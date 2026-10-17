@@ -8,6 +8,15 @@ export type News = { version: string; date: string; lines: string[] };
 // Newest first. Only a release a user would notice gets an entry; the deploy skill drafts it from scripts/release-notes.sh.
 export const NEWS: News[] = [
   {
+    version: 'v0.2.19',
+    date: '2026-10-18',
+    lines: [
+      'Risu 프리셋에 페르소나 자리가 여러 곳이면 모두 가져와요. 토글로 페르소나 위치를 바꾸는 프리셋도 Risu처럼 동작해요. 이미 가져온 프리셋은 다시 가져와 주세요.',
+      '같은 모듈의 새 버전을 가져오면 이전 버전과 바꿀지 물어요. 바꾸면 이전 버전이 켜져 있던 곳에 새 버전이 켜지고, 이전 버전은 휴지통으로 가요.',
+      '프리셋이 쓰는 모듈 중 아직 없는 것은 가져오기 결과에서 알려 줘요.',
+    ],
+  },
+  {
     version: 'v0.2.18',
     date: '2026-10-17',
     lines: [
