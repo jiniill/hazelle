@@ -53,11 +53,11 @@ it('reports a tool import or a version replacement without retaining the code', 
 });
 
 it('names the slot a preset placed twice, and the modules its prompt was turned on with', () => {
-  const read = convertPreset({ name: '누렁이', promptTemplate: [{ type: 'persona', role: 'system' }, { type: 'chat', rangeStart: 0, rangeEnd: 'end' }, { type: 'persona', role: 'system' }] });
+  const read = convertPreset({ name: '누렁이', promptTemplate: [{ type: 'authornote', role: 'system' }, { type: 'chat', rangeStart: 0, rangeEnd: 'end' }, { type: 'authornote', role: 'system' }] });
   if (!read.ok) throw new Error(read.failure.kind);
   const outcome = promptOutcome('nureong.risup', read, 'prompt', ['누렁이모듈'], []);
   expect(outcome).toMatchObject({ kind: 'prompt', title: '프롬프트 · 누렁이', holds: '블록 2개', paired: { text: "'누렁이모듈' 모듈을 이 프롬프트에 켰어요.", failed: false } });
-  expect(outcome.missed[0]).toBe('겹친 페르소나 블록 1개(처음 것만 가져옴)');
+  expect(outcome.missed[0]).toBe('겹친 작가의 노트 블록 1개(처음 것만 가져옴)');
 });
 
 it('names the modules a preset waits for, beside or without those turned on', () => {
