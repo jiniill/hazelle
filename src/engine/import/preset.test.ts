@@ -18,11 +18,16 @@ it("keeps a preset's toggle lines in order, one it cannot read as written and co
   expect(read.unsupported).toContainEqual({ kind: 'toggle-line', count: 1 });
 });
 
-it('keeps a description placed twice, as a preset that moves it by a toggle does, and folds a persona placed twice', () => {
-  const read = convertPreset({ name: 'p', promptTemplate: [{ type: 'description' }, { type: 'persona' }, { type: 'chat', rangeStart: 0, rangeEnd: 'end' }, { type: 'description' }, { type: 'persona' }] });
+it('keeps a description and a persona in every place, as a preset that moves them by a toggle does, and folds a lorebook placed twice', () => {
+  const persona = (at: string) => ({ type: 'persona', innerFormat: `{{#if_pure {{? {{getglobalvar::toggle_topbotpersona}}=${at}}}}}{{slot}}{{/if}}` });
+  const read = convertPreset({
+    name: 'p',
+    promptTemplate: [{ type: 'description' }, persona('0'), { type: 'lorebook' }, { type: 'chat', rangeStart: 0, rangeEnd: 'end' }, { type: 'description' }, persona('2'), { type: 'lorebook' }, persona('3')],
+  });
   if (!read.ok) throw new Error(read.failure.kind);
-  expect(read.prompt.blocks.map((block) => block.kind === 'slot' && block.slot)).toEqual(['description', 'persona', 'chat', 'description']);
-  expect(read.unsupported).toEqual([{ kind: 'repeated-slot', slot: 'persona', count: 1 }, { kind: 'settings', count: 1 }]);
+  expect(read.prompt.blocks.map((block) => block.kind === 'slot' && block.slot)).toEqual(['description', 'persona', 'lorebook', 'chat', 'description', 'persona', 'persona']);
+  expect(read.prompt.blocks.flatMap((block) => (block.kind === 'slot' && block.slot === 'persona' ? [block.wrapper?.match(/=(\d)/)?.[1]] : []))).toEqual(['0', '2', '3']);
+  expect(read.unsupported).toEqual([{ kind: 'repeated-slot', slot: 'lorebook', count: 1 }, { kind: 'settings', count: 1 }]);
 });
 
 it('counts the prompt settings this app has no setting for, each only off its Risu default', () => {

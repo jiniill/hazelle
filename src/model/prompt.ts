@@ -10,10 +10,11 @@ export type PromptSort = 'conversation' | 'translate' | 'memory' | 'illustrate' 
 // {{slot}} where its content goes; role is the one a new block of it starts with (app/prompts/edits newBlock).
 export const SLOTS = {
   tool: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation'] },
-  // 캐릭터 설명 repeats because Risu presets put it in two places and open one by a toggle (누렁이's 탈옥조정): with one
-  // place, the other toggle state sends no description at all.
+  // 캐릭터 설명 and 페르소나 repeat because Risu presets put them in several places and open one by a toggle (누렁이's
+  // 탈옥조정 for the description, 소악마's topbotpersona for the persona): with one place, the other toggle states send
+  // nothing at all.
   description: { wrapped: true, role: 'system', repeats: true, sorts: ['conversation', 'translate', 'memory', 'illustrate'] },
-  persona: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation', 'translate', 'memory', 'illustrate'] },
+  persona: { wrapped: true, role: 'system', repeats: true, sorts: ['conversation', 'translate', 'memory', 'illustrate'] },
   lorebook: { wrapped: false, repeats: false, sorts: ['conversation', 'translate', 'memory', 'illustrate'] },
   authorNote: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation'] },
   postEverything: { wrapped: false, repeats: false, sorts: ['conversation'] },

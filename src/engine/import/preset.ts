@@ -46,7 +46,7 @@ const SKIPPED = new Map<unknown, Counted>([
 ]);
 // A slot placed again where the model allows it once keeps its first place; SLOTS decides which repeat.
 type Repeating = { [K in SlotKind]: (typeof SLOTS)[K]['repeats'] extends true ? K : never }[SlotKind];
-const REPEATING: Record<Repeating, true> = { chat: true, description: true };
+const REPEATING: Record<Repeating, true> = { chat: true, description: true, persona: true };
 
 const fail = (kind: PresetFailure['kind']): PresetResult => ({ ok: false, failure: { kind } });
 

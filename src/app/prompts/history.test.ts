@@ -4,7 +4,7 @@ import type { Draft } from './edits';
 import { addBlock, doing, editLine, moveLine, NO_HISTORY, removeBlock, removeLine, undoing, type History, type Step, type Turned } from './history';
 
 const text = (id: string, words: string): TextBlock => ({ id, name: null, kind: 'text', role: 'system', text: words, mark: null });
-const persona = (id: string): Block => ({ id, name: null, kind: 'slot', slot: 'persona', role: 'system', wrapper: null });
+const authorNote = (id: string): Block => ({ id, name: null, kind: 'slot', slot: 'authorNote', role: 'system', wrapper: null });
 const draftOf = (blocks: Block[]): Draft => ({ name: '', blocks, toggles: [], authorNote: '' });
 const after = (draft: Draft, turned: Turned | null): Draft => (turned && 'patch' in turned ? { ...draft, ...turned.patch } : draft);
 const typed = (draft: Draft, id: string, words: string): Draft => ({ ...draft, blocks: draft.blocks.map((block) => (block.id === id && block.kind === 'text' ? { ...block, text: words } : block)) });
@@ -60,9 +60,9 @@ describe('the prompt editor history', () => {
   });
 
   it('refuses to put back a slot placed once while another stands, changing nothing and dropping the step', () => {
-    const removal = removeBlock(persona('old'), 0);
-    const addition = addBlock(persona('new'), 0);
-    const draft = draftOf([persona('new')]);
+    const removal = removeBlock(authorNote('old'), 0);
+    const addition = addBlock(authorNote('new'), 0);
+    const draft = draftOf([authorNote('new')]);
     const history: History = { done: [removal, addition], undone: [] };
 
     const refused = undoing(history, draft, removal);
