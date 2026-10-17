@@ -2,7 +2,7 @@ import type { ImportedModule, Profiles, Unsupported } from '../engine/import/typ
 import { likenessId } from '../model/likeness';
 import type { Stored } from '../model/kinds';
 import { live, type Module } from '../model/library';
-import { EMPTY_SETTINGS } from '../model/settings';
+import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
 import type { ApiResult } from './api';
 import { markDeleted } from './removal';
 import { saveAssets, type Progress } from './characters';
@@ -42,6 +42,33 @@ export const modulesOf = (store: Pick<ObjectStore, 'list'>): Stored<'module'>[] 
 
 export const switched = (ids: string[] | undefined, id: string, on: boolean) => [...(ids ?? []).filter((each) => each !== id), ...(on ? [id] : [])];
 
+// The live modules a new version of one with this namespace would replace.
+export const sameNamespace = (store: Pick<ObjectStore, 'list'>, namespace: string): Stored<'module'>[] => modulesOf(store).filter(({ value }) => value.namespace === namespace);
+
+// id goes just before the first of olds in the list; olds stay in it, off while deleted and on again once restored.
+const beside = (ids: string[], id: string, olds: string[]) => {
+  const rest = ids.filter((each) => each !== id);
+  const at = rest.findIndex((each) => olds.includes(each));
+  return at < 0 ? ids : [...rest.slice(0, at), id, ...rest.slice(at)];
+};
+
+// A new version takes over from olds: it is on, in their place, everywhere one of them is on, and they go to 휴지통.
+// Restoring them (setModuleDeleted null) and deleting it undoes this exactly. data: how many places it took over.
+export async function replaceModules(store: ObjectStore, id: string, olds: string[]): Promise<ApiResult<number>> {
+  const holds = (value: { modules?: string[] } | undefined) => !!value?.modules?.some((each) => olds.includes(each));
+  const places: (() => Promise<ApiResult<unknown>>)[] = [
+    ...(holds(store.get('settings', SETTINGS_ID)?.value) ? [() => store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, modules: beside(current.modules ?? [], id, olds) }))] : []),
+    ...store.list('character').filter(({ value }) => holds(value)).map(({ id: character }) => () => store.update('character', character, (current) => ({ ...current, modules: beside(current.modules ?? [], id, olds) }))),
+    ...store.list('persona').filter(({ value }) => holds(value)).map(({ id: persona }) => () => store.update('persona', persona, (current) => ({ ...current, modules: beside(current.modules ?? [], id, olds) }))),
+    ...store.list('prompt').filter((prompt): prompt is StoredPrompt<'conversation'> => prompt.value.task === undefined && holds(prompt.value)).map(({ id: prompt }) => () => store.update('prompt', prompt, (current) => (current.task === undefined ? { ...current, modules: beside(current.modules ?? [], id, olds) } : current))),
+  ];
+  for (const place of [...places, ...olds.map((old) => () => setModuleDeleted(store, old, Date.now()))]) {
+    const done = await place();
+    if (!done.ok) return done;
+  }
+  return { ok: true, data: places.length };
+}
+
 export function editModule(store: ObjectStore, id: string, patch: { name?: string; description?: string }): Promise<ApiResult<Stored<'module'>>> {
   return store.update('module', id, (current) => ({ ...current, ...patch }));
 }
@@ -61,11 +88,12 @@ export function setPromptModule(store: ObjectStore, prompt: StoredPrompt<'conver
 }
 
 // A Risu preset names its modules by Risu id or namespace (Risu matches either), the id first. Only live ones: a name no
-// module here answers waits for one imported later (pairWithPrompts). One named twice is on once.
-export function companionModules(store: Pick<ObjectStore, 'list'>, names: string[]): string[] {
+// module here answers waits for one imported later (pairWithPrompts), and is listed in waiting as written. One named
+// twice is on once.
+export function companionModules(store: Pick<ObjectStore, 'list'>, names: string[]): { ids: string[]; waiting: string[] } {
   const modules = modulesOf(store);
   const named = (name: string) => modules.find(({ value }) => value.risu === name) ?? modules.find(({ value }) => value.namespace === name);
-  return [...new Set(names.flatMap((name) => named(name)?.id ?? []))];
+  return { ids: [...new Set(names.flatMap((name) => named(name)?.id ?? []))], waiting: [...new Set(names.filter((name) => !named(name)))] };
 }
 
 // A module arriving after a Risu preset that named it is turned on for that preset's prompts. Its Risu id is the file's:

@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { fold } from '../model/chat';
 import { startChat } from './chat-log';
 import { projectGreetings } from './greetings';
-import { editModule, importModule, modulesOf, pairWithPrompts, setCharacterModule, setModuleAlways, setModuleAt, setModuleDeleted, setPromptModule } from './modules';
+import { editModule, importModule, modulesOf, pairWithPrompts, replaceModules, sameNamespace, setCharacterModule, setModuleAlways, setModuleAt, setModuleDeleted, setPromptModule } from './modules';
 import { addPrompt, chatPrompt, ofSort, savePreset } from './prompts';
 import { convertPreset } from '../engine/import/preset';
 import { answerable, saying, stubRelay, testServer } from './testing';
 import { blankCard } from '../engine/import/card';
 import { evaluateChat, packsOf, togglesOf } from './chat-context';
+import { SETTINGS_ID } from '../model/settings';
 import { takeTurn } from './turn';
 
 const server = testServer();
@@ -81,6 +82,36 @@ describe('modules', () => {
     expect(packsOf(store, { character: character.data.id, prompt: prompt.data.id, persona: persona.data.id }).map(({ id }) => id)).toEqual([character.data.id, always, both, own, worn]);
   });
 
+  it('puts a new version where each older one of its namespace is on, and deleting it and restoring them undoes that', async () => {
+    const { store, files } = await server.account();
+    const module = async (name: string, namespace: string | null) => {
+      const added = await importModule(store, files, { name, description: '', namespace, risu: null, pack: { regex: [], triggers: [], toggles: [] }, lore: [], loreFolders: [], assets: [], unsupported: [] }, () => {});
+      if (!added.ok) throw new Error(added.error);
+      return added.data.id;
+    };
+    const [first, second, other] = [await module('소악마 1', '소악마'), await module('소악마 2', '소악마'), await module('에셋', null)];
+    const character = await store.create('character', { card: blankCard('루나'), folder: null, loreFolders: [], modules: [other, first] });
+    const persona = await store.create('persona', { name: '나', description: '', picture: null, modules: [second] });
+    const prompt = await addPrompt(store, '짝', 'conversation');
+    if (!character.ok || !persona.ok || !prompt.ok || !ofSort(prompt.data, 'conversation')) throw new Error('fixture');
+    await setPromptModule(store, prompt.data, first, true);
+    await setModuleAlways(store, second, true);
+    const chat = { character: character.data.id, prompt: prompt.data.id, persona: persona.data.id };
+    const on = () => packsOf(store, chat).map(({ id }) => id).slice(1);
+
+    expect(sameNamespace(store, '소악마').map(({ id }) => id).sort()).toEqual([first, second].sort());
+    const fresh = await module('소악마 3', '소악마');
+    await setCharacterModule(store, character.data.id, fresh, true);
+    expect(await replaceModules(store, fresh, [first, second])).toEqual({ ok: true, data: 4 });
+    expect(store.get('character', character.data.id)!.value.modules).toEqual([other, fresh, first]);
+    expect(store.get('settings', SETTINGS_ID)!.value.modules).toEqual([fresh, second]);
+    expect(on()).toEqual([fresh, other]);
+    expect(sameNamespace(store, '소악마').map(({ id }) => id)).toEqual([fresh]);
+
+    await Promise.all([setModuleDeleted(store, fresh, Date.now()), setModuleDeleted(store, first, null), setModuleDeleted(store, second, null)]);
+    expect(on()).toEqual([second, first, other]);
+  });
+
   it('renames a module and rewrites its description, keeping its pack', async () => {
     const { store, files } = await server.account();
     const added = await importModule(store, files, { name: 'Bell', description: '', namespace: 'bell', risu: null, pack: { regex: [], triggers: [], toggles: [] }, lore: [], loreFolders: [], assets: [], unsupported: [] }, () => {});
@@ -98,7 +129,7 @@ describe('modules', () => {
     if (!read.ok) throw new Error(read.failure.kind);
     const saved = await savePreset(store, read);
     if (!saved.ok) throw new Error(saved.error);
-    expect(saved.data.paired).toEqual([bell.data.id]);
+    expect(saved.data).toMatchObject({ paired: [bell.data.id], waiting: ['risu-chime'] });
 
     const chime = await importModule(store, files, module('Chime', 'chime', 'risu-chime'), () => {});
     if (!chime.ok) throw new Error(chime.error);

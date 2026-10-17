@@ -93,18 +93,19 @@ export function addPrompt(store: ObjectStore, name: string, sort: PromptSort, id
 }
 
 // paired: the modules turned on for it, those its preset named that were here and then made, the module that holds its
-// preset's regex, written with it in one batch.
-export async function savePreset(store: ObjectStore, { prompt, regex }: PresetRead): Promise<ApiResult<{ id: string; paired: string[]; made: string | null }>> {
+// preset's regex, written with it in one batch. waiting: the names its preset gave that no module here answered.
+export async function savePreset(store: ObjectStore, { prompt, regex }: PresetRead): Promise<ApiResult<{ id: string; paired: string[]; waiting: string[]; made: string | null }>> {
   const id = crypto.randomUUID();
   const made = regex.length > 0 ? crypto.randomUUID() : null;
-  const paired = [...companionModules(store, prompt.companions ?? []), ...(made ? [made] : [])];
+  const companions = companionModules(store, prompt.companions ?? []);
+  const paired = [...companions.ids, ...(made ? [made] : [])];
   const module: Module = { name: `${prompt.name} 정규식`.trim(), description: '', namespace: null, regex, triggers: [], toggles: [], loreFolders: [] };
   const writes: Write[] = [
     ...(made ? [{ type: 'create' as const, kind: 'module' as const, id: made, parent: null, value: module }] : []),
     { type: 'create', kind: 'prompt', id, parent: null, value: paired.length > 0 ? { ...prompt, modules: paired } : prompt },
   ];
   const saved = await store.batch(writes);
-  return saved.ok ? { ok: true, data: { id, paired, made } } : saved;
+  return saved.ok ? { ok: true, data: { id, paired, waiting: companions.waiting, made } } : saved;
 }
 
 // Its Risu preset file, naming for Risu's moduleIntergration the live modules on for it that have a namespace, the only

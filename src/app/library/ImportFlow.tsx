@@ -13,7 +13,7 @@ import { importChat } from '../../runtime/chat-log';
 import type { ApiFailure, ApiResult } from '../../runtime/api';
 import { ImportWorker } from '../../runtime/import/client';
 import { ImportReadError, ImportStuck, type ChatsRead } from '../../runtime/import/protocol';
-import { importModule, pairWithPrompts, setModuleAt, setModuleDeleted, type ModulePlace } from '../../runtime/modules';
+import { importModule, pairWithPrompts, replaceModules, sameNamespace, setModuleAt, setModuleDeleted, type ModulePlace } from '../../runtime/modules';
 import { fillPictures, importRisuChats, risuMatch } from '../../runtime/move';
 import { addRisuPersona, removePersona } from '../../runtime/personas';
 import { ofSort, removePrompt, savePreset } from '../../runtime/prompts';
@@ -23,12 +23,12 @@ import { describeFailure } from '../common/failure';
 import { ImportContext } from '../common/importing';
 import { sizeText } from '../common/size';
 import { useSearch } from '../common/useSearch';
-import { moduleName, NO_CHARACTER, promptName } from '../common/words';
+import { BIN, moduleName, NO_CHARACTER, promptName } from '../common/words';
 import { useFiles, useLibrary, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import type { Route } from '../shell/routes';
 import { Avatar, Button, Callout, ChipButton, ConfirmDialog, Dialog, DropOverlay, Empty, Menu, MenuItem, pickFiles, Progress, Row, Section, Stack, Text, useFileDrop, type ProgressStep } from '../ui';
-import { characterOutcome, chatOutcome, moduleOutcome, personaOutcome, promptOutcome, toolOutcome, type ImportOutcome } from './importOutcome';
+import { characterOutcome, chatOutcome, moduleOutcome, personaOutcome, promptOutcome, quoted, toolOutcome, type ImportOutcome } from './importOutcome';
 import { missedLines, chatMissed, moveMissed } from './missed';
 import { MoveDialog } from './MoveDialog';
 import { MoveFlow } from './MoveFlow';
@@ -47,13 +47,16 @@ type Filled = { kind: 'filled'; file: string; name: string; kept: number; missed
 type Result = ImportOutcome | Filled | { kind: 'failed'; file: string; failure: string };
 // fill: whether to bring only a card's pictures to the character Risu's move brought under its name. character: which
 // character a file of chats goes to, null for 캐릭터 없이; name is the one the file was with, when it says. cancel, the
-// dialog closed while asking, ends the batch: neither answer, since X is not 새 캐릭터로 가져오기 or 캐릭터 없이.
-type Ask = ({ kind: 'fill'; name: string; answer: (fill: boolean) => void } | { kind: 'character'; file: string; name: string | null; fallback: string | null; answer: (character: string | null) => void }) & { cancel: () => void };
+// dialog closed while asking, ends the batch: neither answer, since X is not 새 캐릭터로 가져오기 or 캐릭터 없이. replace:
+// whether a module takes over from the older versions of its namespace, named olds.
+type Ask = ({ kind: 'fill'; name: string; answer: (fill: boolean) => void } | { kind: 'character'; file: string; name: string | null; fallback: string | null; answer: (character: string | null) => void } | { kind: 'replace'; name: string; olds: string[]; answer: (replace: boolean) => void }) & { cancel: () => void };
 // Where a file of chats goes: a character's id, null for 캐릭터 없이, undefined where the way in names none.
 type Target = string | null | undefined;
 type State = { busy: { file: string; steps: ProgressStep[] } | null; results: Result[]; ask: Ask | null };
 // 되돌리기 for what one file brought. Its closure holds ids, never the parsed file, which would stay alive with it.
 type Undo = { message: string; run: () => Promise<ApiResult<unknown> | ApiFailure> };
+
+const ASK_TITLES: Record<Ask['kind'], string> = { fill: '이미지만 가져올까요?', character: '어느 캐릭터에 넣을까요?', replace: '이전 버전과 바꿀까요?' };
 
 const FAILURE: Record<ImportFailure['kind'], string> = {
   'unknown-format': '가져올 수 없는 파일 형식이에요.',
@@ -89,9 +92,15 @@ class ImportCancelled extends Error {}
 
 const unsaved = (file: string, failure: ApiFailure): Result => ({ kind: 'failed', file, failure: `저장하지 못했어요. ${describeFailure(failure)}` });
 
-// An import is undone as its kind is deleted, to 휴지통.
+// An import is undone as its kind is deleted, to 휴지통; a module that replaced older versions brings them back.
 const undoCharacter = (store: ObjectStore, id: string, name: string): Undo => ({ message: `'${name}' 캐릭터를 가져왔어요.`, run: () => setDeleted(store, id, Date.now()) });
-const undoModule = (store: ObjectStore, id: string, name: string): Undo => ({ message: `'${moduleName(name)}' 모듈을 가져왔어요.`, run: () => setModuleDeleted(store, id, Date.now()) });
+const undoModule = (store: ObjectStore, id: string, name: string, replaced: string[]): Undo => ({
+  message: `'${moduleName(name)}' 모듈을 가져왔어요.`,
+  run: async () => {
+    const done = await Promise.all([setModuleDeleted(store, id, Date.now()), ...replaced.map((old) => setModuleDeleted(store, old, null))]);
+    return done.find((result) => !result.ok) ?? done[0]!;
+  },
+});
 const undoPrompt = (store: ObjectStore, id: string, name: string, made: string | null): Undo => ({
   message: `'${promptName(name)}' 프롬프트를 가져왔어요.`,
   run: async () => {
@@ -184,7 +193,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   }
 
   // offer: its 되돌리기. A new tool offers none: importTool refuses its identity again while the binned one is kept.
-  async function save(file: File, place: ModulePlace | null, target: Target, progress: (step: ProgressStep) => void, ask: (name: string) => Promise<boolean>, choose: (name: string | null, fallback: string | null) => Promise<string | null>, offer: (undo: Undo) => void): Promise<Result> {
+  async function save(file: File, place: ModulePlace | null, target: Target, progress: (step: ProgressStep) => void, ask: (name: string) => Promise<boolean>, choose: (name: string | null, fallback: string | null) => Promise<string | null>, replace: (name: string, olds: string[]) => Promise<boolean>, offer: (undo: Undo) => void): Promise<Result> {
     const reader = new ImportWorker();
     readers.current.add(reader);
     try {
@@ -205,17 +214,23 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         if (!saved.ok) return unsaved(file.name, saved);
         offer(undoPrompt(store, saved.data.id, parsed.preset.prompt.name, saved.data.made));
         const modules = saved.data.paired.map((id) => moduleName(store.get('module', id)!.value.name));
-        return promptOutcome(file.name, parsed.preset, saved.data.id, modules);
+        return promptOutcome(file.name, parsed.preset, saved.data.id, modules, saved.data.waiting);
       }
       if ('module' in parsed) {
+        const { namespace } = parsed.module;
+        const versions = namespace === null ? [] : sameNamespace(store, namespace);
+        const olds = versions.length > 0 && (await replace(moduleName(parsed.module.name), versions.map(({ value }) => moduleName(value.name)))) ? versions : [];
         const saved = await importModule(store, files, parsed.module, (step) => progress(stepOf(step)));
         if (!saved.ok) return unsaved(file.name, saved);
-        offer(undoModule(store, saved.data.id, parsed.module.name));
+        offer(undoModule(store, saved.data.id, parsed.module.name, olds.map(({ id }) => id)));
         const placed = place && (await setModuleAt(store, place, saved.data.id, true));
         const failure = placed && !placed.ok ? describeFailure(placed) : null;
+        // After the placement, which appends: replacing puts it where the older version was in that list too.
+        const replaced = olds.length > 0 ? await replaceModules(store, saved.data.id, olds.map(({ id }) => id)) : null;
+        const replacing = replaced && { names: olds.map(({ value }) => moduleName(value.name)), places: replaced.ok ? replaced.data : 0, failure: replaced.ok ? null : describeFailure(replaced) };
         const paired = await pairWithPrompts(store, saved.data.id, parsed.module);
         const pairing = paired.ok ? { prompts: paired.data.map((prompt) => promptName(prompt.value.name)), failure: null } : { prompts: [], failure: describeFailure(paired) };
-        return moduleOutcome(file.name, parsed.module, saved.data.id, saved.data.unsupported, { at: place?.kind ?? null, failure }, pairing);
+        return moduleOutcome(file.name, parsed.module, saved.data.id, saved.data.unsupported, { at: place?.kind ?? null, failure }, pairing, replacing);
       }
       if ('persona' in parsed) {
         const saved = await addRisuPersona(store, parsed.persona, await parsed.persona.picture());
@@ -262,8 +277,9 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       const ask = (name: string) => new Promise<boolean>((answer, reject) => setState({ busy: { file: file.name, steps: [] }, results, ask: { kind: 'fill', name, answer, cancel: cancel(reject) } }));
       const choose = (name: string | null, fallback: string | null) =>
         new Promise<string | null>((answer, reject) => setState({ busy: { file: file.name, steps: [] }, results, ask: { kind: 'character', file: file.name, name, fallback, answer, cancel: cancel(reject) } }));
+      const replace = (name: string, olds: string[]) => new Promise<boolean>((answer, reject) => setState({ busy: { file: file.name, steps: [] }, results, ask: { kind: 'replace', name, olds, answer, cancel: cancel(reject) } }));
       try {
-        results.push(await save(file, place, target, progress, ask, choose, (undo) => undos.push(undo)));
+        results.push(await save(file, place, target, progress, ask, choose, replace, (undo) => undos.push(undo)));
       } catch (error) {
         if (!(error instanceof ImportCancelled)) throw error;
         break;
@@ -293,8 +309,12 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     setState(null);
     navigate(to);
   };
+  const answered = (ask: { answer: (yes: boolean) => void }) => (yes: boolean) => {
+    setState(state && { ...state, ask: null });
+    ask.answer(yes);
+  };
   const came = state?.results.some((result) => result.kind !== 'failed') ?? false;
-  const title = state?.ask ? (state.ask.kind === 'fill' ? '이미지만 가져올까요?' : '어느 캐릭터에 넣을까요?') : state?.busy ? '가져오는 중' : came ? '가져왔어요' : '가져오지 못했어요';
+  const title = state?.ask ? ASK_TITLES[state.ask.kind] : state?.busy ? '가져오는 중' : came ? '가져왔어요' : '가져오지 못했어요';
   return (
     <ImportContext.Provider
       value={{
@@ -339,7 +359,11 @@ export function ImportProvider({ children }: { children: ReactNode }) {
             {state.results.map((result, index) =>
               result.kind === 'failed' ? <Failed key={index} file={result.file} failure={result.failure} /> : result.kind === 'filled' ? <FilledSummary key={index} result={result} /> : <Summary key={index} result={result} />,
             )}
-            {state.ask?.kind === 'fill' ? <FillChoice ask={state.ask} onAnswer={() => setState({ ...state, ask: null })} /> : state.ask ? <CharacterChoice key={state.ask.file} ask={state.ask} onAnswer={() => setState({ ...state, ask: null })} /> : state.busy && <><Text variant="note">{state.busy.file}</Text><Progress steps={state.busy.steps} /></>}
+            {state.ask?.kind === 'fill' ? (
+              <Question title={state.ask.name} help="기존 캐릭터의 대화와 설정은 그대로 두고 이미지만 이 카드에서 가져와요." text="Risu에서 가져온 같은 이름의 캐릭터가 이미 있어요." no="새 캐릭터로 가져오기" yes="이미지만 가져오기" onAnswer={answered(state.ask)} />
+            ) : state.ask?.kind === 'replace' ? (
+              <Question title={state.ask.name} help={`바꾸면 이전 버전이 켜져 있던 곳에 새 버전을 켜고, 이전 버전은 ${BIN}으로 옮겨요.`} text={`이전 버전 ${quoted(state.ask.olds)} 모듈이 있어요.`} no="따로 두기" yes="바꾸기" onAnswer={answered(state.ask)} />
+            ) : state.ask ? <CharacterChoice key={state.ask.file} ask={state.ask} onAnswer={() => setState({ ...state, ask: null })} /> : state.busy && <><Text variant="note">{state.busy.file}</Text><Progress steps={state.busy.steps} /></>}
             {!state.busy && done.length === 1 && (
               <Button
                 icon={MessageSquarePlus}
@@ -367,7 +391,7 @@ function Summary({ result }: { result: ImportOutcome }) {
   return (
     <Section level={3} title={result.title}>
       <Text>{result.holds}</Text>
-      {[result.placed, result.paired].map((line, index) => line && (line.failed ? <Callout key={index} tone="warn">{line.text}</Callout> : <Text key={index}>{line.text}</Text>))}
+      {[result.replaced, result.placed, result.paired].map((line, index) => line && (line.failed ? <Callout key={index} tone="warn">{line.text}</Callout> : <Text key={index}>{line.text}</Text>))}
       {result.missed.length > 0 && <Callout tone="warn">못 가져온 것: {result.missed.join(' · ')}</Callout>}
       {result.unused && <Text variant="note">{result.unused}</Text>}
     </Section>
@@ -407,21 +431,17 @@ function CharacterChoice({ ask, onAnswer }: { ask: Extract<Ask, { kind: 'charact
   );
 }
 
-function FillChoice({ ask, onAnswer }: { ask: Extract<Ask, { kind: 'fill' }>; onAnswer: () => void }) {
-  const answer = (fill: boolean) => {
-    onAnswer();
-    ask.answer(fill);
-  };
+function Question({ title, help, text, no, yes, onAnswer }: { title: string; help: string; text: string; no: string; yes: string; onAnswer: (yes: boolean) => void }) {
   return (
-    <Section level={3} title={ask.name} help="기존 캐릭터의 대화와 설정은 그대로 두고 이미지만 이 카드에서 가져와요.">
+    <Section level={3} title={title} help={help}>
       <Stack gap="related">
-        <Text>Risu에서 가져온 같은 이름의 캐릭터가 이미 있어요.</Text>
+        <Text>{text}</Text>
         <Row kind="actions">
-          <Button variant="secondary" size="md" onClick={() => answer(false)}>
-            새 캐릭터로 가져오기
+          <Button variant="secondary" size="md" onClick={() => onAnswer(false)}>
+            {no}
           </Button>
-          <Button size="md" onClick={() => answer(true)}>
-            이미지만 가져오기
+          <Button size="md" onClick={() => onAnswer(true)}>
+            {yes}
           </Button>
         </Row>
       </Stack>
