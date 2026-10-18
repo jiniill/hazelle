@@ -105,8 +105,10 @@ function termRanges(shadow: ShadowRoot, term: string): Range[] {
 // @import is left to the constructed stylesheet, which drops it. A pattern cut it at the first ;, which a font URL
 // holds inside its quotes (wght@600;700), and the rest of the URL swallowed the bot's next rule.
 // Risu re-reads a bot's CSS through a parser, which drops the non-breaking spaces some bots indent it with; a browser
-// reads one ahead of a selector as part of it, and the rule matches nothing. One inside a quoted string is the bot's text.
-const NBSP_OUTSIDE_STRINGS = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\u00a0/g;
+// reads one ahead of a selector as part of it, and the rule matches nothing. One inside a quoted string is the bot's
+// text; a comment is skipped whole, as its apostrophe opens no string. Both end where CSS ends them (a string at its
+// line, a comment at the end), so an unclosed one is no rescan.
+const NBSP_OUTSIDE_STRINGS = /(\/\*[\s\S]*?(?:\*\/|$)|"(?:\\[\s\S]|[^"\\\n])*"?|'(?:\\[\s\S]|[^'\\\n])*'?)|\u00a0/g;
 export const cleanCss = (css: string, veiled: boolean) => css.replace(NBSP_OUTSIDE_STRINGS, (_, quoted?: string) => quoted ?? ' ').replaceAll('.x-risu-', '.').replace(veiled ? ANY_URL : OUTSIDE_URL, 'none');
 
 // A fixed box would be placed and cut by the message that holds it (Story.module.css): a console centred on Risu's

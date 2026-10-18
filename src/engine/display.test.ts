@@ -189,6 +189,7 @@ describe('storyHtml', () => {
 
   it('keeps a paragraph of block-level HTML whole, joined by <br> as Risu does, so a line indented with non-breaking spaces stays beside its siblings', () => {
     expect(storyHtml('\u00a0<div class="w">\n\u00a0<input id="t">\n\u00a0</div>', true)).toBe('<p>\u00a0<div class="w"><br>\n\u00a0<input id="t"><br>\n\u00a0</div></p>\n');
+    expect(storyHtml('a <p-chip>x</p-chip>\nb', true)).toBe('<p>a <p-chip>x</p-chip></p>\n<p>b</p>\n');
     expect(storyHtml('\u00a0<fieldset>\n\u00a0<input id="t">\n\u00a0</fieldset>', true)).toBe('<p>\u00a0<fieldset><br>\n\u00a0<input id="t"><br>\n\u00a0</fieldset></p>\n');
   });
 

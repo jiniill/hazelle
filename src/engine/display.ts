@@ -199,7 +199,7 @@ function formula(state: StateInline, silent: boolean) {
 // A paragraph holding block-level HTML is the bot's markup that markdown read as text (a line indented with
 // non-breaking spaces starts no HTML block). It stays one paragraph joined by <br>, as Risu renders it: a <p> per line
 // wrapped the bot's elements apart, and an <input> no longer beside the panel its :checked ~ rule opens.
-const BLOCK_HTML = /^<\/?(?:div|p|fieldset|form|address|table|thead|tbody|tfoot|tr|td|th|section|article|aside|header|footer|nav|main|figure|figcaption|details|summary|ul|ol|li|dl|dt|dd|blockquote|center|h[1-6]|hr|pre)\b/i;
+const BLOCK_HTML = /^<\/?(?:div|p|fieldset|form|address|table|thead|tbody|tfoot|tr|td|th|section|article|aside|header|footer|nav|main|figure|figcaption|details|summary|ul|ol|li|dl|dt|dd|blockquote|center|h[1-6]|hr|pre)(?=[\s/>])/i;
 const holdsMarkup = (token: Token) => token.children!.some((child) => child.type === 'html_inline' && BLOCK_HTML.test(child.content));
 
 function lines(state: StateCore) {
