@@ -10,8 +10,7 @@ and only this folder styles elements.**
   color token a light value; `[data-bg]`, `[data-ink]`, `[data-dialogue]` and `[data-accent]` turn the page,
   text, dialogue and accent tokens to a color pick. `foundation/theme.ts` (`applyScheme`) sets the attributes on the
   document, and `schemeAttributes` on an element drawn in another scheme (a preset's swatch). A module
-  never reads `--palette-*`; a surface that needs the other theme's colors (the toast) reads tokens
-  defined per theme.
+  never reads `--palette-*`.
 - `foundation/global.css` loads tokens and sets element defaults. `main.tsx` imports it once, then loads
   `foundation/fonts.css` after paint; slow or unavailable webfonts leave the system faces usable. A tool page
   (`sandbox.html`) has no application bootstrap, so `foundation/sandbox.css` imports both directly.
@@ -199,8 +198,8 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 | overlays | `MoreMenu` | — | The ⋯ that opens what is done to a thing as a whole, in a screen's head (`NavBar` `menu`) or a row, named '{of} 메뉴' |
 | overlays | `Hint` | `Hint.module.css` | An ⓘ that shows an explanation (`Help`): after a moment's hover while the pointer stays on the ⓘ or its bubble, or pinned by a click or tap; a help that names a place ends in a door to it, which the caller's `onClick` opens |
 | overlays | `Menu` (`MenuItem`, `MenuHeading`, `MenuHandle`, `useMenuHandle`, `useMenuOpener`, `useMenuClose`) | `Menu.module.css` | Menus opened from a button, each keeping its own open state, which a handle shares with other buttons; checked items (one of several or `multiple`), disabled items, and a small form opened the same way (kind dialog) with menus inside it |
-| overlays | `Toast` (`ToastAction`) | `Toast.module.css` | A notice on a light card: plain (message, detail, one action with its keys, its time running down as a line) or warn (a warn band, why, where to fix it); someone else's words, such as a bot's, under their face and name, four lines until pressed; a × where a pointer hovers, and on a phone only on a notice that stays |
-| overlays | `ToastStack` | `ToastStack.module.css` | Notices, newest in front, bottom right (under the header on a phone); a mouse pointing at it, or the focus in it, opens it and holds their time, a finger slides one sideways to put it away. Above every layer but the file drop |
+| overlays | `Toast` (`ToastAction`) | `Toast.module.css` | A notice on the floating surface, a pill while it is one line: plain (message, detail, one action in the accent, its time running down as a line, ×N when said again) or warn (a warn mark before the words); someone else's words, such as a bot's, on one line after their face and name, 보기 opening the whole; a × on its corner while a pointer is on it, and in the head of a notice opened to stay |
+| overlays | `ToastStack` | `ToastStack.module.css` | Notices, newest in front, bottom right (under the header on a phone), those behind as edges the front one's width, and +N for the ones waiting; a mouse pointing at it, or the focus in it, opens it and holds their time, a finger slides one sideways or away from the edge it stands at to put it away. Above every layer but the file drop |
 | feedback | `ActionCard` | `ActionCard.module.css` | A large choice with a description |
 | feedback | `AskCard` (`AskAnswer`) | `AskCard.module.css` | A question that waits beside what the user is doing, such as a bot's above the composer: who asks, the question with an ⓘ explanation, a line to type or a few choices, and a × that puts it away |
 | feedback | `Callout` | `Callout.module.css` | A warning or success note, with an optional action under it |

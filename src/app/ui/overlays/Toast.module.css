@@ -1,167 +1,134 @@
-/* The kit's colors are turned for this surface here, so the button and key caps inside keep their own styles. */
 .toast {
-  --color-text: var(--color-toast-text);
-  --color-text-muted: var(--color-toast-muted);
-  --color-bg: var(--color-toast-bg);
-  --color-border: var(--color-toast-line);
-  --color-surface-hover: var(--color-toast-wash);
-  --color-surface-raised: var(--color-toast-wash);
-  --color-accent: var(--color-toast-accent);
-  --color-accent-hover: var(--color-toast-accent-hover);
-  --color-on-accent: var(--color-toast-on-accent);
-  --color-focus: var(--color-toast-accent);
+  position: relative;
+  width: var(--behind-width, fit-content);
+  max-width: 100%;
+  margin-left: auto;
+}
+
+/* One line is a pill: the corner is half its height. A notice that grows, by a detail or a speaker's whole words, keeps
+   the corner and reads as a rounded card. */
+.card {
+  composes: floating from '../foundation/surface.module.css';
   position: relative;
   overflow: hidden;
-  width: 100%;
-  border-radius: var(--radius-md);
-  background: var(--color-bg);
+  min-height: var(--control-md);
+  border-radius: calc(var(--control-md) / 2);
   color: var(--color-text);
-  box-shadow: var(--shadow-toast);
   font-size: var(--text-md);
   line-height: var(--leading-normal);
+}
+
+/* A notice behind the front one shows as its bare edge (ToastStack). */
+.card > * {
+  opacity: var(--behind-shown, 1);
+}
+
+.kept {
+  width: 100%;
+}
+
+/* Under the header on a phone (ToastStack), a notice spans the screen as the header does. */
+@media (max-width: 959px) {
+  .toast {
+    width: 100%;
+  }
 }
 
 .row {
   display: flex;
   align-items: center;
-  gap: var(--space-12);
-  padding: var(--space-12) var(--space-8) var(--space-16) var(--space-16);
+  gap: var(--space-8);
+  min-height: calc(var(--control-md) - 2 * var(--border-thin));
+  padding: var(--space-4) var(--space-16);
+}
+
+.mark {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--color-warn);
 }
 
 .text {
   flex-grow: 1;
   min-width: 0;
-}
-
-.message {
-  font-weight: var(--weight-semibold);
+  padding-block: var(--space-4);
 }
 
 .detail {
   composes: note from '../foundation/type.module.css';
 }
 
-.from {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  min-height: var(--control-chip);
-  padding: var(--space-8) var(--space-8) 0 var(--space-16);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+.times {
+  composes: note from '../foundation/type.module.css';
+  margin-left: var(--space-8);
 }
 
-.name {
-  composes: ellipsis from '../foundation/a11y.module.css';
+.line {
+  display: flex;
   flex-grow: 1;
+  align-items: center;
+  gap: var(--space-8);
   min-width: 0;
 }
 
-.from + .row {
-  padding: var(--space-4) var(--space-16) var(--space-16);
+.name {
+  flex-shrink: 0;
+  font-weight: var(--weight-semibold);
+}
+
+.kept .name {
+  flex-grow: 1;
 }
 
 .words {
-  white-space: pre-wrap;
+  composes: ellipsis from '../foundation/a11y.module.css';
+  min-width: 0;
 }
 
-.cut {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
+.line .times {
+  margin-left: 0;
 }
 
 .whole {
-  display: block;
   max-height: var(--toast-words-most);
   overflow-y: auto;
-}
-
-.more {
-  display: block;
-  width: 100%;
-  padding: 0;
-  text-align: start;
+  padding: 0 var(--space-16) var(--space-16);
+  white-space: pre-wrap;
+  touch-action: pan-y;
 }
 
 .action {
   flex-shrink: 0;
+  margin-right: calc(var(--space-4) - var(--space-16));
 }
 
 .action button {
-  color: var(--color-text);
+  border-radius: var(--radius-full);
+  color: var(--color-accent);
   font-weight: var(--weight-semibold);
 }
 
-.action kbd {
+/* Over the corner, outside the words, so the notice keeps its size while it shows; only where a pointer hovers. */
+.corner {
+  composes: floating from '../foundation/surface.module.css';
+  position: absolute;
+  top: calc(-1 * var(--space-8));
+  left: calc(-1 * var(--space-16));
   display: none;
+  border-radius: var(--radius-full);
+}
+
+.corner button {
+  width: var(--control-xs);
+  height: var(--control-xs);
+  border-radius: var(--radius-full);
 }
 
 @media (hover: hover) {
-  .action kbd {
-    display: inline;
-    margin-left: var(--space-8);
-  }
-}
-
-.warn .action button {
-  color: var(--color-on-accent);
-}
-
-.band {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  padding: var(--space-8) var(--space-16);
-  background: var(--color-warn);
-  font-weight: var(--weight-semibold);
-}
-
-/* On a phone a notice is slid away (ToastStack); only one that stays until closed shows its ×. */
-.close {
-  display: none;
-  flex-shrink: 0;
-}
-
-.band button {
-  color: var(--color-text);
-}
-
-@media (hover: hover) {
-  .close {
+  .toast:hover .corner,
+  .toast:focus-within .corner {
     display: block;
   }
-
-  .band {
-    padding: var(--space-4) var(--space-8) var(--space-4) var(--space-16);
-  }
-}
-
-.kept .close {
-  display: block;
-}
-
-.warn .from {
-  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-16);
-  background: var(--color-warn);
-}
-
-.warn .from button {
-  color: var(--color-text);
-}
-
-.warn .from + .row {
-  padding-top: var(--space-12);
-}
-
-.warn .row {
-  align-items: flex-start;
-}
-
-.warn .detail {
-  color: var(--color-text);
-  font-size: var(--text-md);
 }
 
 .time {
@@ -171,7 +138,7 @@
   bottom: 0;
   width: 100%;
   height: var(--border-medium);
-  background: var(--color-toast-trace);
+  background: var(--color-text-faint);
   transform-origin: left;
   animation-duration: var(--life);
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ApiFailure } from '../runtime/api';
 import { noteProblem } from '../runtime/diagnostics';
 import { describeFailure } from './common/failure';
@@ -9,7 +9,8 @@ import { Toast, ToastStack, type ToastAction } from './ui';
 type Action = { label: string; onClick: () => void };
 type Extra = { detail?: string; action?: Action };
 type From = { name: string; face: string | null };
-type Notice = { key: number; message: string; detail?: string; tone: 'plain' | 'warn'; action?: ToastAction; said?: { from: From; keep: () => void }; close: () => void; undo: boolean; life: number; ends: number };
+// ends: null while it waits behind the notices shown, its time not yet running; Infinity once kept open.
+type Notice = { key: number; message: string; detail?: string; tone: 'plain' | 'warn'; action?: ToastAction; said?: { from: From; keep: () => void }; close: () => void; undo: boolean; times: number; life: number; ends: number | null };
 
 export type Toasts = {
   show: (message: string, extra?: Extra) => void;
@@ -24,8 +25,21 @@ export type Toasts = {
   said: (from: From, text: string, tone: Notice['tone']) => void;
 };
 
-// More would only stack edges nobody reads.
+// More would only stack edges nobody reads. Past them a plain notice is let go, but a 되돌리기, a fix or someone's words
+// waits its turn.
 const KEPT = 3;
+const waits = (notice: Notice) => notice.action !== undefined || notice.said !== undefined;
+
+// A notice that comes up front starts its time, and one pushed back stops it, to start again when it comes up; one kept
+// open stays kept.
+function lineUp(all: Notice[]): Notice[] {
+  const now = Date.now();
+  const placed = (notice: Notice, index: number) => {
+    if (index < KEPT) return notice.ends === null ? { ...notice, ends: now + notice.life } : notice;
+    return notice.ends === null || notice.ends === Infinity ? notice : { ...notice, ends: null };
+  };
+  return all.filter((notice, index) => index < KEPT || waits(notice)).map(placed);
+}
 
 function lifeOf(tone: Notice['tone'], text: string, action: boolean): number {
   const base = tone === 'warn' ? 7000 : action ? 6000 : 4000;
@@ -37,26 +51,30 @@ const FloorContext = createContext<((floor: HTMLElement | null) => void) | null>
 
 export type Standing = { message: string; detail: string };
 
-// A mouse over the stack, or the focus in it, opens it and stops every notice's time, which runs on from where it stopped.
-// standing: a notice in front of them for as long as the caller passes it, with no time of its own.
+// A mouse over the stack, or the focus in it, opens it and stops every notice's time, which runs on from where it stopped;
+// a page out of sight stops it too. standing: a notice in front of them for as long as the caller passes it, with no time of its own.
 export function ToastProvider({ standing, children }: { standing: Standing | null; children: ReactNode }) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [held, setHeld] = useState(false);
+  const [hidden, setHidden] = useState(() => document.hidden);
   const [floor, setFloor] = useState<HTMLElement | null>(null);
-  const heldSince = useRef(0);
   const toasts = useMemo<Toasts>(() => {
     let next = 0;
     const add = (message: string, tone: Notice['tone'], { detail, action, from }: Extra & { from?: From } = {}, undo = false) => {
       const key = ++next;
       if (tone === 'warn') noteProblem(detail ? `${message} ${detail}` : message);
       const life = lifeOf(tone, `${message}${detail ?? ''}`, action !== undefined);
-      const close = () => setNotices((all) => all.filter((notice) => notice.key !== key));
+      const close = () => setNotices((all) => lineUp(all.filter((notice) => notice.key !== key)));
       const keep = () => setNotices((all) => all.map((notice) => (notice.key === key ? { ...notice, ends: Infinity } : notice)));
       const pressed = action && { ...action, onClick: () => (close(), action.onClick()), ...(undo && { keys: SHORTCUTS.undoToast.keys }) };
-      // A notice with nothing to press, said again while it is up, stays one notice. One with an action or a speaker is
-      // never merged: each carries its own 되돌리기 or words.
-      const repeats = (notice: Notice) => !action && !from && !notice.action && !notice.said && notice.message === message && notice.detail === detail && notice.tone === tone;
-      setNotices((all) => all.some(repeats) ? all : [{ key, message, detail, tone, action: pressed, said: from && { from, keep }, close, undo, life, ends: Date.now() + life }, ...all].slice(0, KEPT));
+      // The same words from the same speaker, said again while up, stay one notice that counts them and runs its time
+      // again. One with an action is never merged: each carries its own 되돌리기.
+      const repeats = (notice: Notice) => !action && !notice.action && notice.message === message && notice.detail === detail && notice.tone === tone && notice.said?.from.name === from?.name;
+      setNotices((all) => {
+        const same = all.find(repeats);
+        const again = (notice: Notice) => ({ ...notice, times: notice.times + 1, ends: notice.ends === null ? null : Math.max(notice.ends, Date.now() + life) });
+        return lineUp(same ? all.map((notice) => (notice === same ? again(notice) : notice)) : [{ key, message, detail, tone, action: pressed, said: from && { from, keep }, close, undo, times: 1, life, ends: null }, ...all]);
+      });
       return close;
     };
     const failed: Toasts['failed'] = (failure, prefix, words) => {
@@ -73,28 +91,34 @@ export function ToastProvider({ standing, children }: { standing: Standing | nul
   }, []);
 
   useEffect(() => {
-    if (held || notices.length === 0) return;
-    const now = Date.now();
-    const soonest = Math.min(...notices.map(({ ends }) => ends));
-    // Only notices kept open are left, and those have no end.
+    const seen = () => setHidden(document.hidden);
+    document.addEventListener('visibilitychange', seen);
+    return () => document.removeEventListener('visibilitychange', seen);
+  }, []);
+
+  const stopped = held || hidden;
+  useEffect(() => {
+    if (!stopped) return;
+    const since = Date.now();
+    return () => {
+      const gap = Date.now() - since;
+      setNotices((all) => all.map((notice) => (notice.ends === null ? notice : { ...notice, ends: notice.ends + gap })));
+    };
+  }, [stopped]);
+
+  useEffect(() => {
+    if (stopped) return;
+    const soonest = Math.min(...notices.map(({ ends }) => ends ?? Infinity));
+    // Only notices kept open or waiting are left, and those have no end yet.
     if (soonest === Infinity) return;
-    const timer = setTimeout(() => setNotices((all) => all.filter(({ ends }) => ends > Date.now())), Math.max(0, soonest - now));
+    const timer = setTimeout(() => setNotices((all) => lineUp(all.filter(({ ends }) => ends === null || ends > Date.now()))), Math.max(0, soonest - Date.now()));
     return () => clearTimeout(timer);
-  }, [held, notices]);
+  }, [stopped, notices]);
 
-  const hold = (on: boolean) => {
-    if (on === held) return;
-    if (on) heldSince.current = Date.now();
-    else {
-      const stopped = Date.now() - heldSince.current;
-      setNotices((all) => all.map((notice) => ({ ...notice, ends: notice.ends + stopped })));
-    }
-    setHeld(on);
-  };
-
+  const shown = notices.slice(0, KEPT);
   // The newest 되돌리기 on screen; typing keeps the field's own undo.
   useShortcut('undoToast', (event) => {
-    const newest = notices.find(({ undo }) => undo);
+    const newest = shown.find(({ undo }) => undo);
     if (typing(event) || !newest) return false;
     newest.action!.onClick();
   });
@@ -104,15 +128,16 @@ export function ToastProvider({ standing, children }: { standing: Standing | nul
       <FloorContext.Provider value={setFloor}>{children}</FloorContext.Provider>
       <ToastStack
         items={[
-          ...(standing ? [{ key: 'standing', toast: <Toast message={standing.message} detail={standing.detail} tone="plain" life={0} paused={held} /> }] : []),
-          ...notices.map(({ key, message, detail, tone, action, said, close, life }) => ({
+          ...(standing ? [{ key: 'standing', toast: <Toast message={standing.message} detail={standing.detail} tone="plain" life={0} paused={stopped} /> }] : []),
+          ...shown.map(({ key, message, detail, tone, action, said, close, times, life }) => ({
             key,
-            toast: <Toast message={message} detail={detail} tone={tone} action={action} from={said?.from} onKeep={said?.keep} onClose={close} life={life} paused={held} />,
+            toast: <Toast message={message} detail={detail} tone={tone} action={action} times={times} from={said?.from} onKeep={said?.keep} onClose={close} life={life} paused={stopped} />,
             onClose: close,
           })),
         ]}
+        waiting={notices.length - shown.length}
         held={held}
-        onHold={hold}
+        onHold={setHeld}
         floor={floor}
       />
     </ToastContext.Provider>

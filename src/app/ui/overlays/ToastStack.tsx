@@ -1,10 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type Key, type PointerEvent, type ReactNode, type RefObject } from 'react';
+import { useWide } from '../foundation/media';
 import styles from './ToastStack.module.css';
 
 type Props = {
   // Newest first: the first is in front, and the others wait behind it until the stack is pointed at. onClose: a
   // finger sliding the notice sideways puts it away.
   items: { key: Key; toast: ReactNode; onClose?: () => void }[];
+  // How many wait behind the ones shown, counted past the stack's back edge.
+  waiting: number;
   // Held while a mouse is over the stack or the focus is in it: open, its notices' time stopped. The caller keeps it,
   // since the time it stops outlives the stack.
   held: boolean;
@@ -14,10 +17,13 @@ type Props = {
   floor: HTMLElement | null;
 };
 
-export function ToastStack({ items, held: open, onHold: hold, floor }: Props) {
+export function ToastStack({ items, waiting, held: open, onHold: hold, floor }: Props) {
   const holding = useHold(open, hold);
+  // Away from where the stack stands: down from the bottom on a wide screen, up past the header on a phone.
+  const away = useWide() ? 1 : -1;
   useFloor(holding.ref, floor, items.length > 0);
-  const [heights, setHeights] = useState<ReadonlyMap<Key, number>>(() => new Map());
+  // Each notice's own box: a short one is narrower than the stack.
+  const [sizes, setSizes] = useState<ReadonlyMap<Key, { height: number; width: number }>>(() => new Map());
   // One lasting ref per notice: a new one each render would detach and measure again, and render again, forever. It
   // stays after a detach too, which StrictMode runs on every mount; the refs of notices gone are dropped here.
   const refs = useRef(new Map<Key, (element: HTMLElement | null) => () => void>());
@@ -26,11 +32,16 @@ export function ToastStack({ items, held: open, onHold: hold, floor }: Props) {
     let ref = refs.current.get(key);
     if (!ref) {
       ref = (element: HTMLElement | null) => {
-        const observer = new ResizeObserver(() => element && setHeights((all) => (all.get(key) === element.offsetHeight ? all : new Map(all).set(key, element.offsetHeight))));
-        if (element) observer.observe(element);
+        const notice = element?.firstElementChild as HTMLElement | null | undefined;
+        const observer = new ResizeObserver(() => {
+          if (!notice) return;
+          const size = { height: notice.offsetHeight, width: notice.offsetWidth };
+          setSizes((all) => (all.get(key)?.height === size.height && all.get(key)?.width === size.width ? all : new Map(all).set(key, size)));
+        });
+        if (notice) observer.observe(notice);
         return () => {
           observer.disconnect();
-          setHeights((all) => {
+          setSizes((all) => {
             if (!all.has(key)) return all;
             const rest = new Map(all);
             rest.delete(key);
@@ -43,14 +54,14 @@ export function ToastStack({ items, held: open, onHold: hold, floor }: Props) {
     return ref;
   };
   if (items.length === 0) return null;
-  const height = (key: Key) => heights.get(key) ?? 0;
+  const height = (key: Key) => sizes.get(key)?.height ?? 0;
   const lifts = items.map((_, index) => items.slice(0, index).reduce((sum, { key }) => sum + height(key), 0));
   const front = height(items[0]!.key);
   const total = lifts.at(-1)! + height(items.at(-1)!.key);
   return (
     <div
       className={open ? `${styles.stack} ${styles.open}` : styles.stack}
-      style={{ '--front': `${front}px`, '--total': `${total}px`, '--count': items.length } as CSSProperties}
+      style={{ '--front': `${front}px`, '--front-width': `${sizes.get(items[0]!.key)?.width ?? 0}px`, '--total': `${total}px`, '--count': items.length } as CSSProperties}
       {...holding}
     >
       {items.map(({ key, toast, onClose }, index) => (
@@ -60,11 +71,12 @@ export function ToastStack({ items, held: open, onHold: hold, floor }: Props) {
           style={{ '--index': index, '--lift': `${lifts[index]}px` } as CSSProperties}
           inert={index > 0 && !open}
         >
-          <Swiped measure={measure(key)} onClose={onClose}>
+          <Swiped measure={measure(key)} away={away} onClose={onClose}>
             {toast}
           </Swiped>
         </div>
       ))}
+      {waiting > 0 && <span className={styles.waiting}>+{waiting}</span>}
     </div>
   );
 }
@@ -119,37 +131,42 @@ export function useHold(held: boolean, hold: (held: boolean) => void) {
   };
 }
 
-// Past this a finger's move is a slide, not a press: 되돌리기 under it is not pressed, and a vertical move is left to
-// a long notice's own scroll.
+// Past this a finger's move is a slide, not a press: 되돌리기 under it is not pressed. A move inside a long notice's
+// words scrolls them instead (Toast's pan-y).
 const SLIDE = 8;
 
-// A mouse's drag is left to selecting text; its notices have a ×.
-function Swiped({ measure, onClose, children }: { measure: (element: HTMLElement | null) => () => void; onClose?: () => void; children: ReactNode }) {
+type Shift = { axis: 'x' | 'y'; by: number };
+
+// A finger slides a notice sideways, or away (1 down, -1 up), to put it away; a mouse's drag is left to selecting text,
+// and its notices have a ×.
+function Swiped({ measure, away, onClose, children }: { measure: (element: HTMLElement | null) => () => void; away: 1 | -1; onClose?: () => void; children: ReactNode }) {
   const start = useRef<{ x: number; y: number } | null>(null);
-  const [shift, setShift] = useState<number | null>(null);
+  const [shift, setShift] = useState<Shift | null>(null);
   const down = (event: PointerEvent<HTMLDivElement>) => {
     if (onClose && event.pointerType !== 'mouse') start.current = { x: event.clientX, y: event.clientY };
   };
   const move = (event: PointerEvent<HTMLDivElement>) => {
     if (!start.current) return;
     const x = event.clientX - start.current.x;
-    if (shift !== null) return setShift(x);
     const y = event.clientY - start.current.y;
-    if (Math.abs(x) > SLIDE && Math.abs(x) > Math.abs(y)) {
-      event.currentTarget.setPointerCapture(event.pointerId);
-      setShift(x);
-    } else if (Math.abs(y) > SLIDE) start.current = null;
+    if (shift) return setShift({ axis: shift.axis, by: shift.axis === 'x' ? x : Math.sign(y) === away ? y : 0 });
+    const axis = Math.abs(x) > Math.abs(y) ? 'x' : 'y';
+    if (Math.max(Math.abs(x), Math.abs(y)) <= SLIDE) return;
+    if (axis === 'y' && Math.sign(y) !== away) return void (start.current = null);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setShift({ axis, by: axis === 'x' ? x : y });
   };
   const up = (event: PointerEvent<HTMLDivElement>) => {
     start.current = null;
-    if (shift !== null && Math.abs(shift) > event.currentTarget.offsetWidth / 3) onClose!();
+    const room = shift?.axis === 'x' ? event.currentTarget.offsetWidth / 3 : event.currentTarget.offsetHeight / 2;
+    if (shift && Math.abs(shift.by) > room) onClose!();
     else setShift(null);
   };
   return (
     <div
       ref={measure}
       className={shift === null ? styles.swiped : `${styles.swiped} ${styles.sliding}`}
-      style={shift === null ? undefined : ({ '--shift': `${shift}px` } as CSSProperties)}
+      style={shift === null ? undefined : ({ '--shift': shift.axis === 'x' ? `${shift.by}px 0` : `0 ${shift.by}px` } as CSSProperties)}
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}

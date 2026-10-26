@@ -31,25 +31,39 @@
   transform: translateY(calc(var(--toward) * (var(--lift) + var(--index) * var(--space-8))));
 }
 
-/* Sideways moves are the notice's own (Swiped); a vertical one still scrolls a long notice's words. */
+/* A finger's moves are the notice's own (Swiped); a long notice's words take their vertical ones back (Toast). */
 .swiped {
-  touch-action: pan-y;
-  transition: transform var(--duration-fast) var(--ease-enter);
+  touch-action: none;
+  transition: translate var(--duration-fast) var(--ease-enter);
 }
 
 .sliding {
-  transform: translateX(var(--shift));
+  translate: var(--shift);
   transition: none;
 }
 
+/* The count of notices waiting, past the back edge of the stack, closed or open. */
+.waiting {
+  composes: floating from '../foundation/surface.module.css';
+  composes: note from '../foundation/type.module.css';
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + (var(--count) - 1) * var(--toast-peek) + var(--space-4));
+  padding: 0 var(--space-8);
+  border-radius: var(--radius-full);
+}
+
+.open .waiting {
+  bottom: calc(100% + var(--space-4));
+}
+
+/* A notice behind is a bare edge as wide as the one in front, whatever its own words (Toast reads both). */
 .behind {
+  --behind-width: var(--front-width);
+  --behind-shown: 0;
   height: var(--front);
   overflow: hidden;
   filter: brightness(calc(1 - 2 * var(--index) * var(--toast-shrink)));
-}
-
-.behind > * > * > * {
-  opacity: 0;
 }
 
 @media (max-width: 959px) {
@@ -66,5 +80,15 @@
     top: 0;
     bottom: auto;
     transform-origin: top center;
+  }
+
+  .waiting,
+  .open .waiting {
+    top: calc(100% + var(--space-4));
+    bottom: auto;
+  }
+
+  .stack:not(.open) .waiting {
+    top: calc(100% + (var(--count) - 1) * var(--toast-peek) + var(--space-4));
   }
 }

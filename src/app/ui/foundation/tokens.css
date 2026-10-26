@@ -49,11 +49,8 @@
   --palette-gold-500: #d6b47a;
   --palette-blue-300: #9fb0d6;
   --palette-shadow: rgb(0 0 0 / 45%);
-  --palette-shadow-deep: rgb(0 0 0 / 75%);
-  --palette-lilac-600: #6a6170;
   --palette-ink-wash: rgb(29 27 34 / 7%);
   --palette-ink-line: rgb(29 27 34 / 16%);
-  --palette-ink-trace: rgb(29 27 34 / 22%);
   --palette-scrim: rgb(8 8 10 / 55%);
   --palette-paper-10: #fefcf9;
   --palette-paper-50: #faf7f2;
@@ -86,11 +83,9 @@
   --palette-rose-700: #b0466f;
   --palette-blue-700: #3b5796;
   --palette-shadow-soft: rgb(29 27 34 / 12%);
-  --palette-shadow-soft-deep: rgb(29 27 34 / 24%);
   --palette-scrim-soft: rgb(29 27 34 / 32%);
   --palette-cream-wash: rgb(241 236 228 / 7%);
   --palette-cream-line: rgb(241 236 228 / 16%);
-  --palette-cream-trace: rgb(241 236 228 / 22%);
   --palette-white: #fff;
   --palette-black: #000;
   --palette-graphite-900: #131313;
@@ -220,24 +215,12 @@
 
   --shadow-popover: 0 12px 32px var(--palette-shadow);
   --shadow-cheer: 0 0 0 8px var(--color-accent-bg), 0 14px 36px var(--color-accent-border);
-  --shadow-toast: 0 22px 44px -14px var(--palette-shadow-deep), 0 4px 12px var(--palette-shadow);
 
   /* Glass, for what floats over the story (controls/Pill, story/StepButtons): the story shows through, blurred. */
   --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
   --color-glass-edge: var(--palette-cream-line);
   --color-glass-press: var(--palette-cream-wash);
   --shadow-glass: 0 10px 28px var(--palette-shadow), inset 0 1px 0 var(--palette-cream-line);
-
-  /* The toast wears the other theme's colors; Toast.module.css turns the kit's tokens to these. */
-  --color-toast-bg: var(--palette-cream-100);
-  --color-toast-text: var(--palette-ink-800);
-  --color-toast-muted: var(--palette-lilac-600);
-  --color-toast-line: var(--palette-ink-line);
-  --color-toast-wash: var(--palette-ink-wash);
-  --color-toast-trace: var(--palette-ink-trace);
-  --color-toast-accent: var(--palette-ink-800);
-  --color-toast-accent-hover: var(--palette-ink-600);
-  --color-toast-on-accent: var(--palette-cream-100);
 
   /* 설정 › 디스플레이's color picks in this theme (foundation/theme.ts BG, INK, ACCENT); base is the theme's own. */
   --color-pick-bg-base: var(--palette-ink-900);
@@ -642,20 +625,9 @@
   --color-weight-negative: var(--palette-rose-700);
 
   --shadow-popover: 0 12px 32px var(--palette-shadow-soft);
-  --shadow-toast: 0 22px 44px -14px var(--palette-shadow-soft-deep), 0 4px 12px var(--palette-shadow-soft);
   --color-glass-edge: var(--palette-ink-line);
   --color-glass-press: var(--palette-ink-wash);
   --shadow-glass: 0 10px 28px var(--palette-shadow-soft), inset 0 1px 0 var(--palette-white);
-
-  --color-toast-bg: var(--palette-ink-800);
-  --color-toast-text: var(--palette-cream-100);
-  --color-toast-muted: var(--palette-lilac-300);
-  --color-toast-line: var(--palette-cream-line);
-  --color-toast-wash: var(--palette-cream-wash);
-  --color-toast-trace: var(--palette-cream-trace);
-  --color-toast-accent: var(--palette-cream-100);
-  --color-toast-accent-hover: var(--palette-sand-200);
-  --color-toast-on-accent: var(--palette-ink-800);
 
   --color-pick-bg-base: var(--palette-paper-150);
   --color-pick-bg-gray: var(--palette-mist-150);
