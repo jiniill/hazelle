@@ -6,7 +6,7 @@ import { Evaluation, EvaluationFailed, EvaluationStopped, EvaluationStuck, type 
 import { Evaluator, type EvaluationDown, type EvaluationUp } from './evaluation-core';
 import { changedTail, sameHistory } from './history-delta';
 
-const scope: ChatScope = { card: null, cast: [], packs: [], persona: null, prompt: null, note: null, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, messages: [], variables: [], greeting: null, toggles: new Map(), model: null, axModel: null, clock: { now: 0, timeZone: 'UTC' }, assets: [], inlays: [], modules: [], faces: { char: null, user: null }, screen: null, pick: '' };
+const scope: ChatScope = { card: null, cast: [], packs: [], persona: null, prompt: null, note: null, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, messages: [], variables: [], greeting: null, toggles: new Map(), model: null, axModel: null, clock: { now: 0, timeZone: 'UTC' }, assets: [], inlays: [], textfiles: [], modules: [], faces: { char: null, user: null }, screen: null, pick: '' };
 const message = (id: string, text: string) => ({ id, message: id, seed: id, role: 'user' as const, text, time: 0 });
 const none: Verdicts = { verdict: () => false, judged: () => {} };
 const screen = (chat = 'c') => ({ asker: 'screen', chat }) as const;

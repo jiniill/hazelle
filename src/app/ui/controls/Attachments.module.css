@@ -17,6 +17,38 @@
   background: var(--color-surface-raised);
 }
 
+.file {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  max-width: var(--attachment-file-width);
+  height: var(--attachment-size);
+  padding: 0 var(--space-32) 0 var(--space-12);
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+.words {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  font-size: var(--text-xs);
+}
+
 .failed {
   border-color: var(--color-warn-border);
 }

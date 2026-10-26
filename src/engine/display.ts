@@ -1,5 +1,5 @@
 import MarkdownIt, { type StateCore, type StateInline, type Token } from 'markdown-it';
-import { INLAY_MARKUP } from './assets';
+import { OWN_MARKUP } from './assets';
 import { unescapeCbs } from './cbs/escape';
 import { evaluate, Runaway } from './cbs/evaluate';
 import type { Box } from './regex/scripts';
@@ -154,10 +154,11 @@ function pictureLines(state: StateCore) {
   state.tokens = out;
 }
 
-// Without the bot's HTML, the chat's inlays still show: their markup alone is kept (engine/assets INLAY_MARKUP).
+// Without the bot's HTML, the chat's inlays and text files still show: their markup alone is kept (engine/assets
+// OWN_MARKUP).
 function inlay(state: StateInline, silent: boolean) {
-  INLAY_MARKUP.lastIndex = state.pos;
-  const found = INLAY_MARKUP.exec(state.src);
+  OWN_MARKUP.lastIndex = state.pos;
+  const found = OWN_MARKUP.exec(state.src);
   if (!found) return false;
   if (!silent) Object.assign(state.push('html_inline', '', 0), { content: found[0], meta: { block: found[1] !== undefined } });
   state.pos += found[0].length;

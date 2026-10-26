@@ -269,6 +269,7 @@ export const COMMANDS: readonly CommandGroup[] = [
       { names: ['button'], form: '{{button::글::트리거}}', what: '봇이 만드는 버튼이에요. 누르면 해당 이름의 트리거를 실행해요.' },
       { names: ['triggerid'], form: '{{triggerid}}', what: '버튼을 눌러 실행된 트리거 안에서 읽을 수 있는, 그 버튼의 risu-id 값이에요.' },
       { names: ['inlay', 'inlayed', 'inlayeddata'], form: '{{inlay::id}}', what: '채팅에 넣은 이미지를 보여 줘요. 내 메시지의 이미지는 이미지를 읽을 수 있는 모델에게도 가요.' },
+      { names: ['textfile'], form: '{{textfile::id}}', what: '메시지에 첨부한 텍스트 파일을 이름으로 보여 줘요. 모델에게는 파일 내용이 메시지 앞에 가요.' },
       { names: ['screenwidth'], form: '{{screenwidth}}', what: '현재 화면의 너비예요.' },
       { names: ['screenheight'], form: '{{screenheight}}', what: '현재 화면의 높이예요.' },
     ],

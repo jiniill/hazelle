@@ -5,7 +5,7 @@ import type { CbsTrace } from './cbs/evaluate';
 import type { Assembled } from './pipeline';
 import type { ChatScope } from './render';
 
-const scope: ChatScope = { card: null, cast: [], packs: [], persona: null, prompt: null, note: null, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, messages: [], variables: [], greeting: null, toggles: new Map(), model: null, axModel: null, clock: { now: Date.UTC(2026, 9, 24, 12, 3), timeZone: 'UTC' }, assets: [], inlays: [], modules: [], faces: { char: null, user: null }, screen: null, pick: '' };
+const scope: ChatScope = { card: null, cast: [], packs: [], persona: null, prompt: null, note: null, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, messages: [], variables: [], greeting: null, toggles: new Map(), model: null, axModel: null, clock: { now: Date.UTC(2026, 9, 24, 12, 3), timeZone: 'UTC' }, assets: [], inlays: [], textfiles: [], modules: [], faces: { char: null, user: null }, screen: null, pick: '' };
 const from = { kind: 'block', id: 'clock', name: 'Clock', slot: null } as const;
 const part: ForecastPart = { from, role: 'system', tokens: 10, state: 'write', change: 'changed', before: 0, point: 'cache' };
 const prompt = (content: string, parts: Assembled['parts'] = [{ from, tokens: 10 }]): Assembled => ({ messages: [{ role: 'system', content }], parts, lore: [], silent: [], invalidKeys: [], loreBudget: 0, memory: null, dropped: 0, problems: { found: [], omitted: 0 }, unseen: 0 });

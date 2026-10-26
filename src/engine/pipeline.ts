@@ -2,7 +2,7 @@ import type { CacheRender } from '../model/cache';
 import type { TokenEstimate, TokenFit } from '../model/token-calibration';
 import { cachePoints, type CachePart, type Sent } from './cache-points';
 import { fitChat, messageTokens, remembered, type ChatSent, type ProviderFit, type Part, type TooLong } from './prompt-budget';
-import { inlayIds, SIGNATURE } from './assets';
+import { inlayIds, SIGNATURE, textFileNames } from './assets';
 import type { ChatMessage } from '../connectors/types';
 import type { Memory, Written } from '../model/memory';
 import type { MascotId } from '../model/mascot';
@@ -382,12 +382,17 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
   const sendable = new Map(scope.inlays.filter((inlay) => inlay.type !== SIGNATURE && (inlay.attached || pictures.moved)).map(({ name, id }) => [name, id]));
   const shownIn = ({ role, text }: HistoryMessage) => (role === 'user' ? inlayIds([text]).flatMap((name) => sendable.get(name) ?? []) : []);
   const unseen = pictures.seen ? 0 : scope.messages.slice(covered).reduce((count, message) => count + shownIn(message).length, 0);
+  // A user message's text files go ahead of its text, each whole and named, as the file was: never through the bot's
+  // regex or CBS, which would rewrite code.
+  const files = new Map(scope.textfiles.map((file) => [file.name, file]));
+  const filed = ({ role, text }: HistoryMessage) => (role === 'user' ? textFileNames(text).flatMap((name) => files.get(name) ?? []).map(({ title, text }) => `<file name="${title.replaceAll('"', "'")}">\n${text}\n</file>`) : []);
   const messages = chat.texts
     .slice(covered)
     .map((text, offset): ChatSent => {
       const at = covered + offset;
       const inlays = pictures.seen ? shownIn(scope.messages[at]!) : [];
-      const message = { role: scope.messages[at]!.role, content: text.trim(), ...(inlays.length > 0 && { inlays }) };
+      const content = [...filed(scope.messages[at]!), text.trim()].filter(Boolean).join('\n\n');
+      const message = { role: scope.messages[at]!.role, content, ...(inlays.length > 0 && { inlays }) };
       // The greeting has none: Risu sends it as no message of its chat, and bots find it as the assistant message with
       // no memo.
       return at === 0 && scope.greeting !== null ? { message } : { message, origin: scope.messages[at]!.message };

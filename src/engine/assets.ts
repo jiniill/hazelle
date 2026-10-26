@@ -39,13 +39,25 @@ export function inlayIds(texts: Iterable<string>): string[] {
   return [...ids];
 }
 
-// A message with pictures attached in the composer: their tags lead it, each a paragraph's line before the text.
-// pictureLead takes them off again, for a step that must not touch them (the translation of a message sent translated).
-export const pictured = (names: readonly string[], text: string) => [names.map((name) => `{{inlay::${name}}}`).join(''), text].filter(Boolean).join('\n\n');
-export function pictureLead(text: string): { lead: string; text: string } {
-  const lead = /^(?:\{\{inlay::[^}]+\}\})+(?:\n\n|$)/.exec(text)?.[0] ?? '';
+// A message with pictures and text files attached in the composer: their tags lead it, the pictures' line and then the
+// files', each a paragraph before the text. attachmentLead takes them off again, for a step that must not touch them
+// (the translation of a message sent translated).
+export const withAttachments = ({ pictures, files }: { pictures: readonly string[]; files: readonly string[] }, text: string) =>
+  [pictures.map((name) => `{{inlay::${name}}}`).join(''), files.map((name) => `{{textfile::${name}}}`).join(''), text].filter(Boolean).join('\n\n');
+export function attachmentLead(text: string): { lead: string; text: string } {
+  const lead = /^(?:(?:\{\{(?:inlay|textfile)::[^}]+\}\})+(?:\n\n|$))+/.exec(text)?.[0] ?? '';
   return { lead, text: text.slice(lead.length) };
 }
+
+// The chat's text files a message names (model/library TextFile), by name, each once, in order.
+const TEXTFILE_TAG = /\{\{textfile::(.+?)\}\}/g;
+export const textFileNames = (text: string) => [...new Set([...text.matchAll(TEXTFILE_TAG)].map(([, name]) => name!))];
+export const swapTextFiles = (text: string, swap: (name: string) => string) => text.replace(TEXTFILE_TAG, (_, name: string) => swap(name));
+// The app's own markup for a text file, drawn after the display regex as inlays are; one the chat lacks has no title,
+// which Story.tsx words.
+const HTML_TEXT: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+export const placeTextFiles = (text: string, files: readonly { name: string; title: string }[]) =>
+  swapTextFiles(text, (name) => `<span data-textfile>${(files.find((file) => file.name === name)?.title ?? '').replace(/[&<>]/g, (char) => HTML_TEXT[char]!)}</span>`);
 export const placeInlays = (text: string, inlays: readonly { id: string; name: string; type: string }[]) =>
   text.replace(INLAY_TAG, (_, kind: string, name: string) => {
     const inlay = inlays.find((each) => each.name === name);
@@ -55,7 +67,7 @@ export const placeInlays = (text: string, inlays: readonly { id: string; name: s
   });
 const pattern = (markup: string) => markup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('@', ID);
 // Sticky: it matches only where its lastIndex stands. Group 1: the wrapped picture, a block of its own.
-export const INLAY_MARKUP = new RegExp(`${pattern(inlayMissing)}|(${pattern(inlayBlock('@'))})|${pattern(inlayPicture('@'))}`, 'y');
+export const OWN_MARKUP = new RegExp(`${pattern(inlayMissing)}|(${pattern(inlayBlock('@'))})|${pattern(inlayPicture('@'))}|<span data-textfile>[^<]*</span>`, 'y');
 
 // Risu's distance for a name that matches none: models write names from {{assetlist}} and often get one slightly wrong.
 const NEAR = 4;

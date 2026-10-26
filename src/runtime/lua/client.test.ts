@@ -9,7 +9,7 @@ import { luaStanding } from './snapshot';
 const snapshot: Snapshot = {
   messages: [{ role: 'user', data: 'first', time: 0 }, { role: 'char', data: 'last', time: 1 }], variables: [], globals: [],
   character: { name: '', description: '', firstMessage: '' }, persona: { name: '', description: '' }, note: '',
-  scope: { card: null, persona: null, prompt: null, note: null, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, variables: [], greeting: null, model: null, axModel: null, clock: { now: 0, timeZone: 'UTC' }, assets: [], inlays: [], modules: [], faces: { char: null, user: null }, screen: null, pick: 'chat', messages: [
+  scope: { card: null, persona: null, prompt: null, note: null, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, variables: [], greeting: null, model: null, axModel: null, clock: { now: 0, timeZone: 'UTC' }, assets: [], inlays: [], textfiles: [], modules: [], faces: { char: null, user: null }, screen: null, pick: 'chat', messages: [
     { id: 'a', message: 'a', seed: 'a', role: 'user', text: 'first', time: 0 }, { id: 'b', message: 'b', seed: 'b', role: 'assistant', text: 'last', time: 1 },
   ] },
 };

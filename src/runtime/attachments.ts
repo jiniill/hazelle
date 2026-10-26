@@ -1,7 +1,7 @@
 import type { ChatMessage, InputPicture } from '../connectors/types';
 import { imageType } from '../engine/import/card';
 import type { Assembled } from '../engine/pipeline';
-import type { Inlay } from '../model/library';
+import type { Inlay, TextFile } from '../model/library';
 import { toBase64 } from '../vault/aead';
 import type { ApiResult } from './api';
 import type { Drafts } from './drafts';
@@ -23,20 +23,42 @@ export async function addDraftPicture({ drafts, files }: { drafts: Drafts; files
     drafts.settle(name, state);
     return state;
   });
-  drafts.addPicture(key, { name, url: URL.createObjectURL(new Blob([sent.bytes], { type: sent.type })), state: { kind: 'saving' }, saved });
+  drafts.attach(key, { kind: 'picture', name, url: URL.createObjectURL(new Blob([sent.bytes], { type: sent.type })), state: { kind: 'saving' }, saved });
   return true;
 }
 
-// The chat's rows for a send's pictures, before the turn that reads them: one the chat already holds by its name, kept
-// from a send that failed after it, is not written again. Held here, since a new chat's screen holds it only a render
-// after its first save.
-export async function keepPictures(store: ObjectStore, chat: string, pictures: readonly Inlay[]): Promise<ApiResult<null>> {
+// A text file's row stays well inside one object's sealed body (BATCH_LIMITS.body), whatever its text deflates to.
+export const TEXT_FILE_BYTES = 512 * 1024;
+const UTF8 = new TextDecoder('utf-8', { fatal: true });
+
+// A text file put in the composer: UTF-8 with no NUL, which no binary file passes.
+export async function addDraftFile({ drafts }: { drafts: Drafts }, key: string, file: File): Promise<'added' | 'not-text' | 'too-large'> {
+  if (file.size > TEXT_FILE_BYTES) return 'too-large';
+  let text: string;
+  try {
+    text = UTF8.decode(await file.arrayBuffer());
+  } catch {
+    return 'not-text';
+  }
+  if (text.includes('\0')) return 'not-text';
+  drafts.attach(key, { kind: 'file', value: { name: crypto.randomUUID(), title: file.name, text } });
+  return 'added';
+}
+
+// The chat's rows for a send's attachments, before the turn that reads them: one the chat already holds by its name,
+// kept from a send that failed after it, is not written again. Held here, since a new chat's screen holds it only a
+// render after its first save.
+export async function keepAttachments(store: ObjectStore, chat: string, pictures: readonly Inlay[], files: readonly TextFile[]): Promise<ApiResult<null>> {
   const lease = store.retainChat(chat);
   try {
     const unloaded = await lease.ready;
     if (unloaded) return unloaded;
-    const held = new Set(store.children('inlay', chat).map(({ value }) => value.name));
-    const writes = pictures.filter(({ name }) => !held.has(name)).map((value): Write => ({ type: 'create', kind: 'inlay', id: crypto.randomUUID(), parent: chat, value }));
+    const heldPictures = new Set(store.children('inlay', chat).map(({ value }) => value.name));
+    const heldFiles = new Set(store.children('textfile', chat).map(({ value }) => value.name));
+    const writes = [
+      ...pictures.filter(({ name }) => !heldPictures.has(name)).map((value): Write => ({ type: 'create', kind: 'inlay', id: crypto.randomUUID(), parent: chat, value })),
+      ...files.filter(({ name }) => !heldFiles.has(name)).map((value): Write => ({ type: 'create', kind: 'textfile', id: crypto.randomUUID(), parent: chat, value })),
+    ];
     return writes.length ? await store.batch(writes) : { ok: true, data: null };
   } finally {
     lease.release();

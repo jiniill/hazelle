@@ -1,3 +1,4 @@
+import { textFileNames } from '../engine/assets';
 import { fileStem } from '../engine/file-name';
 import { RISU_ALL_CHATS, risuChat, risuChatJson } from '../engine/import/risu-chat';
 import type { Json } from '../engine/import/convert';
@@ -11,6 +12,7 @@ import { evaluationFailure } from './evaluation';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
 import { summaryId } from './summary';
+import { toBase64 } from '../vault/aead';
 
 type Reader = Pick<Session, 'store'>;
 
@@ -47,12 +49,18 @@ async function lineOf({ store }: Reader, id: string): Promise<ApiResult<{ chat: 
   const greeting = scope.greeting?.index ?? null;
   const edited = opening && (greeting === null || shown(messages[0]!).edited);
   const lore = lorebookOf(store, id, chat.loreFolders ?? []);
+  // Risu carries a text file inside the message as its own {{file::name::base64}}. The stages have read the message's
+  // tags away (cbs/tags.ts), so they are found in the text as stored and lead the message, as the composer put them.
+  const files = new Map(scope.textfiles.map((file) => [file.name, file]));
+  const risuFiles = (stored: string) => textFileNames(stored).flatMap((name) => files.get(name) ?? []).map(({ title, text }) => `{{file::${title.replace(/[:{}]/g, '_')}::${toBase64(encoder.encode(text))}}}`).join('');
   const line = messages.flatMap((message, index) => {
     if (opening && index === 0) return [];
     const version = shown(message);
     // A failed reply is no part of the story, as the 아카라이브 log leaves it out.
     if (version.receipt?.state === 'failed') return [];
-    return [{ id: message.id, role: message.role, text: version.staged ? version.text : state.staged[index]!, at: version.at, ...(version.reasoning && { reasoning: version.reasoning }) }];
+    const text = version.staged ? version.text : state.staged[index]!;
+    const filed = risuFiles(version.text);
+    return [{ id: message.id, role: message.role, text: filed ? filed + text.trimStart() : text, at: version.at, ...(version.reasoning && { reasoning: version.reasoning }) }];
   });
   const written = risuChat({
     id: crypto.randomUUID(),

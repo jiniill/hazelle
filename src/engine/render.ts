@@ -7,7 +7,8 @@ import type { Card, Pack } from './import/types';
 import type { LoreEntries, LoreScan } from './lorebook/activate';
 import { progressed } from './progress';
 import { Scripts, type Box } from './regex/scripts';
-import { placeInlays } from './assets';
+import type { TextFile } from '../model/library';
+import { placeInlays, placeTextFiles } from './assets';
 
 export type Stage = 'display' | 'prompt';
 
@@ -43,6 +44,8 @@ export type ChatScope = {
   assets: CbsContext['assets'];
   // The chat's own pictures (model/library Inlay), each named by its tag's id exactly; never one of assets.
   inlays: readonly { id: string; name: string; type: string; attached?: true }[];
+  // The chat's own text files (model/library TextFile), each named by its tag's name exactly.
+  textfiles: readonly TextFile[];
   modules: CbsContext['modules'];
   faces: CbsContext['faces'];
   // The window the chat is shown in, which only the display reads; null in a turn and in a chat's preview.
@@ -153,7 +156,7 @@ export function renderChat(
       }
       edited = held?.text ?? '';
     }
-    const shown = renderStage(stage, scripts, context, scope.inlays, index, edited, variables, take);
+    const shown = renderStage(stage, scripts, context, scope, index, edited, variables, take);
     if (shown.stopped) { stopped ??= shown.stopped; failures.display.set(index, shown.stopped); }
     return shown;
   };
@@ -207,10 +210,10 @@ export function renderChat(
     drawn[0] = shown.drawn;
     boxes[0] = shown.boxes;
   }
-  return { texts, staged: past, wrote, start, variables, drawn, boxes, missed, unfound, stopped, finish: states ? (index, text) => renderStage(stage, scripts, context, scope.inlays, index, text, index === 0 && later ? variables : states.at(index), take) : null, failures, scripts };
+  return { texts, staged: past, wrote, start, variables, drawn, boxes, missed, unfound, stopped, finish: states ? (index, text) => renderStage(stage, scripts, context, scope, index, text, index === 0 && later ? variables : states.at(index), take) : null, failures, scripts };
 }
 
-function renderStage(stage: Stage, scripts: Scripts, context: ReturnType<typeof contexts>, inlays: ChatScope['inlays'], index: number, text: string, variables: ReadonlyMap<string, string>, take: ReadonlySet<number>) {
+function renderStage(stage: Stage, scripts: Scripts, context: ReturnType<typeof contexts>, { inlays, textfiles }: Pick<ChatScope, 'inlays' | 'textfiles'>, index: number, text: string, variables: ReadonlyMap<string, string>, take: ReadonlySet<number>) {
   progressed();
   const read = new Map(variables);
   let stopped: Runaway | null = null;
@@ -223,7 +226,7 @@ function renderStage(stage: Stage, scripts: Scripts, context: ReturnType<typeof 
     result = { text, drawn: [], boxes: [] };
   }
   // Before unescapeCbs, so an escaped tag stays text.
-  const finished = (html: string) => unescapeCbs(stage === 'display' ? placeInlays(html, inlays) : html);
+  const finished = (html: string) => unescapeCbs(stage === 'display' ? placeTextFiles(placeInlays(html, inlays), textfiles) : html);
   return { text: finished(result.text), drawn: result.drawn, boxes: result.boxes.map((box) => ({ ...box, html: finished(box.html) })), stopped };
 }
 

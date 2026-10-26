@@ -446,6 +446,7 @@
   --avatar-lg: 72px;
   /* A picture put in the composer, waiting to be sent (Attachments). */
   --attachment-size: 64px;
+  --attachment-file-width: 240px;
   /* A post's 추천 column in a feed (VoteButton). */
   --vote-width: 52px;
   --vote-fill-opacity: 0.25;

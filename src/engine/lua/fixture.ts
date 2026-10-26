@@ -30,6 +30,7 @@ export const SNAPSHOT: Snapshot = {
     clock: { now: 0, timeZone: 'UTC' },
     assets: [],
     inlays: [],
+    textfiles: [],
     modules: [],
     faces: { char: null, user: null },
     screen: null,

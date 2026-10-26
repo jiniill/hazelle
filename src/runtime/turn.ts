@@ -19,8 +19,8 @@ import { endCall } from './streams';
 import { resumeTranslation, translate, type TranslateFailure, type TranslationTarget } from './translate';
 import { findRecords } from './retrieval';
 import { preread } from './preread';
-import { withPictures } from './inlays';
-import { pictureLead } from '../engine/assets';
+import { withPictures } from './attachments';
+import { attachmentLead } from '../engine/assets';
 import { agentsOf, preAgents } from './agents';
 import type { Preparing, Skip, StepFailure } from './turn-steps';
 
@@ -258,7 +258,7 @@ export async function resumeSend(session: Pick<Session, 'store' | 'credentials' 
     if (!made.ok && made.failure.kind === 'stopped') return;
     const id = stream.value.result;
     const follows = purpose.follows !== undefined && { follows: purpose.follows };
-    const said = made.ok ? { id, text: pictureLead(purpose.typed).lead + made.translation.text, ...follows, translation: { ...made.translation, text: purpose.typed, sentIn: purpose.language } } : { id, text: purpose.typed, ...follows };
+    const said = made.ok ? { id, text: attachmentLead(purpose.typed).lead + made.translation.text, ...follows, translation: { ...made.translation, text: purpose.typed, sentIn: purpose.language } } : { id, text: purpose.typed, ...follows };
     const saved = await appendUserMessage(session.store, stream.parent!, said);
     if (!saved.ok && saved.error === 'stopped') return;
     if (saved.ok || session.store.children('entry', stream.parent!).some((entry) => entry.id === id)) endCall(session.store, stream.id);
@@ -272,7 +272,7 @@ export async function resumeSend(session: Pick<Session, 'store' | 'credentials' 
 async function sendTranslated(session: Session, chat: string, turn: TurnContext, signal: AbortSignal): Promise<TurnContext | Extract<TurnFailure, { kind: 'untranslated' }>> {
   const typed = turn.said!;
   // The translation's text renders a picture's tag to nothing, so the pictures stay out of it and lead its result.
-  const { lead, text } = pictureLead(typed.text);
+  const { lead, text } = attachmentLead(typed.text);
   if (!text.trim()) return turn;
   const messages = session.read.chat(chat).snapshot()!.messages;
   const input = translationInput(session, chat, turn.chat, messages, { kind: 'input', text });

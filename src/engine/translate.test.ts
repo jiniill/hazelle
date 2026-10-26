@@ -30,7 +30,7 @@ const scope: ChatScope = {
   axModel: null,
   clock: { now: 0, timeZone: 'UTC' },
   assets: [],
-  inlays: [],
+  inlays: [], textfiles: [],
   modules: [],
   faces: { char: null, user: null },
   screen: null,

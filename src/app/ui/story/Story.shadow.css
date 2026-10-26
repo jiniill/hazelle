@@ -126,6 +126,20 @@
     color: var(--color-text-muted);
   }
 
+  /* A text file the message carries (engine/assets placeTextFiles), by its name. */
+  [data-textfile] {
+    display: inline-flex;
+    max-width: 100%;
+    margin: 0 var(--space-4) var(--space-4) 0;
+    padding: var(--space-4) var(--space-8);
+    border: var(--border-thin) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-raised);
+    color: var(--color-text-muted);
+    font: var(--text-sm) / var(--leading-tight) var(--font-mono);
+    overflow-wrap: anywhere;
+  }
+
   a {
     color: var(--color-accent);
   }

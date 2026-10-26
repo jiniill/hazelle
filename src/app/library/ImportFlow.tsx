@@ -3,7 +3,6 @@ import { useToast } from '../toast';
 import { Check, FileText, MessageSquare, MessageSquarePlus, Package, Puzzle, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { EXPANSION, METADATA_BYTES } from '../../engine/import/inflate';
-import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import type { ImportFailure } from '../../engine/import/types';
 import { characterTexts, live } from '../../model/library';
 import { EMPTY_SETTINGS } from '../../model/settings';
@@ -20,7 +19,8 @@ import { ofSort, removePrompt, savePreset } from '../../runtime/prompts';
 import type { ObjectStore } from '../../runtime/store';
 import { aliased } from '../common/alias';
 import { describeFailure } from '../common/failure';
-import { ImportContext } from '../common/importing';
+import { IMPORT_ACCEPT, ImportContext } from '../common/importing';
+import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import { sizeText } from '../common/size';
 import { useSearch } from '../common/useSearch';
 import { BIN, MISSED, moduleName, NO_CHARACTER, promptName, RISU_PLUGIN, TOOL } from '../common/words';
@@ -34,10 +34,8 @@ import { MoveDialog } from './MoveDialog';
 import { MoveFlow } from './MoveFlow';
 import { stepOf } from './saving';
 
-const PRESETS = PRESET_EXTENSIONS.join(',');
 // The preview's own 못 가져온 것: nothing is saved yet.
 const WONT_COME = '못 가져오는 것';
-const ACCEPT = `.png,.charx,.jpg,.jpeg,.json,.lorebook,.risum,.bin,.js,${PRESETS}`;
 const OPENS: { kind: Exclude<ImportOutcome['kind'], 'character'>; icon: LucideIcon; label: string; route: (id: string) => Route }[] = [
   { kind: 'chat', icon: MessageSquare, label: '열기', route: (id) => ({ kind: 'chat', id }) },
   { kind: 'module', icon: Package, label: '모듈 보기', route: (id) => ({ kind: 'module', id, pane: null }) },
@@ -356,7 +354,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     else setNotice(() => then);
   }
 
-  function open(to: Target, accept = ACCEPT) {
+  function open(to: Target, accept = IMPORT_ACCEPT) {
     asked(() => pickFiles(accept, true, (picked) => void take(picked, to)));
   }
 
@@ -406,7 +404,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       value={{
         pick: () => open(undefined),
         pickChats: open,
-        pickPrompts: () => open(undefined, PRESETS),
+        pickPrompts: () => open(undefined, PRESET_EXTENSIONS.join(',')),
         pickPersonas: () => open(undefined, '.png'),
         move: () => asked(() => setAsking(true)),
         bring: (file) => new Promise((done) => asked(() => void take([file], undefined, false).then((results) => done(results.some((result) => result.kind === 'character'))))),

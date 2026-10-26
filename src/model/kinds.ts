@@ -2,7 +2,7 @@ import type { Connection } from '../connectors/types';
 import type { CachePrint } from './cache';
 import type { Chat, Entry, Summary } from './chat';
 import type { Folder } from './folders';
-import type { Asset, Avatar, Character, Inlay, Lore, Module } from './library';
+import type { Asset, Avatar, Character, Inlay, Lore, Module, TextFile } from './library';
 import type { Illustration } from './illustration';
 import type { Likeness } from './likeness';
 import type { Remark } from './mascot';
@@ -32,6 +32,7 @@ export type Values = {
   share: Share;
   // A chat's own picture, attached in the composer or brought from Risu's inlay store: never one of its card's assets.
   inlay: Inlay;
+  textfile: TextFile;
   chat: Chat;
   entry: Entry;
   summary: Summary;
@@ -85,6 +86,7 @@ export const KINDS = {
   illustration: { parent: 'chat', file: true },
   remark: { parent: 'chat' },
   inlay: { parent: 'chat', file: true },
+  textfile: { parent: 'chat' },
   connection: { parent: null },
   settings: { parent: null, id: SETTINGS_ID },
   order: { parent: null, id: ORDER_ID },
@@ -196,6 +198,7 @@ const SHAPES = {
   likeness: shape({ portraits: listOf(shape({ ...all(str, 'name', 'look', 'artist', 'source'), aliases: listOf(str), outfits: listOf(shape(all(str, 'name', 'tags'))) })), at: num, receipt: orNull(isRecord) }),
   share: shape({ share: str, key: str }),
   inlay: (value) => picture(value) && isRecord(value) && (value.attached === undefined || value.attached === true),
+  textfile: shape(all(str, 'name', 'title', 'text')),
   chat: shape({ title: orNull(str), character: orNull(str), models: isRecord, cast: (value) => value === undefined || listOf(str)(value), bookmarks: (value) => value === undefined || listOf(shape({ message: str }))(value), loreFolders: (value) => value === undefined || listOf(shape({ id: str, name: str }))(value), movedPictures: (value) => value === undefined || value === true }),
   entry: (value) => isRecord(value) && typeof value.type === 'string' && Object.hasOwn(ENTRIES, value.type) && ENTRIES[value.type as Entry['type']](value),
   summary: shape({ version: num, head: num, chatRev: num, dependencies: listOf(isRecord), rendered: shape({ now: num, timeZone: str }), character: orNull(str), title: str, preview: str, count: num, at: orNull(num), order: num, recent: listOf(isRecord) , stuck: (value) => value === undefined || shape({ dependencies: listOf(isRecord) })(value) }),

@@ -1,5 +1,6 @@
 import { useRef, type KeyboardEvent } from 'react';
 import { refOf } from '../../connectors/assignment';
+import type { DraftAttachment } from '../../runtime/drafts';
 import type { Blocked } from '../../runtime/turn-context';
 import { describeTurnFailure } from '../common/failure';
 import { withParticle } from '../common/particles';
@@ -10,8 +11,8 @@ import { navigate } from '../shell/router';
 import { keysOf, SHORTCUTS, titled, typing, useShortcut } from '../shortcuts';
 import { useDisplay } from '../display';
 import { useRemembering } from '../session';
-import { useImport } from '../common/importing';
-import { Attachments, Callout, Composer, DropOverlay, Hint, pressed, pressedKey, SendButton, SendNote, useFileDrop, useMenuOpener } from '../ui';
+import { imports, useImport } from '../common/importing';
+import { Attachments, type Attached, Callout, Composer, DropOverlay, Hint, pressed, pressedKey, SendButton, SendNote, useFileDrop, useMenuOpener } from '../ui';
 import { ChatAsk } from './ChatAsk';
 import { ChatAttach } from './ChatAttach';
 import { ChatCache } from './ChatCache';
@@ -37,6 +38,11 @@ const FIX = {
   'profile-missing': { label: '모델 설정 선택', chip: 'profile' },
 } as const satisfies Record<Blocked['kind'], { label: string; chip: Chip }>;
 
+const attachedItem = (each: DraftAttachment): Attached =>
+  each.kind === 'picture'
+    ? { kind: 'picture', key: each.name, url: each.url, label: '이미지', state: each.state.kind }
+    : { kind: 'file', key: each.value.name, label: each.value.title, detail: `${each.value.text.split('\n').length.toLocaleString()}줄`, state: 'saved' };
+
 // folded: ChatScreen's, which the frame's footer measures by, so the two never disagree.
 export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean }) {
   const { draft, attachments, messages, last, answerable, busy, problem, skippable, stuck, translate, sendLanguage, modelMenu, shelf, route, actions } = chat;
@@ -53,13 +59,15 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
   const indexing = chat.features.memory && chat.id !== null ? remembering.indexing.get(chat.id) : undefined;
   const sendKeys = keysOf('send', useDisplay().display.enterSends);
   const typed = draft.text.trim() !== '' || attachments.draft.length > 0;
-  const unseen = chat.sendNotes.unseen + (attachments.sees === false ? attachments.draft.length : 0);
+  const unseen = chat.sendNotes.unseen + (attachments.sees === false ? attachments.draft.filter(({ kind }) => kind === 'picture').length : 0);
   const { drop } = useImport();
-  // A chat takes pictures dropped on it; any other file goes to the app's import, as it does on every other screen.
+  // A chat takes pictures and text files dropped on it; a file the app imports (a card, a module, a plugin's .js) goes
+  // to the import, as it does on every other screen.
   const dragging = useFileDrop((files) => {
-    const pictures = files.filter(({ type }) => type.startsWith('image/'));
-    if (pictures.length) actions.attachPictures(pictures);
-    if (pictures.length < files.length) drop(files.filter((file) => !pictures.includes(file)));
+    const imported = files.filter((file) => !file.type.startsWith('image/') && imports(file.name));
+    const attached = files.filter((file) => !imported.includes(file));
+    if (attached.length) actions.attach(attached);
+    if (imported.length) drop(imported);
   }, 'screen');
   // Moving through the story works where no text is typed: outside a text field, or in this one while it is empty.
   const free = (event?: globalThis.KeyboardEvent) => !typing(event) || (event!.target === input.current && draft.text === '');
@@ -124,11 +132,11 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
         onChange={draft.set}
         onKeyDown={onKey}
         placeholder={translate.input ? `${withParticle(sendLanguage, '으로/로')} 번역해서 보내요` : '메시지'}
-        attachments={<Attachments items={attachments.draft.map(({ name, url, state }) => ({ key: name, url, label: '이미지', state: state.kind }))} onRemove={actions.removePicture} />}
-        onFiles={actions.attachPictures}
+        attachments={<Attachments items={attachments.draft.map(attachedItem)} onRemove={actions.detach} />}
+        onFiles={actions.attach}
         tools={
           <>
-            <ChatAttach sees={attachments.sees} moved={attachments.moved} onAttach={actions.attachPictures} onMoved={actions.sendMoved} />
+            <ChatAttach sees={attachments.sees} moved={attachments.moved} onAttach={actions.attach} onMoved={actions.sendMoved} />
             <ChatPersonaPicker persona={chat.persona} open={chat.dialog === 'persona'} onOpen={() => actions.openDialog('persona')} />
             <ChatNote id={chat.id} note={chat.note} prompt={chat.prompt} onSave={actions.setNote} />
             {chat.features.translate && <ChatTranslate
@@ -161,7 +169,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
           </>
         }
       />
-      {dragging && <DropOverlay>이미지는 메시지에 넣어요</DropOverlay>}
+      {dragging && <DropOverlay>이미지와 텍스트 파일은 메시지에 넣어요</DropOverlay>}
     </>
   );
 }

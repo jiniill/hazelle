@@ -33,6 +33,7 @@ export const SAMPLE: ChatScope = {
   clock: { now: Date.UTC(2026, 9, 1, 3), timeZone: 'Asia/Seoul' },
   assets: [],
   inlays: [],
+  textfiles: [],
   modules: [],
   faces: { char: null, user: null },
   screen: null,

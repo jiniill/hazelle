@@ -91,6 +91,7 @@ const scope = ({ card: own = card(), ...over }: Partial<PromptInput['scope']> = 
   clock: { now: Date.UTC(2026, 8, 28), timeZone: 'UTC' },
   assets: [],
   inlays: [],
+  textfiles: [],
   modules: [],
   faces: { char: null, user: null },
   screen: null,
@@ -256,6 +257,14 @@ describe('assemble', () => {
     expect(sent({ seen: true, moved: true }).messages.find(({ content }) => content === 'Look.')).toEqual({ role: 'user', content: 'Look.', inlays: ['row-old'] });
     const unseen = sent({ seen: false, moved: true });
     expect([unseen.messages.some(({ inlays }) => inlays), unseen.messages.some(({ content }) => content === ''), unseen.unseen]).toEqual([false, false, 2]);
+  });
+
+  it("puts a user message's text files ahead of its text, whole and named, past the bot's regex and CBS", () => {
+    const messages = [message('u1', 'user', '{{textfile::f}}\n\n이거 봐.'), message('a1', 'assistant', 'Sure.'), message('u2', 'user', '{{textfile::gone}}')];
+    const textfiles = [{ name: 'f', title: 'a "b".ts', text: 'const x = "{{user}}";' }];
+    const sent = assembledOf(assemble(input({ messages, greeting: null, textfiles }))).messages;
+    expect(sent.find(({ role, content }) => role === 'user' && content.includes('이거 봐.'))!.content).toBe('<file name="a \'b\'.ts">\nconst x = "{{user}}";\n</file>\n\n이거 봐.');
+    expect(sent.at(-1)!.role).not.toBe('user');
   });
 
   it('never scans the greeting for keys, and still places @@depth entries counting from the chat’s end', () => {

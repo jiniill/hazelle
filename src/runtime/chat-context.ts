@@ -110,6 +110,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
   const route = chatModel(store, chat, 'main');
   const aux = chatModel(store, chat, 'aux');
   const toggles = togglesOf(store, chat, prompt);
+  const loaded = id !== null && store.scopeState(id) === 'loaded';
   return {
     card,
     cast: cast.map(({ id, value }) => ({ id, card: value.card })),
@@ -138,7 +139,8 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
     clock: { now: Date.now(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
     assets: owners.flatMap(({ id: owner, module }) => store.children('asset', owner).map(({ id, value }) => ({ id, name: value.name, type: value.type, ...(module && { module: module.namespace }) }))),
     // Held only while the chat is loaded; a chat not saved yet has none.
-    inlays: id !== null && store.scopeState(id) === 'loaded' ? store.children('inlay', id).map(({ id, value }) => ({ id, name: value.name, type: value.type, ...(value.attached && { attached: true as const }) })) : [],
+    inlays: loaded ? store.children('inlay', id).map(({ id, value }) => ({ id, name: value.name, type: value.type, ...(value.attached && { attached: true as const }) })) : [],
+    textfiles: loaded ? store.children('textfile', id).map(({ value }) => value) : [],
     modules: packs.flatMap(({ module }) => module?.namespace ?? []),
     faces: {
       char: chat.character === null ? null : (store.children('avatar', chat.character)[0]?.value.thumb ?? null),

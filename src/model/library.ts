@@ -133,6 +133,10 @@ export type Asset = { name: string; type: string; size: number; file: FileRef };
 // where the chat's movedPictures is on.
 export type Inlay = Asset & { attached?: true };
 
+// Kind `textfile`, a text file the user put in the composer, which its message names by name ({{textfile::name}}) and
+// which goes to the model with that message (engine/pipeline). title: the file's own name.
+export type TextFile = { name: string; title: string; text: string };
+
 // A character with its chats, or (id null) the chats that have no character: 캐릭터 없이. face: the avatar's thumbnail;
 // avatar: its id, whose file is the picture at full size.
 export type Shelf<C> = { id: string | null; character: Character | null; face: string | null; avatar: string | null; chats: C[] };

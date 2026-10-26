@@ -177,9 +177,10 @@ define('chardisplayasset', 0, (_, { context: { card } }) => (card ? '[]' : null)
 define('moduleenabled', 1, ([namespace], { context }) => (context.modules.includes(namespace!) ? '1' : '0'));
 define('moduleassetlist', 1, ([namespace], { context: { modules, assets } }) => (modules.includes(namespace!) ? serialize(assets.filter((asset) => asset.module === namespace).map(({ name }) => name)) : ''));
 
-// The prompt's text drops a chat's inlays, which go beside it as pictures (engine/pipeline); the display keeps the tag
-// for placeInlays (engine/assets.ts), after its regex.
+// The prompt's text drops a chat's inlays and text files, which go beside it as pictures and ahead of it as files
+// (engine/pipeline); the display keeps the tag for placeInlays and placeTextFiles (engine/assets.ts), after its regex.
 define('inlay inlayed inlayeddata', 1, (_, { context }) => (context.stage === 'display' ? null : ''));
+define('textfile', 1, (_, { context }) => (context.stage === 'display' ? null : ''));
 
 define('getvar', 1, ([name], { context }) => readVar(context, name!));
 define('setvar', 2, ([name, value], { context, writes }) => {

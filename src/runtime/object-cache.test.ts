@@ -184,7 +184,7 @@ it('reopens a session with sealed cached objects before any network read', async
   expect(opened.data.store.get('connection', 'connection')?.value.label).toBe('cached');
   expect(f.fetch).not.toHaveBeenCalled();
   opened.data.startBackground();
-  expect(f.fetch).toHaveBeenCalledWith('/api/objects?since=1&exclude=entry,memory,illustration,inlay,toolchat,cacheprint,remark,ledger&timeline=t0', expect.anything());
+  expect(f.fetch).toHaveBeenCalledWith('/api/objects?since=1&exclude=entry,memory,illustration,inlay,textfile,toolchat,cacheprint,remark,ledger&timeline=t0', expect.anything());
   opened.data.close();
 });
 
@@ -232,7 +232,7 @@ it('renders a saved bootstrap prefix and resumes its original until bound in the
   expect(opened.data.store.list('connection').map((row) => row.id)).toEqual(['first']);
   expect(f.fetch).not.toHaveBeenCalled();
   opened.data.startBackground();
-  expect(f.fetch.mock.lastCall?.[0]).toBe('/api/objects?since=1&exclude=entry,memory,illustration,inlay,toolchat,cacheprint,remark,ledger&bootstrap=1&until=2&count=1&known=2&timeline=t0');
+  expect(f.fetch.mock.lastCall?.[0]).toBe('/api/objects?since=1&exclude=entry,memory,illustration,inlay,textfile,toolchat,cacheprint,remark,ledger&bootstrap=1&until=2&count=1&known=2&timeline=t0');
   opened.data.close();
 });
 
