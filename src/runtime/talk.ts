@@ -48,10 +48,14 @@ export type Turn = {
   retrying?: true;
   stopping?: true;
   preparing?: Preparing;
+  reading?: Reading;
 };
+// The call the reply is read from: when it was asked (a receipt's totalMs counts from there), and how much text and
+// reasoning came before it, a continuation's, which its own output does not count.
+export type Reading = { at: number; text: number; reasoning: number };
 // unstored: the user's message shown before the store has it. Nothing may be saved against it yet: fold skips, for
 // good, an entry that names a message saved after it.
-export type Shown = Message & { live: string | null; whole?: true; batch?: true; retrying?: true; stopping?: true; preparing?: Preparing; unstored?: true };
+export type Shown = Message & { live: string | null; whole?: true; batch?: true; retrying?: true; stopping?: true; preparing?: Preparing; reading?: Reading; unstored?: true };
 
 // The prompt, which the reply's id seeds. settings: the model's 설정 묶음 as stored, which the request fits to the model.
 // said: the user's message as it is saved, which a message sent translated saves translated; null when prepare saved it
@@ -87,7 +91,7 @@ export function withTurn(messages: Message[], turn: Turn | null, chat: string): 
     out.push(message);
   }
   const version = { id: reply.id, seed: reply.continues?.seed ?? reply.id, text: turn.text, receipt: null, edited: false, at: now, ...(reply.before && { before: reply.before }), ...(turn.reasoning && { reasoning: turn.reasoning }) };
-  const live = { live: reply.id, ...(turn.whole && { whole: true as const }), ...(turn.batch && { batch: true as const }), ...(turn.retrying && { retrying: true as const }), ...(turn.stopping && { stopping: true as const }), ...(turn.preparing && { preparing: turn.preparing }) };
+  const live = { live: reply.id, ...(turn.whole && { whole: true as const }), ...(turn.batch && { batch: true as const }), ...(turn.retrying && { retrying: true as const }), ...(turn.stopping && { stopping: true as const }), ...(turn.preparing && { preparing: turn.preparing }), ...(turn.reading && { reading: turn.reading }) };
   // A reply saved while its turn is held stays live until the turn ends, so nothing between its save and Talk's end
   // shows it settled (Translator.expect).
   const saved = out.findIndex((message) => message.id === (reply.message ?? reply.id) && message.versions.some((existing) => existing.id === reply.id));
@@ -274,6 +278,7 @@ export class Talk {
       call.retrying = this.retrying(held);
       this.reading.add(call.id);
       held.calling = call.id;
+      this.change(held, { ...held.turn, reading: { at: Date.now(), text: held.turn.text.length, reasoning: held.turn.reasoning.length } });
       const replying = generate({ credentials: this.credentials, log: this.log, connection: route.connection.value, model: route.model, settings, retries: retriesOf(this.store, route.connection.value, settings), messages: prompt.messages, call, signal: abort.signal, onText: this.writer(held, true), inline: this.inline(held), batching });
       const sent = await sending;
       if (sent && !sent.ok) {
@@ -318,7 +323,8 @@ export class Talk {
     const lease = this.store.retainChat(chat);
     const reply = { id: stream.value.result, message: purpose.message, replaces: purpose.replaces, ...(purpose.follows !== undefined && { follows: purpose.follows }), continues: purpose.continues, ...(purpose.before && { before: purpose.before }) };
     const held = this.seat(chat, null, reply);
-    if ('batch' in stream.value) this.change(held, { ...held.turn, whole: true, batch: true });
+    const reading = { at: stream.value.at, text: held.turn.text.length, reasoning: held.turn.reasoning.length };
+    this.change(held, { ...held.turn, reading, ...('batch' in stream.value && { whole: true as const, batch: true as const }) });
     this.reading.add(stream.id);
     held.calling = stream.id;
     try {

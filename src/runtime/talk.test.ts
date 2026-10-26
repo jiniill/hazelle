@@ -334,6 +334,22 @@ describe('Talk', () => {
       await vi.waitFor(() => expect(heard).toEqual(['reply-started: 인사를 받았다.', 'reply-received']));
     }));
 
+  it('keeps on the turn when its call was asked, the same through every chunk, so a page come back counts from it', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const chat = await chatSaid(session);
+      const readings = new Set<unknown>();
+      session.talk.subscribe(() => readings.add(session.talk.snapshot(chat)?.reading));
+      const events = [{ choices: [{ delta: { content: '반가' } }] }, { choices: [{ delta: { content: '워요' }, finish_reason: 'stop' }] }];
+      stubRelay(() => new Response(`${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`, { headers: { [RELAY_HEADER]: 'upstream' } }));
+      const before = Date.now();
+
+      await takeTurn(session, chat, { kind: 'answer' });
+      const asked = [...readings].filter((reading) => reading !== undefined);
+      expect(asked).toEqual([{ at: expect.any(Number), text: 0, reasoning: 0 }]);
+      expect((asked[0] as { at: number }).at).toBeGreaterThanOrEqual(before);
+    }));
+
   it('ends a turn whose prepare throws, so the next one runs', () =>
     server.withSession(async (session) => {
       const turn = { chat: crypto.randomUUID(), said: null, reply: { id: 'r', message: null, replaces: null, continues: null } };

@@ -188,32 +188,42 @@ export function Marker({ reason, label, action }: MarkerProps) {
 // A fact on the usage line: its number bright, the word naming it faint; a fact its number names alone has no label.
 export type UsagePart = { label?: string; value: string };
 
-// lead: the fact read first (a cost), bold before the rest; null leaves the line to the rest.
-export function Usage({ lead, parts, facts, more }: { lead: string | null; parts: UsagePart[]; facts: FactItem[]; more: { label: string; onClick: () => void } }) {
+// lead: the fact read first (a cost), bold before the rest; null leaves the line to the rest. opens: the facts the line
+// opens below it, and from them the whole account (more); a line without them, as while the reply is written, opens nothing.
+export function Usage({ lead, parts, opens }: { lead: string | null; parts: UsagePart[]; opens?: { facts: FactItem[]; more: { label: string; onClick: () => void } } }) {
   const [open, setOpen] = useState(false);
+  const line = (
+    <>
+      {lead && <span className={styles.usageLead}>{lead}</span>}
+      {parts.map(({ label, value }, index) => (
+        // The dot ends the fact before it, so a line the strip wraps onto never starts with one.
+        <span key={label ?? value} className={styles.usagePart}>
+          {label && `${label} `}
+          <span className={styles.usageValue}>{value}</span>
+          {index < parts.length - 1 && (
+            <span className={styles.usageDot} aria-hidden>
+              ·
+            </span>
+          )}
+        </span>
+      ))}
+    </>
+  );
   return (
     <div className={styles.usage}>
-      <button type="button" className={styles.usageLine} aria-expanded={open} onClick={() => setOpen(!open)}>
-        {lead && <span className={styles.usageLead}>{lead}</span>}
-        {parts.map(({ label, value }, index) => (
-          // The dot ends the fact before it, so a line the strip wraps onto never starts with one.
-          <span key={label ?? value} className={styles.usagePart}>
-            {label && `${label} `}
-            <span className={styles.usageValue}>{value}</span>
-            {index < parts.length - 1 && (
-              <span className={styles.usageDot} aria-hidden>
-                ·
-              </span>
-            )}
-          </span>
-        ))}
-        <Icon icon={open ? ChevronUp : ChevronDown} size="sm" />
-      </button>
-      {open && (
+      {opens ? (
+        <button type="button" className={styles.usageLine} aria-expanded={open} onClick={() => setOpen(!open)}>
+          {line}
+          <Icon icon={open ? ChevronUp : ChevronDown} size="sm" />
+        </button>
+      ) : (
+        <div className={styles.usageLine}>{line}</div>
+      )}
+      {opens && open && (
         <div className={styles.usageFacts}>
-          <Facts items={facts} />
-          <Button variant="link" size="xs" onClick={more.onClick}>
-            {more.label}
+          <Facts items={opens.facts} />
+          <Button variant="link" size="xs" onClick={opens.more.onClick}>
+            {opens.more.label}
           </Button>
         </div>
       )}

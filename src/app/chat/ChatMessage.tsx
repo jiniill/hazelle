@@ -12,9 +12,10 @@ import { BOOKMARK } from '../common/words';
 import { describeFailedReply, describeTranslateFailure } from '../common/failure';
 import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
-import { usageFacts, usageLine } from '../common/receipt';
+import { liveUsageLine, usageFacts, usageLine } from '../common/receipt';
 import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolWaiting } from '../common/words';
+import type { Reading } from '../../runtime/talk';
 import type { Preparing } from '../../runtime/turn-steps';
 import { SHORTCUTS, titled } from '../shortcuts';
 import { MASCOTS } from '../../model/mascot';
@@ -30,6 +31,7 @@ import { rowEqual, sameParts } from './rowPart';
 import { seenText } from './search';
 import { useReveal } from './useReveal';
 import { useSelectedPart } from './useSelectedPart';
+import { useWrittenTokens } from './useWrittenTokens';
 import { withOriginal } from './withOriginal';
 
 const preparingNote = (preparing: Exclude<Preparing, { step: 'tools' }>) => (preparing.step === 'agents' ? agentsWaiting(preparing) : preparing.retrying ? PRE_READ_RETRYING : PRE_READ_WAITING);
@@ -133,7 +135,8 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   } else if (live && empty) {
     const { preparing } = message;
     const waiting = message.stopping ? DISCOUNT_STOPPING : message.batch ? DISCOUNT_WAITING : message.retrying ? RETRYING : preparing && preparing.step !== 'tools' ? preparingNote(preparing) : null;
-    body = waiting ? <Waiting note={waiting} /> : preparing?.step === 'tools' ? <Elapsed key={preparing.since} note={toolWaiting(preparing.running)} since={preparing.since} /> : <Elapsed note={version.reasoning ? '추론 중' : '기다리는 중'} />;
+    const note = version.reasoning ? '추론 중' : '기다리는 중';
+    body = waiting ? <Waiting note={waiting} /> : preparing?.step === 'tools' ? <Elapsed note={toolWaiting(preparing.running)} since={preparing.since} /> : message.reading ? <Elapsed note={note} since={message.reading.at} /> : <Waiting note={note} />;
   } else if (failed) {
     body = (
       <>
@@ -364,8 +367,9 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       writing={live || reveal.revealing}
     >
       {body}
+      {usageShown && live && !empty && message.reading && <LiveUsage reading={message.reading} text={version.text} reasoning={version.reasoning ?? ''} />}
       {usageShown && receipt && !live && !failed && editing === null && (
-        <Usage {...usageLine(receipt)} facts={usageFacts(receipt)} more={{ label: '자세히', onClick: () => actions.info(message.id) }} />
+        <Usage {...usageLine(receipt)} opens={{ facts: usageFacts(receipt), more: { label: '자세히', onClick: () => actions.info(message.id) } }} />
       )}
     </StoryMessage>
   );
@@ -377,12 +381,17 @@ function Remark({ remark, fresh, onSeen }: { remark: Stored<'remark'>; fresh: bo
   return <MascotRemark face={pictures.face} picture={pictures.expressions[expression]} name={MASCOTS[mascot].name} line={line} fresh={fresh} onSeen={onSeen} />;
 }
 
-// It counts from since, or from when this page began to wait.
-function Elapsed({ note, since }: { note: string; since?: number }) {
-  const [mounted] = useState(Date.now);
+// since: when the wait began, which a page left and come back to still counts from.
+function Elapsed({ note, since }: { note: string; since: number }) {
   const now = useNow(Infinity);
-  const seconds = Math.max(0, Math.floor((now - (since ?? mounted)) / 1000));
+  const seconds = Math.max(0, Math.floor((now - since) / 1000));
   return <Waiting note={`${note} · ${seconds}초`} />;
+}
+
+function LiveUsage({ reading, text, reasoning }: { reading: Reading; text: string; reasoning: string }) {
+  const now = useNow(Infinity);
+  const written = useWrittenTokens([text.slice(reading.text), reasoning.slice(reading.reasoning)]);
+  return <Usage {...liveUsageLine(written, Math.max(0, now - reading.at))} />;
 }
 
 export const speaker = (message: Message, character: { name: string } | null, me: { name: string } | null, modelName: string | null) =>

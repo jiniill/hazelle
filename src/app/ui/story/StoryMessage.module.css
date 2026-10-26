@@ -316,8 +316,12 @@
   row-gap: var(--space-2);
 }
 
+div.usageLine {
+  padding-right: var(--space-12);
+}
+
 @media (hover: hover) {
-  .usageLine:hover {
+  button.usageLine:hover {
     background: var(--color-surface-hover);
   }
 }

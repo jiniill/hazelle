@@ -56,6 +56,13 @@ export function usageLine(receipt: Receipt): { lead: string | null; parts: Usage
   return { lead: receipt.cost === null || receipt.cost === 'pending' ? null : cost(receipt.cost), parts };
 }
 
+// 사용량 표시 while a reply is written, with no receipt yet: what this call wrote so far, counted in o200k_base and so an
+// estimate for any other tokenizer (null until first counted), and the time since it was asked.
+export function liveUsageLine(written: number | 'unknown' | null, ms: number): { lead: null; parts: UsagePart[] } {
+  const output = written === null ? [] : [{ label: '출력', value: written === 'unknown' ? UNKNOWN : `약 ${count(written)}` }];
+  return { lead: null, parts: [...output, { value: `${Math.floor(ms / 1000)}초` }] };
+}
+
 export function usageFacts(receipt: Receipt) {
   const { usage } = receipt;
   const share = cacheShare(usage);
