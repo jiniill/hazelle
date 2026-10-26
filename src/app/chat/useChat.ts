@@ -3,7 +3,7 @@ import { entryName } from '../../connectors/types';
 import { resolveAssets, withAttachments } from '../../engine/assets';
 import { holdsPersona, unused } from '../../engine/pipeline';
 import type { Card } from '../../engine/import/types';
-import { shown, type ChatItem, type ChatSummary } from '../../model/chat';
+import { calls, shown, type ChatItem, type ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
 import { resetToggles, setToggle } from '../../runtime/characters';
 import { chatTranslate, featuresOf } from '../../runtime/features';
@@ -122,6 +122,15 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const busy = turn !== null;
   const last = messages.at(-1);
   const answerable = id !== null && last !== undefined;
+  const usageShown = usageShownOf(store);
+  // A cost still 확인 중 after a reload is looked up again wherever the usage line shows it, as ChatInfo does for its own.
+  useEffect(() => {
+    if (!id || !usageShown) return;
+    for (const message of messages) {
+      const { receipt } = shown(message);
+      for (const call of receipt ? calls(receipt) : []) if (call.cost === 'pending') session.costs.settle(id, call);
+    }
+  }, [id, usageShown, messages]);
 
   const replyTarget = busy ? (turn.reply.message ?? turn.reply.id) : null;
   const anchor = busy && !turn.reply.continues ? anchorOf(messages, turn.reply.message ?? turn.reply.id) : null;
@@ -424,7 +433,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     inspect: inspectShown(panels, pairs),
     tools,
     bookmarked,
-    usageShown: usageShownOf(store),
+    usageShown,
     dialog,
     modelMenu,
     castMenu,
