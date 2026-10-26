@@ -106,7 +106,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           <SettingGroup label={DETAIL}>
             <SettingRow
               label="시스템 따라 바꾸기"
-              help="기기가 밝은 모드인지 어두운 모드인지에 맞춰 프리셋을 바꿔요. 켜 둔 동안 고른 프리셋은 지금 모드의 프리셋이 되고, 직접 바꾼 값은 모드가 바뀌면 프리셋대로 돌아가요."
+              help="기기의 밝은·어두운 모드에 맞춰 프리셋을 자동 전환해요. 선택한 프리셋은 현재 모드에 저장되며, 직접 수정한 값은 모드가 바뀔 때 프리셋대로 돌아가요."
               control={<Switch label="시스템 따라 바꾸기" checked={display.follow !== null} onChange={followSystem} />}
             />
             {display.follow &&

@@ -7,7 +7,7 @@ import { useFiles, useStore } from '../session';
 import { useToast } from '../toast';
 
 const LEFT =
-  'RisuAI 설정 › 모듈에서 가져오거나 창에 끌어다 놓으면 열려요. 이미지는 그대로 담기고, 삽화 프로필은 빠져요. Risu에는 끄기 기능이 없어서 꺼 둔 스크립트와 로어북 항목은 빠지고, 로어북의 우선순위와 위치도 빠지며, 쉼표가 들어간 키는 쉼표 기준으로 나뉘어요. 헤이젤로 다시 가져오면 모두 원래대로 돌아와요. Lua 트리거가 있으면 Risu의 저수준 접근을 켠 채로 내보내요.';
+  'RisuAI 설정 › 모듈에서 가져오거나 창에 끌어다 놓아 열 수 있어요. 이미지는 유지되지만 삽화 프로필, 꺼 둔 스크립트·로어북, 로어북 우선순위와 위치는 빠지고, 쉼표가 든 키는 나뉘어요. Lua 트리거가 있으면 저수준 접근이 켜진 채로 내보내지며, 헤이젤로 다시 가져오면 모두 복원돼요.';
 
 export function ModuleExport({ id, name, onClose }: { id: string; name: string; onClose: () => void }) {
   const store = useStore();

@@ -207,7 +207,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     <SettingRow
       key="discount"
       label={DISCOUNT}
-      help="요금이 절반으로 줄어드는 대신 응답이 늦어질 수 있어요. 연결 방식에 따라 응답을 한꺼번에 받기도 하는데, 이때는 번역 같은 보조 작업에는 할인이 적용되지 않아요"
+      help="요금이 절반으로 줄어드는 대신 응답이 느려질 수 있어요. 연결 방식에 따라 응답이 한 번에 오기도 하며, 이때 번역 등 보조 작업은 할인되지 않아요."
       changed={shown.discount !== undefined}
       note={noteFor('discount')}
       control={<Switch label={DISCOUNT} checked={shown.discount === true} onChange={(on) => set({ discount: on ? true : undefined })} />}
@@ -234,7 +234,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
         key="pdf"
         label={PDF_SEND}
         help={{
-          text: '지난 대화를 PDF 파일로 바꿔 보내서 입력 토큰을 줄여요. 빼고 고른 부분은 PDF에 넣지 않고 그대로 보내요. 모델이 대화를 문서로 읽어서 답이 조금 달라질 수 있어요. pdf-pod 플러그인에서 가져온 아이디어예요.',
+          text: '지난 대화를 PDF로 묶어 보내 입력 토큰을 아껴요(제외한 부분은 일반 텍스트로 전송). 대화를 문서로 인식해 응답이 조금 달라질 수 있어요. pdf-pod 플러그인에서 가져온 아이디어예요.',
           // Credit with its link, as promised to pdf-pod's author when the port was allowed.
           open: { label: 'pdf-pod 보기', onClick: () => window.open('https://arca.live/b/characterai/186333157', '_blank', 'noopener') },
         }}

@@ -10,7 +10,7 @@ import { useToast } from '../toast';
 
 // Export spec §3 "Lost" and ruling 9: the prompt's models stay here, Risu keeps its own model settings, and top_p is the
 // one Risu resets.
-const LEFT = `Risu의 프리셋 가져오기로 열거나 Risu 창에 끌어다 놓으면 돼요. 이 프롬프트의 모델과 ${SLOT.tool.name} 블록은 빠져요. Risu에서 이 프리셋을 선택하면 쓰던 모델과 설정은 그대로 유지되고, top_p 값만 1로 바뀌어요.`;
+const LEFT = `Risu 프리셋 가져오기로 열거나 창에 끌어다 놓으세요. 모델과 ${SLOT.tool.name} 블록은 제외되며, Risu에서 적용할 때 기존 모델·설정은 유지되고 top_p만 1로 바뀌어요.`;
 
 export function PresetExport({ prompt, onClose }: { prompt: ConversationPrompt; onClose: () => void }) {
   const store = useStore();

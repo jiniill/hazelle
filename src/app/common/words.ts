@@ -168,7 +168,7 @@ export const scopeTag = (scope: keyof typeof SCOPE) => ({ label: SCOPE[scope], t
 export const FEATURES_TITLE = '기능';
 // 토큰 절약 (runtime/preread), a 실험실 experiment whose name may still change: every screen names it through this.
 export const PRE_READ = '토큰 절약';
-export const PRE_READ_HELP = `${MODEL_ROLES.aux}이 긴 내용을 먼저 읽고 줄여서 ${MODEL_ROLES.main} 입력을 아껴요. 답이 늦게 시작되고, 빠진 내용은 답에 안 나올 수 있어요. pdf-pod 플러그인에서 가져온 아이디어예요.`;
+export const PRE_READ_HELP = `${MODEL_ROLES.aux}이 긴 내용을 요약해 ${MODEL_ROLES.main}의 입력 토큰을 아껴요. 응답 시작이 늦어지고 요약에서 빠진 내용은 반영되지 않을 수 있어요. pdf-pod 플러그인에서 가져온 아이디어예요.`;
 export const PRE_READ_PARTS: Record<keyof PrereadParts, string> = { chat: '대화', system: '시스템 프롬프트', lore: '로어북' };
 // A call whose try failed before any of it came, sent again (design §6.7, retry on failure).
 const RESENDING = '응답을 받지 못해서 다시 보내고 있어요';
@@ -176,7 +176,7 @@ export const PRE_READ_WAITING = `${MODEL_ROLES.aux}이 긴 내용을 먼저 줄�
 export const PRE_READ_RETRYING = `${MODEL_ROLES.aux}이 ${RESENDING}.`;
 // 에이전트 (runtime/agents, design §6.16), a 실험실 experiment.
 export const AGENTS = '에이전트';
-export const AGENTS_HELP = `답을 쓰기 전에 장면을 정리하거나(전처리), 받은 답을 다듬어요(후처리). 에이전트마다 모델을 한 번 더 불러요. Agents! P! 플러그인에서 가져온 아이디어예요.`;
+export const AGENTS_HELP = `응답 전에 장면을 정리하거나(전처리) 응답을 다듬어요(후처리). 에이전트마다 모델을 추가로 호출해요. Agents! P! 플러그인에서 가져온 아이디어예요.`;
 export const STAGE_NAMES: Record<AgentStage, string> = { pre: '전처리', post: '후처리' };
 // The waiting marks name the agents at work, and where more than one runs, how far they are.
 export const agentsWaiting = ({ running, retrying, total }: { running: readonly string[]; retrying: readonly string[]; total: number }) => `${withParticle((retrying.length ? retrying : running).join(', '), '이/가')} ${retrying.length ? RESENDING : '먼저 읽고 있어요'}${total > 1 ? ` · ${total - running.length}/${total} 끝남` : '.'}`;
@@ -232,7 +232,7 @@ export const ARCA_LOG = '아카라이브용 HTML';
 // A chat's or a character's chats in Risu's own chat file (risuChat, risuAllChats), which Risu loads only through its
 // chat list, into the character picked there; what the file cannot hold, behind each place's ⓘ.
 export const RISU_CHAT_FILE = 'Risu 채팅 파일';
-export const RISU_LOSES = 'Risu에서 캐릭터를 선택한 뒤 채팅 목록의 가져오기로 채팅 파일을 추가해요. 지금 화면에 보이는 버전만 담겨요. 다른 버전이나 수정한 첫 메시지, 번역, 이미지와 삽화, 장기 기억, 등장인물, 채팅에서 선택한 프롬프트·페르소나·모델은 빠져요.';
+export const RISU_LOSES = 'Risu에서 캐릭터를 고른 뒤 채팅 목록의 가져오기로 열 수 있어요. 현재 보이는 버전만 담기며 다른 버전, 수정한 첫 메시지, 번역, 이미지·삽화, 장기 기억, 등장인물, 채팅별 프롬프트·페르소나·모델 설정은 빠져요.';
 export const risuLeftOut = ({ greetings, lore, unread }: LeftOut) =>
   [
     greetings ? `수정한 첫 메시지 ${greetings}개는 빠지고 캐릭터 카드의 원래 첫 메시지로 보여요.` : '',

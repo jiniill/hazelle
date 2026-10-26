@@ -27,7 +27,7 @@ export function MoveDialog({ onRead, onClose }: { onRead: (files: File[]) => voi
         <Slot
           title="백업 파일"
           note="Risu의 '로컬 백업 저장'이나 PocketRisu의 '로컬 백업 다운로드'로 받은 파일이에요. risuai.xyz에서 쓰면 '부분 백업'으로 받아 주세요."
-          help="PocketRisu는 설정 › 시스템 › 백업에서 받아요. 이 파일 하나에 메시지 속 이미지까지 들어 있어요. '원본 리스용 백업 내보내기'로 받은 파일에는 메시지 속 이미지가 없어요. 모델 프리셋, 메모리 프리셋, 캐릭터 비활성 표시는 옮겨지지 않아요."
+          help="PocketRisu 백업은 설정 › 시스템 › 백업에서 받으며 메시지 속 이미지도 포함돼요('원본 리스용 백업 내보내기' 파일에는 빠짐). 모델·메모리 프리셋과 캐릭터 비활성 표시는 옮겨지지 않아요."
           file={text}
           onFile={setText}
         />

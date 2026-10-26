@@ -36,7 +36,7 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
       const quiet = !fired && cause.after && !cause.after.fired ? ` (${silentReason(cause.after.why)})` : '';
       return {
         line: fired ? `로어북 '${cause.name}' 항목이 새로 켜졌어요.` : `로어북 '${cause.name}' 항목이 꺼졌어요${quiet}.`,
-        help: '키로 켜지는 항목은 키가 최근 메시지에 나오고 사라질 때마다 켜지고 꺼져서, 그 뒤 캐시가 깨져요. 자주 오간다면 항상 켜 두거나, 깊이를 정해 대화 뒤쪽에 넣으면 앞부분은 계속 읽혀요.',
+        help: '키로 켜지는 항목은 켜고 꺼질 때마다 그 뒤의 캐시가 깨져요. 자주 바뀐다면 항상 켜 두거나, 배치 깊이를 대화 뒤쪽으로 두어 앞부분 캐시를 유지하세요.',
       };
     }
     case 'moved':
@@ -128,7 +128,7 @@ export function ShortfallNote({ receipt, entry }: { receipt: Receipt; entry: Log
     <Text variant="note">
       {`예상보다 적게 읽었어요. 약 ${tokens(Math.round(shortfall.expected))} 토큰을 읽을 줄 알았는데 ${tokens(shortfall.actual)} 토큰만 읽었어요.`}
       {place && ` '${partName(place.from, place.role)}' 부분 근처부터 읽지 못했어요.`}
-      <Hint label={SHORT}>앱이 보낸 요청대로라면 더 읽혀야 했어요. 제공자가 캐시를 먼저 비웠거나, 캐시가 없는 다른 서버가 받았거나, 제공자가 요청에 글을 끼워 넣었을 수 있어요. 끼워 넣은 글은 앱에 보이지 않아요. 계속 그렇다면 다른 연결로 보내 보세요.</Hint>
+      <Hint label={SHORT}>제공자가 캐시를 비웠거나, 캐시가 없는 다른 서버가 받았거나, 요청에 보이지 않는 문구를 끼워 넣었을 수 있어요. 문제가 계속되면 다른 연결을 사용해 보세요.</Hint>
     </Text>
   );
 }

@@ -4,7 +4,7 @@ import { Button, Callout, Progress, Row, Section, SidePanel, Stack, Text, TextFi
 import type { RunEnd } from './autopilot';
 import type { Autopilot, Outlook } from './useAutopilot';
 
-const HOW = '위에서부터 하나씩 보내고, 응답이 끝나면 다음 메시지를 보내요. 시작하면 마지막 메시지의 새 버전에서 이어 가서, 지금까지의 대화는 버전을 바꿔 다시 볼 수 있어요. 실패하거나 멈추면 거기서 끝나요. 채팅을 나가면 다음 메시지는 보내지 않아요.';
+const HOW = '위에서부터 차례대로 응답을 받은 뒤 다음 메시지를 보내요. 마지막 메시지의 새 버전에서 시작하므로 이전 대화도 버전을 바꿔 볼 수 있고, 실패·중단하거나 채팅을 나가면 멈춰요.';
 
 type Props = { autopilot: Autopilot; busy: boolean; onClose: () => void };
 
@@ -45,7 +45,7 @@ function basis(outlook: Outlook): string | undefined {
   if (outlook.kind !== 'estimate') return undefined;
   if (!outlook.priced) return '이 모델의 가격을 몰라서 비용을 셀 수 없어요.';
   if (outlook.output === null) return '이 채팅에 길이를 아는 응답이 없어서 비용을 셀 수 없어요.';
-  return '메시지마다 다음 요청의 입력과 이 채팅의 지난 응답 길이만큼 든다고 셌어요. 대화가 길어지는 만큼은 빠져 있고, 캐시를 읽으면 덜 들어요.';
+  return '다음 요청 입력과 이전 응답 길이를 기준으로 메시지당 예상치를 계산했어요. 대화가 누적되는 분량은 제외됐으며, 캐시가 적용되면 더 적게 들어요.';
 }
 
 function Ended({ end }: { end: RunEnd }) {
