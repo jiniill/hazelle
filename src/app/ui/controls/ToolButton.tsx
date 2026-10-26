@@ -13,19 +13,20 @@ type Props = {
   expanded?: boolean;
   pressed?: boolean;
   phone?: 'full' | 'icon';
+  wide?: 'full' | 'icon';
   // One that opens a form from Menu takes popup and ref too; one that shows and hides a panel takes expanded alone.
   popup?: 'menu' | 'dialog';
   ref?: Ref<HTMLButtonElement>;
   onClick: () => void;
 };
 
-export function ToolButton({ icon, label, detail, mark, phone = 'full', expanded, pressed, popup, ref, onClick }: Props) {
+export function ToolButton({ icon, label, detail, mark, phone = 'full', wide = 'full', expanded, pressed, popup, ref, onClick }: Props) {
   const shown = mark?.kind === 'dot' || (mark?.kind === 'count' && mark.count > 0);
   return (
     <button
       ref={ref}
       type="button"
-      className={phone === 'icon' ? `${styles.tool} ${styles.phoneIcon}` : styles.tool}
+      className={[styles.tool, phone === 'icon' && styles.phoneIcon, wide === 'icon' && styles.wideIcon].filter(Boolean).join(' ')}
       title={label}
       aria-label={detail ? `${label}, ${detail}` : label}
       aria-haspopup={popup}

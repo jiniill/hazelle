@@ -30,3 +30,9 @@
     display: none;
   }
 }
+
+@media (min-width: 960px) {
+  .wideIcon .label {
+    display: none;
+  }
+}
