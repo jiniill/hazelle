@@ -496,8 +496,13 @@ define('erase', 0, () => (before) => {
 // A missing reading is empty; Risu's shows `undefined`.
 define('ruby furigana', 1, ([text, reading = '']) => `<ruby>${text}<rp> (</rp><rt>${reading}</rt><rp>) </rp></ruby>`);
 const HTML_ENTITIES: Record<string, string> = { '&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;' };
-// The last argument is the code. A language before it is dropped, since nothing highlights it; Risu leaves `&` as is.
-define('codeblock', 1, (args) => `<pre><code>${args.at(-1)!.replace(/[&"'<>]/g, (char) => HTML_ENTITIES[char]!)}</code></pre>`);
+// The last argument is the code, a language before it named as a fence names it (app/ui/story/highlight.ts reads it);
+// Risu leaves `&` as is.
+const escapeHtml = (text: string) => text.replace(/[&"'<>]/g, (char) => HTML_ENTITIES[char]!);
+define('codeblock', 1, (args) => {
+  const language = args.length > 1 ? /^[\w+#-]+$/.exec(args[0]!.trim())?.[0] : undefined;
+  return `<pre><code${language ? ` class="language-${language}"` : ''}>${escapeHtml(args.at(-1)!)}</code></pre>`;
+});
 // Only the first argument, as in Risu: a formula holding :: is cut there.
 define('tex latex katex', 1, ([formula]) => `$$${formula}$$`);
 // Risu's attached text file. On screen Risu draws a box with its name, which is not built: there it stays as written.

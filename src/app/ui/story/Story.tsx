@@ -8,6 +8,7 @@ import { inlaid } from './inlay';
 import { useMarginRoom } from '../layout/ChatFrame';
 import { MarginPictures } from './MarginPictures';
 import type { SelectionEnd } from './SelectionButton';
+import { useCode } from './code';
 import { useMath } from './math';
 import styles from './Story.module.css';
 import shadowCss from './Story.shadow.css?inline';
@@ -51,6 +52,9 @@ const PICTURES = Symbol('pictures');
 const VEILED = 'data-veiled';
 // Named in Story.shadow.css. Holds the source of the picture or video tapped open that it covers again.
 const COVER = 'data-cover';
+// Named in Story.shadow.css and snapshot.ts, which leaves it out of an export. A code block's copy button: its words are
+// the attribute's value, drawn by CSS, so they are no text of the story's (search, selection).
+const COPY = 'data-copy';
 // Named in Story.shadow.css and in engine/assets.ts (inlayMissing), whose mark stands where a chat's inlay is missing.
 const INLAY_MISSING = 'data-inlay-missing';
 // Named in Story.shadow.css. chat/withOriginal ends each line of an original shown under its translation with the mark,
@@ -263,6 +267,16 @@ function coverFor(source: string, what: Veiled): HTMLButtonElement {
   return button;
 }
 
+const COPIED_MS = 1500;
+const COPY_WORDS = { ready: '복사', done: '복사했어요', failed: '복사하지 못했어요' };
+function copyButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.setAttribute(COPY, COPY_WORDS.ready);
+  button.setAttribute('aria-label', '코드 복사');
+  return button;
+}
+
 const videoSource = (video: Element) => [video, ...video.querySelectorAll('source')].map((element) => element.getAttribute('src') ?? '').find((source) => OWN_SOURCE.test(source)) ?? null;
 
 // The one mark inlaid left: a paragraph of its own becomes the slot, a mark inside the bot's HTML gives the slot its
@@ -389,6 +403,7 @@ function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFra
   }
   // Last: a control inside a picture's line would cost it its data-picture, and the cursor would go into the control.
   for (const { element, source, what } of revealed) element.after(coverFor(source, what));
+  for (const pre of fragment.querySelectorAll('pre')) if (pre.querySelector(':scope > code')) pre.append(copyButton());
   return fragment;
 }
 
@@ -497,9 +512,10 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   // A dependency that changes only when a mark does.
   const placed = JSON.stringify(marks);
   const math = useMath(html);
+  const code = useCode(html);
   useLayoutEffect(() => {
     const marked = marks.reduce((text: string, mark) => (mark ? inlaid(text, mark, mark) : text), html);
-    const fragment = sanitize(math ? math(marked) : marked, cursor, veil);
+    const fragment = sanitize([math, code].reduce((text, draw) => (draw ? draw(text) : text), marked), cursor, veil);
     for (const picture of fragment.querySelectorAll(`[${PICTURE}]`)) {
       if (whole || pictures?.has(pictureKey(picture))) picture.setAttribute(OPEN, '');
       else if (pictureKey(picture) === hovered.current) picture.setAttribute(HOVER, '');
@@ -508,7 +524,7 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
     for (const [index, mark] of marks.entries()) placeInlay(fragment, mark, inlayName(index));
     morph(root(), fragment);
     for (const picture of root().querySelectorAll<HTMLImageElement>(`[${PICTURE}] > img`)) markWide(picture);
-  }, [html, cursor, pictures, veil, veilTaps, whole, placed, math]);
+  }, [html, cursor, pictures, veil, veilTaps, whole, placed, math, code]);
 
   // After the text is drawn, so the ranges lie over the nodes it now holds. Without the API, nothing is lit.
   useEffect(() => {
@@ -520,7 +536,7 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
     return () => {
       for (const range of ranges) lit.delete(range);
     };
-  }, [html, cursor, pictures, veil, veilTaps, term, placed, math]);
+  }, [html, cursor, pictures, veil, veilTaps, term, placed, math, code]);
 
   useLayoutEffect(() => {
     if (!base) (base = new CSSStyleSheet()).replaceSync(shadowCss);
@@ -567,6 +583,16 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
     const press = (event: Event) => {
       // The inlay's own controls are the app's, slotted in from outside the root, and never a bot's button.
       if (!shadow.contains(event.target as Node)) return;
+      const copy = (event.target as Element).closest<HTMLElement>(`[${COPY}]`);
+      if (copy) {
+        event.preventDefault();
+        const said = (words: string) => {
+          copy.setAttribute(COPY, words);
+          setTimeout(() => copy.setAttribute(COPY, COPY_WORDS.ready), COPIED_MS);
+        };
+        navigator.clipboard.writeText(copy.parentElement!.querySelector(':scope > code')!.textContent!).then(() => said(COPY_WORDS.done), () => said(COPY_WORDS.failed));
+        return;
+      }
       const veiled = (event.target as Element).closest(`[${VEILED}]`);
       if (veiled && veil) {
         veil.revealed.add(veiled.getAttribute(VEILED)!);

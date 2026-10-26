@@ -92,6 +92,40 @@
     font-family: var(--font-mono);
   }
 
+  /* A code block scrolls its code sideways, not the block, so the copy button (below) stays on its corner. */
+  pre {
+    padding: var(--space-12);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-raised);
+  }
+
+  pre > code {
+    display: block;
+    overflow-x: auto;
+  }
+
+  /* A fence's highlighted code (highlight.ts), one class per role of controls/codeRoles.ts. */
+  .code-keyword {
+    color: var(--color-code-keyword);
+  }
+
+  .code-string {
+    color: var(--color-code-string);
+  }
+
+  .code-number {
+    color: var(--color-code-number);
+  }
+
+  .code-comment {
+    color: var(--color-text-faint);
+    font-style: italic;
+  }
+
+  .code-operator {
+    color: var(--color-text-muted);
+  }
+
   a {
     color: var(--color-accent);
   }
@@ -187,6 +221,29 @@
   left: var(--space-8);
 }
 
+/* Story.tsx's copy button on a code block's top corner; its words are its data-copy. */
+pre:has(> [data-copy]) {
+  position: relative;
+  padding-top: var(--space-32);
+}
+
+[data-copy] {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  padding: var(--space-2) var(--space-8);
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: var(--text-xs) / var(--leading-tight) var(--font-sans);
+  cursor: pointer;
+}
+
+[data-copy]::before {
+  content: attr(data-copy);
+}
+
 /* Story.tsx's mark for a picture of the chat it does not hold. */
 [data-inlay-missing] {
   display: inline-flex;
@@ -198,7 +255,7 @@
 }
 
 /* data-buttons is the host's (Story.tsx). A button nothing answers looks it, whatever the bot's CSS says. */
-:host([data-buttons='inert']) :is(button:not([data-veiled], [data-cover]), [risu-btn], [risu-trigger]) {
+:host([data-buttons='inert']) :is(button:not([data-veiled], [data-cover], [data-copy]), [risu-btn], [risu-trigger]) {
   opacity: var(--story-inert-opacity) !important;
   cursor: not-allowed !important;
 }

@@ -50,7 +50,8 @@ export function staticHtml(root: Element, look: Look): Snapshot {
   const lost = new Set<CSSRule | Element>();
   const write = (node: Element, parent: Pick<CSSStyleDeclaration, 'getPropertyValue'> | null) => {
     const name = node.localName;
-    if (SKIPPED.has(name)) return;
+    // Story.tsx's copy button (data-copy) answers nothing on a board.
+    if (SKIPPED.has(name) || [...node.attributes].some(({ name: attribute }) => attribute === 'data-copy')) return;
     const style = look.style(node);
     if (style.getPropertyValue('display') === 'none') return;
     const plain = look.reference(name);

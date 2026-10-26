@@ -284,7 +284,7 @@ describe('evaluate', () => {
 
   it('draws ruby and an escaped code block, and gives a file its decoded text in the prompt only', () => {
     expect(run('{{ruby::漢字::かんじ}}|{{ruby::漢字}}')).toBe('<ruby>漢字<rp> (</rp><rt>かんじ</rt><rp>) </rp></ruby>|<ruby>漢字<rp> (</rp><rt></rt><rp>) </rp></ruby>');
-    expect(run(`{{codeblock::js::a < b && c > "d" 'e'}}`)).toBe('<pre><code>a &lt; b &amp;&amp; c &gt; &quot;d&quot; &#39;e&#39;</code></pre>');
+    expect(run(`{{codeblock::js::a < b && c > "d" 'e'}}`)).toBe('<pre><code class="language-js">a &lt; b &amp;&amp; c &gt; &quot;d&quot; &#39;e&#39;</code></pre>');
     expect(run('{{file::a.txt::7ZWc6riA}}')).toBe('한글');
     expect(run('{{file::a.txt::7ZWc6riA}}', { stage: 'display' })).toBe('{{file::a.txt::7ZWc6riA}}');
   });

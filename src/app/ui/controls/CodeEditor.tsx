@@ -6,8 +6,8 @@ import { linter, lintGutter, lintKeymap, type Diagnostic } from '@codemirror/lin
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { crosshairCursor, Decoration, drawSelection, EditorView, highlightActiveLine, highlightActiveLineGutter, hoverTooltip, keymap, lineNumbers, rectangularSelection, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
-import { tags } from '@lezer/highlight';
 import { useEffect, useRef } from 'react';
+import { CODE_ROLES } from './codeRoles';
 import type { Caret, CodeDoc, CodeLanguage, CodeSpan } from './codeLanguage';
 import styles from './CodeEditor.module.css';
 import { markup, type Piece } from './markup';
@@ -52,13 +52,7 @@ function spanned(read: (text: string) => CodeSpan[], prose: boolean) {
   );
 }
 
-const highlight = HighlightStyle.define([
-  { tag: tags.keyword, class: styles.keyword },
-  { tag: [tags.string, tags.special(tags.string)], class: styles.string },
-  { tag: tags.comment, class: styles.comment },
-  { tag: [tags.number, tags.bool, tags.null], class: styles.number },
-  { tag: tags.operator, class: styles.operator },
-]);
+const highlight = HighlightStyle.define(CODE_ROLES.map(({ tag, role }) => ({ tag, class: styles[role] })));
 
 const PHRASES = EditorState.phrases.of({
   Find: '검색', Replace: '바꿀 내용', next: '다음', previous: '이전', all: '모두', 'match case': '대소문자 구분', regexp: '정규식', 'by word': '단어 단위', replace: '바꾸기', 'replace all': '모두 바꾸기', close: '닫기',
