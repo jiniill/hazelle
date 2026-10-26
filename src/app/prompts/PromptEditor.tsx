@@ -386,6 +386,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
         uses={(key) => countUses(latest.current, key)}
         onAdd={(lines) => perform(addLines(lines, latest.current.toggles.length))}
         onEdit={(before, after, at, what) => JSON.stringify(before) !== JSON.stringify(after) && perform(editLine(before, after, at, what))}
+        onType={(after, at) => update((current) => ({ toggles: current.toggles.with(at, after) }))}
         onMove={(line, move) => perform(moveLines(line, move))}
         onRekey={changeKey}
         onRemove={dropLines}

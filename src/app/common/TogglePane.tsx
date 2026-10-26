@@ -23,6 +23,8 @@ type Props = {
   onAdd: (lines: readonly [ShownLine, ...ToggleLine[]]) => void;
   // line: an unread line fixed, the whole line read again.
   onEdit: (before: ShownLine, after: ToggleLine, at: number, what: 'label' | 'default' | 'line') => void;
+  // A text toggle's default, typed in place.
+  onType: (after: TextToggle, at: number) => void;
   onMove: (line: ShownLine, move: LineMove) => void;
   onRekey: (toggle: Toggle, to: string) => void;
   // In order; a group's head goes with its end, and what it held stays.
@@ -33,18 +35,16 @@ type Props = {
 };
 
 type Labeled = Exclude<ToggleMark['kind'], 'groupEnd'>;
-type Field = 'label' | 'key' | 'default' | 'line';
+type Field = 'label' | 'key' | 'line';
+type TextToggle = Extract<Toggle, { kind: 'text' }>;
 type Editing = { at: number; field: Field } | { add: Labeled };
 
 const FIELD: Record<Labeled, string> = { divider: '이름', caption: '내용', group: '이름' };
 const LINE_ONLY = '비워 두면 선만 보여요.';
 
-const subOf = (line: Toggle | UnreadLine) =>
-  isToggle(line) ? `${line.key} · ${LINE_WORDS[line.kind]}${line.kind === 'text' && line.lines ? ' · 여러 줄' : ''}` : line.text;
-
 // While searching, only the toggles found show, without the layout lines a few found rows would sit oddly under, and
 // without moves past rows not shown.
-export function TogglePane({ owner, lines, uses, onAdd, onEdit, onMove, onRekey, onRemove, adding, onAdding }: Props) {
+export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, onRekey, onRemove, adding, onAdding }: Props) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const toggles = lines.flatMap((line, at) => (isToggle(line) ? [{ line, at }] : []));
   const search = useSearch(toggles, '토글 검색', ({ line }) => [line.label, line.key]);
@@ -54,8 +54,10 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onMove, onRekey,
   const close = () => setEditing(null);
 
   function control(line: Toggle | UnreadLine, at: number) {
-    if (!isToggle(line) || line.kind === 'text') return null;
-    return line.kind === 'check' ? (
+    if (!isToggle(line)) return null;
+    return line.kind === 'text' ? (
+      <TextField label={`${line.label} 기본값`} showLabel={false} value={line.default} lines={line.lines ? 3 : undefined} onChange={(value) => onType({ ...line, default: value }, at)} />
+    ) : line.kind === 'check' ? (
       <Switch label={`${line.label} 기본값`} checked={line.default === '1'} onChange={(on) => onEdit(line, { ...line, default: on ? '1' : '0' }, at, 'default')} />
     ) : (
       <ToggleChoice label={`${line.label} 기본값`} options={line.options} value={line.default} onChange={(value) => onEdit(line, { ...line, default: value }, at, 'default')} />
@@ -72,7 +74,6 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onMove, onRekey,
           label={line.kind === 'caption' || line.kind === 'unread' ? '내용 바꾸기' : ACTS.rename.label}
           onClick={() => setEditing({ at, field: line.kind === 'unread' ? 'line' : 'label' })}
         />
-        {line.kind === 'text' && <MenuItem label="기본값 바꾸기" onClick={() => setEditing({ at, field: 'default' })} />}
         {isToggle(line) && <MenuItem label="키 바꾸기" sub={uses ? '조건에 쓴 키도 함께 바뀌어요' : undefined} onClick={() => setEditing({ at, field: 'key' })} />}
         {moves?.up && <MenuItem icon={ArrowUp} label="위로 옮기기" onClick={() => onMove(line, moves.up!)} />}
         {moves?.down && <MenuItem icon={ArrowDown} label="아래로 옮기기" onClick={() => onMove(line, moves.down!)} />}
@@ -88,7 +89,14 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onMove, onRekey,
   }
 
   const row = ({ line, at }: LineAt<Toggle | UnreadLine>) => (
-    <SettingRow key={isToggle(line) ? line.key : `unread${at}`} label={isToggle(line) ? line.label : LINE_WORDS.unread} sub={subOf(line)} control={control(line, at)} menu={menu({ line, at })} />
+    <SettingRow
+      key={isToggle(line) ? line.key : `unread${at}`}
+      label={isToggle(line) ? line.label : LINE_WORDS.unread}
+      sub={isToggle(line) ? undefined : line.text}
+      wide={line.kind === 'text'}
+      control={control(line, at)}
+      menu={menu({ line, at })}
+    />
   );
 
   function dialog(line: ShownLine, at: number, field: Field) {
@@ -115,21 +123,6 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onMove, onRekey,
           onSave={(key) => {
             close();
             if (key !== line.key) onRekey(line, key);
-          }}
-        />
-      );
-    }
-    if (field === 'default' && line.kind === 'text') {
-      return (
-        <NameDialog
-          title="기본값 바꾸기"
-          field="기본값"
-          value={line.default}
-          blank="비워 두면 빈 값으로 시작해요."
-          onClose={close}
-          onSave={(value) => {
-            close();
-            onEdit(line, { ...line, default: value }, at, 'default');
           }}
         />
       );

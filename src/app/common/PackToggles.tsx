@@ -5,15 +5,17 @@ import type { ToggleLine } from '../../model/prompt';
 import { rekeyed } from '../../model/toggles';
 import { setToggles } from '../../runtime/pack';
 import { useStore } from '../session';
-import { useToast } from '../toast';
 import { TogglePane } from './TogglePane';
+import { useAutosave } from './useAutosave';
 
-// A pack has no conditions of its own to rewrite with a key, and no undo: each change writes the list it makes.
-export function PackToggles({ owner, lines }: { owner: PackOwner; lines: ToggleLine[] }) {
+// A pack has no conditions of its own to rewrite with a key, and no undo: each change writes the list it makes, a
+// default typed in place after a pause.
+export function PackToggles({ owner, lines: stored }: { owner: PackOwner; lines: ToggleLine[] }) {
   const store = useStore();
-  const toast = useToast();
   const [adding, setAdding] = useState(false);
-  const write = (next: ToggleLine[]) => void setToggles(store, owner, next).then((saved) => saved.ok || toast.failed(saved, '저장하지 못했어요.'));
+  const save = useAutosave<{ toggles: ToggleLine[] }>(`pack-toggles:${owner.id}`, ({ toggles }) => setToggles(store, owner, toggles!));
+  const lines = save.unsaved.toggles ?? stored;
+  const write = (toggles: ToggleLine[]) => void save.save({ toggles });
   return (
     <TogglePane
       owner={owner.id}
@@ -21,6 +23,7 @@ export function PackToggles({ owner, lines }: { owner: PackOwner; lines: ToggleL
       uses={null}
       onAdd={(added) => write([...lines, ...added])}
       onEdit={(_, after, at) => write(lines.with(at, after))}
+      onType={(after, at) => save.change({ toggles: lines.with(at, after) })}
       onMove={(_, { from, count, to }) => write(moved(lines, from, to, count))}
       onRekey={(toggle, to) => write(rekeyed(lines, toggle.key, to))}
       onRemove={(gone) => write(lines.filter((_, at) => !gone.some((line) => line.at === at)))}

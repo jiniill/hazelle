@@ -23,6 +23,13 @@ describe('the prompt editor history of toggle lines', () => {
     expect(apply(removed, removal.undo(removed)).toggles).toEqual([rule, sims, rule, note]);
   });
 
+  it("puts a toggle's name back and keeps the default typed since", () => {
+    const style: ToggleLine = { key: 'style', label: '문체', kind: 'text', default: '' };
+    const rename = editLine(style, { ...style, label: '말투' }, 0, 'label');
+    const typed = lines([{ ...apply(lines([style]), rename.redo(lines([style]))).toggles[0]!, default: '건조하게' } as ToggleLine]);
+    expect(apply(typed, rename.undo(typed)).toggles).toEqual([{ ...style, default: '건조하게' }]);
+  });
+
   it('finds a layout line that moved since by what it says, to rename it back or move it back', () => {
     const renamed: ToggleLine = { kind: 'caption', label: '새 안내' };
     const edit = editLine(note, renamed, 1, 'label');

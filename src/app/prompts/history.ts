@@ -185,11 +185,12 @@ export function removeLines(lines: readonly [LineAt<ShownLine>, ...LineAt[]]): S
   return { label: `${lineTitle(lines[0].line)} 삭제`, block: null, undo: put, redo: take };
 }
 
-// The whole line swaps, since nothing is typed into one in place.
+// A text toggle's default is typed in place, outside the steps, so a rename put back keeps what was typed since.
 export function editLine(before: ShownLine, after: ToggleLine, at: number, what: 'label' | 'default' | 'line'): Step {
   const swap = (from: ToggleLine, to: ToggleLine) => (draft: Draft): PromptPatch => {
     const now = lineAt(draft.toggles, from, at);
-    return now === -1 ? {} : { toggles: draft.toggles.map((each, index) => (index === now ? to : each)) };
+    const put = (line: ToggleLine) => (what === 'label' && isToggle(line) && isToggle(to) ? { ...line, label: to.label } : to);
+    return now === -1 ? {} : { toggles: draft.toggles.map((each, index) => (index === now ? put(each) : each)) };
   };
   const words = what === 'default' ? '기본값 바꾸기' : what === 'line' || before.kind === 'caption' ? '내용 바꾸기' : '이름 바꾸기';
   return { label: `${lineTitle(before)} ${words}`, block: null, undo: swap(after, before), redo: swap(before, after) };
