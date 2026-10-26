@@ -41,7 +41,7 @@ export function NextRequest({ chat, sending, request, cache, editor, onEdit }: {
       <Section title="보낼 입력">
         <NextTokens sending={sending} />
       </Section>
-      <Section title="캐시" help="지금 보내면 캐시를 얼마나 읽고 새로 저장할지 미리 계산해요. 토큰 수는 추정치예요.">
+      <Section title="캐시" help="토큰 수는 추정치예요.">
         {cache.next ? <NextCache next={cache.next} recurrence={cache.recurrence} editor={editor} onEdit={onEdit} /> : cache.next === null ? <Empty variant="section">계산할 캐시가 없어요.</Empty> : <Text variant="note">계산하는 중…</Text>}
       </Section>
       <RequestView
@@ -76,7 +76,7 @@ function Rehearsed({ chat, sending, editor, onEdit }: { chat: string; sending: S
   }, [chat, sending]);
   if (rehearsal === null) return null;
   return (
-    <Section title="스크립트 실행 예상" help="보내기 전에 실행되는 봇 스크립트를 미리 실행해 본 결과예요. 저장하지 않고, 질문에는 답하지 않고, 모델도 호출하지 않아요.">
+    <Section title="스크립트 실행 예상" help="보내기 전에 실행되는 봇 스크립트를 미리 실행해 본 결과예요.">
       {rehearsal === undefined ? (
         <Text variant="note">계산하는 중…</Text>
       ) : rehearsal === 'failed' ? (

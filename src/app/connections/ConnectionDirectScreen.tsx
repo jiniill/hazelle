@@ -59,7 +59,7 @@ export function ConnectionDirectScreen({ address: pasted, back }: { address: str
         </Button>
       }
     >
-      <Intro title="목록에 없는 제공자 연결">OpenAI 호환, OpenAI Responses, Anthropic 호환 API에 연결할 수 있어요. 잔액과 비용은 확인할 수 없어요.</Intro>
+      <Intro title="목록에 없는 제공자 연결">OpenAI 호환, OpenAI Responses, Anthropic 호환 API에 연결할 수 있어요.</Intro>
       <GuideMark name={MARKS.connectKey}>
         <Stack>
           <TextField label="주소" kind="key" value={address} onChange={setAddress} placeholder="https://…/v1" />

@@ -163,7 +163,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           />
           <SettingRow
             label="캐릭터 이미지 크게 보기"
-            help="넓은 화면에서 채팅 옆에 캐릭터 이미지를 크게 띄워요. 삽화를 옆에 띄우는 채팅에선 삽화가 그 자리를 써요."
+            help="넓은 화면에서 채팅 옆에 캐릭터 이미지를 크게 띄워요."
             control={<Switch label="캐릭터 이미지 크게 보기" checked={display.portrait} onChange={(portrait) => changeDisplay({ portrait })} />}
           />
         </SettingGroup>
@@ -187,7 +187,7 @@ function PictureWidestRow() {
   return (
     <SettingRow
       label="이미지 최대 폭"
-      help="글 폭 대비 비율이에요. 더 큰 이미지는 이 폭에 맞춰 줄어들어요. 봇마다 따로 정할 수도 있어요."
+      help="글 폭 대비 비율이에요."
       error={widest.error}
       control={<NumberInput label="이미지 최대 폭" value={widest.text} unit="%" invalid={widest.error !== undefined} onChange={widest.change} />}
     />

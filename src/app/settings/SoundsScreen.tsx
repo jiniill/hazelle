@@ -11,9 +11,9 @@ const ALERTS = '알림음';
 const DETAIL = '세부 설정';
 
 const ROWS: { cue: Cue; label: string; help: string }[] = [
-  { cue: 'reply-started', label: '응답이 시작될 때', help: '추론을 마치고 본문이 나오기 시작하면 울려요. 한 번에 받는 응답에는 울리지 않아요.' },
+  { cue: 'reply-started', label: '응답이 시작될 때', help: '추론을 마치고 본문이 나오기 시작하면 울려요.' },
   { cue: 'reply-received', label: '응답이 도착했을 때', help: '멈추기로 끊은 응답과 실패한 응답에는 울리지 않아요.' },
-  { cue: 'translated', label: '번역이 끝났을 때', help: '채팅 메시지의 번역이 끝나면 울려요. 보낼 말 번역과 번역기에서는 울리지 않아요.' },
+  { cue: 'translated', label: '번역이 끝났을 때', help: '채팅 메시지의 번역이 끝나면 울려요.' },
 ];
 
 export function SoundsScreen({ back }: { back: Back | null }) {

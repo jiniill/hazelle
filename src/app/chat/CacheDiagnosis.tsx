@@ -15,7 +15,7 @@ export const breakKind = (kind: keyof typeof KINDS) => KINDS[kind];
 
 const quoted = (value: string) => (value === '' ? '(빈 값)' : `'${value.length > 60 ? `${value.slice(0, 60)}…` : value}'`);
 
-const VARYING = '보낼 때마다 달라지는 내용이 캐시 지점 앞에 있으면, 그 뒤는 매번 새로 저장해요. 달라지는 부분을 프롬프트 뒤쪽, 마지막 캐시 지점 뒤로 옮기면 앞부분은 계속 읽혀요.';
+const VARYING = '달라지는 부분을 마지막 캐시 지점 뒤로 옮기면 앞부분은 계속 읽혀요.';
 
 // One sentence per cause, and behind its ⓘ what would keep it from breaking. shown: the sentence as the part's detail
 // draws it, where it differs from the line the send note reads.
@@ -42,15 +42,15 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
     case 'moved':
       return cause.depth === null
         ? { line: '같은 내용이 다른 자리로 옮겨졌어요.', help: null }
-        : { line: `깊이 ${cause.depth}에 넣는 항목이라 대화가 늘면서 자리를 옮겼어요.`, help: '깊이로 넣는 항목은 메시지가 늘 때마다 함께 밀려서, 캐시는 이 항목이 있던 자리 앞까지만 읽혀요. 깊이가 작을수록 더 많이 읽혀요.' };
+        : { line: `깊이 ${cause.depth}에 넣는 항목이라 대화가 늘면서 자리를 옮겼어요.`, help: '깊이가 작을수록 더 많이 읽혀요.' };
     case 'hoisted':
-      return { line: '시스템 메시지라 요청 맨 앞에 모아 보내요.', help: '이 연결 방식은 시스템 메시지를 모두 요청 맨 앞에 모아요. 매번 바뀌는 시스템 메시지는 그 뒤 전부를 새로 저장하게 해요. 역할을 사용자로 바꾸면 제자리에 들어가요.' };
+      return { line: '시스템 메시지라 요청 맨 앞에 모아 보내요.', help: '역할을 사용자로 바꾸면 제자리에 들어가요.' };
     case 'edited':
       return { line: '대화 메시지가 수정됐어요.', help: null };
     case 'memory':
       return { line: '장기 기억이 새로 정리됐어요.', help: '장기 기억은 정리할 때마다 바뀌어서, 그때 한 번 그 뒤 캐시가 깨져요.' };
     case 'unknown':
-      return { line: '원인을 짚지 못했어요.', help: '스크립트나 토큰 절약이 보낼 글을 바꿨거나, 여러 글이 합쳐진 부분이면 원인을 짚을 수 없어요. 아래에서 달라진 곳을 보세요.' };
+      return { line: '원인을 짚지 못했어요.', help: '스크립트나 토큰 절약이 보낼 내용을 바꿨거나, 여러 항목이 합쳐진 부분일 수 있어요.' };
   }
 }
 
@@ -126,9 +126,9 @@ export function ShortfallNote({ receipt, entry }: { receipt: Receipt; entry: Log
   const place = shortfallPlace(entry, shortfall);
   return (
     <Text variant="note">
-      {`예상보다 적게 읽었어요. 약 ${tokens(Math.round(shortfall.expected))} 토큰을 읽을 줄 알았는데 ${tokens(shortfall.actual)} 토큰만 읽었어요.`}
+      {`약 ${tokens(Math.round(shortfall.expected))} 토큰을 읽을 줄 알았는데 ${tokens(shortfall.actual)} 토큰만 읽었어요.`}
       {place && ` '${partName(place.from, place.role)}' 부분 근처부터 읽지 못했어요.`}
-      <Hint label={SHORT}>제공자가 캐시를 비웠거나, 캐시가 없는 다른 서버가 받았거나, 요청에 보이지 않는 문구를 끼워 넣었을 수 있어요. 문제가 계속되면 다른 연결을 사용해 보세요.</Hint>
+      <Hint label={SHORT}>제공자가 캐시를 비웠거나 요청을 바꿨을 수 있으니, 계속되면 다른 연결을 사용해 보세요.</Hint>
     </Text>
   );
 }

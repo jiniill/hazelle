@@ -11,8 +11,8 @@ type Owner = Exclude<FeatureOwner, { kind: 'settings' }>;
 type Choice = 'default' | 'on' | 'off';
 
 const WORKS: Record<Owner['kind'], string> = {
-  prompt: '이 프롬프트를 쓰는 채팅에 적용돼요. 캐릭터나 채팅에서 따로 정한 값이 있으면 그 값을 따라요.',
-  character: '이 캐릭터의 모든 채팅에 적용돼요. 채팅에서 따로 정한 값이 있으면 그 값을 따라요.',
+  prompt: '이 프롬프트를 쓰는 채팅에 적용돼요.',
+  character: '이 캐릭터의 모든 채팅에 적용돼요.',
   chat: '지금 이 채팅에만 적용돼요.',
 };
 

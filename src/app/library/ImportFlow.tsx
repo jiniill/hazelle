@@ -427,7 +427,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
           제작자가 RisuAI에서만 쓰도록 배포한 봇은 가져오지 마세요.
         </ConfirmDialog>
       )}
-      {dragging && <DropOverlay>여기에 파일을 놓으면 봇, 모듈, 프롬프트, 페르소나, 채팅이나 Risu 백업을 가져와요</DropOverlay>}
+      {dragging && <DropOverlay>여기에 파일을 놓으면 가져와요</DropOverlay>}
       {asking && (
         <MoveDialog
           onRead={(files) => {

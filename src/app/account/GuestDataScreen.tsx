@@ -46,7 +46,7 @@ export function GuestDataScreen({ username, failure, onUpload, onDiscard }: Prop
           onConfirm={() => void discard.run(onDiscard)}
           onClose={() => setDiscarding(false)}
         >
-          이 브라우저에만 있는 내용이라 버리면 되돌릴 수 없어요. 게시판에 쓴 글은 남고, 더는 고칠 수 없어요.
+          버리면 되돌릴 수 없어요. 게시판에 쓴 글은 남고, 더는 고칠 수 없어요.
         </ConfirmDialog>
       )}
     </Screen>

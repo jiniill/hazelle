@@ -136,7 +136,7 @@ export function ConnectionAddScreen({ back }: { back: Back }) {
         <List label={DIRECT_CONNECTION} places>
           <ListItem
             title={DIRECT_CONNECTION}
-            description="OpenAI 호환, OpenAI Responses, Anthropic 호환 주소와 키로 연결해요. 잔액과 비용은 확인할 수 없어요."
+            description="OpenAI 호환, OpenAI Responses, Anthropic 호환 주소와 키로 연결해요."
             current={route.kind === 'connect-direct'}
             onClick={() => navigate({ kind: 'connect-direct', address: search.kind === 'address' ? search.baseUrl : '' })}
           />

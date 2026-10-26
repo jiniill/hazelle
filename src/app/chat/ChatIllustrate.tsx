@@ -58,7 +58,7 @@ function NoteEditor({ id, note, prompt, onSave }: { id: string | null; note: str
       value={text}
       onChange={change}
       placeholder="예: 아리는 지금 잠옷 차림. 배경은 비 오는 밤."
-      help="지금 이 채팅의 삽화에만 적용돼요. 누가 무엇을 입었는지, 어떤 분위기로 그릴지 적어요."
+      help="지금 이 채팅의 삽화에만 적용돼요."
       error={unsent ? ILLUSTRATE_NOTE_UNSENT : undefined}
       action={
         <Text variant="note">

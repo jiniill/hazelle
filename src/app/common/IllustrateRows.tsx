@@ -71,7 +71,7 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
         />
         <SettingRow
           label="무료가 아니어도 만들기"
-          help="무료 사용량을 다 썼거나 요금제에 무료 이미지가 없을 때도 물어보지 않고 바로 만들어요. 이때는 요금이 나가요."
+          help="요금이 나갈 때도 물어보지 않고 만들어요."
           control={<Switch label="무료가 아니어도 만들기" checked={illustrate.spend} onChange={(spend) => onChange({ spend })} />}
         />
         <SettingRow

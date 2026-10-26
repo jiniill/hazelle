@@ -18,7 +18,7 @@ export function Scripts({ chat }: { chat: string }) {
   );
   const entries = log.entries.map((entry, index) => ({ entry, key: `${entry.at}:${log.omitted + index}` })).reverse();
   return (
-    <Section title="실행 기록" help="이 화면에서 실행된 봇 스크립트와 log() 출력 내용이에요. 새로고침하면 사라져요.">
+    <Section title="실행 기록" help="새로고침하면 사라져요.">
       {entries.length === 0 ? (
         <Empty variant="section">실행된 스크립트가 없어요.</Empty>
       ) : (

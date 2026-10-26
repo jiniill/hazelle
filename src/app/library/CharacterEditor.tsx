@@ -300,7 +300,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
         />
         <SettingRow
           label="유틸리티 봇"
-          help="프롬프트는 쓰지 않고 이 캐릭터의 지시문과 설명, 로어북, 대화만 보내요. 번역기처럼 역할극이 아닌 봇에 잘 맞아요."
+          help="프롬프트는 쓰지 않고 이 캐릭터의 지시문과 설명, 로어북, 대화만 보내요."
           control={<Switch label="유틸리티 봇" checked={text.utility} onChange={(on) => change({ utility: on })} />}
         />
         <TextField
@@ -310,7 +310,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
           value={noteText}
           onChange={(note) => noteSave.change({ note })}
           placeholder={NOTE_PLACEHOLDER}
-          help={{ text: '이 캐릭터를 번역할 때만 들어가요. 초안 만들기는 카드를 읽고 이름 표기, 말투, 호칭을 정리해 노트 아래에 적어요.', open: { label: opens(inFeature('translate')), onClick: () => navigate({ kind: 'feature', feature: 'translate' }) } }}
+          help={{ text: '이 캐릭터를 번역할 때만 들어가요. 초안 만들기는 카드를 읽고 노트 아래에 적어요.', open: { label: opens(inFeature('translate')), onClick: () => navigate({ kind: 'feature', feature: 'translate' }) } }}
           action={
             <Button variant="ghost" size="sm" icon={Sparkles} busy={noteDraft.running} onClick={noteDraft.start}>
               {noteDraft.running ? '쓰는 중…' : '초안 만들기'}

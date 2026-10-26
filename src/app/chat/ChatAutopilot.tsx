@@ -45,7 +45,7 @@ function basis(outlook: Outlook): string | undefined {
   if (outlook.kind !== 'estimate') return undefined;
   if (!outlook.priced) return '이 모델의 가격을 몰라서 비용을 셀 수 없어요.';
   if (outlook.output === null) return '이 채팅에 길이를 아는 응답이 없어서 비용을 셀 수 없어요.';
-  return '다음 요청 입력과 이전 응답 길이를 기준으로 메시지당 예상치를 계산했어요. 대화가 누적되는 분량은 제외됐으며, 캐시가 적용되면 더 적게 들어요.';
+  return '다음 요청 입력과 이전 응답 길이로 계산해서, 대화가 쌓이면 더 들고 캐시가 적용되면 덜 들어요.';
 }
 
 function Ended({ end }: { end: RunEnd }) {

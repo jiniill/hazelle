@@ -23,7 +23,7 @@ export function MoveDialog({ onRead, onClose }: { onRead: (files: File[]) => voi
       }
     >
       <Stack gap="section">
-        <Text>Risu나 PocketRisu의 로컬 백업(.bin) 파일에서 캐릭터와 채팅, 페르소나, 프롬프트, 모듈을 가져와요. HypaPlus, LIBRA 같은 장기 기억 플러그인이 쌓은 기억은 옮겨지지 않아요.</Text>
+        <Text>캐릭터와 채팅, 페르소나, 프롬프트, 모듈을 가져와요. HypaPlus, LIBRA 같은 장기 기억 플러그인이 쌓은 기억은 옮겨지지 않아요.</Text>
         <Slot
           title="백업 파일"
           note="Risu의 '로컬 백업 저장'이나 PocketRisu의 '로컬 백업 다운로드'로 받은 파일이에요. risuai.xyz에서 쓰면 '부분 백업'으로 받아 주세요."

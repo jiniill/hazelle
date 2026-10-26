@@ -75,7 +75,7 @@ export function nextWarning(next: NonNullable<CacheNotes['next']>, recurrence: C
   const { against } = next.forecast;
   if (against?.broken) return { words: BROKEN, why: [why(against.broken, profile), breakCauses(next.diagnosis, against.broken), reads(against)].filter(Boolean).join(' ') };
   const streak = shortStreak(recurrence, next.route.connection.id);
-  return streak === null ? undefined : { words: SHORT, why: `이 연결은 최근 ${streak}번 연속 예상보다 적게 읽었어요. 제공자가 캐시를 비우거나 요청을 바꾸는 것 같아요.` };
+  return streak === null ? undefined : { words: SHORT, why: `이 연결은 최근 ${streak}번 연속 예상보다 적게 읽었어요.` };
 }
 
 export function ChatCache({ cache, onOpen }: { cache: CacheNotes; onOpen: () => void }) {

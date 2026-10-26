@@ -51,8 +51,8 @@ export function PasswordScreen({ mode, username: initialUsername, onBack, onSign
       {signup && <Steps current={1} total={2} />}
       <Intro title={{ signup: '계정 만들기', setup: '비밀번호 정하기', reset: '새 비밀번호 설정' }[mode]}>
         {{
-          signup: '비밀번호는 서버로 전송되지 않아요. 그래서 서버에서도 내 채팅과 캐릭터, API 키를 볼 수 없어요.',
-          setup: '이 헤이젤을 열 때 쓰는 비밀번호예요. 서버로 전송되지 않아서, 서버에서도 내 채팅과 캐릭터, API 키를 볼 수 없어요.',
+          signup: '비밀번호는 서버로 전송되지 않아요.',
+          setup: '이 헤이젤을 열 때 쓰는 비밀번호예요.',
           reset: '새 비밀번호를 입력해 주세요.',
         }[mode]}
       </Intro>

@@ -108,7 +108,7 @@ function MascotDefaults() {
     <SettingGroup label={FEATURE_NAMES.mascot}>
       <SettingRow
         label="마스코트 프롬프트"
-        help={`응답마다 ${MODEL_ROLES.aux}을 한 번 더 불러요. 마스코트 프롬프트에서 다른 모델을 고를 수 있어요.`}
+        help={`응답마다 ${MODEL_ROLES.aux}을 한 번 더 불러요.`}
         control={
           <TaskPromptMenu
             task="mascot"
@@ -178,13 +178,13 @@ function PrereadDefaults() {
         <CountRow label="한 번에 줄일 분량" unit="토큰" help="줄일 내용이 이만큼 쌓이면 그때 줄여요. 그보다 적으면 그냥 보내요." value={setup.batch} start={PREREAD_STARTS.batch} onChange={(batch) => save({ batch })} />
         <SettingRow
           label="생각 줄이기"
-          help={`줄이는 모델이 생각을 가장 적게 하게 해서 비용과 기다림을 아껴요. 끄면 그 모델의 ${MODEL_SETTINGS}을 따라요.`}
+          help={`끄면 그 모델의 ${MODEL_SETTINGS}을 따라요.`}
           changed={setup.thinkLess !== PREREAD_STARTS.thinkLess}
           control={<Switch label="생각 줄이기" checked={setup.thinkLess} onChange={(thinkLess) => save({ thinkLess })} />}
         />
         <SettingRow
           label={`${PRE_READ} 프롬프트`}
-          help={`응답마다 ${MODEL_ROLES.aux}을 한 번 더 불러요. PDF를 읽는 Gemini 모델이면 PDF로 보내서 더 아껴요. ${PRE_READ} 프롬프트에서 다른 모델을 고를 수 있어요.`}
+          help={`응답마다 ${MODEL_ROLES.aux}을 한 번 더 불러요. ${PRE_READ} 프롬프트에서 다른 모델을 고를 수 있어요.`}
           control={
             <TaskPromptMenu
               task="preread"

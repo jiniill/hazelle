@@ -47,7 +47,7 @@ export const keysOf = (name: Name, enterSends: boolean) => (enterSends ? undefin
 // Where each shortcut works, in the order 단축키 lists them.
 export const SHORTCUT_GROUPS: readonly { title: string; note?: string; names: readonly Name[] }[] = [
   { title: '어디서나', names: ['settings', 'personas', 'prompts', 'shortcutList', 'sidebar', 'status', 'pictures', 'undoToast'] },
-  { title: '채팅', note: '입력창에서 작동하고, 화살표 키와 Home · End는 입력창이 비어 있을 때만 작동해요.', names: ['send', 'newline', 'stop', 'editLast', 'swipe', 'storyStep', 'storyEnds', 'saveEdit', 'cancelEdit', 'find', 'inspect'] },
+  { title: '채팅', note: '화살표 키와 Home · End는 입력창이 비어 있을 때만 작동해요.', names: ['send', 'newline', 'stop', 'editLast', 'swipe', 'storyStep', 'storyEnds', 'saveEdit', 'cancelEdit', 'find', 'inspect'] },
   { title: '채팅 검색창', names: ['findNext', 'findPrevious', 'closeFind'] },
   { title: '번역기', note: '원문 칸에서 작동해요.', names: ['translate'] },
   { title: '프롬프트 편집', note: '블록과 토글 변경을 되돌리고, 텍스트 칸 안에서는 입력한 내용을 되돌려요.', names: ['undo', 'redo'] },

@@ -130,14 +130,14 @@ export function RestoresDialog({ operated, onClose, onActed }: { operated: Opera
   if (asking?.kind === 'restore') {
     return (
       <ConfirmDialog title={`${subject}을 ${moment(asking.point.takenAt)} 기록으로 복원할까요?`} confirm="복원" icon={History} busy={busy} onConfirm={() => void go(() => beginRestore(whose, { post, at: asking.point.at }))} onClose={() => setAsking(null)}>
-        {standing('그 기록 이후에 저장한 텍스트와 캐릭터, 채팅, 설정은 모두 사라지고 이미지만 남아요. 복원하는 동안에는 계정을 쓸 수 없어요. 복원이 끝난 뒤 7일 안에는 복원 전 상태로 다시 되돌릴 수 있어요.')}
+        {standing('그 기록 이후에 저장한 내용은 모두 사라져요. 복원하는 동안에는 계정을 쓸 수 없고, 7일 안에는 복원 전으로 되돌릴 수 있어요.')}
       </ConfirmDialog>
     );
   }
   if (asking?.kind === 'undo') {
     return (
       <ConfirmDialog title={`${subject}을 복원 전으로 되돌릴까요?`} confirm="복원 전으로 되돌리기" icon={Undo2} busy={busy} onConfirm={() => void go(() => beginRestore(whose, { post, undoes: asking.restore.id }))} onClose={() => setAsking(null)}>
-        {standing('복원하기 바로 전 상태로 돌아가요. 복원한 뒤에 새로 저장한 내용은 모두 사라져요.')}
+        {standing('복원한 뒤에 새로 저장한 내용은 모두 사라져요.')}
       </ConfirmDialog>
     );
   }
@@ -154,7 +154,7 @@ export function RestoresDialog({ operated, onClose, onActed }: { operated: Opera
       <Stack gap="group">
         {operated?.post && <Text variant="prose">{operated.post.text}</Text>}
         {begins && (
-          <Section level={3} title="복원할 기록" help="텍스트와 캐릭터, 채팅, 설정을 그때의 기록으로 되돌려요. 10분 전부터 6일 전까지의 기록이 남아 있어요.">
+          <Section level={3} title="복원할 기록" help="텍스트와 캐릭터, 채팅, 설정을 그때의 기록으로 되돌려요.">
             {points.loading}
             {points.failure}
             {points.data && points.data.length === 0 && <Empty variant="section">복원할 수 있는 기록이 없어요.</Empty>}

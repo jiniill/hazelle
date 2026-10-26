@@ -135,6 +135,6 @@ function risuVerdict({ verdict, missing }: RisuScan): Line {
   switch (verdict) {
     case 'all': return { text: `${RISU_PLUGIN} 기능이 다 돼요.`, failed: false };
     case 'partial': return { text: `${RISU_PLUGIN} 기능 중 일부는 빠져요.`, failed: true, help: { label: '빠지는 기능', text: listed } };
-    case 'unread': return { text: `${RISU_PLUGIN} 기능이 다 되는지 확인하지 못했어요.`, failed: true, help: { label: '확인하지 못한 이유', text: ['플러그인이 기능을 다른 이름으로 불러서 다 읽지 못했어요. 쓰다가 안 되는 기능이 있을 수 있어요.', listed].filter(Boolean).join(' ') } };
+    case 'unread': return { text: `${RISU_PLUGIN} 기능이 다 되는지 확인하지 못했어요.`, failed: true, help: { label: '확인하지 못한 이유', text: ['쓰다가 안 되는 기능이 있을 수 있어요.', listed].filter(Boolean).join(' ') } };
   }
 }

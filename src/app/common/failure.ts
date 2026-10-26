@@ -89,7 +89,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'share-held': SHARE.heldNote,
   'no-consent': '링크로 공유하려면 먼저 공유 규칙에 동의해야 해요.',
   'not-admin': '운영자 계정으로만 할 수 있어요.',
-  'needs-account': `${NEEDS_ACCOUNT}. 이 연결은 브라우저에서 바로 부를 수 없어서 계정을 만들면 쓸 수 있어요.`,
+  'needs-account': `${NEEDS_ACCOUNT}. 계정을 만들면 쓸 수 있어요.`,
   'no-session': '로그인이 풀렸어요. 새로고침한 뒤 다시 로그인해 주세요.',
   conflict: '다른 기기에서 동시에 바꿔서 저장하지 못했어요. 다시 시도해 주세요.',
   unreadable: '암호화 키로 열 수 없는 항목이라 바꿀 수 없어요.',

@@ -18,7 +18,7 @@ import { navigate } from '../shell/router';
 import { useToast } from '../toast';
 import { List, ListItem, Section, Switch } from '../ui';
 
-export const FEATURE_HELP = '끄면 채팅에서 보이지 않고 작동하지 않아요. 프롬프트, 캐릭터, 채팅에서 따로 켤 수 있어요.';
+export const FEATURE_HELP = '끄면 채팅에서 보이지 않고 작동하지 않아요.';
 
 const state = (on: boolean) => (on ? '켜짐' : '꺼짐');
 

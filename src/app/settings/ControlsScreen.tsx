@@ -25,12 +25,12 @@ export function ControlsScreen({ back }: { back: Back | null }) {
           />
           <SettingRow
             label="빠른 스크롤 막대"
-            help="오른쪽 막대를 끌면 메시지마다 멈춰요. 긴 채팅에선 막대에서 왼쪽으로 끌어내면 하나씩 움직여요."
+            help="오른쪽 막대를 끌면 메시지마다 멈춰요."
             control={<Switch label="빠른 스크롤 막대" checked={display.scrubber} onChange={(scrubber) => changeDisplay({ scrubber })} />}
           />
           <SettingRow
             label="메시지 이동 버튼"
-            help="스크롤하면 오른쪽 아래에 버튼이 잠깐 떠요. 누르면 메시지 처음이나 끝으로, 길게 누르면 채팅 맨 위나 맨 아래로 가요."
+            help="누르면 메시지 처음이나 끝으로, 길게 누르면 채팅 맨 위나 맨 아래로 가요."
             control={<Switch label="메시지 이동 버튼" checked={display.stepButtons} onChange={(stepButtons) => changeDisplay({ stepButtons })} />}
           />
         </SettingGroup>

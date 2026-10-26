@@ -121,7 +121,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
       {stuck && (
         <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: actions.retryRegex }}>
           봇 스크립트가 끝나지 않아서 정규식을 껐어요.
-          <Hint label="정규식 꺼짐">캐릭터나 모듈의 정규식, 또는 로어북 키워드 중 하나가 원인이에요. 다른 기기에서도 함께 꺼져요.</Hint>
+          <Hint label="정규식 꺼짐">캐릭터나 모듈의 정규식, 또는 로어북 키워드 중 하나가 원인이에요.</Hint>
         </Callout>
       )}
       <ChatAsk id={chat.id} onTyped={() => input.current?.focus()} />

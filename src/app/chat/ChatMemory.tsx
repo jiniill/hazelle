@@ -163,7 +163,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
       {(!holder || memory.threads.length > 0) && <Threads chat={id} threads={memory.threads} adding={!holder} />}
 
       {(!holder || memory.records.length > 0) && <Section level={3} title="기록" note={`${rows.filter((each) => !each.forgotten).length}개`}>
-        {view?.crowded && <Callout tone="warn">고정한 기록이 한도를 다 채워서 나머지 기록은 보내지 않아요. 고정을 풀거나 한도를 늘려 주세요.</Callout>}
+        {view?.crowded && <Callout tone="warn">고정한 기록이 한도를 다 채워서 나머지 기록은 보내지 않아요.</Callout>}
         {memory.records.length ? (
           <List label="기록">
             {rows.map((each) => (
@@ -202,7 +202,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
           }}
           onClose={() => setRebuilding(false)}
         >
-          남아 있는 메시지를 바탕으로 기억을 처음부터 다시 정리해요. 대화가 길면 요금이 많이 나올 수 있고, 한 번 실행하면 되돌릴 수 없어요.
+          대화가 길면 요금이 많이 나올 수 있고, 되돌릴 수 없어요.
         </ConfirmDialog>
       )}
     </SidePanel>

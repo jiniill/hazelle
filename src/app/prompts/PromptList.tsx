@@ -36,7 +36,7 @@ const SORTS: { sort: PromptSort; label: string; hint?: string; none: string }[] 
   { sort: 'illustrate', label: '삽화', hint: '메시지에 넣을 삽화의 장면을 정할 때 쓰는 프롬프트예요.', none: '삽화 프롬프트가 없어요.' },
   { sort: 'mascot', label: '마스코트', hint: '응답마다 마스코트가 한마디 할 때 쓰는 프롬프트예요.', none: '마스코트 프롬프트가 없어요.' },
   { sort: 'preread', label: PRE_READ, hint: `응답마다 ${MODEL_ROLES.aux}이 긴 내용을 먼저 줄일 때 쓰는 프롬프트예요.`, none: `${PRE_READ} 프롬프트가 없어요.` },
-  { sort: 'agent', label: AGENTS, hint: '답을 쓰기 전에 읽거나, 받은 답을 다듬는 에이전트예요. 공용, 프롬프트, 캐릭터, 채팅에서 켜요.', none: `${AGENTS}가 없어요.` },
+  { sort: 'agent', label: AGENTS, hint: '답을 쓰기 전에 읽거나, 받은 답을 다듬는 에이전트예요.', none: `${AGENTS}가 없어요.` },
 ];
 type Order = 'name' | 'recent';
 

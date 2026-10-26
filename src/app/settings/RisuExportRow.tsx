@@ -8,7 +8,7 @@ import { useToast } from '../toast';
 import { Button, Dialog, Progress, SettingRow } from '../ui';
 
 const LABEL = 'Risu로 옮길 파일';
-const HELP = `캐릭터마다 charx 파일과 ${RISU_CHAT_FILE}을 zip 파일 하나에 담아요. 압축을 푼 뒤 charx 파일을 Risu 창에 끌어다 놓아요. ${RISU_LOSES}`;
+const HELP = `캐릭터마다 charx 파일과 ${RISU_CHAT_FILE}을 zip 파일 하나에 담아요. ${RISU_LOSES}`;
 
 // Like the backup, it runs only while this screen does.
 export function RisuExportRow() {

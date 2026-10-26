@@ -20,6 +20,6 @@ export function PersonaExport({ persona, onClose }: { persona: Persona; onClose:
     });
   }
 
-  const blocked = persona.description ? null : '설명이 비어 있으면 Risu에서 가져갈 수 없어요. 설명을 입력한 뒤에 내보내 주세요.';
+  const blocked = persona.description ? null : '설명이 비어 있으면 Risu에서 가져갈 수 없어요.';
   return <FileExport format="Risu 페르소나" file={file} help={LEFT} blocked={blocked} onExport={save} onClose={onClose} />;
 }

@@ -153,7 +153,7 @@ export function SceneDialog({ reshaping, sizes, onDraw, onClose }: { reshaping: 
         />
       )}
       <TextField label="장면" kind="key" lines={14} value={text} onChange={type} error={error} help="after는 삽화가 들어갈 문단 번호이고, 나머지는 Danbooru 태그예요." />
-      <TextField label={changed ? '지난번에 보낸 태그' : '보낸 태그'} kind="key" lines={6} readOnly value={sentText(reshaping.scene, reshaping.sent)} onChange={() => {}} help="이름이 프로필과 같은 인물은 외모와 옷을 프로필의 태그로 바꿔 보내요. 장면을 고쳐 다시 그려도 같은 규칙을 거쳐요." />
+      <TextField label={changed ? '지난번에 보낸 태그' : '보낸 태그'} kind="key" lines={6} readOnly value={sentText(reshaping.scene, reshaping.sent)} onChange={() => {}} help="이름이 프로필과 같은 인물은 외모와 옷을 프로필의 태그로 바꿔 보내요." />
     </Dialog>
   );
 }

@@ -113,7 +113,7 @@ export function BackupSection() {
       <SettingGroup label="백업">
         <SettingRow
           label="전체 백업"
-          help="캐릭터, 채팅, 프롬프트, 페르소나, 연결과 API 키를 zip 파일로 내보내요. 암호화되지 않은 파일이니 안전하게 보관해 주세요."
+          help="API 키까지 포함해 암호화되지 않은 zip 파일로 내보내요."
           control={
             <Button variant="secondary" size="sm" icon={ACTS.export.icon} disabled={active !== null} onClick={() => void save()}>
               {ACTS.export.label}

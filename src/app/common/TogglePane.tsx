@@ -147,7 +147,7 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, 
     <Section
       title="토글"
       note={`${toggles.length}개`}
-      help="채팅에서 켜고 끄면 조건에 따라 보내는 내용이 바뀌어요. 구분선과 설명, 그룹으로 채팅의 토글 목록을 정리할 수 있어요."
+      help="채팅에서 켜고 끄면 조건에 따라 보내는 내용이 바뀌어요."
       action={
         <Row kind="actions">
           <Menu label="줄 추가" place="below-end" trigger={(opener) => <Button variant="secondary" {...opener}>줄 추가</Button>}>

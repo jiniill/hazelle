@@ -163,7 +163,7 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
       {!editing && operatorOnly && (
         <Stack gap="related">
           <Checkbox label="기기 정보와 최근 오류도 보내기" checked={withDevice} onChange={setWithDevice} />
-          <Text variant="note">앱 정보의 문제 진단과 같은 내용이에요. 채팅 내용이나 API 키는 담기지 않아요.</Text>
+          <Text variant="note">채팅 내용이나 API 키는 담기지 않아요.</Text>
         </Stack>
       )}
       {failure && (

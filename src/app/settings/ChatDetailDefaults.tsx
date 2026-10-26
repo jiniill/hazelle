@@ -106,7 +106,7 @@ function AnswerInstructionField({ changed }: { changed: boolean }) {
   return (
     <SettingRow
       label={ANSWER_INSTRUCTION_LABEL}
-      help={`입력 없이 보내면 봇의 메시지 뒤에 이 문장을 붙여 다음 응답을 받아요. 채팅에는 남지 않아요. 기본값은 ${ANSWER_INSTRUCTION}이에요.`}
+      help={`입력 없이 보내면 이 문장으로 다음 응답을 받아요. 기본값은 ${ANSWER_INSTRUCTION}이에요.`}
       changed={changed}
       error={filled(draft) === null ? '문장을 입력해 주세요.' : undefined}
       wide

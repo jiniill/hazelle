@@ -70,7 +70,7 @@ export function PicturePane({ tags, picture = {}, onTags, onPicture }: Props) {
       <Section
         title="태그"
         note={tags ? '직접 지정' : '기본값'}
-        help="모든 삽화에 공통으로 들어가요. 작가 태그는 맨 앞에, 품질 태그는 장면 설명 뒤에 붙어요. 가중치({강조}, [약화], 1.5::태그::)에 따라 태그 색깔이 달라져요."
+        help="작가 태그는 맨 앞에, 품질 태그는 장면 설명 뒤에 붙어요."
         action={
           tags && (
             <Button variant="link" onClick={() => onTags(undefined)}>

@@ -88,7 +88,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
         <Columns>
           <RoleCard role="main" help="프롬프트나 채팅에서 모델을 따로 정하지 않았을 때 쓰는 모델이에요." own={main} follow={null} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
           <RoleCard role="aux" help={AUX_HELP} own={settings.models.aux} follow={follows(MODEL_ROLES.main)} connections={connections} onPick={(ref) => pickModel('aux', ref)} {...cardOf(settings.models.aux)} />
-          <RoleCard role="embed" help="장기 기억이 지금 대화와 관련된 지난 기록을 찾을 때와, 플러그인이 비슷한 내용을 찾을 때 써요. 모델을 바꾸면 기록을 다시 준비해요." own={settings.models.embed} follow="정하지 않음" connections={connections} onPick={(ref) => pickModel('embed', ref)} />
+          <RoleCard role="embed" help="장기 기억과 플러그인이 비슷한 내용을 찾을 때 써요. 모델을 바꾸면 기록을 다시 준비해요." own={settings.models.embed} follow="정하지 않음" connections={connections} onPick={(ref) => pickModel('embed', ref)} />
           {defaultProfile ? (
             <PickCard label={MODEL_SETTINGS} value={defaultProfile.value.name} note={valuesLine(defaultProfile.value.settings)} help={SETTINGS_HELP} onClick={() => navigate({ kind: 'profile', id: defaultProfile.id })} />
           ) : (

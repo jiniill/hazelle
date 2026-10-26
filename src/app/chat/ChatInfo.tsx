@@ -184,7 +184,7 @@ function AgentCall({ chat, version, run: { agent, name, stage, receipt, note, me
   const save = () => void setAgentMemory(store, chat, version.id, agent, draft!).then((saved) => (saved.ok ? setDraft(null) : toast.failed(saved, '저장하지 못했어요.')));
   return (
     <Section level={3} title={name} note={STAGE_NAMES[stage]}>
-      <Text variant="note">{reused ? '같은 메시지의 앞 응답에서 쓴 노트를 다시 썼어요. 이번에는 비용이 들지 않았어요.' : `${receipt.modelName} · ${receipt.source}`}</Text>
+      <Text variant="note">{reused ? '앞 응답에서 쓴 노트를 다시 썼어요.' : `${receipt.modelName} · ${receipt.source}`}</Text>
       {!reused && <Facts variant="tiles" items={callFacts(receipt)} />}
       {note !== undefined && (
         <Disclosure label="노트">

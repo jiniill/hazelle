@@ -80,7 +80,7 @@ export function PortraitsEditor({ owner }: { owner: string }) {
       <Section
         title="삽화 프로필"
         note={building ? '만드는 중…' : undefined}
-        help="삽화에서 인물을 늘 같은 모습으로 그릴 때 쓰는 태그예요. 처음 삽화를 그릴 때 자동으로 만들어지고, 직접 고치거나 추가한 프로필은 다시 만들어도 그대로 남아요."
+        help="삽화에서 인물을 같은 모습으로 그릴 때 쓰는 태그예요. 직접 수정하거나 추가한 프로필은 다시 만들어도 남아요."
         action={
           <>
             <Button variant="link" disabled={building} onClick={() => void rebuild()}>
@@ -177,7 +177,7 @@ function PortraitFields({ owner, index, portrait, onRemove }: { owner: string; i
             <Section
               title={at === 0 ? '옷 (기본)' : '옷'}
               level={3}
-              help={at === 0 ? '이야기가 옷 이름 그대로 입히면 그 옷의 태그로 그리고, 옷을 말하지 않으면 (기본)을 입어요.' : undefined}
+              help={at === 0 ? '이야기에서 다른 옷을 입지 않으면 이 옷으로 그려요.' : undefined}
               action={remove}
             >
               <Stack gap="related">
