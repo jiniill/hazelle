@@ -80,7 +80,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const translatedText = !paragraphs.size ? reveal.text : originalShown ? withoutMarks(placed ?? original, paragraphs) : translatedMarks(text, placed ?? original, paragraphs);
   // A message sent translated keeps 보낸 메시지 보기 only. Not left off while editing a part: findPart's lines are this text's.
   const both = showOriginal && translation !== null && !sentTranslated && translatingText === null && !originalShown;
-  const storyText = both ? withOriginal(translatedText, original) : translatedText;
+  const storyText = useMemo(() => (both ? withOriginal(translatedText, original) : translatedText), [both, translatedText, original]);
   const part = editing?.part ?? null;
   const drawnText = part ? markPart(storyText, part.shown) : storyText;
   const html = useMemo(() => shownHtml(drawnText, decor), [drawnText, decor.bot, decor.url]);
