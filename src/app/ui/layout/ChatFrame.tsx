@@ -196,13 +196,12 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
 type TitleProps = {
   name: string;
   sub?: string;
-  typing: boolean;
   face?: ReactNode;
   expanded?: boolean;
   onClick?: () => void;
 };
 
-export function ChatTitle({ name, sub, typing, face, expanded, onClick }: TitleProps) {
+export function ChatTitle({ name, sub, face, expanded, onClick }: TitleProps) {
   const lines = (
     <>
       {face}
@@ -214,22 +213,14 @@ export function ChatTitle({ name, sub, typing, face, expanded, onClick }: TitleP
     </>
   );
   return (
-    <span className={styles.chatTitle}>
-      <h1 className={styles.heading}>
-        {onClick ? (
-          <button type="button" className={`${styles.box} ${styles.press}`} aria-expanded={expanded} onClick={onClick}>
-            {lines}
-          </button>
-        ) : (
-          <span className={styles.box}>{lines}</span>
-        )}
-      </h1>
-      {typing && (
-        <span className={styles.typing}>
-          <span className={styles.pulse} />
-          생성 중
-        </span>
+    <h1 className={styles.heading}>
+      {onClick ? (
+        <button type="button" className={`${styles.box} ${styles.press}`} aria-expanded={expanded} onClick={onClick}>
+          {lines}
+        </button>
+      ) : (
+        <span className={styles.box}>{lines}</span>
       )}
-    </span>
+    </h1>
   );
 }

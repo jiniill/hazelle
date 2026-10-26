@@ -21,13 +21,12 @@ import { SceneDialog } from './ChatPicture';
 import type { OpenChat } from './useChat';
 
 export function ChatHeading({ chat }: { chat: OpenChat }) {
-  const { item, card, shelf, busy, panel, actions } = chat;
+  const { item, card, shelf, panel, actions } = chat;
   const open = panel?.kind === 'character';
   return (
     <ChatTitle
       name={card?.name ?? NO_CHARACTER}
       sub={item?.title ?? '새 채팅'}
-      typing={busy}
       face={shelf && card && <Avatar face={card.name} image={shelf.face} size="sm" />}
       expanded={shelf ? open : undefined}
       onClick={shelf ? () => (open ? actions.closePanel() : actions.side({ kind: 'character', id: shelf.id, part: null })) : undefined}

@@ -258,16 +258,9 @@
   pointer-events: auto;
 }
 
-.chatTitle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  min-width: 0;
-  max-width: var(--chat-title-max-width);
-}
-
 .heading {
   min-width: 0;
+  max-width: var(--chat-title-max-width);
   display: flex;
   font-family: var(--font-serif);
   font-size: var(--text-lg);
@@ -309,19 +302,6 @@
   composes: ellipsis from '../foundation/a11y.module.css';
   composes: detail from '../foundation/type.module.css';
   font-weight: var(--weight-regular);
-}
-
-.typing {
-  composes: detail from '../foundation/type.module.css';
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: var(--space-8);
-}
-
-.pulse {
-  composes: pulse from '../foundation/motion.module.css';
-  composes: dot from '../foundation/surface.module.css';
 }
 
 @media (max-width: 959px) {
