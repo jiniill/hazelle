@@ -12,7 +12,7 @@ import { BOOKMARK } from '../common/words';
 import { describeFailedReply, describeTranslateFailure } from '../common/failure';
 import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
-import { liveUsageLine, usageFacts, usageLine } from '../common/receipt';
+import { usageFacts, usageLine, writtenSoFar } from '../common/receipt';
 import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolWaiting } from '../common/words';
 import type { Reading } from '../../runtime/talk';
@@ -42,6 +42,8 @@ type Props = { row: MessageRow; modelMenu: MenuHandle; actions: ChatActions };
 const NO_GREETING = '첫 메시지 없이';
 
 const NO_PERSONA = '페르소나 없음';
+
+const WRITING = '쓰는 중';
 
 const CUT = { length: '잘림', 'no-terminal': '끊김', stopped: '중단됨', refused: '차단됨' } as const;
 const MARK = { length: 'length', 'no-terminal': 'length', stopped: 'stopped', refused: 'refused' } as const;
@@ -367,9 +369,10 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       writing={live || reveal.revealing}
     >
       {body}
-      {usageShown && live && !empty && message.reading && <LiveUsage reading={message.reading} text={version.text} reasoning={version.reasoning ?? ''} />}
+      {/* The wait's line goes on under the text as it comes, the same clock, and 사용량 표시's capsule takes its place once the receipt lands. */}
+      {live && !empty && message.reading && (usageShown ? <Writing reading={message.reading} text={version.text} reasoning={version.reasoning ?? ''} /> : <Elapsed note={WRITING} since={message.reading.at} />)}
       {usageShown && receipt && !live && !failed && editing === null && (
-        <Usage {...usageLine(receipt)} opens={{ facts: usageFacts(receipt), more: { label: '자세히', onClick: () => actions.info(message.id) } }} />
+        <Usage {...usageLine(receipt)} facts={usageFacts(receipt)} more={{ label: '자세히', onClick: () => actions.info(message.id) }} />
       )}
     </StoryMessage>
   );
@@ -381,17 +384,17 @@ function Remark({ remark, fresh, onSeen }: { remark: Stored<'remark'>; fresh: bo
   return <MascotRemark face={pictures.face} picture={pictures.expressions[expression]} name={MASCOTS[mascot].name} line={line} fresh={fresh} onSeen={onSeen} />;
 }
 
-// since: when the wait began, which a page left and come back to still counts from.
-function Elapsed({ note, since }: { note: string; since: number }) {
+// since: when the wait began, which a page left and come back to still counts from. written: what the reply wrote so far.
+function Elapsed({ note, since, written }: { note: string; since: number; written?: string | null }) {
   const now = useNow(Infinity);
   const seconds = Math.max(0, Math.floor((now - since) / 1000));
-  return <Waiting note={`${note} · ${seconds}초`} />;
+  return <Waiting note={`${note} · ${written ? `${written} · ` : ''}${seconds}초`} />;
 }
 
-function LiveUsage({ reading, text, reasoning }: { reading: Reading; text: string; reasoning: string }) {
-  const now = useNow(Infinity);
+// 사용량 표시 on, the line also says what this call wrote so far.
+function Writing({ reading, text, reasoning }: { reading: Reading; text: string; reasoning: string }) {
   const written = useWrittenTokens([text.slice(reading.text), reasoning.slice(reading.reasoning)]);
-  return <Usage {...liveUsageLine(written, Math.max(0, now - reading.at))} />;
+  return <Elapsed note={WRITING} since={reading.at} written={writtenSoFar(written)} />;
 }
 
 export const speaker = (message: Message, character: { name: string } | null, me: { name: string } | null, modelName: string | null) =>
