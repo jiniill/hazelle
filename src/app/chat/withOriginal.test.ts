@@ -36,6 +36,13 @@ it('pairs by alignment where the translation drops a heading and splits a paragr
   expect(withOriginal(translated.join('\n'), original.join('\n'))).toBe(pairs.join('\n'));
 });
 
+it('finds where a run of like paragraphs lost one by the numbers both sides hold', () => {
+  const original = ['Room 101 was empty.', 'Room 102 was empty too.', 'Room 103 was dark.', 'Room 104 was locked.'];
+  const translated = ['101호는 비어 있었다.', '103호는 어두웠다.', '104호는 잠겨 있었다.'];
+  const under = (at: number) => `\n${original[at]}${O}\n`;
+  expect(withOriginal(translated.join('\n'), original.join('\n'))).toBe([translated[0], under(0), under(1), translated[1], under(2), translated[2], under(3)].join('\n'));
+});
+
 it("keeps a picture's mark after its translated paragraph and that paragraph's original", () => {
   expect(withOriginal(withMarks('하나\n둘', new Set([0])), 'One\nTwo')).toBe(`하나\n\nOne${O}\n\n${placeMark(0)}\n둘\n\nTwo${O}\n`);
 });
