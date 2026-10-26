@@ -198,7 +198,16 @@ async function keptWeek(db: Db, week: number): Promise<Period | null> {
 
 // Every day before now's closes the 7 days ending it, in one transaction: their rank places kept for the marks 7 days
 // later, on a Sunday the week's totals written as it was shown, and the lists of the day no later window reaches deleted.
-async function closeDays(db: Db, now: number) {
+// One close at a time per database: a second that read pulse_closed before the first's batch would count a window
+// whose oldest day the first had just deleted, and keep a ranked model of a closed week under the floor too.
+const closing = new WeakMap<Db, Promise<void>>();
+function closeDays(db: Db, now: number): Promise<void> {
+  const closed = (closing.get(db) ?? Promise.resolve()).catch(() => {}).then(() => closePastDays(db, now));
+  closing.set(db, closed);
+  return closed;
+}
+
+async function closePastDays(db: Db, now: number) {
   const today = dayOf(now);
   const [closed, oldest] = await Promise.all([
     db.prepare('SELECT pulse_closed FROM service').first<number>('pulse_closed'),
