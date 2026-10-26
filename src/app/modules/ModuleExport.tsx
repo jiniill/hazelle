@@ -7,7 +7,7 @@ import { useFiles, useStore } from '../session';
 import { useToast } from '../toast';
 
 const LEFT =
-  'RisuAI 설정 › 모듈에서 가져오거나 창에 끌어다 놓아 열 수 있어요. 이미지는 유지되지만 삽화 프로필, 꺼 둔 스크립트·로어북, 로어북 우선순위와 위치는 빠지고, 쉼표가 든 키는 나뉘어요. Lua 트리거가 있으면 저수준 접근이 켜진 채로 내보내지며, 헤이젤로 다시 가져오면 모두 복원돼요.';
+  'RisuAI 설정 › 모듈에서 가져오거나 창에 끌어다 놓아 열 수 있어요. 삽화 프로필, 꺼 둔 스크립트·로어북, 로어북 우선순위와 위치는 빠지고, 쉼표가 든 키는 나뉘어요.';
 
 export function ModuleExport({ id, name, onClose }: { id: string; name: string; onClose: () => void }) {
   const store = useStore();

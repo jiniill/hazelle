@@ -36,7 +36,7 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
       const quiet = !fired && cause.after && !cause.after.fired ? ` (${silentReason(cause.after.why)})` : '';
       return {
         line: fired ? `로어북 '${cause.name}' 항목이 새로 켜졌어요.` : `로어북 '${cause.name}' 항목이 꺼졌어요${quiet}.`,
-        help: '키로 켜지는 항목은 켜고 꺼질 때마다 그 뒤의 캐시가 깨져요. 자주 바뀐다면 항상 켜 두거나, 배치 깊이를 대화 뒤쪽으로 두어 앞부분 캐시를 유지하세요.',
+        help: '자주 켜고 꺼지는 항목은 항상 켜 두거나 배치 깊이를 대화 뒤쪽으로 두면 앞부분 캐시가 유지돼요.',
       };
     }
     case 'moved':

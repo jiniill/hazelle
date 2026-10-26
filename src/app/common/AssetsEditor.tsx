@@ -88,7 +88,7 @@ export function AssetsEditor({ owner }: { owner: string }) {
 
   const viewed = viewing === null ? undefined : assets.find(({ id }) => id === viewing);
   return (
-    <Section title={ASSET} note={`${assets.length}개`} help="봇이 {{img::이름}}이나 {{video::이름}}으로 불러오는 이미지·영상이에요. 파일이나 폴더를 끌어다 놓아 추가할 수 있고, 이름이 겹치면 무작위로 표시돼요. 없는 이름 경고는 앱 실행 후 이 기기에서 본 채팅을 기준으로 떠요.">
+    <Section title={ASSET} note={`${assets.length}개`} help="봇이 {{img::이름}}이나 {{video::이름}}으로 불러오는 이미지·영상이에요. 이름이 겹치면 무작위로 표시돼요.">
       <Stack gap="related">
         {unfound.length > 0 && (
           <Callout tone="warn">

@@ -61,7 +61,7 @@ export function Variables({ chat, sending, busy }: { chat: string; sending: Send
   const search = useSearch(variables, '변수 검색', ({ name, last }) => [name, last.value]);
   return (
     <Stack gap="section">
-      <Section title="변수" help="대화를 처음부터 계산한 변수 값이에요. 눌러서 변경 내역을 보거나 수정할 수 있고, 수정한 값은 마지막 메시지에 저장돼요(그 메시지를 다시 생성하면 사라짐).">
+      <Section title="변수" help="직접 수정한 변수 값은 마지막 메시지를 다시 생성하면 사라져요.">
         {inspected === undefined ? (
           <Text variant="note">읽는 중…</Text>
         ) : inspected === null ? (

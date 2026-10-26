@@ -4,7 +4,7 @@ import { Button, Callout, Progress, Row, Section, SidePanel, Stack, Text, TextFi
 import type { RunEnd } from './autopilot';
 import type { Autopilot, Outlook } from './useAutopilot';
 
-const HOW = '위에서부터 차례대로 응답을 받은 뒤 다음 메시지를 보내요. 마지막 메시지의 새 버전에서 시작하므로 이전 대화도 버전을 바꿔 볼 수 있고, 실패·중단하거나 채팅을 나가면 멈춰요.';
+const HOW = '위에서부터 차례대로 응답을 받은 뒤 다음 메시지를 보내요. 채팅을 나가면 멈춰요.';
 
 type Props = { autopilot: Autopilot; busy: boolean; onClose: () => void };
 

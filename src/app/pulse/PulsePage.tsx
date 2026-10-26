@@ -15,8 +15,8 @@ const CURRENT = 'current';
 
 // Says what PulseBefore compares (contracts/pulse.ts); change both together.
 const RANKING_HELP = {
-  current: `최근 7일간 ${PULSE_FLOORS.row}명 이상(대화는 최근 24시간 내 ${PULSE_FLOORS.row}명 이상) 쓴 모델의 순위예요. 순위 변동은 이전 24시간(대화)이나 1주 전과 비교하며, 집계가 덜 끝났거나 사용자가 ${PULSE_FLOORS.board}명 미만이면 숨겨요. ${PULSE_FLOORS.row}명 미만인 모델은 ${REST}에서 숫자 없이 사용량 순으로 이름만 보여 줘요.`,
-  earlier: `해당 주에 ${PULSE_FLOORS.row}명 이상 쓴 모델의 순위예요. 순위 변동은 전주와 비교하며, 전주 집계가 덜 끝났거나 사용자가 ${PULSE_FLOORS.board}명 미만이면 숨겨요. ${PULSE_FLOORS.row}명 미만인 모델은 ${REST}에서 숫자 없이 사용량 순으로 이름만 보여 줘요.`,
+  current: `최근 7일간 ${PULSE_FLOORS.row}명(대화는 24시간 내 ${PULSE_FLOORS.row}명) 이상 쓴 모델 순위예요. 순위 변동은 직전 기간과 비교하며 사용자가 ${PULSE_FLOORS.board}명 미만이면 숨기고, ${PULSE_FLOORS.row}명 미만인 모델은 ${REST}에 이름만 보여 줘요.`,
+  earlier: `그 주에 ${PULSE_FLOORS.row}명 이상 쓴 모델 순위예요. 순위 변동은 전주와 비교하며 사용자가 ${PULSE_FLOORS.board}명 미만이면 숨기고, ${PULSE_FLOORS.row}명 미만인 모델은 ${REST}에 이름만 보여 줘요.`,
 };
 
 // main.tsx asks before the account flow, as for /terms: the page reads the same signed in or out.

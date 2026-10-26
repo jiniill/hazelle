@@ -20,7 +20,7 @@ import { useDeviceSignIn } from './useDeviceSignIn';
 
 // Who serves a reply: the current group's first account with allowance left (runtime/pool).
 const HELP =
-  '현재 그룹에서 한도가 남은 첫 계정으로 요청을 보내요. 모두 소진됐다면 첫 번째 계정으로 보내며, 초과 사용 여부는 GitHub 설정을 따라요.';
+  '현재 그룹에서 한도가 남은 첫 계정으로 요청을 보내요. 한도를 다 썼을 때 초과 사용 여부는 GitHub 설정을 따라요.';
 
 export function ConnectionAccounts({ id, connection, signIn, level }: { id: string; connection: Connection & { turns: Turns }; signIn: SignIn; level: 2 | 3 }) {
   const { store } = useSession();
