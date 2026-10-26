@@ -15,7 +15,7 @@ const CURRENT = 'current';
 
 // Says what PulseBefore compares (contracts/pulse.ts); change both together.
 const RANKING_HELP = {
-  current: `이번 주에 ${PULSE_FLOORS.row}명 이상 쓴 모델이 순위에 올라요. 대화는 최근 24시간 동안 응답을 받은 사람이 ${PULSE_FLOORS.row}명 이상이어야 해요. 순위 변동은 대화는 그 전 24시간, 다른 역할은 지난주와 비교해요. 비교할 기간이 다 집계되지 않았거나 쓴 사람이 ${PULSE_FLOORS.board}명이 안 됐으면 표시하지 않아요. ${PULSE_FLOORS.row}명이 안 되는 모델은 ${REST}에 숫자 없이 많이 쓴 순서대로 이름만 보여 줘요.`,
+  current: `최근 7일 동안 ${PULSE_FLOORS.row}명 이상 쓴 모델이 순위에 올라요. 대화는 최근 24시간 동안 응답을 받은 사람이 ${PULSE_FLOORS.row}명 이상이어야 해요. 순위 변동은 대화는 그 전 24시간, 다른 역할은 일주일 전 순위와 비교해요. 비교할 기간이 다 집계되지 않았거나 쓴 사람이 ${PULSE_FLOORS.board}명이 안 됐으면 표시하지 않아요. ${PULSE_FLOORS.row}명이 안 되는 모델은 ${REST}에 숫자 없이 많이 쓴 순서대로 이름만 보여 줘요.`,
   earlier: `그 주에 ${PULSE_FLOORS.row}명 이상 쓴 모델이 순위에 올라요. 순위 변동은 그 전 주와 비교해요. 그 전 주가 다 집계되지 않았거나 쓴 사람이 ${PULSE_FLOORS.board}명이 안 됐으면 표시하지 않아요. ${PULSE_FLOORS.row}명이 안 되는 모델은 ${REST}에 숫자 없이 많이 쓴 순서대로 이름만 보여 줘요.`,
 };
 
@@ -45,7 +45,7 @@ function PulsePage() {
 }
 
 function Answer({ answer }: { answer: PulseAnswer }) {
-  if (!answer.board) return <Empty variant="section">이번 주 집계에 참여한 사람이 {PULSE_FLOORS.board}명이 되면 보여 드려요.</Empty>;
+  if (!answer.board) return <Empty variant="section">최근 7일 동안 집계에 참여한 사람이 {PULSE_FLOORS.board}명이 되면 보여 드려요.</Empty>;
   return <Board board={answer.board} at={answer.at} />;
 }
 
@@ -60,7 +60,7 @@ function Board({ board, at }: { board: PulseBoard; at: number }) {
         variant="figures"
         items={[
           { label: '최근 24시간 응답', value: `${count(board.replies)}번` },
-          { label: '이번 주 쓴 사람', value: `${count(board.week.people)}명` },
+          { label: '최근 7일 쓴 사람', value: `${count(board.people)}명` },
         ]}
       />
       <Section title="시간별 응답" note={`${clockText(at)} 기준`}>
@@ -68,14 +68,14 @@ function Board({ board, at }: { board: PulseBoard; at: number }) {
       </Section>
       <Section
         title="모델 순위"
-        note={!current ? '그 주 쓴 사람 순' : role === 'chat' ? '최근 24시간 응답 순' : '이번 주 쓴 사람 순'}
+        note={!current ? '그 주 쓴 사람 순' : role === 'chat' ? '최근 24시간 응답 순' : '최근 7일 쓴 사람 순'}
         help={current ? RANKING_HELP.current : RANKING_HELP.earlier}
         action={
           board.weeks.length > 0 && (
             <ChoiceGroup
               label="기간"
               layout="menu"
-              options={[{ value: CURRENT, label: '이번 주' }, ...board.weeks.map((from) => ({ value: String(from), label: weekText(from) }))]}
+              options={[{ value: CURRENT, label: '최근 7일' }, ...board.weeks.map((from) => ({ value: String(from), label: weekText(from) }))]}
               value={week}
               onChange={setWeek}
             />

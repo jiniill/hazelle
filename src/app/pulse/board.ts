@@ -12,7 +12,8 @@ export function providerName(type: string): string | null {
   return CONNECTION_TYPES.find((each) => each.id === type)?.label ?? null;
 }
 
-// The server counts its week from Monday 00:00 KST, so the page tells every time in KST whatever the viewer's zone.
+// The server counts its days from 00:00 KST and its weeks from Monday, so the page tells every time in KST whatever the
+// viewer's zone.
 const KST = 'Asia/Seoul';
 const hourFormat = new Intl.DateTimeFormat('ko-KR', { timeZone: KST, hour: 'numeric' });
 const clockFormat = new Intl.DateTimeFormat('ko-KR', { timeZone: KST, hour: 'numeric', minute: '2-digit' });
@@ -55,7 +56,7 @@ function moveOf(rank: number, was: number | undefined): Ranked['move'] {
 }
 
 export const REST = '순위 밖 모델';
-const REST_HELP = `최근 24시간이나 이번 주에 쓴 사람이 ${PULSE_FLOORS.row}명이 안 되는 모델을 모았어요. 누가 얼마나 썼는지 드러나지 않게 모델마다 숫자는 보여 주지 않아요.`;
+const REST_HELP = `최근 24시간이나 최근 7일 동안 쓴 사람이 ${PULSE_FLOORS.row}명이 안 되는 모델을 모았어요. 누가 얼마나 썼는지 드러나지 않게 모델마다 숫자는 보여 주지 않아요.`;
 
 const OTHERS_HELP = `이름을 확인할 수 없는 모델은 ${OTHERS}로 묶어 보여 줘요. 제공자의 models.dev 목록에 없는 모델과 ${DIRECT_CONNECTION}로 쓴 모델이에요. 개인 모델 이름이 드러나지 않게 하려고요.`;
 

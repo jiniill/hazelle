@@ -92,11 +92,11 @@ describe('the client files', () => {
     const html = '<title>헤이젤</title><meta name="description" content="app" /><meta property="og:title" content="헤이젤" /><meta property="og:description" content="app" /><meta property="og:image" content="https://hazelle.app/og.png" />';
     writeFileSync(join(dir, 'index.html'), html);
     const row = (model: string | null) => ({ key: model ?? '', model, share: 0.5, people: 5 });
-    const board = { week: { from: 0, people: 4560 }, replies: 12340, ranking: { chat: { merged: [row(null), row('GPT <5> & "co"')], split: [] } } } as unknown as PulseBoard;
+    const board = { people: 4560, replies: 12340, ranking: { chat: { merged: [row(null), row('GPT <5> & "co"')], split: [] } } } as unknown as PulseBoard;
     pulse = async () => ({ at: 0, board });
     const page = async () => (await client.request('/now', { headers: PAGE })).text();
     expect(await page()).toBe(
-      '<title>헤이젤 나우 · 대화 1위 GPT &#60;5&#62; &#38; &#34;co&#34;</title><meta name="description" content="최근 24시간 응답 12,340번 · 이번 주 4,560명이 썼어요" /><meta property="og:title" content="헤이젤 나우 · 대화 1위 GPT &#60;5&#62; &#38; &#34;co&#34;" /><meta property="og:description" content="최근 24시간 응답 12,340번 · 이번 주 4,560명이 썼어요" /><meta property="og:image" content="https://hazelle.app/og.png" />',
+      '<title>헤이젤 나우 · 대화 1위 GPT &#60;5&#62; &#38; &#34;co&#34;</title><meta name="description" content="최근 24시간 응답 12,340번 · 최근 7일 4,560명이 썼어요" /><meta property="og:title" content="헤이젤 나우 · 대화 1위 GPT &#60;5&#62; &#38; &#34;co&#34;" /><meta property="og:description" content="최근 24시간 응답 12,340번 · 최근 7일 4,560명이 썼어요" /><meta property="og:image" content="https://hazelle.app/og.png" />',
     );
     for (const answer of [() => Promise.resolve({ at: 0, board: null }), () => Promise.reject(new Error('down'))]) {
       pulse = answer;

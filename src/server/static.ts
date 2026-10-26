@@ -116,5 +116,5 @@ function pulsePage(html: string, { board }: PulseAnswer): string {
   const count = (value: number) => value.toLocaleString('ko-KR');
   // 기타 never headlines.
   const leader = board.ranking.chat.merged.find((row) => row.model !== null)?.model;
-  return worded(html, leader ? `${PULSE_PAGE.title} · 대화 1위 ${leader}` : PULSE_PAGE.title, `최근 24시간 응답 ${count(board.replies)}번 · 이번 주 ${count(board.week.people)}명이 썼어요`);
+  return worded(html, leader ? `${PULSE_PAGE.title} · 대화 1위 ${leader}` : PULSE_PAGE.title, `최근 24시간 응답 ${count(board.replies)}번 · 최근 7일 ${count(board.people)}명이 썼어요`);
 }

@@ -26,15 +26,19 @@ import { DAY_MS, fail, readObject, type AppEnv } from './http';
 import type { Upstream } from './relay';
 
 // 헤이젤 나우 (design §6.12): counts what the client labels (worker.ts, calls.ts, streams.ts) and answers the public board.
-// The current week and the last 48 hours are lists of who used what (pulse_seen, pulse_used, pulse_replies), counted
-// when read; a week once past is closed into its totals (pulse_week*) and its lists deleted. The floors apply where a
-// count is shown or closed, never where a call is written.
+// The last 7 days and the last 48 hours are lists of who used what (pulse_seen, pulse_used, pulse_replies), counted
+// when read. Each day once past closes the 7 days ending it: their rank places kept for the marks, a Sunday's into the
+// week's totals (pulse_week*), and the day no later window reaches deleted. The floors apply where a count is shown or
+// closed, never where a call is written.
 
 const HOUR_MS = 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 // 1970-01-05 00:00 KST, a Monday. Migration 0014 repeats it in SQL.
 const MONDAY = 4 * DAY_MS - 9 * HOUR_MS;
 const weekOf = (at: number) => at - ((((at - MONDAY) % WEEK_MS) + WEEK_MS) % WEEK_MS);
+const dayOf = (at: number) => at - ((((at - MONDAY) % DAY_MS) + DAY_MS) % DAY_MS);
+// The first of the 7 days ending `day`.
+const firstDay = (day: number) => day - WEEK_MS + DAY_MS;
 const hourOf = (at: number) => at - (at % HOUR_MS);
 // How often the answer is made at most: a reload costs no read before then, and a moment shows this late.
 const MEMO_MS = 5 * 60 * 1000;
@@ -77,15 +81,15 @@ export function openPulse(db: Db, clock: () => number = Date.now): Pulse {
   return {
     invalidate: () => { memo = null; },
     seen: async (account, guest = false) => {
-      await db.prepare(`INSERT INTO ${guest ? 'pulse_guest_seen' : 'pulse_seen'} (week, account) VALUES (?, ?) ON CONFLICT DO NOTHING`).bind(weekOf(clock()), account).run();
+      await db.prepare(`INSERT INTO ${guest ? 'pulse_guest_seen' : 'pulse_seen'} (day, account) VALUES (?, ?) ON CONFLICT DO NOTHING`).bind(dayOf(clock()), account).run();
     },
     call: async (account, { role, type, model }, guest = false) => {
       const { key, name } = await confirm(db, type, model);
-      // Read after the await: a call across a week's start lands in the week it ended in.
+      // Read after the await: a call across midnight lands in the day it ended in.
       const now = clock();
       await db.batch([
         db.prepare('INSERT INTO pulse_hours (hour, role, calls) VALUES (?, ?, 1) ON CONFLICT DO UPDATE SET calls = calls + 1').bind(hourOf(now), role),
-        db.prepare(`INSERT INTO ${guest ? 'pulse_guest_used' : 'pulse_used'} (week, role, key, type, account, name) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO UPDATE SET name = excluded.name`).bind(weekOf(now), role, key, type, account, name),
+        db.prepare(`INSERT INTO ${guest ? 'pulse_guest_used' : 'pulse_used'} (day, role, key, type, account, name) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO UPDATE SET name = excluded.name`).bind(dayOf(now), role, key, type, account, name),
         ...(role === 'chat'
           ? [
               db
@@ -112,7 +116,7 @@ export function openPulse(db: Db, clock: () => number = Date.now): Pulse {
       // A past week no longer changes. Only weeks found are kept: any number can be asked.
       const kept = weeks.get(from);
       if (kept) return kept;
-      const made = closeWeeks(db, now).then(() => pastWeek(db, from));
+      const made = closeDays(db, now).then(() => pastWeek(db, from));
       weeks.set(from, made);
       made.then(
         (week) => {
@@ -128,8 +132,9 @@ export function openPulse(db: Db, clock: () => number = Date.now): Pulse {
 // type: '' for the row merged across connection types.
 type WeekRow = { role: PulseRole; key: string; type: string; name: string | null; people: number };
 type WeekName = Omit<WeekRow, 'people'>;
-// A week as its totals are kept: what passed the floors, and the named rows under them in order, never counted.
-type Week = { people: number; roles: Map<PulseRole, number>; models: WeekRow[]; below: WeekName[] };
+// The last 7 days counted, or a closed week as its totals are kept: what passed the floors, and the named rows under
+// them in order, never counted.
+type Period = { people: number; roles: Map<PulseRole, number>; models: WeekRow[]; below: WeekName[] };
 
 const mostCounted = (names: Map<string | null, number>) => [...names].reduce<[string | null, number]>((best, each) => (each[1] > best[1] ? each : best), [null, 0])[0];
 const add = <K>(map: Map<K, number>, key: K, count: number) => map.set(key, (map.get(key) ?? 0) + count);
@@ -144,14 +149,15 @@ function sortCounted<T>(rows: T[], of: (row: T) => [count: number, name: string 
   });
 }
 
-// The week's lists counted: each row's spelling is the one most of its people used.
-async function countWeek(db: Db, week: number): Promise<Week | null> {
+// The lists of the 7 days ending `day` counted: each row's spelling is the one most of its people used.
+async function countDays(db: Db, day: number): Promise<Period | null> {
+  const days = [firstDay(day), day];
   const [seen, roles, merged, mergedNames, split] = await Promise.all([
-    db.prepare('SELECT COUNT(*) AS people FROM pulse_people_seen WHERE week = ?').bind(week).first<number>('people'),
-    db.prepare('SELECT role, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE week = ? GROUP BY role').bind(week).all<{ role: PulseRole; people: number }>(),
-    db.prepare('SELECT role, key, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE week = ? GROUP BY role, key').bind(week).all<Omit<WeekRow, 'type' | 'name'>>(),
-    db.prepare('SELECT role, key, name, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE week = ? GROUP BY role, key, name ORDER BY name').bind(week).all<Omit<WeekRow, 'type'>>(),
-    db.prepare('SELECT role, key, type, name, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE week = ? GROUP BY role, key, type, name ORDER BY name').bind(week).all<WeekRow>(),
+    db.prepare('SELECT COUNT(DISTINCT account) AS people FROM pulse_people_seen WHERE day BETWEEN ? AND ?').bind(...days).first<number>('people'),
+    db.prepare('SELECT role, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE day BETWEEN ? AND ? GROUP BY role').bind(...days).all<{ role: PulseRole; people: number }>(),
+    db.prepare('SELECT role, key, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE day BETWEEN ? AND ? GROUP BY role, key').bind(...days).all<Omit<WeekRow, 'type' | 'name'>>(),
+    db.prepare('SELECT role, key, name, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE day BETWEEN ? AND ? GROUP BY role, key, name ORDER BY name').bind(...days).all<Omit<WeekRow, 'type'>>(),
+    db.prepare('SELECT role, key, type, name, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE day BETWEEN ? AND ? GROUP BY role, key, type, name ORDER BY name').bind(...days).all<WeekRow>(),
   ]);
   if (seen! < PULSE_FLOORS.board) return null;
   const names = new Map<string, Map<string | null, number>>();
@@ -179,7 +185,7 @@ async function countWeek(db: Db, week: number): Promise<Week | null> {
 }
 
 // null for a week that never passed PULSE_FLOORS.board, whose lists were never shown.
-async function keptWeek(db: Db, week: number): Promise<Week | null> {
+async function keptWeek(db: Db, week: number): Promise<Period | null> {
   const people = await db.prepare('SELECT people FROM pulse_week WHERE week = ?').bind(week).first<number>('people');
   if (people === null) return null;
   const [roles, models, below] = await Promise.all([
@@ -190,27 +196,49 @@ async function keptWeek(db: Db, week: number): Promise<Week | null> {
   return { people, roles: new Map(roles.results.map((row) => [row.role, row.people])), models: models.results, below: below.results };
 }
 
-// Every week before now's: its totals written as it was shown, its lists deleted, in one transaction.
-async function closeWeeks(db: Db, now: number) {
-  const open = await db.prepare('SELECT week FROM pulse_people_seen WHERE week < ? UNION SELECT week FROM pulse_used WHERE week < ? UNION SELECT week FROM pulse_guest_used WHERE week < ?').bind(weekOf(now), weekOf(now), weekOf(now)).all<{ week: number }>();
-  for (const { week } of open.results) {
-    const counted = await countWeek(db, week);
+// Every day before now's closes the 7 days ending it, in one transaction: their rank places kept for the marks 7 days
+// later, on a Sunday the week's totals written as it was shown, and the lists of the day no later window reaches deleted.
+async function closeDays(db: Db, now: number) {
+  const today = dayOf(now);
+  const [closed, oldest] = await Promise.all([
+    db.prepare('SELECT pulse_closed FROM service').first<number>('pulse_closed'),
+    db.prepare('SELECT MIN(day) AS day FROM (SELECT day FROM pulse_people_seen UNION ALL SELECT day FROM pulse_used UNION ALL SELECT day FROM pulse_guest_used)').first<number | null>('day'),
+  ]);
+  // Days before the oldest list close nothing.
+  for (let day = Math.max(closed!, oldest ?? today); day < today; day += DAY_MS) {
+    const counted = await countDays(db, day);
+    const week = weekOf(day);
+    const sunday = weekOf(day + DAY_MS) !== week;
     await db.batch([
       ...(counted
         ? [
-            db.prepare('INSERT INTO pulse_week (week, people) VALUES (?, ?) ON CONFLICT DO NOTHING').bind(week, counted.people),
-            ...[...counted.roles].map(([role, people]) => db.prepare('INSERT INTO pulse_week_roles (week, role, people) VALUES (?, ?, ?) ON CONFLICT DO NOTHING').bind(week, role, people)),
-            ...counted.models.map((row) =>
-              db.prepare('INSERT INTO pulse_week_models (week, role, key, type, name, people) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING').bind(week, row.role, row.key, row.type, row.name, row.people),
-            ),
-            ...counted.below.map((row, place) =>
-              db.prepare('INSERT INTO pulse_week_below (week, role, key, type, name, place) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING').bind(week, row.role, row.key, row.type, row.name, place),
-            ),
+            db.prepare('INSERT INTO pulse_day_places (day, places) VALUES (?, ?) ON CONFLICT DO NOTHING').bind(day, JSON.stringify(byRole((role) => places(rankPeriod(counted)[role])))),
+            ...(sunday
+              ? [
+                  db.prepare('INSERT INTO pulse_week (week, people) VALUES (?, ?) ON CONFLICT DO NOTHING').bind(week, counted.people),
+                  ...[...counted.roles].map(([role, people]) => db.prepare('INSERT INTO pulse_week_roles (week, role, people) VALUES (?, ?, ?) ON CONFLICT DO NOTHING').bind(week, role, people)),
+                  ...counted.models.map((row) =>
+                    db.prepare('INSERT INTO pulse_week_models (week, role, key, type, name, people) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING').bind(week, row.role, row.key, row.type, row.name, row.people),
+                  ),
+                  ...counted.below.map((row, place) =>
+                    db.prepare('INSERT INTO pulse_week_below (week, role, key, type, name, place) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING').bind(week, row.role, row.key, row.type, row.name, place),
+                  ),
+                ]
+              : []),
           ]
         : []),
-      ...['pulse_seen', 'pulse_used', 'pulse_guest_seen', 'pulse_guest_used'].map((table) => db.prepare(`DELETE FROM ${table} WHERE week = ?`).bind(week)),
+      ...['pulse_seen', 'pulse_used', 'pulse_guest_seen', 'pulse_guest_used'].map((table) => db.prepare(`DELETE FROM ${table} WHERE day < ?`).bind(firstDay(day + DAY_MS))),
+      // The board on a later day reads the places of the day 7 days before it.
+      db.prepare('DELETE FROM pulse_day_places WHERE day < ?').bind(firstDay(day + DAY_MS) - DAY_MS),
+      db.prepare('UPDATE service SET pulse_closed = ?').bind(day + DAY_MS),
     ]);
   }
+}
+
+// null for a day whose 7 days never passed PULSE_FLOORS.board, whose ranking was never shown.
+async function dayPlaces(db: Db, day: number): Promise<Record<PulseRole, PulseOrder> | null> {
+  const kept = await db.prepare('SELECT places FROM pulse_day_places WHERE day = ?').bind(day).first<string>('places');
+  return kept === null ? null : (JSON.parse(kept) as Record<PulseRole, PulseOrder>);
 }
 
 const rounded = (count: number) => Math.round(count / PULSE_FLOORS.round) * PULSE_FLOORS.round;
@@ -232,17 +260,17 @@ const listed = (rows: PulseBelow[]): Pick<PulseRanking, 'below'> => {
 const place = ({ key, type }: PulseRow): PulsePlace => (type === undefined ? { key } : { key, type });
 const places = ({ merged, split }: PulseRanking): PulseOrder => ({ merged: merged.map(place), split: split.map(place) });
 
-const rankWeek = (week: Week): PulseRankings =>
+const rankPeriod = (period: Period): PulseRankings =>
   byRole((role) => ({
-    ...ranked(week.models.filter((row) => row.role === role).map(({ key, type, name, people }) => ({ count: people, row: { key, model: name, ...typed(type), share: people / week.roles.get(role)!, people } }))),
-    ...listed(week.below.filter((row) => row.role === role).map(({ key, type, name }) => ({ key, model: name, ...typed(type) }))),
+    ...ranked(period.models.filter((row) => row.role === role).map(({ key, type, name, people }) => ({ count: people, row: { key, model: name, ...typed(type), share: people / period.roles.get(role)!, people } }))),
+    ...listed(period.below.filter((row) => row.role === role).map(({ key, type, name }) => ({ key, model: name, ...typed(type) }))),
   }));
 
 type Tally = { replies: number; people: Set<string>; names: Map<string | null, number> };
 
 // The 24 whole hours before now's hour: each hour's calls, and 대화 ranked by its replies. A row needs 5 people in those
-// hours and its row in `week`, the week of `now`, whose people it shows.
-async function chatDay(db: Db, now: number, week: Week): Promise<{ hours: { at: number; calls: Record<PulseRole, number> }[]; ranking: PulseRanking }> {
+// hours and shows the people of its row in `days`, the 7 days ending today.
+async function chatDay(db: Db, now: number, days: Period): Promise<{ hours: { at: number; calls: Record<PulseRole, number> }[]; ranking: PulseRanking }> {
   const until = hourOf(now);
   const since = until - DAY_MS;
   const [calls, replies, excluded] = await Promise.all([
@@ -265,14 +293,14 @@ async function chatDay(db: Db, now: number, week: Week): Promise<{ hours: { at: 
       add(tally.names, row.name, row.replies);
     }
   }
-  const peopleOf = new Map(week.models.filter((row) => row.role === 'chat').map((row) => [`${row.key}\0${row.type}`, row.people]));
+  const peopleOf = new Map(days.models.filter((row) => row.role === 'chat').map((row) => [`${row.key}\0${row.type}`, row.people]));
   const shown: { count: number; row: PulseRow }[] = [];
   const under: { count: number; row: PulseBelow }[] = [];
   for (const [id, tally] of tallies) {
-    const people = peopleOf.get(id);
     const [key, type] = id.split('\0') as [string, string];
     const model = mostCounted(tally.names);
-    if (people !== undefined && tally.people.size >= PULSE_FLOORS.row) shown.push({ count: tally.replies, row: { key, model, ...typed(type), share: tally.replies / chatCalls, people, replies: rounded(tally.replies) } });
+    // Each reply also wrote its person into pulse_used of a day within `days`, so 5 people here are 5 there.
+    if (tally.people.size >= PULSE_FLOORS.row) shown.push({ count: tally.replies, row: { key, model, ...typed(type), share: tally.replies / chatCalls, people: peopleOf.get(id)!, replies: rounded(tally.replies) } });
     else if (key) under.push({ count: tally.replies, row: { key, model, ...typed(type) } });
   }
   const rest = (split: boolean): PulseRest => {
@@ -284,36 +312,37 @@ async function chatDay(db: Db, now: number, week: Week): Promise<{ hours: { at: 
 }
 
 async function board(db: Db, now: number): Promise<PulseBoard | null> {
-  await closeWeeks(db, now);
-  const from = weekOf(now);
-  const current = await countWeek(db, from);
-  if (!current) return null;
-  const [lastWeek, weeks] = await Promise.all([keptWeek(db, from - WEEK_MS), db.prepare('SELECT week FROM pulse_week WHERE week < ? ORDER BY week DESC').bind(from).all<{ week: number }>()]);
-  // On a Monday the day before reaches into last week, whose people a 대화 row shows: none where it was never shown.
-  const weekBefore = weekOf(now - DAY_MS) === from ? current : lastWeek;
-  const lastRanking = lastWeek && rankWeek(lastWeek);
-  const [day, dayBefore] = await Promise.all([chatDay(db, now, current), weekBefore && chatDay(db, now - DAY_MS, weekBefore)]);
+  await closeDays(db, now);
+  const today = dayOf(now);
+  const days = await countDays(db, today);
+  if (!days) return null;
+  const [weekAgo, weeks, day, dayBefore] = await Promise.all([
+    dayPlaces(db, today - WEEK_MS),
+    db.prepare('SELECT week FROM pulse_week ORDER BY week DESC').all<{ week: number }>(),
+    chatDay(db, now, days),
+    chatDay(db, now - DAY_MS, days),
+  ]);
   return {
-    week: { from, people: current.people },
+    people: days.people,
     replies: rounded(day.hours.reduce((sum, hour) => sum + hour.calls.chat, 0)),
     hours: day.hours.map(({ at, calls }) => ({ at, calls: byRole((role) => rounded(calls[role])) })),
-    // The board's 대화 is the day's replies; the week's people rank it only once the week is past.
-    ranking: { ...rankWeek(current), chat: day.ranking },
-    before: { ...byRole((role) => lastRanking && places(lastRanking[role])), chat: dayBefore && places(dayBefore.ranking) },
+    // The board's 대화 is the day's replies; the days' people rank it only once a week is past.
+    ranking: { ...rankPeriod(days), chat: day.ranking },
+    before: { ...byRole((role) => weekAgo && weekAgo[role]), chat: places(dayBefore.ranking) },
     weeks: weeks.results.map((row) => row.week),
   };
 }
 
 async function pastWeek(db: Db, from: number): Promise<PulseWeek | null> {
   const [week, prior] = await Promise.all([keptWeek(db, from), keptWeek(db, from - WEEK_MS)]);
-  const priorRanking = prior && rankWeek(prior);
-  return week && { from, people: week.people, ranking: rankWeek(week), before: byRole((role) => priorRanking && places(priorRanking[role])) };
+  const priorRanking = prior && rankPeriod(prior);
+  return week && { from, people: week.people, ranking: rankPeriod(week), before: byRole((role) => priorRanking && places(priorRanking[role])) };
 }
 
-// Hourly: past weeks closed, and hours gone by hour boundary, so the board's 대화 before reads
+// Hourly: past days closed, and hours gone by hour boundary, so the board's 대화 before reads
 // [hourOf(now) - 2 days, hourOf(now) - 1 day) whole.
 export async function forgetPulse(db: Db, now = Date.now()) {
-  await closeWeeks(db, now);
+  await closeDays(db, now);
   await db.batch(['pulse_hours', 'pulse_replies', 'pulse_guest_replies'].map((table) => db.prepare(`DELETE FROM ${table} WHERE hour < ?`).bind(hourOf(now) - HOURS_KEPT_MS)));
 }
 

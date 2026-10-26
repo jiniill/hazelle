@@ -38,8 +38,8 @@ export function readPulseHeader(value: string | undefined | null): PulseLabel | 
   return model && model.length <= MODEL_MOST ? { kind: 'call', role: role as PulseRole, type, model } : null;
 }
 
-// A weekly model row shows only with at least `row` distinct people that week (a 대화 row: replied to in the last 24
-// hours); the whole board hides below `board` people sharing that week. Counts of calls round to `round`. The rows under
+// A model row shows only with at least `row` distinct people in its period, the last 7 days or a past week (a 대화 row:
+// replied to in the last 24 hours); the whole board hides below `board` people sharing that period. Counts of calls round to `round`. The rows under
 // the floor are named, never counted, only from `below` of them in a view.
 export const PULSE_FLOORS = { row: 5, board: 10, round: 10, below: 2 } as const;
 
@@ -47,7 +47,7 @@ export const PULSE_FLOORS = { row: 5, board: 10, round: 10, below: 2 } as const;
 // row in another period by key and type, never by model, whose spelling can change. model: the confirmed name in the
 // spelling most counted, null for 기타. type: the connection type,
 // present only in the split view (제공자별로 보기). share: of the role's total in the same window, 0 to 1. people:
-// that week's distinct people on the row. replies: the board's 대화 only, replies received in the last 24 hours, rounded.
+// the period's distinct people on the row. replies: the board's 대화 only, replies received in the last 24 hours, rounded.
 export type PulseRow = { key: string; model: string | null; type?: string; share: number; people: number; replies?: number };
 
 // rest: the board's 대화 only, the replies of rows below the floor in each view, so the shares there add up to the
@@ -62,15 +62,16 @@ export type PulseRankings = Record<PulseRole, PulseRanking>;
 // Who stood where a period earlier, for the rank change marks: the same rows in the same order, nothing else.
 export type PulsePlace = Pick<PulseRow, 'key' | 'type'>;
 export type PulseOrder = { merged: PulsePlace[]; split: PulsePlace[] };
-// A role is null where its earlier period was never shown: last week did not pass PULSE_FLOORS.board (대화: only when
-// the 24 hours before reach into last week), so no mark compares against a list that was never shown.
+// A role is null where its earlier period was never shown: the 7 days a week earlier, or the week before, did not pass
+// PULSE_FLOORS.board, so no mark compares against a list that was never shown. The board's 대화 is never null.
 export type PulseBefore = Record<PulseRole, PulseOrder | null>;
 
 // hours: the last 24 whole hours, oldest first, each hour's calls per role (rounded); at is the hour's start.
-// week.from: the start of the counting week (Monday 00:00 KST). before: 대화 the 24 hours before, the other roles last
-// week. weeks: the earlier weeks that passed PULSE_FLOORS.board, newest first, each read as a PulseWeek.
+// people: who shared in the last 7 days, today in KST and the 6 days before. before: 대화 the 24 hours before, the
+// other roles the 7 days a week earlier. weeks: the past weeks (Monday to Sunday, KST) that passed PULSE_FLOORS.board,
+// newest first, each read as a PulseWeek.
 export type PulseBoard = {
-  week: { from: number; people: number };
+  people: number;
   replies: number;
   hours: { at: number; calls: Record<PulseRole, number> }[];
   ranking: PulseRankings;
@@ -78,7 +79,7 @@ export type PulseBoard = {
   weeks: number[];
 };
 
-// board: null while fewer than PULSE_FLOORS.board people share this week. at: when this answer was made; the server refreshes it every few minutes.
+// board: null while fewer than PULSE_FLOORS.board people shared in the last 7 days. at: when this answer was made; the server refreshes it every few minutes.
 export type PulseAnswer = { at: number; board: PulseBoard | null };
 
 // An earlier week (GET /api/pulse/weeks/:from), every role ranked by that week's people, 대화 too: its replies are kept

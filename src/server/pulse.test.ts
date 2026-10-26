@@ -86,13 +86,13 @@ it('answers with no board before anyone is counted, cached publicly for 5 minute
   expect(await answer.json()).toEqual({ at: NOON, board: null });
 });
 
-it('shows the board from 10 people this week and a row from 5 people on it, naming only a model a list confirms', async () => {
+it('shows the board from 10 people in the last 7 days and a row from 5 people on it, naming only a model a list confirms', async () => {
   const cookies = await people(10);
   await seen(cookies.slice(0, 9));
   expect(await board()).toBeNull();
   await seen(cookies);
   at(NOON + 5 * 60 * 1000);
-  expect((await board())?.week).toEqual({ from: WEEK_FROM, people: 10 });
+  expect((await board())?.people).toBe(10);
 
   for (const cookie of cookies.slice(0, 4)) await call(cookie, 'image', 'novelai', 'nai-diffusion-5-full');
   for (const cookie of cookies.slice(0, 5)) await call(cookie, 'image', 'direct', 'nai-diffusion-5-full');
@@ -166,13 +166,15 @@ it('counts a call once its provider answered 2xx, once after a stream retried', 
   expect(await hourCalls()).toEqual([{ role: 'aux', calls: 1 }]);
 });
 
-it('starts every week empty', async () => {
+it('counts the last 7 days, so a Monday keeps the week before, and closes a week once its Sunday is past', async () => {
   const cookies = await people(10);
   await seen(cookies);
+  at(NOON + 5 * DAY);
+  expect((await board())?.people).toBe(10);
+  expect((await t.env.db.prepare('SELECT week, people FROM pulse_week').all()).results).toEqual([{ week: WEEK_FROM, people: 10 }]);
   at(NOON + WEEK);
   await seen(cookies.slice(0, 9));
   expect(await board()).toBeNull();
-  expect((await t.env.db.prepare('SELECT week, people FROM pulse_week').all()).results).toEqual([{ week: WEEK_FROM, people: 10 }]);
 });
 
 it('keeps counting across a restart, and forgets a person who left', async () => {
@@ -188,7 +190,7 @@ it('keeps counting across a restart, and forgets a person who left', async () =>
   for (const table of ['pulse_seen', 'pulse_used', 'pulse_replies']) expect(await t.env.db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE account = ?`).bind(left!.account).first('n')).toBe(0);
 });
 
-it('closes a past week into the totals that passed the floors, the names under them in order, and deletes its lists', async () => {
+it('closes a past week into the totals that passed the floors, the names under them in order, and deletes lists past 7 days', async () => {
   await t.env.db.prepare("INSERT INTO models_dev (list, model, name) VALUES ('openrouter', 'p', 'P'), ('openrouter', 'q', 'Q')").run();
   const cookies = await people(10);
   await seen(cookies);
@@ -258,15 +260,21 @@ it('marks 대화 against the 24 hours before, ranked as the board ranks them', a
   expect(answer.before.chat).toEqual({ merged: [{ key: 'a' }, { key: 'b' }], split: [{ key: 'a', type: 'openrouter' }, { key: 'b', type: 'openrouter' }] });
 });
 
-it('marks the other roles against last week by people, unless last week never showed its board', async () => {
-  const last = WEEK_FROM - WEEK;
-  await seen(await people(10));
+it('marks the other roles against the 7 days a week earlier by people, unless those never showed the board', async () => {
+  await t.env.db.prepare("INSERT INTO models_dev (list, model, name) VALUES ('openrouter', 'x', 'X'), ('openrouter', 'y', 'Y')").run();
+  const cookies = await people(11);
+  await seen(cookies.slice(0, 10));
   expect((await board())!.before).toEqual({ chat: EMPTY, aux: null, image: null, embedding: null });
-  await insert('pulse_week', [last, 12]);
-  await insert('pulse_week_roles', [last, 'aux', 10]);
-  await insert('pulse_week_models', [last, 'aux', 'x', '', 'X', 5], [last, 'aux', 'y', '', 'Y', 8], [last, 'aux', 'y', 'openai', 'Y', 8]);
-  at(NOON + 10 * 60 * 1000);
-  expect((await board())!.before).toEqual({ chat: EMPTY, aux: { merged: [{ key: 'y' }, { key: 'x' }], split: [{ key: 'y', type: 'openai' }] }, image: EMPTY, embedding: EMPTY });
+  for (const cookie of cookies.slice(0, 5)) await call(cookie, 'aux', 'openrouter', 'x');
+  for (const cookie of cookies.slice(5)) await call(cookie, 'aux', 'openrouter', 'y');
+  at(NOON + WEEK);
+  await seen(cookies.slice(0, 10));
+  expect((await board())!.before).toEqual({
+    chat: EMPTY,
+    aux: { merged: [{ key: 'y' }, { key: 'x' }], split: [{ key: 'y', type: 'openrouter' }, { key: 'x', type: 'openrouter' }] },
+    image: EMPTY,
+    embedding: EMPTY,
+  });
 });
 
 it('lists the earlier weeks and answers each by its people, against the week before it, and nothing else', async () => {
@@ -315,11 +323,11 @@ it('counts guest labels in the same rankings and closes their week without creat
   const existing = await t.env.db.prepare('SELECT id FROM accounts LIMIT 1').first<string>('id');
   await t.post('pulse/guest', { client: existing, label: 'chat direct private' });
   at(NOON + HOUR);
-  expect((await board())?.week.people).toBe(10);
+  expect((await board())?.people).toBe(10);
   expect((await board())?.ranking.chat.merged).toEqual([{ key: '', model: null, share: 1, people: 10, replies: 10 }]);
   expect(await t.env.db.prepare('SELECT COUNT(*) AS n FROM accounts').first('n')).toBe(5);
   await t.restartPulse();
-  expect((await board())?.week.people).toBe(10);
+  expect((await board())?.people).toBe(10);
   await forgetPulse(t.env.db, NOON + WEEK);
   expect(await t.env.db.prepare('SELECT people FROM pulse_week').first('people')).toBe(10);
   expect((await t.env.db.prepare("SELECT people FROM pulse_week_models WHERE type = ''").first('people'))).toBe(10);
@@ -337,7 +345,7 @@ it('lets only the operator persist accounts-only rankings, while guests still co
   expect((await t.put('admin/pulse', { guests: 'false' }, cookies[0])).status).toBe(400);
   expect((await t.put('admin/pulse', { guests: false }, cookies[0])).status).toBe(204);
   expect(await (await t.get('admin/pulse', cookies[0])).json()).toEqual({ guests: false });
-  expect((await board())?.week.people).toBe(15);
+  expect((await board())?.people).toBe(15);
   expect((await board())?.ranking.chat.merged).toEqual([{ key: '', model: null, share: 1, people: 5, replies: 10 }]);
   await t.restartPulse();
   expect((await board())?.ranking.chat.merged[0]?.people).toBe(5);
