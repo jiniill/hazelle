@@ -14,7 +14,7 @@ variable (`variables.tf`), passed as `-var` or `TF_VAR_*`, or in a `*.tfvars` fi
 | variable | what |
 |---|---|
 | `ssh_public_key` | the owner's SSH public key |
-| `owner_cidr` | the owner's IPv4 address as `a.b.c.d/32`; the only source allowed on port 22 |
+| `owner_cidrs` | the owner's IPv4 addresses as `["a.b.c.d/32", …]`; the only sources allowed on port 22 |
 | `image_digest` | `sha256:…` of the release to start with (the release's `image-digest.txt`) |
 | `r2_account_id`, `r2_access_key_id`, `r2_secret_access_key`, `r2_bucket` | the off-site backup bucket and a key that may read, write and delete in it |
 | `r2_files_bucket`, `r2_files_access_key_id`, `r2_files_secret_access_key` | optional: the app's own picture bucket and a key that may read, write and delete in it alone (see Pictures in R2); empty keeps pictures on `/data` |

@@ -8,11 +8,12 @@ resource "vultr_firewall_group" "hazelle" {
 }
 
 resource "vultr_firewall_rule" "ssh" {
+  for_each          = toset(var.owner_cidrs)
   firewall_group_id = vultr_firewall_group.hazelle.id
   protocol          = "tcp"
   ip_type           = "v4"
-  subnet            = split("/", var.owner_cidr)[0]
-  subnet_size       = tonumber(split("/", var.owner_cidr)[1])
+  subnet            = split("/", each.value)[0]
+  subnet_size       = tonumber(split("/", each.value)[1])
   port              = "22"
   notes             = "owner ssh"
 }

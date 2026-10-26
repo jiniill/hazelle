@@ -18,12 +18,12 @@ variable "ssh_public_key" {
   type = string
 }
 
-# The one address allowed to reach port 22, as a CIDR (a.b.c.d/32).
-variable "owner_cidr" {
-  type = string
+# The addresses allowed to reach port 22, as CIDRs (a.b.c.d/32).
+variable "owner_cidrs" {
+  type = list(string)
   validation {
-    condition     = can(cidrhost(var.owner_cidr, 0)) && !strcontains(var.owner_cidr, ":")
-    error_message = "owner_cidr is an IPv4 CIDR such as 203.0.113.7/32."
+    condition     = length(var.owner_cidrs) > 0 && alltrue([for cidr in var.owner_cidrs : can(cidrhost(cidr, 0)) && !strcontains(cidr, ":")])
+    error_message = "owner_cidrs lists IPv4 CIDRs such as 203.0.113.7/32."
   }
 }
 
