@@ -7,6 +7,7 @@ import { PULSE_PAGE, type PulseAnswer } from '../contracts/pulse';
 import { TOOL_SANDBOX } from '../contracts/sandbox';
 import { SHARE_ID, type ShareCover } from '../contracts/shares';
 import { VISITOR_HEADER } from '../contracts/http';
+import { HOSTED } from '../contracts/installation';
 import type { PageVisit } from './visits';
 
 // frame-src is also the tool pages' navigation boundary: adding any host there opens a way out for them.
@@ -26,9 +27,19 @@ const HEADERS = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-re
 // Every file under /assets has a content hash in its name, so a changed file is a new URL.
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 // The pages a search engine may list (design §6.13): the guest home, which is the app's public face, 헤이젤 나우 and the
-// two legal pages. Every other page load, share links and the 게시판 among them, says noindex.
+// two legal pages. Every other page load, share links and the 게시판 among them, says noindex. The sitemap is this set.
 const INDEXED = new Set(['/', PULSE_PAGE.path, '/terms', '/privacy']);
-const LANDING = { title: '헤이젤 · RisuAI 봇으로 캐릭터 챗', line: 'RisuAI 봇과 포켓리스 백업을 가져와 내 API 키로 캐릭터 챗을 해요. 가입 없이 바로 써요.' };
+const LANDING = {
+  title: '헤이젤 · RisuAI 대체 캐릭터 챗, 설치 없이 웹에서',
+  line: 'RisuAI 봇과 포켓리스 백업을 그대로 가져와 내 API 키로 이어서 대화해요. 설치 없이 PC와 폰 브라우저에서, 가입 없이 바로 써요.',
+  heading: 'RisuAI 대체 캐릭터 챗, 헤이젤',
+  points: [
+    '로어북, 정규식, Lua, CBS가 RisuAI처럼 돌아가요',
+    '장기 기억, 번역, 삽화까지 한 곳에서 써요',
+    'Claude, Gemini, GPT, OpenRouter를 내 API 키로 연결해요',
+    '대화는 브라우저에서 암호화한 뒤 저장해요',
+  ],
+};
 
 // selfHost: someone's own installation (node.ts), which no search engine lists and whose page says so to the client.
 export function clientFiles(clientDir: string, cover: (share: string) => Promise<ShareCover | null>, pulse: () => Promise<PulseAnswer>, visit: (page: PageVisit) => void = () => {}, selfHost = false) {
@@ -47,14 +58,16 @@ export function clientFiles(clientDir: string, cover: (share: string) => Promise
     for (const [name, value] of Object.entries(sandboxHeaders(c.req.query('network') === '1'))) c.header(name, value);
     return (await sandbox(c, async () => {})) || c.notFound();
   });
+  const listed = (c: Context) => !selfHost && INDEXED.has(c.req.path);
   // shape rewrites the page after the nonce is in, so text it adds (a share's cover) can never become a nonce.
   const page = async (c: Context, shape: (html: string) => string = (html) => html) => {
     const nonce = randomBytes(18).toString('base64');
     c.header('Content-Security-Policy', pageCsp(nonce));
-    if (selfHost || !INDEXED.has(c.req.path)) c.header('X-Robots-Tag', 'noindex');
+    if (!listed(c)) c.header('X-Robots-Tag', 'noindex');
     const html = (await readFile(join(clientDir, 'index.html'), 'utf8')).replaceAll(NONCE, nonce);
     // Read by main.tsx (runtime/installation.ts), before any request, so pages shown before sign-in know it too.
-    return c.html(shape(selfHost ? html.replace('<html', '<html data-self-host') : html));
+    if (selfHost) return c.html(shape(html.replace('<html', '<html data-self-host')));
+    return c.html(shape(listed(c) ? canonical(html, c.req.path) : html));
   };
   client.use(async (c, next) => {
     await next();
@@ -67,6 +80,8 @@ export function clientFiles(clientDir: string, cover: (share: string) => Promise
     // A tool page's origin is opaque, so its stylesheet and fonts arrive as CORS fetches. Assets are public build files.
     if (asset) c.res.headers.set('Access-Control-Allow-Origin', '*');
   });
+  client.get('/robots.txt', (c) => c.text(`User-agent: *\nDisallow: /api/\n${selfHost ? '' : `Sitemap: ${HOSTED}/sitemap.xml\n`}`));
+  client.get('/sitemap.xml', (c) => (selfHost ? c.notFound() : c.body(SITEMAP, 200, { 'Content-Type': 'application/xml; charset=utf-8' })));
   client.get('/s/:id', async (c, next) => {
     const id = c.req.param('id');
     if (!SHARE_ID.test(id) || !c.req.header('accept')?.includes('text/html')) return next();
@@ -81,7 +96,13 @@ export function clientFiles(clientDir: string, cover: (share: string) => Promise
   });
   const files = serveStatic({ root: clientDir, precompressed: true });
   // The page as a file would carry the placeholder, not a nonce.
-  client.get('*', (c, next) => (c.req.path === '/' || c.req.path === '/index.html' ? page(c, (html) => worded(html, LANDING.title, LANDING.line)) : files(c, next)));
+  client.get('*', (c, next) => {
+    if (c.req.path !== '/' && c.req.path !== '/index.html') return files(c, next);
+    return page(c, (html) => {
+      const named = worded(html, LANDING.title, LANDING.line);
+      return listed(c) ? landingPage(named) : named;
+    });
+  });
   // A path that is no file is a client route, whatever it looks like: model ids carry dots
   // (/models/<connection>/vendor/model-4.5). Only a page load gets the page; a missing asset is a real 404.
   client.get('*', (c) => {
@@ -89,6 +110,20 @@ export function clientFiles(clientDir: string, cover: (share: string) => Promise
     return load ? page(c) : c.notFound();
   });
   return client;
+}
+
+const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...INDEXED].map((path) => `<url><loc>${HOSTED}${path}</loc></url>`).join('')}</urlset>\n`;
+
+const canonical = (html: string, path: string) =>
+  html.replace('</head>', () => `<link rel="canonical" href="${HOSTED}${path}" /><meta property="og:url" content="${HOSTED}${path}" /></head>`);
+
+// The guest home's words as markup, for a crawler that runs no script (Naver's). main.tsx's createRoot replaces them.
+function landingPage(html: string): string {
+  const facts = { '@context': 'https://schema.org', '@type': 'WebApplication', name: '헤이젤', alternateName: 'Hazelle', url: `${HOSTED}/`, description: LANDING.line, applicationCategory: 'EntertainmentApplication', operatingSystem: 'Web', inLanguage: 'ko', offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' } };
+  const points = LANDING.points.map((point) => `<li>${point}</li>`).join('');
+  return html
+    .replace('</head>', () => `<script type="application/ld+json">${JSON.stringify(facts)}</script></head>`)
+    .replace(/<p class="boot" role="status">([^<]*)<\/p>/, (_, loading: string) => `<main class="boot landing"><h1>${LANDING.heading}</h1><p>${LANDING.line}</p><ul>${points}</ul><p role="status">${loading}</p></main>`);
 }
 
 const escape = (text: string) => text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);

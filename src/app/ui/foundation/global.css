@@ -34,6 +34,28 @@
     color: var(--color-text-muted);
   }
 
+  /* The guest home's words that static.ts writes in for crawlers, shown only until the app replaces them. */
+  .landing {
+    place-content: center;
+    gap: var(--space-12);
+    text-align: center;
+  }
+
+  .landing h1 {
+    color: var(--color-text);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+  }
+
+  .landing ul {
+    display: grid;
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-md);
+  }
+
   h1,
   h2,
   h3,

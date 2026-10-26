@@ -60,12 +60,27 @@ describe('the client files', () => {
   });
 
   it('words the guest home for search engines and keeps every page but the public four out of the index', async () => {
-    writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><meta name="description" content="app" />');
-    expect(await (await client.request('/', { headers: PAGE })).text()).toContain('<title>헤이젤 · RisuAI 봇으로 캐릭터 챗</title>');
+    pulse = async () => ({ at: 0, board: null });
+    writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><meta name="description" content="app" /></head><div id="root"><p class="boot" role="status">불러오는 중…</p></div>');
+    const home = await (await client.request('/', { headers: PAGE })).text();
+    expect(home).toContain('<title>헤이젤 · RisuAI 대체 캐릭터 챗, 설치 없이 웹에서</title>');
+    expect(home).toContain('<link rel="canonical" href="https://hazelle.app/" />');
+    expect(home).toContain('<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication"');
+    expect(home).toMatch(/<div id="root"><main class="boot landing"><h1>RisuAI 대체 캐릭터 챗, 헤이젤<\/h1>.*<p role="status">불러오는 중…<\/p><\/main><\/div>$/);
     for (const path of ['/', '/now', '/terms', '/privacy', '/board', '/s/no-cover-share00', '/index.html']) {
-      expect([path, (await client.request(path, { headers: PAGE })).headers.get('x-robots-tag')]).toEqual([path, ['/board', '/s/no-cover-share00', '/index.html'].includes(path) ? 'noindex' : null]);
+      const response = await client.request(path, { headers: PAGE });
+      const hidden = ['/board', '/s/no-cover-share00', '/index.html'].includes(path);
+      expect([path, response.headers.get('x-robots-tag'), (await response.text()).includes(`<link rel="canonical" href="https://hazelle.app${path}" />`)]).toEqual([path, hidden ? 'noindex' : null, !hidden]);
     }
+    expect(await (await client.request('/index.html', { headers: PAGE })).text()).not.toContain('landing');
     writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
+  });
+
+  it('lists the public four in the sitemap and points robots.txt at it', async () => {
+    expect(await (await client.request('/sitemap.xml')).text()).toBe(
+      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url><url><loc>https://hazelle.app/terms</loc></url><url><loc>https://hazelle.app/privacy</loc></url></urlset>\n',
+    );
+    expect(await (await client.request('/robots.txt')).text()).toBe('User-agent: *\nDisallow: /api/\nSitemap: https://hazelle.app/sitemap.xml\n');
   });
 
   it("marks a self-host's page for the client and keeps all of it out of the index", async () => {
@@ -75,6 +90,7 @@ describe('the client files', () => {
       const response = await own.request(path, { headers: PAGE });
       expect([path, response.headers.get('x-robots-tag'), await response.text()]).toEqual([path, 'noindex', expect.stringContaining('<html data-self-host lang="ko">')]);
     }
+    expect([(await own.request('/sitemap.xml')).status, await (await own.request('/robots.txt')).text()]).toEqual([404, 'User-agent: *\nDisallow: /api/\n']);
     expect(await (await client.request('/', { headers: PAGE })).text()).not.toContain('data-self-host');
     writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
   });
