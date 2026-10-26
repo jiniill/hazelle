@@ -31,6 +31,7 @@ import { sharesPulse } from './pulse';
 import { keepSynced, ObjectStore, type PullProgress } from './store';
 import { Talk } from './talk';
 import { Translator } from './translate';
+import { Cues } from './cues';
 import { Usage } from './usage';
 import { LuaStuck, LuaWorker } from './lua/client';
 import { ReadModels } from './read-model';
@@ -65,6 +66,7 @@ export type Session = {
   usage: Usage;
   tokens: Tokens;
   translator: Translator;
+  cues: Cues;
   memory: Rememberer;
   illustrator: Illustrator;
   likenesses: Likenesses;
@@ -135,7 +137,8 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   const drafts = bindings.drafts ?? new Drafts();
   const reading = new Set<string>();
   const log = new RequestLog(store);
-  const translator = new Translator(store, credentials, log, costs, tokens, reading);
+  const cues = new Cues();
+  const translator = new Translator(store, credentials, log, costs, tokens, reading, cues);
   let runner: Promise<LuaRunner> | null = null;
   // Asked for once the session has closed, it makes none: nothing would be left to end it.
   const machine = () => (closing.signal.aborted ? Promise.reject<LuaRunner>(new LuaStuck('closed')) : (runner ??= (bindings.lua ?? luaWorker)()));
@@ -186,6 +189,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
       });
     },
     reading,
+    cues,
   );
   const closing = new AbortController();
   const streams: Streams = new Streams(store, reading, (stream) => {
@@ -251,7 +255,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     assets.close();
     store.close();
   };
-  const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, memory, illustrator, likenesses, commentator, polisher, briefs, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, close, startBackground };
+  const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, polisher, briefs, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, close, startBackground };
   return { ok: true, data: session };
 }
 

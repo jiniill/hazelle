@@ -50,6 +50,7 @@ export type Route =
   | { kind: 'feature'; feature: Feature }
   | { kind: 'display' }
   | { kind: 'controls' }
+  | { kind: 'sounds' }
   | { kind: 'tools' }
   | { kind: 'translator' }
   | { kind: 'calculator' }
@@ -173,6 +174,7 @@ export function parseRoute(at: string): Route {
   }
   if (top === 'settings' && id === 'display' && sub === undefined) return { kind: 'display' };
   if (top === 'settings' && id === 'controls' && sub === undefined) return { kind: 'controls' };
+  if (top === 'settings' && id === 'sounds' && sub === undefined) return { kind: 'sounds' };
   if (top === 'settings' && id === 'labs' && sub === undefined) return { kind: 'labs' };
   if (top === 'tools' && sub === undefined) {
     if (id === undefined) return { kind: 'tools' };
@@ -269,6 +271,8 @@ export function href(route: Route): string {
       return '/settings/display';
     case 'controls':
       return '/settings/controls';
+    case 'sounds':
+      return '/settings/sounds';
     case 'tools':
       return '/tools';
     case 'translator':
@@ -317,7 +321,7 @@ export function listOf(route: Route): Kind<'connections' | 'add-connection'> | n
   }
 }
 
-export type SettingsPage = 'models' | 'connections' | 'chat' | 'prompts' | 'personas' | 'modules' | 'plugins' | 'display' | 'controls' | 'labs' | 'account' | 'admin';
+export type SettingsPage = 'models' | 'connections' | 'chat' | 'prompts' | 'personas' | 'modules' | 'plugins' | 'display' | 'controls' | 'sounds' | 'labs' | 'account' | 'admin';
 
 // 'list' for 설정's own list, or null outside 설정. While it is not null, the settings layer stands in for the library.
 export function settingsPage(route: Route): SettingsPage | 'list' | null {
@@ -342,6 +346,7 @@ export function settingsPage(route: Route): SettingsPage | 'list' | null {
     case 'account':
     case 'display':
     case 'controls':
+    case 'sounds':
     case 'labs':
     case 'admin':
       return route.kind;
@@ -430,6 +435,7 @@ export function up(route: Below, chatShelf?: string | null): Route {
     case 'chat-settings':
     case 'display':
     case 'controls':
+    case 'sounds':
     case 'labs':
     case 'admin':
       return { kind: 'settings' };

@@ -145,11 +145,14 @@ describe('Translator', () => {
       const unsubscribe = session.translator.subscribe(() => {
         if (!session.translator.snapshot().live.has(reply.id)) savedWhenLiveClears.push(shown(messages()[1]!).translation !== undefined);
       });
+      const heard: string[] = [];
+      session.cues.subscribe((cue) => heard.push(cue));
       session.translator.translate(chat, reply, translationInput(session, chat, opened, messages(), { kind: 'message', index: 1 }));
       expect(session.translator.snapshot().live.get(reply.id)).toBe('');
       await vi.waitFor(() => expect(shown(messages()[1]!).translation).toMatchObject({ text: '안녕, 여행자.', receipt: { state: 'done' } }));
       await vi.waitFor(() => expect(session.translator.snapshot().live.size).toBe(0));
       expect(savedWhenLiveClears).toEqual([true]);
+      expect(heard.filter((cue) => cue === 'translated')).toEqual(['translated']);
       unsubscribe();
       expect(JSON.parse(log[1]!.sent.body!).messages.at(-1)).toEqual({ role: 'user', content: 'Hello, traveler.' });
     }));

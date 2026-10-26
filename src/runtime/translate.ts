@@ -28,6 +28,7 @@ import { translationPrompt } from './prompts';
 import type { ObjectStore } from './store';
 import { keepRow } from './usage';
 import { evaluatingTask, type Lane } from './evaluation';
+import type { Cues } from './cues';
 
 // take: the display scripts that draw the status window (상태창 지정), whose boxes the source leaves out.
 // language: what the text is translated into. lane: auto-translation for 응답 번역, which a chat judged stuck refuses;
@@ -181,6 +182,7 @@ export class Translator {
     private readonly tokens: Tokens,
     // The calls this page reads (runtime/streams).
     private readonly reading: Set<string>,
+    private readonly cues: Cues,
   ) {}
 
   readonly subscribe = this.changes.subscribe;
@@ -260,6 +262,7 @@ export class Translator {
           // The live text goes once the store holds the translation, so the original never shows in between.
           this.change(version, { live: null, failed: null });
           endCall(this.store, id);
+          if (saved.ok) this.cues.emit('translated');
           // The device that saved it counts its cost.
           if (saved.ok && this.store.get('chat', chat)) this.costs.settle(chat, made.translation.receipt!);
         },

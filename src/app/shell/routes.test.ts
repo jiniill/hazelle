@@ -76,6 +76,7 @@ const EXAMPLES = {
   feature: FEATURES.map((feature) => ({ kind: 'feature', feature })),
   display: [{ kind: 'display' }],
   controls: [{ kind: 'controls' }],
+  sounds: [{ kind: 'sounds' }],
   tools: [{ kind: 'tools' }],
   translator: [{ kind: 'translator' }],
   calculator: [{ kind: 'calculator' }],

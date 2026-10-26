@@ -14,7 +14,8 @@ import { TourDialog } from '../common/Tour';
 import { TutorialProvider, useTutorials } from '../common/Tutorial';
 import { count } from '../common/typedNumber';
 import { usePersisted } from '../common/usePersisted';
-import { DisplayProvider } from '../display';
+import { playSound, unlockSound } from '../common/sounds';
+import { DisplayProvider, useDisplay } from '../display';
 import { BIN, BOARD, inSettings, NOTICES } from '../common/words';
 import { ImportProvider } from '../library/ImportFlow';
 import { SessionProvider, useSaves, useSession } from '../session';
@@ -84,6 +85,36 @@ function Stale() {
     });
     return () => hearServedVersion(null);
   }, [toast]);
+  return null;
+}
+
+// 설정 › 소리: each cue the session tells rings as this device chose. While any rings, the first press on the page
+// unlocks the sound, since a phone plays none before.
+function Chimes() {
+  const { cues } = useSession();
+  const { chimes, chimeSounds } = useDisplay().display;
+  const ringing = chimes && Object.values(chimeSounds).some((chime) => chime !== 'off');
+  useEffect(() => {
+    if (!chimes) return;
+    return cues.subscribe((cue) => {
+      const chime = chimeSounds[cue];
+      if (chime !== 'off') void playSound(chime);
+    });
+  }, [cues, chimes, chimeSounds]);
+  useEffect(() => {
+    if (!ringing) return;
+    const unlock = () => {
+      unlockSound();
+      stop();
+    };
+    const stop = () => {
+      removeEventListener('pointerdown', unlock);
+      removeEventListener('keydown', unlock);
+    };
+    addEventListener('pointerdown', unlock);
+    addEventListener('keydown', unlock);
+    return stop;
+  }, [ringing]);
   return null;
 }
 
@@ -223,6 +254,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
           <Unread facts={account.facts} kind="unreadBoard" />
           <Stale />
           <ReplyHold />
+          <Chimes />
           <TutorialProvider>
             <News />
             <BotNotes />

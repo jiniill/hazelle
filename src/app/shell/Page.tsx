@@ -49,6 +49,7 @@ const FeatureScreen = lazy(() => import('../settings/FeatureScreen').then(({ Fea
 const ChatSettingsScreen = lazy(() => import('../settings/ChatSettingsScreen').then(({ ChatSettingsScreen }) => ({ default: ChatSettingsScreen })));
 const DisplayScreen = lazy(() => import('../settings/DisplayScreen').then(({ DisplayScreen }) => ({ default: DisplayScreen })));
 const ControlsScreen = lazy(() => import('../settings/ControlsScreen').then(({ ControlsScreen }) => ({ default: ControlsScreen })));
+const SoundsScreen = lazy(() => import('../settings/SoundsScreen').then(({ SoundsScreen }) => ({ default: SoundsScreen })));
 const UsageScreen = lazy(() => import('../settings/UsageScreen').then(({ UsageScreen }) => ({ default: UsageScreen })));
 const NoticesScreen = lazy(() => import('../settings/NoticesSection').then(({ NoticesScreen }) => ({ default: NoticesScreen })));
 const BoardScreen = lazy(() => import('../board/BoardScreen').then(({ BoardScreen }) => ({ default: BoardScreen })));
@@ -149,6 +150,8 @@ export function Page({ route, closeLayer, onPaired }: { route: Route; closeLayer
         return <DisplayScreen back={sideBack(at)} />;
       case 'controls':
         return <ControlsScreen back={sideBack(at)} />;
+      case 'sounds':
+        return <SoundsScreen back={sideBack(at)} />;
       case 'tools':
         return wide ? <Replace to={toolsEntry(true)} /> : <ToolsList onClose={closeLayer} />;
       case 'translator':

@@ -96,6 +96,8 @@ export async function receiveReply(session: Session, chat: string, reply: Writte
       if (!failure) return;
     }
   }
+  // 멈추기 is pressed by someone watching the reply.
+  if (reply.receipt.cut !== 'stopped') session.cues.emit('reply-received');
   const message = reply.message ?? reply.id;
   await polished(session, chat, message, reply.id);
   const received = shownReceived(session, chat, message);

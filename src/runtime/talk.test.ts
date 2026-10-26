@@ -316,6 +316,24 @@ describe('Talk', () => {
       expect(shown(fold(session.store.children('entry', chat))[1]!)).toMatchObject({ text: '반가워요', reasoning: '인사를 받았다.' });
     }));
 
+  it('cues a reply as its text follows its reasoning and once it is received, but not one 멈추기 stopped', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const chat = await chatSaid(session);
+      const heard: string[] = [];
+      session.cues.subscribe((cue) => heard.push(cue === 'reply-started' ? `${cue}: ${session.talk.snapshot(chat)?.reasoning}` : cue));
+      stubRelay(() => new Response('{}', { status: 429, headers: { [RELAY_HEADER]: 'upstream', 'retry-after': '30' } }));
+      const stopped = takeTurn(session, chat, { kind: 'answer' });
+      await vi.waitFor(() => expect(session.talk.snapshot(chat)?.retrying).toBe(true));
+      session.talk.stop(chat);
+      await stopped;
+      const events = [{ choices: [{ delta: { reasoning: '인사를 받았다.' } }] }, { choices: [{ delta: { content: '반가' } }] }, { choices: [{ delta: { content: '워요' }, finish_reason: 'stop' }] }];
+      stubRelay(() => new Response(`${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`, { headers: { [RELAY_HEADER]: 'upstream' } }));
+
+      await takeTurn(session, chat, { kind: 'answer' });
+      await vi.waitFor(() => expect(heard).toEqual(['reply-started: 인사를 받았다.', 'reply-received']));
+    }));
+
   it('ends a turn whose prepare throws, so the next one runs', () =>
     server.withSession(async (session) => {
       const turn = { chat: crypto.randomUUID(), said: null, reply: { id: 'r', message: null, replaces: null, continues: null } };

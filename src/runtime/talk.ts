@@ -3,6 +3,7 @@ import type { Tokens } from './token-calibration';
 import type { ContextRefusal } from '../connectors/preparation';
 import type { InputMeasurement, TokenFit, CallCalibration } from '../model/token-calibration';
 import { ChangeSignal } from '../change-signal';
+import type { Cues } from './cues';
 import type { ModelSettings } from '../connectors/settings';
 import type { InlineThoughts } from '../connectors/stream';
 import type { Phase } from '../connectors/types';
@@ -138,6 +139,7 @@ export class Talk {
     private readonly saved: (chat: string, reply: Written) => void,
     // The calls this page reads (runtime/streams).
     private readonly reading: Set<string>,
+    private readonly cues: Cues,
   ) {
     // A restore ends the store a turn was begun on, and none of the turn's writes can land after it, so it ends every
     // turn as 멈추기 does, a batch's wait too: a call left running would be billed and never read. close does not: a
@@ -272,7 +274,7 @@ export class Talk {
       call.retrying = this.retrying(held);
       this.reading.add(call.id);
       held.calling = call.id;
-      const replying = generate({ credentials: this.credentials, log: this.log, connection: route.connection.value, model: route.model, settings, retries: retriesOf(this.store, route.connection.value, settings), messages: prompt.messages, call, signal: abort.signal, onText: this.writer(held), inline: this.inline(held), batching });
+      const replying = generate({ credentials: this.credentials, log: this.log, connection: route.connection.value, model: route.model, settings, retries: retriesOf(this.store, route.connection.value, settings), messages: prompt.messages, call, signal: abort.signal, onText: this.writer(held, true), inline: this.inline(held), batching });
       const sent = await sending;
       if (sent && !sent.ok) {
         held.cancel.abort();
@@ -337,8 +339,13 @@ export class Talk {
     return () => this.change(held, { ...held.turn, retrying: true });
   }
 
-  private writer(held: Held) {
-    return (phase: Phase, chunk: string) => this.change(held, { ...held.turn, [phase]: held.turn[phase] + chunk });
+  // started: the reply's text begins here, so its first chunk cues; never for one picked up mid-way (resume), a
+  // continuation, whose text starts as the one it continues, or one shown whole.
+  private writer(held: Held, started = false) {
+    return (phase: Phase, chunk: string) => {
+      if (started && phase === 'text' && held.turn.text === '' && !held.turn.whole) this.cues.emit('reply-started');
+      this.change(held, { ...held.turn, [phase]: held.turn[phase] + chunk });
+    };
   }
 
   // A chat without a character has no 추론을 본문에 표시, and strips.

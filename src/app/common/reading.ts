@@ -2,6 +2,8 @@ import { moved } from '../../model/fields';
 import { PICTURE_PERCENT } from '../../model/library';
 import type { SavedLook } from '../../model/settings';
 import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, isDarkScheme, QUOTE_SHAPE, readingDefault, THEME, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme } from '../ui';
+import type { Cue } from '../../runtime/cues';
+import { CHIMES, type Chime } from './sounds';
 import { readPersisted } from './usePersisted';
 
 // Per device, never in the synced settings, since a phone and a desktop screen differ (user, 2026-09-29).
@@ -47,17 +49,20 @@ export function parseReading(stored: string, fallback: Reading): Reading {
 // portrait: the character's picture on the stage, only in a chat without 삽화: the stage is theirs (user, 2026-10-16).
 // follow (시스템 따라 바꾸기): a preset id for each system mode and the mode last applied, so a reload keeps what was
 // changed by hand since and only the next switch puts the preset back (user, 2026-10-20).
-export type Display = Scheme & { follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSends: boolean; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean };
+// chimes (설정 › 소리): off until turned on, then chimeSounds says what each moment rings (user, 2026-10-26).
+export type Display = Scheme & { chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSends: boolean; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean };
 
 export type Follow = Record<Theme, string> & { applied: Theme };
 
 const PLAIN = { bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' } as const;
 
-export const DISPLAY_DEFAULT: Display = { theme: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSends: true, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false };
+export const DISPLAY_DEFAULT: Display = { chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, theme: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSends: true, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false };
 
 export function parseDisplay(stored: string, fallback: Display): Display {
   const read = fields<keyof Display>(stored);
   return {
+    chimes: flag(read.chimes, fallback.chimes),
+    chimeSounds: parseChimeSounds(read.chimeSounds, fallback.chimeSounds),
     theme: known(THEME, read.theme, fallback.theme),
     bg: known(BG, read.bg, fallback.bg),
     ink: known(INK, read.ink, fallback.ink),
@@ -78,6 +83,11 @@ export function parseDisplay(stored: string, fallback: Display): Display {
     scrubber: flag(read.scrubber, fallback.scrubber),
     userStops: flag(read.userStops, fallback.userStops),
   };
+}
+
+function parseChimeSounds(value: unknown, fallback: Display['chimeSounds']): Display['chimeSounds'] {
+  const read = (typeof value === 'object' && value !== null ? value : {}) as Partial<Record<Cue, unknown>>;
+  return { 'reply-started': known(CHIMES, read['reply-started'], fallback['reply-started']), 'reply-received': known(CHIMES, read['reply-received'], fallback['reply-received']), translated: known(CHIMES, read.translated, fallback.translated) };
 }
 
 // An id no preset has any more is kept: it is shown as missing where it is picked, and applies nothing.
