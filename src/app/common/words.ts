@@ -42,7 +42,7 @@ export const BOT_MODELS_HELP = '봇 스크립트가 대화 응답과 별개로 �
 // 캐릭터 편집's switch for scripts that rewrite the card, and what the card that asks it in the chat says first.
 export const CARD_WRITES = '스크립트의 카드 수정';
 export const CARD_WRITES_HELP = '스크립트가 이 캐릭터의 배경 HTML을 바꿔서 저장해요. 바뀐 배경은 이 캐릭터의 모든 채팅에 적용돼요.';
-export const CARD_WRITE_ASK_HELP = '허용하면 이 캐릭터의 배경 HTML이 바뀌고 모든 채팅에 적용돼요. 이 캐릭터에서는 한 번만 물어봐요. 나중에 캐릭터 편집에서 다시 바꿀 수 있어요.';
+export const CARD_WRITE_ASK_HELP = '허용하면 이 캐릭터의 배경 HTML이 바뀌고 모든 채팅에 적용돼요. 나중에 캐릭터 편집에서 다시 바꿀 수 있어요.';
 export const BOT_STUCK = '봇 스크립트가 끝나지 않아서 멈췄어요';
 
 export const TOOL = '플러그인';
@@ -107,9 +107,9 @@ export const UNREADABLE_IMAGE = '이 이미지는 열 수 없어요.';
 export const TRANSLATOR_NOTE = '번역가의 노트';
 export const NOTE_PLACEHOLDER = 'Master -> 주인님\n존댓말은 그대로 유지해 주세요';
 export const noteLines = (note: string | undefined) => (note ?? '').split('\n').filter((line) => line.trim()).length;
-export const NOTE_UNSENT = `번역 프롬프트에 '${TRANSLATOR_NOTE}' 블록을 추가하거나 기본 블록으로 되돌려야 노트가 적용돼요.`;
+export const NOTE_UNSENT = `번역 프롬프트에 '${TRANSLATOR_NOTE}' 블록을 추가해야 노트가 적용돼요.`;
 export const ILLUSTRATE_NOTE = '삽화 노트';
-export const ILLUSTRATE_NOTE_UNSENT = `삽화 프롬프트에 '${ILLUSTRATE_NOTE}' 블록을 추가하거나 기본 블록으로 되돌려야 노트가 적용돼요.`;
+export const ILLUSTRATE_NOTE_UNSENT = `삽화 프롬프트에 '${ILLUSTRATE_NOTE}' 블록을 추가해야 노트가 적용돼요.`;
 
 // 설정's pages, which SettingsNav lists and a sentence points to.
 export const PAGES = { models: '모델', connections: 'API 연결', chat: '채팅', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용량', admin: '운영' };
@@ -255,15 +255,15 @@ export const PDF_SEND = 'PDF로 보내기';
 // The retry count is shared: a connection's or a 설정 묶음's.
 export const RETRYING = `${RESENDING}.`;
 export const RETRY_COUNT = '실패하면 다시 보내기';
-export const RETRY_HELP = '응답이 오기 전에 실패하면 이 횟수만큼 다시 시도해요. 다만 키나 요청 내용이 잘못됐을 때는 바로 알려 줘요.';
+export const RETRY_HELP = '응답이 오기 전에 실패하면 이 횟수만큼 다시 시도해요.';
 export const LORE_BUDGET_LABEL = '로어북 최대 분량';
 // 설정 › 채팅 › 세부 설정's sections.
 export const CHAT_DETAIL = { reply: '응답', lore: '로어북' };
 // The lorebook's scan settings, worded once for 설정 › 채팅 and 캐릭터 편집 › 로어북.
 export const LORE_SCAN_WORDS = {
-  tokenBudget: { label: LORE_BUDGET_LABEL, help: '켜 둔 로어북 항목을 요청마다 이만큼까지 넣어요. 넘치는 항목은 빠지고, 빠지면 알려 드려요.', unit: '토큰', amount: (count: string) => `${count} 토큰`, is: '이에요' },
+  tokenBudget: { label: LORE_BUDGET_LABEL, help: '켜 둔 로어북 항목을 요청마다 이만큼까지 넣어요.', unit: '토큰', amount: (count: string) => `${count} 토큰`, is: '이에요' },
   scanDepth: { label: '검색 깊이', help: '최근 메시지 몇 개에서 키워드를 찾을지 정해요.', unit: '개', amount: (count: string) => `${count}개`, is: '예요' },
-  recursive: { label: '재귀 검색', help: '들어간 항목의 내용에 다른 항목의 키워드가 있으면 그 항목도 이어서 넣어요. 항목마다 @@recursive나 @@unrecursive로 따로 정할 수도 있어요.' },
+  recursive: { label: '재귀 검색', help: '들어간 항목의 내용에 다른 항목의 키워드가 있으면 그 항목도 이어서 넣어요.' },
   fullWordMatching: { label: '단어 단위 검색', help: "키워드가 다른 단어의 일부일 때는 찾지 않아요. 조사가 붙은 말도 다른 단어로 봐서, '달'은 '달빛'에서도 '달이'에서도 찾지 않아요." },
 } as const;
 // 응답 받기: the send button pressed with nothing typed.
@@ -303,7 +303,7 @@ export const SHARE = {
   held: '보류 중',
   removed: '운영자가 내림',
   cover: '미리보기 글',
-  coverHelp: '링크를 붙여 넣은 곳에 이름과 제작자, 소개 첫 줄이 글자로 보여요. 이미지는 나오지 않아요.',
+  coverHelp: '링크를 붙여 넣은 곳에 이름과 제작자, 소개 첫 줄이 보여요.',
   heldNote: '신고가 들어와 운영자가 확인하는 동안 멈춘 링크예요.',
   removedNote: '운영자가 내린 링크예요.',
   goneNote: '끊겼거나 운영자가 내린 링크예요.',
