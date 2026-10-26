@@ -177,6 +177,16 @@ describe('assemble', () => {
     ]);
   });
 
+  it("sends a chat with no character its lorebook and chat, and none of the prompt's", () => {
+    const messages = [message('u1', 'user', 'Is it safe?'), message('a1', 'assistant', 'She nods.'), message('u2', 'user', 'Good.')];
+    expect(build({ card: null, greeting: null, messages, lore: [lore('lighthouse', 'The lighthouse is old.')] })).toEqual([
+      { role: 'system', content: 'The lighthouse is old.', cache: true },
+      { role: 'user', content: 'Is it safe?' },
+      { role: 'assistant', content: 'She nods.' },
+      { role: 'user', content: 'Good.', cache: true },
+    ]);
+  });
+
   it("puts each 등장인물 under its name after the chat's character, its text and its own lorebook entries read as its own {{char}}", () => {
     const mira = card({ name: 'Mira', description: '{{char}} likes apples.', personality: 'shy' });
     const entries = [lore('orchard', '{{char}} tends the orchard.', {}, 'mira'), lore('gate', '{{char}} guards the gate.', {}, 'module')];
@@ -365,7 +375,7 @@ describe('assemble', () => {
     const counted = (from: number, to: number | null, budget: number | null) => {
       const texts: string[] = [];
       const blocks: Prompt['blocks'] = [{ id: 'chat', name: null, kind: 'slot', slot: 'chat', range: { from, to } }];
-      const result = assembledOf(assemble({ ...input({ card: null, lore: [], messages, greeting: null, prompt: { ...starter, blocks } }), budget, fit: providerFit(budget), countTokens: (text) => { texts.push(text); return text.length; } }));
+      const result = assembledOf(assemble({ ...input({ lore: [], messages, greeting: null, prompt: { ...starter, blocks } }), budget, fit: providerFit(budget), countTokens: (text) => { texts.push(text); return text.length; } }));
       return { result, texts };
     };
     expect(counted(-1, null, null).texts).toEqual(['tail']);

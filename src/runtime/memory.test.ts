@@ -19,8 +19,17 @@ import { readTool } from '../engine/import/tool';
 import { setModuleAlways } from './modules';
 import { noOutcome } from './script-binding';
 import { importTool } from './tools/store';
+import { addCharacter } from './characters';
+import { blankCard } from '../engine/import/card';
 
 const server = testServer();
+
+// A chat with no character keeps the prompt out (keepsPromptOut), so a test of the chat's prompt needs one.
+async function character(store: ObjectStore): Promise<string> {
+  const added = await addCharacter(store, { card: blankCard('Luna'), folder: null, loreFolders: [] }, { avatar: null, assets: [], lore: [], likeness: null }, () => {});
+  if (!added.ok) throw new Error('not saved');
+  return added.data;
+}
 
 const summary = (what: string, line: string) =>
   JSON.stringify({ records: [{ to: 1, when: null, where: 'the pier', who: ['Luna', 'jin'], what, lines: [{ speaker: 'jin', text: line }], outcome: '', state: [{ about: 'Luna', field: 'place', value: 'the pier' }], opens: ['They meet again tomorrow.'], closes: [] }] });
@@ -98,7 +107,7 @@ describe('Rememberer', () => {
       await editPrompt(session.store, made.data.id, { blocks: made.data.value.blocks.filter((block) => !(block.kind === 'slot' && block.slot === 'memory')) });
       const chat = crypto.randomUUID();
       await server.hold(session.store, chat);
-      await startChat(session.store, chat, { title: null, character: null, models: {}, prompt: made.data.id }, null);
+      await startChat(session.store, chat, { title: null, character: await character(session.store), models: {}, prompt: made.data.id }, null);
       await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'We meet at the pier.' });
       const log = stubRelay(inTurn([saying('Luna waves.')]));
       expect(await takeTurn(session, chat, { kind: 'answer' })).toBeNull();
@@ -138,7 +147,7 @@ describe('Rememberer', () => {
       await editPrompt(session.store, made.data.id, { blocks: made.data.value.blocks.filter((block) => !(block.kind === 'slot' && block.slot === 'memory')) });
       const chat = crypto.randomUUID();
       await server.hold(session.store, chat);
-      await startChat(session.store, chat, { title: null, character: null, models: {}, prompt: made.data.id }, null);
+      await startChat(session.store, chat, { title: null, character: await character(session.store), models: {}, prompt: made.data.id }, null);
       const said = crypto.randomUUID();
       await appendUserMessage(session.store, chat, { id: said, text: 'We meet at the pier.' });
       await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'Luna waves.' });

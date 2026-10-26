@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { entryName } from '../../connectors/types';
 import { resolveAssets, withAttachments } from '../../engine/assets';
-import { holdsPersona, unused } from '../../engine/pipeline';
+import { holdsPersona, keepsPromptOut, unused } from '../../engine/pipeline';
 import type { Card } from '../../engine/import/types';
 import { calls, shown, type ChatItem, type ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
@@ -486,9 +486,9 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   });
 }
 
-// A missing prompt or persona stops the turn on its own; a utility card leaves the persona out as Risu does.
+// A missing prompt or persona stops the turn on its own; a request that keeps the prompt out leaves the persona out too.
 function personaNote(card: Card | null, prompt: PromptChoice, persona: PersonaChoice): string | null {
-  if (card?.utility || prompt.kind !== 'prompt' || persona.kind !== 'persona') return null;
+  if (keepsPromptOut(card) || prompt.kind !== 'prompt' || persona.kind !== 'persona') return null;
   if (!holdsPersona(prompt.prompt.value.blocks)) return NO_PERSONA_SLOT;
   return persona.persona.value.description.trim() ? null : '페르소나 설명이 비어 있어요.';
 }

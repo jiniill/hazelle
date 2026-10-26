@@ -337,8 +337,10 @@ export const assemble = (input: PromptInput): Assembled | TooLong | RanAway => s
 
 const toolFrom = (tools: PromptInput['tools']): From => ({ kind: 'tool', name: tools.filter(({ text }) => text.trim()).map(({ name }) => name).join(' · ') });
 
-// Risu's 유틸리티 봇: a card made for a task, not a role, keeps the prompt out. The two empty texts still take the card's own
-// system prompt and post-history instructions (ownText), which Risu drops; the card's intent wins.
+// Risu's 유틸리티 봇: a card made for a task, not a role, keeps the prompt out, and so does a chat with no character. The
+// two empty texts still take the card's own system prompt and post-history instructions (ownText), which Risu drops; the
+// card's intent wins.
+export const keepsPromptOut = (card: Card | null) => !card || card.utility;
 const UTILITY: Block[] = [
   { id: 'utility:main', name: null, kind: 'text', role: 'system', text: '', mark: 'main' },
   { id: 'utility:description', name: null, kind: 'slot', slot: 'description', role: 'system', wrapper: null },
@@ -349,7 +351,7 @@ const UTILITY: Block[] = [
   { id: 'utility:postEverything', name: null, kind: 'slot', slot: 'postEverything' },
 ];
 // A chat whose prompt is gone has no block for an @@inject_at entry to go into.
-const conversationBlocks = (scope: ChatScope) => (scope.card?.utility ? UTILITY : (scope.prompt?.blocks ?? []));
+const conversationBlocks = (scope: ChatScope) => (keepsPromptOut(scope.card) ? UTILITY : (scope.prompt?.blocks ?? []));
 
 function conversation({ scope, seed, countTokens, budget, fit, continuing, answerInstruction, memory, tools, notes = '', pictures }: PromptInput): Assembled | TooLong {
   const { prompt } = scope;
@@ -741,7 +743,7 @@ export function unused(card: Card): Unused[] {
 }
 
 // Whether a conversation prompt sends the persona's description: by its 페르소나 slot, or by the tag written in a block
-// under any spelling cbs/tags.ts normalizes to persona or userpersona. A utility card's request has no persona (UTILITY).
+// under any spelling cbs/tags.ts normalizes to persona or userpersona. A request that keeps the prompt out has no persona (UTILITY).
 const PERSONA_TAG = /\{\{[\s_-]*(?:user[\s_-]*)?persona[\s_-]*\}\}/i;
 export const holdsPersona = (blocks: Block[]) =>
   blocks.some((block) => (block.kind === 'text' ? PERSONA_TAG.test(block.text) : block.slot === 'persona' || ('wrapper' in block && block.wrapper !== null && PERSONA_TAG.test(block.wrapper))));

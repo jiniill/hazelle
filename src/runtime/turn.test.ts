@@ -248,7 +248,7 @@ describe('내 메시지 번역', () => {
 
       expect(await takeTurn(session, chat, { kind: 'send', text: '안녕' })).toBeNull();
       expect(lastTwo(log[0]!.sent.body)[1]).toEqual({ role: 'user', content: '안녕' });
-      expect(lastTwo(log[1]!.sent.body)[1]).toEqual({ role: 'user', content: 'Hello there' });
+      expect(lastTwo(log[1]!.sent.body).at(-1)).toEqual({ role: 'user', content: 'Hello there' });
       expect(shown(fold(session.store.children('entry', chat))[0]!)).toMatchObject({ text: 'Hello there', translation: { text: '안녕', receipt: { state: 'done' }, sentIn: 'English' } });
     }));
 
