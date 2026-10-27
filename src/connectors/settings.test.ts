@@ -4,6 +4,7 @@ import openRouterModels from './fixtures/openrouter-models.json';
 import vercelModels from './fixtures/vercel-models.json';
 import { bareModel } from './chat-completions';
 import { cacheView, chatRequest, modelSettings, parseCatalog, resolveConnection, resolveModel, type Route } from './registry';
+import { readExtra } from './extra';
 import { fit, leastReasoning, type ModelSettings } from './settings';
 import type { ChatMessage, Connection, Model } from './types';
 
@@ -241,5 +242,18 @@ describe('할인 받기', () => {
     expect(modelSettings(generic, bare)!.discount).toBe(false);
     expect(body(generic, bare, { discount: true })).not.toHaveProperty('service_tier');
     expect(fit(modelSettings(generic, bare)!, { discount: true }).changes).toEqual([{ setting: 'discount', change: 'left-out' }]);
+  });
+});
+
+describe('추가 파라미터', () => {
+  it('writes Risu’s lines or a JSON object over the built body last, and leaves out only the lines it cannot read', () => {
+    const gemini = connection('google');
+    const lines = 'safetySettings=json::[{"category":"HARM_CATEGORY_JAILBREAK","threshold":"OFF"}]\ngenerationConfig.topA=0.1\nname="1"\nlogprobs=true\ngenerationConfig.maxOutputTokens={{none}}\nheader::X-Key=1\nbroken';
+    const sent = body(gemini, bare, { maxOutput: 100, temperature: 0.5, extra: lines });
+    expect(sent).toMatchObject({ safetySettings: [{ category: 'HARM_CATEGORY_JAILBREAK', threshold: 'OFF' }], generationConfig: { temperature: 0.5, topA: 0.1 }, name: '1', logprobs: true });
+    expect(sent.generationConfig).not.toHaveProperty('maxOutputTokens');
+    expect(readExtra(lines).problems).toEqual([{ line: 6, kind: 'header' }, { line: 7, kind: 'unreadable' }]);
+    expect(body(generic, bare, { maxOutput: 100, extra: '{ "max_tokens": 200, "reasoning.effort": "low" }' })).toMatchObject({ max_tokens: 200, reasoning: { effort: 'low' } });
+    expect(readExtra('{ "max_tokens": ').problems).toEqual([{ line: 1, kind: 'unreadable' }]);
   });
 });

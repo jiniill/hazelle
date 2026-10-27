@@ -11,8 +11,8 @@ import { typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
 import { DISCOUNT, PDF_SEND, UNSET } from '../common/words';
 import { useConnections, useSettings, useStore } from '../session';
-import { ChoiceGroup, NumberInput, PhraseField, Section, SettingGroup, SettingRow, Switch } from '../ui';
-import { CACHE, changeLine, followsRetries, DETAIL, LEVELS, levelName, MAIN, NUMBER, PDF_KEEP_WORDS, SERVICE_TIER_LABEL, SERVICE_TIER_WORDS, VERBOSITY_LABEL, VERBOSITY_WORDS, type Field } from '../common/settingWords';
+import { ChoiceGroup, NumberInput, PhraseField, Section, SettingGroup, SettingRow, Switch, TextField } from '../ui';
+import { CACHE, changeLine, EXTRA_LABEL, extraError, followsRetries, DETAIL, LEVELS, levelName, MAIN, NUMBER, PDF_KEEP_WORDS, SERVICE_TIER_LABEL, SERVICE_TIER_WORDS, VERBOSITY_LABEL, VERBOSITY_WORDS, type Field } from '../common/settingWords';
 import { count, readCount, readOptional, readTyped } from '../common/typedNumber';
 
 const whole = (field: Field | 'budget') => field === 'budget' || field === 'context' || WHOLE.has(field);
@@ -297,8 +297,20 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     />
   );
 
+  const extraRow = (
+    <SettingRow
+      key="extra"
+      label={EXTRA_LABEL}
+      help="요청에 그대로 더해 보낼 값이에요. 한 줄에 키=값으로 쓰거나 JSON 객체 하나로 써요. 줄로 쓸 때 JSON 값은 앞에 json::을 붙이고, 값을 {{none}}으로 쓰면 그 항목을 빼요. 모델이 받지 않는 값이면 요청이 실패할 수 있어요."
+      wide
+      changed={shown.extra !== undefined}
+      error={extraError(shown.extra)}
+      control={<TextField label={EXTRA_LABEL} showLabel={false} kind="key" lines={4} placeholder={'키=값 또는 {"키": 값}'} value={shown.extra ?? ''} onChange={(text) => change({ extra: text.trim() ? text : undefined })} />}
+    />
+  );
+
   const detailSet =
-    DETAIL.filter((field) => shown[field] !== undefined).length + [shown.stop, shown.verbosity, shown.serviceTier, shown.systemAsUser, shown.streaming === false, shown.retries !== undefined].filter(Boolean).length;
+    DETAIL.filter((field) => shown[field] !== undefined).length + [shown.stop, shown.verbosity, shown.serviceTier, shown.systemAsUser, shown.streaming === false, shown.retries !== undefined, shown.extra].filter(Boolean).length;
   const rows = (
     <>
       <Section title="자주 쓰는 설정">
@@ -318,6 +330,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
         {systemRow}
         {streamingRow}
         <RetriesRow value={shown.retries} follows={retries === undefined ? '연결 설정' : followsRetries('connection', retries)} onChange={(value) => change({ retries: value })} />
+        {extraRow}
       </DetailFold>
     </>
   );

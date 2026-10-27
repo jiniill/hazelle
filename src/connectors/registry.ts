@@ -7,6 +7,7 @@ import { copilot } from './copilot';
 import { deepinfra } from './deepinfra';
 import { deepseek } from './deepseek';
 import { destination } from './destination';
+import { readExtra, withExtra } from './extra';
 import { featherless } from './featherless';
 import { friendli } from './friendli';
 import { gemini } from './gemini';
@@ -209,7 +210,9 @@ export function chatRequest(route: Route, request: ChatRequest): HttpRequest {
   const sent = sending(route, request);
   const pictures = sent.messages.some(carriesPictures);
   if (pictures && !seesPictures(sent.model)) throw new ConnectorError('no-picture-input');
-  const built = codecRequest(route, sent);
+  const codec = codecRequest(route, sent);
+  // Last, over the codec's, the discount lane's and the output limit's fields: the user's own field wins.
+  const built = sent.settings.extra && codec.body ? { ...codec, body: withExtra(codec.body, readExtra(sent.settings.extra).fields) } : codec;
   return pictures && route.type?.pictureHeaders ? { ...built, headers: { ...built.headers, ...route.type.pictureHeaders } } : built;
 }
 

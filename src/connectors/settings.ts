@@ -29,6 +29,8 @@ export type ModelSettings = { [S in NumberSetting]?: number } & {
   pdf?: Pdf;
   // Profile retry override (runtime/connections retriesOf); never send it to the provider.
   retries?: number;
+  // 추가 파라미터 as the user typed it; connectors/extra reads it when sending.
+  extra?: string;
 };
 export type Cache = '5m' | '1h';
 // keep: what stays out of the PDF: the leading system prompt (system), that and the latest recent percent of the
