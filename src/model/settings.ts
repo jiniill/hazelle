@@ -12,7 +12,7 @@ export const EMPTY_SETTINGS: Settings = { models: {} };
 
 // The experiments running, each a switch on 설정 › 실험실 (app/common/labs LABS). Deleting an id breaks every reader of
 // it at compile time.
-export type LabId = 'preread' | 'agents';
+export type LabId = 'preread' | 'agents' | 'cachekeeper';
 export const labOn = (settings: Pick<Settings, 'labs'> | undefined, id: LabId) => settings?.labs?.includes(id) ?? false;
 
 // What the 보조 model reads for 토큰 절약 (runtime/preread): which parts of the prompt, how many of the latest chat
