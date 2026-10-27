@@ -28,7 +28,7 @@ export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; ne
 // the forecast while it is open. unsaved: a new chat not saved yet, forecast as its first save will write it.
 export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, messages: Shown[], memory: Memory | null, text: string, busy: boolean): SendNotes {
   const session = useSession();
-  const keeper = useLab('cachekeeper');
+  const guard = useLab('cacheguard');
   const last = useMemo(() => lastCache(messages), [messages]);
   const [next, setNext] = useState<CacheNotes['next']>(undefined);
   const [sending, setSending] = useState<SendNotes['sending']>(undefined);
@@ -65,8 +65,8 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
         setNext(next);
         if (pending) void diagnoseCache(session.store.evaluation, id, sending.turn.scope, made, before ? session.log.entry(id, before.print.call) : null, sending.prompt, send.wire, controller.signal).then(async (diagnosis) => {
           if (controller.signal.aborted) return;
-          setNext({ ...next, diagnosis, prescriptions: diagnosis && keeper ? undefined : [] });
-          if (!diagnosis || !keeper) return;
+          setNext({ ...next, diagnosis, prescriptions: diagnosis && guard ? undefined : [] });
+          if (!diagnosis || !guard) return;
           const prescriptions = await priceCachePrescriptions(session.store, id, sending, diagnosis, made, before, account, controller.signal);
           if (!controller.signal.aborted) setNext({ ...next, diagnosis, prescriptions });
         });
@@ -81,7 +81,7 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [id, unsaved, chat, messages, memory, text, busy, changes, keeper]);
+  }, [id, unsaved, chat, messages, memory, text, busy, changes, guard]);
 
   const recurrence = useMemo(() => cacheRecurrence(messages), [messages]);
   const cache = useMemo((): CacheNotes => ({ until: last?.until ?? null, recurrence, next }), [last, recurrence, next]);

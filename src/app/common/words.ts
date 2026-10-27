@@ -177,9 +177,9 @@ export const PRE_READ_RETRYING = `${MODEL_ROLES.aux}이 ${RESENDING}.`;
 // 에이전트 (runtime/agents, design §6.16), a 실험실 experiment.
 export const AGENTS = '에이전트';
 export const AGENTS_HELP = `응답 전에 장면을 정리하거나 응답을 다듬어요. 에이전트마다 모델을 추가로 호출해요. Agents! P! 플러그인에서 가져온 아이디어예요.`;
-// 캐시 키퍼 (runtime/cache-prescriptions, design §4.4), a 실험실 experiment.
-export const CACHE_KEEPER = '캐시 키퍼';
-export const CACHE_KEEPER_HELP = '캐시가 깨진 원인마다 고치는 방법과 아끼는 금액을 미리 계산해 점검 › 요청에 보여 줘요. 누르기 전에는 아무것도 바뀌지 않아요.';
+// 캐시 보호 (runtime/cache-prescriptions, design §4.4), a 실험실 experiment.
+export const CACHE_GUARD = '캐시 보호';
+export const CACHE_GUARD_HELP = '캐시가 깨진 원인마다 고치는 방법과 아끼는 금액을 점검에 보여 줘요.';
 export const STAGE_NAMES: Record<AgentStage, string> = { pre: '전처리', post: '후처리' };
 // The waiting marks name the agents at work, and where more than one runs, how far they are.
 export const agentsWaiting = ({ running, retrying, total }: { running: readonly string[]; retrying: readonly string[]; total: number }) => `${withParticle((retrying.length ? retrying : running).join(', '), '이/가')} ${retrying.length ? RESENDING : '먼저 읽고 있어요'}${total > 1 ? ` · ${total - running.length}/${total} 끝남` : '.'}`;

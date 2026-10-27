@@ -158,14 +158,14 @@ function saved(now: CacheBreakCost | null, after: CacheBreakCost | null): Cost |
 
 function preview({ edit }: CachePrescription): ReactNode {
   if (edit.kind === 'lore') {
-    if (edit.field === 'constant') return <Text>키워드와 상관없이 매번 보내요. 그만큼 매번 토큰이 들어요.</Text>;
+    if (edit.field === 'constant') return <Text>키워드와 상관없이 매번 보내서 그만큼 토큰이 들어요.</Text>;
     return <TextDiff runs={cacheDiff(edit.before, edit.after).runs} label="항목 내용: 바꾸기 전과 후" />;
   }
-  if (edit.field === 'role') return <Text>역할을 시스템에서 사용자로 바꿔요. 요청 맨 앞으로 모이지 않고 제자리에 들어가요.</Text>;
-  return <Text>보내는 순서가 바뀌어서, 모델이 이 블록을 대화 다음에 읽어요.</Text>;
+  if (edit.field === 'role') return <Text>요청 맨 앞으로 모이지 않고 제자리에 들어가요.</Text>;
+  return <Text>모델이 이 블록을 대화 다음에 읽어요.</Text>;
 }
 
-// Applying one changes the bot (design §4.4, 캐시 키퍼 ruling 1): only on the user's press, with 되돌리기.
+// Applying one changes the bot (design §4.4, 캐시 보호 ruling 1): only on the user's press, with 되돌리기.
 export function Prescriptions({ prescriptions, cost: now }: { prescriptions: CachePrescription[] | null | undefined; cost: CacheBreakCost | null }) {
   const store = useStore();
   const toast = useToast();
@@ -175,10 +175,10 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
   async function apply(prescription: CachePrescription) {
     const done = await applyCacheEdit(store, prescription.edit);
     if (!done.ok) return toast.failed(done, '고치지 못했어요.');
-    toast.undoable('캐시가 덜 깨지게 고쳤어요', () => applyCacheEdit(store, done.data), titleOf(prescription));
+    toast.undoable('고쳤어요.', () => applyCacheEdit(store, done.data), titleOf(prescription));
   }
   return (
-    <Section level={3} title="고치면 더 읽어요" help="고치는 방법마다 따로 계산했어요. 여러 개를 고치면 합과 다를 수 있어요.">
+    <Section level={3} title="고치는 방법" help="여러 개를 고치면 아끼는 금액이 합과 다를 수 있어요.">
       <List label="고치는 방법">
         {prescriptions.map((prescription, index) => {
           const less = saved(now, prescription.cost);
@@ -187,7 +187,7 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
               key={index}
               title={titleOf(prescription)}
               note={`읽기 ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
-              tags={less ? [`${cost(less)} 아껴요`] : []}
+              tags={less ? [`${cost(less)} 절약`] : []}
               expanded={open === index}
               onClick={() => setOpen(open === index ? null : index)}
               detail={
