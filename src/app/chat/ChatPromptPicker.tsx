@@ -13,9 +13,12 @@ import { useToast } from '../toast';
 import { Button, ChipButton, Dialog, Empty, hasFinePointer, Icon, List, ListItem, Row } from '../ui';
 import type { ChatSettingsActions } from './useChatSettings';
 
+const NO_PROMPT = '프롬프트 없이';
+
 // Without its own choice it follows the default live, and a deleted one shows as missing, never as another prompt.
-export function ChatPromptPicker({ prompt, open, onOpen }: { prompt: PromptChoice; open: boolean; onOpen: () => void }) {
-  const label = prompt.kind === 'prompt' ? prompt.prompt.value.name : prompt.own ? DELETED_PROMPT : '기본 프롬프트 없음';
+// out: a 캐릭터 없이 chat that keeps the prompt out (model/chat keepsPromptOut).
+export function ChatPromptPicker({ prompt, out, open, onOpen }: { prompt: PromptChoice; out: boolean; open: boolean; onOpen: () => void }) {
+  const label = out ? NO_PROMPT : prompt.kind === 'prompt' ? prompt.prompt.value.name : prompt.own ? DELETED_PROMPT : '기본 프롬프트 없음';
   return (
     <ChipButton
       label={label}
@@ -32,8 +35,10 @@ export function ChatPromptPicker({ prompt, open, onOpen }: { prompt: PromptChoic
 }
 
 // Mounted only while open, so each opening starts with an empty search, in the folder of the chat's own prompt. A touch
-// screen gets no focused search, whose keyboard would cover the list.
-export function PromptDialog({ prompt, onChoose, onEdit, onClose }: { prompt: PromptChoice; onChoose: ChatSettingsActions['setPrompt']; onEdit: (id: string | null) => void; onClose: () => void }) {
+// screen gets no focused search, whose keyboard would cover the list. plain: a 캐릭터 없이 chat, which lists 프롬프트 없이
+// first; out: that row is its choice.
+type DialogProps = { prompt: PromptChoice; plain: boolean; out: boolean; onChoose: ChatSettingsActions['setPrompt']; onKeepOut: ChatSettingsActions['keepPromptOut']; onEdit: (id: string | null) => void; onClose: () => void };
+export function PromptDialog({ prompt, plain, out, onChoose, onKeepOut, onEdit, onClose }: DialogProps) {
   const { store } = useSession();
   const all = usePrompts();
   const prompts = useMemo(() => all.filter((each) => ofSort(each, 'conversation')), [all]);
@@ -46,7 +51,7 @@ export function PromptDialog({ prompt, onChoose, onEdit, onClose }: { prompt: Pr
   }, []);
   const fallback = chatPrompt(store, {});
   const grouped = useMemo(() => groupPrompts(prompts), [prompts]);
-  const own = prompt.own && prompt.kind === 'prompt' ? prompt.prompt.id : null;
+  const own = !out && prompt.own && prompt.kind === 'prompt' ? prompt.prompt.id : null;
   const search = useSearch(prompts.toSorted(byPromptName), '프롬프트 검색', (item) => [promptName(item.value.name)], { ref: field, onEnter: (first) => choose(first.id) });
   const index = useFolderIndex('prompt', grouped.top, promptFolder);
   const [place, setPlace] = useState(() => (own !== null && prompt.kind === 'prompt' ? promptFolder(prompt.prompt) : null));
@@ -55,6 +60,10 @@ export function PromptDialog({ prompt, onChoose, onEdit, onClose }: { prompt: Pr
   function choose(value: string | null) {
     onClose();
     void onChoose(value).then((saved) => saved.ok || toast.failed(saved));
+  }
+  function keepOut() {
+    onClose();
+    void onKeepOut().then((saved) => saved.ok || toast.failed(saved));
   }
   function open(id: string | null) {
     onClose();
@@ -92,7 +101,8 @@ export function PromptDialog({ prompt, onChoose, onEdit, onClose }: { prompt: Pr
       {index.folders.length > 0 && !search.words && <FolderPath kind="prompt" path={at.path} onGo={setPlace} />}
       {search.none && <Empty>{search.none}</Empty>}
       <List label="프롬프트">
-        {!search.words && !at.here && <ListItem title={follows('기본 프롬프트')} description={fallback.kind === 'prompt' ? fallback.prompt.value.name : '기본 프롬프트 없음'} selected={!prompt.own} onClick={() => choose(null)} />}
+        {plain && !search.words && !at.here && <ListItem title={NO_PROMPT} selected={out} onClick={keepOut} />}
+        {!search.words && !at.here && <ListItem title={follows('기본 프롬프트')} description={fallback.kind === 'prompt' ? fallback.prompt.value.name : '기본 프롬프트 없음'} selected={!out && !prompt.own} onClick={() => choose(null)} />}
         {at.folders.map((folder) => (
           <ListItem key={folder.id} folder title={folder.value.name} note={folderNote('prompt', index.byFolder.get(folder.id)!)} onClick={() => setPlace(folder.id)} />
         ))}

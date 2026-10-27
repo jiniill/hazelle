@@ -21,6 +21,8 @@ export type ChatScope = {
   // Each null when the chat's is gone: the display still renders, and a turn stops before sending.
   persona: CbsContext['persona'];
   prompt: ConversationPrompt | null;
+  // model/chat keepsPromptOut: the request takes engine/pipeline UTILITY's blocks in place of the prompt's.
+  promptOut: boolean;
   // The chat's own 작가의 노트; null follows the prompt's.
   note: string | null;
   lore: (LoreEntries[number] & { parent: string | null })[];

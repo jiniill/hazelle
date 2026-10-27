@@ -337,10 +337,8 @@ export const assemble = (input: PromptInput): Assembled | TooLong | RanAway => s
 
 const toolFrom = (tools: PromptInput['tools']): From => ({ kind: 'tool', name: tools.filter(({ text }) => text.trim()).map(({ name }) => name).join(' · ') });
 
-// Risu's 유틸리티 봇: a card made for a task, not a role, keeps the prompt out, and so does a chat with no character. The
-// two empty texts still take the card's own system prompt and post-history instructions (ownText), which Risu drops; the
-// card's intent wins.
-export const keepsPromptOut = (card: Card | null) => !card || card.utility;
+// The two empty texts still take the card's own system prompt and post-history instructions (ownText), which Risu's
+// 유틸리티 봇 drops; the card's intent wins.
 const UTILITY: Block[] = [
   { id: 'utility:main', name: null, kind: 'text', role: 'system', text: '', mark: 'main' },
   { id: 'utility:description', name: null, kind: 'slot', slot: 'description', role: 'system', wrapper: null },
@@ -351,7 +349,7 @@ const UTILITY: Block[] = [
   { id: 'utility:postEverything', name: null, kind: 'slot', slot: 'postEverything' },
 ];
 // A chat whose prompt is gone has no block for an @@inject_at entry to go into.
-const conversationBlocks = (scope: ChatScope) => (keepsPromptOut(scope.card) ? UTILITY : (scope.prompt?.blocks ?? []));
+const conversationBlocks = (scope: ChatScope) => (scope.promptOut ? UTILITY : (scope.prompt?.blocks ?? []));
 
 function conversation({ scope, seed, countTokens, budget, fit, continuing, answerInstruction, memory, tools, notes = '', pictures }: PromptInput): Assembled | TooLong {
   const { prompt } = scope;

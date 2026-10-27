@@ -19,6 +19,7 @@ const scope: ChatScope = {
   packs: [card],
   persona: { name: 'jin', description: 'A sailor.' },
   prompt: null,
+  promptOut: false,
   note: null,
   lore: [],
   loreFolders: {},

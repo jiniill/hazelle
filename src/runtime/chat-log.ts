@@ -300,6 +300,11 @@ export const withOwn = <T extends Pick<Chat, Own>>(chat: T, field: Own, value: s
 
 export const setChatOwn = (store: ObjectStore, chat: string, field: Own, value: string | null) => store.update('chat', chat, (current) => withOwn(current, field, value));
 
+// A 캐릭터 없이 chat's prompt picker: a pick sends that prompt, or the default (null), from then on; 프롬프트 없이 keeps
+// it out again and drops the pick.
+export const withPromptSent = <T extends Pick<Chat, 'prompt' | 'sendsPrompt'>>(chat: T, value: string | null): T => ({ ...withOwn(chat, 'prompt', value), sendsPrompt: true });
+export const withPromptOut = <T extends Pick<Chat, 'prompt' | 'sendsPrompt'>>(chat: T): T => without(without(chat, 'prompt'), 'sendsPrompt');
+
 export function withCast<T extends Pick<Chat, 'cast'>>(chat: T, character: string | null, ids: string[]): T {
   const cast = [...new Set(ids)].filter((id) => id !== character).slice(0, CAST_MAX);
   return cast.length ? { ...chat, cast } : without(chat, 'cast');

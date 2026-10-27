@@ -8,6 +8,7 @@ import type { Kind, Stored } from './kinds';
 import type { LoreFolder, Mark } from './library';
 import type { MemorySettings } from './memory';
 import type { AgentStage } from './prompt';
+import type { Card } from '../engine/import/types';
 import type { UsageCall } from './usage';
 
 export type Chat = Mark & {
@@ -19,6 +20,8 @@ export type Chat = Mark & {
   models: Assignment;
   // Each absent follows the default.
   prompt?: string;
+  // 캐릭터 없이 only: set by a pick in its prompt picker, absent while it reads 프롬프트 없이 (keepsPromptOut).
+  sendsPrompt?: true;
   persona?: string;
   note?: string;
   // 삽화 노트, sent to the scene writer through the 삽화 prompt's slot; absent is none.
@@ -46,6 +49,10 @@ export type Chat = Mark & {
   // always do (model/library Inlay).
   movedPictures?: true;
 };
+
+// Risu's 유틸리티 봇: a card made for a task, not a role, keeps the prompt's blocks and the persona out, and so does a chat
+// with no character until one is picked in it (engine/pipeline UTILITY).
+export const keepsPromptOut = (card: Pick<Card, 'utility'> | null, chat: Pick<Chat, 'sendsPrompt'>) => (card ? card.utility : !chat.sendsPrompt);
 
 // name: only one the user gave.
 export type Bookmark = { message: string; name?: string };

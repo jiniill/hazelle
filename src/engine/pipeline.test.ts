@@ -79,6 +79,7 @@ const scope = ({ card: own = card(), ...over }: Partial<PromptInput['scope']> = 
   packs: own ? [own] : [],
   persona: { name: 'jin', description: 'A traveler.' },
   prompt: starter,
+  promptOut: false,
   note: 'Rain tonight.',
   lore: [],
   loreFolders: {},
@@ -165,7 +166,7 @@ describe('assemble', () => {
 
   it("sends a 유틸리티 봇 its own texts, description, lorebook and chat, and none of the prompt's", () => {
     const own = card({ utility: true, systemPrompt: 'Translate what {{user}} writes.{{original}}', postHistoryInstructions: 'Answer in Korean.' });
-    expect(build({ card: own, lore: [lore('lighthouse', 'The lighthouse is old.')] })).toEqual([
+    expect(build({ card: own, promptOut: true, lore: [lore('lighthouse', 'The lighthouse is old.')] })).toEqual([
       { role: 'system', content: 'Translate what jin writes.' },
       { role: 'system', content: 'Luna keeps the lighthouse.' },
       { role: 'system', content: 'The lighthouse is old.', cache: true },
@@ -177,9 +178,9 @@ describe('assemble', () => {
     ]);
   });
 
-  it("sends a chat with no character its lorebook and chat, and none of the prompt's", () => {
+  it("sends a chat with no character that keeps the prompt out its lorebook and chat, and none of the prompt's", () => {
     const messages = [message('u1', 'user', 'Is it safe?'), message('a1', 'assistant', 'She nods.'), message('u2', 'user', 'Good.')];
-    expect(build({ card: null, greeting: null, messages, lore: [lore('lighthouse', 'The lighthouse is old.')] })).toEqual([
+    expect(build({ card: null, promptOut: true, greeting: null, messages, lore: [lore('lighthouse', 'The lighthouse is old.')] })).toEqual([
       { role: 'system', content: 'The lighthouse is old.', cache: true },
       { role: 'user', content: 'Is it safe?' },
       { role: 'assistant', content: 'She nods.' },

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { entryName } from '../../connectors/types';
 import { resolveAssets, withAttachments } from '../../engine/assets';
-import { holdsPersona, keepsPromptOut, unused } from '../../engine/pipeline';
-import type { Card } from '../../engine/import/types';
-import { calls, shown, type ChatItem, type ChatSummary } from '../../model/chat';
+import { holdsPersona, unused } from '../../engine/pipeline';
+import { calls, keepsPromptOut, shown, type ChatItem, type ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
 import { resetToggles, setToggle } from '../../runtime/characters';
 import { chatTranslate, featuresOf } from '../../runtime/features';
@@ -80,6 +79,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   }, [id, tools]);
   const toggles = toggleRows(togglesOf(store, chat, prompt));
   const card = shelf?.character.card ?? null;
+  const promptOut = keepsPromptOut(card, chat);
   // Any trigger may answer a press: a Lua one by a function of the button's name, a block one by its own name.
   const scripted = triggersOf(packsOf(store, chat)).length > 0;
   // Subscribed for featuresOf, chatTranslate and usageShownOf, which read the settings and the chat's prompt from the store.
@@ -403,7 +403,8 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     toggles,
     toggleOwner: chat.character,
     notUsed: card && describeUnused(unused(card)),
-    personaNote: personaNote(card, prompt, persona),
+    promptOut,
+    personaNote: personaNote(promptOut, prompt, persona),
     messages,
     texts,
     view,
@@ -487,8 +488,8 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
 }
 
 // A missing prompt or persona stops the turn on its own; a request that keeps the prompt out leaves the persona out too.
-function personaNote(card: Card | null, prompt: PromptChoice, persona: PersonaChoice): string | null {
-  if (keepsPromptOut(card) || prompt.kind !== 'prompt' || persona.kind !== 'persona') return null;
+function personaNote(promptOut: boolean, prompt: PromptChoice, persona: PersonaChoice): string | null {
+  if (promptOut || prompt.kind !== 'prompt' || persona.kind !== 'persona') return null;
   if (!holdsPersona(prompt.prompt.value.blocks)) return NO_PERSONA_SLOT;
   return persona.persona.value.description.trim() ? null : '페르소나 설명이 비어 있어요.';
 }

@@ -4,7 +4,7 @@ import type { Chat } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
 import type { ApiFailure, ApiResult } from '../../runtime/api';
 import { chatModel, setChatModel, withMainModel } from '../../runtime/assignment';
-import { setCast, setChatOwn, withCast, withOwn, type Own } from '../../runtime/chat-log';
+import { setCast, setChatOwn, withCast, withOwn, withPromptOut, withPromptSent, type Own } from '../../runtime/chat-log';
 import { chatPersona, pinPersona, setCurrentPersona } from '../../runtime/personas';
 import { chatPrompt } from '../../runtime/prompts';
 import { useSession } from '../session';
@@ -34,6 +34,10 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
   // null: follow the default again. A new chat holds it until its first send. The caller reports a failure.
   const setOwn = (field: Own, value: string | null) => change((current) => withOwn(current, field, value), (id) => setChatOwn(store, id, field, value));
 
+  const setPrompt = (value: string | null) =>
+    character === null ? change((current) => withPromptSent(current, value), (id) => store.update('chat', id, (current) => withPromptSent(current, value))) : setOwn('prompt', value);
+  const keepPromptOut = () => change(withPromptOut, (id) => store.update('chat', id, withPromptOut));
+
   // A pick is this chat's persona and the current one, which a chat not saved yet follows.
   async function choosePersona(persona: string): Promise<{ ok: true } | ApiFailure> {
     const own = await setOwn('persona', persona);
@@ -51,7 +55,8 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
     persona: chatPersona(store, chat),
     actions: {
       pickModel,
-      setPrompt: (value: string | null) => setOwn('prompt', value),
+      setPrompt,
+      keepPromptOut,
       setNote: (value: string | null) => setOwn('note', value),
       setIllustrateNote: (value: string | null) => setOwn('illustrateNote', value),
       choosePersona,

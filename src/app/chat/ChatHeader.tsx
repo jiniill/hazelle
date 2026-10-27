@@ -52,7 +52,7 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
   const current = 'kind' in route ? null : refOf(route.connection.id, route.model);
   return (
     <>
-      <ChatPromptPicker prompt={chat.prompt} open={chat.dialog === 'prompt'} onOpen={() => actions.openDialog('prompt')} />
+      <ChatPromptPicker prompt={chat.prompt} out={chat.promptOut && chat.card === null} open={chat.dialog === 'prompt'} onOpen={() => actions.openDialog('prompt')} />
       <ChatCastMenu handle={castMenu} cast={cast} character={shelf?.id ?? null} onChange={actions.setCast} />
       <ChatModelMenu handle={modelMenu} current={current} label={label} onPick={actions.pickModel} />
       {item && (
@@ -117,7 +117,7 @@ export function ChatDialogs({ chat }: { chat: OpenChat }) {
       onClose={actions.closeDialog}
     />
   );
-  if (dialog === 'prompt') return <PromptDialog prompt={chat.prompt} onChoose={actions.setPrompt} onEdit={(id) => actions.side({ kind: 'prompts', id, pane: null })} onClose={actions.closeDialog} />;
+  if (dialog === 'prompt') return <PromptDialog prompt={chat.prompt} plain={chat.card === null} out={chat.promptOut && chat.card === null} onChoose={actions.setPrompt} onKeepOut={actions.keepPromptOut} onEdit={(id) => actions.side({ kind: 'prompts', id, pane: null })} onClose={actions.closeDialog} />;
   if (dialog === 'reading') return <ReadingDialog onClose={actions.closeDialog} />;
   if (dialog === 'export' && item) return <ChatExport item={item} messages={chat.messages} view={chat.view} placed={chat.placed} pictures={chat.pictures} flipped={chat.flipped} busy={chat.busy} bot={chat.decor.bot} characterName={chat.card?.name ?? null} names={chat.names} replyLanguage={chat.translate.replyLanguage} onTranslate={chat.features.translate ? actions.translate : undefined} onClose={actions.closeDialog} />;
   if (dialog === 'rename' && item) {

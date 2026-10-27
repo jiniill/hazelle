@@ -199,7 +199,7 @@ const SHAPES = {
   share: shape({ share: str, key: str }),
   inlay: (value) => picture(value) && isRecord(value) && (value.attached === undefined || value.attached === true),
   textfile: shape(all(str, 'name', 'title', 'text')),
-  chat: shape({ title: orNull(str), character: orNull(str), models: isRecord, cast: (value) => value === undefined || listOf(str)(value), bookmarks: (value) => value === undefined || listOf(shape({ message: str }))(value), loreFolders: (value) => value === undefined || listOf(shape({ id: str, name: str }))(value), movedPictures: (value) => value === undefined || value === true }),
+  chat: shape({ title: orNull(str), character: orNull(str), models: isRecord, cast: (value) => value === undefined || listOf(str)(value), bookmarks: (value) => value === undefined || listOf(shape({ message: str }))(value), loreFolders: (value) => value === undefined || listOf(shape({ id: str, name: str }))(value), movedPictures: (value) => value === undefined || value === true, sendsPrompt: (value) => value === undefined || value === true }),
   entry: (value) => isRecord(value) && typeof value.type === 'string' && Object.hasOwn(ENTRIES, value.type) && ENTRIES[value.type as Entry['type']](value),
   summary: shape({ version: num, head: num, chatRev: num, dependencies: listOf(isRecord), rendered: shape({ now: num, timeZone: str }), character: orNull(str), title: str, preview: str, count: num, at: orNull(num), order: num, recent: listOf(isRecord) , stuck: (value) => value === undefined || shape({ dependencies: listOf(isRecord) })(value) }),
   // A batch's marker holds no key: no server object holds its call.

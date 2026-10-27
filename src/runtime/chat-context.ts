@@ -8,7 +8,7 @@ import type { LoreScan } from '../engine/lorebook/activate';
 import type { Box } from '../engine/regex/scripts';
 import type { ChatScope } from '../engine/render';
 import type { TranslationRequest } from '../engine/translate';
-import { shown, type Chat, type Message } from '../model/chat';
+import { keepsPromptOut, shown, type Chat, type Message } from '../model/chat';
 import { live } from '../model/library';
 import type { Toggle, ToggleLine } from '../model/prompt';
 import { without } from '../model/fields';
@@ -117,6 +117,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
     packs: packs.map(({ pack }) => pack),
     persona: persona.kind === 'persona' ? { name: persona.persona.value.name, description: persona.persona.value.description } : null,
     prompt: prompt.kind === 'prompt' ? prompt.prompt.value : null,
+    promptOut: keepsPromptOut(card, chat),
     note: chat.note ?? null,
     lore: loreOwners.flatMap(({ id: owner }) => store.children('lore', owner)),
     loreScan: loreScanOf(store, card),

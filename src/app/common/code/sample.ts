@@ -13,6 +13,7 @@ export const SAMPLE: ChatScope = {
   packs: [],
   persona: { name: '나', description: '' },
   prompt: null,
+  promptOut: false,
   note: null,
   lore: [],
   loreFolders: {},
