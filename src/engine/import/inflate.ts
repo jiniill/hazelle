@@ -1,12 +1,10 @@
 import { Gunzip, Inflate } from 'fflate';
 import { progressed } from '../progress';
 
-// How much packed data each step takes. DEFLATE unpacks to at most 1032 times its size, so an output past the size
-// declared for it is refused within one step of passing it.
+// DEFLATE expands at most 1032× per input step, bounding how far output can overrun its declared size.
 const STEP = 64 * 1024;
 
-// What packed bytes may unpack to, all together. The largest real ones unpack to 3.3 times their size (a charx of
-// pictures) and 2.8 (a Risu backup's database); the floor is for small files of text.
+// Real archives peaked at 3.3× (picture charx), databases at 2.8×; retain a floor for small text files.
 export const EXPANSION = 16;
 const FLOOR = 64 * 1024 * 1024;
 export const expansionLimit = (packed: number) => packed * EXPANSION + FLOOR;
@@ -22,8 +20,7 @@ export class TooLarge extends RangeError {
   }
 }
 
-// The output grows as it is made, in steps: the size a file declares for it is checked and never allocated. Throws
-// when the output is not exactly that size, as for packed bytes that do not read, and stops once it passes limit.
+// Grow incrementally; never allocate the untrusted declared size. Require exact final size and abort past limit.
 function drain(stream: Inflate | Gunzip, packed: Uint8Array, size: number, limit: number): Uint8Array<ArrayBuffer> {
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -45,8 +42,7 @@ function drain(stream: Inflate | Gunzip, packed: Uint8Array, size: number, limit
 // openZip holds to the archive's limit.
 export const inflate = (packed: Uint8Array, size: number) => drain(new Inflate(), packed, size, size);
 
-// A gzip file, whose last four bytes declare its output's size; limit: what the caller lets it unpack to. The declared
-// size alone does not refuse it, as a cut or damaged file declares whatever its last bytes hold.
+// Do not reject by gzip trailer size alone: damaged/cut files have arbitrary trailing bytes.
 export const gunzip = (file: Uint8Array, limit: number) =>
   drain(new Gunzip(), file, new DataView(file.buffer, file.byteOffset, file.byteLength).getUint32(file.length - 4, true), limit);
 

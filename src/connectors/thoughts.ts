@@ -40,9 +40,8 @@ function heldFrom(text: string) {
   return starts.find((at) => opening(text.slice(at))) ?? text.length;
 }
 
-// A block's text goes to the reasoning trimmed, several blocks separated by a blank line. Whitespace before anything
-// visible is held, not sent: a block closed after it trims it. takeBack: the last chars of the reasoning given so far
-// were the answer's content after all, and come again as text right after.
+// Trim reasoning blocks and separate them by blank lines; hold leading whitespace until a block closes.
+// takeBack retracts trailing reasoning now recognized as answer text, which follows again as content.
 export function thoughts(onText: (phase: Phase, text: string) => void, takeBack: (chars: number) => void) {
   const emit = (phase: Phase, text: string) => void (text && onText(phase, text));
   let held = '';

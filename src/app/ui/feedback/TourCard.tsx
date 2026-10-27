@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { Tag } from '../foundation/Tag';
 import styles from './TourCard.module.css';
 
-// action: the button that opens the tour, at the card's end.
 export function TourCard({ icon, title, sub, action }: { icon: LucideIcon; title: string; sub: string; action: ReactNode }) {
   return (
     <div className={styles.card}>

@@ -6,12 +6,10 @@ import { useLayer } from '../overlays/layers';
 import { NavBar, type NavBarProps } from './NavBar';
 import styles from './SidePanel.module.css';
 
-// page: the body scrolls back to its top when this changes, as EditorFrame's page does. expandable: beside the page it
-// can widen over the whole page, which stays under it as it was. fill: one child takes the whole body and scrolls itself.
+// page resets scroll; expandable preserves the underlying page; fill delegates scrolling to its child.
 type Props = { title: string; subtitle?: string; nav?: NavBarProps; page?: string; actions?: ReactNode; expandable?: boolean; fill?: boolean; onClose: () => void; children: ReactNode };
 
-// Where the page is too narrow for it, it covers the page, and there Esc or a press on the page closes it (user,
-// 2026-10-02). Beside the page it stays: the page is read with it open, and Esc is the page's own (응답 멈추기).
+// Overlay panels close on outside/Esc; beside panels leave Esc to page actions such as stop reply (user, 2026-10-02).
 export function SidePanel({ title, subtitle, nav, page, actions, expandable = false, fill = false, onClose, children }: Props) {
   const covers = usePanelCovers();
   const [expanded, setExpanded] = useState(false);
@@ -23,9 +21,8 @@ export function SidePanel({ title, subtitle, nav, page, actions, expandable = fa
   useLayer(covers, {
     // A toast lies over the page too and is no part of it.
     outside: (target) => !panel.current?.contains(target) && !(target instanceof Element ? target : target.parentElement)?.closest('[role="status"], [role="alert"]'),
-    // A press closes it once its click is done, and only if the panel is still there: the header button that opened
-    // it closes it by itself, and another panel's button has put its own in this one's place. A press that ends as a
-    // drag has no click, so the next press starts over instead of finding this one still waiting.
+    // Close after click only if still the same panel: opener/another-panel actions may already replace it.
+    // Drags have no click and must not leave a stale pending outside press.
     close: (refocus) => {
       if (refocus) return onClose();
       const done = () => panel.current && latest.current();

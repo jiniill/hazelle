@@ -1,9 +1,7 @@
 import { Hint, type Help } from '../overlays/Hint';
 import styles from './Ranking.module.css';
 
-// rank: null for a row that holds no place, such as a pool of the rest, shown last. note: its facts under the name.
-// share: the bar, of the largest.
-// move: the change of place since an earlier ranking; its text is drawn under the place, its label read instead.
+// rank null is an unranked trailing pool. share scales to the largest row; move.label replaces move.text for speech.
 export type Ranked = {
   key: string;
   rank: number | null;

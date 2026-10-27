@@ -26,12 +26,9 @@ const WARNINGS: Record<BackupWarning, string> = {
   'disk-full': '디스크 80% 초과',
 };
 
-// Each list shows its head here and opens whole on its own page (AdminListScreen). Every act lands in the log, whose
-// head is asked again after one, as are the service's counts and the flagged accounts, which an act on an account may
-// change. Whole-service usage is refreshed separately by the operator; with one person it would repeat that person's
-// row. A failed service read shows every section: it cannot tell that nothing waits in them. A self-host keeps only its
-// own: its board and share links are not its own (hazelle.app's board, files instead of links), so nothing is reported,
-// posted to its operator or held, and nobody visits it.
+// Refresh log head/counts/flagged accounts after acts; service-wide usage is explicit-refresh only.
+// On failed service reads keep every section: unknown cannot imply empty.
+// Self-hosts omit hosted community/moderation/visits, which belong to hazelle.app.
 export function AdminScreen({ back }: { back: Back | null }) {
   const own = selfHost();
   const service = useLoaded(readService);

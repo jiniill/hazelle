@@ -61,10 +61,8 @@ admin.use(createMiddleware<AppEnv>(async (c, next) => (c.get('account').admin ? 
 
 admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db) }));
 
-// Every action below goes in one batch with its admin_log row, so the log never misses an action that happened and
-// never holds one that did not. The row comes first and is written only if the target is there: a delete could not
-// name its target afterwards.
-// values: what detail names from ?4 on.
+// Atomically log then act, gated on target existence; deletion would make later target lookup impossible.
+// values bind detail parameters from ?4 onward.
 function logged(db: Db, action: string, id: string, detail = 'NULL', ...values: SqlValue[]) {
   return db.prepare(`INSERT INTO admin_log (at, action, target, detail) SELECT ?1, ?2, id, ${detail} FROM accounts WHERE id = ?3`).bind(Date.now(), action, id, ...values);
 }
@@ -142,10 +140,8 @@ async function accountPage<T extends Pick<AccountRow, 'accountId' | 'createdAt'>
   return { rows: results, next: results.length === limit ? `${results.at(-1)!.createdAt}:${results.at(-1)!.accountId}` : null };
 }
 
-// bytes, disk: what the account's store answered, null for an account not read by the deadline, failing, or not
-// active (restoring and leaving accounts are not called). fileBytes: the sum of its pictures. bytesCap, fileBytesCap:
-// its own caps, 'default' while the service's apply. Whole-service totals are read separately through /usage.
-// flagged: only the accounts suspended, restoring or leaving.
+// bytes/disk stay null for inactive/unread/failed stores; own caps use default when inherited.
+// flagged filters suspended/restoring/leaving. Service totals are separate /usage reads.
 admin.get('/accounts', async (c) => {
   const listed = await accountPage<AccountRow>(c, ACCOUNT_COLUMNS, c.req.query('flagged') === '1' ? "(suspended_at IS NOT NULL OR state != 'active')" : 'TRUE');
   if (!listed) return fail(c, 400, 'bad-input');
@@ -201,9 +197,8 @@ function shownAccount(row: AccountRow, usage: Usage) {
   };
 }
 
-// Runs each call that is not null with at most slots of them in flight, a slot held until its call settles, since a
-// call cannot be aborted. At the deadline no call starts any more, and what has not settled is answered as undefined:
-// a call that settles later changes nothing.
+// Hold slots until nonabortable calls settle. At deadline stop dispatching and return undefined for unfinished calls;
+// late answers must not mutate the returned page.
 export async function readAll<T>(calls: ((() => Promise<T>) | null)[], slots: number, deadlineMs: number): Promise<(T | undefined)[]> {
   const settled: (T | undefined)[] = calls.map(() => undefined);
   let next = 0;
@@ -369,9 +364,8 @@ admin.put('/service', async (c) => {
   return c.body(null, 204);
 });
 
-// Every list pages alike: after is the next of the page before, limit the rows asked (PAGE_ROWS at most and when not
-// asked), and next is null on a page shorter than limit, the last. These lists run newest first, their cursor an id.
-// where: what else a row must meet, with its values from ?3 on.
+// Newest-first keyset pages: after is prior next, limit defaults/caps to PAGE_ROWS, short pages end with null.
+// where binds extra filters from ?3 onward.
 async function page<T extends { id: number }>(c: Context<AppEnv>, select: string, where = 'TRUE', ...values: SqlValue[]) {
   const after = c.req.query('after');
   const limit = limitOf(c);
@@ -389,15 +383,14 @@ export function limitOf(c: Context<AppEnv>) {
   return /^[1-9]\d{0,2}$/.test(limit) && Number(limit) <= PAGE_ROWS ? Number(limit) : null;
 }
 
-// A share report carries its share's state now and whose it is: held, reviewed (a hold lifted or a block, after which
-// reports no longer hold it), cut by the sharer, removed by a block. null: the share went with its sharer's account.
+// Read current share state, not report-time state; reviewed holds/blocks do not auto-hold again.
+// Null means the share left with its account.
 type ShareRow = { held: number; reviewed: number; cut: number; removed: number; ownerId: string | null; ownerName: string | null };
 const SHARED = `(SELECT json_object('held', s.held_at IS NOT NULL, 'reviewed', s.reviewed_at IS NOT NULL, 'cut', s.cut_at IS NOT NULL,
     'removed', s.removed_at IS NOT NULL, 'ownerId', a.id, 'ownerName', a.username)
   FROM shares s LEFT JOIN accounts a ON a.incarnation = s.incarnation WHERE s.id = reports.share)`;
 
-// open: only the reports not resolved. A report on a post or a comment (postId, with commentId for a comment) names its
-// reporter by their 게시판 nickname, null for none, and carries what it reports as it reads now, null once removed.
+// open excludes resolved reports. Board reports expose current target text and reporter nickname, null once absent.
 admin.get('/reports', async (c) => {
   const listed = await page<{ id: number; share: string | null; shared: string | null }>(
     c,
@@ -469,9 +462,8 @@ admin.post('/shares/:id/release', async (c) => {
   );
 });
 
-// 차단: the share is removed, the files of the version reviewed go into file_blocks (every account's copy with them), its
-// open reports are resolved, and the sharer is told why and, with suspend, suspended. A share that went with its
-// account has no one to tell: not-found.
+// Block the reviewed version's file ids across accounts, resolve reports and notify/suspend atomically.
+// Departed sharers have no account to notify: not-found.
 admin.post('/shares/:id/block', async (c) => {
   const id = c.req.param('id');
   const body = await readObject(c);

@@ -4,8 +4,7 @@ import type { VaultKey } from './keys';
 
 export type ObjectAddress = { id: string; kind: string; parent: string | null };
 
-// The leading byte names the body format, so a later format can be read beside this one.
-// Format 1: AES-256-GCM over deflate-raw JSON.
+// Format 1: leading format byte, then AES-256-GCM over deflate-raw JSON.
 const FORMAT = 1;
 
 // The server cannot move a body to another object, kind, parent or account without failing this AAD.

@@ -1,6 +1,5 @@
-// Escaped punctuation stands in the private use area, U+E9B8 on, in this order. Escaped text holds no
-// braces, so it survives every later CBS pass (the regex stage evaluates CBS again after each
-// replacement), and unescapeCbs turns it back once, at the very end.
+// Escaped punctuation uses U+E9B8 onward in this order. Keep braces escaped through every CBS/regex pass;
+// unescapeCbs runs only once at the end.
 const PUNCTUATION = '{}()<>:;';
 const FIRST = 0xe9b8;
 const ESCAPED = /[-]/g;

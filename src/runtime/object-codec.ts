@@ -8,17 +8,15 @@ export const OPEN_ITEMS = 64;
 export const OPEN_BYTES = 4 * 1024 * 1024;
 // Values have no cheap encoded size before the worker serializes them. Bound those atomic objects by count.
 export const SEAL_ITEMS = 8;
-// Opening an account is CPU in the workers (base64, decrypt, inflate, parse) while the main thread waits, so the pool
-// takes the cores the main thread can spare, bounded: more workers than that only share the same cores.
+// Bound CPU workers by spare cores; adding workers beyond them cannot speed decrypt/inflate/parse.
 const codecWorkers = () => Math.min(4, Math.max(1, (navigator.hardwareConcurrency || 2) - 1));
 
 export class CodecAborted extends Error {}
 export class CodecUnavailable extends Error {}
 type CodecTransport = { run(job: CodecJob): Promise<CodecResult[]>; close(): void };
 
-// A pool of workers per open store, each initialized once with the same nonextractable derived key, which is cloned,
-// never exported per object. A job goes to the least loaded worker. One worker failing ends the pool: a crash says
-// nothing about which objects are corrupt, so no caller may read a partial answer as unreadable objects.
+// Per-store workers share a cloned, nonextractable derived key; dispatch to least loaded.
+// Any worker crash ends the pool: transport failure must never masquerade as corrupt individual objects.
 function objectCodecTransport(account: string, key: CryptoKey, count: number): CodecTransport {
   const workers: Worker[] = [];
   const loads: number[] = [];
@@ -78,11 +76,9 @@ export class ObjectCodec {
     return this.run({ kind: 'open', items }, signal);
   }
 
-  // Windows are dispatched ahead of the row being applied, one more than there are codec workers, so every worker
-  // holds a window while the main thread applies an earlier one; only those windows' decoded values are retained. The
-  // encoded-byte cap admits one atomic oversized object alone. Every window's promise gets an observer when dispatched:
-  // a caller that stops consuming after an abort leaves no rejection unobserved. Strict scans preserve codec errors.
-  // Outside a strict scan, a body that throws while opening counts as unreadable, as one that fails authentication does.
+  // Retain only worker-count + 1 decoded windows; admit an oversized atomic object alone.
+  // Observe each dispatched promise immediately, including windows abandoned after abort.
+  // Strict scans preserve codec errors; ordinary reads treat opening failures as unreadable bodies.
   opener(rows: SealedChange[], signal: AbortSignal, { strict = false, accept }: { strict?: boolean; accept: (row: SealedChange) => boolean }): (index: number) => Promise<unknown> {
     type Window = { end: number; slots: Map<number, number>; batch: Promise<CodecResult[]> };
     const ahead = this.workers + 1;

@@ -4,9 +4,8 @@ import { normalize, TOGGLE_GLOBAL } from '../../engine/cbs/tags';
 
 type ToggleUse = { key: string; at: number };
 
-// Every place CBS reads a toggle by a written key, found the way the evaluator reads them: the literal `toggle` applies
-// to and the left side of `tis`/`tisnot` in a #when, and `toggle_KEY` in getglobalvar. A key built by a nested tag is
-// computed, not written, so it is not one, and neither is anything in a body the evaluator takes as text.
+// Find literal keys using evaluator syntax: toggle predicates, first tis/tisnot key and getglobalvar toggle_KEY.
+// Computed nested-tag keys and raw-block bodies are deliberately not rewritten.
 export function toggleUses(text: string): ToggleUse[] {
   const uses: ToggleUse[] = [];
   const visit = (nodes: Node[]) => {

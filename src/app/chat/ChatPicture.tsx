@@ -103,9 +103,7 @@ const UNREAD: Record<SceneInvalid, (paragraphs: number) => string> = {
   paragraph: (paragraphs) => `after에는 1부터 ${paragraphs} 사이의 숫자를 입력해야 해요.`,
 };
 
-// 어떻게 바꿀까요?: the scene as the writer answers it, read back through parseScene before anything is drawn. typed: the
-// text as the user left it, null while it follows the scene; a typed text that does not read keeps the last scene that
-// did on the board.
+// Reparse edited scene JSON before drawing. Invalid typed JSON keeps the last valid scene visible.
 export function SceneDialog({ reshaping, sizes, onDraw, onClose }: { reshaping: Reshaping; sizes: PictureSizes; onDraw: IllustrationActions['draw']; onClose: () => void }) {
   const [scene, setScene] = useState(reshaping.scene);
   const [typed, setTyped] = useState<string | null>(null);

@@ -1,8 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-// 소식 (design §6.15): the operator's board post for the release this build is, published by the server whose
-// HAZELLE_VERSION it names at its first start. The deploy skill rewrites it for every release a user would notice and
-// sets it to null for one that brings nothing to tell; once published, the post is the record and is edited on the board.
+// Release copy ships with the build, published once under HAZELLE_VERSION. Deploy updates this text or clears it
+// for silent releases; after publication the board post is the editable record (design §6.15).
 export type ReleaseNews = { version: string; title: string; text: string };
 export const RELEASE_NEWS: ReleaseNews | null = {
   version: 'v0.5.7',

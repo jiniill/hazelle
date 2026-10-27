@@ -26,24 +26,22 @@ export type ReplyError =
   | CredentialFailure
   | NonNullable<Outcome['error']>;
 
-// A stop is a cut, never an error. request is the address and body the request was built with, redacted, and
-// cache what its cache read and wrote; both null when it was refused before it could be built, or picked up after a reload.
-// response: the body the provider answered with, as read, for 응답 원문; null when none was read here, and for a batch's
-// answer.
-// call: the call's id, which its receipt keeps (model/chat Receipt id); a call picked up after a reload has the same.
-// account: the id of the account it was sent with; null when none was picked, or it was picked up after a reload.
-// tries: how many times it was sent (retry on failure); null where that is not known: never sent, or a call whose end
-// was not read.
+// Stops are cuts, never errors.
 export type Reply = Omit<Outcome, 'error'> & {
   calibration: CallCalibration;
   contextRefusal: ContextRefusal | null;
+  // Keep the receipt's call id across reload/resume.
   call: string;
+  // null if no account was picked or the call resumed after reload.
   account: string | null;
+  // Total sends; null when never sent or the call's end was not read.
   tries: number | null;
   error: Exclude<ReplyError, { kind: 'stopped' }> | null;
   firstTextMs: number | null;
   totalMs: number;
+  // Redacted; request/cache are null for pre-build refusals and calls resumed after reload.
   request: Pick<HttpRequest, 'url' | 'body'> | null;
+  // Raw provider body for 응답 원문; null if unread here or answered by a batch.
   response: string | null;
   cache: CacheView | null;
   pdf?: true;
@@ -63,9 +61,8 @@ export type GenerateInput = {
   signal: AbortSignal;
   onText: (phase: Phase, text: string) => void;
   inline?: InlineThoughts;
-  // A call that may be answered through a discount lane's batch: a chat reply's, never a task's (design §6.7: 보조 calls
-  // never wait on a batch). waiting: told once the batch holds the call, whose marker then names it. cancel: 멈추기,
-  // which cancels the batch at the provider (waitBatch); signal only stops waiting, and leaves it to its marker.
+  // Chat replies only, never auxiliary tasks (design §6.7). waiting marks provider acceptance;
+  // cancel stops the provider batch, while signal only stops waiting and leaves the marker resumable.
   batching?: { waiting: () => void; cancel: AbortSignal };
 };
 
@@ -237,9 +234,8 @@ const CHECKS_MS = [5_000, 10_000, 15_000, 30_000, 60_000];
 // Failures worth waiting through: the page's own connection, and the provider busy or down for a moment.
 const passing = (failure: Exclude<RelayFailure, { kind: 'stopped' }>) => failure.kind === 'offline' || failure.kind === 'relay' || (failure.kind === 'provider' && RETRYABLE.includes(failure.status));
 
-// 멈추기 cancels the batch at the provider, and it is still asked about until it ends: an answer made before the cancel
-// landed is billed all the same, so it is read and kept, and a canceled one ends as stopped. Once signal stops the wait,
-// a cancel asked for meanwhile is sent and checked once; the batch is then left to its marker.
+// Poll through provider cancellation: an answer completed before cancellation is still billed and must be kept.
+// After signal aborts, send/check any pending cancel once, then leave resumption to the marker.
 async function waitBatch(asking: Asking, batch: string, key: string): Promise<Answered> {
   const { route, batches, ask, signal, cancel } = asking;
   let canceled = false;

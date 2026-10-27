@@ -8,7 +8,6 @@ import styles from './CardList.module.css';
 
 const Folded = createContext(false);
 
-// The user's own things as cards across the width, as many columns as fit: one in a side panel or on a phone.
 export function CardList({ label, children }: { label: string; children: ReactNode }) {
   return (
     <ul className={styles.list} aria-label={label}>
@@ -18,16 +17,13 @@ export function CardList({ label, children }: { label: string; children: ReactNo
 }
 
 type Props = {
-  // A folder among the things, which opens it and takes the cards dragged onto it. No › here: on these cards it
-  // unfolds a prompt's copies.
+  // Folder opens as a destination and drop target; reserve › for unfolding prompt copies, not folders.
   folder?: boolean;
   title: string;
   badge?: string;
   tags?: string[];
-  // What it holds, then a note such as where it is used, under the title.
   description?: string;
   note?: string;
-  // Beside the card's button, such as the one that unfolds its children.
   control?: ReactNode;
   // Under the card's button, such as a gauge; a press on it opens nothing.
   detail?: ReactNode;

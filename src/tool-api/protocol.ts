@@ -3,9 +3,8 @@ import type { Json, Settings, ToolManifest } from './manifest';
 export type EventName = keyof Hazelle.Events;
 export type ChatHeader = Pick<Hazelle.Chat, 'id' | 'character' | 'persona' | 'length'>;
 export type Message = Hazelle.Message;
-// value: the event's answer (prompt, replying, sending, requesting, showing). data: this chat's tool data
-// (Hazelle.ChatData), undefined for a deletion. badges: by message index, null to clear. lore: the chat's own lorebook
-// entries written, one per name. variables: the chat's own (Hazelle.ChatVariables), by name.
+// data undefined deletes; badges use message indices with null to clear.
+// lore replaces chat-owned entries by name; variables writes shared bot variables, not tool state.
 export type ToolOutcome = {
   value?: Hazelle.PromptAnswer | Hazelle.RequestMessage[] | string[]; writes: [string, Json | undefined][]; edits: { index: number; text: string }[]; added: { role: 'user' | 'char'; text: string }[];
   data: [string, Json | undefined][]; badges: { index: number; text: string | null }[]; lore: Omit<Hazelle.LoreEntry, 'owner'>[];

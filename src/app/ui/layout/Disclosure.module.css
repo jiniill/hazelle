@@ -10,8 +10,7 @@
   gap: var(--space-12);
 }
 
-/* The rule runs on from the label to the edge: the fold reads as a boundary under the rows, not a row (user's pick,
-   2026-10-19, over a row in a box). */
+/* Keep disclosure a boundary under rows, never a boxed setting row (user, 2026-10-19). */
 .line {
   flex: 1;
   height: var(--border-thin);

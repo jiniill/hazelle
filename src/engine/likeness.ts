@@ -30,9 +30,7 @@ export function sample<T extends { name: string }>(pictures: readonly T[], most:
   return picked;
 }
 
-// texts: the card's, module's or persona's own fields that may describe looks, labelled. user: the material is a
-// persona's, the user's own character, whom the profiles then describe. avatar: the first picture is the owner's own.
-// most: PORTRAITS_MOST.
+// Label owner texts; user marks persona material, avatar marks its first picture; most is PORTRAITS_MOST.
 export type LikenessInput = {
   name: string;
   user: boolean;
@@ -50,8 +48,7 @@ const SOURCES: Record<BuiltSource, string> = {
   text: 'the description and lorebook',
 };
 
-// What the material bounds hold, each whole text while it fits and a cut description past it, each whole lore entry
-// while it fits; the prompts deduplicated.
+// Keep whole texts/lore entries while they fit; only descriptions may be truncated. Deduplicate prompts.
 function bounded({ texts, lore, prompts }: Pick<LikenessInput, 'texts' | 'lore' | 'prompts'>) {
   let room = TEXT_MOST;
   const keptTexts = texts.flatMap(({ label, text }) => {
@@ -123,7 +120,6 @@ function outfit(value: unknown): Outfit | null {
   return isRecord(value) && isText(value.name) && isText(value.tags) ? { name: value.name.trim(), tags: value.tags.trim() } : null;
 }
 
-// A portrait's own fields, as a model's answer and a 삽화 프로필 file both hold them.
 function fields(value: Record<string, unknown>): Omit<Portrait, 'artist' | 'source'> | null {
   const { name, aliases, look, outfits } = value;
   if (!isText(name) || !Array.isArray(aliases) || !aliases.every(isText) || !isText(look) || !Array.isArray(outfits)) return null;
@@ -138,8 +134,8 @@ function portrait(value: unknown, sources: readonly BuiltSource[], artist: strin
   return read?.name ? { ...read, artist, source: value.source as BuiltSource } : null;
 }
 
-// The file's source is not read: an imported portrait is the user's, which 다시 만들기 keeps. An unnamed one is kept as
-// the editor holds it, which asks for its name.
+// Imported portraits become user-owned regardless of file source, surviving regeneration.
+// Preserve unnamed portraits for the editor to repair.
 function filePortrait(value: unknown): Portrait | null {
   if (!isRecord(value) || !isText(value.artist)) return null;
   const read = fields(value);
@@ -157,7 +153,6 @@ export function parseLikeness(text: string, { sources, artist, most }: { sources
   return portraits.some((each) => each === null) ? { ok: false, reason: 'fields' } : { ok: true, portraits: portraits as Portrait[] };
 }
 
-// A 삽화 프로필 file, which passes a pack's profiles from one account to another.
 const PORTRAIT_FILE = { hazelle: 'portraits', version: 1 } as const;
 
 export const writePortraitFile = (portraits: readonly Portrait[]) => JSON.stringify({ ...PORTRAIT_FILE, portraits }, null, 2);
@@ -181,16 +176,14 @@ export const nameKey = (name: string) => name.trim().normalize('NFC').toLowerCas
 
 export const namesOf = (portrait: Portrait) => [portrait.name, ...portrait.aliases].map(nameKey).filter(Boolean);
 
-// What a build writes over the portraits there (runtime/likeness): the user's stay, first, and a built one sharing a
-// name or alias with one of them is left out.
+// Regeneration keeps user portraits first and discards generated name/alias collisions.
 export function rebuiltPortraits(before: readonly Portrait[], built: readonly Portrait[], most: number): Portrait[] {
   const kept = before.filter(({ source }) => source === 'user');
   const taken = new Set(kept.flatMap(namesOf));
   return [...kept, ...built.filter((portrait) => !namesOf(portrait).some((key) => taken.has(key)))].slice(0, most);
 }
 
-// What an import writes over the portraits there (runtime/likeness): one sharing a name or alias with an imported one
-// gives way to it, and the imported come last.
+// Imports replace name/alias collisions and append their portraits last.
 export function importedPortraits(before: readonly Portrait[], imported: readonly Portrait[]): { portraits: Portrait[]; replaced: number } {
   const taken = new Set(imported.flatMap(namesOf));
   const kept = before.filter((portrait) => !namesOf(portrait).some((key) => taken.has(key)));

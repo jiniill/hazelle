@@ -1,6 +1,4 @@
-// A classic scrollbar takes room beside what it scrolls (Windows, macOS with a mouse); an overlay one takes none and
-// hides when idle (macOS with a trackpad, phones). scrollbar.css restyles only the classic kind: a styled bar is always
-// classic, so styling an overlay one would bring back a bar the platform hides.
+// Style classic scrollbars only: custom styling turns hidden platform overlays into space-taking classic bars.
 export function markScrollbars() {
   const probe = document.createElement('div');
   probe.style.cssText = 'position: absolute; visibility: hidden; width: 100px; height: 100px; overflow: scroll';

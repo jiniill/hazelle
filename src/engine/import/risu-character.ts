@@ -33,8 +33,8 @@ export async function picture(read: Read): Promise<Picture | null> {
   return type ? { bytes, type } : null;
 }
 
-// char: a database character, out of cold storage. chats: its chats at their positions, each with its own cold
-// payload back, or null when the backup lacks it. Risu's open-time migrations are applied here (spec §8).
+// Restore selected chats at original positions and apply Risu open-time migrations (spec §8).
+// Missing cold payloads stay null.
 export function risuCharacter(char: Json, chats: (Json | null)[], folder: string | null, entry: Entry): RisuCharacter {
   const missed: Tally<MoveUnsupportedKind> = new Map();
   const tally: Tally = new Map();
@@ -102,8 +102,8 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
     if (index <= cut || message.disabled === true || message.isComment === true) add(missed, 'hidden-message');
   }
   if (text(chat.supaMemoryData).trim() || [chat.hypaV2Data, chat.hypaV3Data].some(holdsData)) add(missed, 'memory');
-  // Risu reads these over the account's toggles whether or not useLocallySetGlobalVariables is still on; that flag only
-  // decides where a new value is written (chatVar.svelte.ts getGlobalChatVar). '' and 'null' read as unset.
+  // Read local toggles regardless of useLocallySetGlobalVariables, which only selects a write target.
+  // Empty/'null' means unset (chatVar.svelte.ts getGlobalChatVar).
   if (Object.entries(record(chat.GLGlobalVariables)).some(([key, value]) => key.startsWith('toggle_') && value && value !== 'null')) add(missed, 'chat-toggles');
   const marked = new Set(list(chat.bookmarks).filter((id) => typeof id === 'string'));
   const names = record(chat.bookmarkNames);
@@ -130,10 +130,8 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
 
 const holdsData = (memory: unknown) => isRecord(memory) && Object.values(memory).some((value) => Array.isArray(value) && value.length > 0);
 
-// The fields of Risu's own export of a database character (createBaseV3, spec §6) that the one card converter reads;
-// the rest of the export is left out. Scripts and triggers stay in extensions.risuai, where a JSON card holds them.
-// Export quirks are not reproduced: an unset character_version stays unset rather than "undefined", and no ccdefault:
-// icon is added, since the avatar comes from the character's image.
+// Feed the shared card converter a v3-shaped record; keep scripts/triggers in extensions.risuai.
+// Do not reproduce Risu export artifacts: literal undefined version or ccdefault icon with a separate avatar.
 function cardJson(char: Json): Json {
   const settings = record(char.loreSettings);
   const extras = record(char.additionalData);

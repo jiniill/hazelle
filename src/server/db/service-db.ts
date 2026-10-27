@@ -1,9 +1,7 @@
 import { backup, DatabaseSync } from 'node:sqlite';
 import { transaction } from './transaction';
 
-// The service database (accounts, sessions, vaults, restores, snapshots, ...) behind the statement surface the route
-// modules were written against: prepare(sql).bind(...).first | all | run, and batch, one transaction. The SQL in the
-// routes is the contract; this module makes node:sqlite answer it.
+// Keep the existing route SQL contract over node:sqlite: bound prepare/first/all/run and atomic batch.
 
 export type SqlValue = string | number | bigint | null | Uint8Array;
 export type Row = Record<string, unknown>;
@@ -21,17 +19,15 @@ export type Statement = {
 export type Db = {
   prepare(sql: string): Statement;
   snapshot(path: string): Promise<void>;
-  // One BEGIN IMMEDIATE … COMMIT, synchronous from the first statement to the commit: a statement's changes() is what
-  // the statement before it did, which the signup, the reservation and the deletion chains gate on.
+  // Keep BEGIN IMMEDIATE through COMMIT synchronous: changes() gates the next signup/reservation/deletion statement.
   batch<T = Row>(statements: Statement[]): Promise<Result<T>[]>;
 };
 
 const EXECUTE = Symbol('execute');
 type Internal = Statement & { [EXECUTE]<T>(): Result<T> };
 
-// Every file this process opens: WAL for readers beside the writer, FULL by default so an acknowledged commit survives
-// power loss (the lifecycle orders a service write before an account's deletion and relies on it), foreign keys for the
-// cascades the schema declares.
+// Use WAL, foreign keys and FULL durability by default: lifecycle relies on acknowledged service commits
+// surviving before account-file deletion.
 export function openDatabase(path: string, synchronous: 'FULL' | 'NORMAL' = 'FULL'): DatabaseSync {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL');

@@ -1,20 +1,10 @@
-// Local load test of the production image under the hosted machine's shape (4 vCPU, 8 GB).
-//
+// Local production-image harness (4 vCPU, 8 GB).
 //   docker build -t hazelle-load:local .
 //   NODE_OPTIONS=--max-old-space-size=4096 ./node_modules/.bin/tsx scripts/load/run.ts --accounts 20 --out results.json
-//
-// One run: a fresh data directory under --work, the image in Docker (--cpus/--memory), a fake SSE provider on the host,
-// N accounts signed up through the API (the first is the operator, who lifts the caps) and filled through the write
-// API with sealed-looking text and pictures (sizes: --text-mb, --big-share/--big-text-mb, --picture-mb, --picture-kb,
-// --shared). Then, each in --phases:
-//   daily    the container restarts with HAZELLE_SNAPSHOT_HOUR=0, so its first tick runs the daily job
-//   fresh    one write to every account, then SIGUSR2 (the pre-deploy fresh())
-//   streams  --streams simultaneous detached replies of --stream-seconds each
-//   uploads  --uploaders accounts uploading --upload-mb of new pictures at once
-// Throughout: /api/health and per-account write and read latency (open loop), refused signups during backups, docker stats and
-// the server's RSS, the server's own "event loop delayed" and "slow request" log lines. Results go to --out as JSON.
-// --server-env KEY=VALUE (repeatable) adds to the server's environment, e.g. NODE_OPTIONS=--cpu-prof --cpu-prof-dir=/data/prof
-// with --keep. The data directory, the container and the provider are removed at the end unless --keep.
+// Seed fresh API-created accounts (first operator lifts caps), sealed-looking text and pictures.
+// Phases: daily restarts at snapshot hour 0; fresh writes then SIGUSR2; streams/uploads run requested concurrency.
+// Probe health, open-loop read/write latency, signup refusals, Docker/RSS and server stalls throughout.
+// --server-env is repeatable; --keep retains container/data/provider, otherwise cleanup removes them.
 
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';

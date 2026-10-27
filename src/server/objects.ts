@@ -14,9 +14,8 @@ const KIND = /^[a-z][a-z-]{0,31}$/;
 // A timeline is 16 random bytes in hex (migrations/0001_baseline.sql).
 const TIMELINE =/^[0-9a-f]{32}$/;
 
-// Per account, taken before the body is read: 20 a second, in bursts of up to a minute's. A Risu move (148k objects in
-// ~164 s, 200 a batch) needs ~5 a second, and a page's small writes come in bursts; the rows a batch leaves are billed
-// (account-store.ts), so this bounds the rate, not the size. The client waits out a refusal (runtime/connection-wait).
+// Limit batches before body reads: 20/s with minute-sized bursts accommodates imports (~5/s measured) and UI bursts.
+// This controls rate, not storage size; rows remain billed and clients wait out refusals.
 const batches = tokenBucket(1200, 60_000);
 const throttle = createMiddleware<AppEnv>(async (c, next) => {
   const taken = batches.limit(c.get('account').id);

@@ -15,8 +15,8 @@ import { transfers, type Files } from './files';
 import { shareOf } from './share-link';
 import type { ObjectStore } from './store';
 
-// A share link (server/shares): a character's charx content sealed as one manifest per version under a key that lives
-// in the link's fragment and the sharer's vault (model/share), never in a request but a report's full link.
+// Version manifests are sealed with a key kept only in link fragments/vaults.
+// Only a report sends the full keyed link to the server (server/shares).
 
 // The manifest is the charx's content with each picture by its stored file, never its bytes.
 const MANIFEST = 1;

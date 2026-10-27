@@ -34,8 +34,7 @@ export const editLore = (store: ObjectStore, id: string, patch: Partial<Lore>): 
 export const removeLore = (store: ObjectStore, id: string) => store.take('lore', id);
 export const restoreLore = (store: ObjectStore, removed: Stored<'lore'>) => store.restore(removed);
 
-// A bot's write to the chat's own lorebook (upsertLocalLoreBook): it takes the place of every entry of its name there,
-// as Risu's does. Unlike Risu's, it keeps the first one's id and folder, so the entry stays where the user put it.
+// Upsert chat lore by name, but keep the first match's id/folder so script writes do not undo user placement.
 export function upsertChatLore(store: ObjectStore, chat: string, entry: Omit<Lore, 'folder'>): Promise<ApiResult<null>> {
   const [first, ...rest] = store.children('lore', chat).filter(({ value }) => value.name === entry.name);
   return allWritten([

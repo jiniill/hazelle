@@ -76,12 +76,9 @@ export const mascotPrompt = (store: Pick<ObjectStore, 'get'>) => choose(store, '
 // The account's only, as the mascot's: 토큰 절약's values are 공용's alone.
 export const prereadPrompt = (store: Pick<ObjectStore, 'get'>) => choose(store, 'preread', undefined);
 
-// A new conversation prompt holds every slot once, the context before the chat with 장기 기억 last. Memory changing
-// at a boundary leaves the rest of the fixed part cached (design §6.2, Cache). 도구 follows the chat, so its text
-// changing every turn does not invalidate the history's cached prefix. The notes after the chat and the two texts
-// a card replaces start empty, so a card's system prompt and post-history instructions have their places. A new
-// task prompt starts as the account's default of its sort is, or the built-in one while that is gone.
-// folder: where a conversation prompt is filed (model/folders); task prompts are never filed.
+// Place memory last before chat to preserve the fixed cache prefix; tools after chat avoid per-turn invalidation.
+// Keep card-replacement text blocks/notes empty but present. Task prompts clone the default or built-in.
+// Only conversation prompts may be filed.
 export function addPrompt(store: ObjectStore, name: string, sort: Defaulted, id?: string, folder?: string): Promise<ApiResult<Stored<'prompt'>>> {
   const named = () => ({ id: crypto.randomUUID(), name: null });
   if (sort !== 'conversation') {
@@ -107,8 +104,7 @@ export function addPrompt(store: ObjectStore, name: string, sort: Defaulted, id?
 // An agent starts as a built-in (기본 장면 메모, 기본 문장 다듬기) or empty with its stage's slots (engine/agent).
 export const addAgent = (store: ObjectStore, start: AgentStart, name: string) => store.create('prompt', agentPrompt(start, name));
 
-// paired: the modules turned on for it, those its preset named that were here and then made, the module that holds its
-// preset's regex, written with it in one batch. waiting: the names its preset gave that no module here answered.
+// Save preset-paired/new regex modules with the prompt in one batch. waiting retains unresolved module names.
 export async function savePreset(store: ObjectStore, { prompt, regex }: PresetRead): Promise<ApiResult<{ id: string; paired: string[]; waiting: string[]; made: string | null }>> {
   const id = crypto.randomUUID();
   const made = regex.length > 0 ? crypto.randomUUID() : null;
@@ -132,10 +128,8 @@ export async function exportPreset(store: Pick<ObjectStore, 'get'>, prompt: Conv
   return written.ok ? { ok: true, data: { tools } } : written;
 }
 
-// An account that has never had a sort's default prompt gets that sort's bundled prompt as its default, once. The
-// session awaits it when it opens; a failure is tried again next time.
-// The settings are written once for every default added, since opening writes them from several places at once. An
-// experiment's default waits for its 실험실 switch, which runs this again when turned on.
+// Seed each missing sort default once, after experiment opt-in where required. Await on session open; retry next open.
+// Merge settings once for all additions because other open-time seeders write them concurrently.
 export async function addDefaults(store: ObjectStore): Promise<void> {
   const added = await Promise.all(
     Object.values(DEFAULTS).map(async (entry) => {
@@ -164,17 +158,14 @@ async function starterBytes(): Promise<Uint8Array<ArrayBuffer>> {
   return fromBase64(uri.slice(uri.indexOf(',') + 1));
 }
 
-// Only the fields given, merged into the current prompt, so an edit to another field on another device survives.
-// authorNote is a conversation prompt's only, tags and picture a 삽화 prompt's, protect a translation prompt's or a post agent's,
-// place a post agent's; tags undefined goes back to the app's, protect undefined stores no 보호 패턴, place undefined
-// rewrites the reply.
+// Merge only supplied fields against the latest copy. Clearing tags restores app defaults; clearing protect removes it;
+// clearing post-agent place restores in-place rewriting. Apply fields only to their owning prompt sorts.
 export type PromptPatch = Partial<{ name: string; blocks: Block[]; toggles: ToggleLine[]; authorNote: string; tags: PictureTags; picture: PictureSettings; protect: string[]; place: AgentPlace }>;
 
 export const editPrompt = (store: ObjectStore, id: string, patch: PromptPatch) => store.update('prompt', id, (current): Prompt => ({ ...current, ...patch }));
 
-// A task prompt's blocks and toggles back to the built-in's. The built-in changes with the app (the 번역가의 노트 slot
-// came after many accounts' 기본 번역 was made) and a stored copy follows it no other way. Name, model, origin and a 삽화
-// prompt's tags and picture values stay.
+// Reset blocks/toggles only to the current built-in so old stored copies can acquire new slots.
+// Keep name/model/origin and illustration tags/settings.
 export function resetPromptBlocks(store: ObjectStore, id: string): Promise<ApiResult<Stored<'prompt'>>> {
   const prompt = store.get('prompt', id)?.value;
   if (!prompt || prompt.task === undefined) return Promise.resolve({ ok: false, error: 'gone' });

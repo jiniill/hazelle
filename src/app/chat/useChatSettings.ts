@@ -19,8 +19,8 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
   const [unsaved, setUnsaved] = useState<Draft>({ models: {} });
   const chat: Chat = useMemo(() => saved ?? { title: null, character, ...unsaved }, [saved, character, unsaved]);
 
-  // Before the first send, the chat itself carries these choices into useNewChat's save. After it, each workflow
-  // applies its patch to the stored copy, never the render's snapshot, so another device's settings survive.
+  // Unsaved chats carry settings into first save. Afterward patch the latest stored copy, never render snapshots,
+  // so other devices' settings survive.
   async function change(local: (current: Draft) => Draft, persist: (id: string) => Promise<ApiResult<Stored<'chat'>>>): Promise<{ ok: true } | ApiFailure> {
     if (id) return persist(id);
     setUnsaved(local);

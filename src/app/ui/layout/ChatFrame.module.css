@@ -15,8 +15,7 @@
   /* The story's left edge: centred alone, or centred with its stage (ChatFrame.tsx), never nearer the page's edge than
      --read-stage-least. */
   --story-lead: max(0px, calc((100% - var(--read-width)) / 2));
-  /* A 삽화's most height (StoryPicture): what the screen shows between the header and the composer, less its foot row,
-     so a picture stuck under the header (MarginPicture) ends above the composer. */
+  /* Bound stage illustrations by header/composer room minus foot so sticky MarginPictures cannot overlap the composer. */
   --story-illustration-most: calc(100dvh - var(--header-height) - var(--footer-space) - var(--control-chip) - 3 * var(--space-8));
 }
 
@@ -25,8 +24,7 @@
   --story-lead: var(--story-stage-lead);
 }
 
-/* The character's picture on a stage no 삽화 hold, from the header down to the composer's foot. --story-stage-at is the
-   stage's left edge, measured in ChatFrame.tsx. */
+/* Portrait uses only an unoccupied illustration stage; --story-stage-at is measured by ChatFrame.tsx. */
 .portrait {
   position: absolute;
   top: calc(var(--header-height) + var(--space-8));
@@ -175,8 +173,7 @@
   padding: calc(var(--header-height) + var(--space-24)) var(--read-gutter) calc(var(--footer-space) + var(--space-32));
 }
 
-/* The story's right gutter, from under the header to the composer. The box is the scroller's width, so the story's lead
-   and width resolve in it as they do in .content. */
+/* Resolve right-gutter offsets in the same scroller-width box as .content, not the narrower story column. */
 .edge {
   position: absolute;
   top: calc(var(--header-height) + var(--space-16));
@@ -220,8 +217,7 @@
   transition: background-color var(--duration-slow) var(--ease-enter);
 }
 
-/* The composer and what stands above it go with the story's text, and its ground covers only the text, so the stage
-   runs down beside it. */
+/* Footer ground covers story text only so the adjacent stage can continue beside it. */
 .staged .footer {
   right: auto;
   left: var(--story-stage-lead);

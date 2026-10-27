@@ -2,11 +2,10 @@ import { Unzlib } from 'fflate';
 import { isRecord } from '../../connectors/values';
 import { concat } from './inflate';
 
-// What NovelAI wrote into a picture it drew: its prompt JSON, in a PNG `Comment` text chunk (tEXt, or zTXt packed), or,
-// in a picture saved again as WebP, in its EXIF: UserComment (`ASCII\0\0\0` then the JSON) or ImageDescription. Read
-// nowhere else on purpose (measured on 127 bots, 2026-10-11): their XMP holds only plain descriptions, a raw-text
-// UserComment is another generator's, and alpha-channel metadata survived in 5 of 39,649 pictures.
-// prompt: V4's base caption, else the whole prompt. characters: V4's per-character captions.
+// Read NovelAI prompt JSON only from PNG Comment (tEXt/zTXt) or WebP EXIF UserComment/ImageDescription.
+// UserComment requires ASCII\0\0\0; other generators' plain text and XMP are not prompts.
+// Alpha metadata survived only 5/39,649 pictures (127 bots, 2026-10-11), so do not scan it.
+// prompt uses V4 base caption or the full prompt; characters uses V4 per-character captions.
 export type PicturePrompt = { prompt: string; characters: string[] };
 
 const PNG = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -127,9 +126,8 @@ function promptOf(text: string): PicturePrompt | null {
   return { prompt: base.trim(), characters };
 }
 
-// The stretches of a prompt that name artists (`artist:x`), each as written with its weight: `1.2::artist:x::`,
-// `{artist:x}`, `[[artist:x]]`. A weighted span (`0.5::artist:a, artist:b ::`) is one stretch, commas and all. Never
-// read from a negative prompt, which names artists to avoid.
+// Preserve artist spans with their weights, including comma-separated weighted groups.
+// Never extract from negative prompts, which name artists to avoid.
 export function artistTags(prompt: string): string[] {
   const stretches: string[] = [];
   let start = 0;

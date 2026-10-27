@@ -64,8 +64,7 @@ export async function pool<T>(items: T[], concurrency: number, work: (item: T, i
   );
 }
 
-// On WSL2 the monotonic clock can run slower than real time while the wall clock is stepped forward to catch up. Each
-// step is recorded, so a duration taken from wall-clock stamps (the server's gate_ms, backup_runs) can be checked for one.
+// Record WSL2 wall-clock catch-up steps: monotonic time may lag, skewing server gate_ms/backup_runs comparisons.
 export function clockSteps() {
   const steps: { at: number; stepMs: number }[] = [];
   let offset = Date.now() - performance.now();

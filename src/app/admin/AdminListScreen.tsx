@@ -11,7 +11,6 @@ import { useAccounts } from './useAccounts';
 
 const TITLES: Record<AdminList, string> = { accounts: '계정', reports: NOTICES.received, log: '기록' };
 
-// A list 운영 shows the head of, whole.
 export function AdminListScreen({ list, back }: { list: AdminList; back: Back | null }) {
   return (
     <Screen width="page" top={<NavBar title={TITLES[list]} {...backBar(back)} />}>

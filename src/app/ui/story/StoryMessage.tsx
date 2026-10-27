@@ -183,9 +183,8 @@ export function Marker({ reason, label, action }: MarkerProps) {
   );
 }
 
-// A reply's usage at the end of its text: a line that opens its facts below it, and from them the whole account (more).
-// Not in the foot's markers: the foot sticks to the bottom of the view, and the opened facts would stick with it.
-// A fact on the usage line: its number bright, the word naming it faint; a fact its number names alone has no label.
+// Keep usage/facts outside sticky foot or expanded facts stick over story text.
+// Cost leads; bright numbers and faint labels omit labels only when the number itself names the fact.
 export type UsagePart = { label?: string; value: string };
 
 // lead: the fact read first (a cost), bold before the rest; null leaves the line to the rest.

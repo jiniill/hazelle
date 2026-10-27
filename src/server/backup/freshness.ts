@@ -5,8 +5,7 @@ import type { BackupWarning } from '../../contracts/admin';
 import type { Services } from '../http';
 import { COPIED, generationsDir, listGenerations, MANIFEST } from './generation';
 
-// How fresh the off-site backup is and how full the disk, and the warnings both raise. The admin screen and the alert
-// webhook read the warnings from here; nothing else decides them.
+// Single warning policy shared by admin UI and webhook; never decide freshness separately in callers.
 
 const HOUR_MS = 60 * 60 * 1000;
 const STALE_HOURS = 36;
@@ -23,9 +22,8 @@ export async function freePercent(path: string): Promise<number> {
   return Math.floor((bavail / blocks) * 1000) / 10;
 }
 
-// expectsCopies: whether a copier should be writing copied markers here. hazelle.app's always is; a self-host's is its
-// backup folder once one is set, or the Docker copier it may run, which shows itself only by its markers. Without one,
-// no copy is overdue: the admin screen's 백업 폴더 row says the backups stay on this disk.
+// Expect copies for hosted installs, configured backup folders, or Docker copiers evidenced by markers.
+// Without a copier, do not invent an overdue copy; the UI instead reports disk-only backups.
 export async function freshness(env: Services, dataDir: string, now: number, free: DiskFree, expectsCopies: boolean): Promise<Freshness> {
   const complete = (await listGenerations(dataDir))
     .filter(({ id }) => existsSync(join(generationsDir(dataDir), id, MANIFEST)) && existsSync(join(generationsDir(dataDir), id, COPIED)))

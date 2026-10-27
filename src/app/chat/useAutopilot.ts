@@ -38,9 +38,8 @@ const nextTurn = ({ store, talk }: Pick<Session, 'store' | 'talk'>, chat: string
     check();
   });
 
-// 자동 이어 쓰기 takes its own turn once the reply is saved and the bot's onOutput ran (session's saved hook, runtime/turn
-// receiveReply), as it would were the message typed: sent before it, the next message would turn it away. It continues
-// only the chat's last message as saved, unedited, so an onOutput edit or a message the bot added after it ends the wait.
+// Wait for the saved-hook continuation before the next send or it would lose its turn.
+// Only unedited still-last replies auto-continue; onOutput edits/additions end this wait.
 function continues(reply: Message, last: Message | undefined) {
   const version = shown(reply);
   return last?.id === reply.id && !handEdited(version) && version.receipt !== null && autoContinue({ text: version.text, receipt: version.receipt });
@@ -80,9 +79,8 @@ export function useAutopilot(chat: OpenChat) {
     return stepOf(failure, replyIn(folded()), signal.aborted);
   }
 
-  // Ruling (2026-10-17): the run is honest. It goes on a new version, stops on 멈추기, ends at the first message that
-  // fails or is stopped, and shows its estimated cost before it starts. Each message goes through the screen's send,
-  // never a turn of its own, so translation, the bot's scripts, tools and memory run as when it is typed.
+  // Run each message through the screen send, never a private turn path, so all translation/scripts/tools/memory apply.
+  // New version only; stop at first stopped/failed message, honor 멈추기 and show cost estimate first (user, 2026-10-17).
   async function run(chat: string, list: string[], signal: AbortSignal): Promise<RunEnd> {
     // A chat with no message has no story to keep.
     const last = fold(store.children('entry', chat)).at(-1);

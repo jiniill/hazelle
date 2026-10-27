@@ -7,7 +7,6 @@ type Props = {
   level?: 2 | 3;
   note?: string;
   help?: Help;
-  // By the title: a button (sm) or a control that acts on the whole group, such as its Switch.
   action?: ReactNode;
   seek?: boolean;
   children: ReactNode;

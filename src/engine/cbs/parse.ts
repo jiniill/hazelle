@@ -3,8 +3,7 @@
 export type Node = string | Tag | Block | Legacy;
 // at: where the tag's `{{` stands in the text it was read from; it places the tag's random rolls. end: just past its `}}`.
 export type Tag = { kind: 'tag'; at: number; end: number; parts: Node[] };
-// A block is any tag starting with `#`, up to the next `{{/…}}` on its level, whatever name follows
-// the slash. raw is the body's source. end: just past the close's `}}`.
+// Close a # block at any same-level {{/…}}, regardless of its name. raw preserves the unevaluated body.
 export type Block = { kind: 'block'; at: number; end: number; head: Tag; body: Node[]; raw: string; close: Tag };
 // Risu's deprecated `{#if condition` newline body `#}`, still in imported bots. at: where its `{#` stands, end: just past its `#}`.
 export type Legacy = { kind: 'legacy'; at: number; end: number; parts: Node[] };
@@ -66,8 +65,8 @@ export function parse(text: string): Node[] {
   }
   append(top().nodes, text.slice(from));
 
-  // Unclosed at the end: a tag's `{{` or a legacy `{#` is text and a block's head a lone tag, and what each held is read
-  // in its place, so one stray `{{` leaves the tags after it working.
+  // Unclosed tags/legacy if openers stay literal; unclosed block heads become lone tags.
+  // Reparse their contents so one stray opener cannot swallow later valid tags.
   while (stack.length > 1) {
     const frame = stack.pop()!;
     const parent = top().nodes;
@@ -87,7 +86,6 @@ function append(nodes: Node[], node: Node) {
   else nodes.push(node);
 }
 
-// Removes {{//…}} and {{comment:…}} from text that is searched rather than evaluated (lorebook keys). A comment
-// ends at its first `}}`, so a tag nested inside one ends it early.
+// Search-only stripping must match CBS comment syntax: first }} closes, even inside a nested tag.
 const COMMENT = /\{\{(?:\/\/|comment:)[\s\S]*?\}\}/gi;
 export const stripComments = (text: string) => text.replace(COMMENT, '');

@@ -18,10 +18,8 @@ const SETTLE_MS = 400;
 // unseen: the pictures the chat's messages hold that the model, seeing none, is not sent (engine/pipeline Assembled).
 export type SendNotes = { cache: CacheNotes; leaving: number | null; unseen: number; sending: Sending | Unsendable | null | undefined; request: () => SentRequest | null };
 
-// until: when the last call's cache runs out, null when it cached nothing. next: the draft's forecast against the
-// chat's stored last call (runtime/cache), with what a break costs where the model is priced and the model it was worked
-// out for; undefined until it is worked out after the chat opens or a reply ends. recurrence: the chat's recent replies'
-// stored forecasts. prescriptions: undefined while pending, null on evaluation failure, [] when no edit qualifies.
+// next undefined means pending; prescription null means evaluation failed, [] means no qualifying fix.
+// until is null without cache. Keep draft forecast/model/pricing paired; recurrence uses stored prior receipts.
 export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; next: { forecast: Forecast; diagnosis: CacheDiagnosis | null | undefined; prescriptions: CachePrescription[] | null | undefined; cost: ReturnType<typeof breakCost>; route: Route } | null | undefined };
 
 // The draft is read again after any store change settles, so an edit to the prompt, a lorebook or the model shows in

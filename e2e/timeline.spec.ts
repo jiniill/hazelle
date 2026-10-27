@@ -4,9 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { GENERATION_STEPS } from '../src/runtime/testing/cache';
 import { CARD, confirmImport, pickBot, settingsPage, signUpAsGuest } from './helpers';
 
-// A restore here must land between two given requests of a tab, so every /api answer comes from FakeServer, which
-// answers as the objects routes do (server/objects.ts) and switches its timeline when told. Tabs are pages of one
-// context: one IndexedDB, as two real tabs.
+// FakeServer controls restore between exact requests and matches object API semantics.
+// Tabs share one context/IndexedDB, as real tabs do.
 
 type Row = { id: string; kind: string; parent: string | null; rev: number; body: string | null };
 type Snapshot = { rows: Map<string, Row>; rev: number };

@@ -13,9 +13,7 @@ import { fail, isRecord, readObject, refused as refuseStore, RETRY_SECONDS, type
 import { tokenBucket } from './limits';
 import { canWrite, currentAccount, requireSession } from './session';
 
-// A share is sealed content an account publishes under one link (migrations/0003_shares.sql). The server holds the
-// sealed manifests and the plain list of the files each version names, never the key, which lives only in the link's
-// fragment: it learns what a share holds only when a report hands it the link.
+// Keep only sealed manifests and plain file ids; link keys stay in fragments until a report submits its full link.
 
 // A publish names up to MAX_SHARE_FILES content ids of 64 characters each.
 export const PUBLISH_BYTES = 1_000_000;
@@ -71,9 +69,8 @@ const publishable = createMiddleware<AppEnv>(async (c, next) => {
   return consent === SHARE_CONSENT ? next() : fail(c, 403, 'no-consent');
 });
 
-// Each refusal by name: the rows the publish adds do not fit under the account's cap (caps.ts SHARED_BYTES), a named
-// file is not the sharer's, or a picture was blocked, which would otherwise be published again under a new link.
-// billed: what the account is billed once the publish lands.
+// Reject capped billed rows, foreign files and blocked pictures before publication; blocked content must not
+// reappear under a new link. billed includes the account's resulting usage.
 async function refusal(c: Context<AppEnv>, billed: number, manifest: string, files: string[]) {
   const { incarnation, bytesCap } = c.get('account');
   if (bytesCap !== null && billed > bytesCap) return fail(c, 413, 'storage-full');
@@ -184,8 +181,8 @@ shares.put('/:id/cover', requireSession, canWrite, async (c) => {
   return set ? c.body(null, 204) : fail(c, 404, 'not-found');
 });
 
-// 링크 끊기. The link's rows go at once unless a report still open names it, which keeps what it reported; the hourly
-// pass (admin.ts forgetOldRecords) takes them once it is resolved. The files stay among the sharer's files.
+// Retain cut-link content while an open report needs it; later forgetOldRecords removes it.
+// Cutting never removes the sharer's stored files.
 shares.delete('/:id', requireSession, async (c) => {
   const id = c.req.param('id');
   if (!SHARE_ID.test(id)) return fail(c, 400, 'bad-input');
@@ -197,9 +194,8 @@ shares.delete('/:id', requireSession, async (c) => {
   return cut!.results.length ? c.body(null, 204) : fail(c, 404, 'not-found');
 });
 
-// The rows of cut links that no open report names: their versions and the files those name, then the link's own row
-// once no report names it at all, so a resolved report still shows the link it was about. over: a condition on the
-// shares row s, with its values from ?1 on.
+// For cut links without open reports, remove version/file refs first. Keep the link row while any report,
+// including resolved ones, still names it. over filters shares alias s with parameters from ?1.
 export function forgetCut(db: Db, over: string, ...values: SqlValue[]): Statement[] {
   return [
     db.prepare(`DELETE FROM share_versions WHERE share IN (SELECT s.id FROM shares s WHERE s.cut_at IS NOT NULL AND ${over}
@@ -243,9 +239,8 @@ shares.post('/:id/received', visits('reads'), async (c) => {
   return counted ? c.body(null, 204) : fail(c, 404, 'not-found');
 });
 
-// Anyone holding the link reports from its page; a signed-in reporter is named. The first report on a share the
-// operator has not reviewed holds it at once, in the same batch. A share the operator reviewed is held only by the
-// operator: otherwise one person could pause a link again after every review.
+// The first report atomically holds an unreviewed share. Once reviewed, only the operator may hold it again,
+// preventing repeated reports from overriding review. Signed-in reporters are identified; link holders may also report.
 shares.post('/:id/reports', visits('reports'), async (c) => {
   const id = c.req.param('id');
   const body = await readObject(c);
@@ -274,9 +269,7 @@ shares.post('/:id/reports', visits('reports'), async (c) => {
   return open ? fail(c, 429, 'too-many-reports') : fail(c, 404, 'not-found');
 });
 
-// The sharer's copy of a file a version of the share names, its manifest or a picture. The visitor's page reads it
-// while the link is live and the file is not blocked; the operator's (operator true, under the operator's guard) reads
-// it in any state, to review what was reported.
+// Serve the sharer's copy only for a live link and unblocked file; guarded operator reads bypass those states for review.
 export async function serveShareFile(c: Context<AppEnv>, operator: boolean) {
   const id = c.req.param('id')!;
   const file = c.req.param('file')!;

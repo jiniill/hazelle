@@ -2,16 +2,15 @@ import type { Cost } from '../connectors/types';
 import type { Receipt } from './chat';
 
 type Tally = { total: number; unknown: number };
-// A count sums the calls that reported it, and unknown counts those that did not, so a gap never shrinks the total.
-// costs: one per unit, never summed together; estimated once any part came from a price list.
+// Unknown counts stay separate from known sums; never add costs across units.
+// Any price-list component makes the aggregate estimated.
 export type ModelUsage = { calls: number; last: number | null; input: Tally; output: Tally; costs: { unit: Cost['unit']; amount: number; estimated: boolean }[]; costUnknown: number };
 
 // modelName and source: the names when the call was made, for a model or connection renamed or deleted since.
 export type UsageCall = { at: number; call: Pick<Receipt, 'id' | 'connection' | 'model' | 'modelName' | 'source' | 'usage' | 'cost' | 'calibration'> };
 
-// The account's record of its model calls (kind ledger), one row per call written where the call was made or first
-// saved, with where it was made; it outlives the chat. Rows are written once, so a cost booked after the call is a row
-// of its own naming it. chat null: a call no chat made (번역기, a card's text, a 삽화 profile).
+// Append-only per-call ledger outlives chats; delayed costs get separate rows naming the call.
+// chat null identifies non-chat tasks such as the translator or picture profiles.
 export type Ledger =
   | { type: 'call'; at: number; call: UsageCall['call']; chat: string | null; character: string | null }
   | { type: 'input-refusal'; at: number; call: UsageCall['call']; chat: string | null; character: string | null }
@@ -19,8 +18,7 @@ export type Ledger =
 
 export type Counted = UsageCall & Pick<Extract<Ledger, { type: 'call' }>, 'chat' | 'character'>;
 
-// Each call with the cost booked for it, when it was pending; a booked cost that is known wins over one that is not,
-// since two devices may both look it up.
+// A known booked cost wins over an unknown one when devices both look it up.
 export function counted(rows: Iterable<Ledger>): Counted[] {
   const calls = new Map<string, Counted>();
   const booked = new Map<string, Cost | null>();
@@ -82,9 +80,8 @@ export type ReportWindow = Exclude<UsageWindow, 'hour'> | 'all';
 export const GONE = 'gone';
 export type Kept = { chat: (id: string) => boolean; character: (id: string) => boolean };
 
-// periods: oldest first, every day of the window to its last, days to come too, or over all time every month from the
-// first call's to this one, keyed by its local start, an empty one too. The other axes busiest first. chats: null for
-// the calls no chat made; characters: null for those of no character.
+// Periods include empty/future slots, oldest first by local start; other axes sort busiest first.
+// Null chat/character groups represent calls made without one.
 export type UsageReport = { total: ModelUsage; periods: UsageGroup<number>[]; models: ModelGroup[]; characters: UsageGroup<string | null>[]; chats: UsageGroup<string | null>[] };
 
 export function usageReport(calls: Counted[], window: ReportWindow, now: number, kept: Kept): UsageReport {

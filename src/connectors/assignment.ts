@@ -1,8 +1,7 @@
 import { entryKey, type Model, type Modality, type Starred } from './types';
 
-// A role that no layer sets takes the role it falls back to, so every chain but 임베딩 모델's ends at 대화 모델. A task
-// (번역) has no role: its prompt holds its own model, and without one the task takes 보조 모델. 임베딩 모델 is set in
-// 공용 alone and falls back to nothing: vectors from two models cannot be compared, so one pick serves every chat.
+// Role fallbacks end at chat except embeddings, which are global-only to keep vectors comparable.
+// Task prompts own their model choice and otherwise use auxiliary.
 export type Role = 'main' | 'aux' | 'embed';
 
 export const ROLES: Record<Role, { needs: Modality; fallsBackTo: Role | null }> = {
@@ -21,8 +20,7 @@ export const sameModelRef = (a: ModelRef, b: ModelRef): boolean => a.connection 
 
 export const rolesOf = (assignment: Assignment, ref: ModelRef): Role[] => (Object.keys(ROLES) as Role[]).filter((role) => assignment[role] && sameModelRef(assignment[role], ref));
 
-// Layers run from the most specific to 공용. Every layer is asked for the role before the chain
-// moves on, so a 보조 모델 set in 공용 outranks a 대화 모델 set in the chat.
+// Resolve every layer for a role before falling back to another role; global auxiliary outranks chat-local chat.
 export function resolveRole(role: Role, layers: Assignment[]): ModelRef | null {
   for (const layer of layers) {
     const choice = layer[role];

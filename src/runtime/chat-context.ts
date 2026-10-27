@@ -27,9 +27,8 @@ import type { TranslateInput } from './translate';
 
 type Reader = { store: Pick<ObjectStore, 'get' | 'children' | 'scopeState'> };
 
-// Order (design §6.5): its character's own, then the modules on in every chat, then its prompt's, then the
-// character's, then its persona's, each once where it first appears. A module that is gone or deleted is off.
-// module: null for the character's own pack.
+// Pack order: character, global modules, prompt modules, character modules, persona modules; first occurrence wins.
+// Missing/binned modules are off; module null identifies the character pack (design §6.5).
 export function packsOf(store: Reader['store'], chat: Pick<Chat, 'character' | 'prompt' | 'persona'>): { id: string; pack: Pack; module: { namespace: string | null } | null }[] {
   const character = chat.character === null ? null : store.get('character', chat.character);
   const prompt = chatPrompt(store, chat);
@@ -152,8 +151,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
   };
 }
 
-// Each source's lines apart, in the order they are declared, so one source's layout lines never lay out another's
-// toggles.
+// Keep source layouts separate so one source's group lines cannot capture another's toggles.
 export type ToggleSource = { from: 'prompt' | 'card' | 'module'; id: string; name: string; lines: ToggleLine[] };
 export type ChatToggleSet = { declared: Toggle[]; sources: ToggleSource[]; value: (key: string) => string | null };
 
@@ -247,15 +245,13 @@ export async function chatNow(session: { store: ObjectStore; read: ReadModels },
 export const evaluateChat = async (reader: { store: Reader['store'] & Pick<ObjectStore, 'evaluation'> }, id: string, chat: Chat, messages: Message[], screen: ChatScope['screen'] = null, signal?: AbortSignal): Promise<Display> =>
   (await reader.store.evaluation.display({ asker: 'headless', chat: id }, { ...scopeOf(reader, id, chat, messages), screen }, pinned(reader, chat), signal)).display;
 
-// A chat's regex scripts in the order the engine numbers them (render.ts), each with its 상태창 지정 mark: the
-// character's own script by its id, a module's as `<module id>:<script id>`, since imports number every pack's
-// scripts alike (regex-0…).
+// Regex indices must match engine/render. Namespace module script ids as <module>:<script>:
+// imports reuse regex-0… ids within each pack.
 const statusMark = (module: string | null, script: string) => (module === null ? script : `${module}:${script}`);
 export const chatScripts = (packs: ReturnType<typeof packsOf>) =>
   packs.flatMap(({ id, pack, module }) => pack.regex.map((script, index) => ({ script, index, module: module && id, mark: statusMark(module && id, script.id) })));
 
-// 상태창 지정's scripts at their places among a chat's scripts. A mark that names no script marks nothing, nor does
-// one turned off, which never draws; it is kept for when the script or its module is on again.
+// Retain missing/off script marks for undo and module reactivation, but never extract their boxes.
 type StatusScript = { id: string; place: number };
 export const statusPlaces = (scripts: ReturnType<typeof chatScripts>, marks: readonly string[]): StatusScript[] =>
   marks.flatMap((id) => {

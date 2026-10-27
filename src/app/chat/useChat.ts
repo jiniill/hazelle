@@ -152,7 +152,6 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     setInfoPick(reply);
     open({ kind: 'info', tab });
   };
-  // A frame tool of this chat that asks to be shown opens in the tool panel.
   const askingTool = id === null ? undefined : tools.find(({ module }) => frames.get(module)?.asking && frames.get(module)?.chat === id)?.module;
   useEffect(() => { if (askingTool) setPanels((current) => opened(current, { kind: 'tool', module: askingTool }, pairs)); }, [askingTool, pairs]);
   const flipPanel = (next: Panel, same: (current: Panel) => boolean) => setPanels((current) => (current.panel && same(current.panel) ? { ...current, panel: null } : opened(current, next, pairs)));
@@ -165,8 +164,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const { actions: statusActions, ...status } = useChatStatus(chat, shelf?.character ?? null, view, messages);
   const { editing, actions: editActions } = useMessageEdit(id, messages, (message) => ask({ kind: 'regenerate', message: message.id }), translationActions.carryFlip);
   const sending = useRef(false);
-  // Set when a send or a reply was stopped before the network; the composer then shows what stops the chat now,
-  // so a fix made anywhere clears it.
+  // After a pre-network refusal, derive the current blocker so fixes anywhere clear the composer warning.
   const [stopped, setStopped] = useState(false);
   const problem = stopped ? blocked(session, chat) : null;
   // A failed 토큰 절약 call or pre agent, shown on the composer until the next turn, which may ask again without it.
@@ -228,8 +226,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     return failure;
   }
 
-  // Nothing typed and nothing attached asks for a reply after the last message (응답 받기), as RisuAI's empty send does.
-  // Pictures still saving are waited for in the composer, and the rows are written before the turn reads the chat.
+  // Empty sends request a reply. Composer waits for pending pictures; save attachment rows before the turn reads them.
   async function send(skip: Skip = {}) {
     if (busy || sending.current) return;
     if (!draft.text.trim() && !attaching.attachments.draft.length) {
@@ -289,8 +286,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     return failure;
   }
 
-  // A tool's send (Scripts.sender), as typed or, for '', 응답 받기. It reads the turn under way now: busy is this
-  // render's.
+  // Read the live turn, not this render's busy value; '' requests 응답 받기 as a typed send does.
   async function sendForTool(chat: string, text: string) {
     if (talk.snapshot(chat)) return 'busy';
     return (text ? await say(text) : await asked(chat, { kind: 'answer' })) ? 'failed' : null;
@@ -369,8 +365,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     toast.show(`토글 ${toggles.changed}개를 기본값으로 되돌렸어요.`);
   }
 
-  // A script or a tool runs over a saved chat only, so a press in a new chat (on its greeting, or a tool's) saves it
-  // first.
+  // Scripts/tools require a saved chat, including actions on an unsaved greeting.
   async function saved() {
     const unstarted = id === null && await starting().saved;
     if (unstarted) toast.failed(unstarted);

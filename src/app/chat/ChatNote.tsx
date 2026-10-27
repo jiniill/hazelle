@@ -7,8 +7,7 @@ import { useChatNote } from './useChatNote';
 
 type Props = { id: string | null; note: string | undefined; prompt: PromptChoice; onSave: ChatSettingsActions['setNote'] };
 
-// '' is the chat's own choice of no note, what an emptied box stores; following the prompt's default again (null, which
-// runtime/chat-context.ts and runtime/lua/snapshot.ts read apart from '') is a separate choice.
+// Empty string explicitly suppresses the note; null follows the prompt. Keep runtime/chat-context and lua/snapshot aligned.
 export function ChatNote(props: Props) {
   const { note } = props;
   return (

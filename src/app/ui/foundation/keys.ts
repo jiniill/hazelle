@@ -1,12 +1,10 @@
-// A key as KeyboardEvent.key names it. A modifier set here must be in that state; one left out is not checked.
-// Alt is never left out: held, it is a different key (AltGr types a letter as Ctrl+Alt).
+// Unspecified modifiers are ignored except Alt, which is always explicit so AltGr cannot trigger Ctrl shortcuts.
 export type Chord = { key: string; shift?: boolean; mod?: boolean; alt?: boolean };
 
 type KeyState = { isComposing: boolean; keyCode: number };
 type Press = { key: string; code: string; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean; altKey: boolean; nativeEvent: KeyState };
 
-// A key pressed while an IME is still composing a syllable belongs to the syllable, so it is never a shortcut:
-// Enter cannot send a Korean word half-typed, and Esc cannot close what it was typed into.
+// Never intercept IME composition keys: Enter/Esc belongs to the unfinished syllable, not send/close.
 export const isComposing = (event: KeyState) => event.isComposing || event.keyCode === 229;
 
 // A letter chord is written lower case and matches the letter typed or the key it sits on, so Shift (Z), a Korean

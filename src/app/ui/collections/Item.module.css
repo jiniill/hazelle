@@ -34,7 +34,6 @@
   border-radius: var(--radius-md);
 }
 
-/* In a box the row keeps the box's inset from its edge, as SettingGroup's rows do. */
 .tall {
   gap: var(--space-8);
   min-height: var(--row-min-height);
@@ -149,7 +148,6 @@
   color: var(--color-text);
 }
 
-/* The leading icon: NavGroup's box marks the current row with it. */
 .side[aria-current] > svg:first-child {
   color: var(--current-mark, currentColor);
 }

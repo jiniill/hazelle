@@ -17,7 +17,6 @@ const WAIT = 2500;
 const HOLD = 450;
 const HINT = 1400;
 
-// Up and down a story by its messages, shown while the reader moves over it; a held press goes to the story's end.
 export function StepButtons({ scrollRef, labels, onStep, onEnd }: Props) {
   const { awake, wake } = useAwake(scrollRef, WAIT);
   // n counts the places shown, so the same place reached twice shows again.

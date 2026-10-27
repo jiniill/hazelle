@@ -2,9 +2,7 @@ import { ChangeSignal } from '../change-signal';
 import type { Inlay, TextFile } from '../model/library';
 import type { ApiFailure } from './api';
 
-// A picture put in the composer (runtime/attachments addDraftPicture), its file saved as soon as it is put there. url:
-// what the composer shows it by, revoked when it is removed or sent (release). state: its inlay once the file is saved,
-// the failure otherwise, refused for a file the server refused (Files.save); saved, the state it settles on.
+// Save picture files on attachment; revoke preview URLs only on release. saved resolves to the settled inlay/failure state.
 export type PictureState = { kind: 'saving' } | { kind: 'saved'; value: Inlay } | { kind: 'failed'; failure: ApiFailure | 'refused' };
 export type DraftPicture = { kind: 'picture'; name: string; url: string; state: PictureState; saved: Promise<Exclude<PictureState, { kind: 'saving' }>> };
 // A text file put in the composer (runtime/attachments addDraftFile), whole in page memory until its row is written.
@@ -13,9 +11,8 @@ export type DraftAttachment = DraftPicture | DraftFile;
 const NONE: readonly DraftAttachment[] = [];
 export const attachmentName = (attachment: DraftAttachment) => (attachment.kind === 'picture' ? attachment.name : attachment.value.name);
 
-// Unsent text per chat, kept in page memory until the vault closes: it outlives the chat's screen and the session, and a reply that
-// fails after its screen is gone still hands its text back. A chat not saved yet has no id to keep it under, so its
-// text is kept per character (draftKey) and moved under the chat's id once it is saved. Its attachments go with it.
+// Vault-lifetime drafts outlive screens/sessions so failed background sends can return text.
+// Unsaved chats key by character until first save; move their text and attachments together.
 export const draftKey = (chat: string | null, character: string | null) => chat ?? (character ? `new-${character}` : 'new');
 
 export class Drafts {

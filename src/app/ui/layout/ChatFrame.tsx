@@ -30,8 +30,7 @@ export const readingScope = ({ font, size, leading, width }: Reading) => ({ clas
 // Which side of the story the stage stands on.
 export type StageSide = 'right' | 'left';
 
-// Where the story has a stage for 삽화 beside it at least half its text's width, its side: a message's 삽화 stands
-// there (MarginPictures), not in the text. A stage standing only for the portrait leaves them in the text.
+// Inline illustrations move onto the stage only when it is at least half text width; portrait-only stages do not qualify.
 const MarginRoom = createContext<StageSide | false>(false);
 export const useMarginRoom = () => useContext(MarginRoom);
 
@@ -53,8 +52,7 @@ type Props = {
   edge?: ReactNode;
   reading: Reading;
   hideHeader: boolean;
-  // The chat has 삽화, or will, and the reader keeps them beside the text: its story makes room beside it for them where
-  // the page is wide enough.
+  // Reserve stage space before the first illustration lands, not after it shifts the text.
   stage: boolean;
   side: StageSide;
   // The character's picture, standing on the stage where no 삽화 do.
@@ -74,9 +72,8 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
   const lastTop = useRef(0);
   const columnRef = useRef<HTMLElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
-  // The story ends above the composer as it is whole, never folded or midway: space that moved with the fold would
-  // move the story's end, and the view with it. Only a transition is skipped, so a spinner in the composer does not
-  // stop the measuring.
+  // Reserve the fully expanded composer height so folding cannot shift the story/scroll position.
+  // Skip transitions only, not animations such as spinners.
   const [space, setSpace] = useState(0);
   const [scrollbar, setScrollbar] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -90,8 +87,7 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
   useLayoutEffect(() => {
     const element = footerRef.current!;
     const measure = () => {
-      // What stands stuck above the composer follows it frame by frame through the fold, whose height runs on no one
-      // curve. Written past React, so a fold renders nothing; a resize observer runs before paint, so it never trails.
+      // Follow the fold's measured height before paint, outside React, without rendering every animation frame.
       columnRef.current!.style.setProperty('--footer-height', `${element.offsetHeight}px`);
       if (element.matches(`.${styles.compact}:not(:focus-within)`)) return;
       if (element.getAnimations({ subtree: true }).some((animation) => animation instanceof CSSTransition)) return;
@@ -114,9 +110,8 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
     const content = contentRef.current!;
     const measure = () => {
       setScrollbar(element.offsetWidth - element.clientWidth);
-      // The stage is at most as wide as the story, so the two stand centred together where the page has room; where
-      // it has not, the story keeps its least lead and the stage ends a gap and SidePeek's tab short of the page's edge,
-      // either edge, so the two read the same on both sides.
+      // Center story + stage when space allows; otherwise preserve the minimum lead and room for the gap/SidePeek tab.
+      // Cap stage width at story width and keep left/right layouts symmetric.
       const style = getComputedStyle(content);
       const px = (name: string) => parseFloat(style.getPropertyValue(name));
       const least = px('--read-stage-least');

@@ -7,8 +7,7 @@ export const PULSE_PAGE = { path: '/now', title: '헤이젤 나우' } as const;
 export const PULSE_ROLES = ['chat', 'aux', 'image', 'embedding'] as const;
 export type PulseRole = (typeof PULSE_ROLES)[number];
 
-// The connection type a generic connection (an OpenAI-compatible address or reverse proxy) is labelled with: shown as
-// 직접 연결, its models always 기타. Never its address.
+// Generic connections report 직접 연결 and 기타 models, never their addresses.
 export const DIRECT_TYPE = 'direct';
 
 // seen: the page-load mark, which counts the account active and nothing else. A call names its role, its connection
@@ -41,11 +40,9 @@ export function readPulseHeader(value: string | undefined | null): PulseLabel | 
 // the floor are named, never counted, only from `below` of them in a view.
 export const PULSE_FLOORS = { row: 5, board: 10, round: 10, below: 2 } as const;
 
-// One ranking row. key: the server's one name for the model across spellings and periods, '' for 기타; a row is the same
-// row in another period by key and type, never by model, whose spelling can change. model: the confirmed name in the
-// spelling most counted, null for 기타. type: the connection type,
-// present only in the split view (제공자별로 보기). share: of the role's total in the same window, 0 to 1. people:
-// the period's distinct people on the row. replies: the board's 대화 only, replies received in the last 24 hours, rounded.
+// Match rows across periods by key + type, never model spelling. 기타 has key '' and model null; otherwise use the
+// most-counted confirmed spelling. type appears only in split views. share is 0–1 of the role/window total;
+// people counts distinct users; replies is rounded last-24h replies, only for the live board's 대화.
 export type PulseRow = { key: string; model: string | null; type?: string; share: number; people: number; replies?: number };
 
 // rest: the board's 대화 only, the replies of rows below the floor in each view, so the shares there add up to the
@@ -60,8 +57,7 @@ export type PulseRankings = Record<PulseRole, PulseRanking>;
 // Who stood where a period earlier, for the rank change marks: the same rows in the same order, nothing else.
 export type PulsePlace = Pick<PulseRow, 'key' | 'type'>;
 export type PulseOrder = { merged: PulsePlace[]; split: PulsePlace[] };
-// A role is null where its earlier period was never shown: the 7 days a week earlier, or the week before, did not pass
-// PULSE_FLOORS.board, so no mark compares against a list that was never shown. The board's 대화 is never null.
+// null if the earlier period failed PULSE_FLOORS.board: never compare against an unpublished list. Live-board 대화 is non-null.
 export type PulseBefore = Record<PulseRole, PulseOrder | null>;
 
 // hours: the last 24 whole hours, oldest first, each hour's calls per role (rounded); at is the hour's start.

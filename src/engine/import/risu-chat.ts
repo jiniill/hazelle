@@ -1,10 +1,8 @@
 import { lorebookSource, nativeHolds, type Json } from './convert';
 import type { LoreEntry } from './types';
 
-// One chat's line as Risu's export holds it, the inverse of risu-character.ts risuChat. greeting: the card greeting
-// the line opened on, by this app's index (0 is first_mes); null when it opened on none. messages: the line after its
-// greeting, each text past its input or output stage, which is what Risu stores. variables: those standing after the
-// line. id: the chat's new Risu id, which Risu replaces on import anyway.
+// Inverse of risu-character risuChat: greeting indexes the card (0 = first_mes), messages exclude it.
+// Texts are post-script; variables are end-of-line state. Risu replaces the exported chat id on import.
 export type RisuChatSource = {
   id: string;
   title: string;

@@ -11,7 +11,6 @@
   min-width: 0;
 }
 
-/* Where a dragged card would land: a line in the gap beside this one. */
 .placeBefore::before,
 .placeAfter::before {
   position: absolute;

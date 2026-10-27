@@ -1,5 +1,4 @@
-// What the code editor is told about a language. The kit draws it; the language's owner (app/common/code) fills it
-// from the engine, which the kit cannot import.
+// Kit renders language data, but app/common/code fills it from engine; never import engine into the kit.
 export type CodeDoc = { form: string; text: string; facts?: [string, string][] };
 
 export type CodeProblem = { from: number; to: number; severity: 'error' | 'warning'; message: string; fix?: { label: string; insert: string } };
@@ -12,8 +11,7 @@ export type CodeItem = { label: string; kind: 'function' | 'keyword' | 'variable
 // closing brackets typed after `{{`).
 export type CodeCompletion = { from: number; items: CodeItem[]; validFor: RegExp; closing?: string };
 
-// A language that reads its own text marks it in spans, which never overlap: text with tags in it, where a tag is its
-// braces and name, separators between its arguments, and its arguments.
+// Language spans never overlap; preserve original text positions and separate tag braces/names/arguments.
 export type CodeSpan = { from: number; to: number; kind: 'tag' | 'separator' | 'argument' | 'comment' | 'slot' };
 
 // syntax: lua is CodeMirror's own Lua mode; a function is the language's spans. comment: what Ctrl+/ wraps a

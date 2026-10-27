@@ -9,14 +9,12 @@ type Props = {
   face?: LucideIcon;
   // accent: the operator, whose face and name take the accent.
   tone?: 'plain' | 'accent';
-  // Tags after the name.
   marks?: ReactNode;
   // When, after the name on one line (sm) or under it (md).
   note?: ReactNode;
   size?: 'sm' | 'md';
 };
 
-// Who wrote a thing: their face, name and marks, and when.
 export function Byline({ name, face, tone = 'plain', marks, note, size = 'sm' }: Props) {
   return (
     <span className={`${styles.byline} ${styles[size]}`}>

@@ -1,6 +1,5 @@
-// One `@@name value` line from the leading block of a lorebook entry (risu-compat-spec §b, Decorator syntax).
-// value is the rest of the line as written, not split on commas: @@inject_replace and @@inject_lore take text
-// that may hold a comma, and only key-list decorators split it (args).
+// Keep decorator values unsplit: inject_replace/inject_lore may contain commas.
+// Only key-list readers split them via args (compat spec §b).
 export type DecoratorLine = { name: string; value: string };
 // fallbacks: the `@@@name` lines right after it, tried in order when this decorator is not handled.
 export type Decorator = DecoratorLine & { fallbacks: DecoratorLine[] };

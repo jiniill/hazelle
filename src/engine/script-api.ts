@@ -49,8 +49,7 @@ export type Event =
   | ToolEvent
   | { kind: 'input' | 'start' | 'output' }
   | { kind: 'button'; data: string }
-  // A press on risu-trigger: each Lua script's own global function of that name, and each block trigger of that name
-  // whatever its type, as Risu runs both. id: the pressed element's risu-id, '' when it has none.
+  // risu-trigger runs Lua globals and block triggers by name regardless of event; id is risu-id or empty.
   | { kind: 'call'; name: string; id: string }
   | { kind: 'edit'; stage: EditStage; value: unknown; meta: Record<string, unknown> };
 
@@ -64,9 +63,8 @@ export const listens = (trigger: { kind: 'lua' } | Pick<Extract<ScriptUnit, { ki
 export type Failure = { message: string } | { runaway: true };
 export type ScriptError = { script: string; from: PackOwner } & Failure;
 
-// index is a message's place in the snapshot. handled: some script had the function the event calls, or a block
-// trigger answered it. missing: the functions called and the block effects met that this app does not have. lore: the
-// entries the run wrote to the chat's own lorebook (upsertLocalLoreBook), each taking the place of those of its name.
+// Snapshot indices identify messages. handled means a listener/trigger existed; missing names unsupported calls.
+// lore replaces chat-local entries by name.
 export type Outcome = {
   value: unknown;
   stop: boolean;

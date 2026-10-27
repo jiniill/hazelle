@@ -15,9 +15,8 @@ import { describeUnused } from '../common/unused';
 import { ALWAYS, DEFAULT_VARIABLES, inSettings, moduleName, NO_CHARACTER, promptName, RISU_PLUGIN, SCRIPTS, toolVersion } from '../common/words';
 import { cardMissed, missedLines, presetMissed } from './missed';
 
-// Previews and outcomes must not retain asset readers or source bytes: their closures keep the source archive alive.
-// A preview is what the file holds, read before anything is saved; an outcome names only what saving alone could know.
-// verdict: how much of a Risu plugin works here. placed: where it will be, or was, turned on or put.
+// Never retain asset readers/source bytes in previews or outcomes: closures would keep entire archives alive.
+// Previews describe parsed content; outcomes add save-only facts. placed records activation/destination.
 export type ImportKind = 'character' | 'module' | 'plugin' | 'prompt' | 'persona' | 'chat';
 // title: the thing's own name, its kind said apart.
 export type Preview = { kind: ImportKind; title: string; holds: string; verdict: Line | null; placed: Line | null; missed: string[]; unused: string | null };

@@ -9,8 +9,7 @@ import { useAccount, useSession } from '../session';
 import { useToast } from '../toast';
 import { Button, Callout, Dialog, TextField } from '../ui';
 
-// The nickname each signed-in account was last told it has, by username: only a chosen one is kept, so a gate asks
-// the server again until there is one. The operator's is always there (운영자).
+// Cache chosen nicknames only; keep asking until one exists. Key by username across accounts; operator is fixed.
 const known = new Map<string, string>();
 export const knowNickname = (username: string, name: string) => known.set(username, name);
 

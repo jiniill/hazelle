@@ -17,8 +17,7 @@ export function useNewChat(chatId: string, fresh: boolean, chat: Chat, shelf: Ch
   const [openedAt] = useState(() => Date.now());
   const greetings = card?.greetings ?? [];
   const [picked, pickGreeting] = useState<number | null>(null);
-  // The ids the greetings are saved under, so their random tags roll the same before and after the first send, and the
-  // greeting keeps its place in the story rather than being drawn again. A greeting added since gets its own.
+  // Preserve greeting ids through first save so seeds and story rows stay stable. Newly added greetings get new ids.
   const [madeIds, setOpeningIds] = useState(() => greetings.map(() => crypto.randomUUID()));
   const openingIds = madeIds.length < greetings.length ? [...madeIds, ...greetings.slice(madeIds.length).map(() => crypto.randomUUID())] : madeIds;
   if (openingIds !== madeIds) setOpeningIds(openingIds);
@@ -50,9 +49,8 @@ export function useNewChat(chatId: string, fresh: boolean, chat: Chat, shelf: Ch
     const saved = startChat(store, chatId, chat, greetings).then((unstarted) => {
       if (unstarted) start.current = null;
       else {
-        // The write returns before the chat's projection is made, and the chat's route shows a loading screen in place
-        // of this one until it is: the route changes only once it exists. A failed one shows on the chat's scope. A
-        // screen left by then is not pulled back to the chat.
+        // Change route only once projection exists or it would flash loading. Keep failures on the chat scope;
+        // never navigate back to a chat whose screen the user already left.
         const open = () => {
           drafts.move(draftKey(null, chat.character), chatId);
           if (mounted.current) navigate({ kind: 'chat', id: chatId }, { replace: true });

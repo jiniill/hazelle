@@ -24,17 +24,11 @@ import type { ObjectStore } from './store';
 import type { Write } from './object-writes';
 import { chatPlace, costRow, receiptRow } from './usage';
 
-// The only writer of `chat` and `entry` objects, except a chat's `models` layer, which runtime/assignment writes with
-// the other layers, its lorebook's folders, which runtime/lore writes as every lorebook's, a purge (runtime/characters), which claims a deleted chat and removes it with all it owns, or with
-// its character, a backup's restore, which copies them as they were, and a move from Risu, which saves chatWrites'
-// entries before its character and the chat root with it (runtime/characters addCharacter). An imported chat file or
-// Risu chat file (importChat here, importRisuChats in runtime/move) is saved through saveNewChats.
+// Chat/entry writes live here except assignment's models, lore's folders, character purges and backup restores.
+// Risu moves save chatWrites' entries before addCharacter saves the root; chat-file imports use saveNewChats.
 
-// A new chat is saved in this order: the chat with its greetings, the one shown selected, then the user's first
-// message, which continues the greeting shown (model/chat Entry follows), sent with its reply. The chat and its
-// greetings are one batch, which writes the greetings first, so the chat is never there without them: its screen would
-// show it greeting-less until they landed.
-// id is the one the chat was shown under before it was saved, which seeds its greeting's pick and rollp tags.
+// Batch greetings (including selection) before the root so no greeting-less chat is exposed. The first user
+// message later continues that selection. Keep the pre-save id: it seeds greeting selection and rollp tags.
 export async function startChat(store: ObjectStore, id: string, chat: Chat, greetings: Greetings | null): Promise<ApiFailure | null> {
   const { entries, root } = chatWrites(id, withPersona(store, chat), greetings, []);
   const saved = await store.batch([...entries, root]);
@@ -69,10 +63,8 @@ function greetingWrites(chat: string, { choices, selected }: Greetings, at: numb
   return entries.map(([id, value]) => ({ type: 'create', kind: 'entry', id, parent: chat, value }));
 }
 
-// The spread takes the original's own choices; nothing links the two chats but origin, so deleting either leaves the
-// other whole. messages, versions: each copy's id by the original's. The cache print goes too: the branch sends the
-// same prefix from the same account, so its first send reads the original's cache; it counts only while the print's
-// call is the branch's latest (cache prior), as when it is cut at the last reply.
+// Copy choices, not links: deleting either chat must leave the other whole.
+// Carry the cache print for shared prefixes, but only while its call is the branch's latest (cache prior).
 export async function branchChat(store: ObjectStore, item: ChatItem, message: string): Promise<ApiResult<Hazelle.Branched & { id: string }>> {
   return store.withChat(item.id, async () => {
     const current = store.projections.get(item.id)?.model;
@@ -103,10 +95,8 @@ export async function branchChat(store: ObjectStore, item: ChatItem, message: st
 // the illustrations and the inlays whose picture the server refused.
 export type Dropped = { prompt: number; persona: number; cast: number; models: number; pictures: number; inlays: number };
 
-// A chat file's chat, copied under new ids as a branch is, to character. What it names that is not live here is
-// left out and counted, so the chat follows the default there; a persona left out gives the one a new chat takes.
-// Its pictures are saved first, each under the reference its bytes seal to here; one the server refuses leaves out
-// the illustrations and inlays that show it, as a picture an import cannot read is.
+// Remap ids as for branches; drop/count missing local dependencies, defaulting the persona like a new chat.
+// Save pictures first under their content-sealed references; omit rows for refused files.
 export async function importChat({ store, files }: Pick<Session, 'store' | 'files'>, file: ChatFile, character: string | null): Promise<ApiResult<{ id: string; dropped: Dropped }>> {
   const id = crypto.randomUUID();
   const ids = [...file.pictures.keys()];
@@ -206,9 +196,8 @@ function copyWrites(id: string, source: { message: Message; follows: string | nu
   return { writes, messages, versions, after };
 }
 
-// The tools' data for the chat goes with a branch as it stands, each key at the branch's own address. The badges the
-// host keeps follow their messages; references inside a tool's own data are the tool's to remap (its branch event).
-// A chat file carries none: its modules are another account's.
+// Branch tool data as-is; remap host badges, but let the tool branch event remap its own embedded ids.
+// Chat files omit tool data because their modules belong to another account.
 async function branchToolData(store: ObjectStore, from: string, to: string, messages: ReadonlyMap<string, string>, versions: ReadonlyMap<string, string>): Promise<Write[]> {
   return Promise.all(store.children('toolchat', from).flatMap(({ value: { module, key, value } }) => {
     const badges = key === null && Object.entries(value as Badges).flatMap(([message, { version, text }]) => (messages.has(message) ? [[messages.get(message)!, { version: versions.get(version) ?? version, text }]] : []));
@@ -217,11 +206,9 @@ async function branchToolData(store: ObjectStore, from: string, to: string, mess
   }));
 }
 
-// The records whose every message lies before the split, their sources remapped to the branch's messages and versions
-// (a version the branch does not hold keeps its old id, so the record stays stale there too), with the facts and threads
-// as they stood with only those records (engine/memory memoryThrough). A record across the split stays behind, and its
-// messages stay raw in the branch until its own summarizing reaches them. A chapter goes with its records and its
-// messages, all of them: one made again past a deleted record still reads that record's messages. null: nothing to carry.
+// Copy only records wholly before the split and chapters with every record/source present; remap held version ids.
+// Keep missing version ids stale, and leave cross-split spans raw until the branch summarizes them.
+// Rewind facts/threads through engine/memory memoryThrough; null means nothing to copy.
 function branchMemory(memory: Memory, messages: ReadonlyMap<string, string>, versions: ReadonlyMap<string, string>): Memory | null {
   const remap = ({ message, version }: Source): Source => ({ message: messages.get(message)!, version: versions.get(version) ?? version });
   const kept = memoryThrough(memory, memory.records.filter(({ sources }) => sources.every(({ message }) => messages.has(message))));
@@ -230,12 +217,8 @@ function branchMemory(memory: Memory, messages: ReadonlyMap<string, string>, ver
   return records.length || kept.state.length || kept.threads.length ? { ...kept, records, chapters } : null;
 }
 
-// The entries that fold back to message under the id given: its first version as the message entry, and that
-// version again in its own place when it is an edit or came later than the message, which a message entry cannot
-// hold; the other versions; and a select when the one shown is not the last, since adding a version selects it.
-// versions: each version's id in the branch, by its id here.
-// A field added to messages must be written here too, or a branch drops it, as must a kind a chat holds
-// (copyWrites, branchToolData).
+// Serialize message first, then edited/later first versions, other versions and an explicit select when needed.
+// New message fields and chat-owned kinds must also enter this branch serializer (copyWrites/branchToolData).
 function copied(id: string, { role, at, versions, selected, after }: Message, follows: string | null): { entries: [string, Entry][]; versions: Map<string, string> } {
   const ids = versions.map((_, index) => (index === 0 ? id : crypto.randomUUID()));
   const [first, ...rest] = versions;
@@ -259,8 +242,7 @@ function copied(id: string, { role, at, versions, selected, after }: Message, fo
   return { entries, versions: made };
 }
 
-// What a copy of a version carries. A field added to versions must be written here too, or a copy drops it. The calls
-// the bot's Lua made (Version.calls) are dropped on purpose: usage counts a call where it was made.
+// Keep this serializer in sync with Version fields. Deliberately omit Lua calls: usage belongs where they ran.
 const held = ({ text, receipt, seed, translation, staged, before, reasoning, greeting, raw }: Version) => ({ text, receipt, seed, ...(translation && { translation }), ...(staged && { staged }), ...(before && { before }), ...(reasoning && { reasoning }), ...(greeting !== undefined && { greeting }), ...(raw !== undefined && { raw }) });
 
 // A new last version of the message, a copy of the one shown, which it shows: what followed the one shown stays that
@@ -367,10 +349,8 @@ export function appendReply(store: ObjectStore, chat: string, { id, message, rep
   return append(store, chat, message === null ? { type: 'message', role: 'assistant', ...(follows !== undefined && { follows }), ...held } : { type: 'version', message, replaces, edit: false, ...held, ...(seed && { seed }) }, id, [receiptRow(receipt, at, chatPlace(store, chat))]);
 }
 
-// edits: a message's new text in place of its shown version, with the variables that version's own text wrote, which
-// the new text no longer does. added: messages, the first continuing follows (model/chat Entry), each other the one
-// added before it. vars: the variables written, standing after a version, or with stays after its message
-// (Entry vars).
+// Edits keep old text's variable writes; adds chain from follows. vars attach after a version,
+// or to the message with stays (model/chat Entry).
 export type Scripted = {
   edits: { message: Message; text: string; wrote: Writes }[];
   removed: string[];
@@ -419,10 +399,8 @@ export async function setVariableByHand(store: ObjectStore, chat: string, versio
 
 export const appendCost = (store: ObjectStore, chat: string, { id, replyId }: Receipt, cost: Cost | null) => append(store, chat, { type: 'cost', replyId: replyId!, cost, at: Date.now() }, undefined, [costRow(id, cost)]);
 
-// An edit is a new version in the place of the one shown, keeping its receipt. translation: the
-// edited translation of a version that has one, which keeps the receipt of the call that made it; a blank one leaves
-// the new version without a translation.
-// id: the new version's, when the caller must know it before the save lands.
+// Replace the selected version, retaining receipts; blank translation removes it.
+// Optional id lets callers refer to the new version before its save lands.
 export function editMessage(store: ObjectStore, chat: string, message: Message, text: string, translation: string | null, id?: string) {
   const current = shown(message);
   const at = Date.now();
@@ -431,9 +409,8 @@ export function editMessage(store: ObjectStore, chat: string, message: Message, 
   return append(store, chat, { type: 'version', message: message.id, replaces: current.id, edit: true, at, text, receipt: current.receipt, seed: current.seed, ...(current.greeting !== undefined && { greeting: current.greeting }), ...kept }, id);
 }
 
-// The post agents' text in the place of the version shown (design §6.16), as an onOutput edit is, keeping the text it
-// takes the place of as raw and the agents' calls on its receipt, in place of the post calls of an earlier polish
-// (다시 다듬기). A reply always has a receipt.
+// Save polish as a replacement version retaining raw and the reply receipt.
+// Repolish replaces prior post-agent calls, never stacks them (design §6.16).
 export function appendPolished(store: ObjectStore, chat: string, message: Message, text: string, runs: AgentRun[]) {
   const current = shown(message);
   const receipt = { ...current.receipt!, agents: [...(current.receipt!.agents ?? []).filter(({ stage }) => stage === 'pre'), ...runs] };

@@ -12,8 +12,7 @@ export const foldTerm = (term: string) => term.trim().normalize('NFC').toLowerCa
 
 const fold = (text: string) => text.replace(TAG, '').normalize('NFC').toLowerCase();
 
-// Hits are message indices in chat order. It keeps each text's fold and answer from the call before, so a story of
-// thousands of messages, searched again on every streamed frame, folds only the texts that changed.
+// Cache each text's folded search by identity/content so streaming a long chat only refolds changed messages.
 export function finder() {
   let folds = new Map<string, string>();
   let asked = '';

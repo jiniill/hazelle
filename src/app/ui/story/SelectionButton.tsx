@@ -10,8 +10,6 @@ export type SelectionEnd = { x: number; top: number; bottom: number };
 // Kept from the view's sides, so the button never runs off them.
 const EDGE = 48;
 
-// A button at a selection's end in a story: below its last line, or above it near the view's end, where the
-// composer stands.
 export function SelectionButton({ icon, label, at, onPress }: { icon: LucideIcon; label: string; at: SelectionEnd; onPress: () => void }) {
   const button = useRef<HTMLButtonElement>(null);
   const above = at.bottom > window.innerHeight * 0.75;

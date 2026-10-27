@@ -24,11 +24,7 @@ import { attachmentLead } from '../engine/assets';
 import { agentsOf, preAgents } from './agents';
 import type { Preparing, Skip, StepFailure } from './turn-steps';
 
-// A turn also stops before sending on a new chat that was not saved, a pull that failed, a chat or message another
-// device deleted, a user's message that was not translated, a tokenizer that did not load, a prompt over the model's
-// budget, or a 토큰 절약 call or a pre agent's that failed.
-// kept: the user's message was saved all the same (a bot with Lua has it saved before its onStart runs), so the
-// screen does not hand its text back.
+// kept prevents returning saved text to the composer: Lua bots save the user's message before onStart can fail.
 export type TurnFailure = (
   | TalkFailure
   | Blocked
@@ -42,10 +38,8 @@ export type TurnFailure = (
   | StepFailure
 ) & { kept?: true };
 
-// Automatic 응답 번역 is for replies received here, never for what a chat already holds: opening a chat, a greeting, a
-// version switched to and the switch turned on leave it to 번역 (user ruling, 2026-10-04). The reply is as saved; the
-// bot's onOutput may have edited or removed its message since, so the message is read again. Its chat must stay
-// loaded until this returns (session).
+// Auto-translate only replies received here, never existing messages, greetings or version/switch changes (user, 2026-10-04).
+// Re-read after onOutput, which may edit/delete the saved message. Keep the chat loaded until this returns.
 async function translateReceived(session: Pick<Session, 'store' | 'read' | 'translator'>, chat: string, message: string) {
   const view = await displayed(session, chat);
   if (!view || !chatTranslate(session.store, view.chat).replies) return;
@@ -63,9 +57,8 @@ const displayed = (session: Pick<Session, 'read'>, chat: string) =>
     throw error;
   });
 
-// 자동 이어 쓰기 (design §6.7): a reply cut at its length, or whose stream closed without its end (a deploy rebuilds the
-// server object), is continued once (user, 2026-10-02). A continuation is never continued on its own, a manual one
-// included; nor is a stop (멈추기), nor an empty reply, on which 이어 쓰기 is not offered either.
+// Auto-continue once after length/no-terminal cuts (user, 2026-10-02).
+// Never auto-continue any continuation, manual stops or empty replies.
 export function autoContinue({ text, receipt }: Pick<Written, 'text' | 'receipt'>): boolean {
   return receipt.state === 'cut' && (receipt.cut === 'length' || receipt.cut === 'no-terminal') && !receipt.continues && text !== '';
 }
@@ -80,10 +73,9 @@ const idle = (talk: Session['talk'], chat: string) =>
     });
   });
 
-// A reply this page has just saved (session's saved hook): continued when autoContinue says so and it is still the
-// chat's last message as saved, else given to its post agents, then translated. Never both: a continuation that ran leaves the translation to the hook
-// its own save calls, on the finished version. takeTurn answers null as well when a turn its chat began meanwhile turned it
-// away, and the cut reply then stays untranslated. Its chat must stay loaded until this returns (session).
+// Keep the chat loaded: auto-continue the still-latest saved cut, otherwise polish then translate.
+// Never translate both: a continuation's save hook owns its final version. A competing turn can block continuation,
+// leaving the cut untranslated until another action.
 export async function receiveReply(session: Session, chat: string, reply: Written) {
   if (reply.receipt.state === 'failed') return;
   if (autoContinue(reply)) {
@@ -134,9 +126,8 @@ function shownReceived({ store }: Pick<Session, 'store'>, chat: string, received
   return version?.text.trim() ? { chat: stored.value, message: message!.id, version: version.id } : null;
 }
 
-// A new chat's save, which the turn is shown in while it runs, and the greeting it saved selected, which the turn
-// follows. The turn never saves the chat itself: a press on the greeting may have started the same save, and a second
-// create would be refused.
+// Share the new-chat save with greeting actions; a second create would conflict.
+// Follow its saved greeting selection while the turn remains visible on the new chat.
 export type Starting = { greeting: string | null; saved: Promise<ApiFailure | null> };
 
 export function takeTurn(session: Session, chat: string, target: Target, start: Starting | null = null, skip: Skip = {}): Promise<TurnFailure | null> {
@@ -246,9 +237,8 @@ function runPre(session: Session, chat: string, turn: TurnContext, signal: Abort
   return preAgents(session, chat, turn.chat, turn.scope, messages.slice(0, at), again, signal, (now) => preparing({ step: 'agents', ...now }));
 }
 
-// A message being translated for sending when this page came, which Streams hands over. It is saved translated, or
-// as typed when the translation failed, so what the user wrote is never lost; its reply waits for 응답 받기, since
-// another device may be reading the same call.
+// Resume input translations without auto-reply: another device may read the same call.
+// Save translated text or fall back to the typed text on failure so input is never lost.
 export async function resumeSend(session: Pick<Session, 'store' | 'credentials' | 'log' | 'streams'>, stream: Stored<'stream'>, signal: AbortSignal) {
   const purpose = stream.value.for;
   if (purpose.kind !== 'input') return;
@@ -267,10 +257,8 @@ export async function resumeSend(session: Pick<Session, 'store' | 'credentials' 
   } finally { lease.release(); }
 }
 
-// The user's message goes out translated, which the prompt sends and the chat saves as its text, with
-// what the user typed as its translation. The chat's messages before it are the translation's context.
-// Its call ends as soon as it is translated: a marker left until the message is saved would let a pick-up save the
-// message a second time, beside Talk's own save.
+// Store/send translated text, retaining typed text as its translation; earlier chat messages provide context.
+// End the call before saving: leaving its marker would let resume duplicate Talk's message write.
 async function sendTranslated(session: Session, chat: string, turn: TurnContext, signal: AbortSignal): Promise<TurnContext | Extract<TurnFailure, { kind: 'untranslated' }>> {
   const typed = turn.said!;
   // The translation's text renders a picture's tag to nothing, so the pictures stay out of it and lead its result.

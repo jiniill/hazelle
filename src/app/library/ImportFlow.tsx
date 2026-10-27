@@ -44,10 +44,8 @@ const OPENS: { kind: Exclude<ImportOutcome['kind'], 'character'>; icon: LucideIc
   { kind: 'persona', icon: UserRound, label: '페르소나 보기', route: (id) => ({ kind: 'persona', id }) },
 ];
 
-// A file read for the preview, or one that did not read. choice: what saving it does where its kind asks: fill, a card's
-// pictures into the character Risu's move brought under its name (into); replace, a module's older versions (named
-// olds) taken over; character, where a file of chats goes, null for 캐릭터 없이, asked when the way in and the file
-// leave it to the user (name: the one the file was with, when it says).
+// fill targets a moved character's pictures; replace selects old module versions. For chat destinations,
+// picked null means 캐릭터 없이; asked requests a user choice, with name retaining the file's character name.
 type Choice = { kind: 'fill'; into: string; on: boolean } | { kind: 'replace'; olds: string[]; on: boolean } | { kind: 'character'; asked: boolean; name: string | null; picked: string | null };
 // Where a file of chats goes: a character's id, null for 캐릭터 없이, undefined where the way in names none.
 type Target = string | null | undefined;
@@ -69,9 +67,7 @@ const FAILURE: Record<ImportFailure['kind'], string> = {
   unreadable: '파일을 읽지 못했어요.',
 };
 
-// Keyed by the failure details of engine/import/tool and risu-plugin, of a chat file, of a preset (PresetFailure), of a
-// persona PNG (engine/import/persona) and of the size limits (engine/import/inflate TooLarge); a detail missing here
-// reads as 파일을 읽지 못했어요.
+// Importer detail codes not listed here use the generic unreadable-file message.
 const DETAIL_FAILURE: Record<string, string> = {
   'other-version': '이전 버전에서 만든 채팅 파일이라 가져올 수 없어요.',
   'not-preset': 'Risu 파일이지만 프리셋 파일이 아니에요.',

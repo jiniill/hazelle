@@ -1,9 +1,8 @@
 // Prices come from models.dev's database, never from a table typed in here or a pricing page read (user, 2026-10-04).
 // The server reads this module too (eslint/boundaries.js), so it stays data and types only.
 
-// models.dev's provider id for each connection type it lists; a type left out costs 알 수 없음 unless its provider
-// reports the cost or its model list states prices, and its models take and give only what their list says. credit:
-// the provider bills in AI credits of $0.01 (Copilot), so a cost worked out from the list is shown in credits.
+// Provider ids for models.dev. Missing providers inherit no capabilities/prices beyond their own catalog.
+// credit bills each $0.01 as one AI credit (Copilot).
 export const MODELS_DEV_LISTS: Readonly<Partial<Record<string, { list: string; credit?: true }>>> = {
   openrouter: { list: 'openrouter' },
   vercel: { list: 'vercel' },
@@ -28,8 +27,7 @@ export const MODELS_DEV_LISTS: Readonly<Partial<Record<string, { list: string; c
   copilot: { list: 'github-copilot', credit: true },
 };
 
-// The models a connection type lists itself, by id and name: no models.dev list holds them. Kept here so the server names
-// them on 헤이젤 나우 (server/pulse) from the connector's own list. The first is the type's default.
+// Provider-owned static catalogs also name pulse models; first entry is the default.
 export const CONNECTOR_MODELS = {
   novelai: [
     { id: 'nai-diffusion-5-full', name: 'NovelAI Diffusion V5 Full' },

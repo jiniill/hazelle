@@ -19,7 +19,6 @@ import { backTo, HOME, listOf, up, type Back, type Below, type Route } from './r
 import { SettingsList, settingsEntry } from './settings/SettingsNav';
 import { ToolsList, toolsEntry } from './tools/ToolsNav';
 
-
 const ToolPageScreen = lazy(() => import('../modules/ToolPageScreen').then(({ ToolPageScreen }) => ({ default: ToolPageScreen })));
 const AdminScreen = lazy(() => import('../admin/AdminScreen').then(({ AdminScreen }) => ({ default: AdminScreen })));
 const AdminListScreen = lazy(() => import('../admin/AdminListScreen').then(({ AdminListScreen }) => ({ default: AdminListScreen })));
@@ -69,7 +68,6 @@ const missing = (what: Absent, wide: boolean) => <Missing what={what} back={back
 type ItemKind = 'character' | 'prompt' | 'persona' | 'module' | 'profile';
 const absentItem = <K extends ItemKind>(kind: K, stored: Stored<K> | null): K | `deleted-${K}` =>
   stored && isBinned(stored.value) ? `deleted-${kind}` : kind;
-
 
 // API 연결 stacks the picked connection under its list. Every other item 설정 lists opens as a page of its own.
 const VARIANTS = { connections: 'stack', 'add-connection': 'list' } as const;
@@ -238,10 +236,8 @@ function ChatPage({ at, wide, onPaired }: { at: At<'new-chat' | 'chat'>; wide: b
   const character = at.kind === 'new-chat' ? at.character : stored?.value.character;
   const shelf = useCharacter(character ?? null);
   const characterStored = useStored('character', character ?? null);
-  // The id a new chat is shown under and then saved under, so its greeting's pick and rollp tags keep their rolls. Its
-  // screen is keyed by it, so when the first send saves it and the route becomes the chat's, the same screen stays and
-  // the story is not drawn again. Any other route drops it, so a later 새 채팅 never takes an id already spent.
-  // Both routes stay under this same component boundary; splitting them would remount the screen on its first save.
+  // Keep new/saved chat routes under one component/key to avoid remounting on first save.
+  // Preserve id for greeting/rollp seeds; discard it on other routes so later new chats never reuse a spent id.
   const [fresh, setFresh] = useState<{ character: string | null; id: string } | null>(null);
   let newChat = fresh;
   if (at.kind === 'new-chat' ? fresh?.character !== at.character : fresh !== null) {

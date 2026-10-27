@@ -1,11 +1,8 @@
 import type { ToggleLine } from '../../model/prompt';
 import { args } from '../lorebook/decorators';
 
-// Risu's toggle text, one line each, `key=label=kind=option`: no kind or `check` is a check, `select=a,b` a choice
-// whose value is the option's index as in Risu, `text` a typed value and `textarea` one of several lines. The layout
-// lines (`=label=divider`, `=label=caption`, `=label=group` … `=label=groupEnd`) are read by kind first, as in Risu,
-// so their empty key is no fault. Anything else is kept as an unread line rather than guessed at. It runs only where
-// that text comes in: an import, the upgrade of a pack stored as text (runtime/upgrade), and an unread line fixed by hand.
+// Risu syntax: key=label=kind=option; choices store indices. Read layout kinds before validating their empty keys.
+// Preserve unknown lines verbatim, never guess. Used only at import, stored-text upgrade or explicit line repair.
 export function readToggles(text: string): ToggleLine[] {
   const lines: ToggleLine[] = [];
   for (const line of text.split(/\r?\n/)) {

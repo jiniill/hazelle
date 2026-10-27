@@ -7,8 +7,7 @@
   gap: var(--space-4) var(--space-12);
 }
 
-/* Every row on the list's columns, so the bars end at one line whatever each value's width. A subgrid's padding would
-   squeeze its first and last tracks, so the empty edge columns and their gaps are the row's inset instead. */
+/* Share columns across rows. Use edge tracks for inset: subgrid padding would squeeze the first/last tracks. */
 .row {
   grid-column: 1 / -1;
   display: grid;

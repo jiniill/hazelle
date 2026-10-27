@@ -41,9 +41,8 @@ export type Pack = {
 // id: opaque, and unique within its pack only (import/convert stampIds). off keeps a script in its place but stops it.
 export type Listed = { id: string; off?: true };
 
-// name is Risu's comment. Risu runs a Lua trigger at every event, whatever its trigger type, so a Lua one keeps no
-// `on`. A block trigger is normalized at import; unsupported conditions/effects retain opaque source data so future
-// support can read it without a new import. Execution consumes only the canonical operations.
+// name is Risu's comment; Lua runs at every event and has no `on`. Blocks execute canonical operations only.
+// Keep unsupported conditions/effects as opaque source so future support needs no reimport.
 export type Trigger = Listed & ({ kind: 'lua'; name: string; code: string } | { kind: 'blocks'; name: string; on: string; conditions: BlockCondition[]; effects: BlockEffect[] });
 
 // flags: the custom flag string, <…> meta blocks included; null runs the default `g`.
@@ -221,9 +220,8 @@ export type RisuCharacter = Omit<Imported, 'avatar' | 'bundled'> & {
 // module: its embedded module, which Risu names after the persona.
 export type RisuPersona = { id: string | null; name: string; alias: string; description: string; picture: () => Promise<Picture | null>; module: ImportedModule | null };
 export type RisuPreset = { name: string; result: PresetResult };
-// pictures: the picture entries the files hold, in all; 0 says the account backup was written without its assets.
-// pictureBytes: their size together. inlayCount: the inlay items a character's chats name, each chat's counted apart,
-// as each chat holds its own.
+// pictures counts all archive picture entries (0 for an asset-free backup); pictureBytes is their combined size.
+// inlayCount counts separately per chat, since each chat owns its inlays.
 export type BackupCatalog = {
   pictures: number;
   pictureBytes: number;

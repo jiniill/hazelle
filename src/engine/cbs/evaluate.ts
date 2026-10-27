@@ -22,13 +22,9 @@ export type CbsContext = {
   lore: readonly Omit<LoreEntry, 'folder'>[];
   messages: HistoryMessage[];
   previous: PreviousMessages;
-  // A chat message, by its index in messages: its seed rolls its random tags, and its setvar, addvar
-  // and setdefaultvar write the variables. Or text outside messages: its random tags roll from a seed fresh
-  // for each request, and its variable writes are removed without effect.
+  // Message indices use that message's seed and allow chat-variable writes; other text uses a per-request seed and cannot.
   source: { message: number } | { seed: string };
-  // The greeting the chat opened with, which is then messages[0], and its index in card.greetings: null when
-  // the version shown is not one of the card's (the card changed, or the model rewrote it). null when the chat
-  // opened with none.
+  // Opening greeting at messages[0]; null if none. index is null when the shown version no longer matches the card.
   greeting: { index: number | null } | null;
   // The chat's variables as of this text, written in place, replayed over the card's defaults in message order.
   variables: Map<string, string>;
@@ -39,8 +35,7 @@ export type CbsContext = {
   model: { id: string; maxContext: number | null; prefill: boolean | null } | null;
   // The 보조 모델's id, as {{axmodel}} reads it; null when the chat resolves none.
   axModel: string | null;
-  // The risu-id of the bot's element whose press runs the trigger this text is evaluated in; '' outside such a run, and
-  // when the element has none.
+  // Pressed element's risu-id; '' outside a trigger or when the element has none.
   triggerId: string;
   // The window's size, as Risu reads window.innerWidth: null in the prompt, and when the display does not know it.
   screen: { width: number; height: number } | null;
@@ -48,8 +43,6 @@ export type CbsContext = {
   clock: { now: number; timeZone: string };
   // The language a translation prompt translates into, as the English name the model reads; null outside one.
   language: string | null;
-  // The pictures of the chat's packs, and the faces {{source}} shows: the character's and the persona's pictures as data:
-  // URLs, each null when there is none.
   assets: readonly BotAsset[];
   // The names the display's asset tags found no picture for, added as they are met; null outside a display.
   unfound: Set<string> | null;
@@ -57,6 +50,7 @@ export type CbsContext = {
   problems: CbsProblem[] | null;
   // The namespaces of the modules on in the chat (design §6.5).
   modules: readonly string[];
+  // {{source}} faces as data: URLs, null when absent.
   faces: { char: string | null; user: string | null };
   // pick and rollp keep Risu's seed: the character, the chat and its message count.
   pickSeed: string;
@@ -66,8 +60,7 @@ export type CbsContext = {
 const DEPTH = 20;
 const TOO_DEEP = 'ERROR: Call stack limit reached';
 
-// What one evaluation may do: the tags and blocks it evaluates and the text it produces, counted at every level of
-// nesting. A bot's commands that insert or double their own output grow it without end, on the thread that runs them.
+// Count every nesting level to bound self-expanding scripts on the evaluation thread.
 const MOST_TAGS = 200_000;
 const MOST_CHARS = 10_000_000;
 
@@ -78,10 +71,8 @@ export class Runaway extends Error {
   }
 }
 
-// One tag or block of the text, as it evaluated (시험해 보기's 단계), in the order they start. at and end place it in
-// the text as written, and a block's head ends at headEnd; depth counts the tags and blocks it sits in. One evaluated
-// again (an #each item, a {{call}}) has a step each time; the tags of an inserted text have none. result: still
-// escaped, as evaluate's own.
+// Start-ordered steps, one per tag/block execution (including repeated #each/call); inserted texts have no steps.
+// Offsets refer to the original text, headEnd ends a block's header, depth counts nesting; result stays escaped.
 export type CbsStep = {
   at: number;
   end: number;
@@ -111,8 +102,7 @@ type Run = { context: CbsContext; seed: string; temp: Map<string, string>; funct
 // so each rolls its own. traced: its nodes stand in the text the trace places them in; level: their step depth.
 type Frame = { run: Run; prefix: string; writes: boolean; depth: number; args: string[] | null; slots: Map<string, string>; traced: boolean; level: number };
 
-// Escaped punctuation stays escaped: the caller runs unescapeCbs once, at the very end. Throws Runaway. trace, when
-// given, gets the steps.
+// Callers must unescapeCbs once, at the very end. Runaway aborts the whole evaluation, never returning partial output.
 export function evaluate(text: string, context: CbsContext, trace: CbsTrace | null = null): string {
   const { source } = context;
   const message = 'message' in source;
@@ -135,7 +125,6 @@ function unstep(text: string): (at: number) => number {
   return (at) => at - 2 * ends.filter((end) => end <= at).length;
 }
 
-// A step for node, filled in as it evaluates; null when nothing traces it or the trace is full.
 function stepFor(node: Tag | Block | Legacy, frame: Frame): CbsStep | null {
   const { trace } = frame.run;
   if (!trace || !frame.traced) return null;
@@ -147,7 +136,6 @@ function stepFor(node: Tag | Block | Legacy, frame: Frame): CbsStep | null {
   trace.steps.push(step);
   return step;
 }
-// The frame a node's own parts and body evaluate in: one level deeper in the trace.
 const inside = (frame: Frame): Frame => (frame.traced ? { ...frame, level: frame.level + 1 } : frame);
 
 function enter(nodes: Node[], frame: Frame): string {
@@ -212,8 +200,7 @@ export function blockHead(content: string): { name: string; rest: string } | nul
 
 const GETVAR = handlerFor('getvar');
 
-// The inner tags are evaluated first and the tag's name and arguments read from their output, which is how
-// {{spread}} hands a tag its arguments.
+// Evaluate inner tags before splitting the outer name/arguments so {{spread}} can supply arguments.
 function evaluateTag(tag: Tag, frame: Frame, step: CbsStep | null): string | Erase {
   const content = evaluateNodes(tag.parts, inside(frame));
   if (content.startsWith('//')) return frame.run.context.stage === 'display' ? asWritten(content) : '';
@@ -291,7 +278,6 @@ const BLOCKS = new Map<string, (block: Block, rest: string, frame: Frame, step: 
     },
   ],
 ]);
-// name: normalized, as blockHead gives it.
 export const isBlockName = (name: string) => RAW.has(name) || BLOCKS.has(name);
 export const blockNames = () => [...RAW.keys(), ...BLOCKS.keys()];
 
@@ -327,8 +313,7 @@ function when(block: Block, rest: string, frame: Frame, step: CbsStep | null): s
   return evaluateNodes(modes.includes('keep') ? branch : blankEnds(branch), frame);
 }
 
-// The condition is the first line, read as Risu does: the word after `if`, false when it is '', '0' or '-1', so '2' and
-// 'true' hold, unlike #if. Only a body that holds is evaluated, as in #when. Anything else stays as written.
+// Legacy if uses Risu's '', '0', '-1' falsiness, not #if truthiness; evaluate only the taken body.
 function legacy(node: Legacy, outer: Frame, step: CbsStep | null): string {
   const frame = inside(outer);
   const split = node.parts.findIndex((part) => typeof part === 'string' && part.includes('\n'));
@@ -381,9 +366,8 @@ export function whenArgs(rest: string): { modes: string[]; condition: string[] }
   return { modes: args.slice(0, first), condition: args.slice(first) };
 }
 
-// A condition's operators in the order they apply, each with the index of its left operand when it takes one; the
-// first step's operand is the last argument as written. Operators apply right to left, each to everything on its
-// right: not::a::and::b is not (a and b). A value where an operator belongs ends the steps, and the condition is false.
+// Apply operators right-to-left over everything to their right: not::a::and::b means not (a and b).
+// Steps retain left-operand indices; the first consumes the final argument. A misplaced value makes it false.
 export function conditionSteps(condition: string[]): { steps: { op: string; left?: number }[]; valid: boolean } {
   const steps: { op: string; left?: number }[] = [];
   for (let i = condition.length - 2; i >= 0; i--) {
@@ -419,8 +403,7 @@ function each(block: Block, rest: string, frame: Frame): string | null {
     .join('');
 }
 
-// Blocks trim the text at their body's two ends, which is the source's layout. What an inner tag outputs
-// there, such as a {{br}}, is kept; Risu trims its output.
+// Trim source layout only, never whitespace emitted by inner tags such as {{br}}; Risu trims output instead.
 function trimEnds(nodes: Node[], start: (text: string) => string, end: (text: string) => string): Node[] {
   const out = [...nodes];
   const first = out[0];

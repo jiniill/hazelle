@@ -5,13 +5,10 @@ import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource,
 import { readToggles, writeToggles } from './toggles';
 import type { Bot, BundledModule, CharacterOwn, HazelleOwn, LoreEntry, Profiles, RegexScript, Trigger, TypedModule } from './types';
 
-// A charx this app writes carries in its card's extensions.hazelle what Risu's fields cannot: the scripts turned off,
-// lore entries the native lorebook cannot hold whole, the character's own settings, its 삽화 profiles, and the modules it
-// was exported with. Risu reads those modules' scripts and lorebook as the character's own, merged after its own in
-// module.risum, and their pictures as the character's; the extension says where each module's part ends. print is the
-// fingerprint of what convert reads from the Risu fields as written. Risu keeps unknown extensions, so a file edited and
-// saved again there still carries an extension whose places would land on other entries: it no longer matches, and is
-// counted instead of read.
+// extensions.hazelle preserves disabled scripts, non-native lore, character settings, 삽화 profiles and bundled modules.
+// Risu sees modules merged after the character in module.risum, with their pictures as its assets; the extension restores boundaries.
+// print fingerprints convert's reading of the written Risu fields. Risu preserves unknown extensions after edits,
+// so mismatched prints must be counted and ignored rather than applying stale entry positions.
 const VERSION = 1;
 
 // at: the place in the whole list as this app holds it. shared: the entry is in Risu's list too, read there short of
@@ -258,9 +255,8 @@ export function readHazelle(raw: unknown, toggles: string, read: Converted, tall
   };
 }
 
-// A .risum this app writes carries the same for its one pack in the module JSON's hazelle key: the scripts turned off
-// and the lore entries the native lorebook cannot hold whole. Its print is made as the charx's is, of what convertModule
-// reads from the Risu fields as written; Risu gives a module a new id on import, so the id is not in it.
+// .risum's hazelle key preserves disabled scripts/non-native lore. Fingerprint convertModule's re-read output,
+// excluding the module id because Risu replaces it on import.
 const modulePrint = ({ pack, lore, loreFolders, assets }: ConvertedModule) => fingerprint([{ role: 'module', text: JSON.stringify([pack, lore, loreFolders, assets]) }]);
 
 // The module JSON of a .risum, its pictures named in the order their blocks follow. Its tool, 삽화 profiles and model and

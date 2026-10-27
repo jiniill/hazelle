@@ -26,8 +26,7 @@ export function useFolderIndex<T>(kind: Exclude<Filed, 'character'>, items: read
   return useMemo(() => indexFolders(items, folders, folderOf), [items, folders, folderOf]);
 }
 
-// Where an explorer stands. A folder gone meanwhile, on another device or by a stale link, leaves it at the top.
-// folders: the folder cards it shows, none while searching; placed: the things it lists, every one found while searching.
+// Missing/stale folders fall back to root. Searching lists all matching items without folder cards.
 export type Place<T> = { here: FolderContents<T> | null; path: FolderTree[]; folders: FolderTree[]; placed: (found: readonly T[]) => T[] };
 
 export function placeIn<T>(index: FolderIndex<T>, place: string | null, searching: boolean): Place<T> {

@@ -13,22 +13,18 @@ export type Outcome = {
   inputComplete?: true;
   finishReason: string | null;
   usage: Usage | null;
-  // pending: the type books the cost after the reply, to be looked up by replyId. A pending lookup goes ahead of the
-  // model's price: put after it, a priced model would never be looked up, and the booked cost is the true one.
+  // Look up pending booked costs before model prices, or priced models never learn their actual bill.
   cost: Cost | 'pending' | null;
   replyId: string | null;
   // The discount lane that served it (model/chat Receipt discount); absent when none did.
   discount?: Discount['lane'];
 };
 
-// keep: left where they are, for a reply of a character set to 추론을 본문에 표시; a translation always strips them (user
-// ruling, 2026-10-04). takeBack: only a reader that keeps the reasoning acts on it (Talk); translate, memory and
-// scripts keep the text only, and get what is given back as text all the same.
+// keep applies only to character replies, never translations (user, 2026-10-04).
+// Only Talk consumes takeBack; other tasks still receive the returned content as text.
 export type InlineThoughts = { keep?: boolean; takeBack?: (chars: number) => void };
 
-// The reply in the format the provider answered with: an event stream, or one JSON document when it was asked for
-// whole (ModelSettings streaming). Both read into the same facts and end through the same rules. batched: the reply is
-// the answer read from a discount lane's batch (Batches answer).
+// Streaming and whole JSON replies must share facts/end rules; batched means a discount-batch result.
 export async function decodeStream({ type, codec }: Route, model: Model, response: Response, signal: AbortSignal, onText: (phase: Phase, text: string) => void, inline: InlineThoughts = {}, batched = false): Promise<Outcome> {
   const facts: StreamFacts = { rawUsage: {}, finishReason: null, id: null, tier: null };
   let said = false;

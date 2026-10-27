@@ -1,5 +1,4 @@
-// The share consent's version. The account's row keeps the one it agreed to, and a publish needs the current one, so
-// changing the consent's text raises this and every sharer is asked again.
+// Bump when consent text changes: publishing requires the current version, asking existing sharers again.
 export const SHARE_CONSENT = 1;
 
 // A share's id: 12 random bytes in base64url, made by the server.
@@ -15,5 +14,4 @@ export const MAX_SHARE_LINK = 300;
 export type ShareCover = { name: string; creator: string; line: string };
 export const COVER_LENGTH = { name: 100, creator: 100, line: 200 } as const satisfies Record<keyof ShareCover, number>;
 
-// What the anonymous GET answers. live: the newest version, the manifest's file id and the 받은 횟수.
 export type ShareState = { state: 'live'; version: number; manifest: string; received: number } | { state: 'held' } | { state: 'gone' };

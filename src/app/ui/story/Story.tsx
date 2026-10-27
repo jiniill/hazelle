@@ -67,18 +67,15 @@ const ORIGINAL_BLOCK = 'p, li, h1, h2, h3, h4, h5, h6';
 const pictureKey = (picture: Element) => `${picture.getAttribute(PICTURE)}:${picture.querySelector('img')!.getAttribute('src')}`;
 // Sent from a message when the reader opens or closes one of its pictures, so the chat keeps its view where it is.
 export const READER_RESIZED = 'readerresized';
-// The CSP refuses a style attribute, even in the document the sanitizer parses into, so each is renamed before the
-// parse and applied through CSSOM, which the CSP allows. A DOMPurify hook would come too late: hooks run after the parse.
-// One match per tag, up to its first > (a > inside a quoted value ends it, as it always has), or to the end for a tag
-// never closed: a lazy scan from every < rescanned the rest of the text for each < with no > after it.
+// Rename style attributes before DOMPurify parse; hooks run too late for CSP. Apply via CSSOM afterward.
+// Scan each tag once through first > (including quoted >) or EOF; repeated lazy opener scans become quadratic.
 const TAG = /<[a-z][^>]*(?:>|$)/gi;
 const STYLE_ATTRIBUTE = /(\s)style(?=\s*=)/gi;
 const SET_ASIDE = 'data-style';
 export const setStylesAside = (html: string) => html.replace(TAG, (tag) => tag.replace(STYLE_ATTRIBUTE, `$1${SET_ASIDE}`));
-// No form: the CSP does not limit where one posts. DOMPurify's own URL rule, with blob: added for the bots' pictures;
-// sanitize then keeps only the app's own sources and web links. No popover or command: either opens an element in
-// the top layer, which no containment holds, without a script. KaTeX's MathML (math.ts) wraps a formula in semantics and
-// its TeX in annotation, which DOMPurify drops by default while keeping their text: the TeX would show beside it.
+// No forms (page CSP has no form-action restriction) or popover/command (top layer escapes containment).
+// Allow MathML semantics/annotation so DOMPurify does not unwrap TeX beside rendered formulas.
+// Add blob: to URL parsing; sanitize later restricts to app-owned sources and web links.
 const CONFIG = {
   RETURN_DOM_FRAGMENT: true as const,
   ADD_TAGS: ['semantics', 'annotation'],
@@ -89,8 +86,8 @@ const CONFIG = {
 };
 const VOID = new Set(['BR', 'HR', 'IMG', 'INPUT', 'WBR']);
 const HTML = 'http://www.w3.org/1999/xhtml';
-// An url( never closed runs to the end, as CSS reads it, and goes whole: matching only a closed one rescanned the rest
-// of the text for each url(. The look-ahead takes the spaces itself: \s* giving one back would let url( "blob:…" ) past it.
+// Consume unterminated url( to EOF to avoid quadratic rescans. Consume whitespace in lookahead too:
+// backtracking must not let quoted blob URLs bypass filtering.
 const OUTSIDE_URL = /url\((?![\s'"]*(?:data|blob):)[^)]*(?:\)|$)/gi;
 const ANY_URL = /url\([^)]*(?:\)|$)/gi;
 // data: pictures, and blob: ones, which only the app itself can make: the chat puts its bots' pictures there.
@@ -118,27 +115,20 @@ function termRanges(shadow: ShadowRoot, term: string): Range[] {
   return ranges;
 }
 
-// For a stylesheet and a style attribute alike. Risu prefixes every class with x-risu- in the HTML and in the CSS, so
-// a bot may write either, and both lose it. Only the app's own URLs load: the CSP refuses the others anyway.
-// While 이미지 가리기 is on, the app's own URLs go too: a bot draws its pictures as backgrounds as well.
-// @import is left to the constructed stylesheet, which drops it. A pattern cut it at the first ;, which a font URL
-// holds inside its quotes (wght@600;700), and the rest of the URL swallowed the bot's next rule.
-// Risu re-reads a bot's CSS through a parser, which drops the non-breaking spaces some bots indent it with; a browser
-// reads one ahead of a selector as part of it, and the rule matches nothing. One inside a quoted string is the bot's
-// text; a comment is skipped whole, as its apostrophe opens no string. Both end where CSS ends them (a string at its
-// line, a comment at the end), so an unclosed one is no rescan.
+// Strip Risu's x-risu- prefix in HTML and CSS alike. Only app-owned URLs survive, and veiling removes those too.
+// Let constructed stylesheets drop @import: splitting at semicolons breaks quoted font URLs (wght@600;700).
+// Normalize selector NBSPs as Risu's parser does, but preserve strings and skip comments, including their quotes.
+// Unterminated strings end at the line, comments at EOF, to avoid rescanning.
 const NBSP_OUTSIDE_STRINGS = /(\/\*[\s\S]*?(?:\*\/|$)|"(?:\\[\s\S]|[^"\\\n])*"?|'(?:\\[\s\S]|[^'\\\n])*'?)|\u00a0/g;
 export const cleanCss = (css: string, veiled: boolean) => css.replace(NBSP_OUTSIDE_STRINGS, (_, quoted?: string) => quoted ?? ' ').replaceAll('.x-risu-', '.').replace(veiled ? ANY_URL : OUTSIDE_URL, 'none');
 
-// A fixed box would be placed and cut by the message that holds it (Story.module.css): a console centred on Risu's
-// screen shrank to a sliver in an otherwise empty message. It stands where it is written instead, and its offsets and
-// transform go with fixed, since they placed it on the screen (top: 50% with translate(-50%, -50%) to centre it).
+// Fixed boxes are clipped by message containment (Story.module.css). Returning them to flow must also remove
+// screen-relative offsets/transforms, e.g. top: 50% with translate(-50%, -50%).
 const SCREEN_PLACEMENT = ['top', 'right', 'bottom', 'left', 'inset', 'transform', 'translate'];
 // The screen's whole width or height: a backdrop over Risu's page would stand as a screen-sized block in the message.
 const SCREEN_SIZE = ['width', 'height'];
-// A box over the whole screen (a backdrop whose press closes a drawer) covers the message instead, so a press outside
-// the drawer still lands on it.
-// One pinned to all four sides with a size of its own is a centred dialog, not a cover.
+// Full-screen backdrops cover only the message so outside-drawer clicks still close it.
+// A sized element pinned on all four sides is a centered dialog, not a backdrop.
 const SIDES = ['top', 'right', 'bottom', 'left'];
 const OVER_MESSAGE = { position: 'absolute', top: '0', left: '0', width: '100%', height: '100%' };
 function covers(style: Declarations) {
@@ -151,10 +141,8 @@ function covers(style: Declarations) {
 const WIDTHS = ['width', 'min-width', 'max-width', 'flex-basis'];
 // A number standing alone, not the end of a name (--width-100vw).
 const VW = /(?<![\w-])(\d*\.?\d+)vw\b/g;
-// A drawer Risu kept off the screen by its own extent (right: -33% beside width: 33%) until a rule set that offset back
-// (.panel[class*="opened"] { right: 0 }). Grounded with its offsets gone it would stand open in the message, so it is
-// hidden and that rule shows it, across the message: its extent was a share of the screen it slid over. A box only
-// partly off the screen (a tab peeking out at right: -23px) stays shown.
+// Removing offsets must not expose parked drawers: hide them until their opening rule applies, then span the message.
+// Only fully off-screen drawers qualify (right: -33% with width: 33%); partially visible tabs stay shown.
 const EXTENT = { top: 'height', right: 'width', bottom: 'height', left: 'width' } as const;
 type Side = keyof typeof EXTENT;
 const LENGTH = /^(-?\d*\.?\d+)([a-z%]*)$/;
@@ -221,9 +209,8 @@ let base: CSSStyleSheet | null = null;
 export const botSheets = (shadow: ShadowRoot) => shadow.adoptedStyleSheets.filter((sheet) => sheet !== base);
 
 const BREAKS = /^(?:P|DIV|LI|TR|BLOCKQUOTE|PRE|H[1-6]|SECTION|ARTICLE|HEADER|FOOTER|UL|OL|TABLE|DETAILS|SUMMARY)$/;
-// What a story's html reads as, undrawn (Hazelle.Rendered's text), with a line break for each <br> and block. DOMPurify
-// parses it, as sanitize does: the page requires Trusted Types, which a plain DOMParser of a string breaks, and its
-// fragment stays in an inert document, so no picture loads.
+// Use inert DOMPurify parsing, not raw DOMParser strings (Trusted Types).
+// Return undrawn text with block/br breaks and never load pictures (Hazelle.Rendered).
 export function storyText(html: string): string {
   let text = '';
   const walk = (node: Node) => {
@@ -281,8 +268,7 @@ function copyButton(): HTMLButtonElement {
 
 const videoSource = (video: Element) => [video, ...video.querySelectorAll('source')].map((element) => element.getAttribute('src') ?? '').find((source) => OWN_SOURCE.test(source)) ?? null;
 
-// The one mark inlaid left: a paragraph of its own becomes the slot, a mark inside the bot's HTML gives the slot its
-// place; a mark the sanitizer took leaves the slot at the end.
+// Replace a standalone inlay-mark paragraph, otherwise insert within bot HTML. Sanitized-away marks fall back to the end.
 function placeInlay(fragment: DocumentFragment, mark: string | null, name: string) {
   const slot = document.createElement('slot');
   slot.name = name;
@@ -309,8 +295,7 @@ function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFra
     element.removeAttribute(SET_ASIDE);
   }
   for (const element of fragment.querySelectorAll('[class]')) element.setAttribute('class', element.getAttribute('class')!.replace(/(^|\s)x-risu-/g, '$1'));
-  // Every element that follows a link: HTML's a and area, and SVG's a, whose address may be written as xlink:href.
-  // That one is moved to href, which wins when both are written, so one attribute holds every link.
+  // Normalize HTML/SVG link addresses into href; existing href wins over xlink:href. Include area elements.
   for (const link of fragment.querySelectorAll('a, area')) {
     const href = link.getAttribute('href') ?? link.getAttributeNS(XLINK, 'href');
     link.removeAttributeNS(XLINK, 'href');
@@ -365,8 +350,8 @@ function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFra
       media.controls = true;
     }
   }
-  // The other ways HTML draws a picture, none of which a veil opens: SVG's image and feImage, a video's poster, the
-  // old background attribute. An SVG href to its own #part is not a picture.
+  // Veil non-openable image paths too: SVG image/feImage, video poster and background attributes.
+  // An SVG local #part reference is not an external picture.
   if (veil) {
     for (const element of fragment.querySelectorAll('[*|href]:not(a, area)')) {
       if (!OWN_SOURCE.test(element.getAttribute('href') ?? element.getAttributeNS(XLINK, 'href') ?? '')) continue;
@@ -412,8 +397,8 @@ function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFra
 
 const BLOCK = 'p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, td, th, div';
 
-// What is selected in a story: the selected text of its first block and, when it runs on, of its last, and where it
-// ends; null when the selection begins or ends outside it. By block, since a range's text runs blocks together.
+// Select first/last block text separately: Range.toString joins block text without usable boundaries.
+// Null when either endpoint is outside the story.
 export function storySelection(story: HTMLElement): { pieces: string[]; end: SelectionEnd } | null {
   const root = story.firstElementChild?.shadowRoot;
   const selection = document.getSelection();
@@ -445,15 +430,15 @@ const milliseconds = (time: string) => parseFloat(time) * (time.trim().endsWith(
 // A picture's line easing open or shut (Story's reshape), so a turn midway takes over from it.
 const running = new WeakMap<Element, Animation>();
 
-// Set over any the bot's HTML wrote. A picture already loaded is measured before the frame is drawn. One shared
-// listener, since a kept picture is marked again on every draw and the same listener added twice is added once.
+// Override bot-provided picture-line marks before paint for loaded images.
+// Use one shared listener so repeated draws cannot accumulate handlers.
 function markWide(picture: HTMLImageElement) {
   if (picture.complete) mark(picture);
   else picture.addEventListener('load', markLoaded, { once: true });
 }
 
-// Brings live to want's shape in place, keeping every node both hold, so a picture, video or animation drawn before a
-// streamed chunk goes on through it. By position, since a reply grows at its end. want's new nodes are moved, not copied.
+// Morph in place to keep picture/video/animation nodes alive across streamed chunks.
+// Match by position (replies append); move new nodes instead of copying them.
 function morph(live: ParentNode, want: ParentNode) {
   let at = live.firstChild;
   for (const node of [...want.childNodes]) {
@@ -548,8 +533,8 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
 
   useEffect(() => {
     const shadow = root();
-    // Its height eased from where it is drawn to where change leaves it. From the drawn height, so a line turned again
-    // midway goes on from there; content heights, as max-height reads them whatever the bot's box-sizing.
+    // Animate from current drawn content height so reversal continues smoothly mid-transition.
+    // Use content heights regardless of bot box-sizing, matching max-height.
     const reshape = (line: HTMLElement, change: () => void) => {
       const height = () => getComputedStyle(line).height;
       const from = height();

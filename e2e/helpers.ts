@@ -97,9 +97,8 @@ export const SCRIPTED = {
   ),
 };
 
-// An OpenAI-compatible provider in this process, listed in the server's HAZELLE_LOCAL_PROVIDERS, so 직접 연결 takes its
-// plain http address as a self-hoster's own model server. Every chat request body it hears is kept for the test to read,
-// and every embedding request in embedded.
+// Use the self-host local-provider allowlist for the in-process plain-HTTP fake.
+// Retain chat bodies and embedding requests separately for assertions.
 export const FAKE_PROVIDER = '127.0.0.1:4419';
 export const FAKE_ADDRESS = `http://${FAKE_PROVIDER}/v1`;
 
@@ -269,8 +268,8 @@ export const saving = (page: Page) => page.waitForResponse((response) => respons
 export const settingsPage = (page: Page, label: string) =>
   page.getByRole('navigation', { name: '설정' }).getByRole('button', { name: new RegExp(`^${label}( |$)`) }).click();
 
-// A built server of a spec's own (npm run e2e builds first), on a port and data directory apart from the suite's, for a
-// spec that stops it or needs signup still open; it lets the fake provider through like the suite's (playwright.config.ts).
+// Start a separate built server/port/data directory for destructive lifecycle or open-signup specs.
+// Keep the suite's same fake-provider allowlist.
 export async function startServer(port: number, data: string, fresh = false, env: Record<string, string> = {}): Promise<ChildProcess> {
   const health = () => fetch(`http://localhost:${port}/api/health`).then((response) => response.status, () => 0);
   // A server an earlier run left on the port would answer for this one; its data directory is checked for only after.

@@ -17,8 +17,8 @@ import type { Write } from './object-writes';
 // Fixed, so two devices adding the first persona at once meet in a version conflict instead of making two.
 export const FIRST_ID = '00000000-0000-4000-8000-000000000002';
 
-// A saved chat holds the persona it was saved with (startChat, the move, recordChatPersonas), and a pick in it changes
-// that and the current persona. The 고정 on its character, then the current persona, serve a chat not saved yet.
+// Saved chats keep their persona; picking changes that chat and current persona.
+// Only unsaved chats follow character pin, then current persona.
 export type PersonaSource = 'chat' | 'character' | 'current';
 
 // There is no chat without a persona; a deleted one, or a current one not added yet, reads as missing and never as
@@ -42,8 +42,8 @@ export function withPersona(store: Pick<ObjectStore, 'get'>, chat: Chat): Chat {
   return id === undefined ? chat : { ...chat, persona: id };
 }
 
-// Chats saved before every saved chat held its persona, binned ones too, get the one they read now, once, before a pick
-// can change what they read. Written unheld: a chat's rev moving only stales its summary, which its next opening rewrites.
+// Backfill old chats, including binned ones, before a pick changes their inherited persona.
+// Write unheld: changed revs stale summaries, rebuilt on next open.
 export async function recordChatPersonas(store: ObjectStore): Promise<void> {
   const writes: Write[] = store.list('chat').flatMap(({ id, value }) => {
     if (value.persona !== undefined) return [];
@@ -55,8 +55,7 @@ export async function recordChatPersonas(store: ObjectStore): Promise<void> {
 
 export const chatsHolding = (store: Pick<ObjectStore, 'list'>, persona: string): string[] => store.list('chat').flatMap((chat) => (live(chat)?.value.persona === persona ? [chat.id] : []));
 
-// 채팅 옮기기: the chats given move to another persona together, written unheld as recordChatPersonas writes them. Its
-// 되돌리기 moves back the same ids, not every chat holding the persona by then.
+// Move only the supplied chat ids; undo must not capture other chats later assigned the persona. Write unheld.
 export async function rebindChats(store: ObjectStore, ids: string[], persona: string): Promise<ApiResult<null>> {
   const writes: Write[] = ids.flatMap((id) => {
     const chat = live(store.get('chat', id));

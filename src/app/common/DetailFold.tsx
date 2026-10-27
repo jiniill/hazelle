@@ -4,8 +4,7 @@ import { DETAIL, detailLabel } from './words';
 
 type Rows = { children: ReactNode; sections?: never } | { sections: { title: string; rows: ReactNode }[]; children?: never };
 
-// The fold stays a quiet line (a ruling), never a row or a box's head. set: how many of its rows are set. sections: its
-// rows under titles, for a page whose detail spans several things.
+// Keep this a quiet line, never a row/box header (user ruling). set counts configured rows across sections.
 export function DetailFold({ set, children, sections }: { set: number } & Rows) {
   return (
     <Disclosure label={detailLabel(set)}>

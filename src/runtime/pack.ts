@@ -10,10 +10,8 @@ export type ScriptList = 'regex' | 'triggers';
 type Scripts = Pick<Pack, ScriptList>;
 type Parts = Pick<Pack, ScriptList | 'toggles'>;
 
-// The one place that knows where an owner keeps its pack: a character in its card, a module at its top level. Each
-// change is applied to the copy written over, so an edit to another script on another device survives, and may run
-// again over its own result (ObjectStore.reaching), so it must read the same applied twice as once. null: what it
-// changes is gone there, and nothing is written.
+// Own character.card vs module pack access here. Retry changes against the latest copy, preserving unrelated edits.
+// Changes must be idempotent; null means target gone, with no write.
 function updatePack(store: ObjectStore, { kind, id }: PackOwner, change: (pack: Parts) => Partial<Parts> | null): Promise<ApiResult<unknown>> {
   return kind === 'character'
     ? store.update('character', id, (current) => {
@@ -68,8 +66,7 @@ export const setScriptOff = (store: ObjectStore, owner: PackOwner, list: ScriptL
     patched(scripts, id, (script) => (off ? { ...script, off: true } : without(script, 'off'))),
   );
 
-// A script moves past its neighbour in its list; a regex script past the nearest one of its own stage, since only
-// their order within a stage means anything. null: it has none that way.
+// Move regex scripts past same-stage neighbours only: cross-stage source order has no effect.
 export const neighbour = (pack: Scripts, list: ScriptList, id: string, by: -1 | 1): string | null => {
   const scripts: Listed[] = pack[list];
   const at = scripts.findIndex((script) => script.id === id);
@@ -109,8 +106,7 @@ export const restoreScript = (store: ObjectStore, owner: PackOwner, { list, scri
 // The whole list, as the prompt's is written (runtime/prompts editPrompt): its lines have no ids to merge by.
 export const setToggles = (store: ObjectStore, owner: PackOwner, toggles: ToggleLine[]) => updatePack(store, owner, () => ({ toggles }));
 
-// A pattern may never end, so a sample runs where a chat's scripts do: in the evaluation worker, which is stopped when
-// it hangs. A newer sample of the same script takes the place of one still waiting.
+// Run samples in the watchdog-protected evaluation worker; newer samples replace pending ones of the same script.
 export const sampleScript = (store: ObjectStore, owner: PackOwner, script: RegexScript, text: string, signal: AbortSignal): Promise<ApiResult<string>> =>
   store.evaluation.sample(`sample:${owner.id}:${script.id}`, script, text, signal).then((data) => ({ ok: true, data }), evaluationFailure);
 

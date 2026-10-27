@@ -1,7 +1,6 @@
 import { GenerationChanged, type CachedScope, type CacheWrite, type DeviceCache, type Generation } from './object-cache';
 
-// A store a restore ended hands the device copy on through its clear: the next store of this page opens it only once
-// that ran, and not at all if it failed, since the copy still holds the ended timeline.
+// Do not hand a rewound cache to the next store before clear succeeds; failed clear leaves the old timeline unsafe.
 const handed = new WeakMap<DeviceCache, Promise<boolean>>();
 
 export class ObjectCacheSession {
@@ -55,8 +54,8 @@ export class ObjectCacheSession {
     if (this.cache) this.enqueue(async (generation) => { this.generation = await this.cache!.adopt(generation, timeline); });
   }
 
-  // A failed transaction leaves a valid prefix: no later cursor may pass rows it failed to save. An ending store's
-  // queued work is skipped. A changed generation is not a failure: another tab moved the cache, so the store ends.
+  // Failed transactions retain only a valid prefix; cursors must not advance past it.
+  // Skip ending-store work; a changed generation ends the store without treating another tab's clear as cache failure.
   private enqueue(work: (generation: Generation) => Promise<void>, ending = false) {
     this.queue = this.queue.then(async () => {
       if (ending || (!this.failed && !this.ending.aborted)) await work(this.generation!);

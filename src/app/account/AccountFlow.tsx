@@ -40,14 +40,12 @@ export type Unlocked = Account & { accountId: string; username: string; vaultKey
 
 const ELSEWHERE = '다른 탭에서 다른 계정으로 로그인해서 로그아웃됐어요.';
 const GUEST_NAME = '손님';
-// The username setup gives the one account. A solo sign-in never asks for it, but it names the first persona
-// (addFirstPersona), so the model reads it as {{user}}: a word like RisuAI's "User", never a placeholder like owner.
+// Setup username becomes the first persona/{{user}} even though solo login hides it.
+// Use a person-like name, never an ownership placeholder.
 const OWNER = '사용자';
 
-// Who this browser opens as with no session: the username of the account it last opened, so a lapsed session asks for
-// its login instead of showing an empty guest home that reads as lost data, or '' once 손님으로 쓰기 was picked. Never
-// set (a browser from before 손님 모드), an account's device cache stands for the first. Storage may be refused, which
-// only loses the hint.
+// Remember last account to avoid presenting a lapsed session as an empty guest/lost data.
+// Explicit guest choice stores empty; older browsers infer from device cache. Storage failure loses only the hint.
 const ENTRY = 'risu-alpha:entry';
 async function entry(): Promise<string | null> {
   let stored: string | null = null;
@@ -95,10 +93,8 @@ async function loadState(notice: string | null = null, prefer: 'auto' | 'guest' 
 export function AccountFlow({ children }: { children: (unlocked: Unlocked) => ReactNode }) {
   const [state, setState] = useState<State>({ kind: 'loading' });
 
-  // The page holds the account it is signed in as, locked or not, and goes on holding it while it asks who it is now
-  // (loading, unreachable): a request still leaving for that account stays refused. Once the server says the cookie
-  // names another account, the page asks again and shows that one, which closes what was open. Unlocked, what answers
-  // say of the account goes to its facts. A guest holds none: the server has no account of it.
+  // Keep the page-held account through lock/loading/outages, rejecting cookie-account mismatches until rechecked.
+  // A confirmed different cookie account closes old state. Unlocked responses update facts; guests hold no server account.
   function show(next: State) {
     const facts = next.kind === 'unlocked' ? next.facts : null;
     if (next.kind === 'locked' || next.kind === 'recovered' || next.kind === 'unlocked') {
@@ -129,8 +125,8 @@ export function AccountFlow({ children }: { children: (unlocked: Unlocked) => Re
   const moving = (title: string) => (step: GuestTransferStep) =>
     setState((now) => (now.kind === 'moving' ? { kind: 'moving', moved: { title, steps: { ...now.moved.steps, [step.kind]: step } } } : now));
 
-  // Every way into an account ends here, so what a guest made in this browser is never passed by: a guest whose upload
-  // into this same account was cut off finishes it, and another guest's content waits for 올리기 or 버리기.
+  // Every account entry reconciles guest data: finish this account's interrupted upload,
+  // otherwise await explicit upload/discard before opening it.
   async function land(session: SessionFacts, vaultKey: VaultKey) {
     try {
       const held = await guestWithContent();

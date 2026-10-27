@@ -13,9 +13,8 @@ import workerUrl from './evaluation-worker?worker&url';
 
 export class EvaluationStopped extends Error {}
 export class EvaluationFailed extends Error {}
-// A bot's script that does not end: the started job that went STUCK_MS without a sign of life, which alone fails, or a
-// passive job refused unposted because its chat is judged. regex: the job ran with the bot's regex, so a run without it
-// may land.
+// Stuck means one started job exceeded STUCK_MS without progress, or a passive job was gated by that verdict.
+// regex records whether retrying without bot regex may recover.
 export class EvaluationStuck extends EvaluationFailed {
   constructor(message: string, readonly regex: boolean) {
     super(message);
@@ -35,10 +34,8 @@ export const evaluatingTask = <T>(work: Promise<T>): Promise<T | { kind: 'stoppe
     return failure.error === 'stopped' ? { kind: 'stopped' as const } : { kind: 'unsaved' as const, failure };
   });
 
-// The worker gives a sign of life per stage of a message, lorebook entry scanned and text counted (engine/progress), so
-// STUCK_MS bounds one such unit, never a whole pass over a long chat; a bot's regex that never ends is what passes it.
-// Before a job has started, which a job that counts does once the tokenizer has loaded, only a worker that cannot
-// answer at all is ended, after LOAD_MS.
+// STUCK_MS bounds a stage/scan/count unit, not a whole long-chat pass (engine/progress).
+// Before started/tokenizer load, use LOAD_MS only for a worker that cannot answer.
 const STUCK_MS = 3_000;
 const LOAD_MS = 20_000;
 // Give the completed screen a paint before prefetching; a requested count loads immediately, without this delay.
@@ -69,8 +66,7 @@ const GATES = {
   trial: 'press',
 } as const;
 type Asker = keyof typeof GATES;
-// Who asks, for which chat, saved or not yet. A lane holds one job: a newer one on the same lane stops the one waiting
-// or running. Its history is kept until it is forgotten, so its next job sends the worker only what changed.
+// One job per caller/chat lane: replacement cancels the prior job. Retain history for changed-tail transport.
 export type Lane<A extends Asker = Asker> = { asker: A; chat: string; tool?: string };
 export type Verdicts = { verdict(chat: string): boolean; judged(chat: string): void };
 

@@ -31,9 +31,8 @@ export type Fate =
 
 export type Fired = { id: string; why: Why; fate: Fate };
 
-// An entry that did not fire this turn, and why. closed: the entry is off, or a condition kept it out of the scan, the first
-// that failed in the order activate checks them; only-after and only-every carry the decorator's own number, which counts
-// Risu's chatLength. keyless: it was scanned with no key to find; unmatched: no key was found.
+// Report the first failed condition in activation order; only-after/every count Risu chatLength.
+// keyless was scanned without keys; unmatched had keys but no hit.
 type Closed = { kind: 'closed'; cause: 'disabled' | 'never' | 'after-match' | 'greeting' } | { kind: 'closed'; cause: 'only-after'; from: number } | { kind: 'closed'; cause: 'only-every'; every: number };
 export type Silent = { id: string; why: Closed | { kind: 'keyless' } | { kind: 'unmatched' } };
 
@@ -41,9 +40,7 @@ export type Silent = { id: string; why: Closed | { kind: 'keyless' } | { kind: '
 export type LoreEntries = { id: string; value: Omit<LoreEntry, 'folder'> }[];
 
 export type LoreTurn = {
-  // The chat's messages before the reply being written, the greeting not among them: Risu never scans the
-  // greeting for keys. Its length + 1 is Risu's chatLength, which @@activate_only_after and @@activate_only_every
-  // compare with, whether the chat has a greeting or not.
+  // Exclude the greeting from key scans. Risu chatLength is history.length + 1 regardless of greeting presence.
   history: HistoryMessage[];
   // The chat's greeting as an index into Card.greetings, which @@is_greeting counts from 1.
   greeting: number | null;
@@ -79,8 +76,7 @@ type Where =
   | { kind: 'position'; name: string }
   | { kind: 'inject'; target: string };
 
-// What an entry's decorators leave it with. A later decorator of the same kind replaces an earlier one, and
-// so does any later placement decorator (depth, position, inject_at).
+// Later decorators replace earlier ones of the same kind; placement kinds also replace one another.
 type Rules = {
   trigger: 'keys' | 'activate' | 'never';
   afterMatch: 'keep' | 'dont' | null;
@@ -170,8 +166,7 @@ function activate(shelf: (Book | string)[], books: Book[], { scanDepth, recursiv
   let waiting = books.filter((book) => closed(book) === null).map((book) => ({ book, evidence: new Map<Matcher, Source>() }));
   let frontier: Scanned[] = [];
   let first = true;
-  // Each pass scans what the passes before it activated; an entry fires once, and its roll is its own for the
-  // whole send, whichever pass reaches it.
+  // Scan prior passes' activated text. Each entry fires at most once and retains its roll across passes.
   for (;;) {
     const waited = waiting;
     const now: Book[] = [];
@@ -479,10 +474,8 @@ function placement({ where, role, operation }: Rules): Placement {
   }
 }
 
-// Risu's order among the entries at one depth (risu-compat-spec §e steps 7 and 14), kept now that depth counts
-// from the end: @@depth entries last-first, then @@reverse_depth ones in order. At 0, where Risu sent @@depth
-// entries to postEverything, @@reverse_depth ones come first, then @@depth ones in order with assistant ones last.
-// Empty for an entry bound elsewhere.
+// Preserve Risu ties (§e steps 7/14): at depth >0 reverse @@depth, then keep @@reverse_depth order.
+// At 0 put reverse-depth first, then depth in order with assistant entries last; elsewhere return empty.
 function depthRank({ where, role }: Rules, index: number): number[] {
   if (where.kind !== 'depth') return [];
   if (where.depth > 0) return where.reverse ? [where.depth, 1, index] : [where.depth, 0, -index];

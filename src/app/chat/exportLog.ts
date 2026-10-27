@@ -27,10 +27,8 @@ export const untranslated = (messages: Shown[], view: Display, { from, to }: Pic
 // oldest first (useChat).
 type Illustrated = { placed: ReadonlyMap<number, string>; pictures: ReadonlyMap<string, Stored<'illustration'>[]> };
 
-// The rows a log draws, as the chat draws them, their pictures still named by pictureRef. A reply being written, a
-// failed one and an empty one are left out, and a message's boxes stand in it as they did when it was written. A
-// message's 삽화 go into its first text, the newest of each place, at its paragraph as the chat places it.
-// A message's stories in the order its row draws them: the boxes its scripts put at the top, its own, then the bottom's.
+// Exclude live/failed/empty replies; restore historical boxes around their message text.
+// Use newest illustration at each paragraph, in its first text; order top boxes → story → bottom boxes.
 const aroundBoxes = (boxes: Display['boxes'][number], own: string[], decor: { bot: boolean; url: PictureUrl }) => {
   const box = ({ html }: (typeof boxes)[number]) => shownHtml(html, decor);
   return [...boxes.filter(({ at }) => at === 'top').map(box), ...own, ...boxes.filter(({ at }) => at === 'bottom').map(box)];

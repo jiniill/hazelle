@@ -29,10 +29,8 @@ export const tourOf = (version: string | null) => TOURS.find((tour) => tour.vers
 // open is someone new, who has no before to compare.
 export const openedNewRelease = (built: string | null, lastOpened: string) => built !== null && lastOpened !== '' && lastOpened !== built;
 
-// The tour to show on this device: the newest, unless the device has seen it, once no tutorial is left to offer (settled:
-// a reply has come, or this device finished them), since a tour tells people already using the app (user, 2026-10-22);
-// a newcomer is welcomed with the tutorial instead and gets the tour on a later open. Never on a build without a version
-// (dev, tests).
+// Show unseen tours only after tutorial completion/first reply; newcomers get tutorials and a tour on a later open
+// (user, 2026-10-22). Unversioned builds show none.
 export function tourToShow(built: string | null, seen: string, tours: Tour[], settled: boolean): Tour | null {
   const newest = tours[0];
   return built !== null && settled && newest && newest.version !== seen ? newest : null;

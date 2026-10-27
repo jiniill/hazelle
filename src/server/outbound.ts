@@ -5,8 +5,8 @@ import { destination } from '../connectors/destination';
 import type { Upstream } from './relay';
 import { checkTarget, isPublicAddress, PolicyRefusal } from './ssrf';
 
-// The one way the server reaches a provider: undici's fetch over a dispatcher that pins every connection to the
-// addresses its own lookup validated. Node's global fetch cannot take this undici's dispatcher, so it is never used.
+// All provider fetches use undici with validated, pinned DNS dispatch. Never substitute global fetch:
+// it cannot use this undici instance's dispatcher.
 
 export type Resolve = (hostname: string, options: LookupOptions) => Promise<LookupAddress[]>;
 
@@ -17,9 +17,8 @@ const TIMEOUT_MS = 15 * 60 * 1000;
 // the process-wide bound is those live calls.
 const CONNECTIONS = 128;
 
-// Resolves every address itself and refuses the connection on the first one allowed refuses, so the socket and its
-// family fallback dial only what was validated; the host name stays the TLS server name. net asks for one address or,
-// with all, for the list.
+// Validate every resolved address before dialing any; family fallback must not escape validation.
+// Keep the original hostname for TLS, handling net's single/all lookup forms.
 export function pinnedLookup(resolve: Resolve, allowed: (address: string) => boolean): LookupFunction {
   return (hostname, options, callback) => {
     resolve(hostname, options).then(

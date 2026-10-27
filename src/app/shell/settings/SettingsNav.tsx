@@ -13,8 +13,7 @@ import { subpages, TERMS } from './terms';
 type Place = { page: SettingsPage; label: string; icon: LucideIcon; route: Route };
 type Group = { title: string; places: Place[] };
 
-// Only built pages are listed. A group's title never repeats a label inside it. The app and the account sit at the
-// bottom, which the sidebar sets apart in its footer and the phone list as its last group.
+// List built pages only; group headings cannot repeat child labels. Keep app/account in the separated footer group.
 const GROUPS: Group[] = [
   {
     title: 'AI 엔진',

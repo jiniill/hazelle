@@ -34,9 +34,8 @@ const OTHERS = '기타';
 // The one identity of a row across periods (contracts/pulse.ts): its key and type, never its model's spelling.
 const rowId = (place: PulsePlace) => `${place.key}\0${place.type ?? ''}`;
 
-// The server ranks 기타 by its count among the models; here it holds no place and goes last, so a pool never takes a medal.
-// A split row whose provider this build cannot name is left out, and places run without gaps. The earlier order goes
-// through this too, so a mark compares places counted the same way.
+// Re-rank both current/prior lists identically: exclude unknown providers and move 기타 last without a place.
+// Never award the pooled row a medal or introduce rank gaps.
 function placeRows<T extends PulsePlace>(order: { merged: T[]; split: T[] }, split: boolean): { row: T; provider: string | null; rank: number | null }[] {
   const shown = split
     ? order.split.flatMap((row) => {

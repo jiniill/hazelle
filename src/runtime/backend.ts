@@ -2,8 +2,7 @@ import type { FileSweep, HeldFiles, MissingFiles, SweptFiles } from '../contract
 import type { BatchAnswer, FeedAnswer, FeedQuery, SealedWrite } from '../contracts/objects';
 import { api, type ApiResult } from './api';
 
-// Where an account's sealed objects and files are kept: the server for an account, this browser for a guest
-// (runtime/guest-store, design §6.14). The store and Files speak only this, so neither knows which.
+// Server and guest IndexedDB backends must expose identical sealed object/file semantics to store and Files.
 export interface Backend {
   feed(query: FeedQuery, signal?: AbortSignal): Promise<ApiResult<FeedAnswer>>;
   batch(timeline: string, writes: SealedWrite[], files: string[], signal?: AbortSignal): Promise<ApiResult<BatchAnswer>>;

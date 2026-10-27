@@ -7,11 +7,9 @@ import { DAY_MS, fail, refused, type AppEnv, type Services } from './http';
 import { removePictures } from './reconcile';
 import { takeBackFiles } from './files/claims';
 
-// An account's lifecycle lives on its service row, where a rewind of its store cannot touch it, and its store loads that
-// row when it starts (account-store.ts). Every change is: write the service, restart the store, read back what it
-// loaded. A step below may be cut off at any await and run again: each service write is a compare-and-set that only one
-// runner wins, each store call is safe to repeat, and every statement names the incarnation, so a runner of an account
-// that is gone can never touch a newer account holding the same id.
+// Lifecycle stays on the service row, outside store rewind: write it, restart the store, then verify what loaded.
+// Any await may be interrupted and retried: service writes use compare-and-set; store calls must be repeatable.
+// Every statement names the incarnation so old runners cannot touch a recreated account with the same id.
 
 const MINUTE_MS = 60_000;
 // A restore asks for a time at least this far back, so the snapshot chosen for it lies before the restore's own mark.
@@ -27,8 +25,7 @@ const MAX_STEPS = 24;
 // A fresh stub per call: a stub got before a restart fails every later call.
 export const store = (env: Services, incarnation: string) => env.stores.getByName(incarnation);
 
-// The call that restarts the store ends in an exception by design, never an answer, so the store is asked again on a
-// fresh stub.
+// Restart deliberately throws; verify completion through a fresh stub.
 const restart = (env: Services, incarnation: string) =>
   store(env, incarnation)
     .restart(incarnation)
@@ -54,7 +51,6 @@ export function leaveAccount(
   return env.backups.hold(() => leave(env, ctx, accountId, incarnation, operator));
 }
 
-// What 탈퇴 and the operator's removal answer when the account is not gone; each route answers 'left' its own way.
 export function refuseLeft(c: Context, left: Exclude<Left, 'left'>): Response {
   switch (left) {
     case 'busy':
@@ -126,9 +122,8 @@ type Operation = {
   error: string | null;
 };
 
-// The eligibility of a begin, over an accounts row (unaliased) with ?1 the account, ?2 the operator-only post (null: the
-// account asks itself), ?3 the time asked for, ?4 the restore to undo and ?5 now. The begin's insert and the explanation of a
-// refused one read the same text.
+// Shared restore-eligibility SQL for insertion and refusal explanation. accounts row is unaliased;
+// ?1 account, ?2 private post (null for self), ?3 time, ?4 undo operation, ?5 now.
 const FREE = "accounts.state = 'active' AND NOT EXISTS (SELECT 1 FROM restores WHERE incarnation = accounts.incarnation AND verified = 0)";
 // The operator begins one on an operator-only post (board.ts) the account wrote and the operator has not settled. Only
 // the account's own route passes no post (accounts.ts); the operator's always names one.
@@ -376,10 +371,8 @@ export async function answerBegin(c: Context<AppEnv>, accountId: string, post: n
   return c.json(await runRestore(c.env, begun.begun));
 }
 
-// What a restore can land on now, newest first, each with the time to ask for: every snapshot taken inside the request
-// window, which a restore asked at its own time lands on (snapshotFor), and the older one a restore at the window's
-// oldest edge lands on, for an account unchanged since. That edge is asked a little inside the window, so the point
-// stays askable while the person decides.
+// Offer snapshots inside the request window plus the older baseline covering its oldest edge.
+// Ask slightly inside that edge so the point remains available while the user decides.
 const EDGE_MS = 15 * MINUTE_MS;
 export async function restorePoints(db: Db, accountId: string, now = Date.now()) {
   const incarnation = await db.prepare('SELECT incarnation FROM accounts WHERE id = ?').bind(accountId).first<string>('incarnation');

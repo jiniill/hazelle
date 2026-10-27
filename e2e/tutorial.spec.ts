@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FAKE_ADDRESS, FAKE_MODEL, fakeProvider, setUp, startServer, stopServer } from './helpers';
 
-// Each step finds its control by the screen's GuideMark: a mark lost in a screen's rewrite leaves the note docked with
-// 이어 하기. A server of its own, since the suite's one account has had a reply, and a reply stops offering the tutorial.
+// GuideMarks must survive screen rewrites or notes dock without a target.
+// Use a fresh server: the suite account's earlier reply already suppresses tutorial offers.
 const PORT = 4420;
 let server: ChildProcess;
 

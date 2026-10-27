@@ -32,10 +32,8 @@ const DROPPED_REQUEST_HEADERS = new Set([
 ]);
 const DROPPED_REQUEST_PREFIXES = ['x-forwarded-', 'cf-'];
 
-// fetch decodes the body, so content-encoding and content-length would describe bytes the client
-// never receives. www-authenticate is dropped so a provider 401 cannot open the browser's login prompt.
-// The last group is applied by the browser to this app's origin, not the provider's: a connection
-// could otherwise wipe the session and vault cache (clear-site-data) or redirect error reports.
+// fetch decodes bodies: drop stale encoding/length. Drop www-authenticate to prevent browser login prompts.
+// Origin-scoped headers must not let providers clear app sessions/vault caches or redirect error reports.
 const DROPPED_RESPONSE_HEADERS = new Set([
   ...HOP_BY_HOP,
   'set-cookie',
@@ -104,8 +102,8 @@ export async function forward(upstream: Upstream, body: unknown, bytes: number, 
     return refuse(502, 'upstream-redirect', { status: response.status, location: response.headers.get('location') });
   }
 
-  // A web page is never an API's answer, so a successful one is refused and the relay cannot fetch pages. An error
-  // page (a proxy's 403, Cloudflare's 5xx) keeps its status for the client's message and loses only its body.
+  // Reject successful HTML so relay cannot fetch web pages. Preserve error-page status for useful refusals,
+  // but discard HTML bodies (e.g. proxy/Cloudflare errors).
   const media = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
   const page = media === 'text/html' || media === 'application/xhtml+xml';
   if (page) {
@@ -171,8 +169,7 @@ function outboundHeaders(input: Record<string, string>): Headers {
   return headers;
 }
 
-// No URL, host, headers, body or error message: the relay keeps no record of where a call went, and a message can name
-// the host. The codes along the cause chain (ENOTFOUND, ECONNRESET, UND_ERR_CONNECT_TIMEOUT) name the transport failure.
+// Log transport codes only, never URL/host/headers/body/error messages, which may identify destinations or secrets.
 function unreachable(detail: { codes: string[] } | { status: number }): Response {
   console.error(JSON.stringify({ at: new Date().toISOString(), event: 'relay unreachable', ...detail }));
   return refuse(502, 'upstream-unreachable');

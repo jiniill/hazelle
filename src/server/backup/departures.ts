@@ -4,11 +4,8 @@ import { RETENTION_MS } from '../db/account-db';
 import { fsyncPath, makeDirs } from '../db/durable';
 import { DAY_MS } from '../http';
 
-// departures.json in the backup directory, beside the generations: the accounts that left (탈퇴 or the operator's
-// deletion) while a generation from before they left may still be restored. It lives outside the service database,
-// which a disaster restore rolls back, and restore.ts deletes each one again. deploy/rclone-backup.sh copies it off-site
-// on every pass, and scripts/restore.sh fetch brings it beside the generation. Every read and write is synchronous, so
-// writers in one process never interleave.
+// Keep departures.json outside the rewound service DB so disaster restore re-deletes departed accounts.
+// Copier/restore scripts must move it beside generations. Synchronous reads/writes serialize this process's updates.
 
 export const DEPARTURES = 'departures.json';
 
@@ -60,9 +57,8 @@ export function recordDeparture(dir: string, departure: Departure): void {
   writeDepartures(dir, [...list, departure]);
 }
 
-// Run with every capture (generation.ts), so a generation always has the file beside it and a restore can tell a
-// missing one from an empty one. A generation from before a departure goes at RETENTION_MS from its capture, by the
-// daily job: a day later none that holds the account remains.
+// Create beside every generation, including an empty ledger, so restore can detect a missing file.
+// Prune only after every pre-departure generation expires (capture retention plus the daily pass).
 export function expireDepartures(dir: string, now: number): void {
   writeDepartures(dir, departures(dir).filter(({ leftAt }) => leftAt > now - RETENTION_MS - DAY_MS));
 }

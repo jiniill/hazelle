@@ -13,8 +13,8 @@ export type LogRow = { key: string; name: string; mine: boolean; stories: string
 
 type Props = { title: string; sub: string | null; css: string; reading: Reading; rows: LogRow[]; onDrawn: (snapshot: Snapshot) => void };
 
-// A chat drawn once, out of sight, and handed back as static HTML (snapshot): no tools, no buttons, every picture
-// whole. Drawn at the reading width in the page, never display: none, so it lays out and its pictures decode.
+// Lay out offscreen, never display:none, so snapshot has computed styles/decoded pictures.
+// Use reading width with no controls and all pictures expanded.
 export function LogExport(props: Props) {
   // Drawn once KaTeX has loaded, if any formula needs it: the snapshot is taken as the log is first drawn.
   const math = useMath(props.rows.flatMap(({ stories }) => stories).join(''));

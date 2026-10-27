@@ -116,8 +116,7 @@ const taken = (call: Call, take: (list: unknown[]) => unknown) => {
   return item(value);
 };
 
-// The trigger's own pack's lorebook as Risu numbers it, its folders first as Risu's list holds them when they lead it,
-// each entry's content with its CBS evaluated as the prompt reads it.
+// Number the trigger's own pack lore, including leading folders; evaluate content CBS as the prompt does.
 function lorebook({ run }: Call): { name: string; content: () => string }[] {
   const { scope } = run.snapshot;
   const folders = (scope.loreFolders[run.owner.id] ?? []).map((name) => ({ name, content: () => '' }));
@@ -232,8 +231,8 @@ const CALLS: Record<CallType, (call: Call, ...inputs: string[]) => string | unde
   v2Wait: (_, seconds) => new Promise((resolve) => setTimeout(() => resolve(undefined), Math.max(0, Number(seconds) || 0) * 1000)),
 };
 
-// Effects this app does not have do nothing and are named in run.missing, as a Lua function it lacks is. Conditions
-// and effect operands evaluate CBS at execution. call: a run trigger effect's, which runs the triggers of that name.
+// Missing effects are no-ops recorded in run.missing. Evaluate operands/conditions at execution time.
+// call dispatches triggers by name, regardless of their event.
 export async function runBlocks(trigger: Blocks, run: Acting, call: (name: string) => Promise<void>): Promise<void> {
   const cbs = (value: string) => evaluated(run, value);
   let locals: { name: string; indent: number; value: string }[] = [];
@@ -324,10 +323,8 @@ export async function runBlocks(trigger: Blocks, run: Acting, call: (name: strin
         break;
       }
       case 'command': {
-        // Risu's slash commands, of which only /cut has a caller (the 핑퐁 modules' start trigger, `/cut -N`). Risu
-        // itself undoes a trigger's command edit by installing the chat copy it took before the command ran, so the
-        // evident intent runs here. `a-b` keeps that slice and `-N` the first N, as Risu's `/cut` reads them; a lone
-        // index removes that message, which Risu's splice-assignment meant to.
+        // Only /cut is implemented (ping-pong start triggers). Preserve intended edits rather than Risu's stale-chat overwrite.
+        // a-b keeps a slice; -N keeps the first N; a lone index removes that message.
         const [name = '', argument = ''] = operand(effect.value).trim().split(/\s+/, 2);
         if (name !== '/cut') { run.missing.add(`command ${name}`); break; }
         if (argument.includes('-')) {

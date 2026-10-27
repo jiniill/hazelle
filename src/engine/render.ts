@@ -96,15 +96,12 @@ export function contexts(scope: Omit<ChatScope, 'toggles' | 'cast'> & { toggles:
   return (source, variables) => ({ ...fixed, source, variables, pickSeed: `${pick}:${'message' in source ? source.message : messages.length}` });
 }
 
-// The one pass that turns a chat's stored text into the text shown or sent, oldest message first. The input or
-// output stage is the only one whose CBS writes variables, so a stage chained after it cannot run a setvar twice;
-// the process or display stage reads a copy, so the display never changes what the prompt sees.
-// take: the display scripts, by place among the packs' regex, whose boxes leave the messages (상태창 지정). drawn and
-// boxes are each message's; only the display reads them. staged: each message's text past its input or output stage,
-// which is what the bot's Lua reads; wrote: the variables that stage's own CBS wrote. missed: the messages whose
-// editDisplay pass (lua) is not fresh. unfound: the asset names the display found no picture for, finish's included
-// (null outside the display). stopped: a stage of some message whose CBS ran away, which leaves that stage's
-// text as it came in, its tags as written; null when none did.
+// Replay oldest first. The input or output stage is the only one whose CBS writes variables, so a stage chained after
+// it cannot run a setvar twice; the process or display stage reads a copy, so the display never changes what the prompt sees.
+// take indexes pack regex for status-box extraction; drawn/boxes are per-message display results.
+// staged is post-input/output text for Lua; wrote holds that stage's CBS writes; missed lists stale Lua editDisplay passes.
+// unfound includes finish's missing assets, null outside display. A runaway stage keeps its input with literal tags;
+// stopped is null when none ran away.
 export function renderChat(
   stage: Stage,
   scope: ChatScope,

@@ -6,9 +6,8 @@ import { CARD, confirmImport, enter, pickBot } from './helpers';
 // test card; that account is named owner, and the username here is the one .data/ already holds.
 export const SHOTS = { username: 'shots', password: 'shots-password' };
 
-// The layouts worth showing: a side panel sits beside the page from 1280px, covers it below, and the phone layout
-// starts under 960px. Crossing 960px remounts the page (a new chat rolls its greeting again), so set the size before
-// opening what is shown.
+// Set size before opening: crossing 960px remounts pages and rerolls new-chat greetings.
+// Capture side-by-side panels from 1280px, overlays below, phones below 960px.
 export const SIZES = { wide: { width: 1440, height: 900 }, medium: { width: 1100, height: 800 }, phone: { width: 390, height: 844 } };
 
 // Saved as shots/out/<name>.png once menus and panels have faded in.

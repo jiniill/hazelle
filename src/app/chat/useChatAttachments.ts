@@ -10,9 +10,7 @@ import { NO_PICTURES, UNKNOWN_PICTURES } from '../common/words';
 import { useChildren, useSession } from '../session';
 import { useToast } from '../toast';
 
-// sees: whether the chat's model takes pictures, null where neither its catalog nor the user says (asked again on the
-// next attach).
-// moved: the chat's 옮겨 온 그림도 보내기, null in a chat that holds no picture brought from Risu.
+// sees null is unknown and asks on next attachment; moved null means no imported pictures to opt in.
 export function useChatAttachments(id: string | null, key: string, chat: Chat, route: Route | RouteFailure) {
   const session = useSession();
   const { drafts, store } = session;

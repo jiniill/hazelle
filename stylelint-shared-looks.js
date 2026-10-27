@@ -2,8 +2,7 @@ import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
 import stylelint from 'stylelint';
 
-// Shared looks are taken with composes, never redeclared (src/app/ui/README.md). The looks are read from their own
-// files, so a change there moves this rule with it.
+// Read shared looks from their source classes so composes enforcement follows style changes automatically.
 const ruleName = 'hazelle/shared-looks';
 const messages = stylelint.utils.ruleMessages(ruleName, {
   look: (look, file) => `This rule redeclares the ${look} look: take it with \`composes: ${look} from '…/foundation/${file}'\`.`,
@@ -38,16 +37,14 @@ textLooks.set('error', { ...textLooks.get('note'), ...textLooks.get('error') });
 const track = looksIn('surface.module.css', ['track']).get('track');
 const grounds = looksIn('surface.module.css', ['glass', 'floating']);
 
-// A text look is redeclared where a rule sets what tells it apart, its font-size with its weight (or, without one, its
-// colour), and no text property to another value: xs muted text with a weight of its own is another look.
+// Report matching text looks only when no text property differs; e.g. an independent weight makes a distinct look.
 const redeclaresText = (own, look) =>
   ['font-size', look['font-weight'] ? 'font-weight' : 'color'].every((prop) => own[prop] === look[prop]) && TEXT.every((prop) => own[prop] === undefined || own[prop] === look[prop]);
 
 // A fraction bar's track is its height and radius; each bar fills it in its own colour.
 const redeclaresTrack = (own) => own.height === track.height && own['border-radius'] === track['border-radius'] && (own.background ?? own['background-color']) !== undefined;
 
-// A ground is redeclared where a rule sets all of its values. Only a lone class outside an at-rule can take composes,
-// so a :global selector or a rule in a container query repeats it and is not reported.
+// Only standalone classes can compose; do not flag repeated surfaces in :global or at-rules that cannot use composes.
 const redeclaresGround = (node, own, look) =>
   node.parent.type === 'root' && /^\.[\w-]+$/.test(node.selector) && Object.entries(look).every(([prop, value]) => own[prop] === value);
 

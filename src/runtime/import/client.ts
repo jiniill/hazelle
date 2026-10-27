@@ -6,9 +6,8 @@ import { PendingRequests } from '../pending-requests';
 import { Heartbeat, moduleWorker } from '../worker';
 import workerUrl from './worker?worker&url';
 
-// The worker gives a sign of life per step of unpacking (engine/progress) and answers pings between reads, so STUCK_MS
-// bounds one parse or step; a file that holds it past that, as a pattern that never ends would, is what passes it.
-// Until the worker first answers, only one that cannot load at all is ended, after LOAD_MS.
+// STUCK_MS bounds one progress unit (parse/unpack), not a whole large file read.
+// Use LOAD_MS before the worker first answers; reads answer pings between units.
 const STUCK_MS = 8_000;
 const LOAD_MS = 20_000;
 

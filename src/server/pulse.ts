@@ -19,12 +19,9 @@ import {
 import type { Db } from './db/service-db';
 import { DAY_MS, fail, type AppEnv } from './http';
 
-// 헤이젤 나우 (design §6.12): counts what an account's client labels (worker.ts, calls.ts, streams.ts) and answers the
-// public board. Accounts only: a guest's or a self-host's ping named a person no one can check (migration 0027).
-// The last 7 days and the last 48 hours are lists of who used what (pulse_seen, pulse_used, pulse_replies), counted
-// when read. Each day once past closes the 7 days ending it: their rank places kept for the marks, a Sunday's into the
-// week's totals (pulse_week*), and the day no later window reaches deleted. The floors apply where a count is shown or
-// closed, never where a call is written.
+// Count labelled account traffic only; guest/self-host identities cannot be verified (migration 0027, design §6.12).
+// Keep 7-day usage and 48-hour reply lists; close each past day's rolling week for rank changes and Sundays for totals.
+// Delete days only when no future window needs them. Apply floors on display/closure, never when recording calls.
 
 const HOUR_MS = 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -32,7 +29,6 @@ const WEEK_MS = 7 * DAY_MS;
 const MONDAY = 4 * DAY_MS - 9 * HOUR_MS;
 const weekOf = (at: number) => at - ((((at - MONDAY) % WEEK_MS) + WEEK_MS) % WEEK_MS);
 const dayOf = (at: number) => at - ((((at - MONDAY) % DAY_MS) + DAY_MS) % DAY_MS);
-// The first of the 7 days ending `day`.
 const firstDay = (day: number) => day - WEEK_MS + DAY_MS;
 const hourOf = (at: number) => at - (at % HOUR_MS);
 // How often the answer is made at most: a reload costs no read before then, and a moment shows this late.
@@ -55,8 +51,7 @@ type Named = { key: string; name: string | null };
 const OTHER: Named = { key: '', name: null };
 const BUILT_IN = new Map(Object.entries(CONNECTOR_MODELS).map(([type, models]) => [type, new Map<string, string>(models.map(({ id, name }) => [id, name]))]));
 
-// One model, one row across lists: models.dev's names agree up to spelling. Variant words (Thinking, Fast, TEE, Pro)
-// stay in the key: one that guessed which variants are the same model would be wrong somewhere.
+// Normalize spelling, not variants: Thinking/Fast/TEE/Pro must remain distinct models.
 function named(name: string): Named {
   const spelling = name.replace(/\s*\(latest\)\s*$/i, '').trim();
   return { key: spelling.toLowerCase().replace(/[\s_-]+/g, ' '), name: spelling };
@@ -189,10 +184,9 @@ async function keptWeek(db: Db, week: number): Promise<Period | null> {
   return { people, roles: new Map(roles.results.map((row) => [row.role, row.people])), models: models.results, below: below.results };
 }
 
-// Every day before now's closes the 7 days ending it, in one transaction: their rank places kept for the marks 7 days
-// later, on a Sunday the week's totals written as it was shown, and the lists of the day no later window reaches deleted.
-// One close at a time per database: a second that read pulse_closed before the first's batch would count a window
-// whose oldest day the first had just deleted, and keep a ranked model of a closed week under the floor too.
+// Serialize closes per DB: each transaction keeps 7-day ranks, Sunday totals and removes unreachable days.
+// Concurrent pre-read cursors could otherwise recount a window after its oldest day was deleted
+// and publish below-floor models in a closed week.
 const closing = new WeakMap<Db, Promise<void>>();
 function closeDays(db: Db, now: number): Promise<void> {
   const closed = (closing.get(db) ?? Promise.resolve()).catch(() => {}).then(() => closePastDays(db, now));

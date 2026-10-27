@@ -2,14 +2,11 @@ import type { RisuScan, ToolField, ToolManifest } from '../../tool-api/manifest'
 import { RISU_MAPPED, RISU_NAMES, RISU_REPLACERS } from '../../tool-api/risu-methods';
 import { failed, identity, readTool, toolText, type HeaderLine, type ToolRead } from './tool';
 
-// Risu headers name no author. One fixed value keeps a plugin's identity (name + author) the same across reimports,
-// and with it its tool variables (tool:<author>/<name>:<key>).
+// Fixed author preserves Risu plugin identity and tool variables across reimports; Risu headers have no author.
 export const RISU_AUTHOR = 'risu';
-// Keys only a Risu header has.
 const RISU_ONLY = new Set(['arg', 'link', 'update-url']);
 
-// The one reader of a .js file: a Risu v3 plugin, an older Risu plugin (refused), or a Hazelle tool. //@api may list
-// several versions (`3.0 2.1 2.0`); older Risu plugins often have no //@api line, and a Hazelle tool always has //@author.
+// Distinguish Hazelle tools by //@author. Risu //@api may list multiple versions; missing api is legacy, not Hazelle.
 export function readToolFile(bytes: Uint8Array<ArrayBuffer>): ToolRead {
   const text = toolText(bytes);
   if (!text.ok) return text;
@@ -65,10 +62,8 @@ const sticky = (pattern: RegExp, text: string, from: number) => {
 const UNMAPPED_ANYWHERE = new RegExp(`(?:\\.|\\[\\s*['"\`])\\s*(${RISU_NAMES.filter((name) => !RISU_MAPPED.has(name)).join('|')})\\b`, 'g');
 const REPLACER_ANYWHERE = /\.\s*addRisuReplacer\s*(?:\?\.)?\(\s*(['"`])([\w-]*)\1/g;
 
-// Every use of the API object must be a member named in the code (risuai.x, risuai['x']); any other use (an alias, a
-// destructuring, an argument, globalThis.risuai) leaves what it calls unknown, so the verdict is 'unread'. A name
-// quoted on its own ('risuai') is a string, as plugins name Risu's own model that way; URLs are blanked first, since
-// Risu's own site (risuai.xyz) reads as a member otherwise.
+// Only literal member access is exhaustively scannable; aliases/destructuring/globalThis make verdict unread.
+// Bare quoted risuai is a model name, not API use. Blank URLs first so risuai.xyz is not mistaken for a member.
 export function scanRisu(body: string): RisuScan {
   const missing = new Set<string>();
   let unread = false;

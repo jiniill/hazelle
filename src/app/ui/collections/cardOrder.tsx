@@ -1,8 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as HeldPointer, type ReactNode, type RefObject } from 'react';
 import { scrollAncestor } from './Viewport';
 
-// 순서 바꾸기: a card is moved by its handle, with a pointer of any kind (touch has no HTML drag) or with the arrows. A
-// card lands only among cards of its group, so a folder never lands among characters.
+// Use pointer events for touch ordering; restrict moves to the same group, never folders among characters.
 export type OrderGroup = 'card' | 'folder';
 type Place = (key: string, after: boolean) => void;
 export type Over = { key: string; side: 'before' | 'after' };

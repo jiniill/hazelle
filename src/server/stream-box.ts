@@ -34,8 +34,7 @@ const LIMIT_BYTES = 32 * 1024 * 1024;
 const PAGE = 4;
 // Whatever no device came back for is dropped this long after the call started.
 const KEEP_MS = 24 * 60 * 60 * 1000;
-// A reader sent nothing this long gets a ping: under the idle limits between here and a page, Cloudflare's 100 s
-// proxy read timeout and the 30 to 60 s of some mobile networks, while a provider thinks before its first byte.
+// Ping idle readers before Cloudflare's 100 s/mobile 30–60 s timeouts, including provider thinking before first output.
 const PING_MS = 25 * 1000;
 
 const P256 = { name: 'ECDH', namedCurve: 'P-256' } as const;
@@ -106,9 +105,8 @@ const sleep = (ms: number, signal: AbortSignal) =>
     signal.addEventListener('abort', stop, { once: true });
   });
 
-// Memory holds the frames not yet written (from persisted on, in seq order, no gap) and what each reader is sent;
-// storage holds every page before them, however long the answer. idle: the box has no start pending, no call running
-// and no reader, so its registry may forget it.
+// Memory holds gapless frames from persisted onward plus reader output; earlier pages live in storage.
+// Evict only when idle: no pending start, running call or reader.
 export class StreamBox {
   private next = 0;
   private persisted = 0;
@@ -314,8 +312,8 @@ export class StreamBox {
     for (const resolve of waiting) resolve();
   }
 
-  // hello first, then every frame from seq on, then the live rest while the call runs: stored pages while seq is behind
-  // what is persisted (always, once the call is over or the process restarted), then the frames still in memory.
+  // Replay hello, then frames from seq: persisted pages first, then live memory.
+  // After restart/completion only storage remains; filter earlier frames from the containing page.
   async read(from: number, signal: AbortSignal): Promise<Response> {
     this.readers++;
     let reading = true;

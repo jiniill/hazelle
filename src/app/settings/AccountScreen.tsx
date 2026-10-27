@@ -26,8 +26,8 @@ function Used({ label, bytes, cap }: { label: string; bytes: number | null; cap:
   return <Gauge label={label} share={share} amount={bytes === null ? UNKNOWN : sizeText(bytes)} of={cap === null ? undefined : `/ ${sizeText(cap)}`} />;
 }
 
-// A guest's rows: the browser's own copy, its file backup, board and app facts; account-only features greyed until
-// 계정 만들기 (design §6.14), and 잠그기, 로그아웃, 알림 and 탈퇴, which only an account has, left out.
+// Guests show browser data/backup/community/app facts; gray account-only capabilities.
+// Never offer lock/logout/notices/deletion for a nonexistent server account (design §6.14).
 export function AccountScreen({ section, back }: { section: AccountSection | null; back: Back | null }) {
   const { guest } = useAccount();
   return (

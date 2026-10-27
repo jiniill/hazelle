@@ -141,9 +141,8 @@ function extensions(own: Compartment, language: CodeLanguage, label: string, pro
   ];
 }
 
-// Loaded only when 크게 편집 first opens one (CodeField), so the page never pays for CodeMirror until then. The value
-// is the caller's: a change the editor did not make (the field's own typing) replaces its text. The editor is made
-// once, so its undo history and selection outlive a new language or label, which are swapped in.
+// Lazy-load only for big editing. Keep one editor so language/label changes preserve undo and selection;
+// replace text only for external value changes.
 export default function CodeEditor({ label, value, onChange, language, prose = false, caret }: CodeEditorProps) {
   const box = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -170,8 +169,7 @@ export default function CodeEditor({ label, value, onChange, language, prose = f
     view.current?.dispatch({ effects: own.current.reconfigure(languageExtensions(language, label, prose)) });
   }, [language, label, prose]);
 
-  // CodeMirror keeps \n lines whatever it was given: code stored with \r\n (a bot written on Windows) is the same
-  // text, and replacing it would mark the script changed on open.
+  // Compare normalized line endings: opening CRLF code must not falsely mark a script changed.
   useEffect(() => {
     const editor = view.current;
     if (editor && editor.state.doc.toString() !== value.replace(/\r\n?/g, '\n')) editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: value } });

@@ -24,8 +24,7 @@ type Props = {
   children?: ReactNode;
 };
 
-// 번역's shared values, the same rows in the chat's 번역 dialog and on 설정 › 채팅's 번역 page: the two switches, then
-// the rest folded as 세부 설정, which names how many of them are set.
+// Shared by chat dialog and global settings; fold uncommon settings and count explicit values.
 export function TranslateRows({ translate, translation, card, note, opens, onChange, onEditPrompt, children }: Props) {
   const { store } = useSession();
   const prompt = translationPrompt(store, translate.prompt);

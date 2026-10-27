@@ -8,8 +8,8 @@ import { usePersisted } from './usePersisted';
 
 export const TUTORIAL = { open: '튜토리얼 보기', icon: GraduationCap, title: '헤이젤이 처음이라면', later: '나중에', stop: '그만', resume: '이어 하기', done: '완료' };
 
-// offered: the tutorials to show, those this device has not finished and none once a reply has come; listed: their titles, a door's note. open: the list;
-// welcome: the list at arrival, unless this device closed it before, true when it opened.
+// Offer unfinished tutorials only before any reply. welcome respects this device's dismissal;
+// listed supplies door labels independently of whether the welcome opens.
 type Tutorials = { offered: readonly Tutorial[]; listed: string; open: () => void; welcome: () => boolean };
 const TutorialContext = createContext<Tutorials | null>(null);
 
@@ -25,9 +25,8 @@ function useFacts(): Facts {
   return { route, connection: connections[0]?.id ?? null, added: connections.some(({ value }) => value.starred.length > 0) };
 }
 
-// running: the tutorial being followed on this device, kept across reloads until 그만 or its end is closed. finished:
-// the ones this device walked to the end, set as the end is reached, since the last step's state (being on a chat
-// screen) does not last.
+// Persist running until stopped/end closed. Mark finished on reaching the end:
+// its final chat-screen state is transient and cannot prove completion after reload.
 export function TutorialProvider({ children }: { children: ReactNode }) {
   const facts = useFacts();
   const replied = useReplied();

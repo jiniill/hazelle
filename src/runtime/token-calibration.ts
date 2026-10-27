@@ -125,9 +125,8 @@ export class TokenSnapshot {
     if (refusal.actual !== null && measurement.pictures === 0) this.index.observe({ key: this.key, chat: this.chat, at: measurement.at, fingerprint: measurement.fingerprint, input: refusal.actual, denominator: measurement.o200k });
     const limits = refusal.maximum === null ? this.limits : { ...this.limits, hard: Math.min(this.limits.hard ?? Infinity, refusal.maximum) };
     const learned = fitLimits(limits, this.index.estimate(this.key, this.chat, Date.now()));
-    // With no exact input count, a refusal gives no finite upper ratio. Two geometric cuts halve room each time,
-    // bracketing a fourfold miss (the global prior upper/centre is about 2.87), not guaranteeing an unknown route.
-    // The cap prevents an unbounded loop and a terminal refusal remains truthful.
+    // Count-free refusals cannot supply an upper ratio. Two geometric cuts bracket a fourfold miss, not arbitrary routes.
+    // Keep retries bounded and terminal refusals truthful.
     const shrink = Math.floor(previous / 2);
     const allowance = Math.min(previous - 1, learned.allowance ?? shrink, refusal.actual === null ? shrink : Infinity);
     if (allowance < 0) return null;

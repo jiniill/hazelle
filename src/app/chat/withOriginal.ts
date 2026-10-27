@@ -1,11 +1,9 @@
 import { isParagraph, paragraphsOf, withoutMarks } from '../../model/illustration';
 import { ORIGINAL_MARK } from '../ui';
 
-// 원문 함께 보기: each paragraph of the drawn translation followed by the originals it is aligned with, a blank line on
-// either side so each stands as a block of its own; a picture's mark after its paragraph comes after them. The
-// translator merges, splits, drops and adds paragraphs (translate-instructions: structure deviation is encouraged), so
-// equal counts prove no pairing: every original is shown once, under the paragraph it aligns with, or under the one
-// before it where the translation has none for it.
+// Never pair by paragraph count alone: translation may merge/split/add/drop.
+// Show each original exactly once under its best alignment, or the preceding translation when omitted.
+// Keep picture marks after the paired blocks, separated by blank lines.
 export function withOriginal(drawn: string, original: string): string {
   const lines = drawn.split('\n');
   const paragraph = (line: string) => isParagraph(withoutMarks(line));

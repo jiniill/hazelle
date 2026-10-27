@@ -40,8 +40,8 @@ const SORTS: { sort: PromptSort; label: string; hint?: string; none: string }[] 
 ];
 type Order = 'name' | 'recent';
 
-// defaults: each kind's default leads the list, as a card that opens it. The default is chosen on the prompt's own
-// page (기본으로 정하기), never from these cards. place: the folder the 대화 tab stands in.
+// Default cards lead each sort but only their own pages change the default.
+// place applies to the conversation folder tree only.
 type Props = {
   onPick: (id: string) => void;
   inUse?: string;

@@ -7,17 +7,14 @@ const VERSION = 1;
 
 export type StreamStore = {
   storage(stream: string): BoxStorage;
-  // Streams whose alarm is at or before now.
   due(now: number): string[];
-  // Its pages and its alarm.
   remove(stream: string): void;
   close(): void;
 };
 
 export function streamStore(path: string): StreamStore {
-  // NORMAL, not FULL: every live reply commits a page every PERSIST_MS on the event loop, and a fsync per commit
-  // stalled every request for hundreds of ms at 100 streams. A power loss drops only the newest commits, the alarm with
-  // its pages, never pages without their alarm: the WAL loses a suffix.
+  // Use NORMAL here: per-page fsync at 100 streams stalls every request. Power loss may drop only the newest WAL
+  // suffix, alarms and pages together, never orphan pages without their reservation.
   const db = openDatabase(path, 'NORMAL');
   try {
     transaction(db, () => {

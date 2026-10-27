@@ -171,9 +171,8 @@ function PrereadCall({ preread: { material, brief, receipt, reused, saved } }: {
   );
 }
 
-// An agent's call for the reply, with what a pre agent noted and the memory it left, which the user may set here: the
-// next replies read it (runtime/agents memoryOf). Its 요청 원문 and 응답 원문 are the request log's, as the reply's are;
-// a post agent's 응답 원문 is the reply as that agent left it.
+// Agent info exposes editable memory for following turns (runtime/agents memoryOf).
+// Wire text belongs to the page request log; post-agent raw response is that agent's rewritten reply.
 function AgentCall({ chat, version, run: { agent, name, stage, receipt, note, memory, reused } }: { chat: string; version: Version; run: AgentRun }) {
   const store = useStore();
   const { log } = useSession();

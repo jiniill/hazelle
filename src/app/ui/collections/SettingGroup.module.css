@@ -139,9 +139,7 @@
   justify-self: end;
 }
 
-/* The box, not the screen, decides: in a narrow list column on a wide screen, a field chip beside the words squeezes
-   them to a syllable a line. A lone switch, or a folder's › (.opens), is narrow enough to stay beside them. 440px is --screen-narrow (and
-   --dialog-width): a container query cannot read var(), so change them together. */
+/* Use box width, not screen width, to stack field chips; lone switches/› still fit beside labels. Keep 440px synced with --screen-narrow/--dialog-width: container queries cannot read var(). */
 @container (max-width: 440px) {
   .row:not(:has(> .control > [role='switch']:only-child), .opens) {
     grid-template-columns: minmax(0, 1fr);

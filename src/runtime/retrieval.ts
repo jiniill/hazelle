@@ -38,11 +38,8 @@ const SAVE_EVERY = 60_000;
 
 export type Indexed = { ok: true } | { ok: false; reason: Extract<Embedded, { ok: false }>['reason']; receipt: Receipt | null };
 
-// Embeds the records that have no vector at the current model, EMBED_TEXTS a call, and writes the chat's vectors
-// without those of records gone or remade. Nothing is written while nothing is missing or stale; a call that fails
-// leaves what it had, so the next pass embeds the rest. A long pass (one text a request, Vertex AI) also writes what it
-// has every SAVE_EVERY, so retrieval finds the records embedded so far and a reload keeps them. progress: records
-// embedded so far.
+// Embed missing/stale records in EMBED_TEXTS batches; preserve earlier vectors on failure and drop obsolete ones.
+// Checkpoint long runs every SAVE_EVERY so retrieval/reloads can use partial progress.
 export async function indexRecords(session: Reader, chat: string, signal: AbortSignal, progress: (done: number) => void): Promise<Indexed> {
   const { store } = session;
   const missing = unembedded(store, chat);

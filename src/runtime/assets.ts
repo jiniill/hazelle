@@ -56,8 +56,8 @@ export class AssetUrls {
 
   readonly snapshot = () => this.version;
 
-  // Creating a view during render holds nothing. Its committed mount activates all files resolved so far, and its
-  // cleanup releases them. Re-activation is intentional: React's strict effects replay the same view's mount.
+  // Render-time views hold nothing until committed mount; cleanup releases resolved files.
+  // Allow reactivation because StrictMode replays mount effects.
   view(): AssetView {
     const files = new Set<string>();
     let held = false;

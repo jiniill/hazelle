@@ -24,9 +24,8 @@ export const chatMemory = (store: Pick<ObjectStore, 'children'>, chat: string): 
 
 export const sourcesOf = (messages: Message[]): Source[] => messages.map((message) => ({ message: message.id, version: shown(message).id }));
 
-// Who fills the chat's memory slot (design §6.10): the first tool in pack order whose module the user let take it, else
-// the built-in memory while it and 장기 기억's 기능 are on; null otherwise. A tool's claim does not read 기능: it is its
-// module's own, switched with the module. A claim not answered yet leaves the built-in memory on.
+// First consented tool in pack order owns the slot, regardless of built-in memory feature switches.
+// Unanswered claims leave built-in memory active while its setting/feature permit it.
 type MemoryOwner = { kind: 'built-in'; setup: MemorySetup } | { kind: 'tool'; unit: ToolUnit } | null;
 
 export function memoryOwner(store: ObjectStore, chat: Chat): MemoryOwner {
@@ -38,8 +37,7 @@ export function memoryOwner(store: ObjectStore, chat: Chat): MemoryOwner {
 
 const shownOf = (messages: ChatScope['messages']) => messages.map(({ message, id: version }) => ({ message, version }));
 
-// The slot for a turn's scope as gathered. A tool's text comes with the turn's prompt event (runtime/script-turns
-// prompting); until then it stands for no message. id null: a new chat not saved yet, which has no memory.
+// A tool covers no messages until its prompt answer arrives. Unsaved chats (id null) have no memory.
 export function memoryFill(store: ObjectStore, id: string | null, chat: Chat, messages: ChatScope['messages']): MemoryFill | null {
   const owner = memoryOwner(store, chat);
   if (owner?.kind === 'tool') return { kind: 'tool', name: owner.unit.tool.manifest.displayName, text: '', through: -1 };

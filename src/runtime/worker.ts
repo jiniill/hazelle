@@ -32,10 +32,8 @@ export function postProgress(post: () => void) {
   });
 }
 
-// A worker that leaves a ping unanswered past limit ms is held by a job that will not end. Counted from the ping, never
-// from the clock alone: a hidden tab's timers run late, and the worker answers at once all the same. A beat that comes
-// late to a shown tab pings again rather than judging, since the page itself was held and an answer may be waiting
-// behind it; in a hidden tab every beat is late while the worker's messages are not.
+// Judge unanswered pings, never elapsed wall time alone: hidden tabs delay timers.
+// If a visible page's own beat was late, ping again rather than blame a worker answer waiting behind the stall.
 export class Heartbeat {
   private beat: ReturnType<typeof setInterval> | null = null;
   private pinged: number | null = null;

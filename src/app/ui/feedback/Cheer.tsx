@@ -11,7 +11,6 @@ const PIECES = Array.from({ length: 40 }, (_, i) => ({
   round: i % 3 === 0,
 }));
 
-// A finish's picture: a badge that pops in with rings going out from it and pieces of color thrown round it.
 export function Cheer({ icon: Glyph }: { icon: LucideIcon }) {
   return (
     <div className={styles.cheer} aria-hidden>

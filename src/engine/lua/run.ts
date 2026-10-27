@@ -60,9 +60,8 @@ function luaOptions(value: unknown): Record<string, unknown> {
 
 const MODEL_ROLES: Record<string, ModelMessage['role']> = { system: 'system', sys: 'system', user: 'user', assistant: 'assistant', bot: 'assistant', char: 'assistant' };
 
-// owner names whose Lua globals an engine holds (a chat), so two chats of one bot never share them; lane keeps the
-// display's engines apart from the events', so a question an event waits on never holds up the display, and a
-// preview's apart from both.
+// owner isolates globals per chat; lane separates display, events and preview engines so an event's question
+// cannot block display evaluation.
 export class Lua {
   private readonly worksets = new Map<string, Workset>();
   private readonly displays = new Map<string, DisplaySession>();
@@ -450,9 +449,8 @@ export class Lua {
 
     // Risu's cbs takes no id before its text.
     bind('cbs', (value: unknown) => (engine.run ? cbs(engine.run, text(value)) : undefined));
-    // The entries of that name in the chat's lorebook, the modules' included, as Risu's own lore reads, each content
-    // with its CBS evaluated. The chat's own come first, as Risu lists them here, unlike the prompt's order; a write
-    // of this run takes the place of the chat's own of its name.
+    // Risu order differs from the prompt: chat-local entries precede modules, with CBS evaluated.
+    // This run's same-name write replaces the local entries.
     set('getLoreBooksMain', (run, search: unknown) => {
       const name = text(search);
       const named = run.snapshot.scope.lore.filter(({ value }) => value.name === name);
@@ -463,8 +461,7 @@ export class Lua {
           .map((value) => asRisuLore(value, cbs(run, value.content))),
       );
     });
-    // The entry Risu's binding writes, read as the chat's own lorebook is, whose defaults for an option left out are
-    // Risu's (order 100, no keys, off).
+    // Preserve Risu's omitted-option defaults: order 100, no keys, off.
     act('upsertLocalLoreBook', (run, name: unknown, content: unknown, options: unknown) => {
       const { alwaysActive, insertOrder, key, regex, secondKey } = (options ?? {}) as Record<string, unknown>;
       const entry = chatLorebook([{ comment: text(name), content: text(content), insertorder: insertOrder, mode: 'normal', key, secondkey: secondKey, alwaysActive, selective: !!secondKey, useRegex: regex }]).lore[0]!;

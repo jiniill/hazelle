@@ -63,9 +63,8 @@ export function translateOnTool(session: Deps, text: string, language: string, s
   return translateLoose(session, SHARED_CHAT, text, language, (input, target) => translateWith(session, tool.with, input, target, signal, onText));
 }
 
-// A text of no story, with no persona and no card: a card's text would go along as context of its own translation,
-// every time. Nothing is saved, so no marker is written. The call ends however it went, stopped too: the abort only
-// stops reading, and no reload picks this call up.
+// Non-story text must not receive a card/persona as its own translation context.
+// No marker is kept: end the call even after abort, which only stops reading.
 function translateLoose(session: Deps, chat: Chat, text: string, language: string, run: (input: TranslateInput, target: TranslationTarget) => ReturnType<typeof translate>) {
   const input: TranslateInput = { chat, scope: { ...scopeOf(session, null, chat, []), persona: null, card: null }, take: new Set(), translations: [], request: { kind: 'input', text }, language, lane: null };
   const target: TranslationTarget = { id: crypto.randomUUID(), chat: null, result: crypto.randomUUID(), for: { kind: 'input', typed: text, language } };
@@ -210,10 +209,8 @@ export class Translator {
     this.changes.notify();
   }
 
-  // chat: its id, saved or not yet; a chat not saved when the translation ends shows only its character's greetings,
-  // so the translation is that greeting's, kept on the character.
-  // closed: a reply stopped by a lock is still saved, and its follow-up must not start a call.
-  // Settles once the translation is saved or has failed; one already running for the version is not waited for.
+  // Unsaved chats keep greeting translations on the character. closed prevents follow-up calls after lock.
+  // Resolve after save/failure, but do not await another translation already running for that version.
   translate(chat: string, { id: version, text: original }: Version, input: TranslateInput): Promise<void> {
     if (this.closed || this.aborts.has(version)) return Promise.resolve();
     const target: TranslationTarget = { id: crypto.randomUUID(), chat: this.store.get('chat', chat) ? chat : null, result: crypto.randomUUID(), for: { kind: 'translation', version } };

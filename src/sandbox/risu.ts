@@ -1,9 +1,7 @@
 import { RISU_DECLINED, RISU_REPLACERS } from '../tool-api/risu-methods';
 
-// RisuAI's v3 plugin API over the public Hazelle tool API (research/risu-plugin-adapter-plan.md §3). Risu's shapes
-// live only in this file and it calls nothing but `api`: nothing Risu-shaped crosses tool-api/protocol.ts, so the
-// host's contract stays Hazelle's own. A name it does not map yet throws when called; a declined one reads as undefined,
-// as on a Risu without it, so a plugin's typeof guard takes its other branch. Either is told to 점검, never passed silently.
+// Risu v3 shapes stay in this adapter over `api`, never in tool-api/protocol.ts (research/risu-plugin-adapter-plan.md §3).
+// Unmapped calls throw; declined methods read as undefined for typeof guards. Both report to 점검.
 
 type Callback = () => unknown;
 type MessageAction = (message: { chatId: string; index: number }) => unknown;
@@ -12,10 +10,8 @@ type Handler = (content: string) => unknown;
 type Listener = (arg: { char: unknown; chat: unknown; characterIndex: number; chatIndex: number; messageIndex: number }) => unknown;
 type Scope = Record<string, unknown>;
 
-// Risu numbers a chat by its place in its character's chats, a list Hazelle does not offer; a stable number of the id
-// stands for it, so keys a plugin builds from it stay apart per chat and survive a reload. A character's number is its
-// real place in the list getDatabase hands out (characterAt): plugins write characters[index], and a hash there builds
-// an array hundreds of millions long (Asset Maid, 2026-10).
+// Hash chat ids for stable plugin keys, but use real character-list indices:
+// plugins assign characters[index], where hashes would create huge sparse arrays (Asset Maid, 2026-10).
 const chatNumber = (id: string) => {
   let hash = 2166136261;
   for (let at = 0; at < id.length; at++) hash = Math.imul(hash ^ id.charCodeAt(at), 16777619);
@@ -86,10 +82,8 @@ const once = <T>(read: () => Promise<T>) => {
   return () => held ??= read();
 };
 
-// Risu's main document as far as Hazelle has one: the chat screen (.default-chat-screen), its message rows and their
-// bodies as the screen's display gives them (chat.rendered), and the page's sheets as the bot's. A row stands at Risu's
-// data-chat-index, the greeting at -1. CSS.escape escapes an id that starts with a digit, which the selector is read
-// back from.
+// Expose only rendered chat rows/bodies and bot sheets, including hidden rows; greeting index is -1.
+// Round-trip CSS.escape for digit-leading ids in selectors.
 const ROW = String.raw`(?:\.risu-chat)?(?:\[data-chat-index\])?\[data-chat-(id|index)="((?:[^"\\]|\\.)+)"\]`;
 const BODY = new RegExp(`^(?:\\.default-chat-screen\\s+)?${ROW}\\s+\\.chattext(?::not\\(\\.hidden\\))?$`);
 const ONE_ROW = new RegExp(`^(?:\\.default-chat-screen\\s+)?${ROW}$`);
@@ -117,8 +111,8 @@ const rowOf = (row: Row) => ({
 });
 const unescapeCss = (text: string) => text.replace(/\\([0-9a-f]{1,6})\s?|\\(.)/gi, (_, hex?: string, char?: string) => (hex ? String.fromCodePoint(parseInt(hex, 16)) : char!));
 
-// Risu runs a plugin as the body of an async function (apiV3/factory.ts), so a top-level await works (선택지 용사) and
-// its declarations stay its own. The line break keeps a closing line comment from swallowing the brace.
+// Run as an async function body for top-level await and private declarations (Risu apiV3/factory.ts).
+// Keep the trailing newline so a closing line comment cannot swallow the brace.
 export const risuScript = (code: string) => `(async () => {${code}\n})()`;
 
 // Installs Risuai, risuai and the dialog shims into scope; answers the frame's stop, which runs onUnload callbacks.
@@ -141,8 +135,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     for (const message of messages) place(chat, message);
     return chatOf(chat.id, messages, await chat.lorebook());
   };
-  // Risu's three button places (action, chat, hamburger) are one ⋯ here, so a button a plugin offers in two of them
-  // (Asset Maid, SimCore) is listed once. Splitting by place instead would strand one only in the side menu (Fishing's 도감).
+  // Merge Risu button places into one deduplicated menu; splitting would strand side-menu-only actions.
   const listedButtons = () => {
     const labels = new Set<string>();
     return [...buttons].flatMap(([id, { label }]) => labels.has(label) ? [] : (labels.add(label), [{ id, label }]));
@@ -303,9 +296,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       const chat = await at(characterIndex, chatIndex);
       return chat && read(chat);
     },
-    // An entry of localLore left out stays: Hazelle's chat lorebook writes replace by name, never remove.
-    // scriptstate's $ names are the chat's variables, written as Risu's import reads them; getChatFromIndex hands out
-    // none, so a plugin that spreads them keeps the rest by leaving them out.
+    // Omitted localLore entries stay: native upsert replaces by name, never removes.
+    // Write only supplied scriptstate $ variables; getChatFromIndex omits them, so spread updates preserve the rest.
     setChatToIndex: async (characterIndex: number, chatIndex: number, value: { message: { role: string; data: string }[]; localLore?: Record<string, unknown>[]; scriptstate?: Record<string, unknown> }) => {
       const chat = await at(characterIndex, chatIndex);
       if (!chat) throw new Error('Risu API \'setChatToIndex\' reaches only the open chat in Hazelle');
@@ -361,8 +353,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     removeRisuScriptHandler: async (mode: string, handler: Handler) => { handlers[mode as Mode]?.delete(handler); },
     addRisuChatListener: async (_mode: 'output', listener: Listener) => { listeners.add(listener); },
     removeRisuChatListener: async (_mode: 'output', listener: Listener) => { listeners.delete(listener); },
-    // Risu's paths for what saveAsset keeps, assets/<hash>.png, over the tool's assets; readImage refuses other folders as
-    // Risu does, and answers null for a path this module never saved, a Risu path of the bot's own pictures included.
+    // Map only module-owned assets/<hash>.png paths; reject other folders and return null for unsaved/bot assets.
     saveAsset: async (data: Uint8Array) => `assets/${await api.assets.save(data)}.png`,
     readImage: async (path: string) => {
       const name = path.startsWith('assets/') ? path.slice('assets/'.length) : path;
@@ -370,8 +361,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       return name.endsWith('.png') ? api.assets.read(name.slice(0, -'.png'.length)) : null;
     },
     nativeFetch: fetchOf,
-    // Risu's globalFetch: a JSON body, POST unless told, and an envelope holding the parsed JSON, or the bytes with
-    // rawResponse; any failure, an unreadable JSON answer included, is its { ok: false, data: message, status: 400 }.
+    // globalFetch defaults JSON requests to POST; rawResponse returns bytes.
+    // Preserve Risu failure envelope even for malformed JSON: { ok: false, data: message, status: 400 }.
     risuFetch: async (url: string, arg: { body?: unknown; headers?: Record<string, string>; method?: 'GET' | 'POST'; rawResponse?: boolean; abortSignal?: AbortSignal } = {}) => {
       try {
         const response = await fetchOf(url, { method: arg.method ?? 'POST', headers: { 'Content-Type': 'application/json', ...arg.headers }, body: JSON.stringify(arg.body), signal: arg.abortSignal ?? null });
@@ -465,9 +456,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
 
   scope.Risuai = risu;
   scope.risuai = risu;
-  // PluginSlots, version 1 (research/risu-plugin-adapter-plan.md §9): what a ported plugin calls where it would touch
-  // Risu's page, which a piece pasted into the plugin fills on Risu. It is not Risu's, so it maps over the Hazelle API
-  // here like the rest, and never through Risuai. A message is named by the chatId Risu's chat reads carry.
+  // PluginSlots v1 is a porting shim, not Risu's API; map directly to Hazelle, never through Risuai
+  // (research/risu-plugin-adapter-plan.md §9). Messages use the chatId returned by Risu-shaped chat reads.
   scope.PluginSlots = {
     version: 1,
     // On the version read when its chatId was handed out, which the picture was made for.
@@ -489,8 +479,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     },
     removeMessageAction: async (id: string) => { if (messageActions.delete(id)) await frame.actions(listedActions()); },
   };
-  // alert becomes the tool's say, a toast, never a dialog over the chat (design §6.4). confirm and prompt keep the
-  // browser's dialog (allow-modals): their answer is synchronous, which nothing over the port can give.
+  // alert maps to a toast, never a blocking overlay. confirm/prompt must use allow-modals browser dialogs:
+  // their synchronous answers cannot cross the host port.
   scope.alert = (message?: unknown) => { void frame.chat().then((chat) => chat ? chat.say(String(message)) : console.log(message)); };
   return () => { for (const unload of unloads) press(unload); };
 }

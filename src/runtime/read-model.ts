@@ -52,8 +52,7 @@ export type ChatScopeRead = { state: ScopeState; error: ApiFailure | null };
 export type OpenDisplay = Pick<ScriptDisplay, 'display' | 'subscribe'>;
 export const plainDisplay = (store: ObjectStore): OpenDisplay => ({ display: (id, chat, messages, screen, signal) => evaluateChat({ store }, id, chat, messages, screen, signal), subscribe: () => () => {} });
 
-// store.list answers in the order of the last write, so read as it comes an edited object would drop to the end of
-// its list. The kinds screens list come by name instead.
+// Sort listed kinds by name, not store write order: edits must not move items in their lists.
 const NAMED: { [K in Kind]?: (value: Values[K]) => string } = {
   connection: (value) => value.label,
   module: (value) => value.name,
@@ -392,8 +391,7 @@ export class ChatScreenRead {
     return this.talk.snapshot(this.id);
   }
 
-  // The store's fold, which a write changes at once, never the chat's projection, which follows it by a whole display
-  // pass: Talk ends a turn as soon as its reply is saved, so a screen on the projection dropped the reply until then.
+  // Read the store's immediate fold, not the delayed display projection, or ending a turn briefly hides its saved reply.
   private based(): Opening | null {
     const { store } = this.models;
     const stored = store.scopeState(this.id) === 'loaded' ? live(store.get('chat', this.id)) : null;
@@ -411,9 +409,8 @@ export class ChatScreenRead {
     this.models.store.projections.clear(this.id);
   }
 
-  // One pass at a time, and a pass that lands is shown even when a refresh came meanwhile: a streamed reply asks for
-  // one every chunk, and a pass slower than the chunks would otherwise be dropped each time, so the screen stood still
-  // until the reply paused. What changed meanwhile is taken by the one pass that follows.
+  // Publish every completed pass, then refresh queued changes. Dropping passes overtaken by stream chunks
+  // would freeze the display until generation pauses.
   refresh(): Promise<void> {
     this.again = true;
     return (this.running ??= this.drain());

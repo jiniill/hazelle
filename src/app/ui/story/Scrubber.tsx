@@ -32,14 +32,14 @@ function where(frame: HTMLElement, order: ReadonlyMap<string, number>, stops: re
   return { stop, through: stops[stop] === index ? clamp(row.above / (row.above + row.below), 0, 1) : 1 };
 }
 
-// A track down the story's edge whose thumb stops at each of stops, an even share each however long the message, so a
-// drag lands on a message's start; the view follows the drag. Pointer only: the keyboard has its shortcuts.
+// Give each message an equal track share regardless of length; drag seeks starts.
+// Pointer-only here; keyboard uses story shortcuts.
 export function Scrubber({ scrollRef, keys, stops, label, onSeek }: Props) {
   const { awake, wake } = useAwake(scrollRef, WAIT);
   const track = useRef<HTMLDivElement>(null);
   const order = useMemo(() => new Map(keys.map((key, index) => [key, index])), [keys]);
-  // The stop the drag is on, where it went fine (the finger's height then and the stop it was on), and the track's box
-  // as the drag began: the composer folds as the view leaves the end, and the track's foot moves with it.
+  // Capture track geometry at drag start: composer folding moves its foot mid-drag.
+  // Keep fine-mode entry position/stop stable too.
   const grip = useRef<{ stop: number; fine: { y: number; stop: number } | null; box: DOMRect } | null>(null);
   const [drag, setDrag] = useState<{ stop: number; fine: boolean; coarse: boolean } | null>(null);
   const turned = useRef(0);

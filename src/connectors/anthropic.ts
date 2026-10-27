@@ -3,8 +3,7 @@ import { errorValue } from './errors';
 import type { BatchAnswer, Batches, ConnectionType } from './types';
 import { isRecord } from './values';
 
-// The Message Batches API, checked against platform.claude.com's batch processing guide on 2026-10-12. A batch's
-// results are read from its own results address, a line of JSON per request.
+// Message Batches results are JSONL at the batch's results URL (platform.claude.com batch guide, 2026-10-12).
 const batches: Batches = {
   submit(endpoint, _model, request, key) {
     const params = JSON.parse(request.body!) as Record<string, unknown>;

@@ -8,9 +8,8 @@ type Layer = {
   close: (refocus: boolean) => void;
 };
 
-// Every open menu, dialog and pinned hint, newest last. Esc and a press outside reach the newest one only, so Esc in a menu
-// over a dialog closes the menu and leaves the dialog open. These are the kit's only document listeners for keys
-// and presses: a component adding its own would reach every layer again.
+// Centralize document key/press listeners; only the newest layer handles outside/Esc.
+// Components must not add parallel listeners that close multiple layers per action.
 const open: Layer[] = [];
 
 function press(event: PointerEvent) {
@@ -47,8 +46,7 @@ export function useLayer(active: boolean, layer: Layer) {
   }, [active]);
 }
 
-// The sides a popover must stay within: the nearest box that clips it, such as a list column that scrolls, inside the
-// screen. The screen alone is not enough: a menu inside a column is cut off at the column's side, top or bottom.
+// Constrain popovers to the nearest clipping box AND the viewport; screen bounds alone cannot prevent column clipping.
 export function room(element: HTMLElement) {
   let left = 0;
   let top = 0;
@@ -76,10 +74,8 @@ export function keepOnScreen(element: HTMLElement) {
   element.style.setProperty('--nudge', `${shift}px`);
 }
 
-// A popover on the body at a fixed spot by its anchor, so a dialog's or panel's scrolling box cannot clip it. Its
-// stylesheet places it on one side with --anchor-left and --anchor-below (the anchor's bottom) or --anchor-above (its top,
-// from the window's bottom), and on the other under [data-flipped], set where the first side runs off the screen. It
-// does not follow a scroll, so any scroll closes it.
+// Portal fixed popovers to body to escape panel clipping. CSS uses anchor edges and data-flipped on overflow.
+// Close on any scroll instead of tracking a now-stale anchor.
 export function useAnchored(open: boolean, popover: RefObject<HTMLElement | null>, anchor: RefObject<HTMLElement | null>, close: () => void) {
   const latest = useRef(close);
   latest.current = close;

@@ -3,10 +3,8 @@ import { encodeText, fromBase64, toBase64 } from './aead';
 // The key lives only in sealed object bodies.
 export type FileRef = { id: string; key: string };
 
-// Every file is sealed by its own content (design §3, convergent): the key comes from the bytes, so the same file
-// seals to the same body and id in every account, while each account stores its own copy. The id is the SHA-256 of the sealed body, which the
-// server checks on upload, so no one can store other bytes under a real file's id. The leading byte names the
-// format. Format 1: AES-256-GCM over the file's bytes, uncompressed, since images arrive compressed already.
+// Convergent format 1: AES-256-GCM over uncompressed file bytes; leading byte versions the format.
+// Content-derived keys make body/id identical across accounts. The server verifies SHA-256(sealed body) on upload.
 const FORMAT = 1;
 const AAD = encodeText('risu-alpha/file/v1');
 // One key seals one content only, so a fixed nonce never repeats under a key.

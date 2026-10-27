@@ -36,9 +36,8 @@ import { openVisits, type FrontendMessage } from './visits';
 
 // Configuration is the environment (docs/research/docker-port-plan.md §11).
 const dataDir = process.env.HAZELLE_DATA ?? '/data';
-// An unset or blank variable takes the default: compose passes "" for one the operator left out, and Number("") is 0,
-// which would read as a zero-second drain and a midnight snapshot. Anything else must be a whole number in its range,
-// or the process refuses to start: an hour of 24 would silently never snapshot.
+// Treat blank compose variables as unset, not Number("") = 0. Reject nonintegral/out-of-range settings
+// at startup; an invalid snapshot hour could otherwise silently disable backups.
 function wholeFrom(name: string, fallback: number, min: number, max: number): number {
   const raw = process.env[name]?.trim() ?? '';
   if (raw === '') return fallback;
@@ -99,9 +98,8 @@ const log = (event: string, detail: Record<string, unknown> = {}) => console.log
 
 mkdirSync(dataDir, { recursive: true });
 
-// The per-account registry lives in this process's memory, so a second process on the directory would corrupt the
-// ordering it promises. An exclusive transaction held open on lock.sqlite is an OS lock the kernel drops when the process
-// dies, which a lock file would not be.
+// Account ordering is process-local: exclusively lock data/ with an open SQLite transaction.
+// The kernel releases it on crash, unlike a stale lock file.
 const lock = new DatabaseSync(join(dataDir, 'lock.sqlite'));
 try {
   lock.exec('BEGIN EXCLUSIVE');
@@ -225,9 +223,8 @@ const timers = [
 ];
 for (const timer of timers) timer.unref();
 
-// SIGTERM: stop taking requests, let requests in flight, background work and detached replies finish within the drain,
-// then close the databases. server.close settles when the last active request ended. A detached reply still running at
-// the deadline is lost: its stored pages stay, and a reader after the restart reads them and then a lost stream.
+// Drain requests/background work/detached replies until deadline before closing DBs.
+// After timeout, restarted readers get persisted pages then a lost stream, never a fabricated clean end.
 async function shutdown(signal: string) {
   if (draining) return;
   draining = true;
@@ -268,10 +265,8 @@ async function shutdown(signal: string) {
   log('stopped', { outcome, left: background.size });
   process.exit(0);
 }
-// scripts/deploy.sh asks for a generation before it replaces the image. Without a handler Node's default for the signal
-// would end the process with no drain.
-// The two log lines are how the script knows its own request was taken and how it ended. Refused once draining: the
-// shutdown has stopped looking for new background work.
+// Keep deployment signal handler and its two acknowledgment log lines aligned with scripts/deploy.sh.
+// Without a handler Node exits immediately. Refuse new capture work once shutdown draining begins.
 process.on('SIGUSR2', () => {
   if (draining) return log('backup refused', { reason: 'draining' });
   log('backup requested');

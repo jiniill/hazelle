@@ -75,10 +75,8 @@ const sums = (messages: WireMessage[]) => {
 const place = (from: From) => JSON.stringify({ ...from, id: undefined });
 const sameFrom = (a: WireMessage, b: WireMessage) => a.role === b.role && (place(a.from) === place(b.from) || a.from.kind === 'block' && a.from.slot === 'chat' && b.from.kind === 'block' && b.from.slot === 'chat');
 
-// Every message that differs from the last call's, in wire order, up to where the last call's cached prompt ends in
-// the next send: what follows it there is the chat going on, not a change. One the next send has that the last call's
-// cached prompt did not is changed when it stands in for a removed one from the same part, else added; one the last
-// call cached that the next does not send is removed. A removed one sorts first at the same place.
+// Compare wire order only through the old cached prefix; later conversation is not a change.
+// Pair replacements within one source part, otherwise mark additions; sort removals first at equal positions.
 function changes(before: WireMessage[], after: WireMessage[], same: number, end: number): Change[] {
   const cached = before.slice(same, end + 1);
   const positions = new Map<string, number[]>();
@@ -137,10 +135,8 @@ function changes(before: WireMessage[], after: WireMessage[], same: number, end:
   return found.sort((a, b) => a.at - b.at || (a.kind === 'removed' ? -1 : b.kind === 'removed' ? 1 : 0));
 }
 
-// A provider reads its cache only where a point of the last call stood, as far as both requests match from their
-// start, and only from a point of the next send within its lookback after it. A point whose prompt is under the
-// model's minimum caches nothing, so a last call none of whose points reach it is not compared. null when the next
-// send marks no point and there is no last call to compare.
+// Reuse only matching prefixes ending at an old point reachable from a new point's lookback.
+// Ignore old points below the model minimum; no new points/prior cache means no forecast.
 export function forecast(last: Prior | null, next: CacheSend): Forecast | null {
   const after = next.messages;
   const nextPoints = after.flatMap((message, index) => (message.point ? [index] : []));

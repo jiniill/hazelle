@@ -3,11 +3,9 @@ import type { Change, Chapter, Fact, Line, Memory, MemoryRecord, Source, Thread,
 import type { MemoryPrompt } from '../model/prompt';
 import { args } from './lorebook/decorators';
 
-// by: the tool that held the slot (design §6.10), null for the built-in memory. sent: the built-in memory's records and
-// chapters sent; text: what the tool's memory said. covered: the leading messages memory covers, which the chat slots
-// leave out. missing: how many of those went with no memory standing for them (stale, over the budget, forgotten, or
-// the slot did not reach the request). slot: whether the prompt holds 장기 기억 where it reaches the request, whatever
-// memory holds.
+// covered messages leave chat slots; missing counts those with no sent memory (stale/over/forgotten/unreachable slot).
+// slot reports prompt reachability independently of content. by null selects built-in sent records/chapters;
+// otherwise text is the tool-owned memory.
 export type MemorySent = ({ by: null; sent: string[]; found: string[] } | { by: string; text: string }) & { covered: number; missing: number; slot: boolean };
 
 // A record's or a chapter's. stale: its messages render differently now, so it waits (design §6.2, When the source
@@ -20,8 +18,7 @@ export type RecordStatus = 'sent' | 'stale' | 'over' | 'forgotten' | 'chaptered'
 // records: one of a chapter's records changed, was deleted or was made again since the chapter read it.
 export type Staleness = 'deleted' | 'changed' | 'records';
 
-// The chat's messages as one request reads them, oldest first: each one's id and shown version, and its role, its
-// speaker's name and its text as the prompt renders it.
+// Parallel arrays in oldest-first message order; texts are prompt-rendered, not stored or displayed text.
 export type ChatRead = { shown: Source[]; roles: ('user' | 'assistant')[]; speakers: string[]; texts: string[] };
 
 // A chat whose persona was deleted runs with none until the user picks another; Risu names that user 'User'
@@ -31,17 +28,14 @@ export const personaName = (persona: { name: string } | null) => persona?.name ?
 export const speakersOf = ({ messages, persona, card }: { messages: readonly { role: 'user' | 'assistant' }[]; persona: { name: string } | null; card: { name: string } | null }) =>
   messages.map(({ role }) => (role === 'user' ? personaName(persona) : (card?.name ?? 'Assistant')));
 
-// found: the records retrieval ranked nearest the latest message, nearest first (engine/retrieval), none when nothing
-// could be found.
+// found: retrieval results nearest to the latest message first (engine/retrieval).
 export type MemoryInput = { memory: Memory; budget: number; shown: Source[]; found: string[] };
 
-// Memory takes at most this share of what the model can take, so a budget set for a larger model shrinks for this
-// request; the setting itself is untouched.
+// Clamp to the model's allowance per request without changing the saved memory budget.
 const MEMORY_SHARE = 0.5;
 export const memoryBudget = (setting: number, prompt: number | null) => (prompt === null ? setting : Math.min(setting, Math.floor(prompt * MEMORY_SHARE)));
 
-// The state's limit, a share of the memory budget. Past it nothing is cut: the panel says so, a memory task is told,
-// and the user trims it.
+// Advisory only: report excess to the user and memory task, never truncate state.
 const STATE_SHARE = 0.2;
 export const stateLimit = (budget: number) => Math.floor(budget * STATE_SHARE);
 
@@ -80,12 +74,9 @@ export function coveredBy(memory: Memory, places: ReadonlyMap<string, number>): 
   return end;
 }
 
-// Memory as it stood with only the records kept, which a branch carries (design §6.2, Branches): their facts and
-// threads and the user's as they stand, and what a record left out changed put back as the kept records had it. A fact
-// it set or removed takes the last kept record's value, and a thread it closed is open again. Only a record's own
-// changes say where in the chat they were made: what the user set, rewrote or deleted is carried as it stands now, so a
-// fact or thread of a kept record that is missing with no left-out record's change to explain it stays out, as the
-// user's deletion. A chapter is kept when all its records are.
+// Branches undo excluded records' fact changes and thread closures, but preserve current user edits/deletions.
+// Restore a missing fact/thread only if an excluded record explains its absence; otherwise it was the user's deletion.
+// Keep chapters only when all their records survive (design §6.2, Branches).
 export function memoryThrough(memory: Memory, kept: MemoryRecord[]): Memory {
   const carried = new Set(kept.map(({ id }) => id));
   const rest = memory.records.filter(({ id }) => !carried.has(id));
@@ -132,11 +123,9 @@ export const owned = (item: MemoryRecord | Chapter) => item.edited === true || i
 // Sent whatever the budget, as the state and the open threads are.
 const fixed = (item: MemoryRecord | Chapter) => item.pinned === true || recalled(item);
 
-// costs: every record's and chapter's summary in tokens. fixed: what is sent whatever the budget, the state, the open
-// threads and the pinned and recalled summaries. recalls: what each recalled record's messages take beyond its summary,
-// newest first. free: the other summaries that would be sent if they fit. None of these depends on the budget, so
-// consolidation reads them against the setting. crowded: the pinned summaries with the rest of the fixed part take the
-// whole budget, so others are over.
+// Budget-independent costs let consolidation compare the saved setting, not a request clamp.
+// fixed includes state/threads/pinned/recalled summaries; recalls add source-message costs newest first.
+// crowded means fixed alone fills the budget; free holds the other eligible summaries.
 export type Standing = {
   covered: number;
   status: Map<string, RecordStatus>;
@@ -164,11 +153,9 @@ function recallRoom(room: number, recalls: number[]): { room: number; fits: bool
   return { room: left, fits };
 }
 
-// What memory sends against its budget: the state and open threads always, pinned and recalled ones always, then the
-// newest that fit, in chat order. A chapter that can be sent stands in its first record's place for its records; a
-// pinned or recalled record in it is sent too. A recalled record sends its messages instead of its summary while they
-// fit what the budget leaves. An automatic record or chapter that is stale is not sent, nor a chapter whose records
-// moved; one the user edited or pinned stays sent, marked, until the user decides.
+// Always send state/threads/pinned/recalled summaries, then newest fitting summaries in chat order.
+// Eligible chapters stand at their first record; pinned/recalled members still send separately.
+// Recall substitutes source messages only while they fit. Stale automatic work waits; user edits/pins stay marked.
 export function standing(memory: Memory, chat: ChatRead, budget: number, countTokens: (text: string) => number): Standing {
   const places = placesOf(chat.shown);
   const status = new Map<string, RecordStatus>();
@@ -247,17 +234,13 @@ export function standing(memory: Memory, chat: ChatRead, budget: number, countTo
   };
 }
 
-// Consolidation (design §6.2, When memory outgrows its budget) works on loose records alone, the only summaries it can
-// shrink: it starts once they pass HIGH of the room the rest leaves them, and makes chapters until they are projected
-// under LOW, so it runs in batches rather than on every new record. Once the rest fills the setting, it makes none:
-// chapters are never compressed again, and the oldest go over. A chapter is told to take about 1 / CHAPTER_SHARE of
-// its records.
+// Consolidate loose records only: start above HIGH, stop projected below LOW.
+// Never re-compress chapters or consolidate when fixed content fills the setting. Target 1/CHAPTER_SHARE of source.
 const HIGH = 0.9;
 const LOW = 0.5;
 const CHAPTER_SHARE = 4;
-// Left to the model, Gemini 3.8 Flash wrote one ~1,000-token record for 49 messages (~13k tokens) and lost four facts
-// of nine (measured 2026-10-09); records are told to take about 1 / RECORD_SHARE of their messages, within a quarter of
-// the budget a batch.
+// Unconstrained summaries lost facts (Gemini 3.8 Flash, 2026-10-09); target 1/RECORD_SHARE of source,
+// capped at a quarter of the per-batch budget.
 const RECORD_SHARE = 5;
 export const recordsTarget = (spanTokens: number, budget: number) => Math.min(Math.ceil(spanTokens / RECORD_SHARE), Math.ceil(budget / 4));
 
@@ -269,12 +252,8 @@ export const chapterCap = (batch: number, limit: number | null) => Math.min(4 * 
 
 type NextChapter = { from: number; to: number; records: string[]; target: number };
 
-// The chapters consolidation would make now, oldest first, each from a run of two or more loose records, its messages
-// by place (from included, to not) and its target length; the first is the next job, and their number the calls left. A
-// loose record is automatic, fresh, in no chapter (a deleted one included) and not in a chapter that failed this
-// session (failed). A record whose messages pass cap on their own is stepped over. Measured against setting, the memory
-// budget as set, never the budget a smaller model shrinks it to for one request: switching models must not change what
-// a chat remembers.
+// Plan oldest-first runs of >=2 fresh automatic records outside chapters/failed chapters. Skip oversized records.
+// Use the saved memory setting, never the request's model clamp: switching models must not change remembered content.
 export function nextChapters(memory: Memory, held: Standing, shown: Source[], tokens: number[], setting: number, cap: number, failed: ReadonlySet<string>): NextChapter[] {
   const places = placesOf(shown);
   const member = new Set(memory.chapters.flatMap(({ records }) => records.map(({ id }) => id)));
@@ -320,9 +299,7 @@ export function nextChapters(memory: Memory, held: Standing, shown: Source[], to
   return made;
 }
 
-// Rendered from memory alone, and a recalled record's messages as the prompt renders them, in stored order, with no
-// clock and nothing random, so between two commits the block is the same text on every turn and the cache point before
-// it holds.
+// Stored order, no clock or randomness: memory and recalled prompt text must render identically between commits for caching.
 function memoryText(state: Fact[], threads: string[], items: string[], heading = 'What happened, in the order of the chat:', stateHead = 'Current state:'): string {
   return [
     state.length ? [stateHead, ...state.map(({ about, field, value }) => `- ${about}, ${field}: ${value}`)].join('\n') : '',
@@ -348,8 +325,7 @@ export function recalledText(record: MemoryRecord, chat: ChatRead, places: Reado
   return [headOf(record), 'The messages, word for word:', ...said].join('\n');
 }
 
-// Where the raw window starts, by each message's tokens, oldest first: a message partly inside the window is inside it,
-// and the last message always is.
+// Include partially overlapping messages and always the last one in the raw window.
 export function windowStart(tokens: number[], window: number): number {
   if (!tokens.length) return 0;
   let at = tokens.length - 1;
@@ -360,17 +336,15 @@ export function windowStart(tokens: number[], window: number): number {
 
 const summed = (counts: number[]) => counts.reduce((sum, count) => sum + count, 0);
 
-// The messages a request sends as written, past those memory covers (covered): the ones before the window, which wait
-// for the next summary (from covered to end), and the window's. A record can reach into the window once the window
-// grows, so the window's sent part starts at covered then. waiting and recent count tokens.
+// Raw text starts at covered, even if an expanded window overlaps old records.
+// waiting counts uncovered pre-window tokens; recent counts the remaining window.
 export function rawParts(tokens: number[], covered: number, window: number): { end: number; waiting: number; recent: number } {
   const end = Math.max(windowStart(tokens, window), covered);
   return { end, waiting: summed(tokens.slice(covered, end)), recent: summed(tokens.slice(end)) };
 }
 
-// The messages the next summary reads, from the first one memory does not cover, never into the window: about batch
-// tokens of them (one whole message at least) once those outside the window reach batch, or earlier the ones the next
-// request drops (dropped). null: nothing to summarize yet.
+// Summarize uncovered pre-window text once it reaches batch, or earlier if the next request drops it.
+// Take whole messages (at least one); never enter the raw window. Null means no job.
 export function nextSpan(tokens: number[], covered: number, { window, batch }: { window: number; batch: number }, dropped: number): { from: number; to: number } | null {
   const { end, waiting } = rawParts(tokens, covered, window);
   if (end === covered) return null;
@@ -428,10 +402,8 @@ const textOrNull = (value: unknown): value is string | null => value === null ||
 const textsOf = (value: unknown): value is string[] => Array.isArray(value) && value.every(isText);
 const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
 
-// A key line as a model quotes it: quote marks and punctuation set aside, so `bleachers,"` reads as `bleachers.`, and
-// each sentence found in order in the record's own messages, since a model joins the sentences of one speech that
-// narration separates. A line not said there is left out, never the record: a model alters a word in about one line
-// of five (measured 2026-10-09, Gemini 3.8 Flash), and a batch refused for one line would never land.
+// Validate quoted sentences in source order, ignoring quote punctuation. Drop invented/altered lines, not records:
+// models alter roughly one in five, so rejecting whole batches would prevent progress (Gemini 3.8 Flash, 2026-10-09).
 const plain = (text: string) => text.replace(/["'“”‘’«»「」『』]/g, '').replace(/[.,!?…;:~、。，！？]+/g, ' ').replace(/\s+/g, ' ').trim();
 const sentencesOf = (text: string) => text.split(/(?<=[.!?…。！？])\s+/).map(plain).filter(Boolean);
 export function linesSaid(lines: Line[], source: string): Line[] {

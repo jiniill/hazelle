@@ -9,21 +9,15 @@ import { takeBackFiles } from './files/claims';
 import { fail, hex, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
 import { canWrite, requireSession } from './session';
 
-
-// Each account holds its own copy of a file under its incarnation, so nothing is shared between accounts and removing
-// one account's pictures races no one else. While its account lives, a file goes only through its sweep (below), whose
-// bytes wait out every backup and rewind that could still name it (migration 0010_file_removals).
-// An upload whose account was deleted meanwhile names the old incarnation: its statements match no row, and the bytes
-// it leaves under the old prefix are the hourly reconciliation's (reconcile.ts).
+// File copies are incarnation-scoped, never shared between accounts. Live accounts' files are removed only by sweeps,
+// after all referencing backups/rewinds expire (migration 0010). Uploads outliving deletion match no account row;
+// reconcile.ts removes their orphaned bytes hourly.
 export const files = new Hono<AppEnv>();
 
 files.use(requireSession);
 
-// Which of the ids the asking account does not hold, so an import uploads only those; the largest body a PUT takes,
-// so the client sends none past it: worker.ts refuses one before reading it, which the browser reports as a dropped
-// connection, not as the 413; and the bytes left under the picture cap (null for no cap), so the client sends none
-// past it either, since PUT reads a whole body before its reservation refuses it. A blocked id counts as not held: the
-// upload is then refused by name, where 'held' would let an object name a file nobody can read.
+// Advertise size/space limits before uploads: worker size refusals look like dropped connections, and PUT reads before
+// checking account capacity. Blocked ids count as missing so uploads fail explicitly instead of creating unreadable refs.
 files.post('/missing', async (c) => {
   const input = await readObject(c);
   const ids = input?.ids;
@@ -41,10 +35,8 @@ files.post('/missing', async (c) => {
   return c.json({ missing: results.map(({ id }) => id), maxBytes: MAX_FILE_BYTES, room });
 });
 
-// A body that does not hash to its id is refused: a block names content across every account and GET's answer is
-// cached forever, both only because an id is its content.
-// Reserve, put, finalize: the row is written, and counted, before the bytes, so the cap holds against a crash at any
-// point, and a retry of the same file reuses its row instead of paying again.
+// Content hashes make cross-account blocks and immutable GET caching valid.
+// Reserve and charge before writing bytes, then finalize: crashes preserve caps; retries reuse the reservation.
 files.put('/:id', canWrite, async (c) => {
   const id = c.req.param('id');
   if (!FILE_ID.test(id)) return fail(c, 400, 'bad-input');
@@ -79,8 +71,7 @@ async function publish(c: Context<AppEnv>, id: string) {
     c.req.arrayBuffer(),
   ]);
   if (blocked) return fail(c, 403, 'file-blocked');
-  // Off the main thread, not sha256Hex: a body is up to 25 MiB and several arrive at once; a sync hash would stall every
-  // other request for its whole run.
+  // Keep hashing off-thread: concurrent 25 MiB uploads would block other requests with synchronous sha256Hex.
   if (hex(new Uint8Array(await crypto.subtle.digest('SHA-256', body))) !== id) return fail(c, 400, 'bad-input');
   // Read once the body is in, not beside it: the account may have begun leaving or be gone since the session check.
   if (!(await db.prepare(`SELECT ${ALIVE} AS alive`).bind(incarnation).first<number>('alive'))) return outlived(c);
@@ -139,12 +130,9 @@ files.get('/', async (c) => {
   return 'unavailable' in answer ? refused(c, answer) : answer;
 });
 
-// The account's sweep (runtime/files), on the timeline and revision it walked; a changed revision refuses the stale
-// walk. It shares the account queue with object writes and share publication. unused: held ids no object names,
-// released unless claimed within CLAIM_SETTLE_MS or named by a link
-// the account shared while the link is live or has an open report, since the operator reads it then. named: ids objects
-// name that the account does not hold, taken back while their bytes are kept, over the cap if need be, as the objects
-// are already written.
+// Fence sweeps on the same account queue/timeline/rev as object writes and share publication.
+// Release unused ids only after claims settle and no live/open-report share names them.
+// Reclaim named-but-unheld copies even over cap: their referring objects already exist.
 files.post('/sweep', canWrite, async (c) => {
   const input = await readObject(c);
   const { timeline, rev, unused, named } = input ?? {};
@@ -206,10 +194,8 @@ files.get('/:id', async (c) => {
   return c.body(file, 200, { 'content-type': 'application/octet-stream', 'cache-control': 'private, max-age=31536000, immutable' });
 });
 
-// The operator's block, mounted under the operator's guard (admin.ts). It refuses the content to every account and
-// needs no account to hold it. No bytes are removed, so lifting it brings every copy back.
-// The admin_log row goes in one batch with the change, before it and only if the change happens, so the log never
-// misses a change that happened and never holds one that did not.
+// Global content block needs no holder and removes no bytes, so lifting restores every copy.
+// Log before the change in one target-gated batch, never claim an action that did not happen.
 export const fileBlocks = new Hono<AppEnv>().put('/files/:id/blocked', async (c) => {
   const id = c.req.param('id');
   const blocked = (await readObject(c))?.blocked;

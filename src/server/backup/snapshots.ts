@@ -3,13 +3,10 @@ import { baseIdsPath, CURRENT_BASELINE, RETENTION_MS, TAKES_BASELINE } from '../
 import { snapshotKey } from '../files/bucket';
 import { DAY_MS, type Services } from '../http';
 
-// The daily baselines and the retention of every snapshot (docs/research/docker-port-plan.md §10.1). Day boundaries
-// are UTC. Work goes one account at a time with a yield between, so the event loop keeps serving requests.
+// UTC baselines/retention. Yield between accounts so daily work cannot starve request handling.
 
-// The pin rule, over a snapshots row aliased `s` and the time `now` (a bind or literal): an operation pins its
-// checkpoint and target until it ends and for RETENTION_MS after, whichever way it ended: a finished rewind's undo lives
-// that long, and a cancelled or failed one stays recoverable by hand. Retention and every backup generation read this
-// one rule.
+// Shared pin rule for retention and generations: checkpoint/target stay pinned through operation completion
+// and RETENTION_MS afterward, including failed/cancelled operations for manual recovery.
 export const PINNED = (s: string, now: string) =>
   `EXISTS (SELECT 1 FROM restores r WHERE r.incarnation = ${s}.incarnation AND ${s}.id IN (r.checkpoint, r.target)
      AND (r.ended_at IS NULL OR r.ended_at > ${now} - ${RETENTION_MS}))`;
@@ -17,11 +14,9 @@ export const PINNED = (s: string, now: string) =>
 export const dayStart = (now: number) => now - (now % DAY_MS);
 export const pass = () => new Promise<void>((resolve) => setImmediate(resolve));
 
-// The accounts that take a baseline now (TAKES_BASELINE) whose current baseline (CURRENT_BASELINE) is absent or older
-// than `before`, and when restoring older than today (UTC) at least: one restoring before its checkpoint is restored
-// from its baseline should the operation be cut off. A `before` past `now` selects every one. Freshness is judged among baselines only: a young checkpoint holds an
-// operation's undo, not the account as it is now. An account unchanged since an old current baseline stays selected
-// every day; its take finds it unchanged and copies nothing.
+// Select eligible missing/old current baselines, requiring at least today's baseline before a restoring account checkpoints.
+// Only baselines prove present state; young undo checkpoints do not. Unchanged old baselines remain selected,
+// but capture copies nothing. before > now selects every eligible account.
 export async function staleBaselines(env: Services, now: number, before: number): Promise<string[]> {
   const { results } = await env.db
     .prepare(
@@ -56,17 +51,12 @@ export async function takeBaselines(env: Services, incarnations: string[]): Prom
   return { taken, skipped, unchanged, failed };
 }
 
-// A snapshot goes once it is RETENTION_MS old, unless it is pinned (PINNED), it is a live account's floor: its newest
-// baseline RETENTION_MS old or older, the account as it was when the window began, or a delta names it as its base.
-// The floor is of any timeline, unlike the current baseline: a time inside the window from before a rewind still lands
-// (landing), and only a baseline from before the window answers it. (A clock put back can so keep an older timeline's
-// baseline stamped later as the floor over the current timeline's; landing by time is as confused by it, accepted.)
-// Baselines are taken only on days the account changed, so a time inside the window may land on one from before it;
-// the floor is also an unchanged account's only copy. A base goes on a later pass, once its last delta has gone.
-// A deleted account has no restores and no row, so every catalog entry of it goes at RETENTION_MS from its taking.
-// Disk generations keep hard links; R2 generations name the store, so the catalog deletion queues a removal in the same
-// transaction, due when the newest local generation naming the archive expires, at once when none does (`named`, from
-// namedArchives; reconcile.ts). A snapshot's id list (baseIdsPath) goes with its row on either store.
+// Expire after RETENTION_MS except pins, delta bases and each live account's newest pre-window baseline (floor).
+// The floor spans any timeline: pre-rewind times still need it, and unchanged accounts may have no newer copy.
+// Clock rollback can leave an older timeline's later-stamped floor; landing has the same accepted ambiguity.
+// Remove bases only after their last delta; departed accounts retain no floor. Disk generations keep hard links.
+// For R2, queue deletion atomically with catalog removal, due after the newest naming generation expires
+// (or immediately if none). Remove baseIdsPath with the row on either store.
 export async function expireSnapshots(env: Services, dataDir: string, now: number, named: Map<string, number>): Promise<number> {
   const { results } = await env.db
     .prepare(

@@ -21,9 +21,8 @@ export const callOf = ({ connection, model }: Route): Stream['call'] => ({ conne
 // chat: null for a chat not saved yet, whose call a reload does not pick up.
 export type CallTarget = { id: string; chat: string | null; result: string; for: Stream['for'] };
 
-// Its marker is written once the server holds the call, never before: a pick-up that found the marker of a call not
-// started yet would read no call and save that as its result. A marker that fails to save only leaves the call to this
-// page; one that lands after its result was saved is removed by the next pick-up.
+// Write markers only after server acceptance, or pickup can save not-yet-started calls as missing.
+// Failed markers leave ownership here; late markers after result save are removed by the next pickup.
 export async function newCall({ store, tokens }: Pick<Session, 'store' | 'tokens'>, route: Route, { id, chat, result, for: purpose }: CallTarget): Promise<GenerateInput['call']> {
   const key = await streamKey();
   const at = Date.now();
@@ -61,8 +60,8 @@ export function endCall(store: ObjectStore, id: string) {
   if (marker) void store.remove(id);
 }
 
-// Picks up the calls this page is not reading (reading, which Talk, Translator and Rememberer keep): when the session
-// opens and whenever a marker or an entry changes, which is also when a reply waiting for its chat's turn in Talk to end can go.
+// Pick up only unread calls on session open or marker/entry changes.
+// Result saves also unblock calls waiting for their chat's current turn.
 export class Streams {
   private closed = false;
   private readonly checking = new Set<string>();

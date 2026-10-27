@@ -31,8 +31,7 @@ export class Return {
   }
 }
 
-// What {{bkspc}} and {{erase}} give: a change to the text made before them on their own level, which the evaluator
-// applies (evaluateNodes), since no handler sees that text.
+// Backspace/erase return edits to preceding same-level text; only evaluateNodes owns that text.
 export type Erase = (before: string) => string;
 
 // null: the tag stays as written, as it does with fewer than min arguments.
@@ -48,7 +47,7 @@ export const normalize = (name: string) => name.toLowerCase().replace(/[\s_-]/g,
 export const handlerFor = (name: string) => HANDLERS.get(normalize(name));
 export const tagNames = () => [...HANDLERS.keys()];
 
-// Tags Risu has that risu-alpha does not evaluate, normalized. They stay as written, and import counts them.
+// Unsupported Risu tags stay literal and are counted at import.
 const UNSUPPORTED = new Set([
   // Marked X in risu-compat-spec §d, with their aliases in src/ts/cbs.ts at ca1345fc. The internal-only `__`
   // is left out, since normalizing empties its name.
@@ -146,16 +145,14 @@ define('lorebook worldinfo', 0, (_, { context }) => serialize(context.lore.map((
 // Risu's markup, which the display dims until a bot's buttons can run (design §6.4).
 define('button', 2, ([label, trigger]) => `<button class="button-default" risu-trigger="${trigger}">${label}</button>`);
 
-// A bot's assets show on screen only; the prompt keeps these tags as written, as in Risu (design §6.4). A name that
-// finds no asset shows nothing, and is told in context.unfound.
+// Resolve assets only for display; prompts keep tags literal. Missing assets draw nothing and enter context.unfound.
 const assetTag = (render: (url: string, asset: BotAsset) => string): Run => ([name], { context, random }) => {
   if (context.stage !== 'display') return null;
   const asset = findAsset(context.assets, name!, random);
   if (!asset) context.unfound?.add(name!);
   return asset ? render(assetUrl(asset.id), asset) : '';
 };
-// Risu's video markup, with the source on the video itself, so resolveAssets and the story's sanitizer see one
-// attribute. Story.tsx keeps a video from playing sound until the reader starts it.
+// Put src on video itself for resolveAssets/sanitization; Story.tsx keeps it muted until user playback.
 const video = (url: string) => `<video src="${url}" controls autoplay loop></video>`;
 const mutedVideo = (url: string) => `<video src="${url}" autoplay muted loop></video>`;
 define('raw path', 1, assetTag((url) => url));
@@ -177,8 +174,8 @@ define('chardisplayasset', 0, (_, { context: { card } }) => (card ? '[]' : null)
 define('moduleenabled', 1, ([namespace], { context }) => (context.modules.includes(namespace!) ? '1' : '0'));
 define('moduleassetlist', 1, ([namespace], { context: { modules, assets } }) => (modules.includes(namespace!) ? serialize(assets.filter((asset) => asset.module === namespace).map(({ name }) => name)) : ''));
 
-// The prompt's text drops a chat's inlays and text files, which go beside it as pictures and ahead of it as files
-// (engine/pipeline); the display keeps the tag for placeInlays and placeTextFiles (engine/assets.ts), after its regex.
+// Prompt strips inlay/textfile tags and pipeline sends attachments separately.
+// Display preserves tags until post-regex placement (engine/assets).
 define('inlay inlayed inlayeddata', 1, (_, { context }) => (context.stage === 'display' ? null : ''));
 define('textfile', 1, (_, { context }) => (context.stage === 'display' ? null : ''));
 
@@ -264,8 +261,7 @@ function choose(args: string[], next: () => number): string | null {
   const from = args.length > 1 ? args : options(args[0]!);
   return from[Math.floor(next() * from.length)] ?? null;
 }
-// The most a count read from the text may be where it sizes a loop or an allocation; past it the tag stays as
-// written. It holds each tag, not a text's tags together.
+// Bound each tag's allocation/loop count, not the whole text; oversized arguments leave the tag literal.
 const MOST = 10_000;
 function roll(notation: string, next: () => number): string | null {
   const [, count, sides] = /^(?:(\d*)d)?(\d+)$/i.exec(notation.trim()) ?? [];
@@ -329,8 +325,7 @@ define('lastmessageid lastmessageindex', 0, (_, { context }) => (context.message
 define('previouscharchat lastcharmessage', 0, (_, { context }) => lastOf(context, 'assistant'));
 define('previoususerchat lastusermessage', 0, (_, { context }) => lastOf(context, 'user'));
 define('previouschatlog', 1, ([number], { context }) => context.messages[Number(number) + opened(context)]?.text ?? 'Out of range');
-// Each message a JSON object of role, data and time, as Risu's history gives it (cbs.ts), since a bot's Lua reads the
-// role back from it to tell the user's messages apart.
+// Keep Risu history keys role/data/time: bot Lua reads role to distinguish user messages.
 const luaRole = (role: HistoryMessage['role']) => (role === 'user' ? 'user' : 'char');
 const messageObject = ({ role, text, time }: HistoryMessage) => JSON.stringify({ role: luaRole(role), data: text, ...(time !== null && { time }) });
 // Without an argument the greeting leads, as in Risu; with any the texts after it, `role` among them prefixing each
@@ -351,8 +346,7 @@ define('chatindex', 0, (_, { context }) => {
 });
 // Risu's fmIndex: the card's first message -1 and its first alternate greeting 0, one less than card.greetings counts.
 define('firstmsgindex firstmessageindex', 0, (_, { context: { greeting } }) => (greeting && greeting.index !== null ? String(greeting.index - 1) : null));
-// Risu names a character's message `char`, which bots compare against. Outside a message Risu gives a prompt block its
-// own role; the CBS context does not carry the block, so every text outside a message reads Risu's other answer, unset.
+// Bots expect Risu's char role. Outside a message use unset: CBS context has no prompt-block role.
 define('role', 0, (_, { context }) => {
   const role = currentMessage(context)?.role;
   return role === undefined ? UNSET : role === 'user' ? 'user' : 'char';
@@ -442,8 +436,7 @@ define('arraysplice', 3, ([array, start, count, ...insert]) => {
   return serialize(current);
 });
 
-// [end], [start, end] or [start, end, step], each number as text, as Risu gives them. A negative step counts down, where
-// Risu's gives none or hangs; a step of 0 toward end runs past MOST.
+// Preserve Risu's text-number array shape. Negative steps count down (Risu may hang); zero steps hit MOST.
 define('range', 1, ([bounds]) => {
   const numbers = items(bounds!).map(Number);
   const [start = NaN, end = NaN, step = 1] = numbers.length === 1 ? [0, numbers[0]] : numbers;
@@ -497,8 +490,8 @@ define('erase', 0, () => (before) => {
 // A missing reading is empty; Risu's shows `undefined`.
 define('ruby furigana', 1, ([text, reading = '']) => `<ruby>${text}<rp> (</rp><rt>${reading}</rt><rp>) </rp></ruby>`);
 const HTML_ENTITIES: Record<string, string> = { '&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;' };
-// The last argument is the code, a language before it named as a fence names it (app/ui/story/highlight.ts reads it);
-// Risu leaves `&` as is.
+// Last argument is code; preceding language names its fence (app/ui/story/highlight.ts).
+// Unlike Risu, escape & too.
 const escapeHtml = (text: string) => text.replace(/[&"'<>]/g, (char) => HTML_ENTITIES[char]!);
 define('codeblock', 1, (args) => {
   const language = args.length > 1 ? /^[\w+#-]+$/.exec(args[0]!.trim())?.[0] : undefined;

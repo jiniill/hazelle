@@ -15,11 +15,9 @@ export type OutlineStop = {
   kind: OutlineKind;
   icon: LucideIcon;
   title: string;
-  // An unnamed text block, titled by its first line.
   dim?: boolean;
   meta?: string;
   badge?: string;
-  // The gold dot: the block holds toggle conditions.
   flagged?: boolean;
   // A cache point after the stop, drawn as a dashed line under it: one set on it, or one the app sets itself.
   cache?: 'set' | 'auto';

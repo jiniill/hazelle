@@ -35,8 +35,7 @@ let relay: Relay | null = null;
 // are written after the result, while the test may already be done.
 const answered = new Set<Promise<Response>>();
 
-// The browser's fetch in runtime tests: /api/relay answers as the test says, and every other API route
-// is the real server, in process, over SQLite files and pictures in a temp directory (server/testing).
+// Use the real in-process SQLite/file server for API routes; stub only provider relay answers.
 function stubFetch() {
   vi.stubGlobal('fetch', async (url: string, init: RequestInit = {}) => {
     if (init.signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');

@@ -25,12 +25,9 @@ type Owned = { avatar: Avatar | null; assets: Asset[]; lore: Lore[]; likeness: L
 // Files are read this many at a time and each window saved as one, so a bot of thousands never holds them all at once.
 const FILE_WINDOW = 32;
 
-// The character goes last with what it owns (store.batch), a move's chat roots right before it, so a failure midway
-// never leaves a character missing some of its own, which a move relies on to skip a character already brought. A batch
-// over one request is cut from the back (store.commit), so the roots go in the character's request; only 200 or more
-// chats, or roots pushed past the request's byte limit, leave some roots without their character when cut there. id,
-// chats: a move's character id, which its staged entries name, and its chat roots. unheld: a move holds those chats
-// itself and summarizes them together once the character is published (runtime/move).
+// Write owned rows, move chat roots, then character: only complete characters become skippable on retry.
+// store.commit packs backward so roots share the character request unless count/bytes push them out.
+// unheld leaves chat leases/summaries to runtime/move until publication; id/chats refer to its staged rows.
 export async function addCharacter(store: ObjectStore, character: Character, { avatar, assets, lore, likeness }: Owned, progress: Progress, { id = crypto.randomUUID(), chats = [] }: { id?: string; chats?: Write[] } = {}): Promise<ApiResult<string>> {
   const owned = <K extends 'avatar' | 'asset' | 'lore'>(kind: K, value: Values[K]): Write => ({ type: 'create', kind, id: crypto.randomUUID(), parent: id, value });
   const writes: Write[] = [
@@ -51,9 +48,7 @@ export async function addCharacter(store: ObjectStore, character: Character, { a
 // Both import entrances use faceless for thumbnail failures and refused uploads, not absent source pictures.
 export type ImportedCharacter = { id: string; unsupported: Unsupported; faceless: boolean };
 
-// typeOf: what a kept file is, null for one not kept; an inlay keeps pictures and a signature only (engine/import inlayType).
-// The next window is read and queued while the one before it uploads, so the link never idles between windows; at most
-// two windows' bytes are held.
+// Pipeline read/upload windows, retaining at most two. typeOf null skips a file; inlays allow pictures/signatures only.
 export async function saveAssets(files: Files, assets: Imported['assets'], progress: Progress, typeOf: (bytes: Uint8Array) => string | null = assetType): Promise<ApiResult<{ kept: Asset[]; unsupported: Unsupported }>> {
   const kept: Asset[] = [];
   const tally: Tally = new Map();
@@ -172,8 +167,7 @@ export async function importCharacter(
   return added.ok ? { ok: true, data: { id: added.data, unsupported, faceless: picture !== null && avatar === null } } : added;
 }
 
-// 사본 만들기: chats stay with the original, and so does the alias, which tells the two apart. The copy names the same
-// stored files, so it keeps the 삽화 profiles made from them, tag edits included, without another call.
+// Copies share stored files/profiles but leave chats and alias with the original; never pay to regenerate copied profiles.
 export async function copyCharacter(store: ObjectStore, id: string, name: string, progress: Progress): Promise<ApiResult<string>> {
   const failed = await store.pull();
   if (failed) return failed;
@@ -242,14 +236,13 @@ export function setToggle(store: ObjectStore, character: string | null, key: str
   return store.update('character', character, (current) => ({ ...current, toggles: { ...current.toggles, [key]: value } }));
 }
 
-// The first open after 직접 순서 shipped keeps the order the screens showed by then (ids: folders by name, then
-// characters by their latest chat), so the rail only moves when the user moves something. Another device's seed wins.
+// Seed the pre-existing displayed order once so shipping manual order does not move the rail.
+// A concurrent device's seed wins.
 export async function seedOrder(store: ObjectStore, ids: string[]): Promise<void> {
   if (store.get('order', ORDER_ID)) return;
   await store.upsert('order', (current) => current ?? { ids });
 }
 
-// sequence: one place's characters, or its folders, in their new order.
 export const setOrder = (store: ObjectStore, sequence: string[]) => store.upsert('order', (current) => ({ ids: rearrange(current?.ids ?? [], sequence) }));
 
 export const orderFirst = (store: ObjectStore, ids: string[]) => store.upsert('order', (current) => ({ ids: toFront(current?.ids ?? [], ids) }));
@@ -270,7 +263,6 @@ const TRANSLATE_DEFAULTS = { replies: false, input: false, reverse: false, origi
 const OWN = { translate: 'ownTranslate', illustrate: 'ownIllustrate' } as const;
 type Scoped = keyof typeof OWN;
 type SwitchesOf = { translate: TranslateSwitches; illustrate: IllustrateSwitches };
-// What a write stores: the switches held, with a translation's required ones filled.
 const FILL: { [S in Scoped]: (saved: SwitchesOf[S] | undefined, change?: Partial<SwitchesOf[S]>) => SwitchesOf[S] } = {
   translate: (saved, change = {}) => ({ replies: TRANSLATE_DEFAULTS.replies, input: TRANSLATE_DEFAULTS.input, ...saved, ...change }),
   illustrate: (saved, change = {}) => ({ ...saved, ...change }),
@@ -299,9 +291,8 @@ function setOwnScoped<S extends Scoped>(store: ObjectStore, character: string, s
   return store.update('character', character, (current) => (own ? { ...current, [OWN[scope]]: copy } : without(current, OWN[scope])));
 }
 
-// The switches as set for a chat of character; a chat reads them through 기능 (runtime/features chatTranslate). input
-// is off under reverse, whatever is stored, since 반전 모드 sends what the user typed. prompt absent follows the
-// account's default translation prompt.
+// Reverse disables input translation regardless of saved input. Absent prompt follows the account translation default.
+// Readers must still apply the feature switch (runtime/features chatTranslate).
 export type TranslateSetup = typeof TRANSLATE_DEFAULTS & Pick<TranslateSwitches, 'prompt'> & { own: boolean };
 
 export function translateSwitches(store: Pick<ObjectStore, 'get'>, character: string | null): TranslateSetup {
@@ -326,8 +317,7 @@ export const setIllustrate = (store: ObjectStore, character: string | null, chan
 
 export const setOwnIllustrate = (store: ObjectStore, character: string, own: boolean) => setOwnScoped(store, character, 'illustrate', own);
 
-// 번역가의 노트 add up: the 전역 one, then the character's. Stored as typed, since trimming an autosave eats the newline
-// being typed; read trimmed.
+// Append global then character note. Trim only on read: autosave trimming would eat a newline still being typed.
 export function translatorNotes(store: ObjectStore, character: string | null): string {
   const global = store.get('settings', SETTINGS_ID)?.value.translatorNote;
   const own = character === null ? undefined : store.get('character', character)?.value.translatorNote;
@@ -341,7 +331,6 @@ export function setTranslatorNote(store: ObjectStore, character: string | null, 
   return store.update('character', character, noted);
 }
 
-// Drops the translations of texts the card no longer holds.
 export function setTextTranslation(store: ObjectStore, character: string, source: string, language: string, translation: Translation) {
   return store.update('character', character, (current) => {
     const held = readableTexts(current.card);

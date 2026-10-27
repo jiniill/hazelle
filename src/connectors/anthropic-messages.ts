@@ -35,8 +35,7 @@ const cacheControl = (cache: Cache) => ({ cache_control: ephemeral(cache) });
 
 const imageBlock = ({ type, data }: InputPicture) => ({ type: 'image', source: { type: 'base64', media_type: type, data } });
 
-// Never the cache mark itself; a cache point is the text block that carries it, after the pictures. OpenRouter reads the
-// same text block in chat completions, with its own picture part.
+// Cache the carrying text block after pictures, never a separate mark. OpenRouter uses the same text block.
 export function wireMessage(message: ChatMessage, cache: Cache | undefined, picture: (picture: InputPicture) => object) {
   const marked = message.cache && cache;
   if (!marked && !carriesPictures(message)) return { role: message.role, content: message.content };
@@ -47,8 +46,7 @@ export function wireMessage(message: ChatMessage, cache: Cache | undefined, pict
   return { role: message.role, content: [...pictures, { type: 'text', text: message.content, ...mark }] };
 }
 
-// Every system message goes up into system, joined by a blank line. It stays one string unless a cache point falls in
-// it; then it splits after each point into blocks, the blank line opening the next, so the text read is the same.
+// Cache-point splitting must preserve the exact blank-line-joined system text.
 function systemField(system: ChatMessage[], cache: Cache | undefined) {
   if (!system.length) return {};
   if (!cache || !system.some((message) => message.cache)) return { system: system.map((message) => message.content).join('\n\n') };
@@ -70,9 +68,7 @@ export const anthropicMessages: Codec = {
 
   systemFirst: true,
 
-  // The Models API reports limits, image, PDF and thinking support and effort levels. It does not report
-  // tool support, sampling, or whether thinking can be turned off. A limit of 0 is read as unknown, as
-  // the API's own example shows 0 for real models.
+  // Models API omits tool/sampling/off controls. Zero limits mean unknown, not zero capacity.
   parseModels(payload) {
     return (
       modelEntries(payload)?.map((raw) => {

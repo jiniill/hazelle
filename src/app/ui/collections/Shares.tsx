@@ -2,7 +2,6 @@ import styles from './Shares.module.css';
 
 type Share = { key: string; label: string; value: string; share: number };
 
-// The parts of one total, largest first, each over a bar of its share of the largest.
 export function Shares({ items }: { items: Share[] }) {
   return (
     <ul className={styles.shares}>

@@ -21,9 +21,8 @@ export type Frame = {
   // Ended, with its port still open while the connection lets its unload callbacks run: their calls are answered.
   unloading: boolean;
 };
-// A frame tool (manifest.risu) runs as its background frame, with these: chat, the chat open for it, which its calls
-// outside an event read; menu and actions, what its frame registered; shown, whether it asks to be shown; slot, where it is;
-// leaving, a slot that showed it left in this commit, so a slot attached before the commit ends is a remount.
+// Frame tools run in the background frame. Outside-event calls use chat; menu/actions/shown are live registrations.
+// leaving lasts one commit so reattaching a slot is a remount, not a close.
 export type Entry = {
   module: string; tool: Tool; settings: string; background: Frame | null; pages: Set<Frame>; chats: Set<string>; idle: ReturnType<typeof setTimeout> | null; data: Map<string, { key: string; json: string }>;
   chat: string | null; menu: MenuItem[]; actions: MenuItem[]; shown: boolean; slot: ToolSlot | null; leaving: boolean;

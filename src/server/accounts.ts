@@ -15,10 +15,8 @@ const ROOM = '(SELECT COUNT(*) FROM accounts) < (SELECT signup_cap FROM service)
 
 export const accounts = new Hono<AppEnv>();
 
-// Signup creates the account, its vault and a session in one batch, so an account never exists without a vault, and
-// claims the installation when no account has: the first signup is the operator. The client sends it only after the
-// recovery key is saved. The account's file is prepared before the batch: a crash between leaves a file with no row,
-// which the hourly reconciliation removes, never a row with no file.
+// Prepare file before atomically inserting account/vault/session and first-operator claim.
+// Client must download recovery key first; interrupted signup may leave an orphan file, never an account without one.
 accounts.post('/signup', async (c) => {
   const visitor = outsideVisitor(c);
   if (visitor && !c.env.limits.visitors.signups.limit(visitor).success) return fail(c, 429, 'too-many-signups');
@@ -40,9 +38,8 @@ accounts.post('/signup', async (c) => {
   const timeline = randomBytes(16).toString('hex');
   const [session, loginHash, recoveryHash] = await Promise.all([startSession(db, accountId, true), hashProof(passwordProof), hashProof(recoveryProof)]);
   const now = Date.now();
-  // The insert itself checks the cap and the username, so two signups at once cannot both take the last place or the
-  // same name: no read outside this batch decides. changes() carries its outcome to the vault, the session and the claim.
-  // A backup hold covers the file and the batch, so a generation holds both or neither (backup/backups.ts).
+  // Insert checks username/cap atomically; changes() gates vault/session/claim, never a stale pre-read.
+  // Hold file creation + batch against generation capture so backups get both or neither.
   const [created, , , claim, room] = await c.env.backups.hold(async () => {
     await c.env.stores.prepare(incarnation, timeline);
     return db.batch<{ incarnation?: string; open?: number }>([
@@ -120,9 +117,8 @@ accounts.get('/session', async (c) => {
   return c.json({ session, vault });
 });
 
-// 탈퇴. The proof is asked again, as for a new password, so a stolen session alone cannot delete the account. An
-// account whose deletion was cut off is still admitted, to finish it. The reports and 게시판 posts it wrote (their author
-// gone) and the operator's log rows about it stay. The only operator cannot leave: the installation would have no one to run it.
+// Re-prove identity for deletion; stolen sessions cannot delete. Admit leaving accounts to resume interrupted cleanup.
+// Retain reports/posts/operator logs with departed authors. The sole operator cannot leave.
 accounts.delete('/account', requireOwnSession, async (c) => {
   const body = await readObject(c);
   const method = readMethod(body?.method);
@@ -137,8 +133,8 @@ accounts.delete('/account', requireOwnSession, async (c) => {
   return c.body(null, 204);
 });
 
-// The account rewinds itself (lifecycle.ts). No proof is asked again, unlike 탈퇴: an undo gives the state back for
-// RETENTION_MS. A suspended account adds nothing, so it begins none; one it began before may still be finished.
+// Self-restore needs no new proof because undo remains available for RETENTION_MS.
+// Suspended accounts cannot begin one but may finish an existing operation.
 accounts.post('/account/restores', requireSession, canWrite, async (c) => {
   const from = restoreFrom(await readObject(c));
   if (!from) return fail(c, 400, 'bad-input');
@@ -158,9 +154,7 @@ accounts.post('/account/restores/:id/:action{resume|finalize|cancel}', requireSe
   return answerAction(c, id, c.req.param('action') as RestoreAction);
 });
 
-// The client needs the account id: it is part of the AAD that binds the vault's wrapped keys to the account. storage:
-// what the account holds and the caps that apply to it, null for none. bytes: null while the store does not answer,
-// restoring among the reasons.
+// Return account id for vault AAD. Null caps mean unlimited; null bytes means the store is unavailable/restoring.
 async function describe(c: Context<AppEnv>, account: Pick<Account, 'id' | 'username' | 'suspended' | 'incarnation' | 'state' | 'admin'>) {
   const { incarnation } = account;
   const [usage, facts] = await Promise.all([

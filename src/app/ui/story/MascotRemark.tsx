@@ -39,8 +39,7 @@ export function MascotRemark({ face, picture, name, line, fresh, onSeen }: Props
     timer.current = window.setTimeout(show, REST_DELAY);
   };
 
-  // A press on the card closes it too: it holds nothing to press. Esc leaves the focus on the mark and never sets it
-  // there again: a focus() after a key is focus-visible, which opens the card.
+  // Card click closes it. On Esc retain mark focus without calling focus(): focus-visible would reopen it.
   useLayer(open, { outside: (target) => !mark.current?.contains(target), close });
   useAnchored(open, card, mark, close);
   useEffect(() => () => window.clearTimeout(timer.current), []);

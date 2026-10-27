@@ -10,8 +10,8 @@ import type { Write } from './object-writes';
 import { sentPicture } from './picture';
 import type { ObjectStore } from './store';
 
-// A picture put in the composer is drawn within what a model is sent (runtime/picture sentPicture) and saved that way
-// at once, so every send reads the same bytes. false: the file is no picture the browser can draw.
+// Normalize composer pictures once at attachment time so repeated sends use identical bytes.
+// False means the browser cannot draw it.
 export async function addDraftPicture({ drafts, files }: { drafts: Drafts; files: Pick<Files, 'save'> }, key: string, file: Blob): Promise<boolean> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const sent = await sentPicture({ bytes, type: imageType(bytes) ?? file.type }).catch(() => null);
@@ -45,9 +45,8 @@ export async function addDraftFile({ drafts }: { drafts: Drafts }, key: string, 
   return 'added';
 }
 
-// The chat's rows for a send's attachments, before the turn that reads them: one the chat already holds by its name,
-// kept from a send that failed after it, is not written again. Held here, since a new chat's screen holds it only a
-// render after its first save.
+// Save attachment rows before the turn reads them; retain the new chat across its first render.
+// Retrying a failed send reuses existing names instead of duplicating rows.
 export async function keepAttachments(store: ObjectStore, chat: string, pictures: readonly Inlay[], files: readonly TextFile[]): Promise<ApiResult<null>> {
   const lease = store.retainChat(chat);
   try {
@@ -65,8 +64,7 @@ export async function keepAttachments(store: ObjectStore, chat: string, pictures
   }
 }
 
-// The pictures a prompt's messages name (ChatMessage inlays), read as the request leaves. One brought from Risu is drawn
-// within what a model is sent here; an attached one already is, and passes as it is.
+// Resolve picture ids only at send time. Imported inlays need resizing; composer attachments are already normalized.
 export async function withPictures({ store, files }: { store: Pick<ObjectStore, 'get'>; files: Pick<Files, 'read'> }, prompt: Assembled): Promise<ApiResult<Assembled>> {
   if (!prompt.messages.some(({ inlays }) => inlays)) return { ok: true, data: prompt };
   const read = async (id: string): Promise<ApiResult<InputPicture>> => {

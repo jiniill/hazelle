@@ -4,7 +4,6 @@
   flex-wrap: wrap;
 }
 
-/* The three kinds share one gap today; give a kind its own rule when its spacing changes. */
 .toolbar,
 .actions,
 .tags {
@@ -15,7 +14,6 @@
   gap: var(--space-8);
 }
 
-/* One act standing alone under what it answers, such as a post's 추천. */
 .center {
   justify-content: center;
   gap: var(--space-8);

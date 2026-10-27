@@ -34,8 +34,8 @@ export function AssetsEditor({ owner }: { owner: string }) {
   const selection = useSelection();
   const { picked } = selection;
   const copy = useCopy();
-  // A module is never a key: a chat's names are told under its character, whichever pack's text asked for them. A name
-  // the assets answer now, a near one included, is no longer missing.
+  // Missing names are keyed by character, never module, regardless of which pack referenced them.
+  // A newly resolvable fuzzy match also clears the missing name.
   const asked = useUnfoundAssets(owner);
   const unfound = useMemo(() => {
     const named = assets.map(({ id, value }) => ({ id, name: value.name }));

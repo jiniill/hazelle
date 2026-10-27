@@ -8,13 +8,11 @@ import styles from './useBigEdit.module.css';
 
 const LABEL = '크게 편집';
 
-// What the big copy hands back for the caret: a textarea through area, any other control through caret. Both are
-// stable, so a ref callback built on them is not called again on every render, which would put the caret back.
+// Keep area/caret refs stable: recreating callbacks would reapply the caret on every render.
 export type BigCopy = { area: (element: HTMLTextAreaElement | null) => void; caret: (handle: Caret | null) => void };
 
-// The same control over most of the screen, bound to the same value: there is no draft to save or cancel.
-// big draws that second copy, which must not take the field's own ref: its unmount would clear a ref the field
-// still answers to (the prompt editor's inserts).
+// Big editor shares the live value, not a save/cancel draft. Never reuse the small field's ref:
+// unmounting the copy would clear a ref still used for prompt insertion.
 export function useBigEdit(keys: readonly Chord[] | undefined, title: string, big: (copy: BigCopy) => ReactNode) {
   const field = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -46,9 +44,7 @@ export function useBigEdit(keys: readonly Chord[] | undefined, title: string, bi
     caret.current = (to ? inline() : copy.current)?.selection() ?? null;
     setOpen(to);
   };
-  // After the dialog's own focus moves: its trap focuses the × on open and hands focus back to the opener on close,
-  // which is the corner button when it was pressed. The caret is kept, not taken: StrictMode runs both effects twice
-  // and the trap's second run moves focus again.
+  // Restore caret after dialog focus handling. Do not consume it: StrictMode replays effects and the trap moves focus again.
   useEffect(() => {
     place(open ? copy.current : inline());
   }, [open]);

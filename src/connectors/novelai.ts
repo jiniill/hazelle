@@ -113,10 +113,8 @@ const bearer = (secret: string) => ({ authorization: `Bearer ${secret}` });
 
 const subscription = (secret: string) => ({ url: 'https://image.novelai.net/user/subscription', method: 'GET' as const, headers: bearer(secret), body: null });
 
-// Free on Opus only, for one picture of at most 1,048,576 pixels at no more than 28 steps. Past its V5 allowance every
-// V5 picture costs Anlas until it refills, so a V5 picture is free only while some is left; a missing allowance is not
-// known, never free. The plan is answered before the picture's own size and steps: off Opus the normal size costs too,
-// so naming the size would send the user to a setting that changes nothing.
+// Free Opus pictures require <=1,048,576 pixels and <=28 steps, plus known remaining V5 allowance.
+// Check plan first: changing size cannot make a non-Opus picture free.
 function costs(payload: unknown, picture: PictureRequest): Costs | null {
   const { model, width, height } = picture;
   if (!isRecord(payload) || typeof payload.tier !== 'number') return 'unknown';

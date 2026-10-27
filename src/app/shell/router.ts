@@ -3,7 +3,6 @@ import { HOSTED } from '../../contracts/installation';
 import { selfHost } from '../../runtime/installation';
 import { href, onBoard, parseRoute, type Back, type Route } from './routes';
 
-// A router library would add nothing for a handful of fixed paths.
 const NAVIGATED = 'risu-alpha:navigate';
 
 function subscribe(listener: () => void) {

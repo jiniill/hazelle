@@ -6,9 +6,7 @@ export function statedPrice(input: number | null, output: number | null, cacheRe
   return input === null || output === null ? undefined : { input, output, cacheRead, cacheWrite, tiers: [] };
 }
 
-// What the model list states is the provider's own and is kept: its price, and its inputs and outputs where it does not
-// leave them null. Ids match exactly, then ignoring case, never by likeness: a model models.dev names otherwise stays
-// unpriced, and what it takes and gives unknown.
+// Provider catalog values win. Match models.dev ids exactly, then case-insensitively, never fuzzily.
 export function joinModelsDev(models: Model[], list: ModelsDevList | null): Model[] {
   if (!list?.fetchedAt) return models;
   const exact = new Map(Object.entries(list.models));

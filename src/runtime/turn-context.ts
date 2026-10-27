@@ -125,10 +125,8 @@ export const wouldSend = async (session: Forecaster, chat: string, target: Targe
   return sending && 'kind' in sending ? null : sending;
 };
 
-// null: the chat or its turn cannot be gathered, the calibration did not load, or it was aborted. asker: whose forecast
-// this is, each with its own evaluation lane, kept with the chat so a forecast sends the worker only what changed since
-// its last: the composer's, background memory's (Rememberer) and the memory panel's. One lane shared by two would have
-// each cancel the other's. unsaved: a new chat not saved yet, which has no projection to wait for.
+// Null means unavailable/aborted. Keep separate retained lanes per composer/background memory/panel:
+// a shared lane would make them cancel each other. Unsaved chats have no projection to await.
 export async function forecastSend(session: Forecaster, chat: string, target: Target, signal?: AbortSignal, asker: Asker = 'forecast', unsaved: Unsaved | null = null): Promise<Sending | Unsendable | null> {
   // What the prompt reads may change while it is evaluated: it is gathered and evaluated again once, so a save landing
   // mid-flight does not cost memory its round.

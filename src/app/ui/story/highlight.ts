@@ -42,7 +42,6 @@ const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;'
 const escape = (text: string) => text.replace(/[&<>"]/g, (char) => ESCAPES[char]!);
 const FENCE = /<pre><code class="language-([^"\s]+)">([^<]*)<\/code><\/pre>/g;
 
-// The code of a fence whose language is known, split into its highlighted pieces; another is left as it is.
 export function drawCode(htmlText: string): string {
   return htmlText.replace(FENCE, (fence, language: string, escaped: string) => {
     const mode = MODES[language.toLowerCase()];

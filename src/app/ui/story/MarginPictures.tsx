@@ -11,9 +11,8 @@ type Props = {
 
 type Place = { top: number; height: number };
 
-// Each picture's band of the message: from where it stands to just above the next one, or to the message's end. A
-// picture stands level with its paragraph, below the one before it, and within the message when they fit; when they
-// do not, the last runs past the message's end rather than over another picture.
+// Keep each picture below its predecessor within its paragraph band. If they cannot fit,
+// let the last extend past the message, never overlap another picture.
 function placesOf(wanted: number[], heights: number[], end: number, gap: number): Place[] {
   const tops: number[] = [];
   for (const [index, at] of wanted.entries()) tops.push(index ? Math.max(at, tops[index - 1]! + heights[index - 1]! + gap) : Math.max(at, 0));
@@ -22,8 +21,7 @@ function placesOf(wanted: number[], heights: number[], end: number, gap: number)
   return tops.map((top, index) => ({ top, height: Math.max(index === tops.length - 1 ? end - top : tops[index + 1]! - gap - top, heights[index]!) }));
 }
 
-// A message's 삽화 on the stage beside the story, so the text never moves when one lands. Each follows the reader
-// down its band. Laid out against the message, which StoryMessage positions, whose edges are the text's.
+// Reserve stage outside text flow so landing pictures never move text. Position against StoryMessage's text edges; each follows the reader only within its band.
 export function MarginPictures({ anchors, side, children }: Props) {
   const stage = useRef<HTMLDivElement>(null);
   const pictures = useRef<(HTMLDivElement | null)[]>([]);

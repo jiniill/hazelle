@@ -16,8 +16,8 @@ type BoardReport = Report & { postId: number };
 const reporter = (report: Report) => report.username ?? '익명';
 const what = (report: Report) => (report.share !== null ? '링크' : report.commentId !== null ? '댓글' : '글');
 
-// A share report is its own dialog (ShareReportDialog), a post or comment report this one. head: only the reports not
-// resolved, the few 운영 shows, asked again after each act so the next waiting one comes up.
+// Share reports use ShareReportDialog; board reports use this dialog. Refresh open-report heads after acts
+// so the next waiting report appears without refetching whole lists.
 export function ReportsSection({ head, onActed }: { head: boolean; onActed?: () => void }) {
   const pages = usePages((after) => readReports(after, head ? { open: true, limit: HEAD_ROWS } : {}));
   const [open, setOpen] = useState<Report | null>(null);

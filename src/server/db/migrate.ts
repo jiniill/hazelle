@@ -4,10 +4,8 @@ import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { transaction } from './transaction';
 
-// Applies migrations/*.sql in name order, each whole file in one transaction with its ledger row. The ledger must be an
-// ordered prefix of the files this build ships: a changed applied file, a ledger row this build does not know (a
-// newer database under an older build), a gap, or a missing directory stops the process before it serves. Nothing is
-// ever downgraded.
+// Apply whole migrations in filename order, atomically with ledger entries. Require an unchanged ordered prefix:
+// reject changed/missing files, gaps and newer DBs before serving; never downgrade.
 export function migrate(db: DatabaseSync, directory: string): { applied: string[] } {
   let names: string[];
   try {

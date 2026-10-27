@@ -40,15 +40,13 @@ export async function open(key: CryptoKey, sealed: string, aad: string): Promise
   return openBytes(key, fromBase64(sealed), aad);
 }
 
-// Chunked: one fromCharCode call per 32 KiB, not one string append per byte.
 export function toBase64(bytes: Uint8Array): string {
   let text = '';
   for (let at = 0; at < bytes.length; at += 0x8000) text += String.fromCharCode(...bytes.subarray(at, at + 0x8000));
   return btoa(text);
 }
 
-// atob keeps the validation; the indexed loop replaces Uint8Array.from's per-character callback, which cost more
-// than decrypting across an account's objects on open.
+// Keep atob validation; per-character callbacks cost more than decryption across a full account.
 export function fromBase64(text: string): Uint8Array<ArrayBuffer> {
   const decoded = atob(text);
   const bytes = new Uint8Array(decoded.length);

@@ -16,10 +16,9 @@ export const VISIBLE = '(notices.incarnation = accounts.incarnation OR (notices.
 // Over an accounts row.
 export const UNREAD_NOTICES = `(SELECT COUNT(*) FROM notices WHERE ${VISIBLE} AND notices.id > accounts.notices_seen)`;
 
-// The board activity of the account named by the SQL a, derived from the rows, never stored: each comment others wrote
-// on its posts or under its comments (a 'reply' when under its comment), and each status the operator set on its posts.
-// A row's id is the comment's id * 2, or the post's id * 2 + 1 for its status, so ids of both kinds never meet. A
-// suspended account hears only of its operator-only posts, the ones it can still open (board.ts readable).
+// Derive activity from comments/status, never duplicate stored counters.
+// Disjoint ids: comment id * 2, status post id * 2 + 1.
+// Suspended accounts hear only readable operator-only activity; SQL a names the account.
 const OPENABLE = (a: string) => `(p.visibility = 'operator' OR (SELECT s.suspended_at FROM accounts s WHERE s.id = ${a}) IS NULL)`;
 const COMMENTED = (a: string) => `FROM comments c JOIN posts p ON p.id = c.post_id LEFT JOIN comments parent ON parent.id = c.parent_id
   WHERE (p.account_id = ${a} OR parent.account_id = ${a}) AND c.account_id IS NOT ${a} AND c.deleted = 0 AND NOT ${hidden('c')}

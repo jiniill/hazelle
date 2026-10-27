@@ -11,8 +11,7 @@ import { pause } from './pause';
 
 const VERSION = 1;
 export type ChatModel = ChatItem & { display: Display };
-// shown: the chat's overlay marks it was folded at. Never on Summary, which is saved: no write
-// still unanswered ever reaches the server inside a summary.
+// shown tracks the folded overlay, never persisted in Summary: unconfirmed writes must not reach the server through it.
 export type Projection = { model: ChatModel; summary: Summary; shown: number };
 
 // Like memoryId, a summary has one id under its chat, independent of which device builds it.
@@ -28,9 +27,8 @@ const revised = (store: Pick<ObjectStore, 'revision'>, reads: StoreRead[]): Summ
 type Source = Pick<ObjectStore, 'get' | 'children' | 'scopeState' | 'capture' | 'revision' | 'foldedChat' | 'entryHead' | 'loadedHead' | 'shownMark'>;
 type Scope = { signal: AbortSignal; state: ScopeState; loading: Promise<ApiFailure | null> | null; error: ApiFailure | null };
 type SummaryWrite = { type: 'restore'; id: string; kind: 'summary'; parent: string; value: Summary };
-// cleared: 다시 시도 asked for the bot's regex again; the summary written next drops the stored verdict.
-// over: the revision of the chat's stored summary it was set against. Once a summary is written, by this device or
-// another, the stored one is the verdict: a held entry never writes itself back over another device's.
+// cleared requests a regex retry; next summary drops the verdict. over fences the summary revision.
+// Once either device writes a summary, its verdict is authoritative; never replay a held verdict over it.
 type Verdict = { over: number } & ({ state: 'judged'; dependencies: SummaryRead[] } | { state: 'cleared' });
 type Lifecycle = {
   closing: AbortSignal;
@@ -74,9 +72,8 @@ export class ChatProjections {
     return !this.closed && this.life.scope(chat)?.state === 'loaded' ? this.projections.get(chat) ?? null : null;
   }
 
-  // A chat whose bot's script did not end (EvaluationStuck): its displays leave the bot's regex out, and what only reads
-  // it is refused, while the reads it was judged on stand. Held for the session, and on the chat's summary for every
-  // device, until 다시 시도 clears it.
+  // EvaluationStuck suppresses display regex and refuses read-only evaluation while its dependencies still match.
+  // The summary shares the verdict across devices; 다시 시도 clears it.
   verdict(chat: string): SummaryRead[] | null {
     const held = this.verdicts.get(chat);
     const dependencies = held?.over === this.summaryRev(chat) ? (held.state === 'judged' ? held.dependencies : null) : (this.source.get('summary', summaryId(chat))?.value.stuck?.dependencies ?? null);
@@ -138,9 +135,8 @@ export class ChatProjections {
     return this.life.scope(chat)?.loading ? this.evaluate(chat) : result;
   }
 
-  // A write or a pull is done once the server took it; the held chats' projections follow. Whoever reads a chat as the
-  // write left it waits for evaluate(chat), and a projection that fails is shown on its chat's scope, never as the
-  // write's failure.
+  // Writes finish at server acceptance, not display completion. Readers needing the new projection await evaluate(chat);
+  // projection failure belongs to the chat scope, never retroactively to the write.
   refreshHeld() {
     for (const chat of this.life.held()) {
       const scope = this.life.scope(chat);
@@ -173,11 +169,9 @@ export class ChatProjections {
     return saving;
   }
 
-  // chats: held by the caller and loaded, their entries written under those leases (a move's character) or opened
-  // (withChats), so every summary comes from memory and all go in one request. A pass runs until no chat has outgrown
-  // its summary, as save does: one that changed while the others were built would otherwise keep what was
-  // captured. One not held is a caller's error, as in refreshChat; one whose opening or evaluation failed answers with
-  // that failure.
+  // Caller must hold/load chats so summaries use in-memory source and save together.
+  // Repeat until every chat is current; changes during the pass cannot retain earlier captures.
+  // Return opening/evaluation failures; never-held chats are caller errors.
   async saveMany(chats: Iterable<string>, signal?: AbortSignal): Promise<ApiFailure | null> {
     let passes = 0;
     try {
@@ -277,11 +271,8 @@ export class ChatProjections {
   }
 }
 
-// SUMMARY_WINDOW chats held at a time, opened together and summarized in one request (ChatProjections.saveMany), so
-// a pass over a whole account never holds more than that many histories. A chat with a summary is passed over: what
-// rewrites a summary its chat outgrew is opening that chat (ObjectStore.retainChat), and a stopped restore carries on
-// from the first window it did not finish. An unreadable chat is passed over too, as is one whose bot does not end;
-// its screen says so.
+// Bound account-wide passes to SUMMARY_WINDOW histories and one write request per window.
+// Skip existing summaries (opening refreshes stale ones), unreadable/stuck chats; interrupted restores resume missing windows.
 export const SUMMARY_WINDOW = 16;
 export async function saveSummaries(store: ObjectStore, chats: Iterable<string>, signal = new AbortController().signal, progress: (done: number, total: number) => void = () => {}): Promise<ApiFailure | null> {
   const due = [...chats].filter((id) => !store.get('summary', summaryId(id)));

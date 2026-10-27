@@ -36,11 +36,9 @@ const STEP_LABELS = { up: '위로 · 길게 누르면 맨 위로', down: '아래
 export type SideAt = { open: Side; inUse: string | null; onOpen: (open: Panel) => void; onClose: () => void };
 
 type Props = {
-  // The chat's id, which a new chat is saved under.
   id: string;
   // null for a new chat, which is saved with its first message.
   item: ChatItem | null;
-  // The chat's character, or null for 캐릭터 없이.
   shelf: CharacterShelf<ChatSummary> | null;
   back: Back | null;
   side: (at: SideAt) => ReactNode;

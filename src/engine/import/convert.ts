@@ -152,9 +152,8 @@ export function readTriggers(raw: unknown): Unstamped<Trigger>[] {
   return triggers;
 }
 
-// A background without its closed <style> blocks and comments, as /<style\b[\s\S]*?<\/style\s*>|<!--[\s\S]*?-->/gi
-// strips them, in one pass: that regex rescans to the end for each opener left open. An opener with no closer after
-// it leaves every later one of its kind open too, so that kind is not looked for again.
+// Strip only closed style blocks/comments. After an unmatched opener, stop seeking that kind's closer:
+// a global non-greedy regex would rescan the remaining input for every later opener.
 export function withoutStyles(html: string): string {
   const opener = /<style\b|<!--/gi;
   const closers = { style: /<\/style\s*>/gi, comment: /-->/g };
@@ -185,10 +184,8 @@ function packOf(raw: { regex: unknown; trigger: unknown; background: unknown; to
   return { ...stampIds({ regex: regexScripts(list(raw.regex), tally), triggers }), ...(background.trim() ? { background } : {}), toggles };
 }
 
-// The writer's side, each the inverse of its reader here: what convert reads back as it was written. A charx keeps
-// the scripts and lorebook in its module.risum and the rest in card.json, as Risu's own charx export splits them
-// (characterCards.ts exportCharacterCard at ca1345fc). The lorebook goes out natively, at bookVersion 2, so its content
-// is read back unmigrated.
+// Writers invert these readers. Charx puts scripts/lore in module.risum and the rest in card.json
+// (Risu exportCharacterCard, ca1345fc); native bookVersion 2 prevents lore migration on reimport.
 export const regexSource = ({ name, find, replace, stage, flags }: Unstamped<RegexScript>): Json => ({
   comment: name, in: find, out: replace, type: [...STAGES].find(([, each]) => each === stage)![0], ableFlag: flags !== null, flag: flags ?? '',
 });

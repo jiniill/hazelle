@@ -7,9 +7,8 @@ function span({ from, to }: ChatRange, length: number): [number, number] {
   return [at(from), to === null ? length : at(to)];
 }
 
-// What the 채팅 slots together leave out or send twice, in words, or null when every message goes once. It is read
-// on a chat long enough that the ranges counted from the start and from the end do not meet, so what it says holds
-// for every longer chat.
+// Compare ranges on a chat long enough to separate start/end-relative bounds, so gaps/overlaps remain valid
+// for every longer chat. Null means every message is sent once.
 export function chatWarning(blocks: readonly Block[]): string | null {
   const ranges = blocks.filter((block): block is ChatSlot => block.kind === 'slot' && block.slot === 'chat').map((block) => block.range);
   if (ranges.length === 0) return `'채팅' 블록이 없어서 메시지가 하나도 들어가지 않아요.`;

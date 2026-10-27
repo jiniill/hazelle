@@ -142,8 +142,7 @@ export function setCache(block: Block, on: boolean): Step {
   return { label: titled(block, on ? '여기까지 캐시' : '캐시 지점 빼기'), block: block.id, undo: to(!on), redo: to(on) };
 }
 
-// Trades the 감싸는 텍스트 there for the one the step holds, so one function is both ways: each apply puts back what the one
-// before took out, text typed into it since included.
+// Swap wrappers with the current draft so the same operation handles undo/redo and retains intervening typing.
 export function setWrapper(block: WrappedSlot, wrapper: string | null): Step {
   let held = wrapper;
   const trade = (draft: Draft): PromptPatch => {

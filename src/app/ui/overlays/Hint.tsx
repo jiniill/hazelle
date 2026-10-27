@@ -28,8 +28,7 @@ export function Hint({ label, children }: { label: string; children: Help }) {
   const { text, open } = typeof children === 'string' ? { text: children, open: undefined } : children;
   const button = () => box.current?.querySelector('button');
 
-  // A peek joins the layers too: a press on its door is then inside the newest layer, not a press outside the menu
-  // that holds the ⓘ, which would close the menu and the door with it before the click.
+  // Register peeks as layers too: otherwise clicking a door inside a menu closes/unmounts it before its click.
   useLayer(state !== 'closed', {
     outside: (target) => !box.current?.contains(target) && !bubble.current?.contains(target),
     close: (refocus) => {

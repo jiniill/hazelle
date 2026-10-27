@@ -2,8 +2,7 @@ import { errorText, type EvaluationDown, type EvaluationUp } from './evaluation-
 import { moduleWorker } from './worker';
 import workerUrl from './evaluation-worker?worker&url';
 
-// 문제 진단 (settings/Diagnostics): what a user copies and pastes to the operator when something fails. It holds this
-// device and this tab only, never chat text, keys or the account, and is kept nowhere: a reload starts it empty.
+// Device/tab-only diagnostics: never include chat text, keys or account identity; never persist across reloads.
 type Problem = { at: number; text: string };
 
 const KEPT = 20;

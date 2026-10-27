@@ -40,10 +40,8 @@ export type Turn = {
   reasoning: string;
   // whole: asked for in one piece (ModelSettings streaming), so it is shown when it lands, not paced as bursts are.
   whole?: true;
-  // batch: waiting for a discount lane's batch (design §6.7), which answers whole. retrying: a try failed before any of it
-  // came and is sent again (retry on failure). stopping: 멈추기 canceled the batch, which is asked about until it ends.
-  // preparing: a call the reply waits for runs first, 토큰 절약's (runtime/preread), the pre agents' (runtime/agents), by
-  // the names of those still running out of how many run, or a tool's reading the request (ScriptTurns.requesting).
+  // batch waits for an accepted whole reply; stopping still polls cancellation to completion.
+  // retrying precedes first output. preparing names pending preread/pre-agent/tool request steps.
   batch?: true;
   retrying?: true;
   stopping?: true;
@@ -57,11 +55,8 @@ export type Reading = { at: number; text: number; reasoning: number };
 // good, an entry that names a message saved after it.
 export type Shown = Message & { live: string | null; whole?: true; batch?: true; retrying?: true; stopping?: true; preparing?: Preparing; reading?: Reading; unstored?: true };
 
-// The prompt, which the reply's id seeds. settings: the model's 설정 묶음 as stored, which the request fits to the model.
-// said: the user's message as it is saved, which a message sent translated saves translated; null when prepare saved it
-// itself. forecast: what the send expects to read from the cache (runtime/cache), kept on its receipt. preread: makes
-// the record of the 토큰 절약 call that shortened the prompt from the reply's receipt, which keeps it. agents: the pre
-// agents' calls, which the receipt keeps.
+// Reply id seeds the prompt; fit stored settings for sending. said is saved text, null if prepare saved it.
+// Receipt keeps forecast, pre-agent calls and preread savings measured from the reply itself.
 export type Ask = { diagnose?: (prompt: Assembled, wire: CacheText) => Promise<CacheDiagnosis | null>; calibration?: Pick<CallCalibration, 'fit' | 'retries'>; refit?: (refusal: ContextRefusal, measurement: InputMeasurement) => Promise<{ prompt: Assembled; fit: TokenFit; retries: CallCalibration['retries'] } | null>; route: Route; settings: ModelSettings; prompt: Assembled; said: Said | null; before?: Writes; forecast?: CacheForecast; preread?: Settle; agents?: AgentRun[] };
 
 // unsent: the user's message was not saved, so its reply was stopped. unsaved: the reply was written
@@ -119,9 +114,8 @@ type Prepare<F> = (signal: AbortSignal, preparing: (step: Preparing) => void) =>
 // abort: stops the turn's reading. cancel: 멈추기, which cancels a batch, still read until it ends (GenerateInput batching).
 type Held = { turn: Turn; abort: AbortController; cancel: AbortController; calling: string | null };
 
-// A reply blocks only its own chat: chats, in one tab or several, reply at once (user, 2026-10-04). A reply outlives
-// the screen that asked for it: leaving a chat does not stop it. For an account the server makes the call, so
-// close() only stops reading it; a guest's transport aborts the provider instead and leaves no marker to pick up.
+// Turns serialize per chat only and outlive screens (user, 2026-10-04).
+// Account close stops reading resumable server calls; guest close aborts providers with no resume marker.
 export class Talk {
   // By chat. calling: the call the turn reads, once it started.
   private readonly turns = new Map<string, Held>();
@@ -145,9 +139,8 @@ export class Talk {
     private readonly reading: Set<string>,
     private readonly cues: Cues,
   ) {
-    // A restore ends the store a turn was begun on, and none of the turn's writes can land after it, so it ends every
-    // turn as 멈추기 does, a batch's wait too: a call left running would be billed and never read. close does not: a
-    // call outlives a locked vault, for the next session to read.
+    // Restore cancels turns and batches: their writes cannot land, so leaving calls running would lose billable output.
+    // Lock/close only stops readers; the next session can resume the same timeline.
     this.leave = store.subscribeRewound(() => {
       for (const held of this.turns.values()) {
         this.halt(held);
@@ -237,9 +230,8 @@ export class Talk {
     this.changes.notify();
   }
 
-  // The turn is shown before prepare, which may save a new chat, translate the user's message and builds the prompt,
-  // so the user's message appears the moment it is sent; stop() stops prepare too. A failure prepare returns ends the
-  // turn unsent.
+  // Publish the turn before prepare so input shows immediately. Prepare may save/translate/build; stop must abort it.
+  // Preparation failures end unsent.
   async run<F extends { kind: string }>({ chat, said, reply: asked }: Omit<Turn, 'text' | 'reasoning'>, prepare: Prepare<F>): Promise<TalkFailure | F | null> {
     if (this.turns.has(chat)) return null;
     const lease = this.store.retainChat(chat);
@@ -313,9 +305,8 @@ export class Talk {
     return saved;
   }
 
-  // A reply the server was writing when this page came, which Streams hands over; it waits while its chat has a turn.
-  // One not saved is not reported: its marker stays, and the next pick-up saves it again. One a restore ended goes with
-  // the timeline it was begun on (save).
+  // Resume waits for the chat's turn. Keep markers on save failure for the next pickup;
+  // restore-ended calls never save onto the new timeline.
   async resume(stream: Stored<'stream'>) {
     const purpose = stream.value.for;
     const chat = stream.parent!;
@@ -368,9 +359,8 @@ export class Talk {
   }
 }
 
-// A 삽화 scene (runtime/illustrate), a likeness (runtime/likeness) or a mascot's line (runtime/mascot), read through the
-// server's stream like any model call but with no marker: a pick-up on another device would make it again and pay for
-// it twice. The caller parses the text.
+// Auxiliary calls use detached transport without markers: another device must not rerun their task and bill twice.
+// Caller owns parsing and completion (illustration/likeness/mascot).
 export async function pageAnswer(session: Pick<Session, 'store' | 'tokens' | 'credentials' | 'log'>, { route, settings }: { route: Route; settings: ModelSettings }, requestClass: Exclude<PageClass, 'script'>, chat: string | null, messages: GenerateInput['messages'], signal: AbortSignal, retrying?: () => void): Promise<{ kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { text: string; receipt: Receipt }> {
   const { store, credentials, log } = session;
   const text = gather();

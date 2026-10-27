@@ -4,9 +4,8 @@ import { forward, refuse } from './relay';
 
 export type AdmittedCall = { body: unknown; bytes: number; leave: () => void };
 
-// What a provider call (/api/relay, /api/streams/:id) holds before its body is read: relay traffic left for the day, a
-// live call of the account's own (leave ends it), and room for the body in the upload budget while it is read and
-// parsed. bytes is Content-Length, which worker.ts requires on these routes.
+// Before reading a provider-call body, reserve daily relay traffic, an account live-call slot and upload bytes.
+// bytes is the Content-Length required by worker.ts.
 export async function admitCall(c: Context<AppEnv>): Promise<AdmittedCall | Response> {
   const allowance = c.env.limits.relay.account(c.get('account').id);
   if (!allowance.take(0)) return unread(c, refuse(429, 'relay-traffic-limit'));

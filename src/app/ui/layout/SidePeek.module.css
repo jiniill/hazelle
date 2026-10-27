@@ -38,9 +38,7 @@
   color: var(--color-text);
 }
 
-/* As wide as the story's text, so a bot's box lays out as it does in its message. It comes once the pointer rests on
-   the tab, so a pointer crossing the edge does not bring it, and leaves a moment after the pointer does, so a pointer
-   passing from the tab to it does not close it. */
+/* Match text width for bot layout. Delay entry/exit so crossing the edge does not open a drawer and moving from tab into it does not close it. */
 .drawer {
   composes: floating from '../foundation/surface.module.css';
   position: absolute;

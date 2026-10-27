@@ -51,9 +51,8 @@ const REFUSED: Partial<Record<ServerError, string>> = {
 
 const ENDED: RestorePhase[] = ['done', 'failed', 'cancelled'];
 
-// The operation under way while a request runs, read every second. The server runs the whole operation inside the
-// request (go), so its answer comes only at the end; the list is read again for the phase meanwhile. One account has
-// at most one operation open, so the one not ended is it.
+// Poll phase each second while the request runs: the server answers only when the operation stops/finishes.
+// At most one operation is open per account.
 function useUnderWay(whose: string | null, busy: boolean): RestoreRun | null {
   const [run, setRun] = useState<RestoreRun | null>(null);
   useEffect(() => {

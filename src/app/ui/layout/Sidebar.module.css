@@ -75,8 +75,7 @@
 .rail {
   position: sticky;
   top: 0;
-  /* Sticky makes the rail its own stacking context, so its + menu sits under the panel that follows it unless the rail
-     itself is raised, as high as the menus of the page beside it. */
+  /* Sticky rail creates a stacking context; raise the rail itself to menu level or its menus fall under the next panel. */
   z-index: var(--layer-menu);
   width: var(--rail-width);
   height: 100dvh;

@@ -12,9 +12,8 @@ import type { StoredPrompt } from './prompts';
 import type { ObjectStore } from './store';
 import type { Write } from './object-writes';
 
-// A module as the importer read it (design §6.5). Its pictures are stored first; then it is written with its lorebook,
-// assets and 삽화 profiles in one batch, itself last, so a module appears only once whole. brought: the id module files
-// name it by (a move from Risu's, or a charx bundling it) and the id it is saved at, which a move already turned on.
+// Save pictures first, then owned rows and module last so only whole modules become visible.
+// brought maps exported Risu/module ids to saved ids already activated by a move.
 export async function importModule(store: ObjectStore, files: Files, imported: ImportedModule & { likeness?: Profiles | null }, progress: Progress, brought?: { id: string; risu: string }): Promise<ApiResult<{ id: string; unsupported: Unsupported }>> {
   const stored = await saveAssets(files, imported.assets, progress);
   if (!stored.ok) return stored;
@@ -52,8 +51,8 @@ const beside = (ids: string[], id: string, olds: string[]) => {
   return at < 0 ? ids : [...rest.slice(0, at), id, ...rest.slice(at)];
 };
 
-// A new version takes over from olds: it is on, in their place, everywhere one of them is on, and they go to 휴지통.
-// Restoring them (setModuleDeleted null) and deleting it undoes this exactly. data: how many places it took over.
+// Replace olds in every activation list and bin them; retain their positions so restoring olds/deleting the new module
+// exactly undoes the replacement. data counts affected places.
 export async function replaceModules(store: ObjectStore, id: string, olds: string[]): Promise<ApiResult<number>> {
   const holds = (value: { modules?: string[] } | undefined) => !!value?.modules?.some((each) => olds.includes(each));
   const places: (() => Promise<ApiResult<unknown>>)[] = [
@@ -87,9 +86,7 @@ export function setPromptModule(store: ObjectStore, prompt: StoredPrompt<'conver
   return store.update('prompt', prompt.id, (current) => (current.task === undefined ? { ...current, modules: switched(current.modules, id, on) } : current));
 }
 
-// A Risu preset names its modules by Risu id or namespace (Risu matches either), the id first. Only live ones: a name no
-// module here answers waits for one imported later (pairWithPrompts), and is listed in waiting as written. One named
-// twice is on once.
+// Resolve live Risu modules by id before namespace, deduplicated. Keep unresolved names for later import pairing.
 export function companionModules(store: Pick<ObjectStore, 'list'>, names: string[]): { ids: string[]; waiting: string[] } {
   const modules = modulesOf(store);
   const named = (name: string) => modules.find(({ value }) => value.risu === name) ?? modules.find(({ value }) => value.namespace === name);
@@ -124,6 +121,5 @@ export function setModuleAt(store: ObjectStore, place: ModulePlace, id: string, 
   return setPromptModule(store, place.prompt, id, on);
 }
 
-// at is when it was deleted: it is off everywhere at once, and removed for good with what it owns KEEP_DELETED later
-// (purgeExpired); null brings it back as it was, on where it was on, unless its removal has begun ('gone').
+// Binning disables every use but preserves activation for undo; purging blocks restoration and removes owned data.
 export const setModuleDeleted = (store: ObjectStore, id: string, at: number | null) => markDeleted(store, 'module', id, at);

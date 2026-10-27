@@ -26,8 +26,8 @@ export const sandboxHeaders = (network: boolean) => ({ 'Content-Security-Policy'
 const HEADERS = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' };
 // Every file under /assets has a content hash in its name, so a changed file is a new URL.
 const IMMUTABLE = 'public, max-age=31536000, immutable';
-// The pages a search engine may list (design §6.13): the guest home, which is the app's public face, 헤이젤 나우 and the
-// two legal pages. Every other page load, share links and the 게시판 among them, says noindex. The sitemap is this set.
+// Index only guest home, pulse and legal pages; this set also drives the sitemap.
+// Share/board and all other routes are noindex (design §6.13).
 const INDEXED = new Set(['/', PULSE_PAGE.path, '/terms', '/privacy']);
 const LANDING = {
   title: '헤이젤 · RisuAI 대체 캐릭터 챗, 설치 없이 웹에서',
@@ -103,8 +103,7 @@ export function clientFiles(clientDir: string, cover: (share: string) => Promise
       return listed(c) ? landingPage(named) : named;
     });
   });
-  // A path that is no file is a client route, whatever it looks like: model ids carry dots
-  // (/models/<connection>/vendor/model-4.5). Only a page load gets the page; a missing asset is a real 404.
+  // Dots do not imply assets: provider model ids contain them. Serve SPA only for page loads; missing assets stay 404.
   client.get('*', (c) => {
     const load = !c.req.path.startsWith('/assets/') && c.req.header('accept')?.includes('text/html');
     return load ? page(c) : c.notFound();

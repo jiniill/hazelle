@@ -1,8 +1,7 @@
 @import './tokens.css';
 @import './scrollbar.css';
 
-/* The kit's two layers under every module's own rules: a composer overrides a look's property whichever order the build
-   puts their files in. Each layered file names the order, since the first to load sets it. */
+/* Declare layer order in every layered file: first-loaded order must not let bundled file order defeat component overrides. */
 @layer reset, looks;
 
 @layer reset {

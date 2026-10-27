@@ -41,16 +41,11 @@ export const broughtFromRisu = (store: ObjectStore): Set<string> => new Set(stor
 // By Risu id, the deleted ones too, until they are removed for good.
 export const modulesFromRisu = (store: ObjectStore): Map<string, string> => new Map(store.list('module').flatMap(({ id, value }) => (value.risu === undefined ? [] : [[value.risu, id]])));
 
-// Personas first, so the chats bound to one use it, each after its own module, and modules before the prompts and
-// characters they are on for. The first failure stops the rest, and what was saved before it stays. A character already brought is skipped, which is
-// sound because each one lands whole: its chats' entries are written first, and their roots go with the character in its
-// own batch (runtime/characters addCharacter), so a cut leaves only entries no chat names; a chat's inlays come after
-// its character, so a cut there leaves them to 메시지 이미지 채우기 (fillInlays). So is a module: its
-// 항상 is written before it, under the id it is then saved at, so a move cut between the two leaves only an id that
-// names nothing, which reads as off, and the next run brings the module again. Every write is of the timeline the move
-// began on: an account restored meanwhile stops it.
-// inlays: the export of Risu's inlay store, when it was dropped with the backups; without it every inlay a chat names is
-// counted as not brought.
+// Import personas (after their modules) before chats; modules before dependent prompts/characters. Stop on first failure,
+// retaining earlier saves. Write chat entries first, then roots with their character (addCharacter): interrupted entries
+// stay unreachable, so retries can skip completed characters. Later inlays are recoverable through fillInlays.
+// Write a module's 항상 reference before the module: interrupted dangling ids read as off and retry imports it again.
+// Pin every write to the starting timeline; restore stops the move. Without the inlay export, count every inlay as not brought.
 export function moveFromRisu(store: ObjectStore, files: Files, backup: RisuBackup, pick: MovePick, inlays: Inlays | null, progress: (step: MoveStep) => void): Promise<ApiResult<Moved>> {
   return store.pinned(() => move(store, files, backup, pick, inlays, progress));
 }
@@ -80,9 +75,8 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
     const persona = await backup.persona(key);
     const picture = await persona.picture();
     const modules: string[] = [];
-    // Brought without its Risu id: Risu gives every persona's module the same one ('$embedded'), which modulesFromRisu
-    // would read as one module moved already. Its pictures are read before the backup is asked for anything else, which
-    // lets go of them (runtime/import reader).
+    // Drop the shared '$embedded' Risu id so personas' modules do not deduplicate. Read pictures before another
+    // backup request releases them (runtime/import reader).
     if (persona.module) {
       const imported = await importModule(store, files, persona.module, () => {});
       if (!imported.ok) return imported;

@@ -1,7 +1,7 @@
 import { botSheets } from './Story';
 
-// A drawn subtree, shadow roots included, as HTML whose whole look rides in style attributes: what a board that strips
-// <style>, classes and scripts (arca.live) still draws. What a style attribute cannot carry is counted, never hidden.
+// Inline computed appearance across shadow roots for boards that strip styles/classes/scripts (arca.live).
+// Count unrepresentable styles as lost, never silently hide them.
 export type Look = {
   style: (element: Element) => Pick<CSSStyleDeclaration, 'getPropertyValue'>;
   // An element of that name in a root no sheet styles: what an unstyled one computes to.
@@ -98,8 +98,8 @@ export function pageLook(host: HTMLElement): Look {
   };
 }
 
-// Pseudo-elements and states the reader brings about: no computed style of the drawn page holds them. Structural
-// pseudo-classes such as :nth-child or :host() did apply, and their effect is read like any other.
+// Count interactive pseudo-states/elements as lost; structural selectors already affected computed styles
+// and must not be counted merely for being pseudo-classes.
 const UNDRAWN = /::|:(?:hover|focus|active|checked|target|visited|link|before|after|first-line|first-letter)\b/i;
 
 function lostRules(rules: CSSRuleList): CSSRule[] {

@@ -4,9 +4,8 @@ import { ephemeral, wireMessage } from './anthropic-messages';
 import { carriesPictures, type CacheMark, type ChatMessage, type Codec, type Embeds, type InputPicture, type Model, type Usage } from './types';
 import { count, isRecord, list, modelEntries, vector } from './values';
 
-// OpenRouter's and Vercel's catalogs name the same fields in supported_parameters. max_tokens rather than
-// max_completion_tokens, which many compatible servers do not know; a type whose provider refuses max_tokens names its
-// own field (outputLimit).
+// Prefer max_tokens for compatible servers; providers that reject it override outputLimit.
+// OpenRouter/Vercel supported_parameters use these same field names.
 const FIELDS: Record<NumberSetting | 'stop', string> = {
   maxOutput: 'max_tokens',
   temperature: 'temperature',
@@ -40,9 +39,8 @@ export function listedSettings(names: unknown[]): Setting[] {
   return names.includes('reasoning') || names.includes('reasoning_effort') ? [...settings, 'reasoning'] : settings;
 }
 
-// One key per model and cached prefix, so requests that share it meet the same cache. The prefix runs to the first
-// point, the one that changes least: the last point moves with every turn. Pictures are part of the prefix but join
-// the hash only where a message carries them, so a text-only prefix keeps the key it always had.
+// Hash model + prefix through the first cache point, not the moving last point.
+// Include pictures only when present so text-only keys stay unchanged.
 export function promptCacheKey(model: Model, messages: ChatMessage[]): { prompt_cache_key?: string } {
   const first = messages.findIndex((message) => message.cache);
   if (first === -1) return {};

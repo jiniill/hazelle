@@ -25,8 +25,7 @@ export type PromptInput = {
   tools: { module: string; name: string; text: string }[];
   // prompt: null only on a request that keeps the prompt out (promptOut), which reads none of it.
   scope: ChatScope & { persona: NonNullable<ChatScope['persona']> };
-  // The id of the reply being written. It rolls this request's random tags outside messages and its lorebook
-  // probabilities, as each earlier reply's id rolled its own.
+  // Reply id: seeds random tags outside messages and lorebook probabilities.
   seed: string;
   countTokens: (text: string) => number;
   // Authored memory allowances stay in o200k. Only fit compares text with provider limits.
@@ -34,22 +33,19 @@ export type PromptInput = {
   fit?: ProviderFit;
   // 이어 쓰기: the chat's messages end with the cut reply, and the continue instruction goes last.
   continuing: boolean;
-  // 응답 받기 지시, the account's: the user message sent last when the chat's messages end with the model's and the
-  // reply is a new one, so that a request never ends with the model's message (see CONTINUE).
+  // Account instruction appended as a user message for new replies after assistant text (see CONTINUE).
   answerInstruction: string;
   // null while the chat's memory is off.
   memory: MemoryFill | null;
-  // The pre agents' notes for this reply (engine/agent agentNotes); absent or empty for none.
+  // Pre-agent notes (engine/agent agentNotes).
   notes?: string;
   pictures: PictureSend;
 };
 
-// Which of the chat's inlays its user messages show the model (model/library Inlay): seen, whether the model sees
-// pictures at all; moved, the chat's movedPictures, which lets the ones brought from Risu go as well.
+// seen is model vision support; moved opts imported inlays into input (Chat.movedPictures).
 export type PictureSend = { seen: boolean; moved: boolean };
 
-// What fills the memory slot: the built-in memory, or the text the tool holding the slot gave (design §6.10). through:
-// the place in scope.messages of the last message the text stands for, −1 for none.
+// through indexes the last covered scope.messages entry; −1 means none (tool-owned memory, design §6.10).
 export type MemoryFill = ({ kind: 'built-in' } & MemoryInput) | { kind: 'tool'; name: string; text: string; through: number };
 
 // The CBS of some text the request is built from ran away (cbs/evaluate Runaway), and none of the request is sent.
@@ -90,18 +86,33 @@ export type From =
   // The pre agents' notes, after the chat, in a prompt with no 에이전트 노트 slot.
   | { kind: 'agents' };
 
-// parts[i] says where messages[i] came from (origin as Sent's) and what it counts in o200k_base, an estimate for any other
-// tokenizer. lore is every entry that fired, named as it was then; null for a chat with no card and no lore. invalidKeys: regex keys that
-// did not compile (design.md row 2: never match, listed). loreBudget: the 로어북 최대 분량 the activation was held to. memory: null while the
-// chat's memory is off. dropped: the chat's messages the budget left out, oldest first. problems: the first MOST_PROBLEMS
-// found, and how many more there were. source is the chat/memory text before rendering; cbs, the renders the part sends verbatim.
-// unseen: the pictures in the user's messages memory does not cover, which the model, seeing none, is sent none of; a
-// message of pictures alone is not sent at all.
-export type Assembled = { messages: ChatMessage[]; parts: { from: From; tokens: number; origin?: string; source?: string; cbs?: CacheRender[] }[]; lore: (Fired & { name: string })[] | null; silent: (Silent & { name: string })[] | null; invalidKeys: { entry: string; name: string; key: string }[]; loreBudget: number; memory: MemorySent | null; dropped: number; problems: { found: Problem[]; omitted: number }; unseen: number };
+export type Assembled = {
+  messages: ChatMessage[];
+  // One per message, in matching order; tokens use o200k_base, only an estimate for other tokenizers.
+  parts: {
+    from: From;
+    tokens: number;
+    origin?: string;
+    // Chat/memory text before rendering; cbs records renders sent verbatim.
+    source?: string;
+    cbs?: CacheRender[];
+  }[];
+  // Names captured at activation; null when the chat has neither card nor lore.
+  lore: (Fired & { name: string })[] | null;
+  silent: (Silent & { name: string })[] | null;
+  // Invalid regex keys never match, but remain reportable (design.md row 2).
+  invalidKeys: { entry: string; name: string; key: string }[];
+  loreBudget: number;
+  // null while memory is off.
+  memory: MemorySent | null;
+  // Oldest messages omitted to fit the budget.
+  dropped: number;
+  problems: { found: Problem[]; omitted: number };
+  // Uncovered input pictures omitted for a non-vision model; picture-only messages are omitted too.
+  unseen: number;
+};
 
-// What went wrong in a text outside the chat's messages the request was built from, at the block or entry it was rendered
-// for, once per text: from may match no part, when that text rendered to nothing and was left out. An error text counts
-// only where it reached the output, so one a bot tests with {{iserror}} is none.
+// One per non-chat text; from may name an omitted part. Errors consumed by {{iserror}} do not count.
 export type Problem = CbsProblem & { from: Extract<From, { kind: 'block' | 'lore' | 'depth' }> };
 const MOST_PROBLEMS = 64;
 
@@ -331,7 +342,6 @@ function templateOf(blocks: Block[], laid: Laid, persona: ChatScope['persona'], 
   return { parts, memory };
 }
 
-// Messages left empty are dropped.
 // The messages memory covers leave the chat slots, though their variables are still replayed (renderChat renders them
 // all) and the lorebook still scans them.
 export const assemble = (input: PromptInput): Assembled | TooLong | RanAway => stoppable(() => conversation(input));
@@ -464,11 +474,9 @@ export type TranslationInput = {
   countTokens: (text: string) => number;
 };
 
-// source is what goes out to be translated: a message as it is displayed (after its CBS and display scripts), which
-// is what the reader would otherwise read, or the user's input. A translation holds no chat, so entries placed at a
-// depth, or into a text a card replaces, are not sent in it.
-// spans: what the tokens in source stand for (engine/protect), which the answer must bring back; none when the prompt
-// sends no source.
+// Translate displayed message text (post-CBS/display scripts) or typed input, never stored message text.
+// No chat means depth/card-replacement lore has no destination. spans masks protected source and must round-trip;
+// no source slot means no spans.
 export const assembleTranslation = (input: TranslationInput): { source: string; messages: ChatMessage[]; spans: string[] } | ProtectInvalid | RanAway => stoppable(() => translation(input));
 
 // A message whose CBS ran away is its source as shown, tags as written, and the display says so.
@@ -516,7 +524,6 @@ export type IllustrationInput = {
   // paragraphsOf), which the scene names by number.
   index: number;
   paragraphs: string[];
-  // How many scenes to write (model/illustration pictureCount).
   count: number;
   // The portraits the pictures are drawn with (runtime/likeness).
   portraits: Told[];
@@ -630,10 +637,10 @@ export type MemoryTaskInput = {
   // The chat's, its messages as a request sends them.
   scope: ChatScope;
   prompt: MemoryPrompt;
-  // budget: the 장기 기억 slot's in the chat's requests, whose share the state may take.
   memory: Memory;
   // The chapter just before a chapter's messages, else the record just before the messages.
   before: Written | null;
+  // The chat's memory-slot budget; state takes a share of it.
   budget: number;
   // The messages summarized, by place in scope.messages, from included and to not.
   span: { from: number; to: number };

@@ -68,7 +68,6 @@ export const GENERIC = 'generic';
 // version of the app speaks.
 const CODECS: Partial<Record<string, Codec>> = { 'chat-completions': chatCompletions, 'anthropic-messages': anthropicMessages, gemini, responses };
 
-// Route: a connection that speaks a chat format.
 export type Route = { type: ConnectionType | null; endpoint: Endpoint; codec: Codec };
 // The evaluation worker needs the resolved endpoint and provider policy, never credentials or a model catalog.
 export type WireRoute = { provider: string | null; endpoint: Endpoint };
@@ -117,7 +116,7 @@ export function parseCatalog({ type, codec }: Route, payload: unknown): Model[] 
 
 export const costUnit = (type: ConnectionType | null): Cost['unit'] => (type && MODELS_DEV_LISTS[type.id]?.credit ? 'credit' : 'usd');
 
-// The type's own embeddings, or none, where it names them; else its codec's, as for a generic connection.
+// Explicit null disables embeddings; only undefined inherits the codec's.
 export const embedsOf = ({ type, codec }: Route) => (type?.embeds !== undefined ? type.embeds : codec.embeds);
 
 // The route a model's embeddings take; null where the connection serves none in the model's format.
@@ -191,19 +190,15 @@ export function sending(route: Route, { model, messages, settings: stored }: Cha
   return { model, messages: settings.pdf && route.codec.pack ? route.codec.pack(placed, settings.pdf) : placed, settings };
 }
 
-// Retry on failure (design §6.7): the answers worth a try sent again, the provider refusing for a moment. A bad key or a
-// bad request is not among them, so it is shown at once.
+// Retry transient refusals, never bad credentials or requests (design §6.7).
 export const RETRYABLE: readonly number[] = [408, 429, 500, 502, 503, 504, 520, 522, 524, 529];
 export const RETRIES = 2;
 
-// Whether a refusal is the discount lane's own: no room for the call on it now (Discount busy).
 export function laneBusy(route: Route, request: ChatRequest, status: number, code: string | null): boolean {
   const lane = route.type?.discount;
   return lane?.lane === 'tier' && sending(route, request).settings.discount === true && lane.busy(status, code);
 }
 
-// The batch lane a request is answered through: the type's, where its settings ask for the discount and the model is not
-// known to refuse it.
 export function batchLane(route: Route, request: ChatRequest): Batches | null {
   const lane = route.type?.discount;
   return lane?.lane === 'batch' && sending(route, request).settings.discount ? lane.batches : null;

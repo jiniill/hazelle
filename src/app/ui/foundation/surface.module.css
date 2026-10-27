@@ -7,7 +7,6 @@
     background: var(--color-surface);
   }
 
-  /* Floats over the story, which shows through it. */
   .glass {
     border: var(--border-thin) solid var(--color-glass-edge);
     background: var(--color-glass);
@@ -15,7 +14,6 @@
     backdrop-filter: var(--filter-glass);
   }
 
-  /* Floats over the app: a menu, a dialog, a bubble. Its corner is its size's: a bubble md, a panel lg, a bar full. */
   .floating {
     border: var(--border-thin) solid var(--color-border-strong);
     background: var(--color-surface);
@@ -26,7 +24,6 @@
     border-top: var(--border-thin) solid var(--color-divider);
   }
 
-  /* A field's edge and ground, on any element: SearchField draws it round an input of its own. */
   .frame {
     border: var(--border-thin) solid var(--color-border);
     border-radius: var(--radius-md);
@@ -58,7 +55,6 @@
     padding: 0 var(--space-12);
   }
 
-  /* A share of a whole as a bar; the fill's colour is each component's own. */
   .track {
     display: block;
     height: var(--bar-height);
@@ -72,8 +68,7 @@
     border-radius: var(--radius-xs);
   }
 
-  /* Where a dragged card or row would land. Doubled to stay over the fill of what it marks: a folder's ground, a row's
-     hover (Item's, three classes strong). */
+  /* Double specificity to keep drop markers above folder fill and Item hover (three classes). */
   .dropping.dropping,
   .dropping.dropping:hover:not(:disabled) {
     outline: var(--border-thick) solid var(--color-accent);
@@ -87,7 +82,6 @@
     background: var(--color-accent);
   }
 
-  /* How many wait behind a button: a tool's, or a place's on the rail. */
   .count {
     display: inline-flex;
     align-items: center;

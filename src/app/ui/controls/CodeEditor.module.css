@@ -1,5 +1,4 @@
-/* CodeMirror draws its own elements and themes them through adopted style sheets, which come after this file: each
-   rule below goes through .cm-editor too, so it outweighs CodeMirror's own at its specificity. */
+/* CodeMirror adopted stylesheets load later; include .cm-editor to outweigh their matching specificity. */
 
 .editor {
   composes: field from '../foundation/surface.module.css';

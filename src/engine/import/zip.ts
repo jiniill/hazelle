@@ -11,9 +11,8 @@ const DEFLATED = 8;
 export type Zip = {
   // Whatever precedes the archive: the image of a JPEG with an appended zip.
   prefix: Uint8Array<ArrayBuffer>;
-  // A file's bytes, read when asked, so a bot of thousands of pictures is never unpacked at once. null: no such
-  // file, a damaged one, or one stored in a way this reader does not take. limit: what the file may hold, checked
-  // before it is unpacked.
+  // Lazy bytes keep large archives out of memory; enforce limit before unpacking.
+  // Null means missing, damaged or unsupported entry.
   read(path: string, limit?: number): Uint8Array<ArrayBuffer> | null;
 };
 
@@ -21,9 +20,8 @@ type Entry = { method: number; compressed: number; size: number; header: number 
 
 const utf8 = new TextDecoder();
 
-// The central directory is read once. A zip appended to a JPEG records its offsets from its own start, so the
-// archive's start is where its directory says it must be. What its packed files declare is held to the archive's
-// limit here, before any is unpacked: inflate holds each to its declared size.
+// Appended ZIP offsets are relative to its own start, derived from the central directory.
+// Validate declared sizes against the archive limit before inflate enforces each entry's size.
 export function openZip(bytes: Uint8Array<ArrayBuffer>): Zip | null {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const floor = Math.max(0, bytes.length - END_RECORD - 0xffff);
@@ -79,10 +77,8 @@ const encoder = new TextEncoder();
 
 export type ZipWriter = { add(path: string, bytes: Uint8Array<ArrayBuffer>, deflate?: boolean): Promise<void>; end(): Promise<void> };
 
-// Each file goes out whole, its sizes in its local header and no data descriptor after it: RisuAI reads a charx with
-// fflate's streaming Unzip, which finds the end of a file written with a descriptor by searching its bytes for the
-// descriptor's signature, so a picture holding those four bytes would be cut. Counts, sizes and offsets are those without ZIP64, as openZip
-// reads them; an archive past that throws rather than writing a damaged one.
+// Never write data descriptors: Risu's streaming Unzip searches for their signature and can cut matching image bytes.
+// Write whole entries with sizes in local headers. Refuse ZIP64-sized archives rather than corrupting counts/offsets.
 export function zipWriter(write: (bytes: Uint8Array<ArrayBuffer>) => Promise<void>): ZipWriter {
   const directory: Uint8Array<ArrayBuffer>[] = [];
   let offset = 0;

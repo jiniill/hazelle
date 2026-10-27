@@ -6,9 +6,8 @@ import type { From } from './pipeline';
 export type Sent = { message: ChatMessage; from: From; origin?: string };
 export type CachePart = { cache: true };
 
-// Before the chat and at its end, never at the request's end: a block after the chat changes every turn. A @@depth
-// entry sits among the chat's messages, so it opens the chat as a message does. Before 장기 기억 too when it comes
-// before the chat (design §6.2, Cache): memory changes only at a boundary, so the fixed part before it is never written again.
+// Cache before/at chat, never request end: following blocks change each turn. Depth/retrieval entries count as chat.
+// Cache before leading memory too so boundary updates do not rewrite the fixed prefix (design §6.2).
 export function autoCachePoints(roles: readonly ('chat' | 'depth' | 'memory' | null)[]): number[] {
   const first = roles.findIndex((role) => role === 'chat' || role === 'depth');
   const last = roles.lastIndexOf('chat');

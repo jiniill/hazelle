@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './Thread.module.css';
 
-// Comments under a post, each with its 답글 one step in.
 export function Thread({ label, children }: { label: string; children: ReactNode }) {
   return (
     <ul className={styles.thread} aria-label={label}>
@@ -14,11 +13,8 @@ export function Thread({ label, children }: { label: string; children: ReactNode
 
 type Props = {
   byline: ReactNode;
-  // A MoreMenu at the head's end.
   control?: ReactNode;
-  // What it says, set in under the name.
   children: ReactNode;
-  // Under what it says, such as 답글.
   foot?: ReactNode;
   // ThreadItems answering it, a step in along a line.
   replies?: ReactNode;
@@ -40,8 +36,7 @@ export function ThreadItem({ byline, control, children, foot, replies }: Props) 
   );
 }
 
-// Something that happened to the post among its comments, such as the operator setting its status: a mark where a
-// face stands, a line, and when.
+// Render post events on the comment timeline without implying an authored comment.
 export function ThreadEvent({ icon, note, children }: { icon: LucideIcon; note: string; children: ReactNode }) {
   return (
     <li className={styles.event}>

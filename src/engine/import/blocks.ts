@@ -9,9 +9,7 @@ export type BlockCondition =
   | { kind: 'compare'; source: ConditionSource; comparison: Comparison; value: string }
   | { kind: 'probe'; source: ConditionSource }
   | { kind: 'opaque'; raw: unknown };
-// The effects that read their operands and may write one variable, each by its Risu name with the fields it reads as
-// operands in order: lua/blocks runs each by this name. The array and dictionary ones that take no var operand name
-// their variable in var.
+// Shared Risu effect/operand table with lua/blocks; array/dict effects without a var operand use their var field.
 const CALLS = {
   v2ConcatString: ['source1', 'source2'],
   v2ReplaceString: ['source', 'regex', 'result', 'replacement', 'flags'],
@@ -105,7 +103,6 @@ export type BlockEffect =
   | { kind: 'call'; type: CallType; inputs: Operand[]; name: string; output: string; option: string }
   | { kind: 'opaque'; type: string; raw: unknown };
 
-// A condition or an effect as Risu wrote it comes from a bot's file, so every field is read as it may be.
 type Fields = Record<string, unknown>;
 const fields = (value: unknown): Fields => (isRecord(value) ? value : {});
 // V2 operands say whether a field is text or the name of a variable. V1's untyped operands are texts.
@@ -190,8 +187,8 @@ export function blockEffects(values: unknown): BlockEffect[] {
   });
 }
 
-// Effects stored opaque before this app ran their type, read again from the source each kept. A loop and a local
-// variable stay opaque: they need the end of their block, and the copy lost that line's indent.
+// Reparse formerly opaque effects from retained source. Loops/locals must stay opaque:
+// their copied source lost the closing indent needed to recover scope.
 export function reparsed(effects: BlockEffect[]): BlockEffect[] | null {
   let changed = false;
   const read = effects.map((effect) => {
@@ -203,9 +200,8 @@ export function reparsed(effects: BlockEffect[]): BlockEffect[] | null {
   return changed ? read : null;
 }
 
-// The writer's side: conditions and effects back in Risu's V2 form, by the same tables, so blockConditions and
-// blockEffects read them back as they were. A reading that failed (an operator, role or tone none of Risu's) was kept
-// as null and goes back as an empty field, which reads as null again.
+// Use the same tables as blockConditions/blockEffects for round-trip V2 output.
+// Unrecognized operator/role/tone stays null via an empty field, never a guessed default.
 const symbol = <V>(table: Map<string, V>, value: V | null | undefined) => [...table].find(([, each]) => each === value)?.[0] ?? '';
 const operandSource = (field: string, operand: Operand): Fields =>
   operand.kind === 'variable' ? { [field]: operand.name, [`${field}Type`]: 'var' } : { [field]: operand.text, [`${field}Type`]: 'value' };

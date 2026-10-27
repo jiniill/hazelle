@@ -31,11 +31,9 @@ export type KeyFailure =
   | { kind: 'save'; failure: ApiFailure }
   | { kind: 'stopped' };
 
-// The model list must load before a connection or its new key is saved. A model list
-// may be public (OpenRouter's is), so a key every meters request refuses (401) stops the save too. Never one refusal
-// alone: what NanoGPT's subscription usage answers a working key without a subscription is undocumented. Any other
-// trouble with the meters leaves them to their own block on the next screen.
-// Leaving the screen (signal) while these load saves nothing.
+// Load models before saving; public catalogs do not validate keys, so unanimous meter 401s also block the save.
+// One subscription-meter refusal is inconclusive (NanoGPT); other meter failures stay on the next screen.
+// Leaving this screen while checks run must save nothing.
 async function checkKey({ catalogs, credentials }: Session, connection: Connection, signal?: AbortSignal): Promise<KeyFailure | null> {
   // Asked first, so a pool's pick for the model list reads these same meters.
   const metered = credentials.pool.meters(connection, connection.accounts[0]!, { fresh: true });
@@ -74,11 +72,8 @@ function freeLabel(label: string, connections: readonly Stored<'connection'>[]):
 
 export const renameConnection = (store: ObjectStore, id: string, label: string) => store.update('connection', id, (current) => ({ ...current, label }));
 
-// A model's first entry takes the model's id as its key, so adding a model removed earlier names it for every reference
-// to it again; a further copy comes with the key addCopy chose. Every try runs the change again on what the server holds
-// by then, a write whose answer was lost included, so an entry whose key is there already is not added twice.
-// The first model added that can talk becomes the 대화 모델: until one is set no chat can send, and with one there is
-// nothing to choose between.
+// The model id restores existing references; copies use addCopy's key. Deduplicate by key because lost responses retry.
+// The first chat-capable model fills an unset 대화 모델 so chats can send immediately.
 export async function addModel(store: ObjectStore, id: string, model: Model, own: Pick<Starred, 'label' | 'profile' | 'entry' | 'pictures'> = {}): Promise<ApiResult<string>> {
   const key = own.entry ?? model.id;
   const saved = await store.update('connection', id, (current) =>
@@ -94,9 +89,8 @@ function ownLabel(label: string): Pick<Starred, 'label'> {
   return trimmed ? { label: trimmed } : {};
 }
 
-// A further copy starts on a 설정 of its own, a copy of the one the model's first entry uses: copies exist to differ, and
-// on a shared 설정 an edit on one copy's page would change the other. A model that only draws takes no 설정. Whether it
-// sees pictures is the model's, so a copy keeps what the first entry was told.
+// Each copy needs its own cloned profile or edits would affect the original. Image-only models have none.
+// Vision support is model-wide and keeps the first entry's user affirmation.
 export async function addCopy(store: ObjectStore, id: string, model: Model, label: string): Promise<ApiResult<string>> {
   const connection = store.get('connection', id);
   const first = connection && entriesOf(connection.value, model.id)[0];
@@ -141,10 +135,8 @@ const sameValue = (a: unknown, b: unknown) => {
   return sorted(a) === sorted(b);
 };
 
-// A loaded model list makes the snapshot of every entry of a listed model what the list says of it now, keeping the
-// entry's own fields (connectors ownOf). A model the list no longer has keeps its snapshot, and one it leaves
-// unpriced, or whose inputs or outputs it leaves unknown, keeps what it had: a models.dev list that did not load reads
-// the same.
+// Preserve ownOf fields and unlisted snapshots. Missing prices/modalities retain known values:
+// an unavailable models.dev catalog must not erase them.
 export async function refreshStarred(store: ObjectStore, id: string, models: Model[]): Promise<void> {
   const loaded = new Map(models.map((model) => [model.id, model]));
   const fresh = (model: Starred): Starred => {
@@ -162,9 +154,7 @@ export async function refreshStarred(store: ObjectStore, id: string, models: Mod
   await store.update('connection', id, (current) => ({ ...current, starred: current.starred.map(fresh) }));
 }
 
-// A model starred before its catalog's inputs were filled from models.dev keeps an unknown input in its starred copy,
-// which only opening its model list refreshes; asked here, so pictures are not given or held back blind for that. One the
-// user said sees pictures needs no asking.
+// Old snapshots may predate models.dev inputs; refresh unknown vision support here unless the user already affirmed it.
 export async function seesPicturesNow({ store, catalogs }: Pick<Session, 'store' | 'catalogs'>, { connection, model }: { connection: Stored<'connection'>; model: Starred }): Promise<boolean> {
   if (model.input !== null || model.pictures) return seesPictures(model);
   const listed = await catalogs.load(connection.value);

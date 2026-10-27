@@ -8,8 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { ROW_BYTES } from '../src/server/caps';
 import { startServer, stopServer } from './helpers';
 
-// The account stores over HTTP on the built server (npm run e2e builds first), which this spec starts on a data
-// directory of its own so it can stop, kill and start it again, and whose account files and pictures it reads on disk.
+// Use a separate built-server data directory so restart/crash tests can inspect actual account files and pictures.
 
 type Write = { id: string; kind: string; parent: string | null; body: string | null; baseRev: number | null };
 type FeedPage = { timeline: string; changes: { id: string; rev: number; body?: string | null }[]; cursor: number; until: number; more: boolean };
@@ -265,9 +264,8 @@ test('leaving removes its picture and preserves another account’s copy of the 
   expect(await json(await request.get('/api/session', { headers: headers(other) }))).toMatchObject({ session: { storage: { fileBytes: body.length } } });
 });
 
-// A PUT that finishes after its account's deletion leaves its bytes under the old incarnation (files.test.ts holds one
-// there in process; nothing in the server holds a real request between its reservation and its write). Here those
-// bytes are put where it leaves them, and the hourly job the server runs a minute after it starts removes them.
+// Simulate bytes from a PUT finishing after account deletion under its old incarnation.
+// Real request timing cannot pause exactly there; the hourly job must remove these orphans.
 test('the hourly job removes bytes an upload left under a deleted account and spares a live prefix', async ({ request }) => {
   test.setTimeout(180_000);
   const owner = await ready(request);

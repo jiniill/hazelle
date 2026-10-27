@@ -24,17 +24,15 @@ import type { Turn } from '../runtime/talk';
 import type { Translating } from '../runtime/translate';
 import { Saves } from './common/saveQueue';
 
-// admin, localProviders: the server's word when the account was opened (GET /session, signup, login). facts: its word since.
-// guest: a browser-only account the server never heard of (design §6.14), which has no lock and no logout but two doors
-// out of its session; signupOpen: whether the operator's cap leaves room for 계정 만들기.
+// admin/localProviders come from session opening; facts track later server answers.
+// Guests have no lock/logout, only signup/sign-in doors; signupOpen follows the operator cap.
 export type GuestDoors = { signupOpen: boolean; onSignup: () => void; onSignIn: () => void };
 export type Account = { admin: boolean; localProviders: readonly string[]; facts: AccountFacts } & (
   | { guest: null; onLock: () => void; onLogout: () => Promise<string | null> }
   | { guest: GuestDoors }
 );
 
-// A save in flight and one queued behind it are two round trips, which from Korea can take seconds each; a store write
-// waiting out a dropped connection never ends on its own.
+// Allow two slow save round trips, but bound outage waits so leaving cannot hang forever.
 const LEAVING_WAIT = 10_000;
 
 const SessionContext = createContext<{ session: Session; account: Account; saves: Saves } | null>(null);
@@ -86,8 +84,7 @@ export function useUnfoundAssets(character: string): ReadonlySet<string> {
 // The function is a new one when a picture has loaded, so what shows pictures renders again.
 export function useAssetUrl(): PictureUrl {
   const { assets } = useSession();
-  // Page keys ChatScreen by chat id (including an unsaved chat), so leaving releases this view's story, CSS and
-  // status pictures together. Saving the same chat keeps its key and must not revoke its mounted pictures.
+  // Keep the chat-id key stable on first save so mounted picture URLs survive; leaving releases story/CSS/status views together.
   const view = useMemo(() => assets.view(), [assets]);
   useLayoutEffect(view.hold, [view]);
   const version = useSyncExternalStore(assets.subscribe, assets.snapshot);
@@ -197,8 +194,7 @@ export function useChildren<K extends 'lore' | 'asset' | 'illustration' | 'remar
   const model = parent === null ? null : read.children(kind, parent);
   return useSyncExternalStore(model?.subscribe ?? subscribeNothing, model?.snapshot ?? snapshotNone);
 }
-// A list per parent, in their order; the whole is new exactly when one list changed. key stands for parents, whose array
-// a caller makes anew on each render.
+// Retain per-parent list identities; key parents by contents, not the caller's fresh array identity.
 export function useChildrenOf<K extends 'lore' | 'asset'>(kind: K, parents: readonly string[]): Stored<K>[][] {
   const { read } = useSession();
   const key = parents.join();

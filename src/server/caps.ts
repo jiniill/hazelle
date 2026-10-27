@@ -5,10 +5,8 @@ export const CAP = {
   fileBytes: 'CASE WHEN own_file_bytes_cap THEN file_bytes_cap ELSE (SELECT account_file_bytes_cap FROM service) END',
 };
 
-// What the object cap counts besides the bodies: the rows they leave on disk. Every object row, a deletion included,
-// stays for sync and incremental snapshots (measured 220-320 bytes each). A link's own row with its cover, and each
-// row naming a file of a version (its manifest or a picture), live in the service database (measured ~780 for a link
-// with its first version, ~300 a file row).
+// Bill retained object rows, including tombstones, plus service share/link-file rows; bodies alone undercount disk.
+// Measured row costs: objects 220–320 B, initial link ~780 B, linked file ~300 B.
 export const ROW_BYTES = { object: 256, share: 512, shareFile: 300 };
 
 // The service-database bytes an account's links hold, over ?1, its incarnation.

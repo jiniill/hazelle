@@ -2,9 +2,8 @@ import { bareModel } from './chat-completions';
 import type { ConnectionType, Model } from './types';
 import { count, flag, isRecord, modelEntries } from './values';
 
-// Its public list holds every model on Featherless, text-to-speech and classifier models among them. features names
-// only what a model has, so an absent flag stays unknown. context_length is the model's: the Basic and Premium plans
-// stop at 32K.
+// Public list includes non-chat models. Missing feature flags stay unknown;
+// context_length is the model limit, not the Basic/Premium 32K plan cap.
 export const featherless: ConnectionType = {
   browser: {},
   id: 'featherless',
@@ -27,8 +26,8 @@ export const featherless: ConnectionType = {
       }];
     }) ?? null,
 
-  // The plan's only allowance: concurrent units held by requests in flight, 1 to 4 per request by model size, not
-  // requests. A null limit is an unlimited plan. Its model list is public, so this call is what checks a pasted key.
+  // Allowance counts concurrent units (1–4 per model), not requests; null limit is unlimited.
+  // The public model list cannot validate credentials, so this call must.
   meters: [{
     request: (secret) => ({ url: 'https://api.featherless.ai/account/concurrency', method: 'GET', headers: { authorization: `Bearer ${secret}` }, body: null }),
     parse(payload) {

@@ -5,8 +5,8 @@ import type { LoreEntry } from './types';
 
 export type LorebookRead = { name: string; description: string; lore: LoreEntry[]; loreFolders: string[] };
 
-// A lorebook file: Risu's own export (lorebook.svelte.ts exportLoreBook) and this app's, SillyTavern's world info,
-// NovelAI's .lorebook, or a CCv3 character_book alone. A card keeps its lore under data, never in a top-level entries.
+// Accept standalone lorebook shapes only; cards nest lore under data, never top-level entries.
+// Support Risu/Hazelle, SillyTavern, NovelAI and CCv3 books.
 export function readLorebook(raw: Json, tally: Tally): LorebookRead | null {
   const named = { name: text(raw.name), description: text(raw.description) };
   const native = (lorebook: Json[], hazelle?: unknown) => {
@@ -35,8 +35,7 @@ export function readLorebookText(text: string): LorebookRead | null {
   return isRecord(raw) ? readLorebook(raw, new Map()) : null;
 }
 
-// SillyTavern's world info or NovelAI's .lorebook entry made into Risu's own, as convertExternalLorebook does
-// (lorebook.svelte.ts:732-750), adding keysecondary: SillyTavern's name for the secondary keys, which Risu misses.
+// Convert external lore as Risu does, but also read SillyTavern keysecondary, which Risu misses.
 function externalLore(raw: Json): Json {
   const joined = (value: unknown) => strings(value).join(', ');
   return {
@@ -51,8 +50,8 @@ function externalLore(raw: Json): Json {
   };
 }
 
-// Risu's export, which its importLoreBook reads by type and data alone, so Risu takes the entries its lorebook holds. The
-// rest rides in the hazelle key, made as a module file's of no other part, so readLorebook puts it back through readModule.
+// Export native entries as Risu type/data; preserve non-native fields through the module-shaped hazelle extension
+// so readLorebook/readModule can restore them.
 export function lorebookFile(name: string, lore: LoreEntry[], loreFolders: string[]): Json {
   const { lorebook, hazelle } = moduleSource({ risu: '', name, description: '', namespace: null, pack: { regex: [], triggers: [], toggles: [] }, lore, loreFolders, assets: [], likeness: null });
   return { type: 'risu', ver: 1, name, data: lorebook, hazelle };

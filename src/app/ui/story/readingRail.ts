@@ -7,10 +7,8 @@ export const RAIL = 'data-rail';
 // Not one view: a message a little taller than the screen kept a rail up nearly all the time (user, 2026-10-14).
 const LONG = 2;
 
-// The reader's place in a message at least LONG times the story's view, which is the room between the header and the
-// composer: the message across the view's middle is marked, and its rail (StoryMessage) given the share of it come
-// above the composer and its length. The rail sits stuck where its sticky top puts it, so the length runs from there
-// to the message's end or to the composer, whichever comes first.
+// Mark the middle-crossing message only when >=LONG view heights. Measure between header/composer,
+// then bound rail length by sticky top → message end/composer; give it the share read above the composer.
 export function useReadingRail(scrollRef: RefObject<HTMLElement | null>, footerRef: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     const scroll = scrollRef.current!;

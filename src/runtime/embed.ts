@@ -27,10 +27,8 @@ export const countTexts = (store: Pick<ObjectStore, 'evaluation'>) => async (tex
 // chat's memory never spends the account's 240 calls a minute that its replies need.
 const PART_GAP = 1000;
 
-// One embedding call, in as many requests as the provider needs, with one receipt. On the relay, a script's call
-// (script) is counted once in its chat's bot cap, by its first request; memory's own calls are not a bot's and are not
-// counted there. Consent and the model pick are the caller's (ScriptReach). embedded: told each request's text count as its
-// vectors arrive. receipt: null when nothing reached the network, and only then is nothing logged.
+// One receipt covers all provider-sized chunks. Count script calls once at the first request, not memory indexing.
+// Caller owns consent/model choice; embedded reports chunk progress. Null receipt means no network and no log.
 export async function embedTexts(
   deps: { credentials: Credentials; log: RequestLog; count(texts: string[]): Promise<number[]> },
   { connection, model }: Route,
@@ -74,8 +72,7 @@ export async function embedTexts(
       ...made,
       ...summed(spent),
     };
-    // No response is kept: the vectors of a full batch run to about a million characters, which would push the chat's
-    // replies out of the log's bound. A split call is one entry, its request bodies in one array.
+    // Omit vector responses from logs: one batch can evict real replies. Log split request bodies as one call.
     const request = sent.length === 1 ? sent[0]! : { url: sent[0]!.url, body: `[${sent.map(({ body }) => body).join(',')}]` };
     log.record({ chat, purpose: 'embedding', at, picked: false, receipt: kept, request: redacted(request, connection.value), response: null });
     return kept;

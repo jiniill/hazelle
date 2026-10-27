@@ -3,9 +3,8 @@ import { embedContent } from './gemini';
 import { ConnectorError, type ConnectionType, type Endpoint } from './types';
 import { count, isRecord, vector } from './values';
 
-// Vertex AI with a service-account key, checked against a live service account on 2026-10-13: the key signs a JWT that
-// buys an hour's access token, a reply is asked of the project's global location in the Gemini API's format (refused
-// without the project), and the model list answers only outside a project, at v1beta1.
+// Service-account JWT buys a one-hour token. Gemini calls require the project at the global location;
+// model listing requires project-free v1beta1 (live-verified 2026-10-13).
 
 // keyId is absent from a key typed as separate values; the token endpoint finds the key by the account without it.
 type ServiceAccount = { projectId: string; keyId?: string; privateKey: string; clientEmail: string; tokenUri: string };
@@ -113,9 +112,8 @@ export const vertex: ConnectionType = {
     });
   },
   usagePage: 'https://console.cloud.google.com/billing',
-  // Vertex AI has no batchEmbedContents: Gemini Embedding 2 answers only :embedContent, one content a request, on the
-  // global endpoint, and its :predict is 404 (the REST reference and two client reports, 2026-10-20; unrun against a
-  // live project). Older embedding models that answer only :predict fail at the provider.
+  // Gemini Embedding 2 requires global :embedContent, one input per request; no batchEmbedContents or :predict.
+  // Older :predict-only models fail upstream (REST reference/client reports, 2026-10-20; not live-verified).
   embeds: {
     perRequest: 1,
     request: (endpoint, model, [text], as, fields) => ({
@@ -130,12 +128,10 @@ export const vertex: ConnectionType = {
       return { vectors: [payload.embedding.values], usage: embedUsage(count(usage.promptTokenCount)), raw: usage };
     },
   },
-  // Flex PayGo (docs.cloud.google.com/vertex-ai/generative-ai/docs/flex-paygo, 2026-10-14): half of input and output, on
-  // the global endpoint only, asked for with both headers; the second alone lets Provisioned Throughput serve it first.
-  // The page names no cached-input rate, so cache rates are kept whole, which errs high. Which models take it the model
-  // list does not say; a model refusing it fails at the provider with 400 INVALID_ARGUMENT. The page names no refusal
-  // for want of Flex capacity, and a 429 RESOURCE_EXHAUSTED is also the project's own quota, met off the lane too, so no
-  // refusal is read as the lane's. Unverified against a live refusal.
+  // Flex PayGo needs both headers on the global endpoint; one alone permits Provisioned Throughput first.
+  // Half input/output; unspecified cache discounts stay full-price. Eligibility remains unknown.
+  // Do not classify 429 RESOURCE_EXHAUSTED as Flex capacity: ordinary project quota uses it too
+  // (docs.cloud.google.com/vertex-ai/generative-ai/docs/flex-paygo, 2026-10-14; no live refusal verified).
   discount: {
     lane: 'tier',
     headers: { 'x-vertex-ai-llm-request-type': 'shared', 'x-vertex-ai-llm-shared-request-type': 'flex' },

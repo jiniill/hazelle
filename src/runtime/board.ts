@@ -4,8 +4,7 @@ import { page } from './pages';
 import { recallGuest } from '../vault/device';
 import { guestBoardSecret } from './guest-store';
 
-// 게시판 (design §6.13), one thin wrapper per route of server/board. Guest author requests carry the browser secret;
-// 추천, 신고, nicknames and activity still go through the account session.
+// Guest authors use browser secrets; votes/reports/nicknames/activity still require account-session routes.
 async function guestHeaders(create = false): Promise<ApiResult<Record<string, string>>> {
   if (hasAccount()) return { ok: true, data: {} };
   const guest = await recallGuest();
@@ -41,11 +40,9 @@ export const writeComment = (post: number, text: string, parentId: number | null
 export const editComment = (id: number, text: string) => boardApi<undefined>('PUT', `board/comments/${id}`, { text });
 export const deleteComment = (id: number) => boardApi<undefined>('DELETE', `board/comments/${id}`);
 
-// 신고: into the operator's inbox (admin reports), beside share reports.
 export const reportPost = (id: number, text: string) => api<undefined>('POST', `board/posts/${id}/reports`, { text });
 export const reportComment = (id: number, text: string) => api<undefined>('POST', `board/comments/${id}/reports`, { text });
 
-// What happened to what one wrote, newest first; seen up to the newest the page showed.
 export const readActivity = (after: string | null, ask: { limit?: number } = {}) => page<'activity', Activity>('board/activity', 'activity', after, ask);
 export const markActivitySeen = (newest: number) => api<undefined>('POST', 'board/seen', { id: newest });
 

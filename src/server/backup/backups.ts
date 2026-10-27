@@ -19,21 +19,17 @@ type Outcome = { outcome: 'ok' | 'failed'; error: string | null };
 export type Copier = 'remote' | 'optional' | 'folder';
 
 export type Backups = {
-  // Lifecycle steps, file claims on object writes or share publication, and file sweeps hold off generation capture.
-  // A hold waits while a generation is being captured; capture waits for existing holds. Writes naming no files take none. Holds never
-  // nest: a capture waiting on the outer one would keep the inner one waiting for ever.
+  // Capture and file/lifecycle holds exclude each other. Never nest holds: a queued capture can deadlock the inner hold.
+  // Writes that name no files need no hold.
   hold<T>(work: () => Promise<T>): Promise<T>;
-  // Runs the daily job unless today's (UTC) generation is already captured or the hour has not come: a failed
-  // generation is tried again on the next tick, and a run the process missed while down happens on the first tick
-  // after it. A baseline that failed beside a captured generation waits for tomorrow; its failed run raises the alert.
-  // Then copies to the backup folder what is not there yet, and sends each standing alert to the webhook, at most once a
-  // UTC day per condition.
+  // Capture once per UTC day after the configured hour; retry failed/missed captures on later ticks.
+  // Baseline failures beside a completed generation wait until tomorrow and raise alerts.
+  // Then copy missing generations and send each persistent alert at most once per UTC day.
   tick(env: Services, now: number): Promise<void>;
   freshness(env: Services, now: number): Promise<Freshness>;
   daily(env: Services, now: number): Promise<{ snapshots: Outcome; generation: Outcome }>;
-  // A job that began after this was asked (one already running is waited out first, since its generation may predate
-  // what the asker wants covered) and covers every live account as it is now, not as of today's baseline. A baseline it
-  // could not take fails its generation: published, it would name an older baseline for that account.
+  // Wait out existing jobs, then start a fresh capture covering every live account now, not today's old baseline.
+  // Any failed baseline must fail this generation rather than publish an older account state.
   fresh(env: Services): Promise<{ snapshots: Outcome; generation: Outcome }>;
   // Records an account's departure (departures.ts), durably, before any of it is destroyed.
   depart(account: string, incarnation: string, at: number): void;

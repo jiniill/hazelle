@@ -1,7 +1,4 @@
-/* Every classic scrollbar (scrollbar.ts), the page's own, its boxes' and those inside a bot's story: a round thumb on no
-   track, without arrows. Chromium stops drawing these pseudo-elements on an element given scrollbar-width or
-   scrollbar-color, so those are set only where the pseudo-elements do not exist (Firefox), and nowhere else in the
-   kit but to hide a bar. */
+/* Style classic scrollbars only (scrollbar.ts). Chromium disables pseudo-elements when scrollbar-width/color is set; use those only in Firefox or to hide bars. */
 :root[data-scrollbars='classic']::-webkit-scrollbar,
 :root[data-scrollbars='classic'] ::-webkit-scrollbar,
 :host([data-scrollbars='classic']) ::-webkit-scrollbar {

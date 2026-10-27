@@ -15,7 +15,6 @@ type Props = {
   onClose?: () => void;
 };
 
-// What standing somewhere means, said where it is decided: a title, its points each by an icon, and what to do about it.
 export function NoticeCard({ title, note, points, actions, foot, onClose }: Props) {
   return (
     <section className={styles.card} aria-label={title}>

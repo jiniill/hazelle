@@ -6,14 +6,10 @@ import { DEPARTURES } from './departures';
 import { COPIED, copyWhole, generationsDir, listGenerations, MANIFEST, POOL, thinGenerations } from './generation';
 import { pass } from './snapshots';
 
-// A self-host's backup folder (the admin screen's 백업 폴더, service.backup_folder): another disk or a synced folder of
-// the owner's machine, which holds backup/ in the layout deploy/rclone-backup.sh gives a remote, so restore.ts reads a
-// generation there as it is. A disk-store installation outside a container only (node.ts): an R2 generation names
-// archives this copy does not fetch, and inside a container a path is the container's own, gone at the next update.
-//
-// A pass: departures.json, then for every generation with a manifest and no copied marker the pool, its files, its
-// manifest, then copied in the folder and in backup/; then the folder is thinned as backup/ is. A file already there
-// under its name is whole (copyWhole) and named by what it holds, so a cut-off pass is finished by the next one.
+// Use the copier's backup/ layout so restore.ts reads it unchanged. Disk-store, non-container installs only:
+// R2 archives are not fetched here, and container paths disappear on replacement.
+// Copy departures, then each unmarked generation's pool/files/manifest, then both copied markers; prune last.
+// Content-addressed files appear only whole, so interrupted passes resume without rereading completed files.
 export async function copyToFolder(dataDir: string, folder: string, now: number): Promise<{ copied: string[] }> {
   const local = generationsDir(dataDir);
   // No pool yet: the first generation has not begun.
@@ -49,8 +45,7 @@ async function copyTree(from: string, to: string, skip = new Set<string>()) {
   fsyncPath(to);
 }
 
-// The folder as typed, or why it cannot hold the copies. Explorer's 경로로 복사 wraps a path in quotes. It is written to
-// once here, so a folder this process cannot write to is refused before it is saved.
+// Accept Explorer's quoted copy-path form. Probe writability before saving, never accept an unusable folder.
 export async function checkFolder(dataDir: string, typed: string): Promise<{ ok: true; folder: string } | { ok: false; error: 'folder-not-absolute' | 'folder-in-data' | 'folder-unwritable' }> {
   const unquoted = typed.trim().replace(/^"(.*)"$/, '$1');
   if (!isAbsolute(unquoted)) return { ok: false, error: 'folder-not-absolute' };

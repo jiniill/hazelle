@@ -115,9 +115,8 @@ export function ModelsScreen({ back }: { back: Back | null }) {
             <List label={STARRED} box>
               {search.found.map(({ connection, model, choice }) => {
                 const ref = refOf(connection.id, model);
-                // The row says only what sets a model apart: its roles, and a 모델 설정 other than the default one, by
-                // name, since the side list beside it reads each one's values. A model that only draws takes no 모델 설정
-                // (ModelScreen).
+                // List only distinguishing roles/nondefault profile; neighbouring profile list already shows values.
+                // Image-only models have no profile.
                 const apart = imageOnly(model) ? '이미지 모델' : choice.kind !== 'profile' ? NO_PROFILE : choice.profile.id === settings.profile ? undefined : choice.profile.value.name;
                 return (
                   <ListItem

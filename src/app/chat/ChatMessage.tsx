@@ -307,9 +307,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   ) : (
     <>
       {remark && <Remark remark={remark} fresh={fresh} onSeen={() => actions.seeRemark(remark.id)} />}
-      {/* Ruling (2026-10-23): wide, the switcher stands in the tools so it floats with them mid-read, where the stuck foot
-          hides the markers beside it; a phone's row has no room and keeps it there. Right of the remark, which comes and
-          goes with the version shown: left of it, the switcher would move under the pointer while flipping. */}
+      {/* Keep desktop switcher with floating tools; phones lack room. Place it after the transient remark so version changes cannot move it under the pointer (user, 2026-10-23). */}
       {wide && switcher}
       {!mine && !greeting && !failed && !busy && <IconButton icon={ACTS.regenerate.icon} size="sm" label={ACTS.regenerate.label} onClick={() => actions.regenerate(message)} />}
       {!mine && failed && !busy && <IconButton icon={ACTS.retry.icon} size="sm" label={ACTS.retry.label} onClick={() => actions.retry(message)} />}

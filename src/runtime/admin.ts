@@ -6,12 +6,9 @@ import { page } from './pages';
 // Only the operator's account (the installation's first signup, server/accounts) passes; any other is answered
 // not-admin.
 
-// The caps every account has unless given its own; null is no cap. accounts: the rows the signup cap counts, a leaving one
-// too, since it holds its seat until removed. people: the accounts not leaving. pending: open reports plus held shares,
-// a held share counted again with its report, so it is only ever zero or not. fileBytes: every account's pictures
-// together. links: the links not cut. databaseBytes: the service database; backups leave out daily visitor keys and hashes.
-// backupAgeHours: since the newest backup copied off-site, null for none yet. warnings: what the server says
-// needs the operator (server/backup/freshness).
+// accounts includes leaving rows until deletion; people excludes them. Null caps mean unlimited.
+// pending may double-count reported held shares: use only zero/nonzero.
+// Database backups omit daily visitor keys/hashes; backupAgeHours is null before any off-site copy.
 export type Service = {
   signupCap: number;
   accountBytesCap: number | null;
@@ -45,9 +42,8 @@ export type AdminAccount = {
 };
 // The accounts read at readAt; the sums leave out the unread ones.
 type Totals = { bytes: number; disk: number; unread: number; readAt: number };
-// A report is a 신고 on a share (share set), sent by anyone holding its link, or on a board post or comment (postId set,
-// commentId too for a comment): accountId and username name a signed-in reporter, else null. shared: the share's state
-// now, null once it went with its sharer. postTitle, commentText: what was reported, as it reads now; null once gone.
+// Reports target shares or board content; accountId/username are null for anonymous reporters.
+// Resolve shared/postTitle/commentText from current state, null after deletion.
 export type SharedState = { held: boolean; reviewed: boolean; cut: boolean; removed: boolean; ownerId: string | null; ownerName: string | null };
 export type Report = {
   id: number;

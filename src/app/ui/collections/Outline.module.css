@@ -173,7 +173,6 @@
   background: var(--color-accent);
 }
 
-/* The menu's anchor sits here. */
 .plusAt {
   position: absolute;
   z-index: var(--layer-menu);

@@ -42,14 +42,10 @@ export function parseReading(stored: string, fallback: Reading): Reading {
   };
 }
 
-// pictureWidest: the width no picture-only line's picture is drawn wider than, in percent of the text's width, unless
-// the character sets its own (Pictures.widest). wideFill: a picture wider than tall fills the text's width anyway.
-// The default draws every picture as before the cap (user, 2026-10-17).
-// quotes (대사 모양), pictureSide, inlineIllustrations and portrait: reading habits, so no preset sets them.
-// portrait: the character's picture on the stage, only in a chat without 삽화: the stage is theirs (user, 2026-10-16).
-// follow (시스템 따라 바꾸기): a preset id for each system mode and the mode last applied, so a reload keeps what was
-// changed by hand since and only the next switch puts the preset back (user, 2026-10-20).
-// chimes (설정 › 소리): off until turned on, then chimeSounds says what each moment rings (user, 2026-10-26).
+// Reading chrome (quotes/pictureSide/inlineIllustrations/portrait) never comes from presets.
+// Portrait stage is reserved for chats without illustration (user, 2026-10-16); width cap preserves old default (2026-10-17).
+// Track last system mode so reload preserves manual edits until the next mode change (user, 2026-10-20).
+// Chimes default off and use chimeSounds once enabled (user, 2026-10-26).
 export type Display = Scheme & { chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSends: boolean; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean };
 
 export type Follow = Record<Theme, string> & { applied: Theme };
@@ -102,9 +98,8 @@ export const parseStoredDisplay = (stored: string) => parseDisplay(stored, DISPL
 
 export const systemMode = (dark: boolean): Theme => (dark ? 'dark' : 'light');
 
-// Before the first render, so a light theme or a picked color never paints the default first. Here, not in display.tsx,
-// which reads the session the first screen does not load. An own preset's look arrives with the account, so a mode
-// that switched while the app was closed paints the last look until then.
+// Apply before first paint without display.tsx's session dependency. A system-mode switch to an account-owned
+// preset while closed keeps the last look until that account loads.
 export function applyStoredScheme() {
   const { follow, ...display } = readPersisted(DISPLAY, parseStoredDisplay, DISPLAY_DEFAULT);
   const mode = systemMode(isDarkScheme());
@@ -143,8 +138,7 @@ export function presetOf(list: Preset[], reading: Reading, display: Display): Pr
   return list.find(({ look }) => LOOK_KEYS.every((key) => look[key] === now[key]));
 }
 
-// Written by this app, but another version may know a value this one does not: such a preset is counted as unread,
-// never shown with a value it did not save.
+// Unknown newer-version values count as unread; never substitute a look the preset did not save.
 export function savedPresets(looks: SavedLook[] = []): { presets: Preset[]; unread: number } {
   const presets = looks.flatMap(({ id, name, look }) => {
     const read = parseLook(look);

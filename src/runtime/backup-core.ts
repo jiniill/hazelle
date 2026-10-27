@@ -17,9 +17,8 @@ import { readRow } from './upgrade';
 import type { ObjectRow, ObjectStore, Pin } from './store';
 import type { Write } from './object-writes';
 
-// version is the file format's one version key: a file of any other version is refused, never read as this one. Version
-// 3 and every later file stays readable: a new stored shape adds a step in runtime/upgrade.ts, never a version bump that
-// refuses older files (user ruling 2026-10-10).
+// Only this format version is accepted. Evolve stored shapes through runtime/upgrade.ts, never a version bump
+// that makes v3 or later exports unreadable (user ruling 2026-10-10).
 const FORMAT = { format: 'risu-alpha-backup', version: 3 };
 const MANIFEST = 'manifest.json';
 const OBJECTS = 'objects.jsonl';
@@ -42,11 +41,9 @@ export type ReadArchive = { file: Blob; entries: Map<string, ZipEntry>; objects:
 export type BackupFailure = { ok: false; error: 'not-backup' | 'other-version' | 'stopped' | 'backup-storage' | 'backup-crashed' };
 export type BackupPin = { pin: Pin; excluded: Set<string> };
 
-// Connection keys are kept. What is in 휴지통 reaches nothing: it is left out with all it owns, a character's chats
-// included, as are the pieces nothing reaches: the lore and pictures of an import cut short. left counts the objects that
-// did not open. skipped counts the objects naming a picture the operator blocked, which are left out as restore leaves out
-// what the server refuses. Both scans are of one timeline: an account restored between them fails the export, and no
-// archive is written.
+// Keep connection keys; exclude binned objects, their descendants and unreachable import remnants.
+// left counts unreadable objects; skipped counts objects naming blocked pictures. Both scans must share one timeline;
+// a restore between them aborts the export rather than producing a mixed archive.
 export async function exportBackup(
   store: Pick<ObjectStore, 'scan' | 'pin'>,
   files: Pick<Files, 'read' | 'missing'>,
@@ -91,9 +88,8 @@ export async function exportBackup(
     const blocked = new Set<string>();
     let skipped = 0;
     let first = true;
-    // readBackup refuses a line naming a file the archive lacks, so a blocked picture must be known before the first
-    // line naming it is written. Lines are held from the first naming a picture not yet asked about, and the held
-    // pictures are asked about together; only one the server does not hold is read early, to tell a block from a failure.
+    // Discover blocked files before emitting any row that names them: readBackup rejects missing archive files.
+    // Hold rows from the first unknown picture; batch existence checks and read only server-missing files early.
     let held: { line: string; ref: FileRef | null; size: number }[] = [];
     let heldBytes = 0;
     const unasked = new Map<string, FileRef>();
@@ -124,8 +120,7 @@ export async function exportBackup(
       held = [];
       heldBytes = 0;
     };
-    // An object edited elsewhere after it was written comes again later in the walk, at its newer rev. Each id is written
-    // once, as first met, since the importer refuses a second line for an id and the first is already in the zip.
+    // Concurrent edits may repeat an id later in the walk. Keep its first row: the importer rejects duplicate ids.
     const failure = await store.scan({}, async (row, value) => {
       signal.throwIfAborted();
       const due = reached.delete(row.id);
@@ -174,9 +169,8 @@ export async function exportBackup(
   }
 }
 
-// The file comes from outside, so its shape and every body are checked before anything is written; one bad
-// line refuses the whole file. The index keeps metadata and references only, never decrypted bodies; validated
-// pages go to an encrypted temporary stage, so restoring ownership depths never inflates the archive again.
+// Validate every external row/body before any restore write; one bad line rejects the file.
+// Keep only references/metadata here; encrypted staging holds validated pages without reinflating per ownership depth.
 export async function readBackup(file: Blob, createRecords: () => Promise<BackupRecords>, { signal = new AbortController().signal, progress = () => {} }: Options = {}): Promise<{ ok: true; backup: ReadArchive } | BackupFailure> {
   let records: BackupRecords | null = null;
   let complete = false;
@@ -253,12 +247,8 @@ async function* readObjects(backup: ReadArchive, signal: AbortSignal) {
   if (text) yield line(text);
 }
 
-// A backup goes only into a new account: one holding nothing but what opening it added, and what this same
-// backup already wrote, so loading the file again after a stop carries on from there.
-// The backup's copies replace what opening added, whatever it holds now, and what it added that the backup lacks
-// goes, so the account ends as the backup was. skipped: objects naming a picture the server refuses (taken down by
-// the operator, or too large), which are left out. What is checked and what is written are of one timeline.
-// saveSummaries: runtime/summary's, run by the host on its store.
+// Restore only into a fresh account or this exact backup's partial restore, replacing/removing starter defaults.
+// Check and write on one timeline. Skip/count refused-picture objects; host saveSummaries updates derived summaries.
 export type RestoreStore = Pick<ObjectStore, 'scan' | 'batch' | 'pinned'> & { saveSummaries: (chats: string[], signal: AbortSignal, progress: (step: BackupStep) => void) => Promise<ApiFailure | null> };
 
 export function restoreBackup(store: RestoreStore, files: Pick<Files, 'save'>, backup: ReadArchive, options: Options = {}): Promise<ApiResult<{ skipped: number }>> {
@@ -281,10 +271,8 @@ async function restoreOn(
     }, pin);
     if (failure) return failure;
     if ([...present].some((id) => !ids.has(id) && !SEEDED.has(id))) return { ok: false, error: 'not-new' };
-    // An id is not enough: another backup of the same account shares ids, and carrying on from its copies would mix
-    // the two. What is there besides what opening added must be this backup's copy, as an earlier load wrote it.
-    // What opening added is written over unless it is the backup's copy already: rewritten, its new revision would leave
-    // stale every summary an earlier load wrote, which the summary pass then passes over (runtime/summary saveSummaries).
+    // Shared ids do not prove a resumable restore: non-starter content must equal this backup's earlier copies.
+    // Do not rewrite matching starter rows: new revs would stale summaries already restored.
     const held = new Set([...present].filter((id) => ids.has(id)));
     const same = new Set<string>();
     if (held.size) {
@@ -308,9 +296,8 @@ async function restoreOn(
     const landed = (kind: 'objects' | 'files') => progress({ kind, done: ++done[kind], total: total[kind] });
     progress({ kind: 'objects', done: 0, total: total.objects });
     progress({ kind: 'files', done: 0, total: total.files });
-    // Each file seals to the id its objects name, and one the server holds already is not sent again.
-    // A file whose bytes were changed seals to another id, and an object's key may have been changed on its own: either
-    // would restore a picture that never opens. All files are checked before the first object write.
+    // Verify every file seals to its referenced id and opens with its object's key before writing any objects.
+    // Hash equality alone cannot detect an independently altered key; server-held files need no reupload.
     const refused = new Set<string>();
     // A chunk never holds another picture beside one past the bytes: that file cannot be cut.
     const chunks: { ref: FileRef; entry: ZipEntry }[][] = [];

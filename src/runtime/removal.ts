@@ -10,11 +10,9 @@ import type { ObjectRow, ObjectStore, Pin } from './store';
 
 const KIND_NAMES = Object.keys(KINDS) as Kind[];
 
-// The ids of everything that goes when root is removed for good, as rounds to run one after another; the removals
-// in one round may run together. The invariant: an object is removed only after everything it owns, so a removal
-// that fails midway leaves the owner in place and can be tried again. Stored files stay here: other objects of the
-// account may name the same one, so the sweep that follows weighs them (runtime/files). pin: the removal's, so the plan and the removal are of one
-// timeline.
+// Remove children before owners, in sequential depth rounds; parallelize only within a round.
+// Interrupted removal leaves owners retryable. Keep shared files until runtime/files sweeps them.
+// Plan and remove under the same timeline pin.
 export async function planRemoval(store: ObjectStore, root: { kind: Kind; id: string }, pin: Pin): Promise<ApiResult<ObjectRow[][]>> {
   const pulled = await store.pull();
   if (pulled) return pulled;
@@ -88,9 +86,8 @@ export function markDeleted<K extends Removable>(store: ObjectStore, kind: K, id
   return store.update(kind, id, (current) => (at === null ? (current.purging ? null : without(current, 'deleted')) : { ...current, deleted: at }) as Values[K] | null);
 }
 
-// Removal for good is decided once, by the purging claim, at the rev the claim is written on (store.update): a restore
-// landing first leaves the root not due ('gone'), and one after it is refused (markDeleted). Nothing
-// the root owns goes before the claim lands. A claimed root is always due, so the next purge finishes one cut short.
+// Claim purging at the current rev before deleting children. Earlier restore wins; later restore is refused.
+// Claims remain due so interrupted purges resume, never return to the trash.
 async function purge(store: ObjectStore, kind: Removable, id: string, due: (value: Mark) => boolean, progress: (removed: number, total: number) => void): Promise<ApiResult<null>> {
   const claimed = await store.update(kind, id, (current) => (current.purging || due(current) ? { ...current, purging: true } : null));
   if (!claimed.ok) return claimed;

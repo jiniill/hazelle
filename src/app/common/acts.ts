@@ -1,10 +1,8 @@
 import { CopyPlus, Copy, Download, Pencil, Plus, RefreshCw, RotateCcw, RotateCw, Trash2, Upload, type LucideIcon } from 'lucide-react';
 import { EXPORT } from './words';
 
-// What the user does to a thing reads with one word and one icon on every screen; lint refuses these icons
-// anywhere else (eslint.config.js). 다시 시도 repeats what failed, 다시 생성 asks for another of what worked, 복원
-// brings back from 휴지통: three acts, three icons. 가져오기 sends a file up into the app and 내보내기 brings one down to the
-// device; lucide's Import would read as Download beside it.
+// Keep action icons synchronized across screens (lint-enforced). Retry, regenerate and restore are distinct acts.
+// Import means into the app, export to device; lucide Import visually conflicts with Download.
 type Act = { label: string; icon: LucideIcon };
 
 export const ACTS = {

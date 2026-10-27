@@ -9,8 +9,7 @@ const CodeEditor = lazy(() => import('./CodeEditor'));
 // A pane beside the code, behind a tab of its own on a narrow screen. reveal selects a range of the code and shows it.
 export type CodeAside = { label: string; body: (reveal: (at: [number, number]) => void) => ReactNode };
 
-// A code editor for 크게 편집. While CodeMirror loads, a plain text area stands in, so typing never waits for it.
-// Both panes stay mounted across a tab switch, so the editor keeps its caret and scroll.
+// Keep the plain textarea usable during CodeMirror load; keep both tabs mounted to preserve caret/scroll.
 export function CodeField(props: CodeEditorProps & { area: (element: HTMLTextAreaElement | null) => void; aside?: CodeAside }) {
   const { label, value, onChange, prose, area, aside, caret, ...rest } = props;
   const [asideShown, setAsideShown] = useState(false);

@@ -11,7 +11,6 @@ export function readPersisted<T>(key: string, parse: (stored: string) => T, init
   }
 }
 
-// A list of names or ids, such as the folders or toggle groups left open.
 export const storedStrings = (stored: string): string[] => {
   const list: unknown = JSON.parse(stored);
   return Array.isArray(list) ? list.filter((each) => typeof each === 'string') : [];

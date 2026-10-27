@@ -13,9 +13,8 @@ type Mark = (typeof MARKS)[keyof typeof MARKS];
 // What the steps read. connection: the account's first connection, null while it has none.
 export type Facts = { route: Route; connection: string | null; added: boolean };
 
-// done reads the state, never a click, so a step already done is skipped and leaving resumes where the state is; at is
-// where its control stands, for 이어 하기. above: the note stands over the control, keeping what comes under it clear.
-// label: the step's name, over its note and in the list of what the end says was done.
+// Completion reads state, never clicks, so already-done steps skip and resume correctly.
+// at locates the control for resumption; above prevents the note from covering following content.
 export type Step = { mark: Mark; label: string; text: string; done: (facts: Facts) => boolean; at: (facts: Facts) => Route; go?: { label: string; route: Route }; above?: boolean };
 export type Tutorial = { id: string; title: string; description: string; steps: Step[]; finish: { title: string; text: string } };
 

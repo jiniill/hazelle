@@ -18,9 +18,7 @@
   container-type: size;
 }
 
-/* --ratio is the shape the picture was made at, set by PictureView. Sized from it, the image's box is the picture's own,
-   with no letterbox inside it: a press beside the picture lands on the backdrop. A file of another shape sits inside
-   the box, never stretched. */
+/* Size the box from PictureView --ratio so outside-picture clicks hit backdrop, not letterbox. Contain mismatched files without stretching. */
 .image {
   --whole: min(100cqw, 100cqh * var(--ratio));
 

@@ -16,9 +16,8 @@ export type Backup = { close: () => Promise<void>; worker: BackupWorker };
 
 type Host = { store: ExportStore; files: ExportFiles; output: BackupOutput } | { store: ObjectStore; files: RestoreFiles };
 
-// The metadata scan cannot see a deletion mark or a chat's character: both are sealed in the body. Only their ids
-// cross to the backup worker, never the library's complete character cards and chat values. Pin can hydrate a fresh
-// or rewound store, so capture these marks only after pin settles, as part of the same host request.
+// Deletion/character links are sealed: send only their ids, never full library values, to the worker.
+// Capture after pin settles so fresh/rewound stores and metadata share one timeline.
 export async function pinBackup(store: Pick<ObjectStore, 'pin' | 'list'>, signal?: AbortSignal): Promise<ApiResult<BackupPin>> {
   const pinned = await store.pin(signal);
   if (!pinned.ok) return pinned;

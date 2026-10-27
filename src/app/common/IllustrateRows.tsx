@@ -27,8 +27,7 @@ type Props = {
   children?: ReactNode;
 };
 
-// 삽화's shared values, the same rows in the chat's 삽화 dialog and on 설정 › 채팅's 삽화 page: the switch and the
-// image model, then the rest folded as 세부 설정, which names how many of them are set.
+// Share these rows between chat dialog and global settings; details count only explicitly set values.
 export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange, onEditPrompt, children }: Props) {
   const { store } = useSession();
   const routes = drawingModels(useConnections());
@@ -84,15 +83,12 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
   );
 }
 
-// A new rung's length past the last one's.
 const RUNG = 3000;
 
 type Draft = { from: string; count: string };
 type Read = { ok: true; rung: Rung } | { ok: false; error: string };
 type Readable = Extract<Read, { ok: true }>;
 
-// What a rung's fields hold, or why it cannot be saved: a longer length and more pictures than the rung before, or
-// than the one picture every reply gets.
 function readRung({ from, count }: Draft, before: Rung | null): Read {
   const least = { from: (before?.from ?? 0) + 1, count: (before?.count ?? 1) + 1 };
   const length = readTyped(from, true);
@@ -172,7 +168,6 @@ function PictureLadder({ ladder, onChange }: { ladder: Rung[]; onChange: (ladder
   );
 }
 
-// The image model the switches draw with: their own choice, else the first added model that draws.
 export const imageModelOf = (routes: ImageRoute[], illustrate: IllustrateSetup) => {
   const own = illustrate.model;
   return own ? routes.find(({ connection, model }) => sameModelRef(own, refOf(connection.id, model))) : routes[0];

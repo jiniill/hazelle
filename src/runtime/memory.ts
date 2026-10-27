@@ -40,8 +40,7 @@ export const setDefaultMemory = (store: ObjectStore, change: Partial<MemorySetti
 
 type Write<T = Stored<'memory'>> = Promise<ApiResult<T>>;
 
-// change answers null when what it changes is not there, and nothing is written ('gone'). A create that meets
-// another device's goes on as an update of that one.
+// null means 'gone', with no write. A concurrent create on another device becomes an update.
 async function changeMemory(store: ObjectStore, chat: string, change: (memory: Memory) => Memory | null): Write {
   return store.withChat(chat, async () => {
     const id = memoryId(chat);
@@ -69,8 +68,7 @@ const withItem = (store: ObjectStore, chat: string, id: string, change: ItemChan
 
 export type RecordPatch = Partial<Pick<Written, 'when' | 'where' | 'who' | 'what' | 'lines' | 'outcome'>>;
 
-// at moves too, so a summary of the record started before the edit is refused, and a chapter holding it waits for the
-// user.
+// Advance at to reject in-flight summaries and flag containing chapters for the user.
 export const editRecord = (store: ObjectStore, chat: string, record: string, patch: RecordPatch): Write =>
   withItem(store, chat, record, (current) => ({ ...current, ...patch, edited: true, at: Date.now() }));
 
@@ -86,9 +84,7 @@ export const recallRecord = (store: ObjectStore, chat: string, record: string, r
     return current ? { ...memory, records: memory.records.with(at, recalled ? { ...current, recalled: true } : without(current, 'recalled')) } : null;
   });
 
-// The store applies a change again when a try's answer was lost after it landed (ObjectStore reaching), and that
-// copy no longer holds the thing: the snapshot stays the last copy's that held it, and the deletion already made, by
-// that try or by another device, is this one done.
+// Retries may find the item already removed. Keep its last snapshot and treat that deletion as success.
 async function taking<T>(store: ObjectStore, chat: string, find: (memory: Memory) => T | undefined, remove: (memory: Memory, found: T) => Memory): Write<T> {
   let was: T | undefined;
   const saved = await changeMemory(store, chat, (memory) => {
@@ -150,10 +146,8 @@ export const removeThread = (store: ObjectStore, chat: string, thread: string): 
     (memory, found) => ({ ...memory, threads: memory.threads.filter((each) => each !== found) }),
   );
 
-// One summary: the message versions it reads, in chat order, and the record or chapter it summarizes again as it was when
-// the job started (at), null for the messages after memory's end or for a new chapter. user: the user asked, and may
-// have one they edited, pinned or recalled, or forgot, summarized again. chapter: the records a chapter summarizes
-// again, null for records.
+// Capture source versions and replaced record/chapter at job start. user permits rebuilding user-owned/forgotten work.
+// chapter lists resummarized records, null for ordinary records.
 type Job = { sources: Source[]; redo: { id: string; at: number; user: boolean } | null; chapter: string[] | null };
 
 // A new chapter takes only records automatic work may still take, in no other chapter; one made again takes its records
@@ -247,9 +241,8 @@ export function memoryWriter(store: Pick<ObjectStore, 'get'>, chat: Chat): Tools
   return 'kind' in writer ? writer : { prompt: prompt.prompt.value, ...writer };
 }
 
-// failed: why a chat's last summary did not enter memory, kept for the session so it is not tried again on its own.
-// chapterFailed: why its last chapter did not; records go on being summarized meanwhile. indexing: how many of how many
-// records are embedded for retrieval; indexFailed: why the last pass stopped, which the next 다시 시도 or chat open tries again.
+// Failures stay session-local and require retry; chapter failures do not block record summaries.
+// Index failures retry on explicit retry/chat open; indexing reports completed/total records.
 export type Remembering = { running: ReadonlyMap<string, { model: string; left: number }>; failed: ReadonlyMap<string, MemoryFailure>; chapterFailed: ReadonlyMap<string, MemoryFailure>; indexing: ReadonlyMap<string, { done: number; total: number }>; indexFailed: ReadonlyMap<string, MemoryFailure> };
 
 type Planned = { job: Job; sent: ChatSent; from: number; to: number; memory: Memory; before: Written | null; chapter: { target: number } | null; left: number } & Tools;
@@ -260,23 +253,19 @@ type Tools = { prompt: MemoryPrompt; route: Route; settings: ModelSettings };
 // reads them as they are now. stopped: the session closed; the call's marker stays for the next load.
 type Outcome = 'done' | 'moved' | 'stopped' | MemoryFailure;
 
-// Summarizes chats in the background after replies are saved, when a chat opens, and when an edit or a version switch
-// makes a record stale (design §6.2, When summarizing runs). One job at a time per chat, so each span reads the state the
-// one before it left. It never blocks or cancels a send.
+// One job per chat, reading its predecessor's state. Background summaries follow saves/opens/stale edits,
+// never block or cancel sends.
 export class Rememberer {
   private closed = false;
   private state: Remembering = { running: new Map(), failed: new Map(), chapterFailed: new Map(), indexing: new Map(), indexFailed: new Map() };
   private readonly changes = new ChangeSignal();
   private readonly schedule = new MemorySchedule();
-  // The message versions a stale record was summarized again from this session. One that renders differently each
-  // time it is read ({{time}}, or CBS reading later messages) stays stale, and is not summarized again from the same
-  // versions, which would pay for a call on every check.
+  // Remember retried source versions so nondeterministic CBS cannot trigger a paid summary on every check.
   private readonly reread = new Set<string>();
   // The records of chapters that failed this session, by chat, left out of the next chapter until 다시 시도, so a chapter
   // that keeps failing is not paid for on every check.
   private readonly unchaptered = new Map<string, Set<string>>();
-  // The calls ended here. A memory result is not always saved (a refused one is dropped), so a marker that lands after
-  // its call ended (newCall writes it without waiting) cannot be told by its result, as a reply's is.
+  // Track ended calls separately: rejected results leave no saved outcome, and their markers may land late.
   private readonly ended = new Set<string>();
   private readonly aborts = new Set<AbortController>();
   private readonly stop: () => void;
@@ -425,9 +414,8 @@ export class Rememberer {
     this.change(chat, { chapterFailed: failure });
   }
 
-  // The next job, first the record or chapter the user asked for, then a stale automatic record, then new messages, then
-  // a chapter. A chapter asked for waits for its stale records, whose new summaries would outdate it again. A record one
-  // of whose messages was deleted waits for the user, and a chapter is made again only when the user asks.
+  // Priority: explicit request → stale automatic record → new messages → chapter.
+  // Rebuild stale chapter members first; deleted-message records and chapter rebuilds require user action.
   private async plan(chat: string): Promise<Planned | MemoryFailure | null> {
     const { store } = this.session;
     const memory = chatMemory(store, chat);
@@ -499,10 +487,8 @@ export class Rememberer {
     return this.finish(chat, target.id, target.result, callOf(route), answer, text.value(), job, read);
   }
 
-  // A resumed call's answer is for its span as the prompt rendered it when the call was made (the marker's print).
-  // Rendered differently now, after a toggle or a variable an earlier message sets, the answer is dropped as one whose
-  // versions changed is: its key lines cannot be checked against a text the call never read, and its records would
-  // take the print of that text and never read as stale.
+  // Validate resumed answers against the marker's call-time rendered print. Drop them if current rendering differs:
+  // validating against unseen text would both mischeck quotes and falsely mark the new records fresh.
   private async resumed(chat: string, stream: Stored<'stream'>, { sources, print, chapter }: Extract<Stream['for'], { kind: 'memory' }>) {
     const text = gather();
     const answer = await this.reads(stream.id, (signal) => resume(this.session, stream, signal, text.add));

@@ -13,10 +13,8 @@ import { fetchApi } from './api';
 import { pause } from './pause';
 import { CONNECTION_TYPES } from '../connectors/registry';
 
-// Whose refusal it was decides what the user is told: the provider's answer, the relay's
-// own refusal (X-Relay: error), the app's (no X-Relay header, such as an expired session), or no
-// connection at all. code: the provider's own name for its refusal, where its body gives one; retryAfter: its
-// Retry-After header.
+// Preserve refusal ownership: X-Relay: error is the relay's; no X-Relay means the app's (e.g. expired session).
+// Provider code and Retry-After stay distinct from app/relay errors.
 export type RelayFailure =
   | { kind: 'provider'; status: number; detail: string; code?: string; retryAfter?: string }
   | { kind: 'relay'; code: string }
@@ -186,21 +184,14 @@ async function readJson(response: Response | RelayFailure, signal?: AbortSignal)
   }
 }
 
-// A generation call through server/stream-box (tech-spec §6, Detached replies), which goes on when this
-// page stops reading. With a request it starts the call; without one it reads the call already started, from the
-// start. key: the call's private key; public: its public half, to start.
-// started: told once the server holds the call, before any of it is read, or once a discount lane's batch does (its
-// id, runtime/generate). retrying: told each time a try failed and is to be sent again (Retry). bot: the chat whose
-// bot's script makes the call, which the server limits per chat. tries: how many times the server sent it, once its
-// head has been read. took: how long the call ran, as the server measured it, once its end has been read.
+// Detached calls outlive readers: a request starts one; no request replays it from the beginning (tech-spec §6).
+// key is private; public is sent at startup. started fires before reading, or with the accepted batch id.
+// retrying fires before each resend; bot identifies the chat for script-call limits. tries comes from the head;
+// took is server-measured duration, available only after the end.
 export type StreamCall = { preflight?: (settings: ModelSettings, signal: AbortSignal) => Promise<ApiResult<TokenFit>>; calibration?: CallCalibration; measure?: (prepared: PreparedChat) => Promise<InputMeasurement>; id: string; key: JsonWebKey; public?: string; started?: (batch?: string) => void; retrying?: () => void; bot?: string; took?: number; tries?: number };
 
-// A read ends only at the call's own end: the end the server read, a call the server lost, or one it no longer holds
-// (stream-gone); or once the session is gone (no-session), when no read can reach it. This page's other failures to
-// reach it are tried again until the page stops reading; failing the read on them would save that failure as the
-// call's result and drop a call still running.
-// retry: how the server sends again a try that failed before any of it came, absent for none. pulse: the start's label
-// (relayRaw); a read of a call already started carries none, since its start counted it.
+// Until reader cancellation, retry read failures except call completion, stream-gone or no-session: a network failure
+// must not become the result of a still-running call. retry resends only before output; pulse labels starts, never resumes.
 async function accountStream(call: StreamCall, request: HttpRequest | null, signal: AbortSignal, retry: Retry | null = null, pulse?: PulseLabel): Promise<Response | RelayFailure> {
   let body: ReadableStream<Uint8Array>;
   if (request) {

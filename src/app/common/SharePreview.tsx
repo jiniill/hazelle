@@ -8,9 +8,7 @@ import { describeFailure } from './failure';
 import { count } from './typedNumber';
 import { SAVING_FILE, SHARE } from './words';
 
-// What a share's version shows before anything is taken, on the link's page and in the operator's 열어 보기, with
-// 파일로 받기: the same charx 내보내기 writes. first: what comes before it in its row. received: 받은 횟수, beside the
-// creator. onDownloaded: the file was written whole.
+// Use the same charx export on public/operator previews; onDownloaded fires only after the whole file is written.
 type Props = { source: ShareSource; opened: Opened; first?: ReactNode; received?: number; onDownloaded?: () => void; failed: (failure: string) => void };
 
 export function SharePreview({ source, opened, first, received, onDownloaded, failed }: Props) {

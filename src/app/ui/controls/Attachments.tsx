@@ -2,11 +2,9 @@ import { FileText, TriangleAlert, X } from 'lucide-react';
 import { Icon } from '../foundation/Icon';
 import styles from './Attachments.module.css';
 
-// saving: a picture's file is still being saved; failed: it was not, and goes with nothing until removed. A text file
-// is whole as soon as it is put there. label: what its remove button and a picture's alt name it by.
+// Saving/failed pictures cannot send; text attachments are ready immediately. label names both remove action and alt text.
 export type Attached = { key: string; label: string; state: 'saving' | 'saved' | 'failed' } & ({ kind: 'picture'; url: string } | { kind: 'file'; detail: string });
 
-// What a message about to be sent carries, above the composer's text.
 export function Attachments({ items, onRemove }: { items: readonly Attached[]; onRemove: (key: string) => void }) {
   if (!items.length) return null;
   return (

@@ -25,10 +25,8 @@ export async function chatSent(session: Pick<Session, 'store' | 'read'>, id: str
   return { chat: stored.value, scope, read: { shown, roles: messages.map(({ role }) => role), speakers: speakersOf(scope), texts: texts.texts }, tokens: texts.tokens, standing: texts.standing };
 }
 
-// slot: whether the chat's prompt holds 장기 기억 where a request reaches it, false while the chat cannot send. stale: why
-// each stale record is, a record the user edited or pinned included, which stays sent. tokens: what the slot sends
-// against its budget (shrunk to what the model can take), the state's share against its limit, and the messages sent
-// as written: those waiting for the next summary and the window's (engine rawParts).
+// slot reports actual prompt reachability, false for unsendable chats. Edited/pinned stale records remain sent.
+// Token budgets are request-clamped; raw counts split waiting text from the recent window.
 export type MemoryView = {
   memory: Memory;
   setup: MemorySetup;

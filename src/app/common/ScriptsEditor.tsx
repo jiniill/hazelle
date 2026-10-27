@@ -27,12 +27,9 @@ const STAGE_OPTIONS = choices(STAGES);
 const CHECKS: Record<ScriptCheck, string> = { empty: '패턴 없음', invalid: '패턴 오류', unsupported: '지원하지 않음' };
 const ON: Record<string, string> = { start: '채팅 시작', input: STAGES.input, output: STAGES.output, manual: '버튼' };
 const OFF = '꺼짐';
-// What each list's add button adds, which its failure names too: a trigger list adds only Lua here.
 const ADDED: Record<ScriptList, string> = { regex: SCRIPTS.regex, triggers: 'Lua' };
 
-// drill: the open script stands alone in place of the lists, for a narrow panel or page.
-// status: the ids of the character's 상태창 지정 scripts, tagged in its list. variables: the character's 기본 변수, which
-// the code editor offers by name.
+// drill isolates an open script; status uses character card.regex ids; variables feeds editor completion.
 export function ScriptsEditor({ owner, pack, drill, status = [], variables }: { owner: PackOwner; pack: Pack; drill: boolean; status?: readonly string[]; variables?: Defaults }) {
   const store = useStore();
   const { scriptPreview } = useSession();
@@ -151,8 +148,6 @@ function Item({ page, open, onOpen, title, tag, note, children }: Pick<ItemProps
 
 type Removal = Promise<ApiResult<RemovedScript>>;
 
-// What every script has once open: its switch, its order, its save state and its delete. remove: the script's save
-// queue's.
 function useScriptActions({ owner, pack, drop }: ItemProps, list: ScriptList, script: { id: string; off?: true }, name: string, remove: (task: () => Removal) => Promise<Awaited<Removal> | null>) {
   const store = useStore();
   const toast = useToast();

@@ -1,19 +1,16 @@
 import type { Stored } from './kinds';
 
-// The kinds a folder can hold. Each names its folder in its own `folder` field.
 export type Filed = 'character' | 'prompt' | 'module' | 'persona';
 
-// Up to FOLDER_DEPTH levels deep: a subfolder's parent is the folder it sits in, and top folders have none. It lives in
-// the sealed body, not the object's parent, so the server never sees the tree. of: the kind it holds. Absent is
-// character, the only kind folders held before the others had them: never write 'character' here.
+// Folder nesting lives in the sealed body, never the object's cleartext parent.
+// Absent of means character for older data; never write 'character' explicitly.
 export type Folder = { name: string; parent?: string; of?: Exclude<Filed, 'character'> };
 export const FOLDER_DEPTH = 3;
 export type FolderTree = Stored<'folder'> & { children: FolderTree[] };
 
 export const filedIn = (folder: Folder): Filed => folder.of ?? 'character';
 
-// The folders of one kind as a tree, by name. A subfolder whose parent is gone (removed on another device meanwhile)
-// stands at the top instead of vanishing.
+// Missing parent folders promote children to the root instead of hiding them.
 export function nest(folders: Stored<'folder'>[], kind: Filed): FolderTree[] {
   const sorted = folders.filter(({ value }) => filedIn(value) === kind).sort((a, b) => a.value.name.localeCompare(b.value.name, 'ko'));
   const ids = new Set(sorted.map((folder) => folder.id));
@@ -37,7 +34,6 @@ export const holds = (folder: FolderTree, at: string | null) => at !== null && w
 export type FolderContents<T> = { folder: FolderTree; up: FolderTree | null; direct: T[]; inside: T[] };
 export type FolderIndex<T> = { folders: FolderTree[]; byFolder: ReadonlyMap<string, FolderContents<T>>; loose: T[] };
 
-// The folders from the top down to id, itself last.
 export function pathOf<T>(byFolder: ReadonlyMap<string, FolderContents<T>>, id: string): FolderTree[] {
   const path: FolderTree[] = [];
   for (let at = byFolder.get(id); at; at = at.up ? byFolder.get(at.up.id) : undefined) path.unshift(at.folder);
@@ -46,8 +42,7 @@ export function pathOf<T>(byFolder: ReadonlyMap<string, FolderContents<T>>, id: 
 
 export const pathName = (path: FolderTree[]) => path.map(({ value }) => value.name).join(' › ');
 
-// Things keep the order they come in. One whose folder the tree does not show (removed on another device meanwhile)
-// sits in no folder.
+// Preserve input order; missing folder ids leave items unfiled.
 export function indexFolders<T>(items: readonly T[], folders: FolderTree[], folderOf: (item: T) => string | null): FolderIndex<T> {
   const byFolder = new Map<string, FolderContents<T>>();
   const holders = new Map<string, FolderContents<T>[]>();

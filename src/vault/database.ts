@@ -1,7 +1,6 @@
 export class DatabaseBlocked extends Error {}
 
-// A blocked upgrade rejects with DatabaseBlocked rather than waiting. On versionchange this build lets go so it
-// does not block a newer one.
+// Reject blocked upgrades rather than hanging; release on versionchange so newer builds can upgrade.
 export function cachedDatabase(name: string, version: number, upgrade: (request: IDBOpenDBRequest, event: IDBVersionChangeEvent) => void): () => Promise<IDBDatabase> {
   let opened: Promise<IDBDatabase> | undefined;
   return () => {

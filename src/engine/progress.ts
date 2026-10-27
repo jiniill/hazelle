@@ -1,7 +1,5 @@
-// A sign of life from inside one synchronous pass, given between units a bot's script or an imported file can make
-// long: one stage of one message, one lorebook entry's scan, one count, one step of unpacking. Only the evaluation and
-// import workers listen (runtime/worker postProgress), so their watchdogs bound a unit rather than a whole pass;
-// anywhere else a call does nothing.
+// Workers use this to bound each synchronous unit, not the whole pass, with their watchdogs.
+// Call between script/import-controlled units; outside evaluation/import workers it is a no-op.
 let listener = () => {};
 
 export const progressed = () => listener();

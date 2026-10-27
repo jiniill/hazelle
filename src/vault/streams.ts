@@ -1,8 +1,7 @@
 import { encodeText, toBase64 } from './aead';
 
-// The key a detached call is sealed for (tech-spec §6, Detached replies): the server gets the public half and seals
-// with a key of its own agreed with it; the private half travels only inside the call's sealed marker, so any
-// device with the open vault can open the call and the server never can. server/stream-box seals the same way.
+// Private keys stay inside sealed call markers; the server receives only the public half.
+// Keep ECDH/sealing compatible with server/stream-box so any unlocked device can resume.
 const P256 = { name: 'ECDH', namedCurve: 'P-256' } as const;
 
 export async function streamKey(): Promise<{ public: string; private: JsonWebKey }> {

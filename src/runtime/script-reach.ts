@@ -56,9 +56,8 @@ export class ScriptReach {
     };
   }
 
-  // A script's own model call (design §6.8, §6.10): only for a spender the user allowed, to the chat's model of the
-  // role, with a receipt kept on the last message shown so usage and cost count it. Risu's answer shape stays at the
-  // Lua binding. The reason also lets the tool binding answer without parsing text.
+  // Only consented spenders may call the chat's role model. Keep receipts on the last shown message for usage.
+  // Keep failure reasons structured for tools; Lua formats them at its binding.
   private async model(chat: string, role: Role, messages: ModelMessage[], from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<ModelResult> {
     const { store, credentials, log } = this.session;
     const refused = (reason: ModelRefusal, why: string): ModelResult => ({ success: false, reason, result: `Error: ${why}` });

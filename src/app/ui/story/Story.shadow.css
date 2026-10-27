@@ -3,20 +3,17 @@
 
 @import '../foundation/scrollbar.css';
 
-/* Risu's page sizes every box by its border (Tailwind's base styles), and bots are written for that: a box of width
-   100% with padding fits there. The page's own rule stops at the shadow root. */
+/* Repeat Risu/Tailwind border-box sizing inside the shadow root or padded 100%-width bot boxes overflow. */
 *,
 ::before,
 ::after {
   box-sizing: border-box;
 }
-/* In a box sized by its words (Story.tsx FitsWordsContext) a bot's size container has no width of its own and folds the
-   box to a sliver: Risu's messages run the column's width, which a card of inline-size 100% filled. */
+/* Disable bot size containers for word-sized bubbles: their indefinite width collapses full-width bot cards. */
 :host([data-fits]) * {
   container-type: normal !important;
 }
-/* Block flow, as Risu's message root (a span whose blocks break out), since bots lay out for it: a float wraps text,
-   inline-block chips sit in a row, a centered box keeps its width. A flex column broke all three. */
+/* Keep block flow like Risu: flex-column breaks floats, inline chips and centered fixed-width boxes. */
 :host {
   display: block;
   font-family: var(--prose-font);
@@ -26,8 +23,7 @@
   text-wrap: pretty;
 }
 
-/* The story where the bot says nothing: any rule of the bot's sheet (Story.tsx) beats these, whatever its specificity,
-   since an unlayered rule outranks a layered one. Anonymous, so a bot's sheet cannot name the layer and join it. */
+/* Anonymous layer keeps all bot rules above app fallback styles, regardless of specificity; bots cannot join it by name. */
 @layer {
   :host > *,
   :host > :is(blockquote, ul, ol) p {
@@ -149,10 +145,7 @@
     max-width: 100%;
   }
 
-  /* A bot's CSS that sizes pictures wins, as it does in its own boxes (design.md §6.4). The line, not the picture, is
-     capped and shrunk to fit: a percent on the picture would resolve against a line its own size, and a full-width line
-     opens for a pointer beside the picture and sets the cover (below) off its corner. After the
-     margin reset above, which matches as strongly. data-wide: Story.tsx marks a picture wider than tall. */
+  /* Bot picture sizing wins. Cap/shrink the line, not image percentages, so hit area and corner cover fit the image. Keep after the equally specific margin reset; data-wide comes from Story.tsx. */
   [data-picture] {
     width: fit-content;
     max-width: var(--story-picture-widest);
@@ -172,8 +165,7 @@
   }
 }
 
-/* Story.tsx marks an original shown under its translation (원문 함께 보기). Outside the layer, so a bot's rule for its
-   paragraphs leaves it set apart; faded rather than recolored, so it stays readable on the bot's own background. */
+/* Keep originals outside bot layers; fade rather than recolor so bot backgrounds remain readable. */
 [data-original] {
   font-size: var(--prose-original-size);
   opacity: var(--prose-faded-opacity);
@@ -184,10 +176,7 @@
   background-color: var(--color-found-term);
 }
 
-/* A line that is only a picture, as a bot draws its character's tall portrait, shows its top until the pointer moves
-   over it or it is tapped; Story.tsx sets the attributes and eases the height, since none cannot be eased to. The line
-   is cut, not the picture, so a small one is never stretched; the picture itself is only shrunk to the most it may be
-   (in the layer above). */
+/* Fold the line, never stretch the picture. Story.tsx eases explicit heights because none cannot transition; hover/tap reveals it. */
 [data-picture] {
   max-height: var(--story-picture-peek);
   overflow: hidden;
@@ -198,8 +187,7 @@
   max-height: none;
 }
 
-/* Story.tsx's controls while 이미지 가리기 is on: the stand-in for a picture or video, and 가리기 beside one tapped open. They
-   always answer a tap, whatever data-buttons says. */
+/* Veil controls always accept taps regardless of data-buttons; Story.tsx owns source replacement/reveal state. */
 [data-veiled] {
   display: inline-flex;
   align-items: center;

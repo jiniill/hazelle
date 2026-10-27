@@ -20,9 +20,8 @@ type Props = {
   onCollapse: (collapsed: boolean) => void;
 };
 
-// Wide screens: the rail beside a character's chats, and the rail alone elsewhere, since 캐릭터 둘러보기 holds every
-// character (user ruling, 2026-10-11). Phones: the list of characters is the home page. Its search and open folders
-// outlast a visit inside one.
+// Wide layouts use rail + active character chats, rail alone elsewhere (user, 2026-10-11).
+// Phone home is the character list; preserve search/folder state across visits.
 export function LibrarySidebar({ page, collapsed, onCollapse }: Props) {
   const { none, folders, byFolder, loose } = useSortedLibrary('own');
   const writing = useWritingChats();

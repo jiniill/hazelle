@@ -2,13 +2,9 @@ import type { CallCalibration } from './token-calibration';
 import type { Receipt, Writes } from './chat';
 import type { Source } from './memory';
 
-// A generation call the server is making for a chat (tech-spec §6, Detached replies), kept until its result is saved,
-// so a reload or another device picks it up. call: the connection and model with their names when it started. result:
-// the id of the entry its result is saved as, or of a memory summary's first record or chapter, which tells a call already saved.
-// for a memory summary of the message versions it read: the fingerprint (engine/memory) of their text as the prompt
-// rendered it for the call. An answer picked up later is for that text, however the versions render then.
-// How the call is held: key, the private key of a call the server makes (runtime/relay stream); batch, the provider's id
-// of a reply submitted to a discount lane's batch (ConnectionType discount), which the page asks about through the relay.
+// Keep until the result is saved so reloads/devices can resume. result identifies an already-saved outcome.
+// Memory print fingerprints the rendered source at call time, not at resume time.
+// key is private for server calls; batch identifies a provider batch resumed through the relay.
 export type Stream = ({ key: JsonWebKey } | { batch: string }) & {
   call: Pick<Receipt, 'connection' | 'source' | 'model' | 'modelName' | 'entry'>;
   calibration: CallCalibration;

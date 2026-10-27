@@ -22,9 +22,8 @@ export function transferSlots(protocol: string, nextHop: string | undefined): nu
   return protocol === 'https:' && nextHop !== 'http/1.1' ? TRANSFERS.multiplexed : TRANSFERS.http1;
 }
 
-// The page's one queue of transfers: each holds a slot until it ends, and the slot passes on at once, so a batch never
-// waits on its slowest while the link idles. bulk: one of many (a backup, an import, an export), which a picture
-// asked for on screen goes before.
+// Release each transfer slot immediately; never wait for a whole batch's slowest file.
+// Foreground pictures outrank bulk backup/import/export work.
 export class Transfers {
   private running = 0;
   private readonly waiting = { now: [] as (() => void)[], bulk: [] as (() => void)[] };
@@ -47,9 +46,8 @@ export class Transfers {
 const navigation = typeof performance === 'undefined' ? undefined : (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined);
 export const transfers = new Transfers(transferSlots(globalThis.location?.protocol ?? '', navigation?.nextHopProtocol));
 
-// Starts each item's transfer ahead of the one taken, up to ahead items and, where size tells them, HELD_AHEAD bytes
-// started and not yet taken (the first always starts), and gives each with its result in order, as a zip or a check
-// by position takes them. A caller that stops early still waits for those under way.
+// Prefetch up to ahead items and HELD_AHEAD known bytes, always allowing the first. Yield in input order;
+// early exit must still await transfers already started.
 export async function* inOrder<T, R>(items: readonly T[], start: (item: T) => Promise<R>, { ahead = TRANSFERS.multiplexed, size = () => 0 }: { ahead?: number; size?: (item: T) => number } = {}): AsyncGenerator<[T, R]> {
   const started: Promise<R>[] = [];
   let next = 0;
@@ -74,10 +72,8 @@ export async function* inOrder<T, R>(items: readonly T[], start: (item: T) => Pr
 
 export const namedFile = (value: unknown): string | null => (isRecord(value) && isRecord(value.file) && typeof value.file.id === 'string' && FILE_ID.test(value.file.id) ? value.file.id : null);
 
-// A file is sealed by its content, so one this account already holds is never sent again (accounts keep their own
-// copies, src/server/files.ts); an import cut short and tried again sends only what did not arrive. Asking, uploading and reading wait out a
-// dropped connection the way the store's calls do (store.reaching): a backup reads thousands of pictures in a row, and
-// one dropped read must not end it. Every read and upload takes a slot of the page's transfers.
+// Content-sealed files deduplicate within an account, never across accounts (server/files.ts).
+// All requests retry dropped connections through store.reaching; reads/uploads also take a page transfer slot.
 export class Files {
   private sweeping: Promise<void> | null = null;
   private owed = false;
@@ -88,8 +84,7 @@ export class Files {
     private readonly queue: Transfers = transfers,
   ) {}
 
-  // Each file's reference, in order; null for one the server refuses: too large, blocked (taken down by the operator),
-  // or past the account's picture cap, which the caller leaves out and counts as it does a picture it cannot read.
+  // Keep result order; null files are refused (size/block/cap) and must be omitted and counted by the caller.
   async save(files: Uint8Array<ArrayBuffer>[], { signal, bulk }: { signal?: AbortSignal; bulk?: boolean } = {}): Promise<ApiResult<(FileRef | null)[]>> {
     if (signal?.aborted) return { ok: false, error: 'stopped' };
     const sealed = await Promise.all(files.map(sealFile));
@@ -140,9 +135,8 @@ export class Files {
     return { ok: true, data: { missing, maxBytes, room } };
   }
 
-  // Run after a removal for good (runtime/removal), and once more when another lands meanwhile. One that fails is left to
-  // the next removal, and what it would have freed stays counted until then. A write landing mid-walk refuses it
-  // (conflict), so a chat that goes on beside the removal walks again.
+  // Sweep after permanent removal; coalesce another removal into one more pass.
+  // Failures leave bytes counted until a later sweep; writes during a walk invalidate it and require retry.
   sweep(): Promise<void> {
     this.owed = true;
     this.sweeping ??= (async () => {
@@ -157,11 +151,9 @@ export class Files {
     return this.sweeping;
   }
 
-  // The files the account holds that no object names, 휴지통's included, are released, and the ones objects name that it
-  // no longer holds are taken back (server/files.ts sweep). The walk must be whole: a row that does not open, or names no
-  // file, ends the sweep with nothing released, since a picture only it named would be taken for unused. The held ids
-  // are read before the walk, so a file uploaded during it is never weighed. The server checks the inventory's object
-  // revision on its account queue: any object write during the walk invalidates its unused set.
+  // Include binned objects' references; unreadable rows or missing file refs must abort release, not look unused.
+  // Inventory first excludes uploads arriving mid-walk. The server checks its object revision on the account queue,
+  // invalidating the unused set if any object was written during the walk.
   async release(signal?: AbortSignal): Promise<ApiResult<{ released: number; taken: number }>> {
     return this.store.pinned(async (pin): Promise<ApiResult<{ released: number; taken: number }>> => {
       const held: string[] = [];

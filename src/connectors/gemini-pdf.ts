@@ -2,9 +2,8 @@ import { zlibSync } from 'fflate';
 import type { Pdf } from './settings';
 import type { ChatMessage } from './types';
 
-// PDF로 보내기: Gemini reads a PDF page as one picture's tokens and its text layer without billing it as text, on the
-// models that do not count it (ai.google.dev document processing, 2026-10). The words sit in a text layer of a font
-// that is named but never embedded: only its ToUnicode map is read, so no font travels.
+// PDF text uses an unembedded font's ToUnicode map. Eligible Gemini models bill page images, not that text
+// (ai.google.dev document processing, 2026-10).
 
 export type PdfPlan = { lead: ChatMessage[]; packed: ChatMessage[]; tail: ChatMessage[]; transcript: string };
 
@@ -29,7 +28,7 @@ const PARAGRAPH = ' ';
 const INSTRUCTION =
   'The attached PDF holds the earlier part of this conversation, in order; each message there starts with its role in brackets. A U+2029 character in its text marks a paragraph break, which was a blank line in the original.';
 
-// Codec.pack. The pictures the packed messages carried go along, never dropped.
+// Packed messages must retain their pictures beside the PDF.
 export function packPdf(messages: ChatMessage[], pdf: Pdf): ChatMessage[] {
   const plan = planPdf(messages, pdf);
   if (!plan) return messages;
@@ -39,10 +38,8 @@ export function packPdf(messages: ChatMessage[], pdf: Pdf): ChatMessage[] {
 
 export const pdfData = (transcript: string) => base64(textPdf(transcript));
 
-// US Letter in points. Every glyph advances half an em, the font's default width, so a line holds a fixed count.
-// 0.1 pt is not a slip: each page bills as a picture (about 266 tokens at LOW) while the model reads the text layer,
-// so a whole chat goes on one page. At 8 pt a 290k-character chat took 42 pages and 11,172 tokens on Gemini 3.8
-// Flash; at 0.1 pt, one page and 315, with facts from its start, middle and end still read (measured 2026-10-18).
+// US Letter, half-em glyphs. Keep 0.1 pt: PDF pages bill as images, while text remains readable.
+// A 290k-character chat used 315 tokens on one page vs 11,172 on 42 at 8 pt (Gemini 3.8 Flash, 2026-10-18).
 const WIDTH = 612;
 const HEIGHT = 792;
 const MARGIN = 36;

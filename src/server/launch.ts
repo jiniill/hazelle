@@ -1,9 +1,8 @@
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 
-// The start without Docker (deploy/start-hazelle.bat, deploy/install.sh): the image's /app, copied out by the release
-// workflow, with data/ beside it, reachable from this machine only. Another device needs HTTPS in front anyway, since
-// the vault's secure context holds on localhost alone (README.ko.md).
+// Run the image-extracted app without Docker, with adjacent data/ and loopback binding.
+// Other devices still need HTTPS for the vault secure context (README.ko.md).
 const app = join(import.meta.dirname, '..', '..');
 const port = process.env.PORT || '8080';
 const url = `http://localhost:${port}`;

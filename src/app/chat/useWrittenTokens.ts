@@ -3,8 +3,8 @@ import { useSession } from '../session';
 
 const EVERY_MS = 1000;
 
-// What a reply wrote so far, in o200k_base tokens, counted again once a second at most while it is shown: the next count
-// waits for the last, so a busy worker never queues them. null until first counted; unknown without the tokenizer.
+// Estimate live o200k tokens at most once/second, awaiting each count before scheduling another.
+// Null before first count; tokenizer failure remains unknown.
 export function useWrittenTokens(texts: string[]): number | 'unknown' | null {
   const { store } = useSession();
   const [written, setWritten] = useState<number | 'unknown' | null>(null);

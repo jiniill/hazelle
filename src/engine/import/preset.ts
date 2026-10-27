@@ -53,10 +53,9 @@ const fail = (kind: PresetFailure['kind']): PresetResult => ({ ok: false, failur
 const presetKey = async (usage: 'encrypt' | 'decrypt') => crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', new TextEncoder().encode('risupreset')), 'AES-GCM', false, [usage]);
 const SEAL = { name: 'AES-GCM', iv: new Uint8Array(12) };
 
-// Risu's preset container (compat spec, out-of-scope formats), told apart by extension as Risu does: a .risup is
-// RPack over gzip, a .risupreset gzip alone. Inside is MessagePack {type: 'preset', preset}, where preset is
-// MessagePack under AES-GCM; presetVersion 0 names the field pres. The key is SHA-256 of a fixed string and the IV
-// is zero: the format hides the preset from casual reading, it does not protect it.
+// Dispatch by extension: .risup is RPack over gzip, .risupreset gzip alone (compat spec, out-of-scope formats).
+// MessagePack {type: 'preset', preset} holds AES-GCM-encrypted MessagePack in preset (pres in v0).
+// The fixed-string key hash and zero IV are format obfuscation, not protection.
 export async function importPreset(fileName: string, bytes: Uint8Array): Promise<PresetResult> {
   if (!isPresetFile(fileName)) return fail('unreadable');
   const packed = fileName.toLowerCase().endsWith('.risup');
@@ -206,10 +205,8 @@ function convert(preset: Json, template: unknown[]): PresetRead {
   };
 }
 
-// Risu's prompt settings (process/prompt.ts PromptSettings) that this app has no setting for, each counted only off its
-// default (storage/database.svelte.ts:438-449). Not counted on purpose: assistantPrefill, which Risu never reads, and
-// trimStartNewChat and customChainOfThought, which only leave out what this app never sends ([Start a new chat], Risu's
-// own CoT instruction).
+// Count unsupported PromptSettings only off-default (Risu storage/database.svelte.ts:438-449).
+// Exclude unread assistantPrefill, and trimStartNewChat/customChainOfThought: this app sends neither marker nor CoT instruction.
 function promptSettings(settings: Json, template: unknown[]): number {
   // A chat item marked chatAsOriginalOnSystem keeps its messages' roles, as every chat slot here does.
   const systemized = settings.sendChatAsSystem === true && template.some((item) => isRecord(item) && item.type === 'chat' && item.chatAsOriginalOnSystem !== true);

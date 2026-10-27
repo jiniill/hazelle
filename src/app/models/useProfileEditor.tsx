@@ -36,11 +36,9 @@ export type User = ProfileUser & { schema: SettingsSchema | null; changes: Chang
 type Saved = ModelSettings & { name: string };
 const split = ({ name, ...settings }: Partial<Saved>): { name?: string; settings: ModelSettings } => ({ name, settings });
 
-// The editing of one 모델 설정: its autosave, drafts and rows. ProfileScreen frames it with the 설정's own header and the
-// models on it; a model's page frames it with the model. One of the two mounts per route, so one autosave queue per 설정.
-// model: the page's own model. Its page says once, above the rows, what that model leaves out or caps, so no row notes
-// it of the others; and an empty field shows that model's own number where the catalog gave one. retries: the count its
-// connection gives, which an empty 실패하면 다시 보내기 follows; the 모델 설정's own page serves many connections, so no one number.
+// One mounted editor/queue per profile, shared between profile and model frames.
+// Model pages explain fit/caps once and show that model's catalog defaults; profile pages cannot promise one
+// connection's inherited retry count because profiles span connections.
 export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: { model?: Starred; retries?: number } = {}) {
   const store = useStore();
   const settings = useSettings();

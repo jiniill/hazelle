@@ -11,15 +11,12 @@ import styles from './Table.module.css';
 // keep: still shown when the table is narrow, where every other column but the first gives way to the row's summary.
 export type TableColumn = { label: string; track: 'name' | 'fill' | 'figure' | 'button'; keep?: boolean };
 
-// A null cell is something the row does not have, drawn as a dash. summary: the row's other columns as one line, shown
-// under its first cell when the table is narrow. folder: a folder's row, which opens it. selected: one of
-// a pick of several, absent while not picking. drag: the row can be dragged onto a folder's row, carrying this key;
-// onDropCard: a dragged row's key, let go over this one.
+// Null cells mean absent and draw a dash. Narrow layouts show other columns in summary.
+// Folder rows accept dragged item keys; selected is absent outside multi-pick mode.
 export type TableRow = { key: string; cells: (ReactNode | null)[]; summary?: ReactNode; current?: boolean; folder?: boolean; selected?: boolean; drag?: string; onDropCard?: (key: string) => void; onClick?: () => void };
 
 const TRACKS = { name: 'minmax(0, 2fr)', fill: 'minmax(0, 1fr)', figure: 'var(--table-figure-width)', button: 'var(--control-md)' };
 
-// Things compared by the same few facts. Each row opens its thing, or holds its own controls (no onClick).
 export function Table({ label, columns, rows }: { label: string; columns: TableColumn[]; rows: TableRow[] }) {
   const tracks = {
     '--table-wide': columns.map((column) => TRACKS[column.track]).join(' '),

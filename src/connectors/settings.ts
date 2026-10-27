@@ -12,8 +12,7 @@ export type Reasoning =
   | { kind: 'budget'; tokens: number }
   | { kind: 'adaptive'; level: string | null };
 
-// An absent field is unset: nothing is sent for it, and the provider's default applies.
-// context is the prompt's own limit beside the catalog's context length; it is never sent.
+// Absent fields use provider defaults. context caps the prompt locally and is never sent.
 export type ModelSettings = { [S in NumberSetting]?: number } & {
   context?: number;
   stop?: string[];
@@ -28,8 +27,7 @@ export type ModelSettings = { [S in NumberSetting]?: number } & {
   discount?: true;
   // PDF로 보내기: sending() packs the earlier conversation through its codec's pack (Gemini: connectors/gemini-pdf).
   pdf?: Pdf;
-  // 실패하면 다시 보내기 for the models using this 묶음, over their connection's (runtime/connections retriesOf). Never
-  // sent: no request builder reads it.
+  // Profile retry override (runtime/connections retriesOf); never send it to the provider.
   retries?: number;
 };
 export type Cache = '5m' | '1h';
@@ -45,14 +43,12 @@ export type ServiceTier = (typeof SERVICE_TIERS)[number];
 
 export type Bounds = { min: number | null; max: number | null };
 
-// settings lists the request settings it takes, so one left out is not taken; null means the catalog keeps no such
-// list. reasoning is null when the catalog does not describe the model's reasoning controls, and each control is null
-// where it is silent; budget holds the bounds the catalog names.
+// Absent catalog settings are unsupported; a null list/control is unknown, not unsupported.
 export type Takes = { settings: Setting[] | null; reasoning: ReasoningTakes | null };
 export type ReasoningTakes = { off: boolean | null; levels: string[] | null; budget: Bounds | false | null; adaptive: boolean | null };
 
-// No model on it takes a setting it cannot carry. always: the format sends that setting on every request. least: the
-// least level every model of the format that takes a level takes, null where its models differ.
+// Format support is an upper bound, never a promise of model support.
+// always means unconditionally sent; least is null when supported levels differ across models.
 export type Carries = {
   numbers: { [S in NumberSetting]?: Bounds & { always?: true } };
   reasoning: { off: boolean; levels: string[]; least: string | null; budget: Bounds | null; adaptive: boolean };
@@ -66,8 +62,7 @@ export type Carries = {
   pdf: boolean;
 };
 
-// null is unknown: the screen says so ("받는지 알 수 없어요") and still lets it be set and sent. Only a
-// known false is refused before sending.
+// Unknown remains settable/sendable and is shown as unknown; reject only known false.
 export type Accepts = boolean | null;
 export type Rule = Bounds & { accepted: Accepts; whole: boolean };
 
@@ -89,8 +84,8 @@ export type SettingsSchema = {
 // Effort names from least to most. Catalogs list them in either order (OpenRouter's Claude: max first).
 const EFFORT_ORDER = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 
-// The least thinking the model is known to take: off only where the catalog says it can be turned off (Gemini 3
-// refuses a zero budget), else its least known level, else its smallest budget; null where nothing is known.
+// Prefer known off, then least level, then smallest budget; null when unknown.
+// Never infer off from a zero budget on models that reject it.
 export function leastReasoning({ reasoning }: SettingsSchema): Reasoning | null {
   if (reasoning.off === true) return { kind: 'off' };
   if (reasoning.level !== false && reasoning.least) return { kind: 'level', level: reasoning.least };
@@ -110,9 +105,8 @@ export function effortLevels(values: unknown): { levels: string[]; none: boolean
   return { levels: named.filter((level) => level !== 'none'), none: named.includes('none') };
 }
 
-// The protocol decides what can be carried at all; the catalog decides what this model takes. Carried
-// but not described stays unknown: a protocol field is no promise that a model takes it (Anthropic's
-// models from 4.7 on refuse temperature, which the Messages format carries).
+// Intersect protocol capacity with catalog support; an undescribed model control stays unknown.
+// E.g. Messages carries temperature, but some Anthropic models reject it.
 export function settingsSchema(carries: Carries, model: Model): SettingsSchema {
   const listed = model.takes.settings;
   const facts = model.takes.reasoning;
@@ -150,9 +144,8 @@ export function settingsSchema(carries: Carries, model: Model): SettingsSchema {
       },
       adaptive: control(carries.reasoning.adaptive, facts?.adaptive),
     },
-    // No catalog read here states it (Anthropic's capabilities, Copilot's supports, OpenRouter's and
-    // Vercel's lists, checked 2026-09-28), and the Messages format cannot vouch for it: Anthropic's own
-    // models from 4.6 on refuse a prefill. A connection type that learns it per model fills it here.
+    // Catalogs checked 2026-09-28 do not state prefill; Messages alone cannot promise it (Anthropic 4.6+ refuses).
+    // Only provider-specific per-model evidence may fill it.
     prefill: null,
     // No catalog lists it, so it is the format's word, or the connection type's.
     cache: carries.cache,

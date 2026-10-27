@@ -14,10 +14,8 @@ export type NavBarProps = {
   subtitle?: ReactNode;
   status?: string;
   actions?: ReactNode;
-  // MenuItems for the thing the screen shows, under a ⋯ after the actions.
   menu?: { of: string; items: ReactNode };
-  // In a side panel the bar fills a head of fixed height, whose bottom line meets the chat header's (user,
-  // 2026-10-12): the title and the subtitle keep one line each and cut off at their ends.
+  // Side-panel heads must align with chat header height; truncate title/subtitle to one line each (user, 2026-10-12).
   line?: boolean;
 } & Back;
 

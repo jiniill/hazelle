@@ -18,8 +18,7 @@ import { ANSWER_INSTRUCTION_LABEL, CHAPTER, COMMAND, inSettings, LORE_BUDGET_LAB
 
 type Lore = NonNullable<Assembled['lore']>[number];
 
-// Not "none" or "gone": what a call sent is kept only by the page that made it, while its chat stays open and within
-// the log's bound (runtime/request-log), so a reload, another device or an older call has none of it to show.
+// Unavailable is not none: requests are page-local, chat-leased and bounded, so reloads/other devices/old calls lack them.
 const UNKEPT = '요청을 보낸 기기에서 채팅 화면을 열어 둔 동안 최근 요청만 볼 수 있어요.';
 const PICKED = '새로고침 전에 보낸 요청이라 원문을 알 수 없어요.';
 

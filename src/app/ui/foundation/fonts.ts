@@ -6,9 +6,8 @@ export const FONT_KIND: Record<FontKind, string> = { serif: '명조', sans: '고
 
 type Font = { label: string; kind: FontKind; load?: () => Promise<unknown> };
 
-// Each id names a --font-<id> token in tokens.css. serif and sans are the ids stored by every earlier version for
-// 고운바탕 and IBM 플렉스, never a kind. Those two and the device's own come with the app (fonts.css); the others
-// are fetched when first drawn.
+// Keep stored serif/sans ids mapped to 고운바탕/IBM Plex, never reinterpret as kinds.
+// Each id needs --font-<id> in tokens.css; only bundled/default faces load eagerly.
 export const FONTS = {
   serif: { label: '고운바탕', kind: 'serif' },
   'nanum-myeongjo': { label: '나눔명조', kind: 'serif', load: () => Promise.all([import('@fontsource/nanum-myeongjo/400.css'), import('@fontsource/nanum-myeongjo/700.css')]) },

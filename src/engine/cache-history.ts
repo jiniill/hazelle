@@ -38,8 +38,7 @@ export function cacheShortfall(forecast: CacheForecast | undefined, actual: numb
   return { expected, actual, ratio, short: actual < expected / 2 && expected - actual >= 128 };
 }
 
-// The first wire part a shortfall's read left out, null when it covers them all. A provider reads whole parts up to a
-// cache point, so the read ends at the part boundary nearest its o200k reach; tokenizer noise makes that a neighbourhood.
+// Cache reads end at whole-part boundaries; choose the boundary nearest the o200k reach, allowing tokenizer noise.
 export function readReach(parts: { tokens: number }[], { actual, ratio }: CacheShortfall): number | null {
   const reach = actual / (ratio ?? 1);
   let sum = 0;

@@ -35,7 +35,6 @@ export type Character = Mark & {
   // Whether the scripts of its chats, its modules' included, may rewrite its card (setBackgroundEmbedding). Asked once
   // per character, not per script. Absent: not asked yet, and the first write asks.
   cardWrites?: boolean;
-  // Absent fields are the defaults.
   pictures?: Pictures;
   // 상태창 지정: the display scripts, by id in card.regex, whose boxes are the character's status window, shown once
   // for the latest message instead of in every one. An id that names no script marks nothing, so a deleted script's
@@ -57,12 +56,9 @@ export type Character = Mark & {
   agents?: string[];
 };
 
-// Its lorebook and assets are its children, as a character's are.
-// namespace: Risu's, which {{moduleenabled::…}} asks by. loreFolders only group its lorebook on screen.
-// risu: the id module files name it by (engine/import/types ImportedModule.risu), set for one brought from a Risu backup,
-// which a move skips, or with a character's charx, which a later charx bundling it is attached to. takesMemory: whether its tool may hold the
-// memory slot of the chats it is on in, which turns the built-in memory off there; absent: not asked yet. network: whether its
-// tool may reach the outside (its fetches through the relay, its frame's pictures and fonts); absent: not asked yet.
+// Lore/assets remain owned children. namespace serves {{moduleenabled}}; risu keeps exported identity for move/charx pairing.
+// takesMemory replaces built-in memory; network covers relay fetches and frame pictures/fonts.
+// Absent consent fields mean not asked, never implicitly allowed.
 export type Module = Pack & Mark & {
   botModels?: boolean;
   takesMemory?: boolean;
@@ -83,10 +79,8 @@ export type LoreFolder = { id: string; name: string };
 
 const DAY = 24 * 60 * 60 * 1000;
 
-// What goes to 휴지통 when deleted: it waits KEEP_DELETED, then goes for good with everything it owns (runtime/characters
-// purgeExpired). deleted is when it went there; purging: that removal has begun, so it can no longer be brought back.
-// A character's chats go with it; a deleted chat stays whole for 되돌리기 until that purge. A deleted module is off
-// everywhere and absent from live lists. The next purge finishes a removal interrupted after purging was marked.
+// Binned objects stay recoverable for KEEP_DELETED; characters own their chats, and binned modules are inactive.
+// purging makes removal irreversible; purgeExpired resumes interrupted purges (runtime/characters).
 export const REMOVABLE = ['character', 'module', 'chat', 'prompt', 'persona', 'profile'] as const;
 export type Removable = (typeof REMOVABLE)[number];
 export type Mark = { deleted?: number; purging?: true };
@@ -110,14 +104,11 @@ export const KEEP_DAYS = KEEP_DELETED / DAY;
 export const textTranslation = ({ translations }: Character, source: string, language: string) =>
   translations?.find((each) => each.source === source && each.language === language)?.translation;
 
-// What the user reads to know the character, which 번역 on the character screen translates; empty ones left out.
 export const readableTexts = (card: Card) =>
   [card.creatorNotes, card.description, card.personality, card.scenario, card.exampleDialogue, ...card.greetings].filter((text) => text.trim());
 
-// At 0 or less it is due, and purgeExpired removes it.
 export const daysLeft = ({ deleted }: Mark, now: number) => Math.ceil((deleted! + KEEP_DELETED - now) / DAY);
 
-// What a search over characters reads: the card's name and nickname and the alias the user gave it.
 export const characterTexts = ({ card, alias }: Character) => [card.name, card.nickname ?? '', alias ?? ''];
 
 export type Lore = Omit<LoreEntry, 'folder'> & { folder: string | null };
@@ -144,11 +135,8 @@ export type CharacterShelf<C> = Shelf<C> & { id: string; character: Character };
 
 type ChatLike = { chat: { character: string | null } & Mark; order: number };
 
-// chats come newest first. A character is as recent as its latest chat; those with none come last, by name (user
-// ruling, 2026-10-08), not by their own rev, which every edit and upgrade rewrite moves. Deleted characters and their
-// chats are kept apart, most recently deleted first. binned are the deleted chats: deletedChats lists those binsChat
-// lists, most recently deleted first. One being removed for good (purging) is listed nowhere: it can no longer be
-// brought back.
+// chats must arrive newest first. Rank characters by their latest chat, never their edit-sensitive rev;
+// chatless characters follow by name (user ruling, 2026-10-08). Purging objects must stay out of all lists.
 export function shelve<C extends ChatLike>(
   characters: Stored<'character'>[],
   avatars: Stored<'avatar'>[],

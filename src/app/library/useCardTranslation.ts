@@ -9,9 +9,8 @@ import { useToast } from '../toast';
 
 const AT_ONCE = 3;
 
-// 번역 on the character screen: the stored card's readable texts, never a draft not saved yet, whose translation the
-// next write would drop. Into its chats' reply language, so a chat not begun shows the greetings' translations too.
-// Each is kept on the character as it lands; leaving the screen stops the rest.
+// Translate saved card text only: unsaved drafts would lose translations on write. Use chat reply language
+// so new-chat greetings share results; save each completion and stop remaining work on unmount.
 export function useCardTranslation(id: string, character: Character) {
   const session = useSession();
   const toast = useToast();

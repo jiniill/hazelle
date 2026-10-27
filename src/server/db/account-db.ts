@@ -13,9 +13,8 @@ import { openDatabase, type Db } from './service-db';
 import { archiveSnapshot } from './snapshot';
 import { transaction } from './transaction';
 
-// One account's database file, accounts/<incarnation>.sqlite, behind StoreRules (account-store.ts), and the registry
-// that owns every open file: one serial queue per incarnation, a replaceable session, the install of an armed restore
-// when a session starts, and the bounds of §3 (handles, idle eviction). The layout is docs/research/docker-port-plan.md §4.
+// One queue per incarnation owns its account file and replaceable session; session startup installs armed restores.
+// StoreRules governs access; handle/idle bounds and layout are in docs/research/docker-port-plan.md §§3–4.
 
 // Bumped with every change to SCHEMA; a file carrying a newer number is refused, never downgraded.
 export const ACCOUNT_SCHEMA_VERSION = 1;
@@ -27,17 +26,11 @@ const SCHEMA = [
   'CREATE INDEX objects_parent_rev ON objects (parent_id, rev)',
   'CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
 ];
-// Over an accounts row aliased `a`: whether a baseline may be taken of the account's file now. Before an operation's
-// checkpoint the file is still the account's own; from the checkpoint until the operation ends it is about to be
-// replaced or already was, and a baseline taken then would read, once the rewind is done, as the account after it.
+// Do not capture baselines between checkpoint and restore completion: the file may already be replaced.
 export const TAKES_BASELINE = (a: string) =>
   `(${a}.state = 'active' OR (${a}.state = 'restoring' AND (SELECT phase FROM restores WHERE id = ${a}.operation) IN ('begun', 'fenced')))`;
-// Over an accounts row aliased `a` and a time `now` (a bind): `column` of the account's current baseline, its newest
-// on the account's timeline taken by `now`, or null. A rewind replaces the file and starts a timeline, and the installed
-// head.rev can equal the one an older baseline recorded, so only the current baseline's rev says the file is unchanged.
-// Rows from before migration 0007 have no timeline and never count, and a baseline stamped after `now` is evidence of a
-// clock since put back, not of the account's state; the same clock would stamp a rewind's ended_at before the baselines
-// of the state it replaced, which is why time does not stand in for the timeline here or in CURRENT_BASE.
+// Match the current timeline, not rev or time alone: restores can reuse a rev and clocks can move backward.
+// Pre-0007 rows without a timeline never qualify; future-stamped baselines cannot establish the current state.
 export const CURRENT_BASELINE = (column: 'id' | 'taken_at' | 'rev', a: string, now: string) =>
   `SELECT ${column} FROM snapshots WHERE incarnation = ${a}.incarnation AND timeline = ${a}.timeline AND kind = 'baseline'
      AND taken_at <= ${now}
@@ -48,12 +41,8 @@ export const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 // A day short of retention, and expiry runs in the daily job: a base chosen for a capture is at least a day from expiry,
 // longer than any capture takes to name it.
 const BASE_WINDOW_MS = RETENTION_MS - 24 * 60 * 60 * 1000;
-// Over an accounts row aliased `a` and a time `now` (a bind): the id of the whole snapshot a new snapshot of the account
-// is a delta against, or null, and the new one is whole. Lineage is the account's timeline, which changes exactly when
-// the file stops descending from earlier snapshots: at signup (accounts.ts), a finished rewind (lifecycle.ts) and a
-// disaster restore (backup/restore.ts). Time cannot stand in for it: a disaster restore writes no rewind row while the
-// catalog keeps snapshots newer than the baseline it installed (and see CURRENT_BASELINE on the clock). A whole from
-// before a schema upgrade is never a base: the delta is applied by position over the current schema's columns.
+// Timeline identifies lineage across signup, rewind and disaster restore; timestamps and rewind rows cannot.
+// Match schema too: deltas address columns by position. With no eligible whole snapshot, capture a whole one.
 const CURRENT_BASE = (a: string, now: string) =>
   `SELECT id FROM snapshots WHERE incarnation = ${a}.incarnation AND base IS NULL AND timeline = ${a}.timeline
      AND schema_version = ${ACCOUNT_SCHEMA_VERSION} AND taken_at > ${now} - ${BASE_WINDOW_MS}
@@ -65,9 +54,8 @@ const IDLE_MS = 10 * 60 * 1000;
 const CORRUPT_CODES = new Set([11, 26]);
 
 export const accountPath = (dataDir: string, incarnation: string) => join(dataDir, 'accounts', `${incarnation}.sqlite`);
-// A whole snapshot's ids with a body, one SQLite file per snapshot (writeBaseIds). Outside everything a backup generation
-// captures and a restore writes (backup/generation.ts, restore.ts): ids only, never bodies, so not a copy of anything the
-// account deleted, and a directory restored without them only reads more archives (deletesFromBase).
+// Whole-snapshot id lists cache writeBaseIds lookups, never bodies. Exclude them from backup/restore:
+// a missing list costs archive reads but cannot lose account data.
 export const BASE_IDS_DIR = 'base-ids';
 export const baseIdsPath = (dataDir: string, incarnation: string, id: string) => join(dataDir, BASE_IDS_DIR, `${incarnation}-${id}.sqlite`);
 
@@ -80,8 +68,7 @@ class StoreUnavailable extends Error {
 
 const random = () => randomBytes(6).toString('hex');
 
-// The signup's first step: the file exists, with its schema and head, before the account's row does. A crash in
-// between leaves a file with no row, which the hourly reconciliation removes after an hour.
+// Create file/schema/head before the account row; interrupted signup leaves only an orphan file for hourly cleanup.
 function prepareAccountFile(dataDir: string, incarnation: string, timeline: string): void {
   const path = accountPath(dataDir, incarnation);
   makeDirs(join(dataDir, 'accounts'));
@@ -127,13 +114,9 @@ function corruptOr(error: unknown): unknown {
   return code !== undefined && CORRUPT_CODES.has(code) ? new StoreUnavailable('corrupt') : error;
 }
 
-// The snapshot a rewind to `at` lands on: the newest taken at or before it, and taken after the checkpoint of every
-// rewind finished by then (ended_at, not the checkpoint's time: one that finished after `at` had not replaced anything
-// yet), since one taken before such a rewind holds the state it replaced.
-// No age cut here: an account unchanged for longer than retention has only an old baseline, and that baseline is its
-// state at `at`. How far back a rewind may ask is lifecycle's request window; retention keeps the baseline that window
-// needs (backup/snapshots.ts).
-// A catalogued snapshot whose file is gone or altered is a storage failure, not "too early".
+// Land at or before `at`, but after checkpoints of rewinds completed by `at`; use ended_at, not checkpoint time.
+// No age cutoff: unchanged accounts may need old baselines. lifecycle bounds requests; backup/snapshots keeps their bases.
+// Missing or altered catalogued archives are storage failures, not "too early".
 export async function snapshotFor(files: Bucket, service: Db, incarnation: string, at: number): Promise<{ id: string; takenAt: number } | null> {
   const row = await landing(service, incarnation, at);
   if (row === null) return null;
@@ -300,9 +283,8 @@ export class AccountDb implements StoreDb {
         db.prepare('ATTACH DATABASE ? AS delta').run(plain);
         try {
           rev = this.transaction(() => {
-            // Exact only while account-store.ts writes every objects row with a rev above the previous head.rev and
-            // never hard-deletes one (a purge empties body under a new rev): then `rev > base.rev` is every change
-            // since the base. A hard delete there needs a purge log this delta carries first.
+            // Delta correctness requires append-only rows with strictly increasing revs; purges clear body, never hard-delete.
+            // Any future hard delete needs a delta-carried purge log first.
             db.exec(`CREATE TABLE delta.head AS SELECT * FROM main.head;
               CREATE TABLE delta.kv AS SELECT * FROM main.kv;
               CREATE TABLE delta.objects AS SELECT * FROM main.objects WHERE rev > ${baseRev};`);
@@ -336,18 +318,15 @@ export class AccountDb implements StoreDb {
     };
   }
 
-  // A delta that deletes a body its base holds would keep that body in the base for as long as the delta, or the floor
-  // it becomes, is kept, and in every generation naming it, past the 7 days the privacy text promises (legal.ts). Such a
-  // capture is stored whole instead: its base and delta materialized at the captured rev, replacing `plain`. A delta
-  // deleting only rows written since its base stays a delta.
+  // Materialize whole when a delta deletes a base-held body: retaining the base would violate the 7-day deletion promise
+  // (legal.ts). Deleting only post-base rows can remain a delta.
   private async deletesFromBase(base: string, plain: string, merged: string): Promise<boolean> {
     const ids = baseIdsPath(this.dataDir, this.incarnation, base);
     const probe = new DatabaseSync(plain, { readOnly: true });
     try {
       if (probe.prepare('SELECT 1 FROM objects WHERE body IS NULL LIMIT 1').get() === undefined) return false;
-      // The store does not cache archives, and a base can be tens of MB, so the base's id list answers here. A missing
-      // list (a restored directory, a crash before it was written, a base from before the lists) is a cache miss, not a
-      // second model: the base archive below answers, and is the only read of it for this decision.
+      // Id lists are rebuildable caches. On miss, read the sole authoritative base archive and refill the list,
+      // not an alternate model of which bodies it contains.
       if (existsSync(ids)) {
         probe.prepare('ATTACH DATABASE ? AS base').run(ids);
         if (probe.prepare('SELECT 1 FROM main.objects d JOIN base.ids b ON b.id = d.id WHERE d.body IS NULL LIMIT 1').get() === undefined) return false;
@@ -392,9 +371,8 @@ export class AccountDb implements StoreDb {
   }
 }
 
-// On the disk that stages the archive's gzip, before publication: a disk refusing this list refuses that gzip too, so a
-// failure fails the capture. The fsync comes before the rename: a name over a torn list would answer that the base holds
-// no body the delta deletes.
+// Fsync the id list before rename/publication beside the gzip. A torn named list could hide a base-body deletion;
+// list-disk failure must fail capture too.
 function writeBaseIds(dataDir: string, incarnation: string, id: string, whole: string): void {
   const dir = join(dataDir, BASE_IDS_DIR);
   makeDirs(dir);
@@ -423,9 +401,8 @@ export type Stores = {
   // supplied rules, never a queued stub, and must not wait on another call of the same account.
   withStore<T>(incarnation: string, work: (store: StoreRules) => Promise<T>): Promise<T | Unavailable>;
   prepare(incarnation: string, timeline: string): Promise<void>;
-  // A session the snapshot had to open is closed after capture, so archiving holds no otherwise idle handles. refused: the
-  // account takes no baseline now (TAKES_BASELINE). unchanged: its file still holds the revision its current baseline
-  // (CURRENT_BASELINE) recorded, so that baseline is its state and no copy is taken.
+  // Close capture-opened sessions afterward. refused means no baseline eligibility; unchanged means the current
+  // baseline already holds this revision and no copy is needed.
   snapshot(incarnation: string): Promise<{ taken: string } | { refused: true } | { unchanged: true }>;
   evictIdle(now?: number): void;
   close(): void;
@@ -571,11 +548,9 @@ export function accountRegistry(dataDir: string, service: Db, reads: StoreReads,
   };
 }
 
-// An armed restore is installed when the account's store next starts: the snapshot is decompressed beside the live
-// file, checked, marked with the snapshot it came from and the operation installing it, checkpointed into one file,
-// verified, and renamed over the live file after its WAL and shm are gone, so the live file is always either the old
-// one intact or the new one whole. The mark names the operation too: a later rewind to the same snapshot is a new
-// install over a file that has changed since.
+// Install armed targets on store start: decompress/check/mark/checkpoint/verify beside live, then remove WAL/shm
+// and atomically rename. Live must be intact old or whole new, never partial.
+// Mark operation id as well as snapshot: a later restore to the same snapshot is a distinct installation.
 async function installArmed(dataDir: string, service: Db, incarnation: string, files: Bucket): Promise<void> {
   const armed = await service
     .prepare(

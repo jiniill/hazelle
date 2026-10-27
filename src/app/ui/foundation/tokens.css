@@ -1,8 +1,4 @@
-/*
- * The only file with raw design values. Everything else uses the semantic tokens below, and
- * stylelint enforces that (stylelint.config.js). Palette values come from the approved mockups.
- * Media queries cannot read custom properties, so breakpoints live in MEDIA (media.ts) instead.
- */
+/* Raw design values live only here (stylelint-enforced); use semantic tokens elsewhere. Media query breakpoints live in MEDIA because CSS cannot read custom properties there. */
 
 /* The wordmark's three glyphs only; the full face is not shipped. */
 @font-face {
@@ -111,14 +107,11 @@
   --palette-bronze-400: #c98a5e;
 }
 
-/* The dark theme: the document's default, and any element drawn in it inside a light one (a preset's swatch). */
 :root,
 [data-theme='dark'] {
   color-scheme: dark;
 
-  /* The fills, one rung each, bottom to top: the page, the panes beside it (rail, sidebar, side panel), what stands on
-     either (fields, cards, menus, a list's box), its fill under the pointer, and the current row's. Each rung sits
-     visibly above the one below it, so hover reads on the page, a pane and a field alike. */
+  /* Surface ladder: page → pane → control → hover → current. Keep each rung visibly above the preceding ground. */
   --color-bg: var(--palette-ink-900);
   --color-sidebar: var(--palette-ink-800);
   --color-surface: var(--palette-ink-750);
@@ -162,7 +155,6 @@
   --color-prose-thought: color-mix(in oklab, var(--color-prose-dialogue) 55%, var(--color-prose-narration));
   --color-prose-quote-bg: color-mix(in oklab, currentColor 9%, transparent);
 
-  /* A prompt's blocks by kind, on the outline's rail: the line and ring, and the node's fill. */
   --color-kind-text: var(--palette-lilac-450);
   --color-kind-text-line: var(--palette-lilac-400);
   --color-kind-char: var(--palette-violet-300);
@@ -174,7 +166,6 @@
   --color-kind-note: var(--palette-rose-400);
   --color-kind-note-bg: var(--palette-rose-900);
 
-  /* A face without a picture (collections/CardGrid): its letter and fill, picked by its name, so one name reads alike. */
   --color-face-1: var(--palette-violet-300);
   --color-face-1-bg: var(--palette-violet-900);
   --color-face-2: var(--palette-sky-400);
@@ -190,7 +181,6 @@
   --color-mascot-ground-top: var(--palette-sand-50);
   --color-mascot-ground-bottom: var(--palette-parchment-200);
 
-  /* Prompt text (the editor's highlight layer): the body, heading lines, CBS tags and <tags>. */
   --color-markup-body: var(--palette-sand-100);
   --color-markup-heading: var(--palette-sand-10);
   --color-markup-rule: var(--palette-lilac-400);
@@ -198,7 +188,6 @@
   --color-markup-slot: var(--palette-gold-300);
   --color-markup-slot-bg: color-mix(in srgb, var(--palette-gold-400) 18%, transparent);
   --color-markup-angle: var(--palette-blue-300);
-  /* Code in the code editor (controls/CodeEditor): keywords, strings, numbers. */
   --color-code-keyword: var(--palette-violet-300);
   --color-code-string: var(--palette-mint-400);
   --color-code-number: var(--palette-rose-400);
@@ -216,13 +205,11 @@
   --shadow-popover: 0 12px 32px var(--palette-shadow);
   --shadow-cheer: 0 0 0 8px var(--color-accent-bg), 0 14px 36px var(--color-accent-border);
 
-  /* Glass, for what floats over the story (controls/Pill, story/StepButtons): the story shows through, blurred. */
   --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
   --color-glass-edge: var(--palette-cream-line);
   --color-glass-press: var(--palette-cream-wash);
   --shadow-glass: 0 10px 28px var(--palette-shadow), inset 0 1px 0 var(--palette-cream-line);
 
-  /* 설정 › 디스플레이's color picks in this theme (foundation/theme.ts BG, INK, ACCENT); base is the theme's own. */
   --color-pick-bg-base: var(--palette-ink-900);
   --color-pick-bg-gray: var(--palette-graphite-900);
   --color-pick-bg-blue: var(--palette-navy-900);
@@ -307,8 +294,7 @@
   --tracking-tight: -0.04em;
   --tracking-wide: 0.06em;
 
-  /* Story text at the reading settings' defaults: 명조, 17, line spacing 보통. Story keeps these outside the
-     chat; ChatFrame.tsx's readingDefault names the same choices and reads --prose-size, so change them together. */
+  /* Keep reading defaults synchronized with ChatFrame.readingDefault; --prose-size is the sole default font size, shared with standalone Story. */
   --prose-font: var(--font-serif);
   --prose-size: 17px;
   --prose-leading: var(--prose-leading-normal);
@@ -321,7 +307,6 @@
   --prose-sans-tighten: 0.1;
   --prose-faded-opacity: 0.5;
   --prose-original-size: 0.875em;
-  /* A bot's button that nothing answers (design §6.4). */
   --story-inert-opacity: 0.45;
   /* The story's scrubber (story/Scrubber): its thumb, and how faint it stands while the reader is still. */
   --scrubber-thumb: 44px;
@@ -330,7 +315,6 @@
   /* A picture line's defaults (Story.shadow.css); a character's own replace them (ChatFrame's pictures). */
   --story-picture-peek: 40vh;
   --story-picture-widest: 100%;
-  /* 장면 바꾸기's position board (SceneBoard): as tall at most, its width following the picture's shape. */
   --scene-board-max-height: 40vh;
   --story-picture-wide: 100%;
 
@@ -348,7 +332,7 @@
   --radius-lg: 16px;
   --radius-full: 999px;
 
-  /* The tick box, the switch's knob, the ⓘ and the spinner: a mark in a control, not a step of the control heights. */
+  /* Control marks are not a rung in the control-height scale. */
   --control-mark: 20px;
   --control-xs: 28px;
   --control-chip: 34px;
@@ -356,13 +340,11 @@
   --control-lg: 50px;
   --icon-sm: 16px;
   --icon-md: 22px;
-  /* An icon inside a Tag, a step under the xs icon to sit in its small line. */
   --icon-tag: 14px;
   --row-min-height: 64px;
   --viewport-card-estimate: 280px;
   --viewport-story-estimate: 320px;
   --icon-stroke: 1.8;
-  /* The scrollbar's room, and the clear space round its thumb inside it. */
   --scrollbar-size: 10px;
   --scrollbar-inset: 3px;
   --dot: 6px;
@@ -370,7 +352,6 @@
   --rank-place: 32px;
   --bar-height-thick: 8px;
   --sketch-height: 168px;
-  /* A finish's burst (feedback/Cheer): the badge at its middle, and how far the farthest piece flies. */
   --cheer-height: 184px;
   --cheer-badge: 76px;
   --cheer-icon: 36px;
@@ -380,7 +361,6 @@
   --chart-height: 120px;
   --chart-bar-max: 40px;
   --screen-narrow: 440px;
-  /* The code editor's completion list and the explanation beside it or on hover. */
   --code-list-height: 18em;
   --code-doc-width: 360px;
   --toast-width: 380px;
@@ -399,43 +379,33 @@
   --screen-split-max-width: calc(var(--form-max-width) + var(--screen-aside-width) + var(--space-32) * 2 + var(--space-24) * 2);
   /* How far in a screen's box rows (SettingGroup, List) their words start; 0 outside a Screen (Screen.module.css). */
   --box-inset: 0px;
-  /* 캐릭터 둘러보기: the narrowest face card, the space between cards, and the widest the grid grows. */
   --card-min-width: 152px;
   --face-min-width: 104px;
   --face-min-width-phone: 68px;
   --card-gap: var(--space-16);
   --card-held-opacity: 0.5;
   --gallery-max-width: 1120px;
-  /* 설정's pages: the widest a page grows beside the settings sidebar, and the narrowest column of its grids (Columns). */
   --page-max-width: 1200px;
   --tile-min-width: 220px;
   --tile-wide-min-width: 280px;
   --panel-min-width: 420px;
-  /* Table: a figure's column (a count, a size) and a trailing button's. */
   --table-figure-width: 72px;
   --portrait-width: 200px;
-  /* The mascot's card (story/MascotRemark): its widest, and its portrait frame's width, 3:5 as the pictures are drawn. */
   --mascot-card-width: 360px;
   --mascot-portrait-width: 132px;
   --mascot-portrait-width-phone: 100px;
-  /* A picture shown whole in a dialog (에셋): the tallest it grows, so the dialog's head and actions stay in view. */
   --preview-max-height: 60dvh;
   --header-height: 60px;
   --control-compact: 38px;
   --avatar-sm: 22px;
   --avatar-md: 32px;
-  /* The rail's faces, the only ones between a row's and a card's. */
   --avatar-rail: 40px;
   --avatar-lg: 72px;
-  /* A picture put in the composer, waiting to be sent (Attachments). */
   --attachment-size: 64px;
   --attachment-file-width: 240px;
-  /* A post's 추천 column in a feed (VoteButton). */
   --vote-width: 52px;
   --vote-fill-opacity: 0.25;
-  /* The narrowest a picked card stands in a grid of them (ChoiceGroup cards). */
   --choice-card-min: 148px;
-  /* A comment box at rest: room for two lines and its foot. */
   --comment-box-min-height: 56px;
   --menu-width: 300px;
   --chat-title-max-width: 320px;
@@ -445,12 +415,10 @@
   --dialog-height-wide: 640px;
   --dialog-width-full: 1120px;
   --composer-max-height: 240px;
-  /* 번역기: the two panes side by side, and each one stacked on a narrow page. */
   --desk-min-height: 480px;
   --desk-pane-min-height: 200px;
   /* One line of the element's own text: a custom property keeps 1lh as written, so it is read where used. */
   --one-line: 1lh;
-  /* Prompt text in the editor (MarkupArea) and the outline beside it. */
   --markup-size: 15.5px;
   --markup-leading: 1.72;
   --markup-max-width: 680px;
@@ -474,24 +442,18 @@
   --editor-max-width: 760px;
   --editor-header: 68px;
   --editor-foot: 140px;
-  /* Reading width (읽기 설정): the story column, message gutters included. */
   --read-narrow: 700px;
   --read-normal: 800px;
   --read-wide: 960px;
   --read-widest: 1200px;
   --read-gutter: 40px;
-  /* The least space left of a story with a 삽화 stage (ChatFrame.tsx). */
   --read-stage-least: 64px;
   --peek-tab-width: 27px;
-  /* A preset's swatch: the sample's band above its name. */
   --swatch-min-height: 84px;
-  /* Breakdown's striped mark: a stripe, and the gap after it. */
   --stripe-width: 2px;
 
-  /* Beside: the body's least width (a Table stays wide in it) and the column beside it. */
   --beside-main-min-width: 600px;
   --beside-side-min-width: 300px;
-  /* A screen title's least width beside its actions. */
   --title-min-width: 120px;
 
   /* The gap a menu keeps from the screen's sides, the phone gutter. layers.ts reads it too. */
@@ -517,7 +479,6 @@
   /* How far a ring reaches past its element: the room a box that scrolls or clips keeps around what can take focus. */
   --focus-ring-reach: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 
-  /* Every keyframe is in motion.module.css. */
   --duration-instant: 0.01ms;
   --duration-fast: 120ms;
   --duration-slow: 250ms;
@@ -536,8 +497,7 @@
   --ease-enter: ease-out;
   --ease-loop: ease-in-out;
 
-  /* Layers, bottom to top. The toast is above every layer but the file drop (a message's tools, menus, the side panel,
-     a tutorial's note, dialogs), so a failure shown while one is open can be read and pressed. */
+  /* Keep toast above menus/panels/tutorials/dialogs so failures remain actionable; only file drop is higher. */
   --layer-raised: 2;
   --layer-menu: 20;
   --layer-panel: 30;
@@ -548,8 +508,7 @@
   --layer-drop: 50;
 }
 
-/* Every color token above that names a palette step needs a value here; the color-mix ones follow on their own.
-   A bot's own 꾸밈 CSS is written for dark and is not turned (design §F3, light theme). */
+/* Mirror every palette-based color in light mode; derived mixes follow automatically. Never turn bot-authored dark CSS (design F3). */
 [data-theme='light'] {
   color-scheme: light;
 

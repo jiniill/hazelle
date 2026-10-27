@@ -17,9 +17,8 @@ type Common = {
 // path: the file holding a key, which a backup generation hard-links into its pool. sweep: removes what a put cut off
 // before settled left behind and answers those names.
 export type DiskBucket = Common & { kind: 'disk'; path(key: string): string; sweep(settled: number): Promise<string[]> };
-// The store outlives the machine, so a backup generation names its pictures and archives here instead of copying them
-// (backup/generation.ts). head: a key's size, null when absent; it asks the store itself. trim: the hourly eviction of
-// the copy on the machine's disk (cached-r2-bucket.ts), answering the names it removed.
+// R2 generations name remote objects rather than copying them. head must query the store itself, not its disk cache.
+// trim evicts local cached pictures and reports removed names.
 export type R2Bucket = Common & { kind: 'r2'; name: string; head(key: string): Promise<number | null>; trim(now: number): Promise<string[]> };
 export type Bucket = DiskBucket | R2Bucket;
 

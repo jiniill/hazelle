@@ -9,9 +9,8 @@ import { count, isRecord, list, vector } from './values';
 
 const LEVELS = ['minimal', 'low', 'medium', 'high'];
 
-// Gemini 3 takes thinkingLevel and Gemini 2.5 thinkingBudget, where 0 is off and -1 dynamic; Gemini 3.1 Pro cannot
-// turn thinking off and refuses 0. Thoughts come back only with includeThoughts, which a model that does not think may
-// refuse, so with no reasoning setting it is asked only of models the catalog says think.
+// Gemini 3 uses thinkingLevel; 2.5 uses thinkingBudget (0 off, -1 dynamic); 3.1 Pro refuses off.
+// Ask includeThoughts only for configured reasoning or catalog-confirmed thinkers; others may reject it.
 function thinkingConfig(reasoning: Reasoning | undefined, model: Model) {
   switch (reasoning?.kind) {
     case undefined:
@@ -84,8 +83,8 @@ function terminal(event: unknown): Terminal | null {
 
 const TASKS: Record<EmbedPurpose, string> = { query: 'RETRIEVAL_QUERY', document: 'RETRIEVAL_DOCUMENT' };
 
-// Gemini Embedding 2 takes no taskType; its purpose is written before the text, in the formats ai.google.dev/gemini-api/docs/
-// embeddings gives (checked 2026-10-20). The preview id is the same model before its release.
+// Gemini Embedding 2 (including preview) uses purpose prefixes, not taskType
+// (ai.google.dev/gemini-api/docs/embeddings, 2026-10-20).
 const PURPOSE_IN_TEXT = new Set(['gemini-embedding-2', 'gemini-embedding-2-preview']);
 const PREFIXES: Record<EmbedPurpose, string> = { query: 'task: search result | query: ', document: 'title: none | text: ' };
 
@@ -103,9 +102,8 @@ export const gemini: Codec = {
 
   systemFirst: true,
 
-  // Google's JSON leaves out a field at its default, so a model without thinking has no thinking key: absent is false.
-  // The list says nothing about input modalities, tools, or which request settings or thinking controls a model takes;
-  // its methods tell an embedding model from one that writes.
+  // Google omits default fields: absent thinking means false. Other unlisted capabilities stay unknown.
+  // Supported methods distinguish embedding models from generators.
   parseModels(payload) {
     if (!isRecord(payload) || !Array.isArray(payload.models)) return null;
     return payload.models.flatMap((raw): Model[] => {

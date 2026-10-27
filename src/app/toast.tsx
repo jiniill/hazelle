@@ -15,11 +15,10 @@ type Notice = { key: number; message: string; detail?: string; tone: 'plain' | '
 export type Toasts = {
   show: (message: string, extra?: Extra) => void;
   error: (message: string, extra?: Extra) => void;
-  // A full account is left to its standing notice (shell/Workspace), which says it once, and a write a restore dropped
-  // to the toast that counts them (shell/Workspace); a prefixed failure, a whole task such as a backup, is still said.
+  // Full-account/rewind notices are owned by Workspace, not repeated per write.
+  // Prefixed task failures (e.g. backups) still need their own outcome.
   failed: (failure: ApiFailure, prefix?: string, words?: Parameters<typeof describeFailure>[1]) => void;
-  // Deletion takes effect at once, and the toast offers 되돌리기 instead of a confirm dialog; Ctrl+Z does it too.
-  // Answers what takes the toast away. A restore's result is returned, not chained: the toast says its failure itself.
+  // Delete immediately with undo, never confirmation. Return undo failures to the toast instead of chaining them silently.
   undoable: (message: string, undo: () => void | Promise<{ ok: true } | ApiFailure>, detail?: string) => () => void;
   // Long ones are cut until pressed, and once opened stay until closed.
   said: (from: From, text: string, tone: Notice['tone']) => void;
@@ -51,8 +50,8 @@ const FloorContext = createContext<((floor: HTMLElement | null) => void) | null>
 
 export type Standing = { message: string; detail: string };
 
-// A mouse over the stack, or the focus in it, opens it and stops every notice's time, which runs on from where it stopped;
-// a page out of sight stops it too. standing: a notice in front of them for as long as the caller passes it, with no time of its own.
+// Pause timers on hover/focus or hidden page; resume remaining time, never reset it.
+// standing is caller-owned and never timed.
 export function ToastProvider({ standing, children }: { standing: Standing | null; children: ReactNode }) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [held, setHeld] = useState(false);
@@ -157,9 +156,8 @@ export function useToast(): Toasts {
   return toasts;
 }
 
-// undoable for a 되돌리기 that works through the screen offering it, such as an editor's own undo: its toasts leave
-// with the screen, since pressed after that it would change a draft that is no longer shown. A 되돌리기 that writes
-// to the store itself, such as putting a deleted thing back, outlives its screen and takes useToast's.
+// Editor-history undo dies with its screen so it cannot mutate hidden drafts.
+// Store-level undo (e.g. restore deleted items) may outlive screens through useToast.
 export function useOwnUndo(): Toasts['undoable'] {
   const toasts = useToast();
   const [offered] = useState(() => new Set<() => void>());

@@ -3,8 +3,7 @@ import styles from './Bars.module.css';
 
 type Bar = { label: string; value: number; detail: string };
 
-// One measure over time, oldest first, each bar as tall as its share of the tallest. The bar pointed at, or else the one
-// tapped, or else the latest with any, is read out under the chart.
+// Read out hover, then tapped selection, then the latest nonzero bar; data stays oldest-first.
 export function Bars({ label, bars }: { label: string; bars: Bar[] }) {
   const [hovered, hover] = useState<number | null>(null);
   const [picked, pick] = useState<number | null>(null);

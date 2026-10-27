@@ -22,8 +22,7 @@ export const availableFeatures = (settings: Pick<Settings, 'labs'> | undefined):
     return lab === undefined || labOn(settings, lab);
   });
 
-// Nearest first: the first layer that sets a feature decides it (가까운 쪽을 따른다); one no layer sets starts as
-// FEATURE_STARTS has it. An experiment switched off reads off whatever a layer kept.
+// Nearest explicit layer wins; unset uses FEATURE_STARTS. Disabled experiments stay off despite stored overrides.
 function decided(store: Reader, layers: (FeatureSwitches | undefined)[]): Features {
   const available = availableFeatures(store.get('settings', SETTINGS_ID)?.value);
   return Object.fromEntries(FEATURES.map((feature) => [feature, available.includes(feature) && (layers.find((layer) => layer?.[feature] !== undefined)?.[feature] ?? FEATURE_STARTS[feature])])) as Features;

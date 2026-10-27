@@ -2,15 +2,13 @@ declare const hazelle: Hazelle.Api;
 declare namespace Hazelle {
   type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
   type Role = 'user' | 'char';
-  // index: place after the greeting (index 0 = first message after it), as Lua counts. id: the message's, the same
-  // across its versions. version: the version shown. text: as the prompt reads it. raw: as written, before the bot's
-  // scripts and CBS, what Risu's chat data holds.
+  // index excludes the greeting and is zero-based, as in Lua. id stays stable across versions.
+  // text is prompt-rendered; raw is pre-script/CBS text, matching Risu chat data.
   interface Message { index: number; id: string; version: string; role: Role; text: string; raw: string; time: number }
   type At = { index: number; id: string; version: string };
   interface ModelMessage { role: 'system' | 'user' | 'assistant'; content: string }
-  // A message of the request about to be sent. message: the id of the chat message it renders, absent for the prompt's
-  // own parts; an answered one that keeps it keeps that message's pictures. cache: the provider caches the request
-  // through it.
+  // Retaining message on a replacement request message preserves its pictures.
+  // cache marks the end of the provider-cached prefix.
   interface RequestMessage extends ModelMessage { message?: string; cache?: true }
   // A message about to be shown; at: null for the greeting.
   type Shown = { at: At | null; text: string };
@@ -27,9 +25,8 @@ declare namespace Hazelle {
   // screen tells as it tells a typed message's failure.
   type SendRefusal = 'not-allowed' | 'not-declared' | 'busy' | 'closed' | 'failed';
   type SendAnswer = { ok: true } | { ok: false; reason: SendRefusal };
-  // A message version as the chat screen's display gives it, drawn or scrolled off: html its bodies in order, its boxes
-  // around its text, hidden parts included and pictures left out; css the bot's sheet, which is the whole chat's; text
-  // what the bodies read.
+  // Display snapshot includes offscreen/hidden bodies and boxes, but no pictures.
+  // html follows body order; css is the whole-chat bot sheet; text is rendered body text.
   type Rendered = { html: string; css: string; text: string };
   type Question = { kind: 'input'; text: string } | { kind: 'confirm'; text: string } | { kind: 'select'; text?: string; options: string[] };
   type Settings = Record<string, string | number | boolean>;
@@ -88,10 +85,9 @@ declare namespace Hazelle {
     // with its reason, as fetch does.
     fetch(url: string, init?: FetchInit): Promise<FetchAnswer>;
     badge(index: number, text: string | null): void;   // on the version shown now; lands with the outcome
-    // A picture on a message version, shown as a 삽화 after its last paragraph, replacing the one this tool put there
-    // before. Saved when it resolves, also after the event that handed this chat has ended, so it may take as long as
-    // drawing does; it shares the write rate of storage. caption: read in the picture's place where it is not seen.
-    // Throws on bytes that are no PNG, JPEG, GIF, WebP or AVIF, a version the chat no longer has, or a refused file.
+    // Replaces this tool's picture after the version's last paragraph, with storage's write rate.
+    // May save after its event ends; resolves only once saved. caption substitutes where the image is unseen.
+    // Throws for non-PNG/JPEG/GIF/WebP/AVIF bytes, a missing version or a refused file.
     picture(at: At, bytes: Uint8Array, options?: { caption?: string }): Promise<void>;
     tokens(text: string): Promise<number>;
     lore(reserve?: number): Promise<{ role: 'system' | 'user' | 'assistant'; text: string }[]>;

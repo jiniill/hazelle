@@ -32,9 +32,8 @@ export function readWrap(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 && value.length <= MAX_WRAP_LENGTH ? value : null;
 }
 
-// A new password replaces the login hash and the password wrap and ends every other session, together: a session
-// stolen before the reset must not outlive it. It needs the current password or the recovery key, so a stolen session
-// alone cannot lock the owner out.
+// Atomically replace login hash/password wrap and revoke other sessions.
+// Require password/recovery proof so a stolen session cannot lock out the owner.
 vaults.put('/password', async (c) => {
   const body = await readObject(c);
   const method = readMethod(body?.method);

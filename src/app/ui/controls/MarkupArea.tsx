@@ -15,11 +15,8 @@ type Props = {
   variant?: 'page' | 'field';
   // prompt: headings, rules, <tags> and the language's own tags; tags: image tags colored by their weight.
   kind?: 'prompt' | 'tags';
-  // The language a prompt is written in, which colors its tags.
   language?: CodeLanguage;
-  // The keys for its big editor, the code editor in that language, which a button beside the text opens too.
   expand?: readonly Chord[];
-  // A pane beside that editor, given the text as it stands.
   aside?: (text: string) => CodeAside;
   ref?: Ref<HTMLTextAreaElement>;
 };
@@ -61,8 +58,7 @@ function spansOf(kind: Props['kind'], language: CodeLanguage | undefined, text: 
   return joined(text === '' || text.endsWith('\n') ? [...runs, { text: '\u200b', className: undefined }] : runs);
 }
 
-// Not a state write: that would skip the browser's undo stack, so Ctrl+Z could not take the insert back.
-// insertText lands on it and fires input, which reaches onChange.
+// Use native insertText, not state assignment, so browser undo owns the insertion and input reaches onChange.
 export function typeInto(area: HTMLTextAreaElement, [start, end]: [number, number], text: string) {
   area.focus();
   area.setSelectionRange(start, end);
@@ -71,9 +67,8 @@ export function typeInto(area: HTMLTextAreaElement, [start, end]: [number, numbe
 
 type FrameProps = Pick<Props, 'value' | 'onChange' | 'placeholder' | 'kind' | 'language' | 'ref'> & { id: string };
 
-// The colors are drawn on a layer behind a transparent textarea, so the layer must set the text exactly as the
-// textarea does: it never changes weight, size, spacing or font (a heading is brighter, not bolder), or the caret
-// drifts from the letters. The layer is in the flow and the textarea covers it, so the box grows with the text.
+// Highlight and textarea must share exact font/weight/size/spacing or caret positions drift; headings brighten, never bold.
+// Keep highlight in flow for height, textarea over it for input.
 function Frame({ value, onChange, placeholder, kind, language, ref, id }: FrameProps) {
   const pieces = useMemo(() => spansOf(kind, language, value), [kind, language, value]);
   return (

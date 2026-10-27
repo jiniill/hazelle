@@ -25,8 +25,7 @@ const drawWith = (katex: Katex): Draw => (html) =>
 let drawFormulas: Draw | undefined;
 let loading: Promise<unknown> | null = null;
 
-// What draws html's formulas; a promise while KaTeX loads. KaTeX is imported only for html that holds a formula, so a
-// screen without one never loads it.
+// Lazy-load KaTeX only when formulas exist; retain the pending promise.
 export function mathFor(html: string): Draw | Promise<unknown> {
   if (drawFormulas) return drawFormulas;
   if (!html.includes(MARK)) return asWritten;

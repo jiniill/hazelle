@@ -6,8 +6,7 @@ const PaneContext = createContext<'list' | 'detail' | 'stack' | null>(null);
 // Which pane of a ListDetail a screen is in, or null on a page of its own.
 export const usePane = () => useContext(PaneContext);
 
-// Each pane scrolls on its own, and the screens inside take a pane's shape instead of a page's (Screen, NavBar).
-// list: a list beside the item picked from it. stack: one scroll, the list over the picked item.
+// list panes scroll independently and use pane-scale screens; stack uses one scroll with list above detail.
 export function ListDetail({ list, detail, variant = 'list' }: { list: ReactNode; detail: ReactNode | null; variant?: 'list' | 'stack' }) {
   return (
     <div className={variant === 'list' ? styles.split : `${styles.split} ${styles[variant]}`}>

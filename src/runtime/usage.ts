@@ -9,9 +9,8 @@ import type { ApiFailure, ApiResult } from './api';
 import type { Write } from './object-writes';
 import type { ObjectStore, Pin } from './store';
 
-// A call's row: the call's id with UUID version 8, since the call's own id is its stream marker's, and no id the app
-// makes (crypto.randomUUID, version 4) is ever one. The same call always gets the same row, so writing it again lands
-// as written (server once).
+// Derive a stable UUID-v8 ledger id from the call id; random UUID-v4 stream ids cannot collide.
+// Repeating the same call lands idempotently (server once).
 export const ledgerId = (call: string) => `${call.slice(0, 14)}8${call.slice(15)}`;
 
 export type CallPlace = { chat: string | null; character: string | null };
@@ -97,11 +96,9 @@ export class Usage {
     return { ok: true, data: this.countedRows ??= counted(this.rows.values()) };
   }
 
-  // Writes the rows of the calls made before the ledger, once per account: every call each chat's log keeps, its 삽화
-  // and memory, in 휴지통 too, and each 삽화 profile's. A chat goes after the one it branched from, whose calls it
-  // copies, so a call counts under the chat that made it; settings keeps how far the fill went, and one cut short goes on
-  // from there. A fill runs on one timeline: a restore ends it, and the restored settings say whether it runs again
-  // (useLedger starts it).
+  // Backfill every pre-ledger call once, including binned chats, illustrations/memory and profiles.
+  // Process originals before branches so copied calls stay attributed to their origin.
+  // Persist progress in settings; timeline rewind stops the fill and restored settings decide resumption.
   async fill(signal: AbortSignal = this.closing.signal): Promise<void> {
     if (this.filled && this.filled !== 'failed') return;
     this.filled = { read: 0, of: 0 };

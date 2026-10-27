@@ -25,14 +25,10 @@ import { backups } from './backups';
 import { DEPARTURES, readDepartures, writeDepartures } from './departures';
 import { generationPictures, generationsDir, POOL, readManifest, type Manifest } from './generation';
 
-// The disaster restore (docs/research/docker-port-plan.md §10.2): one generation directory, beside the pool it was
-// copied with (<generation>/../files), into an empty data directory and the picture store the environment names. Every
-// hash is checked before anything is written; a generation whose pictures are in R2 is checked there by size only,
-// before anything but the service file is written. The service goes in before the pictures, since the hourly
-// reconciliation removes a picture prefix no account names; the server must not start until this has finished. Pending
-// operations are then resolved through the live server's own lifecycle code, accounts that left since are deleted again
-// (departures.ts), every session is revoked, and every account gets a fresh timeline, so a device holding an older one
-// re-pulls.
+// Restore one generation beside its files/ pool into empty data; verify hashes before writes (R2 pictures: sizes only).
+// Install service before pictures so reconciliation can see their owners; never start the server mid-restore.
+// Resolve pending operations through lifecycle, replay departures, revoke sessions and reset every account timeline
+// (docs/research/docker-port-plan.md §10.2).
 
 const HEADS = 16;
 
@@ -73,9 +69,8 @@ async function inStore(files: R2Bucket, service: string, manifest: Manifest) {
   if (wrong.length) throw new Error(`restore: ${wrong.length} of ${stored.length} pictures are not in the R2 bucket as the generation names them:\n${wrong.sort().join('\n')}`);
 }
 
-// accounts: every account restored, for the operator to review. deleted: pending deletions finished and departures
-// replayed. departures: 'missing' only when the operator restored without them. sessions: rows revoked, every one the
-// generation held, since logouts and password changes after it are rolled back with it.
+// accounts lists restored accounts; deleted includes completed deletions/departures.
+// Missing departures must be reported. Revoke every captured session: later logouts/password changes were rolled back.
 export type Restored = {
   accounts: { id: string; username: string }[];
   pictures: number;

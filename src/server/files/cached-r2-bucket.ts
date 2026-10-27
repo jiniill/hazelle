@@ -5,14 +5,10 @@ import { join } from 'node:path';
 import { checkedKey, type R2Bucket } from './bucket';
 import { entries } from './disk-bucket';
 
-// A copy on the machine's disk of the pictures read from or put into an R2 store, <dataDir>/cache/<sha256>, .tmp-* while
-// one is written: the machine reaches R2 in 110–175 ms an object, its own disk in about 1 ms. An entry is named by the
-// picture's id alone, so one account's read serves every account that holds the same picture.
-// Archives have a different identity and may be hundreds of MB: only files/ keys enter this cache.
-// Below access control: get answers any key whose id the copy holds, even one the store holds no object under. Every
-// caller checks the account's account_files row and the file's block before it serves what get answers (files.ts,
-// shares.ts); nothing may read through this to decide whether a key exists.
-// No fsync anywhere: an entry lost to a crash is a miss, and a torn one never has the id's name (rename after the hash).
+// Cache files/ pictures only at cache/<sha256>, shared across account copies; never snapshot archives.
+// This sits BELOW access control: callers must check account_files and blocks before serving any cached body.
+// Never use a hit to prove a store key exists. Verify hash before rename from .tmp-*; no fsync is needed:
+// crash loss is only a cache miss, never a named torn entry.
 
 // Outside everything a backup generation captures and a restore writes (backup/generation.ts, restore.ts).
 const CACHE_DIR = 'cache';
@@ -73,8 +69,8 @@ export function cachedR2Bucket(store: R2Bucket, dataDir: string, capBytes: numbe
     );
   };
 
-  // The reader gets the store's bytes as they arrive; the copy is kept only if the whole body hashes to the id. A copy
-  // that cannot be written (a full disk) is dropped and the read goes on. A .tmp-* a failed rm leaves is trim's.
+  // Stream to the reader without waiting for disk; publish cache only after complete hash verification.
+  // Disk failures drop the copy, not the read; trim owns abandoned .tmp-* cleanup.
   const fill = async (id: string, body: ReadableStream<Uint8Array>): Promise<ReadableStream<Uint8Array>> => {
     const reader = body.getReader();
     const hash = createHash('sha256');

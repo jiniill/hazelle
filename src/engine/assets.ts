@@ -4,11 +4,9 @@ import { nearest } from './edit-distance';
 // absent for the character's own.
 export type BotAsset = { id: string; name: string; type: string; module?: string | null };
 
-// A kept asset is a picture or a video (engine/import assetType).
 export const isVideo = (type: string) => type.startsWith('video/');
 
-// A stored picture by its kind and id: a bot's asset, a chat's inlay, a 삽화 (illustration), which only an export names
-// this way, or a character's avatar, which no text names (PICTURE_REF leaves it out).
+// Export-only refs may name illustrations; avatar refs are never accepted in text (PICTURE_REF).
 export type PictureKind = 'asset' | 'inlay' | 'illustration' | 'avatar';
 export type PictureUrl = (kind: PictureKind, id: string) => string | undefined;
 
@@ -20,28 +18,24 @@ const PICTURE_REF = new RegExp(`(asset|inlay|illustration):(${ID})`, 'g');
 
 export const resolveAssets = (text: string, url: PictureUrl) => text.replace(PICTURE_REF, (_, kind: PictureKind, id: string) => url(kind, id) ?? '');
 
-// The app's own markup for a chat's inlay, which engine/cbs/tags.ts writes: the one HTML the display keeps without the
-// bot's style (engine/display.ts). Story.tsx names the mark's attribute again, to give it its text.
+// Keep inlay markup synchronized with cbs/tags, display OWN_MARKUP and Story.tsx attribute readers.
 export const inlayMissing = '<span data-inlay-missing></span>';
 export const inlayPicture = (id: string) => `<img src="${pictureRef('inlay', id)}"/>`;
 export const inlayBlock = (id: string) => `<div class="risu-inlay-image">${inlayPicture(id)}</div>`;
 // The type of an inlay holding a Gemini thought signature's item, which is no picture.
 export const SIGNATURE = 'signature';
-// Risu's inlay tags, drawn after the display regex as Risu draws them (parseInlayAssets), so a bot's regex sees the tags
-// and never the picture. Items of Risu's inlay store, which the chat holds by the tag's id exactly, never by findAsset's
-// near match. A signature is never drawn; an item the chat lacks shows the app's mark.
+// Resolve inlays after display regex by exact id, never fuzzy asset lookup.
+// Signatures never draw; missing items use app-owned placeholders.
 const INLAY_TAG = /\{\{(inlay|inlayed|inlayeddata)::(.+?)\}\}/g;
 
-// The names of the chat's inlays the texts name, each once, in order: Risu's inlay store ids, or an attached picture's.
 export function inlayIds(texts: Iterable<string>): string[] {
   const ids = new Set<string>();
   for (const text of texts) for (const [, , id] of text.matchAll(INLAY_TAG)) ids.add(id!);
   return [...ids];
 }
 
-// A message with pictures and text files attached in the composer: their tags lead it, the pictures' line and then the
-// files', each a paragraph before the text. attachmentLead takes them off again, for a step that must not touch them
-// (the translation of a message sent translated).
+// Composer attachment tags lead text in picture/file order; attachmentLead removes them for translation
+// so rewriting text cannot alter attachment references.
 export const withAttachments = ({ pictures, files }: { pictures: readonly string[]; files: readonly string[] }, text: string) =>
   [pictures.map((name) => `{{inlay::${name}}}`).join(''), files.map((name) => `{{textfile::${name}}}`).join(''), text].filter(Boolean).join('\n\n');
 export function attachmentLead(text: string): { lead: string; text: string } {
@@ -49,7 +43,6 @@ export function attachmentLead(text: string): { lead: string; text: string } {
   return { lead, text: text.slice(lead.length) };
 }
 
-// The chat's text files a message names (model/library TextFile), by name, each once, in order.
 const TEXTFILE_TAG = /\{\{textfile::(.+?)\}\}/g;
 export const textFileNames = (text: string) => [...new Set([...text.matchAll(TEXTFILE_TAG)].map(([, name]) => name!))];
 export const swapTextFiles = (text: string, swap: (name: string) => string) => text.replace(TEXTFILE_TAG, (_, name: string) => swap(name));

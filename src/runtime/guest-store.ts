@@ -8,10 +8,8 @@ import type { Backend } from './backend';
 import { database } from './device-cache';
 import { UNFED } from './object-cache';
 
-// A guest's objects and files (design §6.14): the browser is the account's only copy, so this answers the object API's
-// meaning as server/account-store.ts and server/files.ts do (revs, timeline, conflicts, once, omitted bodies, page
-// budgets, the sweep's revision check), each call one IndexedDB transaction, so a second tab reads and writes the same
-// account as a second device would. No device cache stands in front of it.
+// Browser is the guest's master, not a cache. Match server object/file API semantics, including revisions,
+// conflicts, once, omitted bodies, page limits and revision-checked sweeps; each call is one IndexedDB transaction.
 
 type Head = { rev: number; timeline: string; boardSecret?: string };
 // scope: '' for a kind the feed carries, its parent for one it omits (object-cache UNFED), so a bootstrap reads past

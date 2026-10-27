@@ -15,11 +15,10 @@ import type { ObjectStore } from '../store';
 import type { Write } from '../object-writes';
 
 export type ToolImport = { id: string; previous: Tool | null };
-// One row's value: a tool value kept in its row (tooldata), a chat's (toolchat). It is what a row's sealed body is known
-// to hold under BATCH_LIMITS.body.
+// Bound inline tooldata/toolchat values by the maximum sealed BATCH_LIMITS.body.
 export const TOOL_ROW_BYTES = 512 * 1024;
-// A tool value past one row's is kept as a file (toolfile): a tooldata row is read at every account open, a file only
-// when the tool asks. Its bytes count toward the account's picture budget.
+// Oversized values use toolfile: lazy reads avoid loading them at every account open.
+// Their bytes count toward the picture budget.
 export const TOOL_VALUE_BYTES = 4 * 1024 * 1024;
 export const TOOL_DATA_BYTES = 32 * 1024 * 1024;
 export const TOOL_CHAT_BYTES = 8 * 1024 * 1024;
@@ -69,8 +68,8 @@ export async function importTool(store: ObjectStore, files: Files, { manifest, b
   const previous = existing?.value ?? null;
   const value: Tool = { manifest, file, size: bytes.byteLength, settings: toolSettings(manifest, previous?.settings ?? {}) };
   if (existing) {
-    // Reset before the new code is visible; a failure can ask again but never grant a new capability silently. Each
-    // answer is asked again only for a use it covers: a version that only adds the memory claim keeps 모델 호출.
+    // Reset new-use consent before exposing code; failed saves may re-ask but must never grant silently.
+    // Re-ask only affected uses: adding memory must preserve model consent.
     const added = manifest.uses.filter((use) => !existing.value.manifest.uses.includes(use));
     const answers = [...(added.includes('model') || added.includes('embed') ? ['botModels' as const] : []), ...(added.includes('memory') ? ['takesMemory' as const] : []), ...(added.includes('network') ? ['network' as const] : [])];
     if (answers.length) {
@@ -154,9 +153,8 @@ export async function deleteToolData(store: ObjectStore, module: string, key: st
   return held.length ? store.batch(held) : { ok: true, data: null };
 }
 
-// A tool's picture is an asset of its module: gone with it, counted in the account's picture budget, listed on the module
-// page. It is named by its bytes' hash and kept at an id made from the module and that name, so the same bytes saved
-// again, on any device, find their row and send nothing; the first part keeps the id apart from every toolDataId.
+// Module-owned assets use module + content-hash ids, distinct from toolDataId.
+// Repeated saves across devices reuse the same row/file without upload; removal follows the module.
 export const toolAssetId = (module: string, name: string) => keyId(`asset\0${module}\0${name}`);
 
 export async function saveToolAsset(store: ObjectStore, files: Files, module: string, bytes: Uint8Array<ArrayBuffer>): Promise<ApiResult<string>> {
@@ -186,8 +184,7 @@ export const toolChatData = (store: ObjectStore, module: string, chat: string, k
 export const toolChatKeys = (store: ObjectStore, module: string, chat: string): string[] => chatRows(store, module, chat).flatMap(({ value }) => (value.key === null ? [] : [value.key]));
 export const toolBadges = (store: ObjectStore, module: string, chat: string): Badges => (chatRows(store, module, chat).find(({ value }) => value.key === null)?.value.value ?? {}) as Badges;
 
-// One event's data for one chat, and its badges by message, null clearing one, as one batch: a tool indexing a long
-// chat key by key spends one write of its rate, not one per key.
+// Save event chat data and badges in one batch/rate unit, not one write per key; null clears a badge.
 export async function saveToolChat(store: ObjectStore, module: string, chat: string, data: [string, Json | undefined][], badges: { message: string; version: string; text: string | null }[]): Promise<ApiResult<null>> {
   if (!live(store.get('module', module))) return { ok: false, error: 'gone' };
   const existing = chatRows(store, module, chat);
@@ -231,8 +228,8 @@ export class ToolStorage {
   private readonly queues = new Map<string, DataQueue>();
   // A file's value by its key, read once: a file is named by its sealed bytes, so a value written again names another.
   private readonly files = new Map<string, { id: string; read: Promise<ApiResult<Json | undefined>> }>();
-  // A replaced file stays counted until a sweep releases it, and a sweep walks the whole account, so a tool writing a big
-  // value every turn is swept at most once a claim's length, and once more for what that sweep could not yet release.
+  // Replaced files remain counted until a sweep after the claim window; rate-limit whole-account sweeps
+  // and retry once for files too recent to release on the first pass.
   private sweep: { timer: ReturnType<typeof setTimeout>; again: boolean } | null = null;
   private closed = false;
   private readonly rate = new ToolRate(TOOL_WRITES_PER_MINUTE);

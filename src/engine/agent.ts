@@ -1,7 +1,7 @@
 import type { AgentPrompt, AgentStage, Block } from '../model/prompt';
 
-// 에이전트 (design §6.16). The two built-ins are offered when an agent is added and never attached on their own (user
-// ruling, 2026-10-21): 기본 장면 메모 takes MARP's baseline, 기본 문장 다듬기 the user's own polishers'.
+// Built-ins are opt-in, never auto-attached (user, 2026-10-21).
+// Scene notes follow MARP baseline; polish follows the user's own polishers.
 const SCENE = [
   'You plan the next reply of an ongoing story for another model, which writes it. You do not write the reply.',
   '',
@@ -54,7 +54,6 @@ export function agentPrompt(start: AgentStart, name: string): AgentPrompt {
   return { task: 'agent', name, stage, toggles: [], blocks: stage === 'pre' ? preBlocks(instruction) : postBlocks(instruction) };
 }
 
-// What 처음으로 되돌리기 gives an agent: its stage's built-in.
 export const builtInAgent = (stage: AgentStage) => agentPrompt(stage === 'pre' ? 'scene' : 'polish', '');
 
 export const keepsMemory = (prompt: Pick<AgentPrompt, 'blocks'>) => prompt.blocks.some((block) => block.kind === 'slot' && block.slot === 'agentMemory');
@@ -76,7 +75,6 @@ export function parseAgentAnswer(text: string): { text: string; memory: string |
   return { text: text.replace(MEMORY, '').trim(), memory: blocks.length ? blocks.at(-1)![1]!.trim() : null };
 }
 
-// The pre agents' notes as the chat model reads them, each under its agent's name.
 export const agentNotes = (notes: readonly { name: string; note: string }[]) =>
   notes
     .filter(({ note }) => note.trim())

@@ -36,9 +36,8 @@ let draining = false;
 
 const server = createServer((incoming, outgoing) => {
   const path = incoming.url?.split('?')[0] ?? '/';
-  // The visitor is the connection's peer, unless the peer is a trusted proxy (Caddy, the hosted machine's only way in):
-  // then the last X-Forwarded-For entry, which that proxy wrote. Written over whatever the request says, so no one
-  // names their own key, and loopback, which credentials.ts does not count, only comes from this machine.
+  // Use peer address, or the last X-Forwarded-For entry only from a trusted proxy.
+  // Overwrite visitor headers so outsiders cannot choose keys or claim loopback.
   const peer = incoming.socket.remoteAddress;
   const forwarded = incoming.headers['x-forwarded-for'];
   const proxied = peer !== undefined && trustedProxies.check(peer, isIPv6(peer) ? 'ipv6' : 'ipv4');

@@ -106,8 +106,7 @@
   cursor: progress;
 }
 
-/* The icon and label stay in place, invisible but still read by screen readers, so the width never jumps and nothing
-   sits beside the spinner. */
+/* Keep icon/label laid out and accessible while visually hidden so loading cannot change button width. */
 .busy > :not(.spinner) {
   opacity: 0;
 }

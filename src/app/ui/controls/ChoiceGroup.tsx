@@ -4,9 +4,8 @@ import { Menu, MenuItem } from '../overlays/Menu';
 import { ChipButton } from './ChipButton';
 import styles from './ChoiceGroup.module.css';
 
-// mark: drawn before a chip's label, such as the color it names.
-// menu: the choice as quiet words beside a name, which open the options. fit: a strip while it holds a few short
-// options; more or longer ones, which a strip squeezes to a letter wide each, open as a menu from a field chip.
+// fit uses chips only for a few short choices; long/many choices use a menu to avoid crushed labels.
+// mark precedes the label; menu renders a quiet inline chooser.
 const STRIP = { options: 4, letters: 14 };
 
 type Props<T extends string> = {
@@ -17,7 +16,6 @@ type Props<T extends string> = {
   // fit and menu: the chip's words while value is none of the options.
   empty?: string;
   onChange: (value: T) => void;
-  // cards: a few choices that each need their meaning, a card each with its mark, label and sub.
   layout?: 'chips' | 'buttons' | 'segmented' | 'list' | 'menu' | 'fit' | 'cards';
 };
 

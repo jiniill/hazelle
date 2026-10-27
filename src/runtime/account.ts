@@ -7,8 +7,8 @@ import { page } from './pages';
 import { guestSignupRecovery, recallGuest } from '../vault/device';
 import { transferGuest, type GuestTransferOptions } from './guest-transfer';
 
-// Caps are null for none. bytes is null while the account is restored or its store does not answer. fileBytes: the
-// pictures stored for it, which deleting them in the app does not lower (server/files).
+// Null caps mean unlimited; null bytes means unread/restoring.
+// fileBytes tracks held files, not files currently referenced by app objects (server/files).
 export type Storage = { bytes: number | null; bytesCap: number | null; fileBytes: number; fileBytesCap: number | null };
 export type SessionFacts = { accountId: string; username: string; admin: boolean; suspended: boolean; state: Exclude<AccountState, 'leaving'>; storage: Storage; unreadNotices: number; unreadBoard: number; localProviders: readonly string[] };
 export type SignedIn = { session: SessionFacts; vault: VaultRecord };
@@ -23,9 +23,8 @@ export const credentialFor = (username: string, method: Method, secret: string):
 type Proof = Pick<Credential, 'method' | 'proof'>;
 const proven = ({ method, proof }: Proof) => ({ method, proof });
 
-// full: a write was refused for room and the account has not shrunk since, which another write or sync shows.
-// restoring: the server refused this account's objects while the operator restores it, and no store has answered since.
-// unreadNotices, unreadBoard: as the session, then each sync, last said.
+// full persists until a write/sync confirms shrinkage; restoring until a store answers.
+// Unread counts follow session opening and sync responses.
 export type Standing = { suspended: boolean; full: boolean; restoring: boolean; storage: Storage; unreadNotices: number; unreadBoard: number };
 
 // A cap the operator changes is learned on the next page load.

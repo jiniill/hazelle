@@ -16,9 +16,8 @@ import { toBase64 } from '../vault/aead';
 
 type Reader = Pick<Session, 'store'>;
 
-// What a Risu chat file leaves out of what it was asked to hold, counted for the notice. greetings: an edited
-// greeting, which Risu cannot show, so it shows the card's (ruled 2026-10-15). lore: 채팅 로어북 entries Risu's lorebook
-// cannot hold whole. unread: chats that could not be opened or whose bot did not end.
+// Count unsupported exports: edited greetings fall back to card greetings (user, 2026-10-15),
+// lore counts non-round-trippable entries, unread counts unopenable/stuck chats.
 export type LeftOut = { greetings: number; lore: number; unread: number };
 const NOTHING_LEFT: LeftOut = { greetings: 0, lore: 0, unread: 0 };
 const plus = (a: LeftOut, b: LeftOut): LeftOut => ({ greetings: a.greetings + b.greetings, lore: a.lore + b.lore, unread: a.unread + b.unread });

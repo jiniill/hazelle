@@ -94,10 +94,9 @@ function fromModuleCharx(bytes: Uint8Array<ArrayBuffer>): ImportResult {
   return { ok: true, module: { name: card.name, description: card.creatorNotes, namespace, risu: null, pack, lore: [...lore, ...characterLore(card)], loreFolders, assets: located(assets, resolver({ zip: charx.zip }, tally)), unsupported: counted(UNSUPPORTED_KINDS, tally) } };
 }
 
-// Risu's export moves these @@indicator entries into the card's description, greetings and global note
-// (convertModuleToCharacter), and convertCharacterToModule makes them back (interchangeability.ts:74-117) with these
-// names, order 0 and no keys. The greetings' entry is not always active there either, so it never fires; its content is
-// not migrated, as Risu migrates no module lore.
+// Invert convertModuleToCharacter's @@indicator fields as Risu's convertCharacterToModule does
+// (interchangeability.ts:74-117): these names, order 0, no keys. Greetings are non-constant and never fire;
+// module lore content is not migrated.
 function characterLore({ description, greetings, postHistoryInstructions }: Card): LoreEntry[] {
   const entry = (name: string, content: string, constant: boolean): LoreEntry => ({
     name, keys: [], secondaryKeys: [], content, enabled: true, constant, selective: false, useRegex: false, caseSensitive: false, insertionOrder: 0, priority: null, position: null, folder: null,
@@ -301,9 +300,8 @@ export function assetType(bytes: Uint8Array): string | null {
 
 const utf8Out = new TextEncoder();
 
-// The inverse of fromCharx: card.json and module.risum, and the paths the pictures go at, the avatar's first, then the
-// assets' in the order bot lists them, the bundled modules' after the character's. Pictures are named by place, not by
-// name, so no name needs making safe for a path; the card names each. The print is made by reading what is written.
+// Inverse of fromCharx: avatar first, then character assets, then bundled modules. Use positional picture paths,
+// not untrusted names, and fingerprint the re-read output rather than the input.
 export function writeCharx(bot: Bot): { files: { path: string; bytes: Uint8Array<ArrayBuffer> }[]; pictures: string[] } {
   const source = hazelleSource(bot);
   const icon = bot.avatar === null ? [] : [{ type: 'icon', name: 'main', ext: extensionOf(bot.avatar), uri: `embeded://assets/icon/image/main.${extensionOf(bot.avatar)}` }];

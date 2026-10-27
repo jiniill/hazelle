@@ -1,8 +1,7 @@
 import { useState, type DragEvent } from 'react';
 
-// A card carries its key under a type of its own: the app-wide file drop (overlays/useFileDrop) takes only drags that
-// carry Files, which is why a dragged card's picture must not drag itself. A folder card carries its own type, so it is
-// placed among folders and never filed into one.
+// Keep card/folder drag types distinct from Files and each other; disable native picture dragging.
+// Cards must not enter app-wide file import, nor may folders become filed items.
 const CARD = 'application/x-hazelle-card';
 const FOLDER = 'application/x-hazelle-folder';
 type Carried = 'card' | 'folder';

@@ -3,9 +3,8 @@ import { SCOPED } from './object-cache';
 import type { Held, ObjectIndex } from './object-index';
 import type { Pending } from './object-writes';
 
-// A write sent and not yet answered, which every read shows over the confirmed copy (held null: a removal). Pending is
-// a state of its own, never a rev: the confirmed index, the pull cursors and the cache bounds stay confirmed-only
-// (user, 2026-10-04: the screen leads, the network follows).
+// Overlay unanswered writes (held null removes) without inventing revisions.
+// Indexes, pull cursors and cache bounds remain confirmed-only (user, 2026-10-04).
 export type Overlay = { id: string; kind: string; parent: string | null; held: Held | null };
 export const chatOf = ({ id, kind, parent }: Overlay) => kind === 'chat' ? id : SCOPED.has(kind) ? parent : null;
 

@@ -24,8 +24,7 @@
   background: var(--color-surface);
 }
 
-/* The chip slides over its point as the point nears an edge (left of it at 0, right of it at 1), so it never passes
-   the board's edge, which would scroll the dialog sideways. */
+/* Shift chips inward at edges; overflow would make the whole dialog scroll sideways. */
 .chip {
   position: absolute;
   top: calc(var(--y) * 100%);

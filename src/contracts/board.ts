@@ -1,6 +1,5 @@
-// 게시판 (design §6.13): the wire shapes the server (server/board) and the client (runtime/board) share.
 
-// A nickname is chosen on the first visit and changed at will; unique ignoring case and spacing (nicknameKey).
+// Nickname uniqueness ignores case and spacing (nicknameKey).
 export const NICKNAME_LENGTH = { min: 2, max: 20 } as const;
 // Letters, digits, marks and single inner spaces; nothing that reads as an address, a path or a tag.
 const NICKNAME_FORBIDDEN = /[\s@#/\\<>]/u;
@@ -28,12 +27,10 @@ export const GUEST_ADDRESS_CAP_MULTIPLIER = 10;
 // 임시조치 (정보통신망법 제44조의2): a reported post is held hidden at most this long.
 export const HOLD_DAYS_MAX = 30;
 
-// news: 소식, the operator's public release notes (design §6.15), kept out of the feed that names no category. No 잡담
-// category: the board is feedback, not a place for users to talk among themselves (migration 0019).
+// News stays out of the uncategorized feed. No chat category: feedback only (migration 0019).
 export const CATEGORIES = ['bug', 'idea', 'question', 'news'] as const;
 export type Category = (typeof CATEGORIES)[number];
-// The operator moves a post along; 'done' may name the version that shipped it. A 소식 post takes none, its version
-// being the release it tells of.
+// News posts have no status; their version names the release, not resolution of a report.
 export const STATUSES = ['open', 'seen', 'working', 'done', 'declined'] as const;
 export type Status = (typeof STATUSES)[number];
 // operator: the author and the operator alone read it; the only kind a suspended account reads or writes.
@@ -41,18 +38,15 @@ export type Visibility = 'public' | 'operator';
 export const SORTS = ['new', 'top'] as const;
 export type Sort = (typeof SORTS)[number];
 
-// left: the account is gone (탈퇴한 사용자). name null while not left: the account has not chosen a nickname, which only
-// a post moved from 운영자에게 알리기 (migration 0015) or from a guest can be. mine: written by the asking account or guest.
+// name null with left false means no nickname, possible for migrated or guest-authored posts.
 export type Author = { name: string | null; operator: boolean; mine: boolean; left: boolean; guest?: boolean };
-// A post or comment the operator hid: its reason, and when a hold ends (null: hidden until the operator shows it again).
-// Shown to its author and the operator; others see no trace of a hidden post, and a comment's placeholder (text and
-// hidden both null, deleted false), which the client draws as hidden, not deleted.
+// Hidden content is author/operator-only; until null means indefinite.
+// Others see no post, or a comment placeholder with text/hidden null and deleted false, never a deletion.
 export type Hidden = { reason: string; until: number | null };
 
 export type PostRow = {
   id: number;
   title: string;
-  // The start of its text; null once deleted.
   excerpt: string | null;
   category: Category;
   status: Status;
@@ -83,20 +77,19 @@ export type Comment = {
   hidden: Hidden | null;
   deleted: boolean;
 };
-// text null: deleted. diagnostics: an operator-only post's 문제 진단, to the operator alone; null otherwise.
+// diagnostics is operator-only, never exposed with public post text.
 export type Post = PostRow & {
   text: string | null;
-  // When the operator last set its status (null: never), shown among its comments; earlier changes are not kept.
+  // Only the latest status change time is retained, null before the first change.
   statusAt: number | null;
   diagnostics: string | null;
-  // The author's account, to the operator alone (a restore or a deletion starts from an operator-only post); null for others, or once the account left.
+  // Author account is operator-only and null after departure; enables restore/deletion from a report.
   account: { id: string; username: string } | null;
   comments: Comment[];
 };
 
 export type Compose = { title: string; text: string; category: Category; visibility: Visibility; diagnostics: string | null };
 
-// What happened to what one wrote, newest first: a comment on one's post, a 답글 to one's comment, or a status change.
 export type ActivityKind = 'comment' | 'reply' | 'status';
 export type Activity = { id: number; kind: ActivityKind; postId: number; title: string; by: Author; at: number; commentId: number | null; status: Status | null };
 

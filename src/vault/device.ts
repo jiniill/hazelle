@@ -36,8 +36,8 @@ async function deviceKey(): Promise<CryptoKey> {
   return key;
 }
 
-// Persist only the pending recovery secret, sealed under the device key, so preparing signup again after a close
-// downloads the same recovery key even if the first signup already landed. It goes with the guest after transfer.
+// Keep the pending recovery secret device-sealed so retries after an interrupted signup download the same key.
+// Remove it with the transferred guest.
 export async function guestSignupRecovery(accountId: string): Promise<Uint8Array<ArrayBuffer>> {
   const key = await deviceKey();
   const aad = `${deviceAad(accountId)}/signup-recovery`;

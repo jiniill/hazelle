@@ -2,8 +2,7 @@ import { fileStem } from '../../engine/file-name';
 import type { BackupOutput } from '../../runtime/backup';
 
 const TEMPORARY = 'risu-alpha-backup-downloads';
-// A spool lives while the page that wrote it holds this lock, which the browser drops when the page goes: a sweep
-// removes only spools no open page holds, so another tab's download in progress keeps its file.
+// Page-held Web Lock protects active spools across tabs; reclaim only unlocked files after a page dies.
 const lockName = (name: string) => `${TEMPORARY}/${name}`;
 type Spool = { written: boolean; end: () => Promise<void> };
 const spools = new Set<Spool>();
@@ -38,9 +37,8 @@ export function downloadOutput(filename: string): Promise<BackupOutput> {
   return temporaryOutput(filename);
 }
 
-// Every spool goes, this page's own and a running export's included. The account flow calls it whenever the page
-// learns again who it is (startup, lock, logout), so no plaintext export outlives the unlocked page. A download the
-// browser is still copying from this page's spool then fails: no event says when it is done.
+// On startup/lock/logout remove every plaintext spool, including active exports, so none outlives the unlocked page.
+// Browser downloads still copying can fail: no event tells when they finished.
 export async function clearDownloads(): Promise<void> {
   if (spooling()) await sweep(true);
 }

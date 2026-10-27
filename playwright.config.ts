@@ -4,8 +4,7 @@ import { join } from 'node:path';
 import { FAKE_PROVIDER } from './e2e/helpers';
 
 const PORT = 4417;
-// The first signup claims the installation and closes signup, so every run starts the built server (npm run e2e
-// builds first) on an empty data directory of its own, apart from the .data/ that npm run dev uses.
+// Use fresh isolated data: first signup claims the installation and closes signup. Never touch development .data/.
 const DATA = join(tmpdir(), 'hazelle-e2e');
 
 export default defineConfig({

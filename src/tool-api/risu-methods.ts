@@ -1,5 +1,5 @@
-// The names of Risu v3's API object (RisuaiPluginAPI in upstream risuai.d.ts, plus risuFetch, which plugins still call).
-// The import scan searches an aliased plugin for these as properties of anything, so what it will miss is still listed.
+// Upstream RisuaiPluginAPI names plus risuFetch. Scan aliases as properties of any object
+// so unsupported calls remain discoverable.
 export const RISU_NAMES: readonly string[] = [
   'addPluginChannelListener', 'addProvider', 'addRisuChatListener', 'addRisuReplacer', 'addRisuScriptHandler', 'addTTSPostprocessor', 'addTTSPreprocessor',
   'apiVersion', 'apiVersionCompatibleWith', 'changeColorScheme', 'changeTextTheme', 'checkCharOrder', 'createMutationObserver', 'getArg', 'getArgument',
@@ -11,8 +11,7 @@ export const RISU_NAMES: readonly string[] = [
   'searchTranslationCache', 'sendChat', 'setArg', 'setArgument', 'setChar', 'setCharacter', 'setCharacterToIndex', 'setChatToIndex', 'setColorScheme',
   'setCustomTextTheme', 'setDatabase', 'setDatabaseLite', 'showContainer', 'unregisterBodyIntercepter', 'unregisterMCP', 'unregisterUIPart', 'unwarpSafeArray',
 ];
-// The adapter (src/sandbox/risu.ts) maps exactly these Risu v3 names; the import scan lists every other name a plugin
-// uses as missing. Both read this file, so a name mapped later is added here and nowhere else.
+// Keep adapter mappings (src/sandbox/risu.ts) and import diagnostics in sync through this set only.
 export const RISU_MAPPED: ReadonlySet<string> = new Set([
   'showContainer', 'hideContainer', 'registerButton', 'registerSetting', 'unregisterUIPart', 'onUnload', 'log',
   'pluginStorage', 'getLocalPluginStorage', 'safeLocalStorage', 'getArgument', 'getArg', 'requestPluginPermission',
@@ -23,8 +22,8 @@ export const RISU_MAPPED: ReadonlySet<string> = new Set([
 ]);
 // addRisuReplacer kinds the adapter runs; another kind is missing as `addRisuReplacer:<kind>`.
 export const RISU_REPLACERS: ReadonlySet<string> = new Set(['beforeRequest', 'afterRequest']);
-// Declined for good (design §6.10): the adapter answers them undefined, and the import words them apart from names not
-// mapped yet. getRootDocument:page: the app's page past a drawn message, which getRootDocument finds nowhere.
+// Permanently declined names return undefined, distinct from not-yet-mapped names (design §6.10).
+// getRootDocument:page means app DOM outside rendered messages.
 export const RISU_DECLINED: ReadonlySet<string> = new Set([
   'getRootDocument:page', 'addProvider', 'registerBodyIntercepter', 'unregisterBodyIntercepter', 'addPluginChannelListener', 'postPluginChannelMessage',
 ]);

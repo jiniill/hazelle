@@ -42,8 +42,7 @@ export function rowAt(frame: HTMLElement, y: number): { key: string; above: numb
   return null;
 }
 
-// Uses its existing scroll ancestor: the feature keeps one scroller and one follow policy.
-// The nearest ancestor that scrolls, or null where the page itself does.
+// Reuse the feature's scroller/follow policy; null means the page itself scrolls.
 export function scrollAncestor(element: HTMLElement): HTMLElement | null {
   let parent = element.parentElement;
   while (parent && !/(auto|scroll)/.test(getComputedStyle(parent).overflowY)) parent = parent.parentElement;
@@ -77,18 +76,16 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
   const scroll = useRef<HTMLElement | null>(null);
   const anchor = useRef<{ index: number; inside: number } | null>(null);
   const jump = useRef<Props['seek']>(null);
-  // A seek or reveal holds its row where it put it: measuring the rows above corrects the scroll, and the row's own
-  // height too where its end was put, until the reader moves the view.
+  // Anchor until reader input; correct upstream row heights, and this row's height when anchored by its end.
   const held = useRef<{ key: string; end: boolean } | null>(null);
-  // A top seek keeps room below its row for it to stay at the top while what follows it is shorter than the view:
-  // below is from the row's top to the root's end, so rows above it may still change size.
+  // Keep enough room below a top seek to hold its row even with short following content.
+  // Measure from row top to root end so upstream resizes remain independent.
   const room = useRef<{ key: string; below: number } | null>(null);
   const rootHeight = () => {
     const index = room.current ? keys.indexOf(room.current.key) : -1;
     return Math.max(sizes.offset(keys.length), index < 0 ? 0 : sizes.offset(index) + room.current!.below);
   };
-  // Measured again whenever the scroller's space after the rows changes, such as the composer's as it unfolds: a
-  // shrink would clamp the held row below its line, and nothing would bring it back.
+  // Remeasure after-row space (e.g. composer unfolding): shrinkage clamps the held row and cannot self-correct.
   const fit = useRef<(seek?: boolean) => void>(() => {});
   fit.current = (seek = false) => {
     const frame = scroll.current;
@@ -230,16 +227,13 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
       const top = scrolled - offsetIn(root.current!, frame);
       const anchor = held.current === null ? -1 : keys.indexOf(held.current.key);
       const crossed = reading.current?.row.dataset.key === key ? reading.current : null;
-      // A story drawn again, as when a message flips to its original, replaced what was read: the element at its place
-      // stands in for it.
+      // Redrawing replaces nodes; recover the reading position by its element path.
       const read = crossed && (crossed.element.isConnected ? crossed.element : at(crossed.row, crossed.path));
-      // The browser cannot anchor across unmounted rows. Correct rows wholly above the reading position, and in the row
-      // across it, by how far what was read moved.
+      // Browser anchoring cannot cross unmounted rows; correct upstream heights and the in-row reading element's displacement.
       const correction = anchor >= 0 ? (index < anchor || (index === anchor && held.current!.end) ? delta : 0)
         : position + height - delta <= top ? delta
         : position < top && crossed && read ? inside({ row: crossed.row, element: read }) - crossed.inside : 0;
-      // The root takes its height before the render that sets it, so the correction is not clamped to the old one; and
-      // from the position read before, so a clamp to the new one is not counted twice.
+      // Resize before correcting from the original scroll position: avoid old-height clamping or counting a new clamp twice.
       root.current!.style.height = `${rootHeight()}px`;
       if (correction) frame.scrollTop = scrolled + correction;
       reading.current = across(root.current!, frame);
@@ -296,16 +290,14 @@ function Measured({ item, revision, offset, last, memory, onMeasure, onFocus, on
     onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) onBlur(); }}>{children}</Row></RowMemoryContext>;
 }
 
-// inside: from the row's top, which moves with every correction and render, while the element moves in it only as
-// what is above it in the row grows.
-// path: the element's index among its parent's children, from the row down.
+// inside is row-relative, independent of scroll corrections; path is child indices from the row, across shadow roots.
 type Reading = { row: HTMLElement; element: Element; path: number[]; inside: number };
 const inside = ({ row, element }: Pick<Reading, 'row' | 'element'>) => element.getBoundingClientRect().top - row.getBoundingClientRect().top;
 const childrenOf = (parent: Element) => [...(parent.shadowRoot ?? parent).children];
 const at = (row: Element, path: number[]) => path.reduce<Element | undefined>((parent, index) => parent && childrenOf(parent)[index], row) ?? null;
 
-// The row across the top of the view and, inside it and its story's shadow root, the first element in flow reaching
-// below that line: what the reader is reading. An overlay such as the found mark spans the row and never moves.
+// Track the first in-flow element crossing the view top, including shadow roots.
+// Ignore spanning overlays such as found marks: they are not reading anchors.
 function across(root: HTMLElement, frame: HTMLElement): Reading | null {
   const line = frame === document.scrollingElement ? 0 : frame.getBoundingClientRect().top;
   const below = (element: Element) => element.getBoundingClientRect().bottom > line;

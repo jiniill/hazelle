@@ -17,9 +17,8 @@ export const settingsOf = ({ on, budget, window, batch }: MemorySettings): Memor
 
 type Part = { tokens: number; value: string };
 
-// The chat part of a request, in the order the chat reads: records, the ones an embedding model finds, the messages
-// waiting for the next summary, the window. found: a chat knows it only once a request is made. whole: what the bar
-// stands for, each part's share taken of it.
+// Match request order: memory, retrieval, waiting messages, raw window.
+// found is known only after a request; whole is the denominator for every bar segment.
 export function MemorySplit({ total, whole, records, found, waiting, recent }: { total?: { label: string; value: string }; whole: number; records: Part; found?: Part; waiting: Part; recent: Part }) {
   const parts = [
     { ...records, label: '기록', mark: 'accent' as const },

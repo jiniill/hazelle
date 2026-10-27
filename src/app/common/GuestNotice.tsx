@@ -35,8 +35,7 @@ export function GuestNotice({ guest, onClose }: { guest: GuestDoors; onClose?: (
   );
 }
 
-// The doors stay on a guest's home for good, the more so as what it holds grows: where the card is closed, or gone
-// with the empty home, this line stands in its place. note: what the place it stands in waits for.
+// Keep signup doors visible after the card is dismissed or empty-home disappears; note names the blocked action.
 export function GuestLine({ note = NOTE }: { note?: string }) {
   const { guest } = useAccount();
   if (!guest) return null;

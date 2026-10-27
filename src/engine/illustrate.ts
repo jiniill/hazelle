@@ -38,9 +38,8 @@ export function illustratorPrompt(): IllustratePrompt {
   };
 }
 
-// Sent after the 삽화 prompt when a reply gets more than one picture (model/illustration pictureCount). The engine's,
-// not the prompt's: each account keeps its own copy of the prompt, written before several pictures existed, and
-// parseScenes reads the array asked for here.
+// Engine-owned array instruction must follow user-stored prompts, including older single-picture ones.
+// Keep synchronized with parseScenes.
 export const severalScenes = (count: number) =>
   `This time pick ${count} moments instead of one, each after a different paragraph, spread through the message. Answer with only a JSON array of ${count} objects, each in the shape above, in the order of their paragraphs.`;
 
@@ -50,9 +49,7 @@ export type Told = Pick<Portrait, 'name' | 'aliases' | 'outfits'> & { worn: { ou
 
 const messagesAgo = (ago: number) => (ago === 0 ? 'in this message' : ago === 1 ? '1 message ago' : `${ago} messages ago`);
 
-// Sent after the 삽화 prompt, the engine's for the same reason as severalScenes: a figure is matched to its profile by
-// name or alias and its outfit to one of the profile's by name (pictureRequest), so the scene is asked to use the
-// profile's own names.
+// Engine-owned instruction keeps scene figure/outfit names aligned with profileNames and pictureRequest.
 export const profileNames = (portraits: readonly Told[]) =>
   [
     'These characters have fixed looks. When one of them is in a picture, give its "name" exactly as written here, whatever the story calls them. When the story has one of them in an outfit named here, put that name, exactly as written, as a tag in its "outfit", with any change to it as further tags; otherwise write their clothes as tags. One last drawn in a named outfit likely still wears it; the more messages ago that was, the more what the story shows now outweighs it.',
@@ -66,8 +63,8 @@ export const profileNames = (portraits: readonly Told[]) =>
 // drawnBefore).
 export type Earlier = { scene: Scene; ago: number };
 
-// Sent after the 삽화 prompt, the engine's for the same reason as severalScenes, as are seenBy and COMIC_PAGE: the
-// chat's latest picture, so the next keeps its place, cast and clothes. ago 0 is the same message drawn again by hand.
+// Engine-owned continuity instruction survives old stored prompts, as severalScenes does.
+// ago 0 means redrawing the same message.
 export const lastScene = ({ scene, ago }: Earlier) =>
   [
     `The last picture of this chat was drawn ${messagesAgo(ago)}. Keep what still holds in it, such as the place, who is there and what they wear, unless the story has moved on, and never draw the same moment again.`,
@@ -95,8 +92,6 @@ function countTags(scene: Scene): string[] {
   return [...counted(first.filter((word) => word === 'girl').length, 'girl'), ...counted(first.filter((word) => word === 'boy').length, 'boy')];
 }
 
-// The scene with the count tags leading its setting written again for the figures it holds now; a setting that does
-// not start with count tags is left as written.
 export function recounted(scene: Scene): Scene {
   const setting = scene.setting.trimStart();
   const leading = COUNTS.exec(setting);
@@ -118,14 +113,12 @@ const portraitsByName = (portraits: readonly Portrait[]) => {
   return byName;
 };
 
-// The portrait's outfit a scene's outfit tag names, if any.
 const namedOutfit = (portrait: Portrait, tag: string) => {
   const key = nameKey(tag);
   return key ? portrait.outfits.find((each) => nameKey(each.name) === key) : undefined;
 };
 
-// The outfits a figure matched to a portrait is drawn in: each tag of its outfit that is a portrait outfit's name
-// becomes that outfit, the rest stay tags; an empty outfit is the portrait's first.
+// Resolve outfit-name tags to profile outfits; retain other tags. Empty outfit uses the first profile outfit.
 const outfitsWorn = (portrait: Portrait, outfit: string): (Outfit | string)[] =>
   outfit.trim() ? outfit.split(',').map((tag) => namedOutfit(portrait, tag) ?? tag) : portrait.outfits.slice(0, 1);
 
@@ -160,10 +153,8 @@ function figure(value: unknown): Figure | null {
   return isText(name) && isText(look) && isText(outfit) && isText(action) && isPlace(x) && isPlace(y) ? { name, look, outfit, action, x, y } : null;
 }
 
-// A scene as the writer answers it, for the user to change (어떻게 바꿀까요?) and parseScene to read back.
 export const sceneText = ({ paragraph, ...rest }: Scene) => JSON.stringify({ after: paragraph + 1, ...rest }, null, 2);
 
-// What a picture was drawn from, beside its scene: the base caption, then each figure by the scene's name for it.
 export const sentText = (scene: Scene, sent: Pick<PictureRequest, 'prompt' | 'characters'>) =>
   [sent.prompt, ...sent.characters.map(({ prompt }, index) => `${scene.characters[index]?.name ?? ''}: ${prompt}`)].join('\n');
 
@@ -185,8 +176,8 @@ export function parseScene(text: string, paragraphs: number): SceneRead {
   return read.ok ? readScene(read.value, paragraphs) : { ok: false, reason: 'unreadable' };
 }
 
-// The writer's answer to severalScenes, or to the prompt alone: an array or one scene. One scene that fails fails the
-// answer. A writer that gives fewer is drawn as given; past count, or on a paragraph already taken, a scene is dropped.
+// Accept one scene or an array, never repair malformed scenes. Fewer scenes are allowed;
+// drop excess scenes and duplicate paragraphs.
 export function parseScenes(text: string, paragraphs: number, count: number): { ok: true; scenes: Scene[] } | { ok: false; reason: SceneInvalid } {
   const read = answerJson(text);
   if (!read.ok) return { ok: false, reason: 'unreadable' };
@@ -217,7 +208,6 @@ export type PictureSizes = Record<Shape, { width: number; height: number }>;
 
 export const pictureSizes = (prompt: Pick<IllustratePrompt, 'picture'>): PictureSizes => SIZES[prompt.picture?.size ?? 'normal'];
 
-// The tags of a 삽화 prompt that sets none.
 export const PICTURE_DEFAULTS: PictureTags = {
   artist: '',
   quality: 'best quality, amazing quality, very aesthetic, absurdres',
@@ -226,10 +216,8 @@ export const PICTURE_DEFAULTS: PictureTags = {
 
 const tags = (...parts: string[]) => parts.map((part) => part.trim()).filter((part) => part !== '').join(', ');
 
-// Artist tags lead the base caption (design §6.6): the 삽화 prompt's, else the first drawn portrait's. random: the seed
-// of a prompt that fixes none. portraits: the chat's packs' in pack order (runtime/likeness), the character's own first;
-// the scene call is told their names after the prompt (profileNames). A figure whose name is a portrait's name or alias
-// takes the portrait's look in place of its own and the outfits its outfit names (outfitsWorn).
+// Artist tags lead: prompt tags, else first drawn portrait. Unfixed seeds use random.
+// Match figures by profile name/alias and resolve outfit names; portraits arrive in pack order, character first.
 export function pictureRequest(scene: Scene, prompt: IllustratePrompt, model: Model, random: number, portraits: readonly Portrait[]): PictureRequest {
   const { artist, quality, negative } = prompt.tags ?? PICTURE_DEFAULTS;
   const { steps = null, scale = null, rescale = null, sampler = null, seed = random } = prompt.picture ?? {};

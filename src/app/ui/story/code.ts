@@ -11,8 +11,7 @@ const asWritten: Draw = (html) => html;
 let drawCode: Draw | undefined;
 let loading: Promise<unknown> | null = null;
 
-// What highlights html's code blocks; a promise while the highlighter loads. It is imported only for html that holds a
-// fence naming its language, so a story without one never loads it.
+// Lazy-load highlighting only for named-language fences; retain the promise until it resolves.
 export function codeFor(html: string): Draw | Promise<unknown> {
   if (drawCode) return drawCode;
   if (!html.includes(MARK)) return asWritten;

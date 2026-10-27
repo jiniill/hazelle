@@ -4,8 +4,7 @@ import { describeMascotFailure } from '../common/failure';
 import { useChildren, useCommenting } from '../session';
 import { useToast } from '../toast';
 
-// A failure is said once per chat on this page, though every later reply fails the same way (a model that cannot
-// answer the format): the line is a garnish, and a toast each turn would cover the composer.
+// Toast once per chat/session: repeated garnish failures must not cover the composer on every turn.
 const told = new Set<string>();
 // Fresh (design §6.11: the mark sways until opened once): written after this page loaded and not opened since.
 // Page memory only, so a reload counts every line as seen.

@@ -3,9 +3,8 @@ import { api, SLOW_ROUTE_WAIT, type ApiResult } from './api';
 
 // Restores of one account, asked by the operator for it (whose: its id) or by the signed-in account for itself (null).
 
-// postId: the operator-only post the operator answered, null for one the account began itself. at: the time asked for, null for
-// an undo. targetAt: when the snapshot it rewinds to was taken, null until chosen. verified: the account was seen open
-// again after done. actions: what the server allows in this phase.
+// postId links operator restores to a private report; at null requests undo.
+// targetAt stays null until selected; verified means reopened after done; server actions govern phase transitions.
 export type Restore = {
   id: number;
   postId: number | null;

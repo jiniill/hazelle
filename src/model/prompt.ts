@@ -7,13 +7,10 @@ export type Role = 'system' | 'user' | 'assistant';
 export const PROMPT_SORTS = ['conversation', 'translate', 'memory', 'illustrate', 'mascot', 'preread', 'agent'] as const;
 export type PromptSort = (typeof PROMPT_SORTS)[number];
 
-// A feature that brings something new to the prompt adds a row. wrapped: the slot takes a role and a 감싸는 텍스트 with
-// {{slot}} where its content goes; role is the one a new block of it starts with (app/prompts/edits newBlock).
+// wrapped slots interpolate {{slot}} and start with their declared role (app/prompts/edits newBlock).
 export const SLOTS = {
   tool: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation'] },
-  // 캐릭터 설명 and 페르소나 repeat because Risu presets put them in several places and open one by a toggle (누렁이's
-  // 탈옥조정 for the description, 소악마's topbotpersona for the persona): with one place, the other toggle states send
-  // nothing at all.
+  // Description/persona slots must repeat: Risu presets toggle between separate placements; deduplication drops content.
   description: { wrapped: true, role: 'system', repeats: true, sorts: ['conversation', 'translate', 'memory', 'illustrate', 'agent'] },
   persona: { wrapped: true, role: 'system', repeats: true, sorts: ['conversation', 'translate', 'memory', 'illustrate', 'agent'] },
   lorebook: { wrapped: false, repeats: false, sorts: ['conversation', 'translate', 'memory', 'illustrate', 'agent'] },
@@ -21,12 +18,10 @@ export const SLOTS = {
   postEverything: { wrapped: false, repeats: false, sorts: ['conversation'] },
   chat: { wrapped: false, repeats: true, sorts: ['conversation'] },
   note: { wrapped: true, role: 'system', repeats: false, sorts: ['translate'] },
-  // 삽화 노트: a chat's own directions for its pictures (Chat.illustrateNote).
   illustrateNote: { wrapped: true, role: 'system', repeats: false, sorts: ['illustrate'] },
   recent: { wrapped: true, role: 'system', repeats: false, sorts: ['translate', 'illustrate', 'mascot', 'agent'] },
-  // In a 삽화 task, the message's paragraphs, numbered (model/illustration paragraphsOf); in a 마스코트 task, the reply as
-  // shown; in a 토큰 절약 task, the parts of the request it shortens, each headed by its kind (engine/preread); in a pre
-  // agent, the message the reply answers, and in a post agent the reply as saved.
+  // source is task-specific: numbered paragraphs, displayed mascot reply, preread material,
+  // or the answered message (pre-agent) / saved reply (post-agent).
   source: { wrapped: true, role: 'user', repeats: false, sorts: ['translate', 'illustrate', 'mascot', 'preread', 'agent'] },
   // 에이전트 노트: the pre agents' notes for the reply (design §6.16); a prompt without it gets them after the chat.
   agentNotes: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation'] },
@@ -62,30 +57,23 @@ export type ChatSlot = Named & { kind: 'slot'; slot: 'chat'; range: ChatRange };
 export type PlainSlot = Named & { kind: 'slot'; slot: Exclude<SlotKind, Wrapped | 'chat'> };
 export type Block = TextBlock | WrappedSlot | ChatSlot | PlainSlot;
 
-// key is what conditions name ({{#when::toggle::key}}, toggle_key); label is what screens show. Values are
-// strings because CBS reads them: a check is '1' or '0', a choice is its option's index, a text what was typed
-// (lines: a box of several lines).
+// CBS requires string values: checks use '0'/'1', choices use the option index, text stays verbatim.
 export type Toggle = { key: string; label: string } & (
   | { kind: 'check'; default: '0' | '1' }
   | { kind: 'choice'; options: string[]; default: string }
   | { kind: 'text'; lines?: true; default: string }
 );
 
-// A line of a toggle list that holds no value and only lays the list out: a group runs to its groupEnd, as in Risu.
-// It has no key, so it never reaches what reads values (chatToggles, toggleValue).
+// Layout-only lines have no key and must never participate in toggle value lookup.
 export type ToggleMark = { kind: 'divider'; label: string } | { kind: 'caption'; label: string } | { kind: 'group'; label: string } | { kind: 'groupEnd' };
-// A line of Risu's toggle text that reads as no toggle and no mark, kept as written so an export gives it back and the
-// editor can fix it. It has no key either, and lays nothing out.
+// Preserve unparsed Risu lines verbatim for round-trip export and repair; never render them as controls.
 export type UnreadLine = { kind: 'unread'; text: string };
 export type ToggleLine = Toggle | ToggleMark | UnreadLine;
 export const isToggle = (line: ToggleLine): line is Toggle => 'key' in line;
 
-// A character's or 캐릭터 없이's toggle values by key, over the declared defaults.
 export type ToggleValues = Record<string, string>;
 
-// authorNote is the default 작가의 노트, which a chat's own note replaces.
-// origin is a copy's original, named as it was then. imported marks a prompt made from a Risu preset; a copy
-// does not inherit it.
+// Copies retain origin's captured name, but must not inherit imported. A chat note overrides authorNote.
 export type ConversationPrompt = {
   task?: never;
   name: string;
@@ -99,8 +87,7 @@ export type ConversationPrompt = {
   folder?: string;
   // The modules on in its chats, in the order they were turned on (design §6.5). One that is gone reads as off.
   modules?: string[];
-  // The modules its Risu preset named (moduleIntergration), each a Risu module id or namespace, so a module imported
-  // after it is turned on for it too. Absent on a prompt made before it was kept.
+  // Risu module ids/namespaces enable matching modules even when imported after the preset.
   companions?: string[];
   // 기능 in its chats, over the 공용 ones (runtime/features).
   features?: FeatureSwitches;
@@ -108,10 +95,8 @@ export type ConversationPrompt = {
   agents?: string[];
 };
 
-// model: the one place a translation's model is chosen; without one, the chat's 보조 모델. Its text blocks carry no mark,
-// since a card never replaces a translator's text. protect: 보호 패턴 the user adds, each a JavaScript regular
-// expression source, matched with the flags g and u; what they match goes through the translation unchanged, together
-// with the spans the engine always keeps (engine/protect).
+// Translation model falls back to the chat's auxiliary model. Text blocks have no card-replacement marks.
+// protect regex sources use gu and join engine/protect spans passed through unchanged.
 export type TranslatePrompt = {
   task: 'translate';
   name: string;
@@ -135,15 +120,13 @@ export type MemoryPrompt = {
 // Danbooru-style tags, comma separated, put into every picture the prompt makes (engine/illustrate pictureRequest).
 export type PictureTags = { artist: string; quality: string; negative: string };
 
-// How each picture is drawn, a field absent for the image model's own (connectors PictureRequest), seed absent for a
-// new one each picture. size: the pixel tier of engine/illustrate SIZES, absent for normal, the only tier inside
-// NovelAI Opus's free band.
+// Absent settings use model defaults; absent seed rerolls each picture.
+// normal is the only pixel tier eligible for NovelAI Opus free pictures.
 export type PictureSize = 'normal' | 'large';
 export type PictureSettings = { steps?: number; scale?: number; rescale?: number; sampler?: string; seed?: number; size?: PictureSize };
 
-// model: the one place the scene writer is chosen; without one, the chat's 보조 모델, then its 대화 모델. The picture's
-// model is the chat's 삽화 switches' (runtime/characters illustrateSwitches). tags: absent reads as the app's
-// (engine/illustrate PICTURE_DEFAULTS); an empty field sends none.
+// Scene-model fallback: auxiliary, then chat model; image model comes from illustration switches.
+// Absent tags use PICTURE_DEFAULTS, but empty tags send nothing.
 export type IllustratePrompt = {
   task: 'illustrate';
   name: string;
@@ -175,10 +158,8 @@ export type PrereadPrompt = {
   origin?: { id: string; name: string };
 };
 
-// 에이전트 (design §6.16): pre reads before the reply and leaves a note in the conversation's 에이전트 노트, post rewrites
-// the saved reply. model: the one place an agent's model is chosen; without one, the chat's 보조 모델, then its 대화 모델.
-// protect: a post agent's 보호 패턴, as a translation prompt's. place: where a post agent's answer goes beside the reply
-// (Agents! P!'s prefix and suffix modes), absent for in its place.
+// Pre agents leave notes; post agents rewrite replies. Model fallback is auxiliary, then chat model.
+// protect follows translation rules; absent place replaces text rather than adding before/after it.
 export type AgentStage = 'pre' | 'post';
 export type AgentPlace = 'before' | 'after';
 export type AgentPrompt = {

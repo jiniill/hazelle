@@ -60,9 +60,8 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
   }
 }
 
-// The causes of the part broken names, for the sentence that names it; none for a break of the whole call (expired, model),
-// whose diagnosis still lists changed parts that are not why it reads nothing. Every cause, since they compound: a lore
-// entry turning on reads nothing only because its system message is hoisted to the front.
+// Show all causes of the first broken part: changes can compound (e.g. lore only breaks because system is hoisted).
+// Whole-call breaks have no part cause, even if diagnosis lists unrelated changes.
 export function breakCauses(diagnosis: CacheDiagnosis | null | undefined, broken: CacheBreak): string | null {
   if (!('from' in broken)) return null;
   const part = diagnosis?.parts.find(({ kind, from, role }) => kind === broken.kind && role === broken.role && JSON.stringify(from) === JSON.stringify(broken.from));

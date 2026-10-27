@@ -128,9 +128,8 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
         source.close();
         return setPhase({ kind: 'done', backup: backup.catalog, moved: moved.data });
       }
-      // What a failed run saved stays, and the move skips characters and modules already here by itself. Personas and
-      // presets carry no Risu id, so a run that got past them is not asked for them again. Presets come after the
-      // modules they pair with (runtime/move), so only a run that reached the characters got past them.
+      // Retries keep landed saves and skip known character/module ids. Personas/presets lack ids, so do not reselect
+      // them after progress passed them; reaching characters proves presets finished after their modules.
       const rest = {
         ...ticks,
         ...(Object.keys(steps).some((kind) => kind !== 'personas') && { personas: ticks.personas.map(() => false) }),

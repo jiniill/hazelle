@@ -2,9 +2,8 @@ import { streamError } from './errors';
 import type { BatchAnswer, Batches, ConnectionType } from './types';
 import { isRecord, list } from './values';
 
-// The Gemini API's batch mode with requests inline, checked against ai.google.dev/api/batch-api on 2026-10-12. A batch
-// is a long-running operation: done once it ended, its answer inline in its response. The guide and the reference name
-// the states differently (JOB_STATE_, BATCH_STATE_), so a state is read by its ending.
+// Inline batch operation; match state suffixes because guide/reference use JOB_STATE_/BATCH_STATE_
+// (ai.google.dev/api/batch-api, 2026-10-12).
 const batches: Batches = {
   submit: (endpoint, model, request, key) => ({
     url: `${endpoint.baseUrl}/models/${model.id}:batchGenerateContent`,
@@ -52,8 +51,7 @@ export const google: ConnectionType = {
   keyPage: 'https://aistudio.google.com/apikey',
   endpoint: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta', protocol: 'gemini' },
   detect: { key: /^AIza[0-9A-Za-z_-]{35}$/, host: 'generativelanguage.googleapis.com' },
-  // Batch input and output are billed at half; cached input stays at the standard rate on some models and halves on
-  // others (Gemini's pricing page, 2026-10-12), so it is kept whole, which errs high. Which models take batches the
-  // model list does not say.
+  // Half-rate batch input/output; keep unspecified cache discounts at full price to err high.
+  // Model eligibility is unknown (Gemini pricing, 2026-10-12).
   discount: { lane: 'batch', batches, accepted: null, rates: { input: 0.5, output: 0.5, cacheRead: 1, cacheWrite: 1 } },
 };

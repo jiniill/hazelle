@@ -128,7 +128,6 @@ export function FaceCard({ image, video = false, name, note, selected, current =
   );
 }
 
-// A door among the cards, shaped as one, its picture an icon.
 export function IconCard({ icon, name, note, onClick }: { icon: LucideIcon; name: string; note: string; onClick: () => void }) {
   return (
     <div className={styles.cardBox}>
@@ -143,10 +142,8 @@ export function IconCard({ icon, name, note, onClick }: { icon: LucideIcon; name
   );
 }
 
-// A folder among the cards, shaped as one: a tab over a body holding up to four faces of what it holds, each a quarter
-// however few there are, so one face never fills it as a card's picture does. onDropCard: a dragged FaceCard's key,
-// let go over this folder. drag: the folder card drags beside another, carrying this key; onPlace: another folder's key
-// let go beside this one; arrange as FaceCard's.
+// Keep each preview face in its own quarter even with fewer than four, never full-size like a character.
+// Folder drag/order uses its own key type; onDropCard receives a character/persona key.
 type FolderCardProps = { name: string; note: string; faces: { image: string | null; name: string }[]; onClick: () => void; menu?: ReactNode; onDropCard?: (key: string) => void; drag?: string; onPlace?: (key: string, after: boolean) => void; arrange?: { key: string; label: string } };
 
 export function FolderCard({ name, note, faces, onClick, menu, onDropCard, drag, onPlace, arrange }: FolderCardProps) {
@@ -191,7 +188,6 @@ export function Portrait({ image, name }: { image: string | null; name: string }
   );
 }
 
-// A card's picture whole, at its own ratio, as a dialog shows it; a video plays muted, its sound one press away.
 export function Preview({ image, video = false, name }: { image: string | null; video?: boolean; name: string }) {
   const veil = useVeil();
   if (!image || veil) return <span className={styles.preview}><Face image={null} name={name} /></span>;

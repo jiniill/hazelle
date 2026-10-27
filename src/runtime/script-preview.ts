@@ -17,9 +17,8 @@ import type { ObjectStore } from './store';
 import { providerFit } from './token-calibration';
 import type { Sending } from './turn-context';
 
-// What saving a run's changes to the chat (ScriptEffects.event) and gathering it again make of scope: an edited message is
-// a staged version keeping what its text wrote, an added one is new and staged, and a lorebook write takes the place
-// of the chat's own entries of its name. Writes are the caller's, which knows where each stage's stand.
+// Preview applies staged edits/adds and chat-local lore replacement as a real ScriptEffects save would.
+// Caller places variable writes at their correct stages.
 export function applied(chat: string, scope: ChatScope, { edits, removed, added, lore }: ScriptOutcome): ChatScope {
   if (!edits.length && !removed.length && !added.length && !lore.length) return scope;
   const greeting = scope.greeting === null ? 0 : 1;
@@ -52,9 +51,8 @@ export function applied(chat: string, scope: ChatScope, { edits, removed, added,
   return { ...scope, messages, lore: [...held.slice(0, last), ...fresh, ...held.slice(last)] };
 }
 
-// What a run that saves nothing heard (ScriptPreview.rehearse, ScriptPreview.trial). asked: each question, dismissed there and
-// asked when it runs for real; calls: what is refused there and made for real. loreRanAway: a script read the
-// lorebook, whose CBS ran away, and read none of it.
+// Dismiss preview questions and refuse calls without saving; real execution may branch differently.
+// loreRanAway means the script read no lore after CBS exceeded its limit.
 export type Heard = { said: { tone: 'normal' | 'error'; text: string }[]; asked: Question[]; calls: { model: number; embed: number; background: number }; loreRanAway: boolean };
 
 // The pre-send scripts run ahead on a copy (ScriptPreview.rehearse). stopped: the stage that ended the turn, which then sends
@@ -91,12 +89,9 @@ export class ScriptPreview {
     return this.lua().then((runner) => runner.check(code)).catch(() => 'unchecked' as const);
   }
 
-
-  // The pre-send stages of sending, on Lua engines of their own and off the chat's queue, so a real send never waits
-  // behind one; nothing is saved or kept in the page log. Each stage hands the next the chat as the send's would. A
-  // question is dismissed and no model is called, so a script that branches on either may go another way when sent.
-  // Tools are not rehearsed: their storage writes would be real, so what a tool's sending or requesting does shows only
-  // when sent. null: the chat has no triggers.
+  // Use separate Lua engines off the send queue; never save or log rehearsal effects.
+  // Dismiss questions/refuse model calls, so real branching can differ. Never rehearse tools: storage writes are real.
+  // Null means no triggers.
   async rehearse(chat: string, { turn, prompt, calibration }: Sending, signal: AbortSignal): Promise<Rehearsal | null> {
     const scripts = triggersOf(packsOf(this.session.store, turn.chat));
     if (scripts.length === 0) return null;

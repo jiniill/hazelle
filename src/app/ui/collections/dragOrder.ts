@@ -1,7 +1,6 @@
 import { useState, type DragEvent } from 'react';
 
-// Dragging one of a list's items to a new place, the list laid out along axis. at: the gap it would drop into, 0
-// before the first item and the count after the last; onMove gets the index the item ends at.
+// at is a gap index (0…count); onMove receives the final item index, not that gap.
 export function useDragOrder(onMove: (from: number, to: number) => void, axis: 'x' | 'y') {
   const [drag, setDrag] = useState<{ from: number; at: number } | null>(null);
   return {

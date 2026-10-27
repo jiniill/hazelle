@@ -3,10 +3,8 @@ import { FAKE_PROVIDER } from './e2e/helpers';
 
 const PORT = 5180;
 
-// Screenshot scripts in shots/ (not tracked), against the dev server and its lasting data in .data/, where the account
-// of e2e/shots.ts stays signed up. Unlike playwright.config.ts nothing is wiped between runs. A server already running
-// on .data/ (npm run dev) is reused, since a second one would be refused the directory; it reaches fakeProvider only if
-// it was started with the same HAZELLE_LOCAL_PROVIDERS.
+// Reuse lasting .data/ accounts/dev server, never wipe like normal E2E.
+// A reused server must have matching HAZELLE_LOCAL_PROVIDERS to reach fakeProvider; second processes cannot share data locks.
 export default defineConfig({
   testDir: 'shots',
   workers: 1,

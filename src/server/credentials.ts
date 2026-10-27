@@ -41,9 +41,8 @@ export function findAccount(db: Db, column: 'id' | 'username', value: string) {
     .first<StoredAccount>();
 }
 
-// This machine's own requests are not counted: loopback (e2e against a local server) and none named at all (in
-// process). The visitor is the connection's peer unless a trusted proxy names it (frontend-worker.ts), so neither
-// reaches it from outside.
+// Skip in-process/loopback requests. External visitors come only from the socket peer or trusted proxy,
+// never a client-supplied key (frontend-worker.ts).
 const LOCAL = /^(?:127\.|::1$|::ffff:127\.)/;
 
 export function outsideVisitor(c: Context<AppEnv>): string | null {

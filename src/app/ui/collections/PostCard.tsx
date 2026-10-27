@@ -4,7 +4,6 @@ import { Icon } from '../foundation/Icon';
 import { plainText } from '../foundation/Written';
 import styles from './PostCard.module.css';
 
-// A feed of posts, each a card of its own.
 export function PostFeed({ label, children }: { label: string; children: ReactNode }) {
   return (
     <ul className={styles.feed} aria-label={label}>
@@ -15,12 +14,9 @@ export function PostFeed({ label, children }: { label: string; children: ReactNo
 
 type Props = {
   title: string;
-  // The start of its text, cut at two lines.
   excerpt?: string | null;
-  // Tags over the title: what kind of post it is and where it stands.
   marks?: ReactNode;
   byline: ReactNode;
-  // Counts at the foot's end, such as its comments.
   stats?: ReactNode;
   // A VoteButton in the column before it, pressed without opening the post.
   vote?: ReactNode;
@@ -51,7 +47,6 @@ export function PostCard({ title, excerpt, marks, byline, stats, vote, tone = 'p
   );
 }
 
-// A count beside its icon, at a card's foot.
 export function PostStat({ icon, label, count }: { icon: LucideIcon; label: string; count: string }) {
   return (
     <span className={styles.stat} aria-label={`${label} ${count}`}>

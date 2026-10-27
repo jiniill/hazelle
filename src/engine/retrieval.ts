@@ -1,18 +1,13 @@
 import type { Memory, Vector } from '../model/memory';
 import { placesOf, recalledText, recordText, type ChatRead, type Standing } from './memory';
 
-// Retrieval (design §6.2): the records nearest the latest message, by their summaries' embeddings, ride after the
-// last cache point within RETRIEVAL_SHARE of the memory budget on top of it. One whose summary the slot does not send
-// (over, or standing in its chapter) contributes its summary; one the slot sends contributes its messages word for
-// word, whole or not at all.
+// Retrieve after the last cache point, on top of memory budget within RETRIEVAL_SHARE.
+// Slot-sent summaries contribute their whole source messages; otherwise contribute summaries, never partial messages.
 const RETRIEVAL_SHARE = 0.2;
 export const retrievalRoom = (budget: number) => Math.floor(budget * RETRIEVAL_SHARE);
 
-// Measured 2026-10-10 on voyage-4 (docs/research/memory-eval-2026-10.md): a record is near enough when its similarity
-// beats the median of the chat's records by GAP, read only once LEAST records have vectors, since the median of fewer
-// says nothing. The user ruled for more hits over fewer stray records (2026-10-12): 0.075 lets 16 of 35 asked-for
-// records ride where 0.1 let 13, and one plain send in four retrieves; at 0.05 more than half do. The most that ride at
-// once is MOST.
+// Require LEAST vectors before judging median similarity. GAP 0.075 favors recall (user, 2026-10-12):
+// 16/35 hits vs 13 at 0.1; 0.05 retrieved on over half of ordinary sends (voyage-4, memory-eval-2026-10.md).
 const MOST = 3;
 const LEAST = 4;
 const GAP = 0.075;

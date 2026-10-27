@@ -35,9 +35,8 @@ const AFTER_OPERAND = new Set([...LEVELS.flatMap((operators) => [...operators.ke
 
 class Invalid {}
 
-// {{calc::…}} and {{? …}}. variable reads a `$name` or `@name` token as a number. A missing operand and `null`, an
-// unset variable's text, read as 0, as in Risu. null: the expression does not read, and the tag stays as written; Risu
-// drops the tokens it cannot read and evaluates the rest.
+// Missing operands and unset-variable null text count as 0, as in Risu.
+// Unparseable expressions return null and stay literal; never discard bad tokens and evaluate the rest.
 export function calc(expression: string, variable: (token: string) => number): number | null {
   const source = expression.replace(/\s/g, '');
   const tokens = source.match(TOKENS) ?? [];

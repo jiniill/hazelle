@@ -62,9 +62,8 @@ export class SaveQueue<T extends object> {
     return this.chain;
   };
 
-  // The thing's removal, in the queue's turn: after everything changed so far is stored, and with no save of the thing
-  // in flight beside it, so a save can never write back what the removal took. Once it goes through the queue ends,
-  // and what was typed while it ran is dropped. null: a change could not be stored, and the removal did not run.
+  // Queue removal after all prior saves, never beside an in-flight write that could resurrect it.
+  // Success ends the queue and drops later drafts; null means a failed save prevented removal.
   remove = <R extends { ok: boolean }>(task: () => Promise<R>): Promise<R | null> => {
     clearTimeout(this.timer);
     const removed = this.chain.then(async () => {
@@ -96,8 +95,7 @@ export class SaveQueue<T extends object> {
     this.changed();
     const saved = await this.write(patch);
     this.writing = null;
-    // A failed patch is kept for the next flush to try again, under anything typed since, unless a restore dropped it:
-    // then what was typed since goes too, since each patch carries a whole field typed over the old timeline's value.
+    // Retry failed patches beneath newer typing. Timeline rewind drops both: whole-field patches were based on old state.
     if (!saved.ok && saved.error === 'timeline-changed') {
       this.pending = {};
       this.last = null;
@@ -116,11 +114,9 @@ const IDLE: SaveView<object> = { status: null, unsaved: {} };
 
 type Entry<T extends object> = { queue: SaveQueue<T>; view: SaveView<T>; write: Write<T>; failed: (failure: ApiFailure) => void };
 
-// A session's save queues, one per stored thing by its key, so every screen on a thing saves through the same queue:
-// one opened again while an earlier screen's save is still on its way shows that change and saves after it. A queue
-// lives while a screen watches it or it has something to save. A save that fails with no screen left to show it is told
-// once and dropped. While a queue or the store (unsent) has something unwritten, the browser asks before the tab goes:
-// this is the page's one beforeunload listener.
+// One session queue per object key, shared by every screen; reopen sees pending edits and saves after them.
+// Retain while watched or dirty; orphaned failures toast once and drop.
+// Own the sole beforeunload listener for queue/store unsent work.
 export class Saves {
   private readonly queues = new Map<string, Entry<object>>();
   private readonly watchers = new Map<string, Set<() => void>>();
@@ -161,8 +157,8 @@ export class Saves {
     return this.queues.get(key)?.queue.flush() ?? Promise.resolve(true);
   }
 
-  // Everything changed so far, written now and not after its pause, for leaving the session: true once all of it is
-  // stored. What is still unwritten after bound ms, such as a save waiting out a dropped connection, is close()'s to drop.
+  // Flush current changes without debounce before leaving. Return true only if stored by bound;
+  // close drops leftovers such as saves waiting on an outage.
   settled(bound: number): Promise<boolean> {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const late = new Promise<boolean>((resolve) => (timer = setTimeout(() => resolve(false), bound)));

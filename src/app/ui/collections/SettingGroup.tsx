@@ -29,8 +29,7 @@ type RowProps = {
   control: ReactNode;
   // A small button after the label, such as a pin.
   action?: ReactNode;
-  // Under the words at every width, for a control as wide as the row, such as a row of chips. Beside them, its
-  // grid column takes the chips' one-line width and squeezes the words to a letter a line.
+  // Wide controls stay below labels at every width; a beside-column would size to their unwrapped width and crush text.
   wide?: boolean;
   // The row's ⋯: at the end of the words' line at every width, where a narrow row puts the control under them.
   menu?: ReactNode;

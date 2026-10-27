@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-// A reply arrives in bursts, as the provider sends it and as the screen's passes land (ChatScreenRead), so a reply
-// being written is revealed at a pace of its own: each arrival is spread evenly over the wait expected before the next
-// one, an average of the waits so far, so the text runs about one wait behind and ends about one wait after the last.
+// Smooth provider/display bursts over the mean interarrival wait, intentionally lagging by about one burst.
 const FIRST_GAP = 100;
 const MIN_GAP = 16;
 const MAX_GAP = 1000;
@@ -22,8 +20,8 @@ export function pace(current: Pace, total: number, now: number): Pace {
   return { ...current, shown: Math.min(total, current.shown + current.rate * (now - current.frame)), frame: now };
 }
 
-// Revealing starts from the text the version had when it went live, so 이어 쓰기 does not type out the text it
-// continues, and goes on after the reply ends until all of it is shown, so the last burst does not jump in.
+// Start at existing live text so continuations do not retype history. Finish pacing after generation ends;
+// never snap in the final burst.
 export function useReveal(version: string, text: string, live: boolean): { text: string; revealing: boolean } {
   const [state, setState] = useState<{ version: string; pace: Pace } | null>(null);
   const length = useRef(text.length);
@@ -46,9 +44,8 @@ export function useReveal(version: string, text: string, live: boolean): { text:
   return { text: text.slice(0, revealCut(text, Math.floor(own.pace.shown))), revealing };
 }
 
-// Never half of a surrogate pair, which would show as a broken character for a frame, and never inside a tag: a bare
-// '<' or '</' left before a closing tag is text, which keeps a picture's line from being a picture line (Story), so the
-// picture shows whole for a frame and folds again.
+// Never split surrogate pairs or HTML tags. A transient bare < or </ breaks picture-line detection
+// and flashes a folded image at full height.
 export function revealCut(text: string, cut: number): number {
   if (cut >= text.length) return cut;
   if (/[\uD800-\uDBFF]/.test(text[cut - 1] ?? '')) cut -= 1;

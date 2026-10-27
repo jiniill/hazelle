@@ -1,5 +1,4 @@
-/* A page: its sections stand larger and further apart than a pane's, and its boxes need no line on the darker page.
-   A Dialog opens inside this tree and sets these back (Dialog.module.css); readers fall back to the pane's values. */
+/* Page scale overrides pane fallbacks. Dialog.module.css must reset inherited page scale even inside this tree. */
 .screen {
   --box-inset: var(--space-16);
   --section-title: var(--text-xl);
@@ -79,7 +78,6 @@
   gap: var(--space-24);
 }
 
-/* The body's narrowest useful width beside the aside. */
 @container (min-width: 880px) {
   .columns {
     display: grid;

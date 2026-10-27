@@ -5,8 +5,7 @@ import type { Toasts } from '../toast';
 import { downloadOutput } from './download';
 import { SAVING_FILE } from './words';
 
-// 내보내기 of one file. Call in the press that asked for it: the save picker opens before any await. show takes the
-// button's busy label, null once it ends; a failure says what did not happen.
+// Call directly from the press so the save picker retains activation. show clears busy state with null on exit.
 export function runExport<T>(
   toast: Toasts,
   filename: string,

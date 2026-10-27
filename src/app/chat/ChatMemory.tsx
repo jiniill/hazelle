@@ -311,8 +311,7 @@ function NewFact({ chat }: { chat: string }) {
   );
 }
 
-// One added here is a draft on the page until its first words are saved, and stops being one then: a saved thread
-// deleted later must not come back as the blank it started from.
+// A blank new thread is page-only until first saved. Later deletion must not revive that draft.
 function Threads({ chat, threads, adding }: { chat: string; threads: Thread[]; adding: boolean }) {
   const [drafts, setDrafts] = useState<Thread[]>([]);
   const unsaved = drafts.filter((draft) => !threads.some(({ id }) => id === draft.id));

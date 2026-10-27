@@ -35,11 +35,9 @@ const AT_TARGET: Record<string, string> = { [A]: 'old' };
 
 class Crash extends Error {}
 
-// env with every durable boundary passing through hook once it is over: a service write committed, a store call
-// answered (restart included), a picture directory removed. A hook that throws is a crash right after that boundary;
-// one that waits pauses the runner there. Once a hook has thrown, the runner is dead: every later call throws before it
-// does anything, since the code swallows the failure of a restart by design. arms: the target of every arm call that
-// reached the store. checkpoints: rows each checkpoint write changed.
+// hook runs after each durable boundary: throw simulates crash, wait pauses the runner.
+// After a throw every later call must fail, even though production intentionally swallows restart failures.
+// arms/checkpoints record only store calls/writes that actually landed.
 function watched(hook: (what: string) => void | Promise<void>, reads = false) {
   const arms: string[] = [];
   let checkpoints = 0;

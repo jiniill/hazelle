@@ -26,10 +26,8 @@ type PullOptions = { signal?: AbortSignal; progress?: (progress: PullProgress) =
 export type Pin = { timeline: string };
 const MAX_ATTEMPTS = 3;
 type Scope = { fold: ChatFold; opening: Promise<ApiFailure | null> | null; abort: AbortController; state: ScopeState; users: number; cursor: number; head: number; loading: Promise<ApiFailure | null> | null; error: ApiFailure | null; summarize: boolean };
-// The backend (the server, or a guest's browser store) stays the only source of truth: writes go to it first, and a
-// version conflict is resolved by pulling the newer copy and applying the change again on top of it. A store lives on
-// one timeline of the account: when the account moves to another, it ends (rewind) and the session opens a new one, so
-// nothing it holds or does meets the next.
+// The backend owns confirmed state; conflicts pull the latest copy and reapply the change.
+// A store belongs to one timeline: rewind ends it, and the next store inherits no state or work.
 export class ObjectStore {
   private readonly closing = new AbortController();
   private readonly objects = new ObjectIndex();
@@ -174,8 +172,7 @@ export class ObjectStore {
     this.cachedObjects.write({ changes, feed: this.cacheState(), scopes });
   }
 
-  // Told once, when the store ended for a restore, with how many of the person's writes it dropped; a listener that
-  // comes after is told at once.
+  // Report dropped writes once on rewind; late subscribers receive the result immediately.
   readonly subscribeRewound = (listener: (dropped: number) => void) => {
     if (this.rewound !== null) {
       listener(this.rewound);
@@ -185,10 +182,8 @@ export class ObjectStore {
     return () => { this.rewoundListeners.delete(listener); };
   };
 
-  // The server refused the timeline this store holds (clear: the device copy is of it too), or another tab moved the
-  // device copy to a generation of its own. The store ends as close does, and its unsent writes are dropped and counted,
-  // never replayed: the session opens the next store (app/shell/Workspace), which opens the device copy once it is
-  // cleared (ObjectCacheSession).
+  // A refused timeline or another tab's cache generation ends this store; count and drop unsent writes, never replay them.
+  // clear also invalidates the device copy. Workspace opens the next store after ObjectCacheSession clears it.
   private rewind(clear: boolean) {
     if (this.closing.signal.aborted) return;
     this.rewound = this.pending.dropUnsent();
@@ -318,9 +313,8 @@ export class ObjectStore {
     return failure;
   }
 
-  // created: the caller is writing this chat's first objects under a new id, so the server has nothing to pull for it.
-  // summarize: opening writes the chat's summary when it has outgrown it (the list shows that chat fresh); a pass that
-  // writes a window's summaries in one request (withChats for saveSummaries) opens without.
+  // created skips pulling a new id. summarize catches up stale summaries, except batched summary passes
+  // which write their own (withChats/saveSummaries).
   retainChat(chat: string, { created = false, summarize = true }: { created?: boolean; summarize?: boolean } = {}): ChatLease {
     if (this.closing.signal.aborted) return { ready: Promise.resolve(this.halted()), release: () => {} };
     let scope = this.scopes.get(chat);
@@ -406,10 +400,8 @@ export class ObjectStore {
     return this.withChats([chat], (_, [passed]) => (passed ? Promise.resolve(passed) : run()), { signal });
   }
 
-  // Several chats held together and opened at once, for run. One whose history cannot be read, or whose bot does not end
-  // even without its regex, is left out of what run gets (passed, its failure), since its screen says so and a pass over
-  // many (saveSummaries) passes it over; any other failure to open ends the whole. signal: as withChat, for every chat.
-  // summarize: as retainChat.
+  // Hold/open chats together. Skip/report unreadable or still-stuck chats, whose screens show failures;
+  // other open failures abort the pass. signal releases every lease; summarize follows retainChat.
   async withChats<T>(chats: string[], run: (readable: string[], passed: ApiFailure[]) => Promise<ApiResult<T>>, { signal, summarize = true }: { signal?: AbortSignal; summarize?: boolean } = {}): Promise<ApiResult<T>> {
     if (signal?.aborted) return { ok: false, error: 'stopped' };
     const leases = chats.map((chat) => this.retainChat(chat, { summarize }));
@@ -475,9 +467,8 @@ export class ObjectStore {
     return walked.ok ? null : walked;
   }
 
-  // A walked kind's rows under parent (object-cache WALKED): from this device's cache, then from the server past the
-  // cursor, each visited opened and cached. since: the cursor an earlier walk answered, from which only rows written
-  // after it are read; 0 reads the cached rows first. Answers the cursor to walk on from.
+  // Walk cached parent rows then server revisions after the cursor; never populate held scopes.
+  // since 0 includes cached rows, otherwise only newer rows; return the next cursor.
   async walk(parent: string, kind: Kind, visit: (row: ObjectRow, value: unknown) => void, since: number, pin: Pin, signal?: AbortSignal): Promise<ApiResult<number>> {
     const stop = AbortSignal.any([this.closing.signal, ...(signal ? [signal] : [])]);
     let cursor = since;
@@ -567,16 +558,14 @@ export class ObjectStore {
     return this.closing.signal.aborted ? this.halted() : { ok: true, data: { timeline: this.timeline! } };
   }
 
-  // A workflow of several requests on one timeline: a backup's two scans, its restore, the Risu move, a removal, a chat
-  // turn (runtime/talk). run's scans take the pin; every write made while it runs is the store's, which ends with its
-  // timeline, so no part of a workflow begun on one timeline lands on the next.
+  // Pin multi-request workflows to one timeline. Pass the pin to scans; store writes end with that timeline too,
+  // so no partial backup/move/removal/turn can continue onto a restored account.
   async pinned<T>(run: (pin: Pin) => Promise<T>, signal?: AbortSignal): Promise<T | ApiFailure> {
     const pin = await this.pin(signal);
     return pin.ok ? run(pin.data) : pin;
   }
 
-  // One pull at a time: a caller arriving during a pull waits for that pull instead of starting another.
-  // The caller starting it owns its signal and progress.
+  // Concurrent callers share a pull; its initiator owns cancellation and progress.
   pull(options: PullOptions = {}): Promise<ApiFailure | null> {
     if (this.openingFailure) return Promise.resolve(this.openingFailure);
     if (!this.pulling) {
@@ -593,13 +582,9 @@ export class ObjectStore {
     return this.pulling;
   }
 
-  // One user action's writes, owned objects before their owners and in the order given within a kind, so an owner
-  // appears only once whole and a chat's entries keep their rev order, which model/chat fold reads. An action
-  // larger than one request goes as several, the owner in the last; one cut short leaves only unreachable pieces.
-  // unheld: the writes' chats are not held for them and nothing is summarized after them: a restore's entries before
-  // their chats, whose next lease pulls what was written, or a move's, held by the move and summarized together once
-  // their character is published (ChatProjections.saveMany). signal: the caller's stop, which also ends a wait for the
-  // connection to return.
+  // Preserve within-kind order and write children before owners, owners in the last request.
+  // Interrupted multi-request actions leave only unreachable pieces. unheld delegates leases/summaries to restore/move;
+  // caller cancellation also ends connection waits.
   async batch(writes: Write[], progress: (write: Write) => void = () => {}, { unheld = false, signal }: { unheld?: boolean; signal?: AbortSignal } = {}): Promise<ApiResult<null>> {
     const { ordered, chats } = this.writes.arrange(writes, unheld);
     // Every touched chat stays held until its summary is written; entries held without a scope would never be let go.
@@ -618,15 +603,12 @@ export class ObjectStore {
     }
   }
 
-  // A create whose answer was lost after it landed finds its own object there when tried again, and
-  // succeeds: a retried write with the same id is idempotent.
+  // Reusing the id makes a create idempotent when its successful response was lost.
   create<K extends Exclude<Kind, Singleton>>(kind: K, value: Values[K], { id = crypto.randomUUID(), parent = null }: { id?: string; parent?: string | null } = {}): Promise<ApiResult<Stored<K>>> {
     return this.writeOne<K>(this.writes.step({ type: 'create', kind, id, parent, value }), SCOPED.has(kind) ? parent : null);
   }
 
-  // The parent is the live object's, so an update never moves an object. One that is gone, or goes
-  // while a conflict is resolved, fails as 'gone' and is never written back. So does a change that answers null: what
-  // it changes is no longer there in the copy it is applied to, and nothing is written.
+  // Preserve the live parent; updates never move or resurrect objects. A null change also fails as 'gone'.
   update<K extends Exclude<Kind, AppendOnly>>(kind: K, id: string, change: (current: Values[K]) => Values[K] | null): Promise<ApiResult<Stored<K>>> {
     return this.writeOne<K>(this.writes.update(kind, id, change), SCOPED.has(kind) ? this.objects.get(id)?.parent ?? null : null);
   }
@@ -686,12 +668,8 @@ export class ObjectStore {
     return { ok: false, error: 'conflict' };
   }
 
-  // A call that cannot reach the server waits and tries again until it does, or until stop (the store closing, the
-  // caller's stop, or a reset) ends it: a dropped connection, a restore under way or a store not answering yet does not
-  // fail it. Reads wait too: a store evicted after an idle hour wakes slower than one page's wait, and a reload landing
-  // in a chat must outlast that, not toast it. A write whose answer was lost after it landed comes back as a conflict
-  // and is applied again, so an update's change must read the same applied twice as once (set a value, never add to
-  // one). A file's upload (runtime/files) waits the same way, and shows as the same waiting.
+  // Reads and writes wait through outages, restores and store wake-up until cancellation, as file uploads do.
+  // Lost write responses cause conflict retries: changes must be idempotent (set values, never increment them).
   async reaching<R extends ApiResult<unknown> | null>(attempt: () => Promise<R>, stop: AbortSignal = this.closing.signal): Promise<R | ApiFailure> {
     return this.connection.run(attempt, stop);
   }

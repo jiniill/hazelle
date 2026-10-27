@@ -23,8 +23,7 @@ type Props = {
   onClick?: () => void;
 };
 
-// The fill under the pointer and on the current row follows aria-current and aria-pressed, so it cannot disagree with
-// what a screen reader is told.
+// Visual current/pressed state must derive from ARIA so it cannot disagree with accessibility state.
 export function Item({ density, scheme, leading, title, meta, preview, trailing, current, pressed, expanded, role, checked, tone = 'plain', disabled, onClick }: Props) {
   const branch = expanded !== undefined;
   const line = density === 'tall' && meta === undefined && preview === undefined;

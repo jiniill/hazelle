@@ -13,13 +13,10 @@ import { DAY_MS, type Services } from '../http';
 import { expireDepartures } from './departures';
 import { dayStart, pass, PINNED, staleBaselines, takeBaselines } from './snapshots';
 
-// Backup generations (docs/research/docker-port-plan.md §10.2): backup/<id>/ holds the service snapshot, the
-// snapshots its manifest names and, written last, manifest.json; with the disk bucket, pictures go once each into the
-// shared pool backup/files/<sha256>. Every file a manifest names is a hard link (a copy across filesystems) taken while
-// the gate held, so nothing deleted later in the live layout takes it from the generation. With the R2 bucket the
-// manifest names pictures and archives where they are; removals wait until generations can no longer name them
-// (reconcile.ts). The copier pools named archives off-site before it writes backup/<id>/copied; a generation is
-// complete with both (src/server/db/README.md).
+// backup/<id>/ gets service/snapshots, then manifest.json last (docs/research/docker-port-plan.md §10.2).
+// Under the gate, hard-link/copy disk files so live deletion cannot remove them; pictures share backup/files/<sha256>.
+// R2 files stay in their bucket until no generation references them (reconcile.ts). Off-site archive pooling precedes
+// the copied marker; completeness requires both manifest and copied (src/server/db/README.md).
 
 export const MANIFEST = 'manifest.json';
 export const COPIED = 'copied';
@@ -29,22 +26,14 @@ const GENERATION = /^(\d+)-[0-9a-f]{8}$/;
 // bytes: the gzip on disk. expanded: what it gunzips to, measured on the plain file before it was gzipped (the gzip
 // trailer holds that only modulo 4 GiB).
 type Artifact = { path: string } & SnapshotArchive;
-// accounts: every account the service snapshot holds, with the snapshot its file is restored from: its current
-// baseline, or, once its operation holds a checkpoint, that checkpoint, which is newer than any baseline and holds the
-// file as it was at the fence: a restore cancels the operation before `armed` and from `armed` on finishes it, installing
-// the target over that file. It is the one copy the account can have, since past the fence no baseline is taken
-// (TAKES_BASELINE) and a finished rewind started a new timeline. Null only for a leaving one, whose deletion a restore
-// finishes.
-// pictureBytes: the sizes of its stored pictures, which a restore copies
-// into every account that holds one. snapshots: those baselines, every snapshot an operation pins, and the base of each
-// delta among them, each with `materialized`, an estimate of the file it restores to: a whole one's expanded, a delta's
-// plus its base's, short by what the base's indexes grow over the delta's rows (scripts/destroy.sh sizes a drill by it,
-// with its own margin). operations: those not done, and any not yet seen
-// ending. bucket: where pictures are, the pool for disk, the R2 store for r2. pictures: ids, which are their SHA-256.
-// snapshotStore: where every snapshots entry lives; disk means inside the generation, r2 names the source bucket.
-// The copier pools R2 archives under snapshots/<bucket>/<incarnation>/<id>.sqlite.gz on the backup remote.
-// pictures and migrations are the last two keys written, and bucket comes before them: deploy/rclone-backup.sh matches
-// that tail and the version, and keeps only a disk generation's pictures in its pool.
+// Restore accounts from checkpoint when present, else baseline; null marks leaving accounts whose deletion restore must finish.
+// Checkpoints hold fenced state: restore cancels pre-armed operations and finishes armed ones. TAKES_BASELINE prevents
+// post-checkpoint baselines; completed rewinds start a new timeline. pictureBytes is restored per owning account.
+// snapshots includes baselines, pinned snapshots and delta bases. materialized estimates expanded bytes (delta + base),
+// excluding index growth; scripts/destroy.sh adds its drill margin. operations includes unfinished/unverified operations.
+// bucket locates pictures (SHA-256 ids); snapshotStore locates archives, inside disk generations or in the named R2 bucket.
+// R2 archives are pooled remotely under snapshots/<bucket>/<incarnation>/<id>.sqlite.gz.
+// Write pictures/migrations last, after bucket: deploy/rclone-backup.sh parses this tail/version and pools disk pictures only.
 export type Manifest = {
   version: 2 | 3 | 4;
   snapshotStore: { kind: 'disk' } | { kind: 'r2'; bucket: string };
@@ -62,11 +51,8 @@ export type Manifest = {
 
 export const generationsDir = (dataDir: string) => join(dataDir, 'backup');
 
-// A link where the source and the backup share a filesystem, a copy where they do not (pictures may move to their own
-// volume). The copy is written under a .tmp-* name, synced and renamed, so every name here is whole: an existing
-// target holds the same content (snapshot files and pictures are named by what they hold) and is not hashed again. A
-// cut-off copy leaves only its .tmp-*, which the pool sweep (expireGenerations) or its generation's removal collects.
-// The caller syncs the directory.
+// Hard-link on one filesystem, otherwise sync a .tmp-* copy before renaming. Content-stable names let existing targets
+// skip hashing; interrupted temps are collected by pool/generation removal. The caller must sync the directory.
 async function place(source: string, target: string) {
   try {
     await link(source, target);
@@ -274,13 +260,9 @@ export async function namedArchives(dataDir: string): Promise<Map<string, number
   return named;
 }
 
-// A generation goes at RETENTION_MS, one without a manifest (cut off before it was written) after a day, and a whole one
-// that is neither among the two newest nor the newest of its UTC day once it has been copied off-site: every deploy
-// captures one, and of those only the latest two are kept for a rollback (ruled 2026-10-12). Then every picture in the
-// pool that no remaining disk generation names: an r2 one names pictures in the store, so the pool of the generations
-// before a switch to R2 empties as they expire. Runs inside the daily job, so no capture is writing.
-// A backup folder is thinned by the same rule (folder.ts); deploy/rclone-backup.sh prune applies it to a remote by hand:
-// change both together.
+// Expire at RETENTION_MS; incomplete generations after one day. Within retention keep the newest two for rollback
+// (user, 2026-10-12), each UTC day's newest and anything not copied off-site. Then remove pool files no disk generation names.
+// Run without concurrent capture. Keep folder.ts and deploy/rclone-backup.sh prune in sync with this retention rule.
 export const expireGenerations = (dataDir: string, now: number) => thinGenerations(generationsDir(dataDir), now);
 
 export async function thinGenerations(dir: string, now: number): Promise<{ removed: number; pictures: number }> {

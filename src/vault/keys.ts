@@ -5,8 +5,7 @@ import { formatRecoveryKey, parseRecoveryKey } from './recovery-key';
 export type VaultRecord = { passwordWrap: string; recoveryWrap: string };
 export type VaultKey = Uint8Array<ArrayBuffer>;
 export type Method = 'password' | 'recovery';
-// What the password or the recovery key yields: a proof, which is all the server sees, and the key
-// that unwraps the vault. HKDF keeps the two unrelated, so the proof reveals nothing about the key.
+// Server sees only proof; HKDF separates it from the vault-unwrapping key.
 export type Credential = { method: Method; proof: string; kek: CryptoKey };
 
 // Fixed in code rather than stored with the account: login derives the proof before the server has
@@ -15,8 +14,7 @@ const KDF = { memorySize: 64 * 1024, iterations: 3, parallelism: 1 };
 
 const wrapAad = (accountId: string, method: Method) => `risu-alpha/vault-key/v2/${accountId}/${method}`;
 
-// The only place a username is normalized. The password salt comes from this form, so the server
-// refuses any other instead of normalizing it differently.
+// Single username normalization used for password salt; the server rejects noncanonical names.
 export function canonicalUsername(text: string): string {
   return text.trim().normalize('NFC').toLowerCase();
 }

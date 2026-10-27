@@ -25,8 +25,8 @@ export function PerCharacter({ card, own, onChange }: { card: NamedCharacter; ow
   );
 }
 
-// switches: a chat's switches choose their own prompt, else follow the default. The mascot's and 토큰 절약's are the
-// account's default alone (design §6.11), so their menus set that default and have nothing to follow.
+// Chat task switches override/follow defaults. Mascot/preread pick the account default directly,
+// never a chat override (design §6.11).
 const TASKS = {
   translate: { noun: '번역', setting: 'translatePrompt', choose: translationPrompt, pane: null, switches: true },
   illustrate: { noun: '삽화', setting: 'illustratePrompt', choose: illustrationPrompt, pane: 'picture', switches: true },

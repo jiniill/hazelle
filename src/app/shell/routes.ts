@@ -384,8 +384,7 @@ export function toolsPage(route: Route): ToolsPage | 'list' | null {
   }
 }
 
-// Which shelf a route is inside: a character's id, null for 캐릭터 없이, or undefined outside every
-// shelf. A chat is inside its character's, which only the chat knows; undefined when it is not there.
+// null is 캐릭터 없이; undefined means no known shelf. Chat routes need their owner supplied as chatShelf.
 export function shelfOf(route: Route, chatShelf?: string | null): string | null | undefined {
   switch (route.kind) {
     case 'shelf':
@@ -406,12 +405,10 @@ export function enterShelf(shelf: Shelf<{ id: string }>, wide: boolean): Route {
   return wide && latest ? { kind: 'chat', id: latest.id } : { kind: 'shelf', character: shelf.id };
 }
 
-// On wide screens the library's pages show no 뒤로 at all (the sidebar beside them is the way back), so only phones
-// use their answer.
+// Library pages use this only on phones; wide layouts navigate through the sidebar.
 export function up(route: Below, chatShelf?: string | null): Route {
   switch (route.kind) {
-    // The route does not know a folder's parent: ← from inside one, here or on the settings lists below, goes to the
-    // top; browser back goes up a level.
+    // Routes lack folder parents: ← goes to the list root; browser back retains nesting.
     case 'gallery':
       return route.place === null ? HOME : { kind: 'gallery', place: null };
     case 'shelf':

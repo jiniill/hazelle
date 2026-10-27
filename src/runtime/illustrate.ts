@@ -29,9 +29,8 @@ import type { ObjectStore } from './store';
 import { pageAnswer } from './talk';
 import { chatPlace, receiptRow } from './usage';
 
-// 삽화 (design §6.6): per message per run, one scene call to the chat's 보조 model (or the 삽화 prompt's own) writes
-// as many scenes as the reply's length earns (model/illustration pictureCount), and each is one image call, in turn. The only writer of `illustration` objects but a backup's restore and a chat's copies,
-// a tool's pictures included (attachIllustration).
+// One scene call per message/run, then sequential image calls. Owns illustration writes, including tool pictures,
+// except backup restores and chat copies (design §6.6).
 
 export type ImageRoute = Route & { draws: Draws };
 
@@ -39,8 +38,7 @@ export type ImageRoute = Route & { draws: Draws };
 export const removeIllustration = (store: ObjectStore, id: string) => store.take('illustration', id);
 export const restoreIllustration = (store: ObjectStore, removed: Stored<'illustration'>) => store.restore(removed);
 
-// A tool's picture on a message version (Hazelle.Chat.picture), after the version's last paragraph. It replaces the one
-// that tool put on the version before, so a tool's own 다시 그리기 leaves one picture; the user's 삭제 still takes it.
+// Replace only this tool's prior picture on the version, anchored after its last paragraph; user deletion still applies.
 export async function attachIllustration(
   { store, files }: Pick<Deps, 'store' | 'files'>, chat: string, tool: Attached['tool'], at: { message: string; version: string }, bytes: Uint8Array<ArrayBuffer>, caption: string | null,
 ): Promise<ApiResult<null>> {
@@ -78,10 +76,8 @@ export const drawingModels = (connections: readonly Stored<'connection'>[]): Ima
     return draws ? connection.value.starred.filter(({ output }) => output?.includes('image')).map((model) => ({ connection, model, draws })) : [];
   });
 
-// no-image-model: no added model draws. image-model-gone: the one the switches name no longer does.
-// invalid: the scene writer answered, but not with a scene the format reads. undrawn: the image call failed or was refused.
-// file-refused: the server refused the picture (too large, blocked, or past the account's picture cap).
-// gone: the message or its version was deleted. empty: the version holds no text to draw from.
+// invalid means malformed scene, undrawn a refused/failed image call, file-refused an upload size/block/cap failure.
+// Keep missing selected models distinct from having no model; gone/empty refer to the target version.
 export type IllustrateFailure =
   | RouteFailure
   | { kind: 'prompt-missing'; own: boolean }
@@ -103,8 +99,8 @@ export type IllustrateFailure =
 
 // A scene being drawn, or one whose picture failed, which a retry draws again without another scene call.
 type Sketch = { scene: Scene; failure: IllustrateFailure | null };
-// By message, one run each. writing: its scenes are being written. failure: the run failed before it had a scene, so
-// it stands at the message's end. sketches: its scenes still to draw or failed; a saved picture takes a scene's place.
+// One run per message. Run-level failures have no scene and appear at message end;
+// sketches retain pending/failed scenes until saved pictures replace them.
 export type Drawing = { chat: string; version: string; writing: boolean; failure: IllustrateFailure | null; sketches: readonly Sketch[] };
 export type Illustrating = ReadonlyMap<string, Drawing>;
 
@@ -157,10 +153,8 @@ export class Illustrator {
     this.update(message, (drawing) => ({ ...drawing, sketches: failure === 'drawn' ? drawing.sketches.filter((each) => each.scene !== scene) : drawing.sketches.map((each) => (each.scene === scene ? { scene, failure } : each)) }));
   }
 
-  // scene: one the user changed (어떻게 바꿀까요?) or a failed one's, drawn with no scene call; the version's other
-  // failed scenes stay. auto: asked by a reply received here, whose scene a chat judged stuck refuses (evaluation's
-  // passive gate). 다시 그리기 is another draw: earlier pictures of the version stay. spend: the user agreed to a picture
-  // that may cost, as the switches' spend does for every draw.
+  // Retry edited/failed scenes without another scene call, retaining other failed scenes.
+  // Auto uses the passive stuck gate; manual redraw keeps earlier pictures. spend records explicit cost consent.
   draw(chat: string, message: string, version: string, { scene = null, auto = false, spend = false }: { scene?: Scene | null; auto?: boolean; spend?: boolean } = {}) {
     if (this.closed || this.aborts.has(message)) return;
     const abort = new AbortController();
@@ -298,9 +292,8 @@ export class Illustrator {
     return parsed.ok ? { scenes: parsed.scenes, receipt } : { kind: 'invalid', receipt, reason: parsed.reason };
   }
 
-  // The scenes of the chat's pictures for the shown version of each message up to the one drawn, by message, paragraph
-  // and time, each with its distance from the message drawn: what each figure was last drawn in (toldProfiles), and the
-  // last of them the picture the next follows on from (lastScene).
+  // Use selected-version scenes through the target, in message/paragraph/time order.
+  // Distances drive toldProfiles continuity; the latest scene drives lastScene.
   private drawnBefore(store: ObjectStore, chat: string, history: ReturnType<typeof fold>): Earlier[] {
     const order = new Map(history.map((message, index) => [shown(message).id, index]));
     const versions = standing(history);

@@ -4,9 +4,8 @@ import { IconButton } from '../controls/IconButton';
 import { hasFinePointer } from '../foundation/media';
 import { Menu, useMenuHandle, type MenuHandle } from './Menu';
 
-// The ⋯ of a screen's head or a row: what is done to the thing as a whole (사본 만들기, 기본으로 정하기, 삭제), named
-// '{of} 메뉴'. dot: something inside needs a look; handle: another press, such as the row's own, opens it too; place: a
-// message's tools open toward the story's roomier side (Menu's end).
+// Use whole-item actions here. dot marks pending attention; handle supports a second opener;
+// place chooses the roomier story side for message tools.
 export function MoreMenu({ of, dot, handle, place = 'below-end', children }: { of: string; dot?: boolean; handle?: MenuHandle; place?: 'below-end' | 'end'; children: ReactNode }) {
   const own = useMenuHandle();
   const menu = handle ?? own;
@@ -26,9 +25,8 @@ export function MoreMenu({ of, dot, handle, place = 'below-end', children }: { o
   );
 }
 
-// A kit item of the user's things (a card, a folder, a list row) opens the ⋯ it holds on a right-click too, at the
-// pointer. Only these: a message or a field keeps the browser's own menu for copying and spelling. With a mouse only,
-// so a touch screen's long press stays the browser's.
+// Right-click opens menus on kit cards/folders/rows only. Preserve browser context menus for messages,
+// fields and touch long-presses so copy/spelling remains available.
 export const MenuSlot = createContext<RefObject<MenuHandle | null> | null>(null);
 
 export function useMenuSlot() {

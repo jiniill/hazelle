@@ -5,18 +5,16 @@ import { READER_RESIZED, ROWS_RESIZED, type Seek } from '../ui';
 // band does not snap it down.
 export const atEnd = (distance: number, was: boolean) => distance < (was ? 48 : 1);
 
-// The message 보낸 자리에 멈추기 puts at the top once a reply shows: the user's message it answers, or after the model's own
-// message (응답 받기, 다시 생성 of one) the reply itself, since the message before it was read already. null until the
-// reply shows. 이어 쓰기 places none: it goes on under text already read.
+// Stay anchors at the answered user message, or at the new reply after assistant text.
+// Continuations anchor nothing: they append to already-read text. Null until the reply appears.
 export function anchorOf(messages: readonly { id: string; role: string }[], reply: string): string | null {
   const at = messages.findIndex(({ id }) => id === reply);
   if (at < 1) return null;
   return messages[at - 1]!.role === 'user' ? messages[at - 1]!.id : reply;
 }
 
-// stay (보낸 자리에 멈추기): a reply starting here puts anchor at the top, and from then on nothing
-// the story gains moves the view, not even at its end, nor raises the pill before a view's worth is unread below it,
-// until the pill takes it down (follow). The reader's own scroll raises the pill at once.
+// stay pins the reply-start anchor and ignores story growth. Raise the pill only after a view of unread text,
+// or immediately on reader scroll, until explicit follow.
 export function useFollow(count: number, streaming: boolean, anchor: string | null, stay: boolean) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -52,10 +50,8 @@ export function useFollow(count: number, streaming: boolean, anchor: string | nu
     seen.current = { count, streaming, anchor };
   });
 
-  // A reply grows between the renders of the story as it is revealed (useReveal), so the view follows its size too, a
-  // row's as soon as the story has it (ROWS_RESIZED); not a size the reader changed (Story sends READER_RESIZED), which
-  // moves the bottom without a scroll. The border box holds the room kept for the composer, which grows as it is typed
-  // in: the view at the end moves with that room even while stay holds it, since the room is not the story.
+  // Follow streamed row resizes (ROWS_RESIZED), not reader-driven picture changes (READER_RESIZED).
+  // Composer room belongs to the border box, not story: bottom follows it even during stay.
   useLayoutEffect(() => {
     const element = scrollRef.current;
     const content = element?.firstElementChild;

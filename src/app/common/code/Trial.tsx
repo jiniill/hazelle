@@ -23,8 +23,7 @@ const WAIT_MS = 400;
 // otherwise.
 type Owner = LoreOwner | null;
 
-// One editor's 시험해 보기: the chat it reads, kept while the editor stays mounted, and that chat's variables once a
-// panel has read them, which the editor's code language explains names from.
+// Keep the chosen chat for this editor mount; expose variables only after the trial panel reads them.
 type TrialChat = { owner: Owner; chat: string | null; choose: (chat: string | null) => void; read: (chat: ChatVariables | null) => void; variables: Variables };
 type LuaUnit = Extract<ScriptUnit, { kind: 'lua' }>;
 
@@ -71,9 +70,8 @@ function TrialChats({ owner, chat, onChange }: { owner: Owner; chat: string | nu
   );
 }
 
-// The chat a draft runs in: the sample, or the chosen chat as it stood when chosen; null while it is read. Its
-// variables, as 점검's 변수 tab reads them, go to the editor while the panel is open; a failed read leaves it the
-// 기본 변수 alone.
+// Capture the selected/sample chat at selection time; null while loading.
+// On read failure offer only character defaults, not invented chat values.
 function useTrialScope({ owner, chat, read: readVariables }: TrialChat): ChatScope | 'failed' | null {
   const session = useSession();
   const label = useTrialChats(owner).find((summary) => summary.id === chat)?.title ?? '예시 채팅';

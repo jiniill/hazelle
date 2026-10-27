@@ -15,9 +15,8 @@ type WrongPhase = { wrongPhase: true };
 
 export type SqlValue = string | number | null;
 
-// transaction(fn) rolls back when fn throws. wipe() deletes the file, kv included; the snapshots outlive it. A
-// snapshot is a point-in-time copy of the file, catalogued in the service database; an armed restore installs one
-// when the store next starts (db/account-db.ts).
+// Transactions roll back on throw; wipe deletes live data/kv but not catalogued snapshots.
+// Only db/account-db installs an armed snapshot on store start.
 export type StoreDb = {
   exec<T>(sql: string, ...binds: SqlValue[]): T[];
   transaction<T>(fn: () => T): T;
@@ -99,11 +98,9 @@ export class StoreRules {
       const until = query.bootstrap ? (query.until ?? head.rev) : null;
       // An operator wipe/restore can move revisions backwards. Never merge that account with a newer device snapshot.
       if (Math.max(query.since, query.known, until ?? 0) > head.rev) return { reset: true };
-      // A page stops at a row count or a body budget, whichever comes first, so a sync of many large
-      // objects never has to fit in the process's memory at once. The first row always fits. Rows past the
-      // budget come back without their bodies, only to tell whether more is waiting.
-      // Bound candidates before the window sum; an outer LIMIT still sums the rest of the account.
-      // The budget is bytes: LENGTH(body) counts characters and stops at a NUL, so a page could pass the budget.
+      // Bound rows and body bytes, always admitting the first row; over-budget rows omit bodies to signal more data.
+      // Limit candidates before the window sum, not outside it. Cast body to BLOB: text LENGTH counts characters
+      // and stops at NUL, undercounting the byte budget.
       const excluded = JSON.stringify(query.excluded);
       const pageRows = query.metadata ? METADATA_PAGE_ROWS : PAGE_ROWS;
       const rows = this.db.exec<Row>(
@@ -151,14 +148,10 @@ export class StoreRules {
     });
   }
 
-  // Every write in a batch takes the account's next rev, in the order given, in one transaction. An update keeps
-  // the object's parent: one naming another parent is bad input, not a conflict, since pulling and trying again could
-  // never make it fit. A deleted object stays as a row without a body, so other devices learn of the deletion by sync;
-  // writing it again with its current rev restores it (되돌리기).
-  // The same transaction keeps head.bytes, the bytes of the account's bodies, and holds what the account is billed
-  // (billed) under the cap the request read with its session: a batch that creates an object must fit under it, one
-  // that only changes or deletes objects under it plus FULL_MARGIN, and one that does not grow the account always
-  // passes, so a full account can still delete. A null cap is no cap.
+  // One transaction assigns revs in write order and updates head.bytes. Parent changes are bad input, not retryable conflicts.
+  // Deletions retain bodyless rows for sync; writing at their current rev restores them.
+  // Creates must fit the session cap; update/delete-only batches get FULL_MARGIN. Non-growing batches always pass
+  // so full accounts can delete; null means uncapped. Enforce billed usage, not body bytes alone.
   async batch(incarnation: string, timeline: string, writes: SealedWrite[], cap: number | null): Promise<Refused | { stale: true } | { refused: 'bad-input' | 'conflict' | 'storage-full' } | { revs: number[]; bytes: number; timeline: string }> {
     const life = await this.lifecycle(incarnation);
     if (!active(life)) return refusal(life);
@@ -255,9 +248,8 @@ export class StoreRules {
     return { unmarked: true };
   }
 
-  // installedFrom, installedOp: the snapshot the file was installed from and the operation that installed it, which with
-  // the mark's absence prove the rewind applied; the mark alone proves nothing, since a file installed from before the
-  // mark never held it.
+  // Require both this operation's installedFrom/installedOp and absent mark. Absence alone proves nothing:
+  // a pre-mark snapshot never held the mark.
   async marked(incarnation: string, operation: number): Promise<Refused | { marked: boolean; installedFrom: string | null; installedOp: number | null }> {
     const refused = await this.stored(incarnation);
     if (refused) return refused;
@@ -265,9 +257,8 @@ export class StoreRules {
     return { marked: this.db.kv.get(markKey(operation)) !== undefined, installedFrom: head?.installed_from ?? null, installedOp: head?.installed_op ?? null };
   }
 
-  // The phase is read from the service inside the call: a runner that lost the arming compare-and-set, or one that
-  // arrives after a cancel, must not rewind. The instruction itself is the operation's row at phase armed; the install
-  // happens when the store next starts (db/account-db.ts), so this only confirms it may.
+  // Reread service phase inside the call so stale/losing runners cannot rewind after cancellation.
+  // The armed row is the instruction; db/account-db installs it on restart.
   async arm(incarnation: string, operation: number, target: string): Promise<Refused | WrongPhase | { returned: string }> {
     const refused = await this.restoring(incarnation, operation);
     if (refused) return refused;
@@ -313,9 +304,8 @@ export class StoreRules {
     return this.life ?? this.exclusive(async () => this.life ?? this.load(incarnation));
   }
 
-  // Fails closed: only a read that answers no row means gone. The file was made by the signup or installed by a
-  // rewind, never here: an active account whose file is missing or unreadable is unavailable, not empty. Its timeline
-  // is in head before the first answer, so a just-rewound store never serves the old one.
+  // Only a confirmed absent service row means gone. Missing/corrupt/newer active files mean unavailable, never empty.
+  // Signup/restore create files, not wake. Set head.timeline before serving any rewound response.
   private async load(incarnation: string): Promise<Life | Unavailable> {
     let row: unknown;
     try {

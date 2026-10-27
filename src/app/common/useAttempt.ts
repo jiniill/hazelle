@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-// The task answers with the failure in words, or null when it went through. Its signal stops once the screen is left,
-// and what a task answers after that is not shown.
+// Tasks return failure text or null; abort on unmount and never display a late answer.
 export function useAttempt() {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);

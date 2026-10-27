@@ -96,8 +96,8 @@ export function readMsgpack(bytes: Uint8Array): unknown {
 const utf8Out = new TextEncoder();
 type Widths = [number | null, number, number];
 
-// What a .risup holds, each in its smallest standard form: maps of plain objects, arrays, strings, binary, numbers,
-// booleans and nil. A key whose value is undefined is left out, so null is the only nil written (ruling 9 rests on it).
+// Write smallest standard forms; omit undefined object fields, never turn them into nil.
+// Only explicit null becomes nil (preset export ruling 9).
 export function writeMsgpack(value: unknown): Uint8Array<ArrayBuffer> {
   const parts: Uint8Array[] = [];
   const head = (type: number, bytes: 0 | 1 | 2 | 4 | 8, set?: (view: DataView) => void) => {

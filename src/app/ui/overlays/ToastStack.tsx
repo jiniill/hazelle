@@ -24,8 +24,8 @@ export function ToastStack({ items, waiting, held: open, onHold: hold, floor }: 
   useFloor(holding.ref, floor, items.length > 0);
   // Each notice's own box: a short one is narrower than the stack.
   const [sizes, setSizes] = useState<ReadonlyMap<Key, { height: number; width: number }>>(() => new Map());
-  // One lasting ref per notice: a new one each render would detach and measure again, and render again, forever. It
-  // stays after a detach too, which StrictMode runs on every mount; the refs of notices gone are dropped here.
+  // Keep one ref per notice across renders/detach; new refs remeasure/rerender forever.
+  // StrictMode detaches on mount; only evict refs when the notice is gone.
   const refs = useRef(new Map<Key, (element: HTMLElement | null) => () => void>());
   for (const key of refs.current.keys()) if (!items.some((item) => item.key === key)) refs.current.delete(key);
   const measure = (key: Key) => {
@@ -107,9 +107,8 @@ export function useHold(held: boolean, hold: (held: boolean) => void) {
   const ref = useRef<HTMLDivElement>(null);
   const pointed = useRef(false);
   const focused = () => ref.current?.contains(document.activeElement) ?? false;
-  // A notice its own button took away takes the focus with it, and no blur reaches the stack: React drops the events of
-  // a node it detaches. The last notice leaving takes the pointer too, with no pointer leave. So both are read again
-  // after every render.
+  // Recheck focus/hover after render: removed focused notices emit no React blur,
+  // and removing the last hovered notice emits no pointerleave.
   useEffect(() => {
     if (!ref.current) pointed.current = false;
     if (held && !pointed.current && !focused()) hold(false);

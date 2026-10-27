@@ -5,13 +5,9 @@ import { evaluate, Runaway } from './cbs/evaluate';
 import type { Box } from './regex/scripts';
 import { contexts, renderChat, type ChatScope, type LuaDisplay, type Missed } from './render';
 
-// texts: each message's text as shown, its <style> blocks taken out. css: what those blocks and the packs'
-// backgroundHTML carry. As in Risu, it applies to every message of the chat, not only the one that carried it.
-// unfound: the asset names its tags found no picture for, backgroundHTML's included.
-// drawn: the display scripts, by place among the packs' regex, that drew a box in each message; boxes: each message's
-// boxes taken out of it (상태창 지정), their <style> blocks in css too. pass: whether the bot's Lua editDisplay pass
-// still has pending messages (lua). stopped: the bot's commands in a message or a backgroundHTML that ran away (renderChat); a
-// backgroundHTML that did is left out.
+// Extract styles from texts, status boxes and pack backgroundHTML into chat-wide css, as Risu does.
+// drawn indexes pack regex per message; boxes are the extracted 상태창 지정 output. unfound includes background assets.
+// pass means Lua editDisplay has pending messages; stopped records a Runaway, with runaway backgroundHTML omitted.
 export type Display = { texts: string[]; css: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
 
 export type DisplayWork = { items: Missed[]; staged: string[]; start: [string, string][] };
@@ -196,10 +192,8 @@ function formula(state: StateInline, silent: boolean) {
   return true;
 }
 
-// A tight list's hidden paragraphs keep their breaks.
-// A paragraph holding block-level HTML is the bot's markup that markdown read as text (a line indented with
-// non-breaking spaces starts no HTML block). It stays one paragraph joined by <br>, as Risu renders it: a <p> per line
-// wrapped the bot's elements apart, and an <input> no longer beside the panel its :checked ~ rule opens.
+// Preserve tight-list breaks and keep inline-parsed block HTML (e.g. NBSP-indented markup) in one paragraph with <br>.
+// Wrapping each line in <p> breaks sibling selectors such as an input's :checked ~ panel rule.
 const BLOCK_HTML = /^<\/?(?:div|p|fieldset|form|address|table|thead|tbody|tfoot|tr|td|th|section|article|aside|header|footer|nav|main|figure|figcaption|details|summary|ul|ol|li|dl|dt|dd|blockquote|center|h[1-6]|hr|pre)(?=[\s/>])/i;
 const holdsMarkup = (token: Token) => token.children!.some((child) => child.type === 'html_inline' && BLOCK_HTML.test(child.content));
 

@@ -2,8 +2,7 @@ import type { CacheDiff } from '../model/cache';
 
 const CELLS = 250_000;
 
-// Whole numbers and words, so a changed clock reads 22:15 → 23:36, not digits interleaved. Han and kana go one by one:
-// written without spaces, a word of them would be a whole sentence.
+// Diff whole numbers/words, but individual Han/kana characters; spacing-free text would otherwise be one huge token.
 const units = (text: string) => text.match(/\p{N}+|(?:(?![\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}])\p{L})+|\s+|[^]/gsu) ?? [];
 const size = (text: string) => Array.from(text).length;
 

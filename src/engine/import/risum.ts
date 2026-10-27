@@ -21,8 +21,7 @@ const RPACK = Uint8Array.from(
   (pair) => parseInt(pair, 16),
 );
 
-// Risu's RPack byte substitution, which .risum modules and .risup presets are written through. The table is a
-// permutation, so the encode half of rpack_map.bin is its inverse.
+// RPack table is a permutation; encode is its inverse. Keep .risum/.risup readers and writers aligned.
 export const unpack = (bytes: Uint8Array) => bytes.map((byte) => RPACK[byte]!);
 const PACK = new Uint8Array(256);
 RPACK.forEach((plain, packed) => (PACK[plain] = packed));
@@ -34,11 +33,8 @@ const HEADER = 6;
 
 const ASSET = 1;
 
-// A .risum as exportModuleLegacy writes it (src/ts/process/modules.ts): magic, version, a u32le length, then the
-// RPack'd JSON {type: 'risuModule', module}; then one block per entry of module.assets, in its order (a mark byte, a
-// u32le length, the RPack'd file), and a zero byte. Only the JSON and each block's head are read up front; a picture is
-// read from the file when asked, so a module of gigabytes never sits in memory. A file cut short keeps the blocks that
-// are whole.
+// Layout: magic/version/u32le JSON length, RPack JSON, ordered asset blocks (mark/u32le length/RPack bytes), zero.
+// Read metadata eagerly but asset bytes lazily: modules can exceed memory. Keep whole blocks from truncated files.
 export async function readRisum(source: FileSource): Promise<{ module: Record<string, unknown>; assets: (() => Promise<Uint8Array<ArrayBuffer>>)[] } | null> {
   if (source.size < HEADER) return null;
   const length = jsonLength(await source.read(0, HEADER));
@@ -80,10 +76,8 @@ function moduleOf(packed: Uint8Array): Record<string, unknown> | null {
   return isRecord(main) && main.type === 'risuModule' && isRecord(main.module) ? main.module : null;
 }
 
-// A .risum goes out in three parts, as exportModuleLegacy writes one: the head (magic, version, length, the JSON spaced
-// as Risu's is), one block per entry of module.assets, and the end. Risu fails the whole import on a block no entry
-// names, so the caller writes exactly as many blocks as module.assets lists, in its order. Each block is made on its
-// own, so a module of hundreds of megabytes never sits whole in memory.
+// Write head, individual asset blocks, then end; never buffer the whole module.
+// Block count/order must exactly match module.assets: Risu rejects even one unnamed block.
 export function risumHead(module: Record<string, unknown>): Uint8Array<ArrayBuffer> {
   const main = pack(new TextEncoder().encode(JSON.stringify({ module, type: 'risuModule' }, null, 2)));
   const bytes = new Uint8Array(HEADER + main.length);

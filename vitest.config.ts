@@ -1,7 +1,5 @@
 import { configDefaults, defineConfig } from 'vitest/config';
 
-// Kept apart from vite.config.ts so tests run in plain Node, without the client build's plugins.
-// Vitest stubs out stylesheets; one imported ?raw keeps its text, for src/app/ui/foundation/media.test.ts.
-// Agents' git worktrees live under .claude/, and each is a whole copy of the repository. e2e/ and shots/ are Playwright's.
-// maxWorkers: this machine has crashed from an unbounded run; four workers keep the suite under its memory.
+// Separate plain-Node test config from client plugins; preserve ?raw CSS for media.test.ts.
+// Exclude agent worktrees/Playwright suites and cap workers at four: unbounded runs exhausted this machine's memory.
 export default defineConfig({ assetsInclude: ['**/*.risup'], test: { maxWorkers: 4, setupFiles: ['src/runtime/testing/object-codec-setup.ts'], exclude: [...configDefaults.exclude, '.claude/**', 'e2e/**', 'shots/**', 'selfhost/**'], css: { include: [/\.css\?raw$/] } } });

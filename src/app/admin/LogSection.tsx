@@ -62,8 +62,7 @@ function detailOf({ action, detail }: LogRow): string | undefined {
   return JSON.stringify(detail);
 }
 
-// An account's row names it by the username in its detail, and 'service' and 'everyone' only restate the action, so
-// the target is printed where it is the row's one name: a share's, a file's or a report's id.
+// Print target only when it adds identity: account username is already in detail; service/everyone repeats the action.
 function codeOf({ target, detail }: LogRow): string | undefined {
   if (target === 'service' || target === 'everyone') return undefined;
   return typeof (detail as Record<string, unknown> | null)?.username === 'string' ? undefined : target;

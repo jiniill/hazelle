@@ -5,9 +5,8 @@ import type { PrereadParts, PrereadSettings } from '../model/settings';
 import { fingerprint } from './memory';
 import type { Assembled, From } from './pipeline';
 
-// 토큰 절약: the 보조 model reads the chosen parts of a request about to be sent and writes a brief, which the chat model
-// gets in their place. The idea is the Risu plugin pdf-pod's; this instruction was written fresh, without reading its
-// prompts (user ruling, 2026-10-19).
+// Preread replaces selected prompt parts with an auxiliary brief. Idea: Risu pdf-pod;
+// instruction written independently without reading its prompts (user, 2026-10-19).
 const INSTRUCTION = [
   'You prepare reading notes for another model, which will write the next reply in an ongoing story. It will not see the material you are given; it sees only your notes and the latest messages. Write notes that let it continue as if it had read everything.',
   '',
@@ -23,8 +22,7 @@ const INSTRUCTION = [
   'Do not continue the story, do not invent, do not judge the content, and do not address the reader. Write in the language of the material. Answer with the notes only.',
 ].join('\n');
 
-// The account's default 토큰 절약 prompt, added once (runtime/prompts). The instruction stays a system message ahead of
-// the material, so the PDF the call may pack (runtime/preread) holds the material alone.
+// Keep the instruction in a separate leading system message so PDF packing contains material only.
 export function prereadTaskPrompt(): PrereadPrompt {
   const named = (name: string | null = null) => ({ id: crypto.randomUUID(), name });
   return {
@@ -63,9 +61,8 @@ export function partOf(from: From): PrereadPart | null {
 
 const HEADINGS: Record<PrereadPart, string> = { chat: 'chat', system: 'system', lore: 'lorebook' };
 
-// Who a shortenable message is from one turn to the next. key: a chat message by its message id (the greeting, which
-// has none, by its place first); any other part by where it came from, counted when it comes from there more than once.
-// hash: what it said. message: a chat message's id.
+// Stable identity: chat message id (greeting uses its first position), otherwise origin + occurrence.
+// hash detects content edits; message retains the chat-message id.
 export type Covered = { part: PrereadPart; key: string; hash: string; tokens: number; message?: string };
 
 // taken: every message a brief may stand in for, in order, covered saying who each is. tokens: their o200k count.
@@ -110,11 +107,9 @@ export function prereadPlan(sent: Pick<Assembled, 'messages' | 'parts'>, { parts
 
 const held = ({ key, hash }: Covered) => `${key}\n${hash}`;
 
-// What an earlier brief still does for this request. replaced: the taken messages it stands in for; uncovered: the o200k
-// tokens of the taken ones it does not, which go raw. stale: it says what the chat no longer does, a covered chat message
-// gone from the chat (present: the chat's message ids) or changed, or a covered system message changed or gone. A chat
-// message the budget left out is not gone; nor is a lorebook entry that did not fire: lore comes and goes with its
-// keywords, and a fact the brief still holds does no harm.
+// Changed/deleted covered chat/system content makes a brief stale. Budget-omitted messages are not deleted.
+// Inactive lore is not stale either: keywords come and go, and retained facts are harmless.
+// uncovered counts raw o200k tokens not replaced by the brief.
 export function coverage(sent: Pick<Assembled, 'messages' | 'parts'>, plan: PrereadPlan, covered: readonly Covered[], present: ReadonlySet<string>): { replaced: number[]; uncovered: number; stale: boolean } {
   const now = new Map(identities(sent).flatMap((who) => (who ? [[who.key, who.hash] as const] : [])));
   const stale = covered.some(({ part, key, hash, message }) =>
@@ -143,9 +138,8 @@ export function placeBrief(sent: Assembled, replaced: readonly number[], brief: 
   return { ...sent, messages, parts };
 }
 
-// What the brief saved on the chat model's input: the tokens it took out (taken, negative when the brief was longer) at
-// that model's input rate, less what its own call cost on the turn it was made (spent, nothing on a turn that reused
-// it). null when either is unknown, or they are in different units, which are never summed.
+// Savings use the chat input price minus the brief's call cost (zero when reused); longer briefs can save negatively.
+// Unknown costs or unlike units yield null, never a fabricated total.
 export function savedCost(taken: number, price: Model['price'], unit: Cost['unit'], spent: Cost | null): Cost | null {
   const input = price && priceCost(price, { inputTokens: Math.abs(taken), outputTokens: 0, reasoningTokens: null, cachedInputTokens: null, cacheWriteInputTokens: null }, unit);
   if (!input || !spent || spent.unit !== unit) return null;

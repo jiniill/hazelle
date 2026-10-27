@@ -24,7 +24,5 @@ const readAtLeast = (least: number) => (draft: string): number | null => {
   return typed.ok && typed.value >= least ? typed.value : null;
 };
 
-// How many of a thing: at least one.
 export const readCount = readAtLeast(1);
-// How many where none is a value too.
 export const readWhole = readAtLeast(0);

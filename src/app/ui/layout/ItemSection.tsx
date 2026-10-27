@@ -6,10 +6,8 @@ import styles from './ItemSection.module.css';
 
 type Props = {
   title: string;
-  // The title renames the thing, as NavBar's does.
   rename?: NavBarProps['rename'];
   note?: string;
-  // MenuItems for the thing as a whole, under a ⋯ by its title, as NavBar's menu.
   menu: { of: string; items: ReactNode };
   children: ReactNode;
 };

@@ -1,10 +1,7 @@
-// Run on the Risu web page, pasted into its console or as a bookmark: Risu keeps the pictures inside messages only in
-// that browser (IndexedDB inlay/inlay, written by localforage, a value's data a Blob or, for old items, a data URL).
-// It downloads them as one file whose layout engine/import/backup.ts readInlays reads, so the two change together:
-// records of u32 name length, name, u32 data length, data, little-endian; inlay_skipped.json first, naming the video and
-// audio left out; then inlay_<id> for each picture and for each signature, its item as JSON. The parts go into one Blob,
-// never one string, so thousands of pictures are not copied into memory at once. Plain browser JavaScript, as it runs
-// unbuilt.
+// Run unbuilt on the Risu page as console code/bookmark. IndexedDB inlay/inlay holds Blob or legacy data-URL bytes.
+// Keep layout synchronized with engine/import/backup readInlays: little-endian u32 name length/name/u32 data length/data;
+// inlay_skipped.json first for omitted audio/video, then inlay_<id> picture/signature JSON.
+// Build one Blob from parts, never concatenate all picture bytes into a string.
 export const INLAY_EXPORT = `(async () => {
   const text = new TextEncoder();
   const u32 = (value) => {

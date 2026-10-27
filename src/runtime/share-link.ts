@@ -4,8 +4,7 @@ import { SHARE_KEY } from '../vault/shares';
 import { api, type ApiResult } from './api';
 import type { ObjectStore } from './store';
 
-// A share link's life on the server: its address, its state, cutting it, counting and reporting it. What a link carries
-// is runtime/share, which needs the charx writer; removal cuts a character's links from here without it.
+// Separate link lifecycle from runtime/share content/charx dependencies so permanent removal can cut links cheaply.
 
 export const shareLink = (origin: string, id: string, key: string) => `${origin}/s/${id}#${key}`;
 

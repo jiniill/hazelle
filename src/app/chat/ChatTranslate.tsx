@@ -50,8 +50,7 @@ export function ChatTranslate({ translate, translation, card, note, onChange, on
   );
 }
 
-// Each note's first line, named as the help names it, so the two notes are told apart. Not model/chat's firstLine: that
-// strips tags from message HTML, and a note is plain text where `<char>` is meant literally.
+// Notes are plain text: never use model/chat firstLine, which would strip literal <char> as HTML.
 export function notePreview(global: string | undefined, own: string | undefined): string[] {
   const line = (name: string, note: string | undefined) => {
     const first = (note ?? '').split('\n').map((each) => each.trim()).find(Boolean);

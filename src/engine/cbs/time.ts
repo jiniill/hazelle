@@ -48,8 +48,7 @@ export function calendarDate(ms: number, timeZone: string): string {
 
 const pad = (value: number, width = 2) => String(value).padStart(width, '0');
 
-// Every token is read in one pass: replacing them one after another, as Risu does, lets a later token
-// such as A rewrite the text an earlier one wrote (August).
+// Tokenize once: sequential replacements let later tokens rewrite earlier output (A in August).
 export function formatTime(format: string, ms: number, timeZone: string): string {
   const { year, month, day, hour, minute, second, weekday } = partsOf(ms, timeZone);
   const tokens: Record<string, () => string> = {

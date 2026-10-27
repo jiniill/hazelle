@@ -11,8 +11,7 @@ import styles from './Swatches.module.css';
 // menu: MenuItems for the look, under a ⋯ by its name.
 export type Swatch = Scheme & { name: string; font: Reading['font']; size: number; pressed: boolean; onPick: () => void; menu?: ReactNode };
 
-// Each look as a card drawn in its own scheme and face whatever the app's, the sample in it; the current one pressed.
-// onMove: the cards can be dragged into another order; to is the index a card ends at.
+// Render each swatch in its own scheme/font, independent of app appearance. onMove uses the final card index.
 export function Swatches({ label, sample, items, onMove }: { label: string; sample: string; items: Swatch[]; onMove?: (from: number, to: number) => void }) {
   const order = useDragOrder(onMove ?? (() => {}), 'x');
   return (

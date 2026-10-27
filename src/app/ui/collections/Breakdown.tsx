@@ -2,7 +2,6 @@ import styles from './Breakdown.module.css';
 
 type Part = { label: string; value: string; mark: 'accent' | 'striped' | 'plain' | 'outline' };
 
-// When every share is known, a bar with each part's fraction of it, in the parts' order; total names the whole above it.
 export function Breakdown({ parts, shares, total }: { parts: Part[]; shares: number[] | null; total?: { label: string; value: string } }) {
   return (
     <div className={styles.breakdown}>

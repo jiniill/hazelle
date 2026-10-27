@@ -15,8 +15,7 @@ export function previousReset(at: number): number {
   return Date.UTC(reset.getUTCFullYear(), month, Math.min(reset.getUTCDate(), last), reset.getUTCHours(), reset.getUTCMinutes(), reset.getUTCSeconds(), reset.getUTCMilliseconds());
 }
 
-// turn: the account's group's turn, when the connection has groups that take turns; its use is the window both allow.
-// null where an input is unknown, never a figure made up for it.
+// Intersect the allowance window with the group turn; unknown inputs stay null, never invented figures.
 export function pace(meter: Meter, now: number, turn: { start: number; end: number } | null): Pace | null {
   if (meter.kind !== 'left' || meter.limit === null || meter.limit <= 0 || meter.resets === null || typeof meter.resets === 'string') return null;
   let start = previousReset(meter.resets.at);

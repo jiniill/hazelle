@@ -103,8 +103,8 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
     });
   }
 
-  // A model the list does not name yet (a new release) is added by its id alone, knowing nothing of it; a listed id adds
-  // the listed model, and one added already but no longer listed is copied from what its entry knows.
+  // Unknown ids add unknown capabilities; listed ids use catalog data.
+  // Copies of delisted models retain the existing entry's known values.
   function addById(modelId: string) {
     setAdding(false);
     add((catalog?.ok ? catalog.models.find((model) => model.id === modelId) : undefined) ?? entries.find((entry) => entry.id === modelId) ?? bareModel(modelId));

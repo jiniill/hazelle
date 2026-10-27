@@ -3,8 +3,7 @@ import { createElement, type ReactNode } from 'react';
 import { Link } from '../controls/Link';
 import styles from './Written.module.css';
 
-// No HTML, pictures or tables: a writer's text never puts markup or an outside image on a reader's screen. A single
-// line break stays a break, as when posts were plain text.
+// Never enable HTML/images/tables: authored posts cannot inject markup or external pictures. Preserve single line breaks.
 const md = new MarkdownIt({ html: false, breaks: true, linkify: true, typographer: false }).disable(['image', 'table']);
 md.linkify.set({ fuzzyLink: false, fuzzyEmail: false });
 
@@ -42,12 +41,10 @@ function render(tokens: Token[]): ReactNode[] {
   return root.children;
 }
 
-// What someone wrote for others to read, such as a post or a comment, as markdown.
 export function Written({ text }: { text: string }) {
   return <div className={styles.written}>{render(md.parse(text, {}))}</div>;
 }
 
-// The words of a markdown text without its marks, for a line that shows only the start of it (PostCard's excerpt).
 export function plainText(text: string): string {
   return md.parse(text, {}).filter((token) => token.type === 'inline').map((token) => token.children!.filter((child) => child.type === 'text' || child.type === 'code_inline').map((child) => child.content).join('')).join(' ');
 }

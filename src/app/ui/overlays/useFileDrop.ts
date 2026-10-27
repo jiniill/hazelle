@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
-// The screens that take dropped files of their own, in the order mounted: while one is, the app-wide drop stands aside,
-// and only the last takes a drop, as an editor's 에셋 opened in a panel beside a chat that takes pictures.
+// Last mounted screen drop owns files; app-wide import stands aside while any screen-specific drop exists.
 const screens: symbol[] = [];
 
-// A drag enters the next element before it leaves the last, so only a leave from the element last entered means it left
-// the page or was cancelled. Content replaced under the pointer, as a streaming reply is, gets its leave sent to a node
-// no longer in the page; DropOverlay takes the pointer so the element under it stays put.
-// scope 'screen': a screen's own drop, such as an editor's 에셋 taking pictures, which the app's import would read as cards.
+// dragenter precedes dragleave, so only the last-entered element leaving ends the drag.
+// DropOverlay stabilizes that element while streaming replaces content. screen scope bypasses global card import.
 export function useFileDrop(onDrop: (files: File[]) => void, scope: 'app' | 'screen' = 'app'): boolean {
   const [dragging, setDragging] = useState(false);
   const latest = useRef(onDrop);
@@ -58,8 +55,7 @@ export function useFileDrop(onDrop: (files: File[]) => void, scope: 'app' | 'scr
   return dragging;
 }
 
-// A folder brings every file under it, in its folders too. readEntries hands a folder out a batch at a time (100 in
-// Chromium), so it is asked again until it hands none.
+// Read directory batches until empty (Chromium caps each at 100), including nested folders.
 export async function droppedFiles(entries: readonly (FileSystemEntry | File)[]): Promise<File[]> {
   const files: File[] = [];
   for (const entry of entries) {

@@ -12,28 +12,26 @@ export class ConnectorError extends Error {
 
 export type Endpoint = { baseUrl: string; protocol: Protocol };
 
-// A built-in connection type fixes the endpoint, so baseUrl and protocol are set only on a generic connection.
-// Added models are kept as catalog snapshots, so pickers and requests need no catalog fetch first.
-// accounts holds exactly one account and turns is null, unless the type is a pool; a pool always has turns.
-// retries: how many times a try that failed for a moment is sent again (runtime/connections retriesOf), absent to follow
-// the account's shared count; 0 sends each call once. A model's 설정 묶음 can override it in turn.
 export type Connection = {
   type: string;
   label: string;
+  // Only generic connections set these; built-in types own their endpoint.
   baseUrl: string | null;
   protocol: Protocol | null;
+  // Non-pools hold one account and no turns; pools always have turns.
   accounts: Account[];
   turns: Turns | null;
+  // Catalog snapshots keep pickers and requests independent of a catalog fetch.
   starred: Starred[];
+  // Absent follows the account; 0 disables retries. A model's profile can override this (retriesOf).
   retries?: number;
 };
 
 // name: who signed in, shown only on 연결; the label stays the type's own. A pasted key names no one.
 export type Account = { id: string; secret: string; name?: string };
 
-// Groups take turns by the month, switching on day (1–28) in local time; their order is the turn order, and the
-// accounts in a group are in pick order. Every account is in exactly one group. anchor: the group whose turn cycle
-// (model/turns cycleOf) was.
+// Groups rotate monthly on local day 1–28; each account belongs to exactly one, in pick order.
+// anchor identifies the group at the stored cycle (model/turns cycleOf).
 export type Turns = { day: number; groups: Group[]; anchor: { group: string; cycle: number } };
 export type Group = { id: string; name: string; accounts: string[] };
 
@@ -62,39 +60,44 @@ export type Model = {
   vendor?: string;
 };
 
-// profile: the 설정 묶음 it uses; without one, the default 묶음. label: the user's name for the entry; absent, the catalog's
-// name shows. entry: only on a further copy of a model already added, `#` and an id of its own. pictures: the user's word
-// that a model whose inputs the catalog leaves unknown sees pictures (seesPictures).
-// The fields an entry owns beside the catalog's snapshot: a refresh keeps them, and a snapshot taken from an entry leaves
-// them out.
-type Own = { profile: string; entry: string; label: string; pictures: true };
+// Preserved on catalog refresh; excluded from snapshots.
+type Own = {
+  // Absent in Starred uses the default profile.
+  profile: string;
+  // Only additional copies have their own key: `#` followed by an id.
+  entry: string;
+  label: string;
+  // Used only when catalog inputs are unknown (seesPictures).
+  pictures: true;
+};
 const OWN: (keyof Own)[] = ['profile', 'entry', 'label', 'pictures'];
 export type Starred = Model & Partial<Own>;
 
 export const ownOf = (model: Starred): Partial<Own> => Object.fromEntries(OWN.flatMap((field) => (model[field] === undefined ? [] : [[field, model[field]]])));
 export const snapshotOf = (model: Starred): Model => Object.fromEntries(Object.entries(model).filter(([field]) => !(OWN as readonly string[]).includes(field))) as Model;
 
-// The one key every ModelRef names an entry by. Not a legacy fallback: a model's first entry needs no id of its own, so
-// every reference stored before copies existed still names it.
+// The first entry uses the model id; copies use their own key. Existing ModelRefs keep naming the first entry.
 export const entryKey = (model: Pick<Starred, 'id' | 'entry'>) => model.entry ?? model.id;
 export const entryName = (model: Pick<Starred, 'name' | 'label'>) => model.label ?? model.name;
 export const entryOf = (connection: Pick<Connection, 'starred'>, key: string) => connection.starred.find((model) => entryKey(model) === key);
 export const entriesOf = (connection: Pick<Connection, 'starred'>, id: string) => connection.starred.filter((model) => model.id === id);
 export const entryTerms = (model: Starred) => [entryName(model), model.name, model.id];
 
-// cache: the prompt up to and including this message is a cache point. Only a request whose model settings turn
-// caching on sends it, and a codec never puts the field itself on the wire.
-// pictures: shown to the model with a user message's text, each codec in its own wire shape. Sent only to a model that
-// sees pictures (seesPictures); a request carrying them to any other is refused before sending.
-// A message with pictures may have no text, and a codec then sends none.
-// inlays: the chat's inlay rows (their ids) the message shows the model, which runtime/pictures turns into pictures
-// just before the request leaves; no codec reads it. A turn carries these, not the bytes, through the evaluation
-// worker and the bot's scripts.
-// document: words the codec sends as a file of its own (Codec.pack), ahead of the pictures; set only by its pack.
-export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string; cache?: true; document?: string; pictures?: InputPicture[]; inlays?: string[] };
+export type ChatMessage = {
+  role: 'system' | 'user' | 'assistant';
+  // Picture-only messages omit text on the wire.
+  content: string;
+  // Cache through this message, only when enabled; codecs translate this marker, never send it verbatim.
+  cache?: true;
+  // Set only by Codec.pack; sent as a file ahead of pictures.
+  document?: string;
+  // Refused before sending unless seesPictures accepts the model; encoded by the codec.
+  pictures?: InputPicture[];
+  // Row ids, not bytes, cross the worker and scripts. runtime/pictures resolves them before codecs run.
+  inlays?: string[];
+};
 // type: the media type; data: the bytes as base64.
 export type InputPicture = { type: string; data: string };
-// A model whose catalog does not say takes no picture unless the user said it does; what a catalog says wins over that.
 export const seesPictures = (model: Pick<Starred, 'input' | 'pictures'>) => (model.input === null ? model.pictures === true : model.input.includes('image'));
 export const carriesPictures = (message: ChatMessage) => (message.pictures?.length ?? 0) > 0;
 export type ChatRequest = { model: Model; messages: ChatMessage[]; settings: ModelSettings };
@@ -108,8 +111,7 @@ export type Usage = {
   reasoningTokens: number | null;
 };
 
-// reported: the provider said what the reply cost. price-list: worked out from the model's price, which can fall behind
-// the provider's, so it is shown as an estimate.
+// price-list is an estimate: catalog prices can lag behind the provider's.
 export type Cost = { unit: 'usd' | 'credit'; amount: number; source: 'reported' | 'price-list' };
 
 // Units are never summed together.
@@ -122,7 +124,6 @@ export type Meter =
 export type MeterUnit = 'usd' | 'credit' | 'requests' | 'tokens' | 'concurrency' | 'percent';
 export type MeterReset = 'daily' | 'weekly' | 'monthly' | { at: number };
 
-// plan: the subscription the same answer names, shown beside the account; null where it names none.
 export type MeterRequest = { request(secret: string): HttpRequest; parse(payload: unknown): Meter[] | null; plan?(payload: unknown): string | null };
 
 export type Phase = 'text' | 'reasoning';
@@ -132,9 +133,8 @@ export type StreamFacts = { rawUsage: Record<string, unknown>; finishReason: str
 
 export type Terminal = { state: 'completed' } | { state: 'failed'; error: string; code?: string };
 
-// How a cache point reaches the wire: cache_control on the message's text (Anthropic's shape, which OpenRouter also
-// reads in chat completions), a field of the provider's own on the message, or one prompt_cache_key for the cached
-// prefix, which marks no point at all (OpenAI's prefix caching).
+// Cache encoding: text-block cache_control, a provider-specific message field, or prompt_cache_key.
+// A key routes prefix caching but marks no point.
 export type CacheMark = { kind: 'part' } | { kind: 'message'; field: string } | { kind: 'key' };
 // accepted null: whether the model reads it is not known; it is sent all the same.
 export type CacheWay = { mark: CacheMark; accepted: Accepts };
@@ -142,8 +142,7 @@ export type CacheWay = { mark: CacheMark; accepted: Accepts };
 // A connection type never re-implements a wire format; it adds to one through its own hooks.
 export type Codec = {
   authHeaders(secret: string): Record<string, string>;
-  // Requests are built without the credential, which is added last, so a request that cannot be built is refused
-  // before a credential is fetched.
+  // Build before fetching credentials; add authentication only after the build succeeds.
   listModels(endpoint: Endpoint): HttpRequest;
   // null when the payload is not a model list at all, which is not the same as an empty one.
   parseModels(payload: unknown): Model[] | null;
@@ -153,9 +152,9 @@ export type Codec = {
   // The wire sends every system message ahead of the others (Messages' system field), so a provider's cache reads them
   // first, whatever their place in the prompt.
   systemFirst: boolean;
-  // fields are the connection type's own, laid over the format's body. mark: how the route writes a cache point.
-  // PDF로 보내기, where the format has it: rewrites the messages sending() hands chat, after its cache points.
+  // Runs after cache points are assigned, before chat builds the request.
   pack?(messages: ChatMessage[], pdf: Pdf): ChatMessage[];
+  // fields override the format's body; mark is the route's cache encoding.
   chat(endpoint: Endpoint, request: ChatRequest, fields: Record<string, unknown>, mark: CacheMark | null): HttpRequest;
   read(event: unknown, facts: StreamFacts, append: (phase: Phase, text: string) => void): void;
   terminal(event: unknown): Terminal | null;
@@ -165,27 +164,23 @@ export type Codec = {
   // The provider ended the reply by refusing it (a safety filter, most often), with or without text before it.
   refused(finishReason: string): boolean;
   usage(raw: Record<string, unknown>): Usage;
-  // null for a format with no embeddings.
   embeds: Embeds | null;
 };
 
 export type EmbedPurpose = 'query' | 'document';
 
-// Built from the format; whether a connection type serves it is the type's (ConnectionType embeds). as: what the texts
-// are for, which retrieval-tuned models embed differently; a format with no such field drops it, and fields, the
-// connection type's own (ConnectionType embedPurpose), are laid over the body. parse answers null for a body that is not
-// this format's embedding answer, else a vector per text, in order; raw is the usage as sent, which a type's cost reads.
-// perRequest: the most texts one request carries; null for a whole call's in one.
+// Format support alone is insufficient: ConnectionType.embeds decides provider support.
 export type Embeds = {
+  // Maximum texts per request; null sends the whole call at once.
   perRequest: number | null;
+  // Omit as if unsupported by the format; provider fields override the body (embedPurpose).
   request(endpoint: Endpoint, model: Model, texts: string[], as: EmbedPurpose | null, fields: Record<string, unknown>): HttpRequest;
+  // One vector per input, in order; null for an invalid reply. Provider cost hooks read raw usage.
   parse(payload: unknown, count: number): { vectors: number[][]; usage: Usage; raw: Record<string, unknown> } | null;
 };
 
-// Every hook is optional: without one, the codec's default answers, exactly as for a connection described by hand.
-// models: the type's whole list, for a provider with none to fetch (Voyage AI). A type that speaks no chat format has no
-// endpoint, and its models only draw. endpointFor: an endpoint the account's own key names (Vertex AI's project), read
-// from the secret of a type that is no pool; null for a secret that is not such a key.
+// Absent hooks inherit the codec. Static models replace fetching; image-only types have no chat endpoint.
+// endpointFor reads a non-pool secret (e.g. Vertex project), returning null for an invalid key.
 export type ConnectionType = TypeHooks &
   (
     | { endpoint: Endpoint; endpointFor?: never; models?: Model[] }
@@ -208,9 +203,7 @@ type TypeHooks = {
   major?: true;
   description: string;
   keyPage?: string;
-  // The secret where it is no one-line API key: its name on 연결, how many lines its field takes, and the files it can
-  // be read from (an input accept list). parts: the same secret typed as separate values, which some tools hand out
-  // one by one, folded under its label; join makes the secret of them, '' while one it needs is missing.
+  // Multiline/file secrets may also expose folded parts; join returns empty until required parts are filled.
   keyForm?: { label: string; lines: number; placeholder: string; accept: string; parts?: KeyParts };
   routes?: Partial<Record<Protocol, string>>;
   // Absent for a type the user connects by signing in: there is no key to paste.
@@ -254,20 +247,29 @@ type TypeHooks = {
   embedPurpose?: (as: EmbedPurpose | null) => Record<string, unknown>;
 };
 
-// Half price for a slower answer (design §6.7). rates: what each of the model's price rates is multiplied by once the
-// lane served the call, never because it was asked for. accepted: whether the model takes the lane; null where its
-// catalog does not say. tier: the same call at a slower service tier, asked for with fields laid over the body, headers
-// laid over the request's, or both; the reply's reported tier (StreamFacts tier) equal to served is what says the lane
-// served it; busy, whether a refusal (its status and the provider's code, where it names one) is the lane having no
-// room for the call now, which the same call off the lane would not meet. batch: the whole reply submitted as a batch of
-// one and waited for; an answer read from the batch is one the lane served.
-export type Discount = { rates: DiscountRates; accepted: Accepts } & ({ lane: 'tier'; fields?: Record<string, unknown>; headers?: Record<string, string>; served: string; busy: (status: number, code: string | null) => boolean } | { lane: 'batch'; batches: Batches });
+export type Discount = {
+  // Multiply prices only when the lane served the call, never merely because it was requested.
+  rates: DiscountRates;
+  // null means the catalog does not say.
+  accepted: Accepts;
+} & (
+  | {
+    lane: 'tier';
+    // Override the request body and headers.
+    fields?: Record<string, unknown>;
+    headers?: Record<string, string>;
+    // Must match the reply's StreamFacts.tier to apply rates.
+    served: string;
+    // Only capacity refusals specific to this lane, not failures a regular call would also meet.
+    busy: (status: number, code: string | null) => boolean;
+  }
+  // One request per batch; an answer from it qualifies for rates.
+  | { lane: 'batch'; batches: Batches }
+);
 export type DiscountRates = Record<'input' | 'output' | 'cacheRead' | 'cacheWrite', number>;
 
-// Every request is built without the credential, which is added last (registry withCredential), as for a chat. key: the
-// request's own name in the batch, which its answer is found by. submit takes the codec's request for the whole reply
-// (asked for unstreamed). submitted and ended answer null for a payload that is not this lane's batch; answer, for a
-// results body that holds no answer for key.
+// Build unauthenticated, then registry withCredential authenticates. submit takes an unstreamed codec request.
+// key pairs requests/results; submitted/ended return null for foreign payloads, answer for a missing result key.
 export type Batches = {
   submit(endpoint: Endpoint, model: Model, request: HttpRequest, key: string): HttpRequest;
   submitted(payload: unknown): string | null;
@@ -282,9 +284,8 @@ export type Batches = {
 // window ran out first. Neither is billed.
 export type BatchAnswer = { kind: 'reply'; payload: unknown } | { kind: 'failed'; detail: string } | { kind: 'canceled' } | { kind: 'expired' };
 
-// center: where a character stands, 0–1 from the top left. A model that places no one gets the characters' prompts
-// joined into the main one by its connector. steps, scale (prompt guidance), rescale (guidance rescale) and sampler (an
-// id of Draws.samplers): null for the model's own, which its connector holds.
+// center uses 0–1 coordinates from top left. Connectors without placement merge character tags into the main prompt.
+// Null generation controls use connector-held model defaults.
 export type PictureRequest = {
   model: Model;
   prompt: string;
@@ -301,16 +302,15 @@ export type PictureRequest = {
 
 export type Picture = { bytes: Uint8Array<ArrayBuffer>; type: string };
 
-// Filled by a connection type whose models draw (Model.output holds 'image'). The request is built without the
-// credential, which authHeaders adds last, as for a chat. parse answers null for a body that holds no picture.
+// Image-output hook: build without credentials, then add authHeaders; parse null means no picture in the body.
 export type Draws = {
   // The samplers a request may name, the default first.
   samplers: readonly { id: string; label: string }[];
   request(picture: PictureRequest): HttpRequest;
   authHeaders(secret: string): Record<string, string>;
   parse(body: Uint8Array<ArrayBuffer>, contentType: string | null): Promise<Picture | null>;
-  // Why this picture costs the account right now, asked with the stored credential before each draw; null for one that
-  // costs nothing. A picture not known to be free waits for the user's press; without this hook every picture is one.
+  // Check cost with stored credentials before every draw. Only known-free pictures bypass user consent;
+  // without this hook every picture requires consent.
   free?: { request(secret: string): HttpRequest; costs(payload: unknown, picture: PictureRequest): Costs | null };
 };
 

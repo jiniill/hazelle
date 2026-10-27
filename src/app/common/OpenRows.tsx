@@ -4,8 +4,7 @@ import { useToast } from '../toast';
 import { Button, ListItem, Row, Stack, Tag, Text } from '../ui';
 import { withParticle } from './particles';
 
-// A list whose rows open in place: a pack's scripts one at a time, a lorebook's entries several at once (they are read
-// and copied side by side; a ruling, not a limit of the piece).
+// Script editors open one row; lore opens several for side-by-side reading/copying (user ruling, not a kit limit).
 export function useOpenRows(several = false) {
   const toast = useToast();
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());

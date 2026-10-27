@@ -4,13 +4,11 @@ import { Button } from './Button';
 
 type Props = { accept: string; multiple?: boolean; icon?: LucideIcon; size?: 'sm' | 'lg'; busy?: boolean; disabled?: boolean; onFiles: (files: File[]) => void; children: ReactNode };
 
-// iOS and iPadOS grey out every file whose extension they have no type for (.charx, .risum, .risup), so there a list
-// that names extensions picks nothing; the picker shows every file and the importer turns down the wrong ones.
-// iPadOS Safari reports itself as a Mac, told apart by its touch points.
+// Omit extension filters on iOS/iPadOS: unknown .charx/.risum/.risup types become unselectable.
+// Importer still validates; desktop-reporting iPads are identified by touch points.
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 
-// Call it in the press itself: the picker opens only on the press's own activation. The input is put in the document
-// while it is open, since some mobile browsers open no picker for one outside it.
+// Open inside the original press activation; attach input while picking for mobile browsers that require it.
 export function pickFiles(accept: string, multiple: boolean, onFiles: (files: File[]) => void) {
   const input = document.createElement('input');
   input.type = 'file';

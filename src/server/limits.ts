@@ -71,15 +71,12 @@ export function relayBudget(bytes = RELAY_DAILY.bytes, hosts = RELAY_DAILY.hosts
   };
 }
 
-// One process holds every picture upload until its bytes are on disk, and every provider call's body while it is read
-// and parsed (calls.ts), so what it holds at once is bounded by their bytes, not their count: a picture of ~100 KB or a
-// short prompt never waits, and only bodies near MAX_FILE_BYTES or CALL_BYTES share the budget. A size is never past
-// the budget: worker.ts bounds a body by its route's cap before the route runs.
+// Bound in-flight upload/call bodies by bytes, not count, through disk write or parsing (calls.ts).
+// worker.ts caps each body below this budget before routing.
 const UPLOAD_BYTES = 256 * 1024 * 1024;
 const UPLOAD_WAIT_MS = 30_000;
 
-// Takers wait in order, so a body that fits is never passed by one that arrived later. The head leaving, by entering
-// or by giving up, is what lets the next in, so a wait that runs out admits as a give does.
+// FIFO admission: later fitting bodies cannot bypass the head. A timeout must wake the next waiter like a release.
 export function uploadBudget(bytes = UPLOAD_BYTES, waitMs = UPLOAD_WAIT_MS): UploadBudget {
   let free = bytes;
   const waiting: { size: number; enter: () => void }[] = [];
@@ -201,9 +198,8 @@ export function proofBackoff(clock: () => number = () => performance.now(), maxV
   };
 }
 
-// Distinct members per key within one KST day, the day the counts it guards are kept by, in process: what an address or
-// visitor may add to a count no one can check. Like relayBudget's, keys and members are kept only as hashes under the
-// day's secret, never exposed, logged or persisted; a new day or process forgets them, and at maxKeys the oldest key.
+// Use KST days to match the guarded counts. Keep only daily-secret hashes of keys/members in memory, never log or persist them.
+// Reset on day/process change; evict the oldest key at maxKeys.
 export function dailyDistinct(max: number, clock: () => number = Date.now, maxKeys = 100_000) {
   let day = -1;
   let secret = randomBytes(32);
@@ -232,10 +228,8 @@ export function dailyDistinct(max: number, clock: () => number = Date.now, maxKe
   };
 }
 
-// Per visitor on the anonymous share routes: a link's page and its count, its files (a 파일로 받기 reads every picture
-// of a bot, which may be hundreds), and its reports. Requests, not bytes. received: a link's 받은 횟수 once per visitor.
-// guests: the guest ids one address may add to the daily 손님 응답. signups: attempts an hour, so a script cannot fill
-// signup_cap from one address.
+// Anonymous limits count requests, not bytes; file downloads may need hundreds per bot.
+// received deduplicates per visitor/day; guests bounds distinct daily reply ids; signups bounds hourly attempts.
 export const visitorLimits = () => ({
   reads: tokenBucket(120), files: tokenBucket(1200), reports: tokenBucket(6), received: dailyDistinct(1), guests: dailyDistinct(GUESTS_PER_ADDRESS),
   signups: tokenBucket(10, 60 * 60_000), logins: tokenBucket(30, 60_000, () => performance.now(), LOGIN_VISITORS), proofs: proofBackoff(),

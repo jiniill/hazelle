@@ -35,8 +35,7 @@ export class Catalogs {
     this.cache.clear();
   }
 
-  // The account a reply would be sent with now. Where none would, the list still loads with the current group's first
-  // account, or the connection's: it is the models that are wanted, not the allowance.
+  // Use the prospective serving account, falling back to the current group's first: listing models must not need allowance.
   private async serving(connection: Connection): Promise<Account> {
     const picked = await this.credentials.pool.pick(connection);
     return picked.ok ? picked.account : (onTurn(connection, Date.now())[0] ?? connection.accounts[0]!);
@@ -51,8 +50,7 @@ export class Catalogs {
     if (!resolved.codec) return { ok: true, models: resolved.models };
     // A provider that lists no models (Voyage AI): its type holds the list, and nothing is fetched.
     if (resolved.type?.models) return { ok: true, models: resolved.type.models };
-    // A models.dev list that does not load leaves the models unpriced, their costs 알 수 없음, and what they take and give
-    // only as the provider's list says; the list itself still loads.
+    // A failed models.dev fetch must not fail the provider list or invent its unknown prices/capabilities.
     const list = resolved.type && MODELS_DEV_LISTS[resolved.type.id]?.list;
     const listed = list ? api<ModelsDevList>('GET', `models-dev?provider=${encodeURIComponent(list)}`) : null;
     const credential = await this.credentials.get(resolved, (await this.serving(connection)).secret);

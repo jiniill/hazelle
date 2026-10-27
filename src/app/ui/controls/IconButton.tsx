@@ -9,7 +9,6 @@ type Props = {
   title?: string;
   onClick: () => void;
   pressed?: boolean;
-  // A place's button, lit while that place is open.
   current?: boolean;
   // A button that opens a menu takes popup, expanded and ref from Menu; one that shows and hides a panel takes
   // expanded alone.
@@ -18,11 +17,9 @@ type Props = {
   ref?: Ref<HTMLButtonElement>;
   size?: 'sm' | 'md';
   disabled?: boolean;
-  // Something behind it needs a look, such as a failure inside the menu it opens; the words are inside.
   dot?: boolean;
   // How many wait behind it, such as unread alerts; shown from 1, and read out with the label.
   count?: number;
-  // The rail's buttons: a border round it to stand alone among pictures, and the rail's larger size.
   framed?: boolean;
 };
 

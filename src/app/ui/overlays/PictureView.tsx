@@ -23,9 +23,8 @@ export function PictureView({ src, label, ratio, pages, onClose }: Props) {
     paged.onStep(event.key === 'ArrowLeft' ? -1 : 1);
   };
   return createPortal(
-    // On the body, but React still bubbles its clicks to the message it was opened from, whose tap shows its time. A
-    // press on the backdrop closes the view on pointerdown; its mousedown would then move the focus, handed back to the
-    // picture, to the page.
+    // Stop portal bubbling into the source message. Backdrop pointerdown closes; suppress mousedown afterward
+    // so it cannot move restored focus back onto the page.
     <div
       ref={view}
       className={styles.view}

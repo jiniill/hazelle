@@ -52,10 +52,8 @@ const SECRETS = new Set(['openAIKey', 'proxyKey', 'forceReplaceUrl', 'forceRepla
 const utf8 = new TextDecoder();
 const fail = (kind: BackupFailure['kind'], detail?: string): BackupResult => ({ ok: false, failure: detail ? { kind, detail } : { kind } });
 
-// Several files are read as one: the database comes from the first whose database is not encrypted, and every entry is
-// looked up in all of them, that one first. So an account's full backup, whose database is locked with Risu's server key
-// but whose pictures are plain, supplies the pictures beside the partial backup that supplies the text. Only the database
-// and cold metadata are read here; histories are normalized only for a selected character, pictures only when asked.
+// Merge archives with the first unencrypted database's file taking precedence; encrypted full backups can still supply
+// plain pictures alongside a partial backup's text. Read only database/cold metadata now, histories on selection, pictures on demand.
 export async function readBackup(sources: FileSource[]): Promise<BackupResult> {
   try {
     const indexed = await Promise.all(sources.map((source) => index(readAhead(source), source)));
@@ -89,9 +87,8 @@ function readAhead(source: FileSource): FileSource {
   };
 }
 
-// Records of u32 name length, name, u32 data length, data, little-endian, with nothing around them (spec §1).
-// A span reads from the file it was indexed in, through raw: the read-ahead window serves one read at a time, and
-// entries are read several at once.
+// Bare little-endian records: u32 name length, name, u32 data length, data (spec §1).
+// Spans use raw for concurrent entry reads; the read-ahead window is sequential only.
 async function index(source: FileSource, raw: FileSource): Promise<Map<string, Span>> {
   const files = new Map<string, Span>();
   const take = (offset: number, length: number) => {
@@ -109,9 +106,8 @@ async function index(source: FileSource, raw: FileSource): Promise<Map<string, S
   return files;
 }
 
-// The file the export run on the Risu page writes (app/library/inlayExport), in the backup's layout: inlay_<id> for
-// each picture and Gemini signature (its stored item as JSON), and first of all inlay_skipped.json, naming the video and
-// audio items left out, which marks the file as this export. null: another file.
+// inlayExport writes backup-layout inlay_<id> JSON for pictures/Gemini signatures. Its first entry, inlay_skipped.json,
+// identifies this export and lists omitted audio/video; other files return null.
 export async function readInlays(source: FileSource): Promise<Inlays | null> {
   const ahead = readAhead(source);
   if (source.size < 4) return null;

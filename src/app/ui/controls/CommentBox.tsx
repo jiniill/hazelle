@@ -10,13 +10,11 @@ type Props = {
   // A count against its limit, at the foot's start; error takes its place.
   hint?: string;
   error?: string;
-  // Buttons at the foot's end, such as 취소 and 등록.
   actions: ReactNode;
   // Takes the caret when it opens, as a 답글 or an edit does.
   focus?: boolean;
 };
 
-// A comment written in place: the text grows with what is typed, its buttons inside the box.
 export function CommentBox({ label, value, onChange, placeholder, hint, error, actions, focus = false }: Props) {
   const id = useId();
   const area = useRef<HTMLTextAreaElement>(null);

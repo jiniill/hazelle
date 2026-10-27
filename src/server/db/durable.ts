@@ -3,8 +3,7 @@ import { closeSync, createReadStream, existsSync, fsyncSync, mkdirSync, openSync
 import { open } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-// What account files, snapshots, backup generations and disk pictures share to make a file durable before a row or a
-// manifest names it (README.md), and to check one against what was recorded of it.
+// Shared durability boundary: sync files before catalog rows/manifests name them; verify against recorded hashes/sizes.
 
 // Windows flushes a file only through a handle open for writing and refuses to flush a directory (EPERM); NTFS journals
 // a rename itself, so there a directory's sync is skipped. Elsewhere a read handle flushes either.
@@ -35,9 +34,8 @@ export async function syncPath(path: string): Promise<void> {
   }
 }
 
-// mkdir -p whose new names survive a power loss: every directory it made is synced into its parent before this
-// returns. The entries the caller then puts in the deepest one are the caller's to sync. The missing directories are
-// found before the mkdir, not from what it returns: on Windows that is a \\?\ path, which relative() cannot compare.
+// Sync each newly created directory into its parent; caller syncs entries it adds afterward.
+// Find missing paths before mkdir: Windows returns \?\ paths that relative() cannot compare.
 export function makeDirs(dir: string): void {
   const made: string[] = [];
   for (let path = resolve(dir); !existsSync(path); path = dirname(path)) made.unshift(path);

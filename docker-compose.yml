@@ -22,8 +22,7 @@ services:
       # Ollama, LM Studio and koboldcpp on this machine. Only these host:port pairs may be dialled over plain http or at
       # a private address; every other such destination stays refused.
       HAZELLE_LOCAL_PROVIDERS: host.docker.internal:11434,host.docker.internal:1234,host.docker.internal:5001
-      # Your own installation, not hazelle.app: no relay limits, 헤이젤 나우 and 게시판 open on hazelle.app, and each
-      # account's 헤이젤 나우 counts also go there, under its own switch in 앱 정보 (README).
+      # Self-hosted relay is uncapped by default; community links open hazelle.app, but local accounts send no pulse labels.
       HAZELLE_SELF_HOST: 1
       HAZELLE_ALERT_WEBHOOK: ${HAZELLE_ALERT_WEBHOOK:-}
       # A reverse proxy of your own in front (README "Other settings"); left empty, the connection's peer is the visitor.

@@ -3,19 +3,16 @@ import type { CodeDoc, CodeItem } from '../../ui';
 import { shownValue } from '../HookDetail';
 import { UNKNOWN } from '../words';
 
-// The character's 기본 변수, as name and value.
 export type Defaults = readonly (readonly [string, string])[];
 
 // A chat's variables as 시험해 보기 read them, by name. partial: the read stopped short or the chat holds more than were read, so a name missing
 // here may still be set.
 export type ChatVariables = { label: string; values: ReadonlyMap<string, InspectedVariable>; partial: boolean };
 
-// What the code editor knows of the variables: the 기본 변수, and the chat 시험해 보기 reads once it has read it.
 export type Variables = { defaults: Defaults; chat: ChatVariables | null };
 
 const SCRIPT_STAGE = { input: '입력', output: '출력', greeting: '첫 메시지', staged: '대기 중인 메시지' } as const;
 
-// Where a chat's variable was last written, for 점검's 변수 tab and the code editor alike.
 export function writerName(writer: VariableWriter): string {
   switch (writer.kind) {
     case 'card':

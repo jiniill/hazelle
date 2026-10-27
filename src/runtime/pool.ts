@@ -56,9 +56,8 @@ export class Pool {
     return result;
   }
 
-  // In the current group, in order, the first account whose allowance is left, its meters read again where older than
-  // a few minutes, all at once. With none left, the first that might have some, then the group's first: the provider
-  // decides, since an account with overage billing still serves past its allowance (user ruling 2026-10-06).
+  // Pick first known allowance in the current group; else first unknown, else first account.
+  // Provider decides overage eligibility; zero allowance can still serve (user, 2026-10-06). Refresh stale meters together.
   async pick(connection: Connection): Promise<PickResult> {
     if (!connection.turns) return { ok: true, account: connection.accounts[0]! };
     const now = Date.now();

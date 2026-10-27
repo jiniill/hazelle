@@ -22,8 +22,8 @@ import { pageAnswer } from './talk';
 import type { Preparing } from './turn-steps';
 import { chatPlace, keepRow } from './usage';
 
-// 에이전트 (design §6.16): the lists on the ladder 공용 → 프롬프트 → 캐릭터 → 채팅, which stack; the pre agents a turn runs
-// before its prompt is assembled (runtime/turn prepare); the post agents run on a reply once it is saved (receiveReply).
+// Agent lists stack global → prompt → character → chat. Pre agents run before prompt assembly;
+// post agents run only after the reply is saved (runtime/turn).
 
 type Reader = Pick<ObjectStore, 'get'>;
 type Place = Pick<Chat, 'character' | 'prompt' | 'features' | 'agents'>;
@@ -40,8 +40,7 @@ function layers(store: Reader, chat: Place): string[][] {
   ];
 }
 
-// Farthest layer first, each in the order added; one on two layers runs once, at its first place. One gone, in 휴지통
-// or of another sort reads as absent, as a module does.
+// Resolve farthest layer first; deduplicate at first occurrence. Ignore missing/binned/non-agent prompts.
 function stacked(store: Reader, lists: string[][]): Agent[] {
   const ids = [...new Set(lists.flat())];
   return ids.flatMap((id) => {
@@ -130,11 +129,8 @@ async function call(session: Deps, chat: string, stored: Chat, { id, value: prom
   return { run: { agent: id, name: prompt.name, stage: prompt.stage, receipt, ...(text === undefined && { note: made }), ...(parsed.memory !== null && { memory: parsed.memory }) }, text: made };
 }
 
-// A turn's pre agents, all at once, over the chat as the turn sends it. again: the versions of the message the reply
-// takes the place of or is made beside (다시 시도, 다시 생성), newest first, whose notes are used again (user ruling,
-// 2026-10-15). messages: the chat's, before the reply. Any failure fails the turn (user ruling, 2026-10-21). running:
-// told the names of the calls still out and of those among them sent again, as each starts, ends or is sent again, never
-// an empty list: the last names stand until the reply's own step takes over.
+// Run pre agents concurrently; reuse notes from retry/regeneration versions newest first (user, 2026-10-15).
+// Any failure fails the turn (user, 2026-10-21). Keep the last nonempty running names until the next reply step.
 export async function preAgents(session: Deps, chat: string, stored: Chat, scope: ChatScope, messages: readonly Message[], again: readonly Message['versions'][number][], signal: AbortSignal, running: (now: Omit<Extract<Preparing, { step: 'agents' }>, 'step'>) => void): Promise<{ runs: AgentRun[]; notes: string } | AgentFailed | { kind: 'stopped' }> {
   const { pre } = agentsOf(session.store, stored);
   if (pre.length === 0 || scope.messages.length === 0) return { runs: [], notes: '' };
@@ -173,9 +169,8 @@ export type PolishStep = { name: string; at: number; total: number; retrying?: t
 type Polish = { chat: string; message: string } & ({ step: PolishStep; failure?: never } | { failure: AgentFailed; step?: never });
 export type Polishing = ReadonlyMap<string, Polish>;
 
-// The post agents of a saved reply, one after another, each given the text the last one left, which it rewrites or
-// adds to (AgentPrompt place). What they made is saved as a version in the reply's place that keeps the raw text
-// (design §6.16, user ruling 2026-10-21), the calls before a failure included.
+// Run post agents sequentially on the preceding output. Save as a replacement version retaining raw text
+// and calls completed before failure (design §6.16; user, 2026-10-21).
 export class Polisher {
   private closed = false;
   private state: Polishing = new Map();

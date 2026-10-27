@@ -12,8 +12,7 @@ import type { Card } from '../engine/import/types';
 import type { UsageCall } from './usage';
 
 export type Chat = Mark & {
-  // null until the user names the chat; until then it is called by its first message, or a branch after its
-  // origin (chatTitle).
+  // null uses chatTitle's first-message or branch name.
   title: string | null;
   // A chat with no character talks to the model as it is.
   character: string | null;
@@ -26,18 +25,16 @@ export type Chat = Mark & {
   note?: string;
   // 삽화 노트, sent to the scene writer through the 삽화 prompt's slot; absent is none.
   illustrateNote?: string;
-  // Named as it was then so a renamed or deleted one still reads.
+  // Keep the original name through renames and deletion.
   origin?: { id: string; name: string; after: string };
   // A branch keeps its original's, so the history it copied reads the same.
   seed?: string;
   memory?: MemorySettings;
   // The variables it starts from, over the card's defaults: a chat brought from Risu keeps Risu's.
   variables?: [string, string][];
-  // 등장인물 (design §6.9): characters whose description, lorebook and pictures join the chat's, in the order added, never
-  // the chat's own. One gone or in 휴지통 reads as absent.
+  // Added-order cast, excluding the chat's own character; missing or binned characters read as absent.
   cast?: string[];
-  // 북마크, by message, in the order marked. One whose message is deleted or on no version's line stays stored and reads
-  // as absent (app/chat/bookmarks bookmarkRows), so 되돌리기 of a deletion brings it back.
+  // Keep marked order and hidden/deleted targets so undo restores their bookmarks (bookmarkRows).
   bookmarks?: Bookmark[];
   // 채팅 로어북's folders, which only group its lorebook on screen.
   loreFolders?: LoreFolder[];
@@ -45,8 +42,7 @@ export type Chat = Mark & {
   features?: FeatureSwitches;
   // 에이전트, stacked after its character's (runtime/agents agentsOf).
   agents?: string[];
-  // 옮겨 온 그림도 보내기: the inlays brought with it from Risu go to a model that sees pictures, as the ones attached here
-  // always do (model/library Inlay).
+  // Opt imported inlays into model input; locally attached pictures already qualify (model/library Inlay).
   movedPictures?: true;
 };
 
@@ -62,23 +58,18 @@ export const CAST_MAX = 5;
 // The raw request is never stored.
 export type Receipt = {
   calibration?: CallCalibration;
-  // The call's own id (runtime/streams newCall, pageCall), the same in every copy of the receipt: an edit, a branch's
-  // copy and a continued reply keep the receipt whole, and the call's ledger row is named by it (runtime/usage ledgerId).
+  // Stable across edits, branches and continuations; also identifies the ledger row (runtime/usage ledgerId).
   id: string;
   connection: string;
-  // The id of the connection's account that served it; absent on a receipt older than accounts, and on a call picked
-  // up after a reload.
+  // Serving account; absent on older receipts and calls resumed after reload.
   account?: string;
-  // How many times it was sent, where a try failed before any of it came and was sent again (retry on failure); absent
-  // for one try, and where it is not known.
+  // Total sends, including retries before any output; absent for one try or an unknown count.
   tries?: number;
   // The connection's and the model's names when the reply was made; either may be renamed or deleted later.
   source: string;
-  // The provider's model id and the catalog's name; entry: the key of the further copy the call went through (connectors
-  // Starred entry), absent for a model's first entry. 최근 and a resumed stream route by the key (callRef); usage and the
-  // ledger group by model, so the copies count as one model.
   model: string;
   modelName: string;
+  // Additional-copy key (callRef), absent for the first entry. Usage groups by model, routing by entry.
   entry?: string;
   state: 'done' | 'cut' | 'failed';
   cut: 'length' | 'no-terminal' | 'stopped' | 'refused' | null;
@@ -93,35 +84,37 @@ export type Receipt = {
   // How long the call's cache points keep what they cache, measured from its start; null when it sent none, or its
   // request was not this page's.
   cache: Cache | null;
-  // What the send expected to read from the cache, against the chat's last call (runtime/cache); absent where that
-  // call's request was not known, as on a receipt older than it.
+  // Compared with the last call (runtime/cache); absent when its request was unknown.
   forecast?: CacheForecast;
-  // The discount lane that served the call (design §6.7 할인 받기), as the provider reported it, and so priced; absent
-  // when none did. tier: the same call at a slower service tier; batch: the whole reply submitted and waited for.
+  // The lane actually served and priced by the provider, not merely requested (design §6.7).
   discount?: 'tier' | 'batch';
   // PDF로 보내기 sent the earlier conversation as a PDF; absent when it did not, or the request was not this page's.
   pdf?: true;
-  // 토큰 절약: the 보조 call whose brief shortened the request, the o200k count of what the brief stood in for in it
-  // (material) and of the brief, and what that saved at the chat model's price when it was sent (engine/preread
-  // savedCost; null where unknown). reused: a brief an earlier reply's call made, which this reply paid nothing for.
-  // Never among calls(): that call made no part of the reply's text.
+  // material/brief are o200k counts; saved uses the send-time chat price (savedCost), null if unknown.
+  // reused was paid by an earlier reply. Excluded from calls(): it wrote no reply text.
   preread?: { material: number; brief: number; receipt: Receipt; reused?: true; saved: Cost | null };
-  // 에이전트: each agent's call for this reply, pre ones in their stacked order, then post ones in the order they ran.
-  // Never among calls(), as preread's: each call's ledger row is written when it is made (runtime/agents).
+  // Pre agents in stack order, then post agents in run order. Excluded from calls(): runtime/agents logs them.
   agents?: AgentRun[];
-  // 이어 쓰기: the receipt of the reply this one continued, as it read then, so every call and its cost stays
-  // visible after the continued version replaces the cut one. It nests when a continuation is continued again.
+  // Snapshot of the continued reply's receipt; nesting preserves every replaced call and its cost.
   continues?: Receipt;
 };
 
-// One agent's call for a reply (design §6.16), named as the agent was then. note: what a pre agent left for the reply.
-// memory: the agent's state after the call, absent for one that keeps none. reused: a pre agent's note and state from
-// the version this reply took the place of or was made beside (다시 시도, 다시 생성), which this reply paid nothing for.
-export type AgentRun = { agent: string; name: string; stage: AgentStage; receipt: Receipt; note?: string; memory?: string; reused?: true };
+export type AgentRun = {
+  agent: string;
+  // Snapshot at call time, unaffected by renames.
+  name: string;
+  stage: AgentStage;
+  receipt: Receipt;
+  // Pre-agent output for the reply.
+  note?: string;
+  // Post-call state; absent for stateless agents.
+  memory?: string;
+  // Pre-agent output reused from the retried/regenerated version, with no new charge.
+  reused?: true;
+};
 
-// A receipt's own copy of runtime/generate ReplyError, converted where the receipt is written, so a
-// change to the network's failure types never changes what saved chats hold. A stop is a cut, never
-// an error. status is there when the provider refused the request, and absent when its stream failed.
+// Persisted separately from ReplyError so network type changes cannot alter saved chats. Stops are cuts, not errors.
+// Provider status is present for a refused request, absent for stream failures.
 export type ReceiptError =
   | { kind: 'refused'; code: string }
   | { kind: 'relay'; code: string }
@@ -134,42 +127,32 @@ export type ReceiptError =
   | { kind: 'no-token' }
   | { kind: 'pool'; group: string };
 
-// A version as the reader reads it, beside its text, which is what the model is sent and never this.
-// A version's is translated from its displayed text; a message sent translated keeps here what the user typed, and
-// its text is the translation sent. receipt: the call that translated, null when the user wrote it in an edit. sentIn:
-// the language a message sent translated went out in, as the English name its prompt read, and the one mark of such a
-// message: any other translation, a user message's translated after it was sent among them, has none.
-export type Translation = { text: string; receipt: Receipt | null; at: number; sentIn?: string };
+export type Translation = {
+  // Translated display text; for send-translated messages, the user's original (Entry.text holds the translation).
+  text: string;
+  // null for a hand-edited translation.
+  receipt: Receipt | null;
+  at: number;
+  // English language name; only send-translated messages carry this marker, never later translations.
+  sentIn?: string;
+};
 
-// Shared by every chat, or a character's own (Character.ownTranslate): replies translates each chat's latest reply, reverse (반전 모드) sends the
-// model each version's translation in place of its text. replyLanguage and inputLanguage are what replies and the
-// user's messages are translated into, each as the English name the prompt reads. original (원문 함께 보기) shows each
-// translated paragraph with its original under it. Absent fields are read through runtime/characters
-// translateSwitches, the one place that knows their defaults.
+// Character.ownTranslate overrides the shared settings; only runtime/characters translateSwitches resolves defaults.
+// replies applies to the latest reply; reverse sends translations instead of text; original pairs original paragraphs.
+// Language values are English names consumed by the prompt.
 export type TranslateSwitches = { replies: boolean; input: boolean; reverse?: boolean; original?: boolean; replyLanguage?: string; inputLanguage?: string; prompt?: string };
 
-// Chat entries are created and never changed: an edit, a swipe or a deletion is a new
-// entry. at is the writer's clock, for showing times only; order is the server's rev.
-// seed: the id a version's random tags roll from in place of its own. A branch's copy keeps its original's, and
-// an edit or a continued cut keeps the seed of the version it replaces, so text already shown never rolls again.
-// staged: text already past the bot's input or output scripts (a message brought from Risu, one the bot's Lua
-// wrote), which never run on it again; an edit of it is the same.
-// before: the variables the bot's Lua wrote on the way to this version (when the message was sent, before its reply
-// was made), which the chat's replay sets before the version's own text is read. An edit keeps those of the version
-// it changes and adds its own.
-// reasoning: what the model thought before it wrote the version, as its provider sent it or as Risu kept it. It is
-// never part of text, so it is neither drawn in the story nor sent again; 응답 정보 is its one reader.
-// greeting: the original card index, not a version's position or a text match. Edits and branches keep it.
-// raw: the reply as written before its post agents rewrote it (design §6.16), which 원문 보기 shows; an edit keeps it.
+// Entries are append-only; rev orders them, while at is display-only wall time.
+// Preserve seed across branches, edits and continuations so existing random tags never reroll.
+// staged text has already passed scripts, even after edits. Replay before writes before rendering it.
+// reasoning never joins story text or future requests. greeting keeps the original card index.
+// raw preserves text from before post-agent polishing through edits (design §6.16).
 export type Entry =
-  // A new message with its first version, which has the entry's id. follows: the version of the message it continues,
-  // by any id that version stood under, so each version of a message has its own continuation (ChatFold); null for
-  // the first message of its line. Absent on a message saved before 2026-10-11, which continues the message before it in
-  // rev order, through every version of that message saved before it.
+  // First version id equals the message id. follows names a version, including its historical ids, not a message.
+  // Null starts a line; older entries without follows use the prior message's pre-existing versions in rev order.
   | { type: 'message'; role: 'user' | 'assistant'; at: number; text: string; receipt: Receipt | null; follows?: string | null; seed?: string; translation?: Translation; staged?: true; before?: Writes; reasoning?: string; greeting?: number; raw?: string }
-  // replaces: the version this one takes the place of, for an edit, a retried failure or a continued cut
-  // (이어 쓰기), so the count of versions does not grow; null for a new version, which goes last. An edit keeps
-  // the receipt of the reply it changes.
+  // replaces null appends a version; otherwise replace the same slot without growing the count.
+  // Edits retain the replaced reply's receipt.
   | { type: 'version'; message: string; replaces: string | null; edit: boolean; at: number; text: string; receipt: Receipt | null; seed?: string; translation?: Translation; staged?: true; before?: Writes; reasoning?: string; greeting?: number; raw?: string }
   | { type: 'select'; message: string; version: string; at: number }
   | { type: 'delete'; message: string; at: number }
@@ -179,14 +162,11 @@ export type Entry =
   | { type: 'cost'; replyId: string; cost: Cost | null; at: number }
   // A translation made after the version was saved; the latest one for a version is its translation.
   | ({ type: 'translation'; version: string } & Translation)
-  // The variables the bot's Lua wrote once the version stood, which the replay sets after the version's own text is
-  // read. What the reply's end wrote follows the version into its edits and no further: a retried, continued or new
-  // reply runs the bot's Lua again. stays: what a button wrote is the user's own act at that place in the story, so
-  // it stays with the message whichever version is shown, and moves to the message before when its own is deleted.
-  // byHand: the user's own value typed in 점검 › 변수, held by the version (Version byHand), never with stays.
+  // Replay vars after version text. Reply-end writes follow edits only, not retries, continuations or new replies.
+  // Button writes (stays) follow the message across versions and move backward on deletion.
+  // Manual variable edits (byHand) belong to the version and must never use stays.
   | { type: 'vars'; version: string; set: Writes; at: number; stays?: true; byHand?: true }
-  // The message now continues follows instead: a bot's insertChat puts a new message ahead of one already saved, so
-  // this one names a version saved after it. The latest one stands; one that would loop a line is passed over.
+  // Latest follow overrides the original link; insertChat can target a later-saved version. Ignore links that loop.
   | { type: 'follow'; message: string; follows: string; at: number }
   // A model call the bot's Lua made (LLM, axLLM) while version was the last one shown, kept so usage and cost count
   // it. It follows the version as vars does.
@@ -197,12 +177,9 @@ export type Entry =
 // Variable writes in the order made; a later one of a name wins.
 export type Writes = [string, string][];
 
-// earlier: the ids it stood under before its edits, oldest first; a retry, a continuation or a new version has none.
-// byHand: the user's own writes (Entry vars byHand), set after the message's after, so they win over every write
-// standing with the message; every reader takes this order (runtime/chat-context scopeOf, engine/render renderChat).
-// memories: the agents' memory the user set at this version, by agent (Entry agentMemory), the latest standing.
-// retouched: an edit of a polished version that changed its text, which 다시 다듬기 (from raw) would undo, so it is not
-// offered there (user ruling, 2026-10-22).
+// earlier keeps pre-edit ids oldest first, never retry/continuation ids.
+// Apply byHand after message.after in every reader (runtime/chat-context, engine/render).
+// User-edited agent memories override generated ones. retouched blocks repolish that would undo edits (user, 2026-10-22).
 export type Version = { id: string; seed: string; text: string; receipt: Receipt | null; edited: boolean; at: number; translation?: Translation; staged?: true; before?: Writes; after?: Writes; byHand?: Writes; calls?: BotCall[]; reasoning?: string; greeting?: number; earlier?: string[]; raw?: string; memories?: Record<string, string>; retouched?: true };
 export type BotCall = { receipt: Receipt; at: number };
 // after: the writes that stay with the message (Entry vars), set after its shown version's own.
@@ -225,16 +202,14 @@ const versionOf = (id: string, entry: Extract<Entry, { type: 'message' | 'versio
 
 type Order = { rev: number; pending?: number };
 
-// Entries naming a message or version that is not there yet are skipped, even if it appears later in the replay.
-// places: every id a version stood under, by its slot. founded: by message, the order of the entry that made each slot,
-// never of an edit or retry that replaced it.
+// Skip references not yet seen in replay, even if they arrive later. places preserves historical ids;
+// founded tracks slot creation order, never replacement order.
 function replay(entries: Stored<'entry'>[]): { messages: Message[]; deleted: Set<string>; places: Map<string, number>; founded: Map<string, Order[]> } {
   const messages = new Map<string, Message>();
   const deleted = new Set<string>();
   // By a version's own id only: a translation of a replaced version is not its replacement's.
   const own = new Map<string, Version>();
-  // A place never moves, so a replaced version's id keeps leading to whichever version stands there now, however many
-  // times it was replaced since.
+  // Replaced ids keep pointing to the same slot, regardless of how many replacements follow.
   const places = new Map<string, number>();
   const edits = new Map<string, Version>();
   const ids = new Map<Version, string[]>();
@@ -444,9 +419,8 @@ export class ChatFold {
     return this.result;
   }
 
-  // Every message a version switch can show, not only those shown, each with the version it continues: the nearest
-  // one shown above it, past deleted messages. A deleted message is passed through its selected version only, as the
-  // story shows it.
+  // Include every switchable version, not just visible messages; resolve predecessors past deleted messages
+  // through their selected version only, matching the story.
   tree(): { message: Message; follows: string | null }[] {
     this.snapshot();
     const out: { message: Message; follows: string | null }[] = [];
@@ -466,15 +440,13 @@ export class ChatFold {
     return out;
   }
 
-  // The story in the order it reads: from each first message, down the version each message shows (every: down all
-  // of them), a message's continuations in rev order one after another, so two saved after the same version both show.
-  // Iterative, since a chat may run to thousands of messages.
+  // Walk iteratively for long chats. Visit sibling continuations in rev order so concurrent replies both appear;
+  // every traverses all versions rather than only the selected one.
   private walk(every: boolean): { group: FoldedMessage; follows: string | null }[] {
     const ordered = [...this.groups.values()].filter((group) => group.message !== null)
       .sort((a, b) => entryOrder(this.entries.get(a.message!.id)!, this.entries.get(b.message!.id)!));
-    // A message continues only one saved before the entry that named it, so a follows naming a later or unknown
-    // version starts a line of its own. Follow entries can still close a loop (two devices moving at once): the line
-    // is cut at the latest move in it, which then starts its own.
+    // Original follows must target an earlier-saved version or start a new line.
+    // Concurrent follow moves can loop; cut the latest move into a new line.
     const owner = new Map<string, FoldedMessage>();
     for (const group of ordered) for (const id of group.places.keys()) owner.set(id, group);
     const parents = new Map<FoldedMessage, Edge & { parent: FoldedMessage }>();
@@ -501,8 +473,7 @@ export class ChatFold {
       }
       for (const member of path) seen.set(member, 'done');
     }
-    // Among one version's continuations, a message put ahead of another (a follow entry) stands where that one
-    // stood, not where its later save would put it; so does one put ahead of that.
+    // Inserted continuations inherit the displaced message's position, not their later save order, transitively.
     const order = new Map<FoldedMessage, EntryIndex>(ordered.map((group) => [group, this.entries.get(group.message!.id)!]));
     for (const group of ordered) {
       if (!group.moved) continue;
@@ -566,13 +537,11 @@ export const foldTree = (entries: Stored<'entry'>[]) => folded(entries).tree();
 
 export const shown = (message: Message): Version => message.versions[message.selected]!;
 
-// By every id a version stood under, the one it stands under now: what follows a version into its edits (삽화) is
-// read through it, never by the id it was saved with.
+// Resolve historical ids to current versions so attached data (e.g. illustrations) follows edits.
 export const standing = (messages: readonly Message[]): Map<string, string> =>
   new Map(messages.flatMap(({ versions }) => versions.flatMap(({ id, earlier = [] }) => [...earlier, id].map((each): [string, string] => [each, id]))));
 
-// The text is the user's now: an edit, never what post agents wrote, which is saved as an edit (runtime/chat-log
-// appendPolished) and keeps raw. A user's edit of a polished reply keeps raw too, and reads as not theirs here.
+// Agent polish is saved as an edit but retains raw; neither it nor a later user retouch counts as user-authored here.
 export const handEdited = (version: Version) => version.edited && version.raw === undefined;
 
 // An edit that changed the text and left the translation keeps the translation's time (runtime/chat-log editMessage).
@@ -597,9 +566,8 @@ const CBS_PART = /\{\{[\s\S]*?\}\}|<(?:user|char|bot)>/gi;
 // Shorter, a piece between two tags ('. ') would be found in any line.
 const PIECE_LEAST = 6;
 
-// Many bots open every reply with the same status line, which tells one chat from the next no better than a blank.
-// story: the message's own text. A line the bot's scripts brought in is passed over too: a settings panel kept off
-// the screen until opened reads as prose.
+// Ignore repeated status lines and display-script additions: hidden settings panels can otherwise look like prose.
+// story must be the message's own text.
 export function previewLine(text: string, story: string): string {
   const all = lines(text);
   const pieces = story.split(CBS_PART).flatMap(lines).map(squash);
@@ -639,9 +607,7 @@ export type RecentModel = { at: number; ref: ModelRef };
 
 export const usageCall = ({ id, connection, model, modelName, source, usage, cost, calibration }: Receipt, at: number): UsageCall => ({ at, call: { id, connection, model, modelName, source, usage, cost, ...(calibration && { calibration }) } });
 
-// Every call a chat's log keeps, whatever the chat still shows: a deleted message's, a translation made again. An edit
-// keeps the receipt it changes, so a call counts once, at its first entry. booked: what each cost entry booked for the
-// calls it names.
+// Include hidden/deleted versions and replaced translations; shared receipts count once, at their first entry.
 export function loggedCalls(entries: Iterable<Entry>): { calls: UsageCall[]; booked: { call: string; cost: Cost | null }[] } {
   const kept = new Map<string, UsageCall>();
   const replies = new Map<string, string[]>();

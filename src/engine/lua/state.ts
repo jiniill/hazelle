@@ -8,11 +8,8 @@ import { contexts, type ChatScope } from '../render';
 // A message as a script reads it: role and data are Risu's names, which bots index by.
 export type LuaMessage = { role: 'user' | 'char'; data: string; time: number };
 
-// The chat as a run finds it. messages: without the greeting, each as it stands after the bot's input or output
-// scripts. variables: as of the point in the story the run stands at. globals: what getGlobalVar reads, which is the
-// chat's toggle values. scope: what CBS in a script's text is evaluated over and where its lorebook is read from: the
-// chat's scope without what does not cross to a worker or no tag reads (its toggles, which globals carry, its packs,
-// its cast).
+// Snapshot excludes greeting; messages are post-script, variables are story-local, globals carry toggles.
+// scope omits non-worker data and fields scripts cannot read (packs, cast, duplicate toggles).
 export type Snapshot = {
   messages: LuaMessage[];
   variables: [string, string][];
@@ -25,11 +22,9 @@ export type Snapshot = {
 
 export type Working = { origin: number | null; role: 'user' | 'char'; data: string; time: number; first: string };
 
-// One run's view of the chat, which the Lua API and the block effects read and change. quiet: an editDisplay pass,
-// whose writes are dropped and which reaches nothing outside itself. variables is never written: a run's writes stand
-// over it in written, so a display pass over many messages copies nothing. ranAway: the last cbs() call ran away; the
-// error Lua raises for it reaches the run as another Error, never the Runaway. chat: the chat's id, which parents its
-// own lorebook's entries; lore: the run's writes to that lorebook, by name.
+// Quiet display runs discard writes/external effects. Overlay writes in written; never mutate variables.
+// ranAway carries a CBS stop because the Lua boundary converts Runaway to Error.
+// chat parents local lore writes, which replace entries by name.
 export type Run = {
   owner: PackOwner | null;
   chat: string;
@@ -72,10 +67,8 @@ export const add = (run: Run, role: Working['role'], data: string) => void run.m
 
 const CONTEXTS = new WeakMap<Snapshot, { triggerId: string; context: ReturnType<typeof contexts> }>();
 
-// A script's text with its CBS evaluated over the chat as the run found it, with the run's variable writes so far over
-// the snapshot's. What the run did to the messages is not seen, as in Risu, and a setvar in the text writes nothing.
-// The prompt's stage: a tag only the display reads stays as written, for the display to read once the text is a
-// message's.
+// Evaluate CBS against the original snapshot plus variable writes, not script-mutated messages.
+// No setvar writes; prompt-stage display tags stay literal until the resulting message is displayed.
 export function cbs(run: Run, value: string): string {
   let cached = CONTEXTS.get(run.snapshot);
   if (cached?.triggerId !== run.triggerId) {

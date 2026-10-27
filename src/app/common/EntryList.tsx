@@ -18,8 +18,7 @@ type Props<T> = {
   children: (entry: Entry<T>) => ReactNode;
 };
 
-// A delete takes effect at once and the toast offers 되돌리기, which puts the entry back into the list as it is then, at
-// its old place or last when the list is shorter.
+// Undo inserts into the current list at its old position, clamped to the end if the list shrank.
 export function EntryList<T>({ entries, onChange, name, blank, addLabel, removed, head, children }: Props<T>) {
   const undoable = useOwnUndo();
   const latest = useRef({ entries, onChange });

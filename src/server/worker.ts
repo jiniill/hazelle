@@ -35,9 +35,8 @@ app.use(async (c, next) => {
   }
 });
 
-// 헤이젤 나우 counts only labelled requests. One a signed-in account sent marks it active this week whatever the route
-// answered, since the page's one seen mark may ride a pick-up that finds its stream gone; a call counts where its
-// provider answered (calls.ts, streams.ts). The account is the one requireSession or the session read (accounts.ts) set.
+// Labelled requests mark a session-read account active even on failures: owed seen may ride a missing stream.
+// Count calls only on provider answers (calls/streams); never infer guest identity.
 app.use(async (c, next) => {
   const label = readPulseHeader(c.req.header(PULSE_HEADER));
   if (!label) return next();
@@ -47,8 +46,7 @@ app.use(async (c, next) => {
   if (account) c.executionCtx.waitUntil(c.env.pulse.seen(account.id));
 });
 
-// Hono's own handler would answer a route's exception with plain text, which the browser cannot tell from a page the
-// proxy wrote while the app was down (runtime/api): the JSON shape says it was the app, and the log says what broke.
+// Return app-shaped JSON for exceptions so clients distinguish app failures from proxy HTML/plain-text outages.
 app.onError((error, c) => {
   console.error('request failed', { method: c.req.method, path: c.req.path, error: String(error.stack ?? error) });
   return fail(c, 500, 'server-error');
@@ -78,9 +76,8 @@ const LARGER: [method: string, path: RegExp, bytes: number][] = [
   ['POST', /^\/api\/shares(\/[^/]+\/versions)?$/, PUBLISH_BYTES],
 ];
 
-// bodyLimit trusts Content-Length and passes the stream through, but buffers a chunked body whole before any route
-// runs, so an unauthenticated chunked request could hold a route's whole cap in memory per connection. The browser never
-// sends a chunked request body.
+// Reject chunked bodies before routing: Hono would otherwise buffer the entire route cap per unauthenticated connection.
+// Browser uploads always carry Content-Length.
 app.use(async (c, next) => {
   if (c.req.header('transfer-encoding')?.toLowerCase().includes('chunked')) return fail(c, 411, 'length-required');
   // A provider call is admitted by the size it states before its body is read (calls.ts).

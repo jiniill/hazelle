@@ -1,8 +1,7 @@
 // An answer that changed or read an account's counts carries them, so the page holding the account stays current.
 export const ACCOUNT_USAGE_HEADERS = { bytes: 'x-account-bytes', fileBytes: 'x-account-file-bytes' } as const;
 export const ACCOUNT_HEADER = 'x-account';
-// The account's unread notices, on the answers a page keeps asking for (its sync) and on marking them seen, so a notice
-// sent while the page is open is told without a reload.
+// Sync and mark-seen responses carry unread counts so open pages learn of new notices without reload.
 export const UNREAD_NOTICES_HEADER = 'x-unread-notices';
 // The account's unread 게시판 activity (contracts/board Activity), on the same answers.
 export const UNREAD_BOARD_HEADER = 'x-unread-board';
@@ -16,8 +15,7 @@ export const PULSE_HEADER = 'x-hazelle-pulse';
 // Who sent a request, as the public listener saw it (server/frontend-worker): the key of the per-visitor limits.
 export const VISITOR_HEADER = 'x-hazelle-visitor';
 
-// Every `error` an API answer carries (server/http fail, server/stream-box). The client words each one or names it on
-// its generic fallback (app/common/failure), so a code added here fails tsc until it is decided there.
+// Keep server/http and server/stream-box errors in sync with app/common/failure wording.
 export type ServerError =
   | 'account-busy'
   | 'account-leaving'

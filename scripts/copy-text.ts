@@ -2,9 +2,8 @@ import { globSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
-// Every piece of Korean the source shows, for a model to rewrite: `extract <out.json>` lists them, `text` turns the
-// sentences among them into numbered lines and `untext` reads the model's answer back into entries, and
-// `apply <out.json> <revised.json>` writes the changed ones back where they were found.
+// Copy-only extract/apply pipeline: template literals are split into nonoverlapping literal runs;
+// numbered text/untext batches let models rewrite sentences without source code.
 
 export type Entry = {
   id: string;
@@ -110,7 +109,6 @@ function isOneString(inner: string, quote: string) {
 
 type Edit = { start: number; end: number; text: string };
 
-// Why an entry's new text cannot go back in its place, or its edits.
 function editsFor(entry: Entry, text: string, source: string): Edit[] | string {
   if (entry.kind === 'template') {
     const before = parseTemplate(entry.text);
@@ -126,8 +124,7 @@ function editsFor(entry: Entry, text: string, source: string): Edit[] | string {
 
 const pathOf = (id: string) => id.slice(0, id.indexOf(':'));
 
-// An entry is found again by what it says, not where it sat, so edits elsewhere in its file since extract do not
-// move it; the nth of identical entries in a file stays the nth.
+// Re-find entries by text/occurrence, never stale offsets; unrelated source edits must not shift replacements.
 function keyed(entries: readonly Listed[]) {
   const seen = new Map<string, number>();
   return entries.map((entry) => {
@@ -163,9 +160,8 @@ export function apply(sources: readonly Source[], original: readonly Listed[], r
   return { written, rejected };
 }
 
-// The text-only round: a model sees numbered sentences and nothing else, since ids, code and context gave it room to
-// invent. A line's number is its entry's place in the extract list, written [N] because a chat app renders "N." as a
-// list and renumbers it, and each ${…} reads {1}, {2}… in order.
+// Give models numbered sentences only: source context encouraged invention.
+// Use [N] to avoid Markdown auto-renumbering; numbers retain extract-list indices and ${…} becomes {1}, {2}… .
 const SYNTAX_OWNER = /(?:^|› )(?:form|example|written|result|card|name|variables|toggle|SAMPLE_NOTE)$/;
 const BATCH_LINES = 150;
 const ROLE: [RegExp, string][] = [
@@ -208,7 +204,6 @@ function untrimmed(entry: Listed): string | null {
   return template && template.literals.map((literal, index) => (index ? `{${index}}${literal}` : literal)).join('');
 }
 
-// The entry's source text for a line, or why the line cannot be one.
 function fromLine(entry: Listed, line: string): string | { reason: string } {
   const [lead, trail] = edges(entry.text);
   const text = sourceOf(entry, line);
@@ -240,7 +235,6 @@ export function toText(list: readonly Listed[]): { name: string; body: string }[
   });
   const batches: { name: string; body: string }[] = [];
   for (const [area, indexes] of areas) {
-    // Even chunks, cut only between files.
     const size = Math.ceil(indexes.length / Math.ceil(indexes.length / BATCH_LINES));
     const chunks: number[][] = [[]];
     for (const index of indexes) {

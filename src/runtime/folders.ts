@@ -9,8 +9,7 @@ type Placement = { id: string; folder: string | null };
 
 const folderOf = (value: Values[Filed]) => ('folder' in value ? (value.folder ?? null) : null);
 
-// A character names no folder with null; the other kinds leave the field out. still: whether a thing, where it is now,
-// is still where this placement was decided from; one another device moved meanwhile keeps that move.
+// Characters clear folders with null; other kinds omit the field. still fences concurrent moves: keep the newer placement.
 function place(store: ObjectStore, kind: Filed, placements: Placement[], still: (folder: string | null) => boolean = () => true) {
   return allWritten(placements.map(({ id, folder }) => {
     if (kind === 'character') return store.update('character', id, (current) => (!still(current.folder) ? current : { ...current, folder }));
@@ -35,8 +34,8 @@ export const renameFolder = (store: ObjectStore, id: string, name: string) => st
 // to (null: out of every folder).
 export type RemovedFolder = { kind: Filed; folders: Stored<'folder'>[]; placements: Placement[]; up: Stored<'folder'> | null };
 
-// A folder goes with the folders inside it, and its things, those in 휴지통 too, move up a level. Both go at once: a
-// thing left naming a gone folder sits in no folder (model/folders indexFolders). null: the folder is gone.
+// Remove the whole subtree atomically with moving its items (including binned ones) up to the parent.
+// Dangling folder refs read as unfiled; null means already gone.
 export function folderRemoval(store: ObjectStore, id: string): RemovedFolder | null {
   const stored = store.get('folder', id);
   if (!stored) return null;

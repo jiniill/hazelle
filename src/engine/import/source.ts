@@ -1,6 +1,5 @@
-// A file read in slices: a Risu backup (design F7; research/risu-backup-spec.md) or a .risum. Either can exceed
-// memory, so readers take slices, never an arrayBuffer of the whole file. Pictures stay in the file until a character,
-// persona or module is brought.
+// Backups/.risum may exceed memory: slice reads only, never whole-file arrayBuffer.
+// Leave picture bytes in the file until their owning item is imported.
 export type FileSource = { size: number; read(offset: number, length: number): Promise<Uint8Array<ArrayBuffer>> };
 
 export const fileSource = (file: File): FileSource => ({

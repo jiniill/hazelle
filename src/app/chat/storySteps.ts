@@ -10,9 +10,8 @@ export function storyStops(messages: readonly { role: 'user' | 'assistant' }[], 
   return messages.flatMap((message, index) => (mine || message.role !== 'user' ? [index] : []));
 }
 
-// at: the row across the view's edge the step leaves by (its top line going up, its bottom line going down), and how
-// far that line is from the row's top and end. The row the view is inside is the reader's, a stop or not: going up
-// reaches its start and going down its end before any other row.
+// The current row belongs to the reader even if not a stop: reach its start/end before another row.
+// at locates that leaving edge; distances are relative to row top/end.
 export function stepFrom(stops: readonly number[], last: number, at: { index: number; above: number; below: number } | null, direction: Direction): Step {
   if (!at) return direction === 'up' ? 'start' : 'end';
   const target = direction === 'up'

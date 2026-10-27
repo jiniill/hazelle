@@ -19,8 +19,7 @@ const SOURCES: Record<PortraitSource, string> = { metadata: '이미지 정보에
 // 만들기, which flush the edits first.
 const saveKey = (owner: string, index: number) => `likeness:${owner}:${index}`;
 
-// The 삽화 profiles of a character, module or persona (design §6.6): made by the first 삽화 that needs them, and
-// edited or added here; an edited or added one is the user's, which 다시 만들기 keeps.
+// Edits/additions make portraits user-owned, so regeneration must keep them (design §6.6).
 export function PortraitsEditor({ owner }: { owner: string }) {
   const store = useStore();
   const saves = useSaves();

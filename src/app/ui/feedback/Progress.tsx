@@ -15,8 +15,7 @@ const counted = (steps: ProgressStep[]) => steps.flatMap(({ done = 0, total }) =
 const sum = (steps: ProgressStep[]) => counted(steps).reduce((all, { done, total }) => ({ done: all.done + done, total: all.total + total }), { done: 0, total: 0 });
 const over = ({ done, total, finished }: ProgressStep) => finished === true || (total !== undefined && (done ?? 0) >= total);
 
-// A stage is over by its own count, under way once begun, and the first not begun is under way as well once every
-// stage before it is over: so a label-only stage that follows the counted ones takes its turn without a count of its own.
+// After completed stages, the first unbegun stage is active too, allowing label-only finalization without a count.
 const stateOf = (steps: ProgressStep[], index: number): State => {
   const step = steps[index]!;
   if (over(step)) return 'done';

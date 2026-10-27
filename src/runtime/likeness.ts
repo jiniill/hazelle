@@ -23,8 +23,8 @@ import { pageAnswer } from './talk';
 import { keepRow } from './usage';
 import { fromBase64 } from '../vault/aead';
 
-// 삽화 profiles (design §6.6): the only writer of `likeness` objects but a backup's restore and a character's copy. A
-// pack's are made on the first 삽화 that needs them and again only on 다시 만들기, so a bot never drawn costs nothing.
+// Owns likeness writes except restores/copies. Build only on first needed draw or explicit regeneration;
+// undrawn packs must cost nothing.
 
 // unread: a picture could not be fetched, so nothing is written and the next draw tries again. gone: the pack was
 // deleted.
@@ -76,8 +76,7 @@ export function addPortrait(store: ObjectStore, owner: string): Promise<ApiResul
   return store.update('likeness', likenessId(owner), (current) => (current.portraits.length < PORTRAITS_MOST ? { ...current, portraits: [...current.portraits, added] } : null));
 }
 
-// Both answer what was there, for 되돌리기 (restoreLikeness). A portrait goes until 다시 만들기, since the pack still has
-// its profiles; the whole pack's are made again by the next 삽화 that needs them.
+// Deletion returns undo state. Removing one portrait does not regenerate it; removing all profiles enables next-draw build.
 export async function removePortrait(store: ObjectStore, owner: string, at: PortraitAt): Promise<ApiResult<Stored<'likeness'>>> {
   const before = store.get('likeness', likenessId(owner));
   if (!before) return { ok: false, error: 'gone' };
@@ -89,8 +88,8 @@ export async function removePortrait(store: ObjectStore, owner: string, at: Port
 
 type PortraitsImported = { before: Stored<'likeness'> | null; replaced: number };
 
-// Merged by name (importedPortraits), and refused whole past PORTRAITS_MOST before anything is written. A pack without
-// profiles gets them, so the next 삽화 builds none. before: for 되돌리기, restoreLikeness, or removeLikeness when null.
+// Reject oversized imports before any write; merge by name and retain before for undo.
+// Even an empty-profile pack given imported profiles must not auto-build afterward.
 export async function importPortraits(store: ObjectStore, owner: string, portraits: readonly Portrait[]): Promise<ApiResult<PortraitsImported> | { ok: false; error: 'too-many'; count: number }> {
   const before = store.get('likeness', likenessId(owner));
   const merged = importedPortraits(before?.value.portraits ?? [], portraits);
@@ -125,9 +124,8 @@ export class Likenesses {
     this.changes.notify();
   }
 
-  // The chat's packs' portraits in pack order (chat-context packsOf), then its 등장인물's and its persona's, those
-  // without any built first. A build that fails leaves its owner out of this draw; the picture is drawn all the same.
-  // prompt: the 삽화 prompt the draw uses, whose model writes them.
+  // Build missing profiles first in pack → cast → persona order; failures omit that owner, never the picture.
+  // The selected illustration prompt supplies the profile-writing model.
   async portraits(chat: Chat, prompt: IllustratePrompt, signal: AbortSignal): Promise<Portrait[]> {
     const { store } = this.deps;
     // A 등장인물 is drawn from its own card's portraits, after the packs, as its lorebook and pictures are read.
@@ -138,9 +136,8 @@ export class Likenesses {
     return owners.flatMap((owner) => store.get('likeness', likenessId(owner))?.value.portraits ?? []);
   }
 
-  // 다시 만들기, from the owner's own screen: written as a new chat of the character would draw (a module's or a
-  // persona's as a new 캐릭터 없이 chat's), and replacing what is there but the user's portraits. One under way is not
-  // started again. Answers what it replaced, for 되돌리기, or null when nothing was replaced.
+  // Regenerate using new-chat settings, preserving user portraits. Do not duplicate an active build.
+  // Return the replaced state for undo, null if unchanged.
   async rebuild(owner: string): Promise<Stored<'likeness'> | null> {
     const { store } = this.deps;
     const character = live(store.get('character', owner)) ? owner : null;
@@ -203,9 +200,8 @@ export class Likenesses {
     return { name: card?.name ?? module!.value.name, user: false, texts, lore, files, held: [] };
   }
 
-  // Sources (design §6.6): the pictures' NovelAI metadata, the pictures themselves for a model that sees them, and the
-  // owner's text with its lorebook. An owner with none of them gets no call and nothing saved, so a description
-  // written later (an account's first persona starts blank) is read on the next draw.
+  // Use NovelAI metadata, vision if supported, then owner text/lore.
+  // With no material, call/save nothing so later-added descriptions can still trigger the first build.
   private async build(owner: string, chat: Chat, prompt: IllustratePrompt, signal: AbortSignal): Promise<LikenessFailure | Stopped | null> {
     const { store, files } = this.deps;
     const material = this.material(owner);

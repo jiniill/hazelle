@@ -34,9 +34,8 @@ export function ChatPromptPicker({ prompt, out, open, onOpen }: { prompt: Prompt
   );
 }
 
-// Mounted only while open, so each opening starts with an empty search, in the folder of the chat's own prompt. A touch
-// screen gets no focused search, whose keyboard would cover the list. plain: a 캐릭터 없이 chat, which lists 유틸리티 봇처럼
-// first; out: that row is its choice.
+// Mount per opening to reset search/folder; avoid touch autofocus, whose keyboard covers choices.
+// Characterless chats lead with utility mode; out marks it selected.
 type DialogProps = { prompt: PromptChoice; plain: boolean; out: boolean; onChoose: ChatSettingsActions['setPrompt']; onKeepOut: ChatSettingsActions['keepPromptOut']; onEdit: (id: string | null) => void; onClose: () => void };
 export function PromptDialog({ prompt, plain, out, onChoose, onKeepOut, onEdit, onClose }: DialogProps) {
   const { store } = useSession();

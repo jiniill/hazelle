@@ -1,6 +1,5 @@
-// 헤이젤로 가져오기 crosses a page load and the sign-in or unlock it may need, so the link's key waits in this tab's
-// session storage until the workspace takes it (ShareArrival), which clears it. While one waits for a link, main.tsx
-// answers that link's address with the account flow instead of its public page.
+// Keep keyed share arrival in tab sessionStorage across reload/sign-in/unlock, then consume/clear in ShareArrival.
+// While pending, main.tsx shows account flow instead of the public share page.
 const PENDING = 'hazelle:share-pending';
 
 type Pending = { id: string; key: string };

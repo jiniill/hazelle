@@ -42,9 +42,8 @@ function asRisu(items: readonly Laid<ToggleRow>[]): Laid<ToggleRow>[] {
     .filter((item) => !('group' in item) || item.items.length > 0);
 }
 
-// What the panel shows of a source while searching or filtering: the rows the search and the 변경 filter keep, those
-// that differed when the panel opened or the filter changed first, so a row does not jump away under the pointer as
-// it changes. Layout lines are left out then, since a group or divider over a few found rows would mislead.
+// Freeze changed-filter membership when opened/refiltered so editing cannot remove the row under the pointer.
+// Search/filter omit layout lines, which would misgroup partial results.
 export function shownRows(rows: readonly ToggleRow[], found: ReadonlySet<ToggleRow>, onlyChanged: boolean, first: ReadonlySet<string>): ToggleRow[] {
   const kept = rows.filter((row) => found.has(row) && (!onlyChanged || row.changed));
   return [...kept.filter((row) => first.has(row.toggle.key)), ...kept.filter((row) => !first.has(row.toggle.key))];

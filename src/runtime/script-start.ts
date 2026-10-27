@@ -18,10 +18,8 @@ type StartSteps<F> = {
 // message; what onInput and editInput wrote went with the message sent.
 type StartEnd = { kind: 'stopped'; stage: StartStage | null; writes: Writes } | { kind: 'started'; writes: Writes };
 
-// The bot's scripts before a request, in their order (design §6.8): onInput and editInput for a message being sent,
-// which is then saved, so that what onStart does to the chat lands after it; then onStart. A stop ends them where it
-// is called: what would have run after it does not, and the message is saved as it stands, with what was written
-// until then. The one order for a send (ScriptTurns.starting) and its rehearsal (ScriptPreview.rehearse).
+// Canonical send/rehearsal order: onInput → editInput → save message → onStart.
+// Stops retain writes/message up to that stage and skip everything after it (design §6.8).
 export async function startStages<F>(said: string | null, steps: StartSteps<F>): Promise<F | StartEnd> {
   if (said !== null) {
     const history = (): ChatScope => ({ ...steps.scope(), messages: steps.scope().messages.slice(0, -1) });

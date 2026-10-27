@@ -17,10 +17,8 @@ export class ScriptSchedule {
     private readonly closing: AbortSignal,
   ) {}
 
-  // One run at a time per chat, each reading the chat as the one before left it: a write returns before its chat's
-  // projection is made again, so each waits for it, and a projection that fails is shown on the chat's scope
-  // (ChatProjections.evaluate). A question still open when the next comes is dismissed, so a card the user passed over
-  // never holds up a send.
+  // Serialize chat runs against evaluated prior writes, not just save completion.
+  // Dismiss earlier questions when a new run starts so skipped cards cannot block sends.
   queued<T>(chat: string, task: () => Promise<T>): Promise<T> {
     this.interactions.dismiss(chat);
     const next = (this.queues.get(chat) ?? Promise.resolve()).then(() => this.store.projections.evaluate(chat).catch(evaluationFailure)).then(task);
@@ -39,9 +37,8 @@ export class ScriptSchedule {
     return this.held.has(chat);
   }
 
-  // One chain per chat and tool, off the send queue: a tool hears reply, change, branch, menu and action in the order
-  // they came, and a send never waits for them. Each job runs with the chat held, only while the same tool is on in it,
-  // and dismisses the chat's open question first, as a send does.
+  // Per-chat/tool event chain stays off the send queue. Hold the chat and recheck the tool remains active for each job.
+  // Dismiss open questions as sends do.
   lane(chat: string, unit: ToolUnit, job: () => Promise<unknown>): Promise<void> {
     const { store } = this;
     const key = `${chat}:${unit.module}`;

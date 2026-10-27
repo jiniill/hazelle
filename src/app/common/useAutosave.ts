@@ -11,8 +11,7 @@ export const saveWords = (status: SaveStatus | null) => (status ? SAVE_STATUS[st
 export const mergeStatus = (...statuses: (SaveStatus | null)[]) =>
   statuses.find((each) => each === 'failed') ?? statuses.find((each) => each === 'saving') ?? statuses.find((each) => each !== null) ?? null;
 
-// key names the thing among the session's saves (common/saveQueue Saves), the same on every screen that edits it.
-// unsaved: what was changed that the store does not hold yet, by this screen or one before it.
+// Use the same session save key on every editor of an object; unsaved includes preceding screens' pending edits.
 export function useAutosave<T extends object>(key: string, write: Write<T>) {
   const toast = useToast();
   const saves = useSaves();

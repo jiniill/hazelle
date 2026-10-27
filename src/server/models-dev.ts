@@ -18,8 +18,8 @@ type ListedRow = ListedModel & { list: string; model: string; name: string | nul
 
 const rate = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null);
 
-// A model without an input or output price, or with a tier of another kind than context size, is left unpriced and costs
-// 알 수 없음: priced without that tier it would read cheaper than the bill. context_over_200k repeats the tiers.
+// Unknown prices or non-context tiering must stay unpriced: ignoring tiers would understate bills.
+// context_over_200k duplicates the tier table.
 function ratesOf(cost: unknown): Rates | null {
   if (!isRecord(cost)) return null;
   const input = rate(cost.input);

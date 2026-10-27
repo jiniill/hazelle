@@ -11,9 +11,8 @@ import { dailyDistinct } from './limits';
 export type PageVisit = { kind: 'visit'; address: string; agent: string };
 export type FrontendMessage = 'listening' | 'draining' | 'closed' | PageVisit;
 
-// Only the API process owns these rows. The public worker sends HTML answers over IPC, never through a public route.
-// A guest id is kept 7 days, the 손님 출신 window. An address adds VISITORS_PER_ADDRESS browsers a day at most, so a
-// request with a made-up User-Agent cannot add rows without end.
+// API owns visit rows; public worker reports HTML over IPC, never a public endpoint.
+// Keep guest ids for the 7-day conversion window and cap distinct browsers per address/day against forged User-Agents.
 export function openVisits(db: DatabaseSync, clock: () => number = Date.now) {
   const browsers = dailyDistinct(VISITORS_PER_ADDRESS, clock);
   const close = () => transaction(db, () => {

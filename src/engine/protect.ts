@@ -3,10 +3,8 @@
 
 export type ProtectInvalid = { kind: 'protect-invalid'; pattern: string };
 
-// Always kept: code, comments, styles and scripts, media tags, and the bracketed asset tokens bots write for their
-// scripts (engine/translate-instructions lists their shapes: a 🖼 or an img/image/asset/sprite word inside [ ] or { }).
-// Not whole HTML blocks, since a status board must stay translatable (the pinned ones are already left out of the
-// source).
+// Protect code/comments/styles/scripts/media and bracketed asset tokens (translate-instructions).
+// Never mask whole HTML blocks: status content must remain translatable; pinned boxes are already excluded.
 const BUILT_IN: readonly RegExp[] = [
   /^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[ \t]*$|(?![\s\S]))/gmu,
   /<!--[\s\S]*?-->/gu,

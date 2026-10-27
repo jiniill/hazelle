@@ -1,23 +1,20 @@
 import { isToggle, type Toggle, type ToggleLine, type ToggleMark, type ToggleValues } from './prompt';
 
-// Only toggles are declared; a layout line has no key to read. A key declared twice is one toggle, since conditions
-// read one value per key; the first declaration is kept, so the prompt's over a pack's.
+// First declaration wins per key, so prompt toggles override pack toggles; layout lines declare nothing.
 export function chatToggles(lines: readonly ToggleLine[]): Toggle[] {
   const keys = new Set<string>();
   return lines.filter(isToggle).filter(({ key }) => !keys.has(key) && keys.add(key));
 }
 
 export type GroupHead = Extract<ToggleMark, { kind: 'group' }>;
-// What a group holds, or the list outside its groups.
 export type ToggleEntry = Exclude<ToggleLine, { kind: 'group' } | { kind: 'groupEnd' }>;
-// Every line but a group's end, which shows only as where its group stops.
 export type ShownLine = ToggleEntry | GroupHead;
 export type LineAt<L extends ToggleLine = ToggleLine> = { line: L; at: number };
 export type ToggleGroup = { head: LineAt<GroupHead>; members: LineAt<ToggleEntry>[]; end: LineAt | null };
 export type ToggleNode = LineAt<ToggleEntry> | ToggleGroup;
 
-// As Risu reads them: a group holds the lines after it up to its groupEnd or the next group, so groups do not nest,
-// and a groupEnd with no group open holds nothing and is left out. Each line is the very one in the list, at its index.
+// Risu groups do not nest: the next group or groupEnd closes one. Ignore orphan groupEnd lines.
+// Retain original line objects and indices.
 export function toggleTree(lines: readonly ToggleLine[]): ToggleNode[] {
   const nodes: ToggleNode[] = [];
   let group: ToggleGroup | null = null;
@@ -41,9 +38,8 @@ export type LineMove = { from: number; count: number; to: number };
 const firstOf = (node: ToggleNode) => ('head' in node ? node.head.at : node.at);
 const lastOf = (node: ToggleNode) => ('head' in node ? (node.end?.at ?? node.members.at(-1)?.at ?? node.head.at) : node.at);
 
-// One step past what shows beside the line at `at`: an entry moved past a group's head or end goes into or out of the
-// group, and a group moves with all it holds. A group with no end of its own is not moved up past a lone line, which
-// it would then hold.
+// Moves cross group boundaries; groups carry their contents.
+// Never move an unterminated group above a lone line, which it would absorb.
 export function lineMoves(nodes: readonly ToggleNode[], at: number): { up: LineMove | null; down: LineMove | null } {
   const index = nodes.findIndex((node) => firstOf(node) <= at && at <= lastOf(node));
   const node = nodes[index]!;
@@ -71,7 +67,6 @@ export const keyInUse = (lines: readonly ToggleLine[], key: string) => lines.som
 // The lines alone; what names the key elsewhere is its owner's to rewrite (app/prompts/edits rekey).
 export const rekeyed = (lines: readonly ToggleLine[], from: string, to: string): ToggleLine[] => lines.map((line) => (isToggle(line) && line.key === from ? { ...line, key: to } : line));
 
-// null for a key nothing declares.
 export function toggleValue(declared: readonly Toggle[], values: ToggleValues): (key: string) => string | null {
   const defaults = new Map(declared.map((toggle) => [toggle.key, toggle.default]));
   return (key) => (!defaults.has(key) ? null : Object.hasOwn(values, key) ? values[key]! : defaults.get(key)!);

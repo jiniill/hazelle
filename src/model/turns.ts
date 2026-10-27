@@ -32,7 +32,6 @@ export function schedule(turns: Turns, now: number): Schedule {
   };
 }
 
-// The accounts that may serve now, in pick order: a pool's current group, or a connection's one account.
 export function onTurn(connection: Connection, now: number): Account[] {
   if (!connection.turns) return connection.accounts;
   const ids = schedule(connection.turns, now).active.accounts;
@@ -78,7 +77,6 @@ export function removeGroup(turns: Turns, id: string, now: number): Turns | null
 
 export const takeTurn = (turns: Turns, id: string, now: number): Turns => ({ ...turns, anchor: { group: id, cycle: cycleOf(now, turns.day) } });
 
-// The current group stays current on the new day.
 export function setDay(turns: Turns, day: number, now: number): Turns {
   const { active } = schedule(turns, now);
   return { ...turns, day, anchor: { group: active.id, cycle: cycleOf(now, day) } };
@@ -97,7 +95,6 @@ export function moveAccountOrder(turns: Turns, account: string, by: -1 | 1): Tur
   return { ...turns, groups: turns.groups.map((entry) => (entry.id === group.id ? { ...entry, accounts: moved(group.accounts, index, to) } : entry)) };
 }
 
-// An account signed in again, found by its name, takes the new secret; another joins the current group last.
 export function signedIn(connection: Connection & { turns: Turns }, account: Account, now: number): Connection {
   const same = connection.accounts.find((entry) => entry.name === account.name);
   if (same) return { ...connection, accounts: connection.accounts.map((entry) => (entry === same ? { ...entry, secret: account.secret } : entry)) };

@@ -19,9 +19,8 @@ export type SentRequest = Pick<HttpRequest, 'url' | 'body'>;
 // An agent's call (runtime/agents): whose it was, and the parts it sent.
 export type LoggedAgent = { name: string; stage: AgentStage; sent: Pick<Assembled, 'messages' | 'parts'> };
 
-// One model call this page made or picked up. picked: picked up after a reload, so its request and response were
-// never read here; request is null too for a call refused before it was built. prompt: a chat reply's, agent an
-// agent's (attach). diagnosis is undefined only while queued/running, null when unavailable or unneeded.
+// picked calls lack request/response after reload; pre-build refusals also lack request.
+// diagnosis undefined means queued/running, null means unavailable or unneeded.
 export type LogEntry = Omit<Logged, 'call'> & { at: number; picked: boolean; receipt: Receipt; request: SentRequest | null; response: string | null; prompt?: Assembled; agent?: LoggedAgent; wire?: CacheText; diagnosis?: CacheDiagnosis | null };
 
 export type ChatLog = { entries: readonly LogEntry[]; omitted: number };
@@ -33,9 +32,8 @@ const EMPTY: ChatLog = { entries: [], omitted: 0 };
 
 const SECRET_PARAM = /^(key|api[_-]?key|access[_-]?token|token|authorization)$/i;
 
-// The one redaction of a request this page shows. No credential is applied before it: all connectors authenticate
-// through withCredential's headers, including Gemini and Vertex, and headers are never kept. Imported direct endpoints
-// can still embed one in their URL, and an account's secret is hidden wherever it was pasted.
+// Redact before credentials are applied; authentication headers never enter the log.
+// Also hide secrets in imported direct URLs and anywhere the account secret was pasted.
 export function redacted(request: SentRequest, connection: Connection): SentRequest {
   const url = new URL(request.url);
   let changed = false;

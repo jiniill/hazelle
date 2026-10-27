@@ -35,8 +35,8 @@ export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onRes
   const search = useSearch(all, '토글 검색', (row) => [row.toggle.label]);
   const found = new Set(search.found);
   const laying = filter === 'all' && !search.words;
-  // 캐릭터 없이's values hold for every chat without a character, which no layer word names. Unchanged, the toggles hold
-  // their starting values, 기본값: 공용 sets no toggle, so its tag would be wrong here.
+  // Characterless values apply to all characterless chats, not a global layer.
+  // Unchanged means declared defaults; the global layer declares no toggles and must not label them.
   const tag = toggles.changed === 0 ? ({ label: '기본값', tone: 'plain' } as const) : card ? scopeTag('character') : undefined;
   const visible = toggles.sections
     .map((section) => ({ ...section, shown: shownRows(section.rows, found, filter === 'changed', first) }))

@@ -8,9 +8,7 @@ export type Box = { script: number; html: string; at: 'top' | 'bottom' };
 export type Context = {
   // The scripts, by place, whose boxes are taken out of the text instead of drawn in it.
   take?: ReadonlySet<number>;
-  // The place, in the messages the Scripts were built over, of the message the text belongs to: the stored message index
-  // display uses, never a position in a filtered history. -1 for the backgroundHTML, where repeat_back copies nothing,
-  // as in Risu.
+  // Original stored-message index, never a filtered-history position. -1 is backgroundHTML, where repeat_back copies nothing.
   index: number;
   cbs: (text: string) => string;
 };
@@ -61,10 +59,8 @@ export class Scripts {
     for (const plans of Object.values(this.plans)) plans.sort((a, b) => b.order - a.order);
   }
 
-  // Runs the one CBS pass over the text itself, so the caller hands in the text before CBS.
-  // No result cache: Risu's froze random CBS in a replacement.
-  // drawn: the scripts, by place, that drew a box in this text. A taken box goes on through the scripts after its
-  // own, as it would have in the text: bots turn the <img src=name> of a status box into pictures with a later script.
+  // Accept pre-CBS text; never cache results, which would freeze random replacements. drawn records script positions.
+  // Extracted boxes still pass through later scripts, e.g. a later image replacement inside a status box.
   apply(stage: RegexScript['stage'], text: string, { take = new Set(), index, cbs }: Context): { text: string; drawn: number[]; boxes: Box[] } {
     const drawn: number[] = [];
     const boxes: Box[] = [];
@@ -119,11 +115,9 @@ export class Scripts {
   }
 }
 
-// Risu copied from the previous same-role message only, and carried a match forward because the output stage
-// rewrote that message in storage. Stored text stays as written, so the copy comes from the latest earlier same-role
-// message that has a match, read raw.
-// Each key holds only its latest match before through. Display patches come in descending disjoint stretches,
-// each internally forward; a backwards seek scans only when that match lies beyond the requested message.
+// Risu carried matches forward by rewriting stored output; our immutable text needs the latest raw same-role match.
+// Keep only the latest match before through. Disjoint display patches can seek backward; rescan only if the cached
+// match is at or beyond the requested message.
 type MatchCursor = { through: number; last: { index: number; text: string } | null };
 function latestMatches(messages: readonly HistoryMessage[]): (pattern: RegExp, index: number, dynamic: boolean) => string | null {
   const fixed = new Map<string, MatchCursor>();

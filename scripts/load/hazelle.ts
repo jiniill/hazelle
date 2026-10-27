@@ -1,7 +1,6 @@
 import { createHash, randomBytes, randomUUID, type webcrypto } from 'node:crypto';
 
-// The server's HTTP API as the browser client calls it. Proofs and key wraps are random bytes: the server stores and
-// hashes them (SHA-256) but never learns how the client derived them, so its cost is the same as a real signup's.
+// Match browser HTTP costs with random proofs/wraps: server only hashes/stores them, never derives client keys.
 
 export type Account = { id: string; username: string; cookie: string; timeline: string; rev: number };
 

@@ -19,9 +19,8 @@ export class GenerationChanged extends Error {
   constructor() { super('The cache generation changed'); }
 }
 
-// Each write commits the rows and their cursors atomically. Bodies are server ciphertext, never opened values.
-// Every operation but open and forget states the generation the tab holds and compares it inside its own
-// transaction, so a delayed clear or bootstrap from a stale tab changes nothing.
+// Atomically commit ciphertext rows and cursors. Except open/forget, compare the caller generation inside
+// each transaction so stale-tab clears/bootstrap cannot mutate the current cache.
 export interface DeviceCache {
   // One without a timeline is a clear whose bootstrap has not answered yet, which a tab joins; none at all is a cache
   // from before generations, whose rows go as a new generation is made, in the same transaction.

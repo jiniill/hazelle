@@ -15,8 +15,7 @@ export function starredModels(connections: readonly Stored<'connection'>[], role
 
 type Choice = ReturnType<typeof starredModels>[number];
 
-// A heading wherever the connection changes: same-named models on two connections differ by heading, not by a grey
-// line under each. Callers keep starredModels' order, which lists each connection's models together.
+// Keep connection headings, not per-model sublabels; caller must preserve starredModels connection grouping.
 export function byConnection(choices: readonly Choice[], item: (choice: Choice) => ReactElement): ReactElement[] {
   return choices.flatMap((choice, at) =>
     choices[at - 1]?.ref.connection === choice.ref.connection ? [item(choice)] : [<MenuHeading key={`heading/${choice.ref.connection}`}>{choice.source}</MenuHeading>, item(choice)],
@@ -41,9 +40,8 @@ type Props = {
   label?: string;
   help?: string;
   own: ModelRef | undefined;
-  // What leaving it unset means here; null where it cannot be left unset. It names no model: 대화 모델 differs by
-  // chat, so a model named here would be wrong in any chat that picked another. 보조 모델 too: a chat's
-  // conversation prompt outranks 공용's, and with neither set it falls back to the chat's 대화 모델.
+  // Name the inherited role, never a concrete model: chat/prompt overrides can choose a different one.
+  // Null means the picker cannot be left unset.
   follow: string | null;
   connections: readonly Stored<'connection'>[];
   onPick: (ref: ModelRef | null) => void;
@@ -68,7 +66,6 @@ export function RolePicker({ role, label = MODEL_ROLES[role], help, own, follow,
 // menu's first item, so the values are read on the card and reached in one press.
 type CardProps = Omit<Props, 'label'> & { values?: string; open?: () => void };
 
-// RolePicker's choices from a card that leads its page: the model's name, and its connection under it.
 export function RoleCard({ role, help, own, follow, connections, onPick, values, open }: CardProps) {
   const label = MODEL_ROLES[role];
   const choice = own && findStarred(own, connections);

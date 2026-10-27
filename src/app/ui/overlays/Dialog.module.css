@@ -10,8 +10,7 @@
   background: var(--color-scrim);
 }
 
-/* A pane, though it renders inside a page's tree: the page's scale (Screen.module.css) does not reach it. --box-inset
-   takes a length, not initial: an invalid value would void the max() that reads it (Item.module.css). */
+/* Reset page scale to pane values. --box-inset must be a length, not initial, or Item max() becomes invalid. */
 .dialog {
   composes: floating from '../foundation/surface.module.css';
   --box-inset: 0px;

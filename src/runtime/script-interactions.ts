@@ -13,14 +13,9 @@ import { ToolLate, ToolStopped, ToolStuck, until } from './script-binding';
 import type { ObjectStore } from './store';
 import { toolsOf, ToolRate, TOOL_NOTICES_PER_MINUTE } from './tools/store';
 
-// said: the script's own words (alertNormal, alertError, showAlert, a tool's say). The others are the app's about it.
-// no-model: a script called a model of a role the chat has none for. flood: it called models faster than the server
-// lets a chat's scripts (server/streams). late: a tool missed the prompt deadline and the turn went without its slot.
-// stuck: disabled once a tool stalled too often, until reload. memory-held: a tool the user let take the memory slot
-// cannot, since another tool before it in the chat holds it.
-// unsaved: what a run did to the chat could not be saved; answer-unsaved: a consent answer could not, and is asked again. runaway: the script's commands were stopped for making too
-// much text. input-stop: a script stopped a send before onStart (design §6.8: Risu ignores it there and replies), told
-// once per chat, so the missing reply is not read as a dead bot.
+// said is script-authored text; other variants are app notices. late/stuck/held describe tool gates.
+// answer-unsaved must ask consent again. input-stop is told once per chat so a deliberately absent reply
+// is not mistaken for a broken bot (design §6.8).
 type Note =
   | { kind: 'said'; tone: 'normal' | 'error'; text: string }
   | { kind: 'failed'; message: string }
@@ -36,11 +31,8 @@ type Note =
   | { kind: 'runaway' }
   | { kind: 'input-stop' };
 export type ScriptNote = { id: number; chat: string; from: PackOwner | null } & Note;
-// Consent is saved on the spender, not the chat's character: 'yes' allows it and 'no' refuses it.
-// A dismissal leaves it to be asked again. card: a script would rewrite the chat's character's card, saved on that
-// character whichever script asked. plugin: one card for every use of a module's tool its module has not answered,
-// the memory slot included (design §6.10), each saved on the module; hosts: the literal hosts its code names, none for a
-// Hazelle tool. model: a bot's or a plain module's Lua.
+// Save model consent on its spender, card-write consent on the character, plugin uses on the module.
+// Dismissal saves nothing. Plugin cards combine unanswered uses; hosts are Risu literal hosts, empty for Hazelle tools.
 export type ScriptQuestion = { id: number; chat: string; from: PackOwner; question: Question | { kind: 'model' } | { kind: 'card' } | { kind: 'plugin'; grants: Grant[]; hosts: string[] } };
 export type ScriptsState = { notes: ScriptNote[]; questions: ScriptQuestion[] };
 
@@ -162,9 +154,8 @@ export class ScriptInteractions {
     ];
   }
 
-  // One card per plugin and account (ruled 2026-10-21): its one answer saves every use it names. No asker owns it, as
-  // no claim does: each stops waiting on its own signal and the card stays. An asker reads its own use's answer after,
-  // since a card asked before a re-import added that use never named it.
+  // One shared plugin/account card (user, 2026-10-21), never owned by one waiter.
+  // Cancellation detaches only that waiter. Re-read its use afterward: reimport may have added uses absent from the card.
   private async grant(chat: string, module: string, use: Grant, signal?: AbortSignal): Promise<boolean> {
     const answered = await until(this.card(chat, module), signal).then(() => true, () => false);
     return answered && this.store.get('module', module)?.value[GRANTS[use]] === true;
@@ -176,8 +167,8 @@ export class ScriptInteractions {
     return this.decide(`plugin:${module}`, chat, { kind: 'plugin', grants, hosts }, { kind: 'module', id: module }, (yes) => setGrants(this.store, module, grants, yes));
   }
 
-  // One question per key at a time, its 'yes' or 'no' saved by save; a dismissal saves nothing and is no. A card shows
-  // only in its own chat, so the chat on screen takes one it joins; a background chat joining leaves it where it is.
+  // One question per key; dismissal saves nothing and means no.
+  // Joining foreground chats take the card; background joiners must not move it.
   private decide(key: string, chat: string, question: ScriptQuestion['question'], from: PackOwner, save: (yes: boolean) => Promise<ApiResult<unknown>>, signal?: AbortSignal): Promise<boolean> {
     const asked = this.consents.get(key);
     if (asked) {

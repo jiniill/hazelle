@@ -1,11 +1,9 @@
 import type { CSSProperties } from 'react';
 import styles from './StepList.module.css';
 
-// One step of an evaluation: the source as written and what it gave. depth: how many steps hold it. note: what the
-// result alone does not say. tone: branch when the note is a condition's verdict, warn for a step that did not run.
+// depth counts containing steps; branch is a condition verdict, warn means not executed.
 export type StepRow = { source: string; result: string; depth: number; note?: string; tone?: 'branch' | 'warn' };
 
-// Steps in the order they ran; pressing one asks for its source.
 export function StepList({ label, steps, onPick }: { label: string; steps: StepRow[]; onPick: (index: number) => void }) {
   return (
     <ol className={styles.steps} aria-label={label}>

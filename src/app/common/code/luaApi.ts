@@ -1,7 +1,6 @@
 import { UNSUPPORTED } from '../../../engine/lua/run';
 
-// What a bot's Lua can call, as the code editor offers and explains it. luaApi.test.ts holds the names equal to the
-// functions engine/lua/run.ts sets and prelude.lua defines, so a function added there needs its line here.
+// Keep completion names equal to engine/lua/run and prelude.lua functions (luaApi.test).
 export type LuaFunction = {
   name: string;
   // The call as written, Korean argument names in the parentheses: completion makes each a tab stop.

@@ -37,8 +37,7 @@
   font-weight: var(--weight-regular);
 }
 
-/* Beside a name in a narrow panel, as Risu's select: at most the narrow chip's width, so a long value is cut short
-   and the name keeps the rest of the row. Its own end padding pulled out lines the chevron up with a switch's end. */
+/* Cap long values beside names; pull end padding out to align chevrons with switch ends. */
 .value {
   composes: ghost;
   max-width: var(--chip-max-width-narrow);
@@ -68,8 +67,7 @@
   composes: ellipsis from '../foundation/a11y.module.css';
 }
 
-/* A setting row stacked in a narrow box (SettingGroup's container query) gives its field the whole row, as on a phone.
-   440px is --screen-narrow (and --dialog-width): a container query cannot read var(), so change them together. */
+/* Match SettingGroup stacking at 440px; keep --screen-narrow/--dialog-width synchronized because container queries cannot read var(). */
 @container (max-width: 440px) {
   .field {
     max-width: 100%;

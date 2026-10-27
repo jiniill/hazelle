@@ -59,9 +59,8 @@ const UNREAD: Record<UnreadKind, { says: (unread: number) => string; to: Route }
   unreadBoard: { says: (unread) => `${BOARD.title} 새 알림 ${count(unread)}개`, to: { kind: 'board-activity' } },
 };
 
-// Said when the account opens with notices or board alerts the person has not seen, and again when a sync hears more
-// than were last said; marking them seen lowers the mark. The ref also keeps StrictMode's second effect run from saying
-// it twice.
+// Notify new unread counts on open/sync; seen counts lower the watermark.
+// Ref prevents duplicate StrictMode effect notifications.
 function Unread({ facts, kind }: { facts: AccountFacts; kind: UnreadKind }) {
   const toast = useToast();
   const unread = useSyncExternalStore(facts.subscribe, () => facts.snapshot()[kind]);
@@ -142,10 +141,8 @@ function ReplyHold() {
   return null;
 }
 
-// The release this device last opened, and the tour it saw (closing it in any way is seeing it); the ref: StrictMode
-// runs a mount's effect twice. The open's one dialog: the tutorials' welcome while one is left to offer, else a tour;
-// either stands in for the toast of the same open, which says the release only when the board holds its 소식
-// (server/news), and opens that post.
+// StrictMode-safe device tracking: any tour close marks it seen. Prefer tutorial welcome, then tour,
+// else a release toast only when its news post exists; never show both for the same open.
 function News() {
   const toast = useToast();
   const tutorials = useTutorials();
@@ -182,9 +179,8 @@ function News() {
   );
 }
 
-// Everything behind an open vault is one session, opened before the first screen and closed when this unmounts,
-// which 잠그기 and 로그아웃 both do. A restore the store hears ends its session, and the next one opens on the restored
-// account (ObjectStore.rewind); what was typed outlives it.
+// Unmount closes the unlocked session; restore replaces it on the new store timeline.
+// Keep typed drafts outside that lifetime.
 export function Workspace({ accountId, vaultKey, username, ...account }: Unlocked) {
   const [session, setSession] = useState<Session | null>(null);
   const [failure, setFailure] = useState<string | null>(null);

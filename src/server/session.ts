@@ -27,10 +27,8 @@ const sessionGuard = (read: (c: Context<AppEnv>) => Promise<Account | null>) =>
     const account = await read(c);
     // Carries no x-relay header: that header is how the client tells this 401 from a provider's.
     if (!account) return fail(c, 401, 'no-session');
-    // A page states the account it holds. Once another tab has signed in as someone else the cookie names that account,
-    // and what this page sealed or asks for must not be filed under it. This is the only such check: routes have none.
-    // A request stating none is not from a page holding an account: bad input, since a 409 here would close the page's
-    // account as if another tab had signed in, and a 401 would say the session is gone.
+    // Check the page-held account centrally against its cookie; another tab's login must never redirect sealed data.
+    // Missing account header is bad input, not 409/401: those would falsely close the held account/session.
     const stated = c.req.header(ACCOUNT_HEADER);
     if (stated === undefined) return fail(c, 400, 'bad-input');
     if (stated !== account.id) return fail(c, 409, 'account-mismatch');
@@ -78,9 +76,8 @@ export function setSessionCookie(c: Context, token: string) {
   setCookie(c, 'session', token, {
     prefix: 'host',
     httpOnly: true,
-    // A tool page can navigate its frame to this origin. Strict keeps that GET unauthenticated in Chromium and Firefox,
-    // but WebKit sends the cookie (docs sandbox-spike.md): a signed-in GET must stay free of side effects and never
-    // answer with something a browser runs.
+    // Sandbox frames can navigate here; WebKit may send even Strict cookies.
+    // Authenticated GETs must remain side-effect-free and never serve executable account data (sandbox-spike.md).
     sameSite: 'Strict',
     maxAge: 400 * 24 * 60 * 60,
   });

@@ -2,9 +2,8 @@ import { readAccounts, readAdminAccount } from '../../runtime/admin';
 import { HEAD_ROWS, usePages } from '../common/useLoaded';
 import { useToast } from '../toast';
 
-// head: only the accounts suspended, restoring or leaving, the few 운영 shows; it is asked again after an act, which may
-// flag an account not in hand. The whole list refetches only the account acted on (gone when null), keeping the pages
-// read so far.
+// Refresh flagged-only head after any act; a newly flagged row may not be loaded.
+// Whole-list actions refresh only the target (null removes), preserving fetched pages.
 export function useAccounts(head: boolean) {
   const toast = useToast();
   const pages = usePages((after) => readAccounts(after, head ? { flagged: true, limit: HEAD_ROWS } : {}));

@@ -20,10 +20,8 @@ export type Account = { id: string; username: string; suspended: boolean; incarn
 // Account and object ids are UUIDs made by the client.
 export const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-// What the process gives every request (node.ts; testing.ts builds the same set over a temp directory). outbound: the
-// one way a provider is reached; localProviders: the hosts it reaches outside the public internet (outbound.ts), which
-// the session tells the client. limits: calls per account, botCalls per account and chat, visitors per visitor on the
-// anonymous share routes (shares.ts), signup and credentials. backups: the daily job. pulse: 헤이젤 나우's counts.
+// Production/tests build the same Services. outbound owns provider access; localProviders is also sent in sessions.
+// Limits distinguish accounts, bot chats, anonymous visitors and credential/signup attempts.
 export type Services = {
   db: Db;
   files: Bucket;

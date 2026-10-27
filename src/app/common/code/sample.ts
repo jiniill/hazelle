@@ -2,9 +2,8 @@ import { blankCard } from '../../../engine/import/card';
 import { renderAfter } from '../../../engine/pipeline';
 import type { ChatScope } from '../../../engine/render';
 
-// The chat every guide example and 시험해 보기's 예시 채팅 runs in, which SAMPLE_NOTE describes to the reader. Its seed
-// and clock are fixed, so an example gives the result written beside it; guides.test.ts runs every one.
-// What the sample passes for {{language}}; a real chat passes null, as its conversation prompt does.
+// Fixed seed/clock make guide examples reproducible; guides.test executes each.
+// Sample {{language}} is explicit; real conversations pass null.
 export const SAMPLE_LANGUAGE = 'Korean';
 
 export const SAMPLE: ChatScope = {

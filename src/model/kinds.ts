@@ -52,17 +52,12 @@ export type Values = {
 };
 export type Kind = keyof Values;
 
-// parent: the kind an object's parent must be (one of them, where a list), or null for a top-level object. The
-// server sees this link, and an update never changes it. Read it through parentKinds.
-// id: the one id a singleton kind lives at. appendOnly: written once, never updated.
-// file: the encrypted body names a stored file (`file`, vault/files); backup discovery follows this metadata.
-// owner: a body field naming the object that owns this one, for a link the server must not see. The
-// parent cannot carry it: it is bound into each object's sealing (vault/objects) and sent in the clear.
+// parent is immutable, cleartext and bound into sealing; use owner for sealed ownership links.
+// Singleton ids and appendOnly constrain writes; file metadata drives backup discovery.
 export type Rule = { parent: Kind | readonly Kind[] | null; id?: string; appendOnly?: true; file?: true; owner?: { field: string; kind: Kind } };
 
 type Link<K extends Kind> = { [F in keyof Values[K]]-?: Values[K][F] extends string | null ? F : never }[keyof Values[K]];
 
-// The rules runtime/store checks before a write leaves the browser, and the links runtime/removal follows.
 export const KINDS = {
   character: { parent: null },
   module: { parent: null },
@@ -149,7 +144,6 @@ const picture = shape({ name: str, type: str, size: num, file: shape({ id: str, 
 const toggle = shape({ key: str, label: str, kind: str });
 const mark = shape({ label: str });
 const unread = shape({ text: str });
-// A layout line and an unread one have no key (model/prompt ToggleMark, UnreadLine).
 const toggleLine: Check = (value) =>
   isRecord(value) && (value.kind === 'groupEnd' || (value.kind === 'divider' || value.kind === 'caption' || value.kind === 'group' ? mark : value.kind === 'unread' ? unread : toggle)(value));
 const prompt = shape({ name: str, blocks: listOf(shape({ id: str, kind: str })), toggles: listOf(toggleLine) });
@@ -238,6 +232,5 @@ const SHAPES = {
 
 export const isValue = <K extends Kind>(kind: K, value: unknown): value is Values[K] => SHAPES[kind](value);
 
-// pending: a write this tab sent and the server has not answered, numbered in the order sent (ObjectStore overlays);
-// its rev is then the confirmed one it replaces, 0 for a create, never a rev of its own.
+// pending orders unanswered tab-local writes; rev remains the replaced confirmed revision (0 for creates).
 export type Stored<K extends Kind> = { id: string; kind: K; parent: string | null; rev: number; value: Values[K]; pending?: number };

@@ -72,8 +72,7 @@ const GROUPS: CharacterPart[][] = [
   ['assets', 'illustration', 'display'],
 ];
 const LIST = '캐릭터 항목';
-// Risu stores these as `name=value` lines and reads a name up to the first `=`, so a name with one, or a value over
-// several lines, would not come back from an export; the fields are single-line for that reason.
+// Keep variable fields single-line and names free of = so Risu name=value export round-trips.
 const variableError = (variables: [string, string][], index: number) => {
   const name = variables[index]![0];
   if (!name) return '이름을 입력해 주세요.';
@@ -97,9 +96,8 @@ type Props = {
   frame: Frame;
 };
 
-// The character's one screen: beside its chat, or a page elsewhere. Only the fields changed here go to editCharacter.
-// A caller leaves by unmounting it, which saves; moving between parts keeps it mounted, so nothing typed is lost.
-// shelf: the stored character as it is now, on every render. The editor shows it, under what waits to be saved.
+// Unmount flushes edits; moving between parts must keep the editor mounted.
+// Show current stored shelf under queued patches, writing only changed fields.
 export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }: Props) {
   const { id, character, face } = shelf;
   const { card, origin } = character;

@@ -5,9 +5,8 @@ import type { R2Config } from './r2-bucket';
 import { sha256Hex } from '../http';
 import { authorization } from './sigv4';
 
-// For tests: the part of R2's S3 API r2-bucket.ts calls, in memory on a local port. Every request's signature is
-// checked against the headers that actually arrived, and a listing answers `page` entries at a time so paging runs.
-// requests: each one's method and path, in order of arrival.
+// In-memory test R2 endpoint: verify signatures against received headers and paginate listings so paging executes.
+// requests captures method/path in arrival order.
 export async function fakeS3(page = 2) {
   const config: R2Config = { endpoint: '', bucket: 'pictures', accessKeyId: 'test-key', secretAccessKey: 'test-secret' };
   const objects = new Map<string, Uint8Array>();

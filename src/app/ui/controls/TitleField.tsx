@@ -14,9 +14,8 @@ type Props = {
   ref?: Ref<HTMLInputElement>;
 };
 
-// Without blank, a blank name keeps the last one (a ruling): onChange never hears a blank, and leaving the field blank
-// shows value again. While focused the field shows what was typed, so a caller that trims or snaps what it stores
-// cannot move the text under the caret.
+// Without blank, never emit empty names; restore value on blur (user ruling).
+// Keep focused draft text untouched by caller trimming to avoid moving the caret.
 export function TitleField({ label, value, placeholder, blank, onChange, place, ref }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
   return (

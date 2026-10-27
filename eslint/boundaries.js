@@ -1,9 +1,7 @@
 import path from 'node:path';
 
-// The layering of src. A module belongs to the area with the longest path that holds it: a path is a folder or a module
-// without its extension, relative to the repo root (the folder above this one), and a test file belongs where the module
-// it tests does. An area imports itself, the areas in `imports`, with `import type` those in `types`, and from its test
-// files those in `tests`. A module in no area fails lint until this table places it.
+// Assign modules to their longest matching repo-relative area; tests inherit their subject's area.
+// Allow imports/types/tests edges explicitly; unknown areas fail lint until assigned.
 const RUNTIME_IMPORTS = ['toolApi', 'changeSignal', 'contracts', 'model', 'engine', 'connectors', 'modelsDev', 'vault'];
 const BELOW_APP = ['runtime', ...RUNTIME_IMPORTS];
 const FEATURES = ['account', 'admin', 'library', 'chat', 'connections', 'models', 'prompts', 'personas', 'modules', 'settings', 'share', 'pulse', 'tools', 'board'];

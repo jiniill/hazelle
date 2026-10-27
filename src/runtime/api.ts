@@ -26,8 +26,7 @@ export function holdAccount(account: string | null, onHeard: ((heard: Heard) => 
   hear = onHeard;
 }
 
-// 헤이젤 나우 (design §6.12): the session holds the account's switch here, and fetchApi alone decides whether a request
-// carries a label. seen: the page-load mark, owed until the next request goes out while sharing.
+// Only fetchApi applies sharing labels. An owed page-load seen rides the next request sent while sharing.
 let sharing = false;
 let seenOwed = false;
 
@@ -82,19 +81,16 @@ export async function fetchApi(path: string, { pulse, ...init }: Omit<RequestIni
   return response;
 }
 
-// Headers come only once the whole request body has gone up, so their wait grows with the body at SLOWEST_UPLOAD bytes
-// a second: a slow phone uplink shared by runtime/files' 24 parallel uploads of up to 25 MB each. The answer's body is
-// read with no timer. Never move this into fetchApi: the relay's streams are read through it.
+// Header wait scales with upload bytes at SLOWEST_UPLOAD (24 concurrent files share one slow uplink).
+// Never time response bodies or move this into fetchApi, which also carries relay streams.
 const HEADERS_WAIT = 15_000;
 const SLOWEST_UPLOAD = 8_192;
 // For a route whose server work runs inside the request and can outlast HEADERS_WAIT: 탈퇴's store wipe, an operator's
 // account removal or restore. Timed out, such a request reads as 'offline' while the server may still finish it.
 export const SLOW_ROUTE_WAIT = 5 * 60_000;
 
-// 'offline' means no whole answer came: the request never reached the server, its headers did not come in time, or the
-// connection dropped while its answer was being read, or a 5xx without the JSON error shape every API route uses, which
-// the proxy in front wrote while the app was not answering (a container swap, Cloudflare's 52x). 'server-error' means
-// an answer that was neither, with its status.
+// offline means no complete app answer, including dropped/timed-out reads and proxy-shaped 5xx responses.
+// server-error is a complete unrecognized response with its status.
 export async function api<T = unknown>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, signal?: AbortSignal, headersWait = HEADERS_WAIT, headers: Record<string, string> = {}): Promise<ApiResult<T>> {
   const bytes = body instanceof Uint8Array ? (body as Uint8Array<ArrayBuffer>) : null;
   const payload = body === undefined ? undefined : (bytes ?? JSON.stringify(body));

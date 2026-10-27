@@ -57,9 +57,8 @@ type RailProps = {
   children: ReactNode;
 };
 
-// The library's actions sit above the faces, the fold last so the others stay put when it comes and goes; the places
-// stand at the bottom in two groups the eye reads apart (user, 2026-10-20). The mark is only the brand; the way home
-// is a framed button among the actions (user ruling, 2026-10-12).
+// Keep fold last so actions never move; split bottom places into two groups (user, 2026-10-20).
+// Brand mark is not home navigation: use the framed action button (user, 2026-10-12).
 export function Rail({ fold, actions, places, children }: RailProps) {
   return (
     <aside className={styles.rail} aria-label="캐릭터 바로가기">

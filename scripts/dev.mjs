@@ -3,9 +3,8 @@ import { spawn } from 'node:child_process';
 import console from 'node:console';
 import process from 'node:process';
 
-// The server runs in a process group of its own, signalled as a whole: npm and tsx watch do not pass a signal on to
-// the node process under them, which would be left holding the port and the lock on .data/. Vite stays in the
-// terminal's group, where it reads the keyboard.
+// Give the server its own process group: npm/tsx do not forward signals and could orphan Node with port/data lock.
+// Keep Vite in the terminal group for keyboard input.
 const server = spawn('npm', ['run', '-s', 'server'], { stdio: ['ignore', 'inherit', 'inherit'], detached: true });
 const vite = spawn('./node_modules/.bin/vite', process.argv.slice(2), { stdio: 'inherit' });
 

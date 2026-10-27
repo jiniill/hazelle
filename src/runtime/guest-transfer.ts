@@ -46,8 +46,7 @@ export async function guestWithContent(): Promise<ApiResult<Guest | null>> {
   if (secret.data) return { ok: true, data: guest };
   const held = await inventory(guestBackend(guest.accountId));
   if (!held.ok) return held;
-  // The first open's defaults alone are not asked about, or every sign-in from a browser that once showed the guest home
-  // would ask; nothing is lost by it, since the guest store stays as it is until 올리기 or 버리기.
+  // Ignore untouched starter defaults when deciding to prompt; guest data stays intact until explicit upload/discard.
   if (held.data.rows.some(({ id, body }) => body !== null && !SEEDED.has(id))) return { ok: true, data: guest };
   const files = await guestBackend(guest.accountId).heldFiles(null);
   return files.ok ? { ok: true, data: files.data.ids.length ? guest : null } : files;
@@ -228,10 +227,9 @@ async function copyOrder(target: Backend, accountId: string, vaultKey: VaultKey,
   }
 }
 
-// An account-pair mask gives every guest object a retry-stable copy address, including objects from a backup.
-// XOR-derived addresses commute with it; hash-addressed tool rows are recalculated from their new owners.
-// Only inventory ids enter the replacement set: an unrelated UUID is not a reference. Presence at a copy address,
-// even a tombstone, acknowledges an earlier upload; subsequent account edits and guest edits never overwrite it.
+// Account-pair masks make retry-stable ids; XOR ids commute, hash-addressed tool rows use remapped owners.
+// Rewrite inventory references only, never arbitrary UUID values. Existing copies, even tombstones, acknowledge upload:
+// never overwrite subsequent account edits with guest data.
 async function copyAddresses(guest: Guest, accountId: string, source: Backend, held: Inventory, signal?: AbortSignal): Promise<ApiResult<ReadonlyMap<string, string>>> {
   const mask = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`risu-alpha/guest-import/v1/${guest.accountId}/${accountId}`)));
   const singletons = new Set<string>(Object.values(KINDS).flatMap((rule) => 'id' in rule ? [rule.id] : []));

@@ -290,10 +290,8 @@ board.put('/posts/:id/vote', async (c) => {
 
 const commentText = (value: unknown) => (typeof value === 'string' && value.trim() && value.length <= MAX_COMMENT_LENGTH ? value : null);
 
-// A 답글 sits under a top-level comment: one to a 답글 joins that 답글's thread. Only the post's author and the operator
-// write comments and 답글, so no one else talks among themselves on the board (user ruling); on 소식 that is the operator
-// alone. Comments others wrote before the ruling stay. The operator still comments on a locked post, and on an
-// operator-only post that comment is its reply.
+// Only post author/operator may comment, operator alone on news (user ruling); keep older third-party comments.
+// Replies attach to the top-level thread. Operators bypass locks; private-post comments count as operator replies.
 board.post('/posts/:id/comments', async (c) => {
   const account = readerOf(c);
   const id = idOf(c);

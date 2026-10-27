@@ -22,9 +22,8 @@ import { chatPlace, keepRow } from './usage';
 // 토큰 절약 (runtime/turn prepare): the 보조 model reads the chosen parts of the request and writes a brief the chat model
 // gets in their place (engine/preread).
 
-// Agent defaults (2026-10-19), open to change: a system prompt carries format rules and jailbreak wording that lose
-// force in a paraphrase, so it stays out; six messages are the last three exchanges; batch 4,000 tokens. thinkLess on
-// (user ruling 2026-10-19): in the first live run Flash's thinking was 71% of the brief call's cost.
+// Keep system rules out of paraphrases; defaults use six recent messages and a 4,000-o200k-token refresh threshold.
+// thinkLess defaults on: Flash reasoning cost 71% of the first live brief call (user, 2026-10-19).
 export const PREREAD_STARTS: PrereadSettings = { parts: { chat: true, system: false, lore: true }, recent: 6, batch: 4000, thinkLess: true };
 
 export function prereadSetup(store: Pick<ObjectStore, 'get'>): PrereadSettings {
@@ -65,8 +64,8 @@ export type Preread = NonNullable<Receipt['preread']>;
 // o200k measurement show them, since o200k overcounts some languages (Korean on Gemini by about a fifth).
 export type Settle = (reply: Receipt) => Preread;
 
-// By chat, the latest brief: who it covers, and the prompt and model that wrote it (key). Later turns reuse it until
-// what it does not cover reaches batch or it goes stale (engine/preread coverage). Never stored: a reload makes it again.
+// Reuse the latest chat brief until uncovered tokens reach batch or content is stale.
+// Key includes writing prompt/model; page-only state, rebuilt after reload.
 export type Briefs = Map<string, { key: string; brief: string; tokens: number; covered: Covered[]; receipt: Receipt }>;
 
 // The material always goes as a PDF where the route can take one, whatever the 토큰 절약 model's 설정 묶음 says: the cheap

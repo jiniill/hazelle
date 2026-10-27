@@ -94,9 +94,8 @@ export type Session = {
 // Its worker starts, and the VM loads, when a chat's bot first runs Lua, never with the page.
 const luaWorker = (): Promise<LuaRunner> => Promise.resolve(new LuaWorker());
 
-// An open given up while it loads (signal) starts nothing. A cached opening never waits for the network. drafts: what
-// was typed, kept by the caller across the sessions of one open vault (app/shell/Workspace). kept: where the account's
-// data lives; a guest's has no device cache, since its backend is this browser already.
+// Aborted opens start nothing; cached opens never wait on network. Caller keeps drafts for the unlocked vault.
+// Guests use their browser master directly, without a redundant device cache.
 export async function openSession(accountId: string, vaultKey: VaultKey, username: string, signal: AbortSignal, progress?: (progress: PullProgress) => void, kept: { backend: Backend; cache?: DeviceCache; transport?: Transport } = { backend: serverBackend(), cache: deviceCache(accountId) }, bindings: { lua?: () => Promise<LuaRunner>; tools?: typeof createTools; drafts?: Drafts } = {}): Promise<ApiResult<Session>> {
   const transport = kept.transport ?? accountTransport;
   const opening = async () => {
@@ -174,8 +173,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     costs,
     tokens,
     (chat, reply) => scriptTurns.ending(chat, reply),
-    // The bot's onOutput may rewrite the reply, so what reads the reply waits for it. The lease, taken while Talk still
-    // holds the chat, keeps it loaded for the continuation or translation however soon the chat is left.
+    // Keep the chat leased past Talk: onOutput can edit the reply, and continuations/translations must read that result.
     (chat, reply) => {
       const lease = store.retainChat(chat);
       // Here, before Talk ends the turn: the reply goes from live to awaited with no render between.

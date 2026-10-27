@@ -5,9 +5,7 @@
   gap: var(--space-16);
 }
 
-/* The avatar's column runs down the whole message and holds, under the avatar, the reader's place in a message taller
-   than the view (readingRail.ts), shown on the message it marks. Nothing in the rail may be wider than the avatar: the
-   column's width comes out of the body's, and a share read in digits shook it and narrowed it (user, 2026-10-14). */
+/* Avatar column also holds the reading rail. Never exceed avatar width: digit-sized shares changed body width and shook layout (user, 2026-10-14). */
 .side {
   flex: none;
   display: flex;
@@ -148,9 +146,7 @@
   background: var(--color-surface);
 }
 
-/* The tools take a row of their own under the message, never over its words. While the message runs past the composer
-   the foot sticks above it, so its tools are at hand mid-read; only where a stuck foot can take a ground of its own
-   (scroll-state below), since a bare row stuck over the story's words would be unreadable. */
+/* Tools get their own row, never cover text. Stick above composer only with a scroll-state ground; transparent stuck tools are unreadable. */
 .foot {
   display: flex;
   flex-wrap: wrap;
@@ -180,17 +176,14 @@
     pointer-events: auto;
   }
 
-  /* Where the story's text is narrow, the tools at its end reach under the centred 맨 아래로 pill, so they stand above
-     it: on a phone, and beside a side panel. 560px leaves a gap between the pill (85px) and a reply's tools (203px),
-     which met at 507px (measured 2026-10-15). */
+  /* Raise narrow-layout tools above the centered bottom pill. Keep 560px: measured 85px pill and 203px tools collide at 507px (2026-10-15). */
   @container story (max-width: 560px) {
     .foot {
       bottom: var(--above-pill);
     }
   }
 
-  /* The tools holding the version switcher (wide screens, ChatMessage) reach the pill at every reading width: 378px with
-     a mascot remark against a 720px story, whose pill spans 317–403px (measured 2026-10-23). */
+  /* Desktop switcher tools need pill clearance at every width: 378px tools collide with the pill in a 720px story (2026-10-23). */
   .foot:has(.tools .switcher) {
     bottom: var(--above-pill);
   }

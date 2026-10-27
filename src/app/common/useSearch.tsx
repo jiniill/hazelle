@@ -2,9 +2,8 @@ import { useState, type ReactNode, type Ref } from 'react';
 import { Empty, SearchField } from '../ui';
 import { matches, noResults, SEARCH_FROM } from './search';
 
-// A picker's search: Enter in its field picks the first found once words are typed (with none, the first item may sit
-// in a folder not shown), and ref lets the picker focus the field as it opens.
-// query: words held by a parent that outlives the list, such as the sidebar's across entering a shelf.
+// Enter picks only a nonempty search's first result; otherwise it could select an item inside a hidden folder.
+// Parent-owned query may outlive the list; ref lets callers focus on open.
 export type SearchOptions<T> = { ref?: Ref<HTMLInputElement>; onEnter?: (first: T) => void; query?: readonly [string, (query: string) => void] };
 
 // One list's search: the field shows from SEARCH_FROM items and stays while words are typed, so a list shrinking
@@ -38,8 +37,7 @@ export function useSearch<T>(items: readonly T[], label: string, texts: (item: T
       />
     ),
     none,
-    // The list's place: the list, or once words are typed, what they found or the sentence that nothing was, in the
-    // look of the list's own empty state (empty).
+    // Keep results/no-match copy in the list's own empty-state style.
     shown: (list: ReactNode, results: (found: readonly T[]) => ReactNode, empty: 'body' | 'section' = 'section') =>
       !words ? list : none === null ? results(found) : <Empty variant={empty}>{none}</Empty>,
   };

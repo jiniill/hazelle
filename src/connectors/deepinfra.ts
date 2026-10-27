@@ -3,8 +3,7 @@ import { statedPrice } from './pricing';
 import type { ConnectionType, Model } from './types';
 import { amount, count, isRecord, list, modelEntries } from './values';
 
-// Its list (GET /v1/openai/models, public) also holds image, audio and embedding models; only entries tagged `chat`
-// are chat models. Tags are curated, so a missing `reasoning` tag means the model does not reason.
+// Public list includes non-chat models; only chat tags qualify. Curated tags make missing reasoning false.
 export const deepinfra: ConnectionType = {
   browser: {},
   id: 'deepinfra',

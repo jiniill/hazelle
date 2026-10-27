@@ -43,8 +43,7 @@
   align-items: center;
 }
 
-/* A group at level 3 is a page's subtitle, standing on a hairline; not muted as an inner label is. content-box keeps
-   the line under the head's min-height, so neighbours' lines meet whether or not either has an action. */
+/* Level-3 subtitle hairlines need content-box so min-height excludes the border and neighbouring heads align. */
 .group.level3 {
   gap: var(--space-16);
 }

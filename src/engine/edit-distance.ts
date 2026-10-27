@@ -12,7 +12,6 @@ export function editDistance(a: string, b: string) {
   return row[b.length]!;
 }
 
-// The item whose key is fewest edits from target, within most; the first of a tie.
 export function nearest<T>(target: string, items: Iterable<T>, key: (item: T) => string, most: number): T | null {
   let best: T | null = null;
   let score = most + 1;

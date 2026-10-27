@@ -9,9 +9,8 @@ import { storedMemory } from './memory-read';
 import type { Session } from './session';
 import { readRow } from './upgrade';
 
-// version is the format's one version key: a file of any other version is refused, never read as this one. Version 3
-// and every later file stays readable: a new stored shape adds a step in runtime/upgrade.ts, never a version bump that
-// refuses older files (user ruling 2026-10-10).
+// Accept this format version only; evolve stored bodies through runtime/upgrade, not an incompatible version bump.
+// Keep v3 and later exports readable (user, 2026-10-10).
 const FORMAT = { format: 'hazelle-chat', version: 3 };
 
 // character: the one the chat was with where it was saved, by its id and name there. pictures: each illustration's and
@@ -42,9 +41,7 @@ const row = <K extends Kind>({ id, kind, parent, rev, value }: Stored<K>): Store
 
 const PICTURED = ['illustration', 'inlay'] as const;
 
-// One chat as the backup holds it, its summary and streams aside. Entries go in the order they fold here, numbered
-// again from 1 with none pending, so the file folds as the screen shows it, writes not yet answered included. A
-// picture the operator blocked is left out with its row, as a backup leaves it out.
+// Preserve fold order including pending writes; renumber revs from 1. Omit summary/streams and blocked-picture rows.
 export async function chatFile({ store, files }: Pick<Session, 'store' | 'files'>, id: string): Promise<ApiResult<string>> {
   const chat = store.get('chat', id)!;
   const character = chat.value.character === null ? null : store.get('character', chat.value.character);
@@ -66,9 +63,8 @@ export async function chatFile({ store, files }: Pick<Session, 'store' | 'files'
   return { ok: true, data: JSON.stringify({ ...FORMAT, character: character && { id: character.id, name: character.value.card.name }, rows: [row(chat), ...entries, ...(memory ? [row(memory)] : []), ...pictured, ...remarks, ...textfiles, ...lore], pictures }) };
 }
 
-// The file comes from outside: every row passes the backup's own check, and one that is not this chat's, or an
-// illustration or inlay whose picture the file lacks, refuses it. A file written before inlays, 채팅 로어북, 마스코트 대사
-// or text files has none.
+// Validate with backup checks: foreign-chat rows or missing referenced pictures reject the file.
+// Older files legitimately omit newer chat-owned kinds.
 export function readChatFile(json: unknown): { ok: true; file: ChatFile } | { ok: false; error: ChatFileError } {
   const refused = { ok: false, error: 'not-chat-file' } as const;
   if (!isRecord(json) || json.format !== FORMAT.format) return refused;

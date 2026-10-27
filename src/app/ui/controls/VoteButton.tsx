@@ -13,7 +13,6 @@ type Props = {
   onClick: () => void;
 };
 
-// A 추천 that one account gives or takes back, its count inside.
 export function VoteButton({ label, word, count, pressed, layout = 'row', onClick }: Props) {
   return (
     <button type="button" className={`${styles.vote} ${styles[layout]}`} aria-label={label} aria-pressed={pressed} onClick={onClick}>

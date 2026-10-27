@@ -42,8 +42,7 @@ export function useMenuOpener(handle: MenuHandle): MenuOpener {
 type Props = {
   label: string;
   trigger: (opener: MenuOpener) => ReactNode;
-  // start, end: below or above, whichever half of its scrolling box the button is not in, for a button that can sit anywhere on
-  // a scrolling page, where the screen's head, the composer or the page's own end would squeeze a menu opened the fixed way.
+  // Choose the opposite half of the clipping scroller; fixed direction can squeeze menus under headers/composers.
   place?: 'below-start' | 'below-end' | 'above-start' | 'above-end' | 'start' | 'end';
   size?: 'md' | 'lg' | 'form';
   // dialog: a small form opened and closed like a menu, such as the chat's 작가의 노트; useMenuClose closes it.
@@ -54,9 +53,8 @@ type Props = {
 
 const CloseMenu = createContext(() => {});
 
-// One menu is open at a time, apart from the menus a menu opens inside itself, such as a choice in a small form:
-// opening one closes every other that does not hold it, as a press outside would. Only keys reach another menu's
-// button while one is open.
+// Only one menu branch stays open: preserve ancestors, close unrelated menus.
+// Keyboard can reach another trigger while the current menu is open.
 let shown: (() => void)[] = [];
 const Holders = createContext<readonly (() => void)[]>([]);
 

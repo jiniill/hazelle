@@ -3,7 +3,6 @@ import { Callout, CodeBlock, Facts, Stack, Text } from '../ui';
 
 export const shownValue = (value: string, truncated: boolean) => (value === '' ? '(빈 값)' : truncated ? `${value}…` : value);
 
-// What one script's run did: its errors, log() lines, variables written and the features this app does not have.
 export function HookDetail({ entry }: { entry: HookLog }) {
   return (
     <Stack gap="related">

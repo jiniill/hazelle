@@ -6,9 +6,8 @@ import type { PromptDoor } from '../common/TaskPrompt';
 import type { PromptPane } from '../shell/routes';
 import type { ToggleSection } from './toggles';
 
-// block: the prompt block the editor opens at, absent for its list. fromToggles: opened from the chat's 토글 panel,
-// which the prompt's 토글 pane and the character's 토글 part go back to. A module opens beside the chat only from there,
-// with its toggles alone.
+// fromToggles routes editor back to chat toggles; modules open beside chat only through that route.
+// block selects a prompt block, absent for its list.
 export type Side = { kind: 'prompts'; id: string | null; pane: PromptPane | null; block?: string; fromToggles?: true } | { kind: 'character'; id: string; part: CharacterPart | null; fromToggles?: true } | { kind: 'module'; id: string };
 export type InspectTab = 'request' | 'variables' | 'modules' | 'scripts' | 'log';
 type InspectPanel = { kind: 'inspect'; tab: InspectTab };
@@ -30,9 +29,8 @@ export function opened(current: Panels, panel: Panel, pairs: boolean): Panels {
   return { panel, inspect: pairs && isSide(panel) ? current.inspect : null };
 }
 
-// The editor a part of the prompt is written in: a block of the chat's prompt, the character's 설명 or one of its
-// lorebook entries. A part from a print stored before ids were kept, a module's or a persona's entry, or the app's
-// own block (utility ids) has none.
+// Only local prompt blocks and character description/lore have editors.
+// Old prints without ids, module/persona entries and utility blocks do not.
 export function editorOf(from: From, prompt: { id: string; blocks: Block[] } | null, character: string | null, loreOwner: (id: string) => string | null): Side | null {
   switch (from.kind) {
     case 'block':
