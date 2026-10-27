@@ -13,7 +13,7 @@ import { useToast } from '../toast';
 import { Button, ChipButton, Dialog, Empty, hasFinePointer, Icon, List, ListItem, Row } from '../ui';
 import type { ChatSettingsActions } from './useChatSettings';
 
-const NO_PROMPT = '프롬프트 없이';
+const NO_PROMPT = '유틸리티 봇처럼';
 
 // Without its own choice it follows the default live, and a deleted one shows as missing, never as another prompt.
 // out: a 캐릭터 없이 chat that keeps the prompt out (model/chat keepsPromptOut).
@@ -24,7 +24,7 @@ export function ChatPromptPicker({ prompt, out, open, onOpen }: { prompt: Prompt
       label={label}
       title="이 채팅의 프롬프트"
       leading={<Icon icon={FileText} size="sm" />}
-      tone={prompt.kind === 'missing' ? 'warn' : 'plain'}
+      tone={prompt.kind === 'missing' && !out ? 'warn' : 'plain'}
       phone="icon"
       popup="dialog"
       expanded={open}
@@ -35,7 +35,7 @@ export function ChatPromptPicker({ prompt, out, open, onOpen }: { prompt: Prompt
 }
 
 // Mounted only while open, so each opening starts with an empty search, in the folder of the chat's own prompt. A touch
-// screen gets no focused search, whose keyboard would cover the list. plain: a 캐릭터 없이 chat, which lists 프롬프트 없이
+// screen gets no focused search, whose keyboard would cover the list. plain: a 캐릭터 없이 chat, which lists 유틸리티 봇처럼
 // first; out: that row is its choice.
 type DialogProps = { prompt: PromptChoice; plain: boolean; out: boolean; onChoose: ChatSettingsActions['setPrompt']; onKeepOut: ChatSettingsActions['keepPromptOut']; onEdit: (id: string | null) => void; onClose: () => void };
 export function PromptDialog({ prompt, plain, out, onChoose, onKeepOut, onEdit, onClose }: DialogProps) {

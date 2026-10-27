@@ -713,7 +713,7 @@ describe('tool prompt text', () => {
 
   it('fills an explicit slot in pack order with provenance and without evaluating tool text', () => {
     const base = input();
-    const prompt = { ...base.scope.prompt, blocks: [{ id: 'tool', name: null, kind: 'slot' as const, slot: 'tool' as const, role: 'system' as const, wrapper: '<tools>{{slot}}</tools>' }, chat] };
+    const prompt = { ...starter, blocks: [{ id: 'tool', name: null, kind: 'slot' as const, slot: 'tool' as const, role: 'system' as const, wrapper: '<tools>{{slot}}</tools>' }, chat] };
     const built = assembledOf(assemble({ ...base, scope: { ...base.scope, prompt }, tools }));
     expect(built.messages[0]).toMatchObject({ role: 'system', content: '<tools>one {{getvar::untouched}}\n\ntwo</tools>' });
     expect(built.parts[0]!.from).toEqual({ kind: 'tool', name: 'Notes · Memory' });
@@ -721,7 +721,7 @@ describe('tool prompt text', () => {
 
   it('places implicit text after the template, preserving the history prefix across tool changes', () => {
     const base = input();
-    const prompt = { ...base.scope.prompt, blocks: [{ id: 'top', name: null, kind: 'text' as const, role: 'system' as const, text: 'top', mark: null }, chat, { ...chat, id: 'again' }] };
+    const prompt = { ...starter, blocks: [{ id: 'top', name: null, kind: 'text' as const, role: 'system' as const, text: 'top', mark: null }, chat, { ...chat, id: 'again' }] };
     const built = assembledOf(assemble({ ...base, scope: { ...base.scope, prompt }, tools }));
     expect(built.messages[0]!.content).toBe('top');
     expect(built.messages.at(-1)).toMatchObject({ role: 'system', content: 'one {{getvar::untouched}}\n\ntwo' });

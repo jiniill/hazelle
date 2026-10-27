@@ -9,7 +9,7 @@ import { cacheSend, type Sending } from './turn-context';
 export async function priceCachePrescriptions(store: ObjectStore, chat: string, sending: Sending, diagnosis: CacheDiagnosis, current: Forecast, prior: Prior | null, account: string | null, signal: AbortSignal): Promise<CachePrescription[] | null> {
   if (!current.against || !prior) return [];
   const choice = chatPrompt(store, sending.turn.chat);
-  const prompt = choice.kind === 'prompt' && choice.prompt.value === sending.input.scope.prompt ? choice.prompt.id : null;
+  const prompt = choice.kind === 'prompt' && !sending.input.scope.promptOut && choice.prompt.value === sending.input.scope.prompt ? choice.prompt.id : null;
   const candidates = cacheCandidates(diagnosis, current, sending.input.scope, prompt);
   const prescriptions: CachePrescription[] = [];
   try {

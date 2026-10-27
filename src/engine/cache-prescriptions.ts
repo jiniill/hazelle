@@ -2,7 +2,7 @@ import type { CacheCandidate, CacheDiagnosis, CacheEdit, Forecast } from '../mod
 import type { Lore } from '../model/library';
 import type { Prompt } from '../model/prompt';
 import { parseDecorators } from './lorebook/decorators';
-import type { PromptInput } from './pipeline';
+import { conversationBlocks, type PromptInput } from './pipeline';
 
 // replaces: the decorators that set what line sets, dropped with their @@@ fallbacks so the entry reads one rule.
 function withDecorator(content: string, line: string, replaces: readonly string[]): string {
@@ -15,7 +15,7 @@ function withDecorator(content: string, line: string, replaces: readonly string[
 
 export function cacheCandidates(diagnosis: CacheDiagnosis, forecast: Forecast, scope: PromptInput['scope'], prompt: string | null): CacheCandidate[] {
   const candidates = new Map<string, CacheCandidate>();
-  const blocks = scope.prompt.blocks;
+  const blocks = conversationBlocks(scope);
   const chat = blocks.findLastIndex((block) => block.kind === 'slot' && block.slot === 'chat');
   const lastPoint = forecast.parts.findLastIndex(({ point }) => point === 'cache');
   const post = blocks.findIndex((block) => block.kind === 'slot' && block.slot === 'postEverything');
@@ -63,7 +63,7 @@ export function cacheEditedLore<T extends Omit<Lore, 'folder'>>(entry: T, edit: 
 
 export function cacheOverlay(scope: PromptInput['scope'], edit: CacheEdit): PromptInput['scope'] | null {
   if (edit.kind === 'prompt') {
-    const prompt = cacheEditedPrompt(scope.prompt, edit);
+    const prompt = scope.prompt && cacheEditedPrompt(scope.prompt, edit);
     return prompt && { ...scope, prompt };
   }
   const entry = scope.lore.find(({ id }) => id === edit.id);

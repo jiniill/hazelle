@@ -6,7 +6,7 @@ import { inlayIds, SIGNATURE, textFileNames } from './assets';
 import type { ChatMessage } from '../connectors/types';
 import type { Memory, Written } from '../model/memory';
 import type { MascotId } from '../model/mascot';
-import type { AgentPrompt, Block, ConversationPrompt, IllustratePrompt, MascotPrompt, MemoryPrompt, PrereadPrompt, RecentSlot, Role, SlotKind, TextBlock, TranslatePrompt, WrappedSlot } from '../model/prompt';
+import type { AgentPrompt, Block, IllustratePrompt, MascotPrompt, MemoryPrompt, PrereadPrompt, RecentSlot, Role, SlotKind, TextBlock, TranslatePrompt, WrappedSlot } from '../model/prompt';
 import { unescapeCbs } from './cbs/escape';
 import { evaluate, Runaway, type CbsContext, type CbsProblem, type CbsTrace } from './cbs/evaluate';
 import type { HistoryMessage } from './history';
@@ -23,7 +23,8 @@ import { keepsMemory, memorySheet } from './agent';
 
 export type PromptInput = {
   tools: { module: string; name: string; text: string }[];
-  scope: ChatScope & { prompt: ConversationPrompt; persona: NonNullable<ChatScope['persona']> };
+  // prompt: null only on a request that keeps the prompt out (promptOut), which reads none of it.
+  scope: ChatScope & { persona: NonNullable<ChatScope['persona']> };
   // The id of the reply being written. It rolls this request's random tags outside messages and its lorebook
   // probabilities, as each earlier reply's id rolled its own.
   seed: string;
@@ -349,7 +350,7 @@ const UTILITY: Block[] = [
   { id: 'utility:postEverything', name: null, kind: 'slot', slot: 'postEverything' },
 ];
 // A chat whose prompt is gone has no block for an @@inject_at entry to go into.
-const conversationBlocks = (scope: ChatScope) => (scope.promptOut ? UTILITY : (scope.prompt?.blocks ?? []));
+export const conversationBlocks = (scope: ChatScope) => (scope.promptOut ? UTILITY : (scope.prompt?.blocks ?? []));
 
 function conversation({ scope, seed, countTokens, budget, fit, continuing, answerInstruction, memory, tools, notes = '', pictures }: PromptInput): Assembled | TooLong {
   const { prompt } = scope;
@@ -364,7 +365,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
   const recalled = built && standing(built.memory, read!, memoryBudget(built.budget, budget), tokens);
   const told = memory?.kind === 'tool' ? memory : null;
 
-  const { parts: template, memory: slot } = templateOf(blocks, laid, scope.persona, { sort: 'conversation', note: authorNote(scope.note, prompt), memory: told?.text ?? recalled?.text ?? '', tools, notes });
+  const { parts: template, memory: slot } = templateOf(blocks, laid, scope.persona, { sort: 'conversation', note: prompt ? authorNote(scope.note, prompt) : (scope.note ?? ''), memory: told?.text ?? recalled?.text ?? '', tools, notes });
   // Retrieval rides only where memory does, before the latest user message so it follows the last cache point.
   const found = built && slot ? retrieval(built.memory, built.found, recalled!, read!, retrievalRoom(memoryBudget(built.budget, budget)), tokens) : null;
   // A tool's text stands for its messages only where it reaches the request: without it there, none leave.

@@ -16,7 +16,7 @@ import { answerable, inTurn, saying, stubRelay, testServer, upstream } from './t
 import type { Shown } from './talk';
 import { autoContinue, takeTurn } from './turn';
 import { chatScripts, statusBoxes, statusPlaces } from './chat-context';
-import { wouldSend } from './turn-context';
+import { blocked, wouldSend } from './turn-context';
 
 const server = testServer();
 
@@ -60,6 +60,14 @@ const luna: Card = {
   triggers: [],
   loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null },
 };
+
+it('stops a chat with no character on a missing prompt only once it sends one', () =>
+  server.withSession(async (session) => {
+    await answerable(session);
+    const chat = { title: null, character: null, models: {}, prompt: crypto.randomUUID() };
+    expect(blocked(session, chat)).toBeNull();
+    expect(blocked(session, { ...chat, sendsPrompt: true })).toEqual({ kind: 'prompt-missing', own: true });
+  }));
 
 it('keeps a chat\'s forecast history, so a second forecast sends the worker only what changed', () =>
   server.withSession(async (session) => {

@@ -49,9 +49,9 @@ export type TurnContext = Pick<Ask, 'route' | 'settings' | 'said'> & Pick<Turn, 
 
 function sendable({ store }: Reader, scope: ChatScope, chat: Chat): PromptInput['scope'] | Blocked {
   const { prompt, persona } = scope;
-  if (!prompt) return { kind: 'prompt-missing', own: chat.prompt !== undefined };
+  if (!prompt && !scope.promptOut) return { kind: 'prompt-missing', own: chat.prompt !== undefined };
   if (!persona) return { kind: 'persona-missing', from: chatPersona(store, chat).from };
-  return { ...scope, prompt, persona };
+  return { ...scope, persona };
 }
 
 // null: nothing stops the chat from starting a turn. The screen asks before it saves a new chat.

@@ -68,7 +68,7 @@ it('prices a proven tag block moved back after the chat without writing, then ap
   expect(prescription.after.read).toBeGreaterThan(prescription.before.read);
   expect(prescription.after.of).toBe(prescription.before.of);
   const input = jobs.mock.calls[0]![1];
-  expect(input.scope.prompt.blocks.map(({ id }) => id)).toEqual(['stable', 'chat', 'clock']);
+  expect(input.scope.prompt!.blocks.map(({ id }) => id)).toEqual(['stable', 'chat', 'clock']);
   expect(input.seed).toBe(next.input.seed);
   expect(input.scope.clock).toBe(next.input.scope.clock);
   expect(session.store.get('prompt', prompt)!.value.blocks.map(({ id }) => id)).toEqual(['stable', 'clock', 'chat']);
@@ -78,7 +78,7 @@ it('prices a proven tag block moved back after the chat without writing, then ap
   if (!applied.ok) throw new Error(applied.error);
   expect(session.store.get('prompt', prompt)!.value.blocks.map(({ id }) => id)).toEqual(['stable', 'chat', 'clock']);
   expect((await applyCacheEdit(session.store, applied.data)).ok).toBe(true);
-  expect(session.store.get('prompt', prompt)!.value.blocks).toEqual(next.input.scope.prompt.blocks);
+  expect(session.store.get('prompt', prompt)!.value.blocks).toEqual(next.input.scope.prompt!.blocks);
 }));
 
 it('prices both lore edits once and retains only the constant edit that restores the stopped entry and increases reads', () => server.withSession(async (session) => {

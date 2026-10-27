@@ -20,7 +20,7 @@ export type Chat = Mark & {
   models: Assignment;
   // Each absent follows the default.
   prompt?: string;
-  // 캐릭터 없이 only: set by a pick in its prompt picker, absent while it reads 프롬프트 없이 (keepsPromptOut).
+  // 캐릭터 없이 only: set by a pick in its prompt picker, absent while it reads 유틸리티 봇처럼 (keepsPromptOut).
   sendsPrompt?: true;
   persona?: string;
   note?: string;
