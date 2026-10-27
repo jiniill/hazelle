@@ -30,16 +30,6 @@ type Place = Pick<Chat, 'character' | 'prompt' | 'features' | 'agents'>;
 export type AgentOwner = FeatureOwner;
 type Agent = StoredPrompt<'agent'>;
 
-// One layer's own list, as stored, in the order added.
-export function agentsAt(store: Reader, owner: AgentOwner): string[] {
-  if (owner.kind === 'settings') return store.get('settings', SETTINGS_ID)?.value.agents ?? [];
-  if (owner.kind === 'prompt') {
-    const prompt = store.get('prompt', owner.id)?.value;
-    return prompt?.task === undefined ? (prompt?.agents ?? []) : [];
-  }
-  return store.get(owner.kind, owner.id)?.value.agents ?? [];
-}
-
 function layers(store: Reader, chat: Place): string[][] {
   const prompt = chatPrompt(store, chat);
   return [
