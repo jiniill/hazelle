@@ -165,7 +165,9 @@ function NewerRelease() {
   );
 }
 
+// 헤이젤 나우 counts accounts of hazelle.app only (design §6.12), so a guest or a self-host has no switch for it.
 function AppInfo() {
+  const { guest } = useAccount();
   const toast = useToast();
   const store = useStore();
   const sharing = sharesPulse(useSettings());
@@ -186,11 +188,13 @@ function AppInfo() {
             </Button>
           }
         />
-        <SettingRow
-          label={PULSE.sharing}
-          help="켜 두면 쓰는 모델과 제공자, 응답 수가 hazelle.app의 집계에 더해져요. 직접 설치한 헤이젤도 마찬가지예요. 누가 썼는지와 대화 내용은 남지 않아요."
-          control={<Switch label={PULSE.sharing} checked={sharing} onChange={(on) => void share(on)} />}
-        />
+        {!guest && !selfHost() && (
+          <SettingRow
+            label={PULSE.sharing}
+            help={`켜 두면 쓰는 모델과 제공자, 응답 수가 ${PULSE.title} 집계에 더해져요. 누가 썼는지와 대화 내용은 남지 않아요.`}
+            control={<Switch label={PULSE.sharing} checked={sharing} onChange={(on) => void share(on)} />}
+          />
+        )}
         <Diagnostics />
       </SettingGroup>
       <LegalNotice />

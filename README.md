@@ -94,8 +94,6 @@ A fresh installation admits one account, which makes it one person's: the first 
 
 `HAZELLE_SELF_HOST: 1` in `docker-compose.yml`, which the start without Docker sets too, marks the installation as someone's own rather than hazelle.app. Its relay has no daily limits (`HAZELLE_RELAY_DAILY_BYTES` and `HAZELLE_RELAY_DAILY_HOSTS` set some). 헤이젤 나우 and 게시판 open on hazelle.app, where release news and questions live. There are no share links: characters travel as files. The legal page lists what leaves the installation instead of hazelle.app's terms, and the admin screen keeps signups, storage caps, accounts and its log. An installation that admits one account has no storage caps. The server asks GitHub for the newest release every hour, and 앱 정보 says when there is a newer one. New connections list the model servers of the machine that answer at the allowed addresses, each connected in one tap.
 
-Each 헤이젤 나우 count also goes to hazelle.app's board: the role, connection type and model id, with a hash of the account in place of its id. Each account turns it off with 헤이젤 나우 집계 참여 in 앱 정보.
-
 ### Without Docker
 
 Each release also carries the image's app outside the image, run by Node instead of a container. It listens on 127.0.0.1:8080 (`PORT` changes the port), keeps its data in a `data` folder beside the app, and allows Ollama, LM Studio and koboldcpp at `localhost` (11434, 1234, 5001); a `HAZELLE_LOCAL_PROVIDERS` set before the start replaces that list.

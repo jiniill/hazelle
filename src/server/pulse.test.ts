@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { PULSE_HEADER, VISITOR_HEADER } from '../contracts/http';
 import { pulseHeader, type PulseAnswer, type PulseRole, type PulseWeek } from '../contracts/pulse';
-import { tokenBucket } from './limits';
-import { forgetPulse, forwarded, type Pulse } from './pulse';
+import { dailyDistinct } from './limits';
+import { forgetPulse } from './pulse';
 import { replyKey, testApp } from './testing';
 import { readVisits } from './visits';
 
@@ -47,36 +47,31 @@ const seen = async (cookies: string[]) => {
 const board = async () => ((await (await t.get('pulse')).json()) as PulseAnswer).board;
 const hourCalls = async () => (await t.env.db.prepare('SELECT role, calls FROM pulse_hours').all()).results;
 
-it('keeps daily guest replies and signups with conversions from the existing ping, even with guest rankings off', async () => {
+it("counts a guest's reply in the daily 손님 응답 and 손님 출신 only, never on the board", async () => {
   const clock = vi.spyOn(Date, 'now').mockReturnValue(NOON);
   try {
-    await t.env.db.prepare('UPDATE service SET pulse_guests = 0').run();
+    const cookies = await people(10);
+    await seen(cookies);
     const guest = crypto.randomUUID();
-    const another = crypto.randomUUID();
-    const ping = async (client: string, role: PulseRole = 'chat', type = 'direct') => {
-      expect((await t.post('pulse/guest', { client, label: pulseHeader({ kind: 'call', role, type, model: 'model' }) })).status).toBe(204);
-    };
-    await ping(guest);
-    await ping(guest, 'chat', 'openai');
-    await ping(another, 'aux');
-    await t.signUp('regular');
+    const reply = (each: string) => t.post('visits/guest', { guest: each }, undefined, { [VISITOR_HEADER]: 'guest visitor' });
+    for (const each of [guest, guest.toUpperCase(), crypto.randomUUID()]) expect((await reply(each)).status).toBe(204);
+    expect((await reply('not-a-uuid')).status).toBe(400);
     await t.signUp('converted', guest);
-    expect((await readVisits(t.env.db, NOON))[0]).toMatchObject({ guests: 1, accounts: 2, converted: 1 });
-    const tomorrow = NOON + DAY;
-    at(tomorrow);
-    clock.mockReturnValue(tomorrow);
-    await ping(another);
-    await ping(another);
-    await t.signUp('convertedtomorrow', another);
-    expect((await readVisits(t.env.db, tomorrow)).slice(0, 2).map(({ guests, accounts, converted }) => ({ guests, accounts, converted }))).toEqual([
-      { guests: 1, accounts: 1, converted: 1 },
-      { guests: 1, accounts: 2, converted: 1 },
-    ]);
-    await forgetPulse(t.env.db, tomorrow + 3 * DAY);
-    await t.env.db.prepare('DELETE FROM accounts').run();
-    expect((await readVisits(t.env.db, tomorrow))[1]).toMatchObject({ guests: 1, accounts: 2, converted: 1 });
+    expect((await readVisits(t.env.db, NOON))[0]).toMatchObject({ guests: 2, accounts: 11, converted: 1 });
+    expect((await board())?.people).toBe(10);
   } finally {
     clock.mockRestore();
+  }
+});
+
+it("lets one address name only so many guests a day, a guest id being the client's to make", async () => {
+  const previous = t.env.limits.visitors.guests;
+  t.env.limits.visitors.guests = dailyDistinct(1);
+  try {
+    const reply = (visitor: string) => t.post('visits/guest', { guest: crypto.randomUUID() }, undefined, { [VISITOR_HEADER]: visitor });
+    expect([(await reply('one')).status, (await reply('one')).status, (await reply('two')).status]).toEqual([204, 429, 204]);
+  } finally {
+    t.env.limits.visitors.guests = previous;
   }
 });
 
@@ -309,85 +304,4 @@ it('lists the earlier weeks and answers each by its people, against the week bef
     const missing = await week(from);
     expect([from, missing.status, await missing.json()]).toEqual([from, 404, { error: 'not-found' }]);
   }
-});
-
-
-it('counts guest labels in the same rankings and closes their week without creating accounts', async () => {
-  const cookies = await people(5);
-  const ids = Array.from({ length: 5 }, () => crypto.randomUUID());
-  for (const [index, client] of ids.entries()) {
-    await call(cookies[index]!, 'chat', 'direct', 'private');
-    expect((await t.post('pulse/guest', { client, label: 'chat direct private' })).status).toBe(204);
-  }
-  // Signup keeps the guest id: crossing the account door must not add another person.
-  const existing = await t.env.db.prepare('SELECT id FROM accounts LIMIT 1').first<string>('id');
-  await t.post('pulse/guest', { client: existing, label: 'chat direct private' });
-  at(NOON + HOUR);
-  expect((await board())?.people).toBe(10);
-  expect((await board())?.ranking.chat.merged).toEqual([{ key: '', model: null, share: 1, people: 10, replies: 10 }]);
-  expect(await t.env.db.prepare('SELECT COUNT(*) AS n FROM accounts').first('n')).toBe(5);
-  await t.restartPulse();
-  expect((await board())?.people).toBe(10);
-  await forgetPulse(t.env.db, NOON + WEEK);
-  expect(await t.env.db.prepare('SELECT people FROM pulse_week').first('people')).toBe(10);
-  expect((await t.env.db.prepare("SELECT people FROM pulse_week_models WHERE type = ''").first('people'))).toBe(10);
-  for (const table of ['pulse_guest_seen', 'pulse_guest_used', 'pulse_guest_replies']) expect(await t.env.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first('n')).toBe(0);
-});
-
-it('lets only the operator persist accounts-only rankings, while guests still count as people and calls', async () => {
-  const cookies = await people(10);
-  for (const cookie of cookies.slice(0, 5)) await call(cookie, 'chat', 'direct', 'private');
-  await seen(cookies);
-  for (let index = 0; index < 5; index++) await t.post('pulse/guest', { client: crypto.randomUUID(), label: 'chat direct private' });
-  at(NOON + HOUR);
-  expect((await board())?.ranking.chat.merged[0]?.people).toBe(10);
-  expect((await t.put('admin/pulse', { guests: false }, cookies[1])).status).toBe(403);
-  expect((await t.put('admin/pulse', { guests: 'false' }, cookies[0])).status).toBe(400);
-  expect((await t.put('admin/pulse', { guests: false }, cookies[0])).status).toBe(204);
-  expect(await (await t.get('admin/pulse', cookies[0])).json()).toEqual({ guests: false });
-  expect((await board())?.people).toBe(15);
-  expect((await board())?.ranking.chat.merged).toEqual([{ key: '', model: null, share: 1, people: 5, replies: 10 }]);
-  await t.restartPulse();
-  expect((await board())?.ranking.chat.merged[0]?.people).toBe(5);
-  expect(await t.env.db.prepare("SELECT action FROM admin_log WHERE action = 'set-pulse'").first('action')).toBe('set-pulse');
-});
-
-it('validates guest pings and limits the visitor, not a freely replaced client id', async () => {
-  const previous = t.env.limits.visitors.pulse;
-  t.env.limits.visitors.pulse = tokenBucket(1);
-  try {
-    expect((await t.post('pulse/guest', { client: 'not-a-uuid', label: 'chat direct private' }, undefined, { [VISITOR_HEADER]: 'invalid' })).status).toBe(400);
-    expect((await t.post('pulse/guest', { client: crypto.randomUUID(), label: 'seen' }, undefined, { [VISITOR_HEADER]: 'seen' })).status).toBe(400);
-    const ping = (visitor: string) => t.post('pulse/guest', { client: crypto.randomUUID(), label: 'chat direct private' }, undefined, { [VISITOR_HEADER]: visitor });
-    expect((await ping('one')).status).toBe(204);
-    expect((await ping('one')).status).toBe(429);
-    expect((await ping('two')).status).toBe(204);
-  } finally {
-    t.env.limits.visitors.pulse = previous;
-  }
-});
-
-it("counts a self-host's forwarded ping as a guest of the board, never in the daily 손님 응답", async () => {
-  const clock = vi.spyOn(Date, 'now').mockReturnValue(NOON);
-  try {
-    const client = crypto.randomUUID();
-    expect((await t.post('pulse/remote', { client, label: pulseHeader({ kind: 'call', role: 'chat', type: 'openai', model: 'model' }) })).status).toBe(204);
-    expect((await t.env.db.prepare('SELECT account FROM pulse_guest_replies').all<{ account: string }>()).results).toEqual([{ account: `remote:${client}` }]);
-    expect((await readVisits(t.env.db, NOON))[0]).toMatchObject({ guests: 0 });
-  } finally {
-    clock.mockRestore();
-  }
-});
-
-it('forwards each counted call to the board with a hash of the person in place of its id', async () => {
-  const counted: string[] = [];
-  const sent: { url: string; body: unknown }[] = [];
-  const pulse = forwarded({ call: async (account: string) => { counted.push(account); } } as unknown as Pulse, new URL('https://hazelle.app'), async (url, init) => {
-    sent.push({ url: url.href, body: JSON.parse(init.body!) });
-    return new Response(null, { status: 204 });
-  });
-  await pulse.call('account-1', { kind: 'call', role: 'chat', type: 'openai', model: 'gpt' });
-  expect(counted).toEqual(['account-1']);
-  expect(sent).toEqual([{ url: 'https://hazelle.app/api/pulse/remote', body: { client: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/), label: 'chat openai gpt' } }]);
-  expect(JSON.stringify(sent)).not.toContain('account-1');
 });

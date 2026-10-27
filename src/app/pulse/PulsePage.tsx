@@ -22,7 +22,7 @@ const RANKING_HELP = {
 // main.tsx asks before the account flow, as for /terms: the page reads the same signed in or out.
 export function pulsePage(path: string) {
   if (path !== PULSE.path) return null;
-  // A self-host's 헤이젤 나우 is hazelle.app's, where its counts go.
+  // A self-host's 헤이젤 나우 is hazelle.app's.
   if (selfHost()) {
     location.replace(HOSTED + PULSE.path);
     return <></>;

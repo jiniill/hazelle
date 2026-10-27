@@ -234,11 +234,12 @@ shares.get('/:id/cover', async (c) => {
 
 shares.get('/:id/files/:file', visits('files'), (c) => serveShareFile(c, false));
 
-// The 받은 횟수: a visitor finished 헤이젤로 가져오기 or 파일로 받기.
+// The 받은 횟수: a visitor finished 헤이젤로 가져오기 or 파일로 받기, counted once a day per visitor.
 shares.post('/:id/received', visits('reads'), async (c) => {
   const id = c.req.param('id');
   if (!SHARE_ID.test(id)) return fail(c, 400, 'bad-input');
-  const counted = await c.env.db.prepare(`UPDATE shares AS s SET received = received + 1 WHERE s.id = ? AND ${LIVE} RETURNING id`).bind(id).first();
+  const first = c.env.limits.visitors.received.add(`${id}\0${c.req.header(VISITOR_HEADER) ?? 'direct'}`, '') === 'new';
+  const counted = await c.env.db.prepare(`UPDATE shares AS s SET received = received + ? WHERE s.id = ? AND ${LIVE} RETURNING id`).bind(Number(first), id).first();
   return counted ? c.body(null, 204) : fail(c, 404, 'not-found');
 });
 

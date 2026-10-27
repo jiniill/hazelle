@@ -191,4 +191,11 @@ describe('a share link', () => {
     expect(statuses).toEqual([204, 204, 204, 204, 204, 204, 429]);
     expect((await report(id, 'another visitor')).status).toBe(204);
   });
+
+  it('counts its 받은 횟수 once a day per visitor', async () => {
+    const { id } = await published();
+    const receive = (from: string) => t.raw(`shares/${id}/received`, { method: 'POST', headers: { 'content-type': 'application/json', [VISITOR_HEADER]: from } });
+    for (const from of ['one', 'one', 'two']) expect((await receive(from)).status).toBe(204);
+    expect(await t.env.db.prepare('SELECT received FROM shares WHERE id = ?').bind(id).first('received')).toBe(2);
+  });
 });

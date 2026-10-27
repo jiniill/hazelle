@@ -12,7 +12,6 @@ import { streamOpener } from '../vault/streams';
 import { fetchApi } from './api';
 import { pause } from './pause';
 import { CONNECTION_TYPES } from '../connectors/registry';
-import { pingGuest } from './pulse';
 
 // Whose refusal it was decides what the user is told: the provider's answer, the relay's
 // own refusal (X-Relay: error), the app's (no X-Relay header, such as an expired session), or no
@@ -51,7 +50,11 @@ export const stream = (call: StreamCall, request: HttpRequest | null, signal: Ab
 export const stopStream = (id: string) => transport.stop(id);
 export const dropStream = (id: string) => transport.drop(id);
 
-export function directTransport(client: string, shares: () => boolean): Transport {
+// The operator's daily 손님 응답 (server/visits.ts): a guest's reply never passes the server, so its browser says so.
+const countGuestReply = (guest: string) =>
+  void fetchApi('visits/guest', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ guest }) }).catch(() => {});
+
+export function directTransport(guest: string): Transport {
   const calls = new Map<string, AbortController>();
   const closing = new AbortController();
   const problem: Transport['problem'] = (type) => type?.browser === false ? { kind: 'app', code: 'needs-account' } : null;
@@ -64,7 +67,7 @@ export function directTransport(client: string, shares: () => boolean): Transpor
     if (signal.aborted) return lost(signal);
     try {
       const response = await fetch(request.url, { method: request.method, headers: { ...request.headers, ...(type?.browser && type.browser.headers) }, body: request.body, signal, credentials: 'omit' });
-      if (response.ok && pulse && !closing.signal.aborted && shares()) pingGuest(client, pulse);
+      if (response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) countGuestReply(guest);
       return response;
     } catch {
       // Fetch deliberately does not distinguish CORS, DNS and a lost connection.
@@ -90,7 +93,7 @@ export function directTransport(client: string, shares: () => boolean): Transpor
         const again = response instanceof Response ? retry?.statuses.includes(response.status) : response.kind === 'offline';
         const wait = again && retry && tries <= retry.times ? retryWait(tries, retryAfter, Date.now()) : null;
         if (wait === null) {
-          if (response instanceof Response && response.ok && pulse && !closing.signal.aborted && shares()) pingGuest(client, pulse);
+          if (response instanceof Response && response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) countGuestReply(guest);
           return answered(response);
         }
         if (response instanceof Response) await response.body?.cancel();

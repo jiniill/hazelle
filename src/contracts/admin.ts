@@ -2,6 +2,10 @@ export const MAX_REPORT_LENGTH = 4000;
 export const MAX_NOTICE_LENGTH = 2000;
 
 export type VisitDay = { day: number; visitors: number; guests: number; accounts: number; converted: number };
+// The guest ids one address may add to a day's 손님 응답 (server/limits.ts), a forged count's bound.
+export const GUESTS_PER_ADDRESS = 8;
+// The browsers one address may add to a day's 방문자 (server/visits.ts).
+export const VISITORS_PER_ADDRESS = 32;
 
 export type BackupWarning = 'backup-stale' | 'disk-full';
 // Why the last pass to a self-host's backup folder failed (server/backup/folder.ts): the folder is gone, refused writing,

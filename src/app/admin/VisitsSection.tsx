@@ -1,3 +1,4 @@
+import { GUESTS_PER_ADDRESS, VISITORS_PER_ADDRESS } from '../../contracts/admin';
 import { readVisits } from '../../runtime/admin';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
@@ -12,7 +13,7 @@ const COLUMNS: TableColumn[] = [
   { label: '새 계정', track: 'figure' },
   { label: CONVERTED, track: 'figure' },
 ];
-const HELP = `방문자는 같은 날 같은 브라우저와 접속 주소를 한 번만 세요. ${GUESTS}은 그날 AI 답을 한 번 이상 받은 손님, ${CONVERTED}은 새 계정 중 손님일 때 답을 받아 본 계정이에요. 헤이젤 나우 공유를 끈 손님은 세지 않아요.`;
+const HELP = `방문자는 같은 날 같은 브라우저와 접속 주소를 한 번만 세요. ${GUESTS}은 그날 AI 답을 한 번 이상 받은 손님, ${CONVERTED}은 새 계정 중 7일 안에 손님으로 답을 받아 본 계정이에요. 접속 주소 하나에서 하루에 방문자는 ${VISITORS_PER_ADDRESS}명, 손님은 ${GUESTS_PER_ADDRESS}명까지만 세요.`;
 const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });
 
 export function VisitsSection() {

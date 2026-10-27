@@ -3,12 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { VISITORS_PER_ADDRESS } from '../contracts/admin';
 import { VISITOR_HEADER } from '../contracts/http';
 import { migrate } from './db/migrate';
 import { serviceDb } from './db/service-db';
-import { DAY_MS } from './http';
+import { DAY_MS, visitDay } from './http';
 import { clientFiles } from './static';
-import { openVisits, readVisits, visitDay } from './visits';
+import { openVisits, readVisits } from './visits';
 
 const MIDNIGHT = Date.parse('2026-10-21T15:00:00Z');
 let now: number;
@@ -71,4 +72,15 @@ it('closes a day without another visit, deleting its key and hashes while preser
   await load();
   expect(raw.prepare('SELECT key FROM visit_keys').get()).not.toEqual(key);
   expect(raw.prepare('SELECT hash FROM visit_hashes').get()).not.toEqual(hash);
+});
+
+it('counts at most VISITORS_PER_ADDRESS browsers of one address a day, and keeps a guest id 7 days for 손님 출신', async () => {
+  for (let index = 0; index <= VISITORS_PER_ADDRESS; index++) visits.page({ kind: 'visit', address: '192.0.2.1', agent: `Browser ${index}` });
+  visits.page({ kind: 'visit', address: '192.0.2.2', agent: 'Browser 0' });
+  expect(await today()).toMatchObject({ visitors: VISITORS_PER_ADDRESS + 1 });
+  const guest = raw.prepare('INSERT INTO visit_guests (day, guest) VALUES (?, ?)');
+  guest.run(visitDay(now) - 6 * DAY_MS, 'kept');
+  guest.run(visitDay(now) - 7 * DAY_MS, 'gone');
+  visits.close();
+  expect(raw.prepare('SELECT guest FROM visit_guests').all()).toEqual([{ guest: 'kept' }]);
 });

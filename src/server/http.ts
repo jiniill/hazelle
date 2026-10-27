@@ -45,6 +45,9 @@ export function fail(c: Context, status: ContentfulStatusCode, error: ServerErro
 
 export const RETRY_SECONDS = 5;
 export const DAY_MS = 24 * 60 * 60 * 1000;
+const KST = 9 * 60 * 60 * 1000;
+// The start of `at`'s day in Korea, where the operator reads the daily counts.
+export const visitDay = (at: number) => Math.floor((at + KST) / DAY_MS) * DAY_MS - KST;
 
 // A leaving or gone account answers as a signed-out one: its session is over.
 export function refused(c: Context, answer: Refused) {

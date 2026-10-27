@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { proofBackoff, relayBudget, tokenBucket, uploadBudget } from './limits';
+import { dailyDistinct, proofBackoff, relayBudget, tokenBucket, uploadBudget } from './limits';
 
 const setup = (perMinute: number) => {
   let now = 0;
@@ -150,5 +150,17 @@ describe('relayBudget', () => {
     now = 86_400_000;
     expect(a.visit(new URL('https://other.test/'))).toBe(true);
     expect(a.visit(new URL('https://example.com/'))).toBe(false);
+  });
+});
+
+describe('the daily distinct set', () => {
+  it('takes max members a key, knows them again, and forgets them at KST midnight', () => {
+    // 23:00 KST.
+    let now = Date.parse('2026-10-27T14:00:00Z');
+    const distinct = dailyDistinct(2, () => now);
+    expect(['x', 'y', 'x', 'z'].map((member) => distinct.add('a', member))).toEqual(['new', 'new', 'known', 'full']);
+    expect(distinct.add('b', 'z')).toBe('new');
+    now += 60 * 60_000;
+    expect(distinct.add('a', 'z')).toBe('new');
   });
 });

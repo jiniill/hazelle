@@ -17,6 +17,7 @@ import { PUBLISH_BYTES, shares } from './shares';
 import { canCall, relayBot, requireSession } from './session';
 import { streams } from './streams';
 import { vaults } from './vaults';
+import { guestVisits } from './visits';
 
 const app = new Hono<AppEnv>().basePath('/api');
 
@@ -98,6 +99,7 @@ app.route('/admin', admin);
 app.route('/board', board);
 app.route('/models-dev', modelsDev);
 app.route('/pulse', pulse);
+app.route('/visits', guestVisits);
 app.post('/relay', requireSession, canCall, relayBot, relayCall);
 app.route('/streams', streams);
 app.notFound((c) => fail(c, 404, 'not-found'));

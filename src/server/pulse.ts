@@ -1,9 +1,6 @@
-import { createHash } from 'node:crypto';
-import { Hono, type Context } from 'hono';
+import { Hono } from 'hono';
 import { CONNECTOR_MODELS, MODELS_DEV_LISTS } from '../connectors/models-dev';
 import {
-  pulseHeader,
-  readPulseHeader,
   PULSE_FLOORS,
   PULSE_ROLES,
   type PulseAnswer,
@@ -18,14 +15,12 @@ import {
   type PulseRole,
   type PulseRow,
   type PulseWeek,
-  type GuestPulse,
 } from '../contracts/pulse';
-import { VISITOR_HEADER } from '../contracts/http';
 import type { Db } from './db/service-db';
-import { DAY_MS, fail, readObject, type AppEnv } from './http';
-import type { Upstream } from './relay';
+import { DAY_MS, fail, type AppEnv } from './http';
 
-// 헤이젤 나우 (design §6.12): counts what the client labels (worker.ts, calls.ts, streams.ts) and answers the public board.
+// 헤이젤 나우 (design §6.12): counts what an account's client labels (worker.ts, calls.ts, streams.ts) and answers the
+// public board. Accounts only: a guest's or a self-host's ping named a person no one can check (migration 0027).
 // The last 7 days and the last 48 hours are lists of who used what (pulse_seen, pulse_used, pulse_replies), counted
 // when read. Each day once past closes the 7 days ending it: their rank places kept for the marks, a Sunday's into the
 // week's totals (pulse_week*), and the day no later window reaches deleted. The floors apply where a count is shown or
@@ -47,10 +42,9 @@ const HOURS_KEPT_MS = 2 * DAY_MS;
 type Call = Extract<PulseLabel, { kind: 'call' }>;
 
 export type Pulse = {
-  invalidate(): void;
-  seen(account: string, guest?: boolean): Promise<void>;
+  seen(account: string): Promise<void>;
   // A call its provider answered 2xx.
-  call(account: string, label: Call, guest?: boolean): Promise<void>;
+  call(account: string, label: Call): Promise<void>;
   answer(): Promise<PulseAnswer>;
   // null for anything but one of the board's weeks.
   week(from: number): Promise<PulseWeek | null>;
@@ -79,21 +73,20 @@ export function openPulse(db: Db, clock: () => number = Date.now): Pulse {
   let memo: { at: number; answer: Promise<PulseAnswer> } | null = null;
   const weeks = new Map<number, Promise<PulseWeek | null>>();
   return {
-    invalidate: () => { memo = null; },
-    seen: async (account, guest = false) => {
-      await db.prepare(`INSERT INTO ${guest ? 'pulse_guest_seen' : 'pulse_seen'} (day, account) VALUES (?, ?) ON CONFLICT DO NOTHING`).bind(dayOf(clock()), account).run();
+    seen: async (account) => {
+      await db.prepare('INSERT INTO pulse_seen (day, account) VALUES (?, ?) ON CONFLICT DO NOTHING').bind(dayOf(clock()), account).run();
     },
-    call: async (account, { role, type, model }, guest = false) => {
+    call: async (account, { role, type, model }) => {
       const { key, name } = await confirm(db, type, model);
       // Read after the await: a call across midnight lands in the day it ended in.
       const now = clock();
       await db.batch([
         db.prepare('INSERT INTO pulse_hours (hour, role, calls) VALUES (?, ?, 1) ON CONFLICT DO UPDATE SET calls = calls + 1').bind(hourOf(now), role),
-        db.prepare(`INSERT INTO ${guest ? 'pulse_guest_used' : 'pulse_used'} (day, role, key, type, account, name) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO UPDATE SET name = excluded.name`).bind(dayOf(now), role, key, type, account, name),
+        db.prepare('INSERT INTO pulse_used (day, role, key, type, account, name) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO UPDATE SET name = excluded.name').bind(dayOf(now), role, key, type, account, name),
         ...(role === 'chat'
           ? [
               db
-                .prepare(`INSERT INTO ${guest ? 'pulse_guest_replies' : 'pulse_replies'} (hour, key, type, account, name, replies) VALUES (?, ?, ?, ?, ?, 1) ON CONFLICT DO UPDATE SET replies = replies + 1, name = excluded.name`)
+                .prepare('INSERT INTO pulse_replies (hour, key, type, account, name, replies) VALUES (?, ?, ?, ?, ?, 1) ON CONFLICT DO UPDATE SET replies = replies + 1, name = excluded.name')
                 .bind(hourOf(now), key, type, account, name),
             ]
           : []),
@@ -153,11 +146,11 @@ function sortCounted<T>(rows: T[], of: (row: T) => [count: number, name: string 
 async function countDays(db: Db, day: number): Promise<Period | null> {
   const days = [firstDay(day), day];
   const [seen, roles, merged, mergedNames, split] = await Promise.all([
-    db.prepare('SELECT COUNT(DISTINCT account) AS people FROM pulse_people_seen WHERE day BETWEEN ? AND ?').bind(...days).first<number>('people'),
-    db.prepare('SELECT role, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE day BETWEEN ? AND ? GROUP BY role').bind(...days).all<{ role: PulseRole; people: number }>(),
-    db.prepare('SELECT role, key, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE day BETWEEN ? AND ? GROUP BY role, key').bind(...days).all<Omit<WeekRow, 'type' | 'name'>>(),
-    db.prepare('SELECT role, key, name, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE day BETWEEN ? AND ? GROUP BY role, key, name ORDER BY name').bind(...days).all<Omit<WeekRow, 'type'>>(),
-    db.prepare('SELECT role, key, type, name, COUNT(DISTINCT account) AS people FROM pulse_rank_used WHERE day BETWEEN ? AND ? GROUP BY role, key, type, name ORDER BY name').bind(...days).all<WeekRow>(),
+    db.prepare('SELECT COUNT(DISTINCT account) AS people FROM pulse_seen WHERE day BETWEEN ? AND ?').bind(...days).first<number>('people'),
+    db.prepare('SELECT role, COUNT(DISTINCT account) AS people FROM pulse_used WHERE day BETWEEN ? AND ? GROUP BY role').bind(...days).all<{ role: PulseRole; people: number }>(),
+    db.prepare('SELECT role, key, COUNT(DISTINCT account) AS people FROM pulse_used WHERE day BETWEEN ? AND ? GROUP BY role, key').bind(...days).all<Omit<WeekRow, 'type' | 'name'>>(),
+    db.prepare('SELECT role, key, name, COUNT(DISTINCT account) AS people FROM pulse_used WHERE day BETWEEN ? AND ? GROUP BY role, key, name ORDER BY name').bind(...days).all<Omit<WeekRow, 'type'>>(),
+    db.prepare('SELECT role, key, type, name, COUNT(DISTINCT account) AS people FROM pulse_used WHERE day BETWEEN ? AND ? GROUP BY role, key, type, name ORDER BY name').bind(...days).all<WeekRow>(),
   ]);
   if (seen! < PULSE_FLOORS.board) return null;
   const names = new Map<string, Map<string | null, number>>();
@@ -211,7 +204,7 @@ async function closePastDays(db: Db, now: number) {
   const today = dayOf(now);
   const [closed, oldest] = await Promise.all([
     db.prepare('SELECT pulse_closed FROM service').first<number>('pulse_closed'),
-    db.prepare('SELECT MIN(day) AS day FROM (SELECT day FROM pulse_people_seen UNION ALL SELECT day FROM pulse_used UNION ALL SELECT day FROM pulse_guest_used)').first<number | null>('day'),
+    db.prepare('SELECT MIN(day) AS day FROM (SELECT day FROM pulse_seen UNION ALL SELECT day FROM pulse_used)').first<number | null>('day'),
   ]);
   // Days before the oldest list close nothing.
   for (let day = Math.max(closed!, oldest ?? today); day < today; day += DAY_MS) {
@@ -236,7 +229,7 @@ async function closePastDays(db: Db, now: number) {
               : []),
           ]
         : []),
-      ...['pulse_seen', 'pulse_used', 'pulse_guest_seen', 'pulse_guest_used'].map((table) => db.prepare(`DELETE FROM ${table} WHERE day < ?`).bind(firstDay(day + DAY_MS))),
+      ...['pulse_seen', 'pulse_used'].map((table) => db.prepare(`DELETE FROM ${table} WHERE day < ?`).bind(firstDay(day + DAY_MS))),
       // The board on a later day reads the places of the day 7 days before it.
       db.prepare('DELETE FROM pulse_day_places WHERE day < ?').bind(firstDay(day + DAY_MS) - DAY_MS),
       db.prepare('UPDATE service SET pulse_closed = ?').bind(day + DAY_MS),
@@ -282,17 +275,16 @@ type Tally = { replies: number; people: Set<string>; names: Map<string | null, n
 async function chatDay(db: Db, now: number, days: Period): Promise<{ hours: { at: number; calls: Record<PulseRole, number> }[]; ranking: PulseRanking }> {
   const until = hourOf(now);
   const since = until - DAY_MS;
-  const [calls, replies, excluded] = await Promise.all([
+  const [calls, replies] = await Promise.all([
     db.prepare('SELECT hour, role, calls FROM pulse_hours WHERE hour >= ? AND hour < ?').bind(since, until).all<{ hour: number; role: PulseRole; calls: number }>(),
-    db.prepare('SELECT key, type, account, name, replies FROM pulse_rank_replies WHERE hour >= ? AND hour < ?').bind(since, until).all<{ key: string; type: string; account: string; name: string | null; replies: number }>(),
-    db.prepare('SELECT COALESCE(SUM(replies), 0) AS replies FROM pulse_guest_replies WHERE hour >= ? AND hour < ? AND (SELECT pulse_guests FROM service) = 0').bind(since, until).first<number>('replies'),
+    db.prepare('SELECT key, type, account, name, replies FROM pulse_replies WHERE hour >= ? AND hour < ?').bind(since, until).all<{ key: string; type: string; account: string; name: string | null; replies: number }>(),
   ]);
   const callsAt = new Map(calls.results.map((row) => [`${row.hour}\0${row.role}`, row.calls]));
   const hours = Array.from({ length: 24 }, (_, index) => {
     const at = since + index * HOUR_MS;
     return { at, calls: byRole((role) => callsAt.get(`${at}\0${role}`) ?? 0) };
   });
-  const chatCalls = hours.reduce((sum, hour) => sum + hour.calls.chat, 0) - excluded!;
+  const chatCalls = hours.reduce((sum, hour) => sum + hour.calls.chat, 0);
   const tallies = new Map<string, Tally>();
   for (const row of replies.results) {
     for (const id of [`${row.key}\0`, `${row.key}\0${row.type}`]) {
@@ -352,46 +344,11 @@ async function pastWeek(db: Db, from: number): Promise<PulseWeek | null> {
 // [hourOf(now) - 2 days, hourOf(now) - 1 day) whole.
 export async function forgetPulse(db: Db, now = Date.now()) {
   await closeDays(db, now);
-  await db.batch(['pulse_hours', 'pulse_replies', 'pulse_guest_replies'].map((table) => db.prepare(`DELETE FROM ${table} WHERE hour < ?`).bind(hourOf(now) - HOURS_KEPT_MS)));
-}
-
-// A self-hosted installation's counts also go to hazelle.app's board (design §6.12, on by default since 2026-10-23), as
-// the pings a guest sends: the person is a hash of the account or guest id, which that board can link to nothing.
-export function forwarded(pulse: Pulse, board: URL, upstream: Upstream): Pulse {
-  const remote = new URL('api/pulse/remote', board);
-  return {
-    ...pulse,
-    call: async (account, label, guest) => {
-      await pulse.call(account, label, guest);
-      const hash = createHash('sha256').update(account).digest('hex');
-      const client = [hash.slice(0, 8), hash.slice(8, 12), hash.slice(12, 16), hash.slice(16, 20), hash.slice(20, 32)].join('-');
-      const body = JSON.stringify({ client, label: pulseHeader(label) } satisfies GuestPulse);
-      void upstream(remote, { method: 'POST', headers: new Headers({ 'content-type': 'application/json' }), body, redirect: 'manual', signal: AbortSignal.timeout(10_000) }).then(
-        (answer) => answer.body?.cancel(),
-        () => {},
-      );
-    },
-  };
-}
-
-// A self-host's forwarded person is kept apart from this server's own guests by its prefix: migration 0022 leaves it out
-// of the operator's daily 손님 응답, while the board counts it like a guest.
-const REMOTE = 'remote:';
-async function guestPing(c: Context<AppEnv>, prefix: '' | typeof REMOTE) {
-  if (!c.env.limits.visitors.pulse.limit(c.req.header(VISITOR_HEADER) ?? 'direct').success) return fail(c, 429, 'too-many-visits');
-  const body = await readObject(c);
-  const client = body?.client;
-  const label = typeof body?.label === 'string' ? readPulseHeader(body.label) : null;
-  if (typeof client !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(client) || label?.kind !== 'call') return fail(c, 400, 'bad-input');
-  await c.env.pulse.seen(prefix + client, true);
-  await c.env.pulse.call(prefix + client, label, true);
-  return c.body(null, 204);
+  await db.batch(['pulse_hours', 'pulse_replies'].map((table) => db.prepare(`DELETE FROM ${table} WHERE hour < ?`).bind(hourOf(now) - HOURS_KEPT_MS)));
 }
 
 const WEEK_CACHE_SECONDS = 24 * 60 * 60;
 export const pulse = new Hono<AppEnv>()
-  .post('/guest', (c) => guestPing(c, ''))
-  .post('/remote', (c) => guestPing(c, REMOTE))
   .get('/', async (c) => c.json(await c.env.pulse.answer(), 200, { 'cache-control': `public, max-age=${MEMO_MS / 1000}` }))
   .get('/weeks/:from', async (c) => {
     const found = await c.env.pulse.week(Number(c.req.param('from')));

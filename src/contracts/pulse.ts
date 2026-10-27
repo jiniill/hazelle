@@ -14,8 +14,6 @@ export const DIRECT_TYPE = 'direct';
 // seen: the page-load mark, which counts the account active and nothing else. A call names its role, its connection
 // type and the model id it asked for; the server names the model only when a list it holds confirms it.
 export type PulseLabel = { kind: 'seen' } | { kind: 'call'; role: PulseRole; type: string; model: string };
-export type GuestPulse = { client: string; label: string };
-export type PulseSettings = { guests: boolean };
 
 const TYPE = /^[a-z0-9-]{1,40}$/;
 const MODEL_MOST = 200;

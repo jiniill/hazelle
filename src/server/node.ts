@@ -19,20 +19,20 @@ import { migrate } from './db/migrate';
 import { openDatabase, serviceDb } from './db/service-db';
 import { chooseBucket } from './files/choose';
 import type { FrontendOptions } from './frontend-worker';
-import { DAY_MS, fail, type Services } from './http';
+import { DAY_MS, fail, visitDay, type Services } from './http';
 import { RELAY_DAILY, relayBudget, tokenBucket, uploadBudget, visitorLimits } from './limits';
 import { localProviders, pinnedOutbound } from './outbound';
 import { refreshModelsDev } from './models-dev';
-import { forgetPulse, forwarded, openPulse } from './pulse';
+import { forgetPulse, openPulse } from './pulse';
 import { reconcile } from './reconcile';
 import { streamRegistry } from './stream-registry';
 import { streamStore } from './db/streams-db';
 import app from './worker';
 import { publishNews, RELEASE_NEWS } from './news';
 import { VERSION_HEADER } from '../contracts/http';
-import { HOSTED, type Release } from '../contracts/installation';
+import type { Release } from '../contracts/installation';
 import { releases } from './releases';
-import { openVisits, visitDay, type FrontendMessage } from './visits';
+import { openVisits, type FrontendMessage } from './visits';
 
 // Configuration is the environment (docs/research/docker-port-plan.md §11).
 const dataDir = process.env.HAZELLE_DATA ?? '/data';
@@ -146,7 +146,7 @@ const services: Services = {
   localProviders: local,
   limits,
   backups: backups(dataDir, snapshotHour, operatorAlerts, freePercent, !selfHost ? 'remote' : !container && files.kind === 'disk' ? 'folder' : 'optional'),
-  pulse: selfHost ? forwarded(openPulse(db), new URL(HOSTED), outbound) : openPulse(db),
+  pulse: openPulse(db),
 };
 
 // Work a request leaves running after its answer; the shutdown waits for it.

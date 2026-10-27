@@ -15,6 +15,8 @@ const dir = (files: Record<string, string>) => {
   for (const [name, sql] of Object.entries(files)) writeFileSync(join(path, name), sql);
   return path;
 };
+// The shipped migrations before `bound`, for a test of one whose objects a later migration drops.
+const before = (bound: string) => dir(Object.fromEntries(readdirSync('migrations').filter((name) => name.endsWith('.sql') && name < bound).map((name) => [name, readFileSync(join('migrations', name), 'utf8')])));
 const ledger = (db: DatabaseSync) => (db.prepare('SELECT name FROM migrations ORDER BY rowid').all() as { name: string }[]).map(({ name }) => name);
 const tables = (db: DatabaseSync) => (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name != 'migrations' ORDER BY name").all() as { name: string }[]).map(({ name }) => name);
 
@@ -27,12 +29,12 @@ describe('the migration runner', () => {
       db.exec(`INSERT INTO accounts (id, username, login_hash, created_at, incarnation, timeline) VALUES ('a', 'existing', 'hash', 1, 'inc', 'timeline');
         INSERT INTO pulse_guest_seen (week, account) VALUES (1, 'a');
         INSERT INTO pulse_guest_replies (hour, key, type, account, name, replies) VALUES (0, '', 'direct', 'a', NULL, 1)`);
-      expect(migrate(db, 'migrations').applied).toEqual(['0021_visits.sql', '0022_remote_pulse.sql', '0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql']);
+      expect(migrate(db, before('0027')).applied).toEqual(['0021_visits.sql', '0022_remote_pulse.sql', '0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql']);
       expect(db.prepare('SELECT id, username FROM accounts').all()).toEqual([{ id: 'a', username: 'existing' }]);
       expect(db.prepare('SELECT day, account FROM pulse_people_seen').all()).toEqual([{ day: 1, account: 'a' }]);
       expect(db.prepare('SELECT accounts, converted, guests FROM visit_days').all()).toEqual([{ accounts: 1, converted: 1, guests: 1 }]);
       expect(['visit_days', 'visit_keys', 'visit_hashes'].every((name) => tables(db).includes(name))).toBe(true);
-      expect(migrate(db, 'migrations').applied).toEqual([]);
+      expect(migrate(db, before('0027')).applied).toEqual([]);
     } finally {
       db.close();
     }
@@ -45,7 +47,7 @@ describe('the migration runner', () => {
       migrate(db, dir(Object.fromEntries(earlier.map((name) => [name, readFileSync(`migrations/${name}`, 'utf8')]))));
       const reply = db.prepare("INSERT INTO pulse_guest_replies (hour, key, type, account, name, replies) VALUES (0, '', 'direct', ?, NULL, 1)");
       reply.run('guest');
-      expect(migrate(db, 'migrations').applied).toEqual(['0022_remote_pulse.sql', '0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql']);
+      expect(migrate(db, before('0027')).applied).toEqual(['0022_remote_pulse.sql', '0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql']);
       reply.run('remote:self-host');
       expect(db.prepare('SELECT guests FROM visit_days').all()).toEqual([{ guests: 1 }]);
       reply.run('another');
@@ -62,7 +64,7 @@ describe('the migration runner', () => {
       try {
         migrate(db, dir(earlier));
         db.prepare('UPDATE service SET signup_cap = ?').run(signupCap);
-        expect(migrate(db, 'migrations').applied).toEqual(['0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql']);
+        expect(migrate(db, 'migrations').applied).toEqual(['0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql', '0027_accounts_only_pulse.sql']);
         return db.prepare('SELECT account_bytes_cap AS bytes, account_file_bytes_cap AS files FROM service').get();
       } finally {
         db.close();
@@ -289,7 +291,7 @@ it('migrates pulse without rewriting signed-in rows and keeps guest lists outsid
   db.exec('PRAGMA foreign_keys = ON');
   migrate(db, dir(Object.fromEntries(readdirSync('migrations').filter((name) => name.endsWith('.sql') && name < '0018').map((name) => [name, readFileSync(join('migrations', name), 'utf8')]))));
   db.exec("INSERT INTO accounts (id, username, login_hash, created_at, incarnation, timeline) VALUES ('a', 'jin', 'h', 1, 'inc', 't'); INSERT INTO pulse_seen VALUES (1, 'a')");
-  expect(migrate(db, 'migrations').applied).toContain('0018_guest_pulse.sql');
+  expect(migrate(db, before('0027')).applied).toContain('0018_guest_pulse.sql');
   expect(db.prepare('SELECT pulse_guests FROM service').get()).toEqual({ pulse_guests: 1 });
   db.exec("INSERT INTO pulse_guest_seen VALUES (1, 'a')");
   expect(db.prepare('SELECT account FROM pulse_people_seen ORDER BY account').all()).toEqual([{ account: 'a' }]);
@@ -303,7 +305,7 @@ it('adds guest authors and a persistent keyed address identity without changing 
   const db = new DatabaseSync(':memory:');
   migrate(db, dir(Object.fromEntries(readdirSync('migrations').filter((name) => name.endsWith('.sql') && name < '0020').map((name) => [name, readFileSync(join('migrations', name), 'utf8')]))));
   db.exec("INSERT INTO posts (title, text, category, visibility, created_at) VALUES ('이전 글', '본문', 'bug', 'public', 1); INSERT INTO comments (post_id, text, created_at) VALUES (1, '이전 댓글', 2)");
-  expect(migrate(db, 'migrations').applied).toEqual(['0020_board_guests.sql', '0021_visits.sql', '0022_remote_pulse.sql', '0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql']);
+  expect(migrate(db, 'migrations').applied).toEqual(['0020_board_guests.sql', '0021_visits.sql', '0022_remote_pulse.sql', '0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql', '0027_accounts_only_pulse.sql']);
   const settings = db.prepare('SELECT board_guests, board_guest_key FROM service').get();
   expect(settings).toEqual({ board_guests: 1, board_guest_key: expect.stringMatching(/^[a-f0-9]{64}$/) });
   migrate(db, 'migrations');
@@ -314,5 +316,20 @@ it('adds guest authors and a persistent keyed address identity without changing 
   expect((db.prepare('PRAGMA table_info(board_guest_address_blocks)').all() as { name: string }[]).map(({ name }) => name)).toEqual(['address_hash', 'until']);
   expect(db.prepare('SELECT text FROM posts').get()).toEqual({ text: '본문' });
   expect(db.prepare('SELECT text FROM comments').get()).toEqual({ text: '이전 댓글' });
+  db.close();
+});
+
+it('counts accounts only in 헤이젤 나우 and carries the last 7 days of guests into 손님 출신, without counting them again', () => {
+  const db = new DatabaseSync(':memory:');
+  migrate(db, before('0027'));
+  db.exec(`INSERT INTO pulse_guest_used (day, role, key, type, account, name) VALUES (0, 'aux', '', 'direct', 'used', NULL);
+    INSERT INTO pulse_guest_replies (hour, key, type, account, name, replies) VALUES (3600000, '', 'direct', 'replied', NULL, 1), (3600000, '', 'direct', 'remote:x', NULL, 1)`);
+  expect(migrate(db, 'migrations').applied).toEqual(['0027_accounts_only_pulse.sql']);
+  expect(db.prepare('SELECT guest FROM visit_guests ORDER BY guest').all()).toEqual([{ guest: 'replied' }, { guest: 'used' }]);
+  expect(tables(db).filter((name) => name.startsWith('pulse_guest'))).toEqual([]);
+  expect(Object.keys(db.prepare('SELECT * FROM service').get()!)).not.toContain('pulse_guests');
+  db.exec(`INSERT INTO accounts (id, username, login_hash, created_at, incarnation, timeline) VALUES ('replied', 'jin', 'h', 1, 'inc', 't');
+    INSERT INTO visit_guests (day, guest) VALUES (-32400000, 'new')`);
+  expect(db.prepare('SELECT day, guests, accounts, converted FROM visit_days').all()).toEqual([{ day: -32400000, guests: 2, accounts: 1, converted: 1 }]);
   db.close();
 });

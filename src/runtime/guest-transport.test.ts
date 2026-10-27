@@ -9,7 +9,6 @@ import { guestAccount } from './guest-store';
 import { startChat } from './chat-log';
 import { Catalogs } from './catalog';
 import { Credentials } from './credential';
-import { setPulseSharing } from './pulse';
 import { accountTransport, directTransport, holdTransport, relayJson, relayRaw, stream, stopStream } from './relay';
 import { openGuestSession, type Session } from './session';
 import { FIRST_PROFILE_ID } from './profiles';
@@ -27,13 +26,13 @@ afterEach(() => {
 const connection = (type: string): Connection => ({ type, label: type, baseUrl: null, protocol: null, accounts: [{ id: 'key', secret: 'test-key' }], turns: null, starred: [bareModel('model')] });
 const saying = () => new Response('data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } });
 
-it('opens a guest session, sends a turn directly, parses and saves it in-page, and sends only one label ping to the app', async () => {
+it('opens a guest session, sends a turn directly, parses and saves it in-page, and tells the app only that a guest got a reply', async () => {
   vi.stubGlobal('window', new EventTarget());
   vi.stubGlobal('document', { visibilityState: 'hidden' });
   let release!: () => void;
   const waiting = new Promise<void>((resolve) => { release = resolve; });
   const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async (url) => {
-    if (url === '/api/pulse/guest') return new Response(null, { status: 204 });
+    if (url === '/api/visits/guest') return new Response(null, { status: 204 });
     if (url !== 'https://openrouter.ai/api/v1/chat/completions') throw new Error('Unexpected request');
     await waiting;
     return saying();
@@ -58,21 +57,17 @@ it('opens a guest session, sends a turn directly, parses and saves it in-page, a
   expect(await turn).toBeNull();
   expect(fold(store.children('entry', chat)).map((message) => shown(message).text)).toEqual(['Hi', 'Hello']);
   expect(store.list('stream')).toEqual([]);
-  expect(fetch.mock.calls.map(([url]) => url)).toEqual(['https://openrouter.ai/api/v1/chat/completions', '/api/pulse/guest']);
+  expect(fetch.mock.calls.map(([url]) => url)).toEqual(['https://openrouter.ai/api/v1/chat/completions', '/api/visits/guest']);
   const provider = fetch.mock.calls[0]![1];
   expect(provider).toMatchObject({ method: 'POST', credentials: 'omit', headers: { authorization: 'Bearer test-key' } });
   expect(new Headers(provider.headers).has('x-account')).toBe(false);
   expect(new Headers(provider.headers).has('x-hazelle-pulse')).toBe(false);
-  expect(JSON.parse(fetch.mock.calls[1]![1].body as string)).toEqual({ client: (await guestAccount()).accountId, label: 'chat openrouter model' });
-
-  await setPulseSharing(store, false);
-  await takeTurn(session, chat, { kind: 'send', text: 'Again' });
-  expect(fetch.mock.calls.filter(([url]) => url.startsWith('/api/'))).toHaveLength(1);
+  expect(JSON.parse(fetch.mock.calls[1]![1].body as string)).toEqual({ guest: (await guestAccount()).accountId });
   lease.release();
 });
 
 it('refuses every needs-account type before catalog, token exchange, or OAuth fetch', async () => {
-  holdTransport(directTransport(crypto.randomUUID(), () => true));
+  holdTransport(directTransport(crypto.randomUUID()));
   const fetch = vi.fn();
   vi.stubGlobal('fetch', fetch);
   const credentials = new Credentials();
@@ -94,7 +89,7 @@ it('adds the type’s browser headers only on direct calls and leaves unknown ne
   vi.stubGlobal('fetch', fetch);
   await relayRaw(request, undefined, undefined, undefined, anthropic);
   expect(JSON.parse(fetch.mock.calls[0]![1].body as string)).toEqual(request);
-  holdTransport(directTransport(crypto.randomUUID(), () => false));
+  holdTransport(directTransport(crypto.randomUUID()));
   await relayRaw(request, undefined, undefined, undefined, anthropic);
   expect(fetch.mock.calls[1]).toMatchObject(['https://api.anthropic.com/v1/models', { headers: { 'x-api-key': 'test-key', 'anthropic-dangerous-direct-browser-access': 'true' } }]);
   vi.stubGlobal('fetch', () => Promise.reject(new TypeError('Failed to fetch')));
@@ -102,10 +97,10 @@ it('adds the type’s browser headers only on direct calls and leaves unknown ne
 });
 
 it('retries a direct stream in-page, counts it once, and aborts the provider without stream-box requests', async () => {
-  holdTransport(directTransport(crypto.randomUUID(), () => true));
+  holdTransport(directTransport(crypto.randomUUID()));
   let signal: AbortSignal | undefined;
   const fetch = vi.fn(async (url: string, init: RequestInit) => {
-    if (url === '/api/pulse/guest') return new Response(null, { status: 204 });
+    if (url === '/api/visits/guest') return new Response(null, { status: 204 });
     signal = init.signal!;
     return fetch.mock.calls.length === 1 ? new Response('{}', { status: 429, headers: { 'retry-after': '0' } }) : saying();
   });
@@ -119,7 +114,9 @@ it('retries a direct stream in-page, counts it once, and aborts the provider wit
   expect(call.started).not.toHaveBeenCalled();
   stopStream(call.id);
   expect(signal?.aborted).toBe(true);
-  expect(fetch.mock.calls.map(([url]) => url)).toEqual([request.url, request.url, '/api/pulse/guest']);
+  expect(fetch.mock.calls.map(([url]) => url)).toEqual([request.url, request.url, '/api/visits/guest']);
+  await relayRaw(request, undefined, undefined, { kind: 'call', role: 'aux', type: 'direct', model: 'model' });
+  expect(fetch.mock.calls.map(([url]) => url).filter((url) => url === '/api/visits/guest')).toHaveLength(1);
 });
 
 
@@ -127,7 +124,7 @@ it('mints a Vertex token through the browser’s existing exchange and uses it o
   const pair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
   const der = await crypto.subtle.exportKey('pkcs8', pair.privateKey);
   const secret = JSON.stringify({ type: 'service_account', project_id: 'test', client_email: 'bot@test.iam.gserviceaccount.com', token_uri: 'https://oauth2.googleapis.com/token', private_key: `-----BEGIN PRIVATE KEY-----\n${btoa(String.fromCharCode(...new Uint8Array(der)))}\n-----END PRIVATE KEY-----` });
-  holdTransport(directTransport(crypto.randomUUID(), () => false));
+  holdTransport(directTransport(crypto.randomUUID()));
   const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async (url) => url === 'https://oauth2.googleapis.com/token' ? Response.json({ access_token: 'minted', expires_in: 3600 }) : Response.json({ publisherModels: [] }));
   vi.stubGlobal('fetch', fetch);
   const resolved = resolveConnection({ ...connection('vertex'), accounts: [{ id: 'key', secret }] })!;

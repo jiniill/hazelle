@@ -7,6 +7,7 @@ import type { PulseAnswer } from '../contracts/pulse';
 import type { ShareCover } from '../contracts/shares';
 import { endToEnd } from './hop-by-hop';
 import { clientFiles } from './static';
+import { visitorKey } from './visitor';
 
 // host undefined listens on every interface, as Docker's port mapping needs.
 export type FrontendOptions = { port: number; host: string | undefined; apiPort: number; clientDir: string; trustedProxies: BlockList; selfHost: boolean };
@@ -41,7 +42,7 @@ const server = createServer((incoming, outgoing) => {
   const peer = incoming.socket.remoteAddress;
   const forwarded = incoming.headers['x-forwarded-for'];
   const proxied = peer !== undefined && trustedProxies.check(peer, isIPv6(peer) ? 'ipv6' : 'ipv4');
-  const visitor = (proxied && (Array.isArray(forwarded) ? forwarded.join(',') : forwarded)?.split(',').at(-1)?.trim()) || peer || 'unknown';
+  const visitor = visitorKey((proxied && (Array.isArray(forwarded) ? forwarded.join(',') : forwarded)?.split(',').at(-1)?.trim()) || peer || 'unknown');
   incoming.headers[VISITOR_HEADER] = visitor;
   if (path !== '/api' && !path.startsWith('/api/')) return void files(incoming, outgoing);
 

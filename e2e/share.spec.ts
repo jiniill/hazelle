@@ -54,7 +54,8 @@ test('a shared link opens signed out, gives its file, and a report holds it', as
     await expect(page.getByRole('dialog', { name: '가져왔어요', exact: true })).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
     await guest.reload();
-    await expect(guest.getByText(/받은 횟수 2$/)).toBeVisible();
+    // Both receipts came from this machine's one address, counted once a day.
+    await expect(guest.getByText(/받은 횟수 1$/)).toBeVisible();
   });
 
   await test.step('report it, and the link holds', async () => {

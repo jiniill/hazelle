@@ -1,5 +1,7 @@
 import { createHmac, randomBytes } from 'node:crypto';
+import { GUESTS_PER_ADDRESS } from '../contracts/admin';
 import { COMMENTS_PER_DAY, GUEST_ADDRESS_CAP_MULTIPLIER, POSTS_PER_DAY } from '../contracts/board';
+import { visitDay } from './http';
 
 // A token bucket per key, in process: calls (240 a minute per account), bot calls (20 a minute per account:chat) and
 // visitors (visitorLimits). The caller picks the key.
@@ -199,13 +201,44 @@ export function proofBackoff(clock: () => number = () => performance.now(), maxV
   };
 }
 
+// Distinct members per key within one KST day, the day the counts it guards are kept by, in process: what an address or
+// visitor may add to a count no one can check. Like relayBudget's, keys and members are kept only as hashes under the
+// day's secret, never exposed, logged or persisted; a new day or process forgets them, and at maxKeys the oldest key.
+export function dailyDistinct(max: number, clock: () => number = Date.now, maxKeys = 100_000) {
+  let day = -1;
+  let secret = randomBytes(32);
+  const keys = new Map<string, Set<string>>();
+  const evict = () => {
+    const today = visitDay(clock());
+    if (today === day) return;
+    keys.clear();
+    secret = randomBytes(32);
+    day = today;
+  };
+  return {
+    evict,
+    add(key: string, member: string): 'new' | 'known' | 'full' {
+      evict();
+      const hash = (text: string) => createHmac('sha256', secret).update(text).digest('base64url');
+      const id = hash(key);
+      const members = keys.get(id) ?? new Set<string>();
+      const added = hash(member);
+      if (members.has(added)) return 'known';
+      if (members.size >= max) return 'full';
+      members.add(added);
+      remember(keys, id, members, maxKeys);
+      return 'new';
+    },
+  };
+}
+
 // Per visitor on the anonymous share routes: a link's page and its count, its files (a 파일로 받기 reads every picture
-// of a bot, which may be hundreds), and its reports. Requests, not bytes. signups: attempts an hour, so a script cannot
-// fill signup_cap from one address.
+// of a bot, which may be hundreds), and its reports. Requests, not bytes. received: a link's 받은 횟수 once per visitor.
+// guests: the guest ids one address may add to the daily 손님 응답. signups: attempts an hour, so a script cannot fill
+// signup_cap from one address.
 export const visitorLimits = () => ({
-  pulse: tokenBucket(240),
-  reads: tokenBucket(120), files: tokenBucket(1200), reports: tokenBucket(6), signups: tokenBucket(10, 60 * 60_000),
-  logins: tokenBucket(30, 60_000, () => performance.now(), LOGIN_VISITORS), proofs: proofBackoff(),
+  reads: tokenBucket(120), files: tokenBucket(1200), reports: tokenBucket(6), received: dailyDistinct(1), guests: dailyDistinct(GUESTS_PER_ADDRESS),
+  signups: tokenBucket(10, 60 * 60_000), logins: tokenBucket(30, 60_000, () => performance.now(), LOGIN_VISITORS), proofs: proofBackoff(),
 });
 
 // Count the rows themselves, not parallel counters. A browser has the account cap; shared addresses have more room.
