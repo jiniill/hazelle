@@ -177,34 +177,34 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
     if (!done.ok) return toast.failed(done, '고치지 못했어요.');
     toast.undoable('고쳤어요.', () => applyCacheEdit(store, done.data), titleOf(prescription));
   }
+  const ranked = prescriptions
+    .map((prescription) => ({ prescription, less: saved(now, prescription.cost) }))
+    .sort((a, b) => (b.less?.amount ?? -1) - (a.less?.amount ?? -1));
   return (
     <Section level={3} title="고치는 방법" help="여러 개를 고치면 아끼는 금액이 합과 다를 수 있어요.">
       <List label="고치는 방법">
-        {prescriptions.map((prescription, index) => {
-          const less = saved(now, prescription.cost);
-          return (
-            <ListItem
-              key={index}
-              title={titleOf(prescription)}
-              note={`읽기 ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
-              tags={less ? [`${cost(less)} 절약`] : []}
-              expanded={open === index}
-              onClick={() => setOpen(open === index ? null : index)}
-              detail={
-                open === index && (
-                  <Stack gap="related">
-                    {preview(prescription)}
-                    <Row kind="actions">
-                      <Button variant="secondary" size="sm" onClick={() => void apply(prescription)}>
-                        {ACTIONS[prescription.action].button}
-                      </Button>
-                    </Row>
-                  </Stack>
-                )
-              }
-            />
-          );
-        })}
+        {ranked.map(({ prescription, less }, index) => (
+          <ListItem
+            key={index}
+            title={titleOf(prescription)}
+            note={`읽기 ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
+            tags={less ? [`${cost(less)} 절약`] : []}
+            expanded={open === index}
+            onClick={() => setOpen(open === index ? null : index)}
+            detail={
+              open === index && (
+                <Stack gap="related">
+                  {preview(prescription)}
+                  <Row kind="actions">
+                    <Button variant="secondary" size="sm" onClick={() => void apply(prescription)}>
+                      {ACTIONS[prescription.action].button}
+                    </Button>
+                  </Row>
+                </Stack>
+              )
+            }
+          />
+        ))}
       </List>
     </Section>
   );
