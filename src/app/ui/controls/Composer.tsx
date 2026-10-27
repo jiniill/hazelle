@@ -30,6 +30,7 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, actio
         ref={inputRef}
         className={styles.input}
         rows={2}
+        autoComplete="off"
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}

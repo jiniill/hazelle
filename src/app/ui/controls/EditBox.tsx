@@ -35,7 +35,7 @@ function Area({ label, shown, value, onChange, onKeyDown, focus }: Field & { sho
       <label className={shown ? styles.fieldLabel : styles.label} htmlFor={id}>
         {label}
       </label>
-      <textarea id={id} ref={area} className={styles.input} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} />
+      <textarea id={id} ref={area} className={styles.input} autoComplete="off" value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} />
     </>
   );
 }

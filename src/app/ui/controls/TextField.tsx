@@ -7,7 +7,9 @@ import styles from './TextField.module.css';
 import { useBigEdit } from './useBigEdit';
 
 const KINDS = {
-  text: { type: 'text' },
+  // Every field here is prose, never the user's own details: unmarked, iOS Safari offers their contact card instead
+  // of word suggestions.
+  text: { type: 'text', autoComplete: 'off' },
   username: { type: 'text', autoComplete: 'username', autoCapitalize: 'none', spellCheck: false },
   code: { type: 'text', autoComplete: 'off', autoCapitalize: 'characters', spellCheck: false },
   // API keys, addresses and a script's code: shown as typed, in the mono face, never saved by the browser.

@@ -31,6 +31,7 @@ export function TranslateDesk({ tools, aside, below, source, result }: Props) {
         <div className={styles.pane}>
           <textarea
             className={styles.area}
+            autoComplete="off"
             aria-label={source.label}
             value={source.value}
             placeholder={source.placeholder}

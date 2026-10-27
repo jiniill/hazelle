@@ -27,6 +27,7 @@ export function CommentBox({ label, value, onChange, placeholder, hint, error, a
       <textarea
         ref={area}
         className={styles.input}
+        autoComplete="off"
         aria-label={label}
         aria-invalid={error ? true : undefined}
         aria-describedby={note ? id : undefined}
