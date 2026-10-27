@@ -112,7 +112,7 @@ export function gatherTurn(session: Pick<Session, 'store' | 'read'>, chat: strin
   };
 }
 
-export type Sending = { turn: TurnContext; prompt: Assembled; calibration: TokenSnapshot };
+export type Sending = { turn: TurnContext; prompt: Assembled; calibration: TokenSnapshot; input: Omit<PromptInput, 'countTokens'> };
 // The prompt was evaluated and cannot go: its CBS ran away, it is over the model's budget, or the tokenizer did not load.
 export type Unsendable = Exclude<EvaluatedPrompt, Assembled>;
 
@@ -141,15 +141,16 @@ export async function forecastSend(session: Forecaster, chat: string, target: Ta
     const snapshot = await session.tokens.snapshot(turn.route, turn.settings, tokenLimits(turn.route.model, sentSettings(session.store, turn.route)), 'conversation', chat, signal ?? new AbortController().signal);
     if (!snapshot.ok) return null;
     const fit = providerFit(turn.route, turn.settings, snapshot.data.fit.allowance);
-    const prompt = await session.store.evaluation.prompt({ asker, chat }, { scope: turn.scope, seed: turn.reply.id, budget: turn.budget, fit, ...session.scriptTurns.cachedPrompt(chat, turn), continuing: false, answerInstruction: answerInstructionOf(session.store), pictures: turn.pictures }, signal);
+    const input = { scope: turn.scope, seed: turn.reply.id, budget: turn.budget, fit, ...session.scriptTurns.cachedPrompt(chat, turn), continuing: false, answerInstruction: answerInstructionOf(session.store), pictures: turn.pictures };
+    const prompt = await session.store.evaluation.prompt({ asker, chat }, input, signal);
     if (signal?.aborted) return null;
-    if ((!projection || session.store.loadedHead(chat) === projection.summary.head) && reads.every((read, at) => session.store.revision(read) === revisions[at])) return 'kind' in prompt ? prompt : { turn, prompt, calibration: snapshot.data };
+    if ((!projection || session.store.loadedHead(chat) === projection.summary.head) && reads.every((read, at) => session.store.revision(read) === revisions[at])) return 'kind' in prompt ? prompt : { turn, prompt, calibration: snapshot.data, input };
   }
   return null;
 }
 
 // account: the account that would serve it (runtime/pool peek).
-export function cacheSend({ turn, prompt, calibration }: Sending, account: string | null): (CacheSend & { wire: CacheText }) | null {
+export function cacheSend({ turn, prompt, calibration }: Pick<Sending, 'turn' | 'prompt' | 'calibration'>, account: string | null): (CacheSend & { wire: CacheText }) | null {
   const view = cacheViewOf(turn.route.connection.value, turn.route.model, turn.settings, prompt.messages);
   if (!view) return null;
   // Prefix composition can differ from the whole request; this remains a lower-bound forecast, not reported eligibility.

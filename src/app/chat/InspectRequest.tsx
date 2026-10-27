@@ -11,7 +11,7 @@ import { MODEL_SETTINGS, opens, PRE_READ, UNKNOWN } from '../common/words';
 import { useSession, useStore } from '../session';
 import { navigate } from '../shell/router';
 import { Button, Callout, CodeBlock, Disclosure, Empty, Facts, Gauge, List, ListItem, Row, Section, Stack, Text } from '../ui';
-import { BrokenPartView, breakKind, diagnosed, RecurrenceNote } from './CacheDiagnosis';
+import { BrokenPartView, breakKind, diagnosed, Prescriptions, RecurrenceNote } from './CacheDiagnosis';
 import { nextWarning, profileName } from './ChatCache';
 import { partName, RequestView } from './ChatSent';
 import { HookList, STAGES } from './InspectScripts';
@@ -186,7 +186,7 @@ function cacheRows(parts: ForecastPart[]): CacheRow[] {
 type NextCacheProps = { next: NonNullable<CacheNotes['next']>; recurrence: CacheNotes['recurrence']; editor: (from: From) => Side | null; onEdit: (side: Side) => void };
 
 function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) {
-  const { forecast, diagnosis, cost: price, route } = next;
+  const { forecast, diagnosis, prescriptions, cost: price, route } = next;
   const store = useStore();
   const [open, setOpen] = useState<string | null>(null);
   const { against, written, tail, removed } = forecast;
@@ -213,6 +213,7 @@ function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) {
           ]}
         />
       )}
+      <Prescriptions prescriptions={prescriptions} cost={price} />
       <List label="보낼 메시지">
         {cacheRows(forecast.parts).map((row, index) => {
           const part = row.change && diagnosed(diagnosis, row.change, row.at);

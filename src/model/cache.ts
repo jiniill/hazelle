@@ -1,8 +1,9 @@
 import type { ModelSettings } from '../connectors/settings';
+import type { Cost } from '../connectors/types';
 import type { Fired, Silent } from '../engine/lorebook/activate';
 import type { Assembled, From } from '../engine/pipeline';
 import { inverted } from './memory';
-import type { Role } from './prompt';
+import type { Block, Role } from './prompt';
 
 // One message as the provider's cache reads it: hash of its role and content, its tokens as the prompt counted them
 // (o200k_base, an estimate for any other tokenizer), where the prompt took it from, and whether a cache point ends it.
@@ -63,6 +64,27 @@ export type CacheDiagnosis = {
   parts: { kind: 'changed' | 'added' | 'removed' | 'moved'; from: From; role: Role; before: number | null; after: number | null; diff: CacheDiff | null; causes: CacheCause[] }[];
   missing: number;
 };
+
+export type CacheEdit =
+  | ({ kind: 'prompt'; id: string; block: string } & (
+    | { field: 'blocks'; before: Block[]; after: Block[] }
+    | { field: 'role'; before: Role; after: Role }
+  ))
+  | ({ kind: 'lore'; id: string; name: string } & (
+    | { field: 'constant'; before: boolean; after: boolean }
+    | { field: 'content'; before: string; after: string }
+  ));
+
+// from, role: the broken part it mends.
+export type CacheCandidate = { cause: 'tag' | 'lore' | 'hoisted'; action: 'after-chat' | 'constant' | 'user-role'; edit: CacheEdit; from: From; role: Role };
+export type CacheBreakCost = { paid: Cost; whole: Cost };
+// Each price applies this edit alone against the same prior; prices cannot be added across prescriptions.
+export type CachePrescription = CacheCandidate & {
+  before: Pick<CacheForecast, 'read' | 'of'>;
+  after: Pick<CacheForecast, 'read' | 'of'>;
+  cost: CacheBreakCost | null;
+};
+
 // The latest ten distinct reply calls: considered have forecasts, missing do not. broken: those that read less than the
 // last call cached, as forecast (causes, the first break only being stored) or as the provider reported (short, read
 // under the forecast; a reply can be both). streak: the newest run of shortfalls on one connection, unjudged replies skipped.

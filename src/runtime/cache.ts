@@ -1,10 +1,10 @@
 import { costUnit, resolveConnection, type CacheFacts, type CacheView } from '../connectors/registry';
 import { priceCost } from '../connectors/pricing';
 import type { Cache } from '../connectors/settings';
-import type { Connection, Cost, Model } from '../connectors/types';
+import type { Connection, Model } from '../connectors/types';
 import { fingerprint } from '../engine/memory';
 import type { Assembled, From } from '../engine/pipeline';
-import { cachePrintId, type CacheBreak, type CacheForecast, type CachePrint, type CacheText, type Forecast, type ForecastPart, type WireMessage } from '../model/cache';
+import { cachePrintId, type CacheBreak, type CacheBreakCost, type CacheForecast, type CachePrint, type CacheText, type Forecast, type ForecastPart, type WireMessage } from '../model/cache';
 import type { Message, Receipt } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import type { ObjectStore } from './store';
@@ -197,7 +197,7 @@ export function forecast(last: Prior | null, next: CacheSend): Forecast | null {
 // What the next send's input would cost as forecast, and had it read all the last call cached, from the model's
 // price; null without one. Both write what the next send caches past what they read. ratio: the model's native tokens
 // per o200k token (the send's calibrated centre), since the provider bills its own count and parts hold o200k.
-export function breakCost(connection: Connection, model: Model, { parts, written, against }: Forecast, ratio: number): { paid: Cost; whole: Cost } | null {
+export function breakCost(connection: Connection, model: Model, { parts, written, against }: Forecast, ratio: number): CacheBreakCost | null {
   if (!model.price || !against?.broken) return null;
   const native = (count: number) => Math.round(count * ratio);
   const inputTokens = native(parts.reduce((sum, { tokens }) => sum + tokens, 0));

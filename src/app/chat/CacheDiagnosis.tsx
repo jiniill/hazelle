@@ -1,10 +1,16 @@
-import type { CacheBreak, CacheCause, CacheDiagnosis, CacheRecurrence } from '../../model/cache';
+import type { Cost } from '../../connectors/types';
+import { cacheDiff } from '../../engine/cache-diff';
+import type { CacheBreak, CacheBreakCost, CacheCause, CacheDiagnosis, CachePrescription, CacheRecurrence } from '../../model/cache';
 import type { Receipt } from '../../model/chat';
 import { cacheShortfall, shortfallPlace } from '../../runtime/cache-diagnosis';
+import { applyCacheEdit } from '../../runtime/cache-prescriptions';
 import type { LogEntry } from '../../runtime/request-log';
-import { tokens } from '../common/receipt';
-import type { ReactNode } from 'react';
-import { Hint, Row, Stack, Tag, Text, TextDiff } from '../ui';
+import { cost, tokens } from '../common/receipt';
+import { loreName } from '../common/words';
+import { useStore } from '../session';
+import { useToast } from '../toast';
+import { useState, type ReactNode } from 'react';
+import { Button, Hint, List, ListItem, Row, Section, Stack, Tag, Text, TextDiff } from '../ui';
 import { partName } from './ChatSent';
 import { silentReason } from './InspectModules';
 
@@ -130,5 +136,76 @@ export function ShortfallNote({ receipt, entry }: { receipt: Receipt; entry: Log
       {place && ` '${partName(place.from, place.role)}' 부분 근처부터 읽지 못했어요.`}
       <Hint label={SHORT}>제공자가 캐시를 비웠거나 요청을 바꿨을 수 있으니, 계속되면 다른 연결을 사용해 보세요.</Hint>
     </Text>
+  );
+}
+
+const subject = ({ edit, from, role }: CachePrescription) => (edit.kind === 'lore' ? `로어북 '${loreName(edit.name)}'` : `'${partName(from, role)}'`);
+const ACTIONS: Record<CachePrescription['action'], { title: string; button: string }> = {
+  'after-chat': { title: '대화 뒤로 옮기기', button: '옮기기' },
+  constant: { title: '항상 켜기', button: '항상 켜기' },
+  'user-role': { title: '사용자 역할로 보내기', button: '바꾸기' },
+};
+const titleOf = (prescription: CachePrescription) => `${subject(prescription)} ${ACTIONS[prescription.action].title}`;
+
+// What the next send would pay less, against its price as it stands; null where either is unpriced or the units differ.
+// An edit that mends every break leaves no breakCost, so it pays what reading the whole cache would.
+function saved(now: CacheBreakCost | null, after: CacheBreakCost | null): Cost | null {
+  const paid = after?.paid ?? now?.whole;
+  if (!now || !paid || paid.unit !== now.paid.unit) return null;
+  const amount = now.paid.amount - paid.amount;
+  return amount > 0 ? { ...now.paid, amount } : null;
+}
+
+function preview({ edit }: CachePrescription): ReactNode {
+  if (edit.kind === 'lore') {
+    if (edit.field === 'constant') return <Text>키워드와 상관없이 매번 보내요. 그만큼 매번 토큰이 들어요.</Text>;
+    return <TextDiff runs={cacheDiff(edit.before, edit.after).runs} label="항목 내용: 바꾸기 전과 후" />;
+  }
+  if (edit.field === 'role') return <Text>역할을 시스템에서 사용자로 바꿔요. 요청 맨 앞으로 모이지 않고 제자리에 들어가요.</Text>;
+  return <Text>보내는 순서가 바뀌어서, 모델이 이 블록을 대화 다음에 읽어요.</Text>;
+}
+
+// Applying one changes the bot (design §4.4, 캐시 키퍼 ruling 1): only on the user's press, with 되돌리기.
+export function Prescriptions({ prescriptions, cost: now }: { prescriptions: CachePrescription[] | null | undefined; cost: CacheBreakCost | null }) {
+  const store = useStore();
+  const toast = useToast();
+  const [open, setOpen] = useState<number | null>(null);
+  if (prescriptions === null) return <Text variant="note">고치는 방법을 계산하지 못했어요.</Text>;
+  if (!prescriptions?.length) return null;
+  async function apply(prescription: CachePrescription) {
+    const done = await applyCacheEdit(store, prescription.edit);
+    if (!done.ok) return toast.failed(done, '고치지 못했어요.');
+    toast.undoable('캐시가 덜 깨지게 고쳤어요', () => applyCacheEdit(store, done.data), titleOf(prescription));
+  }
+  return (
+    <Section level={3} title="고치면 더 읽어요" help="고치는 방법마다 따로 계산했어요. 여러 개를 고치면 합과 다를 수 있어요.">
+      <List label="고치는 방법">
+        {prescriptions.map((prescription, index) => {
+          const less = saved(now, prescription.cost);
+          return (
+            <ListItem
+              key={index}
+              title={titleOf(prescription)}
+              note={`읽기 ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
+              tags={less ? [`${cost(less)} 아껴요`] : []}
+              expanded={open === index}
+              onClick={() => setOpen(open === index ? null : index)}
+              detail={
+                open === index && (
+                  <Stack gap="related">
+                    {preview(prescription)}
+                    <Row kind="actions">
+                      <Button variant="secondary" size="sm" onClick={() => void apply(prescription)}>
+                        {ACTIONS[prescription.action].button}
+                      </Button>
+                    </Row>
+                  </Stack>
+                )
+              }
+            />
+          );
+        })}
+      </List>
+    </Section>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CacheDiagnosis, CacheRecurrence, Forecast } from '../../model/cache';
+import type { CacheDiagnosis, CachePrescription, CacheRecurrence, Forecast } from '../../model/cache';
 import { cacheRecurrence, diagnoseCache, needsDiagnosis } from '../../runtime/cache-diagnosis';
+import { priceCachePrescriptions } from '../../runtime/cache-prescriptions';
 import type { Chat } from '../../model/chat';
 import type { Memory } from '../../model/memory';
 import type { Route } from '../../runtime/assignment';
@@ -19,8 +20,8 @@ export type SendNotes = { cache: CacheNotes; leaving: number | null; unseen: num
 // until: when the last call's cache runs out, null when it cached nothing. next: the draft's forecast against the
 // chat's stored last call (runtime/cache), with what a break costs where the model is priced and the model it was worked
 // out for; undefined until it is worked out after the chat opens or a reply ends. recurrence: the chat's recent replies'
-// stored forecasts.
-export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; next: { forecast: Forecast; diagnosis: CacheDiagnosis | null | undefined; cost: ReturnType<typeof breakCost>; route: Route } | null | undefined };
+// stored forecasts. prescriptions: undefined while pending, null on evaluation failure, [] when no edit qualifies.
+export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; next: { forecast: Forecast; diagnosis: CacheDiagnosis | null | undefined; prescriptions: CachePrescription[] | null | undefined; cost: ReturnType<typeof breakCost>; route: Route } | null | undefined };
 
 // The draft is read again after any store change settles, so an edit to the prompt, a lorebook or the model shows in
 // the forecast while it is open. unsaved: a new chat not saved yet, forecast as its first save will write it.
@@ -52,15 +53,20 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
         setSending(result);
         const sending = result && 'turn' in result ? result : null;
         setLeft(sending && leaving(sending.prompt));
-        const send = sending && cacheSend(sending, session.credentials.pool.peek(sending.turn.route.connection.value)?.id ?? null);
+        const account = sending ? session.credentials.pool.peek(sending.turn.route.connection.value)?.id ?? null : null;
+        const send = sending && cacheSend(sending, account);
         const before = session.store.scopeState(id) === 'loaded' ? prior(session.store, id, messages, Date.now()) : null;
         const made = send && forecast(before, send);
         if (!made || !sending || !send) return setNext(null);
         const pending = needsDiagnosis(made);
-        const next = { forecast: made, diagnosis: pending ? undefined : null, cost: breakCost(sending.turn.route.connection.value, sending.turn.route.model, made, sending.calibration.estimate.centre), route: sending.turn.route };
+        const next = { forecast: made, diagnosis: pending ? undefined : null, prescriptions: pending ? undefined : [], cost: breakCost(sending.turn.route.connection.value, sending.turn.route.model, made, sending.calibration.estimate.centre), route: sending.turn.route };
         setNext(next);
-        if (pending) void diagnoseCache(session.store.evaluation, id, sending.turn.scope, made, before ? session.log.entry(id, before.print.call) : null, sending.prompt, send.wire, controller.signal).then((diagnosis) => {
-          if (!controller.signal.aborted) setNext({ ...next, diagnosis });
+        if (pending) void diagnoseCache(session.store.evaluation, id, sending.turn.scope, made, before ? session.log.entry(id, before.print.call) : null, sending.prompt, send.wire, controller.signal).then(async (diagnosis) => {
+          if (controller.signal.aborted) return;
+          setNext({ ...next, diagnosis, prescriptions: diagnosis ? undefined : [] });
+          if (!diagnosis) return;
+          const prescriptions = await priceCachePrescriptions(session.store, id, sending, diagnosis, made, before, account, controller.signal);
+          if (!controller.signal.aborted) setNext({ ...next, diagnosis, prescriptions });
         });
       }, () => {
         if (controller.signal.aborted) return;
