@@ -51,7 +51,6 @@ it('keeps lore firing evidence and known positions when wire text is unavailable
   input.after.wire[0]!.index = 3;
   expect(cacheDiagnosis(input, scope)).toMatchObject({ missing: 1, parts: [{ diff: null, causes: [
     { kind: 'lore', before: { fired: false, why: { kind: 'unmatched' } }, after: { fired: true } },
-    { kind: 'hoisted', wire: 0, prompt: 3 },
   ] }] });
   input.forecast.parts[0]!.change = 'moved';
   expect(cacheDiagnosis(input, scope).parts[0]!.causes).toMatchObject([{ kind: 'lore' }, { kind: 'moved', before: 2, after: 0, depth: 1 }]);

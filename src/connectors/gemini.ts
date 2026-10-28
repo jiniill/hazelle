@@ -100,7 +100,7 @@ export const gemini: Codec = {
   // 1000 is the most one page holds; a later page (nextPageToken) is not asked for.
   listModels: (endpoint) => ({ url: `${endpoint.baseUrl}/models?pageSize=1000`, method: 'GET', headers: {}, body: null }),
 
-  systemFirst: true,
+  inlineSystem: 'system:',
 
   // Google omits default fields: absent thinking means false. Other unlisted capabilities stay unknown.
   // Supported methods distinguish embedding models from generators.

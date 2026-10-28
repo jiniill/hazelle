@@ -370,11 +370,13 @@ describe('chat requests', () => {
     expect(JSON.parse(request.body!)).toEqual({ model: 'm', messages, stream: true, stream_options: { include_usage: true } });
   });
 
-  it('moves system text to Anthropic’s system field and needs a known output limit', () => {
+  it('moves leading system text to Anthropic’s system field, keeps a later one in place, and needs a known output limit', () => {
     const anthropic = connection('anthropic');
     const request = withCredential(anthropic, chatRequest(anthropic, { model: model({ maxOutput: 64000 }), messages, settings: {} }), 'sk-ant');
     expect(request.headers).toEqual({ 'x-api-key': 'sk-ant', 'anthropic-version': '2023-06-01', 'content-type': 'application/json' });
     expect(JSON.parse(request.body!)).toEqual({ model: 'm', max_tokens: 64000, system: '짧게 답해.', messages: [messages[1]], stream: true });
+    const later = JSON.parse(chatRequest(anthropic, { model: model({ maxOutput: 64000 }), messages: [...messages, { role: 'assistant', content: '안녕!' }, { role: 'system', content: '기억' }], settings: {} }).body!);
+    expect(later).toMatchObject({ system: '짧게 답해.', messages: [messages[1], { role: 'assistant', content: '안녕!' }, { role: 'user', content: 'System: 기억' }] });
     expect(() => chatRequest(anthropic, { model: model(), messages, settings: {} })).toThrow(ConnectorError);
   });
 
@@ -436,7 +438,7 @@ describe('chat requests', () => {
     const generic = connection('generic', { baseUrl: 'https://api.example.com/v1', protocol: 'chat-completions' });
     expect(cacheView(generic, { model: model(), messages: sent, settings: {} })).toMatchObject({ cache: null, messages: [{ index: 0 }, { index: 1 }] });
     const view = cacheView(connection('anthropic'), { model: model(), messages: sent, settings: { cache: '1h' } });
-    expect(view).toMatchObject({ model: 'm', cache: '1h', messages: [{ role: 'system', index: 1, cache: true }, { role: 'user', index: 0, cache: true }] });
+    expect(view).toMatchObject({ model: 'm', cache: '1h', messages: [{ role: 'user', index: 0, cache: true }, { role: 'user', content: 'System: 짧게 답해.', index: 1, cache: true }] });
   });
 
   it("names a Claude model's minimum cacheable prompt and lookback however its route spells the id, and nothing for another model", () => {

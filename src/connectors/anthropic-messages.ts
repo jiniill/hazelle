@@ -66,7 +66,7 @@ export const anthropicMessages: Codec = {
 
   listModels: (endpoint) => ({ url: `${endpoint.baseUrl}/models?limit=1000`, method: 'GET', headers: VERSION, body: null }),
 
-  systemFirst: true,
+  inlineSystem: 'System: ',
 
   // Models API omits tool/sampling/off controls. Zero limits mean unknown, not zero capacity.
   parseModels(payload) {

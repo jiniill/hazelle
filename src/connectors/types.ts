@@ -151,7 +151,10 @@ export type Codec = {
   cache: CacheWay | null;
   // The wire sends every system message ahead of the others (Messages' system field), so a provider's cache reads them
   // first, whatever their place in the prompt.
-  systemFirst: boolean;
+  // Where the API takes system text only before the conversation (one system field), a system message after the first
+  // other message stays in place as a user message after this prefix, RisuAI's own for the API; null where system
+  // messages are sent in place.
+  inlineSystem: string | null;
   // Runs after cache points are assigned, before chat builds the request.
   pack?(messages: ChatMessage[], pdf: Pdf): ChatMessage[];
   // fields override the format's body; mark is the route's cache encoding.

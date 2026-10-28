@@ -52,7 +52,6 @@ export type CacheCause =
   | { kind: 'tag'; tag: string; before: string; after: string }
   | { kind: 'lore'; id: string; name: string; before: CacheLore | null; after: CacheLore | null }
   | { kind: 'moved'; before: number; after: number; depth: number | null }
-  | { kind: 'hoisted'; wire: number; prompt: number }
   | { kind: 'edited' | 'memory' | 'unknown' };
 export type CacheLore = { fired: true; why: Fired['why'] } | { fired: false; why: Silent['why'] };
 // Positions address wire order. A null diff lacks text; an empty causes list lacks even a provable cause.
@@ -63,16 +62,13 @@ export type CacheDiagnosis = {
 };
 
 export type CacheEdit =
-  | ({ kind: 'prompt'; id: string; block: string } & (
-    | { field: 'blocks'; before: Block[]; after: Block[] }
-    | { field: 'role'; before: Role; after: Role }
-  ))
+  | { kind: 'prompt'; id: string; block: string; field: 'blocks'; before: Block[]; after: Block[] }
   | ({ kind: 'lore'; id: string; name: string } & (
     | { field: 'constant'; before: boolean; after: boolean }
     | { field: 'content'; before: string; after: string }
   ));
 
-export type CacheCandidate = { cause: 'tag' | 'lore' | 'hoisted'; action: 'after-chat' | 'constant' | 'user-role'; edit: CacheEdit; from: From; role: Role };
+export type CacheCandidate = { cause: 'tag' | 'lore'; action: 'after-chat' | 'constant'; edit: CacheEdit; from: From; role: Role };
 export type CacheBreakCost = { paid: Cost; whole: Cost };
 // Each price applies this edit alone against the same prior; prices cannot be added across prescriptions.
 export type CachePrescription = CacheCandidate & {

@@ -44,7 +44,7 @@ export const responses: Codec = {
   listModels: chatCompletions.listModels,
   parseModels: chatCompletions.parseModels,
 
-  systemFirst: false,
+  inlineSystem: null,
 
   // It has no stop sequences, penalties, top_k or seed. max_output_tokens below 16 is refused.
   carries: {

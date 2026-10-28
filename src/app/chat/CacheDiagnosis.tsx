@@ -49,8 +49,6 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
       return cause.depth === null
         ? { line: '같은 내용이 다른 자리로 옮겨졌어요.', help: null }
         : { line: `깊이 ${cause.depth}에 넣는 항목이라 대화가 늘면서 자리를 옮겼어요.`, help: '깊이가 작을수록 더 많이 읽혀요.' };
-    case 'hoisted':
-      return { line: '시스템 메시지라 요청 맨 앞에 모아 보내요.', help: '역할을 사용자로 바꾸면 제자리에 들어가요.' };
     case 'edited':
       return { line: '대화 메시지가 수정됐어요.', help: null };
     case 'memory':
@@ -60,7 +58,7 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
   }
 }
 
-// Show all causes of the first broken part: changes can compound (e.g. lore only breaks because system is hoisted).
+// Show all causes of the first broken part: changes can compound (e.g. a lore entry fired and moved).
 // Whole-call breaks have no part cause, even if diagnosis lists unrelated changes.
 export function breakCauses(diagnosis: CacheDiagnosis | null | undefined, broken: CacheBreak): string | null {
   if (!('from' in broken)) return null;
@@ -142,7 +140,6 @@ const subject = ({ edit, from, role }: CachePrescription) => (edit.kind === 'lor
 const ACTIONS: Record<CachePrescription['action'], { title: string; button: string }> = {
   'after-chat': { title: '대화 뒤로 옮기기', button: '옮기기' },
   constant: { title: '항상 켜기', button: '항상 켜기' },
-  'user-role': { title: '사용자 역할로 보내기', button: '바꾸기' },
 };
 const titleOf = (prescription: CachePrescription) => `${subject(prescription)} ${ACTIONS[prescription.action].title}`;
 
@@ -160,7 +157,6 @@ function preview({ edit }: CachePrescription): ReactNode {
     if (edit.field === 'constant') return <Text>키워드와 상관없이 매번 보내서 그만큼 토큰이 들어요.</Text>;
     return <TextDiff runs={cacheDiff(edit.before, edit.after).runs} label="항목 내용: 바꾸기 전과 후" />;
   }
-  if (edit.field === 'role') return <Text>요청 맨 앞으로 모이지 않고 제자리에 들어가요.</Text>;
   return <Text>모델이 이 블록을 대화 다음에 읽어요.</Text>;
 }
 

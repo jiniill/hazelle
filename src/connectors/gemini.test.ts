@@ -42,7 +42,7 @@ describe('Gemini', () => {
     expect(atob(body.contents[0].parts[0].inlineData.data).startsWith('%PDF-1.7')).toBe(true);
   });
 
-  it('sends system apart, one turn per run of a role, and thinking with its thoughts', () => {
+  it('sends the leading system text apart and a later one in its place, one turn per run of a role, and thinking with its thoughts', () => {
     const request = withCredential(google, chatRequest(google, {
       model: flash!,
       messages: [
@@ -57,10 +57,10 @@ describe('Gemini', () => {
     expect(request.url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse');
     expect(request.headers['x-goog-api-key']).toBe('secret');
     expect(JSON.parse(request.body!)).toEqual({
-      systemInstruction: { parts: [{ text: '규칙\n\n기억' }] },
+      systemInstruction: { parts: [{ text: '규칙' }] },
       contents: [
         { role: 'model', parts: [{ text: '어서 와.' }] },
-        { role: 'user', parts: [{ text: '안녕' }, { text: '뭐 해?' }] },
+        { role: 'user', parts: [{ text: 'system:기억' }, { text: '안녕' }, { text: '뭐 해?' }] },
       ],
       generationConfig: { maxOutputTokens: 1000, topK: 40, stopSequences: ['끝'], thinkingConfig: { thinkingLevel: 'low', includeThoughts: true } },
     });

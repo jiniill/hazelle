@@ -186,9 +186,17 @@ export function modelSettings(connection: Connection, model: Model): SettingsSch
 // chatRequest writes it and cacheView reads it, so a forecast compares what is sent.
 export function sending(route: Route, { model, messages, settings: stored }: ChatRequest): ChatRequest {
   const { settings } = fit(settingsSchema(carries(route, model), model), stored);
-  const roled = settings.systemAsUser ? messages.map((message) => (message.role === 'system' ? { ...message, role: 'user' as const } : message)) : messages;
+  const roled = settings.systemAsUser ? messages.map((message) => (message.role === 'system' ? { ...message, role: 'user' as const } : message)) : inlined(route.codec.inlineSystem, messages);
   const placed = cachePoints(roled, settings.cache !== undefined);
   return { model, messages: settings.pdf && route.codec.pack ? route.codec.pack(placed, settings.pdf) : placed, settings };
+}
+
+// Only the system messages before the conversation go to the API's system field, so none is sent ahead of where the
+// prompt put it (design §4.4).
+function inlined(prefix: string | null, messages: ChatMessage[]): ChatMessage[] {
+  const start = messages.findIndex(({ role }) => role !== 'system');
+  if (prefix === null || start === -1) return messages;
+  return messages.map((message, index) => (index > start && message.role === 'system' ? { ...message, role: 'user', content: prefix + message.content } : message));
 }
 
 // Retry transient refusals, never bad credentials or requests (design §6.7).
@@ -265,10 +273,8 @@ export function cacheView(route: Route, request: ChatRequest): CacheView {
   const { settings, messages: sent } = sending(route, request);
   const marked = cacheWay(route, request.model)?.mark.kind;
   const messages = marked === 'key' ? sent.map(({ role, content }): ChatMessage => ({ role, content })) : sent;
-  const placed = messages.map((message, index) => ({ ...message, index }));
-  const ordered = route.codec.systemFirst ? [...placed.filter(({ role }) => role === 'system'), ...placed.filter(({ role }) => role !== 'system')] : placed;
   const facts = marked === 'part' || marked === 'message' ? claudeCacheFacts(request.model.id) : null;
-  return { model: request.model.id, reasoning: settings.reasoning, cache: messages.some((message) => message.cache) ? settings.cache! : null, messages: ordered, facts };
+  return { model: request.model.id, reasoning: settings.reasoning, cache: messages.some((message) => message.cache) ? settings.cache! : null, messages: messages.map((message, index) => ({ ...message, index })), facts };
 }
 
 // A request takes at most four cache points (Anthropic's limit, which OpenRouter passes on). Past that the last one

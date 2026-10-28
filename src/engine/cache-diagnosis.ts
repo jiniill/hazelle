@@ -90,9 +90,6 @@ export function cacheDiagnosis({ forecast, before, after }: CacheComparison, sco
       }
     }
     if (row.kind === 'moved' && row.before !== null && row.after !== null) causes.push({ kind: 'moved', before: row.before, after: row.after, depth: from.kind === 'depth' ? from.depth : null });
-    const wire = row.after ?? row.before!;
-    const prompt = nextWire?.index ?? oldWire?.index;
-    if (row.kind !== 'moved' && row.role === 'system' && prompt !== undefined && wire < prompt) causes.push({ kind: 'hoisted', wire, prompt });
     if (row.kind === 'changed' && from.kind === 'block' && oldPart?.source !== undefined && nextPart?.source !== undefined && oldPart.source !== nextPart.source) {
       if (from.slot === 'chat' && oldPart.origin === nextPart.origin) causes.push({ kind: 'edited' });
       if (from.slot === 'memory') causes.push({ kind: 'memory' });

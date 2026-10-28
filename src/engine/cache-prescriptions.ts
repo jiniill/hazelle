@@ -37,13 +37,6 @@ export function cacheCandidates(diagnosis: CacheDiagnosis, forecast: Forecast, s
         // @@depth 0 follows postEverything when present; that slot need not be after the chat.
         if (chat !== -1 && (post === -1 || post > chat)) add({ cause: 'lore', action: 'after-chat', edit: { kind: 'lore', id: entry.id, name: entry.value.name, field: 'content', before: entry.value.content, after: withDecorator(entry.value.content, '@@depth 0', ['depth', 'reverse_depth', 'end', 'position']) } });
       }
-      if (cause.kind === 'hoisted') {
-        if (prompt && block && 'role' in block && block.role === 'system') add({ cause: 'hoisted', action: 'user-role', edit: { kind: 'prompt', id: prompt, block: block.id, field: 'role', before: 'system', after: 'user' } });
-        if (from.kind === 'lore' || from.kind === 'depth') {
-          const entry = scope.lore.find(({ id }) => id === from.id);
-          if (entry) add({ cause: 'hoisted', action: 'user-role', edit: { kind: 'lore', id: entry.id, name: entry.value.name, field: 'content', before: entry.value.content, after: withDecorator(entry.value.content, '@@role user', ['role']) } });
-        }
-      }
     }
   }
   return [...candidates.values()];
@@ -51,10 +44,7 @@ export function cacheCandidates(diagnosis: CacheDiagnosis, forecast: Forecast, s
 
 export function cacheEditedPrompt<T extends Prompt>(prompt: T, edit: Extract<CacheEdit, { kind: 'prompt' }>): T | null {
   if (prompt.deleted !== undefined || prompt.purging) return null;
-  if (edit.field === 'blocks') return JSON.stringify(prompt.blocks) === JSON.stringify(edit.before) ? { ...prompt, blocks: edit.after } : null;
-  const block = prompt.blocks.find(({ id }) => id === edit.block);
-  if (!block || !('role' in block) || block.role !== edit.before) return null;
-  return { ...prompt, blocks: prompt.blocks.map((each) => each === block ? { ...block, role: edit.after } : each) };
+  return JSON.stringify(prompt.blocks) === JSON.stringify(edit.before) ? { ...prompt, blocks: edit.after } : null;
 }
 
 export function cacheEditedLore<T extends Omit<Lore, 'folder'>>(entry: T, edit: Extract<CacheEdit, { kind: 'lore' }>): T | null {

@@ -50,7 +50,7 @@ async function compare(session: Session, chat: string, old: Sending, next: Sendi
   return { prior, current, diagnosis };
 }
 
-it('prices a proven tag block moved back after the chat without writing, then applies and undoes that stored order', () => server.withSession(async (session) => {
+it('prices a proven tag block moved back after the chat without writing, then applies and undoes only that stored order', () => server.withSession(async (session) => {
   const clock: TextBlock = { ...text('clock', 'Clock: {{getvar::clock}} / {{getvar::clock}}.'), cache: true };
   const { chat, prompt, send } = await setup(session, [stable, chatSlot, clock]);
   const old = await send();
@@ -60,6 +60,10 @@ it('prices a proven tag block moved back after the chat without writing, then ap
   const { prior, current, diagnosis } = await compare(session, chat, old, next);
   expect(diagnosis.parts.flatMap(({ causes }) => causes)).toContainEqual({ kind: 'tag', tag: '{{getvar::clock}}', before: 'earlier', after: 'later' });
   const jobs = vi.spyOn(session.store.evaluation, 'prompt');
+  const aborted = new AbortController();
+  aborted.abort();
+  expect(await priceCachePrescriptions(session.store, chat, next, diagnosis, current, prior, null, aborted.signal)).toBeNull();
+  expect(jobs).not.toHaveBeenCalled();
   const prescriptions = await priceCachePrescriptions(session.store, chat, next, diagnosis, current, prior, null, new AbortController().signal);
   expect(jobs).toHaveBeenCalledTimes(1);
   expect(prescriptions).toHaveLength(1);
@@ -77,8 +81,10 @@ it('prices a proven tag block moved back after the chat without writing, then ap
   const applied = await applyCacheEdit(session.store, prescription.edit);
   if (!applied.ok) throw new Error(applied.error);
   expect(session.store.get('prompt', prompt)!.value.blocks.map(({ id }) => id)).toEqual(['stable', 'chat', 'clock']);
+  expect((await applyCacheEdit(session.store, prescription.edit)).ok).toBe(false);
+  await editPrompt(session.store, prompt, { name: 'Renamed meanwhile' });
   expect((await applyCacheEdit(session.store, applied.data)).ok).toBe(true);
-  expect(session.store.get('prompt', prompt)!.value.blocks).toEqual(next.input.scope.prompt!.blocks);
+  expect(session.store.get('prompt', prompt)!.value).toMatchObject({ name: 'Renamed meanwhile', blocks: next.input.scope.prompt!.blocks });
 }));
 
 it('prices both lore edits once and retains only the constant edit that restores the stopped entry and increases reads', () => server.withSession(async (session) => {
@@ -109,30 +115,4 @@ it('prices both lore edits once and retains only the constant edit that restores
   expect(prescription.cost?.paid.amount).toBeGreaterThan(0);
   expect((await applyCacheEdit(session.store, applied.data)).ok).toBe(true);
   expect(session.store.get('lore', entry)!.value.constant).toBe(false);
-}));
-
-it('prices the editable hoisted block role as user, preserves other fields on undo and stops before pricing an aborted cycle', () => server.withSession(async (session) => {
-  const tail = text('tail', 'Tail instruction.');
-  const { chat, prompt, send } = await setup(session, [stable, chatSlot, tail]);
-  const old = await send();
-  await editPrompt(session.store, prompt, { blocks: [stable, chatSlot, { ...tail, role: 'system' }] });
-  const next = await send();
-  const { prior, current, diagnosis } = await compare(session, chat, old, next);
-  const jobs = vi.spyOn(session.store.evaluation, 'prompt');
-  const controller = new AbortController();
-  controller.abort();
-  expect(await priceCachePrescriptions(session.store, chat, next, diagnosis, current, prior, null, controller.signal)).toBeNull();
-  expect(jobs).not.toHaveBeenCalled();
-  const prescriptions = await priceCachePrescriptions(session.store, chat, next, diagnosis, current, prior, null, new AbortController().signal);
-  expect(jobs).toHaveBeenCalledTimes(1);
-  expect(prescriptions).toHaveLength(1);
-  const prescription = prescriptions![0]!;
-  expect(prescription).toMatchObject({ cause: 'hoisted', action: 'user-role', edit: { kind: 'prompt', id: prompt, block: tail.id, field: 'role', before: 'system', after: 'user' } });
-  expect(prescription.after.read).toBeGreaterThan(prescription.before.read);
-  const applied = await applyCacheEdit(session.store, prescription.edit);
-  if (!applied.ok) throw new Error(applied.error);
-  expect((await applyCacheEdit(session.store, prescription.edit)).ok).toBe(false);
-  await editPrompt(session.store, prompt, { name: 'Renamed meanwhile' });
-  expect((await applyCacheEdit(session.store, applied.data)).ok).toBe(true);
-  expect(session.store.get('prompt', prompt)!.value).toMatchObject({ name: 'Renamed meanwhile', blocks: [stable, chatSlot, { ...tail, role: 'system' }] });
 }));
