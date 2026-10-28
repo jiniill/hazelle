@@ -4,6 +4,7 @@ import { lockVault } from '../vault/device';
 import { adoptable, cacheNewer, cacheScope, GenerationChanged, sameGeneration, type CachedScope, type CacheWrite, type DeviceCache, type Generation } from './object-cache';
 
 const caches = new Map<string, BrowserCache>();
+const draftCaches = new Map<string, BrowserDraftCache>();
 const STORES = ['generations', 'states', 'objects'];
 
 export function deviceCache(account: string): DeviceCache {
@@ -15,7 +16,53 @@ export function deviceCache(account: string): DeviceCache {
 export async function forgetVault(account: string, cache = deviceCache(account)): Promise<void> {
   if (cache instanceof BrowserCache) cache.forgotten = true;
   caches.delete(account);
-  await Promise.all([lockVault(), cache.forget().catch(() => {})]);
+  const drafts = draftCache(account);
+  drafts.forgotten = true;
+  draftCaches.delete(account);
+  await Promise.all([lockVault(), cache.forget().catch(() => {}), drafts.forget().catch(() => {})]);
+}
+
+export function draftCache(account: string): BrowserDraftCache {
+  let cache = draftCaches.get(account);
+  if (!cache) draftCaches.set(account, (cache = new BrowserDraftCache(account)));
+  return cache;
+}
+
+class BrowserDraftCache {
+  forgotten = false;
+  constructor(private readonly account: string) {}
+
+  async read(): Promise<[string, string][]> {
+    const tx = (await database()).transaction('drafts');
+    const done = completed(tx);
+    const store = tx.objectStore('drafts');
+    const range = IDBKeyRange.bound([this.account], [this.account, []]);
+    const keys = store.getAllKeys(range);
+    const values = store.getAll(range);
+    await done;
+    return keys.result.map((key, index) => [(key as string[])[1]!, values.result[index] as string]);
+  }
+
+  async write(rows: readonly (readonly [string, string | null])[]): Promise<void> {
+    const db = await database();
+    // Encryption can finish after logout; never let that work recreate forgotten drafts.
+    if (this.forgotten) throw new Error('This account was logged out');
+    const tx = db.transaction('drafts', 'readwrite');
+    const done = completed(tx);
+    const store = tx.objectStore('drafts');
+    for (const [key, body] of rows) {
+      if (body === null) store.delete([this.account, key]);
+      else store.put(body, [this.account, key]);
+    }
+    await done;
+  }
+
+  async forget(): Promise<void> {
+    const tx = (await database()).transaction('drafts', 'readwrite');
+    const done = completed(tx);
+    tx.objectStore('drafts').delete(IDBKeyRange.bound([this.account], [this.account, []]));
+    await done;
+  }
 }
 
 // Whether any account was opened in this browser and not logged out of: its cache stays until 로그아웃 forgets it.
@@ -144,20 +191,23 @@ const changed = new WeakSet<IDBTransaction>();
 
 // Also a guest's own store (runtime/guest-store), the account's master rather than a copy of the server's.
 // An account's page goes on without a blocked cache; the guest store cannot, so it surfaces the block.
-export const database = cachedDatabase('risu-alpha-objects', 3, (req, event) => {
+export const database = cachedDatabase('risu-alpha-objects', 4, (req, event) => {
   const db = req.result;
   if (event.oldVersion === 0) {
     db.createObjectStore('generations');
     db.createObjectStore('states');
     db.createObjectStore('objects').createIndex('scope', ['account', 'scope']);
   }
-  db.createObjectStore('guest-heads');
-  const objects = db.createObjectStore('guest-objects');
-  objects.createIndex('rev', ['account', 'rev']);
-  objects.createIndex('parent', ['account', 'parent', 'rev']);
-  objects.createIndex('scope', ['account', 'scope', 'rev']);
-  objects.createIndex('kind', ['account', 'kind', 'rev']);
-  db.createObjectStore('guest-files');
+  if (event.oldVersion < 3) {
+    db.createObjectStore('guest-heads');
+    const objects = db.createObjectStore('guest-objects');
+    objects.createIndex('rev', ['account', 'rev']);
+    objects.createIndex('parent', ['account', 'parent', 'rev']);
+    objects.createIndex('scope', ['account', 'scope', 'rev']);
+    objects.createIndex('kind', ['account', 'kind', 'rev']);
+    db.createObjectStore('guest-files');
+  }
+  if (event.oldVersion < 4) db.createObjectStore('drafts');
 });
 
 function completed(tx: IDBTransaction): Promise<void> {

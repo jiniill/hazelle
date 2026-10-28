@@ -103,14 +103,20 @@ test('a new account imports a card, chats through the fake provider and finds th
     expect(JSON.stringify(sent[0])).not.toContain(NICKNAME);
   });
 
-  await test.step('after a reload the chat and its rendered messages are still there', async () => {
+  await test.step('after a reload the chat, its rendered messages and the text typed but not sent are still there', async () => {
     const shown = await messages.allTextContents();
+    const composer = page.getByLabel('메시지', { exact: true });
+    await composer.fill('not sent yet');
+    // Past the device copy's write pause.
+    await page.waitForTimeout(1000);
     await page.reload();
     await expect(messages).toHaveCount(3);
     expect(await messages.allTextContents()).toEqual(shown);
     await expect(messages.nth(0)).toContainText(GREETING);
     await expect(messages.nth(1)).toContainText('hi');
     await expect(messages.nth(2)).toContainText('Mira smiles. (bows)');
+    await expect(composer).toHaveValue('not sent yet');
+    await composer.fill('');
   });
 
   await test.step('보내기 with nothing typed asks for the next reply, whose request ends with the 응답 받기 지시 after the reply', async () => {

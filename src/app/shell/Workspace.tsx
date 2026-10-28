@@ -198,7 +198,10 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
   const [attempt, setAttempt] = useState(0);
   const [rewound, setRewound] = useState<number | null>(null);
   const drafts = useMemo(() => new Drafts(), [accountId]);
-  useEffect(() => () => drafts.close(), [drafts]);
+  useEffect(() => {
+    void drafts.persist(accountId, vaultKey);
+    return () => { void drafts.close(); };
+  }, [drafts, accountId, vaultKey]);
   const [progress, setProgress] = useState<PullProgress>(NOT_PULLED);
   const waiting = useSyncExternalStore(session?.store.subscribeWaiting ?? subscribeNothing, session?.store.waiting ?? notWaiting, notWaiting);
   // The notice alone, not the facts, so the counts every write brings render nothing here.

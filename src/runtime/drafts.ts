@@ -1,6 +1,8 @@
 import { ChangeSignal } from '../change-signal';
 import type { Inlay, TextFile } from '../model/library';
+import type { VaultKey } from '../vault/keys';
 import type { ApiFailure } from './api';
+import { DeviceDrafts } from './device-drafts';
 
 // Save picture files on attachment; revoke preview URLs only on release. saved resolves to the settled inlay/failure state.
 export type PictureState = { kind: 'saving' } | { kind: 'saved'; value: Inlay } | { kind: 'failed'; failure: ApiFailure | 'refused' };
@@ -14,22 +16,43 @@ export const attachmentName = (attachment: DraftAttachment) => (attachment.kind 
 // Vault-lifetime drafts outlive screens/sessions so failed background sends can return text.
 // Unsaved chats key by character until first save; move their text and attachments together.
 export const draftKey = (chat: string | null, character: string | null) => chat ?? (character ? `new-${character}` : 'new');
+const prepend = (text: string, typed: string) => typed ? `${text}\n${typed}` : text;
 
 export class Drafts {
-  private readonly texts = new Map<string, string>();
+  private texts = new Map<string, string>();
   private readonly held = new Map<string, readonly DraftAttachment[]>();
   private readonly changes = new ChangeSignal();
+  private device: DeviceDrafts | undefined;
 
   readonly subscribe = this.changes.subscribe;
+
+  persist(account: string, vaultKey: VaultKey): Promise<void> {
+    const texts = this.texts;
+    this.device ??= new DeviceDrafts(account, vaultKey, texts, (key, text) => {
+      if (!text) return;
+      texts.set(key, prepend(text, texts.get(key) ?? ''));
+      if (this.texts === texts) this.changes.notify();
+    });
+    return this.device.ready;
+  }
+
+  flush(): Promise<void> {
+    return this.device?.flush() ?? Promise.resolve();
+  }
 
   text(key: string): string {
     return this.texts.get(key) ?? '';
   }
 
   set(key: string, text: string) {
+    this.writeText(key, text);
+    this.changes.notify();
+  }
+
+  private writeText(key: string, text: string) {
     if (text) this.texts.set(key, text);
     else this.texts.delete(key);
-    this.changes.notify();
+    this.device?.changed(key);
   }
 
   attachments(key: string): readonly DraftAttachment[] {
@@ -66,7 +89,7 @@ export class Drafts {
   // What a send takes: the text and the attachments leave the draft, the pictures' urls still standing for putBack.
   take(key: string): { text: string; attachments: readonly DraftAttachment[] } {
     const taken = { text: this.text(key), attachments: this.attachments(key) };
-    this.texts.delete(key);
+    this.writeText(key, '');
     this.setAttachments(key, NONE);
     return taken;
   }
@@ -74,7 +97,7 @@ export class Drafts {
   move(from: string, to: string) {
     const text = this.text(from);
     const attachments = this.attachments(from);
-    this.texts.delete(from);
+    this.writeText(from, '');
     this.held.delete(from);
     if (text) this.set(to, text);
     if (attachments.length) this.setAttachments(to, [...this.attachments(to), ...attachments]);
@@ -84,13 +107,17 @@ export class Drafts {
   // attachments.
   putBack(key: string, text: string, attachments: readonly DraftAttachment[] = NONE) {
     const typed = this.text(key);
-    if (text) this.set(key, typed ? `${text}\n${typed}` : text);
+    if (text) this.set(key, prepend(text, typed));
     if (attachments.length) this.setAttachments(key, [...attachments, ...this.attachments(key)]);
   }
 
   close() {
+    const flushed = this.device?.close() ?? Promise.resolve();
+    this.device = undefined;
     for (const attachments of this.held.values()) this.release(attachments);
-    this.texts.clear();
+    // A pending load/flush still owns this map; clearing it would erase text during lock or unmount.
+    this.texts = new Map();
     this.held.clear();
+    return flushed;
   }
 }
