@@ -59,6 +59,7 @@ const FULL_MARGIN = 1_000_000;
 const READ_MS = 5_000;
 
 type Head = { rev: number; bytes: number; timeline: string };
+type Batched = { stale: true } | { refused: 'bad-input' | 'conflict' | 'storage-full' } | { revs: number[]; bytes: number; timeline: string };
 type Row = { id: string; kind: string; parent_id: string | null; rev: number; deleted: number; fits: number; omitted: number; body: string | null };
 
 const unavailable = (): Unavailable => ({ unavailable: true });
@@ -67,6 +68,9 @@ const markKey = (operation: number) => `restore:${operation}`;
 export class StoreRules {
   // Kept until the object restarts; never an unavailable answer, so the next call reads the service again.
   private life: Life | null = null;
+  // The objects table's row count, read once: a create in batch() is the only write that adds a row, and no other
+  // writer touches the file while this object holds it (installs happen before a session opens).
+  private rows: number | null = null;
 
   constructor(
     private readonly db: StoreDb,
@@ -152,7 +156,7 @@ export class StoreRules {
   // Deletions retain bodyless rows for sync; writing at their current rev restores them.
   // Creates must fit the session cap; update/delete-only batches get FULL_MARGIN. Non-growing batches always pass
   // so full accounts can delete; null means uncapped. Enforce billed usage, not body bytes alone.
-  async batch(incarnation: string, timeline: string, writes: SealedWrite[], cap: number | null): Promise<Refused | { stale: true } | { refused: 'bad-input' | 'conflict' | 'storage-full' } | { revs: number[]; bytes: number; timeline: string }> {
+  async batch(incarnation: string, timeline: string, writes: SealedWrite[], cap: number | null): Promise<Refused | Batched> {
     const life = await this.lifecycle(incarnation);
     if (!active(life)) return refusal(life);
     // Read on the account's queue, which share publication also takes, so no link lands between it and the write.
@@ -160,7 +164,8 @@ export class StoreRules {
     if (shared === null) return unavailable();
     // No read outside this transaction decides whether to write; a later item's conflict must leave even head.rev
     // untouched.
-    return this.db.transaction(() => {
+    let created = 0;
+    const answer = this.db.transaction((): Batched => {
       const head = this.head();
       if (timeline !== head.timeline) return { stale: true };
       const landed = new Map<string, number>();
@@ -191,7 +196,8 @@ export class StoreRules {
       const added = fresh.reduce((sum, { body }) => sum + (body === null ? 0 : encoder.encode(body).length), 0);
       const bytes = head.bytes + added - found!.replaced;
       // A create is the only write that adds a row: a delete keeps it, a restore and an update reuse it.
-      const rows = fresh.filter(({ baseRev }) => baseRev === null).length * ROW_BYTES.object;
+      const creates = fresh.filter(({ baseRev }) => baseRev === null).length;
+      const rows = creates * ROW_BYTES.object;
       const billed = this.billed(bytes, shared) + rows;
       const margin = rows ? 0 : FULL_MARGIN;
       if (added + rows > found!.replaced && cap !== null && billed > cap + margin) return { refused: 'storage-full' };
@@ -204,9 +210,13 @@ export class StoreRules {
           id, kind, parent, written[index]!, body, body === null ? Date.now() : null,
         ),
       );
+      created = creates;
       let next = 0;
       return { revs: writes.map(({ id }) => landed.get(id) ?? written[next++]!), bytes: billed, timeline: head.timeline };
     });
+    // After the commit: a rolled-back transaction added no row.
+    if (this.rows !== null) this.rows += created;
+    return answer;
   }
 
   async usage(incarnation: string): Promise<Refused | { bytes: number; disk: number }> {
@@ -288,7 +298,8 @@ export class StoreRules {
   // head.bytes stays the bodies alone, as every existing file holds it: the rows and the links are counted when read,
   // so no file needs an upgrade.
   private billed(bodies: number, shared: number) {
-    return bodies + ROW_BYTES.object * this.db.exec<{ n: number }>('SELECT COUNT(*) AS n FROM objects')[0]!.n + shared;
+    this.rows ??= this.db.exec<{ n: number }>('SELECT COUNT(*) AS n FROM objects')[0]!.n;
+    return bodies + ROW_BYTES.object * this.rows + shared;
   }
 
   private async shared(incarnation: string): Promise<number | null> {
