@@ -244,4 +244,8 @@ describe('Saves', () => {
     saves.queue<Note>('other', () => new Promise<Answer>(() => {}), () => {}).change({ body: 'x' });
     expect(await saves.settled(10)).toBe(false);
   });
+
+  it('does not count leaving as settled while the store still holds unsent writes', async () => {
+    expect(await new Saves(page().target, () => 1).settled(10)).toBe(false);
+  });
 });

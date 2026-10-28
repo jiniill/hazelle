@@ -1,6 +1,6 @@
 import { toolId } from '../model/tool';
 import type { ToolFrames, ToolMenu } from '../runtime/tools/facade';
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { PictureUrl } from '../engine/assets';
 import type { ChatScope } from '../engine/render';
 import { nest, type Filed } from '../model/folders';
@@ -35,20 +35,29 @@ export type Account = { admin: boolean; localProviders: readonly string[]; facts
 // Allow two slow save round trips, but bound outage waits so leaving cannot hang forever.
 const LEAVING_WAIT = 10_000;
 
-const SessionContext = createContext<{ session: Session; account: Account; saves: Saves } | null>(null);
+// A leave held back by unsaved work, which goes anyway when pressed.
+export type HeldLeave = { go: () => Promise<string | null> | void };
+
+const SessionContext = createContext<{ session: Session; account: Account; saves: Saves; held: HeldLeave | null } | null>(null);
 
 export function SessionProvider({ session, account, children }: { session: Session; account: Account; children: ReactNode }) {
   // One session's save queues, closed with it: a queue kept past it would write its change into the next account.
   const saves = useMemo(() => new Saves(window, session.store.unsentWrites), [session]);
   useEffect(() => () => saves.close(), [saves]);
-  // Leaving closes the session, which drops what has not been written, so it waits for the saves first.
+  const [held, setHeld] = useState<HeldLeave | null>(null);
+  // Leaving closes the session, which drops what has not been written: it waits for the saves, and when they are not
+  // stored by the bound it stays and holds the leave for the user to confirm.
   const leaving = useMemo<Account>(() => {
-    const after = (go: () => void) => () => void saves.settled(LEAVING_WAIT).then(go);
-    if (account.guest) return { ...account, guest: { ...account.guest, onSignup: after(account.guest.onSignup), onSignIn: after(account.guest.onSignIn) } };
-    const { onLogout } = account;
-    return { ...account, onLock: after(account.onLock), onLogout: () => saves.settled(LEAVING_WAIT).then(onLogout) };
+    const after = (go: HeldLeave['go']) => async () => {
+      if (await saves.settled(LEAVING_WAIT)) return (await go()) ?? null;
+      setHeld({ go });
+      return null;
+    };
+    const quiet = (go: () => void) => () => void after(go)();
+    if (account.guest) return { ...account, guest: { ...account.guest, onSignup: quiet(account.guest.onSignup), onSignIn: quiet(account.guest.onSignIn) } };
+    return { ...account, onLock: quiet(account.onLock), onLogout: after(account.onLogout) };
   }, [account, saves]);
-  return <SessionContext value={{ session, account: leaving, saves }}>{children}</SessionContext>;
+  return <SessionContext value={{ session, account: leaving, saves, held }}>{children}</SessionContext>;
 }
 
 function useOpen() {
@@ -66,6 +75,7 @@ export function useSignedIn(): Extract<Account, { guest: null }> {
   return account;
 }
 export const useSaves = (): Saves => useOpen().saves;
+export const useHeldLeave = (): HeldLeave | null => useOpen().held;
 export const useStore = (): ObjectStore => useSession().store;
 export const useFiles = (): Files => useSession().files;
 

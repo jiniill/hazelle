@@ -166,13 +166,20 @@ export class Saves {
     return this.queues.get(key)?.queue.flush() ?? Promise.resolve(true);
   }
 
-  // Flush current changes without debounce before leaving. Return true only if stored by bound;
-  // close drops leftovers such as saves waiting on an outage.
-  settled(bound: number): Promise<boolean> {
+  // Flush current changes without debounce before leaving. True only if nothing beforeunload would warn of is left by
+  // bound; close drops leftovers such as saves waiting on an outage.
+  async settled(bound: number): Promise<boolean> {
+    const until = Date.now() + bound;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const late = new Promise<boolean>((resolve) => (timer = setTimeout(() => resolve(false), bound)));
-    const written = Promise.all([...this.queues.values()].map(({ queue }) => queue.flush())).then((done) => done.every(Boolean));
-    return Promise.race([written, late]).finally(() => clearTimeout(timer));
+    const late = new Promise<void>((resolve) => (timer = setTimeout(resolve, bound)));
+    await Promise.race([Promise.all([...this.queues.values()].map(({ queue }) => queue.flush())), late]).finally(() => clearTimeout(timer));
+    // The store's own writes and a reply being written tell no promise; they get the same bound, checked as it runs.
+    while (this.unsettled() && Date.now() < until) await new Promise((resolve) => setTimeout(resolve, 100));
+    return !this.unsettled();
+  }
+
+  private unsettled() {
+    return [...this.queues.values()].some(({ queue }) => queue.busy) || this.unsent() > 0 || this.holds > 0;
   }
 
   // The session is over: what waits is dropped, since its store takes no more writes.
@@ -213,9 +220,8 @@ export class Saves {
   }
 
   private readonly unload = (event: BeforeUnloadEvent) => {
-    const busy = [...this.queues.values()].filter(({ queue }) => queue.busy);
-    if (busy.length === 0 && this.unsent() === 0 && this.holds === 0) return;
+    if (!this.unsettled()) return;
     event.preventDefault();
-    for (const { queue } of busy) void queue.flush();
+    for (const { queue } of this.queues.values()) if (queue.busy) void queue.flush();
   };
 }

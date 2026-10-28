@@ -18,7 +18,7 @@ import { playSound, unlockSound } from '../common/sounds';
 import { DisplayProvider, useDisplay } from '../display';
 import { BIN, BOARD, inSettings, NOTICES } from '../common/words';
 import { ImportProvider } from '../library/ImportFlow';
-import { SessionProvider, useSaves, useSession } from '../session';
+import { SessionProvider, useHeldLeave, useSaves, useSession } from '../session';
 import { ToastProvider, useToast, type Standing } from '../toast';
 import { Brand, Progress, Screen, Text } from '../ui';
 import { BotNotes } from './BotNotes';
@@ -141,6 +141,17 @@ function ReplyHold() {
   return null;
 }
 
+function LeaveHold() {
+  const held = useHeldLeave();
+  const toast = useToast();
+  useEffect(() => {
+    if (!held) return;
+    const go = () => void Promise.resolve(held.go()).then((failure) => failure && toast.error(failure));
+    toast.error('아직 저장하지 못한 내용이 있어요', { detail: '연결이 돌아오면 저장돼요. 지금 나가면 사라져요.', action: { label: '그래도 나가기', onClick: go } });
+  }, [held, toast]);
+  return null;
+}
+
 // StrictMode-safe device tracking: any tour close marks it seen. Prefer tutorial welcome, then tour,
 // else a release toast only when its news post exists; never show both for the same open.
 function News() {
@@ -250,6 +261,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
           <Unread facts={account.facts} kind="unreadBoard" />
           <Stale />
           <ReplyHold />
+          <LeaveHold />
           <Chimes />
           <TutorialProvider>
             <News />
