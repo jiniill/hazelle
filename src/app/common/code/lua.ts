@@ -9,7 +9,7 @@ const KEYWORDS = new Set(['and', 'break', 'do', 'else', 'elseif', 'end', 'false'
 const GLOBALS = ['tonumber', 'tostring', 'pairs', 'ipairs', 'type', 'pcall', 'xpcall', 'error', 'assert', 'print', 'select', 'next', 'setmetatable', 'getmetatable', 'rawget', 'rawset', 'rawequal', 'rawlen', 'collectgarbage'];
 const LIBRARY: Record<string, string[]> = {
   string: ['find(글, 찾을 글)', 'sub(글, 시작, 끝)', 'gsub(글, 패턴, 바꿀 글)', 'match(글, 패턴)', 'gmatch(글, 패턴)', 'format(형식, 값)', 'len(글)', 'lower(글)', 'upper(글)', 'rep(글, 횟수)', 'reverse(글)', 'byte(글)', 'char(번호)'],
-  table: ['insert(표, 값)', 'remove(표, 번호)', 'concat(표, 구분자)', 'sort(표)', 'unpack(표)'],
+  table: ['insert(테이블, 값)', 'remove(테이블, 위치)', 'concat(테이블, 구분자)', 'sort(테이블)', 'unpack(표)'],
   math: ['floor(숫자)', 'ceil(숫자)', 'max(가, 나)', 'min(가, 나)', 'random(시작, 끝)', 'abs(숫자)', 'sqrt(숫자)'],
   json: ['encode(값)', 'decode(글)'],
   os: ['time()', 'date(형식)', 'clock()'],
@@ -68,9 +68,9 @@ export function syntaxMessage(message: string): string {
   if (found) return `${near(found[2]!)} 자리에 ${withParticle(found[1]!, '이/가')} 와야 해요.`;
   found = /^unexpected symbol near (.+)$/.exec(message);
   if (found) return `${withParticle(near(found[1]!), '은/는')} 여기 올 수 없어요.`;
-  if (message.startsWith('unfinished string')) return '문자열이 닫히지 않았어요.';
-  if (message.startsWith('unfinished long string') || message.startsWith('unfinished long comment')) return '[[ ]]가 닫히지 않았어요.';
-  if (message.startsWith('malformed number')) return '숫자 모양이 맞지 않아요.';
+  if (message.startsWith('unfinished string')) return '문자열 따옴표를 닫아야 해요.';
+  if (message.startsWith('unfinished long string') || message.startsWith('unfinished long comment')) return '주석이나 긴 문자열의 [[ ]]를 닫아야 해요.';
+  if (message.startsWith('malformed number')) return '숫자 형식이 올바르지 않아요.';
   return message;
 }
 

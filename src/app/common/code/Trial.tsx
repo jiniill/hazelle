@@ -166,7 +166,7 @@ function shownStep(text: string, { at, end, headEnd, depth, result, kept, erased
   const source = text.slice(at, headEnd ?? end);
   // Not a warning for args: a wrapper's {{slot}} stays as written on purpose.
   if (kept) return { source, result, depth, note: KEPT[kept], ...(kept !== 'args' && { tone: 'warn' as const }) };
-  if (erased) return { source, result, depth, note: '앞에 쓴 글을 지워요.' };
+  if (erased) return { source, result, depth, note: '앞의 텍스트를 지워요.' };
   if (variable !== undefined) {
     const found = chatVariable(variables, variable);
     if (found === undefined) return { source, result, depth };
@@ -249,7 +249,7 @@ function LuaRan({ ran: { event, trial }, stale }: { ran: Ran; stale: boolean }) 
       {traced.map((entry, index) => (
         <HookDetail key={index} entry={entry} />
       ))}
-      {outcome.handled && facts.length === 0 && traced.every((entry) => !entry.writes.length && !entry.logs.length && !entry.errors.length) && <Text variant="note">바뀌는 것이 없어요.</Text>}
+      {outcome.handled && facts.length === 0 && traced.every((entry) => !entry.writes.length && !entry.logs.length && !entry.errors.length) && <Text variant="note">변경되는 내용이 없어요.</Text>}
     </Stack>
   );
 }

@@ -11,7 +11,7 @@ export const ROLES: { value: Role; label: string }[] = (['system', 'user', 'assi
 export const TEXTS: { role: Role; name: string; hint: string }[] = [
   { role: 'system', name: textName('system'), hint: '규칙과 지시문을 적어요' },
   { role: 'user', name: textName('user'), hint: '내가 보낸 메시지처럼 들어가요' },
-  { role: 'assistant', name: textName('assistant'), hint: '모델 응답의 첫 부분을 미리 정해 둘 때 써요' },
+  { role: 'assistant', name: textName('assistant'), hint: '모델 응답의 시작 부분을 미리 지정할 때 써요' },
 ];
 
 export const MARKS = {
@@ -23,7 +23,7 @@ const TEXT_ICONS: Record<Role, LucideIcon> = { system: Text, user: User, assista
 
 // The ranges the 채팅 pane offers; an imported range outside them keeps its own line.
 export const RANGES: { range: ChatRange; label: string; meta: string }[] = [
-  { range: { from: 0, to: null }, label: '처음부터 끝까지', meta: '전부' },
+  { range: { from: 0, to: null }, label: '처음부터 끝까지', meta: '전체' },
   { range: { from: 0, to: -1 }, label: '처음부터 마지막 하나 전까지', meta: '마지막 1개 제외' },
   { range: { from: -1, to: null }, label: '마지막 하나', meta: '마지막 1개' },
   { range: { from: 0, to: -2 }, label: '처음부터 마지막 둘 전까지', meta: '마지막 2개 제외' },

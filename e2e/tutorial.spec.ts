@@ -22,7 +22,7 @@ test('the tutorial points at each control in turn and ends on the chat screen', 
   const pointing = async (label: string, step: string) => {
     const note = page.getByRole('note', { name: label });
     await expect(note).toContainText(step);
-    await expect(note.getByRole('button', { name: '이어 하기' })).toHaveCount(0);
+    await expect(note.getByRole('button', { name: '계속하기' })).toHaveCount(0);
     return note;
   };
   await page.getByRole('button', { name: /^튜토리얼 보기/ }).click();
@@ -31,7 +31,7 @@ test('the tutorial points at each control in turn and ends on the chat screen', 
   await page.getByRole('button', { name: /^새 연결/ }).click();
   await pointing('제공자 선택', '2/5');
   await page.getByRole('button', { name: /^직접 연결/ }).click();
-  await pointing('키 넣기', '3/5');
+  await pointing('API 키 입력', '3/5');
   await page.getByLabel('주소', { exact: true }).fill(FAKE_ADDRESS);
   await page.getByRole('button', { name: 'OpenAI 호환', exact: true }).click();
   await page.getByRole('button', { name: '모델 선택', exact: true }).click();

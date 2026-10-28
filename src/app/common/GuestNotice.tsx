@@ -7,7 +7,7 @@ import { Button, Link, NoticeBar, NoticeCard, Text } from '../ui';
 
 // The four limits a guest lives with (design §6.14), said in the user's ruled words; a file backup softens the second.
 const POINTS = [
-  { icon: Unplug, text: '답을 받는 중에 나가면 끊겨요' },
+  { icon: Unplug, text: '응답을 받는 중에 나가면 끊겨요' },
   { icon: HardDriveDownload, text: '자동 백업이 안 돼요 · 파일로는 저장할 수 있어요' },
   { icon: MonitorSmartphone, text: '다른 기기에서 열 수 없어요' },
   { icon: Eraser, text: '이 브라우저의 데이터를 지우면 사라져요' },

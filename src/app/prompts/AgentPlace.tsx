@@ -3,9 +3,9 @@ import { ChoiceGroup, Section } from '../ui';
 
 type Choice = Place | 'rewrite';
 const OPTIONS: { value: Choice; label: string; sub: string }[] = [
-  { value: 'rewrite', label: '전체 다시 쓰기', sub: '답 전체를 이 에이전트가 다시 써요.' },
-  { value: 'before', label: '앞에 추가', sub: '답은 그대로 두고, 쓴 글을 답 앞에 붙여요.' },
-  { value: 'after', label: '뒤에 추가', sub: '답은 그대로 두고, 쓴 글을 답 뒤에 붙여요.' },
+  { value: 'rewrite', label: '전체 다시 쓰기', sub: '응답 전체를 이 에이전트가 다시 작성해요.' },
+  { value: 'before', label: '앞에 추가', sub: '기존 응답 앞에 에이전트가 작성한 내용을 붙여요.' },
+  { value: 'after', label: '뒤에 추가', sub: '기존 응답 뒤에 에이전트가 작성한 내용을 붙여요.' },
 ];
 
 // A post agent's: where its answer goes beside the reply (AgentPrompt place).

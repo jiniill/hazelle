@@ -51,7 +51,7 @@ export function Log({ chat }: { chat: string }) {
           {held.omitted > 0 && <Text variant="note">{`오래된 기록 ${held.omitted}개는 빠졌어요.`}</Text>}
         </Stack>
       ) : (
-        <Empty variant="section">보낸 요청이 없어요.</Empty>
+        <Empty variant="section">아직 전송한 요청이 없어요.</Empty>
       )}
     </Section>
   );

@@ -215,7 +215,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
         <Section title={PARTS.profile.label}>
           {identity.fields}
           <TextField
-            label="부르는 이름"
+            label="채팅 내 이름"
             value={text.nickname ?? ''}
             onChange={(value) => change({ nickname: value === '' ? null : value })}
             help="채팅에서 {{char}} 자리에 캐릭터 이름 대신 들어가요."

@@ -237,7 +237,7 @@ function why({ why }: Lore, names: Map<string, string>): string {
   }
 }
 
-const DROPPED = { probability: '확률로 빠짐', budget: `${LORE_BUDGET_LABEL}을 넘어 빠짐`, 'no-target': '합칠 항목이 없어 빠짐' } as const;
+const DROPPED = { probability: '확률에 걸리지 않아 제외됨', budget: `${LORE_BUDGET_LABEL} 초과로 제외됨`, 'no-target': '합칠 항목이 없어 빠짐' } as const;
 
 function fate({ fate }: Lore, names: Map<string, string>): string {
   switch (fate.kind) {

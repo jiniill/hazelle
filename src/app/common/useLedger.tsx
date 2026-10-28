@@ -46,7 +46,7 @@ export function LedgerWait({ view, retry, failed }: { view: Exclude<LedgerView, 
   const { usage } = useSession();
   const filling = useSyncExternalStore(usage.subscribe, usage.filling);
   if (view.kind === 'fill-failed' || view.kind === 'failed') {
-    return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: retry }}>{view.kind === 'failed' ? failed : '지난 사용량을 다 모으지 못했어요.'}</Callout>;
+    return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: retry }}>{view.kind === 'failed' ? failed : '이전 사용량을 모두 불러오지 못했어요.'}</Callout>;
   }
   if (view.kind === 'reading') return <Text variant="note">사용량을 확인하는 중…</Text>;
   return <Text variant="note">{filling && filling !== 'failed' && filling.of ? `지난 사용량을 모으는 중… 채팅 ${count(filling.of)}개 중 ${count(filling.read)}개` : '이전 사용량을 불러오는 중…'}</Text>;

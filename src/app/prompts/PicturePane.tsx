@@ -92,7 +92,7 @@ export function PicturePane({ tags, picture = {}, onTags, onPicture }: Props) {
           <SettingRow
             label="크기"
             help="크게는 NovelAI 무료 범위를 넘어서, 만들 때마다 Anlas가 차감돼요."
-            sub={picture.size === 'large' ? '만들 때마다 Anlas가 차감돼요.' : undefined}
+            sub={picture.size === 'large' ? '생성할 때마다 Anlas가 차감돼요.' : undefined}
             changed={picture.size !== undefined}
             control={
               <Menu place="below-end" label="크기" trigger={(opener) => <ChipButton variant="field" opens="down" label={SIZE_LABELS[picture.size ?? 'normal']} title="크기" {...opener} />}>

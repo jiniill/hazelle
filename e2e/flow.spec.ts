@@ -27,7 +27,7 @@ test('a new account imports a card, chats through the fake provider and finds th
     expect(policy).toBe(pageCsp(/'nonce-([^']+)'/.exec(policy)?.[1] ?? ''));
     await setUp(page, PASSWORD);
     await expect(page.getByRole('heading', { name: '비어 있어요', exact: true })).toBeVisible();
-    await expect(page.getByRole('region', { name: '손님으로 쓰는 중', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: '손님 모드', exact: true })).toHaveCount(0);
   });
 
   await test.step('connect the fake provider and make its model the default', async () => {

@@ -211,7 +211,7 @@ export async function signUpAsGuest(page: Page, username: string, password: stri
 
 // The suite's servers keep the default cap of one, which makes them one person's: the first visit sets the password, and
 // every later sign-in asks for it alone.
-const settingUp = (page: Page) => page.getByRole('heading', { name: '비밀번호 정하기', exact: true });
+const settingUp = (page: Page) => page.getByRole('heading', { name: '비밀번호 설정', exact: true });
 export async function setUp(page: Page, password: string) {
   await page.getByLabel('비밀번호', { exact: true }).fill(password);
   await page.getByLabel('비밀번호 확인', { exact: true }).fill(password);

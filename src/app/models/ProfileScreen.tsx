@@ -86,7 +86,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
                   <MenuItem
                     label={SET_DEFAULT}
                     sub={`${MODEL_SETTINGS}을 따로 선택하지 않은 모델은 이걸 써요`}
-                    onClick={() => void setDefaultProfile(store, id).then((done) => done.ok || toast.failed(done, '기본으로 정하지 못했어요.'))}
+                    onClick={() => void setDefaultProfile(store, id).then((done) => done.ok || toast.failed(done, '기본으로 지정하지 못했어요.'))}
                   />
                 )}
                 <MenuItem label={resetTo(ORIGINAL)} disabled={Object.keys(shown).length === 0} onClick={() => void clearAll()} />
@@ -131,7 +131,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
             ))}
           </List>
         ) : (
-          <Empty variant="section">쓰는 모델이 없어요.</Empty>
+          <Empty variant="section">사용 중인 모델이 없어요.</Empty>
         )}
       </Section>
 

@@ -155,7 +155,7 @@ function saved(now: CacheBreakCost | null, after: CacheBreakCost | null): Cost |
 function preview({ edit }: CachePrescription): ReactNode {
   if (edit.kind === 'lore') {
     if (edit.field === 'constant') return <Text>키워드와 상관없이 매번 보내서 그만큼 토큰이 들어요.</Text>;
-    return <TextDiff runs={cacheDiff(edit.before, edit.after).runs} label="항목 내용: 바꾸기 전과 후" />;
+    return <TextDiff runs={cacheDiff(edit.before, edit.after).runs} label="항목 내용: 변경 전후" />;
   }
   return <Text>프롬프트에서 이 블록의 순서가 대화 뒤로 바뀌어요.</Text>;
 }
@@ -169,8 +169,8 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
   if (!prescriptions?.length) return null;
   async function apply(prescription: CachePrescription) {
     const done = await applyCacheEdit(store, prescription.edit);
-    if (!done.ok) return toast.failed(done, '고치지 못했어요.');
-    toast.undoable('고쳤어요.', () => applyCacheEdit(store, done.data), titleOf(prescription));
+    if (!done.ok) return toast.failed(done, '적용하지 못했어요.');
+    toast.undoable('적용했어요.', () => applyCacheEdit(store, done.data), titleOf(prescription));
   }
   const ranked = prescriptions
     .map((prescription) => ({ prescription, less: saved(now, prescription.cost) }))

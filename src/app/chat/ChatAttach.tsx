@@ -3,7 +3,7 @@ import { Menu, MenuItem, pickFiles, ToolButton } from '../ui';
 import { NO_PICTURES, UNKNOWN_PICTURES } from '../common/words';
 
 const PICTURES = 'image/*';
-const MOVED = '옮겨 온 이미지도 보내기';
+const MOVED = '가져온 이미지도 보내기';
 
 type Props = {
   sees: boolean | null;

@@ -244,7 +244,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       {editing === null && translationMark}
       {drawing?.writing && <Marker reason="illustration" label="장면 구성 중" />}
       {polishing && <Marker reason="agent" label={polishingNow(polishing)} />}
-      {raw && <Marker reason="agent" label="다듬기 전 답" action={{ label: '다듬기 전으로 되돌리기', disabled: busy, onClick: () => actions.restoreRaw(message) }} />}
+      {raw && <Marker reason="agent" label="다듬기 전 응답" action={{ label: '다듬기 전으로 복원', disabled: busy, onClick: () => actions.restoreRaw(message) }} />}
       {cut && (
         <Marker
           reason={MARK[cut]}
@@ -268,7 +268,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       <IconButton
         icon={only!.marked ? PinOff : Pin}
         size="sm"
-        label={`${only!.marked ? '상태창 지정 풀기' : '상태창으로 지정'} · ${only!.name}`}
+        label={`${only!.marked ? '상태창 지정 해제' : '상태창으로 지정'} · ${only!.name}`}
         onClick={() => actions.markStatus(only!, !only!.marked)}
       />
     ) : offered.length > 1 ? (
@@ -326,7 +326,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
           )}
           <MenuItem label={BOOKMARK} checked={bookmarked} multiple onClick={() => actions.bookmark(message.id)} />
           <MenuItem label="여기서 분기" disabled={branching} onClick={() => void actions.branch(message)} />
-          {hasRaw && <MenuItem label="다듬기 전 답 보기" checked={rawShown} multiple onClick={() => setRawShown(!rawShown)} />}
+          {hasRaw && <MenuItem label="다듬기 전 응답 보기" checked={rawShown} multiple onClick={() => setRawShown(!rawShown)} />}
           {agents.post && !mine && !greeting && !empty && !polishing && !version.retouched && <MenuItem label="다시 다듬기" disabled={busy} onClick={() => actions.polishAgain(message)} />}
           {agents.pre && noted && <MenuItem label="노트부터 다시 생성" disabled={busy} onClick={() => actions.regenerateFresh(message)} />}
           {!mine && <MenuItem label="응답 정보" onClick={() => actions.info(message.id)} />}

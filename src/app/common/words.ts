@@ -34,7 +34,7 @@ export const UNKNOWN_PICTURES = `이 모델이 이미지를 읽는지 알 수 �
 export const AUX_HELP = '번역이나 장기 기억 정리처럼 대화 밖의 작업에 써요.';
 
 export const BOT_MODELS = '봇의 모델 호출';
-export const BOT_MODELS_HELP = '봇 스크립트가 대화 응답과 별개로 모델을 호출해요. 호출한 만큼 요금이 더 나올 수 있어요.';
+export const BOT_MODELS_HELP = '봇 스크립트가 대화 응답과 별개로 모델을 호출해요. 호출할 때마다 토큰과 비용이 추가로 사용돼요.';
 export const CARD_WRITES = '스크립트의 카드 수정';
 export const CARD_WRITES_HELP = '스크립트가 이 캐릭터의 배경 HTML을 바꿔서 저장해요. 바뀐 배경은 이 캐릭터의 모든 채팅에 적용돼요.';
 export const CARD_WRITE_ASK_HELP = '허용하면 이 캐릭터의 배경 HTML이 바뀌고 모든 채팅에 적용돼요. 나중에 캐릭터 편집에서 다시 바꿀 수 있어요.';
@@ -51,7 +51,7 @@ export const modelConsent = (asker: Asker) => `이 ${ASKER[asker]}이 모델을 
 export const cardWriteConsent = (asker: Asker) => `이 ${ASKER[asker]}이 캐릭터 카드를 수정하려고 해요`;
 export const MEMORY_CLAIM_HELP = '허용하면 이 플러그인을 쓰는 채팅에서는 기본 장기 기억이 쉬어요. 기록은 지우지 않아요.';
 export const NETWORK = '외부 연결';
-export const NETWORK_HELP = '켜면 이 플러그인이 대화 내용을 앱 밖으로 보낼 수 있어요. 바깥 이미지와 글꼴은 화면을 새로고침한 뒤부터 보여요.';
+export const NETWORK_HELP = '켜면 이 플러그인이 대화 내용을 외부 서버로 전송할 수 있어요. 외부 이미지와 글꼴은 화면을 새로고침한 뒤부터 표시돼요.';
 // A plugin's one card (design §6.10). The ruling is that it says plainly what it allows, so its line names each grant,
 // the network first.
 const GRANT_CLAUSES = {
@@ -164,8 +164,8 @@ export const polishingNow = ({ name, at, total, retrying }: { name: string; at: 
 export const toolWaiting = (name: string) => `${withParticle(name, '이/가')} 보낼 내용을 준비하는 중`;
 export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS };
 
-// An unset choice takes its value from somewhere else, and names it: 기본 모델 따르기, 보조 모델 따르기.
-export const follows = (source: string) => `${source} 따르기`;
+// An unset choice takes its value from somewhere else, and names it: 기본 모델 사용, 보조 모델 사용.
+export const follows = (source: string) => `${source} 사용`;
 
 export const moduleName = (name: string) => name.trim() || '이름 없는 모듈';
 export const promptName = (name: string) => name || '이름 없는 프롬프트';
@@ -255,7 +255,7 @@ export const LOADING = '불러오는 중…';
 export const SEE_ALL = '모두 보기';
 export const MISSED = '가져오지 못한 항목';
 export const EMPTY_FOLDER = '비어 있는 폴더예요.';
-export const SET_DEFAULT = '기본으로 정하기';
+export const SET_DEFAULT = '기본으로 지정';
 
 // A share link: the character ⋯ item and its dialog, 설정 › 계정's list, the link's own page and the operator's inbox.
 // held: paused by a report or the operator; removed: blocked by the operator.

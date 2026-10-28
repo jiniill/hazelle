@@ -17,13 +17,13 @@ export function silentReason(why: ModuleContribution['silent'][number]['why']): 
     case 'never':
       return '꺼 두었어요';
     case 'after-match':
-      return '한 번 활성화된 뒤에는 다시 켜지지 않아요';
+      return '한 번 활성화된 뒤에는 다시 활성화되지 않아요';
     case 'only-after':
       return `${why.from}번째 메시지부터 켜져요`;
     case 'only-every':
-      return `${why.every}번째 메시지마다 켜져요`;
+      return `${why.every}번째 메시지마다 활성화돼요`;
     case 'greeting':
-      return '다른 첫 메시지에서만 켜져요';
+      return '다른 첫인사에서만 활성화돼요';
   }
 }
 
@@ -87,7 +87,7 @@ function ModuleDetail({ module }: { module: ModuleContribution }) {
         <Text variant="note">이번 요청에서 켜진 로어북 항목이 없어요.</Text>
       )}
       {module.silent.length > 0 && (
-        <Disclosure label={`안 켜진 항목 ${module.silent.length}개`}>
+        <Disclosure label={`비활성 항목 ${module.silent.length}개`}>
           <SilentLore module={module} />
         </Disclosure>
       )}

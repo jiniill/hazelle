@@ -114,7 +114,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
         </Callout>
       )}
       {skippable && (
-        <Callout tone="warn" action={{ label: skippable.failure.kind === 'agent' ? '에이전트 없이 보내기' : '줄이지 않고 보내기', onClick: actions.sendSkipping }}>
+        <Callout tone="warn" action={{ label: skippable.failure.kind === 'agent' ? '에이전트 없이 보내기' : '토큰 절약 없이 보내기', onClick: actions.sendSkipping }}>
           {describeTurnFailure(skippable.failure)}
         </Callout>
       )}
@@ -156,7 +156,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
         }
         actions={
           <>
-            {!busy && chat.sendNotes.leaving ? <SendNote label={`메시지 ${chat.sendNotes.leaving}개`} title="요청에서 빠질 메시지" warning={{ words: '기억에 없음', why: LEAVING }} /> : null}
+            {!busy && chat.sendNotes.leaving ? <SendNote label={`메시지 ${chat.sendNotes.leaving}개`} title="요청에서 제외될 메시지" warning={{ words: '기억에 없음', why: LEAVING }} /> : null}
             {!busy && unseen > 0 && <SendNote label={`이미지 ${unseen}개`} title="전송되지 않는 이미지" warning={{ words: '보내지 않음', why: `${attachments.sees === null ? UNKNOWN_PICTURES : NO_PICTURES} ${UNSEEN}` }} />}
             {indexing && <SendNote label={`기억 검색 준비 ${indexing.done}/${indexing.total}`} title="장기 기억 검색 준비" onClick={() => actions.memory(null)} />}
             {!busy && <ChatCache cache={chat.sendNotes.cache} onOpen={() => chat.actions.openInspect('cache')} />}

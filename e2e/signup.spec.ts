@@ -26,9 +26,9 @@ test('once the operator admits more accounts, a visitor opens as a guest and sig
 
   const visitor = await (await browser.newContext()).newPage();
   await visitor.goto('/');
-  await expect(visitor.getByRole('region', { name: '손님으로 쓰는 중', exact: true })).toBeVisible();
+  await expect(visitor.getByRole('region', { name: '손님 모드', exact: true })).toBeVisible();
   await signUpAsGuest(visitor, 'friend', 'friend-password');
   await expect(visitor.getByRole('heading', { name: '비어 있어요', exact: true })).toBeVisible();
-  await expect(visitor.getByRole('region', { name: '손님으로 쓰는 중', exact: true })).toHaveCount(0);
+  await expect(visitor.getByRole('region', { name: '손님 모드', exact: true })).toHaveCount(0);
   await visitor.context().close();
 });

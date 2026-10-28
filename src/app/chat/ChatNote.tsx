@@ -21,7 +21,7 @@ export function ChatNote(props: Props) {
           icon={PenLine}
           label="노트"
           phone="icon"
-          detail={note === undefined ? undefined : note ? '이 채팅만의 노트' : '노트 없음'}
+          detail={note === undefined ? undefined : note ? '이 채팅 전용 노트' : '노트 없음'}
           mark={note === undefined ? undefined : { kind: 'dot' }}
           {...opener}
         />
@@ -41,7 +41,7 @@ function NoteEditor({ id, note, prompt, onSave }: Props) {
       ? '이 채팅 전용 노트'
       : '노트 없음'
     : fallback === null
-      ? '프롬프트가 없어 기본 노트를 알 수 없음'
+      ? '프롬프트가 없어 기본 노트를 확인할 수 없음'
       : fallback
         ? '기본 노트 사용 중'
         : '프롬프트의 기본 노트: 비어 있음';

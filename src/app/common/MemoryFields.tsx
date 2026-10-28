@@ -23,7 +23,7 @@ export function MemorySplit({ total, whole, records, found, waiting, recent }: {
   const parts = [
     { ...records, label: '기록', mark: 'accent' as const },
     ...(found ? [{ ...found, label: `${MODEL_ROLES.embed}로 찾는 기록`, mark: 'outline' as const }] : []),
-    { ...waiting, label: '정리를 기다리는 대화', mark: 'striped' as const },
+    { ...waiting, label: '정리 대기 중인 대화', mark: 'striped' as const },
     { ...recent, label: COUNTS.window.label, mark: 'plain' as const },
   ];
   return <Breakdown total={total} shares={parts.map((part) => part.tokens / whole)} parts={parts.map(({ label, value, mark }) => ({ label, value, mark }))} />;

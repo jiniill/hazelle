@@ -112,7 +112,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
         </Row>
       )}
       {writing ? (
-        <Text variant="note">{`기억 정리 중 · ${writing.model} · 남은 호출 ${writing.left}개`}</Text>
+        <Text variant="note">{`기억 요약 중 · ${writing.model} · 남은 호출 ${writing.left}개`}</Text>
       ) : (
         failure && (
           <Callout tone="warn" action={retry}>

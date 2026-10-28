@@ -175,12 +175,12 @@ function PrereadDefaults() {
       </SettingGroup>
       <DetailFold set={set}>
         <CountRow label="원문으로 유지할 최근 대화" unit="개" help="마지막으로 보낸 내 메시지는 이 수와 상관없이 그대로 보내요." value={setup.recent} start={PREREAD_STARTS.recent} onChange={(recent) => save({ recent })} />
-        <CountRow label="한 번에 요약할 분량" unit="토큰" help="줄일 내용이 이만큼 쌓이면 그때 줄여요. 그보다 적으면 그냥 보내요." value={setup.batch} start={PREREAD_STARTS.batch} onChange={(batch) => save({ batch })} />
+        <CountRow label="한 번에 요약할 분량" unit="토큰" help="요약할 내용이 이만큼 쌓이면 그때 요약해요. 그보다 적으면 원문 그대로 보내요." value={setup.batch} start={PREREAD_STARTS.batch} onChange={(batch) => save({ batch })} />
         <SettingRow
-          label="생각 줄이기"
+          label="추론 최소화"
           help={`끄면 그 모델의 ${MODEL_SETTINGS}을 따라요.`}
           changed={setup.thinkLess !== PREREAD_STARTS.thinkLess}
-          control={<Switch label="생각 줄이기" checked={setup.thinkLess} onChange={(thinkLess) => save({ thinkLess })} />}
+          control={<Switch label="추론 최소화" checked={setup.thinkLess} onChange={(thinkLess) => save({ thinkLess })} />}
         />
         <SettingRow
           label={`${PRE_READ} 프롬프트`}

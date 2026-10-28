@@ -62,9 +62,9 @@ test('a shared link opens signed out, gives its file, and a report holds it', as
     await guest.getByRole('button', { name: '신고', exact: true }).click();
     await guest.getByLabel('신고 내용', { exact: true }).fill('e2e report');
     await guest.getByRole('button', { name: '보내기', exact: true }).click();
-    await expect(guest.getByRole('heading', { name: '멈춘 링크', exact: true })).toBeVisible();
+    await expect(guest.getByRole('heading', { name: '비활성화된 링크', exact: true })).toBeVisible();
     await guest.reload();
-    await expect(guest.getByRole('heading', { name: '멈춘 링크', exact: true })).toBeVisible();
+    await expect(guest.getByRole('heading', { name: '비활성화된 링크', exact: true })).toBeVisible();
     // No request's address carries the key; only the report's body does, as its full link.
     expect(sent.filter((url) => url.includes(key))).toEqual([]);
   });

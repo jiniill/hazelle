@@ -120,8 +120,8 @@ export const toolOutcome = (file: string, title: string, saved: ToolImport, plac
 export const DECLINED_WORDS: Record<string, string> = {
   'getRootDocument:page': '앱 화면 직접 바꾸기',
   addProvider: '모델 제공자 추가',
-  registerBodyIntercepter: '모델 요청 내용 바꾸기',
-  unregisterBodyIntercepter: '모델 요청 내용 바꾸기',
+  registerBodyIntercepter: '모델 요청 내용 변경',
+  unregisterBodyIntercepter: '모델 요청 내용 변경',
   addPluginChannelListener: '다른 플러그인과 주고받기',
   postPluginChannelMessage: '다른 플러그인과 주고받기',
 };

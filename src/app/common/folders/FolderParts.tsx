@@ -162,7 +162,7 @@ export function useMoving<T>(kind: Filed, index: FolderIndex<T>, folderOf: (id: 
     { counted: (count) => filedCount(kind, count), ask: `옮길 ${withParticle(filedNoun(kind), '을/를')} 선택해 주세요` },
     <Menu
       place="above-end"
-      label="옮길 폴더"
+      label="이동할 폴더"
       trigger={(opener) => (
         <Button size="sm" disabled={!picked?.size || index.folders.length === 0} {...opener}>
           폴더로 옮기기

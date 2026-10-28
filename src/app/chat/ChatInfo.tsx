@@ -272,7 +272,7 @@ function Call({ receipt, entry, onCache }: { receipt: Receipt; entry: LogEntry |
 }
 
 const UNMEASURED = { preparation: '요청을 만들기 전에 멈춤', tokenizer: '토큰 수를 세지 못함' } as const;
-const UNLEARNED = { pictures: '이미지가 있어 배우지 않음', incomplete: '응답이 중단되어 보정 안 함', 'missing-input': '제공자가 입력 토큰을 알려 주지 않음', empty: '보낸 글이 없음' } as const;
+const UNLEARNED = { pictures: '이미지가 포함되어 보정 안 함', incomplete: '응답이 중단되어 보정 안 함', 'missing-input': '제공자가 입력 토큰을 알려 주지 않음', empty: '전송한 텍스트 없음' } as const;
 const SOURCE = { prior: '기본값', model: '이 모델의 기록', chat: '이 채팅의 기록', 'drift-reset': '변경된 배율 재보정 중', unavailable: '보정 안 함' } as const;
 const BOUND = { 'hard-upper': '모델 한도에 여유를 두고 보정', 'hard-centre': '모델 한도 기준', 'user-centre': '컨텍스트 한도 기준', refusal: '한도 초과 후 축소 보정' } as const;
 

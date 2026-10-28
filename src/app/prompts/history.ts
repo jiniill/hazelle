@@ -191,7 +191,7 @@ export function editLine(before: ShownLine, after: ToggleLine, at: number, what:
     const put = (line: ToggleLine) => (what === 'label' && isToggle(line) && isToggle(to) ? { ...line, label: to.label } : to);
     return now === -1 ? {} : { toggles: draft.toggles.map((each, index) => (index === now ? put(each) : each)) };
   };
-  const words = what === 'default' ? '기본값 바꾸기' : what === 'line' || before.kind === 'caption' ? '내용 수정' : '이름 바꾸기';
+  const words = what === 'default' ? '기본값 변경' : what === 'line' || before.kind === 'caption' ? '내용 수정' : '이름 변경';
   return { label: `${lineTitle(before)} ${words}`, block: null, undo: swap(after, before), redo: swap(before, after) };
 }
 

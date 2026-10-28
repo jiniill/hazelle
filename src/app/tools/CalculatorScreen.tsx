@@ -89,7 +89,7 @@ export function CalculatorScreen({ back }: { back: Back | null }) {
         )}
         {search.field}
         {search.shown(
-          picked ? <List label="고른 모델" box>{row(picked)}</List> : rows.length > 0 && <Empty variant="section">모델을 검색해 선택해요.</Empty>,
+          picked ? <List label="선택한 모델" box>{row(picked)}</List> : rows.length > 0 && <Empty variant="section">모델을 검색해 선택해요.</Empty>,
           (found) => <List label="검색 결과" keys={found.map(({ key }) => key)} box>{(index) => row(found[index]!)}</List>,
         )}
       </Panel>

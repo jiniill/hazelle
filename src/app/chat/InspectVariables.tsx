@@ -20,7 +20,7 @@ function ValueEditor({ chat, version, busy, variable, onDone }: { chat: string; 
   const [draft, setDraft] = useState(variable.last.value);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const why = busy ? '응답을 생성하는 중에는 고칠 수 없어요.' : version === undefined ? '첫 메시지를 보내면 고칠 수 있어요.' : variable.nameTruncated || variable.last.truncated ? '값이 너무 길어서 여기서는 고칠 수 없어요.' : null;
+  const why = busy ? '응답을 생성하는 중에는 고칠 수 없어요.' : version === undefined ? '첫 메시지를 보낸 뒤 수정할 수 있어요.' : variable.nameTruncated || variable.last.truncated ? '값이 너무 길어서 여기서는 고칠 수 없어요.' : null;
   if (why || version === undefined) return <Text variant="note">{why}</Text>;
   const save = async () => {
     setSaving(true);
