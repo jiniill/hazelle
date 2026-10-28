@@ -163,6 +163,12 @@ describe('forecast without points', () => {
     expect(made.parts.filter(({ change }) => change).map(({ from }) => from)).toEqual([from('추가 정보'), from('유저 인풋')]);
   });
 
+  it('takes a message sent again for growth, not for the one the last call sent', () => {
+    expect(forecast(prior(nureongi('mem1', ['c1', '계속', 'c3'])), nureongi('mem1', ['c1', '계속', 'c3', '계속']))?.against?.broken).toEqual({ kind: 'moved', from: from('추가 정보'), role: 'user' });
+    const plain = (chat: string[]) => { const made = nureongi('mem1', chat); made.messages = made.messages.filter(({ hash }) => !['추가 정보', '유저 인풋'].includes(hash)); return made; };
+    expect(forecast(prior(plain(['c1', '계속', 'c3'])), plain(['c1', '계속', 'c3', '계속']))?.against).toMatchObject({ broken: null });
+  });
+
   it('prices reading all of it as plain input, with nothing written on either side', () => {
     const made = forecast(prior(nureongi('mem1', four)), nureongi('mem2', six))!;
     const model = { id: 'm1', price: { input: 4, output: 20, cacheRead: 0.4, cacheWrite: 5, tiers: [] } } as unknown as Model;

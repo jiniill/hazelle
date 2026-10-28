@@ -152,9 +152,15 @@ const isChat = ({ from }: WireMessage) => from.kind === 'block' && from.slot ===
 // The chat's growth is the one change no prompt avoids. grown: the new send's first chat message after the last one the
 // last call also sent (after.length when none); end: the last call's part a prefix read can reach, its last chat
 // message when the chat grew, else its last part. Whatever stands between chat messages is expected to stay in place.
+// Counted, so a message sent again ("계속") is not taken for the one the last call sent.
 function growth(before: WireMessage[], after: WireMessage[]) {
-  const sent = new Set(before.filter(isChat).map(({ hash }) => hash));
-  const kept = after.findLastIndex((message) => isChat(message) && sent.has(message.hash));
+  const sent = new Map<string, number>();
+  for (const { hash } of before.filter(isChat)) sent.set(hash, (sent.get(hash) ?? 0) + 1);
+  let kept = -1;
+  for (const [index, message] of after.entries()) {
+    const left = isChat(message) ? sent.get(message.hash) ?? 0 : 0;
+    if (left > 0) { sent.set(message.hash, left - 1); kept = index; }
+  }
   const grown = after.findIndex((message, index) => index > kept && isChat(message));
   return grown === -1 ? { grown: after.length, end: before.length - 1 } : { grown, end: before.findLastIndex(isChat) };
 }
