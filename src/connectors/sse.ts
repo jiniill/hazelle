@@ -1,4 +1,6 @@
-const MAX_EVENT_CHARS = 1024 * 1024;
+// Only a stream that never sends a boundary should hit this: one event may carry a whole base64 picture (a Gemini
+// image part, at 4K tens of MB), which the codec ignores but the parser must still pass.
+export const MAX_EVENT_CHARS = 64 * 1024 * 1024;
 
 // Comment lines and other fields are dropped: providers send keep-alive comments such as ": OPENROUTER PROCESSING",
 // and every codec reads its event type from the JSON data, not from the event field.

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import anthropicMessage from './fixtures/anthropic-message.json';
 import chatCompletion from './fixtures/chat-completion.json';
 import { bareModel } from './chat-completions';
+import { MAX_EVENT_CHARS } from './sse';
 import { resolveConnection, type Route } from './registry';
 import { decodeStream, type InlineThoughts } from './stream';
 import type { Connection, Model, Phase } from './types';
@@ -40,7 +41,7 @@ describe('chat completions stream', () => {
   it('reports an oversized unfinished SSE event as failure and cancels the reader', async () => {
     let cancelled = false;
     const stream = new ReadableStream<Uint8Array>({
-      start(controller) { controller.enqueue(new TextEncoder().encode('data: ' + 'x'.repeat(1024 * 1024))); },
+      start(controller) { controller.enqueue(new TextEncoder().encode('data: ' + 'x'.repeat(MAX_EVENT_CHARS))); },
       cancel() { cancelled = true; },
     });
     expect((await decode(openRouter, stream)).outcome).toMatchObject({ state: 'failed', error: { kind: 'network', detail: 'SSE event is too large' } });
