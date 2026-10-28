@@ -86,7 +86,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
           {[STALE[stale], status === 'stale' ? dropped : status === 'sent' || status === 'recall-over' ? kept : ''].join(' ').trim()}
         </Callout>
       )}
-      {status === 'over' && <Text variant="note">한도를 넘어서 보내지 않아요.</Text>}
+      {status === 'over' && <Text variant="note">한도를 초과해서 보내지 않아요.</Text>}
       {status === 'chaptered' && <Text variant="note">{`이 기록 대신 ${CHAPTER}를 보내요.`}</Text>}
       {holder && view?.records.get(holder.id) === 'sent' && (status === 'sent' || status === 'recall-over') && <Text variant="note">{`${CHAPTER}와 함께 보내요.`}</Text>}
       {item.forgotten && (
@@ -114,7 +114,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
           <SettingRow
             label="원문 메시지 보내기"
             help="요약본 대신 원문 메시지를 보내요."
-            note={status === 'recall-over' ? '원문이 한도를 넘어서 요약본을 보내요.' : undefined}
+            note={status === 'recall-over' ? '원문이 한도를 초과해서 요약본을 보내요.' : undefined}
             control={<Switch label="원문 메시지 보내기" checked={record.recalled === true} onChange={recall} />}
           />
         )}

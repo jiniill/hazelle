@@ -66,7 +66,7 @@ const SORT_WORDS = {
   memory: { default: '기본 기억 프롬프트', makeDefault: '장기 기억을 이 프롬프트로 정리해요' },
   illustrate: { default: '기본 삽화 프롬프트', makeDefault: '삽화 프롬프트를 따로 선택하지 않은 채팅에 써요' },
   mascot: { default: '기본 마스코트 프롬프트', makeDefault: '마스코트가 이 프롬프트로 대사를 써요' },
-  preread: { default: `기본 ${PRE_READ} 프롬프트`, makeDefault: '이 프롬프트로 긴 내용을 먼저 줄여요' },
+  preread: { default: `기본 ${PRE_READ} 프롬프트`, makeDefault: '긴 내용을 미리 요약할 때 이 프롬프트를 써요' },
 } satisfies Record<Exclude<PromptSort, 'agent'>, { default: string; makeDefault: string }>;
 const HELP = '위아래 화살표로 이동, Alt+화살표로 순서 변경, Enter로 편집, Delete로 빼기';
 
@@ -465,7 +465,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
           <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void copy()} />
           {ofSort(stored, 'conversation') && <MenuItem icon={ACTS.export.icon} label={ACTS.export.label} onClick={() => setExporting(true)} />}
           {words && !isDefault && <MenuItem label={SET_DEFAULT} sub={words.makeDefault} onClick={() => void makeDefault()} />}
-          {sort !== 'conversation' && <MenuItem label="기본 블록으로 되돌리기" sub="블록을 앱의 기본으로 바꿔요. 이름과 모델은 그대로예요." onClick={() => void resetBlocks()} />}
+          {sort !== 'conversation' && <MenuItem label="기본 블록으로 되돌리기" sub="블록 구성을 기본값으로 되돌려요. 프롬프트 이름과 모델 설정은 유지돼요." onClick={() => void resetBlocks()} />}
           <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} sub={isDefault ? cannotRemove(words!.default) : undefined} tone="warn" disabled={isDefault} onClick={() => void erase()} />
         </>
       ),

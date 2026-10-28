@@ -129,9 +129,9 @@ export function ShortfallNote({ receipt, entry }: { receipt: Receipt; entry: Log
   const place = shortfallPlace(entry, shortfall);
   return (
     <Text variant="note">
-      {`캐시에서 약 ${tokens(Math.round(shortfall.expected))} 토큰을 읽을 줄 알았는데 ${tokens(shortfall.actual)} 토큰만 읽었어요.`}
+      {`캐시에서 약 ${tokens(Math.round(shortfall.expected))} 토큰을 읽을 것으로 예상했지만 ${tokens(shortfall.actual)} 토큰만 읽었어요.`}
       {place && ` '${partName(place.from, place.role)}' 부분 근처부터는 캐시에서 읽지 못했어요.`}
-      <Hint label={SHORT}>제공자가 캐시를 일찍 비웠거나 요청 내용을 바꿨을 수 있으니, 계속되면 다른 연결을 사용해 보세요.</Hint>
+      <Hint label={SHORT}>제공자가 캐시를 일찍 삭제했거나 요청 내용을 수정했을 수 있어요. 문제가 계속되면 다른 연결을 사용해 보세요.</Hint>
     </Text>
   );
 }
@@ -165,7 +165,7 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
   const store = useStore();
   const toast = useToast();
   const [open, setOpen] = useState<number | null>(null);
-  if (prescriptions === null) return <Text variant="note">고치는 방법을 계산하지 못했어요.</Text>;
+  if (prescriptions === null) return <Text variant="note">해결 방법을 계산하지 못했어요.</Text>;
   if (!prescriptions?.length) return null;
   async function apply(prescription: CachePrescription) {
     const done = await applyCacheEdit(store, prescription.edit);
@@ -176,7 +176,7 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
     .map((prescription) => ({ prescription, less: saved(now, prescription.cost) }))
     .sort((a, b) => (b.less?.amount ?? -1) - (a.less?.amount ?? -1));
   return (
-    <Section level={3} title="해결 방법" help="여러 개를 함께 고치면 아끼는 금액이 각각의 합과 다를 수 있어요.">
+    <Section level={3} title="해결 방법" help="여러 항목을 함께 적용하면 절약되는 금액이 각각의 합과 다를 수 있어요.">
       <List label="해결 방법">
         {ranked.map(({ prescription, less }, index) => (
           <ListItem

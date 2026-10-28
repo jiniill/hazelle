@@ -158,7 +158,7 @@ function PortraitFields({ owner, index, portrait, onRemove }: { owner: string; i
           }}
           error={name.trim() ? undefined : '이름을 적어 주세요.'}
         />
-        <Section title="별명" level={3} help="이야기에서 이 이름으로 불려도 같은 모습으로 그려요.">
+        <Section title="별명" level={3} help="대화에서 이 이름으로 불려도 같은 인물로 인식해 그려요.">
           <PhraseField label={`${label} 별명`} phrases={shown('aliases')} onChange={(aliases) => save.change({ aliases })} />
         </Section>
         <Section title="외모" level={3}>

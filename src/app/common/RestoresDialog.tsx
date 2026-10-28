@@ -41,7 +41,7 @@ const ERRORS: Record<RestoreError, string> & Partial<Record<string, string>> = {
 };
 export const restoreError = (code: string) => ERRORS[code] ?? code;
 const REFUSED: Partial<Record<ServerError, string>> = {
-  'bad-post': '그 계정이 운영자에게만 보낸 글로만 복원할 수 있어요.',
+  'bad-post': "해당 계정이 작성한 '운영자에게만' 글에서만 복원할 수 있어요.",
   'too-many-restores': `복원은 하루에 최대 ${SELF_RESTORES_PER_DAY}번까지 할 수 있어요.`,
   'bad-time': '10분 전부터 6일 전 사이의 시점으로만 복원할 수 있어요.',
   'cannot-undo': '가장 최근에 한 복원만, 끝난 뒤 7일 안에 한 번 되돌릴 수 있어요.',
@@ -172,7 +172,7 @@ export function RestoresDialog({ operated, onClose, onActed }: { operated: Opera
             )}
           </Section>
         )}
-        <Section level={3} title="복원 기록" help={begins ? undefined : '복원은 그 계정이 보낸 알림에서 시작할 수 있어요.'}>
+        <Section level={3} title="복원 기록" help={begins ? undefined : "복원은 해당 계정이 작성한 '운영자에게만' 글에서 시작할 수 있어요."}>
           {restores.loading}
           {restores.failure}
           {restores.data && restores.data.length === 0 && <Empty variant="section">아직 복원한 기록이 없어요.</Empty>}

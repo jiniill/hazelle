@@ -7,7 +7,7 @@ import { useFiles, useStore } from '../session';
 import { useToast } from '../toast';
 
 const LEFT =
-  'RisuAI 설정 › 모듈에서 가져오거나 창에 끌어다 놓아 열 수 있어요. 삽화 프로필, 꺼 둔 스크립트·로어북, 로어북 우선순위와 위치는 빠지고, 쉼표가 든 키는 나뉘어요.';
+  'RisuAI 설정 › 모듈에서 가져오거나 창에 끌어다 놓아 열 수 있어요. 삽화 프로필, 꺼 둔 스크립트·로어북, 로어북 우선순위와 삽입 위치는 제외되며, 쉼표가 포함된 키워드는 여러 개로 분리돼요.';
 
 export function ModuleExport({ id, name, onClose }: { id: string; name: string; onClose: () => void }) {
   const store = useStore();

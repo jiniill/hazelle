@@ -44,7 +44,7 @@ export function BackupFolderSection({ folder, backupAgeHours, onSaved }: { folde
     >
       <TextField
         label="백업 폴더"
-        help="매일 만드는 백업을 이 폴더에도 복사해요. 컴퓨터 디스크가 고장 나도 남도록 USB나 외장 디스크, OneDrive 같은 동기화 폴더를 정해 주세요."
+        help="매일 생성되는 백업을 이 폴더에도 복사해요. 디스크가 고장 나도 백업이 남도록 USB나 외장 드라이브, OneDrive 같은 동기화 폴더를 지정해 주세요."
         value={value}
         onChange={setTyped}
         placeholder="예: D:\헤이젤 백업"
@@ -54,7 +54,7 @@ export function BackupFolderSection({ folder, backupAgeHours, onSaved }: { folde
       ) : (
         <Text variant="note">
           {folder.path === null
-            ? '정하지 않으면 백업이 이 컴퓨터의 디스크에만 남아요.'
+            ? '폴더를 지정하지 않으면 백업이 이 컴퓨터 디스크에만 저장돼요.'
             : backupAgeHours === null
               ? '아직 복사한 백업이 없어요.'
               : `복사한 최신 백업: ${moment(Date.now() - backupAgeHours * HOUR_MS)}`}

@@ -17,7 +17,7 @@ export function useChatPolishing(chatId: string): ReadonlyMap<string, PolishStep
     for (const entry of polishing.values()) {
       if (entry.chat !== chatId || !entry.failure || told.has(entry)) continue;
       told.add(entry);
-      toast.error(`${withParticle(entry.failure.name, '이/가')} 실패해서 답을 다 다듬지 못했어요. ${describeAgentFailure(entry.failure)}`);
+      toast.error(`${withParticle(entry.failure.name, '이/가')} 실패해서 응답을 끝까지 다듬지 못했어요. ${describeAgentFailure(entry.failure)}`);
     }
   }, [polishing]);
 

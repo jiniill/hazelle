@@ -190,7 +190,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       return await use(parsed);
     } catch (error) {
       if (!(error instanceof ImportReadError)) throw error;
-      return error instanceof ImportStuck ? '파일을 읽다가 멈춰서 그만뒀어요. 파일이 깨졌을 수 있어요.' : '파일을 읽지 못했어요. 다시 가져와 주세요.';
+      return error instanceof ImportStuck ? '파일을 읽는 중 응답이 없어 중단했어요. 파일이 손상됐을 수 있어요.' : '파일을 읽지 못했어요. 다시 가져와 주세요.';
     } finally {
       reader.close();
       readers.current.delete(reader);
@@ -227,7 +227,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       if ('tool' in parsed) {
         const previous = sameTool(store, parsed.tool.manifest);
         // importTool refuses an identity whose module is in 휴지통 rather than revive it or keep a second copy.
-        if (previous && !live(store.get('module', previous.parent!))) return { file, failure: `${BIN}에 같은 ${TOOL}이 있어요. 되살린 뒤에 가져와 주세요.` };
+        if (previous && !live(store.get('module', previous.parent!))) return { file, failure: `${BIN}에 같은 ${TOOL}이 있어요. 복원한 뒤에 다시 가져와 주세요.` };
         return shown(toolPreview(parsed.tool.manifest, previous?.value ?? null, at));
       }
       if ('preset' in parsed) return shown(promptPreview(parsed.preset));
@@ -524,7 +524,7 @@ function ChoiceField({ choice, onChange }: { choice: Choice; onChange: (choice: 
         <Stack gap="related">
           <Text>
             {`이전 버전 ${quoted(choice.olds)} 모듈이 있어요.`}
-            <Hint label="바꾸기">{`바꾸면 이전 버전이 켜져 있던 곳에 새 버전을 켜고, 이전 버전은 ${BIN}으로 옮겨요.`}</Hint>
+            <Hint label="바꾸기">{`'바꾸기'를 선택하면 기존 버전이 켜져 있던 곳에 새 버전을 적용하고, 기존 버전은 ${BIN}으로 이동해요.`}</Hint>
           </Text>
           <ChoiceGroup label="이전 버전" layout="fit" options={[{ value: 'replace', label: '바꾸기' }, { value: 'keep', label: '따로 두기' }]} value={choice.on ? 'replace' : 'keep'} onChange={(value) => onChange({ ...choice, on: value === 'replace' })} />
         </Stack>

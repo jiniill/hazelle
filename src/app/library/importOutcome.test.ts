@@ -73,12 +73,12 @@ it('says how much of a Risu plugin works before it is saved, wording declined na
     if (!read.ok) throw new Error('fixture');
     return toolPreview(read.tool.manifest, null, null).verdict;
   };
-  expect(verdict('risuai.showContainer("fullscreen")')).toEqual({ text: 'Risu 플러그인 기능이 다 돼요.', failed: false });
+  expect(verdict('risuai.showContainer("fullscreen")')).toEqual({ text: '이 Risu 플러그인이 사용하는 기능을 모두 지원해요.', failed: false });
   expect(verdict('risuai.addProvider(); risuai.registerBodyIntercepter(); risuai.readInlay()')).toEqual({
-    text: 'Risu 플러그인 기능 중 일부는 빠져요.', failed: true,
+    text: '이 Risu 플러그인이 사용하는 기능 중 일부는 지원하지 않아요.', failed: true,
     help: { label: '빠지는 기능', text: '앞으로도 지원하지 않아요: 모델 제공자 추가, 모델 요청 내용 변경. 아직 지원하지 않아요: readInlay.' },
   });
-  expect(verdict('start(risuai)')).toMatchObject({ text: 'Risu 플러그인 기능이 다 되는지 확인하지 못했어요.', failed: true });
+  expect(verdict('start(risuai)')).toMatchObject({ text: '이 Risu 플러그인이 사용하는 기능을 모두 지원하는지 확인하지 못했어요.', failed: true });
   expect([...RISU_DECLINED].filter((name) => !DECLINED_WORDS[name])).toEqual([]);
 });
 

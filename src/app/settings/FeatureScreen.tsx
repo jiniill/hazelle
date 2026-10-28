@@ -108,7 +108,7 @@ function MascotDefaults() {
     <SettingGroup label={FEATURE_NAMES.mascot}>
       <SettingRow
         label="마스코트 프롬프트"
-        help={`응답마다 ${MODEL_ROLES.aux}을 한 번 더 불러요.`}
+        help={`응답마다 ${MODEL_ROLES.aux}을 추가로 한 번 호출해요.`}
         control={
           <TaskPromptMenu
             task="mascot"
@@ -124,7 +124,7 @@ function MascotDefaults() {
   );
 }
 
-const PART_HELP: Partial<Record<keyof PrereadParts, string>> = { system: '형식 규칙이나 지시는 줄이면 잘 안 지켜질 수 있어요.' };
+const PART_HELP: Partial<Record<keyof PrereadParts, string>> = { system: '시스템 프롬프트를 요약하면 출력 형식이나 세부 지시사항이 잘 지켜지지 않을 수 있어요.' };
 
 function CountRow({ label, unit, help, value, start, onChange }: { label: string; unit: string; help: string; value: number; start: number; onChange: (value: number) => void }) {
   const count = useTypedNumber(readWhole, value, { error: '0 이상의 정수를 입력해 주세요.', onChange });
@@ -178,13 +178,13 @@ function PrereadDefaults() {
         <CountRow label="한 번에 요약할 분량" unit="토큰" help="요약할 내용이 이만큼 쌓이면 그때 요약해요. 그보다 적으면 원문 그대로 보내요." value={setup.batch} start={PREREAD_STARTS.batch} onChange={(batch) => save({ batch })} />
         <SettingRow
           label="추론 최소화"
-          help={`끄면 그 모델의 ${MODEL_SETTINGS}을 따라요.`}
+          help={`끄면 해당 모델의 ${MODEL_SETTINGS}을 그대로 사용해요.`}
           changed={setup.thinkLess !== PREREAD_STARTS.thinkLess}
           control={<Switch label="추론 최소화" checked={setup.thinkLess} onChange={(thinkLess) => save({ thinkLess })} />}
         />
         <SettingRow
           label={`${PRE_READ} 프롬프트`}
-          help={`응답마다 ${MODEL_ROLES.aux}을 한 번 더 불러요. ${PRE_READ} 프롬프트에서 다른 모델을 고를 수 있어요.`}
+          help={`응답마다 ${MODEL_ROLES.aux}을 추가로 호출해요. ${PRE_READ} 프롬프트에서 다른 모델을 선택할 수 있어요.`}
           control={
             <TaskPromptMenu
               task="preread"

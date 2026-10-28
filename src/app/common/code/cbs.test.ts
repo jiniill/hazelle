@@ -24,18 +24,18 @@ describe('cbsLanguage', () => {
   it('marks what the engine would not run as written', () => {
     expect(problems('{{getvr::a}} {{bgm::x}} {{#when::1}}a {{/if}} {{:else}} {{/each}} {{user')).toEqual([
       ['getvr', 'getvar의 오타 같아요.', 'getvar'],
-      ['{{bgm::x}}', '헤이젤에 없는 명령어라 적은 그대로 남아요.', undefined],
+      ['{{bgm::x}}', '헤이젤에서 지원하지 않는 명령어라 입력한 그대로 남아요.', undefined],
       ['{{/if}}', '#when 블록을 닫는 태그예요.', '{{/when}}'],
       ['{{:else}}', '{{:else}}는 #when 블록 안에서만 써요.', undefined],
       ['{{/each}}', '열린 블록 없이 닫는 태그예요.', undefined],
       ['{{', '짝이 되는 }}가 없어서 글자 그대로 들어가요.', undefined],
     ]);
     expect(problems('{{#when::a::b}}x{{/when}} {{#if 1}}')).toEqual([
-      ['{{#when::a::b}}', '조건을 읽을 수 없어서 늘 아닐 때 쪽이 들어가요.', undefined],
+      ['{{#when::a::b}}', '조건식이 올바르지 않아 항상 거짓({{:else}}) 쪽 텍스트가 들어가요.', undefined],
       ['{{#if 1}}', '블록을 닫는 {{/if}} 태그가 없어요.', undefined],
     ]);
     expect(problems('{{original}} {{position::a}} {{ }} {{-}} {{getvar::{{user}}}} {{? 1+1}}', cbsLanguage({ placeholder: 'original' }))).toEqual([]);
-    expect(problems('{{original}}')).toEqual([['original', '모르는 명령어라 적은 그대로 남아요.', undefined]]);
+    expect(problems('{{original}}')).toEqual([['original', '알 수 없는 명령어라 입력한 그대로 남아요.', undefined]]);
     expect(problems('{{data}} {{DATA}} {{data::x}}', cbsLanguage({ placeholder: 'data' }))).toEqual([
       ['{{DATA}}', '{{data}} 그대로 적어야 바뀌어요.', '{{data}}'],
       ['{{data::x}}', '{{data}} 그대로 적어야 바뀌어요.', '{{data}}'],

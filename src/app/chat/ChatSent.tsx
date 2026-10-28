@@ -76,8 +76,8 @@ const UNBUILT = '요청을 보내기 전에 멈춰서 본문이 없어요.';
 export function SentResponse({ entry }: { entry: LogEntry | null }) {
   if (!entry) return <Empty variant="section">{UNKEPT}</Empty>;
   if (entry.picked) return <Empty variant="section">{PICKED}</Empty>;
-  if (entry.purpose === 'embedding') return <Empty variant="section">임베딩 응답은 숫자 목록이라 보관하지 않아요.</Empty>;
-  if (!entry.response) return <Empty variant="section">이 응답의 응답 원문이 없어요.</Empty>;
+  if (entry.purpose === 'embedding') return <Empty variant="section">임베딩 응답은 숫자 배열이라 보관하지 않아요.</Empty>;
+  if (!entry.response) return <Empty variant="section">이 응답은 원문이 남아 있지 않아요.</Empty>;
   return <CodeBlock>{entry.response}</CodeBlock>;
 }
 
@@ -156,7 +156,7 @@ export function RequestView({ prompt, title, level = 3, lead, request, unbuilt, 
         <Stack gap="related">
           {lead}
           {found.length > 0 && !(sameAs && sameProblems(checked, sameAs)) && (
-            <Callout tone="warn">{`문제 ${found.length + omitted}개 · 모르는 ${COMMAND}나 오류 문구가 모델에 그대로 가요.${omitted ? ` ${omitted}개는 목록에서 뺐어요.` : ''}`}</Callout>
+            <Callout tone="warn">{`문제 ${found.length + omitted}개 · 알 수 없는 ${COMMAND}나 오류 문구가 모델에 그대로 전송돼요.${omitted ? ` ${omitted}개는 목록에서 뺐어요.` : ''}`}</Callout>
           )}
           <List label={title}>
             {prompt.messages.map((message, index) => {
@@ -193,7 +193,7 @@ export function RequestView({ prompt, title, level = 3, lead, request, unbuilt, 
               <ListItem
                 title="기타"
                 badge={problemCounts(unplaced)}
-                description="요청에 그대로 들어가지 않은 블록이나 로어북 항목이에요."
+                description="이번 요청에 포함되지 않은 블록이나 로어북 항목이에요."
                 expanded={open.has(-1)}
                 onClick={() => toggle(-1)}
                 detail={open.has(-1) && <ProblemList problems={unplaced} placed={false} />}

@@ -13,7 +13,7 @@ const COLUMNS: TableColumn[] = [
   { label: '새 계정', track: 'figure' },
   { label: CONVERTED, track: 'figure' },
 ];
-const HELP = `방문자는 같은 날 같은 브라우저와 접속 주소를 한 번만 세요. ${GUESTS}은 그날 AI 답을 한 번 이상 받은 손님, ${CONVERTED}은 새 계정 중 7일 안에 손님으로 답을 받아 본 계정이에요. 접속 주소 하나에서 하루에 방문자는 ${VISITORS_PER_ADDRESS}명, 손님은 ${GUESTS_PER_ADDRESS}명까지만 세요.`;
+const HELP = `방문자는 같은 날 같은 브라우저와 IP 주소를 한 번만 집계해요. ${GUESTS}은 그날 AI 응답을 한 번 이상 받은 손님이고, ${CONVERTED}은 신규 계정 중 7일 안에 손님으로 응답을 받아 본 계정이에요. IP 주소당 하루 최대 방문자 ${VISITORS_PER_ADDRESS}명, 손님 ${GUESTS_PER_ADDRESS}명까지만 집계해요.`;
 const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });
 
 export function VisitsSection() {

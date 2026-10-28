@@ -118,7 +118,7 @@ export function AccountsSection({ loaded, total, onActed, children }: { loaded: 
                       {others && <MenuItem icon={Send} label={NOTICES.send} onClick={() => setWriting({ account, suspend: false })} />}
                       {others &&
                         (account.suspended ? (
-                          <MenuItem icon={LockOpen} label="정지 해제" onClick={() => void act(account.accountId, liftSuspension(account.accountId), `${account.username} 계정의 정지를 풀지 못했어요.`)} />
+                          <MenuItem icon={LockOpen} label="정지 해제" onClick={() => void act(account.accountId, liftSuspension(account.accountId), `${account.username} 계정의 정지를 해제하지 못했어요.`)} />
                         ) : (
                           <MenuItem icon={Ban} label="정지" sub="읽기와 백업, 알림 확인, 탈퇴만 할 수 있어요" onClick={() => setWriting({ account, suspend: true })} />
                         ))}
@@ -174,7 +174,7 @@ export function AccountsSection({ loaded, total, onActed, children }: { loaded: 
       {removing &&
         (removing.state === 'leaving' ? (
           <ConfirmDialog title={`${removing.username} 계정의 탈퇴 처리를 끝낼까요?`} confirm="마무리" icon={ACTS.remove.icon} busy={busy} onConfirm={() => void remove(removing)} onClose={() => setRemoving(null)}>
-            남은 데이터를 모두 삭제하고 계정을 완전히 없애요. 이 작업은 되돌릴 수 없어요.
+            남은 데이터를 모두 삭제하고 계정을 완전히 삭제해요. 이 작업은 되돌릴 수 없어요.
           </ConfirmDialog>
         ) : (
           <ConfirmDialog title={`${removing.username} 계정을 삭제할까요?`} confirm={ACTS.remove.label} icon={ACTS.remove.icon} busy={busy} onConfirm={() => void remove(removing)} onClose={() => setRemoving(null)}>

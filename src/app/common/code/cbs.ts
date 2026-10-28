@@ -11,7 +11,7 @@ import { variableDoc, variableItems, type Variables } from './variables';
 // replacement {{data}} (regex/scripts.ts). Both replace only the exact spelling.
 type CbsPlaceholder = 'original' | 'data';
 const PLACEHOLDERS: Record<CbsPlaceholder, string> = {
-  original: '이 칸이 대신하는 프롬프트 텍스트가 그 자리에 들어가요.',
+  original: '이 칸이 대체하는 기본 프롬프트 텍스트가 이 자리에 들어가요.',
   data: '패턴이 찾은 텍스트 전체가 그 자리에 들어가요.',
 };
 
@@ -110,7 +110,7 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
       const exact = `{{${placeholder}}}`;
       if (text.slice(node.at, node.end) !== exact) problem(node.at, node.end, 'warning', `${exact} 그대로 적어야 바뀌어요.`, { label: `${exact}${particleOf(placeholder, '으로/로')} 바꾸기`, insert: exact });
     } else if (known(name)) return;
-    else if (isUnsupportedTag(word)) problem(node.at, node.end, 'warning', '헤이젤에 없는 명령어라 적은 그대로 남아요.');
+    else if (isUnsupportedTag(word)) problem(node.at, node.end, 'warning', '헤이젤에서 지원하지 않는 명령어라 입력한 그대로 남아요.');
     else if (!isProse(word)) unknown(name, found, TAG_POOL);
   };
 
@@ -119,7 +119,7 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
     const at = name.startsWith('#') ? nameAt + 1 : nameAt;
     const to = nameAt + name.length;
     if (near) problem(at, to, 'warning', `${near}의 오타 같아요.`, { label: `${withParticle(near, '으로/로')} 바꾸기`, insert: near });
-    else problem(at, to, 'warning', '모르는 명령어라 적은 그대로 남아요.');
+    else problem(at, to, 'warning', '알 수 없는 명령어라 입력한 그대로 남아요.');
   };
 
   const blockOf = (node: Block) => {
@@ -131,7 +131,7 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
       const whole = plain(node.head);
       if (name === 'when' && whole !== null) {
         const { condition } = whenArgs(blockHead(whole)!.rest);
-        if (condition.length === 0 || !conditionSteps(condition).valid) problem(node.head.at, node.head.end, 'warning', '조건을 읽을 수 없어서 늘 아닐 때 쪽이 들어가요.');
+        if (condition.length === 0 || !conditionSteps(condition).valid) problem(node.head.at, node.head.end, 'warning', '조건식이 올바르지 않아 항상 거짓({{:else}}) 쪽 텍스트가 들어가요.');
       }
     }
     // A raw block's body is text, whatever it holds.

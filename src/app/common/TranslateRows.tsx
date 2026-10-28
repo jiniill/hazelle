@@ -48,7 +48,7 @@ export function TranslateRows({ translate, translation, card, note, opens, onCha
       <DetailFold set={set}>
         <SettingRow
           label="원문 함께 보기"
-          help="번역한 문단마다 그 아래에 원문을 작게 보여요."
+          help="번역된 문단마다 아래에 원문을 작게 함께 표시해요."
           control={<Switch label="원문 함께 보기" checked={translate.original} onChange={(original) => onChange({ original })} />}
         />
         <SettingRow

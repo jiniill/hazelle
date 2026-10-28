@@ -41,9 +41,9 @@ export const SLOT = {
   },
   span: { name: '정리할 메시지', hint: '기억으로 정리할 메시지', line: '이번에 장기 기억으로 정리할 메시지가 여기에 들어가요.', kind: 'chat', icon: ScrollText },
   source: { name: '원문', hint: '번역할 텍스트', line: '번역할 원문 텍스트가 여기에 들어가요.', kind: 'chat', icon: Languages },
-  mascot: { name: FEATURE_NAMES.mascot, hint: '마스코트의 말투와 표정', line: '마스코트의 말투와 표정, 최근 대사, 답하는 형식이 여기에 들어가요.', kind: 'char', icon: Smile },
+  mascot: { name: FEATURE_NAMES.mascot, hint: '마스코트의 말투와 표정', line: '마스코트의 말투와 표정, 최근 대사, 응답 형식이 여기에 들어가요.', kind: 'char', icon: Smile },
   agentNotes: { name: '에이전트 노트', hint: '전처리 에이전트가 이번 답을 위해 남긴 노트', line: '전처리 에이전트의 노트가 여기에 들어가요.', kind: 'note', icon: Bot },
-  agentMemory: { name: '에이전트 기억', hint: '이 에이전트가 채팅마다 이어 적는 기억', line: '이 에이전트의 지난 기억과 기억을 고쳐 적는 형식이 여기에 들어가요.', kind: 'note', icon: Brain },
+  agentMemory: { name: '에이전트 기억', hint: '이 에이전트가 채팅마다 이어 적는 기억', line: '이 에이전트의 이전 기억과 기억을 갱신하는 형식이 여기에 들어가요.', kind: 'note', icon: Brain },
 } satisfies Record<SlotKind, { name: string; hint: string; line: string; kind: OutlineKind; icon: LucideIcon }>;
 
 export const NO_PERSONA_SLOT = `프롬프트에 '${SLOT.persona.name}' 블록이 없어서 페르소나 설명이 대화에 들어가지 않아요.`;

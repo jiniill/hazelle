@@ -22,7 +22,7 @@ const BANNED = [
   '공유할 권리가 없는 자료',
   '법에서 음란물로 보는 내용',
 ];
-const AFTER_REPORT = '신고가 들어오면 링크가 바로 멈춰요. 운영자가 위반을 확인하면 같은 파일을 모든 계정에서 막고, 계정을 제재해요.';
+const AFTER_REPORT = '신고가 접수되면 링크가 일시 보류돼요. 운영자가 위반을 확인하면 해당 파일을 모든 계정에서 차단하고 계정을 제재해요.';
 
 // Character ⋯ › 링크로 공유: the consent once per account, then the character's one link.
 export function ShareDialog({ character, name, onClose }: { character: string; name: string; onClose: () => void }) {

@@ -58,7 +58,7 @@ export function BotNotes() {
           toast.failed(note.failure, '허용 여부를 저장하지 못했어요');
           break;
         case 'input-stop':
-          toast.show('봇 스크립트가 응답을 멈췄어요', { detail: '보낸 메시지는 저장했어요' });
+          toast.show('봇 스크립트가 응답 요청을 취소했어요', { detail: '보낸 메시지는 저장했어요' });
           break;
       }
     }

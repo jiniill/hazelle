@@ -132,8 +132,8 @@ function risuVerdict({ verdict, missing }: RisuScan): Line {
   const later = missing.filter((name) => !RISU_DECLINED.has(name));
   const listed = [never.length > 0 && `앞으로도 지원하지 않아요: ${never.join(', ')}.`, later.length > 0 && `아직 지원하지 않아요: ${later.join(', ')}.`].filter(Boolean).join(' ');
   switch (verdict) {
-    case 'all': return { text: `${RISU_PLUGIN} 기능이 다 돼요.`, failed: false };
-    case 'partial': return { text: `${RISU_PLUGIN} 기능 중 일부는 빠져요.`, failed: true, help: { label: '빠지는 기능', text: listed } };
-    case 'unread': return { text: `${RISU_PLUGIN} 기능이 다 되는지 확인하지 못했어요.`, failed: true, help: { label: '확인하지 못한 이유', text: ['쓰다가 안 되는 기능이 있을 수 있어요.', listed].filter(Boolean).join(' ') } };
+    case 'all': return { text: `이 ${RISU_PLUGIN}이 사용하는 기능을 모두 지원해요.`, failed: false };
+    case 'partial': return { text: `이 ${RISU_PLUGIN}이 사용하는 기능 중 일부는 지원하지 않아요.`, failed: true, help: { label: '빠지는 기능', text: listed } };
+    case 'unread': return { text: `이 ${RISU_PLUGIN}이 사용하는 기능을 모두 지원하는지 확인하지 못했어요.`, failed: true, help: { label: '확인하지 못한 이유', text: ['사용 중 일부 기능이 정상적으로 작동하지 않을 수 있어요.', listed].filter(Boolean).join(' ') } };
   }
 }

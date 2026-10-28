@@ -26,7 +26,7 @@ import { promptEditor } from './panels';
 import type { OpenChat } from './useChat';
 
 const LEAVING = '가장 오래된 메시지가 요청에서 빠지는데, 장기 기억에도 없어서 모델이 그 내용을 알 수 없어요.';
-const UNSEEN = '이미지는 빼고 글만 보내고, 이미지만 있는 메시지는 보내지 않아요.';
+const UNSEEN = '이미지는 제외하고 텍스트만 보내며, 이미지만 있는 메시지는 보내지 않아요.';
 
 type Chip = 'model' | 'prompt' | 'persona' | 'profile';
 const FIX = {

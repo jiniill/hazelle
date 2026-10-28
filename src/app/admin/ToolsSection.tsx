@@ -28,7 +28,7 @@ export function ToolsSection({ onActed }: { onActed: () => void }) {
         />
         <SettingRow
           label="링크 보류"
-          help="멈춘 링크는 운영자가 풀 때까지 열리지 않아요."
+          help="보류한 링크는 운영자가 해제할 때까지 열리지 않아요."
           control={<Button variant="secondary" size="sm" icon={Link2Off} onClick={() => setOpen('share')}>ID 입력</Button>}
         />
         <SettingRow

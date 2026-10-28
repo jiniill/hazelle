@@ -65,7 +65,7 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
         />
         <SettingRow
           label="만화 형식"
-          help="한 장을 여러 컷이 있는 만화 페이지로 그려요. 말풍선 글자는 모델이 그려서 읽을 수 없어요."
+          help="한 장을 여러 컷으로 나뉜 만화 페이지로 그려요. 말풍선 속 글자는 이미지 모델이 임의로 그려서 읽을 수 없어요."
           control={<Switch label="만화 형식" checked={illustrate.comic} onChange={(comic) => onChange({ comic })} />}
         />
         <SettingRow
@@ -137,7 +137,7 @@ function PictureLadder({ ladder, onChange }: { ladder: Rung[]; onChange: (ladder
       head={(add) => (
         <SettingRow
           label="삽화 수"
-          help="응답이 길면 삽화를 더 많이 만들어요. 글자 수는 태그를 빼고 세요."
+          help="응답이 길면 삽화를 여러 장 생성해요. 글자 수는 태그를 제외하고 계산해요."
           sub={ladder.length ? undefined : '응답마다 1장'}
           control={
             <Button variant="ghost" size="sm" icon={ACTS.create.icon} onClick={add.onClick}>

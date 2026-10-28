@@ -8,12 +8,12 @@ import { useLab } from './labs';
 import { AGENTS, promptName, SCOPE, STAGE_NAMES } from './words';
 
 const WORKS: Record<AgentOwner['kind'], string> = {
-  settings: '켜 둔 에이전트는 모든 채팅에서 돌아요.',
-  prompt: '켜 둔 에이전트는 이 프롬프트를 쓰는 채팅에서 돌아요.',
-  character: '켜 둔 에이전트는 이 캐릭터의 모든 채팅에서 돌아요.',
-  chat: '켜 둔 에이전트는 이 채팅에서만 돌아요.',
+  settings: '켜 둔 에이전트는 모든 채팅에서 실행돼요.',
+  prompt: '켜 둔 에이전트는 이 프롬프트를 쓰는 채팅에서 실행돼요.',
+  character: '켜 둔 에이전트는 이 캐릭터의 모든 채팅에서 실행돼요.',
+  chat: '켜 둔 에이전트는 이 채팅에서만 실행돼요.',
 };
-const STACKS = '다른 곳에서 켠 에이전트도 함께 돌아요. 후처리는 켠 순서대로 이어서 다듬어요.';
+const STACKS = '다른 곳에서 켠 에이전트도 함께 실행돼요. 후처리 에이전트는 켠 순서대로 이어서 응답을 다듬어요.';
 const FROM = { settings: SCOPE.default, prompt: '프롬프트', character: '캐릭터' } as const;
 
 // own: the owner's list as stored. Lists stack (design §6.16): one a farther layer holds shows as on there, and is

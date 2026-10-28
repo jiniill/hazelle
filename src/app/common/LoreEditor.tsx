@@ -105,7 +105,7 @@ function OwnScanNumber({ field, own, shared, onChange }: { field: 'tokenBudget' 
   return (
     <SettingRow
       label={label}
-      help={`${help} 비워 두면 공용 값(${amount(count(shared))})을 따라요.`}
+      help={`${help} 비워 두면 공용 설정(${amount(count(shared))})을 사용해요.`}
       changed={own !== null}
       error={typed.error}
       control={<NumberInput label={label} unit={unit} value={typed.text} invalid={typed.error !== undefined} placeholder={count(shared)} onChange={typed.change} />}

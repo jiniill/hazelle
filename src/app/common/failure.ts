@@ -70,7 +70,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'file-blocked': '운영자가 차단한 파일이라 올리거나 열 수 없어요.',
   // The admin screen's 백업 폴더 (server/backup/folder.ts).
   'folder-not-absolute': '전체 경로를 입력해 주세요. 예: D:\\헤이젤 백업',
-  'folder-in-data': '헤이젤 데이터 폴더 밖에 있는 폴더를 정해 주세요.',
+  'folder-in-data': '헤이젤 데이터 폴더 외부의 다른 폴더를 지정해 주세요.',
   'folder-unwritable': '이 폴더에 쓸 수 없어요. 폴더가 있는지, 쓸 권한이 있는지 확인해 주세요.',
   'too-many-reports': '운영자가 아직 확인하지 않은 알림이 많아서 더 보낼 수 없어요.',
   'bad-nickname': `닉네임은 ${count(NICKNAME_LENGTH.min)}~${count(NICKNAME_LENGTH.max)}자로, @ # / 같은 기호 없이 지을 수 있어요.`,
@@ -165,8 +165,8 @@ const REFUSED: Record<string, string> = {
   'unknown-model': '현재 버전에서 알 수 없는 모델이에요. 화면을 새로고침해 주세요.',
   'unknown-sampler': '이 모델이 지원하지 않는 샘플러예요. 삽화 프롬프트에서 샘플러를 다시 선택해 주세요.',
   'model-gone': '연결에서 모델이 빠져서 응답을 이어서 받을 수 없어요.',
-  'batch-expired': '제공자가 정해진 시간 안에 답을 만들지 못해 할인 요청이 만료됐어요.',
-  'discount-busy': `제공자에게 지금은 할인으로 처리할 자리가 없어요. ${DISCOUNT}를 끄면 바로 답해요.`,
+  'batch-expired': '제공자가 정해진 시간 안에 응답을 생성하지 못해 할인 요청이 만료됐어요.',
+  'discount-busy': `제공자 서버에 지금 할인 요청을 처리할 여유 용량이 없어요. ${DISCOUNT}를 끄면 바로 응답을 받을 수 있어요.`,
 };
 
 // The relay refuses these, and 직접 연결 says so before it tries.
@@ -325,7 +325,7 @@ export function describeAgentFailure({ name, failure }: AgentFailed): string {
     case 'failed':
       return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
     case 'lost':
-      return `보호한 부분 ${failure.count}곳이 빠져서 다듬은 글을 쓰지 않았어요.`;
+      return `보호된 구간 ${failure.count}곳이 누락되어 다듬은 응답을 적용하지 않았어요.`;
     case 'unsaved':
       return describeFailure(failure.failure);
   }
@@ -369,7 +369,7 @@ export function describeTranslateFailure(failure: Exclude<TranslateFailure, { ki
     case 'unsaved':
       return `번역 결과를 저장하지 못했어요. ${describeFailure(failure.failure)}`;
     case 'protected-lost':
-      return `보호한 부분 ${failure.count}곳이 번역에서 빠졌어요. 다시 번역해 주세요.`;
+      return `보호된 구간 ${failure.count}곳이 번역 결과에서 누락됐어요. 다시 번역해 주세요.`;
     case 'protect-invalid':
       return `번역 프롬프트의 보호 패턴을 읽을 수 없어요: ${failure.pattern}`;
   }
@@ -412,7 +412,7 @@ const SCENE_INVALID = { ...INVALID, paragraph: '모델이 메시지에 없는 �
 
 const COSTS: Record<Costs, string> = {
   plan: '요금제에 무료 이미지 혜택이 없어요. 만들 때마다 Anlas가 차감돼요.',
-  size: '크기가 크게로 설정되어 있어 무료로 만들 수 없어요. 만들 때마다 Anlas가 차감돼요.',
+  size: "이미지 크기가 '크게'로 설정되어 있어 무료로 생성할 수 없어요. 생성할 때마다 Anlas가 차감돼요.",
   steps: '스텝이 무료 범위를 넘어 무료로 만들 수 없어요. 만들 때마다 Anlas가 차감돼요.',
   allowance: '무료 사용량을 다 썼어요. 다시 채워질 때까지 만들 때마다 Anlas가 차감돼요.',
   unknown: '무료로 만들 수 있는지 확인할 수 없어요. 만들면 사용량이 차감될 수 있어요.',

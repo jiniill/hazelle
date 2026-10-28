@@ -26,12 +26,12 @@ export const TUTORIALS: Tutorial[] = [
   {
     id: 'first-reply',
     title: 'AI 연결하고 대화 시작하기',
-    description: 'API 키를 넣고 모델을 골라 대화를 시작해요',
+    description: 'API 키를 입력하고 모델을 선택해 대화를 시작해요',
     steps: [
-      { mark: MARKS.connectNew, label: '새 연결', text: 'AI를 쓰려면 먼저 연결해요. 여기를 눌러요.', done: (facts) => facts.connection !== null || on(facts, 'add-connection', 'connect', 'connect-direct'), at: () => ADD },
-      { mark: MARKS.connectType, label: '제공자 선택', text: '쓸 제공자를 골라요. 키가 있거나 로그인할 수 있는 곳이면 돼요.', done: (facts) => facts.connection !== null || on(facts, 'connect', 'connect-direct'), at: () => ADD },
-      { mark: MARKS.connectKey, label: 'API 키 입력', text: 'API 키를 붙여 넣고 모델 선택을 눌러요. 로그인하는 곳은 안내대로 로그인해요.', done: (facts) => facts.connection !== null, at: () => ADD, above: true },
-      { mark: MARKS.modelAdd, label: '모델 추가', text: '쓸 모델 옆의 +를 눌러 추가해요. 처음 추가한 모델로 대화해요.', done: (facts) => facts.added, at: (facts) => ({ kind: 'connection', id: facts.connection! }), above: true },
+      { mark: MARKS.connectNew, label: '새 연결', text: 'AI와 대화하려면 먼저 제공자를 연결해야 해요. 여기를 눌러 주세요.', done: (facts) => facts.connection !== null || on(facts, 'add-connection', 'connect', 'connect-direct'), at: () => ADD },
+      { mark: MARKS.connectType, label: '제공자 선택', text: '사용할 제공자를 선택해 주세요. API 키가 있거나 계정을 연결할 수 있는 곳이면 돼요.', done: (facts) => facts.connection !== null || on(facts, 'connect', 'connect-direct'), at: () => ADD },
+      { mark: MARKS.connectKey, label: 'API 키 입력', text: "API 키를 붙여 넣고 '모델 선택'을 눌러 주세요. 계정으로 연결하는 제공자는 화면 안내에 따라 로그인해 주세요.", done: (facts) => facts.connection !== null, at: () => ADD, above: true },
+      { mark: MARKS.modelAdd, label: '모델 추가', text: '사용할 모델 옆의 + 버튼을 눌러 추가해 주세요. 처음 추가한 모델이 대화 모델로 설정돼요.', done: (facts) => facts.added, at: (facts) => ({ kind: 'connection', id: facts.connection! }), above: true },
       { mark: MARKS.modelAdded, label: '대화 시작', text: '모델을 추가했어요. 이제 대화를 시작해 봐요.', go: { label: '대화 시작하기', route: NEW_CHAT }, done: (facts) => on(facts, 'new-chat', 'chat'), at: (facts) => ({ kind: 'connection', id: facts.connection! }) },
     ],
     finish: { title: '튜토리얼 완료', text: '대화할 준비가 끝났어요. 아무 말이나 보내 보거나, 봇을 가져와 대화해 봐요.' },

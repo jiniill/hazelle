@@ -14,7 +14,7 @@ export const GUIDES: Record<GuideId, Guide> = {
       },
       { text: '값을 넣는 명령어는 이름 뒤에 ::를 붙이고 값을 써요. 값이 여러 개면 ::로 구분해요.', example: { written: '{{replace::사과 두 개::사과::배}}', result: '배 두 개' } },
       { text: '명령어 안에 다른 명령어를 넣을 수 있어요. 가장 안쪽부터 계산해요.', example: { written: '{{char}}의 이름은 {{length::{{char}}}}글자예요.', result: '미라의 이름은 2글자예요.' } },
-      { text: '참은 1, 거짓은 0이에요. 비교 명령어는 1이나 0을 내놓지만, 조건문은 1과 true를 모두 참으로 읽어요.', example: { written: '{{greater::{{getvar::호감도}}::20}}', result: '1' } },
+      { text: '참은 1, 거짓은 0이에요. 비교 명령어는 결과를 1이나 0으로 반환하지만, 조건문은 1과 true를 모두 참으로 인식해요.', example: { written: '{{greater::{{getvar::호감도}}::20}}', result: '1' } },
       {
         text: '명령어 이름은 대소문자, 띄어쓰기, _와 -를 구분하지 않아요. 없는 이름이거나 필요한 값이 부족하면 적은 그대로 보내요.',
         example: { written: '{{Get_Var::호감도}} {{없는명령어}}', result: '30 {{없는명령어}}' },
@@ -66,7 +66,7 @@ export const GUIDES: Record<GuideId, Guide> = {
       { text: '배열의 항목 개수는 arraylength로, n번째 항목은 arrayelement로 읽어요. 순서는 0번부터 세요.', example: { written: '{{arraylength::{{getvar::가방}}}}개 중 첫째: {{arrayelement::{{getvar::가방}}::0}}', result: '2개 중 첫째: 나침반' } },
       { text: '사전은 키와 값을 짝지어 놓은 JSON이에요. dictelement로 원하는 키의 값을 읽어요.', example: { written: '{{dictelement::{{makedict::이름=미라::나이=20}}::나이}}', result: '20' } },
       {
-        text: '배열을 바꾸는 명령어는 바뀐 배열을 내놓아요. 저장하려면 메시지 안에서 setvar로 변수에 다시 담아야 해요.',
+        text: '배열을 수정하는 명령어는 변경된 새 배열을 반환해요. 변경 사항을 저장하려면 메시지 안에서 setvar로 변수에 다시 저장해야 해요.',
         example: { written: '{{setvar::가방::{{arraypush::{{getvar::가방}}::칼}}}}{{getvar::가방}}', result: '["나침반","지도","칼"]', inMessage: true },
       },
     ],
@@ -80,7 +80,7 @@ export const GUIDES: Record<GuideId, Guide> = {
       },
       { text: 'call 뒤에 값을 함께 넘기면, 함수 안에서 {{arg::1}}, {{arg::2}}처럼 순서대로 읽을 수 있어요.', example: { written: '{{#func 소개}}이름: {{arg::1}}, 나이: {{arg::2}}{{/func}}{{call::소개::미라::20}}', result: '이름: 미라, 나이: 20' } },
       {
-        text: '{{return}}을 만나면 함수가 바로 끝나고 그 값을 내놓아요. 조건문과 함께 쓰면 상황에 따라 다른 값을 내놓을 수 있어요.',
+        text: '{{return}}을 만나면 함수가 즉시 종료되고 지정한 값을 반환해요. 조건문과 함께 쓰면 상황에 따라 다른 값을 반환할 수 있어요.',
         example: { written: '{{#func 관계}}{{#when::{{arg::1}}::>::50}}{{return::친구}}{{/when}}{{return::지인}}{{/func}}{{call::관계::{{getvar::호감도}}}}', result: '지인' },
       },
     ],

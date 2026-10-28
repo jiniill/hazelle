@@ -70,7 +70,7 @@ function extraWords(text: string): string {
 export function extraError(text: string | undefined): string | undefined {
   if (text === undefined) return undefined;
   const { problems } = readExtra(text);
-  if (text.trim().startsWith('{')) return problems.length ? 'JSON 객체로 읽을 수 없어서 고칠 때까지 보내지 않아요.' : undefined;
+  if (text.trim().startsWith('{')) return problems.length ? '올바른 JSON 객체 형식이 아니라서 수정할 때까지 전송되지 않아요.' : undefined;
   const lines = (kind: ExtraProblem['kind']) => problems.filter((problem) => problem.kind === kind).map((problem) => problem.line).join(', ');
   const unreadable = lines('unreadable');
   const header = lines('header');

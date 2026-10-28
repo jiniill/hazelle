@@ -145,7 +145,7 @@ export function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) 
         />
       )}
       <Prescriptions prescriptions={prescriptions} cost={price} />
-      {guard && against?.broken && diagnosis && prescriptions?.length === 0 && <Text variant="note">{`${CACHE_GUARD}로 고칠 수 있는 원인은 아니에요.`}</Text>}
+      {guard && against?.broken && diagnosis && prescriptions?.length === 0 && <Text variant="note">{`${CACHE_GUARD}로 해결할 수 있는 원인은 아니에요.`}</Text>}
       <List label="보낼 내용">
         {cacheRows(forecast.parts).map((row, index) => {
           const part = row.change && diagnosed(diagnosis, row.change, row.at);

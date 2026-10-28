@@ -149,7 +149,7 @@ function NextTokens({ sending }: { sending: Sending }) {
         note={['앱 추정', ...(fit.allowance !== null && fit.multiplier !== null ? [`배율 ×${fit.multiplier.toFixed(2)} 반영`] : [])].join(' · ')}
       />
       {fit.allowance === null && <Text variant="note">모델 한도를 알 수 없어서 내용을 줄이지 않아요.</Text>}
-      {dropped > 0 && <Text variant="note">{`한도를 넘어서 오래된 메시지 ${dropped}개가 빠져요.`}</Text>}
+      {dropped > 0 && <Text variant="note">{`모델 한도를 초과해서 오래된 메시지 ${dropped}개가 제외돼요.`}</Text>}
       <Disclosure label="토큰 사용처">
         <List label="토큰 사용처">
           {[...groups].sort((a, b) => b.tokens - a.tokens).map((group) => (

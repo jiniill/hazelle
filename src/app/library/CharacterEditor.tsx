@@ -308,7 +308,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
           value={noteText}
           onChange={(note) => noteSave.change({ note })}
           placeholder={NOTE_PLACEHOLDER}
-          help={{ text: '이 캐릭터를 번역할 때만 들어가요. 초안 만들기는 카드를 읽고 노트 아래에 적어요.', open: { label: opens(inFeature('translate')), onClick: () => navigate({ kind: 'feature', feature: 'translate' }) } }}
+          help={{ text: "이 캐릭터를 번역할 때만 적용돼요. '초안 만들기'를 누르면 캐릭터 카드를 분석해 노트 아래에 내용을 추가해요.", open: { label: opens(inFeature('translate')), onClick: () => navigate({ kind: 'feature', feature: 'translate' }) } }}
           action={
             <Button variant="ghost" size="sm" icon={Sparkles} busy={noteDraft.running} onClick={noteDraft.start}>
               {noteDraft.running ? '쓰는 중…' : '초안 만들기'}
@@ -328,7 +328,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
     scripts: <ScriptsEditor owner={{ kind: 'character', id }} pack={card} drill={!split} status={character.statusScripts} variables={card.variables} />,
     toggles: <PackToggles owner={{ kind: 'character', id }} lines={card.toggles} />,
     variables: (
-      <Section title={DEFAULT_VARIABLES} help="새 채팅이 이 값에서 시작해요. 이미 있는 채팅에서도 아직 바뀌지 않은 변수는 이 값을 따라요.">
+      <Section title={DEFAULT_VARIABLES} help="새 채팅을 시작할 때 변수에 설정되는 초기값이에요. 기존 채팅에서도 아직 값이 바뀌지 않은 변수는 이 값을 사용해요.">
         <EntryList
           entries={text.variables}
           onChange={(variables) => change({ variables })}
@@ -356,7 +356,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
           {decor && (
             <SettingRow
               label="긴 이미지 접기"
-              help="이미지만 있는 줄은 윗부분만 보여 줘요."
+              help="이미지만 있는 줄은 길이를 접어 윗부분만 먼저 보여 줘요."
               control={<Switch label="긴 이미지 접기" checked={fold} onChange={(on) => pictureSave.change({ fold: on ? undefined : false })} />}
             />
           )}
@@ -373,7 +373,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
           <Disclosure label="이미지 크기">
             <SettingGroup label="이미지 크기">
               {fold && percentRow(peek, '접힌 높이', '화면 높이 대비 비율이에요.', '40')}
-              {percentRow(widest, '최대 폭', { text: '글 폭 대비 비율이에요. 비워 두면 디스플레이 설정을 따라요.', open: { label: opens(inSettings('display')), onClick: () => navigate({ kind: 'display' }) } }, String(display.pictureWidest))}
+              {percentRow(widest, '최대 폭', { text: '글 폭 대비 비율이에요. 비워 두면 디스플레이 설정 값을 사용해요.', open: { label: opens(inSettings('display')), onClick: () => navigate({ kind: 'display' }) } }, String(display.pictureWidest))}
             </SettingGroup>
           </Disclosure>
         )}

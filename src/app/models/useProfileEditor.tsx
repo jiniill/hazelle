@@ -185,7 +185,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     <SettingRow
       key="cache"
       label="캐시"
-      help="보낸 프롬프트의 앞부분을 저장해 두고 다음 요청에서 더 싸게 읽어요. 처음 저장할 때는 요금이 조금 더 나와요"
+      help="전송한 프롬프트의 앞부분을 캐시에 저장해 두고 다음 요청에서 저렴하게 읽어요. 처음 캐시에 쓸 때는 비용이 조금 더 발생해요"
       changed={shown.cache !== undefined}
       note={noteFor('cache')}
       control={
@@ -301,7 +301,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     <SettingRow
       key="extra"
       label={EXTRA_LABEL}
-      help="요청에 그대로 더해 보낼 값이에요. 한 줄에 키=값으로 쓰거나 JSON 객체 하나로 써요. 줄로 쓸 때 JSON 값은 앞에 json::을 붙이고, 값을 {{none}}으로 쓰면 그 항목을 빼요. 모델이 받지 않는 값이면 요청이 실패할 수 있어요."
+      help="API 요청 본문에 추가로 포함할 파라미터예요. 한 줄에 키=값 형식으로 입력하거나 JSON 객체 하나로 작성해요. 줄 단위로 입력할 때 JSON 값은 앞에 json::을 붙이고, 값을 {{none}}으로 지정하면 해당 항목을 요청에서 제외해요. 모델이 지원하지 않는 파라미터를 넣으면 요청이 실패할 수 있어요."
       wide
       changed={shown.extra !== undefined}
       error={extraError(shown.extra)}
@@ -325,8 +325,8 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
       <DetailFold set={detailSet}>
         {DETAIL.map(numberRow)}
         {stopRow}
-        {choiceRow('verbosity', VERBOSITY_LABEL, '간단히를 선택하면 같은 내용을 더 짧게 요약해서 써요', VERBOSITY, VERBOSITY_WORDS, shown.verbosity, (verbosity) => ({ verbosity }))}
-        {choiceRow('serviceTier', SERVICE_TIER_LABEL, '자동으로 두면 Anthropic 계정에 우선 처리 용량이 남아 있을 때 그 용량부터 먼저 써요', SERVICE_TIERS, SERVICE_TIER_WORDS, shown.serviceTier, (serviceTier) => ({ serviceTier }))}
+        {choiceRow('verbosity', VERBOSITY_LABEL, "'간단히'를 선택하면 응답을 더 간결하게 작성해요", VERBOSITY, VERBOSITY_WORDS, shown.verbosity, (verbosity) => ({ verbosity }))}
+        {choiceRow('serviceTier', SERVICE_TIER_LABEL, "'자동'으로 설정하면 Anthropic 계정에 우선 처리 용량이 남아 있을 때 그 용량부터 먼저 써요", SERVICE_TIERS, SERVICE_TIER_WORDS, shown.serviceTier, (serviceTier) => ({ serviceTier }))}
         {systemRow}
         {streamingRow}
         <RetriesRow value={shown.retries} follows={retries === undefined ? '연결 설정' : followsRetries('connection', retries)} onChange={(value) => change({ retries: value })} />

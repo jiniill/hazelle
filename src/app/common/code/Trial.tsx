@@ -159,14 +159,14 @@ function CbsSteps({ text, read: { steps, omitted }, variables, reveal, stale }: 
   );
 }
 
-const KEPT = { unknown: '모르는 명령어라 쓴 그대로 남아요.', unsupported: '헤이젤이 지원하지 않는 명령어라 쓴 그대로 남아요.', args: '인자가 모자라거나 읽을 수 없어서 쓴 그대로 남아요.' } as const;
+const KEPT = { unknown: '알 수 없는 명령어라 입력한 그대로 남아요.', unsupported: '헤이젤에서 지원하지 않는 명령어라 입력한 그대로 남아요.', args: '인자가 부족하거나 형식이 맞지 않아 입력한 그대로 남아요.' } as const;
 
 // A {{getvar}} says where the chat's value came from: a draft read after the chat writes no variable.
 function shownStep(text: string, { at, end, headEnd, depth, result, kept, erased, held, condition, variable }: CbsStep, variables: Variables): StepRow {
   const source = text.slice(at, headEnd ?? end);
   // Not a warning for args: a wrapper's {{slot}} stays as written on purpose.
   if (kept) return { source, result, depth, note: KEPT[kept], ...(kept !== 'args' && { tone: 'warn' as const }) };
-  if (erased) return { source, result, depth, note: '앞의 텍스트를 지워요.' };
+  if (erased) return { source, result, depth, note: '앞의 텍스트를 삭제해요.' };
   if (variable !== undefined) {
     const found = chatVariable(variables, variable);
     if (found === undefined) return { source, result, depth };

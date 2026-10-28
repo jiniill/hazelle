@@ -23,13 +23,13 @@ export const ROLE_TAGS: Record<Role, string> = { main: '대화', aux: '보조', 
 // Task model doors lead to its prompt picker. Missing prompts lead to the prompt list,
 // never directly to the auxiliary model because the task cannot run without a prompt.
 export const taskModelHelp = (task: string, prompted: boolean) => ({
-  text: `${task} 프롬프트에서 선택해요. 선택하지 않으면 ${MODEL_ROLES.aux}을 따라요.`,
+  text: `${task} 프롬프트에서 선택해요. 따로 선택하지 않으면 ${MODEL_ROLES.aux}을 사용해요.`,
   door: prompted ? opens(`${task} 프롬프트`) : opens(inSettings('prompts')),
 });
 
 export const NO_PICTURES = '이 모델은 이미지를 읽을 수 없어요.';
 export const PICTURE_INPUT = '이미지 읽기';
-export const UNKNOWN_PICTURES = `이 모델이 이미지를 읽는지 알 수 없어요. 읽는 모델이면 모델 화면에서 ${PICTURE_INPUT}를 켜 주세요.`;
+export const UNKNOWN_PICTURES = `이 모델이 이미지 입력을 지원하는지 확인할 수 없어요. 이미지를 지원하는 모델이라면 모델 설정 화면에서 ${PICTURE_INPUT}를 켜 주세요.`;
 
 export const AUX_HELP = '번역이나 장기 기억 정리처럼 대화 밖의 작업에 써요.';
 
@@ -49,18 +49,18 @@ export type Asker = keyof typeof ASKER;
 export const modelsHelp = (asker: Asker) => (asker === 'character' ? BOT_MODELS_HELP : `이 ${ASKER[asker]}이 대화 응답과 별개로 모델을 호출해요. 호출한 만큼 요금이 더 나올 수 있어요.`);
 export const modelConsent = (asker: Asker) => `이 ${ASKER[asker]}이 모델을 추가로 호출하려고 해요`;
 export const cardWriteConsent = (asker: Asker) => `이 ${ASKER[asker]}이 캐릭터 카드를 수정하려고 해요`;
-export const MEMORY_CLAIM_HELP = '허용하면 이 플러그인을 쓰는 채팅에서는 기본 장기 기억이 쉬어요. 기록은 지우지 않아요.';
+export const MEMORY_CLAIM_HELP = '허용하면 이 플러그인을 사용하는 채팅에서는 기본 장기 기억이 일시 중지돼요. 기존 기록은 삭제되지 않아요.';
 export const NETWORK = '외부 연결';
 export const NETWORK_HELP = '켜면 이 플러그인이 대화 내용을 외부 서버로 전송할 수 있어요. 외부 이미지와 글꼴은 화면을 새로고침한 뒤부터 표시돼요.';
 // A plugin's one card (design §6.10). The ruling is that it says plainly what it allows, so its line names each grant,
 // the network first.
 const GRANT_CLAUSES = {
-  network: ['대화 내용을 앱 밖으로 보내고', '대화 내용을 앱 밖으로 보낼 수 있어요'],
+  network: ['대화 내용을 앱 밖으로 보내고', '대화 내용을 외부 서버로 전송할 수 있어요'],
   model: ['모델을 추가로 호출하고', '모델을 추가로 호출할 수 있어요'],
-  memory: ['장기 기억을 대신 맡고', '장기 기억을 대신 맡을 수 있어요'],
+  memory: ['장기 기억을 대신 맡고', '기본 장기 기억 대신 기억을 관리할 수 있어요'],
 } as const;
 const GRANT_HELP = {
-  network: '바깥 이미지와 글꼴은 화면을 새로고침한 뒤부터 보여요.',
+  network: '외부 이미지와 글꼴은 화면을 새로고침한 뒤부터 표시돼요.',
   model: '내 메시지를 대신 보내 응답을 받을 수도 있어요. 호출한 만큼 요금이 더 나올 수 있어요.',
   memory: MEMORY_CLAIM_HELP,
 };
@@ -157,10 +157,10 @@ export const PRE_READ_RETRYING = `${MODEL_ROLES.aux}이 ${RESENDING}.`;
 export const AGENTS = '에이전트';
 export const AGENTS_HELP = `응답 전에 장면을 정리하거나 응답을 다듬어요. 에이전트마다 모델을 추가로 호출해요. Agents! P! 플러그인에서 가져온 아이디어예요.`;
 export const CACHE_GUARD = '캐시 보호';
-export const CACHE_GUARD_HELP = '캐시가 깨질 때 바로 고치는 방법과 아낄 수 있는 금액을 점검 › 캐시에서 알려 줘요.';
+export const CACHE_GUARD_HELP = '캐시가 깨졌을 때 해결 방법과 절약할 수 있는 금액을 점검 › 캐시에서 알려 줘요.';
 export const STAGE_NAMES: Record<AgentStage, string> = { pre: '전처리', post: '후처리' };
 export const agentsWaiting = ({ running, retrying, total }: { running: readonly string[]; retrying: readonly string[]; total: number }) => `${withParticle((retrying.length ? retrying : running).join(', '), '이/가')} ${retrying.length ? RESENDING : '먼저 읽고 있어요'}${total > 1 ? ` · ${total - running.length}/${total} 끝남` : '.'}`;
-export const polishingNow = ({ name, at, total, retrying }: { name: string; at: number; total: number; retrying?: true }) => `${withParticle(name, '이/가')} ${retrying ? RESENDING : '답을 다듬고 있어요'}${total > 1 ? ` · ${at}/${total}` : '.'}`;
+export const polishingNow = ({ name, at, total, retrying }: { name: string; at: number; total: number; retrying?: true }) => `${withParticle(name, '이/가')} ${retrying ? RESENDING : '응답을 다듬고 있어요'}${total > 1 ? ` · ${at}/${total}` : '.'}`;
 export const toolWaiting = (name: string) => `${withParticle(name, '이/가')} 보낼 내용을 준비하는 중`;
 export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS };
 
@@ -205,7 +205,7 @@ export const IMPORT_CHATS = '채팅 가져오기';
 export const ARCA_LOG = '아카라이브용 HTML';
 // Risu chat files import only through the selected character's chat list, never its card importer.
 export const RISU_CHAT_FILE = 'Risu 채팅 파일';
-export const RISU_LOSES = 'Risu에서 캐릭터를 고른 뒤 채팅 목록의 가져오기로 열 수 있어요. 다른 버전, 수정한 첫 메시지, 번역, 이미지·삽화, 장기 기억, 등장인물, 채팅별 프롬프트·페르소나·모델 설정은 빠져요.';
+export const RISU_LOSES = 'Risu에서 캐릭터를 선택한 뒤 채팅 목록의 가져오기로 열 수 있어요. 다른 버전, 수정한 첫 메시지, 번역, 이미지·삽화, 장기 기억, 등장인물, 채팅별 프롬프트·페르소나·모델 설정은 제외돼요.';
 export const risuLeftOut = ({ greetings, lore, unread }: LeftOut) =>
   [
     greetings ? `수정한 첫 메시지 ${greetings}개는 빠지고 캐릭터 카드의 원래 첫 메시지로 보여요.` : '',
@@ -221,7 +221,7 @@ export const UNSET = `모델 ${ORIGINAL}`;
 // A 설정 묶음's discount lane (design §6.7), a reply waiting on its batch, and one whose batch 멈추기 canceled, which
 // shows an answer made before the cancel landed.
 export const DISCOUNT = '할인 받기';
-export const DISCOUNT_WAITING = '할인 받는 중이에요. 답이 다 만들어지면 한 번에 보여요.';
+export const DISCOUNT_WAITING = '할인 요청으로 생성 중이에요. 응답이 완성되면 한 번에 표시돼요.';
 export const DISCOUNT_STOPPING = '멈추는 중이에요. 그사이에 응답이 다 만들어지면 완성된 응답을 보여 줘요.';
 export const PDF_SEND = 'PDF로 보내기';
 
@@ -234,7 +234,7 @@ export const LORE_SCAN_WORDS = {
   tokenBudget: { label: LORE_BUDGET_LABEL, help: '켜 둔 로어북 항목을 요청마다 이만큼까지 넣어요.', unit: '토큰', amount: (count: string) => `${count} 토큰`, is: '이에요' },
   scanDepth: { label: '검색 깊이', help: '최근 메시지 몇 개에서 키워드를 찾을지 정해요.', unit: '개', amount: (count: string) => `${count}개`, is: '예요' },
   recursive: { label: '재귀 검색', help: '들어간 항목의 내용에 다른 항목의 키워드가 있으면 그 항목도 이어서 넣어요.' },
-  fullWordMatching: { label: '단어 단위 검색', help: "키워드가 다른 단어의 일부일 때는 찾지 않아요. 조사가 붙은 말도 다른 단어로 봐서, '달'은 '달빛'에서도 '달이'에서도 찾지 않아요." },
+  fullWordMatching: { label: '단어 단위 검색', help: "키워드가 다른 단어의 일부일 때는 매칭하지 않아요. 한국어는 조사가 붙어도 다른 단어로 판단하므로, '달'을 키워드로 넣으면 '달빛'이나 '달이'에서는 활성화되지 않아요." },
 } as const;
 export const ANSWER = '응답 받기';
 export const ANSWER_INSTRUCTION_LABEL = `${ANSWER} 지시`;
@@ -269,9 +269,9 @@ export const SHARE = {
   removed: '운영자가 내림',
   cover: '미리보기 글',
   coverHelp: '링크를 붙여 넣은 곳에 이름과 제작자, 소개 첫 줄이 보여요.',
-  heldNote: '신고가 들어와 운영자가 확인하는 동안 멈춘 링크예요.',
+  heldNote: '신고가 접수되어 운영자가 확인하는 동안 일시 보류된 링크예요.',
   removedNote: '운영자가 내린 링크예요.',
-  goneNote: '끊겼거나 운영자가 내린 링크예요.',
+  goneNote: '공유가 중단됐거나 운영자가 내린 링크예요.',
   download: '파일로 받기',
   bring: '헤이젤로 가져오기',
   report: '신고',

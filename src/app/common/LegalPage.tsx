@@ -12,7 +12,7 @@ export function legalPage(path: string) {
 function LegalPage({ text }: { text: LegalText }) {
   return (
     <Screen top={<Brand />}>
-      <Intro title={text.title}>{text === OUTBOUND ? '이 헤이젤에서 밖으로 나가는 것을 모두 적었어요.' : `시행일: ${EFFECTIVE}`}</Intro>
+      <Intro title={text.title}>{text === OUTBOUND ? '이 헤이젤에서 외부로 전송되는 데이터를 모두 정리했어요.' : `시행일: ${EFFECTIVE}`}</Intro>
       {text.sections.map((section) => (
         <Section key={section.title} title={section.title}>
           <Stack gap="related">

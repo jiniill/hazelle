@@ -85,7 +85,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
                 {!isDefault && (
                   <MenuItem
                     label={SET_DEFAULT}
-                    sub={`${MODEL_SETTINGS}을 따로 선택하지 않은 모델은 이걸 써요`}
+                    sub={`${MODEL_SETTINGS}을 따로 지정하지 않은 모델에 이 설정이 적용돼요`}
                     onClick={() => void setDefaultProfile(store, id).then((done) => done.ok || toast.failed(done, '기본으로 지정하지 못했어요.'))}
                   />
                 )}

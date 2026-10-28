@@ -34,7 +34,7 @@ type Count = 'input' | 'output' | 'cacheRead' | 'cacheWrite';
 const BLANK: Record<Count, string> = { input: '', output: '', cacheRead: '', cacheWrite: '' };
 const LABELS: Record<Count, string> = { input: '입력', output: '출력', cacheRead: '캐시 읽기', cacheWrite: '캐시 쓰기' };
 const HELPS: Record<Count, string> = {
-  input: '캐시에서 읽거나 캐시에 쓴 토큰까지 모두 더한 입력이에요.',
+  input: '캐시 읽기와 캐시 쓰기 토큰을 모두 포함한 전체 입력 토큰 수예요.',
   output: '추론 토큰도 출력으로 계산해요.',
   cacheRead: '입력 중 캐시에서 읽은 토큰이에요.',
   cacheWrite: '입력 중 캐시에 쓴 토큰이에요.',

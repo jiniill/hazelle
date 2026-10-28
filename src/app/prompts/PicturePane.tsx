@@ -91,7 +91,7 @@ export function PicturePane({ tags, picture = {}, onTags, onPicture }: Props) {
         <SettingGroup label="생성">
           <SettingRow
             label="크기"
-            help="크게는 NovelAI 무료 범위를 넘어서, 만들 때마다 Anlas가 차감돼요."
+            help="'크게'는 NovelAI 무료 생성 범위를 초과하므로 생성할 때마다 Anlas가 차감돼요."
             sub={picture.size === 'large' ? '생성할 때마다 Anlas가 차감돼요.' : undefined}
             changed={picture.size !== undefined}
             control={

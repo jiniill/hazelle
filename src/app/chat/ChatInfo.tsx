@@ -98,7 +98,7 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
   else if (!receipt) {
     body = (
       <>
-        <Empty>{version.reasoning ? '밖에서 가져온 응답이라 토큰과 비용 정보가 없어요.' : '모델이 직접 생성한 응답이 아니라서 토큰과 비용 정보가 없어요.'}</Empty>
+        <Empty>{version.reasoning ? '외부에서 가져온 응답이라 토큰과 비용 정보가 없어요.' : '모델이 직접 생성한 응답이 아니라서 토큰과 비용 정보가 없어요.'}</Empty>
         {translated && <TranslationCall receipt={translated} />}
         {thought}
       </>
@@ -166,7 +166,7 @@ function PrereadCall({ preread: { material, brief, receipt, reused, saved } }: {
   const net = saved && { label: '절약한 비용', value: `약 ${money(saved.unit, Math.abs(saved.amount))} ${saved.amount < 0 ? '추가 발생' : '절약'}` };
   return (
     <Section level={3} title={PRE_READ} note={`원문 약 ${tokens(material)} → 줄인 뒤 ${tokens(brief)}`}>
-      <Text variant="note">{reused ? '앞 응답에서 줄인 내용을 다시 썼어요. 이번에는 비용이 들지 않았어요.' : `${receipt.modelName} · ${receipt.source}`}</Text>
+      <Text variant="note">{reused ? '이전 응답에서 요약한 내용을 재사용해서 이번에는 비용이 들지 않았어요.' : `${receipt.modelName} · ${receipt.source}`}</Text>
       <Facts variant="tiles" items={[net || { label: '절약한 비용', value: UNKNOWN, tone: 'muted' as const }, ...(reused ? [] : callFacts(receipt))]} />
     </Section>
   );
@@ -184,7 +184,7 @@ function AgentCall({ chat, version, run: { agent, name, stage, receipt, note, me
   const save = () => void setAgentMemory(store, chat, version.id, agent, draft!).then((saved) => (saved.ok ? setDraft(null) : toast.failed(saved, '저장하지 못했어요.')));
   return (
     <Section level={3} title={name} note={STAGE_NAMES[stage]}>
-      <Text variant="note">{reused ? '앞 응답에서 쓴 노트를 다시 썼어요.' : `${receipt.modelName} · ${receipt.source}`}</Text>
+      <Text variant="note">{reused ? '이전 응답에서 작성한 노트를 재사용했어요.' : `${receipt.modelName} · ${receipt.source}`}</Text>
       {!reused && <Facts variant="tiles" items={callFacts(receipt)} />}
       {note !== undefined && (
         <Disclosure label="노트">
@@ -283,7 +283,7 @@ function Fitting({ receipt, title = '토큰 보정' }: { receipt: Receipt; title
   if (fit.unavailable === 'historical') return null;
   const learned = fit.source === 'model' || fit.source === 'chat' || fit.source === 'drift-reset';
   return (
-    <Section level={3} title={title} help="제공자가 알려 준 입력 토큰과 앱이 센 토큰을 비교해 프롬프트를 모델 한도에 맞춰요.">
+    <Section level={3} title={title} help="제공자가 계산한 입력 토큰과 앱이 추정한 토큰을 비교해 프롬프트 분량을 모델 한도에 맞춰요.">
       <Facts
         variant="tiles"
         items={[

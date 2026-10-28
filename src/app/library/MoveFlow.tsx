@@ -91,7 +91,7 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
       if (!live) return;
       if (!(error instanceof ImportReadError)) throw error;
       source.close();
-      setPhase({ kind: 'failed', message: error instanceof ImportStuck ? '백업 파일을 읽다가 멈춰서 그만뒀어요. 파일이 깨졌을 수 있어요.' : '백업 파일을 읽지 못했어요. 다시 가져와 주세요.', again: null });
+      setPhase({ kind: 'failed', message: error instanceof ImportStuck ? '백업 파일을 읽는 중 응답이 없어 중단했어요. 파일이 손상됐을 수 있어요.' : '백업 파일을 읽지 못했어요. 다시 가져와 주세요.', again: null });
     });
     return () => {
       live = false;
@@ -142,7 +142,7 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
       if (reader.current !== source) return;
       if (!(error instanceof ImportReadError)) throw error;
       source.close();
-      setPhase({ kind: 'failed', message: `${error instanceof ImportStuck ? '백업 파일을 읽다가 멈춰서 그만뒀어요.' : '백업 파일을 읽지 못했어요.'} 멈추기 전까지 가져온 내용은 저장됐어요.`, again: null });
+      setPhase({ kind: 'failed', message: `${error instanceof ImportStuck ? '백업 파일을 읽는 중 응답이 없어 중단했어요.' : '백업 파일을 읽지 못했어요.'} 멈추기 전까지 가져온 내용은 저장됐어요.`, again: null });
     }
   }
 

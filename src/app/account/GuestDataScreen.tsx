@@ -30,7 +30,7 @@ export function GuestDataScreen({ username, failure, onUpload, onDiscard }: Prop
       }
     >
       <Intro title="계정에 올릴까요?">
-        손님으로 만든 내용을 {username} 계정에 더해요. 설정은 계정 것을 그대로 써요.
+        손님으로 만든 내용을 {username} 계정에 추가해요. 설정은 기존 계정 설정을 유지해요.
       </Intro>
       {shown && (
         <Callout tone="warn" alert>
@@ -46,7 +46,7 @@ export function GuestDataScreen({ username, failure, onUpload, onDiscard }: Prop
           onConfirm={() => void discard.run(onDiscard)}
           onClose={() => setDiscarding(false)}
         >
-          버리면 되돌릴 수 없어요. 게시판에 쓴 글은 남고, 더는 고칠 수 없어요.
+          버리면 되돌릴 수 없어요. 게시판에 쓴 글은 남지만 더 이상 수정할 수 없어요.
         </ConfirmDialog>
       )}
     </Screen>

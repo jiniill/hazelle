@@ -24,10 +24,10 @@ import { useFolderActions } from '../common/folders/useFolderActions';
 const NEW_NAME = { conversation: '새 프롬프트', translate: '새 번역 프롬프트', memory: '새 기억 프롬프트', illustrate: '새 삽화 프롬프트', mascot: '새 마스코트 프롬프트', preread: `새 ${PRE_READ} 프롬프트`, agent: `새 ${AGENTS}` } satisfies Record<PromptSort, string>;
 // What a new agent starts from (user ruling, 2026-10-21): the two built-ins, or one empty of either stage.
 const AGENT_STARTS: { start: AgentStart; name: string; sub: string }[] = [
-  { start: 'scene', name: '기본 장면 메모', sub: `${STAGE_NAMES.pre} · 답을 쓰기 전에 필요한 설정과 흐름을 짚어요.` },
-  { start: 'polish', name: '기본 문장 다듬기', sub: `${STAGE_NAMES.post} · 받은 답의 군더더기를 덜어내요.` },
-  { start: 'pre', name: `새 ${STAGE_NAMES.pre} ${AGENTS}`, sub: '빈 지시로 시작해요.' },
-  { start: 'post', name: `새 ${STAGE_NAMES.post} ${AGENTS}`, sub: '빈 지시로 시작해요.' },
+  { start: 'scene', name: '기본 장면 메모', sub: `${STAGE_NAMES.pre} · 응답을 생성하기 전에 필요한 설정과 대화 흐름을 정리해요.` },
+  { start: 'polish', name: '기본 문장 다듬기', sub: `${STAGE_NAMES.post} · 생성된 응답에서 불필요한 표현을 다듬어요.` },
+  { start: 'pre', name: `새 ${STAGE_NAMES.pre} ${AGENTS}`, sub: '내용이 비어 있는 새 에이전트를 만들어요.' },
+  { start: 'post', name: `새 ${STAGE_NAMES.post} ${AGENTS}`, sub: '내용이 비어 있는 새 에이전트를 만들어요.' },
 ];
 const SORTS: { sort: PromptSort; label: string; hint?: string; none: string }[] = [
   { sort: 'conversation', label: '대화', none: '대화 프롬프트가 없어요.' },
@@ -35,8 +35,8 @@ const SORTS: { sort: PromptSort; label: string; hint?: string; none: string }[] 
   { sort: 'memory', label: '기억', hint: '지난 대화를 장기 기억으로 정리할 때 쓰는 프롬프트예요.', none: '기억 프롬프트가 없어요.' },
   { sort: 'illustrate', label: '삽화', hint: '메시지에 넣을 삽화의 장면을 정할 때 쓰는 프롬프트예요.', none: '삽화 프롬프트가 없어요.' },
   { sort: 'mascot', label: '마스코트', hint: '응답마다 마스코트가 한마디 할 때 쓰는 프롬프트예요.', none: '마스코트 프롬프트가 없어요.' },
-  { sort: 'preread', label: PRE_READ, hint: `응답마다 ${MODEL_ROLES.aux}이 긴 내용을 먼저 줄일 때 쓰는 프롬프트예요.`, none: `${PRE_READ} 프롬프트가 없어요.` },
-  { sort: 'agent', label: AGENTS, hint: '응답을 작성하기 전에 읽거나 받은 응답을 다듬는 에이전트예요.', none: `${AGENTS}가 없어요.` },
+  { sort: 'preread', label: PRE_READ, hint: `응답을 생성하기 전에 ${MODEL_ROLES.aux}이 긴 내용을 요약할 때 쓰는 프롬프트예요.`, none: `${PRE_READ} 프롬프트가 없어요.` },
+  { sort: 'agent', label: AGENTS, hint: '응답 생성 전에 맥락을 정리하거나 생성된 응답을 다듬는 에이전트예요.', none: `${AGENTS}가 없어요.` },
 ];
 type Order = 'name' | 'recent';
 

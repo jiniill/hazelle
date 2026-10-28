@@ -52,7 +52,7 @@ export function RecoveryKeyScreen({ username, recoveryKey, saved: savedBefore, f
           {!selfHost() && (
             <>
               <Text variant="note" align="center">
-                시작하기를 누르면 아래 두 문서에 동의하는 것으로 봐요.
+                시작하기를 누르면 아래 두 문서에 동의하게 돼요.
               </Text>
               <Text variant="note" align="center">
                 <Link href={TERMS.path}>{TERMS.title}</Link> · <Link href={PRIVACY.path}>{PRIVACY.title}</Link>

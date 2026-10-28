@@ -39,7 +39,7 @@ export function ControlsScreen({ back }: { back: Back | null }) {
             <SettingGroup label="세부 설정">
               <SettingRow
                 label="내 메시지에서도 멈추기"
-                help="끄면 캐릭터 메시지에서만 멈춰요. 읽던 메시지의 처음과 끝에는 늘 멈춰요."
+                help="끄면 캐릭터 메시지에서만 멈추고 내 메시지는 건너뛰어요. 현재 읽고 있는 메시지의 처음과 끝에서는 항상 멈춰요."
                 control={<Switch label="내 메시지에서도 멈추기" checked={display.userStops} onChange={(userStops) => changeDisplay({ userStops })} />}
               />
             </SettingGroup>
