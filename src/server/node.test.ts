@@ -89,11 +89,12 @@ describe('the server process', () => {
     const server = start(join(dir, 'data-stalled-drain'), 8080, { HAZELLE_DRAIN_SECONDS: '1' }, join(stalled, 'node.js'));
     await expect.poll(server.log, { timeout: 15000 }).toContain('"event":"listening"');
     server.child.kill('SIGTERM');
-    await expect.poll(() => server.child.exitCode, { timeout: 4000 }).toBe(0);
+    // Without the deadline the process never exits; the margin past drainMs is for slow CI runners, not the deadline.
+    await expect.poll(() => server.child.exitCode, { timeout: 10000 }).toBe(0);
     expect(server.log()).toContain('"event":"draining"');
     expect(server.log()).toContain('"drainMs":1000');
     expect(server.log()).toContain('"outcome":"timeout"');
-  }, 20000);
+  }, 30000);
 
   it('logs a proxy transport failure and its timing without credentials or request content', async () => {
     let received = 0;

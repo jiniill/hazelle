@@ -4,7 +4,7 @@ import type { DatabaseSync } from 'node:sqlite';
 // for silent releases; after publication the board post is the editable record (design §6.15).
 export type ReleaseNews = { version: string; title: string; text: string };
 export const RELEASE_NEWS: ReleaseNews | null = {
-  version: 'v0.5.9',
+  version: 'v0.5.10',
   title: '점검에 캐시 탭이 생기고, 대화 뒤 시스템 메시지가 제자리에 들어가요',
   text: [
     "- Gemini와 Claude 연결에서 대화가 시작된 뒤에 오는 시스템 메시지를 요청 맨 앞으로 끌어올리지 않고, RisuAI처럼 제자리에 사용자 메시지로 보내요(Gemini는 'system:', Claude는 'System: '을 앞에 붙여요). 채팅 블록 뒤에 장기 기억이나 로어북을 두는 프롬프트에서도 차례가 넘어갈 때 앞부분 캐시가 유지되고, 모델이 그 블록을 따르는 느낌이 조금 달라질 수 있어요.",
