@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { setChatOwn, startChat } from './chat-log';
-import { addFirstPersona, addPersona, chatPersona, chatsHolding, pinPersona, rebindChats, recordChatPersonas, removePersona, restorePersona, setCurrentPersona } from './personas';
+import { addFirstPersona, addPersona, chatPersona, chatsHolding, copyPersona, pinPersona, rebindChats, recordChatPersonas, removePersona, restorePersona, setCurrentPersona } from './personas';
 import { testServer } from './testing';
 import { blankCard } from '../engine/import/card';
+import { likenessId } from '../model/likeness';
 
 const server = testServer();
 
@@ -108,5 +109,20 @@ describe('personas', () => {
     expect(chats.map((id) => store.get('chat', id)!.value.persona)).toEqual([rin, rin, jin, rin]);
     await rebindChats(store, moved, jin);
     expect(chats.map((id) => store.get('chat', id)!.value.persona)).toEqual([jin, jin, jin, rin]);
+  });
+
+  it('copies a persona under its new name with its 삽화 profiles, leaving the alias and the chats with the original', async () => {
+    const { store } = await server.account();
+    const added = await addPersona(store, { name: '진', description: '여행자', picture: 'thumb', alias: '첫째', modules: ['m'], folder: 'f' });
+    const jin = added.ok ? added.data.id : '';
+    const likeness = { portraits: [{ name: '진', aliases: [], look: 'boy', outfits: [], artist: '', source: 'user' as const }], at: 1, receipt: null };
+    await store.create('likeness', likeness, { id: likenessId(jin), parent: jin });
+    await store.create('chat', { title: null, character: null, models: {}, persona: jin });
+
+    const copy = crypto.randomUUID();
+    expect((await copyPersona(store, jin, '진 (사본)', copy)).ok).toBe(true);
+    expect(store.get('persona', copy)?.value).toEqual({ name: '진 (사본)', description: '여행자', picture: 'thumb', modules: ['m'], folder: 'f' });
+    expect(store.get('likeness', likenessId(copy))).toMatchObject({ parent: copy, value: likeness });
+    expect(chatsHolding(store, copy)).toEqual([]);
   });
 });

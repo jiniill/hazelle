@@ -3,6 +3,7 @@ import type { Picture, RisuPersona } from '../engine/import/types';
 import type { Chat } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import { live } from '../model/library';
+import { likenessId } from '../model/likeness';
 import type { Persona } from '../model/persona';
 import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
 import type { ApiResult } from './api';
@@ -84,6 +85,17 @@ export const addPersona = (store: ObjectStore, persona: Persona, id?: string) =>
 export async function addRisuPersona(store: ObjectStore, { name, alias, description }: Pick<RisuPersona, 'name' | 'alias' | 'description'>, picture: Picture | null, modules: string[] = []) {
   const thumb = picture && (await thumbnail(picture).catch(() => null));
   return addPersona(store, { name, description, picture: thumb, ...(alias && { alias }), ...(modules.length > 0 && { modules }) });
+}
+
+// Chats and alias stay with the original, as a character's copy leaves them (copyCharacter); 삽화 profiles go along.
+export function copyPersona(store: ObjectStore, id: string, name: string, copy: string): Promise<ApiResult<null>> {
+  const original = store.get('persona', id)?.value;
+  if (!original) return Promise.resolve({ ok: false, error: 'gone' });
+  const likeness = store.get('likeness', likenessId(id))?.value;
+  return store.batch([
+    { type: 'create', kind: 'persona', id: copy, parent: null, value: { ...without(original, 'alias'), name } },
+    ...(likeness ? [{ type: 'create' as const, kind: 'likeness' as const, id: likenessId(copy), parent: copy, value: likeness }] : []),
+  ]);
 }
 
 export const editPersona = (store: ObjectStore, id: string, patch: Partial<Persona>) => store.update('persona', id, (current) => ({ ...current, ...patch }));

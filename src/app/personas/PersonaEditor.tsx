@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ApiFailure } from '../../runtime/api';
 import type { Stored } from '../../model/kinds';
 import type { Persona } from '../../model/persona';
-import { chatsHolding, editPersona, rebindChats, removePersona, restorePersona, setCurrentPersona } from '../../runtime/personas';
+import { chatsHolding, copyPersona, editPersona, rebindChats, removePersona, restorePersona, setCurrentPersona } from '../../runtime/personas';
 import { thumbnail } from '../../runtime/picture';
 import { useChats, useLibrary, useSettings, useStore } from '../session';
 import { ACTS } from '../common/acts';
@@ -14,7 +14,7 @@ import { PersonaPickDialog } from '../common/PersonaPickDialog';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { BIN_KEEPS, cannotRemove } from '../common/words';
+import { BIN_KEEPS, cannotRemove, copyName } from '../common/words';
 import { navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
@@ -53,6 +53,16 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
     toast.undoable(`'${removed.data.value.name}' 페르소나를 삭제했어요.`, () => restorePersona(store, id), BIN_KEEPS);
   }
 
+  async function copy() {
+    if (!(await autosave.flush())) return;
+    const made = crypto.randomUUID();
+    const copying = copyPersona(store, id, copyName(held.name), made);
+    navigate({ kind: 'persona', id: made });
+    const copied = await copying;
+    if (!copied.ok) return toast.failed(copied, '사본을 만들지 못했어요.');
+    toast.show('사본을 만들었어요.');
+  }
+
   const makeCurrent = () => void setCurrentPersona(store, id).then((saved) => saved.ok || toast.failed(saved, '현재 페르소나로 지정하지 못했어요.'));
 
   function moveChats(to: string) {
@@ -86,6 +96,7 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
     of: '페르소나',
     items: (
       <>
+        <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void copy()} />
         <MenuItem icon={ACTS.export.icon} label={ACTS.export.label} onClick={() => setExporting(true)} />
         {!current && <MenuItem label="현재 페르소나로 지정" sub="새 채팅을 시작할 때 이 페르소나를 써요" onClick={makeCurrent} />}
         {holding > 0 && <MenuItem label="채팅 옮기기" sub={`이 페르소나를 쓰는 채팅 ${holding}개를 다른 페르소나로 옮겨요`} onClick={() => setMoving(true)} />}
