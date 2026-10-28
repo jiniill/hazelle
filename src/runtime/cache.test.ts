@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { CacheFacts } from '../connectors/registry';
 import type { Message, Receipt } from '../model/chat';
 import type { Role } from '../model/prompt';
-import { cacheRecurrence, cacheShortfall, shortfallPlace } from './cache-diagnosis';
+import { cacheRecurrence, cacheShortfall, replyCalls, shortfallPlace } from './cache-diagnosis';
 import type { LogEntry } from './request-log';
 import type { Connection, Model } from '../connectors/types';
 import { cachePrintId, type WireMessage } from '../model/cache';
@@ -198,7 +198,7 @@ describe('lastCache', () => {
   it('counts the latest ten distinct reply calls from receipts, including unknown forecasts', () => {
     const messages = Array.from({ length: 12 }, (_, at) => reply(at, receipt({ id: `call-${at}`, forecast: at === 11 ? undefined : { read: 0, of: 100, broken: at === 10 ? null : at === 8 ? { kind: 'moved', from: { kind: 'depth', id: 'lore', name: 'Entry', depth: 1 }, role: 'system' } : { kind: 'changed', from: { kind: 'block', name: 'sys', slot: null }, role: 'system' } } })));
     messages[9]!.versions.push({ ...messages[9]!.versions[0]!, id: 'edited-copy', at: 20 });
-    const result = cacheRecurrence(messages);
+    const result = cacheRecurrence(replyCalls(messages));
     expect(result).toMatchObject({ considered: 9, missing: 1, broken: 8 });
     expect(result.causes.map(({ cause, count }) => [cause.kind, count])).toEqual([['changed', 7], ['moved', 1]]);
   });
@@ -207,8 +207,8 @@ describe('lastCache', () => {
     const read = (at: number, connection: string, cached: number | null, broken: Receipt['forecast'] = { read: 1000, of: 1000, broken: null }) =>
       reply(at, receipt({ id: `call-${at}`, connection, forecast: broken, usage: { inputTokens: 1000, outputTokens: 10, reasoningTokens: null, cachedInputTokens: cached, cacheWriteInputTokens: null } }));
     const messages = [read(1, 'c1', 0), read(2, 'c1', 1000), read(3, 'c1', 0), read(4, 'c1', null), read(5, 'c1', 0, { read: 0, of: 1000, broken: { kind: 'expired' } }), read(6, 'c1', 100)];
-    expect(cacheRecurrence(messages)).toMatchObject({ considered: 6, broken: 4, short: 3, streak: { connection: 'c1', count: 2 } });
-    expect(cacheRecurrence([...messages, read(7, 'c2', 0)]).streak).toEqual({ connection: 'c2', count: 1 });
+    expect(cacheRecurrence(replyCalls(messages))).toMatchObject({ considered: 6, broken: 4, short: 3, streak: { connection: 'c1', count: 2 } });
+    expect(cacheRecurrence(replyCalls([...messages, read(7, 'c2', 0)])).streak).toEqual({ connection: 'c2', count: 1 });
   });
 
   it('names the first part a shortfall left out, at the part boundary nearest the calibrated read', () => {

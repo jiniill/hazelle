@@ -14,7 +14,8 @@ export function diagnoseCache(evaluation: Evaluation, chat: string, scope: ChatS
   return evaluation.cacheDiagnosis(chat, scope, { forecast, before: before && { prompt: before.prompt, wire: before.wire }, after: { prompt, wire } }, signal).catch(() => null);
 }
 
-export function cacheRecurrence(messages: Message[]) {
+// The chat's reply calls, newest first, each once, at the earliest version that holds it.
+export function replyCalls(messages: Message[]): { at: number; receipt: Receipt }[] {
   const receipts = new Map<string, { at: number; order: number; receipt: Receipt }>();
   for (const message of messages) {
     if (message.role !== 'assistant') continue;
@@ -25,8 +26,10 @@ export function cacheRecurrence(messages: Message[]) {
       }
     }
   }
-  return recurrence([...receipts.values()].sort((a, b) => b.at - a.at || b.order - a.order).map(({ receipt }) => receipt), (receipt) => cacheShortfall(receipt)?.short ?? null);
+  return [...receipts.values()].sort((a, b) => b.at - a.at || b.order - a.order).map(({ at, receipt }) => ({ at, receipt }));
 }
+
+export const cacheRecurrence = (replies: ReturnType<typeof replyCalls>) => recurrence(replies.map(({ receipt }) => receipt), (receipt) => cacheShortfall(receipt)?.short ?? null);
 
 export const cacheShortfall = (receipt: Receipt) => shortfall(receipt.forecast, receipt.usage?.cachedInputTokens ?? null, receipt.calibration ? tokenProjection(receipt.calibration, receipt.usage).ratio : null);
 

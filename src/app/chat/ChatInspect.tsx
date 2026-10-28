@@ -4,6 +4,7 @@ import type { Sending } from '../../runtime/turn-context';
 import { describeTurnFailure } from '../common/failure';
 import { useSession } from '../session';
 import { Empty, SidePanel, Tabs, Text } from '../ui';
+import { Cache, NextCacheView } from './InspectCache';
 import { Log } from './InspectLog';
 import { Modules } from './InspectModules';
 import { NextRequest } from './InspectRequest';
@@ -15,6 +16,7 @@ import type { SendNotes } from './useSendNotes';
 
 const TABS: { value: InspectTab; label: string }[] = [
   { value: 'request', label: '요청' },
+  { value: 'cache', label: '캐시' },
   { value: 'variables', label: '변수' },
   { value: 'modules', label: '모듈' },
   { value: 'scripts', label: '스크립트' },
@@ -38,7 +40,8 @@ export function ChatInspect({ chat, character, tab, notes, busy, prompt, onTab, 
   return (
     <SidePanel title="점검" onClose={onClose}>
       {tabs}
-      {tab === 'request' && ready((sending) => <NextRequest chat={chat} sending={sending} request={notes.request} cache={notes.cache} editor={editor} onEdit={onEdit} />)}
+      {tab === 'request' && ready((sending) => <NextRequest chat={chat} sending={sending} request={notes.request} editor={editor} onEdit={onEdit} />)}
+      {tab === 'cache' && <Cache chat={chat} cache={notes.cache} next={ready((sending) => <NextCacheView chat={chat} sending={sending} cache={notes.cache} editor={editor} onEdit={onEdit} />)} />}
       {tab === 'variables' && <Variables chat={chat} sending={notes.sending && 'turn' in notes.sending ? notes.sending : null} busy={busy} />}
       {tab === 'modules' && ready((sending) => <Modules sending={sending} />)}
       {tab === 'scripts' && <Scripts chat={chat} />}

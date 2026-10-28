@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CacheDiagnosis, CachePrescription, CacheRecurrence, Forecast } from '../../model/cache';
-import { cacheRecurrence, diagnoseCache, needsDiagnosis } from '../../runtime/cache-diagnosis';
+import { cacheRecurrence, diagnoseCache, needsDiagnosis, replyCalls } from '../../runtime/cache-diagnosis';
 import { priceCachePrescriptions } from '../../runtime/cache-prescriptions';
 import type { Chat } from '../../model/chat';
 import type { Memory } from '../../model/memory';
@@ -19,8 +19,9 @@ const SETTLE_MS = 400;
 export type SendNotes = { cache: CacheNotes; leaving: number | null; unseen: number; sending: Sending | Unsendable | null | undefined; request: () => SentRequest | null };
 
 // next undefined means pending; prescription null means evaluation failed, [] means no qualifying fix.
-// until is null without a cache's known end. Keep draft forecast/model/pricing paired; recurrence uses stored prior receipts.
-export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; next: { forecast: Forecast; diagnosis: CacheDiagnosis | null | undefined; prescriptions: CachePrescription[] | null | undefined; cost: ReturnType<typeof breakCost>; route: Route } | null | undefined };
+// until is null without a cache's known end. Keep draft forecast/model/pricing paired; recurrence and replies use stored
+// prior receipts.
+export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; replies: ReturnType<typeof replyCalls>; next: { forecast: Forecast; diagnosis: CacheDiagnosis | null | undefined; prescriptions: CachePrescription[] | null | undefined; cost: ReturnType<typeof breakCost>; route: Route } | null | undefined };
 
 // The draft is read again after any store change settles, so an edit to the prompt, a lorebook or the model shows in
 // the forecast while it is open. unsaved: a new chat not saved yet, forecast as its first save will write it.
@@ -81,8 +82,9 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
     };
   }, [id, unsaved, chat, messages, memory, text, busy, changes, guard]);
 
-  const recurrence = useMemo(() => cacheRecurrence(messages), [messages]);
-  const cache = useMemo((): CacheNotes => ({ until: last?.until ?? null, recurrence, next }), [last, recurrence, next]);
+  const replies = useMemo(() => replyCalls(messages), [messages]);
+  const recurrence = useMemo(() => cacheRecurrence(replies), [replies]);
+  const cache = useMemo((): CacheNotes => ({ until: last?.until ?? null, recurrence, replies, next }), [last, recurrence, replies, next]);
   const request = useMemo(() => {
     let wire: SentRequest | null | undefined;
     return () => {

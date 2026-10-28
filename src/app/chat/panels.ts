@@ -9,7 +9,7 @@ import type { ToggleSection } from './toggles';
 // fromToggles routes editor back to chat toggles; modules open beside chat only through that route.
 // block selects a prompt block, absent for its list.
 export type Side = { kind: 'prompts'; id: string | null; pane: PromptPane | null; block?: string; fromToggles?: true } | { kind: 'character'; id: string; part: CharacterPart | null; fromToggles?: true } | { kind: 'module'; id: string };
-export type InspectTab = 'request' | 'variables' | 'modules' | 'scripts' | 'log';
+export type InspectTab = 'request' | 'cache' | 'variables' | 'modules' | 'scripts' | 'log';
 type InspectPanel = { kind: 'inspect'; tab: InspectTab };
 export type InfoTab = 'reply' | 'lore' | 'memory' | 'request' | 'response';
 export type Panel = InspectPanel | { kind: 'toggles' } | { kind: 'memory'; record: string | null } | { kind: 'info'; tab: InfoTab } | { kind: 'tool'; module: string } | { kind: 'bookmarks' } | { kind: 'lore' } | { kind: 'autopilot' } | Side;

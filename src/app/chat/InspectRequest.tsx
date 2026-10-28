@@ -1,22 +1,17 @@
 import { useEffect, useState } from 'react';
-import { refOf } from '../../connectors/assignment';
 import { tokenGroups, type From, type TokenSource } from '../../engine/pipeline';
-import type { ForecastPart } from '../../model/cache';
 import type { Rehearsal } from '../../runtime/script-preview';
 import { afterEnter, previewRequest, type AfterEnter, type Sending } from '../../runtime/turn-context';
 import { describeTurnFailure, runaway } from '../common/failure';
 import { MESSAGE_ROLES, SLOT } from '../common/prompt-words';
-import { cost, tokens } from '../common/receipt';
-import { MODEL_SETTINGS, opens, PRE_READ, UNKNOWN } from '../common/words';
-import { useSession, useStore } from '../session';
-import { navigate } from '../shell/router';
-import { Button, Callout, CodeBlock, Disclosure, Empty, Facts, Gauge, List, ListItem, Row, Section, Stack, Text } from '../ui';
-import { BrokenPartView, breakKind, diagnosed, Prescriptions, RecurrenceNote } from './CacheDiagnosis';
-import { nextWarning, profileName } from './ChatCache';
+import { tokens } from '../common/receipt';
+import { PRE_READ } from '../common/words';
+import { useSession } from '../session';
+import { Callout, CodeBlock, Disclosure, Empty, Facts, Gauge, List, ListItem, Section, Stack, Text } from '../ui';
 import { partName, RequestView } from './ChatSent';
 import { HookList, STAGES } from './InspectScripts';
 import type { Side } from './panels';
-import type { CacheNotes, SendNotes } from './useSendNotes';
+import type { SendNotes } from './useSendNotes';
 
 function later(steps: AfterEnter[]): string[] {
   return steps.map((step) => {
@@ -33,22 +28,24 @@ function later(steps: AfterEnter[]): string[] {
   });
 }
 
-export function NextRequest({ chat, sending, request, cache, editor, onEdit }: { chat: string; sending: Sending; request: SendNotes['request']; cache: CacheNotes; editor: (from: From) => Side | null; onEdit: (side: Side) => void }) {
-  const session = useSession();
-  const missing = later(afterEnter(session, chat, sending.turn));
+// The steps a send runs that a forecast leaves out, as one note; null without any.
+export function useSendTimeNote(chat: string, sending: Sending) {
+  const missing = later(afterEnter(useSession(), chat, sending.turn));
+  return missing.length > 0 ? <Text variant="note">{`보낼 때 실행돼서 여기에는 없어요: ${missing.join(', ')}`}</Text> : null;
+}
+
+export function NextRequest({ chat, sending, request, editor, onEdit }: { chat: string; sending: Sending; request: SendNotes['request']; editor: (from: From) => Side | null; onEdit: (side: Side) => void }) {
+  const lead = useSendTimeNote(chat, sending);
   return (
     <Stack gap="section">
       <Section title="보낼 입력">
         <NextTokens sending={sending} />
       </Section>
-      <Section title="캐시" help="토큰 수는 추정치예요.">
-        {cache.next ? <NextCache next={cache.next} recurrence={cache.recurrence} editor={editor} onEdit={onEdit} /> : cache.next === null ? <Empty variant="section">직전 요청이 남긴 캐시 기록이 없어요.</Empty> : <Text variant="note">계산하는 중…</Text>}
-      </Section>
       <RequestView
         level={2}
         prompt={sending.prompt}
         title="보낼 순서대로"
-        lead={missing.length > 0 && <Text variant="note">{`보낼 때 실행돼서 여기에는 없어요: ${missing.join(', ')}`}</Text>}
+        lead={lead}
         request={request}
         unbuilt={UNBUILT}
         editor={editor}
@@ -164,112 +161,3 @@ function NextTokens({ sending }: { sending: Sending }) {
   );
 }
 
-const STATES: Record<ForecastPart['state'], string> = { read: '캐시에서 읽음', write: '새로 저장', tail: '캐시 밖' };
-type CacheRow = { name: string; tokens: number; count: number; at: number } & Pick<ForecastPart, 'from' | 'state' | 'change' | 'point'>;
-
-// Neighbours of one part, alike in how the cache takes them, read as one row; a point ends its row. A changed part is
-// a row of its own, so its from is the row's.
-function cacheRows(parts: ForecastPart[]): CacheRow[] {
-  const out: CacheRow[] = [];
-  for (const [at, part] of parts.entries()) {
-    const name = partName(part.from, part.role);
-    const open = out.at(-1);
-    if (open && !open.point && !open.change && !part.change && open.name === name && open.state === part.state) {
-      open.tokens += part.tokens;
-      open.count++;
-      open.point = part.point;
-    } else out.push({ name, tokens: part.tokens, count: 1, at, from: part.from, state: part.state, change: part.change, point: part.point });
-  }
-  return out;
-}
-
-type NextCacheProps = { next: NonNullable<CacheNotes['next']>; recurrence: CacheNotes['recurrence']; editor: (from: From) => Side | null; onEdit: (side: Side) => void };
-
-function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) {
-  const { forecast, diagnosis, prescriptions, cost: price, route } = next;
-  const store = useStore();
-  const [open, setOpen] = useState<string | null>(null);
-  const { against, written, tail, removed } = forecast;
-  const warning = nextWarning(next, recurrence, profileName(store, route));
-  const off = against?.broken?.kind === 'off' ? { label: opens(MODEL_SETTINGS), onClick: () => navigate({ kind: 'model', ...refOf(route.connection.id, route.model) }) } : undefined;
-  return (
-    <Stack gap="group">
-      <RecurrenceNote recurrence={recurrence} />
-      {warning && <Callout tone="warn" action={off}>{`${warning.words}: ${warning.why}`}</Callout>}
-      <Facts
-        variant="tiles"
-        items={[
-          { label: STATES.read, value: against ? tokens(against.read) : UNKNOWN, ...(!against && { tone: 'muted' as const }) },
-          ...(forecast.prefix ? [] : [{ label: STATES.write, value: tokens(written) }]),
-          { label: STATES.tail, value: tokens(tail) },
-        ]}
-      />
-      {!against && <Text variant="note">직전 요청 기록이 없어서 얼마나 읽을지 알 수 없어요.</Text>}
-      {price && (
-        <Facts
-          items={[
-            { label: '이대로 보내면', value: cost(price.paid) },
-            { label: '캐시를 다 읽으면', value: cost(price.whole) },
-          ]}
-        />
-      )}
-      <Prescriptions prescriptions={prescriptions} cost={price} />
-      <List label="보낼 메시지">
-        {cacheRows(forecast.parts).map((row, index) => {
-          const part = row.change && diagnosed(diagnosis, row.change, row.at);
-          const side = row.change && editor(row.from);
-          const key = `part:${row.at}`;
-          return (
-            <ListItem
-              key={index}
-              title={row.count > 1 ? `${row.name} ${row.count}개` : row.name}
-              badge={row.change ? breakKind(row.change) : undefined}
-              tags={[STATES[row.state], ...(row.point === 'cache' ? ['캐시 지점'] : row.point === 'short' ? ['캐시 지점 · 최소 크기 미만'] : [])]}
-              note={tokens(row.tokens)}
-              {...(row.change && {
-                expanded: open === key,
-                onClick: () => setOpen(open === key ? null : key),
-                detail: open === key && <BrokenDetail part={part} pending={diagnosis === undefined} edit={side ? { label: opens(row.name), onClick: () => onEdit(side) } : null} />,
-              })}
-            />
-          );
-        })}
-      </List>
-      {removed.length > 0 && (
-        <Section level={3} title="빠지는 메시지">
-          <List label="빠지는 메시지">
-            {removed.map((part, index) => {
-              const key = `removed:${part.before}`;
-              return (
-                <ListItem
-                  key={index}
-                  title={partName(part.from, part.role)}
-                  note={tokens(part.tokens)}
-                  expanded={open === key}
-                  onClick={() => setOpen(open === key ? null : key)}
-                  detail={open === key && <BrokenDetail part={diagnosed(diagnosis, 'removed', part.before)} pending={diagnosis === undefined} edit={null} />}
-                />
-              );
-            })}
-          </List>
-        </Section>
-      )}
-    </Stack>
-  );
-}
-
-// pending: the diagnosis is still worked out; once done, a part it has nothing on has lost the last call's text.
-function BrokenDetail({ part, pending, edit }: { part: ReturnType<typeof diagnosed>; pending: boolean; edit: { label: string; onClick: () => void } | null }) {
-  return (
-    <Stack gap="related">
-      {part ? <BrokenPartView part={part} /> : <Text variant="note">{pending ? '살펴보는 중…' : '어떻게 바뀌었는지는 알 수 없어요.'}</Text>}
-      {edit && (
-        <Row kind="actions">
-          <Button variant="secondary" size="sm" onClick={edit.onClick}>
-            {edit.label}
-          </Button>
-        </Row>
-      )}
-    </Stack>
-  );
-}

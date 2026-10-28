@@ -47,10 +47,11 @@ type Props = Pick<OpenChat, 'id' | 'shelf' | 'messages' | 'infoPick'> & {
   // Absent while 장기 기억's 기능 is off, which leaves out the 기억 tab that opens its panel.
   onRecord?: (id: string | null) => void;
   onEdit: (side: Side) => void;
+  onCache: () => void;
   onClose: () => void;
 };
 
-export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onTab, onPick, onRecord, onEdit, onClose }: Props) {
+export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onTab, onPick, onRecord, onEdit, onCache, onClose }: Props) {
   const { log, costs } = useSession();
   const memory = useChatMemory(chat);
   const tab = picked === 'memory' && !onRecord ? 'reply' : picked;
@@ -116,7 +117,7 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
             {earlier.length > 0 && (
               <Text variant="note">{`${earlier.length + 1}번 호출해서 이어 쓴 응답이에요. 비용은 호출할 때마다 발생해요.`}</Text>
             )}
-            <Call receipt={receipt} entry={entry} />
+            <Call receipt={receipt} entry={entry} onCache={onCache} />
             {receipt.preread && <PrereadCall preread={receipt.preread} />}
             {chat && receipt.agents?.map((run) => <AgentCall key={`${run.stage}:${run.agent}`} chat={chat} version={version} run={run} />)}
             {translated && <TranslationCall receipt={translated} />}
@@ -219,7 +220,8 @@ function AgentCall({ chat, version, run: { agent, name, stage, receipt, note, me
   );
 }
 
-function Call({ receipt, entry }: { receipt: Receipt; entry: LogEntry | null }) {
+// onCache: only a reply's call, whose cache 점검 › 캐시 follows.
+function Call({ receipt, entry, onCache }: { receipt: Receipt; entry: LogEntry | null; onCache?: () => void }) {
   const usage = receipt.usage;
   const cached = usage?.cachedInputTokens ?? null;
   const input = usage?.inputTokens ?? null;
@@ -242,7 +244,7 @@ function Call({ receipt, entry }: { receipt: Receipt; entry: LogEntry | null }) 
         </Section>
       )}
       {usage ? (
-        <Section level={3} title="토큰" note={[input && cached !== null && `캐시 적중 ${Math.round((cached / input) * 100)}%`, written && `캐시에 저장 ${tokens(written)}`].filter(Boolean).join(' · ') || undefined}>
+        <Section level={3} title="토큰" note={[input && cached !== null && `캐시 적중 ${Math.round((cached / input) * 100)}%`, written && `캐시에 저장 ${tokens(written)}`].filter(Boolean).join(' · ') || undefined} action={onCache && <Button variant="ghost" size="sm" onClick={onCache}>캐시 자세히</Button>}>
           <Breakdown
             shares={input && fresh !== null ? [cached! / input, fresh / input] : null}
             parts={
