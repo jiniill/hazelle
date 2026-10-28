@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { useId, type KeyboardEvent, type ReactNode, type Ref } from 'react';
 import { Icon } from '../foundation/Icon';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './SearchField.module.css';
 
 // An API key may be pasted here, so the browser keeps no history of what was typed.
@@ -29,7 +30,7 @@ export function SearchField({ label, value, onChange, size = 'md', grow = false,
         ref={ref}
         className={styles.input}
         type="search"
-        autoComplete="off"
+        {...NO_AUTOFILL}
         spellCheck={false}
         value={value}
         placeholder={label}

@@ -1,5 +1,6 @@
 import { useId, type ChangeEvent, type ReactNode } from 'react';
 import type { Chord } from '../foundation/keys';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import { Hint, type Help } from '../overlays/Hint';
 import type { CodeLanguage } from './codeLanguage';
 import { CodeField, type CodeAside } from './CodeField';
@@ -7,13 +8,11 @@ import styles from './TextField.module.css';
 import { useBigEdit } from './useBigEdit';
 
 const KINDS = {
-  // Every field here is prose, never the user's own details: unmarked, iOS Safari offers their contact card instead
-  // of word suggestions.
-  text: { type: 'text', autoComplete: 'off' },
+  text: { type: 'text', ...NO_AUTOFILL },
   username: { type: 'text', autoComplete: 'username', autoCapitalize: 'none', spellCheck: false },
-  code: { type: 'text', autoComplete: 'off', autoCapitalize: 'characters', spellCheck: false },
+  code: { type: 'text', ...NO_AUTOFILL, autoCapitalize: 'characters', spellCheck: false },
   // API keys, addresses and a script's code: shown as typed, in the mono face, never saved by the browser.
-  key: { type: 'text', autoComplete: 'off', autoCapitalize: 'none', spellCheck: false },
+  key: { type: 'text', ...NO_AUTOFILL, autoCapitalize: 'none', spellCheck: false },
   'new-password': { type: 'password', autoComplete: 'new-password' },
   'current-password': { type: 'password', autoComplete: 'current-password' },
 } as const;

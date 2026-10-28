@@ -1,5 +1,6 @@
 import { useId, useMemo, type Ref } from 'react';
 import type { Chord } from '../foundation/keys';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import { CodeField, type CodeAside } from './CodeField';
 import type { CodeLanguage } from './codeLanguage';
 import { markup, type Piece } from './markup';
@@ -80,7 +81,7 @@ function Frame({ value, onChange, placeholder, kind, language, ref, id }: FrameP
           </span>
         ))}
       </div>
-      <textarea id={id} ref={ref} className={styles.input} value={value} placeholder={placeholder} autoComplete="off" spellCheck={false} onChange={(event) => onChange(event.target.value)} />
+      <textarea id={id} ref={ref} className={styles.input} value={value} placeholder={placeholder} {...NO_AUTOFILL} spellCheck={false} onChange={(event) => onChange(event.target.value)} />
     </div>
   );
 }

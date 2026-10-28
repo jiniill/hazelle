@@ -1,4 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './TranslateDesk.module.css';
 
 type Foot = { note: string; actions: ReactNode };
@@ -31,7 +32,7 @@ export function TranslateDesk({ tools, aside, below, source, result }: Props) {
         <div className={styles.pane}>
           <textarea
             className={styles.area}
-            autoComplete="off"
+            {...NO_AUTOFILL}
             aria-label={source.label}
             value={source.value}
             placeholder={source.placeholder}

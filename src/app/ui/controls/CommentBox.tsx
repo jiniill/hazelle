@@ -1,4 +1,5 @@
 import { useId, useRef, type ReactNode } from 'react';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './CommentBox.module.css';
 import { useAutosize } from './useAutosize';
 
@@ -25,7 +26,7 @@ export function CommentBox({ label, value, onChange, placeholder, hint, error, a
       <textarea
         ref={area}
         className={styles.input}
-        autoComplete="off"
+        {...NO_AUTOFILL}
         aria-label={label}
         aria-invalid={error ? true : undefined}
         aria-describedby={note ? id : undefined}

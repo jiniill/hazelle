@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type KeyboardEvent } from 'react';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './EditBox.module.css';
 import { useAutosize } from './useAutosize';
 
@@ -35,7 +36,7 @@ function Area({ label, shown, value, onChange, onKeyDown, focus }: Field & { sho
       <label className={shown ? styles.fieldLabel : styles.label} htmlFor={id}>
         {label}
       </label>
-      <textarea id={id} ref={area} className={styles.input} autoComplete="off" value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} />
+      <textarea id={id} ref={area} className={styles.input} {...NO_AUTOFILL} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} />
     </>
   );
 }

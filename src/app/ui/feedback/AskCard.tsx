@@ -4,6 +4,7 @@ import { Button } from '../controls/Button';
 import { IconButton } from '../controls/IconButton';
 import { Avatar } from '../foundation/Avatar';
 import { isComposing } from '../foundation/keys';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import { Hint, type Help } from '../overlays/Hint';
 import styles from './AskCard.module.css';
 
@@ -55,7 +56,7 @@ function Line({ onSubmit }: { onSubmit: (value: string) => void }) {
       <input
         className={styles.input}
         type="text"
-        autoComplete="off"
+        {...NO_AUTOFILL}
         autoFocus
         aria-label="답"
         value={draft}

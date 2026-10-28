@@ -1,4 +1,5 @@
 import { useId, type ClipboardEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './Composer.module.css';
 import { useAutosize } from './useAutosize';
 
@@ -30,7 +31,7 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, actio
         ref={inputRef}
         className={styles.input}
         rows={2}
-        autoComplete="off"
+        {...NO_AUTOFILL}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}

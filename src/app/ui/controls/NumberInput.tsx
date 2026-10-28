@@ -1,3 +1,4 @@
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './NumberInput.module.css';
 
 // Empty can mean inherited value; placeholderTone value styles a real effective number, not a hint.
@@ -10,7 +11,7 @@ export function NumberInput({ label, value, onChange, invalid = false, unit, pla
         className={placeholderTone === 'value' ? `${styles.input} ${styles.value}` : styles.input}
         type="text"
         inputMode="decimal"
-        autoComplete="off"
+        {...NO_AUTOFILL}
         spellCheck={false}
         aria-label={label}
         aria-invalid={invalid || undefined}

@@ -1,4 +1,5 @@
 import { useState, type Ref } from 'react';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './TitleField.module.css';
 
 type Props = {
@@ -26,7 +27,7 @@ export function TitleField({ label, value, placeholder, blank, onChange, place, 
       value={draft ?? value}
       placeholder={placeholder}
       title={blank}
-      autoComplete="off"
+      {...NO_AUTOFILL}
       spellCheck={false}
       onFocus={() => setDraft(value)}
       onBlur={() => setDraft(null)}

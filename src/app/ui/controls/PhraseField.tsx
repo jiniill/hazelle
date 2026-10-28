@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useState } from 'react';
 import { Icon } from '../foundation/Icon';
 import { isComposing } from '../foundation/keys';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './PhraseField.module.css';
 
 type Props = { label: string; phrases: string[]; onChange: (phrases: string[]) => void };
@@ -22,7 +23,7 @@ export function PhraseField({ label, phrases, onChange }: Props) {
       <input
         className={styles.input}
         type="text"
-        autoComplete="off"
+        {...NO_AUTOFILL}
         aria-label={`${label} 추가`}
         placeholder="입력 후 Enter"
         value={draft}

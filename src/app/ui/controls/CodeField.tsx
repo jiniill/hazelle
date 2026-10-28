@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Tabs } from '../collections/Tabs';
+import { NO_AUTOFILL } from '../foundation/noAutofill';
 import type { CodeEditorProps } from './CodeEditor';
 import type { Caret } from './codeLanguage';
 import styles from './CodeEditor.module.css';
@@ -31,7 +32,7 @@ export function CodeField(props: CodeEditorProps & { area: (element: HTMLTextAre
     setRevealed({ at });
   };
   const editor = (
-    <Suspense fallback={<textarea ref={area} className={prose ? `${styles.loading} ${styles.prose}` : styles.loading} aria-label={label} data-autofocus autoComplete="off" spellCheck={false} value={value} onChange={(event) => onChange(event.target.value)} />}>
+    <Suspense fallback={<textarea ref={area} className={prose ? `${styles.loading} ${styles.prose}` : styles.loading} aria-label={label} data-autofocus {...NO_AUTOFILL} spellCheck={false} value={value} onChange={(event) => onChange(event.target.value)} />}>
       <CodeEditor label={label} value={value} onChange={onChange} prose={prose} caret={own} {...rest} />
     </Suspense>
   );
