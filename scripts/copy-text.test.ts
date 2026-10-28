@@ -33,23 +33,30 @@ it('writes revised Korean back where it now sits, keeping each template expressi
     [text!.id, 'JSX text cannot hold { } < >'],
   ]);
   expect(written[0]!.source.split('\n').slice(2, 4)).toEqual(['const B = `${count}개 남음 ${on ? `켬` : \'끔\'}`;', 'const C = <p title="이름">설명이에요</p>;']);
-  expect(apply(sources, entries, [{ id: a!.id, text: "저장'했어요" }, { id: b!.id, text: '${total}개 남았어요' }]).rejected.map((each) => each.reason)).toEqual(['not one string literal in its quotes', 'the ${…} expressions changed']);
+  const quoted = apply(sources, entries, [{ id: a!.id, text: "저장'했어요" }, { id: b!.id, text: '${total}개 남았어요' }, { id: off!.id, text: '꺼\'"짐' }]);
+  expect(quoted.rejected.map((each) => each.reason)).toEqual(['the ${…} expressions changed', 'not one string literal in either quotes']);
+  expect(quoted.written[0]!.source.split('\n')[0]).toBe('const A = "저장\'했어요";');
 });
 
-it('sends sentences as numbered lines with {n} slots, and reads an answer back into source text, refusing moved slots and renumbered answers', () => {
+it('lists copy as numbered lines with {n} slots, and reads `old ⇒ new` answers back, trusting a number only when its line shows that old text', () => {
   const source = [
     "const A = '설정에서 \\'모델\\'을 선택해 주세요.';",
     'const B = `${name} 캐릭터를 ${count}개 옮겼어요.`;',
     "const C = '저장';",
+    "const D = '저장';",
   ].join('\n');
   const list = extract([{ path: 'x.ts', source }]);
-  const [body] = toText(list).map((batch) => batch.body.split('\n').filter((line) => /^\[\d/.test(line)));
-  expect(body).toEqual(["[1] 설정에서 '모델'을 선택해 주세요.", '[2] {1} 캐릭터를 {2}개 옮겼어요.']);
-  const { revised, problems } = fromText(list, ["```text\n[1] '모델'을 설정에서 선택해 주세요.\n[2] {1} 캐릭터 {2}개를 옮겼어요.\n```", '[1] 새 목록\n[2] 지어낸 줄\n[3] 저장하기']);
+  expect(toText(list)).toBe("## x.ts\n[1] 설정에서 '모델'을 선택해 주세요.\n[2] {1} 캐릭터를 {2}개 옮겼어요.\n[3] 저장\n[4] 저장\n");
+  expect(toText(list, new Map([['x.ts', new Set([2])]]))).toBe('## x.ts\n[2] {1} 캐릭터를 {2}개 옮겼어요.\n');
+  const { revised, problems } = fromText(list, [
+    "```text\n[1] 설정에서 '모델'을 선택해 주세요. ⇒ '모델'을 설정에서 선택해 주세요.\n[9] {1} 캐릭터를 {2}개 옮겼어요. ⇒ {1} 캐릭터 {2}개를 옮겼어요.\n```",
+    '[4] 저장 ⇒ 저장하기\n[1] 저장 ⇒ 보관\n[7] 지어낸 줄 ⇒ 새 줄',
+  ]);
   expect(revised).toEqual([
     { id: list[0]!.id, text: "\\'모델\\'을 설정에서 선택해 주세요." },
     { id: list[1]!.id, text: '${name} 캐릭터 ${count}개를 옮겼어요.' },
+    { id: list[3]!.id, text: '저장하기' },
   ]);
-  expect(problems).toEqual(['answer 2: 1 of 3 lines were never sent (first 3), so none of it is read']);
-  expect(fromText(list, ['[2] {2}개의 {1} 캐릭터를 옮겼어요.']).problems).toEqual([`2 ${list[1]!.id}: the {n} slots changed`]);
+  expect(problems).toEqual(['[1] 저장: shown on several lines, and not on this one', '[7] 지어낸 줄: no line shows this text']);
+  expect(fromText(list, ['[2] {1} 캐릭터를 {2}개 옮겼어요. ⇒ {2}개의 {1} 캐릭터를 옮겼어요.']).problems).toEqual([`2 ${list[1]!.id}: the {n} slots changed`]);
 });
