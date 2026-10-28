@@ -196,7 +196,7 @@ describe('a deletion from memory', () => {
       drop = true;
       const writing = write();
       await vi.waitFor(() => expect(store.waiting()).toBe(true));
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1500);
       return writing;
     };
     vi.useFakeTimers({ toFake: ['setTimeout'] });

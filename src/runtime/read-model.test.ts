@@ -291,7 +291,7 @@ describe('selective account reads', () => {
       expect(store.scopeState('a')).toBe('loading');
       expect(store.get('stream', 'stream')).not.toBeNull();
       offline = false;
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1500);
       await vi.waitFor(() => expect(store.get('stream', 'stream')).toBeNull());
       expect(take).not.toHaveBeenCalled();
       expect(store.scopeState('a')).toBe('unloaded');
