@@ -117,8 +117,9 @@ export async function api<T = unknown>(method: 'GET' | 'POST' | 'PUT' | 'DELETE'
     });
     if (response.status === 204) return { ok: true, data: undefined as T };
     const readBytes = response.ok && response.headers.get('content-type') === 'application/octet-stream';
-    if (readBytes) progress();
-    const data = await readBody(response, stopped, readBytes ? progress : undefined);
+    // Idle, never total: a sync page of a few MB on a slow phone line may take minutes and still be arriving.
+    progress();
+    const data = await readBody(response, stopped, progress);
     answer = readBytes ? data : new TextDecoder().decode(data);
   } catch {
     return { ok: false, error: signal?.aborted ? 'stopped' : 'offline' };

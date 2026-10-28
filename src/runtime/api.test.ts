@@ -138,28 +138,13 @@ it('does not apply a refusal if the session changes while its body is read', asy
   expect(current).toHaveBeenCalledExactlyOnceWith({ kind: 'bytes', bytes: 7 });
 });
 
-it('times out a JSON body that keeps trickling without completing', async () => {
+it('allows a progressing body past the header wait but cancels a stalled one', async () => {
   vi.useFakeTimers();
   try {
     let body!: ReadableStreamDefaultController<Uint8Array>;
     const cancel = vi.fn();
     vi.stubGlobal('fetch', async () => new Response(new ReadableStream({ start: (controller) => { body = controller; }, cancel })));
     const answer = api('GET', 'objects');
-    await vi.advanceTimersByTimeAsync(10_000);
-    body.enqueue(new TextEncoder().encode('{'));
-    await vi.advanceTimersByTimeAsync(5_000);
-    expect(await answer).toEqual({ ok: false, error: 'offline' });
-    expect(cancel).toHaveBeenCalledOnce();
-  } finally { vi.useRealTimers(); }
-});
-
-it('allows progressing file bodies beyond the total timeout but cancels a stalled download', async () => {
-  vi.useFakeTimers();
-  try {
-    let body!: ReadableStreamDefaultController<Uint8Array>;
-    const cancel = vi.fn();
-    vi.stubGlobal('fetch', async () => new Response(new ReadableStream({ start: (controller) => { body = controller; }, cancel }), { headers: { 'content-type': 'application/octet-stream' } }));
-    const answer = api('GET', 'files/f');
     let ended = false;
     void answer.then(() => { ended = true; });
     await vi.advanceTimersByTimeAsync(10_000);
