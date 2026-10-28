@@ -303,7 +303,7 @@ describe('object store', () => {
       drop = true;
       const saving = store.update('connection', created.data.id, (current) => ({ ...current, label: 'b' }));
       await vi.waitFor(() => expect(store.waiting()).toBe(true));
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1500);
       expect(await saving).toMatchObject({ ok: true, data: { value: { label: 'b' } } });
       expect(store.waiting()).toBe(false);
     } finally {

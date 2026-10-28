@@ -84,3 +84,9 @@ it('reads back an archive past 4 GiB, its names flagged UTF-8', async () => {
   const header = new DataView(await file.slice(korean.offset, korean.offset + 8).arrayBuffer());
   expect(header.getUint16(6, true) & 0x800).toBe(0x800);
 });
+
+it('rejects a directory located beyond the end record', async () => {
+  const bytes = zipSync({});
+  new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).setUint32(16, bytes.length, true);
+  await expect(indexZip(new Blob([bytes]), new AbortController().signal)).rejects.toThrow('ZIP ends early');
+});

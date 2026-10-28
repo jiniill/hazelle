@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ApiFailure } from '../../runtime/api';
 import { SaveQueue, Saves } from './saveQueue';
 
@@ -17,6 +17,32 @@ function queue() {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('SaveQueue', () => {
+  it('reports a thrown save, prevents removal while it fails, and retries newer edits', async () => {
+    const write = vi.fn<() => Promise<Answer>>().mockRejectedValue(new Error('write failed'));
+    const changed = vi.fn();
+    const saves = new SaveQueue<Note>(write, changed);
+    expect(await saves.save({ title: 'a', body: 'x' })).toBe(false);
+    expect(saves.status).toBe('failed');
+    expect(changed).toHaveBeenLastCalledWith({ ok: false, error: 'save-failed' });
+    const remove = vi.fn(async () => ({ ok: true }));
+    expect(await saves.remove(remove)).toBeNull();
+    expect(remove).not.toHaveBeenCalled();
+    write.mockResolvedValue({ ok: true });
+    expect(await saves.save({ title: 'b' })).toBe(true);
+    expect(write).toHaveBeenLastCalledWith({ title: 'b', body: 'x' });
+    expect(saves.status).toBe('saved');
+    expect(saves.busy).toBe(false);
+  });
+
+  it('releases a thrown removal and still accepts the next save', async () => {
+    const write = vi.fn(async () => ({ ok: true as const }));
+    const saves = new SaveQueue<Note>(write, () => {});
+    await expect(saves.remove(async () => { throw new Error('remove failed'); })).rejects.toThrow('remove failed');
+    expect(saves.busy).toBe(false);
+    expect(await saves.save({ title: 'kept' })).toBe(true);
+    expect(write).toHaveBeenCalledWith({ title: 'kept' });
+  });
+
   it('tries a failed patch again on the next flush, under what was typed since', async () => {
     const { saves, writes } = queue();
     saves.change({ title: 'a', body: 'x' });

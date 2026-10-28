@@ -37,6 +37,16 @@ const sse = (...events: unknown[]) => events.map((event) => `data: ${typeof even
 const chunk = (delta: Record<string, unknown>, finish: string | null = null) => ({ choices: [{ index: 0, delta, finish_reason: finish }] });
 
 describe('chat completions stream', () => {
+  it('reports an oversized unfinished SSE event as failure and cancels the reader', async () => {
+    let cancelled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new TextEncoder().encode('data: ' + 'x'.repeat(1024 * 1024))); },
+      cancel() { cancelled = true; },
+    });
+    expect((await decode(openRouter, stream)).outcome).toMatchObject({ state: 'failed', error: { kind: 'network', detail: 'SSE event is too large' } });
+    expect(cancelled).toBe(true);
+  });
+
   it('reads Copilot’s reasoning_text as reasoning', async () => {
     const stream = sse(chunk({ reasoning_text: '짧게 ' }), chunk({ reasoning_text: '답하자.' }), chunk({ content: '안녕.' }), chunk({}, 'stop'), '[DONE]');
     expect(await decode(openRouter, body(stream))).toMatchObject({ text: '안녕.', reasoning: '짧게 답하자.' });

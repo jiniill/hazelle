@@ -22,7 +22,7 @@ export class ConnectionWait {
     try {
       for (let tries = 0; waits(result); tries++) {
         const after = result.retryAfter === undefined ? RECONNECT_PAUSES[Math.min(tries, RECONNECT_PAUSES.length - 1)]! : result.retryAfter * 1000;
-        if (!(await pause(after, stop))) return { ok: false, error: 'stopped' };
+        if (!(await pause(after * (1 + Math.random() * 0.5), stop))) return { ok: false, error: 'stopped' };
         result = await attempt();
       }
       return result;

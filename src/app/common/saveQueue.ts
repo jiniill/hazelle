@@ -69,13 +69,16 @@ export class SaveQueue<T extends object> {
     const removed = this.chain.then(async () => {
       if (!(await this.step())) return null;
       this.removing = true;
-      const result = await task();
-      this.removing = false;
-      if (result.ok) this.end();
-      else this.changed();
-      return result;
+      try {
+        const result = await task();
+        if (result.ok) this.end();
+        return result;
+      } finally {
+        this.removing = false;
+        this.changed();
+      }
     });
-    this.chain = removed.then(() => true);
+    this.chain = removed.then(() => true, () => false);
     return removed;
   };
 
@@ -93,8 +96,14 @@ export class SaveQueue<T extends object> {
     this.writing = patch;
     this.edited = false;
     this.changed();
-    const saved = await this.write(patch);
-    this.writing = null;
+    let saved: Awaited<ReturnType<Write<T>>>;
+    try {
+      saved = await this.write(patch);
+    } catch {
+      saved = { ok: false, error: 'save-failed' };
+    } finally {
+      this.writing = null;
+    }
     // Retry failed patches beneath newer typing. Timeline rewind drops both: whole-field patches were based on old state.
     if (!saved.ok && saved.error === 'timeline-changed') {
       this.pending = {};

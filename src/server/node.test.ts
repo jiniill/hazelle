@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs';
 import { createServer as httpServer, request } from 'node:http';
 import { once } from 'node:events';
 import { Worker } from 'node:worker_threads';
@@ -46,8 +46,8 @@ const freePort = () =>
     });
   });
 
-function start(dataDir: string, port: number, extra: Record<string, string> = {}) {
-  const child = spawn(process.execPath, [bundle], {
+function start(dataDir: string, port: number, extra: Record<string, string> = {}, entry = bundle) {
+  const child = spawn(process.execPath, [entry], {
     env: { ...process.env, HAZELLE_DATA: dataDir, PORT: String(port), HAZELLE_DRAIN_SECONDS: '2', HAZELLE_MIGRATIONS: 'migrations', HAZELLE_CLIENT: client, ...extra },
     cwd: process.cwd(),
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -77,6 +77,24 @@ function start(dataDir: string, port: number, extra: Record<string, string> = {}
 }
 
 describe('the server process', () => {
+  it('enforces the shutdown deadline even when the frontend never acknowledges draining', async () => {
+    const stalled = join(dirname(bundle), 'stalled');
+    mkdirSync(stalled);
+    copyFileSync(bundle, join(stalled, 'node.js'));
+    writeFileSync(join(stalled, 'frontend-worker.js'), `
+      import { parentPort } from 'node:worker_threads';
+      parentPort.on('message', () => {});
+      parentPort.postMessage('listening');
+    `);
+    const server = start(join(dir, 'data-stalled-drain'), 8080, { HAZELLE_DRAIN_SECONDS: '1' }, join(stalled, 'node.js'));
+    await expect.poll(server.log, { timeout: 15000 }).toContain('"event":"listening"');
+    server.child.kill('SIGTERM');
+    await expect.poll(() => server.child.exitCode, { timeout: 4000 }).toBe(0);
+    expect(server.log()).toContain('"event":"draining"');
+    expect(server.log()).toContain('"drainMs":1000');
+    expect(server.log()).toContain('"outcome":"timeout"');
+  }, 20000);
+
   it('logs a proxy transport failure and its timing without credentials or request content', async () => {
     let received = 0;
     const api = httpServer((incoming) => {

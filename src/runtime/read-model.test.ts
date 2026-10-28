@@ -186,7 +186,7 @@ describe('selective account reads', () => {
       expect(store.scopeState('a')).toBe('loading');
       expect(() => store.children('entry', 'a')).toThrow('not loaded');
       offline = false;
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1500);
       expect(await lease.ready).toBeNull();
       expect(store.waiting()).toBe(false);
       expect(store.projections.get('a')?.model.messages).toHaveLength(1);

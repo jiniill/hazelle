@@ -1,6 +1,6 @@
-import { Inflate, strFromU8, strToU8, ZipDeflate, ZipPassThrough } from 'fflate';
+import { Inflate, strToU8, ZipDeflate, ZipPassThrough } from 'fflate';
+import { u16, u32, u64, ZipDirectory, zipEnd, zipRange, zipDataStart, ZipIntegrity, type ZipEntry } from '../engine/import/zip-format';
 
-export type ZipEntry = { name: string; offset: number; compressed: number; size: number; method: number; crc: number };
 export type BackupOutput = {
   write: (chunk: Uint8Array<ArrayBuffer>) => Promise<void>;
   close: () => Promise<void>;
@@ -40,13 +40,6 @@ export function bufferedBackupOutput(output: BackupOutput, signal: AbortSignal):
 }
 
 const view = (bytes: Uint8Array) => new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-const u16 = (bytes: Uint8Array, at: number) => view(bytes).getUint16(at, true);
-const u32 = (bytes: Uint8Array, at: number) => view(bytes).getUint32(at, true);
-const u64 = (bytes: Uint8Array, at: number) => {
-  const value = Number(view(bytes).getBigUint64(at, true));
-  if (!Number.isSafeInteger(value)) throw new Error('ZIP offset is too large');
-  return value;
-};
 const put16 = (bytes: Uint8Array, at: number, value: number) => view(bytes).setUint16(at, value, true);
 const put32 = (bytes: Uint8Array, at: number, value: number) => view(bytes).setUint32(at, value, true);
 const put64 = (bytes: Uint8Array, at: number, value: number) => view(bytes).setBigUint64(at, BigInt(value), true);
@@ -162,69 +155,44 @@ export class BackupZip {
 
 async function slice(file: Blob, offset: number, length: number, signal: AbortSignal) {
   signal.throwIfAborted();
-  if (offset < 0 || length < 0 || offset + length > file.size) throw new Error('ZIP ends early');
+  zipRange(offset, length, file.size);
   return new Uint8Array(await file.slice(offset, offset + length).arrayBuffer());
 }
 
 export async function indexZip(file: Blob, signal: AbortSignal): Promise<Map<string, ZipEntry>> {
   const tail = await slice(file, Math.max(0, file.size - 65557), Math.min(file.size, 65557), signal);
-  let end = tail.length - 22;
-  while (end >= 0 && (u32(tail, end) !== 0x06054b50 || end + 22 + u16(tail, end + 20) !== tail.length)) end--;
-  if (end < 0 || u32(tail, end + 4) !== 0) throw new Error('Not a single-disk ZIP');
+  const end = zipEnd(tail);
+  let directoryEnd = file.size - tail.length + end;
   let count = u16(tail, end + 10);
   let offset = u32(tail, end + 16);
   let size = u32(tail, end + 12);
   if (count === 0xffff || offset === MAX32 || size === MAX32) {
     const locator = await slice(file, file.size - tail.length + end - 20, 20, signal);
     if (u32(locator, 0) !== 0x07064b50 || u32(locator, 4) !== 0 || u32(locator, 16) !== 1) throw new Error('Bad ZIP64 locator');
-    const record = await slice(file, u64(locator, 8), 56, signal);
+    directoryEnd = u64(locator, 8);
+    const record = await slice(file, directoryEnd, 56, signal);
     if (u32(record, 0) !== 0x06064b50 || u32(record, 16) !== 0 || u32(record, 20) !== 0) throw new Error('Bad ZIP64 directory');
     count = u64(record, 32);
     size = u64(record, 40);
     offset = u64(record, 48);
   }
-  const limit = offset + size;
-  if (limit > file.size || count > size / 46) throw new Error('Bad ZIP directory');
-  const entries = new Map<string, ZipEntry>();
+  const directory = new ZipDirectory(count, offset, size, directoryEnd);
   for (let i = 0; i < count; i++) {
-    const header = await slice(file, offset, 46, signal);
-    if (u32(header, 0) !== 0x02014b50 || (u16(header, 8) & 1) || u16(header, 34) !== 0) throw new Error('Bad ZIP entry');
-    const method = u16(header, 10);
-    if (method !== 0 && method !== 8) throw new Error('Unknown ZIP compression');
-    const nameLength = u16(header, 28);
-    const extraLength = u16(header, 30);
-    const variable = await slice(file, offset + 46, nameLength + extraLength, signal);
-    const name = strFromU8(variable.subarray(0, nameLength));
-    let size = u32(header, 24);
-    let compressed = u32(header, 20);
-    let local = u32(header, 42);
-    for (let at = nameLength; at + 4 <= variable.length; at += 4 + u16(variable, at + 2)) {
-      if (u16(variable, at) !== 1) continue;
-      let field = at + 4;
-      if (size === MAX32) { size = u64(variable, field); field += 8; }
-      if (compressed === MAX32) { compressed = u64(variable, field); field += 8; }
-      if (local === MAX32) local = u64(variable, field);
-      break;
-    }
-    if (entries.has(name) || size === MAX32 || compressed === MAX32 || local === MAX32) throw new Error('Bad ZIP entry');
-    entries.set(name, { name, offset: local, size, compressed, method, crc: u32(header, 16) });
-    offset += 46 + nameLength + extraLength + u16(header, 32);
+    const header = await slice(file, directory.offset, directory.headerSize(), signal);
+    const variable = await slice(file, directory.offset + 46, directory.variableSize(header), signal);
+    directory.add(header, variable);
   }
-  if (offset !== limit) throw new Error('Bad ZIP directory size');
-  return entries;
+  return directory.finish();
 }
 
 export async function* unzipEntry(file: Blob, entry: ZipEntry, signal: AbortSignal) {
   const header = await slice(file, entry.offset, 30, signal);
-  if (u32(header, 0) !== 0x04034b50 || u16(header, 8) !== entry.method) throw new Error('Bad ZIP header');
-  const start = entry.offset + 30 + u16(header, 26) + u16(header, 28);
-  const checksum = new ZipPassThrough(entry.name);
-  checksum.ondata = () => {};
+  const start = zipDataStart(header, entry, file.size);
+  const integrity = new ZipIntegrity(entry);
   let chunks: Uint8Array<ArrayBuffer>[] = [];
   const inflate = entry.method === 8 ? new Inflate((chunk) => { chunks.push(chunk); }) : null;
   // A small compressed input bounds even a maximally expanding DEFLATE block to one page.
   const step = inflate ? 1024 : CHUNK;
-  let size = 0;
   for (let at = 0; at < entry.compressed; at += CHUNK) {
     const bytes = await slice(file, start + at, Math.min(CHUNK, entry.compressed - at), signal);
     for (let offset = 0; offset < bytes.length; offset += step) {
@@ -232,17 +200,14 @@ export async function* unzipEntry(file: Blob, entry: ZipEntry, signal: AbortSign
       if (inflate) inflate.push(part, at + offset + part.length === entry.compressed);
       else chunks.push(part);
       for (const chunk of chunks) {
-        size += chunk.length;
-        if (size > entry.size) throw new Error('Bad ZIP size');
-        checksum.push(chunk);
+        integrity.push(chunk);
         yield chunk;
         signal.throwIfAborted();
       }
       chunks = [];
     }
   }
-  checksum.push(new Uint8Array(), true);
-  if (size !== entry.size || (checksum.crc >>> 0) !== entry.crc) throw new Error('Bad ZIP checksum');
+  integrity.finish();
 }
 
 export async function readEntry(file: Blob, entry: ZipEntry, signal: AbortSignal) {

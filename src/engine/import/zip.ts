@@ -1,5 +1,6 @@
 import { deflateSync } from 'fflate';
 import { expansionLimit, inflate, TooLarge } from './inflate';
+import { u16, u32, ZipDirectory, zipEnd, zipRange, zipDataStart, ZipIntegrity } from './zip-format';
 
 const END_OF_DIRECTORY = 0x06054b50;
 const DIRECTORY_ENTRY = 0x02014b50;
@@ -16,54 +17,51 @@ export type Zip = {
   read(path: string, limit?: number): Uint8Array<ArrayBuffer> | null;
 };
 
-type Entry = { method: number; compressed: number; size: number; header: number };
-
-const utf8 = new TextDecoder();
-
 // Appended ZIP offsets are relative to its own start, derived from the central directory.
 // Validate declared sizes against the archive limit before inflate enforces each entry's size.
 export function openZip(bytes: Uint8Array<ArrayBuffer>): Zip | null {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const floor = Math.max(0, bytes.length - END_RECORD - 0xffff);
-  let record = bytes.length - END_RECORD;
-  while (record >= floor && view.getUint32(record, true) !== END_OF_DIRECTORY) record--;
-  if (record < floor) return null;
-  const directorySize = view.getUint32(record + 12, true);
-  const start = record - view.getUint32(record + 16, true) - directorySize;
-  if (start < 0) return null;
-  const entries = new Map<string, Entry>();
-  let unpacked = 0;
-  for (let at = record - directorySize; at + 46 <= record && view.getUint32(at, true) === DIRECTORY_ENTRY; ) {
-    const nameLength = view.getUint16(at + 28, true);
-    const name = utf8.decode(bytes.subarray(at + 46, at + 46 + nameLength));
-    const entry: Entry = {
-      method: view.getUint16(at + 10, true),
-      compressed: view.getUint32(at + 20, true),
-      size: view.getUint32(at + 24, true),
-      header: start + view.getUint32(at + 42, true),
+  try {
+    const record = zipEnd(bytes);
+    const directorySize = u32(bytes, record + 12);
+    const directoryStart = record - directorySize;
+    const start = directoryStart - u32(bytes, record + 16);
+    if (start < 0) return null;
+    const count = u16(bytes, record + 10);
+    const directory = new ZipDirectory(count, directoryStart, directorySize, record, start);
+    for (let i = 0; i < count; i++) {
+      const at = directory.offset;
+      const header = bytes.subarray(at, at + directory.headerSize());
+      const length = directory.variableSize(header);
+      directory.add(header, bytes.subarray(at + 46, at + 46 + length));
+    }
+    let unpacked = 0;
+    for (const entry of directory.entries.values()) if (entry.method === DEFLATED) unpacked += entry.size;
+    if (unpacked > expansionLimit(bytes.length)) throw new TooLarge('expands-too-far');
+    const entries = directory.finish();
+    return {
+      prefix: bytes.slice(0, start),
+      read: (path, limit = Infinity) => {
+        const entry = entries.get(path);
+        if (!entry) return null;
+        if (Math.max(entry.size, entry.compressed) > limit) throw new TooLarge('entry-too-large');
+        try {
+          zipRange(entry.offset, 30, directoryStart);
+          const from = zipDataStart(bytes.subarray(entry.offset, entry.offset + 30), entry, directoryStart);
+          const packed = bytes.subarray(from, from + entry.compressed);
+          const data = entry.method === STORED ? packed : inflate(packed, entry.size);
+          const integrity = new ZipIntegrity(entry);
+          integrity.push(data);
+          integrity.finish();
+          return data;
+        } catch {
+          return null;
+        }
+      },
     };
-    if (entry.method === DEFLATED) unpacked += entry.size;
-    entries.set(name, entry);
-    at += 46 + nameLength + view.getUint16(at + 30, true) + view.getUint16(at + 32, true);
+  } catch (error) {
+    if (error instanceof TooLarge) throw error;
+    return null;
   }
-  if (unpacked > expansionLimit(bytes.length)) throw new TooLarge('expands-too-far');
-  return {
-    prefix: bytes.slice(0, start),
-    read: (path, limit = Infinity) => {
-      const entry = entries.get(path);
-      if (entry && Math.max(entry.size, entry.compressed) > limit) throw new TooLarge('entry-too-large');
-      if (!entry || entry.header + 30 > bytes.length || view.getUint32(entry.header, true) !== LOCAL_HEADER) return null;
-      const from = entry.header + 30 + view.getUint16(entry.header + 26, true) + view.getUint16(entry.header + 28, true);
-      const data = bytes.subarray(from, from + entry.compressed);
-      if (entry.method === STORED) return data;
-      if (entry.method !== DEFLATED) return null;
-      try {
-        return inflate(data, entry.size);
-      } catch {
-        return null;
-      }
-    },
-  };
 }
 
 const CRC = Array.from({ length: 256 }, (_, n) => {

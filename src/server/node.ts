@@ -228,6 +228,10 @@ for (const timer of timers) timer.unref();
 async function shutdown(signal: string) {
   if (draining) return;
   draining = true;
+  const deadline = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), drainMs).unref());
+  log('draining', { signal, drainMs });
+  for (const timer of timers) clearTimeout(timer);
+  eventLoop.disable();
   const frontendDraining = new Promise<void>((resolve) => {
     const drainingMessage = (message: FrontendMessage) => {
       if (message !== 'draining') return;
@@ -237,12 +241,8 @@ async function shutdown(signal: string) {
     frontend.on('message', drainingMessage);
   });
   frontend.postMessage('drain');
-  await frontendDraining;
-  log('draining', { signal, drainMs });
-  for (const timer of timers) clearTimeout(timer);
-  eventLoop.disable();
-  const deadline = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), drainMs).unref());
   const drained = (async () => {
+    await frontendDraining;
     // The public requests must finish proxying before the API listener stops accepting their connections.
     await frontendClosed;
     await new Promise<void>((resolve) => server.close(() => resolve()));

@@ -1,3 +1,4 @@
+import type { ZipEntry } from '../engine/import/zip-format';
 import { strFromU8, strToU8 } from 'fflate';
 import { isRecord } from '../connectors/values';
 import { KINDS, parentKinds, type Kind, type Stored } from '../model/kinds';
@@ -6,7 +7,7 @@ import { SETTINGS_ID } from '../model/settings';
 import type { ApiFailure, ApiResult } from './api';
 import { toBase64 } from '../vault/aead';
 import type { FileRef } from '../vault/files';
-import { BackupZip, indexZip, readEntry, unzipEntry, type BackupOutput, type ZipEntry } from './backup-zip';
+import { BackupZip, indexZip, readEntry, unzipEntry, type BackupOutput } from './backup-zip';
 import { inOrder, type Files } from './files';
 import { BACKUP_PAGE_BYTES as PAGE_BYTES, BACKUP_PAGE_ROWS as PAGE_ROWS, BackupStorageError, type BackupRecord, type BackupRecords } from './backup-records';
 import { FIRST_ID } from './personas';
