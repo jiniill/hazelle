@@ -16,9 +16,9 @@ export const RETRY_MOST = 5;
 const WAIT_MOST_MS = 60_000;
 
 // How long to wait after the tries-th try failed: the provider's Retry-After, in seconds or as a date, else 2 s doubling
-// with each try. null: longer than WAIT_MOST_MS.
-export function retryWait(tries: number, retryAfter: string | null, now: number): number | null {
+// with each try. null: longer than most; reconnecting readers can outwait the provider retry limit.
+export function retryWait(tries: number, retryAfter: string | null, now: number, most = WAIT_MOST_MS): number | null {
   const asked = retryAfter === null ? NaN : /^\d+$/.test(retryAfter.trim()) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - now;
   if (Number.isNaN(asked)) return 1000 * 2 ** tries;
-  return asked > WAIT_MOST_MS ? null : Math.max(0, asked);
+  return asked > most ? null : Math.max(0, asked);
 }

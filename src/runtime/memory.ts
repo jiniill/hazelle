@@ -231,7 +231,7 @@ export type MemoryFailure =
   | { kind: 'failed'; receipt: Receipt }
   | { kind: 'invalid'; receipt: Receipt; reason: Invalid }
   | { kind: 'unsaved'; failure: ApiFailure }
-  | { kind: 'embed'; reason: Extract<Indexed, { ok: false }>['reason']; receipt: Receipt | null }
+  | { kind: 'embed'; reason: Extract<Indexed, { reason: string }>['reason']; receipt: Receipt | null }
   | RanAway;
 
 export function memoryWriter(store: Pick<ObjectStore, 'get'>, chat: Chat): Tools | MemoryFailure {
@@ -401,7 +401,7 @@ export class Rememberer {
     this.aborts.add(control);
     try {
       const done = await indexRecords(this.session, chat, control.signal, (embedded) => this.change(chat, { indexing: { done: embedded, total } }));
-      this.change(chat, { indexing: null, indexFailed: done.ok ? null : { kind: 'embed', reason: done.reason, receipt: done.receipt } });
+      this.change(chat, { indexing: null, indexFailed: done.ok ? null : 'failure' in done ? { kind: 'unsaved', failure: done.failure } : { kind: 'embed', reason: done.reason, receipt: done.receipt } });
     } catch (error) {
       const failure = evaluationFailure(error);
       this.change(chat, { indexing: null, indexFailed: failure.error === 'stopped' ? null : { kind: 'unsaved', failure } });

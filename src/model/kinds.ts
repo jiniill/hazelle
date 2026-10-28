@@ -151,6 +151,8 @@ const optStr: Check = (value) => value === undefined || str(value);
 const conversation = shape({ task: (value) => value === undefined, authorNote: str, models: isRecord, folder: optStr });
 const task = shape({ task: (value) => value === 'translate' || value === 'memory' || value === 'illustrate' || value === 'mascot' || value === 'preread' || value === 'agent', model: (value) => value === undefined || isRecord(value) });
 
+const BASE64 = /^(?=.)(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
 const SHAPES = {
   character: shape({
     card: shape({
@@ -198,7 +200,11 @@ const SHAPES = {
   summary: shape({ version: num, head: num, chatRev: num, dependencies: listOf(isRecord), rendered: shape({ now: num, timeZone: str }), character: orNull(str), title: str, preview: str, count: num, at: orNull(num), order: num, recent: listOf(isRecord) , stuck: (value) => value === undefined || shape({ dependencies: listOf(isRecord) })(value) }),
   // A batch's marker holds no key: no server object holds its call.
   stream: (value) => shape({ calibration, call: shape({ ...all(str, 'connection', 'source', 'model', 'modelName'), entry: optStr }), at: num, result: str, for: shape({ kind: str }) })(value) && (shape({ key: isRecord })(value) || shape({ batch: str })(value)),
-  vectors: shape({ model: str, items: isRecord }),
+  vectors: shape({ model: str, items: (value) => isRecord(value) && Object.values(value).every(shape({
+    at: nonnegative,
+    scale: (value) => finite(value) && (value as number) > 0 && (value as number) <= 1,
+    data: (value) => typeof value === 'string' && BASE64.test(value),
+  })) }),
   cacheprint: shape({ ...all(str, 'call', 'connection', 'model'), account: orNull(str), messages: listOf(shape({ role: str, hash: str, tokens: num, from: isRecord })) }),
   memory: shape({ records: listOf(shape({ id: str, sources: listOf(isRecord), print: str, what: str, state: listOf(isRecord), opens: listOf(str), closes: listOf(str) })), chapters: listOf(shape({ id: str, sources: listOf(isRecord), print: str, what: str, records: listOf(shape({ id: str, at: num })) })), state: listOf(shape(all(str, 'about', 'field', 'value'))), threads: listOf(shape({ id: str, text: str })) }),
   illustration: (value) => shape({ ...all(str, 'message', 'version', 'type'), file: shape({ id: str, key: str }), size: num, at: num })(value) && (isRecord(value) && 'tool' in value

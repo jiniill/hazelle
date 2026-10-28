@@ -3,7 +3,8 @@ import { nearest, quantize, rank } from '../engine/retrieval';
 import type { HistoryMessage } from '../engine/history';
 import type { Receipt } from '../model/chat';
 import { vectorsId, type MemoryRecord, type Vector, type Vectors } from '../model/memory';
-import type { Stored } from '../model/kinds';
+import { isValue, type Stored } from '../model/kinds';
+import type { ApiFailure } from './api';
 import { embedModel, type Route } from './assignment';
 import { keepCall } from './chat-log';
 import { chatMemory } from './memory-read';
@@ -13,7 +14,7 @@ import type { ObjectStore } from './store';
 
 type Reader = Pick<Session, 'store' | 'read' | 'credentials' | 'costs' | 'log'>;
 
-export const chatVectors = (store: Pick<ObjectStore, 'children'>, chat: string): Stored<'vectors'> | undefined => store.children('vectors', chat).find((entry) => entry.id === vectorsId(chat));
+export const chatVectors = (store: Pick<ObjectStore, 'children'>, chat: string): Stored<'vectors'> | undefined => store.children('vectors', chat).find((entry) => entry.id === vectorsId(chat) && isValue('vectors', entry.value));
 
 // Which live records have no vector at the current 임베딩 모델 (design §6.2, Retrieval): every one, when the vectors
 // were written by another model. null when retrieval is off, with no model to embed with.
@@ -36,7 +37,7 @@ export function unembedded(store: Pick<ObjectStore, 'get' | 'children'>, chat: s
 
 const SAVE_EVERY = 60_000;
 
-export type Indexed = { ok: true } | { ok: false; reason: Extract<Embedded, { ok: false }>['reason']; receipt: Receipt | null };
+export type Indexed = { ok: true } | { ok: false; reason: Extract<Embedded, { ok: false }>['reason']; receipt: Receipt | null } | { ok: false; failure: ApiFailure };
 
 // Embed missing/stale records in EMBED_TEXTS batches; preserve earlier vectors on failure and drop obsolete ones.
 // Checkpoint long runs every SAVE_EVERY so retrieval/reloads can use partial progress.
@@ -53,25 +54,30 @@ export async function indexRecords(session: Reader, chat: string, signal: AbortS
     const { answer, receipt } = await embedTexts({ credentials: session.credentials, log: session.log, count: countTexts(store) }, route, batch.map(recordText), 'document', chat, false, signal, (count) => progress((done += count)));
     if (receipt) await keepCall(session, chat, receipt);
     if (!answer.ok) {
-      if (Object.keys(items).length) await writeVectors(store, chat, { model: route.model.id, items });
+      if (Object.keys(items).length) {
+        const saved = await writeVectors(store, chat, { model: route.model.id, items });
+        if (!saved.ok) return { ok: false, failure: saved };
+      }
       return { ok: false, reason: answer.reason, receipt };
     }
     batch.forEach((record, index) => (items[record.id] = quantize(answer.vectors[index]!, record.at)));
     if (from + EMBED_TEXTS < records.length && Date.now() - saved >= SAVE_EVERY) {
-      await writeVectors(store, chat, { model: route.model.id, items });
+      const checkpoint = await writeVectors(store, chat, { model: route.model.id, items });
+      if (!checkpoint.ok) return { ok: false, failure: checkpoint };
       saved = Date.now();
     }
   }
-  await writeVectors(store, chat, { model: route.model.id, items });
-  return { ok: true };
+  const final = await writeVectors(store, chat, { model: route.model.id, items });
+  return final.ok ? { ok: true } : { ok: false, failure: final };
 }
 
 async function writeVectors(store: ObjectStore, chat: string, value: Vectors) {
   return store.withChat(chat, async () => {
     const id = vectorsId(chat);
-    if (!chatVectors(store, chat)) {
+    // By id, not chatVectors: a broken stored value is overwritten by a fresh index rather than conflicting forever.
+    if (!store.get('vectors', id)) {
       const created = await store.create('vectors', value, { id, parent: chat });
-      if (created.ok || created.error !== 'conflict' || !chatVectors(store, chat)) return created;
+      if (created.ok || created.error !== 'conflict' || !store.get('vectors', id)) return created;
     }
     return store.update('vectors', id, () => value);
   });

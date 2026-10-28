@@ -471,4 +471,16 @@ describe('chapters', () => {
       second.close();
     }
   });
+
+  it('shows vector storage failures through the existing unsaved indexing failure path', () => server.withSession(async (session) => {
+    const { chat } = await recorded(session, { budget: 1_000_000 });
+    const connection = session.store.list('connection')[0]!.id;
+    const failure = { ok: false, error: 'storage-full' } as const;
+    const indexing = vi.spyOn(retrieval, 'indexRecords').mockResolvedValue({ ok: false, failure });
+    try {
+      await setDefaultModel(session.store, 'embed', { connection, model: 'm' });
+      session.memory.check(chat);
+      await vi.waitFor(() => expect(session.memory.snapshot().indexFailed.get(chat)).toEqual({ kind: 'unsaved', failure }));
+    } finally { indexing.mockRestore(); }
+  }));
 });

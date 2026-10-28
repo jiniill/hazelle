@@ -76,3 +76,12 @@ it('reads a connection’s retry count as absent or a number, and refuses any ot
   expect(isValue('connection', { ...connection, retries: 0 })).toBe(true);
   expect(isValue('connection', { ...connection, retries: '2' })).toBe(false);
 });
+
+it('requires stored vectors to have usable timestamps, quantization scales and canonical base64 bytes', () => {
+  const vector = { at: 1, scale: 0.5, data: 'fwA=' };
+  const vectors = { model: 'm', items: { record: vector } };
+  expect(isValue('vectors', vectors)).toBe(true);
+  expect(isValue('vectors', { ...vectors, items: { record: { ...vector, data: '%' } } })).toBe(false);
+  expect(isValue('vectors', { ...vectors, items: { record: { ...vector, scale: 0 } } })).toBe(false);
+  expect(isValue('vectors', { ...vectors, items: { record: { ...vector, at: '1' } } })).toBe(false);
+});

@@ -15,6 +15,7 @@ export function cachedDatabase(name: string, version: number, upgrade: (request:
       req.onsuccess = () => {
         // A blocked request can still open later, after its caller has already retried.
         if (blocked) return req.result.close();
+        req.result.onclose = () => { opened = undefined; };
         req.result.onversionchange = () => {
           req.result.close();
           opened = undefined;

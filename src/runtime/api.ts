@@ -17,11 +17,13 @@ const REFUSALS: Record<string, 'elsewhere' | 'suspended' | 'storage-full' | 'res
 
 // Every request states it, and the server refuses one whose cookie has come to name another account (server/session).
 let held: string | null = null;
+let generation = 0;
 let hear: ((heard: Heard) => void) | null = null;
 
 export const hasAccount = () => held !== null;
 
 export function holdAccount(account: string | null, onHeard: ((heard: Heard) => void) | null = null) {
+  generation++;
   held = account;
   hear = onHeard;
 }
@@ -52,6 +54,7 @@ export function hearServedVersion(listener: ((version: string) => void) | null) 
 // Every request to this app's server leaves through here (api, and runtime/relay's raw ones).
 // pulse: a provider call's label, which marks the account active too and so settles an owed seen.
 export async function fetchApi(path: string, { pulse, ...init }: Omit<RequestInit, 'headers'> & { headers?: Record<string, string>; pulse?: PulseLabel } = {}): Promise<Response> {
+  const sent = generation;
   const label = sharing ? (pulse ?? (seenOwed ? ({ kind: 'seen' } as const) : null)) : null;
   if (label) seenOwed = false;
   const response = await fetch(`/api/${path}`, { ...init, headers: { ...(held === null ? {} : { [ACCOUNT_HEADER]: held }), ...(label && { [PULSE_HEADER]: pulseHeader(label) }), ...init.headers } });
@@ -62,7 +65,7 @@ export async function fetchApi(path: string, { pulse, ...init }: Omit<RequestIni
     hearServed?.(version);
   }
   const tell = hear;
-  if (!tell) return response;
+  if (!tell || sent !== generation) return response;
   const bytes = response.headers.get(ACCOUNT_USAGE_HEADERS.bytes);
   const fileBytes = response.headers.get(ACCOUNT_USAGE_HEADERS.fileBytes);
   if (bytes !== null) tell({ kind: 'bytes', bytes: Number(bytes) });
@@ -73,7 +76,8 @@ export async function fetchApi(path: string, { pulse, ...init }: Omit<RequestIni
   if (board !== null) tell({ kind: 'board', unread: Number(board) });
   // A provider's refusal comes through the relay marked x-relay, and its body is the provider's to read.
   if ((response.status === 403 || response.status === 409 || response.status === 413 || response.status === 503) && !response.headers.has(RELAY_HEADER)) {
-    const body: unknown = await response.clone().json().catch(() => null);
+    const body = await readBody(response.clone(), init.signal).then((bytes) => parse(new TextDecoder().decode(bytes))).catch(() => null);
+    if (sent !== generation) return response;
     const kind = isRecord(body) && typeof body.error === 'string' ? REFUSALS[body.error] : undefined;
     if (kind === 'elsewhere') hear = null;
     if (kind) tell({ kind });
@@ -82,9 +86,10 @@ export async function fetchApi(path: string, { pulse, ...init }: Omit<RequestIni
 }
 
 // Header wait scales with upload bytes at SLOWEST_UPLOAD (24 concurrent files share one slow uplink).
-// Never time response bodies or move this into fetchApi, which also carries relay streams.
+// Keep timeouts out of fetchApi, which also carries relay streams.
 const HEADERS_WAIT = 15_000;
 const SLOWEST_UPLOAD = 8_192;
+const BODY_WAIT = 15_000;
 // For a route whose server work runs inside the request and can outlast HEADERS_WAIT: 탈퇴's store wipe, an operator's
 // account removal or restore. Timed out, such a request reads as 'offline' while the server may still finish it.
 export const SLOW_ROUTE_WAIT = 5 * 60_000;
@@ -95,25 +100,30 @@ export async function api<T = unknown>(method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   const bytes = body instanceof Uint8Array ? (body as Uint8Array<ArrayBuffer>) : null;
   const payload = body === undefined ? undefined : (bytes ?? JSON.stringify(body));
   const late = new AbortController();
-  const timer = setTimeout(() => late.abort(), headersWait + ((payload?.length ?? 0) / SLOWEST_UPLOAD) * 1000);
+  let timer = setTimeout(() => late.abort(), headersWait + ((payload?.length ?? 0) / SLOWEST_UPLOAD) * 1000);
+  const stopped = signal ? AbortSignal.any([signal, late.signal]) : late.signal;
+  const progress = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => late.abort(), BODY_WAIT);
+  };
   let response: Response;
   let answer: Uint8Array | string;
   try {
-    try {
-      response = await fetchApi(path, {
-        method,
-        signal: signal ? AbortSignal.any([signal, late.signal]) : late.signal,
-        headers: method === 'GET' ? headers : { ...headers, 'content-type': bytes ? 'application/octet-stream' : 'application/json' },
-        body: payload,
-      });
-    } finally {
-      clearTimeout(timer);
-    }
+    response = await fetchApi(path, {
+      method,
+      signal: stopped,
+      headers: method === 'GET' ? headers : { ...headers, 'content-type': bytes ? 'application/octet-stream' : 'application/json' },
+      body: payload,
+    });
     if (response.status === 204) return { ok: true, data: undefined as T };
     const readBytes = response.ok && response.headers.get('content-type') === 'application/octet-stream';
-    answer = readBytes ? new Uint8Array(await response.arrayBuffer()) : await response.text();
+    if (readBytes) progress();
+    const data = await readBody(response, stopped, readBytes ? progress : undefined);
+    answer = readBytes ? data : new TextDecoder().decode(data);
   } catch {
     return { ok: false, error: signal?.aborted ? 'stopped' : 'offline' };
+  } finally {
+    clearTimeout(timer);
   }
   if (signal?.aborted) return { ok: false, error: 'stopped' };
   const data = typeof answer === 'string' ? parse(answer) : answer;
@@ -124,6 +134,36 @@ export async function api<T = unknown>(method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   }
   if (response.status >= 500) return { ok: false, error: 'offline' };
   return { ok: false, error: 'server-error', status: response.status };
+}
+
+async function readBody(response: Response, signal?: AbortSignal | null, progress?: () => void): Promise<Uint8Array> {
+  signal?.throwIfAborted();
+  if (!response.body) return new Uint8Array();
+  const reader = response.body.getReader();
+  const stop = () => { void reader.cancel().catch(() => {}); };
+  signal?.addEventListener('abort', stop, { once: true });
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      signal?.throwIfAborted();
+      if (done) break;
+      if (value.byteLength) progress?.();
+      chunks.push(value);
+      length += value.byteLength;
+    }
+  } finally {
+    signal?.removeEventListener('abort', stop);
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(length);
+  let at = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return bytes;
 }
 
 function parse(text: string): unknown {

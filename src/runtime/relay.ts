@@ -48,9 +48,9 @@ export const stream = (call: StreamCall, request: HttpRequest | null, signal: Ab
 export const stopStream = (id: string) => transport.stop(id);
 export const dropStream = (id: string) => transport.drop(id);
 
-// The operator's daily 손님 응답 (server/visits.ts): a guest's reply never passes the server, so its browser says so.
+// A guest's reply never passes the server; its browser reports the daily guest-reply count (server/visits.ts).
 const countGuestReply = (guest: string) =>
-  void fetchApi('visits/guest', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ guest }) }).catch(() => {});
+  void fetchApi('visits/guest', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ guest }) }).then((response) => response.body?.cancel()).catch(() => {});
 
 export function directTransport(guest: string): Transport {
   const calls = new Map<string, AbortController>();
@@ -190,7 +190,7 @@ async function readJson(response: Response | RelayFailure, signal?: AbortSignal)
 // took is server-measured duration, available only after the end.
 export type StreamCall = { preflight?: (settings: ModelSettings, signal: AbortSignal) => Promise<ApiResult<TokenFit>>; calibration?: CallCalibration; measure?: (prepared: PreparedChat) => Promise<InputMeasurement>; id: string; key: JsonWebKey; public?: string; started?: (batch?: string) => void; retrying?: () => void; bot?: string; took?: number; tries?: number };
 
-// Until reader cancellation, retry read failures except call completion, stream-gone or no-session: a network failure
+// Until reader cancellation, retry recoverable read failures: a network failure
 // must not become the result of a still-running call. retry resends only before output; pulse labels starts, never resumes.
 async function accountStream(call: StreamCall, request: HttpRequest | null, signal: AbortSignal, retry: Retry | null = null, pulse?: PulseLabel): Promise<Response | RelayFailure> {
   let body: ReadableStream<Uint8Array>;
@@ -204,7 +204,10 @@ async function accountStream(call: StreamCall, request: HttpRequest | null, sign
     if (response.headers.get('x-stream') !== 'frames' || !response.body) return sourced(response);
     // A call stopped as its start was answered gets no marker: whoever stopped it ends it, and a marker landing after
     // that end would be picked up as a call to save.
-    if (signal.aborted) return lost(signal);
+    if (signal.aborted) {
+      void response.body.cancel().catch(() => {});
+      return lost(signal);
+    }
     call.started?.();
     body = response.body;
   } else {
@@ -220,22 +223,31 @@ async function accountStream(call: StreamCall, request: HttpRequest | null, sign
   return answered(await unframe(call, body, signal));
 }
 
-// 멈추기: the call ends and the server keeps what came. A refused stop leaves the call running until it is dropped.
-const accountStop = (id: string) => void fetchApi(`streams/${id}/stop`, { method: 'POST', headers: { 'content-type': 'application/json' } }).catch(() => {});
+// A refused stop leaves the call running until it is dropped.
+const accountStop = (id: string) => void fetchApi(`streams/${id}/stop`, { method: 'POST', headers: { 'content-type': 'application/json' } }).then((response) => response.body?.cancel()).catch(() => {});
 
 // Once the call's result is saved. A refused drop leaves the server's copy until it expires on its own.
-const accountDrop = (id: string) => void fetchApi(`streams/${id}`, { method: 'DELETE', headers: { 'content-type': 'application/json' } }).catch(() => {});
+const accountDrop = (id: string) => void fetchApi(`streams/${id}`, { method: 'DELETE', headers: { 'content-type': 'application/json' } }).then((response) => response.body?.cancel()).catch(() => {});
 
-// No connection or a server error are this page's and are tried again, ever more slowly; stream-gone: the server
-// holds no such call; no-session: the session is gone. Throws once signal stops the read.
+// A network failure must not end a still-running call; permanent refusals must not reconnect it.
 async function reach(id: string, from: number, tries: number, signal: AbortSignal): Promise<ReadableStream<Uint8Array> | RelayFailure> {
+  let wait = tries ? Math.min(1000 * 2 ** (tries - 1), 30_000) : 0;
   for (; ; tries++) {
-    if (tries) await pause(Math.min(1000 * 2 ** (tries - 1), 30_000), signal);
+    if (wait) await pause(wait, signal);
     signal.throwIfAborted();
     const response = await fetchApi(`streams/${id}?from=${from}`, { signal }).catch(() => null);
-    if (response?.headers.get('x-stream') === 'frames' && response.body) return response.body;
-    if (response?.status === 404) return { kind: 'app', code: 'stream-gone' };
-    if (response?.status === 401) return { kind: 'app', code: await errorCode(response) };
+    if (response?.ok && response.headers.get('x-stream') === 'frames' && response.body) return response.body;
+    if (response?.status === 404) {
+      void response.body?.cancel().catch(() => {});
+      return { kind: 'app', code: 'stream-gone' };
+    }
+    const retryAfter = response?.headers.get('retry-after') ?? null;
+    const next = retryWait(Math.min(tries, 5), retryAfter, Date.now(), Infinity);
+    if (response && ![408, 429, 500, 502, 503, 504].includes(response.status)) {
+      return { kind: response.headers.get(RELAY_HEADER) === 'error' ? 'relay' : 'app', code: await errorCode(response) };
+    }
+    void response?.body?.cancel().catch(() => {});
+    wait = retryAfter === null ? Math.min(next!, 30_000) : next!;
   }
 }
 

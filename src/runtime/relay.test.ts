@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HttpRequest } from '../connectors/types';
 import { streamKey } from '../vault/streams';
 import { holdAccount, holdPulse } from './api';
-import { dropStream, relay, relayJson, stopStream, stream } from './relay';
+import { directTransport, dropStream, relay, relayJson, stopStream, stream } from './relay';
 
 const request: HttpRequest = { url: 'https://example.com/models', method: 'GET', headers: {}, body: null };
 const broken = () => new Response(new ReadableStream({ start: (controller) => controller.error(new TypeError('network error')) }), { headers: { 'x-relay': 'upstream' } });
@@ -135,4 +135,56 @@ it('reads again from the frame after the last one, not after a ping, when the co
   const response = await stream(call, request, new AbortController().signal);
   expect(response instanceof Response && (await response.text())).toBe('Hello, traveler.');
   expect(fetch.mock.calls[1]![0]).toBe(`/api/streams/${call.id}?from=3`);
+});
+
+it('ends reconnects at a permanent account refusal', async () => {
+  const fetch = vi.fn(async () => Response.json({ error: 'account-mismatch' }, { status: 409 }));
+  vi.stubGlobal('fetch', fetch);
+  expect(await stream({ id: crypto.randomUUID(), key: {} }, null, new AbortController().signal)).toEqual({ kind: 'app', code: 'account-mismatch' });
+  expect(fetch).toHaveBeenCalledOnce();
+});
+
+it('cancels retry bodies and waits for Retry-After before reconnecting', async () => {
+  vi.useFakeTimers();
+  try {
+    const cancel = vi.fn();
+    const gone = vi.fn();
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(new Response(new ReadableStream({ cancel }), { status: 429, headers: { 'retry-after': '120' } }))
+      .mockResolvedValueOnce(new Response(new ReadableStream({ cancel: gone }), { status: 404 }));
+    vi.stubGlobal('fetch', fetch);
+    const answer = stream({ id: crypto.randomUUID(), key: {} }, null, new AbortController().signal);
+    await vi.advanceTimersByTimeAsync(119_999);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await answer).toEqual({ kind: 'app', code: 'stream-gone' });
+    expect(gone).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  } finally { vi.useRealTimers(); }
+});
+
+it('cancels unused stop, drop and guest-visit response bodies', async () => {
+  const canceled = vi.fn();
+  vi.stubGlobal('fetch', async (url: string) => url === request.url
+    ? new Response('reply')
+    : new Response(new ReadableStream({ cancel: canceled })));
+  stopStream('call');
+  dropStream('call');
+  const transport = directTransport('guest');
+  const reply = await transport.stream({ id: 'call', key: {} }, request, new AbortController().signal, null, { kind: 'call', role: 'chat', type: 'openai', model: 'm' });
+  expect(reply instanceof Response && await reply.text()).toBe('reply');
+  await vi.waitFor(() => expect(canceled).toHaveBeenCalledTimes(3));
+  transport.close();
+});
+
+it('cancels a stream start answered after its caller stopped', async () => {
+  const stopped = new AbortController();
+  const cancel = vi.fn();
+  vi.stubGlobal('fetch', async () => {
+    stopped.abort();
+    return new Response(new ReadableStream({ cancel }), { headers: { 'x-stream': 'frames' } });
+  });
+  expect(await stream({ id: 'call', key: {}, public: 'k' }, request, stopped.signal)).toEqual({ kind: 'stopped' });
+  expect(cancel).toHaveBeenCalledOnce();
 });

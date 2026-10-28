@@ -101,3 +101,75 @@ it('gives up on headers that never come as offline, so the store waits for the c
     vi.useRealTimers();
   }
 });
+
+it('does not deliver a previous account’s late headers or refusal to the new account', async () => {
+  let resolve!: (response: Response) => void;
+  const pending = new Promise<Response>((done) => { resolve = done; });
+  vi.stubGlobal('fetch', () => pending);
+  holdAccount('a', vi.fn());
+  const answer = fetchApi('objects');
+  const heard = vi.fn();
+  holdAccount('b', heard);
+  resolve(Response.json({ error: 'account-mismatch' }, { status: 409, headers: { 'x-account-bytes': '123', 'x-account-file-bytes': '45', 'x-unread-notices': '2', 'x-unread-board': '3' } }));
+  await answer;
+  expect(heard).not.toHaveBeenCalled();
+  vi.stubGlobal('fetch', async () => Response.json({}, { headers: { 'x-account-bytes': '7' } }));
+  await fetchApi('objects');
+  expect(heard).toHaveBeenCalledExactlyOnceWith({ kind: 'bytes', bytes: 7 });
+});
+
+it('does not apply a refusal if the session changes while its body is read', async () => {
+  let body!: ReadableStreamDefaultController<Uint8Array>;
+  const response = new Response(new ReadableStream({ start: (controller) => { body = controller; } }), { status: 409 });
+  const reading = vi.spyOn(response, 'clone');
+  vi.stubGlobal('fetch', async () => response);
+  const old = vi.fn();
+  holdAccount('a', old);
+  const answer = fetchApi('objects');
+  await vi.waitFor(() => expect(reading).toHaveBeenCalled());
+  const current = vi.fn();
+  holdAccount('a', current);
+  body.enqueue(new TextEncoder().encode('{"error":"account-mismatch"}'));
+  body.close();
+  await answer;
+  expect(old).not.toHaveBeenCalled();
+  vi.stubGlobal('fetch', async () => Response.json({}, { headers: { 'x-account-bytes': '7' } }));
+  await fetchApi('objects');
+  expect(current).toHaveBeenCalledExactlyOnceWith({ kind: 'bytes', bytes: 7 });
+});
+
+it('times out a JSON body that keeps trickling without completing', async () => {
+  vi.useFakeTimers();
+  try {
+    let body!: ReadableStreamDefaultController<Uint8Array>;
+    const cancel = vi.fn();
+    vi.stubGlobal('fetch', async () => new Response(new ReadableStream({ start: (controller) => { body = controller; }, cancel })));
+    const answer = api('GET', 'objects');
+    await vi.advanceTimersByTimeAsync(10_000);
+    body.enqueue(new TextEncoder().encode('{'));
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(await answer).toEqual({ ok: false, error: 'offline' });
+    expect(cancel).toHaveBeenCalledOnce();
+  } finally { vi.useRealTimers(); }
+});
+
+it('allows progressing file bodies beyond the total timeout but cancels a stalled download', async () => {
+  vi.useFakeTimers();
+  try {
+    let body!: ReadableStreamDefaultController<Uint8Array>;
+    const cancel = vi.fn();
+    vi.stubGlobal('fetch', async () => new Response(new ReadableStream({ start: (controller) => { body = controller; }, cancel }), { headers: { 'content-type': 'application/octet-stream' } }));
+    const answer = api('GET', 'files/f');
+    let ended = false;
+    void answer.then(() => { ended = true; });
+    await vi.advanceTimersByTimeAsync(10_000);
+    body.enqueue(new Uint8Array([1]));
+    await vi.advanceTimersByTimeAsync(10_000);
+    body.enqueue(new Uint8Array([2]));
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(ended).toBe(false);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(await answer).toEqual({ ok: false, error: 'offline' });
+    expect(cancel).toHaveBeenCalledOnce();
+  } finally { vi.useRealTimers(); }
+});
