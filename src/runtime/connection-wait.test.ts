@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import type { ApiFailure } from './api';
 import { ConnectionWait } from './connection-wait';
 
 it('jitters each wait without retrying before the server retryAfter', async () => {
@@ -23,5 +24,27 @@ it('jitters each wait without retrying before the server retryAfter', async () =
   } finally {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  }
+});
+
+it('passes stop to an in-flight retry so abort ends the attempt and the wait', async () => {
+  vi.useFakeTimers();
+  const stop = new AbortController();
+  const wait = new ConnectionWait();
+  const attempt = vi.fn<(signal: AbortSignal) => Promise<ApiFailure>>()
+    .mockResolvedValueOnce({ ok: false, error: 'offline' })
+    .mockImplementation((signal) => new Promise((resolve) => {
+      signal?.addEventListener('abort', () => resolve({ ok: false, error: 'stopped' }), { once: true });
+    }));
+  try {
+    const running = wait.run(attempt, stop.signal);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(attempt).toHaveBeenLastCalledWith(stop.signal);
+    expect(wait.waiting()).toBe(true);
+    stop.abort();
+    expect(await running).toEqual({ ok: false, error: 'stopped' });
+    expect(wait.waiting()).toBe(false);
+  } finally {
+    vi.useRealTimers();
   }
 });

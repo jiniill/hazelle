@@ -96,10 +96,10 @@ export async function exportBackup(
     const unasked = new Map<string, FileRef>();
     const settle = async () => {
       if (unasked.size) {
-        const missing = await files.missing([...unasked.keys()]);
+        const missing = await files.missing([...unasked.keys()], signal);
         if (!missing.ok) throw (refused = missing);
         for (const id of missing.data.missing) {
-          const read = await files.read(unasked.get(id)!);
+          const read = await files.read(unasked.get(id)!, { signal });
           if (!read.ok && read.error !== 'file-blocked') throw (refused = read);
           if (!read.ok) blocked.add(id);
         }

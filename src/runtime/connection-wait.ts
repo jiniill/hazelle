@@ -15,15 +15,16 @@ export class ConnectionWait {
   readonly waiting = () => this.calls > 0;
   readonly subscribe = this.changes.subscribe;
 
-  async run<R extends ApiResult<unknown> | null>(attempt: () => Promise<R>, stop: AbortSignal): Promise<R | ApiFailure> {
-    let result: R | ApiFailure = await attempt();
+  async run<R extends ApiResult<unknown> | null>(attempt: (signal: AbortSignal) => Promise<R>, stop: AbortSignal): Promise<R | ApiFailure> {
+    if (stop.aborted) return { ok: false, error: 'stopped' };
+    let result: R | ApiFailure = await attempt(stop);
     if (!waits(result)) return result;
     this.change(1);
     try {
       for (let tries = 0; waits(result); tries++) {
         const after = result.retryAfter === undefined ? RECONNECT_PAUSES[Math.min(tries, RECONNECT_PAUSES.length - 1)]! : result.retryAfter * 1000;
         if (!(await pause(after * (1 + Math.random() * 0.5), stop))) return { ok: false, error: 'stopped' };
-        result = await attempt();
+        result = await attempt(stop);
       }
       return result;
     } finally {

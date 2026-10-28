@@ -65,12 +65,12 @@ export async function keepAttachments(store: ObjectStore, chat: string, pictures
 }
 
 // Resolve picture ids only at send time. Imported inlays need resizing; composer attachments are already normalized.
-export async function withPictures({ store, files }: { store: Pick<ObjectStore, 'get'>; files: Pick<Files, 'read'> }, prompt: Assembled): Promise<ApiResult<Assembled>> {
+export async function withPictures({ store, files }: { store: Pick<ObjectStore, 'get'>; files: Pick<Files, 'read'> }, prompt: Assembled, signal?: AbortSignal): Promise<ApiResult<Assembled>> {
   if (!prompt.messages.some(({ inlays }) => inlays)) return { ok: true, data: prompt };
   const read = async (id: string): Promise<ApiResult<InputPicture>> => {
     const inlay = store.get('inlay', id)?.value;
     if (!inlay) return { ok: false, error: 'not-found' };
-    const bytes = await files.read(inlay.file);
+    const bytes = await files.read(inlay.file, { signal });
     if (!bytes.ok) return bytes;
     const sent = await sentPicture({ bytes: bytes.data, type: inlay.type }).catch(() => null);
     return sent ? { ok: true, data: { type: sent.type, data: toBase64(sent.bytes) } } : { ok: false, error: 'unreadable' };

@@ -59,12 +59,12 @@ function coverOf(card: Pick<Card, 'name' | 'creator' | 'creatorNotes'>): ShareCo
 
 // 링크 만들기 and 새 버전으로 바꾸기: the character as it is now, sealed under the link's key, its manifest stored among the
 // account's files and named with its pictures. tools: modules left out, as 내보내기 counts them.
-export async function publishShare(store: ObjectStore, files: Files, character: string, covered: boolean): Promise<ApiResult<{ share: Stored<'share'>; version: number; tools: number }>> {
+export async function publishShare(store: ObjectStore, files: Files, character: string, covered: boolean, signal?: AbortSignal): Promise<ApiResult<{ share: Stored<'share'>; version: number; tools: number }>> {
   const content = charxContent(store, character);
   if (!content.ok) return content;
   const held = shareOf(store, character);
   const key = held?.value.key ?? newShareKey();
-  const manifest = await files.put(await sealShare(key, encodeManifest(content.data)));
+  const manifest = await files.put(await sealShare(key, encodeManifest(content.data)), signal);
   if (!manifest.ok) return manifest;
   const card = live(store.get('character', character))!.value.card;
   const body = { manifest: manifest.data, files: content.data.pictures.map(({ ref }) => ref.id), cover: covered ? coverOf(card) : null };

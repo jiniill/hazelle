@@ -160,7 +160,7 @@ export async function exportEveryCharacter(reader: Pick<Session, 'store' | 'file
       const push = await zip.entry(`${base}.charx`, false);
       // The charx's own failure ends the whole zip, which the finally below aborts; one entry cannot be taken back.
       const entry: BackupOutput = { write: (bytes) => push(bytes), close: () => push(new Uint8Array(0), true), abort: async () => {} };
-      const charx = await writeCharxFile(content.data, (ref) => files.read(ref, { bulk: true }), entry, () => {});
+      const charx = await writeCharxFile(content.data, (ref) => files.read(ref, { bulk: true, signal }), entry, () => {});
       if (!charx.ok) return charx.error === 'export-write' ? writeFailure(signal) : charx;
       tools += content.data.tools;
       const chats = chatsOf(store, id);

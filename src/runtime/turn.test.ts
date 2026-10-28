@@ -1,3 +1,4 @@
+import * as attachments from './attachments';
 import { readTool } from '../engine/import/tool';
 import type { ToolUnit } from '../model/tool';
 import { setModuleAlways } from './modules';
@@ -345,3 +346,25 @@ it('runs tool prompts after Lua, regathers tool edits, and places both sets of w
     expect(shown(fold(session.store.children('entry', chat)).at(-1)!).before).toEqual([['phase', 'lua'], [key, 'true']]);
   }, binding);
 });
+
+it('stops attachment preparation quietly when the turn is cancelled', () =>
+  server.withSession(async (session) => {
+    await answerable(session);
+    const chat = crypto.randomUUID();
+    await server.hold(session.store, chat);
+    await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+    await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'Look at this picture' });
+    const read = vi.spyOn(attachments, 'withPictures').mockImplementation((_session, _prompt, signal) => new Promise((resolve) => {
+      signal?.addEventListener('abort', () => resolve({ ok: false, error: 'stopped' }), { once: true });
+    }));
+    const log = stubRelay(() => saying('unused'));
+    try {
+      const turning = takeTurn(session, chat, { kind: 'answer' });
+      await vi.waitFor(() => expect(read).toHaveBeenCalledOnce());
+      session.talk.stop(chat);
+      expect(await turning).toBeNull();
+      expect(log).toHaveLength(0);
+    } finally {
+      read.mockRestore();
+    }
+  }));

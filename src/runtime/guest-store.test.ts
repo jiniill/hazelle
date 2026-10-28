@@ -132,3 +132,21 @@ it('keeps one board secret across tabs beside the guest head and out of the obje
   expect(JSON.stringify(await backend.feed(feedQuery({ since: 0, timeline: null })))).not.toContain(one.ok ? one.data! : '');
   expect(JSON.stringify(await backend.heldFiles(null))).not.toContain(one.ok ? one.data! : '');
 });
+
+it('aborts a guest file write in its transaction and reports stopped without storing it', async () => {
+  const { backend } = await guest();
+  const stop = new AbortController();
+  const id = 'a'.repeat(64);
+  const put = IDBObjectStore.prototype.put;
+  const write = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementationOnce(function (this: IDBObjectStore, ...args) {
+    const request = put.apply(this, args);
+    queueMicrotask(() => stop.abort());
+    return request;
+  });
+  try {
+    expect(await backend.putFile(id, randomBytes(32), stop.signal)).toEqual({ ok: false, error: 'stopped' });
+    expect(await backend.readFile(id)).toEqual({ ok: false, error: 'not-found' });
+  } finally {
+    write.mockRestore();
+  }
+});

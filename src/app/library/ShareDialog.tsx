@@ -94,13 +94,13 @@ function LinkDialog({ character, name, links, reload, onClose }: { character: st
 
   const publish = () => {
     setPressed('publish');
-    void run(async () => {
+    void run(async (signal) => {
       // A link cut elsewhere still named in this account's vault is let go first; a new one takes its place.
       if (own && !link) {
         const cut = await cutShare(store, own.value.share);
         if (!cut.ok) return describeFailure(cut);
       }
-      const published = await publishShare(store, files, character, link ? link.covered : covered);
+      const published = await publishShare(store, files, character, link ? link.covered : covered, signal);
       if (!published.ok) return describeFailure(published);
       const tools = published.data.tools ? { detail: `${TOOL} ${published.data.tools}개는 빼고 공유했어요.` } : undefined;
       toast.show(link ? '새 버전으로 바꿨어요.' : '공유 링크를 만들었어요.', tools);

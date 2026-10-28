@@ -6,11 +6,11 @@ import { api, type ApiResult } from './api';
 export interface Backend {
   feed(query: FeedQuery, signal?: AbortSignal): Promise<ApiResult<FeedAnswer>>;
   batch(timeline: string, writes: SealedWrite[], files: string[], signal?: AbortSignal): Promise<ApiResult<BatchAnswer>>;
-  missingFiles(ids: string[]): Promise<ApiResult<MissingFiles>>;
-  putFile(id: string, body: Uint8Array<ArrayBuffer>): Promise<ApiResult<unknown>>;
-  readFile(id: string): Promise<ApiResult<Uint8Array<ArrayBuffer>>>;
-  heldFiles(after: string | null): Promise<ApiResult<HeldFiles>>;
-  sweepFiles(sweep: FileSweep): Promise<ApiResult<SweptFiles>>;
+  missingFiles(ids: string[], signal?: AbortSignal): Promise<ApiResult<MissingFiles>>;
+  putFile(id: string, body: Uint8Array<ArrayBuffer>, signal?: AbortSignal): Promise<ApiResult<unknown>>;
+  readFile(id: string, signal?: AbortSignal): Promise<ApiResult<Uint8Array<ArrayBuffer>>>;
+  heldFiles(after: string | null, signal?: AbortSignal): Promise<ApiResult<HeldFiles>>;
+  sweepFiles(sweep: FileSweep, signal?: AbortSignal): Promise<ApiResult<SweptFiles>>;
 }
 
 // The server's defaults, so a query states only what it asks.
@@ -20,11 +20,11 @@ export function serverBackend(request: typeof api = api): Backend {
   return {
     feed: (query, signal) => request<FeedAnswer>('GET', `objects?${feedSearch(query)}`, undefined, signal),
     batch: (timeline, writes, files, signal) => request<BatchAnswer>('POST', 'objects/batch', { timeline, writes, files }, signal),
-    missingFiles: (ids) => request<MissingFiles>('POST', 'files/missing', { ids }),
-    putFile: (id, body) => request('PUT', `files/${id}`, body),
-    readFile: (id) => request<Uint8Array<ArrayBuffer>>('GET', `files/${id}`),
-    heldFiles: (after) => request<HeldFiles>('GET', after ? `files?after=${after}` : 'files'),
-    sweepFiles: (sweep) => request<SweptFiles>('POST', 'files/sweep', sweep),
+    missingFiles: (ids, signal) => request<MissingFiles>('POST', 'files/missing', { ids }, signal),
+    putFile: (id, body, signal) => request('PUT', `files/${id}`, body, signal),
+    readFile: (id, signal) => request<Uint8Array<ArrayBuffer>>('GET', `files/${id}`, undefined, signal),
+    heldFiles: (after, signal) => request<HeldFiles>('GET', after ? `files?after=${after}` : 'files', undefined, signal),
+    sweepFiles: (sweep, signal) => request<SweptFiles>('POST', 'files/sweep', sweep, signal),
   };
 }
 

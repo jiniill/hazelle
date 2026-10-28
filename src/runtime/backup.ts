@@ -98,7 +98,7 @@ class BackupWorker {
       if (name === 'prepare') return pinBackup(host.store, signal);
       if (name === 'pin') return host.store.pin(signal);
       if (name === 'readFile') return host.files.read(args as FileRef, { signal, bulk: true });
-      if (name === 'missingFiles') return host.files.missing(args as string[]);
+      if (name === 'missingFiles') return host.files.missing(args as string[], signal);
       if (name === 'output') {
         const output = args as OutputCall;
         if (output.kind === 'write') return host.output.write(output.bytes);

@@ -49,7 +49,7 @@ export async function addCharacter(store: ObjectStore, character: Character, { a
 export type ImportedCharacter = { id: string; unsupported: Unsupported; faceless: boolean };
 
 // Pipeline read/upload windows, retaining at most two. typeOf null skips a file; inlays allow pictures/signatures only.
-export async function saveAssets(files: Files, assets: Imported['assets'], progress: Progress, typeOf: (bytes: Uint8Array) => string | null = assetType): Promise<ApiResult<{ kept: Asset[]; unsupported: Unsupported }>> {
+export async function saveAssets(files: Files, assets: Imported['assets'], progress: Progress, typeOf: (bytes: Uint8Array) => string | null = assetType, signal?: AbortSignal): Promise<ApiResult<{ kept: Asset[]; unsupported: Unsupported }>> {
   const kept: Asset[] = [];
   const tally: Tally = new Map();
   const saveWindow = async (start: number) => {
@@ -60,7 +60,7 @@ export async function saveAssets(files: Files, assets: Imported['assets'], progr
       else if (!type) add(tally, 'unsupported-file');
       return type ? [{ name, type, bytes: bytes! }] : [];
     });
-    return { read, saved: await files.save(read.map(({ bytes }) => bytes), { bulk: true }) };
+    return { read, saved: await files.save(read.map(({ bytes }) => bytes), { bulk: true, signal }) };
   };
   const starts = Array.from({ length: Math.ceil(assets.length / FILE_WINDOW) }, (_, index) => index * FILE_WINDOW);
   for await (const [start, { read, saved }] of inOrder(starts, saveWindow, { ahead: 2 })) {

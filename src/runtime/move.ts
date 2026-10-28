@@ -236,12 +236,12 @@ type Holder = { kind: 'asset' | 'inlay'; parent: string };
 
 // Only the names the holder does not have yet, so the same pictures given twice add nothing; unsupported as in
 // runtime/characters ImportedCharacter, so a name it had is neither kept nor counted.
-export async function fillPictures(store: ObjectStore, files: Files, { kind, parent }: Holder, assets: Imported['assets'], progress: Progress = () => {}): Promise<ApiResult<{ kept: Asset[]; unsupported: Unsupported }>> {
+export async function fillPictures(store: ObjectStore, files: Files, { kind, parent }: Holder, assets: Imported['assets'], progress: Progress = () => {}, signal?: AbortSignal): Promise<ApiResult<{ kept: Asset[]; unsupported: Unsupported }>> {
   if (!store.get(kind === 'asset' ? 'character' : 'chat', parent)) return { ok: false, error: 'gone' };
   const had = new Set(store.children(kind, parent).map(({ value }) => value.name));
-  const saved = await saveAssets(files, assets.filter(({ name }) => !had.has(name)), progress, kind === 'inlay' ? inlayType : undefined);
+  const saved = await saveAssets(files, assets.filter(({ name }) => !had.has(name)), progress, kind === 'inlay' ? inlayType : undefined, signal);
   if (!saved.ok) return saved;
-  const added = await store.batch(saved.data.kept.map((value): Write => ({ type: 'create', kind, id: crypto.randomUUID(), parent, value })), undefined, { unheld: kind === 'inlay' });
+  const added = await store.batch(saved.data.kept.map((value): Write => ({ type: 'create', kind, id: crypto.randomUUID(), parent, value })), undefined, { unheld: kind === 'inlay', signal });
   return added.ok ? saved : added;
 }
 
@@ -283,7 +283,7 @@ export function fillInlays(store: ObjectStore, files: Files, inlays: Inlays, pro
         }
         const ids = inlayIds(store.children('entry', chat).flatMap(({ value }) => (value.type === 'message' || value.type === 'version' ? [value.text, value.reasoning ?? ''] : [])));
         if (!ids.length) return { ok: true, data: null };
-        const saved = await fillPictures(store, files, { kind: 'inlay', parent: chat }, inlays.assets(ids));
+        const saved = await fillPictures(store, files, { kind: 'inlay', parent: chat }, inlays.assets(ids), undefined, signal);
         if (!saved.ok) return saved;
         filled.pictures += saved.data.kept.filter(({ type }) => type !== SIGNATURE).length;
         filled.missed += unsupportedCount(saved.data.unsupported);

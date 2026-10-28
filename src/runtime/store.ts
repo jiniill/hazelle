@@ -670,7 +670,7 @@ export class ObjectStore {
 
   // Reads and writes wait through outages, restores and store wake-up until cancellation, as file uploads do.
   // Lost write responses cause conflict retries: changes must be idempotent (set values, never increment them).
-  async reaching<R extends ApiResult<unknown> | null>(attempt: () => Promise<R>, stop: AbortSignal = this.closing.signal): Promise<R | ApiFailure> {
+  async reaching<R extends ApiResult<unknown> | null>(attempt: (signal: AbortSignal) => Promise<R>, stop: AbortSignal = this.closing.signal): Promise<R | ApiFailure> {
     return this.connection.run(attempt, stop);
   }
 

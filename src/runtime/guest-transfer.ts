@@ -83,7 +83,7 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
   const pictures: string[] = [];
   for (;;) {
     if (signal?.aborted) return failed('stopped');
-    const page = await source.heldFiles(pictures.at(-1) ?? null);
+    const page = await source.heldFiles(pictures.at(-1) ?? null, signal);
     if (!page.ok) return page;
     if (page.data.timeline !== held.data.timeline || page.data.rev !== held.data.rev) return failed('conflict');
     pictures.push(...page.data.ids);
@@ -92,7 +92,7 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
   progress({ kind: 'pictures', done: 0, total: pictures.length });
   let picturesDone = 0;
   const move = async (ids: string[]): Promise<ApiFailure | null> => {
-    const missing = await target.missingFiles(ids);
+    const missing = await target.missingFiles(ids, signal);
     if (!missing.ok) return missing;
     const needed = new Set(missing.data.missing);
     let room = missing.data.room;
@@ -100,7 +100,7 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
     await Promise.all(ids.map((id) => transfers.run(async () => {
       if (failure || signal?.aborted) return;
       if (needed.has(id)) {
-        const body = await source.readFile(id);
+        const body = await source.readFile(id, signal);
         if (!body.ok) { failure ??= body; return; }
         if (body.data.length > missing.data.maxBytes) { failure ??= failed('too-large'); return; }
         if (room !== null) {
@@ -108,11 +108,11 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
           room -= body.data.length;
         }
         if (failure || signal?.aborted) return;
-        const sent = await target.putFile(id, body.data);
+        const sent = await target.putFile(id, body.data, signal);
         if (!sent.ok) { failure ??= sent; return; }
       }
       progress({ kind: 'pictures', done: ++picturesDone, total: pictures.length });
-    }, true)));
+    }, true, signal)));
     return failure;
   };
   const asks = Array.from({ length: Math.ceil(pictures.length / PICTURES_PER_ASK) }, (_, index) => pictures.slice(index * PICTURES_PER_ASK, (index + 1) * PICTURES_PER_ASK));

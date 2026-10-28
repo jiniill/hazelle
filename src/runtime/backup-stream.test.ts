@@ -93,7 +93,7 @@ it('round-trips streamed objects and files and filters unreachable objects from 
   for (const object of source.objects) expect(next.held.get(object.id)).toMatchObject({ ...object, rev: expect.any(Number) });
   expect(next.held.size).toBe(source.objects.length);
   expect(read).toHaveBeenCalledTimes(1);
-  expect(asked).toHaveBeenCalledExactlyOnceWith([source.ref.id]);
+  expect(asked).toHaveBeenCalledExactlyOnceWith([source.ref.id], expect.any(AbortSignal));
 });
 
 it('restores a backup built by the previous zipSync format', async () => {

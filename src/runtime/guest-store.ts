@@ -80,31 +80,32 @@ export function guestBackend(account: string): Backend {
   return {
     feed: (query) => transact(['guest-heads', 'guest-objects'], 'readonly', (tx) => feed(tx, account, query)),
     batch: (timeline, writes) => transact(['guest-heads', 'guest-objects'], 'readwrite', (tx) => batch(tx, account, timeline, writes)),
-    missingFiles: (ids) => transact(['guest-files'], 'readwrite', async (tx) => {
+    missingFiles: (ids, signal) => transact(['guest-files'], 'readwrite', async (tx) => {
       const files = tx.objectStore('guest-files');
       const held = await Promise.all(ids.map((id) => got<HeldFile | undefined>(files.get(objectKey(id)))));
       const now = Date.now();
       // Asked about is claimed, as the server's ask is: the sweep keeps it while the import writes what names it.
       held.forEach((file, index) => file && files.put({ ...file, claimed: now }, objectKey(ids[index]!)));
       return { ok: true, data: { missing: ids.filter((_, index) => !held[index]), maxBytes: MAX_FILE_BYTES, room: null } };
-    }),
-    putFile: (id, body) => body.length > MAX_FILE_BYTES ? Promise.resolve(failure('too-large')) : transact(['guest-files'], 'readwrite', async (tx) => {
+    }, signal),
+    putFile: (id, body, signal) => transact(['guest-files'], 'readwrite', async (tx) => {
+      if (body.length > MAX_FILE_BYTES) return failure('too-large');
       tx.objectStore('guest-files').put({ body, claimed: Date.now() } satisfies HeldFile, objectKey(id));
       return { ok: true, data: null };
-    }),
-    readFile: (id) => transact(['guest-files'], 'readonly', async (tx) => {
+    }, signal),
+    readFile: (id, signal) => transact(['guest-files'], 'readonly', async (tx) => {
       const file = await got<HeldFile | undefined>(tx.objectStore('guest-files').get(objectKey(id)));
       return file ? { ok: true, data: file.body } : failure('not-found');
-    }),
-    heldFiles: (after) => transact(['guest-heads', 'guest-files'], 'readonly', async (tx) => {
+    }, signal),
+    heldFiles: (after, signal) => transact(['guest-heads', 'guest-files'], 'readonly', async (tx) => {
       const head = await headOf(tx, account);
       if (!head) return failure('browser-storage');
       const range = IDBKeyRange.bound(after === null ? [account] : [account, after], [account, []], after !== null);
       const keys = await got<IDBValidKey[]>(tx.objectStore('guest-files').getAllKeys(range, MAX_FILE_IDS + 1));
       return { ok: true, data: { ids: keys.slice(0, MAX_FILE_IDS).map((key) => (key as [string, string])[1]), more: keys.length > MAX_FILE_IDS, rev: head.rev, timeline: head.timeline } };
-    }),
+    }, signal),
     // Nothing is ever taken back: a file no longer here has no other copy to come from.
-    sweepFiles: ({ timeline, rev, unused }) => transact(['guest-heads', 'guest-files'], 'readwrite', async (tx) => {
+    sweepFiles: ({ timeline, rev, unused }, signal) => transact(['guest-heads', 'guest-files'], 'readwrite', async (tx) => {
       const head = await headOf(tx, account);
       if (!head) return failure('browser-storage');
       if (head.timeline !== timeline) return RESET;
@@ -119,7 +120,7 @@ export function guestBackend(account: string): Backend {
         released++;
       });
       return { ok: true, data: { released, taken: 0 } };
-    }),
+    }, signal),
   };
 }
 
@@ -194,9 +195,15 @@ const headOf = (tx: IDBTransaction, account: string) => got<Head | undefined>(tx
 
 // One transaction per call. A full browser answers browser-full; any other storage failure, or a store gone from under
 // the page, browser-storage.
-async function transact<T>(stores: string[], mode: IDBTransactionMode, work: (tx: IDBTransaction) => Promise<ApiResult<T>>): Promise<ApiResult<T>> {
+async function transact<T>(stores: string[], mode: IDBTransactionMode, work: (tx: IDBTransaction) => Promise<ApiResult<T>>, signal?: AbortSignal): Promise<ApiResult<T>> {
+  let stop: (() => void) | undefined;
   try {
-    const tx = (await database()).transaction(stores, mode);
+    if (signal?.aborted) return failure('stopped');
+    const db = await database();
+    if (signal?.aborted) return failure('stopped');
+    const tx = db.transaction(stores, mode);
+    stop = () => tx.abort();
+    signal?.addEventListener('abort', stop, { once: true });
     const done = new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();
       tx.onabort = tx.onerror = () => reject(tx.error);
@@ -207,8 +214,11 @@ async function transact<T>(stores: string[], mode: IDBTransactionMode, work: (tx
     await done;
     return result;
   } catch (error) {
+    if (signal?.aborted) return failure('stopped');
     if (!(error instanceof DOMException)) throw error;
     return failure(error.name === 'QuotaExceededError' ? 'browser-full' : 'browser-storage');
+  } finally {
+    if (stop) signal?.removeEventListener('abort', stop);
   }
 }
 

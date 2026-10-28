@@ -30,10 +30,27 @@ export class Transfers {
 
   constructor(readonly slots: number) {}
 
-  async run<T>(work: () => Promise<T>, bulk = false): Promise<T> {
+  async run<T>(work: () => Promise<T>, bulk = false, signal?: AbortSignal): Promise<T | ApiFailure> {
+    if (signal?.aborted) return { ok: false, error: 'stopped' };
     if (this.running < this.slots) this.running++;
-    else await new Promise<void>((resolve) => this.waiting[bulk ? 'bulk' : 'now'].push(resolve));
+    else {
+      const waiting = this.waiting[bulk ? 'bulk' : 'now'];
+      const entered = await new Promise<boolean>((resolve) => {
+        const start = () => {
+          signal?.removeEventListener('abort', stop);
+          resolve(true);
+        };
+        const stop = () => {
+          waiting.splice(waiting.indexOf(start), 1);
+          resolve(false);
+        };
+        waiting.push(start);
+        signal?.addEventListener('abort', stop, { once: true });
+      });
+      if (!entered) return { ok: false, error: 'stopped' };
+    }
     try {
+      if (signal?.aborted) return { ok: false, error: 'stopped' };
       return await work();
     } finally {
       const next = this.waiting.now.shift() ?? this.waiting.bulk.shift();
@@ -90,7 +107,7 @@ export class Files {
     const sealed = await Promise.all(files.map(sealFile));
     if (signal?.aborted) return { ok: false, error: 'stopped' };
     const bodies = new Map(sealed.map(({ ref, body }) => [ref.id, body]));
-    const asked = await this.missing([...bodies.keys()]);
+    const asked = await this.missing([...bodies.keys()], signal);
     if (!asked.ok) return asked;
     const refused = new Set<string>();
     const missing: string[] = [];
@@ -108,11 +125,11 @@ export class Files {
       missing.map((id) =>
         this.queue.run(async () => {
           if (failed || signal?.aborted) return;
-          const put = await this.store.reaching(() => this.backend.putFile(id, bodies.get(id)!), signal);
+          const put = await this.store.reaching((stop) => this.backend.putFile(id, bodies.get(id)!, stop), signal);
           if (put.ok) return;
           if (REFUSED.has(put.error)) refused.add(id);
           else failed ??= put;
-        }, bulk),
+        }, bulk, signal),
       ),
     );
     if (signal?.aborted) return { ok: false, error: 'stopped' };
@@ -122,12 +139,13 @@ export class Files {
 
   // The ids the server holds no readable file for (never stored, or blocked), the largest sealed body it takes and the
   // bytes left under the account's picture cap.
-  async missing(ids: string[]): Promise<ApiResult<Missing>> {
+  async missing(ids: string[], signal?: AbortSignal): Promise<ApiResult<Missing>> {
+    if (signal?.aborted) return { ok: false, error: 'stopped' };
     const missing = new Set<string>();
     let maxBytes = 0;
     let room: number | null = null;
     for (let start = 0; start < ids.length; start += MAX_FILE_IDS) {
-      const asked = await this.store.reaching(() => this.backend.missingFiles(ids.slice(start, start + MAX_FILE_IDS)));
+      const asked = await this.store.reaching((stop) => this.backend.missingFiles(ids.slice(start, start + MAX_FILE_IDS), stop), signal);
       if (!asked.ok) return asked;
       for (const id of asked.data.missing) missing.add(id);
       ({ maxBytes, room } = asked.data);
@@ -160,7 +178,7 @@ export class Files {
       let rev: number | null = null;
       for (let more = true; more; ) {
         const after = held.at(-1);
-        const page = await this.store.reaching(() => this.backend.heldFiles(after ?? null), signal);
+        const page = await this.store.reaching((stop) => this.backend.heldFiles(after ?? null, stop), signal);
         if (!page.ok) return page;
         if (page.data.timeline !== pin.timeline) return { ok: false, error: 'cache-reset' };
         if (rev !== null && rev !== page.data.rev) return { ok: false, error: 'conflict' };
@@ -188,7 +206,7 @@ export class Files {
         const released = unused.slice(Math.max(0, start - lost.length), Math.max(0, start + MAX_FILE_IDS - lost.length));
         // rev: set by the walk's first page, which always comes.
         const body = { timeline: pin.timeline, rev: rev!, unused: released, named };
-        const answer = await this.store.reaching(() => this.backend.sweepFiles(body), signal);
+        const answer = await this.store.reaching((stop) => this.backend.sweepFiles(body, stop), signal);
         if (!answer.ok) return answer;
         swept.released += answer.data.released;
         swept.taken += answer.data.taken;
@@ -198,16 +216,16 @@ export class Files {
   }
 
   // A body sealed elsewhere, a share's manifest, stored as it is under its hash, as every file is. Its id.
-  async put(body: Uint8Array<ArrayBuffer>): Promise<ApiResult<string>> {
+  async put(body: Uint8Array<ArrayBuffer>, signal?: AbortSignal): Promise<ApiResult<string>> {
     const id = await fileId(body);
-    const put = await this.queue.run(() => this.store.reaching(() => this.backend.putFile(id, body)));
+    const put = await this.queue.run(() => this.store.reaching((stop) => this.backend.putFile(id, body, stop), signal), false, signal);
     return put.ok ? { ok: true, data: id } : put;
   }
 
   // A body that does not open answers 'unreadable', never empty bytes. The wait ends with signal (a backup's 중지), not
   // only with the store.
   async read(ref: FileRef, { signal, bulk }: { signal?: AbortSignal; bulk?: boolean } = {}): Promise<ApiResult<Uint8Array<ArrayBuffer>>> {
-    const result = await this.queue.run(() => this.store.reaching(() => this.backend.readFile(ref.id), signal), bulk);
+    const result = await this.queue.run(() => this.store.reaching((stop) => this.backend.readFile(ref.id, stop), signal), bulk, signal);
     if (!result.ok) return result;
     const bytes = await openFile(ref, result.data);
     return bytes ? { ok: true, data: bytes } : { ok: false, error: 'unreadable' };

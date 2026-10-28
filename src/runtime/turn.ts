@@ -209,7 +209,8 @@ async function prepare(session: Session, chat: string, gathered: TurnContext, si
   if ('kind' in shortened) return { kind: 'preread', failure: shortened, ...kept };
   const sent = shortened.prompt;
   // Last, so the worker and the bot's scripts carry each picture's id, never its bytes.
-  const pictured = await withPictures(session, sent);
+  const pictured = await withPictures(session, sent, signal);
+  if (signal.aborted) return { kind: 'halted' };
   if (!pictured.ok) return { kind: 'unsent', failure: pictured, ...kept };
   const before = [...(reply.before ?? []), ...requested.writes];
   const send = cacheSend({ turn, prompt: sent, calibration }, session.credentials.pool.peek(route.connection.value)?.id ?? null);
@@ -221,7 +222,7 @@ async function prepare(session: Session, chat: string, gathered: TurnContext, si
     const decision = calibration.refused(refusal, measurement);
     if (!decision) return null;
     const fitted = await evaluating(session.store.evaluation.rewrite({ asker: 'send', chat }, scope, { prompt: sent, messages: sent.messages, fit: { ...fit, allowance: decision.allowance } }, signal));
-    const refitted = 'kind' in fitted ? null : await withPictures(session, fitted);
+    const refitted = 'kind' in fitted ? null : await withPictures(session, fitted, signal);
     return refitted?.ok ? { prompt: refitted.data, fit: decision, retries: [...calibration.retries] } : null;
   };
   return { route, settings, prompt: pictured.data, ...(diagnose && { diagnose }), calibration: { fit: calibration.fit, retries: [] }, refit, said, ...(before.length > 0 && { before }), ...(against && { forecast: against }), ...(shortened.preread && { preread: shortened.preread }), ...(agents.runs.length > 0 && { agents: agents.runs }) };

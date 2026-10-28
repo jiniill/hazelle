@@ -73,6 +73,62 @@ describe('files uploading', () => {
 });
 
 describe('transfers', () => {
+  it('removes a cancelled queued read before a slot opens without calling its backend', async () => {
+    const { store } = await server.account();
+    const queue = new Transfers(1);
+    let release = () => {};
+    const first = queue.run(() => new Promise<void>((resolve) => { release = resolve; }));
+    const backend = serverBackend();
+    const read = vi.spyOn(backend, 'readFile');
+    const files = new Files(backend, store, queue);
+    const stop = new AbortController();
+    const reading = files.read((await sealFile(randomBytes(32))).ref, { signal: stop.signal });
+    try {
+      stop.abort();
+      expect(await reading).toEqual({ ok: false, error: 'stopped' });
+      expect(read).not.toHaveBeenCalled();
+    } finally {
+      release();
+      await first;
+    }
+    await queue.run(async () => {});
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('passes an upload signal through the missing request and aborts its running fetch', async () => {
+    const { store } = await server.account();
+    const stop = new AbortController();
+    let started!: (signal: AbortSignal) => void;
+    const starting = new Promise<AbortSignal>((resolve) => { started = resolve; });
+    let missingSignal: AbortSignal | undefined;
+    let endFetch = () => {};
+    vi.stubGlobal('fetch', vi.fn(async (_input: string, init: RequestInit) => {
+      const signal = init.signal!;
+      if (init.method === 'POST') {
+        missingSignal = signal;
+        const { ids } = JSON.parse(init.body as string) as { ids: string[] };
+        return Response.json({ missing: ids, maxBytes: 1 << 30, room: null });
+      }
+      started(signal);
+      return new Promise<Response>((_resolve, reject) => {
+        endFetch = () => reject(new DOMException('Stopped', 'AbortError'));
+        signal.addEventListener('abort', endFetch, { once: true });
+      });
+    }));
+    const files = new Files(serverBackend(), store, new Transfers(1));
+    try {
+      const saving = files.save([randomBytes(32)], { signal: stop.signal });
+      const transferSignal = await starting;
+      stop.abort();
+      expect(transferSignal.aborted).toBe(true);
+      expect(missingSignal?.aborted).toBe(true);
+      expect(await saving).toEqual({ ok: false, error: 'stopped' });
+    } finally {
+      endFetch();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('runs 4 at once over HTTP/1.1, whose connections the store shares, and 24 over a multiplexed one', () => {
     expect([transferSlots('http:', undefined), transferSlots('https:', 'http/1.1'), transferSlots('https:', 'h2'), transferSlots('https:', '')]).toEqual([4, 4, 24, 24]);
   });
