@@ -12,6 +12,7 @@ import { partName } from './ChatSent';
 import type { CacheNotes } from './useSendNotes';
 
 const TITLE = '캐시가 남은 시간';
+const PREFIX_TITLE = '캐시';
 export const BROKEN = '깨짐 예상';
 
 // profile: the 모델 설정 the send goes out with, which 'off' names; null for an earlier request, whose 모델 설정 is not kept.
@@ -81,7 +82,10 @@ export function nextWarning(next: NonNullable<CacheNotes['next']>, recurrence: C
 export function ChatCache({ cache, onOpen }: { cache: CacheNotes; onOpen: () => void }) {
   const store = useStore();
   const now = useNow(cache.until);
-  if (cache.until === null || now >= cache.until) return null;
   const { next } = cache;
-  return <SendNote label={clock(cache.until - now)} title={TITLE} warning={next ? nextWarning(next, cache.recurrence, profileName(store, next.route)) : undefined} onClick={onOpen} />;
+  const warning = next ? nextWarning(next, cache.recurrence, profileName(store, next.route)) : undefined;
+  // A provider caching on its own tells no time to count down, so only a warning shows.
+  if (next?.forecast.prefix) return warning ? <SendNote label={PREFIX_TITLE} title={PREFIX_TITLE} warning={warning} onClick={onOpen} /> : null;
+  if (cache.until === null || now >= cache.until) return null;
+  return <SendNote label={clock(cache.until - now)} title={TITLE} warning={warning} onClick={onOpen} />;
 }

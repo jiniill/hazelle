@@ -9,7 +9,8 @@ import type { Role } from '../model/prompt';
 import { cacheRecurrence, cacheShortfall, shortfallPlace } from './cache-diagnosis';
 import type { LogEntry } from './request-log';
 import type { Connection, Model } from '../connectors/types';
-import { breakCost, forecast, lastCache, type CacheSend, type Prior } from './cache';
+import { cachePrintId, type WireMessage } from '../model/cache';
+import { breakCost, forecast, lastCache, prefixKept, type CacheSend, type Prior } from './cache';
 
 // Each message counts 10 tokens and is named by its text, which is its hash; a trailing ✓ puts a cache point after it.
 const send = (texts: string[], over: { connection?: string; account?: string | null; model?: string; facts?: CacheFacts } = {}): CacheSend => ({
@@ -132,6 +133,45 @@ describe('forecast', () => {
   });
 });
 
+describe('forecast without points', () => {
+  // 누렁이Gemini v14.2 as Gemini sends it, every system message first: 장기 기억 above the chat, then 과거 챗 · 마지막 챗,
+  // 추가 정보 · 유저 인풋, 현재 챗, 응답템플릿.
+  const memory = { kind: 'block', name: '장기 기억', slot: 'memory' } as const;
+  const nureongi = (summary: string, chat: string[]) => {
+    const made = send(['sys 개요', `sys ${summary}`, '가이드라인', ...chat.slice(0, -1), '추가 정보', '유저 인풋', chat.at(-1)!, '응답템플릿']);
+    made.messages[1]!.from = memory;
+    for (const message of made.messages) if (chat.includes(message.hash)) message.from = { kind: 'block', name: 'Chat', slot: 'chat' };
+    return made;
+  };
+  const prior = (made: CacheSend): Prior => ({ print: { call: 'call', connection: made.connection, account: made.account, model: made.model, messages: made.messages }, live: true });
+  const four = ['c1', 'c2', 'c3', 'c4'];
+  const six = [...four, 'c5', 'c6'];
+
+  it('reads all the last call sent when the send repeats it', () => {
+    expect(forecast(prior(nureongi('mem1', four)), nureongi('mem1', four))).toMatchObject({ against: { read: 100, of: 100, broken: null }, written: 0, tail: 0, prefix: true });
+  });
+
+  it('names renewed memory sent above the chat, and reads only what stands before it', () => {
+    const made = forecast(prior(nureongi('mem1', four)), nureongi('mem2', six))!;
+    expect(made.against).toEqual({ read: 10, of: 90, broken: { kind: 'changed', from: memory, role: 'system' } });
+    expect([made.written, made.tail]).toEqual([0, 110]);
+  });
+
+  it('expects the read to reach the last chat message, so parts set between chat messages count as moved', () => {
+    const made = forecast(prior(nureongi('mem1', four)), nureongi('mem1', six))!;
+    expect(made.against).toEqual({ read: 60, of: 90, broken: { kind: 'moved', from: from('추가 정보'), role: 'user' } });
+    expect(made.parts.filter(({ change }) => change).map(({ from }) => from)).toEqual([from('추가 정보'), from('유저 인풋')]);
+  });
+
+  it('prices reading all of it as plain input, with nothing written on either side', () => {
+    const made = forecast(prior(nureongi('mem1', four)), nureongi('mem2', six))!;
+    const model = { id: 'm1', price: { input: 4, output: 20, cacheRead: 0.4, cacheWrite: 5, tiers: [] } } as unknown as Model;
+    const cost = breakCost({ type: 'gemini', label: '', baseUrl: null } as unknown as Connection, model, made, 1)!;
+    expect(cost.paid.amount).toBeCloseTo((110 * 4 + 10 * 0.4) / 1_000_000, 12);
+    expect(cost.whole.amount).toBeCloseTo((30 * 4 + 90 * 0.4) / 1_000_000, 12);
+  });
+});
+
 it('prices a break in the model\'s native tokens, not the o200k counts the parts hold', () => {
   const made = forecast(before(['sys ✓', 'u1', 'a1 ✓']), send(['sys ✓', 'lore', 'u1', 'a1 ✓', 'u2 ✓']))!;
   const model = { id: 'm1', price: { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5, tiers: [] } } as unknown as Model;
@@ -185,6 +225,19 @@ describe('lastCache', () => {
   it('keeps what the latest call cached for its TTL from the call’s start, and nothing when it cached none', () => {
     expect(lastCache([reply(10_000, receipt({ cache: '1h' })), reply(20_000, receipt({}))])).toEqual({ call: 'call', until: 16_000 + 300_000 });
     expect(lastCache([reply(10_000, receipt({})), reply(20_000, receipt({ usage: { inputTokens: 100, outputTokens: 1, reasoningTokens: null, cachedInputTokens: 0, cacheWriteInputTokens: 0 } }))])).toBeNull();
+    expect(lastCache([reply(10_000, receipt({ cache: null }))])).toEqual({ call: 'call', until: null });
+  });
+
+  it('keeps a call without points only once the provider has reported a read on that connection and model', () => {
+    const chat = crypto.randomUUID();
+    const store = (messages: WireMessage[] | null) => ({ children: () => (messages ? [{ id: cachePrintId(chat), value: { call: 'old', connection: 'c1', account: null, model: 'm1', messages } }] : []) }) as unknown as Parameters<typeof prefixKept>[0];
+    const usage = (cached: number | null) => ({ inputTokens: 1000, outputTokens: 10, reasoningTokens: null, cachedInputTokens: cached, cacheWriteInputTokens: null });
+    const plain: WireMessage[] = [{ role: 'user', hash: 'h', tokens: 10, from: { kind: 'block', name: 'u', slot: null } }];
+    expect(prefixKept(store(null), chat, receipt({ cache: null, usage: usage(500) }))).toBe(true);
+    expect(prefixKept(store(null), chat, receipt({ cache: null, usage: usage(null) }))).toBe(false);
+    expect(prefixKept(store(plain), chat, receipt({ cache: null, usage: usage(null) }))).toBe(true);
+    expect(prefixKept(store(plain), chat, receipt({ cache: null, model: 'm2', usage: usage(null) }))).toBe(false);
+    expect(prefixKept(store([{ ...plain[0]!, point: true }]), chat, receipt({ cache: null, usage: usage(null) }))).toBe(false);
   });
 });
 

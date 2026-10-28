@@ -16,7 +16,7 @@ import type { Stored } from '../model/kinds';
 import type { Stream } from '../model/stream';
 import type { ApiFailure } from './api';
 import type { Route, RouteFailure } from './assignment';
-import { cacheKept, wireOf, wireTextOf, writePrint } from './cache';
+import { cacheKept, prefixKept, wireOf, wireTextOf, writePrint } from './cache';
 import { appendReply, appendUserMessage, savedElsewhere, type Said, type Written } from './chat-log';
 import { retriesOf } from './connections';
 import type { Costs } from './cost';
@@ -298,8 +298,9 @@ export class Talk {
     this.log.attach(chat, call.id, { prompt, forecast, wire, diagnosis: diagnose ? undefined : null });
     if (diagnose) void diagnose(prompt, wire!).then((diagnosis) => this.log.attach(chat, call.id, { diagnosis }));
     const written = this.written(held, reply, callOf(route), answer, Date.now(), forecast, ready.preread, ready.agents);
-    // A receipt's cache is the view's, so one kept means the answer has its view.
-    const printing = cacheKept(written.receipt) && writePrint(this.store, chat, call.id, wireOf(route.connection.id, answer.account, answer.cache!, prompt.parts));
+    // The view is null where the request was not this page's, which a receipt without points does not tell apart.
+    const kept = answer.cache && (cacheKept(written.receipt) || prefixKept(this.store, chat, written.receipt));
+    const printing = kept && writePrint(this.store, chat, call.id, wireOf(route.connection.id, answer.account, answer.cache!, prompt.parts));
     const saved = await this.save(chat, await this.ended(chat, written), call.id);
     await printing;
     return saved;

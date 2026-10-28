@@ -295,7 +295,7 @@ it('runs diagnosis on one disposable worker lane and aborts it with the forecast
   const { workers } = fakeWorkers();
   const evaluation = new Evaluation(none);
   const controller = new AbortController();
-  const input: CacheComparison = { forecast: { parts: [], removed: [], written: 0, tail: 0, against: { read: 0, of: 10, broken: { kind: 'expired' } } }, before: null, after: { prompt: { messages: [], parts: [], lore: null, silent: null, invalidKeys: [], loreBudget: 0, memory: null, dropped: 0, problems: { found: [], omitted: 0 }, unseen: 0 }, wire: [] } };
+  const input: CacheComparison = { forecast: { parts: [], removed: [], written: 0, tail: 0, against: { read: 0, of: 10, broken: { kind: 'expired' } }, prefix: false }, before: null, after: { prompt: { messages: [], parts: [], lore: null, silent: null, invalidKeys: [], loreBudget: 0, memory: null, dropped: 0, problems: { found: [], omitted: 0 }, unseen: 0 }, wire: [] } };
   const diagnosis = evaluation.cacheDiagnosis('c', scope, input, controller.signal);
   expect(workers[0]!.posted.filter((data) => 'input' in data).map(({ input }) => 'job' in input && input.job.kind)).toEqual(['cache-diagnosis']);
   controller.abort();

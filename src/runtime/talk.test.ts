@@ -302,6 +302,28 @@ describe('Talk', () => {
       expect(against.of).toBeGreaterThan(receipts()[1]!.forecast!.of);
     }));
 
+  it('stores a call without points once the provider reports reading a prefix, and forecasts the next send against it', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const chat = crypto.randomUUID();
+      await server.hold(session.store, chat);
+      await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+      const reading = (cached: number) => (text: string) => new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: text }, finish_reason: 'stop' }], usage: { prompt_tokens: 100, completion_tokens: 5, prompt_tokens_details: { cached_tokens: cached } } })}\n\ndata: [DONE]\n\n`, { headers: { [RELAY_HEADER]: 'upstream' } });
+      stubRelay(inTurn([reading(0)('반가워요'), reading(40)('또 반가워요')]));
+
+      expect(await takeTurn(session, chat, { kind: 'send', text: '안녕' })).toBeNull();
+      expect(chatPrint(session.store, chat)).toBeUndefined();
+      expect(await takeTurn(session, chat, { kind: 'send', text: '또 안녕' })).toBeNull();
+      const last = fold(session.store.children('entry', chat)).filter(({ role }) => role === 'assistant').map((message) => shown(message).receipt!).at(-1)!;
+      expect(chatPrint(session.store, chat)?.value).toMatchObject({ call: last.id, messages: expect.not.arrayContaining([expect.objectContaining({ point: true })]) });
+
+      const sending = (await wouldSend(session, chat, { kind: 'send', text: '셋' }))!;
+      const made = forecast(prior(session.store, chat, session.read.chat(chat).snapshot()!.messages, Date.now()), cacheSend(sending, null)!)!;
+      expect(made.prefix).toBe(true);
+      expect(made.against).toEqual({ read: made.against!.of, of: made.against!.of, broken: null });
+      expect(made.against!.of).toBeGreaterThan(0);
+    }));
+
   it('saves what the model thought beside the reply, never inside its text', () =>
     server.withSession(async (session) => {
       await answerable(session);

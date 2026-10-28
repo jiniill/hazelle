@@ -8,7 +8,8 @@ import type { Block, Role } from './prompt';
 // Wire-order cache identity; tokens use o200k_base, an estimate for other tokenizers.
 export type WireMessage = { role: Role; hash: string; tokens: number; from: From; point?: true };
 
-// Last cache-point call, in provider wire order (connectors/registry CacheView).
+// Last call that kept a cache, by its points or a prefix the provider caches on its own, in provider wire order
+// (connectors/registry CacheView).
 // One replaceable object per chat at cachePrintId(chat); account is null when unknown.
 export type CachePrint = {
   call: string;
@@ -34,13 +35,15 @@ export const cachePrintId = (chat: string) => chat.replace(/^([0-9a-f]{8}-)([0-9
 // Wire order. tail is full-price text after the last caching point; short points cache nothing.
 // before is the paired old position, null for additions and unchanged parts.
 export type ForecastPart = { role: Role; from: From; tokens: number; state: 'read' | 'write' | 'tail'; change: 'changed' | 'added' | 'moved' | null; before: number | null; point: 'cache' | 'short' | null };
-// against is null without a prior call; written excludes the uncached tail.
+// against is null without a prior call; written excludes the uncached tail. prefix: no point on either side, so the
+// provider caches on its own, and writes nothing a forecast counts.
 export type Forecast = {
   parts: ForecastPart[];
   removed: { role: Role; from: From; tokens: number; before: number }[];
   written: number;
   tail: number;
   against: CacheForecast | null;
+  prefix: boolean;
 };
 
 // coarse keeps the complete differing middle, without claiming its internal alignment.

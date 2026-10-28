@@ -259,8 +259,8 @@ export function claudeCacheFacts(model: string): CacheFacts | null {
   return { minimum: (name === null ? null : CLAUDE_MINIMUMS[name]) ?? null, lookback: CLAUDE_LOOKBACK };
 }
 
-// A prompt_cache_key marks no point: the provider caches what prefix it finds, so the view holds none and nothing is
-// forecast.
+// A prompt_cache_key marks no point: the provider caches what prefix it finds, so the view holds none and the forecast
+// reads prefixes, as for a codec without points.
 export function cacheView(route: Route, request: ChatRequest): CacheView {
   const { settings, messages: sent } = sending(route, request);
   const marked = cacheWay(route, request.model)?.mark.kind;

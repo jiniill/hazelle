@@ -9,7 +9,7 @@ const scope: ChatScope = { card: null, cast: [], packs: [], persona: null, promp
 const from = { kind: 'block', id: 'clock', name: 'Clock', slot: null } as const;
 const part: ForecastPart = { from, role: 'system', tokens: 10, state: 'write', change: 'changed', before: 0, point: 'cache' };
 const prompt = (content: string, parts: Assembled['parts'] = [{ from, tokens: 10 }]): Assembled => ({ messages: [{ role: 'system', content }], parts, lore: [], silent: [], invalidKeys: [], loreBudget: 0, memory: null, dropped: 0, problems: { found: [], omitted: 0 }, unseen: 0 });
-const comparison = (before: Assembled, after: Assembled): CacheComparison => ({ forecast: { parts: [part], removed: [], written: 10, tail: 0, against: { read: 0, of: 10, broken: { kind: 'changed', from, role: 'system' } } }, before: { prompt: before, wire: before.messages.map(({ content }, index) => ({ content, index })) }, after: { prompt: after, wire: after.messages.map(({ content }, index) => ({ content, index })) } });
+const comparison = (before: Assembled, after: Assembled): CacheComparison => ({ forecast: { parts: [part], removed: [], written: 10, tail: 0, against: { read: 0, of: 10, broken: { kind: 'changed', from, role: 'system' } }, prefix: false }, before: { prompt: before, wire: before.messages.map(({ content }, index) => ({ content, index })) }, after: { prompt: after, wire: after.messages.map(({ content }, index) => ({ content, index })) } });
 
 it('names a CBS result only when the changed renders explain the whole sent difference and the old value is exactly aligned', () => {
   const source = 'Time {{time}}.';

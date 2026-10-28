@@ -42,7 +42,7 @@ export function NextRequest({ chat, sending, request, cache, editor, onEdit }: {
         <NextTokens sending={sending} />
       </Section>
       <Section title="캐시" help="토큰 수는 추정치예요.">
-        {cache.next ? <NextCache next={cache.next} recurrence={cache.recurrence} editor={editor} onEdit={onEdit} /> : cache.next === null ? <Empty variant="section">계산할 캐시가 없어요.</Empty> : <Text variant="note">계산하는 중…</Text>}
+        {cache.next ? <NextCache next={cache.next} recurrence={cache.recurrence} editor={editor} onEdit={onEdit} /> : cache.next === null ? <Empty variant="section">직전 요청이 남긴 캐시 기록이 없어요.</Empty> : <Text variant="note">계산하는 중…</Text>}
       </Section>
       <RequestView
         level={2}
@@ -200,7 +200,7 @@ function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) {
         variant="tiles"
         items={[
           { label: STATES.read, value: against ? tokens(against.read) : UNKNOWN, ...(!against && { tone: 'muted' as const }) },
-          { label: STATES.write, value: tokens(written) },
+          ...(forecast.prefix ? [] : [{ label: STATES.write, value: tokens(written) }]),
           { label: STATES.tail, value: tokens(tail) },
         ]}
       />

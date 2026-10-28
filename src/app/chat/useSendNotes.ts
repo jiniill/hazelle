@@ -19,7 +19,7 @@ const SETTLE_MS = 400;
 export type SendNotes = { cache: CacheNotes; leaving: number | null; unseen: number; sending: Sending | Unsendable | null | undefined; request: () => SentRequest | null };
 
 // next undefined means pending; prescription null means evaluation failed, [] means no qualifying fix.
-// until is null without cache. Keep draft forecast/model/pricing paired; recurrence uses stored prior receipts.
+// until is null without a cache's known end. Keep draft forecast/model/pricing paired; recurrence uses stored prior receipts.
 export type CacheNotes = { until: number | null; recurrence: CacheRecurrence; next: { forecast: Forecast; diagnosis: CacheDiagnosis | null | undefined; prescriptions: CachePrescription[] | null | undefined; cost: ReturnType<typeof breakCost>; route: Route } | null | undefined };
 
 // The draft is read again after any store change settles, so an edit to the prompt, a lorebook or the model shows in
