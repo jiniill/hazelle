@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { storySelection, type SelectionEnd } from '../ui';
 import type { EditPart } from './useMessageEdit';
 
@@ -10,20 +10,24 @@ export function useSelectedPart(story: RefObject<HTMLDivElement | null>, find: (
   const [selected, setSelected] = useState<SelectedPart | null>(null);
   const latest = useRef(find);
   latest.current = find;
+  const read = useCallback(() => {
+    const selection = story.current && storySelection(story.current);
+    const part = selection && latest.current(selection.pieces);
+    setSelected(part ? { part, end: selection.end } : null);
+  }, [story]);
   useEffect(() => {
     if (!active) return;
-    const read = () => {
-      const selection = story.current && storySelection(story.current);
-      const part = selection && latest.current(selection.pieces);
-      setSelected(part ? { part, end: selection.end } : null);
-    };
     read();
     document.addEventListener('selectionchange', read);
+    return () => document.removeEventListener('selectionchange', read);
+  }, [active, read]);
+  // Scrolling moves a selection's end but never makes or ends one, so only a story holding one reads on scroll: every
+  // mounted message reading the page's selection on each scroll event cost a fast scroll on a slow phone.
+  const holding = active && selected !== null;
+  useEffect(() => {
+    if (!holding) return;
     window.addEventListener('scroll', read, { capture: true, passive: true });
-    return () => {
-      document.removeEventListener('selectionchange', read);
-      window.removeEventListener('scroll', read, { capture: true });
-    };
-  }, [active, story]);
+    return () => window.removeEventListener('scroll', read, { capture: true });
+  }, [holding, read]);
   return active ? selected : null;
 }

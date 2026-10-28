@@ -287,8 +287,45 @@ function placeInlay(fragment: DocumentFragment, mark: string | null, name: strin
 
 const inlayName = (index: number) => `inlay-${index}`;
 
+// Configured once: sanitize(html, CONFIG) parses CONFIG anew on every call, since DOMPurify keeps a copy of it and
+// compares the next call's object with that copy. Once set, a call's own config is ignored; storyText's stays on the
+// shared instance.
+let purifier: typeof DOMPurify | null = null;
+// Sanitized fragments by their input, so a message scrolled back into view skips DOMPurify. Kept in a document with no
+// window, where a picture loads nothing and holds no memory; each draw takes its own copy, since the draw moves the
+// copy's nodes into the story.
+let shelf: Document | null = null;
+const shelved = new Map<string, DocumentFragment>();
+let shelvedLength = 0;
+const SHELVED_LENGTH = 1_000_000;
+
+// A streaming reply changes its HTML with every chunk, so its drafts are not kept.
+function purify(html: string, keep: boolean): DocumentFragment {
+  const kept = shelved.get(html);
+  if (kept) {
+    shelved.delete(html);
+    shelved.set(html, kept);
+    return document.importNode(kept, true);
+  }
+  if (!purifier) {
+    purifier = DOMPurify(window);
+    purifier.setConfig(CONFIG);
+  }
+  const fragment = purifier.sanitize(setStylesAside(html), CONFIG);
+  if (!keep || html.length > SHELVED_LENGTH) return fragment;
+  shelf ??= document.implementation.createHTMLDocument('');
+  shelved.set(html, shelf.importNode(fragment, true));
+  shelvedLength += html.length;
+  for (const [oldest] of shelved) {
+    if (shelvedLength <= SHELVED_LENGTH) break;
+    shelved.delete(oldest);
+    shelvedLength -= oldest.length;
+  }
+  return fragment;
+}
+
 function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFragment {
-  const fragment = DOMPurify.sanitize(setStylesAside(html), CONFIG);
+  const fragment = purify(html, !cursor);
   for (const element of fragment.querySelectorAll<HTMLElement | SVGElement>(`[${SET_ASIDE}]`)) {
     element.style.cssText = cleanCss(element.getAttribute(SET_ASIDE)!, veil !== null);
     groundRules([{ selectorText: '', style: element.style }]);
