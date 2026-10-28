@@ -1,5 +1,6 @@
 import { PinOff } from 'lucide-react';
 import { IconButton, SidePeek, Stack, StatusBox } from '../ui';
+import { useAssetUrl } from '../session';
 import { shownHtml } from './ChatMessage';
 import type { OpenChat } from './useChat';
 
@@ -10,6 +11,7 @@ type Props = Pick<OpenChat, 'status' | 'held' | 'decor'> & {
 };
 
 export function ChatStatusPeek({ status, held, decor, onHold, onPress, onUnmark }: Props) {
+  const url = useAssetUrl([status, decor.bot]);
   return (
     <SidePeek
       label="상태"
@@ -22,7 +24,7 @@ export function ChatStatusPeek({ status, held, decor, onHold, onPress, onUnmark 
           <StatusBox
             key={box.id}
             name={box.name}
-            html={box.drawn && shownHtml(box.drawn.html, decor)}
+            html={box.drawn && shownHtml(box.drawn.html, { bot: decor.bot, url })}
             css={decor.css}
             buttons={decor.buttons}
             onPress={onPress}

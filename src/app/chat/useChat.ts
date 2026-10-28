@@ -103,8 +103,8 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   }, [displayError]);
   const { texts, css } = view;
   const bot = shelf?.character.decor !== false;
-  const url = useAssetUrl();
-  const decor = useMemo(() => ({ bot, css: bot ? resolveAssets(css, url) : '', url, buttons: scripted ? ('live' as const) : ('inert' as const) }), [bot, css, url, scripted]);
+  const url = useAssetUrl([bot, css]);
+  const decor = useMemo(() => ({ bot, css: bot ? resolveAssets(css, url) : '', buttons: scripted ? ('live' as const) : ('inert' as const) }), [bot, css, url, scripted]);
   const names = {
     character: card && { name: card.nickname || card.name, image: shelf!.face },
     me: persona.kind === 'persona' ? { name: persona.persona.value.name, image: persona.persona.value.picture } : null,

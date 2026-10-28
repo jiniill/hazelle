@@ -11,7 +11,8 @@ import { ObjectStore } from '../runtime/store';
 import type { Turn } from '../runtime/talk';
 import * as display from '../runtime/chat-context';
 import { randomBytes } from '../vault/aead';
-import { SessionProvider, useChatDisplay } from './session';
+import { AssetUrls } from '../runtime/assets';
+import { SessionProvider, useAssetUrl, useChatDisplay } from './session';
 import { probeRoot } from './ui/probe';
 
 const facts = new AccountFacts({ suspended: false, state: 'active', storage: { bytes: 0, bytesCap: null, fileBytes: 0, fileBytesCap: null }, unreadNotices: 0, unreadBoard: 0 });
@@ -72,5 +73,76 @@ it('C: composer and panel re-renders skip display, while streaming recomputes wi
     lease.release();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  }
+});
+
+function mountedPictures() {
+  const store = {
+    get: (_kind: string, id: string) => ({ value: { type: 'image/png', file: { id, key: 'k' } } }),
+    subscribe: () => () => {},
+  } as unknown as ObjectStore;
+  const read = vi.fn(async () => ({ ok: true as const, data: new Uint8Array(1) }));
+  const assets = new AssetUrls(store, { read }, 0);
+  const session = { store, assets } as Session;
+  const root = probeRoot();
+  const shown = new Map<string, string | undefined>();
+  const revoke = vi.spyOn(URL, 'revokeObjectURL');
+  function Row({ row, picture }: { row: string; picture: string }) {
+    const url = useAssetUrl([picture]);
+    shown.set(row, url('asset', picture));
+    return null;
+  }
+  return {
+    shown, revoke, read,
+    render: (rows: [string, string][]) => act(() => root.render(
+      <SessionProvider session={session} account={{ admin: false, localProviders: [], facts, guest: null, onLock() {}, onLogout: async () => null }}>
+        {rows.map(([row, picture]) => <Row key={row} row={row} picture={picture} />)}
+      </SessionProvider>,
+    )),
+    close: async () => {
+      await act(() => root.unmount());
+      assets.close();
+      revoke.mockRestore();
+      vi.unstubAllGlobals();
+    },
+  };
+}
+
+it('releases only pictures whose mounted rows leave or stop using them with no inactive budget', async () => {
+  const pictures = mountedPictures();
+  try {
+    await pictures.render([['earlier', 'a'], ['current', 'b']]);
+    const a = pictures.shown.get('earlier');
+    const b = pictures.shown.get('current');
+    expect(a).toMatch(/^blob:/);
+    expect(b).toMatch(/^blob:/);
+    await pictures.render([['current', 'b']]);
+    expect(pictures.revoke).toHaveBeenCalledExactlyOnceWith(a);
+    expect(pictures.shown.get('current')).toBe(b);
+    await pictures.render([['current', 'c']]);
+    expect(pictures.revoke.mock.calls).toEqual([[a], [b]]);
+    expect(pictures.shown.get('current')).toMatch(/^blob:/);
+  } finally {
+    await pictures.close();
+  }
+});
+
+it('shares a picture until its last row leaves, holding replacement owners before releasing old ones', async () => {
+  const pictures = mountedPictures();
+  try {
+    await pictures.render([['first', 'shared'], ['second', 'shared']]);
+    const shared = pictures.shown.get('first');
+    expect(shared).toMatch(/^blob:/);
+    expect(pictures.shown.get('second')).toBe(shared);
+    await pictures.render([['second', 'shared']]);
+    expect(pictures.revoke).not.toHaveBeenCalled();
+    await pictures.render([['replacement', 'shared']]);
+    expect(pictures.shown.get('replacement')).toBe(shared);
+    expect(pictures.revoke).not.toHaveBeenCalled();
+    expect(pictures.read).toHaveBeenCalledTimes(1);
+    await pictures.render([]);
+    expect(pictures.revoke).toHaveBeenCalledExactlyOnceWith(shared);
+  } finally {
+    await pictures.close();
   }
 });

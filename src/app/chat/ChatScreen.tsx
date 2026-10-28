@@ -52,7 +52,7 @@ export function ChatScreen({ id: chatId, item, shelf, back, side, onPaired }: Pr
   const { id, busy, panel, scroll, prompt, actions } = chat;
   const autopilot = useAutopilot(chat);
   const folded = display.foldComposer && scroll.away;
-  const url = useAssetUrl();
+  const url = useAssetUrl([display.portrait, display.hidePictures, shelf?.avatar]);
   // The thumbnail stands in until the full picture is read.
   const portrait = display.portrait && !display.hidePictures && shelf?.avatar ? (url('avatar', shelf.avatar) ?? shelf.face ?? undefined) : undefined;
   useShortcut('personas', () => actions.openDialog('persona'));

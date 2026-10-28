@@ -61,6 +61,7 @@ export class AssetUrls {
   view(): AssetView {
     const files = new Set<string>();
     let held = false;
+    let generation = 0;
     return {
       url: (kind, id) => this.lookup(kind, id, (file) => {
         if (files.has(file)) return;
@@ -68,14 +69,18 @@ export class AssetUrls {
         if (held) this.pin(file);
       }),
       hold: () => {
+        const mounting = ++generation;
         if (!held && !this.closed) {
           held = true;
           for (const file of files) this.pin(file);
         }
         return () => {
-          if (!held) return;
-          held = false;
-          for (const file of files) this.release(file);
+          // New owners and StrictMode's replay must hold before any old owner can revoke a shared URL.
+          queueMicrotask(() => {
+            if (!held || mounting !== generation) return;
+            held = false;
+            for (const file of files) this.release(file);
+          });
         };
       },
     };

@@ -10,7 +10,7 @@ import { rowPart } from './rowPart';
 import type { OpenChat } from './useChat';
 
 const rendered = vi.fn<(props: { id: string }) => null>(() => null);
-vi.mock('../session', () => ({ useChatSummary: () => null }));
+vi.mock('../session', () => ({ useChatSummary: () => null, useAssetUrl: () => () => undefined }));
 vi.mock('./useReveal', () => ({ useReveal: (_version: string, text: string) => ({ text, revealing: false }) }));
 vi.mock('../ui', async (original) => ({
   ...await original<typeof import('../ui')>(),
@@ -28,7 +28,6 @@ it('renders only changed rows through chunks and translation, including rebuilt 
   const picture = { id: 'picture', value: { version: 'old', at: 1, scene: { paragraph: 0 } } } as Stored<'illustration'>;
   const closed = { open: false, from: null };
   const modelMenu = { read: () => closed, subscribe: () => () => {}, set: () => {} };
-  const url = () => undefined;
   const messageTools: OpenChat['messageTools'] = [];
   let translations = new Map<string, string>();
   let status = 'HP 7';
@@ -36,7 +35,7 @@ it('renders only changed rows through chunks and translation, including rebuilt 
   const frame = (messages: OpenChat['messages']) => ({
     item: null, messages, texts: messages.map((message) => shown(message).text), keys: messages.map(({ id }) => id),
     names: { character: { name: 'Bot', image: null }, me: null, modelName: null },
-    decor: { bot: true, css: '', url, buttons: 'inert' },
+    decor: { bot: true, css: '', buttons: 'inert' },
     agents: { pre: false, post: true }, features: { translate: true, illustrate: true, mascot: false }, translate: { original: false },
     translating: { live: translations, failed: new Map() }, awaited: () => false, flipped: new Set(),
     pictures: new Map([['old', [picture]]]), placed: new Map(), illustrating: new Map(), pictureSizes: pictureSizes({}),

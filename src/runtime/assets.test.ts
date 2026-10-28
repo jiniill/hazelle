@@ -51,8 +51,10 @@ it('evicts only inactive bytes, shares active pins, and reloads an evicted pictu
   const b = second.url('asset', 'b')!;
   expect(read).toHaveBeenCalledTimes(2);
   releaseFirst();
+  await settled();
   expect(revoke).not.toHaveBeenCalled();
   releaseSecond();
+  await settled();
   expect(revoke).toHaveBeenCalledExactlyOnceWith(a);
   const idle = urls.view();
   expect(idle.url('asset', 'b')).toBe(b);
@@ -85,6 +87,7 @@ it('defers removal revocation while mounted and supports strict-effect reactivat
   expect(view.url('asset', 'x')).toBeUndefined();
   expect(revoke).not.toHaveBeenCalled();
   release();
+  await settled();
   expect(revoke).toHaveBeenCalledExactlyOnceWith(url);
   urls.close();
   revoke.mockRestore();
@@ -97,4 +100,27 @@ it('reads a picture by its kind, so a 삽화 id is never looked up as an asset',
   view.url('illustration', 'x');
   await settled();
   expect([view.url('illustration', 'x'), view.url('asset', 'x'), read.mock.calls.length]).toEqual([expect.stringMatching(/^blob:/), undefined, 1]);
+});
+
+it('keeps a loaded picture pinned through StrictMode hold-release-hold with no inactive budget', async () => {
+  const urls = new AssetUrls(store, { read: async () => ({ ok: true, data: new Uint8Array(1) }) }, 0);
+  const view = urls.view();
+  view.url('asset', 'x');
+  const release = view.hold();
+  await settled();
+  const picture = view.url('asset', 'x');
+  const revoke = vi.spyOn(URL, 'revokeObjectURL');
+  try {
+    release();
+    const replayedRelease = view.hold();
+    await settled();
+    expect(revoke).not.toHaveBeenCalled();
+    expect(view.url('asset', 'x')).toBe(picture);
+    replayedRelease();
+    await settled();
+    expect(revoke).toHaveBeenCalledExactlyOnceWith(picture);
+  } finally {
+    urls.close();
+    revoke.mockRestore();
+  }
 });

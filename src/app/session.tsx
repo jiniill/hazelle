@@ -1,6 +1,6 @@
 import { toolId } from '../model/tool';
 import type { ToolFrames, ToolMenu } from '../runtime/tools/facade';
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { PictureUrl } from '../engine/assets';
 import type { ChatScope } from '../engine/render';
 import { nest, type Filed } from '../model/folders';
@@ -92,13 +92,14 @@ export function useUnfoundAssets(character: string): ReadonlySet<string> {
 }
 
 // The function is a new one when a picture has loaded, so what shows pictures renders again.
-export function useAssetUrl(): PictureUrl {
+export function useAssetUrl(inputs: readonly unknown[]): PictureUrl {
   const { assets } = useSession();
-  // Keep the chat-id key stable on first save so mounted picture URLs survive; leaving releases story/CSS/status views together.
-  const view = useMemo(() => assets.view(), [assets]);
-  useLayoutEffect(view.hold, [view]);
+  // Keep the chat-id key stable on first save so mounted picture URLs survive.
+  // Inputs must cover every condition that changes this consumer's lookups, including no longer showing a picture.
   const version = useSyncExternalStore(assets.subscribe, assets.snapshot);
-  return useCallback<PictureUrl>((kind, id) => view.url(kind, id), [view, version]);
+  const view = useMemo(() => assets.view(), [assets, version, ...inputs]);
+  useLayoutEffect(view.hold, [view]);
+  return view.url;
 }
 
 // Every snapshot below is held until its own inputs change: fresh selector arrays would make React re-render forever.

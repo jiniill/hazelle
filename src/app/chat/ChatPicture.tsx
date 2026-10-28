@@ -1,6 +1,6 @@
 import { SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
-import type { PictureUrl } from '../../engine/assets';
+import { useAssetUrl } from '../session';
 import { parseScene, sceneText, sentText, type PictureSizes, type SceneInvalid } from '../../engine/illustrate';
 import { shown } from '../../model/chat';
 import { paragraphsOf, type Scene } from '../../model/illustration';
@@ -22,7 +22,6 @@ type Props = {
   message: Shown;
   // A run under way for the message, which another must wait for.
   running: boolean;
-  url: PictureUrl;
   // 삽화's 기능: off, a picture stays and is drawn again no more.
   draws: boolean;
   sizes: PictureSizes;
@@ -32,8 +31,9 @@ type Props = {
   onDrop: IllustrationActions['dropPicture'];
 };
 
-export function ChatPicture({ place, message, running, url, draws, sizes, onDraw, onDismiss, onReshape, onDrop }: Props) {
+export function ChatPicture({ place, message, running, draws, sizes, onDraw, onDismiss, onReshape, onDrop }: Props) {
   const [paged, setPaged] = useState<Paged>(null);
+  const url = useAssetUrl([place, paged]);
   if (place.kind === 'drawing') {
     const { width, height } = sizes[place.scene.shape];
     return <StoryPicture src={undefined} label={LABEL} width={width} height={height} status="그리는 중" />;

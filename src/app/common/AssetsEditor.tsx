@@ -134,7 +134,7 @@ type CardProps = { asset: Stored<'asset'>; shared: number; picked: boolean | nul
 
 // Each card holds its own file while drawn, so a grid of thousands keeps only the rows on screen.
 function AssetCard({ asset, shared, picked, onPress, actions }: CardProps) {
-  const url = useAssetUrl();
+  const url = useAssetUrl([asset]);
   const { id, value } = asset;
   return (
     <FaceCard
@@ -160,7 +160,7 @@ function AssetCard({ asset, shared, picked, onPress, actions }: CardProps) {
 
 // Its own view, so the whole file is held only while it is open.
 function AssetPreview({ asset, actions, onClose }: { asset: Stored<'asset'>; actions: Action[]; onClose: () => void }) {
-  const url = useAssetUrl();
+  const url = useAssetUrl([asset]);
   return (
     <Dialog
       title={asset.value.name}

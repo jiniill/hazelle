@@ -17,6 +17,7 @@ import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolWaiting } from '../common/words';
 import type { Reading } from '../../runtime/talk';
 import type { Preparing } from '../../runtime/turn-steps';
+import { useAssetUrl } from '../session';
 import { SHORTCUTS, titled } from '../shortcuts';
 import { MASCOTS } from '../../model/mascot';
 import { Avatar, Button, Divider, EditBox, Failure, IconButton, Marker, MascotRemark, Menu, MenuHeading, MenuItem, MoreMenu, pressed, SelectionButton, Story, StoryMessage, Switcher, Text, Usage, useMenuOpener, useWide, Waiting, type MenuHandle } from '../ui';
@@ -50,7 +51,7 @@ const MARK = { length: 'length', 'no-terminal': 'length', stopped: 'stopped', re
 
 export const ChatMessage = memo(function ChatMessage(props: Props) {
   const { row, modelMenu, actions } = props;
-  const { message, text: original, decor, opening, last, busy, branching, usageShown } = row.story.value;
+  const { message, text: original, decor: decoration, opening, last, busy, branching, usageShown } = row.story.value;
   const { translatingText, untranslated, canTranslate, awaited, flipped, showOriginal } = row.translation.value;
   const { placed, pictures, drawing, canIllustrate, pictureSizes } = row.illustration.value;
   const { remark, fresh } = row.mascot.value;
@@ -87,12 +88,14 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const storyText = useMemo(() => (both ? withOriginal(translatedText, original) : translatedText), [both, translatedText, original]);
   const part = editing?.part ?? null;
   const drawnText = part ? markPart(storyText, part.shown) : storyText;
+  const url = useAssetUrl([row, drawnText, raw]);
+  const decor = useMemo(() => ({ ...decoration, url }), [decoration, url]);
   const html = useMemo(() => shownHtml(drawnText, decor), [drawnText, decor.bot, decor.url]);
   const story = useRef<HTMLDivElement>(null);
   const running = drawing !== null && runs(drawing);
   const illustrations = places.map((place) => ({
     mark: place.paragraph === null ? null : placeMark(place.paragraph),
-    node: <ChatPicture key={place.paragraph ?? 'run'} place={place} message={message} running={running} url={decor.url} draws={canIllustrate} sizes={pictureSizes} onDraw={actions.draw} onDismiss={actions.dismissIllustration} onReshape={actions.reshape} onDrop={actions.dropPicture} />,
+    node: <ChatPicture key={place.paragraph ?? 'run'} place={place} message={message} running={running} draws={canIllustrate} sizes={pictureSizes} onDraw={actions.draw} onDismiss={actions.dismissIllustration} onReshape={actions.reshape} onDrop={actions.dropPicture} />,
   }));
   const failed = receipt?.state === 'failed';
   const empty = original === '';
