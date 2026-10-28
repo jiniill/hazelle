@@ -1,12 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { AccountFacts, changePassword, credentialFor, guestFacts, loadSession, logIn, logOut, prepareGuestSignup, signUpGuest, uploadGuest, type GuestSignup, type SessionFacts, type SignedIn } from '../../runtime/account';
+import { AccountFacts, changePassword, credentialFor, passwordCredentialFor, guestFacts, loadSession, logIn, logOut, prepareGuestSignup, signUpGuest, uploadGuest, type GuestSignup, type SessionFacts, type SignedIn } from '../../runtime/account';
 import { holdAccount } from '../../runtime/api';
 import { cachedAccounts, forgetVault } from '../../runtime/device-cache';
 import { guestAccount } from '../../runtime/guest-store';
 import { discardGuest, guestWithContent, type GuestTransferStep } from '../../runtime/guest-transfer';
 import { lockVault, recallVault, rememberVault } from '../../vault/device';
 import { DatabaseBlocked } from '../../vault/database';
-import { canonicalUsername, openVault, passwordCredential, wrapWithPassword, type Credential, type VaultKey } from '../../vault/keys';
+import { canonicalUsername, openVault, wrapWithPassword, type Credential, type VaultKey } from '../../vault/keys';
 import { clearDownloads } from '../common/download';
 import { describeFailure, wrongSecret } from '../common/failure';
 import type { Account } from '../session';
@@ -218,7 +218,7 @@ export function AccountFlow({ children }: { children: (unlocked: Unlocked) => Re
           onSignIn={setup ? undefined : () => show({ kind: 'login', notice: null, username: '', solo: false })}
           onDone={async (typed, password) => {
             const username = setup ? OWNER : canonicalUsername(typed);
-            const prepared = await prepareGuestSignup(username, await passwordCredential(username, password));
+            const prepared = await prepareGuestSignup(username, await passwordCredentialFor(username, password));
             show({ kind: 'signup', step: 'recovery', draft: prepared, failure: null, setup });
             return null;
           }}
@@ -293,7 +293,7 @@ export function AccountFlow({ children }: { children: (unlocked: Unlocked) => Re
           mode="reset"
           username={session.username}
           onDone={async (username, password) => {
-            const next = await wrapWithPassword(session.accountId, vaultKey, await passwordCredential(username, password));
+            const next = await wrapWithPassword(session.accountId, vaultKey, await passwordCredentialFor(username, password));
             const result = await changePassword(current, next);
             if (!result.ok) return describeFailure(result);
             await land(session, vaultKey);

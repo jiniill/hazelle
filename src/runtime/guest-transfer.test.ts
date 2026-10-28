@@ -20,7 +20,7 @@ import { memoryId, vectorsId } from '../model/memory';
 import { testApp, sessionCookie, signupBody, testConnection, png } from './testing';
 import { randomBytes } from '../vault/aead';
 import { lockVault, recallGuest, recallVault, rememberVault } from '../vault/device';
-import { createVault, openVault, passwordCredential, recoveryCredential } from '../vault/keys';
+import { createVault, openVault, passwordCredential, stretchPassword, recoveryCredential } from '../vault/keys';
 import { objectKey, openObject } from '../vault/objects';
 import { logIn, prepareGuestSignup, signUp, signUpGuest, uploadGuest } from './account';
 import { writePost, writeComment, readPost, readPosts } from './board';
@@ -43,7 +43,7 @@ let dropBatches = false;
 const stores: ObjectStore[] = [];
 beforeAll(async () => {
   app = await testApp();
-  password = await passwordCredential('tester', 'a password');
+  password = await passwordCredential('tester', 'a password', stretchPassword);
 });
 afterAll(() => app.dispose());
 beforeEach(async () => {

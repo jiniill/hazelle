@@ -4,6 +4,7 @@ import type { AccountState } from '../contracts/admin';
 import { createVault, openVault, passwordCredential, recoveryCredential, type Credential, type Method, type VaultKey, type VaultRecord } from '../vault/keys';
 import { api, holdAccount, SLOW_ROUTE_WAIT, type ApiResult, type Heard } from './api';
 import { page } from './pages';
+import { stretchInWorker } from './password';
 import { guestSignupRecovery, recallGuest } from '../vault/device';
 import { transferGuest, type GuestTransferOptions } from './guest-transfer';
 
@@ -17,7 +18,9 @@ export type Signup = { accountId: string; username: string; passwordProof: strin
 
 // null: a recovery key that is not one, so nothing was sent.
 export const credentialFor = (username: string, method: Method, secret: string): Promise<Credential | null> =>
-  method === 'password' ? passwordCredential(username, secret) : recoveryCredential(secret);
+  method === 'password' ? passwordCredentialFor(username, secret) : recoveryCredential(secret);
+
+export const passwordCredentialFor = (username: string, password: string) => passwordCredential(username, password, stretchInWorker);
 
 // The key the secret yields never leaves the page: only its proof is sent.
 type Proof = Pick<Credential, 'method' | 'proof'>;

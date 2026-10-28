@@ -19,11 +19,16 @@ export function canonicalUsername(text: string): string {
   return text.trim().normalize('NFC').toLowerCase();
 }
 
+export type Stretch = (password: string, salt: Uint8Array<ArrayBuffer>) => Promise<Uint8Array<ArrayBuffer>>;
+
+export const stretchPassword: Stretch = async (password, salt) =>
+  new Uint8Array(await argon2id({ password, salt, ...KDF, hashLength: 32, outputType: 'binary' }));
+
 // NFC because the same Korean text can arrive composed or decomposed, depending on the OS and IME.
-export async function passwordCredential(username: string, password: string): Promise<Credential> {
+// stretch: the page passes runtime/password's worker; on the page Argon2 froze a slow phone for over a second.
+export async function passwordCredential(username: string, password: string, stretch: Stretch): Promise<Credential> {
   const salt = new Uint8Array(await crypto.subtle.digest('SHA-256', encodeText(`risu-alpha/password-salt/v1/${username}`)));
-  const stretched = await argon2id({ password: password.normalize('NFC'), salt, ...KDF, hashLength: 32, outputType: 'binary' });
-  return derive('password', new Uint8Array(stretched));
+  return derive('password', await stretch(password.normalize('NFC'), salt));
 }
 
 export async function recoveryCredential(text: string): Promise<Credential | null> {
