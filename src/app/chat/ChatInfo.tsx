@@ -244,7 +244,7 @@ function Call({ receipt, entry, onCache }: { receipt: Receipt; entry: LogEntry |
         </Section>
       )}
       {usage ? (
-        <Section level={3} title="토큰" note={[input && cached !== null && `캐시 적중 ${Math.round((cached / input) * 100)}%`, written && `캐시에 저장 ${tokens(written)}`].filter(Boolean).join(' · ') || undefined} action={onCache && <Button variant="ghost" size="sm" onClick={onCache}>캐시 자세히</Button>}>
+        <Section level={3} title="토큰" note={[input && cached !== null && `캐시에서 ${Math.round((cached / input) * 100)}% 읽음`, written && `캐시에 저장 ${tokens(written)}`].filter(Boolean).join(' · ') || undefined} action={onCache && <Button variant="ghost" size="sm" onClick={onCache}>캐시 점검</Button>}>
           <Breakdown
             shares={input && fresh !== null ? [cached! / input, fresh / input] : null}
             parts={

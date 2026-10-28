@@ -19,7 +19,7 @@ function later(steps: AfterEnter[]): string[] {
       case 'input-translation':
         return '입력 번역';
       case 'tools':
-        return '플러그인의 새 답';
+        return '플러그인 실행';
       case 'retrieval':
         return '기억 검색';
       case 'preread':
@@ -31,7 +31,7 @@ function later(steps: AfterEnter[]): string[] {
 // The steps a send runs that a forecast leaves out, as one note; null without any.
 export function useSendTimeNote(chat: string, sending: Sending) {
   const missing = later(afterEnter(useSession(), chat, sending.turn));
-  return missing.length > 0 ? <Text variant="note">{`보낼 때 실행돼서 여기에는 없어요: ${missing.join(', ')}`}</Text> : null;
+  return missing.length > 0 ? <Text variant="note">{`메시지를 보낼 때 작동해서 여기에는 반영되지 않아요: ${missing.join(', ')}`}</Text> : null;
 }
 
 export function NextRequest({ chat, sending, request, editor, onEdit }: { chat: string; sending: Sending; request: SendNotes['request']; editor: (from: From) => Side | null; onEdit: (side: Side) => void }) {

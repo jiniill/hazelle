@@ -65,7 +65,7 @@ export function usageFacts(receipt: Receipt) {
   const share = cacheShare(usage);
   const reasoning = usage?.reasoningTokens ?? null;
   return [
-    { label: '입력', value: tokens(usage?.inputTokens ?? null), notes: [`캐시 적중 ${share === null ? UNKNOWN : `${share}%`}`] },
+    { label: '입력', value: tokens(usage?.inputTokens ?? null), notes: [`캐시에서 읽음 ${share === null ? UNKNOWN : `${share}%`}`] },
     { label: '출력', value: tokens(usage?.outputTokens ?? null), notes: [`추론 ${tokens(reasoning)}`] },
     ...(receipt.cost === null ? [] : [{ label: '비용', value: cost(receipt.cost) }]),
     { label: '걸린 시간', value: seconds(receipt.totalMs), notes: [`첫 토큰 ${seconds(receipt.firstTextMs)}`] },

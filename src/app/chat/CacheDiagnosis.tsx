@@ -16,12 +16,12 @@ import { silentReason } from './InspectModules';
 
 type BrokenPart = CacheDiagnosis['parts'][number];
 
-const KINDS = { changed: '달라짐', added: '추가됨', removed: '빠짐', moved: '자리 옮김' } as const;
+const KINDS = { changed: '달라짐', added: '추가됨', removed: '빠짐', moved: '위치 바뀜' } as const;
 export const breakKind = (kind: keyof typeof KINDS) => KINDS[kind];
 
 const quoted = (value: string) => (value === '' ? '(빈 값)' : `'${value.length > 60 ? `${value.slice(0, 60)}…` : value}'`);
 
-const VARYING = '달라지는 부분을 마지막 캐시 지점 뒤로 옮기면 앞부분은 계속 읽혀요.';
+const VARYING = '매번 바뀌는 내용을 대화 뒤로 옮기면 앞부분 캐시가 깨지지 않아요.';
 
 // One sentence per cause, and behind its ⓘ what would keep it from breaking. shown: the sentence as the part's detail
 // draws it, where it differs from the line the send note reads.
@@ -42,19 +42,19 @@ function cause(cause: CacheCause): { line: string; shown?: ReactNode; help: stri
       const quiet = !fired && cause.after && !cause.after.fired ? ` (${silentReason(cause.after.why)})` : '';
       return {
         line: fired ? `로어북 '${cause.name}' 항목이 새로 켜졌어요.` : `로어북 '${cause.name}' 항목이 꺼졌어요${quiet}.`,
-        help: '자주 켜고 꺼지는 항목은 항상 켜 두거나 배치 깊이를 대화 뒤쪽으로 두면 앞부분 캐시가 유지돼요.',
+        help: '자주 켜졌다 꺼지는 항목은 항상 켜 두거나 대화 맨 뒤(깊이 0)에 넣으면 앞부분 캐시가 유지돼요.',
       };
     }
     case 'moved':
       return cause.depth === null
-        ? { line: '같은 내용이 다른 자리로 옮겨졌어요.', help: null }
-        : { line: `깊이 ${cause.depth}에 넣는 항목이라 대화가 늘면서 자리를 옮겼어요.`, help: '깊이가 작을수록 더 많이 읽혀요.' };
+        ? { line: '내용은 같지만 들어가는 위치가 바뀌었어요.', help: null }
+        : { line: `깊이 ${cause.depth}에 넣는 항목이라 대화가 길어지면서 들어가는 위치가 밀렸어요.`, help: '깊이 숫자를 작게 할수록 대화 뒤쪽에 들어가서 앞부분 캐시가 더 많이 유지돼요.' };
     case 'edited':
       return { line: '대화 메시지가 수정됐어요.', help: null };
     case 'memory':
-      return { line: '장기 기억이 새로 정리됐어요.', help: '장기 기억은 정리할 때마다 바뀌어서, 그때 한 번 그 뒤 캐시가 깨져요.' };
+      return { line: '장기 기억이 새로 정리됐어요.', help: '장기 기억이 새로 정리될 때마다 그 뒤에 오는 내용의 캐시가 한 번 깨져요.' };
     case 'unknown':
-      return { line: '원인을 짚지 못했어요.', help: '스크립트나 토큰 절약이 보낼 내용을 바꿨거나, 여러 항목이 합쳐진 부분일 수 있어요.' };
+      return { line: '정확한 원인을 찾지 못했어요.', help: '스크립트나 토큰 절약이 보낼 내용을 바꿨거나, 여러 항목이 합쳐진 부분일 수 있어요.' };
   }
 }
 
@@ -85,13 +85,13 @@ export function BrokenPartView({ part }: { part: BrokenPart }) {
         );
       })}
       {diff === null ? (
-        <Text variant="note">직전 요청의 원문이 없어서 어떻게 바뀌었는지는 알 수 없어요.</Text>
+        <Text variant="note">이전 요청 원문이 남지 않아서 어떻게 바뀌었는지는 알 수 없어요.</Text>
       ) : (
         differs && (
           <>
             <Text variant="note">바뀐 곳</Text>
-            <TextDiff runs={diff.runs} label={`${partName(part.from, part.role)}: 직전 요청과 비교`} />
-            {diff.coarse && <Text variant="note">달라진 곳이 길어서 하나하나 맞추지 않고 통째로 보여 줘요.</Text>}
+            <TextDiff runs={diff.runs} label={`${partName(part.from, part.role)}: 이전과 비교`} />
+            {diff.coarse && <Text variant="note">바뀐 부분이 길어서 세세하게 비교하지 않고 통째로 보여 줘요.</Text>}
           </>
         )
       )}
@@ -99,7 +99,7 @@ export function BrokenPartView({ part }: { part: BrokenPart }) {
   );
 }
 
-const BREAK_WORDS: Record<Exclude<CacheBreak['kind'], keyof typeof KINDS>, string> = { model: '모델 바뀜', account: '계정 바뀜', reasoning: '추론 설정 바뀜', off: '캐시 꺼짐', expired: '유지 시간 지남', far: '캐시 위치가 멂' };
+const BREAK_WORDS: Record<Exclude<CacheBreak['kind'], keyof typeof KINDS>, string> = { model: '모델 바뀜', account: '계정 바뀜', reasoning: '추론 설정 바뀜', off: '캐시 꺼짐', expired: '유지 시간 지남', far: '간격이 너무 멂' };
 const breakLabel = (broken: CacheBreak) => ('from' in broken ? `${partName(broken.from, broken.role)} ${KINDS[broken.kind]}` : BREAK_WORDS[broken.kind]);
 
 // Shown only once a pattern can show: two sends that broke.
@@ -120,7 +120,7 @@ export function RecurrenceNote({ recurrence }: { recurrence: CacheRecurrence }) 
   );
 }
 
-export const SHORT = '예상보다 적게 읽음';
+export const SHORT = '캐시를 예상보다 적게 읽음';
 
 // Nothing unless the provider read clearly less than the receipt's forecast.
 export function ShortfallNote({ receipt, entry }: { receipt: Receipt; entry: LogEntry | null }) {
@@ -129,9 +129,9 @@ export function ShortfallNote({ receipt, entry }: { receipt: Receipt; entry: Log
   const place = shortfallPlace(entry, shortfall);
   return (
     <Text variant="note">
-      {`약 ${tokens(Math.round(shortfall.expected))} 토큰을 읽을 줄 알았는데 ${tokens(shortfall.actual)} 토큰만 읽었어요.`}
-      {place && ` '${partName(place.from, place.role)}' 부분 근처부터 읽지 못했어요.`}
-      <Hint label={SHORT}>제공자가 캐시를 비웠거나 요청을 바꿨을 수 있으니, 계속되면 다른 연결을 사용해 보세요.</Hint>
+      {`캐시에서 약 ${tokens(Math.round(shortfall.expected))} 토큰을 읽을 줄 알았는데 ${tokens(shortfall.actual)} 토큰만 읽었어요.`}
+      {place && ` '${partName(place.from, place.role)}' 부분 근처부터는 캐시에서 읽지 못했어요.`}
+      <Hint label={SHORT}>제공자가 캐시를 일찍 비웠거나 요청 내용을 바꿨을 수 있으니, 계속되면 다른 연결을 사용해 보세요.</Hint>
     </Text>
   );
 }
@@ -157,7 +157,7 @@ function preview({ edit }: CachePrescription): ReactNode {
     if (edit.field === 'constant') return <Text>키워드와 상관없이 매번 보내서 그만큼 토큰이 들어요.</Text>;
     return <TextDiff runs={cacheDiff(edit.before, edit.after).runs} label="항목 내용: 바꾸기 전과 후" />;
   }
-  return <Text>모델이 이 블록을 대화 다음에 읽어요.</Text>;
+  return <Text>프롬프트에서 이 블록의 순서가 대화 뒤로 바뀌어요.</Text>;
 }
 
 // Applying one changes the bot (design §4.4, 캐시 보호 ruling 1): only on the user's press, with 되돌리기.
@@ -176,13 +176,13 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
     .map((prescription) => ({ prescription, less: saved(now, prescription.cost) }))
     .sort((a, b) => (b.less?.amount ?? -1) - (a.less?.amount ?? -1));
   return (
-    <Section level={3} title="고치는 방법" help="여러 개를 고치면 아끼는 금액이 합과 다를 수 있어요.">
+    <Section level={3} title="고치는 방법" help="여러 개를 함께 고치면 아끼는 금액이 각각의 합과 다를 수 있어요.">
       <List label="고치는 방법">
         {ranked.map(({ prescription, less }, index) => (
           <ListItem
             key={index}
             title={titleOf(prescription)}
-            note={`읽기 ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
+            note={`캐시에서 읽음 ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
             tags={less ? [`${cost(less)} 절약`] : []}
             expanded={open === index}
             onClick={() => setOpen(open === index ? null : index)}

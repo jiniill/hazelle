@@ -70,7 +70,7 @@ function Row({ entry, open, onToggle }: { entry: LogEntry; open: boolean; onTogg
   return (
     <ListItem
       title={entry.agent ? `${entry.agent.name} · ${STAGE_NAMES[entry.agent.stage]} ${PURPOSES.agent}` : PURPOSES[entry.purpose]}
-      badge={share === null ? undefined : `적중 ${share}%`}
+      badge={share === null ? undefined : `${share}% 읽음`}
       description={facts.join(' · ')}
       tags={used}
       note={ago(entry.at)}

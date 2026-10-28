@@ -11,33 +11,33 @@ import { breakCauses, SHORT } from './CacheDiagnosis';
 import { partName } from './ChatSent';
 import type { CacheNotes } from './useSendNotes';
 
-const TITLE = '캐시가 남은 시간';
+const TITLE = '캐시 남은 시간';
 const PREFIX_TITLE = '캐시';
-export const BROKEN = '깨짐 예상';
+export const BROKEN = '캐시 깨짐';
 
 // profile: the 모델 설정 the send goes out with, which 'off' names; null for an earlier request, whose 모델 설정 is not kept.
 export function why(broken: CacheBreak, profile: string | null): string {
   switch (broken.kind) {
     case 'model':
-      return '직전 요청과 모델이나 연결이 달라요.';
+      return '이전 응답 때와 모델이나 연결이 달라요.';
     case 'account':
-      return '직전 요청과 다른 계정으로 보내요. 캐시는 계정마다 따로 써요.';
+      return '이전과 다른 계정으로 보내서 캐시를 이어 쓸 수 없어요.';
     case 'reasoning':
-      return '직전 요청과 추론 설정이 달라요.';
+      return '이전과 추론 설정이 달라요.';
     case 'off':
       return profile === null ? '이 모델 설정에서는 캐시가 꺼져 있어요.' : `'${profile}' ${MODEL_SETTINGS}에서는 캐시가 꺼져 있어요.`;
     case 'expired':
       return '캐시 유지 시간이 지났어요.';
     case 'far':
-      return '새 캐시 위치가 직전 캐시와 너무 멀어서 찾지 못했어요.';
+      return '한 번에 늘어난 메시지가 너무 많아서 이전 캐시를 이어 쓸 수 없어요.';
     case 'moved':
-      return `'${partName(broken.from, broken.role)}' 부분이 직전 요청과 다른 자리에 들어가요.`;
+      return `'${partName(broken.from, broken.role)}'의 위치가 이전과 달라졌어요.`;
     case 'changed':
-      return broken.from.kind === 'block' && broken.from.slot === 'chat' ? '직전에 보낸 메시지가 수정됐어요.' : `'${partName(broken.from, broken.role)}' 부분이 직전 요청과 달라요.`;
+      return broken.from.kind === 'block' && broken.from.slot === 'chat' ? '이전 대화 메시지가 수정됐어요.' : `'${partName(broken.from, broken.role)}' 내용이 이전과 달라졌어요.`;
     case 'removed':
-      return broken.from.kind === 'block' && broken.from.slot === 'chat' ? '직전에 보낸 메시지가 빠졌어요.' : `'${partName(broken.from, broken.role)}' 부분이 빠져요.`;
+      return broken.from.kind === 'block' && broken.from.slot === 'chat' ? '이전 대화 메시지가 빠졌어요.' : `'${partName(broken.from, broken.role)}' 부분이 이전보다 빠졌어요.`;
     case 'added':
-      return `'${partName(broken.from, broken.role)}' 부분이 추가돼요.`;
+      return `'${partName(broken.from, broken.role)}' 부분이 중간에 새로 들어갔어요.`;
   }
 }
 
@@ -46,7 +46,7 @@ export function profileName(store: Parameters<typeof modelProfile>[0], route: Ro
   return choice.kind === 'profile' ? choice.profile.value.name : null;
 }
 
-const reads = ({ read, of }: CacheForecast) => (read > 0 ? `캐시된 ${tokens(of)} 토큰 중 약 ${tokens(read)} 토큰만 읽어요.` : '캐시를 읽지 못했어요.');
+const reads = ({ read, of }: CacheForecast) => (read > 0 ? `캐시된 ${tokens(of)} 토큰 중 약 ${tokens(read)} 토큰만 읽어요.` : '캐시를 쓰지 못하고 처음부터 다시 읽어요.');
 
 const clock = (ms: number) => {
   const seconds = Math.ceil(ms / 1000);
@@ -76,7 +76,7 @@ export function nextWarning(next: NonNullable<CacheNotes['next']>, recurrence: C
   const { against } = next.forecast;
   if (against?.broken) return { words: BROKEN, why: [why(against.broken, profile), breakCauses(next.diagnosis, against.broken), reads(against)].filter(Boolean).join(' ') };
   const streak = shortStreak(recurrence, next.route.connection.id);
-  return streak === null ? undefined : { words: SHORT, why: `이 연결은 최근 ${streak}번 연속 예상보다 적게 읽었어요.` };
+  return streak === null ? undefined : { words: SHORT, why: `이 연결은 최근 ${streak}번 연속으로 캐시를 예상보다 적게 읽었어요.` };
 }
 
 export function ChatCache({ cache, onOpen }: { cache: CacheNotes; onOpen: () => void }) {

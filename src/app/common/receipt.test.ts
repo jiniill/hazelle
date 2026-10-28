@@ -22,8 +22,8 @@ describe('사용량 표시', () => {
 
   it('opens on the facts, an unreported cache and reasoning read as unknown and an unknown cost left out', () => {
     const facts = (made: Receipt) => Object.fromEntries(usageFacts(made).map(({ label, value, notes }) => [label, [value, ...(notes ?? [])]]));
-    expect(facts(receipt)).toEqual({ 입력: ['12,000', '캐시 적중 92%'], 출력: ['678', '추론 420'], 비용: ['약 $0.0123'], '걸린 시간': ['8.2초', '첫 토큰 1.4초'], 속도: ['100 tok/s'], 모델: ['Sonnet 5', 'Anthropic'] });
-    expect(facts({ ...receipt, usage: { ...usage, cachedInputTokens: null, reasoningTokens: null } })).toMatchObject({ 입력: ['12,000', '캐시 적중 알 수 없음'], 출력: ['678', '추론 알 수 없음'] });
+    expect(facts(receipt)).toEqual({ 입력: ['12,000', '캐시에서 읽음 92%'], 출력: ['678', '추론 420'], 비용: ['약 $0.0123'], '걸린 시간': ['8.2초', '첫 토큰 1.4초'], 속도: ['100 tok/s'], 모델: ['Sonnet 5', 'Anthropic'] });
+    expect(facts({ ...receipt, usage: { ...usage, cachedInputTokens: null, reasoningTokens: null } })).toMatchObject({ 입력: ['12,000', '캐시에서 읽음 알 수 없음'], 출력: ['678', '추론 알 수 없음'] });
     expect(facts({ ...receipt, cost: null })).not.toHaveProperty('비용');
   });
 });

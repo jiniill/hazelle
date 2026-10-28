@@ -30,7 +30,7 @@ export function Cache({ chat, next, cache }: { chat: string; next: ReactNode; ca
       <Section title="다음 전송" help="토큰 수는 추정치예요.">
         {next}
       </Section>
-      <Section title="지난 응답" help="깨진 곳의 원문은 이 화면에서 받은 응답에만 있어요. 새로고침하면 사라져요.">
+      <Section title="지난 응답" help="마지막으로 새로고침한 뒤에 받은 응답만 어디가 어떻게 바뀌었는지 비교해 볼 수 있어요.">
         <Stack gap="related">
           <RecurrenceNote recurrence={cache.recurrence} />
           <PastReplies chat={chat} replies={cache.replies} />
@@ -42,7 +42,7 @@ export function Cache({ chat, next, cache }: { chat: string; next: ReactNode; ca
 
 export function NextCacheView({ chat, sending, cache, editor, onEdit }: { chat: string; sending: Sending; cache: CacheNotes; editor: (from: From) => Side | null; onEdit: (side: Side) => void }) {
   const lead = useSendTimeNote(chat, sending);
-  if (!cache.next) return cache.next === null ? <Empty variant="section">직전 요청이 남긴 캐시 기록이 없어요.</Empty> : <Text variant="note">계산하는 중…</Text>;
+  if (!cache.next) return cache.next === null ? <Empty variant="section">이전 응답에서 남은 캐시 기록이 없어요.</Empty> : <Text variant="note">계산하는 중…</Text>;
   return (
     <Stack gap="related">
       {lead}
@@ -74,9 +74,9 @@ function PastReply({ at, receipt, entry, open, onToggle }: { at: number; receipt
   return (
     <ListItem
       title={receipt.modelName}
-      badge={share === null ? undefined : `적중 ${share}%`}
+      badge={share === null ? undefined : `${share}% 읽음`}
       description={broken ? [`${BROKEN}: ${why(broken, null)}`, breakCauses(entry?.diagnosis, broken)].filter(Boolean).join(' ') : undefined}
-      tags={share === null ? [`읽음 ${UNKNOWN}`] : undefined}
+      tags={share === null ? [`읽은 양 ${UNKNOWN}`] : undefined}
       note={ago(at)}
       {...(parts.length > 0 && { expanded: open, onClick: onToggle })}
       detail={
@@ -95,7 +95,7 @@ function PastReply({ at, receipt, entry, open, onToggle }: { at: number; receipt
   );
 }
 
-const STATES: Record<ForecastPart['state'], string> = { read: '캐시에서 읽음', write: '새로 저장', tail: '캐시 밖' };
+const STATES: Record<ForecastPart['state'], string> = { read: '캐시에서 읽음', write: '캐시에 새로 저장', tail: '캐시 안 함' };
 type CacheRow = { name: string; tokens: number; count: number; at: number } & Pick<ForecastPart, 'from' | 'state' | 'change' | 'point'>;
 
 // Neighbours of one part, alike in how the cache takes them, read as one row; a point ends its row. A changed part is
@@ -135,7 +135,7 @@ export function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) 
           { label: STATES.tail, value: tokens(tail) },
         ]}
       />
-      {!against && <Text variant="note">직전 요청 기록이 없어서 얼마나 읽을지 알 수 없어요.</Text>}
+      {!against && <Text variant="note">이전 응답 기록이 없어서 캐시에서 얼마나 읽을지 알 수 없어요.</Text>}
       {price && (
         <Facts
           items={[
@@ -146,7 +146,7 @@ export function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) 
       )}
       <Prescriptions prescriptions={prescriptions} cost={price} />
       {guard && against?.broken && diagnosis && prescriptions?.length === 0 && <Text variant="note">{`${CACHE_GUARD}로 고칠 수 있는 원인은 아니에요.`}</Text>}
-      <List label="보낼 메시지">
+      <List label="보낼 내용">
         {cacheRows(forecast.parts).map((row, index) => {
           const part = row.change && diagnosed(diagnosis, row.change, row.at);
           const side = row.change && editor(row.from);
@@ -156,7 +156,7 @@ export function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) 
               key={index}
               title={row.count > 1 ? `${row.name} ${row.count}개` : row.name}
               badge={row.change ? breakKind(row.change) : undefined}
-              tags={[STATES[row.state], ...(row.point === 'cache' ? ['캐시 지점'] : row.point === 'short' ? ['캐시 지점 · 최소 크기 미만'] : [])]}
+              tags={[STATES[row.state], ...(row.point === 'cache' ? ['캐시 지점'] : row.point === 'short' ? ['캐시 지점 · 분량이 짧아 저장 안 됨'] : [])]}
               note={tokens(row.tokens)}
               {...(row.change && {
                 expanded: open === key,
@@ -168,8 +168,8 @@ export function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) 
         })}
       </List>
       {removed.length > 0 && (
-        <Section level={3} title="빠지는 메시지">
-          <List label="빠지는 메시지">
+        <Section level={3} title="이전보다 빠진 내용">
+          <List label="이전보다 빠진 내용">
             {removed.map((part, index) => {
               const key = `removed:${part.before}`;
               return (
