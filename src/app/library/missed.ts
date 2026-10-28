@@ -37,7 +37,7 @@ const MOVE_UNSUPPORTED: Record<MoveUnsupportedKind, (count: number) => string> =
   inlay: (count) => `메시지 속 이미지 ${count}개`,
   'chat-folder': (count) => `채팅 폴더 ${count}개`,
   'hidden-message': (count) => `숨김·코멘트 메시지 ${count}개(일반 메시지로 들어옴)`,
-  'cold-missing': (count) => `백업에 없는 대화 ${count}개`,
+  'cold-missing': (count) => `백업에 없는 채팅 ${count}개`,
   'missing-picture': (count) => `백업에 없는 이미지 ${count}개`,
   'escape-output': () => `출력 이스케이프(응답 속 ${COMMAND}도 실행됨)`,
   'lore-depth': () => 'Risu에서 바꾼 로어북 검색 깊이(헤이젤은 5로 고정)',

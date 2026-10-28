@@ -9,7 +9,7 @@ const KEYWORDS = new Set(['and', 'break', 'do', 'else', 'elseif', 'end', 'false'
 const GLOBALS = ['tonumber', 'tostring', 'pairs', 'ipairs', 'type', 'pcall', 'xpcall', 'error', 'assert', 'print', 'select', 'next', 'setmetatable', 'getmetatable', 'rawget', 'rawset', 'rawequal', 'rawlen', 'collectgarbage'];
 const LIBRARY: Record<string, string[]> = {
   string: ['find(글, 찾을 글)', 'sub(글, 시작, 끝)', 'gsub(글, 패턴, 바꿀 글)', 'match(글, 패턴)', 'gmatch(글, 패턴)', 'format(형식, 값)', 'len(글)', 'lower(글)', 'upper(글)', 'rep(글, 횟수)', 'reverse(글)', 'byte(글)', 'char(번호)'],
-  table: ['insert(테이블, 값)', 'remove(테이블, 위치)', 'concat(테이블, 구분자)', 'sort(테이블)', 'unpack(표)'],
+  table: ['insert(테이블, 값)', 'remove(테이블, 위치)', 'concat(테이블, 구분자)', 'sort(테이블)', 'unpack(테이블)'],
   math: ['floor(숫자)', 'ceil(숫자)', 'max(가, 나)', 'min(가, 나)', 'random(시작, 끝)', 'abs(숫자)', 'sqrt(숫자)'],
   json: ['encode(값)', 'decode(글)'],
   os: ['time()', 'date(형식)', 'clock()'],
@@ -18,7 +18,7 @@ const SNIPPETS: [string, string][] = [
   ['if', 'if ${1:조건} then\n\t${0}\nend'],
   ['if else', 'if ${1:조건} then\n\t${2}\nelse\n\t${0}\nend'],
   ['for', 'for ${1:i} = ${2:1}, ${3:끝} do\n\t${0}\nend'],
-  ['for pairs', 'for ${1:k}, ${2:v} in pairs(${3:표}) do\n\t${0}\nend'],
+  ['for pairs', 'for ${1:k}, ${2:v} in pairs(${3:테이블}) do\n\t${0}\nend'],
   ['while', 'while ${1:조건} do\n\t${0}\nend'],
   ['local function', 'local function ${1:이름}(${2})\n\t${0}\nend'],
 ];

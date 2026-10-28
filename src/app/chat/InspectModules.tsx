@@ -110,7 +110,7 @@ function SilentLore({ module }: { module: ModuleContribution }) {
       {search.none ? (
         <Empty variant="section">{search.none}</Empty>
       ) : (
-        <List label={`${module.name} 안 켜진 항목`}>
+        <List label={`${module.name} 비활성 항목`}>
           {search.found.map((entry) => (
             <ListItem key={entry.id} title={entry.name} description={silentReason(entry.why)} />
           ))}

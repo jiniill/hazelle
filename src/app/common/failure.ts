@@ -72,7 +72,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'folder-not-absolute': '전체 경로를 입력해 주세요. 예: D:\\헤이젤 백업',
   'folder-in-data': '헤이젤 데이터 폴더 외부의 다른 폴더를 지정해 주세요.',
   'folder-unwritable': '이 폴더에 쓸 수 없어요. 폴더가 있는지, 쓸 권한이 있는지 확인해 주세요.',
-  'too-many-reports': '운영자가 아직 확인하지 않은 알림이 많아서 더 보낼 수 없어요.',
+  'too-many-reports': '운영자가 아직 확인하지 않은 신고가 많아서 더 보낼 수 없어요.',
   'bad-nickname': `닉네임은 ${count(NICKNAME_LENGTH.min)}~${count(NICKNAME_LENGTH.max)}자로, @ # / 같은 기호 없이 지을 수 있어요.`,
   'nickname-taken': '이미 쓰고 있는 닉네임이에요. 다른 닉네임을 지어 주세요.',
   'no-nickname': '게시판에 쓰려면 먼저 닉네임을 정해야 해요.',
@@ -153,7 +153,7 @@ export function describeFailure(failure: ApiFailure, own: Partial<Record<ServerE
 }
 
 const REFUSED: Record<string, string> = {
-  'max-tokens-unknown': '이 모델의 최대 출력 길이를 알 수 없어서 요청을 보낼 수 없어요.',
+  'max-tokens-unknown': '이 모델의 응답 최대 길이를 알 수 없어서 요청을 보낼 수 없어요.',
   'context-fit': '요청 내용이 이 모델의 컨텍스트 길이를 넘을 것 같아서 보내지 않았어요. 컨텍스트 길이가 더 긴 모델을 선택하거나 프롬프트 내용을 줄여 주세요.',
   tokenizer: '토큰 수를 계산하지 못해서 보내지 않았어요. 새로고침한 뒤 다시 시도해 주세요.',
   'unknown-connection-type': '지원하지 않는 연결 방식이에요. 화면을 새로고침해 주세요.',
@@ -386,7 +386,7 @@ export function describeMemoryFailure(failure: MemoryFailure): string {
     case 'model-gone':
     case 'image-only':
     case 'profile-missing':
-      return describeRoute(failure, '기억 정리 모델', '기억');
+      return describeRoute(failure, '기억 모델', '기억');
     case 'prompt-missing':
       return `기본 기억 프롬프트가 없어요. ${inSettings('prompts')}에서 기억 프롬프트 하나를 기본으로 지정해 주세요.`;
     case 'runaway':

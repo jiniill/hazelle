@@ -170,7 +170,7 @@ function PortraitFields({ owner, index, portrait, onRemove }: { owner: string; i
           name={(at) => outfits[at]!.name || '의상'}
           blank={{ name: '', tags: '' }}
           addLabel={addOf('의상')}
-          removed={(at) => `${at + 1}번째 옷을 삭제했어요.`}
+          removed={(at) => `${at + 1}번째 의상을 삭제했어요.`}
         >
           {({ value: outfit, index: at, set, remove }) => (
             <Section

@@ -152,7 +152,7 @@ export function setWrapper(block: WrappedSlot, wrapper: string | null): Step {
     held = now.wrapper;
     return onBlock(block.id, (each) => ('wrapper' in each ? { ...each, wrapper: next } : each))(draft);
   };
-  return { label: titled(block, wrapper === null ? '감싸는 텍스트 제거' : '감싸는 텍스트 추가'), block: block.id, undo: trade, redo: trade };
+  return { label: titled(block, wrapper === null ? '감싸는 텍스트 빼기' : '감싸는 텍스트 추가'), block: block.id, undo: trade, redo: trade };
 }
 
 // taken: the text withMark took the mark from, which undoing gives it back to.
@@ -206,5 +206,5 @@ export function moveLines(line: ShownLine, { from, count, to }: LineMove): Step 
 
 export function renameKey(toggle: Toggle, to: string): Step {
   const renamed = (from: string, next: string) => (draft: Draft) => (keyInUse(draft.toggles, next) ? keyTaken(next) : rekey(draft, from, next));
-  return { label: `'${toggle.label}' 키 바꾸기`, block: null, undo: renamed(to, toggle.key), redo: renamed(toggle.key, to) };
+  return { label: `'${toggle.label}' 키 변경`, block: null, undo: renamed(to, toggle.key), redo: renamed(toggle.key, to) };
 }

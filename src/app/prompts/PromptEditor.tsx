@@ -258,7 +258,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
   };
   const makeDefault = async () => {
     const saved = await setDefaultPrompt(store, stored.id);
-    if (!saved.ok) toast.failed(saved, '기본으로 정하지 못했어요.');
+    if (!saved.ok) toast.failed(saved, '기본으로 지정하지 못했어요.');
   };
   const erase = async () => {
     const removed = await save.remove(() => removePrompt(store, stored.id));

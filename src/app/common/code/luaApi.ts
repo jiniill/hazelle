@@ -41,7 +41,7 @@ export const LUA_API: readonly LuaFunction[] = [
   fn('getCharacterFirstMessage(id)', '첫인사예요.'),
   fn('getPersonaName(id)', '페르소나 이름이에요.'),
   fn('getPersonaDescription(id)', '페르소나 설명이에요.'),
-  fn('getAuthorsNote(id)', '채팅 노트예요.'),
+  fn('getAuthorsNote(id)', '작가의 노트예요.'),
   fn('getBackgroundEmbedding(id)', '캐릭터의 배경 HTML이에요.'),
   fn('setBackgroundEmbedding(id, html)', '캐릭터의 배경 HTML을 수정해요. 처음 실행할 때는 사용자에게 허용 여부를 물어봐요. async 함수 안에서는 적용 여부를 true/false로, 밖에서는 nil을 반환해요.'),
 

@@ -110,7 +110,7 @@ export const DEFAULT_MODELS = '기본 모델';
 export const MODEL_SETTINGS = '모델 설정';
 
 // Always name message direction: operator → account, account → operator, or operator sending.
-export const NOTICES = { from: '운영자가 보낸 알림', received: '받은 알림', send: '알림 보내기' };
+export const NOTICES = { from: '운영자가 보낸 알림', received: '신고', send: '알림 보내기' };
 
 export const BOARD = {
   title: '게시판',

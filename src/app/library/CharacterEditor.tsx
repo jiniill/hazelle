@@ -373,7 +373,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
           <Disclosure label="이미지 크기">
             <SettingGroup label="이미지 크기">
               {fold && percentRow(peek, '접힌 높이', '화면 높이 대비 비율이에요.', '40')}
-              {percentRow(widest, '최대 폭', { text: '글 폭 대비 비율이에요. 비워 두면 디스플레이 설정 값을 사용해요.', open: { label: opens(inSettings('display')), onClick: () => navigate({ kind: 'display' }) } }, String(display.pictureWidest))}
+              {percentRow(widest, '최대 폭', { text: '읽기 폭 대비 비율이에요. 비워 두면 디스플레이 설정 값을 사용해요.', open: { label: opens(inSettings('display')), onClick: () => navigate({ kind: 'display' }) } }, String(display.pictureWidest))}
             </SettingGroup>
           </Disclosure>
         )}

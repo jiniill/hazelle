@@ -34,7 +34,7 @@ const PRESET_FAILURE: Record<PresetFailure['kind'], string> = {
 };
 
 // In the move's order (runtime/move). The character steps interleave, so each kind reached keeps its own line.
-const STEP: Record<MoveStep['kind'], string> = { personas: '페르소나', modules: '모듈', prompts: '프롬프트', characters: '캐릭터', chats: '대화', pictures: '이미지' };
+const STEP: Record<MoveStep['kind'], string> = { personas: '페르소나', modules: '모듈', prompts: '프롬프트', characters: '캐릭터', chats: '채팅', pictures: '이미지' };
 const READING = '백업 읽기';
 type Steps = Partial<Record<MoveStep['kind'], MoveStep>>;
 
@@ -158,13 +158,13 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
     const { step } = phase;
     return (
       <Dialog title="메시지 이미지 채우는 중" note={note} onClose={onClose}>
-        <Progress hero steps={[{ label: '파일 읽기', finished: true }, step ? { label: '대화', done: step.chats, total: step.total } : { label: '대화' }]} />
+        <Progress hero steps={[{ label: '파일 읽기', finished: true }, step ? { label: '채팅', done: step.chats, total: step.total } : { label: '채팅' }]} />
       </Dialog>
     );
   }
   if (phase.kind === 'filled') {
     const { pictures, missed, unread } = phase.filled;
-    const lines = [...(missed ? moveMissed([{ kind: 'inlay', count: missed }]) : []), ...(unread ? [`읽지 못한 대화 ${unread}개`] : [])];
+    const lines = [...(missed ? moveMissed([{ kind: 'inlay', count: missed }]) : []), ...(unread ? [`읽지 못한 채팅 ${unread}개`] : [])];
     return (
       <Dialog title="이미지 채우기 완료" note={note} onClose={onClose} actions={close}>
         <Stack gap="section">
@@ -238,7 +238,7 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
         {room !== null && pictureBytes > room && <Callout tone="warn">{`남은 이미지 저장 공간은 ${sizeText(room)}예요. 용량을 넘는 이미지는 빼고 가져와요.`}</Callout>}
         <Picks
           title="캐릭터"
-          rows={catalog.characters.map((character) => ({ label: character.name, note: have.characters.has(character.id) ? '이미 있음' : `대화 ${character.chatCount}개` }))}
+          rows={catalog.characters.map((character) => ({ label: character.name, note: have.characters.has(character.id) ? '이미 있음' : `채팅 ${character.chatCount}개` }))}
           can={can.characters}
           ticks={ticks.characters}
           onChange={(next) => tick('characters', next)}
@@ -310,7 +310,7 @@ function Summary({ backup, moved }: { backup: BackupCatalog; moved: Moved }) {
   const notUsed = describeUnused([...totals].map(([kind, count]) => ({ kind, count })));
   return (
     <Stack gap="section">
-      <Text>{`캐릭터 ${moved.characters.length}개 · 대화 ${chats}개 · 페르소나 ${moved.personas}개 · 프롬프트 ${moved.prompts}개 · 모듈 ${moved.modules.length}개`}</Text>
+      <Text>{`캐릭터 ${moved.characters.length}개 · 채팅 ${chats}개 · 페르소나 ${moved.personas}개 · 프롬프트 ${moved.prompts}개 · 모듈 ${moved.modules.length}개`}</Text>
       {moved.loreBudget !== null && <Text variant="note">{`Risu에서 정한 ${LORE_BUDGET_LABEL}(${countText(moved.loreBudget)}토큰) 설정도 함께 가져왔어요.`}</Text>}
       {moved.toggles > 0 && <Text variant="note">{`Risu에서 쓰던 토글 값 ${moved.toggles}개도 함께 가져왔어요.`}</Text>}
       {missed.length > 0 && <Outcome title={MISSED} items={missed} />}

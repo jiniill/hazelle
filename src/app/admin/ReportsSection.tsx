@@ -34,7 +34,7 @@ export function ReportsSection({ head, onActed }: { head: boolean; onActed?: () 
       // Not hidden when the head is whole: it holds only the open reports, and the resolved ones are behind this door.
       action={head ? <SeeAll onClick={() => navigate({ kind: 'admin-list', list: 'reports' })} /> : undefined}
     >
-      <PagedList pages={pages} head={head} label={NOTICES.received} empty={head ? '확인할 신고가 없어요.' : `${NOTICES.received}이 없어요.`}>
+      <PagedList pages={pages} head={head} label={NOTICES.received} empty={head ? '확인할 신고가 없어요.' : `${NOTICES.received}가 없어요.`}>
         {(report) => (
           <ListItem
             key={report.id}

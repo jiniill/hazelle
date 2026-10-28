@@ -65,8 +65,8 @@ export function TaskPromptMenu({ task, chosen, heading, opens, onPick, onEdit }:
         return <MenuItem key={item.id} label={item.value.name} tag={mark && <Tag tone="accent">{mark}</Tag>} checked={item.id === chosen} onClick={() => onPick(item.id)} />;
       })}
       <Divider variant="menu" />
-      {choice.kind === 'prompt' && <MenuItem label="이 프롬프트 편집…" onClick={() => onEdit({ id: choice.prompt.id, pane })} />}
-      <MenuItem label="프롬프트 관리…" onClick={() => onEdit(null)} />
+      {choice.kind === 'prompt' && <MenuItem label="이 프롬프트 편집" onClick={() => onEdit({ id: choice.prompt.id, pane })} />}
+      <MenuItem label="프롬프트 관리" onClick={() => onEdit(null)} />
     </Menu>
   );
 }

@@ -123,7 +123,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       </Section>
       {naming && (
         <NameDialog
-          title={naming.preset ? '프리셋 이름 변경' : '프리셋으로 저장'}
+          title={naming.preset ? '프리셋 이름 바꾸기' : '프리셋으로 저장'}
           value={naming.preset?.name ?? `내 프리셋 ${own.presets.length + 1}`}
           onSave={name}
           onClose={() => setNaming(null)}
@@ -148,7 +148,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           <PictureWidestRow />
           <SettingRow
             label="가로 이미지는 꽉 채우기"
-            help="가로가 세로보다 긴 이미지는 최대 폭과 상관없이 글 폭을 꽉 채워요."
+            help="가로가 세로보다 긴 이미지는 최대 폭과 상관없이 읽기 폭을 꽉 채워요."
             control={<Switch label="가로 이미지는 꽉 채우기" checked={display.wideFill} onChange={(wideFill) => changeDisplay({ wideFill })} />}
           />
           <SettingRow
@@ -187,7 +187,7 @@ function PictureWidestRow() {
   return (
     <SettingRow
       label="이미지 최대 폭"
-      help="글 폭 대비 비율이에요."
+      help="읽기 폭 대비 비율이에요."
       error={widest.error}
       control={<NumberInput label="이미지 최대 폭" value={widest.text} unit="%" invalid={widest.error !== undefined} onChange={widest.change} />}
     />

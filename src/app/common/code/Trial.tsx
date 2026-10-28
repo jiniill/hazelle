@@ -57,7 +57,7 @@ function TrialChats({ owner, chat, onChange }: { owner: Owner; chat: string | nu
   const where = [{ value: 'sample', label: '예시 채팅' }, ...(chats.length ? [{ value: 'mine', label: '내 채팅' }] : [])];
   return (
     <Stack gap="related">
-      <ChoiceGroup label="시험할 채팅" showLabel layout="segmented" options={where} value={chat === null ? 'sample' : 'mine'} onChange={(to) => onChange(to === 'sample' ? null : chats[0]!.id)} />
+      <ChoiceGroup label="테스트할 채팅" showLabel layout="segmented" options={where} value={chat === null ? 'sample' : 'mine'} onChange={(to) => onChange(to === 'sample' ? null : chats[0]!.id)} />
       {chat === null ? (
         <Text variant="note">{SAMPLE_NOTE}</Text>
       ) : (
@@ -224,7 +224,7 @@ function LuaTrial({ unit, trial }: { unit: LuaUnit; trial: TrialChat }) {
 }
 
 function LuaRan({ ran: { event, trial }, stale }: { ran: Ran; stale: boolean }) {
-  if (trial === 'failed') return <Callout tone="warn">시험 실행하지 못했어요.</Callout>;
+  if (trial === 'failed') return <Callout tone="warn">테스트 실행하지 못했어요.</Callout>;
   const { outcome, said, asked, calls, loreRanAway } = trial;
   const count = (label: string, length: number, unit = '개') => (length ? [{ label, value: `${length}${unit}` }] : []);
   const facts = [
@@ -242,7 +242,7 @@ function LuaRan({ ran: { event, trial }, stale }: { ran: Ran; stale: boolean }) 
   const traced = outcome.trace?.entries ?? [];
   return (
     <Stack gap="related">
-      {stale && <Text variant="note">코드가 바뀌었어요. 다시 실행하면 지금 코드로 시험해요.</Text>}
+      {stale && <Text variant="note">코드가 바뀌었어요. 다시 실행하면 지금 코드로 테스트해요.</Text>}
       {!outcome.handled && <Text variant="note">{`이 코드에는 ${event} 함수가 없어요.`}</Text>}
       {loreRanAway && <Callout tone="warn">{runaway('로어북을 스크립트에 넘기기 전에')}</Callout>}
       {facts.length > 0 && <Facts items={facts} />}
