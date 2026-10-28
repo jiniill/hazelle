@@ -12,7 +12,7 @@ const POINTS = [
   { icon: MonitorSmartphone, text: '다른 기기에서 열 수 없어요' },
   { icon: Eraser, text: '이 브라우저의 데이터를 지우면 사라져요' },
 ];
-const TITLE = '손님으로 쓰는 중';
+const TITLE = '손님 모드';
 const NOTE = '만든 내용은 이 브라우저에만 저장돼요.';
 const SAFARI = { icon: Smartphone, text: 'Safari는 7일 동안 열지 않으면 데이터를 지워요 · 공유 › 홈 화면에 추가하면 지우지 않아요' };
 

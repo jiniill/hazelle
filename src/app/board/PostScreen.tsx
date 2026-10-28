@@ -118,10 +118,10 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
     ...(admin
       ? [
           <MenuHeading key="operate">운영</MenuHeading>,
-          ...(post.author.guest ? [<MenuItem key="block-guest" icon={Lock} label="이 손님 글쓰기 막기" onClick={() => act(() => blockGuestPost(post.id), '막지 못했어요.')} />] : []),
-          ...(post.category === 'news' ? [] : [<MenuItem key="status" icon={TagIcon} label="상태 바꾸기" onClick={() => setAsking({ kind: 'status' })} />]),
+          ...(post.author.guest ? [<MenuItem key="block-guest" icon={Lock} label="이 손님 글쓰기 차단" onClick={() => act(() => blockGuestPost(post.id), '차단하지 못했어요.')} />] : []),
+          ...(post.category === 'news' ? [] : [<MenuItem key="status" icon={TagIcon} label="상태 변경" onClick={() => setAsking({ kind: 'status' })} />]),
           post.hidden ? (
-            <MenuItem key="show" icon={Eye} label="보이기" onClick={() => act(() => setPostHidden(post.id, null), '보이게 하지 못했어요.')} />
+            <MenuItem key="show" icon={Eye} label="가림 해제" onClick={() => act(() => setPostHidden(post.id, null), '가림을 해제하지 못했어요.')} />
           ) : (
             <MenuItem key="hide" icon={EyeOff} label="가리기" onClick={() => setAsking({ kind: 'hide-post' })} />
           ),
@@ -247,13 +247,13 @@ function Comments({ post, admin, guest, gate, onAsk, onChanged }: { post: Post; 
       ...(admin && !comment.deleted
         ? [
             <MenuHeading key="operate">운영</MenuHeading>,
-            ...(comment.author.guest ? [<MenuItem key="block-guest" icon={Lock} label="이 손님 글쓰기 막기" onClick={() => void blockGuestComment(comment.id).then((answer) => answer.ok ? onChanged() : toast.failed(answer, '막지 못했어요.'))} />] : []),
+            ...(comment.author.guest ? [<MenuItem key="block-guest" icon={Lock} label="이 손님 글쓰기 차단" onClick={() => void blockGuestComment(comment.id).then((answer) => answer.ok ? onChanged() : toast.failed(answer, '차단하지 못했어요.'))} />] : []),
             comment.hidden ? (
               <MenuItem
                 key="show"
                 icon={Eye}
-                label="보이기"
-                onClick={() => void setCommentHidden(comment.id, null).then((answer) => (answer.ok ? onChanged() : toast.failed(answer, '보이게 하지 못했어요.')))}
+                label="가림 해제"
+                onClick={() => void setCommentHidden(comment.id, null).then((answer) => (answer.ok ? onChanged() : toast.failed(answer, '가림을 해제하지 못했어요.')))}
               />
             ) : (
               <MenuItem key="hide" icon={EyeOff} label="가리기" onClick={() => onAsk({ kind: 'hide-comment', comment })} />
@@ -467,7 +467,7 @@ function StatusDialog({ post, onDone, onClose }: { post: Post; onDone: () => voi
     });
   return (
     <Dialog
-      title="상태 바꾸기"
+      title="상태 변경"
       onClose={onClose}
       onSubmit={() => void submit()}
       actions={

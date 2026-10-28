@@ -11,7 +11,7 @@ export function useAccounts(head: boolean) {
   async function refresh(id: string) {
     if (!pages.rows?.some(({ accountId }) => accountId === id)) return;
     const answer = await readAdminAccount(id);
-    if (!answer.ok) return toast.failed(answer, '계정을 다시 읽지 못했어요.');
+    if (!answer.ok) return toast.failed(answer, '계정을 다시 불러오지 못했어요.');
     const account = answer.data.account;
     pages.update((rows) => rows.flatMap((row) => (row.accountId === id ? (account ? [account] : []) : [row])));
   }

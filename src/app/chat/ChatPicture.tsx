@@ -42,7 +42,7 @@ export function ChatPicture({ place, message, running, draws, sizes, onDraw, onD
     const { failure, version, scene } = place;
     return (
       <Failure
-        title={failure.kind === 'costs' ? '비용이 드는 이미지' : '삽화 실패'}
+        title={failure.kind === 'costs' ? '유료 이미지 생성' : '삽화 실패'}
         actions={
           <>
             <Button variant="secondary" size="sm" disabled={running} onClick={() => onDismiss(message.id, scene)}>
@@ -50,7 +50,7 @@ export function ChatPicture({ place, message, running, draws, sizes, onDraw, onD
             </Button>
             {!draws ? null : failure.kind === 'costs' ? (
               <Button size="sm" disabled={running} onClick={() => onDraw(message.id, version, scene, true)}>
-                그래도 만들기
+                그래도 생성
               </Button>
             ) : (
               <Button size="sm" disabled={running} onClick={() => onDraw(message.id, version, scene)}>

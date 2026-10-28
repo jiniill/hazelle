@@ -13,7 +13,7 @@ import { filled, typedText } from './typed';
 import { useAutosave } from './useAutosave';
 import { portraitName } from './words';
 
-const SOURCES: Record<PortraitSource, string> = { metadata: '이미지 정보에서', vision: '이미지를 보고', text: '설명에서', user: '직접 입력' };
+const SOURCES: Record<PortraitSource, string> = { metadata: '이미지 메타데이터', vision: '이미지 분석', text: '캐릭터 설명', user: '직접 입력' };
 
 // By place, so a rename keeps its field; a portrait's place moves only by this screen's add and remove, and 다시
 // 만들기, which flush the edits first.
@@ -167,21 +167,21 @@ function PortraitFields({ owner, index, portrait, onRemove }: { owner: string; i
         <EntryList
           entries={outfits}
           onChange={(next) => save.change({ outfits: next })}
-          name={(at) => outfits[at]!.name || '옷'}
+          name={(at) => outfits[at]!.name || '의상'}
           blank={{ name: '', tags: '' }}
-          addLabel={addOf('옷')}
+          addLabel={addOf('의상')}
           removed={(at) => `${at + 1}번째 옷을 삭제했어요.`}
         >
           {({ value: outfit, index: at, set, remove }) => (
             <Section
-              title={at === 0 ? '옷 (기본)' : '옷'}
+              title={at === 0 ? '의상 (기본)' : '의상'}
               level={3}
               help={at === 0 ? '이야기에서 다른 옷을 입지 않으면 이 옷으로 그려요.' : undefined}
               action={remove}
             >
               <Stack gap="related">
-                <TextField label="옷 이름" showLabel={false} placeholder="옷 이름" value={outfit.name} onChange={(next) => set({ ...outfit, name: next })} />
-                {tags(`옷 ${outfit.name}`, outfit.tags, (next) => set({ ...outfit, tags: next }))}
+                <TextField label="의상 이름" showLabel={false} placeholder="의상 이름" value={outfit.name} onChange={(next) => set({ ...outfit, name: next })} />
+                {tags(`의상 ${outfit.name}`, outfit.tags, (next) => set({ ...outfit, tags: next }))}
               </Stack>
             </Section>
           )}

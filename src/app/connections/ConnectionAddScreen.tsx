@@ -15,9 +15,9 @@ import { Button, Callout, Empty, GuideMark, List, ListItem, NavBar, Screen, Sear
 import { connect } from './connect';
 
 const GROUPS: Record<ConnectionType['group'], string> = {
-  gateway: '여러 회사 모델을 한 키로',
-  maker: '제작사 API로',
-  subscription: '구독 계정으로',
+  gateway: '통합 API 게이트웨이',
+  maker: '제공자 직접 연결',
+  subscription: '구독 계정 연결',
 };
 
 // Ollama, LM Studio and koboldcpp at the ports launch.ts and docker-compose.yml list; another listed one goes by its address.

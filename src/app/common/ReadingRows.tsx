@@ -43,9 +43,9 @@ export function ReplyRow() {
   const { reading, changeReading } = useDisplay();
   return (
     <SettingRow
-      label="응답이 올 때"
+      label="응답 수신 시"
       wide
-      control={<ChoiceGroup layout="segmented" label="응답이 올 때" options={choices(REPLY)} value={reading.reply} onChange={(reply) => changeReading({ reply })} />}
+      control={<ChoiceGroup layout="segmented" label="응답 수신 시" options={choices(REPLY)} value={reading.reply} onChange={(reply) => changeReading({ reply })} />}
     />
   );
 }

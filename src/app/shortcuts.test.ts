@@ -4,7 +4,7 @@ import { keysOf, SHORTCUT_GROUPS, SHORTCUTS, titled } from './shortcuts';
 describe('shortcuts', () => {
   it('writes the titles the chat shows', () => {
     expect(titled(SHORTCUTS.send.label, SHORTCUTS.send.keys)).toBe('보내기 · Enter');
-    expect(titled(SHORTCUTS.stop.label, SHORTCUTS.stop.keys)).toBe('응답 멈추기 · Esc');
+    expect(titled(SHORTCUTS.stop.label, SHORTCUTS.stop.keys)).toBe('응답 생성 중지 · Esc');
     expect(titled('이전', [SHORTCUTS.swipe.keys[0]])).toBe('이전 · ←');
     expect(titled('다시 생성', [SHORTCUTS.swipe.keys[1]])).toBe('다시 생성 · →');
   });

@@ -12,10 +12,10 @@ export const authorName = (author: Author) => (author.operator ? OPERATOR_NAME :
 
 // A post's 분류 reads by its tint and icon wherever it shows: the feed, the post, the write page's cards.
 export const CATEGORY_LOOK: Record<Category, { hue: 1 | 2 | 3 | 4 | 5; icon: LucideIcon; sub: string }> = {
-  bug: { hue: 4, icon: Bug, sub: '고장 나거나 이상하게 움직여요' },
-  idea: { hue: 1, icon: Lightbulb, sub: '있으면 좋을 기능, 바꿀 점' },
-  question: { hue: 2, icon: CircleHelp, sub: '쓰는 법이 궁금해요' },
-  news: { hue: 5, icon: Megaphone, sub: '새 버전과 공지' },
+  bug: { hue: 4, icon: Bug, sub: '오류나 비정상적인 동작을 제보해요' },
+  idea: { hue: 1, icon: Lightbulb, sub: '필요한 기능이나 개선할 점을 제안해요' },
+  question: { hue: 2, icon: CircleHelp, sub: '사용 방법을 질문해요' },
+  news: { hue: 5, icon: Megaphone, sub: '업데이트 내역과 공지사항' },
 };
 
 // An open post carries no status mark: every post starts open.

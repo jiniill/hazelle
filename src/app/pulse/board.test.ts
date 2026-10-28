@@ -57,7 +57,7 @@ it('marks a move against the earlier places counted by the same rules, and nothi
   };
   const moves = (split: boolean) => rankRows(ranking, before, split, false).map((each) => each.move?.text);
   expect(moves(false)).toEqual(['▲2', undefined, '▼2', 'NEW', undefined]);
-  expect(rankRows(ranking, before, false, false)[0]?.move?.label).toBe('2계단 올랐어요');
+  expect(rankRows(ranking, before, false, false)[0]?.move?.label).toBe('2계단 상승');
   expect(moves(true)).toEqual(['▲1', '▼1']);
   expect(rankRows(ranking, null, false, false).some((each) => each.move)).toBe(false);
 });

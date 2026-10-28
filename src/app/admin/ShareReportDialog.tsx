@@ -73,7 +73,7 @@ export function ShareReportDialog({ report, onClose, onActed }: { report: ShareR
           )}
           {open && shared.held && (
             <Button variant="secondary" icon={Play} busy={busy} onClick={() => void act(releaseShare(report.share))}>
-              보류 풀기
+              보류 해제
             </Button>
           )}
           {report.resolvedAt === null && (

@@ -35,7 +35,7 @@ it('says where a module will be turned on, then that it was, or was not when tha
 
 it('says a module replaced its older versions, and is not "on nowhere" when it took over their places', () => {
   const outcome = (places: number) => moduleOutcome('bell.risum', 'Bell', 'module', [], { at: null, failure: null }, { prompts: [], failure: null }, { names: ['Bell 1', 'Bell 2'], places, failure: null });
-  expect(outcome(2).lines).toEqual([{ text: "'Bell 1', 'Bell 2' 모듈을 바꿨어요. 켜져 있던 곳에 그대로 켰어요.", failed: false }]);
+  expect(outcome(2).lines).toEqual([{ text: "'Bell 1', 'Bell 2' 모듈을 바꿨어요. 원래 켜져 있던 위치에 그대로 적용했어요.", failed: false }]);
   expect(outcome(0).lines.map((line) => line.text)).toEqual(["'Bell 1', 'Bell 2' 모듈을 바꿨어요.", '아직 어디에도 켜지 않았어요. 설정 › 모듈에서 켤 수 있어요.']);
 });
 

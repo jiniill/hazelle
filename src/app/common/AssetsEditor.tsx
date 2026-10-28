@@ -97,7 +97,7 @@ export function AssetsEditor({ owner }: { owner: string }) {
         )}
         <Row kind="toolbar">
           {search.field}
-          {assets.length > 0 && selection.button(ACTS.remove.icon, '선택해서 삭제')}
+          {assets.length > 0 && selection.button(ACTS.remove.icon, '선택 삭제')}
           <FileButton accept={ACCEPT} multiple size="sm" icon={ACTS.create.icon} busy={adding} onFiles={(dropped) => void add(dropped)}>
             {addOf(ASSET)}
           </FileButton>

@@ -48,7 +48,7 @@ type Props = {
 };
 
 export function RolePicker({ role, label = MODEL_ROLES[role], help, own, follow, connections, onPick }: Props) {
-  const current = own ? modelName(own, connections) : (follow ?? '정하지 않음');
+  const current = own ? modelName(own, connections) : (follow ?? '지정 안 함');
   return (
     <SettingRow
       label={label}
@@ -75,7 +75,7 @@ export function RoleCard({ role, help, own, follow, connections, onPick, values,
       trigger={(opener) => (
         <PickCard
           label={label}
-          value={own ? (choice ? choice.name : NOT_STARRED) : (follow ?? '정하지 않음')}
+          value={own ? (choice ? choice.name : NOT_STARRED) : (follow ?? '지정 안 함')}
           note={choice ? [choice.source, values].filter(Boolean).join(' · ') : undefined}
           help={help}
           tone={own && !choice ? 'warn' : 'plain'}

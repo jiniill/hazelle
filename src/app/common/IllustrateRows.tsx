@@ -59,19 +59,19 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
       <DetailFold set={set}>
         <PictureLadder ladder={illustrate.ladder} onChange={(ladder) => onChange({ ladder: ladder.length ? ladder : undefined })} />
         <SettingRow
-          label="페르소나 시점으로 그리기"
+          label="페르소나 시점"
           help="페르소나의 눈으로 보는 장면을 그려요. 페르소나는 삽화에 나오지 않아요."
-          control={<Switch label="페르소나 시점으로 그리기" checked={illustrate.pov} onChange={(pov) => onChange({ pov })} />}
+          control={<Switch label="페르소나 시점" checked={illustrate.pov} onChange={(pov) => onChange({ pov })} />}
         />
         <SettingRow
-          label="만화로 그리기"
+          label="만화 형식"
           help="한 장을 여러 컷이 있는 만화 페이지로 그려요. 말풍선 글자는 모델이 그려서 읽을 수 없어요."
-          control={<Switch label="만화로 그리기" checked={illustrate.comic} onChange={(comic) => onChange({ comic })} />}
+          control={<Switch label="만화 형식" checked={illustrate.comic} onChange={(comic) => onChange({ comic })} />}
         />
         <SettingRow
-          label="무료가 아니어도 만들기"
+          label="유료 생성 시 확인 생략"
           help="요금이 나갈 때도 물어보지 않고 만들어요."
-          control={<Switch label="무료가 아니어도 만들기" checked={illustrate.spend} onChange={(spend) => onChange({ spend })} />}
+          control={<Switch label="유료 생성 시 확인 생략" checked={illustrate.spend} onChange={(spend) => onChange({ spend })} />}
         />
         <SettingRow
           label="삽화 프롬프트"
@@ -155,7 +155,7 @@ function PictureLadder({ ladder, onChange }: { ladder: Rung[]; onChange: (ladder
             sentence={
               <>
                 <NumberInput label={`${name} 글자 수`} value={draft.from} unit="자" invalid={!rung.ok} onChange={(from) => set({ ...draft, from })} />
-                {' 이상이면 '}
+                {' 이상 '}
                 <NumberInput label={`${name} 장 수`} value={draft.count} unit="장" invalid={!rung.ok} onChange={(count) => set({ ...draft, count })} />
               </>
             }

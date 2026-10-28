@@ -242,7 +242,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
     <>
       {selected && <SelectionButton icon={SquarePen} label="수정" at={selected.end} onPress={() => actions.edit(message, selected.part)} />}
       {editing === null && translationMark}
-      {drawing?.writing && <Marker reason="illustration" label="장면 정하는 중" />}
+      {drawing?.writing && <Marker reason="illustration" label="장면 구성 중" />}
       {polishing && <Marker reason="agent" label={polishingNow(polishing)} />}
       {raw && <Marker reason="agent" label="다듬기 전 답" action={{ label: '다듬기 전으로 되돌리기', disabled: busy, onClick: () => actions.restoreRaw(message) }} />}
       {cut && (
@@ -328,7 +328,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
           <MenuItem label="여기서 분기" disabled={branching} onClick={() => void actions.branch(message)} />
           {hasRaw && <MenuItem label="다듬기 전 답 보기" checked={rawShown} multiple onClick={() => setRawShown(!rawShown)} />}
           {agents.post && !mine && !greeting && !empty && !polishing && !version.retouched && <MenuItem label="다시 다듬기" disabled={busy} onClick={() => actions.polishAgain(message)} />}
-          {agents.pre && noted && <MenuItem label="노트 새로 만들어 다시 생성" disabled={busy} onClick={() => actions.regenerateFresh(message)} />}
+          {agents.pre && noted && <MenuItem label="노트부터 다시 생성" disabled={busy} onClick={() => actions.regenerateFresh(message)} />}
           {!mine && <MenuItem label="응답 정보" onClick={() => actions.info(message.id)} />}
           {offered.length > 0 && <MenuHeading>상태창으로 지정</MenuHeading>}
           {offered.map((script) => (

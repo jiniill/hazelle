@@ -23,9 +23,9 @@ import { ModuleExport } from './ModuleExport';
 import { useModuleOwners, useModuleParts } from './ModulesScreen';
 
 const ALWAYS_ON = `${ALWAYS} 켜기`;
-const USED_BY = '쓰는 캐릭터';
-const PROMPTS_USING = '쓰는 프롬프트';
-const PERSONAS_USING = '쓰는 페르소나';
+const USED_BY = '사용 중인 캐릭터';
+const PROMPTS_USING = '사용 중인 프롬프트';
+const PERSONAS_USING = '사용 중인 페르소나';
 
 // What a module's page and a plugin's share; page is the list it belongs to. items: the page's own menu items, before 삭제.
 export function useModuleEditor({ id, value }: Stored<'module'>, page: 'modules' | 'plugins', back: Back, items?: ReactNode) {

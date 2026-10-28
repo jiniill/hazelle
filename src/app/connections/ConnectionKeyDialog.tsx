@@ -30,7 +30,7 @@ export function ConnectionKeyDialog({ id, type, onClose }: { id: string; type: C
 
   return (
     <Dialog
-      title="키 바꾸기"
+      title="키 변경"
       onClose={onClose}
       onSubmit={submit}
       actionsLayout="full"

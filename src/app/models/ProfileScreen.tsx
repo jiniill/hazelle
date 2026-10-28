@@ -15,7 +15,7 @@ import { changeWords, NOT_CALLABLE } from '../common/settingWords';
 import { useProfileEditor, type User } from './useProfileEditor';
 
 // Under the page's own 모델 설정, so it needs no 이 설정.
-const USERS = '쓰는 모델';
+const USERS = '사용 중인 모델';
 
 export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; back: Back }) {
   const store = useStore();
@@ -150,7 +150,7 @@ function AddChoices({ groups, now, onPick }: { groups: Group[]; now: (model: Gro
     const found = search.found.filter((choice) => choice.connection === connection);
     return found.length === 0 ? [] : [
       <MenuHeading key={connection.id}>{connection.value.label}</MenuHeading>,
-      ...found.map(({ model }) => <MenuItem key={`${connection.id}/${entryKey(model)}`} label={entryName(model)} sub={`지금: ${now(model)}`} onClick={() => onPick(connection.id, entryKey(model))} />),
+      ...found.map(({ model }) => <MenuItem key={`${connection.id}/${entryKey(model)}`} label={entryName(model)} sub={`현재: ${now(model)}`} onClick={() => onPick(connection.id, entryKey(model))} />),
     ];
   });
   return (

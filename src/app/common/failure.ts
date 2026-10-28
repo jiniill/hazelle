@@ -319,7 +319,7 @@ export function describeAgentFailure({ name, failure }: AgentFailed): string {
     case 'tokenizer':
       return TOKENIZER;
     case 'runaway':
-      return runaway('부르기 전에');
+      return runaway('호출하기 전에');
     case 'protect-invalid':
       return `보호 패턴을 읽을 수 없어요: ${failure.pattern}`;
     case 'failed':

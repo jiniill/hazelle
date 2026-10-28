@@ -89,7 +89,7 @@ export function CalculatorScreen({ back }: { back: Back | null }) {
         )}
         {search.field}
         {search.shown(
-          picked ? <List label="고른 모델" box>{row(picked)}</List> : rows.length > 0 && <Empty variant="section">모델을 검색해서 골라요.</Empty>,
+          picked ? <List label="고른 모델" box>{row(picked)}</List> : rows.length > 0 && <Empty variant="section">모델을 검색해 선택해요.</Empty>,
           (found) => <List label="검색 결과" keys={found.map(({ key }) => key)} box>{(index) => row(found[index]!)}</List>,
         )}
       </Panel>
@@ -122,7 +122,7 @@ function Result({ row, counts }: { row: Row; counts: Record<Count, number | null
       const value = pick(tier);
       return value === null ? [] : [`입력 ${count(tier.above)}토큰 넘으면 ${perMillion(value, unit)}`];
     });
-    return base === null ? { label, value: '표에 없음', notes: ['입력 가격으로 계산', ...above], tone: 'muted' as const } : { label, value: perMillion(base, unit), notes: above };
+    return base === null ? { label, value: '가격 정보 없음', notes: ['입력 가격 적용', ...above], tone: 'muted' as const } : { label, value: perMillion(base, unit), notes: above };
   };
   return (
     <>

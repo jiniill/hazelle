@@ -49,7 +49,7 @@ export function PasswordScreen({ mode, username: initialUsername, onBack, onSign
       }
     >
       {signup && <Steps current={1} total={2} />}
-      <Intro title={{ signup: '계정 만들기', setup: '비밀번호 정하기', reset: '새 비밀번호 설정' }[mode]}>
+      <Intro title={{ signup: '계정 만들기', setup: '비밀번호 설정', reset: '새 비밀번호 설정' }[mode]}>
         {{
           signup: '비밀번호는 서버로 전송되지 않아요.',
           setup: '이 헤이젤을 열 때 쓰는 비밀번호예요.',
@@ -59,7 +59,7 @@ export function PasswordScreen({ mode, username: initialUsername, onBack, onSign
       <Stack>
         {mode === 'signup' && <TextField label="아이디" kind="username" value={username} onChange={setUsername} />}
         <TextField label="비밀번호" kind="new-password" value={password} onChange={setPassword} placeholder="8자 이상" />
-        <TextField label="비밀번호 확인" kind="new-password" value={again} onChange={setAgain} placeholder="같은 비밀번호" />
+        <TextField label="비밀번호 확인" kind="new-password" value={again} onChange={setAgain} placeholder="비밀번호 다시 입력" />
       </Stack>
       {failure && (
         <Callout tone="warn" alert>

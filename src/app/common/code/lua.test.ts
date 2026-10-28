@@ -30,8 +30,8 @@ describe('Lua code editor', () => {
   it('looks a state up under the `__` name the chat keeps it by, and offers states by their own names', () => {
     const state: InspectedVariable = { name: '__hp', nameTruncated: false, last: { writer: { kind: 'script', version: 'v', message: 'm', index: 0, phase: 'after' }, value: '7', truncated: false }, history: [], omitted: 0 };
     const read = luaLanguage(async () => null, { defaults: [['호감도', '30']], chat: { label: '예시 채팅', values: new Map([['__hp', state]]), partial: true } });
-    expect(read.explain('getState(id, "hp")', 15)?.doc.facts).toEqual([['기본 변수', '없음'], ['채팅', '예시 채팅'], ['지금 값', '7'], ['정한 곳', '1번째 메시지 · 스크립트']]);
-    expect(read.explain('getChatVar(id, "mp")', 17)?.doc.facts?.at(-1)).toEqual(['지금 값', '알 수 없음']);
+    expect(read.explain('getState(id, "hp")', 15)?.doc.facts).toEqual([['기본 변수', '없음'], ['채팅', '예시 채팅'], ['현재 값', '7'], ['설정 위치', '1번째 메시지 · 스크립트']]);
+    expect(read.explain('getChatVar(id, "mp")', 17)?.doc.facts?.at(-1)).toEqual(['현재 값', '알 수 없음']);
     expect(read.complete('getState(id, "")', 14, 'string', false)?.items.map((item) => [item.label, item.detail])).toEqual([['hp', '7']]);
   });
 

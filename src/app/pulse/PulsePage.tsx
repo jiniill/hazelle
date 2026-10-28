@@ -60,7 +60,7 @@ function Board({ board, at }: { board: PulseBoard; at: number }) {
         variant="figures"
         items={[
           { label: '최근 24시간 응답', value: `${count(board.replies)}번` },
-          { label: '최근 7일 쓴 사람', value: `${count(board.people)}명` },
+          { label: '최근 7일 사용자', value: `${count(board.people)}명` },
         ]}
       />
       <Section title="시간별 응답" note={`${clockText(at)} 기준`}>
@@ -68,7 +68,7 @@ function Board({ board, at }: { board: PulseBoard; at: number }) {
       </Section>
       <Section
         title="모델 순위"
-        note={!current ? '그 주 쓴 사람 순' : role === 'chat' ? '최근 24시간 응답 순' : '최근 7일 쓴 사람 순'}
+        note={!current ? '주간 사용자 순' : role === 'chat' ? '최근 24시간 응답 수 순' : '최근 7일 사용자 순'}
         help={current ? RANKING_HELP.current : RANKING_HELP.earlier}
         action={
           board.weeks.length > 0 && (

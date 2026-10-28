@@ -71,8 +71,8 @@ describe('cbsLanguage', () => {
   it('explains and offers a variable with the value 시험해 보기 read from a chat, and where it was set', () => {
     const set: InspectedVariable = { name: '호감도', nameTruncated: false, last: { writer: { kind: 'cbs', version: 'v', message: 'm', index: 2, stage: 'output' }, value: '45', truncated: false }, history: [], omitted: 0 };
     const read = cbsLanguage({ variables: { defaults: [['호감도', '30']], chat: { label: '예시 채팅', values: new Map([['호감도', set], ['날씨', { ...set, name: '날씨', last: { ...set.last, value: '비' } }]]), partial: false } } });
-    expect(read.explain('{{getvar::호감도}}', 12)?.doc.facts).toEqual([['기본 변수', '30'], ['채팅', '예시 채팅'], ['지금 값', '45'], ['정한 곳', '3번째 메시지 · 출력 CBS']]);
-    expect(read.explain('{{getvar::없음}}', 12)?.doc.facts).toEqual([['기본 변수', '없음'], ['채팅', '예시 채팅'], ['지금 값', '없음']]);
+    expect(read.explain('{{getvar::호감도}}', 12)?.doc.facts).toEqual([['기본 변수', '30'], ['채팅', '예시 채팅'], ['현재 값', '45'], ['설정 위치', '3번째 메시지 · 출력 CBS']]);
+    expect(read.explain('{{getvar::없음}}', 12)?.doc.facts).toEqual([['기본 변수', '없음'], ['채팅', '예시 채팅'], ['현재 값', '없음']]);
     expect(read.complete('{{getvar::}}', 10, 'code', false)?.items.map((item) => [item.label, item.detail])).toEqual([['호감도', '45'], ['날씨', '비']]);
   });
 

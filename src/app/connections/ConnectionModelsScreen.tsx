@@ -179,7 +179,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
     of: '연결',
     items: (
       <>
-        {!connection.turns && resolved && <MenuItem icon={KeyRound} label="키 바꾸기" onClick={() => setKeying(true)} />}
+        {!connection.turns && resolved && <MenuItem icon={KeyRound} label="키 변경" onClick={() => setKeying(true)} />}
         <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => void remove()} />
       </>
     ),

@@ -72,7 +72,7 @@ export function ConnectionAccounts({ id, connection, signIn, level }: { id: stri
           <List key={group.id} label={group.name} box>
             <ListItem
               title={group.name}
-              tags={index === 0 ? ['지금 차례'] : []}
+              tags={index === 0 ? ['현재 차례'] : []}
               description={index === 0 ? undefined : `${monthDay(startsAt)}부터`}
               trailing={<GroupMenu turns={connection.turns} group={group} position={index} change={turns} onRename={() => setRenaming(group)} />}
             >
@@ -184,9 +184,9 @@ function GroupMenu({ turns, group, position, change, onRename }: GroupMenuProps)
   return (
     <MoreMenu of={group.name}>
       <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={onRename} />
-      <MenuItem label="지금 차례로" disabled={position === 0} onClick={() => change((current) => takeTurn(current, group.id, Date.now()))} />
-      <MenuItem icon={ArrowUp} label="앞 차례로" disabled={position < 2} onClick={() => change((current) => moveGroup(current, group.id, -1, Date.now()))} />
-      <MenuItem icon={ArrowDown} label="뒤 차례로" disabled={position < 1 || position === turns.groups.length - 1} onClick={() => change((current) => moveGroup(current, group.id, 1, Date.now()))} />
+      <MenuItem label="현재 차례로 지정" disabled={position === 0} onClick={() => change((current) => takeTurn(current, group.id, Date.now()))} />
+      <MenuItem icon={ArrowUp} label="앞 차례로 이동" disabled={position < 2} onClick={() => change((current) => moveGroup(current, group.id, -1, Date.now()))} />
+      <MenuItem icon={ArrowDown} label="뒤 차례로 이동" disabled={position < 1 || position === turns.groups.length - 1} onClick={() => change((current) => moveGroup(current, group.id, 1, Date.now()))} />
       <MenuItem icon={ACTS.remove.icon} label="그룹 삭제" tone="warn" disabled={group.accounts.length > 0 || turns.groups.length === 1} onClick={() => change((current) => removeGroup(current, group.id, Date.now()))} />
     </MoreMenu>
   );

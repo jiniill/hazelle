@@ -201,7 +201,7 @@ export function LoreEditor({ owner, folders, variables }: { owner: LoreOwner; fo
     </List>
   );
   return (
-    <Section title={owner.kind === 'chat' ? '항목' : '로어북'} note={`${entries.length}개`} help={`대화에 키워드가 나오면 그 항목의 내용이 프롬프트에 들어가요.${owner.kind === 'chat' ? ' 지금 이 채팅에서만 쓰여요.' : ''}`}>
+    <Section title={owner.kind === 'chat' ? '항목' : '로어북'} note={`${entries.length}개`} help={`대화에 키워드가 나오면 그 항목의 내용이 프롬프트에 들어가요.${owner.kind === 'chat' ? ' 현재 채팅에서만 사용돼요.' : ''}`}>
       <Stack gap="related">
         {owner.kind === 'character' && <LoreScanFold id={owner.id} />}
         {search.field}

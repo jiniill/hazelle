@@ -16,16 +16,16 @@ export const SHORTCUTS = {
   pictures: { label: '이미지 가리기 · 보이기', keys: [{ key: 'h', mod: true, shift: true }] },
   send: { label: '보내기', keys: [{ key: 'Enter', shift: false }] },
   newline: { label: '줄바꿈', keys: [{ key: 'Enter', shift: true }] },
-  stop: { label: '응답 멈추기', keys: [{ key: 'Escape' }] },
+  stop: { label: '응답 생성 중지', keys: [{ key: 'Escape' }] },
   editLast: { label: '내 마지막 메시지 수정', keys: [{ key: 'ArrowUp' }] },
-  swipe: { label: '응답 넘기기, 마지막에서 다시 생성', keys: [{ key: 'ArrowLeft' }, { key: 'ArrowRight' }] },
-  storyStep: { label: '메시지 단위로 위 · 아래로', keys: [{ key: 'ArrowUp', alt: true }, { key: 'ArrowDown', alt: true }] },
-  storyEnds: { label: '채팅 맨 위 · 맨 아래로', keys: [{ key: 'Home' }, { key: 'End' }] },
+  swipe: { label: '응답 넘기기 · 마지막에서 다시 생성', keys: [{ key: 'ArrowLeft' }, { key: 'ArrowRight' }] },
+  storyStep: { label: '메시지 단위로 상하 이동', keys: [{ key: 'ArrowUp', alt: true }, { key: 'ArrowDown', alt: true }] },
+  storyEnds: { label: '채팅 맨 위 · 맨 아래로 이동', keys: [{ key: 'Home' }, { key: 'End' }] },
   saveEdit: { label: '수정 저장', keys: [{ key: 'Enter', mod: true }] },
   translate: { label: '번역하기', keys: [{ key: 'Enter', mod: true }] },
   cancelEdit: { label: '수정 취소', keys: [{ key: 'Escape' }] },
   // Its handler stays mounted only with a chat open, so elsewhere the key is the browser's find.
-  find: { label: '채팅 안 검색', keys: [{ key: 'f', mod: true }] },
+  find: { label: '채팅 내 검색', keys: [{ key: 'f', mod: true }] },
   // Risu's own key for its prompt preview, kept for the hands that move from it.
   inspect: { label: '점검 열기 · 닫기', keys: [{ key: 'u', mod: true }] },
   findNext: { label: '다음 결과', keys: [{ key: 'Enter', shift: false }] },
@@ -33,7 +33,7 @@ export const SHORTCUTS = {
   closeFind: { label: '검색 닫기', keys: [{ key: 'Escape' }] },
   undoToast: { label: `알림에서 ${UNDO}`, keys: [{ key: 'z', mod: true, shift: false }] },
   undo: { label: UNDO, keys: [{ key: 'z', mod: true, shift: false }] },
-  redo: { label: '다시 하기', keys: [{ key: 'z', mod: true, shift: true }, { key: 'y', mod: true }] },
+  redo: { label: '다시 실행', keys: [{ key: 'z', mod: true, shift: true }, { key: 'y', mod: true }] },
   // Not Risu's Ctrl+X: in a text field that is cut. Shift held, no other chord here matches it.
   bigEdit: { label: '크게 편집 열기 · 닫기', keys: [{ key: 'x', mod: true, shift: true }] },
 } as const satisfies Record<string, Shortcut>;
@@ -46,7 +46,7 @@ export const keysOf = (name: Name, enterSends: boolean) => (enterSends ? undefin
 
 // Where each shortcut works, in the order 단축키 lists them.
 export const SHORTCUT_GROUPS: readonly { title: string; note?: string; names: readonly Name[] }[] = [
-  { title: '어디서나', names: ['settings', 'personas', 'prompts', 'shortcutList', 'sidebar', 'status', 'pictures', 'undoToast'] },
+  { title: '공통', names: ['settings', 'personas', 'prompts', 'shortcutList', 'sidebar', 'status', 'pictures', 'undoToast'] },
   { title: '채팅', note: '화살표 키와 Home · End는 입력창이 비어 있을 때만 작동해요.', names: ['send', 'newline', 'stop', 'editLast', 'swipe', 'storyStep', 'storyEnds', 'saveEdit', 'cancelEdit', 'find', 'inspect'] },
   { title: '채팅 검색창', names: ['findNext', 'findPrevious', 'closeFind'] },
   { title: '번역기', note: '원문 칸에서 작동해요.', names: ['translate'] },

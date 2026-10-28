@@ -9,15 +9,15 @@ import { Disclosure, Empty, Facts, List, ListItem, Stack, Text } from '../ui';
 const ATTACHED = { settings: '설정', prompt: '프롬프트', character: '캐릭터', persona: '페르소나' } as const;
 
 export function silentReason(why: ModuleContribution['silent'][number]['why']): string {
-  if (why.kind === 'unmatched') return '키가 안 나와요';
+  if (why.kind === 'unmatched') return '키워드가 일치하지 않아요';
   if (why.kind === 'keyless') return '키가 없어요';
   switch (why.cause) {
     case 'disabled':
       return '꺼져 있어요';
     case 'never':
-      return '안 켜지게 해 뒀어요';
+      return '꺼 두었어요';
     case 'after-match':
-      return '한 번 켜진 뒤로는 안 켜져요';
+      return '한 번 활성화된 뒤에는 다시 켜지지 않아요';
     case 'only-after':
       return `${why.from}번째 메시지부터 켜져요`;
     case 'only-every':
@@ -55,7 +55,7 @@ export function Modules({ sending }: { sending: Sending }) {
           key={module.id}
           title={module.kind === 'module' ? moduleName(module.name) : module.name}
           badge={module.kind === 'character' ? '캐릭터' : undefined}
-          description={module.kind === 'character' ? '캐릭터에 들어 있음' : `${module.attached.map(({ kind }) => ATTACHED[kind]).join(' · ')}에서 켬`}
+          description={module.kind === 'character' ? '캐릭터 내장' : `${module.attached.map(({ kind }) => ATTACHED[kind]).join(' · ')}에서 켬`}
           tags={moduleTags(module)}
           expanded={open === module.id}
           onClick={() => setOpen(open === module.id ? null : module.id)}
@@ -80,7 +80,7 @@ function ModuleDetail({ module }: { module: ModuleContribution }) {
       {module.lore.length > 0 ? (
         <List label={`${module.name} 로어북`}>
           {module.lore.map((entry) => (
-            <ListItem key={entry.id} title={entry.name} note={entry.parts.length ? tokens(entryTokens(entry)) : '안 들어감'} />
+            <ListItem key={entry.id} title={entry.name} note={entry.parts.length ? tokens(entryTokens(entry)) : '제외됨'} />
           ))}
         </List>
       ) : (
@@ -103,7 +103,7 @@ function ModuleDetail({ module }: { module: ModuleContribution }) {
 }
 
 function SilentLore({ module }: { module: ModuleContribution }) {
-  const search = useSearch(module.silent, '안 켜진 항목 검색', ({ name, why }) => [name, silentReason(why)]);
+  const search = useSearch(module.silent, '비활성 항목 검색', ({ name, why }) => [name, silentReason(why)]);
   return (
     <Stack gap="related">
       {search.field}

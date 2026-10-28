@@ -139,8 +139,8 @@ export function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) 
       {price && (
         <Facts
           items={[
-            { label: '이대로 보내면', value: cost(price.paid) },
-            { label: '캐시를 다 읽으면', value: cost(price.whole) },
+            { label: '현재 예상 비용', value: cost(price.paid) },
+            { label: '캐시 전체 적중 시', value: cost(price.whole) },
           ]}
         />
       )}
@@ -168,8 +168,8 @@ export function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) 
         })}
       </List>
       {removed.length > 0 && (
-        <Section level={3} title="이전보다 빠진 내용">
-          <List label="이전보다 빠진 내용">
+        <Section level={3} title="이전보다 제외된 내용">
+          <List label="이전보다 제외된 내용">
             {removed.map((part, index) => {
               const key = `removed:${part.before}`;
               return (
@@ -194,7 +194,7 @@ export function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) 
 function BrokenDetail({ part, pending, edit }: { part: ReturnType<typeof diagnosed>; pending: boolean; edit: { label: string; onClick: () => void } | null }) {
   return (
     <Stack gap="related">
-      {part ? <BrokenPartView part={part} /> : <Text variant="note">{pending ? '살펴보는 중…' : '어떻게 바뀌었는지는 알 수 없어요.'}</Text>}
+      {part ? <BrokenPartView part={part} /> : <Text variant="note">{pending ? '분석 중…' : '어떻게 바뀌었는지는 알 수 없어요.'}</Text>}
       {edit && (
         <Row kind="actions">
           <Button variant="secondary" size="sm" onClick={edit.onClick}>

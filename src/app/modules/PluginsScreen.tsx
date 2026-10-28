@@ -11,7 +11,7 @@ import { useModuleUse } from './ModulesScreen';
 const COLUMNS: TableColumn[] = [
   { label: PAGES.plugins, track: 'name' },
   { label: '버전', track: 'fill' },
-  { label: '쓰는 곳', track: 'fill', keep: true },
+  { label: '사용처', track: 'fill', keep: true },
 ];
 
 export function PluginsScreen({ back }: { back: Back | null }) {

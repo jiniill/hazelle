@@ -14,7 +14,7 @@ import { LUA_EVENTS } from './luaApi';
 import { SAMPLE, SAMPLE_LANGUAGE, SAMPLE_NOTE } from './sample';
 import { chatVariable, writerName, type ChatVariables, type Defaults, type Variables } from './variables';
 
-const LABEL = '시험해 보기';
+const LABEL = '테스트';
 // The lane name the sample runs on, which no chat id takes.
 const SAMPLE_CHAT = 'sample';
 const WAIT_MS = 400;
@@ -173,7 +173,7 @@ function shownStep(text: string, { at, end, headEnd, depth, result, kept, erased
     return { source, result, depth, note: found ? `정한 곳: ${writerName(found.last.writer)}` : '이 채팅에 없는 변수예요.' };
   }
   if (held === undefined) return { source, result, depth };
-  const verdict = held ? '맞아요' : '안 맞아요';
+  const verdict = held ? '참' : '거짓';
   return { source, result, depth, note: condition ? `조건 ${condition.join(' ')} → ${verdict}` : `조건이 ${verdict}`, tone: 'branch' };
 }
 
@@ -210,12 +210,12 @@ function LuaTrial({ unit, trial }: { unit: LuaUnit; trial: TrialChat }) {
   return (
     <Stack gap="related">
       <TrialChats owner={trial.owner} chat={chat} onChange={reset(trial.choose)} />
-      <ChoiceGroup label="실행할 때" layout="menu" options={EVENT_OPTIONS} value={event} onChange={reset(setEvent)} />
+      <ChoiceGroup label="실행 시점" layout="menu" options={EVENT_OPTIONS} value={event} onChange={reset(setEvent)} />
       {scope === 'failed' ? (
         <Text variant="note">채팅을 열지 못했어요.</Text>
       ) : (
         <Button disabled={scope === null || ran === 'running'} onClick={() => scope && run(scope)}>
-          {ran === 'running' ? '실행하는 중…' : '시험 실행'}
+          {ran === 'running' ? '실행하는 중…' : '테스트 실행'}
         </Button>
       )}
       {ran !== null && ran !== 'running' && <LuaRan ran={ran} stale={ran.code !== unit.code} />}
@@ -228,16 +228,16 @@ function LuaRan({ ran: { event, trial }, stale }: { ran: Ran; stale: boolean }) 
   const { outcome, said, asked, calls, loreRanAway } = trial;
   const count = (label: string, length: number, unit = '개') => (length ? [{ label, value: `${length}${unit}` }] : []);
   const facts = [
-    ...(outcome.stop ? [{ label: '보내기', value: '멈춰요' }] : []),
-    ...(said.length ? [{ label: '띄울 알림', value: said.map(({ text }) => text).join(' · ') }] : []),
-    ...count('물어볼 질문', asked.length),
-    ...count('추가할 메시지', outcome.added.length),
-    ...count('고칠 메시지', outcome.edits.length),
-    ...count('지울 메시지', outcome.removed.length),
-    ...count('채팅 로어북에 쓸 항목', outcome.lore.length),
-    ...count('부르지 않은 모델', calls.model, '번'),
-    ...count('만들지 않은 임베딩', calls.embed, '번'),
-    ...count('바꾸지 않은 배경', calls.background, '번'),
+    ...(outcome.stop ? [{ label: '보내기', value: '중단됨' }] : []),
+    ...(said.length ? [{ label: '알림 표시', value: said.map(({ text }) => text).join(' · ') }] : []),
+    ...count('질문 표시', asked.length),
+    ...count('메시지 추가', outcome.added.length),
+    ...count('메시지 수정', outcome.edits.length),
+    ...count('메시지 삭제', outcome.removed.length),
+    ...count('채팅 로어북 항목', outcome.lore.length),
+    ...count('생략된 모델 호출', calls.model, '번'),
+    ...count('생략된 임베딩 생성', calls.embed, '번'),
+    ...count('생략된 배경 변경', calls.background, '번'),
   ];
   const traced = outcome.trace?.entries ?? [];
   return (

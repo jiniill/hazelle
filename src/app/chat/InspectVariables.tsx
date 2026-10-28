@@ -63,7 +63,7 @@ export function Variables({ chat, sending, busy }: { chat: string; sending: Send
     <Stack gap="section">
       <Section title="변수" help="직접 수정한 변수 값은 마지막 메시지를 다시 생성하면 사라져요.">
         {inspected === undefined ? (
-          <Text variant="note">읽는 중…</Text>
+          <Text variant="note">캐릭터별 설정을 불러오는 중…</Text>
         ) : inspected === null ? (
           <Empty variant="section">변수를 읽지 못했어요.</Empty>
         ) : variables.length === 0 ? (

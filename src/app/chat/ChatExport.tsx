@@ -153,7 +153,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, bu
         <ChoiceGroup layout="segmented" label="형식" options={[...FORMS]} value={form} onChange={setForm} />
         {form === 'risu' && (
           <Row kind="toolbar">
-            <Text variant="note">빠지는 것</Text>
+            <Text variant="note">제외할 항목</Text>
             <Hint label={RISU_CHAT_FILE}>{RISU_LOSES}</Hint>
           </Row>
         )}
@@ -164,7 +164,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, bu
             {translated && <SettingRow label="메시지" control={<ChoiceGroup layout="segmented" label="메시지" options={TEXTS} value={choices.text} onChange={(text) => change({ text })} />} />}
             {onTranslate && (batch || missing.length > 0) && (
               <SettingRow
-                label="번역 없는 메시지"
+                label="번역되지 않은 메시지"
                 note={batch ? `${batch.done}/${batch.total}개 번역함` : `${missing.length}개`}
                 control={
                   batch ? (
@@ -193,7 +193,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, bu
                     {prepared.rules > 0 && (
                       <>
                         {`아카라이브에서 지원하지 않는 스타일 ${prepared.rules}개는 빠져요.`}
-                        <Hint label="빠지는 스타일">마우스를 올렸을 때의 효과나 애니메이션, 화면 크기별 스타일, 글꼴 같은 것들이에요.</Hint>
+                        <Hint label="제외할 스타일">마우스를 올렸을 때의 효과나 애니메이션, 화면 크기별 스타일, 글꼴 같은 것들이에요.</Hint>
                       </>
                     )}
                   </Callout>

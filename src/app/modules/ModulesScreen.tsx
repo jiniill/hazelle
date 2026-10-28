@@ -73,11 +73,11 @@ const COLUMNS: TableColumn[] = [
   { label: SCRIPTS.triggers, track: 'figure' },
   { label: '토글', track: 'figure' },
   { label: '스타일', track: 'figure' },
-  { label: '쓰는 곳', track: 'fill', keep: true },
+  { label: '사용처', track: 'fill', keep: true },
 ];
 const FOLDER_COLUMNS: TableColumn[] = [
   { label: '폴더', track: 'name' },
-  { label: '담긴 것', track: 'fill', keep: true },
+  { label: '포함된 항목', track: 'fill', keep: true },
 ];
 
 // A module stands in the first place it is on, in the order packs apply (항상, prompt, character, persona); its 쓰는 곳
@@ -87,7 +87,7 @@ const SECTIONS: { place: Place; title: string }[] = [
   { place: 'prompt', title: '프롬프트 모듈' },
   { place: 'character', title: '캐릭터 모듈' },
   { place: 'persona', title: '페르소나 모듈' },
-  { place: 'none', title: '안 쓰는 모듈' },
+  { place: 'none', title: '사용 안 함' },
 ];
 
 const figure = (count: number) => (count > 0 ? count : null);

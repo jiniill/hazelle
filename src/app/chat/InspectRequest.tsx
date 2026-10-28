@@ -88,12 +88,12 @@ function Rehearsed({ chat, sending, editor, onEdit }: { chat: string; sending: S
 function RehearsalView({ rehearsal, sending, editor, onEdit }: { rehearsal: Rehearsal; sending: Sending; editor: (from: From) => Side | null; onEdit: (side: Side) => void }) {
   const { trace, stopped, said, asked, calls, input, prompt, request, changed, loreRanAway } = rehearsal;
   const facts = [
-    ...(input === null ? [] : [{ label: '입력이 바뀌어요', value: input }]),
-    ...(asked.length ? [{ label: '보낼 때 물어봐요', value: `${asked.length}개` }] : []),
-    ...(said.length ? [{ label: '보낼 때 알림을 띄워요', value: `${said.length}개` }] : []),
-    ...(calls.model ? [{ label: '보낼 때 모델을 호출해요', value: `${calls.model}번` }] : []),
-    ...(calls.embed ? [{ label: '보낼 때 임베딩을 만들어요', value: `${calls.embed}번` }] : []),
-    ...(calls.background ? [{ label: '보낼 때 배경을 바꿔요', value: `${calls.background}번` }] : []),
+    ...(input === null ? [] : [{ label: '변경된 입력', value: input }]),
+    ...(asked.length ? [{ label: '전송 시 질문', value: `${asked.length}개` }] : []),
+    ...(said.length ? [{ label: '전송 시 알림', value: `${said.length}개` }] : []),
+    ...(calls.model ? [{ label: '전송 시 모델 호출', value: `${calls.model}번` }] : []),
+    ...(calls.embed ? [{ label: '전송 시 임베딩 생성', value: `${calls.embed}번` }] : []),
+    ...(calls.background ? [{ label: '전송 시 배경 변경', value: `${calls.background}번` }] : []),
   ];
   return (
     <Stack gap="related">
@@ -150,8 +150,8 @@ function NextTokens({ sending }: { sending: Sending }) {
       />
       {fit.allowance === null && <Text variant="note">모델 한도를 알 수 없어서 내용을 줄이지 않아요.</Text>}
       {dropped > 0 && <Text variant="note">{`한도를 넘어서 오래된 메시지 ${dropped}개가 빠져요.`}</Text>}
-      <Disclosure label="토큰을 쓰는 곳">
-        <List label="토큰을 쓰는 곳">
+      <Disclosure label="토큰 사용처">
+        <List label="토큰 사용처">
           {[...groups].sort((a, b) => b.tokens - a.tokens).map((group) => (
             <ListItem key={JSON.stringify(group.source)} title={sourceName(group.source)} description={counted(group.source, group.count)} note={tokens(group.tokens)} />
           ))}

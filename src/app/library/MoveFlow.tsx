@@ -166,10 +166,10 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
     const { pictures, missed, unread } = phase.filled;
     const lines = [...(missed ? moveMissed([{ kind: 'inlay', count: missed }]) : []), ...(unread ? [`읽지 못한 대화 ${unread}개`] : [])];
     return (
-      <Dialog title="채웠어요" note={note} onClose={onClose} actions={close}>
+      <Dialog title="이미지 채우기 완료" note={note} onClose={onClose} actions={close}>
         <Stack gap="section">
           <Text>{`이미지 ${pictures}개를 채웠어요`}</Text>
-          {lines.length > 0 && <Outcome title="못 채운 것" items={lines.map((title) => ({ title }))} />}
+          {lines.length > 0 && <Outcome title="채우지 못한 항목" items={lines.map((title) => ({ title }))} />}
         </Stack>
       </Dialog>
     );

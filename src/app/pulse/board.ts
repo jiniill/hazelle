@@ -48,8 +48,8 @@ function placeRows<T extends PulsePlace>(order: { merged: T[]; split: T[] }, spl
 }
 
 function moveOf(rank: number, was: number | undefined): Ranked['move'] {
-  if (was === undefined) return { tone: 'new', text: 'NEW', label: '새로 올랐어요' };
-  if (was > rank) return { tone: 'up', text: `▲${was - rank}`, label: `${was - rank}계단 올랐어요` };
+  if (was === undefined) return { tone: 'new', text: 'NEW', label: '신규 진입' };
+  if (was > rank) return { tone: 'up', text: `▲${was - rank}`, label: `${was - rank}계단 상승` };
   if (was < rank) return { tone: 'down', text: `▼${rank - was}`, label: `${rank - was}계단 내려갔어요` };
   return undefined;
 }

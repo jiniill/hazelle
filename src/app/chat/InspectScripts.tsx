@@ -55,8 +55,8 @@ export function HookList({ label, entries, note }: { label: string; entries: { e
 
 function hookTags(entry: HookLog): string[] {
   return [
-    ...(entry.stopped ? ['멈춤'] : []),
-    ...(entry.changed ? ['바꿈'] : []),
+    ...(entry.stopped ? ['중단됨'] : []),
+    ...(entry.changed ? ['변경됨'] : []),
     ...(entry.writes.length ? [`변수 ${entry.writes.length}개`] : []),
     ...(entry.logs.length ? [`log ${entry.logs.length}줄`] : []),
     ...(entry.missing.length ? [`지원 안 함 ${entry.missing.length}개`] : []),

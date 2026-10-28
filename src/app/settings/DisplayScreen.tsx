@@ -69,7 +69,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
   const menu = (preset: Preset, index: number) => (
     <>
       <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setNaming({ preset })} />
-      {preset !== current && <MenuItem icon={Save} label="지금 설정으로 덮어쓰기" onClick={() => void change((looks) => looks.map((look) => (look.id === preset.id ? { ...look, look: lookOf(reading, display) } : look)), '저장하지 못했어요.')} />}
+      {preset !== current && <MenuItem icon={Save} label="현재 설정으로 덮어쓰기" onClick={() => void change((looks) => looks.map((look) => (look.id === preset.id ? { ...look, look: lookOf(reading, display) } : look)), '저장하지 못했어요.')} />}
       {index > 0 && <MenuItem icon={ArrowLeft} label="앞으로 옮기기" onClick={() => move(index, index - 1)} />}
       {index < own.presets.length - 1 && <MenuItem icon={ArrowRight} label="뒤로 옮기기" onClick={() => move(index, index + 1)} />}
       <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => void remove(preset)} />
@@ -91,7 +91,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
         action={
           !current && (
             <Button variant="ghost" onClick={() => setNaming({ preset: null })}>
-              지금 설정 저장
+              현재 설정 저장
             </Button>
           )
         }
@@ -105,9 +105,9 @@ export function DisplayScreen({ back }: { back: Back | null }) {
         <Disclosure label={detailLabel(display.follow ? 1 : 0)} open={detailOpen} onOpen={setDetailOpen}>
           <SettingGroup label={DETAIL}>
             <SettingRow
-              label="시스템 따라 바꾸기"
+              label="시스템 설정 연동"
               help="기기의 밝은·어두운 모드에 맞춰 프리셋을 자동 전환해요. 직접 수정한 값은 모드가 바뀔 때 프리셋대로 돌아가요."
-              control={<Switch label="시스템 따라 바꾸기" checked={display.follow !== null} onChange={followSystem} />}
+              control={<Switch label="시스템 설정 연동" checked={display.follow !== null} onChange={followSystem} />}
             />
             {display.follow &&
               MODE_KEYS.map((mode) => (
@@ -115,7 +115,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
                   key={mode}
                   label={MODES[mode]}
                   error={missing(mode) ? '이 프리셋을 찾을 수 없어요. 다른 프리셋을 선택해 주세요.' : undefined}
-                  control={<ChoiceGroup layout="fit" label={MODES[mode]} options={presetChoices(all)} value={missing(mode) ? null : display.follow![mode]} empty="없는 프리셋" onChange={(picked) => assign(mode, all.find((preset) => preset.id === picked)!)} />}
+                  control={<ChoiceGroup layout="fit" label={MODES[mode]} options={presetChoices(all)} value={missing(mode) ? null : display.follow![mode]} empty="삭제된 프리셋" onChange={(picked) => assign(mode, all.find((preset) => preset.id === picked)!)} />}
                 />
               ))}
           </SettingGroup>
@@ -123,7 +123,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       </Section>
       {naming && (
         <NameDialog
-          title={naming.preset ? '프리셋 이름 바꾸기' : '프리셋으로 저장'}
+          title={naming.preset ? '프리셋 이름 변경' : '프리셋으로 저장'}
           value={naming.preset?.name ?? `내 프리셋 ${own.presets.length + 1}`}
           onSave={name}
           onClose={() => setNaming(null)}
@@ -171,7 +171,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       <Section title="텍스트">
         <SettingGroup label="텍스트">
           <ReadingRows />
-          <SettingRow label="대사 모양" control={<ChoiceGroup layout="fit" label="대사 모양" options={choices(QUOTE_SHAPE)} value={display.quotes} onChange={(quotes) => changeDisplay({ quotes })} />} />
+          <SettingRow label="대사 따옴표" control={<ChoiceGroup layout="fit" label="대사 따옴표" options={choices(QUOTE_SHAPE)} value={display.quotes} onChange={(quotes) => changeDisplay({ quotes })} />} />
         </SettingGroup>
       </Section>
     </Screen>

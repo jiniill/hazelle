@@ -269,16 +269,16 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
   const systemRow = (
     <SettingRow
       key="system"
-      label="시스템 메시지 보내는 방식"
+      label="시스템 메시지 전송 방식"
       help="시스템 메시지를 지원하지 않는 모델에는 사용자 메시지로 바꿔서 보내요"
       changed={shown.systemAsUser !== undefined}
       control={
         <ChoiceGroup
           layout="fit"
-          label="시스템 메시지 보내는 방식"
+          label="시스템 메시지 전송 방식"
           options={[
-            { value: 'as-is', label: '시스템 메시지로' },
-            { value: 'user', label: '사용자 메시지로' },
+            { value: 'as-is', label: '시스템 메시지로 전송' },
+            { value: 'user', label: '사용자 메시지로 전송' },
           ]}
           value={shown.systemAsUser ? 'user' : 'as-is'}
           onChange={(value) => set({ systemAsUser: value === 'user' ? true : undefined })}

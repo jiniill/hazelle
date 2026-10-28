@@ -42,8 +42,8 @@ export function variableDoc(name: string, variables: Variables, stored = name): 
   const facts: [string, string][] = [['기본 변수', fallback ?? '없음']];
   if (variables.chat) {
     const found = chatVariable(variables, stored);
-    facts.push(['채팅', variables.chat.label], ['지금 값', found ? shownValue(found.last.value, found.last.truncated) : found === null ? '없음' : UNKNOWN]);
-    if (found) facts.push(['정한 곳', writerName(found.last.writer)]);
+    facts.push(['채팅', variables.chat.label], ['현재 값', found ? shownValue(found.last.value, found.last.truncated) : found === null ? '없음' : UNKNOWN]);
+    if (found) facts.push(['설정 위치', writerName(found.last.writer)]);
   }
   return { form: name, text: '채팅 변수예요.', facts };
 }

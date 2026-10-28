@@ -6,7 +6,7 @@ import { Button, Cheer, Coach, Dialog, guideShown, Intro, List, ListItem, Row, S
 import { stepAt, TUTORIALS, type Facts, type Tutorial } from './tutorial';
 import { usePersisted } from './usePersisted';
 
-export const TUTORIAL = { open: '튜토리얼 보기', icon: GraduationCap, title: '헤이젤이 처음이라면', later: '나중에', stop: '그만', resume: '이어 하기', done: '완료' };
+export const TUTORIAL = { open: '튜토리얼 보기', icon: GraduationCap, title: '헤이젤이 처음이라면', later: '나중에', stop: '종료', resume: '계속하기', done: '완료' };
 
 // Offer unfinished tutorials only before any reply. welcome respects this device's dismissal;
 // listed supplies door labels independently of whether the welcome opens.

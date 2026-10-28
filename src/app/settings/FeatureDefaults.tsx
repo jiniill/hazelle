@@ -42,11 +42,11 @@ const LINES: Record<Feature, (store: ObjectStore, routes: ReturnType<typeof draw
   preread: (store) => {
     const { parts, recent } = prereadSetup(store);
     const chosen = (Object.keys(PRE_READ_PARTS) as (keyof typeof PRE_READ_PARTS)[]).filter((part) => parts[part]).map((part) => PRE_READ_PARTS[part]);
-    return [chosen.length ? chosen.join('·') : '줄일 부분 없음', `최근 대화 ${recent}개는 원문`].join(' · ');
+    return [chosen.length ? chosen.join('·') : '요약할 대상 없음', `최근 대화 ${recent}개는 원문`].join(' · ');
   },
   agents: (store) => {
     const { pre, post } = agentsOf(store, SHARED_CHAT);
-    return pre.length + post.length ? `${STAGE_NAMES.pre} ${pre.length}개 · ${STAGE_NAMES.post} ${post.length}개` : '붙인 에이전트 없음';
+    return pre.length + post.length ? `${STAGE_NAMES.pre} ${pre.length}개 · ${STAGE_NAMES.post} ${post.length}개` : '연결된 에이전트 없음';
   },
 };
 

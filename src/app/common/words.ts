@@ -67,7 +67,7 @@ const GRANT_HELP = {
 export const pluginConsent = (grants: (keyof typeof GRANT_CLAUSES)[]) => `이 플러그인이 ${grants.map((grant, index) => GRANT_CLAUSES[grant][index === grants.length - 1 ? 1 : 0]).join(', ')}`;
 export const pluginConsentHelp = (grants: (keyof typeof GRANT_CLAUSES)[], hosts: string[]) =>
   [...grants.map((grant) => GRANT_HELP[grant]), ...(hosts.length ? [`코드에 적힌 주소: ${hosts.join(', ')}.`] : []), '플러그인마다 한 번만 물어보고, 플러그인 화면에서 하나씩 다시 바꿀 수 있어요.'].join(' ');
-export const NETWORK_CALLED = '연결한 곳';
+export const NETWORK_CALLED = '연결한 주소';
 export const TOOL_LATE = '플러그인 응답이 늦어져서 이번에는 빼고 보냈어요';
 export const TOOL_STALE = '이미 다음 응답이 나와서 플러그인이 바꾼 내용은 반영하지 않았어요';
 export const toolVersion = (version: string) => version || UNKNOWN;
@@ -253,7 +253,7 @@ export const UNDO = '되돌리기';
 export const STOP = '멈추기';
 export const LOADING = '불러오는 중…';
 export const SEE_ALL = '모두 보기';
-export const MISSED = '못 가져온 것';
+export const MISSED = '가져오지 못한 항목';
 export const EMPTY_FOLDER = '비어 있는 폴더예요.';
 export const SET_DEFAULT = '기본으로 정하기';
 
@@ -262,7 +262,7 @@ export const SET_DEFAULT = '기본으로 정하기';
 export const SHARE = {
   act: '링크로 공유',
   cut: '링크 끊기',
-  update: '새 버전으로 바꾸기',
+  update: '새 버전으로 업데이트',
   received: '받은 횟수',
   list: '공유한 링크',
   held: '보류 중',

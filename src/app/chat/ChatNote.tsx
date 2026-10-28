@@ -21,7 +21,7 @@ export function ChatNote(props: Props) {
           icon={PenLine}
           label="노트"
           phone="icon"
-          detail={note === undefined ? undefined : note ? '이 채팅만의 노트' : '이 채팅은 노트 없음'}
+          detail={note === undefined ? undefined : note ? '이 채팅만의 노트' : '노트 없음'}
           mark={note === undefined ? undefined : { kind: 'dot' }}
           {...opener}
         />

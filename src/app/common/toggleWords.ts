@@ -10,7 +10,7 @@ export function keyProblem(key: string, lines: readonly ToggleLine[], own: strin
   return null;
 }
 
-export const LINE_WORDS = { check: '켜고 끄기', choice: '선택', text: '텍스트', divider: '구분선', caption: '설명', group: '그룹', unread: '읽을 수 없는 줄' } as const;
+export const LINE_WORDS = { check: '스위치', choice: '선택', text: '텍스트', divider: '구분선', caption: '설명', group: '그룹', unread: '읽을 수 없는 항목' } as const;
 
 export const lineTitle = (line: ShownLine) =>
   isToggle(line) ? `'${line.label}' 토글` : line.kind === 'unread' || !line.label ? LINE_WORDS[line.kind] : `'${line.label}' ${LINE_WORDS[line.kind]}`;

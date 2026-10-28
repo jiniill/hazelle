@@ -106,17 +106,17 @@ export function moveBlock(block: Block, from: number, to: number): Step {
 
 export function setRole(block: Extract<Block, { role: Role }>, role: Role): Step {
   const to = (value: Role) => onBlock(block.id, (each) => ('role' in each ? { ...each, role: value } : each));
-  return { label: titled(block, '보내는 역할 바꾸기'), block: block.id, undo: to(block.role), redo: to(role) };
+  return { label: titled(block, '전송 역할 변경'), block: block.id, undo: to(block.role), redo: to(role) };
 }
 
 export function setRange(block: ChatSlot, range: ChatRange): Step {
   const to = (value: ChatRange) => onBlock(block.id, (each) => (each.kind === 'slot' && each.slot === 'chat' ? { ...each, range: value } : each));
-  return { label: titled(block, '들어갈 메시지 바꾸기'), block: block.id, undo: to(block.range), redo: to(range) };
+  return { label: titled(block, '메시지 범위 변경'), block: block.id, undo: to(block.range), redo: to(range) };
 }
 
 export function setCount(block: RecentSlot, count: number): Step {
   const to = (value: number) => onBlock(block.id, (each) => (each.kind === 'slot' && each.slot === 'recent' ? { ...each, count: value } : each));
-  return { label: titled(block, '메시지 수 바꾸기'), block: block.id, undo: to(block.count), redo: to(count) };
+  return { label: titled(block, '메시지 수 변경'), block: block.id, undo: to(block.count), redo: to(count) };
 }
 
 export function setTranslations(block: RecentSlot, on: boolean): Step {
@@ -128,7 +128,7 @@ export function setTranslations(block: RecentSlot, on: boolean): Step {
       else next.translations = false;
       return next;
     });
-  return { label: titled(block, on ? '번역 포함' : '번역 빼기'), block: block.id, undo: to(!on), redo: to(on) };
+  return { label: titled(block, on ? '번역 포함' : '번역 제외'), block: block.id, undo: to(!on), redo: to(on) };
 }
 
 export function setCache(block: Block, on: boolean): Step {
@@ -139,7 +139,7 @@ export function setCache(block: Block, on: boolean): Step {
       else delete next.cache;
       return next;
     });
-  return { label: titled(block, on ? '여기까지 캐시' : '캐시 지점 빼기'), block: block.id, undo: to(!on), redo: to(on) };
+  return { label: titled(block, on ? '여기까지 캐시' : '캐시 지점 해제'), block: block.id, undo: to(!on), redo: to(on) };
 }
 
 // Swap wrappers with the current draft so the same operation handles undo/redo and retains intervening typing.
@@ -152,7 +152,7 @@ export function setWrapper(block: WrappedSlot, wrapper: string | null): Step {
     held = now.wrapper;
     return onBlock(block.id, (each) => ('wrapper' in each ? { ...each, wrapper: next } : each))(draft);
   };
-  return { label: titled(block, wrapper === null ? '감싸는 텍스트 빼기' : '감싸는 텍스트 추가'), block: block.id, undo: trade, redo: trade };
+  return { label: titled(block, wrapper === null ? '감싸는 텍스트 제거' : '감싸는 텍스트 추가'), block: block.id, undo: trade, redo: trade };
 }
 
 // taken: the text withMark took the mark from, which undoing gives it back to.
@@ -161,7 +161,7 @@ export function setMark(block: TextBlock, mark: TextBlock['mark'], taken: string
   const undo = (draft: Draft): PromptPatch => ({
     blocks: draft.blocks.map((each) => (each.kind !== 'text' ? each : each.id === block.id ? { ...each, mark: was } : each.id === taken ? { ...each, mark } : each)),
   });
-  return { label: titled(block, mark ? `${MARKS[mark].label} 표시` : '표시 빼기'), block: block.id, undo, redo: (draft) => ({ blocks: withMark(draft.blocks, block.id, mark).blocks }) };
+  return { label: titled(block, mark ? `${MARKS[mark].label} 표시` : '표시 해제'), block: block.id, undo, redo: (draft) => ({ blocks: withMark(draft.blocks, block.id, mark).blocks }) };
 }
 
 // The lines in order, so each is put back from the first at its own place and taken from the last.
@@ -191,7 +191,7 @@ export function editLine(before: ShownLine, after: ToggleLine, at: number, what:
     const put = (line: ToggleLine) => (what === 'label' && isToggle(line) && isToggle(to) ? { ...line, label: to.label } : to);
     return now === -1 ? {} : { toggles: draft.toggles.map((each, index) => (index === now ? put(each) : each)) };
   };
-  const words = what === 'default' ? '기본값 바꾸기' : what === 'line' || before.kind === 'caption' ? '내용 바꾸기' : '이름 바꾸기';
+  const words = what === 'default' ? '기본값 바꾸기' : what === 'line' || before.kind === 'caption' ? '내용 수정' : '이름 바꾸기';
   return { label: `${lineTitle(before)} ${words}`, block: null, undo: swap(after, before), redo: swap(before, after) };
 }
 

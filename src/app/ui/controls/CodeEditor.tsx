@@ -55,8 +55,8 @@ function spanned(read: (text: string) => CodeSpan[], prose: boolean) {
 const highlight = HighlightStyle.define(CODE_ROLES.map(({ tag, role }) => ({ tag, class: styles[role] })));
 
 const PHRASES = EditorState.phrases.of({
-  Find: '검색', Replace: '바꿀 내용', next: '다음', previous: '이전', all: '모두', 'match case': '대소문자 구분', regexp: '정규식', 'by word': '단어 단위', replace: '바꾸기', 'replace all': '모두 바꾸기', close: '닫기',
-  'Go to line': '줄로 이동', go: '이동', Diagnostics: '문제', 'No diagnostics': '문제가 없어요', 'current match': '지금 찾은 것', 'on line': '줄', 'replaced match on line $': '$번째 줄을 바꿨어요', 'replaced $ matches': '$개를 바꿨어요', Completions: '자동완성',
+  Find: '검색', Replace: '바꿀 텍스트', next: '다음', previous: '이전', all: '모두', 'match case': '대소문자 구분', regexp: '정규식', 'by word': '단어 단위', replace: '바꾸기', 'replace all': '모두 바꾸기', close: '닫기',
+  'Go to line': '줄로 이동', go: '이동', Diagnostics: '문제', 'No diagnostics': '문제가 없어요', 'current match': '현재 일치 항목', 'on line': '줄', 'replaced match on line $': '$번째 줄을 변경했어요', 'replaced $ matches': '$개를 변경했어요', Completions: '자동완성',
 });
 
 function docNode(doc: CodeDoc) {

@@ -18,8 +18,8 @@ export function HoldShareDialog({ onClose, onActed }: { onClose: () => void; onA
   const act = (hold: boolean) =>
     run(async () => {
       const done = await (hold ? holdShare(id) : releaseShare(id));
-      if (!done.ok) return done.error === 'not-found' ? (hold ? '없거나 멈춘 링크예요.' : '없는 링크이거나 차단된 링크예요.') : describeFailure(done);
-      toast.show(hold ? '링크를 멈췄어요.' : '링크 일시 정지를 풀었어요.', { detail: id });
+      if (!done.ok) return done.error === 'not-found' ? (hold ? '없거나 보류된 링크예요.' : '없는 링크이거나 차단된 링크예요.') : describeFailure(done);
+      toast.show(hold ? '링크를 보류했어요.' : '링크 보류를 해제했어요.', { detail: id });
       onActed();
       return null;
     });
@@ -30,10 +30,10 @@ export function HoldShareDialog({ onClose, onActed }: { onClose: () => void; onA
       onClose={onClose}
       actions={<>
         <Button variant="danger" busy={busy} disabled={!valid} onClick={() => void act(true)}>보류</Button>
-        <Button variant="secondary" busy={busy} disabled={!valid} onClick={() => void act(false)}>보류 풀기</Button>
+        <Button variant="secondary" busy={busy} disabled={!valid} onClick={() => void act(false)}>보류 해제</Button>
       </>}
     >
-      <TextField label="링크 id" kind="key" value={typed} onChange={setTyped} placeholder="16자 id 또는 링크" error={typed && !valid ? '링크 ID를 찾지 못했어요.' : undefined} />
+      <TextField label="링크 ID" kind="key" value={typed} onChange={setTyped} placeholder="16자 ID 또는 링크" error={typed && !valid ? '링크 ID를 찾지 못했어요.' : undefined} />
       {failure && <Callout tone="warn" alert>{failure}</Callout>}
     </Dialog>
   );

@@ -162,7 +162,7 @@ function PrereadDefaults() {
       <SettingGroup label={PRE_READ}>
         <TaskModelRow label={`${PRE_READ} 모델`} noun={PRE_READ} choice={choice} model={'kind' in writer ? describePrereadFailure(writer) : entryName(writer.route.model)} onEdit={editPrompt('preread')} />
       </SettingGroup>
-      <SettingGroup label="줄일 부분">
+      <SettingGroup label="요약할 대상">
         {(Object.entries(PRE_READ_PARTS) as [keyof PrereadParts, string][]).map(([part, label]) => (
           <SettingRow
             key={part}
@@ -174,8 +174,8 @@ function PrereadDefaults() {
         ))}
       </SettingGroup>
       <DetailFold set={set}>
-        <CountRow label="원문으로 둘 최근 대화" unit="개" help="마지막으로 보낸 내 메시지는 이 수와 상관없이 그대로 보내요." value={setup.recent} start={PREREAD_STARTS.recent} onChange={(recent) => save({ recent })} />
-        <CountRow label="한 번에 줄일 분량" unit="토큰" help="줄일 내용이 이만큼 쌓이면 그때 줄여요. 그보다 적으면 그냥 보내요." value={setup.batch} start={PREREAD_STARTS.batch} onChange={(batch) => save({ batch })} />
+        <CountRow label="원문으로 유지할 최근 대화" unit="개" help="마지막으로 보낸 내 메시지는 이 수와 상관없이 그대로 보내요." value={setup.recent} start={PREREAD_STARTS.recent} onChange={(recent) => save({ recent })} />
+        <CountRow label="한 번에 요약할 분량" unit="토큰" help="줄일 내용이 이만큼 쌓이면 그때 줄여요. 그보다 적으면 그냥 보내요." value={setup.batch} start={PREREAD_STARTS.batch} onChange={(batch) => save({ batch })} />
         <SettingRow
           label="생각 줄이기"
           help={`끄면 그 모델의 ${MODEL_SETTINGS}을 따라요.`}

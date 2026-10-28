@@ -34,7 +34,7 @@ export function LeftGauge({ result }: { result: MetersResult }) {
   return meter.amount <= 0 ? <Gauge {...remaining(meter)} tone="warn" status="소진" /> : <Gauge {...remaining(meter)} />;
 }
 
-const VERDICT = { fast: { status: '빠르게 쓰는 중', tone: 'accent' }, even: { status: '적정', tone: 'plain' }, slow: { status: '여유 있음', tone: 'plain' } } as const;
+const VERDICT = { fast: { status: '빠르게 쓰는 중', tone: 'accent' }, even: { status: '적정', tone: 'plain' }, slow: { status: '소진 빠름', tone: 'plain' } } as const;
 
 // turn: the window its group serves, for an account in a pool. waiting: its group's turn has not come. labeled: false
 // where the place above names the allowance already.

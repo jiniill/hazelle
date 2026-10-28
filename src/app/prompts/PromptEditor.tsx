@@ -318,7 +318,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
         <NavRow icon={SlidersHorizontal} label="토글" meta={`${draft.toggles.filter(isToggle).length}개`} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
       </Stack>
       <Section
-        title="보내는 순서"
+        title="전송 순서"
         level={3}
         note={`${draft.blocks.length}개`}
         action={
@@ -332,7 +332,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
         {warning && <Callout tone="warn">{warning}</Callout>}
         {noPersona && <Callout tone="warn">{NO_PERSONA_SLOT}</Callout>}
         <Outline
-          label="보내는 순서"
+          label="전송 순서"
           help={HELP}
           start="맨 처음"
           end="응답 직전"
@@ -440,7 +440,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
       );
       return frame({ head: { title, onBack: paneBack.onBack, backLabel: paneBack.label, status }, body: <>{toOutline}{page}</>, open });
     }
-    return frame({ head: { title, onBack: leavePage, backLabel: '보내는 순서', status }, body: page, open });
+    return frame({ head: { title, onBack: leavePage, backLabel: '전송 순서', status }, body: page, open });
   }
 
   const origin = stored.value.task === undefined && stored.value.imported === 'risu-preset' ? 'Risu 프리셋에서 가져옴' : stored.value.origin ? copyOf(promptName(stored.value.origin.name)) : null;

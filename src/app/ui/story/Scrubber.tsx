@@ -124,7 +124,7 @@ export function Scrubber({ scrollRef, keys, stops, label, onSeek }: Props) {
       {drag && (
         <span className={styles.bubble}>
           {label(stops[drag.stop]!)}
-          {drag.coarse && <span className={styles.note}>{drag.fine ? '하나씩 옮기는 중' : '왼쪽으로 끌면 하나씩'}</span>}
+          {drag.coarse && <span className={styles.note}>{drag.fine ? '세밀하게 이동 중' : '왼쪽으로 끌면 세밀하게 이동'}</span>}
         </span>
       )}
     </div>

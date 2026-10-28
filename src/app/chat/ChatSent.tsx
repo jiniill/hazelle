@@ -191,7 +191,7 @@ export function RequestView({ prompt, title, level = 3, lead, request, unbuilt, 
             })}
             {unplaced.length > 0 && (
               <ListItem
-                title="그 밖에"
+                title="기타"
                 badge={problemCounts(unplaced)}
                 description="요청에 그대로 들어가지 않은 블록이나 로어북 항목이에요."
                 expanded={open.has(-1)}
@@ -227,7 +227,7 @@ const QUERY = { primary: '키워드', secondary: '보조 키워드', additional:
 function why({ why }: Lore, names: Map<string, string>): string {
   switch (why.kind) {
     case 'constant':
-      return '항상 켜 둔 항목';
+      return '상시 활성화 항목';
     case 'decorator':
       return why.name === 'activate' ? '@@activate로 켜짐' : '이전 응답에서 활성화돼 유지됨 (@@keep_activate_after_match)';
     case 'keys':
@@ -242,7 +242,7 @@ const DROPPED = { probability: '확률로 빠짐', budget: `${LORE_BUDGET_LABEL}
 function fate({ fate }: Lore, names: Map<string, string>): string {
   switch (fate.kind) {
     case 'placed':
-      return '들어감';
+      return '포함됨';
     case 'merged':
       return `'${loreName(names.get(fate.into)!)}'에 합쳐 들어감`;
     case 'dropped':
@@ -285,14 +285,14 @@ export function SentMemory({ entry, memory, onRecord }: { entry: LogEntry | null
         variant="tiles"
         items={[
           { label: '보낸 기록', value: `${used.sent.length}개` },
-          { label: '찾아 넣은 기록', value: `${used.found.length}개` },
+          { label: '검색된 기록', value: `${used.found.length}개` },
           { label: '기억에 담긴 메시지', value: `${used.covered}개` },
           { label: '기억에 없는 메시지', value: `${used.missing}개`, tone: used.missing ? 'warn' : undefined },
           cut,
         ]}
       />
       {used.sent.length > 0 && <SentRecords title="보낸 기록" ids={used.sent} records={records} onRecord={onRecord} />}
-      {used.found.length > 0 && <SentRecords title="찾아 넣은 기록" ids={used.found} records={records} onRecord={onRecord} />}
+      {used.found.length > 0 && <SentRecords title="검색된 기록" ids={used.found} records={records} onRecord={onRecord} />}
     </>
   );
 }
@@ -306,7 +306,7 @@ function SentRecords({ title, ids, records, onRecord }: { title: string; ids: st
           return record ? (
             <ListItem key={id} title={recordTitle(record)} description={recordScene(record) || undefined} tags={isChapter(record) ? [CHAPTER] : undefined} onClick={() => onRecord(id)} />
           ) : (
-            <ListItem key={id} title="지금은 없는 기록" />
+            <ListItem key={id} title="삭제된 기록" />
           );
         })}
       </List>

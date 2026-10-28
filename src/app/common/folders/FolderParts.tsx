@@ -176,6 +176,6 @@ export function useMoving<T>(kind: Filed, index: FolderIndex<T>, folderOf: (id: 
       <MenuItem label="폴더에서 빼기" onClick={() => moveTo(null)} />
     </Menu>,
   );
-  const button = !off && selection.button(FolderInput, '선택해서 옮기기');
+  const button = !off && selection.button(FolderInput, '선택 이동');
   return { picked, toggle: selection.toggle, dropInto, bar, button };
 }

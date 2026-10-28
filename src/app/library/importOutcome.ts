@@ -87,7 +87,7 @@ export const quoted = (names: string[]) => names.map((name) => `'${name}'`).join
 export function moduleOutcome(file: string, title: string, id: string, unsupported: Unsupported, placement: Placement, { prompts, failure }: Pairing, replacing: Replacing | null): ImportOutcome {
   const paired = failure !== null ? { text: `프롬프트에 켜지 못했어요. ${failure}`, failed: true } : prompts.length > 0 ? { text: `${quoted(prompts)} 프롬프트에 켰어요.`, failed: false } : null;
   const replaced = replacing && (replacing.failure !== null ? { text: `이전 버전과 바꾸지 못했어요. ${replacing.failure}`, failed: true }
-    : { text: `${quoted(replacing.names)} 모듈을 바꿨어요.${replacing.places > 0 ? ' 켜져 있던 곳에 그대로 켰어요.' : ''}`, failed: false });
+    : { text: `${quoted(replacing.names)} 모듈을 바꿨어요.${replacing.places > 0 ? ' 원래 켜져 있던 위치에 그대로 적용했어요.' : ''}`, failed: false });
   const elsewhere = (paired !== null && !paired.failed) || (replacing !== null && replacing.failure === null && replacing.places > 0);
   // On for a prompt, or where the version it replaced was, it is not "on nowhere".
   const placed = placement.at === null && elsewhere ? null : placedLine('modules', placement);

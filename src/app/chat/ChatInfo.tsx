@@ -163,11 +163,11 @@ function TranslationCall({ receipt }: { receipt: Receipt }) {
 
 // The brief's own call, apart from the reply's: its 입력 is the shortened prompt, and the pair shows what was saved.
 function PrereadCall({ preread: { material, brief, receipt, reused, saved } }: { preread: NonNullable<Receipt['preread']> }) {
-  const net = saved && { label: '아낀 비용', value: `약 ${money(saved.unit, Math.abs(saved.amount))} ${saved.amount < 0 ? '더 들었어요' : '아꼈어요'}` };
+  const net = saved && { label: '절약한 비용', value: `약 ${money(saved.unit, Math.abs(saved.amount))} ${saved.amount < 0 ? '추가 발생' : '절약'}` };
   return (
     <Section level={3} title={PRE_READ} note={`원문 약 ${tokens(material)} → 줄인 뒤 ${tokens(brief)}`}>
       <Text variant="note">{reused ? '앞 응답에서 줄인 내용을 다시 썼어요. 이번에는 비용이 들지 않았어요.' : `${receipt.modelName} · ${receipt.source}`}</Text>
-      <Facts variant="tiles" items={[net || { label: '아낀 비용', value: UNKNOWN, tone: 'muted' as const }, ...(reused ? [] : callFacts(receipt))]} />
+      <Facts variant="tiles" items={[net || { label: '절약한 비용', value: UNKNOWN, tone: 'muted' as const }, ...(reused ? [] : callFacts(receipt))]} />
     </Section>
   );
 }
@@ -272,11 +272,11 @@ function Call({ receipt, entry, onCache }: { receipt: Receipt; entry: LogEntry |
 }
 
 const UNMEASURED = { preparation: '요청을 만들기 전에 멈춤', tokenizer: '토큰 수를 세지 못함' } as const;
-const UNLEARNED = { pictures: '이미지가 있어 배우지 않음', incomplete: '끝까지 받지 못해 배우지 않음', 'missing-input': '제공자가 입력 토큰을 알려 주지 않음', empty: '보낸 글이 없음' } as const;
-const SOURCE = { prior: '기본값', model: '이 모델의 기록', chat: '이 채팅의 기록', 'drift-reset': '바뀐 배율을 다시 배우는 중', unavailable: '맞추지 않음' } as const;
-const BOUND = { 'hard-upper': '모델 한도에 여유를 두고', 'hard-centre': '모델 한도 기준', 'user-centre': '컨텍스트 한도 기준', refusal: '거절된 뒤 줄여서' } as const;
+const UNLEARNED = { pictures: '이미지가 있어 배우지 않음', incomplete: '응답이 중단되어 보정 안 함', 'missing-input': '제공자가 입력 토큰을 알려 주지 않음', empty: '보낸 글이 없음' } as const;
+const SOURCE = { prior: '기본값', model: '이 모델의 기록', chat: '이 채팅의 기록', 'drift-reset': '변경된 배율 재보정 중', unavailable: '보정 안 함' } as const;
+const BOUND = { 'hard-upper': '모델 한도에 여유를 두고 보정', 'hard-centre': '모델 한도 기준', 'user-centre': '컨텍스트 한도 기준', refusal: '한도 초과 후 축소 보정' } as const;
 
-function Fitting({ receipt, title = '토큰 맞추기' }: { receipt: Receipt; title?: string }) {
+function Fitting({ receipt, title = '토큰 보정' }: { receipt: Receipt; title?: string }) {
   const { tokens: calibration } = useSession();
   const fit = calibration.call(receipt);
   // A receipt from before calibration has nothing to show, which is not the same as a call that could not be measured.
@@ -288,15 +288,15 @@ function Fitting({ receipt, title = '토큰 맞추기' }: { receipt: Receipt; ti
         variant="tiles"
         items={[
           fit.denominator === null
-            ? { label: '앱이 센 입력', value: UNKNOWN, tone: 'muted', notes: fit.unavailable ? [UNMEASURED[fit.unavailable]] : undefined }
-            : { label: '앱이 센 입력', value: `약 ${tokens(fit.denominator)}` },
+            ? { label: '앱 계산 입력', value: UNKNOWN, tone: 'muted', notes: fit.unavailable ? [UNMEASURED[fit.unavailable]] : undefined }
+            : { label: '앱 계산 입력', value: `약 ${tokens(fit.denominator)}` },
           fit.ratio === null
-            ? { label: '이번 배율', value: UNKNOWN, tone: 'muted', notes: fit.ineligible ? [UNLEARNED[fit.ineligible]] : undefined }
-            : { label: '이번 배율', value: `×${fit.ratio.toFixed(2)}` },
-          { label: '맞춘 기준', value: SOURCE[fit.source], tone: fit.source === 'unavailable' ? 'muted' : undefined, notes: learned ? [`기록 ${Math.max(1, Math.round(fit.evidence))}개 반영`] : undefined },
+            ? { label: '적용 배율', value: UNKNOWN, tone: 'muted', notes: fit.ineligible ? [UNLEARNED[fit.ineligible]] : undefined }
+            : { label: '적용 배율', value: `×${fit.ratio.toFixed(2)}` },
+          { label: '보정 기준', value: SOURCE[fit.source], tone: fit.source === 'unavailable' ? 'muted' : undefined, notes: learned ? [`기록 ${Math.max(1, Math.round(fit.evidence))}개 반영`] : undefined },
           ...(fit.bound === null && fit.allowance === null
             ? []
-            : [{ label: '보낼 수 있던 입력', value: fit.allowance === null ? UNKNOWN : `약 ${tokens(fit.allowance)}`, notes: [fit.bound ? BOUND[fit.bound] : '모델 한도를 몰라 줄이지 않음', ...(fit.multiplier === null ? [] : [`배율 ×${fit.multiplier.toFixed(2)} 적용`])] }]),
+            : [{ label: '전송 가능했던 입력', value: fit.allowance === null ? UNKNOWN : `약 ${tokens(fit.allowance)}`, notes: [fit.bound ? BOUND[fit.bound] : '모델 한도 미확인으로 축소 안 함', ...(fit.multiplier === null ? [] : [`배율 ×${fit.multiplier.toFixed(2)} 적용`])] }]),
           ...(fit.retries.length ? [{ label: '길이 초과로 다시 보냄', value: `${fit.retries.length}번`, tone: 'warn' as const }] : []),
         ]}
       />

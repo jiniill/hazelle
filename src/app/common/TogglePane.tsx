@@ -71,10 +71,10 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, 
       <MoreMenu of={isToggle(line) ? `'${line.label}'` : lineTitle(line)}>
         <MenuItem
           icon={ACTS.rename.icon}
-          label={line.kind === 'caption' || line.kind === 'unread' ? '내용 바꾸기' : ACTS.rename.label}
+          label={line.kind === 'caption' || line.kind === 'unread' ? '내용 수정' : ACTS.rename.label}
           onClick={() => setEditing({ at, field: line.kind === 'unread' ? 'line' : 'label' })}
         />
-        {isToggle(line) && <MenuItem label="키 바꾸기" sub={uses ? '조건에 쓴 키도 함께 바뀌어요' : undefined} onClick={() => setEditing({ at, field: 'key' })} />}
+        {isToggle(line) && <MenuItem label="키 변경" sub={uses ? '조건에 쓴 키도 함께 바뀌어요' : undefined} onClick={() => setEditing({ at, field: 'key' })} />}
         {moves?.up && <MenuItem icon={ArrowUp} label="위로 옮기기" onClick={() => onMove(line, moves.up!)} />}
         {moves?.down && <MenuItem icon={ArrowDown} label="아래로 옮기기" onClick={() => onMove(line, moves.down!)} />}
         <MenuItem
@@ -130,7 +130,7 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, 
     if (field !== 'label' || line.kind === 'unread') return null;
     return (
       <NameDialog
-        title={line.kind === 'caption' ? '내용 바꾸기' : ACTS.rename.label}
+        title={line.kind === 'caption' ? '내용 수정' : ACTS.rename.label}
         field={isToggle(line) ? '이름' : FIELD[line.kind]}
         value={line.label}
         blank={line.kind === 'divider' ? LINE_ONLY : undefined}
@@ -202,7 +202,7 @@ function KeyDialog({ toggle, lines, uses, onClose, onSave }: { toggle: Toggle; l
   const [error, setError] = useState<string | null>(null);
   return (
     <Dialog
-      title="키 바꾸기"
+      title="키 변경"
       onClose={onClose}
       onSubmit={() => {
         const problem = keyProblem(key.trim(), lines, toggle.key);
@@ -234,7 +234,7 @@ function LineDialog({ line, lines, onClose, onSave }: { line: UnreadLine; lines:
   const [error, setError] = useState<string | null>(null);
   return (
     <Dialog
-      title="내용 바꾸기"
+      title="내용 수정"
       onClose={onClose}
       onSubmit={() => {
         const [read] = readToggles(text);

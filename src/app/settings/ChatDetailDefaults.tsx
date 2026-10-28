@@ -40,8 +40,8 @@ export function ChatDetailDefaults() {
                 control={
                   <Stepper
                     label={RETRY_COUNT}
-                    less="한 번 덜 보내기"
-                    more="한 번 더 보내기"
+                    less="1회 줄이기"
+                    more="1회 늘리기"
                     value={retries ?? RETRIES}
                     min={0}
                     max={RETRY_MOST}

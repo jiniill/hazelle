@@ -16,7 +16,7 @@ import { silentReason } from './InspectModules';
 
 type BrokenPart = CacheDiagnosis['parts'][number];
 
-const KINDS = { changed: '달라짐', added: '추가됨', removed: '빠짐', moved: '위치 바뀜' } as const;
+const KINDS = { changed: '변경됨', added: '추가됨', removed: '제외됨', moved: '위치 바뀜' } as const;
 export const breakKind = (kind: keyof typeof KINDS) => KINDS[kind];
 
 const quoted = (value: string) => (value === '' ? '(빈 값)' : `'${value.length > 60 ? `${value.slice(0, 60)}…` : value}'`);
@@ -89,7 +89,7 @@ export function BrokenPartView({ part }: { part: BrokenPart }) {
       ) : (
         differs && (
           <>
-            <Text variant="note">바뀐 곳</Text>
+            <Text variant="note">변경된 부분</Text>
             <TextDiff runs={diff.runs} label={`${partName(part.from, part.role)}: 이전과 비교`} />
             {diff.coarse && <Text variant="note">바뀐 부분이 길어서 세세하게 비교하지 않고 통째로 보여 줘요.</Text>}
           </>
@@ -99,7 +99,7 @@ export function BrokenPartView({ part }: { part: BrokenPart }) {
   );
 }
 
-const BREAK_WORDS: Record<Exclude<CacheBreak['kind'], keyof typeof KINDS>, string> = { model: '모델 바뀜', account: '계정 바뀜', reasoning: '추론 설정 바뀜', off: '캐시 꺼짐', expired: '유지 시간 지남', far: '간격이 너무 멂' };
+const BREAK_WORDS: Record<Exclude<CacheBreak['kind'], keyof typeof KINDS>, string> = { model: '모델 변경', account: '계정 변경', reasoning: '추론 설정 변경', off: '캐시 꺼짐', expired: '유지 시간 만료', far: '캐시 간격 초과' };
 const breakLabel = (broken: CacheBreak) => ('from' in broken ? `${partName(broken.from, broken.role)} ${KINDS[broken.kind]}` : BREAK_WORDS[broken.kind]);
 
 // Shown only once a pattern can show: two sends that broke.
@@ -176,8 +176,8 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
     .map((prescription) => ({ prescription, less: saved(now, prescription.cost) }))
     .sort((a, b) => (b.less?.amount ?? -1) - (a.less?.amount ?? -1));
   return (
-    <Section level={3} title="고치는 방법" help="여러 개를 함께 고치면 아끼는 금액이 각각의 합과 다를 수 있어요.">
-      <List label="고치는 방법">
+    <Section level={3} title="해결 방법" help="여러 개를 함께 고치면 아끼는 금액이 각각의 합과 다를 수 있어요.">
+      <List label="해결 방법">
         {ranked.map(({ prescription, less }, index) => (
           <ListItem
             key={index}

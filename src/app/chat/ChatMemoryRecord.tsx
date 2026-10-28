@@ -104,18 +104,18 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
           </Button>
         )}
       </Row>
-      <TextField label="무슨 일" lines={5} value={shown.what} onChange={(what) => save.change({ what })} />
-      {text('when', '언제')}
-      {text('where', '어디서')}
+      <TextField label="내용" lines={5} value={shown.what} onChange={(what) => save.change({ what })} />
+      {text('when', '시점')}
+      {text('where', '장소')}
       <SettingGroup label={noun}>
-        <SettingRow label="누가" wide control={<PhraseField label="누가" phrases={shown.who} onChange={(who) => save.change({ who })} />} />
+        <SettingRow label="인물" wide control={<PhraseField label="인물" phrases={shown.who} onChange={(who) => save.change({ who })} />} />
         <SettingRow label="고정" help="원문이 바뀌어도 다른 기록보다 먼저 보내요." control={<Switch label="고정" checked={item.pinned === true} onChange={pin} />} />
         {record && (
           <SettingRow
-            label="이 기억 넣기"
+            label="원문 메시지 보내기"
             help="요약본 대신 원문 메시지를 보내요."
             note={status === 'recall-over' ? '원문이 한도를 넘어서 요약본을 보내요.' : undefined}
-            control={<Switch label="이 기억 넣기" checked={record.recalled === true} onChange={recall} />}
+            control={<Switch label="원문 메시지 보내기" checked={record.recalled === true} onChange={recall} />}
           />
         )}
       </SettingGroup>
@@ -167,7 +167,7 @@ export function MemoryRow({ item, view, positions, onOpen }: { item: MemoryRecor
     <ListItem
       title={recordTitle(item)}
       description={[spanOf(item.sources, positions).words, ...(chapter ? [`기록 ${item.records.length}개`] : []), recordScene(item)].filter(Boolean).join(' · ')}
-      tags={[...(chapter ? [CHAPTER] : []), ...(item.pinned ? ['고정'] : []), ...(!chapter && item.recalled && status === 'sent' ? ['원문 넣음'] : []), ...statusWord(status, view?.stale.get(item.id))]}
+      tags={[...(chapter ? [CHAPTER] : []), ...(item.pinned ? ['고정'] : []), ...(!chapter && item.recalled && status === 'sent' ? ['원문 전송'] : []), ...statusWord(status, view?.stale.get(item.id))]}
       onClick={onOpen}
     />
   );

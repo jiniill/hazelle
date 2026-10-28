@@ -30,7 +30,7 @@ export const TUTORIALS: Tutorial[] = [
     steps: [
       { mark: MARKS.connectNew, label: '새 연결', text: 'AI를 쓰려면 먼저 연결해요. 여기를 눌러요.', done: (facts) => facts.connection !== null || on(facts, 'add-connection', 'connect', 'connect-direct'), at: () => ADD },
       { mark: MARKS.connectType, label: '제공자 선택', text: '쓸 제공자를 골라요. 키가 있거나 로그인할 수 있는 곳이면 돼요.', done: (facts) => facts.connection !== null || on(facts, 'connect', 'connect-direct'), at: () => ADD },
-      { mark: MARKS.connectKey, label: '키 넣기', text: 'API 키를 붙여 넣고 모델 선택을 눌러요. 로그인하는 곳은 안내대로 로그인해요.', done: (facts) => facts.connection !== null, at: () => ADD, above: true },
+      { mark: MARKS.connectKey, label: 'API 키 입력', text: 'API 키를 붙여 넣고 모델 선택을 눌러요. 로그인하는 곳은 안내대로 로그인해요.', done: (facts) => facts.connection !== null, at: () => ADD, above: true },
       { mark: MARKS.modelAdd, label: '모델 추가', text: '쓸 모델 옆의 +를 눌러 추가해요. 처음 추가한 모델로 대화해요.', done: (facts) => facts.added, at: (facts) => ({ kind: 'connection', id: facts.connection! }), above: true },
       { mark: MARKS.modelAdded, label: '대화 시작', text: '모델을 추가했어요. 이제 대화를 시작해 봐요.', go: { label: '대화 시작하기', route: NEW_CHAT }, done: (facts) => on(facts, 'new-chat', 'chat'), at: (facts) => ({ kind: 'connection', id: facts.connection! }) },
     ],

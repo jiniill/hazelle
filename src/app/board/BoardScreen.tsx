@@ -128,7 +128,7 @@ function BoardAside({ operator }: { operator: boolean }) {
             {/* The operator writes as 운영자, which no one picks or changes. */}
             {!admin && nickname.data && (
               <Button variant="secondary" size="sm" onClick={() => setChanging(true)}>
-                {name ? '바꾸기' : '정하기'}
+                {name ? '바꾸기' : '설정'}
               </Button>
             )}
           </>

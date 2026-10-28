@@ -35,7 +35,7 @@ import { MoveFlow } from './MoveFlow';
 import { stepOf } from './saving';
 
 // The preview's own 못 가져온 것: nothing is saved yet.
-const WONT_COME = '못 가져오는 것';
+const WONT_COME = '가져올 수 없는 항목';
 const OPENS: { kind: Exclude<ImportOutcome['kind'], 'character'>; icon: LucideIcon; label: string; route: (id: string) => Route }[] = [
   { kind: 'chat', icon: MessageSquare, label: '열기', route: (id) => ({ kind: 'chat', id }) },
   { kind: 'module', icon: Package, label: '모듈 보기', route: (id) => ({ kind: 'module', id, pane: null }) },

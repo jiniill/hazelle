@@ -24,9 +24,9 @@ const TEXT_ICONS: Record<Role, LucideIcon> = { system: Text, user: User, assista
 // The ranges the 채팅 pane offers; an imported range outside them keeps its own line.
 export const RANGES: { range: ChatRange; label: string; meta: string }[] = [
   { range: { from: 0, to: null }, label: '처음부터 끝까지', meta: '전부' },
-  { range: { from: 0, to: -1 }, label: '처음부터 마지막 하나 전까지', meta: '마지막 빼고' },
+  { range: { from: 0, to: -1 }, label: '처음부터 마지막 하나 전까지', meta: '마지막 1개 제외' },
   { range: { from: -1, to: null }, label: '마지막 하나', meta: '마지막 1개' },
-  { range: { from: 0, to: -2 }, label: '처음부터 마지막 둘 전까지', meta: '마지막 2개 빼고' },
+  { range: { from: 0, to: -2 }, label: '처음부터 마지막 둘 전까지', meta: '마지막 2개 제외' },
   { range: { from: -2, to: null }, label: '마지막 둘', meta: '마지막 2개' },
 ];
 export const rangeKey = ({ from, to }: ChatRange) => `${from}:${to ?? 'end'}`;
@@ -37,7 +37,7 @@ export function describeRange(range: ChatRange): { label: string; meta: string }
   const { from, to } = range;
   const start = from === 0 ? '처음부터' : from > 0 ? `앞의 ${from}개 다음부터` : `끝에서 ${-from}번째부터`;
   const end = to === null ? '끝까지' : to < 0 ? `마지막 ${-to}개 전까지` : `${to}번째까지`;
-  return { label: `${start} ${end}`, meta: '직접 정한 범위' };
+  return { label: `${start} ${end}`, meta: '사용자 지정 범위' };
 }
 
 export const firstLine = (text: string) => text.trim().split('\n')[0]!.trim();

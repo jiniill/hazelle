@@ -66,7 +66,7 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
           onChange={(name) => onChange({ ...block, name: name || null })}
         />
         <Row kind="toolbar">
-          {'role' in block && <ChoiceGroup<Role> label="보내는 역할" showLabel layout="fit" options={ROLES} value={block.role} onChange={(role) => onRole(block, role)} />}
+          {'role' in block && <ChoiceGroup<Role> label="전송 역할" showLabel layout="fit" options={ROLES} value={block.role} onChange={(role) => onRole(block, role)} />}
           {block.kind === 'text' && block.mark && (
             <>
               <Tag tone="accent">{MARKS[block.mark].label}</Tag>
@@ -133,7 +133,7 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
         <>
           <SettingRow
             label="메시지 수"
-            control={<Stepper label="메시지 수" less="메시지 하나 줄이기" more="메시지 하나 늘리기" value={block.count} min={1} max={RECENT_MAX} onChange={(next) => onCount(block, next)} />}
+            control={<Stepper label="메시지 수" less="메시지 1개 줄이기" more="메시지 1개 늘리기" value={block.count} min={1} max={RECENT_MAX} onChange={(next) => onCount(block, next)} />}
           />
           {/* A 삽화 prompt's 이전 메시지 never holds translations (engine/pipeline). */}
           {sort === 'translate' && (
@@ -186,7 +186,7 @@ function RangeChoice({ block, onRange }: { block: ChatSlot; onRange: (range: Cha
   const options = [...RANGES, ...(known ? [] : [{ range: block.range, ...describeRange(block.range) }])];
   return (
     <ChoiceGroup
-      label="들어갈 메시지"
+      label="포함할 메시지 범위"
       layout="list"
       options={options.map((option) => ({ value: rangeKey(option.range), label: option.label }))}
       value={current}

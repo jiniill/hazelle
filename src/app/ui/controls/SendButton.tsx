@@ -9,7 +9,7 @@ export function SendButton({ streaming, disabled, title, onClick }: Props) {
     <button
       type="button"
       className={streaming ? `${styles.send} ${styles.stop}` : styles.send}
-      aria-label={streaming ? '응답 멈추기' : '보내기'}
+      aria-label={streaming ? '응답 생성 중지' : '보내기'}
       title={title}
       disabled={disabled}
       onClick={onClick}

@@ -75,9 +75,9 @@ function SharePage({ id, shareKey }: { id: string; shareKey: string | null }) {
     >
       {view.kind === 'loading' && <Text variant="note">{LOADING}</Text>}
       {view.kind === 'failed' && <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => setAttempt((held) => held + 1) }}>{view.failure}</Callout>}
-      {view.kind === 'held' && <Intro title="멈춘 링크">{SHARE.heldNote}</Intro>}
-      {view.kind === 'gone' && <Intro title="없는 링크">{SHARE.goneNote}</Intro>}
-      {view.kind === 'broken' && <Intro title="열 수 없는 링크">주소의 # 뒷부분까지 모두 복사했는지 확인해 주세요.</Intro>}
+      {view.kind === 'held' && <Intro title="비활성화된 링크">{SHARE.heldNote}</Intro>}
+      {view.kind === 'gone' && <Intro title="존재하지 않는 링크">{SHARE.goneNote}</Intro>}
+      {view.kind === 'broken' && <Intro title="유효하지 않은 링크">주소의 # 뒷부분까지 모두 복사했는지 확인해 주세요.</Intro>}
       {view.kind === 'live' && (
         <Stack gap="section">
           <SharePreview
