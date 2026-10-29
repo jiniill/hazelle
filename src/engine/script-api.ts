@@ -49,6 +49,11 @@ export type ToolEvent =
   | { kind: 'input'; item: string; text: string }
   // The chat model called one of the file's //@tool tools; args: its arguments, read as a JSON object.
   | { kind: 'tool'; name: string; args: { [key: string]: Hazelle.Json } };
+// A //@tool tool's name on the wire: its plugin's place among the turn's plugins with tools, then its own name, so two
+// plugins' tools never share one name. toolShown reads the name back for the reply's line.
+export const toolWire = (plugin: number, name: string) => `p${plugin + 1}_${name}`;
+export const toolShown = (wire: string) => wire.replace(/^p\d+_/, '');
+
 export type Event =
   | ToolEvent
   | { kind: 'input' | 'start' | 'output' }

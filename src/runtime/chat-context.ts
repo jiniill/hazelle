@@ -23,6 +23,7 @@ import { chatPrompt, type PromptChoice } from './prompts';
 import type { ReadModels } from './read-model';
 import type { ObjectStore } from './store';
 import type { Shown } from './talk';
+import { TOOL_ROUNDS } from './tool-loop';
 import type { TranslateInput } from './translate';
 
 type Reader = { store: Pick<ObjectStore, 'get' | 'children' | 'scopeState'> };
@@ -90,6 +91,9 @@ export const setAnswerInstruction = (store: ObjectStore, text: string) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (text === ANSWER_INSTRUCTION ? without(current, 'answerInstruction') : { ...current, answerInstruction: text }));
 
 export const usageShownOf = (store: Reader['store']) => store.get('settings', SETTINGS_ID)?.value.usageShown ?? false;
+
+export const setToolRounds = (store: ObjectStore, rounds: number) =>
+  store.upsert('settings', (current = EMPTY_SETTINGS) => (rounds === TOOL_ROUNDS ? without(current, 'toolRounds') : { ...current, toolRounds: rounds }));
 
 export const setUsageShown = (store: ObjectStore, shown: boolean) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (shown ? { ...current, usageShown: true } : without(current, 'usageShown')));

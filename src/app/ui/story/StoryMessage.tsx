@@ -1,4 +1,4 @@
-import { Ban, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ImageIcon, Languages, Scissors, Square, TriangleAlert, WandSparkles } from 'lucide-react';
+import { Ban, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ImageIcon, Languages, Scissors, Square, TriangleAlert, WandSparkles, Wrench } from 'lucide-react';
 import { createContext, useContext, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Button } from '../controls/Button';
 import { Facts, type FactItem } from '../collections/Facts';
@@ -166,8 +166,8 @@ export function Switcher({ count, prev, next, pick, axis = 'across' }: SwitcherP
   );
 }
 
-type MarkerProps = { reason: 'length' | 'stopped' | 'refused' | 'translation' | 'illustration' | 'agent'; label: string; action?: { label: string; disabled: boolean; onClick: () => void } };
-const MARKS = { length: Scissors, stopped: Square, refused: Ban, translation: Languages, illustration: ImageIcon, agent: WandSparkles };
+type MarkerProps = { reason: 'length' | 'stopped' | 'refused' | 'translation' | 'illustration' | 'agent' | 'tool'; label: string; action?: { label: string; disabled: boolean; onClick: () => void } };
+const MARKS = { length: Scissors, stopped: Square, refused: Ban, translation: Languages, illustration: ImageIcon, agent: WandSparkles, tool: Wrench };
 
 export function Marker({ reason, label, action }: MarkerProps) {
   return (

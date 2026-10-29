@@ -1,5 +1,6 @@
 import type { ChatMessage } from '../connectors/types';
 import type { Assembled, MemoryFill, PromptInput } from '../engine/pipeline';
+import { toolWire } from '../engine/script-api';
 import type { ChatScope } from '../engine/render';
 import type { Writes } from '../model/chat';
 import { live } from '../model/library';
@@ -19,6 +20,7 @@ import type { ScriptSchedule } from './script-schedule';
 import { scriptsOf, triggersOf } from './script-selection';
 import { startStages } from './script-start';
 import type { ObjectStore } from './store';
+import type { Tool, ToolArgs } from './tool-loop';
 import { toolsOf } from './tools/store';
 import type { Blocked, TurnContext } from './turn-context';
 
@@ -241,6 +243,25 @@ export class ScriptTurns {
       const memory = holder && remembered ? this.memoryOf(chat, holder, turn.scope, remembered, true) : turn.memory;
       return { tools, turn: { ...turn, memory, scope: { ...turn.scope, pending: [...(first.scope.pending ?? []), ...writes] }, reply: { ...turn.reply, before: [...(first.reply.before ?? []), ...writes] } } };
     });
+  }
+
+  // The turn's //@tool tools, each run in the chat's script queue on the turn's chat as the calls before it left it, with
+  // no deadline: the turn's stop ends it. Its state writes gather in writes, which the reply is saved with. null: no
+  // plugin of the chat has one.
+  calling(chat: string, turn: TurnContext, signal: AbortSignal): { tools: Tool[]; writes: Writes } | null {
+    const units = toolsOf(this.session.store, turn.chat).filter(({ tool }) => tool.manifest.functions?.length);
+    if (units.length === 0) return null;
+    const writes: Writes = [];
+    const run = (unit: ToolUnit, name: string) => (args: ToolArgs) => this.schedule.queued(chat, async () => {
+      const scope = { ...turn.scope, pending: [...(turn.scope.pending ?? []), ...writes] };
+      const { outcome } = await this.execution.dispatch(chat, { tool: unit, event: { kind: 'tool', name, args } }, scope, null, AbortSignal.any([signal, this.closing]));
+      writes.push(...outcome.writes);
+      if (typeof outcome.value === 'string') return outcome.value;
+      const [error] = outcome.errors;
+      return error ? `The tool failed: ${'message' in error ? error.message : 'it ran too long'}` : outcome.handled ? 'The tool answered nothing.' : 'The tool did not run: its plugin has no tool handler.';
+    });
+    const tools = units.flatMap((unit, at) => unit.tool.manifest.functions!.map(({ name, description, parameters }) => ({ def: { name: toolWire(at, name), description, parameters }, run: run(unit, name) })));
+    return { tools, writes };
   }
 
   // The last message a request always sends as it is (design §6.2), and one the chat does not hold, stand for nothing:

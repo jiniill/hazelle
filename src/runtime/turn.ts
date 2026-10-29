@@ -225,7 +225,9 @@ async function prepare(session: Session, chat: string, gathered: TurnContext, si
     const refitted = 'kind' in fitted ? null : await withPictures(session, fitted, signal);
     return refitted?.ok ? { prompt: refitted.data, fit: decision, retries: [...calibration.retries] } : null;
   };
-  return { route, settings, prompt: pictured.data, ...(diagnose && { diagnose }), calibration: { fit: calibration.fit, retries: [] }, refit, said, ...(before.length > 0 && { before }), ...(against && { forecast: against }), ...(shortened.preread && { preread: shortened.preread }), ...(agents.runs.length > 0 && { agents: agents.runs }) };
+  // A model whose catalog says it takes no tools is offered none; its plugins' other moments run as ever.
+  const calling = route.model.tools === false ? null : session.scriptTurns.calling(chat, turn, signal);
+  return { route, settings, prompt: pictured.data, ...(calling && { tools: calling }), ...(diagnose && { diagnose }), calibration: { fit: calibration.fit, retries: [] }, refit, said, ...(before.length > 0 && { before }), ...(against && { forecast: against }), ...(shortened.preread && { preread: shortened.preread }), ...(agents.runs.length > 0 && { agents: agents.runs }) };
 }
 
 // The reply's message's other versions, the one it takes the place of first, are where its pre notes are found again.

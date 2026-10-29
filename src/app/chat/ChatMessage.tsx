@@ -12,7 +12,7 @@ import { BOOKMARK } from '../common/words';
 import { describeFailedReply, describeTranslateFailure } from '../common/failure';
 import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
-import { usageFacts, usageLine, writtenSoFar } from '../common/receipt';
+import { toolLine, usageFacts, usageLine, writtenSoFar } from '../common/receipt';
 import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolWaiting } from '../common/words';
 import type { Reading } from '../../runtime/talk';
@@ -242,6 +242,8 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
     <>
       {selected && <SelectionButton icon={SquarePen} label="수정" at={selected.end} onPress={() => actions.edit(message, selected.part)} />}
       {editing === null && translationMark}
+      {editing === null && receipt?.toolsRefused && <Marker reason="tool" label="이 모델은 모델 도구를 지원하지 않아서 도구 없이 응답했어요." />}
+      {editing === null && receipt && toolLine(receipt) && <Marker reason="tool" label={toolLine(receipt)!} />}
       {drawing?.writing && <Marker reason="illustration" label="장면 구성 중" />}
       {polishing && <Marker reason="agent" label={polishingNow(polishing)} />}
       {raw && <Marker reason="agent" label="다듬기 전 응답" action={{ label: '다듬기 전으로 복원', disabled: busy, onClick: () => actions.restoreRaw(message) }} />}

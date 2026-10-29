@@ -8,7 +8,7 @@ import { without } from '../model/fields';
 import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
 import { firstTurns, groupOf, putBack, removeAccount as withoutAccount, signedIn } from '../model/turns';
 import type { ApiFailure, ApiResult } from './api';
-import { imageOnly, setDefaultModel } from './assignment';
+import { imageOnly, setDefaultModel, type Route } from './assignment';
 import { modelProfile, ownProfile } from './profiles';
 import type { CatalogFailure } from './catalog';
 import type { MetersFailure } from './meters';
@@ -175,6 +175,10 @@ export const setRetries = (store: ObjectStore, id: string, retries: number | und
 // The default count is kept as none, so it follows the default.
 export const setSharedRetries = (store: ObjectStore, retries: number) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (retries === RETRIES ? without(current, 'retries') : { ...current, retries }));
+
+// A model that refused the plugins' tools is sent none from then on, every entry of it on the connection.
+export const refuseTools = (store: ObjectStore, { connection, model }: Pick<Route, 'connection' | 'model'>) =>
+  store.update('connection', connection.id, (current) => ({ ...current, starred: current.starred.map((each) => (each.id === model.id ? { ...each, tools: false } : each)) }));
 
 export const removeConnection = (store: ObjectStore, id: string) => store.take('connection', id);
 

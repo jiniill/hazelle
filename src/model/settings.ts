@@ -47,6 +47,8 @@ export type Settings = {
   importNotice?: true;
   ledger?: 'filled' | { after: string };
   looks?: SavedLook[];
+  // How many model calls one reply may make while its model calls plugin tools, absent for TOOL_ROUNDS.
+  toolRounds?: number;
   // The shared 실패하면 다시 보내기, absent for RETRIES; a connection or a 설정 묶음 overrides it (runtime/connections retriesOf).
   retries?: number;
   loreBudget?: number;

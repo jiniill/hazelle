@@ -95,8 +95,14 @@ export type Receipt = {
   preread?: { material: number; brief: number; receipt: Receipt; reused?: true; saved: Cost | null };
   // Pre agents in stack order, then post agents in run order. Excluded from calls(): runtime/agents logs them.
   agents?: AgentRun[];
-  // Snapshot of the continued reply's receipt; nesting preserves every replaced call and its cost.
+  // Snapshot of the continued reply's receipt; nesting preserves every replaced call and its cost. A reply whose model
+  // called plugin tools continues the call that made the calls.
   continues?: Receipt;
+  // The plugin tools this call asked for (//@tool), each with the text it answered; result null: never run, the page
+  // having closed or the reply's rounds having run out. name: as sent (engine toolWire). Later turns send only the text.
+  tools?: { id: string; name: string; arguments: string; result: string | null }[];
+  // The model refused the plugins' tools, so the reply was asked for again without them.
+  toolsRefused?: true;
 };
 
 export type AgentRun = {

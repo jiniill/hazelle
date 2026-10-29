@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { RETRIES } from '../../connectors/registry';
 import { RETRY_MOST } from '../../contracts/streams';
-import { ANSWER_INSTRUCTION, answerInstructionOf, LORE_SCAN, setAnswerInstruction, setSharedLoreScan, setUsageShown, sharedLoreScan } from '../../runtime/chat-context';
+import { ANSWER_INSTRUCTION, answerInstructionOf, LORE_SCAN, setAnswerInstruction, setSharedLoreScan, setToolRounds, setUsageShown, sharedLoreScan } from '../../runtime/chat-context';
+import { TOOL_ROUNDS } from '../../runtime/tool-loop';
 import { setSharedRetries } from '../../runtime/connections';
 import { DetailFold } from '../common/DetailFold';
 import { filled, typedText, useTypedNumber } from '../common/typed';
@@ -15,7 +16,7 @@ import { NumberInput, SettingRow, Stepper, Switch, TextField } from '../ui';
 export function ChatDetailDefaults() {
   const store = useStore();
   const toast = useToast();
-  const { retries, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown } = useSettings();
+  const { retries, toolRounds, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown } = useSettings();
   const shared = sharedLoreScan(store);
   const flag = (key: 'recursive' | 'fullWordMatching', set: boolean | undefined) => (
     <SettingRow
@@ -27,7 +28,7 @@ export function ChatDetailDefaults() {
   );
   return (
     <DetailFold
-      set={[retries, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown].filter((value) => value !== undefined).length}
+      set={[retries, toolRounds, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown].filter((value) => value !== undefined).length}
       sections={[
         {
           title: CHAT_DETAIL.reply,
@@ -46,6 +47,22 @@ export function ChatDetailDefaults() {
                     min={0}
                     max={RETRY_MOST}
                     onChange={(next) => void setSharedRetries(store, next).then((result) => result.ok || toast.failed(result))}
+                  />
+                }
+              />
+              <SettingRow
+                label={TOOL_ROUNDS_LABEL}
+                help={`플러그인의 모델 도구를 쓸 때 응답 하나에 모델을 호출하는 최대 횟수예요. 기본값은 ${TOOL_ROUNDS}회예요.`}
+                changed={toolRounds !== undefined}
+                control={
+                  <Stepper
+                    label={TOOL_ROUNDS_LABEL}
+                    less="1회 줄이기"
+                    more="1회 늘리기"
+                    value={toolRounds ?? TOOL_ROUNDS}
+                    min={2}
+                    max={10}
+                    onChange={(next) => void setToolRounds(store, next).then((result) => result.ok || toast.failed(result))}
                   />
                 }
               />
@@ -76,6 +93,7 @@ export function ChatDetailDefaults() {
 }
 
 const USAGE_SHOWN = '사용량 표시';
+const TOOL_ROUNDS_LABEL = '모델 도구 호출 횟수';
 
 function SharedLoreNumber({ field, changed }: { field: 'tokenBudget' | 'scanDepth'; changed: boolean }) {
   const store = useStore();

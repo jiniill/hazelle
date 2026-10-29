@@ -24,6 +24,9 @@ export function argsOf(text: string): ToolArgs | null {
   }
 }
 
+// A reply's model calls while its model calls plugin tools, unless the account sets its own (Settings toolRounds).
+export const TOOL_ROUNDS = 5;
+
 // The one loop of "the model calls, each call runs, the results go back, the model goes on". onText hears every round.
 export async function toolLoop<T extends Sent | { kind: string }>({ tools, rounds: limit, signal, onText }: { tools: Tool[]; rounds: number; signal: AbortSignal; onText: GenerateInput['onText'] }, send: Send<T>): Promise<Looped<Extract<T, Sent>> | Exclude<T, Sent>> {
   type R = Extract<T, Sent>;

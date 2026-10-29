@@ -6,11 +6,11 @@ import { ChangeSignal } from '../change-signal';
 import type { Cues } from './cues';
 import type { ModelSettings } from '../connectors/settings';
 import type { InlineThoughts } from '../connectors/stream';
-import type { Phase } from '../connectors/types';
+import type { Phase, ToolCall, ToolResult } from '../connectors/types';
 import type { Assembled } from '../engine/pipeline';
 import type { Settle } from './preread';
 import type { CacheDiagnosis, CacheForecast, CacheText } from '../model/cache';
-import type { AgentRun, Message, Receipt, Writes } from '../model/chat';
+import { calls, type AgentRun, type Message, type Receipt, type Writes } from '../model/chat';
 import { without } from '../model/fields';
 import type { Stored } from '../model/kinds';
 import type { Stream } from '../model/stream';
@@ -18,7 +18,9 @@ import type { ApiFailure } from './api';
 import type { Route, RouteFailure } from './assignment';
 import { cacheKept, prefixKept, wireOf, wireTextOf, writePrint } from './cache';
 import { appendReply, appendUserMessage, savedElsewhere, type Said, type Written } from './chat-log';
-import { retriesOf } from './connections';
+import { refuseTools, retriesOf } from './connections';
+import { SETTINGS_ID } from '../model/settings';
+import { TOOL_ROUNDS, toolLoop, type Tool } from './tool-loop';
 import type { Costs } from './cost';
 import type { Credentials } from './credential';
 import { gather, generate, receiptOf, resume, unsettled, type GenerateInput, type Reply } from './generate';
@@ -57,7 +59,9 @@ export type Shown = Message & { live: string | null; whole?: true; batch?: true;
 
 // Reply id seeds the prompt; fit stored settings for sending. said is saved text, null if prepare saved it.
 // Receipt keeps forecast, pre-agent calls and preread savings measured from the reply itself.
-export type Ask = { diagnose?: (prompt: Assembled, wire: CacheText) => Promise<CacheDiagnosis | null>; calibration?: Pick<CallCalibration, 'fit' | 'retries'>; refit?: (refusal: ContextRefusal, measurement: InputMeasurement) => Promise<{ prompt: Assembled; fit: TokenFit; retries: CallCalibration['retries'] } | null>; route: Route; settings: ModelSettings; prompt: Assembled; said: Said | null; before?: Writes; forecast?: CacheForecast; preread?: Settle; agents?: AgentRun[] };
+export type Ask = { diagnose?: (prompt: Assembled, wire: CacheText) => Promise<CacheDiagnosis | null>; calibration?: Pick<CallCalibration, 'fit' | 'retries'>; refit?: (refusal: ContextRefusal, measurement: InputMeasurement) => Promise<{ prompt: Assembled; fit: TokenFit; retries: CallCalibration['retries'] } | null>; route: Route; settings: ModelSettings; prompt: Assembled; said: Said | null; before?: Writes; forecast?: CacheForecast; preread?: Settle; agents?: AgentRun[]; tools?: TurnTools };
+// The plugins' //@tool tools the model is offered (ScriptTurns.calling); writes: what their calls wrote to the chat's state.
+export type TurnTools = { tools: Tool[]; writes: Writes };
 
 // unsent: the user's message was not saved, so its reply was stopped. unsaved: the reply was written
 // but not saved; saveAgain(reply) tries it again. reply null: a restore ended the turn, and nothing is kept to save.
@@ -107,6 +111,13 @@ export function withTurn(messages: Message[], turn: Turn | null, chat: string): 
   // A new version continues nothing yet; one in another's place keeps what continues it.
   return slot === -1 ? out.slice(0, index + 1) : out;
 }
+
+// A receipt's tools: each call with the text that answered it, null for one never run.
+const toolsAsked = (made: ToolCall[], results: ToolResult[]): Pick<Receipt, 'tools'> =>
+  made.length ? { tools: made.map(({ id, name, arguments: args }) => ({ id, name, arguments: args, result: results.find((each) => each.id === id)?.text ?? null })) } : {};
+// What a model that cannot take tools answers them with: the request refused whole, before any text.
+const toolsRefusal = (answer: Reply) => answer.state === 'failed' && answer.error?.kind === 'provider' && 'status' in answer.error && (answer.error.status === 400 || answer.error.status === 422);
+const answeredWithout = (answer: Reply) => answer.state !== 'failed';
 
 // preparing: shows a call the reply waits for running, until the prompt is ready.
 type Prepare<F> = (signal: AbortSignal, preparing: (step: Preparing) => void) => Promise<Ask | F>;
@@ -202,7 +213,7 @@ export class Talk {
     this.unsaved.delete(reply.id);
     endCall(this.store, call);
     if (elsewhere) return null;
-    this.costs.settle(chat, reply.receipt);
+    for (const each of calls(reply.receipt)) this.costs.settle(chat, each);
     this.saved(chat, reply);
     return null;
   }
@@ -259,49 +270,95 @@ export class Talk {
     // A message sent translated or changed by the bot shows as it is saved from the moment it is made so.
     this.change(held, { ...without(held.turn, 'preparing'), reply, said: ready.said ?? said, ...(settings.streaming === false && { whole: true as const }) });
     const sending = ready.said && appendUserMessage(this.store, chat, ready.said);
-    const target = { chat, result: reply.id, for: { kind: 'reply' as const, message: reply.message, replaces: reply.replaces, ...(reply.follows !== undefined && { follows: reply.follows }), continues: reply.continues, ...(reply.before && { before: reply.before }) } };
     const batching = { waiting: () => this.change(held, { ...held.turn, whole: true, batch: true }), cancel: held.cancel.signal };
+    const calling = ready.tools ?? null;
+    // Each round after the first continues the one before it, as 이어 쓰기 does: its marker carries the text and the
+    // receipts so far, so a reload saves the reply whole, and the earlier round's marker gives way to it.
+    let continues = reply.continues;
+    const before = () => (calling?.writes.length ? [...(reply.before ?? []), ...calling.writes] : reply.before);
     let decision = ready.calibration;
-    let answer: Reply;
-    let call: Awaited<ReturnType<typeof newCall>>;
-    for (;;) {
-      call = await newCall({ store: this.store, tokens: this.tokens }, route, { id: crypto.randomUUID(), ...target });
-      if (decision) call.calibration = { ...call.calibration!, ...decision };
-      call.retrying = this.retrying(held);
-      this.reading.add(call.id);
-      held.calling = call.id;
-      this.change(held, { ...held.turn, reading: { at: Date.now(), text: held.turn.text.length, reasoning: held.turn.reasoning.length } });
-      const replying = generate({ credentials: this.credentials, log: this.log, connection: route.connection.value, model: route.model, settings, retries: retriesOf(this.store, route.connection.value, settings), messages: prompt.messages, call, signal: abort.signal, onText: this.writer(held, true), inline: this.inline(held), batching });
-      const sent = await sending;
-      if (sent && !sent.ok) {
-        held.cancel.abort();
-        abort.abort();
-        endCall(this.store, call.id);
-        await replying;
-        return { kind: 'unsent', failure: sent };
+    type Called = { answer: Reply; call: string };
+    // Set inside the rounds, which flow analysis does not follow.
+    let first = null as Called | null;
+    let last = null as Called | null;
+    let refused = false as boolean;
+    const rounds = this.store.get('settings', SETTINGS_ID)?.value.toolRounds ?? TOOL_ROUNDS;
+    const looped = await toolLoop({ tools: calling?.tools ?? [], rounds, signal: abort.signal, onText: this.writer(held, true) }, async (exchange, offered, onText) => {
+      if (last) {
+        const results = exchange.at(-1)!.results!;
+        const receipt: Receipt = { ...receiptOf(callOf(route), last.answer), ...(continues && { continues: continues.receipt }), ...toolsAsked(last.answer.calls, results) };
+        continues = { text: held.turn.text, receipt, seed: reply.continues?.seed ?? reply.id, ...(held.turn.reasoning && { reasoning: held.turn.reasoning }) };
       }
-      answer = await replying;
-      if (!answer.contextRefusal || !ready.refit || abort.signal.aborted || this.closed) break;
-      const fitted = await ready.refit(answer.contextRefusal, answer.calibration.measurement);
-      if (!fitted) break;
-      // No receipt, ledger row or visible retry state for a context refusal.
-      endCall(this.store, call.id);
-      this.reading.delete(call.id);
-      prompt = fitted.prompt;
-      decision = { fit: fitted.fit, retries: fitted.retries };
-    }
-    if (this.closed) return null;
-    const forecast = answer.calibration.retries.length ? undefined : ready.forecast;
+      let tools = offered;
+      let answer: Reply;
+      for (;;) {
+        const target = { chat, result: reply.id, for: { kind: 'reply' as const, message: reply.message, replaces: reply.replaces, ...(reply.follows !== undefined && { follows: reply.follows }), continues, ...(before() && { before: before() }) } };
+        const call = await newCall({ store: this.store, tokens: this.tokens }, route, { id: crypto.randomUUID(), ...target });
+        if (last) {
+          endCall(this.store, last.call);
+          this.reading.delete(last.call);
+        }
+        if (decision) call.calibration = { ...call.calibration!, ...decision };
+        call.retrying = this.retrying(held);
+        this.reading.add(call.id);
+        held.calling = call.id;
+        this.change(held, { ...held.turn, reading: { at: Date.now(), text: held.turn.text.length, reasoning: held.turn.reasoning.length } });
+        // A batched reply answers whole and later, so no round could follow a call: a turn that offers tools goes unbatched.
+        const replying = generate({ credentials: this.credentials, log: this.log, connection: route.connection.value, model: route.model, settings, retries: retriesOf(this.store, route.connection.value, settings), messages: [...prompt.messages, ...exchange], ...(tools && { tools }), call, signal: abort.signal, onText, inline: this.inline(held), ...(!tools && { batching }) });
+        const sent = await sending;
+        if (sent && !sent.ok) {
+          held.cancel.abort();
+          abort.abort();
+          endCall(this.store, call.id);
+          await replying;
+          return { kind: 'unsent' as const, failure: sent };
+        }
+        answer = await replying;
+        last = { answer, call: call.id };
+        // A model the catalogs say nothing of may refuse the tools outright: asked once more without them, and remembered.
+        if (tools && !first && route.model.tools === null && toolsRefusal(answer) && !abort.signal.aborted) {
+          endCall(this.store, call.id);
+          this.reading.delete(call.id);
+          last = null;
+          refused = true;
+          tools = undefined;
+          continue;
+        }
+        if (!answer.contextRefusal || !ready.refit || abort.signal.aborted || this.closed) break;
+        const fitted = await ready.refit(answer.contextRefusal, answer.calibration.measurement);
+        if (!fitted) break;
+        // No receipt, ledger row or visible retry state for a context refusal.
+        endCall(this.store, call.id);
+        this.reading.delete(call.id);
+        last = null;
+        prompt = fitted.prompt;
+        decision = { fit: fitted.fit, retries: fitted.retries };
+      }
+      first ??= last;
+      return { answer };
+    });
+    if ('kind' in looped && looped.kind === 'unsent') return looped;
+    if (this.closed || !first || !last) return null;
+    if (refused && answeredWithout(last.answer)) await refuseTools(this.store, route);
+    const lastRound = looped.rounds.at(-1)!;
+    // Stopped while a tool ran: the reply is cut there, as a stop mid-stream cuts it.
+    const answer: Reply = looped.kind === 'stopped' && lastRound.answer.cut === null ? { ...lastRound.answer, state: 'cut', cut: 'stopped' } : lastRound.answer;
+    const ended = { ...reply, continues, ...(before() && { before: before() }) };
+    const single = looped.rounds.length === 1;
+    // The cache view, its print and the forecast are the first round's: its request is what the next turn's begins with.
+    const opening = first.answer;
+    const forecast = single && !opening.calibration.retries.length ? ready.forecast : undefined;
     // Kept before the save, whose store change is what shows the reply's 정보.
-    const wire = answer.cache ? wireTextOf(answer.cache) : undefined;
+    const wire = opening.cache ? wireTextOf(opening.cache) : undefined;
     const diagnose = forecast && wire && ready.diagnose;
-    this.log.attach(chat, call.id, { prompt, forecast, wire, diagnosis: diagnose ? undefined : null });
-    if (diagnose) void diagnose(prompt, wire!).then((diagnosis) => this.log.attach(chat, call.id, { diagnosis }));
-    const written = this.written(held, reply, callOf(route), answer, Date.now(), forecast, ready.preread, ready.agents);
+    this.log.attach(chat, first.call, { prompt, forecast, wire, diagnosis: diagnose ? undefined : null });
+    if (diagnose) void diagnose(prompt, wire!).then((diagnosis) => this.log.attach(chat, first!.call, { diagnosis }));
+    const written = this.written(held, ended, callOf(route), answer, Date.now(), forecast, ready.preread, ready.agents, { ...toolsAsked(answer.calls, lastRound.results), ...(refused && { toolsRefused: true as const }) });
+    const opened = calls(written.receipt)[0]!;
     // The view is null where the request was not this page's, which a receipt without points does not tell apart.
-    const kept = answer.cache && (cacheKept(written.receipt) || prefixKept(this.store, chat, written.receipt));
-    const printing = kept && writePrint(this.store, chat, call.id, wireOf(route.connection.id, answer.account, answer.cache!, prompt.parts));
-    const saved = await this.save(chat, await this.ended(chat, written), call.id);
+    const kept = opening.cache && (cacheKept(opened) || prefixKept(this.store, chat, opened));
+    const printing = kept && writePrint(this.store, chat, first.call, wireOf(route.connection.id, opening.account, opening.cache!, prompt.parts));
+    const saved = await this.save(chat, await this.ended(chat, written), last.call);
     await printing;
     return saved;
   }
@@ -325,7 +382,8 @@ export class Talk {
         const answer = await resume({ store: this.store, credentials: this.credentials, log: this.log }, stream, held.abort.signal, this.writer(held), this.inline(held), { retrying: this.retrying(held), cancel: held.cancel.signal });
         // Not Date.now(): the call may have ended long before this page read it, and the cache timer counts back from at.
         const at = stream.value.at + answer.totalMs;
-        if (!this.closed) await this.save(chat, await this.ended(chat, this.written(held, reply, stream.value.call, answer, at)), stream.id);
+        // A round that called tools ends here: the page that would have run them is gone.
+        if (!this.closed) await this.save(chat, await this.ended(chat, this.written(held, reply, stream.value.call, answer, at, undefined, undefined, undefined, toolsAsked(answer.calls, []))), stream.id);
       });
     } finally {
       this.unseat(held);
@@ -353,8 +411,9 @@ export class Talk {
     return { keep, takeBack: (chars) => this.change(held, { ...held.turn, reasoning: held.turn.reasoning.slice(0, held.turn.reasoning.length - chars) }) };
   }
 
-  private written({ turn }: Held, reply: Turn['reply'], call: Stream['call'], answer: Reply, at: number, forecast?: CacheForecast, preread?: Ask['preread'], agents?: AgentRun[]): Written {
-    const made: Receipt = { ...receiptOf(call, answer), ...(forecast && { forecast }), ...(reply.continues && { continues: reply.continues.receipt }), ...(agents?.length && { agents }) };
+  // tools: the calls the last call made and what answered them (asked), and toolsRefused.
+  private written({ turn }: Held, reply: Turn['reply'], call: Stream['call'], answer: Reply, at: number, forecast?: CacheForecast, preread?: Ask['preread'], agents?: AgentRun[], tools: Pick<Receipt, 'tools' | 'toolsRefused'> = {}): Written {
+    const made: Receipt = { ...receiptOf(call, answer), ...(forecast && { forecast }), ...(reply.continues && { continues: reply.continues.receipt }), ...(agents?.length && { agents }), ...tools };
     const receipt: Receipt = preread ? { ...made, preread: preread(made) } : made;
     return { id: reply.id, message: reply.message, replaces: reply.replaces, ...(reply.follows !== undefined && { follows: reply.follows }), at, text: turn.text, receipt, seed: reply.continues?.seed, ...(reply.before && { before: reply.before }), ...(turn.reasoning && { reasoning: turn.reasoning }) };
   }

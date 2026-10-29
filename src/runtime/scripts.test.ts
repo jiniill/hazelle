@@ -22,7 +22,8 @@ import { EvaluationFailed, EvaluationStuck } from './evaluation';
 import { projectGreetings } from './greetings';
 
 import { openSession, type Session } from './session';
-import { answerable, inTurn, saying, stubRelay, testServer } from './testing';
+import { answerable, inTurn, saying, stubRelay, testServer, upstream } from './testing';
+import { RELAY_HEADER } from '../contracts/http';
 import { blankCard } from '../engine/import/card';
 import { chatNow, evaluateChat } from './chat-context';
 import { NOT_REHEARSED } from './script-preview';
@@ -460,6 +461,58 @@ async function toolChat(session: Session) {
   await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
   return { chat, module: added.data.id, variable: toolVar(parsed.tool.manifest, 'summary'), messages: () => fold(session.store.children('entry', chat)) };
 }
+
+async function diceChat(session: Session) {
+  await answerable(session);
+  const parsed = readTool(new TextEncoder().encode('//@api 1\n//@name dice\n//@author jin\n//@tool {"name":"roll","description":"Rolls a die."}'));
+  if (!parsed.ok) throw new Error('fixture');
+  const added = await importTool(session.store, session.files, parsed.tool);
+  if (!added.ok) throw new Error(added.error);
+  await setModuleAlways(session.store, added.data.id, true);
+  const chat = crypto.randomUUID();
+  await server.hold(session.store, chat);
+  await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+  return { chat, variable: toolVar(parsed.tool.manifest, 'last'), messages: () => fold(session.store.children('entry', chat)) };
+}
+const calling = (text: string, args: string) =>
+  new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: text, tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'p1_roll', arguments: args } }] }, finish_reason: 'tool_calls' }] })}\n\ndata: [DONE]\n\n`, { headers: { [RELAY_HEADER]: 'upstream' } });
+
+describe('plugin tools in a chat turn', () => {
+  it('runs the calls the model makes, sends the results back, and saves one reply with its calls and the tool\'s writes', async () => {
+    let variable = '';
+    const binding: Binding<ToolUnit> = { run: async (_chat, _unit, _scope, event) => ({ ...noOutcome(), ...(event.kind === 'tool' && { value: `${event.name} ${String(event.args.sides)}`, writes: [[variable, '"20"']] as [string, string][] }) }), close: () => {} };
+    await server.withSession(async (session) => {
+      const fixture = await diceChat(session);
+      variable = fixture.variable;
+      const log = stubRelay(inTurn([calling('굴려 볼게요. ', '{"sides":20}'), saying('20이 나왔어요.')]));
+      expect(await takeTurn(session, fixture.chat, { kind: 'send', text: '굴려 줘' })).toBeNull();
+      await expect.poll(() => fixture.messages().length).toBe(2);
+      const reply = shown(fixture.messages()[1]!);
+      expect(reply.text).toBe('굴려 볼게요. 20이 나왔어요.');
+      expect(reply.before).toEqual([[variable, '"20"']]);
+      expect(reply.receipt!.tools).toBeUndefined();
+      expect(reply.receipt!.continues!.tools).toEqual([{ id: 'c1', name: 'p1_roll', arguments: '{"sides":20}', result: 'roll 20' }]);
+      const [asked, again] = log.map(({ sent }) => JSON.parse(sent.body!));
+      expect(asked.tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(['p1_roll']);
+      expect(again.messages.slice(-2)).toMatchObject([{ role: 'assistant', content: '굴려 볼게요. ', tool_calls: [{ id: 'c1' }] }, { role: 'tool', tool_call_id: 'c1', content: 'roll 20' }]);
+    }, binding);
+  });
+
+  it('asks a model that refuses the tools once more without them, says so on the reply, and offers it none again', async () => {
+    await server.withSession(async (session) => {
+      const fixture = await diceChat(session);
+      const log = stubRelay(inTurn([upstream(400, { error: { message: 'tools are not supported' } }), saying('도구 없이 답할게요.'), saying('또 답할게요.')]));
+      expect(await takeTurn(session, fixture.chat, { kind: 'send', text: '굴려 줘' })).toBeNull();
+      await expect.poll(() => fixture.messages().length).toBe(2);
+      const reply = shown(fixture.messages()[1]!);
+      expect(reply).toMatchObject({ text: '도구 없이 답할게요.', receipt: { toolsRefused: true } });
+      expect(reply.receipt!.continues).toBeUndefined();
+      expect(JSON.parse(log[1]!.sent.body!).tools).toBeUndefined();
+      expect(await takeTurn(session, fixture.chat, { kind: 'send', text: '다시' })).toBeNull();
+      expect(JSON.parse(log[2]!.sent.body!).tools).toBeUndefined();
+    }, { run: async () => noOutcome(), close: () => {} });
+  });
+});
 
 describe('tool events through Scripts', () => {
   it('adds live slot text and before writes to a turn, reuses its forecast, and never starts Lua', async () => {

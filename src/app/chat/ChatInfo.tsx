@@ -106,6 +106,7 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
   }
   else {
     const earlier = calls(receipt).slice(0, -1);
+    const tooled = earlier.some((call) => call.tools);
     const entry = chat ? log.entry(chat, receipt.id) : null;
     body = (
       <>
@@ -115,7 +116,7 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
           <>
             {handEdited(version) && <Text variant="note">수정하기 전 응답의 정보예요.</Text>}
             {earlier.length > 0 && (
-              <Text variant="note">{`${earlier.length + 1}번 호출해서 이어 쓴 응답이에요. 비용은 호출할 때마다 발생해요.`}</Text>
+              <Text variant="note">{tooled ? `모델 도구를 사용해서 ${earlier.length + 1}번 호출한 응답이에요. 비용은 호출할 때마다 발생해요.` : `${earlier.length + 1}번 호출해서 이어 쓴 응답이에요. 비용은 호출할 때마다 발생해요.`}</Text>
             )}
             <Call receipt={receipt} entry={entry} onCache={onCache} />
             {receipt.preread && <PrereadCall preread={receipt.preread} />}
@@ -126,7 +127,7 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
               <Section level={3} title="이전 호출">
                 {earlier.map((call, index) => (
                   <Stack key={index} gap="related">
-                    <Text variant="note">{`${index === 0 ? '첫 응답' : `이어 쓰기 ${index}`} · ${call.modelName} · ${call.source}`}</Text>
+                    <Text variant="note">{`${index === 0 ? '첫 응답' : earlier[index - 1]!.tools ? `도구 실행 후 ${index}` : `이어 쓰기 ${index}`} · ${call.modelName} · ${call.source}`}</Text>
                     <Facts variant="tiles" items={callFacts(call)} />
                   </Stack>
                 ))}

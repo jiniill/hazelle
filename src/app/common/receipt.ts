@@ -1,5 +1,6 @@
 import type { Cost, Usage } from '../../connectors/types';
-import type { Receipt } from '../../model/chat';
+import { toolShown } from '../../engine/script-api';
+import { calls, type Receipt } from '../../model/chat';
 import type { UsagePart } from '../ui';
 import { money } from './money';
 import { count } from './typedNumber';
@@ -44,6 +45,17 @@ export function cacheShare(usage: Usage | null): number | null {
 // 사용량 표시: the line under a reply, led by its cost, and the facts it opens. Neither shows a cost the app does not
 // know (the user's pick, 2026-10-24; 응답 정보 still says it); the line also leaves out an unreported cache, which the
 // facts read as unknown. A cost still booking stays in both, as such.
+// The plugin tools a reply's model called, one quiet line: each name and the first words of what it answered.
+export function toolLine(receipt: Receipt): string | null {
+  const called = calls(receipt).flatMap(({ tools = [] }) => tools);
+  if (called.length === 0) return null;
+  return called.map(({ name, result }) => `${toolShown(name)} → ${result === null ? '실행하지 못함' : clipped(result)}`).join(' · ');
+}
+const clipped = (text: string) => {
+  const line = text.trim().split('\n')[0]!;
+  return line.length > 30 ? `${line.slice(0, 30)}…` : line;
+};
+
 export function usageLine(receipt: Receipt): { lead: string | null; parts: UsagePart[] } {
   const { usage } = receipt;
   const share = cacheShare(usage);

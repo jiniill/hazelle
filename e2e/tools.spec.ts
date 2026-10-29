@@ -28,6 +28,32 @@ async function importPlugin(page: Page, name: string) {
   await expect(page.getByRole('switch', { name: '항상 켜기', exact: true })).toBeChecked();
 }
 
+// The fake model in the roles given, connected first on a server of the spec's own.
+async function assign(page: Page, roles: string[]) {
+  const fresh = await enter(page);
+  if (fresh) {
+    await page.goto('/connections/new');
+    await page.getByRole('button', { name: /^직접 연결/ }).click();
+    await page.getByLabel('주소', { exact: true }).fill(FAKE_ADDRESS);
+    await page.getByRole('button', { name: 'OpenAI 호환', exact: true }).click();
+    await page.getByRole('button', { name: '모델 선택', exact: true }).click();
+    await page.getByRole('button', { name: `${FAKE_MODEL} 추가`, exact: true }).click();
+    // Through the app, not page.goto: a reload would drop the model still on its way to the server.
+    await settingsPage(page, '모델');
+  } else await page.goto('/models');
+  for (const role of roles) {
+    const picker = page.getByRole('button', { name: new RegExp(`^${role} · `) });
+    if ((await picker.innerText()).includes(FAKE_MODEL)) continue;
+    await picker.click();
+    const saved = saving(page);
+    await page.getByRole('menuitemradio', { name: new RegExp(`^${FAKE_MODEL}`) }).first().click();
+    await saved;
+    await expect(picker).toContainText(FAKE_MODEL);
+  }
+  await page.reload();
+  await expect(page.getByRole('button', { name: new RegExp(`^${roles.at(-1)} · `) })).toContainText(FAKE_MODEL);
+}
+
 async function openNotepad(page: Page) {
   await page.getByRole('button', { name: '채팅 메뉴', exact: true }).click();
   await page.getByRole('menuitemradio', { name: /^메모장 열기/ }).click();
@@ -44,30 +70,7 @@ test('tools keep a notepad across reload and put versioned aux summaries into th
   const main = () => requests().filter((request) => !auxiliary(request));
   const aux = () => requests().filter(auxiliary);
 
-  await test.step('assign both the conversation model and an explicit auxiliary model', async () => {
-    const fresh = await enter(page);
-    if (fresh) {
-      await page.goto('/connections/new');
-      await page.getByRole('button', { name: /^직접 연결/ }).click();
-      await page.getByLabel('주소', { exact: true }).fill(FAKE_ADDRESS);
-      await page.getByRole('button', { name: 'OpenAI 호환', exact: true }).click();
-      await page.getByRole('button', { name: '모델 선택', exact: true }).click();
-      await page.getByRole('button', { name: `${FAKE_MODEL} 추가`, exact: true }).click();
-      // Through the app, not page.goto: a reload would drop the model still on its way to the server.
-      await settingsPage(page, '모델');
-    } else await page.goto('/models');
-    for (const role of ['대화 모델', '보조 모델']) {
-      const picker = page.getByRole('button', { name: new RegExp(`^${role} · `) });
-      if ((await picker.innerText()).includes(FAKE_MODEL)) continue;
-      await picker.click();
-      const saved = saving(page);
-      await page.getByRole('menuitemradio', { name: new RegExp(`^${FAKE_MODEL}`) }).first().click();
-      await saved;
-      await expect(picker).toContainText(FAKE_MODEL);
-    }
-    await page.reload();
-    await expect(page.getByRole('button', { name: /^보조 모델 · / })).toContainText(FAKE_MODEL);
-  });
+  await test.step('assign both the conversation model and an explicit auxiliary model', () => assign(page, ['대화 모델', '보조 모델']));
 
   await test.step('import the reference notepad in settings and capture its tool section', async () => {
     await importPlugin(page, 'notepad');
@@ -307,4 +310,24 @@ test('a memory tool holds the memory slot, recalls by embedding, badges, follows
     await page.goto(chat);
     await expect(await memoryPanel()).not.toContainText('플러그인이 장기 기억을 관리하고 있어요');
   });
+});
+
+test('a plugin tool the chat model calls runs in the turn, and the reply shows the call', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // The other specs' plugins stay on in this account and ask the fake model too, never with tools.
+  const sent = await fakeProvider((request) => request.messages.at(-1)?.role === 'tool' ? ['The die shows 17.'] : request.tools?.length ? ['Rolling. ', { call: 'p1_roll', arguments: '{"sides":20}' }] : ['A summary.']);
+  await assign(page, ['대화 모델']);
+  await importPlugin(page, 'dice');
+  await page.goto('/');
+  const report = await importFile(page, pickBot, CARD);
+  await report.getByRole('button', { name: '채팅 시작', exact: true }).click();
+  await page.getByLabel('메시지', { exact: true }).fill('Roll a d20 for me.');
+  await page.getByRole('button', { name: '보내기', exact: true }).click();
+  const reply = page.getByRole('article').last();
+  await expect(reply).toContainText('Rolling. The die shows 17.');
+  await expect(reply.getByText('roll → 17', { exact: true })).toBeVisible();
+  const answered = (sent as FakeChatRequest[]).find((request) => request.messages.at(-1)?.role === 'tool')!;
+  expect(answered.messages.at(-1)!.content).toBe('17');
+  await page.reload();
+  await expect(page.getByRole('article').last().getByText('roll → 17', { exact: true })).toBeVisible();
 });
