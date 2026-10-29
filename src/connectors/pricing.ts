@@ -47,3 +47,10 @@ export function discounted(price: Rates, rates: DiscountRates): Rates {
   });
   return { ...scale(price), tiers: price.tiers.map(scale) };
 }
+
+// Calls' costs together, when every one is known and in one unit; null otherwise.
+export function sumCosts(costs: (Cost | null)[]): Cost | null {
+  const known = costs.filter((each): each is Cost => each !== null);
+  if (!known.length || known.length !== costs.length || new Set(known.map(({ unit }) => unit)).size !== 1) return null;
+  return { unit: known[0]!.unit, amount: known.reduce((sum, { amount }) => sum + amount, 0), source: known.some(({ source }) => source === 'price-list') ? 'price-list' : 'reported' };
+}

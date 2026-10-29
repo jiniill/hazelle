@@ -362,6 +362,8 @@ export function describeAskFailure(failure: Exclude<Extract<PluginAsked, { ok: f
       return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
     case 'unsaved':
       return `사용량을 저장하지 못해 답을 버렸어요. ${describeFailure(failure.failure)}`;
+    case 'too-many-calls':
+      return '모델이 테스트만 반복하고 답을 주지 않아서 멈췄어요.';
     default:
       return describeRoute(failure, MODEL_ROLES.main, null);
   }

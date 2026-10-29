@@ -111,7 +111,7 @@ export async function generate({ credentials, log, connection, model, settings, 
     // A provider batch can keep running and billing after the page closes; a guest has no detached replies.
     if (batches && !detachedReplies()) return reply(...failedWith({ kind: 'app', code: 'needs-account' }));
     // A batch answers whole, and both batch formats refuse a request that streams.
-    const prepared = prepareChat(route, { model, messages, settings: batches ? { ...settings, streaming: false } : settings });
+    const prepared = prepareChat(route, { ...asked, settings: batches ? { ...settings, streaming: false } : settings });
     request = prepared.request;
     if (call.measure) call.calibration = { ...(call.calibration ?? unavailableCalibration('preparation')), measurement: await call.measure(prepared) };
     if (call.preflight) {

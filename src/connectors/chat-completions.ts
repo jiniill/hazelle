@@ -72,7 +72,7 @@ function wireMessages(messages: ChatMessage[], cache: Cache | undefined, mark: C
     const built = wired(message, cache, mark);
     if (message.calls?.length) {
       const echo = message.calls[0]!.echo;
-      return [{ ...built, ...(message.content === '' && { content: null }), tool_calls: message.calls.map(wireCall), ...(isRecord(echo) && echo) }];
+      return [{ ...built, ...(message.content === '' && { content: null }), tool_calls: message.calls.map(wireCall), ...(isRecord(echo) && Object.fromEntries(REASONING.flatMap((field) => (typeof echo[field] === 'string' ? [[field, echo[field]]] : [])))) }];
     }
     if (!message.results?.length) return [built];
     const results = message.results.map(({ id, text }) => ({ role: 'tool', tool_call_id: id, content: text }));

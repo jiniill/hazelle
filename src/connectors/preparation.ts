@@ -36,8 +36,8 @@ export function prepareChat(route: Route, asked: ChatRequest): PreparedChat {
   wire.segments.push(...sent.flatMap(({ role, calls = [], results = [] }) => [...calls.map((call) => ({ role, text: `${call.name}${call.arguments}` })), ...results.map((result) => ({ role, text: result.text }))]));
   const messages = route.endpoint.protocol === 'responses' ? body.input : route.endpoint.protocol === 'gemini' ? body.contents : body.messages;
   for (const message of list(messages)) {
-    // chat-completions' own tool turns hold the results already counted above.
-    if (!isRecord(message) || message.role === 'tool') continue;
+    // Tool turns (chat-completions' tool role, Responses' role-less call and result items) hold what is counted above.
+    if (!isRecord(message) || message.role === 'tool' || message.role === undefined) continue;
     wire.messages++;
     content(route.endpoint.protocol === 'gemini' ? message.parts : message.content, String(message.role));
   }

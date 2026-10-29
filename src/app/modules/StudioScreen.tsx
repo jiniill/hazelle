@@ -10,7 +10,7 @@ import type { ObjectStore } from '../../runtime/store';
 import { routeOf, sharedModel } from '../../runtime/assignment';
 import { writeWhole } from '../../runtime/export-file';
 import { addDraftAsk, applyPreview, deleteDraft, restoreDraft, saveDraft, type DraftFile } from '../../runtime/tools/drafts';
-import { askEstimate, askPlugin, type PluginAsked } from '../../runtime/tools/plugin-writer';
+import { askEstimate, askPlugin, type PluginAsked, type TestStep } from '../../runtime/tools/plugin-writer';
 import { ACTS } from '../common/acts';
 import { jsLanguage } from '../common/code/javascript';
 import { fileNamed } from '../common/download';
@@ -22,14 +22,14 @@ import { FileExport } from '../common/FileExport';
 import { cost } from '../common/receipt';
 import { useAutosave } from '../common/useAutosave';
 import { STOP, TOOL, toolVersion } from '../common/words';
-import { useConnections, useSession, useStore } from '../session';
+import { useChats, useConnections, useSession, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
 import { Button, Callout, CodeField, CommentBox, Empty, Exchange, Facts, MenuItem, NavBar, Row, Screen, Section, Stack, Tag, TextDiff, TextField, type CodeAside } from '../ui';
 import { ApplyDialog } from './ApplyDialog';
 import { draftTitle, USE_TAGS } from './studio';
-import { TestPane } from './StudioTest';
+import { TestPane, testRunner, type TestSetup } from './StudioTest';
 
 function askFoot(store: ObjectStore, ask: Pick<DraftAsk, 'model' | 'cost'>): string {
   const route = routeOf(store, ask.model);
@@ -47,6 +47,7 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
   const [applying, setApplying] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [fix, setFix] = useState<Fix | null>(null);
+  const [setup, setSetup] = useState<TestSetup>({ chat: null, calling: false, model: null });
 
   async function remove() {
     const removed = await autosave.remove(() => deleteDraft(store, id));
@@ -57,12 +58,14 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
   }
 
   const asides: CodeAside[] = [
-    { label: 'AI', body: () => <AiPane id={id} draft={draft} flush={autosave.flush} fix={fix} /> },
+    { label: 'AI', body: () => <AiPane id={id} draft={draft} flush={autosave.flush} fix={fix} setup={setup} /> },
     {
       label: '테스트',
       body: (reveal, show) => (
         <TestPane
           draft={draft}
+          setup={setup}
+          onSetup={setSetup}
           reveal={reveal}
           onFix={(ask) => {
             setFix({ ask, at: Date.now() });
@@ -116,12 +119,13 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
 type Pending = { ask: string; before: string; asked: Extract<PluginAsked, { ok: true }> };
 // AI로 수정 from 테스트: sent as an ask at once, or left in the box while another ask is running or waits to be kept.
 type Fix = { ask: string; at: number };
-type Run = { kind: 'idle' } | { kind: 'running'; ask: string; length: number } | { kind: 'failed'; ask: string; message: string } | { kind: 'answered'; pending: Pending };
+type Run = { kind: 'idle' } | { kind: 'running'; ask: string; length: number; steps: TestStep[] } | { kind: 'failed'; ask: string; message: string; steps: TestStep[] } | { kind: 'answered'; pending: Pending };
 
-function AiPane({ id, draft, flush, fix }: { id: string; draft: ToolDraft; flush: () => Promise<boolean>; fix: Fix | null }) {
+function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft; flush: () => Promise<boolean>; fix: Fix | null; setup: TestSetup }) {
   const session = useSession();
   const { store } = session;
   useConnections();
+  const chats = useChats();
   const toast = useToast();
   const [ask, setAsk] = useState('');
   const [run, setRun] = useState<Run>({ kind: 'idle' });
@@ -155,15 +159,19 @@ function AiPane({ id, draft, flush, fix }: { id: string; draft: ToolDraft; flush
     const controller = new AbortController();
     abort.current = controller;
     setAsk('');
-    setRun({ kind: 'running', ask: asked, length: 0 });
-    const answer = await askPlugin(session, { body: before, ask: asked, model: picked }, controller.signal, (live) => setRun({ kind: 'running', ask: asked, length: live.length }));
+    const steps: TestStep[] = [];
+    let length = 0;
+    const show = () => setRun({ kind: 'running', ask: asked, length, steps: [...steps] });
+    show();
+    const runner = testRunner(session, draft, setup.chat ?? chats[0]?.id ?? null, setup);
+    const answer = await askPlugin(session, { body: before, ask: asked, model: picked }, controller.signal, (live) => { length = live.length; show(); }, runner, (step) => { steps.push(step); show(); });
     abort.current = null;
     if (!answer.ok) {
       if (answer.failure.kind === 'stopped') {
         setAsk(asked);
         return setRun({ kind: 'idle' });
       }
-      return setRun({ kind: 'failed', ask: asked, message: describeAskFailure(answer.failure) });
+      return setRun({ kind: 'failed', ask: asked, message: describeAskFailure(answer.failure), steps });
     }
     if (!answer.answer.ok) {
       const kept = await addDraftAsk(store, id, { ask: asked, note: answer.answer.note, model: answer.model, cost: answer.cost, at: Date.now() }, null);
@@ -187,14 +195,20 @@ function AiPane({ id, draft, flush, fix }: { id: string; draft: ToolDraft; flush
       {draft.asks.map((each) => (
         <Exchange key={each.at} ask={each.ask} answer={each.note} foot={askFoot(store, each)} />
       ))}
-      {run.kind === 'running' && <Exchange ask={run.ask} answer="생성 중…" />}
+      {run.kind === 'running' && (
+        <Exchange ask={run.ask} answer="생성 중…">
+          <TestSteps steps={run.steps} />
+        </Exchange>
+      )}
       {run.kind === 'failed' && (
         <Exchange ask={run.ask}>
+          <TestSteps steps={run.steps} />
           <Callout tone="warn">{run.message}</Callout>
         </Exchange>
       )}
       {pending && pending.asked.answer.ok && (
         <Exchange ask={pending.ask} answer={pending.asked.answer.note} foot={askFoot(store, pending.asked)}>
+          <TestSteps steps={pending.asked.steps} />
           <PendingChange pending={pending} current={draft.body} onSettle={(keep) => void settle(pending, keep)} />
         </Exchange>
       )}
@@ -217,6 +231,13 @@ function AiPane({ id, draft, flush, fix }: { id: string; draft: ToolDraft; flush
       />
     </Stack>
   );
+}
+
+// The AI's test runs for one ask, each its moment and how it ended.
+function TestSteps({ steps }: { steps: TestStep[] }) {
+  if (!steps.length) return null;
+  const ended = ({ ended: how }: TestStep) => (how === 'passed' ? '통과' : how === 'unheard' ? '핸들러 없음' : `오류: ${how.failed}${how.line === null ? '' : ` (${how.line}번째 줄)`}`);
+  return <Facts items={steps.map((step, index) => ({ label: `테스트 ${index + 1} · ${step.moment}`, value: ended(step) }))} />;
 }
 
 function PendingChange({ pending, current, onSettle }: { pending: Pending; current: string; onSettle: (keep: boolean) => void }) {

@@ -35,12 +35,14 @@ hazelle.on('reply', async (chat, reply) => {
 API:
 `;
 
-// body: the draft's file without its identity lines; null for a new file.
-export function pluginAskMessages(api: string, body: string | null, ask: string): ChatMessage[] {
+// body: the draft's file without its identity lines; null for a new file. runs: the test runs the run_test tool allows,
+// 0 where it is not offered.
+export function pluginAskMessages(api: string, body: string | null, ask: string, runs = 0): ChatMessage[] {
   const file = body === null ? 'The file is new. Begin it with //@display-name <a short Korean name> and //@description <one Korean sentence>.' : `The current file, without the identity lines the app keeps:\n${body}`;
+  const testing = runs ? `\n\nBefore you answer, run the whole new file with run_test at the moments the change touches, and fix what it reports. At most ${runs} runs. Then answer as the rules say.` : '';
   return [
     { role: 'system', content: RULES + api },
-    { role: 'user', content: `${file}\n\nRequest:\n${ask}` },
+    { role: 'user', content: `${file}${testing}\n\nRequest:\n${ask}` },
   ];
 }
 

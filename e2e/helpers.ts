@@ -103,8 +103,10 @@ export const FAKE_PROVIDER = '127.0.0.1:4419';
 export const FAKE_ADDRESS = `http://${FAKE_PROVIDER}/v1`;
 
 const REPLY = ['{{char}} smiles. ', '[[bow]]'];
-export type FakeChatRequest = { model: string; messages: { role: string; content: string }[]; stream?: boolean };
-let reply: (request: FakeChatRequest) => readonly string[] = () => REPLY;
+export type FakeChatRequest = { model: string; messages: { role: string; content: string }[]; stream?: boolean; tools?: unknown[] };
+// A part of a reply: text, or a tool call, which streams its arguments in two pieces.
+export type FakePart = string | { call: string; arguments: string };
+let reply: (request: FakeChatRequest) => readonly FakePart[] = () => REPLY;
 let heard: unknown[] = [];
 export type FakeEmbedRequest = { model: string; input: string[] };
 export const embedded: FakeEmbedRequest[] = [];
@@ -138,8 +140,13 @@ function upstream(): Promise<void> {
       const body = JSON.parse(Buffer.concat(chunks).toString()) as FakeChatRequest;
       heard.push(body);
       const parts = reply(body);
-      if (body.stream === false) return response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: parts.join('') }, finish_reason: 'stop' }] }));
-      const events = [...parts.map((content) => ({ choices: [{ delta: { content } }] })), { choices: [{ delta: {}, finish_reason: 'stop' }] }];
+      const texts = parts.filter((part) => typeof part === 'string');
+      const calls = parts.flatMap((part) => (typeof part === 'string' ? [] : [part])).map((part, index) => ({ index, id: `call_${index}`, type: 'function', function: { name: part.call, arguments: part.arguments } }));
+      const finish = calls.length ? 'tool_calls' : 'stop';
+      if (body.stream === false) return response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: texts.join(''), ...(calls.length && { tool_calls: calls }) }, finish_reason: finish }] }));
+      const half = (text: string) => [text.slice(0, text.length >> 1), text.slice(text.length >> 1)];
+      const called = calls.flatMap(({ index, id, type, function: { name, arguments: text } }) => half(text).map((piece, at) => ({ choices: [{ delta: { tool_calls: [at ? { index, function: { arguments: piece } } : { index, id, type, function: { name, arguments: piece } }] } }] })));
+      const events = [...texts.map((content) => ({ choices: [{ delta: { content } }] })), ...called, { choices: [{ delta: {}, finish_reason: finish }] }];
       response.writeHead(200, { 'content-type': 'text/event-stream' });
       response.end([...events.map((event) => JSON.stringify(event)), '[DONE]'].map((data) => `data: ${data}\n\n`).join(''));
     });
@@ -150,7 +157,7 @@ function upstream(): Promise<void> {
   return listening;
 }
 
-export async function fakeProvider(answer: (request: FakeChatRequest) => readonly string[] = () => REPLY): Promise<unknown[]> {
+export async function fakeProvider(answer: (request: FakeChatRequest) => readonly FakePart[] = () => REPLY): Promise<unknown[]> {
   await upstream();
   heard = [];
   embedded.length = 0;
