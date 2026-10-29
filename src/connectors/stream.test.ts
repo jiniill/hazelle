@@ -86,6 +86,7 @@ describe('chat completions stream', () => {
         usage: { inputTokens: 12, cachedInputTokens: 0, cacheWriteInputTokens: null, outputTokens: 20, reasoningTokens: 8 },
         cost: { unit: 'usd', amount: 0.00042, source: 'reported' },
         replyId: null,
+        calls: [],
       },
     });
   });
@@ -169,6 +170,7 @@ describe('anthropic messages stream', () => {
         usage: { inputTokens: 125, cachedInputTokens: 100, cacheWriteInputTokens: 20, outputTokens: 15, reasoningTokens: null },
         cost: null,
         replyId: null,
+        calls: [],
       },
     });
   });
@@ -206,6 +208,7 @@ describe('a reply asked for whole', () => {
         usage: { inputTokens: 12, cachedInputTokens: 0, cacheWriteInputTokens: null, outputTokens: 20, reasoningTokens: 8 },
         cost: { unit: 'usd', amount: 0.00042, source: 'reported' },
         replyId: 'gen-1759550000-AbCdEfGhIjKlMnOp',
+        calls: [],
       },
     });
   });
@@ -223,6 +226,7 @@ describe('a reply asked for whole', () => {
         usage: { inputTokens: 125, cachedInputTokens: 100, cacheWriteInputTokens: 20, outputTokens: 15, reasoningTokens: null },
         cost: null,
         replyId: 'msg_01XFDUDYJgAACzvnptvVoYEL',
+        calls: [],
       },
     });
   });

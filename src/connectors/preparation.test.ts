@@ -50,3 +50,15 @@ it('recognizes only context refusals and never mistakes a total requested count 
   expect(contextRefusal('chat-completions', { status: 429, code: 'context_length_exceeded', detail: '' })).toBeNull();
   expect(contextRefusal('anthropic-messages', { status: 400, detail: 'max_tokens must be greater than thinking.budget_tokens' })).toBeNull();
 });
+
+it('counts tools, calls and results once in every format, and refuses tools where the catalog says the model takes none', () => {
+  const tools = [{ name: 'run_test', description: 'Runs the file.', parameters: { type: 'object', properties: {} } }];
+  const turns: ChatMessage[] = [{ role: 'user', content: 'ask' }, { role: 'assistant', content: '', calls: [{ id: 'c1', name: 'run_test', arguments: '{"moment":"reply"}' }] }, { role: 'user', content: '', results: [{ id: 'c1', name: 'run_test', text: 'passed' }] }];
+  for (const protocol of ['chat-completions', 'responses', 'anthropic-messages', 'gemini'] as const) {
+    const texts = prepareChat(route(protocol), { model, messages: turns, settings: {}, tools }).wire.segments.map(({ text }) => text);
+    expect(texts.filter((text) => text === 'passed')).toHaveLength(1);
+    expect(texts.filter((text) => text.includes('"moment":"reply"'))).toHaveLength(1);
+    expect(texts).toContain(JSON.stringify(tools));
+  }
+  expect(() => prepareChat(route('chat-completions'), { model: { ...model, tools: false }, messages: turns, settings: {}, tools })).toThrow('tools-unsupported');
+});

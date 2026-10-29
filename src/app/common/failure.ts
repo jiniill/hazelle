@@ -165,6 +165,7 @@ const REFUSED: Record<string, string> = {
   'unsupported-protocol': '이 모델의 요청 방식은 지원하지 않아요.',
   'image-only': '이미지만 만드는 모델이라 대화에는 쓸 수 없어요.',
   'no-picture-input': NO_PICTURES,
+  'tools-unsupported': '이 모델은 도구를 사용할 수 없어요.',
   'too-many-characters': '이 모델이 한 장면에 그릴 수 있는 최대 인물 수를 넘었어요.',
   'unknown-model': '현재 버전에서 알 수 없는 모델이에요. 화면을 새로고침해 주세요.',
   'unknown-sampler': '이 모델이 지원하지 않는 샘플러예요. 삽화 프롬프트에서 샘플러를 다시 선택해 주세요.',

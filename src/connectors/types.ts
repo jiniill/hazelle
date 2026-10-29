@@ -95,12 +95,23 @@ export type ChatMessage = {
   pictures?: InputPicture[];
   // Row ids, not bytes, cross the worker and scripts. runtime/pictures resolves them before codecs run.
   inlays?: string[];
+  // Assistant only: the tools the model called in this turn.
+  calls?: ToolCall[];
+  // User only: the answers to the calls of the assistant message before it, ahead of any content. A user turn, as
+  // Messages and Gemini take them; chat-completions and Responses send them as items of their own.
+  results?: ToolResult[];
 };
+// parameters: a JSON Schema object.
+export type ToolDef = { name: string; description: string; parameters: Record<string, unknown> };
+// arguments: the JSON text as the model sent it, unparsed, so unreadable arguments are answered as such.
+export type ToolCall = { id: string; name: string; arguments: string };
+// name: Gemini answers a call by its name, not its id.
+export type ToolResult = { id: string; name: string; text: string };
 // type: the media type; data: the bytes as base64.
 export type InputPicture = { type: string; data: string };
 export const seesPictures = (model: Pick<Starred, 'input' | 'pictures'>) => (model.input === null ? model.pictures === true : model.input.includes('image'));
 export const carriesPictures = (message: ChatMessage) => (message.pictures?.length ?? 0) > 0;
-export type ChatRequest = { model: Model; messages: ChatMessage[]; settings: ModelSettings };
+export type ChatRequest = { model: Model; messages: ChatMessage[]; settings: ModelSettings; tools?: ToolDef[] };
 
 // A missing count stays null. Filling it with 0 would read as a measured zero and shrink totals.
 export type Usage = {
@@ -129,7 +140,8 @@ export type MeterRequest = { request(secret: string): HttpRequest; parse(payload
 export type Phase = 'text' | 'reasoning';
 
 // tier: the service tier the reply says served it; null where it names none.
-export type StreamFacts = { rawUsage: Record<string, unknown>; finishReason: string | null; id: string | null; tier: string | null };
+// calls: the tool calls read so far; at is the codec's own key for a call's later chunks (an index, an item id).
+export type StreamFacts = { rawUsage: Record<string, unknown>; finishReason: string | null; id: string | null; tier: string | null; calls: (ToolCall & { at: number | string })[] };
 
 export type Terminal = { state: 'completed' } | { state: 'failed'; error: string; code?: string };
 

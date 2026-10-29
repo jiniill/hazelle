@@ -97,7 +97,7 @@ describe('Gemini', () => {
 
   it('reports the tier usageMetadata says served it, streamed and whole, which Google’s batch lane does not read', async () => {
     const event = { candidates: [{ content: { parts: [{ text: '안녕' }], role: 'model' }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1, trafficType: 'ON_DEMAND_FLEX' } };
-    const facts = (): StreamFacts => ({ rawUsage: {}, finishReason: null, id: null, tier: null });
+    const facts = (): StreamFacts => ({ rawUsage: {}, finishReason: null, id: null, tier: null, calls: [] });
     const streamed = facts();
     gemini.read(event, streamed, () => {});
     const whole = facts();

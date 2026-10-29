@@ -7,7 +7,7 @@ import { batchLane, cacheView, laneBusy, resolveConnection, resolveModel, RETRYA
 import { decodeStream, type InlineThoughts, type Outcome } from '../connectors/stream';
 import type { ModelSettings } from '../connectors/settings';
 import type { PulseLabel } from '../contracts/pulse';
-import { ConnectorError, type Account, type Batches, type ChatMessage, type Connection, type HttpRequest, type Model, type Phase, type Starred } from '../connectors/types';
+import { ConnectorError, type Account, type Batches, type ChatMessage, type Connection, type HttpRequest, type Model, type Phase, type Starred, type ToolDef } from '../connectors/types';
 import { callRef, type Receipt, type ReceiptError } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import type { Stream } from '../model/stream';
@@ -56,6 +56,8 @@ export type GenerateInput = {
   // How many times a try that failed for a moment is sent again (connections retriesOf).
   retries: number;
   messages: ChatMessage[];
+  // Offered to the model; the reply's calls come back in Reply.calls, for the caller to run and answer.
+  tools?: ToolDef[];
   // logged: who the call is for, as newCall and pageCall know it.
   call: StreamCall & { logged: Logged };
   signal: AbortSignal;
@@ -66,7 +68,7 @@ export type GenerateInput = {
   batching?: { waiting: () => void; cancel: AbortSignal };
 };
 
-export async function generate({ credentials, log, connection, model, settings, retries, messages, call, signal, onText, inline, batching }: GenerateInput): Promise<Reply> {
+export async function generate({ credentials, log, connection, model, settings, retries, messages, tools, call, signal, onText, inline, batching }: GenerateInput): Promise<Reply> {
   const at = Date.now();
   const started = performance.now();
   let firstText: number | null = null;
@@ -101,7 +103,7 @@ export async function generate({ credentials, log, connection, model, settings, 
   let route: Route;
   let request: HttpRequest;
   let batches: Batches | null;
-  const asked = { model, messages, settings };
+  const asked = { model, messages, settings, ...(tools && { tools }) };
   try {
     route = resolveModel(resolved, model);
     protocol = route.endpoint.protocol;
@@ -213,7 +215,7 @@ function recorded(response: Response): { response: Response; body: () => string 
 }
 
 type Answered = [Omit<Outcome, 'error'>, Reply['error']];
-const EMPTY = { finishReason: null, usage: null, cost: null, replyId: null };
+const EMPTY = { finishReason: null, usage: null, cost: null, replyId: null, calls: [] };
 const STOPPED: Answered = [{ state: 'cut', cut: 'stopped', ...EMPTY }, null];
 const failedWith = (error: NonNullable<Reply['error']>): Answered => [{ state: 'failed', cut: null, ...EMPTY }, error];
 

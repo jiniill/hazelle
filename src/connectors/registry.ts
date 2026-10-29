@@ -151,7 +151,7 @@ export function embedAnswer(route: Route, model: Model, payload: unknown, count:
   const parsed = embedsOf(route)!.parse(payload, count);
   if (!parsed) return null;
   const { vectors, usage, raw } = parsed;
-  const cost = route.type?.cost?.({ facts: { rawUsage: raw, finishReason: null, id: null, tier: null }, usage, model }) ?? (model.price ? priceCost(model.price, usage, costUnit(route.type)) : null);
+  const cost = route.type?.cost?.({ facts: { rawUsage: raw, finishReason: null, id: null, tier: null, calls: [] }, usage, model }) ?? (model.price ? priceCost(model.price, usage, costUnit(route.type)) : null);
   return { vectors, usage, cost };
 }
 
@@ -184,11 +184,11 @@ export function modelSettings(connection: Connection, model: Model): SettingsSch
 
 // settings is the 묶음's as stored; the 모델 설정 screen names each change with the same fit().
 // chatRequest writes it and cacheView reads it, so a forecast compares what is sent.
-export function sending(route: Route, { model, messages, settings: stored }: ChatRequest): ChatRequest {
+export function sending(route: Route, { model, messages, settings: stored, tools }: ChatRequest): ChatRequest {
   const { settings } = fit(settingsSchema(carries(route, model), model), stored);
   const roled = settings.systemAsUser ? messages.map((message) => (message.role === 'system' ? { ...message, role: 'user' as const } : message)) : inlined(route.codec.inlineSystem, messages);
   const placed = cachePoints(roled, settings.cache !== undefined);
-  return { model, messages: settings.pdf && route.codec.pack ? route.codec.pack(placed, settings.pdf) : placed, settings };
+  return { model, messages: settings.pdf && route.codec.pack ? route.codec.pack(placed, settings.pdf) : placed, settings, ...(tools?.length && { tools }) };
 }
 
 // Only the system messages before the conversation go to the API's system field, so none is sent ahead of where the
@@ -218,6 +218,8 @@ export function chatRequest(route: Route, request: ChatRequest): HttpRequest {
   const sent = sending(route, request);
   const pictures = sent.messages.some(carriesPictures);
   if (pictures && !seesPictures(sent.model)) throw new ConnectorError('no-picture-input');
+  // Only a catalog's own no; most say nothing, and those are sent.
+  if (sent.tools && sent.model.tools === false) throw new ConnectorError('tools-unsupported');
   const codec = codecRequest(route, sent);
   // Last, over the codec's, the discount lane's and the output limit's fields: the user's own field wins.
   const built = sent.settings.extra && codec.body ? { ...codec, body: withExtra(codec.body, readExtra(sent.settings.extra).fields) } : codec;

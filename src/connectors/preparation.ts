@@ -7,7 +7,7 @@ export type PreparedChat = { request: HttpRequest; wire: WireText; identity: str
 
 export function prepareChat(route: Route, asked: ChatRequest): PreparedChat {
   const request = chatRequest(route, asked);
-  const { settings, messages: sent } = sending(route, asked);
+  const { settings, messages: sent, tools } = sending(route, asked);
   const body = JSON.parse(request.body!) as Record<string, unknown>;
   const wire: WireText = { segments: [], messages: 0, pictures: 0 };
   const content = (value: unknown, role: string) => {
@@ -31,9 +31,13 @@ export function prepareChat(route: Route, asked: ChatRequest): PreparedChat {
   // the budget counts them.
   const documents = sent.flatMap(({ role, document }) => (document === undefined ? [] : [{ role, text: document }]));
   wire.segments.push(...documents);
+  // Each format spells tools differently, so they are read from the request as asked, not from the body.
+  if (tools) wire.segments.push({ role: 'tools', text: JSON.stringify(tools) });
+  wire.segments.push(...sent.flatMap(({ role, calls = [], results = [] }) => [...calls.map((call) => ({ role, text: `${call.name}${call.arguments}` })), ...results.map((result) => ({ role, text: result.text }))]));
   const messages = route.endpoint.protocol === 'responses' ? body.input : route.endpoint.protocol === 'gemini' ? body.contents : body.messages;
   for (const message of list(messages)) {
-    if (!isRecord(message)) continue;
+    // chat-completions' own tool turns hold the results already counted above.
+    if (!isRecord(message) || message.role === 'tool') continue;
     wire.messages++;
     content(route.endpoint.protocol === 'gemini' ? message.parts : message.content, String(message.role));
   }

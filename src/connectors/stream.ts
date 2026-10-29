@@ -2,7 +2,7 @@ import { discounted, priceCost } from './pricing';
 import { costUnit, type Route } from './registry';
 import { SseParser } from './sse';
 import { thoughts } from './thoughts';
-import type { Codec, Cost, Discount, Model, Phase, StreamFacts, Terminal, Usage } from './types';
+import type { Codec, Cost, Discount, Model, Phase, StreamFacts, Terminal, ToolCall, Usage } from './types';
 
 // A cut or failed reply is never shown as a clean success.
 export type Outcome = {
@@ -18,6 +18,8 @@ export type Outcome = {
   replyId: string | null;
   // The discount lane that served it (model/chat Receipt discount); absent when none did.
   discount?: Discount['lane'];
+  // The tool calls the reply made, in order; empty when it made none.
+  calls: ToolCall[];
 };
 
 // keep applies only to character replies, never translations (user, 2026-10-04).
@@ -26,7 +28,7 @@ export type InlineThoughts = { keep?: boolean; takeBack?: (chars: number) => voi
 
 // Streaming and whole JSON replies must share facts/end rules; batched means a discount-batch result.
 export async function decodeStream({ type, codec }: Route, model: Model, response: Response, signal: AbortSignal, onText: (phase: Phase, text: string) => void, inline: InlineThoughts = {}, batched = false): Promise<Outcome> {
-  const facts: StreamFacts = { rawUsage: {}, finishReason: null, id: null, tier: null };
+  const facts: StreamFacts = { rawUsage: {}, finishReason: null, id: null, tier: null, calls: [] };
   let said = false;
   const told = (phase: Phase, text: string) => {
     if (phase === 'text') said = true;
@@ -52,6 +54,7 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
       cost: type?.cost?.({ facts, usage, model }) ?? (type?.settle && facts.id ? 'pending' : null) ?? (price ? priceCost(price, usage, unit) : null),
       replyId: facts.id,
       ...(served && { discount: served.lane }),
+      calls: facts.calls.map(({ id, name, arguments: text }) => ({ id, name, arguments: text })),
     };
   };
 
