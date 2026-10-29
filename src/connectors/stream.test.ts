@@ -241,7 +241,7 @@ describe('a discount lane’s cost', () => {
   const priced: Model = { ...model, price: { input: 2, output: 8, cacheRead: 0.5, cacheWrite: null, tiers: [] } };
   const openai = connection('openai');
   const reply = (tier: string) =>
-    new Response(JSON.stringify({ id: 'r', service_tier: tier, choices: [{ message: { content: '안녕' }, finish_reason: 'stop' }], usage: { prompt_tokens: 1_000_000, prompt_tokens_details: { cached_tokens: 500_000 }, completion_tokens: 1_000_000 } }), { headers: { 'content-type': 'application/json' } });
+    new Response(JSON.stringify({ object: 'response', id: 'r', status: 'completed', service_tier: tier, output: [{ type: 'message', content: [{ type: 'output_text', text: '안녕' }] }], usage: { input_tokens: 1_000_000, input_tokens_details: { cached_tokens: 500_000 }, output_tokens: 1_000_000 } }), { headers: { 'content-type': 'application/json' } });
 
   it('is halved only when the reply reports the lane served it', async () => {
     const flex = await decodeStream(openai, priced, reply('flex'), new AbortController().signal, () => {});

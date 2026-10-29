@@ -227,7 +227,7 @@ export function chatRequest(route: Route, request: ChatRequest): HttpRequest {
 }
 
 function codecRequest(route: Route, sent: ChatRequest): HttpRequest {
-  const { reasoning, maxOutput, discount } = sent.settings;
+  const { reasoning, discount } = sent.settings;
   const lane = discount ? route.type?.discount : undefined;
   const tier = lane?.lane === 'tier' ? lane : null;
   const fields = {
@@ -235,10 +235,7 @@ function codecRequest(route: Route, sent: ChatRequest): HttpRequest {
     ...tier?.fields,
   };
   const mark = cacheWay(route, sent.model)?.mark ?? null;
-  const built =
-    maxOutput === undefined || !route.type?.outputLimit
-      ? route.codec.chat(route.endpoint, sent, fields, mark)
-      : route.codec.chat(route.endpoint, { ...sent, settings: { ...sent.settings, maxOutput: undefined } }, { ...fields, ...route.type.outputLimit(maxOutput) }, mark);
+  const built = route.codec.chat(route.endpoint, sent, fields, mark);
   return tier?.headers ? { ...built, headers: { ...built.headers, ...tier.headers } } : built;
 }
 

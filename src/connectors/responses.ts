@@ -16,6 +16,7 @@ function ended(response: Record<string, unknown>, facts: StreamFacts) {
   const details = isRecord(response.incomplete_details) ? response.incomplete_details : {};
   const reason = typeof details.reason === 'string' ? details.reason : response.status;
   if (typeof reason === 'string') facts.finishReason = reason;
+  if (typeof response.service_tier === 'string') facts.tier = response.service_tier;
   if (isRecord(response.usage)) Object.assign(facts.rawUsage, response.usage);
 }
 

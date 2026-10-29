@@ -4,7 +4,7 @@ import { ephemeral, wireMessage } from './anthropic-messages';
 import { carriesPictures, type CacheMark, type ChatMessage, type Codec, type Embeds, type InputPicture, type Model, type Phase, type StreamFacts, type ToolCall, type ToolDef, type Usage } from './types';
 import { count, isRecord, list, modelEntries, vector } from './values';
 
-// Prefer max_tokens for compatible servers; providers that reject it override outputLimit.
+// max_tokens, not max_completion_tokens: compatible servers take it.
 // OpenRouter/Vercel supported_parameters use these same field names.
 const FIELDS: Record<NumberSetting | 'stop', string> = {
   maxOutput: 'max_tokens',

@@ -237,9 +237,6 @@ type TypeHooks = {
   // Reasoning by a token budget, in a field of the provider's own where its codec has none. Its
   // parseModels says which models take one.
   reasoningBudget?: (tokens: number) => Record<string, unknown>;
-  // The output limit in a field of the provider's own, sent in place of the codec's (OpenAI's reasoning models refuse
-  // max_tokens).
-  outputLimit?: (tokens: number) => Record<string, unknown>;
   // Laid over the headers of a chat request that carries pictures, and only of one: Copilot's vision flag.
   pictureHeaders?: Record<string, string>;
   // How its endpoint takes a cache point, per model, where the format has no mark of its own (chat completions).

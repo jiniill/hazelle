@@ -355,11 +355,10 @@ describe('chat requests', () => {
     { role: 'user' as const, content: '안녕' },
   ];
 
-  it('sends OpenAI the output limit as max_completion_tokens, never max_tokens', () => {
-    const openai = connection('openai');
-    const body = JSON.parse(chatRequest(openai, { model: model(), messages, settings: { maxOutput: 1000 } }).body!);
-    expect(body).toMatchObject({ max_completion_tokens: 1000 });
-    expect(body).not.toHaveProperty('max_tokens');
+  it('sends OpenAI a Responses request, with its output limit as max_output_tokens', () => {
+    const request = chatRequest(connection('openai'), { model: model(), messages, settings: { maxOutput: 1000 } });
+    expect(request.url).toBe('https://api.openai.com/v1/responses');
+    expect(JSON.parse(request.body!)).toMatchObject({ max_output_tokens: 1000 });
   });
 
   it('sends max_tokens to a compatible server only when asked', () => {
