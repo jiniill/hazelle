@@ -1,9 +1,10 @@
-import type { Role } from '../connectors/assignment';
+import type { ModelRef, Role } from '../connectors/assignment';
+import type { Cost } from '../connectors/types';
 import type { EmbedPurpose, HttpRequest } from '../connectors/types';
 import type { ChatScope } from '../engine/render';
 import type { EmbedResult, FetchResult, Host, ModelMessage, ModelRefusal, ModelResult, ToolReach } from '../engine/script-api';
 import { live, type PackOwner } from '../model/library';
-import { chatModel, embedModel } from './assignment';
+import { chatModel, embedModel, sharedModel, type Route } from './assignment';
 import { setBackground } from './characters';
 import { keepCall } from './chat-log';
 import { retriesOf } from './connections';
@@ -19,6 +20,7 @@ import type { ScriptInteractions } from './script-interactions';
 import type { ObjectStore } from './store';
 import { callOf, endCall, pageCall } from './streams';
 import type { Tokens } from './token-calibration';
+import { keepRow } from './usage';
 
 export class ScriptReach {
   constructor(
@@ -59,7 +61,7 @@ export class ScriptReach {
   // Only consented spenders may call the chat's role model. Keep receipts on the last shown message for usage.
   // Keep failure reasons structured for tools; Lua formats them at its binding.
   private async model(chat: string, role: Role, messages: ModelMessage[], from: PackOwner, deadline: boolean, signal?: AbortSignal): Promise<ModelResult> {
-    const { store, credentials, log } = this.session;
+    const { store } = this.session;
     const refused = (reason: ModelRefusal, why: string): ModelResult => ({ success: false, reason, result: `Error: ${why}` });
     if (signal?.aborted || this.closing.aborted) return refused('failed', 'stopped');
     const stored = live(store.get('chat', chat));
@@ -73,6 +75,31 @@ export class ScriptReach {
       this.interactions.tell(chat, `no-model:${role}`, { kind: 'no-model', role }, from);
       return refused('no-model', 'no model is set');
     }
+    const { answer, text } = await this.generated(route, profile.profile.value.settings, messages, chat, signal);
+    if (answer.error?.kind === 'app' && answer.error.code === 'too-many-bot-calls') {
+      this.interactions.tell(chat, 'flood', { kind: 'flood' }, from);
+      return refused('flood', 'too many model calls in a minute');
+    }
+    await keepCall(this.session, chat, receiptOf(callOf(route), answer));
+    return answer.state === 'failed' ? refused('failed', answer.error?.kind ?? 'failed') : { success: true, result: text };
+  }
+
+  // A studio test's model call, on the model its 테스트 picked (else the 보조 모델) whichever role the plugin asked for.
+  // Turning 모델 부르기 on is the user's answer, so no plugin consent is asked; its receipt is kept outside any chat.
+  async tried(picked: ModelRef | null, messages: ModelMessage[], signal: AbortSignal): Promise<{ result: ModelResult; cost: Cost | null }> {
+    const refused = (reason: ModelRefusal, why: string) => ({ result: { success: false, reason, result: `Error: ${why}` } as ModelResult, cost: null });
+    const route = sharedModel(this.session.store, 'aux', picked);
+    const profile = 'kind' in route ? null : modelProfile(this.session.store, route.model);
+    if ('kind' in route || profile?.kind !== 'profile') return refused('no-model', 'no model is set');
+    const { answer, text } = await this.generated(route, profile.profile.value.settings, messages, null, signal);
+    const receipt = receiptOf(callOf(route), answer);
+    await keepRow(this.session.store, receipt, Date.now(), { chat: null, character: null });
+    const cost = receipt.cost === 'pending' ? null : receipt.cost;
+    return answer.state === 'failed' ? { ...refused('failed', answer.error?.kind ?? 'failed'), cost } : { result: { success: true, result: text }, cost };
+  }
+
+  private async generated(route: Route, settings: Parameters<typeof generate>[0]['settings'], messages: ModelMessage[], chat: string | null, signal?: AbortSignal) {
+    const { store, credentials, log } = this.session;
     const text = gather();
     const call = await pageCall(this.session, route, 'script', chat);
     // No marker keeps this call, so no pick-up ever ends it: however it went, it is ended here.
@@ -81,19 +108,14 @@ export class ScriptReach {
       log,
       connection: route.connection.value,
       model: route.model,
-      settings: profile.profile.value.settings,
-      retries: retriesOf(store, route.connection.value, profile.profile.value.settings),
+      settings,
+      retries: retriesOf(store, route.connection.value, settings),
       messages,
       call,
       signal: signal ? AbortSignal.any([this.closing, signal]) : this.closing,
       onText: text.add,
     }).finally(() => endCall(store, call.id));
-    if (answer.error?.kind === 'app' && answer.error.code === 'too-many-bot-calls') {
-      this.interactions.tell(chat, 'flood', { kind: 'flood' }, from);
-      return refused('flood', 'too many model calls in a minute');
-    }
-    await keepCall(this.session, chat, receiptOf(callOf(route), answer));
-    return answer.state === 'failed' ? refused('failed', answer.error?.kind ?? 'failed') : { success: true, result: text.value() };
+    return { answer, text: text.value() };
   }
 
   // The chat's character's card, under that character's one answer (design §6.8).

@@ -125,6 +125,37 @@ it('aborts the model call an input item is waiting on when the run is stopped', 
   } finally { host.close(); }
 }));
 
+it('runs a draft as no installed plugin, keeping its storage and settings writes in its own copy, and names an error\'s line', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const code = [
+    '//@api 1', '//@name draft', '//@author jin', '//@setting {"key":"title","type":"text","label":"Title","default":"A"}', '',
+    'hazelle.on("prompt", async (chat) => { await hazelle.storage.set("seen", 1); await hazelle.setSetting("title", "B"); chat.state.set("n", 2); return `${await hazelle.storage.get("seen")}${(await hazelle.settings()).title}`; });',
+    'hazelle.on("menu", () => { throw new Error("boom"); });',
+  ].join('\n');
+  const read = readTool(new TextEncoder().encode(code));
+  if (!read.ok) throw new Error('fixture');
+  const draft = { code, tool: { manifest: read.tool.manifest, settings: { title: 'A' } } };
+  const transport = inProcessTools((api, text) => {
+    Object.defineProperty(globalThis, 'hazelle', { value: api, configurable: true });
+    // As sandbox/api.ts names a plugin's code, so a stack names its lines.
+    return (0, eval)(`${text}\n//# sourceURL=hazelle-plugin.js`) as void;
+  });
+  const host = connect(transport.open);
+  const stored = () => [session.store.list('tool').length, session.store.list('tooldata').length];
+  const before = stored();
+  try {
+    const { scope, host: reach } = f.context();
+    const trial = (event: Parameters<ToolHost['trial']>[3]) => host.trial(f.chat, draft, scope, event, reach, new AbortController().signal);
+    expect(await trial({ kind: 'prompt', turn: { memory: false } })).toMatchObject({
+      outcome: { value: '1B', writes: [[expect.stringMatching(/:n$/), expect.any(String)]] },
+      writes: [{ kind: 'storage', key: 'seen', value: 1 }, { kind: 'setting', key: 'title', value: 'B' }],
+    });
+    await expect(trial({ kind: 'menu', item: 'now' })).rejects.toMatchObject({ message: 'boom', line: 7 });
+    expect(await trial({ kind: 'input', item: 'tidy', text: '' })).toBeNull();
+    expect(stored()).toEqual(before);
+  } finally { host.close(); Reflect.deleteProperty(globalThis, 'hazelle'); }
+}));
+
 it('reads the greeting apart from the messages, which count from after it', () => withTools(async (session, connect) => {
   const f = await fixture(session, '', 'Welcome, {{user}}.');
   let read: { greeting: string | null; messages: Hazelle.Message[] } | null = null;

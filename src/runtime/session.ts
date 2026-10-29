@@ -159,7 +159,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   const scriptExecution: ScriptExecution = new ScriptExecution({ store, read }, { lua: machine, tools }, scriptSchedule, scriptReach, scriptEffects, scriptJournal, scriptClosing.signal);
   const display = new ScriptDisplay(store, machine, (chat, result) => scriptJournal.report(chat, result), unfound, scriptExecution, scriptEffects);
   const scriptTurns = new ScriptTurns({ store, read }, scriptInteractions, scriptSchedule, scriptExecution, scriptClosing.signal);
-  const scriptPreview = new ScriptPreview({ store }, machine, scriptReach, scriptTurns);
+  const scriptPreview = new ScriptPreview({ store }, machine, scriptReach, scriptTurns, tools);
   const scriptCommands = new ScriptCommands({ store, read }, tools, scriptSchedule, scriptExecution, scriptClosing.signal);
   const stopScripts = store.subscribe(() => {
     scriptJournal.prune();

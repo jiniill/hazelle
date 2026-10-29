@@ -23,7 +23,7 @@ import type { ScriptPages } from '../script-pages';
 import type { ScriptJournal } from '../script-journal';
 import type { Session } from '../session';
 import type { MenuItem, ToolHosts } from './facade';
-import { isFrameTool, type Context, type Entry, type Frame } from './frame-state';
+import { isFrameTool, type Context, type Entry, type EntryTrial, type Frame } from './frame-state';
 import { decodeState, encodeState } from './state';
 import { readToolAsset, saveToolAsset, setToolSettings, toolChatData, toolChatKeys, toolKeys, ToolStorage } from './store';
 
@@ -88,6 +88,36 @@ function isOutcome(value: unknown, event: ToolEvent['kind'] | undefined): value 
       && typeof entry.text === 'string' && typeof entry.always === 'boolean' && typeof entry.on === 'boolean')
     && Array.isArray(value.variables) && value.variables.every((pair) => Array.isArray(pair) && pair.length === 2 && typeof pair[0] === 'string' && !pair[0].startsWith(TOOL_VARIABLES) && typeof pair[1] === 'string');
 }
+// A test run's calls that would write outside its outcome: storage and settings change its own copy, the rest are
+// refused, each listed. null: the call runs as in any run, which reads what the run's own module holds: nothing.
+function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unknown, second: unknown): { answer: unknown } | null {
+  switch (method) {
+    case 'storage.get': if (typeof first !== 'string') break; return { answer: trial.storage.get(first) };
+    case 'storage.keys': return { answer: [...trial.storage.keys()] };
+    case 'storage.set': case 'storage.delete': {
+      if (typeof first !== 'string' || (method === 'storage.set' && !isJson(second))) break;
+      const value = method === 'storage.set' ? second as Json : undefined;
+      if (value === undefined) trial.storage.delete(first);
+      else trial.storage.set(first, value);
+      trial.writes.push({ kind: 'storage', key: first, value });
+      return { answer: undefined };
+    }
+    case 'settings': return { answer: entry.tool.settings };
+    case 'settings.set': {
+      const field = entry.tool.manifest.settings.find(({ key }) => key === first);
+      if (!field || !fieldValue(field, second)) break;
+      entry.tool = { ...entry.tool, settings: { ...entry.tool.settings, [field.key]: second } };
+      trial.writes.push({ kind: 'setting', key: field.key, value: second });
+      return { answer: undefined };
+    }
+    case 'assets.save': case 'chat.picture': case 'chat.send':
+      trial.writes.push({ kind: 'refused', call: method });
+      throw new Error('Not run in a test');
+    default: return null;
+  }
+  // Never on to the store-backed calls, which would write.
+  throw new Error('Invalid tool call');
+}
 // The fields a tool writes, over a new entry's defaults; upsertChatLore keeps the folder of the one it replaces.
 const chatLore = ({ name, keys, text, always, on }: ToolOutcome['lore'][number]): ScriptOutcome['lore'][number] => ({
   name, keys, secondaryKeys: [], content: text, enabled: on, constant: always, selective: false, useRegex: false, caseSensitive: false,
@@ -150,8 +180,12 @@ export class ToolApi {
 
   async call(frame: Frame, method: string, args: unknown[], event: unknown, cancel: AbortSignal): Promise<unknown> {
     const entry = frame.entry;
-    if (!live(this.session.store.get('module', entry.module))) throw new ToolStopped();
+    if (!entry.trial && !live(this.session.store.get('module', entry.module))) throw new ToolStopped();
     const [first, second] = args;
+    if (entry.trial) {
+      const kept = trialCall(entry, entry.trial, method, first, second);
+      if (kept) return kept.answer;
+    }
     const own = !frame.page && isFrameTool(entry.tool);
     switch (method) {
       case 'frame.chat': {

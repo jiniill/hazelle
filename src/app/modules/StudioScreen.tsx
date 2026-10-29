@@ -29,6 +29,7 @@ import { useToast } from '../toast';
 import { Button, Callout, CodeField, CommentBox, Empty, Exchange, Facts, MenuItem, NavBar, Row, Screen, Section, Stack, Tag, TextDiff, TextField, type CodeAside } from '../ui';
 import { ApplyDialog } from './ApplyDialog';
 import { draftTitle, USE_TAGS } from './studio';
+import { TestPane } from './StudioTest';
 
 function askFoot(store: ObjectStore, ask: Pick<DraftAsk, 'model' | 'cost'>): string {
   const route = routeOf(store, ask.model);
@@ -56,6 +57,7 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
 
   const asides: CodeAside[] = [
     { label: 'AI', body: () => <AiPane id={id} draft={draft} flush={autosave.flush} /> },
+    { label: '테스트', body: (reveal) => <TestPane draft={draft} reveal={reveal} /> },
     { label: '정보', body: (reveal) => <InfoPane draft={draft} onIdentity={(identity) => autosave.change({ identity })} reveal={reveal} /> },
   ];
   return (

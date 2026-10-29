@@ -1,4 +1,4 @@
-import { connectApi } from './api';
+import { connectApi, sourced } from './api';
 
 let connected = false;
 addEventListener('message', (event: MessageEvent) => {
@@ -7,6 +7,6 @@ addEventListener('message', (event: MessageEvent) => {
   connected = true;
   connectApi(port, (code, api) => {
     Object.defineProperty(globalThis, 'hazelle', { value: api });
-    return (0, eval)(code) as void | Promise<void>;
+    return (0, eval)(sourced(code)) as void | Promise<void>;
   });
 });

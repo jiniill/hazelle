@@ -2,12 +2,12 @@ import { readTool, splitTool, toolSource, type ImportedTool } from '../../engine
 import type { ImportFailure } from '../../engine/import/types';
 import type { Stored } from '../../model/kinds';
 import { live } from '../../model/library';
-import { toolId, type DraftAsk, type ToolDraft, type ToolIdentity } from '../../model/tool';
+import { toolId, type DraftAsk, type Tool, type ToolDraft, type ToolIdentity } from '../../model/tool';
 import type { ToolManifest, ToolUse } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
 import type { Files } from '../files';
 import type { ObjectStore } from '../store';
-import { importTool, sameTool, TOOL_ROW_BYTES, type ToolImport } from './store';
+import { importTool, sameTool, TOOL_ROW_BYTES, toolSettings, type ToolImport } from './store';
 
 export const DRAFT_BYTES: number = TOOL_ROW_BYTES;
 const encoder = new TextEncoder();
@@ -101,6 +101,18 @@ export function applyPreview(store: Pick<ObjectStore, 'list' | 'get'>, draft: To
   const { tool: { manifest }, previous } = prepared;
   return { ok: true, manifest, previous: previous ? { module: previous.parent!, manifest: previous.value.manifest } : null, added: manifest.uses.filter((use) => !previous?.value.manifest.uses.includes(use)) };
 }
+
+// A draft as a test runs it: the file 적용 would install, on the installed plugin's settings, else the defaults. line in
+// a run's failure is the file's; bodyLine maps it into the editor's body.
+export type DraftTrial = { tool: Pick<Tool, 'manifest' | 'settings'>; code: string };
+export function draftTrial(store: Pick<ObjectStore, 'list'>, draft: DraftFile): { ok: true; trial: DraftTrial } | { ok: false; failure: ImportFailure } {
+  const code = sourceOf(draft);
+  const read = readTool(encoder.encode(code));
+  if (!read.ok) return read;
+  const { manifest } = read.tool;
+  return { ok: true, trial: { code, tool: { manifest, settings: toolSettings(manifest, sameTool(store, manifest)?.value.settings ?? {}) } } };
+}
+export const bodyLine = (draft: DraftFile, line: number) => line - (sourceOf(draft).split('\n').length - draft.body.split('\n').length);
 
 export async function applyDraft(store: ObjectStore, files: Files, id: string): Promise<ApiResult<ToolImport>> {
   const draft = store.get('tooldraft', id);

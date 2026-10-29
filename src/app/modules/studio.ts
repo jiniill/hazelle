@@ -1,6 +1,9 @@
+import type { ChatScope } from '../../engine/render';
+import type { ToolEvent } from '../../engine/script-api';
 import type { ToolIdentity } from '../../model/tool';
+import { atOf } from '../../runtime/script-selection';
 import type { DraftState } from '../../runtime/tools/drafts';
-import type { ToolUse } from '../../tool-api/manifest';
+import type { ToolManifest, ToolUse } from '../../tool-api/manifest';
 import { NETWORK } from '../common/words';
 
 export const draftTitle = (identity: ToolIdentity) => identity.displayName || '이름 없는 플러그인';
@@ -8,3 +11,30 @@ export const draftTitle = (identity: ToolIdentity) => identity.displayName || '�
 export const DRAFT_STATES: Record<Exclude<DraftState, 'applied'>, string> = { unapplied: '적용 안 함', differs: '적용한 버전과 다름' };
 
 export const USE_TAGS: Record<ToolUse, string> = { model: '모델 호출', embed: '임베딩', memory: '장기 기억', network: NETWORK };
+
+// What 테스트 can run a draft on: the turn's stages, then each item its header declares. text: the event takes the text
+// typed for it.
+export type TestPick = { value: string; label: string; sub: string; text: boolean };
+export const testPicks = (manifest: ToolManifest): TestPick[] => [
+  { value: 'reply', label: '응답이 저장된 뒤', sub: 'reply · 마지막 응답', text: false },
+  { value: 'sending', label: '메시지를 보내기 전', sub: 'sending', text: true },
+  { value: 'prompt', label: '요청을 만들 때', sub: 'prompt', text: false },
+  ...manifest.menu.map(({ id, label }) => ({ value: `menu:${id}`, label: `⋯ 메뉴 · ${label}`, sub: 'menu', text: false })),
+  ...(manifest.actions ?? []).map(({ id, label }) => ({ value: `action:${id}`, label: `메시지 버튼 · ${label}`, sub: 'action · 마지막 메시지', text: false })),
+  ...(manifest.inputs ?? []).map(({ id, label }) => ({ value: `input:${id}`, label: `입력창 버튼 · ${label}`, sub: 'input', text: true })),
+];
+
+// The event a pick runs on the chat as it stands; null when the chat holds no message it needs.
+export function testEvent(pick: string, scope: ChatScope, text: string, manifest: ToolManifest): ToolEvent | null {
+  const told = scope.messages.slice(scope.greeting === null ? 0 : 1);
+  const at = (message: { message: string } | undefined) => message ? atOf(scope, message.message) : null;
+  const [kind, item = ''] = pick.split(/:(.*)/s);
+  switch (kind) {
+    case 'reply': { const reply = at(told.findLast((message) => message.role === 'assistant')); return reply && { kind: 'reply', reply }; }
+    case 'sending': return { kind: 'sending', text };
+    case 'prompt': return { kind: 'prompt', turn: { memory: manifest.uses.includes('memory') } };
+    case 'menu': return { kind: 'menu', item };
+    case 'action': { const message = at(told.at(-1)); return message && { kind: 'action', item, message }; }
+    default: return { kind: 'input', item, text };
+  }
+}

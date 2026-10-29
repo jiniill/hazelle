@@ -25,9 +25,10 @@ export type Down =
   | { kind: 'ping' };
 export type Up =
   | { kind: 'loaded'; listens: EventName[] }
-  | { kind: 'load-failed'; message: string }
+  // line: in the file, when the error's stack names it.
+  | { kind: 'load-failed'; message: string; line?: number }
   | { kind: 'done'; id: number; outcome: ToolOutcome }
-  | { kind: 'failed'; id: number; message: string }
+  | { kind: 'failed'; id: number; message: string; line?: number }
   | { kind: 'call'; call: number; event?: number; method: Method; args: unknown[] }
   | { kind: 'cancel'; call: number }
   | { kind: 'pong' };

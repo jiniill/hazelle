@@ -1,4 +1,4 @@
-import { connectApi } from './api';
+import { connectApi, sourced } from './api';
 import { installRisu, risuScript } from './risu';
 
 declare const BACKGROUND_SOURCE: string;
@@ -34,7 +34,7 @@ addEventListener('message', (event: MessageEvent) => {
   connectApi(port, (code, api) => {
     Object.defineProperty(globalThis, 'hazelle', { value: api });
     if (api.page?.theme === 'light') document.documentElement.dataset.theme = 'light';
-    return (0, eval)(code) as void | Promise<void>;
+    return (0, eval)(sourced(code)) as void | Promise<void>;
   });
 });
 ready();

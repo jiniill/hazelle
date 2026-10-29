@@ -48,7 +48,7 @@ export class ToolRate {
   }
 }
 
-function toolSettings(manifest: ToolManifest, values: Settings): Settings {
+export function toolSettings(manifest: ToolManifest, values: Settings): Settings {
   const defaults = Object.fromEntries(manifest.settings.flatMap((field) => field.default === undefined ? [] : [[field.key, field.default]]));
   // Values survive a version that removes or changes a field; reverting code must not discard the user's settings.
   return { ...defaults, ...values };

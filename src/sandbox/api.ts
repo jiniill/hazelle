@@ -18,6 +18,12 @@ const STORY_LOCKED = new Set<EventName>(['change', 'branch', 'replying', 'sendin
 const QUIET = new Set<EventName>(['showing']);
 const ANSWERS = new Set<EventName>(['replying', 'sending', 'requesting', 'showing', 'input']);
 const describe = (error: unknown) => error instanceof Error ? error.message : String(error);
+// The name a plugin's code runs under, so a stack names its lines (lineOf), which are the file's.
+export const sourced = (code: string) => `${code}\n//# sourceURL=hazelle-plugin.js`;
+const lineOf = (error: unknown) => {
+  const line = error instanceof Error ? /hazelle-plugin\.js:(\d+)/.exec(error.stack ?? '')?.[1] : undefined;
+  return line === undefined ? {} : { line: Number(line) };
+};
 
 export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api) => void | Promise<void>): () => void {
   let load: Load | null = null;
@@ -132,7 +138,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
     for (const handler of handlers.get(event) ?? []) result = await handler(...args as never[]);
     return result;
   };
-  const failed = (id: number, error: unknown) => send({ kind: 'failed', id, message: describe(error) });
+  const failed = (id: number, error: unknown) => send({ kind: 'failed', id, message: describe(error), ...lineOf(error) });
 
   port.onmessage = ({ data }: MessageEvent<Down>) => {
     if (closed) return;
@@ -193,7 +199,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       void Promise.resolve().then(() => execute(data.code, api)).then(() => {
         loaded = true;
         send({ kind: 'loaded', listens: [...handlers.keys()] });
-      }, (error: unknown) => send({ kind: 'load-failed', message: describe(error) }));
+      }, (error: unknown) => send({ kind: 'load-failed', message: describe(error), ...lineOf(error) }));
       return;
     }
     if (!load) return;

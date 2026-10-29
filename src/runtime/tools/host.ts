@@ -5,6 +5,7 @@ import type { ChatScope } from '../../engine/render';
 import type { Chat } from '../../model/chat';
 import { live } from '../../model/library';
 import { toolId, type Tool, type ToolUnit } from '../../model/tool';
+import type { FileRef } from '../../vault/files';
 import type { Down, EventName } from '../../tool-api/protocol';
 import type { ScriptOutcome } from '../lua/event';
 import { aborted, noOutcome, ToolStopped, ToolStuck, until, type Binding } from '../script-binding';
@@ -15,7 +16,8 @@ import { Heartbeat } from '../worker';
 import { ToolApi, header, type ToolServices } from './api';
 import type { MenuItem, ToolFrames, ToolMenu, ToolPage, ToolSlot, Tools } from './facade';
 import { toolFrame, type OpenFrame } from './frame';
-import { isFrameTool, type Entry, type Frame } from './frame-state';
+import type { DraftTrial } from './drafts';
+import { isFrameTool, ToolFailure, type Entry, type EntryCode, type EntryTrial, type Frame, type TrialWrite } from './frame-state';
 import { toolsOf } from './store';
 
 const EVENTS = new Set<EventName>(['reply', 'replying', 'sending', 'requesting', 'showing', 'prompt', 'change', 'branch', 'menu', 'action', 'input', 'settings', 'open', 'message']);
@@ -28,6 +30,11 @@ const storedAt = (store: ObjectStore, kind: 'tooldata' | 'toolfile', id: string)
   const row = store.get('toolfile', id)?.value;
   return row && { key: row.key, json: row.file.id };
 };
+const blankEntry = (module: string, tool: Entry['tool'], code: EntryCode, data: Entry['data']): Entry => ({
+  ...code, module, tool, settings: JSON.stringify(tool.settings), background: null, pages: new Set(), chats: new Set(), idle: null, data,
+  chat: null, menu: [], actions: [], shown: false, slot: null, leaving: false,
+});
+const toolFailure = (message: unknown, line: unknown) => new ToolFailure(typeof message === 'string' ? message : 'Tool failed', Number.isSafeInteger(line) ? Number(line) : null);
 const framesOf = (entry: Entry) => [...(entry.background ? [entry.background] : []), ...entry.pages];
 const eventFields = (event: ToolEvent): Partial<Extract<Down, { kind: 'event' }>> => {
   switch (event.kind) {
@@ -46,6 +53,8 @@ const eventFields = (event: ToolEvent): Partial<Extract<Down, { kind: 'event' }>
 
 export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> {
   private readonly entries = new Map<string, Entry>();
+  // Test runs, by their own module ids, which no installed plugin has.
+  private readonly trials = new Map<string, Entry>();
   private readonly code = new Map<string, Promise<string>>();
   private readonly stalls = new Map<string, number>();
   private readonly api: ToolApi;
@@ -132,11 +141,33 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
 
   async run(chat: string, unit: ToolUnit, scope: ChatScope, event: ToolEvent, host: ToolReach, signal?: AbortSignal): Promise<ScriptOutcome> {
     const entry = this.entry(unit.module);
-    if (entry.tool.file.id !== unit.tool.file.id || !this.allowed(chat, entry.module)) throw new ToolStopped();
+    if (entry.file?.id !== unit.tool.file.id || !this.allowed(chat, entry.module)) throw new ToolStopped();
     entry.chats.add(chat);
     this.idle(entry);
     const frame = await until(this.background(entry), signal);
     if (!frame.listens.has(event.kind)) return noOutcome();
+    return this.dispatch(frame, chat, scope, event, host, signal);
+  }
+
+  // A studio draft run once for one event on chat as no installed plugin: under its own module id, no consent, journal,
+  // stall count or stored data of a plugin is touched, and its outcome is only returned. null: the draft does not listen.
+  async trial(chat: string, draft: DraftTrial, scope: ChatScope, event: ToolEvent, host: ToolReach, signal: AbortSignal): Promise<{ outcome: ScriptOutcome; writes: TrialWrite[] } | null> {
+    const trial: EntryTrial = { code: draft.code, chat, storage: new Map(), writes: [] };
+    const entry = blankEntry(`trial:${crypto.randomUUID()}`, draft.tool, { file: null, trial }, new Map());
+    this.trials.set(entry.module, entry);
+    try {
+      const frame = await until(this.background(entry), signal);
+      if (!frame.listens.has(event.kind)) return null;
+      return { outcome: await this.dispatch(frame, chat, scope, event, host, signal), writes: trial.writes };
+    } finally {
+      this.end(entry, new ToolStopped());
+      this.trials.delete(entry.module);
+      this.stalls.delete(entry.module);
+    }
+  }
+
+  private dispatch(frame: Frame, chat: string, scope: ChatScope, event: ToolEvent, host: ToolReach, signal?: AbortSignal): Promise<ScriptOutcome> {
+    const { entry } = frame;
     const cancel = new AbortController();
     const stop = AbortSignal.any([cancel.signal, frame.closing.signal, ...(signal ? [signal] : [])]);
     if (stop.aborted) throw aborted(stop);
@@ -227,6 +258,8 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   }
 
   private allowed(chat: string, module: string): boolean {
+    const trial = this.trials.get(module)?.trial;
+    if (trial) return trial.chat === chat;
     const value = this.chatValue(chat);
     return !!value && toolsOf(this.session.store, value).some((unit) => unit.module === module);
   }
@@ -239,11 +272,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
     if (!tool || !live(store.get('module', module))) throw new ToolStopped();
     const current = this.entries.get(module);
     if (current) return current;
-    const entry: Entry = {
-      module, tool, settings: JSON.stringify(tool.settings), background: null, pages: new Set(), chats: new Set(), idle: null,
-      data: new Map((['tooldata', 'toolfile'] as const).flatMap((kind) => store.children(kind, module).map(({ id }) => [id, storedAt(store, kind, id)!] as const))),
-      chat: null, menu: [], actions: [], shown: false, slot: null, leaving: false,
-    };
+    const entry = blankEntry(module, tool, { file: tool.file, trial: null }, new Map((['tooldata', 'toolfile'] as const).flatMap((kind) => store.children(kind, module).map(({ id }) => [id, storedAt(store, kind, id)!] as const))));
     this.entries.set(module, entry);
     return entry;
   }
@@ -270,7 +299,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
     };
     connection.port.onmessage = ({ data }: MessageEvent<unknown>) => this.receive(frame, data);
     connection.port.start();
-    void Promise.all([connection.ready, this.source(entry.tool), lease?.ready]).then(([, code, failure]) => {
+    void Promise.all([connection.ready, entry.trial ? entry.trial.code : this.source(entry.file), lease?.ready]).then(([, code, failure]) => {
       if (failure) throw new Error(failure.error);
       if (frame.closing.signal.aborted) return;
       const context = page?.chat ? this.services.pages.pageContext(page.chat, entry.module, frame.closing.signal) : null;
@@ -282,14 +311,14 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
     return frame;
   }
 
-  private source(tool: Tool): Promise<string> {
-    const held = this.code.get(tool.file.id);
+  private source(file: FileRef): Promise<string> {
+    const held = this.code.get(file.id);
     if (held) return held;
-    const reading = this.session.files.read(tool.file, { signal: this.closing.signal }).then((read) => {
+    const reading = this.session.files.read(file, { signal: this.closing.signal }).then((read) => {
       if (!read.ok) throw new Error(`Tool file: ${read.error}`);
       return new TextDecoder('utf-8', { fatal: true }).decode(read.data);
-    }).catch((error: unknown) => { this.code.delete(tool.file.id); throw error; });
-    this.code.set(tool.file.id, reading);
+    }).catch((error: unknown) => { this.code.delete(file.id); throw error; });
+    this.code.set(file.id, reading);
     return reading;
   }
 
@@ -311,7 +340,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
       this.idle(frame.entry);
       return;
     }
-    if (data.kind === 'load-failed' && typeof data.message === 'string') { this.endFrame(frame, new Error(data.message), true); return; }
+    if (data.kind === 'load-failed' && typeof data.message === 'string') { this.endFrame(frame, toolFailure(data.message, data.line), true); return; }
     if (data.kind === 'call' && Number.isSafeInteger(data.call) && Number(data.call) > 0 && typeof data.method === 'string' && Array.isArray(data.args)) {
       const call = Number(data.call);
       if (frame.calls.has(call)) return;
@@ -329,6 +358,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
       const id = Number(data.id);
       if (!Number.isSafeInteger(data.id)) return;
       if (id === 0) {
+        if (frame.entry.trial) return;
         if (data.kind === 'failed' && typeof data.message === 'string') this.services.journal.report(this.api.chatOf(frame) ?? '', new Error(data.message), { kind: 'module', id: frame.entry.module });
         else if (data.kind === 'done' && this.api.chatOf(frame)) {
           void this.api.pageWrite(frame, data.outcome).then(
@@ -340,7 +370,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
       }
       const pending = frame.pending.get(id);
       if (!pending) return;
-      if (data.kind === 'failed') { this.settle(frame, id, new Error(typeof data.message === 'string' ? data.message : 'Tool failed')); return; }
+      if (data.kind === 'failed') { this.settle(frame, id, toolFailure(data.message, data.line)); return; }
       void this.api.convert(frame, pending, data.outcome).then((outcome) => this.settle(frame, id, outcome), (error: unknown) => this.settle(frame, id, error instanceof Error ? error : new Error(String(error))));
     }
   }
@@ -371,7 +401,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
     if (frame.closing.signal.aborted) return;
     this.stalls.set(frame.entry.module, (this.stalls.get(frame.entry.module) ?? 0) + 1);
     const error = new ToolStuck(this.stalls.get(frame.entry.module)! >= 3);
-    if (frame.loaded && !framesOf(frame.entry).some((each) => each.pending.size)) this.services.journal.report([...frame.entry.chats].at(-1) ?? '', error, { kind: 'module', id: frame.entry.module });
+    if (frame.loaded && !frame.entry.trial && !framesOf(frame.entry).some((each) => each.pending.size)) this.services.journal.report([...frame.entry.chats].at(-1) ?? '', error, { kind: 'module', id: frame.entry.module });
     this.end(frame.entry, error);
   }
 
@@ -418,7 +448,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   private changed(changes: readonly StoreChange[]) {
     for (const entry of [...this.entries.values()]) {
       const tool = this.session.store.get('tool', toolId(entry.module))?.value;
-      if (!tool || !live(this.session.store.get('module', entry.module)) || tool.file.id !== entry.tool.file.id || JSON.stringify(tool.manifest) !== JSON.stringify(entry.tool.manifest)) { this.end(entry, new ToolStopped()); continue; }
+      if (!tool || !live(this.session.store.get('module', entry.module)) || tool.file.id !== entry.file?.id || JSON.stringify(tool.manifest) !== JSON.stringify(entry.tool.manifest)) { this.end(entry, new ToolStopped()); continue; }
       // A withdrawn network answer cannot wait for the frame's next start: its CSP still lets pictures out.
       if (framesOf(entry).some((frame) => frame.network) && !this.api.networkOn(entry)) { this.end(entry, new ToolStopped()); continue; }
       // A consent given while it runs restarts a frame no slot shows, for its pictures from outside; one shown keeps its
@@ -454,4 +484,5 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   }
 }
 
-export const createTools = (session: Pick<Session, 'store' | 'files'>, services: ToolServices): Tools & Binding<ToolUnit, ToolEvent, ToolReach> => new ToolHost(session, services);
+export type ToolRunner = Tools & Binding<ToolUnit, ToolEvent, ToolReach> & Pick<ToolHost, 'trial'>;
+export const createTools = (session: Pick<Session, 'store' | 'files'>, services: ToolServices): ToolRunner => new ToolHost(session, services);

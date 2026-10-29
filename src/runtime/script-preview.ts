@@ -1,8 +1,9 @@
-import type { ChatMessage } from '../connectors/types';
+import type { ModelRef } from '../connectors/assignment';
+import type { ChatMessage, Cost } from '../connectors/types';
 import type { HistoryMessage } from '../engine/history';
 import type { HookTrace, SyntaxProblem } from '../engine/lua/run';
 import type { ChatScope } from '../engine/render';
-import type { Event, Host, Question, ScriptUnit } from '../engine/script-api';
+import type { Event, Question, ScriptUnit, ToolEvent, ToolReach } from '../engine/script-api';
 import { answerInstructionOf, packsOf } from './chat-context';
 import type { EvaluatedPrompt } from './evaluation-core';
 import type { ScriptOutcome } from './lua/event';
@@ -13,6 +14,9 @@ import { requestAnswer, requestEvent, sentOf } from './script-request';
 import { triggersOf } from './script-selection';
 import { startStages, type StartStage } from './script-start';
 import type { ScriptTurns } from './script-turns';
+import type { DraftTrial } from './tools/drafts';
+import type { TrialWrite } from './tools/frame-state';
+import type { ToolRunner } from './tools/host';
 import type { ObjectStore } from './store';
 import { providerFit } from './token-calibration';
 import type { Sending } from './turn-context';
@@ -53,7 +57,7 @@ export function applied(chat: string, scope: ChatScope, { edits, removed, added,
 
 // Dismiss preview questions and refuse calls without saving; real execution may branch differently.
 // loreRanAway means the script read no lore after CBS exceeded its limit.
-export type Heard = { said: { tone: 'normal' | 'error'; text: string }[]; asked: Question[]; calls: { model: number; embed: number; background: number }; loreRanAway: boolean };
+export type Heard = { said: { tone: 'normal' | 'error'; text: string }[]; asked: Question[]; calls: { model: number; embed: number; background: number; fetch: number }; loreRanAway: boolean };
 
 // The pre-send scripts run ahead on a copy (ScriptPreview.rehearse). stopped: the stage that ended the turn, which then sends
 // nothing. scope: the chat as onStart leaves it, its writes and then editRequest's pending. input: the message as
@@ -72,9 +76,12 @@ export type Rehearsal = Heard & {
 
 // One trigger run alone for one event (ScriptPreview.trial), as 시험해 보기 shows it.
 export type Trial = Heard & { outcome: ScriptOutcome };
+// A studio draft run alone for one event (ScriptPreview.tool), as its 테스트 shows it. called: each model call made, by
+// its cost.
+export type ToolTrial = Trial & { writes: TrialWrite[]; called: (Cost | null)[] };
 
 export const NOT_REHEARSED = 'Error: not called while rehearsing';
-const unheard = (): Heard => ({ said: [], asked: [], calls: { model: 0, embed: 0, background: 0 }, loreRanAway: false });
+const unheard = (): Heard => ({ said: [], asked: [], calls: { model: 0, embed: 0, background: 0, fetch: 0 }, loreRanAway: false });
 
 export class ScriptPreview {
   constructor(
@@ -82,6 +89,7 @@ export class ScriptPreview {
     private readonly lua: () => Promise<LuaRunner>,
     private readonly reach: ScriptReach,
     private readonly turns: Pick<ScriptTurns, 'cachedPrompt'>,
+    private readonly tools: Pick<ToolRunner, 'trial'>,
   ) {}
 
   // A Lua draft's first syntax error, from the same VM that runs it; unchecked when the worker is gone.
@@ -150,8 +158,20 @@ export class ScriptPreview {
     return { ...heard, outcome };
   }
 
-  // A host for a run that saves nothing: each question dismissed, each model, embedding and background call refused.
-  private quiet(chat: string, scope: ChatScope, heard: Heard, signal: AbortSignal): Host {
+  // calling: the model its 모델 부르기 calls (null: the 보조 모델), or null while off, which refuses the calls as any
+  // rehearsal does. null: the draft does not listen to the event.
+  async tool(chat: string, scope: ChatScope, draft: DraftTrial, event: ToolEvent, calling: { model: ModelRef | null } | null, signal: AbortSignal): Promise<ToolTrial | null> {
+    const heard = unheard();
+    const called: (Cost | null)[] = [];
+    const quiet = this.quiet(chat, scope, heard, signal);
+    const host: ToolReach = calling ? { ...quiet, model: async (_role, messages) => { const { result, cost } = await this.reach.tried(calling.model, messages, signal); called.push(cost); return result; } } : quiet;
+    const ran = await this.tools.trial(chat, draft, scope, event, host, signal);
+    return ran && { ...heard, ...ran, called };
+  }
+
+  // A host for a run that saves nothing: each question dismissed, each model, embedding, background and network call
+  // refused.
+  private quiet(chat: string, scope: ChatScope, heard: Heard, signal: AbortSignal): ToolReach {
     return {
       ...this.reach.reads(chat, scope, () => { heard.loreRanAway = true; }),
       say: (tone, text) => { if (!signal.aborted) heard.said.push({ tone, text }); },
@@ -159,6 +179,7 @@ export class ScriptPreview {
       model: async () => { heard.calls.model++; return { success: false, reason: 'failed', result: NOT_REHEARSED }; },
       embed: async () => { heard.calls.embed++; return { ok: false, reason: 'failed' }; },
       background: async () => { heard.calls.background++; return false; },
+      fetch: async () => { heard.calls.fetch++; return { ok: false, reason: 'stopped' }; },
     };
   }
 }
