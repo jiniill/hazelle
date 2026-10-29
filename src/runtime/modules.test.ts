@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { fold } from '../model/chat';
 import { startChat } from './chat-log';
 import { projectGreetings } from './greetings';
-import { editModule, importModule, modulesOf, pairWithPrompts, replaceModules, sameNamespace, setCharacterModule, setModuleAlways, setModuleAt, setModuleDeleted, setPromptModule } from './modules';
+import { copyModule, createModule, editModule, importModule, modulesOf, pairWithPrompts, replaceModules, sameNamespace, setCharacterModule, setModuleAlways, setModuleAt, setModuleDeleted, setPromptModule } from './modules';
 import { addPrompt, chatPrompt, ofSort, savePreset } from './prompts';
 import { convertPreset } from '../engine/import/preset';
-import { answerable, saying, stubRelay, testServer } from './testing';
+import { answerable, png, saying, stubRelay, testServer } from './testing';
 import { blankCard } from '../engine/import/card';
 import { evaluateChat, packsOf, togglesOf } from './chat-context';
 import { SETTINGS_ID } from '../model/settings';
+import { likenessId } from '../model/likeness';
 import { takeTurn } from './turn';
 
 const server = testServer();
@@ -118,6 +119,34 @@ describe('modules', () => {
     if (!added.ok) throw new Error(added.error);
     await editModule(store, added.data.id, { name: '종', description: '울려요' });
     expect(store.get('module', added.data.id)!.value).toMatchObject({ name: '종', description: '울려요', namespace: 'bell' });
+  });
+
+  it('makes an empty module in the folder it is made in, on nowhere', async () => {
+    const { store } = await server.account();
+    const id = crypto.randomUUID();
+    const made = await createModule(store, '새 모듈', id, 'folder-1');
+    expect(made.ok).toBe(true);
+    expect(store.get('module', id)!.value).toEqual({ name: '새 모듈', description: '', namespace: null, loreFolders: [], regex: [], triggers: [], toggles: [], folder: 'folder-1' });
+    expect(store.get('settings', SETTINGS_ID)?.value.modules ?? []).not.toContain(id);
+  });
+
+  it('copies a module with its lorebook, pictures and 삽화 profiles, leaving its Risu id and its places with the original', async () => {
+    const { store, files } = await server.account();
+    const likeness = { portraits: [{ name: '종지기', aliases: [], look: 'old man', outfits: [], artist: '', source: 'text' as const }], at: 1, receipt: null };
+    const added = await importModule(store, files, { name: 'Bell', description: '종', namespace: 'bell', risu: null, pack: { regex: [], triggers: [], toggles: [] }, lore: [lore], loreFolders: [], assets: [{ name: 'bell', read: async () => png() }], unsupported: [], likeness }, () => {}, { id: crypto.randomUUID(), risu: 'risu-bell' });
+    if (!added.ok) throw new Error(added.error);
+    const original = added.data.id;
+    await setModuleAlways(store, original, true);
+    const copy = crypto.randomUUID();
+    expect((await copyModule(store, original, 'Bell (사본)', copy)).ok).toBe(true);
+    const { risu, ...kept } = store.get('module', original)!.value;
+    expect(risu).toBe('risu-bell');
+    expect(store.get('module', copy)!.value).toEqual({ ...kept, name: 'Bell (사본)' });
+    expect(store.children('lore', copy).map(({ value }) => value)).toEqual(store.children('lore', original).map(({ value }) => value));
+    expect(store.children('asset', copy).map(({ value }) => value)).toEqual(store.children('asset', original).map(({ value }) => value));
+    expect(store.children('asset', copy)).toHaveLength(1);
+    expect(store.get('likeness', likenessId(copy))).toMatchObject({ parent: copy, value: store.get('likeness', likenessId(original))!.value });
+    expect(store.get('settings', SETTINGS_ID)!.value.modules).toEqual([original]);
   });
 
   it("pairs a preset's prompt with the modules it names, the one already here at import and the one that comes after", async () => {

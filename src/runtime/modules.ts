@@ -4,6 +4,7 @@ import type { Stored } from '../model/kinds';
 import { live, type Module } from '../model/library';
 import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
 import type { ApiResult } from './api';
+import { without } from '../model/fields';
 import { markDeleted } from './removal';
 import { saveAssets, type Progress } from './characters';
 import type { Files } from './files';
@@ -66,6 +67,24 @@ export async function replaceModules(store: ObjectStore, id: string, olds: strin
     if (!done.ok) return done;
   }
   return { ok: true, data: places.length };
+}
+
+export const createModule = (store: ObjectStore, name: string, id: string, folder: string | null) =>
+  store.create('module', { name, description: '', namespace: null, loreFolders: [], regex: [], triggers: [], toggles: [], ...(folder !== null && { folder }) }, { id });
+
+// The copy keeps the namespace its scripts and pictures are named by, so a later import of the original also offers to
+// replace it; risu stays with the original, which a move pairs by it. Its pictures share the original's files.
+export function copyModule(store: ObjectStore, id: string, name: string, copy: string): Promise<ApiResult<null>> {
+  const original = store.get('module', id)?.value;
+  if (!original) return Promise.resolve({ ok: false, error: 'gone' });
+  const likeness = store.get('likeness', likenessId(id))?.value;
+  const owned = <K extends 'lore' | 'asset'>(kind: K) => store.children(kind, id).map(({ value }): Write => ({ type: 'create', kind, id: crypto.randomUUID(), parent: copy, value }));
+  return store.batch([
+    { type: 'create', kind: 'module', id: copy, parent: null, value: { ...without(original, 'risu'), name } },
+    ...owned('lore'),
+    ...owned('asset'),
+    ...(likeness ? [{ type: 'create' as const, kind: 'likeness' as const, id: likenessId(copy), parent: copy, value: likeness }] : []),
+  ]);
 }
 
 export function editModule(store: ObjectStore, id: string, patch: { name?: string; description?: string }): Promise<ApiResult<Stored<'module'>>> {

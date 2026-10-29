@@ -1,9 +1,9 @@
 import { Check } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Stored } from '../../model/kinds';
-import type { ModulePlace } from '../../runtime/modules';
+import { createModule, type ModulePlace } from '../../runtime/modules';
 import { ofSort } from '../../runtime/prompts';
-import { ACTS, importOf } from '../common/acts';
+import { ACTS, importOf, newOf } from '../common/acts';
 import { useImport } from '../common/importing';
 import { counted, holdsLine, packParts, type PackParts } from '../common/pack';
 import { useSearch } from '../common/useSearch';
@@ -11,9 +11,10 @@ import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/
 import { FolderPath, useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
 import { ALWAYS, EMPTY_FOLDER, moduleName, PAGES, SCRIPTS } from '../common/words';
-import { useChildrenOf, useLibrary, useModulesAndPlugins, usePersonas, usePrompts, useSettings } from '../session';
+import { useChildrenOf, useLibrary, useModulesAndPlugins, usePersonas, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
+import { useToast } from '../toast';
 import { Button, Empty, Icon, NavBar, Row, Screen, Section, Table, Tag, type TableColumn, type TableRow } from '../ui';
 
 // The table's columns and each module's contents line both come from these parts, so the two always agree.
@@ -96,6 +97,8 @@ const go = (place: string | null) => navigate({ kind: 'modules', place });
 
 // place: the folder it stands in.
 export function ModulesScreen({ place, back }: { place: string | null; back: Back | null }) {
+  const store = useStore();
+  const toast = useToast();
   const { pick } = useImport();
   const { modules } = useModulesAndPlugins();
   const use = useModuleUse();
@@ -107,10 +110,23 @@ export function ModulesScreen({ place, back }: { place: string | null; back: Bac
   const moving = useMoving('module', index, (id) => modules.find((module) => module.id === id)?.value.folder ?? null);
   const shown = at.placed(search.found);
   const parts = useModuleParts(shown);
-  const importing = (
-    <Button variant="secondary" icon={ACTS.import.icon} onClick={pick}>
-      {importOf('모듈')}
+  function add() {
+    const id = crypto.randomUUID();
+    void createModule(store, newOf('모듈'), id, at.here?.folder.id ?? null).then((saved) => saved.ok || toast.failed(saved, '모듈을 만들지 못했어요.'));
+    navigate({ kind: 'module', id, pane: null });
+  }
+  const adding = (
+    <Button variant="secondary" icon={ACTS.create.icon} onClick={add}>
+      {newOf('모듈')}
     </Button>
+  );
+  const actions = (
+    <>
+      <Button variant="secondary" icon={ACTS.import.icon} onClick={pick}>
+        {importOf('모듈')}
+      </Button>
+      {adding}
+    </>
   );
   const folderRows: TableRow[] = at.folders.map((folder) => ({
     key: folder.id,
@@ -142,7 +158,7 @@ export function ModulesScreen({ place, back }: { place: string | null; back: Bac
   });
   const sections = SECTIONS.map(({ place, title }) => ({ title, rows: rows.filter(({ key }) => use.place(key) === place) })).filter(({ rows }) => rows.length > 0);
   return (
-    <Screen width="page" top={<NavBar title={PAGES.modules} {...backBar(back)} actions={importing} />}>
+    <Screen width="page" top={<NavBar title={PAGES.modules} {...backBar(back)} actions={actions} />}>
       {search.field && <Row kind="toolbar">{search.field}</Row>}
       {modules.length + index.folders.length > 0 && (
         <FolderPath kind="module" path={at.path} onGo={go} onName={naming.name} dropInto={moving.dropInto}>
@@ -163,7 +179,7 @@ export function ModulesScreen({ place, back }: { place: string | null; back: Bac
       ) : at.here ? (
         <Empty>{EMPTY_FOLDER}</Empty>
       ) : (
-        <Empty action={importing}>모듈이 없어요.</Empty>
+        <Empty action={adding}>모듈이 없어요.</Empty>
       )}
       {moving.bar}
       {naming.dialog}
