@@ -129,6 +129,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
         inputRef={input}
         compact={folded}
         value={draft.text}
+        readOnly={chat.toolInput !== null}
         onChange={draft.set}
         onKeyDown={onKey}
         placeholder={translate.input ? `${withParticle(sendLanguage, '으로/로')} 번역해서 보내요` : '메시지'}
@@ -150,7 +151,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
               onEditCharacter={shelf ? () => actions.side({ kind: 'character', id: shelf.id, part: 'instructions' }) : undefined}
             />}
             {chat.features.illustrate && <ChatIllustrate id={chat.id} illustrate={chat.illustrate} note={chat.illustrateNote} card={chat.card} onChange={actions.setIllustrate} onOwnChange={actions.setOwnIllustrate} onSaveNote={actions.setIllustrateNote} sceneWriter={chat.sceneWriter} onEditPrompt={editPrompt} />}
-            <ChatComposerTools tools={chat.composerTools} onOpen={actions.tool} />
+            <ChatComposerTools tools={chat.composerTools} running={chat.toolInput} onRun={actions.toolInput} onStop={actions.stopToolInput} onOpen={actions.tool} />
             <ChatPinnedToggles toggles={chat.toggles} onFlip={actions.flip} />
           </>
         }
@@ -162,7 +163,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
             {!busy && <ChatCache cache={chat.sendNotes.cache} onOpen={() => chat.actions.openInspect('cache')} />}
             <SendButton
               streaming={busy}
-              disabled={!busy && !typed && !answerable}
+              disabled={!busy && ((!typed && !answerable) || chat.toolInput !== null)}
               title={busy ? titled(SHORTCUTS.stop.label, SHORTCUTS.stop.keys) : titled(typed ? SHORTCUTS.send.label : ANSWER, sendKeys)}
               onClick={() => (busy ? actions.stop() : void actions.send())}
             />

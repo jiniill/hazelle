@@ -12,6 +12,8 @@ type Props = {
   // expanded for one that opens something, pressed for one that is itself a switch.
   expanded?: boolean;
   pressed?: boolean;
+  // busy: a run of its own is under way, its icon a spinner.
+  busy?: boolean;
   phone?: 'full' | 'icon';
   wide?: 'full' | 'icon';
   // One that opens a form from Menu takes popup and ref too; one that shows and hides a panel takes expanded alone.
@@ -20,7 +22,7 @@ type Props = {
   onClick: () => void;
 };
 
-export function ToolButton({ icon, label, detail, mark, phone = 'full', wide = 'full', expanded, pressed, popup, ref, onClick }: Props) {
+export function ToolButton({ icon, label, detail, mark, busy = false, phone = 'full', wide = 'full', expanded, pressed, popup, ref, onClick }: Props) {
   const shown = mark?.kind === 'dot' || (mark?.kind === 'count' && mark.count > 0);
   return (
     <button
@@ -32,9 +34,10 @@ export function ToolButton({ icon, label, detail, mark, phone = 'full', wide = '
       aria-haspopup={popup}
       aria-expanded={expanded}
       aria-pressed={pressed}
+      aria-busy={busy || undefined}
       onClick={onClick}
     >
-      <Icon icon={icon} size="sm" />
+      {busy ? <span className={styles.spinner} aria-hidden /> : <Icon icon={icon} size="sm" />}
       <span className={styles.label}>{label}</span>
       {shown &&
         (mark.kind === 'dot' ? (

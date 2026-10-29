@@ -13,6 +13,7 @@ import type { ToggleLine } from '../model/prompt';
 import { fetchApi } from './api';
 import type { Trigger } from '../engine/import/types';
 import { Lua } from '../engine/lua/run';
+import type { ToolEvent } from '../engine/script-api';
 import { fold, shown } from '../model/chat';
 import { modelUsage } from '../model/usage';
 import { setToggle } from './characters';
@@ -443,7 +444,7 @@ describe("the display with the bot's Lua", () => {
 const cachedTools = (session: Session, chat: string) => session.scriptTurns.cachedPrompt(chat, { scope: { messages: [] } as unknown as TurnContext['scope'], memory: null }).tools;
 
 async function notesTool(session: Session) {
-  const parsed = readTool(new TextEncoder().encode('//@api 1\n//@name notes\n//@author jin\n//@display-name 메모\n//@uses model\n//@menu now 지금 정리\n//@action redo 다시 정리'));
+  const parsed = readTool(new TextEncoder().encode('//@api 1\n//@name notes\n//@author jin\n//@display-name 메모\n//@uses model\n//@menu now 지금 정리\n//@action redo 다시 정리\n//@composer 메모\n//@input tidy 다듬기'));
   if (!parsed.ok) throw new Error('fixture');
   const added = await importTool(session.store, session.files, parsed.tool);
   if (!added.ok) throw new Error(added.error);
@@ -598,6 +599,27 @@ describe('tool events through Scripts', () => {
       await expect.poll(() => heard).toContain('action');
       expect(await takeTurn(session, f.chat, { kind: 'send', text: 'not held' })).toBeNull();
       await expect.poll(() => f.messages().length).toBe(4);
+    }, binding);
+  });
+
+  it('hands an input item the draft and returns the text it answers, none for an undeclared item or a stopped run', async () => {
+    let hold: Promise<void> = Promise.resolve();
+    const binding: Binding<ToolUnit, ToolEvent> = { run: async (_chat, _units, _scope, event) => {
+      if (event.kind !== 'input') return noOutcome();
+      await hold;
+      return { ...noOutcome(), handled: true, value: `${event.text} [${event.item}]` };
+    }, close: () => {} };
+    await server.withSession(async (session) => {
+      const f = await toolChat(session);
+      expect(await session.scriptCommands.input(f.chat, f.module, 'tidy', 'hello', new AbortController().signal)).toBe('hello [tidy]');
+      expect(await session.scriptCommands.input(f.chat, f.module, 'other', 'hello', new AbortController().signal)).toBeNull();
+      let release!: () => void;
+      hold = new Promise((resolve) => { release = resolve; });
+      const stop = new AbortController();
+      const stopped = session.scriptCommands.input(f.chat, f.module, 'tidy', 'hello', stop.signal);
+      stop.abort();
+      release();
+      expect(await stopped).toBeNull();
     }, binding);
   });
 

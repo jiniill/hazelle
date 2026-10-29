@@ -18,7 +18,7 @@ import { toolFrame, type OpenFrame } from './frame';
 import { isFrameTool, type Entry, type Frame } from './frame-state';
 import { toolsOf } from './store';
 
-const EVENTS = new Set<EventName>(['reply', 'replying', 'sending', 'requesting', 'showing', 'prompt', 'change', 'branch', 'menu', 'action', 'settings', 'open', 'message']);
+const EVENTS = new Set<EventName>(['reply', 'replying', 'sending', 'requesting', 'showing', 'prompt', 'change', 'branch', 'menu', 'action', 'input', 'settings', 'open', 'message']);
 const IDLE_MS = 10 * 60_000;
 const STUCK_MS = 8000;
 const describe = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -40,6 +40,7 @@ const eventFields = (event: ToolEvent): Partial<Extract<Down, { kind: 'event' }>
     case 'branch': return { from: event.from };
     case 'menu': return { item: event.item };
     case 'action': return { item: event.item, message: event.message };
+    case 'input': return { item: event.item, text: event.text };
   }
 };
 

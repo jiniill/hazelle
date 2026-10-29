@@ -11,6 +11,7 @@ The file starts with its header: //@ lines, one per line, before any code. Any o
 - //@uses model | embed | memory | network: one line for each ability the code calls. model: chat.model or chat.send. embed: chat.embed. memory: a prompt answer with memory. network: chat.fetch.
 - //@setting {"key":"…","label":"…","type":"text"|"number"|"switch"|"choice","options":["…"],"default":…,"composer":true}: one field on the plugin's page, as JSON on one line. options only for choice. composer: true also shows the field from the chat input's button, which needs //@composer.
 - //@composer <label>: that button beside the chat input, at most 8 characters.
+- //@input <id> <label>: an item of that button, at most 3 of them, labels at most 16 characters, which needs //@composer; pressing it sends the 'input' event with the id and the text typed, and a text answered replaces the input's text. Use it to rewrite, translate or draft what the user is about to send.
 - //@menu <id> <label>: an item in the chat's ⋯ menu; pressing it sends the 'menu' event with the id.
 - //@action <id> <label>: an item in each message's ⋯, at most 3 of them, labels at most 16 characters; pressing it sends the 'action' event with the id.
 - //@page <label>: the plugin's own page. The same file also runs there, with hazelle.context === 'page' and the page's own document.

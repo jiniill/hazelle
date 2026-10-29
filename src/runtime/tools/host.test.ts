@@ -97,6 +97,34 @@ it('names each message by its own id and the version shown', () => withTools(asy
   } finally { host.close(); }
 }));
 
+it('answers an input item with the text it returns and refuses any other answer', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const transport = inProcessTools((api) => api.on('input', (_chat, item, text) => item === 'tidy' ? `${text}!` : 3 as unknown as string));
+  const host = connect(transport.open);
+  try {
+    const context = f.context();
+    expect(await host.run(f.chat, f.tool(), context.scope, { kind: 'input', item: 'tidy', text: 'hi' }, context.host)).toMatchObject({ value: 'hi!' });
+    await expect(host.run(f.chat, f.tool(), context.scope, { kind: 'input', item: 'count', text: 'hi' }, context.host)).rejects.toThrow('Invalid tool outcome');
+  } finally { host.close(); }
+}));
+
+it('aborts the model call an input item is waiting on when the run is stopped', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const transport = inProcessTools((api) => api.on('input', async (chat, _item, text) => { await chat.model('main', [{ role: 'user', content: text }]); return 'never'; }));
+  const host = connect(transport.open);
+  let call!: AbortSignal;
+  const model = vi.fn((_role: unknown, _messages: unknown, _owner: unknown, signal?: AbortSignal) => { call = signal!; return new Promise<never>(() => {}); });
+  try {
+    const context = f.context();
+    const stop = new AbortController();
+    const running = host.run(f.chat, f.tool(), context.scope, { kind: 'input', item: 'tidy', text: 'hi' }, { ...context.host, model }, stop.signal);
+    await vi.waitFor(() => expect(model).toHaveBeenCalled());
+    stop.abort();
+    await expect(running).rejects.toThrow();
+    expect(call.aborted).toBe(true);
+  } finally { host.close(); }
+}));
+
 it('reads the greeting apart from the messages, which count from after it', () => withTools(async (session, connect) => {
   const f = await fixture(session, '', 'Welcome, {{user}}.');
   let read: { greeting: string | null; messages: Hazelle.Message[] } | null = null;

@@ -12,12 +12,14 @@ type Props = {
   actions: ReactNode;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   compact: boolean;
+  // A run rewriting the text holds it until it answers.
+  readOnly?: boolean;
   // attachments: what the message carries, above its text (Attachments). onFiles: files pasted with no text.
   attachments?: ReactNode;
   onFiles?: (files: File[]) => void;
 };
 
-export function Composer({ value, onChange, onKeyDown, placeholder, tools, actions, inputRef, compact, attachments, onFiles }: Props) {
+export function Composer({ value, onChange, onKeyDown, placeholder, tools, actions, inputRef, compact, readOnly, attachments, onFiles }: Props) {
   const id = useId();
   useAutosize(inputRef, value);
   return (
@@ -33,6 +35,7 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, actio
         rows={2}
         {...NO_AUTOFILL}
         value={value}
+        readOnly={readOnly}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}

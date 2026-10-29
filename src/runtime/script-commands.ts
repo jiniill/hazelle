@@ -42,6 +42,19 @@ export class ScriptCommands {
     });
   }
 
+  // A //@input item pressed in the composer, its writes staying with the last message as a menu item's do. The text it
+  // answers, which replaces the draft; null when it answers none or stop, the user's 멈추기, drops the run.
+  input(chat: string, module: string, item: string, text: string, stop: AbortSignal): Promise<string | null> {
+    const unit = unitFor(this.session.store, chat, module);
+    if (!unit?.tool.manifest.inputs?.some((each) => each.id === item)) return Promise.resolve(null);
+    let answer: string | null = null;
+    return this.schedule.lane(chat, unit, async () => {
+      const scope = scopeFor(this.session, chat);
+      const { outcome } = await this.execution.dispatch(chat, { tool: unit, event: { kind: 'input', item, text } }, scope, onLast(scope), AbortSignal.any([this.closing, stop]));
+      if (typeof outcome.value === 'string' && !stop.aborted) answer = outcome.value;
+    }).then(() => answer);
+  }
+
   // Where message stands in the chat now; null once it is gone. For runtime/message-acts, which reads a deleted message
   // before its deletion.
   at(chat: string, message: string): Hazelle.At | null {

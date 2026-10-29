@@ -24,8 +24,8 @@ describe('tool header', () => {
   });
 
   it('reads every use, message actions and the composer item with its fields', () => {
-    const result = read(`${header}//@uses model\n//@uses embed\n//@uses memory\n//@uses embed\n//@uses network\n//@action redo 이 부분 다시 정리\n//@composer 기억\n//@setting {"key":"chunk","type":"number","label":"요약 단위","default":30,"composer":true}`);
-    expect(result).toMatchObject({ ok: true, tool: { manifest: { uses: ['model', 'embed', 'memory', 'network'], actions: [{ id: 'redo', label: '이 부분 다시 정리' }], composer: { label: '기억' }, settings: [{ key: 'chunk', composer: true }] } } });
+    const result = read(`${header}//@uses model\n//@uses embed\n//@uses memory\n//@uses embed\n//@uses network\n//@action redo 이 부분 다시 정리\n//@composer 기억\n//@input tidy 문장 다듬기\n//@setting {"key":"chunk","type":"number","label":"요약 단위","default":30,"composer":true}`);
+    expect(result).toMatchObject({ ok: true, tool: { manifest: { uses: ['model', 'embed', 'memory', 'network'], actions: [{ id: 'redo', label: '이 부분 다시 정리' }], inputs: [{ id: 'tidy', label: '문장 다듬기' }], composer: { label: '기억' }, settings: [{ key: 'chunk', composer: true }] } } });
     expect(read(header)).toMatchObject({ ok: true, tool: { manifest: { actions: [], composer: null } } });
   });
 
@@ -35,7 +35,9 @@ describe('tool header', () => {
     ['a repeated action', '//@action a A\n//@action a B', 'tool-action'],
     ['a long composer label', '//@composer 아홉글자아홉글자아홉', 'tool-composer'],
     ['a second composer', '//@composer 기억\n//@composer 메모', 'tool-composer'],
-    ['a composer field without the item', '//@setting {"key":"x","type":"switch","label":"X","composer":true}', 'tool-composer'],
+    ['a composer field without the item', '//@setting {"key":"x","type":"switch","label":"X","composer":true}', 'tool-composer-needed'],
+    ['an input item without the button', '//@input tidy 다듬기', 'tool-composer-needed'],
+    ['a fourth input item', '//@composer 글\n//@input a A\n//@input b B\n//@input c C\n//@input d D', 'tool-input'],
   ])('refuses %s', (_, lines, detail) => {
     expect(read(`${header}${lines}`)).toMatchObject({ ok: false, failure: { detail } });
   });

@@ -73,7 +73,7 @@ const answers = (event: ToolEvent['kind'] | undefined, value: unknown) => {
   if (value === undefined) return true;
   switch (event) {
     case 'prompt': return isAnswer(value);
-    case 'replying': case 'sending': return typeof value === 'string';
+    case 'replying': case 'sending': case 'input': return typeof value === 'string';
     case 'requesting': return isRequestMessages(value);
     case 'showing': return Array.isArray(value) && value.every((text) => typeof text === 'string');
     default: return false;

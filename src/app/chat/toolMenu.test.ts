@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { ToolChatData } from '../../model/tool';
 import type { ToolManifest } from '../../tool-api/manifest';
-import { badgesByVersion, toolActions, toolComposer, toolMenu } from './toolMenu';
+import { badgesByVersion, pressRuns, toolActions, toolComposer, toolMenu } from './toolMenu';
 
 const manifest = (displayName: string, page: ToolManifest['page'], menu: ToolManifest['menu']): ToolManifest => ({ api: 1, name: displayName, author: 'author', displayName, version: '1', description: '', uses: [], page, menu, settings: [] });
 
@@ -24,7 +24,15 @@ it('groups message actions by tool and lists composer items with their own field
   const memory: ToolManifest = { ...manifest('기억', { label: '열기' }, []), actions: [{ id: 'redo', label: '다시 정리' }], composer: { label: '기억' }, settings: [{ key: 'auto', type: 'switch', label: '자동', composer: true }, { key: 'size', type: 'number', label: '단위' }] };
   const tools = [{ module: 'plain', manifest: manifest('메모', null, []) }, { module: 'memory', manifest: memory }];
   expect(toolActions(tools, (module) => tools.find((tool) => tool.module === module)!.manifest.actions ?? [])).toEqual([{ module: 'memory', name: '기억', items: [{ id: 'redo', label: '다시 정리' }] }]);
-  expect(toolComposer(tools)).toEqual([{ module: 'memory', name: '기억', label: '기억', fields: [{ key: 'auto', type: 'switch', label: '자동', composer: true }], page: true }]);
+  expect(toolComposer(tools)).toEqual([{ module: 'memory', name: '기억', label: '기억', inputs: [], fields: [{ key: 'auto', type: 'switch', label: '자동', composer: true }], page: true }]);
+});
+
+it('runs the one input item on the button\'s press only when the button holds nothing else', () => {
+  const tidy = { id: 'tidy', label: '다듬기' };
+  const [alone] = toolComposer([{ module: 'tidy', manifest: { ...manifest('다듬기', null, []), composer: { label: '다듬기' }, inputs: [tidy] } }]);
+  expect(pressRuns(alone!)).toEqual(tidy);
+  expect(pressRuns({ ...alone!, page: true })).toBeNull();
+  expect(pressRuns({ ...alone!, inputs: [tidy, { id: 'more', label: '더' }] })).toBeNull();
 });
 
 it('shows a badge only on the version it was put on, by tool in pack order, cut to ten characters', () => {

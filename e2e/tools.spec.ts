@@ -265,6 +265,17 @@ test('a memory tool holds the memory slot, recalls by embedding, badges, follows
     await expect(page.getByText('이 부분을 다시 정리할까요?', { exact: true })).toBeHidden();
   });
 
+  await test.step('an input item replaces the typed text, and 되돌리기 puts it back', async () => {
+    const input = page.getByLabel('메시지', { exact: true });
+    await input.fill('quiet please');
+    await page.getByRole('button', { name: '회상', exact: true }).click();
+    await page.getByRole('button', { name: '크게 쓰기', exact: true }).click();
+    await expect(input).toHaveValue('QUIET PLEASE');
+    await page.getByRole('button', { name: /^되돌리기/ }).click();
+    await expect(input).toHaveValue('quiet please');
+    await input.fill('');
+  });
+
   await test.step('after reload the data stand and the memory panel names the tool; turned off, built-in memory is back', async () => {
     const badges = page.getByText('요약됨', { exact: true });
     const before = await badges.count();

@@ -16,7 +16,7 @@ const outcome = (pending: Buffer, value?: ToolOutcome['value']): ToolOutcome => 
 const STORY_LOCKED = new Set<EventName>(['change', 'branch', 'replying', 'sending', 'requesting', 'showing']);
 // Nothing a showing answers is saved, so a write there would be lost.
 const QUIET = new Set<EventName>(['showing']);
-const ANSWERS = new Set<EventName>(['replying', 'sending', 'requesting', 'showing']);
+const ANSWERS = new Set<EventName>(['replying', 'sending', 'requesting', 'showing', 'input']);
 const describe = (error: unknown) => error instanceof Error ? error.message : String(error);
 
 export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api) => void | Promise<void>): () => void {
@@ -209,7 +209,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       const chat = data.chat && chatOf(data.chat, data.id, pending, STORY_LOCKED.has(data.event), QUIET.has(data.event));
       const args = {
         reply: [chat, data.reply], replying: [chat, data.text], sending: [chat, data.text], requesting: [chat, data.messages], showing: [chat, data.shown], prompt: [chat, data.turn],
-        change: [chat, data.change], branch: [chat, data.from], menu: [chat, data.item], action: [chat, data.item, data.message],
+        change: [chat, data.change], branch: [chat, data.from], menu: [chat, data.item], action: [chat, data.item, data.message], input: [chat, data.item, data.text],
       }[data.event as string] ?? [chat];
       const answer = (value: unknown) => data.event === 'prompt' ? (value as Hazelle.PromptAnswer | undefined) ?? null : ANSWERS.has(data.event) && value !== null ? value as ToolOutcome['value'] : undefined;
       // The host checks the answer's shape; one the port cannot carry fails the event here.

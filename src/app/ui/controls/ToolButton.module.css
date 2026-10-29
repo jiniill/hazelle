@@ -17,6 +17,16 @@
   color: var(--color-text);
 }
 
+.spinner {
+  composes: spin from '../foundation/motion.module.css';
+  flex-shrink: 0;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  border: var(--border-thick) solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+}
+
 .dot {
   composes: dot from '../foundation/surface.module.css';
 }

@@ -18,11 +18,15 @@ export const toolActions = (tools: ToolMenu[], actions: (module: string) => Menu
   return items.length ? [{ module, name: manifest.displayName, items }] : [];
 });
 
-// A //@composer item: its button, and the settings fields it shows, which are the module's own in every chat.
-export type ToolComposer = { module: string; name: string; label: string; fields: ToolField[]; page: boolean };
+// A //@composer item: its button, its //@input items, and the settings fields it shows, which are the module's own in
+// every chat.
+export type ToolComposer = { module: string; name: string; label: string; inputs: MenuItem[]; fields: ToolField[]; page: boolean };
 export const toolComposer = (tools: ToolMenu[]): ToolComposer[] => tools.flatMap(({ module, manifest }) => manifest.composer ? [{
-  module, name: manifest.displayName, label: manifest.composer.label, fields: manifest.settings.filter((field) => field.composer), page: manifest.page !== null,
+  module, name: manifest.displayName, label: manifest.composer.label, inputs: manifest.inputs ?? [], fields: manifest.settings.filter((field) => field.composer), page: manifest.page !== null,
 }] : []);
+
+// The button runs its one item on a press when it holds nothing else to show.
+export const pressRuns = (tool: ToolComposer): MenuItem | null => tool.inputs.length === 1 && !tool.fields.length && !tool.page ? tool.inputs[0]! : null;
 
 const BADGE_CHARS = 10;
 

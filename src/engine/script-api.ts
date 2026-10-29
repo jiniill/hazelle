@@ -44,7 +44,9 @@ export type ToolEvent =
   | { kind: 'change'; change: Hazelle.Change }
   | { kind: 'branch'; from: Hazelle.Branched }
   | { kind: 'menu'; item: string }
-  | { kind: 'action'; item: string; message: Hazelle.At };
+  | { kind: 'action'; item: string; message: Hazelle.At }
+  // A //@input item pressed in the composer, not Lua's input, which a send is.
+  | { kind: 'input'; item: string; text: string };
 export type Event =
   | ToolEvent
   | { kind: 'input' | 'start' | 'output' }

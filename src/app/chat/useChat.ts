@@ -34,6 +34,7 @@ import { inspectShown, NO_PANELS, opened, type InfoTab, type InspectTab, type Pa
 import { useSendNotes } from './useSendNotes';
 import { displayed } from './exportLog';
 import { useDraft } from './useDraft';
+import { useToolInput } from './useToolInput';
 import { budgetCut, pickStarted } from './infoReply';
 import { toggleRows, toggleSaveKey } from './toggles';
 import { anchorOf, useFollow } from './useFollow';
@@ -137,6 +138,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
 
   const draft = useDraft(id, chat.character);
   const { actions: attachActions, ...attaching } = useChatAttachments(id, draft.key, chat, route);
+  const toolInput = useToolInput(chatId, () => (store.get('chat', chatId) ? chatId : draft.key), saved);
   const { follow: toBottom, beforeTurn, seekTo, ...scroll } = useFollow(messages.length, busy, anchor, reply === 'stay');
   const story = useStorySteps(messages, scroll.scrollRef, seekTo, follow);
   const memory = useChatMemory(id);
@@ -228,7 +230,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
 
   // Empty sends request a reply. Composer waits for pending pictures; save attachment rows before the turn reads them.
   async function send(skip: Skip = {}) {
-    if (busy || sending.current) return;
+    if (busy || sending.current || toolInput.running) return;
     if (!draft.text.trim() && !attaching.attachments.draft.length) {
       if (answerable) ask({ kind: 'answer' }, skip);
       return;
@@ -412,6 +414,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     badges,
     messageTools,
     composerTools,
+    toolInput: toolInput.running,
     placed,
     opening,
     last,
@@ -469,6 +472,8 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       tool: (module: string) => void saved().then((ok) => ok && flipPanel({ kind: 'tool', module }, (current) => current.kind === 'tool' && current.module === module)),
       toolMenu: (module: string, item: string) => runTool(module, (chat) => session.scriptCommands.menu(chat, module, item)),
       toolAction: (module: string, item: string, message: string) => runTool(module, (chat) => session.scriptCommands.action(chat, module, item, message)),
+      toolInput: (module: string, item: string) => void toolInput.run(module, item),
+      stopToolInput: toolInput.stop,
       side: (panel: Panel) => open(panel),
       closePanel: () => setPanels((current) => ({ ...current, panel: null })),
       openDialog: (which: NonNullable<typeof dialog>) => setDialog(which),

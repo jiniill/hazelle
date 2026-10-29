@@ -149,6 +149,9 @@ declare namespace Hazelle {
     branch(chat: Chat, from: Branched): void | Promise<void>;              // chat is the new branch
     menu(chat: Chat, item: string): void | Promise<void>;                   // a //@menu item pressed in the chat's ⋯
     action(chat: Chat, item: string, message: At): void | Promise<void>;   // a //@action item pressed on a message
+    // A //@input item pressed from the //@composer button, with the chat input's text as typed ('' when empty): a text
+    // answered replaces it, which the user can undo. No deadline: the user waits and may stop it, which aborts its calls.
+    input(chat: Chat, item: string, text: string): string | void | Promise<string | void>;
     settings(settings: Settings): void | Promise<void>;                     // fields changed on the module page
     open(): void | Promise<void>;                                           // the user opened a frame tool's page
     message(data: Json): void;                                              // from the other side (page <-> background)

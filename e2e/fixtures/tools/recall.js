@@ -9,6 +9,7 @@
 //@uses memory
 //@action redo 다시 정리
 //@composer 회상
+//@input loud 크게 쓰기
 //@setting {"key":"chunk","type":"number","label":"요약 단위","default":4,"composer":true}
 
 /* global hazelle */
@@ -74,6 +75,8 @@ hazelle.on('branch', async (chat, from) => {
   const nodes = await nodesOf(chat);
   chat.data.set('nodes', nodes.map((node) => ({ ...node, covers: node.covers.map((id) => from.messages[id] ?? id) })));
 });
+
+hazelle.on('input', (chat, item, text) => (item === 'loud' ? text.toUpperCase() : undefined));
 
 hazelle.on('action', async (chat, item, message) => {
   if (item !== 'redo') return;

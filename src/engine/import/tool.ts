@@ -5,6 +5,7 @@ import type { ImportFailure } from './types';
 
 export const TOOL_FILE_BYTES = 8 * 1024 * 1024;
 // What a tool may draw in the chat, which the app draws for it (design §6.10, phase 2 D5).
+// A message's actions and the composer button's input items share these limits.
 export const TOOL_ACTIONS = 3;
 export const TOOL_ACTION_CHARS = 16;
 export const TOOL_COMPOSER_CHARS = 8;
@@ -89,9 +90,12 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
   const text = toolText(bytes);
   if (!text.ok) return text;
   const header = new Map<string, string>();
-  const manifest: ToolManifest = { api: 1, name: '', author: '', displayName: '', version: '', description: '', uses: [], page: null, menu: [], settings: [], actions: [], composer: null };
+  const manifest: ToolManifest = { api: 1, name: '', author: '', displayName: '', version: '', description: '', uses: [], page: null, menu: [], settings: [], actions: [], inputs: [], composer: null };
   const actions = manifest.actions!;
+  const inputs = manifest.inputs!;
   let unknown: string | null = null;
+  // The first line that shows in the composer button, which //@composer must name.
+  let shown: string | null = null;
   for (const { key, value, written } of text.header) {
     if (key === 'setting') {
       let json: unknown;
@@ -99,6 +103,7 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
       const field = fieldOf(json);
       if (!field || manifest.settings.some((each) => each.key === field.key)) return failed('tool-setting', written);
       manifest.settings.push(field);
+      if (field.composer) shown ??= written;
     } else if (key === 'menu') {
       const item = /^(\S+)\s+(.+)$/.exec(value);
       if (!item || !identity(item[1]!) || manifest.menu.some((each) => each.id === item[1])) return failed('tool-menu', written);
@@ -107,6 +112,11 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
       const item = /^(\S+)\s+(.+)$/.exec(value);
       if (!item || !identity(item[1]!) || [...item[2]!].length > TOOL_ACTION_CHARS || actions.length === TOOL_ACTIONS || actions.some((each) => each.id === item[1])) return failed('tool-action', written);
       actions.push({ id: item[1]!, label: item[2]! });
+    } else if (key === 'input') {
+      const item = /^(\S+)\s+(.+)$/.exec(value);
+      if (!item || !identity(item[1]!) || [...item[2]!].length > TOOL_ACTION_CHARS || inputs.length === TOOL_ACTIONS || inputs.some((each) => each.id === item[1])) return failed('tool-input', written);
+      inputs.push({ id: item[1]!, label: item[2]! });
+      shown ??= written;
     } else if (key === 'composer') {
       if (!value || [...value].length > TOOL_COMPOSER_CHARS || manifest.composer) return failed('tool-composer', written);
       manifest.composer = { label: value };
@@ -117,7 +127,7 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
     } else if (HEADER_KEYS.has(key)) header.set(key, value);
     else unknown ??= written;
   }
-  if (!manifest.composer && manifest.settings.some((field) => field.composer)) return failed('tool-composer');
+  if (!manifest.composer && shown) return failed('tool-composer-needed', shown);
   if (header.get('api') !== '1') return failed('tool-api');
   // After the api check, so a file for another app is told it is not a tool at all.
   if (unknown) return failed('tool-unknown', unknown);
