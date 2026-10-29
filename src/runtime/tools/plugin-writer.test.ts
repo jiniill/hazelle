@@ -4,7 +4,7 @@ import { refOf } from '../../connectors/assignment';
 import { sharedModel } from '../assignment';
 import { answerable, saying, stubRelay, testServer, upstream } from '../testing';
 import { Usage } from '../usage';
-import { askEstimate, askPlugin, type TestMoment } from './plugin-writer';
+import { askEstimate, askPlugin, type TestMessage, type TestMoment } from './plugin-writer';
 
 const server = testServer();
 const price = { input: 1, output: 2, cacheRead: null, cacheWrite: null, tiers: [] };
@@ -59,9 +59,9 @@ it('estimates a full-file answer from the catalog price and returns unknown with
 
 it('runs the tests the model calls for, answers past the limit without running, and ends on its file', () => server.withSession(async (session) => {
   await answerable(session);
-  const call = (id: string, code: string, moments = [{ moment: 'reply' }]) => ({ id, type: 'function', function: { name: 'run_test', arguments: JSON.stringify({ code, moments }) } });
+  const call = (id: string, code: string, moments: unknown[] = [{ moment: 'reply' }], messages?: unknown[]) => ({ id, type: 'function', function: { name: 'run_test', arguments: JSON.stringify({ code, moments, messages }) } });
   const replies = [
-    { choices: [{ message: { content: '', tool_calls: [call('a', 'first();', [{ moment: 'reply' }, { moment: 'menu:log' }, { moment: 'input:tidy' }]), call('b', 'second();')] }, finish_reason: 'tool_calls' }] },
+    { choices: [{ message: { content: '돌려 볼게요.', tool_calls: [call('a', 'first();', [{ moment: 'reply' }, { moment: 'menu:log' }, { moment: 'input:tidy' }], [{ role: 'assistant', text: '{"mood":"기쁨"}' }]), call('b', 'second();')] }, finish_reason: 'tool_calls' }] },
     { choices: [{ message: { content: '', tool_calls: [call('c', 'third();'), call('d', 'fourth();'), { id: 'e', type: 'function', function: { name: 'run_test', arguments: '{' } }] }, finish_reason: 'tool_calls' }] },
     { choices: [{ message: { content: '고쳤어요.\n```js\nfixed();\n```' }, finish_reason: 'stop' }] },
   ];
@@ -69,11 +69,15 @@ it('runs the tests the model calls for, answers past the limit without running, 
   const ran: string[] = [];
   // first(); stops at its second moment, as a run ends at its first error.
   const runner = {
-    run: async (code: string, moments: TestMoment[]) => (ran.push(`${code} ${moments.map(({ moment }) => moment).join(',')}`), moments.slice(0, code === 'first();' ? 2 : 1).map(({ moment }) => ({ moment, ended: 'passed' as const, report: `ran ${code}` }))),
+    run: async (code: string, moments: TestMoment[], messages: TestMessage[]) => (ran.push(`${code} ${moments.map(({ moment }) => moment).join(',')} ${messages.length}`), moments.slice(0, code === 'first();' ? 2 : 1).map(({ moment }) => ({ moment, ended: 'passed' as const, report: `ran ${code}` }))),
   };
   const asked = await askPlugin(session, { body: 'old();', ask: '고쳐 줘', model: null }, new AbortController().signal, () => {}, runner);
-  expect(asked).toMatchObject({ ok: true, answer: { ok: true, body: 'fixed();\n' }, runs: [[{ moment: 'reply' }, { moment: 'menu:log' }], [{ report: 'ran second();' }], [{ report: 'ran third();' }]] });
-  expect(ran).toEqual(['first(); reply,menu:log,input:tidy', 'second(); reply', 'third(); reply']);
+  expect(asked).toMatchObject({ ok: true, answer: { ok: true, body: 'fixed();\n' }, runs: [
+    { said: '돌려 볼게요.', added: 1, steps: [{ moment: 'reply' }, { moment: 'menu:log' }] },
+    { said: '', added: 0, steps: [{ report: 'ran second();' }] },
+    { said: '', added: 0, steps: [{ report: 'ran third();' }] },
+  ] });
+  expect(ran).toEqual(['first(); reply,menu:log,input:tidy 1', 'second(); reply 0', 'third(); reply 0']);
   expect(JSON.parse(sent[0]!.sent.body!).tools[0].function.name).toBe('run_test');
   const answers = JSON.parse(sent[2]!.sent.body!).messages.filter((message: { role: string }) => message.role === 'tool').map((message: { content: string }) => message.content);
   expect(answers).toEqual(['reply:\nran first();\n\nmenu:log:\nran first();\n\nThe run stopped there; the later moments did not run.', 'reply:\nran second();', 'reply:\nran third();', expect.stringContaining('used up'), expect.stringContaining('arguments')]);

@@ -3,13 +3,14 @@ import type { ModelRef } from '../../connectors/assignment';
 import { sumCosts } from '../../connectors/pricing';
 import { sharedModel } from '../../runtime/assignment';
 import type { ToolDraft } from '../../model/tool';
+import { splitTool } from '../../engine/import/tool';
 import { chatNow } from '../../runtime/chat-context';
 import type { ChatScope } from '../../engine/render';
 import type { ToolTrial } from '../../runtime/script-preview';
 import type { Session } from '../../runtime/session';
-import { bodyLine, draftTrial } from '../../runtime/tools/drafts';
+import { bodyLine, draftTrial, type DraftFile } from '../../runtime/tools/drafts';
 import { ToolFailure, type TrialWrite } from '../../runtime/tools/frame-state';
-import { trialReport, type PluginRunner, type TestMoment } from '../../runtime/tools/plugin-writer';
+import { trialReport, type PluginRunner, type TestMessage, type TestMoment, type TestRun, type TestStep } from '../../runtime/tools/plugin-writer';
 import { describeImportFailure } from '../common/importFailure';
 import { ModelMenu } from '../common/ModelMenu';
 import { cost } from '../common/receipt';
@@ -26,9 +27,9 @@ export type TestSetup = { chat: string | null; calling: boolean; model: ModelRef
 // code: the failure is the file's own, thrown or failed to load, so the AI can be asked to fix it. line: the body's.
 type Tested = ToolTrial | null | { failed: string; line: number | null; code: boolean };
 
-// The draft run on a chat for its moments in order, as ScriptPreview.tool runs them: nothing is saved. One result per
-// moment run, ending at the first failure.
-async function runTest(session: Session, draft: ToolDraft, chat: string, moments: TestMoment[], setup: TestSetup, signal: AbortSignal): Promise<Tested[]> {
+// The draft run on a chat for its moments in order, as ScriptPreview.tool runs them, after the made-up messages: nothing is
+// saved. One result per moment run, ending at the first failure.
+async function runTest(session: Session, draft: DraftFile, chat: string, moments: TestMoment[], messages: TestMessage[], setup: TestSetup, signal: AbortSignal): Promise<Tested[]> {
   const read = draftTrial(session.store, draft);
   if (!read.ok) return [{ failed: describeImportFailure(read.failure), line: null, code: true }];
   const failed = (error: unknown): Tested => {
@@ -39,25 +40,28 @@ async function runTest(session: Session, draft: ToolDraft, chat: string, moments
     const scope = await chatNow(session, chat, signal);
     if (!scope) return [{ failed: '채팅을 열지 못했어요.', line: null, code: false }];
     const events = moments.map(({ moment, text }) => (at: ChatScope) => testEvent(moment, at, text, read.trial.tool.manifest));
-    const tried = await session.scriptPreview.tool(chat, scope, read.trial, events, setup.calling ? { model: setup.model } : null, signal);
+    const tried = await session.scriptPreview.tool(chat, scope, read.trial, messages, events, setup.calling ? { model: setup.model } : null, signal);
     return tried.map((each) => (each === 'unheard' ? null : each === 'no-event' ? { failed: '이 채팅에는 테스트할 메시지가 없어요.', line: null, code: false } : 'error' in each ? failed(each.error) : each));
   } catch (error) {
     return [failed(error)];
   }
 }
 
-// 테스트 as the AI's run_test: on the code it wrote, under the draft's identity, on the chat 테스트 holds.
-export function testRunner(session: Session, draft: ToolDraft, chat: string | null, setup: TestSetup): PluginRunner | null {
+// 테스트 as the AI's run_test: on the code it wrote, under the draft's identity, on the chat 테스트 holds. A first draft's
+// code may begin with its identity lines, which the draft's own stand in for.
+export function testRunner(session: Session, draft: DraftFile, chat: string | null, setup: TestSetup): PluginRunner | null {
   if (!draftTrial(session.store, draft).ok || chat === null) return null;
   return {
-    async run(code, moments, signal) {
+    async run(sent, moments, messages, signal) {
+      const split = splitTool(sent);
+      const code = split.found.length > 0 ? split.body : sent;
       const tried = { ...draft, body: code };
       const known = draftTrial(session.store, tried);
       const picks = known.ok ? testPicks(known.trial.tool.manifest) : [];
       const pickOf = (moment: string) => picks.find((each) => each.value === moment);
       const missing = known.ok && moments.find(({ moment }) => !pickOf(moment));
       if (missing) return [{ moment: missing.moment, ended: { failed: '이 코드에 없는 실행 시점이에요.', line: null }, report: `Not run: ${missing.moment} is not a moment of this file.` }];
-      const ran = await runTest(session, tried, chat, moments, setup, signal);
+      const ran = await runTest(session, tried, chat, moments, messages, setup, signal);
       return ran.map((result, at) => {
         const { moment } = moments[at]!;
         const label = pickOf(moment)?.label ?? moment;
@@ -70,6 +74,24 @@ export function testRunner(session: Session, draft: ToolDraft, chat: string | nu
       });
     },
   };
+}
+
+// The AI's test runs for one ask: what it said before each, the messages it made up, each moment and how it ended.
+export function TestRuns({ runs }: { runs: TestRun[] }) {
+  if (!runs.length) return null;
+  const ended = ({ ended: how }: TestStep) => (how === 'passed' ? '통과' : how === 'unheard' ? '핸들러 없음' : `오류: ${how.failed}${how.line === null ? '' : ` (${how.line}번째 줄)`}`);
+  const number = (run: number, steps: TestStep[], at: number) => (steps.length > 1 ? `${run + 1}-${at + 1}` : `${run + 1}`);
+  return (
+    <Stack gap="related">
+      {runs.map(({ said, added, steps }, run) => (
+        <Fragment key={run}>
+          {said && <Text variant="note">{said}</Text>}
+          {added > 0 && <Text variant="note">{`가상 메시지 ${added}개를 채팅 끝에 붙여서 테스트했어요.`}</Text>}
+          <Facts items={steps.map((step, at) => ({ label: `테스트 ${number(run, steps, at)} · ${step.moment}`, value: ended(step) }))} />
+        </Fragment>
+      ))}
+    </Stack>
+  );
 }
 
 type Ran = { body: string; pick: TestPick; result: Tested };
@@ -94,7 +116,7 @@ export function TestPane({ draft, setup, onSetup, reveal, onFix }: { draft: Tool
     const stop = (running.current = new AbortController());
     const body = draft.body;
     setRan('running');
-    const [result = null] = await runTest(session, draft, on, [{ moment: pick.value, text }], setup, stop.signal);
+    const [result = null] = await runTest(session, draft, on, [{ moment: pick.value, text }], [], setup, stop.signal);
     if (!stop.signal.aborted) setRan({ body, pick, result });
   }
 

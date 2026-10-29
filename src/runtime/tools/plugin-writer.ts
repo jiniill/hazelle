@@ -20,16 +20,20 @@ import type { ToolTrial } from '../script-preview';
 import { keepRow } from '../usage';
 
 type Deps = { store: ObjectStore; credentials: Credentials; log: RequestLog; tokens: Tokens };
-type Input = { body: string | null; ask: string; model: ModelRef | null };
+// earlier: the draft's last asks, oldest first.
+type Input = { body: string | null; ask: string; model: ModelRef | null; earlier?: { ask: string; note: string }[] };
 // One run_test call as the studio's 테스트 ran it: the moment's label and how it ended, for the screen; report, for the
 // model. unheard: the file has no handler for the moment's event. line: the body's.
 export type TestStep = { moment: string; ended: 'passed' | 'unheard' | { failed: string; line: number | null }; report: string };
 export type TestMoment = { moment: string; text: string };
-// The studio's 테스트, on code the model wrote, one step per moment run, ending at the first failure; absent where there is
-// no draft to run it as (a first draft).
-export type PluginRunner = { run(code: string, moments: TestMoment[], signal: AbortSignal): Promise<TestStep[]> };
-// runs: each run_test call's steps.
-export type PluginAsked = { ok: true; answer: PluginAnswer; model: ModelRef; cost: Cost | null; runs: TestStep[][] } | { ok: false; failure: RouteFailure | { kind: 'profile-missing'; own: boolean } | { kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { kind: 'unsaved'; failure: ApiFailure } | { kind: 'too-many-calls' } };
+// Made up by the model and put at the end of the test chat before the first moment.
+export type TestMessage = { role: 'user' | 'assistant'; text: string };
+// The studio's 테스트, on code the model wrote, one step per moment run, ending at the first failure.
+export type PluginRunner = { run(code: string, moments: TestMoment[], messages: TestMessage[], signal: AbortSignal): Promise<TestStep[]> };
+// One run_test call: what the model wrote in the reply that asked for it, '' after the reply's first run, and how many
+// messages it made up.
+export type TestRun = { said: string; added: number; steps: TestStep[] };
+export type PluginAsked = { ok: true; answer: PluginAnswer; model: ModelRef; cost: Cost | null; runs: TestRun[] } | { ok: false; failure: RouteFailure | { kind: 'profile-missing'; own: boolean } | { kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { kind: 'unsaved'; failure: ApiFailure } | { kind: 'too-many-calls' } };
 
 // An ask's limits, the app's own whatever the model asks for: its test runs, and its calls with the answer's.
 const RUNS = 3;
@@ -53,6 +57,15 @@ const RUN_TEST: ToolDef = {
             text: { type: 'string', description: 'The text typed, for the sending and input: moments.' },
           },
           required: ['moment'],
+        },
+      },
+      messages: {
+        type: 'array',
+        description: 'Messages put at the end of the test chat before the first moment, as if sent, to test text of the shape the change reads; the reply moment then runs on the last of them that is a reply. Leave it out to run on the chat as it is.',
+        items: {
+          type: 'object',
+          properties: { role: { type: 'string', enum: ['user', 'assistant'] }, text: { type: 'string' } },
+          required: ['role', 'text'],
         },
       },
     },
@@ -89,12 +102,15 @@ export function trialReport({ outcome, said, asked, calls, writes, called }: Too
 }
 
 // A call the model made with arguments that do not read is answered as such, never run on a guess.
-function readTest(call: ToolCall): { code: string; moments: TestMoment[] } | null {
+function readTest(call: ToolCall): { code: string; moments: TestMoment[]; messages: TestMessage[] } | null {
   try {
     const read: unknown = JSON.parse(call.arguments);
     if (!isRecord(read) || typeof read.code !== 'string' || !Array.isArray(read.moments) || read.moments.length === 0) return null;
+    const listed = read.messages ?? [];
+    if (!Array.isArray(listed)) return null;
     const moments = read.moments.flatMap((each: unknown) => (isRecord(each) && typeof each.moment === 'string' && (each.text === undefined || typeof each.text === 'string') ? [{ moment: each.moment, text: each.text ?? '' }] : []));
-    return moments.length === read.moments.length ? { code: read.code, moments } : null;
+    const messages = listed.flatMap((each: unknown): TestMessage[] => (isRecord(each) && (each.role === 'user' || each.role === 'assistant') && typeof each.text === 'string' ? [{ role: each.role, text: each.text }] : []));
+    return moments.length === read.moments.length && messages.length === listed.length ? { code: read.code, moments, messages } : null;
   } catch {
     return null;
   }
@@ -102,17 +118,17 @@ function readTest(call: ToolCall): { code: string; moments: TestMoment[] } | nul
 
 // With a runner, the model may test its file before answering: each of its calls is one model call, each run_test one
 // trial, within RUNS and CALLS. The stop signal reaches the model call and the trial alike.
-export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, onText: (text: string) => void, runner: PluginRunner | null = null, onRun: (run: TestStep[]) => void = () => {}): Promise<PluginAsked> {
+export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, onText: (text: string) => void, runner: PluginRunner | null = null, onRun: (run: TestRun) => void = () => {}): Promise<PluginAsked> {
   const { store, credentials, log, tokens } = deps;
   const route = sharedModel(store, 'main', input.model);
   if ('kind' in route) return { ok: false, failure: route };
   const profile = modelProfile(store, route.model);
   if (profile.kind === 'missing') return { ok: false, failure: { kind: 'profile-missing', own: profile.own } };
   const testing = runner && route.model.tools !== false ? runner : null;
-  const messages = pluginAskMessages(api, input.body, input.ask, testing ? RUNS : 0);
+  const messages = pluginAskMessages(api, input.body, input.ask, input.earlier, testing ? RUNS : 0);
   const tools = testing ? [RUN_TEST] : undefined;
   const costs: (Cost | null)[] = [];
-  const runs: TestStep[][] = [];
+  const runs: TestRun[] = [];
   for (let calls = 0; calls < CALLS; calls++) {
     if (signal.aborted) return { ok: false, failure: { kind: 'stopped' } };
     const call = await pageCall({ store, tokens }, route, 'script', null);
@@ -139,18 +155,21 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
       if (answer.state === 'failed' || (!answer.calls.length && !text.value().trim())) return { ok: false, failure: { kind: 'failed', receipt } };
       if (!answer.calls.length || !testing) return { ok: true, answer: readPluginAnswer(text.value()), model: refOf(route.connection.id, route.model), cost: sumCosts(costs), runs };
       const results: ToolResult[] = [];
+      let said = text.value().trim();
       for (const each of answer.calls) {
         const asked = each.name === 'run_test' ? readTest(each) : null;
         let result: string;
-        if (!asked) result = `Not run: ${each.name === 'run_test' ? 'the arguments are not a JSON object with a code string and a list of moments' : 'there is no such tool'}.`;
+        if (!asked) result = `Not run: ${each.name === 'run_test' ? 'the arguments are not a JSON object with a code string, a list of moments and, if any, a list of messages' : 'there is no such tool'}.`;
         else if (runs.length >= RUNS) result = `Not run: the ${RUNS} test runs are used up. Answer now with the Korean note and the whole file.`;
         else {
-          const run = await testing.run(asked.code, asked.moments, signal);
+          const steps = await testing.run(asked.code, asked.moments, asked.messages, signal);
           if (signal.aborted) return { ok: false, failure: { kind: 'stopped' } };
+          const run = { said, added: asked.messages.length, steps };
+          said = '';
           runs.push(run);
           onRun(run);
-          const reports = run.map((step, at) => `${asked.moments[at]!.moment}:\n${step.report}`);
-          result = [...reports, ...(run.length < asked.moments.length ? ['The run stopped there; the later moments did not run.'] : [])].join('\n\n');
+          const reports = steps.map((step, at) => `${asked.moments[at]!.moment}:\n${step.report}`);
+          result = [...reports, ...(steps.length < asked.moments.length ? ['The run stopped there; the later moments did not run.'] : [])].join('\n\n');
         }
         results.push({ id: each.id, name: each.name, text: result });
       }
@@ -169,7 +188,7 @@ export async function askEstimate(deps: Pick<Deps, 'store'>, input: Input): Prom
   if ('kind' in route || !route.model.price) return null;
   const profile = modelProfile(deps.store, route.model);
   if (profile.kind === 'missing') return null;
-  const messages = pluginAskMessages(api, input.body, input.ask);
+  const messages = pluginAskMessages(api, input.body, input.ask, input.earlier);
   const counts = await deps.store.evaluation.count([...messages.map(({ content }) => content), ...(input.body === null ? [] : [input.body])]).catch(() => null);
   if (!Array.isArray(counts)) return null;
   const fileTokens = input.body === null ? 1024 : counts.pop()!;

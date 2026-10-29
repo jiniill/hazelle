@@ -1,12 +1,17 @@
 import { expect, it } from 'vitest';
 import { pluginAskMessages, readPluginAnswer } from './plugin-writer';
 
-it('sends the verbatim API ahead of the body and the ask, and asks a new file for its name', () => {
+it('sends the verbatim API ahead of the earlier asks, the body and the ask, and asks a new file for its name', () => {
   const api = 'declare const hazelle: Hazelle.Api;';
   const [system, first] = pluginAskMessages(api, null, '메모를 만들어 줘');
   expect(system).toEqual({ role: 'system', content: expect.stringMatching(/declare const hazelle: Hazelle\.Api;$/) });
   expect(first).toEqual({ role: 'user', content: expect.stringMatching(/\/\/@display-name[\s\S]*Request:\n메모를 만들어 줘$/) });
   expect(pluginAskMessages(api, 'const whole = `a\nb`;', '바꿔 줘')).toEqual([system, { role: 'user', content: expect.stringContaining('const whole = `a\nb`;\n\nRequest:\n바꿔 줘') }]);
+  expect(pluginAskMessages(api, 'x();', '다시 바꿔 줘', [{ ask: '바꿔 줘', note: '바꿨어요.' }]).slice(1)).toEqual([
+    { role: 'user', content: 'Request:\n바꿔 줘' },
+    { role: 'assistant', content: '바꿨어요.' },
+    { role: 'user', content: expect.stringMatching(/^The current file[\s\S]*came before this one[\s\S]*Request:\n다시 바꿔 줘$/) },
+  ]);
 });
 
 it('takes the last complete js or javascript fence as the body, the identity lines split off, and leaves unfenced answers as notes', () => {

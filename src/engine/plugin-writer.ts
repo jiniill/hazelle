@@ -35,14 +35,16 @@ hazelle.on('reply', async (chat, reply) => {
 API:
 `;
 
-// body: the draft's file without its identity lines; null for a new file. runs: the test runs the run_test tool allows,
-// 0 where it is not offered.
-export function pluginAskMessages(api: string, body: string | null, ask: string, runs = 0): ChatMessage[] {
+// body: the draft's file without its identity lines; null for a new file. earlier: the draft's last asks with their notes,
+// oldest first. runs: the test runs the run_test tool allows, 0 where it is not offered.
+export function pluginAskMessages(api: string, body: string | null, ask: string, earlier: { ask: string; note: string }[] = [], runs = 0): ChatMessage[] {
   const file = body === null ? 'The file is new. Begin it with //@display-name <a short Korean name> and //@description <one Korean sentence>.' : `The current file, without the identity lines the app keeps:\n${body}`;
+  const before = earlier.length ? '\n\nThe asks above came before this one. Each change was applied or discarded; the current file shows which.' : '';
   const testing = runs ? `\n\nBefore you answer, run the whole new file with run_test, listing every moment the change touches in the order a user reaches them, and fix what it reports. At most ${runs} runs. Then answer as the rules say: the short Korean note in 해요체, even though the test reports are in English, then the whole file.` : '';
   return [
     { role: 'system', content: RULES + api },
-    { role: 'user', content: `${file}${testing}\n\nRequest:\n${ask}` },
+    ...earlier.flatMap(({ ask, note }): ChatMessage[] => [{ role: 'user', content: `Request:\n${ask}` }, { role: 'assistant', content: note }]),
+    { role: 'user', content: `${file}${before}${testing}\n\nRequest:\n${ask}` },
   ];
 }
 

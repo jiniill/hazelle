@@ -8,7 +8,7 @@ import { answerInstructionOf, packsOf } from './chat-context';
 import type { EvaluatedPrompt } from './evaluation-core';
 import type { ScriptOutcome } from './lua/event';
 import { memoryOver } from './memory-read';
-import { ToolStopped, until, type LuaRunner } from './script-binding';
+import { noOutcome, ToolStopped, until, type LuaRunner } from './script-binding';
 import type { ScriptReach } from './script-reach';
 import { requestAnswer, requestEvent, sentOf } from './script-request';
 import { triggersOf } from './script-selection';
@@ -161,13 +161,14 @@ export class ScriptPreview {
     return { ...heard, outcome };
   }
 
-  // events: each moment's event on the chat as the moments before it left it, its messages, lore and state; null when the
-  // chat holds no message it needs. calling: the model its 모델 부르기 calls (null: the 보조 모델), or null while off,
-  // which refuses the calls as any rehearsal does. The run ends at the first missing event or error.
-  async tool(chat: string, scope: ChatScope, draft: DraftTrial, events: ((scope: ChatScope) => ToolEvent | null)[], calling: { model: ModelRef | null } | null, signal: AbortSignal): Promise<ToolTried[]> {
+  // added: messages put at the end of the chat first, as if sent. events: each moment's event on the chat as the moments
+  // before it left it, its messages, lore and state; null when the chat holds no message it needs. calling: the model its
+  // 모델 부르기 calls (null: the 보조 모델), or null while off, which refuses the calls as any rehearsal does. The run ends
+  // at the first missing event or error.
+  async tool(chat: string, scope: ChatScope, draft: DraftTrial, added: { role: 'user' | 'assistant'; text: string }[], events: ((scope: ChatScope) => ToolEvent | null)[], calling: { model: ModelRef | null } | null, signal: AbortSignal): Promise<ToolTried[]> {
     return this.tools.trial(chat, draft, signal, async (run) => {
       const tried: ToolTried[] = [];
-      let at = scope;
+      let at = applied(chat, scope, { ...noOutcome(), added: added.map(({ role, text }) => ({ role: role === 'user' ? 'user' : 'char', text, before: null })) });
       for (const eventOf of events) {
         const event = eventOf(at);
         if (!event) return [...tried, 'no-event'];

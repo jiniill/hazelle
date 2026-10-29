@@ -3,26 +3,28 @@ import { useEffect, useRef, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
 import type { Cost } from '../../connectors/types';
 import { addDraftAsk, blankDraft, createDraft, draftIdentity } from '../../runtime/tools/drafts';
-import { askEstimate, askPlugin, type PluginAsked } from '../../runtime/tools/plugin-writer';
+import { askEstimate, askPlugin, type PluginAsked, type TestRun } from '../../runtime/tools/plugin-writer';
 import { sharedModel } from '../../runtime/assignment';
 import { newOf } from '../common/acts';
 import { describeAskFailure } from '../common/failure';
 import { ModelMenu } from '../common/ModelMenu';
 import { cost } from '../common/receipt';
 import { STOP, TOOL } from '../common/words';
-import { useConnections, useSession } from '../session';
+import { useChats, useConnections, useSession } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
 import { Button, Callout, CommentBox, NavBar, Row, Screen, Section, Stack } from '../ui';
 import { isPlace, PLACES, StudioPlaces } from './StudioPlaces';
+import { TestRuns, testRunner } from './StudioTest';
 
-type Run = { kind: 'idle' } | { kind: 'running'; length: number } | { kind: 'failed'; message: string };
+type Run = { kind: 'idle' } | { kind: 'running'; length: number; runs: TestRun[] } | { kind: 'failed'; message: string; runs: TestRun[] };
 
 export function NewPluginScreen({ place, back }: { place: string | null; back: Back }) {
   const session = useSession();
   const { store, username } = session;
   useConnections();
+  const chats = useChats();
   const toast = useToast();
   const [ask, setAsk] = useState(isPlace(place) ? PLACES[place].ask : '');
   const [run, setRun] = useState<Run>({ kind: 'idle' });
@@ -47,11 +49,16 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
   async function make() {
     const controller = new AbortController();
     abort.current = controller;
-    setRun({ kind: 'running', length: 0 });
-    const asked: PluginAsked = await askPlugin(session, { body: null, ask, model: picked }, controller.signal, (text) => setRun({ kind: 'running', length: text.length }));
+    const runs: TestRun[] = [];
+    let length = 0;
+    const show = () => setRun({ kind: 'running', length, runs: [...runs] });
+    show();
+    // A first draft is tested as the blank draft it would be, on the latest chat and with the plugin's model calls refused.
+    const runner = testRunner(session, blankDraft(username), chats[0]?.id ?? null, { chat: null, calling: false, model: null });
+    const asked: PluginAsked = await askPlugin(session, { body: null, ask, model: picked }, controller.signal, (text) => { length = text.length; show(); }, runner, (run) => { runs.push(run); show(); });
     abort.current = null;
-    if (!asked.ok) return setRun(asked.failure.kind === 'stopped' ? { kind: 'idle' } : { kind: 'failed', message: describeAskFailure(asked.failure) });
-    if (!asked.answer.ok) return setRun({ kind: 'failed', message: `응답에 코드가 없어요. ${asked.answer.note}`.trim() });
+    if (!asked.ok) return setRun(asked.failure.kind === 'stopped' ? { kind: 'idle' } : { kind: 'failed', message: describeAskFailure(asked.failure), runs });
+    if (!asked.answer.ok) return setRun({ kind: 'failed', message: `응답에 코드가 없어요. ${asked.answer.note}`.trim(), runs: asked.runs });
     const id = crypto.randomUUID();
     const made = await createDraft(store, id, { identity: draftIdentity(username, asked.answer.proposed), body: asked.answer.body });
     const kept = made.ok && (await addDraftAsk(store, id, { ask, note: asked.answer.note, model: asked.model, cost: asked.cost, at: Date.now() }, null));
@@ -92,6 +99,7 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
                 </>
               }
             />
+            {run.kind !== 'idle' && <TestRuns runs={run.runs} />}
             {run.kind === 'failed' && <Callout tone="warn">{run.message}</Callout>}
           </Stack>
         </Section>

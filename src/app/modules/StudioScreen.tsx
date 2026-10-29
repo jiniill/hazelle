@@ -10,7 +10,7 @@ import type { ObjectStore } from '../../runtime/store';
 import { routeOf, sharedModel } from '../../runtime/assignment';
 import { writeWhole } from '../../runtime/export-file';
 import { addDraftAsk, applyPreview, deleteDraft, restoreDraft, saveDraft, type DraftFile } from '../../runtime/tools/drafts';
-import { askEstimate, askPlugin, type PluginAsked, type TestStep } from '../../runtime/tools/plugin-writer';
+import { askEstimate, askPlugin, type PluginAsked, type TestRun } from '../../runtime/tools/plugin-writer';
 import { ACTS } from '../common/acts';
 import { jsLanguage } from '../common/code/javascript';
 import { fileNamed } from '../common/download';
@@ -29,7 +29,7 @@ import { useToast } from '../toast';
 import { Button, Callout, CodeField, CommentBox, Empty, Exchange, Facts, MenuItem, NavBar, Row, Screen, Section, Stack, Tag, TextDiff, TextField, type CodeAside } from '../ui';
 import { ApplyDialog } from './ApplyDialog';
 import { draftTitle, USE_TAGS } from './studio';
-import { TestPane, testRunner, type TestSetup } from './StudioTest';
+import { TestPane, TestRuns, testRunner, type TestSetup } from './StudioTest';
 
 function askFoot(store: ObjectStore, ask: Pick<DraftAsk, 'model' | 'cost'>): string {
   const route = routeOf(store, ask.model);
@@ -119,7 +119,9 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
 type Pending = { ask: string; before: string; asked: Extract<PluginAsked, { ok: true }> };
 // AI로 수정 from 테스트: sent as an ask at once, or left in the box while another ask is running or waits to be kept.
 type Fix = { ask: string; at: number };
-type Run = { kind: 'idle' } | { kind: 'running'; ask: string; length: number; runs: TestStep[][] } | { kind: 'failed'; ask: string; message: string; runs: TestStep[][] } | { kind: 'answered'; pending: Pending };
+// The asks a new one is sent after, as the conversation so far.
+const EARLIER = 5;
+type Run = { kind: 'idle' } | { kind: 'running'; ask: string; length: number; runs: TestRun[] } | { kind: 'failed'; ask: string; message: string; runs: TestRun[] } | { kind: 'answered'; pending: Pending };
 
 function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft; flush: () => Promise<boolean>; fix: Fix | null; setup: TestSetup }) {
   const session = useSession();
@@ -138,7 +140,7 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
   useEffect(() => {
     if (!ask.trim()) return setEstimate(null);
     let current = true;
-    const timer = setTimeout(() => void askEstimate(session, { body: draft.body, ask, model: picked }).then((found) => current && setEstimate(found)), 400);
+    const timer = setTimeout(() => void askEstimate(session, { body: draft.body, ask, model: picked, earlier: draft.asks.slice(-EARLIER) }).then((found) => current && setEstimate(found)), 400);
     return () => {
       current = false;
       clearTimeout(timer);
@@ -159,12 +161,12 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
     const controller = new AbortController();
     abort.current = controller;
     setAsk('');
-    const runs: TestStep[][] = [];
+    const runs: TestRun[] = [];
     let length = 0;
     const show = () => setRun({ kind: 'running', ask: asked, length, runs: [...runs] });
     show();
     const runner = testRunner(session, draft, setup.chat ?? chats[0]?.id ?? null, setup);
-    const answer = await askPlugin(session, { body: before, ask: asked, model: picked }, controller.signal, (live) => { length = live.length; show(); }, runner, (run) => { runs.push(run); show(); });
+    const answer = await askPlugin(session, { body: before, ask: asked, model: picked, earlier: draft.asks.slice(-EARLIER) }, controller.signal, (live) => { length = live.length; show(); }, runner, (run) => { runs.push(run); show(); });
     abort.current = null;
     if (!answer.ok) {
       if (answer.failure.kind === 'stopped') {
@@ -197,18 +199,18 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
       ))}
       {run.kind === 'running' && (
         <Exchange ask={run.ask} answer="생성 중…">
-          <TestSteps runs={run.runs} />
+          <TestRuns runs={run.runs} />
         </Exchange>
       )}
       {run.kind === 'failed' && (
         <Exchange ask={run.ask}>
-          <TestSteps runs={run.runs} />
+          <TestRuns runs={run.runs} />
           <Callout tone="warn">{run.message}</Callout>
         </Exchange>
       )}
       {pending && pending.asked.answer.ok && (
         <Exchange ask={pending.ask} answer={pending.asked.answer.note} foot={askFoot(store, pending.asked)}>
-          <TestSteps runs={pending.asked.runs} />
+          <TestRuns runs={pending.asked.runs} />
           <PendingChange pending={pending} current={draft.body} onSettle={(keep) => void settle(pending, keep)} />
         </Exchange>
       )}
@@ -231,14 +233,6 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
       />
     </Stack>
   );
-}
-
-// The AI's test runs for one ask, each its moment and how it ended.
-function TestSteps({ runs }: { runs: TestStep[][] }) {
-  if (!runs.length) return null;
-  const ended = ({ ended: how }: TestStep) => (how === 'passed' ? '통과' : how === 'unheard' ? '핸들러 없음' : `오류: ${how.failed}${how.line === null ? '' : ` (${how.line}번째 줄)`}`);
-  const number = (run: number, steps: TestStep[], at: number) => (steps.length > 1 ? `${run + 1}-${at + 1}` : `${run + 1}`);
-  return <Facts items={runs.flatMap((steps, run) => steps.map((step, at) => ({ label: `테스트 ${number(run, steps, at)} · ${step.moment}`, value: ended(step) })))} />;
 }
 
 function PendingChange({ pending, current, onSettle }: { pending: Pending; current: string; onSettle: (keep: boolean) => void }) {
