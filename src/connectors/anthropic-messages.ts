@@ -1,7 +1,7 @@
 import { failedTerminal } from './errors';
 import type { Cache, Reasoning } from './settings';
-import { carriesPictures, ConnectorError, type ChatMessage, type Codec, type InputPicture, type Modality } from './types';
-import { count, isRecord, modelEntries, nameOf } from './values';
+import { carriesPictures, ConnectorError, type ChatMessage, type Codec, type InputPicture, type Modality, type StreamFacts, type ToolCall, type ToolResult } from './types';
+import { count, isRecord, list, modelEntries, nameOf } from './values';
 
 export const VERSION = { 'anthropic-version': '2023-06-01' };
 
@@ -44,6 +44,53 @@ export function wireMessage(message: ChatMessage, cache: Cache | undefined, pict
   // Pictures with no text send no text block, which Anthropic refuses empty; the cache point is then the last picture.
   if (message.content === '' && pictures.length) return { role: message.role, content: pictures.with(-1, { ...pictures.at(-1), ...mark }) };
   return { role: message.role, content: [...pictures, { type: 'text', text: message.content, ...mark }] };
+}
+
+// The API takes only an object here; arguments that are not one were already answered as unreadable.
+function inputOf(text: string) {
+  try {
+    const input: unknown = JSON.parse(text);
+    return isRecord(input) ? input : {};
+  } catch {
+    return {};
+  }
+}
+
+const toolUse = ({ id, name, arguments: text }: ToolCall) => ({ type: 'tool_use', id, name, input: inputOf(text) });
+const toolResult = ({ id, text }: ToolResult) => ({ type: 'tool_result', tool_use_id: id, content: text });
+// A call made under another format carries that format's echo, which this API would refuse.
+const echoOf = (call: ToolCall) => list(call.echo).filter((block): block is Record<string, unknown> => isRecord(block) && (block.type === 'thinking' || block.type === 'redacted_thinking'));
+
+// Thinking blocks go back unchanged and in order, each run ahead of the call it came before; the first run also leads
+// the text, since a turn under budget thinking must start with one. Thinking blocks take no cache mark.
+function toolTurn(message: ChatMessage, cache: Cache | undefined) {
+  const [first, ...later] = message.calls ?? [];
+  const text = message.content === '' ? [] : [{ type: 'text', text: message.content }];
+  const blocks: object[] = [
+    ...(message.results ?? []).map(toolResult),
+    ...(first ? echoOf(first) : []),
+    ...(message.pictures ?? []).map(imageBlock),
+    ...text,
+    ...(first ? [toolUse(first), ...later.flatMap((call) => [...echoOf(call), toolUse(call)])] : []),
+  ];
+  return { role: message.role, content: message.cache && cache ? blocks.with(-1, { ...blocks.at(-1), ...cacheControl(cache) }) : blocks };
+}
+
+const wire = (message: ChatMessage, cache: Cache | undefined) => (message.calls?.length || message.results?.length ? toolTurn(message, cache) : wireMessage(message, cache, imageBlock));
+
+type Thought = { type: string; thinking?: string; signature?: string };
+// read sees one event at a time: a reply's thinking blocks wait here for the call they come before.
+const held = new WeakMap<StreamFacts, Map<number, Thought>>();
+function heldOf(facts: StreamFacts) {
+  let thoughts = held.get(facts);
+  if (!thoughts) held.set(facts, (thoughts = new Map()));
+  return thoughts;
+}
+
+function called(facts: StreamFacts, block: Record<string, unknown>, at: number, text: string) {
+  const thoughts = heldOf(facts);
+  facts.calls.push({ id: typeof block.id === 'string' ? block.id : `call-${at}`, name: typeof block.name === 'string' ? block.name : '', arguments: text, at, ...(thoughts.size > 0 && { echo: [...thoughts.values()] }) });
+  thoughts.clear();
 }
 
 // Cache-point splitting must preserve the exact blank-line-joined system text.
@@ -116,7 +163,7 @@ export const anthropicMessages: Codec = {
 
   // The Messages API requires max_tokens. With no setting and no catalog limit there is no truthful
   // number to send, so the request is refused instead of guessed.
-  chat(endpoint, { model, messages, settings }, fields) {
+  chat(endpoint, { model, messages, settings, tools }, fields) {
     const limit = settings.maxOutput ?? model.maxOutput;
     if (limit === null) throw new ConnectorError('max-tokens-unknown');
     return {
@@ -130,7 +177,8 @@ export const anthropicMessages: Codec = {
           messages.filter((message) => message.role === 'system'),
           settings.cache,
         ),
-        messages: messages.filter((message) => message.role !== 'system').map((message) => wireMessage(message, settings.cache, imageBlock)),
+        messages: messages.filter((message) => message.role !== 'system').map((message) => wire(message, settings.cache)),
+        ...(tools ? { tools: tools.map(({ name, description, parameters }) => ({ name, description, input_schema: parameters })) } : {}),
         ...(settings.temperature === undefined ? {} : { temperature: settings.temperature }),
         ...(settings.topP === undefined ? {} : { top_p: settings.topP }),
         ...(settings.topK === undefined ? {} : { top_k: settings.topK }),
@@ -150,12 +198,30 @@ export const anthropicMessages: Codec = {
       if (isRecord(event.message.usage)) Object.assign(facts.rawUsage, event.message.usage);
     } else if (event.type === 'content_block_start' && isRecord(event.content_block)) {
       const block = event.content_block;
+      const at = Number(event.index);
       if (block.type === 'text' && typeof block.text === 'string') append('text', block.text);
       if (block.type === 'thinking' && typeof block.thinking === 'string') append('reasoning', block.thinking);
+      if (block.type === 'thinking' || block.type === 'redacted_thinking') heldOf(facts).set(at, { ...block } as Thought);
+      // The start block's input is a placeholder; the deltas carry the whole of it.
+      if (block.type === 'tool_use') called(facts, block, at, '');
     } else if (event.type === 'content_block_delta' && isRecord(event.delta)) {
       const delta = event.delta;
+      const at = Number(event.index);
+      const thought = heldOf(facts).get(at);
       if (delta.type === 'text_delta' && typeof delta.text === 'string') append('text', delta.text);
-      if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') append('reasoning', delta.thinking);
+      if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') {
+        append('reasoning', delta.thinking);
+        if (thought) thought.thinking = (thought.thinking ?? '') + delta.thinking;
+      }
+      if (delta.type === 'signature_delta' && typeof delta.signature === 'string' && thought) thought.signature = (thought.signature ?? '') + delta.signature;
+      if (delta.type === 'input_json_delta' && typeof delta.partial_json === 'string') {
+        const call = facts.calls.find((call) => call.at === at);
+        if (call) call.arguments += delta.partial_json;
+      }
+    } else if (event.type === 'content_block_stop') {
+      const call = facts.calls.find((call) => call.at === Number(event.index));
+      // A tool that takes nothing may stream no input at all, and its start block said {}.
+      if (call?.arguments === '') call.arguments = '{}';
     } else if (event.type === 'message_delta') {
       if (isRecord(event.delta) && typeof event.delta.stop_reason === 'string') facts.finishReason = event.delta.stop_reason;
       if (isRecord(event.usage)) Object.assign(facts.rawUsage, event.usage);
@@ -174,10 +240,12 @@ export const anthropicMessages: Codec = {
     if (failed) return failed;
     if (!isRecord(payload) || payload.type !== 'message' || !Array.isArray(payload.content)) return null;
     if (typeof payload.id === 'string') facts.id = payload.id;
-    for (const block of payload.content) {
+    for (const [at, block] of payload.content.entries()) {
       if (!isRecord(block)) continue;
       if (block.type === 'text' && typeof block.text === 'string') append('text', block.text);
       if (block.type === 'thinking' && typeof block.thinking === 'string') append('reasoning', block.thinking);
+      if (block.type === 'thinking' || block.type === 'redacted_thinking') heldOf(facts).set(at, block as Thought);
+      if (block.type === 'tool_use') called(facts, block, at, isRecord(block.input) ? JSON.stringify(block.input) : '');
     }
     if (typeof payload.stop_reason === 'string') facts.finishReason = payload.stop_reason;
     if (isRecord(payload.usage)) Object.assign(facts.rawUsage, payload.usage);
