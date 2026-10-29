@@ -135,7 +135,7 @@ const sameValue = (a: unknown, b: unknown) => {
   return sorted(a) === sorted(b);
 };
 
-// Preserve ownOf fields and unlisted snapshots. Missing prices/modalities retain known values:
+// Preserve ownOf fields and unlisted snapshots. Missing prices/modalities/tool support retain known values:
 // an unavailable models.dev catalog must not erase them.
 export async function refreshStarred(store: ObjectStore, id: string, models: Model[]): Promise<void> {
   const loaded = new Map(models.map((model) => [model.id, model]));
@@ -146,6 +146,7 @@ export async function refreshStarred(store: ObjectStore, id: string, models: Mod
       ...listed,
       input: listed.input ?? model.input,
       output: listed.output ?? model.output,
+      tools: listed.tools ?? model.tools,
       ...(listed.price === undefined && model.price !== undefined && { price: model.price }),
       ...ownOf(model),
     };

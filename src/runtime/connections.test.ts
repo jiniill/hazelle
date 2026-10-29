@@ -132,15 +132,15 @@ describe('removeModel', () => {
 });
 
 describe('refreshStarred', () => {
-  it('takes what the list says of each entry of a listed model now, keeping its own fields, a price and inputs the list leaves out, and a model it no longer lists', () =>
+  it('takes what the list says of each entry of a listed model now, keeping its own fields, a price, inputs and tool support the list leaves out, and a model it no longer lists', () =>
     server.withSession(async ({ store }) => {
       const price = { input: 1, output: 2, cacheRead: null, cacheWrite: null, tiers: [] };
       const copy = { ...testModel, entry: '#low', label: 'M (low)', profile: 'q' };
-      const saved = await store.create('connection', { ...openRouter, starred: [{ ...testModel, input: ['text', 'image'], price, profile: 'p' }, copy, { ...testModel, id: 'gone' }] });
+      const saved = await store.create('connection', { ...openRouter, starred: [{ ...testModel, input: ['text', 'image'], tools: true, price, profile: 'p' }, copy, { ...testModel, id: 'gone' }] });
       const id = saved.ok ? saved.data.id : '';
       const listed = { ...testModel, name: 'M 2', protocol: 'anthropic-messages' as const, later: 'a field a later version adds' };
       await refreshStarred(store, id, [listed]);
-      expect(store.get('connection', id)?.value.starred).toEqual([{ ...listed, input: ['text', 'image'], price, profile: 'p' }, { ...listed, entry: '#low', label: 'M (low)', profile: 'q' }, { ...testModel, id: 'gone' }]);
+      expect(store.get('connection', id)?.value.starred).toEqual([{ ...listed, input: ['text', 'image'], tools: true, price, profile: 'p' }, { ...listed, entry: '#low', label: 'M (low)', profile: 'q' }, { ...testModel, id: 'gone' }]);
       const rev = store.get('connection', id)!.rev;
       await refreshStarred(store, id, [{ ...listed }]);
       expect(store.get('connection', id)!.rev).toBe(rev);
