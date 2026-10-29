@@ -12,7 +12,6 @@ type Props = {
   // expanded for one that opens something, pressed for one that is itself a switch.
   expanded?: boolean;
   pressed?: boolean;
-  // busy: a run of its own is under way, its icon a spinner.
   busy?: boolean;
   phone?: 'full' | 'icon';
   wide?: 'full' | 'icon';

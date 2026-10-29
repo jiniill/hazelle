@@ -25,7 +25,6 @@ export const toolComposer = (tools: ToolMenu[]): ToolComposer[] => tools.flatMap
   module, name: manifest.displayName, label: manifest.composer.label, inputs: manifest.inputs ?? [], fields: manifest.settings.filter((field) => field.composer), page: manifest.page !== null,
 }] : []);
 
-// The button runs its one item on a press when it holds nothing else to show.
 export const pressRuns = (tool: ToolComposer): MenuItem | null => tool.inputs.length === 1 && !tool.fields.length && !tool.page ? tool.inputs[0]! : null;
 
 const BADGE_CHARS = 10;

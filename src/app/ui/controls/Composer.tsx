@@ -12,7 +12,6 @@ type Props = {
   actions: ReactNode;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   compact: boolean;
-  // A run rewriting the text holds it until it answers.
   readOnly?: boolean;
   // attachments: what the message carries, above its text (Attachments). onFiles: files pasted with no text.
   attachments?: ReactNode;

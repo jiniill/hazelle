@@ -196,6 +196,12 @@ test('a memory tool holds the memory slot, recalls by embedding, badges, follows
     await page.goto('/');
     const report = await importFile(page, pickBot, RECALL_CARD);
     await report.getByRole('button', { name: '채팅 시작', exact: true }).click();
+    // Pressed in a chat not saved yet: the press saves it, and the run lives through that first save.
+    const input = page.getByLabel('메시지', { exact: true });
+    await input.fill('first words');
+    await page.getByRole('button', { name: '회상', exact: true }).click();
+    await page.getByRole('button', { name: '크게 쓰기', exact: true }).click();
+    await expect(input).toHaveValue('FIRST WORDS');
     await send('We climb the stairs.');
     await expect(page.getByText('이 플러그인이 모델을 추가로 호출하고, 기본 장기 기억 대신 기억을 관리할 수 있어요', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: '허용', exact: true }).click();
