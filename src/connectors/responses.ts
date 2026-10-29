@@ -19,18 +19,38 @@ function ended(response: Record<string, unknown>, facts: StreamFacts) {
   if (isRecord(response.usage)) Object.assign(facts.rawUsage, response.usage);
 }
 
-const inputItem = (message: ChatMessage) => {
+const messageItem = (message: ChatMessage) => {
   const { role, content, pictures = [] } = message;
   if (!carriesPictures(message)) return { role, content };
   return { role, content: [...pictures.map((picture) => ({ type: 'input_image', image_url: dataUrl(picture) })), ...(content === '' ? [] : [{ type: 'input_text', text: content }])] };
+};
+
+// A call goes back without its item id (fc_…): with store false the provider holds no such item, and a reasoning model
+// refuses an id'd call that comes without its reasoning item. The reasoning item itself is only advice, so it is not echoed.
+const inputItems = (message: ChatMessage) => {
+  const { calls = [], results = [] } = message;
+  const said = (calls.length === 0 && results.length === 0) || message.content !== '' || carriesPictures(message);
+  return [
+    ...results.map((result) => ({ type: 'function_call_output', call_id: result.id, output: result.text })),
+    ...(said ? [messageItem(message)] : []),
+    ...calls.map((call) => ({ type: 'function_call', call_id: call.id, name: call.name, arguments: call.arguments })),
+  ];
 };
 
 function texts(parts: unknown, type: string): string[] {
   return list(parts).flatMap((part) => (isRecord(part) && part.type === type && typeof part.text === 'string' ? [part.text] : []));
 }
 
-function readItem(item: unknown, append: (phase: Phase, text: string) => void) {
+const readCall = (item: Record<string, unknown>, at: number) => ({
+  id: typeof item.call_id === 'string' && item.call_id ? item.call_id : `call_${at}`,
+  name: typeof item.name === 'string' ? item.name : '',
+  arguments: typeof item.arguments === 'string' ? item.arguments : '',
+  at,
+});
+
+function readItem(item: unknown, at: number, facts: StreamFacts, append: (phase: Phase, text: string) => void) {
   if (!isRecord(item)) return;
+  if (item.type === 'function_call') facts.calls.push(readCall(item, at));
   if (item.type === 'reasoning') {
     const reasoning = [...texts(item.summary, 'summary_text'), ...texts(item.content, 'reasoning_text')].join('\n\n');
     if (reasoning) append('reasoning', reasoning);
@@ -58,13 +78,15 @@ export const responses: Codec = {
   // prompt_cache_key is the format's own field, but a server that speaks it is not bound to read it.
   cache: { mark: { kind: 'key' }, accepted: null },
 
-  chat: (endpoint, { model, messages, settings }, fields) => ({
+  chat: (endpoint, { model, messages, settings, tools }, fields) => ({
     url: `${endpoint.baseUrl}/responses`,
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       model: model.id,
-      input: messages.map(inputItem),
+      input: messages.flatMap(inputItems),
+      // Left out, strict becomes the format's default: it rewrites the schema so every parameter is required.
+      ...(tools ? { tools: tools.map(({ name, description, parameters }) => ({ type: 'function', name, description, parameters, strict: false })) } : {}),
       ...(settings.maxOutput === undefined ? {} : { max_output_tokens: settings.maxOutput }),
       ...(settings.temperature === undefined ? {} : { temperature: settings.temperature }),
       ...(settings.topP === undefined ? {} : { top_p: settings.topP }),
@@ -83,6 +105,15 @@ export const responses: Codec = {
     const response = isRecord(event.response) ? event.response : null;
     if (typeof response?.id === 'string' && response.id) facts.id ??= response.id;
     switch (event.type) {
+      // Keyed by output_index, which every event of a call carries.
+      case 'response.output_item.added':
+        if (isRecord(event.item) && event.item.type === 'function_call' && typeof event.output_index === 'number') facts.calls.push(readCall(event.item, event.output_index));
+        break;
+      case 'response.function_call_arguments.delta': {
+        const call = facts.calls.find(({ at }) => at === event.output_index);
+        if (call && typeof event.delta === 'string') call.arguments += event.delta;
+        break;
+      }
       case 'response.output_text.delta':
         if (typeof event.delta === 'string') append('text', event.delta);
         break;
@@ -115,7 +146,7 @@ export const responses: Codec = {
     if (payload.object !== 'response') return isRecord(payload.error) ? failedTerminal(payload.error) : null;
     if (payload.status === 'failed') return failedTerminal(payload.error);
     if (typeof payload.id === 'string' && payload.id) facts.id = payload.id;
-    for (const item of list(payload.output)) readItem(item, append);
+    list(payload.output).forEach((item, at) => readItem(item, at, facts, append));
     ended(payload, facts);
     return { state: 'completed' };
   },

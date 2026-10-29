@@ -65,6 +65,22 @@ describe('responses request', () => {
     ]);
   });
 
+  it('sends tools, an assistant’s calls after its text and a user’s results ahead of it, leaving out empty text', () => {
+    const tools = [{ name: 'run_test', description: 'Runs the file.', parameters: { type: 'object', properties: {} } }];
+    const turns: ChatMessage[] = [
+      { role: 'user', content: '돌려 봐' },
+      { role: 'assistant', content: '', calls: [{ id: 'call_1', name: 'run_test', arguments: '{"moment":"reply"}' }] },
+      { role: 'user', content: '', results: [{ id: 'call_1', name: 'run_test', text: 'passed' }] },
+    ];
+    const body = JSON.parse(chatRequest(route, { model, messages: turns, settings: {}, tools }).body!);
+    expect(body.tools).toEqual([{ type: 'function', name: 'run_test', description: 'Runs the file.', parameters: { type: 'object', properties: {} }, strict: false }]);
+    expect(body.input).toEqual([
+      { role: 'user', content: '돌려 봐' },
+      { type: 'function_call', call_id: 'call_1', name: 'run_test', arguments: '{"moment":"reply"}' },
+      { type: 'function_call_output', call_id: 'call_1', output: 'passed' },
+    ]);
+  });
+
   it('asks for the whole reply when streaming is off', () => {
     expect(JSON.parse(chatRequest(route, { model, messages, settings: { streaming: false, reasoning: { kind: 'off' } } }).body!)).toMatchObject({ reasoning: { effort: 'none' }, stream: false });
   });
@@ -114,6 +130,23 @@ describe('responses stream', () => {
     expect((await decode(route, sse(created, failed))).outcome).toMatchObject({ state: 'failed', error: { kind: 'provider', detail: '잠시 후 다시 시도해 주세요.' } });
     const error = { type: 'error', code: 'rate_limit_exceeded', message: '요청이 너무 많아요.', param: null };
     expect((await decode(route, sse(error))).outcome).toMatchObject({ state: 'failed', error: { kind: 'provider', detail: '요청이 너무 많아요.' } });
+  });
+
+  it('reads a tool call, its arguments assembled from their chunks, as a finished reply', async () => {
+    const stream = sse(
+      created,
+      { type: 'response.output_item.added', output_index: 0, item: { type: 'function_call', id: 'fc_1', call_id: 'call_1', name: 'run_test', arguments: '', status: 'in_progress' } },
+      { type: 'response.function_call_arguments.delta', item_id: 'fc_1', output_index: 0, delta: '{"moment":' },
+      { type: 'response.function_call_arguments.delta', item_id: 'fc_1', output_index: 0, delta: '"reply"}' },
+      { type: 'response.function_call_arguments.done', item_id: 'fc_1', output_index: 0, arguments: '{"moment":"reply"}' },
+      { type: 'response.completed', response: { id: 'resp_1', object: 'response', status: 'completed', usage } },
+    );
+    expect((await decode(route, stream)).outcome).toMatchObject({ state: 'done', finishReason: 'completed', calls: [{ id: 'call_1', name: 'run_test', arguments: '{"moment":"reply"}' }] });
+  });
+
+  it('reads a whole reply’s tool call', async () => {
+    const whole = { id: 'resp_3', object: 'response', status: 'completed', output: [{ type: 'function_call', id: 'fc_1', call_id: 'call_1', name: 'run_test', arguments: '{"moment":"reply"}', status: 'completed' }], usage };
+    expect((await decode(route, JSON.stringify(whole), 'application/json')).outcome).toMatchObject({ state: 'done', calls: [{ id: 'call_1', name: 'run_test', arguments: '{"moment":"reply"}' }] });
   });
 
   it('reads a whole reply’s output items', async () => {
