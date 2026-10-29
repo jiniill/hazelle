@@ -16,7 +16,7 @@ export type Method =
 export type Role = 'background' | 'page' | 'frame';
 export type Down =
   | { kind: 'load'; api: 1; role: Role; code: string; manifest: ToolManifest; settings: Settings; chat: ChatHeader | null; theme: 'dark' | 'light' }
-  | { kind: 'event'; id: number; event: EventName; chat: ChatHeader | null; reply?: Hazelle.At; turn?: Hazelle.Turn; change?: Hazelle.Change; from?: Hazelle.Branched; item?: string; message?: Hazelle.At; text?: string; messages?: Hazelle.RequestMessage[]; shown?: Hazelle.Shown[] }
+  | { kind: 'event'; id: number; event: EventName; chat: ChatHeader | null; reply?: Hazelle.At; turn?: Hazelle.Turn; change?: Hazelle.Change; from?: Hazelle.Branched; item?: string; message?: Hazelle.At; text?: string; messages?: Hazelle.RequestMessage[]; shown?: Hazelle.Shown[]; name?: string; args?: { [key: string]: Hazelle.Json } }
   | { kind: 'answer'; call: number; ok: boolean; value: unknown }
   | { kind: 'storage'; keys: string[] }
   | { kind: 'message'; data: Json }

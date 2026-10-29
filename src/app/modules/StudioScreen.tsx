@@ -283,6 +283,7 @@ function InfoPane({ draft, onIdentity, reveal }: { draft: ToolDraft; onIdentity:
                 { label: '메시지 버튼', value: (preview.manifest.actions ?? []).map((item) => item.label).join(', ') || none },
                 { label: '입력창 버튼', value: preview.manifest.composer?.label ?? none },
                 { label: '입력창 버튼 항목', value: (preview.manifest.inputs ?? []).map((item) => item.label).join(', ') || none },
+                { label: '모델 도구', value: (preview.manifest.functions ?? []).map((item) => item.name).join(', ') || none },
                 { label: '전용 화면', value: preview.manifest.page?.label ?? none },
               ]}
             />

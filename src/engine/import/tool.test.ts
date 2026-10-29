@@ -26,7 +26,13 @@ describe('tool header', () => {
   it('reads every use, message actions and the composer item with its fields', () => {
     const result = read(`${header}//@uses model\n//@uses embed\n//@uses memory\n//@uses embed\n//@uses network\n//@action redo 이 부분 다시 정리\n//@composer 기억\n//@input tidy 문장 다듬기\n//@setting {"key":"chunk","type":"number","label":"요약 단위","default":30,"composer":true}`);
     expect(result).toMatchObject({ ok: true, tool: { manifest: { uses: ['model', 'embed', 'memory', 'network'], actions: [{ id: 'redo', label: '이 부분 다시 정리' }], inputs: [{ id: 'tidy', label: '문장 다듬기' }], composer: { label: '기억' }, settings: [{ key: 'chunk', composer: true }] } } });
-    expect(read(header)).toMatchObject({ ok: true, tool: { manifest: { actions: [], composer: null } } });
+    expect(read(header)).toMatchObject({ ok: true, tool: { manifest: { actions: [], composer: null, functions: [] } } });
+  });
+
+  it('reads the tools the chat model may call, one without parameters as one that takes none', () => {
+    const roll = { name: 'roll', description: 'Rolls dice.', parameters: { type: 'object', properties: { sides: { type: 'number' } } } };
+    const result = read(`${header}//@tool ${JSON.stringify(roll)}\n//@tool {"name":"bag","description":"Lists the bag."}`);
+    expect(result).toMatchObject({ ok: true, tool: { manifest: { functions: [roll, { name: 'bag', description: 'Lists the bag.', parameters: { type: 'object', properties: {} } }] } } });
   });
 
   it.each([
@@ -38,6 +44,10 @@ describe('tool header', () => {
     ['a composer field without the item', '//@setting {"key":"x","type":"switch","label":"X","composer":true}', 'tool-composer-needed'],
     ['an input item without the button', '//@input tidy 다듬기', 'tool-composer-needed'],
     ['a fourth input item', '//@composer 글\n//@input a A\n//@input b B\n//@input c C\n//@input d D', 'tool-input'],
+    ['a tool name no provider takes', '//@tool {"name":"주사위","description":"Rolls."}', 'tool-function'],
+    ['a tool without a description', '//@tool {"name":"roll","description":" "}', 'tool-function'],
+    ['tool parameters that are no object schema', '//@tool {"name":"roll","description":"Rolls.","parameters":{"type":"array"}}', 'tool-function'],
+    ['a repeated tool', '//@tool {"name":"roll","description":"Rolls."}\n//@tool {"name":"roll","description":"Again."}', 'tool-function'],
   ])('refuses %s', (_, lines, detail) => {
     expect(read(`${header}${lines}`)).toMatchObject({ ok: false, failure: { detail } });
   });

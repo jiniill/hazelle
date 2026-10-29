@@ -2,6 +2,7 @@ import type { ChatScope } from '../../engine/render';
 import type { ToolEvent } from '../../engine/script-api';
 import type { ToolIdentity } from '../../model/tool';
 import { atOf } from '../../runtime/script-selection';
+import { argsOf } from '../../runtime/tool-loop';
 import type { DraftState } from '../../runtime/tools/drafts';
 import type { ToolManifest, ToolUse } from '../../tool-api/manifest';
 import { NETWORK } from '../common/words';
@@ -22,9 +23,11 @@ export const testPicks = (manifest: ToolManifest): TestPick[] => [
   ...manifest.menu.map(({ id, label }) => ({ value: `menu:${id}`, label: `⋯ 메뉴 · ${label}`, sub: 'menu', text: false })),
   ...(manifest.actions ?? []).map(({ id, label }) => ({ value: `action:${id}`, label: `메시지 버튼 · ${label}`, sub: 'action · 마지막 메시지', text: false })),
   ...(manifest.inputs ?? []).map(({ id, label }) => ({ value: `input:${id}`, label: `입력창 버튼 · ${label}`, sub: 'input', text: true })),
+  ...(manifest.functions ?? []).map(({ name }) => ({ value: `tool:${name}`, label: `모델 도구 · ${name}`, sub: 'tool', text: true })),
 ];
 
-// The event a pick runs on the chat as it stands; null when the chat holds no message it needs.
+// The event a pick runs on the chat as it stands; null when the chat holds no message it needs, or a tool's arguments
+// are not a JSON object. No arguments typed is a call with none.
 export function testEvent(pick: string, scope: ChatScope, text: string, manifest: ToolManifest): ToolEvent | null {
   const told = scope.messages.slice(scope.greeting === null ? 0 : 1);
   const at = (message: { message: string } | undefined) => message ? atOf(scope, message.message) : null;
@@ -35,6 +38,7 @@ export function testEvent(pick: string, scope: ChatScope, text: string, manifest
     case 'prompt': return { kind: 'prompt', turn: { memory: manifest.uses.includes('memory') } };
     case 'menu': return { kind: 'menu', item };
     case 'action': { const message = at(told.at(-1)); return message && { kind: 'action', item, message }; }
+    case 'tool': { const args = argsOf(text.trim() || '{}'); return args && { kind: 'tool', name: item, args }; }
     default: return { kind: 'input', item, text };
   }
 }

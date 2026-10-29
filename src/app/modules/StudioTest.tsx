@@ -41,7 +41,8 @@ async function runTest(session: Session, draft: DraftFile, chat: string, moments
     if (!scope) return [{ failed: '채팅을 열지 못했어요.', line: null, code: false }];
     const events = moments.map(({ moment, text }) => (at: ChatScope) => testEvent(moment, at, text, read.trial.tool.manifest));
     const tried = await session.scriptPreview.tool(chat, scope, read.trial, messages, events, setup.calling ? { model: setup.model } : null, signal);
-    return tried.map((each) => (each === 'unheard' ? null : each === 'no-event' ? { failed: '이 채팅에는 테스트할 메시지가 없어요.', line: null, code: false } : 'error' in each ? failed(each.error) : each));
+    const missing = (at: number) => (moments[at]!.moment.startsWith('tool:') ? '인자가 JSON 객체가 아니에요.' : '이 채팅에는 테스트할 메시지가 없어요.');
+    return tried.map((each, at) => (each === 'unheard' ? null : each === 'no-event' ? { failed: missing(at), line: null, code: false } : 'error' in each ? failed(each.error) : each));
   } catch (error) {
     return [failed(error)];
   }
@@ -124,7 +125,7 @@ export function TestPane({ draft, setup, onSetup, reveal, onFix }: { draft: Tool
     <Stack gap="related">
       <ChoiceGroup label="채팅" layout="menu" options={chats.map(({ id, title }) => ({ value: id, label: title }))} value={chosen.id} onChange={(chat) => onSetup({ ...setup, chat })} />
       <ChoiceGroup label="실행 시점" layout="menu" options={picks.map(({ value, label, sub }) => ({ value, label, sub }))} value={picked.value} onChange={setPick} />
-      {picked.text && <TextField label={picked.value === 'sending' ? '보낼 메시지' : '입력창 내용'} value={text} onChange={setText} />}
+      {picked.text && <TextField label={picked.value === 'sending' ? '보낼 메시지' : picked.sub === 'tool' ? '인자(JSON)' : '입력창 내용'} value={text} onChange={setText} />}
       {read.trial.tool.manifest.uses.includes('model') && (
         <>
           <SettingRow label="모델 호출" help="플러그인의 모델 호출은 모두 선택한 모델로 보내요. 기본값은 보조 모델이에요." control={<Switch label="모델 호출" checked={setup.calling} onChange={(calling) => onSetup({ ...setup, calling })} />} />

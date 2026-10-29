@@ -152,6 +152,10 @@ declare namespace Hazelle {
     // A //@input item pressed from the //@composer button, with the chat input's text as typed ('' when empty): a text
     // answered replaces it, which the user can undo. No deadline: the user waits and may stop it, which aborts its calls.
     input(chat: Chat, item: string, text: string): string | void | Promise<string | void>;
+    // The chat model called a //@tool tool while writing a reply, with its arguments: the text answered goes back to the
+    // model, which then goes on with the reply. The reply is not saved yet, so the story cannot be changed here; state,
+    // data and badge writes land with it. No deadline: the user may stop the reply, which aborts its calls.
+    tool(chat: Chat, name: string, args: { [key: string]: Json }): string | Promise<string>;
     settings(settings: Settings): void | Promise<void>;                     // fields changed on the module page
     open(): void | Promise<void>;                                           // the user opened a frame tool's page
     message(data: Json): void;                                              // from the other side (page <-> background)

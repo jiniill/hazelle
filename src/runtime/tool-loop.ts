@@ -1,10 +1,12 @@
 import type { ChatMessage, ToolDef, ToolResult } from '../connectors/types';
 import { isRecord } from '../connectors/values';
+import type { Json } from '../tool-api/manifest';
 import { gather, type GenerateInput, type Reply } from './generate';
 
 // A tool the model may call. args: the call's arguments read as a JSON object; a call that names no offered tool or
 // whose arguments do not read so never reaches run. before: what the model wrote since the last call that ran.
-export type Tool = { def: ToolDef; run: (args: Record<string, unknown>, before: string) => Promise<string> };
+export type ToolArgs = { [key: string]: Json };
+export type Tool = { def: ToolDef; run: (args: ToolArgs, before: string) => Promise<string> };
 // One round's model call, made by the caller with its own call record, receipt and ledger row, on its messages
 // followed by exchange. tools is absent when none are offered. A result without an answer ends the loop as it is.
 export type Send<T> = (exchange: ChatMessage[], tools: ToolDef[] | undefined, onText: GenerateInput['onText']) => Promise<T>;
@@ -13,10 +15,10 @@ export type Round<R> = R & { text: string; results: ToolResult[] };
 // answered: the last round called nothing. failed: its call failed. exhausted: it still called on the last round allowed.
 export type Looped<R> = { kind: 'answered' | 'stopped' | 'failed' | 'exhausted'; rounds: Round<R>[] };
 
-function argsOf(text: string): Record<string, unknown> | null {
+export function argsOf(text: string): ToolArgs | null {
   try {
     const read: unknown = JSON.parse(text);
-    return isRecord(read) ? read : null;
+    return isRecord(read) ? (read as ToolArgs) : null;
   } catch {
     return null;
   }

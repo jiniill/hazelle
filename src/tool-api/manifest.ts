@@ -9,8 +9,10 @@ export type ToolField = { key: string; type: 'text' | 'number' | 'switch' | 'cho
 // Risu import scan: missing lists refused/unmapped methods; hosts lists literal hosts.
 // unread means API aliasing prevented an exhaustive scan.
 export type RisuScan = { verdict: 'all' | 'partial' | 'unread'; missing: string[]; hosts: string[] };
-// Older tools omit actions/inputs/composer and declare none; risu selects the v3 adapter.
+// A //@tool line: a tool the chat model may call, answered by the 'tool' event. parameters: a JSON Schema object.
+export type ToolFunction = { name: string; description: string; parameters: { [key: string]: Json } };
+// Older tools omit actions/inputs/composer/functions and declare none; risu selects the v3 adapter.
 export type ToolManifest = {
   api: 1; name: string; author: string; displayName: string; version: string; description: string; uses: ToolUse[]; page: { label: string } | null;
-  menu: { id: string; label: string }[]; settings: ToolField[]; actions?: { id: string; label: string }[]; inputs?: { id: string; label: string }[]; composer?: { label: string } | null; risu?: RisuScan;
+  menu: { id: string; label: string }[]; settings: ToolField[]; actions?: { id: string; label: string }[]; inputs?: { id: string; label: string }[]; composer?: { label: string } | null; functions?: ToolFunction[]; risu?: RisuScan;
 };

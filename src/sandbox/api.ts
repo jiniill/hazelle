@@ -13,10 +13,10 @@ const outcome = (pending: Buffer, value?: ToolOutcome['value']): ToolOutcome => 
   data: [...pending.data], badges: [...pending.badges].map(([index, text]) => ({ index, text })), lore: [...pending.lore.values()], variables: [...pending.variables],
 });
 // An event about the user's own change must not rewrite the story under them, nor one inside a turn or a showing.
-const STORY_LOCKED = new Set<EventName>(['change', 'branch', 'replying', 'sending', 'requesting', 'showing']);
+const STORY_LOCKED = new Set<EventName>(['change', 'branch', 'replying', 'sending', 'requesting', 'showing', 'tool']);
 // Nothing a showing answers is saved, so a write there would be lost.
 const QUIET = new Set<EventName>(['showing']);
-const ANSWERS = new Set<EventName>(['replying', 'sending', 'requesting', 'showing', 'input']);
+const ANSWERS = new Set<EventName>(['replying', 'sending', 'requesting', 'showing', 'input', 'tool']);
 const describe = (error: unknown) => error instanceof Error ? error.message : String(error);
 // The name a plugin's code runs under, so a stack names its lines (lineOf), which are the file's.
 export const sourced = (code: string) => `${code}\n//# sourceURL=hazelle-plugin.js`;
@@ -215,7 +215,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       const chat = data.chat && chatOf(data.chat, data.id, pending, STORY_LOCKED.has(data.event), QUIET.has(data.event));
       const args = {
         reply: [chat, data.reply], replying: [chat, data.text], sending: [chat, data.text], requesting: [chat, data.messages], showing: [chat, data.shown], prompt: [chat, data.turn],
-        change: [chat, data.change], branch: [chat, data.from], menu: [chat, data.item], action: [chat, data.item, data.message], input: [chat, data.item, data.text],
+        change: [chat, data.change], branch: [chat, data.from], menu: [chat, data.item], action: [chat, data.item, data.message], input: [chat, data.item, data.text], tool: [chat, data.name, data.args],
       }[data.event as string] ?? [chat];
       const answer = (value: unknown) => data.event === 'prompt' ? (value as Hazelle.PromptAnswer | undefined) ?? null : ANSWERS.has(data.event) && value !== null ? value as ToolOutcome['value'] : undefined;
       // The host checks the answer's shape; one the port cannot carry fails the event here.

@@ -66,6 +66,24 @@ it('buffers chat data and badges, merges pending keys, carries the prompt answer
   close();
 });
 
+it('hands a tool call its name and arguments, sends its text back with its writes, and refuses story writes in it', async () => {
+  const port = new FakePort();
+  const close = connectApi(port, (_code, api) => {
+    api.on('tool', (chat, name, args) => {
+      if (args.edit) chat.edit(0, 'never');
+      chat.badge(1, '굴림');
+      return `${name} ${String(args.sides)}`;
+    });
+  });
+  port.receive(load());
+  await vi.waitFor(() => expect(port.sent.some((message) => message.kind === 'loaded')).toBe(true));
+  port.receive({ kind: 'event', id: 1, event: 'tool', chat, name: 'roll', args: { sides: 6 } });
+  await vi.waitFor(() => expect(port.sent).toContainEqual({ kind: 'done', id: 1, outcome: expect.objectContaining({ value: 'roll 6', badges: [{ index: 1, text: '굴림' }] }) }));
+  port.receive({ kind: 'event', id: 2, event: 'tool', chat, name: 'roll', args: { edit: true } });
+  await vi.waitFor(() => expect(port.sent).toContainEqual(expect.objectContaining({ kind: 'failed', id: 2 })));
+  close();
+});
+
 it('applies message tails, keeps concurrent event buffers separate, and surfaces a refused host call', async () => {
   const port = new FakePort();
   const close = connectApi(port, (_code, api) => {

@@ -14,6 +14,7 @@ The file starts with its header: //@ lines, one per line, before any code. Any o
 - //@input <id> <label>: an item of that button, at most 3 of them, labels at most 16 characters, which needs //@composer; pressing it sends the 'input' event with the id and the text typed, and a text answered replaces the input's text. A button with one item and no composer field or page runs it on a press, with no menu. Use it to rewrite, translate or draft what the user is about to send.
 - //@menu <id> <label>: an item in the chat's ⋯ menu; pressing it sends the 'menu' event with the id.
 - //@action <id> <label>: an item in each message's ⋯, at most 3 of them, labels at most 16 characters; pressing it sends the 'action' event with the id.
+- //@tool {"name":"…","description":"…","parameters":{…}}: a tool the chat model may call while it writes a reply, as JSON on one line. name: letters, numbers, _ or -, starting with a letter, at most 40 characters; description: when the model should call it, in English; parameters: a JSON Schema object, left out when it takes none. A call sends the 'tool' event with the name and the arguments, and the text answered goes back to the model. Use it for what the model should look up or roll itself: dice, an inventory, a stat.
 - //@page <label>: the plugin's own page. The same file also runs there, with hazelle.context === 'page' and the page's own document.
 Ids use letters, numbers, _, . or -. Every label the user reads is Korean.
 

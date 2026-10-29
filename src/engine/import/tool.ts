@@ -1,5 +1,5 @@
 import { isRecord } from '../../connectors/values';
-import type { Settings, ToolField, ToolManifest, ToolUse } from '../../tool-api/manifest';
+import type { Json, Settings, ToolField, ToolFunction, ToolManifest, ToolUse } from '../../tool-api/manifest';
 import type { ToolIdentity } from '../../model/tool';
 import type { ImportFailure } from './types';
 
@@ -14,6 +14,8 @@ export type ImportedTool = { manifest: ToolManifest; bytes: Uint8Array<ArrayBuff
 export type ToolRead = { ok: true; tool: ImportedTool } | { ok: false; failure: ImportFailure };
 const HEADER_KEYS = new Set(['api', 'name', 'author', 'display-name', 'version', 'description', 'page']);
 export const identity = (value: string) => /^[\p{L}\p{N}_.-]+$/u.test(value);
+// What every provider takes as a tool name, with room for the per-plugin prefix the app adds on the wire.
+const FUNCTION_NAME = /^[A-Za-z][A-Za-z0-9_-]{0,39}$/;
 // written: the line as the file has it, quoted back in a failure.
 export type HeaderLine = { key: string; value: string; written: string };
 // header: the leading //@ lines, blank lines between them skipped; body: the code after them.
@@ -27,6 +29,13 @@ export function fieldValue(field: ToolField, value: unknown): value is Settings[
     case 'switch': return typeof value === 'boolean';
     case 'choice': return typeof value === 'string' && !!field.options?.includes(value);
   }
+}
+
+// No parameters is a tool that takes none, as the providers' own empty schema says.
+function functionOf(value: unknown): ToolFunction | null {
+  if (!isRecord(value) || typeof value.name !== 'string' || !FUNCTION_NAME.test(value.name) || typeof value.description !== 'string' || !value.description.trim()) return null;
+  if (value.parameters !== undefined && (!isRecord(value.parameters) || value.parameters.type !== 'object')) return null;
+  return { name: value.name, description: value.description, parameters: (value.parameters as { [key: string]: Json } | undefined) ?? { type: 'object', properties: {} } };
 }
 
 function fieldOf(value: unknown): ToolField | null {
@@ -90,9 +99,10 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
   const text = toolText(bytes);
   if (!text.ok) return text;
   const header = new Map<string, string>();
-  const manifest: ToolManifest = { api: 1, name: '', author: '', displayName: '', version: '', description: '', uses: [], page: null, menu: [], settings: [], actions: [], inputs: [], composer: null };
+  const manifest: ToolManifest = { api: 1, name: '', author: '', displayName: '', version: '', description: '', uses: [], page: null, menu: [], settings: [], actions: [], inputs: [], composer: null, functions: [] };
   const actions = manifest.actions!;
   const inputs = manifest.inputs!;
+  const functions = manifest.functions!;
   let unknown: string | null = null;
   // The first line that shows in the composer button, which //@composer must name.
   let shown: string | null = null;
@@ -117,6 +127,12 @@ export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {
       if (!item || !identity(item[1]!) || [...item[2]!].length > TOOL_ACTION_CHARS || inputs.length === TOOL_ACTIONS || inputs.some((each) => each.id === item[1])) return failed('tool-input', written);
       inputs.push({ id: item[1]!, label: item[2]! });
       shown ??= written;
+    } else if (key === 'tool') {
+      let json: unknown;
+      try { json = JSON.parse(value); } catch { return failed('tool-function', written); }
+      const made = functionOf(json);
+      if (!made || functions.some((each) => each.name === made.name)) return failed('tool-function', written);
+      functions.push(made);
     } else if (key === 'composer') {
       if (!value || [...value].length > TOOL_COMPOSER_CHARS || manifest.composer) return failed('tool-composer', written);
       manifest.composer = { label: value };

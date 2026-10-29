@@ -17,7 +17,7 @@ import type { ObjectStore } from '../store';
 import { callOf, endCall, pageCall } from '../streams';
 import type { Tokens } from '../token-calibration';
 import type { ToolTrial } from '../script-preview';
-import { toolLoop } from '../tool-loop';
+import { toolLoop, type ToolArgs } from '../tool-loop';
 import { keepRow } from '../usage';
 
 type Deps = { store: ObjectStore; credentials: Credentials; log: RequestLog; tokens: Tokens };
@@ -54,8 +54,8 @@ const RUN_TEST: ToolDef = {
         items: {
           type: 'object',
           properties: {
-            moment: { type: 'string', description: 'reply: after the last reply is saved; sending: before a message is sent; prompt: when a request is built; menu:<id>, action:<id> (on the last message) or input:<id>, with an id from that line of the code.' },
-            text: { type: 'string', description: 'The text typed, for the sending and input: moments.' },
+            moment: { type: 'string', description: 'reply: after the last reply is saved; sending: before a message is sent; prompt: when a request is built; menu:<id>, action:<id> (on the last message) or input:<id>, with an id from that line of the code; tool:<name>, the chat model calling that //@tool tool.' },
+            text: { type: 'string', description: 'The text typed, for the sending and input: moments; for tool:, the arguments as a JSON object.' },
           },
           required: ['moment'],
         },
@@ -103,7 +103,7 @@ export function trialReport({ outcome, said, asked, calls, writes, called }: Too
 }
 
 // A run_test whose arguments are not of its shape is answered as such, never run on a guess.
-function readTest(read: Record<string, unknown>): { code: string; moments: TestMoment[]; messages: TestMessage[] } | null {
+function readTest(read: ToolArgs): { code: string; moments: TestMoment[]; messages: TestMessage[] } | null {
   if (typeof read.code !== 'string' || !Array.isArray(read.moments) || read.moments.length === 0) return null;
   const listed = read.messages ?? [];
   if (!Array.isArray(listed)) return null;
@@ -123,7 +123,7 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
   const testing = runner && route.model.tools !== false ? runner : null;
   const messages = pluginAskMessages(api, input.body, input.ask, input.earlier, testing ? RUNS : 0);
   const runs: TestRun[] = [];
-  const runTest = (testing: PluginRunner) => async (args: Record<string, unknown>, before: string) => {
+  const runTest = (testing: PluginRunner) => async (args: ToolArgs, before: string) => {
     const asked = readTest(args);
     if (!asked) return 'Not run: the arguments are not a JSON object with a code string, a list of moments and, if any, a list of messages.';
     if (runs.length >= RUNS) return `Not run: the ${RUNS} test runs are used up. Answer now with the Korean note and the whole file.`;
