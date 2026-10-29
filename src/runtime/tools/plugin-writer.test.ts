@@ -17,14 +17,14 @@ it('streams one answer from the 대화 모델 and records its usage outside chat
   const written = '만들었어요.\n```js\nprivateNewFile();\n```';
   const sent = stubRelay(() => upstream(200, { choices: [{ message: { content: written }, finish_reason: 'stop' }], usage: { prompt_tokens: 100, completion_tokens: 50 } }));
   const onText = vi.fn();
-  const asked = await askPlugin(session, { file, ask: '고쳐 줘', model: null }, new AbortController().signal, onText);
-  expect(asked).toMatchObject({ ok: true, answer: { ok: true, note: '만들었어요.', file: 'privateNewFile();\n' }, model: refOf(route.connection.id, route.model) });
+  const asked = await askPlugin(session, { body: file, ask: '고쳐 줘', model: null }, new AbortController().signal, onText);
+  expect(asked).toMatchObject({ ok: true, answer: { ok: true, note: '만들었어요.', body: 'privateNewFile();\n', proposed: {} }, model: refOf(route.connection.id, route.model) });
   expect(onText).toHaveBeenLastCalledWith(written);
   expect(sent).toHaveLength(1);
   const messages = JSON.parse(sent[0]!.sent.body!).messages;
   expect(messages[0].content).toContain(api);
   expect(messages[1].content).toContain(file);
-  expect(messages.at(-1).content).toBe('고쳐 줘');
+  expect(messages[1].content).toMatch(/Request:\n고쳐 줘$/);
   expect(session.store.list('stream')).toEqual([]);
   const usage = new Usage(session.store);
   const rows = await usage.read(new AbortController().signal);
@@ -33,25 +33,25 @@ it('streams one answer from the 대화 모델 and records its usage outside chat
 }));
 
 it('asks the picked model over the 대화 모델, keeps unfenced answers as notes, and refuses missing or stopped calls', () => server.withSession(async (session) => {
-  expect(await askPlugin(session, { file: null, ask: '만들어 줘', model: null }, new AbortController().signal, () => {})).toEqual({ ok: false, failure: { kind: 'no-model' } });
+  expect(await askPlugin(session, { body: null, ask: '만들어 줘', model: null }, new AbortController().signal, () => {})).toEqual({ ok: false, failure: { kind: 'no-model' } });
   await answerable(session);
   const sent = stubRelay(() => saying('내용을 더 알려 줘야 해요.'));
-  expect(await askPlugin(session, { file: null, ask: '만들어 줘', model: null }, new AbortController().signal, () => {})).toMatchObject({ ok: true, answer: { ok: false, note: '내용을 더 알려 줘야 해요.' }, cost: null });
+  expect(await askPlugin(session, { body: null, ask: '만들어 줘', model: null }, new AbortController().signal, () => {})).toMatchObject({ ok: true, answer: { ok: false, note: '내용을 더 알려 줘야 해요.' }, cost: null });
   expect(sent).toHaveLength(1);
-  expect(await askPlugin(session, { file: null, ask: '만들어 줘', model: null }, AbortSignal.abort(), () => {})).toEqual({ ok: false, failure: { kind: 'stopped' } });
+  expect(await askPlugin(session, { body: null, ask: '만들어 줘', model: null }, AbortSignal.abort(), () => {})).toEqual({ ok: false, failure: { kind: 'stopped' } });
   expect(sent).toHaveLength(1);
   const [connection] = session.store.list('connection');
-  expect(await askPlugin(session, { file: null, ask: '만들어 줘', model: { connection: connection!.id, model: 'gone' } }, new AbortController().signal, () => {})).toEqual({ ok: false, failure: { kind: 'model-gone' } });
+  expect(await askPlugin(session, { body: null, ask: '만들어 줘', model: { connection: connection!.id, model: 'gone' } }, new AbortController().signal, () => {})).toEqual({ ok: false, failure: { kind: 'model-gone' } });
   expect(sent).toHaveLength(1);
 }));
 
 it('estimates a full-file answer from the catalog price and returns unknown without one', () => server.withSession(async (session) => {
   await answerable(session);
-  const input = { file: 'wholeFile();', ask: '고쳐 줘', model: null };
+  const input = { body: 'wholeFile();', ask: '고쳐 줘', model: null };
   expect(await askEstimate(session, input)).toBeNull();
   const [connection] = session.store.list('connection');
   await session.store.update('connection', connection!.id, (current) => ({ ...current, starred: current.starred.map((model) => ({ ...model, price })) }));
   const counts = vi.spyOn(session.store.evaluation, 'count').mockResolvedValue([100, 20, 10, 15]);
   expect(await askEstimate(session, input)).toEqual({ unit: 'usd', amount: 0.00016, source: 'price-list' });
-  expect(counts.mock.lastCall![0].at(-1)).toBe(input.file);
+  expect(counts.mock.lastCall![0].at(-1)).toBe(input.body);
 }));

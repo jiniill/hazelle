@@ -176,7 +176,7 @@ const SHAPES = {
   }),
   module: shape({ name: str, description: str, namespace: orNull(str), folder: optStr, regex: listOf(shape({ id: str })), triggers: listOf(shape({ id: str, kind: str, name: str })), toggles: listOf(toggleLine), loreFolders: listOf(shape({ id: str, name: str })) }),
   tool: shape({ manifest: shape({ api: (value) => value === 1, ...all(str, 'name', 'author', 'displayName', 'version', 'description'), uses: listOf((value) => value === 'model' || value === 'embed' || value === 'memory' || value === 'network'), page: orNull(shape({ label: str })), menu: listOf(shape({ id: str, label: str })), settings: listOf(shape({ key: str, type: str, label: str })) }), file: shape({ id: str, key: str }), size: num, settings: isRecord }),
-  tooldraft: shape({ text: str, module: orNull(str), applied: orNull(str), asks: listOf(shape({ ask: str, note: str, model: shape(all(str, 'connection', 'model')), cost: orNull(isRecord), at: num })), at: num }),
+  tooldraft: shape({ identity: shape(all(str, 'name', 'author', 'displayName', 'version', 'description')), body: str, module: orNull(str), applied: orNull(str), asks: listOf(shape({ ask: str, note: str, model: shape(all(str, 'connection', 'model')), cost: orNull(isRecord), at: num })), at: num }),
   tooldata: shape({ key: str, value: (value) => value !== undefined }),
   toolfile: shape({ key: str, size: num, file: shape({ id: str, key: str }) }),
   toolchat: shape({ module: str, key: orNull(str), value: (value) => value !== undefined }),

@@ -1,8 +1,8 @@
-import { readTool } from '../../engine/import/tool';
+import { readTool, splitTool, toolSource, type ImportedTool } from '../../engine/import/tool';
 import type { ImportFailure } from '../../engine/import/types';
 import type { Stored } from '../../model/kinds';
 import { live } from '../../model/library';
-import { toolId, type DraftAsk, type ToolDraft } from '../../model/tool';
+import { toolId, type DraftAsk, type ToolDraft, type ToolIdentity } from '../../model/tool';
 import type { ToolManifest, ToolUse } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
 import type { Files } from '../files';
@@ -11,28 +11,40 @@ import { importTool, sameTool, TOOL_ROW_BYTES, type ToolImport } from './store';
 
 export const DRAFT_BYTES: number = TOOL_ROW_BYTES;
 const encoder = new TextEncoder();
-const tooLarge = (text: string) => encoder.encode(text).byteLength > DRAFT_BYTES;
+export type DraftFile = Pick<ToolDraft, 'identity' | 'body'>;
+const sourceOf = (draft: DraftFile) => toolSource(draft.identity, draft.body);
+const tooLarge = (draft: DraftFile) => encoder.encode(sourceOf(draft)).byteLength > DRAFT_BYTES;
 
 export const draftsOf = (store: Pick<ObjectStore, 'list'>): Stored<'tooldraft'>[] =>
   store.list('tooldraft').sort((a, b) => b.value.at - a.value.at);
 
 export type DraftState = 'unapplied' | 'differs' | 'applied';
-export const draftState = (draft: ToolDraft): DraftState => draft.applied === null ? 'unapplied' : draft.text === draft.applied ? 'applied' : 'differs';
+export const draftState = (draft: ToolDraft): DraftState => draft.applied === null ? 'unapplied' : sourceOf(draft) === draft.applied ? 'applied' : 'differs';
 
-export async function createDraft(store: ObjectStore, text: string, id: string): Promise<ApiResult<null>> {
-  if (tooLarge(text)) return { ok: false, error: 'draft-too-large' };
-  const saved = await store.create('tooldraft', { text, module: null, applied: null, asks: [], at: Date.now() }, { id, parent: null });
+// name is the plugin's identity for updates, so it is made once here and never shown or changed.
+export const draftIdentity = (author: string, named: Partial<Pick<ToolIdentity, 'displayName' | 'description'>>): ToolIdentity =>
+  ({ name: `plugin-${crypto.randomUUID().slice(0, 8)}`, author, displayName: named.displayName ?? '', version: '0.1.0', description: named.description ?? '' });
+
+export const blankDraft = (author: string): DraftFile => ({ identity: draftIdentity(author, { displayName: '내 플러그인' }), body: "hazelle.on('prompt', () => '');\n" });
+
+export async function createDraft(store: ObjectStore, id: string, file: DraftFile): Promise<ApiResult<null>> {
+  if (tooLarge(file)) return { ok: false, error: 'draft-too-large' };
+  const saved = await store.create('tooldraft', { ...file, module: null, applied: null, asks: [], at: Date.now() }, { id, parent: null });
   return saved.ok ? { ok: true, data: null } : saved;
 }
 
-export async function saveDraftText(store: ObjectStore, id: string, text: string): Promise<ApiResult<unknown>> {
-  if (tooLarge(text)) return { ok: false, error: 'draft-too-large' };
-  return store.update('tooldraft', id, (current) => ({ ...current, text, at: Date.now() }));
+export async function saveDraft(store: ObjectStore, id: string, patch: Partial<DraftFile>): Promise<ApiResult<unknown>> {
+  const current = store.get('tooldraft', id);
+  if (!current) return { ok: false, error: 'gone' };
+  if (tooLarge({ ...current.value, ...patch })) return { ok: false, error: 'draft-too-large' };
+  return store.update('tooldraft', id, (draft) => ({ ...draft, ...patch, at: Date.now() }));
 }
 
-export async function addDraftAsk(store: ObjectStore, id: string, ask: DraftAsk, text: string | null): Promise<ApiResult<unknown>> {
-  if (text !== null && tooLarge(text)) return { ok: false, error: 'draft-too-large' };
-  return store.update('tooldraft', id, (current) => ({ ...current, asks: [...current.asks, ask].slice(-30), ...(text !== null && { text }), at: Date.now() }));
+export async function addDraftAsk(store: ObjectStore, id: string, ask: DraftAsk, body: string | null): Promise<ApiResult<unknown>> {
+  const current = store.get('tooldraft', id);
+  if (!current) return { ok: false, error: 'gone' };
+  if (body !== null && tooLarge({ ...current.value, body })) return { ok: false, error: 'draft-too-large' };
+  return store.update('tooldraft', id, (draft) => ({ ...draft, asks: [...draft.asks, ask].slice(-30), ...(body !== null && { body }), at: Date.now() }));
 }
 
 export async function deleteDraft(store: ObjectStore, id: string): Promise<ApiResult<unknown>> {
@@ -49,48 +61,56 @@ export async function restoreDraft(store: ObjectStore, id: string, draft: ToolDr
 export async function draftOfTool(store: ObjectStore, files: Files, module: string): Promise<ApiResult<string>> {
   const tool = live(store.get('module', module)) && store.get('tool', toolId(module));
   if (!tool) return { ok: false, error: 'gone' };
-  if (tool.value.manifest.risu) return { ok: false, error: 'risu-plugin' };
+  const { manifest } = tool.value;
+  if (manifest.risu) return { ok: false, error: 'risu-plugin' };
   const existing = draftsOf(store).find(({ value }) => value.module === module);
   if (existing) return { ok: true, data: existing.id };
   if (tool.value.size > DRAFT_BYTES) return { ok: false, error: 'draft-too-large' };
   const read = await files.read(tool.value.file);
   if (!read.ok) return read;
   if (read.data.byteLength > DRAFT_BYTES) return { ok: false, error: 'draft-too-large' };
-  const text = new TextDecoder().decode(read.data);
+  const file = { identity: { name: manifest.name, author: manifest.author, displayName: manifest.displayName, version: manifest.version, description: manifest.description }, body: splitTool(new TextDecoder().decode(read.data)).body };
   const id = crypto.randomUUID();
-  const saved = await store.create('tooldraft', { text, module, applied: text, asks: [], at: Date.now() }, { id, parent: null });
+  const saved = await store.create('tooldraft', { ...file, module, applied: sourceOf(file), asks: [], at: Date.now() }, { id, parent: null });
   return saved.ok ? { ok: true, data: id } : saved;
 }
 
-export type ApplyPreview = { ok: true; manifest: ToolManifest; previous: { module: string; manifest: ToolManifest } | null; added: ToolUse[] } | { ok: false; failure: ImportFailure };
-export function applyPreview(store: Pick<ObjectStore, 'list' | 'get'>, text: string): ApplyPreview {
-  const read = readTool(encoder.encode(text));
+const nextVersion = (version: string) => {
+  const parts = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+  return parts ? `${parts[1]}.${parts[2]}.${Number(parts[3]) + 1}` : null;
+};
+
+// 적용 raises the patch version when the installed plugin already has the draft's version and the file changed since
+// it was last applied; a version the user set, or one that is not x.y.z, is applied as it is.
+type Prepared = { ok: true; file: DraftFile; tool: ImportedTool; previous: Stored<'tool'> | null } | { ok: false; failure: ImportFailure };
+function prepare(store: Pick<ObjectStore, 'list' | 'get'>, draft: ToolDraft): Prepared {
+  const read = readTool(encoder.encode(sourceOf(draft)));
   if (!read.ok) return read;
-  const { manifest } = read.tool;
-  const previous = sameTool(store, manifest);
+  const previous = sameTool(store, read.tool.manifest) ?? null;
+  const raised = previous && previous.value.manifest.version === draft.identity.version && sourceOf(draft) !== draft.applied ? nextVersion(draft.identity.version) : null;
+  if (!raised) return { ok: true, file: draft, tool: read.tool, previous };
+  const file = { identity: { ...draft.identity, version: raised }, body: draft.body };
+  const again = readTool(encoder.encode(sourceOf(file)));
+  return again.ok ? { ok: true, file, tool: again.tool, previous } : again;
+}
+
+export type ApplyPreview = { ok: true; manifest: ToolManifest; previous: { module: string; manifest: ToolManifest } | null; added: ToolUse[] } | { ok: false; failure: ImportFailure };
+export function applyPreview(store: Pick<ObjectStore, 'list' | 'get'>, draft: ToolDraft): ApplyPreview {
+  const prepared = prepare(store, draft);
+  if (!prepared.ok) return prepared;
+  const { tool: { manifest }, previous } = prepared;
   return { ok: true, manifest, previous: previous ? { module: previous.parent!, manifest: previous.value.manifest } : null, added: manifest.uses.filter((use) => !previous?.value.manifest.uses.includes(use)) };
 }
 
 export async function applyDraft(store: ObjectStore, files: Files, id: string): Promise<ApiResult<ToolImport>> {
   const draft = store.get('tooldraft', id);
   if (!draft) return { ok: false, error: 'gone' };
-  const { text } = draft.value;
-  if (tooLarge(text)) return { ok: false, error: 'draft-too-large' };
-  const read = readTool(encoder.encode(text));
-  if (!read.ok) return { ok: false, error: read.failure.detail ?? read.failure.kind };
-  const installed = await importTool(store, files, read.tool);
+  if (tooLarge(draft.value)) return { ok: false, error: 'draft-too-large' };
+  const prepared = prepare(store, draft.value);
+  if (!prepared.ok) return { ok: false, error: prepared.failure.detail ?? prepared.failure.kind };
+  const installed = await importTool(store, files, prepared.tool);
   if (!installed.ok) return installed;
-  const saved = await store.update('tooldraft', id, (current) => ({ ...current, module: installed.data.id, applied: text }));
+  const { identity } = prepared.file;
+  const saved = await store.update('tooldraft', id, (current) => ({ ...current, identity, module: installed.data.id, applied: sourceOf(prepared.file) }));
   return saved.ok ? installed : saved;
-}
-
-export function blankPlugin(author: string): string {
-  return `//@api 1
-//@name my-plugin
-//@author ${author}
-//@display-name 내 플러그인
-//@version 0.1.0
-
-hazelle.on('prompt', () => '');
-`;
 }

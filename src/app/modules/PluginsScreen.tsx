@@ -9,7 +9,7 @@ import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, Empty, NavBar, Row, Screen, Section, Stack, Table, Tag, type TableColumn, type TableRow } from '../ui';
 import { useModuleUse } from './ModulesScreen';
-import { DRAFT_STATES, draftHeader } from './studio';
+import { DRAFT_STATES, draftTitle } from './studio';
 import { StudioPlaces } from './StudioPlaces';
 
 const COLUMNS: TableColumn[] = [
@@ -32,7 +32,7 @@ function Drafts() {
     const edited = `${ago(value.at)} 수정`;
     return {
       key: id,
-      cells: [draftHeader(value.text).title, edited, state === 'applied' ? null : <Tag tone={state === 'differs' ? 'accent' : 'faint'}>{DRAFT_STATES[state]}</Tag>],
+      cells: [draftTitle(value.identity), edited, state === 'applied' ? null : <Tag tone={state === 'differs' ? 'accent' : 'faint'}>{DRAFT_STATES[state]}</Tag>],
       summary: edited,
       onClick: () => navigate({ kind: 'plugin-draft', id }),
     };

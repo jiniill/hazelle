@@ -17,8 +17,8 @@ import { callOf, endCall, pageCall } from '../streams';
 import type { Tokens } from '../token-calibration';
 import { keepRow } from '../usage';
 
-type Deps = { store: ObjectStore; credentials: Credentials; log: RequestLog; tokens: Tokens; username: string };
-type Input = { file: string | null; ask: string; model: ModelRef | null };
+type Deps = { store: ObjectStore; credentials: Credentials; log: RequestLog; tokens: Tokens };
+type Input = { body: string | null; ask: string; model: ModelRef | null };
 export type PluginAsked = { ok: true; answer: PluginAnswer; model: ModelRef; cost: Cost | null } | { ok: false; failure: RouteFailure | { kind: 'profile-missing'; own: boolean } | { kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { kind: 'unsaved'; failure: ApiFailure } };
 
 export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, onText: (text: string) => void): Promise<PluginAsked> {
@@ -38,7 +38,7 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
       model: route.model,
       settings: profile.profile.value.settings,
       retries: retriesOf(store, route.connection.value, profile.profile.value.settings),
-      messages: pluginAskMessages(api, input.file, input.ask, deps.username),
+      messages: pluginAskMessages(api, input.body, input.ask),
       call,
       signal,
       onText: text.add,
@@ -56,15 +56,15 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
 
 // One full file out: the current file's tokens, or 1,024 for a first draft, within the user's output cap. An estimate
 // from the catalog price, never a quote: reasoning and cache hits are not foreseen.
-export async function askEstimate(deps: Pick<Deps, 'store' | 'username'>, input: Input): Promise<Cost | null> {
+export async function askEstimate(deps: Pick<Deps, 'store'>, input: Input): Promise<Cost | null> {
   const route = sharedModel(deps.store, 'main', input.model);
   if ('kind' in route || !route.model.price) return null;
   const profile = modelProfile(deps.store, route.model);
   if (profile.kind === 'missing') return null;
-  const messages = pluginAskMessages(api, input.file, input.ask, deps.username);
-  const counts = await deps.store.evaluation.count([...messages.map(({ content }) => content), ...(input.file === null ? [] : [input.file])]).catch(() => null);
+  const messages = pluginAskMessages(api, input.body, input.ask);
+  const counts = await deps.store.evaluation.count([...messages.map(({ content }) => content), ...(input.body === null ? [] : [input.body])]).catch(() => null);
   if (!Array.isArray(counts)) return null;
-  const fileTokens = input.file === null ? 1024 : counts.pop()!;
+  const fileTokens = input.body === null ? 1024 : counts.pop()!;
   const outputTokens = Math.min(fileTokens, profile.profile.value.settings.maxOutput ?? Infinity);
   return priceCost(route.model.price, { inputTokens: counts.reduce((sum, count) => sum + count, 0), outputTokens, cachedInputTokens: null, cacheWriteInputTokens: null, reasoningTokens: null }, costUnit(resolveConnection(route.connection.value)?.type ?? null));
 }

@@ -1,17 +1,9 @@
-import { toolText } from '../../engine/import/tool';
+import type { ToolIdentity } from '../../model/tool';
 import type { DraftState } from '../../runtime/tools/drafts';
 import type { ToolUse } from '../../tool-api/manifest';
 import { NETWORK } from '../common/words';
 
-const UNNAMED = '이름 없는 플러그인';
-
-// A draft is named by its own header as typed, before readTool would accept it: a half-written file still has a name.
-export function draftHeader(text: string): { title: string; name: string | null; version: string | null } {
-  const read = toolText(new TextEncoder().encode(text));
-  const value = (key: string) => (read.ok ? read.header.find((line) => line.key === key)?.value || null : null);
-  const name = value('name');
-  return { title: value('display-name') ?? name ?? UNNAMED, name, version: value('version') };
-}
+export const draftTitle = (identity: ToolIdentity) => identity.displayName || '이름 없는 플러그인';
 
 export const DRAFT_STATES: Record<Exclude<DraftState, 'applied'>, string> = { unapplied: '적용 안 함', differs: '적용한 버전과 다름' };
 

@@ -2,7 +2,7 @@ import { Code2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
 import type { Cost } from '../../connectors/types';
-import { addDraftAsk, blankPlugin, createDraft } from '../../runtime/tools/drafts';
+import { addDraftAsk, blankDraft, createDraft, draftIdentity } from '../../runtime/tools/drafts';
 import { askEstimate, askPlugin, type PluginAsked } from '../../runtime/tools/plugin-writer';
 import { sharedModel } from '../../runtime/assignment';
 import { newOf } from '../common/acts';
@@ -37,7 +37,7 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
   useEffect(() => {
     if (!ready || !ask.trim()) return setEstimate(null);
     let current = true;
-    const timer = setTimeout(() => void askEstimate(session, { file: null, ask, model: picked }).then((found) => current && setEstimate(found)), 400);
+    const timer = setTimeout(() => void askEstimate(session, { body: null, ask, model: picked }).then((found) => current && setEstimate(found)), 400);
     return () => {
       current = false;
       clearTimeout(timer);
@@ -48,12 +48,12 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
     const controller = new AbortController();
     abort.current = controller;
     setRun({ kind: 'running', length: 0 });
-    const asked: PluginAsked = await askPlugin(session, { file: null, ask, model: picked }, controller.signal, (text) => setRun({ kind: 'running', length: text.length }));
+    const asked: PluginAsked = await askPlugin(session, { body: null, ask, model: picked }, controller.signal, (text) => setRun({ kind: 'running', length: text.length }));
     abort.current = null;
     if (!asked.ok) return setRun(asked.failure.kind === 'stopped' ? { kind: 'idle' } : { kind: 'failed', message: describeAskFailure(asked.failure) });
     if (!asked.answer.ok) return setRun({ kind: 'failed', message: `응답에 코드가 없어요. ${asked.answer.note}`.trim() });
     const id = crypto.randomUUID();
-    const made = await createDraft(store, asked.answer.file, id);
+    const made = await createDraft(store, id, { identity: draftIdentity(username, asked.answer.proposed), body: asked.answer.body });
     const kept = made.ok && (await addDraftAsk(store, id, { ask, note: asked.answer.note, model: asked.model, cost: asked.cost, at: Date.now() }, null));
     if (!made.ok || !kept || !kept.ok) {
       setRun({ kind: 'idle' });
@@ -64,7 +64,7 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
 
   async function blank() {
     const id = crypto.randomUUID();
-    const made = await createDraft(store, blankPlugin(username), id);
+    const made = await createDraft(store, id, blankDraft(username));
     if (!made.ok) return toast.show(`${TOOL} 초안을 만들지 못했어요.`);
     navigate({ kind: 'plugin-draft', id }, { replace: true });
   }

@@ -1,5 +1,6 @@
 import { isRecord } from '../../connectors/values';
 import type { Settings, ToolField, ToolManifest, ToolUse } from '../../tool-api/manifest';
+import type { ToolIdentity } from '../../model/tool';
 import type { ImportFailure } from './types';
 
 export const TOOL_FILE_BYTES = 8 * 1024 * 1024;
@@ -45,6 +46,10 @@ export function toolText(bytes: Uint8Array<ArrayBuffer>): ToolText {
   let code: string;
   try { code = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
   catch { return failed('tool-encoding'); }
+  return { ok: true, ...headerOf(code) };
+}
+
+function headerOf(code: string): { header: HeaderLine[]; body: string } {
   const lines = code.split(/\r?\n/);
   const header: HeaderLine[] = [];
   let next = 0;
@@ -55,7 +60,29 @@ export function toolText(bytes: Uint8Array<ArrayBuffer>): ToolText {
     if (!match) break;
     header.push({ key: match[1]!, value: match[2]?.trim() ?? '', written: line.trim() });
   }
-  return { ok: true, header, body: lines.slice(next).join('\n') };
+  return { header, body: lines.slice(next).join('\n') };
+}
+
+// A studio draft keeps these header lines in its own fields and the rest of the file, the code's own header lines
+// included, as its body; toolSource joins them into the file that is applied and exported.
+const IDENTITY_KEYS: Record<string, keyof ToolIdentity | null> = { api: null, name: 'name', author: 'author', 'display-name': 'displayName', version: 'version', description: 'description' };
+
+export function toolSource(identity: ToolIdentity, body: string): string {
+  const lines = ['//@api 1', `//@name ${identity.name}`, `//@author ${identity.author}`, ...(identity.displayName ? [`//@display-name ${identity.displayName}`] : []), `//@version ${identity.version}`, ...(identity.description ? [`//@description ${identity.description}`] : [])];
+  return `${lines.join('\n')}\n\n${body}`;
+}
+
+// found: the identity lines the text holds, for a body that should hold none.
+export function splitTool(text: string): { identity: Partial<ToolIdentity>; found: HeaderLine[]; body: string } {
+  const { header, body } = headerOf(text);
+  const found = header.filter(({ key }) => Object.hasOwn(IDENTITY_KEYS, key));
+  const kept = header.filter((line) => !found.includes(line)).map(({ written }) => written);
+  const identity: Partial<ToolIdentity> = {};
+  for (const { key, value } of found) {
+    const field = IDENTITY_KEYS[key];
+    if (field) identity[field] = value;
+  }
+  return { identity, found, body: kept.length > 0 ? `${kept.join('\n')}\n\n${body}` : body };
 }
 
 export function readTool(bytes: Uint8Array<ArrayBuffer>): ToolRead {

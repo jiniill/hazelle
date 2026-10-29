@@ -87,9 +87,11 @@ it('requires stored vectors to have usable timestamps, quantization scales and c
 });
 
 it('accepts an account-level tool draft with typed ask history, and refuses incomplete drafts', () => {
-  const draft = { text: 'code', module: null, applied: null, asks: [{ ask: 'write', note: 'done', model: { connection: 'c', model: 'm' }, cost: null, at: 1 }], at: 2 };
+  const identity = { name: 'n', author: 'a', displayName: '이름', version: '0.1.0', description: '' };
+  const draft = { identity, body: 'code', module: null, applied: null, asks: [{ ask: 'write', note: 'done', model: { connection: 'c', model: 'm' }, cost: null, at: 1 }], at: 2 };
   expect(isValue('tooldraft', draft)).toBe(true);
   expect(isValue('tooldraft', { ...draft, module: 'mod', applied: 'code' })).toBe(true);
   expect(isValue('tooldraft', { ...draft, applied: undefined })).toBe(false);
+  expect(isValue('tooldraft', { ...draft, identity: { ...identity, version: undefined } })).toBe(false);
   expect(isValue('tooldraft', { ...draft, asks: [{ ...draft.asks[0], model: { connection: 'c' } }] })).toBe(false);
 });

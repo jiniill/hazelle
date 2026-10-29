@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ToolDraft } from '../../model/tool';
 import { applyDraft, applyPreview } from '../../runtime/tools/drafts';
 import { setModuleAt } from '../../runtime/modules';
 import { undoToolImport } from '../../runtime/tools/store';
@@ -13,32 +14,33 @@ type Where = 'always' | 'none';
 
 // 적용 is importTool with the draft's bytes: an update when a plugin of the same name and author is installed, else a
 // new one, whose place is asked here once (ruled 2026-10-29: an update keeps where the plugin is on).
-export function ApplyDialog({ draft, text, onClose }: { draft: string; text: string; onClose: () => void }) {
+export function ApplyDialog({ id, draft, onClose }: { id: string; draft: ToolDraft; onClose: () => void }) {
   const store = useStore();
   const files = useFiles();
   const toast = useToast();
   const [where, setWhere] = useState<Where>('always');
   const [busy, setBusy] = useState(false);
-  const preview = applyPreview(store, text);
+  const preview = applyPreview(store, draft);
 
   async function apply() {
     setBusy(true);
-    const applied = await applyDraft(store, files, draft);
+    const applied = await applyDraft(store, files, id);
     setBusy(false);
     if (!applied.ok) return toast.failed(applied, '적용하지 못했어요.');
     onClose();
-    const { id, previous } = applied.data;
+    const { id: module, previous } = applied.data;
     const name = preview.ok ? preview.manifest.displayName : TOOL;
-    if (previous) return toast.undoable(`'${name}' ${TOOL}을 적용했어요.`, () => undoToolImport(store, id, previous));
-    const placed = where === 'always' ? await setModuleAt(store, { kind: 'always' }, id, true) : null;
+    if (previous) return toast.undoable(`'${name}' ${TOOL}을 적용했어요.`, () => undoToolImport(store, module, previous));
+    const placed = where === 'always' ? await setModuleAt(store, { kind: 'always' }, module, true) : null;
     if (placed && !placed.ok) return toast.failed(placed, `'${name}' ${TOOL}을 설치했지만 켜지 못했어요.`);
     toast.show(`'${name}' ${TOOL}을 설치했어요.`);
   }
 
-  if (!preview.ok) {
+  const unnamed = !draft.identity.displayName.trim();
+  if (!preview.ok || unnamed) {
     return (
       <Dialog title="적용할 수 없어요" onClose={onClose} actions={<Button variant="secondary" onClick={onClose}>닫기</Button>}>
-        <Callout tone="warn">{describeImportFailure(preview.failure)}</Callout>
+        <Callout tone="warn">{preview.ok ? '정보 탭에서 이름을 적어 주세요.' : describeImportFailure(preview.failure)}</Callout>
       </Dialog>
     );
   }

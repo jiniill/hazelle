@@ -224,7 +224,7 @@ it('remaps inventory ids regardless of field names, preserving engine seeds, lit
     { type: 'create', kind: 'profile', id: FIRST_PROFILE_ID, parent: null, value: { name: 'Guest profile', settings: {} } },
     { type: 'create', kind: 'memory', id: memoryId(source.chat), parent: source.chat, value: { records: [], chapters: [], state: [], threads: [] } },
     { type: 'create', kind: 'vectors', id: vectorsId(source.chat), parent: source.chat, value: { model: providerModel, items: {} } },
-    { type: 'create', kind: 'tooldraft', id: crypto.randomUUID(), parent: null, value: { text: source.character, applied: source.message, module, asks: [{ ask: source.chat, note: source.character, model: { connection: connectionId, model: providerModel }, cost: null, at: 1 }], at: 2 } },
+    { type: 'create', kind: 'tooldraft', id: crypto.randomUUID(), parent: null, value: { identity: { name: source.character, author: source.chat, displayName: source.message, version: source.chat, description: source.character }, body: source.character, applied: source.message, module, asks: [{ ask: source.chat, note: source.character, model: { connection: connectionId, model: providerModel }, cost: null, at: 1 }], at: 2 } },
     { type: 'create', kind: 'cacheprint', id: cachePrintId(source.chat), parent: source.chat, value: { call, connection: connectionId, account: connectionAccount, model: providerModel, messages: [] } },
     { type: 'create', kind: 'likeness', id: likenessId(source.character), parent: source.character, value: { portraits: [], at: 1, receipt: null } },
     { type: 'create', kind: 'summary', id: summaryId(source.chat), parent: source.chat, value: { version: 1, head: 0, chatRev: 0, dependencies: [{ kind: 'character', id: source.character, rev: 1 }], rendered: { now: 1, timeZone: 'UTC' }, character: source.character, title: 'A chat', preview: 'Hello', count: 1, at: 1, order: 1, recent: [] } },
@@ -311,7 +311,7 @@ it('remaps inventory ids regardless of field names, preserving engine seeds, lit
   const badge = target.children('toolchat', chat.id).find(({ value }) => value.key === null)!;
   const importedModule = target.list('module')[0]!.id;
   expect(importedModule).not.toBe(module);
-  expect(target.list('tooldraft')[0]!.value).toEqual({ text: source.character, applied: source.message, module: importedModule, asks: [{ ask: source.chat, note: source.character, model: { connection: target.list('connection')[0]!.id, model: providerModel }, cost: null, at: 1 }], at: 2 });
+  expect(target.list('tooldraft')[0]!.value).toEqual({ identity: { name: source.character, author: source.chat, displayName: source.message, version: source.chat, description: source.character }, body: source.character, applied: source.message, module: importedModule, asks: [{ ask: source.chat, note: source.character, model: { connection: target.list('connection')[0]!.id, model: providerModel }, cost: null, at: 1 }], at: 2 });
   expect(badge.id).toBe(await toolChatId(importedModule, chat.id, null));
   expect(badge.value.value).toEqual({ [message.id]: { version: message.id, text: 'A badge' } });
   const data = target.get('tooldata', await toolDataId(importedModule, toolKey))!.value;

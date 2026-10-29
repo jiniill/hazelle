@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readTool, TOOL_FILE_BYTES } from './tool';
+import { readTool, splitTool, toolSource, TOOL_FILE_BYTES } from './tool';
 
 const read = (source: string) => readTool(new TextEncoder().encode(source));
 const header = '//@api 1\n//@name notes\n//@author jin\n';
@@ -53,4 +53,13 @@ describe('tool header', () => {
     expect(readTool(new Uint8Array(TOOL_FILE_BYTES + 1))).toMatchObject({ ok: false, failure: { detail: 'tool-too-large' } });
     expect(readTool(new Uint8Array([0xff]))).toMatchObject({ ok: false, failure: { detail: 'tool-encoding' } });
   });
+});
+
+it('splits the identity lines from the code\'s own header and joins them back into a readable file', () => {
+  const text = '//@api 1\n//@name notes\n//@uses model\n//@author jin\n//@display-name 메모\n\nhazelle.on("prompt", () => "");';
+  const split = splitTool(text);
+  expect(split).toMatchObject({ identity: { name: 'notes', author: 'jin', displayName: '메모' }, body: '//@uses model\n\nhazelle.on("prompt", () => "");' });
+  expect(split.found.map(({ key }) => key)).toEqual(['api', 'name', 'author', 'display-name']);
+  const read = readTool(new TextEncoder().encode(toolSource({ name: 'notes', author: 'jin', displayName: '메모', version: '0.1.0', description: '' }, split.body)));
+  expect(read).toMatchObject({ ok: true, tool: { manifest: { name: 'notes', author: 'jin', displayName: '메모', version: '0.1.0', description: '', uses: ['model'] } } });
 });
