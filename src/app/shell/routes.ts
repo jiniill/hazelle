@@ -38,6 +38,10 @@ export type Route =
   | { kind: 'plugins' }
   | { kind: 'plugin'; id: string }
   | { kind: 'plugin-page'; id: string }
+  // place: the studio card it was opened from, which fills the ask.
+  | { kind: 'plugin-new'; place: string | null }
+  // A plugin being written in the studio (a tooldraft row), not yet one or not yet applied.
+  | { kind: 'plugin-draft'; id: string }
   | { kind: 'models' }
   | { kind: 'profile'; id: string }
   // model: an added model's key (connectors/types entryKey), which may hold any character; the path carries it escaped.
@@ -151,6 +155,8 @@ export function parseRoute(at: string): Route {
   }
   if (top === 'plugins') {
     if (id === undefined) return { kind: 'plugins' };
+    if (id === 'new' && sub === undefined) return { kind: 'plugin-new', place: params.get('place') };
+    if (id === 'drafts') return sub !== undefined && ID.test(sub) ? { kind: 'plugin-draft', id: sub } : HOME;
     if (!ID.test(id)) return HOME;
     if (sub === 'page') return { kind: 'plugin-page', id };
     return sub === undefined ? { kind: 'plugin', id } : HOME;
@@ -251,6 +257,10 @@ export function href(route: Route): string {
       return `/plugins/${route.id}`;
     case 'plugin-page':
       return `/plugins/${route.id}/page`;
+    case 'plugin-new':
+      return route.place === null ? '/plugins/new' : `/plugins/new?place=${encodeURIComponent(route.place)}`;
+    case 'plugin-draft':
+      return `/plugins/drafts/${route.id}`;
     case 'models':
       return '/models';
     case 'profile':
@@ -338,6 +348,8 @@ export function settingsPage(route: Route): SettingsPage | 'list' | null {
     case 'plugins':
     case 'plugin':
     case 'plugin-page':
+    case 'plugin-new':
+    case 'plugin-draft':
       return 'plugins';
     case 'models':
     case 'profile':
@@ -468,6 +480,8 @@ export function up(route: Below, chatShelf?: string | null): Route {
     case 'module':
       return route.pane ? { ...route, pane: null } : { kind: 'modules', place: null };
     case 'plugin':
+    case 'plugin-new':
+    case 'plugin-draft':
       return { kind: 'plugins' };
     case 'plugin-page':
       return { kind: 'plugin', id: route.id };

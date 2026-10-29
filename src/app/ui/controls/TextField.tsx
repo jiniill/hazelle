@@ -52,7 +52,7 @@ export function TextField({ label, showLabel = true, kind = 'text', value, onCha
     'aria-invalid': error ? true : undefined,
   };
   const big = useBigEdit(expand, label, (copy) =>
-    language ? <CodeField label={label} value={value} onChange={onChange} language={language} prose={kind !== 'key'} area={copy.area} caret={copy.caret} aside={aside?.(value)} /> : <textarea ref={copy.area} className={`${look} ${styles.big}`} aria-label={label} data-autofocus {...typed} {...shared} />,
+    language ? <CodeField label={label} value={value} onChange={onChange} language={language} prose={kind !== 'key'} area={copy.area} caret={copy.caret} asides={aside && [aside(value)]} /> : <textarea ref={copy.area} className={`${look} ${styles.big}`} aria-label={label} data-autofocus {...typed} {...shared} />,
   );
   const own = { id, 'aria-label': showLabel ? undefined : label, 'aria-describedby': note ? noteId : undefined, ...shared };
   return (

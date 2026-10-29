@@ -76,3 +76,19 @@ export function cacheDiff(before: string, after: string): CacheDiff {
   add('same', a.slice(a.length - tail).join(''));
   return { runs, coarse };
 }
+
+export function changedLines(runs: CacheDiff['runs']): { from: number; to: number } | null {
+  let line = 1;
+  let from: number | null = null;
+  let to = 1;
+  for (const run of runs) {
+    if (!run.text) continue;
+    const breaks = run.kind === 'before' ? 0 : (run.text.match(/\n/g)?.length ?? 0);
+    if (run.kind !== 'same') {
+      from ??= line;
+      to = Math.max(to, line + breaks - (run.kind === 'after' && run.text.endsWith('\n') ? 1 : 0));
+    }
+    line += breaks;
+  }
+  return from === null ? null : { from, to };
+}

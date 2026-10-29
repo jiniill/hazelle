@@ -10,10 +10,12 @@ const CodeEditor = lazy(() => import('./CodeEditor'));
 // A pane beside the code, behind a tab of its own on a narrow screen. reveal selects a range of the code and shows it.
 export type CodeAside = { label: string; body: (reveal: (at: [number, number]) => void) => ReactNode };
 
-// Keep the plain textarea usable during CodeMirror load; keep both tabs mounted to preserve caret/scroll.
-export function CodeField(props: CodeEditorProps & { area: (element: HTMLTextAreaElement | null) => void; aside?: CodeAside }) {
-  const { label, value, onChange, prose, area, aside, caret, ...rest } = props;
-  const [asideShown, setAsideShown] = useState(false);
+// Keep the plain textarea usable during CodeMirror load; keep every tab mounted to preserve caret/scroll. asides: the
+// panes beside the code, one shown at a time; narrow, the code is one more tab before them.
+export function CodeField(props: CodeEditorProps & { area: (element: HTMLTextAreaElement | null) => void; asides?: readonly CodeAside[] }) {
+  const { label, value, onChange, prose, area, asides, caret, ...rest } = props;
+  const [pane, setPane] = useState(0);
+  const [codeShown, setCodeShown] = useState(true);
   const handle = useRef<Caret | null>(null);
   // caret is BigCopy's, which is stable; so is this one, since a new callback would be called again and put the caret back.
   const [own] = useState(() => (next: Caret | null) => {
@@ -28,7 +30,7 @@ export function CodeField(props: CodeEditorProps & { area: (element: HTMLTextAre
     handle.current?.select(revealed.at);
   }, [revealed]);
   const reveal = (at: [number, number]) => {
-    setAsideShown(false);
+    setCodeShown(true);
     setRevealed({ at });
   };
   const editor = (
@@ -36,24 +38,34 @@ export function CodeField(props: CodeEditorProps & { area: (element: HTMLTextAre
       <CodeEditor label={label} value={value} onChange={onChange} prose={prose} caret={own} {...rest} />
     </Suspense>
   );
-  if (!aside) return editor;
+  if (!asides?.length) return editor;
+  const panes = asides.map((aside, index) => ({ value: String(index), label: aside.label }));
   return (
-    <div className={asideShown ? `${styles.split} ${styles.asideShown}` : styles.split}>
+    <div className={codeShown ? styles.split : `${styles.split} ${styles.asideShown}`}>
       <div className={styles.tabs}>
         <Tabs
           label="보기"
-          items={[
-            { value: 'code', label: '코드' },
-            { value: 'aside', label: aside.label },
-          ]}
-          value={asideShown ? 'aside' : 'code'}
-          onChange={(value) => setAsideShown(value === 'aside')}
+          items={[{ value: 'code', label: '코드' }, ...panes]}
+          value={codeShown ? 'code' : String(pane)}
+          onChange={(value) => {
+            setCodeShown(value === 'code');
+            if (value !== 'code') setPane(Number(value));
+          }}
         />
       </div>
       <div className={styles.code}>{editor}</div>
-      <section className={styles.aside} aria-label={aside.label}>
-        {aside.body(reveal)}
-      </section>
+      <div className={styles.asides}>
+        {panes.length > 1 && (
+          <div className={styles.asideTabs}>
+            <Tabs label="보기" items={panes} value={String(pane)} onChange={(value) => setPane(Number(value))} />
+          </div>
+        )}
+        {asides.map((aside, index) => (
+          <section key={aside.label} className={styles.aside} hidden={index !== pane} aria-label={aside.label}>
+            {aside.body(reveal)}
+          </section>
+        ))}
+      </div>
     </div>
   );
 }

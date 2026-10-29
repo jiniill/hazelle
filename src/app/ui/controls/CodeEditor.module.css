@@ -273,10 +273,23 @@
   min-height: 0;
 }
 
+.asides {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+  min-height: 0;
+}
+
 .aside {
+  flex-grow: 1;
   min-width: 0;
   min-height: 0;
   overflow: auto;
+}
+
+.aside[hidden] {
+  display: none;
 }
 
 @media (max-width: 959px) {
@@ -290,7 +303,8 @@
     display: block;
   }
 
-  .split:not(.asideShown) .aside,
+  .asideTabs,
+  .split:not(.asideShown) .asides,
   .asideShown .code {
     display: none;
   }

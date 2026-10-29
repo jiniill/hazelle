@@ -1,0 +1,27 @@
+.exchange {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.ask {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: var(--space-12) var(--space-16);
+  border: var(--border-thin) solid var(--color-surface-hover);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  white-space: pre-wrap;
+}
+
+.answer {
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  white-space: pre-wrap;
+}
+
+.detail {
+  composes: detail from '../foundation/type.module.css';
+}

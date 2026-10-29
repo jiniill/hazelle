@@ -300,6 +300,7 @@ function remap(value: unknown, replacements: ReadonlyMap<string, string>, kind: 
   if ((kind === 'chat' || kind === 'entry') && path.length === 1 && field === 'seed') return value;
   if (kind === 'stream' && path.join('.') === 'for.continues.seed') return value;
   if ((kind === 'tooldata' || kind === 'toolfile' || kind === 'toolchat') && path.length === 1 && field === 'key') return value;
+  if (kind === 'tooldraft' && ['text', 'applied', 'asks.*.ask', 'asks.*.note', 'asks.*.model.model'].includes(path.join('.'))) return value;
   if (typeof value === 'string') return replacements.get(value) ?? value;
   if (Array.isArray(value)) return value.map((item: unknown) => remap(item, replacements, kind, [...path, '*']));
   if (!isRecord(value)) return value;

@@ -1,6 +1,7 @@
 import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, snippet, type Completion, type CompletionContext } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { bracketMatching, HighlightStyle, indentOnInput, indentUnit, StreamLanguage, syntaxHighlighting, syntaxTree } from '@codemirror/language';
+import { javascript } from '@codemirror/legacy-modes/mode/javascript';
 import { lua } from '@codemirror/legacy-modes/mode/lua';
 import { linter, lintGutter, lintKeymap, type Diagnostic } from '@codemirror/lint';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
@@ -16,6 +17,7 @@ import { markup, type Piece } from './markup';
 export type CodeEditorProps = { label: string; value: string; onChange: (value: string) => void; language: CodeLanguage; prose?: boolean; caret?: (handle: Caret | null) => void };
 
 const LUA = StreamLanguage.define(lua);
+const JAVASCRIPT = StreamLanguage.define(javascript);
 
 const MARK: Record<NonNullable<Piece['mark']>, string> = { tag: styles.tag!, separator: styles.separator!, argument: styles.argument!, comment: styles.comment!, slot: styles.slot!, angle: styles.angle! };
 const LINE = { body: null, heading: styles.heading!, rule: styles.rule! };
@@ -102,7 +104,7 @@ function languageExtensions(language: CodeLanguage, label: string, prose: boolea
   });
   const { syntax, comment } = language;
   return [
-    syntax === 'lua' ? LUA : spanned(syntax, prose),
+    syntax === 'lua' ? LUA : syntax === 'javascript' ? JAVASCRIPT : spanned(syntax, prose),
     comment ? EditorState.languageData.of(() => [{ commentTokens: { block: comment } }]) : [],
     autocompletion({ override: [complete], icons: false }),
     linter(lint, { delay: 400 }),

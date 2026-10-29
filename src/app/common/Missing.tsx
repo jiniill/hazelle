@@ -19,6 +19,7 @@ const COPY = {
   prompt: { title: '프롬프트', message: '이 프롬프트를 찾을 수 없어요. 삭제됐거나 주소가 잘못됐어요.' },
   persona: { title: '페르소나', message: '이 페르소나를 찾을 수 없어요. 삭제됐거나 주소가 잘못됐어요.' },
   module: { title: '모듈', message: '이 모듈을 찾을 수 없어요. 삭제됐거나 주소가 잘못됐어요.' },
+  draft: { title: '플러그인 초안', message: '이 초안을 찾을 수 없어요. 삭제됐거나 주소가 잘못됐어요.' },
   profile: { title: '모델 설정', message: '이 모델 설정을 찾을 수 없어요. 삭제됐거나 주소가 잘못됐어요.' },
   model: { title: '모델', message: '추가한 모델에서 빠졌거나 연결이 삭제된 모델이에요.' },
   feature: { title: FEATURES_TITLE, message: `${PAGES.labs}에서 켜면 쓸 수 있는 기능이에요.` },

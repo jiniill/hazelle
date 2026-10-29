@@ -16,6 +16,7 @@ import type { Polishing } from '../runtime/agents';
 import type { Likenesses, LikenessRuns } from '../runtime/likeness';
 import type { Remembering } from '../runtime/memory';
 import { modulesOf } from '../runtime/modules';
+import { draftsOf } from '../runtime/tools/drafts';
 import type { Session } from '../runtime/session';
 import type { ChatScopeRead, Opening } from '../runtime/read-model';
 import type { ScriptsState } from '../runtime/script-interactions';
@@ -191,6 +192,12 @@ export function useModulesAndPlugins() {
     }
     return { modules: plain, plugins };
   }, [modules, tools]);
+}
+// 설정 › 플러그인's 만드는 중: the studio's drafts, last edited first.
+export function usePluginDrafts() {
+  const store = useStore();
+  const all = useKind('tooldraft');
+  return useMemo(() => draftsOf(store), [store, all]);
 }
 export function useBin() {
   const modules = useKind('module');

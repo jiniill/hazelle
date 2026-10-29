@@ -5,6 +5,7 @@ export { Cheer } from './Cheer';
 export { CodeBlock } from './CodeBlock';
 export { CodeCard } from './CodeCard';
 export { Empty } from './Empty';
+export { Exchange } from './Exchange';
 export { Gauge } from './Gauge';
 export { NoticeBar } from './NoticeBar';
 export { NoticeCard } from './NoticeCard';

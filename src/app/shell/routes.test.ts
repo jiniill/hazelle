@@ -50,6 +50,8 @@ const EXAMPLES = {
   plugins: [{ kind: 'plugins' }],
   plugin: [{ kind: 'plugin', id: CHAT }],
   'plugin-page': [{ kind: 'plugin-page', id: CHAT }],
+  'plugin-new': [{ kind: 'plugin-new', place: null }, { kind: 'plugin-new', place: 'badge' }],
+  'plugin-draft': [{ kind: 'plugin-draft', id: CHAT }],
   models: [{ kind: 'models' }],
   profile: [{ kind: 'profile', id: CHAT }],
   model: [
@@ -102,7 +104,7 @@ describe('routes', () => {
     expect(parseRoute(`/modules/${CHAT}/page`)).toEqual({ kind: 'plugin-page', id: CHAT });
   });
 
-  it.each(['/nope', '/characters/', '/characters/abc', '/characters/none/about', `/characters/${CHARACTER}/other`, '/chats', `/chats/${CHAT}/x`, '/connections/', '/connections/new/nope', '/prompts/abc', `/prompts/${CHAT}/x`, `/connections/abc/model`, `/connections/${CHAT}/model`, '/personas/abc', `/personas/${CHAT}/x`, '/modules/abc', `/modules/${CHAT}/x`, '/plugins/abc', `/plugins/${CHAT}/x`, '/models/abc', `/models/abc/x`, `/models/${CHAT}/%E0%A4%A`, '/settings/x', '/settings/chat/nope', '/settings/chat/memory/x', '/account/sent', '/board/0', '/board/01', '/board/abc', '/board/12/x', '/board/write/x'])(
+  it.each(['/nope', '/characters/', '/characters/abc', '/characters/none/about', `/characters/${CHARACTER}/other`, '/chats', `/chats/${CHAT}/x`, '/connections/', '/connections/new/nope', '/prompts/abc', `/prompts/${CHAT}/x`, `/connections/abc/model`, `/connections/${CHAT}/model`, '/personas/abc', `/personas/${CHAT}/x`, '/modules/abc', `/modules/${CHAT}/x`, '/plugins/abc', `/plugins/${CHAT}/x`, '/plugins/drafts', '/plugins/drafts/abc', '/plugins/new/x', '/models/abc', `/models/abc/x`, `/models/${CHAT}/%E0%A4%A`, '/settings/x', '/settings/chat/nope', '/settings/chat/memory/x', '/account/sent', '/board/0', '/board/01', '/board/abc', '/board/12/x', '/board/write/x'])(
     '%s is home',
     (at) => {
       expect(parseRoute(at)).toEqual(HOME);

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { cacheDiff } from './cache-diff';
+import { cacheDiff, changedLines } from './cache-diff';
 
 it('compares whole numbers and words, joining a short unchanged stretch into the changes around it', () => {
   expect(cacheDiff('오늘😀 12:01 맑음', '오늘😀 12:03 흐림')).toEqual({ coarse: false, runs: [
@@ -26,4 +26,17 @@ it('trims a long unchanged frame before bounding the middle, and exposes a lossl
   expect(diff.runs.map(({ kind }) => kind)).toEqual(['same', 'before', 'after', 'same']);
   expect(diff.runs.filter(({ kind }) => kind !== 'after').map(({ text }) => text).join('')).toBe(before);
   expect(diff.runs.filter(({ kind }) => kind !== 'before').map(({ text }) => text).join('')).toBe(after);
+});
+
+it('locates changed lines in the new text, anchoring deletions without counting their old lines', () => {
+  expect(changedLines(cacheDiff('same', 'same').runs)).toBeNull();
+  expect(changedLines([
+    { kind: 'same', text: 'one\n' },
+    { kind: 'before', text: 'old\nremoved\n' },
+    { kind: 'after', text: 'two\nthree\n' },
+    { kind: 'same', text: 'four' },
+  ])).toEqual({ from: 2, to: 3 });
+  expect(changedLines(cacheDiff('one\ntwo\nthree', 'one\nthree').runs)).toEqual({ from: 2, to: 2 });
+  expect(changedLines(cacheDiff('one\ntwo', 'one').runs)).toEqual({ from: 1, to: 1 });
+  expect(changedLines(cacheDiff('old', '').runs)).toEqual({ from: 1, to: 1 });
 });

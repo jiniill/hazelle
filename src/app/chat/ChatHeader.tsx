@@ -1,6 +1,4 @@
 import { toolMenu } from './toolMenu';
-import { refOf } from '../../connectors/assignment';
-import { entryName } from '../../connectors/types';
 import { BookKey, BookOpen, Bookmark, Brain, Keyboard, MessageSquarePlus, Package, PlaneTakeoff, ScanSearch, Search, SlidersHorizontal, SquarePen, ToggleRight, UsersRound } from 'lucide-react';
 import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
@@ -13,7 +11,7 @@ import { runShortcut } from '../shortcuts';
 import { Avatar, ChatTitle, Divider, Menu, MenuItem, MoreMenu, ToolButton, useMenuHandle, useMenuOpener, useWide } from '../ui';
 import { ChatCastMenu } from './ChatCastMenu';
 import { ChatExport } from './ChatExport';
-import { ChatModelMenu } from './ChatModelMenu';
+import { ModelMenu } from '../common/ModelMenu';
 import { PersonaDialog } from './ChatPersonaPicker';
 import { ChatPromptPicker, PromptDialog } from './ChatPromptPicker';
 import { ReadingDialog } from './ChatReading';
@@ -48,13 +46,11 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
   const openCast = useMenuOpener(castMenu);
   const featuresMenu = useMenuHandle();
   const openFeatures = useMenuOpener(featuresMenu);
-  const label = 'kind' in route ? '모델 선택' : entryName(route.model);
-  const current = 'kind' in route ? null : refOf(route.connection.id, route.model);
   return (
     <>
       <ChatPromptPicker prompt={chat.prompt} out={chat.promptOut && chat.card === null} open={chat.dialog === 'prompt'} onOpen={() => actions.openDialog('prompt')} />
       <ChatCastMenu handle={castMenu} cast={cast} character={shelf?.id ?? null} onChange={actions.setCast} />
-      <ChatModelMenu handle={modelMenu} current={current} label={label} onPick={actions.pickModel} />
+      <ModelMenu handle={modelMenu} route={route} onPick={actions.pickModel} />
       {item && (
         <Menu kind="dialog" size="form" handle={featuresMenu} place="below-end" label={FEATURES_TITLE} trigger={() => null}>
           <FeatureSwitches owner={{ kind: 'chat', id: item.id }} own={item.chat.features} />

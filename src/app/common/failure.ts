@@ -1,3 +1,4 @@
+import type { PluginAsked } from '../../runtime/tools/plugin-writer';
 import { COMMENTS_PER_DAY, NICKNAME_LENGTH, POSTS_PER_DAY } from '../../contracts/board';
 import type { Costs } from '../../connectors/types';
 import type { RelayError, ServerError } from '../../contracts/http';
@@ -65,6 +66,8 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'too-many-live-calls': '동시에 받는 응답이 너무 많아요. 받고 있는 응답이 끝난 뒤 다시 시도해 주세요.',
   'storage-full': `저장 공간이 가득 찼어요. ${BIN}에서 영구 삭제하면 공간이 생겨요.`,
   'tool-file-refused': '플러그인 파일을 저장하지 못했어요. 파일 용량 한도나 차단 여부를 확인해 주세요.',
+  'draft-too-large': '플러그인 코드가 512KB를 넘어서 여기서 편집할 수 없어요.',
+  'risu-plugin': 'Risu 플러그인은 여기서 편집할 수 없어요.',
   'picture-unreadable': UNREADABLE_IMAGE,
   'picture-refused': '이미지 용량이 너무 크거나, 차단된 파일이거나, 파일 한도를 넘었어요.',
   'file-blocked': '운영자가 차단한 파일이라 올리거나 열 수 없어요.',
@@ -121,8 +124,9 @@ const EMPTY_REPLY = '모델이 내용이 비어 있는 응답을 보냈어요.';
 const GONE_MESSAGE = '삭제된 메시지예요.';
 
 // model ends in 모델: 이 and 은 are its particles.
-function describeRoute(failure: RouteFailure | { kind: 'profile-missing'; own: boolean }, model: string, prompt: string): string {
-  const where = `${prompt} 프롬프트나 ${inSettings('models')}에서`;
+// prompt: the task prompt that may name its own model; null when only 설정 › 모델 chooses it.
+function describeRoute(failure: RouteFailure | { kind: 'profile-missing'; own: boolean }, model: string, prompt: string | null): string {
+  const where = prompt === null ? `${inSettings('models')}에서` : `${prompt} 프롬프트나 ${inSettings('models')}에서`;
   switch (failure.kind) {
     case 'no-model':
       return `${model}이 지정되지 않았어요. ${where} 모델을 선택해 주세요.`;
@@ -348,6 +352,17 @@ export function describePrereadFailure(failure: Exclude<PrereadFailure, { kind: 
       return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
     case 'unsaved':
       return describeFailure(failure.failure);
+  }
+}
+
+export function describeAskFailure(failure: Exclude<Extract<PluginAsked, { ok: false }>['failure'], { kind: 'stopped' }>): string {
+  switch (failure.kind) {
+    case 'failed':
+      return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
+    case 'unsaved':
+      return `사용량을 저장하지 못해 답을 버렸어요. ${describeFailure(failure.failure)}`;
+    default:
+      return describeRoute(failure, MODEL_ROLES.main, null);
   }
 }
 

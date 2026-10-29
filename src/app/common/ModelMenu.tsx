@@ -1,28 +1,29 @@
 import { Layers } from 'lucide-react';
-import { sameModelRef, type ModelRef } from '../../connectors/assignment';
+import { refOf, sameModelRef, type ModelRef } from '../../connectors/assignment';
 import { recentModels } from '../../model/chat';
-import { entryOf, entryTerms } from '../../connectors/types';
+import { entryName, entryOf, entryTerms } from '../../connectors/types';
+import type { Route, RouteFailure } from '../../runtime/assignment';
 import { modelProfile } from '../../runtime/profiles';
-import { byConnection, starredModels } from '../common/RolePicker';
-import { profileLine } from '../common/settingWords';
-import { useSearch } from '../common/useSearch';
-import { MODEL_SETTINGS, noStarred } from '../common/words';
+import { byConnection, starredModels } from './RolePicker';
+import { profileLine } from './settingWords';
+import { useSearch } from './useSearch';
+import { MODEL_SETTINGS, noStarred } from './words';
 import { useSummaries, useConnections, useSettings, useStore } from '../session';
 import { navigate } from '../shell/router';
 import { ChipButton, Divider, Empty, Icon, Menu, MenuHeading, MenuItem, type MenuHandle } from '../ui';
 
 type Props = {
-  // null when no layer names one.
   current: ModelRef | null;
-  label: string;
   onPick: (ref: ModelRef) => void;
-  handle: MenuHandle;
+  handle?: MenuHandle;
 };
 
 const RECENT = 3;
 
 // Added models only, recent ones first. It never lists providers.
-export function ChatModelMenu({ current, label, onPick, handle }: Props) {
+export function ModelMenu({ route, onPick, handle }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure }) {
+  const current = 'kind' in route ? null : refOf(route.connection.id, route.model);
+  const label = 'kind' in route ? '모델 선택' : entryName(route.model);
   return (
     <Menu handle={handle} place="below-end" size="lg" label="모델" trigger={(opener) => <ChipButton label={label} title="모델 바꾸기" leading={<Icon icon={Layers} size="sm" />} phone="icon" {...opener} />}>
       <ModelChoices current={current} onPick={onPick} />

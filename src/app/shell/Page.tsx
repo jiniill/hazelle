@@ -38,6 +38,8 @@ const ModelsScreen = lazy(() => import('../models/ModelsScreen').then(({ ModelsS
 const ModuleScreen = lazy(() => import('../modules/ModuleScreen').then(({ ModuleScreen }) => ({ default: ModuleScreen })));
 const ModulesScreen = lazy(() => import('../modules/ModulesScreen').then(({ ModulesScreen }) => ({ default: ModulesScreen })));
 const PluginScreen = lazy(() => import('../modules/PluginScreen').then(({ PluginScreen }) => ({ default: PluginScreen })));
+const NewPluginScreen = lazy(() => import('../modules/NewPluginScreen').then(({ NewPluginScreen }) => ({ default: NewPluginScreen })));
+const StudioScreen = lazy(() => import('../modules/StudioScreen').then(({ StudioScreen }) => ({ default: StudioScreen })));
 const PluginsScreen = lazy(() => import('../modules/PluginsScreen').then(({ PluginsScreen }) => ({ default: PluginsScreen })));
 const PersonaEditor = lazy(() => import('../personas/PersonaEditor').then(({ PersonaEditor }) => ({ default: PersonaEditor })));
 const PersonaList = lazy(() => import('../personas/PersonaList').then(({ PersonaList }) => ({ default: PersonaList })));
@@ -127,6 +129,10 @@ export function Page({ route, closeLayer, onPaired }: { route: Route; closeLayer
         return <ItemPage at={{ kind: 'module', id: at.id }} back={back(at)}>{(stored) => <PluginScreen key={stored.id} stored={stored} back={back(at)} />}</ItemPage>;
       case 'plugin-page':
         return <ItemPage at={{ kind: 'module', id: at.id }} back={backTo({ kind: 'plugins' }, wide)}>{(stored) => <ToolPageScreen key={stored.id} stored={stored} back={back(at)} />}</ItemPage>;
+      case 'plugin-new':
+        return <NewPluginScreen place={at.place} back={back(at)} />;
+      case 'plugin-draft':
+        return <DraftPage id={at.id} back={back(at)} />;
       case 'models':
         return <ModelsScreen back={sideBack(at)} />;
       case 'profile':
@@ -282,6 +288,11 @@ function ModulePage({ stored, pane, back }: { stored: Stored<'module'>; pane: 't
     if (plugin) navigate({ kind: 'plugin', id: stored.id }, { replace: true });
   }, [plugin, stored.id]);
   return plugin ? null : <ModuleScreen stored={stored} pane={pane} back={back} />;
+}
+
+function DraftPage({ id, back }: { id: string; back: Back }) {
+  const stored = useStored('tooldraft', id);
+  return stored ? <StudioScreen key={stored.id} stored={stored} back={back} /> : <Missing what="draft" back={back} />;
 }
 
 function ConnectionPage({ at, back }: { at: At<'connection'>; back: Back }) {

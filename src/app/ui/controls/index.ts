@@ -4,7 +4,7 @@ export { Checkbox } from './Checkbox';
 export { ChipButton } from './ChipButton';
 export { ChoiceGroup } from './ChoiceGroup';
 export { CommentBox } from './CommentBox';
-export type { CodeAside } from './CodeField';
+export { CodeField, type CodeAside } from './CodeField';
 export type { CodeCompletion, CodeDoc, CodeItem, CodeLanguage, CodeProblem, CodeSpan } from './codeLanguage';
 export { FontPicker } from './FontPicker';
 export { Composer } from './Composer';

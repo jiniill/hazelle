@@ -14,10 +14,10 @@ export type CodeCompletion = { from: number; items: CodeItem[]; validFor: RegExp
 // Language spans never overlap; preserve original text positions and separate tag braces/names/arguments.
 export type CodeSpan = { from: number; to: number; kind: 'tag' | 'separator' | 'argument' | 'comment' | 'slot' };
 
-// syntax: lua is CodeMirror's own Lua mode; a function is the language's spans. comment: what Ctrl+/ wraps a
+// syntax: lua and javascript are CodeMirror's own modes; a function is the language's spans. comment: what Ctrl+/ wraps a
 // selection in, when the syntax has no comment of its own. place: what the caret is in, by the syntax's own reading.
 export type CodeLanguage = {
-  syntax: 'lua' | ((text: string) => CodeSpan[]);
+  syntax: 'lua' | 'javascript' | ((text: string) => CodeSpan[]);
   comment?: { open: string; close: string };
   lint: (text: string) => CodeProblem[] | Promise<CodeProblem[]>;
   complete: (text: string, at: number, place: 'code' | 'string' | 'comment', explicit: boolean) => CodeCompletion | null;

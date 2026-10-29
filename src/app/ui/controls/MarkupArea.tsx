@@ -88,7 +88,7 @@ function Frame({ value, onChange, placeholder, kind, language, ref, id }: FrameP
 
 export function MarkupArea({ label, value, onChange, placeholder, variant = 'page', kind = 'prompt', language, expand, aside, ref }: Props) {
   const id = useId();
-  const big = useBigEdit(language ? expand : undefined, label, (copy) => language && <CodeField label={label} value={value} onChange={onChange} language={language} prose area={copy.area} caret={copy.caret} aside={aside?.(value)} />);
+  const big = useBigEdit(language ? expand : undefined, label, (copy) => language && <CodeField label={label} value={value} onChange={onChange} language={language} prose area={copy.area} caret={copy.caret} asides={aside && [aside(value)]} />);
   const frame = <Frame value={value} onChange={onChange} placeholder={placeholder} kind={kind} language={language} id={id} ref={ref} />;
   return (
     <>
