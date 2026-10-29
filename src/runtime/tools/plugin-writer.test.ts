@@ -67,7 +67,7 @@ it('runs the tests the model calls for, answers past the limit without running, 
   ];
   const sent = stubRelay(() => upstream(200, replies.shift()));
   const ran: string[] = [];
-  const runner = { moments: [{ value: 'reply', label: '응답이 저장된 뒤' }], run: async (code: string) => (ran.push(code), { moment: '응답이 저장된 뒤', ended: 'passed' as const, report: `ran ${code}` }) };
+  const runner = { run: async (code: string) => (ran.push(code), { moment: '응답이 저장된 뒤', ended: 'passed' as const, report: `ran ${code}` }) };
   const asked = await askPlugin(session, { body: 'old();', ask: '고쳐 줘', model: null }, new AbortController().signal, () => {}, runner);
   expect(asked).toMatchObject({ ok: true, answer: { ok: true, body: 'fixed();\n' }, steps: [{ report: 'ran first();' }, { report: 'ran second();' }, { report: 'ran third();' }] });
   expect(ran).toEqual(['first();', 'second();', 'third();']);

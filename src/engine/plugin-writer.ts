@@ -39,7 +39,7 @@ API:
 // 0 where it is not offered.
 export function pluginAskMessages(api: string, body: string | null, ask: string, runs = 0): ChatMessage[] {
   const file = body === null ? 'The file is new. Begin it with //@display-name <a short Korean name> and //@description <one Korean sentence>.' : `The current file, without the identity lines the app keeps:\n${body}`;
-  const testing = runs ? `\n\nBefore you answer, run the whole new file with run_test at the moments the change touches, and fix what it reports. At most ${runs} runs. Then answer as the rules say.` : '';
+  const testing = runs ? `\n\nBefore you answer, run the whole new file with run_test at the moments the change touches, and fix what it reports. At most ${runs} runs. Then answer as the rules say: the short Korean note in 해요체, even though the test reports are in English, then the whole file.` : '';
   return [
     { role: 'system', content: RULES + api },
     { role: 'user', content: `${file}${testing}\n\nRequest:\n${ask}` },

@@ -24,26 +24,27 @@ type Input = { body: string | null; ask: string; model: ModelRef | null };
 // model. unheard: the file has no handler for the moment's event. line: the body's.
 export type TestStep = { moment: string; ended: 'passed' | 'unheard' | { failed: string; line: number | null }; report: string };
 // The studio's 테스트, on code the model wrote; absent where there is no draft to run it as (a first draft).
-export type PluginRunner = { moments: { value: string; label: string }[]; run(code: string, moment: string, text: string, signal: AbortSignal): Promise<TestStep> };
+export type PluginRunner = { run(code: string, moment: string, text: string, signal: AbortSignal): Promise<TestStep> };
 export type PluginAsked = { ok: true; answer: PluginAnswer; model: ModelRef; cost: Cost | null; steps: TestStep[] } | { ok: false; failure: RouteFailure | { kind: 'profile-missing'; own: boolean } | { kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { kind: 'unsaved'; failure: ApiFailure } | { kind: 'too-many-calls' } };
 
 // An ask's limits, the app's own whatever the model asks for: its test runs, and its calls with the answer's.
 const RUNS = 3;
 const CALLS = RUNS + 2;
 
-const runTest = (moments: PluginRunner['moments']): ToolDef => ({
+// The moments are the code's own, not the draft's: a change may add the //@input or //@menu it then tests.
+const RUN_TEST: ToolDef = {
   name: 'run_test',
   description: "Runs a version of the plugin file once in the app's test on a real chat, at one moment, without installing or saving anything. Answers what the run showed and wrote, or its error with the line. The plugin's model calls are made only if the user allowed them; network calls and embeddings never are.",
   parameters: {
     type: 'object',
     properties: {
       code: { type: 'string', description: 'The whole file without the identity lines, as you would answer it.' },
-      moment: { type: 'string', enum: moments.map(({ value }) => value), description: moments.map(({ value, label }) => `${value}: ${label}`).join('; ') },
+      moment: { type: 'string', description: 'reply: after the last reply is saved; sending: before a message is sent; prompt: when a request is built; menu:<id>, action:<id> (on the last message) or input:<id>, with an id from that line of the code.' },
       text: { type: 'string', description: 'The text typed, for the sending and input: moments.' },
     },
     required: ['code', 'moment'],
   },
-});
+};
 
 // What a run did, for the model: everything 테스트 lists, in plain words.
 export function trialReport({ outcome, said, asked, calls, writes, called }: ToolTrial): string {
@@ -95,7 +96,7 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
   if (profile.kind === 'missing') return { ok: false, failure: { kind: 'profile-missing', own: profile.own } };
   const testing = runner && route.model.tools !== false ? runner : null;
   const messages = pluginAskMessages(api, input.body, input.ask, testing ? RUNS : 0);
-  const tools = testing ? [runTest(testing.moments)] : undefined;
+  const tools = testing ? [RUN_TEST] : undefined;
   const costs: (Cost | null)[] = [];
   const steps: TestStep[] = [];
   for (let calls = 0; calls < CALLS; calls++) {
@@ -128,7 +129,7 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
         const asked = each.name === 'run_test' ? readTest(each) : null;
         let result: string;
         if (!asked) result = `Not run: ${each.name === 'run_test' ? 'the arguments are not a JSON object with code and moment strings' : 'there is no such tool'}.`;
-        else if (steps.length >= RUNS) result = `Not run: the ${RUNS} test runs are used up. Answer now with the note and the whole file.`;
+        else if (steps.length >= RUNS) result = `Not run: the ${RUNS} test runs are used up. Answer now with the Korean note and the whole file.`;
         else {
           const step = await testing.run(asked.code, asked.moment, asked.text, signal);
           if (signal.aborted) return { ok: false, failure: { kind: 'stopped' } };

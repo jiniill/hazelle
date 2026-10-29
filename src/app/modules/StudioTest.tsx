@@ -43,10 +43,8 @@ async function runTest(session: Session, draft: ToolDraft, chat: string, moment:
 
 // 테스트 as the AI's run_test: on the code it wrote, under the draft's identity, on the chat 테스트 holds.
 export function testRunner(session: Session, draft: ToolDraft, chat: string | null, setup: TestSetup): PluginRunner | null {
-  const read = draftTrial(session.store, draft);
-  if (!read.ok || chat === null) return null;
+  if (!draftTrial(session.store, draft).ok || chat === null) return null;
   return {
-    moments: testPicks(read.trial.tool.manifest),
     async run(code, moment, text, signal) {
       const tried = { ...draft, body: code };
       const known = draftTrial(session.store, tried);
