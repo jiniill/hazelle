@@ -5,7 +5,7 @@ import { setModuleDeleted } from '../modules';
 import { purgeNow } from '../removal';
 import { exportBackup, readBackup, restoreBackup } from '../testing/backup';
 import { testServer } from '../testing';
-import { deleteToolData, importTool, readToolAsset, saveToolAsset, saveToolChat, setToolData, setToolSettings, toolBadges, toolChatData, toolChatKeys, toolData, toolDataId, toolKeys, TOOL_CHAT_BYTES, TOOL_DATA_BYTES, TOOL_KEY_CHARS, TOOL_ROW_BYTES, TOOL_VALUE_BYTES, ToolStorage, undoToolImport } from './store';
+import { deleteToolData, exportTool, importTool, readToolAsset, saveToolAsset, saveToolChat, setToolData, setToolSettings, toolBadges, toolChatData, toolChatKeys, toolData, toolDataId, toolKeys, TOOL_CHAT_BYTES, TOOL_DATA_BYTES, TOOL_KEY_CHARS, TOOL_ROW_BYTES, TOOL_VALUE_BYTES, ToolStorage, undoToolImport } from './store';
 import { CLAIM_SETTLE_MS } from '../../contracts/files';
 import type { Files } from '../files';
 
@@ -60,6 +60,19 @@ describe('tool storage', () => {
     expect(store.get('tool', toolId(module))!.value.settings).toEqual({ title: 'mine', new: true });
     await undoToolImport(store, module, replaced.data.previous!);
     expect(store.get('tool', toolId(module))!.value.settings.title).toBe('mine');
+  });
+
+  it('exports the file as imported, without its settings, and reads back as the same plugin', async () => {
+    const { store, files } = await server.account();
+    const tool = source();
+    const added = await importTool(store, files, tool);
+    if (!added.ok) throw new Error(added.error);
+    await setToolSettings({ store }, added.data.id, { title: 'mine' });
+    const chunks: Uint8Array[] = [];
+    const output = { write: async (chunk: Uint8Array<ArrayBuffer>) => void chunks.push(chunk), close: async () => {}, abort: async () => {} };
+    expect((await exportTool(store, files, added.data.id, output)).ok).toBe(true);
+    expect(Buffer.concat(chunks)).toEqual(Buffer.from(tool.bytes));
+    expect(readTool(Buffer.concat(chunks) as Uint8Array<ArrayBuffer>)).toMatchObject({ ok: true, tool: { manifest: tool.manifest } });
   });
 
   it('does not revive a binned identity and purges both child kinds', async () => {

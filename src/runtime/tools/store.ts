@@ -9,6 +9,8 @@ import { live } from '../../model/library';
 import { toolId, type Badges, type Tool } from '../../model/tool';
 import type { Json, Settings, ToolManifest } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
+import type { BackupOutput } from '../backup-zip';
+import { writeWhole } from '../export-file';
 import type { Files } from '../files';
 import type { Session } from '../session';
 import type { ObjectStore } from '../store';
@@ -84,6 +86,15 @@ export async function importTool(store: ObjectStore, files: Files, { manifest, b
     { type: 'create', kind: 'tool', id: toolId(id), parent: id, value },
   ]);
   return saved.ok ? { ok: true, data: { id, previous: null } } : saved;
+}
+
+// The file as it was imported, which imports again as the same plugin; its settings and data stay in the account.
+export async function exportTool(store: ObjectStore, files: Files, module: string, output: BackupOutput): Promise<ApiResult<null>> {
+  const tool = live(store.get('module', module)) ? store.get('tool', toolId(module))?.value : undefined;
+  const read: ApiResult<Uint8Array<ArrayBuffer>> = tool ? await files.read(tool.file) : { ok: false, error: 'gone' };
+  if (read.ok) return writeWhole(output, read.data);
+  await output.abort();
+  return read;
 }
 
 export const undoToolImport = (store: ObjectStore, module: string, previous: Tool) =>
