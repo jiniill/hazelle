@@ -14,7 +14,7 @@ export function joinModelsDev(models: Model[], list: ModelsDevList | null): Mode
   return models.map((model) => {
     const listed = exact.get(model.id) ?? folded.get(model.id.toLowerCase());
     if (!listed) return model;
-    return { ...model, input: model.input ?? listed.input, output: model.output ?? listed.output, ...(!model.price && listed.price && { price: listed.price }) };
+    return { ...model, input: model.input ?? listed.input, output: model.output ?? listed.output, tools: model.tools ?? listed.tools, ...(!model.price && listed.price && { price: listed.price }) };
   });
 }
 

@@ -50,8 +50,8 @@ function listedRows(payload: unknown): ListedRow[] | null {
     for (const [model, raw] of Object.entries(provider.models)) {
       if (!isRecord(raw)) continue;
       const modalities = isRecord(raw.modalities) ? raw.modalities : {};
-      const row = { list, model, name: typeof raw.name === 'string' && raw.name ? raw.name : null, price: ratesOf(raw.cost), input: modalitiesOf(modalities.input), output: raw.type === 'embedding' ? ['embedding' as const] : modalitiesOf(modalities.output) };
-      if (row.price || row.input || row.output) rows.push(row);
+      const row = { list, model, name: typeof raw.name === 'string' && raw.name ? raw.name : null, price: ratesOf(raw.cost), input: modalitiesOf(modalities.input), output: raw.type === 'embedding' ? ['embedding' as const] : modalitiesOf(modalities.output), tools: typeof raw.tool_call === 'boolean' ? raw.tool_call : null };
+      if (row.price || row.input || row.output || row.tools !== null) rows.push(row);
     }
   }
   return rows;
@@ -78,15 +78,15 @@ export async function refreshModelsDev(db: Db, outbound: Upstream, now = Date.no
     db.prepare('DELETE FROM models_dev'),
     db
       .prepare(
-        `INSERT INTO models_dev (list, model, name, price, input, output)
-         SELECT value->>'list', value->>'model', value->>'name', value->>'price', value->>'input', value->>'output' FROM json_each(?)`,
+        `INSERT INTO models_dev (list, model, name, price, input, output, tools)
+         SELECT value->>'list', value->>'model', value->>'name', value->>'price', value->>'input', value->>'output', value->>'tools' FROM json_each(?)`,
       )
       .bind(JSON.stringify(rows)),
     db.prepare('UPDATE models_dev_fetch SET fetched_at = ? WHERE id = 1').bind(now),
   ]);
 }
 
-type Row = { model: string; price: string | null; input: string | null; output: string | null };
+type Row = { model: string; price: string | null; input: string | null; output: string | null; tools: number | null };
 type TableRow = { list: string; model: string; name: string | null; price: string | null };
 const parsed = <T>(json: string | null): T | null => (json === null ? null : (JSON.parse(json) as T));
 
@@ -113,8 +113,8 @@ export const modelsDev = new Hono<AppEnv>()
     const list = c.req.query('provider');
     if (!list || !LISTS.has(list)) return fail(c, 400, 'bad-input');
     return answer<ModelsDevList>(c, { fetchedAt: null, models: {} }, async (fetchedAt) => {
-      const { results } = await c.env.db.prepare('SELECT model, price, input, output FROM models_dev WHERE list = ?').bind(list).all<Row>();
-      const models = Object.fromEntries(results.map((row) => [row.model, { price: parsed<Rates>(row.price), input: parsed<ListedModality[]>(row.input), output: parsed<ListedModality[]>(row.output) }]));
+      const { results } = await c.env.db.prepare('SELECT model, price, input, output, tools FROM models_dev WHERE list = ?').bind(list).all<Row>();
+      const models = Object.fromEntries(results.map((row) => [row.model, { price: parsed<Rates>(row.price), input: parsed<ListedModality[]>(row.input), output: parsed<ListedModality[]>(row.output), tools: row.tools === null ? null : row.tools === 1 }]));
       return { fetchedAt, models };
     });
   })

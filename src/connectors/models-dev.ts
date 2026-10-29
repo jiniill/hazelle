@@ -49,8 +49,8 @@ export type PriceTier = { above: number; input: number; output: number; cacheRea
 // USD per million tokens. A null cache rate is one the list does not state.
 export type Rates = { input: number; output: number; cacheRead: number | null; cacheWrite: number | null; tiers: PriceTier[] };
 
-// price: null where models.dev cannot price the model whole. input, output: null where it does not say.
-export type ListedModel = { price: Rates | null; input: ListedModality[] | null; output: ListedModality[] | null };
+// price: null where models.dev cannot price the model whole. input, output, tools: null where it does not say.
+export type ListedModel = { price: Rates | null; input: ListedModality[] | null; output: ListedModality[] | null; tools: boolean | null };
 
 // GET /api/models-dev?provider=<list>. fetchedAt is null, and models empty, until the server's first fetch has landed.
 export type ModelsDevList = { fetchedAt: number | null; models: Record<string, ListedModel> };

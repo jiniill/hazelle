@@ -29,7 +29,7 @@ describe('priceCost', () => {
 });
 
 describe('joinModelsDev', () => {
-  const listed = (price: Rates | null): ListedModel => ({ price, input: ['text', 'image'], output: ['text'] });
+  const listed = (price: Rates | null): ListedModel => ({ price, input: ['text', 'image'], output: ['text'], tools: true });
 
   it('keeps a price the model list states, matches exactly and then ignoring case, and never by likeness', () => {
     const stated = { ...bareModel('deepseek-ai/DeepSeek-V4'), price: statedPrice(1, 2, null, null) };
@@ -39,13 +39,13 @@ describe('joinModelsDev', () => {
     expect(joinModelsDev([bareModel('gpt-5.4')], { fetchedAt: null, models: {} })[0]!.price).toBeUndefined();
   });
 
-  it('fills inputs and outputs the model list leaves unknown, keeps those it states, and leaves a model models.dev does not know unknown', () => {
+  it('fills inputs, outputs and tool support the model list leaves unknown, keeps those it states, and leaves a model models.dev does not know unknown', () => {
     const list = { fetchedAt: 7, models: { 'gemini-2.5-flash': listed(null), 'gpt-5.4': listed(opus) } };
-    const joined = joinModelsDev([bareModel('gemini-2.5-flash'), { ...bareModel('gpt-5.4'), input: ['text'] }, bareModel('gemini-9')], list);
-    expect(joined.map(({ input, output, price }) => ({ input, output, price }))).toEqual([
-      { input: ['text', 'image'], output: ['text'], price: undefined },
-      { input: ['text'], output: ['text'], price: { ...opus } },
-      { input: null, output: null, price: undefined },
+    const joined = joinModelsDev([bareModel('gemini-2.5-flash'), { ...bareModel('gpt-5.4'), input: ['text'], tools: false }, bareModel('gemini-9')], list);
+    expect(joined.map(({ input, output, price, tools }) => ({ input, output, price, tools }))).toEqual([
+      { input: ['text', 'image'], output: ['text'], price: undefined, tools: true },
+      { input: ['text'], output: ['text'], price: { ...opus }, tools: false },
+      { input: null, output: null, price: undefined, tools: null },
     ]);
   });
 });
