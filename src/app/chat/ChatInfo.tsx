@@ -10,7 +10,7 @@ import { Breakdown, Button, Callout, Disclosure, Empty, Facts, Section, SidePane
 import { ShortfallNote } from './CacheDiagnosis';
 import { SentLore, SentMemory, SentRequest, SentResponse } from './ChatSent';
 import { money } from '../common/money';
-import { cost, finish, seconds, speed, tokens } from '../common/receipt';
+import { cost, finish, seconds, speed, streaming, tokens } from '../common/receipt';
 import { DISCOUNT, PDF_SEND, PRE_READ, STAGE_NAMES, UNKNOWN } from '../common/words';
 import { infoReply } from './infoReply';
 import type { InfoTab, Side } from './panels';
@@ -28,7 +28,7 @@ const outcomeFacts = (receipt: Receipt) => [
   { label: '비용', value: cost(receipt.cost), tone: receipt.cost === null ? ('muted' as const) : undefined },
   finish(receipt),
   { label: '첫 토큰까지', value: seconds(receipt.firstTextMs) },
-  { label: '속도', value: speed(receipt.usage?.outputTokens ?? null, receipt.firstTextMs, receipt.totalMs) },
+  { label: '속도', value: speed(receipt.usage?.outputTokens ?? null, streaming(receipt)) },
   ...(receipt.discount ? [{ label: DISCOUNT, value: '받음' }] : []),
   // The whole request's words by o200k, close to Gemini's own count: what 입력 would read had it gone as text.
   ...(receipt.pdf ? [{ label: PDF_SEND, value: receipt.calibration?.measurement.kind === 'measured' ? `원문 약 ${tokens(receipt.calibration.measurement.o200k)}` : '보냄' }] : []),

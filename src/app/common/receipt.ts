@@ -1,3 +1,4 @@
+import { sumCosts } from '../../connectors/pricing';
 import type { Cost, Usage } from '../../connectors/types';
 import { toolShown } from '../../engine/script-api';
 import { calls, type Receipt } from '../../model/chat';
@@ -30,10 +31,9 @@ export function finish(receipt: Receipt): { label: string; value: string; tone?:
 // A reply that came in one piece, as from a provider that does not stream, has no speed to measure.
 const MEASURABLE_MS = 250;
 
-export function speed(outputTokens: number | null, firstTextMs: number | null, totalMs: number): string {
-  if (outputTokens === null || firstTextMs === null || totalMs - firstTextMs < MEASURABLE_MS) return UNKNOWN;
-  return `${Math.round(outputTokens / ((totalMs - firstTextMs) / 1000))} tok/s`;
-}
+export const streaming = ({ firstTextMs, totalMs }: Receipt) => (firstTextMs === null || totalMs - firstTextMs < MEASURABLE_MS ? null : totalMs - firstTextMs);
+
+export const speed = (outputTokens: number | null, streamingMs: number | null) => (outputTokens === null || streamingMs === null ? UNKNOWN : `${Math.round(outputTokens / (streamingMs / 1000))} tok/s`);
 
 // The share of the input read from the provider's cache; null where the provider does not say what it read.
 export function cacheShare(usage: Usage | null): number | null {
@@ -42,9 +42,6 @@ export function cacheShare(usage: Usage | null): number | null {
   return input === null || read === null || input === 0 ? null : Math.round((read / input) * 100);
 }
 
-// 사용량 표시: the line under a reply, led by its cost, and the facts it opens. Neither shows a cost the app does not
-// know (the user's pick, 2026-10-24; 응답 정보 still says it); the line also leaves out an unreported cache, which the
-// facts read as unknown. A cost still booking stays in both, as such.
 // The plugin tools a reply's model called, one quiet line: each name and the first words of what it answered.
 export function toolLine(receipt: Receipt): string | null {
   const called = calls(receipt).flatMap(({ tools = [] }) => tools);
@@ -56,16 +53,30 @@ const clipped = (text: string) => {
   return line.length > 30 ? `${line.slice(0, 30)}…` : line;
 };
 
+// 사용량 표시: the line under a reply, led by its cost, and the facts it opens. Neither shows a cost the app does not
+// know (the user's pick, 2026-10-24; 응답 정보 still says it); the line also leaves out an unreported cache, which the
+// facts read as unknown. A cost still booking stays in both, as such.
+// Both count the whole reply, every call a continued reply took (the user's pick, 2026-10-29); 응답 정보 lists each call.
+// A count one call did not report leaves the sum unknown.
+function whole(receipt: Receipt) {
+  const all = calls(receipt);
+  const sum = (values: (number | null)[]) => (values.includes(null) ? null : (values as number[]).reduce((total, value) => total + value, 0));
+  const field = (key: keyof Usage) => sum(all.map(({ usage }) => usage![key]));
+  const usage: Usage | null = all.some(({ usage }) => !usage) ? null : { inputTokens: field('inputTokens'), cachedInputTokens: field('cachedInputTokens'), cacheWriteInputTokens: field('cacheWriteInputTokens'), outputTokens: field('outputTokens'), reasoningTokens: field('reasoningTokens') };
+  const cost = all.some(({ cost }) => cost === 'pending') ? ('pending' as const) : sumCosts(all.map(({ cost }) => cost as Cost | null));
+  return { usage, cost, totalMs: sum(all.map(({ totalMs }) => totalMs))!, firstTextMs: all[0]!.firstTextMs, streamingMs: sum(all.map(streaming)) };
+}
+
 export function usageLine(receipt: Receipt): { lead: string | null; parts: UsagePart[] } {
-  const { usage } = receipt;
+  const { usage, cost: total, totalMs } = whole(receipt);
   const share = cacheShare(usage);
   const parts: UsagePart[] = [
     ...(usage ? [{ label: '입력', value: tokens(usage.inputTokens) }, { label: '출력', value: tokens(usage.outputTokens) }] : [{ label: '사용량', value: UNKNOWN }]),
     ...(share === null ? [] : [{ label: '캐시', value: `${share}%` }]),
-    ...(receipt.cost === 'pending' ? [{ label: '비용', value: cost('pending') }] : []),
-    { value: seconds(receipt.totalMs) },
+    ...(total === 'pending' ? [{ label: '비용', value: cost('pending') }] : []),
+    { value: seconds(totalMs) },
   ];
-  return { lead: receipt.cost === null || receipt.cost === 'pending' ? null : cost(receipt.cost), parts };
+  return { lead: total === null || total === 'pending' ? null : cost(total), parts };
 }
 
 // 사용량 표시 while a reply is written, with no receipt yet: what this call wrote so far, counted in o200k_base and so an
@@ -73,15 +84,15 @@ export function usageLine(receipt: Receipt): { lead: string | null; parts: Usage
 export const writtenSoFar = (written: number | 'unknown' | null) => (written === null ? null : `출력 ${written === 'unknown' ? UNKNOWN : `약 ${count(written)}`}`);
 
 export function usageFacts(receipt: Receipt) {
-  const { usage } = receipt;
+  const { usage, cost: total, totalMs, firstTextMs, streamingMs } = whole(receipt);
   const share = cacheShare(usage);
   const reasoning = usage?.reasoningTokens ?? null;
   return [
     { label: '입력', value: tokens(usage?.inputTokens ?? null), notes: [`캐시에서 읽음 ${share === null ? UNKNOWN : `${share}%`}`] },
     { label: '출력', value: tokens(usage?.outputTokens ?? null), notes: [`추론 ${tokens(reasoning)}`] },
-    ...(receipt.cost === null ? [] : [{ label: '비용', value: cost(receipt.cost) }]),
-    { label: '걸린 시간', value: seconds(receipt.totalMs), notes: [`첫 토큰 ${seconds(receipt.firstTextMs)}`] },
-    { label: '속도', value: speed(usage?.outputTokens ?? null, receipt.firstTextMs, receipt.totalMs) },
+    ...(total === null ? [] : [{ label: '비용', value: cost(total) }]),
+    { label: '걸린 시간', value: seconds(totalMs), notes: [`첫 토큰 ${seconds(firstTextMs)}`] },
+    { label: '속도', value: speed(usage?.outputTokens ?? null, streamingMs) },
     { label: '모델', value: receipt.modelName, notes: [receipt.source] },
   ];
 }

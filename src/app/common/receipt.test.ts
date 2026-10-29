@@ -26,4 +26,12 @@ describe('사용량 표시', () => {
     expect(facts({ ...receipt, usage: { ...usage, cachedInputTokens: null, reasoningTokens: null } })).toMatchObject({ 입력: ['12,000', '캐시에서 읽음 알 수 없음'], 출력: ['678', '추론 알 수 없음'] });
     expect(facts({ ...receipt, cost: null })).not.toHaveProperty('비용');
   });
+
+  it('counts every call of a continued reply, a count one call did not report left unknown', () => {
+    const first = { ...receipt, usage: { ...usage, reasoningTokens: null }, cost: { unit: 'usd', amount: 0.0077, source: 'price-list' }, totalMs: 2_000, firstTextMs: null } as Receipt;
+    const chained = { ...receipt, continues: first } as Receipt;
+    expect(usageLine(chained).lead).toBe('약 $0.020');
+    expect(Object.fromEntries(usageFacts(chained).map(({ label, value, notes }) => [label, [value, ...(notes ?? [])]]))).toMatchObject({ 입력: ['24,000', '캐시에서 읽음 92%'], 출력: ['1,356', '추론 알 수 없음'], '걸린 시간': ['10.2초', '첫 토큰 알 수 없음'], 속도: ['알 수 없음'] });
+    expect(usageLine({ ...chained, continues: { ...first, cost: 'pending' } }).lead).toBeNull();
+  });
 });
