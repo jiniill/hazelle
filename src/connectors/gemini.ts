@@ -1,7 +1,7 @@
 import { failedTerminal } from './errors';
 import type { Reasoning } from './settings';
 import { bareModel, embedUsage } from './chat-completions';
-import type { ChatMessage, Codec, EmbedPurpose, InputPicture, Model, Phase, StreamFacts, Terminal } from './types';
+import type { ChatMessage, Codec, EmbedPurpose, InputPicture, Model, Phase, StreamFacts, Terminal, ToolCall, ToolResult } from './types';
 import { packPdf, pdfData } from './gemini-pdf';
 import { count, isRecord, list, vector } from './values';
 
@@ -26,7 +26,11 @@ function thinkingConfig(reasoning: Reasoning | undefined, model: Model) {
   }
 }
 
-type Part = { text: string } | { inlineData: { mimeType: string; data: string }; mediaResolution?: { level: 'MEDIA_RESOLUTION_LOW' } };
+type Part =
+  | { text: string }
+  | { inlineData: { mimeType: string; data: string }; mediaResolution?: { level: 'MEDIA_RESOLUTION_LOW' } }
+  | { functionCall: { id: string; name: string; args: Record<string, unknown> }; thoughtSignature?: string }
+  | { functionResponse: { id: string; name: string; response: { output: string } } };
 
 const media = ({ type, data }: InputPicture): Part => ({ inlineData: { mimeType: type, data } });
 
@@ -34,7 +38,25 @@ const media = ({ type, data }: InputPicture): Part => ({ inlineData: { mimeType:
 // the pictures beside it keep theirs.
 const pdfPart = (transcript: string): Part => ({ inlineData: { mimeType: 'application/pdf', data: pdfData(transcript) }, mediaResolution: { level: 'MEDIA_RESOLUTION_LOW' } });
 
-const parts = ({ content, document: packed, pictures = [] }: ChatMessage): Part[] => [...(packed === undefined ? [] : [pdfPart(packed)]), ...pictures.map(media), ...(content === '' && pictures.length ? [] : [{ text: content }])];
+// Unreadable arguments go back as {}: the caller has already answered that call as unreadable.
+function args(text: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+// A signature goes back on the very part it came on (only the first of parallel calls has one); Gemini 3 refuses a
+// call loop without it.
+const call = ({ id, name, arguments: text, echo }: ToolCall): Part => ({ functionCall: { id, name, args: args(text) }, ...(typeof echo === 'string' && { thoughtSignature: echo }) });
+const answer = ({ id, name, text }: ToolResult): Part => ({ functionResponse: { id, name, response: { output: text } } });
+
+function parts({ content, document: packed, pictures = [], calls = [], results = [] }: ChatMessage): Part[] {
+  const bare = content === '' && (pictures.length || calls.length || results.length);
+  return [...results.map(answer), ...(packed === undefined ? [] : [pdfPart(packed)]), ...pictures.map(media), ...(bare ? [] : [{ text: content }]), ...calls.map(call)];
+}
 
 function contents(messages: ChatMessage[]) {
   const turns: { role: 'user' | 'model'; parts: Part[] }[] = [];
@@ -63,7 +85,14 @@ function read(event: unknown, facts: StreamFacts, append: (phase: Phase, text: s
   if (isRecord(candidate)) {
     const content = isRecord(candidate.content) ? candidate.content : {};
     for (const part of list(content.parts)) {
-      if (isRecord(part) && typeof part.text === 'string') append(part.thought === true ? 'reasoning' : 'text', part.text);
+      if (!isRecord(part)) continue;
+      if (typeof part.text === 'string') append(part.thought === true ? 'reasoning' : 'text', part.text);
+      // Calls arrive whole, one part each, so at is the call's position and no later chunk extends one.
+      if (isRecord(part.functionCall) && typeof part.functionCall.name === 'string') {
+        const at = facts.calls.length;
+        const { id, name, args } = part.functionCall;
+        facts.calls.push({ id: typeof id === 'string' && id ? id : `call_${at}`, name, arguments: JSON.stringify(args ?? {}), ...(typeof part.thoughtSignature === 'string' && { echo: part.thoughtSignature }), at });
+      }
     }
     if (typeof candidate.finishReason === 'string') facts.finishReason = candidate.finishReason;
   }
@@ -149,7 +178,7 @@ export const gemini: Codec = {
 
   pack: packPdf,
 
-  chat(endpoint, { model, messages, settings }, fields) {
+  chat(endpoint, { model, messages, settings, tools }, fields) {
     const system = messages.filter((message) => message.role === 'system');
     const config = {
       ...(settings.maxOutput === undefined ? {} : { maxOutputTokens: settings.maxOutput }),
@@ -171,6 +200,7 @@ export const gemini: Codec = {
         ...(system.length ? { systemInstruction: { parts: [{ text: system.map((message) => message.content).join('\n\n') }] } } : {}),
         contents: contents(messages.filter((message) => message.role !== 'system')),
         ...(Object.keys(config).length ? { generationConfig: config } : {}),
+        ...(tools && { tools: [{ functionDeclarations: tools.map(({ name, description, parameters }) => ({ name, description, parametersJsonSchema: parameters })) }] }),
         ...fields,
       }),
     };

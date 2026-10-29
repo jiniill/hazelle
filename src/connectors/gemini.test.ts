@@ -106,6 +106,38 @@ describe('Gemini', () => {
     expect((await decode(sse(event))).outcome.discount).toBeUndefined();
   });
 
+  it('reads calls streamed one part an event, the first with its thought signature, and ids made from their place where none came', async () => {
+    const first = { candidates: [{ content: { parts: [{ functionCall: { id: 'fc1', name: 'run_test', args: { moment: 'reply' } }, thoughtSignature: 'SIG' }], role: 'model' } }] };
+    const second = { candidates: [{ content: { parts: [{ functionCall: { name: 'list_files' } }], role: 'model' }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 } };
+    const { outcome } = await decode(sse(first, second));
+    expect(outcome).toMatchObject({ state: 'done', finishReason: 'STOP' });
+    expect(outcome.calls).toEqual([{ id: 'fc1', name: 'run_test', arguments: '{"moment":"reply"}', echo: 'SIG' }, { id: 'call_1', name: 'list_files', arguments: '{}' }]);
+  });
+
+  it('reads a call from a whole reply', async () => {
+    const reply = { candidates: [{ content: { parts: [{ text: '돌려 볼게.' }, { functionCall: { name: 'run_test', args: {} }, thoughtSignature: 'SIG' }], role: 'model' }, finishReason: 'STOP' }] };
+    const { outcome, text } = await decode(JSON.stringify(reply), 'application/json');
+    expect({ state: outcome.state, text, calls: outcome.calls }).toEqual({ state: 'done', text: '돌려 볼게.', calls: [{ id: 'call_0', name: 'run_test', arguments: '{}', echo: 'SIG' }] });
+  });
+
+  it('sends tools as JSON Schema declarations, calls with their signature after the model’s text, and results ahead of the user’s', () => {
+    const body = JSON.parse(chatRequest(google, {
+      model: flash!,
+      messages: [
+        { role: 'user', content: '돌려 봐' },
+        { role: 'assistant', content: '돌려 볼게.', calls: [{ id: 'fc1', name: 'run_test', arguments: '{"moment":"reply"}', echo: 'SIG' }, { id: 'fc2', name: 'list_files', arguments: '{"broken' }] },
+        { role: 'user', content: '', results: [{ id: 'fc1', name: 'run_test', text: 'passed' }, { id: 'fc2', name: 'list_files', text: 'unreadable' }] },
+      ],
+      settings: {},
+      tools: [{ name: 'run_test', description: 'Runs the file.', parameters: { type: 'object', properties: { moment: { type: 'string' } } } }],
+    }).body!);
+    expect(body.tools).toEqual([{ functionDeclarations: [{ name: 'run_test', description: 'Runs the file.', parametersJsonSchema: { type: 'object', properties: { moment: { type: 'string' } } } }] }]);
+    expect(body.contents.slice(1)).toEqual([
+      { role: 'model', parts: [{ text: '돌려 볼게.' }, { functionCall: { id: 'fc1', name: 'run_test', args: { moment: 'reply' } }, thoughtSignature: 'SIG' }, { functionCall: { id: 'fc2', name: 'list_files', args: {} } }] },
+      { role: 'user', parts: [{ functionResponse: { id: 'fc1', name: 'run_test', response: { output: 'passed' } } }, { functionResponse: { id: 'fc2', name: 'list_files', response: { output: 'unreadable' } } }] },
+    ]);
+  });
+
   it('embeds in one batch with the purpose as its task type, or before the text for Gemini Embedding 2, and reads the vectors in order', () => {
     const embedder = parseCatalog(google, recorded.models)!.at(-1)!;
     const request = embedRequest(google, embedder, ['밤', '아침'], 'query');
