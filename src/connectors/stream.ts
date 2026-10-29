@@ -54,7 +54,7 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
       cost: type?.cost?.({ facts, usage, model }) ?? (type?.settle && facts.id ? 'pending' : null) ?? (price ? priceCost(price, usage, unit) : null),
       replyId: facts.id,
       ...(served && { discount: served.lane }),
-      calls: facts.calls.map(({ id, name, arguments: text }) => ({ id, name, arguments: text })),
+      calls: facts.calls.map(({ id, name, arguments: text, echo }) => ({ id, name, arguments: text, ...(echo !== undefined && { echo }) })),
     };
   };
 

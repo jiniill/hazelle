@@ -103,8 +103,10 @@ export type ChatMessage = {
 };
 // parameters: a JSON Schema object.
 export type ToolDef = { name: string; description: string; parameters: Record<string, unknown> };
-// arguments: the JSON text as the model sent it, unparsed, so unreadable arguments are answered as such.
-export type ToolCall = { id: string; name: string; arguments: string };
+// arguments: the JSON text as the model sent it, unparsed, so unreadable arguments are answered as such. echo: what the
+// format needs sent back with the call, read and written by the same codec alone (Gemini's thoughtSignature, the
+// thinking blocks Messages put before it); the caller passes it on untouched.
+export type ToolCall = { id: string; name: string; arguments: string; echo?: unknown };
 // name: Gemini answers a call by its name, not its id.
 export type ToolResult = { id: string; name: string; text: string };
 // type: the media type; data: the bytes as base64.
