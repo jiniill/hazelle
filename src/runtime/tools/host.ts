@@ -51,6 +51,8 @@ const eventFields = (event: ToolEvent): Partial<Extract<Down, { kind: 'event' }>
   }
 };
 
+export type TrialRun = (scope: ChatScope, event: ToolEvent, host: ToolReach) => Promise<{ outcome: ScriptOutcome; writes: TrialWrite[] } | null>;
+
 export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> {
   private readonly entries = new Map<string, Entry>();
   // Test runs, by their own module ids, which no installed plugin has.
@@ -149,16 +151,20 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
     return this.dispatch(frame, chat, scope, event, host, signal);
   }
 
-  // A studio draft run once for one event on chat as no installed plugin: under its own module id, no consent, journal,
-  // stall count or stored data of a plugin is touched, and its outcome is only returned. null: the draft does not listen.
-  async trial(chat: string, draft: DraftTrial, scope: ChatScope, event: ToolEvent, host: ToolReach, signal: AbortSignal): Promise<{ outcome: ScriptOutcome; writes: TrialWrite[] } | null> {
+  // A studio draft run on chat as no installed plugin: under its own module id, no consent, journal, stall count or stored
+  // data of a plugin is touched, and its outcomes are only returned. use runs its events on one frame, so its globals and
+  // storage carry from one to the next. null: the draft does not listen to that event.
+  async trial<T>(chat: string, draft: DraftTrial, signal: AbortSignal, use: (run: TrialRun) => Promise<T>): Promise<T> {
     const trial: EntryTrial = { code: draft.code, chat, storage: new Map(), writes: [] };
     const entry = blankEntry(`trial:${crypto.randomUUID()}`, draft.tool, { file: null, trial }, new Map());
     this.trials.set(entry.module, entry);
     try {
       const frame = await until(this.background(entry), signal);
-      if (!frame.listens.has(event.kind)) return null;
-      return { outcome: await this.dispatch(frame, chat, scope, event, host, signal), writes: trial.writes };
+      return await use(async (scope, event, host) => {
+        if (!frame.listens.has(event.kind)) return null;
+        const outcome = await this.dispatch(frame, chat, scope, event, host, signal);
+        return { outcome, writes: trial.writes.splice(0) };
+      });
     } finally {
       this.end(entry, new ToolStopped());
       this.trials.delete(entry.module);

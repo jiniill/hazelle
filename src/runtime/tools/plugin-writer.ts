@@ -1,6 +1,7 @@
 import { costUnit, resolveConnection } from '../../connectors/registry';
 import { priceCost, sumCosts } from '../../connectors/pricing';
 import type { Cost, ToolCall, ToolDef, ToolResult } from '../../connectors/types';
+import { isRecord } from '../../connectors/values';
 import { refOf, type ModelRef } from '../../connectors/assignment';
 import { pluginAskMessages, readPluginAnswer, type PluginAnswer } from '../../engine/plugin-writer';
 import type { Receipt } from '../../model/chat';
@@ -23,9 +24,12 @@ type Input = { body: string | null; ask: string; model: ModelRef | null };
 // One run_test call as the studio's 테스트 ran it: the moment's label and how it ended, for the screen; report, for the
 // model. unheard: the file has no handler for the moment's event. line: the body's.
 export type TestStep = { moment: string; ended: 'passed' | 'unheard' | { failed: string; line: number | null }; report: string };
-// The studio's 테스트, on code the model wrote; absent where there is no draft to run it as (a first draft).
-export type PluginRunner = { run(code: string, moment: string, text: string, signal: AbortSignal): Promise<TestStep> };
-export type PluginAsked = { ok: true; answer: PluginAnswer; model: ModelRef; cost: Cost | null; steps: TestStep[] } | { ok: false; failure: RouteFailure | { kind: 'profile-missing'; own: boolean } | { kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { kind: 'unsaved'; failure: ApiFailure } | { kind: 'too-many-calls' } };
+export type TestMoment = { moment: string; text: string };
+// The studio's 테스트, on code the model wrote, one step per moment run, ending at the first failure; absent where there is
+// no draft to run it as (a first draft).
+export type PluginRunner = { run(code: string, moments: TestMoment[], signal: AbortSignal): Promise<TestStep[]> };
+// runs: each run_test call's steps.
+export type PluginAsked = { ok: true; answer: PluginAnswer; model: ModelRef; cost: Cost | null; runs: TestStep[][] } | { ok: false; failure: RouteFailure | { kind: 'profile-missing'; own: boolean } | { kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { kind: 'unsaved'; failure: ApiFailure } | { kind: 'too-many-calls' } };
 
 // An ask's limits, the app's own whatever the model asks for: its test runs, and its calls with the answer's.
 const RUNS = 3;
@@ -34,15 +38,25 @@ const CALLS = RUNS + 2;
 // The moments are the code's own, not the draft's: a change may add the //@input or //@menu it then tests.
 const RUN_TEST: ToolDef = {
   name: 'run_test',
-  description: "Runs a version of the plugin file once in the app's test on a real chat, at one moment, without installing or saving anything. Answers what the run showed and wrote, or its error with the line. The plugin's model calls are made only if the user allowed them; network calls and embeddings never are.",
+  description: "Runs a version of the plugin file in the app's test on a real chat, at the moments given, in order, without installing or saving anything. What one moment leaves (chat state, storage, messages, variables) is there for the next, so list the moments of one use together. Stops at the first error. Answers what each moment showed and wrote, or the error with its line. The plugin's model calls are made only if the user allowed them; network calls and embeddings never are.",
   parameters: {
     type: 'object',
     properties: {
       code: { type: 'string', description: 'The whole file without the identity lines, as you would answer it.' },
-      moment: { type: 'string', description: 'reply: after the last reply is saved; sending: before a message is sent; prompt: when a request is built; menu:<id>, action:<id> (on the last message) or input:<id>, with an id from that line of the code.' },
-      text: { type: 'string', description: 'The text typed, for the sending and input: moments.' },
+      moments: {
+        type: 'array',
+        minItems: 1,
+        items: {
+          type: 'object',
+          properties: {
+            moment: { type: 'string', description: 'reply: after the last reply is saved; sending: before a message is sent; prompt: when a request is built; menu:<id>, action:<id> (on the last message) or input:<id>, with an id from that line of the code.' },
+            text: { type: 'string', description: 'The text typed, for the sending and input: moments.' },
+          },
+          required: ['moment'],
+        },
+      },
     },
-    required: ['code', 'moment'],
+    required: ['code', 'moments'],
   },
 };
 
@@ -75,12 +89,12 @@ export function trialReport({ outcome, said, asked, calls, writes, called }: Too
 }
 
 // A call the model made with arguments that do not read is answered as such, never run on a guess.
-function readTest(call: ToolCall): { code: string; moment: string; text: string } | null {
+function readTest(call: ToolCall): { code: string; moments: TestMoment[] } | null {
   try {
     const read: unknown = JSON.parse(call.arguments);
-    if (typeof read !== 'object' || read === null) return null;
-    const { code, moment, text = '' } = read as Record<string, unknown>;
-    return typeof code === 'string' && typeof moment === 'string' && typeof text === 'string' ? { code, moment, text } : null;
+    if (!isRecord(read) || typeof read.code !== 'string' || !Array.isArray(read.moments) || read.moments.length === 0) return null;
+    const moments = read.moments.flatMap((each: unknown) => (isRecord(each) && typeof each.moment === 'string' && (each.text === undefined || typeof each.text === 'string') ? [{ moment: each.moment, text: each.text ?? '' }] : []));
+    return moments.length === read.moments.length ? { code: read.code, moments } : null;
   } catch {
     return null;
   }
@@ -88,7 +102,7 @@ function readTest(call: ToolCall): { code: string; moment: string; text: string 
 
 // With a runner, the model may test its file before answering: each of its calls is one model call, each run_test one
 // trial, within RUNS and CALLS. The stop signal reaches the model call and the trial alike.
-export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, onText: (text: string) => void, runner: PluginRunner | null = null, onStep: (step: TestStep) => void = () => {}): Promise<PluginAsked> {
+export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, onText: (text: string) => void, runner: PluginRunner | null = null, onRun: (run: TestStep[]) => void = () => {}): Promise<PluginAsked> {
   const { store, credentials, log, tokens } = deps;
   const route = sharedModel(store, 'main', input.model);
   if ('kind' in route) return { ok: false, failure: route };
@@ -98,7 +112,7 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
   const messages = pluginAskMessages(api, input.body, input.ask, testing ? RUNS : 0);
   const tools = testing ? [RUN_TEST] : undefined;
   const costs: (Cost | null)[] = [];
-  const steps: TestStep[] = [];
+  const runs: TestStep[][] = [];
   for (let calls = 0; calls < CALLS; calls++) {
     if (signal.aborted) return { ok: false, failure: { kind: 'stopped' } };
     const call = await pageCall({ store, tokens }, route, 'script', null);
@@ -123,19 +137,20 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
       costs.push(receipt.cost === 'pending' ? null : receipt.cost);
       if (answer.cut === 'stopped') return { ok: false, failure: { kind: 'stopped' } };
       if (answer.state === 'failed' || (!answer.calls.length && !text.value().trim())) return { ok: false, failure: { kind: 'failed', receipt } };
-      if (!answer.calls.length || !testing) return { ok: true, answer: readPluginAnswer(text.value()), model: refOf(route.connection.id, route.model), cost: sumCosts(costs), steps };
+      if (!answer.calls.length || !testing) return { ok: true, answer: readPluginAnswer(text.value()), model: refOf(route.connection.id, route.model), cost: sumCosts(costs), runs };
       const results: ToolResult[] = [];
       for (const each of answer.calls) {
         const asked = each.name === 'run_test' ? readTest(each) : null;
         let result: string;
-        if (!asked) result = `Not run: ${each.name === 'run_test' ? 'the arguments are not a JSON object with code and moment strings' : 'there is no such tool'}.`;
-        else if (steps.length >= RUNS) result = `Not run: the ${RUNS} test runs are used up. Answer now with the Korean note and the whole file.`;
+        if (!asked) result = `Not run: ${each.name === 'run_test' ? 'the arguments are not a JSON object with a code string and a list of moments' : 'there is no such tool'}.`;
+        else if (runs.length >= RUNS) result = `Not run: the ${RUNS} test runs are used up. Answer now with the Korean note and the whole file.`;
         else {
-          const step = await testing.run(asked.code, asked.moment, asked.text, signal);
+          const run = await testing.run(asked.code, asked.moments, signal);
           if (signal.aborted) return { ok: false, failure: { kind: 'stopped' } };
-          steps.push(step);
-          onStep(step);
-          result = step.report;
+          runs.push(run);
+          onRun(run);
+          const reports = run.map((step, at) => `${asked.moments[at]!.moment}:\n${step.report}`);
+          result = [...reports, ...(run.length < asked.moments.length ? ['The run stopped there; the later moments did not run.'] : [])].join('\n\n');
         }
         results.push({ id: each.id, name: each.name, text: result });
       }

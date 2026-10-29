@@ -119,7 +119,7 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
 type Pending = { ask: string; before: string; asked: Extract<PluginAsked, { ok: true }> };
 // AI로 수정 from 테스트: sent as an ask at once, or left in the box while another ask is running or waits to be kept.
 type Fix = { ask: string; at: number };
-type Run = { kind: 'idle' } | { kind: 'running'; ask: string; length: number; steps: TestStep[] } | { kind: 'failed'; ask: string; message: string; steps: TestStep[] } | { kind: 'answered'; pending: Pending };
+type Run = { kind: 'idle' } | { kind: 'running'; ask: string; length: number; runs: TestStep[][] } | { kind: 'failed'; ask: string; message: string; runs: TestStep[][] } | { kind: 'answered'; pending: Pending };
 
 function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft; flush: () => Promise<boolean>; fix: Fix | null; setup: TestSetup }) {
   const session = useSession();
@@ -159,19 +159,19 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
     const controller = new AbortController();
     abort.current = controller;
     setAsk('');
-    const steps: TestStep[] = [];
+    const runs: TestStep[][] = [];
     let length = 0;
-    const show = () => setRun({ kind: 'running', ask: asked, length, steps: [...steps] });
+    const show = () => setRun({ kind: 'running', ask: asked, length, runs: [...runs] });
     show();
     const runner = testRunner(session, draft, setup.chat ?? chats[0]?.id ?? null, setup);
-    const answer = await askPlugin(session, { body: before, ask: asked, model: picked }, controller.signal, (live) => { length = live.length; show(); }, runner, (step) => { steps.push(step); show(); });
+    const answer = await askPlugin(session, { body: before, ask: asked, model: picked }, controller.signal, (live) => { length = live.length; show(); }, runner, (run) => { runs.push(run); show(); });
     abort.current = null;
     if (!answer.ok) {
       if (answer.failure.kind === 'stopped') {
         setAsk(asked);
         return setRun({ kind: 'idle' });
       }
-      return setRun({ kind: 'failed', ask: asked, message: describeAskFailure(answer.failure), steps });
+      return setRun({ kind: 'failed', ask: asked, message: describeAskFailure(answer.failure), runs });
     }
     if (!answer.answer.ok) {
       const kept = await addDraftAsk(store, id, { ask: asked, note: answer.answer.note, model: answer.model, cost: answer.cost, at: Date.now() }, null);
@@ -197,18 +197,18 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
       ))}
       {run.kind === 'running' && (
         <Exchange ask={run.ask} answer="생성 중…">
-          <TestSteps steps={run.steps} />
+          <TestSteps runs={run.runs} />
         </Exchange>
       )}
       {run.kind === 'failed' && (
         <Exchange ask={run.ask}>
-          <TestSteps steps={run.steps} />
+          <TestSteps runs={run.runs} />
           <Callout tone="warn">{run.message}</Callout>
         </Exchange>
       )}
       {pending && pending.asked.answer.ok && (
         <Exchange ask={pending.ask} answer={pending.asked.answer.note} foot={askFoot(store, pending.asked)}>
-          <TestSteps steps={pending.asked.steps} />
+          <TestSteps runs={pending.asked.runs} />
           <PendingChange pending={pending} current={draft.body} onSettle={(keep) => void settle(pending, keep)} />
         </Exchange>
       )}
@@ -234,10 +234,11 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
 }
 
 // The AI's test runs for one ask, each its moment and how it ended.
-function TestSteps({ steps }: { steps: TestStep[] }) {
-  if (!steps.length) return null;
+function TestSteps({ runs }: { runs: TestStep[][] }) {
+  if (!runs.length) return null;
   const ended = ({ ended: how }: TestStep) => (how === 'passed' ? '통과' : how === 'unheard' ? '핸들러 없음' : `오류: ${how.failed}${how.line === null ? '' : ` (${how.line}번째 줄)`}`);
-  return <Facts items={steps.map((step, index) => ({ label: `테스트 ${index + 1} · ${step.moment}`, value: ended(step) }))} />;
+  const number = (run: number, steps: TestStep[], at: number) => (steps.length > 1 ? `${run + 1}-${at + 1}` : `${run + 1}`);
+  return <Facts items={runs.flatMap((steps, run) => steps.map((step, at) => ({ label: `테스트 ${number(run, steps, at)} · ${step.moment}`, value: ended(step) })))} />;
 }
 
 function PendingChange({ pending, current, onSettle }: { pending: Pending; current: string; onSettle: (keep: boolean) => void }) {

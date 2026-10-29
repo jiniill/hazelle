@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import portingSample from '../../engine/import/fixtures/porting-sample.js.txt?raw';
 import { readToolFile } from '../../engine/import/risu-plugin';
 import { readTool } from '../../engine/import/tool';
-import type { Host, ToolReach } from '../../engine/script-api';
+import type { Host, ToolEvent, ToolReach } from '../../engine/script-api';
 import { toolId } from '../../model/tool';
 import type { Down, Up } from '../../tool-api/protocol';
 import { shown } from '../../model/chat';
@@ -125,11 +125,11 @@ it('aborts the model call an input item is waiting on when the run is stopped', 
   } finally { host.close(); }
 }));
 
-it('runs a draft as no installed plugin, keeping its storage and settings writes in its own copy, and names an error\'s line', () => withTools(async (session, connect) => {
+it('runs a draft as no installed plugin, keeping its storage and settings writes in its own copy across its events, and names an error\'s line', () => withTools(async (session, connect) => {
   const f = await fixture(session);
   const code = [
     '//@api 1', '//@name draft', '//@author jin', '//@setting {"key":"title","type":"text","label":"Title","default":"A"}', '',
-    'hazelle.on("prompt", async (chat) => { await hazelle.storage.set("seen", 1); await hazelle.setSetting("title", "B"); chat.state.set("n", 2); return `${await hazelle.storage.get("seen")}${(await hazelle.settings()).title}`; });',
+    'hazelle.on("prompt", async (chat) => { await hazelle.storage.set("seen", ((await hazelle.storage.get("seen")) ?? 0) + 1); await hazelle.setSetting("title", "B"); chat.state.set("n", 2); return `${await hazelle.storage.get("seen")}${(await hazelle.settings()).title}`; });',
     'hazelle.on("menu", () => { throw new Error("boom"); });',
   ].join('\n');
   const read = readTool(new TextEncoder().encode(code));
@@ -145,13 +145,18 @@ it('runs a draft as no installed plugin, keeping its storage and settings writes
   const before = stored();
   try {
     const { scope, host: reach } = f.context();
-    const trial = (event: Parameters<ToolHost['trial']>[3]) => host.trial(f.chat, draft, scope, event, reach, new AbortController().signal);
-    expect(await trial({ kind: 'prompt', turn: { memory: false } })).toMatchObject({
-      outcome: { value: '1B', writes: [[expect.stringMatching(/:n$/), expect.any(String)]] },
-      writes: [{ kind: 'storage', key: 'seen', value: 1 }, { kind: 'setting', key: 'title', value: 'B' }],
+    const trial = (...events: ToolEvent[]) => host.trial(f.chat, draft, new AbortController().signal, async (run) => {
+      const ran = [];
+      for (const event of events) ran.push(await run(scope, event, reach));
+      return ran;
     });
+    const prompt: ToolEvent = { kind: 'prompt', turn: { memory: false } };
+    expect(await trial(prompt, prompt)).toMatchObject([
+      { outcome: { value: '1B', writes: [[expect.stringMatching(/:n$/), expect.any(String)]] }, writes: [{ kind: 'storage', key: 'seen', value: 1 }, { kind: 'setting', key: 'title', value: 'B' }] },
+      { outcome: { value: '2B' }, writes: [{ kind: 'storage', key: 'seen', value: 2 }, { kind: 'setting', key: 'title', value: 'B' }] },
+    ]);
     await expect(trial({ kind: 'menu', item: 'now' })).rejects.toMatchObject({ message: 'boom', line: 7 });
-    expect(await trial({ kind: 'input', item: 'tidy', text: '' })).toBeNull();
+    expect(await trial({ kind: 'input', item: 'tidy', text: '' })).toEqual([null]);
     expect(stored()).toEqual(before);
   } finally { host.close(); Reflect.deleteProperty(globalThis, 'hazelle'); }
 }));

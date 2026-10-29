@@ -4,11 +4,12 @@ import { sumCosts } from '../../connectors/pricing';
 import { sharedModel } from '../../runtime/assignment';
 import type { ToolDraft } from '../../model/tool';
 import { chatNow } from '../../runtime/chat-context';
+import type { ChatScope } from '../../engine/render';
 import type { ToolTrial } from '../../runtime/script-preview';
 import type { Session } from '../../runtime/session';
 import { bodyLine, draftTrial } from '../../runtime/tools/drafts';
 import { ToolFailure, type TrialWrite } from '../../runtime/tools/frame-state';
-import { trialReport, type PluginRunner } from '../../runtime/tools/plugin-writer';
+import { trialReport, type PluginRunner, type TestMoment } from '../../runtime/tools/plugin-writer';
 import { describeImportFailure } from '../common/importFailure';
 import { ModelMenu } from '../common/ModelMenu';
 import { cost } from '../common/receipt';
@@ -25,19 +26,23 @@ export type TestSetup = { chat: string | null; calling: boolean; model: ModelRef
 // code: the failure is the file's own, thrown or failed to load, so the AI can be asked to fix it. line: the body's.
 type Tested = ToolTrial | null | { failed: string; line: number | null; code: boolean };
 
-// The draft run once on a chat for one moment, as ScriptPreview.tool runs it: nothing is saved.
-async function runTest(session: Session, draft: ToolDraft, chat: string, moment: string, text: string, setup: TestSetup, signal: AbortSignal): Promise<Tested> {
+// The draft run on a chat for its moments in order, as ScriptPreview.tool runs them: nothing is saved. One result per
+// moment run, ending at the first failure.
+async function runTest(session: Session, draft: ToolDraft, chat: string, moments: TestMoment[], setup: TestSetup, signal: AbortSignal): Promise<Tested[]> {
   const read = draftTrial(session.store, draft);
-  if (!read.ok) return { failed: describeImportFailure(read.failure), line: null, code: true };
-  try {
-    const scope = await chatNow(session, chat, signal);
-    if (!scope) return { failed: '채팅을 열지 못했어요.', line: null, code: false };
-    const event = testEvent(moment, scope, text, read.trial.tool.manifest);
-    if (!event) return { failed: '이 채팅에는 테스트할 메시지가 없어요.', line: null, code: false };
-    return await session.scriptPreview.tool(chat, scope, read.trial, event, setup.calling ? { model: setup.model } : null, signal);
-  } catch (error) {
+  if (!read.ok) return [{ failed: describeImportFailure(read.failure), line: null, code: true }];
+  const failed = (error: unknown): Tested => {
     const code = error instanceof ToolFailure;
     return { failed: error instanceof Error ? error.message : String(error), line: code && error.line !== null ? bodyLine(draft, error.line) : null, code };
+  };
+  try {
+    const scope = await chatNow(session, chat, signal);
+    if (!scope) return [{ failed: '채팅을 열지 못했어요.', line: null, code: false }];
+    const events = moments.map(({ moment, text }) => (at: ChatScope) => testEvent(moment, at, text, read.trial.tool.manifest));
+    const tried = await session.scriptPreview.tool(chat, scope, read.trial, events, setup.calling ? { model: setup.model } : null, signal);
+    return tried.map((each) => (each === 'unheard' ? null : each === 'no-event' ? { failed: '이 채팅에는 테스트할 메시지가 없어요.', line: null, code: false } : 'error' in each ? failed(each.error) : each));
+  } catch (error) {
+    return [failed(error)];
   }
 }
 
@@ -45,19 +50,24 @@ async function runTest(session: Session, draft: ToolDraft, chat: string, moment:
 export function testRunner(session: Session, draft: ToolDraft, chat: string | null, setup: TestSetup): PluginRunner | null {
   if (!draftTrial(session.store, draft).ok || chat === null) return null;
   return {
-    async run(code, moment, text, signal) {
+    async run(code, moments, signal) {
       const tried = { ...draft, body: code };
       const known = draftTrial(session.store, tried);
-      const pick = (known.ok ? testPicks(known.trial.tool.manifest) : []).find((each) => each.value === moment);
-      const label = pick?.label ?? moment;
-      if (known.ok && !pick) return { moment: label, ended: { failed: '이 코드에 없는 실행 시점이에요.', line: null }, report: `Not run: ${moment} is not a moment of this file.` };
-      const ran = await runTest(session, tried, chat, moment, text, setup, signal);
-      if (ran === null) return { moment: label, ended: 'unheard', report: `Nothing ran: the file has no handler for the ${pick!.sub.split(' ')[0]} event.` };
-      if ('failed' in ran) {
-        const at = ran.line === null ? undefined : code.split('\n')[ran.line - 1];
-        return { moment: label, ended: { failed: ran.failed, line: ran.line }, report: [`Error: ${ran.failed}`, at !== undefined && `Line ${ran.line}: ${at.trim()}`].filter(Boolean).join('\n') };
-      }
-      return { moment: label, ended: 'passed', report: trialReport(ran) };
+      const picks = known.ok ? testPicks(known.trial.tool.manifest) : [];
+      const pickOf = (moment: string) => picks.find((each) => each.value === moment);
+      const missing = known.ok && moments.find(({ moment }) => !pickOf(moment));
+      if (missing) return [{ moment: missing.moment, ended: { failed: '이 코드에 없는 실행 시점이에요.', line: null }, report: `Not run: ${missing.moment} is not a moment of this file.` }];
+      const ran = await runTest(session, tried, chat, moments, setup, signal);
+      return ran.map((result, at) => {
+        const { moment } = moments[at]!;
+        const label = pickOf(moment)?.label ?? moment;
+        if (result === null) return { moment: label, ended: 'unheard', report: `Nothing ran: the file has no handler for the ${moment.split(':')[0]} event.` };
+        if ('failed' in result) {
+          const line = result.line === null ? undefined : code.split('\n')[result.line - 1];
+          return { moment: label, ended: { failed: result.failed, line: result.line }, report: [`Error: ${result.failed}`, line !== undefined && `Line ${result.line}: ${line.trim()}`].filter(Boolean).join('\n') };
+        }
+        return { moment: label, ended: 'passed', report: trialReport(result) };
+      });
     },
   };
 }
@@ -84,7 +94,7 @@ export function TestPane({ draft, setup, onSetup, reveal, onFix }: { draft: Tool
     const stop = (running.current = new AbortController());
     const body = draft.body;
     setRan('running');
-    const result = await runTest(session, draft, on, pick.value, text, setup, stop.signal);
+    const [result = null] = await runTest(session, draft, on, [{ moment: pick.value, text }], setup, stop.signal);
     if (!stop.signal.aborted) setRan({ body, pick, result });
   }
 

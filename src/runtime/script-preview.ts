@@ -79,6 +79,9 @@ export type Trial = Heard & { outcome: ScriptOutcome };
 // A studio draft run alone for one event (ScriptPreview.tool), as its 테스트 shows it. called: each model call made, by
 // its cost.
 export type ToolTrial = Trial & { writes: TrialWrite[]; called: (Cost | null)[] };
+// One moment of ScriptPreview.tool: its trial, a draft that does not listen ('unheard'), a chat with no message the moment
+// needs ('no-event'), or what it threw.
+export type ToolTried = ToolTrial | 'unheard' | 'no-event' | { error: unknown };
 
 export const NOT_REHEARSED = 'Error: not called while rehearsing';
 const unheard = (): Heard => ({ said: [], asked: [], calls: { model: 0, embed: 0, background: 0, fetch: 0 }, loreRanAway: false });
@@ -158,15 +161,32 @@ export class ScriptPreview {
     return { ...heard, outcome };
   }
 
-  // calling: the model its 모델 부르기 calls (null: the 보조 모델), or null while off, which refuses the calls as any
-  // rehearsal does. null: the draft does not listen to the event.
-  async tool(chat: string, scope: ChatScope, draft: DraftTrial, event: ToolEvent, calling: { model: ModelRef | null } | null, signal: AbortSignal): Promise<ToolTrial | null> {
-    const heard = unheard();
-    const called: (Cost | null)[] = [];
-    const quiet = this.quiet(chat, scope, heard, signal);
-    const host: ToolReach = calling ? { ...quiet, model: async (_role, messages) => { const { result, cost } = await this.reach.tried(calling.model, messages, signal); called.push(cost); return result; } } : quiet;
-    const ran = await this.tools.trial(chat, draft, scope, event, host, signal);
-    return ran && { ...heard, ...ran, called };
+  // events: each moment's event on the chat as the moments before it left it, its messages, lore and state; null when the
+  // chat holds no message it needs. calling: the model its 모델 부르기 calls (null: the 보조 모델), or null while off,
+  // which refuses the calls as any rehearsal does. The run ends at the first missing event or error.
+  async tool(chat: string, scope: ChatScope, draft: DraftTrial, events: ((scope: ChatScope) => ToolEvent | null)[], calling: { model: ModelRef | null } | null, signal: AbortSignal): Promise<ToolTried[]> {
+    return this.tools.trial(chat, draft, signal, async (run) => {
+      const tried: ToolTried[] = [];
+      let at = scope;
+      for (const eventOf of events) {
+        const event = eventOf(at);
+        if (!event) return [...tried, 'no-event'];
+        const heard = unheard();
+        const called: (Cost | null)[] = [];
+        const quiet = this.quiet(chat, at, heard, signal);
+        const host: ToolReach = calling ? { ...quiet, model: async (_role, messages) => { const { result, cost } = await this.reach.tried(calling.model, messages, signal); called.push(cost); return result; } } : quiet;
+        try {
+          const ran = await run(at, event, host);
+          if (!ran) { tried.push('unheard'); continue; }
+          tried.push({ ...heard, ...ran, called });
+          const next = applied(chat, at, ran.outcome);
+          at = ran.outcome.writes.length > 0 ? { ...next, pending: [...(next.pending ?? []), ...ran.outcome.writes] } : next;
+        } catch (error) {
+          return [...tried, { error }];
+        }
+      }
+      return tried;
+    });
   }
 
   // A host for a run that saves nothing: each question dismissed, each model, embedding, background and network call
