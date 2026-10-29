@@ -10,15 +10,16 @@ import { ToolFailure, type TrialWrite } from '../../runtime/tools/frame-state';
 import { ModelMenu } from '../common/ModelMenu';
 import { cost } from '../common/receipt';
 import { useChats, useSession } from '../session';
-import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, SettingRow, Stack, Switch, Text, TextField } from '../ui';
-import { testEvent, testPicks } from './studio';
+import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, Row, SettingRow, Stack, Switch, Text, TextField } from '../ui';
+import { fixAsk, testEvent, testPicks, type TestPick } from './studio';
 
 const REFUSED: Record<Extract<TrialWrite, { kind: 'refused' }>['call'], string> = { 'assets.save': '파일 저장', 'chat.picture': '이미지 넣기', 'chat.send': '메시지 보내기' };
 
-type Ran = { body: string; result: ToolTrial | null | { failed: string; line: number | null } };
+// code: the failure is the file's own, thrown or failed to load, so the AI can be asked to fix it.
+type Ran = { body: string; pick: TestPick; result: ToolTrial | null | { failed: string; line: number | null; code: boolean } };
 
 // The draft run once on a chosen chat for one event, as ScriptPreview.tool runs it: nothing is saved.
-export function TestPane({ draft, reveal }: { draft: ToolDraft; reveal: (at: [number, number]) => void }) {
+export function TestPane({ draft, reveal, onFix }: { draft: ToolDraft; reveal: (at: [number, number]) => void; onFix: (ask: string) => void }) {
   const session = useSession();
   const chats = useChats();
   const read = useMemo(() => draftTrial(session.store, draft), [session.store, draft.identity, draft.body]);
@@ -37,20 +38,21 @@ export function TestPane({ draft, reveal }: { draft: ToolDraft; reveal: (at: [nu
   if (!read.ok) return <Text variant="note">헤더에 오류가 있어서 테스트할 수 없어요. 정보 탭에서 확인해 주세요.</Text>;
   if (!chosen || !picked) return <Empty>테스트하려면 먼저 채팅을 시작해 주세요.</Empty>;
 
-  async function run(trial: typeof read & { ok: true }, on: string, what: string) {
+  async function run(trial: typeof read & { ok: true }, on: string, pick: TestPick) {
     running.current?.abort();
     const stop = (running.current = new AbortController());
     const body = draft.body;
     setRan('running');
-    const done = (result: Ran['result']) => !stop.signal.aborted && setRan({ body, result });
+    const done = (result: Ran['result']) => !stop.signal.aborted && setRan({ body, pick, result });
     try {
       const scope = await chatNow(session, on, stop.signal);
-      if (!scope) return done({ failed: '채팅을 열지 못했어요.', line: null });
-      const event = testEvent(what, scope, text, trial.trial.tool.manifest);
-      if (!event) return done({ failed: '이 채팅에는 테스트할 메시지가 없어요.', line: null });
+      if (!scope) return done({ failed: '채팅을 열지 못했어요.', line: null, code: false });
+      const event = testEvent(pick.value, scope, text, trial.trial.tool.manifest);
+      if (!event) return done({ failed: '이 채팅에는 테스트할 메시지가 없어요.', line: null, code: false });
       done(await session.scriptPreview.tool(on, scope, trial.trial, event, calling ? { model } : null, stop.signal));
     } catch (error) {
-      done({ failed: error instanceof Error ? error.message : String(error), line: error instanceof ToolFailure ? error.line : null });
+      const code = error instanceof ToolFailure;
+      done({ failed: error instanceof Error ? error.message : String(error), line: code ? error.line : null, code });
     }
   }
 
@@ -66,19 +68,38 @@ export function TestPane({ draft, reveal }: { draft: ToolDraft; reveal: (at: [nu
         </>
       )}
       <Text variant="note">{calling ? '채팅과 저장소는 바뀌지 않아요. 모델은 실제로 호출해서 비용이 들어요.' : '채팅과 저장소는 바뀌지 않고, 모델 호출과 네트워크 요청은 하지 않아요.'}</Text>
-      <Button disabled={ran === 'running'} onClick={() => void run(read, chosen.id, picked.value)}>
+      <Button disabled={ran === 'running'} onClick={() => void run(read, chosen.id, picked)}>
         {ran === 'running' ? '실행하는 중…' : '테스트 실행'}
       </Button>
-      {ran !== null && ran !== 'running' && <TestResult ran={ran} event={picked.sub.split(' ')[0]!} stale={ran.body !== draft.body} onLine={(line) => reveal(lineRange(draft.body, bodyLine(draft, line)))} />}
+      {ran !== null && ran !== 'running' && (
+        <TestResult
+          ran={ran}
+          stale={ran.body !== draft.body}
+          onLine={(line) => reveal(lineRange(draft.body, bodyLine(draft, line)))}
+          onFix={(failed, line) => onFix(fixAsk(failed, ran.pick.label, ran.body, line === null ? null : bodyLine(draft, line)))}
+        />
+      )}
     </Stack>
   );
 }
 
-function TestResult({ ran: { result }, event, stale, onLine }: { ran: Ran; event: string; stale: boolean; onLine: (line: number) => void }) {
-  if (result === null) return <Text variant="note">{`이 코드에는 '${event}' 핸들러가 없어요.`}</Text>;
+type ResultProps = { ran: Ran; stale: boolean; onLine: (line: number) => void; onFix: (failed: string, line: number | null) => void };
+
+function TestResult({ ran: { pick, result }, stale, onLine, onFix }: ResultProps) {
+  if (result === null) return <Text variant="note">{`이 코드에는 '${pick.sub.split(' ')[0]!}' 핸들러가 없어요.`}</Text>;
   if ('failed' in result) {
-    const { failed, line } = result;
-    return <Callout tone="warn" action={line === null || stale ? undefined : { label: '코드에서 보기', onClick: () => onLine(line) }}>{failed}</Callout>;
+    const { failed, line, code } = result;
+    return (
+      <Stack gap="related">
+        <Callout tone="warn">{failed}</Callout>
+        {!stale && (code || line !== null) && (
+          <Row kind="actions">
+            {line !== null && <Button variant="secondary" size="sm" onClick={() => onLine(line)}>코드에서 보기</Button>}
+            {code && <Button variant="primary" size="sm" onClick={() => onFix(failed, line)}>AI로 수정</Button>}
+          </Row>
+        )}
+      </Stack>
+    );
   }
   const { outcome, said, asked, calls, writes, called } = result;
   const answer = answerText(outcome.value);

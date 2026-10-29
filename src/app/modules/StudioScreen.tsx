@@ -46,6 +46,7 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
   const language = useMemo(() => jsLanguage(), []);
   const [applying, setApplying] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [fix, setFix] = useState<Fix | null>(null);
 
   async function remove() {
     const removed = await autosave.remove(() => deleteDraft(store, id));
@@ -56,8 +57,20 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
   }
 
   const asides: CodeAside[] = [
-    { label: 'AI', body: () => <AiPane id={id} draft={draft} flush={autosave.flush} /> },
-    { label: '테스트', body: (reveal) => <TestPane draft={draft} reveal={reveal} /> },
+    { label: 'AI', body: () => <AiPane id={id} draft={draft} flush={autosave.flush} fix={fix} /> },
+    {
+      label: '테스트',
+      body: (reveal, show) => (
+        <TestPane
+          draft={draft}
+          reveal={reveal}
+          onFix={(ask) => {
+            setFix({ ask, at: Date.now() });
+            show('AI');
+          }}
+        />
+      ),
+    },
     { label: '정보', body: (reveal) => <InfoPane draft={draft} onIdentity={(identity) => autosave.change({ identity })} reveal={reveal} /> },
   ];
   return (
@@ -101,9 +114,11 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
 
 // An answer waits here until kept or dropped; either way the ask joins the draft's list, its change only when kept.
 type Pending = { ask: string; before: string; asked: Extract<PluginAsked, { ok: true }> };
+// AI로 수정 from 테스트: sent as an ask at once, or left in the box while another ask is running or waits to be kept.
+type Fix = { ask: string; at: number };
 type Run = { kind: 'idle' } | { kind: 'running'; ask: string; length: number } | { kind: 'failed'; ask: string; message: string } | { kind: 'answered'; pending: Pending };
 
-function AiPane({ id, draft, flush }: { id: string; draft: ToolDraft; flush: () => Promise<boolean> }) {
+function AiPane({ id, draft, flush, fix }: { id: string; draft: ToolDraft; flush: () => Promise<boolean>; fix: Fix | null }) {
   const session = useSession();
   const { store } = session;
   useConnections();
@@ -126,9 +141,16 @@ function AiPane({ id, draft, flush }: { id: string; draft: ToolDraft; flush: () 
     };
   }, [session, draft.body, ask, picked]);
 
-  async function send() {
+  const pending = run.kind === 'answered' ? run.pending : null;
+  // Only a new fix acts; a later change of the run or the answer leaves it be.
+  useEffect(() => {
+    if (!fix) return;
+    if (running || pending) setAsk(fix.ask);
+    else void send(fix.ask);
+  }, [fix]);
+
+  async function send(asked: string) {
     if (!(await flush())) return;
-    const asked = ask.trim();
     const before = draft.body;
     const controller = new AbortController();
     abort.current = controller;
@@ -158,7 +180,6 @@ function AiPane({ id, draft, flush }: { id: string; draft: ToolDraft; flush: () 
     setRun({ kind: 'idle' });
   }
 
-  const pending = run.kind === 'answered' ? run.pending : null;
   const hint = running ? `생성 중… ${run.length.toLocaleString()}자` : estimate === null ? undefined : `예상 ${cost(estimate)}`;
   return (
     <Stack gap="group">
@@ -189,7 +210,7 @@ function AiPane({ id, draft, flush }: { id: string; draft: ToolDraft; flush: () 
             {running ? (
               <Button variant="secondary" onClick={() => abort.current?.abort()}>{STOP}</Button>
             ) : (
-              <Button variant="primary" icon={ArrowUp} disabled={!ask.trim() || pending !== null} onClick={() => void send()}>보내기</Button>
+              <Button variant="primary" icon={ArrowUp} disabled={!ask.trim() || pending !== null} onClick={() => void send(ask.trim())}>보내기</Button>
             )}
           </>
         }

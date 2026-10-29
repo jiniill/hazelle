@@ -7,8 +7,9 @@ import styles from './CodeEditor.module.css';
 
 const CodeEditor = lazy(() => import('./CodeEditor'));
 
-// A pane beside the code, behind a tab of its own on a narrow screen. reveal selects a range of the code and shows it.
-export type CodeAside = { label: string; body: (reveal: (at: [number, number]) => void) => ReactNode };
+// A pane beside the code, behind a tab of its own on a narrow screen. reveal selects a range of the code and shows it;
+// show brings up the pane of that label.
+export type CodeAside = { label: string; body: (reveal: (at: [number, number]) => void, show: (label: string) => void) => ReactNode };
 
 // Keep the plain textarea usable during CodeMirror load; keep every tab mounted to preserve caret/scroll. asides: the
 // panes beside the code, one shown at a time; narrow, the code is one more tab before them.
@@ -32,6 +33,12 @@ export function CodeField(props: CodeEditorProps & { area: (element: HTMLTextAre
   const reveal = (at: [number, number]) => {
     setCodeShown(true);
     setRevealed({ at });
+  };
+  const show = (label: string) => {
+    const index = asides?.findIndex((aside) => aside.label === label) ?? -1;
+    if (index < 0) return;
+    setPane(index);
+    setCodeShown(false);
   };
   const editor = (
     <Suspense fallback={<textarea ref={area} className={prose ? `${styles.loading} ${styles.prose}` : styles.loading} aria-label={label} data-autofocus {...NO_AUTOFILL} spellCheck={false} value={value} onChange={(event) => onChange(event.target.value)} />}>
@@ -62,7 +69,7 @@ export function CodeField(props: CodeEditorProps & { area: (element: HTMLTextAre
         )}
         {asides.map((aside, index) => (
           <section key={aside.label} className={styles.aside} hidden={index !== pane} aria-label={aside.label}>
-            {aside.body(reveal)}
+            {aside.body(reveal, show)}
           </section>
         ))}
       </div>

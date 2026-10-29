@@ -38,3 +38,9 @@ export function testEvent(pick: string, scope: ChatScope, text: string, manifest
     default: return { kind: 'input', item, text };
   }
 }
+
+// AI로 수정's ask, shown as sent: the run's error, its moment and its line. line counts in body, as the model is sent it.
+export function fixAsk(failed: string, moment: string, body: string, line: number | null): string {
+  const text = line === null ? undefined : body.split('\n')[line - 1];
+  return ['테스트에서 난 오류를 수정해 주세요.', `실행 시점: ${moment}`, `오류: ${failed}`, ...(text === undefined ? [] : [`${line}번째 줄: ${text.trim()}`])].join('\n');
+}
