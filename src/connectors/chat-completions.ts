@@ -1,7 +1,7 @@
 import { failedTerminal } from './errors';
 import type { Cache, NumberSetting, Reasoning, Setting } from './settings';
 import { ephemeral, wireMessage } from './anthropic-messages';
-import { carriesPictures, type CacheMark, type ChatMessage, type Codec, type Embeds, type InputPicture, type Model, type Usage } from './types';
+import { carriesPictures, type CacheMark, type ChatMessage, type Codec, type Embeds, type InputPicture, type Model, type Phase, type StreamFacts, type ToolCall, type ToolDef, type Usage } from './types';
 import { count, isRecord, list, modelEntries, vector } from './values';
 
 // Prefer max_tokens for compatible servers; providers that reject it override outputLimit.
@@ -58,11 +58,29 @@ const imagePart = (picture: InputPicture) => ({ type: 'image_url', image_url: { 
 
 const plain = (message: ChatMessage) => wireMessage(message, undefined, imagePart);
 
-function wireMessages(messages: ChatMessage[], cache: Cache | undefined, mark: CacheMark | null) {
-  if (!cache || !mark || mark.kind === 'key') return messages.map(plain);
-  if (mark.kind === 'part') return messages.map((message) => wireMessage(message, cache, imagePart));
-  return messages.map((message) => (message.cache ? { ...plain(message), [mark.field]: ephemeral(cache) } : plain(message)));
+function wired(message: ChatMessage, cache: Cache | undefined, mark: CacheMark | null) {
+  if (!cache || !mark || mark.kind === 'key') return plain(message);
+  if (mark.kind === 'part') return wireMessage(message, cache, imagePart);
+  return message.cache ? { ...plain(message), [mark.field]: ephemeral(cache) } : plain(message);
 }
+
+const wireCall = ({ id, name, arguments: text }: ToolCall) => ({ id, type: 'function', function: { name, arguments: text } });
+
+// Results are messages of their own, ahead of the user's text, which goes only when there is some.
+function wireMessages(messages: ChatMessage[], cache: Cache | undefined, mark: CacheMark | null) {
+  return messages.flatMap((message): object[] => {
+    const built = wired(message, cache, mark);
+    if (message.calls?.length) {
+      const echo = message.calls[0]!.echo;
+      return [{ ...built, ...(message.content === '' && { content: null }), tool_calls: message.calls.map(wireCall), ...(isRecord(echo) && echo) }];
+    }
+    if (!message.results?.length) return [built];
+    const results = message.results.map(({ id, text }) => ({ role: 'tool', tool_call_id: id, content: text }));
+    return message.content === '' && !carriesPictures(message) ? results : [...results, built];
+  });
+}
+
+const wireTool = ({ name, description, parameters }: ToolDef) => ({ type: 'function', function: { name, description, parameters } });
 
 // OpenAI's reasoning_effort, which OpenRouter and Vercel take too; 'none' turns reasoning off.
 function effort(reasoning: Reasoning | undefined) {
@@ -73,9 +91,38 @@ function effort(reasoning: Reasoning | undefined) {
 
 // reasoning_content (DeepSeek and others), reasoning (OpenRouter) and reasoning_text (Copilot's Claude and Gemini)
 // are the spellings of reasoning text in a delta or a message; a provider sends one of them.
-function reasoningOf(part: Record<string, unknown>) {
-  const reasoning = [part.reasoning_content, part.reasoning, part.reasoning_text].find((value) => typeof value === 'string' && value);
-  return typeof reasoning === 'string' ? reasoning : null;
+const REASONING = ['reasoning_content', 'reasoning', 'reasoning_text'];
+
+// The reply's reasoning so far, under the field it came in. DeepSeek refuses a tool loop whose assistant turn lost its
+// reasoning_content, so the first call echoes it back. It is shared by reference: reasoning read after that call
+// lands in its echo too.
+const reasoned = new WeakMap<StreamFacts, Record<string, string>>();
+
+function reason(part: Record<string, unknown>, facts: StreamFacts, append: (phase: Phase, text: string) => void) {
+  const field = REASONING.find((name) => typeof part[name] === 'string' && part[name]);
+  if (field === undefined) return;
+  const text = part[field] as string;
+  append('reasoning', text);
+  const kept = reasoned.get(facts) ?? {};
+  kept[field] = (kept[field] ?? '') + text;
+  reasoned.set(facts, kept);
+  const first = facts.calls[0];
+  if (first) first.echo ??= kept;
+}
+
+// A streamed part names its call by index; one without an index is read as a whole call of its own.
+function readCall(part: unknown, facts: StreamFacts, position?: number) {
+  if (!isRecord(part)) return;
+  const at = position ?? (typeof part.index === 'number' ? part.index : facts.calls.length);
+  const named = isRecord(part.function) ? part.function : {};
+  let call = facts.calls.find((known) => known.at === at);
+  if (!call) {
+    const kept = facts.calls.length ? undefined : reasoned.get(facts);
+    call = { at, id: typeof part.id === 'string' && part.id ? part.id : `call_${at}`, name: '', arguments: '', ...(kept && { echo: kept }) };
+    facts.calls.push(call);
+  }
+  if (typeof named.name === 'string') call.name ||= named.name;
+  if (typeof named.arguments === 'string') call.arguments += named.arguments;
 }
 
 // An embedding writes nothing, so its output is a measured zero: a price-list cost can be worked out from the input.
@@ -135,13 +182,14 @@ export const chatCompletions: Codec = {
   // The standard has no cache points; a connection type whose provider takes them says how (cachePoints).
   cache: null,
 
-  chat: (endpoint, { model, messages, settings }, fields, mark) => ({
+  chat: (endpoint, { model, messages, settings, tools }, fields, mark) => ({
     url: `${endpoint.baseUrl}/chat/completions`,
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       model: model.id,
       messages: wireMessages(messages, settings.cache, mark),
+      ...(tools && { tools: tools.map(wireTool) }),
       // OpenAI refuses stream_options on a request that does not stream.
       ...(settings.streaming === false ? { stream: false } : { stream: true, stream_options: { include_usage: true } }),
       ...Object.fromEntries(CARRIED.filter((setting) => settings[setting] !== undefined).map((setting) => [FIELDS[setting], settings[setting]])),
@@ -159,9 +207,9 @@ export const chatCompletions: Codec = {
     for (const choice of list(event.choices)) {
       if (!isRecord(choice)) continue;
       const delta = isRecord(choice.delta) ? choice.delta : {};
-      const reasoning = reasoningOf(delta);
-      if (reasoning !== null) append('reasoning', reasoning);
+      reason(delta, facts, append);
       if (typeof delta.content === 'string') append('text', delta.content);
+      for (const part of list(delta.tool_calls)) readCall(part, facts);
       if (typeof choice.finish_reason === 'string') facts.finishReason = choice.finish_reason;
     }
     if (isRecord(event.usage)) Object.assign(facts.rawUsage, event.usage);
@@ -182,9 +230,9 @@ export const chatCompletions: Codec = {
     const [choice] = payload.choices;
     if (isRecord(choice)) {
       const message = isRecord(choice.message) ? choice.message : {};
-      const reasoning = reasoningOf(message);
-      if (reasoning !== null) append('reasoning', reasoning);
+      reason(message, facts, append);
       if (typeof message.content === 'string') append('text', message.content);
+      list(message.tool_calls).forEach((part, position) => readCall(part, facts, position));
       if (typeof choice.finish_reason === 'string') facts.finishReason = choice.finish_reason;
     }
     if (isRecord(payload.usage)) Object.assign(facts.rawUsage, payload.usage);
