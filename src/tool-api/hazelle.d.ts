@@ -84,7 +84,7 @@ declare namespace Hazelle {
     // needs //@uses network, which the user allows once per module; through the app's relay. An aborted signal rejects
     // with its reason, as fetch does.
     fetch(url: string, init?: FetchInit): Promise<FetchAnswer>;
-    badge(index: number, text: string | null): void;   // on the version shown now; lands with the outcome
+    badge(index: number, text: string | null): void;   // on the version shown now, cut to 10 characters; lands with the outcome
     // Replaces this tool's picture after the version's last paragraph, with storage's write rate.
     // May save after its event ends; resolves only once saved. caption substitutes where the image is unseen.
     // Throws for non-PNG/JPEG/GIF/WebP/AVIF bytes, a missing version or a refused file.
