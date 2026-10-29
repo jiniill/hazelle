@@ -345,8 +345,12 @@ export type Written = { id: string; message: string | null; replaces: string | n
 
 export function appendReply(store: ObjectStore, chat: string, { id, message, replaces, follows, at, text, receipt, seed, before, reasoning }: Written) {
   const held = { at, text, receipt, ...(before && { before }), ...(reasoning && { reasoning }) };
-  // A continued reply's receipt carries the one it continued, whose row its own save wrote.
-  return append(store, chat, message === null ? { type: 'message', role: 'assistant', ...(follows !== undefined && { follows }), ...held } : { type: 'version', message, replaces, edit: false, ...held, ...(seed && { seed }) }, id, [receiptRow(receipt, at, chatPlace(store, chat))]);
+  // A continued reply's receipt carries the one it continued, whose row its own save wrote; the rounds that called
+  // plugin tools below it were saved by no reply of their own, so their rows go with this one.
+  const rounds = [receipt];
+  for (let below = receipt.continues; below?.tools; below = below.continues) rounds.push(below);
+  const place = chatPlace(store, chat);
+  return append(store, chat, message === null ? { type: 'message', role: 'assistant', ...(follows !== undefined && { follows }), ...held } : { type: 'version', message, replaces, edit: false, ...held, ...(seed && { seed }) }, id, rounds.map((round) => receiptRow(round, at, place)));
 }
 
 // Edits keep old text's variable writes; adds chain from follows. vars attach after a version,
