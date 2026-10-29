@@ -1,6 +1,6 @@
 import { costUnit, resolveConnection } from '../../connectors/registry';
 import { priceCost, sumCosts } from '../../connectors/pricing';
-import type { Cost, ToolCall, ToolDef, ToolResult } from '../../connectors/types';
+import type { Cost, ToolDef } from '../../connectors/types';
 import { isRecord } from '../../connectors/values';
 import { refOf, type ModelRef } from '../../connectors/assignment';
 import { pluginAskMessages, readPluginAnswer, type PluginAnswer } from '../../engine/plugin-writer';
@@ -17,6 +17,7 @@ import type { ObjectStore } from '../store';
 import { callOf, endCall, pageCall } from '../streams';
 import type { Tokens } from '../token-calibration';
 import type { ToolTrial } from '../script-preview';
+import { toolLoop } from '../tool-loop';
 import { keepRow } from '../usage';
 
 type Deps = { store: ObjectStore; credentials: Credentials; log: RequestLog; tokens: Tokens };
@@ -101,19 +102,14 @@ export function trialReport({ outcome, said, asked, calls, writes, called }: Too
   return lines.filter((line): line is string => typeof line === 'string').join('\n');
 }
 
-// A call the model made with arguments that do not read is answered as such, never run on a guess.
-function readTest(call: ToolCall): { code: string; moments: TestMoment[]; messages: TestMessage[] } | null {
-  try {
-    const read: unknown = JSON.parse(call.arguments);
-    if (!isRecord(read) || typeof read.code !== 'string' || !Array.isArray(read.moments) || read.moments.length === 0) return null;
-    const listed = read.messages ?? [];
-    if (!Array.isArray(listed)) return null;
-    const moments = read.moments.flatMap((each: unknown) => (isRecord(each) && typeof each.moment === 'string' && (each.text === undefined || typeof each.text === 'string') ? [{ moment: each.moment, text: each.text ?? '' }] : []));
-    const messages = listed.flatMap((each: unknown): TestMessage[] => (isRecord(each) && (each.role === 'user' || each.role === 'assistant') && typeof each.text === 'string' ? [{ role: each.role, text: each.text }] : []));
-    return moments.length === read.moments.length && messages.length === listed.length ? { code: read.code, moments, messages } : null;
-  } catch {
-    return null;
-  }
+// A run_test whose arguments are not of its shape is answered as such, never run on a guess.
+function readTest(read: Record<string, unknown>): { code: string; moments: TestMoment[]; messages: TestMessage[] } | null {
+  if (typeof read.code !== 'string' || !Array.isArray(read.moments) || read.moments.length === 0) return null;
+  const listed = read.messages ?? [];
+  if (!Array.isArray(listed)) return null;
+  const moments = read.moments.flatMap((each: unknown) => (isRecord(each) && typeof each.moment === 'string' && (each.text === undefined || typeof each.text === 'string') ? [{ moment: each.moment, text: each.text ?? '' }] : []));
+  const messages = listed.flatMap((each: unknown): TestMessage[] => (isRecord(each) && (each.role === 'user' || each.role === 'assistant') && typeof each.text === 'string' ? [{ role: each.role, text: each.text }] : []));
+  return moments.length === read.moments.length && messages.length === listed.length ? { code: read.code, moments, messages } : null;
 }
 
 // With a runner, the model may test its file before answering: each of its calls is one model call, each run_test one
@@ -126,13 +122,20 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
   if (profile.kind === 'missing') return { ok: false, failure: { kind: 'profile-missing', own: profile.own } };
   const testing = runner && route.model.tools !== false ? runner : null;
   const messages = pluginAskMessages(api, input.body, input.ask, input.earlier, testing ? RUNS : 0);
-  const tools = testing ? [RUN_TEST] : undefined;
-  const costs: (Cost | null)[] = [];
   const runs: TestRun[] = [];
-  for (let calls = 0; calls < CALLS; calls++) {
-    if (signal.aborted) return { ok: false, failure: { kind: 'stopped' } };
+  const runTest = (testing: PluginRunner) => async (args: Record<string, unknown>, before: string) => {
+    const asked = readTest(args);
+    if (!asked) return 'Not run: the arguments are not a JSON object with a code string, a list of moments and, if any, a list of messages.';
+    if (runs.length >= RUNS) return `Not run: the ${RUNS} test runs are used up. Answer now with the Korean note and the whole file.`;
+    const steps = await testing.run(asked.code, asked.moments, asked.messages, signal);
+    const run = { said: before.trim(), added: asked.messages.length, steps };
+    runs.push(run);
+    onRun(run);
+    const reports = steps.map((step, at) => `${asked.moments[at]!.moment}:\n${step.report}`);
+    return [...reports, ...(steps.length < asked.moments.length ? ['The run stopped there; the later moments did not run.'] : [])].join('\n\n');
+  };
+  const looped = await toolLoop({ tools: testing ? [{ def: RUN_TEST, run: runTest(testing) }] : [], rounds: CALLS, signal, onText: gather(onText).add }, async (exchange, tools, text) => {
     const call = await pageCall({ store, tokens }, route, 'script', null);
-    const text = gather(onText);
     try {
       const answer = await generate({
         credentials,
@@ -141,44 +144,26 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
         model: route.model,
         settings: profile.profile.value.settings,
         retries: retriesOf(store, route.connection.value, profile.profile.value.settings),
-        messages,
+        messages: [...messages, ...exchange],
         ...(tools && { tools }),
         call,
         signal,
-        onText: text.add,
+        onText: text,
       });
       const receipt = unsettled(receiptOf(callOf(route), answer));
       const saved = await keepRow(store, receipt, Date.now(), { chat: null, character: null });
-      if (!saved.ok) return { ok: false, failure: { kind: 'unsaved', failure: saved } };
-      costs.push(receipt.cost === 'pending' ? null : receipt.cost);
-      if (answer.cut === 'stopped') return { ok: false, failure: { kind: 'stopped' } };
-      if (answer.state === 'failed' || (!answer.calls.length && !text.value().trim())) return { ok: false, failure: { kind: 'failed', receipt } };
-      if (!answer.calls.length || !testing) return { ok: true, answer: readPluginAnswer(text.value()), model: refOf(route.connection.id, route.model), cost: sumCosts(costs), runs };
-      const results: ToolResult[] = [];
-      let said = text.value().trim();
-      for (const each of answer.calls) {
-        const asked = each.name === 'run_test' ? readTest(each) : null;
-        let result: string;
-        if (!asked) result = `Not run: ${each.name === 'run_test' ? 'the arguments are not a JSON object with a code string, a list of moments and, if any, a list of messages' : 'there is no such tool'}.`;
-        else if (runs.length >= RUNS) result = `Not run: the ${RUNS} test runs are used up. Answer now with the Korean note and the whole file.`;
-        else {
-          const steps = await testing.run(asked.code, asked.moments, asked.messages, signal);
-          if (signal.aborted) return { ok: false, failure: { kind: 'stopped' } };
-          const run = { said, added: asked.messages.length, steps };
-          said = '';
-          runs.push(run);
-          onRun(run);
-          const reports = steps.map((step, at) => `${asked.moments[at]!.moment}:\n${step.report}`);
-          result = [...reports, ...(steps.length < asked.moments.length ? ['The run stopped there; the later moments did not run.'] : [])].join('\n\n');
-        }
-        results.push({ id: each.id, name: each.name, text: result });
-      }
-      messages.push({ role: 'assistant', content: text.value(), calls: answer.calls }, { role: 'user', content: '', results });
+      return saved.ok ? { answer, receipt } : { kind: 'unsaved' as const, failure: saved };
     } finally {
       endCall(store, call.id);
     }
-  }
-  return { ok: false, failure: { kind: 'too-many-calls' } };
+  });
+  if (looped.kind === 'unsaved') return { ok: false, failure: looped };
+  if (looped.kind === 'stopped') return { ok: false, failure: { kind: 'stopped' } };
+  if (looped.kind === 'exhausted') return { ok: false, failure: { kind: 'too-many-calls' } };
+  const last = looped.rounds.at(-1)!;
+  if (looped.kind === 'failed' || (!last.answer.calls.length && !last.text.trim())) return { ok: false, failure: { kind: 'failed', receipt: last.receipt } };
+  const cost = sumCosts(looped.rounds.map(({ receipt }) => (receipt.cost === 'pending' ? null : receipt.cost)));
+  return { ok: true, answer: readPluginAnswer(last.text), model: refOf(route.connection.id, route.model), cost, runs };
 }
 
 // One full file out: the current file's tokens, or 1,024 for a first draft, within the user's output cap. An estimate
