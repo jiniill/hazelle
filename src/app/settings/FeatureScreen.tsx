@@ -5,6 +5,7 @@ import type { PromptSort } from '../../model/prompt';
 import type { PrereadParts } from '../../model/settings';
 import { illustrateSwitches, setIllustrate, setTranslate, setTranslatorNote, translateSwitches } from '../../runtime/characters';
 import { SHARED_CHAT, availableFeatures } from '../../runtime/features';
+import { setAgentAt } from '../../runtime/agents';
 import { briefsWithChatModel, briefWriterOf, PREREAD_STARTS, prereadSetup, setPreread } from '../../runtime/preread';
 import { describePrereadFailure } from '../common/failure';
 import { sceneWriterOf } from '../../runtime/illustrate';
@@ -202,7 +203,8 @@ function PrereadDefaults() {
 }
 
 function AgentDefaults() {
-  return <AgentSwitches owner={{ kind: 'settings' }} own={useSettings().agents ?? []} />;
+  const store = useStore();
+  return <AgentSwitches owner={{ kind: 'settings' }} own={useSettings().agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'settings' }, agent, on)} />;
 }
 
 const DEFAULTS: Record<Feature, ComponentType> = { translate: TranslateDefaults, illustrate: IllustrateDefaults, memory: MemoryDefaults, mascot: MascotDefaults, preread: PrereadDefaults, agents: AgentDefaults };

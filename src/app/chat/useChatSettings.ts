@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
 import type { Chat } from '../../model/chat';
-import type { Stored } from '../../model/kinds';
+import type { Feature } from '../../model/features';
+import { setAgentAt, withAgent } from '../../runtime/agents';
 import type { ApiFailure, ApiResult } from '../../runtime/api';
 import { chatModel, setChatModel, withMainModel } from '../../runtime/assignment';
 import { setCast, setChatOwn, withCast, withOwn, withPromptOut, withPromptSent, type Own } from '../../runtime/chat-log';
+import { setFeatureAt, withFeature } from '../../runtime/features';
 import { chatPersona, pinPersona, setCurrentPersona } from '../../runtime/personas';
 import { chatPrompt } from '../../runtime/prompts';
 import { useSession } from '../session';
@@ -21,7 +23,7 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
 
   // Unsaved chats carry settings into first save. Afterward patch the latest stored copy, never render snapshots,
   // so other devices' settings survive.
-  async function change(local: (current: Draft) => Draft, persist: (id: string) => Promise<ApiResult<Stored<'chat'>>>): Promise<{ ok: true } | ApiFailure> {
+  async function change(local: (current: Draft) => Draft, persist: (id: string) => Promise<ApiResult<unknown>>): Promise<{ ok: true } | ApiFailure> {
     if (id) return persist(id);
     setUnsaved(local);
     return { ok: true };
@@ -62,6 +64,8 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
       choosePersona,
       pinPersona: (persona: string | null) => pinPersona(store, chat.character!, persona),
       setCast: changeCast,
+      setFeature: (feature: Feature, value: boolean | null) => change((current) => withFeature(current, feature, value), (id) => setFeatureAt(store, { kind: 'chat', id }, feature, value)),
+      setAgent: (agent: string, on: boolean) => change((current) => withAgent(current, agent, on), (id) => setAgentAt(store, { kind: 'chat', id }, agent, on)),
     },
   };
 }

@@ -23,7 +23,7 @@ describe('features', () => {
       await setFeatureAt(store, at.character, 'mascot', true);
       expect(featuresOf(store, chat()).mascot).toBe(true);
       await setFeatureAt(store, at.character, 'mascot', null);
-      expect([above(store, at.prompt), above(store, at.character), above(store, at.chat)]).toEqual(['settings', 'prompt', 'character']);
+      expect([above(at.prompt), above(at.character), above({ kind: 'chat', chat: chat() })]).toEqual(['settings', 'prompt', 'character']);
 
       for (const layer of ['settings', 'prompt', 'character', 'chat'] as const) {
         await setFeatureAt(store, at[layer], 'memory', false);
@@ -37,13 +37,23 @@ describe('features', () => {
       expect(featuresOf(store, chat()).translate).toBe(true);
       await setFeatureAt(store, at.character, 'translate', false);
       expect(featuresOf(store, chat()).translate).toBe(false);
-      expect(inherited(store, at.chat).translate).toBe(false);
+      expect(inherited(store, { kind: 'chat', chat: chat() }).translate).toBe(false);
       await setFeatureAt(store, at.chat, 'translate', true);
       expect(featuresOf(store, chat()).translate).toBe(true);
       expect(inherited(store, at.prompt).translate).toBe(false);
 
       await setFeatureAt(store, at.chat, 'translate', null);
       expect(chat().features).toBeUndefined();
+    }));
+
+  it('reads a new chat not stored yet by its value: it follows its character', () =>
+    server.withSession(async ({ store }) => {
+      const character = await store.create('character', { card: blankCard('루나'), folder: null, loreFolders: [] });
+      if (!character.ok) throw new Error('not created');
+      await setFeatureAt(store, { kind: 'character', id: character.data.id }, 'translate', false);
+      const unsaved = { kind: 'chat', chat: { title: null, character: character.data.id, models: {} } } as const;
+      expect(above(unsaved)).toBe('character');
+      expect(inherited(store, unsaved).translate).toBe(false);
     }));
 
   it("turns a chat's running switches off with its feature, and keeps the rest", () =>

@@ -1,4 +1,6 @@
-import { inheritedAgents, setAgentAt, type AgentOwner } from '../../runtime/agents';
+import { inheritedAgents } from '../../runtime/agents';
+import type { ApiFailure } from '../../runtime/api';
+import type { FeatureLayer } from '../../runtime/features';
 import { ofSort } from '../../runtime/prompts';
 import { useLibrary, usePrompts, useSettings, useStore } from '../session';
 import { navigate } from '../shell/router';
@@ -7,7 +9,9 @@ import { Button, Empty, Section, SettingGroup, SettingRow, Switch, Text } from '
 import { useLab } from './labs';
 import { AGENTS, promptName, SCOPE, STAGE_NAMES } from './words';
 
-const WORKS: Record<AgentOwner['kind'], string> = {
+type Owner = { kind: 'settings' } | FeatureLayer;
+
+const WORKS: Record<Owner['kind'], string> = {
   settings: '켜 둔 에이전트는 모든 채팅에서 실행돼요.',
   prompt: '켜 둔 에이전트는 이 프롬프트를 쓰는 채팅에서 실행돼요.',
   character: '켜 둔 에이전트는 이 캐릭터의 모든 채팅에서 실행돼요.',
@@ -16,9 +20,9 @@ const WORKS: Record<AgentOwner['kind'], string> = {
 const STACKS = '다른 곳에서 켠 에이전트도 함께 실행돼요. 후처리 에이전트는 켠 순서대로 이어서 응답을 다듬어요.';
 const FROM = { settings: SCOPE.default, prompt: '프롬프트', character: '캐릭터' } as const;
 
-// own: the owner's list as stored. Lists stack (design §6.16): one a farther layer holds shows as on there, and is
-// turned off only there.
-export function AgentSwitches({ owner, own }: { owner: AgentOwner; own: string[] }) {
+// own: the owner's list as stored; onChange turns one on or off there. Lists stack (design §6.16): one a farther layer
+// holds shows as on there, and is turned off only there.
+export function AgentSwitches({ owner, own, onChange }: { owner: Owner; own: string[]; onChange: (agent: string, on: boolean) => Promise<{ ok: true } | ApiFailure> }) {
   const store = useStore();
   const toast = useToast();
   // Subscribed for inheritedAgents, which reads the farther layers from the store.
@@ -30,7 +34,7 @@ export function AgentSwitches({ owner, own }: { owner: AgentOwner; own: string[]
   const held = owner.kind === 'settings' ? new Map<string, keyof typeof FROM>() : inheritedAgents(store, owner);
 
   async function change(agent: string, on: boolean) {
-    const saved = await setAgentAt(store, owner, agent, on);
+    const saved = await onChange(agent, on);
     if (!saved.ok) toast.failed(saved, '저장하지 못했어요.');
   }
 

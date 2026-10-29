@@ -6,6 +6,8 @@ import { live } from '../../model/library';
 import { labOn } from '../../model/settings';
 import { isToggle, slotsOf, sortOf, type Block, type PromptSort, type TextBlock, type Toggle, type WrappedSlot } from '../../model/prompt';
 import { setPromptModel, setTaskModel } from '../../runtime/assignment';
+import { setAgentAt } from '../../runtime/agents';
+import { setFeatureAt } from '../../runtime/features';
 import { copyPrompt, editPrompt, isDefaultPrompt, ofSort, removePrompt, resetPromptBlocks, restorePrompt, setDefaultPrompt, type PromptPatch } from '../../runtime/prompts';
 import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
@@ -363,8 +365,8 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
       {ofSort(stored, 'conversation') && (
         <>
           <ModuleSwitches owner={{ kind: 'prompt', prompt: stored }} own={stored.value.modules ?? []} />
-          <FeatureSwitches owner={{ kind: 'prompt', id: stored.id }} own={stored.value.features} />
-          <AgentSwitches owner={{ kind: 'prompt', id: stored.id }} own={stored.value.agents ?? []} />
+          <FeatureSwitches owner={{ kind: 'prompt' }} own={stored.value.features} onChange={(feature, value) => setFeatureAt(store, { kind: 'prompt', id: stored.id }, feature, value)} />
+          <AgentSwitches owner={{ kind: 'prompt' }} own={stored.value.agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'prompt', id: stored.id }, agent, on)} />
         </>
       )}
     </>

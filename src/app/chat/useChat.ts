@@ -394,6 +394,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     prompt,
     persona,
     names,
+    place: chat,
     note: chat.note,
     illustrateNote: chat.illustrateNote,
     cast: chat.cast ?? [],

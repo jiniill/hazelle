@@ -33,7 +33,7 @@ export function ChatHeading({ chat }: { chat: OpenChat }) {
 }
 
 export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
-  const { id, item, shelf, cast, route, toggles, panel, features, modelMenu, castMenu, actions } = chat;
+  const { id, item, place, shelf, cast, route, toggles, panel, features, modelMenu, castMenu, actions } = chat;
   const remembering = useRemembering();
   const session = useSession();
   // Subscribed for items, which read the frame tools' registrations.
@@ -51,12 +51,10 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
       <ChatPromptPicker prompt={chat.prompt} out={chat.promptOut && chat.card === null} open={chat.dialog === 'prompt'} onOpen={() => actions.openDialog('prompt')} />
       <ChatCastMenu handle={castMenu} cast={cast} character={shelf?.id ?? null} onChange={actions.setCast} />
       <ModelMenu handle={modelMenu} route={route} onPick={actions.pickModel} />
-      {item && (
-        <Menu kind="dialog" size="form" handle={featuresMenu} place="below-end" label={FEATURES_TITLE} trigger={() => null}>
-          <FeatureSwitches owner={{ kind: 'chat', id: item.id }} own={item.chat.features} />
-          <AgentSwitches owner={{ kind: 'chat', id: item.id }} own={item.chat.agents ?? []} />
-        </Menu>
-      )}
+      <Menu kind="dialog" size="form" handle={featuresMenu} place="below-end" label={FEATURES_TITLE} trigger={() => null}>
+        <FeatureSwitches owner={{ kind: 'chat', chat: place }} own={place.features} onChange={actions.setFeature} />
+        <AgentSwitches owner={{ kind: 'chat', chat: place }} own={place.agents ?? []} onChange={actions.setAgent} />
+      </Menu>
       <ToolButton
         icon={SlidersHorizontal}
         label="토글"
@@ -76,7 +74,7 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
         <MenuItem icon={Search} label="검색" onClick={actions.openSearch} />
         {item && !chat.displayPending && <MenuItem icon={Bookmark} label={BOOKMARK} onClick={actions.bookmarks} />}
         {item && features.memory && <MenuItem icon={Brain} label={FEATURE_NAMES.memory} sub={failed ? '정리 실패' : indexing ? `검색 준비 ${indexing.done}/${indexing.total}` : undefined} onClick={toggleMemory} />}
-        {item && <MenuItem icon={ToggleRight} label={FEATURES_TITLE} onClick={openFeatures.onClick} />}
+        <MenuItem icon={ToggleRight} label={FEATURES_TITLE} onClick={openFeatures.onClick} />
         {item && <MenuItem icon={BookKey} label={CHAT_LORE} onClick={actions.lore} />}
         <MenuItem icon={ScanSearch} label="점검" onClick={() => actions.openInspect('request')} />
         {item && <MenuItem icon={PlaneTakeoff} label="오토파일럿" onClick={actions.autopilot} />}

@@ -14,6 +14,8 @@ type Features = Record<Feature, boolean>;
 type Reader = Pick<ObjectStore, 'get'>;
 type Place = Pick<Chat, 'character' | 'prompt' | 'features'>;
 export type FeatureOwner = { kind: 'settings' } | { kind: 'prompt' | 'character' | 'chat'; id: string };
+// A layer as its switches screen reads it: a chat by its value, since a new one is not stored until its first send.
+export type FeatureLayer = { kind: 'prompt' } | { kind: 'character' } | { kind: 'chat'; chat: Place };
 
 // The features a screen lists: an experiment's only while its 실험실 switch is on.
 export const availableFeatures = (settings: Pick<Settings, 'labs'> | undefined): Feature[] =>
@@ -42,26 +44,27 @@ export const sharedFeatures = (store: Reader): Features => decided(store, [setti
 
 // What a layer that sets nothing reads: the layers past it. A character's is what a new chat of it reads, through the
 // default prompt.
-export function inherited(store: Reader, owner: Exclude<FeatureOwner, { kind: 'settings' }>): Features {
-  if (owner.kind === 'prompt') return sharedFeatures(store);
-  if (owner.kind === 'character') return decided(store, [promptLayer(store, {}), settingsLayer(store)]);
-  const chat = store.get('chat', owner.id)?.value;
-  return chat ? featuresOf(store, { ...chat, features: undefined }) : sharedFeatures(store);
+export function inherited(store: Reader, layer: FeatureLayer): Features {
+  if (layer.kind === 'prompt') return sharedFeatures(store);
+  if (layer.kind === 'character') return decided(store, [promptLayer(store, {}), settingsLayer(store)]);
+  return featuresOf(store, { ...layer.chat, features: undefined });
 }
 
 // The layer one that sets nothing follows: the next one up 공용 → 프롬프트 → 캐릭터 → 채팅, past a chat with no character.
-export function above(store: Reader, owner: Exclude<FeatureOwner, { kind: 'settings' }>): 'settings' | 'prompt' | 'character' {
-  if (owner.kind === 'prompt') return 'settings';
-  if (owner.kind === 'character') return 'prompt';
-  return store.get('chat', owner.id)?.value.character ? 'character' : 'prompt';
+export function above(layer: FeatureLayer): 'settings' | 'prompt' | 'character' {
+  if (layer.kind === 'prompt') return 'settings';
+  if (layer.kind === 'character') return 'prompt';
+  return layer.chat.character ? 'character' : 'prompt';
 }
 
 // null clears the layer's entry; a layer left with none drops the field, so it sets nothing.
+export function withFeature<T extends { features?: FeatureSwitches }>(current: T, feature: Feature, value: boolean | null): T {
+  const features = value === null ? without(current.features ?? {}, feature) : { ...current.features, [feature]: value };
+  return Object.keys(features).length ? { ...current, features } : without(current, 'features');
+}
+
 export function setFeatureAt(store: ObjectStore, owner: FeatureOwner, feature: Feature, value: boolean | null): Promise<ApiResult<unknown>> {
-  const set = <T extends { features?: FeatureSwitches }>(current: T): T => {
-    const features = value === null ? without(current.features ?? {}, feature) : { ...current.features, [feature]: value };
-    return Object.keys(features).length ? { ...current, features } : without(current, 'features');
-  };
+  const set = <T extends { features?: FeatureSwitches }>(current: T): T => withFeature(current, feature, value);
   if (owner.kind === 'settings') return store.upsert('settings', (current = EMPTY_SETTINGS) => set(current));
   if (owner.kind === 'prompt') return store.update('prompt', owner.id, (current) => (current.task === undefined ? set(current) : current));
   if (owner.kind === 'character') return store.update('character', owner.id, set);

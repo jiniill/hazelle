@@ -12,7 +12,7 @@ import type { RouteFailure } from './assignment';
 import { scopeOf } from './chat-context';
 import { appendPolished } from './chat-log';
 import { evaluatingTask } from './evaluation';
-import { featuresOf, type FeatureOwner } from './features';
+import { featuresOf, type FeatureLayer, type FeatureOwner } from './features';
 import { switched } from './modules';
 import { taskWriter } from './profiles';
 import { chatPrompt, ofSort, type StoredPrompt } from './prompts';
@@ -57,10 +57,9 @@ export function agentsOf(store: Reader, chat: Place): Record<AgentStage, Agent[]
 
 // What a layer's list shows as already on: each agent the layers past it hold, by the farthest that holds it. A
 // character's are what a new chat of it gets through the default prompt.
-export function inheritedAgents(store: Reader, owner: Exclude<AgentOwner, { kind: 'settings' }>): Map<string, Exclude<AgentOwner['kind'], 'chat'>> {
-  const chat = owner.kind === 'chat' ? store.get('chat', owner.id)?.value : undefined;
-  const [shared, prompt, character] = layers(store, chat ?? { character: null });
-  const past = owner.kind === 'prompt' ? [shared!] : owner.kind === 'character' ? [shared!, prompt!] : [shared!, prompt!, character!];
+export function inheritedAgents(store: Reader, layer: FeatureLayer): Map<string, Exclude<AgentOwner['kind'], 'chat'>> {
+  const [shared, prompt, character] = layers(store, layer.kind === 'chat' ? layer.chat : { character: null });
+  const past = layer.kind === 'prompt' ? [shared!] : layer.kind === 'character' ? [shared!, prompt!] : [shared!, prompt!, character!];
   const kinds = ['settings', 'prompt', 'character'] as const;
   const held = new Map<string, Exclude<AgentOwner['kind'], 'chat'>>();
   past.forEach((list, at) => {
@@ -70,8 +69,10 @@ export function inheritedAgents(store: Reader, owner: Exclude<AgentOwner, { kind
 }
 
 // on false takes it off this layer only: a list never removes what another layer holds (design §6.16).
+export const withAgent = <T extends { agents?: string[] }>(current: T, id: string, on: boolean): T => ({ ...current, agents: switched(current.agents, id, on) });
+
 export function setAgentAt(store: ObjectStore, owner: AgentOwner, id: string, on: boolean): Promise<ApiResult<unknown>> {
-  const set = <T extends { agents?: string[] }>(current: T): T => ({ ...current, agents: switched(current.agents, id, on) });
+  const set = <T extends { agents?: string[] }>(current: T): T => withAgent(current, id, on);
   if (owner.kind === 'settings') return store.upsert('settings', (current = EMPTY_SETTINGS) => set(current));
   if (owner.kind === 'prompt') return store.update('prompt', owner.id, (current) => (current.task === undefined ? set(current) : current));
   if (owner.kind === 'character') return store.update('character', owner.id, set);

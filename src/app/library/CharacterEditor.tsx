@@ -1,4 +1,6 @@
 import { setModels } from '../../runtime/pack';
+import { setAgentAt } from '../../runtime/agents';
+import { setFeatureAt } from '../../runtime/features';
 import type { ObjectStore } from '../../runtime/store';
 import { BookOpen, Braces, Eye, IdCard, Images, Languages, MessageSquareQuote, Package, Palette, ScrollText, SlidersHorizontal, Sparkles, Square, ToggleRight, UserRound, Variable, type LucideIcon } from 'lucide-react';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
@@ -321,8 +323,8 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
     modules: <ModuleSwitches owner={{ kind: 'character', id }} own={ownModules} />,
     features: (
       <>
-        <FeatureSwitches owner={{ kind: 'character', id }} own={character.features} />
-        <AgentSwitches owner={{ kind: 'character', id }} own={character.agents ?? []} />
+        <FeatureSwitches owner={{ kind: 'character' }} own={character.features} onChange={(feature, value) => setFeatureAt(store, { kind: 'character', id }, feature, value)} />
+        <AgentSwitches owner={{ kind: 'character' }} own={character.agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'character', id }, agent, on)} />
       </>
     ),
     scripts: <ScriptsEditor owner={{ kind: 'character', id }} pack={card} drill={!split} status={character.statusScripts} variables={card.variables} />,
@@ -384,7 +386,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
     greetings: `${text.greetings.length}개`,
     lore: `${lore.length}개`,
     modules: `${modules.filter((module) => always.includes(module.id) || ownModules.includes(module.id)).length}개 켜짐`,
-    features: featureHolds(store, { kind: 'character', id }, character.features),
+    features: featureHolds(store, { kind: 'character' }, character.features),
     scripts: scriptHolds(card) || undefined,
     toggles: `${card.toggles.filter(isToggle).length}개`,
     variables: `${text.variables.length}개`,
