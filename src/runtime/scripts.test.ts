@@ -517,6 +517,18 @@ describe('plugin tools in a chat turn', () => {
       expect(JSON.parse(log[2]!.sent.body!).tools).toBeUndefined();
     }, { run: async () => noOutcome(), close: () => {} });
   });
+
+  it('asks once more without tools on a refusal that names no tool, and offers them again on the next turn', async () => {
+    await server.withSession(async (session) => {
+      const fixture = await diceChat(session);
+      const log = stubRelay(inTurn([upstream(400, { error: { message: 'invalid schema' } }), saying('도구 없이 답할게요.'), saying('또 답할게요.')]));
+      expect(await takeTurn(session, fixture.chat, { kind: 'send', text: '굴려 줘' })).toBeNull();
+      await expect.poll(() => fixture.messages().length).toBe(2);
+      expect(shown(fixture.messages()[1]!).receipt!.toolsRefused).toBeUndefined();
+      expect(await takeTurn(session, fixture.chat, { kind: 'send', text: '다시' })).toBeNull();
+      expect(JSON.parse(log[2]!.sent.body!).tools).toBeDefined();
+    }, { run: async () => noOutcome(), close: () => {} });
+  });
 });
 
 describe('tool events through Scripts', () => {

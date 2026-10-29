@@ -117,6 +117,8 @@ const toolsAsked = (made: ToolCall[], results: ToolResult[]): Pick<Receipt, 'too
   made.length ? { tools: made.map(({ id, name, arguments: args }) => ({ id, name, arguments: args, result: results.find((each) => each.id === id)?.text ?? null })) } : {};
 // What a model that cannot take tools answers them with: the request refused whole, before any text.
 const toolsRefusal = (answer: Reply) => answer.state === 'failed' && answer.error?.kind === 'provider' && 'status' in answer.error && (answer.error.status === 400 || answer.error.status === 422);
+// A plugin's malformed schema is refused with the same status, so only a refusal that names tools is remembered.
+const toolsNamed = ({ error }: Reply) => error?.kind === 'provider' && /tool|function/i.test(error.detail);
 const answeredWithout = (answer: Reply) => answer.state !== 'failed';
 
 // preparing: shows a call the reply waits for running, until the prompt is ready.
@@ -282,6 +284,7 @@ export class Talk {
     let first = null as Called | null;
     let last = null as Called | null;
     let refused = false as boolean;
+    let named = false as boolean;
     const rounds = this.store.get('settings', SETTINGS_ID)?.value.toolRounds ?? TOOL_ROUNDS;
     const looped = await toolLoop({ tools: calling?.tools ?? [], rounds, signal: abort.signal, onText: this.writer(held, true) }, async (exchange, offered, onText) => {
       if (last) {
@@ -315,12 +318,13 @@ export class Talk {
         }
         answer = await replying;
         last = { answer, call: call.id };
-        // A model the catalogs say nothing of may refuse the tools outright: asked once more without them, and remembered.
+        // A model the catalogs say nothing of may refuse the tools outright: asked once more without them.
         if (tools && !first && route.model.tools === null && toolsRefusal(answer) && !abort.signal.aborted) {
           endCall(this.store, call.id);
           this.reading.delete(call.id);
           last = null;
           refused = true;
+          named = toolsNamed(answer);
           tools = undefined;
           continue;
         }
@@ -339,7 +343,8 @@ export class Talk {
     });
     if ('kind' in looped && looped.kind === 'unsent') return looped;
     if (this.closed || !first || !last) return null;
-    if (refused && answeredWithout(last.answer)) await refuseTools(this.store, route);
+    const remembered = refused && named && answeredWithout(last.answer);
+    if (remembered) await refuseTools(this.store, route);
     const lastRound = looped.rounds.at(-1)!;
     // Stopped while a tool ran: the reply is cut there, as a stop mid-stream cuts it.
     const answer: Reply = looped.kind === 'stopped' && lastRound.answer.cut === null ? { ...lastRound.answer, state: 'cut', cut: 'stopped' } : lastRound.answer;
@@ -353,7 +358,7 @@ export class Talk {
     const diagnose = forecast && wire && ready.diagnose;
     this.log.attach(chat, first.call, { prompt, forecast, wire, diagnosis: diagnose ? undefined : null });
     if (diagnose) void diagnose(prompt, wire!).then((diagnosis) => this.log.attach(chat, first!.call, { diagnosis }));
-    const written = this.written(held, ended, callOf(route), answer, Date.now(), forecast, ready.preread, ready.agents, { ...toolsAsked(answer.calls, lastRound.results), ...(refused && { toolsRefused: true as const }) });
+    const written = this.written(held, ended, callOf(route), answer, Date.now(), forecast, ready.preread, ready.agents, { ...toolsAsked(answer.calls, lastRound.results), ...(remembered && { toolsRefused: true as const }) });
     const opened = calls(written.receipt)[0]!;
     // The view is null where the request was not this page's, which a receipt without points does not tell apart.
     const kept = opening.cache && (cacheKept(opened) || prefixKept(this.store, chat, opened));
