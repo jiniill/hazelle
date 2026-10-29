@@ -49,7 +49,31 @@ describe('Anthropic Messages tools', () => {
     }), 'application/json');
     expect(text).toBe('확인해 볼게.');
     expect(outcome).toMatchObject({ state: 'done', cut: null });
-    expect(outcome.calls).toEqual([{ id: 'toolu_2', name: 'get_weather', arguments: '{"location":"Seoul"}', echo: [{ type: 'redacted_thinking', data: 'ENCRYPTED' }] }]);
+    expect(outcome.calls).toEqual([{ id: 'toolu_2', name: 'get_weather', arguments: '{"location":"Seoul"}', echo: [{ type: 'redacted_thinking', data: 'ENCRYPTED' }, { type: 'text', length: 7 }] }]);
+  });
+
+  it('sends interleaved thinking back in the reply\'s order, the text cut back into its blocks', async () => {
+    const { outcome, text } = await decode(sse(
+      { type: 'message_start', message: { id: 'msg_3', usage: { input_tokens: 10 } } },
+      { type: 'content_block_start', index: 0, content_block: { type: 'thinking', thinking: '', signature: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'signature_delta', signature: 'A' } },
+      { type: 'content_block_start', index: 1, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '굴려 ' } },
+      { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: '볼게.' } },
+      { type: 'content_block_start', index: 2, content_block: { type: 'thinking', thinking: '', signature: '' } },
+      { type: 'content_block_delta', index: 2, delta: { type: 'signature_delta', signature: 'B' } },
+      { type: 'content_block_start', index: 3, content_block: { type: 'tool_use', id: 'toolu_3', name: 'roll', input: {} } },
+      { type: 'content_block_stop', index: 3 },
+      { type: 'message_delta', delta: { stop_reason: 'tool_use' }, usage: { output_tokens: 9 } },
+      { type: 'message_stop' },
+    ), 'text/event-stream');
+    const body = JSON.parse(chatRequest(anthropic, { model, messages: [{ role: 'user', content: '굴려 줘' }, { role: 'assistant', content: text, calls: outcome.calls }], settings: {} }).body!);
+    expect(body.messages[1].content).toEqual([
+      { type: 'thinking', thinking: '', signature: 'A' },
+      { type: 'text', text: '굴려 볼게.' },
+      { type: 'thinking', thinking: '', signature: 'B' },
+      { type: 'tool_use', id: 'toolu_3', name: 'roll', input: {} },
+    ]);
   });
 
   it('sends tools, the calls after their thinking, and the results ahead of the next turn with its cache mark', () => {

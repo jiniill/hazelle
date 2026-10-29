@@ -59,27 +59,33 @@ function inputOf(text: string) {
 const toolUse = ({ id, name, arguments: text }: ToolCall) => ({ type: 'tool_use', id, name, input: inputOf(text) });
 const toolResult = ({ id, text }: ToolResult) => ({ type: 'tool_result', tool_use_id: id, content: text });
 // A call made under another format carries that format's echo, which this API would refuse.
-const echoOf = (call: ToolCall) => list(call.echo).filter((block): block is Record<string, unknown> => isRecord(block) && (block.type === 'thinking' || block.type === 'redacted_thinking'));
+const echoOf = (call: ToolCall) => list(call.echo).filter((block): block is Record<string, unknown> => isRecord(block) && (block.type === 'thinking' || block.type === 'redacted_thinking' || (block.type === 'text' && typeof block.length === 'number')));
 
-// Thinking blocks go back unchanged and in order, each run ahead of the call it came before; the first run also leads
-// the text, since a turn under budget thinking must start with one. Thinking blocks take no cache mark.
+// Thinking blocks go back unchanged and in the reply's order: interleaved thinking is refused once moved. A text block
+// is echoed as its length only, and the message's text is cut back into those blocks; with no length echoed (no
+// thinking before the call), the text leads the calls. Thinking blocks take no cache mark.
 function toolTurn(message: ChatMessage, cache: Cache | undefined) {
-  const [first, ...later] = message.calls ?? [];
-  const text = message.content === '' ? [] : [{ type: 'text', text: message.content }];
-  const blocks: object[] = [
-    ...(message.results ?? []).map(toolResult),
-    ...(first ? echoOf(first) : []),
-    ...(message.pictures ?? []).map(imageBlock),
-    ...text,
-    ...(first ? [toolUse(first), ...later.flatMap((call) => [...echoOf(call), toolUse(call)])] : []),
-  ];
+  const echoes = (message.calls ?? []).map(echoOf);
+  const placed = echoes.some((echo) => echo.some((block) => block.type === 'text'));
+  let rest = message.content;
+  const take = (length: number) => {
+    const text = rest.slice(0, length);
+    rest = rest.slice(length);
+    return text === '' ? [] : [{ type: 'text', text }];
+  };
+  // Unplaced, the first call's thinking leads the text, since a turn under budget thinking must start with one.
+  const lead = placed ? [] : (echoes[0] ?? []);
+  const calls = (message.calls ?? []).flatMap((call, at) => [...(placed || at > 0 ? echoes[at]!.flatMap((block) => (block.type === 'text' ? take(block.length as number) : [block])) : []), toolUse(call)]);
+  const text = rest === '' ? [] : [{ type: 'text', text: rest }];
+  const blocks: object[] = [...(message.results ?? []).map(toolResult), ...lead, ...(message.pictures ?? []).map(imageBlock), ...(placed ? [] : text), ...calls, ...(placed ? text : [])];
   return { role: message.role, content: message.cache && cache ? blocks.with(-1, { ...blocks.at(-1), ...cacheControl(cache) }) : blocks };
 }
 
 const wire = (message: ChatMessage, cache: Cache | undefined) => (message.calls?.length || message.results?.length ? toolTurn(message, cache) : wireMessage(message, cache, imageBlock));
 
-type Thought = { type: string; thinking?: string; signature?: string };
-// read sees one event at a time: a reply's thinking blocks wait here for the call they come before.
+// length: a text block's, which toolTurn cuts the reply's text back into.
+type Thought = { type: string; thinking?: string; signature?: string; length?: number };
+// read sees one event at a time: a reply's thinking and text blocks wait here for the call they come before.
 const held = new WeakMap<StreamFacts, Map<number, Thought>>();
 function heldOf(facts: StreamFacts) {
   let thoughts = held.get(facts);
@@ -89,7 +95,8 @@ function heldOf(facts: StreamFacts) {
 
 function called(facts: StreamFacts, block: Record<string, unknown>, at: number, text: string) {
   const thoughts = heldOf(facts);
-  facts.calls.push({ id: typeof block.id === 'string' ? block.id : `call-${at}`, name: typeof block.name === 'string' ? block.name : '', arguments: text, at, ...(thoughts.size > 0 && { echo: [...thoughts.values()] }) });
+  const echo = [...thoughts.values()];
+  facts.calls.push({ id: typeof block.id === 'string' ? block.id : `call-${at}`, name: typeof block.name === 'string' ? block.name : '', arguments: text, at, ...(echo.some(({ type }) => type !== 'text') && { echo }) });
   thoughts.clear();
 }
 
@@ -199,7 +206,10 @@ export const anthropicMessages: Codec = {
     } else if (event.type === 'content_block_start' && isRecord(event.content_block)) {
       const block = event.content_block;
       const at = Number(event.index);
-      if (block.type === 'text' && typeof block.text === 'string') append('text', block.text);
+      if (block.type === 'text' && typeof block.text === 'string') {
+        append('text', block.text);
+        heldOf(facts).set(at, { type: 'text', length: block.text.length });
+      }
       if (block.type === 'thinking' && typeof block.thinking === 'string') append('reasoning', block.thinking);
       if (block.type === 'thinking' || block.type === 'redacted_thinking') heldOf(facts).set(at, { ...block } as Thought);
       // The start block's input is a placeholder; the deltas carry the whole of it.
@@ -208,7 +218,10 @@ export const anthropicMessages: Codec = {
       const delta = event.delta;
       const at = Number(event.index);
       const thought = heldOf(facts).get(at);
-      if (delta.type === 'text_delta' && typeof delta.text === 'string') append('text', delta.text);
+      if (delta.type === 'text_delta' && typeof delta.text === 'string') {
+        append('text', delta.text);
+        if (thought?.type === 'text') thought.length! += delta.text.length;
+      }
       if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') {
         append('reasoning', delta.thinking);
         if (thought) thought.thinking = (thought.thinking ?? '') + delta.thinking;
@@ -242,7 +255,10 @@ export const anthropicMessages: Codec = {
     if (typeof payload.id === 'string') facts.id = payload.id;
     for (const [at, block] of payload.content.entries()) {
       if (!isRecord(block)) continue;
-      if (block.type === 'text' && typeof block.text === 'string') append('text', block.text);
+      if (block.type === 'text' && typeof block.text === 'string') {
+        append('text', block.text);
+        heldOf(facts).set(at, { type: 'text', length: block.text.length });
+      }
       if (block.type === 'thinking' && typeof block.thinking === 'string') append('reasoning', block.thinking);
       if (block.type === 'thinking' || block.type === 'redacted_thinking') heldOf(facts).set(at, block as Thought);
       if (block.type === 'tool_use') called(facts, block, at, isRecord(block.input) ? JSON.stringify(block.input) : '');
