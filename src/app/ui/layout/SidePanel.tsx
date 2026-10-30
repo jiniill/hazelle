@@ -35,6 +35,7 @@ export function SidePanel({ title, subtitle, nav, page, actions, expandable = fa
       document.addEventListener('click', done, { once: true });
       document.addEventListener('pointerdown', () => document.removeEventListener('click', done), { once: true });
     },
+    takesBack: true,
   });
   useLayoutEffect(() => {
     body.current?.scrollTo({ top: 0 });

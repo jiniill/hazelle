@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react';
+import { ChangeSignal } from '../../../change-signal';
 import { isComposing } from '../foundation/keys';
 
 type Layer = {
@@ -6,11 +7,25 @@ type Layer = {
   // refocus: closed by Esc, so the focus goes back to where the layer was opened. A press outside leaves the
   // focus where it pressed.
   close: (refocus: boolean) => void;
+  // Opt-in: a hover peek must write no history, and a sidebar that stands as long as its page is no overlay to back out of.
+  takesBack?: true;
 };
 
 // Centralize document key/press listeners; only the newest layer handles outside/Esc.
 // Components must not add parallel listeners that close multiple layers per action.
 const open: Layer[] = [];
+const changes = new ChangeSignal();
+const backing = () => open.filter((layer) => layer.takesBack);
+
+// What the router asks, since the kit may not import it (shell/router.ts holdBack, wired in Layout).
+export const backLayers = {
+  count: () => backing().length,
+  // refocus, as Esc: a covering panel's press outside waits for a click that a back never brings.
+  closeAbove: (keep: number) => {
+    for (const layer of backing().slice(keep).reverse()) layer.close(true);
+  },
+  subscribe: changes.subscribe,
+};
 
 function press(event: PointerEvent) {
   const top = open.at(-1);
@@ -31,14 +46,16 @@ export function useLayer(active: boolean, layer: Layer) {
   latest.current = layer;
   useEffect(() => {
     if (!active) return;
-    const entry: Layer = { outside: (target) => latest.current.outside(target), close: (refocus) => latest.current.close(refocus) };
+    const entry: Layer = { outside: (target) => latest.current.outside(target), close: (refocus) => latest.current.close(refocus), takesBack: latest.current.takesBack };
     if (open.length === 0) {
       document.addEventListener('pointerdown', press);
       document.addEventListener('keydown', key);
     }
     open.push(entry);
+    changes.notify();
     return () => {
       open.splice(open.indexOf(entry), 1);
+      changes.notify();
       if (open.length > 0) return;
       document.removeEventListener('pointerdown', press);
       document.removeEventListener('keydown', key);

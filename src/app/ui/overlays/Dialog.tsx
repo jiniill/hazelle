@@ -29,7 +29,7 @@ export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout 
   const scrim = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
   // Only the scrim itself is outside: the toast sits above the dialog and stays pressable while it is open.
-  useLayer(true, { outside: (target) => target === scrim.current, close: onClose });
+  useLayer(true, { outside: (target) => target === scrim.current, close: onClose, takesBack: true });
   const trap = useFocusTrap(box);
   const body = actions ? (
     <Stack gap={actionsLayout === 'full' ? 'related' : 'group'}>

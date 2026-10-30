@@ -5,6 +5,7 @@ import { Item } from '../collections/Item';
 import { ButtonSlot } from '../controls/Button';
 import { Icon } from '../foundation/Icon';
 import { faceStyle, type FontId } from '../foundation/fonts';
+import { isCoarsePointer } from '../foundation/media';
 import { keepOnScreen, room, useLayer } from './layers';
 import styles from './Menu.module.css';
 
@@ -51,6 +52,9 @@ type Props = {
   children: ReactNode;
 };
 
+// A search would raise a phone's keyboard over the list it filters; a field that is only typed in still takes the focus.
+export const openingStop = (coarse: boolean) => `${coarse ? 'input:not([type="search"])' : 'input'}, textarea, [role^="menuitem"], button`;
+
 const CloseMenu = createContext(() => {});
 
 // Only one menu branch stays open: preserve ancestors, close unrelated menus.
@@ -71,13 +75,13 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
     if (refocus) (from?.isConnected ? from : opener.ref.current)?.focus();
   };
   // A press on the button that opened it is not outside, so that button closes it again like the menu's own does.
-  useLayer(open, { outside: (target) => !anchor.current?.contains(target) && !from?.contains(target), close });
+  useLayer(open, { outside: (target) => !anchor.current?.contains(target) && !from?.contains(target), close, takesBack: true });
 
   // A menu that is not on the page is closed, so no button elsewhere shows it open.
   useEffect(() => () => menu.set(CLOSED), [menu]);
 
   useEffect(() => {
-    if (open) panel.current?.querySelector<HTMLElement>('input, textarea, [role^="menuitem"], button')?.focus();
+    if (open) panel.current?.querySelector<HTMLElement>(openingStop(isCoarsePointer()))?.focus();
   }, [open]);
 
   const holders = useContext(Holders);
