@@ -1,4 +1,5 @@
 import { createContext, useContext, useId, type ReactNode } from 'react';
+import { RowSwitch } from '../controls/Switch';
 import { Hint, type Help } from '../overlays/Hint';
 import { FolderMark } from './FolderMark';
 import styles from './SettingGroup.module.css';
@@ -39,6 +40,7 @@ type RowProps = {
 
 export function SettingRow({ label, folder = false, sentence, changed = false, help, sub, preview, control, action, wide = false, menu, error, note }: RowProps) {
   const id = useId();
+  const switchId = useId();
   const grouped = useContext(Grouped);
   const className = [styles.row, grouped ? styles.ruled : styles.panel, wide && styles.wide, folder && styles.opens].filter(Boolean).join(' ');
   return (
@@ -50,10 +52,18 @@ export function SettingRow({ label, folder = false, sentence, changed = false, h
               <FolderMark />
             </span>
           )}
-          <span id={id} className={sentence ? `${styles.label} ${styles.sentence}` : styles.label}>
-            {changed && <span className={styles.changed} aria-hidden />}
-            {sentence ?? label}
-          </span>
+          {sentence ? (
+            <span id={id} className={`${styles.label} ${styles.sentence}`}>
+              {changed && <span className={styles.changed} aria-hidden />}
+              {sentence}
+            </span>
+          ) : (
+            // Only a Switch takes this id, so another control's label activates nothing. A sentence holds controls of its own, which a label may not.
+            <label id={id} className={styles.label} htmlFor={switchId}>
+              {changed && <span className={styles.changed} aria-hidden />}
+              {label}
+            </label>
+          )}
           {help && <Hint label={label}>{help}</Hint>}
           {action}
         </span>
@@ -64,7 +74,9 @@ export function SettingRow({ label, folder = false, sentence, changed = false, h
           </span>
         ))}
       </div>
-      <div className={styles.control}>{control}</div>
+      <div className={styles.control}>
+        <RowSwitch value={sentence ? undefined : switchId}>{control}</RowSwitch>
+      </div>
       {menu && <div className={styles.menu}>{menu}</div>}
       {error && (
         <p className={styles.error} role="alert">

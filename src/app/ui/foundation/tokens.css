@@ -340,6 +340,8 @@
   --control-chip: 34px;
   --control-md: 44px;
   --control-lg: 50px;
+  /* How far a mark's press area reaches past it under a coarse pointer, to the height of a control. */
+  --hit-outset: calc((var(--control-md) - var(--control-mark)) / 2);
   --icon-sm: 16px;
   --icon-md: 22px;
   --icon-tag: 14px;

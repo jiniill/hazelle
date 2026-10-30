@@ -20,6 +20,14 @@
   color: var(--color-text);
 }
 
+@media (pointer: coarse) {
+  .button::after {
+    position: absolute;
+    inset: calc(-1 * var(--hit-outset));
+    content: '';
+  }
+}
+
 .bubble {
   composes: floating from '../foundation/surface.module.css';
   composes: dropIn from '../foundation/motion.module.css';

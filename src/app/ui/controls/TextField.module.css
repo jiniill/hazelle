@@ -45,6 +45,14 @@
   resize: none;
 }
 
+/* Positioned after the ⓘ, whose press area reaches over them otherwise. */
+@media (pointer: coarse) {
+  .head > *,
+  .input {
+    position: relative;
+  }
+}
+
 .hint {
   composes: note from '../foundation/type.module.css';
 }
