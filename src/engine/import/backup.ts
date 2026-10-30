@@ -354,13 +354,17 @@ async function coldChat(chat: Json, cold: Cold): Promise<Json | null> {
   return { ...chat, message, hypaV2Data, hypaV3Data, scriptstate, localLore };
 }
 
+// Written to a slot only by saveCurrentPreset, so the slot first-run Risu leaves active never holds them while the
+// database does; a user who never switched presets would be refused as having no template.
+const SAVED_ONLY = ['promptTemplate', 'promptSettings', 'customPromptTemplateToggle', 'templateDefaultVariables', 'moduleIntergration'];
+
 // The active slot's values live at the database's top level until Risu saves the preset (saveCurrentPreset): each
 // key the slot holds is taken from there, regex from presetRegex. Its name and picture stay the slot's.
 function live(slot: Json, db: Json): Json {
   return Object.fromEntries(
-    Object.entries(slot).flatMap(([key, value]) => {
+    [...new Set([...Object.keys(slot), ...SAVED_ONLY])].flatMap((key) => {
       if (SECRETS.has(key)) return [];
-      if (key === 'name' || key === 'image') return [[key, value]];
+      if (key === 'name' || key === 'image') return [[key, slot[key]]];
       return [[key, db[key === 'regex' ? 'presetRegex' : key]]];
     }),
   );

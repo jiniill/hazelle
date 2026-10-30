@@ -477,6 +477,10 @@ describe('readBackup', () => {
     const [main, legacy] = await Promise.all(backup.catalog.presets.map(({ key }) => backup.preset(key)));
     expect(main!.result).toMatchObject({ ok: true, prompt: { name: 'Main', blocks: [{ kind: 'text', text: 'live', mark: 'main' }] } });
     expect(legacy).toEqual({ name: 'Legacy', result: { ok: false, failure: { kind: 'no-template' } } });
+    // First-run Risu's slot, which never saved the template the database sends.
+    const firstRun = await readBackup([backupFile(database({ ...db, botPresets: [{ name: 'Default', mainPrompt: '' }] }))]);
+    if (!firstRun.ok) throw new Error(firstRun.failure.kind);
+    expect((await firstRun.backup.preset(firstRun.backup.catalog.presets[0]!.key))!.result).toMatchObject({ ok: true, prompt: { name: 'Default', blocks: [{ kind: 'text', text: 'live' }] } });
     expect(JSON.stringify({ catalog: backup.catalog, personas, presets: [main, legacy] })).not.toContain('sk-');
   });
 });
