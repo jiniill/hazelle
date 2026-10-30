@@ -19,7 +19,7 @@ https://raw.githubusercontent.com/jiniill/hazelle/master/src/tool-api/hazelle.d.
 
 ## The header
 
-The file starts with its header: `//@` lines, one per line, before any code. Blank lines between them are fine. The first other line ends the header, so a comment or `// @ts-check` goes after it. Any other `//@` key makes the file unreadable.
+The file starts with its header: `//@` lines, one per line, before any code. Blank lines between them are fine. The first other line ends the header, so a comment goes after it. Any other `//@` key makes the file unreadable.
 
 Identity lines:
 - `//@api 1`: required, as written.
@@ -87,7 +87,7 @@ More working files, each run by the app's browser tests: [`memory.js`](../../e2e
 
 ## Checking and installing
 
-1. Check the code against the API from the folder holding the file and `hazelle.d.ts`. After the header, add `// @ts-check` and `/// <reference path="./hazelle.d.ts" />`, then run `npx -p typescript tsc --noEmit --allowJs --checkJs --target es2022 --lib es2022,dom plugin.js`. This proves the calls match the types. Only the import reads the header.
+1. Check the code against the API from the folder holding the file and `hazelle.d.ts`: `npx -p typescript tsc --noEmit --allowJs --checkJs --target es2022 --lib es2022,dom hazelle.d.ts plugin.js`. This proves the calls match the types. Only the import reads the header.
 2. Import the file: 설정 → 플러그인 → 플러그인 가져오기, or drop the `.js` file anywhere in the app. A file is at most 8 MB. A refused file says why, and names the line when one line is at fault. Importing the same name and author again replaces the code and keeps the plugin's settings and data.
 3. Run it in the app: the plugin's page → ⋯ → 코드 편집 → 테스트 runs a moment of the header, such as a menu item or a `tool` call, on a test chat, and neither the chat nor the plugin's data changes. Model calls are real only with its 모델 호출 switch on; network and embeddings are not called there. 코드 편집 holds up to 512 KB.
 

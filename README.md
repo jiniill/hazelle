@@ -28,7 +28,7 @@ Characters
 - Folders, a gallery view, a character editor, a trash for deleted characters, and export as a CCv3 charx.
 - Share links: a character published as a link that anyone can open and import into their own account, with reporting and a hold on reported links.
 
-Prompts, modules and tools
+Prompts, modules and plugins
 - A block-based prompt editor. RisuAI presets (`.risup`) import as prompts.
 - Modules switched on always, per prompt, per character or per persona.
 - Plugins: JavaScript files that run in an isolated frame, reach the network only through the relay and with the user's consent, and can take over long-term memory, add message actions and badges, and give the chat model tools to call. The [plugin guide](src/tool-api/README.md) holds the syntax, for writing one in the app's studio or with Claude Code or Codex.
