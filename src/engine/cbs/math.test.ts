@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { calc } from './math';
 
 describe('calc', () => {
+  it("reads ?? as the author's fallback and ?: as a choice, loosest of all", () => {
+    expect(['null??50', '??50', '30??50', '0??50', 'null??null', '1+null??2', '(1>=1)?0.65:0', '0?1:2', '1?2?3:4:5', '0?1:0?2:3', 'null??1?2:3'].map((expression) => calc(expression, none))).toEqual([50, 50, 30, 0, 0, 1, 0.65, 2, 3, 3, 2]);
+    expect(calc('$x??7', () => null)).toBe(7);
+    expect(['1?2', '1:2'].map((expression) => calc(expression, none))).toEqual([null, null]);
+  });
+
   const none = () => 0;
 
   it('keeps precedence, left-associates every operator, ^ included, and gives comparisons and logic as 1 or 0', () => {

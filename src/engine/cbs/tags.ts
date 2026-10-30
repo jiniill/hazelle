@@ -228,7 +228,10 @@ function asNumber(text: string): number {
   const value = Number(text);
   return Number.isNaN(value) ? 0 : value;
 }
-const variableNumber = (context: CbsContext) => (token: string) => asNumber(token.startsWith('$') ? readVar(context, token.slice(1)) : readGlobal(context, token.slice(1)));
+const variableNumber = (context: CbsContext) => (token: string) => {
+  const value = token.startsWith('$') ? readVar(context, token.slice(1)) : readGlobal(context, token.slice(1));
+  return value === 'null' ? null : asNumber(value);
+};
 define('calc', 1, ([expression], { context }) => {
   const value = calc(expression!, variableNumber(context));
   return value === null ? null : String(value);
