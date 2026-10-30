@@ -57,7 +57,8 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
   const input = useRef<HTMLTextAreaElement>(null);
   const remembering = useRemembering();
   const indexing = chat.features.memory && chat.id !== null ? remembering.indexing.get(chat.id) : undefined;
-  const sendKeys = keysOf('send', useDisplay().display.enterSends);
+  const { enterSends } = useDisplay().display;
+  const sendKeys = keysOf('send', enterSends);
   const typed = draft.text.trim() !== '' || attachments.draft.length > 0;
   const unseen = chat.sendNotes.unseen + (attachments.sees === false ? attachments.draft.filter(({ kind }) => kind === 'picture').length : 0);
   const { drop } = useImport();
@@ -130,6 +131,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
         compact={folded}
         value={draft.text}
         readOnly={chat.toolInput !== null}
+        enterKeyHint={enterSends ? 'send' : 'enter'}
         onChange={draft.set}
         onKeyDown={onKey}
         placeholder={translate.input ? `${withParticle(sendLanguage, '으로/로')} 번역해서 보내요` : '메시지'}

@@ -6,7 +6,7 @@ export { Divider } from './Divider';
 export { FONT_IDS, FONT_KIND, FONTS, type FontId } from './fonts';
 export { Icon } from './Icon';
 export { formatKeys, pressed, pressedKey, type Chord } from './keys';
-export { hasFinePointer, isDarkScheme, isInstalled, useDarkScheme, usePanelsBeside, useSplit, useViewport, useWide } from './media';
+export { hasFinePointer, isDarkScheme, isInstalled, useCoarsePointer, useDarkScheme, usePanelsBeside, useSplit, useViewport, useWide } from './media';
 export { markScrollbars } from './scrollbar';
 export { Tag } from './Tag';
 export { Text } from './Text';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Reading } from '../ui';
-import { DISPLAY_DEFAULT, lookOf, moveLook, parseDisplay, parseReading, presetOf, presets, savedPresets } from './reading';
+import { DISPLAY_DEFAULT, effectiveEnterSends, lookOf, moveLook, parseDisplay, parseReading, presetOf, presets, savedPresets } from './reading';
 
 const FALLBACK: Reading = { font: 'serif', size: 17, leading: 'normal', width: 'normal', reply: 'follow' };
 
@@ -20,9 +20,32 @@ describe('stored reading settings', () => {
 
 describe('stored display settings', () => {
   it('keeps a known theme, color picks and real switches, and starts anything else from the fallback', () => {
-    const chosen = { chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, theme: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSends: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, userStops: true } as const;
+    const chosen = { chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, theme: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSendsChoice: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, userStops: true } as const;
     expect(parseDisplay(JSON.stringify(chosen), DISPLAY_DEFAULT)).toEqual(chosen);
-    expect(parseDisplay(JSON.stringify({ chimes: 'yes', chimeSounds: { 'reply-started': 'bell', translated: 3 }, theme: 'sepia', bg: 'teal', accent: 3, quotes: 'bubble', follow: { light: 'study', dark: 3, applied: 'dark' }, hideHeader: 'no', enterSends: 0, hidePictures: 1, pictureWidest: 5, wideFill: 'no', pictureSide: 'top', inlineIllustrations: 'yes', portrait: 'yes' }), DISPLAY_DEFAULT)).toEqual(DISPLAY_DEFAULT);
+    expect(parseDisplay(JSON.stringify({ chimes: 'yes', chimeSounds: { 'reply-started': 'bell', translated: 3 }, theme: 'sepia', bg: 'teal', accent: 3, quotes: 'bubble', follow: { light: 'study', dark: 3, applied: 'dark' }, hideHeader: 'no', enterSendsChoice: 0, enterSends: 0, hidePictures: 1, pictureWidest: 5, wideFill: 'no', pictureSide: 'top', inlineIllustrations: 'yes', portrait: 'yes' }), DISPLAY_DEFAULT)).toEqual(DISPLAY_DEFAULT);
+  });
+});
+
+describe('Enter로 보내기', () => {
+  const choice = (stored: object) => parseDisplay(JSON.stringify(stored), DISPLAY_DEFAULT).enterSendsChoice;
+
+  it('carries the old false over as a choice and reads the old true, which nobody had to pick, as none', () => {
+    expect(choice({ enterSends: false })).toBe(false);
+    expect(choice({ enterSends: true })).toBeNull();
+    expect(choice({})).toBeNull();
+  });
+
+  it('keeps a choice stored in the new field, and drops the old field from what is saved next', () => {
+    expect(choice({ enterSendsChoice: true })).toBe(true);
+    expect(choice({ enterSendsChoice: false })).toBe(false);
+    expect(parseDisplay(JSON.stringify({ enterSends: false }), DISPLAY_DEFAULT)).not.toHaveProperty('enterSends');
+  });
+
+  it('follows the pointer until a choice overrides it', () => {
+    expect(effectiveEnterSends(null, false)).toBe(true);
+    expect(effectiveEnterSends(null, true)).toBe(false);
+    expect(effectiveEnterSends(true, true)).toBe(true);
+    expect(effectiveEnterSends(false, false)).toBe(false);
   });
 });
 

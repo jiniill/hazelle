@@ -46,16 +46,16 @@ export function parseReading(stored: string, fallback: Reading): Reading {
 // Portrait stage is reserved for chats without illustration (user, 2026-10-16); width cap preserves old default (2026-10-17).
 // Track last system mode so reload preserves manual edits until the next mode change (user, 2026-10-20).
 // Chimes default off and use chimeSounds once enabled (user, 2026-10-26).
-export type Display = Scheme & { chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSends: boolean; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean };
+export type Display = Scheme & { chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean };
 
 export type Follow = Record<Theme, string> & { applied: Theme };
 
 const PLAIN = { bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' } as const;
 
-export const DISPLAY_DEFAULT: Display = { chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, theme: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSends: true, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false };
+export const DISPLAY_DEFAULT: Display = { chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, theme: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false };
 
 export function parseDisplay(stored: string, fallback: Display): Display {
-  const read = fields<keyof Display>(stored);
+  const read = fields<keyof Display | 'enterSends'>(stored);
   return {
     chimes: flag(read.chimes, fallback.chimes),
     chimeSounds: parseChimeSounds(read.chimeSounds, fallback.chimeSounds),
@@ -68,7 +68,8 @@ export function parseDisplay(stored: string, fallback: Display): Display {
     quotes: known(QUOTE_SHAPE, read.quotes, fallback.quotes),
     hideHeader: flag(read.hideHeader, fallback.hideHeader),
     foldComposer: flag(read.foldComposer, fallback.foldComposer),
-    enterSends: flag(read.enterSends, fallback.enterSends),
+    // The old enterSends was saved whole with every display change, so its true says nobody chose it; only false was picked.
+    enterSendsChoice: typeof read.enterSendsChoice === 'boolean' ? read.enterSendsChoice : read.enterSends === false ? false : fallback.enterSendsChoice,
     hidePictures: flag(read.hidePictures, fallback.hidePictures),
     pictureWidest: percent(read.pictureWidest) ?? fallback.pictureWidest,
     wideFill: flag(read.wideFill, fallback.wideFill),
@@ -93,6 +94,9 @@ function parseFollow(value: unknown): Follow | null {
   const mode = named(THEME, applied);
   return typeof light === 'string' && typeof dark === 'string' && mode ? { light, dark, applied: mode } : null;
 }
+
+// No choice follows the device: a finger has no Shift to break a line with, and the send button is there.
+export const effectiveEnterSends = (choice: Display['enterSendsChoice'], coarsePointer: boolean) => choice ?? !coarsePointer;
 
 export const parseStoredDisplay = (stored: string) => parseDisplay(stored, DISPLAY_DEFAULT);
 

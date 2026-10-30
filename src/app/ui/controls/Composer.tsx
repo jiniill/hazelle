@@ -13,12 +13,13 @@ type Props = {
   inputRef: RefObject<HTMLTextAreaElement | null>;
   compact: boolean;
   readOnly?: boolean;
+  enterKeyHint?: 'send' | 'enter';
   // attachments: what the message carries, above its text (Attachments). onFiles: files pasted with no text.
   attachments?: ReactNode;
   onFiles?: (files: File[]) => void;
 };
 
-export function Composer({ value, onChange, onKeyDown, placeholder, tools, actions, inputRef, compact, readOnly, attachments, onFiles }: Props) {
+export function Composer({ value, onChange, onKeyDown, placeholder, tools, actions, inputRef, compact, readOnly, enterKeyHint, attachments, onFiles }: Props) {
   const id = useId();
   useAutosize(inputRef, value);
   return (
@@ -35,6 +36,7 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, actio
         {...NO_AUTOFILL}
         value={value}
         readOnly={readOnly}
+        enterKeyHint={enterKeyHint}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}

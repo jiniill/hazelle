@@ -1,12 +1,13 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
-import { DISPLAY, DISPLAY_DEFAULT, parseReading, parseStoredDisplay, presetOf, presets, READING, savedPresets, systemMode, type Display, type Follow, type Preset } from './common/reading';
+import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, parseReading, parseStoredDisplay, presetOf, presets, READING, savedPresets, systemMode, type Display, type Follow, type Preset } from './common/reading';
 import { usePersisted } from './common/usePersisted';
 import { useSettings } from './session';
-import { applyScheme, QuoteShapeContext, readingDefault, useDarkScheme, VeilContext, type Reading, type Theme } from './ui';
+import { applyScheme, QuoteShapeContext, readingDefault, useCoarsePointer, useDarkScheme, VeilContext, type Reading, type Theme } from './ui';
 
 type DisplayControl = {
   reading: Reading;
-  display: Display;
+  // enterSends is what Enter does now, resolved here; only enterSendsChoice is stored.
+  display: Display & { enterSends: boolean };
   presets: Preset[];
   own: { presets: Preset[]; unread: number };
   changeReading: (change: Partial<Reading>) => void;
@@ -30,6 +31,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const { looks } = useSettings();
   const own = useMemo(() => savedPresets(looks), [looks]);
   const mode = systemMode(useDarkScheme());
+  const coarsePointer = useCoarsePointer();
   const { theme, bg, ink, accent, dialogue, follow } = display;
   useLayoutEffect(() => applyScheme({ theme, bg, ink, accent, dialogue }), [theme, bg, ink, accent, dialogue]);
   const veil = useMemo(() => (display.hidePictures ? { revealed: new Set<string>() } : null), [display.hidePictures]);
@@ -52,7 +54,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   }
   const control: DisplayControl = {
     reading,
-    display,
+    display: { ...display, enterSends: effectiveEnterSends(display.enterSendsChoice, coarsePointer) },
     presets: list,
     own,
     changeReading: (change) => setReading({ ...reading, ...change }),
