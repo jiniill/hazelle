@@ -78,6 +78,13 @@ describe('stripStyles', () => {
     const open = '<style '.repeat(150_000);
     expect(take(open)).toEqual({ text: open, blocks: [] });
   });
+
+  it('reads the hex form a bot script writes, in order with plain styles, and takes unreadable hex as no style', () => {
+    const hex = Array.from(new TextEncoder().encode('.a{content:"한"}'), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    const blocks: string[] = [];
+    expect(stripStyles(`x<style>.z{}</style><risu-style>${hex}</risu-style>y<risu-style>nope</risu-style>`, blocks)).toBe('xy');
+    expect(blocks).toEqual(['.z{}', '.a{content:"한"}', '']);
+  });
 });
 
 describe('a message whose commands ran away', () => {

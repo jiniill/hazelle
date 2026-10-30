@@ -87,20 +87,27 @@ export class DisplayPass {
   }
 }
 
+// <risu-style> is a style in Risu's own stored form, the hex of its CSS's UTF-8, which a bot's script may write itself.
+// Hex that does not read leaves no style, as in Risu.
+const fromHex = (hex: string): string =>
+  /[^0-9a-f]/i.test(hex) || hex.length % 2 ? '' : new TextDecoder().decode(Uint8Array.from(hex.match(/../g) ?? [], (byte) => parseInt(byte, 16)));
+
 // A <style> left open runs to the end of its text, as a browser reads it; bots' backgroundHTML often ends that way.
 // One pass, taking what /<style\b[^>]*>([\s\S]*?)(?:<\/style\s*>|$)/gi takes: that regex rescans to the end for each
 // opener with no > after it, and no opener after that one has a > either.
 export function stripStyles(text: string, blocks: string[]): string {
-  const opener = /<style\b/gi;
-  const closer = /<\/style\s*>/gi;
+  const opener = /<(risu-)?style\b/gi;
+  const closers = { plain: /<\/style\s*>/gi, hex: /<\/risu-style\s*>/gi };
   let kept = '';
   let from = 0;
   for (let found = opener.exec(text); found; found = opener.exec(text)) {
     const open = text.indexOf('>', opener.lastIndex);
     if (open === -1) break;
+    const closer = found[1] ? closers.hex : closers.plain;
     closer.lastIndex = open + 1;
     const end = closer.exec(text);
-    blocks.push(text.slice(open + 1, end ? end.index : text.length));
+    const body = text.slice(open + 1, end ? end.index : text.length);
+    blocks.push(found[1] ? fromHex(body) : body);
     kept += text.slice(from, found.index);
     from = opener.lastIndex = end ? closer.lastIndex : text.length;
   }
