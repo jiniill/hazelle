@@ -3,6 +3,7 @@ import { useMemo, type Ref } from 'react';
 import { ACTS, addOf, newOf } from '../common/acts';
 import { cbsLanguage } from '../common/code/cbs';
 import { useTrial } from '../common/code/Trial';
+import { CountedMarkup } from '../common/CountedFields';
 import { withParticle } from '../common/particles';
 import { SLOT } from '../common/prompt-words';
 import { SHORTCUTS } from '../shortcuts';
@@ -117,7 +118,7 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
       </Stack>
       {block.kind === 'slot' && <Text>{SLOT[block.slot].line}</Text>}
       {block.kind === 'text' && (
-        <MarkupArea
+        <CountedMarkup
           ref={textRef}
           label="내용"
           language={cbs}
@@ -147,7 +148,7 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
       )}
       {block.kind === 'slot' && block.slot === 'authorNote' && authorNote !== null && (
         <Section title="기본 노트" level={3} help="비워 두면 노트가 없는 채팅에는 아무것도 들어가지 않아요.">
-          <MarkupArea label="기본 노트" variant="field" language={cbs} expand={SHORTCUTS.bigEdit.keys} aside={trial.cbs} value={authorNote} onChange={onAuthorNote} />
+          <CountedMarkup label="기본 노트" variant="field" language={cbs} expand={SHORTCUTS.bigEdit.keys} aside={trial.cbs} value={authorNote} onChange={onAuthorNote} />
         </Section>
       )}
       {'wrapper' in block &&

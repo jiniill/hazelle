@@ -13,7 +13,7 @@ export type BigCopy = { area: (element: HTMLTextAreaElement | null) => void; car
 
 // Big editor shares the live value, not a save/cancel draft. Never reuse the small field's ref:
 // unmounting the copy would clear a ref still used for prompt insertion.
-export function useBigEdit(keys: readonly Chord[] | undefined, title: string, big: (copy: BigCopy) => ReactNode) {
+export function useBigEdit(keys: readonly Chord[] | undefined, title: string, big: (copy: BigCopy) => ReactNode, note?: string) {
   const field = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const caret = useRef<[number, number] | null>(null);
@@ -59,7 +59,7 @@ export function useBigEdit(keys: readonly Chord[] | undefined, title: string, bi
     wrap: { ref: field, onKeyDown },
     button: keys && <IconButton icon={Maximize2} label={LABEL} title={`${LABEL} · ${formatKeys(keys)}`} size="sm" onClick={() => toggle(true)} />,
     dialog: open && (
-      <Dialog title={title} size="full" onClose={() => toggle(false)}>
+      <Dialog title={title} note={note} size="full" onClose={() => toggle(false)}>
         <div className={styles.fill} onKeyDown={onKeyDown}>
           {big(bound)}
         </div>

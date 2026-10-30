@@ -13,6 +13,12 @@
   max-width: var(--markup-max-width);
 }
 
+.count {
+  composes: note from '../foundation/type.module.css';
+  margin-top: var(--space-8);
+  text-align: end;
+}
+
 .beside {
   display: flex;
   align-items: flex-start;

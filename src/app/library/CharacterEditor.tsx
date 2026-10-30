@@ -16,6 +16,7 @@ import { packsOf } from '../../runtime/chat-context';
 import { aliased } from '../common/alias';
 import { cbsLanguage } from '../common/code/cbs';
 import { useTrial } from '../common/code/Trial';
+import { CountedField } from '../common/CountedFields';
 import { describeTranslateFailure } from '../common/failure';
 import { describeUnused } from '../common/unused';
 import { AssetsEditor } from '../common/AssetsEditor';
@@ -249,10 +250,10 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
           </>
         ) : (
           <>
-            <TextField label="설명" lines={20} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.description} onChange={(value) => change({ description: value })} />
-            {legacy.personality && <TextField label="성격" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.personality} onChange={(value) => change({ personality: value })} />}
-            {legacy.scenario && <TextField label="상황" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.scenario} onChange={(value) => change({ scenario: value })} />}
-            <TextField label="예시 대화" lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.exampleDialogue} onChange={(value) => change({ exampleDialogue: value })} />
+            <CountedField label="설명" lines={20} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.description} onChange={(value) => change({ description: value })} />
+            {legacy.personality && <CountedField label="성격" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.personality} onChange={(value) => change({ personality: value })} />}
+            {legacy.scenario && <CountedField label="상황" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.scenario} onChange={(value) => change({ scenario: value })} />}
+            <CountedField label="예시 대화" lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.exampleDialogue} onChange={(value) => change({ exampleDialogue: value })} />
           </>
         )}
       </Section>
@@ -271,14 +272,14 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
             addLabel="첫인사 추가"
             removed={(index) => `${index + 1}번째 첫인사를 삭제했어요.`}
           >
-            {({ value, name, set, remove }) => <TextField label={name} lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={value} onChange={set} action={remove} />}
+            {({ value, name, set, remove }) => <CountedField label={name} lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={value} onChange={set} action={remove} />}
           </EntryList>
         )}
       </Section>
     ),
     instructions: (
       <Section title={PARTS.instructions.label}>
-        <TextField
+        <CountedField
           label="시스템 프롬프트"
           lines={6}
           expand={SHORTCUTS.bigEdit.keys}
@@ -288,7 +289,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
           onChange={(value) => change({ systemPrompt: value })}
           help={{ text: '비워 두면 기본 지시문을 써요. {{original}}을 넣으면 그 자리에 기본 지시문이 들어가요.', open: { label: opens(inSettings('prompts')), onClick: () => navigate({ kind: 'prompts', place: null, sort: 'conversation' }) } }}
         />
-        <TextField
+        <CountedField
           label="대화 뒤 지시문"
           lines={4}
           expand={SHORTCUTS.bigEdit.keys}
@@ -303,7 +304,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
           help="프롬프트는 쓰지 않고 이 캐릭터의 지시문과 설명, 로어북, 대화만 보내요."
           control={<Switch label="유틸리티 봇" checked={text.utility} onChange={(on) => change({ utility: on })} />}
         />
-        <TextField
+        <CountedField
           label={TRANSLATOR_NOTE}
           lines={6}
           expand={SHORTCUTS.bigEdit.keys}

@@ -1,6 +1,7 @@
 import { PenLine } from 'lucide-react';
+import { CountedField } from '../common/CountedFields';
 import { follows } from '../common/words';
-import { Button, Menu, Row, Stack, Text, TextField, ToolButton, useMenuClose } from '../ui';
+import { Button, Menu, Row, Stack, Text, ToolButton, useMenuClose } from '../ui';
 import type { PromptChoice } from '../../runtime/prompts';
 import type { ChatSettingsActions } from './useChatSettings';
 import { useChatNote } from './useChatNote';
@@ -48,7 +49,7 @@ function NoteEditor({ id, note, prompt, onSave }: Props) {
 
   return (
     <Stack gap="related">
-      <TextField
+      <CountedField
         label="작가의 노트"
         lines={5}
         value={text}

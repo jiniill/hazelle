@@ -13,6 +13,8 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  // A short measure of the text, by the label and in its big editor.
+  count?: string;
   variant?: 'page' | 'field';
   // prompt: headings, rules, <tags> and the language's own tags; tags: image tags colored by their weight.
   kind?: 'prompt' | 'tags';
@@ -86,9 +88,9 @@ function Frame({ value, onChange, placeholder, kind, language, ref, id }: FrameP
   );
 }
 
-export function MarkupArea({ label, value, onChange, placeholder, variant = 'page', kind = 'prompt', language, expand, aside, ref }: Props) {
+export function MarkupArea({ label, value, onChange, placeholder, count, variant = 'page', kind = 'prompt', language, expand, aside, ref }: Props) {
   const id = useId();
-  const big = useBigEdit(language ? expand : undefined, label, (copy) => language && <CodeField label={label} value={value} onChange={onChange} language={language} prose area={copy.area} caret={copy.caret} asides={aside && [aside(value)]} />);
+  const big = useBigEdit(language ? expand : undefined, label, (copy) => language && <CodeField label={label} value={value} onChange={onChange} language={language} prose area={copy.area} caret={copy.caret} asides={aside && [aside(value)]} />, count);
   const frame = <Frame value={value} onChange={onChange} placeholder={placeholder} kind={kind} language={language} id={id} ref={ref} />;
   return (
     <>
@@ -104,6 +106,7 @@ export function MarkupArea({ label, value, onChange, placeholder, variant = 'pag
         ) : (
           frame
         )}
+        {count && <p className={styles.count}>{count}</p>}
       </div>
       {big.dialog}
     </>

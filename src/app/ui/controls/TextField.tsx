@@ -25,6 +25,8 @@ type Props = {
   onChange: (value: string) => void;
   placeholder?: string;
   hint?: string;
+  // A short measure of the text, by the label and in its big editor.
+  count?: string;
   help?: Help;
   error?: string;
   lines?: number;
@@ -38,7 +40,7 @@ type Props = {
   aside?: (text: string) => CodeAside;
 };
 
-export function TextField({ label, showLabel = true, kind = 'text', value, onChange, placeholder, hint, help, error, lines, readOnly, action, expand, language, aside }: Props) {
+export function TextField({ label, showLabel = true, kind = 'text', value, onChange, placeholder, hint, count, help, error, lines, readOnly, action, expand, language, aside }: Props) {
   const id = useId();
   const noteId = `${id}-note`;
   const note = error ?? hint;
@@ -53,7 +55,7 @@ export function TextField({ label, showLabel = true, kind = 'text', value, onCha
   };
   const big = useBigEdit(expand, label, (copy) =>
     language ? <CodeField label={label} value={value} onChange={onChange} language={language} prose={kind !== 'key'} area={copy.area} caret={copy.caret} asides={aside && [aside(value)]} /> : <textarea ref={copy.area} className={`${look} ${styles.big}`} aria-label={label} data-autofocus {...typed} {...shared} />,
-  );
+  count);
   const own = { id, 'aria-label': showLabel ? undefined : label, 'aria-describedby': note ? noteId : undefined, ...shared };
   return (
     <>
@@ -65,6 +67,7 @@ export function TextField({ label, showLabel = true, kind = 'text', value, onCha
             </label>
             {help && <Hint label={label}>{help}</Hint>}
           </span>
+          {count && <span className={styles.hint}>{count}</span>}
           {action}
           {big.button}
         </div>}

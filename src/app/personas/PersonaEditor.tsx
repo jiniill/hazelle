@@ -7,6 +7,7 @@ import { thumbnail } from '../../runtime/picture';
 import { useChats, useLibrary, useSettings, useStore } from '../session';
 import { ACTS } from '../common/acts';
 import { aliased } from '../common/alias';
+import { CountedField } from '../common/CountedFields';
 import { FaceChange } from '../common/FaceChange';
 import { framePage } from '../common/frame';
 import { ModuleSwitches } from '../common/ModuleSwitches';
@@ -18,7 +19,7 @@ import { BIN_KEEPS, cannotRemove, copyName } from '../common/words';
 import { navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
-import { Avatar, Facts, MenuItem, TextField } from '../ui';
+import { Avatar, Facts, MenuItem } from '../ui';
 import { PersonaExport } from './PersonaExport';
 
 // A caller leaves by unmounting it, which saves.
@@ -87,7 +88,7 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
       <FaceChange face={<Avatar face={persona.name} image={persona.picture} size="lg" tone="you" />} apply={picture} />
       {facts.length > 0 && <Facts items={facts} />}
       {identity.fields}
-      <TextField label="설명" lines={8} value={persona.description} onChange={(description) => autosave.change({ description })} />
+      <CountedField label="설명" lines={8} value={persona.description} onChange={(description) => autosave.change({ description })} />
       <ModuleSwitches owner={{ kind: 'persona', id }} own={stored.value.modules ?? []} />
       <PortraitsEditor owner={id} />
     </>

@@ -13,6 +13,7 @@ import { describeFailedReply, describeTranslateFailure } from '../common/failure
 import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
 import { toolLine, usageFacts, usageLine, writtenSoFar } from '../common/receipt';
+import { useTokens } from '../common/useTokens';
 import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolWaiting } from '../common/words';
 import type { Reading } from '../../runtime/talk';
@@ -32,7 +33,6 @@ import { rowEqual, sameParts } from './rowPart';
 import { seenText } from './search';
 import { useReveal } from './useReveal';
 import { useSelectedPart } from './useSelectedPart';
-import { useWrittenTokens } from './useWrittenTokens';
 import { withOriginal } from './withOriginal';
 
 const preparingNote = (preparing: Exclude<Preparing, { step: 'tools' }>) => (preparing.step === 'agents' ? agentsWaiting(preparing) : preparing.retrying ? PRE_READ_RETRYING : PRE_READ_WAITING);
@@ -396,7 +396,7 @@ function Elapsed({ note, since, written }: { note: string; since: number; writte
 
 // 사용량 표시 on, the line also says what this call wrote so far.
 function Writing({ reading, text, reasoning }: { reading: Reading; text: string; reasoning: string }) {
-  const written = useWrittenTokens([text.slice(reading.text), reasoning.slice(reading.reasoning)]);
+  const written = useTokens([text.slice(reading.text), reasoning.slice(reading.reasoning)]);
   return <Elapsed note={WRITING} since={reading.at} written={writtenSoFar(written)} />;
 }
 

@@ -81,6 +81,7 @@ export function usageLine(receipt: Receipt): { lead: string | null; parts: Usage
 
 // 사용량 표시 while a reply is written, with no receipt yet: what this call wrote so far, counted in o200k_base and so an
 // estimate for any other tokenizer; null until first counted.
+export const textTokens = (written: number | 'unknown' | null) => (!written ? undefined : written === 'unknown' ? `토큰 ${UNKNOWN}` : `약 ${count(written)} 토큰`);
 export const writtenSoFar = (written: number | 'unknown' | null) => (written === null ? null : `출력 ${written === 'unknown' ? UNKNOWN : `약 ${count(written)}`}`);
 
 export function usageFacts(receipt: Receipt) {
