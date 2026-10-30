@@ -13,7 +13,7 @@ import { subpages, TERMS } from './terms';
 type Place = { page: SettingsPage; label: string; icon: LucideIcon; route: Route };
 type Group = { title: string; places: Place[] };
 
-// List built pages only; group headings cannot repeat child labels. Keep app/account in the separated footer group.
+// List built pages only; group headings cannot repeat child labels.
 const GROUPS: Group[] = [
   {
     title: 'AI 엔진',
@@ -33,7 +33,6 @@ const GROUPS: Group[] = [
     ],
   },
 ];
-const APP_TITLE = '앱';
 const APP: Place[] = [
   { page: 'display', label: PAGES.display, icon: SunMoon, route: { kind: 'display' } },
   { page: 'controls', label: PAGES.controls, icon: Hand, route: { kind: 'controls' } },
@@ -43,9 +42,9 @@ const APP: Place[] = [
 ];
 const ADMIN: Place = { page: 'admin', label: PAGES.admin, icon: ShieldCheck, route: { kind: 'admin' } };
 
-function useApp(): Place[] {
+function useGroups(): Group[] {
   const { admin } = useAccount();
-  return admin ? [...APP, ADMIN] : APP;
+  return [...GROUPS, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
 }
 
 // What each page holds, at its row's end in the sidebar and the phone list.
@@ -97,12 +96,11 @@ function useSettingsSearch(places: Place[]) {
 export const settingsEntry = (wide: boolean): Route => (wide ? GROUPS[0]!.places[0]!.route : { kind: 'settings' });
 
 export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 'list'; onClose: () => void }) {
-  const app = useApp();
+  const groups = useGroups();
   const holds = useHolds();
-  const search = useSettingsSearch([...GROUPS.flatMap(({ places }) => places), ...app]);
-  const row = (place: Place) => <NavRow key={place.page} icon={place.icon} label={place.label} meta={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route)} />;
+  const search = useSettingsSearch(groups.flatMap(({ places }) => places));
   return (
-    <LayerSidebar title={SETTINGS} onClose={onClose} search={search.field} footer={search.words ? null : <NavGroup title={APP_TITLE}>{app.map(row)}</NavGroup>}>
+    <LayerSidebar title={SETTINGS} onClose={onClose} search={search.field} seek={search.words ? undefined : current}>
       {search.words ? (
         search.none ? (
           <Empty variant="side">{search.none}</Empty>
@@ -110,9 +108,11 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
           search.found.map((hit) => <NavRow key={`${hit.where}/${hit.term}`} icon={hit.place.icon} label={hit.term} meta={hit.where} onClick={() => search.open(hit)} />)
         )
       ) : (
-        GROUPS.map(({ title, places }) => (
+        groups.map(({ title, places }) => (
           <NavGroup key={title} title={title}>
-            {places.map(row)}
+            {places.map((place) => (
+              <NavRow key={place.page} icon={place.icon} label={place.label} meta={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route)} />
+            ))}
           </NavGroup>
         ))
       )}
@@ -122,8 +122,7 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
 
 export function SettingsList({ onClose }: { onClose: () => void }) {
   const holds = useHolds();
-  const app = useApp();
-  const groups = [...GROUPS, { title: APP_TITLE, places: app }];
+  const groups = useGroups();
   const search = useSettingsSearch(groups.flatMap(({ places }) => places));
   return (
     <Screen top={<NavBar title={SETTINGS} close backLabel={`${SETTINGS} 닫기`} onBack={onClose} />}>

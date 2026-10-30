@@ -16,7 +16,7 @@ export const toolsEntry = (wide: boolean): Route => (wide ? PLACES[0]!.route : {
 
 export function ToolsSidebar({ current, onClose }: { current: ToolsPage | 'list'; onClose: () => void }) {
   return (
-    <LayerSidebar title={TOOLS} onClose={onClose} footer={null}>
+    <LayerSidebar title={TOOLS} onClose={onClose}>
       <NavGroup>
         {PLACES.map((place) => (
           <NavRow key={place.page} icon={place.icon} label={place.label} current={place.page === current} onClick={() => navigate(place.route)} />

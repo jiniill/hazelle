@@ -1,5 +1,5 @@
 import { PanelLeft, X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { Brand } from '../foundation/Brand';
 import { Divider } from '../foundation/Divider';
@@ -31,8 +31,13 @@ export function Sidebar({ page = false, actions, children, corner }: Props) {
 }
 
 // Esc joins the layer stack, so a menu open over the page closes first.
-export function LayerSidebar({ title, onClose, search, children, footer }: { title: string; onClose: () => void; search?: ReactNode; children: ReactNode; footer: ReactNode }) {
+// seek: changes with the current row, which then comes into view: on opening, on going back, when a search gives way to the list.
+export function LayerSidebar({ title, onClose, search, seek, children }: { title: string; onClose: () => void; search?: ReactNode; seek?: string; children: ReactNode }) {
   useLayer(true, { outside: () => false, close: onClose });
+  const list = useRef<HTMLElement>(null);
+  useEffect(() => {
+    list.current?.querySelector('[aria-current]')?.scrollIntoView({ block: 'nearest' });
+  }, [seek]);
   return (
     <aside className={styles.sidebar} aria-label={title}>
       <div className={styles.head}>
@@ -40,9 +45,8 @@ export function LayerSidebar({ title, onClose, search, children, footer }: { tit
         <IconButton icon={X} label={`${title} 닫기`} size="sm" onClick={onClose} />
       </div>
       {search}
-      <nav className={styles.nav} aria-label={title}>
-        <div className={styles.list}>{children}</div>
-        {footer && <div className={styles.footer}>{footer}</div>}
+      <nav ref={list} className={styles.list} aria-label={title}>
+        {children}
       </nav>
     </aside>
   );
