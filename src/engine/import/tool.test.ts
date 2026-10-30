@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import guide from '../../tool-api/README.md?raw';
 import { readTool, splitTool, toolSource, TOOL_FILE_BYTES } from './tool';
 
 const read = (source: string) => readTool(new TextEncoder().encode(source));
@@ -65,6 +66,15 @@ describe('tool header', () => {
     expect(readTool(new Uint8Array(TOOL_FILE_BYTES + 1))).toMatchObject({ ok: false, failure: { detail: 'tool-too-large' } });
     expect(readTool(new Uint8Array([0xff]))).toMatchObject({ ok: false, failure: { detail: 'tool-encoding' } });
   });
+});
+
+it('reads the plugin guide\'s examples, one of them holding every kind of header line', () => {
+  const [every, example] = [...guide.matchAll(/^```js\n([\s\S]*?)^```$/gm)].map((fence) => read(fence[1]!));
+  expect(example).toMatchObject({ ok: true });
+  expect(every).toMatchObject({ ok: true, tool: { manifest: {
+    version: '1.0.0', displayName: '찾아보기', description: expect.any(String), uses: ['model', 'network'], page: { label: '자료 열기' }, composer: { label: '찾아보기' },
+    settings: [{ key: 'tone', composer: true }], inputs: [{ id: 'draft' }], menu: [{ id: 'digest' }], actions: [{ id: 'cite' }], functions: [{ name: 'search' }],
+  } } });
 });
 
 it('splits the identity lines from the code\'s own header and joins them back into a readable file', () => {

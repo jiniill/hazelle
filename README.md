@@ -31,7 +31,7 @@ Characters
 Prompts, modules and tools
 - A block-based prompt editor. RisuAI presets (`.risup`) import as prompts.
 - Modules switched on always, per prompt, per character or per persona.
-- Tools: JavaScript modules that run in an isolated frame with no network access, and can take over long-term memory, add message actions and badges.
+- Plugins: JavaScript files that run in an isolated frame, reach the network only through the relay and with the user's consent, and can take over long-term memory, add message actions and badges, and give the chat model tools to call. The [plugin guide](src/tool-api/README.md) holds the syntax, for writing one in the app's studio or with Claude Code or Codex.
 - Personas, per-model setting profiles, prompt caching settings, and auxiliary model slots for translation, memory and other tasks.
 - Agents (experimental): pre agents write notes the reply is written with, post agents rewrite the reply or add to it. Each agent call shows the request it sent and the answer it got.
 
@@ -48,7 +48,7 @@ Backup
 - A full backup exports the whole account as one zip, which can be restored into a new, empty account.
 - The server snapshots every account daily. An account can rewind itself from its settings to any point kept in the last week, up to three times a day.
 
-Out of scope: group chat (several bots taking turns), TTS, RisuAI plugins (Hazelle has its own tool API), card v1.
+Out of scope: group chat (several bots taking turns), TTS, card v1.
 
 ## Security model
 
@@ -66,6 +66,8 @@ What the server can still see:
 ## RisuAI compatibility
 
 Supported: character cards v2/v3 (PNG, charx, JSON), `.risum` modules (including the one inside a charx), lorebooks, regex scripts, CBS, `.risup` presets, bot HTML/CSS, Lua and block triggers.
+
+RisuAI v3 plugins run through an adapter; older plugin files are refused.
 
 Not imported: RisuAI's long-term memory data, and encrypted cards and backups. The import summary shows what was skipped.
 

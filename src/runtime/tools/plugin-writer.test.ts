@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import api from '../../tool-api/hazelle.d.ts?raw';
+import guide from '../../tool-api/README.md?raw';
 import { refOf } from '../../connectors/assignment';
 import { sharedModel } from '../assignment';
 import { answerable, saying, stubRelay, testServer, upstream } from '../testing';
@@ -23,6 +24,7 @@ it('streams one answer from the 대화 모델 and records its usage outside chat
   expect(sent).toHaveLength(1);
   const messages = JSON.parse(sent[0]!.sent.body!).messages;
   expect(messages[0].content).toContain(api);
+  expect(messages[0].content).toContain(guide);
   expect(messages[1].content).toContain(file);
   expect(messages[1].content).toMatch(/Request:\n고쳐 줘$/);
   expect(JSON.parse(sent[0]!.sent.body!).tools).toBeUndefined();

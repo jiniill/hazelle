@@ -6,6 +6,7 @@ import { refOf, type ModelRef } from '../../connectors/assignment';
 import { pluginAskMessages, readPluginAnswer, type PluginAnswer } from '../../engine/plugin-writer';
 import type { Receipt } from '../../model/chat';
 import api from '../../tool-api/hazelle.d.ts?raw';
+import guide from '../../tool-api/README.md?raw';
 import type { ApiFailure } from '../api';
 import { sharedModel, type RouteFailure } from '../assignment';
 import { retriesOf } from '../connections';
@@ -35,6 +36,8 @@ export type PluginRunner = { run(code: string, moments: TestMoment[], messages: 
 // messages it made up.
 export type TestRun = { said: string; added: number; steps: TestStep[] };
 export type PluginAsked = { ok: true; answer: PluginAnswer; model: ModelRef; cost: Cost | null; runs: TestRun[] } | { ok: false; failure: RouteFailure | { kind: 'profile-missing'; own: boolean } | { kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { kind: 'unsaved'; failure: ApiFailure } | { kind: 'too-many-calls' } };
+
+const REFERENCE = `${guide}\nAPI (hazelle.d.ts):\n${api}`;
 
 // An ask's limits, the app's own whatever the model asks for: its test runs, and its calls with the answer's.
 const RUNS = 3;
@@ -121,7 +124,7 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
   const profile = modelProfile(store, route.model);
   if (profile.kind === 'missing') return { ok: false, failure: { kind: 'profile-missing', own: profile.own } };
   const testing = runner && route.model.tools !== false ? runner : null;
-  const messages = pluginAskMessages(api, input.body, input.ask, input.earlier, testing ? RUNS : 0);
+  const messages = pluginAskMessages(REFERENCE, input.body, input.ask, input.earlier, testing ? RUNS : 0);
   const runs: TestRun[] = [];
   const runTest = (testing: PluginRunner) => async (args: ToolArgs, before: string) => {
     const asked = readTest(args);
@@ -173,7 +176,7 @@ export async function askEstimate(deps: Pick<Deps, 'store'>, input: Input): Prom
   if ('kind' in route || !route.model.price) return null;
   const profile = modelProfile(deps.store, route.model);
   if (profile.kind === 'missing') return null;
-  const messages = pluginAskMessages(api, input.body, input.ask, input.earlier);
+  const messages = pluginAskMessages(REFERENCE, input.body, input.ask, input.earlier);
   const counts = await deps.store.evaluation.count([...messages.map(({ content }) => content), ...(input.body === null ? [] : [input.body])]).catch(() => null);
   if (!Array.isArray(counts)) return null;
   const fileTokens = input.body === null ? 1024 : counts.pop()!;

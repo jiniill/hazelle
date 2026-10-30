@@ -7,6 +7,7 @@ import { askEstimate, askPlugin, type PluginAsked, type TestRun } from '../../ru
 import { sharedModel } from '../../runtime/assignment';
 import { newOf } from '../common/acts';
 import { describeAskFailure } from '../common/failure';
+import { PLUGIN_GUIDE } from '../common/legal';
 import { ModelMenu } from '../common/ModelMenu';
 import { cost } from '../common/receipt';
 import { STOP, TOOL } from '../common/words';
@@ -14,7 +15,7 @@ import { useChats, useConnections, useSession } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
-import { Button, Callout, CommentBox, NavBar, Row, Screen, Section, Stack } from '../ui';
+import { Button, Callout, CommentBox, Link, NavBar, Row, Screen, Section, Stack } from '../ui';
 import { isPlace, PLACES, StudioPlaces } from './StudioPlaces';
 import { TestRuns, testRunner } from './StudioTest';
 
@@ -108,6 +109,7 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
         </Section>
         <Row kind="actions">
           <Button variant="link" icon={Code2} disabled={running} onClick={() => void blank()}>빈 파일로 시작</Button>
+          <Link href={PLUGIN_GUIDE}>Claude Code나 Codex로 만들기</Link>
         </Row>
       </Stack>
     </Screen>
