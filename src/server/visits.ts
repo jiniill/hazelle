@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { Hono } from 'hono';
-import { VISITORS_PER_ADDRESS, type VisitDay } from '../contracts/admin';
+import { GUEST_STEPS, VISITORS_PER_ADDRESS, type GuestStep, type VisitDay } from '../contracts/admin';
 import { VISITOR_HEADER } from '../contracts/http';
 import type { Db } from './db/service-db';
 import { transaction } from './db/transaction';
@@ -40,22 +40,22 @@ export function openVisits(db: DatabaseSync, clock: () => number = Date.now) {
 
 export async function readVisits(db: Db, now = Date.now()): Promise<VisitDay[]> {
   const today = visitDay(now);
-  const { results } = await db.prepare('SELECT day, visitors, guests, accounts, converted FROM visit_days WHERE day >= ? AND day <= ? ORDER BY day DESC').bind(today - 13 * DAY_MS, today).all<VisitDay>();
+  const { results } = await db.prepare('SELECT day, visitors, opened, connected, guests, accounts, converted FROM visit_days WHERE day >= ? AND day <= ? ORDER BY day DESC').bind(today - 13 * DAY_MS, today).all<VisitDay>();
   const days = new Map(results.map((row) => [row.day, row]));
   return Array.from({ length: 14 }, (_, index) => {
     const day = today - index * DAY_MS;
-    return days.get(day) ?? { day, visitors: 0, guests: 0, accounts: 0, converted: 0 };
+    return days.get(day) ?? { day, visitors: 0, opened: 0, connected: 0, guests: 0, accounts: 0, converted: 0 };
   });
 }
 
-// A guest's reply (runtime/relay.ts), which never passes this server: its id is a person of the day's 손님 응답 and, at
-// signup, of 손님 출신 (migrations/0027). The id is the client's to make, so an address names GUESTS_PER_ADDRESS a day.
+// A guest's steps (runtime/relay.ts) never pass this server otherwise: its id is a person of the step's day and, for a
+// reply at signup, of 손님 출신 (migrations/0029). The id is the client's to make, so an address names GUESTS_PER_ADDRESS a day.
 export const guestVisits = new Hono<AppEnv>().post('/guest', async (c) => {
   const body = await readObject(c);
   const guest = typeof body?.guest === 'string' ? body.guest.toLowerCase() : '';
-  if (!ID.test(guest)) return fail(c, 400, 'bad-input');
-  const added = c.env.limits.visitors.guests.add(c.req.header(VISITOR_HEADER) ?? 'direct', guest);
-  if (added === 'full') return fail(c, 429, 'too-many-visits');
-  if (added === 'new') await c.env.db.prepare('INSERT INTO visit_guests (day, guest) VALUES (?, ?) ON CONFLICT DO NOTHING').bind(visitDay(Date.now()), guest).run();
+  const step = body?.step as GuestStep;
+  if (!ID.test(guest) || !GUEST_STEPS.includes(step)) return fail(c, 400, 'bad-input');
+  if (c.env.limits.visitors.guests.add(c.req.header(VISITOR_HEADER) ?? 'direct', guest) === 'full') return fail(c, 429, 'too-many-visits');
+  await c.env.db.prepare('INSERT INTO visit_guests (day, guest, step) VALUES (?, ?, ?) ON CONFLICT DO NOTHING').bind(visitDay(Date.now()), guest, step).run();
   return c.body(null, 204);
 });

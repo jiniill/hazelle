@@ -48,7 +48,9 @@ export async function addConnection(session: Session, connection: Connection, si
   const failure = await checkKey(session, connection, signal);
   if (failure) return { ok: false, failure };
   const saved = await session.store.create('connection', { ...connection, label: freeLabel(connection.label, session.store.list('connection')) });
-  return saved.ok ? { ok: true, id: saved.data.id } : { ok: false, failure: { kind: 'save', failure: saved } };
+  if (!saved.ok) return { ok: false, failure: { kind: 'save', failure: saved } };
+  session.transport.connected();
+  return { ok: true, id: saved.data.id };
 }
 
 // A pool's accounts change by signing in again, never here. The account keeps its id, so nothing that names it changes.

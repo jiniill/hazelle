@@ -7,6 +7,7 @@ import { HEAD, DATA, END, PING, WAIT, retryWait, type Retry } from '../contracts
 import { providerCode, providerMessage } from '../connectors/errors';
 import { isRecord } from '../connectors/values';
 import type { ConnectionType, HttpRequest } from '../connectors/types';
+import type { GuestStep } from '../contracts/admin';
 import type { PulseLabel } from '../contracts/pulse';
 import { streamOpener } from '../vault/streams';
 import { fetchApi } from './api';
@@ -34,9 +35,10 @@ export type Transport = {
   stream(call: StreamCall, request: HttpRequest | null, signal: AbortSignal, retry?: Retry | null, pulse?: PulseLabel, type?: ConnectionType | null): Promise<Response | RelayFailure>;
   stop(id: string): void;
   drop(id: string): void;
+  connected(): void;
 };
 
-export const accountTransport: Transport = { detached: true, problem: () => null, close: () => {}, raw: accountRaw, stream: accountStream, stop: (id) => accountStop(id), drop: (id) => accountDrop(id) };
+export const accountTransport: Transport = { detached: true, problem: () => null, close: () => {}, raw: accountRaw, stream: accountStream, stop: (id) => accountStop(id), drop: (id) => accountDrop(id), connected: () => {} };
 
 // Like api's held account, the one open session owns the page's provider transport. Never infer it from cookies.
 let transport = accountTransport;
@@ -48,9 +50,9 @@ export const stream = (call: StreamCall, request: HttpRequest | null, signal: Ab
 export const stopStream = (id: string) => transport.stop(id);
 export const dropStream = (id: string) => transport.drop(id);
 
-// A guest's reply never passes the server; its browser reports the daily guest-reply count (server/visits.ts).
-const countGuestReply = (guest: string) =>
-  void fetchApi('visits/guest', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ guest }) }).then((response) => response.body?.cancel()).catch(() => {});
+// A guest's steps never pass the server; its browser reports them to the operator's daily counts (server/visits.ts).
+export const countGuest = (guest: string, step: GuestStep) =>
+  void fetchApi('visits/guest', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ guest, step }) }).then((response) => response.body?.cancel()).catch(() => {});
 
 export function directTransport(guest: string): Transport {
   const calls = new Map<string, AbortController>();
@@ -65,7 +67,7 @@ export function directTransport(guest: string): Transport {
     if (signal.aborted) return lost(signal);
     try {
       const response = await fetch(request.url, { method: request.method, headers: { ...request.headers, ...(type?.browser && type.browser.headers) }, body: request.body, signal, credentials: 'omit' });
-      if (response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) countGuestReply(guest);
+      if (response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) countGuest(guest, 'replied');
       return response;
     } catch {
       // Fetch deliberately does not distinguish CORS, DNS and a lost connection.
@@ -91,7 +93,7 @@ export function directTransport(guest: string): Transport {
         const again = response instanceof Response ? retry?.statuses.includes(response.status) : response.kind === 'offline';
         const wait = again && retry && tries <= retry.times ? retryWait(tries, retryAfter, Date.now()) : null;
         if (wait === null) {
-          if (response instanceof Response && response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) countGuestReply(guest);
+          if (response instanceof Response && response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) countGuest(guest, 'replied');
           return answered(response);
         }
         if (response instanceof Response) await response.body?.cancel();
@@ -101,6 +103,7 @@ export function directTransport(guest: string): Transport {
     },
     stop: (id) => { calls.get(id)?.abort(); calls.delete(id); },
     drop: (id) => { calls.delete(id); },
+    connected: () => countGuest(guest, 'connected'),
   };
 }
 

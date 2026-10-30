@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { PULSE_HEADER, VISITOR_HEADER } from '../contracts/http';
 import { pulseHeader, type PulseAnswer, type PulseRole, type PulseWeek } from '../contracts/pulse';
 import { dailyDistinct } from './limits';
-import { forgetPulse } from './pulse';
+import { forgetPulse, readCohorts } from './pulse';
 import { replyKey, testApp } from './testing';
 import { readVisits } from './visits';
 
@@ -53,7 +53,7 @@ it("counts a guest's reply in the daily 손님 응답 and 손님 출신 only, ne
     const cookies = await people(10);
     await seen(cookies);
     const guest = crypto.randomUUID();
-    const reply = (each: string) => t.post('visits/guest', { guest: each }, undefined, { [VISITOR_HEADER]: 'guest visitor' });
+    const reply = (each: string) => t.post('visits/guest', { guest: each, step: 'replied' }, undefined, { [VISITOR_HEADER]: 'guest visitor' });
     for (const each of [guest, guest.toUpperCase(), crypto.randomUUID()]) expect((await reply(each)).status).toBe(204);
     expect((await reply('not-a-uuid')).status).toBe(400);
     await t.signUp('converted', guest);
@@ -64,11 +64,50 @@ it("counts a guest's reply in the daily 손님 응답 and 손님 출신 only, ne
   }
 });
 
+it('counts each guest step once a day, and only a reply makes 손님 출신', async () => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(NOON);
+  try {
+    const guest = crypto.randomUUID();
+    const step = (name: string) => t.post('visits/guest', { guest, step: name }, undefined, { [VISITOR_HEADER]: 'guest steps' });
+    for (const name of ['opened', 'opened', 'connected']) expect((await step(name)).status).toBe(204);
+    expect((await step('paid')).status).toBe(400);
+    await t.signUp('connectedonly', guest);
+    expect((await readVisits(t.env.db, NOON))[0]).toMatchObject({ opened: 1, connected: 1, guests: 0, accounts: 1, converted: 0 });
+  } finally {
+    clock.mockRestore();
+  }
+});
+
+it('closes a week into people per signup week, only from the policy week on and never under the floor', async () => {
+  const counted = WEEK_FROM + WEEK;
+  await t.env.db.prepare('UPDATE service SET pulse_cohorts_from = ?').bind(counted).run();
+  const signUpAt = async (now: number, count: number) => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
+    try {
+      return await people(count);
+    } finally {
+      clock.mockRestore();
+    }
+  };
+  const first = await signUpAt(NOON, 10);
+  await seen(first);
+  at(NOON + 5 * DAY);
+  await board();
+  expect((await t.env.db.prepare('SELECT * FROM pulse_week_cohorts').all()).results).toEqual([]);
+  at(NOON + WEEK);
+  const late = await signUpAt(NOON + WEEK, 3);
+  await seen([...first, ...late]);
+  at(NOON + WEEK + 5 * DAY);
+  await board();
+  expect((await t.env.db.prepare('SELECT week, cohort, people FROM pulse_week_cohorts').all()).results).toEqual([{ week: counted, cohort: WEEK_FROM, people: 10 }]);
+  expect(await readCohorts(t.env.db)).toEqual({ weeks: [counted], rows: [{ cohort: counted, signed: 3, people: [null] }, { cohort: WEEK_FROM, signed: 10, people: [10] }] });
+});
+
 it("lets one address name only so many guests a day, a guest id being the client's to make", async () => {
   const previous = t.env.limits.visitors.guests;
   t.env.limits.visitors.guests = dailyDistinct(1);
   try {
-    const reply = (visitor: string) => t.post('visits/guest', { guest: crypto.randomUUID() }, undefined, { [VISITOR_HEADER]: visitor });
+    const reply = (visitor: string) => t.post('visits/guest', { guest: crypto.randomUUID(), step: 'replied' }, undefined, { [VISITOR_HEADER]: visitor });
     expect([(await reply('one')).status, (await reply('one')).status, (await reply('two')).status]).toEqual([204, 429, 204]);
   } finally {
     t.env.limits.visitors.guests = previous;

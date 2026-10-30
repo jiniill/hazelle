@@ -78,7 +78,7 @@ it('counts at most VISITORS_PER_ADDRESS browsers of one address a day, and keeps
   for (let index = 0; index <= VISITORS_PER_ADDRESS; index++) visits.page({ kind: 'visit', address: '192.0.2.1', agent: `Browser ${index}` });
   visits.page({ kind: 'visit', address: '192.0.2.2', agent: 'Browser 0' });
   expect(await today()).toMatchObject({ visitors: VISITORS_PER_ADDRESS + 1 });
-  const guest = raw.prepare('INSERT INTO visit_guests (day, guest) VALUES (?, ?)');
+  const guest = raw.prepare("INSERT INTO visit_guests (day, guest, step) VALUES (?, ?, 'replied')");
   guest.run(visitDay(now) - 6 * DAY_MS, 'kept');
   guest.run(visitDay(now) - 7 * DAY_MS, 'gone');
   visits.close();

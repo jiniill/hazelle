@@ -16,6 +16,7 @@ import {
   type PulseRow,
   type PulseWeek,
 } from '../contracts/pulse';
+import type { VisitCohorts } from '../contracts/admin';
 import type { Db } from './db/service-db';
 import { DAY_MS, fail, type AppEnv } from './http';
 
@@ -34,6 +35,7 @@ const hourOf = (at: number) => at - (at % HOUR_MS);
 // How often the answer is made at most: a reload costs no read before then, and a moment shows this late.
 const MEMO_MS = 5 * 60 * 1000;
 const HOURS_KEPT_MS = 2 * DAY_MS;
+const COHORT_WEEKS_SHOWN = 4;
 
 type Call = Extract<PulseLabel, { kind: 'call' }>;
 
@@ -196,12 +198,12 @@ function closeDays(db: Db, now: number): Promise<void> {
 
 async function closePastDays(db: Db, now: number) {
   const today = dayOf(now);
-  const [closed, oldest] = await Promise.all([
-    db.prepare('SELECT pulse_closed FROM service').first<number>('pulse_closed'),
+  const [service, oldest] = await Promise.all([
+    db.prepare('SELECT pulse_closed, pulse_cohorts_from FROM service').first<{ pulse_closed: number; pulse_cohorts_from: number }>(),
     db.prepare('SELECT MIN(day) AS day FROM (SELECT day FROM pulse_seen UNION ALL SELECT day FROM pulse_used)').first<number | null>('day'),
   ]);
   // Days before the oldest list close nothing.
-  for (let day = Math.max(closed!, oldest ?? today); day < today; day += DAY_MS) {
+  for (let day = Math.max(service!.pulse_closed, oldest ?? today); day < today; day += DAY_MS) {
     const counted = await countDays(db, day);
     const week = weekOf(day);
     const sunday = weekOf(day + DAY_MS) !== week;
@@ -219,6 +221,17 @@ async function closePastDays(db: Db, now: number) {
                   ...counted.below.map((row, place) =>
                     db.prepare('INSERT INTO pulse_week_below (week, role, key, type, name, place) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING').bind(week, row.role, row.key, row.type, row.name, place),
                   ),
+                  ...(week >= service!.pulse_cohorts_from
+                    ? [
+                        db
+                          .prepare(
+                            `INSERT INTO pulse_week_cohorts (week, cohort, people)
+                             SELECT ?, created_at - (created_at - ?) % ? AS cohort, COUNT(DISTINCT account) FROM pulse_seen JOIN accounts ON accounts.id = account
+                             WHERE day BETWEEN ? AND ? GROUP BY cohort HAVING COUNT(DISTINCT account) >= ? ON CONFLICT DO NOTHING`,
+                          )
+                          .bind(week, MONDAY, WEEK_MS, week, day, PULSE_FLOORS.row),
+                      ]
+                    : []),
                 ]
               : []),
           ]
@@ -342,6 +355,20 @@ export async function forgetPulse(db: Db, now = Date.now()) {
 }
 
 const WEEK_CACHE_SECONDS = 24 * 60 * 60;
+export async function readCohorts(db: Db): Promise<VisitCohorts> {
+  const [weeks, stored, signups] = await Promise.all([
+    db.prepare('SELECT week FROM pulse_week WHERE week >= (SELECT pulse_cohorts_from FROM service) ORDER BY week DESC LIMIT ?').bind(COHORT_WEEKS_SHOWN).all<{ week: number }>(),
+    db.prepare('SELECT week, cohort, people FROM pulse_week_cohorts').all<{ week: number; cohort: number; people: number }>(),
+    db.prepare('SELECT day, accounts FROM visit_days WHERE accounts > 0').all<{ day: number; accounts: number }>(),
+  ]);
+  const shown = weeks.results.map(({ week }) => week).reverse();
+  const people = new Map(stored.results.map((row) => [`${row.week}/${row.cohort}`, row.people]));
+  const signed = new Map<number, number>();
+  for (const { day, accounts } of signups.results) signed.set(weekOf(day), (signed.get(weekOf(day)) ?? 0) + accounts);
+  const rows = [...signed].sort(([a], [b]) => b - a).map(([cohort, count]) => ({ cohort, signed: count, people: shown.map((week) => people.get(`${week}/${cohort}`) ?? null) }));
+  return { weeks: shown, rows };
+}
+
 export const pulse = new Hono<AppEnv>()
   .get('/', async (c) => c.json(await c.env.pulse.answer(), 200, { 'cache-control': `public, max-age=${MEMO_MS / 1000}` }))
   .get('/weeks/:from', async (c) => {

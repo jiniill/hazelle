@@ -26,7 +26,7 @@ afterEach(() => {
 const connection = (type: string): Connection => ({ type, label: type, baseUrl: null, protocol: null, accounts: [{ id: 'key', secret: 'test-key' }], turns: null, starred: [bareModel('model')] });
 const saying = () => new Response('data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } });
 
-it('opens a guest session, sends a turn directly, parses and saves it in-page, and tells the app only that a guest got a reply', async () => {
+it('opens a guest session, sends a turn directly, parses and saves it in-page, and tells the app only the steps of a guest', async () => {
   vi.stubGlobal('window', new EventTarget());
   vi.stubGlobal('document', { visibilityState: 'hidden' });
   let release!: () => void;
@@ -41,8 +41,14 @@ it('opens a guest session, sends a turn directly, parses and saves it in-page, a
   const opened = await openGuestSession(new AbortController().signal);
   if (!opened.ok) throw new Error(opened.error);
   session = opened.data;
-  expect(fetch).not.toHaveBeenCalled();
+  const guest = (await guestAccount()).accountId;
+  expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/visits/guest']);
+  expect(JSON.parse(fetch.mock.calls[0]![1].body as string)).toEqual({ guest, step: 'opened' });
+  fetch.mockClear();
   const { store } = session;
+  session.transport.connected();
+  expect(JSON.parse(fetch.mock.calls[0]![1].body as string)).toEqual({ guest, step: 'connected' });
+  fetch.mockClear();
   const added = await store.create('connection', connection('openrouter'));
   if (!added.ok) throw new Error(added.error);
   await setDefaultModel(store, 'main', { connection: added.data.id, model: 'model' });
@@ -62,7 +68,7 @@ it('opens a guest session, sends a turn directly, parses and saves it in-page, a
   expect(provider).toMatchObject({ method: 'POST', credentials: 'omit', headers: { authorization: 'Bearer test-key' } });
   expect(new Headers(provider.headers).has('x-account')).toBe(false);
   expect(new Headers(provider.headers).has('x-hazelle-pulse')).toBe(false);
-  expect(JSON.parse(fetch.mock.calls[1]![1].body as string)).toEqual({ guest: (await guestAccount()).accountId });
+  expect(JSON.parse(fetch.mock.calls[1]![1].body as string)).toEqual({ guest, step: 'replied' });
   lease.release();
 });
 
@@ -146,6 +152,7 @@ it('refuses guest batch discounts before sending because a provider batch can ou
   vi.stubGlobal('fetch', fetch);
   const opened = await openGuestSession(new AbortController().signal);
   if (!opened.ok) throw new Error(opened.error);
+  fetch.mockClear();
   session = opened.data;
   const { store } = session;
   const model = { ...bareModel('claude'), maxOutput: 128 };

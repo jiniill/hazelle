@@ -11,6 +11,7 @@ import { fail, ID, readObject, type AppEnv, type Services } from './http';
 import { answerAction, answerBegin, leaveAccount, refuseLeft, restoreFrom, restorePoints, restoresOf, store } from './lifecycle';
 import { requireSession } from './session';
 import { tellUnread, VISIBLE } from './unread';
+import { readCohorts } from './pulse';
 import { readVisits } from './visits';
 
 // Reports are plaintext rows no byte cap counts, so one account's unresolved ones are bounded (board.ts).
@@ -59,7 +60,7 @@ export const admin = new Hono<AppEnv>();
 admin.use(requireSession);
 admin.use(createMiddleware<AppEnv>(async (c, next) => (c.get('account').admin ? next() : fail(c, 403, 'not-admin'))));
 
-admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db) }));
+admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db), cohorts: await readCohorts(c.env.db) }));
 
 // Atomically log then act, gated on target existence; deletion would make later target lookup impossible.
 // values bind detail parameters from ?4 onward.

@@ -1,7 +1,12 @@
 export const MAX_REPORT_LENGTH = 4000;
 export const MAX_NOTICE_LENGTH = 2000;
 
-export type VisitDay = { day: number; visitors: number; guests: number; accounts: number; converted: number };
+// opened, connected, guests: the guest ids that opened the app, added a connection or got a reply that day (GUEST_STEPS).
+export type VisitDay = { day: number; visitors: number; opened: number; connected: number; guests: number; accounts: number; converted: number };
+export const GUEST_STEPS = ['opened', 'connected', 'replied'] as const;
+export type GuestStep = (typeof GUEST_STEPS)[number];
+// weeks: the closed weeks shown, oldest first. people lines up with weeks; null is under PULSE_FLOORS.row.
+export type VisitCohorts = { weeks: number[]; rows: { cohort: number; signed: number; people: (number | null)[] }[] };
 // The guest ids one address may add to a day's 손님 응답 (server/limits.ts), a forged count's bound.
 export const GUESTS_PER_ADDRESS = 8;
 // The browsers one address may add to a day's 방문자 (server/visits.ts).

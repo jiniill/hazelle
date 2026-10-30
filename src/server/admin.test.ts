@@ -35,7 +35,7 @@ describe('the operator', () => {
     expect(answer.status).toBe(200);
     const { days } = await answer.json() as { days: unknown[] };
     expect(days).toHaveLength(14);
-    expect(days[0]).toEqual({ day: expect.any(Number), visitors: 0, guests: 0, accounts: 2, converted: 0 });
+    expect(days[0]).toEqual({ day: expect.any(Number), visitors: 0, opened: 0, connected: 0, guests: 0, accounts: 2, converted: 0 });
   });
 
   it('is the first account signed up: the session says so, nobody else passes, and the installation keeps naming it', async () => {

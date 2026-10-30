@@ -1,5 +1,5 @@
 import type { BoardSettings } from '../contracts/board';
-import type { BackupFolder, BackupWarning, AccountState, VisitDay } from '../contracts/admin';
+import type { BackupFolder, BackupWarning, AccountState, VisitCohorts, VisitDay } from '../contracts/admin';
 import { api, SLOW_ROUTE_WAIT, type ApiResult } from './api';
 import { page } from './pages';
 
@@ -63,7 +63,7 @@ export type Report = {
 };
 export type LogRow = { id: number; at: number; action: string; target: string; detail: unknown };
 export const readService = () => api<Service>('GET', 'admin/service');
-export const readVisits = () => api<{ days: VisitDay[] }>('GET', 'admin/visits');
+export const readVisits = () => api<{ days: VisitDay[]; cohorts: VisitCohorts }>('GET', 'admin/visits');
 export const setService = (values: Pick<Service, 'signupCap' | 'accountBytesCap' | 'accountFileBytesCap'>) => api<undefined>('PUT', 'admin/service', values);
 export const setBackupFolder = (folder: string | null) => api<undefined>('PUT', 'admin/backup-folder', { folder });
 

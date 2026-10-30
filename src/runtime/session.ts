@@ -50,7 +50,7 @@ import { Streams } from './streams';
 import { backfillSummaries } from './summary';
 import { receiveReply, resumeSend } from './turn';
 import { saveUpgraded } from './upgrade';
-import { accountTransport, directTransport, holdTransport, type Transport } from './relay';
+import { accountTransport, countGuest, directTransport, holdTransport, type Transport } from './relay';
 import { guestAccount, guestBackend } from './guest-store';
 
 export type Session = {
@@ -261,5 +261,7 @@ export async function openGuestSession(signal: AbortSignal, progress?: (progress
   const { accountId, vaultKey } = await guestAccount();
   if (signal.aborted) return { ok: false, error: 'stopped' };
   holdAccount(null);
-  return openSession(accountId, vaultKey, '손님', signal, progress, { backend: guestBackend(accountId), transport: directTransport(accountId) }, bindings);
+  const opened = await openSession(accountId, vaultKey, '손님', signal, progress, { backend: guestBackend(accountId), transport: directTransport(accountId) }, bindings);
+  if (opened.ok) countGuest(accountId, 'opened');
+  return opened;
 }
