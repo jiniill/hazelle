@@ -164,6 +164,17 @@ describe('assemble', () => {
     expect(renderChat('display', scope({ card: card({ regex }), messages })).texts[2]).toBe('She nods slowly. [OOC] ignore');
   });
 
+  it("takes a thinking block a bot's text holds out of the story and the send, block by block, and leaves a user's and a kept one", () => {
+    const line = (role: 'user' | 'assistant', text: string) => ({ id: role, message: role, seed: role, role, text, time: 0 });
+    const shown = [line('user', 'say <think>this</think>'), line('assistant', '<Thoughts>plan</Thoughts>first <thinking>more</thinking>second')];
+    const over = { messages: shown, greeting: null };
+    const display = renderChat('display', scope(over));
+    expect([display.texts, display.thoughts]).toEqual([['say <think>this</think>', 'first second'], ['', 'plan\n\nmore']]);
+    expect(renderChat('prompt', scope(over)).texts).toEqual(['say <think>this</think>', 'first second']);
+    expect(renderChat('display', scope({ ...over, keepsThoughts: true })).texts[1]).toBe(shown[1]!.text);
+    expect(renderChat('prompt', scope({ ...over, keepsThoughts: true })).texts[1]).toBe('first second');
+  });
+
   it("sends a 유틸리티 봇 its own texts, description, lorebook and chat, and none of the prompt's", () => {
     const own = card({ utility: true, systemPrompt: 'Translate what {{user}} writes.{{original}}', postHistoryInstructions: 'Answer in Korean.' });
     expect(build({ card: own, promptOut: true, lore: [lore('lighthouse', 'The lighthouse is old.')] })).toEqual([

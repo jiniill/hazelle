@@ -17,6 +17,7 @@ const messages = [
   message('e', 'assistant', {}, 'e'),
 ];
 const view: Display = {
+  thoughts: [],
   texts: ['Hello', '반가워', 'broken', '', 'writing'],
   css: `.x { background: url(asset:${picture}) }`,
   drawn: [[], [], [], [], []],

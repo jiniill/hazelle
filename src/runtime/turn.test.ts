@@ -282,7 +282,7 @@ describe('상태', () => {
     const messages = [message('a', false), message('b', false), message('c', false), message('d', true)];
     const box = (html: string) => [{ script: 0, html, at: 'top' as const }];
     const boxes = [box('first'), box('second'), box(' '), box('half')];
-    expect(statusBoxes({ texts: [], css: '', drawn: [], boxes, pass: false, unfound: [], stopped: null }, messages, [{ id: 'a', place: 0 }, { id: 'b', place: 2 }])).toEqual([
+    expect(statusBoxes({ texts: [], thoughts: [], css: '', drawn: [], boxes, pass: false, unfound: [], stopped: null }, messages, [{ id: 'a', place: 0 }, { id: 'b', place: 2 }])).toEqual([
       { id: 'a', place: 0, drawn: { script: 0, html: 'second', at: 'top', message: 1 } },
       { id: 'b', place: 2, drawn: null },
     ]);

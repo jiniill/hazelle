@@ -329,7 +329,7 @@ export class ChatScreenRead {
     this.base = this.based();
     this.turn = this.currentTurn();
     this.drawing = drawingKey(id, drawings.snapshot());
-    this.state = new Snapshot<ChatScreen>({ chat: opening.chat, messages: [], display: { texts: [], css: '', drawn: [], boxes: [], pass: false, unfound: [], stopped: null }, stuck: false, pending: true, placed: new Map() });
+    this.state = new Snapshot<ChatScreen>({ chat: opening.chat, messages: [], display: { texts: [], thoughts: [], css: '', drawn: [], boxes: [], pass: false, unfound: [], stopped: null }, stuck: false, pending: true, placed: new Map() });
   }
 
   readonly snapshot = () => this.state.snapshot();

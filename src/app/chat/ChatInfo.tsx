@@ -40,7 +40,7 @@ const callFacts = (receipt: Receipt) => [
   ...outcomeFacts(receipt),
 ];
 
-type Props = Pick<OpenChat, 'id' | 'shelf' | 'messages' | 'infoPick'> & {
+type Props = Pick<OpenChat, 'id' | 'shelf' | 'messages' | 'infoPick' | 'view'> & {
   tab: InfoTab;
   onTab: (tab: InfoTab) => void;
   onPick: (id: string) => void;
@@ -51,7 +51,7 @@ type Props = Pick<OpenChat, 'id' | 'shelf' | 'messages' | 'infoPick'> & {
   onClose: () => void;
 };
 
-export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onTab, onPick, onRecord, onEdit, onCache, onClose }: Props) {
+export function ChatInfo({ id: chat, shelf, messages, infoPick, view, tab: picked, onTab, onPick, onRecord, onEdit, onCache, onClose }: Props) {
   const { log, costs } = useSession();
   const memory = useChatMemory(chat);
   const tab = picked === 'memory' && !onRecord ? 'reply' : picked;
@@ -81,9 +81,10 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
   // A continued reply thought in each of its calls; one call that did not say leaves the total unknown.
   const counts = receipt ? calls(receipt).map((call) => call.usage?.reasoningTokens ?? null) : [];
   const reasoned = counts.includes(null) ? null : counts.reduce<number>((sum, count) => sum + (count ?? 0), 0);
-  const thought = version && (version.reasoning || reasoned) && (
+  const reasoning = [version?.reasoning, reply && view.thoughts[messages.indexOf(reply)]].filter(Boolean).join('\n\n');
+  const thought = version && (reasoning || reasoned) && (
     <Section level={3} title="추론" note={reasoned ? `${tokens(reasoned)} 토큰` : undefined}>
-      {version.reasoning ? <Text variant="prose">{version.reasoning}</Text> : <Empty variant="section">모델이 추론 과정을 보내지 않았어요.</Empty>}
+      {reasoning ? <Text variant="prose">{reasoning}</Text> : <Empty variant="section">모델이 추론 과정을 보내지 않았어요.</Empty>}
     </Section>
   );
   if (!version) body = <Empty>응답이 없어요.</Empty>;

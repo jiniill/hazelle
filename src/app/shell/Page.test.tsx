@@ -138,7 +138,7 @@ it('keeps the chat screen mounted through its first save, then distinguishes orp
     const id = seen.chats.at(-1)!;
     expect(seen.mounts).toBe(1);
     const stored: Stored<'chat'> = { id, kind: 'chat', parent: null, rev: 2, value: { title: '첫 채팅', character: character.id, models: {} } };
-    const model: ChatModel = { id, chat: stored.value, title: '첫 채팅', count: 0, preview: '', at: null, order: 2, messages: [], display: { texts: [], css: '', drawn: [], boxes: [], pass: false, unfound: [], stopped: null } };
+    const model: ChatModel = { id, chat: stored.value, title: '첫 채팅', count: 0, preview: '', at: null, order: 2, messages: [], display: { texts: [], thoughts: [], css: '', drawn: [], boxes: [], pass: false, unfound: [], stopped: null } };
     await act(() => { p.items.set(id, stored); p.models.set(id, model); p.announce('chat', id); });
     await p.render({ kind: 'chat', id });
     expect(seen.chats.at(-1)).toBe(id);

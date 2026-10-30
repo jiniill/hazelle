@@ -7,11 +7,12 @@ import { contexts, renderChat, type ChatScope, type LuaDisplay, type Missed } fr
 
 // Extract styles from texts, status boxes and pack backgroundHTML into chat-wide css, as Risu does.
 // drawn indexes pack regex per message; boxes are the extracted 상태창 지정 output. unfound includes background assets.
+// thoughts: the thinking blocks the display regex left in each message, taken out of its text.
 // pass means Lua editDisplay has pending messages; stopped records a Runaway, with runaway backgroundHTML omitted.
-export type Display = { texts: string[]; css: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
+export type Display = { texts: string[]; thoughts: string[]; css: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
 
 export type DisplayWork = { items: Missed[]; staged: string[]; start: [string, string][] };
-export type DisplayPatch = { rows: { index: number; text: string; drawn: number[]; boxes: Box[] }[]; css: string; pass: boolean; unfound: string[]; stopped: Runaway | null };
+export type DisplayPatch = { rows: { index: number; text: string; thoughts: string; drawn: number[]; boxes: Box[] }[]; css: string; pass: boolean; unfound: string[]; stopped: Runaway | null };
 
 export const display = (scope: ChatScope, take: ReadonlySet<number> = new Set(), lua?: LuaDisplay): Display => new DisplayPass(scope, take, lua).value;
 
@@ -48,7 +49,7 @@ export class DisplayPass {
     this.boxStyles = rendered.boxes.map(() => []);
     const texts = rendered.texts.map((text, index) => stripStyles(text, this.textStyles[index]!));
     const boxes = rendered.boxes.map((rows, index) => rows.map((box) => ({ ...box, html: stripStyles(box.html, this.boxStyles[index]!) })));
-    this.value = { texts, boxes, drawn: rendered.drawn, css: this.css(), pass: this.missing.size > 0, unfound: [...rendered.unfound!], stopped: rendered.stopped ?? this.backgroundStop };
+    this.value = { texts, thoughts: rendered.thoughts, boxes, drawn: rendered.drawn, css: this.css(), pass: this.missing.size > 0, unfound: [...rendered.unfound!], stopped: rendered.stopped ?? this.backgroundStop };
   }
 
   patch(items: { version: string; text: string }[]): DisplayPatch {
@@ -61,9 +62,10 @@ export class DisplayPass {
       else this.rendered.failures.display.delete(index);
       this.textStyles[index] = [];
       this.boxStyles[index] = [];
-      const row = { index, text: stripStyles(next.text, this.textStyles[index]!), drawn: next.drawn, boxes: next.boxes.map((box) => ({ ...box, html: stripStyles(box.html, this.boxStyles[index]!) })) };
+      const row = { index, text: stripStyles(next.text, this.textStyles[index]!), thoughts: next.thoughts, drawn: next.drawn, boxes: next.boxes.map((box) => ({ ...box, html: stripStyles(box.html, this.boxStyles[index]!) })) };
       rows.push(row);
       this.value.texts[index] = row.text;
+      this.value.thoughts[index] = row.thoughts;
       this.value.drawn[index] = row.drawn;
       this.value.boxes[index] = row.boxes;
       this.missing.delete(version);

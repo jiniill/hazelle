@@ -181,10 +181,11 @@ export class ScriptDisplay {
           const patch = await this.store.evaluation.patch({ asker: 'screen', chat }, pass.revision, pass.generation, rows);
           if (!patch || pass.signal?.aborted || this.passes.get(chat) !== pass || !this.listeners.has(chat)) continue;
           const texts = pass.view.texts.slice();
+          const thoughts = pass.view.thoughts.slice();
           const drawn = pass.view.drawn.slice();
           const boxes = pass.view.boxes.slice();
-          for (const row of patch.rows) { texts[row.index] = row.text; drawn[row.index] = row.drawn; boxes[row.index] = row.boxes; }
-          pass.view = { texts, drawn, boxes, css: patch.css, pass: patch.pass, unfound: patch.unfound, stopped: patch.stopped };
+          for (const row of patch.rows) { texts[row.index] = row.text; thoughts[row.index] = row.thoughts; drawn[row.index] = row.drawn; boxes[row.index] = row.boxes; }
+          pass.view = { texts, thoughts, drawn, boxes, css: patch.css, pass: patch.pass, unfound: patch.unfound, stopped: patch.stopped };
           await this.tell(chat, this.told(chat, pass.view));
         } catch (error) {
           // A stuck patch whose chat was judged is said by the composer; a chat not saved yet cannot be judged from here.

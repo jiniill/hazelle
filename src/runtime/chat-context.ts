@@ -121,6 +121,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
     persona: persona.kind === 'persona' ? { name: persona.persona.value.name, description: persona.persona.value.description } : null,
     prompt: prompt.kind === 'prompt' ? prompt.prompt.value : null,
     promptOut: keepsPromptOut(card, chat),
+    keepsThoughts: character?.keepThoughts === true,
     note: chat.note ?? null,
     lore: loreOwners.flatMap(({ id: owner }) => store.children('lore', owner)),
     loreScan: loreScanOf(store, card),
