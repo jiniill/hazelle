@@ -9,7 +9,7 @@ import { useToastFloor } from '../toast';
 import { useDisplay } from '../display';
 import { useAssetUrl } from '../session';
 import { day } from '../common/time';
-import { ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, usePanelsBeside } from '../ui';
+import { aimedAtPanel, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, usePanelsBeside } from '../ui';
 import { ChatAutopilot } from './ChatAutopilot';
 import { ChatBookmarks } from './ChatBookmarks';
 import { ChatInspect } from './ChatInspect';
@@ -62,7 +62,11 @@ export function ChatScreen({ id: chatId, item, shelf, back, side, onPaired }: Pr
     if (!chat.status.length) return false;
     actions.hold(!chat.held);
   });
-  useShortcut('find', () => actions.openSearch());
+  // The chat's search reads only the story; a panel's text is the browser's to find.
+  useShortcut('find', (event) => {
+    if (event && aimedAtPanel(event)) return false;
+    actions.openSearch();
+  });
   useShortcut('inspect', () => {
     if (chat.inspect) actions.closeInspect();
     else actions.openInspect('request');

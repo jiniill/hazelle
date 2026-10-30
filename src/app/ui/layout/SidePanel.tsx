@@ -9,6 +9,12 @@ import styles from './SidePanel.module.css';
 // page resets scroll; expandable preserves the underlying page; fill delegates scrolling to its child.
 type Props = { title: string; subtitle?: string; nav?: NavBarProps; page?: string; actions?: ReactNode; expandable?: boolean; fill?: boolean; onClose: () => void; children: ReactNode };
 
+// A key aimed at a side panel or a dialog rather than the page under it: focus in one or, with focus nowhere, the pointer
+// over a panel.
+export function aimedAtPanel({ target }: KeyboardEvent): boolean {
+  return target instanceof Element && target !== document.body ? !!target.closest('[data-side-panel], [role="dialog"]') : !!document.querySelector('[data-side-panel]:hover');
+}
+
 // Overlay panels close on outside/Esc; beside panels leave Esc to page actions such as stop reply (user, 2026-10-02).
 export function SidePanel({ title, subtitle, nav, page, actions, expandable = false, fill = false, onClose, children }: Props) {
   const covers = usePanelCovers();
@@ -34,7 +40,7 @@ export function SidePanel({ title, subtitle, nav, page, actions, expandable = fa
     body.current?.scrollTo({ top: 0 });
   }, [page]);
   return (
-    <aside ref={panel} className={widens && expanded ? `${styles.panel} ${styles.expanded}` : styles.panel} aria-label={title}>
+    <aside ref={panel} className={widens && expanded ? `${styles.panel} ${styles.expanded}` : styles.panel} aria-label={title} data-side-panel>
       <div className={styles.head}>
         {nav ? (
           <NavBar {...nav} line />

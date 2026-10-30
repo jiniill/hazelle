@@ -24,7 +24,8 @@ export const SHORTCUTS = {
   saveEdit: { label: '수정 저장', keys: [{ key: 'Enter', mod: true }] },
   translate: { label: '번역하기', keys: [{ key: 'Enter', mod: true }] },
   cancelEdit: { label: '수정 취소', keys: [{ key: 'Escape' }] },
-  // Its handler stays mounted only with a chat open, so elsewhere the key is the browser's find.
+  // Its handler stays mounted only with a chat open and passes a key aimed at a side panel, so elsewhere the key is the
+  // browser's find.
   find: { label: '채팅 내 검색', keys: [{ key: 'f', mod: true }] },
   // Risu's own key for its prompt preview, kept for the hands that move from it.
   inspect: { label: '점검 열기 · 닫기', keys: [{ key: 'u', mod: true }] },
@@ -47,7 +48,7 @@ export const keysOf = (name: Name, enterSends: boolean) => (enterSends ? undefin
 // Where each shortcut works, in the order 단축키 lists them.
 export const SHORTCUT_GROUPS: readonly { title: string; note?: string; names: readonly Name[] }[] = [
   { title: '공통', names: ['settings', 'personas', 'prompts', 'shortcutList', 'sidebar', 'status', 'pictures', 'undoToast'] },
-  { title: '채팅', note: '화살표 키와 Home · End는 입력창이 비어 있을 때만 작동해요.', names: ['send', 'newline', 'stop', 'editLast', 'swipe', 'storyStep', 'storyEnds', 'saveEdit', 'cancelEdit', 'find', 'inspect'] },
+  { title: '채팅', note: '화살표 키와 Home · End는 입력창이 비어 있을 때만 작동해요. 사이드 패널에서 Ctrl+F를 누르면 브라우저 검색이 열려요.', names: ['send', 'newline', 'stop', 'editLast', 'swipe', 'storyStep', 'storyEnds', 'saveEdit', 'cancelEdit', 'find', 'inspect'] },
   { title: '채팅 검색창', names: ['findNext', 'findPrevious', 'closeFind'] },
   { title: '번역기', note: '원문 칸에서 작동해요.', names: ['translate'] },
   { title: '프롬프트 편집', note: '블록과 토글 변경을 되돌리고, 텍스트 칸 안에서는 입력한 내용을 되돌려요.', names: ['undo', 'redo'] },

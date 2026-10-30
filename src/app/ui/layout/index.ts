@@ -14,7 +14,7 @@ export { Screen } from './Screen';
 export { Section } from './Section';
 export { Shell } from './Shell';
 export { FaceButton, LayerSidebar, Rail, Sidebar } from './Sidebar';
-export { SidePanel } from './SidePanel';
+export { aimedAtPanel, SidePanel } from './SidePanel';
 export { SidePeek, SidePeeks } from './SidePeek';
 export { Stack } from './Stack';
 export { TranslateDesk } from './TranslateDesk';
