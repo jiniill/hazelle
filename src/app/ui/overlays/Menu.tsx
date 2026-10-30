@@ -75,7 +75,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
     if (refocus) (from?.isConnected ? from : opener.ref.current)?.focus();
   };
   // A press on the button that opened it is not outside, so that button closes it again like the menu's own does.
-  useLayer(open, { outside: (target) => !anchor.current?.contains(target) && !from?.contains(target), close });
+  useLayer(open, { outside: (target) => !anchor.current?.contains(target) && !from?.contains(target), close, takesBack: true });
 
   // A menu that is not on the page is closed, so no button elsewhere shows it open.
   useEffect(() => () => menu.set(CLOSED), [menu]);

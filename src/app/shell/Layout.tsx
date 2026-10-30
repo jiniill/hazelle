@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePersisted } from '../common/usePersisted';
 import { useDisplay } from '../display';
 import { keysOf, SHORTCUT_GROUPS, SHORTCUTS, useShortcut } from '../shortcuts';
-import { Dialog, Section, Shell, Shortcuts, Stack, Text, useWide } from '../ui';
+import { backLayers, Dialog, Section, Shell, Shortcuts, Stack, Text, useWide } from '../ui';
 import { Page } from './Page';
-import { navigate, useRoute } from './router';
+import { holdBack, navigate, useRoute } from './router';
 import { HOME, settingsPage, sidebarPage, toolsPage, type Route } from './routes';
 import { settingsEntry, SettingsSidebar } from './settings/SettingsNav';
 import { ToolsSidebar } from './tools/ToolsNav';
@@ -15,6 +15,7 @@ const COLLAPSED = 'risu-alpha:sidebar-collapsed';
 export function Layout() {
   const route = useRoute();
   const wide = useWide();
+  useEffect(() => holdBack(backLayers), []);
   const [collapsed, setCollapsed] = usePersisted(COLLAPSED, (stored) => stored === '1', false, (folded) => (folded ? '1' : '0'));
   // Two panels beside a chat fold the list for their room without touching the stored choice; opening it then keeps it
   // open until the pair closes.

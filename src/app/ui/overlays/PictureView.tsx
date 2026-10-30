@@ -13,7 +13,7 @@ type Props = { src: string; label: string; ratio: number; pages?: Pages; onClose
 export function PictureView({ src, label, ratio, pages, onClose }: Props) {
   const view = useRef<HTMLDivElement>(null);
   // The picture and its buttons are not the backdrop; every empty box around them is.
-  useLayer(true, { outside: (target) => view.current!.contains(target) && !(target as Element).closest(`img, .${styles.chrome}`), close: onClose });
+  useLayer(true, { outside: (target) => view.current!.contains(target) && !(target as Element).closest(`img, .${styles.chrome}`), close: onClose, takesBack: true });
   const trap = useFocusTrap(view);
   const paged = pages && pages.count > 1 ? pages : undefined;
   const keys = (event: KeyboardEvent) => {

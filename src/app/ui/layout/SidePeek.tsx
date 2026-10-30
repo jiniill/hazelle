@@ -25,6 +25,7 @@ export function SidePeek({ label, open, onOpenChange, actions, children }: Props
   useLayer(open, {
     outside: (target) => !root.current?.contains(target),
     close: () => onOpenChange(false),
+    takesBack: true,
   });
 
   return (
