@@ -32,6 +32,8 @@ export const UNSUPPORTED = [
   'setChatRole', 'request', 'generateImage', 'getCharacterImage', 'getCharacterImageMain',
   'getPersonaImage', 'getPersonaImageMain', 'setName', 'setDescription', 'setCharacterFirstMessage',
 ];
+// Async in Risu, so bots write them with :await(), which a bare nil turns into an error before the bot's own nil check.
+const AWAITED = new Set(['request', 'generateImage', 'getCharacterImageMain', 'getPersonaImageMain']);
 
 type Engine = { loaded: HookLog | null; log: HookLog | null; lua: LuaEngine; own: Set<string>; run: Run | null; queue: Promise<unknown>; failed: string | null };
 type Lane = RunLane | 'display';
@@ -398,7 +400,9 @@ export class Lua {
     });
     const set = (name: string, api: (run: Run, ...args: never[]) => unknown) => bind(name, (_key: unknown, ...args: never[]) => (engine.run ? api(engine.run, ...args) : undefined));
     // What a run does outside itself, which an editDisplay pass and a script outliving its run do not.
-    const act = (name: string, api: (run: Acting, ...args: never[]) => unknown) => set(name, (run, ...args) => (run.quiet || !run.host || !run.owner ? undefined : api(run as Acting, ...args)));
+    const act = (name: string, api: (run: Acting, ...args: never[]) => unknown, refused?: Promise<undefined>) => set(name, (run, ...args) => (run.quiet || !run.host || !run.owner ? refused : api(run as Acting, ...args)));
+    // Async in Risu: refused too, a call answers a promise of nil, for :await() to read.
+    const awaited = (name: string, api: (run: Acting, ...args: never[]) => unknown) => act(name, api, Promise.resolve(undefined));
     const last = (run: Run, role: Working['role']) => run.messages.findLast((message) => message.role === role)?.data;
     const model = (role: 'main' | 'aux') => (run: Acting, prompt: string) => {
       const messages = (JSON.parse(prompt) as { role?: unknown; content?: unknown }[]).map((message) => ({ role: MODEL_ROLES[text(message.role)] ?? 'assistant', content: text(message.content) }));
@@ -467,7 +471,7 @@ export class Lua {
       const entry = chatLorebook([{ comment: text(name), content: text(content), insertorder: insertOrder, mode: 'normal', key, secondkey: secondKey, alwaysActive, selective: !!secondKey, useRegex: regex }]).lore[0]!;
       run.lore.set(entry.name, entry);
     });
-    act('loadLoreBooksMain', (run, reserve: unknown) =>
+    awaited('loadLoreBooksMain', (run, reserve: unknown) =>
       run.host.lore(typeof reserve === 'number' ? reserve : null).then((entries) => JSON.stringify((entries ?? []).map(({ role, text: data }) => ({ data, role: role === 'assistant' ? 'char' : role })))),
     );
 
@@ -479,7 +483,7 @@ export class Lua {
     act('alertSelect', (run, options: unknown) => run.host.ask({ kind: 'select', options: Object.values((options ?? {}) as Record<string, unknown>).map(text) }, run.owner).then((answer) => answer ?? ''));
     act('reloadDisplay', (run) => void (run.reload = true));
     act('reloadChat', (run) => void (run.reload = true));
-    act('getTokens', (run, value: unknown) => run.host.tokens(text(value)));
+    awaited('getTokens', (run, value: unknown) => run.host.tokens(text(value)));
     act('sleep', (_run, time: number) => new Promise((resolve) => setTimeout(() => resolve(true), time)));
     // Risu's backgroundHTML is the character's, never a module's.
     set('getBackgroundEmbedding', (run) => run.background ?? run.snapshot.scope.card?.background ?? '');
@@ -490,22 +494,27 @@ export class Lua {
         return saved;
       });
     });
-    act('LLMMain', model('main'));
+    awaited('LLMMain', model('main'));
     // Every mode goes to the 보조 모델; an unknown one is refused before any call, as Risu refuses it. useMultimodal is
     // Risu's third argument: no picture goes with a script's call.
-    act('axLLMMain', (run, prompt: string, _multimodal: unknown, options: unknown) => {
+    awaited('axLLMMain', (run, prompt: string, _multimodal: unknown, options: unknown) => {
       const mode = text(luaOptions(options).mode ?? 'otherAx');
       if (!AX_MODES.has(mode)) return Promise.resolve(JSON.stringify({ success: false, result: `Error: Invalid axLLM mode: ${mode}` }));
       return model('aux')(run, prompt);
     });
     // nil when a call is refused or fails, as Risu answers a script it does not let call.
-    act('similarity', (run, source: unknown, values: unknown) => ranked(run, text(source), Object.values((values ?? {}) as Record<string, unknown>).map(text)));
+    awaited('similarity', (run, source: unknown, values: unknown) => ranked(run, text(source), Object.values((values ?? {}) as Record<string, unknown>).map(text)));
 
     set('hash', async (_run, value: unknown) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text(value))))].map((byte) => byte.toString(16).padStart(2, '0')).join(''));
     bind('logMain', (value: string) => {
       if (engine.log) boundedItem(engine.log, engine.log.logs, clipped(engine.log, value));
     });
-    for (const name of UNSUPPORTED) set(name, (run) => void run.missing.add(name));
+    for (const name of UNSUPPORTED) {
+      set(name, (run) => {
+        run.missing.add(name);
+        return AWAITED.has(name) ? Promise.resolve() : undefined;
+      });
+    }
   }
 }
 

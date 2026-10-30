@@ -214,6 +214,7 @@ describe('Lua runs', () => {
     const failed = await run(`function onStart(id)\n  local none = nil\n  return none.field\nend`, { kind: 'start' });
     expect(failed.errors[0]).toMatchObject({ message: expect.stringContaining('main:3:') });
     expect((await run(`function onStart(id) generateImage(id, 'x') setChatVar(id, 'after', '1') end`, { kind: 'start' }))).toMatchObject({ missing: ['generateImage'], writes: [['after', '1']] });
+    expect(await run(`onStart = async(function(id) local image = generateImage(id, 'x'):await() setChatVar(id, 'after', tostring(image)) end)`, { kind: 'start' })).toMatchObject({ errors: [], missing: ['generateImage'], writes: [['after', 'nil']] });
     expect((await run(`syntax error here`, { kind: 'start' })).errors).toHaveLength(1);
     expect((await run(`function onStart(id) while true do end end`, { kind: 'start' })).errors[0]).toMatchObject({ message: expect.stringContaining('timeout') });
   });
