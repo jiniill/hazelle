@@ -224,9 +224,9 @@ function block(item: Json): Block | Counted {
   const wrapped = WRAPPED.get(item.type);
   if (wrapped) {
     // The role on these is an optional override of the bucket's, which is system (compat spec, Template assembly).
-    // Current Risu keeps it in `role2`; older editors wrote `role` (export spec, Finding: role2).
-    const override = item.role2 ?? item.role;
-    const placedAs = override === undefined ? 'system' : ROLES.get(override);
+    // Never `role`: most real presets carry a stale one here that Risu ignores (export spec, Finding: role2), and
+    // reading it sends the description as a turn.
+    const placedAs = item.role2 === undefined ? 'system' : ROLES.get(item.role2);
     return placedAs ? { ...named, kind: 'slot', slot: wrapped, role: placedAs, wrapper: text(item.innerFormat) || null } : 'unread-item';
   }
   switch (item.type) {

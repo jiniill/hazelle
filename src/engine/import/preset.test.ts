@@ -46,7 +46,7 @@ it('counts the prompt settings this app has no setting for, each only off its Ri
 
 it('places a persona, description, memory or author note item that names no role as a system slot', () => {
   const template = ['persona', 'description', 'memory', 'authornote'].map((type) => ({ type, innerFormat: '' }));
-  const read = convertPreset({ name: 'p', promptTemplate: [...template, { type: 'persona', role: 'narrator' }] });
+  const read = convertPreset({ name: 'p', promptTemplate: [...template, { type: 'persona', role2: 'narrator' }] });
   if (!read.ok) throw new Error(read.failure.kind);
   expect(read.prompt.blocks.map((block) => [block.kind === 'slot' && block.slot, 'role' in block && block.role])).toEqual([
     ['persona', 'system'],
@@ -57,10 +57,10 @@ it('places a persona, description, memory or author note item that names no role
   expect(read.unsupported).toContainEqual({ kind: 'unread-item', count: 1 });
 });
 
-it("reads a slot's role from role2, as current Risu writes it, and from role in older files", () => {
+it("reads a slot's role from role2 alone, ignoring the stale role Risu ignores", () => {
   const read = convertPreset({ name: 'p', promptTemplate: [{ type: 'description', role2: 'user' }, { type: 'persona', role: 'bot' }] });
   if (!read.ok) throw new Error(read.failure.kind);
-  expect(read.prompt.blocks.map((block) => 'role' in block && block.role)).toEqual(['user', 'assistant']);
+  expect(read.prompt.blocks.map((block) => 'role' in block && block.role)).toEqual(['user', 'system']);
 });
 
 it('reads a chat rangeStart of -1000 as the whole chat whatever its rangeEnd, as Risu does', () => {

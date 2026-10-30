@@ -31,7 +31,7 @@ describe('importPreset', () => {
     expect(prompt.name).toBe('🏓 핑퐁 간소화');
     expect(prompt.blocks.map(outline)).toEqual([
       ['text', null, 'system', null],
-      ['description', null, 'assistant', '<Role-play Materials>'],
+      ['description', null, 'system', '<Role-play Materials>'],
       ['persona', null, 'system', '[<user> (Main PC)]'],
       ['text', null, 'system', null],
       ['lorebook', null],
@@ -39,7 +39,7 @@ describe('importPreset', () => {
       ['memory', null, 'system', null],
       ['text', null, 'system', null],
       ['text', '글노덮', 'system', 'globalNote'],
-      ['authorNote', null, 'assistant', null],
+      ['authorNote', null, 'system', null],
       ['postEverything', null],
       ['text', '가이드라인 (중요!!!)', 'system', 'main'],
       ['chat', '과거 챗', { from: 0, to: -1 }],
