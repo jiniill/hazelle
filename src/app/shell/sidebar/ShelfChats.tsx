@@ -9,7 +9,7 @@ import { useImport } from '../../common/importing';
 import { ago } from '../../common/time';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
 import { useWritingChats } from '../../session';
-import { Button, Empty, ItemRow, NavRow, SideTitle, Sidebar, Viewport } from '../../ui';
+import { Button, Empty, IconButton, ItemRow, NavRow, Row, SideTitle, Sidebar, Viewport } from '../../ui';
 import { navigate, useRoute } from '../router';
 import { HOME } from '../routes';
 import { LayerButtons } from './LayerButtons';
@@ -41,12 +41,12 @@ export function ShelfChats({ page, shelf }: Props) {
             name={shelfName(shelf)}
             onOpen={open}
           />
-          <Button variant="secondary" size="sm" icon={ACTS.import.icon} onClick={() => pickChats(shelf.id)}>
-            {IMPORT_CHATS}
-          </Button>
-          <Button variant="secondary" size="sm" icon={MessageSquarePlus} onClick={() => navigate({ kind: 'new-chat', character: shelf.id })}>
-            새 채팅
-          </Button>
+          <Row kind="spread">
+            <Button variant="secondary" size="sm" icon={MessageSquarePlus} onClick={() => navigate({ kind: 'new-chat', character: shelf.id })}>
+              새 채팅
+            </Button>
+            <IconButton icon={ACTS.import.icon} label={IMPORT_CHATS} size="sm" onClick={() => pickChats(shelf.id)} />
+          </Row>
           {field}
         </>
       }
