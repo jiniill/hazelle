@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ToolDraft } from '../../model/tool';
-import { applyDraft, applyPreview } from '../../runtime/tools/drafts';
+import { applyDraft, applyPreview, installedDiffers } from '../../runtime/tools/drafts';
 import { setModuleAt } from '../../runtime/modules';
 import { undoToolImport } from '../../runtime/tools/store';
 import { describeImportFailure } from '../common/importFailure';
@@ -20,7 +20,9 @@ export function ApplyDialog({ id, draft, onClose }: { id: string; draft: ToolDra
   const toast = useToast();
   const [where, setWhere] = useState<Where>('always');
   const [busy, setBusy] = useState(false);
+  const [replaces, setReplaces] = useState(false);
   const preview = applyPreview(store, draft);
+  useEffect(() => { void installedDiffers(store, files, draft).then(setReplaces); }, [store, files, draft]);
 
   async function apply() {
     setBusy(true);
@@ -57,6 +59,7 @@ export function ApplyDialog({ id, draft, onClose }: { id: string; draft: ToolDra
         </>
       }
     >
+      {replaces && <Callout tone="warn">마지막으로 적용한 뒤 설치된 코드가 바뀌었어요. 적용하면 바뀐 코드를 덮어써요.</Callout>}
       <Facts items={[{ label: '버전', value: previous ? `${toolVersion(previous.manifest.version)} → ${toolVersion(manifest.version)}` : toolVersion(manifest.version) }]} />
       {added.length > 0 && (
         <SettingGroup label="새 권한">

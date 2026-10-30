@@ -3,7 +3,7 @@ import { identity, readTool, toolSource } from '../../engine/import/tool';
 import { toolId } from '../../model/tool';
 import { setModuleDeleted } from '../modules';
 import { testServer } from '../testing';
-import { addDraftAsk, applyDraft, applyPreview, blankDraft, createDraft, deleteDraft, DRAFT_BYTES, draftOfTool, draftsOf, draftState, saveDraft } from './drafts';
+import { addDraftAsk, applyDraft, applyPreview, blankDraft, createDraft, deleteDraft, DRAFT_BYTES, draftOfTool, draftsOf, draftState, importFile, installedDiffers, saveDraft, undoFileImport } from './drafts';
 import { importTool } from './store';
 
 const server = testServer();
@@ -105,6 +105,33 @@ it('opens the installed file once as identity and body, reuses its edited draft 
   expect(await draftOfTool(store, files, module)).toEqual({ ok: false, error: 'draft-too-large' });
   await store.update('tool', toolId(module), (tool) => ({ ...tool, manifest: { ...tool.manifest, risu: { verdict: 'all', missing: [], hosts: [] } } }));
   expect(await draftOfTool(store, files, module)).toEqual({ ok: false, error: 'risu-plugin' });
+});
+
+it('carries a draft without edits along with an imported file, keeps one with edits, and tells 적용 what it would replace', async () => {
+  const { store, files } = await server.account();
+  const written = (body: string) => { const read = readTool(new TextEncoder().encode(`//@version 1.0.0\n//@author jin\n\n//@api 1\n//@name notes\n\n\n${body}`)); if (!read.ok) throw new Error('fixture'); return read.tool; };
+  const first = await importFile(store, files, written('first();'));
+  if (!first.ok) throw new Error(first.error);
+  const opened = await draftOfTool(store, files, first.data.id);
+  if (!opened.ok) throw new Error(opened.error);
+  const draft = () => store.get('tooldraft', opened.data)!.value;
+  expect(await installedDiffers(store, files, draft())).toBe(false);
+
+  const second = await importFile(store, files, written('second();'));
+  if (!second.ok) throw new Error(second.error);
+  expect(draft()).toMatchObject({ body: 'second();' });
+  expect(draftState(draft())).toBe('applied');
+  expect(await installedDiffers(store, files, draft())).toBe(false);
+
+  await undoFileImport(store, second.data, second.data.previous!);
+  expect(draft()).toMatchObject({ body: 'first();' });
+  expect(await installedDiffers(store, files, draft())).toBe(false);
+
+  await saveDraft(store, opened.data, { body: 'mine();' });
+  expect(await installedDiffers(store, files, draft())).toBe(false);
+  expect(await importFile(store, files, written('third();'))).toMatchObject({ ok: true, data: { carried: null } });
+  expect(draft()).toMatchObject({ body: 'mine();' });
+  expect(await installedDiffers(store, files, draft())).toBe(true);
 });
 
 it('starts with a readable native plugin and accepts every allowed username character without a fallback author', () => {

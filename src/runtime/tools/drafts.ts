@@ -7,12 +7,13 @@ import type { ToolManifest, ToolUse } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
 import type { Files } from '../files';
 import type { ObjectStore } from '../store';
-import { importTool, sameTool, TOOL_ROW_BYTES, toolSettings, type ToolImport } from './store';
+import { importTool, sameTool, TOOL_ROW_BYTES, toolSettings, undoToolImport, type ToolImport } from './store';
 
 export const DRAFT_BYTES: number = TOOL_ROW_BYTES;
 const encoder = new TextEncoder();
 export type DraftFile = Pick<ToolDraft, 'identity' | 'body'>;
 const sourceOf = (draft: DraftFile) => toolSource(draft.identity, draft.body);
+const fileOf = (manifest: ToolManifest, text: string): DraftFile => ({ identity: { name: manifest.name, author: manifest.author, displayName: manifest.displayName, version: manifest.version, description: manifest.description }, body: splitTool(text).body });
 const tooLarge = (draft: DraftFile) => encoder.encode(sourceOf(draft)).byteLength > DRAFT_BYTES;
 
 export const draftsOf = (store: Pick<ObjectStore, 'list'>): Stored<'tooldraft'>[] =>
@@ -69,10 +70,46 @@ export async function draftOfTool(store: ObjectStore, files: Files, module: stri
   const read = await files.read(tool.value.file);
   if (!read.ok) return read;
   if (read.data.byteLength > DRAFT_BYTES) return { ok: false, error: 'draft-too-large' };
-  const file = { identity: { name: manifest.name, author: manifest.author, displayName: manifest.displayName, version: manifest.version, description: manifest.description }, body: splitTool(new TextDecoder().decode(read.data)).body };
+  const file = fileOf(manifest, new TextDecoder().decode(read.data));
   const id = crypto.randomUUID();
   const saved = await store.create('tooldraft', { ...file, module, applied: sourceOf(file), asks: [], at: Date.now() }, { id, parent: null });
   return saved.ok ? { ok: true, data: id } : saved;
+}
+
+// carried: the draft as it was before the file replaced it, for the import's 되돌리기.
+export type FileImport = ToolImport & { carried: Stored<'tooldraft'> | null };
+
+// A file imported over a plugin carries the plugin's draft along. A draft with edits of its own, or one that could not
+// hold the file, stays as it was, and installedDiffers tells 적용 so.
+export async function importFile(store: ObjectStore, files: Files, tool: ImportedTool): Promise<ApiResult<FileImport>> {
+  const installed = await importTool(store, files, tool);
+  if (!installed.ok) return installed;
+  const draft = draftsOf(store).find(({ value }) => value.module === installed.data.id);
+  const file = fileOf(tool.manifest, new TextDecoder().decode(tool.bytes));
+  if (!draft || draftState(draft.value) !== 'applied' || tooLarge(file)) return { ok: true, data: { ...installed.data, carried: null } };
+  const saved = await store.update('tooldraft', draft.id, (current) => ({ ...current, ...file, applied: sourceOf(file), at: Date.now() }));
+  return saved.ok ? { ok: true, data: { ...installed.data, carried: draft } } : saved;
+}
+
+export async function undoFileImport(store: ObjectStore, { id, carried }: FileImport, previous: Tool): Promise<ApiResult<unknown>> {
+  const undone = await undoToolImport(store, id, previous);
+  if (!undone.ok || !carried) return undone;
+  const { identity, body, applied } = carried.value;
+  return store.update('tooldraft', carried.id, (current) => draftState(current) === 'applied' ? { ...current, identity, body, applied } : null);
+}
+
+// Whether the installed file is no longer the one the draft last matched, so 적용 would replace code the draft never held.
+// Through the manifest on both sides: an imported file's header need not be written as toolSource writes it.
+export async function installedDiffers(store: Pick<ObjectStore, 'get'>, files: Files, draft: ToolDraft): Promise<boolean> {
+  const tool = draft.module && store.get('tool', toolId(draft.module));
+  if (!tool || draft.applied === null) return false;
+  const read = await files.read(tool.value.file);
+  return read.ok && canonical(new TextDecoder().decode(read.data)) !== canonical(draft.applied);
+}
+
+function canonical(text: string): string {
+  const read = readTool(encoder.encode(text));
+  return read.ok ? sourceOf(fileOf(read.tool.manifest, text)) : text;
 }
 
 const nextVersion = (version: string) => {

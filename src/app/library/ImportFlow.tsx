@@ -1,4 +1,5 @@
-import { importTool, sameTool, undoToolImport } from '../../runtime/tools/store';
+import { importFile, undoFileImport } from '../../runtime/tools/drafts';
+import { sameTool } from '../../runtime/tools/store';
 import { useToast } from '../toast';
 import { Check, FileText, MessageSquare, MessageSquarePlus, Package, Puzzle, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -217,11 +218,11 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         return saved.ok ? chatOutcome(file.name, saved.data, nameOf(character), []) : unsaved(file.name, saved);
       }
       if ('tool' in parsed) {
-        const saved = await importTool(store, files, parsed.tool);
+        const saved = await importFile(store, files, parsed.tool);
         if (!saved.ok) return unsaved(file.name, saved);
         const { previous } = saved.data;
         const placed = !previous && place && (await setModuleAt(store, place, saved.data.id, true));
-        if (previous) offer({ message: `'${parsed.tool.manifest.displayName}' ${TOOL}을 가져왔어요.`, run: () => undoToolImport(store, saved.data.id, previous) });
+        if (previous) offer({ message: `'${parsed.tool.manifest.displayName}' ${TOOL}을 가져왔어요.`, run: () => undoFileImport(store, saved.data, previous) });
         return toolOutcome(file.name, title, saved.data, { at: place?.kind ?? null, failure: placed && !placed.ok ? describeFailure(placed) : null });
       }
       if ('preset' in parsed) {
