@@ -9,6 +9,7 @@ export type Outcome = {
   state: 'done' | 'cut' | 'failed';
   // refused: the provider ended the reply by refusing it after text had come; refused with no text is a failure.
   cut: 'length' | 'no-terminal' | 'stopped' | 'refused' | null;
+  // null on a failed reply: the model finished without a word (or a call), and no provider said why.
   error: { kind: 'provider' | 'bad-event' | 'network'; detail: string; code?: string } | null;
   inputComplete?: true;
   finishReason: string | null;
@@ -31,7 +32,7 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
   const facts: StreamFacts = { rawUsage: {}, finishReason: null, id: null, tier: null, calls: [] };
   let said = false;
   const told = (phase: Phase, text: string) => {
-    if (phase === 'text') said = true;
+    if (phase === 'text' && /\S/.test(text)) said = true;
     onText(phase, text);
   };
   const scanner = inline.keep ? null : thoughts(told, inline.takeBack ?? (() => {}));
@@ -72,14 +73,15 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
   if (terminal?.state === 'failed') return finish('failed', null, { kind: 'provider', detail: terminal.error, ...(terminal.code && { code: terminal.code }) });
   // A stream may close without its end marker after the model already said why it stopped.
   if (!terminal && facts.finishReason === null) return finish('cut', 'no-terminal', null);
-  if (facts.finishReason !== null && codec.refused(facts.finishReason)) {
+  if (facts.refusal || (facts.finishReason !== null && codec.refused(facts.finishReason))) {
     // Judged after finish, which lets the scanner say the text it held back.
     const refused = finish('cut', 'refused', null);
-    return said ? refused : { ...refused, state: 'failed', cut: null, error: { kind: 'provider', detail: facts.finishReason } };
+    return said ? refused : { ...refused, state: 'failed', cut: null, error: { kind: 'provider', detail: facts.refusal ?? facts.finishReason! } };
   }
   const outcome = facts.finishReason !== null && codec.truncated(facts.finishReason) ? finish('cut', 'length', null) : finish('done', null, null);
   // A finish reason without the codec's terminal is not authoritative input evidence.
-  return terminal?.state === 'completed' ? { ...outcome, inputComplete: true } : outcome;
+  const answered = terminal?.state === 'completed' ? { ...outcome, inputComplete: true as const } : outcome;
+  return answered.state === 'done' && !said && facts.calls.length === 0 ? { ...answered, state: 'failed' } : answered;
 }
 
 type Append = (phase: Phase, text: string) => void;

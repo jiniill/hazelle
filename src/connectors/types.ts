@@ -143,7 +143,8 @@ export type Phase = 'text' | 'reasoning';
 
 // tier: the service tier the reply says served it; null where it names none.
 // calls: the tool calls read so far; at is the codec's own key for a call's later chunks (an index, an item id).
-export type StreamFacts = { rawUsage: Record<string, unknown>; finishReason: string | null; id: string | null; tier: string | null; calls: (ToolCall & { at: number | string })[] };
+// refusal: the sentence a provider sent in place of the reply, where it has a field of its own for one.
+export type StreamFacts = { rawUsage: Record<string, unknown>; finishReason: string | null; id: string | null; tier: string | null; calls: (ToolCall & { at: number | string })[]; refusal?: string };
 
 export type Terminal = { state: 'completed' } | { state: 'failed'; error: string; code?: string };
 

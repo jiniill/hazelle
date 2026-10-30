@@ -56,7 +56,10 @@ function readItem(item: unknown, at: number, facts: StreamFacts, append: (phase:
     const reasoning = [...texts(item.summary, 'summary_text'), ...texts(item.content, 'reasoning_text')].join('\n\n');
     if (reasoning) append('reasoning', reasoning);
   }
-  if (item.type === 'message') for (const text of texts(item.content, 'output_text')) append('text', text);
+  if (item.type === 'message') {
+    for (const text of texts(item.content, 'output_text')) append('text', text);
+    for (const part of list(item.content)) if (isRecord(part) && part.type === 'refusal' && typeof part.refusal === 'string') facts.refusal = (facts.refusal ?? '') + part.refusal;
+  }
 }
 
 export const responses: Codec = {
@@ -117,6 +120,9 @@ export const responses: Codec = {
       }
       case 'response.output_text.delta':
         if (typeof event.delta === 'string') append('text', event.delta);
+        break;
+      case 'response.refusal.delta':
+        if (typeof event.delta === 'string') facts.refusal = (facts.refusal ?? '') + event.delta;
         break;
       case 'response.reasoning_summary_text.delta':
       case 'response.reasoning_text.delta':

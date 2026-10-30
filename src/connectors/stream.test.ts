@@ -111,6 +111,13 @@ describe('chat completions stream', () => {
     expect(none.outcome).toMatchObject({ state: 'failed', cut: null, error: { kind: 'provider', detail: 'content_filter' } });
   });
 
+  it('fails a reply that finished without a word, and keeps one that only made a call', async () => {
+    const none = await decode(openRouter, body(sse(chunk({ reasoning: '생각만' }, 'stop'), '[DONE]')));
+    expect(none.outcome).toMatchObject({ state: 'failed', cut: null, error: null, finishReason: 'stop' });
+    const call = await decode(openRouter, body(sse(chunk({ tool_calls: [{ index: 0, id: 'a', function: { name: 'f', arguments: '{}' } }] }, 'tool_calls'), '[DONE]')));
+    expect(call.outcome).toMatchObject({ state: 'done', calls: [{ name: 'f' }] });
+  });
+
   it('marks a stream that ends without a finish reason or end marker as cut, and one with a finish reason as done', async () => {
     expect((await decode(openRouter, body(sse(chunk({ content: '중간에' }))))).outcome).toMatchObject({ state: 'cut', cut: 'no-terminal' });
     const endedWithoutTerminal = (await decode(openRouter, body(sse(chunk({ content: '끝' }, 'stop'))))).outcome;

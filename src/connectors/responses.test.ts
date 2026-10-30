@@ -87,6 +87,13 @@ describe('responses request', () => {
 });
 
 describe('responses stream', () => {
+  it("fails a refusal with the provider's sentence, in a stream and whole", async () => {
+    const stream = await decode(route, sse({ type: 'response.refusal.delta', delta: '도와드릴 ' }, { type: 'response.refusal.delta', delta: '수 없어요' }, { type: 'response.completed', response: { status: 'completed' } }));
+    expect(stream.outcome).toMatchObject({ state: 'failed', error: { kind: 'provider', detail: '도와드릴 수 없어요' } });
+    const whole = { object: 'response', status: 'completed', output: [{ type: 'message', content: [{ type: 'refusal', refusal: '안 돼요' }] }] };
+    expect((await decode(route, JSON.stringify(whole), 'application/json')).outcome).toMatchObject({ state: 'failed', error: { kind: 'provider', detail: '안 돼요' } });
+  });
+
   it('keeps cache writes as input details without adding them to total input', async () => {
     const { outcome } = await decode(route, sse({ type: 'response.completed', response: { status: 'completed', usage: { input_tokens: 1200, input_tokens_details: { cached_tokens: 800, cache_write_tokens: 300 }, output_tokens: 20 } } }));
     expect(outcome.usage).toMatchObject({ inputTokens: 1200, cachedInputTokens: 800, cacheWriteInputTokens: 300 });
