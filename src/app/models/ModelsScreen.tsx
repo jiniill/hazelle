@@ -4,7 +4,7 @@ import { imageOnly, setDefaultModel } from '../../runtime/assignment';
 import { addDefaultProfile, modelProfile, profileUsers, setDefaultProfile } from '../../runtime/profiles';
 import { TASK_NAMES } from '../common/prompt-words';
 import { findStarred, RoleCard } from '../common/RolePicker';
-import { defaultFirst, NO_PROFILE, profileLine, valuesLine } from '../common/settingWords';
+import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { ACTS, newOf } from '../common/acts';
 import { AUX_HELP, DEFAULT_MODELS, defaultMark, follows, MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, noStarred, PAGES, ROLE_TAGS, SCOPE } from '../common/words';
@@ -38,7 +38,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
   const cardOf = (ref: ModelRef | undefined) => {
     const found = ref && models.find(({ connection, model }) => sameModelRef(refOf(connection.id, model), ref));
     if (!found) return {};
-    return { values: imageOnly(found.model) ? undefined : profileLine(found.choice, settings.profile), open: () => navigate({ kind: 'model', ...refOf(found.connection.id, found.model) }) };
+    return { values: imageOnly(found.model) ? undefined : profileLine(found.choice, settings.profile, NO_PROFILE_VALUES), open: () => navigate({ kind: 'model', ...refOf(found.connection.id, found.model) }) };
   };
   const search = useSearch(models, `${STARRED} 검색`, ({ connection, model }) => [...entryTerms(model), connection.value.label]);
   const sorted = defaultFirst(profiles, settings.profile);
