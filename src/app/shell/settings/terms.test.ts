@@ -6,15 +6,15 @@ import { EMPTY_SETTINGS } from '../../../model/settings';
 import type { SettingsPage } from '../routes';
 import { hitsOf, hitTexts, subpages } from './terms';
 
-const PLACES = (['models', 'connections', 'chat', 'labs', 'prompts', 'personas', 'modules', 'plugins', 'display', 'controls', 'sounds', 'account', 'admin'] satisfies SettingsPage[]).map((page) => ({ page, label: PAGES[page], route: { kind: page === 'account' ? 'usage' : 'settings' } as const }));
+const PLACES = (['models', 'connections', 'chat', 'labs', 'prompts', 'personas', 'modules', 'plugins', 'display', 'controls', 'sounds', 'account', 'admin'] satisfies SettingsPage[]).map((page) => ({ page, label: PAGES[page], route: { kind: 'settings' } as const }));
 const hits = hitsOf(PLACES, subpages({ ...EMPTY_SETTINGS, profile: 'main', labs: LABS.map(({ id }) => id) }, [{ id: 'main' }]));
 const search = (words: string) => hits.filter((hit) => matches(words, ...hitTexts(hit)));
 
 const SHOWN = Object.values(
   import.meta.glob<string>(['/src/app/{settings,models,connections,admin}/*.tsx', '/src/app/common/{TranslateRows,IllustrateRows,MemoryFields,ReadingRows,RetriesRow}.tsx', '!**/*.test.tsx'], { query: '?raw', import: 'default', eager: true }),
 );
-// The label is the first attribute with a literal value, past others in braces; an inner control's own label is not it.
-const LITERAL = /<(?:SettingRow|CountRow|TaskModelRow|Section|Panel)\s+(?:\w+=\{[^}]*\}\s+)*(?:label|title)="([^"]+)"/g;
+// The element's own label or title, past attributes before it; an inner control's own label is not it.
+const LITERAL = /<(?:SettingRow|CountRow|TaskModelRow|Section|Panel)\s+(?:\w+=(?:\{[^}]*\}|"[^"]*")\s+)*(?:label|title)="([^"]+)"/g;
 // Shown, but no one searches by them: the usage page's table heads, an operator dialog's field, 장기 기억's on-switch.
 const NOT_SOUGHT = new Set(['합계', '캐릭터', '신고 이유', '사용']);
 
