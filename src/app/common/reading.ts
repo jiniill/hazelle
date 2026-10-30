@@ -95,7 +95,7 @@ function parseFollow(value: unknown): Follow | null {
   return typeof light === 'string' && typeof dark === 'string' && mode ? { light, dark, applied: mode } : null;
 }
 
-// No choice follows the device: a finger has no Shift to break a line with, and the send button is there.
+// Coarse with no choice is deliberately false: Enter breaks the line there, and the send button sends.
 export const effectiveEnterSends = (choice: Display['enterSendsChoice'], coarsePointer: boolean) => choice ?? !coarsePointer;
 
 export const parseStoredDisplay = (stored: string) => parseDisplay(stored, DISPLAY_DEFAULT);
