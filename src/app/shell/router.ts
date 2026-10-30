@@ -91,6 +91,8 @@ export function navigate(route: Route, { replace = false } = {}) {
   history[replace || have > 0 ? 'replaceState' : 'pushState'](null, '', at);
   window.scrollTo(0, 0);
   window.dispatchEvent(new Event(NAVIGATED));
+  // An overlay that stays across the route (단축키 over a keyboard shortcut) has just lost its guard, with no layer change to say so.
+  queueMicrotask(settle);
 }
 
 // NavBar's back; none where back is null, since a sidebar beside the screen is the way back.

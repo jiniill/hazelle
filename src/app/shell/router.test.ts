@@ -138,6 +138,18 @@ describe('back with overlays open', () => {
     expect(page.url()).toBe('/');
   });
 
+  it('keeps a guard for an overlay that stays across the route', async () => {
+    const { page, overlays } = start();
+    await overlays.set('dialog');
+    navigate(USAGE);
+    await Promise.resolve();
+    page.back();
+    expect(overlays.open).toEqual([]);
+    expect(page.url()).toBe(href(USAGE));
+    page.back();
+    expect(page.url()).toBe('/');
+  });
+
   it('takes the page itself on a replace from inside', async () => {
     const { page, overlays } = start();
     navigate(DISPLAY);
