@@ -27,6 +27,10 @@
     animation: fadeAway var(--duration-found) var(--ease-enter) forwards;
   }
 
+  .sought {
+    animation: sought var(--duration-found) var(--ease-enter);
+  }
+
   .spin {
     animation: spin var(--duration-spin) linear infinite;
   }
@@ -85,6 +89,13 @@
     from {
       opacity: 0;
       transform: translateY(-4px);
+    }
+  }
+
+  @keyframes sought {
+    from,
+    60% {
+      background-color: var(--color-found-term);
     }
   }
 

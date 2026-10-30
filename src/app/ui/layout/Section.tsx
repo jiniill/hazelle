@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, type ReactNode } from 'react';
 import { ButtonSlot } from '../controls/Button';
+import { useSeekRow } from '../foundation/seek';
 import { Tag } from '../foundation/Tag';
 import { Hint, type Help } from '../overlays/Hint';
 import styles from './Section.module.css';
@@ -18,15 +19,15 @@ type Props = {
 };
 
 export function Section({ title, level = 2, note, help, tag, action, seek = false, group = false, children }: Props) {
-  const self = useRef<HTMLElement>(null);
+  const head = useSeekRow<HTMLDivElement>(title, 'start');
   useLayoutEffect(() => {
-    if (seek) self.current?.scrollIntoView({ block: 'start' });
-  }, [seek]);
+    if (seek) head.current?.scrollIntoView({ block: 'start' });
+  }, [seek, head]);
   const Heading = level === 2 ? 'h2' : 'h3';
   const noted = note && <span className={styles.note}>{note}</span>;
   return (
-    <section ref={self} className={[styles.section, styles[`level${level}`], group && styles.group].filter(Boolean).join(' ')}>
-      <div className={styles.head}>
+    <section className={[styles.section, styles[`level${level}`], group && styles.group].filter(Boolean).join(' ')}>
+      <div ref={head} className={styles.head}>
         <span className={styles.name}>
           <Heading className={styles.title}>{title}</Heading>
           {tag && (

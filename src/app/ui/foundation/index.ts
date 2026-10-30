@@ -8,6 +8,7 @@ export { Icon } from './Icon';
 export { formatKeys, pressed, pressedKey, type Chord } from './keys';
 export { hasFinePointer, isDarkScheme, isInstalled, useCoarsePointer, useDarkScheme, usePanelsBeside, useSplit, useViewport, useWide } from './media';
 export { markScrollbars } from './scrollbar';
+export { seekRow } from './seek';
 export { Tag } from './Tag';
 export { Text } from './Text';
 export { Written } from './Written';

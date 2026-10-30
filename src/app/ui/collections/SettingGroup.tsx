@@ -1,5 +1,6 @@
 import { createContext, useContext, useId, type ReactNode } from 'react';
 import { RowSwitch } from '../controls/Switch';
+import { useSeekRow } from '../foundation/seek';
 import { Hint, type Help } from '../overlays/Hint';
 import { FolderMark } from './FolderMark';
 import styles from './SettingGroup.module.css';
@@ -41,10 +42,11 @@ type RowProps = {
 export function SettingRow({ label, folder = false, sentence, changed = false, help, sub, preview, control, action, wide = false, menu, error, note }: RowProps) {
   const id = useId();
   const switchId = useId();
+  const self = useSeekRow<HTMLDivElement>(label);
   const grouped = useContext(Grouped);
   const className = [styles.row, grouped ? styles.ruled : styles.panel, wide && styles.wide, folder && styles.opens].filter(Boolean).join(' ');
   return (
-    <div className={className} role="group" aria-labelledby={sentence ? undefined : id} aria-label={sentence ? label : undefined}>
+    <div ref={self} className={className} role="group" aria-labelledby={sentence ? undefined : id} aria-label={sentence ? label : undefined}>
       <div className={styles.words}>
         <span className={styles.name}>
           {folder && (

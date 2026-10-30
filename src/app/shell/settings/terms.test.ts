@@ -41,6 +41,12 @@ describe('설정 검색', () => {
     expect(none.find(({ term }) => term === '스트리밍')?.to).toEqual({ kind: 'models' });
   });
 
+  it('seeks the row a hit names, and nothing on a hit that names the page itself', () => {
+    expect(search('스트리밍')[0]?.seek).toBe('스트리밍');
+    expect(search('캐싱')[0]?.seek).toBe('캐시');
+    expect(hits.find(({ term, where }) => term === '디스플레이' && where === undefined)?.seek).toBeUndefined();
+  });
+
   it('keys each row of a result list apart', () => {
     const keys = hits.map(({ where, term }) => `${where}/${term}`);
     expect(keys.filter((key, index) => keys.indexOf(key) !== index)).toEqual([]);

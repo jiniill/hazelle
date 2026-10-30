@@ -1,8 +1,7 @@
 import { ACTS, importOf, newOf } from '../../common/acts';
 import { LABS } from '../../common/labs';
-import { NUMBER } from '../../common/settingWords';
+import { NUMBER, PROFILE_LABELS, PROFILE_ROWS } from '../../common/settingWords';
 import { ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, FEATURE_NAMES, FEATURES_TITLE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, TOOL, TRANSLATOR_NOTE } from '../../common/words';
-import { PROFILE_LABELS, PROFILE_ROWS } from '../../models/profileRows';
 import type { Feature } from '../../../model/features';
 import type { Settings } from '../../../model/settings';
 import { availableFeatures } from '../../../runtime/features';
@@ -40,7 +39,7 @@ const FEATURE_TERMS: Record<Feature, string[]> = {
 const HIDDEN: Record<string, string[]> = {
   [PROFILE_ROWS.cache]: ['캐싱'],
   글꼴: ['폰트'],
-  테마: ['다크', '라이트'],
+  테마: ['다크 모드', '라이트 모드'],
   [FEATURE_NAMES.memory]: ['메모리'],
   [NUMBER.temperature.label]: ['temperature'],
   [NUMBER.maxOutput.label]: ['최대 토큰'],
@@ -63,13 +62,14 @@ export const subpages = (settings: Settings, profiles: readonly { id: string }[]
 };
 
 // where: the page that holds the term, unless the term is that page's own label.
-export type Hit<Place> = { term: string; place: Place; where: string | undefined; to: Route };
+// seek: the row or section it names on the page it opens; a page's own label names none.
+export type Hit<Place> = { term: string; place: Place; where: string | undefined; to: Route; seek: string | undefined };
 
 export const hitsOf = <Place extends { page: SettingsPage; label: string; route: Route }>(places: readonly Place[], subs: ReturnType<typeof subpages>): Hit<Place>[] =>
   places.flatMap((place) => [
-    ...[place.label, ...TERMS[place.page]].map((term) => ({ term, place, where: term === place.label ? undefined : place.label, to: place.route })),
+    ...[place.label, ...TERMS[place.page]].map((term) => ({ term, place, where: term === place.label ? undefined : place.label, to: place.route, seek: term === place.label ? undefined : term })),
     ...(subs[place.page] ?? []).flatMap((sub) =>
-      [sub.label, ...sub.terms].map((term) => ({ term, place, where: term === sub.label ? (sub.where ?? place.label) : `${place.label} › ${sub.label}`, to: sub.route })),
+      [sub.label, ...sub.terms].map((term) => ({ term, place, where: term === sub.label ? (sub.where ?? place.label) : `${place.label} › ${sub.label}`, to: sub.route, seek: term === sub.label ? undefined : term })),
     ),
   ]);
 

@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { createContext, useContext, type ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
+import { useSeekRow } from '../foundation/seek';
 import { Tag } from '../foundation/Tag';
 import { MenuSlot, useMenuSlot } from '../overlays/MoreMenu';
 import { FolderMark } from './FolderMark';
@@ -66,6 +67,7 @@ export function ListItem({ leading, folder = false, title, badge, code, descript
   const windowed = useContext(Windowed);
   const places = useContext(Places);
   const slot = useMenuSlot();
+  const self = useSeekRow<HTMLLIElement>(title);
   const end = trailing ?? ((places || (folder && expanded === undefined)) && onClick ? <Icon icon={ChevronRight} /> : undefined);
   const meta =
     code || tags.length > 0 ? (
@@ -125,5 +127,5 @@ export function ListItem({ leading, folder = false, title, badge, code, descript
       {children && <ul className={styles.nested}>{children}</ul>}
     </>
   );
-  return windowed ? content : <li className={styles.item}>{content}</li>;
+  return windowed ? content : <li ref={self} className={styles.item}>{content}</li>;
 }

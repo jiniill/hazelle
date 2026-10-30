@@ -5,7 +5,7 @@ import { PAGES, SETTINGS } from '../../common/words';
 import { presetOf } from '../../common/reading';
 import { useDisplay } from '../../display';
 import { useAccount, useConnections, useModulesAndPlugins, usePersonas, useProfiles, usePrompts, useSession, useSettings } from '../../session';
-import { Empty, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen } from '../../ui';
+import { Empty, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen, seekRow } from '../../ui';
 import { navigate } from '../router';
 import type { Route, SettingsPage } from '../routes';
 import { hitsOf, hitTexts, subpages, type Hit } from './terms';
@@ -72,13 +72,14 @@ function useHolds(): Record<SettingsPage, string | undefined> {
   };
 }
 
-// 설정 검색: a page by its label, or by a title or label shown on it; a hit opens the page and clears the words.
+// 설정 검색: a page by its label, or by a title or label shown on it; a hit opens the page at that row and clears the words.
 function useSettingsSearch(places: Place[]) {
   const query = useState('');
   const hits = hitsOf(places, subpages(useSettings(), useProfiles()));
   const open = (hit: Hit<Place>) => {
     query[1]('');
     navigate(hit.to);
+    if (hit.seek) seekRow(hit.seek);
   };
   return { ...useSearch(hits, '설정 검색', hitTexts, { query, onEnter: open }), open };
 }
