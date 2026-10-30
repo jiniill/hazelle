@@ -139,6 +139,12 @@
   background: var(--current-fill, var(--color-surface-raised));
 }
 
+/* On the dark current fill, faint cannot reach 4.5:1 and stay a rung under muted (tokens.test.ts). */
+.item[aria-current] .meta,
+.item[aria-pressed='true'] .meta {
+  color: inherit;
+}
+
 .side {
   color: var(--color-text-muted);
 }
@@ -171,10 +177,6 @@
 .tab[aria-pressed='true'] {
   border-color: var(--color-border-strong);
   color: var(--color-text);
-}
-
-.tab[aria-pressed='true'] .meta {
-  color: inherit;
 }
 
 .muted {
