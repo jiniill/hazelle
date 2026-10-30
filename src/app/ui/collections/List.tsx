@@ -101,6 +101,7 @@ export function ListItem({ leading, folder = false, title, badge, code, descript
           </span>
         )
       }
+      trailingWraps={Boolean(note)}
       pressed={selected}
       current={current && 'page'}
       expanded={expanded}
