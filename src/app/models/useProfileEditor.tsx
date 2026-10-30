@@ -14,6 +14,7 @@ import { useConnections, useSettings, useStore } from '../session';
 import { ChoiceGroup, NumberInput, PhraseField, Section, SettingGroup, SettingRow, Switch, TextField } from '../ui';
 import { CACHE, changeLine, EXTRA_LABEL, extraError, followsRetries, DETAIL, LEVELS, levelName, MAIN, NUMBER, PDF_KEEP_WORDS, SERVICE_TIER_LABEL, SERVICE_TIER_WORDS, VERBOSITY_LABEL, VERBOSITY_WORDS, type Field } from '../common/settingWords';
 import { count, readCount, readOptional, readTyped } from '../common/typedNumber';
+import { PROFILE_ROWS } from './profileRows';
 
 const whole = (field: Field | 'budget') => field === 'budget' || field === 'context' || WHOLE.has(field);
 // undefined: left empty, which unsets it. null: not a number the field takes.
@@ -142,15 +143,15 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     return (
       <SettingRow
         key="reasoning"
-        label="추론"
+        label={PROFILE_ROWS.reasoning}
         changed={reasoning !== undefined}
         error={typed && !typed.ok ? typed.error : undefined}
         note={noteFor('reasoning')}
         control={
           <>
-            <ChoiceGroup layout="fit" label="추론" options={options} value={current} onChange={pick} />
+            <ChoiceGroup layout="fit" label={PROFILE_ROWS.reasoning} options={options} value={current} onChange={pick} />
             {reasoning?.kind === 'budget' && (
-              <NumberInput label="추론 예산" unit="토큰" value={draft} invalid={!typed?.ok} onChange={(next) => type('budget', next, (tokens) => ({ reasoning: { kind: 'budget', tokens } }))} />
+              <NumberInput label={PROFILE_ROWS.budget} unit="토큰" value={draft} invalid={!typed?.ok} onChange={(next) => type('budget', next, (tokens) => ({ reasoning: { kind: 'budget', tokens } }))} />
             )}
           </>
         }
@@ -184,14 +185,14 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
   const cacheRow = (
     <SettingRow
       key="cache"
-      label="캐시"
+      label={PROFILE_ROWS.cache}
       help="전송한 프롬프트의 앞부분을 캐시에 저장해 두고 다음 요청에서 저렴하게 읽어요. 처음 캐시에 쓸 때는 비용이 조금 더 발생해요"
       changed={shown.cache !== undefined}
       note={noteFor('cache')}
       control={
         <ChoiceGroup
           layout="fit"
-          label="캐시"
+          label={PROFILE_ROWS.cache}
           options={[{ value: 'off' as const, label: '끔' }, ...choices(CACHE)]}
           value={shown.cache ?? 'off'}
           onChange={(value) => set({ cache: value === 'off' ? undefined : value })}
@@ -248,7 +249,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
               value={pdf?.keep ?? 'off'}
               onChange={pick}
             />
-            {pdf?.keep === 'recent' && <NumberInput label="원문으로 보낼 최근 대화" unit="%" value={draft} invalid={recent === null} onChange={typeRecent} />}
+            {pdf?.keep === 'recent' && <NumberInput label={PROFILE_ROWS.recent} unit="%" value={draft} invalid={recent === null} onChange={typeRecent} />}
           </>
         }
       />
@@ -258,24 +259,24 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
   const stopRow = (
     <SettingRow
       key="stop"
-      label="멈춤 문구"
+      label={PROFILE_ROWS.stop}
       help="이 문구가 나오면 그 자리에서 응답 생성을 멈춰요"
       changed={shown.stop !== undefined}
       note={noteFor('stop')}
-      control={<PhraseField label="멈춤 문구" phrases={shown.stop ?? []} onChange={(next) => set({ stop: next.length ? next : undefined })} />}
+      control={<PhraseField label={PROFILE_ROWS.stop} phrases={shown.stop ?? []} onChange={(next) => set({ stop: next.length ? next : undefined })} />}
     />
   );
 
   const systemRow = (
     <SettingRow
       key="system"
-      label="시스템 메시지 전송 방식"
+      label={PROFILE_ROWS.system}
       help="시스템 메시지를 지원하지 않는 모델에는 사용자 메시지로 바꿔서 보내요"
       changed={shown.systemAsUser !== undefined}
       control={
         <ChoiceGroup
           layout="fit"
-          label="시스템 메시지 전송 방식"
+          label={PROFILE_ROWS.system}
           options={[
             { value: 'as-is', label: '시스템 메시지로 전송' },
             { value: 'user', label: '사용자 메시지로 전송' },
@@ -290,10 +291,10 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
   const streamingRow = (
     <SettingRow
       key="streaming"
-      label="스트리밍"
+      label={PROFILE_ROWS.streaming}
       help="프록시 서버에서 응답을 중간에 끊어 버린다면 이 설정을 꺼 주세요"
       changed={shown.streaming !== undefined}
-      control={<Switch label="스트리밍" checked={shown.streaming !== false} onChange={(on) => set({ streaming: on ? undefined : false })} />}
+      control={<Switch label={PROFILE_ROWS.streaming} checked={shown.streaming !== false} onChange={(on) => set({ streaming: on ? undefined : false })} />}
     />
   );
 
@@ -313,8 +314,8 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     DETAIL.filter((field) => shown[field] !== undefined).length + [shown.stop, shown.verbosity, shown.serviceTier, shown.systemAsUser, shown.streaming === false, shown.retries !== undefined, shown.extra].filter(Boolean).length;
   const rows = (
     <>
-      <Section title="자주 쓰는 설정">
-        <SettingGroup label="자주 쓰는 설정">
+      <Section title={PROFILE_ROWS.frequent}>
+        <SettingGroup label={PROFILE_ROWS.frequent}>
           {MAIN.map(numberRow)}
           {reasoningRow()}
           {cacheRow}

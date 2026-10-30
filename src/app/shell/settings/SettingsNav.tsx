@@ -4,16 +4,16 @@ import { useSearch } from '../../common/useSearch';
 import { PAGES, SETTINGS } from '../../common/words';
 import { presetOf } from '../../common/reading';
 import { useDisplay } from '../../display';
-import { useAccount, useConnections, useModulesAndPlugins, usePersonas, usePrompts, useSession, useSettings } from '../../session';
+import { useAccount, useConnections, useModulesAndPlugins, usePersonas, useProfiles, usePrompts, useSession, useSettings } from '../../session';
 import { Empty, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen } from '../../ui';
 import { navigate } from '../router';
 import type { Route, SettingsPage } from '../routes';
-import { subpages, TERMS } from './terms';
+import { hitsOf, hitTexts, subpages, type Hit } from './terms';
 
 type Place = { page: SettingsPage; label: string; icon: LucideIcon; route: Route };
 type Group = { title: string; places: Place[] };
 
-// List built pages only; group headings cannot repeat child labels. Keep app/account in the separated footer group.
+// List built pages only; group headings cannot repeat child labels.
 const GROUPS: Group[] = [
   {
     title: 'AI 엔진',
@@ -33,7 +33,6 @@ const GROUPS: Group[] = [
     ],
   },
 ];
-const APP_TITLE = '앱';
 const APP: Place[] = [
   { page: 'display', label: PAGES.display, icon: SunMoon, route: { kind: 'display' } },
   { page: 'controls', label: PAGES.controls, icon: Hand, route: { kind: 'controls' } },
@@ -43,9 +42,9 @@ const APP: Place[] = [
 ];
 const ADMIN: Place = { page: 'admin', label: PAGES.admin, icon: ShieldCheck, route: { kind: 'admin' } };
 
-function useApp(): Place[] {
+function useGroups(): Group[] {
   const { admin } = useAccount();
-  return admin ? [...APP, ADMIN] : APP;
+  return [...GROUPS, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
 }
 
 // What each page holds, at its row's end in the sidebar and the phone list.
@@ -73,36 +72,26 @@ function useHolds(): Record<SettingsPage, string | undefined> {
   };
 }
 
-// where: the page that holds the term, unless the term is that page's own label.
-type Hit = { term: string; place: Place; where: string | undefined; to: Route };
-
 // 설정 검색: a page by its label, or by a title or label shown on it; a hit opens the page and clears the words.
 function useSettingsSearch(places: Place[]) {
   const query = useState('');
-  const subs = subpages(useSettings());
-  const hits: Hit[] = places.flatMap((place) => [
-    ...[place.label, ...TERMS[place.page]].map((term) => ({ term, place, where: term === place.label ? undefined : place.label, to: place.route })),
-    ...(subs[place.page] ?? []).flatMap((sub) =>
-      [sub.label, ...sub.terms].map((term) => ({ term, place, where: term === sub.label ? place.label : `${place.label} › ${sub.label}`, to: sub.route })),
-    ),
-  ]);
-  const open = (hit: Hit) => {
+  const hits = hitsOf(places, subpages(useSettings(), useProfiles()));
+  const open = (hit: Hit<Place>) => {
     query[1]('');
     navigate(hit.to);
   };
-  return { ...useSearch(hits, '설정 검색', ({ term }) => [term], { query, onEnter: open }), open };
+  return { ...useSearch(hits, '설정 검색', hitTexts, { query, onEnter: open }), open };
 }
 
 // Where the library's 설정 lands: the first page where the sidebar lists them all, the list on phones.
 export const settingsEntry = (wide: boolean): Route => (wide ? GROUPS[0]!.places[0]!.route : { kind: 'settings' });
 
 export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 'list'; onClose: () => void }) {
-  const app = useApp();
+  const groups = useGroups();
   const holds = useHolds();
-  const search = useSettingsSearch([...GROUPS.flatMap(({ places }) => places), ...app]);
-  const row = (place: Place) => <NavRow key={place.page} icon={place.icon} label={place.label} meta={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route)} />;
+  const search = useSettingsSearch(groups.flatMap(({ places }) => places));
   return (
-    <LayerSidebar title={SETTINGS} onClose={onClose} search={search.field} footer={search.words ? null : <NavGroup title={APP_TITLE}>{app.map(row)}</NavGroup>}>
+    <LayerSidebar title={SETTINGS} onClose={onClose} search={search.field} seek={search.words ? undefined : current}>
       {search.words ? (
         search.none ? (
           <Empty variant="side">{search.none}</Empty>
@@ -110,9 +99,11 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
           search.found.map((hit) => <NavRow key={`${hit.where}/${hit.term}`} icon={hit.place.icon} label={hit.term} meta={hit.where} onClick={() => search.open(hit)} />)
         )
       ) : (
-        GROUPS.map(({ title, places }) => (
+        groups.map(({ title, places }) => (
           <NavGroup key={title} title={title}>
-            {places.map(row)}
+            {places.map((place) => (
+              <NavRow key={place.page} icon={place.icon} label={place.label} meta={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route)} />
+            ))}
           </NavGroup>
         ))
       )}
@@ -122,8 +113,7 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
 
 export function SettingsList({ onClose }: { onClose: () => void }) {
   const holds = useHolds();
-  const app = useApp();
-  const groups = [...GROUPS, { title: APP_TITLE, places: app }];
+  const groups = useGroups();
   const search = useSettingsSearch(groups.flatMap(({ places }) => places));
   return (
     <Screen top={<NavBar title={SETTINGS} close backLabel={`${SETTINGS} 닫기`} onBack={onClose} />}>
