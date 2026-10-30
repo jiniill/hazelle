@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import recorded from './fixtures/gemini.json';
 import { chatRequest, detect, embedAnswer, embedRequests, parseCatalog, resolveConnection, withCredential, type Route } from './registry';
+import { bareModel } from './chat-completions';
 import { gemini } from './gemini';
 import { decodeStream } from './stream';
 import type { Phase, StreamFacts } from './types';
@@ -81,6 +82,13 @@ describe('Gemini', () => {
     expect({ text, reasoning }).toEqual({ text: '안녕하세요!', reasoning: '짧게 답하자.' });
     expect(outcome).toMatchObject({ state: 'done', replyId: 'mFLhaOirDu2qz7IPzN7DqQg' });
     expect(outcome.usage).toEqual({ inputTokens: 120, cachedInputTokens: 100, cacheWriteInputTokens: null, outputTokens: 20, reasoningTokens: 16 });
+  });
+
+  it('carries a stored level to what the model takes, as a 설정 묶음 outlives its model', () => {
+    const level = (id: string, setting: string) => (JSON.parse(chatRequest(google, { model: bareModel(id), messages: [{ role: 'user', content: '안녕' }], settings: { reasoning: { kind: 'level', level: setting } } }).body!) as { generationConfig: { thinkingConfig: unknown } }).generationConfig.thinkingConfig;
+    expect(level('gemini-3.1-pro', 'minimal')).toEqual({ thinkingLevel: 'low', includeThoughts: true });
+    expect(level('gemini-3.5-flash', 'minimal')).toEqual({ thinkingLevel: 'minimal', includeThoughts: true });
+    expect(level('gemini-2.5-flash', 'high')).toEqual({ thinkingBudget: -1, includeThoughts: true });
   });
 
   it('cuts at MAX_TOKENS, keeps the text a SAFETY stop came after as a refused cut, and fails one with none or a blocked prompt', async () => {
