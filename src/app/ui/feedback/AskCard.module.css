@@ -48,6 +48,13 @@
 }
 
 /* The room around them is the focus ring's, which a box that scrolls would cut. */
+/* Positioned after the ⓘ, whose press area reaches over it otherwise. */
+@media (pointer: coarse) {
+  .answer {
+    position: relative;
+  }
+}
+
 .choices {
   max-height: var(--composer-max-height);
   margin: calc(-1 * var(--focus-ring-reach));

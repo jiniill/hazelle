@@ -93,6 +93,13 @@
   padding-top: var(--space-8);
 }
 
+/* Positioned after a SendNote's ⓘ, whose press area reaches over the send button otherwise. */
+@media (pointer: coarse) {
+  .bar > * {
+    position: relative;
+  }
+}
+
 /* Tools wrap to a second line rather than push the send button off a phone's bar. */
 .toolRow {
   flex-grow: 1;
