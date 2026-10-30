@@ -190,6 +190,7 @@ describe('evaluate', () => {
 
   it('reads {{? …}} as calc with $name from the chat variables, and leaves an expression it cannot read as written', () => {
     expect(run('{{? $hp * 2 + 1}} {{calc::2 + abc}}', { variables: new Map([['hp', '4']]) })).toBe('9 {{calc::2 + abc}}');
+    expect(run('{{? {{getvar::x}}??50}} {{calc::(1>=1)?0.65:0}}')).toBe('50 0.65');
   });
 
   it('indexes previous roles across same-role runs while returning raw text relative to the source', () => {

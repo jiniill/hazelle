@@ -298,6 +298,12 @@ function onStart(id) log('started') end` }];
 });
 
 describe('Lua display', () => {
+  it('answers a refused call Risu declares async with a promise, for :await() to read as nil', async () => {
+    const code = `listenEdit('editDisplay', function(id, value) return value .. ':' .. (getTokens(id, 'x') == nil and 'nil' or 'promise') .. ':' .. (alertNormal(id, 'x') == nil and 'nil' or 'promise') end)`;
+    await lua.installDisplay('refused', 1, [{ owner: OWNER, kind: 'lua', name: 'main', code }], SNAPSHOT, [{ index: 0, text: 'a', variables: [] }]);
+    expect((await lua.display('refused', 1, 1)).texts).toEqual(['a:promise:nil']);
+  });
+
   it('edits each message with the state as of it and keeps none of its writes or acts', async () => {
     const code = `listenEdit('editDisplay', function(id, value, meta)
         log(value)

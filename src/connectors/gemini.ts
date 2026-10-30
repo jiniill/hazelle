@@ -9,9 +9,8 @@ import { count, isRecord, list, vector } from './values';
 
 const LEVELS = ['minimal', 'low', 'medium', 'high'];
 
-// Refused on the model named, and a 설정 묶음 outlives its model, so a stored level is carried to what the model takes:
-// minimal to low, which is what Google does itself, and on 2.5 any level to dynamic (3.7/3.8 Flash, 3.1 Pro and 4 Argon
-// on Vertex AI, 2026-10-23).
+// A 설정 묶음 outlives its model, so a stored level the model refuses (see reasoning under carries) is carried to what
+// it takes: minimal to low, which is what Google does itself, and on 2.5 any level to dynamic.
 const NO_MINIMAL = /^gemini-(?:3\.1-pro|3\.[78]|4)/;
 const NO_LEVEL = /^gemini-2\./;
 function thinkingLevel(level: string, model: Model) {

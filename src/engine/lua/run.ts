@@ -400,9 +400,9 @@ export class Lua {
     });
     const set = (name: string, api: (run: Run, ...args: never[]) => unknown) => bind(name, (_key: unknown, ...args: never[]) => (engine.run ? api(engine.run, ...args) : undefined));
     // What a run does outside itself, which an editDisplay pass and a script outliving its run do not.
-    const act = (name: string, api: (run: Acting, ...args: never[]) => unknown, refused?: Promise<undefined>) => set(name, (run, ...args) => (run.quiet || !run.host || !run.owner ? refused : api(run as Acting, ...args)));
+    const act = (name: string, api: (run: Acting, ...args: never[]) => unknown, refused: () => unknown = () => undefined) => set(name, (run, ...args) => (run.quiet || !run.host || !run.owner ? refused() : api(run as Acting, ...args)));
     // Async in Risu: refused too, a call answers a promise of nil, for :await() to read.
-    const awaited = (name: string, api: (run: Acting, ...args: never[]) => unknown) => act(name, api, Promise.resolve(undefined));
+    const awaited = (name: string, api: (run: Acting, ...args: never[]) => unknown) => act(name, api, () => Promise.resolve());
     const last = (run: Run, role: Working['role']) => run.messages.findLast((message) => message.role === role)?.data;
     const model = (role: 'main' | 'aux') => (run: Acting, prompt: string) => {
       const messages = (JSON.parse(prompt) as { role?: unknown; content?: unknown }[]).map((message) => ({ role: MODEL_ROLES[text(message.role)] ?? 'assistant', content: text(message.content) }));

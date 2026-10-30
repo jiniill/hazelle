@@ -421,7 +421,7 @@ const blankEnds = (nodes: Node[]) =>
     (text) => text.replace(LEADING_BLANK, ''),
     (text) => text.replace(TRAILING_BLANK, ''),
   );
-// #if: each line's leading whitespace, then the whole body.
+// #if and #each: each line's leading whitespace, then the whole body.
 const trimLines = (nodes: Node[]) =>
   trimEnds(
     nodes.map((node) => (typeof node === 'string' ? node.replace(/\n[ \t]+/g, '\n') : node)),
