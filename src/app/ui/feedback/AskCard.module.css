@@ -64,5 +64,5 @@
   min-width: 0;
   height: var(--control-chip);
   padding: 0 var(--space-12);
-  font-size: var(--text-md);
+  font-size: max(var(--text-md), var(--text-entry-min));
 }

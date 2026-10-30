@@ -8,7 +8,7 @@
   composes: compactField from '../foundation/surface.module.css';
   width: var(--number-input-width);
   font-family: var(--font-mono);
-  font-size: var(--text-md);
+  font-size: max(var(--text-md), var(--text-entry-min));
   text-align: end;
 }
 

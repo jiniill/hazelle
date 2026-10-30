@@ -29,7 +29,7 @@
 
 .mono {
   font-family: var(--font-mono);
-  font-size: var(--text-md);
+  font-size: max(var(--text-md), var(--text-entry-min));
 }
 
 .area {

@@ -37,7 +37,7 @@
   padding: 0;
   border: none;
   font-family: var(--font-sans);
-  font-size: var(--markup-size);
+  font-size: max(var(--markup-size), var(--text-entry-min));
   font-weight: var(--weight-regular);
   line-height: var(--markup-leading);
   white-space: pre-wrap;

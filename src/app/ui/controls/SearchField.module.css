@@ -38,6 +38,7 @@
   border: 0;
   background: transparent;
   color: var(--color-text);
+  font-size: max(100%, var(--text-entry-min));
 }
 
 .input:focus-visible {
