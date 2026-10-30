@@ -5,6 +5,16 @@
   min-width: 0;
 }
 
+/* Nothing to measure against, so the name and the figures share a line. */
+.gauge:not(:has(.track)) {
+  flex-flow: row wrap;
+  align-items: baseline;
+}
+
+.gauge:not(:has(.track)) .figures {
+  flex-grow: 1;
+}
+
 .label {
   color: var(--color-text-soft);
   font-size: var(--text-sm);
