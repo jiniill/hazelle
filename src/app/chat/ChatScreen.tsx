@@ -9,7 +9,7 @@ import { useToastFloor } from '../toast';
 import { useDisplay } from '../display';
 import { useAssetUrl } from '../session';
 import { day } from '../common/time';
-import { aimedAtPanel, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, usePanelsBeside } from '../ui';
+import { aimedAtPanel, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, usePanelsBeside, useWide } from '../ui';
 import { ChatAutopilot } from './ChatAutopilot';
 import { ChatBookmarks } from './ChatBookmarks';
 import { ChatInspect } from './ChatInspect';
@@ -51,7 +51,8 @@ export function ChatScreen({ id: chatId, item, shelf, back, side, onPaired }: Pr
   const chat = useChat(chatId, item, shelf, reading.reply);
   const { id, busy, panel, scroll, prompt, actions } = chat;
   const autopilot = useAutopilot(chat);
-  const folded = display.foldComposer && scroll.away;
+  const wide = useWide();
+  const folded = (display.foldComposer && scroll.away) || (!wide && chat.editing !== null);
   const url = useAssetUrl([display.portrait, display.hidePictures, shelf?.avatar]);
   // The thumbnail stands in until the full picture is read.
   const portrait = display.portrait && !display.hidePictures && shelf?.avatar ? (url('avatar', shelf.avatar) ?? shelf.face ?? undefined) : undefined;

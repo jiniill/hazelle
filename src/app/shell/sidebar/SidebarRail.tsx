@@ -1,14 +1,13 @@
-import { LayoutGrid, MessageSquarePlus, MessagesSquare, PackageOpen, Settings, UserRoundPlus, Wrench } from 'lucide-react';
+import { LayoutGrid, MessagesSquare, Settings, Wrench } from 'lucide-react';
 import type { ChatSummary } from '../../../model/chat';
 import type { Shelf } from '../../../model/library';
-import { ACTS, importOf, newOf } from '../../common/acts';
-import { useImport } from '../../common/importing';
+import { ACTS } from '../../common/acts';
 import { ShelfFace, shelfName } from '../../library/shelf';
-import { useNewCharacter } from '../../library/useCharacterActions';
-import { BOARD, NO_CHARACTER, SETTINGS, TOOLS } from '../../common/words';
+import { BOARD, SETTINGS, TOOLS } from '../../common/words';
 import { useStanding } from '../../session';
-import { FaceButton, IconButton, Menu, MenuItem, Rail, Viewport } from '../../ui';
+import { FaceButton, IconButton, Rail, Viewport } from '../../ui';
 import { navigate } from '../router';
+import { AddMenu } from './AddMenu';
 import { HOME } from '../routes';
 import { settingsEntry } from '../settings/SettingsNav';
 import { toolsEntry } from '../tools/ToolsNav';
@@ -26,20 +25,13 @@ type Props = {
 // On wide screens these places live only here; the list page shows them on phones.
 export function SidebarRail({ shelves, current, home, board, typing, onEnter, fold }: Props) {
   const { unreadBoard } = useStanding();
-  const { pick, move } = useImport();
-  const create = useNewCharacter();
   return (
     <Rail
       fold={fold}
       actions={
         <>
           <IconButton icon={LayoutGrid} label="캐릭터 둘러보기" framed current={home} onClick={() => navigate(HOME)} />
-          <Menu label="추가" trigger={(opener) => <IconButton icon={ACTS.create.icon} label="추가" framed {...opener} />}>
-            <MenuItem icon={ACTS.import.icon} label={importOf('봇')} onClick={pick} />
-            <MenuItem icon={UserRoundPlus} label={newOf('캐릭터')} onClick={create} />
-            <MenuItem icon={PackageOpen} label="Risu에서 이사" onClick={move} />
-            <MenuItem icon={MessageSquarePlus} label={`${NO_CHARACTER} 새 채팅`} onClick={() => navigate({ kind: 'new-chat', character: null })} />
-          </Menu>
+          <AddMenu trigger={(opener) => <IconButton icon={ACTS.create.icon} label={ACTS.create.label} framed {...opener} />} />
         </>
       }
       places={

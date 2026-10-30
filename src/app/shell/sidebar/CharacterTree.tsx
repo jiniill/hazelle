@@ -1,20 +1,19 @@
-import { LayoutGrid, MessageSquarePlus, PackageOpen, UserRoundPlus } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 import { useMemo } from 'react';
 import type { ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
 import { characterTexts, type Shelf } from '../../../model/library';
-import { ACTS, importOf, newOf } from '../../common/acts';
+import { ACTS } from '../../common/acts';
 import { useSearch } from '../../common/useSearch';
 import { ago } from '../../common/time';
 import { GuestLine } from '../../common/GuestNotice';
 import { TUTORIAL, useTutorials } from '../../common/Tutorial';
 import { Welcome } from '../../library/HomeScreen';
-import { useImport } from '../../common/importing';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
-import { useNewCharacter } from '../../library/useCharacterActions';
 import { useCharacterSort, useSortedLibrary } from '../../common/characterOrder';
-import { Button, Empty, FolderRow, IconButton, ItemRow, Row, Sidebar, Tag, TreeRow, Viewport } from '../../ui';
+import { Button, Empty, FolderRow, ItemRow, Row, Sidebar, Tag, TreeRow, Viewport } from '../../ui';
 import { navigate } from '../router';
+import { AddMenu } from './AddMenu';
 import { LayerButtons } from './LayerButtons';
 
 type Props = {
@@ -29,8 +28,6 @@ type Props = {
 export function CharacterTree({ typing, onEnter, query, onQuery, openFolders, onToggleFolder }: Props) {
   const [sort] = useCharacterSort();
   const { characters, none, folders, byFolder, loose } = useSortedLibrary(sort);
-  const { pick, move } = useImport();
-  const create = useNewCharacter();
   const empty = characters.length === 0 && none.chats.length === 0;
   const search = useSearch(characters, '캐릭터 검색', ({ character }) => characterTexts(character), { query: [query, onQuery] });
   const { words } = search;
@@ -73,13 +70,16 @@ export function CharacterTree({ typing, onEnter, query, onQuery, openFolders, on
       actions={
         <>
           <Row kind="toolbar">
-            <Button variant="secondary" size="sm" icon={ACTS.import.icon} onClick={pick}>
-              {importOf('봇')}
+            <AddMenu
+              trigger={(opener) => (
+                <Button variant="secondary" size="sm" icon={ACTS.create.icon} {...opener}>
+                  {ACTS.create.label}
+                </Button>
+              )}
+            />
+            <Button variant="secondary" size="sm" icon={LayoutGrid} onClick={() => navigate({ kind: 'gallery', place: null })}>
+              캐릭터 둘러보기
             </Button>
-            <IconButton icon={UserRoundPlus} label={newOf('캐릭터')} size="sm" onClick={create} />
-            <IconButton icon={PackageOpen} label="Risu에서 이사" size="sm" onClick={move} />
-            <IconButton icon={LayoutGrid} label="캐릭터 둘러보기" size="sm" onClick={() => navigate({ kind: 'gallery', place: null })} />
-            <IconButton icon={MessageSquarePlus} label="새 채팅" size="sm" onClick={() => navigate({ kind: 'new-chat', character: null })} />
           </Row>
           {search.field}
           {!empty && <GuestLine />}
