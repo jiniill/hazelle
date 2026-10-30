@@ -13,7 +13,7 @@
   flex-grow: 1;
   padding: var(--space-12) var(--space-16);
   font-family: var(--font-mono);
-  font-size: var(--text-md);
+  font-size: max(var(--text-md), var(--text-entry-min));
   line-height: var(--leading-relaxed);
   color: var(--color-text);
   resize: none;
@@ -23,7 +23,7 @@
   flex-grow: 1;
   min-width: 0;
   color: var(--color-text);
-  font-size: var(--text-md);
+  font-size: max(var(--text-md), var(--text-entry-min));
 }
 
 .editor :global(.cm-editor.cm-focused) {
@@ -108,7 +108,7 @@
   background: var(--color-surface);
   background-image: none;
   color: var(--color-text);
-  font-size: var(--text-sm);
+  font-size: max(var(--text-sm), var(--text-entry-min));
 }
 
 /* surface.module.css's floating: a :global selector cannot take composes. */
@@ -238,7 +238,7 @@
 .loading.prose,
 .prose :global(.cm-editor) :global(.cm-scroller) {
   font-family: var(--font-sans);
-  font-size: var(--markup-size);
+  font-size: max(var(--markup-size), var(--text-entry-min));
   line-height: var(--markup-leading);
 }
 

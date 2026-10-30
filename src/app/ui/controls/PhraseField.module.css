@@ -40,5 +40,5 @@
 .input {
   composes: compactField from '../foundation/surface.module.css';
   width: var(--phrase-input-width);
-  font-size: var(--text-sm);
+  font-size: max(var(--text-sm), var(--text-entry-min));
 }

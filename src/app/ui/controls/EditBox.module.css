@@ -24,7 +24,7 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--prose-font);
-  font-size: var(--prose-size);
+  font-size: max(var(--prose-size), var(--text-entry-min));
   line-height: var(--prose-leading);
   resize: none;
 }

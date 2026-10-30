@@ -6,6 +6,7 @@
 }
 
 .button {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,6 +19,14 @@
 .button:hover,
 .button[aria-expanded='true'] {
   color: var(--color-text);
+}
+
+@media (pointer: coarse) {
+  .button::after {
+    position: absolute;
+    inset: calc(-1 * var(--hit-outset));
+    content: '';
+  }
 }
 
 .bubble {

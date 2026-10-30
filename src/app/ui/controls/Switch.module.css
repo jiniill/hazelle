@@ -41,3 +41,12 @@
 .switch:disabled::before {
   background: var(--color-text-faint);
 }
+
+/* ::before is the knob. Positioned, so it takes a near miss from the row's button under it (List's rows that open a page). */
+@media (pointer: coarse) {
+  .switch::after {
+    position: absolute;
+    inset: calc(-1 * var(--hit-outset) - var(--border-thin));
+    content: '';
+  }
+}

@@ -29,7 +29,7 @@
 
 .mono {
   font-family: var(--font-mono);
-  font-size: var(--text-md);
+  font-size: max(var(--text-md), var(--text-entry-min));
 }
 
 .area {
@@ -43,6 +43,14 @@
   composes: area;
   flex-grow: 1;
   resize: none;
+}
+
+/* Positioned after the ⓘ, whose press area reaches over them otherwise. */
+@media (pointer: coarse) {
+  .head > *,
+  .input {
+    position: relative;
+  }
 }
 
 .hint {

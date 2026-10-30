@@ -55,7 +55,7 @@
   border-radius: 0;
   background: transparent;
   color: var(--color-text);
-  font-size: var(--text-md);
+  font-size: max(var(--text-md), var(--text-entry-min));
   line-height: var(--leading-relaxed);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

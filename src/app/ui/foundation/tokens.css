@@ -16,6 +16,7 @@
   --palette-ink-600: #383441;
   --palette-ink-500: #4a4555;
   --palette-lilac-400: #958ea2;
+  --palette-lilac-375: #9d96aa;
   --palette-lilac-300: #a8a1b4;
   --palette-cream-100: #f1ece4;
   --palette-gold-400: #e6b35c;
@@ -57,6 +58,7 @@
   --palette-paper-500: #bab1a4;
   --palette-lilac-550: #766e7f;
   --palette-lilac-650: #68616f;
+  --palette-lilac-600: #696270;
   --palette-lilac-700: #5f5869;
   --palette-lilac-800: #3f3a46;
   --palette-gold-650: #8d6828;
@@ -124,7 +126,7 @@
   --color-border-strong: var(--palette-ink-500);
   --color-text: var(--palette-cream-100);
   --color-text-muted: var(--palette-lilac-300);
-  --color-text-faint: var(--palette-lilac-400);
+  --color-text-faint: var(--palette-lilac-375);
   --color-accent: var(--palette-gold-400);
   --color-accent-hover: var(--palette-gold-300);
   --color-on-accent: var(--palette-gold-950);
@@ -279,6 +281,8 @@
   --text-xl: 20px;
   --text-display: 30px;
   --text-hero: 64px;
+  /* iOS zooms the page when a field under 16px takes focus. A viewport scale limit would stop it and pinch zoom with it. */
+  --text-entry-min: 0px;
 
   --weight-light: 300;
   --weight-regular: 400;
@@ -338,6 +342,8 @@
   --control-chip: 34px;
   --control-md: 44px;
   --control-lg: 50px;
+  /* How far a mark's press area reaches past it under a coarse pointer, to the height of a control. */
+  --hit-outset: calc((var(--control-md) - var(--control-mark)) / 2);
   --icon-sm: 16px;
   --icon-md: 22px;
   --icon-tag: 14px;
@@ -508,6 +514,12 @@
   --layer-drop: 50;
 }
 
+@media (pointer: coarse) {
+  :root {
+    --text-entry-min: 16px;
+  }
+}
+
 /* Mirror every palette-based color in light mode; derived mixes follow automatically. Never turn bot-authored dark CSS (design F3). */
 [data-theme='light'] {
   color-scheme: light;
@@ -523,7 +535,7 @@
   --color-border-strong: var(--palette-paper-500);
   --color-text: var(--palette-ink-800);
   --color-text-muted: var(--palette-lilac-700);
-  --color-text-faint: var(--palette-lilac-450);
+  --color-text-faint: var(--palette-lilac-600);
   --color-text-soft: var(--palette-lilac-800);
   --color-accent: var(--palette-gold-700);
   --color-accent-hover: var(--palette-gold-800);

@@ -47,6 +47,26 @@
   min-height: var(--control-md);
 }
 
+.wraps {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-8);
+}
+
+.wraps > :last-child {
+  max-width: 100%;
+  margin-inline-start: auto;
+}
+
+/* The title alone decides the line: a preview's unwrapped width would send trailing under it on every row. */
+.wraps .preview {
+  width: 0;
+  min-width: 100%;
+}
+
 .branch {
   gap: var(--space-8);
   font-weight: var(--weight-medium);
@@ -139,6 +159,12 @@
   background: var(--current-fill, var(--color-surface-raised));
 }
 
+/* On the dark current fill, faint cannot reach 4.5:1 and stay a rung under muted (tokens.test.ts). */
+.item[aria-current] .meta,
+.item[aria-pressed='true'] .meta {
+  color: inherit;
+}
+
 .side {
   color: var(--color-text-muted);
 }
@@ -171,10 +197,6 @@
 .tab[aria-pressed='true'] {
   border-color: var(--color-border-strong);
   color: var(--color-text);
-}
-
-.tab[aria-pressed='true'] .meta {
-  color: inherit;
 }
 
 .muted {

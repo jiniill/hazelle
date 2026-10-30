@@ -71,6 +71,10 @@
   composes: fieldLabel from '../foundation/type.module.css';
 }
 
+.row:has(> .control > [role='switch']:not(:disabled):only-child) .label {
+  cursor: pointer;
+}
+
 .sentence {
   display: flex;
   flex-wrap: wrap;
@@ -162,6 +166,15 @@
   .error,
   .note {
     justify-self: start;
+  }
+}
+
+/* Positioned after the ⓘ, whose press area reaches over them otherwise. */
+@media (pointer: coarse) {
+  .name > *,
+  .control,
+  .menu {
+    position: relative;
   }
 }
 
