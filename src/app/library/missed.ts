@@ -27,6 +27,7 @@ const UNSUPPORTED: Record<UnsupportedKind, (count: number) => string> = {
   module: () => '읽지 못한 모듈',
   'toggle-line': (count) => `읽지 못한 토글 줄 ${count}개(토글에서 수정할 수 있음)`,
   mcp: () => 'MCP 서버 연결',
+  onboarding: () => '시작 전 설문',
   cjs: () => '모듈 자바스크립트(cjs)',
   hazelle: () => '파일이 바뀌어 읽지 않은 헤이젤 설정과 모듈',
 };

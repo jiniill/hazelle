@@ -128,6 +128,7 @@ export const UNSUPPORTED_KINDS = [
   'toggle-line',
   'mcp',
   'cjs',
+  'onboarding',
   'hazelle',
 ] as const;
 export type UnsupportedKind = (typeof UNSUPPORTED_KINDS)[number];

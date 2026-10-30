@@ -91,6 +91,7 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
   // Risu's inlay mode and its instruction text (newGenData) act only while this is on.
   if (risu.viewScreen === 'emotion' || risu.viewScreen === 'imggen') add(tally, 'view-screen');
   if (text(record(extensions.depth_prompt).prompt).trim()) add(tally, 'depth-prompt');
+  if (record(risu.onboarding).enabled === true) add(tally, 'onboarding');
 
   const greetings = [data.first_mes, ...list(data.alternate_greetings)].map(text);
   while (greetings.at(-1) === '') greetings.pop();

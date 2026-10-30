@@ -349,6 +349,7 @@ describe('importCard', () => {
             prebuiltAssetCommand: true,
             largePortrait: true,
             viewScreen: 'imggen',
+            onboarding: { enabled: true },
             inlayViewScreen: true,
             toggles: 'sims=시뮬레이터 모드\n모드 고르기',
             lowLevelAccess: true,
@@ -386,6 +387,7 @@ describe('importCard', () => {
       { kind: 'regex-stage', count: 1 },
       { kind: 'regex-off', count: 1 },
       { kind: 'toggle-line', count: 1 },
+      { kind: 'onboarding', count: 1 },
     ]);
   });
 
