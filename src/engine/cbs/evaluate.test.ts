@@ -116,6 +116,11 @@ describe('evaluate', () => {
     expect(variables.has('x')).toBe(false);
   });
 
+  it("trims #each's body layout, so the items it writes for split and filter carry no padding", () => {
+    expect(run('{{#each ["a","b"] as x}}\n    <i>{{slot::x}}</i>\n{{/each}}')).toBe('<i>a</i><i>b</i>');
+    expect(run('{{filter::{{split::{{#each ["Pa","x","Pb"] as a}} {{#if {{startswith::{{slot::a}}::P}}}} {{slot::a}}$$ {{/if}} {{/each}}::$$}}}}')).toBe('["Pa","Pb"]');
+  });
+
   it('repeats #each per item of a JSON or § array, each item rolling its own random tags', () => {
     expect(run('{{#each ["a","b"] as x}}[{{slot::x}}]{{/each}} {{#each 1§2 y}}{{slot::y}}{{/each}}')).toBe('[a][b] 12');
     expect(run('[{{#each {{getvar::none}} as x}}{{slot::x}}{{/each}}]')).toBe('[]');

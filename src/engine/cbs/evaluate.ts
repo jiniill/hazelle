@@ -387,7 +387,7 @@ function fold(condition: string[], context: CbsContext): boolean {
   return truthy(value);
 }
 
-// #each ARRAY as NAME, or ARRAY NAME; `::keep` right after #each keeps the body's blank lines. null: no name.
+// #each ARRAY as NAME, or ARRAY NAME; `::keep` right after #each keeps the body's layout. null: no name.
 function each(block: Block, rest: string, frame: Frame): string | null {
   const keep = rest.startsWith('::keep');
   // Split before trimming: an unset array leaves ` as x`, which is no items.
@@ -396,7 +396,7 @@ function each(block: Block, rest: string, frame: Frame): string | null {
   const at = as === -1 ? spec.lastIndexOf(' ') : as;
   if (at === -1) return null;
   const name = spec.slice(at + (as === -1 ? 1 : ' as '.length)).trim();
-  const body = keep ? block.body : blankEnds(block.body);
+  const body = keep ? block.body : trimLines(block.body);
   const place = frame.prefix + block.at;
   return items(spec.slice(0, at).trim())
     .map((item, i) => evaluateNodes(body, { ...frame, prefix: `${place}.${i}>`, slots: new Map([...frame.slots, [name, item]]) }))
