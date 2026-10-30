@@ -4,7 +4,7 @@ import type { Modality, Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
 import type { ProfileChoice } from '../../runtime/profiles';
 import { count } from './typedNumber';
-import { DISCOUNT, MODEL_SETTINGS, PDF_SEND, RETRY_COUNT, SCOPE, UNKNOWN } from './words';
+import { DISCOUNT, MODEL_SETTINGS, PDF_SEND, RETRY_COUNT, SCOPE, UNKNOWN, UNSET } from './words';
 
 export const MODALITY: Record<Modality, string> = { text: '텍스트', image: '이미지', audio: '오디오', video: '영상', file: '파일', embedding: '임베딩' };
 
@@ -39,7 +39,22 @@ export const SERVICE_TIER_WORDS: Record<ServiceTier, string> = { auto: '자동',
 export const EXTRA_LABEL = '추가 파라미터';
 export const PDF_KEEP_WORDS: Record<PdfKeep, string> = { recent: '최근 대화 제외', system: '시스템 프롬프트 제외', none: '전부' };
 
-const NAMED: Record<Exclude<Change['setting'], Field>, string> = { stop: '멈춤 문구', reasoning: '추론', cache: '캐시', verbosity: VERBOSITY_LABEL, serviceTier: SERVICE_TIER_LABEL, discount: DISCOUNT, pdf: PDF_SEND };
+// A 모델 설정 row's name. Apart from useProfileEditor, a lazy screen's, because the settings nav reads these on every page.
+export const PROFILE_ROWS = {
+  frequent: '자주 쓰는 설정',
+  reasoning: '추론',
+  budget: '추론 예산',
+  cache: '캐시',
+  recent: '원문으로 보낼 최근 대화',
+  stop: '멈춤 문구',
+  system: '시스템 메시지 전송 방식',
+  streaming: '스트리밍',
+};
+
+// 설정 검색's index (shell/settings/terms.ts) reads this: a row of the editor is named here too, or the search misses it.
+export const PROFILE_LABELS = [...Object.values(PROFILE_ROWS), ...[...MAIN, ...DETAIL].map((field) => NUMBER[field].label), DISCOUNT, PDF_SEND, VERBOSITY_LABEL, SERVICE_TIER_LABEL, RETRY_COUNT, EXTRA_LABEL];
+
+const NAMED: Record<Exclude<Change['setting'], Field>, string> = { stop: PROFILE_ROWS.stop, reasoning: PROFILE_ROWS.reasoning, cache: PROFILE_ROWS.cache, verbosity: VERBOSITY_LABEL, serviceTier: SERVICE_TIER_LABEL, discount: DISCOUNT, pdf: PDF_SEND };
 const isField = (setting: Change['setting']): setting is Field => setting in NUMBER;
 const settingLabel = (setting: Change['setting']) => (isField(setting) ? NUMBER[setting].label : NAMED[setting]);
 
@@ -47,7 +62,7 @@ const settingLabel = (setting: Change['setting']) => (isField(setting) ? NUMBER[
 const NO_VALUES = '지정 안 함';
 // Where no label beside it already says 모델 설정; under one, plain 없음 and NO_VALUES.
 export const NO_PROFILE = `${MODEL_SETTINGS} 없음`;
-export const NO_PROFILE_VALUES = `${MODEL_SETTINGS} ${NO_VALUES}`;
+export const NO_PROFILE_VALUES = UNSET;
 
 // What a 모델 설정 sets, in the order the editor shows them.
 export function valuesLine(settings: ModelSettings, unset: string = NO_VALUES): string {
@@ -58,8 +73,8 @@ export function valuesLine(settings: ModelSettings, unset: string = NO_VALUES): 
   };
   const thinking = !reasoning
     ? []
-    : [`추론 ${reasoning.kind === 'off' ? '끔' : reasoning.kind === 'budget' ? `예산 ${count(reasoning.tokens)}` : reasoning.kind === 'adaptive' ? (reasoning.level === null ? '적응형' : `적응형 · ${levelName(reasoning.level)}`) : levelName(reasoning.level)}`];
-  const words = [...MAIN.flatMap(number), ...thinking, ...(cache ? [`캐시 ${CACHE[cache]}`] : []), ...(discount ? [DISCOUNT] : []), ...(pdf ? [`${PDF_SEND} ${PDF_KEEP_WORDS[pdf.keep]}${pdf.keep === 'recent' ? ` ${pdf.recent}%` : ''}`] : []), ...DETAIL.flatMap(number), ...(stop ? [`멈춤 문구 ${stop.length}개`] : []), ...(verbosity ? [`${VERBOSITY_LABEL} ${VERBOSITY_WORDS[verbosity]}`] : []), ...(serviceTier ? [`${SERVICE_TIER_LABEL} ${SERVICE_TIER_WORDS[serviceTier]}`] : []), ...(systemAsUser ? ['시스템 메시지를 사용자 메시지로 변환'] : []), ...(streaming === false ? ['스트리밍 끔'] : []), ...(retries === undefined ? [] : [`${RETRY_COUNT} ${retries}번`]), ...(extra === undefined ? [] : [extraWords(extra)])];
+    : [`${PROFILE_ROWS.reasoning} ${reasoning.kind === 'off' ? '끔' : reasoning.kind === 'budget' ? `예산 ${count(reasoning.tokens)}` : reasoning.kind === 'adaptive' ? (reasoning.level === null ? '적응형' : `적응형 · ${levelName(reasoning.level)}`) : levelName(reasoning.level)}`];
+  const words = [...MAIN.flatMap(number), ...thinking, ...(cache ? [`${PROFILE_ROWS.cache} ${CACHE[cache]}`] : []), ...(discount ? [DISCOUNT] : []), ...(pdf ? [`${PDF_SEND} ${PDF_KEEP_WORDS[pdf.keep]}${pdf.keep === 'recent' ? ` ${pdf.recent}%` : ''}`] : []), ...DETAIL.flatMap(number), ...(stop ? [`${PROFILE_ROWS.stop} ${stop.length}개`] : []), ...(verbosity ? [`${VERBOSITY_LABEL} ${VERBOSITY_WORDS[verbosity]}`] : []), ...(serviceTier ? [`${SERVICE_TIER_LABEL} ${SERVICE_TIER_WORDS[serviceTier]}`] : []), ...(systemAsUser ? ['시스템 메시지를 사용자 메시지로 변환'] : []), ...(streaming === false ? [`${PROFILE_ROWS.streaming} 끔`] : []), ...(retries === undefined ? [] : [`${RETRY_COUNT} ${retries}번`]), ...(extra === undefined ? [] : [extraWords(extra)])];
   return words.length ? words.join(' · ') : unset;
 }
 

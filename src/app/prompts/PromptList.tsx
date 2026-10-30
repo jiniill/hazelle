@@ -44,7 +44,7 @@ type Order = 'name' | 'recent';
 export function defaultsSummary(picks: readonly { label: string; prompt?: unknown }[]): string {
   const missing = picks.filter(({ prompt }) => !prompt).map(({ label }) => label);
   const held = picks.filter(({ prompt }) => prompt).map(({ label }) => label);
-  return ['기본 프롬프트', held.join(', '), missing.length ? `${missing.join(', ')} 없음` : ''].filter(Boolean).join(' · ');
+  return ['기본 프롬프트', held.length ? `${held.join(', ')}${missing.length ? ' 있음' : ''}` : '', missing.length ? `${missing.join(', ')} 없음` : ''].filter(Boolean).join(' · ');
 }
 
 // Default cards lead each sort but only their own pages change the default.
@@ -153,7 +153,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
     />
   )) : [];
 
-  const defaultPicks = sorts.filter(({ sort }) => sort !== 'agent').map(({ sort, label }) => ({ sort, label, prompt: prompts.find((each) => ofSort(each, sort) && isDefaultPrompt(settings, each)) }));
+  const defaultPicks = !defaults ? [] : sorts.filter(({ sort }) => sort !== 'agent').map(({ sort, label }) => ({ sort, label, prompt: prompts.find((each) => ofSort(each, sort) && isDefaultPrompt(settings, each)) }));
   const defaultCards = defaults && (
     <Disclosure label={defaultsSummary(defaultPicks)}>
       <Columns>

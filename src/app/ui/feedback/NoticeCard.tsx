@@ -29,7 +29,7 @@ export function NoticeCard({ title, note, points, actions, foot, onClose }: Prop
         {points.map(({ icon, text }) => (
           <li key={text} className={styles.point}>
             <span className={styles.icon}>
-              <Icon icon={icon} />
+              <Icon icon={icon} size="sm" />
             </span>
             {text}
           </li>

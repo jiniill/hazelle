@@ -13,7 +13,7 @@ it("reads a model's 모델 설정 by its values, naming it only when it is not t
 });
 
 it('names what is unset where no label beside the line says 모델 설정', () => {
-  expect(profileLine({ kind: 'profile', profile: profile('a', '기본', {}), own: false }, 'a', NO_PROFILE_VALUES)).toBe('모델 설정 지정 안 함');
+  expect(profileLine({ kind: 'profile', profile: profile('a', '기본', {}), own: false }, 'a', NO_PROFILE_VALUES)).toBe('모델 원래 값');
   expect(profileLine({ kind: 'profile', profile: profile('a', '기본', { temperature: 1 }), own: false }, 'a', NO_PROFILE_VALUES)).toBe('온도 1');
 });
 

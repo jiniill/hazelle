@@ -50,7 +50,7 @@ export function ControlsScreen({ back }: { back: Back | null }) {
         <SettingGroup label="입력창">
           <SettingRow
             label="Enter로 보내기"
-            help="끄면 Enter는 줄을 바꾸고, Ctrl+Enter나 보내기 버튼으로 보내요."
+            help="끄면 Enter로 줄을 바꾸고, Ctrl+Enter나 보내기 버튼으로 보내요."
             control={<Switch label="Enter로 보내기" checked={display.enterSends} onChange={(enterSendsChoice) => changeDisplay({ enterSendsChoice })} />}
           />
         </SettingGroup>

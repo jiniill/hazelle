@@ -5,7 +5,7 @@ import { Item } from '../collections/Item';
 import { ButtonSlot } from '../controls/Button';
 import { Icon } from '../foundation/Icon';
 import { faceStyle, type FontId } from '../foundation/fonts';
-import { isCoarsePointer } from '../foundation/media';
+import { hasFinePointer } from '../foundation/media';
 import { keepOnScreen, room, useLayer } from './layers';
 import styles from './Menu.module.css';
 
@@ -53,7 +53,7 @@ type Props = {
 };
 
 // A search would raise a phone's keyboard over the list it filters; a field that is only typed in still takes the focus.
-export const openingStop = (coarse: boolean) => `${coarse ? 'input:not([type="search"])' : 'input'}, textarea, [role^="menuitem"], button`;
+export const openingStop = (fine: boolean) => `${fine ? 'input' : 'input:not([type="search"])'}, textarea, [role^="menuitem"], button`;
 
 const CloseMenu = createContext(() => {});
 
@@ -81,7 +81,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   useEffect(() => () => menu.set(CLOSED), [menu]);
 
   useEffect(() => {
-    if (open) panel.current?.querySelector<HTMLElement>(openingStop(isCoarsePointer()))?.focus();
+    if (open) panel.current?.querySelector<HTMLElement>(openingStop(hasFinePointer()))?.focus();
   }, [open]);
 
   const holders = useContext(Holders);

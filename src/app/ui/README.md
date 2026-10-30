@@ -60,7 +60,7 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 
 - **Button sizes belong to their slot.** A `NavBar`'s actions and a `Section`'s action are `sm`, a `Dialog`'s actions
   and footer `md` (`ButtonSlot`); a caller in a slot passes no `size`. Free-standing buttons keep theirs.
-- **A screen's head:** `{noun} 가져오기` (secondary, `ACTS.import`) before `새 {noun}` (secondary, `ACTS.create`);
+- **A screen's head:** `{noun} 가져오기` (secondary, `ACTS.import`) before `새 {noun}` (secondary, `ACTS.create`), except a character's chat list, whose 새 채팅 leads and whose 채팅 가져오기 is an icon beside it;
   nothing primary, except where writing is the screen's whole point: the board's 글쓰기 is primary. What is done to the thing the screen shows (사본 만들기, 기본으로 정하기, 삭제 in `tone="warn"`)
   goes in `NavBar` `menu`, a ⋯, never at the foot of the body. What cannot be done to it now stays there disabled, its
   words saying why, such as 삭제 on the default. A row opened in place (a lorebook entry, a script)

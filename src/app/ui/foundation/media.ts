@@ -64,7 +64,6 @@ export const usePanelsBeside = () => !usePanelCovers();
 export const useHover = watch(MEDIA.hover);
 
 export const useCoarsePointer = watch(MEDIA.coarsePointer);
-export const isCoarsePointer = () => mediaQuery(MEDIA.coarsePointer).read();
 
 export const useDarkScheme = watch(MEDIA.darkScheme);
 export const isDarkScheme = () => mediaQuery(MEDIA.darkScheme).read();

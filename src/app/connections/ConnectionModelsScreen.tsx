@@ -14,7 +14,7 @@ import { DetailFold } from '../common/DetailFold';
 import { NameDialog } from '../common/NameDialog';
 import { useSearch } from '../common/useSearch';
 import { RetriesRow } from '../common/RetriesRow';
-import { followsRetries, profileLine } from '../common/settingWords';
+import { followsRetries, NO_PROFILE_VALUES, profileLine } from '../common/settingWords';
 import { useAutosave } from '../common/useAutosave';
 import { MODEL_SETTINGS } from '../common/words';
 import { MARKS } from '../common/tutorial';
@@ -126,7 +126,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
         key={entryKey(entry)}
         title={name}
         code={entry.id}
-        description={choice ? profileLine(choice, defaultProfile) : undefined}
+        description={choice ? profileLine(choice, defaultProfile, NO_PROFILE_VALUES) : undefined}
         tags={!listed ? ['목록에 없음'] : entry.protocol === 'unsupported' ? ['지원 안 됨', ...tags(entry)] : tags(entry)}
         trailing={
           <Row kind="actions">

@@ -2,8 +2,8 @@
   composes: box from '../foundation/surface.module.css';
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
-  padding: var(--space-16) var(--space-16) var(--space-16) var(--space-24);
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-12) var(--space-12) var(--space-16);
 }
 
 .head {
@@ -18,7 +18,7 @@
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
-  padding-top: var(--space-8);
+  padding-top: var(--space-4);
 }
 
 .title {
@@ -33,12 +33,12 @@
 .points {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-4);
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: var(--text-md);
-  line-height: var(--leading-relaxed);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }
 
 .point {
@@ -51,7 +51,7 @@
 .icon {
   display: flex;
   align-items: center;
-  height: calc(var(--text-md) * var(--leading-relaxed));
+  height: calc(var(--text-sm) * var(--leading-normal));
   color: var(--color-text-muted);
 }
 

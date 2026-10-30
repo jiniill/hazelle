@@ -12,9 +12,8 @@ import { useAutosave } from '../common/useAutosave';
 import { DISCOUNT, PDF_SEND, UNSET } from '../common/words';
 import { useConnections, useSettings, useStore } from '../session';
 import { ChoiceGroup, NumberInput, PhraseField, Section, SettingGroup, SettingRow, Switch, TextField } from '../ui';
-import { CACHE, changeLine, EXTRA_LABEL, extraError, followsRetries, DETAIL, LEVELS, levelName, MAIN, NUMBER, PDF_KEEP_WORDS, SERVICE_TIER_LABEL, SERVICE_TIER_WORDS, VERBOSITY_LABEL, VERBOSITY_WORDS, type Field } from '../common/settingWords';
+import { CACHE, changeLine, EXTRA_LABEL, extraError, followsRetries, DETAIL, LEVELS, levelName, MAIN, NUMBER, PDF_KEEP_WORDS, PROFILE_ROWS, SERVICE_TIER_LABEL, SERVICE_TIER_WORDS, VERBOSITY_LABEL, VERBOSITY_WORDS, type Field } from '../common/settingWords';
 import { count, readCount, readOptional, readTyped } from '../common/typedNumber';
-import { PROFILE_ROWS } from './profileRows';
 
 const whole = (field: Field | 'budget') => field === 'budget' || field === 'context' || WHOLE.has(field);
 // undefined: left empty, which unsets it. null: not a number the field takes.
