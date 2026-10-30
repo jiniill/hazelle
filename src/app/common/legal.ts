@@ -10,7 +10,7 @@ export const REPOSITORY = 'https://github.com/jiniill/hazelle';
 export const INSTALL_GUIDE = `${REPOSITORY}/blob/master/README.ko.md`;
 export const PLUGIN_GUIDE = `${REPOSITORY}/blob/master/src/tool-api/README.md`;
 // The date the current text takes effect, set by the operator. Changing either text sets it anew.
-export const EFFECTIVE: string = '2026년 10월 30일';
+export const EFFECTIVE: string = '2026년 10월 31일';
 
 type Block = string | string[];
 export type LegalText = { path: string; title: string; sections: { title: string; body: Block[] }[] };
