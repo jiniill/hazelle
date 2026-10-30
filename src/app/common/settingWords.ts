@@ -45,11 +45,12 @@ const settingLabel = (setting: Change['setting']) => (isField(setting) ? NUMBER[
 
 // The screens never say 묶음.
 const NO_VALUES = '지정 안 함';
-// Where no label beside it already says 모델 설정; under one, plain 없음.
+// Where no label beside it already says 모델 설정; under one, plain 없음 and NO_VALUES.
 export const NO_PROFILE = `${MODEL_SETTINGS} 없음`;
+export const NO_PROFILE_VALUES = `${MODEL_SETTINGS} ${NO_VALUES}`;
 
 // What a 모델 설정 sets, in the order the editor shows them.
-export function valuesLine(settings: ModelSettings): string {
+export function valuesLine(settings: ModelSettings, unset: string = NO_VALUES): string {
   const { reasoning, stop, systemAsUser, streaming, cache, verbosity, serviceTier, discount, pdf, retries, extra } = settings;
   const number = (field: Field) => {
     const value = settings[field];
@@ -59,7 +60,7 @@ export function valuesLine(settings: ModelSettings): string {
     ? []
     : [`추론 ${reasoning.kind === 'off' ? '끔' : reasoning.kind === 'budget' ? `예산 ${count(reasoning.tokens)}` : reasoning.kind === 'adaptive' ? (reasoning.level === null ? '적응형' : `적응형 · ${levelName(reasoning.level)}`) : levelName(reasoning.level)}`];
   const words = [...MAIN.flatMap(number), ...thinking, ...(cache ? [`캐시 ${CACHE[cache]}`] : []), ...(discount ? [DISCOUNT] : []), ...(pdf ? [`${PDF_SEND} ${PDF_KEEP_WORDS[pdf.keep]}${pdf.keep === 'recent' ? ` ${pdf.recent}%` : ''}`] : []), ...DETAIL.flatMap(number), ...(stop ? [`멈춤 문구 ${stop.length}개`] : []), ...(verbosity ? [`${VERBOSITY_LABEL} ${VERBOSITY_WORDS[verbosity]}`] : []), ...(serviceTier ? [`${SERVICE_TIER_LABEL} ${SERVICE_TIER_WORDS[serviceTier]}`] : []), ...(systemAsUser ? ['시스템 메시지를 사용자 메시지로 변환'] : []), ...(streaming === false ? ['스트리밍 끔'] : []), ...(retries === undefined ? [] : [`${RETRY_COUNT} ${retries}번`]), ...(extra === undefined ? [] : [extraWords(extra)])];
-  return words.length ? words.join(' · ') : NO_VALUES;
+  return words.length ? words.join(' · ') : unset;
 }
 
 function extraWords(text: string): string {
@@ -79,9 +80,9 @@ export function extraError(text: string | undefined): string | undefined {
 }
 
 // A model's 모델 설정 in one line: what it sets, led by its name only when it is not the default one.
-export function profileLine(choice: ProfileChoice, defaultId: string | undefined): string {
+export function profileLine(choice: ProfileChoice, defaultId: string | undefined, unset?: string): string {
   if (choice.kind !== 'profile') return NO_PROFILE;
-  const values = valuesLine(choice.profile.value.settings);
+  const values = valuesLine(choice.profile.value.settings, unset);
   return choice.profile.id === defaultId ? values : `${choice.profile.value.name} · ${values}`;
 }
 
