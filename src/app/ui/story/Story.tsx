@@ -498,6 +498,8 @@ const isStyle = (namespaceURI: string | null, localName: string) => namespaceURI
 
 function fit(at: ChildNode, node: ChildNode) {
   if (at instanceof Element && node instanceof Element && at.namespaceURI === node.namespaceURI && at.localName === node.localName) {
+    // An input once pressed stops following its checked attribute, and a bot's variable writes that attribute.
+    if (at instanceof HTMLInputElement && at.hasAttribute('checked') !== node.hasAttribute('checked')) at.checked = node.hasAttribute('checked');
     for (const { namespaceURI, localName } of [...at.attributes]) if (!isStyle(namespaceURI, localName) && !node.hasAttributeNS(namespaceURI, localName)) at.removeAttributeNS(namespaceURI, localName);
     for (const { namespaceURI, localName, name, value } of node.attributes) if (!isStyle(namespaceURI, localName) && at.getAttributeNS(namespaceURI, localName) !== value) at.setAttributeNS(namespaceURI, name, value);
     // Through CSSOM, as the draw applies it: a style attribute set by script changes the attribute and, under the CSP,
@@ -654,7 +656,6 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
       // The nearest element that names what to run: a plain button inside one is that one's press.
       const named = (event.target as Element).closest(NAMED);
       if (!named && !(event.target as Element).closest('button')) return;
-      event.preventDefault();
       // An element with both is its trigger, as in Risu.
       const trigger = named?.getAttribute('risu-trigger') ?? null;
       onPress?.(trigger !== null ? { trigger, id: named!.getAttribute('risu-id') ?? '' } : named ? { data: named.getAttribute('risu-btn')! } : null);
