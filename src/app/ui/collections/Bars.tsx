@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import styles from './Bars.module.css';
 
 type Bar = { label: string; value: number; detail: string };
+
+export function nearestBar(x: number, centers: number[]): number {
+  return centers.reduce((best, center, index) => (Math.abs(center - x) < Math.abs(centers[best]! - x) ? index : best), 0);
+}
 
 // Read out hover, then tapped selection, then the latest nonzero bar; data stays oldest-first.
 export function Bars({ label, bars }: { label: string; bars: Bar[] }) {
@@ -11,9 +15,18 @@ export function Bars({ label, bars }: { label: string; bars: Bar[] }) {
   const latest = bars.findLastIndex(({ value }) => value > 0);
   const current = hovered ?? picked ?? (latest === -1 ? bars.length - 1 : latest);
   const shown = bars[current];
+  // A press between the bars or past the last one; a column's own click covers the rest, the keyboard's included.
+  const pickNearest = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    const centers = [...event.currentTarget.children].map((column) => {
+      const { left, width } = column.getBoundingClientRect();
+      return left + width / 2;
+    });
+    pick(nearestBar(event.clientX, centers));
+  };
   return (
     <figure className={styles.bars}>
-      <div className={styles.plot} role="group" aria-label={label}>
+      <div className={styles.plot} role="group" aria-label={label} onClick={pickNearest}>
         {bars.map((bar, index) => (
           <button
             key={index}
