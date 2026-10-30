@@ -14,6 +14,8 @@ export const MEDIA = {
   phone: '(max-width: 599px)',
   // A mouse or trackpad, where a focused search raises no on-screen keyboard.
   finePointer: '(pointer: fine)',
+  // A finger: no Shift key, an on-screen keyboard that a focus raises, and targets it has to hit.
+  coarsePointer: '(pointer: coarse)',
   // A touch screen keeps :hover on whatever was tapped last.
   hover: '(hover: hover)',
   reducedMotion: '(prefers-reduced-motion: reduce)',
@@ -60,6 +62,9 @@ export const usePanelCovers = watch(MEDIA.panelCovers);
 export const usePanelsBeside = () => !usePanelCovers();
 
 export const useHover = watch(MEDIA.hover);
+
+export const useCoarsePointer = watch(MEDIA.coarsePointer);
+export const isCoarsePointer = () => mediaQuery(MEDIA.coarsePointer).read();
 
 export const useDarkScheme = watch(MEDIA.darkScheme);
 export const isDarkScheme = () => mediaQuery(MEDIA.darkScheme).read();
