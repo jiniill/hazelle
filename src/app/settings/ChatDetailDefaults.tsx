@@ -4,6 +4,7 @@ import { RETRY_MOST } from '../../contracts/streams';
 import { ANSWER_INSTRUCTION, answerInstructionOf, LORE_SCAN, setAnswerInstruction, setSharedLoreScan, setToolRounds, setUsageShown, sharedLoreScan } from '../../runtime/chat-context';
 import { TOOL_ROUNDS } from '../../runtime/tool-loop';
 import { setSharedRetries } from '../../runtime/connections';
+import { CacheNoteRow } from '../common/CacheNoteRow';
 import { DetailFold } from '../common/DetailFold';
 import { filled, typedText, useTypedNumber } from '../common/typed';
 import { count, readCount } from '../common/typedNumber';
@@ -16,7 +17,7 @@ import { NumberInput, SettingRow, Stepper, Switch, TextField } from '../ui';
 export function ChatDetailDefaults() {
   const store = useStore();
   const toast = useToast();
-  const { retries, toolRounds, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown } = useSettings();
+  const { retries, toolRounds, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown, cacheNoteHidden } = useSettings();
   const shared = sharedLoreScan(store);
   const flag = (key: 'recursive' | 'fullWordMatching', set: boolean | undefined) => (
     <SettingRow
@@ -28,7 +29,7 @@ export function ChatDetailDefaults() {
   );
   return (
     <DetailFold
-      set={[retries, toolRounds, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown].filter((value) => value !== undefined).length}
+      set={[retries, toolRounds, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown, cacheNoteHidden].filter((value) => value !== undefined).length}
       sections={[
         {
           title: CHAT_DETAIL.reply,
@@ -73,6 +74,7 @@ export function ChatDetailDefaults() {
                 changed={usageShown !== undefined}
                 control={<Switch label={USAGE_SHOWN} checked={usageShown !== undefined} onChange={(on) => void setUsageShown(store, on).then((result) => result.ok || toast.failed(result))} />}
               />
+              <CacheNoteRow />
             </>
           ),
         },

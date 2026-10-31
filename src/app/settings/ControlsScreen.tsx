@@ -1,4 +1,4 @@
-import { CacheNoteRow, ReplyRow } from '../common/ReadingRows';
+import { ReplyRow } from '../common/ReadingRows';
 import { PAGES } from '../common/words';
 import { useDisplay } from '../display';
 import { backBar } from '../shell/router';
@@ -53,7 +53,6 @@ export function ControlsScreen({ back }: { back: Back | null }) {
             help="끄면 Enter로 줄을 바꾸고, Ctrl+Enter나 보내기 버튼으로 보내요."
             control={<Switch label="Enter로 보내기" checked={display.enterSends} onChange={(enterSendsChoice) => changeDisplay({ enterSendsChoice })} />}
           />
-          <CacheNoteRow />
         </SettingGroup>
       </Section>
       <Section title="단축키">

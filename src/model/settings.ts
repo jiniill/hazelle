@@ -63,6 +63,7 @@ export type Settings = {
   preread?: Partial<PrereadSettings>;
   answerInstruction?: string;
   usageShown?: true;
+  cacheNoteHidden?: true;
   // 헤이젤 나우 (design §6.12): false stops every usage label this account's pages send; absent shares (the default).
   pulse?: false;
 };

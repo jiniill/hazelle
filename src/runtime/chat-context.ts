@@ -98,6 +98,9 @@ export const setToolRounds = (store: ObjectStore, rounds: number) =>
 export const setUsageShown = (store: ObjectStore, shown: boolean) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (shown ? { ...current, usageShown: true } : without(current, 'usageShown')));
 
+export const setCacheNoteHidden = (store: ObjectStore, hidden: boolean) =>
+  store.upsert('settings', (current = EMPTY_SETTINGS) => (hidden ? { ...current, cacheNoteHidden: true } : without(current, 'cacheNoteHidden')));
+
 // id is null for a chat not saved yet.
 export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messages: Message[]): ChatScope {
   const character = chat.character === null ? null : (store.get('character', chat.character)?.value ?? null);

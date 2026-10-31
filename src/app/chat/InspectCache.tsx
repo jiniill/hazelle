@@ -7,7 +7,7 @@ import { cacheShortfall } from '../../runtime/cache-diagnosis';
 import type { LogEntry } from '../../runtime/request-log';
 import type { Sending } from '../../runtime/turn-context';
 import { cacheShare, cost, tokens } from '../common/receipt';
-import { CacheNoteRow } from '../common/ReadingRows';
+import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ago } from '../common/time';
 import { CACHE_GUARD, MODEL_SETTINGS, opens, UNKNOWN } from '../common/words';
 import { useLab } from '../common/labs';
