@@ -1,13 +1,25 @@
+import { MAX_DIAGNOSTICS_LENGTH } from '../contracts/board';
 import { errorText, type EvaluationDown, type EvaluationUp } from './evaluation-core';
+import type { Facts, Place } from './diagnostic-state';
 import { moduleWorker } from './worker';
 import workerUrl from './evaluation-worker?worker&url';
 
-// Device/tab-only diagnostics: never include chat text, keys or account identity; never persist across reloads.
+// Tab-only: never persisted across reloads. A problem's text is an error's own words, which can quote what it failed on,
+// so the report is always shown before it is sent (board/WriteScreen).
 type Problem = { at: number; text: string };
 
 const KEPT = 20;
 const PROBE_MS = 30_000;
+const LINE = 500;
 const problems: Problem[] = [];
+let place: Place | null = null;
+
+// Null leaves the last place standing: 앱 정보 and the board are where a report is written, not what it is about.
+export function notePlace(next: Place | null) {
+  if (next) place = next;
+}
+
+export const lastPlace = () => place;
 
 // The same problem said again in a row, as a failure repeats on each try, stays one line.
 export function noteProblem(text: string, at = Date.now()) {
@@ -64,7 +76,17 @@ function device(): Device {
 
 const UNKNOWN = '알 수 없음';
 
-export function reportText({ version, now, device, tokenizer, problems }: { version: string | null; now: number; device: Device; tokenizer: string; problems: readonly Problem[] }): string {
+type Report = { version: string | null; now: number; device: Device; tokenizer: string; state: Facts; problems: readonly Problem[] };
+
+// The oldest problems go first when it would not fit a post, and the report says how many went.
+export function reportText({ problems, ...report }: Report): string {
+  for (let cut = 0; ; cut++) {
+    const text = reportLines(report, problems.slice(cut), cut).join('\n');
+    if (text.length <= MAX_DIAGNOSTICS_LENGTH || cut === problems.length) return text;
+  }
+}
+
+function reportLines({ version, now, device, tokenizer, state }: Omit<Report, 'problems'>, problems: readonly Problem[], cut: number): string[] {
   return [
     '헤이젤 진단 정보',
     `시각: ${new Date(now).toISOString()}`,
@@ -75,12 +97,16 @@ export function reportText({ version, now, device, tokenizer, problems }: { vers
     `코어: ${device.cores ?? UNKNOWN} · 메모리: ${device.memory === null ? UNKNOWN : `${device.memory}GB`}`,
     `홈 화면 앱: ${device.standalone ? '예' : '아니요'} · 온라인: ${device.online ? '예' : '아니요'}`,
     `토크나이저: ${tokenizer}`,
+    `앱 상태: ${JSON.stringify(state, null, 1)}`,
     '최근 오류:',
-    ...(problems.length === 0 ? ['- 없음'] : problems.map(({ at, text }) => `- ${new Date(at).toISOString()} ${text}`)),
-  ].join('\n');
+    ...(cut > 0 ? [`- 오래된 오류 ${cut}줄 생략`] : []),
+    ...(problems.length === 0 && cut === 0 ? ['- 없음'] : problems.map(({ at, text }) => `- ${new Date(at).toISOString()} ${text.slice(0, LINE)}`)),
+  ];
 }
 
-export async function diagnosticReport(version: string | null): Promise<string> {
-  const tokenizer = await probeTokenizer();
-  return reportText({ version, now: Date.now(), device: device(), tokenizer, problems });
+// state: a read of the app, as diagnostic-state makes it. It comes in from the caller since evaluation imports this file
+// for noteProblem and the state's reads import evaluation.
+export async function diagnosticReport(version: string | null, state: Promise<Facts>): Promise<string> {
+  const [tokenizer, facts] = await Promise.all([probeTokenizer(), state]);
+  return reportText({ version, now: Date.now(), device: device(), tokenizer, state: facts, problems });
 }

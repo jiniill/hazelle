@@ -5,6 +5,7 @@ import { probeRoot } from './ui/probe';
 
 let shown: unknown[] = [];
 let waiting = 0;
+const report = vi.fn();
 vi.mock('./ui', () => ({
   Toast: () => null,
   ToastStack: (props: { items: unknown[]; waiting: number }) => {
@@ -26,7 +27,7 @@ function provider() {
   const root = probeRoot();
   return {
     toasts: () => toasts,
-    start: () => act(() => root.render(<ToastProvider standing={null}><Probe /></ToastProvider>)),
+    start: () => act(() => root.render(<ToastProvider standing={null} onReport={report}><Probe /></ToastProvider>)),
     end: async () => {
       await act(() => root.unmount());
       vi.unstubAllGlobals();
@@ -41,7 +42,7 @@ it('takes a screen\'s own 되돌리기 away when the screen is left', async () =
     return null;
   }
   const root = probeRoot();
-  const render = (open: boolean) => root.render(<ToastProvider standing={null}>{open && <Editor />}</ToastProvider>);
+  const render = (open: boolean) => root.render(<ToastProvider standing={null} onReport={report}>{open && <Editor />}</ToastProvider>);
   try {
     await act(() => render(true));
     await act(() => void undoable!('블록을 뺐어요.', () => {}));
@@ -51,6 +52,23 @@ it('takes a screen\'s own 되돌리기 away when the screen is left', async () =
   } finally {
     await act(() => root.unmount());
     vi.unstubAllGlobals();
+  }
+});
+
+it('offers 오류 제보 on a failure, still counting one said again as one notice', async () => {
+  const { toasts, start, end } = provider();
+  try {
+    await start();
+    const failure = { ok: false, error: 'network' } as const;
+    await act(() => toasts().failed(failure));
+    await act(() => toasts().failed(failure));
+    expect(props()).toHaveLength(1);
+    expect(props()[0]!.times).toBe(2);
+    await act(() => props()[0]!.action!.onClick());
+    expect(report).toHaveBeenCalledOnce();
+    expect(props()).toHaveLength(0);
+  } finally {
+    await end();
   }
 });
 

@@ -2,14 +2,15 @@ import { Globe, Lock } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { CATEGORIES, MAX_POST_LENGTH, MAX_TITLE_LENGTH, type Category, type Post } from '../../contracts/board';
 import { editPost, readPost, writePost } from '../../runtime/board';
-import { diagnosticReport } from '../../runtime/diagnostics';
+import { stateFacts } from '../../runtime/diagnostic-state';
+import { diagnosticReport, lastPlace } from '../../runtime/diagnostics';
 import { describeFailure } from '../common/failure';
 import { BUILT_VERSION } from '../common/release';
 import { useAttempt } from '../common/useAttempt';
 import { CATEGORY_LOOK } from '../common/postRow';
 import { readPersisted } from '../common/usePersisted';
 import { useLoaded } from '../common/useLoaded';
-import { BOARD } from '../common/words';
+import { BOARD, DIAGNOSIS_NOTE } from '../common/words';
 import { useAccount, useSession, useStanding } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -67,7 +68,8 @@ export function EditScreen({ id, back }: { id: number; back: Back }) {
 // operator: 운영자에게만 preset, as 설정 › 계정 and 내 글 open it. A suspended account writes nothing else (design §6.13).
 export function WriteScreen({ editing, operator, category: preset, back }: { editing: Post | null; operator: boolean; category?: Category; back: Back }) {
   const { suspended } = useStanding();
-  const { username } = useSession();
+  const session = useSession();
+  const { username } = session;
   const { admin } = useAccount();
   const { gate, dialog } = useNicknameGate();
   const key = draftKey(username);
@@ -80,8 +82,10 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
   const [category, setCategory] = useState<Category | null>(start.category);
   const [toOperator, setToOperator] = useState(operator || (restored?.toOperator ?? false));
   const [fromDraft, setFromDraft] = useState(restored !== null);
-  // On by default: an error report is rarely answerable without it, and it holds no chat text or key.
-  const [withDevice, setWithDevice] = useState(true);
+  // On by default: an error report is rarely answerable without it.
+  const [withReport, setWithReport] = useState(true);
+  // What was shown is what goes: read once, not again at the press.
+  const [report, setReport] = useState<string | null>(null);
   const { busy, failure, run } = useAttempt();
   const titled = counted(title, MAX_TITLE_LENGTH);
   const body = counted(text, MAX_POST_LENGTH);
@@ -89,7 +93,13 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
   const news = category === 'news';
   const operatorOnly = (toOperator || suspended) && !news;
   const blank = title.trim() === '' && (text.trim() === '' || text === BUG_TEMPLATE);
-  const ready = titled.length > 0 && !titled.over && body.length > 0 && text !== BUG_TEMPLATE && !body.over && category !== null;
+  const attaching = !editing && operatorOnly && withReport;
+  // The report says what happened by itself, so it may go without the template filled in.
+  const ready = titled.length > 0 && !titled.over && body.length > 0 && (text !== BUG_TEMPLATE || attaching) && !body.over && category !== null && (!attaching || report !== null);
+
+  useEffect(() => {
+    if (attaching && report === null) void diagnosticReport(BUILT_VERSION, stateFacts(session, lastPlace())).then(setReport);
+  }, [attaching]);
 
   useEffect(() => {
     if (!editing) keepDraft(key, blank ? null : { title, text, category, toOperator });
@@ -116,8 +126,7 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
         navigate({ kind: 'post', id: editing.id }, { replace: true });
         return null;
       }
-      const diagnostics = operatorOnly && withDevice ? await diagnosticReport(BUILT_VERSION) : null;
-      const written = await writePost({ ...fields, visibility: operatorOnly ? 'operator' : 'public', diagnostics });
+      const written = await writePost({ ...fields, visibility: operatorOnly ? 'operator' : 'public', diagnostics: attaching ? report : null });
       if (!written.ok) return describeFailure(written);
       keepDraft(key, null);
       navigate({ kind: 'post', id: written.data.id }, { replace: true });
@@ -162,8 +171,9 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
         ))}
       {!editing && operatorOnly && (
         <Stack gap="related">
-          <Checkbox label="기기 정보와 최근 오류도 보내기" checked={withDevice} onChange={setWithDevice} />
-          <Text variant="note">채팅 내용이나 API 키는 담기지 않아요.</Text>
+          <Checkbox label="진단 정보 함께 보내기" checked={withReport} onChange={setWithReport} />
+          <Text variant="note">{DIAGNOSIS_NOTE}</Text>
+          {attaching && (report === null ? <Text variant="note">진단 정보를 불러오는 중이에요.</Text> : <TextField label="진단 정보" lines={8} value={report} onChange={() => {}} readOnly />)}
         </Stack>
       )}
       {failure && (

@@ -505,3 +505,8 @@ export function backTo(to: Route, wide: boolean): Back {
       return { to, label: '뒤로' };
   }
 }
+
+// Where a report is written, not what it is about (runtime/diagnostics notePlace).
+const REPORTING: readonly Route['kind'][] = ['settings', 'account', 'notices'];
+
+export const reportedPlace = (route: Route): { kind: string; id: string | null } | null => (onBoard(route) || REPORTING.includes(route.kind) ? null : { kind: route.kind, id: 'id' in route && typeof route.id === 'string' ? route.id : null });

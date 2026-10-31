@@ -20,12 +20,13 @@ import { DisplayProvider, useDisplay } from '../display';
 import { BIN, BOARD, inSettings, NOTICES } from '../common/words';
 import { ImportProvider } from '../library/ImportFlow';
 import { SessionProvider, useHeldLeave, useSaves, useSession, useSettings, useStore } from '../session';
+import { notePlace } from '../../runtime/diagnostics';
 import { ToastProvider, useToast, type Standing } from '../toast';
 import { Brand, Progress, Screen, Text } from '../ui';
 import { BotNotes } from './BotNotes';
 import { Layout } from './Layout';
-import { navigate } from './router';
-import type { Route } from './routes';
+import { navigate, useRoute } from './router';
+import { reportedPlace, type Route } from './routes';
 
 const RECONNECTING: Standing = { message: '연결이 불안정해요', detail: '다시 연결되면 이어서 읽고 저장해요.' };
 const SUSPENDED: Standing = {
@@ -260,7 +261,8 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
     <SessionProvider session={session} account={account}>
       {/* Around the toasts, which show a character's picture that 이미지 가리기 covers. */}
       <DisplayProvider>
-        <ToastProvider standing={notice !== RESTORING && waiting ? RECONNECTING : notice}>
+        <ToastProvider standing={notice !== RESTORING && waiting ? RECONNECTING : notice} onReport={() => navigate({ kind: 'board-write', operator: true })}>
+          <PlaceNote />
           {rewound !== null && <Restored dropped={rewound} />}
           <Unread facts={account.facts} kind="unreadNotices" />
           <Unread facts={account.facts} kind="unreadBoard" />
@@ -279,4 +281,11 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
       </DisplayProvider>
     </SessionProvider>
   );
+}
+
+// Apart, so a navigation does not draw the whole workspace again.
+function PlaceNote() {
+  const route = useRoute();
+  useEffect(() => notePlace(reportedPlace(route)), [route]);
+  return null;
 }

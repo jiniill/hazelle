@@ -2,15 +2,16 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { ApiFailure } from '../runtime/api';
 import { noteProblem } from '../runtime/diagnostics';
 import { describeFailure } from './common/failure';
-import { UNDO } from './common/words';
+import { REPORT_FAILURE, UNDO } from './common/words';
 import { SHORTCUTS, typing, useShortcut } from './shortcuts';
 import { Toast, ToastStack, type ToastAction } from './ui';
 
 type Action = { label: string; onClick: () => void };
-type Extra = { detail?: string; action?: Action };
+// report: offers 오류 제보, for a failure that is the app's rather than the user's input.
+type Extra = { detail?: string; action?: Action; report?: true };
 type From = { name: string; face: string | null };
 // ends: null while it waits behind the notices shown, its time not yet running; Infinity once kept open.
-type Notice = { key: number; message: string; detail?: string; tone: 'plain' | 'warn'; action?: ToastAction; said?: { from: From; keep: () => void }; close: () => void; undo: boolean; times: number; life: number; ends: number | null };
+type Notice = { key: number; message: string; detail?: string; tone: 'plain' | 'warn'; action?: ToastAction; offer?: ToastAction; said?: { from: From; keep: () => void }; close: () => void; undo: boolean; times: number; life: number; ends: number | null };
 
 export type Toasts = {
   show: (message: string, extra?: Extra) => void;
@@ -52,32 +53,35 @@ export type Standing = { message: string; detail: string };
 
 // Pause timers on hover/focus or hidden page; resume remaining time, never reset it.
 // standing is caller-owned and never timed.
-export function ToastProvider({ standing, children }: { standing: Standing | null; children: ReactNode }) {
+export function ToastProvider({ standing, onReport, children }: { standing: Standing | null; onReport: () => void; children: ReactNode }) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [held, setHeld] = useState(false);
   const [hidden, setHidden] = useState(() => document.hidden);
   const [floor, setFloor] = useState<HTMLElement | null>(null);
   const toasts = useMemo<Toasts>(() => {
     let next = 0;
-    const add = (message: string, tone: Notice['tone'], { detail, action, from }: Extra & { from?: From } = {}, undo = false) => {
+    const add = (message: string, tone: Notice['tone'], { detail, action, report, from }: Extra & { from?: From } = {}, undo = false) => {
       const key = ++next;
-      if (tone === 'warn') noteProblem(detail ? `${message} ${detail}` : message);
+      // Not a speaker's words: a plugin or bot may quote the chat in them.
+      if (tone === 'warn' && !from) noteProblem(detail ? `${message} ${detail}` : message);
       const life = lifeOf(tone, `${message}${detail ?? ''}`, action !== undefined);
       const close = () => setNotices((all) => lineUp(all.filter((notice) => notice.key !== key)));
       const keep = () => setNotices((all) => all.map((notice) => (notice.key === key ? { ...notice, ends: Infinity } : notice)));
       const pressed = action && { ...action, onClick: () => (close(), action.onClick()), ...(undo && { keys: SHORTCUTS.undoToast.keys }) };
+      // Apart from action, since one of those waits its turn and is never merged, and a repeating failure must still merge.
+      const offer = report && { label: REPORT_FAILURE, onClick: () => (close(), onReport()) };
       // The same words from the same speaker, said again while up, stay one notice that counts them and runs its time
       // again. One with an action is never merged: each carries its own 되돌리기.
       const repeats = (notice: Notice) => !action && !notice.action && notice.message === message && notice.detail === detail && notice.tone === tone && notice.said?.from.name === from?.name;
       setNotices((all) => {
         const same = all.find(repeats);
         const again = (notice: Notice) => ({ ...notice, times: notice.times + 1, ends: notice.ends === null ? null : Math.max(notice.ends, Date.now() + life) });
-        return lineUp(same ? all.map((notice) => (notice === same ? again(notice) : notice)) : [{ key, message, detail, tone, action: pressed, said: from && { from, keep }, close, undo, times: 1, life, ends: null }, ...all]);
+        return lineUp(same ? all.map((notice) => (notice === same ? again(notice) : notice)) : [{ key, message, detail, tone, action: pressed, offer, said: from && { from, keep }, close, undo, times: 1, life, ends: null }, ...all]);
       });
       return close;
     };
     const failed: Toasts['failed'] = (failure, prefix, words) => {
-      if (failure.error !== 'storage-full' && (failure.error !== 'timeline-changed' || prefix)) add(prefix ?? describeFailure(failure, words), 'warn', prefix ? { detail: describeFailure(failure, words) } : {});
+      if (failure.error !== 'storage-full' && (failure.error !== 'timeline-changed' || prefix)) add(prefix ?? describeFailure(failure, words), 'warn', { report: true, ...(prefix && { detail: describeFailure(failure, words) }) });
     };
     const settle = (undo: Parameters<Toasts['undoable']>[1]) => () => void undo()?.then((result) => result.ok || failed(result, '되돌리지 못했어요.'));
     return {
@@ -128,9 +132,9 @@ export function ToastProvider({ standing, children }: { standing: Standing | nul
       <ToastStack
         items={[
           ...(standing ? [{ key: 'standing', toast: <Toast message={standing.message} detail={standing.detail} tone="plain" life={0} paused={stopped} /> }] : []),
-          ...shown.map(({ key, message, detail, tone, action, said, close, times, life }) => ({
+          ...shown.map(({ key, message, detail, tone, action, offer, said, close, times, life }) => ({
             key,
-            toast: <Toast message={message} detail={detail} tone={tone} action={action} times={times} from={said?.from} onKeep={said?.keep} onClose={close} life={life} paused={stopped} />,
+            toast: <Toast message={message} detail={detail} tone={tone} action={action ?? offer} times={times} from={said?.from} onKeep={said?.keep} onClose={close} life={life} paused={stopped} />,
             onClose: close,
           })),
         ]}

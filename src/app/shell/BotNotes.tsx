@@ -25,7 +25,7 @@ export function BotNotes() {
           break;
         }
         case 'failed':
-          toast.error(`${from?.name ?? '봇'} 스크립트가 오류로 멈췄어요`, { detail: note.message });
+          toast.error(`${from?.name ?? '봇'} 스크립트가 오류로 멈췄어요`, { detail: note.message, report: true });
           break;
         case 'missing':
           toast.show(`${from?.name ?? '봇'} · 지원하지 않는 기능을 썼어요`, { detail: note.names.join(', ') });
