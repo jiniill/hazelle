@@ -46,13 +46,13 @@ export function parseReading(stored: string, fallback: Reading): Reading {
 // Portrait stage is reserved for chats without illustration (user, 2026-10-16); width cap preserves old default (2026-10-17).
 // Track last system mode so reload preserves manual edits until the next mode change (user, 2026-10-20).
 // Chimes default off and use chimeSounds once enabled (user, 2026-10-26).
-export type Display = Scheme & { chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean };
+export type Display = Scheme & { chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean; cacheNote: boolean };
 
 export type Follow = Record<Theme, string> & { applied: Theme };
 
 const PLAIN = { bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' } as const;
 
-export const DISPLAY_DEFAULT: Display = { chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, theme: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false };
+export const DISPLAY_DEFAULT: Display = { chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, theme: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false, cacheNote: true };
 
 export function parseDisplay(stored: string, fallback: Display): Display {
   const read = fields<keyof Display | 'enterSends'>(stored);
@@ -79,6 +79,7 @@ export function parseDisplay(stored: string, fallback: Display): Display {
     stepButtons: flag(read.stepButtons, fallback.stepButtons),
     scrubber: flag(read.scrubber, fallback.scrubber),
     userStops: flag(read.userStops, fallback.userStops),
+    cacheNote: flag(read.cacheNote, fallback.cacheNote),
   };
 }
 

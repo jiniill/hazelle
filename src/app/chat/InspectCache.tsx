@@ -7,12 +7,13 @@ import { cacheShortfall } from '../../runtime/cache-diagnosis';
 import type { LogEntry } from '../../runtime/request-log';
 import type { Sending } from '../../runtime/turn-context';
 import { cacheShare, cost, tokens } from '../common/receipt';
+import { CacheNoteRow } from '../common/ReadingRows';
 import { ago } from '../common/time';
 import { CACHE_GUARD, MODEL_SETTINGS, opens, UNKNOWN } from '../common/words';
 import { useLab } from '../common/labs';
 import { useSession, useStore } from '../session';
 import { navigate } from '../shell/router';
-import { Button, Callout, Disclosure, Empty, Facts, List, ListItem, Row, Section, Stack, Text } from '../ui';
+import { Button, Callout, Disclosure, Empty, Facts, List, ListItem, Row, Section, SettingGroup, Stack, Text } from '../ui';
 import { BrokenPartView, breakCauses, breakKind, diagnosed, Prescriptions, RecurrenceNote, ShortfallNote } from './CacheDiagnosis';
 import { BROKEN, nextWarning, profileName, why } from './ChatCache';
 import { partName } from './ChatSent';
@@ -27,6 +28,9 @@ const RECENT = 10;
 export function Cache({ chat, next, cache }: { chat: string; next: ReactNode; cache: CacheNotes }) {
   return (
     <Stack gap="section">
+      <SettingGroup label="캐시 표시">
+        <CacheNoteRow />
+      </SettingGroup>
       <Section title="다음 전송" help="토큰 수는 추정치예요.">
         {next}
       </Section>
