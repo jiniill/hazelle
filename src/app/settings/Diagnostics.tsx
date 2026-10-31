@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { stateFacts } from '../../runtime/diagnostic-state';
 import { diagnosticReport, lastPlace } from '../../runtime/diagnostics';
 import { ACTS } from '../common/acts';
-import { BUILT_VERSION } from '../common/release';
+import { BUILT_VERSION } from '../../runtime/installation';
 import { DIAGNOSIS_NOTE } from '../common/words';
 import { useCopy } from '../common/useCopy';
 import { useSession } from '../session';

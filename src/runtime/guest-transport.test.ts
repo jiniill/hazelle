@@ -10,6 +10,7 @@ import { startChat } from './chat-log';
 import { Catalogs } from './catalog';
 import { Credentials } from './credential';
 import { accountTransport, directTransport, holdTransport, relayJson, relayRaw, stream, stopStream } from './relay';
+import { autoDiagnose } from './auto-diagnosis';
 import { openGuestSession, type Session } from './session';
 import { FIRST_PROFILE_ID } from './profiles';
 import { requestCode } from './sign-in';
@@ -45,6 +46,8 @@ it('opens a guest session, sends a turn directly, parses and saves it in-page, a
   expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/visits/guest']);
   expect(JSON.parse(fetch.mock.calls[0]![1].body as string)).toEqual({ guest, step: 'opened' });
   fetch.mockClear();
+  autoDiagnose({ event: 'turn-failed', detail: 'gone' });
+  expect(fetch).not.toHaveBeenCalled();
   const { store } = session;
   session.transport.connected();
   expect(JSON.parse(fetch.mock.calls[0]![1].body as string)).toEqual({ guest, step: 'connected' });

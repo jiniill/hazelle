@@ -27,6 +27,7 @@ import { RequestLog } from './request-log';
 import { addFirstPersona, recordChatPersonas } from './personas';
 import { addFirstProfile } from './profiles';
 import { addDefaults } from './prompts';
+import { holdDiagnosis, sharesDiagnosis } from './auto-diagnosis';
 import { sharesPulse } from './pulse';
 import { keepSynced, ObjectStore, type PullProgress } from './store';
 import { Talk } from './talk';
@@ -121,7 +122,11 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   }
   // The opening pull is sent before the switch is read, so the page-load mark rides the next request.
   holdTransport(transport);
-  const holdSharing = () => holdPulse(transport.detached && sharesPulse(store.get('settings', SETTINGS_ID)?.value));
+  const holdSharing = () => {
+    const settings = store.get('settings', SETTINGS_ID)?.value;
+    holdPulse(transport.detached && sharesPulse(settings));
+    holdDiagnosis(transport.detached && sharesDiagnosis(settings));
+  };
   holdSharing();
   markSeen();
   const stopSharing = store.subscribe((changes) => {
@@ -225,6 +230,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     transport.close();
     stopSharing();
     holdPulse(false);
+    holdDiagnosis(false);
     stopSync();
     read.close();
     display.close();

@@ -12,6 +12,7 @@ import { answerAction, answerBegin, leaveAccount, refuseLeft, restoreFrom, resto
 import { requireSession } from './session';
 import { tellUnread, VISIBLE } from './unread';
 import { readCohorts } from './pulse';
+import { forgetDiagnoses, readDiagnoses } from './diagnoses';
 import { readVisits } from './visits';
 
 // Reports are plaintext rows no byte cap counts, so one account's unresolved ones are bounded (board.ts).
@@ -30,6 +31,7 @@ export async function forgetOldRecords(db: Db): Promise<void> {
     db.prepare("DELETE FROM posts WHERE visibility = 'operator' AND status IN ('seen', 'done', 'declined') AND status_at < ?").bind(before),
     db.prepare('DELETE FROM admin_log WHERE at < ?').bind(before),
     db.prepare('DELETE FROM board_guest_address_blocks WHERE until <= ?').bind(now),
+    forgetDiagnoses(db, now),
     ...forgetCut(db, 'TRUE'),
   ]);
 }
@@ -61,6 +63,7 @@ admin.use(requireSession);
 admin.use(createMiddleware<AppEnv>(async (c, next) => (c.get('account').admin ? next() : fail(c, 403, 'not-admin'))));
 
 admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db), cohorts: await readCohorts(c.env.db) }));
+admin.get('/diagnoses', async (c) => c.json({ rows: await readDiagnoses(c.env.db) }));
 
 // Atomically log then act, gated on target existence; deletion would make later target lookup impossible.
 // values bind detail parameters from ?4 onward.

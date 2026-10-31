@@ -1,9 +1,5 @@
 import type { Route } from '../shell/routes';
 
-// The tag this page was built from: the Dockerfile hands its HAZELLE_VERSION to Vite. A build without one (dev, tests, a
-// local docker build) has none, and then neither compares with the server nor says news.
-export const BUILT_VERSION: string | null = (import.meta.env.VITE_HAZELLE_VERSION as string | undefined) || null;
-
 // The pictures common/tourArt draws, one name per page.
 export type TourArt = 'board-list' | 'board-thread' | 'board-operator';
 // A release's headline feature shown page by page (common/Tour), under the version of its 소식 post (server/news).

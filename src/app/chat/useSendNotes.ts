@@ -6,6 +6,8 @@ import type { Chat } from '../../model/chat';
 import type { Memory } from '../../model/memory';
 import type { Route } from '../../runtime/assignment';
 import { breakCost, forecast, lastCache, prior } from '../../runtime/cache';
+import { autoDiagnose } from '../../runtime/auto-diagnosis';
+import { autoChat } from '../../runtime/diagnostic-state';
 import { leaving } from '../../runtime/memory-view';
 import type { Shown } from '../../runtime/talk';
 import type { SentRequest } from '../../runtime/request-log';
@@ -54,6 +56,7 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
         setSending(result);
         const sending = result && 'turn' in result ? result : null;
         setLeft(sending && leaving(sending.prompt));
+        if (sending && leaving(sending.prompt)) autoDiagnose({ event: 'memory-gap', chat: { id, read: () => autoChat(session, id, sending) } });
         const account = sending ? session.credentials.pool.peek(sending.turn.route.connection.value)?.id ?? null : null;
         const send = sending && cacheSend(sending, account);
         const before = session.store.scopeState(id) === 'loaded' ? prior(session.store, id, messages, Date.now()) : null;

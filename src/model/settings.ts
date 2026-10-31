@@ -71,4 +71,6 @@ export type Settings = {
   seen?: Seen;
   // 헤이젤 나우 (design §6.12): false stops every usage label this account's pages send; absent shares (the default).
   pulse?: false;
+  // 자동 진단 (design §6.13): false sends none; absent sends (the default).
+  diagnosis?: false;
 };

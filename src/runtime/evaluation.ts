@@ -6,6 +6,7 @@ import type { AgentInput, assembleAgent, assembleIllustration, assembleMascot, a
 import type { ChatScope, VariableInspection } from '../engine/render';
 import type { ApiFailure } from './api';
 import type { ChatTexts, Counted, DisplayEvaluation, EvaluatedPrompt, EvaluationDown, EvaluationInput, EvaluationJob, EvaluationResult, EvaluationUp, LuaResult, ToolState, TrialRead } from './evaluation-core';
+import { autoDiagnose } from './auto-diagnosis';
 import { noteProblem } from './diagnostics';
 import { changedTail, sameHistory } from './history-delta';
 import { Heartbeat, moduleWorker } from './worker';
@@ -281,7 +282,10 @@ export class Evaluation {
 
   private receive(data: EvaluationUp) {
     if ('pong' in data || 'progress' in data) return this.heart.answered();
-    if ('trouble' in data) return noteProblem(data.trouble);
+    if ('trouble' in data) {
+      autoDiagnose({ event: 'worker-trouble' });
+      return noteProblem(data.trouble);
+    }
     if ('probed' in data) return;
     const active = this.active;
     if ('started' in data) {

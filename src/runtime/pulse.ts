@@ -34,4 +34,6 @@ export const PULSE_ROLE: Record<CallPurpose, PulseRole> = {
   embedding: 'embedding',
 };
 
-export const callLabel = (role: PulseRole, connection: Connection, model: string): PulseLabel => ({ kind: 'call', role, type: connection.type === GENERIC ? DIRECT_TYPE : connection.type, model });
+export const labelledType = (connection: Connection) => (connection.type === GENERIC ? DIRECT_TYPE : connection.type);
+
+export const callLabel = (role: PulseRole, connection: Connection, model: string): PulseLabel => ({ kind: 'call', role, type: labelledType(connection), model });

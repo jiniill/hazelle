@@ -10,6 +10,7 @@ import type { Back } from '../shell/routes';
 import { Beside, Callout, NavBar, Screen, Section, SettingGroup, SettingRow, Switch } from '../ui';
 import { AccountsSection } from './AccountsSection';
 import { BackupCopierNote, BackupFolderSection } from './BackupFolderSection';
+import { DiagnosesSection } from './DiagnosesSection';
 import { LogSection } from './LogSection';
 import { OperatorPostsSection } from './OperatorPostsSection';
 import { ReportsSection } from './ReportsSection';
@@ -47,6 +48,7 @@ export function AdminScreen({ back }: { back: Back | null }) {
       <Beside side={<LogSection key={acts} head />}>
         {!own && moderating && <ReportsSection head onActed={acted} />}
         {!own && <OperatorPostsSection />}
+        {!own && <DiagnosesSection />}
         {!own && <VisitsSection />}
         {!own && <GuestBoardSection onSaved={acted} />}
         <AccountsSection loaded={accounts} total={service.data?.accounts ?? null} onActed={acted}>

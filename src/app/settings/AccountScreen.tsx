@@ -1,5 +1,6 @@
 import { logOutOthers } from '../../runtime/account';
 import { readRelease, selfHost } from '../../runtime/installation';
+import { setDiagnosisSharing, sharesDiagnosis } from '../../runtime/auto-diagnosis';
 import { setPulseSharing, sharesPulse } from '../../runtime/pulse';
 import { sizeText } from '../common/size';
 import { count } from '../common/typedNumber';
@@ -11,8 +12,8 @@ import { useToast } from '../toast';
 import { LegalNotice } from '../common/LegalNotice';
 import { INSTALL_GUIDE } from '../common/legal';
 import { useLoaded } from '../common/useLoaded';
-import { BUILT_VERSION } from '../common/release';
-import { BIN, BOARD, PAGES, PULSE, UNKNOWN } from '../common/words';
+import { BUILT_VERSION } from '../../runtime/installation';
+import { AUTO_DIAGNOSIS, BIN, BOARD, PAGES, PULSE, UNKNOWN } from '../common/words';
 import { Avatar, Button, Columns, FaceRow, Gauge, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
 import { BackupSection } from './BackupSection';
 import { Diagnostics } from './Diagnostics';
@@ -170,7 +171,13 @@ function AppInfo() {
   const { guest } = useAccount();
   const toast = useToast();
   const store = useStore();
-  const sharing = sharesPulse(useSettings());
+  const settings = useSettings();
+  const sharing = sharesPulse(settings);
+  const diagnosing = sharesDiagnosis(settings);
+  async function diagnose(on: boolean) {
+    const done = await setDiagnosisSharing(store, on);
+    if (!done.ok) toast.failed(done, '바꾸지 못했어요.');
+  }
   async function share(on: boolean) {
     const done = await setPulseSharing(store, on);
     if (!done.ok) toast.failed(done, '바꾸지 못했어요.');
@@ -193,6 +200,13 @@ function AppInfo() {
             label={PULSE.sharing}
             help={`켜 두면 쓰는 모델과 제공자, 응답 수가 ${PULSE.title} 집계에 더해져요. 누가 썼는지와 대화 내용은 남지 않아요.`}
             control={<Switch label={PULSE.sharing} checked={sharing} onChange={(on) => void share(on)} />}
+          />
+        )}
+        {!guest && !selfHost() && (
+          <SettingRow
+            label={AUTO_DIAGNOSIS.label}
+            help={AUTO_DIAGNOSIS.help}
+            control={<Switch label={AUTO_DIAGNOSIS.label} checked={diagnosing} onChange={(on) => void diagnose(on)} />}
           />
         )}
         <Diagnostics />

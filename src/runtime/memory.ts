@@ -1,3 +1,5 @@
+import { autoDiagnose } from './auto-diagnosis';
+import { autoChat } from './diagnostic-state';
 import { entryName } from '../connectors/types';
 import { ChangeSignal } from '../change-signal';
 import { chatMemory, memoryOwner, memorySetup, sourcesOf, storedMemory } from './memory-read';
@@ -341,6 +343,9 @@ export class Rememberer {
     else if (change.indexFailed) next.indexFailed.set(chat, change.indexFailed);
     this.state = next;
     this.changes.notify();
+    for (const failure of [change.failed, change.chapterFailed, change.indexFailed]) {
+      if (failure) autoDiagnose({ event: 'memory-failed', detail: failure.kind, chat: { id: chat, read: () => autoChat(this.session, chat, null) } });
+    }
   }
 
   private start(chat: string, check: MemoryCheck) {

@@ -53,18 +53,19 @@ export function hearServedVersion(listener: ((version: string) => void) | null) 
 
 // Every request to this app's server leaves through here (api, and runtime/relay's raw ones).
 // pulse: a provider call's label, which marks the account active too and so settles an owed seen.
-export async function fetchApi(path: string, { pulse, ...init }: Omit<RequestInit, 'headers'> & { headers?: Record<string, string>; pulse?: PulseLabel } = {}): Promise<Response> {
+// anonymous: says nothing of the account, neither the cookie nor the header, and hears nothing of it (runtime/auto-diagnosis).
+export async function fetchApi(path: string, { pulse, anonymous, ...init }: Omit<RequestInit, 'headers'> & { headers?: Record<string, string>; pulse?: PulseLabel; anonymous?: true } = {}): Promise<Response> {
   const sent = generation;
-  const label = sharing ? (pulse ?? (seenOwed ? ({ kind: 'seen' } as const) : null)) : null;
+  const label = sharing && !anonymous ? (pulse ?? (seenOwed ? ({ kind: 'seen' } as const) : null)) : null;
   if (label) seenOwed = false;
-  const response = await fetch(`/api/${path}`, { ...init, headers: { ...(held === null ? {} : { [ACCOUNT_HEADER]: held }), ...(label && { [PULSE_HEADER]: pulseHeader(label) }), ...init.headers } });
+  const response = await fetch(`/api/${path}`, { ...init, ...(anonymous && { credentials: 'omit' }), headers: { ...(held === null || anonymous ? {} : { [ACCOUNT_HEADER]: held }), ...(label && { [PULSE_HEADER]: pulseHeader(label) }), ...init.headers } });
   // An immutable answer (a picture) may come from the browser's cache, carrying the release that first served it.
   const version = response.headers.get('cache-control')?.includes('immutable') ? null : response.headers.get(VERSION_HEADER);
   if (version !== null && version !== served) {
     served = version;
     hearServed?.(version);
   }
-  const tell = hear;
+  const tell = anonymous ? null : hear;
   if (!tell || sent !== generation) return response;
   const bytes = response.headers.get(ACCOUNT_USAGE_HEADERS.bytes);
   const fileBytes = response.headers.get(ACCOUNT_USAGE_HEADERS.fileBytes);

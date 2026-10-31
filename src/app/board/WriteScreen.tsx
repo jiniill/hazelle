@@ -5,7 +5,7 @@ import { editPost, readPost, writePost } from '../../runtime/board';
 import { stateFacts } from '../../runtime/diagnostic-state';
 import { diagnosticReport, lastPlace } from '../../runtime/diagnostics';
 import { describeFailure } from '../common/failure';
-import { BUILT_VERSION } from '../common/release';
+import { BUILT_VERSION } from '../../runtime/installation';
 import { useAttempt } from '../common/useAttempt';
 import { CATEGORY_LOOK } from '../common/postRow';
 import { readPersisted } from '../common/usePersisted';

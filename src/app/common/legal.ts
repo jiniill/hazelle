@@ -1,7 +1,8 @@
+import { AUTO_KEEP_DAYS } from '../../contracts/auto-diagnosis';
 import { GUESTS_PER_ADDRESS, SELF_RESTORES_PER_DAY, VISITORS_PER_ADDRESS } from '../../contracts/admin';
 import { COMMENTS_PER_DAY, GUEST_ADDRESS_CAP_MULTIPLIER, HOLD_DAYS_MAX, POSTS_PER_DAY } from '../../contracts/board';
 import { PULSE_FLOORS } from '../../contracts/pulse';
-import { PULSE } from './words';
+import { AUTO_DIAGNOSIS, PULSE } from './words';
 // The only place the terms and the privacy page are written. Every factual sentence states what the code does: a change
 // to accounts, storage, deletion, the relay or the operator's routes may make one false.
 
@@ -199,6 +200,7 @@ export const PRIVACY: LegalText = {
           `${PULSE.title}의 주별 재방문 집계(주, 가입 주, 각 주에 앱을 연 사람 수): 운영자 화면에서 가입 주별 재방문을 확인하는 데 사용합니다. 주가 끝나면 만들고, 계정을 담지 않으며, 사람 수가 ${PULSE_FLOORS.row}명 이상일 때만 저장합니다. 탈퇴해도 삭제되지 않습니다.`,
           `${PULSE.title}의 시간별 집계(시각, 역할별 호출 수): 최근 24시간을 보여 주는 데 사용합니다. 계정을 담지 않으며, 48시간이 지나면 삭제합니다.`,
           `${PULSE.title}의 사람 수를 세는 목록(계정 id와 그 계정이 쓴 역할, 모델 이름, 연결 종류, 대화 모델은 시간별 응답 수): 같은 사람을 한 번만 세고 최근 7일과 최근 24시간의 순위와 주별 재방문 집계를 만드는 데 사용합니다. 목록 자체는 운영자 화면에 표시하지 않으며, 모델은 쓴 사람이 ${PULSE_FLOORS.row}명 이상일 때만 순위와 숫자를 페이지에 보여 줍니다. ${PULSE_FLOORS.row}명이 안 되는 모델은 그런 모델이 ${PULSE_FLOORS.below}개 이상일 때 숫자 없이 이름만 많이 쓴 순서대로 보여 줍니다. 목록은 날짜별로 두어 7일이 지난 날의 것을, 대화 응답 목록은 48시간이 지나면 삭제하고, 탈퇴하면 함께 삭제합니다.`,
+          `자동 진단(날짜, 문제의 종류, 앱 버전, 브라우저와 운영체제의 종류와 주 버전, 휴대 기기 여부, 오류 이름과 앱 코드 안의 위치, 보던 채팅의 설정값과 메시지 수·토큰 수, 연결 종류, 서버가 가진 모델 목록에 있는 모델 이름, 같은 날 같은 문제의 횟수, 접속 주소와 브라우저 정보를 하루 동안만 유효한 키로 해시한 값): 앱 오류, 응답 실패, 장기 기억 실패, 채팅 열기 실패, 기억에 없는 메시지 경고가 생기면 앱이 자동으로 보내며, 문제를 확인하는 데 사용합니다. 아이디와 쿠키를 보내지 않으므로 어느 계정의 기록인지 저장하지 않습니다. 대화, 캐릭터, 페르소나, 프롬프트, 플러그인, 모듈의 내용과 이름, 오류 메시지, 연결한 키는 포함하지 않습니다. 해시에 쓴 키는 하루가 끝나면 삭제합니다. ${AUTO_KEEP_DAYS}일이 지나면 삭제하며, 탈퇴해도 삭제되지 않습니다. 설정 › 계정 › 앱 정보의 ${AUTO_DIAGNOSIS.label}로 끌 수 있으며 기본값은 켜짐입니다. 손님과 이용자가 직접 설치한 헤이젤은 보내지 않습니다.`,
           '운영자가 보낸 알림: 통지에 사용합니다. 한 계정에만 보낸 알림은 탈퇴 시 삭제하고, 전체 이용자에게 보낸 알림은 남습니다.',
           '운영자 기록(아래 참조): 운영자가 한 조치를 남깁니다. 탈퇴 후에도 남으며, 기록한 날부터 1년이 지나면 삭제합니다.',
         ],

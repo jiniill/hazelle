@@ -1,5 +1,5 @@
 import { createHmac, randomBytes } from 'node:crypto';
-import { GUESTS_PER_ADDRESS } from '../contracts/admin';
+import { GUESTS_PER_ADDRESS, VISITORS_PER_ADDRESS } from '../contracts/admin';
 import { COMMENTS_PER_DAY, GUEST_ADDRESS_CAP_MULTIPLIER, POSTS_PER_DAY } from '../contracts/board';
 import { visitDay } from './http';
 
@@ -231,7 +231,7 @@ export function dailyDistinct(max: number, clock: () => number = Date.now, maxKe
 // Anonymous limits count requests, not bytes; file downloads may need hundreds per bot.
 // received deduplicates per visitor/day; guests bounds distinct daily reply ids; signups bounds hourly attempts.
 export const visitorLimits = () => ({
-  reads: tokenBucket(120), files: tokenBucket(1200), reports: tokenBucket(6), received: dailyDistinct(1), guests: dailyDistinct(GUESTS_PER_ADDRESS),
+  reads: tokenBucket(120), files: tokenBucket(1200), reports: tokenBucket(6), received: dailyDistinct(1), guests: dailyDistinct(GUESTS_PER_ADDRESS), diagnoses: tokenBucket(30), diagnosers: dailyDistinct(VISITORS_PER_ADDRESS),
   signups: tokenBucket(10, 60 * 60_000), logins: tokenBucket(30, 60_000, () => performance.now(), LOGIN_VISITORS), proofs: proofBackoff(),
 });
 

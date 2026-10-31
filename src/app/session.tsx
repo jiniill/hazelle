@@ -1,4 +1,5 @@
 import { toolId } from '../model/tool';
+import { autoDiagnose } from '../runtime/auto-diagnosis';
 import type { ToolFrames, ToolMenu } from '../runtime/tools/facade';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { PictureUrl } from '../engine/assets';
@@ -116,6 +117,9 @@ export function useChatModel(id: string | null) {
   useEffect(() => {
     if (id === null || !exists) return;
     const lease = store.retainChat(id);
+    void lease.ready.then((failure) => {
+      if (failure) autoDiagnose({ event: 'chat-unopened' });
+    });
     return lease.release;
   }, [store, id, attempt, exists]);
   const model = id === null ? null : read.chat(id);

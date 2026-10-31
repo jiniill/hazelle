@@ -1,13 +1,17 @@
+import type { AutoChat } from '../contracts/auto-diagnosis';
+import { memoryBudget } from '../engine/memory';
 import type { Chat } from '../model/chat';
 import { live } from '../model/library';
 import { toolId } from '../model/tool';
 import { chatModel } from './assignment';
-import { limitsOf, packsOf } from './chat-context';
+import { limitsOf, packsOf, promptBudget } from './chat-context';
 import type { MemoryFailure } from './memory';
+import { memorySetup } from './memory-read';
 import { memoryView } from './memory-view';
 import { chatPrompt } from './prompts';
+import { labelledType } from './pulse';
 import type { Session } from './session';
-import { forecastSend } from './turn-context';
+import { forecastSend, type Sending } from './turn-context';
 
 // The operator reads this unencrypted, and the privacy policy (app/common/legal) promises what it holds: numbers,
 // switches and the words known() is given. Known is branded so a text cannot reach a report by accident: known() takes
@@ -82,27 +86,39 @@ async function memoryFacts(session: Reader, id: string): Promise<Facts> {
   };
 }
 
+// The one read of a built request; 문제 진단 adds to it, and 자동 진단 sends it as it is.
+function sentFacts({ prompt, calibration: { fit, estimate } }: Sending) {
+  return {
+    messages: prompt.messages.length,
+    dropped: prompt.dropped,
+    unseen: prompt.unseen,
+    problems: prompt.problems.found.length + prompt.problems.omitted,
+    covered: prompt.memory?.covered ?? null,
+    missing: prompt.memory?.missing ?? null,
+    slot: prompt.memory?.slot ?? null,
+    tool: prompt.memory ? prompt.memory.by !== null : null,
+    source: fit.source,
+    bound: fit.bound,
+    multiplier: fit.multiplier,
+    allowance: fit.allowance,
+    inputLimit: fit.inputLimit,
+    evidence: estimate.evidence,
+    cold: estimate.cold,
+  };
+}
+
 async function requestFacts(session: Reader, id: string): Promise<Facts> {
   const sending = await forecastSend(session, id, { kind: 'answer' }, undefined, 'view');
   if (!sending) return { built: false };
   if ('kind' in sending) return { refused: known(sending.kind), ...(sending.kind === 'too-long' && { tokens: sending.tokens, budget: sending.budget }) };
-  const { prompt, calibration } = sending;
+  const { prompt } = sending;
   const tokens: Facts = {};
   for (const { from, tokens: size } of prompt.parts) {
     const part = from.kind === 'block' ? `block:${from.slot ?? 'text'}` : from.kind;
     tokens[part] = ((tokens[part] as number | undefined) ?? 0) + size;
   }
-  const { fit, estimate } = calibration;
-  return {
-    messages: prompt.messages.length,
-    tokens,
-    dropped: prompt.dropped,
-    unseen: prompt.unseen,
-    problems: prompt.problems.found.length + prompt.problems.omitted,
-    lore: { fired: prompt.lore?.length ?? 0, silent: prompt.silent?.length ?? 0, invalidKeys: prompt.invalidKeys.length, budget: prompt.loreBudget },
-    memory: prompt.memory && { tool: prompt.memory.by !== null, covered: prompt.memory.covered, missing: prompt.memory.missing, slot: prompt.memory.slot },
-    fit: { source: known(fit.source), bound: fit.bound && known(fit.bound), multiplier: fit.multiplier, allowance: fit.allowance, inputLimit: fit.inputLimit, evidence: estimate.evidence, cold: estimate.cold },
-  };
+  const { source, bound, ...facts } = sentFacts(sending);
+  return { ...facts, source: known(source), bound: bound && known(bound), tokens, lore: { fired: prompt.lore?.length ?? 0, silent: prompt.silent?.length ?? 0, invalidKeys: prompt.invalidKeys.length, budget: prompt.loreBudget } };
 }
 
 function modelFacts(store: Reader['store'], chat: Chat): Facts {
@@ -146,6 +162,26 @@ function placeFacts(session: Reader, { kind, id }: Place): Facts | Promise<Facts
     return connection ? { type: known(connection.type), models: connection.starred.length } : { found: false };
   }
   return null;
+}
+
+// 자동 진단's read of a chat: store reads and a request already built, so a report never makes a worker build another.
+export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: string, sending: Sending | null): AutoChat | null {
+  const chat = live(store.get('chat', id))?.value;
+  if (!chat) return null;
+  const route = chatModel(store, chat, 'main');
+  const { context, reply } = limitsOf(store, chat);
+  const { on, own, budget, window, batch } = memorySetup(store, chat);
+  return {
+    type: 'kind' in route ? null : labelledType(route.connection.value),
+    model: 'kind' in route ? null : route.model.id,
+    hardContext: 'kind' in route ? null : route.model.contextLength,
+    context,
+    reply,
+    messages: read.chat(id).snapshot()?.messages.length ?? null,
+    character: chat.character !== null,
+    memory: { on, own, budget, clamped: memoryBudget(budget, promptBudget(store, chat)), window, batch },
+    request: sending && sentFacts(sending),
+  };
 }
 
 // A chat that cannot be read is what a report is often sent about, so a failure here is reported, never thrown. Its

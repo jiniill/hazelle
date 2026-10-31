@@ -5,6 +5,7 @@ import { firstTurns } from '../model/turns';
 import { appendUserMessage, startChat } from './chat-log';
 import { fetchApi } from './api';
 import { editPersona } from './personas';
+import { autoDiagnose, setDiagnosisSharing } from './auto-diagnosis';
 import { setPulseSharing } from './pulse';
 import { stubRelay, testServer, upstream } from './testing';
 
@@ -88,5 +89,25 @@ describe('session', () => {
     });
     await call();
     expect(sent).toEqual(['seen', undefined, undefined, undefined, undefined, 'chat openai gpt-5', undefined]);
+  });
+
+  it('sends an automatic report only while an account’s switch is on, and none once closed', async () => {
+    const sent: string[] = [];
+    const reported = () => sent.filter((url) => url === '/api/diagnoses').length;
+    await server.withSession(async (session) => {
+      const fetch = globalThis.fetch;
+      vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+        sent.push(url);
+        return fetch(url, init);
+      });
+      await setDiagnosisSharing(session.store, false);
+      autoDiagnose({ event: 'turn-failed', detail: 'gone' });
+      expect(reported()).toBe(0);
+      await setDiagnosisSharing(session.store, true);
+      autoDiagnose({ event: 'turn-failed', detail: 'gone' });
+      expect(reported()).toBe(1);
+    });
+    autoDiagnose({ event: 'turn-failed', detail: 'unsent' });
+    expect(reported()).toBe(1);
   });
 });

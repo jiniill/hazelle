@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { readTool } from '../engine/import/tool';
 import { appendUserMessage, startChat } from './chat-log';
-import { stateFacts } from './diagnostic-state';
+import { readAutoReport } from '../contracts/auto-diagnosis';
+import { autoChat, stateFacts } from './diagnostic-state';
 import { setFact } from './memory';
 import { setModuleAlways } from './modules';
 import { answerable, testServer } from './testing';
 import { importTool } from './tools/store';
+import { forecastSend, type Sending } from './turn-context';
 
 const server = testServer();
 
@@ -36,8 +38,16 @@ describe('the state a 문제 진단 reports', () => {
           model: { id: 'm' },
           modules: { items: [{ tool: { name: 'keeper', version: '1.2.3' } }], more: 0 },
           memory: { facts: 1, records: 0 },
-          request: { dropped: 0, memory: { missing: 0 } },
+          request: { dropped: 0, missing: 0 },
         },
       });
+
+      // Off its list a report would be dropped without a word, so a real request has to read as one.
+      const sending = (await forecastSend(session, chat, { kind: 'answer' }, undefined, 'view')) as Sending;
+      const auto = { event: 'memory-gap', detail: null, version: null, browser: 'chrome', major: 1, os: 'linux', mobile: false, place: null, chat: autoChat(session, chat, sending) };
+      expect(readAutoReport(auto)).toEqual(auto);
+      expect(auto.chat).toMatchObject({ type: expect.any(String), messages: 1, request: { dropped: 0, missing: 0 } });
+      expect(JSON.stringify(auto)).not.toContain('CANARY');
+      expect(JSON.stringify(auto)).not.toContain('keeper');
     }));
 });

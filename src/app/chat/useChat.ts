@@ -4,6 +4,8 @@ import { resolveAssets, withAttachments } from '../../engine/assets';
 import { holdsPersona, unused } from '../../engine/pipeline';
 import { calls, keepsPromptOut, shown, type ChatItem, type ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
+import { autoDiagnose } from '../../runtime/auto-diagnosis';
+import { autoChat } from '../../runtime/diagnostic-state';
 import { resetToggles, setToggle } from '../../runtime/characters';
 import { chatTranslate, featuresOf } from '../../runtime/features';
 import { removeChat, renameChat, restoreChat, restoreRaw } from '../../runtime/chat-log';
@@ -201,6 +203,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   function report(failure: TurnFailure | null, target?: Target, skip: Skip = {}) {
     if (!failure) return;
     if (isBlocked(failure)) return setStopped(true);
+    autoDiagnose({ event: 'turn-failed', detail: failure.kind, chat: { id: chatId, read: () => autoChat(session, chatId, null) } });
     const skipped = target && skippedStep(failure, skip);
     if (skipped) return setSkippable({ ...skipped, target });
     const kept = failure.kind === 'unsaved' ? failure.reply : null;

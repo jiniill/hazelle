@@ -2,7 +2,7 @@ import { Link, Row, Stack, Text } from '../ui';
 import { HOSTED } from '../../contracts/installation';
 import { selfHost } from '../../runtime/installation';
 import { INSTALL_GUIDE, OPERATOR, OUTBOUND, PRIVACY, REPOSITORY, TERMS } from './legal';
-import { BUILT_VERSION } from './release';
+import { BUILT_VERSION } from '../../runtime/installation';
 import { PULSE } from './words';
 
 // The notices GPLv3 §5(d) has an interactive program show, with AGPL-3.0 §13's offer of the running version's

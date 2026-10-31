@@ -1,4 +1,5 @@
 import { MAX_DIAGNOSTICS_LENGTH } from '../contracts/board';
+import { autoDiagnose, errorFacts } from './auto-diagnosis';
 import { errorText, type EvaluationDown, type EvaluationUp } from './evaluation-core';
 import type { Facts, Place } from './diagnostic-state';
 import { moduleWorker } from './worker';
@@ -31,8 +32,18 @@ export function noteProblem(text: string, at = Date.now()) {
 export const recentProblems = (): readonly Problem[] => problems;
 
 export function watchProblems() {
-  addEventListener('error', (event) => noteProblem(`오류 · ${event.error === undefined || event.error === null ? event.message : errorText(event.error)}`));
-  addEventListener('unhandledrejection', (event) => noteProblem(`처리되지 않은 오류 · ${errorText(event.reason)}`));
+  // Without an object thrown there is nothing to say: a browser's own note, or a script of another origin.
+  const thrown = (error: unknown) => {
+    if (typeof error === 'object' && error !== null) autoDiagnose({ event: 'app-error', ...errorFacts(error) });
+  };
+  addEventListener('error', (event) => {
+    noteProblem(`오류 · ${event.error === undefined || event.error === null ? event.message : errorText(event.error)}`);
+    thrown(event.error);
+  });
+  addEventListener('unhandledrejection', (event) => {
+    noteProblem(`처리되지 않은 오류 · ${errorText(event.reason)}`);
+    thrown(event.reason);
+  });
 }
 
 // A worker of its own, so a failed import the app's worker has cached is tried again, as a reload would.

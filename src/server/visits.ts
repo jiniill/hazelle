@@ -38,6 +38,13 @@ export function openVisits(db: DatabaseSync, clock: () => number = Date.now) {
   };
 }
 
+// The day's key goes when the day closes, so a hash cannot be worked back or matched to another day's.
+export async function dayHash(db: Db, day: number, input: unknown[]): Promise<string> {
+  await db.prepare('INSERT INTO visit_keys (day, key) VALUES (?, ?) ON CONFLICT DO NOTHING').bind(day, randomBytes(32)).run();
+  const { key } = (await db.prepare('SELECT key FROM visit_keys WHERE day = ?').bind(day).first<{ key: Uint8Array }>())!;
+  return createHmac('sha256', key).update(JSON.stringify(input)).digest('hex');
+}
+
 export async function readVisits(db: Db, now = Date.now()): Promise<VisitDay[]> {
   const today = visitDay(now);
   const { results } = await db.prepare('SELECT day, visitors, opened, connected, guests, accounts, converted FROM visit_days WHERE day >= ? AND day <= ? ORDER BY day DESC').bind(today - 13 * DAY_MS, today).all<VisitDay>();

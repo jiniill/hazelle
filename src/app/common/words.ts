@@ -84,6 +84,7 @@ export const NEEDS_ACCOUNT = '계정이 필요해요';
 export const ACCOUNT_ONLY = '계정을 만들면 돼요';
 
 export const PULSE = { ...PULSE_PAGE, sharing: `${PULSE_PAGE.title} 집계 참여` };
+export const AUTO_DIAGNOSIS = { label: '자동 진단 보내기', help: '켜 두면 오류가 나거나 기억에 없는 메시지가 생겼을 때 앱 버전, 브라우저 종류, 모델, 설정값, 메시지 수와 토큰 수를 보내요. 아이디, 대화 내용, 이름, 오류 메시지는 보내지 않아요.' };
 
 export const BIN = '휴지통';
 export const BIN_KEEPS = `${KEEP_DAYS}일 안에 '${BIN}'에서 복원할 수 있어요.`;

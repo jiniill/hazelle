@@ -14,8 +14,8 @@ export const DIRECT_TYPE = 'direct';
 // type and the model id it asked for; the server names the model only when a list it holds confirms it.
 export type PulseLabel = { kind: 'seen' } | { kind: 'call'; role: PulseRole; type: string; model: string };
 
-const TYPE = /^[a-z0-9-]{1,40}$/;
-const MODEL_MOST = 200;
+export const TYPE = /^[a-z0-9-]{1,40}$/;
+export const MODEL_MOST = 200;
 
 export function pulseHeader(label: PulseLabel): string {
   return label.kind === 'seen' ? 'seen' : `${label.role} ${label.type} ${encodeURIComponent(label.model)}`;

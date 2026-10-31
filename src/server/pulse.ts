@@ -59,7 +59,7 @@ function named(name: string): Named {
   return { key: spelling.toLowerCase().replace(/[\s_-]+/g, ' '), name: spelling };
 }
 
-async function confirm(db: Db, type: string, model: string): Promise<Named> {
+export async function confirmedModel(db: Db, type: string, model: string): Promise<Named> {
   const listed = BUILT_IN.get(type);
   const list = MODELS_DEV_LISTS[type]?.list;
   const name = listed ? listed.get(model) : list ? await db.prepare('SELECT name FROM models_dev WHERE list = ? AND model = ?').bind(list, model).first<string>('name') : null;
@@ -74,7 +74,7 @@ export function openPulse(db: Db, clock: () => number = Date.now): Pulse {
       await db.prepare('INSERT INTO pulse_seen (day, account) VALUES (?, ?) ON CONFLICT DO NOTHING').bind(dayOf(clock()), account).run();
     },
     call: async (account, { role, type, model }) => {
-      const { key, name } = await confirm(db, type, model);
+      const { key, name } = await confirmedModel(db, type, model);
       // Read after the await: a call across midnight lands in the day it ended in.
       const now = clock();
       await db.batch([
