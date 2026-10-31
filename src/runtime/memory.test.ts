@@ -494,6 +494,39 @@ describe('chapters', () => {
     }
   });
 
+  it('keeps the words of a chapter the user edits while a call making it again is picked up after a reload', async () => {
+    vi.stubGlobal('window', new EventTarget());
+    vi.stubGlobal('document', { visibilityState: 'hidden' });
+    const { accountId, vaultKey } = await server.account();
+    const open = async () => {
+      const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal);
+      if (!opened.ok) throw new Error(opened.error);
+      opened.data.startBackground();
+      return opened.data;
+    };
+    const first = await open();
+    const { chat } = await recorded(first, { budget: 1_000_000 }, meeting);
+    const provider = new TransformStream<Uint8Array, Uint8Array>();
+    const writer = provider.writable.getWriter();
+    stubRelay(inTurn([new Response(provider.readable, { headers: { 'x-relay': 'upstream' } })]));
+    first.memory.rebuild(chat, 'c0');
+    await vi.waitFor(() => expect(first.store.list('stream').map(({ pending }) => pending)).toEqual([undefined]));
+    first.close();
+
+    const second = await open();
+    try {
+      await server.hold(second.store, chat);
+      await editRecord(second.store, chat, 'c0', { what: 'My own words.' });
+      await vi.waitFor(() => expect(second.memory.snapshot().running.has(chat)).toBe(true));
+      await writer.write(new TextEncoder().encode(`data: ${JSON.stringify({ choices: [{ delta: { content: chapterAnswer }, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n`));
+      await writer.close();
+      await vi.waitFor(() => expect(second.store.list('stream')).toEqual([]));
+      expect(chatMemory(second.store, chat).chapters[0]).toMatchObject({ what: 'My own words.', edited: true });
+    } finally {
+      second.close();
+    }
+  });
+
   it('shows vector storage failures through the existing unsaved indexing failure path', () => server.withSession(async (session) => {
     const { chat } = await recorded(session, { budget: 1_000_000 });
     const connection = session.store.list('connection')[0]!.id;

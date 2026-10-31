@@ -166,11 +166,11 @@ function applies(memory: Memory, messages: Message[], { sources, redo, chapter }
       const record = records.get(id);
       return record !== undefined && !held.has(id) && (redo !== null || (!owned(record) && !record.forgotten));
     });
-    return free && (!redo || memory.chapters.find(({ id }) => id === redo.id)?.at === redo.at);
-  }
-  if (!redo) return coveredBy(memory, places) === places.get(sources[0]!.message);
-  const record = memory.records.find(({ id }) => id === redo.id);
-  return record !== undefined && record.at === redo.at && (redo.user || (!owned(record) && !record.forgotten));
+    if (!free) return false;
+  } else if (!redo) return coveredBy(memory, places) === places.get(sources[0]!.message);
+  if (!redo) return true;
+  const item = (chapter ? memory.chapters : memory.records).find(({ id }) => id === redo.id);
+  return item !== undefined && item.at === redo.at && (redo.user || (!owned(item) && !item.forgotten));
 }
 
 // The records a chapter summarizes again when it is made again: its own, but those the user deleted.
