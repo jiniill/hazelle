@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
-import { COMMENTS_PER_DAY, GUEST_ADDRESS_CAP_MULTIPLIER, GUEST_BOARD_HEADER, MAX_DIAGNOSTICS_LENGTH, POSTS_PER_DAY, type Activity, type Compose, type Post, type PostList } from '../contracts/board';
+import { COMMENTS_PER_DAY, GUEST_ADDRESS_CAP_MULTIPLIER, GUEST_BOARD_HEADER, MAX_DIAGNOSTICS_LENGTH, MAX_PICTURE_BYTES, MAX_POST_PICTURES, PICTURES_PER_DAY, POSTS_PER_DAY, type Activity, type Compose, type Post, type PostList } from '../contracts/board';
 import { UNREAD_BOARD_HEADER, VISITOR_HEADER } from '../contracts/http';
 import { sha256Hex } from './http';
 import { forgetOldRecords } from './admin';
@@ -583,4 +583,73 @@ it('moves guest posts and comments to a session account by secret, idempotently,
   for (const table of ['posts', 'comments']) expect(await t.env.db.prepare(`SELECT account_id, guest_secret_hash, guest_address_hash FROM ${table} WHERE id = ?`).bind(table === 'posts' ? id : post.comments[0]!.id).first()).toEqual({ account_id: account.id, guest_secret_hash: null, guest_address_hash: null });
   expect((await who.send('GET', `posts/${id}`)).status).toBe(404);
   expect((await t.env.db.prepare('SELECT COUNT(*) AS n FROM posts WHERE guest_secret_hash IS NOT NULL').first<number>('n'))).toBe(1);
+});
+
+const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2]);
+const WEBP = new TextEncoder().encode('RIFF\0\0\0\0WEBPVP8 ');
+const addPicture = (who: Who, post: number, bytes: Uint8Array = JPEG) => t.post(`board/posts/${post}/pictures`, bytes, who.cookie);
+const operatorPost = (who: Who) => posted(who, { category: 'bug', visibility: 'operator' });
+
+it('keeps a picture on an operator-only post for its author and the operator alone', async () => {
+  const op = await operator();
+  const author = await member('글쓴이');
+  const stranger = await member('낯선이');
+  const post = await operatorPost(author);
+  const added = (await (await addPicture(author, post, WEBP)).json()) as { id: number; type: string };
+  expect(added.type).toBe('image/webp');
+  for (const who of [author, op]) {
+    expect((await read(who, post)).pictures).toEqual([added]);
+    const got = await t.get(`board/posts/${post}/pictures/${added.id}`, who.cookie);
+    expect(got.headers.get('content-type')).toBe('application/octet-stream');
+    expect(new Uint8Array(await got.arrayBuffer())).toEqual(WEBP);
+  }
+  expect((await t.get(`board/posts/${post}/pictures/${added.id}`, stranger.cookie)).status).toBe(404);
+  expect((await t.get(`board/posts/${post}/pictures/${added.id}`)).status).toBe(401);
+});
+
+it('refuses a picture on a public post, on another author\'s post, and from a guest', async () => {
+  await operator();
+  const author = await member('글쓴이');
+  const stranger = await member('낯선이');
+  expect((await addPicture(author, await posted(author))).status).toBe(404);
+  const post = await operatorPost(author);
+  expect((await addPicture(stranger, post)).status).toBe(404);
+  expect((await t.post(`board/posts/${post}/pictures`, JPEG, undefined, { [GUEST_BOARD_HEADER]: 'a'.repeat(64) })).status).toBe(401);
+});
+
+it('takes only pictures the browser draws, within the size and the counts', async () => {
+  await operator();
+  const author = await member('글쓴이');
+  const post = await operatorPost(author);
+  expect((await addPicture(author, post, new TextEncoder().encode('<svg onload="x()">'))).status).toBe(400);
+  const oversized = new Uint8Array(MAX_PICTURE_BYTES + 1);
+  oversized.set(JPEG);
+  expect((await addPicture(author, post, oversized)).status).toBe(413);
+  for (let added = 0; added < MAX_POST_PICTURES; added++) expect((await addPicture(author, post)).status).toBe(200);
+  expect((await addPicture(author, post)).status).toBe(429);
+  for (let added = MAX_POST_PICTURES; added < PICTURES_PER_DAY;) {
+    const next = await operatorPost(author);
+    for (let each = 0; each < MAX_POST_PICTURES; each++, added++) expect((await addPicture(author, next)).status).toBe(200);
+  }
+  expect((await addPicture(author, await operatorPost(author))).status).toBe(429);
+});
+
+it('takes the pictures with the post, also where its placeholder stays, and lets the author remove one', async () => {
+  const op = await operator();
+  const author = await member('글쓴이');
+  const count = () => t.env.db.prepare('SELECT COUNT(*) AS n FROM post_pictures').first<number>('n');
+  const bare = await operatorPost(author);
+  await addPicture(author, bare);
+  expect((await t.delete(`board/posts/${bare}`, undefined, author.cookie)).status).toBe(204);
+  expect(await count()).toBe(0);
+  const answered = await operatorPost(author);
+  const { id } = (await (await addPicture(author, answered)).json()) as { id: number };
+  await addPicture(author, answered);
+  expect((await t.delete(`board/posts/${answered}/pictures/${id}`, undefined, op.cookie)).status).toBe(404);
+  expect((await t.delete(`board/posts/${answered}/pictures/${id}`, undefined, author.cookie)).status).toBe(204);
+  expect(await count()).toBe(1);
+  await commented(op, answered, '봤어요');
+  expect((await t.delete(`board/posts/${answered}`, undefined, author.cookie)).status).toBe(204);
+  expect((await read(author, answered)).deleted).toBe(true);
+  expect(await count()).toBe(0);
 });

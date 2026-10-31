@@ -1,6 +1,7 @@
-import { useId, type ClipboardEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { useId, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './Composer.module.css';
+import { pasteFiles } from './pasteFiles';
 import { useAutosize } from './useAutosize';
 
 type Props = {
@@ -40,13 +41,7 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, actio
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
-        onPaste={onFiles && ((event: ClipboardEvent<HTMLTextAreaElement>) => {
-          const files = [...event.clipboardData.files];
-          // Office apps copy a picture of the text beside it, and the text is what was meant.
-          if (!files.length || event.clipboardData.getData('text/plain')) return;
-          event.preventDefault();
-          onFiles(files);
-        })}
+        onPaste={onFiles && ((event) => pasteFiles(event, onFiles))}
       />
       <div className={styles.fold}>
         <div className={styles.tools}>

@@ -64,7 +64,7 @@ describe('the migration runner', () => {
       try {
         migrate(db, dir(earlier));
         db.prepare('UPDATE service SET signup_cap = ?').run(signupCap);
-        expect(migrate(db, 'migrations').applied).toEqual(['0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql', '0027_accounts_only_pulse.sql', '0028_models_dev_tools.sql', '0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql']);
+        expect(migrate(db, 'migrations').applied).toEqual(['0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql', '0027_accounts_only_pulse.sql', '0028_models_dev_tools.sql', '0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql', '0031_post_pictures.sql']);
         return db.prepare('SELECT account_bytes_cap AS bytes, account_file_bytes_cap AS files FROM service').get();
       } finally {
         db.close();
@@ -305,7 +305,7 @@ it('adds guest authors and a persistent keyed address identity without changing 
   const db = new DatabaseSync(':memory:');
   migrate(db, dir(Object.fromEntries(readdirSync('migrations').filter((name) => name.endsWith('.sql') && name < '0020').map((name) => [name, readFileSync(join('migrations', name), 'utf8')]))));
   db.exec("INSERT INTO posts (title, text, category, visibility, created_at) VALUES ('이전 글', '본문', 'bug', 'public', 1); INSERT INTO comments (post_id, text, created_at) VALUES (1, '이전 댓글', 2)");
-  expect(migrate(db, 'migrations').applied).toEqual(['0020_board_guests.sql', '0021_visits.sql', '0022_remote_pulse.sql', '0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql', '0027_accounts_only_pulse.sql', '0028_models_dev_tools.sql', '0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql']);
+  expect(migrate(db, 'migrations').applied).toEqual(['0020_board_guests.sql', '0021_visits.sql', '0022_remote_pulse.sql', '0023_self_host_caps.sql', '0024_backup_folder.sql', '0025_pulse_week_below.sql', '0026_pulse_days.sql', '0027_accounts_only_pulse.sql', '0028_models_dev_tools.sql', '0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql', '0031_post_pictures.sql']);
   const settings = db.prepare('SELECT board_guests, board_guest_key FROM service').get();
   expect(settings).toEqual({ board_guests: 1, board_guest_key: expect.stringMatching(/^[a-f0-9]{64}$/) });
   migrate(db, 'migrations');
@@ -324,7 +324,7 @@ it('counts accounts only in 헤이젤 나우 and carries the last 7 days of gues
   migrate(db, before('0027'));
   db.exec(`INSERT INTO pulse_guest_used (day, role, key, type, account, name) VALUES (0, 'aux', '', 'direct', 'used', NULL);
     INSERT INTO pulse_guest_replies (hour, key, type, account, name, replies) VALUES (3600000, '', 'direct', 'replied', NULL, 1), (3600000, '', 'direct', 'remote:x', NULL, 1)`);
-  expect(migrate(db, 'migrations').applied).toEqual(['0027_accounts_only_pulse.sql', '0028_models_dev_tools.sql', '0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql']);
+  expect(migrate(db, 'migrations').applied).toEqual(['0027_accounts_only_pulse.sql', '0028_models_dev_tools.sql', '0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql', '0031_post_pictures.sql']);
   expect(db.prepare('SELECT guest FROM visit_guests ORDER BY guest').all()).toEqual([{ guest: 'replied' }, { guest: 'used' }]);
   expect(tables(db).filter((name) => name.startsWith('pulse_guest'))).toEqual([]);
   expect(Object.keys(db.prepare('SELECT * FROM service').get()!)).not.toContain('pulse_guests');
@@ -338,7 +338,7 @@ it('keeps stored guest ids as replies, counts each step in its own column, and s
   const db = new DatabaseSync(':memory:');
   migrate(db, before('0029'));
   db.exec("INSERT INTO visit_guests (day, guest) VALUES (0, 'replied')");
-  expect(migrate(db, 'migrations').applied).toEqual(['0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql']);
+  expect(migrate(db, 'migrations').applied).toEqual(['0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql', '0031_post_pictures.sql']);
   expect(db.prepare('SELECT guest, step FROM visit_guests').all()).toEqual([{ guest: 'replied', step: 'replied' }]);
   db.exec(`INSERT INTO visit_guests (day, guest, step) VALUES (0, 'opened', 'opened'), (0, 'connected', 'connected');
     INSERT INTO accounts (id, username, login_hash, created_at, incarnation, timeline) VALUES ('opened', 'jin', 'h', 1, 'inc', 't')`);
@@ -356,7 +356,7 @@ it("asks for the models.dev list again for its tool support, keeping the stored 
   const db = new DatabaseSync(':memory:');
   migrate(db, before('0028'));
   db.exec(`INSERT INTO models_dev (list, model, price) VALUES ('openai', 'gpt-5', '{}'); UPDATE models_dev_fetch SET fetched_at = 5, tried_at = 5`);
-  expect(migrate(db, 'migrations').applied).toEqual(['0028_models_dev_tools.sql', '0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql']);
+  expect(migrate(db, 'migrations').applied).toEqual(['0028_models_dev_tools.sql', '0029_guest_steps_and_cohorts.sql', '0030_auto_diagnoses.sql', '0031_post_pictures.sql']);
   expect(db.prepare('SELECT model, tools FROM models_dev').all()).toEqual([{ model: 'gpt-5', tools: null }]);
   expect(db.prepare('SELECT fetched_at, tried_at FROM models_dev_fetch').get()).toEqual({ fetched_at: null, tried_at: null });
   db.close();

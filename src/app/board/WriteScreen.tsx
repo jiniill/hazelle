@@ -1,7 +1,7 @@
 import { Globe, Lock } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { CATEGORIES, MAX_POST_LENGTH, MAX_TITLE_LENGTH, type Category, type Post } from '../../contracts/board';
-import { editPost, readPost, writePost } from '../../runtime/board';
+import { addPostPicture, editPost, readPost, writePost } from '../../runtime/board';
 import { stateFacts } from '../../runtime/diagnostic-state';
 import { diagnosticReport, lastPlace } from '../../runtime/diagnostics';
 import { describeFailure } from '../common/failure';
@@ -12,11 +12,13 @@ import { readPersisted } from '../common/usePersisted';
 import { useLoaded } from '../common/useLoaded';
 import { BOARD, DIAGNOSIS_NOTE } from '../common/words';
 import { useAccount, useSession, useStanding } from '../session';
+import { useToast } from '../toast';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, Callout, Checkbox, ChoiceGroup, NavBar, Row, Screen, Stack, Tag, Text, TextField } from '../ui';
 import { useNicknameGate } from './nickname';
 import { counted } from './parts';
+import { DraftPictures, useDraftPictures } from './pictures';
 
 // What a bug report needs, laid into an empty text when 버그 is picked and taken out again, untouched, when it is not.
 const BUG_TEMPLATE = '재현 순서\n1. \n2. \n\n기대한 결과\n\n실제 결과\n';
@@ -70,7 +72,8 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
   const { suspended } = useStanding();
   const session = useSession();
   const { username } = session;
-  const { admin } = useAccount();
+  const { admin, guest } = useAccount();
+  const toast = useToast();
   const { gate, dialog } = useNicknameGate();
   const key = draftKey(username);
   const [restored] = useState(() => (editing ? null : readPersisted(key, parseDraft, null)));
@@ -94,6 +97,9 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
   const operatorOnly = (toOperator || suspended) && !news;
   const blank = title.trim() === '' && (text.trim() === '' || text === BUG_TEMPLATE);
   const attaching = !editing && operatorOnly && withReport;
+  const pictures = useDraftPictures();
+  // Not kept in the draft, which is localStorage text.
+  const picturing = !editing && operatorOnly && !guest && !suspended;
   // The report says what happened by itself, so it may go without the template filled in.
   const ready = titled.length > 0 && !titled.over && body.length > 0 && (text !== BUG_TEMPLATE || attaching) && !body.over && category !== null && (!attaching || report !== null);
 
@@ -129,6 +135,14 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
       const written = await writePost({ ...fields, visibility: operatorOnly ? 'operator' : 'public', diagnostics: attaching ? report : null });
       if (!written.ok) return describeFailure(written);
       keepDraft(key, null);
+      // The post stands by now; its page can add what did not arrive.
+      for (const { bytes } of picturing ? pictures.items : []) {
+        const added = await addPostPicture(written.data.id, bytes);
+        if (!added.ok) {
+          toast.failed(added, '글은 올렸지만 사진을 올리지 못했어요.');
+          break;
+        }
+      }
       navigate({ kind: 'post', id: written.data.id }, { replace: true });
       return null;
     });
@@ -161,7 +175,7 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
       )}
       <ChoiceGroup label="분류" showLabel options={admin ? CATEGORY_CARDS : CATEGORY_CARDS.filter(({ value }) => value !== 'news')} value={category} onChange={pick} layout="cards" />
       <TextField label="제목" value={title} onChange={setTitle} placeholder="한 줄로 요약해 주세요" hint={titled.hint} error={titled.error} />
-      <TextField label="내용" lines={12} value={text} onChange={setText} hint={body.hint} error={body.error} />
+      <TextField label="내용" lines={12} value={text} onChange={setText} hint={body.hint} error={body.error} onFiles={picturing ? pictures.add : undefined} />
       {!editing &&
         !news &&
         (suspended ? (
@@ -169,6 +183,7 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
         ) : (
           <ChoiceGroup label="공개 범위" showLabel options={REACH_CARDS} value={operatorOnly ? 'operator' : 'public'} onChange={(reach) => setToOperator(reach === 'operator')} layout="cards" />
         ))}
+      {picturing && <DraftPictures pictures={pictures} />}
       {!editing && operatorOnly && (
         <Stack gap="related">
           <Checkbox label="진단 정보 함께 보내기" checked={withReport} onChange={setWithReport} />

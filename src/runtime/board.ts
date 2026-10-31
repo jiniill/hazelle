@@ -1,4 +1,4 @@
-import { GUEST_BOARD_HEADER, MAX_DIAGNOSTICS_LENGTH, type Activity, type Category, type Comment, type Compose, type Post, type PostRow, type Sort, type Status, type Visibility } from '../contracts/board';
+import { GUEST_BOARD_HEADER, MAX_DIAGNOSTICS_LENGTH, type Activity, type Category, type Comment, type Compose, type Post, type PostPicture, type PostRow, type Sort, type Status, type Visibility } from '../contracts/board';
 import { api, hasAccount, type ApiResult } from './api';
 import { page } from './pages';
 import { recallGuest } from '../vault/device';
@@ -34,6 +34,10 @@ export const writePost = ({ diagnostics, ...compose }: Compose) => boardApi<{ id
 export const editPost = (id: number, edit: Pick<Compose, 'title' | 'text' | 'category'>) => boardApi<undefined>('PUT', `board/posts/${id}`, edit);
 // The author's or the operator's: a post with comments stays as a placeholder (PostRow.deleted).
 export const deletePost = (id: number) => boardApi<undefined>('DELETE', `board/posts/${id}`);
+// Accounts only: a guest has no picture routes (server/board.ts).
+export const addPostPicture = (post: number, bytes: Uint8Array<ArrayBuffer>) => api<PostPicture>('POST', `board/posts/${post}/pictures`, bytes);
+export const readPostPicture = (post: number, picture: number) => api<Uint8Array<ArrayBuffer>>('GET', `board/posts/${post}/pictures/${picture}`);
+export const deletePostPicture = (post: number, picture: number) => api<undefined>('DELETE', `board/posts/${post}/pictures/${picture}`);
 export const votePost = (id: number, voted: boolean) => api<{ votes: number }>('PUT', `board/posts/${id}/vote`, { voted });
 
 export const writeComment = (post: number, text: string, parentId: number | null) => boardApi<{ comment: Comment }>('POST', `board/posts/${post}/comments`, { text, parentId });

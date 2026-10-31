@@ -1,5 +1,5 @@
 import type { PluginAsked } from '../../runtime/tools/plugin-writer';
-import { COMMENTS_PER_DAY, NICKNAME_LENGTH, POSTS_PER_DAY } from '../../contracts/board';
+import { COMMENTS_PER_DAY, MAX_POST_PICTURES, NICKNAME_LENGTH, PICTURES_PER_DAY, POSTS_PER_DAY } from '../../contracts/board';
 import type { Costs } from '../../connectors/types';
 import type { RelayError, ServerError } from '../../contracts/http';
 import type { ApiFailure } from '../../runtime/api';
@@ -85,6 +85,8 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'guest-board-closed': '지금은 손님 글쓰기가 닫혀 있어요. 계정을 만들면 쓸 수 있어요.',
   'too-many-posts': `글은 하루에 ${count(POSTS_PER_DAY)}개까지 쓸 수 있어요.`,
   'too-many-comments': `댓글은 하루에 ${count(COMMENTS_PER_DAY)}개까지 쓸 수 있어요.`,
+  'too-many-pictures': `사진은 글 하나에 ${count(MAX_POST_PICTURES)}장, 하루에 ${count(PICTURES_PER_DAY)}장까지 올릴 수 있어요.`,
+  'bad-picture': '이 사진은 올릴 수 없어요.',
   'too-many-visits': '요청을 너무 자주 보냈어요. 잠시 뒤에 다시 시도해 주세요.',
   'too-many-shares': `링크는 ${count(SHARE_LIMITS.links)}개까지 만들 수 있어요. 안 쓰는 링크를 끊고 다시 시도해 주세요.`,
   'too-many-versions': `링크 하나에 새 버전은 ${count(SHARE_LIMITS.versions)}번까지 올릴 수 있어요. 링크를 끊고 새로 공유해 주세요.`,

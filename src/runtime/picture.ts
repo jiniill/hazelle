@@ -1,4 +1,5 @@
 import type { InputPicture } from '../connectors/types';
+import { MAX_PICTURE_BYTES } from '../contracts/board';
 import { fromBase64, toBase64 } from '../vault/aead';
 
 const THUMB = 400;
@@ -42,6 +43,18 @@ export async function sentPicture(picture: Picture): Promise<Picture> {
   }
   const blob = await drawn(bitmap, scale);
   return { bytes: new Uint8Array(await blob.arrayBuffer()), type: blob.type };
+}
+
+// A phone's screenshot stays its own size. Always drawn again, so only its look leaves the device, never a photo's
+// location or anything else in the file. null: not a picture, or too large even so.
+const POSTED_SIDE = 2400;
+export async function postedPicture(file: File): Promise<Picture | null> {
+  try {
+    const blob = await shrink({ bytes: new Uint8Array(await file.arrayBuffer()), type: file.type }, POSTED_SIDE);
+    return blob.size > MAX_PICTURE_BYTES ? null : { bytes: new Uint8Array(await blob.arrayBuffer()), type: blob.type };
+  } catch {
+    return null;
+  }
 }
 
 export async function thumbnail(picture: Picture): Promise<string> {

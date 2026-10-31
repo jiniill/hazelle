@@ -114,6 +114,7 @@ export const MODEL_SETTINGS = '모델 설정';
 export const NOTICES = { from: '운영자가 보낸 알림', received: '신고', send: '알림 보내기' };
 
 export const REPORT_FAILURE = '오류 제보';
+export const PICTURE_NOTE = '사진은 암호화되지 않고 운영자가 볼 수 있어요. 대화 내용이 찍혔는지 확인하고 올려 주세요.';
 export const DIAGNOSIS_NOTE = '대화 내용과 API 키 없이 설정값, 토큰 수, 모델, 플러그인·모듈 이름, 최근 오류만 들어가요. 오류 메시지에 입력한 내용이 일부 포함될 수 있으니 보내기 전에 확인해 주세요.';
 
 export const BOARD = {

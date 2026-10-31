@@ -4,6 +4,7 @@ import { NO_AUTOFILL } from '../foundation/noAutofill';
 import { Hint, type Help } from '../overlays/Hint';
 import type { CodeLanguage } from './codeLanguage';
 import { CodeField, type CodeAside } from './CodeField';
+import { pasteFiles } from './pasteFiles';
 import styles from './TextField.module.css';
 import { useBigEdit } from './useBigEdit';
 
@@ -38,9 +39,11 @@ type Props = {
   language?: CodeLanguage;
   // A pane beside that editor, given the text as it stands.
   aside?: (text: string) => CodeAside;
+  // A text area's files pasted with no text.
+  onFiles?: (files: File[]) => void;
 };
 
-export function TextField({ label, showLabel = true, kind = 'text', value, onChange, placeholder, hint, count, help, error, lines, readOnly, action, expand, language, aside }: Props) {
+export function TextField({ label, showLabel = true, kind = 'text', value, onChange, placeholder, hint, count, help, error, lines, readOnly, action, expand, language, aside, onFiles }: Props) {
   const id = useId();
   const noteId = `${id}-note`;
   const note = error ?? hint;
@@ -72,7 +75,7 @@ export function TextField({ label, showLabel = true, kind = 'text', value, onCha
           {big.button}
         </div>}
         {lines ? (
-          <textarea className={`${look} ${styles.area}`} rows={lines} {...typed} {...own} />
+          <textarea className={`${look} ${styles.area}`} rows={lines} {...typed} {...own} onPaste={onFiles && ((event) => pasteFiles(event, onFiles))} />
         ) : (
           <input className={look} type={type} {...typed} {...own} />
         )}

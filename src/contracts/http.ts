@@ -63,6 +63,8 @@ export type ServerError =
   | 'too-many-bot-calls'
   | 'too-many-calls'
   | 'too-many-comments'
+  | 'too-many-pictures'
+  | 'bad-picture'
   | 'too-many-live-calls'
   | 'too-many-posts'
   | 'too-many-publishes'

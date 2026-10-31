@@ -35,4 +35,28 @@ test('the operator posts, comments, votes, and finds it all after a reload', asy
     await page.getByRole('button', { name: '게시판', exact: true }).first().click();
     await expect(page.getByRole('button', { name: /첫 글/ })).toBeVisible();
   });
+
+  await test.step('an operator-only post carries a picture, shown large and removable', async () => {
+    await page.getByRole('button', { name: '글쓰기', exact: true }).click();
+    await page.getByLabel('제목', { exact: true }).fill('경고가 떠요');
+    await page.getByRole('group', { name: '분류', exact: true }).getByRole('button', { name: '버그', exact: true }).click();
+    await page.getByRole('group', { name: '공개 범위', exact: true }).getByRole('button', { name: /운영자에게만/ }).click();
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: '사진 추가', exact: true }).click();
+    await (await chooser).setFiles({ name: 'shot.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==', 'base64') });
+    await expect(page.getByRole('img', { name: '사진 1', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '올리기', exact: true }).click();
+    await expect(page.getByRole('heading', { name: '경고가 떠요', exact: true })).toBeVisible();
+
+    const picture = page.getByRole('img', { name: '사진 1', exact: true });
+    await expect.poll(() => picture.evaluate((image) => (image as unknown as { naturalWidth: number }).naturalWidth)).toBe(1);
+    await page.getByRole('button', { name: '사진 1 크게 보기', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: '사진 1', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    await page.reload();
+    await page.getByRole('button', { name: '사진 1 빼기', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: '삭제', exact: true }).click();
+    await expect(page.getByRole('img', { name: '사진 1', exact: true })).toHaveCount(0);
+  });
 });

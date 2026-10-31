@@ -36,6 +36,7 @@ import { useToast } from '../toast';
 import { Button, Callout, ChoiceGroup, CommentBox, ConfirmDialog, Dialog, Empty, MenuHeading, MenuItem, MoreMenu, NavBar, PostStat, Row, Screen, Section, Stack, Tag, Text, TextField, Thread, ThreadEvent, ThreadItem, TourCard, VoteButton, Written } from '../ui';
 import { useNicknameGate } from './nickname';
 import { counted, ReasonDialog } from './parts';
+import { PostPictures } from './pictures';
 import { useVotes } from './vote';
 
 type Gate = (then: () => void) => void;
@@ -164,6 +165,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
           />
         )}
         {live ? <Written text={post.text!} /> : <Text variant="note">삭제된 글이에요.</Text>}
+        <PostPictures post={post} reload={reload} />
         {admin && post.diagnostics !== null && <TextField label="진단 정보" lines={8} value={post.diagnostics} onChange={() => {}} readOnly />}
         {live && post.visibility === 'public' && (
           <Row kind="center">

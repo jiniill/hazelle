@@ -22,6 +22,10 @@ export const MAX_DIAGNOSTICS_LENGTH = 16000;
 // Per account or guest browser, counted over the last 24 hours in the database, so a restart resets nothing.
 export const POSTS_PER_DAY = 10;
 export const COMMENTS_PER_DAY = 60;
+// Pictures on an operator-only post, by its author with an account (design §6.13).
+export const MAX_POST_PICTURES = 3;
+export const PICTURES_PER_DAY = 9;
+export const MAX_PICTURE_BYTES = 2_000_000;
 // Shared mobile-carrier addresses need room for several browsers, but not unlimited fresh secrets.
 export const GUEST_ADDRESS_CAP_MULTIPLIER = 10;
 // 임시조치 (정보통신망법 제44조의2): a reported post is held hidden at most this long.
@@ -77,9 +81,11 @@ export type Comment = {
   hidden: Hidden | null;
   deleted: boolean;
 };
+export type PostPicture = { id: number; type: string };
 // diagnostics is operator-only, never exposed with public post text.
 export type Post = PostRow & {
   text: string | null;
+  pictures: PostPicture[];
   // Only the latest status change time is retained, null before the first change.
   statusAt: number | null;
   diagnostics: string | null;

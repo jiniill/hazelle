@@ -7,6 +7,7 @@ import { admin, notices } from './admin';
 import { board } from './board';
 import { relayCall } from './calls';
 import { files } from './files';
+import { MAX_PICTURE_BYTES } from '../contracts/board';
 import { MAX_FILE_BYTES } from '../contracts/files';
 import { BATCH_LIMITS } from '../contracts/objects';
 import { fail, type Account, type AppEnv } from './http';
@@ -75,6 +76,7 @@ const LARGER: [method: string, path: RegExp, bytes: number][] = [
   ['PUT', /^\/api\/files\/[^/]+$/, MAX_FILE_BYTES],
   ['POST', CALLS, CALL_BYTES],
   ['POST', /^\/api\/shares(\/[^/]+\/versions)?$/, PUBLISH_BYTES],
+  ['POST', /^\/api\/board\/posts\/[^/]+\/pictures$/, MAX_PICTURE_BYTES],
 ];
 
 // Reject chunked bodies before routing: Hono would otherwise buffer the entire route cap per unauthenticated connection.

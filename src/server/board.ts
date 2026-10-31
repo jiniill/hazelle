@@ -9,10 +9,12 @@ import {
   MAX_COMMENT_LENGTH,
   MAX_DIAGNOSTICS_LENGTH,
   MAX_POST_LENGTH,
+  MAX_POST_PICTURES,
   MAX_REASON_LENGTH,
   MAX_TITLE_LENGTH,
   nicknameKey,
   OPERATOR_NAME,
+  PICTURES_PER_DAY,
   SORTS,
   STATUSES,
   validNickname,
@@ -21,6 +23,7 @@ import {
   type Comment,
   type Hidden,
   type Post,
+  type PostPicture,
   type PostRow,
 } from '../contracts/board';
 import { ACCOUNT_HEADER, VISITOR_HEADER } from '../contracts/http';
@@ -192,9 +195,11 @@ board.get('/posts/:id', async (c) => {
   if (!row) return fail(c, 404, 'not-found');
   const { text, diagnostics, statusAt, accountId, username, ...shown } = row;
   const { results } = await db.prepare(`SELECT ${COMMENT_COLUMNS} FROM comments c WHERE c.post_id = ?2 ORDER BY c.id`).bind(account.id, id).all<CommentSql>();
+  const { results: pictures } = await db.prepare('SELECT id, type FROM post_pictures WHERE post_id = ? ORDER BY id').bind(id).all<PostPicture>();
   const post: Post = {
     ...postRow(shown, account),
     text,
+    pictures,
     statusAt,
     diagnostics: account.admin ? diagnostics : null,
     account: account.admin && username !== null ? { id: accountId!, username } : null,
@@ -263,10 +268,66 @@ board.delete('/posts/:id', async (c) => {
   const bound = [account.id, id, account.admin ? 1 : 0];
   const done = await db.batch([
     ...(account.admin ? [db.prepare(`INSERT INTO admin_log (at, action, target, detail) SELECT ?2, 'post-delete', id, json_object('title', title) FROM posts WHERE id = ?1 AND deleted = 0`).bind(id, Date.now())] : []),
+    db.prepare(`DELETE FROM post_pictures WHERE post_id = ?2 AND EXISTS (SELECT 1 FROM posts p WHERE ${own})`).bind(...bound),
     db.prepare(`UPDATE posts AS p SET text = NULL, diagnostics = NULL, deleted = 1 WHERE ${own} AND EXISTS (SELECT 1 FROM comments WHERE post_id = p.id) RETURNING id`).bind(...bound),
     db.prepare(`DELETE FROM posts AS p WHERE ${own} AND NOT EXISTS (SELECT 1 FROM comments WHERE post_id = p.id) RETURNING id`).bind(...bound),
   ]);
   return done.slice(-2).some(({ results }) => results.length) ? c.body(null, 204) : fail(c, 404, 'not-found');
+});
+
+// What the browser draws (runtime/picture postedPicture); nothing else is stored, whatever the request calls it.
+function pictureType(bytes: Uint8Array) {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  const ascii = (start: number, end: number) => String.fromCharCode(...bytes.subarray(start, end));
+  return ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP' ? 'image/webp' : null;
+}
+
+// GUEST_ROUTES leaves these behind the session: a guest can make a new secret freely, and pictures are unencrypted
+// bytes the operator would be made to look at. The operator reads them, so public posts take none (ruled, design §6.13).
+board.post('/posts/:id/pictures', async (c) => {
+  const account = c.get('account');
+  const id = idOf(c);
+  const bytes = new Uint8Array(await c.req.arrayBuffer());
+  const type = pictureType(bytes);
+  if (id === null || type === null) return fail(c, 400, 'bad-picture');
+  if (account.suspended) return fail(c, 403, 'suspended');
+  const db = c.env.db;
+  const post = await db.prepare("SELECT 1 FROM posts WHERE id = ?1 AND account_id = ?2 AND visibility = 'operator' AND deleted = 0 AND locked = 0").bind(id, account.id).first();
+  if (!post) return fail(c, 404, 'not-found');
+  const added = await db
+    .prepare(
+      `INSERT INTO post_pictures (post_id, type, bytes, created_at) SELECT ?1, ?3, ?4, ?5
+       WHERE (SELECT COUNT(*) FROM post_pictures WHERE post_id = ?1) < ${MAX_POST_PICTURES}
+         AND (SELECT COUNT(*) FROM post_pictures x JOIN posts p ON p.id = x.post_id WHERE p.account_id = ?2 AND x.created_at > ?5 - ${DAY_MS}) < ${PICTURES_PER_DAY} RETURNING id`,
+    )
+    .bind(id, account.id, type, bytes, Date.now())
+    .first<number>('id');
+  return added === null ? fail(c, 429, 'too-many-pictures') : c.json({ id: added, type });
+});
+
+board.get('/posts/:id/pictures/:picture', async (c) => {
+  const account = c.get('account');
+  const id = idOf(c);
+  const picture = c.req.param('picture');
+  if (id === null || !ROW_ID.test(picture)) return fail(c, 400, 'bad-input');
+  const row = await c.env.db
+    .prepare(`SELECT x.bytes FROM post_pictures x JOIN posts p ON p.id = x.post_id WHERE x.id = ?3 AND p.id = ?2 AND ${readable(account)}`)
+    .bind(account.id, id, Number(picture))
+    .first<{ bytes: Uint8Array<ArrayBuffer> }>();
+  // Never its image type: opened as a page, these bytes stay a download.
+  return row ? c.body(row.bytes, 200, { 'content-type': 'application/octet-stream' }) : fail(c, 404, 'not-found');
+});
+
+// The author's alone; the operator deletes the post (with its log row) when a picture must go.
+board.delete('/posts/:id/pictures/:picture', async (c) => {
+  const id = idOf(c);
+  const picture = c.req.param('picture');
+  if (id === null || !ROW_ID.test(picture)) return fail(c, 400, 'bad-input');
+  const removed = await c.env.db
+    .prepare('DELETE FROM post_pictures WHERE id = ?3 AND post_id = ?2 AND EXISTS (SELECT 1 FROM posts p WHERE p.id = ?2 AND p.account_id = ?1) RETURNING id')
+    .bind(c.get('account').id, id, Number(picture))
+    .first();
+  return removed ? c.body(null, 204) : fail(c, 404, 'not-found');
 });
 
 // An operator-only post is a conversation with the operator, not a thing to recommend.
