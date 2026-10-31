@@ -5,7 +5,7 @@ import { CHAPTER } from '../common/words';
 const STATUS_WORDS: Record<RecordStatus, string> = { sent: '보냄', stale: '원문 바뀜', over: '한도 넘음', forgotten: '삭제됨', chaptered: `${CHAPTER}로 보냄`, 'recall-over': '요약 보냄' };
 
 export const statusWord = (status: RecordStatus | undefined, stale: Staleness | undefined) =>
-  status === undefined || status === 'sent' ? [] : [status === 'stale' && stale === 'records' ? '기록 바뀜' : STATUS_WORDS[status]];
+  status === 'sent' && stale === 'rendered' ? ['원문 불일치'] : status === undefined || status === 'sent' ? [] : [status === 'stale' && stale === 'records' ? '기록 바뀜' : STATUS_WORDS[status]];
 
 export const recordTitle = (item: MemoryRecord | Chapter) => item.what.trim() || (isChapter(item) ? `내용 없는 ${CHAPTER}` : '내용 없는 기록');
 

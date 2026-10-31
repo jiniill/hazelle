@@ -4,7 +4,7 @@ import { chatMemory, memoryOwner, memorySetup, sourcesOf, storedMemory } from '.
 import { chatSent, type ChatSent } from './memory-view';
 import { MemorySchedule, type MemoryCheck } from './memory-schedule';
 import type { ModelSettings } from '../connectors/settings';
-import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, staleness, threadLabel, type ChatRead, type Drafted, type Invalid, type Scene } from '../engine/memory';
+import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, staleness, threadLabel, type Drafted, type Invalid, type Scene } from '../engine/memory';
 import type { RanAway } from '../engine/pipeline';
 import { fold, shown, type Chat, type Message, type Receipt } from '../model/chat';
 import type { Stored } from '../model/kinds';
@@ -260,8 +260,6 @@ export class Rememberer {
   private state: Remembering = { running: new Map(), failed: new Map(), chapterFailed: new Map(), indexing: new Map(), indexFailed: new Map() };
   private readonly changes = new ChangeSignal();
   private readonly schedule = new MemorySchedule();
-  // Remember retried source versions so nondeterministic CBS cannot trigger a paid summary on every check.
-  private readonly reread = new Set<string>();
   // The records of chapters that failed this session, by chat, left out of the next chapter until 다시 시도, so a chapter
   // that keeps failing is not paid for on every check.
   private readonly unchaptered = new Map<string, Set<string>>();
@@ -382,7 +380,6 @@ export class Rememberer {
       if ('kind' in planned) return this.change(chat, { failed: planned });
       this.change(chat, { running: { model: entryName(planned.route.model), left: planned.left } });
       const outcome = await this.summarize(chat, planned);
-      if (planned.job.redo) this.reread.add(readKey(planned.job.sources));
       if (outcome === 'stopped') return;
       if (typeof outcome === 'string') continue;
       if (!planned.job.chapter) return this.change(chat, { failed: outcome });
@@ -427,7 +424,7 @@ export class Rememberer {
     const held = sent.standing!;
     const places = placesOf(sent.read.shown);
     const asked = [...memory.records, ...memory.chapters].find(({ id }) => id === this.schedule.requested(chat));
-    const stale = memory.records.filter((record) => !owned(record) && !record.forgotten && staleness(record, sent.read, places) === 'changed' && !this.reread.has(readKey(shownFor(record, sent.read, places))));
+    const stale = memory.records.filter((record) => !owned(record) && !record.forgotten && staleness(record, sent.read, places) === 'changed');
     const member = asked && isChapter(asked) ? stale.find(({ id }) => asked.records.some((each) => each.id === id)) : undefined;
     if (!member) this.schedule.rebuild(chat, null);
     // Without a 장기 기억 slot in the request, a new record would only take its messages out of it, and a stale one
@@ -555,9 +552,3 @@ const sameText = (text: string) => text.replace(/\s+/g, ' ').trim();
 // 3.8 Flash); matched on the label alone, no thread ever closed.
 const closesThread = (closes: string[], thread: Thread) => closes.some((text) => text.includes(threadLabel(thread)) || sameText(text) === sameText(thread.text));
 
-const readKey = (sources: Source[]) => sources.map(({ message, version }) => `${message}/${version}`).join(' ');
-
-const shownFor = (record: Written, read: ChatRead, places: ReadonlyMap<string, number>) => record.sources.flatMap(({ message }) => {
-  const at = places.get(message);
-  return at === undefined ? [] : [read.shown[at]!];
-});

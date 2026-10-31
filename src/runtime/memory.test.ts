@@ -142,12 +142,34 @@ describe('Rememberer', () => {
       const said = crypto.randomUUID();
       await appendUserMessage(session.store, chat, { id: said, text: 'We meet at the pier.' });
       await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'Luna waves.' });
-      const stale = { id: 'r0', sources: [{ message: said, version: said }], print: 'another text', when: null, where: null, who: [], what: 'They meet.', lines: [], outcome: '', state: [], opens: [], closes: [], receipt: null, at: 0 };
+      const stale = { id: 'r0', sources: [{ message: said, version: 'older' }], print: 'another text', when: null, where: null, who: [], what: 'They meet.', lines: [], outcome: '', state: [], opens: [], closes: [], receipt: null, at: 0 };
       await session.store.create('memory', { records: [stale], chapters: [], state: [], threads: [] }, { id: memoryId(chat), parent: chat });
       const log = stubRelay(inTurn([saying(summary('jin and Luna meet at the pier.', 'We meet at the pier.'))]));
       session.memory.check(chat);
       await new Promise((resolve) => setTimeout(resolve, 1000));
       expect(log).toHaveLength(0);
+
+      session.memory.rebuild(chat, 'r0');
+      await vi.waitFor(() => expect(chatMemory(session.store, chat).records[0]).toMatchObject({ what: 'jin and Luna meet at the pier.' }));
+      expect(log).toHaveLength(1);
+    }));
+  it('pays for no new summary of a record whose messages only read differently, and makes it again when the user asks', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      await setDefaultMemory(session.store, { window: 1, batch: 1 });
+      const chat = crypto.randomUUID();
+      await server.hold(session.store, chat);
+      await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+      const said = crypto.randomUUID();
+      await appendUserMessage(session.store, chat, { id: said, text: 'We meet at the pier.' });
+      await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'Luna waves.' });
+      const reread = { id: 'r0', sources: [{ message: said, version: said }], print: 'another text', when: null, where: null, who: [], what: 'They meet.', lines: [], outcome: '', state: [], opens: [], closes: [], receipt: null, at: 0 };
+      await session.store.create('memory', { records: [reread], chapters: [], state: [], threads: [] }, { id: memoryId(chat), parent: chat });
+      const log = stubRelay(inTurn([saying(summary('jin and Luna meet at the pier.', 'We meet at the pier.'))]));
+      session.memory.check(chat);
+      await vi.waitFor(() => expect(session.memory.snapshot().running.size).toBe(0));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect([log.length, chatMemory(session.store, chat).records[0]!.what]).toEqual([0, 'They meet.']);
 
       session.memory.rebuild(chat, 'r0');
       await vi.waitFor(() => expect(chatMemory(session.store, chat).records[0]).toMatchObject({ what: 'jin and Luna meet at the pier.' }));
@@ -292,7 +314,7 @@ describe('chapters', () => {
       ids.push(id);
       await appendUserMessage(session.store, chat, { id, text });
     }
-    const records = said.map((text, index) => ({ id: `r${index}`, sources: [{ message: ids[index]!, version: ids[index]! }], print: stale && index === 0 ? 'another text' : fingerprint([{ role: 'user', text }]), when: null, where: 'the pier', who: ['Luna'], what: `Event ${index}.`, lines: [], outcome: '', state: [], opens: [], closes: [], receipt: null, at: 0 }));
+    const records = said.map((text, index) => ({ id: `r${index}`, sources: [{ message: ids[index]!, version: stale && index === 0 ? 'older' : ids[index]! }], print: fingerprint([{ role: 'user', text }]), when: null, where: 'the pier', who: ['Luna'], what: `Event ${index}.`, lines: [], outcome: '', state: [], opens: [], closes: [], receipt: null, at: 0 }));
     await session.store.create('memory', { records, chapters: chapters(ids), state: [fact], threads: [thread] }, { id: memoryId(chat), parent: chat });
     await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'Will you wait?' });
     return { chat, records };

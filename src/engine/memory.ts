@@ -8,15 +8,19 @@ import { args } from './lorebook/decorators';
 // otherwise text is the tool-owned memory.
 export type MemorySent = ({ by: null; sent: string[]; found: string[] } | { by: string; text: string }) & { covered: number; missing: number; slot: boolean };
 
-// A record's or a chapter's. stale: its messages render differently now, so it waits (design §6.2, When the source
-// changes). chaptered: a record whose chapter is sent in its place. recall-over: a recalled record whose messages do
-// not fit, sent as its summary.
+// A record's or a chapter's. stale: its messages changed, so it waits (design §6.2, When the source changes).
+// chaptered: a record whose chapter is sent in its place. recall-over: a recalled record whose messages do not fit,
+// sent as its summary.
 export type RecordStatus = 'sent' | 'stale' | 'over' | 'forgotten' | 'chaptered' | 'recall-over';
 
 // deleted: one of its messages is gone, and the record waits for the user, since 되돌리기 may bring the message back.
-// changed: its messages render differently now, after an edit, a version switch or a variable an earlier message sets.
+// changed: another version of one of its messages is shown now, after an edit or a version switch.
+// rendered: the same versions read differently now (a variable, a script, a tag). It keeps being sent and is not made
+// again unasked: a difference no one wrote would otherwise take the whole memory out of the request and pay to rewrite it.
 // records: one of a chapter's records changed, was deleted or was made again since the chapter read it.
-export type Staleness = 'deleted' | 'changed' | 'records';
+export type Staleness = 'deleted' | 'changed' | 'rendered' | 'records';
+
+const withheld = (why: Staleness | null | undefined) => why != null && why !== 'rendered';
 
 // Parallel arrays in oldest-first message order; texts are prompt-rendered, not stored or displayed text.
 export type ChatRead = { shown: Source[]; roles: ('user' | 'assistant')[]; speakers: string[]; texts: string[] };
@@ -110,7 +114,7 @@ export function staleness(item: Written, chat: ChatRead, places: ReadonlyMap<str
   if (at.some((index) => index === undefined)) return 'deleted';
   const indices = at as number[];
   if (item.sources.some(({ version }, index) => chat.shown[indices[index]!]!.version !== version)) return 'changed';
-  return item.print === printOf(chat, indices) ? null : 'changed';
+  return item.print === printOf(chat, indices) ? null : 'rendered';
 }
 
 export const isChapter = (item: MemoryRecord | Chapter): item is Chapter => 'records' in item;
@@ -169,7 +173,7 @@ export function standing(memory: Memory, chat: ChatRead, budget: number, countTo
     const why = moved ? 'records' : staleness(chapter, chat, places);
     if (why) stale.set(chapter.id, why);
     if (chapter.forgotten) status.set(chapter.id, 'forgotten');
-    else if (moved || (why && !owned(chapter))) status.set(chapter.id, 'stale');
+    else if (moved || (withheld(why) && !owned(chapter))) status.set(chapter.id, 'stale');
     else for (const { id } of chapter.records) holder.set(id, chapter);
   }
   const units: (MemoryRecord | Chapter)[] = [];
@@ -180,7 +184,7 @@ export function standing(memory: Memory, chat: ChatRead, budget: number, countTo
     if (chapter?.records[0]!.id === record.id) units.push(chapter);
     if (record.forgotten) status.set(record.id, 'forgotten');
     else if (chapter && !fixed(record)) continue;
-    else if (why && !owned(record)) status.set(record.id, 'stale');
+    else if (withheld(why) && !owned(record)) status.set(record.id, 'stale');
     else units.push(record);
   }
   const threads = memory.threads.map(({ text }) => text);
@@ -259,7 +263,7 @@ export function nextChapters(memory: Memory, held: Standing, shown: Source[], to
   const member = new Set(memory.chapters.flatMap(({ records }) => records.map(({ id }) => id)));
   const runs: MemoryRecord[][] = [[]];
   for (const record of memory.records) {
-    if (!record.forgotten && !owned(record) && !member.has(record.id) && !held.stale.has(record.id) && !failed.has(record.id)) runs.at(-1)!.push(record);
+    if (!record.forgotten && !owned(record) && !member.has(record.id) && !withheld(held.stale.get(record.id)) && !failed.has(record.id)) runs.at(-1)!.push(record);
     else if (runs.at(-1)!.length) runs.push([]);
   }
   const loose = runs.flat().reduce((sum, { id }) => sum + held.costs.get(id)!, 0);

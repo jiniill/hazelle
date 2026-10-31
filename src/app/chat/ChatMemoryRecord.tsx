@@ -12,7 +12,7 @@ import { Button, Callout, List, ListItem, PhraseField, Row, Section, SettingGrou
 import { recordScene, recordTitle, spanOf, statusWord } from './memory';
 import type { ChatActions } from './useChat';
 
-const STALE = { changed: '대화 원문이 바뀌었어요.', deleted: '원문 메시지가 삭제됐어요.', records: '기록이 바뀌었어요.' };
+const STALE = { changed: '대화 원문이 바뀌었어요.', rendered: '원문이 정리할 때와 달라요.', deleted: '원문 메시지가 삭제됐어요.', records: '기록이 바뀌었어요.' };
 
 type Props = {
   chat: string;

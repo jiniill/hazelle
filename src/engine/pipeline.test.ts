@@ -554,7 +554,7 @@ describe('assemble with memory', () => {
       memoryOf([
         record('r1', [0], 'They arrive.', { pinned: true }),
         record('r2', [1], long),
-        record('r3', [2], 'jin promises.', { print: 'rendered before' }),
+        record('r3', [2], 'jin promises.', { sources: [{ ...shown[2]!, version: 'older' }] }),
         record('r4', [3], 'Luna nods.', { forgotten: true }),
         record('r5', [4], 'Morning.'),
       ]),
@@ -563,8 +563,10 @@ describe('assemble with memory', () => {
     expect(result.memory).toEqual({ by: null, sent: ['r1', 'r5'], covered: 5, missing: 3, slot: true, found: [] });
     expect(chatOf(result)).toEqual(['Luna is calm.']);
     expect(memoryOfSent(result)!.content).toMatch(/^Current state:\n- Luna, mood: wary\n\nOpen threads:\n- jin will come back\./);
-    const pinned = withMemory(memoryOf([record('r1', [0], 'They arrive.', { print: 'rendered before', pinned: true })]));
+    const pinned = withMemory(memoryOf([record('r1', [0], 'They arrive.', { sources: [{ ...shown[0]!, version: 'older' }], pinned: true })]));
     expect(pinned.memory).toMatchObject({ sent: ['r1'], missing: 0 });
+    const reread = withMemory(memoryOf([record('r1', [0], 'They arrive.', { print: 'rendered before' })]));
+    expect(reread.memory).toMatchObject({ sent: ['r1'], missing: 0 });
   });
 
   it('counts every covered message as missing when the prompt has no 장기 기억 slot or a toggle leaves it out, and sends nothing for an empty memory', () => {
