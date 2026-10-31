@@ -1,22 +1,21 @@
 import { entryName } from '../../connectors/types';
 import { ArrowRight, ChevronDown, ChevronUp, Eraser, Languages, Square } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { translateOnTool, setToolNote, toolTranslatorOf, type TranslatorFailure } from '../../runtime/translate';
+import { translateOnTool, setToolLanguage, setToolNote, toolTranslatorOf, type TranslatorFailure } from '../../runtime/translate';
 import { ACTS } from '../common/acts';
 import { describeTranslateFailure } from '../common/failure';
 import { LanguageMenu } from '../common/IntoLanguage';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { count } from '../common/typedNumber';
 import { useCopy } from '../common/useCopy';
-import { usePersisted } from '../common/usePersisted';
 import { inSettings, MODEL_ROLES, noteLines, opens, STOP, TOOL_PAGES, TRANSLATOR_NOTE } from '../common/words';
 import { useConnections, useSession, useSettings } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { SHORTCUTS } from '../shortcuts';
+import { useToast } from '../toast';
 import { Button, Callout, ChipButton, formatKeys, Icon, Menu, MenuHeading, MenuItem, NavBar, pressed, Screen, TranslateDesk } from '../ui';
 
-const LANGUAGE = 'risu-alpha:translator-language';
 
 // text: what came before a stop or a failure, kept in view.
 type Run =
@@ -35,7 +34,8 @@ export function TranslatorScreen({ back }: { back: Back | null }) {
   // toolTranslatorOf reads these too.
   useConnections();
   const copy = useCopy();
-  const [language, setLanguage] = usePersisted(LANGUAGE, (stored) => stored, 'Korean', (name) => name);
+  const language = settings.toolLanguage ?? 'Korean';
+  const toast = useToast();
   const [source, setSource] = useState('');
   const [run, setRun] = useState<Run>({ kind: 'idle' });
   const [noteOpen, setNoteOpen] = useState(false);
@@ -95,7 +95,7 @@ export function TranslatorScreen({ back }: { back: Back | null }) {
               <MenuHeading>여기서 번역한 내용은 저장되지 않아요.</MenuHeading>
             </Menu>
             <Icon icon={ArrowRight} size="sm" />
-            <LanguageMenu label="번역할 언어" value={language} opens="down" onPick={setLanguage} />
+            <LanguageMenu label="번역할 언어" value={language} opens="down" onPick={(name) => void setToolLanguage(store, name).then((result) => result.ok || toast.failed(result))} />
           </>
         }
         aside={

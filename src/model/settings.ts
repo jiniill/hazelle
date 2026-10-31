@@ -22,6 +22,9 @@ export type SavedLook = { id: string; name: string; look: Record<string, string 
 
 // Shared defaults are resolved by runtime/chat-context, runtime/characters and runtime/memory;
 // character-owned translation and illustration settings replace their shared settings.
+// What this person has been shown, so no device of theirs shows it again.
+export type Seen = { tutorials?: string[]; welcome?: true; tour?: string; opened?: string };
+
 export type Settings = {
   models: Assignment;
   prompt?: string;
@@ -44,6 +47,7 @@ export type Settings = {
   translatorNote?: string;
   // Tool-only note; never inherits the chats' global translator note (user, 2026-10-20).
   toolNote?: string;
+  toolLanguage?: string;
   importNotice?: true;
   ledger?: 'filled' | { after: string };
   looks?: SavedLook[];
@@ -64,6 +68,7 @@ export type Settings = {
   answerInstruction?: string;
   usageShown?: true;
   cacheNoteHidden?: true;
+  seen?: Seen;
   // 헤이젤 나우 (design §6.12): false stops every usage label this account's pages send; absent shares (the default).
   pulse?: false;
 };

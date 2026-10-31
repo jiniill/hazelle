@@ -1,6 +1,7 @@
 import { Check, GraduationCap, PartyPopper } from 'lucide-react';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useConnections, useReplied } from '../session';
+import { markSeen } from '../../runtime/chat-context';
+import { useConnections, useReplied, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import { Button, Cheer, Coach, Dialog, guideShown, Intro, List, ListItem, Row, Stack, Tag, Text, useGuideTarget } from '../ui';
 import { stepAt, TUTORIALS, type Facts, type Tutorial } from './tutorial';
@@ -8,7 +9,7 @@ import { usePersisted } from './usePersisted';
 
 export const TUTORIAL = { open: '튜토리얼 보기', icon: GraduationCap, title: '헤이젤이 처음이라면', later: '나중에', stop: '종료', resume: '계속하기', done: '완료' };
 
-// Offer unfinished tutorials only before any reply. welcome respects this device's dismissal;
+// Offer unfinished tutorials only before any reply. welcome respects the account's dismissal;
 // listed supplies door labels independently of whether the welcome opens.
 type Tutorials = { offered: readonly Tutorial[]; listed: string; open: () => void; welcome: () => boolean };
 const TutorialContext = createContext<Tutorials | null>(null);
@@ -31,20 +32,20 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const facts = useFacts();
   const replied = useReplied();
   const [runningId, setRunning] = usePersisted('risu-alpha:tutorial', String, '', String);
-  const [finished, setFinished] = usePersisted('risu-alpha:tutorials-done', (stored) => stored.split(' ').filter(Boolean), [], (ids) => ids.join(' '));
-  const [welcomed, setWelcomed] = usePersisted('risu-alpha:welcome-seen', (stored) => stored === '1', false, (value) => (value ? '1' : ''));
+  const store = useStore();
+  const { tutorials: finished = [], welcome: welcomed = false } = useSettings().seen ?? {};
   const [listing, setListing] = useState(false);
   const offered = replied ? [] : TUTORIALS.filter(({ id }) => !finished.includes(id));
   const running = TUTORIALS.find(({ id }) => id === runningId) ?? null;
   const at = running && stepAt(running, facts);
   const ended = running !== null && (at === null || finished.includes(running.id));
   useEffect(() => {
-    if (running && ended && !finished.includes(running.id)) setFinished([...finished, running.id]);
+    if (running && ended && !finished.includes(running.id)) void markSeen(store, { tutorials: [...finished, running.id] });
   }, [ended]);
 
   function close() {
     setListing(false);
-    setWelcomed(true);
+    if (!welcomed) void markSeen(store, { welcome: true });
   }
 
   // Started where the step's control is on screen (the empty home's 새 연결), else at the step's place.

@@ -11,6 +11,14 @@ export function readPersisted<T>(key: string, parse: (stored: string) => T, init
   }
 }
 
+export function forgetPersisted(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Refused storage held nothing to forget, or asks again at the next open.
+  }
+}
+
 export const storedStrings = (stored: string): string[] => {
   const list: unknown = JSON.parse(stored);
   return Array.isArray(list) ? list.filter((each) => typeof each === 'string') : [];

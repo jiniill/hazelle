@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { hearServedVersion } from '../../runtime/api';
+import { markSeen } from '../../runtime/chat-context';
 import type { AccountFacts } from '../../runtime/account';
 import { Drafts } from '../../runtime/drafts';
 import { selfHost } from '../../runtime/installation';
@@ -9,16 +10,16 @@ import type { Unlocked } from '../account/AccountFlow';
 import { UnreachableScreen } from '../account/UnreachableScreen';
 import { describeFailure } from '../common/failure';
 import { readPosts } from '../../runtime/board';
+import { carryDeviceValues } from '../common/carryDeviceValues';
 import { BUILT_VERSION, openedNewRelease, TOURS, tourToShow, type Tour } from '../common/release';
 import { TourDialog } from '../common/Tour';
 import { TutorialProvider, useTutorials } from '../common/Tutorial';
 import { count } from '../common/typedNumber';
-import { usePersisted } from '../common/usePersisted';
 import { playSound, unlockSound } from '../common/sounds';
 import { DisplayProvider, useDisplay } from '../display';
 import { BIN, BOARD, inSettings, NOTICES } from '../common/words';
 import { ImportProvider } from '../library/ImportFlow';
-import { SessionProvider, useHeldLeave, useSaves, useSession } from '../session';
+import { SessionProvider, useHeldLeave, useSaves, useSession, useSettings, useStore } from '../session';
 import { ToastProvider, useToast, type Standing } from '../toast';
 import { Brand, Progress, Screen, Text } from '../ui';
 import { BotNotes } from './BotNotes';
@@ -152,13 +153,13 @@ function LeaveHold() {
   return null;
 }
 
-// StrictMode-safe device tracking: any tour close marks it seen. Prefer tutorial welcome, then tour,
+// StrictMode-safe: any tour close marks it seen. Prefer tutorial welcome, then tour,
 // else a release toast only when its news post exists; never show both for the same open.
 function News() {
   const toast = useToast();
   const tutorials = useTutorials();
-  const [lastOpened, setLastOpened] = usePersisted('risu-alpha:opened-version', String, '', String);
-  const [tourSeen, setTourSeen] = usePersisted('risu-alpha:tour-seen', String, '', String);
+  const store = useStore();
+  const { opened: lastOpened = '', tour: tourSeen = '' } = useSettings().seen ?? {};
   const [tour, setTour] = useState<Tour | null>(null);
   const said = useRef(false);
   useEffect(() => {
@@ -176,14 +177,14 @@ function News() {
         if (news?.version === BUILT_VERSION) toast.show('새 버전으로 바뀌었어요', { action: { label: '바뀐 점 보기', onClick: () => navigate({ kind: 'post', id: news.id }) } });
       });
     }
-    if (lastOpened !== BUILT_VERSION) setLastOpened(BUILT_VERSION);
+    if (lastOpened !== BUILT_VERSION) void markSeen(store, { opened: BUILT_VERSION });
   }, []);
   if (!tour) return null;
   return (
     <TourDialog
       tour={tour}
       onClose={() => {
-        setTourSeen(tour.version);
+        void markSeen(store, { tour: tour.version });
         setTour(null);
       }}
     />
@@ -225,6 +226,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
       if (abandon.signal.aborted) return;
       if (!result.ok) return setFailure(describeFailure(result));
       opened = result.data;
+      carryDeviceValues(opened.store);
       setSession(opened);
     });
     return () => {

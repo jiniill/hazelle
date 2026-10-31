@@ -12,7 +12,7 @@ import { keepsPromptOut, shown, type Chat, type Message } from '../model/chat';
 import { live } from '../model/library';
 import type { Toggle, ToggleLine } from '../model/prompt';
 import { without } from '../model/fields';
-import { EMPTY_SETTINGS, SETTINGS_ID, type Settings } from '../model/settings';
+import { EMPTY_SETTINGS, SETTINGS_ID, type Seen, type Settings } from '../model/settings';
 import { chatToggles, toggleValue } from '../model/toggles';
 import { chatModel, type Route } from './assignment';
 import { chatTranslate } from './features';
@@ -97,6 +97,9 @@ export const setToolRounds = (store: ObjectStore, rounds: number) =>
 
 export const setUsageShown = (store: ObjectStore, shown: boolean) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (shown ? { ...current, usageShown: true } : without(current, 'usageShown')));
+
+export const markSeen = (store: ObjectStore, change: Seen) =>
+  store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, seen: { ...current.seen, ...change } }));
 
 export const setCacheNoteHidden = (store: ObjectStore, hidden: boolean) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (hidden ? { ...current, cacheNoteHidden: true } : without(current, 'cacheNoteHidden')));

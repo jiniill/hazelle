@@ -153,6 +153,9 @@ export function toolTranslatorOf(store: ObjectStore): { ok: true; with: Translat
 
 const TOOL_PROMPT = toolPrompt();
 
+export const setToolLanguage = (store: ObjectStore, name: string) =>
+  store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, toolLanguage: name }));
+
 export const setToolNote = (store: ObjectStore, text: string) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (text.trim() ? { ...current, toolNote: text } : without(current, 'toolNote')));
 
