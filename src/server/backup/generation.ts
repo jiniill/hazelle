@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import type { AccountState, RestorePhase } from '../../contracts/admin';
 import { ACCOUNT_SCHEMA_VERSION, CURRENT_BASELINE, RETENTION_MS } from '../db/account-db';
 import { fsyncPath, makeDirs } from '../db/durable';
-import { archiveSnapshot, type SnapshotArchive } from '../db/snapshot';
+import { archiveSnapshot, snapshotJob, type SnapshotArchive } from '../db/snapshot';
 import { fileKey, snapshotKey, type Bucket, type DiskBucket } from '../files/bucket';
 import { entries } from '../files/disk-bucket';
 import { DAY_MS, type Services } from '../http';
@@ -73,6 +73,7 @@ export async function copyWhole(source: string, target: string) {
 }
 
 type Named = Omit<Manifest, 'version' | 'id' | 'capturedAt' | 'service' | 'accountSchema' | 'bucket' | 'snapshotStore'>;
+export type NamedRead = { named: Named; sources: Map<string, string[]> };
 
 export function generationPictures(db: DatabaseSync, snapshots: string[]): { incarnation: string; id: string; size: number }[] {
   // Generations from before migration 0010 have no released files; restore still reads those service snapshots.
@@ -85,7 +86,7 @@ export function generationPictures(db: DatabaseSync, snapshots: string[]): { inc
 }
 
 // What the service snapshot names, read from the snapshot itself so the manifest and the service agree.
-function readNamed(path: string, now: number): { named: Named; sources: Map<string, string[]> } {
+export function readNamed(path: string, now: number): NamedRead {
   const db = new DatabaseSync(path, { readOnly: true });
   try {
     const all = <T>(sql: string, ...binds: (string | number)[]) => db.prepare(sql).all(...binds) as T[];
@@ -166,9 +167,9 @@ export async function captureGeneration(
       copy.close();
     }
     expireDepartures(generationsDir(dataDir), clock());
-    const { named, sources } = readNamed(plain, clock());
-    const dirs = new Set<string>([pool]);
     const files = env.files;
+    const { named, sources } = await snapshotJob<NamedRead>({ kind: 'named', path: plain, now: clock(), sources: files.kind === 'disk' });
+    const dirs = new Set<string>([pool]);
     if (files.kind === 'disk') for (const snapshot of named.snapshots) {
       const target = join(root, snapshot.path);
       makeDirs(dirname(target));

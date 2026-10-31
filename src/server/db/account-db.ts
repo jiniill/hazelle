@@ -10,7 +10,7 @@ import { StoreRules, type SqlValue, type StoreDb, type StoreReads, type Unavaila
 import { snapshotKey, type Bucket } from '../files/bucket';
 import { fsyncPath, makeDirs } from './durable';
 import { openDatabase, type Db } from './service-db';
-import { archiveSnapshot } from './snapshot';
+import { archiveSnapshot, snapshotJob } from './snapshot';
 import { transaction } from './transaction';
 
 // One queue per incarnation owns its account file and replaceable session; session startup installs armed restores.
@@ -181,7 +181,7 @@ export async function materializeSnapshot(files: Bucket, service: Db, incarnatio
   const delta = `${target}.delta`;
   try {
     await readSnapshot(files, incarnation, id, snapshot, delta);
-    withDelta(target, delta, applyDelta);
+    await snapshotJob<boolean>({ kind: 'merge', whole: target, delta, onlyIfDeletesHeld: false });
   } finally {
     rmSync(delta, { force: true });
   }
@@ -192,27 +192,6 @@ export async function materializeSnapshot(files: Bucket, service: Db, incarnatio
     check.close();
   }
 }
-
-function withDelta<T>(whole: string, delta: string, work: (db: DatabaseSync) => T): T {
-  const db = new DatabaseSync(whole);
-  try {
-    db.prepare('ATTACH DATABASE ? AS delta').run(delta);
-    try {
-      return work(db);
-    } finally {
-      db.exec('DETACH DATABASE delta');
-    }
-  } finally {
-    db.close();
-  }
-}
-
-const applyDelta = (db: DatabaseSync) =>
-  transaction(db, () => {
-    db.exec(`INSERT OR REPLACE INTO objects (id, kind, parent_id, rev, body, deleted_at) SELECT id, kind, parent_id, rev, body, deleted_at FROM delta.objects;
-      DELETE FROM kv; INSERT INTO kv SELECT * FROM delta.kv;
-      DELETE FROM head; INSERT INTO head SELECT * FROM delta.head;`);
-  });
 
 // Exported for tests that wrap a StoreDb; production code reaches a file only through the registry.
 export class AccountDb implements StoreDb {
@@ -275,25 +254,9 @@ export class AccountDb implements StoreDb {
       .first<{ timeline: string; base: string | null; baseRev: number | null }>())!;
     let rev: number;
     try {
-      if (base === null) {
-        rev = this.exec<{ rev: number }>('SELECT rev FROM head')[0]!.rev;
-        await backup(this.db(), plain);
-      } else {
-        const db = this.db();
-        db.prepare('ATTACH DATABASE ? AS delta').run(plain);
-        try {
-          rev = this.transaction(() => {
-            // Delta correctness requires append-only rows with strictly increasing revs; purges clear body, never hard-delete.
-            // Any future hard delete needs a delta-carried purge log first.
-            db.exec(`CREATE TABLE delta.head AS SELECT * FROM main.head;
-              CREATE TABLE delta.kv AS SELECT * FROM main.kv;
-              CREATE TABLE delta.objects AS SELECT * FROM main.objects WHERE rev > ${baseRev};`);
-            return this.exec<{ rev: number }>('SELECT rev FROM delta.head')[0]!.rev;
-          });
-        } finally {
-          db.exec('DETACH DATABASE delta');
-        }
-      }
+      rev = this.exec<{ rev: number }>('SELECT rev FROM head')[0]!.rev;
+      if (base === null) await backup(this.db(), plain);
+      else await snapshotJob<void>({ kind: 'delta', live: accountPath(this.dataDir, this.incarnation), plain, baseRev: baseRev! });
     } catch (error) {
       rmSync(plain, { force: true });
       throw error;
@@ -301,7 +264,7 @@ export class AccountDb implements StoreDb {
     return async () => {
       try {
         const stored = base !== null && (await this.deletesFromBase(base, plain, join(dir, `.tmp-${id}-whole.sqlite`))) ? null : base;
-        if (stored === null) writeBaseIds(this.dataDir, this.incarnation, id, plain);
+        if (stored === null) await writeBaseIds(this.dataDir, this.incarnation, id, plain);
         const { bytes, expanded, sha256 } = await archiveSnapshot(plain, gz);
         await this.files.putFile(snapshotKey(this.incarnation, id), gz);
         // The row follows the durable artifact. A crash before publication leaves a .tmp-* or uncatalogued gzip
@@ -337,12 +300,8 @@ export class AccountDb implements StoreDb {
     try {
       await materializeSnapshot(this.files, this.service, this.incarnation, base, merged);
       // The miss fills the list, so a base from before the lists is read once, not daily until its next whole.
-      if (!existsSync(ids)) writeBaseIds(this.dataDir, this.incarnation, base, merged);
-      const held = withDelta(merged, plain, (db) => {
-        const found = db.prepare('SELECT 1 FROM delta.objects d JOIN main.objects b ON b.id = d.id WHERE d.body IS NULL AND b.body IS NOT NULL LIMIT 1').get() !== undefined;
-        if (found) applyDelta(db);
-        return found;
-      });
+      if (!existsSync(ids)) await writeBaseIds(this.dataDir, this.incarnation, base, merged);
+      const held = await snapshotJob<boolean>({ kind: 'merge', whole: merged, delta: plain, onlyIfDeletesHeld: true });
       if (held) renameSync(merged, plain);
       return held;
     } finally {
@@ -371,25 +330,10 @@ export class AccountDb implements StoreDb {
   }
 }
 
-// Fsync the id list before rename/publication beside the gzip. A torn named list could hide a base-body deletion;
-// list-disk failure must fail capture too.
-function writeBaseIds(dataDir: string, incarnation: string, id: string, whole: string): void {
+async function writeBaseIds(dataDir: string, incarnation: string, id: string, whole: string): Promise<void> {
   const dir = join(dataDir, BASE_IDS_DIR);
   makeDirs(dir);
-  const temp = join(dir, `.tmp-${incarnation}-${id}.sqlite`);
-  try {
-    const db = new DatabaseSync(temp);
-    try {
-      db.prepare('ATTACH DATABASE ? AS whole').run(whole);
-      db.exec('CREATE TABLE ids (id TEXT PRIMARY KEY); INSERT INTO ids SELECT id FROM whole.objects WHERE body IS NOT NULL');
-    } finally {
-      db.close();
-    }
-    fsyncPath(temp);
-    renameSync(temp, baseIdsPath(dataDir, incarnation, id));
-  } finally {
-    rmSync(temp, { force: true });
-  }
+  await snapshotJob<void>({ kind: 'base-ids', whole, temp: join(dir, `.tmp-${incarnation}-${id}.sqlite`), target: baseIdsPath(dataDir, incarnation, id) });
 }
 
 type StoreStub = { [M in keyof StoreRules]: StoreRules[M] } & { restart(incarnation: string): Promise<never> };
