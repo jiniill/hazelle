@@ -16,7 +16,7 @@ const CHAT: AutoChat = {
   messages: 180,
   character: true,
   memory: { on: true, own: false, budget: 8000, clamped: 4000, window: 12_000, batch: 4000 },
-  request: { messages: 60, dropped: 15, unseen: 0, problems: 0, covered: 100, missing: 0, slot: true, tool: false, source: 'chat', bound: 'hard-upper', multiplier: 1.2, allowance: 40_000, inputLimit: 44_000, evidence: 3, cold: false },
+  request: { messages: 60, dropped: 15, unseen: 0, problems: 0, covered: 100, missing: 0, slot: true, tool: false, records: { over: 4, stale: 0, deleted: 0, changed: 0, rendered: 0 }, source: 'chat', bound: 'hard-upper', multiplier: 1.2, allowance: 40_000, inputLimit: 44_000, evidence: 3, cold: false },
 };
 const REPORT: AutoReport = { event: 'memory-gap', detail: null, version: 'v0.6.4', browser: 'chrome', major: 140, os: 'windows', mobile: false, place: null, chat: CHAT };
 

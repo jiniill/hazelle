@@ -46,7 +46,7 @@ describe('the state a 문제 진단 reports', () => {
       const sending = (await forecastSend(session, chat, { kind: 'answer' }, undefined, 'view')) as Sending;
       const auto = { event: 'memory-gap', detail: null, version: null, browser: 'chrome', major: 1, os: 'linux', mobile: false, place: null, chat: autoChat(session, chat, sending) };
       expect(readAutoReport(auto)).toEqual(auto);
-      expect(auto.chat).toMatchObject({ type: expect.any(String), messages: 1, request: { dropped: 0, missing: 0 } });
+      expect(auto.chat).toMatchObject({ type: expect.any(String), messages: 1, request: { dropped: 0, missing: 0, records: { over: 0, stale: 0 } } });
       expect(JSON.stringify(auto)).not.toContain('CANARY');
       expect(JSON.stringify(auto)).not.toContain('keeper');
     }));

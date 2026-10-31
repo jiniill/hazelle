@@ -41,6 +41,7 @@ const CHAT = {
     missing: orNull('number'),
     slot: orNull('flag'),
     tool: orNull('flag'),
+    records: orNull({ over: 'number', stale: 'number', deleted: 'number', changed: 'number', rendered: 'number' }),
     source: SOURCES,
     bound: orNull(BOUNDS),
     multiplier: orNull('number'),

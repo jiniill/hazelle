@@ -97,6 +97,7 @@ function sentFacts({ prompt, calibration: { fit, estimate } }: Sending) {
     missing: prompt.memory?.missing ?? null,
     slot: prompt.memory?.slot ?? null,
     tool: prompt.memory ? prompt.memory.by !== null : null,
+    records: prompt.memory?.by === null ? prompt.memory.records : null,
     source: fit.source,
     bound: fit.bound,
     multiplier: fit.multiplier,

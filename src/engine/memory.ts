@@ -6,7 +6,10 @@ import { args } from './lorebook/decorators';
 // covered messages leave chat slots; missing counts those with no sent memory (stale/over/forgotten/unreachable slot).
 // slot reports prompt reachability independently of content. by null selects built-in sent records/chapters;
 // otherwise text is the tool-owned memory.
-export type MemorySent = ({ by: null; sent: string[]; found: string[] } | { by: string; text: string }) & { covered: number; missing: number; slot: boolean };
+export type MemorySent = ({ by: null; sent: string[]; found: string[]; records: RecordCounts } | { by: string; text: string }) & { covered: number; missing: number; slot: boolean };
+
+// Why messages are not in the memory sent, in numbers: the request has read every record's standing already.
+export type RecordCounts = { over: number; stale: number; deleted: number; changed: number; rendered: number };
 
 // A record's or a chapter's. stale: its messages changed, so it waits (design §6.2, When the source changes).
 // chaptered: a record whose chapter is sent in its place. recall-over: a recalled record whose messages do not fit,
@@ -130,6 +133,11 @@ const fixed = (item: MemoryRecord | Chapter) => item.pinned === true || recalled
 // Budget-independent costs let consolidation compare the saved setting, not a request clamp.
 // fixed includes state/threads/pinned/recalled summaries; recalls add source-message costs newest first.
 // crowded means fixed alone fills the budget; free holds the other eligible summaries.
+export function recordCounts({ status, stale }: Pick<Standing, 'status' | 'stale'>): RecordCounts {
+  const of = (values: Iterable<string>, word: string) => [...values].filter((value) => value === word).length;
+  return { over: of(status.values(), 'over'), stale: of(status.values(), 'stale'), deleted: of(stale.values(), 'deleted'), changed: of(stale.values(), 'changed'), rendered: of(stale.values(), 'rendered') };
+}
+
 export type Standing = {
   covered: number;
   status: Map<string, RecordStatus>;

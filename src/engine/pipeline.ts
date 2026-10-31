@@ -13,7 +13,7 @@ import type { HistoryMessage } from './history';
 import type { Card } from './import/types';
 import { prepareLore, merge, type Activation, type Fired, type LoreBook, type LoreTurn, type Operation, type Silent } from './lorebook/activate';
 import { authorNote, contexts, renderChat, type ChatScope } from './render';
-import { chapterBefore, chapterFormat, memoryBefore, memoryBudget, memoryFormat, recordsTarget, spanText, speakersOf, standing, stateLimit, type MemoryInput, type MemorySent } from './memory';
+import { chapterBefore, chapterFormat, memoryBefore, memoryBudget, memoryFormat, recordCounts, recordsTarget, spanText, speakersOf, standing, stateLimit, type MemoryInput, type MemorySent } from './memory';
 import { retrieval, retrievalRoom } from './retrieval';
 import { COMIC_PAGE, lastScene, numbered, profileNames, seenBy, severalScenes, type Earlier, type Told } from './illustrate';
 import { mascotSheet } from './mascot';
@@ -429,7 +429,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
       silent: activation && activation.silent.map((silent) => ({ ...silent, name: named(silent.id) })),
       invalidKeys: activation ? activation.invalidKeys.map((invalid) => ({ ...invalid, name: named(invalid.entry) })) : [],
       loreBudget: scope.loreScan.tokenBudget,
-      memory: told ? { by: told.name, text: told.text, covered, missing: 0, slot } : recalled && { by: null, sent: recalled.sent, found: retrieved?.ids ?? [], covered, missing: slot ? covered - recalled.held : covered, slot },
+      memory: told ? { by: told.name, text: told.text, covered, missing: 0, slot } : recalled && { by: null, sent: recalled.sent, found: retrieved?.ids ?? [], records: recordCounts(recalled), covered, missing: slot ? covered - recalled.held : covered, slot },
       dropped,
       problems,
       unseen,
