@@ -344,7 +344,7 @@ export class Rememberer {
     this.state = next;
     this.changes.notify();
     for (const failure of [change.failed, change.chapterFailed, change.indexFailed]) {
-      if (failure) autoDiagnose({ event: 'memory-failed', detail: failure.kind, chat: { id: chat, read: () => autoChat(this.session, chat, null) } });
+      if (failure) autoDiagnose({ event: 'memory-failed', detail: failure.kind, chat: { id: chat, read: () => autoChat(this.session, chat, null, this.state) } });
     }
   }
 
@@ -444,7 +444,7 @@ export class Rememberer {
       const snapshot = await this.session.tokens.snapshot(tools.route, tools.settings, tokenLimits(tools.route.model, sentSettings(store, tools.route)), 'memory', chat, new AbortController().signal);
       if (!snapshot.ok) return { kind: 'unsaved', failure: snapshot };
       const cap = chapterCap(setup.batch, snapshot.data.fit.allowance);
-      chapters = nextChapters(memory, held, sent.read.shown, sent.tokens, setup.budget, cap, this.unchaptered.get(chat) ?? new Set());
+      chapters = nextChapters(memory, held, sent.read.shown, sent.tokens, cap, this.unchaptered.get(chat) ?? new Set());
     }
     const next = chapters[0];
     if (!again && !span && !next) return null;
@@ -467,8 +467,7 @@ export class Rememberer {
 
   // Earlier than batch when the next request drops messages for want of room.
   private async span(chat: string, tokens: number[], covered: number, setup: MemorySettings) {
-    const { end, waiting } = rawParts(tokens, covered, setup.window);
-    if (end === covered) return null;
+    const { waiting } = rawParts(tokens, covered, setup.window);
     const dropped = waiting < setup.batch ? ((await wouldSend(this.session, chat, { kind: 'answer' }, undefined, 'memory'))?.prompt.dropped ?? 0) : 0;
     const span = nextSpan(tokens, covered, setup, dropped);
     return span && { ...span, waiting };

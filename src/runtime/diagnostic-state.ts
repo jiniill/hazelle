@@ -5,7 +5,7 @@ import { live } from '../model/library';
 import { toolId } from '../model/tool';
 import { chatModel } from './assignment';
 import { limitsOf, packsOf, promptBudget } from './chat-context';
-import type { MemoryFailure } from './memory';
+import type { MemoryFailure, Remembering } from './memory';
 import { memorySetup } from './memory-read';
 import { memoryView } from './memory-view';
 import { chatPrompt } from './prompts';
@@ -166,7 +166,7 @@ function placeFacts(session: Reader, { kind, id }: Place): Facts | Promise<Facts
 }
 
 // 자동 진단's read of a chat: store reads and a request already built, so a report never makes a worker build another.
-export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: string, sending: Sending | null): AutoChat | null {
+export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: string, sending: Sending | null, { running, failed, chapterFailed }: Pick<Remembering, 'running' | 'failed' | 'chapterFailed'>, gap: AutoChat['gap'] = null): AutoChat | null {
   const chat = live(store.get('chat', id))?.value;
   if (!chat) return null;
   const route = chatModel(store, chat, 'main');
@@ -181,6 +181,9 @@ export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: s
     messages: read.chat(id).snapshot()?.messages.length ?? null,
     character: chat.character !== null,
     memory: { on, own, budget, clamped: memoryBudget(budget, promptBudget(store, chat)), window, batch },
+    page: Math.round(performance.now() / 1000),
+    work: { left: running.get(id)?.left ?? null, failed: failed.get(id)?.kind ?? chapterFailed.get(id)?.kind ?? null },
+    gap,
     request: sending && sentFacts(sending),
   };
 }

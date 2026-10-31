@@ -203,7 +203,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   function report(failure: TurnFailure | null, target?: Target, skip: Skip = {}) {
     if (!failure) return;
     if (isBlocked(failure)) return setStopped(true);
-    autoDiagnose({ event: 'turn-failed', detail: failure.kind, chat: { id: chatId, read: () => autoChat(session, chatId, null) } });
+    autoDiagnose({ event: 'turn-failed', detail: failure.kind, chat: { id: chatId, read: () => autoChat(session, chatId, null, session.memory.snapshot()) } });
     const skipped = target && skippedStep(failure, skip);
     if (skipped) return setSkippable({ ...skipped, target });
     const kept = failure.kind === 'unsaved' ? failure.reply : null;

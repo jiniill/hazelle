@@ -1,6 +1,8 @@
 import { useRef, type KeyboardEvent } from 'react';
+import type { GapCause } from '../../contracts/auto-diagnosis';
 import { refOf } from '../../connectors/assignment';
 import type { DraftAttachment } from '../../runtime/drafts';
+import { leavingCauses } from '../../runtime/memory-view';
 import type { Blocked } from '../../runtime/turn-context';
 import { describeTurnFailure } from '../common/failure';
 import { withParticle } from '../common/particles';
@@ -25,8 +27,24 @@ import { ChatTranslate } from './ChatTranslate';
 import { promptEditor } from './panels';
 import type { OpenChat } from './useChat';
 
-const LEAVING = '가장 오래된 메시지가 요청에서 빠지는데, 장기 기억에도 없어서 모델이 그 내용을 알 수 없어요.';
+// Shown by what leavingCauses finds: the first cause's words, every cause's sentence.
+const LEAVING: Record<GapCause, { words: string; why: string }> = {
+  working: { words: '기억 정리 중', why: '장기 기억을 정리하는 중이에요.' },
+  failed: { words: '기억 정리 실패', why: '장기 기억 정리가 실패해서 멈췄어요. 눌러서 다시 시도할 수 있어요.' },
+  tool: { words: '플러그인 응답 전', why: '장기 기억을 맡은 플러그인이 아직 응답하지 않아서 보내기 전에는 정확한 수를 알 수 없어요.' },
+  off: { words: '장기 기억 꺼짐', why: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠지는데, 장기 기억이 꺼져 있어요.' },
+  'no-slot': { words: '프롬프트에 기억 없음', why: '기록은 있지만 프롬프트에 장기 기억 블록이 없거나 토글로 꺼져 있어서 보내지 않아요.' },
+  stale: { words: '원문 바뀜', why: '원문 메시지가 수정되거나 삭제된 기록은 다시 만들 때까지 보내지 않아요.' },
+  over: { words: '기록 한도 넘음', why: '기록이 이 요청의 한도를 넘어서 오래된 기록부터 빠져요. 컨텍스트 길이가 짧은 모델이면 한도도 줄어요.' },
+  forgotten: { words: '기록 삭제됨', why: '삭제한 기록의 메시지는 요청에도 기억에도 없어요.' },
+  'no-room': { words: '컨텍스트 부족', why: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠지는데, 아직 장기 기억에 없어요.' },
+  unknown: { words: '기억에 없음', why: '오래된 메시지가 요청에서 빠지는데, 장기 기억에도 없어요.' },
+};
 const UNSEEN = '이미지는 제외하고 텍스트만 보내며, 이미지만 있는 메시지는 보내지 않아요.';
+
+function LeavingNote({ count, causes, onOpen }: { count: number; causes: GapCause[]; onOpen: (() => void) | undefined }) {
+  return <SendNote label={`메시지 ${count}개`} title="요청에서 제외될 메시지" warning={{ words: LEAVING[causes[0]!].words, why: causes.map((cause) => LEAVING[cause].why).join(' ') }} onClick={onOpen} />;
+}
 
 type Chip = 'model' | 'prompt' | 'persona' | 'profile';
 const FIX = {
@@ -160,7 +178,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
         }
         actions={
           <>
-            {!busy && chat.sendNotes.leaving ? <SendNote label={`메시지 ${chat.sendNotes.leaving}개`} title="요청에서 제외될 메시지" warning={{ words: '기억에 없음', why: LEAVING }} /> : null}
+            {!busy && chat.sendNotes.leaving && chat.id !== null && chat.sendNotes.sending && 'turn' in chat.sendNotes.sending ? <LeavingNote count={chat.sendNotes.leaving} causes={leavingCauses(chat.sendNotes.sending.prompt, chat.id, remembering)} onOpen={chat.features.memory ? () => actions.memory(null) : undefined} /> : null}
             {!busy && unseen > 0 && <SendNote label={`이미지 ${unseen}개`} title="전송되지 않는 이미지" warning={{ words: '보내지 않음', why: `${attachments.sees === null ? UNKNOWN_PICTURES : NO_PICTURES} ${UNSEEN}` }} />}
             {indexing && <SendNote label={`기억 검색 준비 ${indexing.done}/${indexing.total}`} title="장기 기억 검색 준비" onClick={() => actions.memory(null)} />}
             {!busy && !cacheNoteHidden && <ChatCache cache={chat.sendNotes.cache} onOpen={() => chat.actions.openInspect('cache')} />}

@@ -1,3 +1,4 @@
+import type { GapCause } from '../contracts/auto-diagnosis';
 import { memoryBudget, rawParts, speakersOf, type ChatRead, type RecordStatus, type Staleness, type Standing } from '../engine/memory';
 import type { Assembled } from '../engine/pipeline';
 import type { ChatScope } from '../engine/render';
@@ -5,6 +6,7 @@ import type { Chat } from '../model/chat';
 import type { Memory } from '../model/memory';
 import { asSent, promptBudget, scopeOf } from './chat-context';
 import { chatMemory, memorySetup, sourcesOf, type MemorySetup } from './memory-read';
+import type { Remembering } from './memory';
 import type { Session } from './session';
 import { wouldSend } from './turn-context';
 
@@ -56,3 +58,23 @@ export async function memoryView(session: Pick<Session, 'store' | 'read' | 'scri
 }
 
 export const leaving = (prompt: Assembled): number => (prompt.memory?.missing ?? 0) + prompt.dropped;
+
+// Every reason that holds now. The first names the warning, so what ends by itself comes before what waits for the user.
+export function leavingCauses({ memory, dropped }: Pick<Assembled, 'memory' | 'dropped'>, chat: string, { running, failed, chapterFailed }: Pick<Remembering, 'running' | 'failed' | 'chapterFailed'>): GapCause[] {
+  const missing = memory?.missing ?? 0;
+  const records = memory?.by === null ? memory.records : null;
+  const causes: GapCause[] = [];
+  if (running.has(chat)) causes.push('working');
+  if (failed.has(chat) || chapterFailed.has(chat)) causes.push('failed');
+  // Before a plugin's first answer on this page the forecast has none of its text, so it cannot say what will be sent.
+  if (memory?.by != null && memory.covered === 0 && dropped > 0) causes.push('tool');
+  if (!memory && dropped > 0) causes.push('off');
+  if (memory && !memory.slot && missing > 0) causes.push('no-slot');
+  if (missing > 0 && memory?.slot && records) {
+    if (records.stale > 0) causes.push('stale');
+    if (records.over > 0) causes.push('over');
+    if (records.forgotten > 0) causes.push('forgotten');
+  }
+  if (memory && memory.by === null && dropped > 0) causes.push('no-room');
+  return causes.length ? causes : ['unknown'];
+}

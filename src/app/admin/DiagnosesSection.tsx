@@ -10,6 +10,7 @@ const EVENTS: Record<AutoEvent, string> = {
   'turn-failed': '응답 실패',
   'memory-failed': '장기 기억 실패',
   'memory-gap': '기억에 없음',
+  'memory-gap-ended': '기억에 없음 사라짐',
   'chat-unopened': '채팅 열기 실패',
 };
 const HELP = '문제별로 그날 겪은 사람 수와 횟수를 보여 줘요. 사람은 날마다 새로 세요.';

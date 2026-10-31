@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CacheDiagnosis, CachePrescription, CacheRecurrence, Forecast } from '../../model/cache';
 import { cacheRecurrence, diagnoseCache, needsDiagnosis, replyCalls } from '../../runtime/cache-diagnosis';
 import { priceCachePrescriptions } from '../../runtime/cache-prescriptions';
@@ -8,7 +8,7 @@ import type { Route } from '../../runtime/assignment';
 import { breakCost, forecast, lastCache, prior } from '../../runtime/cache';
 import { autoDiagnose } from '../../runtime/auto-diagnosis';
 import { autoChat } from '../../runtime/diagnostic-state';
-import { leaving } from '../../runtime/memory-view';
+import { leaving, leavingCauses } from '../../runtime/memory-view';
 import type { Shown } from '../../runtime/talk';
 import type { SentRequest } from '../../runtime/request-log';
 import { cacheSend, forecastSend, previewRequest, type Sending, type Unsendable, type Unsaved } from '../../runtime/turn-context';
@@ -35,6 +35,7 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
   const [sending, setSending] = useState<SendNotes['sending']>(undefined);
   const [left, setLeft] = useState<number | null>(null);
   const [changes, setChanges] = useState(0);
+  const gap = useRef<{ chat: string; since: number; most: number } | null>(null);
 
   useEffect(() => {
     const stop = session.store.subscribe(() => setChanges((count) => count + 1));
@@ -55,8 +56,18 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
         if (controller.signal.aborted) return;
         setSending(result);
         const sending = result && 'turn' in result ? result : null;
-        setLeft(sending && leaving(sending.prompt));
-        if (sending && leaving(sending.prompt)) autoDiagnose({ event: 'memory-gap', chat: { id, read: () => autoChat(session, id, sending) } });
+        const count = sending && leaving(sending.prompt);
+        setLeft(count);
+        const work = session.memory.snapshot();
+        if (sending && count) {
+          if (gap.current?.chat !== id) gap.current = { chat: id, since: Date.now(), most: 0 };
+          gap.current.most = Math.max(gap.current.most, count);
+          autoDiagnose({ event: 'memory-gap', detail: leavingCauses(sending.prompt, id, work)[0], chat: { id, read: () => autoChat(session, id, sending, work) } });
+        } else if (sending && gap.current?.chat === id) {
+          const ended = { lasted: Math.round((Date.now() - gap.current.since) / 1000), most: gap.current.most };
+          gap.current = null;
+          autoDiagnose({ event: 'memory-gap-ended', chat: { id, read: () => autoChat(session, id, sending, work, ended) } });
+        }
         const account = sending ? session.credentials.pool.peek(sending.turn.route.connection.value)?.id ?? null : null;
         const send = sending && cacheSend(sending, account);
         const before = session.store.scopeState(id) === 'loaded' ? prior(session.store, id, messages, Date.now()) : null;

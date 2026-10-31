@@ -13,7 +13,9 @@ import { editRecord, forgetRecord, removeFact, removeThread, setDefaultMemory, s
 import { addPrompt, editPrompt } from './prompts';
 import { ObjectStore } from './store';
 import { openSession, type Session } from './session';
-import { answerable, inTurn, saying, stubRelay, testServer } from './testing';
+import { answerable, inTurn, saying, stubRelay, testConnection, testModel, testServer } from './testing';
+import { leaving } from './memory-view';
+import { wouldSend } from './turn-context';
 import { takeTurn } from './turn';
 import { readTool } from '../engine/import/tool';
 import { setModuleAlways } from './modules';
@@ -26,6 +28,31 @@ const summary = (what: string, line: string) =>
   JSON.stringify({ records: [{ to: 1, when: null, where: 'the pier', who: ['Luna', 'jin'], what, lines: [{ speaker: 'jin', text: line }], outcome: '', state: [{ about: 'Luna', field: 'place', value: 'the pier' }], opens: ['They meet again tomorrow.'], closes: [] }] });
 
 describe('Rememberer', () => {
+  it('summarizes what a request cannot hold though it is inside the window, in few calls, until nothing leaves and the last message stays raw', () =>
+    server.withSession(async (session) => {
+      const connection = await session.store.create('connection', { ...testConnection, starred: [{ ...testModel, contextLength: 1500 }] });
+      if (!connection.ok) throw new Error(connection.error);
+      await setDefaultModel(session.store, 'main', { connection: connection.data.id, model: testModel.id });
+      await setDefaultMemory(session.store, { window: 100_000, batch: 300 });
+      const chat = crypto.randomUUID();
+      await server.hold(session.store, chat);
+      await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+      for (let index = 0; index < 40; index++) await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: `${index} ${'word '.repeat(40)}` });
+      const before = await wouldSend(session, chat, { kind: 'answer' }, undefined, 'view');
+      expect(before!.prompt.dropped).toBeGreaterThan(0);
+      const log = stubRelay(({ body }) => saying(JSON.stringify({ records: [{ to: String(body).match(/\[#\d+ /g)!.length, when: null, where: null, who: [], what: 'They talk.', lines: [], outcome: '', state: [], opens: [], closes: [] }] })));
+      session.memory.check(chat);
+      await vi.waitFor(async () => {
+        expect(session.memory.snapshot().running.has(chat)).toBe(false);
+        expect(leaving((await wouldSend(session, chat, { kind: 'answer' }, undefined, 'view'))!.prompt)).toBe(0);
+      }, { timeout: 5000 });
+      expect(log.length).toBeLessThanOrEqual(3);
+      const messages = fold(session.store.children('entry', chat));
+      const covered = chatMemory(session.store, chat).records.flatMap(({ sources }) => sources.map(({ message }) => message));
+      expect(covered).not.toContain(messages.at(-1)!.id);
+      expect(covered.length).toBeGreaterThanOrEqual(before!.prompt.dropped);
+    }));
+
   it('summarizes the messages past the window once a reply is saved, and drops a result whose messages changed while it was written, then summarizes them as they are now', () =>
     server.withSession(async (session) => {
       await answerable(session);
@@ -319,6 +346,19 @@ describe('chapters', () => {
     await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'Will you wait?' });
     return { chat, records };
   }
+
+  it('makes a chapter once memory passes the budget a small model shrinks it to, however large the setting', () =>
+    server.withSession(async (session) => {
+      const { chat } = await recorded(session, { budget: 100_000 });
+      const [small, large] = await Promise.all([session.store.create('connection', { ...testConnection, starred: [{ ...testModel, contextLength: 120 }] }), session.store.create('connection', testConnection)]);
+      if (!small.ok || !large.ok) throw new Error('connection');
+      await setDefaultModel(session.store, 'main', { connection: small.data.id, model: testModel.id });
+      await setDefaultModel(session.store, 'aux', { connection: large.data.id, model: testModel.id });
+      const log = stubRelay(inTurn([saying(chapterAnswer)]));
+      session.memory.check(chat);
+      await vi.waitFor(() => expect(chatMemory(session.store, chat).chapters).toHaveLength(1));
+      expect(log).toHaveLength(1);
+    }));
 
   it('summarizes the oldest records again into one chapter from their messages once memory passes its setting, leaving records, state and threads as they are', () =>
     server.withSession(async (session) => {

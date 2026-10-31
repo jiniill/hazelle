@@ -9,7 +9,7 @@ import { args } from './lorebook/decorators';
 export type MemorySent = ({ by: null; sent: string[]; found: string[]; records: RecordCounts } | { by: string; text: string }) & { covered: number; missing: number; slot: boolean };
 
 // Why messages are not in the memory sent, in numbers: the request has read every record's standing already.
-export type RecordCounts = { over: number; stale: number; deleted: number; changed: number; rendered: number };
+export type RecordCounts = { over: number; stale: number; forgotten: number; deleted: number; changed: number; rendered: number };
 
 // A record's or a chapter's. stale: its messages changed, so it waits (design §6.2, When the source changes).
 // chaptered: a record whose chapter is sent in its place. recall-over: a recalled record whose messages do not fit,
@@ -130,12 +130,12 @@ export const owned = (item: MemoryRecord | Chapter) => item.edited === true || i
 // Sent whatever the budget, as the state and the open threads are.
 const fixed = (item: MemoryRecord | Chapter) => item.pinned === true || recalled(item);
 
-// Budget-independent costs let consolidation compare the saved setting, not a request clamp.
+// Budget-independent costs, for consolidation to read.
 // fixed includes state/threads/pinned/recalled summaries; recalls add source-message costs newest first.
 // crowded means fixed alone fills the budget; free holds the other eligible summaries.
 export function recordCounts({ status, stale }: Pick<Standing, 'status' | 'stale'>): RecordCounts {
   const of = (values: Iterable<string>, word: string) => [...values].filter((value) => value === word).length;
-  return { over: of(status.values(), 'over'), stale: of(status.values(), 'stale'), deleted: of(stale.values(), 'deleted'), changed: of(stale.values(), 'changed'), rendered: of(stale.values(), 'rendered') };
+  return { over: of(status.values(), 'over'), stale: of(status.values(), 'stale'), forgotten: of(status.values(), 'forgotten'), deleted: of(stale.values(), 'deleted'), changed: of(stale.values(), 'changed'), rendered: of(stale.values(), 'rendered') };
 }
 
 export type Standing = {
@@ -265,8 +265,9 @@ export const chapterCap = (batch: number, limit: number | null) => Math.min(4 * 
 type NextChapter = { from: number; to: number; records: string[]; target: number };
 
 // Plan oldest-first runs of >=2 fresh automatic records outside chapters/failed chapters. Skip oversized records.
-// Use the saved memory setting, never the request's model clamp: switching models must not change remembered content.
-export function nextChapters(memory: Memory, held: Standing, shown: Source[], tokens: number[], setting: number, cap: number, failed: ReadonlySet<string>): NextChapter[] {
+// Against the budget the request sends under, clamp included: measured against the saved setting, a small model leaves the
+// oldest records out of every request while no chapter ever starts (design §6.2).
+export function nextChapters(memory: Memory, held: Standing, shown: Source[], tokens: number[], cap: number, failed: ReadonlySet<string>): NextChapter[] {
   const places = placesOf(shown);
   const member = new Set(memory.chapters.flatMap(({ records }) => records.map(({ id }) => id)));
   const runs: MemoryRecord[][] = [[]];
@@ -275,7 +276,7 @@ export function nextChapters(memory: Memory, held: Standing, shown: Source[], to
     else if (runs.at(-1)!.length) runs.push([]);
   }
   const loose = runs.flat().reduce((sum, { id }) => sum + held.costs.get(id)!, 0);
-  const room = recallRoom(setting - held.fixed, held.recalls).room - (held.free - loose);
+  const room = recallRoom(held.tokens.budget - held.fixed, held.recalls).room - (held.free - loose);
   if (room <= 0 || loose <= room * HIGH) return [];
   const made: NextChapter[] = [];
   let left = loose;
@@ -356,15 +357,20 @@ export function rawParts(tokens: number[], covered: number, window: number): { e
 }
 
 // Summarize uncovered pre-window text once it reaches batch, or earlier if the next request drops it.
-// Take whole messages (at least one); never enter the raw window. Null means no job.
+// Take whole messages (at least one), the last never. Null means no job.
+// A request that cannot hold the window drops messages inside it, and those must reach memory too (model/memory's
+// invariant). Such a span takes up to half of what the request still holds as well: cutting only the dropped ones would
+// pay a call and move the boundary, which breaks the cache, on every turn.
 export function nextSpan(tokens: number[], covered: number, { window, batch }: { window: number; batch: number }, dropped: number): { from: number; to: number } | null {
   const { end, waiting } = rawParts(tokens, covered, window);
-  if (end === covered) return null;
   if (waiting < batch && dropped === 0) return null;
+  const short = waiting < batch;
+  const most = short ? Math.min(batch, summed(tokens.slice(covered, covered + dropped)) + summed(tokens.slice(covered + dropped)) / 2) : batch;
+  const stop = short ? tokens.length - 1 : end;
   let to = covered + 1;
   let sum = tokens[covered]!;
-  while (to < end && sum + tokens[to]! <= batch) sum += tokens[to++]!;
-  return { from: covered, to: waiting < batch ? Math.min(to, covered + dropped) : to };
+  while (to < stop && sum + tokens[to]! <= most) sum += tokens[to++]!;
+  return { from: covered, to };
 }
 
 // A thread as a job names it: its id's first group, which stays the same whichever device reads the answer.
