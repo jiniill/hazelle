@@ -42,6 +42,7 @@ describe('diagnostics', () => {
     expect(text.length).toBeLessThanOrEqual(MAX_DIAGNOSTICS_LENGTH);
     expect(text).toMatch(/- 오래된 오류 \d+줄 생략/);
     expect(text).toContain(`${new Date(39).toISOString()} ${'x'.repeat(500)}`);
+    expect(reportText({ version: null, now: 0, device: DEVICE, tokenizer: '불러옴', state: { fills: 'x'.repeat(20000) as never }, problems: [] })).toHaveLength(MAX_DIAGNOSTICS_LENGTH);
   });
 
   it('says an error with its name and the first lines of its stack', () => {

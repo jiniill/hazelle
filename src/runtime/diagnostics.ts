@@ -82,7 +82,8 @@ type Report = { version: string | null; now: number; device: Device; tokenizer: 
 export function reportText({ problems, ...report }: Report): string {
   for (let cut = 0; ; cut++) {
     const text = reportLines(report, problems.slice(cut), cut).join('\n');
-    if (text.length <= MAX_DIAGNOSTICS_LENGTH || cut === problems.length) return text;
+    // Here and not at the send, so the field shows exactly what goes.
+    if (text.length <= MAX_DIAGNOSTICS_LENGTH || cut === problems.length) return text.slice(0, MAX_DIAGNOSTICS_LENGTH);
   }
 }
 
