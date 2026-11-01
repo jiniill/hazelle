@@ -1,4 +1,4 @@
-import { Check, type LucideIcon } from 'lucide-react';
+import { Check, ChevronLeft, type LucideIcon } from 'lucide-react';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
 import { ChangeSignal } from '../../../change-signal';
 import { Item } from '../collections/Item';
@@ -199,6 +199,19 @@ export function MenuItem({ label, sub, face, icon, avatar, tag, checked, multipl
 }
 
 export const useMenuClose = () => useContext(CloseMenu);
+
+// Above a form that replaced the panel's list: quieter than the form's own title, and on its line. It takes the focus,
+// the button that opened the form being gone.
+export function MenuBack({ label, onClick }: { label: string; onClick: () => void }) {
+  const self = useRef<HTMLButtonElement>(null);
+  useEffect(() => self.current?.focus(), []);
+  return (
+    <button ref={self} type="button" className={styles.back} onClick={onClick}>
+      <Icon icon={ChevronLeft} size="sm" />
+      {label}
+    </button>
+  );
+}
 
 export function MenuHeading({ children }: { children: ReactNode }) {
   return <span className={styles.heading}>{children}</span>;

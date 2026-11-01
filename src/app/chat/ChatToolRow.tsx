@@ -1,8 +1,8 @@
-import { ChevronLeft, type LucideIcon } from 'lucide-react';
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { hideTool, setToolOrder } from '../../runtime/characters';
 import { useSettings, useStore } from '../session';
-import { Button, CheckList, MoreMenu, Section, ToolEnd, useMenuClose } from '../ui';
+import { CheckList, MenuBack, MoreMenu, Section, ToolEnd, useMenuClose } from '../ui';
 import { inToolOrder } from './toolMenu';
 
 // live: it acts in this chat. Hiding moves the button only, so ⋯ and its line carry a dot while a hidden one is live; 기능 is what stops a feature.
@@ -42,16 +42,10 @@ function Panel({ tools, hidden, onHide, onMove }: { tools: RowTool[]; hidden: Se
   const close = useMenuClose();
   const [viewing, setViewing] = useState<string | null>(null);
   const view = tools.find((tool) => tool.key === viewing);
-  const back = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (viewing !== null) back.current?.focus();
-  }, [viewing]);
   if (view) {
     return (
       <>
-        <span>
-          <Button ref={back} variant="ghost" size="sm" icon={ChevronLeft} onClick={() => setViewing(null)}>도구</Button>
-        </span>
+        <MenuBack label="도구" onClick={() => setViewing(null)} />
         {view.open as ReactNode}
       </>
     );

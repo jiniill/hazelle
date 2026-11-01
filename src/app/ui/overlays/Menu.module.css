@@ -100,3 +100,20 @@
 .face {
   font-family: var(--prose-font);
 }
+
+/* The chevron's own margin pulled out, so its point stands on the title's line. */
+.back {
+  composes: detail from '../foundation/type.module.css';
+  display: flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  margin-inline-start: calc(-1 * (var(--space-4) + var(--space-2)));
+  margin-block-end: var(--space-8);
+  color: var(--color-text-muted);
+}
+
+.back:hover {
+  color: var(--color-text);
+}
