@@ -103,6 +103,15 @@ describe('Gemini', () => {
     expect((await decode(sse(recorded.error))).outcome).toMatchObject({ state: 'failed', error: { kind: 'provider', detail: 'Resource has been exhausted (e.g. check quota).' } });
   });
 
+  it('counts a stream closed after a finish reason as complete, reading on past that event, and one closed before it as not', async () => {
+    const said = (text: string, finishReason?: string) => ({ candidates: [{ content: { parts: [{ text }], role: 'model' }, finishReason }], usageMetadata: { promptTokenCount: 10 } });
+    const closed = await decode(sse(said('앞', 'STOP'), said('뒤', 'STOP')));
+    expect(closed.text).toBe('앞뒤');
+    expect(closed.outcome).toMatchObject({ state: 'done', inputComplete: true, usage: { inputTokens: 10 } });
+    expect((await decode(sse(said('중간에')))).outcome).toMatchObject({ state: 'cut', cut: 'no-terminal' });
+    expect((await decode(sse(said('중간에')))).outcome.inputComplete).toBeUndefined();
+  });
+
   it('reports the tier usageMetadata says served it, streamed and whole, which Google’s batch lane does not read', async () => {
     const event = { candidates: [{ content: { parts: [{ text: '안녕' }], role: 'model' }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1, trafficType: 'ON_DEMAND_FLEX' } };
     const facts = (): StreamFacts => ({ rawUsage: {}, finishReason: null, id: null, tier: null, calls: [] });

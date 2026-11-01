@@ -79,8 +79,8 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
     return said ? refused : { ...refused, state: 'failed', cut: null, error: { kind: 'provider', detail: facts.refusal ?? facts.finishReason! } };
   }
   const outcome = facts.finishReason !== null && codec.truncated(facts.finishReason) ? finish('cut', 'length', null) : finish('done', null, null);
-  // A finish reason without the codec's terminal is not authoritative input evidence.
-  const answered = terminal?.state === 'completed' ? { ...outcome, inputComplete: true as const } : outcome;
+  // A finish reason without the codec's terminal is not authoritative input evidence, unless the format has none to send.
+  const answered = terminal?.state === 'completed' || codec.endsByClosing ? { ...outcome, inputComplete: true as const } : outcome;
   return answered.state === 'done' && !said && facts.calls.length === 0 ? { ...answered, state: 'failed' } : answered;
 }
 

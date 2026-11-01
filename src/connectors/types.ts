@@ -176,6 +176,9 @@ export type Codec = {
   chat(endpoint: Endpoint, request: ChatRequest, fields: Record<string, unknown>, mark: CacheMark | null): HttpRequest;
   read(event: unknown, facts: StreamFacts, append: (phase: Phase, text: string) => void): void;
   terminal(event: unknown): Terminal | null;
+  // The stream has no end marker: one that closes after a finish reason counts as ended by it. Not a terminal, which
+  // would stop reading at the first event naming a finish reason and lose whatever a later one holds.
+  endsByClosing?: true;
   // null when the payload is not this format's reply at all.
   whole(payload: unknown, facts: StreamFacts, append: (phase: Phase, text: string) => void): Terminal | null;
   truncated(finishReason: string): boolean;

@@ -111,7 +111,6 @@ function read(event: unknown, facts: StreamFacts, append: (phase: Phase, text: s
   }
 }
 
-// The stream has no end marker: it closes after the chunk that names finishReason.
 function terminal(event: unknown): Terminal | null {
   if (!isRecord(event)) return null;
   if (event.error !== undefined && event.error !== null) return failedTerminal(event.error);
@@ -218,6 +217,8 @@ export const gemini: Codec = {
   read,
 
   terminal,
+
+  endsByClosing: true,
 
   whole(payload, facts, append) {
     if (!isRecord(payload)) return null;
