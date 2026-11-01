@@ -1,17 +1,21 @@
-import type { AutoChat } from '../contracts/auto-diagnosis';
+import { closedWord, type AutoCache, type AutoCall, type AutoChat, type AutoFailure, type CacheCauseWord } from '../contracts/auto-diagnosis';
 import { memoryBudget } from '../engine/memory';
-import type { Chat } from '../model/chat';
+import type { CacheDiagnosis, Forecast } from '../model/cache';
+import { shown, type Chat, type Receipt } from '../model/chat';
 import { live } from '../model/library';
 import { toolId } from '../model/tool';
 import { chatModel } from './assignment';
+import { forecast, prior } from './cache';
+import { diagnoseCache } from './cache-diagnosis';
 import { limitsOf, packsOf, promptBudget } from './chat-context';
 import type { MemoryFailure, Remembering } from './memory';
-import { memorySetup } from './memory-read';
+import { chatMemory, memorySetup, memoryWriter } from './memory-read';
 import { memoryView } from './memory-view';
 import { chatPrompt } from './prompts';
 import { labelledType } from './pulse';
 import type { Session } from './session';
-import { forecastSend, type Sending } from './turn-context';
+import type { TurnFailure } from './turn';
+import { cacheSend, forecastSend, type Sending } from './turn-context';
 
 // The operator reads this unencrypted, and the privacy policy (app/common/legal) promises what it holds: numbers,
 // switches and the words known() is given. Known is branded so a text cannot reach a report by accident: known() takes
@@ -19,12 +23,12 @@ import { forecastSend, type Sending } from './turn-context';
 // text of a character, chat, persona, prompt, block or lore entry.
 type Known = string & { readonly closed: unique symbol };
 const known = (word: string) => word as Known;
-export type Facts = { [key: string]: number | boolean | null | Known | Facts | Facts[] };
+export type Facts = { [key: string]: number | number[] | boolean | null | Known | Facts | Facts[] };
 
 // Where the user was before opening the report; its id only picks what to read and is never reported.
 export type Place = { kind: string; id: string | null };
 
-type Reader = Pick<Session, 'store' | 'read' | 'scriptTurns' | 'tokens' | 'memory'>;
+type Reader = Pick<Session, 'store' | 'read' | 'scriptTurns' | 'tokens' | 'memory' | 'credentials' | 'log'>;
 
 const STATE_MS = 10_000;
 const LISTED = 40;
@@ -57,14 +61,80 @@ function promptFacts(store: Reader['store'], id: string): Facts {
   return prompt ? { task: known(prompt.task ?? 'conversation'), blocks: known(prompt.blocks.map((block) => ('slot' in block ? block.slot : block.kind)).join(' ')), toggles: prompt.toggles.length } : { found: false };
 }
 
-function memoryFailure(failure: MemoryFailure | undefined): Known | null {
-  return failure ? known(failure.kind === 'unsaved' ? `unsaved:${failure.failure.error}` : 'reason' in failure ? `${failure.kind}:${failure.reason}` : failure.kind) : null;
+// A call's numbers and closed words. A provider's own sentence (ReceiptError detail) stays out.
+function callFacts({ state, cut, finishReason, error, tries, usage, firstTextMs, totalMs }: Receipt): AutoCall {
+  return {
+    state,
+    cut,
+    finish: finishReason && closedWord(finishReason),
+    error: error?.kind ?? null,
+    status: error && 'status' in error ? error.status : null,
+    code: error && 'code' in error ? closedWord(error.code) : null,
+    tries: tries ?? null,
+    input: usage?.inputTokens ?? null,
+    cached: usage?.cachedInputTokens ?? null,
+    written: usage?.cacheWriteInputTokens ?? null,
+    output: usage?.outputTokens ?? null,
+    reasoning: usage?.reasoningTokens ?? null,
+    first: firstTextMs,
+    total: totalMs,
+  };
+}
+
+function failureFacts(failure: MemoryFailure | undefined): AutoFailure | null {
+  if (!failure) return null;
+  const reason = failure.kind === 'unsaved' ? failure.failure.error : 'reason' in failure ? failure.reason : null;
+  const receipt = 'receipt' in failure ? failure.receipt : null;
+  return { kind: failure.kind, reason: reason && closedWord(reason), call: receipt && callFacts(receipt) };
+}
+
+export function turnFacts(failure: TurnFailure): AutoChat['turn'] {
+  const inner = 'failure' in failure ? failure.failure : null;
+  return { reason: inner && 'error' in inner ? closedWord(String(inner.error)) : null, tokens: 'tokens' in failure ? failure.tokens : null, budget: 'budget' in failure ? failure.budget : null };
+}
+
+// The writer's type and model, read with the same word for both reports.
+function auxFacts(store: Reader['store'], chat: Chat): AutoChat['aux'] {
+  const writer = memoryWriter(store, chat);
+  return 'kind' in writer ? { type: null, model: null } : { type: labelledType(writer.route.connection.value), model: writer.route.model.id };
+}
+
+// The contract's closed shape stands for known() here: every word in it passed closedWord or came off a list of its own.
+const vouched = (facts: object | null) => facts as Facts | null;
+
+export function cacheFacts(made: Forecast, diagnosis: CacheDiagnosis | null): AutoCache {
+  const changes = [...made.parts.flatMap(({ change }) => change ?? []), ...made.removed.map(() => 'removed')];
+  const causes = (diagnosis?.parts ?? []).flatMap((part) => part.causes.map(({ kind }) => kind));
+  const tally = (words: string[]) => {
+    const counts: Record<string, number> = {};
+    for (const word of words) counts[word] = (counts[word] ?? 0) + 1;
+    return counts;
+  };
+  return { broken: made.against?.broken?.kind ?? null, read: made.against?.read ?? null, of: made.against?.of ?? null, written: made.written, tail: made.tail, prefix: made.prefix, changes: tally(changes), causes: tally(causes), missing: diagnosis?.missing ?? null };
+}
+
+// What names a cache break worth a report. An expired or switched-off cache is the ordinary case and goes unreported.
+export function cacheCause(made: Forecast, diagnosis: CacheDiagnosis | null): CacheCauseWord | null {
+  const broken = made.against?.broken?.kind;
+  if (!broken || broken === 'expired' || broken === 'off') return null;
+  const cause = diagnosis?.parts.flatMap((part) => part.causes.map(({ kind }) => kind)).find((kind) => kind !== 'unknown');
+  return cause ?? broken;
+}
+
+async function cacheOf(session: Reader, id: string, sending: Sending): Promise<Facts | null> {
+  const send = cacheSend(sending, session.credentials.pool.peek(sending.turn.route.connection.value)?.id ?? null);
+  const messages = session.read.chat(id).snapshot()?.messages;
+  if (!send || !messages) return null;
+  const before = prior(session.store, id, messages, Date.now());
+  const made = forecast(before, send);
+  if (!made) return null;
+  return vouched(cacheFacts(made, await diagnoseCache(session.store.evaluation, id, sending.turn.scope, made, before ? session.log.entry(id, before.print.call) : null, sending.prompt, send.wire)));
 }
 
 async function memoryFacts(session: Reader, id: string): Promise<Facts> {
   const view = await memoryView(session, id);
   const { running, failed, chapterFailed, indexing, indexFailed } = session.memory.snapshot();
-  const work = { running: running.has(id), failed: memoryFailure(failed.get(id)), chapterFailed: memoryFailure(chapterFailed.get(id)), indexing: indexing.has(id), indexFailed: memoryFailure(indexFailed.get(id)) };
+  const work = { running: running.has(id), left: running.get(id)?.left ?? null, failed: vouched(failureFacts(failed.get(id))), chapterFailed: vouched(failureFacts(chapterFailed.get(id))), indexing: indexing.has(id), indexFailed: vouched(failureFacts(indexFailed.get(id))) };
   if (!view) return { read: false, ...work };
   const { memory, setup, slot, records, stale, tokens, crowded } = view;
   return {
@@ -88,6 +158,11 @@ async function memoryFacts(session: Reader, id: string): Promise<Facts> {
 
 // The one read of a built request; 문제 진단 adds to it, and 자동 진단 sends it as it is.
 function sentFacts({ prompt, calibration: { fit, estimate } }: Sending) {
+  const tokens: Record<string, number> = {};
+  for (const { from, tokens: size } of prompt.parts) {
+    const part = from.kind === 'block' ? `block:${from.slot ?? 'text'}` : from.kind;
+    tokens[part] = (tokens[part] ?? 0) + size;
+  }
   return {
     messages: prompt.messages.length,
     dropped: prompt.dropped,
@@ -105,6 +180,9 @@ function sentFacts({ prompt, calibration: { fit, estimate } }: Sending) {
     inputLimit: fit.inputLimit,
     evidence: estimate.evidence,
     cold: estimate.cold,
+    tokens: tokens as Record<string, number>,
+    lore: { fired: prompt.lore?.length ?? 0, silent: prompt.silent?.length ?? 0, invalidKeys: prompt.invalidKeys.length, budget: prompt.loreBudget },
+    shape: prompt.memoryShape,
   };
 }
 
@@ -112,14 +190,8 @@ async function requestFacts(session: Reader, id: string): Promise<Facts> {
   const sending = await forecastSend(session, id, { kind: 'answer' }, undefined, 'view');
   if (!sending) return { built: false };
   if ('kind' in sending) return { refused: known(sending.kind), ...(sending.kind === 'too-long' && { tokens: sending.tokens, budget: sending.budget }) };
-  const { prompt } = sending;
-  const tokens: Facts = {};
-  for (const { from, tokens: size } of prompt.parts) {
-    const part = from.kind === 'block' ? `block:${from.slot ?? 'text'}` : from.kind;
-    tokens[part] = ((tokens[part] as number | undefined) ?? 0) + size;
-  }
-  const { source, bound, ...facts } = sentFacts(sending);
-  return { ...facts, source: known(source), bound: bound && known(bound), tokens, lore: { fired: prompt.lore?.length ?? 0, silent: prompt.silent?.length ?? 0, invalidKeys: prompt.invalidKeys.length, budget: prompt.loreBudget } };
+  const { source, bound, shape, ...facts } = sentFacts(sending);
+  return { ...facts, source: known(source), bound: bound && known(bound), shape: vouched(shape), cache: await cacheOf(session, id, sending) };
 }
 
 function modelFacts(store: Reader['store'], chat: Chat): Facts {
@@ -143,6 +215,7 @@ async function chatFacts(session: Reader, id: string): Promise<Facts> {
       messages: session.read.chat(id).snapshot()?.messages.length ?? null,
       character: chat.character !== null,
       model: modelFacts(store, chat),
+      aux: vouched(auxFacts(store, chat)),
       prompt: prompt.kind === 'prompt' ? promptFacts(store, prompt.prompt.id) : { missing: known(prompt.kind) },
       modules: listed(packsOf(store, chat).flatMap(({ id: pack, module }) => (module ? [moduleFacts(store, pack)] : []))),
       memory: await memoryFacts(session, id),
@@ -166,24 +239,32 @@ function placeFacts(session: Reader, { kind, id }: Place): Facts | Promise<Facts
 }
 
 // 자동 진단's read of a chat: store reads and a request already built, so a report never makes a worker build another.
-export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: string, sending: Sending | null, { running, failed, chapterFailed }: Pick<Remembering, 'running' | 'failed' | 'chapterFailed'>, gap: AutoChat['gap'] = null): AutoChat | null {
+export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: string, sending: Sending | null, { running, failed, chapterFailed }: Pick<Remembering, 'running' | 'failed' | 'chapterFailed'>, more: Partial<Pick<AutoChat, 'gap' | 'turn' | 'cache'>> = {}): AutoChat | null {
   const chat = live(store.get('chat', id))?.value;
   if (!chat) return null;
   const route = chatModel(store, chat, 'main');
   const { context, reply } = limitsOf(store, chat);
   const { on, own, budget, window, batch } = memorySetup(store, chat);
+  const memory = store.scopeState(id) === 'loaded' ? chatMemory(store, id) : null;
+  const messages = read.chat(id).snapshot()?.messages;
+  const latest = messages?.at(-1);
+  const receipt = latest && shown(latest).receipt;
   return {
     type: 'kind' in route ? null : labelledType(route.connection.value),
     model: 'kind' in route ? null : route.model.id,
     hardContext: 'kind' in route ? null : route.model.contextLength,
     context,
     reply,
-    messages: read.chat(id).snapshot()?.messages.length ?? null,
+    messages: messages?.length ?? null,
     character: chat.character !== null,
     memory: { on, own, budget, clamped: memoryBudget(budget, promptBudget(store, chat)), window, batch },
-    page: Math.round(performance.now() / 1000),
-    work: { left: running.get(id)?.left ?? null, failed: failed.get(id)?.kind ?? chapterFailed.get(id)?.kind ?? null },
-    gap,
+    aux: auxFacts(store, chat),
+    stored: memory && { records: memory.records.length, chapters: memory.chapters.length, facts: memory.state.length, threads: memory.threads.length },
+    work: { left: running.get(id)?.left ?? null, failed: failureFacts(failed.get(id)), chapter: failureFacts(chapterFailed.get(id)) },
+    last: receipt ? callFacts(receipt) : null,
+    turn: more.turn ?? null,
+    cache: more.cache ?? null,
+    gap: more.gap ?? null,
     request: sending && sentFacts(sending),
   };
 }
@@ -200,8 +281,9 @@ export async function stateFacts(session: Reader, place: Place | null): Promise<
     modules: store.list('module').length,
     connections: counted(store.list('connection').map(({ value }) => value.type)),
   };
-  if (!place) return { place: null, account };
+  const page = Math.round(performance.now() / 1000);
+  if (!place) return { place: null, page, account };
   const timeout = new Promise<Facts>((resolve) => setTimeout(() => resolve({ timedOut: STATE_MS }), STATE_MS));
   const facts = await Promise.race([Promise.resolve().then(() => placeFacts(session, place)), timeout]).catch((error: unknown) => ({ failed: known(error instanceof Error ? error.name : 'unknown') }));
-  return { place: known(place.kind), account, facts };
+  return { place: known(place.kind), page, account, facts };
 }

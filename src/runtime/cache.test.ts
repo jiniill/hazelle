@@ -267,7 +267,7 @@ it('converts the native cache minimum once with the conversation lower predictiv
   sending.calibration = snapshot.data;
   const threshold = Math.ceil(1024 / snapshot.data.estimate.lower);
   expect(threshold).toBeGreaterThan(1024 / snapshot.data.estimate.centre);
-  sending.prompt = { messages: [{ role: 'user', content: 'prefix', cache: true }], parts: [{ tokens: threshold - 1, from: { kind: 'block', name: 'prefix', slot: null } }], lore: null, silent: null, invalidKeys: [], loreBudget: 0, memory: null, dropped: 0, problems: { found: [], omitted: 0 }, unseen: 0 };
+  sending.prompt = { messages: [{ role: 'user', content: 'prefix', cache: true }], parts: [{ tokens: threshold - 1, from: { kind: 'block', name: 'prefix', slot: null } }], lore: null, silent: null, invalidKeys: [], loreBudget: 0, memory: null, memoryShape: null, dropped: 0, problems: { found: [], omitted: 0 }, unseen: 0 };
   const short = cacheSend(sending, null)!;
   expect(short.facts?.minimum).toBe(threshold);
   expect(forecast(null, short)?.parts[0]!.point).toBe('short');

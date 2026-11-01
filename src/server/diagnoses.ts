@@ -25,10 +25,11 @@ export const diagnoses = new Hono<AppEnv>().post('/', async (c) => {
   if (rows >= ROWS_PER_DAY) return c.body(null, 204);
   const { event, detail, version, place, chat, ...device } = report;
   const model = chat?.type && chat.model ? (await confirmedModel(c.env.db, chat.type, chat.model)).name : null;
+  const aux = chat?.aux.type && chat.aux.model ? (await confirmedModel(c.env.db, chat.aux.type, chat.aux.model)).name : null;
   const person = await dayHash(c.env.db, day, ['diagnosis', visitor, agent]);
   await c.env.db
     .prepare('INSERT INTO auto_diagnoses (day, person, event, detail, version, place, times, at, facts) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT DO UPDATE SET times = times + 1, at = excluded.at, facts = excluded.facts')
-    .bind(day, person, event, detail ?? '', version ?? '', place ?? '', now, JSON.stringify({ ...device, chat: chat && { ...chat, model } }))
+    .bind(day, person, event, detail ?? '', version ?? '', place ?? '', now, JSON.stringify({ ...device, chat: chat && { ...chat, model, aux: { ...chat.aux, model: aux } } }))
     .run();
   return c.body(null, 204);
 });

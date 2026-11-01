@@ -1,7 +1,8 @@
 import { Stethoscope } from 'lucide-react';
 import { useState } from 'react';
 import { stateFacts } from '../../runtime/diagnostic-state';
-import { diagnosticReport, lastPlace } from '../../runtime/diagnostics';
+import { lastPlace } from '../../runtime/auto-diagnosis';
+import { diagnosticReport } from '../../runtime/diagnostics';
 import { ACTS } from '../common/acts';
 import { BUILT_VERSION } from '../../runtime/installation';
 import { DIAGNOSIS_NOTE } from '../common/words';

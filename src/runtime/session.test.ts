@@ -100,6 +100,11 @@ describe('session', () => {
         sent.push(url);
         return fetch(url, init);
       });
+      vi.stubGlobal('navigator', { userAgent: 'test', onLine: true, language: 'ko-KR', hardwareConcurrency: 8 });
+      vi.stubGlobal('document', { visibilityState: 'visible' });
+      vi.stubGlobal('matchMedia', () => ({ matches: false }));
+      vi.stubGlobal('innerWidth', 1280);
+      vi.stubGlobal('innerHeight', 800);
       await setDiagnosisSharing(session.store, false);
       autoDiagnose({ event: 'turn-failed', detail: 'gone' });
       expect(reported()).toBe(0);

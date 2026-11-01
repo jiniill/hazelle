@@ -21,7 +21,7 @@ import { DisplayProvider, useDisplay } from '../display';
 import { BIN, BOARD, inSettings, NOTICES } from '../common/words';
 import { ImportProvider } from '../library/ImportFlow';
 import { SessionProvider, useHeldLeave, useSaves, useSession, useSettings, useStore } from '../session';
-import { notePlace } from '../../runtime/diagnostics';
+import { notePlace } from '../../runtime/auto-diagnosis';
 import { ToastProvider, useToast, type Standing } from '../toast';
 import { Brand, Progress, Screen, Text } from '../ui';
 import { BotNotes } from './BotNotes';

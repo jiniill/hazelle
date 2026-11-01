@@ -12,6 +12,7 @@ const EVENTS: Record<AutoEvent, string> = {
   'memory-gap': '기억에 없음',
   'memory-gap-ended': '기억에 없음 사라짐',
   'chat-unopened': '채팅 열기 실패',
+  'cache-broken': '캐시 깨짐',
 };
 const HELP = '문제별로 그날 겪은 사람 수와 횟수를 보여 줘요. 사람은 날마다 새로 세요.';
 const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });

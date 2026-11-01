@@ -3,9 +3,9 @@ import { useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import type { Chat, ChatItem } from '../../model/chat';
 import { emptyMemory, type Fact, type MemorySettings, type Thread } from '../../model/memory';
 import { embedModel } from '../../runtime/assignment';
-import { memoryOwner, memorySetup } from '../../runtime/memory-read';
+import { memoryOwner, memorySetup, memoryWriter } from '../../runtime/memory-read';
 import { memoryView, type MemoryView } from '../../runtime/memory-view';
-import { memoryWriter, removeFact, removeThread, setChatMemory, setFact, setThread } from '../../runtime/memory';
+import { removeFact, removeThread, setChatMemory, setFact, setThread } from '../../runtime/memory';
 import { memoryPrompt } from '../../runtime/prompts';
 import { ACTS, addOf } from '../common/acts';
 import { describeMemoryFailure } from '../common/failure';

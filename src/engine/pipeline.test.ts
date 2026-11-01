@@ -708,7 +708,7 @@ describe('a request a script rewrote', () => {
     { role: 'assistant', content: 'first reply' },
     { role: 'user', content: 'second hello' },
   ];
-  const prompt: Assembled = { messages: built, parts: [main, chat, chat, chat].map((from, at) => ({ from, tokens: built[at]!.content.length })), lore: null, silent: null, invalidKeys: [], loreBudget: 0, memory: null, dropped: 2, problems: { found: [], omitted: 0 }, unseen: 0 };
+  const prompt: Assembled = { messages: built, parts: [main, chat, chat, chat].map((from, at) => ({ from, tokens: built[at]!.content.length })), lore: null, silent: null, invalidKeys: [], loreBudget: 0, memory: null, memoryShape: null, dropped: 2, problems: { found: [], omitted: 0 }, unseen: 0 };
   const note: ChatMessage = { role: 'system', content: 'from the script' };
   const count = (text: string) => text.length;
 

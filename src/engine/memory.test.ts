@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Chapter, Memory, MemoryRecord } from '../model/memory';
-import { fingerprint, memoryBefore, memoryBudget, nextChapters, nextMerge, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, standing, windowStart, type ChatRead } from './memory';
+import { fingerprint, memoryBefore, memoryBudget, nextChapters, nextMerge, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, standing, windowStart, type ChatRead, memoryShape } from './memory';
 
 const span = ['Luna: "I will  wait\nfor you until spring."', 'jin leaves the lighthouse.', 'Spring comes. Luna lights the lamp.'];
 const record = (to: number, lines: { speaker: string; text: string }[] = []) => ({
@@ -227,4 +227,14 @@ describe('parseChapter', () => {
     expect(parseChapter(JSON.stringify({ chapter: { ...scene, outcome: undefined } }), span)).toEqual({ ok: false, reason: 'fields' });
     expect(parseChapter(JSON.stringify({ chapter: { ...scene, lines: [{ speaker: 'Luna', text: 'I will always wait.' }] } }), span)).toEqual({ ok: true, chapter: { ...scene, lines: [] } });
   });
+});
+
+it('sizes a memory: each chapter beside what its records take, and what the fixed part holds', () => {
+  const shape = memoryShape(
+    { records: [{ id: 'r1', pinned: true }, { id: 'r2' }], chapters: [{ id: 'c1', records: [{ id: 'r1' }, { id: 'r2' }, { id: 'gone' }] }], state: [], threads: [{ text: 'open' }] } as never,
+    { tokens: { used: 30, budget: 100, state: 0, stateLimit: 20 }, costs: new Map([['r1', 40], ['r2', 10], ['c1', 25]]), fixed: 40, free: 25, status: new Map([['r1', 'sent'], ['r2', 'chaptered'], ['c1', 'sent']]) },
+    (text) => text.length,
+  );
+  expect(shape).toMatchObject({ chapters: [25], sources: [50], records: { tokens: 50, largest: 40 }, status: { sent: 2, chaptered: 1 }, pinned: 1, edited: 0, fixed: 40, free: 25 });
+  expect(shape.threads).toBeGreaterThan(0);
 });

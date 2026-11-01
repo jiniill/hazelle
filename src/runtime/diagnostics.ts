@@ -1,7 +1,7 @@
 import { MAX_DIAGNOSTICS_LENGTH } from '../contracts/board';
-import { autoDiagnose, errorFacts } from './auto-diagnosis';
+import { autoDiagnose, errorFacts, type AutoOrigin } from './auto-diagnosis';
 import { errorText, type EvaluationDown, type EvaluationUp } from './evaluation-core';
-import type { Facts, Place } from './diagnostic-state';
+import type { Facts } from './diagnostic-state';
 import { moduleWorker } from './worker';
 import workerUrl from './evaluation-worker?worker&url';
 
@@ -13,14 +13,6 @@ const KEPT = 20;
 const PROBE_MS = 30_000;
 const LINE = 500;
 const problems: Problem[] = [];
-let place: Place | null = null;
-
-// Null leaves the last place standing: 앱 정보 and the board are where a report is written, not what it is about.
-export function notePlace(next: Place | null) {
-  if (next) place = next;
-}
-
-export const lastPlace = () => place;
 
 // The same problem said again in a row, as a failure repeats on each try, stays one line.
 export function noteProblem(text: string, at = Date.now()) {
@@ -33,16 +25,20 @@ export const recentProblems = (): readonly Problem[] => problems;
 
 export function watchProblems() {
   // Without an object thrown there is nothing to say: a browser's own note, or a script of another origin.
-  const thrown = (error: unknown) => {
-    if (typeof error === 'object' && error !== null) autoDiagnose({ event: 'app-error', ...errorFacts(error) });
+  const thrown = (error: unknown, origin: AutoOrigin) => {
+    if (typeof error !== 'object' || error === null) return;
+    const facts = errorFacts(error);
+    // Where it went off, for a press: the positions name no input, as the words before them can.
+    if (facts.frames) noteProblem(`코드 위치 · ${facts.frames}`);
+    autoDiagnose({ event: 'app-error', origin, ...facts });
   };
   addEventListener('error', (event) => {
     noteProblem(`오류 · ${event.error === undefined || event.error === null ? event.message : errorText(event.error)}`);
-    thrown(event.error);
+    thrown(event.error, 'error');
   });
   addEventListener('unhandledrejection', (event) => {
     noteProblem(`처리되지 않은 오류 · ${errorText(event.reason)}`);
-    thrown(event.reason);
+    thrown(event.reason, 'rejection');
   });
 }
 

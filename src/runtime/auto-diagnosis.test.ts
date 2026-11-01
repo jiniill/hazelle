@@ -7,6 +7,11 @@ const sent = vi.fn<(path: string, init: RequestInit) => Promise<Response>>(async
 beforeEach(() => {
   sent.mockClear();
   vi.stubGlobal('fetch', sent);
+  vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (X11; Linux x86_64) Chrome/141.0.0.0', onLine: true, language: 'ko-KR', hardwareConcurrency: 8 });
+  vi.stubGlobal('document', { visibilityState: 'visible' });
+  vi.stubGlobal('matchMedia', () => ({ matches: false }));
+  vi.stubGlobal('innerWidth', 1280);
+  vi.stubGlobal('innerHeight', 800);
 });
 afterEach(() => {
   holdDiagnosis(false);
@@ -44,8 +49,10 @@ it('goes by the switch, and never from a self-host', () => {
 it('takes an error\'s name and bundle position, never its message or a function name', () => {
   const error = new TypeError('비밀 메시지');
   error.stack = 'TypeError: 비밀 메시지\n    at secretFn (https://hazelle.app/assets/index-AbC123.js:1:2345)';
-  expect(errorFacts(error)).toEqual({ detail: 'TypeError', place: 'index-AbC123.js:1:2345' });
-  expect(errorFacts(Object.assign(new Error('x'), { name: 'PluginBoom', stack: 'no frames' }))).toEqual({ detail: 'other', place: null });
+  expect(errorFacts(error)).toEqual({ detail: 'TypeError', place: 'index-AbC123.js:1:2345', frames: 'index-AbC123.js:1:2345' });
+  error.stack += '\n    at caller (https://hazelle.app/assets/Workspace-x.js:8:9)';
+  expect(errorFacts(error).frames).toBe('index-AbC123.js:1:2345 Workspace-x.js:8:9');
+  expect(errorFacts(Object.assign(new Error('x'), { name: 'PluginBoom', stack: 'no frames' }))).toEqual({ detail: 'other', place: null, frames: null });
 });
 
 it('reduces a browser to its family, major version and system', () => {

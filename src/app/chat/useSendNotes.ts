@@ -7,7 +7,7 @@ import type { Memory } from '../../model/memory';
 import type { Route } from '../../runtime/assignment';
 import { breakCost, forecast, lastCache, prior } from '../../runtime/cache';
 import { autoDiagnose } from '../../runtime/auto-diagnosis';
-import { autoChat } from '../../runtime/diagnostic-state';
+import { autoChat, cacheCause, cacheFacts } from '../../runtime/diagnostic-state';
 import { leaving, leavingCauses } from '../../runtime/memory-view';
 import type { Shown } from '../../runtime/talk';
 import type { SentRequest } from '../../runtime/request-log';
@@ -66,7 +66,7 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
         } else if (sending && gap.current?.chat === id) {
           const ended = { lasted: Math.round((Date.now() - gap.current.since) / 1000), most: gap.current.most };
           gap.current = null;
-          autoDiagnose({ event: 'memory-gap-ended', chat: { id, read: () => autoChat(session, id, sending, work, ended) } });
+          autoDiagnose({ event: 'memory-gap-ended', chat: { id, read: () => autoChat(session, id, sending, work, { gap: ended }) } });
         }
         const account = sending ? session.credentials.pool.peek(sending.turn.route.connection.value)?.id ?? null : null;
         const send = sending && cacheSend(sending, account);
@@ -78,6 +78,8 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
         setNext(next);
         if (pending) void diagnoseCache(session.store.evaluation, id, sending.turn.scope, made, before ? session.log.entry(id, before.print.call) : null, sending.prompt, send.wire, controller.signal).then(async (diagnosis) => {
           if (controller.signal.aborted) return;
+          const cause = cacheCause(made, diagnosis);
+          if (cause) autoDiagnose({ event: 'cache-broken', detail: cause, chat: { id, read: () => autoChat(session, id, sending, work, { cache: cacheFacts(made, diagnosis) }) } });
           setNext({ ...next, diagnosis, prescriptions: diagnosis && guard ? undefined : [] });
           if (!diagnosis || !guard) return;
           const prescriptions = await priceCachePrescriptions(session.store, id, sending, diagnosis, made, before, account, controller.signal);

@@ -2,26 +2,22 @@ import { autoDiagnose } from './auto-diagnosis';
 import { autoChat } from './diagnostic-state';
 import { entryName } from '../connectors/types';
 import { ChangeSignal } from '../change-signal';
-import { chatMemory, memoryOwner, memorySetup, sourcesOf, storedMemory } from './memory-read';
+import { chatMemory, memoryOwner, memorySetup, sourcesOf, storedMemory, memoryWriter, type Tools } from './memory-read';
 import { chatSent, type ChatSent } from './memory-view';
 import { MemorySchedule, type MemoryCheck } from './memory-schedule';
-import type { ModelSettings } from '../connectors/settings';
 import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextMerge, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, standingChapters, staleness, threadLabel, type Drafted, type Invalid, type Scene } from '../engine/memory';
 import type { RanAway } from '../engine/pipeline';
-import { fold, shown, type Chat, type Message, type Receipt } from '../model/chat';
+import { fold, shown, type Message, type Receipt } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import { live } from '../model/library';
 import { emptyMemory, memoryId, type Chapter, type Fact, type Memory, type MemoryRecord, type MemorySettings, type Source, type Thread, type Written } from '../model/memory';
-import type { MemoryPrompt } from '../model/prompt';
 import type { Stream } from '../model/stream';
 import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiFailure, ApiResult } from './api';
 import { retriesOf } from './connections';
 import { evaluationFailure } from './evaluation';
-import type { Route, RouteFailure } from './assignment';
+import type { RouteFailure } from './assignment';
 import { gather, generate, receiptOf, resume, unsettled, type Reply } from './generate';
-import { taskWriter } from './profiles';
-import { memoryPrompt } from './prompts';
 import type { Session } from './session';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
@@ -246,20 +242,12 @@ export type MemoryFailure =
   | { kind: 'embed'; reason: Extract<Indexed, { reason: string }>['reason']; receipt: Receipt | null }
   | RanAway;
 
-export function memoryWriter(store: Pick<ObjectStore, 'get'>, chat: Chat): Tools | MemoryFailure {
-  const prompt = memoryPrompt(store);
-  if (prompt.kind === 'missing') return { kind: 'prompt-missing' };
-  const writer = taskWriter(store, chat, prompt.prompt.value.model);
-  return 'kind' in writer ? writer : { prompt: prompt.prompt.value, ...writer };
-}
-
 // Failures stay session-local and require retry; chapter failures do not block record summaries.
 // Index failures retry on explicit retry/chat open; indexing reports completed/total records.
 export type Remembering = { running: ReadonlyMap<string, { model: string; left: number }>; failed: ReadonlyMap<string, MemoryFailure>; chapterFailed: ReadonlyMap<string, MemoryFailure>; indexing: ReadonlyMap<string, { done: number; total: number }>; indexFailed: ReadonlyMap<string, MemoryFailure> };
 
 type Planned = { job: Job; sent: ChatSent; from: number; to: number; memory: Memory; before: Written | null; chapter: { target: number; merged: string[] | null } | null; left: number } & Tools;
 
-type Tools = { prompt: MemoryPrompt; route: Route; settings: ModelSettings };
 
 // done: committed. moved: memory or the messages changed while the call ran, so its result was dropped and the next job
 // reads them as they are now. stopped: the session closed; the call's marker stays for the next load.

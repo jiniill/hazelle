@@ -13,7 +13,7 @@ import type { HistoryMessage } from './history';
 import type { Card } from './import/types';
 import { prepareLore, merge, type Activation, type Fired, type LoreBook, type LoreTurn, type Operation, type Silent } from './lorebook/activate';
 import { authorNote, contexts, renderChat, type ChatScope } from './render';
-import { chapterBefore, chapterFormat, memoryBefore, memoryBudget, memoryFormat, recordCounts, recordsTarget, spanText, speakersOf, standing, stateLimit, type MemoryInput, type MemorySent } from './memory';
+import { chapterBefore, chapterFormat, memoryBefore, memoryBudget, memoryFormat, memoryShape, recordCounts, recordsTarget, spanText, speakersOf, standing, stateLimit, type MemoryInput, type MemorySent, type MemoryShape } from './memory';
 import { retrieval, retrievalRoom } from './retrieval';
 import { COMIC_PAGE, lastScene, numbered, profileNames, seenBy, severalScenes, type Earlier, type Told } from './illustrate';
 import { mascotSheet } from './mascot';
@@ -105,6 +105,7 @@ export type Assembled = {
   loreBudget: number;
   // null while memory is off.
   memory: MemorySent | null;
+  memoryShape: MemoryShape | null;
   // Oldest messages omitted to fit the budget.
   dropped: number;
   problems: { found: Problem[]; omitted: number };
@@ -429,6 +430,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
       silent: activation && activation.silent.map((silent) => ({ ...silent, name: named(silent.id) })),
       invalidKeys: activation ? activation.invalidKeys.map((invalid) => ({ ...invalid, name: named(invalid.entry) })) : [],
       loreBudget: scope.loreScan.tokenBudget,
+      memoryShape: recalled ? memoryShape(built!.memory, recalled, tokens) : null,
       memory: told ? { by: told.name, text: told.text, covered, missing: 0, slot } : recalled && { by: null, sent: recalled.sent, found: retrieved?.ids ?? [], records: recordCounts(recalled), covered, missing: slot ? covered - recalled.held : covered, slot },
       dropped,
       problems,

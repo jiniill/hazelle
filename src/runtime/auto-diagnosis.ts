@@ -1,4 +1,5 @@
 import { AUTO_ERROR_NAMES, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorName, type AutoEvent, type AutoReport } from '../contracts/auto-diagnosis';
+import type { Place } from './diagnostic-state';
 import { without } from '../model/fields';
 import { EMPTY_SETTINGS, type Settings } from '../model/settings';
 import { fetchApi } from './api';
@@ -10,6 +11,15 @@ export const sharesDiagnosis = (settings: Settings | undefined) => !selfHost() &
 
 export const setDiagnosisSharing = (store: ObjectStore, on: boolean) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (on ? without(current, 'diagnosis') : { ...current, diagnosis: false }));
+
+// Null leaves the last place standing: 앱 정보 and the board are where a report is written, not what it is about.
+let place: Place | null = null;
+export function notePlace(next: Place | null) {
+  if (next) place = next;
+}
+export const lastPlace = () => place;
+
+const FRAMES = 12;
 
 let armed = false;
 // For the page's life: a problem that repeats, as a failure does on each try, is one report per chat.
@@ -36,25 +46,42 @@ export function deviceFacts(agent: string): Pick<AutoReport, 'browser' | 'major'
   };
 }
 
-// A thrown error's name and where in the app's bundle it went off. Its message and its stack's function names stay out.
-export function errorFacts(error: object): { detail: AutoErrorName; place: string | null } {
-  const { name, stack } = error as { name?: unknown; stack?: unknown };
+// What a report says of the page and the machine, whatever the problem.
+function pageFacts(): Pick<AutoReport, 'screen' | 'page' | 'online' | 'visible' | 'standalone' | 'cores' | 'memoryGb' | 'width' | 'height' | 'language'> {
+  const nav = navigator as Navigator & { deviceMemory?: number; standalone?: boolean };
   return {
-    detail: AUTO_ERROR_NAMES.find((known) => known === name) ?? 'other',
-    place: typeof stack === 'string' ? (/\/assets\/([\w.-]{1,100}\.js:\d{1,9}:\d{1,9})/.exec(stack)?.[1] ?? null) : null,
+    screen: place?.kind ?? null,
+    page: Math.round(performance.now() / 1000),
+    online: nav.onLine,
+    visible: document.visibilityState === 'visible',
+    standalone: nav.standalone === true || matchMedia('(display-mode: standalone)').matches,
+    cores: nav.hardwareConcurrency || null,
+    memoryGb: nav.deviceMemory ?? null,
+    width: innerWidth,
+    height: innerHeight,
+    language: /^[A-Za-z-]{2,20}$/.test(nav.language) ? nav.language : null,
   };
 }
 
-type Problem = { event: AutoEvent; detail?: AutoDetail | null; place?: string | null; chat?: { id: string; read: () => AutoChat | null } };
+// A thrown error's name and where in the app's bundle it went off. Its message and its stack's function names stay out.
+export function errorFacts(error: object): { detail: AutoErrorName; place: string | null; frames: string | null } {
+  const { name, stack } = error as { name?: unknown; stack?: unknown };
+  const frames = typeof stack === 'string' ? [...stack.matchAll(/\/assets\/([\w.-]{1,100}\.js:\d{1,9}:\d{1,9})/g)].slice(0, FRAMES).map((match) => match[1]!) : [];
+  return { detail: AUTO_ERROR_NAMES.find((known) => known === name) ?? 'other', place: frames[0] ?? null, frames: frames.join(' ') || null };
+}
+
+export type AutoOrigin = NonNullable<AutoReport['origin']>;
+
+type Problem = { event: AutoEvent; detail?: AutoDetail | null; place?: string | null; frames?: string | null; origin?: AutoReport['origin']; chat?: { id: string; read: () => AutoChat | null } };
 
 // Never fails its caller, and a report that goes wrong tells no one: this is the app's own note about a problem.
-export function autoDiagnose({ event, detail = null, place = null, chat }: Problem) {
+export function autoDiagnose({ event, detail = null, place: thrown = null, frames = null, origin = null, chat }: Problem) {
   if (!armed) return;
-  const key = JSON.stringify([event, detail, place, chat?.id ?? null]);
+  const key = JSON.stringify([event, detail, thrown, chat?.id ?? null]);
   if (said.has(key)) return;
   said.add(key);
   try {
-    const report = readAutoReport({ event, detail, version: BUILT_VERSION, place, ...deviceFacts(navigator.userAgent), chat: chat?.read() ?? null });
+    const report = readAutoReport({ event, detail, version: BUILT_VERSION, place: thrown, frames, origin, ...deviceFacts(navigator.userAgent), ...pageFacts(), chat: chat?.read() ?? null });
     if (report) void fetchApi('diagnoses', { anonymous: true, method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(report), keepalive: true }).catch(() => {});
   } catch {
     // Whatever a read of the chat threw, the problem being reported is the caller's to handle, not this one.

@@ -138,6 +138,46 @@ export function recordCounts({ status, stale }: Pick<Standing, 'status' | 'stale
   return { over: of(status.values(), 'over'), stale: of(status.values(), 'stale'), forgotten: of(status.values(), 'forgotten'), deleted: of(stale.values(), 'deleted'), changed: of(stale.values(), 'changed'), rendered: of(stale.values(), 'rendered') };
 }
 
+// A built-in memory in tokens, for 문제 진단 and 자동 진단. chapters and sources pair up: a chapter's length beside what its
+// records take, which is how far past its target a model wrote.
+export type MemoryShape = {
+  budget: number;
+  used: number;
+  fixed: number;
+  free: number;
+  state: number;
+  stateLimit: number;
+  threads: number;
+  chapters: number[];
+  sources: number[];
+  records: { tokens: number; largest: number };
+  status: Record<string, number>;
+  pinned: number;
+  edited: number;
+  recalled: number;
+};
+
+export function memoryShape(memory: Memory, { tokens, costs, fixed: always, free, status }: Pick<Standing, 'tokens' | 'costs' | 'fixed' | 'free' | 'status'>, countTokens: (text: string) => number): MemoryShape {
+  const items = [...memory.records, ...memory.chapters];
+  const threads = memoryText([], memory.threads.map(({ text }) => text), []);
+  const sizes = memory.records.map(({ id }) => costs.get(id)!);
+  const words: Record<string, number> = {};
+  for (const word of status.values()) words[word] = (words[word] ?? 0) + 1;
+  return {
+    ...tokens,
+    fixed: always,
+    free,
+    threads: threads ? countTokens(threads) : 0,
+    chapters: memory.chapters.map(({ id }) => costs.get(id)!),
+    sources: memory.chapters.map((chapter) => chapter.records.reduce((sum, { id }) => sum + (costs.get(id) ?? 0), 0)),
+    records: { tokens: sizes.reduce((sum, size) => sum + size, 0), largest: Math.max(0, ...sizes) },
+    status: words,
+    pinned: items.filter(({ pinned }) => pinned === true).length,
+    edited: items.filter(({ edited }) => edited === true).length,
+    recalled: items.filter(recalled).length,
+  };
+}
+
 export type Standing = {
   covered: number;
   status: Map<string, RecordStatus>;

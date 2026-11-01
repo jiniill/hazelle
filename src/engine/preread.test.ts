@@ -11,7 +11,7 @@ const sent = (rows: Row[]): Assembled => ({
   silent: null,
   invalidKeys: [],
   loreBudget: 0,
-  memory: null,
+  memory: null, memoryShape: null,
   dropped: 0,
   problems: { found: [], omitted: 0 },
   unseen: 0,

@@ -24,7 +24,7 @@ it('bounds full request builds independently of the number of discarded messages
   const fixed = ['Follow the story.', 'Keep the scene consistent.'].map((content) => ({ message: { role: 'system' as const, content }, from: { kind: 'script' as const } }));
   const template: Part[] = [...fixed, { range: { from: 0, to: null }, from: chat }];
   const all = [...fixed, ...messages.map((message) => ({ message, from: chat }))];
-  const prompt: Assembled = { messages: all.map(({ message }) => message), parts: all.map(({ message, from }) => ({ from, tokens: countTokens(message.content) })), dropped: 0, lore: null, silent: null, invalidKeys: [], loreBudget: 0, memory: null, problems: { found: [], omitted: 0 }, unseen: 0 };
+  const prompt: Assembled = { messages: all.map(({ message }) => message), parts: all.map(({ message, from }) => ({ from, tokens: countTokens(message.content) })), dropped: 0, lore: null, silent: null, invalidKeys: [], loreBudget: 0, memory: null, memoryShape: null, problems: { found: [], omitted: 0 }, unseen: 0 };
   for (const protocol of ['anthropic-messages', 'gemini'] as const) {
     const fit = fitFor(protocol, 20000);
     for (const mode of ['assemble', 'rewrite'] as const) {

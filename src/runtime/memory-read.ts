@@ -1,11 +1,17 @@
 import type { MemoryFill } from '../engine/pipeline';
 import type { ChatScope } from '../engine/render';
 import { shown, type Chat, type Message } from '../model/chat';
+import type { ModelSettings } from '../connectors/settings';
 import type { Stored } from '../model/kinds';
 import { emptyMemory, memoryId, type Memory, type MemorySettings, type Source } from '../model/memory';
 import { SETTINGS_ID } from '../model/settings';
 import type { ToolUnit } from '../model/tool';
+import type { Route } from './assignment';
 import { featuresOf } from './features';
+import type { MemoryFailure } from './memory';
+import { taskWriter } from './profiles';
+import type { MemoryPrompt } from '../model/prompt';
+import { memoryPrompt } from './prompts';
 import type { ObjectStore } from './store';
 import { toolsOf } from './tools/store';
 
@@ -46,3 +52,12 @@ export function memoryFill(store: ObjectStore, id: string | null, chat: Chat, me
 
 // The same slot over the scope a turn's scripts leave (ScriptPreview.rehearse).
 export const memoryOver = (fill: MemoryFill | null, messages: ChatScope['messages']): MemoryFill | null => (fill?.kind === 'built-in' ? { ...fill, shown: shownOf(messages) } : fill);
+
+export type Tools = { prompt: MemoryPrompt; route: Route; settings: ModelSettings };
+
+export function memoryWriter(store: Pick<ObjectStore, 'get'>, chat: Chat): Tools | MemoryFailure {
+  const prompt = memoryPrompt(store);
+  if (prompt.kind === 'missing') return { kind: 'prompt-missing' };
+  const writer = taskWriter(store, chat, prompt.prompt.value.model);
+  return 'kind' in writer ? writer : { prompt: prompt.prompt.value, ...writer };
+}
