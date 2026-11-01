@@ -3,15 +3,19 @@ import { aliased } from '../common/alias';
 import { PersonaPickDialog } from '../common/PersonaPickDialog';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
-import { Avatar, Button, Checkbox, ChipButton, Hint, Row, useMenuClose } from '../ui';
+import { Avatar, Button, Checkbox, ChipButton, Hint, Row } from '../ui';
 import type { PersonaChoice } from '../../runtime/personas';
+import type { RowTool } from './ChatToolRow';
 import type { ChatSettingsActions } from './useChatSettings';
 
 const MISSING = { chat: '페르소나 삭제됨', character: '고정한 페르소나 삭제됨', current: '현재 페르소나 삭제됨' };
 
-export function ChatPersonaPicker({ persona, open, onOpen }: { persona: PersonaChoice; open: boolean; onOpen: () => void }) {
+type PickerProps = { persona: PersonaChoice; open: boolean; onOpen: () => void };
+
+export const personaTool = (props: PickerProps): RowTool => ({ key: 'persona', label: '페르소나', icon: UserRound, live: props.persona.kind !== 'persona', node: <ChatPersonaPicker {...props} />, open: props.onOpen });
+
+function ChatPersonaPicker({ persona, open, onOpen }: PickerProps) {
   const shown = persona.kind === 'persona' ? persona.persona.value : null;
-  const close = useMenuClose();
   return (
     <ChipButton
       label={shown ? aliased(shown.name, shown.alias) : MISSING[persona.from]}
@@ -23,10 +27,7 @@ export function ChatPersonaPicker({ persona, open, onOpen }: { persona: PersonaC
       ref={null}
       leading={<Avatar size="sm" tone="you" face={shown?.name ?? UserRound} image={shown?.picture} />}
       tone={shown ? 'plain' : 'warn'}
-      onClick={() => {
-        close();
-        onOpen();
-      }}
+      onClick={onOpen}
     />
   );
 }

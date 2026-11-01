@@ -24,5 +24,5 @@ export { Stepper } from './Stepper';
 export { Switch } from './Switch';
 export { TextField } from './TextField';
 export { TitleField } from './TitleField';
-export { ToolButton, ToolEnd, ToolShelf } from './ToolButton';
+export { ToolButton, ToolEnd } from './ToolButton';
 export { VoteButton } from './VoteButton';

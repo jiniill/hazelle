@@ -47,3 +47,8 @@ export function badgesByVersion(rows: readonly { value: ToolChatData }[], tools:
   }
   return versions;
 }
+
+export function inToolOrder<T extends { key: string }>(tools: readonly T[], order: readonly string[]): T[] {
+  const rank = (tool: T) => (order.includes(tool.key) ? order.indexOf(tool.key) : order.length);
+  return [...tools].sort((a, b) => rank(a) - rank(b));
+}

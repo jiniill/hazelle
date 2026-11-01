@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { ToolChatData } from '../../model/tool';
 import type { ToolManifest } from '../../tool-api/manifest';
-import { badgesByVersion, pressRuns, toolActions, toolComposer, toolMenu } from './toolMenu';
+import { badgesByVersion, inToolOrder, pressRuns, toolActions, toolComposer, toolMenu } from './toolMenu';
 
 const manifest = (displayName: string, page: ToolManifest['page'], menu: ToolManifest['menu']): ToolManifest => ({ api: 1, name: displayName, author: 'author', displayName, version: '1', description: '', uses: [], page, menu, settings: [] });
 
@@ -47,4 +47,10 @@ it('shows a badge only on the version it was put on, by tool in pack order, cut 
   expect(badges.get('v1')).toEqual(['열한글자짜리배지입니', '요약됨']);
   expect(badges.get('v3')).toEqual(['새']);
   expect(badges.get('v2')).toBeUndefined();
+});
+
+it('shows tools in the saved order, a tool not saved yet after them in the app\'s own order', () => {
+  const tools = ['attach', 'note', 'plugin-a', 'plugin-b'].map((key) => ({ key }));
+  expect(inToolOrder(tools, ['note', 'gone', 'attach']).map(({ key }) => key)).toEqual(['note', 'attach', 'plugin-a', 'plugin-b']);
+  expect(inToolOrder(tools, []).map(({ key }) => key)).toEqual(['attach', 'note', 'plugin-a', 'plugin-b']);
 });

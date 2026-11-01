@@ -3,13 +3,16 @@ import { CountedField } from '../common/CountedFields';
 import { follows } from '../common/words';
 import { Button, Menu, Row, Stack, Text, ToolButton, useMenuClose } from '../ui';
 import type { PromptChoice } from '../../runtime/prompts';
+import type { RowTool } from './ChatToolRow';
 import type { ChatSettingsActions } from './useChatSettings';
 import { useChatNote } from './useChatNote';
 
 type Props = { id: string | null; note: string | undefined; prompt: PromptChoice; onSave: ChatSettingsActions['setNote'] };
 
+export const noteTool = (props: Props): RowTool => ({ key: 'note', label: '노트', icon: PenLine, live: props.note !== undefined, node: <ChatNote {...props} />, open: <NoteEditor {...props} /> });
+
 // Empty string explicitly suppresses the note; null follows the prompt. Keep runtime/chat-context and lua/snapshot aligned.
-export function ChatNote(props: Props) {
+function ChatNote(props: Props) {
   const { note } = props;
   return (
     <Menu

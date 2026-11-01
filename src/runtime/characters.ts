@@ -259,6 +259,10 @@ export const pinToggle = (store: ObjectStore, key: string, pinned: boolean) => l
 
 export const hideTool = (store: ObjectStore, key: string, hidden: boolean) => listInSettings(store, 'hiddenTools', key, hidden);
 
+// sequence: this chat's tools; a plugin only other chats have keeps its slot.
+export const setToolOrder = (store: ObjectStore, sequence: string[]) =>
+  store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, toolOrder: rearrange(current.toolOrder ?? [], sequence) }));
+
 // What a switch not stored reads as. Switches stored before 반전 모드, the languages and the prompt choice existed
 // hold none of those, and read as these.
 const TRANSLATE_DEFAULTS = { replies: false, input: false, reverse: false, original: false, replyLanguage: 'Korean', inputLanguage: 'English' };

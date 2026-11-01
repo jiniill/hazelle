@@ -11,6 +11,7 @@ export { ItemRow } from './ItemRow';
 export { List, ListItem } from './List';
 export { NavGroup } from './NavGroup';
 export { NavRow } from './NavRow';
+export { CheckList, type CheckListItem } from './CheckList';
 export { Outline, type OutlineKind, type OutlineStop } from './Outline';
 export { SettingGroup, SettingRow } from './SettingGroup';
 export { Shares } from './Shares';

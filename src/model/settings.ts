@@ -39,6 +39,8 @@ export type Settings = {
   pinnedToggles?: string[];
   // Composer tools moved behind 더보기: the app's own keys (ChatComposer) and module ids. Absent: all on the row.
   hiddenTools?: string[];
+  // Those keys in the order the row shows them. A tool not listed yet follows them. Absent: the app's own order.
+  toolOrder?: string[];
   translate?: TranslateSwitches;
   illustrate?: IllustrateSwitches;
   profile?: string;

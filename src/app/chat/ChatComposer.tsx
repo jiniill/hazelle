@@ -17,15 +17,15 @@ import { useRemembering, useSettings, useTools } from '../session';
 import { imports, useImport } from '../common/importing';
 import { Attachments, type Attached, Callout, Composer, DropOverlay, Hint, pressed, pressedKey, SendButton, SendNote, useFileDrop, useMenuOpener } from '../ui';
 import { ChatAsk } from './ChatAsk';
-import { ChatAttach } from './ChatAttach';
+import { attachTool } from './ChatAttach';
 import { ChatCache } from './ChatCache';
-import { ChatComposerTool } from './ChatComposerTools';
-import { ChatIllustrate } from './ChatIllustrate';
-import { ChatNote } from './ChatNote';
+import { composerTool } from './ChatComposerTools';
+import { illustrateTool } from './ChatIllustrate';
+import { noteTool } from './ChatNote';
 import { ChatPinnedToggles } from './ChatPinnedToggles';
-import { ChatPersonaPicker } from './ChatPersonaPicker';
+import { personaTool } from './ChatPersonaPicker';
 import { ChatToolRow, type RowTool } from './ChatToolRow';
-import { ChatTranslate, translateOn } from './ChatTranslate';
+import { translateTool } from './ChatTranslate';
 import { toolIsOn } from './toolMenu';
 import { promptEditor } from './panels';
 import type { OpenChat } from './useChat';
@@ -77,37 +77,28 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
   };
   const editPrompt = (door: PromptDoor) => actions.side(promptEditor(door));
   const storedTools = useTools();
-  // live is what each button's own dot or warning says; a new one changes both.
   const rowTools: RowTool[] = [
-    { key: 'attach', label: '첨부', live: attachments.moved === true, node: <ChatAttach sees={attachments.sees} moved={attachments.moved} onAttach={actions.attach} onMoved={actions.sendMoved} /> },
-    { key: 'persona', label: '페르소나', live: chat.persona.kind !== 'persona', node: <ChatPersonaPicker persona={chat.persona} open={chat.dialog === 'persona'} onOpen={() => actions.openDialog('persona')} /> },
-    { key: 'note', label: '노트', live: chat.note !== undefined, node: <ChatNote id={chat.id} note={chat.note} prompt={chat.prompt} onSave={actions.setNote} /> },
-    ...(chat.features.translate ? [{
-      key: 'translate',
-      label: '번역',
-      live: translateOn(translate) !== '',
-      node: <ChatTranslate
-        translate={translate}
-        translation={chat.translation}
-        card={chat.card}
-        note={shelf?.character.translatorNote}
-        onChange={actions.setTranslate}
-        onOwnChange={actions.setOwnTranslate}
-        onEditPrompt={editPrompt}
-        onEditCharacter={shelf ? () => actions.side({ kind: 'character', id: shelf.id, part: 'instructions' }) : undefined}
-      />,
-    }] : []),
-    ...(chat.features.illustrate ? [{
-      key: 'illustrate',
-      label: '삽화',
-      live: chat.illustrate.auto || Boolean(chat.illustrateNote),
-      node: <ChatIllustrate id={chat.id} illustrate={chat.illustrate} note={chat.illustrateNote} card={chat.card} onChange={actions.setIllustrate} onOwnChange={actions.setOwnIllustrate} onSaveNote={actions.setIllustrateNote} sceneWriter={chat.sceneWriter} onEditPrompt={editPrompt} />,
-    }] : []),
-    ...chat.composerTools.map((tool) => ({
-      key: tool.module,
-      label: tool.name,
-      live: chat.toolInput === tool.module || toolIsOn(tool, storedTools.find(({ id }) => id === toolId(tool.module))?.value.settings ?? {}),
-      node: <ChatComposerTool tool={tool} running={chat.toolInput} onRun={actions.toolInput} onStop={actions.stopToolInput} onOpen={actions.tool} />,
+    attachTool({ sees: attachments.sees, moved: attachments.moved, onAttach: actions.attach, onMoved: actions.sendMoved }),
+    personaTool({ persona: chat.persona, open: chat.dialog === 'persona', onOpen: () => actions.openDialog('persona') }),
+    noteTool({ id: chat.id, note: chat.note, prompt: chat.prompt, onSave: actions.setNote }),
+    ...(chat.features.translate ? [translateTool({
+      translate,
+      translation: chat.translation,
+      card: chat.card,
+      note: shelf?.character.translatorNote,
+      onChange: actions.setTranslate,
+      onOwnChange: actions.setOwnTranslate,
+      onEditPrompt: editPrompt,
+      onEditCharacter: shelf ? () => actions.side({ kind: 'character', id: shelf.id, part: 'instructions' }) : undefined,
+    })] : []),
+    ...(chat.features.illustrate ? [illustrateTool({ id: chat.id, illustrate: chat.illustrate, note: chat.illustrateNote, card: chat.card, onChange: actions.setIllustrate, onOwnChange: actions.setOwnIllustrate, onSaveNote: actions.setIllustrateNote, sceneWriter: chat.sceneWriter, onEditPrompt: editPrompt })] : []),
+    ...chat.composerTools.map((tool) => composerTool({
+      tool,
+      running: chat.toolInput,
+      on: toolIsOn(tool, storedTools.find(({ id }) => id === toolId(tool.module))?.value.settings ?? {}),
+      onRun: actions.toolInput,
+      onStop: actions.stopToolInput,
+      onOpen: actions.tool,
     })),
   ];
   const input = useRef<HTMLTextAreaElement>(null);

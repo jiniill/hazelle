@@ -1,0 +1,48 @@
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.handle {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  cursor: grab;
+}
+
+.arrows {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.dot {
+  composes: dot from '../foundation/surface.module.css';
+}
+
+.action {
+  margin-inline-start: auto;
+}
+
+.drop {
+  position: absolute;
+  z-index: var(--layer-raised);
+  left: 0;
+  right: 0;
+  height: var(--border-thick);
+  background: var(--color-accent);
+}
+
+.before {
+  top: 0;
+}
+
+.after {
+  bottom: 0;
+}

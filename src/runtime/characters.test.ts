@@ -10,7 +10,7 @@ import { SETTINGS_ID } from '../model/settings';
 import { randomBytes } from '../vault/aead';
 import { sealFile } from '../vault/files';
 import { api, holdAccount } from './api';
-import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, hideTool, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggle, setTranslate, translateSwitches } from './characters';
+import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggle, setTranslate, translateSwitches } from './characters';
 import { markDeleted, purgeExpired, purgeNow } from './removal';
 import { appendUserMessage, removeChat, restoreChat, startChat } from './chat-log';
 import { Files } from './files';
@@ -352,6 +352,15 @@ describe('hideTool', () => {
     expect(store.get('settings', SETTINGS_ID)?.value.hiddenTools).toEqual(['note']);
     await hideTool(store, 'note', false);
     expect(store.get('settings', SETTINGS_ID)?.value).not.toHaveProperty('hiddenTools');
+  });
+});
+
+describe('setToolOrder', () => {
+  it('reorders this chat\'s tools and leaves a plugin only other chats have in its slot', async () => {
+    const { store } = await server.account();
+    await setToolOrder(store, ['note', 'elsewhere', 'attach']);
+    await setToolOrder(store, ['attach', 'note']);
+    expect(store.get('settings', SETTINGS_ID)?.value.toolOrder).toEqual(['attach', 'elsewhere', 'note']);
   });
 });
 

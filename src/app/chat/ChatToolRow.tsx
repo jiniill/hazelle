@@ -1,64 +1,76 @@
-import { Fragment, useState, type ReactNode } from 'react';
-import { hideTool } from '../../runtime/characters';
+import { ChevronLeft, type LucideIcon } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { hideTool, setToolOrder } from '../../runtime/characters';
 import { useSettings, useStore } from '../session';
-import { Checkbox, Divider, MoreMenu, Section, ToolEnd, ToolShelf } from '../ui';
+import { Button, CheckList, MoreMenu, Section, ToolEnd, useMenuClose } from '../ui';
+import { inToolOrder } from './toolMenu';
 
-// live: the tool acts in this chat, so hiding it must not hide that. Hiding moves the button only; 기능 is what stops a feature.
-export type RowTool = { key: string; label: string; live: boolean; node: ReactNode };
+// live: it acts in this chat. Hiding moves the button only, so ⋯ and its line carry a dot while a hidden one is live; 기능 is what stops a feature.
+// running: its button is the only stop, so it stands on the row while hidden.
+// open: what the panel shows for a hidden one, or what it does at once.
+export type RowTool = { key: string; label: string; icon: LucideIcon; live: boolean; running?: boolean; node: ReactNode; open: ReactNode | (() => void); openLabel?: string };
 
 // after: buttons of the row that are not tools to hide. ⋯ holds the row's far end: ticking a box must not move the panel under the pointer.
-export function ChatToolRow({ tools, after }: { tools: RowTool[]; after: ReactNode }) {
+export function ChatToolRow({ tools: declared, after }: { tools: RowTool[]; after: ReactNode }) {
   const store = useStore();
-  const hidden = new Set(useSettings().hiddenTools);
-  // Once live a hidden tool keeps its button for the visit: turning it off from its own form would close that form.
-  const stayed = useEverKeys(tools.filter((tool) => tool.live && hidden.has(tool.key)));
-  const onRow = (tool: RowTool) => !hidden.has(tool.key) || tool.live || stayed.has(tool.key);
+  const { hiddenTools, toolOrder } = useSettings();
+  const hidden = new Set(hiddenTools);
+  const tools = inToolOrder(declared, toolOrder ?? []);
   return (
     <>
-      {tools.filter(onRow).map((tool) => <Fragment key={tool.key}>{tool.node}</Fragment>)}
+      {tools.filter((tool) => !hidden.has(tool.key) || tool.running).map((tool) => <Fragment key={tool.key}>{tool.node}</Fragment>)}
       {after}
       <ToolEnd>
-        <MoreMenu of="입력창 도구" kind="dialog" place="above-end">
-          <Shelf tools={tools} hidden={hidden} onRow={onRow} onHide={(key, hide) => void hideTool(store, key, hide)} />
+        <MoreMenu of="입력창 도구" kind="dialog" size="form" place="above-end" dot={tools.some((tool) => hidden.has(tool.key) && tool.live)}>
+          <Panel
+            tools={tools}
+            hidden={hidden}
+            onHide={(key, hide) => void hideTool(store, key, hide)}
+            onMove={(from, to) => {
+              const keys = tools.map((tool) => tool.key);
+              keys.splice(to, 0, keys.splice(from, 1)[0]!);
+              void setToolOrder(store, keys);
+            }}
+          />
         </MoreMenu>
       </ToolEnd>
     </>
   );
 }
 
-function useEverKeys(tools: RowTool[]): ReadonlySet<string> {
-  const [ever, setEver] = useState<ReadonlySet<string>>(new Set());
-  const fresh = tools.filter((tool) => !ever.has(tool.key));
-  if (fresh.length) setEver(new Set([...ever, ...fresh.map((tool) => tool.key)]));
-  return ever;
-}
-
-function Shelf({ tools, hidden, onRow, onHide }: { tools: RowTool[]; hidden: Set<string>; onRow: (tool: RowTool) => boolean; onHide: (key: string, hide: boolean) => void }) {
-  // Once listed a tool stays until the panel closes: turning live from its form here must not remount that form on the row.
-  const listed = useEverKeys(tools.filter((tool) => !onRow(tool)));
-  const shelved = tools.filter((tool) => hidden.has(tool.key) && (!onRow(tool) || listed.has(tool.key)));
+function Panel({ tools, hidden, onHide, onMove }: { tools: RowTool[]; hidden: Set<string>; onHide: (key: string, hide: boolean) => void; onMove: (from: number, to: number) => void }) {
+  const close = useMenuClose();
+  const [viewing, setViewing] = useState<string | null>(null);
+  const view = tools.find((tool) => tool.key === viewing);
+  const back = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (viewing !== null) back.current?.focus();
+  }, [viewing]);
+  if (view) {
+    return (
+      <>
+        <span>
+          <Button ref={back} variant="ghost" size="sm" icon={ChevronLeft} onClick={() => setViewing(null)}>도구</Button>
+        </span>
+        {view.open as ReactNode}
+      </>
+    );
+  }
+  const openOf = ({ key, open }: RowTool) => () => {
+    if (typeof open !== 'function') return setViewing(key);
+    close();
+    open();
+  };
   return (
-    <>
-      <Section level={3} title="입력창에 둘 도구">
-        <div>
-          {tools.map((tool) => (
-            <Checkbox
-              key={tool.key}
-              label={tool.label}
-              note={hidden.has(tool.key) && tool.live ? '사용 중이라 보여요' : undefined}
-              checked={!hidden.has(tool.key)}
-              onChange={(shown) => onHide(tool.key, !shown)}
-            />
-          ))}
-        </div>
-      </Section>
-      {/* Last, by the row: a form these open rises from here, over the list, with the room the row's own have. */}
-      {shelved.length > 0 && (
-        <>
-          <Divider variant="menu" />
-          <ToolShelf>{shelved.map((tool) => <Fragment key={tool.key}>{tool.node}</Fragment>)}</ToolShelf>
-        </>
-      )}
-    </>
+    <Section level={3} title="입력창에 둘 도구">
+      <CheckList
+        items={tools.map((tool) => {
+          const off = hidden.has(tool.key);
+          return { id: tool.key, label: tool.label, icon: tool.icon, dot: off && tool.live, checked: !off, action: off ? { label: tool.openLabel ?? '열기', onClick: openOf(tool) } : undefined };
+        })}
+        onCheck={(key, shown) => onHide(key, !shown)}
+        onMove={onMove}
+      />
+    </Section>
   );
 }

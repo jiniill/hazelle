@@ -16,12 +16,6 @@
   color: var(--color-text);
 }
 
-.shelf {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-8);
-}
-
 .end {
   margin-inline-start: auto;
 }

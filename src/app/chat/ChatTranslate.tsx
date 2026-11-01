@@ -6,6 +6,7 @@ import { inFeature, NOTE_UNSENT, opens, scopeTag, TRANSLATOR_NOTE } from '../com
 import { useSettings } from '../session';
 import { navigate } from '../shell/router';
 import { Button, Menu, Section, SettingRow, Stack, ToolButton } from '../ui';
+import type { RowTool } from './ChatToolRow';
 import type { TranslateSetup } from '../../runtime/characters';
 import type { TranslationActions } from './useChatTranslation';
 
@@ -21,10 +22,12 @@ type Props = {
   onEditCharacter: (() => void) | undefined;
 };
 
-export const translateOn = (translate: Props['translate']) => [translate.replies && '응답 번역', translate.input && '내 메시지 번역', translate.reverse && '반전 모드'].filter(Boolean).join(', ');
+const translateOn = (translate: Props['translate']) => [translate.replies && '응답 번역', translate.input && '내 메시지 번역', translate.reverse && '반전 모드'].filter(Boolean).join(', ');
 
-export function ChatTranslate({ translate, translation, card, note, onChange, onOwnChange, onEditPrompt, onEditCharacter }: Props) {
-  const on = translateOn(translate);
+export const translateTool = (props: Props): RowTool => ({ key: 'translate', label: '번역', icon: Languages, live: translateOn(props.translate) !== '', node: <ChatTranslate {...props} />, open: <TranslateForm {...props} /> });
+
+function ChatTranslate(props: Props) {
+  const on = translateOn(props.translate);
   return (
     <Menu
       kind="dialog"
@@ -33,22 +36,28 @@ export function ChatTranslate({ translate, translation, card, note, onChange, on
       label="번역"
       trigger={(opener) => <ToolButton icon={Languages} label="번역" phone="icon" detail={on ? `${on} 켜짐` : undefined} mark={on ? { kind: 'dot' } : undefined} {...opener} />}
     >
-      <Section level={3} title="번역" tag={scopeTag(card && translate.own ? 'character' : 'default')}>
-        <Stack gap="related">
-          <TranslateRows
-            translate={translate}
-            translation={translation}
-            card={card}
-            note={<NoteRow note={note} translation={translation} onEdit={onEditCharacter} />}
-            opens="up"
-            onChange={onChange}
-            onEditPrompt={onEditPrompt}
-          >
-            <PerCharacter card={card} own={translate.own} onChange={onOwnChange} />
-          </TranslateRows>
-        </Stack>
-      </Section>
+      <TranslateForm {...props} />
     </Menu>
+  );
+}
+
+function TranslateForm({ translate, translation, card, note, onChange, onOwnChange, onEditPrompt, onEditCharacter }: Props) {
+  return (
+    <Section level={3} title="번역" tag={scopeTag(card && translate.own ? 'character' : 'default')}>
+      <Stack gap="related">
+        <TranslateRows
+          translate={translate}
+          translation={translation}
+          card={card}
+          note={<NoteRow note={note} translation={translation} onEdit={onEditCharacter} />}
+          opens="up"
+          onChange={onChange}
+          onEditPrompt={onEditPrompt}
+        >
+          <PerCharacter card={card} own={translate.own} onChange={onOwnChange} />
+        </TranslateRows>
+      </Stack>
+    </Section>
   );
 }
 
