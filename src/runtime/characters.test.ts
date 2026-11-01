@@ -10,7 +10,7 @@ import { SETTINGS_ID } from '../model/settings';
 import { randomBytes } from '../vault/aead';
 import { sealFile } from '../vault/files';
 import { api, holdAccount } from './api';
-import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggle, setTranslate, translateSwitches } from './characters';
+import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, setPinnedTogglesSpread, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggle, setTranslate, translateSwitches } from './characters';
 import { markDeleted, purgeExpired, purgeNow } from './removal';
 import { appendUserMessage, removeChat, restoreChat, startChat } from './chat-log';
 import { Files } from './files';
@@ -342,6 +342,16 @@ describe('setToggle', () => {
     expect([store.get('character', id)?.value.toggles, store.get('settings', SETTINGS_ID)?.value.toggles]).toEqual([{ sims: '1', mode: '2' }, { sims: '0' }]);
     await resetToggles(store, id);
     expect(store.get('character', id)?.value.toggles).toBeUndefined();
+  });
+});
+
+describe('setPinnedTogglesSpread', () => {
+  it('stores the spread layout and drops the field for the gathered one', async () => {
+    const { store } = await server.account();
+    await setPinnedTogglesSpread(store, true);
+    expect(store.get('settings', SETTINGS_ID)?.value.pinnedTogglesSpread).toBe(true);
+    await setPinnedTogglesSpread(store, false);
+    expect(store.get('settings', SETTINGS_ID)?.value).not.toHaveProperty('pinnedTogglesSpread');
   });
 });
 

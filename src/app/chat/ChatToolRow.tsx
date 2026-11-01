@@ -10,8 +10,8 @@ import { inToolOrder } from './toolMenu';
 // open: what the panel shows for a hidden one, or what it does at once.
 export type RowTool = { key: string; label: string; icon: LucideIcon; live: boolean; running?: boolean; node: ReactNode; open: ReactNode | (() => void); openLabel?: string };
 
-// after: buttons of the row that are not tools to hide. ⋯ holds the row's far end: ticking a box must not move the panel under the pointer.
-export function ChatToolRow({ tools: declared, after }: { tools: RowTool[]; after: ReactNode }) {
+// after: buttons of the row that are not tools to hide. foot: what the list of ⋯ shows under its tools. ⋯ holds the row's far end: ticking a box must not move the panel under the pointer.
+export function ChatToolRow({ tools: declared, after, foot }: { tools: RowTool[]; after: ReactNode; foot: ReactNode }) {
   const store = useStore();
   const { hiddenTools, toolOrder } = useSettings();
   const hidden = new Set(hiddenTools);
@@ -25,6 +25,7 @@ export function ChatToolRow({ tools: declared, after }: { tools: RowTool[]; afte
           <Panel
             tools={tools}
             hidden={hidden}
+            foot={foot}
             onHide={(key, hide) => void hideTool(store, key, hide)}
             onMove={(from, to) => {
               const keys = tools.map((tool) => tool.key);
@@ -38,7 +39,7 @@ export function ChatToolRow({ tools: declared, after }: { tools: RowTool[]; afte
   );
 }
 
-function Panel({ tools, hidden, onHide, onMove }: { tools: RowTool[]; hidden: Set<string>; onHide: (key: string, hide: boolean) => void; onMove: (from: number, to: number) => void }) {
+function Panel({ tools, hidden, foot, onHide, onMove }: { tools: RowTool[]; hidden: Set<string>; foot: ReactNode; onHide: (key: string, hide: boolean) => void; onMove: (from: number, to: number) => void }) {
   const close = useMenuClose();
   const [viewing, setViewing] = useState<string | null>(null);
   const view = tools.find((tool) => tool.key === viewing);
@@ -65,6 +66,7 @@ function Panel({ tools, hidden, onHide, onMove }: { tools: RowTool[]; hidden: Se
         onCheck={(key, shown) => onHide(key, !shown)}
         onMove={onMove}
       />
+      {foot}
     </Section>
   );
 }

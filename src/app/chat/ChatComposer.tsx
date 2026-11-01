@@ -22,7 +22,7 @@ import { ChatCache } from './ChatCache';
 import { composerTool } from './ChatComposerTools';
 import { illustrateTool } from './ChatIllustrate';
 import { noteTool } from './ChatNote';
-import { ChatPinnedToggles } from './ChatPinnedToggles';
+import { ChatPinnedToggles, PinnedTogglesLayout } from './ChatPinnedToggles';
 import { personaTool } from './ChatPersonaPicker';
 import { ChatToolRow, type RowTool } from './ChatToolRow';
 import { translateTool } from './ChatTranslate';
@@ -185,7 +185,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
         attachments={<Attachments items={attachments.draft.map(attachedItem)} onRemove={actions.detach} />}
         onFiles={actions.attach}
         tools={
-          <ChatToolRow tools={rowTools} after={<ChatPinnedToggles toggles={chat.toggles} onFlip={actions.flip} />} />
+          <ChatToolRow tools={rowTools} after={<ChatPinnedToggles toggles={chat.toggles} onFlip={actions.flip} />} foot={<PinnedTogglesLayout toggles={chat.toggles} />} />
         }
         actions={
           <>

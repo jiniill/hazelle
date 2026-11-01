@@ -257,6 +257,9 @@ function listInSettings(store: ObjectStore, list: 'pinnedToggles' | 'hiddenTools
 
 export const pinToggle = (store: ObjectStore, key: string, pinned: boolean) => listInSettings(store, 'pinnedToggles', key, pinned);
 
+export const setPinnedTogglesSpread = (store: ObjectStore, spread: boolean) =>
+  store.upsert('settings', (current = EMPTY_SETTINGS) => (spread ? { ...current, pinnedTogglesSpread: true } : without(current, 'pinnedTogglesSpread')));
+
 export const hideTool = (store: ObjectStore, key: string, hidden: boolean) => listInSettings(store, 'hiddenTools', key, hidden);
 
 // sequence: this chat's tools; a plugin only other chats have keeps its slot.
