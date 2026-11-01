@@ -14,7 +14,7 @@ import { addPrompt, editPrompt } from './prompts';
 import { ObjectStore } from './store';
 import { openSession, type Session } from './session';
 import { answerable, inTurn, saying, stubRelay, testConnection, testModel, testServer } from './testing';
-import { leaving } from './memory-view';
+import { leaving, memoryView } from './memory-view';
 import { wouldSend } from './turn-context';
 import { takeTurn } from './turn';
 import { readTool } from '../engine/import/tool';
@@ -397,6 +397,21 @@ describe('chapters', () => {
       expect(chatMemory(session.store, chat).records.map(({ id }) => id)).toEqual(['r0', 'r1', 'r2']);
     }));
 
+  it('keeps sending a chapter whose message changed, spending nothing on it until the user asks', () =>
+    server.withSession(async (session) => {
+      const made = (ids: string[]): Chapter[] => [{ id: 'c0', sources: ids.map((message, index) => ({ message, version: index === 0 ? 'older' : message })), print: fingerprint(said.map((text) => ({ role: 'user', text }))), when: null, where: null, who: [], what: 'They meet.', lines: [], outcome: '', receipt: null, at: 0, records: [0, 1, 2].map((index) => ({ id: `r${index}`, at: 0 })) }];
+      const { chat } = await recorded(session, { budget: 100_000 }, made, true);
+      const log = stubRelay(inTurn([saying(summary('They meet.', 'We meet at the pier.'))]));
+      const planned = vi.spyOn(session.tokens, 'snapshot');
+      session.memory.check(chat);
+      await vi.waitFor(() => expect(planned.mock.calls.some((args) => args[3] === 'memory')).toBe(true));
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(log).toEqual([]);
+      const view = await memoryView(session, chat);
+      expect([view!.records.get('c0'), view!.stale.get('c0')]).toEqual(['sent', 'changed']);
+      expect(leaving((await wouldSend(session, chat, { kind: 'answer' }, undefined, 'view'))!.prompt)).toBe(0);
+    }));
+
   it('merges no chapters under a budget a small model shrinks, since the merge outlives the model', () =>
     server.withSession(async (session) => {
       const made = (ids: string[]) =>
@@ -516,12 +531,12 @@ describe('chapters', () => {
     { id: 'c0', sources: ids.slice(0, 2).map((id) => ({ message: id, version: id })), print: fingerprint(said.slice(0, 2).map((text) => ({ role: 'user', text }))), when: null, where: null, who: [], what: 'They meet.', lines: [], outcome: '', receipt: null, at: 0, records: [{ id: 'r0', at: 0 }, { id: 'r1', at: 0 }] },
   ];
 
-  it('names the records a record inside a chapter is summarized again into, and leaves the chapter for the user to make again', () =>
+  it('names the records a record inside a chapter is summarized again into when the user asks, and leaves the chapter for the user to make again', () =>
     server.withSession(async (session) => {
       const chapter = meeting;
       const { chat } = await recorded(session, { budget: 1_000_000 }, chapter, true);
       const log = stubRelay(inTurn([saying(summary('jin and Luna meet.', 'We meet at the pier.'))]));
-      session.memory.check(chat);
+      session.memory.rebuild(chat, 'r0');
       await vi.waitFor(() => expect(chatMemory(session.store, chat).records[0]).toMatchObject({ what: 'jin and Luna meet.' }));
       const memory = chatMemory(session.store, chat);
       expect(memory.chapters[0]!.records).toEqual([{ id: memory.records[0]!.id, at: 0 }, { id: 'r1', at: 0 }]);

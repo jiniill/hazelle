@@ -120,7 +120,7 @@ describe('chapters and recall in what memory sends', () => {
   });
   const memoryOf = (records: MemoryRecord[], chapters: Chapter[] = []): Memory => ({ records, chapters, state: [], threads: [] });
 
-  it('sends a chapter in its records’ place, a pinned record in it beside it, and its records again once one changed or it went stale', () => {
+  it('sends a chapter in its records’ place, a pinned record in it beside it, and its records again once one changed, but not when only a message under it did', () => {
     const [r1, r2, r3] = [record('r1', [0, 1], 'They arrive.'), record('r2', [2, 3], 'jin promises.', { pinned: true }), record('r3', [4], 'Morning.')];
     const c1 = chapter('c1', [r1, r2], 'jin and Luna arrive, and jin promises to come back.');
     const sent = standing(memoryOf([r1, r2, r3], [c1]), read, 10_000, count);
@@ -133,7 +133,7 @@ describe('chapters and recall in what memory sends', () => {
     const changed = standing(memoryOf([r1, r2, r3], [{ ...c1, print: 'rendered before' }]), read, 10_000, count);
     expect([changed.sent, changed.status.get('c1'), changed.stale.get('c1')]).toEqual([['c1', 'r2', 'r3'], 'sent', 'rendered']);
     const switched = standing(memoryOf([r1, r2, r3], [{ ...c1, sources: [{ ...c1.sources[0]!, version: 'older' }, ...c1.sources.slice(1)] }]), read, 10_000, count);
-    expect([switched.sent, switched.status.get('c1'), switched.stale.get('c1')]).toEqual([['r1', 'r2', 'r3'], 'stale', 'changed']);
+    expect([switched.sent, switched.status.get('c1'), switched.stale.get('c1'), switched.held]).toEqual([['c1', 'r2', 'r3'], 'sent', 'changed', 5]);
 
     const tight = standing(memoryOf([r1, r2, r3], [c1]), read, sent.costs.get('r2')! + sent.costs.get('r3')!, count);
     expect([tight.sent, tight.status.get('c1'), tight.status.get('r1'), tight.crowded]).toEqual([['r2', 'r3'], 'over', 'over', false]);
@@ -170,6 +170,8 @@ describe('chapters and recall in what memory sends', () => {
 
     const edited = told({ edited: true });
     expect(nextMerge(edited, full(edited), read.shown, tokensFor(edited), new Set())).toMatchObject({ from: 2, to: 6 });
+    const rewritten = told({ sources: [{ message: 'm1', version: 'older' }] });
+    expect(nextMerge(rewritten, full(rewritten), read.shown, tokensFor(rewritten), new Set())).toMatchObject({ from: 2, to: 6 });
     const pinning = told({}, true);
     expect(nextMerge(pinning, full(pinning), read.shown, tokensFor(pinning), new Set())).toMatchObject({ from: 2, to: 6 });
     expect(nextMerge(plain, full(plain), read.shown, tokensFor(plain), new Set(['r1']))).toMatchObject({ from: 2, to: 6 });

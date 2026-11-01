@@ -6,7 +6,7 @@ import { chatMemory, memoryOwner, memorySetup, sourcesOf, storedMemory } from '.
 import { chatSent, type ChatSent } from './memory-view';
 import { MemorySchedule, type MemoryCheck } from './memory-schedule';
 import type { ModelSettings } from '../connectors/settings';
-import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextMerge, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, staleness, threadLabel, type Drafted, type Invalid, type Scene } from '../engine/memory';
+import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextMerge, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, standingChapters, staleness, threadLabel, type Drafted, type Invalid, type Scene } from '../engine/memory';
 import type { RanAway } from '../engine/pipeline';
 import { fold, shown, type Chat, type Message, type Receipt } from '../model/chat';
 import type { Stored } from '../model/kinds';
@@ -439,8 +439,11 @@ export class Rememberer {
     const held = sent.standing!;
     const places = placesOf(sent.read.shown);
     const asked = [...memory.records, ...memory.chapters].find(({ id }) => id === this.schedule.requested(chat));
-    const stale = memory.records.filter((record) => !owned(record) && !record.forgotten && staleness(record, sent.read, places) === 'changed');
-    const member = asked && isChapter(asked) ? stale.find(({ id }) => asked.records.some((each) => each.id === id)) : undefined;
+    const changed = memory.records.filter((record) => !owned(record) && !record.forgotten && staleness(record, sent.read, places) === 'changed');
+    // A record summarized again takes its chapter out of the request, so only the user's 다시 만들기 does that to one.
+    const inChapter = new Set(standingChapters(memory, held).flatMap(({ records }) => records.map(({ id }) => id)));
+    const stale = changed.filter(({ id }) => !inChapter.has(id));
+    const member = asked && isChapter(asked) ? changed.find(({ id }) => asked.records.some((each) => each.id === id)) : undefined;
     if (!member) this.schedule.rebuild(chat, null);
     // Without a 장기 기억 slot in the request, a new record would only take its messages out of it, and a stale one
     // summarized again would be paid for and never read. What the user asked for is made whatever the prompt holds.

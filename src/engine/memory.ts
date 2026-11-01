@@ -181,7 +181,9 @@ export function standing(memory: Memory, chat: ChatRead, budget: number, countTo
     const why = moved ? 'records' : staleness(chapter, chat, places);
     if (why) stale.set(chapter.id, why);
     if (chapter.forgotten) status.set(chapter.id, 'forgotten');
-    else if (moved || (withheld(why) && !owned(chapter))) status.set(chapter.id, 'stale');
+    // A message edited or deleted under a chapter keeps it: its records would stand in for far more than the one message
+    // and go over the budget oldest first, so the change would not reach the request either (user, 2026-11-01).
+    else if (moved) status.set(chapter.id, 'stale');
     else for (const { id } of chapter.records) holder.set(id, chapter);
   }
   const units: (MemoryRecord | Chapter)[] = [];
@@ -267,6 +269,9 @@ type NextChapter = { from: number; to: number; records: string[]; target: number
 
 const MOST_MERGED = 4;
 
+// Those that stand in their records' place, whether or not they fit the budget.
+export const standingChapters = (memory: Memory, held: Pick<Standing, 'status'>) => memory.chapters.filter(({ id }) => held.status.get(id) === 'sent' || held.status.get(id) === 'over');
+
 // Once chapters leave no room, the oldest run side by side in the chat that automatic work may still take. Without this no
 // chapter ever starts again, and new records push out whole chapters (design §6.2).
 // Against the saved setting, not the budget this request sends under, and with no room taken for recalled messages: both
@@ -274,8 +279,8 @@ const MOST_MERGED = 4;
 // A pinned or put-in record stops the run: the commit refuses one, and a refused call would be paid for on every check.
 export function nextMerge(memory: Memory, held: Standing, shown: Source[], setting: number, failed: ReadonlySet<string>): NextChapter | null {
   const room = setting - held.fixed;
-  const standingIn = ({ id, pinned }: Chapter) => !pinned && (held.status.get(id) === 'sent' || held.status.get(id) === 'over');
-  const spent = memory.chapters.filter(standingIn).reduce((sum, { id }) => sum + held.costs.get(id)!, 0);
+  const chapters = standingChapters(memory, held);
+  const spent = chapters.reduce((sum, { id, pinned }) => (pinned ? sum : sum + held.costs.get(id)!), 0);
   if (room <= 0 || spent < room * HIGH) return null;
   const places = placesOf(shown);
   const records = new Map(memory.records.map((record) => [record.id, record]));
@@ -288,7 +293,8 @@ export function nextMerge(memory: Memory, held: Standing, shown: Source[], setti
     merged: run.map(({ chapter }) => recordText(chapter)),
   });
   for (const chapter of memory.chapters) {
-    const free = standingIn(chapter) && !owned(chapter) && chapter.records.every(({ id }) => !failed.has(id) && !owned(records.get(id)!));
+    // A chapter whose message changed stays out: its text would carry the old words on under a fresh mark.
+    const free = chapters.includes(chapter) && !owned(chapter) && !withheld(held.stale.get(chapter.id)) && chapter.records.every(({ id }) => !failed.has(id) && !owned(records.get(id)!));
     if (!free) {
       if (run.length >= 2) return merge();
       run = [];
