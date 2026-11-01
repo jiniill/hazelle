@@ -644,8 +644,8 @@ export type MemoryTaskInput = {
   budget: number;
   // The messages summarized, by place in scope.messages, from included and to not.
   span: { from: number; to: number };
-  // A chapter's job, with its length in tokens; null for records.
-  chapter: { target: number } | null;
+  // A chapter's job, with its length in tokens and the chapters it reads in place of the span's messages; null for records.
+  chapter: { target: number; merged: string[] | null } | null;
   seed: string;
   countTokens: (text: string) => number;
 };
@@ -661,11 +661,12 @@ function memoryTask({ scope, prompt, memory, before, budget, span: { from, to },
   const laid = lay(scope, prompt.blocks, scope.messages.slice(0, to), variables, seed, remembered(countTokens), null);
   const speakers = speakersOf(scope);
   const span = texts.slice(from, to);
-  const shown = spanText(span.map((text, offset) => ({ speaker: speakers[from + offset]!, text: text.trim() })));
+  const merged = chapter?.merged ?? null;
+  const shown = spanText(merged ? merged.map((text) => ({ speaker: 'Chapter', text })) : span.map((text, offset) => ({ speaker: speakers[from + offset]!, text: text.trim() })));
   const held = chapter ? chapterBefore(before) : memoryBefore(memory, before, stateLimit(budget), countTokens);
   const { parts } = templateOf(prompt.blocks, laid, scope.persona, { sort: 'memory', memory: held, span: shown });
   const messages = taskMessages(parts);
-  const format = chapter ? chapterFormat(to - from, chapter.target) : memoryFormat(to - from, recordsTarget(span.reduce((sum, text) => sum + countTokens(text), 0), budget));
+  const format = chapter ? chapterFormat(merged?.length ?? to - from, chapter.target, merged !== null) : memoryFormat(to - from, recordsTarget(span.reduce((sum, text) => sum + countTokens(text), 0), budget));
   return { messages: [...messages, { role: 'user', content: format }], span };
 }
 

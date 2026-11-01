@@ -247,7 +247,7 @@ export function standing(memory: Memory, chat: ChatRead, budget: number, countTo
 }
 
 // Consolidate loose records only: start above HIGH, stop projected below LOW.
-// Never re-compress chapters or consolidate when fixed content fills the setting. Target 1/CHAPTER_SHARE of source.
+// Never consolidate when fixed content fills the setting. Target 1/CHAPTER_SHARE of source.
 const HIGH = 0.9;
 const LOW = 0.5;
 const CHAPTER_SHARE = 4;
@@ -262,8 +262,45 @@ export const chapterTarget = (costs: number[]) => Math.ceil(costs.reduce((sum, c
 // the model's context is unknown.
 export const chapterCap = (batch: number, limit: number | null) => Math.min(4 * batch, limit === null ? Infinity : Math.floor(limit / 2));
 
-type NextChapter = { from: number; to: number; records: string[]; target: number };
+// merged: the chapters' texts it reads in place of its messages, which one call could not hold.
+type NextChapter = { from: number; to: number; records: string[]; target: number; merged?: string[] };
 
+const MOST_MERGED = 4;
+
+// The oldest run of chapters side by side in the chat that automatic work may still take. A pinned or put-in record stops
+// the run: the commit refuses one, and a refused call would be paid for again on every check.
+function nextMerge(memory: Memory, held: Standing, places: ReadonlyMap<string, number>, failed: ReadonlySet<string>): NextChapter | null {
+  const records = new Map(memory.records.map((record) => [record.id, record]));
+  let run: { chapter: Chapter; from: number; to: number }[] = [];
+  const merge = (): NextChapter => ({
+    from: run[0]!.from,
+    to: run.at(-1)!.to,
+    records: run.flatMap(({ chapter }) => chapter.records.map(({ id }) => id)),
+    target: chapterTarget(run.map(({ chapter }) => held.costs.get(chapter.id)!)),
+    merged: run.map(({ chapter }) => recordText(chapter)),
+  });
+  for (const chapter of memory.chapters) {
+    const status = held.status.get(chapter.id);
+    const free = (status === 'sent' || status === 'over') && !owned(chapter) && chapter.records.every(({ id }) => !failed.has(id) && !owned(records.get(id)!));
+    if (!free) {
+      if (run.length >= 2) return merge();
+      run = [];
+      continue;
+    }
+    const indices = chapter.sources.map(({ message }) => places.get(message)!);
+    const from = Math.min(...indices);
+    if (run.length && run.at(-1)!.to !== from) {
+      if (run.length >= 2) return merge();
+      run = [];
+    }
+    run.push({ chapter, from, to: Math.max(...indices) + 1 });
+    if (run.length === MOST_MERGED) return merge();
+  }
+  return run.length >= 2 ? merge() : null;
+}
+
+// Once chapters leave no room, merge the oldest ones first: a chapter counts against the room even when it is over the
+// budget, so without this no chapter ever starts again and new records push out whole chapters (design §6.2).
 // Plan oldest-first runs of >=2 fresh automatic records outside chapters/failed chapters. Skip oversized records.
 // Against the budget the request sends under, clamp included: measured against the saved setting, a small model leaves the
 // oldest records out of every request while no chapter ever starts (design §6.2).
@@ -276,7 +313,10 @@ export function nextChapters(memory: Memory, held: Standing, shown: Source[], to
     else if (runs.at(-1)!.length) runs.push([]);
   }
   const loose = runs.flat().reduce((sum, { id }) => sum + held.costs.get(id)!, 0);
-  const room = recallRoom(held.tokens.budget - held.fixed, held.recalls).room - (held.free - loose);
+  const whole = recallRoom(held.tokens.budget - held.fixed, held.recalls).room;
+  const room = whole - (held.free - loose);
+  const merge = whole > 0 && whole - room >= whole * HIGH ? nextMerge(memory, held, places, failed) : null;
+  if (merge) return [merge];
   if (room <= 0 || loose <= room * HIGH) return [];
   const made: NextChapter[] = [];
   let left = loose;
@@ -403,12 +443,14 @@ export const memoryFormat = (count: number, target: number) =>
 
 // The app's own sentence after a memory prompt for a chapter, which overrides what the prompt asks of records:
 // parseChapter depends on every word of it.
-export const chapterFormat = (count: number, target: number) =>
-  [
+export const chapterFormat = (count: number, target: number, merged: boolean) => {
+  const read = merged ? 'chapters' : 'messages';
+  return [
     'Answer with one JSON object and nothing else: {"chapter": {...}}.',
-    `The chapter is one summary of all ${count} numbered messages, about ${target} tokens long. Write no state and no threads, whatever the instructions above ask.`,
-    'It has every field: "when" and "where" (text, or null when the messages do not say); "who" (a list of the names of those present); "what" (what happened); "lines" (key lines, each {"speaker": name, "text": the line copied word for word from the messages}); "outcome" (text).',
+    `The chapter is one summary of all ${count} numbered ${merged ? 'earlier chapters, each already a summary of many messages' : 'messages'}, about ${target} tokens long. Write no state and no threads, whatever the instructions above ask.`,
+    `It has every field: "when" and "where" (text, or null when the ${read} do not say); "who" (a list of the names of those present); "what" (what happened); "lines" (key lines, each {"speaker": name, "text": the line copied word for word from the ${read}}); "outcome" (text).`,
   ].join('\n');
+};
 
 export type Scene = Pick<Written, 'when' | 'where' | 'who' | 'what' | 'lines' | 'outcome'>;
 // closes: the labels of the threads it closes (threadLabel).

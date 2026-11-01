@@ -374,6 +374,29 @@ describe('chapters', () => {
       expect(log).toHaveLength(2);
     }));
 
+  it('merges chapters that fill the budget into one from their own text, and takes a merged chapter too long to read apart when made again', () =>
+    server.withSession(async (session) => {
+      const made = (ids: string[]) =>
+        ids.map((message, index): Chapter => ({ id: `c${index}`, sources: [{ message, version: message }], print: fingerprint([{ role: 'user', text: said[index]! }]), when: null, where: null, who: [], what: `Chapter ${index}. `.repeat(10), lines: [], outcome: '', receipt: null, at: 0, records: [{ id: `r${index}`, at: 0 }] }));
+      const { chat } = await recorded(session, {}, made);
+      const merging = stubRelay(inTurn([saying(chapterAnswer)]));
+      session.memory.check(chat);
+      await vi.waitFor(() => expect(chatMemory(session.store, chat).chapters).toHaveLength(1));
+      await vi.waitFor(() => expect(session.store.list('stream')).toEqual([]));
+      const merged = chatMemory(session.store, chat).chapters[0]!;
+      expect(merged.records.map(({ id }) => id)).toEqual(['r0', 'r1', 'r2']);
+      expect(merged.lines).toEqual([{ speaker: 'jin', text: 'jin promises to return.' }]);
+      expect(merging[0]!.sent.body).toContain('earlier chapters');
+      expect(merging[0]!.sent.body).toContain('Chapter 2.');
+      expect(merging[0]!.sent.body).not.toContain('We meet at the pier.');
+      expect(merged.print).toBe(fingerprint(said.map((text) => ({ role: 'user', text }))));
+
+      await setDefaultMemory(session.store, { batch: 1, budget: 100_000 });
+      session.memory.rebuild(chat, merged.id);
+      await vi.waitFor(() => expect(chatMemory(session.store, chat).chapters).toEqual([]));
+      expect(chatMemory(session.store, chat).records.map(({ id }) => id)).toEqual(['r0', 'r1', 'r2']);
+    }));
+
   it('limits chapter source spans by the memory route calibrated allowance, not its native window', () =>
     server.withSession(async (session) => {
       const { chat } = await recorded(session, {});

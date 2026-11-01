@@ -152,8 +152,8 @@ export const removeThread = (store: ObjectStore, chat: string, thread: string): 
 // chapter lists resummarized records, null for ordinary records.
 type Job = { sources: Source[]; redo: { id: string; at: number; user: boolean } | null; chapter: string[] | null };
 
-// A new chapter takes only records automatic work may still take, in no other chapter; one made again takes its records
-// as they are.
+// A new chapter takes only records automatic work may still take, in no other chapter but those it takes whole; one made
+// again takes its records as they are.
 function applies(memory: Memory, messages: Message[], { sources, redo, chapter }: Job): boolean {
   const places = placesOf(sourcesOf(messages));
   const showing = sources.every(({ message, version }) => {
@@ -163,7 +163,9 @@ function applies(memory: Memory, messages: Message[], { sources, redo, chapter }
   if (!showing) return false;
   if (chapter) {
     const records = new Map(memory.records.map((record) => [record.id, record]));
-    const held = new Set(memory.chapters.flatMap((each) => (each.id === redo?.id ? [] : each.records.map(({ id }) => id))));
+    const taken = takenWhole(memory, chapter);
+    if (taken.some((each) => each.id !== redo?.id && (owned(each) || each.forgotten))) return false;
+    const held = new Set(memory.chapters.flatMap((each) => (each.id === redo?.id || taken.includes(each) ? [] : each.records.map(({ id }) => id))));
     const free = chapter.every((id) => {
       const record = records.get(id);
       return record !== undefined && !held.has(id) && (redo !== null || (!owned(record) && !record.forgotten));
@@ -175,6 +177,13 @@ function applies(memory: Memory, messages: Message[], { sources, redo, chapter }
   return item !== undefined && item.at === redo.at && (redo.user || (!owned(item) && !item.forgotten));
 }
 
+// The chapters a new chapter over these records replaces, which is how merged chapters leave whichever path commits them,
+// a resumed call included.
+const takenWhole = (memory: Memory, records: string[]) => {
+  const taken = new Set(records);
+  return memory.chapters.filter((each) => each.records.every(({ id }) => taken.has(id)));
+};
+
 // The records a chapter summarizes again when it is made again: its own, but those the user deleted.
 const members = (memory: Memory, chapter: Chapter) => chapter.records.flatMap(({ id }) => (memory.records.find((record) => record.id === id)?.forgotten ? [] : [id]));
 
@@ -182,7 +191,8 @@ const members = (memory: Memory, chapter: Chapter) => chapter.records.flatMap(({
 function withChapter(memory: Memory, { sources, redo }: Job, chapter: string[], scene: Scene, span: { role: string; text: string }[], receipt: Receipt, first: string): Memory {
   const order = new Map(memory.records.map(({ id }, index) => [id, index]));
   const made: Chapter = { id: first, sources, print: fingerprint(span), ...scene, receipt, at: Date.now(), records: chapter.map((id) => ({ id, at: memory.records[order.get(id)!]!.at })) };
-  const rest = memory.chapters.filter(({ id }) => id !== redo?.id);
+  const taken = takenWhole(memory, chapter);
+  const rest = memory.chapters.filter((each) => each.id !== redo?.id && !taken.includes(each));
   const place = rest.findIndex(({ records }) => order.get(records[0]!.id)! > order.get(chapter[0]!)!);
   return { ...memory, chapters: place === -1 ? [...rest, made] : rest.toSpliced(place, 0, made) };
 }
@@ -247,7 +257,7 @@ export function memoryWriter(store: Pick<ObjectStore, 'get'>, chat: Chat): Tools
 // Index failures retry on explicit retry/chat open; indexing reports completed/total records.
 export type Remembering = { running: ReadonlyMap<string, { model: string; left: number }>; failed: ReadonlyMap<string, MemoryFailure>; chapterFailed: ReadonlyMap<string, MemoryFailure>; indexing: ReadonlyMap<string, { done: number; total: number }>; indexFailed: ReadonlyMap<string, MemoryFailure> };
 
-type Planned = { job: Job; sent: ChatSent; from: number; to: number; memory: Memory; before: Written | null; chapter: { target: number } | null; left: number } & Tools;
+type Planned = { job: Job; sent: ChatSent; from: number; to: number; memory: Memory; before: Written | null; chapter: { target: number; merged: string[] | null } | null; left: number } & Tools;
 
 type Tools = { prompt: MemoryPrompt; route: Route; settings: ModelSettings };
 
@@ -439,11 +449,24 @@ export class Rememberer {
     const again = member ?? asked ?? (stale.length && await reaches() ? stale[0] : undefined);
     const span = !again && this.schedule.includesNew(chat) && await reaches() ? await this.span(chat, sent.tokens, coveredBy(memory, places), setup) : null;
     const tools = memoryWriter(this.session.store, sent.chat);
+    const readCap = async (writer: Tools) => {
+      const snapshot = await this.session.tokens.snapshot(writer.route, writer.settings, tokenLimits(writer.route.model, sentSettings(store, writer.route)), 'memory', chat, new AbortController().signal);
+      return snapshot.ok ? chapterCap(setup.batch, snapshot.data.fit.allowance) : ({ kind: 'unsaved', failure: snapshot } as const);
+    };
+    // A merged chapter's messages may not fit one call. It goes, and its records become chapters again from their messages.
+    if (again && isChapter(again) && !('kind' in tools)) {
+      const cap = await readCap(tools);
+      if (typeof cap !== 'number') return cap;
+      const size = again.sources.reduce((sum, { message }) => sum + (sent.tokens[places.get(message) ?? -1] ?? 0), 0);
+      if (size > cap) {
+        const saved = await changeMemory(store, chat, (current) => ({ ...current, chapters: current.chapters.filter(({ id }) => id !== again.id) }));
+        return saved.ok ? this.plan(chat) : { kind: 'unsaved', failure: saved };
+      }
+    }
     let chapters: ReturnType<typeof nextChapters> = [];
     if (!('kind' in tools) && !again && !span && this.schedule.includesNew(chat) && await reaches()) {
-      const snapshot = await this.session.tokens.snapshot(tools.route, tools.settings, tokenLimits(tools.route.model, sentSettings(store, tools.route)), 'memory', chat, new AbortController().signal);
-      if (!snapshot.ok) return { kind: 'unsaved', failure: snapshot };
-      const cap = chapterCap(setup.batch, snapshot.data.fit.allowance);
+      const cap = await readCap(tools);
+      if (typeof cap !== 'number') return cap;
       chapters = nextChapters(memory, held, sent.read.shown, sent.tokens, cap, this.unchaptered.get(chat) ?? new Set());
     }
     const next = chapters[0];
@@ -462,7 +485,7 @@ export class Rememberer {
       : (memory.records.slice(0, first).findLast((record) => !record.forgotten) ?? null);
     const target = next ? next.target : chapter && chapterTarget(chapter.map((id) => held.costs.get(id)!));
     const waiting = span ? Math.ceil(span.waiting / setup.batch) : 0;
-    return { job, sent, from, to, memory, before, chapter: target === null ? null : { target }, ...tools, left: Math.max(stale.length + waiting + chapters.length, 1) };
+    return { job, sent, from, to, memory, before, chapter: target === null ? null : { target, merged: next?.merged ?? null }, ...tools, left: Math.max(stale.length + waiting + chapters.length, 1) };
   }
 
   // Earlier than batch when the next request drops messages for want of room.

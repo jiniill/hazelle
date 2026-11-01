@@ -35,7 +35,8 @@ export type Written = {
 // recalled sends source messages while they fit and, like pinned, is user-owned.
 export type MemoryRecord = Written & { state: Change[]; opens: string[]; closes: string[]; recalled?: true };
 
-// Chapters resummarize original messages, never record text or another chapter.
+// Chapters resummarize original messages, except that the oldest merge from their own text once they fill the budget:
+// one call could not hold their messages (design §6.2).
 // Changed record timestamps require user intervention before replacing a chapter.
 export type Chapter = Written & { records: { id: string; at: number }[] };
 
