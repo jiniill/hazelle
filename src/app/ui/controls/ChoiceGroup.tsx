@@ -17,15 +17,17 @@ type Props<T extends string> = {
   empty?: string;
   onChange: (value: T) => void;
   layout?: 'chips' | 'buttons' | 'segmented' | 'list' | 'menu' | 'fit' | 'cards';
+  // fit and menu, near the bottom of the screen.
+  opens?: 'up' | 'down';
 };
 
-export function ChoiceGroup<T extends string>({ label, showLabel = false, options, value, empty, onChange, layout = 'chips' }: Props<T>) {
+export function ChoiceGroup<T extends string>({ label, showLabel = false, options, value, empty, onChange, layout = 'chips', opens = 'down' }: Props<T>) {
   const id = useId();
   const strip = layout === 'fit' && options.length <= STRIP.options && options.map((option) => option.label).join('').length <= STRIP.letters;
   if (strip) return <ChoiceGroup label={label} showLabel={showLabel} options={options} value={value} onChange={onChange} layout="segmented" />;
   if (layout === 'fit' || layout === 'menu') {
     return (
-      <Menu label={label} place="below-end" trigger={(opener) => <ChipButton variant={layout === 'menu' ? 'value' : 'field'} label={options.find((option) => option.value === value)?.label ?? empty ?? value ?? ''} title={label} {...opener} />}>
+      <Menu label={label} place={opens === 'up' ? 'above-end' : 'below-end'} trigger={(opener) => <ChipButton variant={layout === 'menu' ? 'value' : 'field'} label={options.find((option) => option.value === value)?.label ?? empty ?? value ?? ''} title={label} {...opener} />}>
         {options.map((option) => (
           <MenuItem key={option.value} label={option.label} sub={option.sub} checked={option.value === value} onClick={() => onChange(option.value)} />
         ))}

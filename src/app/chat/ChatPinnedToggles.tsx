@@ -25,7 +25,7 @@ export function ChatPinnedToggles({ toggles, onFlip }: Props) {
       trigger={(opener) => <ToolButton icon={ListChecks} label={`토글 ${shown.length}개`} detail={on ? `${on}개 켜짐` : undefined} {...opener} />}
     >
       <Stack gap="related">
-        {shown.map(({ toggle, value }) => <SettingRow key={toggle.key} label={toggle.label} control={<ToggleFlip toggle={toggle} value={value} onFlip={onFlip} />} />)}
+        {shown.map(({ toggle, value }) => <SettingRow key={toggle.key} label={toggle.label} control={<ToggleFlip toggle={toggle} value={value} opens="up" onFlip={onFlip} />} />)}
       </Stack>
     </Menu>
   );
