@@ -53,9 +53,11 @@ describe('the state a 문제 진단 reports', () => {
 });
 
 it('reports a cache break by what proves it, and leaves out one that only expired', () => {
-  const made = (kind: string) => ({ parts: [{ change: 'changed' }], removed: [], written: 5, tail: 1, prefix: false, against: { read: 10, of: 20, broken: { kind } } }) as never;
+  const made = (kind: string, read = 10) => ({ parts: [{ change: 'changed' }], removed: [], written: 5, tail: 1, prefix: false, against: { read, of: 20, broken: { kind } } }) as never;
   const causes = { missing: 0, parts: [{ causes: [{ kind: 'unknown' }, { kind: 'tag', tag: 'CANARY', before: 'CANARY', after: 'CANARY' }] }] } as never;
   expect(cacheCause(made('expired'), null)).toBeNull();
+  expect(cacheCause(made('changed', 18), null)).toBeNull();
+  expect(cacheCause(made('changed', 17), null)).toBe('changed');
   expect(cacheCause(made('changed'), null)).toBe('changed');
   expect(cacheCause(made('changed'), causes)).toBe('tag');
   const facts = cacheFacts(made('changed'), causes);

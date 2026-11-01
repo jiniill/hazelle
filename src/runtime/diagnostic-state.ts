@@ -113,10 +113,13 @@ export function cacheFacts(made: Forecast, diagnosis: CacheDiagnosis | null): Au
   return { broken: made.against?.broken?.kind ?? null, read: made.against?.read ?? null, of: made.against?.of ?? null, written: made.written, tail: made.tail, prefix: made.prefix, changes: tally(changes), causes: tally(causes), missing: diagnosis?.missing ?? null };
 }
 
+// A send that still reads this share of the last call's cache costs next to nothing more, so it goes unreported.
+const CACHE_KEPT = 0.9;
+
 // What names a cache break worth a report. An expired or switched-off cache is the ordinary case and goes unreported.
 export function cacheCause(made: Forecast, diagnosis: CacheDiagnosis | null): CacheCauseWord | null {
   const broken = made.against?.broken?.kind;
-  if (!broken || broken === 'expired' || broken === 'off') return null;
+  if (!broken || broken === 'expired' || broken === 'off' || made.against!.read >= made.against!.of * CACHE_KEPT) return null;
   const cause = diagnosis?.parts.flatMap((part) => part.causes.map(({ kind }) => kind)).find((kind) => kind !== 'unknown');
   return cause ?? broken;
 }
