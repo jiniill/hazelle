@@ -247,13 +247,17 @@ export const setOrder = (store: ObjectStore, sequence: string[]) => store.upsert
 
 export const orderFirst = (store: ObjectStore, ids: string[]) => store.upsert('order', (current) => ({ ids: toFront(current?.ids ?? [], ids) }));
 
-export function pinToggle(store: ObjectStore, key: string, pinned: boolean): Promise<ApiResult<Stored<'settings'>>> {
+function listInSettings(store: ObjectStore, list: 'pinnedToggles' | 'hiddenTools', key: string, listed: boolean): Promise<ApiResult<Stored<'settings'>>> {
   return store.upsert('settings', (current = EMPTY_SETTINGS) => {
-    const keys = (current.pinnedToggles ?? []).filter((each) => each !== key);
-    if (pinned) keys.push(key);
-    return keys.length ? { ...current, pinnedToggles: keys } : without(current, 'pinnedToggles');
+    const keys = (current[list] ?? []).filter((each) => each !== key);
+    if (listed) keys.push(key);
+    return keys.length ? { ...current, [list]: keys } : without(current, list);
   });
 }
+
+export const pinToggle = (store: ObjectStore, key: string, pinned: boolean) => listInSettings(store, 'pinnedToggles', key, pinned);
+
+export const hideTool = (store: ObjectStore, key: string, hidden: boolean) => listInSettings(store, 'hiddenTools', key, hidden);
 
 // What a switch not stored reads as. Switches stored before 반전 모드, the languages and the prompt choice existed
 // hold none of those, and read as these.

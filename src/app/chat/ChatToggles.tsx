@@ -2,13 +2,13 @@ import { Pin } from 'lucide-react';
 import { useState } from 'react';
 import type { Toggle } from '../../model/prompt';
 import { pinToggle } from '../../runtime/characters';
-import { ToggleChoice } from '../common/ToggleChoice';
+import { ToggleFlip } from '../common/ToggleChoice';
 import { ToggleList } from '../common/ToggleList';
 import { useAutosave } from '../common/useAutosave';
 import { useSearch } from '../common/useSearch';
 import { PAGES, RESET, scopeTag } from '../common/words';
 import { useSettings, useStore } from '../session';
-import { Button, Empty, IconButton, Row, Section, SettingRow, SidePanel, Switch, Tabs, TextField } from '../ui';
+import { Button, Empty, IconButton, Row, Section, SettingRow, SidePanel, Tabs, TextField } from '../ui';
 import { shownRows, toggleSaveKey, type ToggleRow, type ToggleSection } from './toggles';
 import type { OpenChat } from './useChat';
 
@@ -56,12 +56,10 @@ export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onRes
       wide={toggle.kind === 'text'}
       action={toggle.kind !== 'text' && <IconButton icon={Pin} size="sm" label="입력창에 고정" pressed={pinned.has(toggle.key)} onClick={() => void pinToggle(store, toggle.key, !pinned.has(toggle.key))} />}
       control={
-        toggle.kind === 'check' ? (
-          <Switch label={toggle.label} checked={value === '1'} onChange={(on) => onFlip(toggle.key, on ? '1' : '0')} />
-        ) : toggle.kind === 'choice' ? (
-          <ToggleChoice label={toggle.label} options={toggle.options} value={value} onChange={(next) => onFlip(toggle.key, next)} />
-        ) : (
+        toggle.kind === 'text' ? (
           <TextToggle toggle={toggle} value={value} owner={toggleOwner} write={onWrite} />
+        ) : (
+          <ToggleFlip toggle={toggle} value={value} onFlip={onFlip} />
         )
       }
     />

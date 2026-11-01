@@ -45,7 +45,8 @@
   overflow-y: visible;
 }
 
-.menu .menu {
+/* A form takes the room above its button, as it does from the composer's own row. */
+.menu .menu:not(.dialog) {
   max-height: var(--menu-inner-max-height);
 }
 

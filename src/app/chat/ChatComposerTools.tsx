@@ -2,23 +2,24 @@ import { ExternalLink, Package } from 'lucide-react';
 import { ToolSetting } from '../common/ToolSetting';
 import { useTool } from '../session';
 import { Button, Menu, Stack, ToolButton, useMenuClose } from '../ui';
-import { pressRuns, type ToolComposer } from './toolMenu';
+import { pressRuns, toolIsOn, type ToolComposer } from './toolMenu';
 
-type Props = { tools: ToolComposer[]; running: string | null; onRun: (module: string, item: string) => void; onStop: () => void; onOpen: (module: string) => void };
+type Props = { tool: ToolComposer; running: string | null; onRun: (module: string, item: string) => void; onStop: () => void; onOpen: (module: string) => void };
 
-// Each //@composer item of the chat's tools: its fields are the module's own, the same in every chat, as 삽화's are.
+// A //@composer item of the chat's tools: its fields are the module's own, the same in every chat, as 삽화's are.
 // running: the module whose input item runs now, whose button stops it.
-export function ChatComposerTools({ tools, running, onRun, onStop, onOpen }: Props) {
-  return tools.map((tool) => running === tool.module
-    ? <ToolButton key={tool.module} icon={Package} label="멈추기" detail={tool.label} busy onClick={onStop} />
-    : <ComposerTool key={tool.module} tool={tool} onRun={(item) => onRun(tool.module, item)} onOpen={() => onOpen(tool.module)} />);
+export function ChatComposerTool({ tool, running, onRun, onStop, onOpen }: Props) {
+  return running === tool.module
+    ? <ToolButton icon={Package} label="멈추기" detail={tool.label} busy onClick={onStop} />
+    : <ComposerTool tool={tool} onRun={(item) => onRun(tool.module, item)} onOpen={() => onOpen(tool.module)} />;
 }
 
 function ComposerTool({ tool, onRun, onOpen }: { tool: ToolComposer; onRun: (item: string) => void; onOpen: () => void }) {
   const settings = useTool(tool.module)?.value.settings ?? {};
-  const on = tool.fields.some((field) => field.type === 'switch' && settings[field.key] === true);
+  const on = toolIsOn(tool, settings);
+  const close = useMenuClose();
   const runs = pressRuns(tool);
-  if (runs) return <ToolButton icon={Package} label={tool.label} phone="icon" onClick={() => onRun(runs.id)} />;
+  if (runs) return <ToolButton icon={Package} label={tool.label} phone="icon" onClick={() => { close(); onRun(runs.id); }} />;
   return (
     <Menu
       kind="dialog"

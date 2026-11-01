@@ -10,7 +10,7 @@ import { SETTINGS_ID } from '../model/settings';
 import { randomBytes } from '../vault/aead';
 import { sealFile } from '../vault/files';
 import { api, holdAccount } from './api';
-import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggle, setTranslate, translateSwitches } from './characters';
+import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, hideTool, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggle, setTranslate, translateSwitches } from './characters';
 import { markDeleted, purgeExpired, purgeNow } from './removal';
 import { appendUserMessage, removeChat, restoreChat, startChat } from './chat-log';
 import { Files } from './files';
@@ -342,6 +342,16 @@ describe('setToggle', () => {
     expect([store.get('character', id)?.value.toggles, store.get('settings', SETTINGS_ID)?.value.toggles]).toEqual([{ sims: '1', mode: '2' }, { sims: '0' }]);
     await resetToggles(store, id);
     expect(store.get('character', id)?.value.toggles).toBeUndefined();
+  });
+});
+
+describe('hideTool', () => {
+  it('lists a hidden tool and drops the field when none is left', async () => {
+    const { store } = await server.account();
+    await hideTool(store, 'note', true);
+    expect(store.get('settings', SETTINGS_ID)?.value.hiddenTools).toEqual(['note']);
+    await hideTool(store, 'note', false);
+    expect(store.get('settings', SETTINGS_ID)?.value).not.toHaveProperty('hiddenTools');
   });
 });
 

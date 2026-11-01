@@ -21,8 +21,10 @@ type Props = {
   onEditCharacter: (() => void) | undefined;
 };
 
+export const translateOn = (translate: Props['translate']) => [translate.replies && '응답 번역', translate.input && '내 메시지 번역', translate.reverse && '반전 모드'].filter(Boolean).join(', ');
+
 export function ChatTranslate({ translate, translation, card, note, onChange, onOwnChange, onEditPrompt, onEditCharacter }: Props) {
-  const on = [translate.replies && '응답 번역', translate.input && '내 메시지 번역', translate.reverse && '반전 모드'].filter(Boolean).join(', ');
+  const on = translateOn(translate);
   return (
     <Menu
       kind="dialog"

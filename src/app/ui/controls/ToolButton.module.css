@@ -11,10 +11,19 @@
 }
 
 .tool:hover,
-.tool[aria-expanded='true'],
-.tool[aria-pressed='true'] {
+.tool[aria-expanded='true'] {
   background: var(--color-surface-hover);
   color: var(--color-text);
+}
+
+.shelf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.end {
+  margin-inline-start: auto;
 }
 
 .spinner {

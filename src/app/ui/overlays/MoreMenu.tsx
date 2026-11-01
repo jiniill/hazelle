@@ -6,7 +6,7 @@ import { Menu, useMenuHandle, type MenuHandle } from './Menu';
 
 // Use whole-item actions here. dot marks pending attention; handle supports a second opener;
 // place chooses the roomier story side for message tools.
-export function MoreMenu({ of, dot, handle, place = 'below-end', children }: { of: string; dot?: boolean; handle?: MenuHandle; place?: 'below-end' | 'end'; children: ReactNode }) {
+export function MoreMenu({ of, dot, handle, kind, place = 'below-end', children }: { of: string; dot?: boolean; handle?: MenuHandle; kind?: 'menu' | 'dialog'; place?: 'below-end' | 'end' | 'above-end'; children: ReactNode }) {
   const own = useMenuHandle();
   const menu = handle ?? own;
   const slot = useContext(MenuSlot);
@@ -19,7 +19,7 @@ export function MoreMenu({ of, dot, handle, place = 'below-end', children }: { o
   }, [slot, menu]);
   const label = `${of} 메뉴`;
   return (
-    <Menu place={place} label={label} handle={menu} trigger={(opener) => <IconButton icon={MoreHorizontal} label={label} size="sm" dot={dot} {...opener} />}>
+    <Menu kind={kind} place={place} label={label} handle={menu} trigger={(opener) => <IconButton icon={MoreHorizontal} label={label} size="sm" dot={dot} {...opener} />}>
       {children}
     </Menu>
   );

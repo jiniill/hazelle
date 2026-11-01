@@ -37,6 +37,8 @@ export type Settings = {
   toggles?: ToggleValues;
   // 입력창에 고정: toggle keys shown beside the composer of every chat whose prompt, card or modules declare them.
   pinnedToggles?: string[];
+  // Composer tools moved behind 더보기: the app's own keys (ChatComposer) and module ids. Absent: all on the row.
+  hiddenTools?: string[];
   translate?: TranslateSwitches;
   illustrate?: IllustrateSwitches;
   profile?: string;
