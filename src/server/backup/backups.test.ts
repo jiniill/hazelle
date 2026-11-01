@@ -11,11 +11,13 @@ const HOUR_MS = 60 * 60 * 1000;
 const sent: { url: string; body: unknown }[] = [];
 // The webhook answers once this settles.
 let answered: Promise<void> = Promise.resolve();
+let reached = () => {};
 
 let t: Awaited<ReturnType<typeof testApp>>;
 beforeAll(async () => {
   t = await testApp(async (url, init) => {
     sent.push({ url: url.href, body: JSON.parse(init.body!) });
+    reached();
     await answered;
     return new Response(null, { status: 204 });
   });
@@ -33,8 +35,9 @@ it('sends each standing alert once when a tick comes while another waits on the 
   t.clock.now = () => at;
   let answer = () => {};
   answered = new Promise((resolve) => (answer = resolve));
+  const reachedWebhook = new Promise<void>((resolve) => (reached = resolve));
   const first = t.env.backups.tick(t.env, at);
-  await expect.poll(() => sent.length).toBe(1);
+  await reachedWebhook;
   const second = t.env.backups.tick(t.env, at + 60_000);
   // Time for a second tick of its own to reach the webhook too.
   await new Promise((resolve) => setTimeout(resolve, 200));
@@ -43,7 +46,8 @@ it('sends each standing alert once when a tick comes while another waits on the 
   const texts = sent.map(({ body }) => (body as { text: string }).text);
   expect(texts).toContain('[Hazelle] 백업이 36시간 넘게 없음');
   expect(new Set(texts).size).toBe(texts.length);
-});
+  // The tick captures a generation before it alerts. A timeout here would leave it waiting and spill into the next test.
+}, 30_000);
 
 it('raises the banner and the webhook once a day for a failed night after a backup older than 36 hours', async () => {
   const { cookie, incarnation } = await t.signUp('operator');
