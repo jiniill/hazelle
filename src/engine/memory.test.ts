@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Chapter, Memory, MemoryRecord } from '../model/memory';
-import { fingerprint, memoryBefore, memoryBudget, nextChapters, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, standing, windowStart, type ChatRead } from './memory';
+import { fingerprint, memoryBefore, memoryBudget, nextChapters, nextMerge, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, standing, windowStart, type ChatRead } from './memory';
 
 const span = ['Luna: "I will  wait\nfor you until spring."', 'jin leaves the lighthouse.', 'Spring comes. Luna lights the lamp.'];
 const record = (to: number, lines: { speaker: string; text: string }[] = []) => ({
@@ -151,29 +151,29 @@ describe('chapters and recall in what memory sends', () => {
     expect(tight.text).toContain('They arrive.');
   });
 
-  it('merges up to four of the oldest chapters side by side once chapters fill the budget, reading their texts, and past one the user holds', () => {
+  it('merges up to four of the oldest chapters side by side once chapters fill the saved setting, reading their texts, and past one the user holds', () => {
     const records = texts.map((_, index) => record(`r${index}`, [index], `Event ${index} happens.`));
     const told = (over: Partial<Chapter> = {}, pinned = false) =>
       memoryOf(
         pinned ? records.map((each) => (each.id === 'r1' ? { ...each, pinned: true as const } : each)) : records,
         records.map((each, index) => chapter(`c${index}`, [each], `Chapter ${index}. `.repeat(20), index === 1 ? over : {})),
       );
-    const tokens = texts.map(count);
-    const full = (memory: Memory) => {
+    const tokensFor = (memory: Memory) => {
       const { fixed, free } = standing(memory, read, 10, count);
-      return standing(memory, read, fixed + free, count);
+      return fixed + free;
     };
+    const full = (memory: Memory) => standing(memory, read, tokensFor(memory), count);
     const plain = told();
-    const [merge] = nextChapters(plain, full(plain), read.shown, tokens, 1, new Set());
+    const merge = nextMerge(plain, full(plain), read.shown, tokensFor(plain), new Set());
     expect(merge).toMatchObject({ from: 0, to: 4, records: ['r0', 'r1', 'r2', 'r3'], merged: plain.chapters.slice(0, 4).map(recordText) });
     expect(merge!.target).toBe(Math.ceil(['c0', 'c1', 'c2', 'c3'].reduce((sum, id) => sum + full(plain).costs.get(id)!, 0) / 4));
 
     const edited = told({ edited: true });
-    expect(nextChapters(edited, full(edited), read.shown, tokens, 1, new Set())[0]).toMatchObject({ from: 2, to: 6 });
+    expect(nextMerge(edited, full(edited), read.shown, tokensFor(edited), new Set())).toMatchObject({ from: 2, to: 6 });
     const pinning = told({}, true);
-    expect(nextChapters(pinning, full(pinning), read.shown, tokens, 1, new Set())[0]).toMatchObject({ from: 2, to: 6 });
-    expect(nextChapters(plain, full(plain), read.shown, tokens, 1, new Set(['r1']))[0]).toMatchObject({ from: 2, to: 6 });
-    expect(nextChapters(plain, standing(plain, read, 100_000, count), read.shown, tokens, 1, new Set())).toEqual([]);
+    expect(nextMerge(pinning, full(pinning), read.shown, tokensFor(pinning), new Set())).toMatchObject({ from: 2, to: 6 });
+    expect(nextMerge(plain, full(plain), read.shown, tokensFor(plain), new Set(['r1']))).toMatchObject({ from: 2, to: 6 });
+    expect(nextMerge(plain, full(plain), read.shown, 2 * tokensFor(plain), new Set())).toBeNull();
   });
 
   it('takes the oldest run of loose records against the budget the request sends under, within its read cap, and counts the chapters of the pass', () => {

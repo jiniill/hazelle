@@ -397,6 +397,24 @@ describe('chapters', () => {
       expect(chatMemory(session.store, chat).records.map(({ id }) => id)).toEqual(['r0', 'r1', 'r2']);
     }));
 
+  it('merges no chapters under a budget a small model shrinks, since the merge outlives the model', () =>
+    server.withSession(async (session) => {
+      const made = (ids: string[]) =>
+        ids.map((message, index): Chapter => ({ id: `c${index}`, sources: [{ message, version: message }], print: fingerprint([{ role: 'user', text: said[index]! }]), when: null, where: null, who: [], what: `Chapter ${index}. `.repeat(10), lines: [], outcome: '', receipt: null, at: 0, records: [{ id: `r${index}`, at: 0 }] }));
+      const { chat } = await recorded(session, { budget: 100_000 }, made);
+      const [small, large] = await Promise.all([session.store.create('connection', { ...testConnection, starred: [{ ...testModel, contextLength: 120 }] }), session.store.create('connection', testConnection)]);
+      if (!small.ok || !large.ok) throw new Error('connection');
+      await setDefaultModel(session.store, 'main', { connection: small.data.id, model: testModel.id });
+      await setDefaultModel(session.store, 'aux', { connection: large.data.id, model: testModel.id });
+      const log = stubRelay(inTurn([saying(chapterAnswer)]));
+      const planned = vi.spyOn(session.tokens, 'snapshot');
+      session.memory.check(chat);
+      await vi.waitFor(() => expect(planned.mock.calls.some((args) => args[3] === 'memory')).toBe(true));
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(log).toEqual([]);
+      expect(chatMemory(session.store, chat).chapters).toHaveLength(3);
+    }));
+
   it('limits chapter source spans by the memory route calibrated allowance, not its native window', () =>
     server.withSession(async (session) => {
       const { chat } = await recorded(session, {});

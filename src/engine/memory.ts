@@ -267,9 +267,17 @@ type NextChapter = { from: number; to: number; records: string[]; target: number
 
 const MOST_MERGED = 4;
 
-// The oldest run of chapters side by side in the chat that automatic work may still take. A pinned or put-in record stops
-// the run: the commit refuses one, and a refused call would be paid for again on every check.
-function nextMerge(memory: Memory, held: Standing, places: ReadonlyMap<string, number>, failed: ReadonlySet<string>): NextChapter | null {
+// Once chapters leave no room, the oldest run side by side in the chat that automatic work may still take. Without this no
+// chapter ever starts again, and new records push out whole chapters (design §6.2).
+// Against the saved setting, not the budget this request sends under, and with no room taken for recalled messages: both
+// come and go, and a merge is not undone when they do. A small model keeps the oldest chapters out instead (user, 2026-11-01).
+// A pinned or put-in record stops the run: the commit refuses one, and a refused call would be paid for on every check.
+export function nextMerge(memory: Memory, held: Standing, shown: Source[], setting: number, failed: ReadonlySet<string>): NextChapter | null {
+  const room = setting - held.fixed;
+  const standingIn = ({ id, pinned }: Chapter) => !pinned && (held.status.get(id) === 'sent' || held.status.get(id) === 'over');
+  const spent = memory.chapters.filter(standingIn).reduce((sum, { id }) => sum + held.costs.get(id)!, 0);
+  if (room <= 0 || spent < room * HIGH) return null;
+  const places = placesOf(shown);
   const records = new Map(memory.records.map((record) => [record.id, record]));
   let run: { chapter: Chapter; from: number; to: number }[] = [];
   const merge = (): NextChapter => ({
@@ -280,8 +288,7 @@ function nextMerge(memory: Memory, held: Standing, places: ReadonlyMap<string, n
     merged: run.map(({ chapter }) => recordText(chapter)),
   });
   for (const chapter of memory.chapters) {
-    const status = held.status.get(chapter.id);
-    const free = (status === 'sent' || status === 'over') && !owned(chapter) && chapter.records.every(({ id }) => !failed.has(id) && !owned(records.get(id)!));
+    const free = standingIn(chapter) && !owned(chapter) && chapter.records.every(({ id }) => !failed.has(id) && !owned(records.get(id)!));
     if (!free) {
       if (run.length >= 2) return merge();
       run = [];
@@ -299,8 +306,6 @@ function nextMerge(memory: Memory, held: Standing, places: ReadonlyMap<string, n
   return run.length >= 2 ? merge() : null;
 }
 
-// Once chapters leave no room, merge the oldest ones first: a chapter counts against the room even when it is over the
-// budget, so without this no chapter ever starts again and new records push out whole chapters (design §6.2).
 // Plan oldest-first runs of >=2 fresh automatic records outside chapters/failed chapters. Skip oversized records.
 // Against the budget the request sends under, clamp included: measured against the saved setting, a small model leaves the
 // oldest records out of every request while no chapter ever starts (design §6.2).
@@ -313,10 +318,7 @@ export function nextChapters(memory: Memory, held: Standing, shown: Source[], to
     else if (runs.at(-1)!.length) runs.push([]);
   }
   const loose = runs.flat().reduce((sum, { id }) => sum + held.costs.get(id)!, 0);
-  const whole = recallRoom(held.tokens.budget - held.fixed, held.recalls).room;
-  const room = whole - (held.free - loose);
-  const merge = whole > 0 && whole - room >= whole * HIGH ? nextMerge(memory, held, places, failed) : null;
-  if (merge) return [merge];
+  const room = recallRoom(held.tokens.budget - held.fixed, held.recalls).room - (held.free - loose);
   if (room <= 0 || loose <= room * HIGH) return [];
   const made: NextChapter[] = [];
   let left = loose;

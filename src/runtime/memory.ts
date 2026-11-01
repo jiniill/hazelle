@@ -6,7 +6,7 @@ import { chatMemory, memoryOwner, memorySetup, sourcesOf, storedMemory } from '.
 import { chatSent, type ChatSent } from './memory-view';
 import { MemorySchedule, type MemoryCheck } from './memory-schedule';
 import type { ModelSettings } from '../connectors/settings';
-import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, staleness, threadLabel, type Drafted, type Invalid, type Scene } from '../engine/memory';
+import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextMerge, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, staleness, threadLabel, type Drafted, type Invalid, type Scene } from '../engine/memory';
 import type { RanAway } from '../engine/pipeline';
 import { fold, shown, type Chat, type Message, type Receipt } from '../model/chat';
 import type { Stored } from '../model/kinds';
@@ -467,7 +467,9 @@ export class Rememberer {
     if (!('kind' in tools) && !again && !span && this.schedule.includesNew(chat) && await reaches()) {
       const cap = await readCap(tools);
       if (typeof cap !== 'number') return cap;
-      chapters = nextChapters(memory, held, sent.read.shown, sent.tokens, cap, this.unchaptered.get(chat) ?? new Set());
+      const failed = this.unchaptered.get(chat) ?? new Set<string>();
+      const merge = nextMerge(memory, held, sent.read.shown, setup.budget, failed);
+      chapters = merge ? [merge] : nextChapters(memory, held, sent.read.shown, sent.tokens, cap, failed);
     }
     const next = chapters[0];
     if (!again && !span && !next) return null;
