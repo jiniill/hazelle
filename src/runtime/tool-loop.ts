@@ -48,9 +48,10 @@ export async function toolLoop<T extends Sent | { kind: string }>({ tools, round
     for (const call of answer.calls) {
       const tool = tools.find(({ def }) => def.name === call.name);
       const args = tool && argsOf(call.arguments);
-      let result = 'Not run: there is no such tool.';
-      if (tool && !args) result = 'Not run: the arguments are not a JSON object.';
-      else if (tool && args) {
+      let result: string;
+      if (!tool) result = 'Not run: there is no such tool.';
+      else if (!args) result = 'Not run: the arguments are not a JSON object.';
+      else {
         result = await tool.run(args, before);
         before = '';
       }

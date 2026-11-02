@@ -85,7 +85,7 @@ export function translate(deps: Deps, input: TranslateInput, target: Translation
 
 // A translation cut at its length keeps what it wrote, and its receipt says it was cut, unless the cut took a protected
 // span (protected-lost).
-export async function translateWith(
+async function translateWith(
   { store, credentials, log, tokens }: Deps,
   { prompt, route, notes }: TranslateWith,
   { scope, take, translations, request, language, lane }: TranslateInput,

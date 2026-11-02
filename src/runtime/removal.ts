@@ -9,6 +9,13 @@ import { cutShare } from './share-link';
 import type { ObjectRow, ObjectStore, Pin } from './store';
 
 const KIND_NAMES = Object.keys(KINDS) as Kind[];
+const PARENT_KINDS = new Set(KIND_NAMES.flatMap(parentKinds));
+const depthOf = (kind: Kind): number => {
+  const { owner }: Rule = KINDS[kind];
+  const owners = owner ? [owner.kind] : parentKinds(kind);
+  return owners.length === 0 ? 0 : Math.max(...owners.map(depthOf)) + 1;
+};
+const DEPTHS = new Map(KIND_NAMES.map((kind) => [kind, depthOf(kind)]));
 
 // Remove children before owners, in sequential depth rounds; parallelize only within a round.
 // Interrupted removal leaves owners retryable. Keep shared files until runtime/files sweeps them.
@@ -19,8 +26,8 @@ export async function planRemoval(store: ObjectStore, root: { kind: Kind; id: st
   const rounds: ObjectRow[][] = [];
   const visit = async (object: ObjectRow): Promise<ApiResult<number>> => {
     const children: ObjectRow[] = [];
-    const failed = KIND_NAMES.some((kind) => parentKinds(kind).includes(object.kind as Kind))
-      ? await store.scan({ parent: object.id, metadata: true }, (row) => { children.push(row); }, pin)
+    const failed = PARENT_KINDS.has(object.kind as Kind)
+      ?await store.scan({ parent: object.id, metadata: true }, (row) => { children.push(row); }, pin)
       : null;
     if (failed) return failed;
     for (const kind of KIND_NAMES) {
@@ -53,11 +60,7 @@ export function orderOwned<T extends { kind: Kind }>(objects: T[]): T[] {
   return [...objects].sort((a, b) => ownershipDepth(b.kind) - ownershipDepth(a.kind));
 }
 
-export function ownershipDepth(kind: Kind): number {
-  const { owner }: Rule = KINDS[kind];
-  const owners = owner ? [owner.kind] : parentKinds(kind);
-  return owners.length === 0 ? 0 : Math.max(...owners.map(ownershipDepth)) + 1;
-}
+export const ownershipDepth = (kind: Kind): number => DEPTHS.get(kind)!;
 
 async function removeOn(store: ObjectStore, root: { kind: Kind; id: string }, progress: (done: number, total: number) => void, pin: Pin): Promise<ApiResult<null>> {
   for (let attempt = 0; attempt < 3; attempt++) {
