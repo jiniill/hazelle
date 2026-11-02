@@ -5,7 +5,7 @@ import { probeRoot } from '../ui/probe';
 import { useMessageEdit } from './useMessageEdit';
 
 vi.mock('../session', () => ({ useSession: () => ({}) }));
-vi.mock('../toast', () => ({ useToast: () => ({ failed: vi.fn(), undoable: vi.fn() }) }));
+vi.mock('../toast', () => ({ useToast: () => ({ failed: vi.fn(), settled: vi.fn(), undoable: vi.fn() }) }));
 
 afterEach(() => {
   vi.unstubAllGlobals();

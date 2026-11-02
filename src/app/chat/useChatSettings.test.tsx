@@ -16,7 +16,7 @@ const store = {
   upsert: vi.fn(async () => ({ ok: true })),
 };
 vi.mock('../session', () => ({ useSession: () => ({ store }) }));
-vi.mock('../toast', () => ({ useToast: () => ({ failed: vi.fn() }) }));
+vi.mock('../toast', () => ({ useToast: () => ({ failed: vi.fn(), settled: vi.fn() }) }));
 
 beforeEach(() => {
   stored = { title: 'Saved', character: 'owner', models: {} };
