@@ -11,6 +11,7 @@ import type { ApiFailure, ApiResult } from './api';
 import { imageOnly, setDefaultModel, type Route } from './assignment';
 import { modelProfile, ownProfile } from './profiles';
 import type { CatalogFailure } from './catalog';
+import type { GenerateInput } from './generate';
 import type { MetersFailure } from './meters';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
@@ -181,6 +182,13 @@ export const setSharedRetries = (store: ObjectStore, retries: number) =>
 // A model that refused the plugins' tools is sent none from then on, every entry of it on the connection.
 export const refuseTools = (store: ObjectStore, { connection, model }: Pick<Route, 'connection' | 'model'>) =>
   store.update('connection', connection.id, (current) => ({ ...current, starred: current.starred.map((each) => (each.id === model.id ? { ...each, tools: false } : each)) }));
+
+export const routeFields = (store: ObjectStore, { connection, model }: Route, settings: ModelSettings): Pick<GenerateInput, 'connection' | 'model' | 'settings' | 'retries'> => ({
+  connection: connection.value,
+  model,
+  settings,
+  retries: retriesOf(store, connection.value, settings),
+});
 
 export const removeConnection = (store: ObjectStore, id: string) => store.take('connection', id);
 

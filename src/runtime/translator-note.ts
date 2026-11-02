@@ -1,6 +1,6 @@
 import { translatorNoteRequest } from '../engine/translator-note';
 import { translateSwitches, translatorNotes } from './characters';
-import { retriesOf } from './connections';
+import { routeFields } from './connections';
 import { gather, generate, receiptOf } from './generate';
 import { modelProfile } from './profiles';
 import type { Session } from './session';
@@ -22,10 +22,7 @@ export async function draftTranslatorNote({ store, credentials, log, tokens }: P
   const answer = await generate({
     credentials,
     log,
-    connection: route.connection.value,
-    model: route.model,
-    settings,
-    retries: retriesOf(store, route.connection.value, settings),
+    ...routeFields(store, route, settings),
     messages,
     call: await newCall({ store, tokens }, route, target),
     signal,
