@@ -39,7 +39,7 @@ describe('modules', () => {
       await startChat(store, chat, { title: null, character: character.data.id, models: {} }, projectGreetings(card.greetings, [crypto.randomUUID()], 0));
       const value = () => store.get('chat', chat)!.value;
       const shown = () => evaluateChat(session, chat, value(), fold(store.children('entry', chat)));
-      const toggles = () => togglesOf(store, value(), chatPrompt(store, value())).declared.map(({ key }) => key);
+      const toggles = () => togglesOf(store, value(), chatPrompt(store, value()), packsOf(store, value())).declared.map(({ key }) => key);
       expect((await shown()).texts).toEqual(['the LAMP']);
 
       await setCharacterModule(store, character.data.id, module, true);

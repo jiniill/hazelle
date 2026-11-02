@@ -118,7 +118,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
   const persona = chatPersona(store, chat);
   const route = chatModel(store, chat, 'main');
   const aux = chatModel(store, chat, 'aux');
-  const toggles = togglesOf(store, chat, prompt);
+  const toggles = togglesOf(store, chat, prompt, packs);
   const loaded = id !== null && store.scopeState(id) === 'loaded';
   return {
     card,
@@ -166,12 +166,12 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
 export type ToggleSource = { from: 'prompt' | 'card' | 'module'; id: string; name: string; lines: ToggleLine[] };
 export type ChatToggleSet = { declared: Toggle[]; sources: ToggleSource[]; value: (key: string) => string | null };
 
-export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoice): ChatToggleSet {
+export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoice, packs: ReturnType<typeof packsOf>): ChatToggleSet {
   const character = chat.character === null ? null : (store.get('character', chat.character)?.value ?? null);
   const sources: ToggleSource[] = [
     ...(prompt.kind === 'prompt' ? [{ from: 'prompt' as const, id: prompt.prompt.id, name: prompt.prompt.value.name, lines: prompt.prompt.value.toggles }] : []),
     // packsOf holds only a character or module that is there.
-    ...packsOf(store, chat).map(({ id, pack, module }) => ({
+    ...packs.map(({ id, pack, module }) => ({
       from: module ? ('module' as const) : ('card' as const),
       id,
       name: module ? store.get('module', id)!.value.name : character!.card.name,
@@ -185,7 +185,7 @@ export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoi
 type InspectedToggle = { declaration: Toggle; value: string | null; sources: ToggleSource[] };
 
 export function inspectToggles(store: Reader['store'], chat: Chat): InspectedToggle[] {
-  const toggles = togglesOf(store, chat, chatPrompt(store, chat));
+  const toggles = togglesOf(store, chat, chatPrompt(store, chat), packsOf(store, chat));
   return toggles.declared.map((declaration) => ({
     declaration,
     value: toggles.value(declaration.key),

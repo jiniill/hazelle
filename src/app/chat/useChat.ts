@@ -80,11 +80,12 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     void session.tools.warm(id);
     session.scriptInteractions.claims(id);
   }, [id, tools]);
-  const toggles = toggleRows(togglesOf(store, chat, prompt));
+  const packs = packsOf(store, chat);
+  const toggles = toggleRows(togglesOf(store, chat, prompt, packs));
   const card = shelf?.character.card ?? null;
   const promptOut = keepsPromptOut(card, chat);
   // Any trigger may answer a press: a Lua one by a function of the button's name, a block one by its own name.
-  const scripted = triggersOf(packsOf(store, chat)).length > 0;
+  const scripted = triggersOf(packs).length > 0;
   // Subscribed for featuresOf, chatTranslate and usageShownOf, which read the settings and the chat's prompt from the store.
   useSettings();
   useStored('prompt', prompt.kind === 'prompt' ? prompt.prompt.id : null);
