@@ -8,7 +8,7 @@ import { byConnection, starredModels } from './RolePicker';
 import { profileLine } from './settingWords';
 import { useSearch } from './useSearch';
 import { MODEL_SETTINGS, noStarred } from './words';
-import { useSummaries, useConnections, useSettings, useStore } from '../session';
+import { useCaptured, useSummaries, useConnections, useSettings } from '../session';
 import { navigate } from '../shell/router';
 import { ChipButton, Divider, Empty, Icon, Menu, MenuHeading, MenuItem, type MenuHandle } from '../ui';
 
@@ -35,13 +35,12 @@ export function ModelMenu({ route, onPick, handle }: Pick<Props, 'onPick' | 'han
 }
 
 function ProfileItem({ current }: { current: ModelRef }) {
-  const store = useStore();
   const connections = useConnections();
   const settings = useSettings();
   const connection = connections.find(({ id }) => id === current.connection);
   const model = connection && entryOf(connection.value, current.model);
-  if (!model) return null;
-  const choice = modelProfile(store, model);
+  const choice = useCaptured((store) => (model ? modelProfile(store, model) : null), [model]);
+  if (!model || !choice) return null;
   return <MenuItem tone="muted" label={MODEL_SETTINGS} sub={choice.kind === 'profile' ? profileLine(choice, settings.profile) : '없음'} onClick={() => navigate({ kind: 'model', ...current })} />;
 }
 

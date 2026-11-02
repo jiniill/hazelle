@@ -5,7 +5,7 @@ import type { IllustrateSwitches, Rung } from '../../model/illustration';
 import type { IllustrateSetup } from '../../runtime/characters';
 import { drawingModels, type ImageRoute, type sceneWriterOf } from '../../runtime/illustrate';
 import { illustrationPrompt } from '../../runtime/prompts';
-import { useConnections, useSession } from '../session';
+import { useCaptured, useConnections } from '../session';
 import { navigate } from '../shell/router';
 import { Button, ChipButton, Menu, MenuHeading, MenuItem, NumberInput, SettingGroup, SettingRow, Switch } from '../ui';
 import { ACTS, addOf, newOf } from './acts';
@@ -29,9 +29,8 @@ type Props = {
 
 // Share these rows between chat dialog and global settings; details count only explicitly set values.
 export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange, onEditPrompt, children }: Props) {
-  const { store } = useSession();
   const routes = drawingModels(useConnections());
-  const prompt = illustrationPrompt(store, illustrate.prompt);
+  const prompt = useCaptured((store) => illustrationPrompt(store, illustrate.prompt), [illustrate.prompt]);
   const set = [illustrate.ladder.length > 0, illustrate.pov, illustrate.comic, illustrate.spend, illustrate.model !== undefined, illustrate.prompt !== undefined].filter(Boolean).length;
   return (
     <>

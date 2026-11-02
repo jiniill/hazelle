@@ -4,7 +4,7 @@ import type { TranslateSwitches } from '../../model/chat';
 import type { TranslateSetup } from '../../runtime/characters';
 import { translationPrompt } from '../../runtime/prompts';
 import type { translatorOf } from '../../runtime/translate';
-import { useSession } from '../session';
+import { useCaptured } from '../session';
 import { SettingGroup, SettingRow, Switch } from '../ui';
 import { DetailFold } from './DetailFold';
 import { describeTranslateFailure } from './failure';
@@ -26,8 +26,7 @@ type Props = {
 
 // Shared by chat dialog and global settings; fold uncommon settings and count explicit values.
 export function TranslateRows({ translate, translation, card, note, opens, onChange, onEditPrompt, children }: Props) {
-  const { store } = useSession();
-  const prompt = translationPrompt(store, translate.prompt);
+  const prompt = useCaptured((store) => translationPrompt(store, translate.prompt), [translate.prompt]);
   const set = [translate.original, translate.reverse, translate.prompt !== undefined].filter(Boolean).length;
   return (
     <>
