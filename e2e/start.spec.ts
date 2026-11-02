@@ -88,14 +88,27 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   await expect(page.getByRole('heading', { level: 1, name: '내 API 키로 바로 시작하는 AI 캐릭터 챗' })).toHaveCount(0);
 });
 
-test('one wheel notch walks on to the next stop, and the door looks the same on any screen', async ({ page }) => {
+test('one gesture moves one stop at once, and the door looks the same on any screen', async ({ page }) => {
   const scrollTop = () => page.evaluate<number>('Math.round(scrollY)');
   const centred = (id: string) => page.evaluate<number>(`(() => { const { top, height } = document.getElementById('${id}').getBoundingClientRect(); return Math.round(top + scrollY + (height - innerHeight) / 2); })()`);
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.mouse.move(400, 300);
-  await page.mouse.wheel(0, 100);
-  await expect.poll(scrollTop, { timeout: 5000 }).toBe(await centred('example'));
+  const example = await centred('example');
+
+  // A flick and its inertia: one stop, not several.
+  for (const delta of [120, 90, 60, 40, 25, 15, 8, 4]) {
+    await page.mouse.wheel(0, delta);
+    await page.waitForTimeout(16);
+  }
+  await expect.poll(scrollTop, { timeout: 5000 }).toBe(example);
+  await page.waitForTimeout(400);
+  expect(await scrollTop()).toBe(example);
+
+  await page.keyboard.press('ArrowUp');
+  await expect.poll(scrollTop, { timeout: 5000 }).toBe(0);
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(scrollTop, { timeout: 5000 }).toBe(example);
 
   // The trial's panel must not hold the page: a notch over its fields still leaves the room.
   await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
@@ -103,6 +116,28 @@ test('one wheel notch walks on to the next stop, and the door looks the same on 
   await page.getByLabel(/API 키$/).hover();
   await page.mouse.wheel(0, 100);
   await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(room + 500);
+
+  // A list inside the panel scrolls first, and a flick that runs it to its end stays in the room; only a fresh notch leaves.
+  await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
+  const list = page.getByLabel(/API 키$/);
+  await page.evaluate(`(() => {
+    let scroller = document.querySelector('#trial input').parentElement;
+    while (!/auto|scroll/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+    const tall = scroller.appendChild(document.createElement('div'));
+    tall.style.height = '300px';
+    scroller.dataset.testScroller = '';
+  })()`);
+  await list.hover();
+  const inRoom = await scrollTop();
+  for (let flick = 0; flick < 30; flick++) {
+    await page.mouse.wheel(0, 60);
+    await page.waitForTimeout(16);
+  }
+  await page.waitForTimeout(300);
+  expect(await scrollTop()).toBe(inRoom);
+  expect(await page.evaluate<number>(`document.querySelector('[data-test-scroller]').scrollTop`)).toBeGreaterThan(0);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(inRoom + 500);
 
   const doorScale = async (width: number, height: number) => {
     await page.setViewportSize({ width, height });

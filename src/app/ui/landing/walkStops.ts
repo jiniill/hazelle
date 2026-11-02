@@ -16,9 +16,10 @@ const readStops = () => {
     const { top, height } = node.getBoundingClientRect();
     const at = top + scrollY;
     const spare = height - innerHeight;
-    // A beat that fits stands in the middle of the screen; a longer one is read freely from end to end.
     if (node.dataset['walkStop'] === 'top') return { from: within(at), to: within(at) };
-    return spare > 0 ? { from: within(at), to: within(at + spare) } : { from: within(at + spare / 2), to: within(at + spare / 2) };
+    const { paddingTop, paddingBottom } = getComputedStyle(node);
+    // A beat whose words fit stands in the middle of the screen, even if its padding falls off it, so no move is a nudge of a few pixels; a longer one is read in moves from end to end.
+    return spare > parseFloat(paddingTop) + parseFloat(paddingBottom) ? { from: within(at), to: within(at + spare) } : { from: within(at + spare / 2), to: within(at + spare / 2) };
   });
 };
 
@@ -42,94 +43,134 @@ export const paceOfPage = (): Pace => {
   return (tuned) => along(knots, tuned);
 };
 
-const SETTLED_AFTER = 120;
-const GLIDE_PER_PIXEL = 1.2;
-const GLIDE_SHORTEST = 900;
-const GLIDE_LONGEST = 2400;
-const SCROLL_KEYS = new Set(['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End']);
-const typing = () => document.activeElement?.matches('input, textarea, select') ?? false;
+const READ_STEP = 0.8;
 
-// When the visitor's own scroll comes to rest between stops, the walk carries on to the next stop that way.
-// Nothing is intercepted: the browser's scroll stays whole, and a scroll that is not the visitor's (find in page, the scrollbar, a focus) is left where it lands.
+// Where one move can end: each stop, and the screens of a beat longer than the screen, so all of it can be read.
+const restsOfPage = () =>
+  readStops().flatMap(({ from, to }) => {
+    const moves = Math.ceil((to - from) / (innerHeight * READ_STEP));
+    return Array.from({ length: moves + 1 }, (_, move) => from + (moves ? (to - from) * (move / moves) : 0));
+  });
+
+const restAhead = (way: number) => {
+  const at = scrollY;
+  const rests = restsOfPage();
+  return way > 0 ? rests.find((rest) => rest > at + 1) : rests.findLast((rest) => rest < at - 1);
+};
+
+const scrollerAhead = (from: EventTarget | null, way: number) => {
+  for (let node = from instanceof Element ? from : null; node && node !== document.body; node = node.parentElement) {
+    if (node.scrollHeight <= node.clientHeight + 1) continue;
+    const { overflowY } = getComputedStyle(node);
+    if (overflowY !== 'auto' && overflowY !== 'scroll') continue;
+    if (way > 0 ? node.scrollTop + node.clientHeight < node.scrollHeight - 1 : node.scrollTop > 1) return true;
+  }
+  return false;
+};
+
+const GLIDE_PER_PIXEL = 0.9;
+const GLIDE_SHORTEST = 800;
+const GLIDE_LONGEST = 1600;
+const GLIDE_ATTACK = 0.75;
+// Longer than the gap between a flick's inertial events, shorter than the pause before another notch.
+const GESTURE_GAP = 160;
+const SWIPE = 24;
+const KEY_WAYS: Record<string, number> = { ArrowDown: 1, PageDown: 1, End: 1, ArrowUp: -1, PageUp: -1, Home: -1 };
+const PRESSABLE = 'a, button, summary, [role="button"], [role="link"]';
+const typing = () => document.activeElement?.matches('input, textarea, select') ?? false;
+const zoomedIn = () => (visualViewport?.scale ?? 1) > 1.01;
+
+// One wheel gesture, swipe or scroll key moves one rest, at once, and what comes during the move is swallowed.
+// CSS scroll snap cannot do this: in Chromium y mandatory snaps one wheel notch back forever.
+// Left to the browser: a scroller inside the page while it can still move that way, browser zoom, sideways moves, the scrollbar and find in page.
 export function useWalkOn() {
   useEffect(() => {
     if (stillness()) return;
-    let meant = false;
-    let touching = false;
-    let left = scrollY;
-    let settling: ReturnType<typeof setTimeout> | undefined;
     let frame = 0;
+    let gesture: 'open' | 'inside' | 'spent' = 'open';
+    let lastWheel = -Infinity;
+    let finger: { x: number; y: number; state: 'undecided' | 'holding' | 'spent' } | null = null;
 
-    const halt = () => {
-      cancelAnimationFrame(frame);
-      frame = 0;
-    };
     const glide = (to: number) => {
       const from = scrollY;
       const takes = Math.min(Math.max(Math.abs(to - from) * GLIDE_PER_PIXEL, GLIDE_SHORTEST), GLIDE_LONGEST);
       const began = performance.now();
       const step = (now: number) => {
-        const done = Math.min((now - began) / takes, 1);
-        scrollTo(0, from + (to - from) * ((1 - Math.cos(done * Math.PI)) / 2));
+        const done = Math.min(Math.max(now - began, 0) / takes, 1);
+        scrollTo(0, from + (to - from) * ((1 - Math.cos(done ** GLIDE_ATTACK * Math.PI)) / 2));
         frame = done < 1 ? requestAnimationFrame(step) : 0;
-        if (!frame) left = scrollY;
       };
       frame = requestAnimationFrame(step);
     };
-    const settle = () => {
-      if (!meant || touching || typing()) return;
-      meant = false;
-      const at = scrollY;
-      const stops = readStops();
-      const movedOn = at > left;
-      left = at;
-      if (stops.some(({ from, to }) => at >= from - 1 && at <= to + 1)) return;
-      const next = movedOn ? stops.find(({ from }) => from > at)?.from : stops.findLast(({ to }) => to < at)?.to;
-      if (next !== undefined) glide(next);
-    };
-    const restLater = () => {
-      clearTimeout(settling);
-      settling = setTimeout(settle, SETTLED_AFTER);
-    };
-    const scrolled = () => {
-      if (!frame) restLater();
-    };
-    const wheeled = () => {
-      halt();
-      meant = true;
-    };
-    const keyed = ({ key }: KeyboardEvent) => {
-      if (SCROLL_KEYS.has(key)) wheeled();
-    };
-    const fingerDown = () => {
-      halt();
-      touching = true;
-    };
-    const fingerMoved = () => {
-      meant = true;
-    };
-    const fingerUp = () => {
-      touching = false;
-      restLater();
+
+    const wheeled = (event: WheelEvent) => {
+      if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+      const way = Math.sign(event.deltaY);
+      if (event.timeStamp - lastWheel > GESTURE_GAP) gesture = 'open';
+      lastWheel = event.timeStamp;
+      if (frame || gesture === 'spent') return event.preventDefault();
+      if (scrollerAhead(event.target, way)) {
+        gesture = 'inside';
+        return;
+      }
+      event.preventDefault();
+      // A flick that ran a list inside to its end must not carry on and leave the room.
+      if (gesture === 'inside') return;
+      gesture = 'spent';
+      const rest = restAhead(way);
+      if (rest !== undefined) glide(rest);
     };
 
-    addEventListener('scroll', scrolled, { passive: true });
-    addEventListener('wheel', wheeled, { passive: true });
+    const keyed = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || typing()) return;
+      const space = event.key === ' ';
+      const way = space ? (event.shiftKey ? -1 : 1) : KEY_WAYS[event.key];
+      if (!way || (space && (event.target as Element).matches(PRESSABLE)) || scrollerAhead(event.target, way)) return;
+      const rest = event.key === 'Home' ? restsOfPage()[0] : event.key === 'End' ? restsOfPage().at(-1) : restAhead(way);
+      if (rest === undefined) return;
+      event.preventDefault();
+      if (!frame) glide(rest);
+    };
+
+    const fingerDown = ({ touches }: TouchEvent) => {
+      finger = touches.length === 1 ? { x: touches[0]!.clientX, y: touches[0]!.clientY, state: frame ? 'spent' : 'undecided' } : null;
+    };
+    const fingerMoved = (event: TouchEvent) => {
+      if (!finger) return;
+      if (event.touches.length > 1) {
+        finger = null;
+        return;
+      }
+      const { clientX, clientY } = event.touches[0]!;
+      const down = finger.y - clientY;
+      if (!down && clientX === finger.x) return;
+      if (finger.state === 'undecided') {
+        // The browser takes the gesture for good on the first move left uncancelled, so this one move decides it.
+        const way = Math.sign(down);
+        if (zoomedIn() || typing() || Math.abs(clientX - finger.x) >= Math.abs(down) || scrollerAhead(event.target, way) || restAhead(way) === undefined) {
+          finger = null;
+          return;
+        }
+        finger.state = 'holding';
+      }
+      if (event.cancelable) event.preventDefault();
+      if (finger.state === 'holding' && Math.abs(down) >= SWIPE) {
+        finger.state = 'spent';
+        const rest = restAhead(Math.sign(down));
+        if (rest !== undefined) glide(rest);
+      }
+    };
+
+    addEventListener('wheel', wheeled, { passive: false });
     addEventListener('keydown', keyed);
     addEventListener('touchstart', fingerDown, { passive: true });
-    addEventListener('touchmove', fingerMoved, { passive: true });
-    addEventListener('touchend', fingerUp, { passive: true });
-    addEventListener('touchcancel', fingerUp, { passive: true });
+    addEventListener('touchmove', fingerMoved, { passive: false });
     return () => {
-      removeEventListener('scroll', scrolled);
       removeEventListener('wheel', wheeled);
       removeEventListener('keydown', keyed);
       removeEventListener('touchstart', fingerDown);
       removeEventListener('touchmove', fingerMoved);
-      removeEventListener('touchend', fingerUp);
-      removeEventListener('touchcancel', fingerUp);
-      clearTimeout(settling);
-      halt();
+      cancelAnimationFrame(frame);
     };
   }, []);
 }

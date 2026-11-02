@@ -5,7 +5,7 @@ import styles from './Landing.module.css';
 // top: the doors' row. The lantern below the words says there is more further down, and needs no words of its own.
 export function Hero({ top, title, line }: { top: ReactNode; title: string; line: string }) {
   return (
-    <header className={styles.hero} data-walk-stop="">
+    <header className={styles.hero} data-walk-stop="top">
       <div className={styles.top}>{top}</div>
       <div className={styles.heroWords}>
         <h1 className={styles.heroTitle}>{title}</h1>
