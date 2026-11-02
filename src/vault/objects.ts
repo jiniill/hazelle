@@ -1,6 +1,6 @@
 import { deflateSync, inflateSync } from 'fflate';
-import { encodeText, fromBase64, openBytes, sealBytes, toBase64, withFormat } from './aead';
-import { vaultSubkey, type VaultKey } from './keys';
+import { encodeText, fromBase64, openBytes, sealBytes, toBase64, vaultSubkey, withFormat } from './aead';
+import type { VaultKey } from './keys';
 
 export type ObjectAddress = { id: string; kind: string; parent: string | null };
 

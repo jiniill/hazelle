@@ -1,5 +1,5 @@
-import { encodeText, open, seal } from './aead';
-import { vaultSubkey, type VaultKey } from './keys';
+import { encodeText, open, seal, vaultSubkey } from './aead';
+import type { VaultKey } from './keys';
 
 const draftAad = (account: string, draftKey: string) => `risu-alpha/draft/v1/${account}/${draftKey}`;
 

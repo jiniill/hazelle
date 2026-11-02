@@ -55,12 +55,6 @@ export async function openVault(accountId: string, record: VaultRecord, credenti
   return open(credential.kek, wrap, wrapAad(accountId, credential.method));
 }
 
-// A key derived from the vault key for one use alone, named by info.
-export async function vaultSubkey(vaultKey: VaultKey, info: string): Promise<CryptoKey> {
-  const base = await crypto.subtle.importKey('raw', vaultKey, 'HKDF', false, ['deriveKey']);
-  return crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(), info: encodeText(info) }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-}
-
 async function derive(method: Method, secret: Uint8Array<ArrayBuffer>): Promise<Credential> {
   const base = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveBits', 'deriveKey']);
   const hkdf = (use: string) => ({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(), info: encodeText(`risu-alpha ${method} ${use} v1`) });

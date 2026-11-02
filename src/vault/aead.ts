@@ -40,6 +40,12 @@ export function withFormat(format: number, sealed: Uint8Array<ArrayBuffer>): Uin
   return body;
 }
 
+// A key derived from the vault key for one use alone, named by info.
+export async function vaultSubkey(vaultKey: Uint8Array<ArrayBuffer>, info: string): Promise<CryptoKey> {
+  const base = await crypto.subtle.importKey('raw', vaultKey, 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(), info: encodeText(info) }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+
 export async function seal(key: CryptoKey, plaintext: Uint8Array<ArrayBuffer>, aad: string): Promise<string> {
   return toBase64(await sealBytes(key, plaintext, aad));
 }
