@@ -52,10 +52,15 @@ export type Memory = { records: MemoryRecord[]; chapters: Chapter[]; state: Fact
 
 export const emptyMemory = (): Memory => ({ records: [], chapters: [], state: [], threads: [] });
 
-export const inverted = (group: string) => [...group].map((digit) => (15 - parseInt(digit, 16)).toString(16)).join('');
+// An object derived from another takes the other's id with one group inverted; two derived from one owner must take
+// different groups (a chat's: memoryId first, cachePrintId second, vectorsId last; a module's: toolId first, likenessId
+// second).
+const inverted = (group: string) => [...group].map((digit) => (15 - parseInt(digit, 16)).toString(16)).join('');
+export const firstInverted = (id: string) => id.replace(/^[0-9a-f]{8}/, inverted);
+export const secondInverted = (id: string) => id.replace(/^([0-9a-f]{8}-)([0-9a-f]{4})/, (_, head: string, group: string) => head + inverted(group));
 
 // Deterministic id makes concurrent device creation conflict instead of duplicating memory.
-export const memoryId = (chat: string) => chat.replace(/^[0-9a-f]{8}/, inverted);
+export const memoryId = firstInverted;
 
 // Rebuildable per-chat embeddings: never compare vectors from different models.
 // Record id + at invalidates edits/remakes. Unit vectors use signed-byte quantization at scale (base64 data).

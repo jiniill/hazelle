@@ -2,7 +2,7 @@ import type { Cost } from '../connectors/types';
 import type { ModelRef } from '../connectors/assignment';
 import type { Json, Settings, ToolManifest } from '../tool-api/manifest';
 import type { FileRef } from '../vault/files';
-import { inverted } from './memory';
+import { firstInverted } from './memory';
 
 export type Tool = { manifest: ToolManifest; file: FileRef; size: number; settings: Settings };
 export type DraftAsk = { ask: string; note: string; model: ModelRef; cost: Cost | null; at: number };
@@ -16,4 +16,4 @@ export type ToolFile = { key: string; size: number; file: FileRef };
 export type ToolChatData = { module: string; key: string | null; value: Json };
 export type Badges = Record<string, { version: string; text: string }>;
 export type ToolUnit = { module: string; tool: Tool };
-export const toolId = (module: string) => module.replace(/^[0-9a-f]{8}/, inverted);
+export const toolId = firstInverted;
