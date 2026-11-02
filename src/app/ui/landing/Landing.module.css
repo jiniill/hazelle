@@ -269,19 +269,6 @@
     overscroll-behavior: contain;
   }
 
-  .roomFor {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .roomFor > * {
-    grid-area: 1 / 1;
-  }
-
-  .roomForm {
-    visibility: hidden;
-  }
-
   .talkBox {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -289,6 +276,25 @@
     align-content: start;
     gap: var(--space-16);
     height: 100%;
+  }
+
+  .exampleTalk {
+    height: var(--landing-example-talk);
+  }
+
+  .upcomingHeld {
+    visibility: hidden;
+  }
+
+  .walkOnHint {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    margin: 0;
+    color: var(--landing-cue);
+    font-size: var(--landing-said);
+    font-weight: var(--weight-semibold);
+    text-shadow: var(--scene-text-shadow);
   }
 
   .talkLog {

@@ -1,12 +1,12 @@
-import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { CONNECTION_TYPES, detect } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
 import { START_AGAIN, START_PAGE } from '../../contracts/start';
 import { countFirstPage } from '../../runtime/first-page';
 import { LegalNotice } from '../common/LegalNotice';
 import { href } from '../shell/routes';
-import { Beat, Brand, Button, Callout, ChoiceGroup, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, RoomFor, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
-import { EXAMPLE } from './example';
+import { Beat, Brand, Button, Callout, ChoiceGroup, ExampleTalk, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps, Upcoming, WalkOnHint } from '../ui';
+import { EXAMPLE, type ExampleLine, type ExampleStrand } from './example';
 
 const Trial = lazy(() => import('./Trial').then(({ Trial }) => ({ default: Trial })));
 
@@ -142,46 +142,51 @@ function KeyForm({ refused, onEnter }: { refused: string | null; onEnter: (type:
 
 const TYPED_EVERY = 24;
 
-type ExampleChoice = (typeof EXAMPLE.choices)[number];
-const typedOut = (picked: ExampleChoice | null, typed: number) => picked !== null && typed >= picked.reply.length;
-
 function ExampleChat({ onTalking }: { onTalking: (talking: boolean) => void }) {
-  const [picked, setPicked] = useState<ExampleChoice | null>(null);
+  const [strand, setStrand] = useState<ExampleStrand | null>(null);
+  const [later, setLater] = useState<readonly ExampleLine[]>([]);
   const [typed, setTyped] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval>>(undefined);
-  const done = typedOut(picked, typed);
+  const said = strand ? [strand, ...later] : [];
+  const last = said.at(-1);
+  const done = !last || typed >= last.reply.length;
+  const offered = strand ? strand.then[later.length] : EXAMPLE.choices;
 
   useEffect(() => {
-    if (!picked) return;
+    if (!last) return;
     timer.current = setInterval(() => setTyped((count) => count + 1), TYPED_EVERY);
     return () => clearInterval(timer.current);
-  }, [picked]);
+  }, [last]);
   useEffect(() => {
     if (done) clearInterval(timer.current);
-    onTalking(picked !== null && !done);
-  }, [done, picked]);
+    onTalking(!done);
+  }, [done]);
 
   function pick(say: string) {
+    const chosen = <Line extends ExampleLine>(choices: readonly Line[]) => choices.find((choice) => choice.say === say)!;
     setTyped(0);
-    setPicked(EXAMPLE.choices.find((choice) => choice.say === say)!);
+    if (strand) setLater([...later, chosen(strand.then[later.length]!)]);
+    else setStrand(chosen(EXAMPLE.choices));
   }
 
   return (
-    <RoomFor forms={EXAMPLE.choices.map((choice) => <ExampleLines picked={choice} typed={choice.reply.length} onPick={pick} />)}>
-      <ExampleLines picked={picked} typed={typed} onPick={pick} />
-    </RoomFor>
-  );
-}
-
-function ExampleLines({ picked, typed, onPick }: { picked: ExampleChoice | null; typed: number; onPick: (say: string) => void }) {
-  const done = typedOut(picked, typed);
-  return (
-    <Stack>
+    <ExampleTalk
+      foot={
+        <>
+          <Upcoming shown={done}>
+            {offered ? <SayChoices choices={offered.map(({ say }) => say)} onPick={pick} /> : <WalkOnHint>{EXAMPLE.walkOn}</WalkOnHint>}
+          </Upcoming>
+          <Text variant="note">{EXAMPLE.about}</Text>
+        </>
+      }
+    >
       <Said by="them" name={EXAMPLE.name}>{EXAMPLE.greeting}</Said>
-      {picked && <Said by="me">{picked.say}</Said>}
-      {picked && <Said by="them" name={EXAMPLE.name} typing={!done}>{picked.reply.slice(0, typed)}</Said>}
-      {(!picked || done) && <SayChoices choices={EXAMPLE.choices.filter((choice) => choice !== picked).map(({ say }) => say)} onPick={onPick} />}
-      <Text variant="note">{EXAMPLE.about}</Text>
-    </Stack>
+      {said.map((line) => (
+        <Fragment key={line.say}>
+          <Said by="me">{line.say}</Said>
+          <Said by="them" name={EXAMPLE.name} typing={line === last && !done}>{line === last ? line.reply.slice(0, typed) : line.reply}</Said>
+        </Fragment>
+      ))}
+    </ExampleTalk>
   );
 }

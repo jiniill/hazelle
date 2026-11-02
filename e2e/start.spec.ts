@@ -161,11 +161,16 @@ test('the example conversation never moves the page, and the next notch goes on 
   await expect.poll(scrollTop, { timeout: 5000 }).toBe(stop);
   const before = await length();
   await page.getByRole('button', { name: '당신은 누구예요?' }).click();
-  await expect(page.getByRole('button', { name: '이 숲엔 뭐가 살아요?' })).toBeVisible({ timeout: 15000 });
+  for (const say of ['이름은 비밀이에요', '왜 밤에만 깨어 있어요?', '전 이제 어디로 가야 해요?']) {
+    await page.getByRole('button', { name: say }).click({ timeout: 15000 });
+    expect(await length()).toBe(before);
+  }
+  await expect(page.getByText('계속하려면 아래로')).toBeVisible({ timeout: 15000 });
   expect(await length()).toBe(before);
   expect(await scrollTop()).toBe(stop);
+  const log = await page.getByText('전 이제 어디로 가야 해요?').boundingBox();
   await page.waitForTimeout(200);
-  await page.mouse.move(40, 40);
+  await page.mouse.move(log!.x, log!.y);
   await page.mouse.wheel(0, 100);
   await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(stop + 500);
 });

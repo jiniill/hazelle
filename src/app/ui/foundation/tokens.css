@@ -629,6 +629,7 @@
   --landing-room-words-talking: grid;
   --landing-talk-fade: linear-gradient(transparent, #000 var(--space-16));
   --landing-talk-width: 34rem;
+  --landing-example-talk: min(52svh, 30rem);
   --landing-finish-top: 14svh;
   --landing-step-lantern: clamp(34px, 3.4vw, 42px);
   --landing-step-rope: linear-gradient(90deg, transparent, #c9a87a80 14%, #c9a87a80 86%, transparent);

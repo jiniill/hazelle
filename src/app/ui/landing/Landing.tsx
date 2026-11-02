@@ -21,15 +21,19 @@ export function Hero({ top, title, line }: { top: ReactNode; title: string; line
             <rect x="1.5" y="1.5" width="21" height="33" rx="10.5" />
             <line className={styles.mouseWheel} x1="12" y1="8" x2="12" y2="13" />
           </svg>
-          <svg className={styles.drops} viewBox="0 0 20 26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path className={styles.drop} d="M3 3l7 7 7-7" />
-            <path className={styles.drop} d="M3 14l7 7 7-7" />
-          </svg>
+          <Drops />
         </div>
       </div>
     </header>
   );
 }
+
+const Drops = () => (
+  <svg className={styles.drops} viewBox="0 0 20 26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path className={styles.drop} d="M3 3l7 7 7-7" />
+    <path className={styles.drop} d="M3 14l7 7 7-7" />
+  </svg>
+);
 
 // kind: how the words and what they lead to share the screen, with the walk's scene standing in the room left over.
 export function Beat({ id, title, line, kind, foot, children }: { id?: string; title: string; line?: string; kind: 'talk' | 'lanterns' | 'points' | 'finish'; foot?: ReactNode; children: ReactNode }) {
@@ -76,14 +80,7 @@ const CLOSE_TO_END = 40;
 
 // A conversation inside the panel's fixed height: it follows the newest words unless the visitor has scrolled back to read.
 // Holds the height of the tallest form its content will take, so what grows inside never moves the page under the walk.
-export const RoomFor = ({ forms, children }: { forms: ReactNode[]; children: ReactNode }) => (
-  <div className={styles.roomFor}>
-    {forms.map((form, index) => <div key={index} className={styles.roomForm} aria-hidden="true">{form}</div>)}
-    <div>{children}</div>
-  </div>
-);
-
-export function TalkBox({ onSubmit, foot, children }: { onSubmit: FormEventHandler<HTMLFormElement>; foot: ReactNode; children: ReactNode }) {
+function TalkLog({ children }: { children: ReactNode }) {
   const log = useRef<HTMLDivElement>(null);
   const following = useRef(true);
   // A scroll is only the visitor's after their own wheel or finger: replies landing and swapping move the log too, and must not let go of it.
@@ -97,22 +94,44 @@ export function TalkBox({ onSubmit, foot, children }: { onSubmit: FormEventHandl
     log.current!.scrollTop = log.current!.scrollHeight;
   });
   return (
-    <form className={styles.talkBox} onSubmit={onSubmit}>
-      <div
-        ref={log}
-        className={styles.talkLog}
-        onWheel={read}
-        onTouchMove={read}
-        onScroll={({ currentTarget: { scrollHeight, scrollTop, clientHeight } }) => {
-          if (reading.current) following.current = scrollHeight - scrollTop - clientHeight < CLOSE_TO_END;
-        }}
-      >
-        {children}
-      </div>
-      <div className={styles.talkFoot}>{foot}</div>
-    </form>
+    <div
+      ref={log}
+      className={styles.talkLog}
+      onWheel={read}
+      onTouchMove={read}
+      onScroll={({ currentTarget: { scrollHeight, scrollTop, clientHeight } }) => {
+        if (reading.current) following.current = scrollHeight - scrollTop - clientHeight < CLOSE_TO_END;
+      }}
+    >
+      {children}
+    </div>
   );
 }
+
+export const TalkBox = ({ onSubmit, foot, children }: { onSubmit: FormEventHandler<HTMLFormElement>; foot: ReactNode; children: ReactNode }) => (
+  <form className={styles.talkBox} onSubmit={onSubmit}>
+    <TalkLog>{children}</TalkLog>
+    <div className={styles.talkFoot}>{foot}</div>
+  </form>
+);
+
+// Its height is fixed so a conversation of any length never changes the page's: a length that changes moves every stop under the visitor and refits the walk.
+export const ExampleTalk = ({ foot, children }: { foot: ReactNode; children: ReactNode }) => (
+  <div className={`${styles.talkBox} ${styles.exampleTalk}`}>
+    <TalkLog>{children}</TalkLog>
+    <div className={styles.talkFoot}>{foot}</div>
+  </div>
+);
+
+// Holds its room while hidden, so what comes next appearing does not shift the log above it.
+export const Upcoming = ({ shown, children }: { shown: boolean; children: ReactNode }) => <div className={shown ? undefined : styles.upcomingHeld}>{children}</div>;
+
+export const WalkOnHint = ({ children }: { children: ReactNode }) => (
+  <p className={styles.walkOnHint}>
+    {children}
+    <Drops />
+  </p>
+);
 
 const Lantern = ({ lit }: { lit: boolean }) => (
   <span className={`${styles.lantern} ${lit ? styles.lanternLit : styles.lanternOut}`}>
