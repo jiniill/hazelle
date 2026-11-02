@@ -3,7 +3,7 @@ import { prepareChat, contextRefusal, type ContextRefusal } from '../connectors/
 import type { CallCalibration } from '../model/token-calibration';
 import { completedCalibration } from './token-calibration';
 import { retryWait } from '../contracts/streams';
-import { batchLane, cacheView, laneBusy, resolveConnection, resolveModel, RETRYABLE, withCredential, type CacheView, type Route } from '../connectors/registry';
+import { batchLane, cacheView, laneBusy, resolveConnection, resolveModel, RETRYABLE, connectionRoute, withCredential, type CacheView, type Route } from '../connectors/registry';
 import { decodeStream, type InlineThoughts, type Outcome } from '../connectors/stream';
 import type { ModelSettings } from '../connectors/settings';
 import type { PulseLabel } from '../contracts/pulse';
@@ -303,14 +303,8 @@ export function gather(onText?: (text: string) => void) {
 
 // What a request would cache, as generate builds it; null where generate would refuse it before sending.
 export function cacheViewOf(connection: Connection, model: Starred, settings: ModelSettings, messages: ChatMessage[]): CacheView | null {
-  const resolved = resolveConnection(connection);
-  if (!resolved) return null;
-  try {
-    return cacheView(resolveModel(resolved, model), { model, messages, settings });
-  } catch (error) {
-    if (error instanceof ConnectorError) return null;
-    throw error;
-  }
+  const route = connectionRoute(connection, model);
+  return route && cacheView(route, { model, messages, settings });
 }
 
 // A call already running (its marker): on the server, read from its start, what came while no page read it, then the

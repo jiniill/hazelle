@@ -121,7 +121,7 @@ export const costUnit = (type: ConnectionType | null): Cost['unit'] => (type && 
 const embedsOf = ({ type, codec }: Route) => (type?.embeds !== undefined ? type.embeds : codec.embeds);
 
 // null for a model this version cannot call at all over the connection.
-function routeOf(connection: Connection, model: Model): Route | null {
+export function connectionRoute(connection: Connection, model: Model): Route | null {
   const resolved = resolveConnection(connection);
   if (!resolved) return null;
   try {
@@ -134,7 +134,7 @@ function routeOf(connection: Connection, model: Model): Route | null {
 
 // The route a model's embeddings take; null where the connection serves none in the model's format.
 export function embedRoute(connection: Connection, model: Model): Route | null {
-  const route = routeOf(connection, model);
+  const route = connectionRoute(connection, model);
   return route && embedsOf(route) ? route : null;
 }
 
@@ -176,7 +176,7 @@ function carries(route: Route, model: Model): Carries {
 }
 
 export function modelSettings(connection: Connection, model: Model): SettingsSchema | null {
-  const route = routeOf(connection, model);
+  const route = connectionRoute(connection, model);
   return route && settingsSchema(carries(route, model), model);
 }
 

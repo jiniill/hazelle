@@ -1,5 +1,5 @@
 import type { ChatMessage, ToolDef, ToolResult } from '../connectors/types';
-import { isRecord } from '../connectors/values';
+import { jsonObject } from '../connectors/values';
 import type { Json } from '../tool-api/manifest';
 import { gather, type GenerateInput, type Reply } from './generate';
 
@@ -15,14 +15,7 @@ export type Round<R> = R & { text: string; results: ToolResult[] };
 // answered: the last round called nothing. failed: its call failed. exhausted: it still called on the last round allowed.
 export type Looped<R> = { kind: 'answered' | 'stopped' | 'failed' | 'exhausted'; rounds: Round<R>[] };
 
-export function argsOf(text: string): ToolArgs | null {
-  try {
-    const read: unknown = JSON.parse(text);
-    return isRecord(read) ? (read as ToolArgs) : null;
-  } catch {
-    return null;
-  }
-}
+export const argsOf = (text: string) => jsonObject(text) as ToolArgs | null;
 
 // A reply's model calls while its model calls plugin tools, unless the account sets its own (Settings toolRounds).
 export const TOOL_ROUNDS = 5;
