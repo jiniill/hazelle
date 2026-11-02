@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { createPortal } from 'react-dom';
 import { ChangeSignal } from '../../../change-signal';
 import { Steps } from '../feedback/Steps';
+import { menuEdge } from './layers';
 import styles from './Guide.module.css';
 
 // The marks on screen by name. A mark wraps one control without a box of its own, so what is pointed at is its
@@ -80,7 +81,7 @@ export function Coach({ target, title, progress, above = false, children }: { ta
       const key = `${at.left} ${at.top} ${at.width} ${at.height} ${width} ${height} ${box.offsetWidth} ${box.offsetHeight}`;
       if (key === placed) return;
       placed = key;
-      const edge = parseFloat(getComputedStyle(box).getPropertyValue('--menu-edge'));
+      const edge = menuEdge(box);
       const within = (value: number, size: number, room: number) => Math.min(Math.max(value, edge), room - size - edge);
       ring.current!.style.setProperty('--anchor-left', `${at.left}px`);
       ring.current!.style.setProperty('--anchor-top', `${at.top}px`);
