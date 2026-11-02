@@ -15,6 +15,9 @@ export function useMessageEdit(id: string | null, messages: Shown[], regenerate:
   const session = useSession();
   const toast = useToast();
   const [editing, setEditing] = useState<Editing | null>(null);
+  // Its message left the line shown (deleted, here or elsewhere, or another version picked above it): kept, the edit
+  // would hold a phone's composer folded with no edit box left to close it.
+  if (editing && !messages.some(({ id: each }) => each === editing.id)) setEditing(null);
 
   function saveEdit(message: Shown, andReply: boolean) {
     if (!id || !editing) return;
@@ -40,7 +43,6 @@ export function useMessageEdit(id: string | null, messages: Shown[], regenerate:
     const from = messages.findIndex(({ id: each }) => each === message.id);
     if (from === -1) return;
     const gone = messages.slice(from);
-    if (editing && gone.some(({ id: each }) => each === editing.id)) setEditing(null);
     void deleteMessages(session, id, gone).then((saved) => saved.ok || toast.failed(saved));
     toast.undoable(`메시지 ${gone.length}개를 삭제했어요.`, () => undeleteMessages(session, id, gone));
   }
