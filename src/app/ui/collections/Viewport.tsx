@@ -28,8 +28,14 @@ export const ROWS_RESIZED = 'rowsresized';
 // The scroller's view between what floats over its ends (its scroll padding), in client px.
 export function viewLines(frame: HTMLElement) {
   const box = frame.getBoundingClientRect();
+  const padding = scrollPadding(frame);
+  return { top: box.top + padding.top, bottom: box.bottom - padding.bottom };
+}
+
+// auto, the scroller's default, is no padding.
+function scrollPadding(frame: HTMLElement) {
   const style = getComputedStyle(frame);
-  return { top: box.top + (parseFloat(style.scrollPaddingTop) || 0), bottom: box.bottom - (parseFloat(style.scrollPaddingBottom) || 0) };
+  return { top: parseFloat(style.scrollPaddingTop) || 0, bottom: parseFloat(style.scrollPaddingBottom) || 0 };
 }
 
 // The mounted row across y (client px), or the first below it where y falls between rows; above and below are how far
@@ -92,8 +98,7 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
     const element = root.current;
     const index = room.current ? keys.indexOf(room.current.key) : -1;
     if (!frame || !element || index < 0) return;
-    // auto, the scroller's default, is no padding.
-    const line = parseFloat(getComputedStyle(frame).scrollPaddingTop) || 0;
+    const line = scrollPadding(frame).top;
     const offset = offsetIn(element, frame);
     const end = frame.scrollHeight - offset - element.offsetHeight;
     room.current!.below = frameHeight(frame) - line - end;
@@ -182,7 +187,7 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
           if (target.lands === 'top') {
             room.current = { key: target.key, below: 0 };
             fit.current(true);
-          } else if (target.lands === 'bottom') frame.scrollTop = bottom - frameHeight(frame) + (parseFloat(getComputedStyle(frame).scrollPaddingBottom) || 0);
+          } else if (target.lands === 'bottom') frame.scrollTop = bottom - frameHeight(frame) + scrollPadding(frame).bottom;
           else frame.scrollTop = (top + bottom) / 2 - frameHeight(frame) / 2;
           opened.current = true;
         }
