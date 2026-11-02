@@ -1,7 +1,7 @@
 // A scripted conversation for someone with no key yet. Nothing here reaches a model.
 export const EXAMPLE = {
   name: '아린',
-  about: '밤의 개암나무 숲지기',
+  about: '밤의 개암나무 숲지기 · 예시',
   greeting: '등불을 들어 당신을 살폈어요. "이 숲에 손님은 오랜만이네요. 길을 잃으셨어요?"',
   choices: [
     { say: '네, 길을 잃은 것 같아요', reply: '아린이 작게 웃으며 등불을 앞으로 내밀었어요. "그럼 잘 오셨어요. 이 불빛만 따라오면 오두막까지 금방이에요. 따뜻한 차도 있고요."' },

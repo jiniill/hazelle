@@ -74,7 +74,7 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
             <Link href={move.path}>{move.label}</Link>
           </Stack>
         </Beat>
-        <Beat title={finish.title} line={finish.line} side="whole">
+        <Beat title={finish.title} side="whole">
           <Stack>
             <div><Button onClick={onOpen}>헤이젤 열기</Button></div>
             <LegalNotice />
