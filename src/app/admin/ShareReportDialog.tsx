@@ -5,10 +5,11 @@ import type { ApiResult } from '../../runtime/api';
 import { openVersion, type Opened } from '../../runtime/share';
 import { describeFailure } from '../common/failure';
 import { SharePreview } from '../common/SharePreview';
+import { TextDialog } from '../common/TextDialog';
 import { ago } from '../common/time';
 import { useAttempt } from '../common/useAttempt';
 import { Button, Callout, Checkbox, Dialog, Stack, Text } from '../ui';
-import { NoticeDialog } from './NoticeDialog';
+import { NOTICE_TEXT } from './notice';
 import { shareTags } from './shareTags';
 
 type ShareReport = Report & { share: string; shareVersion: number; link: string };
@@ -45,15 +46,16 @@ export function ShareReportDialog({ report, onClose, onActed }: { report: ShareR
 
   if (blocking) {
     return (
-      <NoticeDialog
+      <TextDialog
+        {...NOTICE_TEXT}
         title="링크 차단"
         note={`버전 ${report.shareVersion}`}
         label="공유한 사람에게 보낼 알림"
         placeholder="예: 미성년자로 보이는 캐릭터의 성적인 이미지가 있어 링크를 내렸어요."
         confirm={{ label: '차단', icon: Ban }}
-        about={<Checkbox label="계정도 정지" note="작성한 내용을 정지 사유 알림으로 보내요." checked={suspend} onChange={setSuspend} />}
+        above={<Checkbox label="계정도 정지" note="작성한 내용을 정지 사유 알림으로 보내요." checked={suspend} onChange={setSuspend} />}
         send={(text) => blockShare(report.share, report.shareVersion, text, suspend)}
-        onSent={onActed}
+        onDone={onActed}
         onClose={() => setBlocking(false)}
       />
     );

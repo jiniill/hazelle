@@ -9,6 +9,7 @@ import { describeFailure } from '../common/failure';
 import { BUILT_VERSION } from '../../runtime/installation';
 import { useAttempt } from '../common/useAttempt';
 import { CATEGORY_LOOK } from '../common/postRow';
+import { counted } from '../common/TextDialog';
 import { readPersisted } from '../common/usePersisted';
 import { useLoaded } from '../common/useLoaded';
 import { BOARD, DIAGNOSIS_NOTE } from '../common/words';
@@ -18,7 +19,6 @@ import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, Callout, Checkbox, ChoiceGroup, NavBar, Row, Screen, Stack, Tag, Text, TextField } from '../ui';
 import { useNicknameGate } from './nickname';
-import { counted } from './parts';
 import { DraftPictures, useDraftPictures } from './pictures';
 
 // What a bug report needs, laid into an empty text when 버그 is picked and taken out again, untouched, when it is not.
