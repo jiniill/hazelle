@@ -34,7 +34,8 @@ async function guest() {
 }
 
 describe('a guest’s browser store', () => {
-  it('serializes two first visits into one guest and finds it again on later pages', async () => {
+  it('serializes two first visits into one guest, without waiting on the browser’s storage prompt, and finds it again on later pages', async () => {
+    vi.stubGlobal('navigator', { locks: navigator.locks, storage: { persist: () => new Promise(() => {}) } });
     const [first, second] = await Promise.all([guestAccount(), guestAccount()]);
     expect(second).toEqual(first);
     expect(await guestAccount()).toEqual(first);

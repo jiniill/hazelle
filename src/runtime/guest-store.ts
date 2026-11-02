@@ -41,7 +41,8 @@ export async function guestAccount(): Promise<{ accountId: string; vaultKey: Vau
     });
     if (!head.ok) throw new Error(head.error);
     await rememberVault(accountId, vaultKey, true);
-    await navigator.storage?.persist?.().catch(() => false);
+    // Never awaited: Firefox settles this only once the visitor answers its prompt, and the app waits on this guest.
+    void navigator.storage?.persist?.().catch(() => false);
     return { accountId, vaultKey };
   });
 }
