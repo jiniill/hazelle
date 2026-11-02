@@ -4,6 +4,7 @@ import { isIPv6, type BlockList } from 'node:net';
 import { parentPort, workerData } from 'node:worker_threads';
 import { VISITOR_HEADER } from '../contracts/http';
 import type { PulseAnswer } from '../contracts/pulse';
+import type { PriceTable } from '../connectors/models-dev';
 import type { ShareCover } from '../contracts/shares';
 import { endToEnd } from './hop-by-hop';
 import { clientFiles } from './static';
@@ -28,7 +29,18 @@ async function pulse(): Promise<PulseAnswer> {
   if (!answer.ok) throw new Error(`pulse ${answer.status}`);
   return (await answer.json()) as PulseAnswer;
 }
-const files = getRequestListener(clientFiles(clientDir, cover, pulse, (page) => parentPort!.postMessage(page), selfHost).fetch);
+// The price table for the calculator page's words, an hour at most: every load of that page asks, the table moves daily.
+const PRICES_FOR = 3_600_000;
+let prices: { at: number; table: PriceTable } | null = null;
+async function priceTable(): Promise<PriceTable> {
+  if (prices && Date.now() - prices.at < PRICES_FOR) return prices.table;
+  const answer = await fetch(`http://127.0.0.1:${apiPort}/api/models-dev/table`);
+  if (!answer.ok) throw new Error(`prices ${answer.status}`);
+  const table = (await answer.json()) as PriceTable;
+  prices = { at: Date.now(), table };
+  return table;
+}
+const files = getRequestListener(clientFiles(clientDir, { cover, pulse, prices: priceTable }, (page) => parentPort!.postMessage(page), selfHost).fetch);
 // A finite socket timeout lets Node honor the API's shorter keep-alive hint; zero keeps idle sockets until
 // the server closes them and races reuse. The agent destroys timed-out free sockets, not active requests.
 const agent = new Agent({ keepAlive: true, timeout: 5000 });

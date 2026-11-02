@@ -1,3 +1,4 @@
+import { CALCULATOR_PAGE } from '../../contracts/prices';
 import { CONNECTION_TYPES } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
 import { CATEGORIES, type Category } from '../../contracts/board';
@@ -288,7 +289,7 @@ export function href(route: Route): string {
     case 'translator':
       return '/tools/translator';
     case 'calculator':
-      return '/tools/calculator';
+      return CALCULATOR_PAGE.path;
     case 'board':
       return `/board${boardQuery(route)}`;
     case 'post':

@@ -33,7 +33,7 @@
     color: var(--color-text-muted);
   }
 
-  /* The guest home's words that static.ts writes in for crawlers, shown only until the app replaces them. */
+  /* The public pages' words that static.ts writes in for crawlers, shown only until the app replaces them. */
   .landing {
     place-content: center;
     gap: var(--space-12);
@@ -46,7 +46,14 @@
     font-weight: var(--weight-bold);
   }
 
-  .landing ul {
+  .landing h2 {
+    color: var(--color-text);
+    font-size: var(--text-md);
+    font-weight: var(--weight-bold);
+  }
+
+  .landing ul,
+  .landing ol {
     display: grid;
     gap: var(--space-4);
     margin: 0;

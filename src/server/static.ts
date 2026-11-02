@@ -3,6 +3,9 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono, type Context } from 'hono';
+import type { PriceTable } from '../connectors/models-dev';
+import { GUIDE_INDEX, GUIDES, type Guide } from '../contracts/guides';
+import { CALCULATOR_PAGE } from '../contracts/prices';
 import { PULSE_PAGE, type PulseAnswer } from '../contracts/pulse';
 import { TOOL_SANDBOX } from '../contracts/sandbox';
 import { SHARE_ID, type ShareCover } from '../contracts/shares';
@@ -28,7 +31,9 @@ const HEADERS = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-re
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 // Only pages whose words reach a crawler that runs no script; this set also drives the sitemap. The legal pages stay
 // out: their text lives in the app, which the server may not import (design §6.13).
-const INDEXED = new Set(['/', PULSE_PAGE.path]);
+const INDEXED = new Set(['/', PULSE_PAGE.path, CALCULATOR_PAGE.path, GUIDE_INDEX.path, ...GUIDES.map((guide) => guide.path)]);
+// The lists people compare by provider; the gateways' lists repeat these models at their own prices.
+const PRICED: [list: string, label: string][] = [['anthropic', 'Anthropic'], ['google', 'Google'], ['openai', 'OpenAI'], ['deepseek', 'DeepSeek'], ['xai', 'xAI']];
 const PULSE_LINE = '헤이젤 사용자들이 캐릭터 챗에 실제로 쓰는 AI 모델 순위예요.';
 const LANDING = {
   title: '헤이젤 · RisuAI 대체 캐릭터 챗, 설치 없이 웹에서',
@@ -43,7 +48,10 @@ const LANDING = {
 };
 
 // selfHost: someone's own installation (node.ts), which no search engine lists and whose page says so to the client.
-export function clientFiles(clientDir: string, cover: (share: string) => Promise<ShareCover | null>, pulse: () => Promise<PulseAnswer>, visit: (page: PageVisit) => void = () => {}, selfHost = false) {
+// What pages read from the API, which owns the database.
+export type PageSources = { cover: (share: string) => Promise<ShareCover | null>; pulse: () => Promise<PulseAnswer>; prices: () => Promise<PriceTable> };
+
+export function clientFiles(clientDir: string, sources: PageSources, visit: (page: PageVisit) => void = () => {}, selfHost = false) {
   const client = new Hono();
   client.use(async (c, next) => {
     const started = performance.now();
@@ -86,12 +94,22 @@ export function clientFiles(clientDir: string, cover: (share: string) => Promise
   client.get('/s/:id', async (c, next) => {
     const id = c.req.param('id');
     if (!SHARE_ID.test(id)) return next();
-    const shared = await cover(id);
+    const shared = await sources.cover(id);
     return page(c, (html) => sharePage(html, shared));
+  });
+  client.get(GUIDE_INDEX.path, (c) => page(c, guideIndexPage));
+  client.get(`${GUIDE_INDEX.path}/:slug`, (c, next) => {
+    const guide = GUIDES.find((each) => each.path === c.req.path);
+    return guide ? page(c, (html) => guidePage(html, guide)) : next();
+  });
+  client.get(CALCULATOR_PAGE.path, async (c) => {
+    // The page loads whatever the table does.
+    const table = await sources.prices().catch(() => null);
+    return page(c, (html) => calculatorPage(html, table));
   });
   client.get(PULSE_PAGE.path, async (c) => {
     // The page loads whatever the numbers do.
-    const answer = await pulse().catch(() => null);
+    const answer = await sources.pulse().catch(() => null);
     return page(c, (html) => (answer ? pulsePage(html, answer) : html));
   });
   const files = serveStatic({ root: clientDir, precompressed: true });
@@ -123,7 +141,7 @@ const withWords = (html: string, words: string) =>
 function landingPage(html: string): string {
   const facts = { '@context': 'https://schema.org', '@type': 'WebApplication', name: '헤이젤', alternateName: 'Hazelle', url: `${HOSTED}/`, description: LANDING.line, applicationCategory: 'EntertainmentApplication', operatingSystem: 'Web', inLanguage: 'ko', offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' } };
   const points = LANDING.points.map((point) => `<li>${point}</li>`).join('');
-  return withWords(html.replace('</head>', () => `<script type="application/ld+json">${JSON.stringify(facts)}</script></head>`), `<h1>${LANDING.heading}</h1><p>${LANDING.line}</p><ul>${points}</ul>`);
+  return withWords(html.replace('</head>', () => `<script type="application/ld+json">${JSON.stringify(facts)}</script></head>`), `<h1>${LANDING.heading}</h1><p>${LANDING.line}</p><ul>${points}</ul><p><a href="${GUIDE_INDEX.path}">${GUIDE_INDEX.title}</a> · <a href="${CALCULATOR_PAGE.path}">${CALCULATOR_PAGE.title}</a> · <a href="${PULSE_PAGE.path}">${PULSE_PAGE.title}</a></p>`);
 }
 
 const escape = (text: string) => text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
@@ -135,6 +153,33 @@ function worded(html: string, title: string, line: string): string {
     .replace(/<meta property="og:title" content="[^"]*"/, () => `<meta property="og:title" content="${named}"`)
     .replace(/<meta name="description" content="[^"]*"/, () => `<meta name="description" content="${said}"`)
     .replace(/<meta property="og:description" content="[^"]*"/, () => `<meta property="og:description" content="${said}"`);
+}
+
+const titled = (title: string) => `${title} · 헤이젤`;
+
+function guideIndexPage(html: string): string {
+  const rows = GUIDES.map((guide) => `<li><a href="${guide.path}">${guide.title}</a></li>`).join('');
+  return withWords(worded(html, titled(GUIDE_INDEX.title), GUIDE_INDEX.line), `<h1>${GUIDE_INDEX.title}</h1><p>${GUIDE_INDEX.line}</p><ul>${rows}</ul>`);
+}
+
+function guidePage(html: string, guide: Guide): string {
+  const sections = guide.sections.map(({ title, blocks }) => {
+    const words = blocks.map((block) => {
+      if (typeof block === 'string') return `<p>${block}</p>`;
+      if ('steps' in block) return `<ol>${block.steps.map((step) => `<li>${step}</li>`).join('')}</ol>`;
+      return 'link' in block ? `<p><a href="${block.link}">${block.label}</a></p>` : '';
+    });
+    return `<h2>${title}</h2>${words.join('')}`;
+  });
+  return withWords(worded(html, titled(guide.title), guide.line), `<h1>${guide.title}</h1><p>${guide.line}</p>${sections.join('')}`);
+}
+
+function calculatorPage(html: string, table: PriceTable | null): string {
+  const lists = PRICED.flatMap(([list, label]) => {
+    const rows = (table?.models ?? []).flatMap((model) => (model.list === list && model.price ? `<li>${escape(model.name ?? model.model)}: 입력 $${model.price.input} · 출력 $${model.price.output}</li>` : []));
+    return rows.length ? `<h2>${label}</h2><ul>${rows.join('')}</ul>` : [];
+  });
+  return withWords(worded(html, titled(CALCULATOR_PAGE.title), CALCULATOR_PAGE.line), `<h1>${CALCULATOR_PAGE.title}</h1><p>${CALCULATOR_PAGE.line}</p>${lists.length ? `<p>100만 토큰당 가격이에요.</p>${lists.join('')}` : ''}`);
 }
 
 // A share link's page: the app's page, whose embed carries the sharer's opt-in cover as text, or the app's own words

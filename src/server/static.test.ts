@@ -1,3 +1,4 @@
+import type { PriceTable } from '../connectors/models-dev';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,6 +9,7 @@ import { clientFiles, CSP, pageCsp, SANDBOX_CSP, SANDBOX_NETWORK_CSP } from './s
 let dir: string;
 let client: ReturnType<typeof clientFiles>;
 let pulse: () => Promise<PulseAnswer>;
+let prices: () => Promise<PriceTable> = async () => ({ fetchedAt: null, models: [] });
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), 'hazelle-client-'));
   mkdirSync(join(dir, 'assets'));
@@ -22,7 +24,7 @@ beforeAll(() => {
   ]) {
     writeFileSync(join(dir, name!), body!);
   }
-  client = clientFiles(dir, async (share) => (share === 'covered-share-id' ? { name: 'Mira <b>', creator: 'jin & co', line: '$& "quoted"' } : null), () => pulse());
+  client = clientFiles(dir, { cover: async (share) => (share === 'covered-share-id' ? { name: 'Mira <b>', creator: 'jin & co', line: '$& "quoted"' } : null), pulse: () => pulse(), prices: () => prices() });
 });
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -59,7 +61,7 @@ describe('the client files', () => {
     }
   });
 
-  it('words the guest home for search engines and keeps every page but the public two out of the index', async () => {
+  it('words the guest home for search engines and keeps every page but the public ones out of the index', async () => {
     pulse = async () => ({ at: 0, board: null });
     writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><meta name="description" content="app" /></head><div id="root"><p class="boot" role="status">불러오는 중…</p></div>');
     const home = await (await client.request('/', { headers: PAGE })).text();
@@ -67,25 +69,25 @@ describe('the client files', () => {
     expect(home).toContain('<link rel="canonical" href="https://hazelle.app/" />');
     expect(home).toContain('<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication"');
     expect(home).toMatch(/<div id="root"><main class="boot landing"><h1>RisuAI 대체 캐릭터 챗, 헤이젤<\/h1>.*<p role="status">불러오는 중…<\/p><\/main><\/div>$/);
-    for (const path of ['/', '/now', '/terms', '/privacy', '/board', '/s/no-cover-share00', '/index.html']) {
+    for (const path of ['/', '/now', '/tools/calculator', '/guide', '/guide/connect', '/guide/gone', '/terms', '/privacy', '/board', '/s/no-cover-share00', '/index.html']) {
       const response = await client.request(path, { headers: PAGE });
-      const hidden = !['/', '/now'].includes(path);
+      const hidden = !['/', '/now', '/tools/calculator', '/guide', '/guide/connect'].includes(path);
       expect([path, response.headers.get('x-robots-tag'), (await response.text()).includes(`<link rel="canonical" href="https://hazelle.app${path}" />`)]).toEqual([path, hidden ? 'noindex' : null, !hidden]);
     }
     expect(await (await client.request('/index.html', { headers: PAGE })).text()).not.toContain('landing');
     writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
   });
 
-  it('lists the public two in the sitemap and points robots.txt at it', async () => {
+  it('lists the public pages in the sitemap and points robots.txt at it', async () => {
     expect(await (await client.request('/sitemap.xml')).text()).toBe(
-      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url></urlset>\n',
+      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url><url><loc>https://hazelle.app/tools/calculator</loc></url><url><loc>https://hazelle.app/guide</loc></url><url><loc>https://hazelle.app/guide/connect</loc></url><url><loc>https://hazelle.app/guide/move-from-risu</loc></url></urlset>\n',
     );
     expect(await (await client.request('/robots.txt')).text()).toBe('User-agent: *\nDisallow: /api/\nSitemap: https://hazelle.app/sitemap.xml\n');
   });
 
   it("marks a self-host's page for the client and keeps all of it out of the index", async () => {
     writeFileSync(join(dir, 'index.html'), '<!doctype html><html lang="ko">page</html>');
-    const own = clientFiles(dir, async () => null, async () => ({ at: 0, board: null }), () => {}, true);
+    const own = clientFiles(dir, { cover: async () => null, pulse: async () => ({ at: 0, board: null }), prices: async () => ({ fetchedAt: null, models: [] }) }, () => {}, true);
     for (const path of ['/', '/now', '/terms']) {
       const response = await own.request(path, { headers: PAGE });
       expect([path, response.headers.get('x-robots-tag'), await response.text()]).toEqual([path, 'noindex', expect.stringContaining('<html data-self-host lang="ko">')]);
@@ -132,7 +134,31 @@ describe('the client files', () => {
   });
 
   it('answers a page that exists whatever the crawler accepts', async () => {
-    for (const path of ['/now', '/s/no-cover-share00']) expect([path, (await client.request(path, { headers: ANY })).status]).toEqual([path, 200]);
+    for (const path of ['/now', '/s/no-cover-share00', '/tools/calculator', '/guide', '/guide/connect']) expect([path, (await client.request(path, { headers: ANY })).status]).toEqual([path, 200]);
+  });
+
+  it("writes a guide's words into the page, its steps and links but no pictures", async () => {
+    writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><meta name="description" content="app" /><div id="root"><p class="boot" role="status">불러오는 중…</p></div>');
+    const body = await (await client.request('/guide/connect', { headers: PAGE })).text();
+    expect(body).toContain('<title>API 키 연결하고 대화 시작하는 법 · 헤이젤</title>');
+    expect(body).toContain('<li>모델 선택을 눌러요.</li>');
+    expect(body).toContain('<a href="/guide/move-from-risu">');
+    expect(body).not.toContain('<img');
+    writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
+  });
+
+  it("writes the calculator's prices by provider, escaped, and only its words when the table fails", async () => {
+    writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><div id="root"><p class="boot" role="status">불러오는 중…</p></div>');
+    const rates = { input: 3, output: 15, cacheRead: null, cacheWrite: null, tiers: [] };
+    prices = async () => ({ fetchedAt: 1, models: [{ list: 'anthropic', model: 'c', name: 'Claude <5>', price: rates }, { list: 'anthropic', model: 'x', name: 'Unpriced', price: null }, { list: 'vercel', model: 'v', name: 'Gateway', price: rates }] });
+    const body = await (await client.request('/tools/calculator', { headers: PAGE })).text();
+    expect(body).toContain('<h2>Anthropic</h2><ul><li>Claude &#60;5&#62;: 입력 $3 · 출력 $15</li></ul>');
+    expect(body).not.toMatch(/Unpriced|Gateway/);
+    prices = () => Promise.reject(new Error('down'));
+    const down = await client.request('/tools/calculator', { headers: PAGE });
+    expect([down.status, (await down.text()).includes('<h2>')]).toEqual([200, false]);
+    prices = async () => ({ fetchedAt: null, models: [] });
+    writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
   });
 
   it("gives each page load its own nonce, in the page where Vite left the placeholder and in the page's policy", async () => {

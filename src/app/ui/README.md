@@ -109,6 +109,7 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 | foundation | `keys.ts` (`Chord`, `pressed`, `pressedKey`, `isComposing`, `keyCaps`, `formatKeys`) | — | Matching a key press, the IME guard, and keys written as text |
 | foundation | `Avatar` | `Avatar.module.css` | A face: picture, icon, or a name's first letter, tinted by the name (the user's own in their colour, the operator's in the accent); four sizes, or `fill`, the frame it stands in (`CardGrid`'s pictures) |
 | foundation | `Brand` | `Brand.module.css` | The wordmark |
+| foundation | `Figure` | `Figure.module.css` | A picture in a guide's text |
 | foundation | `Divider` | `Divider.module.css` | Lines between groups: a labeled line, the story's (with an icon and an action where a branch split) or a toggle list's, one plain rule when it has no label; and the menu, tools and rail lines |
 | foundation | `Icon` | `Icon.module.css` | Icon sizes and stroke |
 | foundation | `Kbd` (inside the kit only) | `Kbd.module.css` | One key cap, in a notice's action and the 단축키 list |

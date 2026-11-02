@@ -3,6 +3,7 @@ export { Brand } from './Brand';
 export { Byline } from './Byline';
 export { ColorDot } from './ColorDot';
 export { Divider } from './Divider';
+export { Figure } from './Figure';
 export { FONT_IDS, FONT_KIND, FONTS, type FontId } from './fonts';
 export { Icon } from './Icon';
 export { formatKeys, pressed, pressedKey, type Chord } from './keys';

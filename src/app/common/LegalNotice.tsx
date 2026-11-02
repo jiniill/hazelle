@@ -1,4 +1,5 @@
 import { Link, Row, Stack, Text } from '../ui';
+import { GUIDE_INDEX } from '../../contracts/guides';
 import { HOSTED } from '../../contracts/installation';
 import { selfHost } from '../../runtime/installation';
 import { INSTALL_GUIDE, OPERATOR, OUTBOUND, PRIVACY, REPOSITORY, TERMS } from './legal';
@@ -18,6 +19,7 @@ export function LegalNotice() {
         © 2026 {OPERATOR}. AGPL-3.0에 따라 누구나 쓰고, 수정하고, 다시 배포할 수 있는 자유 소프트웨어예요. 보증은 제공하지 않아요.
       </Text>
       <Row kind="tags">
+        <Link href={GUIDE_INDEX.path}>{GUIDE_INDEX.title}</Link>
         <Link href={source}>GitHub</Link>
         <Link href={INSTALL_GUIDE}>내 기기에 설치</Link>
         <Link href="/source.tar.gz" download="hazelle-source.tar.gz">

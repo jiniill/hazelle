@@ -1,6 +1,7 @@
 import { lazy, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AccountFlow } from './account/AccountFlow';
+import { guidePage } from './guide/GuidePage';
 import { legalPage } from './common/LegalPage';
 import { applyStoredScheme } from './common/reading';
 import { ScreenLoad } from './common/ScreenLoad';
@@ -23,7 +24,7 @@ markScrollbars();
 
 createRoot(root).render(
   <StrictMode>
-    {legalPage(location.pathname) ?? pulsePage(location.pathname) ?? sharePage(location.pathname, location.hash) ?? <AccountFlow>{(unlocked) => <ScreenLoad><Workspace {...unlocked} /></ScreenLoad>}</AccountFlow>}
+    {legalPage(location.pathname) ?? guidePage(location.pathname) ?? pulsePage(location.pathname) ?? sharePage(location.pathname, location.hash) ?? <AccountFlow>{(unlocked) => <ScreenLoad><Workspace {...unlocked} /></ScreenLoad>}</AccountFlow>}
   </StrictMode>,
 );
 

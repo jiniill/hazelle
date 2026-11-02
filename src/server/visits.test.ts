@@ -26,7 +26,7 @@ beforeEach(() => {
   mkdirSync(join(dir, 'assets'));
   writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
   writeFileSync(join(dir, 'assets/app.js'), 'app');
-  client = clientFiles(dir, async () => null, async () => ({ at: now, board: null }), visits.page);
+  client = clientFiles(dir, { cover: async () => null, pulse: async () => ({ at: now, board: null }), prices: async () => ({ fetchedAt: null, models: [] }) }, visits.page);
 });
 afterEach(() => {
   raw.close();
