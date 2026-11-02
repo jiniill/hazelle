@@ -9,11 +9,12 @@ export type MetersResult = { meters: Meter[]; failures: MetersFailure[]; plan: s
 
 // null for a connection whose type reports no meters. Not cached here: runtime/pool holds what the pick reads.
 export function loadMeters(connection: Connection, account: Account, signal?: AbortSignal): Promise<MetersResult> | null {
-  const requests = resolveConnection(connection)?.type?.meters;
+  const type = resolveConnection(connection)?.type;
+  const requests = type?.meters;
   if (!requests) return null;
   return Promise.all(
     requests.map(async ({ request, parse, plan }): Promise<{ meters: Meter[]; plan: string | null } | MetersFailure> => {
-      const answer = await relayJson(request(account.secret), signal, undefined, undefined, resolveConnection(connection)?.type);
+      const answer = await relayJson(request(account.secret), signal, undefined, undefined, type);
       if (!answer.ok) return answer.failure;
       const meters = parse(answer.data);
       return meters ? { meters, plan: plan?.(answer.data) ?? null } : { kind: 'not-meters' };
