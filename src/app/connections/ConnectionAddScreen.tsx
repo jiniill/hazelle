@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { GENERIC, resolveConnection, searchTypes } from '../../connectors/registry';
+import { resolveConnection, searchTypes } from '../../connectors/registry';
 import type { Connection, ConnectionType } from '../../connectors/types';
-import { newAccount, providerConnection } from '../../runtime/connections';
+import { providerConnection } from '../../runtime/connections';
 import { count as counted } from '../common/typedNumber';
 import { newOf } from '../common/acts';
 import { noResults } from '../common/search';
@@ -12,7 +12,7 @@ import { useAccount, useConnections, useSession } from '../session';
 import { backBar, navigate, useRoute } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, Callout, Empty, GuideMark, List, ListItem, NavBar, Screen, SearchField, Section, Stack, Text } from '../ui';
-import { connect } from './connect';
+import { connect, directConnection } from './connect';
 
 const GROUPS: Record<ConnectionType['group'], string> = {
   gateway: '통합 API 게이트웨이',
@@ -23,15 +23,7 @@ const GROUPS: Record<ConnectionType['group'], string> = {
 // Ollama, LM Studio and koboldcpp at the ports launch.ts and docker-compose.yml list; another listed one goes by its address.
 const LOCAL_NAMES: Partial<Record<string, string>> = { '11434': 'Ollama', '1234': 'LM Studio', '5001': 'koboldcpp' };
 
-const localConnection = (address: string): Connection => ({
-  type: GENERIC,
-  label: LOCAL_NAMES[address.split(':').at(-1)!] ?? address,
-  baseUrl: `http://${address}/v1`,
-  protocol: 'chat-completions',
-  accounts: [newAccount('')],
-  turns: null,
-  starred: [],
-});
+const localConnection = (address: string) => directConnection(LOCAL_NAMES[address.split(':').at(-1)!] ?? address, `http://${address}/v1`, 'chat-completions', '');
 
 // The model servers a self-host lists (HAZELLE_LOCAL_PROVIDERS) that answer with a model list now; hazelle.app lists none.
 function useLocalServers(addresses: readonly string[]) {

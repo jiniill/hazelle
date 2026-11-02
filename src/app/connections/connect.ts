@@ -1,5 +1,6 @@
-import type { Connection } from '../../connectors/types';
-import { addConnection } from '../../runtime/connections';
+import { GENERIC } from '../../connectors/registry';
+import type { Connection, Protocol } from '../../connectors/types';
+import { addConnection, newAccount } from '../../runtime/connections';
 import type { Session } from '../../runtime/session';
 import { describeKeyFailure } from '../common/failure';
 import { navigate } from '../shell/router';
@@ -11,3 +12,13 @@ export async function connect(session: Session, connection: Connection, signal: 
   if (!signal.aborted) navigate({ kind: 'connection', id: added.id }, { replace: true });
   return null;
 }
+
+export const directConnection = (label: string, baseUrl: string, protocol: Protocol, secret: string): Connection => ({
+  type: GENERIC,
+  label,
+  baseUrl,
+  protocol,
+  accounts: [newAccount(secret)],
+  turns: null,
+  starred: [],
+});

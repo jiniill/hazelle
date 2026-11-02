@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { addressProblem, detect, GENERIC } from '../../connectors/registry';
+import { addressProblem, detect } from '../../connectors/registry';
 import type { Connection, Protocol } from '../../connectors/types';
-import { newAccount, providerConnection } from '../../runtime/connections';
+import { providerConnection } from '../../runtime/connections';
 import { HTTPS_ONLY } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { MARKS } from '../common/tutorial';
@@ -10,7 +10,7 @@ import { useAccount, useSession } from '../session';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, Callout, ChoiceGroup, GuideMark, Intro, NavBar, Screen, Stack, Text, TextField } from '../ui';
-import { connect } from './connect';
+import { connect, directConnection } from './connect';
 
 const PROTOCOLS: { value: Protocol; label: string }[] = [
   { value: 'chat-completions', label: 'OpenAI 호환' },
@@ -40,7 +40,7 @@ export function ConnectionDirectScreen({ address: pasted, back }: { address: str
   if (place?.kind === 'url' && secret) {
     draft = providerConnection(place.type, secret);
   } else if (place?.kind === 'generic-url' && !problem && protocol) {
-    draft = { type: GENERIC, label: new URL(place.baseUrl).host, baseUrl: place.baseUrl, protocol, accounts: [newAccount(secret)], turns: null, starred: [] };
+    draft = directConnection(new URL(place.baseUrl).host, place.baseUrl, protocol, secret);
   }
 
   async function submit(event: FormEvent) {
