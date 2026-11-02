@@ -6,7 +6,7 @@ import { api, holdAccount, SLOW_ROUTE_WAIT, type ApiResult, type Heard } from '.
 import { page } from './pages';
 import { stretchInWorker } from './password';
 import { guestSignupRecovery, recallGuest } from '../vault/device';
-import { transferGuest, type GuestTransferOptions } from './guest-transfer';
+import { sameVaultKey, transferGuest, type GuestTransferOptions } from './guest-transfer';
 
 // Null caps mean unlimited; null bytes means unread/restoring.
 // fileBytes tracks held files, not files currently referenced by app objects (server/files).
@@ -81,8 +81,8 @@ export async function logIn(username: string, credential: Credential, options: G
   const guest = await recallGuest();
   if (guest?.accountId === signedIn.data.session.accountId) {
     const vaultKey = await openVault(guest.accountId, signedIn.data.vault, credential);
-    if (!vaultKey || !sameVault(guest.vaultKey, vaultKey)) return { ok: false, error: 'unreadable' };
-    const resumed = await resumeGuestSignup(signedIn.data, vaultKey, options);
+    if (!vaultKey || !sameVaultKey(guest.vaultKey, vaultKey)) return { ok: false, error: 'unreadable' };
+    const resumed = await uploadGuest(guest.accountId, vaultKey, options);
     if (!resumed.ok) return resumed;
   }
   return signedIn;
@@ -108,10 +108,9 @@ export async function signUpGuest(draft: GuestSignup, options: GuestTransferOpti
     if (!signedIn.ok) return signedIn.error === 'wrong-login' ? signedUp : signedIn;
     if (signedIn.data.session.accountId !== draft.accountId) return signedUp;
     const key = await openVault(draft.accountId, signedIn.data.vault, draft.password);
-    return key && sameVault(key, draft.vaultKey) ? { ok: true, data: signedIn.data.session } : { ok: false, error: 'unreadable' };
+    return key && sameVaultKey(key, draft.vaultKey) ? { ok: true, data: signedIn.data.session } : { ok: false, error: 'unreadable' };
   }
-  holdAccount(draft.accountId);
-  const uploaded = await transferGuest(draft.accountId, draft.vaultKey, options);
+  const uploaded = await uploadGuest(draft.accountId, draft.vaultKey, options);
   return uploaded.ok ? signedUp : uploaded;
 }
 
@@ -119,17 +118,6 @@ export function uploadGuest(accountId: string, vaultKey: VaultKey, options: Gues
   holdAccount(accountId);
   return transferGuest(accountId, vaultKey, options);
 }
-
-// Also usable after loadSession finds a signup whose page closed during upload, before opening an account session.
-export async function resumeGuestSignup(signedIn: SignedIn, vaultKey: VaultKey, options: GuestTransferOptions = {}): Promise<ApiResult<null>> {
-  const guest = await recallGuest();
-  if (!guest || guest.accountId !== signedIn.session.accountId) return { ok: true, data: null };
-  if (!sameVault(guest.vaultKey, vaultKey)) return { ok: false, error: 'unreadable' };
-  holdAccount(signedIn.session.accountId);
-  return transferGuest(signedIn.session.accountId, vaultKey, options);
-}
-
-const sameVault = (one: VaultKey, two: VaultKey) => one.length === two.length && one.every((byte, index) => byte === two[index]);
 
 export const logOut = () => api<undefined>('POST', 'logout');
 export const logOutOthers = () => api<{ ended: number }>('POST', 'logout/others');

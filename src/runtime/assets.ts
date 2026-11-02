@@ -1,7 +1,7 @@
 import { ChangeSignal } from '../change-signal';
 import { pictureRef, type PictureKind, type PictureUrl } from '../engine/assets';
 import { toBase64 } from '../vault/aead';
-import { PERMANENT, type Files } from './files';
+import { inOrder, PERMANENT, type Files } from './files';
 import type { ObjectStore } from './store';
 
 const INACTIVE_BYTES = 32 * 1024 * 1024;
@@ -197,10 +197,9 @@ export class UnfoundAssets {
 export async function assetDataUrls(store: Pick<ObjectStore, 'get'>, files: Pick<Files, 'read'>, pictures: Iterable<{ kind: PictureKind; id: string }>): Promise<{ urls: Map<string, string>; missing: number }> {
   const urls = new Map<string, string>();
   let missing = 0;
-  for (const { kind, id } of pictures) {
-    const picture = store.get(kind, id)?.value;
-    const read = picture && (await files.read(picture.file));
-    if (picture && read?.ok) urls.set(pictureRef(kind, id), `data:${picture.type};base64,${toBase64(read.data)}`);
+  const held = [...pictures].map(({ kind, id }) => ({ ref: pictureRef(kind, id), picture: store.get(kind, id)?.value }));
+  for await (const [{ ref, picture }, read] of inOrder(held, ({ picture }) => (picture ? files.read(picture.file) : Promise.resolve(null)), { size: ({ picture }) => picture?.size ?? 0 })) {
+    if (picture && read?.ok) urls.set(ref, `data:${picture.type};base64,${toBase64(read.data)}`);
     else missing++;
   }
   return { urls, missing };

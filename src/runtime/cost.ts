@@ -15,11 +15,12 @@ const WAITS_MS = [1000, 2000, 4000, 8000, 15000, 30000];
 
 // No pool type books a cost afterwards (pool.test), so the reply's account is the connection's one account.
 export async function settleCost(connection: Connection, replyId: string, signal: AbortSignal): Promise<SettleResult> {
-  const settle = resolveConnection(connection)?.type?.settle;
+  const type = resolveConnection(connection)?.type;
+  const settle = type?.settle;
   if (!settle) return { ok: false, failure: { kind: 'not-a-cost' } };
   const [account] = connection.accounts;
   for (let attempt = 0; ; attempt++) {
-    const answer = await relayJson(settle.request(account!.secret, replyId), signal, undefined, undefined, resolveConnection(connection)?.type);
+    const answer = await relayJson(settle.request(account!.secret, replyId), signal, undefined, undefined, type);
     if (answer.ok) {
       const cost = settle.parse(answer.data);
       return cost ? { ok: true, cost } : { ok: false, failure: { kind: 'not-a-cost' } };
