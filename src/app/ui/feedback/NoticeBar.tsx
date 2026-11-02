@@ -2,12 +2,13 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import { Row } from '../layout/Row';
+import { Hint } from '../overlays/Hint';
 import styles from './NoticeBar.module.css';
 
-type Props = { icon: LucideIcon; title: string; note?: string; actions: ReactNode };
+type Props = { icon: LucideIcon; title: string; note?: string; hint?: { label: string; text: string }; actions: ReactNode };
 
-// NoticeCard's standing in one line, for where the card is put away or no longer stands; it has no ×.
-export function NoticeBar({ icon, title, note, actions }: Props) {
+// What standing somewhere means, in one line, where the whole of it (NoticeCard) would ask too much of the screen.
+export function NoticeBar({ icon, title, note, hint, actions }: Props) {
   return (
     <section className={styles.bar} aria-label={title}>
       <span className={styles.lead}>
@@ -16,7 +17,12 @@ export function NoticeBar({ icon, title, note, actions }: Props) {
         </span>
         <span className={styles.words}>
           <span className={styles.title}>{title}</span>
-          {note && <span className={styles.note}>{note}</span>}
+          {note && (
+            <span className={styles.note}>
+              {note}
+              {hint && <Hint label={hint.label}>{hint.text}</Hint>}
+            </span>
+          )}
         </span>
       </span>
       <Row kind="actions">{actions}</Row>

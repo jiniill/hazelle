@@ -13,33 +13,41 @@ const POINTS = [
   { icon: Eraser, text: '이 브라우저의 데이터를 지우면 사라져요' },
 ];
 const TITLE = '손님 모드';
+const LIMITS = '손님 모드의 제한';
 const NOTE = '만든 내용은 이 브라우저에만 저장돼요.';
 const SAFARI = { icon: Smartphone, text: 'Safari는 7일 동안 열지 않으면 데이터를 지워요 · 공유 › 홈 화면에 추가하면 지우지 않아요' };
 
-export function GuestNotice({ guest, onClose }: { guest: GuestDoors; onClose?: () => void }) {
+const points = () => (evictsUnlessInstalled() ? [...POINTS, SAFARI] : POINTS);
+
+export function GuestNotice({ guest }: { guest: GuestDoors }) {
+  return <NoticeCard title={TITLE} note={NOTE} points={points()} actions={<Doors guest={guest} signIn="계정이 있으면 로그인" />} foot={<Agreement />} />;
+}
+
+// A guest agrees to the terms by first use, so this stands where that use starts.
+function Agreement() {
+  if (selfHost()) return null;
   return (
-    <NoticeCard
-      title={TITLE}
-      note={NOTE}
-      points={evictsUnlessInstalled() ? [...POINTS, SAFARI] : POINTS}
-      onClose={onClose}
-      actions={<Doors guest={guest} signIn="계정이 있으면 로그인" />}
-      foot={
-        selfHost() ? undefined : (
-          <>
-            쓰면 <Link href={TERMS.path}>{TERMS.title}</Link>과 <Link href={PRIVACY.path}>{PRIVACY.title}</Link>에 동의하게 돼요.
-          </>
-        )
-      }
-    />
+    <>
+      쓰면 <Link href={TERMS.path}>{TERMS.title}</Link>과 <Link href={PRIVACY.path}>{PRIVACY.title}</Link>에 동의하게 돼요.
+    </>
   );
 }
 
-// Keep signup doors visible after the card is dismissed or empty-home disappears; note names the blocked action.
+export function GuestAgreement() {
+  const { guest } = useAccount();
+  if (!guest || selfHost()) return null;
+  return (
+    <Text variant="note">
+      <Agreement />
+    </Text>
+  );
+}
+
+// The quiet standing of a guest: the card with every limit is in 설정 › 계정, the limits sit behind the ⓘ, and each speaks again where it bites. note names the blocked action.
 export function GuestLine({ note = NOTE }: { note?: string }) {
   const { guest } = useAccount();
   if (!guest) return null;
-  return <NoticeBar icon={CloudOff} title={TITLE} note={note} actions={<Doors guest={guest} signIn="로그인" />} />;
+  return <NoticeBar icon={CloudOff} title={TITLE} note={note} hint={{ label: LIMITS, text: points().map(({ text }) => `${text}.`).join(' ') }} actions={<Doors guest={guest} signIn="로그인" quiet />} />;
 }
 
 // Until guests can write on the board, the way out for a failure, a failed 계정 만들기 above all.
@@ -51,17 +59,17 @@ export function ReportElsewhere() {
   );
 }
 
-function Doors({ guest, signIn }: { guest: GuestDoors; signIn: string }) {
+function Doors({ guest, signIn, quiet = false }: { guest: GuestDoors; signIn: string; quiet?: boolean }) {
   return (
     <>
       {guest.signupOpen ? (
-        <Button size="sm" onClick={guest.onSignup}>
+        <Button variant={quiet ? 'secondary' : 'primary'} size="sm" onClick={guest.onSignup}>
           계정 만들기
         </Button>
       ) : (
         <Text variant="note">지금은 정원이 차서 계정을 만들 수 없어요</Text>
       )}
-      <Button variant="secondary" size="sm" onClick={guest.onSignIn}>
+      <Button variant={quiet ? 'ghost' : 'secondary'} size="sm" onClick={guest.onSignIn}>
         {signIn}
       </Button>
     </>

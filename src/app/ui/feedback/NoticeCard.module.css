@@ -6,12 +6,6 @@
   padding: var(--space-12) var(--space-12) var(--space-12) var(--space-16);
 }
 
-.head {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-8);
-}
-
 .words {
   display: flex;
   flex: 1 1 auto;

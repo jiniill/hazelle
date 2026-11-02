@@ -13,7 +13,7 @@ type Props = {
 export function ActionCard({ tone = 'plain', icon, title, description, onClick }: Props) {
   return (
     <button type="button" className={tone === 'accent' ? `${styles.card} ${styles.accent}` : styles.card} onClick={onClick}>
-      <span className={styles.head}>
+      <span className={styles.icon}>
         <Icon icon={icon} />
       </span>
       <span className={styles.title}>{title}</span>
