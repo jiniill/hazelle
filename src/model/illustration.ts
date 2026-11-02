@@ -2,6 +2,7 @@ import type { ModelRef } from '../connectors/assignment';
 import type { PictureRequest } from '../connectors/types';
 import type { FileRef } from '../vault/files';
 import type { Receipt } from './chat';
+import { grouped } from './fields';
 
 // Pictures belong to message versions; never rewrite message text or the bot's assets.
 
@@ -92,12 +93,6 @@ export const withoutMarks = (text: string, keep: ReadonlySet<number> = new Set()
 
 // Group by paragraph, oldest picture first within each group; text is the current version text.
 export function byParagraph<T extends { value: Illustration }>(pictures: readonly T[], text: string): Map<number, T[]> {
-  const places = new Map<number, T[]>();
-  const placed = pictures.map((picture) => ({ picture, paragraph: placeOf(picture.value, text) }));
-  for (const { picture, paragraph } of placed.sort((a, b) => a.paragraph - b.paragraph || a.picture.value.at - b.picture.value.at)) {
-    const place = places.get(paragraph);
-    if (place) place.push(picture);
-    else places.set(paragraph, [picture]);
-  }
-  return places;
+  const places = new Map(pictures.map((picture) => [picture, placeOf(picture.value, text)]));
+  return grouped(pictures.toSorted((a, b) => places.get(a)! - places.get(b)! || a.value.at - b.value.at), (picture) => places.get(picture)!);
 }
