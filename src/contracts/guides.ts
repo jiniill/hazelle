@@ -40,7 +40,7 @@ export const GUIDES: Guide[] = [
           '옮긴 채팅은 장기 기억이 꺼진 채로 시작해요. 켜면 그때 요약해요.',
         ],
       },
-      { title: '옮긴 다음에는', blocks: ['대화하려면 모델을 연결해야 해요.', { link: '/', label: 'API 키 연결하고 대화 시작하기' }] },
+      { title: '옮긴 다음에는', blocks: ['대화하려면 모델을 연결해야 해요.', { link: '/connections/new', label: 'API 키 연결하고 대화 시작하기' }] },
     ],
   },
 ];

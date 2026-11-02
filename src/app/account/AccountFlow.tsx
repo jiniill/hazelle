@@ -64,7 +64,8 @@ function enterAs(username: string) {
 }
 
 // A browser that has held neither an account nor a guest, asking for the site's front door. A search engine is one.
-const firstVisit = async () => location.pathname === '/' && !selfHost() && (await entry()) === null && (await recallGuest()) === null;
+// entry() reads a chosen guest ('') as no account, so the stored hint is asked apart: a person who picked 손님으로 쓰기 has been here.
+const firstVisit = async () => location.pathname === '/' && !selfHost() && readPersisted<string | null>(ENTRY, (value) => value, null) === null && (await entry()) === null && (await recallGuest()) === null;
 
 export type FirstDoors = { onOpen: () => void; onSignIn: () => void };
 

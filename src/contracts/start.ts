@@ -1,7 +1,7 @@
 // The first visitor's page: the server writes these words for crawlers (static.ts) and the app draws the same words
 // around its live parts (app/start), so what a search engine reads is what a person reads.
 export const START_PAGE = {
-  title: '헤이젤 · 내 API 키로 웹에서 하는 AI 캐릭터 챗',
+  title: '헤이젤 · 내 API 키로 웹에서 하는 AI 캐릭터 챗, RisuAI 봇까지',
   line: '설치나 가입 없이 브라우저에서 GPT, Claude, Gemini를 API 키로 연결해요. RisuAI 봇과 포켓리스 백업도 그대로 가져와요.',
   heading: '내 API 키로 바로 시작하는 AI 캐릭터 챗',
   example: { title: '이런 대화를 나눠요', line: '예시 대화예요. 하고 싶은 말을 눌러 보세요.' },

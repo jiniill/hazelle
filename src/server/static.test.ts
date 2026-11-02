@@ -65,7 +65,7 @@ describe('the client files', () => {
     pulse = async () => ({ at: 0, board: null });
     writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><meta name="description" content="app" /></head><div id="root"><p class="boot" role="status">불러오는 중…</p></div>');
     const home = await (await client.request('/', { headers: PAGE })).text();
-    expect(home).toContain('<title>헤이젤 · 내 API 키로 웹에서 하는 AI 캐릭터 챗</title>');
+    expect(home).toContain('<title>헤이젤 · 내 API 키로 웹에서 하는 AI 캐릭터 챗, RisuAI 봇까지</title>');
     expect(home).toContain('<link rel="canonical" href="https://hazelle.app/" />');
     expect(home).toContain('<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication"');
     expect(home).toMatch(/<div id="root"><main class="boot landing"><h1>내 API 키로 바로 시작하는 AI 캐릭터 챗<\/h1>.*<p role="status">불러오는 중…<\/p><\/main><\/div>$/);
@@ -142,7 +142,7 @@ describe('the client files', () => {
     const body = await (await client.request('/guide/move-from-risu', { headers: PAGE })).text();
     expect(body).toContain('<title>RisuAI·포켓리스 백업 옮기는 법 · 헤이젤</title>');
     expect(body).toContain('<li>첫 화면에서 Risu에서 이사를 눌러요.</li>');
-    expect(body).toContain('<a href="/">');
+    expect(body).toContain('<a href="/connections/new">');
     expect(body).not.toContain('<img');
     writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
   });
