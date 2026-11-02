@@ -120,17 +120,22 @@ export const costUnit = (type: ConnectionType | null): Cost['unit'] => (type && 
 // Explicit null disables embeddings; only undefined inherits the codec's.
 const embedsOf = ({ type, codec }: Route) => (type?.embeds !== undefined ? type.embeds : codec.embeds);
 
-// The route a model's embeddings take; null where the connection serves none in the model's format.
-export function embedRoute(connection: Connection, model: Model): Route | null {
+// null for a model this version cannot call at all over the connection.
+function routeOf(connection: Connection, model: Model): Route | null {
   const resolved = resolveConnection(connection);
-  if (!resolved?.codec) return null;
+  if (!resolved) return null;
   try {
-    const route = resolveModel(resolved, model);
-    return embedsOf(route) ? route : null;
+    return resolveModel(resolved, model);
   } catch (error) {
     if (error instanceof ConnectorError) return null;
     throw error;
   }
+}
+
+// The route a model's embeddings take; null where the connection serves none in the model's format.
+export function embedRoute(connection: Connection, model: Model): Route | null {
+  const route = routeOf(connection, model);
+  return route && embedsOf(route) ? route : null;
 }
 
 // One request for each perRequest texts, in order; count: the texts its answer holds.
@@ -170,16 +175,9 @@ function carries(route: Route, model: Model): Carries {
   };
 }
 
-// null for a model this version cannot call at all.
 export function modelSettings(connection: Connection, model: Model): SettingsSchema | null {
-  const resolved = resolveConnection(connection);
-  if (!resolved) return null;
-  try {
-    return settingsSchema(carries(resolveModel(resolved, model), model), model);
-  } catch (error) {
-    if (error instanceof ConnectorError) return null;
-    throw error;
-  }
+  const route = routeOf(connection, model);
+  return route && settingsSchema(carries(route, model), model);
 }
 
 // settings is the 묶음's as stored; the 모델 설정 screen names each change with the same fit().
