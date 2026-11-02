@@ -92,7 +92,6 @@ export function useNicknameGate() {
   return { gate: (then: () => void) => void gate(then), dialog };
 }
 
-// The account's own nickname as 게시판 shows it, with its 바꾸기 and the dialog that does it, for a place to lay out.
 export function useOwnNickname() {
   const { admin } = useAccount();
   const loaded = useLoaded(readNickname);

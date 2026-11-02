@@ -6,8 +6,7 @@ import { count } from '../common/typedNumber';
 
 type Ask = Parameters<typeof askEstimate>[1];
 
-// Read once typing pauses. ask null: nothing to send, so no estimate. Its earlier asks change only with a sent one,
-// which empties the ask, so they are not watched.
+// Earlier asks change only with a sent one, which empties the ask, so they are not watched.
 export function useAskEstimate(deps: Parameters<typeof askEstimate>[0], ask: Ask | null): Cost | null {
   const [estimate, setEstimate] = useState<Cost | null>(null);
   useEffect(() => {
