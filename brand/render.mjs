@@ -28,14 +28,23 @@ const fonts = `@font-face{font-family:Hangul;src:url(data:font/woff2;base64,${aw
 const icon = (box) => svg(box, box, `<rect width="${box}" height="${box}" rx="${box * 0.22}" fill="${ink}"/>${centered(box, box * 0.64, gold)}`);
 // Maskable icons are cropped to a circle or squircle inside the outer 10 %, so the mark stays within the middle 60 %.
 const maskable = (box) => svg(box, box, `<rect width="${box}" height="${box}" fill="${ink}"/>${centered(box, box * 0.56, gold)}`);
-const preview = svg(1200, 630, `<rect width="1200" height="630" fill="${ink}"/>${mark(214, 190, 250, gold)}<text x="520" y="358" font-family="Hangul" font-size="168" fill="${cream}">헤이젤</text><text x="528" y="436" font-family="Latin" font-size="48" fill="${cream}" fill-opacity="0.6">Hazelle</text>`);
+const art = async (name) => `url(data:image/webp;base64,${await base64(path.join(root, 'src/app/ui/landing/art', `${name}.webp`))})`;
+const layer = async (name, css = '') => `<div style="position:absolute;inset:0;background:${await art(name)} 62% 100%/cover no-repeat;${css}"></div>`;
+// The link preview is the first page's own forest, redrawn by this file whenever ui/landing/art changes.
+const preview = `<div style="position:relative;width:1200px;height:630px;overflow:hidden;background:#0a0a22">
+  ${await layer('sky-wide')}
+  <div style="position:absolute;top:44px;left:876px;width:126px;height:126px;background:${await art('moon')} center/contain no-repeat"></div>
+  ${await layer('ridge-wide')}${await layer('rowA-wide')}${await layer('rowB-wide')}${await layer('rowC-wide')}
+  <div style="position:absolute;inset:0;background:linear-gradient(90deg,#0a0a22d9 0,#0a0a2299 42%,transparent 68%)"></div>
+  <div style="position:absolute;inset:0">${svg(1200, 630, `${mark(84, 226, 150, gold)}<text x="262" y="325" font-family="Hangul" font-size="112" fill="${cream}" letter-spacing="-2">헤이젤</text><text x="266" y="382" font-family="Latin" font-size="36" fill="${cream}" fill-opacity="0.72">Hazelle</text>`)}</div>
+</div>`;
 
 const files = [
   ['icon-192.png', 192, 192, icon(192)],
   ['icon-512.png', 512, 512, icon(512)],
   ['icon-maskable-512.png', 512, 512, maskable(512)],
   ['apple-touch-icon.png', 180, 180, icon(180)],
-  ['og.png', 1200, 630, preview],
+  ['og.jpg', 1200, 630, preview],
 ];
 const browser = await chromium.launch();
 const page = await browser.newPage({ deviceScaleFactor: 1 });
@@ -43,7 +52,7 @@ for (const [name, w, h, body] of files) {
   await page.setViewportSize({ width: w, height: h });
   await page.setContent(`<style>${fonts}html,body{margin:0;background:transparent}</style>${body}`);
   await page.evaluate('document.fonts.ready');
-  await page.screenshot({ path: out(name), omitBackground: true });
+  await page.screenshot(name.endsWith('.jpg') ? { path: out(name), type: 'jpeg', quality: 86 } : { path: out(name), omitBackground: true });
 }
 await browser.close();
 stdout.write(`brand: wrote favicon.svg and ${files.length} images to public/\n`);
