@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import type { ReactNode, Ref } from 'react';
+import type { Ref } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './ToolButton.module.css';
 
@@ -18,10 +18,6 @@ type Props = {
   ref?: Ref<HTMLButtonElement>;
   onClick: () => void;
 };
-
-export function ToolEnd({ children }: { children: ReactNode }) {
-  return <div className={styles.end}>{children}</div>;
-}
 
 export function ToolButton({ icon, label, detail, mark, busy = false, phone = 'full', wide = 'full', expanded, popup, ref, onClick }: Props) {
   const shown = mark?.kind === 'dot' || (mark?.kind === 'count' && mark.count > 0);

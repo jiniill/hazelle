@@ -4,15 +4,16 @@ import { Hint } from '../overlays/Hint';
 import styles from './SendNote.module.css';
 
 // onClick: the note opens where its reason is told at length, so it is a button and keeps no ⓘ of its own.
-type Props = { label: string; title: string; warning?: { words: string; why: string }; onClick?: () => void };
+// spareLabel: the words already say the label, so it shows only where they fold.
+type Props = { label: string; title: string; warning?: { words: string; why: string }; spareLabel?: boolean; onClick?: () => void };
 
-export function SendNote({ label, title, warning, onClick }: Props) {
+export function SendNote({ label, title, warning, spareLabel, onClick }: Props) {
   const className = [styles.sendNote, warning && styles.warn, onClick && styles.press].filter(Boolean).join(' ');
   const body = (
     <>
       <Icon icon={warning ? TriangleAlert : Timer} size="sm" />
-      {label}
-      {warning && <span className={styles.words}>· {warning.words}</span>}
+      <span className={spareLabel ? styles.spare : undefined}>{label}</span>
+      {warning && <span className={styles.words}>{!spareLabel && '· '}{warning.words}</span>}
     </>
   );
   if (onClick)

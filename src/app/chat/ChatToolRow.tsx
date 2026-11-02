@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Fragment, useState, type ReactNode } from 'react';
 import { hideTool, setToolOrder } from '../../runtime/characters';
 import { useSettings, useStore } from '../session';
-import { CheckList, MenuBack, MoreMenu, Section, ToolEnd, useMenuClose } from '../ui';
+import { CheckList, MenuBack, MoreMenu, Section, useMenuClose } from '../ui';
 import { inToolOrder } from './toolMenu';
 
 // live: it acts in this chat. Hiding moves the button only, so ⋯ and its line carry a dot while a hidden one is live; 기능 is what stops a feature.
@@ -10,32 +10,41 @@ import { inToolOrder } from './toolMenu';
 // open: what the panel shows for a hidden one, or what it does at once.
 export type RowTool = { key: string; label: string; icon: LucideIcon; live: boolean; running?: boolean; node: ReactNode; open: ReactNode | (() => void); openLabel?: string };
 
-// after: buttons of the row that are not tools to hide. foot: what the list of ⋯ shows under its tools. ⋯ holds the row's far end: ticking a box must not move the panel under the pointer.
-export function ChatToolRow({ tools: declared, after, foot }: { tools: RowTool[]; after: ReactNode; foot: ReactNode }) {
-  const store = useStore();
+function useRowTools(declared: RowTool[]) {
   const { hiddenTools, toolOrder } = useSettings();
-  const hidden = new Set(hiddenTools);
-  const tools = inToolOrder(declared, toolOrder ?? []);
+  return { tools: inToolOrder(declared, toolOrder ?? []), hidden: new Set(hiddenTools) };
+}
+
+// after: buttons of the row that are not tools to hide.
+export function ChatToolRow({ tools: declared, after }: { tools: RowTool[]; after: ReactNode }) {
+  const { tools, hidden } = useRowTools(declared);
   return (
     <>
       {tools.filter((tool) => !hidden.has(tool.key) || tool.running).map((tool) => <Fragment key={tool.key}>{tool.node}</Fragment>)}
       {after}
-      <ToolEnd>
-        <MoreMenu of="입력창 도구" kind="dialog" size="form" place="above-end" dot={tools.some((tool) => hidden.has(tool.key) && tool.live)}>
-          <Panel
-            tools={tools}
-            hidden={hidden}
-            foot={foot}
-            onHide={(key, hide) => void hideTool(store, key, hide)}
-            onMove={(from, to) => {
-              const keys = tools.map((tool) => tool.key);
-              keys.splice(to, 0, keys.splice(from, 1)[0]!);
-              void setToolOrder(store, keys);
-            }}
-          />
-        </MoreMenu>
-      </ToolEnd>
     </>
+  );
+}
+
+// Stands apart from the row, which wraps: ticking a box must not move the panel under the pointer.
+// foot: what the list shows under its tools.
+export function ChatToolMore({ tools: declared, foot }: { tools: RowTool[]; foot: ReactNode }) {
+  const store = useStore();
+  const { tools, hidden } = useRowTools(declared);
+  return (
+    <MoreMenu of="입력창 도구" kind="dialog" size="form" place="above-end" dot={tools.some((tool) => hidden.has(tool.key) && tool.live)}>
+      <Panel
+        tools={tools}
+        hidden={hidden}
+        foot={foot}
+        onHide={(key, hide) => void hideTool(store, key, hide)}
+        onMove={(from, to) => {
+          const keys = tools.map((tool) => tool.key);
+          keys.splice(to, 0, keys.splice(from, 1)[0]!);
+          void setToolOrder(store, keys);
+        }}
+      />
+    </MoreMenu>
   );
 }
 

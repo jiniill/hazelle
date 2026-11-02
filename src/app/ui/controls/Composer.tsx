@@ -47,7 +47,7 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, actio
         <div className={styles.tools}>
           <div className={styles.bar}>
             <div className={styles.toolRow}>{tools}</div>
-            {actions}
+            <div className={styles.actions}>{actions}</div>
           </div>
         </div>
       </div>

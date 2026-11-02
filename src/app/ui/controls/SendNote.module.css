@@ -22,8 +22,16 @@
   text-decoration: underline;
 }
 
-@media (max-width: 959px) {
+.spare {
+  display: none;
+}
+
+@container composer (max-width: 599px) {
   .words {
     display: none;
+  }
+
+  .spare {
+    display: inline;
   }
 }

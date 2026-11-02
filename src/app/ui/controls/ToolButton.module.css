@@ -16,10 +16,6 @@
   color: var(--color-text);
 }
 
-.end {
-  margin-inline-start: auto;
-}
-
 .spinner {
   composes: spin from '../foundation/motion.module.css';
   flex-shrink: 0;
@@ -39,6 +35,12 @@
 }
 
 @media (max-width: 959px) {
+  .phoneIcon .label {
+    display: none;
+  }
+}
+
+@container composer (max-width: 599px) {
   .phoneIcon .label {
     display: none;
   }

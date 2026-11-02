@@ -1,4 +1,6 @@
 .composer {
+  /* Named for what folds on the composer's own width (ToolButton, SendNote): a side panel narrows it on a wide window. */
+  container: composer / inline-size;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -88,19 +90,13 @@
     opacity var(--duration-fast) var(--duration-fast),
     visibility var(--duration-fast) var(--duration-fast);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-8);
   padding-top: var(--space-8);
 }
 
-/* Positioned after a SendNote's ⓘ, whose press area reaches over the send button otherwise. */
-@media (pointer: coarse) {
-  .bar > * {
-    position: relative;
-  }
-}
-
-/* Tools wrap to a second line rather than push the send button off a phone's bar. */
+/* Tools wrap to a second line rather than push the send button off a phone's bar. The padding centres each line's
+   chips on the send button's height, so the last line stays level with it. */
 .toolRow {
   flex-grow: 1;
   min-width: 0;
@@ -108,4 +104,19 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-8);
+  padding-block: calc((var(--control-compact) - var(--control-chip)) / 2);
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+/* Positioned after a SendNote's ⓘ, whose press area reaches over the send button otherwise. */
+@media (pointer: coarse) {
+  .actions > * {
+    position: relative;
+  }
 }

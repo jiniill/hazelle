@@ -85,7 +85,7 @@ export function ChatCache({ cache, onOpen }: { cache: CacheNotes; onOpen: () => 
   const { next } = cache;
   const warning = next ? nextWarning(next, cache.recurrence, profileName(store, next.route)) : undefined;
   // A provider caching on its own tells no time to count down, so only a warning shows.
-  if (next?.forecast.prefix) return warning ? <SendNote label={PREFIX_TITLE} title={PREFIX_TITLE} warning={warning} onClick={onOpen} /> : null;
+  if (next?.forecast.prefix) return warning ? <SendNote label={PREFIX_TITLE} title={PREFIX_TITLE} warning={warning} spareLabel onClick={onOpen} /> : null;
   if (cache.until === null || now >= cache.until) return null;
   return <SendNote label={clock(cache.until - now)} title={TITLE} warning={warning} onClick={onOpen} />;
 }
