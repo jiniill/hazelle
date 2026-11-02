@@ -1,6 +1,6 @@
 import { streamError } from './errors';
 import type { BatchAnswer, Batches, ConnectionType } from './types';
-import { isRecord, list } from './values';
+import { isRecord, jsonObject, list } from './values';
 
 // Inline batch operation; match state suffixes because guide/reference use JOB_STATE_/BATCH_STATE_
 // (ai.google.dev/api/batch-api, 2026-10-12).
@@ -16,13 +16,8 @@ const batches: Batches = {
   ended: (payload) => (isRecord(payload) && typeof payload.name === 'string' ? payload.done === true : null),
   results: (endpoint, batch) => ({ url: `${endpoint.baseUrl}/${batch}`, method: 'GET', headers: {}, body: null }),
   answer(body) {
-    let payload: unknown;
-    try {
-      payload = JSON.parse(body);
-    } catch {
-      return null;
-    }
-    return isRecord(payload) && payload.done === true ? answerOf(payload) : null;
+    const payload = jsonObject(body);
+    return payload?.done === true ? answerOf(payload) : null;
   },
   cancel: (endpoint, batch) => ({ url: `${endpoint.baseUrl}/${batch}:cancel`, method: 'POST', headers: {}, body: null }),
 };

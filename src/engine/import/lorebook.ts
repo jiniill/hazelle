@@ -1,4 +1,4 @@
-import { isRecord } from '../../connectors/values';
+import { isRecord, jsonObject } from '../../connectors/values';
 import { bookLorebook, countTags, finite, record, strings, text, type Json, type Tally } from './convert';
 import { moduleSource, readModule } from './hazelle';
 import type { LoreEntry } from './types';
@@ -26,13 +26,8 @@ export function readLorebook(raw: Json, tally: Tally): LorebookRead | null {
 
 // A file picked in a lorebook's 가져오기; null for one that is no lorebook.
 export function readLorebookText(text: string): LorebookRead | null {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    return null;
-  }
-  return isRecord(raw) ? readLorebook(raw, new Map()) : null;
+  const raw = jsonObject(text);
+  return raw && readLorebook(raw, new Map());
 }
 
 // Convert external lore as Risu does, but also read SillyTavern keysecondary, which Risu misses.

@@ -1,4 +1,4 @@
-import { isRecord, list } from '../../connectors/values';
+import { isRecord, jsonObject, list } from '../../connectors/values';
 import { SIGNATURE } from '../assets';
 import { imageType } from './card';
 import { add, counted, record, text, type Json, type Tally } from './convert';
@@ -156,12 +156,7 @@ const HELD_INLAY = 'inlay/';
 export function inlayType(bytes: Uint8Array): string | null {
   const type = imageType(bytes);
   if (type || bytes[0] !== 0x7b) return type;
-  try {
-    const item: unknown = JSON.parse(utf8.decode(bytes));
-    return isRecord(item) && item.type === SIGNATURE ? SIGNATURE : null;
-  } catch {
-    return null;
-  }
+  return jsonObject(utf8.decode(bytes))?.type === SIGNATURE ? SIGNATURE : null;
 }
 
 const u32 = (bytes: Uint8Array, at: number) => new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(at, true);

@@ -1,7 +1,7 @@
 import { VERSION } from './anthropic-messages';
 import { errorValue } from './errors';
 import type { BatchAnswer, Batches, ConnectionType } from './types';
-import { isRecord } from './values';
+import { isRecord, jsonObject } from './values';
 
 // Message Batches results are JSONL at the batch's results URL (platform.claude.com batch guide, 2026-10-12).
 const batches: Batches = {
@@ -16,13 +16,8 @@ const batches: Batches = {
   results: (endpoint, batch) => ({ url: `${endpoint.baseUrl}/messages/batches/${batch}/results`, method: 'GET', headers: VERSION, body: null }),
   answer(body, key) {
     for (const line of body.split('\n')) {
-      let row: unknown;
-      try {
-        row = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      if (isRecord(row) && row.custom_id === key && isRecord(row.result)) return answerOf(row.result);
+      const row = jsonObject(line);
+      if (row?.custom_id === key && isRecord(row.result)) return answerOf(row.result);
     }
     return null;
   },

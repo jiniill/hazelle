@@ -1,5 +1,5 @@
 import { Unzlib } from 'fflate';
-import { isRecord } from '../../connectors/values';
+import { isRecord, jsonObject } from '../../connectors/values';
 import { concat } from './inflate';
 
 // Read NovelAI prompt JSON only from PNG Comment (tEXt/zTXt) or WebP EXIF UserComment/ImageDescription.
@@ -113,13 +113,8 @@ function exifTexts(chunk: Uint8Array): string[] {
 const isText = (value: unknown): value is string => typeof value === 'string';
 
 function promptOf(text: string): PicturePrompt | null {
-  let value: unknown;
-  try {
-    value = JSON.parse(text.replace(/\0+$/, ''));
-  } catch {
-    return null;
-  }
-  if (!isRecord(value) || !isText(value.prompt)) return null;
+  const value = jsonObject(text.replace(/\0+$/, ''));
+  if (!value || !isText(value.prompt)) return null;
   const caption = isRecord(value.v4_prompt) && isRecord(value.v4_prompt.caption) ? value.v4_prompt.caption : null;
   const base = caption && isText(caption.base_caption) ? caption.base_caption : value.prompt;
   const characters = caption && Array.isArray(caption.char_captions) ? caption.char_captions.flatMap((each) => (isRecord(each) && isText(each.char_caption) && each.char_caption.trim() ? [each.char_caption.trim()] : [])) : [];
