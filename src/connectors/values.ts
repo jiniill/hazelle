@@ -36,6 +36,15 @@ export function perMillion(value: unknown): number | null {
 
 export const vector = (value: unknown): value is number[] => Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'number' && Number.isFinite(item));
 
+export function jsonObject(text: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }

@@ -1,7 +1,7 @@
 import { failedTerminal } from './errors';
 import type { Cache, Reasoning } from './settings';
 import { carriesPictures, ConnectorError, type ChatMessage, type Codec, type InputPicture, type Modality, type StreamFacts, type ToolCall, type ToolResult } from './types';
-import { count, isRecord, list, modelEntries, nameOf } from './values';
+import { count, isRecord, jsonObject, list, modelEntries, nameOf } from './values';
 
 export const VERSION = { 'anthropic-version': '2023-06-01' };
 
@@ -47,16 +47,7 @@ export function wireMessage(message: ChatMessage, cache: Cache | undefined, pict
 }
 
 // The API takes only an object here; arguments that are not one were already answered as unreadable.
-function inputOf(text: string) {
-  try {
-    const input: unknown = JSON.parse(text);
-    return isRecord(input) ? input : {};
-  } catch {
-    return {};
-  }
-}
-
-const toolUse = ({ id, name, arguments: text }: ToolCall) => ({ type: 'tool_use', id, name, input: inputOf(text) });
+const toolUse = ({ id, name, arguments: text }: ToolCall) => ({ type: 'tool_use', id, name, input: jsonObject(text) ?? {} });
 const toolResult = ({ id, text }: ToolResult) => ({ type: 'tool_result', tool_use_id: id, content: text });
 // A call made under another format carries that format's echo, which this API would refuse.
 const echoOf = (call: ToolCall) => list(call.echo).filter((block): block is Record<string, unknown> => isRecord(block) && (block.type === 'thinking' || block.type === 'redacted_thinking' || (block.type === 'text' && typeof block.length === 'number')));

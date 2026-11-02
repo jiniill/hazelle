@@ -3,7 +3,7 @@ import type { Reasoning } from './settings';
 import { bareModel, embedUsage } from './chat-completions';
 import type { ChatMessage, Codec, EmbedPurpose, InputPicture, Model, Phase, StreamFacts, Terminal, ToolCall, ToolResult } from './types';
 import { packPdf, pdfData } from './gemini-pdf';
-import { count, isRecord, list, vector } from './values';
+import { count, isRecord, jsonObject, list, vector } from './values';
 
 // The Gemini API (generateContent), checked against ai.google.dev/api on 2026-10-04.
 
@@ -47,19 +47,9 @@ const media = ({ type, data }: InputPicture): Part => ({ inlineData: { mimeType:
 // the pictures beside it keep theirs.
 const pdfPart = (transcript: string): Part => ({ inlineData: { mimeType: 'application/pdf', data: pdfData(transcript) }, mediaResolution: { level: 'MEDIA_RESOLUTION_LOW' } });
 
-// Unreadable arguments go back as {}: the caller has already answered that call as unreadable.
-function args(text: string): Record<string, unknown> {
-  try {
-    const parsed: unknown = JSON.parse(text);
-    return isRecord(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
 // A signature goes back on the very part it came on (only the first of parallel calls has one); Gemini 3 refuses a
-// call loop without it.
-const call = ({ id, name, arguments: text, echo }: ToolCall): Part => ({ functionCall: { id, name, args: args(text) }, ...(typeof echo === 'string' && { thoughtSignature: echo }) });
+// call loop without it. Unreadable arguments go back as {}: the caller has already answered that call as unreadable.
+const call = ({ id, name, arguments: text, echo }: ToolCall): Part => ({ functionCall: { id, name, args: jsonObject(text) ?? {} }, ...(typeof echo === 'string' && { thoughtSignature: echo }) });
 const answer = ({ id, name, text }: ToolResult): Part => ({ functionResponse: { id, name, response: { output: text } } });
 
 function parts({ content, document: packed, pictures = [], calls = [], results = [] }: ChatMessage): Part[] {
