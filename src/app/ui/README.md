@@ -32,7 +32,7 @@ and only this folder styles elements.**
 
 - Components take variants, never `className` or `style`; a screen that needs a new look extends a component or adds
   one here. Each prop word has one meaning across the kit:
-  - `variant`: which of a component's looks. `size`: how large, a step of a short scale; a slot may decide it. A control's `xs`, `sm`, `md` and `lg` are `--control-xs`, `--control-chip`, `--control-md` and `--control-lg` on every control that takes them.
+  - `variant`: which of a component's looks. `size`: how large, a step of a short scale; a slot may decide it. A control's `xs`, `sm`, `md` and `lg` are `--control-xs`, `--control-chip`, `--control-md` and `--control-lg` on every control that takes them. A button's `xl`, `--control-xl`, is for the one call to action that ends a page.
     `tone`: the colour of what it says: `plain` for neutral, then `muted`, `accent`, `warn` and a component's own
     (a branch, the user's own, faded).
   - `kind`: what a group holds (a toolbar, actions, tags; a menu or a dialog). `gap`: the named room between a
