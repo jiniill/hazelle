@@ -504,6 +504,40 @@
   --ease-loop: ease-in-out;
 
   /* Keep toast above menus/panels/tutorials/dialogs so failures remain actionable; only file drop is higher. */
+  /* The first visitor's night scene (ui/landing). Fixed in both themes: it is a place, not a surface. */
+  --scene-sky-top: #0f1026;
+  --scene-sky-mid: #1b1a3c;
+  --scene-sky-low: #3b2f57;
+  --scene-moon: #f2c97e;
+  --scene-moon-halo: #f2c97e33;
+  --scene-star: #e9e4f5;
+  --scene-ridge-far: #2a2750;
+  --scene-ridge-mid: #1a1a38;
+  --scene-ridge-near: #0c0d1f;
+  --scene-dawn: #f0a868;
+  --scene-text: #f6f1e7;
+  --scene-text-soft: #cfc9df;
+  --scene-pane: #17162ef2;
+  --scene-pane-line: #f2c97e59;
+  --scene-pane-glow: 0 0 80px #f2c97e2e;
+  --scene-said: #2c2850;
+  --scene-replied: #f2c97e;
+  --scene-on-replied: #2a1d07;
+  --landing-hero: clamp(40px, 7.4vw, 92px);
+  --landing-title: clamp(28px, 4.2vw, 52px);
+  --landing-line: clamp(16px, 1.6vw, 20px);
+  --landing-place: clamp(24px, 3vw, 36px);
+  --landing-leading: 1.16;
+  --landing-heading-width: 8.6em;
+  --landing-line-width: 34em;
+  --landing-behind: -1;
+  --scene-moon-glow: 0 0 120px 40px var(--scene-moon-halo);
+  --landing-column: 1180px;
+  --landing-screen: 100svh;
+  --landing-gap: clamp(96px, 16vh, 200px);
+  --landing-edge: clamp(20px, 5vw, 64px);
+  --landing-chat: 340px;
+  --landing-models: 320px;
   --layer-raised: 2;
   --layer-menu: 20;
   --layer-panel: 30;

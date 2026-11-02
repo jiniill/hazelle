@@ -12,6 +12,7 @@ import { sharePage } from './share/SharePage';
 import { markScrollbars } from './ui';
 import './ui/foundation/global.css';
 
+const StartPage = lazy(() => import('./start/StartPage').then(({ StartPage }) => ({ default: StartPage })));
 const Workspace = lazy(() => import('./shell/Workspace').then(({ Workspace }) => ({ default: Workspace })));
 
 const root = document.getElementById('root');
@@ -24,7 +25,7 @@ markScrollbars();
 
 createRoot(root).render(
   <StrictMode>
-    {legalPage(location.pathname) ?? guidePage(location.pathname) ?? pulsePage(location.pathname) ?? sharePage(location.pathname, location.hash) ?? <AccountFlow>{(unlocked) => <ScreenLoad><Workspace {...unlocked} /></ScreenLoad>}</AccountFlow>}
+    {legalPage(location.pathname) ?? guidePage(location.pathname) ?? pulsePage(location.pathname) ?? sharePage(location.pathname, location.hash) ?? <AccountFlow first={(doors) => <ScreenLoad><StartPage {...doors} /></ScreenLoad>}>{(unlocked) => <ScreenLoad><Workspace {...unlocked} /></ScreenLoad>}</AccountFlow>}
   </StrictMode>,
 );
 

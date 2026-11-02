@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { ChildProcess } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { setUp, signUpAsGuest, startServer, stopServer } from './helpers';
+import { openAsGuest, setUp, signUpAsGuest, startServer, stopServer } from './helpers';
 
 // An installation whose operator admits more accounts, as hazelle.app does: a server of its own, since the suite's keeps
 // the cap of one, which makes it one person's and shows no guest.
@@ -26,6 +26,7 @@ test('once the operator admits more accounts, a visitor opens as a guest and sig
 
   const visitor = await (await browser.newContext()).newPage();
   await visitor.goto('/');
+  await openAsGuest(visitor);
   await expect(visitor.getByRole('region', { name: '손님 모드', exact: true })).toBeVisible();
   await signUpAsGuest(visitor, 'friend', 'friend-password');
   await expect(visitor.getByRole('heading', { name: '비어 있어요', exact: true })).toBeVisible();

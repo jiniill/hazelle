@@ -207,7 +207,15 @@ const saveRecoveryKey = async (page: Page) => {
 
 // An installation that admits more than one account opens as a guest (design F1); its home card holds both doors, and
 // 계정 만들기 turns that guest into an account.
+export async function openAsGuest(page: Page) {
+  await page.getByRole('button', { name: '가입 없이 열기', exact: true }).click();
+}
+
 export async function signUpAsGuest(page: Page, username: string, password: string) {
+  const start = page.getByRole('button', { name: '가입 없이 열기', exact: true });
+  const signUp = page.getByRole('button', { name: '계정 만들기', exact: true });
+  await start.or(signUp).first().waitFor();
+  if (await start.isVisible()) await start.click();
   await page.getByRole('button', { name: '계정 만들기', exact: true }).click();
   await page.getByLabel('아이디', { exact: true }).fill(username);
   await page.getByLabel('비밀번호', { exact: true }).fill(password);

@@ -2,6 +2,7 @@ export * from './collections';
 export * from './controls';
 export * from './feedback';
 export * from './foundation';
+export * from './landing';
 export * from './layout';
 export * from './overlays';
 export * from './story';

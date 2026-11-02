@@ -72,6 +72,43 @@
     animation: twinkle var(--duration-ripple) var(--ease-loop) infinite;
   }
 
+  /* The night scene's layers follow the page's scroll on the compositor; where a browser has no scroll timeline they stand still. */
+  @supports (animation-timeline: scroll()) {
+    .sceneDrift {
+      animation: sceneDrift linear both;
+      animation-timeline: scroll(root);
+    }
+
+    .sceneDawn {
+      animation: sceneDawn linear both;
+      animation-timeline: scroll(root);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sceneDrift,
+    .sceneDawn {
+      animation: none;
+    }
+  }
+
+  @keyframes sceneDrift {
+    to {
+      transform: translate3d(var(--drift-x, 0), var(--drift-y, 0), 0);
+    }
+  }
+
+  @keyframes sceneDawn {
+    0%,
+    62% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
   @keyframes fade {
     from {
       opacity: 0;

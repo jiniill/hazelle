@@ -137,6 +137,8 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 | layout | `Stack` | `Stack.module.css` | A column with a named gap: related, group or section |
 | layout | `ToolFrame` | `ToolFrame.module.css` | An opaque-origin tool page that fills the rest of its column (a `fill` Screen or SidePanel); the caller connects its window |
 | layout | `TranslateDesk` | `TranslateDesk.module.css` | 번역기: a bar of choices, then the source and its translation side by side in one box, taking the height a `fill` Screen leaves, each scrolling its own text (stacked on a narrow page), each pane with a foot of counts and buttons |
+| landing | `NightScene` | `NightScene.module.css` | The first page's night behind everything: stars, moon and three rows of round crowns that drift with the page's scroll, standing still where a browser has no scroll timeline or asks for reduced motion |
+| landing | `Hero`, `Beat`, `Lantern`, `TrialSteps`, `Said`, `SendRow`, `SayChoices`, `KeyPlaces`, `Promises` | `Landing.module.css` | The first page's parts over that scene; their colors are `--scene-*`, fixed in both themes |
 | controls | `Button` (`ButtonSlot`, inside the kit only) | `Button.module.css` | Variants (a link and a delete among them), sizes, the busy spinner; the size a slot decides |
 | controls | `Checkbox` | `Checkbox.module.css` | A labeled checkbox, with a note after its label, or its label read aloud only beside a row that names it; dimmed when it cannot be ticked |
 | controls | `ChipButton` | `ChipButton.module.css` | A rounded button naming a menu's current choice, shaped like a field for a setting, borderless in the composer, or quiet words of at most a narrow chip's width beside a name (value); with a leading icon or face |

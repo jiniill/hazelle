@@ -1,0 +1,60 @@
+@layer reset, looks;
+
+@layer looks {
+  .scene {
+    position: fixed;
+    inset: 0;
+    z-index: var(--landing-behind);
+    overflow: hidden;
+    background: linear-gradient(var(--scene-sky-top), var(--scene-sky-mid) 55%, var(--scene-sky-low));
+  }
+
+  .dawn {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    background: radial-gradient(ellipse 90% 70% at 50% 100%, var(--scene-dawn), transparent);
+  }
+
+  .layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    will-change: transform;
+  }
+
+  .stars {
+    fill: var(--scene-star);
+    --drift-y: -8vh;
+  }
+
+  .moon {
+    position: absolute;
+    top: 8vh;
+    right: 8vw;
+    width: clamp(96px, 20vw, 280px);
+    aspect-ratio: 1;
+    border-radius: var(--radius-full);
+    background: var(--scene-moon);
+    box-shadow: var(--scene-moon-glow);
+    will-change: transform;
+    --drift-x: -14vw;
+    --drift-y: 66vh;
+  }
+
+  .far {
+    fill: var(--scene-ridge-far);
+    --drift-y: 8vh;
+  }
+
+  .mid {
+    fill: var(--scene-ridge-mid);
+    --drift-y: 26vh;
+  }
+
+  .near {
+    fill: var(--scene-ridge-near);
+    --drift-y: 62vh;
+  }
+}

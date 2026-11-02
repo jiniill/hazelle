@@ -4,7 +4,8 @@ import { holdAccount } from '../../runtime/api';
 import { cachedAccounts, forgetVault } from '../../runtime/device-cache';
 import { guestAccount } from '../../runtime/guest-store';
 import { discardGuest, guestWithContent, type GuestTransferStep } from '../../runtime/guest-transfer';
-import { lockVault, recallVault, rememberVault } from '../../vault/device';
+import { selfHost } from '../../runtime/installation';
+import { lockVault, recallGuest, recallVault, rememberVault } from '../../vault/device';
 import { DatabaseBlocked } from '../../vault/database';
 import { canonicalUsername, openVault, wrapWithPassword, type Credential, type VaultKey } from '../../vault/keys';
 import { clearDownloads } from '../common/download';
@@ -21,6 +22,7 @@ import { UnreachableScreen } from './UnreachableScreen';
 
 type State =
   | { kind: 'loading' }
+  | { kind: 'first' }
   | { kind: 'unreachable'; message: string }
   | { kind: 'guest'; accountId: string; vaultKey: VaultKey; signupOpen: boolean; facts: AccountFacts }
   // draft: kept until the upload lands, so going back, or a failed upload, keeps the same recovery key.
@@ -61,9 +63,14 @@ function enterAs(username: string) {
   }
 }
 
+// A browser that has held neither an account nor a guest, asking for the site's front door. A search engine is one.
+const firstVisit = async () => location.pathname === '/' && !selfHost() && (await entry()) === null && (await recallGuest()) === null;
+
+export type FirstDoors = { onOpen: () => void; onSignIn: () => void };
+
 // Signed out, the page opens as this browser's guest (design F1), unless it came from leaving an account or this
 // browser has opened one before; guest: the person picked 손님으로 쓰기.
-async function loadState(notice: string | null = null, prefer: 'auto' | 'guest' | 'login' = 'auto'): Promise<Loaded> {
+async function loadState(notice: string | null = null, prefer: 'auto' | 'guest' | 'login' = 'auto', greets = false): Promise<Loaded> {
   void clearDownloads();
   const result = await loadSession();
   if (!result.ok) return { kind: 'unreachable', message: describeFailure(result) };
@@ -76,6 +83,7 @@ async function loadState(notice: string | null = null, prefer: 'auto' | 'guest' 
       return { kind: 'signup', step: 'password', draft: null, setup: true };
     }
     if (door.kind === 'solo') return { kind: 'login', notice, username: door.username, solo: true };
+    if (greets && prefer === 'auto' && notice === null && (await firstVisit())) return { kind: 'first' };
     const known = prefer === 'auto' ? await entry() : null;
     if (prefer === 'login' || notice !== null || known !== null) return { kind: 'login', notice, username: known ?? '', solo: false };
     return { kind: 'guest', ...(await guestAccount()), signupOpen: door.kind === 'open', facts: guestFacts() };
@@ -86,7 +94,8 @@ async function loadState(notice: string | null = null, prefer: 'auto' | 'guest' 
 }
 
 // children renders what is behind it, so account/ never imports the shell.
-export function AccountFlow({ children }: { children: (unlocked: Unlocked) => ReactNode }) {
+// first: what a first visit opens on; without it the flow goes straight on to the guest.
+export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) => ReactNode; children: (unlocked: Unlocked) => ReactNode }) {
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   // Keep the page-held account through lock/loading/outages, rejecting cookie-account mismatches until rechecked.
@@ -111,10 +120,12 @@ export function AccountFlow({ children }: { children: (unlocked: Unlocked) => Re
 
   function reload(notice: string | null = null, prefer: 'auto' | 'guest' | 'login' = 'auto') {
     show({ kind: 'loading' });
-    void loadState(notice, prefer).then(settle).catch(failed);
+    void loadState(notice, prefer, first !== undefined).then(settle).catch(failed);
   }
 
   useEffect(() => {
+    // The page stands before the server answers; a session or a one-person door found then replaces it.
+    if (first) void firstVisit().then((yes) => yes && setState((now) => (now.kind === 'loading' ? { kind: 'first' } : now))).catch(() => {});
     reload();
   }, []);
 
@@ -170,6 +181,14 @@ export function AccountFlow({ children }: { children: (unlocked: Unlocked) => Re
       return <UnreachableScreen message={state.message} onRetry={() => reload()} />;
     case 'moving':
       return <MovingScreen moved={state.moved} />;
+    case 'first':
+      return first!({
+        onOpen: () => {
+          enterAs('');
+          reload(null, 'guest');
+        },
+        onSignIn: () => reload(null, 'login'),
+      });
     case 'guest':
       return children({
         accountId: state.accountId,

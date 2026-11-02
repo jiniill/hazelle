@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono, type Context } from 'hono';
 import type { PriceTable } from '../connectors/models-dev';
+import { START_PAGE } from '../contracts/start';
 import { GUIDE_INDEX, GUIDES, type Guide } from '../contracts/guides';
 import { CALCULATOR_PAGE } from '../contracts/prices';
 import { PULSE_PAGE, type PulseAnswer } from '../contracts/pulse';
@@ -35,18 +36,6 @@ const INDEXED = new Set(['/', PULSE_PAGE.path, CALCULATOR_PAGE.path, GUIDE_INDEX
 // The lists people compare by provider; the gateways' lists repeat these models at their own prices.
 const PRICED: [list: string, label: string][] = [['anthropic', 'Anthropic'], ['google', 'Google'], ['openai', 'OpenAI'], ['deepseek', 'DeepSeek'], ['xai', 'xAI']];
 const PULSE_LINE = '헤이젤 사용자들이 캐릭터 챗에 실제로 쓰는 AI 모델 순위예요.';
-const LANDING = {
-  title: '헤이젤 · RisuAI 대체 캐릭터 챗, 설치 없이 웹에서',
-  line: 'RisuAI 봇과 포켓리스 백업을 그대로 가져와 내 API 키로 이어서 대화해요. 설치 없이 PC와 폰 브라우저에서, 가입 없이 바로 써요.',
-  heading: 'RisuAI 대체 캐릭터 챗, 헤이젤',
-  points: [
-    '로어북, 정규식, Lua, CBS가 RisuAI처럼 돌아가요',
-    '장기 기억, 번역, 삽화까지 한 곳에서 써요',
-    'Claude, Gemini, GPT, OpenRouter를 내 API 키로 연결해요',
-    '대화는 브라우저에서 암호화한 뒤 저장해요',
-  ],
-};
-
 // selfHost: someone's own installation (node.ts), which no search engine lists and whose page says so to the client.
 // What pages read from the API, which owns the database.
 export type PageSources = { cover: (share: string) => Promise<ShareCover | null>; pulse: () => Promise<PulseAnswer>; prices: () => Promise<PriceTable> };
@@ -117,7 +106,7 @@ export function clientFiles(clientDir: string, sources: PageSources, visit: (pag
   client.get('*', (c, next) => {
     if (c.req.path !== '/' && c.req.path !== '/index.html') return files(c, next);
     return page(c, (html) => {
-      const named = worded(html, LANDING.title, LANDING.line);
+      const named = worded(html, START_PAGE.title, START_PAGE.line);
       return listed(c) ? landingPage(named) : named;
     });
   });
@@ -139,9 +128,11 @@ const withWords = (html: string, words: string) =>
   html.replace(/<p class="boot" role="status">([^<]*)<\/p>/, (_, loading: string) => `<main class="boot landing">${words}<p role="status">${loading}</p></main>`);
 
 function landingPage(html: string): string {
-  const facts = { '@context': 'https://schema.org', '@type': 'WebApplication', name: '헤이젤', alternateName: 'Hazelle', url: `${HOSTED}/`, description: LANDING.line, applicationCategory: 'EntertainmentApplication', operatingSystem: 'Web', inLanguage: 'ko', offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' } };
-  const points = LANDING.points.map((point) => `<li>${point}</li>`).join('');
-  return withWords(html.replace('</head>', () => `<script type="application/ld+json">${JSON.stringify(facts)}</script></head>`), `<h1>${LANDING.heading}</h1><p>${LANDING.line}</p><ul>${points}</ul><p><a href="${GUIDE_INDEX.path}">${GUIDE_INDEX.title}</a> · <a href="${CALCULATOR_PAGE.path}">${CALCULATOR_PAGE.title}</a> · <a href="${PULSE_PAGE.path}">${PULSE_PAGE.title}</a></p>`);
+  const facts = { '@context': 'https://schema.org', '@type': 'WebApplication', name: '헤이젤', alternateName: 'Hazelle', url: `${HOSTED}/`, description: START_PAGE.line, applicationCategory: 'EntertainmentApplication', operatingSystem: 'Web', inLanguage: 'ko', offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' } };
+  const list = (items: readonly string[], tag = 'ul') => `<${tag}>${items.map((item) => `<li>${item}</li>`).join('')}</${tag}>`;
+  const { heading, line, keys, trial, features, move } = START_PAGE;
+  const words = `<h1>${heading}</h1><p>${line}</p><h2>${keys.title}</h2><p>${keys.line}</p><h2>${trial.title}</h2>${list(trial.steps, 'ol')}<p>${trial.privacy}</p><h2>${features.title}</h2>${list(features.points)}<p><a href="${move.path}">${move.label}</a> · <a href="${GUIDE_INDEX.path}">${GUIDE_INDEX.title}</a> · <a href="${CALCULATOR_PAGE.path}">${CALCULATOR_PAGE.title}</a> · <a href="${PULSE_PAGE.path}">${PULSE_PAGE.title}</a></p>`;
+  return withWords(html.replace('</head>', () => `<script type="application/ld+json">${JSON.stringify(facts)}</script></head>`), words);
 }
 
 const escape = (text: string) => text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
