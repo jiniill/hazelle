@@ -1,3 +1,4 @@
+import { hex } from '../hex';
 import { describe, expect, it } from 'vitest';
 import { resolveAssets } from './assets';
 import { evaluate } from './cbs/evaluate';
@@ -80,9 +81,9 @@ describe('stripStyles', () => {
   });
 
   it('reads the hex form a bot script writes, in order with plain styles, and takes unreadable hex as no style', () => {
-    const hex = Array.from(new TextEncoder().encode('.a{content:"한"}'), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    const encoded = hex(new TextEncoder().encode('.a{content:"한"}'));
     const blocks: string[] = [];
-    expect(stripStyles(`x<style>.z{}</style><risu-style>${hex}</risu-style>y<risu-style>nope</risu-style>`, blocks)).toBe('xy');
+    expect(stripStyles(`x<style>.z{}</style><risu-style>${encoded}</risu-style>y<risu-style>nope</risu-style>`, blocks)).toBe('xy');
     expect(blocks).toEqual(['.z{}', '.a{content:"한"}', '']);
   });
 });

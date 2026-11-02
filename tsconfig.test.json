@@ -6,5 +6,5 @@
     "types": ["node", "vite/client"],
     "allowArbitraryExtensions": true
   },
-  "include": ["src/change-signal.test.ts", "src/sandbox/**/*.test.ts", "src/tool-api", "src/runtime/testing.ts", "src/runtime/**/*.test.ts", "src/server/testing.ts", "src/server/**/*.test.ts"]
+  "include": ["src/change-signal.test.ts", "src/hex.test.ts", "src/sandbox/**/*.test.ts", "src/tool-api", "src/runtime/testing.ts", "src/runtime/**/*.test.ts", "src/server/testing.ts", "src/server/**/*.test.ts"]
 }
