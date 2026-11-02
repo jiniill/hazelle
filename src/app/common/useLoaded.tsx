@@ -40,7 +40,8 @@ export function usePages<T>(load: (after: string | null) => Promise<ApiResult<Pa
   const [rows, setRows] = useState<T[] | null>(null);
   const [next, setNext] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
+  // after: the page that failed, which 다시 시도 asks for again.
+  const [failure, setFailure] = useState<{ text: string; after: string | null } | null>(null);
 
   async function fetch(after: string | null, live = () => true) {
     setBusy(true);
@@ -48,7 +49,7 @@ export function usePages<T>(load: (after: string | null) => Promise<ApiResult<Pa
     const answer = await load(after);
     if (!live()) return;
     setBusy(false);
-    setFailure(answer.ok ? null : describeFailure(answer));
+    setFailure(answer.ok ? null : { text: describeFailure(answer), after });
     if (!answer.ok) return;
     setRows((shown) => (after === null ? answer.data.rows : [...(shown ?? []), ...answer.data.rows]));
     setNext(answer.data.next);
@@ -62,15 +63,13 @@ export function usePages<T>(load: (after: string | null) => Promise<ApiResult<Pa
     };
   }, []);
 
-  // Rows and next are kept only on success, so none yet means the first page failed and some means the next one did.
-  const retry = () => void fetch(rows === null ? null : next);
   return {
     rows,
     busy,
     // Every row is in hand: a head that is whole needs no door to the rest.
     whole: rows !== null && next === null,
     loading: rows === null && failure === null && LOADING_NOTE,
-    failure: failure && <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: retry }}>{failure}</Callout>,
+    failure: failure && <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => void fetch(failure.after) }}>{failure.text}</Callout>,
     more: next !== null && (
       <Button variant="ghost" size="sm" busy={busy} onClick={() => void fetch(next)}>
         더 보기

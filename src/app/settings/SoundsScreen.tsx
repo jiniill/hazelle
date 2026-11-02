@@ -1,4 +1,5 @@
 import type { Cue } from '../../runtime/cues';
+import { DetailFold } from '../common/DetailFold';
 import { choices } from '../common/reading';
 import { CHIMES, playSound } from '../common/sounds';
 import { PAGES } from '../common/words';
@@ -6,10 +7,9 @@ import { useDisplay } from '../display';
 import { useToast } from '../toast';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
-import { ChoiceGroup, Disclosure, NavBar, Screen, Section, SettingGroup, SettingRow, Switch } from '../ui';
+import { ChoiceGroup, NavBar, Screen, Section, SettingGroup, SettingRow, Switch } from '../ui';
 
 const ALERTS = '알림음';
-const DETAIL = '세부 설정';
 
 const ROWS: { cue: Cue; label: string; help: string }[] = [
   { cue: 'reply-started', label: '응답이 시작될 때', help: '추론을 마치고 본문이 나오기 시작하면 울려요.' },
@@ -31,30 +31,28 @@ export function SoundsScreen({ back }: { back: Back | null }) {
           />
         </SettingGroup>
         {display.chimes && (
-          <Disclosure label={DETAIL}>
-            <SettingGroup label={DETAIL}>
-              {ROWS.map(({ cue, label, help }) => (
-                <SettingRow
-                  key={cue}
-                  label={label}
-                  help={help}
-                  control={
-                    <ChoiceGroup
-                      layout="fit"
-                      label={label}
-                      options={choices(CHIMES)}
-                      value={display.chimeSounds[cue]}
-                      // Played on the pick, inside the press, which also unlocks a phone's sound.
-                      onChange={(chime) => {
-                        changeDisplay({ chimeSounds: { ...display.chimeSounds, [cue]: chime } });
-                        if (chime !== 'off') void playSound(chime).then((played) => played || toast.error('소리를 재생하지 못했어요.'));
-                      }}
-                    />
-                  }
-                />
-              ))}
-            </SettingGroup>
-          </Disclosure>
+          <DetailFold set={0}>
+            {ROWS.map(({ cue, label, help }) => (
+              <SettingRow
+                key={cue}
+                label={label}
+                help={help}
+                control={
+                  <ChoiceGroup
+                    layout="fit"
+                    label={label}
+                    options={choices(CHIMES)}
+                    value={display.chimeSounds[cue]}
+                    // Played on the pick, inside the press, which also unlocks a phone's sound.
+                    onChange={(chime) => {
+                      changeDisplay({ chimeSounds: { ...display.chimeSounds, [cue]: chime } });
+                      if (chime !== 'off') void playSound(chime).then((played) => played || toast.error('소리를 재생하지 못했어요.'));
+                    }}
+                  />
+                }
+              />
+            ))}
+          </DetailFold>
         )}
       </Section>
     </Screen>

@@ -1,5 +1,5 @@
 import { logOutOthers } from '../../runtime/account';
-import { readRelease, selfHost } from '../../runtime/installation';
+import { BUILT_VERSION, readRelease, selfHost } from '../../runtime/installation';
 import { setDiagnosisSharing, sharesDiagnosis } from '../../runtime/auto-diagnosis';
 import { setPulseSharing, sharesPulse } from '../../runtime/pulse';
 import { sizeText } from '../common/size';
@@ -12,7 +12,6 @@ import { useToast } from '../toast';
 import { LegalNotice } from '../common/LegalNotice';
 import { INSTALL_GUIDE } from '../common/legal';
 import { useLoaded } from '../common/useLoaded';
-import { BUILT_VERSION } from '../../runtime/installation';
 import { AUTO_DIAGNOSIS, BIN, BOARD, PAGES, PULSE, UNKNOWN } from '../common/words';
 import { Avatar, Button, Columns, FaceRow, Gauge, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
 import { BackupSection } from './BackupSection';
@@ -174,14 +173,7 @@ function AppInfo() {
   const settings = useSettings();
   const sharing = sharesPulse(settings);
   const diagnosing = sharesDiagnosis(settings);
-  async function diagnose(on: boolean) {
-    const done = await setDiagnosisSharing(store, on);
-    if (!done.ok) toast.failed(done, '바꾸지 못했어요.');
-  }
-  async function share(on: boolean) {
-    const done = await setPulseSharing(store, on);
-    if (!done.ok) toast.failed(done, '바꾸지 못했어요.');
-  }
+  const flip = (set: typeof setPulseSharing) => (on: boolean) => void set(store, on).then((done) => done.ok || toast.failed(done, '바꾸지 못했어요.'));
   return (
     <Panel title="앱 정보">
       <SettingGroup label="앱 정보">
@@ -199,14 +191,14 @@ function AppInfo() {
           <SettingRow
             label={PULSE.sharing}
             help={`켜 두면 쓰는 모델과 제공자, 응답 수가 ${PULSE.title} 집계에 더해져요. 누가 썼는지와 대화 내용은 남지 않아요.`}
-            control={<Switch label={PULSE.sharing} checked={sharing} onChange={(on) => void share(on)} />}
+            control={<Switch label={PULSE.sharing} checked={sharing} onChange={flip(setPulseSharing)} />}
           />
         )}
         {!guest && !selfHost() && (
           <SettingRow
             label={AUTO_DIAGNOSIS.label}
             help={AUTO_DIAGNOSIS.help}
-            control={<Switch label={AUTO_DIAGNOSIS.label} checked={diagnosing} onChange={(on) => void diagnose(on)} />}
+            control={<Switch label={AUTO_DIAGNOSIS.label} checked={diagnosing} onChange={flip(setDiagnosisSharing)} />}
           />
         )}
         <Diagnostics />

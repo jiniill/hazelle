@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import type { MemorySettings } from '../../model/memory';
+import { DetailFold } from './DetailFold';
 import { typedText } from './typed';
 import { readCount } from './typedNumber';
 import { MODEL_ROLES } from './words';
-import { Breakdown, Disclosure, NumberInput, SettingGroup, SettingRow, Switch } from '../ui';
+import { Breakdown, NumberInput, SettingGroup, SettingRow, Switch } from '../ui';
 
 type Count = 'budget' | 'window' | 'batch';
 
@@ -70,9 +71,7 @@ export function MemoryFields({ value, onChange, help: usage = MEMORY_HELP, child
         <SettingRow label="사용" help={usage} control={<Switch label="장기 기억" checked={value.on} onChange={(on) => onChange({ on })} />} />
       </SettingGroup>
       {children}
-      <Disclosure label="세부 설정">
-        <SettingGroup label="세부 설정">{rows}</SettingGroup>
-      </Disclosure>
+      <DetailFold set={0}>{rows}</DetailFold>
     </>
   );
 }

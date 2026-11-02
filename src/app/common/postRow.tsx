@@ -32,7 +32,7 @@ export const statusIcon = (status: Status): LucideIcon => (status === 'open' ? C
 export const statusWord = ({ status, version }: Pick<PostRow, 'status' | 'version'>) =>
   status === 'done' && version ? `${BOARD.statuses.done} · ${version}` : BOARD.statuses[status];
 
-export const CategoryTag = ({ category }: { category: Category }) => (
+const CategoryTag = ({ category }: { category: Category }) => (
   <Tag hue={CATEGORY_LOOK[category].hue} icon={CATEGORY_LOOK[category].icon}>
     {BOARD.categories[category]}
   </Tag>

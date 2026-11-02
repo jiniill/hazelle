@@ -8,7 +8,7 @@ import { EMPTY_SETTINGS } from '../../model/settings';
 import { importCardFile } from '../../runtime/card-file';
 import { setDeleted } from '../../runtime/characters';
 import { importChat } from '../../runtime/chat-log';
-import type { ApiFailure, ApiResult } from '../../runtime/api';
+import type { ApiFailure } from '../../runtime/api';
 import type { UnpackFailure } from '../../engine/import/archive';
 import { PACKED_EXTENSION } from '../../engine/import/extensions';
 import { ImportWorker } from '../../runtime/import/client';
@@ -65,7 +65,7 @@ type State =
   | { kind: 'saving'; file: string; steps: ProgressStep[] }
   | { kind: 'done'; results: Result[] };
 // 되돌리기 for what one file brought. Its closure holds ids, never the parsed file, which would stay alive with it.
-type Undo = { message: string; run: () => Promise<ApiResult<unknown> | ApiFailure> };
+type Undo = { message: string; run: () => Promise<{ ok: true } | ApiFailure> };
 
 const LINK = '링크';
 const linkFailure = (failure: Exclude<LinkFailure, { kind: 'cancelled' | 'needs-password' | 'wrong-password' }>) => {
@@ -97,22 +97,16 @@ const unsaved = (file: string, failure: ApiFailure): Result => failed(file, `저
 const undoCharacter = (store: ObjectStore, id: string, name: string): Undo => ({ message: `'${name}' 캐릭터를 가져왔어요.`, run: () => setDeleted(store, id, Date.now()) });
 const undoModule = (store: ObjectStore, id: string, name: string, replaced: string[]): Undo => ({
   message: `'${moduleName(name)}' 모듈을 가져왔어요.`,
-  run: async () => {
-    const done = await Promise.all([setModuleDeleted(store, id, Date.now()), ...replaced.map((old) => setModuleDeleted(store, old, null))]);
-    return done.find((result) => !result.ok) ?? done[0]!;
-  },
+  run: () => allDone([setModuleDeleted(store, id, Date.now()), ...replaced.map((old) => setModuleDeleted(store, old, null))]),
 });
 const undoPrompt = (store: ObjectStore, id: string, name: string, made: string | null): Undo => ({
   message: `'${promptName(name)}' 프롬프트를 가져왔어요.`,
-  run: async () => {
-    const done = await Promise.all([removePrompt(store, id), ...(made === null ? [] : [setModuleDeleted(store, made, Date.now())])]);
-    return done.find((result) => !result.ok) ?? done[0]!;
-  },
+  run: () => allDone([removePrompt(store, id), ...(made === null ? [] : [setModuleDeleted(store, made, Date.now())])]),
 });
 const undoPersona = (store: ObjectStore, id: string, name: string): Undo => ({ message: `'${name}' 페르소나를 가져왔어요.`, run: () => removePersona(store, id) });
 
-async function undoAll(undos: Undo[]): Promise<{ ok: true } | ApiFailure> {
-  const done = await Promise.all(undos.map(({ run }) => run()));
+async function allDone(runs: Promise<{ ok: true } | ApiFailure>[]): Promise<{ ok: true } | ApiFailure> {
+  const done = await Promise.all(runs);
   return done.find((result): result is ApiFailure => !result.ok) ?? { ok: true };
 }
 
@@ -391,7 +385,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       results.push(await save(row, place, (step) => setState({ kind: 'saving', file: row.file.name, steps: [step] }), (undo) => undos.push(undo)));
     }
     if (undos.length === 1) toast.undoable(undos[0]!.message, undos[0]!.run);
-    else if (undos.length > 1) toast.undoable(`${undos.length}개를 가져왔어요.`, () => undoAll(undos));
+    else if (undos.length > 1) toast.undoable(`${undos.length}개를 가져왔어요.`, () => allDone(undos.map(({ run }) => run())));
     setState(results.length > 0 ? { kind: 'done', results } : null);
     return results;
   }

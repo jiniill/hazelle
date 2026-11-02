@@ -11,6 +11,7 @@ import { navigate } from '../../shell/router';
 import { enterShelf } from '../../shell/routes';
 import { FaceCard, MenuItem, MoreMenu, useMenuHandle, useMenuOpener, useWide } from '../../ui';
 import { binCardNote, cardNote } from '../shelf';
+import { BinnedItems } from './BinnedRow';
 import { binnedCharacter, type CharacterActions } from '../useCharacterActions';
 
 type Props = {
@@ -40,10 +41,7 @@ export function CharacterCard({ shelf, binned, busy, picked, onPick, actions, on
   const menu = (
     <MoreMenu handle={handle} of={name}>
       {binned ? (
-        <>
-          <MenuItem icon={ACTS.restore.icon} label={ACTS.restore.label} onClick={() => actions.restore(binnedCharacter(shelf))} />
-          <MenuItem icon={ACTS.remove.icon} label="영구 삭제" tone="warn" onClick={onPurge} />
-        </>
+        <BinnedItems item={binnedCharacter(shelf)} actions={actions} onPurge={onPurge} />
       ) : (
         <>
           <MenuItem icon={SquarePen} label="편집" onClick={() => navigate({ kind: 'edit', character: shelf.id })} />

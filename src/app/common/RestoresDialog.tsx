@@ -12,7 +12,7 @@ import { ConfirmDialog, Dialog, Empty, List, ListItem, MenuItem, MoreMenu, Secti
 
 // The account the operator acts on, with the operator-only post a new restore or an undo answers (null when opened
 // from the account, which only continues one). The signed-in account's own restores have none of it.
-export type Operated = { accountId: string; username: string; post: { id: number; text: string } | null };
+type Operated = { accountId: string; username: string; post: { id: number; text: string } | null };
 
 type Words = { tag: string; says: string };
 const UNCHANGED = '계정 데이터는 바뀌지 않았어요.';

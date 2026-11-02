@@ -44,7 +44,7 @@ export const TOOL = '플러그인';
 export const RISU_PLUGIN = 'Risu 플러그인';
 export const MODULE_MODELS = '모델 호출';
 // Who a script's question or switch speaks for; a module that holds a tool is a plugin. Each noun takes 이.
-export const ASKER = { character: '봇', module: '모듈', plugin: TOOL };
+const ASKER = { character: '봇', module: '모듈', plugin: TOOL };
 export type Asker = keyof typeof ASKER;
 export const modelsHelp = (asker: Asker) => (asker === 'character' ? BOT_MODELS_HELP : `이 ${ASKER[asker]}이 대화 응답과 별개로 모델을 호출해요. 호출한 만큼 요금이 더 나올 수 있어요.`);
 export const modelConsent = (asker: Asker) => `이 ${ASKER[asker]}이 모델을 추가로 호출하려고 해요`;
