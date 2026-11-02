@@ -603,20 +603,20 @@ function ChoiceField({ choice, onChange }: { choice: Choice; onChange: (choice: 
       return (
         <Stack gap="related">
           <Text>
-            Risu에서 가져온 같은 이름의 캐릭터가 이미 있어요.
-            <Hint label="이미지만 가져오기">기존 캐릭터의 대화와 설정은 그대로 두고 이미지만 이 카드에서 가져와요.</Hint>
+            같은 이름의 캐릭터가 있어요. 어떻게 가져올까요?
+            <Hint label="이미지만 넣기">Risu에서 가져온 캐릭터의 채팅과 설정은 그대로 두고 이 카드의 이미지만 넣어요.</Hint>
           </Text>
-          <ChoiceGroup label="가져올 방법" layout="fit" options={[{ value: 'new', label: '새 캐릭터로' }, { value: 'fill', label: '이미지만' }]} value={choice.on ? 'fill' : 'new'} onChange={(value) => onChange({ ...choice, on: value === 'fill' })} />
+          <ChoiceGroup label="가져올 방법" layout="list" options={[{ value: 'new', label: '새 캐릭터로 추가' }, { value: 'fill', label: '기존 캐릭터에 이미지만 넣기' }]} value={choice.on ? 'fill' : 'new'} onChange={(value) => onChange({ ...choice, on: value === 'fill' })} />
         </Stack>
       );
     case 'replace':
       return (
         <Stack gap="related">
           <Text>
-            {`이전 버전 ${quoted(choice.olds)} 모듈이 있어요.`}
-            <Hint label="바꾸기">{`'바꾸기'를 선택하면 기존 버전이 켜져 있던 곳에 새 버전을 적용하고, 기존 버전은 ${BIN}으로 이동해요.`}</Hint>
+            {`이전 버전 ${quoted(choice.olds)} 모듈이 있어요. 어떻게 할까요?`}
+            <Hint label="새 버전으로 바꾸기">{`새 버전으로 바꾸면 이전 버전이 켜져 있던 곳에 그대로 적용하고, 이전 버전은 ${BIN}으로 이동해요.`}</Hint>
           </Text>
-          <ChoiceGroup label="이전 버전" layout="fit" options={[{ value: 'replace', label: '바꾸기' }, { value: 'keep', label: '따로 두기' }]} value={choice.on ? 'replace' : 'keep'} onChange={(value) => onChange({ ...choice, on: value === 'replace' })} />
+          <ChoiceGroup label="이전 버전" layout="list" options={[{ value: 'replace', label: '새 버전으로 바꾸기' }, { value: 'keep', label: '둘 다 유지' }]} value={choice.on ? 'replace' : 'keep'} onChange={(value) => onChange({ ...choice, on: value === 'replace' })} />
         </Stack>
       );
     case 'character':

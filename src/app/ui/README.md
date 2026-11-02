@@ -83,7 +83,7 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
   다시 시도. Loading is a note ending in `…`.
 - **Controls:** on/off is a `Switch`; one of several is `ChoiceGroup layout="fit"`, a segmented strip for up to
   four short choices and a menu behind a field `ChipButton` past that (`layout="menu"`, quiet words beside the name,
-  for a prompt's choice toggle); chips are for filters, and for colour picks, each chip leading with its mark (대사 모양 is `fit`). A shared default
+  for a prompt's choice toggle); a question a dialog asks, whose answers are whole phrases, is `layout="list"`; chips are for filters, and for colour picks, each chip leading with its mark (대사 모양 is `fit`). A shared default
   that cannot be empty steps with a `Stepper`; an override that can be empty, so the default applies, is an emptyable
   number field (`NumberInput`), as the retries are. Explanations go behind ⓘ (`help`), never as visible prose.
 - **Focus rings are never cut.** The global ring sits `--focus-ring-reach` outside its element, and a box that scrolls or clips cuts whatever passes its padding. So a field (`surface` `field`, `SearchField`) and a row in a `List box` draw the ring inside, and a scrolling box with no padding of its own keeps that reach as padding, given back with a negative margin (`Dialog`'s body, `Sidebar`'s rail, `AskCard`'s choices). A new scrolling box does the same.

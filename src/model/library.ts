@@ -47,7 +47,7 @@ export type Character = Mark & {
   // Translations of the card's readable texts (readableTexts), keyed by the text as the card holds it and the
   // language, so an edited text or a changed language translates anew. A chat not begun shows its greetings' here.
   translations?: TextTranslation[];
-  // The Risu chaId of a character brought from Risu: a move skips it, and 이미지만 가져오기 finds it.
+  // The Risu chaId of a character brought from Risu: a move skips it, and 이미지만 넣기 finds it.
   risu?: string;
   // The modules on in its chats, in the order they were turned on (design §6.5). One that is gone reads as off.
   modules?: string[];
