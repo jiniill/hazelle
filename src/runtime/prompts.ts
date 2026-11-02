@@ -145,6 +145,10 @@ export async function addDefaults(store: ObjectStore): Promise<void> {
   await store.upsert('settings', (current = EMPTY_SETTINGS) => added.flat().reduce((next, { setting, id }) => (next[setting] === undefined ? { ...next, [setting]: id } : next), current));
 }
 
+// The preset's authors write in English and read through translation; someone who just arrived expects their own language at once.
+const STARTER_LANGUAGE = 'is in English only.';
+const NEW_ACCOUNT_LANGUAGE = 'is in Korean only.';
+
 // The user's own Risu preset, through the one preset converter. It goes out under the app's name, not the preset's:
 // the preset's name is a well-known community prompt's.
 async function starter(): Promise<ConversationPrompt | null> {
@@ -153,7 +157,9 @@ async function starter(): Promise<ConversationPrompt | null> {
   const bytes = await starterBytes().catch(() => null);
   if (!bytes) return null;
   const read = await importPreset('starter-prompt.risup', bytes);
-  return read.ok ? without({ ...read.prompt, name: '기본 대화' }, 'imported') : null;
+  if (!read.ok) return null;
+  const blocks = read.prompt.blocks.map((block) => (block.kind === 'text' ? { ...block, text: block.text.replace(STARTER_LANGUAGE, NEW_ACCOUNT_LANGUAGE) } : block));
+  return without({ ...read.prompt, blocks, name: '기본 대화' }, 'imported');
 }
 
 // Vite hands an ?inline asset over as a base64 data: URL, in the browser and in tests alike. It is decoded
