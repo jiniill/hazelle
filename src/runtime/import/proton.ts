@@ -10,6 +10,8 @@ import {
   NodeType,
   OpenPGPCryptoWithCryptoProxy,
   ProtonDriveClient,
+  RateLimitedError,
+  ServerError,
   ValidationError,
   type ProtonDriveHTTPClientBlobRequest,
   type ProtonDriveHTTPClientJsonRequest,
@@ -81,7 +83,8 @@ export async function downloadProton(url: string, password: string | undefined, 
     const { isCustomPasswordProtected } = await client.experimental.getURLAccessInfo(url);
     if (isCustomPasswordProtected && password === undefined) return { ok: false, failure: { kind: 'needs-password' } };
     const link = await client.experimental.authURLAccess(url, password, true).catch((error: unknown) => {
-      if (isCustomPasswordProtected && !signal.aborted && !relayFailure) throw WRONG;
+      // A refusal in Proton's own codes, as a wrong proof gets; an outage carries an HTTP status and a limit its own class.
+      if (isCustomPasswordProtected && error instanceof ServerError && error.statusCode === undefined && !(error instanceof RateLimitedError)) throw WRONG;
       throw error;
     });
     const root = (await link.getRootNode()) as Named;
