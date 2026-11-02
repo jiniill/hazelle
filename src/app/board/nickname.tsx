@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { NICKNAME_LENGTH, validNickname } from '../../contracts/board';
 import { readNickname, setNickname } from '../../runtime/board';
 import { describeFailure } from '../common/failure';
+import { AuthorLine } from '../common/postRow';
 import { useAttempt } from '../common/useAttempt';
+import { useLoaded } from '../common/useLoaded';
 import { BOARD } from '../common/words';
 import { useAccount, useSession } from '../session';
 import { useToast } from '../toast';
@@ -11,9 +13,9 @@ import { Button, Callout, Dialog, TextField } from '../ui';
 
 // Cache chosen nicknames only; keep asking until one exists. Key by username across accounts; operator is fixed.
 const known = new Map<string, string>();
-export const knowNickname = (username: string, name: string) => known.set(username, name);
 
 const BAD = describeFailure({ ok: false, error: 'bad-nickname' });
+const TAKEN = describeFailure({ ok: false, error: 'nickname-taken' });
 
 export function NicknameDialog({ current, onSet, onClose }: { current: string | null; onSet: (name: string) => void; onClose: () => void }) {
   const { username } = useSession();
@@ -30,7 +32,7 @@ export function NicknameDialog({ current, onSet, onClose }: { current: string | 
         return null;
       }
       if (!set.ok) return describeFailure(set);
-      knowNickname(username, typed);
+      known.set(username, typed);
       onSet(typed);
       return null;
     });
@@ -51,7 +53,7 @@ export function NicknameDialog({ current, onSet, onClose }: { current: string | 
         value={name}
         onChange={setName}
         hint={`${NICKNAME_LENGTH.min}~${NICKNAME_LENGTH.max}자`}
-        error={bad ? BAD : taken === typed ? describeFailure({ ok: false, error: 'nickname-taken' }) : undefined}
+        error={bad ? BAD : taken === typed ? TAKEN : undefined}
       />
       {failure && (
         <Callout tone="warn" alert>
@@ -74,7 +76,7 @@ export function useNicknameGate() {
     const read = await readNickname();
     if (!read.ok) return toast.failed(read, '닉네임을 확인하지 못했어요.');
     if (read.data.name === null) return setPending(() => then);
-    knowNickname(username, read.data.name);
+    known.set(username, read.data.name);
     then();
   }
   const dialog = pending && (
@@ -88,4 +90,29 @@ export function useNicknameGate() {
     />
   );
   return { gate: (then: () => void) => void gate(then), dialog };
+}
+
+export function useOwnNickname() {
+  const { admin } = useAccount();
+  const loaded = useLoaded(readNickname);
+  const [changing, setChanging] = useState(false);
+  const name = loaded.data?.name ?? null;
+  const line = <AuthorLine author={{ name, operator: admin, mine: true, left: false }} note={admin ? undefined : BOARD.nickname} size="md" />;
+  // The operator writes as 운영자, which no one picks or changes.
+  const change = !admin && (
+    <Button variant="secondary" size="sm" onClick={() => setChanging(true)}>
+      {name ? '바꾸기' : '설정'}
+    </Button>
+  );
+  const dialog = changing && (
+    <NicknameDialog
+      current={name}
+      onSet={() => {
+        setChanging(false);
+        loaded.reload();
+      }}
+      onClose={() => setChanging(false)}
+    />
+  );
+  return { loaded, line, change, dialog };
 }

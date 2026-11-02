@@ -2,7 +2,7 @@ import { Bell, FileText, Inbox, ListFilter, PenLine, Send } from 'lucide-react';
 import { useState } from 'react';
 import { CATEGORIES, STATUSES, type Category, type Sort, type Status } from '../../contracts/board';
 import { GuestLine } from '../common/GuestNotice';
-import { AuthorLine, CATEGORY_LOOK } from '../common/postRow';
+import { CATEGORY_LOOK } from '../common/postRow';
 import { ago } from '../common/time';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
@@ -11,8 +11,8 @@ import { useAccount, useStanding } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, ChoiceGroup, IconButton, Menu, MenuItem, NavBar, NavGroup, NavRow, NoticeBar, Row, Screen, Tabs, useSplit } from '../ui';
-import { readNickname, readPosts } from '../../runtime/board';
-import { NicknameDialog, useNicknameGate } from './nickname';
+import { readPosts } from '../../runtime/board';
+import { useNicknameGate, useOwnNickname } from './nickname';
 import { PostList } from './parts';
 
 const ALL = 'all';
@@ -115,22 +115,15 @@ function LatestNews() {
 function BoardAside({ operator }: { operator: boolean }) {
   const { admin } = useAccount();
   const { unreadBoard } = useStanding();
-  const nickname = useLoaded(readNickname);
-  const [changing, setChanging] = useState(false);
-  const name = nickname.data?.name ?? null;
+  const own = useOwnNickname();
   return (
     <>
       <NavGroup
         title="내 게시판"
         head={
           <>
-            <AuthorLine author={{ name, operator: admin, mine: true, left: false }} note={admin ? undefined : BOARD.nickname} size="md" />
-            {/* The operator writes as 운영자, which no one picks or changes. */}
-            {!admin && nickname.data && (
-              <Button variant="secondary" size="sm" onClick={() => setChanging(true)}>
-                {name ? '바꾸기' : '설정'}
-              </Button>
-            )}
+            {own.line}
+            {own.loaded.data && own.change}
           </>
         }
       >
@@ -142,16 +135,7 @@ function BoardAside({ operator }: { operator: boolean }) {
           <NavRow icon={Send} label={BOARD.toOperator} onClick={() => navigate({ kind: 'board-write', operator: true })} />
         )}
       </NavGroup>
-      {changing && (
-        <NicknameDialog
-          current={name}
-          onSet={() => {
-            setChanging(false);
-            nickname.reload();
-          }}
-          onClose={() => setChanging(false)}
-        />
-      )}
+      {own.dialog}
     </>
   );
 }

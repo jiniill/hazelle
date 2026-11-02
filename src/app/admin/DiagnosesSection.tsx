@@ -3,6 +3,7 @@ import { readDiagnoses } from '../../runtime/admin';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
 import { Button, Disclosure, Empty, Panel, Stack, TextField } from '../ui';
+import { seoulMonthDay } from './seoul';
 
 const EVENTS: Record<AutoEvent, string> = {
   'app-error': '앱 오류',
@@ -15,11 +16,10 @@ const EVENTS: Record<AutoEvent, string> = {
   'cache-broken': '캐시 깨짐',
 };
 const HELP = '문제별로 그날 겪은 사람 수와 횟수를 보여 줘요. 사람은 날마다 새로 세요.';
-const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });
 
 export const lineOf = ({ day, version, event, detail, place, people, times, facts }: AutoRow) => {
   const { cause } = JSON.parse(facts) as { cause?: AutoErrorCause | null };
-  return [date.format(day).slice(5), version || '버전 없음', EVENTS[event], detail, event === 'app-error' && cause && `최근 오류 분류: ${cause}`, place, `${count(people)}명 ${count(times)}회`].filter(Boolean).join(' · ');
+  return [seoulMonthDay(day), version || '버전 없음', EVENTS[event], detail, event === 'app-error' && cause && `최근 오류 분류: ${cause}`, place, `${count(people)}명 ${count(times)}회`].filter(Boolean).join(' · ');
 };
 
 export function DiagnosesSection() {

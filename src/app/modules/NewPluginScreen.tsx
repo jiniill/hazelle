@@ -1,15 +1,13 @@
 import { Code2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
-import type { Cost } from '../../connectors/types';
 import { addDraftAsk, blankDraft, createDraft, draftIdentity } from '../../runtime/tools/drafts';
-import { askEstimate, askPlugin, type PluginAsked, type TestRun } from '../../runtime/tools/plugin-writer';
+import { askPlugin, type PluginAsked, type TestRun } from '../../runtime/tools/plugin-writer';
 import { sharedModel } from '../../runtime/assignment';
 import { newOf } from '../common/acts';
 import { describeAskFailure } from '../common/failure';
 import { PLUGIN_GUIDE } from '../common/legal';
 import { ModelMenu } from '../common/ModelMenu';
-import { cost } from '../common/receipt';
 import { STOP, TOOL } from '../common/words';
 import { useChats, useConnections, useSession } from '../session';
 import { backBar, navigate } from '../shell/router';
@@ -18,6 +16,7 @@ import { useToast } from '../toast';
 import { Button, Callout, CommentBox, Link, NavBar, Row, Screen, Section, Stack } from '../ui';
 import { isPlace, PLACES, StudioPlaces } from './StudioPlaces';
 import { TestRuns, testRunner } from './StudioTest';
+import { askHint, useAskEstimate } from './useAskEstimate';
 
 type Run = { kind: 'idle' } | { kind: 'running'; length: number; runs: TestRun[] } | { kind: 'failed'; message: string; runs: TestRun[] };
 
@@ -29,23 +28,13 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
   const toast = useToast();
   const [ask, setAsk] = useState(isPlace(place) ? PLACES[place].ask : '');
   const [run, setRun] = useState<Run>({ kind: 'idle' });
-  const [estimate, setEstimate] = useState<Cost | null>(null);
   const [picked, setPicked] = useState<ModelRef | null>(null);
   const abort = useRef<AbortController | null>(null);
   useEffect(() => () => abort.current?.abort(), []);
   const route = sharedModel(store, 'main', picked);
   const ready = !('kind' in route);
   const running = run.kind === 'running';
-
-  useEffect(() => {
-    if (!ready || !ask.trim()) return setEstimate(null);
-    let current = true;
-    const timer = setTimeout(() => void askEstimate(session, { body: null, ask, model: picked }).then((found) => current && setEstimate(found)), 400);
-    return () => {
-      current = false;
-      clearTimeout(timer);
-    };
-  }, [session, ready, ask, picked]);
+  const estimate = useAskEstimate(session, ready && ask.trim() ? { body: null, ask, model: picked } : null);
 
   async function make() {
     const controller = new AbortController();
@@ -77,7 +66,7 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
     navigate({ kind: 'plugin-draft', id }, { replace: true });
   }
 
-  const hint = running ? `생성 중… ${run.length.toLocaleString()}자` : estimate === null ? undefined : `예상 ${cost(estimate)}`;
+  const hint = askHint(running ? run.length : null, estimate);
   return (
     <Screen width="form" top={<NavBar title={newOf(TOOL)} {...backBar(back)} />}>
       <Stack gap="section">

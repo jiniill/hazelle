@@ -9,6 +9,7 @@ import { DatabaseBlocked } from '../../vault/database';
 import { canonicalUsername, openVault, wrapWithPassword, type Credential, type VaultKey } from '../../vault/keys';
 import { clearDownloads } from '../common/download';
 import { describeFailure, wrongSecret } from '../common/failure';
+import { readPersisted } from '../common/usePersisted';
 import type { Account } from '../session';
 import { Brand, Progress, Screen } from '../ui';
 import { GuestDataScreen } from './GuestDataScreen';
@@ -48,12 +49,7 @@ const OWNER = '사용자';
 // Explicit guest choice stores empty; older browsers infer from device cache. Storage failure loses only the hint.
 const ENTRY = 'risu-alpha:entry';
 async function entry(): Promise<string | null> {
-  let stored: string | null = null;
-  try {
-    stored = localStorage.getItem(ENTRY);
-  } catch {
-    // A hint only.
-  }
+  const stored = readPersisted<string | null>(ENTRY, (value) => value, null);
   if (stored !== null) return stored === '' ? null : stored;
   return (await cachedAccounts().catch(() => false)) ? '' : null;
 }

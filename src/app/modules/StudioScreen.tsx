@@ -1,7 +1,7 @@
 import { ArrowUp } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
-import { entryName, type Cost } from '../../connectors/types';
+import { entryName } from '../../connectors/types';
 import { cacheDiff, changedLines } from '../../engine/cache-diff';
 import { toolSource } from '../../engine/import/tool';
 import type { Stored } from '../../model/kinds';
@@ -10,7 +10,7 @@ import type { ObjectStore } from '../../runtime/store';
 import { routeOf, sharedModel } from '../../runtime/assignment';
 import { writeWhole } from '../../runtime/export-file';
 import { addDraftAsk, applyPreview, deleteDraft, restoreDraft, saveDraft, type DraftFile } from '../../runtime/tools/drafts';
-import { askEstimate, askPlugin, type PluginAsked, type TestRun } from '../../runtime/tools/plugin-writer';
+import { askPlugin, type PluginAsked, type TestRun } from '../../runtime/tools/plugin-writer';
 import { ACTS } from '../common/acts';
 import { jsLanguage } from '../common/code/javascript';
 import { fileNamed } from '../common/download';
@@ -28,7 +28,8 @@ import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
 import { Button, Callout, CodeField, CommentBox, Empty, Exchange, Facts, MenuItem, NavBar, Row, Screen, Section, Stack, Tag, TextDiff, TextField, type CodeAside } from '../ui';
 import { ApplyDialog } from './ApplyDialog';
-import { draftTitle, USE_TAGS } from './studio';
+import { draftTitle, lineRange, USE_TAGS } from './studio';
+import { askHint, useAskEstimate } from './useAskEstimate';
 import { TestPane, TestRuns, testRunner, type TestSetup } from './StudioTest';
 
 function askFoot(store: ObjectStore, ask: Pick<DraftAsk, 'model' | 'cost'>): string {
@@ -131,21 +132,11 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
   const toast = useToast();
   const [ask, setAsk] = useState('');
   const [run, setRun] = useState<Run>({ kind: 'idle' });
-  const [estimate, setEstimate] = useState<Cost | null>(null);
   const [picked, setPicked] = useState<ModelRef | null>(null);
   const abort = useRef<AbortController | null>(null);
   useEffect(() => () => abort.current?.abort(), []);
   const running = run.kind === 'running';
-
-  useEffect(() => {
-    if (!ask.trim()) return setEstimate(null);
-    let current = true;
-    const timer = setTimeout(() => void askEstimate(session, { body: draft.body, ask, model: picked, earlier: draft.asks.slice(-EARLIER) }).then((found) => current && setEstimate(found)), 400);
-    return () => {
-      current = false;
-      clearTimeout(timer);
-    };
-  }, [session, draft.body, ask, picked]);
+  const estimate = useAskEstimate(session, ask.trim() ? { body: draft.body, ask, model: picked, earlier: draft.asks.slice(-EARLIER) } : null);
 
   const pending = run.kind === 'answered' ? run.pending : null;
   // Only a new fix acts; a later change of the run or the answer leaves it be.
@@ -190,7 +181,7 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
     setRun({ kind: 'idle' });
   }
 
-  const hint = running ? `생성 중… ${run.length.toLocaleString()}자` : estimate === null ? undefined : `예상 ${cost(estimate)}`;
+  const hint = askHint(running ? run.length : null, estimate);
   return (
     <Stack gap="group">
       {draft.asks.length === 0 && !pending && run.kind === 'idle' && <Empty>{`바꾸고 싶은 점을 적으면 AI가 ${TOOL} 코드를 수정해요.`}</Empty>}
@@ -290,20 +281,12 @@ function InfoPane({ draft, onIdentity, reveal }: { draft: ToolDraft; onIdentity:
           </Section>
         </>
       ) : (
-        <Callout tone="warn" action={{ label: '코드에서 보기', onClick: () => reveal(lineAt(draft.body, preview.failure.line)) }}>
+        <Callout tone="warn" action={{ label: '코드에서 보기', onClick: () => reveal(lineRange(draft.body, draft.body.split('\n').findIndex((each) => each.trim() === preview.failure.line) + 1)) }}>
           {describeImportFailure(preview.failure)}
         </Callout>
       )}
     </Stack>
   );
-}
-
-function lineAt(text: string, line: string | undefined): [number, number] {
-  const lines = text.split('\n');
-  const at = line === undefined ? -1 : lines.findIndex((each) => each.trim() === line);
-  if (at < 0) return [0, 0];
-  const from = lines.slice(0, at).reduce((sum, each) => sum + each.length + 1, 0);
-  return [from, from + lines[at]!.length];
 }
 
 function DraftExport({ name, text, onClose }: { name: string; text: string; onClose: () => void }) {

@@ -51,6 +51,11 @@ type Asking =
   | { kind: 'report-comment'; comment: Comment }
   | { kind: 'hide-comment'; comment: Comment };
 
+function useAct(then: () => void) {
+  const toast = useToast();
+  return (request: () => Promise<ApiResult<undefined>>, failed: string) => void request().then((answer) => (answer.ok ? then() : toast.failed(answer, failed)));
+}
+
 const edited = (at: number, editedAt: number | null) => (editedAt === null ? ago(at) : `${ago(at)} · 수정됨`);
 const hiddenLine = (what: string, { reason, until }: Hidden) => `운영자가 가린 ${what}이에요. 이유: ${reason}${until === null ? '' : ` · ${moment(until)}까지`}`;
 
@@ -82,8 +87,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
     reload();
   };
 
-  const act = (request: () => Promise<ApiResult<undefined>>, failed: string) =>
-    void request().then((answer) => (answer.ok ? reload() : toast.failed(answer, failed)));
+  const act = useAct(reload);
 
   const removePost = () =>
     run(async () => {
@@ -216,7 +220,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
 // Flat under the post, each 답글 one level under the comment it answers; a 답글 whose comment is not here stands at the
 // top rather than vanish.
 function Comments({ post, admin, guest, gate, onAsk, onChanged }: { post: Post; admin: boolean; guest: boolean; gate: Gate; onAsk: (asking: Asking) => void; onChanged: () => void }) {
-  const toast = useToast();
+  const act = useAct(onChanged);
   const [replying, setReplying] = useState<number | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const ids = new Set(post.comments.map((comment) => comment.id));
@@ -249,14 +253,9 @@ function Comments({ post, admin, guest, gate, onAsk, onChanged }: { post: Post; 
       ...(admin && !comment.deleted
         ? [
             <MenuHeading key="operate">운영</MenuHeading>,
-            ...(comment.author.guest ? [<MenuItem key="block-guest" icon={Lock} label="이 손님 글쓰기 차단" onClick={() => void blockGuestComment(comment.id).then((answer) => answer.ok ? onChanged() : toast.failed(answer, '차단하지 못했어요.'))} />] : []),
+            ...(comment.author.guest ? [<MenuItem key="block-guest" icon={Lock} label="이 손님 글쓰기 차단" onClick={() => act(() => blockGuestComment(comment.id), '차단하지 못했어요.')} />] : []),
             comment.hidden ? (
-              <MenuItem
-                key="show"
-                icon={Eye}
-                label="가림 해제"
-                onClick={() => void setCommentHidden(comment.id, null).then((answer) => (answer.ok ? onChanged() : toast.failed(answer, '가림을 해제하지 못했어요.')))}
-              />
+              <MenuItem key="show" icon={Eye} label="가림 해제" onClick={() => act(() => setCommentHidden(comment.id, null), '가림을 해제하지 못했어요.')} />
             ) : (
               <MenuItem key="hide" icon={EyeOff} label="가리기" onClick={() => onAsk({ kind: 'hide-comment', comment })} />
             ),
