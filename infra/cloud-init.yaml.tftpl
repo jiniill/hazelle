@@ -1,6 +1,7 @@
 #cloud-config
 # First boot of the hosted machine: Docker from Docker's own repository, the compose files and their env under
-# /etc/hazelle, /data on the instance disk owned by the app's uid, then the stack. Every file comes from infra/main.tf.
+# /etc/hazelle, /data on the instance disk owned by the app's uid, a swap file, the images, then the stack unless start
+# is false (scripts/rebuild.sh). Every file comes from infra/main.tf.
 apt:
   sources:
     docker:
@@ -39,9 +40,16 @@ write_files:
   - path: /etc/hazelle/deploy/rclone-backup.sh
     encoding: b64
     content: ${base64encode(copier)}
+swap:
+  filename: /swapfile
+  size: 4G
+  maxsize: 4G
 runcmd:
   # 1000 is the node user of node:24-alpine, which the app and the copier run as.
   - [mkdir, -p, /data]
   - [chown, "1000:1000", /data]
   - [chown, -R, "1000:1000", /etc/hazelle/rclone]
+  - [hazelle-compose, pull, -q]
+%{ if start ~}
   - [hazelle-compose, up, -d]
+%{ endif ~}

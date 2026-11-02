@@ -1,75 +1,20 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016 # the single-quoted scripts run by remote() expand on the machine
-# Destroys the hosted machine (infra/), and only after the off-site backup is proven: the newest remote generation
-# must have its manifest, be marked copied on the machine, be younger than a day, and restore with scripts/restore.sh
-# into a scratch directory on the machine. Then terraform plans the destroy from a copy of infra/ that lifts
-# prevent_destroy, against infra/'s state; after the typed confirmation the generation's age is checked again and the
-# saved plan is applied.
+# Destroys the hosted machine (infra/), and only after the off-site backup is proven by scripts/machine-restore.sh drill
+# on the machine. Then terraform plans the destroy from a copy of infra/ that lifts prevent_destroy, against infra/'s
+# state; after the typed confirmation the generation's age is checked again and the saved plan is applied.
 #   scripts/destroy.sh
 # Needs: terraform initialised in infra/, VULTR_API_KEY in the shell, every required variable of infra/variables.tf
 # (infra/README.md "Inputs": the gitignored *.tfvars, TF_VAR_* for what it lacks; the plan fails only after the drill
-# without them), ssh as root to the machine, and free space on the
-# machine's disk, which the live app shares, for the generation as downloaded and as restored plus a fifth of the disk
-# (the script adds it up from the manifest and checks it).
+# without them), ssh as root to the machine, and the free space the drill needs there.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 state=$PWD/infra/terraform.tfstate
 host=$(terraform -chdir=infra output -raw ip)
 remote() { ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "root@$host" "$@" </dev/null; }
+machine() { cat scripts/machine-lib.sh scripts/machine-restore.sh | ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "root@$host" bash -s -- "$@"; }
 
-# Prints the drilled generation's id.
-id=$(remote 'set -eu
-  remote=$(sed -n "s/^HAZELLE_BACKUP_REMOTE=//p" /etc/hazelle/env)
-  image=$(sed -n "s/^HAZELLE_IMAGE=//p" /etc/hazelle/env)
-  drill=/var/tmp/hazelle-drill
-  rclone() { docker run --rm --user 1000:1000 -e HOME=/tmp -v /etc/hazelle/rclone:/config/rclone -v $drill:/drill rclone/rclone:1.75 "$@"; }
-  rm -rf $drill && mkdir -p $drill/data && chown -R 1000:1000 $drill
-  trap "rm -rf $drill" EXIT
-  listing=$(rclone lsf --dirs-only "$remote") || { echo "destroy: cannot list $remote" >&2; exit 1; }
-  id=$(printf "%s\n" "$listing" | sed -n "s|^\([0-9]*-[0-9a-f]\{8\}\)/$|\1|p" | sort -n | tail -1)
-  [ -n "$id" ] || { echo "destroy: no generation on $remote" >&2; exit 1; }
-  age_ms=$(( $(date +%s%3N) - ${id%%-*} ))
-  [ "$age_ms" -ge 0 ] && [ "$age_ms" -lt 86400000 ] ||
-    { echo "destroy: the newest generation $id is $((age_ms / 3600000)) hours old" >&2; exit 1; }
-  [ -f "/data/backup/$id/copied" ] || { echo "destroy: $id is not marked copied" >&2; exit 1; }
-  rclone copyto "$remote/$id/manifest.json" /drill/manifest.json
-  grep -Eq "^\{\"version\":[0-9]+,\"id\":\"$id\"," $drill/manifest.json || { echo "destroy: the remote manifest of $id names another generation" >&2; exit 1; }
-  grep -q "\"materialized\":" $drill/manifest.json ||
-    { echo "destroy: the manifest of $id records no materialized sizes (an older build wrote it); run this after the next daily generation" >&2; exit 1; }
-  grep -o "\"pictures\":\[[^]]*\]" $drill/manifest.json | grep -o "[0-9a-f]\{64\}" >$drill/pictures || true
-  if grep -q "\"bucket\":\"r2\"" $drill/manifest.json; then : >$drill/pictures; fi
-  sum() { grep -o "\"$1\":[0-9]*" $drill/manifest.json | cut -d: -f2 | awk "{ s += \$1 } END { print s + 0 }"; }
-  artifacts=$(sum bytes)
-  service=$(grep -o "\"service\":{[^}]*}" $drill/manifest.json | grep -o "\"expanded\":[0-9]*" | cut -d: -f2)
-  expanded=$((service + $(sum materialized)))
-  held=$(sum pictureBytes)
-  if grep -q "\"bucket\":\"r2\"" $drill/manifest.json; then held=0; fi
-  # No pictures: the remote may have no files/ at all.
-  pictures=0
-  if [ -s $drill/pictures ]; then
-    size=$(rclone size "$remote/files" --files-from-raw /drill/pictures --json)
-    pictures=$(echo "$size" | sed -n "s/.*\"bytes\":\([0-9]*\).*/\1/p")
-  fi
-  space=$(df -Pk $drill | awk "NR == 2 { print \$2, \$4 }")
-  disk_kb=${space% *}
-  free_kb=${space#* }
-  # The restore gunzips the service and materializes each account file (expanded: the size of the service and the
-  # materialized one of every snapshot, a delta counted with its base, the target of a rewound account as a second
-  # file; no apostrophe in this quoted script), copies the
-  # snapshots as they are (artifacts, which counts the service gzip too) and copies each picture into every account
-  # holding it (held).
-  download=$((artifacts + pictures))
-  restore=$((expanded + artifacts + held))
-  need=$((download + restore + disk_kb * 1024 / 5))
-  echo "destroy: $id downloads $download bytes (generation $artifacts, pictures $pictures) and restores to $restore (databases $expanded, snapshots $artifacts, pictures per account $held); the drill needs $need bytes free on $drill with a fifth of the disk, $((free_kb * 1024)) are" >&2
-  [ $((free_kb * 1024)) -ge "$need" ] || { echo "destroy: not enough free space for the drill" >&2; exit 1; }
-  docker run --rm --entrypoint cat "$image" /app/scripts/restore.sh >$drill/fetch.sh
-  docker run --rm --user 1000:1000 -e HOME=/tmp -v /etc/hazelle/rclone:/config/rclone -v $drill:/drill --entrypoint /bin/sh rclone/rclone:1.75 /drill/fetch.sh fetch "$remote" "$id" /drill
-  # The env of the app names the picture store: an r2 generation restores only into it, and without the env the
-  # restore looks for a pool beside the generation.
-  docker run --rm --user 1000:1000 --env-file /etc/hazelle/env --entrypoint /app/scripts/restore.sh -v $drill:/drill "$image" "/drill/$id" /drill/data >&2
-  echo "destroy: $id restores" >&2
-  echo "$id"')
+id=$(machine drill)
 
 fresh() {
   local now_ms age_ms

@@ -64,7 +64,8 @@ resource "vultr_instance" "hazelle" {
       "HAZELLE_FILES_R2_ACCESS_KEY_ID=${var.r2_files_access_key_id}",
       "HAZELLE_FILES_R2_SECRET_ACCESS_KEY=${var.r2_files_secret_access_key}",
     ])
-    rclone_conf = join("\n", [
+    # [files]: the picture store, which the copier reads for snapshot archives (deploy/rclone-backup.sh).
+    rclone_conf = join("\n", concat([
       "[r2]",
       "type = s3",
       "provider = Cloudflare",
@@ -72,14 +73,25 @@ resource "vultr_instance" "hazelle" {
       "secret_access_key = ${var.r2_secret_access_key}",
       "endpoint = https://${var.r2_account_id}.r2.cloudflarestorage.com",
       "no_check_bucket = true",
-    ])
+      ], var.r2_files_bucket == "" ? [] : [
+      "",
+      "[files]",
+      "type = s3",
+      "provider = Cloudflare",
+      "access_key_id = ${var.r2_files_access_key_id}",
+      "secret_access_key = ${var.r2_files_secret_access_key}",
+      "endpoint = https://${var.r2_account_id}.r2.cloudflarestorage.com",
+      "no_check_bucket = true",
+    ]))
+    start = var.start
     compose        = file("${path.module}/../docker-compose.yml")
     compose_hosted = file("${path.module}/../docker-compose.hosted.yml")
     caddyfile      = file("${path.module}/../deploy/Caddyfile")
     copier         = file("${path.module}/../deploy/rclone-backup.sh")
   })
   lifecycle {
-    # scripts/destroy.sh is the only path that lifts this, after it verified the newest off-site generation.
+    # scripts/destroy.sh and scripts/rebuild.sh are the only paths that lift this, after the newest off-site generation
+    # restored on the machine.
     prevent_destroy = true
     # user_data runs once, on first boot. deploy.sh rewrites /etc/hazelle/env afterwards, so a changed digest or file
     # here must not read as a reason to replace the machine.

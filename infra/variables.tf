@@ -3,9 +3,19 @@ variable "region" {
   default = "icn"
 }
 
+# Vultr changes a plan in place only upwards. A smaller plan goes through scripts/rebuild.sh, which replaces the machine;
+# a plain apply with a smaller plan than the machine has fails at Vultr and changes nothing.
 variable "plan" {
   type    = string
-  default = "vhp-4c-8gb-amd"
+  default = "vhp-2c-4gb-amd"
+}
+
+# Start the stack on first boot. scripts/rebuild.sh passes false: the new machine pulls the images and waits for the
+# restore of the old one's generation (an app on an empty /data with the store's credentials would sweep the store's
+# archives within a minute).
+variable "start" {
+  type    = bool
+  default = true
 }
 
 # "Ubuntu 24.04 LTS x64" in Vultr's GET /v2/os.

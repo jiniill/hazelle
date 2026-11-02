@@ -1,10 +1,11 @@
 # infra
 
-Terraform for the hosted machine on Vultr: one instance (`vhp-4c-8gb-amd` in `icn`, Ubuntu 24.04), a reserved IPv4
+Terraform for the hosted machine on Vultr: one instance (`vhp-2c-4gb-amd` in `icn`, Ubuntu 24.04), a reserved IPv4
 address, a firewall group (22 from the owner's address, 80, 443 and 443/udp as `edge` says) and the owner's SSH
 key. `/data` lives on the instance's own disk. On first boot `cloud-init.yaml.tftpl` installs Docker from Docker's
-repository, writes `/etc/hazelle/` (the env file, the rclone config for R2, both compose files, the Caddyfile, the
-copier script) and runs `hazelle-compose up -d`.
+repository, writes `/etc/hazelle/` (the env file, the rclone config for R2 with the backup remote `[r2]` and the picture
+store `[files]`, both compose files, the Caddyfile, the copier script), makes a 4 GB swap file, pulls the images and,
+unless `start = false`, runs `hazelle-compose up -d`.
 
 ## Inputs
 
@@ -19,6 +20,8 @@ variable (`variables.tf`), passed as `-var` or `TF_VAR_*`, or in a `*.tfvars` fi
 | `r2_account_id`, `r2_access_key_id`, `r2_secret_access_key`, `r2_bucket` | the off-site backup bucket and a key that may read, write and delete in it |
 | `r2_files_bucket`, `r2_files_access_key_id`, `r2_files_secret_access_key` | optional: the app's own picture bucket and a key that may read, write and delete in it alone (see Pictures in R2); empty keeps pictures on `/data` |
 | `alert_webhook` | optional Discord/Slack webhook for backup, disk and server-slowness alerts |
+| `plan` | the Vultr plan; a smaller one than the machine has only through `scripts/rebuild.sh` (see Commands) |
+| `start` | `true` (default): the stack starts on first boot; `scripts/rebuild.sh` passes `false` so the restore fills `/data` first |
 | `edge` | `direct` (default): 80 and 443 open to anyone, the DNS record unproxied; `cloudflare`: only Cloudflare's ranges, the record proxied (see Edge) |
 | `cloudflare_ipv4` | for `edge = cloudflare`; defaults to Cloudflare's published list; update it when https://www.cloudflare.com/ips-v4 changes |
 
@@ -46,9 +49,18 @@ only when no manifest in the remote's listing names it and the machine's own poo
 listing never lags behind by the 7 days the machine keeps a generation.
 
 `prevent_destroy` is set on the instance and the reserved IP, so a plain `terraform destroy` fails. `scripts/destroy.sh`
-lifts it only after it has restored the newest off-site generation into a scratch directory, and only in a copy of this
-directory (`.destroy.*` beside it, removed on exit) that plans and applies against this directory's state; nothing in
-`infra/` changes. A `.destroy.*` left behind by a crash lifts nothing here; delete it.
+lifts it only after the newest off-site generation restored into a scratch directory on the machine
+(`scripts/machine-restore.sh drill`), and only in a copy of this directory (`.destroy.*` beside it, removed on exit)
+that plans and applies against this directory's state; nothing in `infra/` changes. A `.destroy.*` left behind by a
+crash lifts nothing here; delete it.
+
+Vultr resizes an instance in place only to a larger plan (`terraform apply` after raising `plan`; one reboot, the root
+file system grows on boot). A smaller plan is a new machine: `scripts/rebuild.sh` plans the replacement of the instance
+alone (`.rebuild.*`, the reserved address stays), drills the newest generation, and after the typed confirmation stops
+Caddy, captures a final generation off-site, applies, and installs that generation on the new machine
+(`scripts/machine-restore.sh install`), which boots with `start = false` and the running image as `image_digest`. The
+address keeps its DNS record and firewall rules; its host key changes. Until the rebuild runs, `terraform plan` shows
+the plan change as an in-place update, which Vultr would refuse.
 
 ## Pictures in R2
 
@@ -115,8 +127,8 @@ Moving the hosted machine's existing archives, as root on it:
    is left, checks every catalogued archive in the bucket at its size, and only then removes `/data/snapshots`), and
    `hazelle-compose up -d app`. Older generations keep hard links to the old archives until they expire.
 4. Take a generation (`hazelle-compose exec -T app kill -USR2 1`), let the copier run, and check that the remote holds
-   `snapshots/hazelle-files/...` and the generation's `copied`. Then run the restore drill (`scripts/restore.sh fetch`
-   into a scratch directory, as `scripts/destroy.sh` does) to prove the text restores from the backup bucket alone.
+   `snapshots/hazelle-files/...` and the generation's `copied`. Then run the restore drill (`scripts/machine-restore.sh
+   drill`, as `scripts/destroy.sh` does) to prove the text restores from the backup bucket alone.
 
 ## Edge
 
