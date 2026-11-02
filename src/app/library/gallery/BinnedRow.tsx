@@ -25,11 +25,19 @@ export function BinnedRow({ item, face, description, mark, busy, actions, onPurg
       trailing={
         busy === null && (
           <MoreMenu of={item.name}>
-            <MenuItem icon={ACTS.restore.icon} label={ACTS.restore.label} onClick={() => actions.restore(item)} />
-            <MenuItem icon={ACTS.remove.icon} label="영구 삭제" tone="warn" onClick={onPurge} />
+            <BinnedItems item={item} actions={actions} onPurge={onPurge} />
           </MoreMenu>
         )
       }
     />
+  );
+}
+
+export function BinnedItems({ item, actions, onPurge }: Pick<Props, 'item' | 'actions' | 'onPurge'>) {
+  return (
+    <>
+      <MenuItem icon={ACTS.restore.icon} label={ACTS.restore.label} onClick={() => actions.restore(item)} />
+      <MenuItem icon={ACTS.remove.icon} label="영구 삭제" tone="warn" onClick={onPurge} />
+    </>
   );
 }
