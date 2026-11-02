@@ -28,7 +28,7 @@ import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
 import { Button, Callout, CodeField, CommentBox, Empty, Exchange, Facts, MenuItem, NavBar, Row, Screen, Section, Stack, Tag, TextDiff, TextField, type CodeAside } from '../ui';
 import { ApplyDialog } from './ApplyDialog';
-import { draftTitle, USE_TAGS } from './studio';
+import { draftTitle, lineRange, USE_TAGS } from './studio';
 import { TestPane, TestRuns, testRunner, type TestSetup } from './StudioTest';
 
 function askFoot(store: ObjectStore, ask: Pick<DraftAsk, 'model' | 'cost'>): string {
@@ -290,20 +290,12 @@ function InfoPane({ draft, onIdentity, reveal }: { draft: ToolDraft; onIdentity:
           </Section>
         </>
       ) : (
-        <Callout tone="warn" action={{ label: '코드에서 보기', onClick: () => reveal(lineAt(draft.body, preview.failure.line)) }}>
+        <Callout tone="warn" action={{ label: '코드에서 보기', onClick: () => reveal(lineRange(draft.body, draft.body.split('\n').findIndex((each) => each.trim() === preview.failure.line) + 1)) }}>
           {describeImportFailure(preview.failure)}
         </Callout>
       )}
     </Stack>
   );
-}
-
-function lineAt(text: string, line: string | undefined): [number, number] {
-  const lines = text.split('\n');
-  const at = line === undefined ? -1 : lines.findIndex((each) => each.trim() === line);
-  if (at < 0) return [0, 0];
-  const from = lines.slice(0, at).reduce((sum, each) => sum + each.length + 1, 0);
-  return [from, from + lines[at]!.length];
 }
 
 function DraftExport({ name, text, onClose }: { name: string; text: string; onClose: () => void }) {

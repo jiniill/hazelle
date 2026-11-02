@@ -16,7 +16,7 @@ import { ModelMenu } from '../common/ModelMenu';
 import { cost } from '../common/receipt';
 import { useChats, useSession } from '../session';
 import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, Row, SettingRow, Stack, Switch, Text, TextField } from '../ui';
-import { fixAsk, testEvent, testPicks, type TestPick } from './studio';
+import { fixAsk, lineRange, testEvent, testPicks, type TestPick } from './studio';
 
 const REFUSED: Record<Extract<TrialWrite, { kind: 'refused' }>['call'], string> = { 'assets.save': '파일 저장', 'chat.picture': '이미지 넣기', 'chat.send': '메시지 보내기' };
 
@@ -210,12 +210,4 @@ function answerText(value: unknown): { label: string; text: string }[] {
   if (value === null || typeof value !== 'object') return [];
   const { tool, memory } = value as Exclude<Hazelle.PromptAnswer, string | null>;
   return [...(tool ? [{ label: '플러그인 블록', text: tool }] : []), ...(memory ? [{ label: '장기 기억 블록', text: memory.text }] : [])];
-}
-
-
-function lineRange(text: string, line: number): [number, number] {
-  const lines = text.split('\n');
-  if (line < 1 || line > lines.length) return [0, 0];
-  const from = lines.slice(0, line - 1).reduce((sum, each) => sum + each.length + 1, 0);
-  return [from, from + lines[line - 1]!.length];
 }

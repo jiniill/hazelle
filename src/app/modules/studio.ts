@@ -48,3 +48,11 @@ export function fixAsk(failed: string, moment: string, body: string, line: numbe
   const text = line === null ? undefined : body.split('\n')[line - 1];
   return ['테스트에서 난 오류를 수정해 주세요.', `실행 시점: ${moment}`, `오류: ${failed}`, ...(text === undefined ? [] : [`${line}번째 줄: ${text.trim()}`])].join('\n');
 }
+
+// Where line (counted from 1) stands in text, as a selection; [0, 0] for a line it does not hold.
+export function lineRange(text: string, line: number): [number, number] {
+  const lines = text.split('\n');
+  if (line < 1 || line > lines.length) return [0, 0];
+  const from = lines.slice(0, line - 1).reduce((sum, each) => sum + each.length + 1, 0);
+  return [from, from + lines[line - 1]!.length];
+}
