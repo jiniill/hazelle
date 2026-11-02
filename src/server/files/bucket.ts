@@ -17,9 +17,9 @@ type Common = {
 // path: the file holding a key, which a backup generation hard-links into its pool. sweep: removes what a put cut off
 // before settled left behind and answers those names.
 export type DiskBucket = Common & { kind: 'disk'; path(key: string): string; sweep(settled: number): Promise<string[]> };
-// R2 generations name remote objects rather than copying them. head must query the store itself, not its disk cache.
-// trim evicts local cached pictures and reports removed names.
-export type R2Bucket = Common & { kind: 'r2'; name: string; head(key: string): Promise<number | null>; trim(now: number): Promise<string[]> };
+// R2 generations name remote objects rather than copying them. sizes lists a prefix's objects with their sizes from the
+// store itself, not its disk cache. trim evicts local cached pictures and reports removed names.
+export type R2Bucket = Common & { kind: 'r2'; name: string; sizes(prefix: string): Promise<Map<string, number>>; trim(now: number): Promise<string[]> };
 export type Bucket = DiskBucket | R2Bucket;
 
 // The path-traversal guard: keys come from validated route params or generated snapshot ids; a miss is a programming error.

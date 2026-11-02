@@ -102,11 +102,16 @@ it('the disk bucket leaves no temp file and sweeps only a settled one', async ()
   expect(await bucket.sweep(Date.now() - 60_000)).toEqual([`${PREFIX}.tmp-old`]);
 });
 
-it('the r2 bucket answers a key’s size, and a refusal names the request', async () => {
+it('the r2 bucket lists a prefix’s sizes across pages without a HEAD, and a refusal names the request', async () => {
   const bucket = r2Bucket(s3.config);
   await bucket.put(key('a'), new Uint8Array([1, 2, 3]));
-  expect(await bucket.head(key('a'))).toBe(3);
-  expect(await bucket.head(key('b'))).toBeNull();
+  await bucket.put(key('b'), new Uint8Array([4]));
+  await bucket.put(key('c'), new Uint8Array(1500));
+  await bucket.put(key('d', `files/${OTHER}/`), new Uint8Array([5, 6]));
+  s3.requests.length = 0;
+  expect(await bucket.sizes(PREFIX)).toEqual(new Map([[key('a'), 3], [key('b'), 1], [key('c'), 1500]]));
+  expect(s3.requests).toEqual(['GET /pictures/', 'GET /pictures/']);
+  expect(await bucket.sizes(`files/${'c'.repeat(32)}/`)).toEqual(new Map());
   await expect(r2Bucket({ ...s3.config, secretAccessKey: 'wrong' }).get(key('a'))).rejects.toThrow(`r2: get ${key('a')} answered 403`);
 });
 

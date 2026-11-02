@@ -49,8 +49,7 @@ export function r2Bucket(config: R2Config): R2Bucket {
   };
 
   const listing = async (query: Record<string, string>) => {
-    const keys: string[] = [];
-    const archives: { key: string; modified: number }[] = [];
+    const objects: { key: string; size: number; modified: number }[] = [];
     const prefixes: string[] = [];
     let token: string | null = null;
     do {
@@ -59,13 +58,12 @@ export function r2Bucket(config: R2Config): R2Bucket {
       const xml = await response.text();
       for (const entry of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
         const key = tags(entry[1]!, /<Key>([^<]*)<\/Key>/g)[0]!;
-        if (isKey(key)) archives.push({ key, modified: Date.parse(tags(entry[1]!, /<LastModified>([^<]*)<\/LastModified>/g)[0]!) });
+        if (isKey(key)) objects.push({ key, size: Number(tags(entry[1]!, /<Size>([^<]*)<\/Size>/g)[0]), modified: Date.parse(tags(entry[1]!, /<LastModified>([^<]*)<\/LastModified>/g)[0]!) });
       }
-      keys.push(...tags(xml, /<Key>([^<]*)<\/Key>/g));
       prefixes.push(...tags(xml, /<CommonPrefixes>\s*<Prefix>([^<]*)<\/Prefix>/g));
       token = /<IsTruncated>true<\/IsTruncated>/.test(xml) ? (tags(xml, /<NextContinuationToken>([^<]*)<\/NextContinuationToken>/g)[0] ?? null) : null;
     } while (token);
-    return { keys, prefixes, archives };
+    return { objects, prefixes };
   };
 
   const remove = async (key: string) => {
@@ -73,12 +71,12 @@ export function r2Bucket(config: R2Config): R2Bucket {
     if (!response.ok && response.status !== 404) await refused(response, `delete ${key}`);
     await response.body?.cancel();
   };
-  const list = async (prefix: string) => (await listing({ prefix: checkedPrefix(prefix) })).keys.filter(isKey).sort();
+  const list = async (prefix: string) => (await listing({ prefix: checkedPrefix(prefix) })).objects.map(({ key }) => key).sort();
 
   return {
     kind: 'r2',
     name: config.bucket,
-    archives: async () => (await listing({ prefix: 'snapshots/' })).archives,
+    archives: async () => (await listing({ prefix: 'snapshots/' })).objects.map(({ key, modified }) => ({ key, modified })),
     putFile: async (key, path) => {
       checkedKey(key);
       const { size } = await stat(path);
@@ -107,12 +105,7 @@ export function r2Bucket(config: R2Config): R2Bucket {
       if (!response.ok || !response.body) return refused(response, `get ${key}`);
       return response.body;
     },
-    head: async (key) => {
-      const response = await send('HEAD', checkedKey(key));
-      if (response.status === 404) return null;
-      if (!response.ok) return refused(response, `head ${key}`);
-      return Number(response.headers.get('content-length'));
-    },
+    sizes: async (prefix) => new Map((await listing({ prefix: checkedPrefix(prefix) })).objects.map(({ key, size }) => [key, size])),
     delete: remove,
     list,
     deletePrefix: async (prefix) => {

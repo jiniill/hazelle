@@ -11,7 +11,7 @@ import { accountPath, accountRegistry, installSnapshot, materializeSnapshot } fr
 import { digest, fsyncPath } from '../db/durable';
 import { migrate } from '../db/migrate';
 import { openDatabase, serviceDb } from '../db/service-db';
-import { fileKey, snapshotKey, type Bucket, type R2Bucket } from '../files/bucket';
+import { fileKey, filePrefix, snapshotKey, type Bucket, type R2Bucket } from '../files/bucket';
 import { diskBucket } from '../files/disk-bucket';
 import { takeBackFiles } from '../files/claims';
 import type { Services } from '../http';
@@ -30,8 +30,6 @@ import { generationPictures, generationsDir, POOL, readManifest, type Manifest }
 // Resolve pending operations through lifecycle, replay departures, revoke sessions and reset every account timeline
 // (docs/research/docker-port-plan.md §10.2).
 
-const HEADS = 16;
-
 async function verify(generation: string, manifest: Manifest, files: Bucket, source: Bucket) {
   if (manifest.bucket === 'r2' && files.kind !== 'r2') throw new Error('restore: the generation’s pictures are in an R2 bucket; set HAZELLE_FILES_BUCKET=r2 and its HAZELLE_FILES_R2_* to that bucket');
   const check = async (path: string, expected: string) => {
@@ -48,7 +46,8 @@ async function verify(generation: string, manifest: Manifest, files: Bucket, sou
 }
 
 // Every stored picture the service names is in the store at the size its row records, or the restore fails naming each
-// one that is not. Sizes only: reading every object back to hash it is not done.
+// one that is not. Sizes only: reading every object back to hash it is not done. One listing per account, not one HEAD
+// per picture: the hosted store held 277,334 pictures on 2026-11-02, 45 minutes of HEADs.
 async function inStore(files: R2Bucket, service: string, manifest: Manifest) {
   const db = new DatabaseSync(service, { readOnly: true });
   let stored: { incarnation: string; id: string; size: number }[];
@@ -57,14 +56,15 @@ async function inStore(files: R2Bucket, service: string, manifest: Manifest) {
   } finally {
     db.close();
   }
+  const byAccount = new Map<string, { id: string; size: number }[]>();
+  for (const { incarnation, id, size } of stored) byAccount.set(incarnation, [...(byAccount.get(incarnation) ?? []), { id, size }]);
   const wrong: string[] = [];
-  for (let start = 0; start < stored.length; start += HEADS) {
-    await Promise.all(
-      stored.slice(start, start + HEADS).map(async ({ incarnation, id, size }) => {
-        const found = await files.head(fileKey(incarnation, id));
-        if (found !== size) wrong.push(`${fileKey(incarnation, id)}: ${found === null ? 'missing' : `${found} bytes, not ${size}`}`);
-      }),
-    );
+  for (const [incarnation, pictures] of byAccount) {
+    const sizes = await files.sizes(filePrefix(incarnation));
+    for (const { id, size } of pictures) {
+      const found = sizes.get(fileKey(incarnation, id));
+      if (found !== size) wrong.push(`${fileKey(incarnation, id)}: ${found === undefined ? 'missing' : `${found} bytes, not ${size}`}`);
+    }
   }
   if (wrong.length) throw new Error(`restore: ${wrong.length} of ${stored.length} pictures are not in the R2 bucket as the generation names them:\n${wrong.sort().join('\n')}`);
 }

@@ -460,7 +460,7 @@ it('restores version 2 and 3 generations, whose snapshots are all whole, and ref
   }
 }, 30_000);
 
-it('names R2 snapshots in v4, supports a local store restore and a pooled disaster restore, and checks pictures by size', async () => {
+it('names R2 snapshots in v4, supports a local store restore and a pooled disaster restore, and checks pictures by listed size', async () => {
   const s3 = await fakeS3();
   const disk = t.env.files;
   t.env.files = r2Bucket(s3.config);
@@ -495,7 +495,9 @@ it('names R2 snapshots in v4, supports a local store restore and a pooled disast
 
     s3.objects.set(keptKey, held);
     const dir = emptyDir();
+    s3.requests.length = 0;
     expect(await restoreGeneration(generation, dir, 'migrations', r2Bucket(s3.config))).toMatchObject({ accounts: [{ username: 'operator' }], pictures: 1, deleted: 1 });
+    expect(s3.requests.filter((request) => request.startsWith('HEAD '))).toEqual([]);
     expect(existsSync(join(dir, 'files'))).toBe(false);
     const raw = openDatabase(join(dir, 'service.sqlite'));
     try {
