@@ -1,6 +1,5 @@
 import { createHmac } from 'node:crypto';
 import { Hono, type Context } from 'hono';
-import { createMiddleware } from 'hono/factory';
 import { MAX_REPORT_LENGTH } from '../contracts/admin';
 import {
   CATEGORIES,
@@ -27,7 +26,7 @@ import {
   type PostRow,
 } from '../contracts/board';
 import { ACCOUNT_HEADER } from '../contracts/http';
-import { act, limitOf, MAX_OPEN_REPORTS, positive } from './admin';
+import { act, limitOf, MAX_OPEN_REPORTS, operator, positive } from './admin';
 import type { SqlValue } from './db/service-db';
 import { DAY_MS, fail, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
 import { boardDailyLimit } from './limits';
@@ -484,7 +483,6 @@ board.post('/seen', async (c) => {
 });
 
 // The operator's moves, each in one batch with its admin_log row, written only if its target is there (admin.ts act).
-const operator = createMiddleware<AppEnv>(async (c, next) => (c.get('account').admin ? next() : fail(c, 403, 'not-admin')));
 
 board.put('/posts/:id/status', operator, async (c) => {
   const id = idOf(c);

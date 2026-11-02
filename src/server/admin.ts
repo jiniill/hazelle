@@ -57,10 +57,12 @@ export const notices = new Hono<AppEnv>()
     return c.body(null, 204);
   });
 
+export const operator = createMiddleware<AppEnv>(async (c, next) => (c.get('account').admin ? next() : fail(c, 403, 'not-admin')));
+
 export const admin = new Hono<AppEnv>();
 
 admin.use(requireSession);
-admin.use(createMiddleware<AppEnv>(async (c, next) => (c.get('account').admin ? next() : fail(c, 403, 'not-admin'))));
+admin.use(operator);
 
 admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db), cohorts: await readCohorts(c.env.db) }));
 admin.get('/diagnoses', async (c) => c.json({ rows: await readDiagnoses(c.env.db) }));
