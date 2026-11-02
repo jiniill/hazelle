@@ -3,7 +3,8 @@ import copilotModels from './fixtures/copilot-models.json';
 import openRouterModels from './fixtures/openrouter-models.json';
 import vercelModels from './fixtures/vercel-models.json';
 import { bareModel } from './chat-completions';
-import { cacheView, chatRequest, modelSettings, parseCatalog, resolveConnection, resolveModel, type Route } from './registry';
+import { cacheView, modelSettings, parseCatalog, resolveConnection, resolveModel, type Route } from './registry';
+import { prepareChat } from './preparation';
 import { readExtra } from './extra';
 import { fit, leastReasoning, type ModelSettings } from './settings';
 import type { ChatMessage, Connection, Model } from './types';
@@ -22,7 +23,7 @@ function body(on: Connection, model: Model, settings: ModelSettings) {
     { role: 'system' as const, content: '짧게 답해.' },
     { role: 'user' as const, content: '안녕' },
   ];
-  return JSON.parse(chatRequest(route, { model, messages, settings }).body!) as Record<string, unknown>;
+  return JSON.parse(prepareChat(route, { model, messages, settings }).request.body!) as Record<string, unknown>;
 }
 
 describe('what a model takes', () => {
@@ -162,7 +163,7 @@ describe('cache points', () => {
     { role: 'assistant', content: 'Hello.' },
   ];
   const sent = (on: Connection, settings: ModelSettings, messages = marked) =>
-    JSON.parse(chatRequest(resolveModel(resolveConnection(on)!, claude), { model: claude, messages, settings }).body!) as Record<string, unknown>;
+    JSON.parse(prepareChat(resolveModel(resolveConnection(on)!, claude), { model: claude, messages, settings }).request.body!) as Record<string, unknown>;
 
   it('splits the Messages format’s system after a point and marks the message, and sends neither the mark nor a split without caching', () => {
     expect(sent(connection('anthropic'), { cache: '1h' })).toMatchObject({
@@ -193,7 +194,7 @@ describe('cache points', () => {
 
   it('marks Copilot’s chat completions as its catalog’s vendor asks, unconfirmed either way', () => {
     const copilot = connection('copilot');
-    const request = (model: Model) => JSON.parse(chatRequest(resolveModel(resolveConnection(copilot)!, model), { model, messages: marked, settings: { cache: '5m' } }).body!) as Record<string, unknown>;
+    const request = (model: Model) => JSON.parse(prepareChat(resolveModel(resolveConnection(copilot)!, model), { model, messages: marked, settings: { cache: '5m' } }).request.body!) as Record<string, unknown>;
     const gemini = listed('copilot', copilotModels, 'gemini-3-pro');
     expect(request(gemini).messages).toEqual([
       { role: 'system', content: 'Rules.', copilot_cache_control: { type: 'ephemeral' } },

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { catalogRequest, chatRequest, detect, embedAnswer, embedRequests, embedRoute, parseCatalog, resolveConnection, withCredential, type Route } from './registry';
+import { catalogRequest, detect, embedAnswer, embedRequests, embedRoute, parseCatalog, resolveConnection, withCredential, type Route } from './registry';
+import { prepareChat } from './preparation';
 import { decodeStream } from './stream';
 import type { Connection } from './types';
 import { vertex } from './vertex';
@@ -57,7 +58,7 @@ describe('Vertex AI', () => {
     const route = resolveConnection(connection) as Route;
     expect(route.endpoint).toEqual({ baseUrl: 'https://aiplatform.googleapis.com/v1/projects/test-project/locations/global/publishers/google', protocol: 'gemini' });
     const model = parseCatalog(route, { publisherModels: [{ name: 'publishers/google/models/gemini-2.5-flash' }] })![0]!;
-    const request = withCredential(route, chatRequest(route, { model, messages: [{ role: 'user', content: '안녕' }], settings: {} }), 'token');
+    const request = withCredential(route, prepareChat(route, { model, messages: [{ role: 'user', content: '안녕' }], settings: {} }).request, 'token');
     expect(request.url).toBe('https://aiplatform.googleapis.com/v1/projects/test-project/locations/global/publishers/google/models/gemini-2.5-flash:streamGenerateContent?alt=sse');
     expect(request.headers.authorization).toBe('Bearer token');
     expect(resolveConnection({ ...connection, accounts: [{ id: 'key', secret: '{"type": "service_account"}' }] })).toBeNull();
@@ -93,7 +94,7 @@ describe('Vertex AI', () => {
   it('asks for Flex with both headers only on the discount lane, and halves only a reply Flex served', async () => {
     const route = resolveConnection(connection) as Route;
     const [model] = parseCatalog(route, { publisherModels: [{ name: 'publishers/google/models/gemini-3-flash-preview' }] })!;
-    const asked = (settings: { discount?: true }) => withCredential(route, chatRequest(route, { model: model!, messages: [{ role: 'user', content: '안녕' }], settings }), 'token').headers;
+    const asked = (settings: { discount?: true }) => withCredential(route, prepareChat(route, { model: model!, messages: [{ role: 'user', content: '안녕' }], settings }).request, 'token').headers;
     expect(asked({ discount: true })).toMatchObject({ 'x-vertex-ai-llm-request-type': 'shared', 'x-vertex-ai-llm-shared-request-type': 'flex', authorization: 'Bearer token' });
     expect(Object.keys(asked({})).filter((name) => name.startsWith('x-vertex-ai-'))).toEqual([]);
 

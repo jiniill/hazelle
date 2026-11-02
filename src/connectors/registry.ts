@@ -183,7 +183,7 @@ export function modelSettings(connection: Connection, model: Model): SettingsSch
 }
 
 // settings is the 묶음's as stored; the 모델 설정 screen names each change with the same fit().
-// chatRequest writes it and cacheView reads it, so a forecast compares what is sent.
+// sentRequest writes it and cacheView reads it, so a forecast compares what is sent.
 export function sending(route: Route, { model, messages, settings: stored, tools }: ChatRequest): ChatRequest {
   const { settings } = fit(settingsSchema(carries(route, model), model), stored);
   const roled = settings.systemAsUser ? messages.map((message) => (message.role === 'system' ? { ...message, role: 'user' as const } : message)) : inlined(route.codec.inlineSystem, messages);
@@ -213,9 +213,9 @@ export function batchLane(route: Route, request: ChatRequest): Batches | null {
   return lane?.lane === 'batch' && sending(route, request).settings.discount ? lane.batches : null;
 }
 
-// Refused here, not in sending, which cacheView shares: a forecast never refuses.
-export function chatRequest(route: Route, request: ChatRequest): HttpRequest {
-  const sent = sending(route, request);
+// Refused here, not in sending, which cacheView shares: a forecast never refuses. sent: what sending made, never a request
+// as asked, since sending is not idempotent (it packs a PDF again).
+export function sentRequest(route: Route, sent: ChatRequest): HttpRequest {
   const pictures = sent.messages.some(carriesPictures);
   if (pictures && !seesPictures(sent.model)) throw new ConnectorError('no-picture-input');
   // Only a catalog's own no; most say nothing, and those are sent.

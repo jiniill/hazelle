@@ -1,4 +1,4 @@
-import { chatRequest, sending, type Route } from './registry';
+import { sending, sentRequest, type Route } from './registry';
 import type { ChatRequest, HttpRequest } from './types';
 import { isRecord, list } from './values';
 
@@ -6,8 +6,9 @@ export type WireText = { segments: { role: string; text: string }[]; messages: n
 export type PreparedChat = { request: HttpRequest; wire: WireText; identity: string; pdf: boolean };
 
 export function prepareChat(route: Route, asked: ChatRequest): PreparedChat {
-  const request = chatRequest(route, asked);
-  const { settings, messages: sent, tools } = sending(route, asked);
+  const prepared = sending(route, asked);
+  const request = sentRequest(route, prepared);
+  const { settings, messages: sent, tools } = prepared;
   const body = JSON.parse(request.body!) as Record<string, unknown>;
   const wire: WireText = { segments: [], messages: 0, pictures: 0 };
   const content = (value: unknown, role: string) => {

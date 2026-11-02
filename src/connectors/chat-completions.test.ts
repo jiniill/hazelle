@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bareModel } from './chat-completions';
-import { chatRequest, resolveConnection, type Route } from './registry';
+import { resolveConnection, type Route } from './registry';
+import { prepareChat } from './preparation';
 import { decodeStream } from './stream';
 import type { ChatMessage, Connection, Phase } from './types';
 
@@ -27,7 +28,7 @@ describe('chat-completions tools', () => {
       { role: 'assistant', content: '', calls: [{ id: 'c1', name: 'run_test', arguments: '{"moment":"reply"}', echo: { reasoning_content: '돌려야지' } }] },
       { role: 'user', content: '', results: [{ id: 'c1', name: 'run_test', text: 'passed' }] },
     ];
-    const body = JSON.parse(chatRequest(route, { model, messages, settings: { streaming: false }, tools }).body!);
+    const body = JSON.parse(prepareChat(route, { model, messages, settings: { streaming: false }, tools }).request.body!);
     expect(body.tools).toEqual([{ type: 'function', function: tools[0] }]);
     expect(body.messages).toEqual([
       { role: 'user', content: '돌려 봐' },
