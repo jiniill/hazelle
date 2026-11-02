@@ -47,7 +47,7 @@ const blank = (text: string) => text.replace(/--\[(=*)\[[\s\S]*?\]\1\]|--[^\n]*|
 
 // Names the code itself gives: functions, locals, parameters and assigned globals. A name only ever called is an API
 // name or a typo; offering it would rank the typo over the API.
-export function definedNames(text: string): Set<string> {
+function definedNames(text: string): Set<string> {
   const code = blank(text);
   const names = new Set<string>();
   for (const [, name] of code.matchAll(/\bfunction\s+([A-Za-z_]\w*)/g)) names.add(name!);

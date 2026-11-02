@@ -7,7 +7,7 @@ import { useLibrary, useStore, useStored } from '../session';
 import { useToast } from '../toast';
 import { usePersisted } from './usePersisted';
 
-export type CharacterSort = 'recent' | 'own';
+type CharacterSort = 'recent' | 'own';
 export const CHARACTER_SORTS = [{ value: 'recent', label: '최근 대화' }, { value: 'own', label: '사용자 지정' }] as const;
 
 // 캐릭터 둘러보기 and the phone's character list never stand together, so one key serves both; the rail is always 직접.
