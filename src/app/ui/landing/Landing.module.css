@@ -45,6 +45,7 @@
 
   .title {
     font-size: var(--landing-title);
+    text-wrap: balance;
   }
 
   .line {
@@ -197,7 +198,6 @@
   .finish .title {
     color: var(--landing-finish-ink);
     font-size: var(--landing-hero);
-    text-wrap: balance;
     text-shadow: var(--landing-finish-shadow);
   }
 
@@ -644,6 +644,7 @@
     font-weight: var(--weight-bold);
     line-height: var(--landing-leading);
     word-break: keep-all;
+    text-wrap: balance;
     text-shadow: var(--scene-text-shadow);
   }
 

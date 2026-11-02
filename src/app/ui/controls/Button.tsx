@@ -3,7 +3,7 @@ import { createContext, useContext, type ReactNode, type Ref } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './Button.module.css';
 
-type Size = 'xs' | 'sm' | 'md' | 'lg';
+type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 // A slot that holds buttons decides their size, over what a caller passes: a screen's head, a section's head and a
 // dialog's actions each read one size wherever they stand.

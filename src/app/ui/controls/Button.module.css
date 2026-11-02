@@ -30,6 +30,12 @@
   font-size: var(--text-lg);
 }
 
+.xl {
+  height: var(--control-xl);
+  padding: 0 var(--space-32);
+  font-size: var(--text-xl);
+}
+
 .primary {
   background: var(--color-accent);
   color: var(--color-on-accent);

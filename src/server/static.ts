@@ -106,7 +106,7 @@ export function clientFiles(clientDir: string, sources: PageSources, visit: (pag
   client.get('*', (c, next) => {
     if (c.req.path !== '/' && c.req.path !== '/index.html') return files(c, next);
     return page(c, (html) => {
-      const named = worded(html, START_PAGE.title, START_PAGE.line);
+      const named = worded(html, START_PAGE.title, START_PAGE.description);
       return listed(c) ? landingPage(named) : named;
     });
   });
@@ -128,7 +128,7 @@ const withWords = (html: string, words: string) =>
   html.replace(/<p class="boot" role="status">([^<]*)<\/p>/, (_, loading: string) => `<main class="boot landing">${words}<p role="status">${loading}</p></main>`);
 
 function landingPage(html: string): string {
-  const facts = { '@context': 'https://schema.org', '@type': 'WebApplication', name: '헤이젤', alternateName: 'Hazelle', url: `${HOSTED}/`, description: START_PAGE.line, applicationCategory: 'EntertainmentApplication', operatingSystem: 'Web', inLanguage: 'ko', offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' } };
+  const facts = { '@context': 'https://schema.org', '@type': 'WebApplication', name: '헤이젤', alternateName: 'Hazelle', url: `${HOSTED}/`, description: START_PAGE.description, applicationCategory: 'EntertainmentApplication', operatingSystem: 'Web', inLanguage: 'ko', offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' } };
   const list = (items: readonly string[], tag = 'ul') => `<${tag}>${items.map((item) => `<li>${item}</li>`).join('')}</${tag}>`;
   const { heading, line, keys, trial, features, move } = START_PAGE;
   const words = `<h1>${heading}</h1><p>${line}</p><h2>${keys.title}</h2><p>${keys.line}</p><h2>${trial.title}</h2>${list(trial.steps, 'ol')}<p>${trial.privacy}</p><h2>${features.title}</h2>${list(features.points)}<p><a href="${move.path}">${move.label}</a> · <a href="${GUIDE_INDEX.path}">${GUIDE_INDEX.title}</a> · <a href="${CALCULATOR_PAGE.path}">${CALCULATOR_PAGE.title}</a> · <a href="${PULSE_PAGE.path}">${PULSE_PAGE.title}</a></p>`;

@@ -109,7 +109,7 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
           </Stack>
         </Beat>
         <Beat title={finish.title} kind="finish" foot={<LegalNotice />}>
-          <Button onClick={enter}>헤이젤 열기</Button>
+          <Button size="xl" onClick={enter}>헤이젤 열기</Button>
         </Beat>
       </main>
     </div>
