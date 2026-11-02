@@ -610,6 +610,13 @@
   --landing-edge: clamp(20px, 5vw, 72px);
   --landing-walk: 58svh;
   --landing-onward-takes: 2.8s;
+  --landing-cue: #ffdca6;
+  --landing-cue-takes: 1.7s;
+  --landing-cue-mouse: 26px;
+  --landing-cue-arrow: 24px;
+  --landing-cue-rise: -3px;
+  --landing-cue-fall: 3px;
+  --landing-cue-wheel-fall: 9px;
   --landing-room-stay: 64svh;
   --landing-room-after: 8svh;
   --landing-room-panel: 36rem;

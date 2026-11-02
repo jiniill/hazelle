@@ -59,10 +59,66 @@
 
   /* Hangs still and sinks a little: down is the way on. */
   .onward {
+    display: grid;
     justify-self: center;
+    justify-items: center;
+    gap: var(--space-12);
+  }
+
+  .onwardLantern {
     width: var(--landing-step-lantern);
     transform-origin: 50% 0;
     animation: onward var(--landing-onward-takes) var(--ease-loop) infinite;
+  }
+
+  .onwardCue {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+    color: var(--landing-cue);
+  }
+
+  /* A mouse means nothing under a finger: there the arrow says it alone. */
+  .mouse {
+    display: none;
+    width: var(--landing-cue-mouse);
+  }
+
+  .mouseWheel {
+    animation: mouseWheel var(--landing-cue-takes) var(--ease-loop) infinite;
+  }
+
+  .drops {
+    width: var(--landing-cue-arrow);
+  }
+
+  .drop {
+    animation: drop var(--landing-cue-takes) var(--ease-loop) infinite;
+  }
+
+  .drop + .drop {
+    animation-delay: calc(var(--landing-cue-takes) / 5);
+  }
+
+  @media (pointer: fine) {
+    .mouse {
+      display: block;
+    }
+  }
+
+  @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
+    .hero {
+      grid-template-rows: auto 1fr;
+      grid-template-columns: 1fr auto;
+    }
+
+    .top {
+      grid-column: 1 / -1;
+    }
+
+    .onward {
+      align-self: end;
+    }
   }
 
   /* Empty ground between beats is the walk itself: the scene gets a screen to itself. */
@@ -587,7 +643,9 @@
 
   @media (prefers-reduced-motion: reduce) {
     .lanternLit::after,
-    .onward,
+    .onwardLantern,
+    .mouseWheel,
+    .drop,
     .saidThem,
     .saidMe,
     .caret {
@@ -597,6 +655,40 @@
     .seat,
     .seat[data-inside] {
       transition: none;
+    }
+  }
+
+  @keyframes mouseWheel {
+    0% {
+      opacity: 0;
+      transform: translateY(var(--landing-cue-rise));
+    }
+
+    25% {
+      opacity: 1;
+    }
+
+    75%,
+    100% {
+      opacity: 0;
+      transform: translateY(var(--landing-cue-wheel-fall));
+    }
+  }
+
+  @keyframes drop {
+    0% {
+      opacity: 0.15;
+      transform: translateY(var(--landing-cue-rise));
+    }
+
+    40% {
+      opacity: 1;
+    }
+
+    80%,
+    100% {
+      opacity: 0.15;
+      transform: translateY(var(--landing-cue-fall));
     }
   }
 

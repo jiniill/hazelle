@@ -2,7 +2,7 @@ import { useEffect, useRef, type FormEventHandler, type ReactNode } from 'react'
 import lantern from './art/lantern.webp';
 import styles from './Landing.module.css';
 
-// top: the doors' row. The lantern below the words says there is more further down, and needs no words of its own.
+// top: the doors' row. The lantern and the moving cue below the words say there is more further down, and need no words of their own.
 export function Hero({ top, title, line }: { top: ReactNode; title: string; line: string }) {
   return (
     <header className={styles.hero} data-walk-stop="top">
@@ -12,7 +12,19 @@ export function Hero({ top, title, line }: { top: ReactNode; title: string; line
         <p className={styles.line}>{line}</p>
       </div>
       <div className={styles.onward} aria-hidden="true">
-        <Lantern lit />
+        <div className={styles.onwardLantern}>
+          <Lantern lit />
+        </div>
+        <div className={styles.onwardCue}>
+          <svg className={styles.mouse} viewBox="0 0 24 36" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <rect x="1.5" y="1.5" width="21" height="33" rx="10.5" />
+            <line className={styles.mouseWheel} x1="12" y1="8" x2="12" y2="13" />
+          </svg>
+          <svg className={styles.drops} viewBox="0 0 20 26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path className={styles.drop} d="M3 3l7 7 7-7" />
+            <path className={styles.drop} d="M3 14l7 7 7-7" />
+          </svg>
+        </div>
       </div>
     </header>
   );

@@ -6,6 +6,8 @@ export const MEDIA = {
   tallScreen: '(max-aspect-ratio: 1/1)',
   // A small phone with its browser bars showing: the first page's room gives up picture so the form still fits.
   shortTallScreen: '(max-aspect-ratio: 1/1) and (max-height: 600px)',
+  // A phone on its side: the hero's words take the whole height.
+  shortWideScreen: '(min-aspect-ratio: 1/1) and (max-height: 500px)',
   // Room for the sidebar beside the page. narrow is its complement: change the two together.
   wide: '(min-width: 960px)',
   narrow: '(max-width: 959px)',
