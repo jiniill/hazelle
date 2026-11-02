@@ -8,6 +8,7 @@ import { pipeline } from 'node:stream/promises';
 import { createGunzip } from 'node:zlib';
 import { StoreRules, type SqlValue, type StoreDb, type StoreReads, type Unavailable } from '../account-store';
 import { snapshotKey, type Bucket } from '../files/bucket';
+import { DAY_MS } from '../http';
 import { fsyncPath, makeDirs } from './durable';
 import { openDatabase, type Db } from './service-db';
 import { archiveSnapshot, snapshotJob } from './snapshot';
@@ -37,10 +38,10 @@ export const CURRENT_BASELINE = (column: 'id' | 'taken_at' | 'rev', a: string, n
    ORDER BY taken_at DESC, id DESC LIMIT 1`;
 
 // How long a snapshot, a backup generation and an ended operation's pins last; a finished rewind's undo too.
-export const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+export const RETENTION_MS = 7 * DAY_MS;
 // A day short of retention, and expiry runs in the daily job: a base chosen for a capture is at least a day from expiry,
 // longer than any capture takes to name it.
-const BASE_WINDOW_MS = RETENTION_MS - 24 * 60 * 60 * 1000;
+const BASE_WINDOW_MS = RETENTION_MS - DAY_MS;
 // Timeline identifies lineage across signup, rewind and disaster restore; timestamps and rewind rows cannot.
 // Match schema too: deltas address columns by position. With no eligible whole snapshot, capture a whole one.
 const CURRENT_BASE = (a: string, now: string) =>

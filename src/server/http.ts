@@ -42,8 +42,10 @@ export function fail(c: Context, status: ContentfulStatusCode, error: ServerErro
 }
 
 export const RETRY_SECONDS = 5;
-export const DAY_MS = 24 * 60 * 60 * 1000;
-const KST = 9 * 60 * 60 * 1000;
+export const MINUTE_MS = 60 * 1000;
+export const HOUR_MS = 60 * MINUTE_MS;
+export const DAY_MS = 24 * HOUR_MS;
+const KST = 9 * HOUR_MS;
 // The start of `at`'s day in Korea, where the operator reads the daily counts.
 export const visitDay = (at: number) => Math.floor((at + KST) / DAY_MS) * DAY_MS - KST;
 

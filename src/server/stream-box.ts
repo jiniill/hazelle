@@ -1,6 +1,6 @@
 import { RELAY_HEADER, type ServerError } from '../contracts/http';
 import { HELLO, HEAD, DATA, END, PING, WAIT, retryWait, type Retry } from '../contracts/streams';
-import { isRecord } from './http';
+import { DAY_MS, isRecord } from './http';
 import type { RelayAllowance } from './limits';
 import { forward, RelayTrafficLimit, type Upstream } from './relay';
 
@@ -33,7 +33,7 @@ const LIMIT_BYTES = 32 * 1024 * 1024;
 // Pages a reader takes from storage at once. A page holds PAGE_BYTES and at most one frame more.
 const PAGE = 4;
 // Whatever no device came back for is dropped this long after the call started.
-const KEEP_MS = 24 * 60 * 60 * 1000;
+const KEEP_MS = DAY_MS;
 // Ping idle readers before Cloudflare's 100 s/mobile 30–60 s timeouts, including provider thinking before first output.
 const PING_MS = 25 * 1000;
 

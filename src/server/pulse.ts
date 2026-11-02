@@ -18,13 +18,12 @@ import {
 } from '../contracts/pulse';
 import type { VisitCohorts } from '../contracts/admin';
 import type { Db } from './db/service-db';
-import { DAY_MS, fail, type AppEnv } from './http';
+import { DAY_MS, fail, HOUR_MS, type AppEnv } from './http';
 
 // Count labelled account traffic only; guest/self-host identities cannot be verified (migration 0027, design §6.12).
 // Keep 7-day usage and 48-hour reply lists; close each past day's rolling week for rank changes and Sundays for totals.
 // Delete days only when no future window needs them. Apply floors on display/closure, never when recording calls.
 
-const HOUR_MS = 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 // 1970-01-05 00:00 KST, a Monday. Migration 0014 repeats it in SQL.
 const MONDAY = 4 * DAY_MS - 9 * HOUR_MS;

@@ -7,7 +7,7 @@ import { SHARE_ID } from '../contracts/shares';
 import { blockFiles, fileBlocks } from './files';
 import { forgetCut, serveShareFile } from './shares';
 import type { Db, SqlValue, Statement } from './db/service-db';
-import { fail, ID, readObject, type AppEnv, type Services } from './http';
+import { DAY_MS, fail, ID, readObject, type AppEnv, type Services } from './http';
 import { answerAction, answerBegin, leaveAccount, refuseLeft, restoreFrom, restorePoints, restoresOf, store } from './lifecycle';
 import { requireSession } from './session';
 import { tellUnread, VISIBLE } from './unread';
@@ -20,7 +20,7 @@ export const MAX_OPEN_REPORTS = 20;
 const PAGE_ROWS = 100;
 // How long a resolved report, a settled operator-only post and a log row are kept, as the privacy page says. An open
 // report stays whatever its age, and a public post is never forgotten by age.
-const KEEP_MS = 365 * 24 * 60 * 60 * 1000;
+const KEEP_MS = 365 * DAY_MS;
 
 // Also the rows of cut links whose reports were resolved or forgotten since (shares.ts forgetCut).
 export async function forgetOldRecords(db: Db): Promise<void> {
