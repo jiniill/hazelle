@@ -28,7 +28,7 @@ import { NO_PERSONA_SLOT } from '../common/prompt-words';
 import { describeUnused } from '../common/unused';
 import { useCopy } from '../common/useCopy';
 import { BIN_KEEPS, LORE_BUDGET_LABEL } from '../common/words';
-import { useAssetUrl, useChatDisplay, useChatMemory, useChatTools, useChildren, useSaves, useSession, useSettings, useStored, useToolFrames, useTurn } from '../session';
+import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSaves, useSession, useToolFrames, useTurn } from '../session';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
 import { storyText, useMenuHandle, usePanelsBeside, useTimePin, useViewport, type BotButton, type Reading } from '../ui';
@@ -80,21 +80,23 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     void session.tools.warm(id);
     session.scriptInteractions.claims(id);
   }, [id, tools]);
-  const packs = packsOf(store, chat);
-  const toggles = toggleRows(togglesOf(store, chat, prompt, packs));
+  const { toggles, scripted, features, stages, translate, usageShown } = useCaptured((store) => {
+    const packs = packsOf(store, chat);
+    return {
+      toggles: toggleRows(togglesOf(store, chat, prompt, packs)),
+      // Any trigger may answer a press: a Lua one by a function of the button's name, a block one by its own name.
+      scripted: triggersOf(packs).length > 0,
+      features: featuresOf(store, chat),
+      stages: agentsOf(store, chat),
+      translate: chatTranslate(store, chat),
+      usageShown: usageShownOf(store),
+    };
+  }, [chat, prompt]);
   const card = shelf?.character.card ?? null;
   const promptOut = keepsPromptOut(card, chat);
-  // Any trigger may answer a press: a Lua one by a function of the button's name, a block one by its own name.
-  const scripted = triggersOf(packs).length > 0;
-  // Subscribed for featuresOf, chatTranslate and usageShownOf, which read the settings and the chat's prompt from the store.
-  useSettings();
-  useStored('prompt', prompt.kind === 'prompt' ? prompt.prompt.id : null);
-  const features = featuresOf(store, chat);
-  const stages = agentsOf(store, chat);
   const pre = stages.pre.length > 0;
   const post = stages.post.length > 0;
   const agents = useMemo(() => ({ pre, post }), [pre, post]);
-  const translate = chatTranslate(store, chat);
   const { unstarted, unsaved, pickGreeting, starting } = useNewChat(chatId, item === null, chat, shelf, translate.replyLanguage);
   const openingMessages = useMemo(() => unstarted ? [unstarted] : [], [unstarted]);
   const [width, height] = useViewport().split('x').map(Number);
@@ -126,7 +128,6 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const busy = turn !== null;
   const last = messages.at(-1);
   const answerable = id !== null && last !== undefined;
-  const usageShown = usageShownOf(store);
   // A cost still 확인 중 after a reload is looked up again wherever the usage line shows it, as ChatInfo does for its own.
   useEffect(() => {
     if (!id || !usageShown) return;
@@ -175,7 +176,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const sending = useRef(false);
   // After a pre-network refusal, derive the current blocker so fixes anywhere clear the composer warning.
   const [stopped, setStopped] = useState(false);
-  const problem = stopped ? blocked(session, chat) : null;
+  const problem = useCaptured((store) => (stopped ? blocked({ store }, chat) : null), [stopped, chat]);
   // A failed 토큰 절약 call or pre agent, shown on the composer until the next turn, which may ask again without it.
   // skip: what that turn went without, and the failed step.
   const [skippable, setSkippable] = useState<{ failure: StepFailure; target: Target; skip: Skip } | null>(null);

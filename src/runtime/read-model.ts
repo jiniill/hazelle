@@ -455,3 +455,50 @@ export class ChatScreenRead {
     });
   }
 }
+
+// A screen's read of the store, taken again only when its inputs or something it read change (store.capture records
+// every read, missing objects included), so its value keeps its identity until then. scopeState is no recorded read:
+// a read of a chat's own kinds does not belong here.
+export class CapturedRead<T> {
+  private held: { value: T; inputs: unknown[]; reads: StoreRead[]; revisions: number[] } | null = null;
+  private stale = false;
+  private readonly changes = new ChangeSignal();
+  private listeners = 0;
+  private leave: (() => void) | null = null;
+
+  constructor(private readonly store: ObjectStore) {}
+
+  read(compute: (store: ObjectStore) => T, inputs: unknown[]): T {
+    if (this.held && !this.stale && sameItems(this.held.inputs, inputs)) return this.held.value;
+    const { value, reads } = this.store.capture(() => compute(this.store));
+    this.held = { value, inputs, reads, revisions: reads.map((read) => this.store.revision(read)) };
+    this.stale = false;
+    return value;
+  }
+
+  readonly subscribe = (listener: () => void) => {
+    if (!this.leave) {
+      this.leave = this.store.subscribe((changes) => {
+        if (this.held && readsChanged(this.held.reads, changes)) this.changed();
+      });
+      // A write pulled between the read and this subscription went by unheard; one not confirmed yet is told again
+      // when it is.
+      const held = this.held;
+      if (held?.reads.some((read, at) => this.store.revision(read) !== held.revisions[at])) this.changed();
+    }
+    const stop = this.changes.subscribe(listener);
+    this.listeners += 1;
+    return () => {
+      stop();
+      if (--this.listeners === 0) {
+        this.leave?.();
+        this.leave = null;
+      }
+    };
+  };
+
+  private changed() {
+    this.stale = true;
+    this.changes.notify();
+  }
+}

@@ -3,7 +3,7 @@ import { moduleContributions, type ModuleContribution, type Sending } from '../.
 import { tokens } from '../common/receipt';
 import { useSearch } from '../common/useSearch';
 import { moduleName } from '../common/words';
-import { useSession } from '../session';
+import { useCaptured } from '../session';
 import { Disclosure, Empty, Facts, List, ListItem, Stack, Text } from '../ui';
 
 const ATTACHED = { settings: '설정', prompt: '프롬프트', character: '캐릭터', persona: '페르소나' } as const;
@@ -44,9 +44,8 @@ function moduleTags(module: ModuleContribution): string[] {
 }
 
 export function Modules({ sending }: { sending: Sending }) {
-  const session = useSession();
   const [open, setOpen] = useState<string | null>(null);
-  const modules = moduleContributions(session, sending.turn.chat, sending.prompt);
+  const modules = useCaptured((store) => moduleContributions({ store }, sending.turn.chat, sending.prompt), [sending]);
   if (modules.length === 0) return <Empty variant="section">이 채팅에서 켜져 있는 모듈이 없어요.</Empty>;
   return (
     <List label="실행되는 모듈">

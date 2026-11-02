@@ -34,13 +34,7 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
   const [next, setNext] = useState<CacheNotes['next']>(undefined);
   const [sending, setSending] = useState<SendNotes['sending']>(undefined);
   const [left, setLeft] = useState<number | null>(null);
-  const [changes, setChanges] = useState(0);
   const gap = useRef<{ chat: string; since: number; most: number } | null>(null);
-
-  useEffect(() => {
-    const stop = session.store.subscribe(() => setChanges((count) => count + 1));
-    return () => void stop();
-  }, []);
 
   useEffect(() => {
     if (busy) {
@@ -48,8 +42,17 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
       setSending(undefined);
       return setLeft(null);
     }
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
+    let stopRun = () => {};
+    const run = () => {
+      stopRun();
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => forecastOnce(controller), SETTLE_MS);
+      stopRun = () => {
+        controller.abort();
+        window.clearTimeout(timer);
+      };
+    };
+    const forecastOnce = (controller: AbortController) => {
       // A message sent translated goes out as its translation, which is not made yet, so it stands in as typed. Nothing
       // typed sends 응답 받기.
       void forecastSend(session, id, text.trim() ? { kind: 'send', text } : { kind: 'answer' }, controller.signal, 'forecast', unsaved).then((result) => {
@@ -91,12 +94,14 @@ export function useSendNotes(id: string, unsaved: Unsaved | null, chat: Chat, me
         setSending(null);
         setLeft(null);
       });
-    }, SETTLE_MS);
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
     };
-  }, [id, unsaved, chat, messages, memory, text, busy, changes, guard]);
+    run();
+    const stop = session.store.subscribe(run);
+    return () => {
+      stop();
+      stopRun();
+    };
+  }, [id, unsaved, chat, messages, memory, text, busy, guard]);
 
   const replies = useMemo(() => replyCalls(messages), [messages]);
   const recurrence = useMemo(() => cacheRecurrence(replies), [replies]);
