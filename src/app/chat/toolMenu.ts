@@ -12,7 +12,7 @@ export const toolMenu = (tools: ToolMenu[], items: (module: string) => MenuItem[
 
 // A message's 도구 menu: each tool's message actions, by tool in pack order. actions: the tool host's, which a frame
 // tool's frame registers while it runs.
-export type ToolActions = { module: string; name: string; items: MenuItem[] };
+type ToolActions ={ module: string; name: string; items: MenuItem[] };
 export const toolActions = (tools: ToolMenu[], actions: (module: string) => MenuItem[]): ToolActions[] => tools.flatMap(({ module, manifest }) => {
   const items = actions(module);
   return items.length ? [{ module, name: manifest.displayName, items }] : [];

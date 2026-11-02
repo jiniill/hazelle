@@ -38,7 +38,7 @@ export type Account = { admin: boolean; localProviders: readonly string[]; facts
 const LEAVING_WAIT = 10_000;
 
 // A leave held back by unsaved work, which goes anyway when pressed.
-export type HeldLeave = { go: () => Promise<string | null> | void };
+type HeldLeave ={ go: () => Promise<string | null> | void };
 
 const SessionContext = createContext<{ session: Session; account: Account; saves: Saves; held: HeldLeave | null } | null>(null);
 

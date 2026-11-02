@@ -120,7 +120,7 @@ function cacheRows(parts: ForecastPart[]): CacheRow[] {
 
 type NextCacheProps = { next: NonNullable<CacheNotes['next']>; recurrence: CacheNotes['recurrence']; editor: (from: From) => Side | null; onEdit: (side: Side) => void };
 
-export function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) {
+function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) {
   const { forecast, diagnosis, prescriptions, cost: price, route } = next;
   const store = useStore();
   const guard = useLab('cacheguard');
