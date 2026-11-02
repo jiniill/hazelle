@@ -82,7 +82,7 @@ const zoomedIn = () => (visualViewport?.scale ?? 1) > 1.01;
 
 // One wheel gesture, swipe or scroll key moves one rest, at once, and what comes during the move is swallowed.
 // CSS scroll snap cannot do this: in Chromium y mandatory snaps one wheel notch back forever.
-// Left to the browser: a scroller inside the page while it can still move that way, browser zoom, sideways moves, the scrollbar and find in page.
+// Left to the browser: a scroller inside the page while it can still move that way, browser zoom, a pull down at the top, the scrollbar and find in page. A sideways start is held: nothing here scrolls sideways, and left alone its upward part would stop the page between rests.
 export function useWalkOn() {
   useEffect(() => {
     if (stillness()) return;
@@ -104,7 +104,8 @@ export function useWalkOn() {
     };
 
     const wheeled = (event: WheelEvent) => {
-      if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+      if (event.ctrlKey || !event.deltaY) return;
+      if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return event.preventDefault();
       const way = Math.sign(event.deltaY);
       if (event.timeStamp - lastWheel > GESTURE_GAP) gesture = 'open';
       lastWheel = event.timeStamp;
@@ -147,7 +148,8 @@ export function useWalkOn() {
       if (finger.state === 'undecided') {
         // The browser takes the gesture for good on the first move left uncancelled, so this one move decides it.
         const way = Math.sign(down);
-        if (zoomedIn() || typing() || Math.abs(clientX - finger.x) >= Math.abs(down) || scrollerAhead(event.target, way) || restAhead(way) === undefined) {
+        const upright = Math.abs(down) > Math.abs(clientX - finger.x);
+        if (zoomedIn() || typing() || (upright && (scrollerAhead(event.target, way) || restAhead(way) === undefined))) {
           finger = null;
           return;
         }

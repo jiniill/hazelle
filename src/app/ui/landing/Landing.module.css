@@ -210,6 +210,7 @@
     padding: var(--space-4);
     margin: calc(var(--space-4) * -1);
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .talkBox {

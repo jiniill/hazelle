@@ -150,6 +150,49 @@ test('one gesture moves one stop at once, and the door looks the same on any scr
   expect(Math.abs((await doorScale(390, 664)) - (await doorScale(1440, 900)))).toBeLessThan(1.5);
 });
 
+test.describe(() => {
+  test.use({ viewport: { width: 390, height: 664 }, hasTouch: true });
+
+  test('one swipe moves one stop, a sideways start included, and a list inside the panel scrolls first', async ({ page }) => {
+    const scrollTop = () => page.evaluate<number>('Math.round(scrollY)');
+    const finger = await page.context().newCDPSession(page);
+    const touch = (type: 'touchStart' | 'touchMove', x: number, y: number) => finger.send('Input.dispatchTouchEvent', { type, touchPoints: [{ x, y }] });
+    const swipeUp = async (x: number, y: number, by: number) => {
+      await touch('touchStart', x, y);
+      await touch('touchMove', x + 40, y);
+      for (let step = 1; step <= 8; step++) {
+        await touch('touchMove', x + 40, y - (by * step) / 8);
+        await page.waitForTimeout(16);
+      }
+      await finger.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    };
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    const example = await page.evaluate<number>(`(() => { const { top, height } = document.getElementById('example').getBoundingClientRect(); return Math.round(top + scrollY + (height - innerHeight) / 2); })()`);
+    await swipeUp(50, 300, 160);
+    await expect.poll(scrollTop, { timeout: 5000 }).toBe(example);
+
+    await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
+    await page.evaluate(`(() => {
+      let scroller = document.querySelector('#trial input').parentElement;
+      while (!/auto|scroll/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+      scroller.appendChild(document.createElement('div')).style.height = '300px';
+      scroller.dataset.testScroller = '';
+    })()`);
+    const room = await scrollTop();
+    const field = (await page.getByLabel(/API 키$/).boundingBox())!;
+    const inner = () => page.evaluate<number>(`document.querySelector('[data-test-scroller]').scrollTop`);
+    await touch('touchStart', field.x + 20, field.y + 10);
+    for (let step = 1; step <= 8; step++) {
+      await touch('touchMove', field.x + 20, field.y + 10 - step * 15);
+      await page.waitForTimeout(16);
+    }
+    await finger.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect.poll(inner).toBeGreaterThan(0);
+    expect(await scrollTop()).toBe(room);
+  });
+});
+
 test('a phone gets the same page', async ({ page }) => {
   test.skip(!SHOTS, 'pictures only');
   await page.setViewportSize({ width: 390, height: 844 });
