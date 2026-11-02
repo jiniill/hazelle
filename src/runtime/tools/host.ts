@@ -23,6 +23,7 @@ import { toolsOf } from './store';
 const EVENTS = new Set<EventName>(['reply', 'replying', 'sending', 'requesting', 'showing', 'prompt', 'change', 'branch', 'menu', 'action', 'input', 'tool', 'settings', 'open', 'message']);
 const IDLE_MS = 10 * 60_000;
 const STUCK_MS = 8000;
+const STALLS = 3;
 const describe = (error: unknown) => error instanceof Error ? error.message : String(error);
 // A stored value as a change compares it: a file's by its id, which its bytes name, so 4 MB is never stringified.
 const storedAt = (store: ObjectStore, kind: 'tooldata' | 'toolfile', id: string) => {
@@ -116,7 +117,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   };
 
   readonly hears = (module: string, event: EventName): boolean | null => {
-    if ((this.stalls.get(module) ?? 0) >= 3) return false;
+    if (this.disabled(module)) return false;
     const frame = this.entries.get(module)?.background;
     return frame?.loaded ? frame.listens.has(event) : null;
   };
@@ -273,7 +274,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
 
   private entry(module: string): Entry {
     if (this.closing.signal.aborted) throw new ToolStopped();
-    if ((this.stalls.get(module) ?? 0) >= 3) throw new ToolStuck(true);
+    if (this.disabled(module)) throw new ToolStuck(true);
     const { store } = this.session;
     const tool = store.get('tool', toolId(module))?.value;
     if (!tool || !live(store.get('module', module))) throw new ToolStopped();
@@ -332,13 +333,14 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   private receive(frame: Frame, data: unknown) {
     if (!isRecord(data) || (frame.closing.signal.aborted && !(frame.unloading && data.kind === 'call'))) return;
     if (data.kind === 'pong') { frame.heart.answered(); return; }
-    if (data.kind === 'loaded' && frame.loadTimer === null && frame.loaded && Array.isArray(data.listens) && data.listens.every((event) => EVENTS.has(event as EventName))) {
+    const listens = data.kind === 'loaded' && Array.isArray(data.listens) && data.listens.every((event) => EVENTS.has(event as EventName)) ? new Set(data.listens as EventName[]) : null;
+    if (listens && frame.loadTimer === null && frame.loaded) {
       // A listener added after load (sandbox/api.ts sends the whole list again).
-      frame.listens = new Set(data.listens as EventName[]);
+      frame.listens = listens;
       return;
     }
-    if (data.kind === 'loaded' && !frame.loaded && frame.loadTimer !== null && Array.isArray(data.listens) && data.listens.every((event) => EVENTS.has(event as EventName))) {
-      frame.listens = new Set(data.listens as EventName[]);
+    if (listens && !frame.loaded && frame.loadTimer !== null) {
+      frame.listens = listens;
       frame.loaded = true;
       clearTimeout(frame.loadTimer);
       frame.loadTimer = null;
@@ -404,10 +406,14 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
     entry.idle = setTimeout(() => this.end(entry, new ToolStopped()), IDLE_MS);
   }
 
+  private disabled(module: string): boolean {
+    return (this.stalls.get(module) ?? 0) >= STALLS;
+  }
+
   private stalled(frame: Frame) {
     if (frame.closing.signal.aborted) return;
     this.stalls.set(frame.entry.module, (this.stalls.get(frame.entry.module) ?? 0) + 1);
-    const error = new ToolStuck(this.stalls.get(frame.entry.module)! >= 3);
+    const error = new ToolStuck(this.disabled(frame.entry.module));
     if (frame.loaded && !frame.entry.trial && !framesOf(frame.entry).some((each) => each.pending.size)) this.services.journal.report([...frame.entry.chats].at(-1) ?? '', error, { kind: 'module', id: frame.entry.module });
     this.end(frame.entry, error);
   }
