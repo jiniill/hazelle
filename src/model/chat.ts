@@ -640,7 +640,7 @@ export const callRef = ({ connection, model, entry }: Pick<Receipt, 'connection'
 function latest(used: RecentModel[], limit: number): RecentModel[] {
   const seen = new Set<string>();
   const kept: RecentModel[] = [];
-  for (const model of used.sort((a, b) => b.at - a.at)) {
+  for (const model of used.toSorted((a, b) => b.at - a.at)) {
     const key = `${model.ref.connection}/${model.ref.model}`;
     if (seen.has(key)) continue;
     seen.add(key);

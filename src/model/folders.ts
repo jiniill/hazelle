@@ -15,7 +15,7 @@ export const filedIn = (folder: Folder): Filed => folder.of ?? 'character';
 export function nest(folders: Stored<'folder'>[], kind: Filed): FolderTree[] {
   const sorted = folders.filter(({ value }) => filedIn(value) === kind).sort((a, b) => a.value.name.localeCompare(b.value.name, 'ko'));
   const ids = new Set(sorted.map((folder) => folder.id));
-  const children = grouped(sorted, ({ value }) => value.parent);
+  const children = grouped(sorted.filter(({ value }) => value.parent !== undefined), ({ value }) => value.parent!);
   const grow = (folder: Stored<'folder'>): FolderTree => ({ ...folder, children: (children.get(folder.id) ?? []).map(grow) });
   return sorted.filter(({ value }) => value.parent === undefined || !ids.has(value.parent)).map(grow);
 }
