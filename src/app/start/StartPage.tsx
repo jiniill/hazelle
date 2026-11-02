@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'rea
 import { CONNECTION_TYPES, detect } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
 import { START_PAGE } from '../../contracts/start';
+import { countFirstPage } from '../../runtime/first-page';
 import { LegalNotice } from '../common/LegalNotice';
 import { Beat, Brand, Button, Callout, ChoiceGroup, Door, Hero, KeyPlaces, Link, NightScene, Progress, Promises, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
 import { EXAMPLE } from './example';
@@ -19,6 +20,8 @@ const PLACES = OFFERED.map(({ id, name }) => {
   return { name, href, site: new URL(href).host, action: '키 받기' };
 });
 
+const BEATS_COUNTED = { example: 'read', trial: 'door' } as const;
+
 export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: () => void }) {
   const { heading, line, example, keys, trial, features, move, finish } = START_PAGE;
   const [step, setStep] = useState(0);
@@ -26,6 +29,23 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
   const [refused, setRefused] = useState<string | null>(null);
   const [talking, setTalking] = useState(false);
   const [replied, setReplied] = useState(false);
+  const enter = () => {
+    countFirstPage('entered');
+    onOpen();
+  };
+
+  useEffect(() => {
+    countFirstPage('shown');
+    const reached = new IntersectionObserver((entries, watching) => {
+      for (const { isIntersecting, target } of entries) {
+        if (!isIntersecting) continue;
+        countFirstPage(BEATS_COUNTED[target.id as keyof typeof BEATS_COUNTED]);
+        watching.unobserve(target);
+      }
+    });
+    for (const id of Object.keys(BEATS_COUNTED)) reached.observe(document.getElementById(id)!);
+    return () => reached.disconnect();
+  }, []);
 
   return (
     <div data-theme="dark">
@@ -41,10 +61,10 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
         }
       >
         <Button onClick={() => document.getElementById('trial')?.scrollIntoView()}>직접 해보기</Button>
-        <Button variant="secondary" onClick={onOpen}>가입 없이 열기</Button>
+        <Button variant="secondary" onClick={enter}>가입 없이 열기</Button>
       </Hero>
       <main>
-        <Beat title={example.title} line={example.line} kind="talk">
+        <Beat id="example" title={example.title} line={example.line} kind="talk">
           <ExampleChat onTalking={setTalking} />
         </Beat>
         <Beat title={keys.title} line={keys.line} kind="lanterns">
@@ -67,7 +87,7 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
                 />
               </Suspense>
             ) : (
-              <KeyForm refused={refused} onEnter={(type, secret) => { setRefused(null); setEntered({ type, secret }); }} />
+              <KeyForm refused={refused} onEnter={(type, secret) => { countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
             )}
           </Door>
         </Beat>
@@ -78,7 +98,7 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
           </Stack>
         </Beat>
         <Beat title={finish.title} kind="finish" foot={<LegalNotice />}>
-          <Button onClick={onOpen}>헤이젤 열기</Button>
+          <Button onClick={enter}>헤이젤 열기</Button>
         </Beat>
       </main>
     </div>

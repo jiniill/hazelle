@@ -19,7 +19,7 @@ import { canCall, relayBot, requireSession } from './session';
 import { streams } from './streams';
 import { vaults } from './vaults';
 import { diagnoses } from './diagnoses';
-import { guestVisits } from './visits';
+import { visits } from './visits';
 
 const app = new Hono<AppEnv>().basePath('/api');
 
@@ -99,7 +99,7 @@ app.route('/admin', admin);
 app.route('/board', board);
 app.route('/models-dev', modelsDev);
 app.route('/pulse', pulse);
-app.route('/visits', guestVisits);
+app.route('/visits', visits);
 app.route('/diagnoses', diagnoses);
 app.post('/relay', requireSession, canCall, relayBot, relayCall);
 app.route('/streams', streams);

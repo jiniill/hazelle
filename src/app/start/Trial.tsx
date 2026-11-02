@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import type { ConnectionType, Model } from '../../connectors/types';
+import { countFirstPage } from '../../runtime/first-page';
 import type { Session } from '../../runtime/session';
 import { connectTrial, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels } from '../../runtime/trial';
 import { describeCatalogFailure, describeFailure, describeKeyFailure, describeTurnFailure } from '../common/failure';
@@ -12,7 +13,10 @@ type Phase =
   | { kind: 'listless'; connection: string; message: string }
   | { kind: 'chat'; session: Session };
 
-const open = (at: string) => location.assign(at);
+const open = (at: string) => {
+  countFirstPage('entered');
+  location.assign(at);
+};
 
 // Runs the rest of the first visit on this browser's guest, loaded only once a key is entered: the engine is the page's heaviest part.
 export function Trial({ type, secret, onStep, onReplied, onRefused }: { type: ConnectionType; secret: string; onStep: (step: number) => void; onReplied: () => void; onRefused: (message: string) => void }) {

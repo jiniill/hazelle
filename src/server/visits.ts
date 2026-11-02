@@ -1,11 +1,13 @@
 import { createHmac, randomBytes } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { Hono } from 'hono';
-import { GUEST_STEPS, VISITORS_PER_ADDRESS, type GuestStep, type VisitDay } from '../contracts/admin';
+import { FIRST_PAGE_STEPS, GUEST_STEPS, VISITORS_PER_ADDRESS, type FirstPageStep, type GuestStep, type VisitDay } from '../contracts/admin';
 import type { Db } from './db/service-db';
 import { transaction } from './db/transaction';
-import { DAY_MS, fail, ID, readObject, visitDay, visitorOf, type AppEnv } from './http';
+import { countVisit, DAY_MS, fail, ID, readObject, visitDay, visitorOf, type AppEnv } from './http';
 import { dailyDistinct } from './limits';
+
+const BOTS = /bot|crawl|spider|slurp|preview/i;
 
 export type PageVisit = { kind: 'visit'; address: string; agent: string };
 export type FrontendMessage = 'listening' | 'draining' | 'closed' | PageVisit;
@@ -23,7 +25,7 @@ export function openVisits(db: DatabaseSync, clock: () => number = Date.now) {
   return {
     close,
     page: ({ address, agent }: PageVisit) => {
-      if (/bot|crawl|spider|slurp|preview/i.test(agent) || browsers.add(address, agent) === 'full') return;
+      if (BOTS.test(agent) || browsers.add(address, agent) === 'full') return;
       close();
       const day = visitDay(clock());
       transaction(db, () => {
@@ -46,22 +48,31 @@ export async function dayHash(db: Db, day: number, input: unknown[]): Promise<st
 
 export async function readVisits(db: Db, now = Date.now()): Promise<VisitDay[]> {
   const today = visitDay(now);
-  const { results } = await db.prepare('SELECT day, visitors, opened, connected, guests, accounts, converted FROM visit_days WHERE day >= ? AND day <= ? ORDER BY day DESC').bind(today - 13 * DAY_MS, today).all<VisitDay>();
+  const { results } = await db.prepare('SELECT day, visitors, opened, connected, guests, accounts, converted, shown, read, door, keyed, entered FROM visit_days WHERE day >= ? AND day <= ? ORDER BY day DESC').bind(today - 13 * DAY_MS, today).all<VisitDay>();
   const days = new Map(results.map((row) => [row.day, row]));
   return Array.from({ length: 14 }, (_, index) => {
     const day = today - index * DAY_MS;
-    return days.get(day) ?? { day, visitors: 0, opened: 0, connected: 0, guests: 0, accounts: 0, converted: 0 };
+    return days.get(day) ?? { day, visitors: 0, opened: 0, connected: 0, guests: 0, accounts: 0, converted: 0, shown: 0, read: 0, door: 0, keyed: 0, entered: 0 };
   });
 }
 
 // A guest's steps (runtime/relay.ts) never pass this server otherwise: its id is a person of the step's day and, for a
 // reply at signup, of 손님 출신 (migrations/0029). The id is the client's to make, so an address names GUESTS_PER_ADDRESS a day.
-export const guestVisits = new Hono<AppEnv>().post('/guest', async (c) => {
+export const visits = new Hono<AppEnv>().post('/guest', async (c) => {
   const body = await readObject(c);
   const guest = typeof body?.guest === 'string' ? body.guest.toLowerCase() : '';
   const step = body?.step as GuestStep;
   if (!ID.test(guest) || !GUEST_STEPS.includes(step)) return fail(c, 400, 'bad-input');
   if (c.env.limits.visitors.guests.add(visitorOf(c), guest) === 'full') return fail(c, 429, 'too-many-visits');
   await c.env.db.prepare('INSERT INTO visit_guests (day, guest, step) VALUES (?, ?, ?) ON CONFLICT DO NOTHING').bind(visitDay(Date.now()), guest, step).run();
+  return c.body(null, 204);
+}).post('/first-page', countVisit('reads'), async (c) => {
+  const step = (await readObject(c))?.step as FirstPageStep;
+  if (!FIRST_PAGE_STEPS.includes(step)) return fail(c, 400, 'bad-input');
+  if (BOTS.test(c.req.header('user-agent') ?? '')) return c.body(null, 204);
+  const day = visitDay(Date.now());
+  const hash = await dayHash(c.env.db, day, ['first-page', step, visitorOf(c)]);
+  const added = await c.env.db.prepare('INSERT INTO visit_hashes (day, hash) VALUES (?, ?) ON CONFLICT DO NOTHING').bind(day, hash).run();
+  if (added.meta.changes) await c.env.db.prepare(`INSERT INTO visit_days (day, ${step}) VALUES (?, 1) ON CONFLICT (day) DO UPDATE SET ${step} = ${step} + 1`).bind(day).run();
   return c.body(null, 204);
 });
