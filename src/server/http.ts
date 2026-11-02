@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import type { Context } from 'hono';
+import { createMiddleware } from 'hono/factory';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AccountState } from '../contracts/admin';
-import type { ServerError } from '../contracts/http';
+import { VISITOR_HEADER, type ServerError } from '../contracts/http';
 import type { PulseLabel } from '../contracts/pulse';
 import type { Refused } from './account-store';
 import type { Backups } from './backup/backups';
@@ -54,6 +55,13 @@ export function refused(c: Context, answer: Refused) {
   if ('unavailable' in answer) return fail(c, 503, 'store-unavailable', { retryAfter: RETRY_SECONDS });
   return answer.refused === 'restoring' ? fail(c, 503, 'account-restoring', { retryAfter: RETRY_SECONDS }) : fail(c, 401, 'no-session');
 }
+
+// The anonymous routes count per visitor, as the public listener saw them (VISITOR_HEADER). A request that did not
+// come through it, as in tests, counts as one visitor.
+export const visitorOf = (c: Context) => c.req.header(VISITOR_HEADER) ?? 'direct';
+
+export const countVisit = (kind: 'reads' | 'files' | 'reports') =>
+  createMiddleware<AppEnv>(async (c, next) => (c.env.limits.visitors[kind].limit(visitorOf(c)).success ? next() : fail(c, 429, 'too-many-visits')));
 
 export const sha256Hex = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex');
 

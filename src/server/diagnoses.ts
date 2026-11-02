@@ -1,8 +1,7 @@
 import { Hono } from 'hono';
 import { AUTO_KEEP_DAYS, readAutoReport, type AutoRow } from '../contracts/auto-diagnosis';
-import { VISITOR_HEADER } from '../contracts/http';
 import type { Db } from './db/service-db';
-import { DAY_MS, fail, readObject, visitDay, type AppEnv } from './http';
+import { DAY_MS, fail, readObject, visitDay, visitorOf, type AppEnv } from './http';
 import { confirmedModel } from './pulse';
 import { dayHash } from './visits';
 
@@ -13,7 +12,7 @@ const SHOWN = 200;
 // No session is read here (runtime/auto-diagnosis sends none): a row names no account, and accounts-only is the
 // client's rule, as for the pulse labels.
 export const diagnoses = new Hono<AppEnv>().post('/', async (c) => {
-  const visitor = c.req.header(VISITOR_HEADER) ?? 'direct';
+  const visitor = visitorOf(c);
   const agent = c.req.header('user-agent') ?? '';
   if (!c.env.limits.visitors.diagnoses.limit(visitor).success) return fail(c, 429, 'too-many-visits');
   const report = readAutoReport(await readObject(c));

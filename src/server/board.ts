@@ -26,10 +26,10 @@ import {
   type PostPicture,
   type PostRow,
 } from '../contracts/board';
-import { ACCOUNT_HEADER, VISITOR_HEADER } from '../contracts/http';
+import { ACCOUNT_HEADER } from '../contracts/http';
 import { act, limitOf, MAX_OPEN_REPORTS, positive } from './admin';
 import type { SqlValue } from './db/service-db';
-import { DAY_MS, fail, readObject, sha256Hex, type Account, type AppEnv } from './http';
+import { DAY_MS, fail, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
 import { boardDailyLimit } from './limits';
 import { requireSession } from './session';
 import { activity, hidden, OPERATOR, tellUnread } from './unread';
@@ -39,13 +39,13 @@ import { activity, hidden, OPERATOR, tellUnread } from './unread';
 const GUEST_ROUTES = /^\/api\/board\/(posts(\/[^/]+(\/comments)?)?|comments\/[^/]+)$/;
 export const board = new Hono<AppEnv>().use(async (c, next) => {
   if (!GUEST_ROUTES.test(c.req.path) || c.req.header(ACCOUNT_HEADER) !== undefined) return requireSession(c, next);
-  if (!c.env.limits.visitors.reads.limit(c.req.header(VISITOR_HEADER) ?? 'direct').success) return fail(c, 429, 'too-many-visits');
+  if (!c.env.limits.visitors.reads.limit(visitorOf(c)).success) return fail(c, 429, 'too-many-visits');
   if (c.req.method !== 'GET') {
     const secret = guestSecret(c);
     if (!secret) return fail(c, 401, 'no-session');
     const settings = await c.env.db.prepare('SELECT board_guests, board_guest_key FROM service').first<{ board_guests: number; board_guest_key: string }>();
     if (!settings!.board_guests) return fail(c, 403, 'guest-board-closed');
-    const address = c.req.header(VISITOR_HEADER) ?? 'direct';
+    const address = visitorOf(c);
     const addressHash = createHmac('sha256', settings!.board_guest_key).update(address).digest('hex');
     if (await c.env.db.prepare('SELECT 1 FROM board_guest_blocks WHERE secret_hash = ?1 UNION ALL SELECT 1 FROM board_guest_address_blocks WHERE address_hash = ?2 AND until > ?3 LIMIT 1').bind(sha256Hex(secret), addressHash, Date.now()).first()) return fail(c, 403, 'guest-board-blocked');
     c.set('boardGuest', { addressHash });
