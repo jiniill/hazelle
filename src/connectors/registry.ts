@@ -118,7 +118,7 @@ export function parseCatalog({ type, codec }: Route, payload: unknown): Model[] 
 export const costUnit = (type: ConnectionType | null): Cost['unit'] => (type && MODELS_DEV_LISTS[type.id]?.credit ? 'credit' : 'usd');
 
 // Explicit null disables embeddings; only undefined inherits the codec's.
-export const embedsOf = ({ type, codec }: Route) => (type?.embeds !== undefined ? type.embeds : codec.embeds);
+const embedsOf = ({ type, codec }: Route) => (type?.embeds !== undefined ? type.embeds : codec.embeds);
 
 // The route a model's embeddings take; null where the connection serves none in the model's format.
 export function embedRoute(connection: Connection, model: Model): Route | null {

@@ -545,7 +545,7 @@ export type HookLog = {
 };
 
 // Both sides of the worker boundary are bounded. Scripts separately bounds the page's retained log by serialized size.
-export const HOOK_TRACE_LIMITS = { entries: 100, items: 16, text: 1024 } as const;
+const HOOK_TRACE_LIMITS = { entries: 100, items: 16, text: 1024 } as const;
 export type HookTrace = { entries: HookLog[]; omitted: number };
 
 function clipped(entry: HookLog, text: string): string {

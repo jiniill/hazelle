@@ -1,4 +1,4 @@
-export function editDistance(a: string, b: string) {
+function editDistance(a: string, b: string) {
   const row = Array.from({ length: b.length + 1 }, (_, index) => index);
   for (let i = 1; i <= a.length; i++) {
     let corner = row[0]!;

@@ -514,7 +514,7 @@ const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
 // models alter roughly one in five, so rejecting whole batches would prevent progress (Gemini 3.8 Flash, 2026-10-09).
 const plain = (text: string) => text.replace(/["'“”‘’«»「」『』]/g, '').replace(/[.,!?…;:~、。，！？]+/g, ' ').replace(/\s+/g, ' ').trim();
 const sentencesOf = (text: string) => text.split(/(?<=[.!?…。！？])\s+/).map(plain).filter(Boolean);
-export function linesSaid(lines: Line[], source: string): Line[] {
+function linesSaid(lines: Line[], source: string): Line[] {
   const said = plain(source);
   return lines.filter(({ text }) => {
     let at = 0;

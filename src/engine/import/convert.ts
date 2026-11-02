@@ -197,7 +197,7 @@ export const triggerSource = (trigger: Unstamped<Trigger>): Json =>
     ? { comment: trigger.name, type: 'start', conditions: [], effect: [{ type: 'triggerlua', code: trigger.code }] }
     : { comment: trigger.name, type: trigger.on, conditions: conditionSources(trigger.conditions), effect: effectSources(trigger.effects) };
 
-export const folderKey = (folder: number) => `folder-${folder}`;
+const folderKey = (folder: number) => `folder-${folder}`;
 
 // The native form has no enabled, priority or position, and joins keys into one string: an entry it cannot hold whole
 // (nativeHolds) is kept apart by the caller.

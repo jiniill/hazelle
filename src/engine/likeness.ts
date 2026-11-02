@@ -12,10 +12,10 @@ export const SAMPLE_MOST = 24;
 export const SHOWN_MOST = 6;
 // Characters of description, personality, scenario and lorebook together, and of the pictures' prompts.
 export const TEXT_MOST = 32_000;
-export const PROMPTS_MOST = 8_000;
+const PROMPTS_MOST = 8_000;
 
 // `Aya_smile.png` and `aya angry` are one stem, so a pack of expressions per character is sampled once per character.
-export const stemOf = (name: string) => name.toLowerCase().replace(/\.[a-z0-9]+$/, '').split(/[\s_\-.]/)[0]!;
+const stemOf = (name: string) => name.toLowerCase().replace(/\.[a-z0-9]+$/, '').split(/[\s_\-.]/)[0]!;
 
 export function sample<T extends { name: string }>(pictures: readonly T[], most: number): T[] {
   const stems = new Set<string>();
