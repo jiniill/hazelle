@@ -1,9 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { CONNECTION_TYPES, detect } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
-import { START_PAGE } from '../../contracts/start';
+import { START_AGAIN, START_PAGE } from '../../contracts/start';
 import { countFirstPage } from '../../runtime/first-page';
 import { LegalNotice } from '../common/LegalNotice';
+import { href } from '../shell/routes';
 import { Beat, Brand, Button, Callout, ChoiceGroup, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
 import { EXAMPLE } from './example';
 
@@ -22,7 +23,8 @@ const PLACES = OFFERED.map(({ id, name }) => {
 
 const BEATS_COUNTED = { example: 'read', trial: 'door' } as const;
 
-export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: () => void }) {
+// doors: a first visit, counted and with the live trial; null: START_AGAIN.
+export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: () => void } | null }) {
   const { heading, line, example, keys, trial, features, move, finish } = START_PAGE;
   const [step, setStep] = useState(0);
   const [entered, setEntered] = useState<{ type: ConnectionType; secret: string } | null>(null);
@@ -31,11 +33,13 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
   const [replied, setReplied] = useState(false);
   const [inside, setInside] = useState(false);
   const enter = () => {
+    if (!doors) return location.assign('/');
     countFirstPage('entered');
-    onOpen();
+    doors.onOpen();
   };
 
   useEffect(() => {
+    if (!doors) return;
     countFirstPage('shown');
     const reached = new IntersectionObserver((entries, watching) => {
       for (const { isIntersecting, target } of entries) {
@@ -57,10 +61,14 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
         top={
           <>
             <Brand />
-            <Row kind="actions">
-              <Button variant="ghost" size="sm" onClick={enter}>가입 없이 열기</Button>
-              <Button variant="ghost" size="sm" onClick={onSignIn}>로그인</Button>
-            </Row>
+            {doors ? (
+              <Row kind="actions">
+                <Button variant="ghost" size="sm" onClick={enter}>가입 없이 열기</Button>
+                <Button variant="ghost" size="sm" onClick={doors.onSignIn}>로그인</Button>
+              </Row>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={enter}>{START_AGAIN.back}</Button>
+            )}
           </>
         }
       />
@@ -71,10 +79,12 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
         <Beat title={keys.title} line={keys.line} kind="lanterns">
           <KeyPlaces places={PLACES} />
         </Beat>
-        <Indoors id="trial" title={trial.title} line={trial.line} inside={inside} talking={step === 2} onInside={setInside}>
+        <Indoors id="trial" title={trial.title} line={doors ? trial.line : START_AGAIN.line} inside={inside} talking={step === 2} onInside={setInside}>
           <TrialSteps steps={trial.steps} at={step} />
           <PanelBody>
-            {entered ? (
+            {!doors ? (
+              <div><Button onClick={() => location.assign(href({ kind: 'connections' }))}>{START_AGAIN.connect}</Button></div>
+            ) : entered ? (
               <Suspense fallback={<Progress title="불러오는 중" steps={[{ label: '연결 준비' }]} />}>
                 <Trial
                   type={entered.type}

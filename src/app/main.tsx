@@ -7,6 +7,7 @@ import { applyStoredScheme } from './common/reading';
 import { ScreenLoad } from './common/ScreenLoad';
 import { watchProblems } from '../runtime/diagnostics';
 import { markSelfHost } from '../runtime/installation';
+import { START_AGAIN } from '../contracts/start';
 import { pulsePage } from './pulse/PulsePage';
 import { sharePage } from './share/SharePage';
 import { markScrollbars } from './ui';
@@ -25,7 +26,7 @@ markScrollbars();
 
 createRoot(root).render(
   <StrictMode>
-    {legalPage(location.pathname) ?? guidePage(location.pathname) ?? pulsePage(location.pathname) ?? sharePage(location.pathname, location.hash) ?? <AccountFlow first={(doors) => <ScreenLoad><StartPage {...doors} /></ScreenLoad>}>{(unlocked) => <ScreenLoad><Workspace {...unlocked} /></ScreenLoad>}</AccountFlow>}
+    {legalPage(location.pathname) ?? guidePage(location.pathname) ?? pulsePage(location.pathname) ?? sharePage(location.pathname, location.hash) ?? (location.pathname === START_AGAIN.path ? <ScreenLoad><StartPage doors={null} /></ScreenLoad> : null) ?? <AccountFlow first={(doors) => <ScreenLoad><StartPage doors={doors} /></ScreenLoad>}>{(unlocked) => <ScreenLoad><Workspace {...unlocked} /></ScreenLoad>}</AccountFlow>}
   </StrictMode>,
 );
 

@@ -150,6 +150,28 @@ test('one gesture moves one stop at once, and the door looks the same on any scr
   expect(Math.abs((await doorScale(390, 664)) - (await doorScale(1440, 900)))).toBeLessThan(1.5);
 });
 
+test('someone already using the app can walk it again, uncounted and with nothing live', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '가입 없이 열기' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: '내 API 키로 바로 시작하는 AI 캐릭터 챗' })).toHaveCount(0);
+  await page.goto('/account');
+  const counted: string[] = [];
+  page.context().on('request', (request) => {
+    if (request.url().includes('visits/first-page')) counted.push(request.url());
+  });
+  const opening = page.waitForEvent('popup');
+  await page.getByRole('link', { name: '첫 페이지 다시 보기' }).click();
+  const again = await opening;
+  const heading = again.getByRole('heading', { level: 1, name: '내 API 키로 바로 시작하는 AI 캐릭터 챗' });
+  await expect(heading).toBeVisible();
+  await expect(again.getByLabel(/API 키$/)).toHaveCount(0);
+  await expect(again.getByRole('button', { name: '가입 없이 열기' })).toHaveCount(0);
+  await again.getByRole('button', { name: '앱으로 돌아가기' }).click();
+  await expect(again).toHaveURL(/\/$/);
+  await expect(heading).toHaveCount(0);
+  expect(counted).toEqual([]);
+});
+
 test.describe(() => {
   test.use({ viewport: { width: 390, height: 664 }, hasTouch: true });
 

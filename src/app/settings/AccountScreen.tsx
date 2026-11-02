@@ -1,4 +1,5 @@
 import { logOutOthers } from '../../runtime/account';
+import { START_AGAIN } from '../../contracts/start';
 import { BUILT_VERSION, readRelease, selfHost } from '../../runtime/installation';
 import { setDiagnosisSharing, sharesDiagnosis } from '../../runtime/auto-diagnosis';
 import { setPulseSharing, sharesPulse } from '../../runtime/pulse';
@@ -13,7 +14,7 @@ import { LegalNotice } from '../common/LegalNotice';
 import { INSTALL_GUIDE } from '../common/legal';
 import { useLoaded } from '../common/useLoaded';
 import { AUTO_DIAGNOSIS, BIN, BOARD, PAGES, PULSE, UNKNOWN } from '../common/words';
-import { Avatar, Button, Columns, FaceRow, Gauge, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
+import { Avatar, Button, Columns, FaceRow, Gauge, Link, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
 import { BackupSection } from './BackupSection';
 import { Diagnostics } from './Diagnostics';
 import { LeaveSection } from './LeaveSection';
@@ -203,6 +204,7 @@ function AppInfo() {
         )}
         <Diagnostics />
       </SettingGroup>
+      {!selfHost() && <Link href={START_AGAIN.path}>{START_AGAIN.open}</Link>}
       <LegalNotice />
     </Panel>
   );

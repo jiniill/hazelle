@@ -19,3 +19,12 @@ export const START_PAGE = {
   move: { label: 'RisuAI·포켓리스 백업 옮기는 법', path: '/guide/move-from-risu' },
   finish: { title: '지금 바로 시작해 봐요' },
 } as const;
+
+// The same walk for someone who already uses the app. It has no live part: its trial runs on this browser's guest, which would add to a guest's data or wait to be merged into an account.
+export const START_AGAIN = {
+  path: '/welcome',
+  open: '첫 페이지 다시 보기',
+  back: '앱으로 돌아가기',
+  line: '키 연결은 앱에서 바로 할 수 있어요.',
+  connect: '연결 화면 열기',
+} as const;
