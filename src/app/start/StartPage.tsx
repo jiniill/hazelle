@@ -63,8 +63,8 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
             <Brand />
             {doors ? (
               <Row kind="actions">
-                <Button variant="ghost" size="sm" onClick={enter}>가입 없이 열기</Button>
                 <Button variant="ghost" size="sm" onClick={doors.onSignIn}>로그인</Button>
+                <Button size="sm" onClick={enter}>가입 없이 열기</Button>
               </Row>
             ) : (
               <Button variant="ghost" size="sm" onClick={enter}>{START_AGAIN.back}</Button>
