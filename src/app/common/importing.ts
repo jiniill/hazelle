@@ -1,12 +1,12 @@
 import { createContext, useContext } from 'react';
-import { PRESET_EXTENSIONS } from '../../engine/import/preset';
+import { PACKED_EXTENSION, UNPACKED_EXTENSIONS } from '../../engine/import/extensions';
 
 // All features share library/ImportFlow. pickChats null means characterless; bring uses dropped-file handling
 // and succeeds only for an imported character; drop forwards files the current screen did not accept.
-type Importer = { pick: () => void; pickChats: (target: string | null) => void; pickPrompts: () => void; pickPersonas: () => void; move: () => void; bring: (file: File) => Promise<boolean>; drop: (files: File[]) => void };
+type Importer = { pick: () => void; pickChats: (target: string | null) => void; pickPrompts: () => void; pickPersonas: () => void; pickLink: () => void; move: () => void; bring: (file: File) => Promise<boolean>; drop: (files: File[]) => void };
 
 // What the import reads, by extension: the picker's accept, and what a chat's drop leaves to it.
-const EXTENSIONS = ['.png', '.charx', '.jpg', '.jpeg', '.json', '.lorebook', '.risum', '.bin', '.js', ...PRESET_EXTENSIONS];
+const EXTENSIONS = [...UNPACKED_EXTENSIONS, PACKED_EXTENSION];
 export const IMPORT_ACCEPT = EXTENSIONS.join(',');
 export const imports = (name: string) => EXTENSIONS.some((extension) => name.toLowerCase().endsWith(extension));
 

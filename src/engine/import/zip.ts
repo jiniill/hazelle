@@ -1,6 +1,6 @@
 import { deflateSync } from 'fflate';
 import { expansionLimit, inflate, TooLarge } from './inflate';
-import { u16, u32, ZipDirectory, zipEnd, zipRange, zipDataStart, ZipIntegrity } from './zip-format';
+import { u16, u32, ZipDirectory, ZipEncrypted, zipEnd, zipRange, zipDataStart, ZipIntegrity } from './zip-format';
 
 const END_OF_DIRECTORY = 0x06054b50;
 const DIRECTORY_ENTRY = 0x02014b50;
@@ -12,6 +12,7 @@ const DEFLATED = 8;
 export type Zip = {
   // Whatever precedes the archive: the image of a JPEG with an appended zip.
   prefix: Uint8Array<ArrayBuffer>;
+  names: string[];
   // Lazy bytes keep large archives out of memory; enforce limit before unpacking.
   // Null means missing, damaged or unsupported entry.
   read(path: string, limit?: number): Uint8Array<ArrayBuffer> | null;
@@ -40,6 +41,7 @@ export function openZip(bytes: Uint8Array<ArrayBuffer>): Zip | null {
     const entries = directory.finish();
     return {
       prefix: bytes.slice(0, start),
+      names: [...entries.keys()],
       read: (path, limit = Infinity) => {
         const entry = entries.get(path);
         if (!entry) return null;
@@ -59,7 +61,7 @@ export function openZip(bytes: Uint8Array<ArrayBuffer>): Zip | null {
       },
     };
   } catch (error) {
-    if (error instanceof TooLarge) throw error;
+    if (error instanceof TooLarge || error instanceof ZipEncrypted) throw error;
     return null;
   }
 }

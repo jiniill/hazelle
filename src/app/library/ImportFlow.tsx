@@ -9,7 +9,10 @@ import { importCardFile } from '../../runtime/card-file';
 import { setDeleted } from '../../runtime/characters';
 import { importChat } from '../../runtime/chat-log';
 import type { ApiFailure, ApiResult } from '../../runtime/api';
+import type { UnpackFailure } from '../../engine/import/archive';
+import { PACKED_EXTENSION } from '../../engine/import/extensions';
 import { ImportWorker } from '../../runtime/import/client';
+import { downloadRealm, realmId, type RealmFailure } from '../../runtime/import/realm';
 import { ImportReadError, ImportStuck, type ChatsRead } from '../../runtime/import/protocol';
 import { importModule, pairWithPrompts, replaceModules, sameNamespace, setModuleAt, setModuleDeleted, type ModulePlace } from '../../runtime/modules';
 import { fillPictures, importRisuChats, risuMatch } from '../../runtime/move';
@@ -19,6 +22,7 @@ import type { ObjectStore } from '../../runtime/store';
 import { aliased } from '../common/alias';
 import { describeFailure } from '../common/failure';
 import { describeImportFailure } from '../common/importFailure';
+import { ACTS } from '../common/acts';
 import { IMPORT_ACCEPT, ImportContext } from '../common/importing';
 import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import { useSearch } from '../common/useSearch';
@@ -26,7 +30,7 @@ import { BIN, MISSED, moduleName, NO_CHARACTER, promptName, TOOL } from '../comm
 import { useFiles, useLibrary, useSession, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import type { Route } from '../shell/routes';
-import { Avatar, Button, Callout, Checkbox, ChipButton, ChoiceGroup, ConfirmDialog, Dialog, DropOverlay, Empty, Hint, List, ListItem, Menu, MenuItem, Outcome, pickFiles, Progress, Stack, Text, useFileDrop, type ProgressStep } from '../ui';
+import { Avatar, Button, Callout, Checkbox, ChipButton, ChoiceGroup, ConfirmDialog, Dialog, DropOverlay, Empty, Hint, List, ListItem, Menu, MenuItem, Outcome, pickFiles, Progress, Stack, Text, TextField, useFileDrop, type ProgressStep } from '../ui';
 import { characterOutcome, characterPreview, chatOutcome, chatPreview, moduleOutcome, modulePreview, personaOutcome, personaPreview, promptOutcome, promptPreview, quoted, toolOutcome, toolPreview, type ImportKind, type ImportOutcome, type Line, type Preview } from './importOutcome';
 import { chatMissed, missedLines, moveMissed } from './missed';
 import { MoveDialog } from './MoveDialog';
@@ -53,12 +57,29 @@ type Row = { file: File; failure: string } | Read;
 type Parsed = Exclude<Awaited<ReturnType<ImportWorker['card']>>, { ok: false }>;
 type Result = ImportOutcome | { kind: 'filled'; file: string; title: string; lines: Line[]; missed: string[] } | { kind: 'failed'; file: string; failure: string };
 type State =
+  | { kind: 'downloading'; step: ProgressStep }
   | { kind: 'reading'; file: string }
   | { kind: 'preview'; rows: Row[]; place: ModulePlace | null }
   | { kind: 'saving'; file: string; steps: ProgressStep[] }
   | { kind: 'done'; results: Result[] };
 // 되돌리기 for what one file brought. Its closure holds ids, never the parsed file, which would stay alive with it.
 type Undo = { message: string; run: () => Promise<ApiResult<unknown> | ApiFailure> };
+
+const REALM_LINK = 'Realm 링크';
+const REALM_FAILURE: Record<Exclude<RealmFailure, 'cancelled'>, string> = {
+  missing: 'Realm에서 봇을 찾지 못했어요. 삭제됐거나 비공개일 수 있어요.',
+  refused: 'Realm에서 다운로드를 거절했어요. 잠시 뒤 다시 시도해 주세요.',
+  'not-a-bot': 'Realm에서 봇 파일을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.',
+  lost: '다운로드가 끊겼어요. 인터넷 연결을 확인해 주세요.',
+};
+const UNPACK_FAILURE: Record<UnpackFailure, string> = {
+  encrypted: '비밀번호가 걸려 있어요. 압축을 풀고 안의 파일을 가져와 주세요.',
+  'too-large': '압축을 풀면 용량이 너무 커요. 직접 풀고 안의 파일을 가져와 주세요.',
+  unreadable: '압축 파일을 읽지 못했어요. 파일이 손상됐을 수 있어요.',
+};
+const SKIPPED_SHOWN = 3;
+const skippedLine = (names: string[]) =>
+  `가져오지 않은 파일 ${names.length}개: ${names.slice(0, SKIPPED_SHOWN).join(', ')}${names.length > SKIPPED_SHOWN ? ' 등' : ''}`;
 
 const failed = (file: string, failure: string): Result => ({ kind: 'failed', file, failure });
 const unsaved = (file: string, failure: ApiFailure): Result => failed(file, `저장하지 못했어요. ${describeFailure(failure)}`);
@@ -128,15 +149,18 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const noticed = useSettings().importNotice === true;
   const [notice, setNotice] = useState<(() => void) | null>(null);
   const readers = useRef(new Set<ImportWorker>());
+  const download = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   const [state, setState] = useState<State | null>(null);
   const [moving, setMoving] = useState<{ files: File[]; aside: number } | null>(null);
   const [asking, setAsking] = useState(false);
+  const [linking, setLinking] = useState(false);
 
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      download.current?.abort();
       for (const reader of readers.current) reader.close();
       readers.current.clear();
     };
@@ -144,12 +168,17 @@ export function ImportProvider({ children }: { children: ReactNode }) {
 
   // A file is read once for its preview and again to save it, so a batch never holds every archive while the user looks.
   async function reading<T extends object>(file: File, place: ModulePlace | null, use: (parsed: Parsed) => Promise<T>): Promise<T | string> {
+    return withReader(async (reader) => {
+      const parsed = await reader.card(file, place?.kind === 'always');
+      return parsed.ok ? use(parsed) : describeImportFailure(parsed.failure);
+    });
+  }
+
+  async function withReader<T>(use: (reader: ImportWorker) => Promise<T>): Promise<T | string> {
     const reader = new ImportWorker();
     readers.current.add(reader);
     try {
-      const parsed = await reader.card(file, place?.kind === 'always');
-      if (!parsed.ok) return describeImportFailure(parsed.failure);
-      return await use(parsed);
+      return await use(reader);
     } catch (error) {
       if (!(error instanceof ImportReadError)) throw error;
       return error instanceof ImportStuck ? '파일을 읽는 중 응답이 없어 중단했어요. 파일이 손상됐을 수 있어요.' : '파일을 읽지 못했어요. 다시 가져와 주세요.';
@@ -268,16 +297,61 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   }
 
   // shown: false for a file the user has already seen, as a share link's page shows its bot.
+  // A zip stands in the list only for what it could not give: then every file inside is one more picked file.
+  async function unpacked(picked: File[]): Promise<{ files: File[]; rows: Row[] }> {
+    const files: File[] = [];
+    const rows: Row[] = [];
+    for (const file of picked) {
+      if (!file.name.toLowerCase().endsWith(PACKED_EXTENSION)) {
+        files.push(file);
+        continue;
+      }
+      setState({ kind: 'reading', file: file.name });
+      const opened = await withReader((reader) => reader.zip(file));
+      if (typeof opened === 'string') rows.push({ file, failure: opened });
+      else if (!opened.ok) rows.push({ file, failure: UNPACK_FAILURE[opened.failure] });
+      else {
+        files.push(...opened.files);
+        if (opened.files.length === 0) rows.push({ file, failure: '가져올 수 있는 파일이 없어요.' });
+        else if (opened.skipped.length > 0) rows.push({ file, failure: skippedLine(opened.skipped) });
+      }
+    }
+    return { files, rows };
+  }
+
+  async function bringRealm(id: string) {
+    setLinking(false);
+    const line = new AbortController();
+    download.current = line;
+    const megabytes = (bytes: number) => Math.round(bytes / 1e6);
+    const shown = (done: number, total?: number): State => ({ kind: 'downloading', step: { label: '다운로드 (MB)', done, ...(total !== undefined && { total }) } });
+    setState(shown(0));
+    let last = 0;
+    // Each state renders every useImport screen: once per megabyte, not once per network chunk.
+    const answer = await downloadRealm(id, line.signal, (done, total) => {
+      if (megabytes(done) === last) return;
+      last = megabytes(done);
+      setState(shown(last, total === undefined ? undefined : megabytes(total)));
+    });
+    download.current = null;
+    if (!mounted.current) return;
+    if (answer.ok) void take([answer.file], undefined);
+    else if (answer.failure === 'cancelled') setState(null);
+    else setState({ kind: 'done', results: [failed(REALM_LINK, REALM_FAILURE[answer.failure])] });
+  }
+
   async function take(picked: File[], target: Target, shown = true): Promise<Result[]> {
     if (picked.length === 0 || (state !== null && state.kind !== 'done') || moving) return [];
-    const backups = picked.filter((file) => file.name.toLowerCase().endsWith('.bin'));
+    const { files, rows } = await unpacked(picked);
+    if (!mounted.current) return [];
+    const backups = files.filter((file) => file.name.toLowerCase().endsWith('.bin'));
     if (backups.length > 0) {
-      setMoving({ files: backups, aside: picked.length - backups.length });
+      setState(null);
+      setMoving({ files: backups, aside: files.length - backups.length });
       return [];
     }
     const place = placeOf(store, route);
-    const rows: Row[] = [];
-    for (const file of picked) {
+    for (const file of files) {
       if (!mounted.current) return [];
       setState({ kind: 'reading', file: file.name });
       rows.push(await previewOf(file, place, target));
@@ -345,7 +419,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const ready = rows.filter((row): row is Read => 'preview' in row);
   const ticked = ready.filter((row) => row.ticked);
   const title =
-    state?.kind === 'reading' ? '파일 읽는 중'
+    state?.kind === 'downloading' ? '봇 받는 중'
+    : state?.kind === 'reading' ? '파일 읽는 중'
     : state?.kind === 'saving' ? '가져오는 중'
     : state?.kind === 'preview' ? (ready.length > 0 ? '가져올까요?' : '가져오지 못했어요')
     : results.some((result) => result.kind !== 'failed') ? '가져왔어요' : '가져오지 못했어요';
@@ -364,6 +439,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         pickChats: open,
         pickPrompts: () => open(undefined, PRESET_EXTENSIONS.join(',')),
         pickPersonas: () => open(undefined, '.png'),
+        pickLink: () => asked(() => setLinking(true)),
         move: () => asked(() => setAsking(true)),
         bring: (file) => new Promise((done) => asked(() => void take([file], undefined, false).then((results) => done(results.some((result) => result.kind === 'character'))))),
         drop,
@@ -395,9 +471,13 @@ export function ImportProvider({ children }: { children: ReactNode }) {
           onClose={() => setAsking(false)}
         />
       )}
+      {linking && <RealmLinkDialog onBring={(id) => void bringRealm(id)} onClose={() => setLinking(false)} />}
       {moving && <MoveFlow files={moving.files} aside={moving.aside} onClose={() => setMoving(null)} />}
       {state && (
-        <Dialog title={title} onClose={() => (state.kind === 'preview' || state.kind === 'done') && setState(null)} actions={actions}>
+        <Dialog title={title} onClose={() => {
+          if (state.kind === 'downloading') download.current?.abort();
+          else if (state.kind === 'preview' || state.kind === 'done') setState(null);
+        }} actions={actions}>
           {state.kind === 'preview' ? (
             <List label="가져올 파일" box>
               {ready.map((row, index) => <PreviewRow key={index} row={row} many={ready.length > 1} onChange={(next) => change(row, next)} />)}
@@ -409,6 +489,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
                 result.kind === 'failed' ? <FailedRow key={index} file={result.file} failure={result.failure} /> : <DoneRow key={index} result={result} />,
               )}
             </List>
+          ) : state.kind === 'downloading' ? (
+            <Progress steps={[state.step]} />
           ) : (
             <Stack>
               <Text variant="note">{state.file}</Text>
@@ -463,6 +545,26 @@ function PreviewRow({ row: { preview, choice, ticked }, many, onChange }: { row:
 
 function DoneRow({ result }: { result: Exclude<Result, { kind: 'failed' }> }) {
   return <ImportRow kind={result.kind === 'filled' ? 'character' : result.kind} title={result.title} lines={result.lines} missed={result.missed} missedTitle={MISSED} />;
+}
+
+function RealmLinkDialog({ onBring, onClose }: { onBring: (id: string) => void; onClose: () => void }) {
+  const [text, setText] = useState('');
+  const id = realmId(text);
+  return (
+    <Dialog
+      title="링크로 가져오기"
+      onClose={onClose}
+      actions={<Button disabled={id === null} onClick={() => id && onBring(id)}>{ACTS.import.label}</Button>}
+    >
+      <TextField
+        label="Realm 봇 링크"
+        value={text}
+        onChange={setText}
+        placeholder="https://realm.risuai.net/character/..."
+        error={text.trim() !== '' && id === null ? 'Realm 봇 링크만 가져올 수 있어요.' : undefined}
+      />
+    </Dialog>
+  );
 }
 
 function FailedRow({ file, failure }: { file: string; failure: string }) {

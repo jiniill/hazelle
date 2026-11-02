@@ -1,3 +1,4 @@
+import type { Unpacked } from '../../engine/import/archive';
 import type { PresetRead } from '../../engine/import/preset';
 import type { ImportedTool } from '../../engine/import/tool';
 import type { BackupCatalog, BackupFailure, BundledModule, Imported, ImportedModule, ImportedPersona, ImportFailure, MoveUnsupported, Picture, RisuCharacter, RisuChat, RisuMessage, RisuPersona, RisuPreset } from '../../engine/import/types';
@@ -15,6 +16,7 @@ export type ChatsRead = { ok: true; chat: ChatFile } | { ok: true; risuChats: Ri
 type Inputs = {
   backup: { files: File[] };
   card: { file: File; asModule: boolean };
+  zip: { file: File };
   character: { key: number };
   persona: { key: number };
   preset: { key: number };
@@ -26,6 +28,7 @@ type Inputs = {
   picture: { handle: number };
 };
 export type Replies = {
+  zip: Unpacked<File>;
   backup: { ok: true; catalog: BackupCatalog } | { ok: false; failure: BackupFailure };
   card: { ok: true; tool: ImportedTool } | { ok: true; preset: PresetRead } | { ok: true; card: CardData } | { ok: true; module: ModuleData } | { ok: true; persona: PersonaFileData } | ChatsRead | { ok: false; failure: ImportFailure };
   character: CharacterData;

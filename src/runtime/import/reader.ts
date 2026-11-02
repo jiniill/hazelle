@@ -1,6 +1,7 @@
 import { readToolFile } from '../../engine/import/risu-plugin';
 import { TOOL_FILE_BYTES } from '../../engine/import/tool';
 import { readBackup } from '../../engine/import/backup';
+import { unpackZip } from '../../engine/import/archive';
 import { importCard, importRisum } from '../../engine/import/card';
 import { importPreset, isPresetFile } from '../../engine/import/preset';
 import { risuChatFile } from '../../engine/import/risu-character';
@@ -65,6 +66,10 @@ export class ImportReader {
         if (!result.ok) return result;
         if ('persona' in result) return { ok: true, persona: { ...result.persona, picture: this.picture(result.persona.picture) } };
         return 'card' in result ? { ok: true, card: this.card(result.card) } : { ok: true, module: this.module(result.module) };
+      }
+      case 'zip': {
+        const unpacked = unpackZip(request.file.name, new Uint8Array(await request.file.arrayBuffer()));
+        return unpacked.ok ? { ...unpacked, files: unpacked.files.map(({ name, bytes }) => new File([bytes], name)) } : unpacked;
       }
       case 'character': {
         this.clear();

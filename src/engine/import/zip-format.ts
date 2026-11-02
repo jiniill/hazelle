@@ -24,6 +24,18 @@ export function zipEnd(tail: Uint8Array) {
   return end;
 }
 
+// Names without the UTF-8 flag are CP949 from older Korean zippers; WHATWG's euc-kr is CP949. Replacing their bytes with
+// U+FFFD instead would make same-length names collide, and a collision refuses the whole archive.
+function entryName(bytes: Uint8Array) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('euc-kr').decode(bytes);
+  }
+}
+
+export class ZipEncrypted extends Error {}
+
 export class ZipDirectory {
   readonly entries = new Map<string, ZipEntry>();
   readonly limit: number;
@@ -40,7 +52,8 @@ export class ZipDirectory {
   }
 
   variableSize(header: Uint8Array) {
-    if (u32(header, 0) !== 0x02014b50 || (u16(header, 8) & 1) || u16(header, 34) !== 0) throw new Error('Bad ZIP entry');
+    if (u32(header, 0) !== 0x02014b50 || u16(header, 34) !== 0) throw new Error('Bad ZIP entry');
+    if (u16(header, 8) & 1) throw new ZipEncrypted('encrypted ZIP entry');
     const length = u16(header, 28) + u16(header, 30) + u16(header, 32);
     zipRange(this.offset + 46, length, this.limit);
     return length;
@@ -51,7 +64,7 @@ export class ZipDirectory {
     if (method !== 0 && method !== 8) throw new Error('Unknown ZIP compression');
     const nameLength = u16(header, 28);
     const extraEnd = nameLength + u16(header, 30);
-    const name = new TextDecoder().decode(variable.subarray(0, nameLength));
+    const name = entryName(variable.subarray(0, nameLength));
     let size = u32(header, 24);
     let compressed = u32(header, 20);
     let local = u32(header, 42);
