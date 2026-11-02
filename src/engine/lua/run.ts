@@ -1,3 +1,4 @@
+import { jsonObject } from '../../connectors/values';
 import type { PackOwner } from '../../model/library';
 import { LuaFactory, type LuaEngine } from 'wasmoon';
 import { runBlocks, type Blocks } from './blocks';
@@ -49,16 +50,6 @@ const roleOf = (value: unknown): Working['role'] => (value === 'user' ? 'user' :
 const view = ({ role, data, time }: Working) => ({ role, data, time });
 
 const AX_MODES = new Set(['emotion', 'memory', 'otherAx', 'submodel', 'translate']);
-
-// What a script passes as options, json-encoded by the prelude; anything but an object reads as none, as in Risu.
-function luaOptions(value: unknown): Record<string, unknown> {
-  try {
-    const parsed: unknown = JSON.parse(text(value));
-    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
-  } catch {
-    return {};
-  }
-}
 
 const MODEL_ROLES: Record<string, ModelMessage['role']> = { system: 'system', sys: 'system', user: 'user', assistant: 'assistant', bot: 'assistant', char: 'assistant' };
 
@@ -498,7 +489,8 @@ export class Lua {
     // Every mode goes to the 보조 모델; an unknown one is refused before any call, as Risu refuses it. useMultimodal is
     // Risu's third argument: no picture goes with a script's call.
     awaited('axLLMMain', (run, prompt: string, _multimodal: unknown, options: unknown) => {
-      const mode = text(luaOptions(options).mode ?? 'otherAx');
+      // options: json-encoded by the prelude; anything but an object reads as none, as in Risu.
+      const mode = text(jsonObject(text(options))?.mode ?? 'otherAx');
       if (!AX_MODES.has(mode)) return Promise.resolve(JSON.stringify({ success: false, result: `Error: Invalid axLLM mode: ${mode}` }));
       return model('aux')(run, prompt);
     });
@@ -545,7 +537,7 @@ export type HookLog = {
 };
 
 // Both sides of the worker boundary are bounded. Scripts separately bounds the page's retained log by serialized size.
-export const HOOK_TRACE_LIMITS = { entries: 100, items: 16, text: 1024 } as const;
+const HOOK_TRACE_LIMITS = { entries: 100, items: 16, text: 1024 } as const;
 export type HookTrace = { entries: HookLog[]; omitted: number };
 
 function clipped(entry: HookLog, text: string): string {

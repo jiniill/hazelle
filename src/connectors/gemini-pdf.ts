@@ -1,4 +1,5 @@
 import { zlibSync } from 'fflate';
+import { toBase64 } from './base64';
 import type { Pdf } from './settings';
 import type { ChatMessage } from './types';
 
@@ -36,7 +37,7 @@ export function packPdf(messages: ChatMessage[], pdf: Pdf): ChatMessage[] {
   return [...plan.lead, { role: 'user', content: INSTRUCTION, document: plan.transcript, ...(pictures.length > 0 && { pictures }) }, ...plan.tail];
 }
 
-export const pdfData = (transcript: string) => base64(textPdf(transcript));
+export const pdfData = (transcript: string) => toBase64(textPdf(transcript));
 
 // US Letter, half-em glyphs. Keep 0.1 pt: PDF pages bill as images, while text remains readable.
 // A 290k-character chat used 315 tokens on one page vs 11,172 on 42 at 8 pt (Gemini 3.8 Flash, 2026-10-18).
@@ -119,12 +120,6 @@ function toUnicode(cids: Map<string, string>): string {
 }
 
 const encode = (text: string) => new TextEncoder().encode(text);
-
-function base64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let at = 0; at < bytes.length; at += 0x8000) binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000));
-  return btoa(binary);
-}
 
 // Object n is bodies[n - 1]. 1 is the catalog and 2 the page tree, filled in last since they name every page.
 class PdfWriter {

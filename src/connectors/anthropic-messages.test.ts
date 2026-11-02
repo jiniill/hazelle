@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bareModel } from './chat-completions';
-import { chatRequest, resolveConnection, type Route } from './registry';
+import { resolveConnection, type Route } from './registry';
+import { prepareChat } from './preparation';
 import { decodeStream } from './stream';
 import type { Phase } from './types';
 
@@ -67,7 +68,7 @@ describe('Anthropic Messages tools', () => {
       { type: 'message_delta', delta: { stop_reason: 'tool_use' }, usage: { output_tokens: 9 } },
       { type: 'message_stop' },
     ), 'text/event-stream');
-    const body = JSON.parse(chatRequest(anthropic, { model, messages: [{ role: 'user', content: '굴려 줘' }, { role: 'assistant', content: text, calls: outcome.calls }], settings: {} }).body!);
+    const body = JSON.parse(prepareChat(anthropic, { model, messages: [{ role: 'user', content: '굴려 줘' }, { role: 'assistant', content: text, calls: outcome.calls }], settings: {} }).request.body!);
     expect(body.messages[1].content).toEqual([
       { type: 'thinking', thinking: '', signature: 'A' },
       { type: 'text', text: '굴려 볼게.' },
@@ -79,7 +80,7 @@ describe('Anthropic Messages tools', () => {
   it('sends tools, the calls after their thinking, and the results ahead of the next turn with its cache mark', () => {
     const thought = { type: 'thinking', thinking: '날씨를 봐야 해.', signature: 'EqQB' };
     const update = { type: 'thinking', thinking: '시간도.', signature: 'Fq' };
-    const body = JSON.parse(chatRequest(anthropic, {
+    const body = JSON.parse(prepareChat(anthropic, {
       model,
       tools: [{ name: 'get_weather', description: 'Weather now.', parameters: { type: 'object', properties: { location: { type: 'string' } } } }],
       messages: [
@@ -88,7 +89,7 @@ describe('Anthropic Messages tools', () => {
         { role: 'user', content: '', cache: true, results: [{ id: 'toolu_1', name: 'get_weather', text: '맑음' }, { id: 'toolu_2', name: 'get_time', text: 'unreadable arguments' }] },
       ],
       settings: { cache: '5m' },
-    }).body!);
+    }).request.body!);
     expect(body.tools).toEqual([{ name: 'get_weather', description: 'Weather now.', input_schema: { type: 'object', properties: { location: { type: 'string' } } } }]);
     expect(body.messages).toEqual([
       { role: 'user', content: '서울 날씨와 시간?' },

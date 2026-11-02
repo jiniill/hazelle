@@ -8,7 +8,7 @@ export const TOOL_FILE_BYTES = 8 * 1024 * 1024;
 // A message's actions and the composer button's input items share these limits.
 export const TOOL_ACTIONS = 3;
 export const TOOL_ACTION_CHARS = 16;
-export const TOOL_COMPOSER_CHARS = 8;
+const TOOL_COMPOSER_CHARS = 8;
 export const USES: readonly ToolUse[] = ['model', 'embed', 'memory', 'network'];
 export type ImportedTool = { manifest: ToolManifest; bytes: Uint8Array<ArrayBuffer> };
 export type ToolRead = { ok: true; tool: ImportedTool } | { ok: false; failure: ImportFailure };

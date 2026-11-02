@@ -6,8 +6,6 @@ const TEXT_KEYS = new Set(['chara', 'ccv3', 'persona']);
 const ASSET = 'chara-ext-asset_';
 const decoder = new TextDecoder();
 
-export const base64 = (text: string) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0));
-
 export type Png = {
   // The card's base64 payload. ccv3 wins over chara.
   card: string | null;

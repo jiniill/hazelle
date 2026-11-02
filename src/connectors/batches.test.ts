@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { bareModel } from './chat-completions';
-import { batchLane, chatRequest, CONNECTION_TYPES, resolveConnection, type Route } from './registry';
+import { batchLane, CONNECTION_TYPES, resolveConnection, type Route } from './registry';
+import { prepareChat } from './preparation';
 import type { Batches, Connection, Model } from './types';
 
 const route = (type: string) => resolveConnection({ type, label: type, baseUrl: null, protocol: null, accounts: [{ id: 'key', secret: 'key' }], turns: null, starred: [] } as Connection) as Route;
 const model: Model = { ...bareModel('m'), maxOutput: 1000 };
 const messages = [{ role: 'user' as const, content: '안녕' }];
 const lane = (type: string): Batches => batchLane(route(type), { model, messages, settings: { discount: true } })!;
-const whole = (type: string) => chatRequest(route(type), { model, messages, settings: { streaming: false } });
+const whole = (type: string) => prepareChat(route(type), { model, messages, settings: { streaming: false } }).request;
 
 it('has no pool type with a discount lane, whose batch is asked about with the connection’s one account', () => {
   expect(CONNECTION_TYPES.filter((type) => type.pool && type.discount)).toEqual([]);

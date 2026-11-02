@@ -1,7 +1,8 @@
+import { fromBase64, toBase64 } from '../../connectors/base64';
 import { isRecord } from '../../connectors/values';
 import type { Persona } from '../../model/persona';
 import { text } from './convert';
-import { base64, withText } from './png';
+import { withText } from './png';
 import type { ImportResult } from './types';
 
 // A Risu persona record, from a backup's list or a persona PNG.
@@ -11,7 +12,7 @@ export const risuPersonaFields = (raw: Record<string, unknown>) => ({ name: text
 export function readPersona(payload: string, image: Uint8Array<ArrayBuffer>): ImportResult {
   let raw: unknown;
   try {
-    raw = JSON.parse(new TextDecoder().decode(base64(payload)));
+    raw = JSON.parse(new TextDecoder().decode(fromBase64(payload)));
   } catch {
     return { ok: false, failure: { kind: 'unreadable', detail: 'persona-unreadable' } };
   }
@@ -24,7 +25,5 @@ export function readPersona(payload: string, image: Uint8Array<ArrayBuffer>): Im
 // Risu's exportUserPersona (export spec §4): png, already a PNG, with one tEXt chunk `persona`, base64 of the UTF-8 JSON
 // that risuPersonaFields reads. Risu refuses an empty description on import, so a caller never writes one.
 export function writePersonaPng(png: Uint8Array, { name, description, alias }: Pick<Persona, 'name' | 'description' | 'alias'>): Uint8Array<ArrayBuffer> {
-  let binary = '';
-  for (const byte of new TextEncoder().encode(JSON.stringify({ name, personaPrompt: description, note: alias }))) binary += String.fromCharCode(byte);
-  return withText(png, 'persona', btoa(binary));
+  return withText(png, 'persona', toBase64(new TextEncoder().encode(JSON.stringify({ name, personaPrompt: description, note: alias }))));
 }

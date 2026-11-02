@@ -1,7 +1,8 @@
+import { fromBase64, toBase64 } from './base64';
 import { bareModel, embedUsage } from './chat-completions';
 import { embedContent } from './gemini';
 import { ConnectorError, type ConnectionType, type Endpoint } from './types';
-import { count, isRecord, vector } from './values';
+import { count, isRecord, jsonObject, vector } from './values';
 
 // Service-account JWT buys a one-hour token. Gemini calls require the project at the global location;
 // model listing requires project-free v1beta1 (live-verified 2026-10-13).
@@ -12,13 +13,8 @@ type ServiceAccount = { projectId: string; keyId?: string; privateKey: string; c
 const TOKEN_URI = 'https://oauth2.googleapis.com/token';
 
 function serviceAccount(secret: string): ServiceAccount | null {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(secret);
-  } catch {
-    return null;
-  }
-  if (!isRecord(raw) || raw.type !== 'service_account') return null;
+  const raw = jsonObject(secret);
+  if (raw?.type !== 'service_account') return null;
   const account = { projectId: raw.project_id, privateKey: raw.private_key, clientEmail: raw.client_email, tokenUri: raw.token_uri };
   if (!Object.values(account).every((field) => typeof field === 'string' && field)) return null;
   return { ...(account as ServiceAccount), ...(typeof raw.private_key_id === 'string' && raw.private_key_id && { keyId: raw.private_key_id }) };
@@ -33,13 +29,13 @@ function joinedAccount(values: Record<string, string>): string {
   return JSON.stringify({ type: 'service_account', project_id: project, private_key: privateKey, client_email: email, token_uri: TOKEN_URI });
 }
 
-const base64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const base64url = (bytes: Uint8Array) => toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const encoded = (value: unknown) => base64url(new TextEncoder().encode(JSON.stringify(value)));
 
 // A key file whose private key is cut short or edited is refused here, before anything is sent.
 async function signingKey(pem: string): Promise<CryptoKey> {
   try {
-    const der = Uint8Array.from(atob(pem.replace(/-----[^-]+-----/g, '').replace(/\s/g, '')), (char) => char.charCodeAt(0));
+    const der = fromBase64(pem.replace(/-----[^-]+-----/g, '').replace(/\s/g, ''));
     return await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
   } catch {
     throw new ConnectorError('unreadable-key');

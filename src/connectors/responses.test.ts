@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bareModel } from './chat-completions';
-import { chatRequest, modelSettings, resolveConnection, type Route } from './registry';
+import { modelSettings, resolveConnection, type Route } from './registry';
+import { prepareChat } from './preparation';
 import { fit, type ModelSettings } from './settings';
 import { decodeStream } from './stream';
 import type { ChatMessage, Connection, Phase } from './types';
@@ -30,7 +31,7 @@ describe('responses request', () => {
   it('sends input with its roles and the format’s own fields, and leaves out what it cannot carry', () => {
     const settings: ModelSettings = { maxOutput: 4000, temperature: 0.7, stop: ['끝'], reasoning: { kind: 'level', level: 'low' }, verbosity: 'low', cache: '5m' };
     expect(fit(modelSettings(on, model)!, settings).changes).toEqual([{ setting: 'stop', change: 'left-out' }]);
-    const request = chatRequest(route, { model, messages, settings });
+    const request = prepareChat(route, { model, messages, settings }).request;
     expect(request.url).toBe('https://api.example.com/v1/responses');
     expect(JSON.parse(request.body!)).toEqual({
       model: 'gpt-5',
@@ -49,7 +50,7 @@ describe('responses request', () => {
   });
 
   it('keys the cache by the prefix up to the first point, so a new turn keeps the key, and sends none without caching', () => {
-    const key = (sent: ChatMessage[], cache?: '5m') => JSON.parse(chatRequest(route, { model: { ...model, input: ['text', 'image'] }, messages: sent, settings: { cache } }).body!).prompt_cache_key as unknown;
+    const key = (sent: ChatMessage[], cache?: '5m') => JSON.parse(prepareChat(route, { model: { ...model, input: ['text', 'image'] }, messages: sent, settings: { cache } }).request.body!).prompt_cache_key as unknown;
     const first = key(messages, '5m');
     expect(key([...messages, { role: 'assistant', content: '안녕!' }, { role: 'user', content: '뭐 해?', cache: true }], '5m')).toBe(first);
     expect(key([{ ...messages[0]!, content: '길게 답해.' }, messages[1]!], '5m')).not.toBe(first);
@@ -60,7 +61,7 @@ describe('responses request', () => {
 
   it('sends pictures as data URL input images ahead of the input text', () => {
     const shown: ChatMessage[] = [{ role: 'user', content: '이 사람은?', pictures: [{ type: 'image/png', data: 'AAAA' }] }];
-    expect(JSON.parse(chatRequest(route, { model: { ...model, input: ['text', 'image'] }, messages: shown, settings: {} }).body!).input).toEqual([
+    expect(JSON.parse(prepareChat(route, { model: { ...model, input: ['text', 'image'] }, messages: shown, settings: {} }).request.body!).input).toEqual([
       { role: 'user', content: [{ type: 'input_image', image_url: 'data:image/png;base64,AAAA' }, { type: 'input_text', text: '이 사람은?' }] },
     ]);
   });
@@ -72,7 +73,7 @@ describe('responses request', () => {
       { role: 'assistant', content: '', calls: [{ id: 'call_1', name: 'run_test', arguments: '{"moment":"reply"}' }] },
       { role: 'user', content: '', results: [{ id: 'call_1', name: 'run_test', text: 'passed' }] },
     ];
-    const body = JSON.parse(chatRequest(route, { model, messages: turns, settings: {}, tools }).body!);
+    const body = JSON.parse(prepareChat(route, { model, messages: turns, settings: {}, tools }).request.body!);
     expect(body.tools).toEqual([{ type: 'function', name: 'run_test', description: 'Runs the file.', parameters: { type: 'object', properties: {} }, strict: false }]);
     expect(body.input).toEqual([
       { role: 'user', content: '돌려 봐' },
@@ -82,7 +83,7 @@ describe('responses request', () => {
   });
 
   it('asks for the whole reply when streaming is off', () => {
-    expect(JSON.parse(chatRequest(route, { model, messages, settings: { streaming: false, reasoning: { kind: 'off' } } }).body!)).toMatchObject({ reasoning: { effort: 'none' }, stream: false });
+    expect(JSON.parse(prepareChat(route, { model, messages, settings: { streaming: false, reasoning: { kind: 'off' } } }).request.body!)).toMatchObject({ reasoning: { effort: 'none' }, stream: false });
   });
 });
 

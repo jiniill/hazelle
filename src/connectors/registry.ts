@@ -118,19 +118,24 @@ export function parseCatalog({ type, codec }: Route, payload: unknown): Model[] 
 export const costUnit = (type: ConnectionType | null): Cost['unit'] => (type && MODELS_DEV_LISTS[type.id]?.credit ? 'credit' : 'usd');
 
 // Explicit null disables embeddings; only undefined inherits the codec's.
-export const embedsOf = ({ type, codec }: Route) => (type?.embeds !== undefined ? type.embeds : codec.embeds);
+const embedsOf = ({ type, codec }: Route) => (type?.embeds !== undefined ? type.embeds : codec.embeds);
 
-// The route a model's embeddings take; null where the connection serves none in the model's format.
-export function embedRoute(connection: Connection, model: Model): Route | null {
+// null for a model this version cannot call at all over the connection.
+function routeOf(connection: Connection, model: Model): Route | null {
   const resolved = resolveConnection(connection);
-  if (!resolved?.codec) return null;
+  if (!resolved) return null;
   try {
-    const route = resolveModel(resolved, model);
-    return embedsOf(route) ? route : null;
+    return resolveModel(resolved, model);
   } catch (error) {
     if (error instanceof ConnectorError) return null;
     throw error;
   }
+}
+
+// The route a model's embeddings take; null where the connection serves none in the model's format.
+export function embedRoute(connection: Connection, model: Model): Route | null {
+  const route = routeOf(connection, model);
+  return route && embedsOf(route) ? route : null;
 }
 
 // One request for each perRequest texts, in order; count: the texts its answer holds.
@@ -170,20 +175,13 @@ function carries(route: Route, model: Model): Carries {
   };
 }
 
-// null for a model this version cannot call at all.
 export function modelSettings(connection: Connection, model: Model): SettingsSchema | null {
-  const resolved = resolveConnection(connection);
-  if (!resolved) return null;
-  try {
-    return settingsSchema(carries(resolveModel(resolved, model), model), model);
-  } catch (error) {
-    if (error instanceof ConnectorError) return null;
-    throw error;
-  }
+  const route = routeOf(connection, model);
+  return route && settingsSchema(carries(route, model), model);
 }
 
 // settings is the 묶음's as stored; the 모델 설정 screen names each change with the same fit().
-// chatRequest writes it and cacheView reads it, so a forecast compares what is sent.
+// sentRequest writes it and cacheView reads it, so a forecast compares what is sent.
 export function sending(route: Route, { model, messages, settings: stored, tools }: ChatRequest): ChatRequest {
   const { settings } = fit(settingsSchema(carries(route, model), model), stored);
   const roled = settings.systemAsUser ? messages.map((message) => (message.role === 'system' ? { ...message, role: 'user' as const } : message)) : inlined(route.codec.inlineSystem, messages);
@@ -213,9 +211,9 @@ export function batchLane(route: Route, request: ChatRequest): Batches | null {
   return lane?.lane === 'batch' && sending(route, request).settings.discount ? lane.batches : null;
 }
 
-// Refused here, not in sending, which cacheView shares: a forecast never refuses.
-export function chatRequest(route: Route, request: ChatRequest): HttpRequest {
-  const sent = sending(route, request);
+// Refused here, not in sending, which cacheView shares: a forecast never refuses. sent: what sending made, never a request
+// as asked, since sending is not idempotent (it packs a PDF again).
+export function sentRequest(route: Route, sent: ChatRequest): HttpRequest {
   const pictures = sent.messages.some(carriesPictures);
   if (pictures && !seesPictures(sent.model)) throw new ConnectorError('no-picture-input');
   // Only a catalog's own no; most say nothing, and those are sent.

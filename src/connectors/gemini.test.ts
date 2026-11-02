@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import recorded from './fixtures/gemini.json';
-import { chatRequest, detect, embedAnswer, embedRequests, parseCatalog, resolveConnection, withCredential, type Route } from './registry';
+import { detect, embedAnswer, embedRequests, parseCatalog, resolveConnection, withCredential, type Route } from './registry';
+import { prepareChat } from './preparation';
 import { bareModel } from './chat-completions';
 import { gemini } from './gemini';
 import { decodeStream } from './stream';
@@ -30,11 +31,11 @@ describe('Gemini', () => {
   });
 
   it('sends the earlier conversation as one PDF part at low resolution, the system prompt and recent turns as text', () => {
-    const body = JSON.parse(chatRequest(google, {
+    const body = JSON.parse(prepareChat(google, {
       model: flash!,
       messages: [{ role: 'system', content: '규칙' }, { role: 'user', content: '안녕' }, { role: 'assistant', content: '어서 와.' }, { role: 'user', content: '뭐 해?' }],
       settings: { pdf: { keep: 'recent', recent: 30 } },
-    }).body!);
+    }).request.body!);
     expect(body).toEqual({
       systemInstruction: { parts: [{ text: '규칙' }] },
       contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'application/pdf', data: expect.any(String) }, mediaResolution: { level: 'MEDIA_RESOLUTION_LOW' } }, { text: expect.stringContaining('U+2029') }, { text: '뭐 해?' }] }],
@@ -44,7 +45,7 @@ describe('Gemini', () => {
   });
 
   it('sends the leading system text apart and a later one in its place, one turn per run of a role, and thinking with its thoughts', () => {
-    const request = withCredential(google, chatRequest(google, {
+    const request = withCredential(google, prepareChat(google, {
       model: flash!,
       messages: [
         { role: 'system', content: '규칙' },
@@ -54,7 +55,7 @@ describe('Gemini', () => {
         { role: 'user', content: '뭐 해?' },
       ],
       settings: { maxOutput: 1000, topK: 40, stop: ['끝'], reasoning: { kind: 'level', level: 'low' } },
-    }), 'secret');
+    }).request, 'secret');
     expect(request.url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse');
     expect(request.headers['x-goog-api-key']).toBe('secret');
     expect(JSON.parse(request.body!)).toEqual({
@@ -65,14 +66,14 @@ describe('Gemini', () => {
       ],
       generationConfig: { maxOutputTokens: 1000, topK: 40, stopSequences: ['끝'], thinkingConfig: { thinkingLevel: 'low', includeThoughts: true } },
     });
-    const plain = chatRequest(google, { model: old!, messages: [{ role: 'user', content: '안녕' }], settings: { streaming: false } });
+    const plain = prepareChat(google, { model: old!, messages: [{ role: 'user', content: '안녕' }], settings: { streaming: false } }).request;
     expect(plain.url).toMatch(/gemini-2\.0-flash:generateContent$/);
     expect(JSON.parse(plain.body!)).toEqual({ contents: [{ role: 'user', parts: [{ text: '안녕' }] }] });
   });
 
   it('sends pictures as inline data ahead of their message’s text, and no empty text after pictures alone, in the run of its role', () => {
     const messages = [{ role: 'user' as const, content: '안녕' }, { role: 'user' as const, content: '이 사람은?', pictures: [{ type: 'image/png', data: 'AAAA' }] }, { role: 'user' as const, content: '', pictures: [{ type: 'image/png', data: 'BBBB' }] }];
-    expect(JSON.parse(chatRequest(google, { model: { ...flash!, input: ['text', 'image'] }, messages, settings: {} }).body!).contents).toEqual([
+    expect(JSON.parse(prepareChat(google, { model: { ...flash!, input: ['text', 'image'] }, messages, settings: {} }).request.body!).contents).toEqual([
       { role: 'user', parts: [{ text: '안녕' }, { inlineData: { mimeType: 'image/png', data: 'AAAA' } }, { text: '이 사람은?' }, { inlineData: { mimeType: 'image/png', data: 'BBBB' } }] },
     ]);
   });
@@ -85,7 +86,7 @@ describe('Gemini', () => {
   });
 
   it('carries a stored level to what the model takes, as a 설정 묶음 outlives its model', () => {
-    const level = (id: string, setting: string) => (JSON.parse(chatRequest(google, { model: bareModel(id), messages: [{ role: 'user', content: '안녕' }], settings: { reasoning: { kind: 'level', level: setting } } }).body!) as { generationConfig: { thinkingConfig: unknown } }).generationConfig.thinkingConfig;
+    const level = (id: string, setting: string) => (JSON.parse(prepareChat(google, { model: bareModel(id), messages: [{ role: 'user', content: '안녕' }], settings: { reasoning: { kind: 'level', level: setting } } }).request.body!) as { generationConfig: { thinkingConfig: unknown } }).generationConfig.thinkingConfig;
     expect(level('gemini-3.1-pro', 'minimal')).toEqual({ thinkingLevel: 'low', includeThoughts: true });
     expect(level('gemini-3.5-flash', 'minimal')).toEqual({ thinkingLevel: 'minimal', includeThoughts: true });
     expect(level('gemini-2.5-flash', 'high')).toEqual({ thinkingBudget: -1, includeThoughts: true });
@@ -138,7 +139,7 @@ describe('Gemini', () => {
   });
 
   it('sends tools as JSON Schema declarations, calls with their signature after the model’s text, and results ahead of the user’s', () => {
-    const body = JSON.parse(chatRequest(google, {
+    const body = JSON.parse(prepareChat(google, {
       model: flash!,
       messages: [
         { role: 'user', content: '돌려 봐' },
@@ -147,7 +148,7 @@ describe('Gemini', () => {
       ],
       settings: {},
       tools: [{ name: 'run_test', description: 'Runs the file.', parameters: { type: 'object', properties: { moment: { type: 'string' } } } }],
-    }).body!);
+    }).request.body!);
     expect(body.tools).toEqual([{ functionDeclarations: [{ name: 'run_test', description: 'Runs the file.', parametersJsonSchema: { type: 'object', properties: { moment: { type: 'string' } } } }] }]);
     expect(body.contents.slice(1)).toEqual([
       { role: 'model', parts: [{ text: '돌려 볼게.' }, { functionCall: { id: 'fc1', name: 'run_test', args: { moment: 'reply' } }, thoughtSignature: 'SIG' }, { functionCall: { id: 'fc2', name: 'list_files', args: {} } }] },

@@ -105,7 +105,7 @@ export async function writePreset(prompt: ConversationPrompt, namespaces: readon
   return { bytes: pack(gzipSync(writeMsgpack({ presetVersion: 2, type: 'preset', preset: sealed }))), tools };
 }
 
-export function botPreset(prompt: ConversationPrompt, namespaces: readonly string[]): { preset: Json; tools: number } {
+function botPreset(prompt: ConversationPrompt, namespaces: readonly string[]): { preset: Json; tools: number } {
   const promptTemplate: Json[] = [];
   let tools = 0;
   for (const block of prompt.blocks) {

@@ -20,7 +20,7 @@ export const resolveAssets = (text: string, url: PictureUrl) => text.replace(PIC
 
 // Keep inlay markup synchronized with cbs/tags, display OWN_MARKUP and Story.tsx attribute readers.
 export const inlayMissing = '<span data-inlay-missing></span>';
-export const inlayPicture = (id: string) => `<img src="${pictureRef('inlay', id)}"/>`;
+const inlayPicture = (id: string) => `<img src="${pictureRef('inlay', id)}"/>`;
 export const inlayBlock = (id: string) => `<div class="risu-inlay-image">${inlayPicture(id)}</div>`;
 // The type of an inlay holding a Gemini thought signature's item, which is no picture.
 export const SIGNATURE = 'signature';
@@ -45,7 +45,7 @@ export function attachmentLead(text: string): { lead: string; text: string } {
 
 const TEXTFILE_TAG = /\{\{textfile::(.+?)\}\}/g;
 export const textFileNames = (text: string) => [...new Set([...text.matchAll(TEXTFILE_TAG)].map(([, name]) => name!))];
-export const swapTextFiles = (text: string, swap: (name: string) => string) => text.replace(TEXTFILE_TAG, (_, name: string) => swap(name));
+const swapTextFiles = (text: string, swap: (name: string) => string) => text.replace(TEXTFILE_TAG, (_, name: string) => swap(name));
 // The app's own markup for a text file, drawn after the display regex as inlays are; one the chat lacks has no title,
 // which Story.tsx words.
 const HTML_TEXT: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };

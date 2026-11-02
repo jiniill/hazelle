@@ -1,3 +1,4 @@
+import { fromBase64, toBase64 } from '../../connectors/base64';
 import { isRecord } from '../../connectors/values';
 import { UNSET } from '../script-api';
 import { assetUrl, findAsset, isVideo, type BotAsset } from '../assets';
@@ -380,19 +381,14 @@ define('u unicodedecodefromhex ue unicodeencodefromhex', 0, ([hex = '']) => Stri
 
 const utf8 = new TextEncoder();
 const fromUtf8 = new TextDecoder();
-function toBase64(bytes: Uint8Array): string {
-  let text = '';
-  for (const byte of bytes) text += String.fromCharCode(byte);
-  return btoa(text);
-}
 // Leniently, as Risu: what is outside the alphabet is skipped, and a lone last character dropped.
-function fromBase64(text: string): Uint8Array {
+function lenientBase64(text: string): Uint8Array {
   const clean = text.replace(/[^A-Za-z0-9+/]/g, '');
-  return Uint8Array.from(atob(clean.length % 4 === 1 ? clean.slice(0, -1) : clean), (char) => char.charCodeAt(0));
+  return fromBase64(clean.length % 4 === 1 ? clean.slice(0, -1) : clean);
 }
 const flip = (byte: number) => byte ^ 0xff;
 define('xor xorencrypt xorencode xore', 0, ([text = '']) => toBase64(utf8.encode(text).map(flip)));
-define('xordecrypt xordecode xord', 1, ([text]) => fromUtf8.decode(fromBase64(text!).map(flip)));
+define('xordecrypt xordecode xord', 1, ([text]) => fromUtf8.decode(lenientBase64(text!).map(flip)));
 // The default shift, 32768, is its own inverse. Each UTF-16 unit shifts alone, as in Risu, so text outside the BMP comes
 // back whole only after the round trip.
 define('crypt crypto caesar encrypt decrypt', 1, ([text, shift]) => {
@@ -503,7 +499,7 @@ define('codeblock', 1, (args) => {
 // Only the first argument, as in Risu: a formula holding :: is cut there.
 define('tex latex katex', 1, ([formula]) => `$$${formula}$$`);
 // Risu's attached text file. On screen Risu draws a box with its name, which is not built: there it stays as written.
-define('file', 2, ([, data], { context }) => (context.stage === 'display' ? null : fromUtf8.decode(fromBase64(data!))));
+define('file', 2, ([, data], { context }) => (context.stage === 'display' ? null : fromUtf8.decode(lenientBase64(data!))));
 
 define('language', 0, (_, { context: { language } }) => language);
 define('model', 0, (_, { context: { model } }) => model && model.id);

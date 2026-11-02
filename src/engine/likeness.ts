@@ -1,5 +1,5 @@
 import type { ChatMessage, InputPicture } from '../connectors/types';
-import { isRecord } from '../connectors/values';
+import { isRecord, jsonObject } from '../connectors/values';
 import type { BuiltSource, Outfit, Portrait } from '../model/likeness';
 import type { PicturePrompt } from './import/picture-prompt';
 import { answerJson } from './answer-json';
@@ -12,10 +12,10 @@ export const SAMPLE_MOST = 24;
 export const SHOWN_MOST = 6;
 // Characters of description, personality, scenario and lorebook together, and of the pictures' prompts.
 export const TEXT_MOST = 32_000;
-export const PROMPTS_MOST = 8_000;
+const PROMPTS_MOST = 8_000;
 
 // `Aya_smile.png` and `aya angry` are one stem, so a pack of expressions per character is sampled once per character.
-export const stemOf = (name: string) => name.toLowerCase().replace(/\.[a-z0-9]+$/, '').split(/[\s_\-.]/)[0]!;
+const stemOf = (name: string) => name.toLowerCase().replace(/\.[a-z0-9]+$/, '').split(/[\s_\-.]/)[0]!;
 
 export function sample<T extends { name: string }>(pictures: readonly T[], most: number): T[] {
   const stems = new Set<string>();
@@ -159,13 +159,8 @@ export const writePortraitFile = (portraits: readonly Portrait[]) => JSON.string
 
 // other: not JSON, not this file, or another version of it. portrait: the one at index is malformed.
 export function readPortraitFile(text: string): { ok: true; portraits: Portrait[] } | { ok: false; reason: 'other' } | { ok: false; reason: 'portrait'; index: number } {
-  let value: unknown;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    return { ok: false, reason: 'other' };
-  }
-  if (!isRecord(value) || value.hazelle !== PORTRAIT_FILE.hazelle || value.version !== PORTRAIT_FILE.version || !Array.isArray(value.portraits)) return { ok: false, reason: 'other' };
+  const value = jsonObject(text);
+  if (!value || value.hazelle !== PORTRAIT_FILE.hazelle || value.version !== PORTRAIT_FILE.version || !Array.isArray(value.portraits)) return { ok: false, reason: 'other' };
   const portraits = value.portraits.map(filePortrait);
   const index = portraits.indexOf(null);
   return index === -1 ? { ok: true, portraits: portraits as Portrait[] } : { ok: false, reason: 'portrait', index };
