@@ -36,6 +36,8 @@ const preview = `<div style="position:relative;width:1200px;height:630px;overflo
   <div style="position:absolute;top:44px;left:876px;width:126px;height:126px;background:${await art('moon')} center/contain no-repeat"></div>
   ${await layer('ridge-wide')}${await layer('rowA-wide')}${await layer('rowB-wide')}${await layer('rowC-wide')}
   <div style="position:absolute;inset:0;background:linear-gradient(90deg,#0a0a22d9 0,#0a0a2299 42%,transparent 68%)"></div>
+  <div style="position:absolute;top:150px;left:788px;width:260px;height:260px;background:radial-gradient(closest-side,#ffd59a80,#ffb46026 56%,transparent)"></div>
+  <div style="position:absolute;bottom:42px;left:826px;width:355px;height:480px;background:${await art('arin')} center/contain no-repeat"></div>
   <div style="position:absolute;inset:0">${svg(1200, 630, `${mark(84, 226, 150, gold)}<text x="262" y="325" font-family="Hangul" font-size="112" fill="${cream}" letter-spacing="-2">헤이젤</text><text x="266" y="382" font-family="Latin" font-size="36" fill="${cream}" fill-opacity="0.72">Hazelle</text>`)}</div>
 </div>`;
 

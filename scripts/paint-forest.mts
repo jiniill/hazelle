@@ -1,5 +1,6 @@
 // Paints the first page's forest (ui/landing/art) in a headless browser. Run: tsx scripts/paint-forest.mts [out dir] [only]
 // The pictures are committed: a visitor downloads what was looked at here, on any browser, and spends no CPU painting it.
+// arin.webp and cabin.webp in the same folder are illustrations, not painted here.
 import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -422,198 +423,6 @@ function painter() {
     ctx.stroke();
   }
 
-  function arin() {
-    const scale = 0.72;
-    const { element, ctx } = canvas(1000 * scale, 1100 * scale);
-    ctx.scale(scale, scale);
-    ctx.translate(180, 0);
-    const moonRim = hex('#8d95dc');
-    softDot(ctx, 90, 1040, 300, hex('#f2b865'), 0.42, 0.13);
-    crook(ctx, 12, '#0a0a1c');
-    const cut = (path: string, base: string, warmAt: number, warmReach: number, warmth: number, folds: (c: CanvasRenderingContext2D) => void = () => {}) => {
-      const layer = canvas(1000, 1100);
-      const c = layer.ctx;
-      c.translate(180, 0);
-      const shape = new Path2D(path);
-      c.fillStyle = base;
-      c.fill(shape);
-      c.globalCompositeOperation = 'source-atop';
-      folds(c);
-      const warm = c.createRadialGradient(44, 372, 40, warmAt, 372, warmReach);
-      warm.addColorStop(0, `rgba(255,186,104,${warmth})`);
-      warm.addColorStop(0.4, `rgba(226,132,76,${warmth * 0.5})`);
-      warm.addColorStop(1, 'rgba(120,70,70,0)');
-      c.fillStyle = warm;
-      c.fillRect(-180, 0, 1000, 1100);
-      const edge = c.createLinearGradient(400, 0, 640, 0);
-      edge.addColorStop(0, css(moonRim, 0));
-      edge.addColorStop(1, css(moonRim, 0.36));
-      c.fillStyle = edge;
-      c.fillRect(-180, 0, 1000, 1100);
-      // The shape's own lit rim on the lantern's side.
-      c.globalCompositeOperation = 'source-atop';
-      c.strokeStyle = 'rgba(255,190,120,0.2)';
-      c.lineWidth = 3;
-      c.stroke(shape);
-      ctx.save();
-      ctx.setTransform(scale, 0, 0, scale, 0, 0);
-      ctx.drawImage(layer.element, 0, 0);
-      ctx.restore();
-    };
-    const fall = (c: CanvasRenderingContext2D, lines: [number, number, number, number, number, number, number, string][]) => {
-      c.lineCap = 'round';
-      lines.forEach(([x1, y1, x2, y2, x3, y3, width, color]) => {
-        c.strokeStyle = color;
-        c.lineWidth = width;
-        c.beginPath();
-        c.moveTo(x1, y1);
-        c.quadraticCurveTo(x2, y2, x3, y3);
-        c.stroke();
-      });
-    };
-    cut(ARIN.skirt, '#0f1029', 120, 620, 0.42, (c) => fall(c, [[300, 560, 280, 800, 262, 1050, 30, 'rgba(4,4,14,0.6)'], [390, 560, 400, 800, 396, 1050, 40, 'rgba(4,4,14,0.55)'], [474, 560, 520, 800, 570, 1050, 28, 'rgba(4,4,14,0.5)'], [346, 560, 340, 800, 332, 1050, 12, 'rgba(255,180,110,0.08)'], [432, 560, 462, 800, 486, 1050, 12, 'rgba(150,150,230,0.1)']]));
-    cut(ARIN.sleeve, '#17152e', 130, 240, 0.8);
-    ctx.fillStyle = '#efb883';
-    ctx.fill(new Path2D(ARIN.hand));
-    cut(ARIN.capelet, '#14142f', 120, 460, 0.56, (c) => fall(c, [[338, 320, 300, 440, 268, 580, 18, 'rgba(4,4,14,0.45)'], [412, 316, 420, 440, 416, 586, 22, 'rgba(4,4,14,0.45)'], [468, 340, 490, 450, 510, 570, 14, 'rgba(4,4,14,0.4)']]));
-    cut(ARIN.hood, '#181836', 120, 460, 0.62);
-    ctx.fillStyle = '#05050f';
-    ctx.fill(new Path2D(ARIN.opening));
-    const cheek = ctx.createLinearGradient(296, 0, 354, 0);
-    cheek.addColorStop(0, '#f6c690');
-    cheek.addColorStop(1, '#8a5240');
-    ctx.fillStyle = cheek;
-    ctx.fill(new Path2D(ARIN.cheek));
-    ctx.fillStyle = '#1a1020';
-    ctx.fill(new Path2D('M386 148 C350 150 322 176 318 216 C334 206 348 216 352 240 C356 268 350 300 330 318 C352 318 366 300 372 268 C378 230 382 190 386 148 Z'));
-    // A firefly rests on her shoulder, as she says.
-    softDot(ctx, 468, 318, 34, hex('#e8e27a'), 0.9);
-    softDot(ctx, 468, 318, 7, hex('#fffbd0'), 1);
-    crook(ctx, 3, 'rgba(255,190,120,0.42)');
-    ctx.strokeStyle = '#120f18';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(44, 278);
-    ctx.lineTo(44, 316);
-    ctx.stroke();
-    ctx.fillStyle = '#120f18';
-    ctx.fill(new Path2D('M18 330 C22 318 66 318 70 330 L76 342 L12 342 Z M14 410 L74 410 L78 424 L10 424 Z'));
-    const flame = ctx.createRadialGradient(44, 378, 2, 44, 378, 40);
-    flame.addColorStop(0, '#ffffff');
-    flame.addColorStop(0.55, '#fff0bd');
-    flame.addColorStop(1, '#ffc35e');
-    ctx.fillStyle = flame;
-    ctx.fillRect(18, 342, 52, 68);
-    ctx.strokeStyle = '#120f18';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(18, 342, 52, 68);
-    return element;
-  }
-
-  function cabin() {
-    const scale = 0.72;
-    const { element, ctx } = canvas(1500 * scale, 1100 * scale);
-    const random = seeded(61);
-    ctx.scale(scale, scale);
-    ctx.translate(0, 80);
-    const wall = '#14132c';
-    const lit = '#ffcf85';
-    // Smoke first, so the chimney stands in front of it.
-    for (let k = 0; k < 26; k++) {
-      const t = k / 26;
-      softDot(ctx, 900 + Math.sin(t * 5) * 34 + t * 90, 210 - t * 290, 26 + t * 70, hex('#9a9ad0'), 0.09 * (1 - t) + 0.015);
-    }
-    softDot(ctx, 700, 760, 760, hex('#f2b865'), 0.2, 0.62);
-    ctx.fillStyle = '#0d0c20';
-    ctx.fillRect(868, 210, 74, 210);
-    ctx.fillStyle = wall;
-    ctx.fill(new Path2D('M400 520 L1040 520 L1040 880 L400 880 Z'));
-    ctx.fillStyle = '#0b0a1d';
-    ctx.fill(new Path2D('M300 560 L690 120 L730 120 L1140 560 L1050 560 L708 196 L392 560 Z'));
-    ctx.fillStyle = '#0f0e26';
-    ctx.fill(new Path2D('M392 560 L708 196 L1050 560 Z'));
-    // Shingles as leaves of moss, lit from the moon's side.
-    for (let k = 0; k < 2600; k++) {
-      const u = random();
-      const v = random();
-      const y = 150 + v * 410;
-      const half = (y - 150) * 0.97 + 20;
-      const x = 710 + (u - 0.5) * 2 * half;
-      const toRight = (x - 710) / half;
-      const color = mix(hex('#0d0c22'), hex('#2a2c64'), clamp(toRight * 0.6 + random() * 0.5) ** 2);
-      ctx.fillStyle = css(mix(color, hex('#6d73bb'), clamp(toRight - 0.72) * 1.4 * random()));
-      ctx.beginPath();
-      ctx.ellipse(x, y, 13 + random() * 9, 6 + random() * 3, (toRight > 0 ? 0.6 : -0.6) + (random() - 0.5) * 0.4, 0, 6.283);
-      ctx.fill();
-    }
-    // Round window under the gable, two square ones and the open door.
-    const lightUp = (path: Path2D, x: number, y: number, reach: number) => {
-      softDot(ctx, x, y, reach * 2.2, hex('#ffb860'), 0.3);
-      const fill = ctx.createRadialGradient(x, y, 4, x, y, reach);
-      fill.addColorStop(0, '#fff3cf');
-      fill.addColorStop(1, lit);
-      ctx.fillStyle = fill;
-      ctx.fill(path);
-    };
-    lightUp(new Path2D('M712 340 m-48 0 a48 48 0 1 0 96 0 a48 48 0 1 0 -96 0'), 712, 340, 60);
-    lightUp(new Path2D('M460 600 h120 v130 h-120 Z'), 520, 665, 96);
-    lightUp(new Path2D('M840 600 h120 v130 h-120 Z'), 900, 665, 96);
-    lightUp(new Path2D('M642 880 V680 a70 70 0 0 1 140 0 V880 Z'), 712, 740, 150);
-    ctx.strokeStyle = '#120f1e';
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.moveTo(712, 292);
-    ctx.lineTo(712, 388);
-    ctx.moveTo(664, 340);
-    ctx.lineTo(760, 340);
-    ctx.moveTo(520, 600);
-    ctx.lineTo(520, 730);
-    ctx.moveTo(460, 665);
-    ctx.lineTo(580, 665);
-    ctx.moveTo(900, 600);
-    ctx.lineTo(900, 730);
-    ctx.moveTo(840, 665);
-    ctx.lineTo(960, 665);
-    ctx.stroke();
-    // Bushes and ground hold it in the forest, with the door's light spilling down the path.
-    const palette = PALETTES.near;
-    for (let k = 0; k < 2400; k++) {
-      const x = random() * 1500;
-      if (x > 610 && x < 810) continue;
-      const fromDoor = Math.abs(x - 712) / 780;
-      const y = 900 - random() ** 2 * (40 + 150 * fromDoor);
-      const color = mix(palette.deep, palette.body, random());
-      ctx.fillStyle = css(mix(mix(color, palette.rim, random() ** 7 * 0.6), palette.warm, clamp(0.7 - fromDoor * 2.4) * random() * 0.7));
-      ctx.beginPath();
-      ctx.ellipse(x, y, 8 + random() * 7, 5 + random() * 4, random() * 3, 0, 6.283);
-      ctx.fill();
-    }
-    const under = ctx.createLinearGradient(0, 880, 0, 1020);
-    under.addColorStop(0, css(palette.deep));
-    under.addColorStop(1, css(palette.deep, 0));
-    ctx.fillStyle = under;
-    ctx.fillRect(0, 880, 1500, 200);
-    const spill = ctx.createLinearGradient(0, 880, 0, 1020);
-    spill.addColorStop(0, 'rgba(255,200,120,0.75)');
-    spill.addColorStop(1, 'rgba(255,190,110,0)');
-    ctx.fillStyle = spill;
-    ctx.filter = 'blur(14px)';
-    ctx.fill(new Path2D('M642 880 L782 880 L900 1020 L524 1020 Z'));
-    ctx.filter = 'none';
-    // Nothing of it has an edge: the sides and the ground melt into the night.
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalCompositeOperation = 'destination-in';
-    const sides = ctx.createLinearGradient(0, 0, element.width, 0);
-    sides.addColorStop(0, 'rgba(0,0,0,0)');
-    sides.addColorStop(0.2, 'rgba(0,0,0,1)');
-    sides.addColorStop(0.8, 'rgba(0,0,0,1)');
-    sides.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = sides;
-    ctx.fillRect(0, 0, element.width, element.height);
-    return element;
-  }
-
-  // The last hill, black against the dawn, with the hazel and a small figure holding the lantern up.
   function hill(shape: Shape) {
     const { element, ctx } = canvas(shape.width, shape.height);
     const { width, height, gapX, tall } = shape;
@@ -679,8 +488,6 @@ function painter() {
     moon,
     ridge,
     bough,
-    arin,
-    cabin,
     hill,
     grain,
     rowA: (shape: Shape) => row(shape, { seed: 11, palette: PALETTES.far, top: 0.71, gapHalf: shape.tall ? 0.1 : 0.05, dip: 0.012, trees: shape.tall ? 10 : 22, tall: [0.22, 0.34], blur: shape.tall ? 1 : 1.5, leaf: 0.0036, density: 0.95, clearing: { y: 0.28, rx: shape.tall ? 0.46 : 0.17, ry: 0.32 } }),
@@ -704,8 +511,6 @@ const JOBS: Job[] = [
   ...shaped('bough', 0.72),
   ...shaped('hill', 0.72),
   { name: 'moon', call: 'moon()', quality: 0.8 },
-  { name: 'arin', call: 'arin()', quality: 0.82 },
-  { name: 'cabin', call: 'cabin()', quality: 0.7 },
   { name: 'grain', call: 'grain()', quality: 0.9 },
 ];
 

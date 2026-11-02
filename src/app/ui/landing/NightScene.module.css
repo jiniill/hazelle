@@ -19,7 +19,6 @@
   .flies,
   .grain,
   .curtain,
-  .carried,
   .dawn {
     position: absolute;
     inset: 0;
@@ -97,7 +96,7 @@
     bottom: var(--scene-arin-ground);
     left: var(--scene-arin-x);
     height: var(--scene-arin-height);
-    aspect-ratio: 1000 / 1100;
+    aspect-ratio: 813 / 1100;
     transform: translateX(-50%);
   }
 
@@ -130,10 +129,33 @@
     transform: translateX(-50%);
   }
 
+  /* An illustration cut from its background: the light around it and the ground under it stand it in this forest. */
+  .cabin::before,
+  .cabin::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .cabin::before {
+    inset: var(--scene-cabin-halo-reach);
+    background: var(--scene-cabin-halo);
+  }
+
+  .cabin::after {
+    right: var(--scene-cabin-pool-side);
+    bottom: var(--scene-cabin-pool-under);
+    left: var(--scene-cabin-pool-side);
+    height: var(--scene-cabin-pool-height);
+    background: var(--scene-cabin-pool);
+  }
+
   .cabin img {
+    position: relative;
     display: block;
     width: 100%;
     opacity: 0;
+    mask-image: var(--scene-cabin-foot);
     transition: opacity var(--scene-art-in) var(--ease-enter);
   }
 
@@ -193,22 +215,44 @@
     animation: firefly var(--takes) var(--ease-loop) var(--after) infinite;
   }
 
-  /* The lantern the visitor carries: moved, never repainted. */
+  /* The lantern the visitor carries: the forest stays dark outside it. Moved, never repainted; the veil's flat rim costs no memory. */
+  .lantern,
+  .step {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .veil,
+  .carried {
+    position: absolute;
+    border-radius: var(--radius-full);
+  }
+
+  .veil {
+    top: calc(var(--scene-veil-reach) * -1);
+    left: calc(var(--scene-veil-reach) * -1);
+    width: calc(var(--scene-veil-reach) * 2);
+    height: calc(var(--scene-veil-reach) * 2);
+    background: var(--scene-veil);
+  }
+
   .carried {
     top: calc(var(--scene-carried-reach) * -1);
     left: calc(var(--scene-carried-reach) * -1);
     width: calc(var(--scene-carried-reach) * 2);
     height: calc(var(--scene-carried-reach) * 2);
-    inset-block-end: auto;
-    inset-inline-end: auto;
-    opacity: 0;
     background: var(--scene-carried);
-    transform: translate3d(calc(var(--look-x) * 100vw), calc(var(--look-y) * 100vh), 0);
-    transition: opacity var(--scene-answer) var(--ease-enter);
   }
 
-  [data-lit] .carried {
-    opacity: 1;
+  /* Rooted at the ground, so a row leans in the wind instead of sliding. */
+  .sway {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 100%;
+    animation: sway var(--sway-takes) var(--ease-loop) infinite alternate;
   }
 
   .grain {
@@ -225,9 +269,14 @@
   @media (prefers-reduced-motion: reduce) {
     .arinGlow,
     .bough,
+    .sway,
     .fly,
     .curtain {
       animation: none;
+    }
+
+    .lantern {
+      display: none;
     }
 
     .curtain {
@@ -250,6 +299,16 @@
     62% {
       opacity: 0.74;
       transform: translate(-50%, -50%) scale(calc(var(--flare, 1) * 0.97));
+    }
+  }
+
+  @keyframes sway {
+    from {
+      transform: skewX(var(--scene-sway-from));
+    }
+
+    to {
+      transform: skewX(var(--scene-sway-to));
     }
   }
 

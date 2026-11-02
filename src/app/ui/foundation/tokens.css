@@ -545,15 +545,22 @@
   --scene-sun-size: clamp(460px, 64vw, 900px);
   --scene-arin-ground: 28.5%;
   --scene-arin-x: 63.4%;
-  --scene-arin-height: 10.8vh;
-  --scene-arin-lantern-x: 22.4%;
-  --scene-arin-lantern-y: 33.8%;
-  --scene-arin-glow: 84%;
+  --scene-arin-height: 10vh;
+  --scene-arin-lantern-x: 6.4%;
+  --scene-arin-lantern-y: 27.7%;
+  --scene-arin-glow: 100%;
   --scene-lantern-glow: radial-gradient(closest-side, #ffe9bde6 0, #ffbe6e80 26%, #f2a85a2e 58%, transparent);
   --scene-flicker: 3.4s;
-  --scene-cabin-ground: 27%;
-  --scene-cabin-x: 62.4%;
-  --scene-cabin-width: 20vw;
+  --scene-cabin-ground: 29%;
+  --scene-cabin-x: 62.1%;
+  --scene-cabin-width: 13vw;
+  --scene-cabin-halo-reach: -14% -12% 0;
+  --scene-cabin-halo: radial-gradient(ellipse 50% 56% at 52% 60%, #ffb4603d, #ffb4600f 62%, transparent);
+  --scene-cabin-pool-side: -24%;
+  --scene-cabin-pool-under: -11%;
+  --scene-cabin-pool-height: 24%;
+  --scene-cabin-pool: radial-gradient(ellipse 22% 42% at 52.5% 50%, #ffc47842, #ffb46014 58%, transparent), radial-gradient(ellipse closest-side, #06071ea6 40%, transparent);
+  --scene-cabin-foot: linear-gradient(#000 96%, transparent);
   --scene-bough-sway: 7s;
   --scene-bough-from: -0.5deg;
   --scene-bough-to: 0.7deg;
@@ -563,8 +570,12 @@
   --scene-fly-reach: 46px;
   --scene-fly-light: #f6f1a8;
   --scene-fly-glow: 0 0 10px 3px #e8e27acc, 0 0 28px 8px #e8e27a33;
-  --scene-carried: radial-gradient(closest-side, #ffc4782e, transparent);
-  --scene-carried-reach: 300px;
+  --scene-carried: radial-gradient(closest-side, #ffcf8f4d 0, #ffbf7626 42%, transparent);
+  --scene-carried-reach: clamp(220px, 34vmax, 560px);
+  --scene-veil: radial-gradient(circle closest-side, transparent 8%, #05061a57 26%);
+  --scene-veil-reach: 240vmax;
+  --scene-sway-from: -0.3deg;
+  --scene-sway-to: 0.3deg;
   --landing-hero: clamp(42px, 6.6vw, 96px);
   --landing-title: clamp(30px, 4vw, 56px);
   --landing-point: clamp(26px, 3.4vw, 46px);
@@ -825,8 +836,8 @@
     --scene-moon-top: 14vh;
     --scene-moon-size: 76px;
     --scene-arin-x: 52.3%;
-    --scene-arin-height: 6.4vh;
-    --scene-cabin-x: 50%;
-    --scene-cabin-width: 26vw;
+    --scene-arin-height: 6vh;
+    --scene-cabin-x: 49.6%;
+    --scene-cabin-width: 17vw;
   }
 }

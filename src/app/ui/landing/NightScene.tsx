@@ -69,17 +69,17 @@ function useWalk(frames: () => Keyframe[]) {
 
 // Far planes share pictures with near ones: seen at another depth, between other trees, a row reads as new.
 // Each comes out of the fog well before it is near, so the fog does its far colors, and leaves before it fills the screen.
-const ROWS = [
+const ROWS: readonly { art: { wide: string; tall: string }; z: number; seen: Seen; takes?: string }[] = [
   { art: ROW_B, z: 19000, seen: { in: [0.3, 0.5], out: [0.84, 0.9] } },
   { art: ROW_D, z: 13000, seen: { in: [0.16, 0.36], out: [0.8, 0.86] } },
   { art: ROW_B, z: 8500, seen: { in: [0.1, 0.28], out: [0.72, 0.8] } },
   { art: ROW_D, z: 5500, seen: { in: [0.06, 0.2], out: [0.58, 0.66] } },
   { art: ROW_B, z: 3400, seen: { in: [0.04, 0.14], out: [0.38, 0.44] } },
   { art: ROW_D, z: 2000, seen: { in: [0.02, 0.1], out: [0.22, 0.27] } },
-  { art: ROW_A, z: 1000, seen: { out: [0.1, 0.16] } },
-  { art: ROW_B, z: 600, seen: { out: [0.07, 0.12] } },
-  { art: ROW_C, z: 200, seen: { out: [0.05, 0.09] } },
-] as const;
+  { art: ROW_A, z: 1000, seen: { out: [0.1, 0.16] }, takes: '11s' },
+  { art: ROW_B, z: 600, seen: { out: [0.07, 0.12] }, takes: '9s' },
+  { art: ROW_C, z: 200, seen: { out: [0.05, 0.09] }, takes: '7s' },
+];
 
 const CABIN = { z: 5000, seen: { in: [0.42, 0.52], out: [0.665, 0.71] } } as const;
 const ARIN = { z: 1500, seen: { out: [0.25, 0.275] } } as const;
@@ -90,6 +90,9 @@ const RIDGE = { z: 60000, seen: {} } as const;
 const stops = (at: (share: number) => Keyframe) => () => Array.from({ length: SAMPLES + 1 }, (_, index) => at(index / SAMPLES));
 const MOON = stops((share) => ({ transform: `translate3d(0, ${share < 0.44 ? between(0, 0.44, share) * 5 : 5 + between(0.44, 0.84, share) * 69}vh, 0)` }));
 const DAWN = stops((share) => ({ opacity: between(0.66, 1, share) }));
+// The carried lantern dips and rises with each step of the walk, and is not needed once the sun is up.
+const STRIDES = 22;
+const STEP = stops((share) => ({ transform: `translate3d(${Math.sin(share * STRIDES * Math.PI) * 9}px, ${Math.abs(Math.cos(share * STRIDES * Math.PI)) * 14}px, 0)`, opacity: 1 - between(0.68, 0.9, share) }));
 const SUN = stops((share) => ({ transform: `translate3d(0, ${(1 - between(0.74, 1, share)) * 34}vh, 0)`, opacity: between(0.74, 1, share) }));
 
 const FIREFLIES = Array.from({ length: 16 }, (_, index) => {
@@ -128,6 +131,7 @@ function Moving({ className, frames, children }: { className: string; frames: ()
 // glow: how far the visitor has come (0 to 3), told by the door's steps. talking: 아린 is answering.
 export function NightScene({ glow, talking }: { glow: number; talking: boolean }) {
   const stage = useRef<HTMLDivElement>(null);
+  const lantern = useRef<HTMLDivElement>(null);
   const [walking, setWalking] = useState(false);
 
   useEffect(() => {
@@ -156,27 +160,45 @@ export function NightScene({ glow, talking }: { glow: number; talking: boolean }
   }, [walking]);
 
   useEffect(() => {
-    if (!hasFinePointer() || stillness()) return;
+    if (stillness()) return;
     const node = stage.current!;
-    const aim = { x: 0.5, y: 0.5 };
-    const now = { x: 0.5, y: 0.5 };
+    const carried = lantern.current!;
+    // A finger also moves the lantern, but looking around stays with a mouse: it restyles every plane, which a phone pays for.
+    const looks = hasFinePointer();
+    const aim = matchMedia(MEDIA.tallScreen).matches ? { x: 0.5, y: 0.66 } : { x: 0.62, y: 0.68 };
+    const now = { ...aim };
     let frame = 0;
+    const place = () => {
+      carried.style.transform = `translate3d(${now.x * innerWidth}px, ${now.y * innerHeight}px, 0)`;
+    };
     const settle = () => {
       now.x += (aim.x - now.x) * 0.08;
       now.y += (aim.y - now.y) * 0.08;
-      node.style.setProperty('--look-x', now.x.toFixed(4));
-      node.style.setProperty('--look-y', now.y.toFixed(4));
+      place();
+      if (looks) {
+        node.style.setProperty('--look-x', now.x.toFixed(4));
+        node.style.setProperty('--look-y', now.y.toFixed(4));
+      }
       frame = Math.abs(aim.x - now.x) + Math.abs(aim.y - now.y) > 0.0008 ? requestAnimationFrame(settle) : 0;
     };
-    const move = ({ clientX, clientY }: PointerEvent) => {
-      aim.x = clientX / innerWidth;
-      aim.y = clientY / innerHeight;
-      node.dataset['lit'] = '';
+    const point = (x: number, y: number) => {
+      aim.x = x / innerWidth;
+      aim.y = y / innerHeight;
       if (!frame) frame = requestAnimationFrame(settle);
     };
-    addEventListener('pointermove', move, { passive: true });
+    const moved = ({ clientX, clientY }: PointerEvent) => point(clientX, clientY);
+    // A scrolling finger stops sending pointer events almost at once; touch events keep coming.
+    const touched = ({ touches }: TouchEvent) => point(touches[0]!.clientX, touches[0]!.clientY);
+    place();
+    addEventListener('pointermove', moved, { passive: true });
+    addEventListener('touchstart', touched, { passive: true });
+    addEventListener('touchmove', touched, { passive: true });
+    addEventListener('resize', place);
     return () => {
-      removeEventListener('pointermove', move);
+      removeEventListener('pointermove', moved);
+      removeEventListener('touchstart', touched);
+      removeEventListener('touchmove', touched);
+      removeEventListener('resize', place);
       cancelAnimationFrame(frame);
     };
   }, []);
@@ -192,8 +214,10 @@ export function NightScene({ glow, talking }: { glow: number; talking: boolean }
       <Moving className={styles.sun} frames={SUN} />
       <Plane {...RIDGE}><Art wide={ridgeWide} tall={ridgeTall} /></Plane>
       {walking && <Plane {...HILL}><Art wide={hillWide} tall={hillTall} /></Plane>}
-      {ROWS.map(({ art, z, seen }) => ('in' in seen && !walking ? null : (
-        <Plane key={z} z={z} seen={seen}><Art wide={art.wide} tall={art.tall} priority={z === 200} /></Plane>
+      {ROWS.map(({ art, z, seen, takes }) => (seen.in && !walking ? null : (
+        <Plane key={z} z={z} seen={seen}>
+          {takes ? <div className={styles.sway} style={{ '--sway-takes': takes } as CSSProperties}><Art wide={art.wide} tall={art.tall} priority={z === 200} /></div> : <Art wide={art.wide} tall={art.tall} />}
+        </Plane>
       )))}
       {walking && (
         <Plane {...CABIN}>
@@ -211,6 +235,12 @@ export function NightScene({ glow, talking }: { glow: number; talking: boolean }
       </Plane>
       <div className={styles.haze} />
       <div className={styles.warmth} />
+      <div ref={lantern} className={styles.lantern}>
+        <Moving className={styles.step} frames={STEP}>
+          <div className={styles.veil} />
+          <div className={styles.carried} />
+        </Moving>
+      </div>
       <div className={styles.flies}>
         {FIREFLIES.map(({ key, style }) => (
           <div key={key} className={styles.gather} style={style}>
@@ -218,7 +248,6 @@ export function NightScene({ glow, talking }: { glow: number; talking: boolean }
           </div>
         ))}
       </div>
-      <div className={styles.carried} />
       <div className={styles.grain} />
       <div className={styles.curtain} />
     </div>
