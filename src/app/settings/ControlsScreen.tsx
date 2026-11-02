@@ -1,10 +1,11 @@
+import { DetailFold } from '../common/DetailFold';
 import { ReplyRow } from '../common/ReadingRows';
 import { PAGES } from '../common/words';
 import { useDisplay } from '../display';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { runShortcut } from '../shortcuts';
-import { Button, Disclosure, NavBar, Screen, Section, SettingGroup, SettingRow, Switch } from '../ui';
+import { Button, NavBar, Screen, Section, SettingGroup, SettingRow, Switch } from '../ui';
 
 export function ControlsScreen({ back }: { back: Back | null }) {
   const { display, changeDisplay } = useDisplay();
@@ -35,15 +36,13 @@ export function ControlsScreen({ back }: { back: Back | null }) {
           />
         </SettingGroup>
         {(display.scrubber || display.stepButtons) && (
-          <Disclosure label="세부 설정">
-            <SettingGroup label="세부 설정">
-              <SettingRow
-                label="내 메시지에서도 멈추기"
-                help="끄면 캐릭터 메시지에서만 멈추고 내 메시지는 건너뛰어요. 현재 읽고 있는 메시지의 처음과 끝에서는 항상 멈춰요."
-                control={<Switch label="내 메시지에서도 멈추기" checked={display.userStops} onChange={(userStops) => changeDisplay({ userStops })} />}
-              />
-            </SettingGroup>
-          </Disclosure>
+          <DetailFold set={0}>
+            <SettingRow
+              label="내 메시지에서도 멈추기"
+              help="끄면 캐릭터 메시지에서만 멈추고 내 메시지는 건너뛰어요. 현재 읽고 있는 메시지의 처음과 끝에서는 항상 멈춰요."
+              control={<Switch label="내 메시지에서도 멈추기" checked={display.userStops} onChange={(userStops) => changeDisplay({ userStops })} />}
+            />
+          </DetailFold>
         )}
       </Section>
       <Section title="입력창">
