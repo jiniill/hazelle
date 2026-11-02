@@ -1,5 +1,6 @@
 import { useEffect, useRef, type FormEventHandler, type ReactNode } from 'react';
 import lantern from './art/lantern.webp';
+import { useHanging } from './hanging';
 import styles from './Landing.module.css';
 
 // top: the doors' row. The lantern and the moving cue below the words say there is more further down, and need no words of their own.
@@ -151,8 +152,11 @@ export const SayChoices = ({ choices, onPick }: { choices: readonly string[]; on
 );
 
 // Hanging from the dark above, each on its own length of rope, its tag tied below; the whole lantern is the link.
-export const KeyPlaces = ({ places }: { places: readonly { name: string; site: string; href: string; action: string }[] }) => (
-  <ul className={styles.places}>
+export function KeyPlaces({ places }: { places: readonly { name: string; site: string; href: string; action: string }[] }) {
+  const list = useRef<HTMLUListElement>(null);
+  useHanging(list, `.${styles.placeLink}`, `.${styles.placeTag}`);
+  return (
+  <ul ref={list} className={styles.places}>
     {places.map(({ name, site, href, action }) => (
       <li key={name} className={styles.place}>
         <a className={styles.placeLink} href={href} target="_blank" rel="noreferrer">
@@ -168,7 +172,8 @@ export const KeyPlaces = ({ places }: { places: readonly { name: string; site: s
       </li>
     ))}
   </ul>
-);
+  );
+}
 
 export const Promises = ({ points }: { points: readonly string[] }) => (
   <ul className={styles.promises}>
