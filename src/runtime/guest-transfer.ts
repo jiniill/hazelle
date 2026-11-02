@@ -67,7 +67,7 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
   const guest = await recallGuest();
   if (!guest) return { ok: true, data: null };
   const conversion = guest.accountId === accountId;
-  if (conversion && !sameKey(guest.vaultKey, vaultKey)) return failed('unreadable');
+  if (conversion && !sameVaultKey(guest.vaultKey, vaultKey)) return failed('unreadable');
   const source = guestBackend(guest.accountId);
   const held = await inventory(source, options.signal);
   if (!held.ok) return held;
@@ -203,7 +203,7 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
   return { ok: true, data: null };
 }
 
-const sameKey = (one: VaultKey, two: VaultKey) => one.length === two.length && one.every((byte, index) => byte === two[index]);
+export const sameVaultKey = (one: VaultKey, two: VaultKey) => one.length === two.length && one.every((byte, index) => byte === two[index]);
 
 async function copyOrder(target: Backend, accountId: string, vaultKey: VaultKey, timeline: string, ids: string[], signal?: AbortSignal): Promise<ApiResult<number>> {
   const key = await objectKey(vaultKey);
