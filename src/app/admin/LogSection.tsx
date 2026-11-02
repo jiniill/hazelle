@@ -1,11 +1,10 @@
 import { readLog, type LogRow } from '../../runtime/admin';
 import { sizeText } from '../common/size';
-import { ago } from '../common/time';
+import { ago, moment } from '../common/time';
 import { BOARD, NOTICES } from '../common/words';
 import { navigate } from '../shell/router';
 import { ListItem, Panel } from '../ui';
 import { restoreError } from '../common/RestoresDialog';
-import { moment } from '../common/time';
 import { HEAD_ROWS, PagedList, SeeAll, usePages } from '../common/useLoaded';
 
 // The actions server/admin and server/board log. One they do not list shows as the server wrote it.
@@ -39,7 +38,7 @@ const ACTIONS: Record<string, string> = {
   'comment-delete': '댓글 삭제',
 };
 
-const capText = (cap: unknown) => (typeof cap === 'number' ? sizeText(cap) : cap === 'default' ? '기본값' : '없음');
+const capWords = (cap: unknown) => (typeof cap === 'number' ? sizeText(cap) : cap === 'default' ? '기본값' : '없음');
 
 function detailOf({ action, detail }: LogRow): string | undefined {
   if (action === 'send-notice' && detail === null) return '모두에게';
@@ -52,12 +51,12 @@ function detailOf({ action, detail }: LogRow): string | undefined {
   if (action === 'post-delete' && typeof values.title === 'string') return values.title;
   if (action === 'comment-delete' && typeof values.post === 'number') return `글 ${values.post}`;
   if (action === 'set-board' && typeof values.guests === 'boolean') return `손님 글쓰기 ${values.guests ? '열기' : '닫기'}`;
-  if (action === 'set-caps') return `${String(values.username)} · 텍스트 한도 ${capText(values.bytesCap)} · 이미지 한도 ${capText(values.fileBytesCap)}`;
+  if (action === 'set-caps') return `${String(values.username)} · 텍스트 한도 ${capWords(values.bytesCap)} · 이미지 한도 ${capWords(values.fileBytesCap)}`;
   if (action === 'restore-begun') return `${String(values.username)} · ${typeof values.at === 'number' ? `${moment(values.at)} 시점으로` : '복원 전으로 되돌리기'}`;
   if (action === 'restore-failed' && typeof values.error === 'string') return `${String(values.username)} · ${restoreError(values.error)}`;
   if (typeof values.username === 'string') return values.username;
   if (action === 'set-service' && typeof values.signupCap === 'number') {
-    return `가입 정원 ${values.signupCap}명 · 계정당 텍스트 한도 ${capText(values.accountBytesCap)} · 계정당 이미지 한도 ${capText(values.accountFileBytesCap)}`;
+    return `가입 정원 ${values.signupCap}명 · 계정당 텍스트 한도 ${capWords(values.accountBytesCap)} · 계정당 이미지 한도 ${capWords(values.accountFileBytesCap)}`;
   }
   return JSON.stringify(detail);
 }
