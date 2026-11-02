@@ -38,7 +38,7 @@ export type Account = { admin: boolean; localProviders: readonly string[]; facts
 const LEAVING_WAIT = 10_000;
 
 // A leave held back by unsaved work, which goes anyway when pressed.
-export type HeldLeave = { go: () => Promise<string | null> | void };
+type HeldLeave ={ go: () => Promise<string | null> | void };
 
 const SessionContext = createContext<{ session: Session; account: Account; saves: Saves; held: HeldLeave | null } | null>(null);
 
@@ -122,17 +122,14 @@ export function useChatModel(id: string | null) {
     });
     return lease.release;
   }, [store, id, attempt, exists]);
-  const model = id === null ? null : read.chat(id);
-  const value = useSyncExternalStore(model?.subscribe ?? subscribeNothing, model?.snapshot ?? snapshotNull);
-  const scope = id === null ? null : read.scope(id);
-  const { state, error } = useSyncExternalStore(scope?.subscribe ?? subscribeNothing, scope?.snapshot ?? snapshotUnloaded);
+  const value = useRead(id === null ? null : read.chat(id), snapshotNull);
+  const { state, error } = useRead(id === null ? null : read.scope(id), snapshotUnloaded);
   return { model: value, state, error, retry };
 }
 
 export function useChatSummary(id: string | null) {
   const { read } = useSession();
-  const model = id === null ? null : read.summary(id);
-  return useSyncExternalStore(model?.subscribe ?? subscribeNothing, model?.snapshot ?? snapshotNull);
+  return useRead(id === null ? null : read.summary(id), snapshotNull);
 }
 
 export function useSummaries() {
@@ -213,8 +210,7 @@ export function useBin() {
 // parent null is a chat not saved yet, which has none.
 export function useChildren<K extends 'lore' | 'asset' | 'illustration' | 'remark' | 'toolchat' | 'inlay'>(kind: K, parent: string | null): Stored<K>[] {
   const { read } = useSession();
-  const model = parent === null ? null : read.children(kind, parent);
-  return useSyncExternalStore(model?.subscribe ?? subscribeNothing, model?.snapshot ?? snapshotNone);
+  return useRead(parent === null ? null : read.children(kind, parent), snapshotNone);
 }
 // Retain per-parent list identities; key parents by contents, not the caller's fresh array identity.
 export function useChildrenOf<K extends 'lore' | 'asset'>(kind: K, parents: readonly string[]): Stored<K>[][] {
@@ -253,16 +249,18 @@ const snapshotNone = () => NONE;
 const UNLOADED: ChatScopeRead = { state: 'unloaded', error: null };
 const snapshotUnloaded = () => UNLOADED;
 
+function useRead<T>(model: { subscribe: (listener: () => void) => () => void; snapshot: () => T } | null, absent: () => T): T {
+  return useSyncExternalStore(model?.subscribe ?? subscribeNothing, model?.snapshot ?? absent);
+}
+
 export function useCharacter(id: string | null) {
   const { read } = useSession();
-  const model = id === null ? null : read.character(id);
-  return useSyncExternalStore(model?.subscribe ?? subscribeNothing, model?.snapshot ?? snapshotNull);
+  return useRead(id === null ? null : read.character(id), snapshotNull);
 }
 
 export function useStored<K extends Kind>(kind: K, id: string | null): Stored<K> | null {
   const { read } = useSession();
-  const model = id === null ? null : read.object(kind, id);
-  return useSyncExternalStore(model?.subscribe ?? subscribeNothing, model?.snapshot ?? snapshotNull);
+  return useRead(id === null ? null : read.object(kind, id), snapshotNull);
 }
 
 export function useChatDisplay(id: string, opening: Opening, screen: ChatScope['screen']) {
@@ -293,8 +291,7 @@ export function useTranslating(): Translating {
 
 export function useChatMemory(id: string | null): Memory | null {
   const { read } = useSession();
-  const model = id === null ? null : read.memory(id);
-  return useSyncExternalStore(model?.subscribe ?? subscribeNothing, model?.snapshot ?? snapshotNull);
+  return useRead(id === null ? null : read.memory(id), snapshotNull);
 }
 
 export function useIllustrating(): Illustrating {
@@ -347,6 +344,5 @@ export function useToolHosts(module: string): ReadonlyMap<string, number> | unde
 
 export function useChatTools(chat: string | null): ToolMenu[] {
   const { read, tools } = useSession();
-  const model = chat === null ? null : read.tools(chat, tools);
-  return useSyncExternalStore(model?.subscribe ?? subscribeNothing, model?.snapshot ?? snapshotNone);
+  return useRead(chat === null ? null : read.tools(chat, tools), snapshotNone);
 }

@@ -92,7 +92,7 @@ export function Page({ route, closeLayer, onPaired }: { route: Route; closeLayer
         return <GalleryScreen place={at.place} back={sideBack(at)} />;
       case 'shelf':
       case 'edit':
-        return <CharacterPage at={at} wide={wide} />;
+        return <CharacterPage at={at} wide={wide} back={sideBack(at)} />;
       case 'new-chat':
       case 'chat':
         return <ChatPage at={at} wide={wide} onPaired={onPaired} />;
@@ -222,7 +222,7 @@ function HomePage() {
   return populated ? <GalleryScreen place={null} back={null} lead={<GuestLine />} /> : <HomeScreen />;
 }
 
-function CharacterPage({ at, wide }: { at: At<'shelf' | 'edit'>; wide: boolean }) {
+function CharacterPage({ at, wide, back }: { at: At<'shelf' | 'edit'>; wide: boolean; back: Back | null }) {
   const shelf = useCharacter(at.character);
   const stored = useStored('character', at.character);
   if (at.character === null) return (
@@ -232,7 +232,7 @@ function CharacterPage({ at, wide }: { at: At<'shelf' | 'edit'>; wide: boolean }
     </Screen>
   );
   if (!shelf) return missing(absentItem('character', stored), wide);
-  return <CharacterEditScreen key={shelf.id} shelf={shelf} back={wide ? null : backTo(up(at), wide)} />;
+  return <CharacterEditScreen key={shelf.id} shelf={shelf} back={back} />;
 }
 
 function ChatPage({ at, wide, onPaired }: { at: At<'new-chat' | 'chat'>; wide: boolean; onPaired: (paired: boolean) => void }) {

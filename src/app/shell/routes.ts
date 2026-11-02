@@ -74,7 +74,7 @@ export type Route =
   | { kind: 'settings' };
 
 export const HOME: Route = { kind: 'home' };
-export const ADMIN_LISTS = ['accounts', 'reports', 'log'] as const;
+const ADMIN_LISTS =['accounts', 'reports', 'log'] as const;
 export type AdminList = (typeof ADMIN_LISTS)[number];
 // 캐릭터 둘러보기's place: a folder's id, BIN_PLACE for 휴지통, or null for the top.
 export const BIN_PLACE = 'bin';

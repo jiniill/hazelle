@@ -151,16 +151,20 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const pairs = usePanelsBeside();
   const [panels, setPanels] = useState<Panels>(NO_PANELS);
   const { panel } = panels;
+  // null follows the latest.
+  const [infoPick, setInfoPick] = useState<string | null>(null);
   const open = (next: Panel) => setPanels((current) => opened(current, next, pairs));
   const openInfo = (reply: string, tab: InfoTab) => {
     setInfoPick(reply);
     open({ kind: 'info', tab });
   };
-  const askingTool = id === null ? undefined : tools.find(({ module }) => frames.get(module)?.asking && frames.get(module)?.chat === id)?.module;
+  const askingTool = id === null ? undefined : tools.find(({ module }) => {
+    const frame = frames.get(module);
+    return frame?.asking && frame.chat === id;
+  })?.module;
   useEffect(() => { if (askingTool) setPanels((current) => opened(current, { kind: 'tool', module: askingTool }, pairs)); }, [askingTool, pairs]);
   const flipPanel = (next: Panel, same: (current: Panel) => boolean) => setPanels((current) => (current.panel && same(current.panel) ? { ...current, panel: null } : opened(current, next, pairs)));
-  // null follows the latest.
-  const [infoPick, setInfoPick] = useState<string | null>(null);
+  const flipKind = (kind: 'bookmarks' | 'lore' | 'autopilot' | 'toggles') => flipPanel({ kind }, (current) => current.kind === kind);
   const timePin = useTimePin();
   const [branching, setBranching] = useState(false);
   const { found, search, actions: searchActions } = useChatSearch(messages, texts, translation.translating, translation.flipped, seekTo);
@@ -468,14 +472,14 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       copy,
       press: (button: BotButton | null) => void press(button),
       branch,
-      bookmarks: () => flipPanel({ kind: 'bookmarks' }, ({ kind }) => kind === 'bookmarks'),
-      lore: () => flipPanel({ kind: 'lore' }, ({ kind }) => kind === 'lore'),
-      autopilot: () => flipPanel({ kind: 'autopilot' }, ({ kind }) => kind === 'autopilot'),
+      bookmarks: () => flipKind('bookmarks'),
+      lore: () => flipKind('lore'),
+      autopilot: () => flipKind('autopilot'),
       follow,
       info: (reply: string) => openInfo(reply, panel?.kind === 'info' ? panel.tab : 'reply'),
       pickInfo: setInfoPick,
       switchInfoTab: (tab: InfoTab) => setPanels((current) => (current.panel?.kind === 'info' ? { ...current, panel: { kind: 'info', tab } } : current)),
-      flipToggles: () => flipPanel({ kind: 'toggles' }, ({ kind }) => kind === 'toggles'),
+      flipToggles: () => flipKind('toggles'),
       memory: (record: string | null) => open({ kind: 'memory', record }),
       openInspect: (tab: InspectTab) => open({ kind: 'inspect', tab }),
       switchInspectTab: (tab: InspectTab) => setPanels((current) => current.inspect ? { ...current, inspect: { kind: 'inspect', tab } } : current),
