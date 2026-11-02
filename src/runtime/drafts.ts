@@ -11,7 +11,7 @@ export type DraftPicture = { kind: 'picture'; name: string; url: string; state: 
 export type DraftFile = { kind: 'file'; value: TextFile };
 export type DraftAttachment = DraftPicture | DraftFile;
 const NONE: readonly DraftAttachment[] = [];
-export const attachmentName = (attachment: DraftAttachment) => (attachment.kind === 'picture' ? attachment.name : attachment.value.name);
+const attachmentName =(attachment: DraftAttachment) => (attachment.kind === 'picture' ? attachment.name : attachment.value.name);
 
 // Vault-lifetime drafts outlive screens/sessions so failed background sends can return text.
 // Unsaved chats key by character until first save; move their text and attachments together.

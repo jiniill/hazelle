@@ -127,7 +127,7 @@ export async function pairWithPrompts(store: ObjectStore, id: string, { risu, na
   return { ok: true, data: due };
 }
 
-export function setPersonaModule(store: ObjectStore, persona: string, id: string, on: boolean): Promise<ApiResult<Stored<'persona'>>> {
+function setPersonaModule(store: ObjectStore, persona: string, id: string, on: boolean): Promise<ApiResult<Stored<'persona'>>> {
   return store.update('persona', persona, (current) => ({ ...current, modules: switched(current.modules, id, on) }));
 }
 
