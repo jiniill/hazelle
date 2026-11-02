@@ -236,12 +236,13 @@ export function forecast(last: Prior | null, next: CacheSend): Forecast | null {
 export function breakCost(connection: Connection, model: Model, { parts, written, against, prefix }: Forecast, ratio: number): CacheBreakCost | null {
   if (!model.price || !against?.broken) return null;
   const native = (count: number) => Math.round(count * ratio);
-  const inputTokens = native(parts.reduce((sum, { tokens }) => sum + tokens, 0));
+  const total = parts.reduce((sum, { tokens }) => sum + tokens, 0);
+  const inputTokens = native(total);
   const unit = costUnit(resolveConnection(connection)?.type ?? null);
   const cost = (cached: number, write: number) => priceCost(model.price!, { inputTokens, outputTokens: 0, reasoningTokens: null, cachedInputTokens: native(cached), cacheWriteInputTokens: native(write) }, unit);
   const paid = cost(against.read, written);
   // A provider caching on its own bills what it writes as plain input, so neither side writes.
-  const ends = prefix ? parts.reduce((sum, { tokens }) => sum + tokens, 0) : against.read + written;
+  const ends = prefix ? total : against.read + written;
   const whole = cost(Math.min(against.of, ends), prefix ? 0 : Math.max(ends - against.of, 0));
   return paid && whole && { paid, whole };
 }
