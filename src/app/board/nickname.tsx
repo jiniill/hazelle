@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { NICKNAME_LENGTH, validNickname } from '../../contracts/board';
 import { readNickname, setNickname } from '../../runtime/board';
 import { describeFailure } from '../common/failure';
+import { AuthorLine } from '../common/postRow';
 import { useAttempt } from '../common/useAttempt';
+import { useLoaded } from '../common/useLoaded';
 import { BOARD } from '../common/words';
 import { useAccount, useSession } from '../session';
 import { useToast } from '../toast';
@@ -88,4 +90,30 @@ export function useNicknameGate() {
     />
   );
   return { gate: (then: () => void) => void gate(then), dialog };
+}
+
+// The account's own nickname as 게시판 shows it, with its 바꾸기 and the dialog that does it, for a place to lay out.
+export function useOwnNickname() {
+  const { admin } = useAccount();
+  const loaded = useLoaded(readNickname);
+  const [changing, setChanging] = useState(false);
+  const name = loaded.data?.name ?? null;
+  const line = <AuthorLine author={{ name, operator: admin, mine: true, left: false }} note={admin ? undefined : BOARD.nickname} size="md" />;
+  // The operator writes as 운영자, which no one picks or changes.
+  const change = !admin && (
+    <Button variant="secondary" size="sm" onClick={() => setChanging(true)}>
+      {name ? '바꾸기' : '설정'}
+    </Button>
+  );
+  const dialog = changing && (
+    <NicknameDialog
+      current={name}
+      onSet={() => {
+        setChanging(false);
+        loaded.reload();
+      }}
+      onClose={() => setChanging(false)}
+    />
+  );
+  return { loaded, line, change, dialog };
 }
