@@ -142,7 +142,8 @@ on_machine() {
   ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "root@$host" "
     exec 9>/run/hazelle-deploy.lock
     flock -n 9 || { echo 'deploy: another deploy holds /run/hazelle-deploy.lock on the machine; nothing changed' >&2; exit 5; }
-    exec timeout -k 60 3600 bash -c '$LIB$1'" </dev/null || status=$?
+    exec timeout -k 60 3600 bash -c '$LIB
+$1'" </dev/null || status=$?
   case $status in
     0 | 1 | 3 | 4 | 5) exit "$status" ;;
   esac
