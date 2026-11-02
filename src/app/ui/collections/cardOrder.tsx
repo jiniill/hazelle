@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as HeldPointer, type ReactNode, type RefObject } from 'react';
+import { sideOf } from './cardDrag';
 import { scrollAncestor } from './Viewport';
 
 // Use pointer events for touch ordering; restrict moves to the same group, never folders among characters.
@@ -58,10 +59,7 @@ export function CardOrderScope({ root, keys, children }: { root: RefObject<HTMLE
       const at = box?.dataset.orderKey;
       const entry = at === undefined ? undefined : entries.current.get(at);
       if (!box || at === undefined || entry?.group !== group || at === key) target = null;
-      else {
-        const rect = box.getBoundingClientRect();
-        target = { key: at, side: point.x > rect.left + rect.width / 2 ? 'after' : 'before' };
-      }
+      else target = { key: at, side: sideOf(point.x, box.getBoundingClientRect()) };
       setOver((shown) => (shown?.key === target?.key && shown?.side === target?.side ? shown : target));
     };
     let frame = 0;
