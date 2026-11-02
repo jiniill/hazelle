@@ -9,13 +9,14 @@ import { readableTexts, type Asset, type Avatar, type Character, type Lore, type
 import { likenessId, type Likeness } from '../model/likeness';
 import type { ToggleValues } from '../model/prompt';
 import { ORDER_ID, rearrange, toFront } from '../model/order';
-import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
+import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiResult } from './api';
 import { inOrder, type Files } from './files';
 import { thumbnail } from './picture';
 import { markDeleted } from './removal';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import type { Write } from './object-writes';
 
 export type Progress = (step: { kind: 'picture' } | { kind: 'assets' | 'saving'; done: number; total: number }) => void;
@@ -281,7 +282,7 @@ const FILL: { [S in Scoped]: (saved: SwitchesOf[S] | undefined, change?: Partial
 
 function scoped<S extends Scoped>(store: Pick<ObjectStore, 'get'>, character: string | null, scope: S): { switches: SwitchesOf[S] | undefined; own: boolean } {
   const own = character === null ? undefined : (store.get('character', character)?.value[OWN[scope]] as SwitchesOf[S] | undefined);
-  return { switches: own ?? (store.get('settings', SETTINGS_ID)?.value[scope] as SwitchesOf[S] | undefined), own: own !== undefined };
+  return { switches: own ?? (accountSettings(store)?.[scope] as SwitchesOf[S] | undefined), own: own !== undefined };
 }
 
 // Only the switches given, merged into the ones a chat of character reads: its own, or else the shared ones. A field
@@ -298,7 +299,7 @@ function setScoped<S extends Scoped>(store: ObjectStore, character: string | nul
 // On starts from the shared switches as they are; off follows them again.
 function setOwnScoped<S extends Scoped>(store: ObjectStore, character: string, scope: S, own: boolean): Promise<ApiResult<Stored<'character'>>> {
   const fill = FILL[scope] as (saved: SwitchesOf[S] | undefined) => SwitchesOf[S];
-  const copy = fill(store.get('settings', SETTINGS_ID)?.value[scope] as SwitchesOf[S] | undefined);
+  const copy = fill(accountSettings(store)?.[scope] as SwitchesOf[S] | undefined);
   return store.update('character', character, (current) => (own ? { ...current, [OWN[scope]]: copy } : without(current, OWN[scope])));
 }
 
@@ -330,7 +331,7 @@ export const setOwnIllustrate = (store: ObjectStore, character: string, own: boo
 
 // Append global then character note. Trim only on read: autosave trimming would eat a newline still being typed.
 export function translatorNotes(store: ObjectStore, character: string | null): string {
-  const global = store.get('settings', SETTINGS_ID)?.value.translatorNote;
+  const global = accountSettings(store)?.translatorNote;
   const own = character === null ? undefined : store.get('character', character)?.value.translatorNote;
   return [global, own].map((note) => note?.trim() ?? '').filter(Boolean).join('\n\n');
 }

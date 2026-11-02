@@ -2,10 +2,11 @@ import { expect, it, vi } from 'vitest';
 import type { Entry, Receipt } from '../model/chat';
 import { blankCard } from '../engine/import/card';
 import { memoryId, type Memory } from '../model/memory';
-import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
+import { EMPTY_SETTINGS } from '../model/settings';
 import type { Counted } from '../model/usage';
 import { appendCost, appendReply } from './chat-log';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import type { Write } from './object-writes';
 import { testServer } from './testing';
 import { Usage } from './usage';
@@ -19,7 +20,7 @@ const message = (call: Receipt): Entry => ({ type: 'message', role: 'assistant',
 const write = (parent: string, value: Entry, id = crypto.randomUUID()): Write => ({ type: 'create', kind: 'entry', id, parent, value });
 const chat = (id: string, origin?: string): Write => ({ type: 'create', kind: 'chat', id, parent: null, value: { title: null, character: null, models: {}, ...(origin && { origin: { id: origin, name: '', after: '' } }) } });
 const places = (calls: Counted[]) => Object.fromEntries(calls.map(({ call, chat }) => [call.id, chat]));
-const filled = (store: ObjectStore) => store.get('settings', SETTINGS_ID)?.value.ledger;
+const filled = (store: ObjectStore) => accountSettings(store)?.ledger;
 
 async function account() {
   const { store } = await server.account();

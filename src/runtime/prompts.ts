@@ -9,7 +9,7 @@ import type { Chat } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import { live, type Module } from '../model/library';
 import { sortOf, type AgentPlace, type Block, type ConversationPrompt, type PictureSettings, type PictureTags, type Prompt, type PromptOf, type PromptSort, type ToggleLine } from '../model/prompt';
-import { EMPTY_SETTINGS, labOn, SETTINGS_ID, type LabId, type Settings } from '../model/settings';
+import { EMPTY_SETTINGS, labOn, type LabId, type Settings } from '../model/settings';
 import { fromBase64 } from '../base64';
 import type { ApiResult } from './api';
 import type { BackupOutput } from './backup-zip';
@@ -19,6 +19,7 @@ import type { Write } from './object-writes';
 import { markDeleted } from './removal';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 
 // Every write of `prompt` objects and of the default prompts, except a conversation prompt's `models` layer, which
 // runtime/assignment writes with the other layers, and a backup's restore.
@@ -57,7 +58,7 @@ export type PromptChoice<S extends PromptSort = 'conversation'> = { kind: 'promp
 
 function choose<S extends Defaulted>(store: Pick<ObjectStore, 'get'>, sort: S, chosen: string | undefined): PromptChoice<S> {
   const own = chosen !== undefined;
-  const id = chosen ?? store.get('settings', SETTINGS_ID)?.value[DEFAULTS[sort].setting];
+  const id = chosen ?? accountSettings(store)?.[DEFAULTS[sort].setting];
   const prompt = id === undefined ? null : live(store.get('prompt', id));
   return prompt && ofSort(prompt, sort) ? { kind: 'prompt', prompt, own } : { kind: 'missing', own };
 }
@@ -133,7 +134,7 @@ export async function exportPreset(store: Pick<ObjectStore, 'get'>, prompt: Conv
 export async function addDefaults(store: ObjectStore): Promise<void> {
   const added = await Promise.all(
     Object.values(DEFAULTS).map(async (entry) => {
-      const settings = store.get('settings', SETTINGS_ID)?.value;
+      const settings = accountSettings(store);
       if (settings?.[entry.setting] !== undefined || ('lab' in entry && !labOn(settings, entry.lab))) return [];
       if (store.get('prompt', entry.id)) return [entry];
       const made = await entry.make();
@@ -189,7 +190,7 @@ export function copyPrompt(store: ObjectStore, id: string, name: string, copy?: 
 // To 휴지통 (model/library Mark). A sort's default prompt cannot be deleted until another prompt of its sort is made the
 // default.
 export async function removePrompt(store: ObjectStore, id: string): Promise<ApiResult<Stored<'prompt'>> | { ok: false; error: 'default' }> {
-  const settings = store.get('settings', SETTINGS_ID)?.value;
+  const settings = accountSettings(store);
   if (Object.values(DEFAULTS).some(({ setting }) => settings?.[setting] === id)) return { ok: false, error: 'default' };
   return markDeleted(store, 'prompt', id, Date.now());
 }

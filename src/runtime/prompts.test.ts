@@ -4,7 +4,7 @@ import { importPreset } from '../engine/import/preset';
 import { unpack } from '../engine/import/risum';
 import { live } from '../model/library';
 import type { Block } from '../model/prompt';
-import { SETTINGS_ID } from '../model/settings';
+import { accountSettings } from './account-settings';
 import { fromBase64 } from '../base64';
 import { chatModel, setPromptModel } from './assignment';
 import { setChatOwn } from './chat-log';
@@ -81,13 +81,13 @@ describe('addDefaults', () => {
     const failing = await import('./prompts');
     await failing.addDefaults(store);
     expect(store.get('prompt', STARTER_ID)).toBeNull();
-    expect(store.get('settings', SETTINGS_ID)?.value.prompt).toBeUndefined();
-    expect(store.get('settings', SETTINGS_ID)?.value.translatePrompt).toBe(TRANSLATOR_ID);
+    expect(accountSettings(store)?.prompt).toBeUndefined();
+    expect(accountSettings(store)?.translatePrompt).toBe(TRANSLATOR_ID);
     vi.doUnmock('./starter-prompt.risup?inline');
     vi.resetModules();
     const { addDefaults: again } = await import('./prompts');
     await again(store);
-    expect(store.get('settings', SETTINGS_ID)?.value.prompt).toBe(STARTER_ID);
+    expect(accountSettings(store)?.prompt).toBe(STARTER_ID);
   });
 
   it('adds each sort’s default prompt once, even from two devices at the same time', async () => {
@@ -97,7 +97,7 @@ describe('addDefaults', () => {
     await store.pull();
     const names = () => store.list('prompt').filter(live).map((kept) => kept.value.name).sort();
     expect(names()).toEqual(['기본 기억', '기본 대화', '기본 마스코트', '기본 번역', '기본 삽화']);
-    const settings = store.get('settings', SETTINGS_ID)?.value;
+    const settings = accountSettings(store);
     expect([settings?.prompt, settings?.translatePrompt, settings?.memoryPrompt, settings?.illustratePrompt, settings?.mascotPrompt]).toEqual([STARTER_ID, TRANSLATOR_ID, MEMORY_PROMPT_ID, ILLUSTRATOR_ID, COMMENTATOR_ID]);
 
     const [mine, translator] = await Promise.all([addPrompt(store, '내 프롬프트', 'conversation'), addPrompt(store, '내 번역', 'translate')]);
@@ -115,7 +115,7 @@ describe('addDefaults', () => {
     if (!mine.ok) throw new Error('not saved');
     await setDefaultPrompt(store, mine.data.id);
     await addDefaults(store);
-    const settings = store.get('settings', SETTINGS_ID)?.value;
+    const settings = accountSettings(store);
     expect([settings?.prompt, settings?.translatePrompt]).toEqual([mine.data.id, TRANSLATOR_ID]);
     expect(store.get('prompt', STARTER_ID)).toBeNull();
   });

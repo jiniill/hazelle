@@ -1,11 +1,12 @@
 import type { Chat } from '../model/chat';
 import { FEATURE_LABS, FEATURE_STARTS, FEATURES, type Feature, type FeatureSwitches } from '../model/features';
 import { without } from '../model/fields';
-import { EMPTY_SETTINGS, labOn, SETTINGS_ID, type Settings } from '../model/settings';
+import { EMPTY_SETTINGS, labOn, type Settings } from '../model/settings';
 import type { ApiResult } from './api';
 import { illustrateSwitches, translateSwitches, type IllustrateSetup, type TranslateSetup } from './characters';
 import { chatPrompt } from './prompts';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 
 // A new 캐릭터 없이 chat: what the 공용 layer resolves to when no chat or card of its own sets anything.
 export const SHARED_CHAT: Chat = { title: null, character: null, models: {} };
@@ -26,11 +27,11 @@ export const availableFeatures = (settings: Pick<Settings, 'labs'> | undefined):
 
 // Nearest explicit layer wins; unset uses FEATURE_STARTS. Disabled experiments stay off despite stored overrides.
 function decided(store: Reader, layers: (FeatureSwitches | undefined)[]): Features {
-  const available = availableFeatures(store.get('settings', SETTINGS_ID)?.value);
+  const available = availableFeatures(accountSettings(store));
   return Object.fromEntries(FEATURES.map((feature) => [feature, available.includes(feature) && (layers.find((layer) => layer?.[feature] !== undefined)?.[feature] ?? FEATURE_STARTS[feature])])) as Features;
 }
 
-const settingsLayer = (store: Reader) => store.get('settings', SETTINGS_ID)?.value.features;
+const settingsLayer = (store: Reader) => accountSettings(store)?.features;
 const characterLayer = (store: Reader, character: string | null) => (character === null ? undefined : store.get('character', character)?.value.features);
 function promptLayer(store: Reader, chat: Pick<Chat, 'prompt'>) {
   const prompt = chatPrompt(store, chat);

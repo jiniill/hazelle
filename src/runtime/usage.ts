@@ -8,6 +8,7 @@ import { counted, type Counted, type Ledger, type UsageCall } from '../model/usa
 import type { ApiFailure, ApiResult } from './api';
 import type { Write } from './object-writes';
 import type { ObjectStore, Pin } from './store';
+import { accountSettings } from './account-settings';
 
 // Derive a stable UUID-v8 ledger id from the call id; random UUID-v4 stream ids cannot collide.
 // Repeating the same call lands idempotently (server once).
@@ -115,7 +116,7 @@ export class Usage {
   }
 
   private async filledAll(pin: Pin, signal: AbortSignal): Promise<ApiFailure | null> {
-    const settings = this.store.get('settings', SETTINGS_ID)?.value;
+    const settings = accountSettings(this.store);
     if (!settings || settings.ledger === 'filled') return null;
     const { ledger } = settings;
     const depth = ({ value }: Stored<'chat'>) => {

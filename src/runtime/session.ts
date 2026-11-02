@@ -4,7 +4,6 @@ import { createTools } from './tools/host';
 import type { LuaRunner } from './script-binding';
 import type { VaultKey } from '../vault/keys';
 import { withInside } from '../model/folders';
-import { SETTINGS_ID } from '../model/settings';
 import { holdAccount, holdPulse, markSeen, type ApiResult } from './api';
 import { serverBackend, type Backend } from './backend';
 import { AssetUrls, UnfoundAssets } from './assets';
@@ -30,6 +29,7 @@ import { addDefaults } from './prompts';
 import { holdDiagnosis, sharesDiagnosis } from './auto-diagnosis';
 import { sharesPulse } from './pulse';
 import { keepSynced, ObjectStore, type PullProgress } from './store';
+import { accountSettings } from './account-settings';
 import { Talk } from './talk';
 import { Translator } from './translate';
 import { Cues } from './cues';
@@ -123,7 +123,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   // The opening pull is sent before the switch is read, so the page-load mark rides the next request.
   holdTransport(transport);
   const holdSharing = () => {
-    const settings = store.get('settings', SETTINGS_ID)?.value;
+    const settings = accountSettings(store);
     holdPulse(transport.detached && sharesPulse(settings));
     holdDiagnosis(transport.detached && sharesDiagnosis(settings));
   };
@@ -220,7 +220,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
       void backfillSummaries(store, closing.signal);
       // A purge before the ledger's fill took a chat's calls would lose them: the trash empties only once it has.
       void usage.fill(closing.signal).then(() => {
-        if (store.get('settings', SETTINGS_ID)?.value.ledger === 'filled') void purgeExpired(store, files, Date.now(), closing.signal);
+        if (accountSettings(store)?.ledger === 'filled') void purgeExpired(store, files, Date.now(), closing.signal);
       });
     })();
   };

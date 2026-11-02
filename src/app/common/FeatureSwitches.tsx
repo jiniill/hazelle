@@ -1,8 +1,8 @@
 import type { Feature, FeatureSwitches as Switches } from '../../model/features';
 import type { ApiFailure } from '../../runtime/api';
 import { availableFeatures, above, inherited, type FeatureLayer } from '../../runtime/features';
-import { SETTINGS_ID } from '../../model/settings';
 import type { ObjectStore } from '../../runtime/store';
+import { accountSettings } from '../../runtime/account-settings';
 import { useLibrary, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { ChoiceGroup, Section, SettingGroup, SettingRow } from '../ui';
@@ -22,7 +22,7 @@ const followsAbove = (owner: FeatureLayer) => follows(ABOVE[above(owner)]);
 
 // A layer's line in a list of parts: what it follows while it sets nothing shown, else what it sets, 번역 끔 · 삽화 켬.
 export const featureHolds = (store: ObjectStore, owner: FeatureLayer, own: Switches | undefined) =>
-  availableFeatures(store.get('settings', SETTINGS_ID)?.value).flatMap((feature) => (own?.[feature] === undefined ? [] : [`${FEATURE_NAMES[feature]} ${own[feature] ? '켬' : '끔'}`])).join(' · ') || followsAbove(owner);
+  availableFeatures(accountSettings(store)).flatMap((feature) => (own?.[feature] === undefined ? [] : [`${FEATURE_NAMES[feature]} ${own[feature] ? '켬' : '끔'}`])).join(' · ') || followsAbove(owner);
 
 const choiceOf = (value: boolean | undefined): Choice => (value === undefined ? 'default' : value ? 'on' : 'off');
 

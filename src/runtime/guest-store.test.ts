@@ -2,13 +2,13 @@ import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CLAIM_SETTLE_MS } from '../contracts/files';
 import type { Connection } from '../connectors/types';
-import { SETTINGS_ID } from '../model/settings';
 import { randomBytes } from '../vault/aead';
 import { feedQuery } from './backend';
 import { guestAccount, guestBackend, guestBoardSecret } from './guest-store';
 import { Files } from './files';
 import { openSession } from './session';
 import { ObjectStore, type PullProgress } from './store';
+import { accountSettings } from './account-settings';
 
 const connection = (label: string): Connection => ({ type: 'openrouter', label, baseUrl: null, protocol: null, accounts: [{ id: 'key', secret: 'sk-or-x' }], turns: null, starred: [] });
 
@@ -117,7 +117,7 @@ describe('a guest’s browser store', () => {
     const { accountId, vaultKey, backend } = await guest();
     const opened = await openSession(accountId, vaultKey, '손님', new AbortController().signal, undefined, { backend });
     if (!opened.ok) throw new Error(opened.error);
-    expect(opened.data.store.get('settings', SETTINGS_ID)?.value.persona).toBeDefined();
+    expect(accountSettings(opened.data.store)?.persona).toBeDefined();
     opened.data.close();
     expect(fetched).not.toHaveBeenCalled();
   });
