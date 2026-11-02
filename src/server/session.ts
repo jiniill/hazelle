@@ -6,7 +6,8 @@ import type { AccountState } from '../contracts/admin';
 import { ACCOUNT_HEADER, BOT_HEADER } from '../contracts/http';
 import { CAP } from './caps';
 import type { Db } from './db/service-db';
-import { DAY_MS, fail, hex, ID, sha256Hex, type Account, type AppEnv } from './http';
+import { hex } from '../hex';
+import { DAY_MS, fail, ID, sha256Hex, type Account, type AppEnv } from './http';
 
 const SESSION_LIFETIME_MS = 30 * DAY_MS;
 

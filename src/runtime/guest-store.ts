@@ -1,5 +1,6 @@
 import { CLAIM_SETTLE_MS, MAX_FILE_BYTES, MAX_FILE_IDS } from '../contracts/files';
 import { BATCH_LIMITS, type BatchAnswer, type FeedAnswer, type FeedQuery, type SealedChange, type SealedWrite } from '../contracts/objects';
+import { hex } from '../hex';
 import { randomBytes } from '../vault/aead';
 import { recallGuest, rememberVault } from '../vault/device';
 import type { VaultKey } from '../vault/keys';
@@ -50,7 +51,7 @@ export async function guestBoardSecret(account: string, create = false): Promise
     const head = await headOf(tx, account);
     if (!head) return failure('browser-storage');
     if (!head.boardSecret && create) {
-      head.boardSecret = Array.from(randomBytes(32), (byte) => byte.toString(16).padStart(2, '0')).join('');
+      head.boardSecret = hex(randomBytes(32));
       tx.objectStore('guest-heads').put(head, account);
     }
     return { ok: true, data: head.boardSecret ?? null };

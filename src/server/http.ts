@@ -65,10 +65,6 @@ export const countVisit = (kind: 'reads' | 'files' | 'reports') =>
 
 export const sha256Hex = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex');
 
-export function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 export const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 export const isPositive = (value: unknown): value is number => isCount(value) && value > 0;
 

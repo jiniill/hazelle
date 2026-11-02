@@ -1,4 +1,5 @@
 import type { ProviderFit } from '../engine/prompt-budget';
+import { hex } from '../hex';
 import { unavailableCalibration } from '../model/token-calibration';
 import { prepareChat, type ContextRefusal, type PreparedChat } from '../connectors/preparation';
 import { resolveConnection, resolveModel, wireRoute } from '../connectors/registry';
@@ -24,7 +25,7 @@ export async function measureInput(store: ObjectStore, connection: string, reque
   const counts = await store.evaluation.count(prepared.wire.segments.map(({ text }) => text)).catch(() => null);
   if (!Array.isArray(counts)) return { kind: 'unavailable', reason: 'tokenizer' };
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(prepared.wire)));
-  return { kind: 'measured', key: calibrationKey(connection, requestClass, prepared), at: Date.now(), fingerprint: Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(''), o200k: counts.reduce((sum, count) => sum + count, 0), messages: prepared.wire.messages, blocks: prepared.wire.segments.length, pictures: prepared.wire.pictures };
+  return { kind: 'measured', key: calibrationKey(connection, requestClass, prepared), at: Date.now(), fingerprint: hex(new Uint8Array(digest)), o200k: counts.reduce((sum, count) => sum + count, 0), messages: prepared.wire.messages, blocks: prepared.wire.segments.length, pictures: prepared.wire.pictures };
 }
 
 export function completedCalibration(calibration: CallCalibration, outcome: { state: string; cut: string | null; usage: ReportedUsage | null; inputComplete?: true }): CallCalibration {
