@@ -81,11 +81,13 @@ export function room(element: HTMLElement) {
   return { left, top, right, bottom };
 }
 
+export const menuEdge = (element: HTMLElement) => parseFloat(getComputedStyle(element).getPropertyValue('--menu-edge'));
+
 export function keepOnScreen(element: HTMLElement) {
   // Measured unshifted: --nudge inherits, so a popover inside another would otherwise start from the outer one's shift.
   element.style.setProperty('--nudge', '0px');
   const box = element.getBoundingClientRect();
-  const edge = parseFloat(getComputedStyle(element).getPropertyValue('--menu-edge'));
+  const edge = menuEdge(element);
   const { left, right } = room(element);
   const shift = box.left < left + edge ? left + edge - box.left : box.right > right - edge ? right - edge - box.right : 0;
   element.style.setProperty('--nudge', `${shift}px`);

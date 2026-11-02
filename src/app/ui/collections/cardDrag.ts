@@ -24,6 +24,9 @@ export const bothDrops = (a: Handlers, b: Handlers): Handlers => ({
   onDrop: (event) => { a.onDrop?.(event); b.onDrop?.(event); },
 });
 
+// One rule for both ways a card is placed: a mouse drag here and a held finger (cardOrder).
+export const sideOf = (x: number, box: DOMRect): 'before' | 'after' => (x > box.left + box.width / 2 ? 'after' : 'before');
+
 const left = (event: DragEvent) => !event.currentTarget.contains(event.relatedTarget as Node | null);
 
 // over: a card is held above the target.
@@ -58,10 +61,7 @@ export function useCardPlace(onPlace: ((key: string, after: boolean) => void) | 
   const [side, setSide] = useState<'before' | 'after' | null>(null);
   if (!onPlace) return { side: null, props: {} };
   const type = TYPES[carried];
-  const sideOf = (event: DragEvent) => {
-    const box = event.currentTarget.getBoundingClientRect();
-    return event.clientX > box.left + box.width / 2 ? 'after' : 'before';
-  };
+  const sideAt = (event: DragEvent) => sideOf(event.clientX, event.currentTarget.getBoundingClientRect());
   return {
     side,
     props: {
@@ -69,7 +69,7 @@ export function useCardPlace(onPlace: ((key: string, after: boolean) => void) | 
         if (!event.dataTransfer.types.includes(type)) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
-        const next = sideOf(event);
+        const next = sideAt(event);
         if (next !== side) setSide(next);
       },
       onDragLeave: (event: DragEvent) => {
@@ -79,7 +79,7 @@ export function useCardPlace(onPlace: ((key: string, after: boolean) => void) | 
         if (!event.dataTransfer.types.includes(type)) return;
         event.preventDefault();
         setSide(null);
-        onPlace(event.dataTransfer.getData(type), sideOf(event) === 'after');
+        onPlace(event.dataTransfer.getData(type), sideAt(event) === 'after');
       },
     } satisfies Handlers,
   };

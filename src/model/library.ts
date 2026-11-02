@@ -2,6 +2,7 @@ export type PackOwner = { kind: 'character' | 'module'; id: string };
 // A lorebook's owner: a pack's, or a chat's own (채팅 로어북), which owns no scripts, so PackOwner leaves it out.
 export type LoreOwner = { kind: PackOwner['kind'] | 'chat'; id: string };
 import type { FileRef } from '../vault/files';
+import { grouped } from './fields';
 import type { Card, LoreEntry, Pack } from '../engine/import/types';
 import type { Translation, TranslateSwitches } from './chat';
 import type { FeatureSwitches } from './features';
@@ -144,14 +145,9 @@ export function shelve<C extends ChatLike>(
   binned: C[],
 ): { characters: CharacterShelf<C>[]; none: Shelf<C>; deleted: CharacterShelf<C>[]; deletedChats: C[] } {
   const avatarOf = new Map(avatars.map((avatar) => [avatar.parent, avatar]));
-  const grouped = new Map<string | null, C[]>();
-  for (const item of chats) {
-    const own = grouped.get(item.chat.character);
-    if (own) own.push(item);
-    else grouped.set(item.chat.character, [item]);
-  }
-  const shelves = characters.map(({ id, value }) => ({ id, character: value, face: avatarOf.get(id)?.value.thumb ?? null, avatar: avatarOf.get(id)?.id ?? null, chats: grouped.get(id) ?? [] }));
-  const loose = grouped.get(null) ?? [];
+  const byCharacter = grouped(chats, (item) => item.chat.character);
+  const shelves = characters.map(({ id, value }) => ({ id, character: value, face: avatarOf.get(id)?.value.thumb ?? null, avatar: avatarOf.get(id)?.id ?? null, chats: byCharacter.get(id) ?? [] }));
+  const loose = byCharacter.get(null) ?? [];
   const live = shelves.filter((shelf) => isLive(shelf.character));
   const liveIds = new Set(live.map((shelf) => shelf.id));
   return {

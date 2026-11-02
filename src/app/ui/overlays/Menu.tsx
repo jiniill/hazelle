@@ -6,7 +6,7 @@ import { ButtonSlot } from '../controls/Button';
 import { Icon } from '../foundation/Icon';
 import { faceStyle, type FontId } from '../foundation/fonts';
 import { hasFinePointer } from '../foundation/media';
-import { keepOnScreen, room, useLayer } from './layers';
+import { keepOnScreen, menuEdge, room, useLayer } from './layers';
 import styles from './Menu.module.css';
 
 export type MenuOpener = { ref: RefObject<HTMLButtonElement | null>; popup: 'menu' | 'dialog'; expanded: boolean; onClick: () => void };
@@ -118,7 +118,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
     }
     keepOnScreen(panel.current);
     const box = panel.current.getBoundingClientRect();
-    const edge = parseFloat(getComputedStyle(panel.current).getPropertyValue('--menu-edge'));
+    const edge = menuEdge(panel.current);
     const { top, bottom } = room(panel.current);
     panel.current.style.setProperty('--room', `${side.startsWith('above') ? box.bottom - top - edge : bottom - box.top - edge}px`);
   }, [open, side, at]);
@@ -141,7 +141,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
 
 // Drops from the pointer, or rises to it where the room below is shorter than the menu and than the room above.
 function placeAt(panel: HTMLElement, anchor: HTMLElement, at: { x: number; y: number }) {
-  const edge = parseFloat(getComputedStyle(panel).getPropertyValue('--menu-edge'));
+  const edge = menuEdge(panel);
   const { top, bottom } = room(panel);
   const below = bottom - edge - at.y;
   const above = at.y - top - edge;

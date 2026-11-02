@@ -1,5 +1,6 @@
 import type { Cost } from '../connectors/types';
 import type { Receipt } from './chat';
+import { grouped } from './fields';
 
 type Tally = { total: number; unknown: number };
 // Unknown counts stay separate from known sums; never add costs across units.
@@ -87,16 +88,8 @@ export type UsageReport = { total: ModelUsage; periods: UsageGroup<number>[]; mo
 export function usageReport(calls: Counted[], window: ReportWindow, now: number, kept: Kept): UsageReport {
   const since = window === 'all' ? null : windowStart(window, now);
   const shown = calls.filter(({ at }) => since === null || at >= since);
-  const group = <K>(keyOf: (one: Counted) => K): UsageGroup<K>[] => {
-    const groups = new Map<K, UsageCall[]>();
-    for (const one of shown) {
-      const key = keyOf(one);
-      const held = groups.get(key);
-      if (held) held.push(one);
-      else groups.set(key, [one]);
-    }
-    return [...groups].map(([key, made]) => ({ key, usage: sum(made) })).sort((a, b) => b.usage.calls - a.usage.calls);
-  };
+  const group = <K>(keyOf: (one: Counted) => K): UsageGroup<K>[] =>
+    [...grouped(shown, keyOf)].map(([key, made]) => ({ key, usage: sum(made) })).sort((a, b) => b.usage.calls - a.usage.calls);
   const monthly = window === 'all';
   const startOf = (at: number) => windowStart(monthly ? 'month' : 'today', at);
   const made = new Map(group(({ at }) => startOf(at)).map(({ key, usage }) => [key, usage]));

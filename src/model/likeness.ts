@@ -1,5 +1,5 @@
 import type { Receipt } from './chat';
-import { inverted } from './memory';
+import { secondInverted } from './memory';
 
 // One profile per pack at likenessId(owner); regenerate only on explicit request, not per picture.
 
@@ -20,4 +20,4 @@ export type Likeness = { portraits: Portrait[]; at: number; receipt: Receipt | n
 export const PORTRAITS_MOST = 8;
 
 // Deterministic id makes concurrent creation conflict instead of duplicating profiles; same scheme as memoryId.
-export const likenessId = (owner: string) => owner.replace(/^([0-9a-f]{8}-)([0-9a-f]{4})/, (_, head: string, group: string) => head + inverted(group));
+export const likenessId = secondInverted;

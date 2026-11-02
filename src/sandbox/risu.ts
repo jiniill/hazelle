@@ -213,6 +213,9 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   };
   // The three Risu stores are one synced tool storage here, each under its own prefix so their keys never meet.
   const local = storage('local:');
+  const getArgument = async (key: string) => (await api.settings())[key];
+  const setArgument = (key: string, value: string | number) => api.setSetting(key, value);
+  const getCharacter = async () => { const current = await opened(); return current && characterOf(current); };
   const mapped: Scope = {
     getRuntimeInfo: async () => ({ apiVersion: '3.0', platform: 'hazelle', saveMethod: 'account' }),
     showContainer: async () => frame.show(),
@@ -236,10 +239,10 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     pluginStorage: storage('plugin:'),
     getLocalPluginStorage: async () => local,
     safeLocalStorage: storage('safe:'),
-    getArgument: async (key: string) => (await api.settings())[key],
-    getArg: async (key: string) => (await api.settings())[key],
-    setArgument: (key: string, value: string | number) => api.setSetting(key, value),
-    setArg: (key: string, value: string | number) => api.setSetting(key, value),
+    getArgument,
+    getArg: getArgument,
+    setArgument,
+    setArg: setArgument,
     unwarpSafeArray: async (array: ReturnType<typeof safeArray>) => array[ITEMS],
     // Read-only, and only the chat screen and its messages: the rest of the page (body, to put a box of its own on the
     // app) is declined (design §6.10) and found nowhere.
@@ -284,8 +287,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       return chat ? (await chat.lorebook()).map(loreEntry) : [];
     },
     requestPluginPermission: async () => true,
-    getCharacter: async () => { const current = await opened(); return current && characterOf(current); },
-    getChar: async () => { const current = await opened(); return current && characterOf(current); },
+    getCharacter,
+    getChar: getCharacter,
     getCharacterFromIndex: async (characterIndex: number) => {
       const current = await opened();
       return current && current.characterIndex === characterIndex ? characterOf(current) : null;

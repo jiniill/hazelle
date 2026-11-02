@@ -637,29 +637,20 @@ export function loggedCalls(entries: Iterable<Entry>): { calls: UsageCall[]; boo
 
 export const callRef = ({ connection, model, entry }: Pick<Receipt, 'connection' | 'model' | 'entry'>): ModelRef => ({ connection, model: entry ?? model });
 
-export function recentIn(messages: Message[]): RecentModel[] {
-  const used = messages.flatMap((message) => message.versions)
-    .flatMap((version) => (version.receipt ? [{ at: version.at, ref: callRef(version.receipt) }] : []))
-    .sort((a, b) => b.at - a.at);
-  const latest: RecentModel[] = [];
-  for (const model of used) {
-    if (latest.some(({ ref }) => ref.connection === model.ref.connection && ref.model === model.ref.model)) continue;
-    latest.push(model);
-    if (latest.length === 3) break;
-  }
-  return latest;
-}
-
-export function recentModels(chats: RecentModel[][], limit: number): ModelRef[] {
-  const used = chats.flat().sort((a, b) => b.at - a.at);
+function latest(used: RecentModel[], limit: number): RecentModel[] {
   const seen = new Set<string>();
-  const refs: ModelRef[] = [];
-  for (const { ref } of used) {
-    const key = `${ref.connection}/${ref.model}`;
+  const kept: RecentModel[] = [];
+  for (const model of used.toSorted((a, b) => b.at - a.at)) {
+    const key = `${model.ref.connection}/${model.ref.model}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    refs.push(ref);
-    if (refs.length === limit) break;
+    kept.push(model);
+    if (kept.length === limit) break;
   }
-  return refs;
+  return kept;
 }
+
+export const recentIn = (messages: Message[]): RecentModel[] =>
+  latest(messages.flatMap(({ versions }) => versions.flatMap((version) => (version.receipt ? [{ at: version.at, ref: callRef(version.receipt) }] : []))), 3);
+
+export const recentModels = (chats: RecentModel[][], limit: number): ModelRef[] => latest(chats.flat(), limit).map(({ ref }) => ref);

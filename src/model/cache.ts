@@ -2,7 +2,7 @@ import type { ModelSettings } from '../connectors/settings';
 import type { Cost } from '../connectors/types';
 import type { Fired, Silent } from '../engine/lorebook/activate';
 import type { Assembled, From } from '../engine/pipeline';
-import { inverted } from './memory';
+import { secondInverted } from './memory';
 import type { Block, Role } from './prompt';
 
 // Wire-order cache identity; tokens use o200k_base, an estimate for other tokenizers.
@@ -30,7 +30,7 @@ export type CacheBreak =
 export type CacheForecast = { read: number; of: number; broken: CacheBreak | null };
 
 // The chat's id with its second group's hex digits inverted, as memoryId inverts the first and vectorsId the last.
-export const cachePrintId = (chat: string) => chat.replace(/^([0-9a-f]{8}-)([0-9a-f]{4})/, (_, head: string, group: string) => head + inverted(group));
+export const cachePrintId = secondInverted;
 
 // Wire order. tail is full-price text after the last caching point; short points cache nothing.
 // before is the paired old position, null for additions and unchanged parts.

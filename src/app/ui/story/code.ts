@@ -12,7 +12,7 @@ let drawCode: Draw | undefined;
 let loading: Promise<unknown> | null = null;
 
 // Lazy-load highlighting only for named-language fences; retain the promise until it resolves.
-export function codeFor(html: string): Draw | Promise<unknown> {
+function codeFor(html: string): Draw | Promise<unknown> {
   if (drawCode) return drawCode;
   if (!html.includes(MARK)) return asWritten;
   return (loading ??= import('./highlight').then(
