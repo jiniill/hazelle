@@ -32,7 +32,6 @@ export async function openBytes(key: CryptoKey, sealed: Uint8Array<ArrayBuffer>,
   }
 }
 
-// The leading byte names the body's format.
 export function withFormat(format: number, sealed: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
   const body = new Uint8Array(1 + sealed.length);
   body[0] = format;
