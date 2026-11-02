@@ -242,7 +242,7 @@ export async function readManifest(root: string): Promise<Manifest | null> {
 export const listGenerations = (dataDir: string) => generationsIn(generationsDir(dataDir));
 
 // root: backup/ or a folder its generations are copied to (folder.ts), which share one layout.
-export async function generationsIn(root: string): Promise<{ id: string; capturedAt: number }[]> {
+async function generationsIn(root: string): Promise<{ id: string; capturedAt: number }[]> {
   return (await entries(root)).flatMap((name) => {
     const at = GENERATION.exec(name)?.[1];
     return at === undefined ? [] : [{ id: name, capturedAt: Number(at) }];

@@ -3,7 +3,7 @@ import { BEFORE_ARMED, SELF_RESTORES_PER_DAY, type RestoreAction, type RestoreEr
 import type { Life, Unavailable } from './account-store';
 import { landing, RETENTION_MS } from './db/account-db';
 import type { Db } from './db/service-db';
-import { DAY_MS, fail, refused, type AppEnv, type Services } from './http';
+import { DAY_MS, fail, isCount, isPositive, MINUTE_MS, refused, type AppEnv, type Services } from './http';
 import { removePictures } from './reconcile';
 import { takeBackFiles } from './files/claims';
 
@@ -11,7 +11,6 @@ import { takeBackFiles } from './files/claims';
 // Any await may be interrupted and retried: service writes use compare-and-set; store calls must be repeatable.
 // Every statement names the incarnation so old runners cannot touch a recreated account with the same id.
 
-const MINUTE_MS = 60_000;
 // A restore asks for a time at least this far back, so the snapshot chosen for it lies before the restore's own mark.
 const NEWEST_MS = 10 * MINUTE_MS;
 // Snapshots are kept for RETENTION_MS (db/account-db.ts). A day less leaves an operation time to choose its target, which
@@ -357,9 +356,8 @@ function restoreActions(phase: RestorePhase, verified: boolean): RestoreAction[]
 export function restoreFrom(body: Record<string, unknown> | null): { at: number } | { undoes: number } | null {
   const at = body?.at;
   const undoes = body?.undoes;
-  const whole = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value);
-  if (at === undefined) return whole(undoes) && undoes > 0 ? { undoes } : null;
-  return undoes === undefined && whole(at) && at >= 0 ? { at } : null;
+  if (at === undefined) return isPositive(undoes) ? { undoes } : null;
+  return undoes === undefined && isCount(at) ? { at } : null;
 }
 
 const REFUSAL_STATUS = { 'not-found': 404, 'account-busy': 409, 'bad-post': 400, 'too-many-restores': 429, 'bad-time': 400, 'cannot-undo': 400 } as const;
@@ -374,8 +372,10 @@ export async function answerBegin(c: Context<AppEnv>, accountId: string, post: n
 // Offer snapshots inside the request window plus the older baseline covering its oldest edge.
 // Ask slightly inside that edge so the point remains available while the user decides.
 const EDGE_MS = 15 * MINUTE_MS;
+export const incarnationOf = (db: Db, accountId: string) => db.prepare('SELECT incarnation FROM accounts WHERE id = ?').bind(accountId).first<string>('incarnation');
+
 export async function restorePoints(db: Db, accountId: string, now = Date.now()) {
-  const incarnation = await db.prepare('SELECT incarnation FROM accounts WHERE id = ?').bind(accountId).first<string>('incarnation');
+  const incarnation = await incarnationOf(db, accountId);
   if (incarnation === null) return null;
   const { results } = await db
     .prepare('SELECT taken_at AS takenAt, kind FROM snapshots WHERE incarnation = ? AND taken_at BETWEEN ? AND ? GROUP BY taken_at ORDER BY taken_at DESC')

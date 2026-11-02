@@ -1,7 +1,7 @@
 import type { AccountState } from '../contracts/admin';
 import type { FeedQuery, SealedChange, SealedWrite } from '../contracts/objects';
 import { ROW_BYTES, SHARED_BYTES } from './caps';
-import type { Db } from './db/service-db';
+import type { Db, SqlValue } from './db/service-db';
 import { isRecord } from './http';
 // The rules of one account's store over its database file (db/account-db.ts); nothing here touches a file directly.
 
@@ -12,8 +12,6 @@ export type Unavailable = { unavailable: true };
 export type Refused = { refused: 'restoring' | 'leaving' | 'gone' } | Unavailable;
 export type FeedPage = { timeline: string; bytes: number; until: number | null; changes: SealedChange[]; cursor: number; more: boolean; total?: number };
 type WrongPhase = { wrongPhase: true };
-
-export type SqlValue = string | number | null;
 
 // Transactions roll back on throw; wipe deletes live data/kv but not catalogued snapshots.
 // Only db/account-db installs an armed snapshot on store start.
@@ -75,8 +73,6 @@ export class StoreRules {
   constructor(
     private readonly db: StoreDb,
     private readonly reads: StoreReads,
-    // Holds every other call of this store until the load settles.
-    private readonly exclusive: <T>(work: () => Promise<T>) => Promise<T>,
   ) {}
 
   status(incarnation: string): Promise<Life | Unavailable> {
@@ -312,7 +308,7 @@ export class StoreRules {
   }
 
   private async lifecycle(incarnation: string): Promise<Life | Unavailable> {
-    return this.life ?? this.exclusive(async () => this.life ?? this.load(incarnation));
+    return this.life ?? this.load(incarnation);
   }
 
   // Only a confirmed absent service row means gone. Missing/corrupt/newer active files mean unavailable, never empty.

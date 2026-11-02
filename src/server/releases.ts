@@ -8,7 +8,7 @@ const FETCH_MS = 30 * 1000;
 
 const parts = (tag: string) => /^v(\d+)\.(\d+)\.(\d+)$/.exec(tag)?.slice(1).map(Number) ?? null;
 
-export function isNewer(tag: string, than: string): boolean {
+function isNewer(tag: string, than: string): boolean {
   const [next, now] = [parts(tag), parts(than)];
   if (!next || !now) return false;
   const differs = next.findIndex((part, at) => part !== now[at]);

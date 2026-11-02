@@ -1,6 +1,5 @@
 import { createHmac } from 'node:crypto';
 import { Hono, type Context } from 'hono';
-import { createMiddleware } from 'hono/factory';
 import { MAX_REPORT_LENGTH } from '../contracts/admin';
 import {
   CATEGORIES,
@@ -26,10 +25,10 @@ import {
   type PostPicture,
   type PostRow,
 } from '../contracts/board';
-import { ACCOUNT_HEADER, VISITOR_HEADER } from '../contracts/http';
-import { act, limitOf, MAX_OPEN_REPORTS, positive } from './admin';
+import { ACCOUNT_HEADER } from '../contracts/http';
+import { act, limitOf, MAX_OPEN_REPORTS, operator } from './admin';
 import type { SqlValue } from './db/service-db';
-import { DAY_MS, fail, readObject, sha256Hex, type Account, type AppEnv } from './http';
+import { DAY_MS, fail, isPositive, isRecord, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
 import { boardDailyLimit } from './limits';
 import { requireSession } from './session';
 import { activity, hidden, OPERATOR, tellUnread } from './unread';
@@ -39,13 +38,13 @@ import { activity, hidden, OPERATOR, tellUnread } from './unread';
 const GUEST_ROUTES = /^\/api\/board\/(posts(\/[^/]+(\/comments)?)?|comments\/[^/]+)$/;
 export const board = new Hono<AppEnv>().use(async (c, next) => {
   if (!GUEST_ROUTES.test(c.req.path) || c.req.header(ACCOUNT_HEADER) !== undefined) return requireSession(c, next);
-  if (!c.env.limits.visitors.reads.limit(c.req.header(VISITOR_HEADER) ?? 'direct').success) return fail(c, 429, 'too-many-visits');
+  if (!c.env.limits.visitors.reads.limit(visitorOf(c)).success) return fail(c, 429, 'too-many-visits');
   if (c.req.method !== 'GET') {
     const secret = guestSecret(c);
     if (!secret) return fail(c, 401, 'no-session');
     const settings = await c.env.db.prepare('SELECT board_guests, board_guest_key FROM service').first<{ board_guests: number; board_guest_key: string }>();
     if (!settings!.board_guests) return fail(c, 403, 'guest-board-closed');
-    const address = c.req.header(VISITOR_HEADER) ?? 'direct';
+    const address = visitorOf(c);
     const addressHash = createHmac('sha256', settings!.board_guest_key).update(address).digest('hex');
     if (await c.env.db.prepare('SELECT 1 FROM board_guest_blocks WHERE secret_hash = ?1 UNION ALL SELECT 1 FROM board_guest_address_blocks WHERE address_hash = ?2 AND until > ?3 LIMIT 1').bind(sha256Hex(secret), addressHash, Date.now()).first()) return fail(c, 403, 'guest-board-blocked');
     c.set('boardGuest', { addressHash });
@@ -359,7 +358,7 @@ board.post('/posts/:id/comments', async (c) => {
   const body = await readObject(c);
   const text = commentText(body?.text);
   const parentId = body?.parentId;
-  if (id === null || text === null || !(parentId === null || positive(parentId))) return fail(c, 400, 'bad-input');
+  if (id === null || text === null || !(parentId === null || isPositive(parentId))) return fail(c, 400, 'bad-input');
   if (!account.guest && !account.admin && !(await hasNickname(c))) return fail(c, 403, 'no-nickname');
   const db = c.env.db;
   const post = await db.prepare(`SELECT p.locked, COALESCE(p.account_id, p.guest_secret_hash) AS author FROM posts p WHERE p.id = ?2 AND p.deleted = 0 AND ${readable(account)}`).bind(account.id, id).first<{ locked: number; author: string | null }>();
@@ -474,7 +473,7 @@ board.get('/activity', async (c) => {
 board.post('/seen', async (c) => {
   const account = c.get('account');
   const id = (await readObject(c))?.id;
-  if (!positive(id)) return fail(c, 400, 'bad-input');
+  if (!isPositive(id)) return fail(c, 400, 'bad-input');
   await c.env.db
     .prepare(`UPDATE accounts SET board_seen = MAX(board_seen, COALESCE((SELECT at FROM (${activity('?1')}) WHERE id = ?2), 0)) WHERE id = ?1`)
     .bind(account.id, id)
@@ -484,7 +483,6 @@ board.post('/seen', async (c) => {
 });
 
 // The operator's moves, each in one batch with its admin_log row, written only if its target is there (admin.ts act).
-const operator = createMiddleware<AppEnv>(async (c, next) => (c.get('account').admin ? next() : fail(c, 403, 'not-admin')));
 
 board.put('/posts/:id/status', operator, async (c) => {
   const id = idOf(c);
@@ -505,10 +503,10 @@ board.put('/posts/:id/status', operator, async (c) => {
 // hidden: a reason and a hold of days (임시조치), or days null for hidden until shown; null shows it again.
 function readHidden(value: unknown) {
   if (value === null) return null;
-  if (typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const { reason, days } = value as Record<string, unknown>;
+  if (!isRecord(value)) return undefined;
+  const { reason, days } = value;
   const why = typeof reason === 'string' ? reason.trim() : '';
-  const held = days === null || (positive(days) && days <= HOLD_DAYS_MAX);
+  const held = days === null || (isPositive(days) && days <= HOLD_DAYS_MAX);
   return why && why.length <= MAX_REASON_LENGTH && held ? { reason: why, days: days as number | null } : undefined;
 }
 

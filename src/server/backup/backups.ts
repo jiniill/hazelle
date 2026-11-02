@@ -1,6 +1,6 @@
 import type { BackupCopyFailure } from '../../contracts/admin';
 import type { Alerts } from '../alerts';
-import { DAY_MS, type Services } from '../http';
+import { DAY_MS, HOUR_MS, type Services } from '../http';
 import { recordDeparture } from './departures';
 import { checkFolder, copyToFolder } from './folder';
 import { freePercent, freshness, type DiskFree, type Freshness } from './freshness';
@@ -9,8 +9,6 @@ import { dayStart, expireSnapshots, staleBaselines, takeBaselines } from './snap
 
 // The daily job, the gate a backup generation holds, and their record in backup_runs (docs/research/docker-port-plan.md
 // §10). One job runs at a time.
-
-const HOUR_MS = 60 * 60 * 1000;
 
 type Outcome = { outcome: 'ok' | 'failed'; error: string | null };
 

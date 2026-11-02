@@ -2,10 +2,9 @@ import { createHmac, randomBytes } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { Hono } from 'hono';
 import { GUEST_STEPS, VISITORS_PER_ADDRESS, type GuestStep, type VisitDay } from '../contracts/admin';
-import { VISITOR_HEADER } from '../contracts/http';
 import type { Db } from './db/service-db';
 import { transaction } from './db/transaction';
-import { DAY_MS, fail, ID, readObject, visitDay, type AppEnv } from './http';
+import { DAY_MS, fail, ID, readObject, visitDay, visitorOf, type AppEnv } from './http';
 import { dailyDistinct } from './limits';
 
 export type PageVisit = { kind: 'visit'; address: string; agent: string };
@@ -62,7 +61,7 @@ export const guestVisits = new Hono<AppEnv>().post('/guest', async (c) => {
   const guest = typeof body?.guest === 'string' ? body.guest.toLowerCase() : '';
   const step = body?.step as GuestStep;
   if (!ID.test(guest) || !GUEST_STEPS.includes(step)) return fail(c, 400, 'bad-input');
-  if (c.env.limits.visitors.guests.add(c.req.header(VISITOR_HEADER) ?? 'direct', guest) === 'full') return fail(c, 429, 'too-many-visits');
+  if (c.env.limits.visitors.guests.add(visitorOf(c), guest) === 'full') return fail(c, 429, 'too-many-visits');
   await c.env.db.prepare('INSERT INTO visit_guests (day, guest, step) VALUES (?, ?, ?) ON CONFLICT DO NOTHING').bind(visitDay(Date.now()), guest, step).run();
   return c.body(null, 204);
 });

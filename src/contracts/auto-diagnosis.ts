@@ -6,13 +6,13 @@ import { MODEL_MOST, TYPE } from './pulse';
 
 export const AUTO_KEEP_DAYS = 30;
 
-export const AUTO_EVENTS = ['app-error', 'worker-trouble', 'turn-failed', 'memory-failed', 'memory-gap', 'memory-gap-ended', 'chat-unopened', 'cache-broken'] as const;
+const AUTO_EVENTS = ['app-error', 'worker-trouble', 'turn-failed', 'memory-failed', 'memory-gap', 'memory-gap-ended', 'chat-unopened', 'cache-broken'] as const;
 export type AutoEvent = (typeof AUTO_EVENTS)[number];
 
 // An error's name, or the kind of a failure. Never an error's message, which can quote what it failed on.
 export const AUTO_ERROR_NAMES = ['Error', 'TypeError', 'RangeError', 'ReferenceError', 'SyntaxError', 'URIError', 'EvalError', 'AggregateError', 'AbortError', 'DataCloneError', 'InvalidStateError', 'NetworkError', 'NotFoundError', 'QuotaExceededError', 'SecurityError', 'TimeoutError', 'other'] as const;
 export type AutoErrorName = (typeof AUTO_ERROR_NAMES)[number];
-export const AUTO_ERROR_CAUSES = ['fetch', 'module-import', 'other'] as const;
+const AUTO_ERROR_CAUSES = ['fetch', 'module-import', 'other'] as const;
 export type AutoErrorCause = (typeof AUTO_ERROR_CAUSES)[number];
 // Exact fixed browser text only. Prefixes, URLs, translated messages and arbitrary text must remain 'other'.
 export const AUTO_BROWSER_MESSAGES = [
@@ -24,7 +24,7 @@ export const AUTO_BROWSER_MESSAGES = [
 ] as const satisfies readonly { message: string; cause: AutoErrorCause }[];
 const FAILURES = ['unsent', 'unsaved', 'too-long', 'runaway', 'tokenizer', 'unstarted', 'unpulled', 'gone', 'untranslated', 'preread', 'agent', 'no-model', 'model-gone', 'image-only', 'prompt-missing', 'profile-missing', 'failed', 'invalid', 'embed'] as const;
 // Why messages leave a request and are in no memory sent: the first that holds names the warning (runtime/memory-view).
-export const GAP_CAUSES = ['working', 'failed', 'tool', 'off', 'no-slot', 'stale', 'over', 'forgotten', 'no-room', 'unknown'] as const;
+const GAP_CAUSES = ['working', 'failed', 'tool', 'off', 'no-slot', 'stale', 'over', 'forgotten', 'no-room', 'unknown'] as const;
 export type GapCause = (typeof GAP_CAUSES)[number];
 // The first cause a cache break proves, or the break's own kind without one.
 const CACHE_CAUSES = ['tag', 'lore', 'moved', 'edited', 'memory', 'model', 'account', 'reasoning', 'far', 'changed', 'added', 'removed'] as const;

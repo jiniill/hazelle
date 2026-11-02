@@ -4,12 +4,12 @@ import { claimFiles } from './files/claims';
 import { createMiddleware } from 'hono/factory';
 import { MAX_REPORT_LENGTH } from '../contracts/admin';
 import { FILE_ID } from '../contracts/files';
-import { ACCOUNT_USAGE_HEADERS, VISITOR_HEADER } from '../contracts/http';
+import { ACCOUNT_USAGE_HEADERS } from '../contracts/http';
 import { COVER_LENGTH, MAX_SHARE_FILES, MAX_SHARE_LINK, SHARE_CONSENT, SHARE_ID, SHARE_LIMITS, type ShareCover, type ShareState } from '../contracts/shares';
 import { ROW_BYTES } from './caps';
 import type { Db, SqlValue, Statement } from './db/service-db';
 import { fileKey } from './files/bucket';
-import { fail, isRecord, readObject, refused as refuseStore, RETRY_SECONDS, type AppEnv } from './http';
+import { countVisit, fail, isRecord, readObject, refused as refuseStore, RETRY_SECONDS, visitorOf, type AppEnv } from './http';
 import { tokenBucket } from './limits';
 import { canWrite, currentAccount, requireSession } from './session';
 
@@ -26,12 +26,6 @@ const FRESH = { 'cache-control': 'no-store' };
 // them back.
 const HELD = '(s.held_at IS NOT NULL OR EXISTS (SELECT 1 FROM accounts WHERE accounts.incarnation = s.incarnation AND accounts.suspended_at IS NOT NULL))';
 const LIVE = `s.cut_at IS NULL AND s.removed_at IS NULL AND NOT ${HELD}`;
-
-type Visits = 'reads' | 'files' | 'reports';
-// The anonymous routes count per visitor, as the public listener saw them (VISITOR_HEADER). A request that did not
-// come through it, as in tests, counts as one visitor.
-const visits = (kind: Visits) =>
-  createMiddleware<AppEnv>(async (c, next) => (c.env.limits.visitors[kind].limit(c.req.header(VISITOR_HEADER) ?? 'direct').success ? next() : fail(c, 429, 'too-many-visits')));
 
 const newShareId = () => randomBytes(12).toString('base64url');
 
@@ -206,7 +200,7 @@ export function forgetCut(db: Db, over: string, ...values: SqlValue[]): Statemen
 
 // Anonymous from here on.
 
-shares.get('/:id', visits('reads'), async (c) => {
+shares.get('/:id', countVisit('reads'), async (c) => {
   const id = c.req.param('id');
   if (!SHARE_ID.test(id)) return fail(c, 400, 'bad-input');
   const row = await c.env.db
@@ -228,20 +222,20 @@ shares.get('/:id/cover', async (c) => {
   return c.json({ cover: cover ? (JSON.parse(cover) as ShareCover) : null }, 200, FRESH);
 });
 
-shares.get('/:id/files/:file', visits('files'), (c) => serveShareFile(c, false));
+shares.get('/:id/files/:file', countVisit('files'), (c) => serveShareFile(c, false));
 
 // The 받은 횟수: a visitor finished 헤이젤로 가져오기 or 파일로 받기, counted once a day per visitor.
-shares.post('/:id/received', visits('reads'), async (c) => {
+shares.post('/:id/received', countVisit('reads'), async (c) => {
   const id = c.req.param('id');
   if (!SHARE_ID.test(id)) return fail(c, 400, 'bad-input');
-  const first = c.env.limits.visitors.received.add(`${id}\0${c.req.header(VISITOR_HEADER) ?? 'direct'}`, '') === 'new';
+  const first = c.env.limits.visitors.received.add(`${id}\0${visitorOf(c)}`, '') === 'new';
   const counted = await c.env.db.prepare(`UPDATE shares AS s SET received = received + ? WHERE s.id = ? AND ${LIVE} RETURNING id`).bind(Number(first), id).first();
   return counted ? c.body(null, 204) : fail(c, 404, 'not-found');
 });
 
 // The first report atomically holds an unreviewed share. Once reviewed, only the operator may hold it again,
 // preventing repeated reports from overriding review. Signed-in reporters are identified; link holders may also report.
-shares.post('/:id/reports', visits('reports'), async (c) => {
+shares.post('/:id/reports', countVisit('reports'), async (c) => {
   const id = c.req.param('id');
   const body = await readObject(c);
   const text = typeof body?.text === 'string' ? body.text.trim() : '';

@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import type { Context } from 'hono';
+import { createMiddleware } from 'hono/factory';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AccountState } from '../contracts/admin';
-import type { ServerError } from '../contracts/http';
+import { VISITOR_HEADER, type ServerError } from '../contracts/http';
 import type { PulseLabel } from '../contracts/pulse';
 import type { Refused } from './account-store';
 import type { Backups } from './backup/backups';
@@ -42,8 +43,10 @@ export function fail(c: Context, status: ContentfulStatusCode, error: ServerErro
 }
 
 export const RETRY_SECONDS = 5;
-export const DAY_MS = 24 * 60 * 60 * 1000;
-const KST = 9 * 60 * 60 * 1000;
+export const MINUTE_MS = 60 * 1000;
+export const HOUR_MS = 60 * MINUTE_MS;
+export const DAY_MS = 24 * HOUR_MS;
+const KST = 9 * HOUR_MS;
 // The start of `at`'s day in Korea, where the operator reads the daily counts.
 export const visitDay = (at: number) => Math.floor((at + KST) / DAY_MS) * DAY_MS - KST;
 
@@ -53,11 +56,21 @@ export function refused(c: Context, answer: Refused) {
   return answer.refused === 'restoring' ? fail(c, 503, 'account-restoring', { retryAfter: RETRY_SECONDS }) : fail(c, 401, 'no-session');
 }
 
+// The anonymous routes count per visitor, as the public listener saw them (VISITOR_HEADER). A request that did not
+// come through it, as in tests, counts as one visitor.
+export const visitorOf = (c: Context) => c.req.header(VISITOR_HEADER) ?? 'direct';
+
+export const countVisit = (kind: 'reads' | 'files' | 'reports') =>
+  createMiddleware<AppEnv>(async (c, next) => (c.env.limits.visitors[kind].limit(visitorOf(c)).success ? next() : fail(c, 429, 'too-many-visits')));
+
 export const sha256Hex = (data: string | Uint8Array) => createHash('sha256').update(data).digest('hex');
 
 export function hex(bytes: Uint8Array): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+export const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+export const isPositive = (value: unknown): value is number => isCount(value) && value > 0;
 
 export const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 

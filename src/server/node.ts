@@ -19,7 +19,7 @@ import { migrate } from './db/migrate';
 import { openDatabase, serviceDb } from './db/service-db';
 import { chooseBucket } from './files/choose';
 import type { FrontendOptions } from './frontend-worker';
-import { DAY_MS, fail, visitDay, type Services } from './http';
+import { DAY_MS, fail, HOUR_MS, MINUTE_MS, visitDay, type Services } from './http';
 import { RELAY_DAILY, relayBudget, tokenBucket, uploadBudget, visitorLimits } from './limits';
 import { localProviders, pinnedOutbound } from './outbound';
 import { refreshModelsDev } from './models-dev';
@@ -91,8 +91,6 @@ try {
   console.error(`hazelle: ${(error as Error).message}`);
   process.exit(1);
 }
-const HOUR_MS = 60 * 60 * 1000;
-const MINUTE_MS = 60 * 1000;
 
 const log = (event: string, detail: Record<string, unknown> = {}) => console.log(JSON.stringify({ at: new Date().toISOString(), event, ...detail }));
 

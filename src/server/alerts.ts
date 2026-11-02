@@ -1,9 +1,7 @@
-import type { Services } from './http';
+import { HOUR_MS, type Services } from './http';
 import { dayStart } from './backup/snapshots';
 
 // The operator's webhook (HAZELLE_ALERT_WEBHOOK): every alert goes out here, each condition at most once a UTC day.
-
-const HOUR_MS = 60 * 60 * 1000;
 
 const TEXTS = {
   'backup-stale': '백업이 36시간 넘게 없음',

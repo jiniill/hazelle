@@ -2,12 +2,11 @@ import { existsSync } from 'node:fs';
 import { statfs } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { BackupWarning } from '../../contracts/admin';
-import type { Services } from '../http';
+import { HOUR_MS, type Services } from '../http';
 import { COPIED, generationsDir, listGenerations, MANIFEST } from './generation';
 
 // Single warning policy shared by admin UI and webhook; never decide freshness separately in callers.
 
-const HOUR_MS = 60 * 60 * 1000;
 const STALE_HOURS = 36;
 const MIN_FREE_PERCENT = 20;
 

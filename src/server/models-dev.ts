@@ -1,17 +1,16 @@
 import { Hono, type Context } from 'hono';
 import { MODELS_DEV_LISTS, MODELS_DEV_MODALITIES, type ListedModality, type ListedModel, type ModelsDevList, type PriceTable, type PriceTier, type Rates } from '../connectors/models-dev';
 import type { Db } from './db/service-db';
-import { fail, isRecord, type AppEnv } from './http';
+import { countVisit, fail, HOUR_MS, isRecord, MINUTE_MS, type AppEnv } from './http';
 import type { Upstream } from './relay';
-import { VISITOR_HEADER } from '../contracts/http';
 
 const SOURCE = 'https://models.dev/api.json';
 const LISTS = new Set(Object.values(MODELS_DEV_LISTS).map((entry) => entry!.list));
 // The hourly cron asks every time; the list is fetched again once it is this old, so about once a day.
-const STALE_MS = 23 * 60 * 60 * 1000;
-const RETRY_MS = 10 * 60 * 1000;
+const STALE_MS = 23 * HOUR_MS;
+const RETRY_MS = 10 * MINUTE_MS;
 // A fetch is background work the shutdown drain waits for, so it is bounded.
-const FETCH_MS = 60 * 1000;
+const FETCH_MS = MINUTE_MS;
 
 // name: models.dev's display name, which 헤이젤 나우 shows (pulse.ts); null where it gives none.
 type ListedRow = ListedModel & { list: string; model: string; name: string | null };
@@ -105,11 +104,8 @@ async function answer<T extends { fetchedAt: number | null }>(c: Context<AppEnv>
   return c.json(await read(fetchedAt), 200, headers);
 }
 
-const visits = (c: Context<AppEnv>) => c.env.limits.visitors.reads.limit(c.req.header(VISITOR_HEADER) ?? 'direct').success;
-
 export const modelsDev = new Hono<AppEnv>()
-  .get('/', async (c) => {
-    if (!visits(c)) return fail(c, 429, 'too-many-visits');
+  .get('/', countVisit('reads'), async (c) => {
     const list = c.req.query('provider');
     if (!list || !LISTS.has(list)) return fail(c, 400, 'bad-input');
     return answer<ModelsDevList>(c, { fetchedAt: null, models: {} }, async (fetchedAt) => {
@@ -118,8 +114,7 @@ export const modelsDev = new Hono<AppEnv>()
       return { fetchedAt, models };
     });
   })
-  .get('/table', async (c) => {
-    if (!visits(c)) return fail(c, 429, 'too-many-visits');
+  .get('/table', countVisit('reads'), async (c) => {
     return answer<PriceTable>(c, { fetchedAt: null, models: [] }, async (fetchedAt) => {
       const { results } = await c.env.db.prepare('SELECT list, model, name, price FROM models_dev').all<TableRow>();
       return { fetchedAt, models: results.map((row) => ({ ...row, price: parsed<Rates>(row.price) })) };

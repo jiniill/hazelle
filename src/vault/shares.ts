@@ -1,4 +1,4 @@
-import { fromBase64, openBytes, randomBytes, sealBytes, toBase64 } from './aead';
+import { fromBase64, openBytes, randomBytes, sealBytes, toBase64, withFormat } from './aead';
 
 // A share link's key: 32 random bytes in base64url, made by the sharer's page and kept in the link's fragment and the
 // sharer's vault (model/share), never sent to the server but inside a report's full link.
@@ -14,11 +14,7 @@ const keyOf = (key: string) => crypto.subtle.importKey('raw', fromUrl(key), 'AES
 export const newShareKey = () => toUrl(randomBytes(32));
 
 export async function sealShare(key: string, bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
-  const sealed = await sealBytes(await keyOf(key), bytes, AAD);
-  const body = new Uint8Array(1 + sealed.length);
-  body[0] = FORMAT;
-  body.set(sealed, 1);
-  return body;
+  return withFormat(FORMAT, await sealBytes(await keyOf(key), bytes, AAD));
 }
 
 // null: an unknown format, or a key that is not this link's.
