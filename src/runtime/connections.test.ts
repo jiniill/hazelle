@@ -4,7 +4,8 @@ import type { Connection } from '../connectors/types';
 import openRouterKey from '../connectors/fixtures/openrouter-key.json';
 import openRouterModels from '../connectors/fixtures/openrouter-models.json';
 import { SETTINGS_ID } from '../model/settings';
-import { addConnection, addCopy, addModel, changeKey, providerConnection, putModelBack, refreshStarred, removeModel, renameModel, retriesOf, setSharedRetries } from './connections';
+import { addConnection, addCopy, addModel, changeKey, providerConnection, putModelBack, refreshStarred, removeModel, renameModel, retriesOf, routeFields, setSharedRetries } from './connections';
+import type { Stored } from '../model/kinds';
 import { bareModel } from '../connectors/chat-completions';
 import type { Model } from '../connectors/types';
 import { stubRelay, testModel, testServer, upstream } from './testing';
@@ -155,5 +156,14 @@ describe('retriesOf', () => {
       expect(retriesOf(store, openRouter, {})).toBe(4);
       expect(retriesOf(store, { ...openRouter, retries: 0 }, {})).toBe(0);
       expect(retriesOf(store, { ...openRouter, retries: 0 }, { retries: 5 })).toBe(5);
+    }));
+});
+
+describe('routeFields', () => {
+  it("unwraps the route's connection and carries its retry count for the settings given", () =>
+    server.withSession(async ({ store }) => {
+      const connection: Stored<'connection'> = { id: 'c', kind: 'connection', parent: null, rev: 1, value: { ...openRouter, retries: 2 } };
+      expect(routeFields(store, { connection, model: testModel }, { maxOutput: 16 })).toEqual({ connection: connection.value, model: testModel, settings: { maxOutput: 16 }, retries: 2 });
+      expect(routeFields(store, { connection, model: testModel }, { retries: 5 }).retries).toBe(5);
     }));
 });

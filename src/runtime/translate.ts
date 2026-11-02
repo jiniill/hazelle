@@ -17,7 +17,7 @@ import { setTextTranslation, translatorNotes } from './characters';
 import { chatTranslate, SHARED_CHAT } from './features';
 import { scopeOf } from './chat-context';
 import { appendTranslation, savedElsewhere, type Written } from './chat-log';
-import { retriesOf } from './connections';
+import { routeFields } from './connections';
 import type { Costs } from './cost';
 import type { Credentials } from './credential';
 import type { RequestLog } from './request-log';
@@ -102,10 +102,7 @@ async function translateWith(
   const answer = await generate({
     credentials,
     log,
-    connection: route.connection.value,
-    model: route.model,
-    settings: profile.profile.value.settings,
-    retries: retriesOf(store, route.connection.value, profile.profile.value.settings),
+    ...routeFields(store, route, profile.profile.value.settings),
     messages: assembled.messages,
     call: await newCall({ store, tokens }, route, spans.length ? { ...target, for: { ...target.for, spans } } : target),
     signal,

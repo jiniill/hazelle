@@ -9,7 +9,7 @@ import api from '../../tool-api/hazelle.d.ts?raw';
 import guide from '../../tool-api/README.md?raw';
 import type { ApiFailure } from '../api';
 import { sharedModel, type RouteFailure } from '../assignment';
-import { retriesOf } from '../connections';
+import { routeFields } from '../connections';
 import type { Credentials } from '../credential';
 import { gather, generate, receiptOf, unsettled } from '../generate';
 import { modelProfile } from '../profiles';
@@ -143,10 +143,7 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
       const answer = await generate({
         credentials,
         log,
-        connection: route.connection.value,
-        model: route.model,
-        settings: profile.profile.value.settings,
-        retries: retriesOf(store, route.connection.value, profile.profile.value.settings),
+        ...routeFields(store, route, profile.profile.value.settings),
         messages: [...messages, ...exchange],
         ...(tools && { tools }),
         call,

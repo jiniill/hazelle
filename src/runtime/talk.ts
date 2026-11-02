@@ -18,7 +18,7 @@ import type { ApiFailure } from './api';
 import type { Route, RouteFailure } from './assignment';
 import { cacheKept, prefixKept, wireOf, wireTextOf, writePrint } from './cache';
 import { appendReply, appendUserMessage, savedElsewhere, type Said, type Written } from './chat-log';
-import { refuseTools, retriesOf } from './connections';
+import { refuseTools, routeFields } from './connections';
 import { SETTINGS_ID } from '../model/settings';
 import { TOOL_ROUNDS, toolLoop, type Tool } from './tool-loop';
 import type { Costs } from './cost';
@@ -307,7 +307,7 @@ export class Talk {
         held.calling = call.id;
         this.change(held, { ...held.turn, reading: { at: Date.now(), text: held.turn.text.length, reasoning: held.turn.reasoning.length } });
         // A batched reply answers whole and later, so no round could follow a call: a turn that offers tools goes unbatched.
-        const replying = generate({ credentials: this.credentials, log: this.log, connection: route.connection.value, model: route.model, settings, retries: retriesOf(this.store, route.connection.value, settings), messages: [...prompt.messages, ...exchange], ...(tools && { tools }), call, signal: abort.signal, onText, inline: this.inline(held), ...(!tools && { batching }) });
+        const replying = generate({ credentials: this.credentials, log: this.log, ...routeFields(this.store, route, settings), messages: [...prompt.messages, ...exchange], ...(tools && { tools }), call, signal: abort.signal, onText, inline: this.inline(held), ...(!tools && { batching }) });
         const sent = await sending;
         if (sent && !sent.ok) {
           held.cancel.abort();
@@ -431,7 +431,7 @@ export async function pageAnswer(session: Pick<Session, 'store' | 'tokens' | 'cr
   const text = gather();
   const call = await pageCall(session, route, requestClass, chat);
   call.retrying = retrying;
-  const answer = await generate({ credentials, log, connection: route.connection.value, model: route.model, settings, retries: retriesOf(store, route.connection.value, settings), messages, call, signal, onText: text.add }).finally(() => endCall(store, call.id));
+  const answer = await generate({ credentials, log, ...routeFields(store, route, settings), messages, call, signal, onText: text.add }).finally(() => endCall(store, call.id));
   if (answer.cut === 'stopped') return { kind: 'stopped' };
   const receipt = unsettled(receiptOf(callOf(route), answer));
   return answer.state === 'done' ? { text: text.value(), receipt } : { kind: 'failed', receipt };

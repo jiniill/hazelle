@@ -7,7 +7,7 @@ import { live, type PackOwner } from '../model/library';
 import { chatModel, embedModel, sharedModel, type Route } from './assignment';
 import { setBackground } from './characters';
 import { keepCall } from './chat-log';
-import { retriesOf } from './connections';
+import { routeFields } from './connections';
 import type { Costs } from './cost';
 import type { Credentials } from './credential';
 import { countTexts, embedTexts } from './embed';
@@ -106,10 +106,7 @@ export class ScriptReach {
     const answer = await generate({
       credentials,
       log,
-      connection: route.connection.value,
-      model: route.model,
-      settings,
-      retries: retriesOf(store, route.connection.value, settings),
+      ...routeFields(store, route, settings),
       messages,
       call,
       signal: signal ? AbortSignal.any([this.closing, signal]) : this.closing,
