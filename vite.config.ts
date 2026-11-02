@@ -11,9 +11,9 @@ export default defineConfig({
   html: { cspNonce: 'HAZELLE_NONCE' },
   // Emit assets as files: CSP rejects data URLs. Explicit ?inline is code-read text, never a loaded URL.
   // Build sandbox stylesheet only; scripts/sandbox emits a classic script to avoid opaque-frame module CORS fetches.
-  build: { assetsInlineLimit: 0, outDir: 'dist/client', rollupOptions: { input: { main: 'index.html', sandbox: 'sandbox.html' } } },
+  build: { assetsInlineLimit: 0, outDir: 'dist/client', rollupOptions: { tsconfig: false, input: { main: 'index.html', sandbox: 'sandbox.html' } } },
   // Workers are module workers (runtime/worker moduleWorker), so a worker's dynamic import stays its own chunk: the
   // evaluation worker starts small and loads the tokenizer apart (runtime/tokenizer).
-  worker: { format: 'es', plugins: () => [tokenTable()] },
+  worker: { format: 'es', plugins: () => [tokenTable()], rollupOptions: { tsconfig: false } },
   assetsInclude: ['**/*.risup'],
 });

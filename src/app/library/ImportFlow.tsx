@@ -12,7 +12,7 @@ import type { ApiFailure, ApiResult } from '../../runtime/api';
 import type { UnpackFailure } from '../../engine/import/archive';
 import { PACKED_EXTENSION } from '../../engine/import/extensions';
 import { ImportWorker } from '../../runtime/import/client';
-import { downloadRealm, realmId, type RealmFailure } from '../../runtime/import/realm';
+import { downloadLink, readLink, type BotLink, type LinkFailure } from '../../runtime/import/link';
 import { ImportReadError, ImportStuck, type ChatsRead } from '../../runtime/import/protocol';
 import { importModule, pairWithPrompts, replaceModules, sameNamespace, setModuleAt, setModuleDeleted, type ModulePlace } from '../../runtime/modules';
 import { fillPictures, importRisuChats, risuMatch } from '../../runtime/move';
@@ -20,7 +20,7 @@ import { addRisuPersona, removePersona } from '../../runtime/personas';
 import { ofSort, removePrompt, savePreset } from '../../runtime/prompts';
 import type { ObjectStore } from '../../runtime/store';
 import { aliased } from '../common/alias';
-import { describeFailure } from '../common/failure';
+import { describeFailure, describeReplyError } from '../common/failure';
 import { describeImportFailure } from '../common/importFailure';
 import { ACTS } from '../common/acts';
 import { IMPORT_ACCEPT, ImportContext } from '../common/importing';
@@ -55,6 +55,8 @@ type Target = string | null | undefined;
 type Read = { file: File; preview: Preview; choice: Choice | null; ticked: boolean };
 type Row = { file: File; failure: string } | Read;
 type Parsed = Exclude<Awaited<ReturnType<ImportWorker['card']>>, { ok: false }>;
+// password: why a Proton link asks for its owner's password.
+type LinkStart = { text: string; password: 'asked' | 'wrong' | null };
 type Result = ImportOutcome | { kind: 'filled'; file: string; title: string; lines: Line[]; missed: string[] } | { kind: 'failed'; file: string; failure: string };
 type State =
   | { kind: 'downloading'; step: ProgressStep }
@@ -65,12 +67,19 @@ type State =
 // 되돌리기 for what one file brought. Its closure holds ids, never the parsed file, which would stay alive with it.
 type Undo = { message: string; run: () => Promise<ApiResult<unknown> | ApiFailure> };
 
-const REALM_LINK = 'Realm 링크';
-const REALM_FAILURE: Record<Exclude<RealmFailure, 'cancelled'>, string> = {
-  missing: 'Realm에서 봇을 찾지 못했어요. 삭제됐거나 비공개일 수 있어요.',
-  refused: 'Realm에서 다운로드를 거절했어요. 잠시 뒤 다시 시도해 주세요.',
-  'not-a-bot': 'Realm에서 봇 파일을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.',
-  lost: '다운로드가 끊겼어요. 인터넷 연결을 확인해 주세요.',
+const LINK = '링크';
+const linkFailure = (failure: Exclude<LinkFailure, { kind: 'cancelled' | 'needs-password' | 'wrong-password' }>) => {
+  switch (failure.kind) {
+    case 'missing': return '봇을 찾지 못했어요. 삭제됐거나 비공개일 수 있어요.';
+    case 'refused': return '사이트에서 다운로드를 거절했어요. 잠시 뒤 다시 시도해 주세요.';
+    case 'not-a-file': return '웹 페이지가 열리는 링크예요. 파일을 바로 받는 링크를 넣어 주세요.';
+    case 'guest-blocked': return '이 사이트는 손님 모드에서 바로 가져올 수 없어요. 파일을 직접 받아서 넣어 주세요.';
+    case 'needs-account': return 'Proton 링크는 손님 모드에서 가져올 수 없어요. 파일을 직접 받아서 넣어 주세요.';
+    case 'no-bot-file': return '가져올 수 있는 파일이 없어요.';
+    case 'damaged': return '파일을 읽지 못했어요. 링크가 잘렸거나 파일이 손상됐을 수 있어요.';
+    case 'lost': return '다운로드가 끊겼어요. 인터넷 연결을 확인해 주세요.';
+    case 'relay': return describeReplyError(failure.failure);
+  }
 };
 const UNPACK_FAILURE: Record<UnpackFailure, string> = {
   encrypted: '비밀번호가 걸려 있어요. 압축을 풀고 안의 파일을 가져와 주세요.',
@@ -154,7 +163,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State | null>(null);
   const [moving, setMoving] = useState<{ files: File[]; aside: number } | null>(null);
   const [asking, setAsking] = useState(false);
-  const [linking, setLinking] = useState(false);
+  const [linking, setLinking] = useState<LinkStart | null>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -320,8 +329,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     return { files, rows };
   }
 
-  async function bringRealm(id: string) {
-    setLinking(false);
+  async function bringLink(link: BotLink, text: string) {
+    setLinking(null);
     const line = new AbortController();
     download.current = line;
     const megabytes = (bytes: number) => Math.round(bytes / 1e6);
@@ -329,21 +338,27 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     setState(shown(0));
     let last = 0;
     // Each state renders every useImport screen: once per megabyte, not once per network chunk.
-    const answer = await downloadRealm(id, line.signal, (done, total) => {
+    const answer = await downloadLink(link, line.signal, (done, total) => {
       if (megabytes(done) === last) return;
       last = megabytes(done);
       setState(shown(last, total === undefined ? undefined : megabytes(total)));
     });
     download.current = null;
     if (!mounted.current) return;
-    if (answer.ok) void take([answer.file], undefined);
-    else if (answer.failure === 'cancelled') setState(null);
-    else setState({ kind: 'done', results: [failed(REALM_LINK, REALM_FAILURE[answer.failure])] });
+    if (answer.ok) return void take(answer.files, undefined, true, answer.skipped.length > 0 ? [{ file: new File([], LINK), failure: skippedLine(answer.skipped) }] : []);
+    const { failure } = answer;
+    if (failure.kind === 'cancelled') return setState(null);
+    if (failure.kind === 'needs-password' || failure.kind === 'wrong-password') {
+      setState(null);
+      return setLinking({ text, password: failure.kind === 'needs-password' ? 'asked' : 'wrong' });
+    }
+    setState({ kind: 'done', results: [failed(LINK, linkFailure(failure))] });
   }
 
-  async function take(picked: File[], target: Target, shown = true): Promise<Result[]> {
+  async function take(picked: File[], target: Target, shown = true, aside: Row[] = []): Promise<Result[]> {
     if (picked.length === 0 || (state !== null && state.kind !== 'done') || moving) return [];
-    const { files, rows } = await unpacked(picked);
+    const { files, rows: unread } = await unpacked(picked);
+    const rows = [...aside, ...unread];
     if (!mounted.current) return [];
     const backups = files.filter((file) => file.name.toLowerCase().endsWith('.bin'));
     if (backups.length > 0) {
@@ -440,7 +455,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         pickChats: open,
         pickPrompts: () => open(undefined, PRESET_EXTENSIONS.join(',')),
         pickPersonas: () => open(undefined, '.png'),
-        pickLink: () => asked(() => setLinking(true)),
+        pickLink: () => asked(() => setLinking({ text: '', password: null })),
         move: () => asked(() => setAsking(true)),
         bring: (file) => new Promise((done) => asked(() => void take([file], undefined, false).then((results) => done(results.some((result) => result.kind === 'character'))))),
         drop,
@@ -472,7 +487,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
           onClose={() => setAsking(false)}
         />
       )}
-      {linking && <RealmLinkDialog onBring={(id) => void bringRealm(id)} onClose={() => setLinking(false)} />}
+      {linking && <LinkDialog start={linking} onBring={(link, text) => void bringLink(link, text)} onClose={() => setLinking(null)} />}
       {moving && <MoveFlow files={moving.files} aside={moving.aside} onClose={() => setMoving(null)} />}
       {state && (
         <Dialog title={title} onClose={() => {
@@ -548,22 +563,38 @@ function DoneRow({ result }: { result: Exclude<Result, { kind: 'failed' }> }) {
   return <ImportRow kind={result.kind === 'filled' ? 'character' : result.kind} title={result.title} lines={result.lines} missed={result.missed} missedTitle={MISSED} />;
 }
 
-function RealmLinkDialog({ onBring, onClose }: { onBring: (id: string) => void; onClose: () => void }) {
-  const [text, setText] = useState('');
-  const id = realmId(text);
+function LinkDialog({ start, onBring, onClose }: { start: LinkStart; onBring: (link: BotLink, text: string) => void; onClose: () => void }) {
+  const [text, setText] = useState(start.text);
+  const [password, setPassword] = useState('');
+  const link = readLink(text);
+  const asking = start.password !== null && link?.kind === 'proton';
+  const ready = link !== null && (!asking || password !== '');
   return (
     <Dialog
       title="링크로 가져오기"
       onClose={onClose}
-      actions={<Button disabled={id === null} onClick={() => id && onBring(id)}>{ACTS.import.label}</Button>}
+      actions={<Button disabled={!ready} onClick={() => link && onBring(asking ? { ...link, password } : link, text)}>{ACTS.import.label}</Button>}
     >
-      <TextField
-        label="Realm 봇 링크"
-        value={text}
-        onChange={setText}
-        placeholder="https://realm.risuai.net/character/..."
-        error={text.trim() !== '' && id === null ? 'Realm 봇 링크만 가져올 수 있어요.' : undefined}
-      />
+      <Stack>
+        <TextField
+          label="봇 링크"
+          value={text}
+          onChange={setText}
+          placeholder="https://realm.risuai.net/character/..."
+          help="Realm 봇 링크, Proton Drive 공개 링크, 파일을 바로 받는 https 링크를 넣어요. Realm 외의 링크는 하루 사용량에 포함돼요."
+          error={text.trim() !== '' && link === null ? 'https로 시작하는 링크를 넣어 주세요.' : undefined}
+        />
+        {asking && (
+          <TextField
+            label="링크 비밀번호"
+            kind="current-password"
+            value={password}
+            onChange={setPassword}
+            hint="헤이젤은 Proton 공식 앱이 아니에요. 비밀번호는 이 브라우저에서만 쓰여요."
+            error={start.password === 'wrong' ? '비밀번호가 맞지 않아요.' : undefined}
+          />
+        )}
+      </Stack>
     </Dialog>
   );
 }

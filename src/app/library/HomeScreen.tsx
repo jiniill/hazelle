@@ -27,7 +27,7 @@ export function Welcome() {
         )}
         <ActionCard tone={connections.length ? 'plain' : 'accent'} icon={PackageOpen} title="Risu에서 이사" description="캐릭터와 채팅, 프롬프트를 한 번에 옮겨요" onClick={move} />
         <ActionCard icon={ACTS.import.icon} title={importOf('봇')} description="PNG · charx · zip 파일을 끌어다 놓거나 선택해요" onClick={pick} />
-        <ActionCard icon={Link} title="링크로 가져오기" description="Realm 봇 링크를 붙여 넣어요" onClick={pickLink} />
+        <ActionCard icon={Link} title="링크로 가져오기" description="Realm, Proton, 파일 링크를 붙여 넣어요" onClick={pickLink} />
         <ActionCard icon={UserRoundPlus} title={newOf('캐릭터')} description="이름과 설명부터 직접 입력해요" onClick={create} />
         {connections.length === 0 ? (
           <GuideMark name={MARKS.connectNew}>

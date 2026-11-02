@@ -1,0 +1,122 @@
+import 'core-js/proposals/array-buffer-base64';
+import { CryptoProxy } from '@protontech/crypto';
+import { Api } from '@protontech/crypto/proxy/endpoint/api.ts';
+import { computeKeyPassword, getSrp } from '@protontech/crypto/srp';
+import {
+  ConnectionError,
+  DecryptionError,
+  IntegrityError,
+  MemoryCache,
+  NodeType,
+  OpenPGPCryptoWithCryptoProxy,
+  ProtonDriveClient,
+  ValidationError,
+  type ProtonDriveHTTPClientBlobRequest,
+  type ProtonDriveHTTPClientJsonRequest,
+} from '@protontech/drive-sdk';
+import { PACKED_EXTENSION, UNPACKED_EXTENSIONS } from '../../engine/import/extensions';
+import { BUILT_VERSION } from '../installation';
+import { relayRaw, type RelayFailure } from '../relay';
+import type { LinkAnswer, LinkFailure, Progress } from './link';
+
+// The SDK's terms ask for this exact form and forbid passing as a Proton client.
+const APP_VERSION = `external-drive-hazelle@${BUILT_VERSION?.replace(/^v/, '') ?? '0.0.0'}-stable`;
+const importable = (name: string) => [...UNPACKED_EXTENSIONS, PACKED_EXTENSION].some((extension) => name.toLowerCase().endsWith(extension));
+
+// In this page, not the package's worker pool: its workers are built from a plain URL, which this app's Trusted Types
+// policy refuses, and the package exports no way to build them otherwise.
+let cryptoReady = false;
+function startCrypto() {
+  if (cryptoReady) return;
+  Api.init({});
+  CryptoProxy.setEndpoint(new Api());
+  cryptoReady = true;
+}
+
+type Named = { uid: string; type: NodeType; name: { ok: true; value: string } | { ok: false } };
+const nameOf = ({ name }: Named) => (name.ok ? name.value : null);
+
+// A link's password and share keys stay in this page: the relay carries the handshake's proof and the encrypted blocks only.
+export async function downloadProton(url: string, password: string | undefined, signal: AbortSignal, progress: Progress): Promise<LinkAnswer> {
+  let relayFailure: RelayFailure | null = null;
+  const send = async (request: ProtonDriveHTTPClientJsonRequest | ProtonDriveHTTPClientBlobRequest) => {
+    request.headers.set('x-pm-appversion', APP_VERSION);
+    const json = 'json' in request && request.json !== undefined ? JSON.stringify(request.json) : null;
+    const answer = await relayRaw(
+      { url: request.url, method: request.method === 'POST' ? 'POST' : 'GET', headers: Object.fromEntries(request.headers), body: json },
+      AbortSignal.any([signal, AbortSignal.timeout(request.timeoutMs), ...(request.signal ? [request.signal] : [])]),
+    );
+    if (answer instanceof Response) return answer;
+    relayFailure = answer;
+    throw new Error(answer.kind);
+  };
+  const refusal = (error: unknown): LinkFailure => {
+    if (signal.aborted) return { kind: 'cancelled' };
+    if (relayFailure) return { kind: 'relay', failure: relayFailure };
+    if (error instanceof ValidationError) return { kind: 'missing' };
+    if (error instanceof DecryptionError || error instanceof IntegrityError) return { kind: 'damaged' };
+    return { kind: error instanceof ConnectionError ? 'lost' : 'refused' };
+  };
+
+  try {
+    startCrypto();
+    const client = new ProtonDriveClient({
+      httpClient: { fetchJson: send, fetchBlob: send },
+      entitiesCache: new MemoryCache(),
+      cryptoCache: new MemoryCache(),
+      // An anonymous visitor has no addresses; the public-link client never signs anything for this read.
+      account: { getOwnPrimaryAddress: unavailable, getOwnAddresses: async () => [], getOwnAddress: unavailable, hasProtonAccount: async () => false, getPublicKeys: async () => [] },
+      openPGPCryptoModule: new OpenPGPCryptoWithCryptoProxy(CryptoProxy as never),
+      srpModule: {
+        getSrp: (version, modulus, serverEphemeral, salt, secret) =>
+          getSrp({ Version: version, Modulus: modulus, ServerEphemeral: serverEphemeral, Username: '', Salt: salt }, { username: '', password: secret }, version),
+        computeKeyPassword,
+        getSrpVerifier: unavailable,
+        generateKeySalt: () => {
+          throw new Error('not available to an anonymous visitor');
+        },
+      },
+      telemetry: { getLogger: () => QUIET, recordMetric: () => {} },
+    });
+    const { isCustomPasswordProtected } = await client.experimental.getURLAccessInfo(url);
+    if (isCustomPasswordProtected && password === undefined) return { ok: false, failure: { kind: 'needs-password' } };
+    const link = await client.experimental.authURLAccess(url, password, true).catch((error: unknown) => {
+      if (isCustomPasswordProtected && !signal.aborted && !relayFailure) throw WRONG;
+      throw error;
+    });
+    const root = (await link.getRootNode()) as Named;
+    const nodes: Named[] = root.type === NodeType.Folder ? [] : [root];
+    if (root.type === NodeType.Folder) {
+      for await (const child of link.iterateFolderChildren(root.uid, undefined, signal)) nodes.push(child as Named);
+    }
+    const files: File[] = [];
+    const skipped: string[] = [];
+    const wanted = nodes.filter((node) => {
+      const name = nameOf(node);
+      if (node.type === NodeType.File && name && importable(name)) return true;
+      if (node.type === NodeType.File) skipped.push(name ?? '?');
+      return false;
+    });
+    const downloaders = await Promise.all(wanted.map((node) => link.getFileDownloader(node.uid, signal)));
+    const claimed = downloaders.map((downloader) => downloader.getClaimedSizeInBytes());
+    const total = claimed.every((size) => size !== undefined) ? claimed.reduce<number>((all, size) => all + size!, 0) : undefined;
+    let before = 0;
+    for (const [index, downloader] of downloaders.entries()) {
+      const parts: Uint8Array<ArrayBuffer>[] = [];
+      const taken = before;
+      const stream = new WritableStream<Uint8Array<ArrayBuffer>>({ write: (part) => void parts.push(part) });
+      await downloader.downloadToStream(stream, (done) => progress(taken + done, total)).completion();
+      files.push(new File(parts, nameOf(wanted[index]!)!));
+      before += files.at(-1)!.size;
+    }
+    return { ok: true, files, skipped };
+  } catch (error) {
+    return { ok: false, failure: error === WRONG ? { kind: 'wrong-password' } : refusal(error) };
+  }
+}
+
+const WRONG = new Error('wrong password');
+const QUIET = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} };
+const unavailable = async (): Promise<never> => {
+  throw new Error('not available to an anonymous visitor');
+};

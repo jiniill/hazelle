@@ -18,7 +18,8 @@ import { CONNECTION_TYPES } from '../connectors/registry';
 // Provider code and Retry-After stay distinct from app/relay errors.
 export type RelayFailure =
   | { kind: 'provider'; status: number; detail: string; code?: string; retryAfter?: string }
-  | { kind: 'relay'; code: string }
+  // location: where a refused redirect pointed.
+  | { kind: 'relay'; code: string; location?: string }
   | { kind: 'app'; code: string }
   | { kind: 'offline' }
   | { kind: 'stopped' };
@@ -129,14 +130,14 @@ async function accountRaw(request: HttpRequest, signal?: AbortSignal, bot?: stri
 async function sourced(response: Response): Promise<Response | RelayFailure> {
   const source = response.headers.get(RELAY_HEADER);
   if (source === 'upstream') return response;
-  const code = await errorCode(response);
-  return source === 'error' ? { kind: 'relay', code } : { kind: 'app', code };
+  const body: unknown = await response.json().catch(() => null);
+  const code = codeOf(body);
+  if (source !== 'error') return { kind: 'app', code };
+  return { kind: 'relay', code, ...(isRecord(body) && typeof body.location === 'string' && { location: body.location }) };
 }
 
-async function errorCode(response: Response) {
-  const body: unknown = await response.json().catch(() => null);
-  return isRecord(body) && typeof body.error === 'string' ? body.error : 'server-error';
-}
+const codeOf = (body: unknown) => (isRecord(body) && typeof body.error === 'string' ? body.error : 'server-error');
+const errorCode = async (response: Response) => codeOf(await response.json().catch(() => null));
 
 async function answered(response: Response | RelayFailure): Promise<Response | RelayFailure> {
   if (!(response instanceof Response) || response.ok) return response;
