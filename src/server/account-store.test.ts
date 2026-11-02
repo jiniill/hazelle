@@ -262,7 +262,7 @@ describe('timeline', () => {
       size: () => inner.size(),
       snapshots: inner.snapshots,
     };
-    const rules = new StoreRules(spy, reads, (work) => work());
+    const rules = new StoreRules(spy, reads);
     // The wake installs the timeline in one statement of its own; only the calls after it are counted.
     expect(await rules.status(INC)).toEqual(active());
     outside.length = 0;

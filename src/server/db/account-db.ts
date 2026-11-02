@@ -6,11 +6,11 @@ import { backup, DatabaseSync } from 'node:sqlite';
 import { Transform, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createGunzip } from 'node:zlib';
-import { StoreRules, type SqlValue, type StoreDb, type StoreReads, type Unavailable } from '../account-store';
+import { StoreRules, type StoreDb, type StoreReads, type Unavailable } from '../account-store';
 import { snapshotKey, type Bucket } from '../files/bucket';
 import { DAY_MS } from '../http';
 import { fsyncPath, makeDirs } from './durable';
-import { openDatabase, type Db } from './service-db';
+import { openDatabase, type Db, type SqlValue } from './service-db';
 import { archiveSnapshot, snapshotJob } from './snapshot';
 import { transaction } from './transaction';
 
@@ -395,7 +395,7 @@ export function accountRegistry(dataDir: string, service: Db, reads: StoreReads,
     await installArmed(dataDir, service, incarnation, files);
     bound();
     const db = new AccountDb(dataDir, incarnation, service, clock, files);
-    held.session = { db, rules: new StoreRules(db, reads, (work) => work()) };
+    held.session = { db, rules: new StoreRules(db, reads) };
     return held.session;
   };
 
