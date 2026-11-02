@@ -32,7 +32,7 @@ export function ConnectionAccounts({ id, connection, signIn, level }: { id: stri
   const next = timeline[1];
   const usagePage = resolveConnection(connection)?.type?.usagePage;
 
-  const turns = (change: (turns: Turns) => Turns | null) => void changeTurns(store, id, change).then((result) => result.ok || toast.failed(result));
+  const turns = (change: (turns: Turns) => Turns | null) => toast.settled(changeTurns(store, id, change));
 
   function remove(account: Account) {
     void removeAccount(store, id, account.id).then((result) => {
@@ -62,8 +62,7 @@ export function ConnectionAccounts({ id, connection, signIn, level }: { id: stri
             onClose={() => setSigning(null)}
             onApproved={(secret, name) => {
               const known = connection.accounts.some((account) => account.name === name);
-              void addAccount(store, id, newAccount(secret, name)).then((result) => result.ok || toast.failed(result));
-              toast.show(known ? `${name} 계정에 다시 로그인했어요.` : `${name} 계정을 추가했어요.`);
+              void addAccount(store, id, newAccount(secret, name)).then((result) => (result.ok ? toast.show(known ? `${name} 계정에 다시 로그인했어요.` : `${name} 계정을 추가했어요.`) : toast.failed(result)));
               setSigning(null);
             }}
           />
