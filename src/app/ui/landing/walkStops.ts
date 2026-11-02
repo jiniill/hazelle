@@ -44,6 +44,7 @@ export const paceOfPage = (): Pace => {
 };
 
 const READ_STEP = 0.8;
+const ALREADY_THERE = 0.1;
 
 // Where one move can end: each stop, and the screens of a beat longer than the screen, so all of it can be read.
 const restsOfPage = () =>
@@ -55,7 +56,9 @@ const restsOfPage = () =>
 const restAhead = (way: number) => {
   const at = scrollY;
   const rests = restsOfPage();
-  return way > 0 ? rests.find((rest) => rest > at + 1) : rests.findLast((rest) => rest < at - 1);
+  // A stop that moved a little under the visitor (fonts arriving, the screen's bars) is where they already are: a gesture never spends itself on a nudge.
+  const here = innerHeight * ALREADY_THERE;
+  return way > 0 ? rests.find((rest) => rest > at + here) : rests.findLast((rest) => rest < at - here);
 };
 
 const scrollerAhead = (from: EventTarget | null, way: number) => {

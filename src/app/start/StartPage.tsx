@@ -5,7 +5,7 @@ import { START_AGAIN, START_PAGE } from '../../contracts/start';
 import { countFirstPage } from '../../runtime/first-page';
 import { LegalNotice } from '../common/LegalNotice';
 import { href } from '../shell/routes';
-import { Beat, Brand, Button, Callout, ChoiceGroup, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
+import { Beat, Brand, Button, Callout, ChoiceGroup, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, RoomFor, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
 import { EXAMPLE } from './example';
 
 const Trial = lazy(() => import('./Trial').then(({ Trial }) => ({ default: Trial })));
@@ -142,11 +142,14 @@ function KeyForm({ refused, onEnter }: { refused: string | null; onEnter: (type:
 
 const TYPED_EVERY = 24;
 
+type ExampleChoice = (typeof EXAMPLE.choices)[number];
+const typedOut = (picked: ExampleChoice | null, typed: number) => picked !== null && typed >= picked.reply.length;
+
 function ExampleChat({ onTalking }: { onTalking: (talking: boolean) => void }) {
-  const [picked, setPicked] = useState<(typeof EXAMPLE.choices)[number] | null>(null);
+  const [picked, setPicked] = useState<ExampleChoice | null>(null);
   const [typed, setTyped] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval>>(undefined);
-  const done = picked !== null && typed >= picked.reply.length;
+  const done = typedOut(picked, typed);
 
   useEffect(() => {
     if (!picked) return;
@@ -164,11 +167,20 @@ function ExampleChat({ onTalking }: { onTalking: (talking: boolean) => void }) {
   }
 
   return (
+    <RoomFor forms={EXAMPLE.choices.map((choice) => <ExampleLines picked={choice} typed={choice.reply.length} onPick={pick} />)}>
+      <ExampleLines picked={picked} typed={typed} onPick={pick} />
+    </RoomFor>
+  );
+}
+
+function ExampleLines({ picked, typed, onPick }: { picked: ExampleChoice | null; typed: number; onPick: (say: string) => void }) {
+  const done = typedOut(picked, typed);
+  return (
     <Stack>
       <Said by="them" name={EXAMPLE.name}>{EXAMPLE.greeting}</Said>
       {picked && <Said by="me">{picked.say}</Said>}
       {picked && <Said by="them" name={EXAMPLE.name} typing={!done}>{picked.reply.slice(0, typed)}</Said>}
-      {(!picked || done) && <SayChoices choices={EXAMPLE.choices.filter((choice) => choice !== picked).map(({ say }) => say)} onPick={pick} />}
+      {(!picked || done) && <SayChoices choices={EXAMPLE.choices.filter((choice) => choice !== picked).map(({ say }) => say)} onPick={onPick} />}
       <Text variant="note">{EXAMPLE.about}</Text>
     </Stack>
   );

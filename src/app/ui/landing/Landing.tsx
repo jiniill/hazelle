@@ -74,6 +74,14 @@ export const PanelBody = ({ children }: { children: ReactNode }) => <div classNa
 const CLOSE_TO_END = 40;
 
 // A conversation inside the panel's fixed height: it follows the newest words unless the visitor has scrolled back to read.
+// Holds the height of the tallest form its content will take, so what grows inside never moves the page under the walk.
+export const RoomFor = ({ forms, children }: { forms: ReactNode[]; children: ReactNode }) => (
+  <div className={styles.roomFor}>
+    {forms.map((form, index) => <div key={index} className={styles.roomForm} aria-hidden="true">{form}</div>)}
+    <div>{children}</div>
+  </div>
+);
+
 export function TalkBox({ onSubmit, foot, children }: { onSubmit: FormEventHandler<HTMLFormElement>; foot: ReactNode; children: ReactNode }) {
   const log = useRef<HTMLDivElement>(null);
   const following = useRef(true);

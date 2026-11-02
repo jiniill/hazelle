@@ -57,7 +57,7 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   }
 
   await page.getByRole('button', { name: '당신은 누구예요?', exact: true }).click();
-  await expect(page.getByText('이제 당신 이름을 들려줄 차례예요.', { exact: false })).toBeVisible();
+  await expect(page.getByText('이제 당신 이름을 들려줄 차례예요.', { exact: false }).locator('visible=true')).toBeVisible();
 
   await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
   const pageLength = () => page.evaluate<number>('document.documentElement.scrollHeight');
@@ -148,6 +148,26 @@ test('one gesture moves one stop at once, and the door looks the same on any scr
     return page.evaluate<number>(`Math.max(...document.getAnimations().map((animation) => animation.effect.target).filter((node) => String(node.className).includes('doorward')).map((node) => new DOMMatrix(getComputedStyle(node).transform).a))`);
   };
   expect(Math.abs((await doorScale(390, 664)) - (await doorScale(1440, 900)))).toBeLessThan(1.5);
+});
+
+test('the example conversation never moves the page, and the next notch goes on to the next stop', async ({ page }) => {
+  const scrollTop = () => page.evaluate<number>('Math.round(scrollY)');
+  const length = () => page.evaluate<number>('document.documentElement.scrollHeight');
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.mouse.move(400, 300);
+  await page.mouse.wheel(0, 100);
+  const stop = await page.evaluate<number>(`(() => { const { top, height } = document.getElementById('example').getBoundingClientRect(); return Math.round(top + scrollY + (height - innerHeight) / 2); })()`);
+  await expect.poll(scrollTop, { timeout: 5000 }).toBe(stop);
+  const before = await length();
+  await page.getByRole('button', { name: '당신은 누구예요?' }).click();
+  await expect(page.getByRole('button', { name: '이 숲엔 뭐가 살아요?' })).toBeVisible({ timeout: 15000 });
+  expect(await length()).toBe(before);
+  expect(await scrollTop()).toBe(stop);
+  await page.waitForTimeout(200);
+  await page.mouse.move(40, 40);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(stop + 500);
 });
 
 test('someone already using the app can walk it again, uncounted and with nothing live', async ({ page }) => {

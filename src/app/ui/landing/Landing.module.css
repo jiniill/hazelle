@@ -269,6 +269,19 @@
     overscroll-behavior: contain;
   }
 
+  .roomFor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .roomFor > * {
+    grid-area: 1 / 1;
+  }
+
+  .roomForm {
+    visibility: hidden;
+  }
+
   .talkBox {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
