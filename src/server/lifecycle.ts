@@ -3,7 +3,7 @@ import { BEFORE_ARMED, SELF_RESTORES_PER_DAY, type RestoreAction, type RestoreEr
 import type { Life, Unavailable } from './account-store';
 import { landing, RETENTION_MS } from './db/account-db';
 import type { Db } from './db/service-db';
-import { DAY_MS, fail, MINUTE_MS, refused, type AppEnv, type Services } from './http';
+import { DAY_MS, fail, isCount, isPositive, MINUTE_MS, refused, type AppEnv, type Services } from './http';
 import { removePictures } from './reconcile';
 import { takeBackFiles } from './files/claims';
 
@@ -356,9 +356,8 @@ function restoreActions(phase: RestorePhase, verified: boolean): RestoreAction[]
 export function restoreFrom(body: Record<string, unknown> | null): { at: number } | { undoes: number } | null {
   const at = body?.at;
   const undoes = body?.undoes;
-  const whole = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value);
-  if (at === undefined) return whole(undoes) && undoes > 0 ? { undoes } : null;
-  return undoes === undefined && whole(at) && at >= 0 ? { at } : null;
+  if (at === undefined) return isPositive(undoes) ? { undoes } : null;
+  return undoes === undefined && isCount(at) ? { at } : null;
 }
 
 const REFUSAL_STATUS = { 'not-found': 404, 'account-busy': 409, 'bad-post': 400, 'too-many-restores': 429, 'bad-time': 400, 'cannot-undo': 400 } as const;

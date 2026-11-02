@@ -6,7 +6,7 @@ import { RETENTION_MS } from './db/account-db';
 import type { Db, SqlValue, Statement } from './db/service-db';
 import { fileKey } from './files/bucket';
 import { takeBackFiles } from './files/claims';
-import { fail, hex, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
+import { fail, hex, isCount, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
 import { canWrite, requireSession } from './session';
 
 // File copies are incarnation-scoped, never shared between accounts. Live accounts' files are removed only by sweeps,
@@ -137,7 +137,7 @@ files.post('/sweep', canWrite, async (c) => {
   const input = await readObject(c);
   const { timeline, rev, unused, named } = input ?? {};
   const ids = (list: unknown): list is string[] => Array.isArray(list) && list.length <= MAX_FILE_IDS && list.every((id) => typeof id === 'string' && FILE_ID.test(id));
-  if (typeof timeline !== 'string' || !Number.isSafeInteger(rev) || (rev as number) < 0 || !ids(unused) || !ids(named) || unused.length + named.length > MAX_FILE_IDS) return fail(c, 400, 'bad-input');
+  if (typeof timeline !== 'string' || !isCount(rev) || !ids(unused) || !ids(named) || unused.length + named.length > MAX_FILE_IDS) return fail(c, 400, 'bad-input');
   const db = c.env.db;
   const { incarnation } = c.get('account');
   const result = await c.env.backups.hold(() => c.env.stores.withStore(incarnation, async (store) => {

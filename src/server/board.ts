@@ -26,9 +26,9 @@ import {
   type PostRow,
 } from '../contracts/board';
 import { ACCOUNT_HEADER } from '../contracts/http';
-import { act, limitOf, MAX_OPEN_REPORTS, operator, positive } from './admin';
+import { act, limitOf, MAX_OPEN_REPORTS, operator } from './admin';
 import type { SqlValue } from './db/service-db';
-import { DAY_MS, fail, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
+import { DAY_MS, fail, isPositive, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
 import { boardDailyLimit } from './limits';
 import { requireSession } from './session';
 import { activity, hidden, OPERATOR, tellUnread } from './unread';
@@ -358,7 +358,7 @@ board.post('/posts/:id/comments', async (c) => {
   const body = await readObject(c);
   const text = commentText(body?.text);
   const parentId = body?.parentId;
-  if (id === null || text === null || !(parentId === null || positive(parentId))) return fail(c, 400, 'bad-input');
+  if (id === null || text === null || !(parentId === null || isPositive(parentId))) return fail(c, 400, 'bad-input');
   if (!account.guest && !account.admin && !(await hasNickname(c))) return fail(c, 403, 'no-nickname');
   const db = c.env.db;
   const post = await db.prepare(`SELECT p.locked, COALESCE(p.account_id, p.guest_secret_hash) AS author FROM posts p WHERE p.id = ?2 AND p.deleted = 0 AND ${readable(account)}`).bind(account.id, id).first<{ locked: number; author: string | null }>();
@@ -473,7 +473,7 @@ board.get('/activity', async (c) => {
 board.post('/seen', async (c) => {
   const account = c.get('account');
   const id = (await readObject(c))?.id;
-  if (!positive(id)) return fail(c, 400, 'bad-input');
+  if (!isPositive(id)) return fail(c, 400, 'bad-input');
   await c.env.db
     .prepare(`UPDATE accounts SET board_seen = MAX(board_seen, COALESCE((SELECT at FROM (${activity('?1')}) WHERE id = ?2), 0)) WHERE id = ?1`)
     .bind(account.id, id)
@@ -506,7 +506,7 @@ function readHidden(value: unknown) {
   if (typeof value !== 'object' || Array.isArray(value)) return undefined;
   const { reason, days } = value as Record<string, unknown>;
   const why = typeof reason === 'string' ? reason.trim() : '';
-  const held = days === null || (positive(days) && days <= HOLD_DAYS_MAX);
+  const held = days === null || (isPositive(days) && days <= HOLD_DAYS_MAX);
   return why && why.length <= MAX_REASON_LENGTH && held ? { reason: why, days: days as number | null } : undefined;
 }
 

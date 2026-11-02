@@ -7,7 +7,7 @@ import { SHARE_ID } from '../contracts/shares';
 import { blockFiles, fileBlocks } from './files';
 import { forgetCut, serveShareFile } from './shares';
 import type { Db, SqlValue, Statement } from './db/service-db';
-import { DAY_MS, fail, ID, readObject, type AppEnv, type Services } from './http';
+import { DAY_MS, fail, ID, isCount, isPositive, readObject, type AppEnv, type Services } from './http';
 import { answerAction, answerBegin, leaveAccount, refuseLeft, restoreFrom, restorePoints, restoresOf, store } from './lifecycle';
 import { requireSession } from './session';
 import { tellUnread, VISIBLE } from './unread';
@@ -51,7 +51,7 @@ export const notices = new Hono<AppEnv>()
   // id: the newest notice the page showed, so one sent since it was read stays unread.
   .post('/seen', async (c) => {
     const id = (await readObject(c))?.id;
-    if (!positive(id)) return fail(c, 400, 'bad-input');
+    if (!isPositive(id)) return fail(c, 400, 'bad-input');
     await c.env.db.prepare('UPDATE accounts SET notices_seen = MAX(notices_seen, ?) WHERE incarnation = ?').bind(id, c.get('account').incarnation).run();
     await tellUnread(c);
     return c.body(null, 204);
@@ -138,7 +138,7 @@ async function accountPage<T extends Pick<AccountRow, 'accountId' | 'createdAt'>
   const split = after?.indexOf(':') ?? 0;
   const at = Number(after?.slice(0, split));
   const id = after?.slice(split + 1) ?? '';
-  if (limit === null || (after !== null && (split < 1 || !count(at) || !ID.test(id)))) return null;
+  if (limit === null || (after !== null && (split < 1 || !isCount(at) || !ID.test(id)))) return null;
   const rows = after === null
     ? c.env.db.prepare(`SELECT ${columns} FROM accounts WHERE ${where} ORDER BY created_at, id LIMIT ?`).bind(limit)
     : c.env.db.prepare(`SELECT ${columns} FROM accounts WHERE (created_at, id) > (?, ?) AND ${where} ORDER BY created_at, id LIMIT ?`).bind(at, id, limit);
@@ -287,7 +287,7 @@ admin.post('/accounts/:id/restores', async (c) => {
   const body = await readObject(c);
   const post = body?.post;
   const from = restoreFrom(body);
-  if (!ID.test(id) || !positive(post) || !from) return fail(c, 400, 'bad-input');
+  if (!ID.test(id) || !isPositive(post) || !from) return fail(c, 400, 'bad-input');
   return answerBegin(c, id, post, from);
 });
 
@@ -302,7 +302,7 @@ admin.get('/accounts/:id/restores', async (c) => c.json({ restores: await restor
 
 admin.post('/restores/:id/:action{resume|finalize|cancel}', async (c) => {
   const id = Number(c.req.param('id'));
-  if (!positive(id)) return fail(c, 400, 'bad-input');
+  if (!isPositive(id)) return fail(c, 400, 'bad-input');
   return answerAction(c, id, c.req.param('action') as RestoreAction);
 });
 
@@ -351,9 +351,7 @@ admin.put('/backup-folder', async (c) => {
   return c.body(null, 204);
 });
 
-const count = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
-export const positive = (value: unknown): value is number => count(value) && value > 0;
-const cap = (value: unknown) => value === null || count(value);
+const cap = (value: unknown) => value === null || isCount(value);
 const ownCap = (value: unknown) => value === 'default' || cap(value);
 
 admin.put('/service', async (c) => {
@@ -361,7 +359,7 @@ admin.put('/service', async (c) => {
   const signupCap = body?.signupCap;
   const accountBytesCap = body?.accountBytesCap;
   const accountFileBytesCap = body?.accountFileBytesCap;
-  if (!count(signupCap) || !cap(accountBytesCap) || !cap(accountFileBytesCap)) return fail(c, 400, 'bad-input');
+  if (!isCount(signupCap) || !cap(accountBytesCap) || !cap(accountFileBytesCap)) return fail(c, 400, 'bad-input');
   const db = c.env.db;
   await db.batch([
     db.prepare(`INSERT INTO admin_log (at, action, target, detail) VALUES (?, 'set-service', 'service', ?)`).bind(Date.now(), JSON.stringify({ signupCap, accountBytesCap, accountFileBytesCap })),
@@ -476,7 +474,7 @@ admin.post('/shares/:id/block', async (c) => {
   const version = body?.version;
   const notice = noticeText(body?.notice);
   const suspend = body?.suspend;
-  if (!SHARE_ID.test(id) || !positive(version) || !notice || typeof suspend !== 'boolean') return fail(c, 400, 'bad-input');
+  if (!SHARE_ID.test(id) || !isPositive(version) || !notice || typeof suspend !== 'boolean') return fail(c, 400, 'bad-input');
   const db = c.env.db;
   const owner = await db
     .prepare('SELECT a.id FROM shares s JOIN accounts a ON a.incarnation = s.incarnation WHERE s.id = ? AND s.removed_at IS NULL AND EXISTS (SELECT 1 FROM share_versions WHERE share = s.id AND version = ?)')

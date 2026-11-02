@@ -3,7 +3,7 @@ import { createMiddleware } from 'hono/factory';
 import { ACCOUNT_USAGE_HEADERS } from '../contracts/http';
 import { FILE_ID } from '../contracts/files';
 import { BATCH_LIMITS, type BatchAnswer, type FeedAnswer, type FeedQuery, type SealedWrite } from '../contracts/objects';
-import { fail, ID, isRecord, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
+import { fail, ID, isPositive, isRecord, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
 import { store } from './lifecycle';
 import { canWrite, requireSession } from './session';
 import { claimFiles } from './files/claims';
@@ -130,7 +130,7 @@ function readWrite(input: unknown): SealedWrite | null {
   if (typeof id !== 'string' || !ID.test(id)) return null;
   if (typeof kind !== 'string' || !KIND.test(kind)) return null;
   if (parent !== null && (typeof parent !== 'string' || !ID.test(parent))) return null;
-  if (baseRev !== null && (typeof baseRev !== 'number' || !Number.isSafeInteger(baseRev) || baseRev < 1)) return null;
+  if (baseRev !== null && !isPositive(baseRev)) return null;
   if (body !== null && (typeof body !== 'string' || !body)) return null;
   if (body === null && baseRev === null) return null;
   if (once !== undefined && (once !== true || body === null || baseRev !== null)) return null;

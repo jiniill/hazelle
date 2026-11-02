@@ -4,7 +4,7 @@ import type { Door } from '../contracts/accounts';
 import type { RestoreAction } from '../contracts/admin';
 import { CAP } from './caps';
 import { checkProof, findAccount, hashProof, outsideVisitor, readMethod, readProof } from './credentials';
-import { fail, ID, readObject, type Account, type AppEnv } from './http';
+import { fail, ID, isPositive, readObject, type Account, type AppEnv } from './http';
 import { answerAction, answerBegin, leaveAccount, refuseLeft, restoreFrom, restorePoints, restoresOf, store } from './lifecycle';
 import { canWrite, currentAccount, dropSessionCookie, endOtherSessions, endSession, requireOwnSession, requireSession, setSessionCookie, startSession } from './session';
 import { insertVault, readVault, readWrap } from './vaults';
@@ -148,7 +148,7 @@ accounts.get('/account/restores', requireSession, async (c) => c.json({ restores
 // Only the account's own restores, whoever began them: one the operator began is the account's too.
 accounts.post('/account/restores/:id/:action{resume|finalize|cancel}', requireSession, async (c) => {
   const id = Number(c.req.param('id'));
-  if (!Number.isSafeInteger(id) || id < 1) return fail(c, 400, 'bad-input');
+  if (!isPositive(id)) return fail(c, 400, 'bad-input');
   const own = await c.env.db.prepare('SELECT 1 FROM restores WHERE id = ? AND incarnation = ?').bind(id, c.get('account').incarnation).first();
   if (!own) return fail(c, 404, 'not-found');
   return answerAction(c, id, c.req.param('action') as RestoreAction);
