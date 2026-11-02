@@ -4,6 +4,7 @@ import type { ToolUnit } from '../../model/tool';
 import { packsOf } from '../chat-context';
 import { assetType } from '../../engine/import/card';
 import { fieldValue, type ImportedTool } from '../../engine/import/tool';
+import { hex } from '../../hex';
 import { without } from '../../model/fields';
 import { live } from '../../model/library';
 import { toolId, type Badges, type Tool } from '../../model/tool';
@@ -106,8 +107,8 @@ export async function setToolSettings({ store }: Pick<Session, 'store'>, module:
 
 async function keyId(text: string): Promise<string> {
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
-  const hex = [...digest.slice(0, 16)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  const digits = hex(digest.slice(0, 16));
+  return `${digits.slice(0, 8)}-${digits.slice(8, 12)}-${digits.slice(12, 16)}-${digits.slice(16, 20)}-${digits.slice(20)}`;
 }
 
 // Every device addresses the same key. The module separates equal key names owned by different tools; a chat's badge
@@ -172,7 +173,7 @@ export async function saveToolAsset(store: ObjectStore, files: Files, module: st
   if (!live(store.get('module', module))) return { ok: false, error: 'gone' };
   const type = assetType(bytes);
   if (!type) return { ok: false, error: 'unsupported-file' };
-  const name = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  const name = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
   const id = await toolAssetId(module, name);
   if (store.get('asset', id)) return { ok: true, data: name };
   const saved = await files.save([bytes]);

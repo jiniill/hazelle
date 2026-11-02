@@ -6,7 +6,8 @@ import { RETENTION_MS } from './db/account-db';
 import type { Db, SqlValue, Statement } from './db/service-db';
 import { fileKey } from './files/bucket';
 import { takeBackFiles } from './files/claims';
-import { fail, hex, isCount, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
+import { hex } from '../hex';
+import { fail, isCount, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
 import { canWrite, requireSession } from './session';
 
 // File copies are incarnation-scoped, never shared between accounts. Live accounts' files are removed only by sweeps,

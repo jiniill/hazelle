@@ -2,7 +2,7 @@ import path from 'node:path';
 
 // Assign modules to their longest matching repo-relative area; tests inherit their subject's area.
 // Allow imports/types/tests edges explicitly; unknown areas fail lint until assigned.
-const RUNTIME_IMPORTS = ['toolApi', 'changeSignal', 'base64', 'contracts', 'model', 'engine', 'connectors', 'modelsDev', 'vault'];
+const RUNTIME_IMPORTS = ['toolApi', 'changeSignal', 'base64', 'hex', 'contracts', 'model', 'engine', 'connectors', 'modelsDev', 'vault'];
 const BELOW_APP = ['runtime', ...RUNTIME_IMPORTS];
 const FEATURES = ['account', 'admin', 'library', 'chat', 'connections', 'models', 'prompts', 'personas', 'modules', 'settings', 'share', 'pulse', 'tools', 'board'];
 const FEATURE = {
@@ -14,6 +14,7 @@ const AREAS = {
   sandbox: { paths: ['src/sandbox'], imports: ['toolApi'], why: 'the sandbox reaches only the public tool contract.' },
   changeSignal: { paths: ['src/change-signal'], why: 'argument-free change notifications import no application or environment code.' },
   base64: { paths: ['src/base64'], why: 'one base64 codec for the vault, the connectors and the engine; it imports nothing, so none of them learns of another layer through it.' },
+  hex: { paths: ['src/hex'], why: 'one lowercase hex writer for the ids and names the runtime, the vault, the engine and the server derive from bytes; it imports nothing, so none of them learns of another layer through it.' },
   contracts: { paths: ['src/contracts'], why: 'wire values shared by the server and client import no other layer.' },
   connectors: {
     paths: ['src/connectors'],
@@ -24,7 +25,7 @@ const AREAS = {
   destination: { paths: ['src/connectors/destination'], why: 'how an address is matched against the operator\'s local providers is shared by 직접 연결 and the server\'s outbound policy, so it imports nothing.' },
   engine: {
     paths: ['src/engine'],
-    imports: ['base64', 'connectors', 'toolApi'],
+    imports: ['base64', 'hex', 'connectors', 'toolApi'],
     types: ['model'],
     why: 'the engine stays free of UI, network, storage and server code so its golden tests run in node, and takes only types from the model; the tool contract imports no application code, so its values keep the engine node-pure.',
   },
@@ -33,11 +34,11 @@ const AREAS = {
     types: ['toolApi', 'connectors', 'engine', 'vault'],
     why: 'the model is pure domain, saved values and what is computed from them with no I/O, and takes only types from connectors, the engine and the vault (a stored file\'s reference).',
   },
-  vault: { paths: ['src/vault'], imports: ['base64'], why: 'the vault is crypto and device storage only; it never reaches the network.' },
+  vault: { paths: ['src/vault'], imports: ['base64', 'hex'], why: 'the vault is crypto and device storage only; it never reaches the network.' },
   server: {
     paths: ['src/server'],
-    imports: ['contracts', 'modelsDev', 'destination'],
-    why: 'the server knows nothing about the client or providers, but their wire contracts, which models.dev lists to keep (connectors/models-dev) and how a local provider\'s address is matched (connectors/destination).',
+    imports: ['contracts', 'hex', 'modelsDev', 'destination'],
+    why: 'the server knows nothing about the client or providers, but their wire contracts, which models.dev lists to keep (connectors/models-dev), how a local provider\'s address is matched (connectors/destination) and the hex writer its file ids and session tokens share with the client.',
   },
   runtime: {
     paths: ['src/runtime'],
