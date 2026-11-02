@@ -32,6 +32,14 @@ export async function openBytes(key: CryptoKey, sealed: Uint8Array<ArrayBuffer>,
   }
 }
 
+// The leading byte names the body's format.
+export function withFormat(format: number, sealed: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
+  const body = new Uint8Array(1 + sealed.length);
+  body[0] = format;
+  body.set(sealed, 1);
+  return body;
+}
+
 export async function seal(key: CryptoKey, plaintext: Uint8Array<ArrayBuffer>, aad: string): Promise<string> {
   return toBase64(await sealBytes(key, plaintext, aad));
 }

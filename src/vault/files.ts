@@ -1,4 +1,4 @@
-import { encodeText, fromBase64, toBase64 } from './aead';
+import { encodeText, fromBase64, toBase64, withFormat } from './aead';
 
 // The key lives only in sealed object bodies.
 export type FileRef = { id: string; key: string };
@@ -15,9 +15,7 @@ export async function sealFile(bytes: Uint8Array<ArrayBuffer>): Promise<{ ref: F
   const raw = new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(), info: AAD }, base, 256));
   const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']);
   const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: NONCE, additionalData: AAD }, key, bytes));
-  const body = new Uint8Array(1 + sealed.length);
-  body[0] = FORMAT;
-  body.set(sealed, 1);
+  const body = withFormat(FORMAT, sealed);
   return { ref: { id: await fileId(body), key: toBase64(raw) }, body };
 }
 
