@@ -1,4 +1,4 @@
-// Cuts an illustration for the first page (ui/landing/art) out of its background and grades it for the night forest.
+// Cuts the illustrations for the first page (ui/landing/art) out of their backgrounds and grades them for the night forest.
 // Run: tsx scripts/cut-art.mts <arin.png> <cabin.png> [out dir], then npm run brand: the link preview shows 아린.
 import { chromium } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -57,4 +57,18 @@ for (const part of parts) {
   const web = b64(r.webp); await writeFile(`${out}/${part.name}.webp`, web);
   console.log(part.name, r.w, r.h, 'source', r.W, r.H, 'box', r.box.join(','), Math.round(web.length/1024)+'K');
 }
+// The page's other lanterns and the door's view are parts of these two, so they stay one picture.
+const piece = (from: string, name: string, box: [number, number, number, number], scale: number, blur: number, quality: number) => readFile(`${out}/${from}.webp`).then(async (file) => {
+  const data = await p.evaluate(async ({ src, box, scale, blur, quality }) => {
+    const i = new Image(); i.src = src; await i.decode();
+    const [sx, sy, sw, sh] = box;
+    const c = document.createElement('canvas'); c.width = sw * scale; c.height = sh * scale;
+    const x = c.getContext('2d')!; x.imageSmoothingQuality = 'high'; if (blur) x.filter = `blur(${blur}px)`;
+    x.drawImage(i, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    return c.toDataURL('image/webp', quality);
+  }, { src: `data:image/webp;base64,${file.toString('base64')}`, box, scale, blur, quality });
+  await writeFile(`${out}/${name}.webp`, Buffer.from(data.split(',')[1]!, 'base64'));
+});
+await piece('arin', 'lantern', [0, 172, 108, 218], 2, 0, 0.86);
+await piece('cabin', 'room', [620, 440, 240, 520], 1, 3, 0.6);
 await b.close();
