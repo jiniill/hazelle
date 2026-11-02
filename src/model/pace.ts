@@ -8,7 +8,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export type Pace = { used: number; even: number; perDay: number; daysLeft: number; endsAtSwitch: boolean };
 
 // One month before, in UTC as the reset is counted; a day the month lacks becomes its last.
-export function previousReset(at: number): number {
+function previousReset(at: number): number {
   const reset = new Date(at);
   const month = reset.getUTCMonth() - 1;
   const last = new Date(Date.UTC(reset.getUTCFullYear(), month + 1, 0)).getUTCDate();

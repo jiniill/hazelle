@@ -1,7 +1,7 @@
 import type { Account, Connection, Group, Turns } from '../connectors/types';
 import { moved } from './fields';
 
-export const DEFAULT_DAY = 16;
+const DEFAULT_DAY = 16;
 
 const modulo = (value: number, divisor: number) => ((value % divisor) + divisor) % divisor;
 
@@ -12,7 +12,7 @@ export function cycleOf(now: number, day: number): number {
   return date.getDate() < day ? month - 1 : month;
 }
 
-export const cycleStart = (cycle: number, day: number): number => new Date(Math.floor(cycle / 12), modulo(cycle, 12), day).getTime();
+const cycleStart = (cycle: number, day: number): number => new Date(Math.floor(cycle / 12), modulo(cycle, 12), day).getTime();
 
 // window: when the current group's turn started and ends; null with one group, whose turn never ends.
 // timeline: one round from the current group, each with its turn's start and end.
