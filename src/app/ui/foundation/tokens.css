@@ -561,6 +561,24 @@
   --scene-cabin-pool-height: 24%;
   --scene-cabin-pool: radial-gradient(ellipse 22% 42% at 52.5% 50%, #ffc47842, #ffb46014 58%, transparent), radial-gradient(ellipse closest-side, #06071ea6 40%, transparent);
   --scene-cabin-foot: linear-gradient(#000 96%, transparent);
+  --scene-cabin-door-x: calc(var(--scene-cabin-x) + var(--scene-cabin-width) * 0.025);
+  --scene-cabin-door-y: calc(100% - var(--scene-cabin-ground) - var(--scene-cabin-width) * 0.236);
+  --scene-room-floor: #1d1017;
+  --scene-room-width: max(100vw, 100lvh * 1672 / 941);
+  --scene-room-shape: 1672 / 941;
+  --scene-room-top: 50%;
+  --scene-room-shift: -50%;
+  --scene-room-near: 1.07;
+  --scene-room-in: 1100ms;
+  --scene-room-out: 800ms;
+  --scene-room-lamp-x: 38.9%;
+  --scene-room-lamp-y: 54%;
+  --scene-room-lamp: 34%;
+  --scene-room-hearth-x: 8.8%;
+  --scene-room-hearth-y: 48%;
+  --scene-room-hearth: 26%;
+  --scene-room-lamp-glow: radial-gradient(closest-side, #ffc97a38, #ffb46026 44%, transparent);
+  --scene-room-hearth-glow: radial-gradient(closest-side, #ffb4604d, #ff9a4a1f 56%, transparent);
   --scene-bough-sway: 7s;
   --scene-bough-from: -0.5deg;
   --scene-bough-to: 0.7deg;
@@ -591,34 +609,24 @@
   --landing-gap: clamp(72px, 14vh, 160px);
   --landing-edge: clamp(20px, 5vw, 72px);
   --landing-walk: 58svh;
+  --landing-room-stay: 64svh;
+  --landing-room-after: 8svh;
+  --landing-room-panel: 36rem;
+  --landing-room-in: 700ms;
+  --landing-room-wait: 450ms;
+  --landing-room-out: 300ms;
+  --landing-room-columns: 54fr 46fr;
+  --landing-room-seat: clamp(24px, 8svh, 88px);
+  --landing-room-seat-end: var(--landing-room-seat);
+  --landing-room-gap: var(--space-24);
+  --landing-room-words-gap: var(--space-16);
+  --landing-room-words-talking: grid;
+  --landing-talk-fade: linear-gradient(transparent, #000 var(--space-16));
   --landing-talk-width: 34rem;
-  --landing-door-width: 34rem;
-  --landing-door-arch: clamp(120px, 15vw, 210px);
-  --landing-door-floor: linear-gradient(#2a180f 0, #24160f 40%, #1b1110 100%);
-  --landing-door-frame: clamp(10px, 1.1vw, 15px);
-  --landing-door-wood: linear-gradient(90deg, #2e1b11, #6a4427 7%, #4c2f1b 48%, #6a4427 93%, #2e1b11);
-  --landing-door-keystone: clamp(34px, 3.6vw, 48px);
-  --landing-door-keystone-wood: linear-gradient(#7c5430, #4f3119);
-  --landing-door-sill: linear-gradient(#b8a48c, #5c5068 70%, #2e2a44);
-  --landing-door-shade: inset 0 0 0 1px #00000099, inset 0 18px 40px #00000073;
-  --landing-door-view: clamp(190px, 26vw, 300px);
-  --landing-door-view-seen: 0.72;
-  --landing-door-view-fade: linear-gradient(#000 40%, transparent);
-  --landing-door-leaf: clamp(120px, 12vw, 170px);
-  --landing-door-leaf-round: 100%;
-  --landing-door-planks: repeating-linear-gradient(90deg, #4f3320 0, #5c3d25 18px, #2f1d12 19px, #4f3320 20px);
-  --landing-door-leaf-shade: inset -18px 0 26px #00000080;
-  --landing-door-depth: 1100px;
-  --landing-door-swing: 62deg;
-  --landing-door-hinge: #1a1218;
-  --landing-door-round: 50%;
   --landing-finish-top: 14svh;
   --landing-step-lantern: clamp(34px, 3.4vw, 42px);
   --landing-step-rope: linear-gradient(90deg, transparent, #c9a87a80 14%, #c9a87a80 86%, transparent);
   --landing-caret-height: 1em;
-  --landing-door-glow: 0 0 0 1px #00000099, 0 24px 60px #00000080, 0 0 120px 12px #ffb4603d;
-  --landing-door-spill: radial-gradient(ellipse 44% 100% at 50% 0, #ffc47866, #ffc4781f 58%, transparent);
-  --landing-door-spill-height: 22svh;
   --landing-lantern: 58px;
   --landing-lantern-hung: clamp(72px, 6.6vw, 96px);
   --landing-lantern-breath: radial-gradient(closest-side, #ffcf8a59, #ffbe6e1a 56%, transparent);
@@ -643,7 +651,6 @@
   --landing-point-dim: 0.28;
   --landing-tracking: -0.01em;
   --landing-cta-glow: drop-shadow(0 0 26px #ffd28c99);
-  --landing-door-top: clamp(44px, 6vw, 76px);
   --landing-caret: 2px;
   --landing-caret-blink: 900ms;
   --landing-point-gap: clamp(72px, 22svh, 220px);
@@ -856,5 +863,28 @@
     --scene-arin-height: 6vh;
     --scene-cabin-x: 49.6%;
     --scene-cabin-width: 17vw;
+    --scene-room-width: max(100vw, 100svh * 941 / 1672);
+    --scene-room-shape: 941 / 1672;
+    --scene-room-top: 0;
+    --scene-room-shift: 0;
+    --scene-room-lamp-x: 67.5%;
+    --scene-room-lamp-y: 24%;
+    --scene-room-lamp: 62%;
+    --scene-room-hearth-x: 17.5%;
+    --scene-room-hearth-y: 18.8%;
+    --scene-room-hearth: 46%;
+    --landing-room-columns: 1fr;
+    --landing-room-seat: max(33svh, 60vw);
+    --landing-room-seat-end: var(--space-16);
+    --landing-room-gap: var(--space-16);
+    --landing-room-words-gap: var(--space-8);
+    --landing-room-words-talking: none;
+  }
+}
+
+@media (max-aspect-ratio: 1/1) and (max-height: 600px) {
+  :root,
+  [data-theme='dark'] {
+    --landing-room-seat: 24svh;
   }
 }

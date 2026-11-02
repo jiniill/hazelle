@@ -104,12 +104,6 @@
       gap: var(--landing-edge);
     }
 
-    .door {
-      grid-template-columns: 4fr 7fr;
-      align-items: start;
-      gap: var(--landing-edge);
-    }
-
     .points {
       grid-template-columns: 5fr 7fr;
       align-items: start;
@@ -148,92 +142,100 @@
     text-shadow: var(--landing-finish-shadow);
   }
 
-  .doorway {
+  /* The room stands behind the page, in the scene: what is pinned here only appears and goes, it never rides the scroll up the screen. */
+  .indoors {
     position: relative;
-    width: min(100%, var(--landing-door-width));
-    margin-inline-start: auto;
+    display: block;
+    width: 100%;
+    height: calc(var(--landing-screen) + var(--landing-room-stay) + var(--landing-room-after));
+    padding: 0;
+    scroll-margin-top: 0;
   }
 
-  /* The room's light falling out over the ground below the door. */
-  .doorway::after {
-    content: '';
+  .stay {
     position: absolute;
-    top: 100%;
-    left: -18%;
-    right: -18%;
-    height: var(--landing-door-spill-height);
-    background: var(--landing-door-spill);
-    pointer-events: none;
+    top: 0;
+    height: var(--landing-room-stay);
+    width: 100%;
   }
 
-  .doorFrame {
-    position: relative;
-    padding: var(--landing-door-frame);
-    padding-block-end: 0;
-    border-start-start-radius: var(--landing-door-round) var(--landing-door-arch);
-    border-start-end-radius: var(--landing-door-round) var(--landing-door-arch);
-    background: var(--landing-door-wood);
-    box-shadow: var(--landing-door-glow);
-  }
-
-  .doorKeystone {
-    position: absolute;
-    top: calc(var(--landing-door-frame) * -0.4);
-    left: 50%;
-    width: var(--landing-door-keystone);
-    height: calc(var(--landing-door-frame) * 2.2);
-    background: var(--landing-door-keystone-wood);
-    clip-path: polygon(0 0, 100% 0, 82% 100%, 18% 100%);
-    transform: translateX(-50%);
-  }
-
-  .doorSill {
-    position: absolute;
-    top: 100%;
-    left: calc(var(--landing-door-frame) * -1.2);
-    right: calc(var(--landing-door-frame) * -1.2);
-    height: var(--landing-door-frame);
-    border-radius: var(--radius-sm);
-    background: var(--landing-door-sill);
-  }
-
-  .doorLeaf {
-    display: none;
-  }
-
-  .room {
-    position: relative;
+  .seat {
+    position: sticky;
+    top: 0;
     display: grid;
-    border-start-start-radius: var(--landing-door-round) var(--landing-door-arch);
-    border-start-end-radius: var(--landing-door-round) var(--landing-door-arch);
-    background: var(--landing-door-floor);
-    box-shadow: var(--landing-door-shade);
+    grid-template-columns: var(--landing-room-columns);
+    height: var(--landing-screen);
+    padding-block: var(--landing-room-seat) var(--landing-room-seat-end);
+    padding-inline: var(--landing-edge);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--landing-room-out) var(--ease-enter);
+  }
+
+  .seat[data-inside],
+  .seat:focus-within {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .seat[data-inside] {
+    transition: opacity var(--landing-room-in) var(--ease-enter) var(--landing-room-wait);
+  }
+
+  .panel {
+    grid-column: -2;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: var(--landing-room-gap);
+    width: min(100%, var(--landing-room-panel));
+    min-width: 0;
+    min-height: 0;
     color: var(--color-text);
   }
 
-  .roomBehind {
-    position: absolute;
-    inset: 0 0 auto;
-    width: 100%;
-    height: var(--landing-door-view);
-    border-start-start-radius: var(--landing-door-round) var(--landing-door-arch);
-    border-start-end-radius: var(--landing-door-round) var(--landing-door-arch);
-    object-fit: cover;
-    object-position: 50% 24%;
-    opacity: var(--landing-door-view-seen);
-    mask-image: var(--landing-door-view-fade);
-    pointer-events: none;
+  .panel .words {
+    gap: var(--landing-room-words-gap);
   }
 
-  .roomInside {
-    position: relative;
+  .panel[data-talking] .words {
+    display: var(--landing-room-words-talking);
+  }
+
+  /* One height whatever step the visitor is on: the page, and the walk it measures, never change length. */
+  .panelBody {
+    min-height: 0;
+    padding: var(--space-4);
+    margin: calc(var(--space-4) * -1);
+    overflow-y: auto;
+  }
+
+  .talkBox {
     display: grid;
-    gap: var(--space-24);
-    min-width: 0;
-    padding: var(--landing-door-top) clamp(var(--space-16), 4vw, var(--space-32)) clamp(var(--space-24), 4vw, var(--space-32));
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, auto) auto;
+    align-content: start;
+    gap: var(--space-16);
+    height: 100%;
   }
 
-  /* One rope across the doorway: the walk's three lanterns hang from it, and the visitor lights them. */
+  .talkLog {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: var(--space-16);
+    min-height: 0;
+    padding-block-start: var(--space-16);
+    overflow-y: auto;
+    mask-image: var(--landing-talk-fade);
+  }
+
+  .talkFoot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-16);
+  }
+
+  /* One rope across the room: the walk's three lanterns hang from it, and the visitor lights them. */
   .steps {
     position: relative;
     display: grid;
@@ -394,7 +396,7 @@
 
   .sendRow {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
     gap: var(--space-8);
   }
@@ -587,42 +589,6 @@
     }
   }
 
-  /* The door itself, swung open toward the visitor. Only a wide screen has the room beside it. */
-  @media (min-width: 960px) {
-    .doorLeaf {
-      position: absolute;
-      top: var(--landing-door-frame);
-      right: calc(100% - var(--landing-door-frame));
-      bottom: 0;
-      display: block;
-      width: var(--landing-door-leaf);
-      border-start-start-radius: var(--landing-door-leaf-round) var(--landing-door-arch);
-      background: var(--landing-door-planks);
-      box-shadow: var(--landing-door-leaf-shade);
-      transform: perspective(var(--landing-door-depth)) rotateY(var(--landing-door-swing));
-      transform-origin: 100% 50%;
-    }
-
-    .doorLeaf::before,
-    .doorLeaf::after {
-      content: '';
-      position: absolute;
-      left: 12%;
-      right: 0;
-      height: var(--space-12);
-      border-radius: var(--radius-sm);
-      background: var(--landing-door-hinge);
-    }
-
-    .doorLeaf::before {
-      top: 34%;
-    }
-
-    .doorLeaf::after {
-      bottom: 14%;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .lanternLit::after,
     .saidThem,
@@ -630,6 +596,11 @@
     .caret,
     .promise {
       animation: none;
+    }
+
+    .seat,
+    .seat[data-inside] {
+      transition: none;
     }
   }
 

@@ -9,6 +9,8 @@ import hillWide from './art/hill-wide.webp';
 import moon from './art/moon.webp';
 import ridgeTall from './art/ridge-tall.webp';
 import ridgeWide from './art/ridge-wide.webp';
+import roomTall from './art/room-tall.webp';
+import roomWide from './art/room-wide.webp';
 import rowATall from './art/rowA-tall.webp';
 import rowAWide from './art/rowA-wide.webp';
 import rowBTall from './art/rowB-tall.webp';
@@ -26,10 +28,12 @@ const ROW_B = { wide: rowBWide, tall: rowBTall };
 const ROW_C = { wide: rowCWide, tall: rowCTall };
 const ROW_D = { wide: rowDWide, tall: rowDTall };
 
-// How far the walk has come at a share of the page's scroll: it slows at 아린's clearing, the lanterns and the cabin, while each is read.
-const WALK: readonly (readonly [number, number])[] = [[0, 0], [0.19, 2050], [0.27, 2140], [0.37, 3100], [0.44, 3400], [0.58, 4400], [0.7, 4640], [1, 7600]];
+// How far the walk has come at a share of the page's scroll: it slows at 아린's clearing and the lanterns while each is read, then closes on the cabin's door, reached as the threshold is crossed.
+const WALK: readonly (readonly [number, number])[] = [[0, 0], [0.19, 2050], [0.27, 2140], [0.37, 3100], [0.44, 3400], [0.512, 5800], [1, 7600]];
 const LENS = 1000;
 const NEAREST = 14;
+// The doorway must fill the screen; the rest of the picture is off it by then, so only this plane may grow this far.
+const AT_THE_DOOR = 40;
 const SAMPLES = 40;
 const CLOCK = 1000;
 
@@ -46,11 +50,11 @@ type Seen = { in?: readonly [number, number]; out?: readonly [number, number] };
 const seenAt = ({ in: rise, out: fall }: Seen, share: number) => (rise ? between(rise[0], rise[1], share) : 1) * (fall ? 1 - between(fall[0], fall[1], share) : 1);
 
 // Each plane grows as its nearness says: a flat picture and a scale, so no browser's 3D is asked to hold depths this far apart.
-const planeFrames = (z: number, seen: Seen): Keyframe[] =>
+const planeFrames = (z: number, seen: Seen, nearest: number): Keyframe[] =>
   Array.from({ length: SAMPLES + 1 }, (_, index) => {
     const share = index / SAMPLES;
     const left = Math.max(z + LENS - walked(share), 1);
-    return { transform: `scale(${Math.min((z + LENS) / left, NEAREST).toFixed(4)})`, opacity: seenAt(seen, share).toFixed(3) };
+    return { transform: `scale(${Math.min((z + LENS) / left, nearest).toFixed(4)})`, opacity: seenAt(seen, share).toFixed(3) };
   });
 
 const SCROLL = typeof ScrollTimeline === 'function' ? new ScrollTimeline({ source: document.documentElement }) : null;
@@ -73,7 +77,7 @@ const ROWS: readonly { art: { wide: string; tall: string }; z: number; seen: See
   { art: ROW_B, z: 19000, seen: { in: [0.3, 0.5], out: [0.84, 0.9] } },
   { art: ROW_D, z: 13000, seen: { in: [0.16, 0.36], out: [0.8, 0.86] } },
   { art: ROW_B, z: 8500, seen: { in: [0.1, 0.28], out: [0.72, 0.8] } },
-  { art: ROW_D, z: 5500, seen: { in: [0.06, 0.2], out: [0.58, 0.66] } },
+  { art: ROW_D, z: 5500, seen: { in: [0.06, 0.2], out: [0.555, 0.59] } },
   { art: ROW_B, z: 3400, seen: { in: [0.04, 0.14], out: [0.38, 0.44] } },
   { art: ROW_D, z: 2000, seen: { in: [0.02, 0.1], out: [0.22, 0.27] } },
   { art: ROW_A, z: 1000, seen: { out: [0.1, 0.16] }, takes: '11s' },
@@ -81,7 +85,8 @@ const ROWS: readonly { art: { wide: string; tall: string }; z: number; seen: See
   { art: ROW_C, z: 200, seen: { out: [0.05, 0.09] }, takes: '7s' },
 ];
 
-const CABIN = { z: 5000, seen: { in: [0.42, 0.52], out: [0.665, 0.71] } } as const;
+// The room covers the forest from the threshold (a share of 0.51 to 0.58, by the screen) to the way out (from 0.6): what leaves or arrives between them is never seen going.
+const CABIN = { z: 5000, seen: { in: [0.4, 0.46], out: [0.555, 0.59] } } as const;
 const ARIN = { z: 1500, seen: { out: [0.25, 0.275] } } as const;
 const BOUGH = { z: 40, seen: { out: [0.02, 0.05] } } as const;
 const HILL = { z: 40000, seen: { in: [0.78, 0.92] } } as const;
@@ -89,7 +94,7 @@ const RIDGE = { z: 60000, seen: {} } as const;
 
 const stops = (at: (share: number) => Keyframe) => () => Array.from({ length: SAMPLES + 1 }, (_, index) => at(index / SAMPLES));
 const MOON = stops((share) => ({ transform: `translate3d(0, ${share < 0.44 ? between(0, 0.44, share) * 5 : 5 + between(0.44, 0.84, share) * 69}vh, 0)` }));
-const DAWN = stops((share) => ({ opacity: between(0.66, 1, share) }));
+const DAWN = stops((share) => ({ opacity: between(0.56, 1, share) }));
 // The carried lantern dips and rises with each step of the walk, and is not needed once the sun is up.
 const STRIDES = 22;
 const STEP = stops((share) => ({ transform: `translate3d(${Math.sin(share * STRIDES * Math.PI) * 9}px, ${Math.abs(Math.cos(share * STRIDES * Math.PI)) * 14}px, 0)`, opacity: 1 - between(0.68, 0.9, share) }));
@@ -114,11 +119,11 @@ function Art({ wide, tall, priority }: { wide: string; tall: string; priority?: 
   );
 }
 
-function Plane({ z, seen, children }: { z: number; seen: Seen; children: ReactNode }) {
-  const node = useWalk(() => planeFrames(z, seen));
+function Plane({ z, seen, doorward, children }: { z: number; seen: Seen; doorward?: boolean; children: ReactNode }) {
+  const node = useWalk(() => planeFrames(z, seen, doorward ? AT_THE_DOOR : NEAREST));
   return (
     <div className={styles.look} style={{ '--near': (LENS / (LENS + z)).toFixed(3) } as CSSProperties}>
-      <div ref={node} className={styles.plane}>{children}</div>
+      <div ref={node} className={doorward ? `${styles.plane} ${styles.doorward}` : styles.plane}>{children}</div>
     </div>
   );
 }
@@ -128,8 +133,8 @@ function Moving({ className, frames, children }: { className: string; frames: ()
   return <div ref={node} className={className}>{children}</div>;
 }
 
-// glow: how far the visitor has come (0 to 3), told by the door's steps. talking: 아린 is answering.
-export function NightScene({ glow, talking }: { glow: number; talking: boolean }) {
+// glow: how far the visitor has come (0 to 3), told by the trial's steps. talking: 아린 is answering. inside: past the cabin's threshold.
+export function NightScene({ glow, talking, inside }: { glow: number; talking: boolean; inside: boolean }) {
   const stage = useRef<HTMLDivElement>(null);
   const lantern = useRef<HTMLDivElement>(null);
   const [walking, setWalking] = useState(false);
@@ -204,7 +209,7 @@ export function NightScene({ glow, talking }: { glow: number; talking: boolean }
   }, []);
 
   return (
-    <div ref={stage} className={styles.scene} data-glow={glow} data-talking={talking || undefined} aria-hidden="true">
+    <div ref={stage} className={styles.scene} data-glow={glow} data-talking={talking || undefined} data-inside={inside || undefined} aria-hidden="true">
       <div className={styles.flat}><Art wide={skyWide} tall={skyTall} priority /></div>
       <Moving className={styles.moonPath} frames={MOON}>
         <div className={styles.halo} />
@@ -220,7 +225,7 @@ export function NightScene({ glow, talking }: { glow: number; talking: boolean }
         </Plane>
       )))}
       {walking && (
-        <Plane {...CABIN}>
+        <Plane {...CABIN} doorward>
           <div className={styles.cabin}><img src={cabin} alt="" decoding="async" onLoad={ready} /></div>
         </Plane>
       )}
@@ -248,6 +253,15 @@ export function NightScene({ glow, talking }: { glow: number; talking: boolean }
           </div>
         ))}
       </div>
+      {(walking || inside) && (
+        <div className={styles.room}>
+          <div className={styles.roomPicture}>
+            <Art wide={roomWide} tall={roomTall} />
+            <div className={styles.roomHearth} />
+            <div className={styles.roomLamp} />
+          </div>
+        </div>
+      )}
       <div className={styles.grain} />
       <div className={styles.curtain} />
     </div>

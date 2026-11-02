@@ -1,8 +1,8 @@
 // Cuts the illustrations for the first page (ui/landing/art) out of their backgrounds and grades them for the night forest.
-// Run: tsx scripts/cut-art.mts <arin.png> <cabin.png> [out dir], then npm run brand: the link preview shows 아린.
+// Run: tsx scripts/cut-art.mts <arin.png> <cabin.png> <room wide.png> <room tall.png> [out dir], then npm run brand: the link preview shows 아린.
 import { chromium } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
-const [arin, cabin, out = 'src/app/ui/landing/art'] = process.argv.slice(2);
+const [arin, cabin, roomWide, roomTall, out = 'src/app/ui/landing/art'] = process.argv.slice(2);
 const parts = [
   { name: 'arin', file: arin!, size: { height: 1100 }, grade: 0.82, quality: 0.86 },
   { name: 'cabin', file: cabin!, size: { width: 1400 }, grade: 0.66, quality: 0.84 },
@@ -57,18 +57,21 @@ for (const part of parts) {
   const web = b64(r.webp); await writeFile(`${out}/${part.name}.webp`, web);
   console.log(part.name, r.w, r.h, 'source', r.W, r.H, 'box', r.box.join(','), Math.round(web.length/1024)+'K');
 }
-// The page's other lanterns and the door's view are parts of these two, so they stay one picture.
-const piece = (from: string, name: string, box: [number, number, number, number], scale: number, blur: number, quality: number) => readFile(`${out}/${from}.webp`).then(async (file) => {
-  const data = await p.evaluate(async ({ src, box, scale, blur, quality }) => {
+const encode = async (file: string, name: string, box: [number, number, number, number] | null, scale: number, quality: number) => {
+  const data = await p.evaluate(async ({ src, box, scale, quality }) => {
     const i = new Image(); i.src = src; await i.decode();
-    const [sx, sy, sw, sh] = box;
+    const [sx, sy, sw, sh] = box ?? [0, 0, i.width, i.height];
     const c = document.createElement('canvas'); c.width = sw * scale; c.height = sh * scale;
-    const x = c.getContext('2d')!; x.imageSmoothingQuality = 'high'; if (blur) x.filter = `blur(${blur}px)`;
+    const x = c.getContext('2d')!; x.imageSmoothingQuality = 'high';
     x.drawImage(i, sx, sy, sw, sh, 0, 0, c.width, c.height);
     return c.toDataURL('image/webp', quality);
-  }, { src: `data:image/webp;base64,${file.toString('base64')}`, box, scale, blur, quality });
-  await writeFile(`${out}/${name}.webp`, Buffer.from(data.split(',')[1]!, 'base64'));
-});
-await piece('arin', 'lantern', [0, 172, 108, 218], 2, 0, 0.86);
-await piece('cabin', 'room', [620, 440, 240, 520], 1, 3, 0.6);
+  }, { src: `data:image/png;base64,${(await readFile(file)).toString('base64')}`, box, scale, quality });
+  const web = Buffer.from(data.split(',')[1]!, 'base64'); await writeFile(`${out}/${name}.webp`, web);
+  console.log(name, Math.round(web.length / 1024) + 'K');
+};
+// The page's other lanterns are parts of 아린's picture, so they stay one picture.
+await encode(`${out}/arin.webp`, 'lantern', [0, 172, 108, 218], 2, 0.86);
+// The room is painted whole and warm: nothing to cut, no night to grade it into.
+await encode(roomWide!, 'room-wide', null, 1, 0.8);
+await encode(roomTall!, 'room-tall', null, 1, 0.8);
 await b.close();

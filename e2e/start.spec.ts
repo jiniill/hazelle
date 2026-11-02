@@ -60,12 +60,15 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   await expect(page.getByText('이제 당신 이름을 들려줄 차례예요.', { exact: false })).toBeVisible();
 
   await page.getByRole('button', { name: '직접 해보기', exact: true }).click();
+  const pageLength = () => page.evaluate<number>('document.documentElement.scrollHeight');
+  const lengthBefore = await pageLength();
   await page.getByLabel(/API 키$/).fill(KEY);
   await page.getByRole('button', { name: '모델 선택', exact: true }).click();
   await page.getByRole('button', { name: /Claude E2E/ }).click();
   await page.getByRole('textbox', { name: '보낼 말' }).fill('안녕');
   await page.getByRole('button', { name: '보내기', exact: true }).click();
   await expect(page.getByText('안녕하세요, 시험 답이에요.')).toBeVisible();
+  expect(await pageLength()).toBe(lengthBefore);
   if (SHOTS) {
     await page.screenshot({ path: `${SHOTS}/4-trial.png` });
     const height = await page.evaluate<number>('document.documentElement.scrollHeight - innerHeight');

@@ -1,2 +1,2 @@
 export { NightScene } from './NightScene';
-export { Beat, Door, Hero, KeyPlaces, Promises, Said, SayChoices, SendRow, TrialSteps } from './Landing';
+export { Beat, Hero, Indoors, KeyPlaces, PanelBody, Promises, Said, SayChoices, SendRow, TalkBox, TrialSteps } from './Landing';

@@ -5,7 +5,7 @@ import type { Session } from '../../runtime/session';
 import { connectTrial, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels } from '../../runtime/trial';
 import { describeCatalogFailure, describeFailure, describeKeyFailure, describeTurnFailure } from '../common/failure';
 import { href } from '../shell/routes';
-import { Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TextField } from '../ui';
+import { Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, TextField } from '../ui';
 
 type Phase =
   | { kind: 'connecting' }
@@ -109,17 +109,21 @@ function TrialChat({ session, onReplied }: { session: Session; onReplied: () => 
   }
 
   return (
-    <form onSubmit={(event) => void send(event)}>
-      <Stack>
-        {log.map(({ by, text }, index) => <Said key={index} by={by}>{text}</Said>)}
-        {turn && <Said by="them" typing>{turn.text}</Said>}
-        {failure && <Callout tone="warn" alert>{failure}</Callout>}
-        <SendRow>
-          <TextField label="보낼 말" showLabel={false} placeholder="안녕! 짧게 자기소개해 줘" value={draft} onChange={setDraft} />
-          <Button type="submit" disabled={!draft.trim() || turn !== null}>보내기</Button>
-        </SendRow>
-        {replied && <div><Button onClick={() => open(href({ kind: 'chat', id: chat }))}>앱에서 대화 이어 가기</Button></div>}
-      </Stack>
-    </form>
+    <TalkBox
+      onSubmit={(event) => void send(event)}
+      foot={
+        <>
+          <SendRow>
+            <TextField label="보낼 말" showLabel={false} placeholder="안녕! 짧게 자기소개해 줘" value={draft} onChange={setDraft} />
+            <Button type="submit" disabled={!draft.trim() || turn !== null}>보내기</Button>
+          </SendRow>
+          {replied && <div><Button onClick={() => open(href({ kind: 'chat', id: chat }))}>앱에서 대화 이어 가기</Button></div>}
+        </>
+      }
+    >
+      {log.map(({ by, text }, index) => <Said key={index} by={by}>{text}</Said>)}
+      {turn && <Said by="them" typing>{turn.text}</Said>}
+      {failure && <Callout tone="warn" alert>{failure}</Callout>}
+    </TalkBox>
   );
 }

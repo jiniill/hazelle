@@ -4,7 +4,7 @@ import type { ConnectionType } from '../../connectors/types';
 import { START_PAGE } from '../../contracts/start';
 import { countFirstPage } from '../../runtime/first-page';
 import { LegalNotice } from '../common/LegalNotice';
-import { Beat, Brand, Button, Callout, ChoiceGroup, Door, Hero, KeyPlaces, Link, NightScene, Progress, Promises, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
+import { Beat, Brand, Button, Callout, ChoiceGroup, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
 import { EXAMPLE } from './example';
 
 const Trial = lazy(() => import('./Trial').then(({ Trial }) => ({ default: Trial })));
@@ -29,6 +29,7 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
   const [refused, setRefused] = useState<string | null>(null);
   const [talking, setTalking] = useState(false);
   const [replied, setReplied] = useState(false);
+  const [inside, setInside] = useState(false);
   const enter = () => {
     countFirstPage('entered');
     onOpen();
@@ -49,7 +50,7 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
 
   return (
     <div data-theme="dark">
-      <NightScene glow={replied ? 3 : step} talking={talking} />
+      <NightScene glow={replied ? 3 : step} talking={talking} inside={inside} />
       <Hero
         title={heading}
         line={line}
@@ -70,9 +71,9 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
         <Beat title={keys.title} line={keys.line} kind="lanterns">
           <KeyPlaces places={PLACES} />
         </Beat>
-        <Beat id="trial" title={trial.title} line={trial.line} kind="door">
-          <Door>
-            <TrialSteps steps={trial.steps} at={step} />
+        <Indoors id="trial" title={trial.title} line={trial.line} inside={inside} talking={step === 2} onInside={setInside}>
+          <TrialSteps steps={trial.steps} at={step} />
+          <PanelBody>
             {entered ? (
               <Suspense fallback={<Progress title="불러오는 중" steps={[{ label: '연결 준비' }]} />}>
                 <Trial
@@ -89,8 +90,8 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
             ) : (
               <KeyForm refused={refused} onEnter={(type, secret) => { countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
             )}
-          </Door>
-        </Beat>
+          </PanelBody>
+        </Indoors>
         <Beat title={features.title} kind="points">
           <Stack>
             <Promises points={features.points} />

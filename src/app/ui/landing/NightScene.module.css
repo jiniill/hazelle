@@ -91,6 +91,11 @@
     transform-origin: var(--scene-origin-x) var(--scene-origin-y);
   }
 
+  /* Toward the cabin the walk aims at its open doorway, so the doorway is what grows to meet the visitor. */
+  .doorward {
+    transform-origin: var(--scene-cabin-door-x) var(--scene-cabin-door-y);
+  }
+
   .arin {
     position: absolute;
     bottom: var(--scene-arin-ground);
@@ -175,7 +180,7 @@
     pointer-events: none;
   }
 
-  /* The forest warms as the visitor gets further with the door. */
+  /* The forest warms as the visitor gets further with the trial. */
   .warmth {
     opacity: 0;
     background: var(--scene-warmth);
@@ -255,6 +260,67 @@
     animation: sway var(--sway-takes) var(--ease-loop) infinite alternate;
   }
 
+  /* The room answers the threshold being crossed, not a share of the scroll: where the threshold falls differs with every screen. */
+  .room {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: var(--scene-room-floor);
+    opacity: 0;
+    transform: scale(var(--scene-room-near));
+    transition: opacity var(--scene-room-out) var(--ease-enter), transform var(--scene-room-out) var(--ease-enter);
+  }
+
+  [data-inside] .room {
+    opacity: 1;
+    transform: none;
+    transition-duration: var(--scene-room-in);
+  }
+
+  .roomPicture {
+    position: absolute;
+    top: var(--scene-room-top);
+    left: 50%;
+    width: var(--scene-room-width);
+    aspect-ratio: var(--scene-room-shape);
+    transform: translate(-50%, var(--scene-room-shift));
+  }
+
+  .roomLamp,
+  .roomHearth {
+    position: absolute;
+    aspect-ratio: 1;
+    border-radius: var(--radius-full);
+    animation: flicker var(--scene-flicker) var(--ease-loop) infinite;
+  }
+
+  .roomLamp {
+    top: var(--scene-room-lamp-y);
+    left: var(--scene-room-lamp-x);
+    width: var(--scene-room-lamp);
+    background: var(--scene-room-lamp-glow);
+  }
+
+  [data-glow='1'] .roomLamp {
+    --flare: 1.12;
+  }
+
+  [data-glow='2'] .roomLamp {
+    --flare: 1.25;
+  }
+
+  [data-glow='3'] .roomLamp {
+    --flare: 1.45;
+  }
+
+  .roomHearth {
+    top: var(--scene-room-hearth-y);
+    left: var(--scene-room-hearth-x);
+    width: var(--scene-room-hearth);
+    background: var(--scene-room-hearth-glow);
+    animation-duration: calc(var(--scene-flicker) * 0.7);
+  }
+
   .grain {
     background: url('./art/grain.webp') repeat;
     pointer-events: none;
@@ -268,6 +334,8 @@
 
   @media (prefers-reduced-motion: reduce) {
     .arinGlow,
+    .roomLamp,
+    .roomHearth,
     .bough,
     .sway,
     .fly,
@@ -277,6 +345,10 @@
 
     .lantern {
       display: none;
+    }
+
+    .room {
+      transition: none;
     }
 
     .curtain {

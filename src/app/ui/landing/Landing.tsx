@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type FormEventHandler, type ReactNode } from 'react';
 import lantern from './art/lantern.webp';
-import room from './art/room.webp';
 import styles from './Landing.module.css';
 
 // top: the doors' row. children: what the hero's words lead to.
@@ -18,7 +17,7 @@ export function Hero({ top, title, line, children }: { top: ReactNode; title: st
 }
 
 // kind: how the words and what they lead to share the screen, with the walk's scene standing in the room left over.
-export function Beat({ id, title, line, kind, foot, children }: { id?: string; title: string; line?: string; kind: 'talk' | 'lanterns' | 'door' | 'points' | 'finish'; foot?: ReactNode; children: ReactNode }) {
+export function Beat({ id, title, line, kind, foot, children }: { id?: string; title: string; line?: string; kind: 'talk' | 'lanterns' | 'points' | 'finish'; foot?: ReactNode; children: ReactNode }) {
   return (
     <section id={id} className={`${styles.beat} ${styles[kind]}`}>
       <div className={styles.words}>
@@ -31,20 +30,66 @@ export function Beat({ id, title, line, kind, foot, children }: { id?: string; t
   );
 }
 
-// The cabin's open door: the one warm room on the page, and where the live parts stand.
-export const Door = ({ children }: { children: ReactNode }) => (
-  <div className={styles.doorway}>
-    <div className={styles.doorLeaf} />
-    <div className={styles.doorFrame}>
-      <div className={styles.room}>
-        <img className={styles.roomBehind} src={room} alt="" loading="lazy" decoding="async" />
-        <div className={styles.roomInside}>{children}</div>
+// Over the room in the scene: the words and the live parts appear once the visitor has crossed the threshold, and go as they leave.
+// talking: a conversation is under way, and on a narrow screen it takes the words' room.
+export function Indoors({ id, title, line, inside, talking, onInside, children }: { id: string; title: string; line: string; inside: boolean; talking: boolean; onInside: (inside: boolean) => void; children: ReactNode }) {
+  const stay = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const crossing = new IntersectionObserver(([entry]) => onInside(entry!.isIntersecting), { rootMargin: '0px 0px -97% 0px' });
+    crossing.observe(stay.current!);
+    return () => crossing.disconnect();
+  }, []);
+  return (
+    <section id={id} className={`${styles.beat} ${styles.indoors}`}>
+      <div ref={stay} className={styles.stay} />
+      <div className={styles.seat} data-inside={inside || undefined}>
+        <div className={styles.panel} data-talking={talking || undefined}>
+          <div className={styles.words}>
+            <h2 className={styles.title}>{title}</h2>
+            <p className={styles.line}>{line}</p>
+          </div>
+          {children}
+        </div>
       </div>
-      <div className={styles.doorKeystone} />
-    </div>
-    <div className={styles.doorSill} />
-  </div>
-);
+    </section>
+  );
+}
+
+export const PanelBody = ({ children }: { children: ReactNode }) => <div className={styles.panelBody}>{children}</div>;
+
+const CLOSE_TO_END = 40;
+
+// A conversation inside the panel's fixed height: it follows the newest words unless the visitor has scrolled back to read.
+export function TalkBox({ onSubmit, foot, children }: { onSubmit: FormEventHandler<HTMLFormElement>; foot: ReactNode; children: ReactNode }) {
+  const log = useRef<HTMLDivElement>(null);
+  const following = useRef(true);
+  // A scroll is only the visitor's after their own wheel or finger: replies landing and swapping move the log too, and must not let go of it.
+  const reading = useRef(false);
+  const read = () => {
+    reading.current = true;
+  };
+  useEffect(() => {
+    if (!following.current) return;
+    reading.current = false;
+    log.current!.scrollTop = log.current!.scrollHeight;
+  });
+  return (
+    <form className={styles.talkBox} onSubmit={onSubmit}>
+      <div
+        ref={log}
+        className={styles.talkLog}
+        onWheel={read}
+        onTouchMove={read}
+        onScroll={({ currentTarget: { scrollHeight, scrollTop, clientHeight } }) => {
+          if (reading.current) following.current = scrollHeight - scrollTop - clientHeight < CLOSE_TO_END;
+        }}
+      >
+        {children}
+      </div>
+      <div className={styles.talkFoot}>{foot}</div>
+    </form>
+  );
+}
 
 const Lantern = ({ lit }: { lit: boolean }) => (
   <span className={`${styles.lantern} ${lit ? styles.lanternLit : styles.lanternOut}`}>
