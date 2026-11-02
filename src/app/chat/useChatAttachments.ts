@@ -37,7 +37,7 @@ export function useChatAttachments(id: string | null, key: string, chat: Chat, r
 
   function sendMoved(on: boolean) {
     if (!id) return;
-    void store.update('chat', id, (current) => (on ? { ...current, movedPictures: true as const } : without(current, 'movedPictures'))).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(store.update('chat', id, (current) => (on ? { ...current, movedPictures: true as const } : without(current, 'movedPictures'))));
   }
 
   return {

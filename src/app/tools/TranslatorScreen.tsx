@@ -95,7 +95,7 @@ export function TranslatorScreen({ back }: { back: Back | null }) {
               <MenuHeading>여기서 번역한 내용은 저장되지 않아요.</MenuHeading>
             </Menu>
             <Icon icon={ArrowRight} size="sm" />
-            <LanguageMenu label="번역할 언어" value={language} opens="down" onPick={(name) => void setToolLanguage(store, name).then((result) => result.ok || toast.failed(result))} />
+            <LanguageMenu label="번역할 언어" value={language} opens="down" onPick={(name) => toast.settled(setToolLanguage(store, name))} />
           </>
         }
         aside={

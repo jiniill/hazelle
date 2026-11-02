@@ -64,7 +64,7 @@ function TranslateDefaults() {
         translation={translation}
         card={null}
         opens="down"
-        onChange={(change) => void setTranslate(store, null, change).then((saved) => saved.ok || toast.failed(saved))}
+        onChange={(change) => toast.settled(setTranslate(store, null, change))}
         onEditPrompt={editPrompt('translate')}
       />
       <TranslatorNoteField
@@ -92,7 +92,7 @@ function IllustrateDefaults() {
       sceneWriter={sceneWriterOf(store, SHARED_CHAT)}
       card={null}
       opens="down"
-      onChange={(change) => void setIllustrate(store, null, change).then((saved) => saved.ok || toast.failed(saved))}
+      onChange={(change) => toast.settled(setIllustrate(store, null, change))}
       onEditPrompt={editPrompt('illustrate')}
     />
   );
@@ -116,7 +116,7 @@ function MascotDefaults() {
             chosen={settings.mascotPrompt}
             heading="모든 채팅에 적용돼요."
             opens="down"
-            onPick={(prompt) => void setDefaultPrompt(store, prompt!).then((saved) => saved.ok || toast.failed(saved))}
+            onPick={(prompt) => toast.settled(setDefaultPrompt(store, prompt!))}
             onEdit={editPrompt('mascot')}
           />
         }
@@ -152,7 +152,7 @@ function PrereadDefaults() {
   const writer = briefWriterOf(store, SHARED_CHAT);
   const setup = prereadSetup(store);
   const set = [setup.recent !== PREREAD_STARTS.recent, setup.batch !== PREREAD_STARTS.batch, setup.thinkLess !== PREREAD_STARTS.thinkLess].filter(Boolean).length;
-  const save = (change: Parameters<typeof setPreread>[1]) => void setPreread(store, change).then((saved) => saved.ok || toast.failed(saved));
+  const save = (change: Parameters<typeof setPreread>[1]) => toast.settled(setPreread(store, change));
   return (
     <>
       {briefsWithChatModel(store, SHARED_CHAT) && (
@@ -192,7 +192,7 @@ function PrereadDefaults() {
               chosen={settings.prereadPrompt}
               heading="모든 채팅에 적용돼요."
               opens="down"
-              onPick={(prompt) => void setDefaultPrompt(store, prompt!).then((saved) => saved.ok || toast.failed(saved))}
+              onPick={(prompt) => toast.settled(setDefaultPrompt(store, prompt!))}
               onEdit={editPrompt('preread')}
             />
           }

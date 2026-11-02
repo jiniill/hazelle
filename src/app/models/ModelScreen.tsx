@@ -188,7 +188,7 @@ function ChatModelScreen({ connection, model, back }: Props) {
           <SettingRow
             label={PICTURE_INPUT}
             help="켜면 메시지에 넣은 이미지를 이 모델에게 보내요."
-            control={<Switch label={PICTURE_INPUT} checked={model.pictures === true} onChange={(on) => void setModelPictures(store, connection.id, entryKey(model), on).then((saved) => saved.ok || toast.failed(saved, '바꾸지 못했어요.'))} />}
+            control={<Switch label={PICTURE_INPUT} checked={model.pictures === true} onChange={(on) => toast.settled(setModelPictures(store, connection.id, entryKey(model), on), '바꾸지 못했어요.')} />}
           />
         )}
       </Section>

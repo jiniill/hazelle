@@ -24,7 +24,7 @@ export function ChatDetailDefaults() {
       label={LORE_SCAN_WORDS[key].label}
       help={`${LORE_SCAN_WORDS[key].help} 기본값은 ${LORE_SCAN[key] ? '켜짐' : '꺼짐'}이에요.`}
       changed={set !== undefined}
-      control={<Switch label={LORE_SCAN_WORDS[key].label} checked={shared[key]} onChange={(on) => void setSharedLoreScan(store, key, on).then((result) => result.ok || toast.failed(result))} />}
+      control={<Switch label={LORE_SCAN_WORDS[key].label} checked={shared[key]} onChange={(on) => toast.settled(setSharedLoreScan(store, key, on))} />}
     />
   );
   return (
@@ -47,7 +47,7 @@ export function ChatDetailDefaults() {
                     value={retries ?? RETRIES}
                     min={0}
                     max={RETRY_MOST}
-                    onChange={(next) => void setSharedRetries(store, next).then((result) => result.ok || toast.failed(result))}
+                    onChange={(next) => toast.settled(setSharedRetries(store, next))}
                   />
                 }
               />
@@ -63,7 +63,7 @@ export function ChatDetailDefaults() {
                     value={toolRounds ?? TOOL_ROUNDS}
                     min={2}
                     max={10}
-                    onChange={(next) => void setToolRounds(store, next).then((result) => result.ok || toast.failed(result))}
+                    onChange={(next) => toast.settled(setToolRounds(store, next))}
                   />
                 }
               />
@@ -72,7 +72,7 @@ export function ChatDetailDefaults() {
                 label={USAGE_SHOWN}
                 help="응답 아래에 비용과 토큰을 한 줄로 보여 줘요. 누르면 자세한 내용이 펼쳐져요."
                 changed={usageShown !== undefined}
-                control={<Switch label={USAGE_SHOWN} checked={usageShown !== undefined} onChange={(on) => void setUsageShown(store, on).then((result) => result.ok || toast.failed(result))} />}
+                control={<Switch label={USAGE_SHOWN} checked={usageShown !== undefined} onChange={(on) => toast.settled(setUsageShown(store, on))} />}
               />
               <CacheNoteRow />
             </>

@@ -173,7 +173,7 @@ function AppInfo() {
   const settings = useSettings();
   const sharing = sharesPulse(settings);
   const diagnosing = sharesDiagnosis(settings);
-  const flip = (set: typeof setPulseSharing) => (on: boolean) => void set(store, on).then((done) => done.ok || toast.failed(done, '바꾸지 못했어요.'));
+  const flip = (set: typeof setPulseSharing) => (on: boolean) => toast.settled(set(store, on), '바꾸지 못했어요.');
   return (
     <Panel title="앱 정보">
       <SettingGroup label="앱 정보">

@@ -35,7 +35,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
     return choice.kind === 'profile' ? choice.profile.value.name : '없음';
   };
   const others = connections.map((connection) => ({ connection, models: connection.value.starred.filter((model) => !using.has(`${connection.id}/${entryKey(model)}`)) })).filter((group) => group.models.length > 0);
-  const attach = (connection: string, model: string) => void setModelProfile(store, connection, model, id).then((done) => done.ok || toast.failed(done, '저장하지 못했어요.'));
+  const attach = (connection: string, model: string) => toast.settled(setModelProfile(store, connection, model, id), '저장하지 못했어요.');
 
   async function copy() {
     if (!(await flush())) return;
@@ -86,7 +86,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
                   <MenuItem
                     label={SET_DEFAULT}
                     sub={`${MODEL_SETTINGS}을 따로 지정하지 않은 모델에 이 설정이 적용돼요`}
-                    onClick={() => void setDefaultProfile(store, id).then((done) => done.ok || toast.failed(done, '기본으로 지정하지 못했어요.'))}
+                    onClick={() => toast.settled(setDefaultProfile(store, id), '기본으로 지정하지 못했어요.')}
                   />
                 )}
                 <MenuItem label={resetTo(ORIGINAL)} disabled={Object.keys(shown).length === 0} onClick={() => void clearAll()} />

@@ -25,7 +25,7 @@ export function useMessageEdit(id: string | null, messages: Shown[], regenerate:
     const [nextText, nextTranslation] = !part ? [text, translation] : part.side === 'text' ? [withPart(text, part, part.value), translation] : [text, withPart(translation!, part, part.value)];
     const version = crypto.randomUUID();
     edited(shown(message).id, version);
-    void editShown(session, id, message, nextText, nextTranslation, version).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(editShown(session, id, message, nextText, nextTranslation, version));
     setEditing(null);
     const next = messages[messages.findIndex(({ id: each }) => each === message.id) + 1];
     if (andReply && next?.role === 'assistant') regenerate(next);
@@ -33,7 +33,7 @@ export function useMessageEdit(id: string | null, messages: Shown[], regenerate:
 
   function remove(message: Shown) {
     if (!id) return;
-    void deleteMessage(session, id, message).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(deleteMessage(session, id, message));
     toast.undoable('메시지를 삭제했어요.', () => undeleteMessage(session, id, message));
   }
 
@@ -43,7 +43,7 @@ export function useMessageEdit(id: string | null, messages: Shown[], regenerate:
     const from = messages.findIndex(({ id: each }) => each === message.id);
     if (from === -1) return;
     const gone = messages.slice(from);
-    void deleteMessages(session, id, gone).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(deleteMessages(session, id, gone));
     toast.undoable(`메시지 ${gone.length}개를 삭제했어요.`, () => undeleteMessages(session, id, gone));
   }
 

@@ -53,11 +53,11 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
   }
 
   function pin(on: boolean) {
-    void pinRecord(store, chat, item.id, on).then((done) => done.ok || toast.failed(done, '저장하지 못했어요.'));
+    toast.settled(pinRecord(store, chat, item.id, on), '저장하지 못했어요.');
   }
 
   function recall(on: boolean) {
-    void recallRecord(store, chat, item.id, on).then((done) => done.ok || toast.failed(done, '저장하지 못했어요.'));
+    toast.settled(recallRecord(store, chat, item.id, on), '저장하지 못했어요.');
   }
 
   async function forget() {

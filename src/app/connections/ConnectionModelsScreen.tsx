@@ -91,7 +91,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
   // The first add stays on the list; a model already added asks the new entry's name.
   function add(model: Model) {
     if (entriesOf(connection, model.id).length > 0) setCopying(model);
-    else void addModel(store, id, model).then((result) => result.ok || toast.failed(result));
+    else toast.settled(addModel(store, id, model));
   }
 
   // Saving the name opens the copy's page, since what comes next is changing what differs.
@@ -239,7 +239,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
         <RetriesRow
           value={connection.retries}
           follows={followsRetries('shared', shared ?? RETRIES)}
-          onChange={(retries) => void setRetries(store, id, retries).then((result) => result.ok || toast.failed(result))}
+          onChange={(retries) => toast.settled(setRetries(store, id, retries))}
         />
       </DetailFold>
     </>

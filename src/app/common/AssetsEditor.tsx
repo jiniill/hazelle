@@ -74,7 +74,7 @@ export function AssetsEditor({ owner }: { owner: string }) {
 
   function rename(asset: Stored<'asset'>, name: string) {
     setNaming(null);
-    void renameAsset(store, asset.id, name).then((saved) => saved.ok || toast.failed(saved, '저장하지 못했어요.'));
+    toast.settled(renameAsset(store, asset.id, name), '저장하지 못했어요.');
   }
 
   const actionsOf = (asset: Stored<'asset'>): Action[] => [

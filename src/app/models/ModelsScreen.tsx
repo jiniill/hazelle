@@ -32,8 +32,8 @@ export function ModelsScreen({ back }: { back: Back | null }) {
     void setDefaultModel(store, role, ref).then((result) => {
       if (!result.ok) toast.failed(result, `${DEFAULT_MODELS}을 바꾸지 못했어요.`);
     });
-  const pickDefault = (id: string) => void setDefaultProfile(store, id).then((done) => done.ok || toast.failed(done, '저장하지 못했어요.'));
-  const makeDefault = () => void addDefaultProfile(store).then((done) => done.ok || toast.failed(done, `${MODEL_SETTINGS}을 만들지 못했어요.`));
+  const pickDefault = (id: string) => toast.settled(setDefaultProfile(store, id), '저장하지 못했어요.');
+  const makeDefault = () => toast.settled(addDefaultProfile(store), `${MODEL_SETTINGS}을 만들지 못했어요.`);
   const models = connections.flatMap((connection) => connection.value.starred.map((model) => ({ connection, model, choice: modelProfile(store, model) })));
   const cardOf = (ref: ModelRef | undefined) => {
     const found = ref && models.find(({ connection, model }) => sameModelRef(refOf(connection.id, model), ref));

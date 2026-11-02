@@ -112,7 +112,7 @@ export function ModulesScreen({ place, back }: { place: string | null; back: Bac
   const parts = useModuleParts(shown);
   function add() {
     const id = crypto.randomUUID();
-    void createModule(store, newOf('모듈'), id, at.here?.folder.id ?? null).then((saved) => saved.ok || toast.failed(saved, '모듈을 만들지 못했어요.'));
+    toast.settled(createModule(store, newOf('모듈'), id, at.here?.folder.id ?? null), '모듈을 만들지 못했어요.');
     navigate({ kind: 'module', id, pane: null });
   }
   const adding = (

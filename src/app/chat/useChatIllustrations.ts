@@ -61,11 +61,11 @@ export function useChatIllustrations(chatId: string, id: string | null, chat: Ch
   }, [illustrating]);
 
   function setIllustrateSwitches(change: Partial<IllustrateSwitches>) {
-    void setIllustrate(store, character, change).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(setIllustrate(store, character, change));
   }
 
   function setOwnIllustrateSwitches(own: boolean) {
-    void setOwnIllustrate(store, character!, own).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(setOwnIllustrate(store, character!, own));
   }
 
   // scene: one already written, drawn again with no scene call. spend: the user's 그래도 만들기 on a picture that may cost.
@@ -74,7 +74,7 @@ export function useChatIllustrations(chatId: string, id: string | null, chat: Ch
   }
 
   function dropPicture(picture: Stored<'illustration'>) {
-    void removeIllustration(store, picture.id).then((removed) => removed.ok || toast.failed(removed));
+    toast.settled(removeIllustration(store, picture.id));
     toast.undoable('삽화를 삭제했어요.', () => restoreIllustration(store, picture));
   }
 

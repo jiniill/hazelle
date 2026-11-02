@@ -324,7 +324,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
 
   function select(message: Shown, index: number) {
     if (!id) return;
-    void pickVersion(session, id, message, index).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(pickVersion(session, id, message, index));
   }
 
   // The versions go round: ← on the first lands on the last (user, 2026-10-04). → past a reply's last asks for a new one;
@@ -359,7 +359,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     if (!item) return;
     const { id: dropped, title } = item;
     talk.stop(dropped);
-    void removeChat(store, dropped).then((removed) => removed.ok || toast.failed(removed));
+    toast.settled(removeChat(store, dropped));
     navigate({ kind: 'shelf', character: chat.character });
     toast.undoable(`'${title}' 채팅을 삭제했어요.`, () => {
       const restored = restoreChat(store, dropped);
@@ -372,13 +372,13 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const writeToggle = (key: string, value: string) => setToggle(store, chat.character, key, value);
 
   function flip(key: string, value: string) {
-    void writeToggle(key, value).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(writeToggle(key, value));
   }
 
   async function reset() {
     // A typed value still waiting would land over the reset.
     await Promise.all(toggles.sections.flatMap(({ rows }) => rows.flatMap(({ toggle }) => (toggle.kind === 'text' ? [saves.flush(toggleSaveKey(chat.character, toggle.key))] : []))));
-    void resetToggles(store, chat.character).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(resetToggles(store, chat.character));
     toast.show(`토글 ${toggles.changed}개를 기본값으로 되돌렸어요.`);
   }
 
@@ -395,7 +395,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
 
   function rename(name: string) {
     if (!id) return;
-    void renameChat(store, id, name).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(renameChat(store, id, name));
     setDialog(null);
   }
 
@@ -467,7 +467,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       polishAgain: (message: Shown) => void (id && polishAgain(session, id, message.id, shown(message).id)),
       retry: (message: Shown) => ask({ kind: 'retry', message: message.id, version: shown(message).id }),
       continue: (message: Shown) => ask({ kind: 'continue', message: message.id, version: shown(message).id }),
-      restoreRaw: (message: Shown) => void (id && restoreRaw(store, id, message).then((saved) => saved.ok || toast.failed(saved))),
+      restoreRaw: (message: Shown) => void (id && toast.settled(restoreRaw(store, id, message))),
       swipe,
       pick,
       copy,

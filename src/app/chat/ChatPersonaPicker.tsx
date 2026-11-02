@@ -47,7 +47,7 @@ export function PersonaDialog({ persona, characterName, pinned, onChoose, onPin,
 
   function choose(id: string) {
     onClose();
-    void onChoose(id).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(onChoose(id));
   }
 
   const footer = (
@@ -58,7 +58,7 @@ export function PersonaDialog({ persona, characterName, pinned, onChoose, onPin,
             label={`${characterName}에 고정`}
             checked={using !== null && pinned === using}
             disabled={using === null}
-            onChange={(checked) => void onPin(checked ? using : null).then((saved) => saved.ok || toast.failed(saved))}
+            onChange={(checked) => toast.settled(onPin(checked ? using : null))}
           />
           <Hint label="고정">이 캐릭터와 새로 시작하는 채팅에 이 페르소나를 써요.</Hint>
         </Row>

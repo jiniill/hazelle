@@ -239,7 +239,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
     if (!perform(renameKey(toggle, to))) return;
     toast.show('키를 바꿨어요.', count ? { detail: `조건 ${count}곳도 함께 바꿨어요.` } : undefined);
   };
-  const modelSaved = (saving: ReturnType<typeof setTaskModel>) => void saving.then((saved) => saved.ok || toast.failed(saved, '모델을 바꾸지 못했어요.'));
+  const modelSaved = (saving: ReturnType<typeof setTaskModel>) => toast.settled(saving, '모델을 바꾸지 못했어요.');
 
   const isDefault = isDefaultPrompt(settings, stored);
   const copy = async () => {

@@ -104,7 +104,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   function add(sort: Exclude<PromptSort, 'agent'>) {
     const id = crypto.randomUUID();
     const folder = sort === 'conversation' ? at.here?.folder.id : undefined;
-    void addPrompt(store, NEW_NAME[sort], sort, id, folder).then((added) => added.ok || toast.failed(added, '프롬프트를 만들지 못했어요.'));
+    toast.settled(addPrompt(store, NEW_NAME[sort], sort, id, folder), '프롬프트를 만들지 못했어요.');
     onPick(id);
   }
 

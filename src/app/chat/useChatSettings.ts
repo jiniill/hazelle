@@ -30,7 +30,7 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
   }
 
   function pickModel(ref: ModelRef) {
-    void change((current) => withMainModel(current, ref), (id) => setChatModel(store, id, ref)).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(change((current) => withMainModel(current, ref), (id) => setChatModel(store, id, ref)));
   }
 
   // null: follow the default again. A new chat holds it until its first send. The caller reports a failure.
@@ -47,7 +47,7 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
   }
 
   function changeCast(ids: string[]) {
-    void change((current) => withCast(current, chat.character, ids), (id) => setCast(store, id, ids)).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(change((current) => withCast(current, chat.character, ids), (id) => setCast(store, id, ids)));
   }
 
   return {

@@ -151,15 +151,14 @@ type Removal = Promise<ApiResult<RemovedScript>>;
 function useScriptActions({ owner, pack, drop }: ItemProps, list: ScriptList, script: { id: string; off?: true }, name: string, remove: (task: () => Removal) => Promise<Awaited<Removal> | null>) {
   const store = useStore();
   const toast = useToast();
-  const failed = (saved: ApiResult<unknown>) => saved.ok || toast.failed(saved, '저장하지 못했어요.');
   const move = (by: -1 | 1, icon: LucideIcon, label: string) => {
     const past = neighbour(pack, list, script.id, by);
-    return <IconButton icon={icon} size="sm" label={label} disabled={past === null} onClick={() => void moveScript(store, owner, list, script.id, by, past!).then(failed)} />;
+    return <IconButton icon={icon} size="sm" label={label} disabled={past === null} onClick={() => toast.settled(moveScript(store, owner, list, script.id, by, past!), '저장하지 못했어요.')} />;
   };
   return (words: string | undefined) => (
     <>
       <SettingGroup label="켬">
-        <SettingRow label="켬" control={<Switch label="켬" checked={!script.off} onChange={(on) => void setScriptOff(store, owner, list, script.id, !on).then(failed)} />} />
+        <SettingRow label="켬" control={<Switch label="켬" checked={!script.off} onChange={(on) => toast.settled(setScriptOff(store, owner, list, script.id, !on), '저장하지 못했어요.')} />} />
       </SettingGroup>
       <RowFoot noun={SCRIPTS[list]} words={words} onRemove={() => void drop({ id: script.id, noun: SCRIPTS[list], name }, remove(() => removeScript(store, owner, list, script.id)), (removed) => restoreScript(store, owner, removed))}>
         {move(-1, ChevronUp, '위로')}

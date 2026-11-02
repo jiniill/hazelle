@@ -85,7 +85,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
 
   async function revert() {
     if (!(await save.flush())) return;
-    void setChatMemory(store, id, null).then((done) => done.ok || toast.failed(done, '되돌리지 못했어요.'));
+    toast.settled(setChatMemory(store, id, null), '되돌리지 못했어요.');
     setResets((count) => count + 1);
   }
 
@@ -291,7 +291,7 @@ function NewFact({ chat }: { chat: string }) {
   }
   const ready = draft.about.trim() !== '' && draft.field.trim() !== '' && draft.value.trim() !== '';
   function add() {
-    void setFact(store, chat, { ...draft!, record: null }, null).then((done) => done.ok || toast.failed(done, '저장하지 못했어요.'));
+    toast.settled(setFact(store, chat, { ...draft!, record: null }, null), '저장하지 못했어요.');
     setDraft(null);
   }
   return (

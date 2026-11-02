@@ -137,12 +137,12 @@ function useLoreFolders(owner: LoreOwner): FolderActions {
   const toast = useToast();
   return {
     deepest: 1,
-    create: (name) => void addLoreFolder(store, owner, name).then((saved) => saved.ok || toast.failed(saved, '저장하지 못했어요.')),
-    rename: (id, name) => void renameLoreFolder(store, owner, id, name).then((saved) => saved.ok || toast.failed(saved, '저장하지 못했어요.')),
+    create: (name) => toast.settled(addLoreFolder(store, owner, name), '저장하지 못했어요.'),
+    rename: (id, name) => toast.settled(renameLoreFolder(store, owner, id, name), '저장하지 못했어요.'),
     remove: (folder) => {
       const removal = loreFolderRemoval(store, owner, folder.id);
       if (!removal) return false;
-      void removeLoreFolder(store, owner, removal).then((removed) => removed.ok || toast.failed(removed, '폴더를 삭제하지 못했어요.'));
+      toast.settled(removeLoreFolder(store, owner, removal), '폴더를 삭제하지 못했어요.');
       const held = removal.entries.length;
       toast.undoable(`'${folder.name}' 폴더를 삭제했어요.`, () => restoreLoreFolder(store, owner, removal), held > 0 ? `항목 ${held}개는 폴더 밖으로 꺼냈어요.` : undefined);
       return true;

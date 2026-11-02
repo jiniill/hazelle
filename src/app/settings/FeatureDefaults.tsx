@@ -60,7 +60,7 @@ export function FeatureSwitch({ feature }: { feature: Feature }) {
     <Switch
       label={FEATURE_NAMES[feature]}
       checked={sharedFeatures(store)[feature]}
-      onChange={(on) => void setFeatureAt(store, { kind: 'settings' }, feature, on).then((saved) => saved.ok || toast.failed(saved, '저장하지 못했어요.'))}
+      onChange={(on) => toast.settled(setFeatureAt(store, { kind: 'settings' }, feature, on), '저장하지 못했어요.')}
     />
   );
 }

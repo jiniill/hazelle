@@ -27,7 +27,7 @@ export function PersonaList({ place, back }: { place: string | null; back: Back 
 
   function add() {
     const id = crypto.randomUUID();
-    void addPersona(store, { name: '새 페르소나', description: '', picture: null, ...(here !== null && { folder: here }) }, id).then((saved) => saved.ok || toast.failed(saved, '페르소나를 만들지 못했어요.'));
+    toast.settled(addPersona(store, { name: '새 페르소나', description: '', picture: null, ...(here !== null && { folder: here }) }, id), '페르소나를 만들지 못했어요.');
     navigate({ kind: 'persona', id });
   }
 

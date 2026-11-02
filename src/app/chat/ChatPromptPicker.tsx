@@ -58,11 +58,11 @@ export function PromptDialog({ prompt, plain, out, onChoose, onKeepOut, onEdit, 
 
   function choose(value: string | null) {
     onClose();
-    void onChoose(value).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(onChoose(value));
   }
   function keepOut() {
     onClose();
-    void onKeepOut().then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(onKeepOut());
   }
   function open(id: string | null) {
     onClose();

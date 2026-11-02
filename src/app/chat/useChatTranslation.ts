@@ -49,11 +49,11 @@ export function useChatTranslation(chatId: string, chat: Chat, messages: Shown[]
   }
 
   function setSwitches(change: Partial<TranslateSwitches>) {
-    void setTranslate(store, chat.character, change).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(setTranslate(store, chat.character, change));
   }
 
   function setOwnSwitches(own: boolean) {
-    void setOwnTranslate(store, chat.character!, own).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(setOwnTranslate(store, chat.character!, own));
   }
 
   return {

@@ -147,7 +147,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
   const keepThoughts = character.keepThoughts === true;
 
   function flip(field: Switched, on: boolean) {
-    void SWITCHES[field](store, id, on).then((saved) => saved.ok || toast.failed(saved, '저장하지 못했어요.'));
+    toast.settled(SWITCHES[field](store, id, on), '저장하지 못했어요.');
   }
 
   const peek = useTypedNumber(readPicturePercent, pictures.peek, { error: PICTURE_PERCENT_ERROR, onChange: (value) => pictureSave.change({ peek: value }) });

@@ -10,17 +10,17 @@ export function useFolderActions(kind: Filed) {
   const toast = useToast();
 
   function create(name: string, parent: string | null) {
-    void createFolder(store, kind, name, parent).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(createFolder(store, kind, name, parent));
   }
 
   function rename(id: string, name: string) {
-    void renameFolder(store, id, name).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(renameFolder(store, id, name));
   }
 
   function remove(folder: NamedFolder) {
     const removal = folderRemoval(store, folder.id);
     if (!removal) return false;
-    void removeFolder(store, removal).then((removed) => removed.ok || toast.failed(removed));
+    toast.settled(removeFolder(store, removal));
     const { folders: gone, up } = removal;
     const inside = gone.length > 1 ? `와 안의 폴더 ${gone.length - 1}개` : '';
     toast.undoable(
@@ -33,7 +33,7 @@ export function useFolderActions(kind: Filed) {
 
   // to: a folder, or null for out of every folder. shown: how many the user moved, where ids carry more along.
   function move(ids: string[], to: { id: string; name: string } | null, shown = ids.length) {
-    void moveInto(store, kind, ids, to?.id ?? null).then((moved) => moved.ok || toast.failed(moved));
+    toast.settled(moveInto(store, kind, ids, to?.id ?? null));
     toast.show(to ? `${filedObject(kind, shown)} '${to.name}' 폴더로 옮겼어요.` : `${filedObject(kind, shown)} 폴더에서 뺐어요.`);
   }
 

@@ -64,7 +64,7 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
     toast.show('사본을 만들었어요.');
   }
 
-  const makeCurrent = () => void setCurrentPersona(store, id).then((saved) => saved.ok || toast.failed(saved, '현재 페르소나로 지정하지 못했어요.'));
+  const makeCurrent = () => toast.settled(setCurrentPersona(store, id), '현재 페르소나로 지정하지 못했어요.');
 
   function moveChats(to: string) {
     setMoving(false);

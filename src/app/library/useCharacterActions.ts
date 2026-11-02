@@ -40,7 +40,7 @@ export function useNewCharacter() {
   const toast = useToast();
   return () => {
     const id = crypto.randomUUID();
-    void createCharacter(store, newOf('캐릭터'), id).then((saved) => saved.ok || toast.failed(saved, '캐릭터를 만들지 못했어요.'));
+    toast.settled(createCharacter(store, newOf('캐릭터'), id), '캐릭터를 만들지 못했어요.');
     navigate({ kind: 'edit', character: id });
   };
 }
@@ -98,7 +98,7 @@ export function useCharacterActions(editing?: Editing) {
   }
 
   function restore({ kind, id, name }: Binned) {
-    void markDeleted(store, kind, id, null).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(markDeleted(store, kind, id, null));
     toast.show(`'${name}' ${OBJECT[kind]} 복원했어요.`);
   }
 

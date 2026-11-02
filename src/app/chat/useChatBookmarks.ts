@@ -26,7 +26,7 @@ export function useChatBookmarks(id: string | null, bookmarks: Chat['bookmarks']
   function bookmark(message: string) {
     if (!id) return;
     const on = !bookmarked.has(message);
-    void setBookmark(store, id, message, on).then((saved) => saved.ok || toast.failed(saved));
+    toast.settled(setBookmark(store, id, message, on));
     const name = on ? undefined : bookmarks?.find((each) => each.message === message)?.name;
     if (name !== undefined) toast.undoable(`'${name}' ${BOOKMARK}를 해제했어요.`, () => setBookmark(store, id, message, true, name));
   }
@@ -54,7 +54,7 @@ export function useChatBookmarks(id: string | null, bookmarks: Chat['bookmarks']
   }
 
   function renameBookmark(message: string, name: string) {
-    if (id) void nameBookmark(store, id, message, name).then((saved) => saved.ok || toast.failed(saved));
+    if (id) toast.settled(nameBookmark(store, id, message, name));
   }
 
   return { bookmarked, actions: { bookmark, showBookmark, renameBookmark } };

@@ -19,6 +19,8 @@ export type Toasts = {
   // Full-account/rewind notices are owned by Workspace, not repeated per write.
   // Prefixed task failures (e.g. backups) still need their own outcome.
   failed: (failure: ApiFailure, prefix?: string, words?: Parameters<typeof describeFailure>[1]) => void;
+  // A write whose success shows itself on screen: only its failure is said.
+  settled: (write: Promise<{ ok: true } | ApiFailure>, prefix?: string) => void;
   // Delete immediately with undo, never confirmation. Return undo failures to the toast instead of chaining them silently.
   undoable: (message: string, undo: () => void | Promise<{ ok: true } | ApiFailure>, detail?: string) => () => void;
   // Long ones are cut until pressed, and once opened stay until closed.
@@ -83,12 +85,13 @@ export function ToastProvider({ standing, onReport, children }: { standing: Stan
     const failed: Toasts['failed'] = (failure, prefix, words) => {
       if (failure.error !== 'storage-full' && (failure.error !== 'timeline-changed' || prefix)) add(prefix ?? describeFailure(failure, words), 'warn', { report: true, ...(prefix && { detail: describeFailure(failure, words) }) });
     };
-    const settle = (undo: Parameters<Toasts['undoable']>[1]) => () => void undo()?.then((result) => result.ok || failed(result, '되돌리지 못했어요.'));
+    const settled: Toasts['settled'] = (write, prefix) => void write.then((result) => result.ok || failed(result, prefix));
     return {
       show: (message, extra) => void add(message, 'plain', extra),
       error: (message, extra) => void add(message, 'warn', extra),
       failed,
-      undoable: (message, undo, detail) => add(message, 'plain', { detail, action: { label: UNDO, onClick: settle(undo) } }, true),
+      settled,
+      undoable: (message, undo, detail) => add(message, 'plain', { detail, action: { label: UNDO, onClick: () => { const undone = undo(); if (undone) settled(undone, '되돌리지 못했어요.'); } } }, true),
       said: (from, text, tone) => void add(text, tone, { from }),
     };
   }, []);
