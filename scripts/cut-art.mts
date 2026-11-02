@@ -16,7 +16,6 @@ for (const part of parts) {
     const W = i.width, H = i.height;
     const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d', { willReadFrequently: true })!; x.drawImage(i, 0, 0);
     const im = x.getImageData(0, 0, W, H); const d = im.data;
-    const at = (px: number, py: number) => (py * W + px) * 4;
     // solid: confidently the subject. Keep only the largest connected piece, so loose flakes of the old background go.
     const solid = new Uint8Array(W * H);
     for (let n = 0; n < W * H; n++) solid[n] = d[n * 4 + 3]! > 200 ? 1 : 0;
