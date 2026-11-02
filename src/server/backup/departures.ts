@@ -2,7 +2,7 @@ import { closeSync, fsyncSync, openSync, readFileSync, renameSync, writeSync } f
 import { join } from 'node:path';
 import { RETENTION_MS } from '../db/account-db';
 import { fsyncPath, makeDirs } from '../db/durable';
-import { DAY_MS } from '../http';
+import { DAY_MS, isRecord } from '../http';
 
 // Keep departures.json outside the rewound service DB so disaster restore re-deletes departed accounts.
 // Copier/restore scripts must move it beside generations. Synchronous reads/writes serialize this process's updates.
@@ -11,10 +11,8 @@ export const DEPARTURES = 'departures.json';
 
 export type Departure = { account: string; incarnation: string; leftAt: number };
 
-const isDeparture = (value: unknown): value is Departure => {
-  const entry = value as Partial<Departure> | null;
-  return typeof entry === 'object' && entry !== null && typeof entry.account === 'string' && typeof entry.incarnation === 'string' && Number.isSafeInteger(entry.leftAt);
-};
+const isDeparture = (value: unknown): value is Departure =>
+  isRecord(value) && typeof value.account === 'string' && typeof value.incarnation === 'string' && Number.isSafeInteger(value.leftAt);
 
 // Null when the file is absent.
 export function readDepartures(path: string): Departure[] | null {

@@ -28,7 +28,7 @@ import {
 import { ACCOUNT_HEADER } from '../contracts/http';
 import { act, limitOf, MAX_OPEN_REPORTS, operator } from './admin';
 import type { SqlValue } from './db/service-db';
-import { DAY_MS, fail, isPositive, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
+import { DAY_MS, fail, isPositive, isRecord, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
 import { boardDailyLimit } from './limits';
 import { requireSession } from './session';
 import { activity, hidden, OPERATOR, tellUnread } from './unread';
@@ -503,8 +503,8 @@ board.put('/posts/:id/status', operator, async (c) => {
 // hidden: a reason and a hold of days (임시조치), or days null for hidden until shown; null shows it again.
 function readHidden(value: unknown) {
   if (value === null) return null;
-  if (typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const { reason, days } = value as Record<string, unknown>;
+  if (!isRecord(value)) return undefined;
+  const { reason, days } = value;
   const why = typeof reason === 'string' ? reason.trim() : '';
   const held = days === null || (isPositive(days) && days <= HOLD_DAYS_MAX);
   return why && why.length <= MAX_REASON_LENGTH && held ? { reason: why, days: days as number | null } : undefined;
