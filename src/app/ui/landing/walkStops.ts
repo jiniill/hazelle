@@ -16,10 +16,10 @@ const readStops = () => {
     const { top, height } = node.getBoundingClientRect();
     const at = top + scrollY;
     const spare = height - innerHeight;
-    if (node.dataset['walkStop'] === 'top') return { from: within(at), to: within(at) };
+    if (node.dataset['walkStop'] === 'top') return { from: within(at), to: within(at), slow: node.dataset['walkSlow'] !== undefined };
     const { paddingTop, paddingBottom } = getComputedStyle(node);
     // A beat whose words fit stands in the middle of the screen, even if its padding falls off it, so no move is a nudge of a few pixels; a longer one is read in moves from end to end.
-    return spare > parseFloat(paddingTop) + parseFloat(paddingBottom) ? { from: within(at), to: within(at + spare) } : { from: within(at + spare / 2), to: within(at + spare / 2) };
+    return spare > parseFloat(paddingTop) + parseFloat(paddingBottom) ? { from: within(at), to: within(at + spare), slow: false } : { from: within(at + spare / 2), to: within(at + spare / 2), slow: false };
   });
 };
 
@@ -74,12 +74,16 @@ const scrollerAhead = (from: EventTarget | null, way: number) => {
 const GLIDE_PER_PIXEL = 0.9;
 const GLIDE_SHORTEST = 800;
 const GLIDE_LONGEST = 1600;
+// A threshold crossed in the same time as any other move reads as a cut.
+const GLIDE_ACROSS = 2600;
 const GLIDE_ATTACK = 0.75;
 // Longer than the gap between a flick's inertial events, shorter than the pause before another notch.
 const GESTURE_GAP = 160;
 const SWIPE = 24;
 const KEY_WAYS: Record<string, number> = { ArrowDown: 1, PageDown: 1, End: 1, ArrowUp: -1, PageUp: -1, Home: -1 };
 const PRESSABLE = 'a, button, summary, [role="button"], [role="link"]';
+const glideTakes = (from: number, to: number) =>
+  readStops().some(({ from: at, slow }) => slow && at >= Math.min(from, to) - 1 && at <= Math.max(from, to) + 1) ? GLIDE_ACROSS : Math.min(Math.max(Math.abs(to - from) * GLIDE_PER_PIXEL, GLIDE_SHORTEST), GLIDE_LONGEST);
 const typing = () => document.activeElement?.matches('input, textarea, select') ?? false;
 const zoomedIn = () => (visualViewport?.scale ?? 1) > 1.01;
 
@@ -96,7 +100,7 @@ export function useWalkOn() {
 
     const glide = (to: number) => {
       const from = scrollY;
-      const takes = Math.min(Math.max(Math.abs(to - from) * GLIDE_PER_PIXEL, GLIDE_SHORTEST), GLIDE_LONGEST);
+      const takes = glideTakes(from, to);
       const began = performance.now();
       const step = (now: number) => {
         const done = Math.min(Math.max(now - began, 0) / takes, 1);

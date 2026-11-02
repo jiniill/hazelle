@@ -54,7 +54,7 @@ export function Indoors({ id, title, line, inside, talking, onInside, children }
     return () => crossing.disconnect();
   }, []);
   return (
-    <section id={id} className={`${styles.beat} ${styles.indoors}`} data-walk-stop="top">
+    <section id={id} className={`${styles.beat} ${styles.indoors}`} data-walk-stop="top" data-walk-slow="">
       <div ref={stay} className={styles.stay} />
       <div className={styles.seat} data-inside={inside || undefined}>
         <div className={styles.panel} data-talking={talking || undefined}>

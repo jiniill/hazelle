@@ -260,21 +260,17 @@
     animation: sway var(--sway-takes) var(--ease-loop) infinite alternate;
   }
 
-  /* The room answers the threshold being crossed, not a share of the scroll: where the threshold falls differs with every screen. */
+  /* Its walk's frames rule it. With reduced motion there are none, and only the threshold shows it. */
   .room {
     position: absolute;
     inset: 0;
     overflow: hidden;
     background: var(--scene-room-floor);
     opacity: 0;
-    transform: scale(var(--scene-room-near));
-    transition: opacity var(--scene-room-out) var(--ease-enter), transform var(--scene-room-out) var(--ease-enter);
   }
 
   [data-inside] .room {
     opacity: 1;
-    transform: none;
-    transition-duration: var(--scene-room-in);
   }
 
   .roomPicture {
@@ -345,10 +341,6 @@
 
     .lantern {
       display: none;
-    }
-
-    .room {
-      transition: none;
     }
 
     .curtain {

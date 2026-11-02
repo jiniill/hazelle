@@ -33,25 +33,34 @@ const ROW_D = { wide: rowDWide, tall: rowDTall };
 const WALK: readonly (readonly [number, number])[] = [[0, 0], [0.1725, 2100], [0.27, 2160], [0.331, 3250], [0.44, 3450], [0.512, 5800], [1, 7600]];
 const LENS = 1000;
 const NEAREST = 14;
-// The doorway must fill the screen; the rest of the picture is off it by then, so only this plane may grow this far.
-const AT_THE_DOOR = 40;
-const SAMPLES = 120;
+const SAMPLES = 240;
 const CLOCK = 1000;
 
 type Frames = (pace: Pace) => Keyframe[];
 const stops = (at: (share: number) => Keyframe): Frames => (pace) =>
   Array.from({ length: SAMPLES + 1 }, (_, index) => ({ ...at(index / SAMPLES), offset: pace(index / SAMPLES) }));
 const between = (low: number, high: number, at: number) => Math.min(Math.max((at - low) / (high - low), 0), 1);
+const smooth = (at: number) => at * at * (3 - 2 * at);
 
 type Seen = { in?: readonly [number, number]; out?: readonly [number, number] };
 const seenAt = ({ in: rise, out: fall }: Seen, share: number) => (rise ? between(rise[0], rise[1], share) : 1) * (fall ? 1 - between(fall[0], fall[1], share) : 1);
 
 // Each plane grows as its nearness says: a flat picture and a scale, so no browser's 3D is asked to hold depths this far apart.
-const planeFrames = (z: number, seen: Seen, nearest: number): Frames =>
+const planeFrames = (z: number, seen: Seen): Frames =>
   stops((share) => {
     const left = Math.max(z + LENS - along(WALK, share), 1);
-    return { transform: `scale(${Math.min((z + LENS) / left, nearest).toFixed(4)})`, opacity: seenAt(seen, share).toFixed(3) };
+    return { transform: `scale(${Math.min((z + LENS) / left, NEAREST).toFixed(4)})`, opacity: seenAt(seen, share).toFixed(3) };
   });
+
+// The cabin grows by a steady ratio from far off to its doorway filling the screen. By nearness alone, as the other planes grow, nearly all of it would come in the last moment.
+const DOOR_FAR = 1.1;
+const DOOR_FILLS = 21.6;
+const NEARING = [0.34, 0.5096] as const;
+const doorFrames = (seen: Seen): Frames =>
+  stops((share) => ({
+    transform: `scale(${(DOOR_FAR * (DOOR_FILLS / DOOR_FAR) ** Math.max((share - NEARING[0]) / (NEARING[1] - NEARING[0]), 0)).toFixed(4)})`,
+    opacity: seenAt(seen, share).toFixed(3),
+  }));
 
 const SCROLL = typeof ScrollTimeline === 'function' ? new ScrollTimeline({ source: document.documentElement }) : null;
 const PaceOfPage = createContext<Pace>(samePace);
@@ -74,7 +83,7 @@ const ROWS: readonly { art: { wide: string; tall: string }; z: number; seen: See
   { art: ROW_B, z: 19000, seen: { in: [0.3, 0.5], out: [0.84, 0.9] } },
   { art: ROW_D, z: 13000, seen: { in: [0.16, 0.36], out: [0.8, 0.86] } },
   { art: ROW_B, z: 8500, seen: { in: [0.1, 0.28], out: [0.72, 0.8] } },
-  { art: ROW_D, z: 5500, seen: { in: [0.06, 0.2], out: [0.555, 0.59] } },
+  { art: ROW_D, z: 5500, seen: { in: [0.06, 0.2], out: [0.513, 0.52] } },
   { art: ROW_B, z: 3400, seen: { in: [0.04, 0.14], out: [0.38, 0.44] } },
   { art: ROW_D, z: 2000, seen: { in: [0.02, 0.1], out: [0.22, 0.27] } },
   { art: ROW_A, z: 1000, seen: { out: [0.1, 0.16] }, takes: '11s' },
@@ -82,8 +91,8 @@ const ROWS: readonly { art: { wide: string; tall: string }; z: number; seen: See
   { art: ROW_C, z: 200, seen: { out: [0.05, 0.09] }, takes: '7s' },
 ];
 
-// The room covers the forest from the threshold to the way out, 0.51 to 0.6 tuned: what leaves or arrives between them is never seen going.
-const CABIN = { z: 5000, seen: { in: [0.4, 0.46], out: [0.555, 0.59] } } as const;
+// The room fully covers the forest from the threshold to 0.52 tuned, so what leaves there is never seen going.
+const CABIN = { z: 5000, seen: { in: [0.345, 0.385], out: [0.513, 0.52] } } as const;
 const ARIN = { z: 1500, seen: { out: [0.25, 0.275] } } as const;
 const BOUGH = { z: 40, seen: { out: [0.02, 0.05] } } as const;
 const HILL = { z: 40000, seen: { in: [0.78, 0.92] } } as const;
@@ -97,6 +106,12 @@ const MOON: Frames = (pace) => {
     return { transform: `translate3d(0, ${(share < 0.44 ? between(0, 0.44, share) * 5 : 5 + between(0.44, 0.84, share) * 69) - climbed}vh, 0)` };
   })(pace);
 };
+// Dissolves on the walk's own scale as the doorway closes in and on the way out, always moving the way the visitor walks, in either direction.
+const ROOM = stops((share) => {
+  const entered = smooth(between(0.455, 0.5096, share));
+  const leaving = smooth(between(0.5096, 0.67, share));
+  return { opacity: (entered * (1 - smooth(between(0.52, 0.67, share)))).toFixed(3), transform: `scale(${(0.9 + entered * 0.1 + leaving * 0.14).toFixed(4)})` };
+});
 const DAWN = stops((share) => ({ opacity: between(0.56, 1, share) }));
 // The carried lantern dips and rises with each step of the walk, and is not needed once the sun is up.
 const STRIDES = 22;
@@ -123,7 +138,7 @@ function Art({ wide, tall, priority }: { wide: string; tall: string; priority?: 
 }
 
 function Plane({ z, seen, doorward, children }: { z: number; seen: Seen; doorward?: boolean; children: ReactNode }) {
-  const node = useWalk(planeFrames(z, seen, doorward ? AT_THE_DOOR : NEAREST));
+  const node = useWalk(doorward ? doorFrames(seen) : planeFrames(z, seen));
   return (
     <div className={styles.look} style={{ '--near': (LENS / (LENS + z)).toFixed(3) } as CSSProperties}>
       <div ref={node} className={doorward ? `${styles.plane} ${styles.doorward}` : styles.plane}>{children}</div>
@@ -276,13 +291,13 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
           ))}
         </div>
         {(walking || inside) && (
-          <div className={styles.room}>
+          <Moving className={styles.room} frames={ROOM}>
             <div className={styles.roomPicture}>
               <Art wide={roomWide} tall={roomTall} />
               <div className={styles.roomHearth} />
               <div className={styles.roomLamp} />
             </div>
-          </div>
+          </Moving>
         )}
         <div className={styles.grain} />
         <div className={styles.curtain} />

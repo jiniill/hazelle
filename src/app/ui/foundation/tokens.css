@@ -568,9 +568,6 @@
   --scene-room-shape: 1672 / 941;
   --scene-room-top: 50%;
   --scene-room-shift: -50%;
-  --scene-room-near: 1.07;
-  --scene-room-in: 1100ms;
-  --scene-room-out: 800ms;
   --scene-room-lamp-x: 38.9%;
   --scene-room-lamp-y: 54%;
   --scene-room-lamp: 34%;
