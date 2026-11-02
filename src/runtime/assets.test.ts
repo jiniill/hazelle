@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiResult } from './api';
-import { AssetUrls } from './assets';
+import { assetDataUrls, AssetUrls } from './assets';
 import type { Files } from './files';
 import type { ObjectStore } from './store';
 
@@ -123,4 +123,22 @@ it('keeps a loaded picture pinned through StrictMode hold-release-hold with no i
     urls.close();
     revoke.mockRestore();
   }
+});
+
+it('reads the pictures for data URLs together and keeps their order', async () => {
+  let reading = 0;
+  let most = 0;
+  const read = async ({ id }: { id: string }) => {
+    most = Math.max(most, ++reading);
+    await settled();
+    reading--;
+    return { ok: true as const, data: new Uint8Array([id.charCodeAt(0)]) };
+  };
+  const held = new Map([['one', 'a'], ['two', 'b']]);
+  const store = { get: (_kind: string, id: string) => (held.has(id) ? { value: { ...asset, file: { id: held.get(id)!, key: 'k' } } } : undefined) } as unknown as ObjectStore;
+  const found = await assetDataUrls(store, { read } as unknown as Files, [{ kind: 'asset', id: 'one' }, { kind: 'asset', id: 'gone' }, { kind: 'asset', id: 'two' }]);
+  expect([...found.urls.keys()]).toEqual(['asset:one', 'asset:two']);
+  expect(found.urls.get('asset:two')).toBe('data:image/png;base64,Yg==');
+  expect(found.missing).toBe(1);
+  expect(most).toBe(2);
 });
