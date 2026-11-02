@@ -461,7 +461,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   private changed(changes: readonly StoreChange[]) {
     for (const entry of [...this.entries.values()]) {
       const tool = this.session.store.get('tool', toolId(entry.module))?.value;
-      if (!tool || !live(this.session.store.get('module', entry.module)) || tool.file.id !== entry.file?.id || JSON.stringify(tool.manifest) !== JSON.stringify(entry.tool.manifest)) { this.end(entry, new ToolStopped()); continue; }
+      if (!tool || !live(this.session.store.get('module', entry.module)) || tool.file.id !== entry.file?.id || (tool.manifest !== entry.tool.manifest && JSON.stringify(tool.manifest) !== JSON.stringify(entry.tool.manifest))) { this.end(entry, new ToolStopped()); continue; }
       // A withdrawn network answer cannot wait for the frame's next start: its CSP still lets pictures out.
       if (framesOf(entry).some((frame) => frame.network) && !this.api.networkOn(entry)) { this.end(entry, new ToolStopped()); continue; }
       // A consent given while it runs restarts a frame no slot shows, for its pictures from outside; one shown keeps its
