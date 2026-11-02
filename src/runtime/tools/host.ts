@@ -248,10 +248,10 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   }
 
   private settingsChanged(entry: Entry, tool: Tool) {
+    entry.tool = tool;
     const settings = JSON.stringify(tool.settings);
     if (settings === entry.settings) return;
     entry.settings = settings;
-    entry.tool = tool;
     if (entry.background?.loaded) this.send(entry.background, { kind: 'settings', values: tool.settings });
     this.idle(entry);
   }
