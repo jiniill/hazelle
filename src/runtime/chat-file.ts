@@ -2,7 +2,7 @@ import { isRecord } from '../connectors/values';
 import { entryOrder } from '../model/chat';
 import type { Kind, Stored } from '../model/kinds';
 import { memoryId } from '../model/memory';
-import { fromBase64, toBase64 } from '../vault/aead';
+import { fromBase64, toBase64 } from '../base64';
 import type { ApiResult } from './api';
 import { inOrder } from './files';
 import { storedMemory } from './memory-read';

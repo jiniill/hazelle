@@ -5,7 +5,7 @@ import { unpack } from '../engine/import/risum';
 import { live } from '../model/library';
 import type { Block } from '../model/prompt';
 import { SETTINGS_ID } from '../model/settings';
-import { fromBase64 } from '../vault/aead';
+import { fromBase64 } from '../base64';
 import { chatModel, setPromptModel } from './assignment';
 import { setChatOwn } from './chat-log';
 import { addDefaults, addPrompt, COMMENTATOR_ID, ILLUSTRATOR_ID, chatPrompt, copyPrompt, editPrompt, removePrompt, resetPromptBlocks, savePreset, restorePrompt, setDefaultPrompt, MEMORY_PROMPT_ID, STARTER_ID, TRANSLATOR_ID } from './prompts';

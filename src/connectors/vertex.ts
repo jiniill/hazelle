@@ -1,4 +1,4 @@
-import { fromBase64, toBase64 } from './base64';
+import { fromBase64, toBase64 } from '../base64';
 import { bareModel, embedUsage } from './chat-completions';
 import { embedContent } from './gemini';
 import { ConnectorError, type ConnectionType, type Endpoint } from './types';

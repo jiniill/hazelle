@@ -1,4 +1,5 @@
-import { fromBase64, openBytes, randomBytes, sealBytes, toBase64, withFormat } from './aead';
+import { openBytes, randomBytes, sealBytes, withFormat } from './aead';
+import { fromBase64, toBase64 } from '../base64';
 
 // A share link's key: 32 random bytes in base64url, made by the sharer's page and kept in the link's fragment and the
 // sharer's vault (model/share), never sent to the server but inside a report's full link.

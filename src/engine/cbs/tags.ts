@@ -1,4 +1,4 @@
-import { fromBase64, toBase64 } from '../../connectors/base64';
+import { fromBase64, toBase64 } from '../../base64';
 import { isRecord } from '../../connectors/values';
 import { UNSET } from '../script-api';
 import { assetUrl, findAsset, isVideo, type BotAsset } from '../assets';

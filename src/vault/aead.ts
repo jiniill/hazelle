@@ -1,3 +1,4 @@
+import { fromBase64, toBase64 } from '../base64';
 const NONCE_BYTES = 12;
 
 export function randomBytes(length: number): Uint8Array<ArrayBuffer> {
@@ -51,18 +52,4 @@ export async function seal(key: CryptoKey, plaintext: Uint8Array<ArrayBuffer>, a
 
 export async function open(key: CryptoKey, sealed: string, aad: string): Promise<Uint8Array<ArrayBuffer> | null> {
   return openBytes(key, fromBase64(sealed), aad);
-}
-
-export function toBase64(bytes: Uint8Array): string {
-  let text = '';
-  for (let at = 0; at < bytes.length; at += 0x8000) text += String.fromCharCode(...bytes.subarray(at, at + 0x8000));
-  return btoa(text);
-}
-
-// Keep atob validation; per-character callbacks cost more than decryption across a full account.
-export function fromBase64(text: string): Uint8Array<ArrayBuffer> {
-  const decoded = atob(text);
-  const bytes = new Uint8Array(decoded.length);
-  for (let at = 0; at < decoded.length; at++) bytes[at] = decoded.charCodeAt(at);
-  return bytes;
 }

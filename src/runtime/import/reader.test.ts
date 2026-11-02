@@ -2,7 +2,7 @@ import { gzipSync, strToU8, zipSync } from 'fflate';
 import { describe, expect, it, vi } from 'vitest';
 import { risumBlock, risumHead, RISUM_END } from '../../engine/import/risum';
 import type { RisuMessage } from '../../engine/import/types';
-import { fromBase64 } from '../../vault/aead';
+import { fromBase64 } from '../../base64';
 import starter from '../starter-prompt.risup?inline';
 import { MESSAGE_BYTES, MESSAGE_PAGE, type Method, type Replies, type Request } from './protocol';
 import { ImportReader } from './reader';

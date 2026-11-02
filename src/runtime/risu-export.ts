@@ -12,7 +12,7 @@ import { evaluationFailure } from './evaluation';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
 import { summaryId } from './summary';
-import { toBase64 } from '../vault/aead';
+import { toBase64 } from '../base64';
 
 type Reader = Pick<Session, 'store'>;
 

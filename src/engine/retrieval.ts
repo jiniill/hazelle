@@ -1,4 +1,4 @@
-import { fromBase64, toBase64 } from '../connectors/base64';
+import { fromBase64, toBase64 } from '../base64';
 import type { Memory, Vector } from '../model/memory';
 import { placesOf, recalledText, recordText, type ChatRead, type Standing } from './memory';
 

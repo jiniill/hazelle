@@ -1,5 +1,6 @@
 import { argon2id } from 'hash-wasm';
-import { encodeText, open, randomBytes, seal, toBase64 } from './aead';
+import { encodeText, open, randomBytes, seal } from './aead';
+import { toBase64 } from '../base64';
 import { formatRecoveryKey, parseRecoveryKey } from './recovery-key';
 
 export type VaultRecord = { passwordWrap: string; recoveryWrap: string };

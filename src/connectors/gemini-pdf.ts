@@ -1,5 +1,5 @@
 import { zlibSync } from 'fflate';
-import { toBase64 } from './base64';
+import { toBase64 } from '../base64';
 import type { Pdf } from './settings';
 import type { ChatMessage } from './types';
 

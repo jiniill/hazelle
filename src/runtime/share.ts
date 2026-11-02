@@ -5,7 +5,7 @@ import { imageType } from '../engine/import/card';
 import type { Card } from '../engine/import/types';
 import type { Stored } from '../model/kinds';
 import { live } from '../model/library';
-import { fromBase64, toBase64 } from '../vault/aead';
+import { fromBase64, toBase64 } from '../base64';
 import { openFile, type FileRef } from '../vault/files';
 import { newShareKey, openShare, sealShare } from '../vault/shares';
 import { api, type ApiResult } from './api';

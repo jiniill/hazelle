@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import { withAttachments } from '../engine/assets';
-import { toBase64 } from '../vault/aead';
+import { toBase64 } from '../base64';
 import { setDefaultModel } from './assignment';
 import { startChat } from './chat-log';
 import { addDraftFile, keepAttachments } from './attachments';

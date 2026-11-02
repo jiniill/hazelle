@@ -1,6 +1,6 @@
 import { ChangeSignal } from '../change-signal';
 import { pictureRef, type PictureKind, type PictureUrl } from '../engine/assets';
-import { toBase64 } from '../vault/aead';
+import { toBase64 } from '../base64';
 import { inOrder, PERMANENT, type Files } from './files';
 import type { ObjectStore } from './store';
 

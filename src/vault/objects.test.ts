@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { fromBase64, randomBytes, toBase64 } from './aead';
+import { randomBytes } from './aead';
+import { fromBase64, toBase64 } from '../base64';
 import { objectKey, openObject, sealObject } from './objects';
 
 const address = { id: 'object-1', kind: 'connection', parent: null };

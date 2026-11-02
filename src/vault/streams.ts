@@ -1,4 +1,5 @@
-import { encodeText, toBase64 } from './aead';
+import { encodeText } from './aead';
+import { toBase64 } from '../base64';
 
 // Private keys stay inside sealed call markers; the server receives only the public half.
 // Keep ECDH/sealing compatible with server/stream-box so any unlocked device can resume.

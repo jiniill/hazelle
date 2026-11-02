@@ -1,4 +1,5 @@
-import { encodeText, fromBase64, toBase64, withFormat } from './aead';
+import { encodeText, withFormat } from './aead';
+import { fromBase64, toBase64 } from '../base64';
 
 // The key lives only in sealed object bodies.
 export type FileRef = { id: string; key: string };

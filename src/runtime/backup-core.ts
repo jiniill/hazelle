@@ -5,7 +5,7 @@ import { KINDS, parentKinds, type Kind, type Stored } from '../model/kinds';
 import { ORDER_ID } from '../model/order';
 import { SETTINGS_ID } from '../model/settings';
 import type { ApiFailure, ApiResult } from './api';
-import { toBase64 } from '../vault/aead';
+import { toBase64 } from '../base64';
 import type { FileRef } from '../vault/files';
 import { BackupZip, indexZip, readEntry, unzipEntry, type BackupOutput } from './backup-zip';
 import { inOrder, type Files } from './files';

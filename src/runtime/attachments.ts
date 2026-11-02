@@ -2,7 +2,7 @@ import type { ChatMessage, InputPicture } from '../connectors/types';
 import { imageType } from '../engine/import/card';
 import type { Assembled } from '../engine/pipeline';
 import type { Inlay, TextFile } from '../model/library';
-import { toBase64 } from '../vault/aead';
+import { toBase64 } from '../base64';
 import type { ApiResult } from './api';
 import type { Drafts } from './drafts';
 import type { Files } from './files';

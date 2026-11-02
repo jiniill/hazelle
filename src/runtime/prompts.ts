@@ -10,7 +10,7 @@ import type { Stored } from '../model/kinds';
 import { live, type Module } from '../model/library';
 import { sortOf, type AgentPlace, type Block, type ConversationPrompt, type PictureSettings, type PictureTags, type Prompt, type PromptOf, type PromptSort, type ToggleLine } from '../model/prompt';
 import { EMPTY_SETTINGS, labOn, SETTINGS_ID, type LabId, type Settings } from '../model/settings';
-import { fromBase64 } from '../vault/aead';
+import { fromBase64 } from '../base64';
 import type { ApiResult } from './api';
 import type { BackupOutput } from './backup-zip';
 import { writeWhole } from './export-file';

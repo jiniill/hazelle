@@ -1,6 +1,6 @@
 import type { InputPicture } from '../connectors/types';
 import { MAX_PICTURE_BYTES } from '../contracts/board';
-import { fromBase64, toBase64 } from '../vault/aead';
+import { fromBase64, toBase64 } from '../base64';
 
 const THUMB = 400;
 // The longest side of a picture shown to a model: enough to read a character's looks, a few hundred tokens each.

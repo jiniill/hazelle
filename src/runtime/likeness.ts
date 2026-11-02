@@ -21,7 +21,7 @@ import type { Session } from './session';
 import type { ObjectStore } from './store';
 import { pageAnswer } from './talk';
 import { keepRow } from './usage';
-import { fromBase64 } from '../vault/aead';
+import { fromBase64 } from '../base64';
 
 // Owns likeness writes except restores/copies. Build only on first needed draw or explicit regeneration;
 // undrawn packs must cost nothing.

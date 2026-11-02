@@ -9,7 +9,7 @@ import { readRisum, readRisumModule, writeRisum } from './risum';
 import type { FileSource } from './source';
 import { writeToggles } from './toggles';
 import { openZip, type Zip } from './zip';
-import { fromBase64 } from '../../connectors/base64';
+import { fromBase64 } from '../../base64';
 import { isRecord } from '../../connectors/values';
 
 const utf8 = new TextDecoder();
