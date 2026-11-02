@@ -59,7 +59,7 @@ describe('the client files', () => {
     }
   });
 
-  it('words the guest home for search engines and keeps every page but the public four out of the index', async () => {
+  it('words the guest home for search engines and keeps every page but the public two out of the index', async () => {
     pulse = async () => ({ at: 0, board: null });
     writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><meta name="description" content="app" /></head><div id="root"><p class="boot" role="status">불러오는 중…</p></div>');
     const home = await (await client.request('/', { headers: PAGE })).text();
@@ -69,16 +69,16 @@ describe('the client files', () => {
     expect(home).toMatch(/<div id="root"><main class="boot landing"><h1>RisuAI 대체 캐릭터 챗, 헤이젤<\/h1>.*<p role="status">불러오는 중…<\/p><\/main><\/div>$/);
     for (const path of ['/', '/now', '/terms', '/privacy', '/board', '/s/no-cover-share00', '/index.html']) {
       const response = await client.request(path, { headers: PAGE });
-      const hidden = ['/board', '/s/no-cover-share00', '/index.html'].includes(path);
+      const hidden = !['/', '/now'].includes(path);
       expect([path, response.headers.get('x-robots-tag'), (await response.text()).includes(`<link rel="canonical" href="https://hazelle.app${path}" />`)]).toEqual([path, hidden ? 'noindex' : null, !hidden]);
     }
     expect(await (await client.request('/index.html', { headers: PAGE })).text()).not.toContain('landing');
     writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
   });
 
-  it('lists the public four in the sitemap and points robots.txt at it', async () => {
+  it('lists the public two in the sitemap and points robots.txt at it', async () => {
     expect(await (await client.request('/sitemap.xml')).text()).toBe(
-      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url><url><loc>https://hazelle.app/terms</loc></url><url><loc>https://hazelle.app/privacy</loc></url></urlset>\n',
+      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url></urlset>\n',
     );
     expect(await (await client.request('/robots.txt')).text()).toBe('User-agent: *\nDisallow: /api/\nSitemap: https://hazelle.app/sitemap.xml\n');
   });
@@ -119,6 +119,20 @@ describe('the client files', () => {
       expect(await page()).toBe(html);
     }
     writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
+  });
+
+  it("writes 헤이젤 나우's ranking into the page for a crawler that runs no script, leaving 기타 out", async () => {
+    writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><div id="root"><p class="boot" role="status">불러오는 중…</p></div>');
+    const row = (model: string | null) => ({ key: model ?? '', model, share: 0.5, people: 5 });
+    pulse = async () => ({ at: 0, board: { people: 4560, replies: 12340, ranking: { chat: { merged: [row(null), row('GPT <5>'), row('Gemini')], split: [] } } } as unknown as PulseBoard });
+    const body = await (await client.request('/now', { headers: PAGE })).text();
+    expect(body).toContain('<ul><li>1위 GPT &#60;5&#62;</li><li>2위 Gemini</li></ul><p role="status">불러오는 중…</p></main></div>');
+    pulse = async () => ({ at: 0, board: null });
+    writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
+  });
+
+  it('answers a page that exists whatever the crawler accepts', async () => {
+    for (const path of ['/now', '/s/no-cover-share00']) expect([path, (await client.request(path, { headers: ANY })).status]).toEqual([path, 200]);
   });
 
   it("gives each page load its own nonce, in the page where Vite left the placeholder and in the page's policy", async () => {

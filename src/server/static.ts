@@ -26,9 +26,10 @@ export const sandboxHeaders = (network: boolean) => ({ 'Content-Security-Policy'
 const HEADERS = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' };
 // Every file under /assets has a content hash in its name, so a changed file is a new URL.
 const IMMUTABLE = 'public, max-age=31536000, immutable';
-// Index only guest home, pulse and legal pages; this set also drives the sitemap.
-// Share/board and all other routes are noindex (design §6.13).
-const INDEXED = new Set(['/', PULSE_PAGE.path, '/terms', '/privacy']);
+// Only pages whose words reach a crawler that runs no script; this set also drives the sitemap. The legal pages stay
+// out: their text lives in the app, which the server may not import (design §6.13).
+const INDEXED = new Set(['/', PULSE_PAGE.path]);
+const PULSE_LINE = '헤이젤 사용자들이 캐릭터 챗에 실제로 쓰는 AI 모델 순위예요.';
 const LANDING = {
   title: '헤이젤 · RisuAI 대체 캐릭터 챗, 설치 없이 웹에서',
   line: 'RisuAI 봇과 포켓리스 백업을 그대로 가져와 내 API 키로 이어서 대화해요. 설치 없이 PC와 폰 브라우저에서, 가입 없이 바로 써요.',
@@ -84,12 +85,11 @@ export function clientFiles(clientDir: string, cover: (share: string) => Promise
   client.get('/sitemap.xml', (c) => (selfHost ? c.notFound() : c.body(SITEMAP, 200, { 'Content-Type': 'application/xml; charset=utf-8' })));
   client.get('/s/:id', async (c, next) => {
     const id = c.req.param('id');
-    if (!SHARE_ID.test(id) || !c.req.header('accept')?.includes('text/html')) return next();
+    if (!SHARE_ID.test(id)) return next();
     const shared = await cover(id);
     return page(c, (html) => sharePage(html, shared));
   });
-  client.get(PULSE_PAGE.path, async (c, next) => {
-    if (!c.req.header('accept')?.includes('text/html')) return next();
+  client.get(PULSE_PAGE.path, async (c) => {
     // The page loads whatever the numbers do.
     const answer = await pulse().catch(() => null);
     return page(c, (html) => (answer ? pulsePage(html, answer) : html));
@@ -116,13 +116,14 @@ const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://w
 const canonical = (html: string, path: string) =>
   html.replace('</head>', () => `<link rel="canonical" href="${HOSTED}${path}" /><meta property="og:url" content="${HOSTED}${path}" /></head>`);
 
-// The guest home's words as markup, for a crawler that runs no script (Naver's). main.tsx's createRoot replaces them.
+// A page's words as markup, for a crawler that runs no script (Naver's). main.tsx's createRoot replaces them.
+const withWords = (html: string, words: string) =>
+  html.replace(/<p class="boot" role="status">([^<]*)<\/p>/, (_, loading: string) => `<main class="boot landing">${words}<p role="status">${loading}</p></main>`);
+
 function landingPage(html: string): string {
   const facts = { '@context': 'https://schema.org', '@type': 'WebApplication', name: '헤이젤', alternateName: 'Hazelle', url: `${HOSTED}/`, description: LANDING.line, applicationCategory: 'EntertainmentApplication', operatingSystem: 'Web', inLanguage: 'ko', offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' } };
   const points = LANDING.points.map((point) => `<li>${point}</li>`).join('');
-  return html
-    .replace('</head>', () => `<script type="application/ld+json">${JSON.stringify(facts)}</script></head>`)
-    .replace(/<p class="boot" role="status">([^<]*)<\/p>/, (_, loading: string) => `<main class="boot landing"><h1>${LANDING.heading}</h1><p>${LANDING.line}</p><ul>${points}</ul><p role="status">${loading}</p></main>`);
+  return withWords(html.replace('</head>', () => `<script type="application/ld+json">${JSON.stringify(facts)}</script></head>`), `<h1>${LANDING.heading}</h1><p>${LANDING.line}</p><ul>${points}</ul>`);
 }
 
 const escape = (text: string) => text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
@@ -149,6 +150,11 @@ function pulsePage(html: string, { board }: PulseAnswer): string {
   if (!board) return html;
   const count = (value: number) => value.toLocaleString('ko-KR');
   // 기타 never headlines.
-  const leader = board.ranking.chat.merged.find((row) => row.model !== null)?.model;
-  return worded(html, leader ? `${PULSE_PAGE.title} · 대화 1위 ${leader}` : PULSE_PAGE.title, `최근 24시간 응답 ${count(board.replies)}번 · 최근 7일 ${count(board.people)}명이 썼어요`);
+  const named = board.ranking.chat.merged.flatMap((row) => row.model ?? []);
+  const line = `최근 24시간 응답 ${count(board.replies)}번 · 최근 7일 ${count(board.people)}명이 썼어요`;
+  const ranks = named.map((model, index) => `<li>${index + 1}위 ${escape(model)}</li>`).join('');
+  return withWords(
+    worded(html, named[0] ? `${PULSE_PAGE.title} · 대화 1위 ${named[0]}` : PULSE_PAGE.title, line),
+    `<h1>${PULSE_PAGE.title}</h1><p>${PULSE_LINE}</p><p>${line}</p>${ranks && `<h2>대화 모델 순위</h2><ul>${ranks}</ul>`}`,
+  );
 }
