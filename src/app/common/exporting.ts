@@ -5,11 +5,13 @@ import type { Toasts } from '../toast';
 import { downloadOutput } from './download';
 import { SAVING_FILE } from './words';
 
+export type ExportWrite<T> = (output: BackupOutput, progress: (step: ExportStep) => void) => Promise<ApiResult<T>>;
+
 // Call directly from the press so the save picker retains activation. show clears busy state with null on exit.
 export function runExport<T>(
   toast: Toasts,
   filename: string,
-  write: (output: BackupOutput, progress: (step: ExportStep) => void) => Promise<ApiResult<T>>,
+  write: ExportWrite<T>,
   show: (label: string | null) => void,
   done: (data: T) => void,
 ) {
