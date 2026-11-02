@@ -5,6 +5,12 @@
   gap: var(--space-16);
 }
 
+.small {
+  --column-min: var(--tile-small-min-width);
+
+  gap: var(--space-8);
+}
+
 .tile {
   --column-min: var(--tile-min-width);
 }

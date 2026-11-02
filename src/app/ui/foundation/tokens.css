@@ -407,6 +407,7 @@
   --card-held-opacity: 0.5;
   --gallery-max-width: 1120px;
   --page-max-width: 1200px;
+  --tile-small-min-width: 190px;
   --tile-min-width: 220px;
   --tile-wide-min-width: 280px;
   --panel-min-width: 420px;
