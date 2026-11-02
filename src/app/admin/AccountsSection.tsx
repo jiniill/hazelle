@@ -10,12 +10,13 @@ import { count } from '../common/typedNumber';
 import { SeeAll } from '../common/useLoaded';
 import { NOTICES, UNKNOWN } from '../common/words';
 import { RestoresDialog } from '../common/RestoresDialog';
+import { TextDialog } from '../common/TextDialog';
 import { useSession } from '../session';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
 import { Button, ConfirmDialog, Empty, MenuItem, MoreMenu, Panel, Table, Tag, type TableColumn } from '../ui';
 import { CapsDialog } from './CapsDialog';
-import { NoticeDialog } from './NoticeDialog';
+import { NOTICE_TEXT } from './notice';
 import type { useAccounts } from './useAccounts';
 
 const STATES: Record<AccountState, string | null> = { active: null, restoring: '복원 중', leaving: '탈퇴 중' };
@@ -145,25 +146,27 @@ export function AccountsSection({ loaded, total, onActed, children }: { loaded: 
       )}
       {writing &&
         (writing.suspend ? (
-          <NoticeDialog
+          <TextDialog
+            {...NOTICE_TEXT}
             title={`${writing.account.username} 계정을 정지할까요?`}
             label="정지 이유"
             placeholder="이 내용은 알림으로 전달돼요."
             confirm={{ label: '정지', icon: Ban }}
             send={(reason) => suspend(writing.account.accountId, reason)}
-            onSent={() => {
+            onDone={() => {
               setWriting(null);
               acted(writing.account.accountId);
             }}
             onClose={() => setWriting(null)}
           />
         ) : (
-          <NoticeDialog
+          <TextDialog
+            {...NOTICE_TEXT}
             title={`${writing.account.username}에게 ${NOTICES.send}`}
             label="보낼 내용"
             confirm={{ label: '보내기', icon: Send }}
             send={(text) => sendNotice(writing.account.accountId, text)}
-            onSent={() => {
+            onDone={() => {
               setWriting(null);
               toast.show(`${writing.account.username}에게 보냈어요.`);
               onActed();

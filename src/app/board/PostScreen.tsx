@@ -1,6 +1,6 @@
 import { Check, EyeOff, Sparkles, Eye, Flag, History, Lock, LockOpen, PenLine, Tag as TagIcon, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
-import { HOLD_DAYS_MAX, MAX_COMMENT_LENGTH, OPERATOR_NAME, STATUSES, type Comment, type Hidden, type Post, type Status } from '../../contracts/board';
+import { HOLD_DAYS_MAX, MAX_COMMENT_LENGTH, MAX_REASON_LENGTH, OPERATOR_NAME, STATUSES, type Comment, type Hidden, type Post, type Status } from '../../contracts/board';
 import type { ApiResult } from '../../runtime/api';
 import {
   blockGuestPost,
@@ -24,6 +24,7 @@ import { TOUR, TourDialog } from '../common/Tour';
 import { AuthorLine, authorName, PostMarks, statusIcon } from '../common/postRow';
 import { withParticle } from '../common/particles';
 import { RestoresDialog } from '../common/RestoresDialog';
+import { counted, TextDialog } from '../common/TextDialog';
 import { ago, moment } from '../common/time';
 import { count, readCount } from '../common/typedNumber';
 import { useAttempt } from '../common/useAttempt';
@@ -35,7 +36,6 @@ import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
 import { Button, Callout, ChoiceGroup, CommentBox, ConfirmDialog, Dialog, Empty, MenuHeading, MenuItem, MoreMenu, NavBar, PostStat, Row, Screen, Section, Stack, Tag, Text, TextField, Thread, ThreadEvent, ThreadItem, TourCard, VoteButton, Written } from '../ui';
 import { useNicknameGate } from './nickname';
-import { counted, ReasonDialog } from './parts';
 import { PostPictures } from './pictures';
 import { useVotes } from './vote';
 
@@ -190,10 +190,13 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
         </ConfirmDialog>
       )}
       {(asking?.kind === 'report-post' || asking?.kind === 'report-comment') && (
-        <ReasonDialog
+        <TextDialog
           title={asking.kind === 'report-post' ? '글 신고' : '댓글 신고'}
           note="운영자가 확인해요."
           label="신고 이유"
+          lines={3}
+          max={MAX_REASON_LENGTH}
+          trim
           confirm={{ label: SHARE.report, icon: Flag }}
           send={(reason) => (asking.kind === 'report-post' ? reportPost(post.id, reason) : reportComment(asking.comment.id, reason))}
           onDone={() => {
@@ -433,13 +436,16 @@ function HideDialog({ what, send, onDone, onClose }: { what: string; send: (hidd
   const held = days.trim() === '' ? null : readCount(days);
   const valid = days.trim() === '' || (held !== null && held <= HOLD_DAYS_MAX);
   return (
-    <ReasonDialog
+    <TextDialog
       title={`${what} 가리기`}
       note={`${what}을 쓴 사람에게는 이유와 함께 보여요.`}
       label="가리는 이유"
+      lines={3}
+      max={MAX_REASON_LENGTH}
+      trim
       confirm={{ label: '가리기', icon: EyeOff }}
       ready={valid}
-      also={
+      below={
         <TextField
           label="기간 (일)"
           value={days}

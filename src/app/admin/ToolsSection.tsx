@@ -1,12 +1,13 @@
 import { FileX, Link2Off, Send } from 'lucide-react';
 import { useState } from 'react';
 import { sendNotice } from '../../runtime/admin';
+import { TextDialog } from '../common/TextDialog';
 import { NOTICES } from '../common/words';
 import { useToast } from '../toast';
 import { Button, Section, SettingGroup, SettingRow } from '../ui';
 import { BlockFileDialog } from './BlockFileDialog';
 import { HoldShareDialog } from './HoldShareDialog';
-import { NoticeDialog } from './NoticeDialog';
+import { NOTICE_TEXT } from './notice';
 
 type Open = 'notice' | 'share' | 'file' | null;
 
@@ -38,12 +39,13 @@ export function ToolsSection({ onActed }: { onActed: () => void }) {
         />
       </SettingGroup>
       {open === 'notice' && (
-        <NoticeDialog
+        <TextDialog
+          {...NOTICE_TEXT}
           title={`모두에게 ${NOTICES.send}`}
           label="보낼 내용"
           confirm={{ label: '보내기', icon: Send }}
           send={(text) => sendNotice(null, text)}
-          onSent={() => {
+          onDone={() => {
             toast.show('모든 계정에 보냈어요.');
             done();
           }}

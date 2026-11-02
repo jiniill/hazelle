@@ -6,10 +6,10 @@ import { countReceived, readShareLink, readShareState, reportShare, shareLink } 
 import { describeFailure } from '../common/failure';
 import { LegalNotice } from '../common/LegalNotice';
 import { SharePreview } from '../common/SharePreview';
-import { useAttempt } from '../common/useAttempt';
+import { TextDialog } from '../common/TextDialog';
 import { ACTS } from '../common/acts';
 import { LOADING, SHARE } from '../common/words';
-import { Brand, Button, Callout, Dialog, Divider, Intro, Screen, Stack, Text, TextField } from '../ui';
+import { Brand, Button, Callout, Divider, Intro, Screen, Stack, Text } from '../ui';
 import { holdPending, pendingFor } from '../common/sharePending';
 
 type View =
@@ -93,10 +93,19 @@ function SharePage({ id, shareKey }: { id: string; shareKey: string | null }) {
         </Stack>
       )}
       {reporting && view.kind === 'live' && shareKey !== null && (
-        <ReportDialog
+        <TextDialog
+          title={SHARE.report}
+          label="신고 이유"
+          lines={4}
+          help="운영자가 이 링크를 열어 확인해요. 확인하는 동안 링크가 보류될 수 있어요."
+          placeholder="예: 미성년자로 보이는 캐릭터의 성적인 이미지가 있어요."
+          max={MAX_REPORT_LENGTH}
+          quiet
+          cancel
+          confirm={{ label: '보내기', icon: Send }}
           send={(text) => reportShare(id, text, shareLink(location.origin, id, shareKey), view.version)}
           onClose={() => setReporting(false)}
-          onSent={() => {
+          onDone={() => {
             setReporting(false);
             setSaid('신고를 보냈어요. 운영자가 확인할게요.');
             setAttempt((held) => held + 1);
@@ -106,45 +115,5 @@ function SharePage({ id, shareKey }: { id: string; shareKey: string | null }) {
       <Divider label="" />
       <LegalNotice />
     </Screen>
-  );
-}
-
-function ReportDialog({ send, onClose, onSent }: { send: (text: string) => ReturnType<typeof reportShare>; onClose: () => void; onSent: () => void }) {
-  const [text, setText] = useState('');
-  const { busy, failure, run } = useAttempt();
-  const length = text.trim().length;
-  const submit = () =>
-    run(async () => {
-      const sent = await send(text);
-      if (!sent.ok) return describeFailure(sent);
-      onSent();
-      return null;
-    });
-  return (
-    <Dialog
-      title={SHARE.report}
-      onClose={onClose}
-      onSubmit={() => void submit()}
-      actions={
-        <>
-          <Button variant="secondary" onClick={onClose}>
-            취소
-          </Button>
-          <Button type="submit" icon={Send} busy={busy} disabled={length === 0 || length > MAX_REPORT_LENGTH}>
-            보내기
-          </Button>
-        </>
-      }
-    >
-      <TextField
-        label="신고 이유"
-        lines={4}
-        value={text}
-        onChange={setText}
-        help="운영자가 이 링크를 열어 확인해요. 확인하는 동안 링크가 보류될 수 있어요."
-        placeholder="예: 미성년자로 보이는 캐릭터의 성적인 이미지가 있어요."
-      />
-      {failure && <Callout tone="warn" alert>{failure}</Callout>}
-    </Dialog>
   );
 }
