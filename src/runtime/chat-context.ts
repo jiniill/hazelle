@@ -12,7 +12,7 @@ import { keepsPromptOut, shown, type Chat, type Message } from '../model/chat';
 import { live } from '../model/library';
 import type { Toggle, ToggleLine } from '../model/prompt';
 import { without } from '../model/fields';
-import { EMPTY_SETTINGS, SETTINGS_ID, type Seen, type Settings } from '../model/settings';
+import { EMPTY_SETTINGS, type Seen, type Settings } from '../model/settings';
 import { chatToggles, toggleValue } from '../model/toggles';
 import { chatModel, type Route } from './assignment';
 import { chatTranslate } from './features';
@@ -22,6 +22,7 @@ import { modelProfile } from './profiles';
 import { chatPrompt, type PromptChoice } from './prompts';
 import type { ReadModels } from './read-model';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import type { Shown } from './talk';
 import { TOOL_ROUNDS } from './tool-loop';
 import type { TranslateInput } from './translate';
@@ -36,7 +37,7 @@ export function packsOf(store: Reader['store'], chat: Pick<Chat, 'character' | '
   const persona = chatPersona(store, chat);
   const modules = [
     ...new Set([
-      ...(store.get('settings', SETTINGS_ID)?.value.modules ?? []),
+      ...(accountSettings(store)?.modules ?? []),
       ...(prompt.kind === 'prompt' ? (prompt.prompt.value.modules ?? []) : []),
       ...(character?.value.modules ?? []),
       ...(persona.kind === 'persona' ? (persona.persona.value.modules ?? []) : []),
@@ -58,7 +59,7 @@ const SHARED_SCAN = { scanDepth: 'loreDepth', tokenBudget: 'loreBudget', recursi
 
 // The account's, which every chat follows where its character sets none.
 export function sharedLoreScan(store: Reader['store']): LoreScan {
-  const settings = store.get('settings', SETTINGS_ID)?.value;
+  const settings = accountSettings(store);
   return {
     scanDepth: settings?.loreDepth ?? LORE_SCAN.scanDepth,
     tokenBudget: settings?.loreBudget ?? LORE_SCAN.tokenBudget,
@@ -85,12 +86,12 @@ export function loreScanOf(store: Reader['store'], card: Card | null): LoreScan 
 
 export const ANSWER_INSTRUCTION = '(OOC: Continue the story with your next reply.)';
 
-export const answerInstructionOf = (store: Reader['store']) => store.get('settings', SETTINGS_ID)?.value.answerInstruction ?? ANSWER_INSTRUCTION;
+export const answerInstructionOf = (store: Reader['store']) => accountSettings(store)?.answerInstruction ?? ANSWER_INSTRUCTION;
 
 export const setAnswerInstruction = (store: ObjectStore, text: string) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (text === ANSWER_INSTRUCTION ? without(current, 'answerInstruction') : { ...current, answerInstruction: text }));
 
-export const usageShownOf = (store: Reader['store']) => store.get('settings', SETTINGS_ID)?.value.usageShown ?? false;
+export const usageShownOf = (store: Reader['store']) => accountSettings(store)?.usageShown ?? false;
 
 export const setToolRounds = (store: ObjectStore, rounds: number) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (rounds === TOOL_ROUNDS ? without(current, 'toolRounds') : { ...current, toolRounds: rounds }));
@@ -179,7 +180,7 @@ export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoi
     })),
   ];
   const declared = chatToggles(sources.flatMap(({ lines }) => lines));
-  return { declared, sources, value:toggleValue(declared, (character ? character.toggles : store.get('settings', SETTINGS_ID)?.value.toggles) ?? {}) };
+  return { declared, sources, value:toggleValue(declared, (character ? character.toggles : accountSettings(store)?.toggles) ?? {}) };
 }
 
 type InspectedToggle = { declaration: Toggle; value: string | null; sources: ToggleSource[] };

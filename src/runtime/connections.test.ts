@@ -3,7 +3,7 @@ import { CONNECTION_TYPES, RETRIES } from '../connectors/registry';
 import type { Connection } from '../connectors/types';
 import openRouterKey from '../connectors/fixtures/openrouter-key.json';
 import openRouterModels from '../connectors/fixtures/openrouter-models.json';
-import { SETTINGS_ID } from '../model/settings';
+import { accountSettings } from './account-settings';
 import { addConnection, addCopy, addModel, changeKey, providerConnection, putModelBack, refreshStarred, removeModel, renameModel, retriesOf, setSharedRetries } from './connections';
 import { bareModel } from '../connectors/chat-completions';
 import type { Model } from '../connectors/types';
@@ -75,7 +75,7 @@ describe('addModel', () => {
       await addModel(store, id, model('painter', ['image']));
       await addModel(store, id, model('first'));
       await addModel(store, id, model('second'));
-      expect(store.get('settings', SETTINGS_ID)?.value.models.main).toEqual({ connection: id, model: 'first' });
+      expect(accountSettings(store)?.models.main).toEqual({ connection: id, model: 'first' });
     }));
 
   it("keys a model's first entry by its id and a copy by the entry it was given, and adds neither twice", () =>

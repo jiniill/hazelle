@@ -5,7 +5,7 @@ import { entriesOf, entryKey, ownOf, seesPictures, snapshotOf, type Account, typ
 import { isRecord } from '../connectors/values';
 import type { Stored } from '../model/kinds';
 import { without } from '../model/fields';
-import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
+import { EMPTY_SETTINGS } from '../model/settings';
 import { firstTurns, groupOf, putBack, removeAccount as withoutAccount, signedIn } from '../model/turns';
 import type { ApiFailure, ApiResult } from './api';
 import { imageOnly, setDefaultModel, type Route } from './assignment';
@@ -14,6 +14,7 @@ import type { CatalogFailure } from './catalog';
 import type { MetersFailure } from './meters';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 
 export const newAccount = (secret: string, name?: string): Account => ({ id: crypto.randomUUID(), secret, ...(name !== undefined && { name }) });
 
@@ -81,7 +82,7 @@ export async function addModel(store: ObjectStore, id: string, model: Model, own
   const saved = await store.update('connection', id, (current) =>
     current.starred.some((each) => entryKey(each) === key) ? current : { ...current, starred: [...current.starred, { ...snapshotOf(model), ...own }] });
   if (!saved.ok) return saved;
-  if (fitsRole(model, 'main') && !store.get('settings', SETTINGS_ID)?.value.models.main) await setDefaultModel(store, 'main', { connection: id, model: key });
+  if (fitsRole(model, 'main') && !accountSettings(store)?.models.main) await setDefaultModel(store, 'main', { connection: id, model: key });
   return { ok: true, data: key };
 }
 
@@ -168,7 +169,7 @@ export async function seesPicturesNow({ store, catalogs }: Pick<Session, 'store'
 
 // Most specific first: the model's 설정 묶음, then its connection, then the account's shared count.
 export const retriesOf = (store: ObjectStore, connection: Connection, settings: ModelSettings) =>
-  settings.retries ?? connection.retries ?? store.get('settings', SETTINGS_ID)?.value.retries ?? RETRIES;
+  settings.retries ?? connection.retries ?? accountSettings(store)?.retries ?? RETRIES;
 
 // undefined: follow the account's shared count again.
 export const setRetries = (store: ObjectStore, id: string, retries: number | undefined) =>

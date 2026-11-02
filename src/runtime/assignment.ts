@@ -3,11 +3,12 @@ import { embedRoute } from '../connectors/registry';
 import { entryOf, type Model, type Starred } from '../connectors/types';
 import type { Chat } from '../model/chat';
 import type { Stored } from '../model/kinds';
-import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
+import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiResult } from './api';
 import { chatPrompt } from './prompts';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 
 // The chat layer lives in the chat object and the prompt layer in the prompt, which runtime/chat-log and runtime/prompts
 // write otherwise; their `models` fields are written only here.
@@ -24,14 +25,14 @@ const writes = (route: Route | RouteFailure): Route | RouteFailure => ('kind' in
 // A missing prompt has no layer; the turn stops on it before the model matters.
 export function chatModel(store: Pick<ObjectStore, 'get'>, chat: Chat, role: Role): Route | RouteFailure {
   const prompt = chatPrompt(store, chat);
-  const ref = resolveRole(role, [chat.models, ...(prompt.kind === 'prompt' ? [prompt.prompt.value.models] : []), store.get('settings', SETTINGS_ID)?.value.models ?? {}]);
+  const ref = resolveRole(role, [chat.models, ...(prompt.kind === 'prompt' ? [prompt.prompt.value.models] : []), accountSettings(store)?.models ?? {}]);
   return ref ? writes(routeOf(store, ref)) : { kind: 'no-model' };
 }
 
 // 임베딩 모델 is set in 공용 alone (connectors/assignment ROLES). A model whose connection serves no embeddings is gone
 // for this role, as one no longer added is.
 export function embedModel(store: Pick<ObjectStore, 'get'>): Route | RouteFailure {
-  const ref = store.get('settings', SETTINGS_ID)?.value.models.embed;
+  const ref = accountSettings(store)?.models.embed;
   if (!ref) return { kind: 'no-model' };
   const route = routeOf(store, ref);
   return 'kind' in route || embedRoute(route.connection.value, route.model) ? route : { kind: 'model-gone' };
@@ -39,7 +40,7 @@ export function embedModel(store: Pick<ObjectStore, 'get'>): Route | RouteFailur
 
 // 설정 › 모델's own pick for a role, which no chat or prompt changes: what 번역기 calls with. own is a model picked for one call.
 export function sharedModel(store: Pick<ObjectStore, 'get'>, role: Role, own: ModelRef | null = null): Route | RouteFailure {
-  const ref = own ?? resolveRole(role, [store.get('settings', SETTINGS_ID)?.value.models ?? {}]);
+  const ref = own ?? resolveRole(role, [accountSettings(store)?.models ?? {}]);
   return ref ? writes(routeOf(store, ref)) : { kind: 'no-model' };
 }
 

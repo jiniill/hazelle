@@ -19,7 +19,6 @@ import type { Route, RouteFailure } from './assignment';
 import { cacheKept, prefixKept, wireOf, wireTextOf, writePrint } from './cache';
 import { appendReply, appendUserMessage, savedElsewhere, type Said, type Written } from './chat-log';
 import { refuseTools, retriesOf } from './connections';
-import { SETTINGS_ID } from '../model/settings';
 import { TOOL_ROUNDS, toolLoop, type Tool } from './tool-loop';
 import type { Costs } from './cost';
 import type { Credentials } from './credential';
@@ -27,6 +26,7 @@ import { gather, generate, receiptOf, resume, unsettled, type GenerateInput, typ
 import { stopStream } from './relay';
 import type { RequestLog } from './request-log';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import type { ChatLease } from './chat-scope';
 import { callOf, endCall, newCall, pageCall, type PageClass } from './streams';
 import type { Session } from './session';
@@ -285,7 +285,7 @@ export class Talk {
     let last = null as Called | null;
     let refused = false as boolean;
     let named = false as boolean;
-    const rounds = this.store.get('settings', SETTINGS_ID)?.value.toolRounds ?? TOOL_ROUNDS;
+    const rounds = accountSettings(this.store)?.toolRounds ?? TOOL_ROUNDS;
     const looped = await toolLoop({ tools: calling?.tools ?? [], rounds, signal: abort.signal, onText: this.writer(held, true) }, async (exchange, offered, onText) => {
       if (last) {
         const results = exchange.at(-1)!.results!;

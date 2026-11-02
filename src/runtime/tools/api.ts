@@ -7,7 +7,7 @@ import { fieldValue, TOOL_ACTION_CHARS, TOOL_ACTIONS } from '../../engine/import
 import type { ToolEvent, ModelMessage, Question } from '../../engine/script-api';
 import type { ChatScope } from '../../engine/render';
 import { live } from '../../model/library';
-import { SETTINGS_ID } from '../../model/settings';
+import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
 import { TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
 import type { ChatHeader, Down, Message, ToolOutcome } from '../../tool-api/protocol';
@@ -277,7 +277,7 @@ export class ToolApi {
       }
       case 'account': {
         const { store } = this.session;
-        const current = store.get('settings', SETTINGS_ID)?.value.persona;
+        const current = accountSettings(store)?.persona;
         return {
           personas: store.list('persona').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.name, description: each.value.description, current: each.id === current }] : []),
           characters: store.list('character').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.card.name }] : []),

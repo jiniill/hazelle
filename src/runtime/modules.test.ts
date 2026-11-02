@@ -8,7 +8,7 @@ import { convertPreset } from '../engine/import/preset';
 import { answerable, png, saying, stubRelay, testServer } from './testing';
 import { blankCard } from '../engine/import/card';
 import { evaluateChat, packsOf, togglesOf } from './chat-context';
-import { SETTINGS_ID } from '../model/settings';
+import { accountSettings } from './account-settings';
 import { likenessId } from '../model/likeness';
 import { takeTurn } from './turn';
 
@@ -105,7 +105,7 @@ describe('modules', () => {
     await setCharacterModule(store, character.data.id, fresh, true);
     expect(await replaceModules(store, fresh, [first, second])).toEqual({ ok: true, data: 4 });
     expect(store.get('character', character.data.id)!.value.modules).toEqual([other, fresh, first]);
-    expect(store.get('settings', SETTINGS_ID)!.value.modules).toEqual([fresh, second]);
+    expect(accountSettings(store)!.modules).toEqual([fresh, second]);
     expect(on()).toEqual([fresh, other]);
     expect(sameNamespace(store, '소악마').map(({ id }) => id)).toEqual([fresh]);
 
@@ -127,7 +127,7 @@ describe('modules', () => {
     const made = await createModule(store, '새 모듈', id, 'folder-1');
     expect(made.ok).toBe(true);
     expect(store.get('module', id)!.value).toEqual({ name: '새 모듈', description: '', namespace: null, loreFolders: [], regex: [], triggers: [], toggles: [], folder: 'folder-1' });
-    expect(store.get('settings', SETTINGS_ID)?.value.modules ?? []).not.toContain(id);
+    expect(accountSettings(store)?.modules ?? []).not.toContain(id);
   });
 
   it('copies a module with its lorebook, pictures and 삽화 profiles, leaving its Risu id and its places with the original', async () => {
@@ -146,7 +146,7 @@ describe('modules', () => {
     expect(store.children('asset', copy).map(({ value }) => value)).toEqual(store.children('asset', original).map(({ value }) => value));
     expect(store.children('asset', copy)).toHaveLength(1);
     expect(store.get('likeness', likenessId(copy))).toMatchObject({ parent: copy, value: store.get('likeness', likenessId(original))!.value });
-    expect(store.get('settings', SETTINGS_ID)!.value.modules).toEqual([original]);
+    expect(accountSettings(store)!.modules).toEqual([original]);
   });
 
   it("pairs a preset's prompt with the modules it names, the one already here at import and the one that comes after", async () => {

@@ -8,12 +8,13 @@ import type { Kind, Stored, Values } from '../model/kinds';
 import { indexFolders, nest, type FolderIndex, type FolderTree } from '../model/folders';
 import { isLive, live, shelve, type CharacterShelf, type Shelf } from '../model/library';
 import type { Memory } from '../model/memory';
-import { EMPTY_SETTINGS, SETTINGS_ID, type Settings } from '../model/settings';
+import { EMPTY_SETTINGS, type Settings } from '../model/settings';
 import type { ApiFailure } from './api';
 import type { ScopeState } from './chat-scope';
 import { EvaluationStopped, EvaluationStuck } from './evaluation';
 import type { ScriptDisplay } from './script-display';
 import { type ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import { readsChanged } from './store-changes';
 import type { StoreChange, StoreRead } from './object-index';
 import { withTurn, type Shown, type Talk, type Turn } from './talk';
@@ -98,7 +99,7 @@ export class ReadModels {
 
   constructor(readonly store: ObjectStore) {
     this.folders = nest(store.list('folder'), 'character');
-    this.settings = new Snapshot(store.get('settings', SETTINGS_ID)?.value ?? EMPTY_SETTINGS);
+    this.settings = new Snapshot(accountSettings(store) ?? EMPTY_SETTINGS);
     this.unreadable = new Snapshot(store.unreadable());
     this.updateLists();
     this.library = new Snapshot(this.buildLibrary());
@@ -196,7 +197,7 @@ export class ReadModels {
       const next = this.listed(kind);
       if (!sameItems(snapshot.snapshot(), next)) snapshot.set(next);
     }
-    if (kinds.has('settings')) this.settings.set(this.store.get('settings', SETTINGS_ID)?.value ?? EMPTY_SETTINGS);
+    if (kinds.has('settings')) this.settings.set(accountSettings(this.store) ?? EMPTY_SETTINGS);
     this.unreadable.set(this.store.unreadable());
     if (kinds.has('folder')) this.folders = nest(this.store.list('folder'), 'character');
     if (listsChanged || ['character', 'avatar', 'folder'].some((kind) => kinds.has(kind))) {

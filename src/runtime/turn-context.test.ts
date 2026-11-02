@@ -7,6 +7,7 @@ import { blankCard } from '../engine/import/card';
 import type { Assembled } from '../engine/pipeline';
 import { emptyMemory, vectorsId } from '../model/memory';
 import { SETTINGS_ID } from '../model/settings';
+import { accountSettings } from './account-settings';
 import { setDefaultModel } from './assignment';
 import { startChat } from './chat-log';
 import { inspectToggles } from './chat-context';
@@ -90,7 +91,7 @@ it('attributes preview lore to its pack and keeps pack order, attachment sites a
   const character = await store.create('character', { card: blankCard('bot'), folder: null, loreFolders: [], modules: [module.data.id] });
   if (!character.ok) throw new Error(character.error);
   await store.update('settings', SETTINGS_ID, (settings) => ({ ...settings, modules: [module.data.id] }));
-  const settings = store.get('settings', SETTINGS_ID)!.value;
+  const settings = accountSettings(store)!;
   await store.update('prompt', settings.prompt!, (prompt) => ({ ...prompt, modules: [module.data.id] }));
   await store.update('persona', settings.persona!, (persona) => ({ ...persona, modules: [module.data.id] }));
   const lore = crypto.randomUUID();

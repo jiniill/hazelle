@@ -6,7 +6,6 @@ import { KEEP_DELETED, textTranslation, type Character, type Lore } from '../mod
 import { cachePrintId } from '../model/cache';
 import { memoryId } from '../model/memory';
 import { likenessId } from '../model/likeness';
-import { SETTINGS_ID } from '../model/settings';
 import { randomBytes } from '../vault/aead';
 import { sealFile } from '../vault/files';
 import { api, holdAccount } from './api';
@@ -16,6 +15,7 @@ import { appendUserMessage, removeChat, restoreChat, startChat } from './chat-lo
 import { Files } from './files';
 import { thumbnail } from './picture';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import type { Write } from './object-writes';
 import { BATCH_LIMITS } from '../contracts/objects';
 import { png, testServer } from './testing';
@@ -339,7 +339,7 @@ describe('setToggle', () => {
     await setToggle(store, id, 'sims', '1');
     await setToggle(store, id, 'mode', '2');
     await setToggle(store, null, 'sims', '0');
-    expect([store.get('character', id)?.value.toggles, store.get('settings', SETTINGS_ID)?.value.toggles]).toEqual([{ sims: '1', mode: '2' }, { sims: '0' }]);
+    expect([store.get('character', id)?.value.toggles, accountSettings(store)?.toggles]).toEqual([{ sims: '1', mode: '2' }, { sims: '0' }]);
     await resetToggles(store, id);
     expect(store.get('character', id)?.value.toggles).toBeUndefined();
   });
@@ -349,9 +349,9 @@ describe('setPinnedTogglesSpread', () => {
   it('stores the spread layout and drops the field for the gathered one', async () => {
     const { store } = await server.account();
     await setPinnedTogglesSpread(store, true);
-    expect(store.get('settings', SETTINGS_ID)?.value.pinnedTogglesSpread).toBe(true);
+    expect(accountSettings(store)?.pinnedTogglesSpread).toBe(true);
     await setPinnedTogglesSpread(store, false);
-    expect(store.get('settings', SETTINGS_ID)?.value).not.toHaveProperty('pinnedTogglesSpread');
+    expect(accountSettings(store)).not.toHaveProperty('pinnedTogglesSpread');
   });
 });
 
@@ -359,9 +359,9 @@ describe('hideTool', () => {
   it('lists a hidden tool and drops the field when none is left', async () => {
     const { store } = await server.account();
     await hideTool(store, 'note', true);
-    expect(store.get('settings', SETTINGS_ID)?.value.hiddenTools).toEqual(['note']);
+    expect(accountSettings(store)?.hiddenTools).toEqual(['note']);
     await hideTool(store, 'note', false);
-    expect(store.get('settings', SETTINGS_ID)?.value).not.toHaveProperty('hiddenTools');
+    expect(accountSettings(store)).not.toHaveProperty('hiddenTools');
   });
 });
 
@@ -370,7 +370,7 @@ describe('setToolOrder', () => {
     const { store } = await server.account();
     await setToolOrder(store, ['note', 'elsewhere', 'attach']);
     await setToolOrder(store, ['attach', 'note']);
-    expect(store.get('settings', SETTINGS_ID)?.value.toolOrder).toEqual(['attach', 'elsewhere', 'note']);
+    expect(accountSettings(store)?.toolOrder).toEqual(['attach', 'elsewhere', 'note']);
   });
 });
 
@@ -380,10 +380,10 @@ describe('pinToggle', () => {
     await pinToggle(store, 'sims', true);
     await pinToggle(store, 'mode', true);
     await pinToggle(store, 'sims', true);
-    expect(store.get('settings', SETTINGS_ID)?.value.pinnedToggles).toEqual(['mode', 'sims']);
+    expect(accountSettings(store)?.pinnedToggles).toEqual(['mode', 'sims']);
     await pinToggle(store, 'mode', false);
     await pinToggle(store, 'sims', false);
-    expect(store.get('settings', SETTINGS_ID)?.value).not.toHaveProperty('pinnedToggles');
+    expect(accountSettings(store)).not.toHaveProperty('pinnedToggles');
   });
 });
 

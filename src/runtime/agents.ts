@@ -6,7 +6,7 @@ import type { ChatScope } from '../engine/render';
 import { fold, shown, type AgentRun, type Chat, type Message, type Receipt } from '../model/chat';
 import { live } from '../model/library';
 import type { AgentStage } from '../model/prompt';
-import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
+import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiFailure, ApiResult } from './api';
 import type { RouteFailure } from './assignment';
 import { scopeOf } from './chat-context';
@@ -18,6 +18,7 @@ import { taskWriter } from './profiles';
 import { chatPrompt, ofSort, type StoredPrompt } from './prompts';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import { pageAnswer } from './talk';
 import type { Preparing } from './turn-steps';
 import { chatPlace, keepRow } from './usage';
@@ -33,7 +34,7 @@ type Agent = StoredPrompt<'agent'>;
 function layers(store: Reader, chat: Place): string[][] {
   const prompt = chatPrompt(store, chat);
   return [
-    store.get('settings', SETTINGS_ID)?.value.agents ?? [],
+    accountSettings(store)?.agents ?? [],
     prompt.kind === 'prompt' ? (prompt.prompt.value.agents ?? []) : [],
     chat.character === null ? [] : (store.get('character', chat.character)?.value.agents ?? []),
     chat.agents ?? [],

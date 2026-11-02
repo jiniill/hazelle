@@ -7,7 +7,7 @@ import type { TranslationRequest } from '../engine/translate';
 import { restore, type ProtectInvalid } from '../engine/protect';
 import type { Chat, Receipt, Translation, Version } from '../model/chat';
 import type { Stored } from '../model/kinds';
-import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
+import { EMPTY_SETTINGS } from '../model/settings';
 import { without } from '../model/fields';
 import type { TranslatePrompt } from '../model/prompt';
 import type { Stream } from '../model/stream';
@@ -26,6 +26,7 @@ import { callOf, endCall, newCall, type CallTarget } from './streams';
 import { modelProfile } from './profiles';
 import { translationPrompt } from './prompts';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import { keepRow } from './usage';
 import { evaluatingTask, type Lane } from './evaluation';
 import type { Cues } from './cues';
@@ -148,7 +149,7 @@ export function translatorOf(store: ObjectStore, chat: Chat): { ok: true; prompt
 export function toolTranslatorOf(store: ObjectStore): { ok: true; with: TranslateWith } | { ok: false; failure: RouteFailure } {
   const route = sharedModel(store, 'aux');
   if ('kind' in route) return { ok: false, failure: route };
-  return { ok: true, with: { prompt: TOOL_PROMPT, route, notes: store.get('settings', SETTINGS_ID)?.value.toolNote ?? '' } };
+  return { ok: true, with: { prompt: TOOL_PROMPT, route, notes: accountSettings(store)?.toolNote ?? '' } };
 }
 
 const TOOL_PROMPT = toolPrompt();

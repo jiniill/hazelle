@@ -5,12 +5,13 @@ import type { Chat } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import { live } from '../model/library';
 import type { Profile } from '../model/profile';
-import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
+import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiResult } from './api';
 import { imageOnly, taskModel, type Route, type RouteFailure } from './assignment';
 import { markDeleted } from './removal';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 
 // Every write of `profile` objects, of the default 묶음, and of the 묶음 an added model uses.
 
@@ -25,7 +26,7 @@ const profileId = (model: Starred, defaultProfile: string | undefined) => model.
 
 export function modelProfile(store: Pick<ObjectStore, 'get'>, model: Starred): ProfileChoice {
   const own = model.profile !== undefined;
-  const id = profileId(model, store.get('settings', SETTINGS_ID)?.value.profile);
+  const id = profileId(model, accountSettings(store)?.profile);
   const profile = id === undefined ? null : live(store.get('profile', id));
   return profile ? { kind: 'profile', profile, own } : { kind: 'missing', own };
 }
@@ -51,7 +52,7 @@ export function profileUsers(connections: readonly Stored<'connection'>[], defau
 export const FIRST_PROFILE_NAME = '기본';
 
 export async function addFirstProfile(store: ObjectStore): Promise<void> {
-  if (store.get('settings', SETTINGS_ID)?.value.profile !== undefined) return;
+  if (accountSettings(store)?.profile !== undefined) return;
   if (!store.get('profile', FIRST_PROFILE_ID)) {
     const saved = await store.create('profile', { name: FIRST_PROFILE_NAME, settings: {} }, { id: FIRST_PROFILE_ID });
     if (!saved.ok) return;
@@ -77,7 +78,7 @@ export const setProfileSettings = (store: ObjectStore, id: string, values: Model
 // To 휴지통 (model/library Mark). As with prompts, the default goes only once another 묶음 is the default. A model that
 // used a deleted 묶음 reads as missing until it is given another, or the 묶음 comes back.
 export async function removeProfile(store: ObjectStore, id: string): Promise<ApiResult<Stored<'profile'>> | { ok: false; error: 'default' }> {
-  if (store.get('settings', SETTINGS_ID)?.value.profile === id) return { ok: false, error: 'default' };
+  if (accountSettings(store)?.profile === id) return { ok: false, error: 'default' };
   return markDeleted(store, 'profile', id, Date.now());
 }
 
@@ -94,7 +95,7 @@ export async function addDefaultProfile(store: ObjectStore) {
 
 // The default 묶음 is what a model without its own uses, so putting a model on it clears the model's own.
 export function setModelProfile(store: ObjectStore, connection: string, key: string, profile: string): Promise<ApiResult<Stored<'connection'>>> {
-  const isDefault = profile === store.get('settings', SETTINGS_ID)?.value.profile;
+  const isDefault = profile === accountSettings(store)?.profile;
   return store.update('connection', connection, (current) => ({
     ...current,
     starred: current.starred.map((entry) => (entryKey(entry) !== key ? entry : isDefault ? without(entry, 'profile') : { ...entry, profile })),

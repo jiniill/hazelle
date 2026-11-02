@@ -5,7 +5,7 @@ import type { Stored } from '../model/kinds';
 import { live } from '../model/library';
 import { likenessId } from '../model/likeness';
 import type { Persona } from '../model/persona';
-import { EMPTY_SETTINGS, SETTINGS_ID } from '../model/settings';
+import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiResult } from './api';
 import type { BackupOutput } from './backup-zip';
 import { writeWhole } from './export-file';
@@ -13,6 +13,7 @@ import { pngOf, thumbnail } from './picture';
 import { markDeleted } from './removal';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import type { Write } from './object-writes';
 
 // Fixed, so two devices adding the first persona at once meet in a version conflict instead of making two.
@@ -28,7 +29,7 @@ export type PersonaChoice = { kind: 'persona'; persona: Stored<'persona'>; from:
 
 function followed(store: Pick<ObjectStore, 'get'>, chat: Pick<Chat, 'character' | 'persona'>): [PersonaSource, string | undefined] {
   const pinned = chat.character === null ? undefined : store.get('character', chat.character)?.value.persona;
-  return chat.persona !== undefined ? ['chat', chat.persona] : pinned !== undefined ? ['character', pinned] : ['current', store.get('settings', SETTINGS_ID)?.value.persona];
+  return chat.persona !== undefined ? ['chat', chat.persona] : pinned !== undefined ? ['character', pinned] : ['current', accountSettings(store)?.persona];
 }
 
 export function chatPersona(store: Pick<ObjectStore, 'get'>, chat: Pick<Chat, 'character' | 'persona'>): PersonaChoice {
@@ -71,7 +72,7 @@ export const pinPersona = (store: ObjectStore, character: string, persona: strin
 // An account that has never had a current persona gets one named after its username, once. The session
 // awaits it when it opens; a failure is tried again next time.
 export async function addFirstPersona(store: ObjectStore, username: string): Promise<void> {
-  if (store.get('settings', SETTINGS_ID)?.value.persona !== undefined) return;
+  if (accountSettings(store)?.persona !== undefined) return;
   if (!store.get('persona', FIRST_ID)) {
     const saved = await store.create('persona', { name: username, description: '', picture: null }, { id: FIRST_ID });
     if (!saved.ok) return;
@@ -110,7 +111,7 @@ export async function exportPersona(persona: Persona, output: BackupOutput): Pro
 
 // To 휴지통 (model/library Mark). The current persona goes only once another is picked.
 export async function removePersona(store: ObjectStore, id: string): Promise<ApiResult<Stored<'persona'>> | { ok: false; error: 'current' }> {
-  if (store.get('settings', SETTINGS_ID)?.value.persona === id) return { ok: false, error: 'current' };
+  if (accountSettings(store)?.persona === id) return { ok: false, error: 'current' };
   return markDeleted(store, 'persona', id, Date.now());
 }
 

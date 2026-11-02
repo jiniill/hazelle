@@ -4,7 +4,7 @@ import { textTranslation } from '../model/library';
 import { appendUserMessage, startChat } from './chat-log';
 import { answerable, inTurn, saying, stubRelay, testServer } from './testing';
 import { setTranslate, setTranslatorNote } from './characters';
-import { SETTINGS_ID } from '../model/settings';
+import { accountSettings } from './account-settings';
 import { setDefaultModel, setTaskModel } from './assignment';
 import { setToolNote, translate, translatorOf, translateOnTool, translateText, type Translating } from './translate';
 import { takeTurn } from './turn';
@@ -205,7 +205,7 @@ describe('Translator', () => {
       expect(model()).toBe('m');
       await setDefaultModel(session.store, 'aux', { connection: connection!.id, model: 'aux' });
       expect(model()).toBe('aux');
-      await setTaskModel(session.store, session.store.get('settings', SETTINGS_ID)!.value.translatePrompt!, { connection: connection!.id, model: 'tr' });
+      await setTaskModel(session.store, accountSettings(session.store)!.translatePrompt!, { connection: connection!.id, model: 'tr' });
       expect(model()).toBe('tr');
     }));
 

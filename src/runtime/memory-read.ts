@@ -4,7 +4,6 @@ import { shown, type Chat, type Message } from '../model/chat';
 import type { ModelSettings } from '../connectors/settings';
 import type { Stored } from '../model/kinds';
 import { emptyMemory, memoryId, type Memory, type MemorySettings, type Source } from '../model/memory';
-import { SETTINGS_ID } from '../model/settings';
 import type { ToolUnit } from '../model/tool';
 import type { Route } from './assignment';
 import { featuresOf } from './features';
@@ -13,6 +12,7 @@ import { taskWriter } from './profiles';
 import type { MemoryPrompt } from '../model/prompt';
 import { memoryPrompt } from './prompts';
 import type { ObjectStore } from './store';
+import { accountSettings } from './account-settings';
 import { toolsOf } from './tools/store';
 
 // budget, window and batch count tokens (model/memory MemorySettings).
@@ -20,7 +20,7 @@ export const MEMORY_DEFAULTS: MemorySettings = { on: true, budget: 25_000, windo
 
 export type MemorySetup = MemorySettings & { own: boolean };
 
-export const defaultMemory = (store: Pick<ObjectStore, 'get'>): MemorySettings => ({ ...MEMORY_DEFAULTS, ...store.get('settings', SETTINGS_ID)?.value.memory });
+export const defaultMemory = (store: Pick<ObjectStore, 'get'>): MemorySettings => ({ ...MEMORY_DEFAULTS, ...accountSettings(store)?.memory });
 
 export const memorySetup = (store: Pick<ObjectStore, 'get'>, chat: Chat): MemorySetup => (chat.memory ? { ...chat.memory, own: true } : { ...defaultMemory(store), own: false });
 
