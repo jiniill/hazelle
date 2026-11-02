@@ -22,11 +22,11 @@ export const START_PAGE = {
   finish: { title: '지금 바로 시작할까요?' },
 } as const;
 
-// The same walk for someone who already uses the app. It has no live part: its trial runs on this browser's guest, which would add to a guest's data or wait to be merged into an account.
+// The same walk for someone who already uses the app. Its trial runs on a throwaway session: on this browser's guest it would add to a guest's data or wait to be merged into an account.
 export const START_AGAIN = {
   path: '/welcome',
   open: '첫 페이지 다시 보기',
   back: '앱으로 돌아가기',
-  line: '키 연결은 앱에서 바로 할 수 있어요.',
-  connect: '연결 화면 열기',
+  line: '여기서는 키와 대화를 저장하지 않아요.',
+  privacy: '키는 저장하지 않고, 제공자에게 바로 보내요.',
 } as const;

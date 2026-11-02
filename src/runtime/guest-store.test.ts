@@ -4,7 +4,7 @@ import { CLAIM_SETTLE_MS } from '../contracts/files';
 import type { Connection } from '../connectors/types';
 import { randomBytes } from '../vault/aead';
 import { feedQuery } from './backend';
-import { guestAccount, guestBackend, guestBoardSecret } from './guest-store';
+import { guestAccount, guestBackend, guestBoardSecret, throwawayGuest } from './guest-store';
 import { Files } from './files';
 import { openSession } from './session';
 import { ObjectStore, type PullProgress } from './store';
@@ -121,6 +121,17 @@ describe('a guest’s browser store', () => {
     opened.data.close();
     expect(fetched).not.toHaveBeenCalled();
   });
+});
+
+it('clears what a throwaway session left after a day, leaving a recent one and the guest', async () => {
+  const { accountId: real } = await guestAccount();
+  const past = vi.spyOn(Date, 'now').mockReturnValue(Date.now() - 2 * 24 * 60 * 60 * 1000);
+  const { accountId: old } = await throwawayGuest();
+  past.mockRestore();
+  const { accountId: recent } = await throwawayGuest();
+  expect((await guestBoardSecret(old)).ok).toBe(false);
+  expect((await guestBoardSecret(recent)).ok).toBe(true);
+  expect((await guestBoardSecret(real)).ok).toBe(true);
 });
 
 it('keeps one board secret across tabs beside the guest head and out of the object and file feeds', async () => {

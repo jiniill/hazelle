@@ -4,7 +4,6 @@ import type { ConnectionType } from '../../connectors/types';
 import { START_AGAIN, START_PAGE } from '../../contracts/start';
 import { countFirstPage } from '../../runtime/first-page';
 import { LegalNotice } from '../common/LegalNotice';
-import { href } from '../shell/routes';
 import { Beat, Brand, Button, Callout, ChoiceGroup, ExampleTalk, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps, Upcoming, WalkOnHint } from '../ui';
 import { EXAMPLE, type ExampleLine, type ExampleStrand } from './example';
 
@@ -82,13 +81,12 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
         <Indoors id="trial" title={trial.title} line={doors ? trial.line : START_AGAIN.line} inside={inside} talking={step === 2} onInside={setInside}>
           <TrialSteps steps={trial.steps} at={step} />
           <PanelBody>
-            {!doors ? (
-              <div><Button onClick={() => location.assign(href({ kind: 'connections' }))}>{START_AGAIN.connect}</Button></div>
-            ) : entered ? (
+            {entered ? (
               <Suspense fallback={<Progress title="불러오는 중" steps={[{ label: '연결 준비' }]} />}>
                 <Trial
                   type={entered.type}
                   secret={entered.secret}
+                  kept={doors !== null}
                   onStep={setStep}
                   onReplied={() => setReplied(true)}
                   onRefused={(message) => {
@@ -98,7 +96,7 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
                 />
               </Suspense>
             ) : (
-              <KeyForm refused={refused} onEnter={(type, secret) => { countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
+              <KeyForm refused={refused} privacy={doors ? trial.privacy : START_AGAIN.privacy} onEnter={(type, secret) => { if (doors) countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
             )}
           </PanelBody>
         </Indoors>
@@ -116,7 +114,7 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
   );
 }
 
-function KeyForm({ refused, onEnter }: { refused: string | null; onEnter: (type: ConnectionType, secret: string) => void }) {
+function KeyForm({ refused, privacy, onEnter }: { refused: string | null; privacy: string; onEnter: (type: ConnectionType, secret: string) => void }) {
   const [picked, setPicked] = useState<string>(OFFERED[0].id);
   const [key, setKey] = useState('');
   const secret = key.trim();
@@ -132,7 +130,7 @@ function KeyForm({ refused, onEnter }: { refused: string | null; onEnter: (type:
     <form onSubmit={submit}>
       <Stack>
         <ChoiceGroup label="제공자" options={OFFERED.map(({ id, name }) => ({ value: id, label: name }))} value={OFFERED.some(({ id }) => id === type.id) ? type.id : null} empty={type.label} onChange={setPicked} />
-        <TextField label={`${type.label} API 키`} kind="key" value={key} onChange={setKey} placeholder={type.keyForm?.placeholder} help={START_PAGE.trial.privacy} />
+        <TextField label={`${type.label} API 키`} kind="key" value={key} onChange={setKey} placeholder={type.keyForm?.placeholder} help={privacy} />
         {refused && <Callout tone="warn" alert>{refused}</Callout>}
         <div><Button type="submit" disabled={!secret}>모델 선택</Button></div>
       </Stack>

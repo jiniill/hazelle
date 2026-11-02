@@ -37,11 +37,13 @@ const stream = (text: string) =>
     { type: 'message_stop' },
   ].map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join('');
 
+const sent: string[] = [];
 // A guest's calls leave the page for the provider, so the fake stands in the browser, not behind the relay.
 async function fakeAnthropic(page: Page) {
   await page.route('https://api.anthropic.com/**', (route) => {
     const request = route.request();
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
+    if (request.method() === 'POST' && request.url().includes('/messages')) sent.push(request.postData() ?? '');
     if (request.url().includes('/models')) return route.fulfill({ headers: CORS, json: { data: [{ id: 'claude-e2e', display_name: 'Claude E2E', type: 'model', max_tokens: 8192, max_input_tokens: 200000 }], has_more: false } });
     return route.fulfill({ headers: { ...CORS, 'content-type': 'text/event-stream' }, body: stream('안녕하세요, 시험 답이에요.') });
   });
@@ -68,6 +70,7 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   await page.getByRole('textbox', { name: '보낼 말' }).fill('안녕');
   await page.getByRole('button', { name: '보내기', exact: true }).click();
   await expect(page.getByText('안녕하세요, 시험 답이에요.')).toBeVisible();
+  expect(sent.at(-1)).toContain('숲지기');
   expect(await pageLength()).toBe(lengthBefore);
   if (SHOTS) {
     await page.screenshot({ path: `${SHOTS}/4-trial.png` });
@@ -175,7 +178,7 @@ test('the example conversation never moves the page, and the next notch goes on 
   await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(stop + 500);
 });
 
-test('someone already using the app can walk it again, uncounted and with nothing live', async ({ page }) => {
+test('someone already using the app can walk it again and try it, uncounted, keeping nothing', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '가입 없이 열기' }).click();
   await expect(page.getByRole('heading', { level: 1, name: '내 API 키로 바로 시작하는 AI 캐릭터 챗' })).toHaveCount(0);
@@ -189,12 +192,21 @@ test('someone already using the app can walk it again, uncounted and with nothin
   const again = await opening;
   const heading = again.getByRole('heading', { level: 1, name: '내 API 키로 바로 시작하는 AI 캐릭터 챗' });
   await expect(heading).toBeVisible();
-  await expect(again.getByLabel(/API 키$/)).toHaveCount(0);
   await expect(again.getByRole('button', { name: '가입 없이 열기' })).toHaveCount(0);
+  await fakeAnthropic(again);
+  await again.evaluate(`document.getElementById('trial').scrollIntoView()`);
+  await again.getByLabel(/API 키$/).fill(KEY);
+  await again.getByRole('button', { name: '모델 선택', exact: true }).click();
+  await again.getByRole('button', { name: /Claude E2E/ }).click();
+  await again.getByRole('textbox', { name: '보낼 말' }).fill('안녕');
+  await again.getByRole('button', { name: '보내기', exact: true }).click();
+  await expect(again.getByText('안녕하세요, 시험 답이에요.')).toBeVisible();
+  await expect(again.getByRole('button', { name: '앱에서 대화 이어 가기' })).toHaveCount(0);
   await again.getByRole('button', { name: '앱으로 돌아가기' }).click();
   await expect(again).toHaveURL(/\/$/);
   await expect(heading).toHaveCount(0);
   expect(counted).toEqual([]);
+  await expect(again.getByRole('heading', { name: '비어 있어요', exact: true })).toBeVisible();
 });
 
 test.describe(() => {

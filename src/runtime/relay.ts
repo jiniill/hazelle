@@ -57,7 +57,11 @@ export const countGuest = (guest: string, step: GuestStep) =>
     // A missing usage count must not fail the guest's session, connection or reply.
   });
 
-export function directTransport(guest: string): Transport {
+// guest: whose steps count toward the operator's daily figures; null, a session that is nobody's and counts nothing.
+export function directTransport(guest: string | null): Transport {
+  const count = (step: GuestStep) => {
+    if (guest) countGuest(guest, step);
+  };
   const calls = new Map<string, AbortController>();
   const closing = new AbortController();
   const problem: Transport['problem'] = (type) => type?.browser === false ? { kind: 'app', code: 'needs-account' } : null;
@@ -70,7 +74,7 @@ export function directTransport(guest: string): Transport {
     if (signal.aborted) return lost(signal);
     try {
       const response = await fetch(request.url, { method: request.method, headers: { ...request.headers, ...(type?.browser && type.browser.headers) }, body: request.body, signal, credentials: 'omit' });
-      if (response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) countGuest(guest, 'replied');
+      if (response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) count('replied');
       return response;
     } catch {
       // Fetch deliberately does not distinguish CORS, DNS and a lost connection.
@@ -96,7 +100,7 @@ export function directTransport(guest: string): Transport {
         const again = response instanceof Response ? retry?.statuses.includes(response.status) : response.kind === 'offline';
         const wait = again && retry && tries <= retry.times ? retryWait(tries, retryAfter, Date.now()) : null;
         if (wait === null) {
-          if (response instanceof Response && response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) countGuest(guest, 'replied');
+          if (response instanceof Response && response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) count('replied');
           return answered(response);
         }
         if (response instanceof Response) await discardBody(response.body);
@@ -106,7 +110,7 @@ export function directTransport(guest: string): Transport {
     },
     stop: (id) => { calls.get(id)?.abort(); calls.delete(id); },
     drop: (id) => { calls.delete(id); },
-    connected: () => countGuest(guest, 'connected'),
+    connected: () => count('connected'),
   };
 }
 

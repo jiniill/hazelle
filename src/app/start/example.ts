@@ -3,10 +3,11 @@ export type ExampleStrand = ExampleLine & { then: readonly (readonly ExampleLine
 
 // A scripted conversation for someone with no key yet. Nothing here reaches a model.
 // Each turn's answers must follow from either answer before them, and each strand's last replies lead down the hill, where the walk goes next.
-export const EXAMPLE: { name: string; about: string; greeting: string; walkOn: string; choices: readonly ExampleStrand[] } = {
+export const EXAMPLE: { name: string; about: string; description: string; greeting: string; walkOn: string; choices: readonly ExampleStrand[] } = {
   name: '아린',
   about: '밤의 개암나무 숲지기 · 예시',
   walkOn: '계속하려면 아래로',
+  description: '아린은 밤의 개암나무 숲을 지키는 숲지기예요. 등불을 들고 밤마다 숲을 돌며, 길 잃은 손님을 언덕 아래 오두막으로 안내해요. 다정하고 장난기가 있으며, 농담도 진지한 얼굴로 해요. 이 숲에는 달빛을 따라 자리를 옮기는 나무와 사람 이름을 묻는 여우가 살아요. 오두막에서는 개암 껍질을 덖은 차를 내줘요. 답은 행동 묘사와 따옴표 대사를 섞어 두세 문장으로 짧게 써요.',
   greeting: '등불을 들어 당신을 살폈어요. "이 숲에 손님은 오랜만이네요. 길을 잃으셨어요?"',
   choices: [
     {

@@ -12,7 +12,8 @@ import { UNFED } from './object-cache';
 // Browser is the guest's master, not a cache. Match server object/file API semantics, including revisions,
 // conflicts, once, omitted bodies, page limits and revision-checked sweeps; each call is one IndexedDB transaction.
 
-type Head = { rev: number; timeline: string; boardSecret?: string };
+// throwaway: when a session nobody returns to began (throwawayGuest).
+type Head = { rev: number; timeline: string; boardSecret?: string; throwaway?: number };
 // scope: '' for a kind the feed carries, its parent for one it omits (object-cache UNFED), so a bootstrap reads past
 // every message without opening it.
 type Row = { account: string; id: string; kind: string; parent: string | null; rev: number; body: string | null; scope: string };
@@ -44,6 +45,40 @@ export async function guestAccount(): Promise<{ accountId: string; vaultKey: Vau
     return { accountId, vaultKey };
   });
 }
+
+const dropStore = (tx: IDBTransaction, account: string) => {
+  const range = IDBKeyRange.bound([account], [account, []]);
+  tx.objectStore('guest-objects').delete(range);
+  tx.objectStore('guest-files').delete(range);
+  tx.objectStore('guest-heads').delete(account);
+};
+
+// Longer than a page stays open, so another tab's session is not swept from under it.
+const THROWAWAY_LIVES = 24 * 60 * 60 * 1000;
+
+// A guest nobody will come back to: its vault key lives only in the page, so what a closed tab leaves can never be opened.
+// A store cannot be sure of finishing a write as its page goes, so what earlier ones left is cleared here.
+export async function throwawayGuest(): Promise<{ accountId: string; vaultKey: VaultKey }> {
+  const accountId = crypto.randomUUID();
+  const head = await transact(['guest-heads', 'guest-objects', 'guest-files'], 'readwrite', async (tx) => {
+    const heads = tx.objectStore('guest-heads');
+    const [accounts, held] = await Promise.all([got<IDBValidKey[]>(heads.getAllKeys()), got<Head[]>(heads.getAll())]);
+    const expired = Date.now() - THROWAWAY_LIVES;
+    held.forEach(({ throwaway }, index) => {
+      if (throwaway !== undefined && throwaway < expired) dropStore(tx, accounts[index] as string);
+    });
+    heads.put({ rev: 0, timeline: crypto.randomUUID(), throwaway: Date.now() } satisfies Head, accountId);
+    return { ok: true, data: null };
+  });
+  if (!head.ok) throw new Error(head.error);
+  return { accountId, vaultKey: randomBytes(32) };
+}
+
+export const dropGuestStore = (account: string) =>
+  transact(['guest-heads', 'guest-objects', 'guest-files'], 'readwrite', async (tx) => {
+    dropStore(tx, account);
+    return { ok: true, data: null };
+  });
 
 // Kept beside the sealed objects, never in their feed or an account upload. A transaction makes all tabs share it.
 export async function guestBoardSecret(account: string, create = false): Promise<ApiResult<string | null>> {

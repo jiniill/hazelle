@@ -52,7 +52,7 @@ import { backfillSummaries } from './summary';
 import { receiveReply, resumeSend } from './turn';
 import { saveUpgraded } from './upgrade';
 import { accountTransport, countGuest, directTransport, holdTransport, type Transport } from './relay';
-import { guestAccount, guestBackend } from './guest-store';
+import { guestAccount, dropGuestStore, guestBackend, throwawayGuest } from './guest-store';
 
 export type Session = {
   transport: Transport;
@@ -261,6 +261,19 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   };
   const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, polisher, briefs, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, close, startBackground };
   return { ok: true, data: session };
+}
+
+// The whole app's engine for one page, for someone whose own data must not change: nothing it holds can be read after the page, and it counts toward nothing.
+export async function openThrowawaySession(signal: AbortSignal): Promise<ApiResult<Session>> {
+  const { accountId, vaultKey } = await throwawayGuest();
+  const forget = () => void dropGuestStore(accountId);
+  const opened = await openSession(accountId, vaultKey, '손님', signal, undefined, { backend: guestBackend(accountId), transport: directTransport(null) });
+  if (!opened.ok) {
+    forget();
+    return opened;
+  }
+  const { close } = opened.data;
+  return { ok: true, data: { ...opened.data, close: () => { close(); forget(); } } };
 }
 
 export async function openGuestSession(signal: AbortSignal, progress?: (progress: PullProgress) => void, bindings: Parameters<typeof openSession>[6] = {}): Promise<ApiResult<Session>> {
