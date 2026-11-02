@@ -327,7 +327,7 @@ export function SentLore({ entry, character, onEdit }: { entry: LogEntry | null;
   const door = editor ? { label: opens('캐릭터 편집 › 로어북'), onClick: () => onEdit(editor) } : { label: opens(inSettings('chat')), onClick: () => navigate({ kind: 'chat-settings' }) };
   return (
     <>
-      {cut > 0 && <Callout tone="warn" action={door}>{`${LORE_BUDGET_LABEL}(${prompt.loreBudget.toLocaleString()} 토큰)을 넘어 ${cut}개가 빠졌어요.`}</Callout>}
+      {cut > 0 && <Callout tone="warn" action={door}>{`${LORE_BUDGET_LABEL}(${tokens(prompt.loreBudget)} 토큰)을 넘어 ${cut}개가 빠졌어요.`}</Callout>}
       <Section level={3} title="활성화된 항목" note={`${lore.length}개 중 ${went}개 들어감`}>
         <List label="활성화된 로어북 항목">
           {lore.map((entry) => (

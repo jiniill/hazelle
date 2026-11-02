@@ -8,6 +8,7 @@ import type { Blocked } from '../../runtime/turn-context';
 import { describeTurnFailure } from '../common/failure';
 import { withParticle } from '../common/particles';
 import { ACTS } from '../common/acts';
+import { count } from '../common/typedNumber';
 import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES } from '../common/words';
 import type { PromptDoor } from '../common/TaskPrompt';
 import { navigate } from '../shell/router';
@@ -62,7 +63,7 @@ const FIX = {
 const attachedItem = (each: DraftAttachment): Attached =>
   each.kind === 'picture'
     ? { kind: 'picture', key: each.name, url: each.url, label: '이미지', state: each.state.kind }
-    : { kind: 'file', key: each.value.name, label: each.value.title, detail: `${each.value.text.split('\n').length.toLocaleString()}줄`, state: 'saved' };
+    : { kind: 'file', key: each.value.name, label: each.value.title, detail: `${count(each.value.text.split('\n').length)}줄`, state: 'saved' };
 
 // folded: ChatScreen's, which the frame's footer measures by, so the two never disagree.
 export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean }) {
