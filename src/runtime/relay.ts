@@ -10,7 +10,7 @@ import type { ConnectionType, HttpRequest } from '../connectors/types';
 import type { GuestStep } from '../contracts/admin';
 import type { PulseLabel } from '../contracts/pulse';
 import { streamOpener } from '../vault/streams';
-import { fetchApi } from './api';
+import { discardBody, fetchApi } from './api';
 import { pause } from './pause';
 import { CONNECTION_TYPES } from '../connectors/registry';
 
@@ -53,7 +53,9 @@ export const dropStream = (id: string) => transport.drop(id);
 
 // A guest's steps never pass the server; its browser reports them to the operator's daily counts (server/visits.ts).
 export const countGuest = (guest: string, step: GuestStep) =>
-  void fetchApi('visits/guest', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ guest, step }) }).then((response) => response.body?.cancel()).catch(() => {});
+  void fetchApi('visits/guest', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ guest, step }) }).then((response) => discardBody(response.body)).catch(() => {
+    // A missing usage count must not fail the guest's session, connection or reply.
+  });
 
 export function directTransport(guest: string): Transport {
   const calls = new Map<string, AbortController>();
@@ -97,7 +99,7 @@ export function directTransport(guest: string): Transport {
           if (response instanceof Response && response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) countGuest(guest, 'replied');
           return answered(response);
         }
-        if (response instanceof Response) await response.body?.cancel();
+        if (response instanceof Response) await discardBody(response.body);
         call.retrying?.();
         if (!(await pause(wait, canceled))) return { kind: 'stopped' };
       }
@@ -209,7 +211,7 @@ async function accountStream(call: StreamCall, request: HttpRequest | null, sign
     // A call stopped as its start was answered gets no marker: whoever stopped it ends it, and a marker landing after
     // that end would be picked up as a call to save.
     if (signal.aborted) {
-      void response.body.cancel().catch(() => {});
+      void discardBody(response.body);
       return lost(signal);
     }
     call.started?.();
@@ -227,11 +229,13 @@ async function accountStream(call: StreamCall, request: HttpRequest | null, sign
   return answered(await unframe(call, body, signal));
 }
 
-// A refused stop leaves the call running until it is dropped.
-const accountStop = (id: string) => void fetchApi(`streams/${id}/stop`, { method: 'POST', headers: { 'content-type': 'application/json' } }).then((response) => response.body?.cancel()).catch(() => {});
+const accountStop = (id: string) => void fetchApi(`streams/${id}/stop`, { method: 'POST', headers: { 'content-type': 'application/json' } }).then((response) => discardBody(response.body)).catch(() => {
+  // A refused stop leaves the call running until it is dropped.
+});
 
-// Once the call's result is saved. A refused drop leaves the server's copy until it expires on its own.
-const accountDrop = (id: string) => void fetchApi(`streams/${id}`, { method: 'DELETE', headers: { 'content-type': 'application/json' } }).then((response) => response.body?.cancel()).catch(() => {});
+const accountDrop = (id: string) => void fetchApi(`streams/${id}`, { method: 'DELETE', headers: { 'content-type': 'application/json' } }).then((response) => discardBody(response.body)).catch(() => {
+  // Once the call's result is saved. A refused drop leaves the server's copy until it expires on its own.
+});
 
 // A network failure must not end a still-running call; permanent refusals must not reconnect it.
 async function reach(id: string, from: number, tries: number, signal: AbortSignal): Promise<ReadableStream<Uint8Array> | RelayFailure> {
@@ -242,7 +246,7 @@ async function reach(id: string, from: number, tries: number, signal: AbortSigna
     const response = await fetchApi(`streams/${id}?from=${from}`, { signal }).catch(() => null);
     if (response?.ok && response.headers.get('x-stream') === 'frames' && response.body) return response.body;
     if (response?.status === 404) {
-      void response.body?.cancel().catch(() => {});
+      void discardBody(response.body);
       return { kind: 'app', code: 'stream-gone' };
     }
     const retryAfter = response?.headers.get('retry-after') ?? null;
@@ -250,7 +254,7 @@ async function reach(id: string, from: number, tries: number, signal: AbortSigna
     if (response && ![408, 429, 500, 502, 503, 504].includes(response.status)) {
       return { kind: response.headers.get(RELAY_HEADER) === 'error' ? 'relay' : 'app', code: await errorCode(response) };
     }
-    void response?.body?.cancel().catch(() => {});
+    void discardBody(response?.body);
     wait = retryAfter === null ? Math.min(next!, 30_000) : next!;
   }
 }
@@ -346,6 +350,6 @@ async function* split(body: ReadableStream<Uint8Array>) {
       buffer = joined;
     }
   } finally {
-    void reader.cancel().catch(() => {});
+    void discardBody(reader);
   }
 }

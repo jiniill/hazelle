@@ -142,7 +142,7 @@ async function readBody(response: Response, signal?: AbortSignal | null, progres
   signal?.throwIfAborted();
   if (!response.body) return new Uint8Array();
   const reader = response.body.getReader();
-  const stop = () => { void reader.cancel().catch(() => {}); };
+  const stop = () => { void discardBody(reader); };
   signal?.addEventListener('abort', stop, { once: true });
   const chunks: Uint8Array[] = [];
   let length = 0;
@@ -166,6 +166,14 @@ async function readBody(response: Response, signal?: AbortSignal | null, progres
     at += chunk.byteLength;
   }
   return bytes;
+}
+
+export async function discardBody(body: Pick<ReadableStream<Uint8Array>, 'cancel'> | null | undefined): Promise<void> {
+  try {
+    await body?.cancel();
+  } catch {
+    // This body will not be read. A broken body's cleanup must not fail a retry or replace the caller's stop/failure.
+  }
 }
 
 function parse(text: string): unknown {

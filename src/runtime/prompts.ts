@@ -147,7 +147,11 @@ export async function addDefaults(store: ObjectStore): Promise<void> {
 // The user's own Risu preset, through the one preset converter. It goes out under the app's name, not the preset's:
 // the preset's name is a well-known community prompt's.
 async function starter(): Promise<ConversationPrompt | null> {
-  const read = await importPreset('starter-prompt.risup', await starterBytes());
+  // A chunk that failed to load leaves the default unset, so the next open adds it. Imported statically it would ship
+  // in the first screen's bundle and both workers, for an account that needs it once.
+  const bytes = await starterBytes().catch(() => null);
+  if (!bytes) return null;
+  const read = await importPreset('starter-prompt.risup', bytes);
   return read.ok ? without({ ...read.prompt, name: '기본 대화' }, 'imported') : null;
 }
 

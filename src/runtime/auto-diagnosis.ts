@@ -1,4 +1,4 @@
-import { AUTO_ERROR_NAMES, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorName, type AutoEvent, type AutoReport } from '../contracts/auto-diagnosis';
+import { AUTO_BROWSER_MESSAGES, AUTO_ERROR_NAMES, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorCause, type AutoErrorName, type AutoEvent, type AutoReport } from '../contracts/auto-diagnosis';
 import type { Place } from './diagnostic-state';
 import { without } from '../model/fields';
 import { EMPTY_SETTINGS, type Settings } from '../model/settings';
@@ -64,25 +64,28 @@ function pageFacts(): Pick<AutoReport, 'screen' | 'page' | 'online' | 'visible' 
 }
 
 // A thrown error's name and where in the app's bundle it went off. Its message and its stack's function names stay out.
-export function errorFacts(error: object): { detail: AutoErrorName; place: string | null; frames: string | null } {
-  const { name, stack } = error as { name?: unknown; stack?: unknown };
+export function errorFacts(error: object): { detail: AutoErrorName; cause: AutoErrorCause; place: string | null; frames: string | null } {
+  const { name, message, stack } = error as { name?: unknown; message?: unknown; stack?: unknown };
   const frames = typeof stack === 'string' ? [...stack.matchAll(/\/assets\/([\w.-]{1,100}\.js:\d{1,9}:\d{1,9})/g)].slice(0, FRAMES).map((match) => match[1]!) : [];
-  return { detail: AUTO_ERROR_NAMES.find((known) => known === name) ?? 'other', place: frames[0] ?? null, frames: frames.join(' ') || null };
+  const cause = AUTO_BROWSER_MESSAGES.find((known) => known.message === message)?.cause ?? 'other';
+  return { detail: AUTO_ERROR_NAMES.find((known) => known === name) ?? 'other', cause, place: frames[0] ?? null, frames: frames.join(' ') || null };
 }
 
 export type AutoOrigin = NonNullable<AutoReport['origin']>;
 
-type Problem = { event: AutoEvent; detail?: AutoDetail | null; place?: string | null; frames?: string | null; origin?: AutoReport['origin']; chat?: { id: string; read: () => AutoChat | null } };
+type Problem = { event: AutoEvent; detail?: AutoDetail | null; cause?: AutoErrorCause | null; place?: string | null; frames?: string | null; origin?: AutoReport['origin']; chat?: { id: string; read: () => AutoChat | null } };
 
 // Never fails its caller, and a report that goes wrong tells no one: this is the app's own note about a problem.
-export function autoDiagnose({ event, detail = null, place: thrown = null, frames = null, origin = null, chat }: Problem) {
+export function autoDiagnose({ event, detail = null, cause = null, place: thrown = null, frames = null, origin = null, chat }: Problem) {
   if (!armed) return;
-  const key = JSON.stringify([event, detail, thrown, chat?.id ?? null]);
+  const key = JSON.stringify([event, detail, cause, thrown, chat?.id ?? null]);
   if (said.has(key)) return;
   said.add(key);
   try {
-    const report = readAutoReport({ event, detail, version: BUILT_VERSION, place: thrown, frames, origin, ...deviceFacts(navigator.userAgent), ...pageFacts(), chat: chat?.read() ?? null });
-    if (report) void fetchApi('diagnoses', { anonymous: true, method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(report), keepalive: true }).catch(() => {});
+    const report = readAutoReport({ event, detail, cause, version: BUILT_VERSION, place: thrown, frames, origin, ...deviceFacts(navigator.userAgent), ...pageFacts(), chat: chat?.read() ?? null });
+    if (report) void fetchApi('diagnoses', { anonymous: true, method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(report), keepalive: true }).catch(() => {
+      // Reporting must not create another report, and a failed report is never queued or retried.
+    });
   } catch {
     // Whatever a read of the chat threw, the problem being reported is the caller's to handle, not this one.
   }

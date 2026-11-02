@@ -15,23 +15,36 @@ let context: AudioContext | null = null;
 const decoded = new Map<Sound, Promise<AudioBuffer>>();
 
 // A phone plays only from a context resumed inside a tap or key press; a desktop browser, once the page was touched.
-export function unlockSound() {
-  context ??= new AudioContext();
-  if (context.state === 'suspended') void context.resume();
-  return context;
+export async function unlockSound(): Promise<AudioContext | null> {
+  try {
+    context ??= new AudioContext();
+    if (context.state === 'suspended') await context.resume();
+    return context;
+  } catch {
+    // Sound is optional: a refused context must not fail the reply or translation that rang it.
+    return null;
+  }
 }
 
-export async function playSound(sound: Sound) {
-  const audio = unlockSound();
-  let buffer = decoded.get(sound);
-  if (!buffer) {
-    buffer = fetch(FILES[sound]).then((response) => response.arrayBuffer()).then((bytes) => audio.decodeAudioData(bytes));
+export async function playSound(sound: Sound): Promise<boolean> {
+  const audio = await unlockSound();
+  if (!audio) return false;
+  try {
+    let buffer = decoded.get(sound);
+    if (!buffer) {
+      buffer = fetch(FILES[sound]).then((response) => response.arrayBuffer()).then((bytes) => audio.decodeAudioData(bytes));
+      decoded.set(sound, buffer);
+    }
+    const data = await buffer;
+    const source = audio.createBufferSource();
+    source.buffer = data;
+    source.connect(audio.destination);
+    source.start();
+    return true;
+  } catch {
     // A fetch that failed is tried again on the next ring.
-    buffer.catch(() => decoded.delete(sound));
-    decoded.set(sound, buffer);
+    decoded.delete(sound);
+    // Automatic chimes may be missed; an explicit preview uses this result to tell the user.
+    return false;
   }
-  const source = audio.createBufferSource();
-  source.buffer = await buffer;
-  source.connect(audio.destination);
-  source.start();
 }

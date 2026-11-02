@@ -178,6 +178,18 @@ it('cancels unused stop, drop and guest-visit response bodies', async () => {
   transport.close();
 });
 
+it('still retries a guest call when discarding the failed response body rejects', async () => {
+  const fetch = vi.fn()
+    .mockResolvedValueOnce(new Response(new ReadableStream({ start: (controller) => controller.error(new TypeError('Load failed')) }), { status: 503, headers: { 'retry-after': '0' } }))
+    .mockResolvedValueOnce(new Response('reply'));
+  vi.stubGlobal('fetch', fetch);
+  const transport = directTransport('guest');
+  const response = await transport.stream({ id: 'call', key: {} }, request, new AbortController().signal, { times: 1, statuses: [503] });
+  expect(response instanceof Response && await response.text()).toBe('reply');
+  expect(fetch).toHaveBeenCalledTimes(2);
+  transport.close();
+});
+
 it('cancels a stream start answered after its caller stopped', async () => {
   const stopped = new AbortController();
   const cancel = vi.fn();

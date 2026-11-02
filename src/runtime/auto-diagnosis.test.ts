@@ -49,10 +49,35 @@ it('goes by the switch, and never from a self-host', () => {
 it('takes an error\'s name and bundle position, never its message or a function name', () => {
   const error = new TypeError('비밀 메시지');
   error.stack = 'TypeError: 비밀 메시지\n    at secretFn (https://hazelle.app/assets/index-AbC123.js:1:2345)';
-  expect(errorFacts(error)).toEqual({ detail: 'TypeError', place: 'index-AbC123.js:1:2345', frames: 'index-AbC123.js:1:2345' });
+  expect(errorFacts(error)).toEqual({ detail: 'TypeError', cause: 'other', place: 'index-AbC123.js:1:2345', frames: 'index-AbC123.js:1:2345' });
   error.stack += '\n    at caller (https://hazelle.app/assets/Workspace-x.js:8:9)';
   expect(errorFacts(error).frames).toBe('index-AbC123.js:1:2345 Workspace-x.js:8:9');
-  expect(errorFacts(Object.assign(new Error('x'), { name: 'PluginBoom', stack: 'no frames' }))).toEqual({ detail: 'other', place: null, frames: null });
+  expect(errorFacts(Object.assign(new Error('x'), { name: 'PluginBoom', stack: 'no frames' }))).toEqual({ detail: 'other', cause: 'other', place: null, frames: null });
+});
+
+it('classifies only whole fixed browser messages, including errors with no stack', () => {
+  const facts = (message: unknown) => errorFacts({ name: 'TypeError', message });
+  expect(facts('Load failed')).toEqual({ detail: 'TypeError', cause: 'fetch', place: null, frames: null });
+  expect(facts('Failed to fetch').cause).toBe('fetch');
+  expect(facts('NetworkError when attempting to fetch resource.').cause).toBe('fetch');
+  expect(facts('Importing a module script failed.').cause).toBe('module-import');
+  expect(facts('Importing a module script is canceled.').cause).toBe('module-import');
+  for (const message of ['Load failed: private text', ' Load failed', 'Load failed\n', 'Failed to fetch dynamically imported module: https://private.example/', 'load failed', undefined, { toString: () => 'Load failed' }]) {
+    expect(facts(message).cause).toBe('other');
+  }
+});
+
+it('sends distinct stackless causes once each without their messages, and drops a 400 without retry', async () => {
+  sent.mockResolvedValueOnce(new Response(null, { status: 400 }));
+  holdDiagnosis(true);
+  for (const message of ['Load failed', 'Load failed', 'Importing a module script failed.', 'private text']) {
+    autoDiagnose({ event: 'app-error', origin: 'rejection', ...errorFacts({ name: 'TypeError', message }) });
+  }
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const bodies = sent.mock.calls.map(([, init]) => JSON.parse(init.body as string) as Record<string, unknown>);
+  expect(bodies.map(({ cause }) => cause)).toEqual(['fetch', 'module-import', 'other']);
+  expect(bodies.every((body) => body.origin === 'rejection' && body.place === null && body.frames === null && !Object.hasOwn(body, 'message'))).toBe(true);
+  expect(JSON.stringify(bodies)).not.toMatch(/Load failed|Importing a module script failed|private text/);
 });
 
 it('reduces a browser to its family, major version and system', () => {

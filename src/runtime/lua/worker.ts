@@ -53,7 +53,9 @@ addEventListener('message', ({ data }: MessageEvent<Down>) => {
   }
   if (data.kind === 'forget-display') {
     if (displays.get(data.owner)?.revision === data.revision) displays.delete(data.owner);
-    void lua?.then((machine) => machine.forgetDisplay(data.owner, data.revision));
+    void lua?.then((machine) => machine.forgetDisplay(data.owner, data.revision), () => {
+      // The job that loaded Lua reports its failure; a VM that never loaded holds no display to forget.
+    });
     return;
   }
   const eventScope = data.kind === 'run' ? { ...data.input.scope, messages: history = applyTail(history, data.input.history) } : null;

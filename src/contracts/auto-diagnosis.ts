@@ -12,6 +12,16 @@ export type AutoEvent = (typeof AUTO_EVENTS)[number];
 // An error's name, or the kind of a failure. Never an error's message, which can quote what it failed on.
 export const AUTO_ERROR_NAMES = ['Error', 'TypeError', 'RangeError', 'ReferenceError', 'SyntaxError', 'URIError', 'EvalError', 'AggregateError', 'AbortError', 'DataCloneError', 'InvalidStateError', 'NetworkError', 'NotFoundError', 'QuotaExceededError', 'SecurityError', 'TimeoutError', 'other'] as const;
 export type AutoErrorName = (typeof AUTO_ERROR_NAMES)[number];
+export const AUTO_ERROR_CAUSES = ['fetch', 'module-import', 'other'] as const;
+export type AutoErrorCause = (typeof AUTO_ERROR_CAUSES)[number];
+// Exact fixed browser text only. Prefixes, URLs, translated messages and arbitrary text must remain 'other'.
+export const AUTO_BROWSER_MESSAGES = [
+  { message: 'Load failed', cause: 'fetch' },
+  { message: 'Failed to fetch', cause: 'fetch' },
+  { message: 'NetworkError when attempting to fetch resource.', cause: 'fetch' },
+  { message: 'Importing a module script failed.', cause: 'module-import' },
+  { message: 'Importing a module script is canceled.', cause: 'module-import' },
+] as const satisfies readonly { message: string; cause: AutoErrorCause }[];
 const FAILURES = ['unsent', 'unsaved', 'too-long', 'runaway', 'tokenizer', 'unstarted', 'unpulled', 'gone', 'untranslated', 'preread', 'agent', 'no-model', 'model-gone', 'image-only', 'prompt-missing', 'profile-missing', 'failed', 'invalid', 'embed'] as const;
 // Why messages leave a request and are in no memory sent: the first that holds names the warning (runtime/memory-view).
 export const GAP_CAUSES = ['working', 'failed', 'tool', 'off', 'no-slot', 'stale', 'over', 'forgotten', 'no-room', 'unknown'] as const;
@@ -120,6 +130,7 @@ const CHAT = {
 const REPORT = {
   event: AUTO_EVENTS,
   detail: orNull(DETAILS),
+  cause: orNull(AUTO_ERROR_CAUSES),
   version: orNull(/^[\w.+-]{1,40}$/),
   browser: BROWSERS,
   major: orNull('number'),

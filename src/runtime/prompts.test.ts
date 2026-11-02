@@ -1,5 +1,5 @@
 import { gunzipSync, gzipSync } from 'fflate';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { importPreset } from '../engine/import/preset';
 import { unpack } from '../engine/import/risum';
 import { live } from '../model/library';
@@ -72,6 +72,24 @@ describe('importPreset', () => {
 });
 
 describe('addDefaults', () => {
+  it('leaves the conversation default unset when its chunk fails to load, for the next open to add', async () => {
+    const { store } = await server.account();
+    vi.resetModules();
+    vi.doMock('./starter-prompt.risup?inline', () => {
+      throw new TypeError('Importing a module script failed.');
+    });
+    const failing = await import('./prompts');
+    await failing.addDefaults(store);
+    expect(store.get('prompt', STARTER_ID)).toBeNull();
+    expect(store.get('settings', SETTINGS_ID)?.value.prompt).toBeUndefined();
+    expect(store.get('settings', SETTINGS_ID)?.value.translatePrompt).toBe(TRANSLATOR_ID);
+    vi.doUnmock('./starter-prompt.risup?inline');
+    vi.resetModules();
+    const { addDefaults: again } = await import('./prompts');
+    await again(store);
+    expect(store.get('settings', SETTINGS_ID)?.value.prompt).toBe(STARTER_ID);
+  });
+
   it('adds each sort’s default prompt once, even from two devices at the same time', async () => {
     const { store, open } = await server.account();
     const other = await open();

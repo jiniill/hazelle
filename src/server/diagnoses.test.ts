@@ -25,13 +25,14 @@ const CHAT: AutoChat = {
   gap: null,
   request: { messages: 60, dropped: 15, unseen: 0, problems: 0, covered: 100, missing: 0, slot: true, tool: false, records: { over: 4, stale: 0, forgotten: 0, deleted: 0, changed: 0, rendered: 0 }, source: 'chat', bound: 'hard-upper', multiplier: 1.2, allowance: 40_000, inputLimit: 44_000, evidence: 3, cold: false, tokens: { 'block:chat': 40000, retrieval: 10 }, lore: { fired: 1, silent: 2, invalidKeys: 0, budget: 500 }, shape: { budget: 8000, used: 4000, fixed: 500, free: 3000, state: 300, stateLimit: 1600, threads: 200, chapters: [1200], sources: [4800], records: { tokens: 6000, largest: 900 }, status: { sent: 3, chaptered: 4 }, pinned: 0, edited: 0, recalled: 0 } },
 };
-const REPORT: AutoReport = { event: 'memory-gap', detail: null, version: 'v0.6.4', browser: 'chrome', major: 140, os: 'windows', mobile: false, place: null, frames: null, origin: null, screen: 'chat', page: 30, online: true, visible: true, standalone: false, cores: 8, memoryGb: 8, width: 1280, height: 800, language: 'ko-KR', chat: CHAT };
+const REPORT: AutoReport = { event: 'memory-gap', detail: null, cause: null, version: 'v0.6.4', browser: 'chrome', major: 140, os: 'windows', mobile: false, place: null, frames: null, origin: null, screen: 'chat', page: 30, online: true, visible: true, standalone: false, cores: 8, memoryGb: 8, width: 1280, height: 800, language: 'ko-KR', chat: CHAT };
 
 it('refuses anything off the list: a field more or less, a free word, a name where a word goes', () => {
   expect(readAutoReport(REPORT)).toEqual(REPORT);
   expect(readAutoReport({ ...REPORT, extra: 1 })).toBeNull();
   expect(readAutoReport(Object.fromEntries(Object.entries(REPORT).filter(([key]) => key !== 'detail')))).toBeNull();
   expect(readAutoReport({ ...REPORT, detail: '비밀 메시지' })).toBeNull();
+  expect(readAutoReport({ ...REPORT, cause: 'Load failed' })).toBeNull();
   expect(readAutoReport({ ...REPORT, place: 'my diary.txt' })).toBeNull();
   expect(readAutoReport({ ...REPORT, chat: { ...CHAT, module: 'Koyomi' } })).toBeNull();
   expect(readAutoReport({ ...REPORT, chat: { ...CHAT, messages: '180' } })).toBeNull();
@@ -53,6 +54,20 @@ afterEach(() => {
 const send = (report: unknown = REPORT, agent = 'Browser', visitor = '192.0.2.1') =>
   t.post('diagnoses', report, undefined, { 'user-agent': agent, [VISITOR_HEADER]: visitor });
 const stored = () => t.env.db.prepare('SELECT person, times, facts FROM auto_diagnoses').all<{ person: string; times: number; facts: string }>();
+
+it('rejects old or unlisted causes before storage and keeps the accepted cause in the latest facts', async () => {
+  const report = { ...REPORT, event: 'app-error', detail: 'TypeError', origin: 'rejection', cause: 'fetch', chat: null };
+  const old = Object.fromEntries(Object.entries(report).filter(([key]) => key !== 'cause'));
+  expect((await send(old)).status).toBe(400);
+  expect((await send({ ...report, cause: 'private text' })).status).toBe(400);
+  expect((await stored()).results).toHaveLength(0);
+  expect((await send(report)).status).toBe(204);
+  expect(JSON.parse((await stored()).results[0]!.facts)).toMatchObject({ cause: 'fetch', origin: 'rejection' });
+  expect((await send({ ...report, cause: 'module-import' })).status).toBe(204);
+  const [row] = await readDiagnoses(t.env.db);
+  expect(row).toMatchObject({ times: 2, people: 1 });
+  expect(JSON.parse(row!.facts)).toMatchObject({ cause: 'module-import' });
+});
 
 it('keeps a person to one row a day, under a hash that changes with the day and names no account', async () => {
   vi.useFakeTimers({ now: Date.parse('2026-11-02T03:00:00Z'), toFake: ['Date'] });

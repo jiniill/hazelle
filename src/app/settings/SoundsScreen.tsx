@@ -3,6 +3,7 @@ import { choices } from '../common/reading';
 import { CHIMES, playSound } from '../common/sounds';
 import { PAGES } from '../common/words';
 import { useDisplay } from '../display';
+import { useToast } from '../toast';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { ChoiceGroup, Disclosure, NavBar, Screen, Section, SettingGroup, SettingRow, Switch } from '../ui';
@@ -18,6 +19,7 @@ const ROWS: { cue: Cue; label: string; help: string }[] = [
 
 export function SoundsScreen({ back }: { back: Back | null }) {
   const { display, changeDisplay } = useDisplay();
+  const toast = useToast();
   return (
     <Screen width="page" top={<NavBar title={PAGES.sounds} {...backBar(back)} />}>
       <Section title={ALERTS}>
@@ -45,7 +47,7 @@ export function SoundsScreen({ back }: { back: Back | null }) {
                       // Played on the pick, inside the press, which also unlocks a phone's sound.
                       onChange={(chime) => {
                         changeDisplay({ chimeSounds: { ...display.chimeSounds, [cue]: chime } });
-                        if (chime !== 'off') void playSound(chime);
+                        if (chime !== 'off') void playSound(chime).then((played) => played || toast.error('소리를 재생하지 못했어요.'));
                       }}
                     />
                   }

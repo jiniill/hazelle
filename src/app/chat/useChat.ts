@@ -248,24 +248,31 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       }
       if (talk.snapshot(chatId)) return;
       const taken = drafts.take(draft.key);
-      const text = taken.text.trim();
       // Wherever the chat's draft is by now: a new chat may have been saved meanwhile, or not at all.
-      const putBack = () => drafts.putBack(store.get('chat', chatId) ? chatId : draft.key, text, taken.attachments);
-      const pictures = settled.flatMap((state) => (state.kind === 'saved' ? [state.value] : []));
-      const files = taken.attachments.flatMap((each) => (each.kind === 'file' ? [each.value] : []));
-      if (pictures.length || files.length) {
-        const unstarted = id === null && (await starting().saved);
-        const kept = unstarted || (await keepAttachments(store, chatId, pictures, files));
-        if (!kept.ok) {
-          putBack();
-          toast.failed(kept);
-          return;
+      const putBack = () => drafts.putBack(store.get('chat', chatId) ? chatId : draft.key, taken.text, taken.attachments);
+      try {
+        const text = taken.text.trim();
+        const pictures = settled.flatMap((state) => (state.kind === 'saved' ? [state.value] : []));
+        const files = taken.attachments.flatMap((each) => (each.kind === 'file' ? [each.value] : []));
+        if (pictures.length || files.length) {
+          const unstarted = id === null && (await starting().saved);
+          const kept = unstarted || (await keepAttachments(store, chatId, pictures, files));
+          if (!kept.ok) {
+            putBack();
+            toast.failed(kept);
+            return;
+          }
         }
+        const failure = await say(withAttachments({ pictures: pictures.map(({ name }) => name), files: files.map(({ name }) => name) }, text), skip);
+        // An unsaved reply or a kept failure means the user's message was saved.
+        if (failure && failure.kind !== 'unsaved' && !failure.kept) putBack();
+        else drafts.release(taken.attachments);
+      } catch (error) {
+        // A rejected send may already be saved; restoring a duplicate is safer than losing the draft.
+        putBack();
+        toast.error('보내는 중 오류가 생겼어요. 입력창에 내용을 돌려놓았어요.', { report: true });
+        throw error;
       }
-      const failure = await say(withAttachments({ pictures: pictures.map(({ name }) => name), files: files.map(({ name }) => name) }, text), skip);
-      // An unsaved reply or a kept failure means the user's message was saved.
-      if (failure && failure.kind !== 'unsaved' && !failure.kept) putBack();
-      else drafts.release(taken.attachments);
     } finally {
       sending.current = false;
     }

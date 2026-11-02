@@ -106,7 +106,7 @@ function Chimes() {
   useEffect(() => {
     if (!ringing) return;
     const unlock = () => {
-      unlockSound();
+      void unlockSound();
       stop();
     };
     const stop = () => {
