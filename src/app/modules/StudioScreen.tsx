@@ -14,7 +14,6 @@ import { askPlugin, type PluginAsked, type TestRun } from '../../runtime/tools/p
 import { ACTS } from '../common/acts';
 import { jsLanguage } from '../common/code/javascript';
 import { fileNamed } from '../common/download';
-import { runExport } from '../common/exporting';
 import { describeAskFailure } from '../common/failure';
 import { describeImportFailure } from '../common/importFailure';
 import { ModelMenu } from '../common/ModelMenu';
@@ -290,13 +289,16 @@ function InfoPane({ draft, onIdentity, reveal }: { draft: ToolDraft; onIdentity:
 }
 
 function DraftExport({ name, text, onClose }: { name: string; text: string; onClose: () => void }) {
-  const toast = useToast();
   const file = fileNamed(name, TOOL, 'js');
-  function save(show: (label: string | null) => void) {
-    runExport(toast, file, (output) => writeWhole(output, new TextEncoder().encode(text)), show, () => {
-      toast.show(`'${name}' 초안을 내보냈어요.`);
-      onClose();
-    });
-  }
-  return <FileExport format={`헤이젤 ${TOOL}`} file={file} help="플러그인 가져오기로 열 수 있어요." blocked={null} onExport={save} onClose={onClose} />;
+  return (
+    <FileExport
+      format={`헤이젤 ${TOOL}`}
+      file={file}
+      help="플러그인 가져오기로 열 수 있어요."
+      blocked={null}
+      write={(output) => writeWhole(output, new TextEncoder().encode(text))}
+      done={() => ({ message: `'${name}' 초안을 내보냈어요.` })}
+      onClose={onClose}
+    />
+  );
 }
