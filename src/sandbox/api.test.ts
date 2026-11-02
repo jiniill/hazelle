@@ -84,6 +84,24 @@ it('hands a tool call its name and arguments, sends its text back with its write
   close();
 });
 
+it('reads chat data keys in a showing, where only writes throw', async () => {
+  const port = new FakePort();
+  const close = connectApi(port, (_code, api) => {
+    api.on('showing', async (chat, shown) => {
+      expect(() => chat.data.set('never', 1)).toThrow();
+      return [`${(await chat.data.keys()).join()} ${shown.length}`];
+    });
+  });
+  port.receive(load());
+  await vi.waitFor(() => expect(port.sent.some((message) => message.kind === 'loaded')).toBe(true));
+  port.receive({ kind: 'event', id: 1, event: 'showing', chat, shown: [{ at: null, text: 'hi' }] });
+  await vi.waitFor(() => expect(port.sent.some((message) => message.kind === 'call' && message.method === 'chat.data.keys')).toBe(true));
+  const keys = port.sent.findLast((message) => message.kind === 'call')!;
+  port.receive({ kind: 'answer', call: keys.call, ok: true, value: ['kept'] });
+  await vi.waitFor(() => expect(port.sent).toContainEqual(expect.objectContaining({ kind: 'done', id: 1, outcome: expect.objectContaining({ value: ['kept 1'] }) })));
+  close();
+});
+
 it('applies message tails, keeps concurrent event buffers separate, and surfaces a refused host call', async () => {
   const port = new FakePort();
   const close = connectApi(port, (_code, api) => {

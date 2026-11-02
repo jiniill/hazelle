@@ -67,12 +67,13 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
   };
 
   const chatOf = (header: ChatHeader, event?: number, writes = buffer(), locked = false, quiet = false): Hazelle.Chat => {
-    const pending = () => { if (quiet) throw new Error('Nothing is saved in this event'); return event === undefined ? pageWrites : writes; };
+    const current = () => (event === undefined ? pageWrites : writes);
+    const pending = () => { if (quiet) throw new Error('Nothing is saved in this event'); return current(); };
     const changed = () => { if (event === undefined) flushPage(); };
     const story = () => { if (locked) throw new Error('The story cannot be changed in this event'); };
     const overlaid = async <T extends Json>(layer: 'writes' | 'data' | 'variables', method: 'chat.state.get' | 'chat.data.get' | 'chat.variables.get', key: string): Promise<T | undefined> => {
-      const current = (event === undefined ? pageWrites : writes)[layer];
-      if (current.has(key)) return current.get(key) as T | undefined;
+      const own = current()[layer];
+      if (own.has(key)) return own.get(key) as T | undefined;
       if (event === undefined && pageSent?.[layer].has(key)) return pageSent[layer].get(key) as T | undefined;
       return call<T | undefined>(method, [key], event);
     };
@@ -104,7 +105,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
         delete: (key) => { pending().data.set(key, undefined); changed(); },
         keys: async () => {
           const keys = new Set(await call<string[]>('chat.data.keys', [], event));
-          for (const layer of [...(event === undefined && pageSent ? [pageSent.data] : []), pending().data]) {
+          for (const layer of [...(event === undefined && pageSent ? [pageSent.data] : []), current().data]) {
             for (const [key, value] of layer) {
               if (value === undefined) keys.delete(key);
               else keys.add(key);
