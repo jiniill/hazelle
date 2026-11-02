@@ -372,8 +372,10 @@ export async function answerBegin(c: Context<AppEnv>, accountId: string, post: n
 // Offer snapshots inside the request window plus the older baseline covering its oldest edge.
 // Ask slightly inside that edge so the point remains available while the user decides.
 const EDGE_MS = 15 * MINUTE_MS;
+export const incarnationOf = (db: Db, accountId: string) => db.prepare('SELECT incarnation FROM accounts WHERE id = ?').bind(accountId).first<string>('incarnation');
+
 export async function restorePoints(db: Db, accountId: string, now = Date.now()) {
-  const incarnation = await db.prepare('SELECT incarnation FROM accounts WHERE id = ?').bind(accountId).first<string>('incarnation');
+  const incarnation = await incarnationOf(db, accountId);
   if (incarnation === null) return null;
   const { results } = await db
     .prepare('SELECT taken_at AS takenAt, kind FROM snapshots WHERE incarnation = ? AND taken_at BETWEEN ? AND ? GROUP BY taken_at ORDER BY taken_at DESC')

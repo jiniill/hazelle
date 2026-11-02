@@ -8,7 +8,7 @@ import { blockFiles, fileBlocks } from './files';
 import { forgetCut, serveShareFile } from './shares';
 import type { Db, SqlValue, Statement } from './db/service-db';
 import { DAY_MS, fail, ID, isCount, isPositive, readObject, type AppEnv, type Services } from './http';
-import { answerAction, answerBegin, leaveAccount, refuseLeft, restoreFrom, restorePoints, restoresOf, store } from './lifecycle';
+import { answerAction, answerBegin, incarnationOf, leaveAccount, refuseLeft, restoreFrom, restorePoints, restoresOf, store } from './lifecycle';
 import { requireSession } from './session';
 import { tellUnread, VISIBLE } from './unread';
 import { readCohorts } from './pulse';
@@ -275,7 +275,7 @@ admin.put('/accounts/:id/caps', async (c) => {
 admin.delete('/accounts/:id', async (c) => {
   const id = c.req.param('id');
   if (!ID.test(id)) return fail(c, 400, 'bad-input');
-  const incarnation = await incarnationOf(c, id);
+  const incarnation = await incarnationOf(c.env.db, id);
   if (incarnation === null) return fail(c, 404, 'not-found');
   const left = await leaveAccount(c.env, c.executionCtx, id, incarnation, true);
   if (left !== 'left') return refuseLeft(c, left);
@@ -290,8 +290,6 @@ admin.post('/accounts/:id/restores', async (c) => {
   if (!ID.test(id) || !isPositive(post) || !from) return fail(c, 400, 'bad-input');
   return answerBegin(c, id, post, from);
 });
-
-const incarnationOf = (c: Context<AppEnv>, id: string) => c.env.db.prepare('SELECT incarnation FROM accounts WHERE id = ?').bind(id).first<string>('incarnation');
 
 admin.get('/accounts/:id/points', async (c) => {
   const points = await restorePoints(c.env.db, c.req.param('id'));
