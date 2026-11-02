@@ -21,18 +21,31 @@
   .heroWords {
     display: grid;
     align-content: center;
+    justify-items: start;
     gap: var(--space-24);
+    padding-block-end: var(--landing-gap);
+  }
+
+  .heroTitle,
+  .title {
+    margin: 0;
+    color: var(--scene-text);
+    font-family: var(--font-story);
+    font-weight: var(--weight-bold);
+    line-height: var(--landing-leading);
+    letter-spacing: var(--landing-tracking);
+    word-break: keep-all;
+    text-shadow: var(--scene-text-shadow);
   }
 
   .heroTitle {
-    margin: 0;
-    color: var(--scene-text);
-    font-family: var(--font-brand);
-    font-size: var(--landing-hero);
-    font-weight: var(--weight-bold);
-    line-height: var(--landing-leading);
     max-width: var(--landing-heading-width);
+    font-size: var(--landing-hero);
     text-wrap: balance;
+  }
+
+  .title {
+    font-size: var(--landing-title);
   }
 
   .line {
@@ -41,6 +54,8 @@
     color: var(--scene-text-soft);
     font-size: var(--landing-line);
     line-height: var(--leading-relaxed);
+    word-break: keep-all;
+    text-shadow: var(--scene-text-shadow);
   }
 
   .doors {
@@ -50,12 +65,22 @@
     font-size: var(--text-md);
   }
 
+  /* Empty ground between beats is the walk itself: the scene gets a screen to itself. */
   .beat {
     display: grid;
     gap: var(--space-32);
     width: min(100%, var(--landing-column));
     margin-inline: auto;
     padding: var(--landing-gap) var(--landing-edge);
+    scroll-margin-top: var(--space-24);
+  }
+
+  .beat + .beat {
+    margin-top: var(--landing-walk);
+  }
+
+  main:first-of-type > .beat:first-child {
+    margin-top: var(--landing-walk);
   }
 
   .words {
@@ -64,110 +89,220 @@
     gap: var(--space-16);
   }
 
-  .title {
-    margin: 0;
-    color: var(--scene-text);
-    font-family: var(--font-brand);
-    font-size: var(--landing-title);
-    font-weight: var(--weight-bold);
-    line-height: var(--landing-leading);
-  }
-
   .held {
     min-width: 0;
   }
 
+  .talk > * {
+    max-width: var(--landing-talk-width);
+  }
+
   @media (min-width: 960px) {
-    .start,
-    .end {
-      grid-template-columns: 5fr 7fr;
-      align-items: center;
+    .lanterns {
+      grid-template-columns: 4fr 7fr;
+      align-items: start;
       gap: var(--landing-edge);
     }
 
-    .end {
-      grid-template-columns: 7fr 5fr;
+    .door {
+      grid-template-columns: 4fr 7fr;
+      align-items: start;
+      gap: var(--landing-edge);
     }
 
-    .end .words {
-      order: 2;
+    .points {
+      grid-template-columns: 5fr 7fr;
+      align-items: start;
+      gap: var(--landing-edge);
     }
 
+    .points .words {
+      position: sticky;
+      top: 22svh;
+    }
   }
 
-  .lantern {
+  .finish {
+    justify-items: center;
+    text-align: center;
+    min-height: var(--landing-screen);
+    grid-template-rows: auto auto 1fr;
+    padding-block-start: var(--landing-finish-top);
+    padding-block-end: var(--space-24);
+  }
+
+  .finish .held {
+    filter: var(--landing-cta-glow);
+  }
+
+  .foot {
+    align-self: end;
+    text-align: start;
+    width: 100%;
+  }
+
+  .finish .title {
+    color: var(--landing-finish-ink);
+    font-size: var(--landing-hero);
+    text-wrap: balance;
+    text-shadow: var(--landing-finish-shadow);
+  }
+
+  .doorway {
+    position: relative;
+    width: min(100%, var(--landing-door-width));
+    margin-inline-start: auto;
+  }
+
+  /* The room's light falling out over the ground below the door. */
+  .doorway::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: -18%;
+    right: -18%;
+    height: var(--landing-door-spill-height);
+    background: var(--landing-door-spill);
+    pointer-events: none;
+  }
+
+  .room {
+    position: relative;
     display: grid;
     gap: var(--space-24);
-    padding: clamp(var(--space-16), 4vw, var(--space-32));
-    border: var(--border-thin) solid var(--scene-pane-line);
-    border-radius: var(--radius-lg);
-    background: var(--scene-pane);
-    box-shadow: var(--scene-pane-glow);
+    padding: var(--landing-door-top) clamp(var(--space-16), 4vw, var(--space-32)) clamp(var(--space-24), 4vw, var(--space-32));
+    border-start-start-radius: var(--landing-door-round) var(--landing-door-arch);
+    border-start-end-radius: var(--landing-door-round) var(--landing-door-arch);
+    border-end-start-radius: var(--radius-sm);
+    border-end-end-radius: var(--radius-sm);
+    background: var(--landing-door-light);
+    box-shadow: var(--landing-door-glow);
     color: var(--color-text);
   }
 
   .steps {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-8) var(--space-24);
+    justify-content: center;
+    gap: clamp(var(--space-12), 4vw, var(--space-32));
     margin: 0;
     padding: 0;
     list-style: none;
     font-size: var(--text-sm);
+    text-align: center;
   }
 
   .step,
   .stepNow,
   .stepDone {
-    display: flex;
-    align-items: center;
+    display: grid;
+    justify-items: center;
     gap: var(--space-8);
+    min-width: var(--landing-step-width);
+    max-width: var(--landing-step-width);
     color: var(--scene-text-soft);
+    word-break: keep-all;
   }
 
   .stepNow {
-    color: var(--scene-moon);
+    color: var(--scene-gold);
     font-weight: var(--weight-bold);
   }
 
-  .stepNumber {
-    display: grid;
-    place-items: center;
-    width: var(--space-24);
-    height: var(--space-24);
-    border: var(--border-thin) solid currentColor;
-    border-radius: var(--radius-full);
-    font-size: var(--text-xs);
+  .step .lanternPicture,
+  .stepNow .lanternPicture,
+  .stepDone .lanternPicture {
+    width: var(--space-32);
+  }
+
+  .step .lanternPicture {
+    filter: var(--landing-lantern-dim);
+  }
+
+  .stepNow .lanternPicture {
+    filter: var(--landing-lantern-glow-near);
+  }
+
+  .stepDone .lanternPicture {
+    filter: var(--landing-lantern-glow);
+  }
+
+  .lanternPicture {
+    display: block;
+    overflow: visible;
+  }
+
+  .iron {
+    fill: var(--landing-iron);
+  }
+
+  .glass {
+    fill: var(--landing-glass-out);
+  }
+
+  .glassHot {
+    stop-color: var(--landing-glass-hot);
+  }
+
+  .glassWarm {
+    stop-color: var(--landing-glass-warm);
+  }
+
+  .glassEdge {
+    stop-color: var(--landing-glass-edge);
+  }
+
+  .flame {
+    fill: var(--landing-flame);
+    transform-origin: 50px 100px;
+    transform-box: view-box;
+    animation: lanternFlame var(--scene-flicker) var(--ease-loop) infinite;
   }
 
   .saidThem,
   .saidMe {
     width: fit-content;
-    max-width: 88%;
+    max-width: 92%;
     padding: var(--space-12) var(--space-16);
     border-radius: var(--radius-lg);
-    font-size: var(--text-md);
+    font-family: var(--font-story);
+    font-size: var(--landing-said);
     line-height: var(--leading-relaxed);
     white-space: pre-wrap;
+    word-break: keep-all;
+    animation: saidIn var(--duration-base) var(--ease-enter) both;
   }
 
   .saidThem {
-    background: var(--scene-said);
+    border: var(--border-thin) solid var(--landing-said-line);
+    border-start-start-radius: var(--radius-sm);
+    background: var(--landing-said-them);
     color: var(--scene-text);
   }
 
   .saidMe {
     margin-inline-start: auto;
-    background: var(--scene-replied);
-    color: var(--scene-on-replied);
+    border-end-end-radius: var(--radius-sm);
+    background: var(--landing-said-me);
+    color: var(--scene-ink);
   }
 
   .saidName {
     display: block;
     margin-bottom: var(--space-4);
-    color: var(--scene-moon);
+    color: var(--scene-gold);
+    font-family: var(--font-sans);
     font-size: var(--text-sm);
     font-weight: var(--weight-bold);
+  }
+
+  .caret {
+    display: inline-block;
+    width: var(--landing-caret);
+    height: var(--landing-caret-height);
+    margin-inline-start: var(--space-4);
+    background: var(--scene-gold);
+    vertical-align: text-bottom;
+    animation: caret var(--landing-caret-blink) step-end infinite;
   }
 
   .choices {
@@ -178,16 +313,18 @@
 
   .choice {
     padding: var(--space-8) var(--space-16);
-    border: var(--border-thin) solid var(--scene-pane-line);
+    border: var(--border-thin) solid var(--landing-choice-line);
     border-radius: var(--radius-full);
-    background: transparent;
+    background: var(--landing-said-them);
     color: var(--scene-text);
     font-size: var(--text-sm);
     cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-enter), border-color var(--duration-fast) var(--ease-enter);
   }
 
   .choice:hover {
-    background: var(--scene-said);
+    border-color: var(--scene-gold);
+    background: var(--landing-choice-hover);
   }
 
   .sendRow {
@@ -199,53 +336,185 @@
 
   .places {
     display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(var(--space-8), 3vw, var(--space-32));
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
   .place {
+    position: relative;
     display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: baseline;
-    gap: var(--space-4) var(--space-16);
-    padding-block: var(--space-16);
-    border-bottom: var(--border-thin) solid var(--scene-pane-line);
+    align-content: start;
+    justify-items: center;
+    text-align: center;
   }
 
-  .placeName {
-    color: var(--scene-text);
-    font-family: var(--font-brand);
-    font-size: var(--landing-place);
-    font-weight: var(--weight-bold);
+  .place:nth-child(1) {
+    padding-top: var(--landing-rope-first);
   }
 
-  .placeSite {
-    grid-row: 2;
-    color: var(--scene-text-soft);
-    font-size: var(--text-sm);
+  .place:nth-child(2) {
+    padding-top: var(--landing-rope-second);
+  }
+
+  .place:nth-child(3) {
+    padding-top: var(--landing-rope-third);
   }
 
   .placeLink {
-    grid-row: 1 / span 2;
-    grid-column: 2;
-    align-self: center;
-    padding: var(--space-8) var(--space-16);
+    display: grid;
+    align-content: start;
+    justify-items: center;
+    gap: var(--space-8);
+    border-radius: var(--radius-lg);
+    color: var(--scene-text);
+    text-decoration: none;
+    transform-origin: 50% calc(var(--landing-rope-reach) * -1);
+    transition: transform var(--duration-slow) var(--ease-enter);
+  }
+
+  .placeLink:hover,
+  .placeLink:focus-visible {
+    transform: rotate(var(--landing-sway));
+  }
+
+  .place:nth-child(2n) .placeLink:hover,
+  .place:nth-child(2n) .placeLink:focus-visible {
+    transform: rotate(calc(var(--landing-sway) * -1));
+  }
+
+  .lanternBody {
+    position: relative;
+    display: block;
+    width: var(--landing-lantern);
+    filter: var(--landing-lantern-glow);
+    transition: filter var(--duration-slow) var(--ease-enter);
+  }
+
+  .placeLink:hover .lanternBody,
+  .placeLink:focus-visible .lanternBody {
+    filter: var(--landing-lantern-glow-near);
+  }
+
+  /* The rope climbs out of sight, up into the dark. */
+  .lanternBody::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    width: var(--border-thin);
+    height: var(--landing-rope-reach);
+    background: linear-gradient(transparent, var(--landing-rope));
+  }
+
+  .placeName {
+    position: absolute;
+    top: 28%;
+    left: 14%;
+    right: 14%;
+    bottom: 16%;
+    display: grid;
+    place-items: center;
+    color: var(--scene-ink);
+    font-size: var(--landing-place);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--landing-tracking);
+  }
+
+  .placeSite {
+    padding: var(--space-4) var(--space-8);
+    border-radius: var(--radius-sm);
+    background: var(--landing-said-them);
+    color: var(--scene-text-soft);
+    font-size: var(--text-xs);
+  }
+
+  .placeAction {
+    padding: var(--space-4) var(--space-12);
     border-radius: var(--radius-full);
-    background: var(--scene-moon);
-    color: var(--scene-on-replied);
+    white-space: nowrap;
+    background: var(--scene-gold);
+    color: var(--scene-ink);
     font-size: var(--text-sm);
     font-weight: var(--weight-bold);
-    text-decoration: none;
   }
 
   .promises {
     display: grid;
-    gap: var(--space-16);
+    gap: var(--landing-point-gap);
     margin: 0;
     padding: 0;
     list-style: none;
+  }
+
+  /* Each line comes up to full brightness while it is the one being read. */
+  .promise {
     color: var(--scene-text);
-    font-size: var(--landing-line);
+    font-family: var(--font-story);
+    font-size: var(--landing-point);
+    font-weight: var(--weight-bold);
+    line-height: var(--landing-leading);
+    word-break: keep-all;
+    text-shadow: var(--scene-text-shadow);
+  }
+
+  @supports (animation-timeline: view()) {
+    .promise {
+      animation: promise linear both;
+      animation-timeline: view();
+      animation-range: cover 10% cover 90%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flame,
+    .saidThem,
+    .saidMe,
+    .caret,
+    .promise {
+      animation: none;
+    }
+  }
+
+  @keyframes lanternFlame {
+    0%,
+    100% {
+      transform: scale(1, 1);
+    }
+
+    40% {
+      transform: scale(0.92, 1.1);
+    }
+
+    70% {
+      transform: scale(1.06, 0.94);
+    }
+  }
+
+  @keyframes saidIn {
+    from {
+      opacity: 0;
+      transform: translate3d(0, var(--space-8), 0);
+    }
+  }
+
+  @keyframes caret {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes promise {
+    0%,
+    100% {
+      opacity: var(--landing-point-dim);
+    }
+
+    30%,
+    70% {
+      opacity: 1;
+    }
   }
 }

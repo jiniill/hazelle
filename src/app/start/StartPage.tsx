@@ -3,7 +3,7 @@ import { CONNECTION_TYPES, detect } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
 import { START_PAGE } from '../../contracts/start';
 import { LegalNotice } from '../common/LegalNotice';
-import { Beat, Brand, Button, Callout, ChoiceGroup, Hero, KeyPlaces, Lantern, Link, NightScene, Progress, Promises, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
+import { Beat, Brand, Button, Callout, ChoiceGroup, Door, Hero, KeyPlaces, Link, NightScene, Progress, Promises, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
 import { EXAMPLE } from './example';
 
 const Trial = lazy(() => import('./Trial').then(({ Trial }) => ({ default: Trial })));
@@ -24,10 +24,12 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
   const [step, setStep] = useState(0);
   const [entered, setEntered] = useState<{ type: ConnectionType; secret: string } | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
+  const [talking, setTalking] = useState(false);
+  const [replied, setReplied] = useState(false);
 
   return (
-    <>
-      <NightScene />
+    <div data-theme="dark">
+      <NightScene glow={replied ? 3 : step} talking={talking} />
       <Hero
         title={heading}
         line={line}
@@ -42,14 +44,14 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
         <Button variant="secondary" onClick={onOpen}>가입 없이 열기</Button>
       </Hero>
       <main>
-        <Beat title={example.title} line={example.line}>
-          <Lantern><ExampleChat /></Lantern>
+        <Beat title={example.title} line={example.line} kind="talk">
+          <ExampleChat onTalking={setTalking} />
         </Beat>
-        <Beat title={keys.title} line={keys.line} side="end">
+        <Beat title={keys.title} line={keys.line} kind="lanterns">
           <KeyPlaces places={PLACES} />
         </Beat>
-        <Beat id="trial" title={trial.title} line={trial.line} side="whole">
-          <Lantern>
+        <Beat id="trial" title={trial.title} line={trial.line} kind="door">
+          <Door>
             <TrialSteps steps={trial.steps} at={step} />
             {entered ? (
               <Suspense fallback={<Progress title="불러오는 중" steps={[{ label: '연결 준비' }]} />}>
@@ -57,6 +59,7 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
                   type={entered.type}
                   secret={entered.secret}
                   onStep={setStep}
+                  onReplied={() => setReplied(true)}
                   onRefused={(message) => {
                     setEntered(null);
                     setRefused(message);
@@ -66,22 +69,19 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
             ) : (
               <KeyForm refused={refused} onEnter={(type, secret) => { setRefused(null); setEntered({ type, secret }); }} />
             )}
-          </Lantern>
+          </Door>
         </Beat>
-        <Beat title={features.title} side="end">
+        <Beat title={features.title} kind="points">
           <Stack>
             <Promises points={features.points} />
             <Link href={move.path}>{move.label}</Link>
           </Stack>
         </Beat>
-        <Beat title={finish.title} side="whole">
-          <Stack>
-            <div><Button onClick={onOpen}>헤이젤 열기</Button></div>
-            <LegalNotice />
-          </Stack>
+        <Beat title={finish.title} kind="finish" foot={<LegalNotice />}>
+          <Button onClick={onOpen}>헤이젤 열기</Button>
         </Beat>
       </main>
-    </>
+    </div>
   );
 }
 
@@ -111,7 +111,7 @@ function KeyForm({ refused, onEnter }: { refused: string | null; onEnter: (type:
 
 const TYPED_EVERY = 24;
 
-function ExampleChat() {
+function ExampleChat({ onTalking }: { onTalking: (talking: boolean) => void }) {
   const [picked, setPicked] = useState<(typeof EXAMPLE.choices)[number] | null>(null);
   const [typed, setTyped] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval>>(undefined);
@@ -124,7 +124,8 @@ function ExampleChat() {
   }, [picked]);
   useEffect(() => {
     if (done) clearInterval(timer.current);
-  }, [done]);
+    onTalking(picked !== null && !done);
+  }, [done, picked]);
 
   function pick(say: string) {
     setTyped(0);
@@ -135,7 +136,7 @@ function ExampleChat() {
     <Stack>
       <Said by="them" name={EXAMPLE.name}>{EXAMPLE.greeting}</Said>
       {picked && <Said by="me">{picked.say}</Said>}
-      {picked && <Said by="them" name={EXAMPLE.name}>{picked.reply.slice(0, typed)}</Said>}
+      {picked && <Said by="them" name={EXAMPLE.name} typing={!done}>{picked.reply.slice(0, typed)}</Said>}
       {(!picked || done) && <SayChoices choices={EXAMPLE.choices.filter((choice) => choice !== picked).map(({ say }) => say)} onPick={pick} />}
       <Text variant="note">{EXAMPLE.about}</Text>
     </Stack>

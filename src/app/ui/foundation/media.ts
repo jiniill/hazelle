@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 // Every media query in the app. Stylesheets cannot read these, so each writes its query out in full,
 // and media.test.ts fails on an @media that is not one of them.
 export const MEDIA = {
+  tallScreen: '(max-aspect-ratio: 1/1)',
   // Room for the sidebar beside the page. narrow is its complement: change the two together.
   wide: '(min-width: 960px)',
   narrow: '(max-width: 959px)',

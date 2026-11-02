@@ -51,7 +51,10 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   await fakeAnthropic(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('내 API 키로 바로 시작하는 AI 캐릭터 챗');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/1-hero.png` });
+  if (SHOTS) {
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: `${SHOTS}/1-hero.png` });
+  }
 
   await page.getByRole('button', { name: '당신은 누구예요?', exact: true }).click();
   await expect(page.getByText('이제 당신 이름을 들려줄 차례예요.', { exact: false })).toBeVisible();
@@ -66,9 +69,9 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   if (SHOTS) {
     await page.screenshot({ path: `${SHOTS}/4-trial.png` });
     const height = await page.evaluate<number>('document.documentElement.scrollHeight - innerHeight');
-    for (const [name, at] of [['2-example', 0.18], ['3-keys', 0.36], ['5-features', 0.78], ['6-finish', 1]] as const) {
+    for (const [name, at] of [['2-example', 0.2], ['3-keys', 0.38], ['5-features', 0.8], ['6-finish', 1]] as const) {
       await page.evaluate(`scrollTo(0, ${height * at})`);
-      await page.waitForTimeout(200);
+      await page.waitForTimeout(800);
       await page.screenshot({ path: `${SHOTS}/${name}.png` });
     }
   }
@@ -87,11 +90,12 @@ test('a phone gets the same page', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.waitForTimeout(2500);
   await page.screenshot({ path: `${SHOTS}/p1-hero.png` });
   const height = await page.evaluate<number>('document.documentElement.scrollHeight - innerHeight');
   for (const [name, at] of [['p2', 0.2], ['p3', 0.45], ['p4', 0.65], ['p5', 1]] as const) {
     await page.evaluate(`scrollTo(0, ${height * at})`);
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(800);
     await page.screenshot({ path: `${SHOTS}/${name}.png` });
   }
 });

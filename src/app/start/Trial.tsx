@@ -15,7 +15,7 @@ type Phase =
 const open = (at: string) => location.assign(at);
 
 // Runs the rest of the first visit on this browser's guest, loaded only once a key is entered: the engine is the page's heaviest part.
-export function Trial({ type, secret, onStep, onRefused }: { type: ConnectionType; secret: string; onStep: (step: number) => void; onRefused: (message: string) => void }) {
+export function Trial({ type, secret, onStep, onReplied, onRefused }: { type: ConnectionType; secret: string; onStep: (step: number) => void; onReplied: () => void; onRefused: (message: string) => void }) {
   const [phase, setPhase] = useState<Phase>({ kind: 'connecting' });
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -49,7 +49,7 @@ export function Trial({ type, secret, onStep, onRefused }: { type: ConnectionTyp
       </Stack>
     );
   }
-  if (phase.kind === 'chat') return <TrialChat session={phase.session} />;
+  if (phase.kind === 'chat') return <TrialChat session={phase.session} onReplied={onReplied} />;
   return (
     <ModelPick
       models={phase.models}
@@ -80,7 +80,7 @@ function ModelPick({ models, failure, onPick }: { models: Model[]; failure: stri
 }
 const MODELS_SHOWN = 8;
 
-function TrialChat({ session }: { session: Session }) {
+function TrialChat({ session, onReplied }: { session: Session; onReplied: () => void }) {
   const [chat] = useState(() => crypto.randomUUID());
   const [log, setLog] = useState<{ by: 'me' | 'them'; text: string }[]>([]);
   const [draft, setDraft] = useState('');
@@ -101,13 +101,14 @@ function TrialChat({ session }: { session: Session }) {
     const failed = await (log.length === 0 ? startTrialChat(session, chat, text) : sayInTrial(session, chat, text));
     if (failed) return setFailure(describeTurnFailure(failed));
     setLog((now) => [...now, { by: 'them', text: live.current }]);
+    onReplied();
   }
 
   return (
     <form onSubmit={(event) => void send(event)}>
       <Stack>
         {log.map(({ by, text }, index) => <Said key={index} by={by}>{text}</Said>)}
-        {turn && <Said by="them">{turn.text || '…'}</Said>}
+        {turn && <Said by="them" typing>{turn.text}</Said>}
         {failure && <Callout tone="warn" alert>{failure}</Callout>}
         <SendRow>
           <TextField label="보낼 말" showLabel={false} placeholder="안녕! 짧게 자기소개해 줘" value={draft} onChange={setDraft} />

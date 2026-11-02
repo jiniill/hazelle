@@ -2,59 +2,297 @@
 
 @layer looks {
   .scene {
+    --look-x: 0.5;
+    --look-y: 0.5;
+
     position: fixed;
     inset: 0;
     z-index: var(--landing-behind);
     overflow: hidden;
-    background: linear-gradient(var(--scene-sky-top), var(--scene-sky-mid) 55%, var(--scene-sky-low));
+    background: var(--scene-sky-top);
+    contain: strict;
   }
 
+  .flat,
+  .haze,
+  .warmth,
+  .flies,
+  .grain,
+  .curtain,
+  .carried,
   .dawn {
     position: absolute;
     inset: 0;
-    opacity: 0;
-    background: radial-gradient(ellipse 90% 70% at 50% 100%, var(--scene-dawn), transparent);
   }
 
-  .layer {
-    position: absolute;
-    inset: 0;
+  .art {
+    display: block;
     width: 100%;
     height: 100%;
-    will-change: transform;
+    object-fit: cover;
+    object-position: var(--scene-art-focus) 100%;
+    opacity: 0;
+    transition: opacity var(--scene-art-in) var(--ease-enter);
   }
 
-  .stars {
-    fill: var(--scene-star);
-    --drift-y: -8vh;
+  .art[data-ready] {
+    opacity: 1;
+  }
+
+  .moonPath {
+    position: absolute;
+    top: var(--scene-moon-top);
+    left: var(--scene-moon-x);
+    width: var(--scene-moon-size);
+    aspect-ratio: 1;
+    margin-left: calc(var(--scene-moon-size) / -2);
   }
 
   .moon {
     position: absolute;
-    top: 8vh;
-    right: 8vw;
-    width: clamp(96px, 20vw, 280px);
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .halo {
+    position: absolute;
+    inset: var(--scene-halo-reach);
+    border-radius: var(--radius-full);
+    background: var(--scene-moon-halo);
+  }
+
+  .dawn {
+    opacity: 0;
+    background: var(--scene-dawn);
+  }
+
+  .sun {
+    position: absolute;
+    top: calc(var(--scene-sun-horizon) - var(--scene-sun-size) / 2);
+    left: var(--scene-vanish-x);
+    width: var(--scene-sun-size);
+    aspect-ratio: 1;
+    margin-left: calc(var(--scene-sun-size) / -2);
+    border-radius: var(--radius-full);
+    background: var(--scene-sun);
+    opacity: 0;
+  }
+
+  .look {
+    position: absolute;
+    inset: 0;
+    transform: translate3d(calc((var(--look-x) - 0.5) * var(--scene-look-reach) * var(--near)), calc((var(--look-y) - 0.5) * var(--scene-look-reach) * var(--near) * 0.4), 0);
+  }
+
+  /* The eye stands low, level with the far ground, so what stands on the ground stays on it as the walk nears. */
+  .plane {
+    position: absolute;
+    inset: var(--scene-overscan);
+    transform-origin: var(--scene-origin-x) var(--scene-origin-y);
+  }
+
+  .arin {
+    position: absolute;
+    bottom: var(--scene-arin-ground);
+    left: var(--scene-arin-x);
+    height: var(--scene-arin-height);
+    aspect-ratio: 1000 / 1100;
+    transform: translateX(-50%);
+  }
+
+  .arin img {
+    display: block;
+    height: 100%;
+  }
+
+  .arinGlow {
+    position: absolute;
+    top: var(--scene-arin-lantern-y);
+    left: var(--scene-arin-lantern-x);
+    width: var(--scene-arin-glow);
     aspect-ratio: 1;
     border-radius: var(--radius-full);
-    background: var(--scene-moon);
-    box-shadow: var(--scene-moon-glow);
-    will-change: transform;
-    --drift-x: -14vw;
-    --drift-y: 66vh;
+    background: var(--scene-lantern-glow);
+    transform: translate(-50%, -50%);
+    animation: flicker var(--scene-flicker) var(--ease-loop) infinite;
   }
 
-  .far {
-    fill: var(--scene-ridge-far);
-    --drift-y: 8vh;
+  [data-talking] .arinGlow {
+    --flare: 1.5;
   }
 
-  .mid {
-    fill: var(--scene-ridge-mid);
-    --drift-y: 26vh;
+  .cabin {
+    position: absolute;
+    bottom: var(--scene-cabin-ground);
+    left: var(--scene-cabin-x);
+    width: var(--scene-cabin-width);
+    transform: translateX(-50%);
   }
 
-  .near {
-    fill: var(--scene-ridge-near);
-    --drift-y: 62vh;
+  .cabin img {
+    display: block;
+    width: 100%;
+    opacity: 0;
+    transition: opacity var(--scene-art-in) var(--ease-enter);
+  }
+
+  .cabin img[data-ready] {
+    opacity: 1;
+  }
+
+  .bough {
+    position: absolute;
+    inset: 0;
+    transform-origin: 100% 0;
+    animation: bough var(--scene-bough-sway) var(--ease-loop) infinite alternate;
+  }
+
+  .haze {
+    background: var(--scene-haze);
+    pointer-events: none;
+  }
+
+  /* The forest warms as the visitor gets further with the door. */
+  .warmth {
+    opacity: 0;
+    background: var(--scene-warmth);
+    transition: opacity var(--scene-answer) var(--ease-enter);
+  }
+
+  [data-glow='1'] .warmth {
+    opacity: 0.35;
+  }
+
+  [data-glow='2'] .warmth {
+    opacity: 0.65;
+  }
+
+  [data-glow='3'] .warmth {
+    opacity: 1;
+  }
+
+  .gather {
+    position: absolute;
+    top: var(--at-y);
+    left: var(--at-x);
+    transition: transform var(--scene-answer) var(--ease-enter);
+  }
+
+  [data-glow='2'] .gather:nth-child(2n),
+  [data-glow='3'] .gather {
+    transform: translate3d(var(--gather-x), var(--gather-y), 0);
+  }
+
+  .fly {
+    width: var(--scene-fly);
+    height: var(--scene-fly);
+    border-radius: var(--radius-full);
+    background: var(--scene-fly-light);
+    box-shadow: var(--scene-fly-glow);
+    animation: firefly var(--takes) var(--ease-loop) var(--after) infinite;
+  }
+
+  /* The lantern the visitor carries: moved, never repainted. */
+  .carried {
+    top: calc(var(--scene-carried-reach) * -1);
+    left: calc(var(--scene-carried-reach) * -1);
+    width: calc(var(--scene-carried-reach) * 2);
+    height: calc(var(--scene-carried-reach) * 2);
+    inset-block-end: auto;
+    inset-inline-end: auto;
+    opacity: 0;
+    background: var(--scene-carried);
+    transform: translate3d(calc(var(--look-x) * 100vw), calc(var(--look-y) * 100vh), 0);
+    transition: opacity var(--scene-answer) var(--ease-enter);
+  }
+
+  [data-lit] .carried {
+    opacity: 1;
+  }
+
+  .grain {
+    background: url('./art/grain.webp') repeat;
+    pointer-events: none;
+  }
+
+  .curtain {
+    background: var(--scene-sky-top);
+    animation: curtain var(--scene-curtain) var(--ease-enter) both;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .arinGlow,
+    .bough,
+    .fly,
+    .curtain {
+      animation: none;
+    }
+
+    .curtain {
+      opacity: 0;
+    }
+  }
+
+  @keyframes flicker {
+    0%,
+    100% {
+      opacity: 0.82;
+      transform: translate(-50%, -50%) scale(var(--flare, 1));
+    }
+
+    38% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(calc(var(--flare, 1) * 1.06));
+    }
+
+    62% {
+      opacity: 0.74;
+      transform: translate(-50%, -50%) scale(calc(var(--flare, 1) * 0.97));
+    }
+  }
+
+  @keyframes bough {
+    from {
+      transform: rotate(var(--scene-bough-from));
+    }
+
+    to {
+      transform: rotate(var(--scene-bough-to));
+    }
+  }
+
+  @keyframes firefly {
+    0%,
+    100% {
+      opacity: 0;
+      transform: translate3d(0, 0, 0);
+    }
+
+    20% {
+      opacity: 1;
+      transform: translate3d(var(--scene-fly-reach), calc(var(--scene-fly-reach) * -0.7), 0);
+    }
+
+    45% {
+      opacity: 0.15;
+      transform: translate3d(calc(var(--scene-fly-reach) * 0.4), calc(var(--scene-fly-reach) * -1.6), 0);
+    }
+
+    65% {
+      opacity: 0.9;
+      transform: translate3d(calc(var(--scene-fly-reach) * -0.8), calc(var(--scene-fly-reach) * -0.9), 0);
+    }
+  }
+
+  @keyframes curtain {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
   }
 }
