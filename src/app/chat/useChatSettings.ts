@@ -9,7 +9,7 @@ import { setCast, setChatOwn, withCast, withOwn, withPromptOut, withPromptSent, 
 import { setFeatureAt, withFeature } from '../../runtime/features';
 import { chatPersona, pinPersona, setCurrentPersona } from '../../runtime/personas';
 import { chatPrompt } from '../../runtime/prompts';
-import { useSession } from '../session';
+import { useCaptured, useSession } from '../session';
 import { useToast } from '../toast';
 
 type Draft = Omit<Chat, 'title' | 'character'>;
@@ -20,6 +20,7 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
   const toast = useToast();
   const [unsaved, setUnsaved] = useState<Draft>({ models: {} });
   const chat: Chat = useMemo(() => saved ?? { title: null, character, ...unsaved }, [saved, character, unsaved]);
+  const { route, prompt, persona } = useCaptured((store) => ({ route: chatModel(store, chat, 'main'), prompt: chatPrompt(store, chat), persona: chatPersona(store, chat) }), [chat]);
 
   // Unsaved chats carry settings into first save. Afterward patch the latest stored copy, never render snapshots,
   // so other devices' settings survive.
@@ -52,9 +53,9 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
 
   return {
     chat,
-    route: chatModel(store, chat, 'main'),
-    prompt: chatPrompt(store, chat),
-    persona: chatPersona(store, chat),
+    route,
+    prompt,
+    persona,
     actions: {
       pickModel,
       setPrompt,

@@ -8,7 +8,7 @@ import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/
 import { FolderPath } from '../common/folders/FolderParts';
 import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse';
 import { defaultMark, DELETED_PROMPT, follows, promptName } from '../common/words';
-import { useSession, useSettings, usePrompts } from '../session';
+import { useCaptured, useSettings, usePrompts } from '../session';
 import { useToast } from '../toast';
 import { Button, ChipButton, Dialog, Empty, hasFinePointer, Icon, List, ListItem, Row } from '../ui';
 import type { ChatSettingsActions } from './useChatSettings';
@@ -38,7 +38,6 @@ export function ChatPromptPicker({ prompt, out, open, onOpen }: { prompt: Prompt
 // Characterless chats lead with utility mode; out marks it selected.
 type DialogProps = { prompt: PromptChoice; plain: boolean; out: boolean; onChoose: ChatSettingsActions['setPrompt']; onKeepOut: ChatSettingsActions['keepPromptOut']; onEdit: (id: string | null) => void; onClose: () => void };
 export function PromptDialog({ prompt, plain, out, onChoose, onKeepOut, onEdit, onClose }: DialogProps) {
-  const { store } = useSession();
   const all = usePrompts();
   const prompts = useMemo(() => all.filter((each) => ofSort(each, 'conversation')), [all]);
   const uses = usePromptUse();
@@ -48,7 +47,7 @@ export function PromptDialog({ prompt, plain, out, onChoose, onKeepOut, onEdit, 
   useEffect(() => {
     if (hasFinePointer()) field.current?.focus();
   }, []);
-  const fallback = chatPrompt(store, {});
+  const fallback = useCaptured((store) => chatPrompt(store, {}), []);
   const grouped = useMemo(() => groupPrompts(prompts), [prompts]);
   const own = !out && prompt.own && prompt.kind === 'prompt' ? prompt.prompt.id : null;
   const search = useSearch(prompts.toSorted(byPromptName), '프롬프트 검색', (item) => [promptName(item.value.name)], { ref: field, onEnter: (first) => choose(first.id) });

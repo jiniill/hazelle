@@ -5,7 +5,7 @@ import { translationInput } from '../../runtime/chat-context';
 import type { Shown } from '../../runtime/talk';
 import { translatorOf, type TranslatorFailure } from '../../runtime/translate';
 import { languageLabel } from '../common/languages';
-import { useSession, useTranslating } from '../session';
+import { useCaptured, useSession, useTranslating } from '../session';
 import { useToast } from '../toast';
 
 export type TranslationActions = ReturnType<typeof useChatTranslation>['actions'];
@@ -15,7 +15,7 @@ export function useChatTranslation(chatId: string, chat: Chat, messages: Shown[]
   const { store, translator } = session;
   const toast = useToast();
   const translating = useTranslating();
-  const translation = translatorOf(store, chat);
+  const translation = useCaptured((store) => translatorOf(store, chat), [chat]);
   const sendLanguage = languageLabel(translate.inputLanguage);
   const [flipped, setFlipped] = useState<ReadonlySet<string>>(new Set());
   const last = messages.at(-1);

@@ -11,7 +11,7 @@ import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ago } from '../common/time';
 import { CACHE_GUARD, MODEL_SETTINGS, opens, UNKNOWN } from '../common/words';
 import { useLab } from '../common/labs';
-import { useSession, useStore } from '../session';
+import { useCaptured, useSession } from '../session';
 import { navigate } from '../shell/router';
 import { Button, Callout, Disclosure, Empty, Facts, List, ListItem, Row, Section, SettingGroup, Stack, Text } from '../ui';
 import { BrokenPartView, breakCauses, breakKind, diagnosed, Prescriptions, RecurrenceNote, ShortfallNote } from './CacheDiagnosis';
@@ -122,11 +122,11 @@ type NextCacheProps = { next: NonNullable<CacheNotes['next']>; recurrence: Cache
 
 function NextCache({ next, recurrence, editor, onEdit }: NextCacheProps) {
   const { forecast, diagnosis, prescriptions, cost: price, route } = next;
-  const store = useStore();
+  const profile = useCaptured((store) => profileName(store, route), [route]);
   const guard = useLab('cacheguard');
   const [open, setOpen] = useState<string | null>(null);
   const { against, written, tail, removed } = forecast;
-  const warning = nextWarning(next, recurrence, profileName(store, route));
+  const warning = nextWarning(next, recurrence, profile);
   const off = against?.broken?.kind === 'off' ? { label: opens(MODEL_SETTINGS), onClick: () => navigate({ kind: 'model', ...refOf(route.connection.id, route.model) }) } : undefined;
   return (
     <Stack gap="group">

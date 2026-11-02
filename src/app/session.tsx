@@ -19,7 +19,7 @@ import type { Remembering } from '../runtime/memory';
 import { modulesOf } from '../runtime/modules';
 import { draftsOf } from '../runtime/tools/drafts';
 import type { Session } from '../runtime/session';
-import type { ChatScopeRead, Opening } from '../runtime/read-model';
+import { CapturedRead, type ChatScopeRead, type Opening } from '../runtime/read-model';
 import type { ScriptsState } from '../runtime/script-interactions';
 import type { ObjectStore } from '../runtime/store';
 import type { Turn } from '../runtime/talk';
@@ -261,6 +261,14 @@ export function useCharacter(id: string | null) {
 export function useStored<K extends Kind>(kind: K, id: string | null): Stored<K> | null {
   const { read } = useSession();
   return useRead(id === null ? null : read.object(kind, id), snapshotNull);
+}
+
+// A render's read through runtime functions that take the store, subscribed to exactly what it read. inputs: every value
+// besides the store that the read takes.
+export function useCaptured<T>(read: (store: ObjectStore) => T, inputs: unknown[]): T {
+  const { store } = useSession();
+  const model = useMemo(() => new CapturedRead<T>(store), [store]);
+  return useSyncExternalStore(model.subscribe, () => model.read(read, inputs));
 }
 
 export function useChatDisplay(id: string, opening: Opening, screen: ChatScope['screen']) {

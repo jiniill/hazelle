@@ -5,7 +5,7 @@ import type { Route } from '../../runtime/assignment';
 import { modelProfile } from '../../runtime/profiles';
 import { tokens } from '../common/receipt';
 import { MODEL_SETTINGS } from '../common/words';
-import { useStore } from '../session';
+import { useCaptured } from '../session';
 import { SendNote } from '../ui';
 import { breakCauses, SHORT } from './CacheDiagnosis';
 import { partName } from './ChatSent';
@@ -80,10 +80,10 @@ export function nextWarning(next: NonNullable<CacheNotes['next']>, recurrence: C
 }
 
 export function ChatCache({ cache, onOpen }: { cache: CacheNotes; onOpen: () => void }) {
-  const store = useStore();
   const now = useNow(cache.until);
   const { next } = cache;
-  const warning = next ? nextWarning(next, cache.recurrence, profileName(store, next.route)) : undefined;
+  const profile = useCaptured((store) => (next ? profileName(store, next.route) : null), [next]);
+  const warning = next ? nextWarning(next, cache.recurrence, profile) : undefined;
   // A provider caching on its own tells no time to count down, so only a warning shows.
   if (next?.forecast.prefix) return warning ? <SendNote label={PREFIX_TITLE} title={PREFIX_TITLE} warning={warning} spareLabel onClick={onOpen} /> : null;
   if (cache.until === null || now >= cache.until) return null;

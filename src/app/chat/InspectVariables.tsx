@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { VARIABLE_LIMITS, type InspectedVariable, type VariableInspection } from '../../engine/render';
 import { shown } from '../../model/chat';
 import { inspectToggles } from '../../runtime/chat-context';
@@ -44,7 +44,8 @@ function ValueEditor({ chat, version, busy, variable, onDone }: { chat: string; 
 
 export function Variables({ chat, sending, busy }: { chat: string; sending: Sending | null | undefined; busy: boolean }) {
   const { store, read } = useSession();
-  const last = read.chat(chat).snapshot()?.messages.at(-1);
+  const model = read.chat(chat);
+  const last = useSyncExternalStore(model.subscribe, model.snapshot)?.messages.at(-1);
   const [inspected, setInspected] = useState<VariableInspection | null | undefined>(undefined);
   const [open, setOpen] = useState<string | null>(null);
   useEffect(() => {

@@ -15,7 +15,7 @@ const store = {
   }),
   upsert: vi.fn(async () => ({ ok: true })),
 };
-vi.mock('../session', () => ({ useSession: () => ({ store }) }));
+vi.mock('../session', () => ({ useSession: () => ({ store }), useCaptured: (read: (reader: typeof store) => unknown) => read(store) }));
 vi.mock('../toast', () => ({ useToast: () => ({ failed: vi.fn(), settled: vi.fn() }) }));
 
 beforeEach(() => {

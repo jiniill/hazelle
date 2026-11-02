@@ -18,6 +18,7 @@ const translating = { live: new Map<string, string>(), failed: new Map() };
 const pictures: [] = [];
 vi.mock('../session', () => ({
   useSession: () => session,
+  useCaptured: (read: (store: typeof session.store) => unknown) => read(session.store),
   useChildren: () => pictures,
   useIllustrating: () => drawings,
   useTranslating: () => translating,

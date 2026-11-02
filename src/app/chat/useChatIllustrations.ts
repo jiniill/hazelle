@@ -8,7 +8,7 @@ import { pictureSizes } from '../../engine/illustrate';
 import { removeIllustration, restoreIllustration, sceneWriterOf, type IllustrateFailure } from '../../runtime/illustrate';
 import { illustrationPrompt } from '../../runtime/prompts';
 import { describeIllustrateFailure } from '../common/failure';
-import { useChildren, useIllustrating, useSession } from '../session';
+import { useCaptured, useChildren, useIllustrating, useSession } from '../session';
 import { useToast } from '../toast';
 
 // The failures a toast already said: each is said once, though the chat is left and opened again, and once for all the
@@ -37,9 +37,10 @@ export function useChatIllustrations(chatId: string, id: string | null, chat: Ch
   const { character } = chat;
   const { store, illustrator } = useSession();
   const toast = useToast();
-  const illustrate = chatIllustrate(store, chat);
-  const sceneWriter = sceneWriterOf(store, chat);
-  const prompt = illustrationPrompt(store, illustrate.prompt);
+  const { illustrate, sceneWriter, prompt } = useCaptured((store) => {
+    const illustrate = chatIllustrate(store, chat);
+    return { illustrate, sceneWriter: sceneWriterOf(store, chat), prompt: illustrationPrompt(store, illustrate.prompt) };
+  }, [chat]);
   // The frame a picture being drawn or placed takes: the 삽화 prompt's size tier; without a prompt nothing is drawn.
   const sizes = pictureSizes(prompt.kind === 'prompt' ? prompt.prompt.value : {});
   const illustrations = useChildren('illustration', id);

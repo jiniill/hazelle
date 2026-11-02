@@ -15,7 +15,7 @@ import { TaskModelRow, type PromptDoor } from '../common/TaskPrompt';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
 import { CHAPTER, follows, inFeature, inSettings, MODEL_ROLES, opens, resetTo, SCOPE, scopeTag } from '../common/words';
-import { useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
+import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
 import { Button, Callout, ConfirmDialog, Empty, IconButton, List, MenuItem, MoreMenu, Progress, Row, Section, SidePanel, Stack, Text, TextField } from '../ui';
@@ -67,9 +67,8 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   const { running, failed, chapterFailed, indexing, indexFailed } = useRemembering();
   const [messagePositions] = useState(() => new MessagePositions());
   const positions = messagePositions.read(messages);
-  const setup = memorySetup(store, own);
   // A tool holding the slot leaves these records as they are, readable, until the slot is theirs again (design §6.10).
-  const owner = memoryOwner(store, own);
+  const { setup, owner, embeds } = useCaptured((store) => ({ setup: memorySetup(store, own), owner: memoryOwner(store, own), embeds: !('kind' in embedModel(store)) }), [own]);
   const holder = owner?.kind === 'tool' ? owner.unit : null;
   const view = useView(id, busy, [memory, own, messages, settings, prompts]);
   const [rebuilding, setRebuilding] = useState(false);
@@ -94,7 +93,6 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   const unchaptered = chapterFailed.get(id);
   const embedding = indexing.get(id);
   const unindexed = indexFailed.get(id);
-  const embeds = !('kind' in embedModel(store));
   const rows = memoryRows(memory);
   const retry = { label: ACTS.retry.label, onClick: () => session.memory.retry(id) };
   const more = (
@@ -229,9 +227,7 @@ function MemoryFill({ view }: { view: MemoryView }) {
 }
 
 function WriterRow({ chat, onEditPrompt }: { chat: Chat; onEditPrompt: (door: PromptDoor) => void }) {
-  const store = useStore();
-  const writer = memoryWriter(store, chat);
-  const prompt = memoryPrompt(store);
+  const { writer, prompt } = useCaptured((store) => ({ writer: memoryWriter(store, chat), prompt: memoryPrompt(store) }), [chat]);
   return (
     <TaskModelRow
       label="기억 모델"

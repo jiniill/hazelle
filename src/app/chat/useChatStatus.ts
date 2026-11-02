@@ -5,7 +5,7 @@ import type { Character } from '../../model/library';
 import { setStatusScript } from '../../runtime/characters';
 import { chatScripts, packsOf, statusBoxes, statusPlaces } from '../../runtime/chat-context';
 import type { Shown } from '../../runtime/talk';
-import { useSession } from '../session';
+import { useCaptured, useSession } from '../session';
 import { moduleName, scriptName } from '../common/words';
 import { useToast } from '../toast';
 import { useSeen } from './useSeen';
@@ -17,13 +17,16 @@ export function useChatStatus(chat: Chat, settings: Character | null, view: Disp
   const card = settings?.card ?? null;
   const bot = settings?.decor !== false;
   // 상태창 지정 (design §6.4).
-  const scripts = bot && card ? chatScripts(packsOf(store, chat)) : [];
+  const { scripts, names } = useCaptured((store) => {
+    const scripts = bot && card ? chatScripts(packsOf(store, chat)) : [];
+    const names = scripts.map(({ script, index, module }) => {
+      const name = scriptName(script.name, 'regex', index);
+      return module === null ? name : `${name} · ${moduleName(store.get('module', module)?.value.name ?? '')}`;
+    });
+    return { scripts, names };
+  }, [bot, card, chat]);
   const statusScripts = statusPlaces(scripts, settings?.statusScripts ?? []);
-  const nameAt = (place: number) => {
-    const { script, index, module } = scripts[place]!;
-    const name = scriptName(script.name, 'regex', index);
-    return module === null ? name : `${name} · ${moduleName(store.get('module', module)?.value.name ?? '')}`;
-  };
+  const nameAt = (place: number) => names[place]!;
   const status = statusBoxes(view, messages, statusScripts).map((box) => ({ ...box, name: nameAt(box.place) }));
   const offered = (index: number) =>
     view.drawn[index]!.flatMap((place) => (scripts[place] ? [{ id: scripts[place].mark, name: nameAt(place), marked: statusScripts.some(({ place: marked }) => marked === place) }] : []));

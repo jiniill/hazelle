@@ -2,7 +2,7 @@ import { ImageIcon } from 'lucide-react';
 import { IllustrateRows } from '../common/IllustrateRows';
 import { PerCharacter } from '../common/TaskPrompt';
 import { ILLUSTRATE_NOTE, ILLUSTRATE_NOTE_UNSENT, scopeTag } from '../common/words';
-import { useSession } from '../session';
+import { useCaptured } from '../session';
 import { Divider, Menu, Section, Stack, Text, TextField, ToolButton } from '../ui';
 import type { RowTool } from './ChatToolRow';
 import type { IllustrateSetup } from '../../runtime/characters';
@@ -57,8 +57,7 @@ function IllustrateForm({ id, illustrate, note, sceneWriter, card, onChange, onO
 }
 
 function NoteEditor({ id, note, prompt, onSave }: { id: string | null; note: string | undefined; prompt: string | undefined; onSave: Props['onSaveNote'] }) {
-  const { store } = useSession();
-  const chosen = illustrationPrompt(store, prompt);
+  const chosen = useCaptured((store) => illustrationPrompt(store, prompt), [prompt]);
   const { text, status, change } = useChatNote('illustrate-note', id, note, onSave, null, '');
   const unsent = text.trim() !== '' && chosen.kind === 'prompt' && !sendsIllustrateNote(chosen.prompt.value);
   return (
