@@ -3,12 +3,13 @@ import { readLorebook } from './lorebook';
 import { METADATA_BYTES } from './inflate';
 import { hazelleSource, printOf, readHazelle, readModule, type ConvertedBundle } from './hazelle';
 import { UNSUPPORTED_KINDS, type Bot, type Card, type ImportFailure, type ImportedModule, type ImportReport, type ImportResult, type Imported, type LoreEntry } from './types';
-import { base64, readPng } from './png';
+import { readPng } from './png';
 import { readPersona } from './persona';
 import { readRisum, readRisumModule, writeRisum } from './risum';
 import type { FileSource } from './source';
 import { writeToggles } from './toggles';
 import { openZip, type Zip } from './zip';
+import { fromBase64 } from '../../connectors/base64';
 import { isRecord } from '../../connectors/values';
 
 const utf8 = new TextDecoder();
@@ -55,7 +56,7 @@ function fromPng(bytes: Uint8Array<ArrayBuffer>): ImportResult {
   if (!png.card) return png.persona === null ? fail('unreadable', 'the PNG holds no card') : readPersona(png.persona, png.image);
   if (png.card.startsWith('rcc||')) return fail('encrypted');
   const tally: Tally = new Map();
-  const converted = convert(JSON.parse(utf8.decode(base64(png.card))), null, tally);
+  const converted = convert(JSON.parse(utf8.decode(fromBase64(png.card))), null, tally);
   return converted ? done('png', converted, { bytes: png.image, type: 'image/png' }, { chunks: png.assets }, tally, NOT_OWN) : fail('unreadable', 'not a character card');
 }
 
@@ -195,7 +196,7 @@ function reader(uri: string, { zip, chunks }: Holders): (() => Uint8Array<ArrayB
 
 function decode(text: string): Uint8Array<ArrayBuffer> | null {
   try {
-    return base64(text);
+    return fromBase64(text);
   } catch {
     return null;
   }

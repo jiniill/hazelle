@@ -1,3 +1,4 @@
+import { fromBase64, toBase64 } from '../connectors/base64';
 import type { Memory, Vector } from '../model/memory';
 import { placesOf, recalledText, recordText, type ChatRead, type Standing } from './memory';
 
@@ -21,11 +22,11 @@ export function quantize(values: number[], at: number): Vector {
   const normal = unit(values);
   const scale = normal.reduce((most, value) => Math.max(most, Math.abs(value)), 0) || 1;
   const bytes = Int8Array.from(normal, (value) => Math.round((value / scale) * 127));
-  return { at, scale, data: btoa(String.fromCharCode(...new Uint8Array(bytes.buffer))) };
+  return { at, scale, data: toBase64(new Uint8Array(bytes.buffer)) };
 }
 
 export const dequantize = ({ scale, data }: Vector): Float32Array => {
-  const bytes = new Int8Array(Uint8Array.from(atob(data), (char) => char.charCodeAt(0)).buffer);
+  const bytes = new Int8Array(fromBase64(data).buffer);
   return unit(Float32Array.from(bytes, (byte) => (byte / 127) * scale));
 };
 
