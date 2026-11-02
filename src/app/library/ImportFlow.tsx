@@ -167,6 +167,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // A file is read once for its preview and again to save it, so a batch never holds every archive while the user looks.
+// A zip's files are the exception: unpacked, they stay in memory until the dialog closes.
   async function reading<T extends object>(file: File, place: ModulePlace | null, use: (parsed: Parsed) => Promise<T>): Promise<T | string> {
     return withReader(async (reader) => {
       const parsed = await reader.card(file, place?.kind === 'always');
