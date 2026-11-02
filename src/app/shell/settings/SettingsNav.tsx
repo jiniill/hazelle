@@ -42,9 +42,10 @@ const APP: Place[] = [
 ];
 const ADMIN: Place = { page: 'admin', label: PAGES.admin, icon: ShieldCheck, route: { kind: 'admin' } };
 
-function useGroups(): Group[] {
+function useSettingsNav() {
   const { admin } = useAccount();
-  return [...GROUPS, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
+  const groups: Group[] = [...GROUPS, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
+  return { groups, holds: useHolds(), search: useSettingsSearch(groups.flatMap(({ places }) => places)) };
 }
 
 // What each page holds, at its row's end in the sidebar and the phone list.
@@ -88,9 +89,7 @@ function useSettingsSearch(places: Place[]) {
 export const settingsEntry = (wide: boolean): Route => (wide ? GROUPS[0]!.places[0]!.route : { kind: 'settings' });
 
 export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 'list'; onClose: () => void }) {
-  const groups = useGroups();
-  const holds = useHolds();
-  const search = useSettingsSearch(groups.flatMap(({ places }) => places));
+  const { groups, holds, search } = useSettingsNav();
   return (
     <LayerSidebar title={SETTINGS} onClose={onClose} search={search.field} seek={search.words ? undefined : current}>
       {search.words ? (
@@ -113,9 +112,7 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
 }
 
 export function SettingsList({ onClose }: { onClose: () => void }) {
-  const holds = useHolds();
-  const groups = useGroups();
-  const search = useSettingsSearch(groups.flatMap(({ places }) => places));
+  const { groups, holds, search } = useSettingsNav();
   return (
     <Screen top={<NavBar title={SETTINGS} close backLabel={`${SETTINGS} 닫기`} onBack={onClose} />}>
       {search.field}
