@@ -4,7 +4,7 @@ import type { ConnectionType } from '../../connectors/types';
 import { START_PAGE } from '../../contracts/start';
 import { countFirstPage } from '../../runtime/first-page';
 import { LegalNotice } from '../common/LegalNotice';
-import { Beat, Brand, Button, Callout, ChoiceGroup, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
+import { Beat, Brand, Button, Callout, ChoiceGroup, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps } from '../ui';
 import { EXAMPLE } from './example';
 
 const Trial = lazy(() => import('./Trial').then(({ Trial }) => ({ default: Trial })));
@@ -57,13 +57,13 @@ export function StartPage({ onOpen, onSignIn }: { onOpen: () => void; onSignIn: 
         top={
           <>
             <Brand />
-            <Button variant="ghost" size="sm" onClick={onSignIn}>로그인</Button>
+            <Row kind="actions">
+              <Button variant="ghost" size="sm" onClick={enter}>가입 없이 열기</Button>
+              <Button variant="ghost" size="sm" onClick={onSignIn}>로그인</Button>
+            </Row>
           </>
         }
-      >
-        <Button onClick={() => document.getElementById('trial')?.scrollIntoView()}>직접 해보기</Button>
-        <Button variant="secondary" onClick={enter}>가입 없이 열기</Button>
-      </Hero>
+      />
       <main>
         <Beat id="example" title={example.title} line={example.line} kind="talk">
           <ExampleChat onTalking={setTalking} />

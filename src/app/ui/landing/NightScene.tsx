@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
 import { hasFinePointer, MEDIA } from '../foundation/media';
+import { along, paceOfPage, samePace, stillness, useWalkOn, type Pace } from './walkStops';
 import arin from './art/arin.webp';
 import boughTall from './art/bough-tall.webp';
 import boughWide from './art/bough-wide.webp';
@@ -28,46 +29,42 @@ const ROW_B = { wide: rowBWide, tall: rowBTall };
 const ROW_C = { wide: rowCWide, tall: rowCTall };
 const ROW_D = { wide: rowDWide, tall: rowDTall };
 
-// How far the walk has come at a share of the page's scroll: it slows at 아린's clearing and the lanterns while each is read, then closes on the cabin's door, reached as the threshold is crossed.
-const WALK: readonly (readonly [number, number])[] = [[0, 0], [0.19, 2050], [0.27, 2140], [0.37, 3100], [0.44, 3400], [0.512, 5800], [1, 7600]];
+// How far the walk has come at a tuned share of the scroll: it slows at 아린's clearing and the lanterns while each is read, then closes on the cabin's door, reached as the threshold is crossed.
+const WALK: readonly (readonly [number, number])[] = [[0, 0], [0.1725, 2100], [0.27, 2160], [0.331, 3250], [0.44, 3450], [0.512, 5800], [1, 7600]];
 const LENS = 1000;
 const NEAREST = 14;
 // The doorway must fill the screen; the rest of the picture is off it by then, so only this plane may grow this far.
 const AT_THE_DOOR = 40;
-const SAMPLES = 40;
+const SAMPLES = 120;
 const CLOCK = 1000;
 
-const walked = (share: number) => {
-  const after = WALK.findIndex(([at]) => at >= share);
-  if (after <= 0) return 0;
-  const [fromShare, fromWalk] = WALK[after - 1]!;
-  const [toShare, toWalk] = WALK[after]!;
-  return fromWalk + ((share - fromShare) / (toShare - fromShare)) * (toWalk - fromWalk);
-};
+type Frames = (pace: Pace) => Keyframe[];
+const stops = (at: (share: number) => Keyframe): Frames => (pace) =>
+  Array.from({ length: SAMPLES + 1 }, (_, index) => ({ ...at(index / SAMPLES), offset: pace(index / SAMPLES) }));
 const between = (low: number, high: number, at: number) => Math.min(Math.max((at - low) / (high - low), 0), 1);
 
 type Seen = { in?: readonly [number, number]; out?: readonly [number, number] };
 const seenAt = ({ in: rise, out: fall }: Seen, share: number) => (rise ? between(rise[0], rise[1], share) : 1) * (fall ? 1 - between(fall[0], fall[1], share) : 1);
 
 // Each plane grows as its nearness says: a flat picture and a scale, so no browser's 3D is asked to hold depths this far apart.
-const planeFrames = (z: number, seen: Seen, nearest: number): Keyframe[] =>
-  Array.from({ length: SAMPLES + 1 }, (_, index) => {
-    const share = index / SAMPLES;
-    const left = Math.max(z + LENS - walked(share), 1);
+const planeFrames = (z: number, seen: Seen, nearest: number): Frames =>
+  stops((share) => {
+    const left = Math.max(z + LENS - along(WALK, share), 1);
     return { transform: `scale(${Math.min((z + LENS) / left, nearest).toFixed(4)})`, opacity: seenAt(seen, share).toFixed(3) };
   });
 
 const SCROLL = typeof ScrollTimeline === 'function' ? new ScrollTimeline({ source: document.documentElement }) : null;
-const stillness = () => matchMedia(MEDIA.reducedMotion).matches;
+const PaceOfPage = createContext<Pace>(samePace);
 
-function useWalk(frames: () => Keyframe[]) {
+function useWalk(frames: Frames) {
   const node = useRef<HTMLDivElement>(null);
+  const pace = useContext(PaceOfPage);
   useLayoutEffect(() => {
     if (stillness()) return;
-    const animation = node.current!.animate(frames(), { duration: CLOCK, fill: 'both', easing: 'linear', ...(SCROLL ? { timeline: SCROLL } : {}) });
+    const animation = node.current!.animate(frames(pace), { duration: CLOCK, fill: 'both', easing: 'linear', ...(SCROLL ? { timeline: SCROLL } : {}) });
     if (!SCROLL) animation.pause();
     return () => animation.cancel();
-  }, []);
+  }, [pace]);
   return node;
 }
 
@@ -85,15 +82,21 @@ const ROWS: readonly { art: { wide: string; tall: string }; z: number; seen: See
   { art: ROW_C, z: 200, seen: { out: [0.05, 0.09] }, takes: '7s' },
 ];
 
-// The room covers the forest from the threshold (a share of 0.51 to 0.58, by the screen) to the way out (from 0.6): what leaves or arrives between them is never seen going.
+// The room covers the forest from the threshold to the way out, 0.51 to 0.6 tuned: what leaves or arrives between them is never seen going.
 const CABIN = { z: 5000, seen: { in: [0.4, 0.46], out: [0.555, 0.59] } } as const;
 const ARIN = { z: 1500, seen: { out: [0.25, 0.275] } } as const;
 const BOUGH = { z: 40, seen: { out: [0.02, 0.05] } } as const;
 const HILL = { z: 40000, seen: { in: [0.78, 0.92] } } as const;
 const RIDGE = { z: 60000, seen: {} } as const;
 
-const stops = (at: (share: number) => Keyframe) => () => Array.from({ length: SAMPLES + 1 }, (_, index) => at(index / SAMPLES));
-const MOON = stops((share) => ({ transform: `translate3d(0, ${share < 0.44 ? between(0, 0.44, share) * 5 : 5 + between(0.44, 0.84, share) * 69}vh, 0)` }));
+// On a tall screen the page's words reach across the moon's place, so it climbs clear of them while they are read.
+const MOON: Frames = (pace) => {
+  const climbs = matchMedia(MEDIA.tallScreen).matches ? 11 : 0;
+  return stops((share) => {
+    const climbed = climbs * between(0, 0.1725, share) * (1 - between(0.44, 0.84, share));
+    return { transform: `translate3d(0, ${(share < 0.44 ? between(0, 0.44, share) * 5 : 5 + between(0.44, 0.84, share) * 69) - climbed}vh, 0)` };
+  })(pace);
+};
 const DAWN = stops((share) => ({ opacity: between(0.56, 1, share) }));
 // The carried lantern dips and rises with each step of the walk, and is not needed once the sun is up.
 const STRIDES = 22;
@@ -120,7 +123,7 @@ function Art({ wide, tall, priority }: { wide: string; tall: string; priority?: 
 }
 
 function Plane({ z, seen, doorward, children }: { z: number; seen: Seen; doorward?: boolean; children: ReactNode }) {
-  const node = useWalk(() => planeFrames(z, seen, doorward ? AT_THE_DOOR : NEAREST));
+  const node = useWalk(planeFrames(z, seen, doorward ? AT_THE_DOOR : NEAREST));
   return (
     <div className={styles.look} style={{ '--near': (LENS / (LENS + z)).toFixed(3) } as CSSProperties}>
       <div ref={node} className={doorward ? `${styles.plane} ${styles.doorward}` : styles.plane}>{children}</div>
@@ -128,7 +131,7 @@ function Plane({ z, seen, doorward, children }: { z: number; seen: Seen; doorwar
   );
 }
 
-function Moving({ className, frames, children }: { className: string; frames: () => Keyframe[]; children?: ReactNode }) {
+function Moving({ className, frames, children }: { className: string; frames: Frames; children?: ReactNode }) {
   const node = useWalk(frames);
   return <div ref={node} className={className}>{children}</div>;
 }
@@ -138,6 +141,24 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
   const stage = useRef<HTMLDivElement>(null);
   const lantern = useRef<HTMLDivElement>(null);
   const [walking, setWalking] = useState(false);
+  const [pace, setPace] = useState<Pace>(() => samePace);
+  useWalkOn();
+
+  useLayoutEffect(() => {
+    if (stillness()) return;
+    // Measured against the page's content, not the window: a phone's bars coming and going must not rebuild the walk mid-scroll.
+    let fitted = '';
+    const fit = () => {
+      const size = `${document.body.offsetWidth}x${document.body.offsetHeight}`;
+      if (size === fitted) return;
+      fitted = size;
+      setPace(() => paceOfPage());
+    };
+    fit();
+    const refit = new ResizeObserver(fit);
+    refit.observe(document.body);
+    return () => refit.disconnect();
+  }, []);
 
   useEffect(() => {
     if (stillness()) return;
@@ -162,7 +183,7 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
       removeEventListener('scroll', follow);
       removeEventListener('resize', follow);
     };
-  }, [walking]);
+  }, [walking, pace]);
 
   useEffect(() => {
     if (stillness()) return;
@@ -209,61 +230,63 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
   }, []);
 
   return (
-    <div ref={stage} className={styles.scene} data-glow={glow} data-talking={talking || undefined} data-inside={inside || undefined} aria-hidden="true">
-      <div className={styles.flat}><Art wide={skyWide} tall={skyTall} priority /></div>
-      <Moving className={styles.moonPath} frames={MOON}>
-        <div className={styles.halo} />
-        <img className={styles.moon} src={moon} alt="" decoding="async" />
-      </Moving>
-      <Moving className={styles.dawn} frames={DAWN} />
-      <Moving className={styles.sun} frames={SUN} />
-      <Plane {...RIDGE}><Art wide={ridgeWide} tall={ridgeTall} /></Plane>
-      {walking && <Plane {...HILL}><Art wide={hillWide} tall={hillTall} /></Plane>}
-      {ROWS.map(({ art, z, seen, takes }) => (seen.in && !walking ? null : (
-        <Plane key={z} z={z} seen={seen}>
-          {takes ? <div className={styles.sway} style={{ '--sway-takes': takes } as CSSProperties}><Art wide={art.wide} tall={art.tall} priority={z === 200} /></div> : <Art wide={art.wide} tall={art.tall} />}
-        </Plane>
-      )))}
-      {walking && (
-        <Plane {...CABIN} doorward>
-          <div className={styles.cabin}><img src={cabin} alt="" decoding="async" onLoad={ready} /></div>
-        </Plane>
-      )}
-      <Plane {...ARIN}>
-        <div className={styles.arin}>
-          <img src={arin} alt="" decoding="async" />
-          <div className={styles.arinGlow} />
-        </div>
-      </Plane>
-      <Plane {...BOUGH}>
-        <div className={styles.bough}><Art wide={boughWide} tall={boughTall} /></div>
-      </Plane>
-      <div className={styles.haze} />
-      <div className={styles.warmth} />
-      <div ref={lantern} className={styles.lantern}>
-        <Moving className={styles.step} frames={STEP}>
-          <div className={styles.veil} />
-          <div className={styles.carried} />
+    <PaceOfPage.Provider value={pace}>
+      <div ref={stage} className={styles.scene} data-glow={glow} data-talking={talking || undefined} data-inside={inside || undefined} aria-hidden="true">
+        <div className={styles.flat}><Art wide={skyWide} tall={skyTall} priority /></div>
+        <Moving className={styles.moonPath} frames={MOON}>
+          <div className={styles.halo} />
+          <img className={styles.moon} src={moon} alt="" decoding="async" />
         </Moving>
-      </div>
-      <div className={styles.flies}>
-        {FIREFLIES.map(({ key, style }) => (
-          <div key={key} className={styles.gather} style={style}>
-            <div className={styles.fly} />
+        <Moving className={styles.dawn} frames={DAWN} />
+        <Moving className={styles.sun} frames={SUN} />
+        <Plane {...RIDGE}><Art wide={ridgeWide} tall={ridgeTall} /></Plane>
+        {walking && <Plane {...HILL}><Art wide={hillWide} tall={hillTall} /></Plane>}
+        {ROWS.map(({ art, z, seen, takes }) => (seen.in && !walking ? null : (
+          <Plane key={z} z={z} seen={seen}>
+            {takes ? <div className={styles.sway} style={{ '--sway-takes': takes } as CSSProperties}><Art wide={art.wide} tall={art.tall} priority={z === 200} /></div> : <Art wide={art.wide} tall={art.tall} />}
+          </Plane>
+        )))}
+        {walking && (
+          <Plane {...CABIN} doorward>
+            <div className={styles.cabin}><img src={cabin} alt="" decoding="async" onLoad={ready} /></div>
+          </Plane>
+        )}
+        <Plane {...ARIN}>
+          <div className={styles.arin}>
+            <img src={arin} alt="" decoding="async" />
+            <div className={styles.arinGlow} />
           </div>
-        ))}
-      </div>
-      {(walking || inside) && (
-        <div className={styles.room}>
-          <div className={styles.roomPicture}>
-            <Art wide={roomWide} tall={roomTall} />
-            <div className={styles.roomHearth} />
-            <div className={styles.roomLamp} />
-          </div>
+        </Plane>
+        <Plane {...BOUGH}>
+          <div className={styles.bough}><Art wide={boughWide} tall={boughTall} /></div>
+        </Plane>
+        <div className={styles.haze} />
+        <div className={styles.warmth} />
+        <div ref={lantern} className={styles.lantern}>
+          <Moving className={styles.step} frames={STEP}>
+            <div className={styles.veil} />
+            <div className={styles.carried} />
+          </Moving>
         </div>
-      )}
-      <div className={styles.grain} />
-      <div className={styles.curtain} />
-    </div>
+        <div className={styles.flies}>
+          {FIREFLIES.map(({ key, style }) => (
+            <div key={key} className={styles.gather} style={style}>
+              <div className={styles.fly} />
+            </div>
+          ))}
+        </div>
+        {(walking || inside) && (
+          <div className={styles.room}>
+            <div className={styles.roomPicture}>
+              <Art wide={roomWide} tall={roomTall} />
+              <div className={styles.roomHearth} />
+              <div className={styles.roomLamp} />
+            </div>
+          </div>
+        )}
+        <div className={styles.grain} />
+        <div className={styles.curtain} />
+      </div>
+    </PaceOfPage.Provider>
   );
 }

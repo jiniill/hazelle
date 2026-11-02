@@ -2,15 +2,17 @@ import { useEffect, useRef, type FormEventHandler, type ReactNode } from 'react'
 import lantern from './art/lantern.webp';
 import styles from './Landing.module.css';
 
-// top: the doors' row. children: what the hero's words lead to.
-export function Hero({ top, title, line, children }: { top: ReactNode; title: string; line: string; children: ReactNode }) {
+// top: the doors' row. The lantern below the words says there is more further down, and needs no words of its own.
+export function Hero({ top, title, line }: { top: ReactNode; title: string; line: string }) {
   return (
-    <header className={styles.hero}>
+    <header className={styles.hero} data-walk-stop="">
       <div className={styles.top}>{top}</div>
       <div className={styles.heroWords}>
         <h1 className={styles.heroTitle}>{title}</h1>
         <p className={styles.line}>{line}</p>
-        <div className={styles.doors}>{children}</div>
+      </div>
+      <div className={styles.onward} aria-hidden="true">
+        <Lantern lit />
       </div>
     </header>
   );
@@ -19,7 +21,7 @@ export function Hero({ top, title, line, children }: { top: ReactNode; title: st
 // kind: how the words and what they lead to share the screen, with the walk's scene standing in the room left over.
 export function Beat({ id, title, line, kind, foot, children }: { id?: string; title: string; line?: string; kind: 'talk' | 'lanterns' | 'points' | 'finish'; foot?: ReactNode; children: ReactNode }) {
   return (
-    <section id={id} className={`${styles.beat} ${styles[kind]}`}>
+    <section id={id} className={`${styles.beat} ${styles[kind]}`} data-walk-stop="">
       <div className={styles.words}>
         <h2 className={styles.title}>{title}</h2>
         {line && <p className={styles.line}>{line}</p>}
@@ -40,7 +42,7 @@ export function Indoors({ id, title, line, inside, talking, onInside, children }
     return () => crossing.disconnect();
   }, []);
   return (
-    <section id={id} className={`${styles.beat} ${styles.indoors}`}>
+    <section id={id} className={`${styles.beat} ${styles.indoors}`} data-walk-stop="top">
       <div ref={stay} className={styles.stay} />
       <div className={styles.seat} data-inside={inside || undefined}>
         <div className={styles.panel} data-talking={talking || undefined}>

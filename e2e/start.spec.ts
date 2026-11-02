@@ -59,7 +59,7 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   await page.getByRole('button', { name: '당신은 누구예요?', exact: true }).click();
   await expect(page.getByText('이제 당신 이름을 들려줄 차례예요.', { exact: false })).toBeVisible();
 
-  await page.getByRole('button', { name: '직접 해보기', exact: true }).click();
+  await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
   const pageLength = () => page.evaluate<number>('document.documentElement.scrollHeight');
   const lengthBefore = await pageLength();
   await page.getByLabel(/API 키$/).fill(KEY);
@@ -86,6 +86,33 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   // The browser now holds a guest, so the front door opens the app.
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: '내 API 키로 바로 시작하는 AI 캐릭터 챗' })).toHaveCount(0);
+});
+
+test('one wheel notch walks on to the next stop, and the door looks the same on any screen', async ({ page }) => {
+  const scrollTop = () => page.evaluate<number>('Math.round(scrollY)');
+  const centred = (id: string) => page.evaluate<number>(`(() => { const { top, height } = document.getElementById('${id}').getBoundingClientRect(); return Math.round(top + scrollY + (height - innerHeight) / 2); })()`);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.mouse.move(400, 300);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(scrollTop, { timeout: 5000 }).toBe(await centred('example'));
+
+  // The trial's panel must not hold the page: a notch over its fields still leaves the room.
+  await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
+  const room = await scrollTop();
+  await page.getByLabel(/API 키$/).hover();
+  await page.mouse.wheel(0, 100);
+  await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(room + 500);
+
+  const doorScale = async (width: number, height: number) => {
+    await page.setViewportSize({ width, height });
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
+    await page.waitForTimeout(500);
+    return page.evaluate<number>(`Math.max(...document.getAnimations().map((animation) => animation.effect.target).filter((node) => String(node.className).includes('doorward')).map((node) => new DOMMatrix(getComputedStyle(node).transform).a))`);
+  };
+  expect(Math.abs((await doorScale(390, 664)) - (await doorScale(1440, 900)))).toBeLessThan(1.5);
 });
 
 test('a phone gets the same page', async ({ page }) => {

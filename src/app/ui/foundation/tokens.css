@@ -609,6 +609,7 @@
   --landing-gap: clamp(72px, 14vh, 160px);
   --landing-edge: clamp(20px, 5vw, 72px);
   --landing-walk: 58svh;
+  --landing-onward-takes: 2.8s;
   --landing-room-stay: 64svh;
   --landing-room-after: 8svh;
   --landing-room-panel: 36rem;
@@ -648,12 +649,11 @@
   --landing-said-me: #f2c97e;
   --landing-choice-line: #f2c97e73;
   --landing-choice-hover: #f2c97e24;
-  --landing-point-dim: 0.28;
   --landing-tracking: -0.01em;
   --landing-cta-glow: drop-shadow(0 0 26px #ffd28c99);
   --landing-caret: 2px;
   --landing-caret-blink: 900ms;
-  --landing-point-gap: clamp(72px, 22svh, 220px);
+  --landing-point-gap: clamp(32px, 7svh, 72px);
   --landing-finish-ink: #fff8ea;
   --landing-finish-shadow: 0 1px 2px #2a124066, 0 0 36px #2a1240a6;
   --layer-raised: 2;
@@ -860,7 +860,8 @@
     --scene-moon-top: 14vh;
     --scene-moon-size: 76px;
     --scene-arin-x: 52.3%;
-    --scene-arin-height: 6vh;
+    --scene-arin-height: 4.8vh;
+    --scene-arin-ground: 26%;
     --scene-cabin-x: 49.6%;
     --scene-cabin-width: 17vw;
     --scene-room-width: max(100vw, 100svh * 941 / 1672);

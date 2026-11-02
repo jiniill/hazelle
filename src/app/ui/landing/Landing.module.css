@@ -3,7 +3,7 @@
 @layer looks {
   .hero {
     display: grid;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto 1fr auto;
     min-height: var(--landing-screen);
     width: min(100%, var(--landing-column));
     margin-inline: auto;
@@ -23,7 +23,6 @@
     align-content: center;
     justify-items: start;
     gap: var(--space-24);
-    padding-block-end: var(--landing-gap);
   }
 
   .heroTitle,
@@ -58,11 +57,12 @@
     text-shadow: var(--scene-text-shadow);
   }
 
-  .doors {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-12);
-    font-size: var(--text-md);
+  /* Hangs still and sinks a little: down is the way on. */
+  .onward {
+    justify-self: center;
+    width: var(--landing-step-lantern);
+    transform-origin: 50% 0;
+    animation: onward var(--landing-onward-takes) var(--ease-loop) infinite;
   }
 
   /* Empty ground between beats is the walk itself: the scene gets a screen to itself. */
@@ -97,6 +97,14 @@
     max-width: var(--landing-talk-width);
   }
 
+  /* A tall screen has room for 아린 only below the conversation. */
+  @media (max-aspect-ratio: 1/1) {
+    .talk {
+      align-content: start;
+      min-height: var(--landing-screen);
+    }
+  }
+
   @media (min-width: 960px) {
     .lanterns {
       grid-template-columns: 4fr 7fr;
@@ -108,11 +116,6 @@
       grid-template-columns: 5fr 7fr;
       align-items: start;
       gap: var(--landing-edge);
-    }
-
-    .points .words {
-      position: sticky;
-      top: 22svh;
     }
   }
 
@@ -226,6 +229,7 @@
     min-height: 0;
     padding-block-start: var(--space-16);
     overflow-y: auto;
+    overscroll-behavior: contain;
     mask-image: var(--landing-talk-fade);
   }
 
@@ -570,7 +574,6 @@
     list-style: none;
   }
 
-  /* Each line comes up to full brightness while it is the one being read. */
   .promise {
     color: var(--scene-text);
     font-family: var(--font-story);
@@ -581,26 +584,29 @@
     text-shadow: var(--scene-text-shadow);
   }
 
-  @supports (animation-timeline: view()) {
-    .promise {
-      animation: promise linear both;
-      animation-timeline: view();
-      animation-range: cover 10% cover 90%;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .lanternLit::after,
+    .onward,
     .saidThem,
     .saidMe,
-    .caret,
-    .promise {
+    .caret {
       animation: none;
     }
 
     .seat,
     .seat[data-inside] {
       transition: none;
+    }
+  }
+
+  @keyframes onward {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) rotate(var(--landing-sway));
+    }
+
+    50% {
+      transform: translate3d(0, var(--space-12), 0) rotate(calc(var(--landing-sway) * -1));
     }
   }
 
@@ -629,18 +635,6 @@
   @keyframes caret {
     50% {
       opacity: 0;
-    }
-  }
-
-  @keyframes promise {
-    0%,
-    100% {
-      opacity: var(--landing-point-dim);
-    }
-
-    30%,
-    70% {
-      opacity: 1;
     }
   }
 }
