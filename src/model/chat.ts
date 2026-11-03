@@ -593,6 +593,7 @@ export function chatTitle(chat: Chat, messages: Message[], texts: string[]): str
 
 // count and preview are null while the chat has no saved summary.
 export type ChatSummary = { id: string; chat: Chat; count: number | null; title: string; preview: string | null; at: number | null; order: number };
+export const chatFolderOf = ({ chat }: Pick<ChatSummary, 'chat'>) => chat.folder ?? null;
 export type ChatItem = ChatSummary & { count: number; preview: string; messages: Message[] };
 export type SummaryRead = ({ kind: Kind; id: string } | { kind: Kind; list: true } | { kind: Kind; parent: string }) & { rev: number };
 export type Summary = {

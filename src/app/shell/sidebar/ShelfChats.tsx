@@ -1,6 +1,6 @@
 import { ChevronLeft, FolderPlus, MessageSquarePlus } from 'lucide-react';
 import { useMemo } from 'react';
-import type { ChatSummary } from '../../../model/chat';
+import { chatFolderOf, type ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
 import type { Shelf } from '../../../model/library';
 import { openCharacter } from '../../chat/characterBeside';
@@ -23,8 +23,6 @@ import { LayerButtons } from './LayerButtons';
 // Its own key: the character tree's open folders are LibrarySidebar's, and two hooks on one key miss each other's writes.
 const OPEN_FOLDERS = 'risu-alpha:open-chat-folders';
 
-const folderOf = (item: ChatSummary) => item.chat.folder ?? null;
-
 type Props = {
   page: boolean;
   shelf: Shelf<ChatSummary>;
@@ -35,7 +33,7 @@ type ListRow = { key: string; depth: number } & ({ folder: FolderTree } | { chat
 // Keyed by its character, so the search starts empty in each.
 export function ShelfChats({ page, shelf }: Props) {
   const set = useMemo(() => ({ chats: shelf.id }), [shelf.id]);
-  const index = useFolderIndex(set, shelf.chats, folderOf);
+  const index = useFolderIndex(set, shelf.chats, chatFolderOf);
   const folderActions = useFolderActions(set);
   const naming = useNaming(folderActions);
   const moving = useMoving(set, index, (id) => shelf.chats.find((item) => item.id === id)?.chat.folder ?? null);
@@ -68,7 +66,7 @@ export function ShelfChats({ page, shelf }: Props) {
 
   const chatRow = (item: ChatSummary) => {
     const preview = item.preview ?? '미리보기 없음';
-    const where = words ? whereIs(index, folderOf(item)) : undefined;
+    const where = words ? whereIs(index, chatFolderOf(item)) : undefined;
     return (
       <ItemRow
         key={item.id}

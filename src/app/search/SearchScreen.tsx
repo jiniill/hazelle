@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import type { ChatSummary } from '../../model/chat';
+import { chatFolderOf, type ChatSummary } from '../../model/chat';
 import type { Shelf } from '../../model/library';
 import { foldTerm } from '../../model/search';
 import { liveChats, results, type Found } from '../../runtime/chat-search';
 import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
 import { noResults } from '../common/search';
+import { useFolderIndex, whereIs } from '../common/folders/filing';
 import { ago } from '../common/time';
 import { CHAT_SEARCH } from '../common/words';
 import { useLibrary, useSession } from '../session';
@@ -17,8 +18,6 @@ import { Callout, Empty, FoundRow, List, NavBar, Screen, SearchField, Stack, Tex
 // Typing settles this long before the messages are read for it; titles and previews answer every key.
 const SETTLE_MS = 300;
 
-// The one place a found chat's path is made.
-const chatPath = (character: string, title: Marked): Marked[] => [character, title];
 
 type Props = {
   query: string;
@@ -60,20 +59,7 @@ export function SearchScreen({ query, back, face, name }: Props) {
   });
 
   const open = ({ summary, hit }: Found) => navigate({ kind: 'chat', id: summary.id, ...(hit && { find: { term: typed.trim(), at: hit.message } }) });
-  const row = (each: Found) => {
-    const { summary, title, preview, hit } = each;
-    const shelf = shelves.get(summary.id)!;
-    return (
-      <FoundRow
-        key={summary.id}
-        face={face(shelf)}
-        path={chatPath(name(shelf), title ?? summary.title)}
-        snippet={hit?.lit ?? preview ?? summary.preview}
-        note={[hit && `메시지 ${hit.count}개`, summary.at !== null && ago(summary.at)].filter(Boolean).join(' · ')}
-        onClick={() => open(each)}
-      />
-    );
-  };
+  const row = (each: Found) => <FoundChat key={each.summary.id} found={each} shelf={shelves.get(each.summary.id)!} face={face} name={name} onOpen={() => open(each)} />;
   const reading = finding.term === term && finding.running;
   const failure = finding.term === term ? finding.failure : null;
   return (
@@ -99,5 +85,23 @@ export function SearchScreen({ query, back, face, name }: Props) {
         )}
       </Stack>
     </Screen>
+  );
+}
+
+type FoundProps = Pick<Props, 'face' | 'name'> & { found: Found; shelf: Shelf<ChatSummary>; onOpen: () => void };
+
+// Its own component so only the rows the list draws index their shelf's chat folders.
+function FoundChat({ found: { summary, title, preview, hit }, shelf, face, name, onOpen }: FoundProps) {
+  const set = useMemo(() => ({ chats: shelf.id }), [shelf.id]);
+  const folder = whereIs(useFolderIndex(set, shelf.chats, chatFolderOf), chatFolderOf(summary));
+  const path: Marked[] = [name(shelf), ...(folder ? [folder] : []), title ?? summary.title];
+  return (
+    <FoundRow
+      face={face(shelf)}
+      path={path}
+      snippet={hit?.lit ?? preview ?? summary.preview}
+      note={[hit && `메시지 ${hit.count}개`, summary.at !== null && ago(summary.at)].filter(Boolean).join(' · ')}
+      onClick={onOpen}
+    />
   );
 }
