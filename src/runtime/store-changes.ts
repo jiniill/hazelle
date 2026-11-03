@@ -42,7 +42,15 @@ export class StoreChanges {
     if (!this.changes.length) return;
     // A confirmed write is told twice over, by hold and by its overlay going.
     const changes = [...new Map(this.changes.splice(0).map((change) => [`${change.kind}\n${change.id}\n${change.parent}`, change])).values()];
-    for (const listener of this.listeners) listener(changes);
+    // Publishing sits inside pulls and writes, before their cursor moves or their answer returns: a listener's fault
+    // goes on as an uncaught error (runtime/diagnostics hears it), never through the store's work or past later listeners.
+    for (const listener of this.listeners) {
+      try {
+        listener(changes);
+      } catch (error) {
+        queueMicrotask(() => { throw error; });
+      }
+    }
   }
 
   close() { this.listeners.clear(); }
