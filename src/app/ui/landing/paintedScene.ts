@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import styles from './NightScene.module.css';
-import { about, painterOn, parseFade, parseGradients, scaling, shift, skewingX, times, turning, type Affine, type Box, type Fade, type Radial } from './paint';
+import { about, painterOn, parseFade, parseGradients, scaling, share, shift, skewingX, times, turning, type Affine, type Box, type Fade, type Radial } from './paint';
 import type { Pace } from './walkStops';
 
 export type Walked = { scale: number; opacity: number };
@@ -18,7 +18,6 @@ type Piece =
 type Motion = { origin: readonly [number, number]; takes: number; from: number; to: number; turns: boolean };
 type Planned = { look: HTMLElement; walk: (share: number) => Walked; origin: readonly [number, number]; motion: Motion | null; pieces: Piece[]; shifted: readonly [number, number] };
 
-const share = (text: string) => parseFloat(text) / (text.trim().endsWith('%') ? 100 : 1);
 const seconds = (text: string) => parseFloat(text) / (text.trim().endsWith('ms') ? 1000 : 1);
 const within = (node: Element, frame: DOMRect): Box => {
   const { left, top, width, height } = node.getBoundingClientRect();

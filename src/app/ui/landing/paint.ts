@@ -60,7 +60,9 @@ const parseColor = (text: string): Color | null => {
   return premultiplied(channels[0]!, channels[1]!, channels[2]!, channels[3] ?? 1);
 };
 
-const share = (text: string) => (text.endsWith('%') ? parseFloat(text) / 100 : parseFloat(text));
+const PLACES: Record<string, number> = { left: 0, top: 0, center: 0.5, right: 1, bottom: 1 };
+// A position or a stop as a share of its box: browsers may give a place as a keyword.
+export const share = (text: string) => PLACES[text] ?? parseFloat(text) / (text.endsWith('%') ? 100 : 1);
 
 const parseStop = (text: string): { at: number | null; color: Color } | null => {
   const split = text.endsWith(')') ? text.length : text.search(/\s[\d.-]+%?$/);

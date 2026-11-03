@@ -10,6 +10,7 @@ describe('parseGradients', () => {
     expect(shadow).toMatchObject({ cx: 0.5, cy: 0.5, rx: 0.5, ry: 0.5 });
     expect(shadow!.stops.map((stop) => stop.at)).toEqual([0.4, 1]);
     expect(shadow!.stops[0]!.color[0]).toBeCloseTo((6 / 255) * (0xa6 / 255));
+    expect(parseGradients('radial-gradient(closest-side at center bottom, #fff, transparent)')[0]).toMatchObject({ cx: 0.5, cy: 1 });
   });
 });
 
