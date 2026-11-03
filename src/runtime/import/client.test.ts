@@ -39,7 +39,7 @@ const catalog: Replies['backup'] = { ok: true, catalog: {
 function character(): CharacterData {
   const result = importCard('card.json', new TextEncoder().encode(JSON.stringify({ spec: 'chara_card_v3', spec_version: '3.0', data: { name: 'Selected' } })));
   if (!result.ok || !('card' in result)) throw new Error('card did not import');
-  return { ...result.card, avatar: 1, assets: [], id: 'selected', folder: null, modules: [], missed: [], chatCount: 2 };
+  return { ...result.card, avatar: 1, assets: [], id: 'selected', folder: null, chatFolders: [], modules: [], missed: [], chatCount: 2 };
 }
 
 describe('ImportWorker', () => {
@@ -97,12 +97,12 @@ describe('ImportWorker', () => {
 
   it('fetches only a selected character, assembles pages in order, and releases the worker history', async () => {
     const chats: RisuChat[] = [
-      { title: 'First', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [], messages: [
+      { title: 'First', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [], folder: null, messages: [
         { role: 'user', text: 'one', at: 1 },
         { role: 'assistant', text: 'two', reasoning: 'thought', at: 2 },
         { role: 'user', text: 'three', at: 3 },
       ] },
-      { title: 'Second', note: 'note', persona: 'persona', greeting: 1, variables: [['mood', 'calm']], inlays: [], lore: [], loreFolders: [], memory: [], messages: [{ role: 'assistant', text: 'four', at: 4 }] },
+      { title: 'Second', note: 'note', persona: 'persona', greeting: 1, variables: [['mood', 'calm']], inlays: [], lore: [], loreFolders: [], memory: [], folder: null, messages: [{ role: 'assistant', text: 'four', at: 4 }] },
     ];
     const { asked } = transport((request) => {
       switch (request.kind) {
@@ -143,7 +143,7 @@ describe('ImportWorker', () => {
       switch (request.kind) {
         case 'backup': return { result: catalog };
         case 'character': return { result: character() };
-        case 'chat': return { result: { header: { title: 'First', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [] }, messages: 1 } };
+        case 'chat': return { result: { header: { title: 'First', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [], folder: null }, messages: 1 } };
         case 'messages': return { error: 'page unreadable' };
         case 'release': return { result: null };
         default: throw new Error(`unexpected request: ${request.kind}`);

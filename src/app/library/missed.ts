@@ -36,7 +36,6 @@ const MOVE_UNSUPPORTED: Record<MoveUnsupportedKind, (count: number) => string> =
   'group-chat': (count) => `그룹 채팅 ${count}개`,
   memory: (count) => `장기 기억을 다 옮기지 못한 채팅 ${count}개`,
   inlay: (count) => `메시지 속 이미지 ${count}개`,
-  'chat-folder': (count) => `채팅 폴더 ${count}개`,
   'hidden-message': (count) => `숨김·코멘트 메시지 ${count}개(일반 메시지로 들어옴)`,
   'cold-missing': (count) => `백업에 없는 채팅 ${count}개`,
   'missing-picture': (count) => `백업에 없는 이미지 ${count}개`,

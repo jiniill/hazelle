@@ -55,6 +55,14 @@ export function risuCharacter(char: Json, chats: (Json | null)[], folder: string
   // Risu turns a module on for one chat too, a place this app does not have: a chat's are on for its character
   // (design §6.5). Only a chat that comes brings its own.
   const modules = new Set(list(char.modules).filter((id) => typeof id === 'string'));
+  const folders = new Map<string, number>();
+  const chatFolders: string[] = [];
+  for (const folder of list(char.chatFolders).filter(isRecord)) {
+    const id = text(folder.id);
+    if (!id || folders.has(id)) continue;
+    folders.set(id, chatFolders.length);
+    chatFolders.push(text(folder.name).trim() || '이름 없는 폴더');
+  }
   const brought = chats.flatMap((chat, index) => {
     if (!chat) {
       add(missed, 'cold-missing');
@@ -64,9 +72,8 @@ export function risuCharacter(char: Json, chats: (Json | null)[], folder: string
     for (const id of list(chat.modules)) if (typeof id === 'string') modules.add(id);
     // Risu moves the old post-history text into the open chat's note when the character is next opened.
     const note = index === page && text(char.postHistoryInstructions) ? `${text(chat.note)}\n${text(char.postHistoryInstructions)}`.trim() : text(chat.note);
-    return [risuChat(chat, note, fmIndex, missed)];
+    return [risuChat(chat, note, fmIndex, missed, folders)];
   });
-  add(missed, 'chat-folder', list(char.chatFolders).length);
   if (char.escapeOutput === true) add(missed, 'escape-output');
   const note = text(char.translatorNote);
 
@@ -77,6 +84,7 @@ export function risuCharacter(char: Json, chats: (Json | null)[], folder: string
     avatar: image ? () => picture(image) : () => Promise.resolve(null),
     folder,
     chats: brought,
+    chatFolders,
     modules: [...modules],
     missed: counted(MOVE_UNSUPPORTED_KINDS, missed),
   };
@@ -93,7 +101,7 @@ export function risuChatFile(json: unknown): { chats: RisuChat[]; missed: MoveUn
   return { chats, missed: counted(MOVE_UNSUPPORTED_KINDS, missed) };
 }
 
-function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveUnsupportedKind>): RisuChat {
+function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveUnsupportedKind>, folders: ReadonlyMap<string, number> = new Map()): RisuChat {
   const messages = list(chat.message).filter(isRecord);
   let at = finite(chat.lastDate) ?? 0;
   // 'allBefore' leaves it and every message before it out of the prompt.
@@ -119,6 +127,7 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
     inlays: inlayIds(messageTexts(messages)),
     ...chatLorebook(list(chat.localLore)),
     memory: memory.summaries,
+    folder: folders.get(text(chat.folderId)) ?? null,
     messages: messages.map((message) => {
       at = finite(message.time) ?? at;
       // Risu keeps a reply's reasoning inside its text as <Thoughts> blocks, and takes them out again before it draws or

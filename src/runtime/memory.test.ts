@@ -644,7 +644,7 @@ describe('memory moved from Risu', () => {
       const said = ['We meet at the pier.', 'Luna waves.', 'jin promises to return.', 'They part.', 'Morning comes.'];
       const messages = said.map((text, index) => ({ role: index % 2 ? ('assistant' as const) : ('user' as const), text, at: index + 1 }));
       const memory = [{ text: 'They meet.', through: 1 }, { text: 'jin promises to return, and they part.', through: 3 }];
-      const made = await importRisuChats(session.store, null, [{ title: 'pier', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], messages, memory }]);
+      const made = await importRisuChats(session.store, null, [{ title: 'pier', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], messages, memory, folder: null }]);
       const chat = made.ok ? made.data[0]! : '';
       await server.hold(session.store, chat);
       const view = (await memoryView(session, chat))!;

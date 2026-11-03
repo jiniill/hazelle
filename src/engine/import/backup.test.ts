@@ -83,7 +83,7 @@ const mira = {
     ['gone', 'assets/gone.png', 'png'],
   ],
   modules: ['m1'],
-  chatFolders: [{ id: 'f', folded: false }],
+  chatFolders: [{ id: 'f', folded: false }, { id: 'g', name: ' 데일리 ', color: 3, folded: true }, { id: 'f', name: 'again', folded: false }],
   chatPage: 0,
   chats: [
     {
@@ -95,6 +95,7 @@ const mira = {
       scriptstate: { $mood: 'calm', $count: 3, plain: 'x' },
       bookmarks: ['c1', 'c2', 'gone'],
       bookmarkNames: { c1: ' 시작 ' },
+      folderId: 'g',
       modules: ['m1', 'm2'],
       localLore: [],
       message: [
@@ -102,7 +103,7 @@ const mira = {
         { role: 'char', data: '<Thoughts>\nhmm\n</Thoughts>\n\nlook {{inlay::abc}}', disabled: true, chatId: 'c2' },
       ],
     },
-    { name: 'Cold', note: 'n', localLore: [], scriptstate: {}, message: [{ role: 'char', data: COLD + CHAT_KEY, time: 900 }] },
+    { name: 'Cold', note: 'n', localLore: [], scriptstate: {}, folderId: 'gone', message: [{ role: 'char', data: COLD + CHAT_KEY, time: 900 }] },
     { name: 'Empty', note: '', localLore: [], modules: ['m3'], message: [] },
     { name: 'Lost', note: '', localLore: [], message: [{ role: 'char', data: `${COLD}33333333-3333-4333-8333-333333333333`, time: 1 }] },
   ],
@@ -349,7 +350,7 @@ describe('readBackup', () => {
       ['sleeper', 'Fav'],
       ['mira', null],
     ]);
-    expect(characters[0]!.chats).toEqual([{ title: 'Nap', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [], messages: [{ role: 'user', text: 'wake', at: 5 }] }]);
+    expect(characters[0]!.chats).toEqual([{ title: 'Nap', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [], folder: null, messages: [{ role: 'user', text: 'wake', at: 5 }] }]);
     expect(backup.catalog.unsupported).toEqual([
       { kind: 'group-chat', count: 1 },
       { kind: 'cold-missing', count: 1 },
@@ -388,6 +389,7 @@ describe('readBackup', () => {
         lore: [],
         loreFolders: [],
         memory: [],
+        folder: 1,
       },
       {
         title: 'Cold',
@@ -401,10 +403,12 @@ describe('readBackup', () => {
         lore: [{ name: 'Key', keys: ['k'], secondaryKeys: [], content: '<char>\n@@end', enabled: true, constant: false, selective: false, useRegex: false, caseSensitive: false, insertionOrder: 100, priority: null, position: null, folder: 0 }],
         loreFolders: ['Places'],
         memory: [],
+        folder: null,
       },
     ]);
+    expect(card.chatFolders).toEqual(['이름 없는 폴더', '데일리']);
     expect(card.missed).toEqual(
-      (['memory', 'chat-folder', 'hidden-message', 'cold-missing', 'missing-picture'] as const).map((kind) => ({ kind, count: 1 })),
+      (['memory', 'hidden-message', 'cold-missing', 'missing-picture'] as const).map((kind) => ({ kind, count: 1 })),
     );
   });
 

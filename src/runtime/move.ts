@@ -150,7 +150,10 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
     // the published character and go in one request: the source holds the whole character already, so this holds no
     // more than it. Nothing is pulled: what the leases hold is what this device wrote.
     const sorted = [...character.chats].sort((a, b) => lastTalk(a) - lastTalk(b));
-    const chats = sorted.map((chat) => chatOf(crypto.randomUUID(), id, character.card, chat, personaIds, current, memory));
+    // Its chat folders land with it, as its chats' roots do, so a cut-short move leaves none behind.
+    const folderIds = character.chatFolders.map(() => crypto.randomUUID());
+    const folders = character.chatFolders.map((name, index): Write => ({ type: 'create', kind: 'folder', id: folderIds[index]!, parent: null, value: { name, of: 'chat', character: id } }));
+    const chats = sorted.map((chat) => chatOf(crypto.randomUUID(), id, character.card, chat, personaIds, current, memory, folderIds));
     const last = new Set(chats.flatMap(({ entries }) => entries.at(-1)?.id ?? []));
     let staged = 0;
     let saved: ImportedCharacter | undefined;
@@ -161,7 +164,7 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
       },
       landed: async () => {
         chatsDone += chats.length;
-        const imported = await importCharacter(store, files, character, avatar, uploading, { id, folder: folder?.data ?? null, risu: character.id, toggles: backup.catalog.toggles, chats: chats.map(({ root }) => root) }, character.modules.flatMap((risu) => moduleIds.get(risu) ?? []));
+        const imported = await importCharacter(store, files, character, avatar, uploading, { id, folder: folder?.data ?? null, risu: character.id, toggles: backup.catalog.toggles, chats: [...folders, ...chats.map(({ root }) => root)] }, character.modules.flatMap((risu) => moduleIds.get(risu) ?? []));
         if (!imported.ok) return imported;
         saved = imported.data;
         picturesDone += character.assets.length;
@@ -211,20 +214,21 @@ async function folderNamed(store: ObjectStore, name: string): Promise<ApiResult<
 export async function importRisuChats(store: ObjectStore, character: string | null, chats: RisuChat[]): Promise<ApiResult<string[]>> {
   const card = character === null ? null : (store.get('character', character)?.value.card ?? null);
   const current = accountSettings(store)?.persona;
-  const made = [...chats].sort((a, b) => lastTalk(a) - lastTalk(b)).map((chat) => chatOf(crypto.randomUUID(), character, card, chat, new Map(), current, movedMemory(store)));
+  const made = [...chats].sort((a, b) => lastTalk(a) - lastTalk(b)).map((chat) => chatOf(crypto.randomUUID(), character, card, chat, new Map(), current, movedMemory(store), []));
   const failure = await saveNewChats(store, made.map(({ root }) => root.id), made.flatMap(({ entries, root }) => [...entries, root]));
   return failure ?? { ok: true, data: made.map(({ root }) => root.id) };
 }
 
 // A chat Risu bound to no persona, or to one not brought, holds the current persona, as a chat saved here would. Its
-// lorebook goes before its messages, whose last write a move counts its progress by.
-function chatOf(id: string, character: string | null, card: Card | null, { title, note, persona, greeting, variables, messages, lore, loreFolders, memory: remembered }: RisuChat, personaIds: ReadonlyMap<string, string>, current: string | undefined, memory: MemorySettings): { entries: Write[]; root: Write } {
+// lorebook goes before its messages, whose last write a move counts its progress by. folders: the ids its character's
+// chat folders are written under, in RisuCharacter.chatFolders order.
+function chatOf(id: string, character: string | null, card: Card | null, { title, note, persona, greeting, variables, messages, lore, loreFolders, memory: remembered, folder }: RisuChat, personaIds: ReadonlyMap<string, string>, current: string | undefined, memory: MemorySettings, folders: readonly string[]): { entries: Write[]; root: Write } {
   // The chat opens on the greeting Risu showed; a blank one shown leaves the chat without one, as Risu showed none.
   // One past the card's greetings opens on its last, as Risu shows it; projectGreetings would take the first.
   const greetings = card && startingGreetings(projectGreetings(card.greetings, card.greetings.map(() => crypto.randomUUID()), Math.min(greeting, Math.max(card.greetings.length - 1, 0))));
   const own = (persona === null ? undefined : personaIds.get(persona)) ?? current;
-  const { folders, writes } = importedLore(id, lore, loreFolders);
-  const chat: Chat = { title: title.trim() || null, character, models: {}, memory: remembered.length ? { ...memory, on: true } : memory, ...(note !== null && { note }), ...(own && { persona: own }), ...(variables.length > 0 && { variables }), ...(folders.length > 0 && { loreFolders: folders }) };
+  const { folders: grouped, writes } = importedLore(id, lore, loreFolders);
+  const chat: Chat = { title: title.trim() || null, character, models: {}, memory: remembered.length ? { ...memory, on: true } : memory, ...(note !== null && { note }), ...(own && { persona: own }), ...(variables.length > 0 && { variables }), ...(grouped.length > 0 && { loreFolders: grouped }), ...(folder !== null && { folder: folders[folder]! }) };
   const { entries, root, said } = chatWrites(id, chat, greetings, messages);
   const recorded: Write[] = remembered.length ? [{ type: 'create', kind: 'memory', id: memoryId(id), parent: id, value: risuRecords(remembered, messages, said) }] : [];
   return { entries: [...writes, ...entries, ...recorded], root };
