@@ -4,6 +4,7 @@ import { memoryThrough } from '../engine/memory';
 import { VARIABLE_LIMITS } from '../engine/render';
 import { CAST_MAX, foldTree, shown, standing, translationOutdated, type AgentRun, type Bookmark, type Chat, type ChatItem, type Entry, type Message, type Receipt, type Translation, type Version, type Writes } from '../model/chat';
 import { cachePrintId } from '../model/cache';
+import { isChatFolderOf } from '../model/folders';
 import type { Illustration } from '../model/illustration';
 import type { Remark } from '../model/mascot';
 import { live, type Asset, type Lore, type TextFile } from '../model/library';
@@ -113,7 +114,7 @@ export async function importChat({ store, files }: Pick<Session, 'store' | 'file
   const illustrations = resealed(file.illustrations.map(({ value }) => value));
   const inlays = resealed(file.inlays.map(({ value }) => value));
   const { writes, messages } = copyWrites(id, foldTree(file.entries), file.memory?.value, illustrations, file.remarks.map(({ value }) => value), inlays, file.textfiles.map(({ value }) => value), file.lore.map(({ value }) => value));
-  const { prompt, persona, cast = [], models, origin, bookmarks, ...value } = without(without(file.chat.value, 'deleted'), 'purging');
+  const { prompt, persona, cast = [], models, origin, bookmarks, folder, ...value } = without(without(file.chat.value, 'deleted'), 'purging');
   const held = (kind: 'prompt' | 'persona' | 'character' | 'chat', ref: string | undefined): ref is string => ref !== undefined && live(store.get(kind, ref)) !== null;
   const kept = cast.filter((each) => held('character', each));
   const roles = Object.entries(models).filter(([, ref]) => ref && !('kind' in routeOf(store, ref)));
@@ -126,6 +127,7 @@ export async function importChat({ store, files }: Pick<Session, 'store' | 'file
     ...(held('prompt', prompt) && { prompt }),
     ...(held('persona', persona) && { persona }),
     ...(origin && after && held('chat', origin.id) && { origin: { ...origin, after } }),
+    ...(folder !== undefined && isChatFolderOf(store.get('folder', folder)?.value, character) && { folder }),
   };
   const dropped = {
     prompt: Number(prompt !== undefined && chat.prompt === undefined),

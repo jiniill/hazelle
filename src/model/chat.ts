@@ -44,6 +44,8 @@ export type Chat = Mark & {
   agents?: string[];
   // Opt imported inlays into model input; locally attached pictures already qualify (model/library Inlay).
   movedPictures?: true;
+  // A chat folder of its own character's; one gone or another character's reads as none.
+  folder?: string;
 };
 
 // Risu's 유틸리티 봇: a card made for a task, not a role, keeps the prompt's blocks and the persona out, and so does a chat

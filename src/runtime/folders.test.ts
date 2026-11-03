@@ -3,6 +3,7 @@ import { addPersona, removePersona } from './personas';
 import { createCharacter, seedOrder } from './characters';
 import { ORDER_ID } from '../model/order';
 import { createFolder, folderRemoval, moveInto, removeFolder, restoreFolder } from './folders';
+import { removeChat } from './chat-log';
 import { testServer } from './testing';
 
 const server = testServer();
@@ -53,6 +54,37 @@ describe('folders', () => {
     const outermost = folderRemoval(store, top)!;
     await removeFolder(store, outermost);
     expect('folder' in store.get('persona', hyun!)!.value).toBe(false);
+  });
+
+  it("makes a chat folder for one character, and its removal moves only that character's chats up, 휴지통's too, and back", async () => {
+    const { store } = await server.account();
+    const [luna, mira] = [crypto.randomUUID(), crypto.randomUUID()];
+    for (const id of [luna, mira]) await createCharacter(store, id, id);
+    const made = async (name: string, parent: string | null) => {
+      const saved = await createFolder(store, { chats: luna }, name, parent);
+      return saved.ok ? saved.data.id : '';
+    };
+    const top = await made('모험', null);
+    const inner = await made('바다', top);
+    const chat = async (character: string) => {
+      const saved = await store.create('chat', { title: null, character, models: {} });
+      return saved.ok ? saved.data.id : '';
+    };
+    const [kept, binned, theirs] = [await chat(luna), await chat(luna), await chat(mira)];
+    await moveInto(store, 'chat', [kept, binned, theirs], inner);
+    await removeChat(store, binned);
+    const folderOf = (id: string) => store.get('chat', id)!.value.folder;
+
+    expect(store.get('folder', inner)!.value).toEqual({ name: '바다', parent: top, of: 'chat', character: luna });
+    const removal = folderRemoval(store, inner)!;
+    expect([removal.kind, removal.up?.id, removal.placements.map(({ id }) => id).sort()]).toEqual(['chat', top, [kept, binned].sort()]);
+    await removeFolder(store, removal);
+    expect([folderOf(kept), folderOf(binned), folderOf(theirs)]).toEqual([top, top, inner]);
+    await restoreFolder(store, removal);
+    expect([folderOf(kept), folderOf(binned)]).toEqual([inner, inner]);
+
+    await removeFolder(store, folderRemoval(store, top)!);
+    expect('folder' in store.get('chat', kept)!.value).toBe(false);
   });
 
   it('leaves a thing moved elsewhere after the removal was decided where it went, on removal and on undo', async () => {

@@ -43,12 +43,14 @@ const luna: RisuCharacter = {
       lore: [],
       loreFolders: [],
       memory: [],
+      folder: null,
       messages: [
         { role: 'user', text: '안녕', at: 1 },
         { role: 'assistant', text: '반가워 [HP 7]', at: 2 },
       ],
     },
   ],
+  chatFolders: [],
   modules: [],
   missed: [],
 };
@@ -117,6 +119,18 @@ describe('moveFromRisu', () => {
     expect(backup.character).toHaveBeenCalledExactlyOnceWith(0);
     expect(store.list('character')).toHaveLength(1);
     expect(broughtFromRisu(store)).toEqual(new Set(['risu-luna']));
+  });
+
+  it("files each chat in its character's chat folder, made with the character", async () => {
+    const { store, files } = await server.account();
+    const loose = { ...luna.chats[0]!, title: '부두' };
+    const backup = source({ characters: [{ ...luna, chatFolders: ['바다', '빈 폴더'], chats: [{ ...luna.chats[0]!, folder: 0 }, loose] }] });
+    const moved = await moveFromRisu(store, files, backup, backup.catalog, null, () => {});
+    const id = moved.ok ? moved.data.characters[0]!.id : '';
+    const made = store.list('folder').filter(({ value }) => value.of === 'chat');
+    expect(made.map(({ value }) => value)).toEqual([{ name: '바다', of: 'chat', character: id }, { name: '빈 폴더', of: 'chat', character: id }]);
+    const folderOf = (title: string) => store.list('chat').find(({ value }) => value.title === title)!.value.folder;
+    expect([folderOf('등대'), folderOf('부두')]).toEqual([made[0]!.id, undefined]);
   });
 
   it('opens a chat whose greeting lies past the card\'s on its last one', async () => {

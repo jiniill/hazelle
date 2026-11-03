@@ -194,12 +194,13 @@ export type RisuChat = {
   loreFolders: string[];
   // Its memory, whichever of Risu's formats held it, in chat order, each covering more than the one before.
   memory: RisuSummary[];
+  // Indexes its character's chatFolders; null in none, or in a chat file, which holds no folders.
+  folder: number | null;
 };
 export const MOVE_UNSUPPORTED_KINDS = [
   'group-chat',
   'memory',
   'inlay',
-  'chat-folder',
   'hidden-message',
   'cold-missing',
   'missing-picture',
@@ -217,6 +218,8 @@ export type RisuCharacter = Omit<Imported, 'avatar' | 'bundled'> & {
   // The Risu folder it sits in, by name.
   folder: string | null;
   chats: RisuChat[];
+  // Its chat folders' names; Risu's are flat, and their colour and folded state stay behind.
+  chatFolders: string[];
   // The Risu ids of the modules on for it, whether or not the backup holds them.
   modules: string[];
   missed: MoveUnsupported[];

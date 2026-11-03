@@ -14,6 +14,8 @@ import { testServer } from './testing';
 import { evaluateChat } from './chat-context';
 import { saveToolChat, toolBadges, toolChatData } from './tools/store';
 import { addLore, addLoreFolder } from './lore';
+import { createFolder, moveInto } from './folders';
+import { createCharacter } from './characters';
 
 const server = testServer();
 
@@ -178,6 +180,35 @@ describe('bookmarks', () => {
     if (!branched.ok) throw new Error(branched.error);
     await server.hold(store, branched.data.id);
     expect(shownTexts(branched.data.id)).toEqual([['말 0', '시작']]);
+  });
+});
+
+describe('a chat folder', () => {
+  it("stays with a branch, and with a chat file only when it comes back into the folder's character", async () => {
+    const { store, files } = await server.account();
+    const id = crypto.randomUUID();
+    await server.hold(store, id);
+    await startChat(store, id, { title: '등대', character: null, models: {} }, null);
+    const first = crypto.randomUUID();
+    await appendUserMessage(store, id, { id: first, text: '안녕', follows: null });
+    const made = await createFolder(store, { chats: null }, '모험', null);
+    const folder = made.ok ? made.data.id : '';
+    await moveInto(store, 'chat', [id], folder);
+
+    const messages = fold(store.children('entry', id));
+    const item: ChatItem = { id, chat: store.get('chat', id)!.value, messages, count: messages.length, title: '등대', preview: '', at: null, order: 0 };
+    const branched = await branchChat(store, item, first);
+    if (!branched.ok) throw new Error(branched.error);
+    expect(store.get('chat', branched.data.id)!.value.folder).toBe(folder);
+
+    const written = await chatFile({ store, files }, id);
+    if (!written.ok) throw new Error(written.error);
+    const read = readChatFile(JSON.parse(written.data));
+    if (!read.ok) throw new Error(read.error);
+    const character = crypto.randomUUID();
+    await createCharacter(store, '루나', character);
+    const imported = await Promise.all([importChat({ store, files }, read.file, null), importChat({ store, files }, read.file, character)]);
+    expect(imported.map((each) => each.ok && store.get('chat', each.data.id)!.value.folder)).toEqual([folder, undefined]);
   });
 });
 

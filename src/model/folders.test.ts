@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Stored } from './kinds';
-import { holds, indexFolders, nest, pathOf, type Folder } from './folders';
+import { holds, indexFolders, nest, pathOf } from './folders';
 
-const folder = (id: string, name: string, parent?: string, of?: Folder['of']): Stored<'folder'> => ({ id, kind: 'folder', parent: null, rev: 1, value: { name, ...(parent && { parent }), ...(of && { of }) } });
+const folder = (id: string, name: string, parent?: string, of?: 'prompt' | 'module' | 'persona'): Stored<'folder'> => ({ id, kind: 'folder', parent: null, rev: 1, value: { name, ...(parent && { parent }), ...(of && { of }) } });
 
 describe('nest', () => {
   it('puts subfolders under their top folder by name, and lifts one whose top folder is gone', () => {
@@ -30,6 +30,12 @@ describe('nest', () => {
     expect(nest(all, 'character').map(({ id }) => id)).toEqual(['c']);
     expect(nest(all, 'prompt').map((top) => [top.id, top.children.map(({ id }) => id)])).toEqual([['p', ['q']]]);
     expect(nest(all, 'persona')).toEqual([]);
+  });
+
+  it("takes one character's chat folders, 캐릭터 없이's apart", () => {
+    const chats = (id: string, character: string | null): Stored<'folder'> => ({ id, kind: 'folder', parent: null, rev: 1, value: { name: id, of: 'chat', character } });
+    const all = [folder('c', '판타지'), chats('a', 'luna'), chats('b', 'mira'), chats('n', null)];
+    expect([nest(all, { chats: 'luna' }), nest(all, { chats: null }), nest(all, 'character')].map((tree) => tree.map(({ id }) => id))).toEqual([['a'], ['n'], ['c']]);
   });
 });
 

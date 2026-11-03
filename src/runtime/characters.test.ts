@@ -11,6 +11,7 @@ import { sealFile } from '../vault/files';
 import { api, holdAccount } from './api';
 import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, setPinnedTogglesSpread, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggle, setTranslate, translateSwitches } from './characters';
 import { markDeleted, purgeExpired, purgeNow } from './removal';
+import { createFolder } from './folders';
 import { appendUserMessage, removeChat, restoreChat, startChat } from './chat-log';
 import { Files } from './files';
 import { thumbnail } from './picture';
@@ -448,6 +449,16 @@ describe('purgeNow', () => {
       [3, 3],
     ]);
     expect([store.list('character'), store.list('chat')].map((left) => left.length)).toEqual([0, 0]);
+  });
+
+  it("takes its chat folders with it, and leaves another's and 캐릭터 없이's", async () => {
+    const { store } = await server.account();
+    const [gone, other] = await Promise.all([addCharacter(store, bare('루나', { deleted: Date.now() }), none, () => {}), addCharacter(store, bare('미라'), none, () => {})]);
+    const [id, kept] = [gone.ok ? gone.data : '', other.ok ? other.data : ''];
+    for (const character of [id, kept, null]) await createFolder(store, { chats: character }, '모험', null);
+
+    expect(await purgeNow(store, unswept, 'character', id, () => {})).toEqual({ ok: true, data: null });
+    expect(store.list('folder').map(({ value }) => value.of === 'chat' && value.character)).toEqual([kept, null]);
   });
 
   it('takes its deleted chats with it, their messages included', async () => {

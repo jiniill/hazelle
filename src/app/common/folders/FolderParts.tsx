@@ -1,6 +1,6 @@
 import { ArrowDownToLine, ArrowUpToLine, FolderInput, FolderPlus, FolderTree as SubfolderIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { pathName, pathOf, withInside, type Filed, type FolderContents, type FolderIndex, type FolderTree } from '../../../model/folders';
+import { kindOf, pathName, pathOf, withInside, type Filed, type FolderContents, type FolderIndex, type FolderSet, type FolderTree } from '../../../model/folders';
 import { Button, Divider, FolderCard, IconButton, Menu, MenuItem, MoreMenu, PathBar, Row, useWide } from '../../ui';
 import { ACTS, newOf } from '../acts';
 import { NameDialog } from '../NameDialog';
@@ -60,7 +60,7 @@ export function useNaming({ create, rename }: FolderActions) {
 }
 
 type PathProps = {
-  kind: Filed;
+  kind: Exclude<Filed, 'chat'>;
   path: FolderTree[];
   onGo: (place: string | null) => void;
   // Absent where folders are only walked, not made or changed, as in a picker.
@@ -115,7 +115,7 @@ export function FolderMenu({ actions, folder, depth, onName, onRemoved, order }:
 
 // A folder among cards. faces: up to four of what it holds. drag: the card drags beside other folders (order.onPlace);
 // arranging: 순서 바꾸기 is on, so it moves by its handle.
-export function FolderTile<T>({ kind, contents, depth, faces, onOpen, onName, dropInto, order, drag = false, arranging = false }: { kind: Filed; contents: FolderContents<T>; depth: number; faces: { image: string | null; name: string }[]; onOpen: () => void; onName?: (naming: Naming) => void; dropInto?: Drop; order?: Ordering; drag?: boolean; arranging?: boolean }) {
+export function FolderTile<T>({ kind, contents, depth, faces, onOpen, onName, dropInto, order, drag = false, arranging = false }: { kind: Exclude<Filed, 'chat'>; contents: FolderContents<T>; depth: number; faces: { image: string | null; name: string }[]; onOpen: () => void; onName?: (naming: Naming) => void; dropInto?: Drop; order?: Ordering; drag?: boolean; arranging?: boolean }) {
   const { folder } = contents;
   const actions = useFolderActions(kind);
   return (
@@ -133,10 +133,26 @@ export function FolderTile<T>({ kind, contents, depth, faces, onOpen, onName, dr
   );
 }
 
+export const MOVE_TO_FOLDER = '폴더로 옮기기';
+
+// A move's places: every folder by its path, then out of every folder.
+export function FolderChoices<T>({ index, onPick }: { index: FolderIndex<T>; onPick: (to: FolderTree | null) => void }) {
+  return (
+    <>
+      {index.folders.flatMap(withInside).map((folder) => (
+        <MenuItem key={folder.id} label={pathName(pathOf(index.byFolder, folder.id))} onClick={() => onPick(folder)} />
+      ))}
+      <Divider variant="menu" />
+      <MenuItem label="폴더에서 빼기" onClick={() => onPick(null)} />
+    </>
+  );
+}
+
 // 선택해서 옮기기's pick and, on wide screens, the drags that move cards; off moves nothing (휴지통). folderOf: where a
 // thing is by its id; carry: the ids a move of one takes along, such as a prompt's copies listed under it.
-export function useMoving<T>(kind: Filed, index: FolderIndex<T>, folderOf: (id: string) => string | null, { off = false, carry = (id: string) => [id] }: { off?: boolean; carry?: (id: string) => string[] } = {}) {
-  const { move } = useFolderActions(kind);
+export function useMoving<T>(set: FolderSet, index: FolderIndex<T>, folderOf: (id: string) => string | null, { off = false, carry = (id: string) => [id] }: { off?: boolean; carry?: (id: string) => string[] } = {}) {
+  const kind = kindOf(set);
+  const { move } = useFolderActions(set);
   const wide = useWide();
   const selection = useSelection();
   const picked = off ? null : selection.picked;
@@ -165,15 +181,11 @@ export function useMoving<T>(kind: Filed, index: FolderIndex<T>, folderOf: (id: 
       label="이동할 폴더"
       trigger={(opener) => (
         <Button size="sm" disabled={!picked?.size || index.folders.length === 0} {...opener}>
-          폴더로 옮기기
+          {MOVE_TO_FOLDER}
         </Button>
       )}
     >
-      {index.folders.flatMap(withInside).map((folder) => (
-        <MenuItem key={folder.id} label={pathName(pathOf(index.byFolder, folder.id))} onClick={() => moveTo(folder)} />
-      ))}
-      <Divider variant="menu" />
-      <MenuItem label="폴더에서 빼기" onClick={() => moveTo(null)} />
+      <FolderChoices index={index} onPick={moveTo} />
     </Menu>,
   );
   const button = !off && selection.button(FolderInput, '선택 이동');

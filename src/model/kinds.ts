@@ -57,7 +57,8 @@ export type Kind = keyof Values;
 // Singleton ids and appendOnly constrain writes; file metadata drives backup discovery.
 export type Rule = { parent: Kind | readonly Kind[] | null; id?: string; appendOnly?: true; file?: true; owner?: { field: string; kind: Kind } };
 
-type Link<K extends Kind> = { [F in keyof Values[K]]-?: Values[K][F] extends string | null ? F : never }[keyof Values[K]];
+// Distributes over a union value, so an owner field may live on one of its shapes (a chat folder's character).
+type Link<K extends Kind> = Values[K] extends infer V ? (V extends unknown ? { [F in keyof V]-?: V[F] extends string | null ? F : never }[keyof V] : never) : never;
 
 export const KINDS = {
   character: { parent: null },
@@ -67,7 +68,7 @@ export const KINDS = {
   tooldata: { parent: 'module' },
   toolfile: { parent: 'module', file: true },
   toolchat: { parent: 'chat', owner: { field: 'module', kind: 'module' } },
-  folder: { parent: null },
+  folder: { parent: null, owner: { field: 'character', kind: 'character' } },
   lore: { parent: ['character', 'module', 'chat'] },
   avatar: { parent: 'character', file: true },
   asset: { parent: ['character', 'module'], file: true },
@@ -180,7 +181,7 @@ const SHAPES = {
   tooldata: shape({ key: str, value: (value) => value !== undefined }),
   toolfile: shape({ key: str, size: num, file: shape({ id: str, key: str }) }),
   toolchat: shape({ module: str, key: orNull(str), value: (value) => value !== undefined }),
-  folder: shape({ name: str, of: (value) => value === undefined || value === 'prompt' || value === 'module' || value === 'persona' }),
+  folder: (value) => shape({ name: str })(value) && isRecord(value) && (value.of === 'chat' ? orNull(str)(value.character) : value.of === undefined || value.of === 'prompt' || value.of === 'module' || value.of === 'persona'),
   lore: shape({
     ...all(bool, 'enabled', 'constant', 'selective', 'useRegex', 'caseSensitive'),
     name: str,
@@ -198,7 +199,7 @@ const SHAPES = {
   share: shape({ share: str, key: str }),
   inlay: (value) => picture(value) && isRecord(value) && (value.attached === undefined || value.attached === true),
   textfile: shape(all(str, 'name', 'title', 'text')),
-  chat: shape({ title: orNull(str), character: orNull(str), models: isRecord, cast: (value) => value === undefined || listOf(str)(value), bookmarks: (value) => value === undefined || listOf(shape({ message: str }))(value), loreFolders: (value) => value === undefined || listOf(shape({ id: str, name: str }))(value), movedPictures: (value) => value === undefined || value === true, sendsPrompt: (value) => value === undefined || value === true }),
+  chat: shape({ title: orNull(str), character: orNull(str), models: isRecord, cast: (value) => value === undefined || listOf(str)(value), bookmarks: (value) => value === undefined || listOf(shape({ message: str }))(value), loreFolders: (value) => value === undefined || listOf(shape({ id: str, name: str }))(value), movedPictures: (value) => value === undefined || value === true, sendsPrompt: (value) => value === undefined || value === true, folder: optStr }),
   entry: (value) => isRecord(value) && typeof value.type === 'string' && Object.hasOwn(ENTRIES, value.type) && ENTRIES[value.type as Entry['type']](value),
   summary: shape({ version: num, head: num, chatRev: num, dependencies: listOf(isRecord), rendered: shape({ now: num, timeZone: str }), character: orNull(str), title: str, preview: str, count: num, at: orNull(num), order: num, recent: listOf(isRecord) , stuck: (value) => value === undefined || shape({ dependencies: listOf(isRecord) })(value) }),
   // A batch's marker holds no key: no server object holds its call.

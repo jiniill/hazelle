@@ -2,6 +2,16 @@ import { unavailableCalibration } from './token-calibration';
 import { expect, it } from 'vitest';
 import { isValue } from './kinds';
 
+it("reads folders and chats written before chat folders, and a chat folder only with the character it belongs to", () => {
+  expect(isValue('folder', { name: '판타지' })).toBe(true);
+  expect(isValue('folder', { name: '판타지', of: 'chat', character: null })).toBe(true);
+  expect(isValue('folder', { name: '판타지', of: 'chat' })).toBe(false);
+  const chat = { title: null, character: null, models: {} };
+  expect(isValue('chat', chat)).toBe(true);
+  expect(isValue('chat', { ...chat, folder: 'f' })).toBe(true);
+  expect(isValue('chat', { ...chat, folder: null })).toBe(false);
+});
+
 it("reads a summary's verdict as absent or well formed, and refuses a malformed one", () => {
   const summary = { version: 1, head: 0, chatRev: 1, dependencies: [], rendered: { now: 0, timeZone: 'UTC' }, character: null, title: '', preview: '', count: 0, at: null, order: 1, recent: [] };
   expect(isValue('summary', summary)).toBe(true);

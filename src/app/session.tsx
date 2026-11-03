@@ -4,7 +4,7 @@ import type { ToolFrames, ToolMenu } from '../runtime/tools/facade';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { PictureUrl } from '../engine/assets';
 import type { ChatScope } from '../engine/render';
-import { nest, type Filed } from '../model/folders';
+import { nest, type FolderSet } from '../model/folders';
 import { binned, live } from '../model/library';
 import type { Kind, Stored } from '../model/kinds';
 import type { ToolManifest } from '../tool-api/manifest';
@@ -165,9 +165,10 @@ function useLive<K extends 'prompt' | 'persona' | 'profile'>(kind: K) {
   return useMemo(() => all.filter(live), [all]);
 }
 // The folders of one kind as a tree; characters' come with the library (useLibrary).
-export function useFolders(kind: Exclude<Filed, 'character'>) {
+// A chat folder set must keep its identity across renders (useMemo), or the tree is built again each time.
+export function useFolders(set: Exclude<FolderSet, 'character'>) {
   const all = useKind('folder');
-  return useMemo(() => nest(all, kind), [all, kind]);
+  return useMemo(() => nest(all, set), [all, set]);
 }
 export const usePrompts = () => useLive('prompt');
 export const usePersonas = () => useLive('persona');
