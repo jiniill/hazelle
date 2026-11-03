@@ -44,7 +44,7 @@ export const closedWord = (word: string) => (WORD.test(word) ? word : 'other');
 
 const CALL = {
   state: ['done', 'cut', 'failed'],
-  cut: orNull(['length', 'no-terminal', 'stopped', 'refused']),
+  cut: orNull(['length', 'no-terminal', 'stopped', 'refused', 'repeated']),
   finish: orNull(WORD),
   error: orNull(['refused', 'relay', 'app', 'provider', 'bad-event', 'network', 'offline', 'no-token', 'pool']),
   status: orNull('number'),

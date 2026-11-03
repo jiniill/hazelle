@@ -19,7 +19,7 @@ export function cost(value: Cost | 'pending' | null): string {
   return value.source === 'reported' ? amount : `약 ${amount}`;
 }
 
-const CUT = { length: '길이 한도', stopped: '직접 중단', 'no-terminal': '중간에 끊김', refused: '제공자가 차단' } as const;
+const CUT = { length: '길이 한도', stopped: '직접 중단', 'no-terminal': '중간에 끊김', refused: '제공자가 차단', repeated: '반복 감지' } as const;
 
 export function finish(receipt: Receipt): { label: string; value: string; tone?: 'warn' } {
   if (receipt.state === 'failed') return { label: '종료 사유', value: '실패', tone: 'warn' };

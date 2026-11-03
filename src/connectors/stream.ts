@@ -1,5 +1,6 @@
 import { discounted, priceCost } from './pricing';
 import { costUnit, type Route } from './registry';
+import { Repetition } from './repetition';
 import { SseParser } from './sse';
 import { thoughts } from './thoughts';
 import type { Codec, Cost, Discount, Model, Phase, StreamFacts, Terminal, ToolCall, Usage } from './types';
@@ -8,7 +9,8 @@ import type { Codec, Cost, Discount, Model, Phase, StreamFacts, Terminal, ToolCa
 export type Outcome = {
   state: 'done' | 'cut' | 'failed';
   // refused: the provider ended the reply by refusing it after text had come; refused with no text is a failure.
-  cut: 'length' | 'no-terminal' | 'stopped' | 'refused' | null;
+  // repeated: the reply ran into a loop and reading stopped (connectors/repetition); the caller stops the provider's call.
+  cut: 'length' | 'no-terminal' | 'stopped' | 'refused' | 'repeated' | null;
   // null on a failed reply: the model finished without a word (or a call), and no provider said why.
   error: { kind: 'provider' | 'bad-event' | 'network'; detail: string; code?: string } | null;
   inputComplete?: true;
@@ -31,9 +33,16 @@ export type InlineThoughts = { keep?: boolean; takeBack?: (chars: number) => voi
 export async function decodeStream({ type, codec }: Route, model: Model, response: Response, signal: AbortSignal, onText: (phase: Phase, text: string) => void, inline: InlineThoughts = {}, batched = false): Promise<Outcome> {
   const facts: StreamFacts = { rawUsage: {}, finishReason: null, id: null, tier: null, calls: [] };
   let said = false;
+  const loops = { text: new Repetition(), reasoning: new Repetition() };
+  let repeated = false;
   const told = (phase: Phase, text: string) => {
     if (phase === 'text' && /\S/.test(text)) said = true;
     onText(phase, text);
+    // finish() may still flush text the thought scanner held, after the loop was caught.
+    if (!repeated && loops[phase].push(text)) {
+      repeated = true;
+      throw new Error('repeated');
+    }
   };
   const scanner = inline.keep ? null : thoughts(told, inline.takeBack ?? (() => {}));
   const append = (phase: Phase, text: string) => text && (scanner ? scanner.push(phase, text) : told(phase, text));
@@ -64,6 +73,7 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
   try {
     ended = media === 'application/json' ? await readWhole(codec, response, facts, append) : await readEvents(codec, response, facts, append);
   } catch (error) {
+    if (repeated) return finish('cut', 'repeated', null);
     if (signal.aborted) return finish('cut', 'stopped', null);
     return finish('failed', null, { kind: 'network', detail: error instanceof Error ? error.message : String(error) });
   }

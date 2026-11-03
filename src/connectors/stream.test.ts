@@ -258,3 +258,20 @@ describe('a discount lane’s cost', () => {
     expect(standard.cost).toMatchObject({ amount: 1 + 0.25 + 8 });
   });
 });
+
+describe('a reply caught in a loop', () => {
+  it('stops reading and cuts it, keeping what came, but lets a status panel border through', async () => {
+    let cancelled = false;
+    const loop = sse(chunk({ content: '안녕. ' }), ...Array.from({ length: 300 }, () => chunk({ content: '그래서 나는 말했다. ' })));
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new TextEncoder().encode(loop)); },
+      cancel() { cancelled = true; },
+    });
+    const { outcome, text } = await decode(openRouter, stream);
+    expect(outcome).toMatchObject({ state: 'cut', cut: 'repeated' });
+    expect(text.startsWith('안녕. 그래서 나는 말했다.')).toBe(true);
+    expect(cancelled).toBe(true);
+    const panel = sse(chunk({ content: `${'━'.repeat(200)}\n${'<div class="slot"></div>'.repeat(60)}` }), chunk({}, 'stop'), '[DONE]');
+    expect((await decode(openRouter, body(panel))).outcome).toMatchObject({ state: 'done', cut: null });
+  });
+});

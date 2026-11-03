@@ -74,7 +74,7 @@ export type Receipt = {
   // Additional-copy key (callRef), absent for the first entry. Usage groups by model, routing by entry.
   entry?: string;
   state: 'done' | 'cut' | 'failed';
-  cut: 'length' | 'no-terminal' | 'stopped' | 'refused' | null;
+  cut: 'length' | 'no-terminal' | 'stopped' | 'refused' | 'repeated' | null;
   error: ReceiptError | null;
   finishReason: string | null;
   usage: Usage | null;

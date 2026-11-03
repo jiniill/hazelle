@@ -17,7 +17,7 @@ import type { PoolFailure } from './pool';
 import { callLabel, PULSE_ROLE } from './pulse';
 import type { ObjectStore } from './store';
 import { pause } from './pause';
-import { relay, relayJson, stream, transportProblem, detachedReplies, type RelayFailure, type StreamCall } from './relay';
+import { relay, relayJson, stopStream, stream, transportProblem, detachedReplies, type RelayFailure, type StreamCall } from './relay';
 import { redacted, type Logged, type RequestLog } from './request-log';
 
 export type ReplyError =
@@ -188,6 +188,8 @@ export async function generate({ credentials, log, connection, model, settings, 
   const read = recorded(response);
   answered = read.body;
   const outcome = await decodeStream(route, model, read.response, signal, timed, inline);
+  // Reading stopped there, but a relayed call runs on the server until stopped, billing the loop to its end.
+  if (outcome.cut === 'repeated') stopStream(call.id);
   if (outcome.error) credentials.pool.stale(connection, serving);
   return reply(outcome, outcome.error);
 }
@@ -338,6 +340,7 @@ export async function resume({ store, credentials, log }: { store: ObjectStore; 
   tries = call.tries ?? null;
   if (!(response instanceof Response)) return reply(response.kind === 'stopped' ? STOPPED : failedWith(response));
   const outcome = await decodeStream(routed, route.model, response, signal, onText, inline);
+  if (outcome.cut === 'repeated') stopStream(call.id);
   took = call.took ?? 0;
   return reply([outcome, outcome.error]);
 }

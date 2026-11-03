@@ -46,8 +46,8 @@ const NO_PERSONA = '페르소나 없음';
 
 const WRITING = '쓰는 중';
 
-const CUT = { length: '잘림', 'no-terminal': '끊김', stopped: '중단됨', refused: '차단됨' } as const;
-const MARK = { length: 'length', 'no-terminal': 'length', stopped: 'stopped', refused: 'refused' } as const;
+const CUT = { length: '잘림', 'no-terminal': '끊김', stopped: '중단됨', refused: '차단됨', repeated: '반복돼서 멈춤' } as const;
+const MARK = { length: 'length', 'no-terminal': 'length', stopped: 'stopped', refused: 'refused', repeated: 'length' } as const;
 
 export const ChatMessage = memo(function ChatMessage(props: Props) {
   const { row, modelMenu, actions } = props;
@@ -252,9 +252,10 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
           reason={MARK[cut]}
           label={cut === 'stopped' && empty ? '응답 전 중단됨' : CUT[cut]}
           action={
-            !empty
+            // Continuing a loop only runs it on.
+            !empty && cut !== 'repeated'
               ? { label: '이어 쓰기', disabled: busy, onClick: () => actions.continue(message) }
-              : cut === 'stopped'
+              : cut === 'stopped' || cut === 'repeated'
                 ? { label: ACTS.retry.label, disabled: busy, onClick: () => actions.retry(message) }
                 : undefined
           }
