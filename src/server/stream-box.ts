@@ -1,5 +1,5 @@
 import { RELAY_HEADER, type ServerError } from '../contracts/http';
-import { HELLO, HEAD, DATA, END, PING, WAIT, retryWait, type Retry } from '../contracts/streams';
+import { HELLO, HEAD, DATA, END, PING, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
 import { DAY_MS, isRecord } from './http';
 import type { RelayAllowance } from './limits';
 import { forward, RelayTrafficLimit, type Upstream } from './relay';
@@ -90,6 +90,8 @@ async function passing(response: Response, statuses: Retry['statuses']): Promise
   const body: unknown = await response.clone().json().catch(() => null);
   return isRecord(body) && body.error === 'upstream-unreachable';
 }
+
+const asked = async (response: Response) => askedWait(response.headers.get('retry-after'), await response.clone().json().catch(() => null));
 
 const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -213,7 +215,7 @@ export class StreamBox {
       for (;;) {
         tries++;
         response = await forward(this.upstream, envelope, bytes, signal, this.allowance);
-        const wait = retry && tries <= retry.times && !signal.aborted && (await passing(response, retry.statuses)) ? retryWait(tries, response.headers.get('retry-after'), Date.now()) : null;
+        const wait = retry && tries <= retry.times && !signal.aborted && (await passing(response, retry.statuses)) ? retryWait(tries, await asked(response), Date.now()) : null;
         if (wait === null) break;
         await response.body?.cancel();
         this.append(sealing, WAIT, new Uint8Array());

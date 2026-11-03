@@ -3,7 +3,7 @@ import type { ApiResult } from './api';
 import type { PreparedChat } from '../connectors/preparation';
 import type { CallCalibration, InputMeasurement, TokenFit } from '../model/token-calibration';
 import { BOT_HEADER, RELAY_HEADER } from '../contracts/http';
-import { HEAD, DATA, END, PING, WAIT, retryWait, type Retry } from '../contracts/streams';
+import { HEAD, DATA, END, PING, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
 import { providerCode, providerMessage } from '../connectors/errors';
 import { isRecord } from '../connectors/values';
 import type { ConnectionType, HttpRequest } from '../connectors/types';
@@ -96,8 +96,8 @@ export function directTransport(guest: string | null): Transport {
       for (let tries = 1; ; tries++) {
         call.tries = tries;
         const response = await raw(request, canceled, call.bot, undefined, type);
-        const retryAfter = response instanceof Response ? response.headers.get('retry-after') : null;
         const again = response instanceof Response ? retry?.statuses.includes(response.status) : response.kind === 'offline';
+        const retryAfter = again && response instanceof Response ? askedWait(response.headers.get('retry-after'), await response.clone().json().catch(() => null)) : null;
         const wait = again && retry && tries <= retry.times ? retryWait(tries, retryAfter, Date.now()) : null;
         if (wait === null) {
           if (response instanceof Response && response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) count('replied');
@@ -145,11 +145,19 @@ async function sourced(response: Response): Promise<Response | RelayFailure> {
 const codeOf = (body: unknown) => (isRecord(body) && typeof body.error === 'string' ? body.error : 'server-error');
 const errorCode = async (response: Response) => codeOf(await response.json().catch(() => null));
 
+const parsed = (text: string): unknown => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
+
 async function answered(response: Response | RelayFailure): Promise<Response | RelayFailure> {
   if (!(response instanceof Response) || response.ok) return response;
   const text = await response.text().catch(() => '');
   const code = providerCode(text);
-  const retryAfter = response.headers.get('retry-after');
+  const retryAfter = askedWait(response.headers.get('retry-after'), parsed(text));
   return { kind: 'provider', status: response.status, detail: providerMessage(text), ...(code !== null && { code }), ...(retryAfter !== null && { retryAfter }) };
 }
 
