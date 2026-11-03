@@ -498,8 +498,8 @@ export class ObjectStore {
 
   // A chat's entries without holding it, for a pass over many chats (runtime/chat-search), never filling the held
   // scopes. Every kind of the chat's is read from the server, as a held chat's pull reads them, since what is read is
-  // cached as the chat's scope, which an opening then trusts as whole. A cached cursor at the chat's entry head asks the
-  // server nothing; with no cached scope the head is no proof, since a bootstrap leaves the heads before it unknown.
+  // cached as the chat's scope, which an opening then trusts as whole. A whole cached scope at the chat's entry head asks
+  // the server nothing; anything less, the head is no proof, since a bootstrap leaves the heads before it unknown.
   async chatEntries(chat: string, pin: Pin, signal?: AbortSignal): Promise<ApiResult<Stored<'entry'>[]>> {
     const stop = AbortSignal.any([this.closing.signal, ...(signal ? [signal] : [])]);
     const entries: Stored<'entry'>[] = [];
@@ -524,7 +524,7 @@ export class ObjectStore {
       if (stop.aborted) return this.halted();
       keep(row, upgradeValue(row.kind, value) ?? value);
     }
-    if (!saved || saved.state.cursor < this.entryHead(chat)) {
+    if (!saved || !saved.state.complete || saved.state.cursor < this.entryHead(chat)) {
       const read = await this.pages({ parent: chat }, saved?.state.cursor ?? 0, keep, pin, signal, (changes, at, more) => this.cacheWrite(changes, { chat, cursor: at, complete: !more }), true);
       if (!read.ok) return read;
     }

@@ -90,4 +90,16 @@ describe('채팅 검색', () => {
     expect(device.children('textfile', id).map(({ value }) => value.text)).toEqual(['kept']);
     lease.release();
   });
+
+  it('asks the server again for a chat whose cached scope a pull left short', async () => {
+    const { store, open } = await server.account();
+    const id = await chat(store, {}, '용');
+    const cache = new MemoryCache();
+    const device = await open(undefined, cache);
+    expect(await device.pull()).toBeNull();
+    expect((await device.pinned((pin) => device.chatEntries(id, pin))).ok).toBe(true);
+    cache.states.set(id, { ...cache.states.get(id)!, complete: false });
+    await server.wipe();
+    expect((await device.pinned((pin) => device.chatEntries(id, pin))).ok).toBe(false);
+  });
 });
