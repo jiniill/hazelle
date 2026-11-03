@@ -26,6 +26,7 @@ import { useEditBeside } from './characterBeside';
 import { promptEditor, toggleEditor, type Panel, type Side } from './panels';
 import { useAutopilot } from './useAutopilot';
 import { useChat } from './useChat';
+import type { SearchSeed } from './useChatSearch';
 
 // The lorebook panel brings the lorebook editor and the CBS language with it, so a chat loads them only when it opens.
 const ChatLore = lazy(() => import('./ChatLore').then(({ ChatLore }) => ({ default: ChatLore })));
@@ -40,15 +41,16 @@ type Props = {
   // null for a new chat, which is saved with its first message.
   item: ChatItem | null;
   shelf: CharacterShelf<ChatSummary> | null;
+  find: SearchSeed | null;
   back: Back | null;
   side: (at: SideAt) => ReactNode;
   // Told while two panels stand beside the story, so the shell can make room.
   onPaired: (paired: boolean) => void;
 };
 
-export function ChatScreen({ id: chatId, item, shelf, back, side, onPaired }: Props) {
+export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired }: Props) {
   const { reading, display } = useDisplay();
-  const chat = useChat(chatId, item, shelf, reading.reply);
+  const chat = useChat(chatId, item, shelf, reading.reply, find);
   const { id, busy, panel, scroll, prompt, actions } = chat;
   const autopilot = useAutopilot(chat);
   const wide = useWide();

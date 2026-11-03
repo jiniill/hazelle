@@ -1,0 +1,9 @@
+.lit {
+  border-radius: var(--radius-xs);
+  background: var(--color-found-term);
+  color: inherit;
+}
+
+.step {
+  color: var(--color-text-faint);
+}

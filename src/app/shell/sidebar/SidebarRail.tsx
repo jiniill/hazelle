@@ -1,9 +1,10 @@
-import { LayoutGrid, MessagesSquare, Settings, Wrench } from 'lucide-react';
+import { LayoutGrid, MessagesSquare, Search, Settings, Wrench } from 'lucide-react';
 import type { ChatSummary } from '../../../model/chat';
 import type { Shelf } from '../../../model/library';
 import { ACTS } from '../../common/acts';
 import { ShelfFace, shelfName } from '../../library/shelf';
-import { BOARD, SETTINGS, TOOLS } from '../../common/words';
+import { BOARD, CHAT_SEARCH, SETTINGS, TOOLS } from '../../common/words';
+import { SHORTCUTS, titled } from '../../shortcuts';
 import { useStanding } from '../../session';
 import { FaceButton, IconButton, Rail, Viewport } from '../../ui';
 import { navigate } from '../router';
@@ -16,6 +17,7 @@ type Props = {
   shelves: Shelf<ChatSummary>[];
   current: Shelf<ChatSummary> | undefined;
   home: boolean;
+  search: boolean;
   board: boolean;
   typing: (shelf: Shelf<ChatSummary>) => boolean;
   onEnter: (shelf: Shelf<ChatSummary>) => void;
@@ -23,7 +25,7 @@ type Props = {
 };
 
 // On wide screens these places live only here; the list page shows them on phones.
-export function SidebarRail({ shelves, current, home, board, typing, onEnter, fold }: Props) {
+export function SidebarRail({ shelves, current, home, search, board, typing, onEnter, fold }: Props) {
   const { unreadBoard } = useStanding();
   return (
     <Rail
@@ -31,6 +33,7 @@ export function SidebarRail({ shelves, current, home, board, typing, onEnter, fo
       actions={
         <>
           <IconButton icon={LayoutGrid} label="캐릭터 둘러보기" framed current={home} onClick={() => navigate(HOME)} />
+          <IconButton icon={Search} label={CHAT_SEARCH} title={titled(CHAT_SEARCH, SHORTCUTS.search.keys)} framed current={search} onClick={() => navigate({ kind: 'search', query: '' })} />
           <AddMenu trigger={(opener) => <IconButton icon={ACTS.create.icon} label={ACTS.create.label} framed {...opener} />} />
         </>
       }

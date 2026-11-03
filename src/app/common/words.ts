@@ -138,6 +138,8 @@ export const BOARD = {
 };
 
 export const TOOLS = '도구';
+
+export const CHAT_SEARCH = '채팅 검색';
 export const TOOL_PAGES = { translator: '번역기', calculator: '비용 계산기' };
 
 export const inSettings = (page: keyof typeof PAGES) => `${SETTINGS} › ${PAGES[page]}`;

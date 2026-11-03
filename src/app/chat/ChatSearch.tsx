@@ -16,6 +16,7 @@ type Props = {
 export function ChatSearch({ search, onSearch, onStep, onClose }: Props) {
   const field = useRef<HTMLInputElement>(null);
   useEffect(() => {
+    if (!search.focus) return;
     field.current?.focus();
     field.current?.select();
   }, [search.focus]);

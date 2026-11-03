@@ -65,7 +65,7 @@ export function LibrarySidebar({ page, collapsed, onCollapse }: Props) {
   );
   return (
     <>
-      <SidebarRail shelves={railShelves} current={current} home={route.kind === 'home' || route.kind === 'gallery'} board={onBoard(route)} typing={typing} onEnter={enter} fold={chats ? { open: !collapsed, onToggle: () => onCollapse(!collapsed) } : undefined} />
+      <SidebarRail shelves={railShelves} current={current} home={route.kind === 'home' || route.kind === 'gallery'} search={route.kind === 'search'} board={onBoard(route)} typing={typing} onEnter={enter} fold={chats ? { open: !collapsed, onToggle: () => onCollapse(!collapsed) } : undefined} />
       {!collapsed && chats}
     </>
   );

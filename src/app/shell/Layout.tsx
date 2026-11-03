@@ -40,6 +40,7 @@ export function Layout() {
   useShortcut('settings', () => (settings === null ? navigate(settingsEntry(wide)) : closeLayer()), fallback);
   useShortcut('personas', () => navigate({ kind: 'personas', place: null }), fallback);
   useShortcut('prompts', () => navigate({ kind: 'prompts', place: null, sort: null }), fallback);
+  useShortcut('search', () => navigate({ kind: 'search', query: '' }), fallback);
   useShortcut('shortcutList', () => setListing((open) => !open), fallback);
   useShortcut('sidebar', () => (wide && settings === null && tools === null ? fold(!folded) : false), fallback);
   useShortcut('pictures', () => changeDisplay({ hidePictures: !display.hidePictures }), fallback);

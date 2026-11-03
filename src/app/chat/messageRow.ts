@@ -1,7 +1,7 @@
 import { shown } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
+import { foldTerm } from '../../model/search';
 import { rowPart, sameFields, sameItems } from './rowPart';
-import { foldTerm } from './search';
 import type { OpenChat } from './useChat';
 
 const NO_PICTURES: Stored<'illustration'>[] = [];
