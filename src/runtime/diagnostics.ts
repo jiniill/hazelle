@@ -1,6 +1,7 @@
 import { MAX_DIAGNOSTICS_LENGTH } from '../contracts/board';
 import { autoDiagnose, errorFacts, type AutoOrigin } from './auto-diagnosis';
-import { errorText, type EvaluationDown, type EvaluationUp } from './evaluation-core';
+import { errorText } from './error-text';
+import type { EvaluationDown, EvaluationUp } from './evaluation-core';
 import type { Facts } from './diagnostic-state';
 import { moduleWorker } from './worker';
 import workerUrl from './evaluation-worker?worker&url';

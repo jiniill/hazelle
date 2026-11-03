@@ -4,7 +4,7 @@ import { entryKey, entryName, type Starred } from '../connectors/types';
 import type { Chat } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import { live } from '../model/library';
-import type { Profile } from '../model/profile';
+import { FIRST_PROFILE_NAME, type Profile } from '../model/profile';
 import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiResult } from './api';
 import { imageOnly, taskModel, type Route, type RouteFailure } from './assignment';
@@ -48,9 +48,6 @@ export function profileUsers(connections: readonly Stored<'connection'>[], defau
 
 // An account that has never had a default 묶음 gets an empty one, once. The session awaits it when it opens;
 // a failure is tried again next time.
-// The starter's name, which the default's mark leaves out (words defaultMark).
-export const FIRST_PROFILE_NAME = '기본';
-
 export async function addFirstProfile(store: ObjectStore): Promise<void> {
   if (accountSettings(store)?.profile !== undefined) return;
   if (!store.get('profile', FIRST_PROFILE_ID)) {

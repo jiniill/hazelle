@@ -1,12 +1,12 @@
 import { ChangeSignal } from '../change-signal';
 import type { Door } from '../contracts/accounts';
 import type { AccountState } from '../contracts/admin';
-import { createVault, openVault, passwordCredential, recoveryCredential, type Credential, type Method, type VaultKey, type VaultRecord } from '../vault/keys';
+import { createVault, openVault, passwordCredential, recoveryCredential, sameVaultKey, type Credential, type Method, type VaultKey, type VaultRecord } from '../vault/keys';
 import { api, holdAccount, SLOW_ROUTE_WAIT, type ApiResult, type Heard } from './api';
 import { page } from './pages';
 import { stretchInWorker } from './password';
 import { guestSignupRecovery, recallGuest } from '../vault/device';
-import { sameVaultKey, transferGuest, type GuestTransferOptions } from './guest-transfer';
+import type { GuestTransferOptions } from './guest-transfer';
 
 // Null caps mean unlimited; null bytes means unread/restoring.
 // fileBytes tracks held files, not files currently referenced by app objects (server/files).
@@ -114,8 +114,10 @@ export async function signUpGuest(draft: GuestSignup, options: GuestTransferOpti
   return uploaded.ok ? signedUp : uploaded;
 }
 
-export function uploadGuest(accountId: string, vaultKey: VaultKey, options: GuestTransferOptions = {}): Promise<ApiResult<null>> {
+export async function uploadGuest(accountId: string, vaultKey: VaultKey, options: GuestTransferOptions = {}): Promise<ApiResult<null>> {
   holdAccount(accountId);
+  // Imported on demand, as AccountFlow's land does: main.tsx reaches this file before any page draws.
+  const { transferGuest } = await import('./guest-transfer');
   return transferGuest(accountId, vaultKey, options);
 }
 

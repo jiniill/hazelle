@@ -6,6 +6,7 @@ import { formatRecoveryKey, parseRecoveryKey } from './recovery-key';
 export type VaultRecord = { passwordWrap: string; recoveryWrap: string };
 export type VaultKey = Uint8Array<ArrayBuffer>;
 export type Method = 'password' | 'recovery';
+export const sameVaultKey = (one: VaultKey, two: VaultKey) => one.length === two.length && one.every((byte, index) => byte === two[index]);
 // Server sees only proof; HKDF separates it from the vault-unwrapping key.
 export type Credential = { method: Method; proof: string; kek: CryptoKey };
 

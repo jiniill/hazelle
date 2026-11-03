@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { PULSE_FLOORS, PULSE_ROLES, type PulseAnswer, type PulseBoard, type PulseOrder, type PulseRanking, type PulseRole } from '../../contracts/pulse';
-import { HOSTED } from '../../contracts/installation';
-import { selfHost } from '../../runtime/installation';
 import { readPulse, readPulseWeek } from '../../runtime/pulse';
 import { LegalNotice } from '../common/LegalNotice';
 import { count } from '../common/typedNumber';
@@ -19,18 +17,7 @@ const RANKING_HELP = {
   earlier: `그 주에 ${PULSE_FLOORS.row}명 이상 쓴 모델 순위예요. 순위 변동은 전주와 비교하며 사용자가 ${PULSE_FLOORS.board}명 미만이면 숨기고, ${PULSE_FLOORS.row}명 미만인 모델은 ${REST}에 이름만 보여 줘요.`,
 };
 
-// main.tsx asks before the account flow, as for /terms: the page reads the same signed in or out.
-export function pulsePage(path: string) {
-  if (path !== PULSE.path) return null;
-  // A self-host's 헤이젤 나우 is hazelle.app's.
-  if (selfHost()) {
-    location.replace(HOSTED + PULSE.path);
-    return <></>;
-  }
-  return <PulsePage />;
-}
-
-function PulsePage() {
+export function PulsePage() {
   const pulse = useLoaded(readPulse);
   return (
     <Screen width="form" top={<Brand />}>

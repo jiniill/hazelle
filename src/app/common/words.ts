@@ -5,7 +5,7 @@ import type { Feature } from '../../model/features';
 import type { PrereadParts } from '../../model/settings';
 import type { AgentStage } from '../../model/prompt';
 import { KEEP_DAYS } from '../../model/library';
-import { FIRST_PROFILE_NAME } from '../../runtime/profiles';
+import { FIRST_PROFILE_NAME } from '../../model/profile';
 import { PULSE_PAGE } from '../../contracts/pulse';
 import type { Category, Status } from '../../contracts/board';
 import { withParticle } from './particles';

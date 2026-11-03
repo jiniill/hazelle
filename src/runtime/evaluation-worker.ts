@@ -1,4 +1,5 @@
-import { errorText, Evaluator, type EvaluationDown, type EvaluationUp } from './evaluation-core';
+import { Evaluator, type EvaluationDown, type EvaluationUp } from './evaluation-core';
+import { errorText } from './error-text';
 import { tokenizer } from './tokenizer';
 import { postProgress } from './worker';
 

@@ -1,6 +1,6 @@
 import { CloudOff, Eraser, HardDriveDownload, MonitorSmartphone, Smartphone, Unplug } from 'lucide-react';
 import { selfHost } from '../../runtime/installation';
-import { CONTACT, PRIVACY, REPOSITORY, TERMS } from './legal';
+import { PRIVACY, TERMS } from './legal';
 import { evictsUnlessInstalled } from './platform';
 import { useAccount, type GuestDoors } from '../session';
 import { Button, Link, NoticeBar, NoticeCard, Text } from '../ui';
@@ -48,15 +48,6 @@ export function GuestLine({ note = NOTE }: { note?: string }) {
   const { guest } = useAccount();
   if (!guest) return null;
   return <NoticeBar icon={CloudOff} title={TITLE} note={note} hint={{ label: LIMITS, text: points().map(({ text }) => `${text}.`).join(' ') }} actions={<Doors guest={guest} signIn="로그인" quiet />} />;
-}
-
-// Until guests can write on the board, the way out for a failure, a failed 계정 만들기 above all.
-export function ReportElsewhere() {
-  return (
-    <Text variant="note">
-      계정 없이 알리려면 <Link href={`${REPOSITORY}/issues/new`}>GitHub 이슈</Link>나 <Link href={`mailto:${CONTACT}`}>메일</Link>로 보내 주세요.
-    </Text>
-  );
 }
 
 function Doors({ guest, signIn, quiet = false }: { guest: GuestDoors; signIn: string; quiet?: boolean }) {

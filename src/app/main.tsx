@@ -8,8 +8,8 @@ import { ScreenLoad } from './common/ScreenLoad';
 import { watchProblems } from '../runtime/diagnostics';
 import { markSelfHost } from '../runtime/installation';
 import { START_AGAIN } from '../contracts/start';
-import { pulsePage } from './pulse/PulsePage';
-import { sharePage } from './share/SharePage';
+import { pulsePage } from './pulse/route';
+import { sharePage } from './share/route';
 import { markScrollbars } from './ui';
 import './ui/foundation/global.css';
 

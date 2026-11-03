@@ -3,7 +3,7 @@ import { AccountFacts, changePassword, credentialFor, passwordCredentialFor, gue
 import { holdAccount } from '../../runtime/api';
 import { cachedAccounts, forgetVault } from '../../runtime/device-cache';
 import { guestAccount } from '../../runtime/guest-store';
-import { discardGuest, guestWithContent, type GuestTransferStep } from '../../runtime/guest-transfer';
+import type { GuestTransferStep } from '../../runtime/guest-transfer';
 import { selfHost } from '../../runtime/installation';
 import { lockVault, recallGuest, recallVault, rememberVault } from '../../vault/device';
 import { DatabaseBlocked } from '../../vault/database';
@@ -137,7 +137,8 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
   // otherwise await explicit upload/discard before opening it.
   async function land(session: SessionFacts, vaultKey: VaultKey) {
     try {
-      const held = await guestWithContent();
+      // Imported here, not at the top: the transfer brings the store, which a first visit's page must not wait for.
+      const held = await (await import('../../runtime/guest-transfer')).guestWithContent();
       if (!held.ok) return show({ kind: 'unreachable', message: describeFailure(held) });
       const guest = held.data;
       if (guest?.accountId === session.accountId) {
@@ -255,7 +256,7 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
             await land(session, vaultKey);
           }}
           onDiscard={async () => {
-            const discarded = await discardGuest();
+            const discarded = await (await import('../../runtime/guest-transfer')).discardGuest();
             if (!discarded.ok) return describeFailure(discarded);
             await land(session, vaultKey);
             return null;

@@ -3,7 +3,7 @@ import { BATCH_LIMITS, type SealedChange, type SealedWrite } from '../contracts/
 import { isValue, KINDS, type Kind } from '../model/kinds';
 import { ORDER_ID, toFront, type Order } from '../model/order';
 import { forgetGuestVault, recallGuest, rememberVault } from '../vault/device';
-import type { VaultKey } from '../vault/keys';
+import { sameVaultKey, type VaultKey } from '../vault/keys';
 import { objectKey, openObject, sealObject } from '../vault/objects';
 import { feedQuery, serverBackend, type Backend } from './backend';
 import { api, type ApiFailure, type ApiResult } from './api';
@@ -202,8 +202,6 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
   await forgetGuestVault(guest.accountId);
   return { ok: true, data: null };
 }
-
-export const sameVaultKey = (one: VaultKey, two: VaultKey) => one.length === two.length && one.every((byte, index) => byte === two[index]);
 
 async function copyOrder(target: Backend, accountId: string, vaultKey: VaultKey, timeline: string, ids: string[], signal?: AbortSignal): Promise<ApiResult<number>> {
   const key = await objectKey(vaultKey);

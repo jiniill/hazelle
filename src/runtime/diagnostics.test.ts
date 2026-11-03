@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_DIAGNOSTICS_LENGTH } from '../contracts/board';
-import { errorText } from './evaluation-core';
+import { errorText } from './error-text';
 import { noteProblem, recentProblems, reportText } from './diagnostics';
 
 const DEVICE = { userAgent: 'Mozilla/5.0 (iPhone)', language: 'ko-KR', screen: '402×874 @3 · 창 402×760', cores: 6, memory: null, standalone: false, online: true };

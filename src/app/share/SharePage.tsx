@@ -2,7 +2,7 @@ import { Flag, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { MAX_REPORT_LENGTH } from '../../contracts/admin';
 import { openVersion, type Opened } from '../../runtime/share';
-import { countReceived, readShareLink, readShareState, reportShare, shareLink } from '../../runtime/share-link';
+import { countReceived, readShareState, reportShare, shareLink } from '../../runtime/share-link';
 import { describeFailure } from '../common/failure';
 import { LegalNotice } from '../common/LegalNotice';
 import { SharePreview } from '../common/SharePreview';
@@ -10,7 +10,7 @@ import { TextDialog } from '../common/TextDialog';
 import { ACTS } from '../common/acts';
 import { LOADING, SHARE } from '../common/words';
 import { Brand, Button, Callout, Divider, Intro, Screen, Stack, Text } from '../ui';
-import { holdPending, pendingFor } from '../common/sharePending';
+import { holdPending } from '../common/sharePending';
 
 type View =
   | { kind: 'loading' }
@@ -21,15 +21,7 @@ type View =
   | { kind: 'broken' }
   | { kind: 'failed'; failure: string };
 
-// main.tsx asks before the account flow, as for /terms: the page reads the same signed in or out, and opens without an
-// account. A link whose 헤이젤로 가져오기 is waiting goes to the account flow instead (common/sharePending).
-export function sharePage(path: string, hash: string) {
-  const link = readShareLink(path, hash);
-  if (!link || pendingFor(link.id) !== null) return null;
-  return <SharePage id={link.id} shareKey={link.key} />;
-}
-
-function SharePage({ id, shareKey }: { id: string; shareKey: string | null }) {
+export function SharePage({ id, shareKey }: { id: string; shareKey: string | null }) {
   const [view, setView] = useState<View>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const [reporting, setReporting] = useState(false);

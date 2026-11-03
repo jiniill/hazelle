@@ -61,15 +61,6 @@ export type EvaluationDown = { id: number; input: EvaluationInput } | { forget: 
 // (engine/progress). trouble: why the tokenizer did not load, for 문제 진단's recent problems (runtime/diagnostics).
 export type EvaluationUp = { id: number; result: EvaluationResult } | { id: number; error: string } | { pong: true } | { started: number } | { progress: true } | { trouble: string } | { probed: string };
 
-// An error as 문제 진단 reports it. WebKit names the failing file and line only in the stack, so its first lines come too;
-// V8's stack opens with the name and message, said once.
-export function errorText(error: unknown): string {
-  if (!(error instanceof Error)) return String(error);
-  const head = `${error.name}: ${error.message}`;
-  const lines = error.stack?.split('\n') ?? [];
-  return [head, ...(lines[0] === head ? lines.slice(1) : lines).slice(0, 3)].join('\n');
-}
-
 export class Evaluator {
   private readonly displays = new Map<string, { revision: number; pass: DisplayPass }>();
   private readonly held = new Map<string, Map<string, LuaText>>();
