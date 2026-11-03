@@ -52,6 +52,18 @@ describe('채팅 검색', () => {
     expect([read, unreadable]).toEqual([4, 0]);
   });
 
+  it('reads a message’s names as the chat shows them', async () => {
+    const { store } = await server.account();
+    const [luna, rin] = [crypto.randomUUID(), crypto.randomUUID()];
+    expect((await store.create('character', { card: card('Luna'), folder: null, loreFolders: [] }, { id: luna })).ok).toBe(true);
+    expect((await store.create('persona', { name: '린', description: '', picture: null }, { id: rin })).ok).toBe(true);
+    await chat(store, { character: luna, persona: rin }, '{{user}}가 <char>를 불렀다');
+    const chats = liveChats(new ReadModels(store).library.snapshot());
+    const finder = new ChatFinder(store);
+    finder.find('린', chats);
+    expect(results(chats, '린', await finished(finder)).found[0]!.hit).toMatchObject({ lit: { text: '린가 Luna를 불렀다', from: 0, to: 1 } });
+  });
+
   it('goes on from what a stopped pass read for the same term, and starts over for another', async () => {
     const { store } = await server.account();
     for (const text of ['용', '용', '불']) await chat(store, {}, text);

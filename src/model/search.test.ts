@@ -11,6 +11,6 @@ it('finds a term in each shown version or its translation, tags left out, and li
   expect(far.text.slice(far.from, far.to)).toBe('dragon');
   expect(far.text.startsWith('…')).toBe(true);
   const messages = [said('a', 'nothing'), said('b', '원문', 'the dragon'), said('c', 'dragon again')];
-  expect(findInMessages(messages, term)).toEqual({ message: 'b', count: 2, lit: { text: 'the dragon', from: 4, to: 10 } });
-  expect(findInMessages(messages, foldTerm('용'))).toBeNull();
+  expect(findInMessages(messages, term, (text) => text)).toEqual({ message: 'b', count: 2, lit: { text: 'the dragon', from: 4, to: 10 } });
+  expect(findInMessages(messages, foldTerm('용'), (text) => text)).toBeNull();
 });

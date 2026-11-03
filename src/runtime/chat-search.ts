@@ -1,7 +1,9 @@
 import { ChangeSignal } from '../change-signal';
-import { fold, type ChatSummary, type Message } from '../model/chat';
+import { fillNames } from '../engine/cbs/evaluate';
+import { fold, type Chat, type ChatSummary, type Message } from '../model/chat';
 import { findInMessages, litIn, type Lit, type MessageHit } from '../model/search';
 import type { ApiFailure, ApiResult } from './api';
+import { namedIn } from './chat-context';
 import type { Library } from './read-model';
 import type { ObjectStore, Pin } from './store';
 
@@ -69,10 +71,10 @@ export class ChatFinder {
       let failed: ApiFailure | null = null;
       const reader = async () => {
         while (!failed && !signal.aborted && next < due.length) {
-          const { id, order } = due[next++]!;
+          const { id, order, chat } = due[next++]!;
           const messages = await this.messages(id, pin, signal);
           if (signal.aborted) return;
-          if (messages.ok) this.reading.set(id, { order, hit: findInMessages(messages.data, term) });
+          if (messages.ok) this.reading.set(id, { order, hit: findInMessages(messages.data, term, this.named(chat)) });
           else if (messages.error === 'unreadable') this.reading.set(id, { order, unreadable: true });
           else failed = messages;
           this.soon();
@@ -89,6 +91,11 @@ export class ChatFinder {
     if (this.store.scopeState(chat) === 'loaded') return { ok: true, data: this.store.foldedChat(chat).messages };
     const entries = await this.store.chatEntries(chat, pin, signal);
     return entries.ok ? { ok: true, data: fold(entries.data) } : entries;
+  }
+
+  private named(chat: Chat): (text: string) => string {
+    const names = namedIn(this.store, chat);
+    return (text) => fillNames(text, names);
   }
 
   private soon() {

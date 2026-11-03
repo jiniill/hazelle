@@ -117,8 +117,10 @@ const variadic = (args: string[]) => (args.length === 1 ? items(args[0]!) : args
 const numbers = (args: string[]) => variadic(args).map((value) => Number(value) || 0);
 
 const cardText = (field: 'description' | 'personality' | 'scenario' | 'exampleDialogue'): Run => (_, { context, insert }) => (context.card ? insert(context.card[field]) : null);
-define('char bot', 0, (_, { context: { card } }) => card && (card.nickname || card.name));
-define('user', 0, (_, { context: { persona } }) => persona && persona.name);
+export const charName = (card: CbsContext['card']) => card && (card.nickname || card.name);
+export const userName = (persona: CbsContext['persona']) => persona && persona.name;
+define('char bot', 0, (_, { context: { card } }) => charName(card));
+define('user', 0, (_, { context: { persona } }) => userName(persona));
 define('persona userpersona', 0, (_, { context: { persona }, insert }) => persona && insert(persona.description));
 define('description chardesc', 0, cardText('description'));
 define('personality charpersona', 0, cardText('personality'));

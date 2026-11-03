@@ -6,7 +6,7 @@ import type { Stage } from '../render';
 import { escapeCbs } from './escape';
 import type { PreviousMessages } from './history';
 import { parse, type Block, type Legacy, type Node, type Tag } from './parse';
-import { bool, handlerFor, isErrorText, isUnsupportedTag, items, normalize, readToggle, readVar, Return, truthy, type Env, type Erase } from './tags';
+import { bool, charName, handlerFor, isErrorText, isUnsupportedTag, items, normalize, readToggle, readVar, Return, truthy, userName, type Env, type Erase } from './tags';
 
 // unknown-tag: a tag or block no handler takes, as written back, unless its name is prose. error-text: Risu's error text a tag gave ({{iserror}}).
 export type CbsProblem = { kind: 'unknown-tag' | 'error-text'; text: string };
@@ -120,6 +120,13 @@ export function evaluate(text: string, context: CbsContext, trace: CbsTrace | nu
 const STEPPED = /<(user|char|bot)>/gi;
 const prestep = (text: string) => text.replace(STEPPED, (_, name: string) => `{{${name.toLowerCase()}}}`);
 // A place in prestep's text back in the text as written: each rewrite before it is two characters longer there.
+const NAME = /\{\{(char|bot|user)\}\}/gi;
+
+// Only the names filled, for a text read without its chat's whole context (채팅 검색); a name that is missing leaves its tag.
+export function fillNames(text: string, { card, persona }: Pick<CbsContext, 'card' | 'persona'>): string {
+  return prestep(text).replace(NAME, (tag, name: string) => (name.toLowerCase() === 'user' ? userName(persona) : charName(card)) ?? tag);
+}
+
 function unstep(text: string): (at: number) => number {
   const ends = [...text.matchAll(STEPPED)].map((match, index) => match.index + match[0].length + 2 * (index + 1));
   return (at) => at - 2 * ends.filter((end) => end <= at).length;

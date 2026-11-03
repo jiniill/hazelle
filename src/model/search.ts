@@ -30,13 +30,14 @@ export function litIn(text: string, term: string): Lit | null {
 // count: the messages holding the term, as the in-chat search counts its hits; message: the first of them.
 export type MessageHit = { message: string; count: number; lit: Lit };
 
-// Each message's shown version, its text and its translation, as stored: what the display makes of them is not read.
-export function findInMessages(messages: readonly Message[], term: string): MessageHit | null {
+// Each message's shown version, its text and its translation, as stored with only what named fills in: the rest of what
+// the display makes of them is not read.
+export function findInMessages(messages: readonly Message[], term: string, named: (text: string) => string): MessageHit | null {
   let first: Omit<MessageHit, 'count'> | null = null;
   let count = 0;
   for (const message of messages) {
     const { text, translation } = shown(message);
-    const lit = litIn(text, term) ?? (translation ? litIn(translation.text, term) : null);
+    const lit = litIn(named(text), term) ?? (translation ? litIn(named(translation.text), term) : null);
     if (!lit) continue;
     count++;
     first ??= { message: message.id, lit };

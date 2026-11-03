@@ -105,10 +105,19 @@ export const markSeen = (store: ObjectStore, change: Seen) =>
 export const setCacheNoteHidden = (store: ObjectStore, hidden: boolean) =>
   store.upsert('settings', (current = EMPTY_SETTINGS) => (hidden ? { ...current, cacheNoteHidden: true } : without(current, 'cacheNoteHidden')));
 
+// Whom a chat's text names: {{char}} its card, {{user}} its persona.
+export function namedIn(store: Reader['store'], chat: Pick<Chat, 'character' | 'persona'>): Pick<ChatScope, 'card' | 'persona'> {
+  const persona = chatPersona(store, chat);
+  return {
+    card: chat.character === null ? null : (store.get('character', chat.character)?.value.card ?? null),
+    persona: persona.kind === 'persona' ? { name: persona.persona.value.name, description: persona.persona.value.description } : null,
+  };
+}
+
 // id is null for a chat not saved yet.
 export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messages: Message[]): ChatScope {
   const character = chat.character === null ? null : (store.get('character', chat.character)?.value ?? null);
-  const card = character?.card ?? null;
+  const { card, persona } = namedIn(store, chat);
   const packs = packsOf(store, chat);
   const cast = (chat.cast ?? []).flatMap((member) => live(store.get('character', member)) ?? []);
   // A 등장인물's lorebook and pictures follow the packs', its pictures with no module namespace, as the character's own.
@@ -116,7 +125,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
   // The lorebooks in Risu's order: the character's own, the chat's own (채팅 로어북), then the modules', then the cast's.
   const loreOwners = [...packs.filter(({ module }) => !module), ...(id === null ? [] : [{ id }]), ...packs.filter(({ module }) => module), ...cast];
   const prompt = chatPrompt(store, chat);
-  const persona = chatPersona(store, chat);
+  const face = chatPersona(store, chat);
   const route = chatModel(store, chat, 'main');
   const aux = chatModel(store, chat, 'aux');
   const toggles = togglesOf(store, chat, prompt, packs);
@@ -125,7 +134,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
     card,
     cast: cast.map(({ id, value }) => ({ id, card: value.card })),
     packs: packs.map(({ pack }) => pack),
-    persona: persona.kind === 'persona' ? { name: persona.persona.value.name, description: persona.persona.value.description } : null,
+    persona,
     prompt: prompt.kind === 'prompt' ? prompt.prompt.value : null,
     promptOut: keepsPromptOut(card, chat),
     keepsThoughts: character?.keepThoughts === true,
@@ -156,7 +165,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
     modules: packs.flatMap(({ module }) => module?.namespace ?? []),
     faces: {
       char: chat.character === null ? null : (store.children('avatar', chat.character)[0]?.value.thumb ?? null),
-      user: persona.kind === 'persona' ? persona.persona.value.picture : null,
+      user: face.kind === 'persona' ? face.persona.value.picture : null,
     },
     screen: null,
     pick: `${chat.character ?? ''}:${chat.seed ?? id ?? ''}`,
