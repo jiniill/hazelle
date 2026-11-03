@@ -11,6 +11,8 @@ export const SHORTCUTS = {
   personas: { label: '페르소나 (채팅에서는 바꾸기)', keys: [{ key: 'e', mod: true }] },
   prompts: { label: '프롬프트 (채팅에서는 바꾸기)', keys: [{ key: 'p', mod: true }] },
   shortcutList: { label: '단축키 보기', keys: [{ key: '/', mod: true }] },
+  // Not Ctrl+F, which stays the open chat's own search and elsewhere the browser's.
+  search: { label: '모든 채팅에서 검색', keys: [{ key: 'k', mod: true }] },
   sidebar: { label: '사이드바 접기 · 펼치기', keys: [{ key: 'b', mod: true }] },
   status: { label: '상태 보기 · 닫기 (상태창을 지정한 채팅)', keys: [{ key: '.', mod: true }] },
   pictures: { label: '이미지 가리기 · 보이기', keys: [{ key: 'h', mod: true, shift: true }] },
@@ -47,7 +49,7 @@ export const keysOf = (name: Name, enterSends: boolean) => (enterSends ? undefin
 
 // Where each shortcut works, in the order 단축키 lists them.
 export const SHORTCUT_GROUPS: readonly { title: string; note?: string; names: readonly Name[] }[] = [
-  { title: '공통', names: ['settings', 'personas', 'prompts', 'shortcutList', 'sidebar', 'status', 'pictures', 'undoToast'] },
+  { title: '공통', names: ['settings', 'personas', 'prompts', 'search', 'shortcutList', 'sidebar', 'status', 'pictures', 'undoToast'] },
   { title: '채팅', note: '화살표 키와 Home · End는 입력창이 비어 있을 때만 작동해요. 사이드 패널에서 Ctrl+F를 누르면 브라우저 검색이 열려요.', names: ['send', 'newline', 'stop', 'editLast', 'swipe', 'storyStep', 'storyEnds', 'saveEdit', 'cancelEdit', 'find', 'inspect'] },
   { title: '채팅 검색창', names: ['findNext', 'findPrevious', 'closeFind'] },
   { title: '번역기', note: '원문 칸에서 작동해요.', names: ['translate'] },

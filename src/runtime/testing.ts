@@ -20,6 +20,7 @@ import { Files } from './files';
 import { RequestLog, type Logged } from './request-log';
 import { openSession, type Session } from './session';
 import { ObjectStore } from './store';
+import type { DeviceCache } from './object-cache';
 
 // The bot scripts run in the test's own thread: node has no Worker to load them into. Made before withSession stubs
 // window, which the VM's loader would read as a browser.
@@ -157,8 +158,8 @@ export function testServer() {
       const { accountId } = body;
       holdAccount(accountId);
       const vaultKey = randomBytes(32);
-      const open = async (key: VaultKey = vaultKey) => {
-        const store = await ObjectStore.open(accountId, key, serverBackend(api));
+      const open = async (key: VaultKey = vaultKey, cache?: DeviceCache) => {
+        const store = await ObjectStore.open(accountId, key, serverBackend(api), cache);
         stores.push(store);
         return store;
       };

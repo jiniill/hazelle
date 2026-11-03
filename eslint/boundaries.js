@@ -4,7 +4,7 @@ import path from 'node:path';
 // Allow imports/types/tests edges explicitly; unknown areas fail lint until assigned.
 const RUNTIME_IMPORTS = ['toolApi', 'changeSignal', 'base64', 'hex', 'contracts', 'model', 'engine', 'connectors', 'modelsDev', 'vault'];
 const BELOW_APP = ['runtime', ...RUNTIME_IMPORTS];
-const FEATURES = ['account', 'admin', 'library', 'chat', 'connections', 'models', 'prompts', 'personas', 'modules', 'settings', 'share', 'pulse', 'guide', 'start', 'tools', 'board'];
+const FEATURES = ['account', 'admin', 'library', 'chat', 'connections', 'models', 'prompts', 'personas', 'modules', 'settings', 'share', 'pulse', 'guide', 'start', 'tools', 'board', 'search'];
 const FEATURE = {
   imports: ['ui', 'routes', 'common', 'root', ...BELOW_APP],
   why: 'a feature folder imports no other feature folder and nothing from the shell but routes and router (only the shell and main.tsx compose features), and reaches the server over HTTP only.',

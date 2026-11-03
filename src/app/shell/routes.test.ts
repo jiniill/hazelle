@@ -19,7 +19,8 @@ const EXAMPLES = {
     { kind: 'new-chat', character: CHARACTER },
     { kind: 'new-chat', character: null },
   ],
-  chat: [{ kind: 'chat', id: CHAT }],
+  chat: [{ kind: 'chat', id: CHAT }, { kind: 'chat', id: CHAT, find: { term: '검은 용 & a+b?', at: CHARACTER } }],
+  search: [{ kind: 'search', query: '' }, { kind: 'search', query: '검은 용 & a+b?#' }],
   connections: [{ kind: 'connections' }],
   'add-connection': [{ kind: 'add-connection' }],
   connect: CONNECTION_TYPES.map((type) => ({ kind: 'connect', type })),
@@ -110,6 +111,11 @@ describe('routes', () => {
       expect(parseRoute(at)).toEqual(HOME);
     },
   );
+
+  it('opens a chat from 채팅 검색 only at a message it can name', () => {
+    expect(parseRoute(`/chats/${CHAT}?find=용&at=abc`)).toEqual({ kind: 'chat', id: CHAT });
+    expect(parseRoute(`/chats/${CHAT}?find=&at=${CHARACTER}`)).toEqual({ kind: 'chat', id: CHAT });
+  });
 
   it('sends 뒤로 from a chat to its character’s chats, or home when the chat is not there', () => {
     expect(backTo(up({ kind: 'chat', id: CHAT }, CHARACTER), false)).toEqual({ to: { kind: 'shelf', character: CHARACTER }, label: '채팅 목록' });

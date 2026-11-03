@@ -41,7 +41,7 @@ import { budgetCut, pickStarted } from './infoReply';
 import { toggleRows, toggleSaveKey } from './toggles';
 import { anchorOf, useFollow } from './useFollow';
 import { useStorySteps } from './useStorySteps';
-import { useChatSearch } from './useChatSearch';
+import { useChatSearch, type SearchSeed } from './useChatSearch';
 import { useChatStatus } from './useChatStatus';
 import { useMessageEdit } from './useMessageEdit';
 import { useNewChat } from './useNewChat';
@@ -64,7 +64,7 @@ export type OpenChat = ReturnType<typeof useChat>;
 export type ChatActions = OpenChat['actions'];
 
 // item null is a new chat, saved under chatId with its first message; shelf null is 캐릭터 없이.
-export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterShelf<ChatSummary> | null, reply: Reading['reply']) {
+export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterShelf<ChatSummary> | null, reply: Reading['reply'], seed: SearchSeed | null) {
   const session = useSession();
   const { store, talk, drafts } = session;
   const saves = useSaves();
@@ -169,7 +169,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const flipKind = (kind: 'bookmarks' | 'lore' | 'autopilot' | 'toggles') => flipPanel({ kind }, (current) => current.kind === kind);
   const timePin = useTimePin();
   const [branching, setBranching] = useState(false);
-  const { found, search, actions: searchActions } = useChatSearch(messages, texts, translation.translating, translation.flipped, seekTo);
+  const { found, search, actions: searchActions } = useChatSearch(messages, texts, translation.translating, translation.flipped, seekTo, seed);
   const { bookmarked, actions: bookmarkActions } = useChatBookmarks(id, chat.bookmarks, messages, busy, searchActions.find);
   const { actions: statusActions, ...status } = useChatStatus(chat, shelf?.character ?? null, view, messages);
   const { editing, actions: editActions } = useMessageEdit(id, messages, (message) => ask({ kind: 'regenerate', message: message.id }), translationActions.carryFlip);

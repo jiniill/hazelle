@@ -76,7 +76,7 @@ it('searches the original when translation is flipped and keeps the choice per r
   const chat: Chat = { title: null, character: null, models: {} };
   function Probe() {
     translation = useChatTranslation('chat', chat, messages, texts, translateSwitches(session.store, null));
-    search = useChatSearch(messages, texts, translation.translating, translation.flipped, () => {});
+    search = useChatSearch(messages, texts, translation.translating, translation.flipped, () => {}, null);
     return null;
   }
   const root = probeRoot();

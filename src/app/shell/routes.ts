@@ -20,7 +20,10 @@ export type Route =
   | { kind: 'shelf'; character: string | null }
   | { kind: 'edit'; character: string }
   | { kind: 'new-chat'; character: string | null }
-  | { kind: 'chat'; id: string }
+  // find: opened from 채팅 검색, at the message holding the term, the chat's own search seeded with it.
+  | { kind: 'chat'; id: string; find?: { term: string; at: string } }
+  // 채팅 검색 (design F3): query as typed.
+  | { kind: 'search'; query: string }
   | { kind: 'connections' }
   | { kind: 'add-connection' }
   | { kind: 'connect'; type: ConnectionType }
@@ -124,9 +127,11 @@ export function parseRoute(at: string): Route {
   if (top === 's' && id !== undefined && sub === undefined) return SHARE_ID.test(id) ? { kind: 'share', id } : HOME;
   if (top === 'chats' && id !== undefined && sub === undefined) {
     if (id === 'new') return { kind: 'new-chat', character: null };
-    if (ID.test(id)) return { kind: 'chat', id };
-    return HOME;
+    if (!ID.test(id)) return HOME;
+    const [term, at] = [params.get('find'), params.get('at')];
+    return term && at !== null && ID.test(at) ? { kind: 'chat', id, find: { term, at } } : { kind: 'chat', id };
   }
+  if (top === 'search' && id === undefined) return { kind: 'search', query: params.get('q') ?? '' };
   if (top === 'connections') {
     if (id === undefined) return { kind: 'connections' };
     if (id !== 'new') {
@@ -229,7 +234,9 @@ export function href(route: Route): string {
     case 'new-chat':
       return route.character === null ? '/chats/new' : `/characters/${route.character}/new`;
     case 'chat':
-      return `/chats/${route.id}`;
+      return `/chats/${route.id}${route.find ? `?${new URLSearchParams({ find: route.find.term, at: route.find.at })}` : ''}`;
+    case 'search':
+      return route.query ? `/search?${new URLSearchParams({ q: route.query })}` : '/search';
     case 'connections':
       return '/connections';
     case 'add-connection':
@@ -425,6 +432,7 @@ export function up(route: Below, chatShelf?: string | null): Route {
     case 'gallery':
       return route.place === null ? HOME : { kind: 'gallery', place: null };
     case 'shelf':
+    case 'search':
       return HOME;
     case 'edit':
     case 'new-chat':

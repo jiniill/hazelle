@@ -496,7 +496,44 @@ export class ObjectStore {
     return this.pages({ parent, kind }, cursor, visit, pin, signal, (changes, at, more) => this.cacheWrite(changes, { chat: parent, cursor: at, complete: !more }));
   }
 
-  private async pages(options: { parent?: string; kind?: Kind; metadata?: boolean }, since: number, visit: (row: ObjectRow, value: unknown) => void | Promise<void>, pin: Pin, signal?: AbortSignal, paged?: (changes: SealedChange[], cursor: number, more: boolean) => void): Promise<ApiResult<number>> {
+  // A chat's entries without holding it, for a pass over many chats (runtime/chat-search), never filling the held
+  // scopes. Every kind of the chat's is read from the server, as a held chat's pull reads them, since what is read is
+  // cached as the chat's scope, which an opening then trusts as whole. A cached cursor at the chat's entry head asks the
+  // server nothing; with no cached scope the head is no proof, since a bootstrap leaves the heads before it unknown.
+  async chatEntries(chat: string, pin: Pin, signal?: AbortSignal): Promise<ApiResult<Stored<'entry'>[]>> {
+    const stop = AbortSignal.any([this.closing.signal, ...(signal ? [signal] : [])]);
+    const entries: Stored<'entry'>[] = [];
+    let unreadable = false;
+    const keep = (row: ObjectRow, value: unknown) => {
+      if (row.kind !== 'entry') return;
+      if (value === undefined) unreadable = true;
+      else entries.push({ ...row, kind: 'entry', value: value as Values['entry'] });
+    };
+    await this.cachedObjects.settled;
+    const saved = await this.cachedObjects.read(chat);
+    if (stop.aborted) return this.halted();
+    const rows = saved?.changes.filter((row) => row.kind === 'entry' && row.body) ?? [];
+    const opened = this.codec.opener(rows, stop, { accept: () => true });
+    for (const [index, row] of rows.entries()) {
+      let value: unknown;
+      try {
+        value = await opened(index);
+      } catch (error) {
+        return this.codecFailure(error);
+      }
+      if (stop.aborted) return this.halted();
+      keep(row, upgradeValue(row.kind, value) ?? value);
+    }
+    if (!saved || saved.state.cursor < this.entryHead(chat)) {
+      const read = await this.pages({ parent: chat }, saved?.state.cursor ?? 0, keep, pin, signal, (changes, at, more) => this.cacheWrite(changes, { chat, cursor: at, complete: !more }), true);
+      if (!read.ok) return read;
+    }
+    // As a held chat's opening fails on one, never a chat read short.
+    return unreadable ? { ok: false, error: 'unreadable' } : { ok: true, data: entries };
+  }
+
+  // lenient: an object that will not open is visited as undefined, where a strict walk throws.
+  private async pages(options: { parent?: string; kind?: Kind; metadata?: boolean }, since: number, visit: (row: ObjectRow, value: unknown) => void | Promise<void>, pin: Pin, signal?: AbortSignal, paged?: (changes: SealedChange[], cursor: number, more: boolean) => void, lenient = false): Promise<ApiResult<number>> {
     const stop = AbortSignal.any([this.closing.signal, ...(signal ? [signal] : [])]);
     let cursor = since;
     let more = true;
@@ -510,7 +547,7 @@ export class ObjectStore {
         return this.halted();
       }
       this.limits = result.data.limits;
-      const opened = this.opener(result.data.changes, true, stop, true);
+      const opened = lenient ? this.codec.opener(result.data.changes, stop, { accept: () => true }) : this.opener(result.data.changes, true, stop, true);
       for (const [index, { body, omitted, ...row }] of result.data.changes.entries()) {
         if (stop.aborted) return this.halted();
         if (body === null) continue;

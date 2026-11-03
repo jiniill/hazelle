@@ -12,6 +12,7 @@ import { ScreenLoad } from '../common/ScreenLoad';
 import { findStarred } from '../common/RolePicker';
 import { NO_CHARACTER } from '../common/words';
 import { ShareArrival } from '../library/ShareArrival';
+import { ShelfFace, shelfName } from '../library/shelf';
 import { useAccount, useCharacter, useChatModel, useChatSummary, useConnections, useSession, useSettings, useStored, useTool } from '../session';
 import { Button, Callout, Empty, Intro, ListDetail, NavBar, Progress, Screen, useSplit, useWide } from '../ui';
 import { backBar, navigate } from './router';
@@ -62,6 +63,7 @@ const MineScreen = lazy(() => import('../board/MineScreen').then(({ MineScreen }
 const LabsScreen = lazy(() => import('../settings/LabsScreen').then(({ LabsScreen }) => ({ default: LabsScreen })));
 const TranslatorScreen = lazy(() => import('../tools/TranslatorScreen').then(({ TranslatorScreen }) => ({ default: TranslatorScreen })));
 const CalculatorScreen = lazy(() => import('../tools/CalculatorScreen').then(({ CalculatorScreen }) => ({ default: CalculatorScreen })));
+const SearchScreen = lazy(() => import('../search/SearchScreen').then(({ SearchScreen }) => ({ default: SearchScreen })));
 const ChatSide = lazy(() => import('./ChatSide').then(({ ChatSide }) => ({ default: ChatSide })));
 
 const side = (at: SideAt) => <ScreenLoad><ChatSide {...at} /></ScreenLoad>;
@@ -96,6 +98,8 @@ export function Page({ route, closeLayer, onPaired }: { route: Route; closeLayer
       case 'new-chat':
       case 'chat':
         return <ChatPage at={at} wide={wide} onPaired={onPaired} />;
+      case 'search':
+        return <SearchScreen query={at.query} back={sideBack(at)} face={(shelf) => <ShelfFace shelf={shelf} />} name={shelfName} />;
       case 'settings':
         return wide ? <Replace to={settingsEntry(true)} /> : <SettingsList onClose={closeLayer} />;
       case 'connections':
@@ -253,7 +257,7 @@ function ChatPage({ at, wide, onPaired }: { at: At<'new-chat' | 'chat'>; wide: b
   const back = backTo(up(at, summary?.chat.character), wide);
   if (at.kind === 'new-chat') {
     if (at.character !== null && !shelf) return missing(absentItem('character', characterStored), wide);
-    return <ChatScreen key={newChat!.id} id={newChat!.id} item={null} shelf={shelf} back={wide ? null : back} side={side} onPaired={onPaired} />;
+    return <ChatScreen key={newChat!.id} id={newChat!.id} item={null} shelf={shelf} find={null} back={wide ? null : back} side={side} onPaired={onPaired} />;
   }
   if (!summary) {
     return missing(stored && binsChat(stored.value, () => shelf !== null) ? 'deleted-chat' : 'chat', wide);
@@ -271,7 +275,7 @@ function ChatPage({ at, wide, onPaired }: { at: At<'new-chat' | 'chat'>; wide: b
     </Screen>
   );
   if (character !== null && !shelf) return missing('orphaned-chat', wide);
-  return <ChatScreen key={item.id} id={item.id} item={item} shelf={shelf} back={wide ? null : back} side={side} onPaired={onPaired} />;
+  return <ChatScreen key={item.id} id={item.id} item={item} shelf={shelf} find={at.find ?? null} back={wide ? null : back} side={side} onPaired={onPaired} />;
 }
 
 function ItemPage<K extends 'prompt' | 'persona' | 'module' | 'profile'>({ at, back, children }: { at: { kind: K; id: string }; back: Back; children: (stored: Stored<K>) => ReactNode }) {

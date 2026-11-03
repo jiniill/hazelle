@@ -8,6 +8,7 @@ import { holdAccount, holdPulse, markSeen, type ApiResult } from './api';
 import { serverBackend, type Backend } from './backend';
 import { AssetUrls, UnfoundAssets } from './assets';
 import { Catalogs } from './catalog';
+import { ChatFinder } from './chat-search';
 import { seedOrder } from './characters';
 import { purgeExpired } from './removal';
 import { Costs } from './cost';
@@ -87,6 +88,7 @@ export type Session = {
   catalogs: Catalogs;
   read: ReadModels;
   display: ScriptDisplay;
+  finder: ChatFinder;
   // Every way out of an open vault (잠그기, 로그아웃) and every restore the store hears end it (app/shell/Workspace).
   close: () => void;
   startBackground: () => void;
@@ -152,6 +154,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   const scriptJournal = new ScriptJournal(store, scriptInteractions, scriptClosing.signal);
   const unfound = new UnfoundAssets();
   const read = new ReadModels(store);
+  const finder = new ChatFinder(store);
   const scriptReach = new ScriptReach({ tokens, store, read, credentials, log, costs }, scriptInteractions, scriptClosing.signal);
   const likenesses = new Likenesses({ tokens, store, credentials, log, files, catalogs });
   const illustrator = new Illustrator({ tokens, store, credentials, log, files, likenesses });
@@ -233,6 +236,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     holdDiagnosis(false);
     stopSync();
     read.close();
+    finder.close();
     display.close();
     streams.close();
     talk.close();
@@ -259,7 +263,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     assets.close();
     store.close();
   };
-  const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, polisher, briefs, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, close, startBackground };
+  const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, polisher, briefs, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, finder, close, startBackground };
   return { ok: true, data: session };
 }
 

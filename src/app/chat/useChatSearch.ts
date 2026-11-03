@@ -1,15 +1,26 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { shown } from '../../model/chat';
 import type { Shown } from '../../runtime/talk';
 import type { Translating } from '../../runtime/translate';
 import type { Seek } from '../ui';
 import { finder, seenText } from './search';
 
-export function useChatSearch(messages: Shown[], texts: string[], translating: Translating, flipped: ReadonlySet<string>, seekTo: (key: string, lands: Seek['lands']) => void) {
+// What 채팅 검색 opened the chat with: its term, and the message it was found in.
+export type SearchSeed = { term: string; at: string };
+
+export function useChatSearch(messages: Shown[], texts: string[], translating: Translating, flipped: ReadonlySet<string>, seekTo: (key: string, lands: Seek['lands']) => void, seed: SearchSeed | null) {
   const [found, setFound] = useState<{ ids: ReadonlySet<string>; at: number } | null>(null);
   // The search bar's term and current hit, by message id so rows coming and going keep it. focus asks the field to take
-  // the focus again, as Ctrl+F does while the bar is open.
-  const [search, setSearch] = useState<{ term: string; at: string | null; focus: number } | null>(null);
+  // the focus again, as Ctrl+F does while the bar is open; 0, a bar opened with the chat, leaves the focus where it is,
+  // so a phone's keyboard does not cover the message it landed on.
+  const [search, setSearch] = useState<{ term: string; at: string | null; focus: number } | null>(seed && { ...seed, focus: 0 });
+  // The view goes to the seed's message once the story holds it, whether its shown text holds the term or not.
+  const landed = useRef(seed === null);
+  useLayoutEffect(() => {
+    if (landed.current || !messages.some(({ id }) => id === seed!.at)) return;
+    landed.current = true;
+    seekTo(seed!.at, 'center');
+  }, [messages]);
   const [find] = useState(finder);
   const readAs = (message: Shown, index: number) => {
     const version = shown(message);
