@@ -271,6 +271,8 @@ describe('a reply caught in a loop', () => {
     expect(outcome).toMatchObject({ state: 'cut', cut: 'repeated' });
     expect(text.startsWith('안녕. 그래서 나는 말했다.')).toBe(true);
     expect(cancelled).toBe(true);
+    const whole = { ...chatCompletion, choices: [{ index: 0, message: { role: 'assistant', content: '그래서 나는 말했다. '.repeat(300) }, finish_reason: 'stop' }] };
+    expect((await decode(openRouter, body(JSON.stringify(whole)), undefined, 'application/json')).outcome).toMatchObject({ state: 'cut', cut: 'repeated', usage: { inputTokens: expect.any(Number) } });
     const panel = sse(chunk({ content: `${'━'.repeat(200)}\n${'<div class="slot"></div>'.repeat(60)}` }), chunk({}, 'stop'), '[DONE]');
     expect((await decode(openRouter, body(panel))).outcome).toMatchObject({ state: 'done', cut: null });
   });

@@ -32,6 +32,7 @@ export type InlineThoughts = { keep?: boolean; takeBack?: (chars: number) => voi
 // Streaming and whole JSON replies must share facts/end rules; batched means a discount-batch result.
 export async function decodeStream({ type, codec }: Route, model: Model, response: Response, signal: AbortSignal, onText: (phase: Phase, text: string) => void, inline: InlineThoughts = {}, batched = false): Promise<Outcome> {
   const facts: StreamFacts = { rawUsage: {}, finishReason: null, id: null, tier: null, calls: [] };
+  const media = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
   let said = false;
   const loops = { text: new Repetition(), reasoning: new Repetition() };
   let repeated = false;
@@ -41,7 +42,8 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
     // finish() may still flush text the thought scanner held, after the loop was caught.
     if (!repeated && loops[phase].push(text)) {
       repeated = true;
-      throw new Error('repeated');
+      // A whole reply is already paid for, and its usage comes after its text: it is read to the end.
+      if (media !== 'application/json') throw new Error('repeated');
     }
   };
   const scanner = inline.keep ? null : thoughts(told, inline.takeBack ?? (() => {}));
@@ -68,7 +70,6 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
     };
   };
 
-  const media = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
   let ended: { terminal: Terminal | null } | { badEvent: string };
   try {
     ended = media === 'application/json' ? await readWhole(codec, response, facts, append) : await readEvents(codec, response, facts, append);
@@ -79,6 +80,7 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
   }
 
   if ('badEvent' in ended) return finish('failed', null, { kind: 'bad-event', detail: ended.badEvent });
+  if (repeated) return finish('cut', 'repeated', null);
   const { terminal } = ended;
   if (terminal?.state === 'failed') return finish('failed', null, { kind: 'provider', detail: terminal.error, ...(terminal.code && { code: terminal.code }) });
   // A stream may close without its end marker after the model already said why it stopped.
