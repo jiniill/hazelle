@@ -252,6 +252,24 @@
     background: var(--scene-carried);
   }
 
+  /* Painted: the planes stay for their layout and their pictures, and the canvas shows them. */
+  .painted {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  [data-painted] .look {
+    visibility: hidden;
+  }
+
+  [data-painted] .sway,
+  [data-painted] .bough,
+  [data-painted] .arinGlow {
+    animation: none;
+  }
+
   /* Rooted at the ground, so a row leans in the wind instead of sliding. */
   .sway {
     position: absolute;

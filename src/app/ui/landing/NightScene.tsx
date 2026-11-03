@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
 import { hasFinePointer, MEDIA } from '../foundation/media';
+import { usePaintedScene, type Walked, type Walks } from './paintedScene';
 import { along, paceOfPage, samePace, stillness, useWalkOn, type Pace } from './walkStops';
 import arin from './art/arin.webp';
 import boughTall from './art/bough-tall.webp';
@@ -46,30 +47,31 @@ type Seen = { in?: readonly [number, number]; out?: readonly [number, number] };
 const seenAt = ({ in: rise, out: fall }: Seen, share: number) => (rise ? between(rise[0], rise[1], share) : 1) * (fall ? 1 - between(fall[0], fall[1], share) : 1);
 
 // Each plane grows as its nearness says: a flat picture and a scale, so no browser's 3D is asked to hold depths this far apart.
-const planeFrames = (z: number, seen: Seen): Frames =>
-  stops((share) => {
-    const left = Math.max(z + LENS - along(WALK, share), 1);
-    return { transform: `scale(${Math.min((z + LENS) / left, NEAREST).toFixed(4)})`, opacity: seenAt(seen, share).toFixed(3) };
-  });
+const planeAt = (z: number, seen: Seen) => (share: number): Walked => ({ scale: Math.min((z + LENS) / Math.max(z + LENS - along(WALK, share), 1), NEAREST), opacity: seenAt(seen, share) });
 
 // The cabin grows by a steady ratio from far off to its doorway filling the screen. By nearness alone, as the other planes grow, nearly all of it would come in the last moment.
 const DOOR_FAR = 1.1;
 const DOOR_FILLS = 21.6;
 const NEARING = [0.34, 0.5096] as const;
-const doorFrames = (seen: Seen): Frames =>
-  stops((share) => ({
-    transform: `scale(${(DOOR_FAR * (DOOR_FILLS / DOOR_FAR) ** Math.max((share - NEARING[0]) / (NEARING[1] - NEARING[0]), 0)).toFixed(4)})`,
-    opacity: seenAt(seen, share).toFixed(3),
-  }));
+const doorAt = (seen: Seen) => (share: number): Walked => ({ scale: DOOR_FAR * (DOOR_FILLS / DOOR_FAR) ** Math.max((share - NEARING[0]) / (NEARING[1] - NEARING[0]), 0), opacity: seenAt(seen, share) });
+
+const planeFrames = (at: (share: number) => Walked): Frames =>
+  stops((share) => {
+    const { scale, opacity } = at(share);
+    return { transform: `scale(${scale.toFixed(4)})`, opacity: opacity.toFixed(3) };
+  });
 
 const SCROLL = typeof ScrollTimeline === 'function' ? new ScrollTimeline({ source: document.documentElement }) : null;
+// A trial behind ?gl: the planes painted on one canvas instead of composited one by one.
+const PAINTED = typeof WebGL2RenderingContext === 'function' && new URLSearchParams(location.search).has('gl') && !stillness();
 const PaceOfPage = createContext<Pace>(samePace);
+const PaintedWalks = createContext<{ walks: Walks; changed: () => void } | null>(null);
 
-function useWalk(frames: Frames) {
+function useWalk(frames: Frames | null) {
   const node = useRef<HTMLDivElement>(null);
   const pace = useContext(PaceOfPage);
   useLayoutEffect(() => {
-    if (stillness()) return;
+    if (!frames || stillness()) return;
     const animation = node.current!.animate(frames(pace), { duration: CLOCK, fill: 'both', easing: 'linear', ...(SCROLL ? { timeline: SCROLL } : {}) });
     if (!SCROLL) animation.pause();
     return () => animation.cancel();
@@ -138,7 +140,19 @@ function Art({ wide, tall, priority }: { wide: string; tall: string; priority?: 
 }
 
 function Plane({ z, seen, doorward, children }: { z: number; seen: Seen; doorward?: boolean; children: ReactNode }) {
-  const node = useWalk(doorward ? doorFrames(seen) : planeFrames(z, seen));
+  const at = doorward ? doorAt(seen) : planeAt(z, seen);
+  const painted = useContext(PaintedWalks);
+  const node = useWalk(painted ? null : planeFrames(at));
+  useLayoutEffect(() => {
+    if (!painted) return;
+    const plane = node.current!;
+    painted.walks.set(plane, at);
+    painted.changed();
+    return () => {
+      painted.walks.delete(plane);
+      painted.changed();
+    };
+  }, []);
   return (
     <div className={styles.look} style={{ '--near': (LENS / (LENS + z)).toFixed(3) } as CSSProperties}>
       <div ref={node} className={doorward ? `${styles.plane} ${styles.doorward}` : styles.plane}>{children}</div>
@@ -157,7 +171,15 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
   const lantern = useRef<HTMLDivElement>(null);
   const [walking, setWalking] = useState(false);
   const [pace, setPace] = useState<Pace>(() => samePace);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [walks] = useState<Walks>(() => new Map());
+  const painting = usePaintedScene(PAINTED, stage, canvas, walks, pace);
+  const [painted] = useState(() => (PAINTED ? { walks, changed: () => painting.current.refit() } : null));
   useWalkOn();
+
+  useEffect(() => {
+    painting.current.refit();
+  }, [talking]);
 
   useLayoutEffect(() => {
     if (stillness()) return;
@@ -219,6 +241,7 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
       if (looks) {
         node.style.setProperty('--look-x', now.x.toFixed(4));
         node.style.setProperty('--look-y', now.y.toFixed(4));
+        painting.current.looked();
       }
       frame = Math.abs(aim.x - now.x) + Math.abs(aim.y - now.y) > 0.0008 ? requestAnimationFrame(settle) : 0;
     };
@@ -246,7 +269,8 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
 
   return (
     <PaceOfPage.Provider value={pace}>
-      <div ref={stage} className={styles.scene} data-glow={glow} data-talking={talking || undefined} data-inside={inside || undefined} aria-hidden="true">
+      <PaintedWalks.Provider value={painted}>
+      <div ref={stage} className={styles.scene} data-glow={glow} data-talking={talking || undefined} data-inside={inside || undefined} data-painted={painted ? '' : undefined} aria-hidden="true">
         <div className={styles.flat}><Art wide={skyWide} tall={skyTall} priority /></div>
         <Moving className={styles.moonPath} frames={MOON}>
           <div className={styles.halo} />
@@ -275,6 +299,7 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
         <Plane {...BOUGH}>
           <div className={styles.bough}><Art wide={boughWide} tall={boughTall} /></div>
         </Plane>
+        {painted && <canvas ref={canvas} className={styles.painted} />}
         <div className={styles.haze} />
         <div className={styles.warmth} />
         <div ref={lantern} className={styles.lantern}>
@@ -302,6 +327,7 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
         <div className={styles.grain} />
         <div className={styles.curtain} />
       </div>
+      </PaintedWalks.Provider>
     </PaceOfPage.Provider>
   );
 }
