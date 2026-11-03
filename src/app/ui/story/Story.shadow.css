@@ -34,6 +34,16 @@
     margin-top: var(--space-12);
   }
 
+  /* The one look a bot cannot override, whence !important: a bubble's padding is its edge, so a bot's paragraph margin
+     (p { margin: 0 0 1em }) stays between paragraphs but would pad the bubble's ends twice. */
+  :host([data-fits]) > :first-child {
+    margin-top: 0 !important;
+  }
+
+  :host([data-fits]) > :last-child {
+    margin-bottom: 0 !important;
+  }
+
   :host > :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, table) em {
     font-style: normal;
     color: var(--color-prose-action);
