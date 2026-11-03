@@ -68,7 +68,7 @@ export function SearchScreen({ query, back, face, name }: Props) {
         <SearchField ref={field} label={SHORTCUTS.search.label} value={typed} onChange={setTyped} />
         {term && (reading || unreadable > 0) && (
           <Text variant="note">
-            {[reading && (finding.filling === null ? `${read} / ${chats.length}개 채팅 찾아보는 중…` : `채팅 받는 중… ${Math.floor(finding.filling * 100)}%`), unreadable > 0 && `읽지 못한 채팅 ${unreadable}개`].filter(Boolean).join(' · ')}
+            {[reading && (finding.filling === null ? `채팅 ${read} / ${chats.length}개 검색하는 중…` : `채팅 받는 중… ${Math.floor(finding.filling * 100)}%`), unreadable > 0 && `읽지 못한 채팅 ${unreadable}개`].filter(Boolean).join(' · ')}
           </Text>
         )}
         {failure && (

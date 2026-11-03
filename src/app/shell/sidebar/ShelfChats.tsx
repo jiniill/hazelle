@@ -39,7 +39,7 @@ export function ShelfChats({ page, shelf }: Props) {
   const moving = useMoving(set, index, (id) => shelf.chats.find((item) => item.id === id)?.chat.folder ?? null);
   const [openFolders, setOpenFolders] = usePersisted(OPEN_FOLDERS, storedStrings, []);
   const opened = useMemo(() => new Set(openFolders), [openFolders]);
-  const { field, found, none, words } = useSearch(shelf.chats, '채팅 검색', (item) => [item.title, item.preview ?? '']);
+  const { field, found, none, words } = useSearch(shelf.chats, '이 목록에서 검색', (item) => [item.title, item.preview ?? '']);
   const writing = useWritingChats();
   const { pickChats } = useImport();
   const route = useRoute();
