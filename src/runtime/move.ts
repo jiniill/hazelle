@@ -150,7 +150,8 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
     // the published character and go in one request: the source holds the whole character already, so this holds no
     // more than it. Nothing is pulled: what the leases hold is what this device wrote.
     const sorted = [...character.chats].sort((a, b) => lastTalk(a) - lastTalk(b));
-    // Its chat folders land with it, as its chats' roots do, so a cut-short move leaves none behind.
+    // Its chat folders go last before it, so they share its request (store send counts from the back) and a cut-short
+    // move leaves none without it.
     const folderIds = character.chatFolders.map(() => crypto.randomUUID());
     const folders = character.chatFolders.map((name, index): Write => ({ type: 'create', kind: 'folder', id: folderIds[index]!, parent: null, value: { name, of: 'chat', character: id } }));
     const chats = sorted.map((chat) => chatOf(crypto.randomUUID(), id, character.card, chat, personaIds, current, memory, folderIds));
@@ -164,7 +165,7 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
       },
       landed: async () => {
         chatsDone += chats.length;
-        const imported = await importCharacter(store, files, character, avatar, uploading, { id, folder: folder?.data ?? null, risu: character.id, toggles: backup.catalog.toggles, chats: [...folders, ...chats.map(({ root }) => root)] }, character.modules.flatMap((risu) => moduleIds.get(risu) ?? []));
+        const imported = await importCharacter(store, files, character, avatar, uploading, { id, folder: folder?.data ?? null, risu: character.id, toggles: backup.catalog.toggles, chats: [...chats.map(({ root }) => root), ...folders] }, character.modules.flatMap((risu) => moduleIds.get(risu) ?? []));
         if (!imported.ok) return imported;
         saved = imported.data;
         picturesDone += character.assets.length;
