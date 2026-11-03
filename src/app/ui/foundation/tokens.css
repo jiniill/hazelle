@@ -532,7 +532,6 @@
   --scene-origin-y: 70%;
   --scene-art-focus: 62%;
   --scene-art-in: 900ms;
-  --scene-curtain: 1400ms;
   --scene-answer: 1800ms;
   --scene-look-reach: 46px;
   --scene-overscan: -5%;
@@ -553,6 +552,7 @@
   --scene-arin-glow: 100%;
   --scene-lantern-glow: radial-gradient(closest-side, #ffe9bde6 0, #ffbe6e80 26%, #f2a85a2e 58%, transparent);
   --scene-flicker: 3.4s;
+  --scene-hearth-flicker: 2.38s;
   --scene-cabin-ground: 29%;
   --scene-cabin-x: 62.1%;
   --scene-cabin-width: 13vw;

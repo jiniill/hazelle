@@ -1,24 +1,73 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import styles from './NightScene.module.css';
-import { about, painterOn, parseFade, parseGradients, scaling, share, shift, skewingX, times, turning, type Affine, type Box, type Fade, type Radial } from './paint';
-import type { Pace } from './walkStops';
+import { about, ANYWHERE, painterOn, parseColor, parseFade, parseGradients, parseShadows, roundGlow, scaling, share, shift, skewingX, times, turning, type Affine, type Box, type Fade, type Gradient } from './paint';
+import { scrollRange, type Pace } from './walkStops';
 
-export type Walked = { scale: number; opacity: number };
-// Each plane's node, with where the walk has it at a tuned share of the scroll.
-export type Walks = Map<HTMLElement, (share: number) => Walked>;
+export type Screen = { w: number; h: number };
+// Where the walk has a layer at a tuned share of the scroll: x and y in CSS pixels, scale about its transform-origin.
+export type Walked = { scale?: number; x?: number; y?: number; opacity?: number };
+export type Walk = (share: number, screen: Screen) => Walked;
+// near: how much looking around moves it. carried: it goes where the visitor's lantern is.
+export type Layer = { walk?: Walk; near?: number; carried?: boolean };
+
+const Layers = createContext<{ layers: Map<HTMLElement, Layer>; changed: () => void }>({ layers: new Map(), changed: () => {} });
+export const LayersOfScene = Layers.Provider;
+
+// A node of the scene the canvas paints, with everything inside it, as its CSS lays it out.
+export function useLayer(layer: Layer) {
+  const node = useRef<HTMLDivElement>(null);
+  const { layers, changed } = useContext(Layers);
+  useLayoutEffect(() => {
+    const element = node.current!;
+    layers.set(element, layer);
+    changed();
+    return () => {
+      layers.delete(element);
+      changed();
+    };
+  }, []);
+  return node;
+}
 
 // The pictures are painted at most this many pixels to a CSS pixel: none of them holds more than about two at a phone's size.
 const DENSITY = 1.5;
-// Between frames when only the breeze and the flames move.
+// Between frames when only the breeze, the flames and the fireflies move.
 const AMBIENT_GAP = 33;
+// Looking around moves a layer less up and down than across.
+const LOOK_RISE = 0.4;
 
-type Piece =
-  | { kind: 'picture'; img: HTMLImageElement; box: Box; cover: readonly [number, number] | null; fade: Fade | undefined }
-  | { kind: 'glow'; box: Box; radials: Radial[]; flare: number | null };
+type Piece = {
+  key: Element | null;
+  box: Box;
+  clip: Box;
+  paint: { kind: 'picture'; img: HTMLImageElement; cover: readonly [number, number] | null; fade: Fade | undefined; tiled: boolean } | { kind: 'gradient'; gradient: Gradient };
+  flicker: { takes: number; flare: number } | null;
+  fly: { takes: number; after: number } | null;
+};
+type Loops = Pick<Piece, 'flicker' | 'fly'>;
 type Motion = { origin: readonly [number, number]; takes: number; from: number; to: number; turns: boolean };
-type Planned = { look: HTMLElement; walk: (share: number) => Walked; origin: readonly [number, number]; motion: Motion | null; pieces: Piece[]; shifted: readonly [number, number] };
+type Planned = { root: HTMLElement; layer: Layer; origin: readonly [number, number]; opacity: number; motion: Motion | null; pieces: Piece[] };
+type Tween = { x: number; y: number; opacity: number; began: number };
 
 const seconds = (text: string) => parseFloat(text) / (text.trim().endsWith('ms') ? 1000 : 1);
+
+const BEZIERS: Record<string, readonly number[]> = { linear: [0, 0, 1, 1], ease: [0.25, 0.1, 0.25, 1], 'ease-in': [0.42, 0, 1, 1], 'ease-out': [0, 0, 0.58, 1], 'ease-in-out': [0.42, 0, 0.58, 1] };
+// A CSS easing keyword or cubic-bezier(), as a function of progress.
+const easing = (text: string) => {
+  const [x1, y1, x2, y2] = BEZIERS[text.trim()] ?? /cubic-bezier\(([^)]*)\)/.exec(text)?.[1]?.split(',').map(Number) ?? BEZIERS['ease']!;
+  const curve = (at: number, one: number, two: number) => 3 * (1 - at) ** 2 * at * one + 3 * (1 - at) * at * at * two + at ** 3;
+  return (progress: number) => {
+    let low = 0;
+    let high = 1;
+    for (let step = 0; step < 16; step++) {
+      const at = (low + high) / 2;
+      if (curve(at, x1!, x2!) < progress) low = at;
+      else high = at;
+    }
+    return curve((low + high) / 2, y1!, y2!);
+  };
+};
+
 const within = (node: Element, frame: DOMRect): Box => {
   const { left, top, width, height } = node.getBoundingClientRect();
   return { x: left - frame.left, y: top - frame.top, w: width, h: height };
@@ -27,37 +76,74 @@ const originOf = (node: Element, box: Box) => {
   const [x, y] = getComputedStyle(node).transformOrigin.split(' ').map(parseFloat);
   return [box.x + x!, box.y + y!] as const;
 };
+const meet = (one: Box, other: Box): Box => {
+  const x = Math.max(one.x, other.x);
+  const y = Math.max(one.y, other.y);
+  return { x, y, w: Math.max(Math.min(one.x + one.w, other.x + other.w) - x, 0), h: Math.max(Math.min(one.y + one.h, other.y + other.h) - y, 0) };
+};
 
-// The scene's CSS lays every piece out; only the walk's transforms and the loops below are painted instead of styled.
-function piecesOf(plane: HTMLElement, frame: DOMRect) {
+const tiles = new Map<string, HTMLImageElement>();
+const tileOf = (source: string, loaded: () => void) => {
+  let tile = tiles.get(source);
+  if (!tile) {
+    tile = new Image();
+    tile.addEventListener('load', loaded, { once: true });
+    tile.src = source;
+    tiles.set(source, tile);
+  }
+  return tile;
+};
+
+const NO_LOOPS: Loops = { flicker: null, fly: null };
+
+// The scene's CSS lays every piece out and colors it; the canvas moves it and paints what it says.
+function piecesOf(root: HTMLElement, frame: DOMRect, loaded: () => void) {
   const pieces: Piece[] = [];
-  const glow = (node: Element, pseudo?: '::before' | '::after') => {
-    const style = getComputedStyle(node, pseudo);
-    if (!style.backgroundImage.includes('radial-gradient')) return;
+  const background = (key: Element | null, style: CSSStyleDeclaration, box: Box, clip: Box, loops: Loops) => {
+    const core = parseColor(style.backgroundColor);
+    const shadows = parseShadows(style.boxShadow);
+    if (core && shadows.length && parseFloat(style.borderTopLeftRadius) >= box.w / 2) {
+      const { reach, gradient } = roundGlow(core, box.w / 2, shadows);
+      pieces.push({ key, box: { x: box.x + box.w / 2 - reach, y: box.y + box.h / 2 - reach, w: reach * 2, h: reach * 2 }, clip, paint: { kind: 'gradient', gradient }, ...loops });
+      return;
+    }
+    if (core?.[3]) pieces.push({ key, box, clip, paint: { kind: 'gradient', gradient: { kind: 'linear', stops: [{ at: 0, color: core }] } }, ...loops });
+    for (const gradient of parseGradients(style.backgroundImage)) pieces.push({ key, box, clip, paint: { kind: 'gradient', gradient }, ...loops });
+    const tiled = /url\("?([^")]*)"?\)/.exec(style.backgroundImage)?.[1];
+    if (tiled && style.backgroundRepeat.startsWith('repeat')) pieces.push({ key, box, clip, paint: { kind: 'picture', img: tileOf(tiled, loaded), cover: null, fade: undefined, tiled: true }, ...loops });
+  };
+  const pseudo = (node: Element, which: '::before' | '::after', clip: Box) => {
+    const style = getComputedStyle(node, which);
+    if (style.content === 'none' || style.content === 'normal') return;
     const box = within(node, frame);
-    pieces.push({
-      kind: 'glow',
-      box: pseudo ? { x: box.x + parseFloat(style.left), y: box.y + parseFloat(style.top), w: parseFloat(style.width), h: parseFloat(style.height) } : box,
-      radials: parseGradients(style.backgroundImage),
-      flare: node.classList.contains(styles.arinGlow) ? parseFloat(style.getPropertyValue('--flare')) || 1 : null,
-    });
+    background(null, style, { x: box.x + parseFloat(style.left), y: box.y + parseFloat(style.top), w: parseFloat(style.width), h: parseFloat(style.height) }, clip, NO_LOOPS);
   };
-  const visit = (node: Element) => {
-    glow(node, '::before');
+  const visit = (node: Element, clip: Box) => {
+    const style = getComputedStyle(node);
+    if (style.display === 'none') return;
+    const box = within(node, frame);
+    const flickers = style.getPropertyValue('--flicker');
+    const loops: Loops = {
+      flicker: flickers ? { takes: seconds(flickers), flare: parseFloat(style.getPropertyValue('--flare')) || 1 } : null,
+      fly: node.classList.contains(styles.fly) ? { takes: seconds(style.getPropertyValue('--takes')), after: seconds(style.getPropertyValue('--after')) } : null,
+    };
+    pseudo(node, '::before', clip);
+    background(node, style, box, clip, loops);
     if (node instanceof HTMLImageElement) {
-      const style = getComputedStyle(node);
       const [x, y] = style.objectPosition.split(' ').map(share);
-      pieces.push({ kind: 'picture', img: node, box: within(node, frame), cover: style.objectFit === 'cover' ? [x!, y!] : null, fade: parseFade(style.maskImage || style.webkitMaskImage) ?? undefined });
-    } else glow(node);
-    for (const child of node.children) visit(child);
-    glow(node, '::after');
+      pieces.push({ key: node, box, clip, paint: { kind: 'picture', img: node, cover: style.objectFit === 'cover' ? [x!, y!] : null, fade: parseFade(style.maskImage || style.webkitMaskImage) ?? undefined, tiled: false }, ...loops });
+    }
+    const inner = style.overflow === 'hidden' ? meet(clip, box) : clip;
+    for (const child of node.children) visit(child, inner);
+    pseudo(node, '::after', clip);
   };
-  visit(plane);
+  visit(root, ANYWHERE);
   return pieces;
 }
 
-function motionOf(plane: HTMLElement, frame: DOMRect): Motion | null {
-  const mover = plane.firstElementChild!;
+function motionOf(root: HTMLElement, frame: DOMRect): Motion | null {
+  const mover = root.firstElementChild;
+  if (!mover) return null;
   const turns = mover.classList.contains(styles.bough);
   if (!turns && !mover.classList.contains(styles.sway)) return null;
   const style = getComputedStyle(mover);
@@ -67,36 +153,18 @@ function motionOf(plane: HTMLElement, frame: DOMRect): Motion | null {
     : { origin: originOf(mover, within(mover, frame)), takes: seconds(token('--sway-takes')), from: parseFloat(token('--scene-sway-from')), to: parseFloat(token('--scene-sway-to')), turns };
 }
 
-// ease-in-out, the scene's --ease-loop.
-const eased = (progress: number) => {
-  let low = 0;
-  let high = 1;
-  for (let step = 0; step < 16; step++) {
-    const at = (low + high) / 2;
-    if (3 * (1 - at) ** 2 * at * 0.42 + 3 * (1 - at) * at * at * 0.58 + at ** 3 < progress) low = at;
-    else high = at;
-  }
-  const at = (low + high) / 2;
-  return 3 * (1 - at) * at * at + at ** 3;
+// A loop's keyframes: where in the loop, then its values; each stretch eased.
+const keyed = (keys: readonly (readonly number[])[], into: number, eased: (progress: number) => number) => {
+  const after = Math.max(keys.findIndex(([at]) => at! > into), 1);
+  const from = keys[after - 1]!;
+  const to = keys[after]!;
+  const progress = eased((into - from[0]!) / (to[0]! - from[0]!));
+  return from.slice(1).map((value, index) => value + (to[index + 1]! - value) * progress);
 };
-
-// An alternating loop, eased both ways.
-const swayed = ({ takes, from, to }: Motion, time: number) => {
-  const turns = time / takes;
-  const into = turns % 1;
-  return from + (to - from) * eased(Math.floor(turns) % 2 ? 1 - into : into);
-};
-
-// The flame's flicker, as @keyframes flicker in NightScene.module.css, which still runs the room's lights: change the two together.
+// A flame: opacity and scale.
 const FLICKER = [[0, 0.82, 1], [0.38, 1, 1.06], [0.62, 0.74, 0.97], [1, 0.82, 1]] as const;
-const flickered = (time: number, takes: number) => {
-  const into = (time / takes) % 1;
-  const after = FLICKER.findIndex(([at]) => at > into);
-  const [fromAt, fromOpacity, fromScale] = FLICKER[after - 1]!;
-  const [toAt, toOpacity, toScale] = FLICKER[after]!;
-  const progress = eased((into - fromAt) / (toAt - fromAt));
-  return { opacity: fromOpacity + (toOpacity - fromOpacity) * progress, scale: fromScale + (toScale - fromScale) * progress };
-};
+// A firefly: opacity, then its drift across and up in reaches.
+const DRIFT = [[0, 0, 0, 0], [0.2, 1, 1, -0.7], [0.45, 0.15, 0.4, -1.6], [0.65, 0.9, -0.8, -0.9], [1, 0, 0, 0]] as const;
 
 // The tuned share whose place on this page's scroll is the real one.
 const tunedAt = (pace: Pace, real: number) => {
@@ -110,18 +178,21 @@ const tunedAt = (pace: Pace, real: number) => {
   return (low + high) / 2;
 };
 
-// cover: object-fit cover at an object-position, as the part of the picture the box shows.
-const windowOf = (img: HTMLImageElement, box: Box, [x, y]: readonly [number, number]): Box => {
+// The part of the picture the box shows: tiled at its own size, or object-fit cover at an object-position.
+const windowOf = (img: HTMLImageElement, box: Box, cover: readonly [number, number] | null, tiled: boolean): Box | undefined => {
+  if (tiled) return { x: 0, y: 0, w: box.w / img.naturalWidth, h: box.h / img.naturalHeight };
+  if (!cover) return undefined;
   const by = Math.max(box.w / img.naturalWidth, box.h / img.naturalHeight);
   const wide = img.naturalWidth * by;
   const tall = img.naturalHeight * by;
-  return { x: ((wide - box.w) * x) / wide, y: ((tall - box.h) * y) / tall, w: box.w / wide, h: box.h / tall };
+  return { x: ((wide - box.w) * cover[0]) / wide, y: ((tall - box.h) * cover[1]) / tall, w: box.w / wide, h: box.h / tall };
 };
 
-export type Painting = { refit: () => void; looked: () => void };
+// answered: a step of the trial changed what the scene's CSS says, and what moved or lit eases there.
+export type Painting = { refit: () => void; answered: () => void; aim: (at: { x: number; y: number }, looks: boolean) => void };
 
-export function usePaintedScene(on: boolean, stage: RefObject<HTMLDivElement | null>, canvas: RefObject<HTMLCanvasElement | null>, walks: Walks, pace: Pace) {
-  const painting = useRef<Painting>({ refit: () => {}, looked: () => {} });
+export function usePaintedScene(on: boolean, stage: RefObject<HTMLDivElement | null>, canvas: RefObject<HTMLCanvasElement | null>, layers: Map<HTMLElement, Layer>, pace: Pace) {
+  const painting = useRef<Painting>({ refit: () => {}, answered: () => {}, aim: () => {} });
   const paceNow = useRef(pace);
   paceNow.current = pace;
 
@@ -132,20 +203,28 @@ export function usePaintedScene(on: boolean, stage: RefObject<HTMLDivElement | n
     let frame = 0;
     let timer = 0;
     let fitted = false;
-    let looks = true;
+    let answering = false;
     let lastShare = NaN;
     let planned: Planned[] = [];
     let range = 1;
-    let size = { w: 0, h: 0 };
+    let size: Screen = { w: 0, h: 0 };
     let artIn = 1;
-    let flickerTakes = 1;
+    let lookReach = 0;
+    let flyReach = 0;
+    let answerTakes = 1;
+    let answerEase = (progress: number) => progress;
+    let loopEase = answerEase;
+    const began = performance.now();
+    const aimed = { x: 0.5, y: 0.5, looks: false };
+    const tweens = new WeakMap<Element, Tween>();
+    const before = new WeakMap<Element, { x: number; y: number; opacity: number }>();
 
     const repaint = () => {
       if (frame) return;
       clearTimeout(timer);
       frame = requestAnimationFrame(draw);
     };
-    // The planes hide only while a painter shows them: a canvas WebGL2 would not open, or lost, leaves them standing.
+    // The scene's nodes hide only while a painter shows them: a canvas WebGL2 would not open, or lost, leaves them standing still.
     let painter = painterOn(surface, repaint);
     const shown = () => {
       if (painter) scene.dataset['painted'] = '';
@@ -153,73 +232,108 @@ export function usePaintedScene(on: boolean, stage: RefObject<HTMLDivElement | n
     };
     shown();
 
-    const fit = () => {
-      const { width, height } = scene.getBoundingClientRect();
-      size = { w: width, h: height };
-      range = Math.max(document.documentElement.scrollHeight - document.documentElement.clientHeight, 1);
+    const fit = (now: number) => {
+      const frameOf = scene.getBoundingClientRect();
+      size = { w: frameOf.width, h: frameOf.height };
+      range = scrollRange();
       const tokens = getComputedStyle(scene);
       artIn = seconds(tokens.getPropertyValue('--scene-art-in')) * 1000;
-      flickerTakes = seconds(tokens.getPropertyValue('--scene-flicker'));
-      planned = [...walks]
+      lookReach = parseFloat(tokens.getPropertyValue('--scene-look-reach'));
+      flyReach = parseFloat(tokens.getPropertyValue('--scene-fly-reach'));
+      answerTakes = seconds(tokens.getPropertyValue('--scene-answer')) * 1000;
+      answerEase = easing(tokens.getPropertyValue('--ease-enter'));
+      loopEase = easing(tokens.getPropertyValue('--ease-loop'));
+      planned = [...layers]
         .sort(([one], [other]) => (one.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
-        .map(([plane, walk]) => {
-          const look = plane.parentElement!;
-          const frameOf = look.getBoundingClientRect();
-          return { look, walk, origin: originOf(plane, within(plane, frameOf)), motion: motionOf(plane, frameOf), pieces: piecesOf(plane, frameOf), shifted: [0, 0] };
-        });
+        .map(([root, layer]) => ({ root, layer, origin: originOf(root, within(root, frameOf)), opacity: parseFloat(getComputedStyle(root).opacity), motion: motionOf(root, frameOf), pieces: piecesOf(root, frameOf, repaint) }));
+      for (const plan of planned) {
+        const was = before.get(plan.root);
+        if (answering && was && was.opacity !== plan.opacity) tweens.set(plan.root, { x: 0, y: 0, opacity: was.opacity - plan.opacity, began: now });
+        before.set(plan.root, { x: 0, y: 0, opacity: plan.opacity });
+        for (const { key, box } of plan.pieces) {
+          if (!key) continue;
+          const stood = before.get(key);
+          if (answering && stood && (stood.x !== box.x || stood.y !== box.y)) tweens.set(key, { x: stood.x - box.x, y: stood.y - box.y, opacity: 0, began: now });
+          before.set(key, { x: box.x, y: box.y, opacity: 1 });
+        }
+      }
       fitted = true;
-      looks = true;
+      answering = false;
     };
+
+    // How much of a tween is still to go.
+    const left = (tween: Tween | undefined, now: number) => (tween ? 1 - answerEase(Math.min((now - tween.began) / answerTakes, 1)) : 0);
 
     const draw = (now: number) => {
       frame = 0;
       timer = 0;
       if (!painter) return;
-      if (!fitted) fit();
-      if (looks) {
-        for (const plane of planned) {
-          const { e, f } = new DOMMatrixReadOnly(getComputedStyle(plane.look).transform);
-          plane.shifted = [e, f];
-        }
-        looks = false;
-      }
+      if (!fitted) fit(now);
       const at = tunedAt(paceNow.current, Math.min(Math.max(scrollY / range, 0), 1));
       const moved = at !== lastShare;
       lastShare = at;
-      const time = now / 1000;
+      const time = (now - began) / 1000;
       let ambient = false;
       let fading = false;
+      let tweening = false;
       painter.begin(size.w, size.h, Math.min(devicePixelRatio, DENSITY));
-      for (const plane of planned) {
-        const { scale, opacity } = plane.walk(at);
+      for (const plan of planned) {
+        const walked = plan.layer.walk?.(at, size) ?? {};
+        const lit = tweens.get(plan.root);
+        const settling = left(lit, now);
+        if (settling) tweening = true;
+        const opacity = walked.opacity ?? plan.opacity + (lit?.opacity ?? 0) * settling;
         if (opacity <= 0) continue;
-        let place: Affine = times(shift(...plane.shifted), about(...plane.origin, scaling(scale)));
-        if (plane.motion) {
+        const looking = plan.layer.near && aimed.looks ? plan.layer.near * lookReach : 0;
+        const carried = plan.layer.carried ? 1 : 0;
+        let place: Affine = times(
+          shift((aimed.x - 0.5) * looking + aimed.x * size.w * carried + (walked.x ?? 0), (aimed.y - 0.5) * looking * LOOK_RISE + aimed.y * size.h * carried + (walked.y ?? 0)),
+          about(...plan.origin, scaling(walked.scale ?? 1)),
+        );
+        if (plan.motion) {
           ambient = true;
-          const angle = swayed(plane.motion, time);
-          place = times(place, about(...plane.motion.origin, plane.motion.turns ? turning(angle) : skewingX(angle)));
+          const { takes, from, to, turns } = plan.motion;
+          const into = (time / takes) % 1;
+          const angle = from + (to - from) * loopEase(Math.floor(time / takes) % 2 ? 1 - into : into);
+          place = times(place, about(...plan.motion.origin, turns ? turning(angle) : skewingX(angle)));
         }
-        for (const piece of plane.pieces) {
-          if (piece.kind === 'picture') {
-            const picture = painter.pictureOf(piece.img);
-            if (!picture) continue;
-            const shown = Math.min((now - picture.arrived) / artIn, 1);
-            if (shown < 1) fading = true;
-            painter.picture(picture.texture!, piece.box, place, opacity * shown, piece.cover ? windowOf(piece.img, piece.box, piece.cover) : undefined, piece.fade);
+        for (const piece of plan.pieces) {
+          let piecePlace = place;
+          let pieceOpacity = opacity;
+          const moving = piece.key ? tweens.get(piece.key) : undefined;
+          const still = left(moving, now);
+          if (still) {
+            tweening = true;
+            piecePlace = times(piecePlace, shift(moving!.x * still, moving!.y * still));
+          }
+          if (piece.flicker) {
+            ambient = true;
+            const [flickerOpacity, flickerScale] = keyed(FLICKER, (time / piece.flicker.takes) % 1, loopEase);
+            piecePlace = times(piecePlace, about(piece.box.x + piece.box.w / 2, piece.box.y + piece.box.h / 2, scaling(flickerScale! * piece.flicker.flare)));
+            pieceOpacity *= flickerOpacity!;
+          }
+          if (piece.fly) {
+            ambient = true;
+            const [flyOpacity, across, up] = keyed(DRIFT, ((((time - piece.fly.after) / piece.fly.takes) % 1) + 1) % 1, loopEase);
+            piecePlace = times(piecePlace, shift(across! * flyReach, up! * flyReach));
+            pieceOpacity *= flyOpacity!;
+          }
+          if (pieceOpacity <= 0) continue;
+          if (piece.paint.kind === 'gradient') {
+            painter.gradient(piece.paint.gradient, piece.box, piecePlace, pieceOpacity, piece.clip);
             continue;
           }
-          let glowAt = place;
-          let glowing = opacity;
-          if (piece.flare !== null) {
-            ambient = true;
-            const flame = flickered(time, flickerTakes);
-            glowAt = times(place, about(piece.box.x + piece.box.w / 2, piece.box.y + piece.box.h / 2, scaling(flame.scale * piece.flare)));
-            glowing *= flame.opacity;
-          }
-          for (const radial of piece.radials) painter.glow(radial, piece.box, glowAt, glowing);
+          const { img, cover, fade, tiled } = piece.paint;
+          const picture = painter.pictureOf(img, tiled);
+          if (!picture) continue;
+          const arrived = Math.min((now - picture.arrived) / artIn, 1);
+          if (arrived < 1) fading = true;
+          painter.picture(picture.texture!, piece.box, piecePlace, pieceOpacity * arrived, piece.clip, windowOf(img, piece.box, cover, tiled), fade);
         }
       }
-      if (moved || fading) frame = requestAnimationFrame(draw);
+      // Where the walk rests, for the e2e that holds every screen to the same scene at a stop.
+      if (!moved && scene.dataset['walked'] !== at.toFixed(4)) scene.dataset['walked'] = at.toFixed(4);
+      if (moved || fading || tweening) frame = requestAnimationFrame(draw);
       else if (ambient) timer = window.setTimeout(repaint, AMBIENT_GAP);
     };
 
@@ -229,8 +343,12 @@ export function usePaintedScene(on: boolean, stage: RefObject<HTMLDivElement | n
     };
     painting.current = {
       refit,
-      looked: () => {
-        looks = true;
+      answered: () => {
+        answering = true;
+        refit();
+      },
+      aim: ({ x, y }, looks) => {
+        Object.assign(aimed, { x, y, looks });
         repaint();
       },
     };

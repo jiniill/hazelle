@@ -7,7 +7,7 @@ export const stillness = () => matchMedia(MEDIA.reducedMotion).matches;
 // The walk is written against these and only its frames' places on the scroll move with the real page, so a stop shows the same scene on every screen.
 const TUNED_STOPS = [0, 0.1725, 0.331, 0.5096, 0.79, 1];
 
-const scrollRange = () => Math.max(document.documentElement.scrollHeight - innerHeight, 1);
+export const scrollRange = () => Math.max(document.documentElement.scrollHeight - innerHeight, 1);
 
 const readStops = () => {
   const range = scrollRange();

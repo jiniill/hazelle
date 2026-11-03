@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
-import { hasFinePointer, MEDIA } from '../foundation/media';
-import { usePaintedScene, type Walked, type Walks } from './paintedScene';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
+import { hasFinePointer, MEDIA, mediaQuery } from '../foundation/media';
+import { LayersOfScene, useLayer, usePaintedScene, type Layer, type Walk, type Walked } from './paintedScene';
 import { along, paceOfPage, samePace, stillness, useWalkOn, type Pace } from './walkStops';
 import arin from './art/arin.webp';
 import boughTall from './art/bough-tall.webp';
@@ -34,12 +34,7 @@ const ROW_D = { wide: rowDWide, tall: rowDTall };
 const WALK: readonly (readonly [number, number])[] = [[0, 0], [0.1725, 2100], [0.27, 2160], [0.331, 3250], [0.44, 3450], [0.512, 5800], [1, 7600]];
 const LENS = 1000;
 const NEAREST = 14;
-const SAMPLES = 240;
-const CLOCK = 1000;
 
-type Frames = (pace: Pace) => Keyframe[];
-const stops = (at: (share: number) => Keyframe): Frames => (pace) =>
-  Array.from({ length: SAMPLES + 1 }, (_, index) => ({ ...at(index / SAMPLES), offset: pace(index / SAMPLES) }));
 const between = (low: number, high: number, at: number) => Math.min(Math.max((at - low) / (high - low), 0), 1);
 const smooth = (at: number) => at * at * (3 - 2 * at);
 
@@ -55,23 +50,8 @@ const DOOR_FILLS = 21.6;
 const NEARING = [0.34, 0.5096] as const;
 const doorAt = (seen: Seen) => (share: number): Walked => ({ scale: DOOR_FAR * (DOOR_FILLS / DOOR_FAR) ** Math.max((share - NEARING[0]) / (NEARING[1] - NEARING[0]), 0), opacity: seenAt(seen, share) });
 
-const SCROLL = typeof ScrollTimeline === 'function' ? new ScrollTimeline({ source: document.documentElement }) : null;
-// The planes are painted on one canvas: a phone composites one layer instead of a dozen growing pictures. Without WebGL2 or with reduced motion they stand still.
+// The scene is painted on one canvas: a phone composites one layer instead of dozens of growing pictures and glows. Without WebGL2 or with reduced motion it stands still.
 const PAINTS = typeof WebGL2RenderingContext === 'function' && !stillness();
-const PaceOfPage = createContext<Pace>(samePace);
-const PaintedWalks = createContext<{ walks: Walks; changed: () => void }>({ walks: new Map(), changed: () => {} });
-
-function useWalk(frames: Frames) {
-  const node = useRef<HTMLDivElement>(null);
-  const pace = useContext(PaceOfPage);
-  useLayoutEffect(() => {
-    if (stillness()) return;
-    const animation = node.current!.animate(frames(pace), { duration: CLOCK, fill: 'both', easing: 'linear', ...(SCROLL ? { timeline: SCROLL } : {}) });
-    if (!SCROLL) animation.pause();
-    return () => animation.cancel();
-  }, [pace]);
-  return node;
-}
 
 // Far planes share pictures with near ones: seen at another depth, between other trees, a row reads as new.
 // Each comes out of the fog well before it is near, so the fog does its far colors, and leaves before it fills the screen.
@@ -94,25 +74,23 @@ const BOUGH = { z: 40, seen: { out: [0.02, 0.05] } } as const;
 const HILL = { z: 40000, seen: { in: [0.78, 0.92] } } as const;
 const RIDGE = { z: 60000, seen: {} } as const;
 
+const tallScreen = mediaQuery(MEDIA.tallScreen);
 // On a tall screen the page's words reach across the moon's place, so it climbs clear of them while they are read.
-const MOON: Frames = (pace) => {
-  const climbs = matchMedia(MEDIA.tallScreen).matches ? 11 : 0;
-  return stops((share) => {
-    const climbed = climbs * between(0, 0.1725, share) * (1 - between(0.44, 0.84, share));
-    return { transform: `translate3d(0, ${(share < 0.44 ? between(0, 0.44, share) * 5 : 5 + between(0.44, 0.84, share) * 69) - climbed}vh, 0)` };
-  })(pace);
+const MOON: Walk = (share, { h }) => {
+  const climbed = (tallScreen.read() ? 11 : 0) * between(0, 0.1725, share) * (1 - between(0.44, 0.84, share));
+  return { y: (((share < 0.44 ? between(0, 0.44, share) * 5 : 5 + between(0.44, 0.84, share) * 69) - climbed) * h) / 100 };
 };
 // Dissolves on the walk's own scale as the doorway closes in and on the way out, always moving the way the visitor walks, in either direction.
-const ROOM = stops((share) => {
+const ROOM: Walk = (share) => {
   const entered = smooth(between(0.455, 0.5096, share));
   const leaving = smooth(between(0.5096, 0.67, share));
-  return { opacity: (entered * (1 - smooth(between(0.52, 0.67, share)))).toFixed(3), transform: `scale(${(0.9 + entered * 0.1 + leaving * 0.14).toFixed(4)})` };
-});
-const DAWN = stops((share) => ({ opacity: between(0.56, 1, share) }));
+  return { opacity: entered * (1 - smooth(between(0.52, 0.67, share))), scale: 0.9 + entered * 0.1 + leaving * 0.14 };
+};
+const DAWN: Walk = (share) => ({ opacity: between(0.56, 1, share) });
 // The carried lantern dips and rises with each step of the walk, and is not needed once the sun is up.
 const STRIDES = 22;
-const STEP = stops((share) => ({ transform: `translate3d(${Math.sin(share * STRIDES * Math.PI) * 9}px, ${Math.abs(Math.cos(share * STRIDES * Math.PI)) * 14}px, 0)`, opacity: 1 - between(0.68, 0.9, share) }));
-const SUN = stops((share) => ({ transform: `translate3d(0, ${(1 - between(0.74, 1, share)) * 34}vh, 0)`, opacity: between(0.74, 1, share) }));
+const STEP: Walk = (share) => ({ x: Math.sin(share * STRIDES * Math.PI) * 9, y: Math.abs(Math.cos(share * STRIDES * Math.PI)) * 14, opacity: 1 - between(0.68, 0.9, share) });
+const SUN: Walk = (share, { h }) => ({ y: ((1 - between(0.74, 1, share)) * 34 * h) / 100, opacity: between(0.74, 1, share) });
 
 const FIREFLIES = Array.from({ length: 16 }, (_, index) => {
   const x = (index * 37 + 11) % 100;
@@ -133,46 +111,35 @@ function Art({ wide, tall, priority }: { wide: string; tall: string; priority?: 
   );
 }
 
-function Plane({ z, seen, doorward, children }: { z: number; seen: Seen; doorward?: boolean; children: ReactNode }) {
-  const at = doorward ? doorAt(seen) : planeAt(z, seen);
-  const painted = useContext(PaintedWalks);
-  const node = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const plane = node.current!;
-    painted.walks.set(plane, at);
-    painted.changed();
-    return () => {
-      painted.walks.delete(plane);
-      painted.changed();
-    };
-  }, []);
-  return (
-    <div className={styles.look} style={{ '--near': (LENS / (LENS + z)).toFixed(3) } as CSSProperties}>
-      <div ref={node} className={doorward ? `${styles.plane} ${styles.doorward}` : styles.plane}>{children}</div>
-    </div>
-  );
-}
-
-function Moving({ className, frames, children }: { className: string; frames: Frames; children?: ReactNode }) {
-  const node = useWalk(frames);
+function Painted({ className, layer = {}, children }: { className: string; layer?: Layer; children?: ReactNode }) {
+  const node = useLayer(layer);
   return <div ref={node} className={className}>{children}</div>;
 }
+
+const Plane = ({ z, seen, doorward, children }: { z: number; seen: Seen; doorward?: boolean; children: ReactNode }) => (
+  <Painted className={doorward ? `${styles.plane} ${styles.doorward}` : styles.plane} layer={{ walk: doorward ? doorAt(seen) : planeAt(z, seen), near: LENS / (LENS + z) }}>
+    {children}
+  </Painted>
+);
 
 // glow: how far the visitor has come (0 to 3), told by the trial's steps. talking: 아린 is answering. inside: past the cabin's threshold.
 export function NightScene({ glow, talking, inside }: { glow: number; talking: boolean; inside: boolean }) {
   const stage = useRef<HTMLDivElement>(null);
-  const lantern = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
   const [walking, setWalking] = useState(false);
   const [pace, setPace] = useState<Pace>(() => samePace);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const [walks] = useState<Walks>(() => new Map());
-  const painting = usePaintedScene(PAINTS, stage, canvas, walks, pace);
-  const [painted] = useState(() => ({ walks, changed: () => painting.current.refit() }));
+  const [layers] = useState(() => new Map<HTMLElement, Layer>());
+  const painting = usePaintedScene(PAINTS, stage, canvas, layers, pace);
+  const [ofScene] = useState(() => ({ layers, changed: () => painting.current.refit() }));
   useWalkOn();
 
   useEffect(() => {
     painting.current.refit();
   }, [talking]);
+
+  useEffect(() => {
+    painting.current.answered();
+  }, [glow]);
 
   useLayoutEffect(() => {
     if (stillness()) return;
@@ -199,43 +166,16 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
   }, []);
 
   useEffect(() => {
-    if (SCROLL) return;
-    // A browser with no scroll timeline runs the same animations, paused, with the page's scroll setting their clock.
-    const node = stage.current!;
-    const follow = () => {
-      const share = Math.min(scrollY / Math.max(document.documentElement.scrollHeight - innerHeight, 1), 1);
-      for (const animation of node.getAnimations({ subtree: true })) if (animation.playState === 'paused') animation.currentTime = share * CLOCK;
-    };
-    follow();
-    addEventListener('scroll', follow, { passive: true });
-    addEventListener('resize', follow);
-    return () => {
-      removeEventListener('scroll', follow);
-      removeEventListener('resize', follow);
-    };
-  }, [walking, pace]);
-
-  useEffect(() => {
-    if (stillness()) return;
-    const node = stage.current!;
-    const carried = lantern.current!;
-    // A finger also moves the lantern, but looking around stays with a mouse: it restyles every plane, which a phone pays for.
+    if (!PAINTS) return;
+    // A finger also moves the lantern, but looking around stays with a mouse.
     const looks = hasFinePointer();
-    const aim = matchMedia(MEDIA.tallScreen).matches ? { x: 0.5, y: 0.66 } : { x: 0.62, y: 0.68 };
+    const aim = tallScreen.read() ? { x: 0.5, y: 0.66 } : { x: 0.62, y: 0.68 };
     const now = { ...aim };
     let frame = 0;
-    const place = () => {
-      carried.style.transform = `translate3d(${now.x * innerWidth}px, ${now.y * innerHeight}px, 0)`;
-    };
     const settle = () => {
       now.x += (aim.x - now.x) * 0.08;
       now.y += (aim.y - now.y) * 0.08;
-      place();
-      if (looks) {
-        node.style.setProperty('--look-x', now.x.toFixed(4));
-        node.style.setProperty('--look-y', now.y.toFixed(4));
-        painting.current.looked();
-      }
+      painting.current.aim(now, looks);
       frame = Math.abs(aim.x - now.x) + Math.abs(aim.y - now.y) > 0.0008 ? requestAnimationFrame(settle) : 0;
     };
     const point = (x: number, y: number) => {
@@ -246,31 +186,28 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
     const moved = ({ clientX, clientY }: PointerEvent) => point(clientX, clientY);
     // A scrolling finger stops sending pointer events almost at once; touch events keep coming.
     const touched = ({ touches }: TouchEvent) => point(touches[0]!.clientX, touches[0]!.clientY);
-    place();
+    painting.current.aim(now, looks);
     addEventListener('pointermove', moved, { passive: true });
     addEventListener('touchstart', touched, { passive: true });
     addEventListener('touchmove', touched, { passive: true });
-    addEventListener('resize', place);
     return () => {
       removeEventListener('pointermove', moved);
       removeEventListener('touchstart', touched);
       removeEventListener('touchmove', touched);
-      removeEventListener('resize', place);
       cancelAnimationFrame(frame);
     };
   }, []);
 
   return (
-    <PaceOfPage.Provider value={pace}>
-      <PaintedWalks.Provider value={painted}>
+    <LayersOfScene value={ofScene}>
       <div ref={stage} className={styles.scene} data-glow={glow} data-talking={talking || undefined} data-inside={inside || undefined} aria-hidden="true">
-        <div className={styles.flat}><Art wide={skyWide} tall={skyTall} priority /></div>
-        <Moving className={styles.moonPath} frames={MOON}>
+        <Painted className={styles.flat}><Art wide={skyWide} tall={skyTall} priority /></Painted>
+        <Painted className={styles.moonPath} layer={{ walk: MOON }}>
           <div className={styles.halo} />
           <img className={styles.moon} src={moon} alt="" decoding="async" />
-        </Moving>
-        <Moving className={styles.dawn} frames={DAWN} />
-        <Moving className={styles.sun} frames={SUN} />
+        </Painted>
+        <Painted className={styles.dawn} layer={{ walk: DAWN }} />
+        <Painted className={styles.sun} layer={{ walk: SUN }} />
         <Plane {...RIDGE}><Art wide={ridgeWide} tall={ridgeTall} /></Plane>
         {walking && <Plane {...HILL}><Art wide={hillWide} tall={hillTall} /></Plane>}
         {ROWS.map(({ art, z, seen, takes }) => (seen.in && !walking ? null : (
@@ -292,35 +229,33 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
         <Plane {...BOUGH}>
           <div className={styles.bough}><Art wide={boughWide} tall={boughTall} /></div>
         </Plane>
-        {PAINTS && <canvas ref={canvas} className={styles.painted} />}
-        <div className={styles.haze} />
-        <div className={styles.warmth} />
-        <div ref={lantern} className={styles.lantern}>
-          <Moving className={styles.step} frames={STEP}>
+        <Painted className={styles.haze} />
+        <Painted className={styles.warmth} />
+        <div className={styles.lantern}>
+          <Painted className={styles.step} layer={{ walk: STEP, carried: true }}>
             <div className={styles.veil} />
             <div className={styles.carried} />
-          </Moving>
+          </Painted>
         </div>
-        <div className={styles.flies}>
+        <Painted className={styles.flies}>
           {FIREFLIES.map(({ key, style }) => (
             <div key={key} className={styles.gather} style={style}>
               <div className={styles.fly} />
             </div>
           ))}
-        </div>
+        </Painted>
         {(walking || inside) && (
-          <Moving className={styles.room} frames={ROOM}>
+          <Painted className={styles.room} layer={{ walk: ROOM }}>
             <div className={styles.roomPicture}>
               <Art wide={roomWide} tall={roomTall} />
               <div className={styles.roomHearth} />
               <div className={styles.roomLamp} />
             </div>
-          </Moving>
+          </Painted>
         )}
-        <div className={styles.grain} />
-        <div className={styles.curtain} />
+        <Painted className={styles.grain} />
+        {PAINTS && <canvas ref={canvas} className={styles.painted} />}
       </div>
-      </PaintedWalks.Provider>
-    </PaceOfPage.Provider>
+    </LayersOfScene>
   );
 }
