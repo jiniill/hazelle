@@ -152,7 +152,7 @@ describe('a character file', () => {
     const copy = brought.ok ? brought.data.id : '';
     const after = await held(other.store, other.files, copy);
     const onAfter = after.character.modules!;
-    expect({ ...after, character: { ...after.character, modules: [] } }).toEqual({ ...before, character: { ...before.character, modules: [] } });
+    expect({ ...after, character: { ...after.character, modules: [] } }).toEqual({ ...before, character: { ...before.character, modules: [], changed: expect.any(Number) } });
     const { risu, ...moduleAfter } = await heldModule(other.store, other.files, onAfter[0]!);
     expect(risu).toBe(moduleId);
     expect(moduleAfter).toEqual(moduleBefore);

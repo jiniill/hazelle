@@ -32,7 +32,7 @@ const FILE_WINDOW = 32;
 export async function addCharacter(store: ObjectStore, character: Character, { avatar, assets, lore, likeness }: Owned, progress: Progress, { id = crypto.randomUUID(), chats = [] }: { id?: string; chats?: Write[] } = {}): Promise<ApiResult<string>> {
   const owned = <K extends 'avatar' | 'asset' | 'lore'>(kind: K, value: Values[K]): Write => ({ type: 'create', kind, id: crypto.randomUUID(), parent: id, value });
   const writes: Write[] = [
-    { type: 'create', kind: 'character', id, parent: null, value: character },
+    { type: 'create', kind: 'character', id, parent: null, value: { ...character, changed: Date.now() } },
     ...(avatar ? [owned('avatar', avatar)] : []),
     ...assets.map((asset) => owned('asset', asset)),
     ...lore.map((entry) => owned('lore', entry)),
@@ -194,7 +194,7 @@ export type CharacterText = Omit<Card, keyof Pack> & { alias: string };
 // Only the fields given, the card's merged into the current card, so an edit to another field on another device
 // survives.
 export function editCharacter(store: ObjectStore, id: string, { alias, ...card }: Partial<CharacterText>): Promise<ApiResult<Stored<'character'>>> {
-  return store.update('character', id, (current) => ({ ...current, ...(alias === undefined ? {} : { alias }), card: { ...current.card, ...card } }));
+  return store.update('character', id, (current) => ({ ...current, ...(alias === undefined ? {} : { alias }), card: { ...current.card, ...card }, changed: Date.now() }));
 }
 
 // Only the fields given; undefined removes one, back to its default.

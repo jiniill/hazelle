@@ -3,8 +3,8 @@ import type { Card } from '../engine/import/types';
 import type { Stored } from './kinds';
 import { characterTexts, daysLeft, KEEP_DELETED, shelve } from './library';
 
-const character = (id: string, rev: number): Stored<'character'> => ({ id, kind: 'character', parent: null, rev, value: { card: { name: id } as Card, folder: null, loreFolders: [] } });
-const chat = (id: string, character: string | null, order: number) => ({ id, chat: { character }, order });
+const character = (id: string, rev: number, changed?: number): Stored<'character'> => ({ id, kind: 'character', parent: null, rev, value: { card: { name: id } as Card, folder: null, loreFolders: [], ...(changed && { changed }) } });
+const chat = (id: string, character: string | null, order: number, at: number | null = order) => ({ id, chat: { character }, order, at });
 
 describe('shelve', () => {
   it('groups chats under their character, most recent character first, those without chats last by name, and keeps characterless chats apart', () => {
@@ -19,6 +19,12 @@ describe('shelve', () => {
     ]);
     expect(characters.find((shelf) => shelf.id === 'b')!.face).toBe('data:thumb');
     expect(none.chats.map((item) => item.id)).toEqual(['c3']);
+  });
+
+  it('ranks a character just brought in or edited among the chats by time, whatever its rev', () => {
+    const chats = [chat('c2', 'a', 8, 300), chat('c1', 'b', 5, 100)];
+    const { characters } = shelve([character('a', 1), character('b', 9), character('new', 2, 200), character('old', 3)], [], chats, []);
+    expect(characters.map((shelf) => shelf.id)).toEqual(['a', 'new', 'b', 'old']);
   });
 
   it('lists a character being removed for good nowhere', () => {

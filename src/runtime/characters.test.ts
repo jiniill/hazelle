@@ -118,11 +118,11 @@ describe('importCharacter', () => {
 });
 
 describe('createCharacter', () => {
-  it('shows the blank character under its id before the write is answered, so its page opens at once', async () => {
+  it('shows the blank character under its id before the write is answered, so its page opens at once, dated for 최근', async () => {
     const { store } = await server.account();
     const id = crypto.randomUUID();
     const saving = createCharacter(store, '새 캐릭터', id);
-    expect(store.get('character', id)?.value).toEqual(bare('새 캐릭터'));
+    expect(store.get('character', id)?.value).toEqual({ ...bare('새 캐릭터'), changed: expect.any(Number) });
     expect(await saving).toEqual({ ok: true, data: id });
   });
 });
@@ -233,7 +233,7 @@ describe('copyCharacter', () => {
 
     const copied = await copyCharacter(store, id, '루나 (사본)', () => {});
     const copy = copied.ok ? copied.data : '';
-    expect(store.get('character', copy)?.value).toEqual({ ...luna, card: { ...luna.card, name: '루나 (사본)' }, origin: { id, name: '루나' } });
+    expect(store.get('character', copy)?.value).toEqual({ ...luna, card: { ...luna.card, name: '루나 (사본)' }, origin: { id, name: '루나' }, changed: expect.any(Number) });
     expect(store.children('lore', copy).map((lore) => lore.value)).toEqual([entry]);
     expect(store.children('avatar', copy).map(({ value }) => value)).toEqual([avatar]);
     expect(store.children('asset', copy).map(({ value }) => value)).toEqual(assets);

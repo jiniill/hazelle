@@ -8,7 +8,7 @@ import { useToast } from '../toast';
 import { usePersisted } from './usePersisted';
 
 type CharacterSort = 'recent' | 'own';
-export const CHARACTER_SORTS = [{ value: 'recent', label: '최근 대화' }, { value: 'own', label: '사용자 지정' }] as const;
+export const CHARACTER_SORTS = [{ value: 'recent', label: '최근' }, { value: 'own', label: '사용자 지정' }] as const;
 
 // 캐릭터 둘러보기 and the phone's character list never stand together, so one key serves both; the rail is always 직접.
 export const useCharacterSort = () => usePersisted<CharacterSort>('risu-alpha:character-sort', (stored) => (stored === 'own' ? 'own' : 'recent'), 'recent', String);
@@ -23,7 +23,7 @@ export function useSortedLibrary(sort: CharacterSort): Library {
   }, [library, order, sort]);
 }
 
-// shown: the ids of one place's characters, or its folders, as they stand. A move made in 최근 대화 starts from what was
+// shown: the ids of one place's characters, or its folders, as they stand. A move made in 최근 starts from what was
 // shown there and turns the view to 직접 (user, 2026-10-19).
 export function useReorder(setSort: (sort: CharacterSort) => void) {
   const store = useStore();

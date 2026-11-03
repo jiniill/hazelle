@@ -16,6 +16,9 @@ import type { ToggleValues } from './prompt';
 // card's nickname (부르는 이름), which CCv3 puts in {{char}}'s place.
 export type Character = Mark & {
   card: Card;
+  // When the user last made, brought in or edited it (runtime/characters stamps it), which 최근 ranks with its chats'
+  // times; absent on a character untouched since before it was kept.
+  changed?: number;
   alias?: string;
   folder: string | null;
   loreFolders: LoreFolder[];
@@ -134,10 +137,11 @@ export type TextFile = { name: string; title: string; text: string };
 export type Shelf<C> = { id: string | null; character: Character | null; face: string | null; avatar: string | null; chats: C[] };
 export type CharacterShelf<C> = Shelf<C> & { id: string; character: Character };
 
-type ChatLike = { chat: { character: string | null } & Mark; order: number };
+type ChatLike = { chat: { character: string | null } & Mark; order: number; at: number | null };
 
-// chats must arrive newest first. Rank characters by their latest chat, never their edit-sensitive rev;
-// chatless characters follow by name (user ruling, 2026-10-08). Purging objects must stay out of all lists.
+// chats must arrive newest first. Rank characters by the latest of their chats' times and their own changed, never by
+// a rev, which any write moves; those with neither follow by name (user rulings, 2026-10-08 and 2026-11-03). Purging
+// objects must stay out of all lists.
 export function shelve<C extends ChatLike>(
   characters: Stored<'character'>[],
   avatars: Stored<'avatar'>[],
@@ -150,8 +154,9 @@ export function shelve<C extends ChatLike>(
   const loose = byCharacter.get(null) ?? [];
   const live = shelves.filter((shelf) => isLive(shelf.character));
   const liveIds = new Set(live.map((shelf) => shelf.id));
+  const latest = ({ character, chats }: CharacterShelf<C>) => Math.max(character.changed ?? 0, ...chats.map(({ at }) => at ?? 0));
   return {
-    characters: live.sort((a, b) => (b.chats[0]?.order ?? 0) - (a.chats[0]?.order ?? 0) || a.character.card.name.localeCompare(b.character.card.name, 'ko')),
+    characters: live.sort((a, b) => latest(b) - latest(a) || a.character.card.name.localeCompare(b.character.card.name, 'ko')),
     none: { id: null, character: null, face: null, avatar: null, chats: loose },
     deleted: shelves.filter((shelf) => isBinned(shelf.character)).sort((a, b) => b.character.deleted! - a.character.deleted!),
     deletedChats: binned
