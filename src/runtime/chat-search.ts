@@ -12,8 +12,9 @@ const TELL_MS = 100;
 
 // order: the chat's when it was read, so a chat written to since is read again.
 type Read = { order: number; hit: MessageHit | null } | { order: number; unreadable: true };
-// term: folded (model/search foldTerm). read holds what the scan found in page memory only, never stored.
-export type Finding = { term: string; read: ReadonlyMap<string, Read>; running: boolean; failure: ApiFailure | null };
+// term: folded (model/search foldTerm). read holds what the scan found in page memory only, never stored. filling: how
+// far the chats not on this device yet have come down (ObjectStore.fillChats), null outside that step.
+export type Finding = { term: string; read: ReadonlyMap<string, Read>; running: boolean; filling: number | null; failure: ApiFailure | null };
 
 // Only live chats of live characters and 캐릭터 없이: a binned character's chats go and come back with it.
 export const liveChats = (library: Library): ChatSummary[] => [...library.characters.flatMap((shelf) => shelf.chats), ...library.none.chats];
@@ -21,7 +22,7 @@ export const liveChats = (library: Library): ChatSummary[] => [...library.charac
 // 채팅 검색's pass over every chat's messages: a few chats at a time, each let go once read, so no more than those few
 // are in memory.
 export class ChatFinder {
-  private finding: Finding = { term: '', read: new Map(), running: false, failure: null };
+  private finding: Finding = { term: '', read: new Map(), running: false, filling: null, failure: null };
   private reading = new Map<string, Read>();
   private run: AbortController | null = null;
   private telling: ReturnType<typeof setTimeout> | null = null;
@@ -48,7 +49,7 @@ export class ChatFinder {
   stop() {
     this.run?.abort();
     this.run = null;
-    if (this.finding.running) this.tell({ running: false });
+    if (this.finding.running) this.tell({ running: false, filling: null });
   }
 
   close() {
@@ -60,6 +61,10 @@ export class ChatFinder {
 
   private async scan(term: string, due: readonly ChatSummary[], signal: AbortSignal) {
     const failure = await this.store.pinned(async (pin) => {
+      const filled = await this.store.fillChats(due.map(({ id }) => id), pin, signal, (filling) => this.tell({ filling }));
+      if (signal.aborted) return null;
+      this.tell({ filling: null });
+      if (!filled.ok) return filled;
       let next = 0;
       let failed: ApiFailure | null = null;
       const reader = async () => {

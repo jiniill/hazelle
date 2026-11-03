@@ -102,4 +102,22 @@ describe('채팅 검색', () => {
     await server.wipe();
     expect((await device.pinned((pin) => device.chatEntries(id, pin))).ok).toBe(false);
   });
+
+  it('brings many chats down in one pass over the feed, each then read from the device whole', async () => {
+    const { store, open } = await server.account();
+    const ids: string[] = [];
+    for (let at = 0; at < 70; at++) ids.push(await chat(store, {}, `용 ${at}`));
+    expect((await store.create('textfile', { name: 'note', title: 'Note', text: 'kept' }, { parent: ids[0]! })).ok).toBe(true);
+    const device = await open(undefined, new MemoryCache());
+    expect(await device.pull()).toBeNull();
+    const shares: number[] = [];
+    expect(await device.pinned((pin) => device.fillChats(ids, pin, new AbortController().signal, (share) => shares.push(share)))).toEqual({ ok: true, data: null });
+    expect(shares.at(-1)).toBe(1);
+    await server.wipe();
+    for (const id of ids) expect((await device.pinned((pin) => device.chatEntries(id, pin))).ok).toBe(true);
+    const lease = device.retainChat(ids[0]!, { summarize: false });
+    expect(await lease.ready).toBeNull();
+    expect(device.children('textfile', ids[0]!).map(({ value }) => value.text)).toEqual(['kept']);
+    lease.release();
+  });
 });

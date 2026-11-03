@@ -26,6 +26,8 @@ export interface DeviceCache {
   // from before generations, whose rows go as a new generation is made, in the same transaction.
   open(): Promise<{ generation: Generation; saved: CachedScope | null }>;
   read(generation: Generation, chat: string): Promise<CachedScope | null>;
+  // Every chat scope's state, without its rows (ObjectStore.fillChats).
+  scopes(generation: Generation): Promise<Map<string, CacheState>>;
   write(generation: Generation, write: CacheWrite): Promise<void>;
   // Every row goes, and the answer is the new generation, without a timeline.
   clear(generation: Generation): Promise<Generation>;

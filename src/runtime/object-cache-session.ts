@@ -1,4 +1,4 @@
-import { GenerationChanged, type CachedScope, type CacheWrite, type DeviceCache, type Generation } from './object-cache';
+import { GenerationChanged, type CachedScope, type CacheState, type CacheWrite, type DeviceCache, type Generation } from './object-cache';
 
 // Do not hand a rewound cache to the next store before clear succeeds; failed clear leaves the old timeline unsafe.
 const handed = new WeakMap<DeviceCache, Promise<boolean>>();
@@ -30,6 +30,15 @@ export class ObjectCacheSession {
     return this.cache.read(generation, chat).catch((error: unknown) => {
       if (error instanceof GenerationChanged && !this.ending.aborted) this.moved();
       return null;
+    });
+  }
+
+  async scopes(): Promise<Map<string, CacheState>> {
+    const generation = this.generation;
+    if (!this.cache || this.failed || generation?.timeline == null) return new Map();
+    return this.cache.scopes(generation).catch((error: unknown) => {
+      if (error instanceof GenerationChanged && !this.ending.aborted) this.moved();
+      return new Map<string, CacheState>();
     });
   }
 

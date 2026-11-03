@@ -181,7 +181,7 @@ describe('object codec store boundaries', () => {
         state: { cursor: 1, complete: true, until: null, limits: { items: 200, bytes: 10000000, body: 1000000 }, heads: [], revisions: [] },
         changes: [{ ...item, rev: 1, body: 'ciphertext' }],
       } }),
-      read: vi.fn(async () => null), write: vi.fn(async () => {}), clear: vi.fn(async () => generation),
+      read: vi.fn(async () => null), scopes: vi.fn(async () => new Map()), write: vi.fn(async () => {}), clear: vi.fn(async () => generation),
       adopt: vi.fn(async () => generation), forget: vi.fn(async () => {}),
     };
     const { request } = feed([]);

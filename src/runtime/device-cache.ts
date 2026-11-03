@@ -1,7 +1,7 @@
 import { cachedDatabase } from '../vault/database';
 import type { SealedChange } from '../contracts/objects';
 import { lockVault } from '../vault/device';
-import { adoptable, cacheNewer, cacheScope, GenerationChanged, sameGeneration, type CachedScope, type CacheWrite, type DeviceCache, type Generation } from './object-cache';
+import { adoptable, cacheNewer, cacheScope, GenerationChanged, sameGeneration, type CachedScope, type CacheState, type CacheWrite, type DeviceCache, type Generation } from './object-cache';
 
 const caches = new Map<string, BrowserCache>();
 const draftCaches = new Map<string, BrowserDraftCache>();
@@ -106,6 +106,23 @@ class BrowserCache implements DeviceCache {
     this.compare(tx, (stored) => sameGeneration(stored, generation), () => this.scope(tx, chat, (scope) => { saved = scope; }));
     await done;
     return saved;
+  }
+
+  async scopes(generation: Generation): Promise<Map<string, CacheState>> {
+    const { tx, done } = await this.transaction();
+    const found = new Map<string, CacheState>();
+    this.compare(tx, (stored) => sameGeneration(stored, generation), () => {
+      const walk = tx.objectStore('states').openCursor(IDBKeyRange.bound([this.account], [this.account, []]));
+      walk.onsuccess = () => {
+        const at = walk.result;
+        if (!at) return;
+        const [, chat] = at.key as [string, string];
+        if (chat) found.set(chat, at.value as CacheState);
+        at.continue();
+      };
+    });
+    await done;
+    return found;
   }
 
   async write(generation: Generation, { changes, feed, scopes }: CacheWrite): Promise<void> {

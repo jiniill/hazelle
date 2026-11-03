@@ -1,5 +1,5 @@
 import { ChatFold } from '../model/chat';
-import type { AppendOnly, Kind, Singleton, Stored, Values } from '../model/kinds';
+import { KINDS, type AppendOnly, type Kind, type Singleton, type Stored, type Values } from '../model/kinds';
 import { objectKey } from '../vault/objects';
 import type { VaultKey } from '../vault/keys';
 import type { FeedAnswer, SealedChange } from '../contracts/objects';
@@ -25,6 +25,12 @@ type PullOptions = { signal?: AbortSignal; progress?: (progress: PullProgress) =
 
 export type Pin = { timeline: string };
 const MAX_ATTEMPTS = 3;
+// fillChats: fewer chats left to read than this go one pull each (chatEntries), which costs less than walking the
+// account's feed; its pass saves where it got to this often, so a cut-short pass goes on from there.
+const FILL_FROM = 64;
+const FILL_SAVE_MS = 5_000;
+// The server refuses more than 32 kinds excluded; every kind but a chat's own comes bodiless.
+const FILL_EXCLUDED = Object.keys(KINDS).filter((kind) => !SCOPED.has(kind));
 type Scope = { fold: ChatFold; opening: Promise<ApiFailure | null> | null; abort: AbortController; state: ScopeState; users: number; cursor: number; head: number; loading: Promise<ApiFailure | null> | null; error: ApiFailure | null; summarize: boolean };
 // The backend owns confirmed state; conflicts pull the latest copy and reapply the change.
 // A store belongs to one timeline: rewind ends it, and the next store inherits no state or work.
@@ -494,6 +500,42 @@ export class ObjectStore {
       }
     }
     return this.pages({ parent, kind }, cursor, visit, pin, signal, (changes, at, more) => this.cacheWrite(changes, { chat: parent, cursor: at, complete: !more }));
+  }
+
+  // Many chats' scopes into the device cache in one pass over the account's feed, for chatEntries to read after it,
+  // where a pull per chat would ask the server once a chat. Nothing is opened; held chats keep their own state.
+  // share: how far the pass has got, by revision.
+  async fillChats(chats: readonly string[], pin: Pin, signal: AbortSignal, share: (done: number) => void): Promise<ApiResult<null>> {
+    if (!this.cachedObjects.available) return { ok: true, data: null };
+    const stop = AbortSignal.any([this.closing.signal, signal]);
+    await this.cachedObjects.settled;
+    const known = await this.cachedObjects.scopes();
+    if (stop.aborted) return this.halted();
+    const due = new Map(chats.flatMap((chat) => (known.get(chat)?.complete ? [] : [[chat, known.get(chat)?.cursor ?? 0] as const])));
+    if (due.size < FILL_FROM) return { ok: true, data: null };
+    const from = Math.min(...due.values());
+    const head = this.known;
+    let cursor = from;
+    let more = true;
+    let saved = Date.now();
+    while (more) {
+      const result = await this.backend.feed(feedQuery({ since: cursor, timeline: pin.timeline, excluded: FILL_EXCLUDED }), stop);
+      if (stop.aborted) return this.halted();
+      if (!result.ok) {
+        if (result.error !== 'cache-reset') return result;
+        this.rewind(true);
+        return this.halted();
+      }
+      ({ cursor, more } = result.data);
+      const ends = !more || Date.now() - saved >= FILL_SAVE_MS;
+      // A scope's state says its rows are whole up to its cursor, true of every chat the pass has gone past.
+      const scopes = ends ? [...due].flatMap(([chat, since]) => (since <= cursor && !this.scopes.has(chat) ? [{ chat, state: this.cacheState({ cursor, complete: !more }) }] : [])) : [];
+      if (this.timeline !== null) this.cachedObjects.write({ changes: result.data.changes.filter((row) => SCOPED.has(row.kind) && due.has(row.parent!)), feed: this.cacheState(), scopes });
+      if (ends) saved = Date.now();
+      share(head > from ? Math.min((cursor - from) / (head - from), 1) : 1);
+    }
+    await this.cachedObjects.settled;
+    return stop.aborted ? this.halted() : { ok: true, data: null };
   }
 
   // A chat's entries without holding it, for a pass over many chats (runtime/chat-search), never filling the held

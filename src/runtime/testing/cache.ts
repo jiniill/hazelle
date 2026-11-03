@@ -22,6 +22,11 @@ export class MemoryCache implements DeviceCache {
     return state ? structuredClone({ state, changes: this.scope(chat) }) : null;
   }
 
+  async scopes(generation: Generation) {
+    if (!sameGeneration(this.generation, generation)) throw new GenerationChanged();
+    return structuredClone(new Map([...this.states].filter(([chat]) => chat !== '')));
+  }
+
   async write(generation: Generation, write: CacheWrite) {
     if (!sameGeneration(this.generation, generation)) throw new GenerationChanged();
     const { changes, feed, scopes } = structuredClone(write);
