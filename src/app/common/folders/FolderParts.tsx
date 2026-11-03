@@ -1,4 +1,4 @@
-import { ArrowDownToLine, ArrowUpToLine, FolderInput, FolderPlus, FolderTree as SubfolderIcon } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpToLine, FolderInput, FolderPlus, SquareCheck, FolderTree as SubfolderIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { kindOf, pathName, pathOf, withInside, type Filed, type FolderContents, type FolderIndex, type FolderSet, type FolderTree } from '../../../model/folders';
 import { Button, Divider, FolderCard, IconButton, Menu, MenuItem, MoreMenu, PathBar, Row, useWide } from '../../ui';
@@ -149,8 +149,9 @@ export function FolderChoices<T>({ index, onPick }: { index: FolderIndex<T>; onP
 }
 
 // 선택해서 옮기기's pick and, on wide screens, the drags that move cards; off moves nothing (휴지통). folderOf: where a
-// thing is by its id; carry: the ids a move of one takes along, such as a prompt's copies listed under it.
-export function useMoving<T>(set: FolderSet, index: FolderIndex<T>, folderOf: (id: string) => string | null, { off = false, carry = (id: string) => [id] }: { off?: boolean; carry?: (id: string) => string[] } = {}) {
+// thing is by its id; carry: the ids a move of one takes along, such as a prompt's copies listed under it. remove: the
+// pick can be deleted too, so it is offered with no folder yet. compact: the button is an icon (useSelection).
+export function useMoving<T>(set: FolderSet, index: FolderIndex<T>, folderOf: (id: string) => string | null, { off = false, carry = (id: string) => [id], remove, compact = false }: { off?: boolean; carry?: (id: string) => string[]; remove?: (ids: string[]) => void; compact?: boolean } = {}) {
   const kind = kindOf(set);
   const { move } = useFolderActions(set);
   const wide = useWide();
@@ -175,19 +176,31 @@ export function useMoving<T>(set: FolderSet, index: FolderIndex<T>, folderOf: (i
     selection.clear();
   };
   const bar = !off && selection.bar(
-    { counted: (count) => filedCount(kind, count), ask: `옮길 ${withParticle(filedNoun(kind), '을/를')} 선택해 주세요` },
-    <Menu
-      place="above-end"
-      label="이동할 폴더"
-      trigger={(opener) => (
-        <Button size="sm" disabled={!picked?.size || index.folders.length === 0} {...opener}>
-          {MOVE_TO_FOLDER}
+    { counted: (count) => filedCount(kind, count), ask: `${remove ? '' : '옮길 '}${withParticle(filedNoun(kind), '을/를')} 선택해 주세요` },
+    <>
+      {(!remove || index.folders.length > 0) && (
+        <Menu
+          place="above-end"
+          label="이동할 폴더"
+          trigger={(opener) => (
+            <Button size="sm" disabled={!picked?.size || index.folders.length === 0} {...opener}>
+              {MOVE_TO_FOLDER}
+            </Button>
+          )}
+        >
+          <FolderChoices index={index} onPick={moveTo} />
+        </Menu>
+      )}
+      {remove && (
+        <Button size="sm" variant="danger" disabled={!picked?.size} onClick={() => {
+          remove([...picked!]);
+          selection.clear();
+        }}>
+          {ACTS.remove.label}
         </Button>
       )}
-    >
-      <FolderChoices index={index} onPick={moveTo} />
-    </Menu>,
+    </>,
   );
-  const button = !off && selection.button(FolderInput, '선택 이동');
-  return { picked, toggle: selection.toggle, dropInto, bar, button };
+  const button = !off && selection.button(remove ? SquareCheck : FolderInput, remove ? '선택' : '선택 이동', compact);
+  return { picked, toggle: selection.toggle, range: selection.range, dropInto, bar, button };
 }

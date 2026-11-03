@@ -38,12 +38,15 @@ export function ShelfChats({ page, shelf }: Props) {
   const index = useFolderIndex(set, shelf.chats, chatFolderOf);
   const folderActions = useFolderActions(set);
   const naming = useNaming(folderActions);
-  const moving = useMoving(set, index, (id) => shelf.chats.find((item) => item.id === id)?.chat.folder ?? null);
+  const edits = useChatEdits();
+  const moving = useMoving(set, index, (id) => shelf.chats.find((item) => item.id === id)?.chat.folder ?? null, {
+    remove: (ids) => edits.drop(shelf.chats.filter((chat) => ids.includes(chat.id)).map(({ id, title }) => ({ id, title, character: shelf.id }))),
+    compact: true,
+  });
   const [openFolders, setOpenFolders] = usePersisted(OPEN_FOLDERS, storedStrings, []);
   const chatMenu = useMenuHandle();
   const folderMenu = useMenuHandle();
   const chatFolders = useChatFolders(shelf.id);
-  const edits = useChatEdits();
   const [asked, setAsked] = useState<{ chat: ChatSummary; at?: { x: number; y: number } } | null>(null);
   const [renaming, setRenaming] = useState<ChatSummary | null>(null);
   const opened = useMemo(() => new Set(openFolders), [openFolders]);
@@ -70,6 +73,7 @@ export function ShelfChats({ page, shelf }: Props) {
     return result;
   }, [words, found, index, opened]);
 
+  const listed = useMemo(() => rows.flatMap((row) => ('chat' in row ? [row.chat.id] : [])), [rows]);
   const toggleFolder = (folder: string) => setOpenFolders(opened.has(folder) ? openFolders.filter((each) => each !== folder) : [...openFolders, folder]);
 
   const chatRow = (item: ChatSummary) => {
@@ -85,8 +89,14 @@ export function ShelfChats({ page, shelf }: Props) {
         current={item.id === openChat}
         selected={moving.picked ? moving.picked.has(item.id) : undefined}
         drag={moving.dropInto && item.id}
+        onDropCard={words ? undefined : moving.dropInto?.(chatFolderOf(item))}
         menu={moving.picked ? undefined : { handle: chatMenu, onOpen: () => setAsked({ chat: item, at: chatMenu.read().at }) }}
-        onClick={() => (moving.picked ? moving.toggle(item.id) : navigate({ kind: 'chat', id: item.id }))}
+        onClick={(event) => {
+          if (event.ctrlKey || event.metaKey) moving.toggle(item.id);
+          else if (event.shiftKey) moving.range(item.id, listed);
+          else if (moving.picked) moving.toggle(item.id);
+          else navigate({ kind: 'chat', id: item.id });
+        }}
       />
     );
   };
@@ -107,7 +117,7 @@ export function ShelfChats({ page, shelf }: Props) {
             <Button variant="secondary" size="sm" icon={MessageSquarePlus} onClick={() => navigate({ kind: 'new-chat', character: shelf.id })}>
               새 채팅
             </Button>
-            {index.folders.length > 0 && moving.button}
+            {moving.button}
             <IconButton icon={FolderPlus} label="새 폴더" size="sm" onClick={() => naming.name({ id: null, name: '' })} />
             <IconButton icon={ACTS.import.icon} label={IMPORT_CHATS} size="sm" onClick={() => pickChats(shelf.id)} />
           </Row>
@@ -140,7 +150,7 @@ export function ShelfChats({ page, shelf }: Props) {
             <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setRenaming(asked.chat)} />
             {index.folders.length > 0 && <MenuItem icon={FolderInput} label={MOVE_TO_FOLDER} onClick={() => folderMenu.set({ open: true, from: null, at: asked.at })} />}
             <Divider variant="menu" />
-            <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => edits.drop({ id: asked.chat.id, title: asked.chat.title, character: shelf.id })} />
+            <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => edits.drop([{ id: asked.chat.id, title: asked.chat.title, character: shelf.id }])} />
           </>
         )}
       </Menu>

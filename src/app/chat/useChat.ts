@@ -359,7 +359,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   }
 
   function drop() {
-    if (item) edits.drop({ id: item.id, title: item.title, character: chat.character });
+    if (item) edits.drop([{ id: item.id, title: item.title, character: chat.character }]);
   }
 
   // A value is the character's, in every chat of it, or shared by every 캐릭터 없이 chat.

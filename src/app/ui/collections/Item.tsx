@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './Item.module.css';
 
@@ -22,7 +22,7 @@ type Props = {
   tone?: 'plain' | 'muted' | 'warn';
   disabled?: boolean;
   // With onClick the whole row is one button, so trailing must not hold a control then.
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
 // Visual current/pressed state must derive from ARIA so it cannot disagree with accessibility state.

@@ -1,23 +1,36 @@
 import type { LucideIcon } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { Button, SelectionBar } from '../ui';
+import { useRef, useState, type ReactNode } from 'react';
+import { Button, IconButton, SelectionBar } from '../ui';
 
 // counted: a count of picked things as the screen says it (3개, 캐릭터 3명). ask: the bar's words while none is picked.
 // every: the ids 모두 선택 picks, where the screen offers it.
 type Bar = { counted: (count: number) => string; ask: string; every?: readonly string[] };
 
-// Picking several things on a screen: null while not picking. A press on a thing toggles it only while picking.
+// Picking several things on a screen: null while not picking. A plain press on a thing toggles it only while picking;
+// toggle and range start a pick (Ctrl and Shift).
 export function useSelection() {
   const [picked, setPicked] = useState<ReadonlySet<string> | null>(null);
+  // Where a Shift range starts: the thing last toggled, kept across ranges as a file list keeps it.
+  const anchor = useRef<string | null>(null);
   const start = () => setPicked(new Set());
-  const clear = () => setPicked(null);
+  const clear = () => {
+    anchor.current = null;
+    setPicked(null);
+  };
   const all = (ids: readonly string[]) => setPicked(new Set(ids));
   const toggle = (id: string) => {
-    if (!picked) return;
     const next = new Set(picked);
     if (next.has(id)) next.delete(id);
     else next.add(id);
+    anchor.current = id;
     setPicked(next);
+  };
+  // order: the things as the screen lists them now.
+  const range = (id: string, order: readonly string[]) => {
+    const from = order.indexOf(anchor.current ?? id);
+    const to = order.indexOf(id);
+    if (from < 0 || to < 0) return toggle(id);
+    setPicked(new Set([...(picked ?? []), ...order.slice(Math.min(from, to), Math.max(from, to) + 1)]));
   };
   return {
     picked,
@@ -25,12 +38,16 @@ export function useSelection() {
     clear,
     all,
     toggle,
-    // The head's button that starts picking, and ends it as 완료.
-    button: (icon: LucideIcon, label: string) => (
-      <Button variant="secondary" size="sm" icon={icon} onClick={picked ? clear : start}>
-        {picked ? '완료' : label}
-      </Button>
-    ),
+    range,
+    // The head's button that starts picking, and ends it as 완료; compact, an icon pressed while picking, for a narrow head.
+    button: (icon: LucideIcon, label: string, compact = false) =>
+      compact ? (
+        <IconButton icon={icon} label={label} size="sm" pressed={picked !== null} onClick={picked ? clear : start} />
+      ) : (
+        <Button variant="secondary" size="sm" icon={icon} onClick={picked ? clear : start}>
+          {picked ? '완료' : label}
+        </Button>
+      ),
     // actions: what is done to the pick, after 취소.
     bar: ({ counted, ask, every }: Bar, actions: ReactNode) =>
       picked && (

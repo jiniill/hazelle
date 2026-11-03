@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import type { MenuHandle } from '../overlays/Menu';
 import { openAtPointer } from '../overlays/MoreMenu';
-import { cardDrag } from './cardDrag';
+import { cardDrag, useCardDrop } from './cardDrag';
 import { Item } from './Item';
 import styles from './ItemRow.module.css';
 
@@ -18,10 +18,14 @@ type Props = {
   drag?: string;
   // Right-click opens it at the pointer; onOpen tells the one menu many rows share which row asked.
   menu?: { handle: MenuHandle; onOpen: () => void };
-  onClick: () => void;
+  // A dragged row's key, let go over this one.
+  onDropCard?: (key: string) => void;
+  // event: its modifier keys pick several (Ctrl, Shift) where the list offers it.
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
-export function ItemRow({ avatar, title, time, typing, preview, current = false, selected, drag, menu, onClick }: Props) {
+export function ItemRow({ avatar, title, time, typing, preview, current = false, selected, drag, menu, onDropCard, onClick }: Props) {
+  const drop = useCardDrop(onDropCard);
   const row = (
     <Item
       density="regular"
@@ -35,9 +39,14 @@ export function ItemRow({ avatar, title, time, typing, preview, current = false,
       onClick={onClick}
     />
   );
-  if (drag === undefined && !menu) return row;
+  if (drag === undefined && !menu && !onDropCard) return row;
   return (
-    <div {...(drag !== undefined && cardDrag(drag))} onContextMenu={menu && ((event) => openAtPointer(menu.handle, event) && menu.onOpen())}>
+    <div
+      className={drop.over ? styles.dropping : undefined}
+      {...(drag !== undefined && cardDrag(drag))}
+      {...drop.props}
+      onContextMenu={menu && ((event) => openAtPointer(menu.handle, event) && menu.onOpen())}
+    >
       {row}
     </div>
   );
