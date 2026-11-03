@@ -1,4 +1,4 @@
-import { filedIn, holds, nest, withInside, type Filed } from '../model/folders';
+import { holds, kindOf, nest, setOf, withInside, type Filed, type FolderSet } from '../model/folders';
 import type { Stored, Values } from '../model/kinds';
 import { without } from '../model/fields';
 import { allWritten } from './api';
@@ -15,6 +15,7 @@ function place(store: ObjectStore, kind: Filed, placements: Placement[], still: 
     if (kind === 'character') return store.update('character', id, (current) => (!still(current.folder) ? current : { ...current, folder }));
     if (kind === 'prompt') return store.update('prompt', id, (current) => (current.task !== undefined || !still(folderOf(current)) ? current : folder === null ? without(current, 'folder') : { ...current, folder }));
     if (kind === 'module') return store.update('module', id, (current) => (!still(folderOf(current)) ? current : folder === null ? without(current, 'folder') : { ...current, folder }));
+    if (kind === 'chat') return store.update('chat', id, (current) => (!still(folderOf(current)) ? current : folder === null ? without(current, 'folder') : { ...current, folder }));
     return store.update('persona', id, (current) => (!still(folderOf(current)) ? current : folder === null ? without(current, 'folder') : { ...current, folder }));
   }));
 }
@@ -25,8 +26,8 @@ export function moveInto(store: ObjectStore, kind: Filed, ids: string[], folder:
   return kind === 'character' ? allWritten([moved, orderFirst(store, ids)]) : moved;
 }
 
-export const createFolder = (store: ObjectStore, kind: Filed, name: string, parent: string | null) =>
-  store.create('folder', { name, ...(parent !== null && { parent }), ...(kind !== 'character' && { of: kind }) });
+export const createFolder = (store: ObjectStore, set: FolderSet, name: string, parent: string | null) =>
+  store.create('folder', { name, ...(parent !== null && { parent }), ...(typeof set !== 'string' ? { of: 'chat', character: set.chats } : set !== 'character' && { of: set }) });
 
 export const renameFolder = (store: ObjectStore, id: string, name: string) => store.update('folder', id, (current) => ({ ...current, name }));
 
@@ -39,12 +40,14 @@ export type RemovedFolder = { kind: Filed; folders: Stored<'folder'>[]; placemen
 export function folderRemoval(store: ObjectStore, id: string): RemovedFolder | null {
   const stored = store.get('folder', id);
   if (!stored) return null;
-  const kind = filedIn(stored.value);
-  const every = nest(store.list('folder'), kind).flatMap(withInside);
+  const set = setOf(stored.value);
+  const kind = kindOf(set);
+  const every = nest(store.list('folder'), set).flatMap(withInside);
   const target = every.find((folder) => folder.id === id);
   if (!target) return null;
   const up = every.find((folder) => folder.children.includes(target)) ?? null;
-  const things: Stored<Filed>[] = store.list(kind);
+  // Only its own character's chats: another's naming it reads as in none, and stays so.
+  const things: Stored<Filed>[] = typeof set === 'string' ? store.list(kind) : store.list('chat').filter(({ value }) => value.character === set.chats);
   const placements = things.filter(({ value }) => holds(target, folderOf(value))).map(({ id, value }) => ({ id, folder: folderOf(value) }));
   return { kind, folders: withInside(target), placements, up };
 }

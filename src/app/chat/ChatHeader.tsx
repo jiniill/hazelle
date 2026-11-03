@@ -1,5 +1,5 @@
 import { toolMenu } from './toolMenu';
-import { BookKey, BookOpen, Bookmark, Brain, Keyboard, MessageSquarePlus, Package, PlaneTakeoff, ScanSearch, Search, SlidersHorizontal, SquarePen, ToggleRight, UsersRound } from 'lucide-react';
+import { BookKey, BookOpen, Bookmark, Brain, FolderInput, Keyboard, MessageSquarePlus, Package, PlaneTakeoff, ScanSearch, Search, SlidersHorizontal, SquarePen, ToggleRight, UsersRound } from 'lucide-react';
 import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
@@ -10,6 +10,8 @@ import { navigate } from '../shell/router';
 import { runShortcut } from '../shortcuts';
 import { Avatar, ChatTitle, Divider, Menu, MenuItem, MoreMenu, ToolButton, useMenuHandle, useMenuOpener, useWide } from '../ui';
 import { ChatCastMenu } from './ChatCastMenu';
+import { MOVE_TO_FOLDER } from '../common/folders/FolderParts';
+import { ChatFolderMenu, useChatFolders } from './ChatFolderMenu';
 import { ChatExport } from './ChatExport';
 import { ModelMenu } from '../common/ModelMenu';
 import { PersonaDialog } from './ChatPersonaPicker';
@@ -46,11 +48,16 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
   const openCast = useMenuOpener(castMenu);
   const featuresMenu = useMenuHandle();
   const openFeatures = useMenuOpener(featuresMenu);
+  const folderMenu = useMenuHandle();
+  const openFolders = useMenuOpener(folderMenu);
+  const folders = useChatFolders(shelf?.id ?? null);
+  const fileable = item && folders.index.folders.length > 0;
   return (
     <>
       <ChatPromptPicker prompt={chat.prompt} out={chat.promptOut && chat.card === null} open={chat.dialog === 'prompt'} onOpen={() => actions.openDialog('prompt')} />
       <ChatCastMenu handle={castMenu} cast={cast} character={shelf?.id ?? null} onChange={actions.setCast} />
       <ModelMenu handle={modelMenu} route={route} onPick={actions.pickModel} />
+      {fileable && <ChatFolderMenu handle={folderMenu} chat={item.id} folder={item.chat.folder ?? null} folders={folders} />}
       <Menu kind="dialog" size="form" handle={featuresMenu} place="below-end" label={FEATURES_TITLE} trigger={() => null}>
         <FeatureSwitches owner={{ kind: 'chat', chat: place }} own={place.features} onChange={actions.setFeature} />
         <AgentSwitches owner={{ kind: 'chat', chat: place }} own={place.agents ?? []} onChange={actions.setAgent} />
@@ -68,6 +75,7 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
         {shelf && <MenuItem icon={SquarePen} label="캐릭터 편집" onClick={() => actions.side({ kind: 'character', id: shelf.id, part: null })} />}
         {!wide && <MenuItem icon={MessageSquarePlus} label="새 채팅" onClick={() => navigate({ kind: 'new-chat', character: shelf?.id ?? null })} />}
         {item && <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => actions.openDialog('rename')} />}
+        {fileable && <MenuItem icon={FolderInput} label={MOVE_TO_FOLDER} onClick={openFolders.onClick} />}
         <MenuItem icon={UsersRound} label={CAST} sub={cast.length ? `${cast.length}명` : undefined} onClick={openCast.onClick} />
         {item && !chat.displayPending && <MenuItem icon={ACTS.export.icon} label={EXPORT} onClick={() => actions.openDialog('export')} />}
         <Divider variant="menu" />

@@ -1,4 +1,4 @@
-import { indexFolders, pathName, pathOf, type Filed, type FolderContents, type FolderIndex, type FolderTree } from '../../../model/folders';
+import { indexFolders, pathName, pathOf, type Filed, type FolderContents, type FolderIndex, type FolderSet, type FolderTree } from '../../../model/folders';
 import { PAGES } from '../words';
 import { particleOf, withParticle } from '../particles';
 import { useFolders } from '../../session';
@@ -9,6 +9,7 @@ const WORDS: Record<Filed, { noun: string; unit: string }> = {
   prompt: { noun: PAGES.prompts, unit: '개' },
   module: { noun: PAGES.modules, unit: '개' },
   persona: { noun: PAGES.personas, unit: '개' },
+  chat: { noun: '채팅', unit: '개' },
 };
 
 export const filedNoun = (kind: Filed) => WORDS[kind].noun;
@@ -21,8 +22,8 @@ export const folderNote = <T>(kind: Filed, { folder, inside }: FolderContents<T>
   [folder.children.length > 0 && `폴더 ${folder.children.length}개`, filedCount(kind, inside.length)].filter(Boolean).join(' · ');
 
 // The folders of a kind other than character with its things filed in them; characters' come with the library.
-export function useFolderIndex<T>(kind: Exclude<Filed, 'character'>, items: readonly T[], folderOf: (item: T) => string | null): FolderIndex<T> {
-  const folders = useFolders(kind);
+export function useFolderIndex<T>(set: Exclude<FolderSet, 'character'>, items: readonly T[], folderOf: (item: T) => string | null): FolderIndex<T> {
+  const folders = useFolders(set);
   return useMemo(() => indexFolders(items, folders, folderOf), [items, folders, folderOf]);
 }
 

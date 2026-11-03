@@ -1,16 +1,17 @@
-import { FOLDER_DEPTH, type Filed } from '../../../model/folders';
+import { FOLDER_DEPTH, kindOf, type FolderSet } from '../../../model/folders';
 import { createFolder, folderRemoval, moveInto, removeFolder, renameFolder, restoreFolder } from '../../../runtime/folders';
 import { useStore } from '../../session';
 import { useToast } from '../../toast';
 import type { NamedFolder } from './FolderParts';
 import { filedObject, filedTopic } from './filing';
 
-export function useFolderActions(kind: Filed) {
+export function useFolderActions(set: FolderSet) {
   const store = useStore();
   const toast = useToast();
+  const kind = kindOf(set);
 
   function create(name: string, parent: string | null) {
-    toast.settled(createFolder(store, kind, name, parent));
+    toast.settled(createFolder(store, set, name, parent));
   }
 
   function rename(id: string, name: string) {

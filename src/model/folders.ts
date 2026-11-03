@@ -1,19 +1,27 @@
 import { grouped } from './fields';
 import type { Stored } from './kinds';
 
-export type Filed = 'character' | 'prompt' | 'module' | 'persona';
+export type Filed = 'character' | 'prompt' | 'module' | 'persona' | 'chat';
 
 // Folder nesting lives in the sealed body, never the object's cleartext parent.
 // Absent of means character for older data; never write 'character' explicitly.
-export type Folder = { name: string; parent?: string; of?: Exclude<Filed, 'character'> };
+// A chat folder belongs to one character's chats (null: 캐릭터 없이) and never holds another's.
+export type Folder = { name: string; parent?: string } & ({ of?: 'prompt' | 'module' | 'persona' } | { of: 'chat'; character: string | null });
 export const FOLDER_DEPTH = 3;
 export type FolderTree = Stored<'folder'> & { children: FolderTree[] };
 
+// The folders one explorer walks: a kind's, or one character's chat folders.
+export type FolderSet = Exclude<Filed, 'chat'> | { chats: string | null };
+
 export const filedIn = (folder: Folder): Filed => folder.of ?? 'character';
+export const kindOf = (set: FolderSet): Filed => (typeof set === 'string' ? set : 'chat');
+export const setOf = (folder: Folder): FolderSet => (folder.of === 'chat' ? { chats: folder.character } : (folder.of ?? 'character'));
+export const isChatFolderOf = (folder: Folder | undefined, character: string | null) => folder?.of === 'chat' && folder.character === character;
+const inSet = (folder: Folder, set: FolderSet) => (typeof set === 'string' ? filedIn(folder) === set : isChatFolderOf(folder, set.chats));
 
 // Missing parent folders promote children to the root instead of hiding them.
-export function nest(folders: Stored<'folder'>[], kind: Filed): FolderTree[] {
-  const sorted = folders.filter(({ value }) => filedIn(value) === kind).sort((a, b) => a.value.name.localeCompare(b.value.name, 'ko'));
+export function nest(folders: Stored<'folder'>[], set: FolderSet): FolderTree[] {
+  const sorted = folders.filter(({ value }) => inSet(value, set)).sort((a, b) => a.value.name.localeCompare(b.value.name, 'ko'));
   const ids = new Set(sorted.map((folder) => folder.id));
   const children = grouped(sorted.filter(({ value }) => value.parent !== undefined), ({ value }) => value.parent!);
   const grow = (folder: Stored<'folder'>): FolderTree => ({ ...folder, children: (children.get(folder.id) ?? []).map(grow) });
