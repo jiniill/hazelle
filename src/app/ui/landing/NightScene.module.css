@@ -261,7 +261,7 @@
     transform-origin: 50% 100%;
   }
 
-  /* Its walk's frames rule it. With reduced motion there are none, and only the threshold shows it. */
+  /* The canvas walks it in; standing still, only the threshold shows it. */
   .room {
     position: absolute;
     inset: 0;
