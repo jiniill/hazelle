@@ -1,6 +1,7 @@
 import { ChangeSignal } from '../change-signal';
 import { pictureRef, type PictureKind, type PictureUrl } from '../engine/assets';
 import { toBase64 } from '../base64';
+import { ScopeUnavailable } from './chat-scope';
 import { inOrder, PERMANENT, type Files } from './files';
 import type { ObjectStore } from './store';
 
@@ -37,7 +38,7 @@ export class AssetUrls {
         if (!KINDS.has(kind)) continue;
         const ref = pictureRef(kind as PictureKind, id);
         const file = this.sources.get(ref);
-        if (!file || store.get(kind as PictureKind, id)?.value.file.id === file) continue;
+        if (!file || this.shows(kind as PictureKind, id, file)) continue;
         this.sources.delete(ref);
         const cached = this.urls.get(file)!;
         cached.owners.delete(ref);
@@ -50,6 +51,17 @@ export class AssetUrls {
       }
       if (changed) this.changed();
     });
+  }
+
+  // The store still reports a released chat's pictures (a deletion, a row the feed sent without its body), and
+  // refuses to read them: such a picture shows nothing.
+  private shows(kind: PictureKind, id: string, file: string) {
+    try {
+      return this.store.get(kind, id)?.value.file.id === file;
+    } catch (error) {
+      if (error instanceof ScopeUnavailable) return false;
+      throw error;
+    }
   }
 
   readonly subscribe = this.changes.subscribe;

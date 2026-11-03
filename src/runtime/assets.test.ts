@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiResult } from './api';
 import { assetDataUrls, AssetUrls } from './assets';
+import { ScopeUnavailable } from './chat-scope';
 import type { Files } from './files';
 import type { ObjectStore } from './store';
 
@@ -100,6 +101,30 @@ it('reads a picture by its kind, so a 삽화 id is never looked up as an asset',
   view.url('illustration', 'x');
   await settled();
   expect([view.url('illustration', 'x'), view.url('asset', 'x'), read.mock.calls.length]).toEqual([expect.stringMatching(/^blob:/), undefined, 1]);
+});
+
+it('lets a picture go when a change reports it in a chat no longer held', async () => {
+  let loaded = true;
+  let change!: Parameters<ObjectStore['subscribe']>[0];
+  const store = {
+    get: () => { if (!loaded) throw new ScopeUnavailable('chat'); return { value: asset }; },
+    subscribe: (listener: typeof change) => { change = listener; return () => {}; },
+  } as unknown as ObjectStore;
+  const urls = new AssetUrls(store, { read: async () => ({ ok: true, data: new Uint8Array(1) }) });
+  const view = urls.view();
+  view.url('inlay', 'x');
+  view.hold()();
+  await settled();
+  const picture = view.url('inlay', 'x');
+  const revoke = vi.spyOn(URL, 'revokeObjectURL');
+  try {
+    loaded = false;
+    change([{ kind: 'inlay', id: 'x', parent: 'chat' }]);
+    expect(revoke).toHaveBeenCalledExactlyOnceWith(picture);
+  } finally {
+    urls.close();
+    revoke.mockRestore();
+  }
 });
 
 it('keeps a loaded picture pinned through StrictMode hold-release-hold with no inactive budget', async () => {
