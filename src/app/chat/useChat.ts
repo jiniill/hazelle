@@ -8,7 +8,7 @@ import { autoDiagnose } from '../../runtime/auto-diagnosis';
 import { autoChat, turnFacts } from '../../runtime/diagnostic-state';
 import { resetToggles, setToggle } from '../../runtime/characters';
 import { chatTranslate, featuresOf } from '../../runtime/features';
-import { removeChat, renameChat, restoreChat, restoreRaw } from '../../runtime/chat-log';
+import { restoreRaw } from '../../runtime/chat-log';
 import { keepAttachments } from '../../runtime/attachments';
 import { branchFrom, pickVersion } from '../../runtime/message-acts';
 import { badgesByVersion, toolActions, toolComposer } from './toolMenu';
@@ -27,10 +27,11 @@ import { describeTurnFailure } from '../common/failure';
 import { NO_PERSONA_SLOT } from '../common/prompt-words';
 import { describeUnused } from '../common/unused';
 import { useCopy } from '../common/useCopy';
-import { BIN_KEEPS, LORE_BUDGET_LABEL } from '../common/words';
+import { LORE_BUDGET_LABEL } from '../common/words';
 import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSaves, useSession, useToolFrames, useTurn } from '../session';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
+import { useChatEdits } from './ChatEdits';
 import { storyText, useMenuHandle, usePanelsBeside, useTimePin, useViewport, type BotButton, type Reading } from '../ui';
 import { inspectShown, NO_PANELS, opened, type InfoTab, type InspectTab, type Panel, type Panels } from './panels';
 import { useSendNotes } from './useSendNotes';
@@ -70,6 +71,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const saves = useSaves();
   const turn = useTurn(chatId);
   const toast = useToast();
+  const edits = useChatEdits();
   const copy = useCopy();
   const id = item ? chatId : null;
   const stored = useChatTools(id);
@@ -357,16 +359,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   }
 
   function drop() {
-    if (!item) return;
-    const { id: dropped, title } = item;
-    talk.stop(dropped);
-    toast.settled(removeChat(store, dropped));
-    navigate({ kind: 'shelf', character: chat.character });
-    toast.undoable(`'${title}' 채팅을 삭제했어요.`, () => {
-      const restored = restoreChat(store, dropped);
-      navigate({ kind: 'chat', id: dropped });
-      return restored;
-    }, BIN_KEEPS);
+    if (item) edits.drop({ id: item.id, title: item.title, character: chat.character });
   }
 
   // A value is the character's, in every chat of it, or shared by every 캐릭터 없이 chat.
@@ -396,7 +389,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
 
   function rename(name: string) {
     if (!id) return;
-    toast.settled(renameChat(store, id, name));
+    edits.rename(id, name);
     setDialog(null);
   }
 

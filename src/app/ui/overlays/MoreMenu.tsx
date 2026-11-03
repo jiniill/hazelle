@@ -31,12 +31,15 @@ export const MenuSlot = createContext<RefObject<MenuHandle | null> | null>(null)
 
 export function useMenuSlot() {
   const held = useRef<MenuHandle | null>(null);
-  const onContextMenu = (event: MouseEvent) => {
-    const menu = held.current;
-    // Already open, the right-click fell inside it (a press outside closed it first): the browser's.
-    if (!menu || menu.read().open || !hasFinePointer()) return;
-    event.preventDefault();
-    menu.set({ open: true, from: null, at: { x: event.clientX, y: event.clientY } });
-  };
+  const onContextMenu = (event: MouseEvent) => void openAtPointer(held.current, event);
   return { held, onContextMenu };
+}
+
+// false: the browser's own menu shows instead.
+export function openAtPointer(menu: MenuHandle | null, event: MouseEvent): boolean {
+  // Already open, the right-click fell inside it (a press outside closed it first): the browser's.
+  if (!menu || menu.read().open || !hasFinePointer()) return false;
+  event.preventDefault();
+  menu.set({ open: true, from: null, at: { x: event.clientX, y: event.clientY } });
+  return true;
 }

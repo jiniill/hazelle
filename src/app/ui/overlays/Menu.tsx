@@ -1,5 +1,6 @@
 import { Check, ChevronLeft, type LucideIcon } from 'lucide-react';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { ChangeSignal } from '../../../change-signal';
 import { Item } from '../collections/Item';
 import { ButtonSlot } from '../controls/Button';
@@ -75,7 +76,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
     if (refocus) (from?.isConnected ? from : opener.ref.current)?.focus();
   };
   // A press on the button that opened it is not outside, so that button closes it again like the menu's own does.
-  useLayer(open, { outside: (target) => !anchor.current?.contains(target) && !from?.contains(target), close, takesBack: true });
+  useLayer(open, { outside: (target) => !anchor.current?.contains(target) && !panel.current?.contains(target) && !from?.contains(target), close, takesBack: true });
 
   // A menu that is not on the page is closed, so no button elsewhere shows it open.
   useEffect(() => () => menu.set(CLOSED), [menu]);
@@ -112,7 +113,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   useLayoutEffect(() => {
     if (!panel.current) return;
     if (at) {
-      placeAt(panel.current, anchor.current!, at);
+      placeAt(panel.current, at);
       keepOnScreen(panel.current);
       return;
     }
@@ -123,33 +124,34 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
     panel.current.style.setProperty('--room', `${side.startsWith('above') ? box.bottom - top - edge : bottom - box.top - edge}px`);
   }, [open, side, at]);
 
+  // At the pointer it stands on the screen, not in its anchor's column: a list narrower than the menu would clip it.
+  const body = (
+    <div ref={panel} className={`${styles.menu} ${at ? styles.point : styles[side]} ${styles[size]} ${kind === 'dialog' ? styles.dialog : ''}`} role={kind} aria-label={label}>
+      <Holders.Provider value={held}>
+        <CloseMenu.Provider value={() => close(true)}>
+          <ButtonSlot value={null}>{children}</ButtonSlot>
+        </CloseMenu.Provider>
+      </Holders.Provider>
+    </div>
+  );
   return (
     <div className={styles.anchor} ref={anchor}>
       {trigger({ ...opener, popup: kind })}
-      {open && (
-        <div ref={panel} className={`${styles.menu} ${at ? styles.point : styles[side]} ${styles[size]} ${kind === 'dialog' ? styles.dialog : ''}`} role={kind} aria-label={label}>
-          <Holders.Provider value={held}>
-            <CloseMenu.Provider value={() => close(true)}>
-              <ButtonSlot value={null}>{children}</ButtonSlot>
-            </CloseMenu.Provider>
-          </Holders.Provider>
-        </div>
-      )}
+      {open && (at ? createPortal(body, document.body) : body)}
     </div>
   );
 }
 
 // Drops from the pointer, or rises to it where the room below is shorter than the menu and than the room above.
-function placeAt(panel: HTMLElement, anchor: HTMLElement, at: { x: number; y: number }) {
+function placeAt(panel: HTMLElement, at: { x: number; y: number }) {
   const edge = menuEdge(panel);
   const { top, bottom } = room(panel);
   const below = bottom - edge - at.y;
   const above = at.y - top - edge;
   const upward = panel.offsetHeight > below && above > below;
   panel.style.setProperty('--room', `${upward ? above : below}px`);
-  const box = anchor.getBoundingClientRect();
-  panel.style.setProperty('--point-left', `${at.x - box.left}px`);
-  panel.style.setProperty('--point-top', `${(upward ? at.y - panel.offsetHeight : at.y) - box.top}px`);
+  panel.style.setProperty('--point-left', `${at.x}px`);
+  panel.style.setProperty('--point-top', `${upward ? at.y - panel.offsetHeight : at.y}px`);
 }
 
 type ItemProps = {

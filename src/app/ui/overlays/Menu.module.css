@@ -49,8 +49,9 @@
   max-height: var(--menu-inner-max-height);
 }
 
-/* Opened by a right-click: Menu sets the pointer's spot within the anchor. */
+/* Opened by a right-click: Menu sets the pointer's spot on the screen. */
 .point {
+  position: fixed;
   top: var(--point-top);
   left: var(--point-left);
 }

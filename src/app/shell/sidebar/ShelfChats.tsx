@@ -1,11 +1,13 @@
-import { ChevronLeft, FolderPlus, MessageSquarePlus } from 'lucide-react';
-import { useMemo } from 'react';
+import { ChevronLeft, FolderInput, FolderPlus, MessageSquarePlus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { chatFolderOf, type ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
 import type { Shelf } from '../../../model/library';
 import { openCharacter } from '../../chat/characterBeside';
+import { ChatNameDialog, useChatEdits } from '../../chat/ChatEdits';
+import { ChatFolderMenu, useChatFolders } from '../../chat/ChatFolderMenu';
 import { ACTS } from '../../common/acts';
-import { FolderMenu, named, useMoving, useNaming } from '../../common/folders/FolderParts';
+import { FolderMenu, MOVE_TO_FOLDER, named, useMoving, useNaming } from '../../common/folders/FolderParts';
 import { useFolderIndex, whereIs } from '../../common/folders/filing';
 import { useFolderActions } from '../../common/folders/useFolderActions';
 import { useSearch } from '../../common/useSearch';
@@ -15,7 +17,7 @@ import { useImport } from '../../common/importing';
 import { ago } from '../../common/time';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
 import { useWritingChats } from '../../session';
-import { Button, Empty, FolderRow, IconButton, ItemRow, NavRow, Row, SideTitle, Sidebar, TreeRow, Viewport } from '../../ui';
+import { Button, Divider, Empty, FolderRow, IconButton, ItemRow, Menu, MenuItem, NavRow, Row, SideTitle, Sidebar, TreeRow, useMenuHandle, Viewport } from '../../ui';
 import { navigate, useRoute } from '../router';
 import { HOME } from '../routes';
 import { LayerButtons } from './LayerButtons';
@@ -38,6 +40,12 @@ export function ShelfChats({ page, shelf }: Props) {
   const naming = useNaming(folderActions);
   const moving = useMoving(set, index, (id) => shelf.chats.find((item) => item.id === id)?.chat.folder ?? null);
   const [openFolders, setOpenFolders] = usePersisted(OPEN_FOLDERS, storedStrings, []);
+  const chatMenu = useMenuHandle();
+  const folderMenu = useMenuHandle();
+  const chatFolders = useChatFolders(shelf.id);
+  const edits = useChatEdits();
+  const [asked, setAsked] = useState<{ chat: ChatSummary; at?: { x: number; y: number } } | null>(null);
+  const [renaming, setRenaming] = useState<ChatSummary | null>(null);
   const opened = useMemo(() => new Set(openFolders), [openFolders]);
   const { field, found, none, words } = useSearch(shelf.chats, '이 목록에서 검색', (item) => [item.title, item.preview ?? '']);
   const writing = useWritingChats();
@@ -77,6 +85,7 @@ export function ShelfChats({ page, shelf }: Props) {
         current={item.id === openChat}
         selected={moving.picked ? moving.picked.has(item.id) : undefined}
         drag={moving.dropInto && item.id}
+        menu={moving.picked ? undefined : { handle: chatMenu, onOpen: () => setAsked({ chat: item, at: chatMenu.read().at }) }}
         onClick={() => (moving.picked ? moving.toggle(item.id) : navigate({ kind: 'chat', id: item.id }))}
       />
     );
@@ -125,6 +134,27 @@ export function ShelfChats({ page, shelf }: Props) {
         );
       }}</Viewport>
       {shelf.chats.length === 0 ? <Empty variant="side">{`${NO_CHATS}.`}</Empty> : none && <Empty variant="side">{none}</Empty>}
+      <Menu handle={chatMenu} label="채팅 메뉴" trigger={() => null}>
+        {asked && (
+          <>
+            <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setRenaming(asked.chat)} />
+            {index.folders.length > 0 && <MenuItem icon={FolderInput} label={MOVE_TO_FOLDER} onClick={() => folderMenu.set({ open: true, from: null, at: asked.at })} />}
+            <Divider variant="menu" />
+            <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => edits.drop({ id: asked.chat.id, title: asked.chat.title, character: shelf.id })} />
+          </>
+        )}
+      </Menu>
+      {asked && index.folders.length > 0 && <ChatFolderMenu handle={folderMenu} chat={asked.chat.id} folder={chatFolderOf(asked.chat)} folders={chatFolders} />}
+      {renaming && (
+        <ChatNameDialog
+          title={renaming.title}
+          onSave={(name) => {
+            edits.rename(renaming.id, name);
+            setRenaming(null);
+          }}
+          onClose={() => setRenaming(null)}
+        />
+      )}
       {moving.bar}
       {naming.dialog}
     </Sidebar>
