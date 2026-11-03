@@ -90,12 +90,14 @@ describe('addDefaults', () => {
     expect(accountSettings(store)?.prompt).toBe(STARTER_ID);
   });
 
-  it('has a new account’s conversation default answer in Korean', async () => {
+  it('has a new account’s conversation default answer in Korean, with no date opening a reply', async () => {
     const { store } = await server.account();
     await addDefaults(store);
     const said = JSON.stringify(store.get('prompt', STARTER_ID)!.value);
     expect(said).toContain('is in Korean only.');
     expect(said).not.toContain('English only');
+    expect(said).not.toContain('⏱');
+    expect(said).not.toContain('timestamp');
   });
 
   it('adds each sort’s default prompt once, even from two devices at the same time', async () => {

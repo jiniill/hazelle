@@ -146,8 +146,12 @@ export async function addDefaults(store: ObjectStore): Promise<void> {
 }
 
 // The preset's authors write in English and read through translation; someone who just arrived expects their own language at once.
-const STARTER_LANGUAGE = 'is in English only.';
-const NEW_ACCOUNT_LANGUAGE = 'is in Korean only.';
+// What a new account's copy says differently from the preset file: Korean replies, and no made-up date opening each one.
+const NEW_ACCOUNT_CHANGES = [
+  ['is in English only.', 'is in Korean only.'],
+  ['- Every reply begins with ⏱️[YYYY-MM-DD (dayOfWeek) HH:MM AM/PM], marking the moment the reply ends.\n', ''],
+  ['left off: after the timestamp, the first sentence', 'left off: the first sentence'],
+] as const;
 
 // The user's own Risu preset, through the one preset converter. It goes out under the app's name, not the preset's:
 // the preset's name is a well-known community prompt's.
@@ -158,7 +162,7 @@ async function starter(): Promise<ConversationPrompt | null> {
   if (!bytes) return null;
   const read = await importPreset('starter-prompt.risup', bytes);
   if (!read.ok) return null;
-  const blocks = read.prompt.blocks.map((block) => (block.kind === 'text' ? { ...block, text: block.text.replace(STARTER_LANGUAGE, NEW_ACCOUNT_LANGUAGE) } : block));
+  const blocks = read.prompt.blocks.map((block) => (block.kind === 'text' ? { ...block, text: NEW_ACCOUNT_CHANGES.reduce((text, [from, to]) => text.replace(from, to), block.text) } : block));
   return without({ ...read.prompt, blocks, name: '기본 대화' }, 'imported');
 }
 
