@@ -1,8 +1,12 @@
 import { Send } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { counted, TextDialog } from './TextDialog';
+
+// Static markup holds no portal: the dialog renders in place.
+vi.mock('react-dom', async (original) => ({ ...(await original<typeof import('react-dom')>()), createPortal: (node: unknown) => node }));
+vi.stubGlobal('document', {});
 
 it('counts text trimmed against its limit, with the error only past it', () => {
   expect(counted('  abc  ', 3)).toEqual({ length: 3, over: false, hint: '3 / 3자', error: undefined });

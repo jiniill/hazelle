@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { ButtonSlot } from '../controls/Button';
 import { IconButton } from '../controls/IconButton';
 import { Kbd } from '../foundation/Kbd';
@@ -39,8 +40,9 @@ export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout 
   ) : (
     children
   );
-  // A dialog opened from a button in a head does not take that head's button size.
-  return (
+  // A dialog opened from a button in a head does not take that head's button size. On the body, so no stacking context
+  // of where it was opened from (the sticky sidebar's) holds it under the page beside it.
+  return createPortal(
     <ButtonSlot value={null}>
     <div ref={scrim} className={size === 'normal' ? styles.scrim : `${styles.scrim} ${size === 'wide' ? styles.sheet : styles.bare}`}>
       <div ref={box} className={size === 'normal' ? styles.dialog : `${styles.dialog} ${styles[size]}`} role="dialog" aria-modal="true" aria-label={title} onKeyDown={trap}>
@@ -67,7 +69,8 @@ export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout 
         {footer && <div className={styles.footer}><ButtonSlot value="md">{footer}</ButtonSlot></div>}
       </div>
     </div>
-    </ButtonSlot>
+    </ButtonSlot>,
+    document.body,
   );
 }
 
