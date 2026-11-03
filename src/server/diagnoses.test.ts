@@ -18,7 +18,7 @@ const CHAT: AutoChat = {
   memory: { on: true, own: false, budget: 8000, clamped: 4000, window: 12_000, batch: 4000 },
   aux: { type: 'openrouter', model: 'someone-private/secret-aux' },
   stored: { records: 4, chapters: 1, facts: 2, threads: 1 },
-  work: { left: null, failed: { kind: 'invalid', reason: 'fields', call: { state: 'done', cut: 'length', finish: 'MAX_TOKENS', error: null, status: null, code: null, tries: 1, input: 900, cached: null, written: null, output: 400, reasoning: 20, first: 900, total: 4000 } }, chapter: null },
+  work: { left: null, failed: { kind: 'invalid', reason: 'outcome', call: { state: 'done', cut: 'length', finish: 'MAX_TOKENS', error: null, status: null, code: null, tries: 1, input: 900, cached: null, written: null, output: 400, reasoning: 20, first: 900, total: 4000 } }, chapter: null },
   last: null,
   turn: null,
   cache: null,

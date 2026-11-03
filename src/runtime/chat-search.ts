@@ -1,5 +1,6 @@
 import { ChangeSignal } from '../change-signal';
 import { fillNames } from '../engine/cbs/evaluate';
+import { charName, userName } from '../engine/cbs/tags';
 import { fold, type Chat, type ChatSummary, type Message } from '../model/chat';
 import { findInMessages, litIn, type Lit, type MessageHit } from '../model/search';
 import type { ApiFailure, ApiResult } from './api';
@@ -12,11 +13,17 @@ const AT_ONCE = 4;
 // Hits pile in at most this often, so thousands of chats read do not draw the list thousands of times.
 const TELL_MS = 100;
 
-// order: the chat's when it was read, so a chat written to since is read again.
-type Read = { order: number; hit: MessageHit | null } | { order: number; unreadable: true };
+// order: the chat's when it was read, so a chat written to since is read again; named: whom its names read as then
+// (namesOf), so a character or persona renamed since reads it again.
+type Read = { order: number; named: string; hit: MessageHit | null } | { order: number; named: string; unreadable: true };
 // term: folded (model/search foldTerm). read holds what the scan found in page memory only, never stored. filling: how
 // far the chats not on this device yet have come down (ObjectStore.fillChats), null outside that step.
 export type Finding = { term: string; read: ReadonlyMap<string, Read>; running: boolean; filling: number | null; failure: ApiFailure | null };
+
+function namesOf(store: ObjectStore, chat: Chat) {
+  const names = namedIn(store, chat);
+  return { key: `${charName(names.card) ?? ''}\n${userName(names.persona) ?? ''}`, fill: (text: string) => fillNames(text, names) };
+}
 
 // Only live chats of live characters and 캐릭터 없이: a binned character's chats go and come back with it.
 export const liveChats = (library: Library): ChatSummary[] => [...library.characters.flatMap((shelf) => shelf.chats), ...library.none.chats];
@@ -39,7 +46,10 @@ export class ChatFinder {
   find(term: string, chats: readonly ChatSummary[]) {
     this.stop();
     if (term !== this.finding.term) this.reading = new Map();
-    const due = term ? chats.filter((chat) => this.reading.get(chat.id)?.order !== chat.order).sort((a, b) => b.order - a.order) : [];
+    const due = term ? chats.filter((chat) => {
+      const read = this.reading.get(chat.id);
+      return read?.order !== chat.order || read.named !== namesOf(this.store, chat.chat).key;
+    }).sort((a, b) => b.order - a.order) : [];
     this.tell({ term, running: due.length > 0, failure: null });
     if (!due.length) return;
     const run = new AbortController();
@@ -72,10 +82,11 @@ export class ChatFinder {
       const reader = async () => {
         while (!failed && !signal.aborted && next < due.length) {
           const { id, order, chat } = due[next++]!;
-          const messages = await this.messages(id, pin, signal);
+          const messages = await this.messages(id, order, pin, signal);
           if (signal.aborted) return;
-          if (messages.ok) this.reading.set(id, { order, hit: findInMessages(messages.data, term, this.named(chat)) });
-          else if (messages.error === 'unreadable') this.reading.set(id, { order, unreadable: true });
+          const names = namesOf(this.store, chat);
+          if (messages.ok) this.reading.set(id, { order, named: names.key, hit: findInMessages(messages.data, term, names.fill) });
+          else if (messages.error === 'unreadable') this.reading.set(id, { order, named: names.key, unreadable: true });
           else failed = messages;
           this.soon();
         }
@@ -86,16 +97,12 @@ export class ChatFinder {
     if (!signal.aborted) this.tell({ running: false, failure });
   }
 
-  // A held chat is read as it is shown, its writes not yet confirmed included.
-  private async messages(chat: string, pin: Pin, signal: AbortSignal): Promise<ApiResult<Message[]>> {
-    if (this.store.scopeState(chat) === 'loaded') return { ok: true, data: this.store.foldedChat(chat).messages };
+  // A held chat is read as it is shown, its writes not yet confirmed included, unless it has not caught up with the
+  // summary that listed it (another device wrote, and its refresh is still on the way).
+  private async messages(chat: string, order: number, pin: Pin, signal: AbortSignal): Promise<ApiResult<Message[]>> {
+    if (this.store.scopeState(chat) === 'loaded' && this.store.loadedHead(chat) >= order) return { ok: true, data: this.store.foldedChat(chat).messages };
     const entries = await this.store.chatEntries(chat, pin, signal);
     return entries.ok ? { ok: true, data: fold(entries.data) } : entries;
-  }
-
-  private named(chat: Chat): (text: string) => string {
-    const names = namedIn(this.store, chat);
-    return (text) => fillNames(text, names);
   }
 
   private soon() {

@@ -56,7 +56,7 @@ describe('folders', () => {
     expect('folder' in store.get('persona', hyun!)!.value).toBe(false);
   });
 
-  it("makes a chat folder for one character, and its removal moves only that character's chats up, 휴지통's too, and back", async () => {
+  it("makes a chat folder for one character, files no other character's chat in it, and its removal moves only that character's chats up, 휴지통's too, and back", async () => {
     const { store } = await server.account();
     const [luna, mira] = [crypto.randomUUID(), crypto.randomUUID()];
     for (const id of [luna, mira]) await createCharacter(store, id, id);
@@ -72,8 +72,11 @@ describe('folders', () => {
     };
     const [kept, binned, theirs] = [await chat(luna), await chat(luna), await chat(mira)];
     await moveInto(store, 'chat', [kept, binned, theirs], inner);
-    await removeChat(store, binned);
     const folderOf = (id: string) => store.get('chat', id)!.value.folder;
+    expect(folderOf(theirs)).toBeUndefined();
+    // Past moveInto, as a write from an older version could have filed it.
+    await store.update('chat', theirs, (current) => ({ ...current, folder: inner }));
+    await removeChat(store, binned);
 
     expect(store.get('folder', inner)!.value).toEqual({ name: '바다', parent: top, of: 'chat', character: luna });
     const removal = folderRemoval(store, inner)!;

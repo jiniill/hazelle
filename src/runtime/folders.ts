@@ -1,4 +1,4 @@
-import { holds, kindOf, nest, setOf, withInside, type Filed, type FolderSet } from '../model/folders';
+import { holds, isChatFolderOf, kindOf, nest, setOf, withInside, type Filed, type FolderSet } from '../model/folders';
 import type { Stored, Values } from '../model/kinds';
 import { without } from '../model/fields';
 import { allWritten } from './api';
@@ -15,7 +15,8 @@ function place(store: ObjectStore, kind: Filed, placements: Placement[], still: 
     if (kind === 'character') return store.update('character', id, (current) => (!still(current.folder) ? current : { ...current, folder }));
     if (kind === 'prompt') return store.update('prompt', id, (current) => (current.task !== undefined || !still(folderOf(current)) ? current : folder === null ? without(current, 'folder') : { ...current, folder }));
     if (kind === 'module') return store.update('module', id, (current) => (!still(folderOf(current)) ? current : folder === null ? without(current, 'folder') : { ...current, folder }));
-    if (kind === 'chat') return store.update('chat', id, (current) => (!still(folderOf(current)) ? current : folder === null ? without(current, 'folder') : { ...current, folder }));
+    // Only into its own character's folder: a chat dragged from another window's list carries just its id.
+    if (kind === 'chat') return store.update('chat', id, (current) => (!still(folderOf(current)) || (folder !== null && !isChatFolderOf(store.get('folder', folder)?.value, current.character)) ? current : folder === null ? without(current, 'folder') : { ...current, folder }));
     return store.update('persona', id, (current) => (!still(folderOf(current)) ? current : folder === null ? without(current, 'folder') : { ...current, folder }));
   }));
 }

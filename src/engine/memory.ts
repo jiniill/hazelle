@@ -503,7 +503,11 @@ export const chapterFormat = (count: number, target: number, merged: boolean) =>
 export type Scene = Pick<Written, 'when' | 'where' | 'who' | 'what' | 'lines' | 'outcome'>;
 // closes: the labels of the threads it closes (threadLabel).
 export type Drafted = Scene & Pick<MemoryRecord, 'state' | 'opens'> & { to: number; closes: string[] };
-export type Invalid = 'unreadable' | 'fields';
+// A field names the first field of a record or chapter that is missing or of the wrong kind.
+type Field = 'when' | 'where' | 'who' | 'what' | 'lines' | 'outcome' | 'to' | 'state' | 'opens' | 'closes';
+// shape: no {"records": [...]} or {"chapter": {...}}, or an item that is no object; order: a "to" that does not move
+// forward inside the span; short: records that stop before the span's last message.
+export type Invalid = 'unreadable' | 'shape' | 'order' | 'short' | Field;
 
 const isText = (value: unknown): value is string => typeof value === 'string';
 const textOrNull = (value: unknown): value is string | null => value === null || isText(value);
@@ -533,24 +537,27 @@ function linesSaid(lines: Line[], source: string): Line[] {
 export function parseRecords(answer: string, span: string[]): { ok: true; records: Drafted[] } | { ok: false; reason: Invalid } {
   const parsed = jsonOf(answer);
   if (parsed === undefined) return { ok: false, reason: 'unreadable' };
-  if (!isRecord(parsed) || !Array.isArray(parsed.records) || !parsed.records.length) return { ok: false, reason: 'fields' };
+  if (!isRecord(parsed) || !Array.isArray(parsed.records) || !parsed.records.length) return { ok: false, reason: 'shape' };
   const records: Drafted[] = [];
   let from = 0;
   for (const item of parsed.records as unknown[]) {
+    if (!isRecord(item)) return { ok: false, reason: 'shape' };
     const record = drafted(item);
-    if (!record || !Number.isInteger(record.to) || record.to <= from || record.to > span.length) return { ok: false, reason: 'fields' };
+    if (typeof record === 'string') return { ok: false, reason: record };
+    if (record.to <= from || record.to > span.length) return { ok: false, reason: 'order' };
     records.push({ ...record, lines: linesSaid(record.lines, span.slice(from, record.to).join('\n')) });
     from = record.to;
   }
-  return from === span.length ? { ok: true, records } : { ok: false, reason: 'fields' };
+  return from === span.length ? { ok: true, records } : { ok: false, reason: 'short' };
 }
 
 // A chapter job's answer, by the same rules over its whole span, with no state or threads.
 export function parseChapter(answer: string, span: string[]): { ok: true; chapter: Scene } | { ok: false; reason: Invalid } {
   const parsed = jsonOf(answer);
   if (parsed === undefined) return { ok: false, reason: 'unreadable' };
-  const chapter = isRecord(parsed) ? sceneOf(parsed.chapter) : null;
-  if (!chapter) return { ok: false, reason: 'fields' };
+  if (!isRecord(parsed) || !isRecord(parsed.chapter)) return { ok: false, reason: 'shape' };
+  const chapter = sceneOf(parsed.chapter);
+  if (typeof chapter === 'string') return { ok: false, reason: chapter };
   return { ok: true, chapter: { ...chapter, lines: linesSaid(chapter.lines, span.join('\n')) } };
 }
 
@@ -562,22 +569,29 @@ function jsonOf(answer: string): unknown {
   }
 }
 
-function sceneOf(item: unknown): Scene | null {
-  if (!isRecord(item)) return null;
+function sceneOf(item: Record<string, unknown>): Scene | Field {
   const { when, where, what, lines, outcome } = item;
   // Asked for a list, a model still writes "Milina, Steve".
   const who = typeof item.who === 'string' ? args(item.who) : item.who;
   const line = (value: unknown): value is Line => isRecord(value) && isText(value.speaker) && isText(value.text) && flat(value.text) !== '';
-  if (!textOrNull(when) || !textOrNull(where) || !textsOf(who) || !isText(what) || !flat(what) || !isText(outcome) || !Array.isArray(lines) || !lines.every(line)) return null;
+  if (!textOrNull(when)) return 'when';
+  if (!textOrNull(where)) return 'where';
+  if (!textsOf(who)) return 'who';
+  if (!isText(what) || !flat(what)) return 'what';
+  if (!Array.isArray(lines) || !lines.every(line)) return 'lines';
+  if (!isText(outcome)) return 'outcome';
   return { when, where, who, what, lines: lines.map(({ speaker, text }) => ({ speaker, text })), outcome };
 }
 
-function drafted(item: unknown): Drafted | null {
+function drafted(item: Record<string, unknown>): Drafted | Field {
   const scene = sceneOf(item);
-  if (!scene || !isRecord(item)) return null;
+  if (typeof scene === 'string') return scene;
   const { to, state, opens, closes } = item;
   const change = (value: unknown): value is Change => isRecord(value) && isText(value.about) && isText(value.field) && textOrNull(value.value);
-  if (typeof to !== 'number' || !Array.isArray(state) || !state.every(change) || !textsOf(opens) || !textsOf(closes)) return null;
+  if (typeof to !== 'number' || !Number.isInteger(to)) return 'to';
+  if (!Array.isArray(state) || !state.every(change)) return 'state';
+  if (!textsOf(opens)) return 'opens';
+  if (!textsOf(closes)) return 'closes';
   return { to, ...scene, state: state.map(({ about, field, value }) => ({ about, field, value })), opens, closes };
 }
 

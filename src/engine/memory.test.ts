@@ -36,11 +36,13 @@ describe('parseRecords', () => {
     expect(parseRecords(line("I like it. You're insane."), said)).toMatchObject({ ok: true, records: [{ lines: [] }] });
   });
 
-  it('refuses an answer that is not JSON, one with a field missing or a gap left, and a key line said by other messages', () => {
+  it('refuses an answer that is not JSON, one with a field missing or a gap left, naming the check, and a key line said by other messages', () => {
     expect(parseRecords('Here is the summary.', span)).toEqual({ ok: false, reason: 'unreadable' });
-    expect(parseRecords(answer([[]]), span)).toEqual({ ok: false, reason: 'fields' });
-    expect(parseRecords(answer([{ ...record(3), opens: undefined }]), span)).toEqual({ ok: false, reason: 'fields' });
-    expect(parseRecords(answer([record(2)]), span)).toEqual({ ok: false, reason: 'fields' });
+    expect(parseRecords(answer([[]]), span)).toEqual({ ok: false, reason: 'shape' });
+    expect(parseRecords(answer([{ ...record(3), opens: undefined }]), span)).toEqual({ ok: false, reason: 'opens' });
+    expect(parseRecords(answer([{ ...record(3), outcome: null }]), span)).toEqual({ ok: false, reason: 'outcome' });
+    expect(parseRecords(answer([record(2), record(1)]), span)).toEqual({ ok: false, reason: 'order' });
+    expect(parseRecords(answer([record(2)]), span)).toEqual({ ok: false, reason: 'short' });
     expect(parseRecords(answer([record(1), record(3, [{ speaker: 'Luna', text: 'I will wait for you until spring.' }])]), span)).toMatchObject({ ok: true, records: [{ lines: [] }, { lines: [] }] });
   });
 });
@@ -224,7 +226,7 @@ describe('parseChapter', () => {
 
   it('reads one chapter over the whole span and refuses a missing field or a key line the messages never said', () => {
     expect(parseChapter(JSON.stringify({ chapter: { ...scene, state: [{ about: 'Luna' }] } }), span)).toEqual({ ok: true, chapter: scene });
-    expect(parseChapter(JSON.stringify({ chapter: { ...scene, outcome: undefined } }), span)).toEqual({ ok: false, reason: 'fields' });
+    expect(parseChapter(JSON.stringify({ chapter: { ...scene, outcome: undefined } }), span)).toEqual({ ok: false, reason: 'outcome' });
     expect(parseChapter(JSON.stringify({ chapter: { ...scene, lines: [{ speaker: 'Luna', text: 'I will always wait.' }] } }), span)).toEqual({ ok: true, chapter: { ...scene, lines: [] } });
   });
 });

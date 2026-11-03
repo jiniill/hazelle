@@ -13,7 +13,16 @@ export function useChatEdits() {
   const { store, talk } = useSession();
   const toast = useToast();
   const route = useRoute();
-  const rename = (id: string, name: string) => toast.settled(renameChat(store, id, name));
+  const rename = (id: string, name: string) => {
+    const renamed = renameChat(store, id, name);
+    toast.settled(renamed);
+    // A cleared title shows the summary's, which only an opened chat writes again.
+    if (!name.trim()) void renamed.then((done) => {
+      if (!done.ok) return;
+      const lease = store.retainChat(id);
+      void lease.ready.finally(lease.release);
+    });
+  };
   const drop = (chats: readonly Edited[]) => {
     const open = route.kind === 'chat' ? chats.find(({ id }) => id === route.id) : undefined;
     for (const { id } of chats) talk.stop(id);

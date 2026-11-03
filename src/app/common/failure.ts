@@ -395,10 +395,25 @@ export function describeTranslateFailure(failure: Exclude<TranslateFailure, { ki
   }
 }
 
-const INVALID = {
-  unreadable: '모델 응답의 형식이 맞지 않아요.',
-  fields: '모델 응답에 빠진 항목이 있어요.',
-} as const;
+const UNREADABLE = '모델 응답의 형식이 맞지 않아요.';
+
+const wrongField = (label: string) => `모델 응답의 '${label}' 항목이 비었거나 형식이 맞지 않아요.`;
+const MEMORY_INVALID: Record<Extract<MemoryFailure, { kind: 'invalid' }>['reason'], string> = {
+  unreadable: UNREADABLE,
+  shape: '모델 응답에 요약이 없어요.',
+  order: '모델 응답의 기록 범위가 메시지 순서와 맞지 않아요.',
+  short: '모델 응답이 마지막 메시지까지 정리하지 않았어요.',
+  when: wrongField('시점'),
+  where: wrongField('장소'),
+  who: wrongField('인물'),
+  what: wrongField('내용'),
+  lines: wrongField('대사'),
+  outcome: wrongField('결과'),
+  to: wrongField('메시지 번호'),
+  state: wrongField('상태'),
+  opens: wrongField('미해결 사건'),
+  closes: wrongField('해결된 사건'),
+};
 
 export function describeMemoryFailure(failure: MemoryFailure): string {
   switch (failure.kind) {
@@ -416,7 +431,7 @@ export function describeMemoryFailure(failure: MemoryFailure): string {
     case 'failed':
       return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
     case 'invalid':
-      return INVALID[failure.reason];
+      return MEMORY_INVALID[failure.reason];
     case 'unsaved':
       return `기억을 저장하지 못했어요. ${describeFailure(failure.failure)}`;
     case 'embed':
@@ -428,7 +443,7 @@ const EMBED: Partial<Record<Extract<MemoryFailure, { kind: 'embed' }>['reason'],
   'too-large': `기록이 ${MODEL_ROLES.embed}의 한도보다 길어요.`,
 };
 
-const SCENE_INVALID = { ...INVALID, paragraph: '모델이 메시지에 없는 문단 번호를 선택했어요.' } as const;
+const SCENE_INVALID = { unreadable: UNREADABLE, fields: '모델 응답에 빠진 항목이 있어요.', paragraph: '모델이 메시지에 없는 문단 번호를 선택했어요.' } as const;
 
 const COSTS: Record<Costs, string> = {
   plan: '요금제에 무료 이미지 혜택이 없어요. 만들 때마다 Anlas가 차감돼요.',
@@ -490,7 +505,7 @@ export function describeLikenessFailure(failure: LikenessFailure): string {
   }
 }
 
-const REMARK_INVALID = { unreadable: INVALID.unreadable, line: '모델이 대사를 쓰지 않았어요.' } as const;
+const REMARK_INVALID = { unreadable: UNREADABLE, line: '모델이 대사를 쓰지 않았어요.' } as const;
 
 export function describeMascotFailure(failure: MascotFailure): string {
   switch (failure.kind) {

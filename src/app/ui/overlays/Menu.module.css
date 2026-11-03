@@ -49,9 +49,11 @@
   max-height: var(--menu-inner-max-height);
 }
 
-/* Opened by a right-click: Menu sets the pointer's spot on the screen. */
+/* Opened by a right-click: Menu sets the pointer's spot on the screen. On the screen as a hint is (useAnchored), it
+   stands above the panel or dialog it was opened from. */
 .point {
   position: fixed;
+  z-index: var(--layer-hint);
   top: var(--point-top);
   left: var(--point-left);
 }
