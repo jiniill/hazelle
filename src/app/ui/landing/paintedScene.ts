@@ -80,7 +80,7 @@ const eased = (progress: number) => {
   return 3 * (1 - at) * at * at + at ** 3;
 };
 
-// As @keyframes sway and bough in NightScene.module.css, which still run the unpainted scene: change them together.
+// An alternating loop, eased both ways.
 const swayed = ({ takes, from, to }: Motion, time: number) => {
   const turns = time / takes;
   const into = turns % 1;
@@ -145,7 +145,13 @@ export function usePaintedScene(on: boolean, stage: RefObject<HTMLDivElement | n
       clearTimeout(timer);
       frame = requestAnimationFrame(draw);
     };
+    // The planes hide only while a painter shows them: a canvas WebGL2 would not open, or lost, leaves them standing.
     let painter = painterOn(surface, repaint);
+    const shown = () => {
+      if (painter) scene.dataset['painted'] = '';
+      else delete scene.dataset['painted'];
+    };
+    shown();
 
     const fit = () => {
       const { width, height } = scene.getBoundingClientRect();
@@ -233,9 +239,11 @@ export function usePaintedScene(on: boolean, stage: RefObject<HTMLDivElement | n
     const lost = (event: Event) => {
       event.preventDefault();
       painter = null;
+      shown();
     };
     const restored = () => {
       painter = painterOn(surface, repaint);
+      shown();
       repaint();
     };
     addEventListener('scroll', repaint, { passive: true });

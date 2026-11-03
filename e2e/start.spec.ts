@@ -142,15 +142,16 @@ test('one gesture moves one stop at once, and the door looks the same on any scr
   await page.mouse.wheel(0, 100);
   await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(inRoom + 500);
 
-  const doorScale = async (width: number, height: number) => {
+  // The door is painted; the room dissolving behind it runs on the same walk, so its scale says where the walk stands.
+  const walkedScale = async (width: number, height: number) => {
     await page.setViewportSize({ width, height });
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
     await page.waitForTimeout(500);
-    return page.evaluate<number>(`Math.max(...document.getAnimations().map((animation) => animation.effect.target).filter((node) => String(node.className).includes('doorward')).map((node) => new DOMMatrix(getComputedStyle(node).transform).a))`);
+    return page.evaluate<number>(`Math.max(...document.getAnimations().filter((animation) => !(animation instanceof CSSAnimation)).map((animation) => animation.effect.target).filter((node) => /_room_/.test(String(node.className))).map((node) => new DOMMatrix(getComputedStyle(node).transform).a))`);
   };
-  expect(Math.abs((await doorScale(390, 664)) - (await doorScale(1440, 900)))).toBeLessThan(1.5);
+  expect(Math.abs((await walkedScale(390, 664)) - (await walkedScale(1440, 900)))).toBeLessThan(0.003);
 });
 
 test('the example conversation never moves the page, and the next notch goes on to the next stop', async ({ page }) => {

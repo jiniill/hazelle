@@ -55,23 +55,17 @@ const DOOR_FILLS = 21.6;
 const NEARING = [0.34, 0.5096] as const;
 const doorAt = (seen: Seen) => (share: number): Walked => ({ scale: DOOR_FAR * (DOOR_FILLS / DOOR_FAR) ** Math.max((share - NEARING[0]) / (NEARING[1] - NEARING[0]), 0), opacity: seenAt(seen, share) });
 
-const planeFrames = (at: (share: number) => Walked): Frames =>
-  stops((share) => {
-    const { scale, opacity } = at(share);
-    return { transform: `scale(${scale.toFixed(4)})`, opacity: opacity.toFixed(3) };
-  });
-
 const SCROLL = typeof ScrollTimeline === 'function' ? new ScrollTimeline({ source: document.documentElement }) : null;
-// A trial behind ?gl: the planes painted on one canvas instead of composited one by one.
-const PAINTED = typeof WebGL2RenderingContext === 'function' && new URLSearchParams(location.search).has('gl') && !stillness();
+// The planes are painted on one canvas: a phone composites one layer instead of a dozen growing pictures. Without WebGL2 or with reduced motion they stand still.
+const PAINTS = typeof WebGL2RenderingContext === 'function' && !stillness();
 const PaceOfPage = createContext<Pace>(samePace);
-const PaintedWalks = createContext<{ walks: Walks; changed: () => void } | null>(null);
+const PaintedWalks = createContext<{ walks: Walks; changed: () => void }>({ walks: new Map(), changed: () => {} });
 
-function useWalk(frames: Frames | null) {
+function useWalk(frames: Frames) {
   const node = useRef<HTMLDivElement>(null);
   const pace = useContext(PaceOfPage);
   useLayoutEffect(() => {
-    if (!frames || stillness()) return;
+    if (stillness()) return;
     const animation = node.current!.animate(frames(pace), { duration: CLOCK, fill: 'both', easing: 'linear', ...(SCROLL ? { timeline: SCROLL } : {}) });
     if (!SCROLL) animation.pause();
     return () => animation.cancel();
@@ -142,9 +136,8 @@ function Art({ wide, tall, priority }: { wide: string; tall: string; priority?: 
 function Plane({ z, seen, doorward, children }: { z: number; seen: Seen; doorward?: boolean; children: ReactNode }) {
   const at = doorward ? doorAt(seen) : planeAt(z, seen);
   const painted = useContext(PaintedWalks);
-  const node = useWalk(painted ? null : planeFrames(at));
+  const node = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    if (!painted) return;
     const plane = node.current!;
     painted.walks.set(plane, at);
     painted.changed();
@@ -173,8 +166,8 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
   const [pace, setPace] = useState<Pace>(() => samePace);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [walks] = useState<Walks>(() => new Map());
-  const painting = usePaintedScene(PAINTED, stage, canvas, walks, pace);
-  const [painted] = useState(() => (PAINTED ? { walks, changed: () => painting.current.refit() } : null));
+  const painting = usePaintedScene(PAINTS, stage, canvas, walks, pace);
+  const [painted] = useState(() => ({ walks, changed: () => painting.current.refit() }));
   useWalkOn();
 
   useEffect(() => {
@@ -270,7 +263,7 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
   return (
     <PaceOfPage.Provider value={pace}>
       <PaintedWalks.Provider value={painted}>
-      <div ref={stage} className={styles.scene} data-glow={glow} data-talking={talking || undefined} data-inside={inside || undefined} data-painted={painted ? '' : undefined} aria-hidden="true">
+      <div ref={stage} className={styles.scene} data-glow={glow} data-talking={talking || undefined} data-inside={inside || undefined} aria-hidden="true">
         <div className={styles.flat}><Art wide={skyWide} tall={skyTall} priority /></div>
         <Moving className={styles.moonPath} frames={MOON}>
           <div className={styles.halo} />
@@ -299,7 +292,7 @@ export function NightScene({ glow, talking, inside }: { glow: number; talking: b
         <Plane {...BOUGH}>
           <div className={styles.bough}><Art wide={boughWide} tall={boughTall} /></div>
         </Plane>
-        {painted && <canvas ref={canvas} className={styles.painted} />}
+        {PAINTS && <canvas ref={canvas} className={styles.painted} />}
         <div className={styles.haze} />
         <div className={styles.warmth} />
         <div ref={lantern} className={styles.lantern}>
