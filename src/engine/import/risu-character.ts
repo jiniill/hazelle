@@ -3,7 +3,7 @@ import { isRecord, list } from '../../connectors/values';
 import { inlayIds } from '../assets';
 import { assemble, imageType, type Resolve } from './card';
 import { add, chatLorebook, convert, counted, finite, record, text, type Json, type Tally } from './convert';
-import { MOVE_UNSUPPORTED_KINDS, type MoveUnsupported, type MoveUnsupportedKind, type Picture, type RisuCharacter, type RisuChat } from './types';
+import { MOVE_UNSUPPORTED_KINDS, type MoveUnsupported, type MoveUnsupportedKind, type Picture, type RisuCharacter, type RisuChat, type RisuSummary } from './types';
 
 export type Read = () => Promise<Uint8Array<ArrayBuffer>>;
 // The backup's entry for a Risu asset key; null when the backup lacks it.
@@ -101,7 +101,8 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
   for (const [index, message] of messages.entries()) {
     if (index <= cut || message.disabled === true || message.isComment === true) add(missed, 'hidden-message');
   }
-  if (text(chat.supaMemoryData).trim() || [chat.hypaV2Data, chat.hypaV3Data].some(holdsData)) add(missed, 'memory');
+  const memory = risuMemory(chat, messages);
+  if (memory.left) add(missed, 'memory');
   // Read local toggles regardless of useLocallySetGlobalVariables, which only selects a write target.
   // Empty/'null' means unset (chatVar.svelte.ts getGlobalChatVar).
   if (Object.entries(record(chat.GLGlobalVariables)).some(([key, value]) => key.startsWith('toggle_') && value && value !== 'null')) add(missed, 'chat-toggles');
@@ -117,6 +118,7 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
     ),
     inlays: inlayIds(messageTexts(messages)),
     ...chatLorebook(list(chat.localLore)),
+    memory: memory.summaries,
     messages: messages.map((message) => {
       at = finite(message.time) ?? at;
       // Risu keeps a reply's reasoning inside its text as <Thoughts> blocks, and takes them out again before it draws or
@@ -128,7 +130,53 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
   };
 }
 
-const holdsData = (memory: unknown) => isRecord(memory) && Object.values(memory).some((value) => Array.isArray(value) && value.length > 0);
+// Risu's memory as summaries, and whether any of it stays behind. Risu reads only the format of the chat's current
+// algorithm, so the newest one a chat holds is taken and an older one beside it stays behind.
+// Each summary ends at a message: Risu leaves every message up to there out of the prompt (hypav3.ts startIdx,
+// supaMemory.ts), which is what runtime/move's records, each covering on from the one before, keep.
+function risuMemory(chat: Json, messages: Json[]): { summaries: RisuSummary[]; left: boolean } {
+  const places = new Map(messages.flatMap((message, index): [string, number][] => (typeof message.chatId === 'string' ? [[message.chatId, index]] : [])));
+  // hypaV3 summaries and hypaV2 main chunks name the messages they read; one naming a message the chat no longer has is
+  // an orphan, which Risu drops (hypav3.ts cleanOrphanedSummary).
+  const read = (summaries: Json[]) =>
+    summaries.map((summary) => {
+      const memos = list(summary.chatMemos).filter((memo) => typeof memo === 'string');
+      const ends = memos.length > 0 && memos.every((memo) => places.has(memo)) ? places.get(memos.at(-1)!)! : null;
+      return { text: text(summary.text), through: ends };
+    });
+  // SupaMemory names the first message it left in the prompt; its old 'hypa:' form keeps a list, newest first, of which
+  // Risu reads the first whose message the chat still has (supaMemory.ts).
+  const supa = (data: string) => {
+    if (data.length <= 4) return [];
+    const [first = '', ...rest] = data.split('\n');
+    const before = (id: unknown) => {
+      const at = typeof id === 'string' ? places.get(id) : undefined;
+      return at === undefined || at === 0 ? null : at - 1;
+    };
+    if (!first.startsWith('hypa:')) return [{ text: rest.join('\n'), through: before(first) }];
+    const kept = list(parsed(rest.join('\n'))).filter(isRecord);
+    const found = kept.find(({ id }) => before(id) !== null);
+    return found ? [{ text: text(found.supa), through: before(found.id) }] : kept.length ? [{ text: '', through: null }] : [];
+  };
+  const formats = [read(list(record(chat.hypaV3Data).summaries).filter(isRecord)), read(list(record(chat.hypaV2Data).mainChunks).filter(isRecord)), supa(text(chat.supaMemoryData))];
+  const taken = formats.find((format) => format.length > 0) ?? [];
+  const summaries: RisuSummary[] = [];
+  let left = formats.some((format) => format.length > 0 && format !== taken);
+  for (const { text: said, through } of [...taken].sort((a, b) => (a.through ?? -1) - (b.through ?? -1))) {
+    // A summary covering nothing past the one before has no messages of its own to stand on.
+    if (through === null || !said.trim() || through <= (summaries.at(-1)?.through ?? -1)) left = true;
+    else summaries.push({ text: said.trim(), through });
+  }
+  return { summaries, left };
+}
+
+function parsed(json: string): unknown {
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
 
 // Feed the shared card converter a v3-shaped record; keep scripts/triggers in extensions.risuai.
 // Do not reproduce Risu export artifacts: literal undefined version or ccdefault icon with a separate avatar.

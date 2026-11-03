@@ -148,7 +148,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
           </List>
         </Section>
       )}
-      <Text variant="note">{item.receipt ? `${item.receipt.modelName} · ${ago(item.at)} 정리` : `직접 쓴 기록 · ${ago(item.at)}`}</Text>
+      <Text variant="note">{item.receipt ? `${item.receipt.modelName} · ${ago(item.at)} 정리` : item.from === 'risu' ? `Risu에서 옮긴 기록 · ${ago(item.at)}` : `직접 쓴 기록 · ${ago(item.at)}`}</Text>
       {!item.forgotten && (
         <Row kind="actions">
           <Button variant="danger" size="sm" onClick={() => void forget()}>

@@ -15,6 +15,7 @@ import { ObjectStore } from './store';
 import { openSession, type Session } from './session';
 import { answerable, inTurn, saying, stubRelay, testConnection, testModel, testServer } from './testing';
 import { leaving, memoryView } from './memory-view';
+import { importRisuChats } from './move';
 import { wouldSend } from './turn-context';
 import { takeTurn } from './turn';
 import { readTool } from '../engine/import/tool';
@@ -634,4 +635,25 @@ describe('chapters', () => {
       await vi.waitFor(() => expect(session.memory.snapshot().indexFailed.get(chat)).toEqual({ kind: 'unsaved', failure }));
     } finally { indexing.mockRestore(); }
   }));
+});
+
+describe('memory moved from Risu', () => {
+  it('covers the chat through the last summary, each record from where the one before ended, sent on as Risu sent it', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const said = ['We meet at the pier.', 'Luna waves.', 'jin promises to return.', 'They part.', 'Morning comes.'];
+      const messages = said.map((text, index) => ({ role: index % 2 ? ('assistant' as const) : ('user' as const), text, at: index + 1 }));
+      const memory = [{ text: 'They meet.', through: 1 }, { text: 'jin promises to return, and they part.', through: 3 }];
+      const made = await importRisuChats(session.store, null, [{ title: 'pier', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], messages, memory }]);
+      const chat = made.ok ? made.data[0]! : '';
+      await server.hold(session.store, chat);
+      const view = (await memoryView(session, chat))!;
+      expect(view.setup.on).toBe(true);
+      expect(view.memory.records.map(({ what, sources, from }) => [what, sources.length, from])).toEqual([['They meet.', 2, 'risu'], ['jin promises to return, and they part.', 2, 'risu']]);
+      expect([...view.records.values()]).toEqual(['sent', 'sent']);
+      expect([...view.stale]).toEqual([]);
+      const { prompt } = (await wouldSend(session, chat, { kind: 'answer' }, undefined, 'view'))!;
+      expect(prompt.memory?.covered).toBe(4);
+      expect(leaving(prompt)).toBe(0);
+    }));
 });

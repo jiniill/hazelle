@@ -349,7 +349,7 @@ describe('readBackup', () => {
       ['sleeper', 'Fav'],
       ['mira', null],
     ]);
-    expect(characters[0]!.chats).toEqual([{ title: 'Nap', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], messages: [{ role: 'user', text: 'wake', at: 5 }] }]);
+    expect(characters[0]!.chats).toEqual([{ title: 'Nap', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [], messages: [{ role: 'user', text: 'wake', at: 5 }] }]);
     expect(backup.catalog.unsupported).toEqual([
       { kind: 'group-chat', count: 1 },
       { kind: 'cold-missing', count: 1 },
@@ -387,6 +387,7 @@ describe('readBackup', () => {
         ],
         lore: [],
         loreFolders: [],
+        memory: [],
       },
       {
         title: 'Cold',
@@ -399,6 +400,7 @@ describe('readBackup', () => {
         // Unmigrated, as Risu leaves a chat's lorebook.
         lore: [{ name: 'Key', keys: ['k'], secondaryKeys: [], content: '<char>\n@@end', enabled: true, constant: false, selective: false, useRegex: false, caseSensitive: false, insertionOrder: 100, priority: null, position: null, folder: 0 }],
         loreFolders: ['Places'],
+        memory: [],
       },
     ]);
     expect(card.missed).toEqual(

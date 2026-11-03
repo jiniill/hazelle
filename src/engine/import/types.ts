@@ -175,6 +175,8 @@ export type Picture = { bytes: Uint8Array<ArrayBuffer>; type: string };
 // reasoning: what Risu kept inside the text as <Thoughts> blocks, taken out of it. bookmark: Risu's on the message, with
 // its name if it had one.
 export type RisuMessage = { role: 'user' | 'assistant'; text: string; at: number; reasoning?: string; bookmark?: { name?: string } };
+// One of Risu's memory summaries, with the last message it covers (an index into its chat's messages).
+export type RisuSummary = { text: string; through: number };
 export type RisuChat = {
   title: string;
   // 작가의 노트; null when Risu's is empty.
@@ -190,6 +192,8 @@ export type RisuChat = {
   // Its own lorebook (채팅 로어북); folder indexes loreFolders, as Imported's does.
   lore: LoreEntry[];
   loreFolders: string[];
+  // Its memory, whichever of Risu's formats held it, in chat order, each covering more than the one before.
+  memory: RisuSummary[];
 };
 export const MOVE_UNSUPPORTED_KINDS = [
   'group-chat',

@@ -13,7 +13,7 @@ export type Line = { speaker: string; text: string };
 
 // Never invent when/where; quote lines verbatim with speakers. print fingerprints prompt-rendered source.
 // Automatic work must not rewrite edited/pinned records. Forgotten spans stay covered until explicitly retried.
-// receipt is null for user-authored records.
+// receipt is null for user-authored records and for records moved in from (from) another app.
 export type Written = {
   id: string;
   sources: Source[];
@@ -25,6 +25,7 @@ export type Written = {
   lines: Line[];
   outcome: string;
   receipt: Receipt | null;
+  from?: 'risu';
   at: number;
   edited?: true;
   pinned?: true;

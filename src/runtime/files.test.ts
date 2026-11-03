@@ -371,7 +371,7 @@ describe('the sweep', () => {
 
   it('walks the pictures held by chats too, so an inlay is never taken for unused', async () => {
     const { store, files } = await server.account();
-    const made = await importRisuChats(store, null, [{ title: 't', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], messages: [{ role: 'user', text: 'hi', at: 1 }] }]);
+    const made = await importRisuChats(store, null, [{ title: 't', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [], messages: [{ role: 'user', text: 'hi', at: 1 }] }]);
     const chat = made.ok ? made.data[0]! : '';
     await server.hold(store, chat);
     expect(await fillPictures(store, files, { kind: 'inlay', parent: chat }, [{ name: 'a', read: async () => png() }])).toMatchObject({ ok: true, data: { unsupported: [] } });

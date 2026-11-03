@@ -3,12 +3,13 @@ import { backupInlays, inlayType, readInlays, type Inlays } from '../engine/impo
 import { fileSource } from '../engine/import/source';
 import { counted } from '../engine/import/convert';
 import { inlayIds } from '../engine/assets';
-import { mergeUnsupported, MOVE_UNSUPPORTED_KINDS, unsupportedCount, type BackupCatalog, type Card, type Imported, type MoveUnsupported, type RisuBackup, type RisuChat, type Unsupported } from '../engine/import/types';
+import { mergeUnsupported, MOVE_UNSUPPORTED_KINDS, unsupportedCount, type BackupCatalog, type Card, type Imported, type MoveUnsupported, type RisuBackup, type RisuChat, type RisuMessage, type RisuSummary, type Unsupported } from '../engine/import/types';
 import { unused, type Unused } from '../engine/pipeline';
 import type { Chat } from '../model/chat';
 import { filedIn } from '../model/folders';
 import type { Asset } from '../model/library';
-import type { MemorySettings } from '../model/memory';
+import { emptyMemory, memoryId, type Memory, type MemoryRecord, type MemorySettings } from '../model/memory';
+import { fingerprint } from '../engine/memory';
 import type { ApiResult } from './api';
 import { createFolder } from './folders';
 import { importCharacter, orderFirst, saveAssets, setToggle, type ImportedCharacter, type Progress } from './characters';
@@ -195,7 +196,8 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
 const lastTalk = (chat: RisuChat) => chat.messages.at(-1)?.at ?? 0;
 
 // Moved chats start with long-term memory off: on, opening a long one would summarize its whole past at once (user,
-// 2026-10-01: 옮겨 온 대화는 꺼진 채로). Turning it on in the chat summarizes it then.
+// 2026-10-01: 옮겨 온 대화는 꺼진 채로). Turning it on in the chat summarizes it then. A chat that brings Risu's memory
+// starts with it on, its past already covered (user, 2026-11-03; chatOf).
 const movedMemory = (store: ObjectStore): MemorySettings => ({ ...defaultMemory(store), on: false });
 
 async function folderNamed(store: ObjectStore, name: string): Promise<ApiResult<string>> {
@@ -216,15 +218,32 @@ export async function importRisuChats(store: ObjectStore, character: string | nu
 
 // A chat Risu bound to no persona, or to one not brought, holds the current persona, as a chat saved here would. Its
 // lorebook goes before its messages, whose last write a move counts its progress by.
-function chatOf(id: string, character: string | null, card: Card | null, { title, note, persona, greeting, variables, messages, lore, loreFolders }: RisuChat, personaIds: ReadonlyMap<string, string>, current: string | undefined, memory: MemorySettings): ReturnType<typeof chatWrites> {
+function chatOf(id: string, character: string | null, card: Card | null, { title, note, persona, greeting, variables, messages, lore, loreFolders, memory: remembered }: RisuChat, personaIds: ReadonlyMap<string, string>, current: string | undefined, memory: MemorySettings): { entries: Write[]; root: Write } {
   // The chat opens on the greeting Risu showed; a blank one shown leaves the chat without one, as Risu showed none.
   // One past the card's greetings opens on its last, as Risu shows it; projectGreetings would take the first.
   const greetings = card && startingGreetings(projectGreetings(card.greetings, card.greetings.map(() => crypto.randomUUID()), Math.min(greeting, Math.max(card.greetings.length - 1, 0))));
   const own = (persona === null ? undefined : personaIds.get(persona)) ?? current;
   const { folders, writes } = importedLore(id, lore, loreFolders);
-  const chat: Chat = { title: title.trim() || null, character, models: {}, memory, ...(note !== null && { note }), ...(own && { persona: own }), ...(variables.length > 0 && { variables }), ...(folders.length > 0 && { loreFolders: folders }) };
-  const { entries, root } = chatWrites(id, chat, greetings, messages);
-  return { entries: [...writes, ...entries], root };
+  const chat: Chat = { title: title.trim() || null, character, models: {}, memory: remembered.length ? { ...memory, on: true } : memory, ...(note !== null && { note }), ...(own && { persona: own }), ...(variables.length > 0 && { variables }), ...(folders.length > 0 && { loreFolders: folders }) };
+  const { entries, root, said } = chatWrites(id, chat, greetings, messages);
+  const recorded: Write[] = remembered.length ? [{ type: 'create', kind: 'memory', id: memoryId(id), parent: id, value: risuRecords(remembered, messages, said) }] : [];
+  return { entries: [...writes, ...entries, ...recorded], root };
+}
+
+// Risu's summaries as records, each covering the messages from where the one before ended through its own last, as Risu
+// left all of those out of the prompt: memory and the raw window from its end hold the whole chat (design §6.2). The
+// greeting before them is covered without being a source, since a greeting's text is filled anew each time it is sent.
+// print reads the text Risu summarized; where the prompt renders it otherwise the panel says so (원문 불일치).
+function risuRecords(summaries: RisuSummary[], messages: RisuMessage[], said: string[]): Memory {
+  const at = Date.now();
+  let from = 0;
+  const records = summaries.map(({ text, through }): MemoryRecord => {
+    const span = messages.slice(from, through + 1);
+    const sources = said.slice(from, through + 1).map((message) => ({ message, version: message }));
+    from = through + 1;
+    return { id: crypto.randomUUID(), sources, print: fingerprint(span), when: null, where: null, who: [], what: text, lines: [], outcome: '', receipt: null, from: 'risu', at, state: [], opens: [], closes: [] };
+  });
+  return { ...emptyMemory(), records };
 }
 
 export const risuMatch = (store: ObjectStore, name: string): string | null =>

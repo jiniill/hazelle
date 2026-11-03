@@ -37,18 +37,21 @@ export async function startChat(store: ObjectStore, id: string, chat: Chat, gree
 
 // A new chat's writes: its greetings, then the messages it already holds (a chat brought from Risu), in the order they
 // fold, and its root, which is written with or after them.
-export function chatWrites(id: string, chat: Chat, greetings: Greetings | null, messages: RisuMessage[]): { entries: Write[]; root: Write } {
+// said: the ids messages got, in their order.
+export function chatWrites(id: string, chat: Chat, greetings: Greetings | null, messages: RisuMessage[]): { entries: Write[]; root: Write; said: string[] } {
   // A moved chat's greeting takes its first message's time, so it does not read as newer than what follows it.
   const entries = greetings ? greetingWrites(id, greetings, messages[0]?.at ?? Date.now()) : [];
   let follows = greetings ? greetings.choices[greetings.selected]!.id : null;
   const bookmarks: Bookmark[] = [];
+  const said: string[] = [];
   for (const { role, text, at, reasoning, bookmark } of messages) {
     const message = crypto.randomUUID();
+    said.push(message);
     entries.push({ type: 'create', kind: 'entry', id: message, parent: id, value: { type: 'message', role, at, text, receipt: null, follows, staged: true, ...(reasoning && { reasoning }) } });
     if (bookmark) bookmarks.push({ message, ...bookmark });
     follows = message;
   }
-  return { entries, root: { type: 'create', kind: 'chat', id, parent: null, value: withBookmarks(chat, bookmarks) } };
+  return { entries, root: { type: 'create', kind: 'chat', id, parent: null, value: withBookmarks(chat, bookmarks) }, said };
 }
 
 // Greetings are saved as the card wrote them; engine/render fills them each time they are shown or sent.

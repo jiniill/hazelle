@@ -42,6 +42,7 @@ const luna: RisuCharacter = {
       inlays: [],
       lore: [],
       loreFolders: [],
+      memory: [],
       messages: [
         { role: 'user', text: '안녕', at: 1 },
         { role: 'assistant', text: '반가워 [HP 7]', at: 2 },

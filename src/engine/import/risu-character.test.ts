@@ -15,3 +15,30 @@ it('counts a chat whose own toggle values Risu reads over the account, with or w
   })!;
   expect(file.missed).toEqual([{ kind: 'chat-toggles', count: 2 }]);
 });
+
+it("reads each of Risu's memory formats into summaries ending where Risu stopped sending, and counts what stays behind", () => {
+  const message = (chatId: string) => ({ role: 'user', data: chatId, chatId });
+  const messages = ['a', 'b', 'c', 'd', 'e'].map(message);
+  const file = risuChatFile({
+    type: 'risuAllChats',
+    ver: 2,
+    data: [
+      // An orphan names a message the chat lost; a null memo is how JSON keeps Risu's undefined.
+      { message: messages, hypaV3Data: { summaries: [{ text: 'later', chatMemos: ['c', 'd'] }, { text: 'first', chatMemos: [null, 'a', 'b'] }, { text: 'orphan', chatMemos: ['gone'] }] } },
+      { message: messages, hypaV2Data: { mainChunks: [{ id: 0, text: 'chunk', chatMemos: ['a', 'b', 'c'] }], chunks: [] } },
+      // SupaMemory names the first message it left in the prompt.
+      { message: messages, supaMemoryData: 'c\nsupa summary' },
+      { message: messages, supaMemoryData: `hypa:\n${JSON.stringify([{ id: 'gone', supa: 'newest', hypa: [] }, { id: 'e', supa: 'older', hypa: [] }])}` },
+      // Risu reads only one format; the newest is taken.
+      { message: messages, hypaV3Data: { summaries: [{ text: 'v3', chatMemos: ['a'] }] }, supaMemoryData: 'b\nsupa' },
+    ],
+  })!;
+  expect(file.chats.map(({ memory }) => memory)).toEqual([
+    [{ text: 'first', through: 1 }, { text: 'later', through: 3 }],
+    [{ text: 'chunk', through: 2 }],
+    [{ text: 'supa summary', through: 1 }],
+    [{ text: 'older', through: 3 }],
+    [{ text: 'v3', through: 0 }],
+  ]);
+  expect(file.missed).toEqual([{ kind: 'memory', count: 2 }]);
+});
