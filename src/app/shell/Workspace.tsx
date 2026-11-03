@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { hearServedVersion } from '../../runtime/api';
+import { hearServedBuild } from '../../runtime/api';
 import { markSeen } from '../../runtime/chat-context';
 import type { AccountFacts } from '../../runtime/account';
 import { Drafts } from '../../runtime/drafts';
-import { BUILT_VERSION, selfHost } from '../../runtime/installation';
+import { BUILT_VERSION, PAGE_BUILD, selfHost } from '../../runtime/installation';
 import { openGuestSession, openSession, type Session } from '../../runtime/session';
 import type { PullProgress } from '../../runtime/store';
 import type { Unlocked } from '../account/AccountFlow';
@@ -75,16 +75,16 @@ function Unread({ facts, kind }: { facts: AccountFacts; kind: UnreadKind }) {
   return null;
 }
 
-// A tab left open across a deploy runs the old release, whose chunks the new image no longer serves; said once for each
-// release the server starts saying it runs.
+// A tab left open across a deploy that changed the page runs chunks the new image no longer serves; said once for each
+// build the server starts serving. A deploy that left the page as it was says nothing: a reload would bring the same.
 function Stale() {
   const toast = useToast();
   useEffect(() => {
-    if (BUILT_VERSION === null) return;
-    hearServedVersion((served) => {
-      if (served !== BUILT_VERSION) toast.show('새 버전이 나왔어요', { action: { label: '새로고침', onClick: () => location.reload() } });
+    if (PAGE_BUILD === null) return;
+    hearServedBuild((served) => {
+      if (served !== PAGE_BUILD) toast.show('새 버전이 나왔어요', { action: { label: '새로고침', onClick: () => location.reload() } });
     });
-    return () => hearServedVersion(null);
+    return () => hearServedBuild(null);
   }, [toast]);
   return null;
 }

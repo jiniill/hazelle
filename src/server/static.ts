@@ -1,4 +1,5 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { readdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
@@ -40,7 +41,14 @@ const PULSE_LINE = '헤이젤 사용자들이 캐릭터 챗에 실제로 쓰는 
 // What pages read from the API, which owns the database.
 export type PageSources = { cover: (share: string) => Promise<ShareCover | null>; pulse: () => Promise<PulseAnswer>; prices: () => Promise<PriceTable> };
 
-export function clientFiles(clientDir: string, sources: PageSources, visit: (page: PageVisit) => void = () => {}, selfHost = false) {
+// What a release's page says of itself on <html>, for runtime/installation.ts.
+export type PageStamp = { version: string; build: string };
+// Every file under /assets has a content hash in its name, so the same names are the same page, whatever the tag.
+export const pageBuild = (clientDir: string) => createHash('sha256').update(readdirSync(join(clientDir, 'assets')).sort().join('\n')).digest('hex').slice(0, 16);
+
+export function clientFiles(clientDir: string, sources: PageSources, visit: (page: PageVisit) => void = () => {}, selfHost = false, stamp: PageStamp | null = null) {
+  // Read by main.tsx and runtime/installation.ts before any request, so pages shown before sign-in know them too.
+  const marks = `${selfHost ? ' data-self-host' : ''}${stamp ? ` data-version="${stamp.version}" data-build="${stamp.build}"` : ''}`;
   const client = new Hono();
   client.use(async (c, next) => {
     const started = performance.now();
@@ -62,9 +70,7 @@ export function clientFiles(clientDir: string, sources: PageSources, visit: (pag
     const nonce = randomBytes(18).toString('base64');
     c.header('Content-Security-Policy', pageCsp(nonce));
     if (!listed(c)) c.header('X-Robots-Tag', 'noindex');
-    const html = (await readFile(join(clientDir, 'index.html'), 'utf8')).replaceAll(NONCE, nonce);
-    // Read by main.tsx (runtime/installation.ts), before any request, so pages shown before sign-in know it too.
-    if (selfHost) return c.html(shape(html.replace('<html', '<html data-self-host')));
+    const html = (await readFile(join(clientDir, 'index.html'), 'utf8')).replaceAll(NONCE, nonce).replace('<html', () => `<html${marks}`);
     return c.html(shape(listed(c) ? canonical(html, c.req.path) : html));
   };
   client.use(async (c, next) => {

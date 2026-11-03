@@ -9,11 +9,12 @@ RUN npm ci
 COPY . .
 # release/source.tar.gz is the release commit's archive (scripts/source.sh, run by .github/workflows/release.yml before
 # this build). The context holds no .git, so a build without it serves no /source.tar.gz and says so here.
-# HAZELLE_VERSION: the release tag (.github/workflows/release.yml). The page and the server bundle each carry it, and a
-# page whose tag differs from the server's offers a reload; a build without one compares nothing. It lives in the
-# bundles, not in the runtime environment, so the app the release copies out of /app for the start without Docker has it.
+# HAZELLE_VERSION: the release tag (.github/workflows/release.yml), in the server bundle, which writes it on the page.
+# Not given to Vite: the chunks stay the same across a release that leaves the page as it was, so tabs keep working and
+# nothing offers them a reload. A build without one compares nothing. It lives in the bundle, not in the runtime
+# environment, so the app the release copies out of /app for the start without Docker has it.
 ARG HAZELLE_VERSION=
-RUN VITE_HAZELLE_VERSION=$HAZELLE_VERSION ./node_modules/.bin/vite build \
+RUN ./node_modules/.bin/vite build \
  && npm run -s build:server -- "--define:process.env.HAZELLE_VERSION=\"$HAZELLE_VERSION\"" \
  && cp LICENSE dist/client/license.txt \
  && if [ -f release/source.tar.gz ]; then cp release/source.tar.gz dist/client/; else echo 'hazelle: source archive absent, /source.tar.gz will answer 404' >&2; fi \

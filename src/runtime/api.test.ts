@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { api, fetchApi, hearServedVersion, holdAccount, holdPulse, markSeen, SLOW_ROUTE_WAIT } from './api';
+import { api, fetchApi, hearServedBuild, holdAccount, holdPulse, markSeen, SLOW_ROUTE_WAIT } from './api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -69,19 +69,19 @@ it('states the account the page holds with every request, and hears what answers
   ]);
 });
 
-it('tells each release the server says it runs once, not one an immutable answer carries, and a listener that comes later the last one said', async () => {
-  const answers = ['v1', 'v1', null, 'v2'].map((version) => Response.json({}, { headers: version ? { 'x-hazelle-version': version } : {} }));
-  answers.splice(2, 0, Response.json({}, { headers: { 'x-hazelle-version': 'v0', 'cache-control': 'private, max-age=31536000, immutable' } }));
+it('tells each page build the server says it serves once, not one an immutable answer carries, and a listener that comes later the last one said', async () => {
+  const answers = ['b1', 'b1', null, 'b2'].map((build) => Response.json({}, { headers: build ? { 'x-hazelle-version': build } : {} }));
+  answers.splice(2, 0, Response.json({}, { headers: { 'x-hazelle-version': 'b0', 'cache-control': 'private, max-age=31536000, immutable' } }));
   vi.stubGlobal('fetch', async () => answers.shift()!);
   const heard = vi.fn();
-  hearServedVersion(heard);
+  hearServedBuild(heard);
   for (let sent = 0; sent < 5; sent++) await api('GET', 'session');
-  expect(heard.mock.calls).toEqual([['v1'], ['v2']]);
+  expect(heard.mock.calls).toEqual([['b1'], ['b2']]);
 
   const later = vi.fn();
-  hearServedVersion(later);
-  expect(later.mock.calls).toEqual([['v2']]);
-  hearServedVersion(null);
+  hearServedBuild(later);
+  expect(later.mock.calls).toEqual([['b2']]);
+  hearServedBuild(null);
 });
 
 it('gives up on headers that never come as offline, so the store waits for the connection instead', async () => {

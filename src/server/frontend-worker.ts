@@ -7,13 +7,13 @@ import type { PulseAnswer } from '../contracts/pulse';
 import type { PriceTable } from '../connectors/models-dev';
 import type { ShareCover } from '../contracts/shares';
 import { endToEnd } from './hop-by-hop';
-import { clientFiles } from './static';
+import { clientFiles, type PageStamp } from './static';
 import { visitorKey } from './visitor';
 
 // host undefined listens on every interface, as Docker's port mapping needs.
-export type FrontendOptions = { port: number; host: string | undefined; apiPort: number; clientDir: string; trustedProxies: BlockList; selfHost: boolean };
+export type FrontendOptions = { port: number; host: string | undefined; apiPort: number; clientDir: string; trustedProxies: BlockList; selfHost: boolean; stamp: PageStamp | null };
 
-const { port, host, apiPort, clientDir, trustedProxies, selfHost } = workerData as FrontendOptions;
+const { port, host, apiPort, clientDir, trustedProxies, selfHost, stamp } = workerData as FrontendOptions;
 // A share page's embed text, asked of the API, which owns the database; a failure leaves the page without one.
 async function cover(id: string): Promise<ShareCover | null> {
   try {
@@ -40,7 +40,7 @@ async function priceTable(): Promise<PriceTable> {
   prices = { at: Date.now(), table };
   return table;
 }
-const files = getRequestListener(clientFiles(clientDir, { cover, pulse, prices: priceTable }, (page) => parentPort!.postMessage(page), selfHost).fetch);
+const files = getRequestListener(clientFiles(clientDir, { cover, pulse, prices: priceTable }, (page) => parentPort!.postMessage(page), selfHost, stamp).fetch);
 // A finite socket timeout lets Node honor the API's shorter keep-alive hint; zero keeps idle sockets until
 // the server closes them and races reuse. The agent destroys timed-out free sockets, not active requests.
 const agent = new Agent({ keepAlive: true, timeout: 5000 });

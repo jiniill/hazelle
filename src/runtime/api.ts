@@ -1,4 +1,4 @@
-import { ACCOUNT_HEADER, RELAY_HEADER, ACCOUNT_USAGE_HEADERS, PULSE_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, VERSION_HEADER } from '../contracts/http';
+import { ACCOUNT_HEADER, RELAY_HEADER, ACCOUNT_USAGE_HEADERS, PULSE_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, BUILD_HEADER } from '../contracts/http';
 import { pulseHeader, type PulseLabel } from '../contracts/pulse';
 import { isRecord } from '../connectors/values';
 
@@ -41,12 +41,12 @@ export function markSeen() {
   seenOwed = true;
 }
 
-// The release the server last said it runs, and who hears when that changes; apart from holdAccount's listener, since
-// the release is not of the account.
+// The page build the server last said it serves, and who hears when that changes; apart from holdAccount's listener,
+// since the build is not of the account.
 let served: string | null = null;
 let hearServed: ((version: string) => void) | null = null;
 
-export function hearServedVersion(listener: ((version: string) => void) | null) {
+export function hearServedBuild(listener: ((build: string) => void) | null) {
   hearServed = listener;
   if (listener && served !== null) listener(served);
 }
@@ -60,10 +60,10 @@ export async function fetchApi(path: string, { pulse, anonymous, ...init }: Omit
   if (label) seenOwed = false;
   const response = await fetch(`/api/${path}`, { ...init, ...(anonymous && { credentials: 'omit' }), headers: { ...(held === null || anonymous ? {} : { [ACCOUNT_HEADER]: held }), ...(label && { [PULSE_HEADER]: pulseHeader(label) }), ...init.headers } });
   // An immutable answer (a picture) may come from the browser's cache, carrying the release that first served it.
-  const version = response.headers.get('cache-control')?.includes('immutable') ? null : response.headers.get(VERSION_HEADER);
-  if (version !== null && version !== served) {
-    served = version;
-    hearServed?.(version);
+  const build = response.headers.get('cache-control')?.includes('immutable') ? null : response.headers.get(BUILD_HEADER);
+  if (build !== null && build !== served) {
+    served = build;
+    hearServed?.(build);
   }
   const tell = anonymous ? null : hear;
   if (!tell || sent !== generation) return response;

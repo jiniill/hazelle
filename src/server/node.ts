@@ -29,10 +29,11 @@ import { streamRegistry } from './stream-registry';
 import { streamStore } from './db/streams-db';
 import app from './worker';
 import { publishNews, RELEASE_NEWS } from './news';
-import { VERSION_HEADER } from '../contracts/http';
+import { BUILD_HEADER } from '../contracts/http';
 import type { Release } from '../contracts/installation';
 import { releases } from './releases';
 import { openVisits, type FrontendMessage } from './visits';
+import { pageBuild } from './static';
 
 // Configuration is the environment (docs/research/docker-port-plan.md §11).
 const dataDir = process.env.HAZELLE_DATA ?? '/data';
@@ -158,8 +159,9 @@ const ctx: ExecutionContext = {
 
 let draining = false;
 const root = new Hono();
-if (version) root.use('/api/*', async (c, next) => {
-  c.header(VERSION_HEADER, version);
+const stamp = version ? { version, build: pageBuild(clientDir) } : null;
+if (stamp) root.use('/api/*', async (c, next) => {
+  c.header(BUILD_HEADER, stamp.build);
   await next();
 });
 root.get('/api/health', async (c) => {
@@ -177,7 +179,7 @@ const server = serve({ fetch: (request) => root.fetch(request, services, ctx), h
 await once(server, 'listening');
 // The public listener owns no databases, so even a synchronous SQL operation cannot hold its asset responses.
 const frontend = new Worker(new URL(import.meta.url.endsWith('.ts') ? './frontend-worker.ts' : './frontend-worker.js', import.meta.url), {
-  workerData: { port, host, apiPort: (server.address() as AddressInfo).port, clientDir, trustedProxies, selfHost } satisfies FrontendOptions,
+  workerData: { port, host, apiPort: (server.address() as AddressInfo).port, clientDir, trustedProxies, selfHost, stamp } satisfies FrontendOptions,
 });
 frontend.on('error', (error) => { log('frontend failed', { error: String(error) }); process.exit(1); });
 frontend.on('exit', (code) => { if (!draining) { log('frontend stopped', { code }); process.exit(1); } });

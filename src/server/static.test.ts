@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PulseAnswer, PulseBoard } from '../contracts/pulse';
-import { clientFiles, CSP, pageCsp, SANDBOX_CSP, SANDBOX_NETWORK_CSP } from './static';
+import { clientFiles, CSP, pageBuild, pageCsp, SANDBOX_CSP, SANDBOX_NETWORK_CSP } from './static';
 
 let dir: string;
 let client: ReturnType<typeof clientFiles>;
@@ -83,6 +83,18 @@ describe('the client files', () => {
       '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url><url><loc>https://hazelle.app/tools/calculator</loc></url><url><loc>https://hazelle.app/guide</loc></url><url><loc>https://hazelle.app/guide/move-from-risu</loc></url></urlset>\n',
     );
     expect(await (await client.request('/robots.txt')).text()).toBe('User-agent: *\nDisallow: /api/\nSitemap: https://hazelle.app/sitemap.xml\n');
+  });
+
+  it('stamps a release on its page, with a build that follows the page’s files and not the tag', async () => {
+    writeFileSync(join(dir, 'index.html'), '<!doctype html><html lang="ko">page</html>');
+    mkdirSync(join(dir, 'assets'), { recursive: true });
+    writeFileSync(join(dir, 'assets', 'stamp-a.js'), '');
+    const before = pageBuild(dir);
+    const stamped = clientFiles(dir, { cover: async () => null, pulse: async () => ({ at: 0, board: null }), prices: async () => ({ fetchedAt: null, models: [] }) }, () => {}, false, { version: 'v9', build: before });
+    expect(await (await stamped.request('/terms', { headers: PAGE })).text()).toContain(`<html data-version="v9" data-build="${before}" lang="ko">`);
+    expect(pageBuild(dir)).toBe(before);
+    writeFileSync(join(dir, 'assets', 'stamp-b.js'), '');
+    expect(pageBuild(dir)).not.toBe(before);
   });
 
   it("marks a self-host's page for the client and keeps all of it out of the index", async () => {

@@ -5,8 +5,9 @@ export const ACCOUNT_HEADER = 'x-account';
 export const UNREAD_NOTICES_HEADER = 'x-unread-notices';
 // The account's unread 게시판 activity (contracts/board Activity), on the same answers.
 export const UNREAD_BOARD_HEADER = 'x-unread-board';
-// The release the server runs, on every API answer, so a page built from an older one can offer a reload.
-export const VERSION_HEADER = 'x-hazelle-version';
+// The page build the server serves, on every API answer, so a page of another build can offer a reload.
+// Named for what it once said: a tab of a release from before is told only through this name.
+export const BUILD_HEADER = 'x-hazelle-version';
 export const RELAY_HEADER = 'x-relay';
 // The chat whose bot's script makes a relayed call (an embedding), counted in that chat's cap as its streams are.
 export const BOT_HEADER = 'x-hazelle-bot';
