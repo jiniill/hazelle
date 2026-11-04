@@ -7,8 +7,10 @@ import { Kbd } from '../foundation/Kbd';
 import { keyCaps, type Chord } from '../foundation/keys';
 import { Row } from '../layout/Row';
 import { Stack } from '../layout/Stack';
+import { Switcher } from '../story/StoryMessage';
 import styles from './Dialog.module.css';
 import { useFocusTrap, useLayer } from './layers';
+import { stepByKey, stepping, useSwipe, type Pages } from './pages';
 
 type Props = {
   title: string;
@@ -23,15 +25,19 @@ type Props = {
   // Above and below the scrolling body, always in view.
   toolbar?: ReactNode;
   footer?: ReactNode;
+  // Stepped by the head's switcher, ← → and a sideways swipe, the dialog showing one of them at a time.
+  pages?: Pages;
   children: ReactNode;
 };
 
-export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout = 'row', size = 'normal', toolbar, footer, children }: Props) {
+export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout = 'row', size = 'normal', toolbar, footer, pages, children }: Props) {
   const scrim = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
   // Only the scrim itself is outside: the toast sits above the dialog and stays pressable while it is open.
   useLayer(true, { outside: (target) => target === scrim.current, close: onClose, takesBack: true });
   const trap = useFocusTrap(box);
+  const paged = stepping(pages);
+  const swipe = useSwipe(paged);
   const body = actions ? (
     <Stack gap={actionsLayout === 'full' ? 'related' : 'group'}>
       {children}
@@ -45,9 +51,16 @@ export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout 
   return createPortal(
     <ButtonSlot value={null}>
     <div ref={scrim} className={size === 'normal' ? styles.scrim : `${styles.scrim} ${size === 'wide' ? styles.sheet : styles.bare}`}>
-      <div ref={box} className={size === 'normal' ? styles.dialog : `${styles.dialog} ${styles[size]}`} role="dialog" aria-modal="true" aria-label={title} onKeyDown={trap}>
+      <div ref={box} className={size === 'normal' ? styles.dialog : `${styles.dialog} ${styles[size]}`} role="dialog" aria-modal="true" aria-label={title} onKeyDown={(event) => { trap(event); stepByKey(paged, event); }} {...swipe}>
         <div className={styles.head}>
           <h2 className={styles.title}>{title}</h2>
+          {paged && (
+            <Switcher
+              count={`${paged.at + 1} / ${paged.count}`}
+              prev={{ label: '이전', onClick: () => paged.onStep(-1) }}
+              next={{ label: '다음', onClick: () => paged.onStep(1) }}
+            />
+          )}
           <IconButton icon={X} label="닫기" size="sm" onClick={onClose} />
         </div>
         {note && <p className={styles.note}>{note}</p>}

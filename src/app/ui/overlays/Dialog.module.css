@@ -101,10 +101,14 @@
 .head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-8);
 }
 
+/* Takes the free width, so a switcher stands beside the close button. */
 .title {
+  flex-grow: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
 }

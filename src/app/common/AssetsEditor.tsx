@@ -6,7 +6,7 @@ import type { Stored } from '../../model/kinds';
 import { addAssets, removeAssets, renameAsset, replaceAsset, restoreAssets } from '../../runtime/characters';
 import { useAssetUrl, useChildren, useFiles, useStore, useUnfoundAssets } from '../session';
 import { useToast } from '../toast';
-import { Button, Callout, CardGrid, Dialog, DropOverlay, Empty, FaceCard, FileButton, MenuItem, MoreMenu, pickFiles, Preview, Row, Section, Stack, useFileDrop } from '../ui';
+import { Button, Callout, CardGrid, Dialog, DropOverlay, Empty, FaceCard, FileButton, MenuItem, MoreMenu, pickFiles, Preview, Row, Section, Stack, useFileDrop, type Pages } from '../ui';
 import { ACTS, addOf } from './acts';
 import { NameDialog } from './NameDialog';
 import { useCopy } from './useCopy';
@@ -87,6 +87,9 @@ export function AssetsEditor({ owner }: { owner: string }) {
   const press = (id: string) => (picked ? selection.toggle(id) : setViewing(id));
 
   const viewed = viewing === null ? undefined : assets.find(({ id }) => id === viewing);
+  // Stepped in the grid's order; an asset the search no longer shows is viewed alone.
+  const at = search.found.findIndex(({ id }) => id === viewing);
+  const pages = at < 0 ? undefined : { at, count: search.found.length, onStep: (by: -1 | 1) => setViewing(search.found[(at + by + search.found.length) % search.found.length]!.id) };
   return (
     <Section title={ASSET} note={`${assets.length}개`} help="봇이 {{img::이름}}이나 {{video::이름}}으로 불러오는 이미지·영상이에요. 이름이 겹치면 무작위로 표시돼요.">
       <Stack gap="related">
@@ -121,7 +124,7 @@ export function AssetsEditor({ owner }: { owner: string }) {
           )}
       </Stack>
       {dragging && <DropOverlay>여기에 놓으면 에셋으로 추가돼요</DropOverlay>}
-      {viewed && <AssetPreview asset={viewed} actions={actionsOf(viewed)} onClose={() => setViewing(null)} />}
+      {viewed && <AssetPreview asset={viewed} actions={actionsOf(viewed)} pages={pages} onClose={() => setViewing(null)} />}
       {naming && <NameDialog title={`${ASSET} ${ACTS.rename.label}`} value={naming.value.name} hint="봇은 이 이름으로 에셋을 찾아요." onSave={(name) => rename(naming, name)} onClose={() => setNaming(null)} />}
     </Section>
   );
@@ -159,13 +162,14 @@ function AssetCard({ asset, shared, picked, onPress, actions }: CardProps) {
 }
 
 // Its own view, so the whole file is held only while it is open.
-function AssetPreview({ asset, actions, onClose }: { asset: Stored<'asset'>; actions: Action[]; onClose: () => void }) {
+function AssetPreview({ asset, actions, pages, onClose }: { asset: Stored<'asset'>; actions: Action[]; pages: Pages | undefined; onClose: () => void }) {
   const url = useAssetUrl([asset]);
   return (
     <Dialog
       title={asset.value.name}
       note={kindOf(asset)}
       size="wide"
+      pages={pages}
       onClose={onClose}
       actions={actions.map(({ icon, label, warn, run }) => (
         <Button key={label} variant={warn ? 'danger' : 'secondary'} icon={icon} onClick={run}>

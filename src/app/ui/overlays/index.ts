@@ -5,6 +5,7 @@ export { Coach, GuideMark, guideShown, useGuideTarget } from './Guide';
 export { Hint, type Help } from './Hint';
 export { backLayers } from './layers';
 export { MoreMenu } from './MoreMenu';
+export { type Pages } from './pages';
 export { Menu, MenuBack, MenuHeading, MenuItem, useMenuClose, useMenuHandle, useMenuOpener, type MenuHandle } from './Menu';
 export { useFileDrop } from './useFileDrop';
 export { Toast, type ToastAction } from './Toast';
