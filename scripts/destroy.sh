@@ -4,12 +4,11 @@
 # on the machine. Then terraform plans the destroy from a copy of infra/ that lifts prevent_destroy, against infra/'s
 # state; after the typed confirmation the generation's age is checked again and the saved plan is applied.
 #   scripts/destroy.sh
-# Needs: terraform initialised in infra/, VULTR_API_KEY in the shell, every required variable of infra/variables.tf
+# Needs: terraform initialised in infra/, VULTR_API_KEY, CLOUDFLARE_API_TOKEN and the R2 state keys in the shell (infra/README.md "State"), every required variable of infra/variables.tf
 # (infra/README.md "Inputs": the gitignored *.tfvars, TF_VAR_* for what it lacks; the plan fails only after the drill
 # without them), ssh as root to the machine, and the free space the drill needs there.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-state=$PWD/infra/terraform.tfstate
 host=$(terraform -chdir=infra output -raw ip)
 remote() { ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "root@$host" "$@" </dev/null; }
 machine() { cat scripts/machine-lib.sh scripts/machine-restore.sh | ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "root@$host" bash -s -- "$@"; }
@@ -40,8 +39,8 @@ for file in infra/terraform.tfvars infra/*.auto.tfvars; do
 done
 tf() { TF_DATA_DIR=$PWD/infra/.terraform terraform -chdir="$config" "$@"; }
 
-tf plan -destroy -input=false -state="$state" "${var_files[@]}" -out="$plans/destroy"
+tf plan -destroy -input=false "${var_files[@]}" -out="$plans/destroy"
 read -r -p "destroy: type destroy to destroy what the plan lists: " answer
 [ "$answer" = destroy ] || { echo "destroy: not confirmed; nothing changed" >&2; exit 1; }
 fresh
-tf apply -input=false -state="$state" -state-out="$state" "$plans/destroy"
+tf apply -input=false "$plans/destroy"

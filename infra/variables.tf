@@ -91,6 +91,12 @@ variable "alert_webhook" {
   default   = ""
 }
 
+# The Cloudflare zone whose apex A record points at the reserved IP; the Caddyfile serves the same name.
+variable "domain" {
+  type    = string
+  default = "hazelle.app"
+}
+
 # Who may reach 80 and 443. direct: anyone, the DNS record unproxied. cloudflare: only Cloudflare's proxy, the record
 # proxied; the way back if the machine is attacked (README "Edge").
 variable "edge" {

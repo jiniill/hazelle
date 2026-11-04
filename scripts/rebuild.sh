@@ -14,11 +14,10 @@
 # --resume: after an apply that destroyed the old machine and failed to create the new one. Creates it with a plain
 # apply and installs the generation; image_digest must be the one the generation was written by, which the first run
 # printed with this command.
-# Needs what scripts/destroy.sh needs: terraform initialised in infra/, VULTR_API_KEY in the shell, every required
+# Needs what scripts/destroy.sh needs: terraform initialised in infra/, VULTR_API_KEY, CLOUDFLARE_API_TOKEN and the R2 state keys in the shell (infra/README.md "State"), every required
 # variable of infra/variables.tf, ssh as root to the machine, and the free space the drill needs there.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-state=$PWD/infra/terraform.tfstate
 host=$(terraform -chdir=infra output -raw ip)
 ssh_opts=(-o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
 remote() { ssh "${ssh_opts[@]}" "root@$host" "$@" </dev/null; }
@@ -65,13 +64,13 @@ install() {
 }
 
 if [ "${1:-}" = --resume ]; then
-  tf plan -input=false -state="$state" "${var_files[@]}" -out="$plans/rebuild"
-  tf apply -input=false -state="$state" -state-out="$state" "$plans/rebuild"
+  tf plan -input=false "${var_files[@]}" -out="$plans/rebuild"
+  tf apply -input=false "$plans/rebuild"
   install
   exit 0
 fi
 
-tf plan -input=false -state="$state" "${var_files[@]}" -replace=vultr_instance.hazelle -out="$plans/rebuild"
+tf plan -input=false "${var_files[@]}" -replace=vultr_instance.hazelle -out="$plans/rebuild"
 drilled=$(machine drill)
 echo "rebuild: $drilled restores on the machine; the replacement is planned above" >&2
 read -r -p "rebuild: type rebuild to stop the site, back it up and replace the machine: " answer
@@ -94,6 +93,6 @@ generation=$({
 } | ssh "${ssh_opts[@]}" "root@$host" bash -s) ||
   { echo "rebuild: no final generation; the old machine stands with Caddy stopped: hazelle-compose up -d caddy serves again" >&2; exit 1; }
 echo "rebuild: final generation $generation is off-site; replacing the machine" >&2
-tf apply -input=false -state="$state" -state-out="$state" "$plans/rebuild" ||
+tf apply -input=false "$plans/rebuild" ||
   { echo "rebuild: the apply failed; if the old machine is gone: TF_VAR_image_digest=$TF_VAR_image_digest scripts/rebuild.sh --resume $generation" >&2; exit 1; }
 install

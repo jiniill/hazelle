@@ -2,14 +2,14 @@
 
 Terraform for the hosted machine on Vultr: one instance (`vhp-2c-4gb-amd` in `icn`, Ubuntu 24.04), a reserved IPv4
 address, a firewall group (22 from the owner's address, 80, 443 and 443/udp as `edge` says) and the owner's SSH
-key. `/data` lives on the instance's own disk. On first boot `cloud-init.yaml.tftpl` installs Docker from Docker's
+key, plus the domain's A record in Cloudflare. `/data` lives on the instance's own disk. On first boot `cloud-init.yaml.tftpl` installs Docker from Docker's
 repository, writes `/etc/hazelle/` (the env file, the rclone config for R2 with the backup remote `[r2]` and the picture
 store `[files]`, both compose files, the Caddyfile, the copier script), makes a 4 GB swap file, pulls the images and,
 unless `start = false`, runs `hazelle-compose up -d`.
 
 ## Inputs
 
-The API key is read by the provider from `VULTR_API_KEY` in the shell; it is in no file. Everything else is a
+The provider keys are read from the shell, `VULTR_API_KEY` and `CLOUDFLARE_API_TOKEN` (Zone DNS Edit and Zone Read on the domain, R2 Edit on the account); they are in no file. Everything else is a
 variable (`variables.tf`), passed as `-var` or `TF_VAR_*`, or in a `*.tfvars` file, which git ignores:
 
 | variable | what |
@@ -22,6 +22,7 @@ variable (`variables.tf`), passed as `-var` or `TF_VAR_*`, or in a `*.tfvars` fi
 | `alert_webhook` | optional Discord/Slack webhook for backup, disk and server-slowness alerts |
 | `plan` | the Vultr plan; a smaller one than the machine has only through `scripts/rebuild.sh` (see Commands) |
 | `start` | `true` (default): the stack starts on first boot; `scripts/rebuild.sh` passes `false` so the restore fills `/data` first |
+| `domain` | the Cloudflare zone whose apex A record points at the reserved IP; `hazelle.app` |
 | `edge` | `direct` (default): 80 and 443 open to anyone, the DNS record unproxied; `cloudflare`: only Cloudflare's ranges, the record proxied (see Edge) |
 | `cloudflare_ipv4` | for `edge = cloudflare`; defaults to Cloudflare's published list; update it when https://www.cloudflare.com/ips-v4 changes |
 
@@ -136,9 +137,9 @@ Korean visitors on KT reach a proxied record through Cloudflare's LAX location (
 up to 16 s, against 0.02 s direct), so the record is unproxied and `edge = direct`. Caddy issues its own Let's Encrypt
 certificate, which Cloudflare's Full (strict) mode also trusts, so either edge needs nothing changed on the machine.
 
-Under attack: `terraform apply -target=vultr_firewall_rule.web -var edge=cloudflare`, then turn the record's proxy on in
-Cloudflare's dashboard. Vultr applies a firewall change in up to about 7 minutes. The address is public by then, which
-is why the firewall, not the proxy alone, is the shield. Back: the same with `edge=direct` and the proxy off.
+Under attack: `terraform apply -var edge=cloudflare`, which narrows the firewall to Cloudflare's ranges and turns the
+record's proxy on in one step. Vultr applies a firewall change in up to about 7 minutes. The address is public by then,
+which is why the firewall, not the proxy alone, is the shield. Back: the same with `edge=direct`.
 
 The login, signup and share-link limits key each visitor on the last X-Forwarded-For entry when the connection comes
 from `HAZELLE_TRUSTED_PROXIES` (src/server/frontend-worker.ts), which `docker-compose.hosted.yml` sets to the `edge`
@@ -148,9 +149,23 @@ Cloudflare saw (CF-Connecting-IP) first.
 
 ## State
 
-State is local (`terraform.tfstate`, git-ignored) and holds the secrets above. Keep a copy somewhere private. Losing
-it loses nothing on Vultr, but Terraform no longer knows the machine: a new `apply` would try to create a second one.
-To take the existing resources back, import each by its Vultr id (shown by the Vultr API or `vultr-cli`):
+State lives in the private R2 bucket `hazelle-tfstate` (`infra/terraform.tfstate`, the `s3` backend in `versions.tf`),
+beside a copy of the variables (`infra/terraform.tfvars`); both hold the secrets above. The backend reads
+`AWS_ENDPOINT_URL_S3` (`https://<account id>.r2.cloudflarestorage.com`), `AWS_ACCESS_KEY_ID` (the Cloudflare token's
+id) and `AWS_SECRET_ACCESS_KEY` (the SHA-256 of the token's value) from the shell. On a fresh machine, with those and
+the provider keys set:
+
+```
+cd infra
+wrangler r2 object get hazelle-tfstate/infra/terraform.tfvars --file terraform.tfvars --remote
+terraform init
+terraform plan       # must show no changes
+```
+
+After changing `terraform.tfvars`, put it back with `wrangler r2 object put … --file terraform.tfvars --remote`.
+
+Losing the state loses nothing on Vultr or Cloudflare, but Terraform no longer knows them: a new `apply` would try to
+create a second machine. To take the existing resources back, import each by its id (`vultr-cli`, the Cloudflare API):
 
 ```
 terraform import vultr_ssh_key.owner <ssh-key-id>
@@ -159,6 +174,10 @@ terraform import vultr_firewall_rule.ssh <firewall-group-id>,<rule-id>
 terraform import 'vultr_firewall_rule.web["173.245.48.0/20 443"]' <firewall-group-id>,<rule-id>   # one per rule
 terraform import vultr_reserved_ip.hazelle <reserved-ip-id>
 terraform import vultr_instance.hazelle <instance-id>
+terraform import cloudflare_dns_record.site <zone-id>/<record-id>
 ```
 
-Then `terraform plan` must show no change to the instance before anything is applied.
+An imported instance lacks the attributes Vultr reads only at creation, so `terraform plan` then proposes replacing
+it. Write them into the state (`terraform state pull`, set `reserved_ip_id`, `ssh_key_ids`, `ddos_protection`,
+`enable_ipv6`, raise `serial`, `terraform state push`) until `terraform plan` shows no changes; nothing is applied
+before that.

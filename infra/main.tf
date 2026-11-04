@@ -99,6 +99,20 @@ resource "vultr_instance" "hazelle" {
   }
 }
 
+data "cloudflare_zone" "site" {
+  filter = { name = var.domain }
+}
+
+# Proxied exactly when the firewall admits only Cloudflare, so one edge switch moves both.
+resource "cloudflare_dns_record" "site" {
+  zone_id = data.cloudflare_zone.site.zone_id
+  name    = var.domain
+  type    = "A"
+  content = vultr_reserved_ip.hazelle.subnet
+  proxied = var.edge == "cloudflare"
+  ttl     = 1
+}
+
 output "ip" {
   value = vultr_reserved_ip.hazelle.subnet
 }
