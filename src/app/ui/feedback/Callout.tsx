@@ -1,10 +1,10 @@
-import { CircleCheck, TriangleAlert } from 'lucide-react';
+import { CircleCheck, Lightbulb, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '../controls/Button';
 import { Icon } from '../foundation/Icon';
 import styles from './Callout.module.css';
 
-const ICONS = { warn: TriangleAlert, success: CircleCheck };
+const ICONS = { warn: TriangleAlert, success: CircleCheck, tip: Lightbulb };
 
 type Props = {
   tone: keyof typeof ICONS;

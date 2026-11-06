@@ -1,6 +1,7 @@
 export { Beside } from './Beside';
 export { ChatFrame, ChatTitle, readingDefault, type Reading, type StageSide } from './ChatFrame';
 export { Columns } from './Columns';
+export { Contents } from './Contents';
 export { Disclosure } from './Disclosure';
 export { FaceRow } from './FaceRow';
 export { FieldRow } from './FieldRow';

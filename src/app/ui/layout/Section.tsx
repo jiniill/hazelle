@@ -7,6 +7,8 @@ import styles from './Section.module.css';
 
 type Props = {
   title: string;
+  // The id a link to this section names (Contents).
+  anchor?: string;
   level?: 2 | 3;
   note?: string;
   help?: Help;
@@ -18,7 +20,7 @@ type Props = {
   children: ReactNode;
 };
 
-export function Section({ title, level = 2, note, help, tag, action, seek = false, group = false, children }: Props) {
+export function Section({ title, anchor, level = 2, note, help, tag, action, seek = false, group = false, children }: Props) {
   const head = useSeekRow<HTMLDivElement>(title, 'start');
   useLayoutEffect(() => {
     if (seek) head.current?.scrollIntoView({ block: 'start' });
@@ -27,7 +29,7 @@ export function Section({ title, level = 2, note, help, tag, action, seek = fals
   const noted = note && <span className={styles.note}>{note}</span>;
   return (
     <section className={[styles.section, styles[`level${level}`], group && styles.group].filter(Boolean).join(' ')}>
-      <div ref={head} className={styles.head}>
+      <div ref={head} id={anchor} className={styles.head}>
         <span className={styles.name}>
           <Heading className={styles.title}>{title}</Heading>
           {tag && (

@@ -1,5 +1,6 @@
 export { Bars } from './Bars';
 export { Breakdown } from './Breakdown';
+export { Bullets } from './Bullets';
 export { CardItem, CardList } from './CardList';
 export { CardGrid, FaceCard, FolderCard, IconCard, Portrait, Preview, SelectionBar } from './CardGrid';
 export { PathBar } from './PathBar';
@@ -8,6 +9,7 @@ export { Ranking, type Ranked } from './Ranking';
 export { Facts } from './Facts';
 export { FolderRow, TreeRow } from './FolderRow';
 export { FoundRow, type Marked } from './FoundRow';
+export { HowTo, type HowToStep } from './HowTo';
 export { ItemRow } from './ItemRow';
 export { List, ListItem } from './List';
 export { NavGroup } from './NavGroup';

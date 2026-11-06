@@ -398,6 +398,8 @@
   --form-max-width: 688px;
   --screen-aside-width: 400px;
   --screen-split-max-width: calc(var(--form-max-width) + var(--screen-aside-width) + var(--space-32) * 2 + var(--space-24) * 2);
+  --screen-contents-width: 220px;
+  --screen-contents-max-width: calc(var(--form-max-width) + var(--screen-contents-width) + var(--space-32) * 2 + var(--space-24) * 2);
   /* How far in a screen's box rows (SettingGroup, List) their words start; 0 outside a Screen (Screen.module.css). */
   --box-inset: 0px;
   --card-min-width: 152px;

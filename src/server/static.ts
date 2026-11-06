@@ -6,7 +6,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono, type Context } from 'hono';
 import type { PriceTable } from '../connectors/models-dev';
 import { START_PAGE } from '../contracts/start';
-import { GUIDE_INDEX, GUIDES, type Guide } from '../contracts/guides';
+import { GUIDE_INDEX, GUIDE_TOPICS, GUIDE_WORDS, GUIDES, guideMeta, spans, type Guide, type GuideStep } from '../contracts/guides';
 import { CALCULATOR_PAGE } from '../contracts/prices';
 import { PULSE_PAGE, type PulseAnswer } from '../contracts/pulse';
 import { TOOL_SANDBOX } from '../contracts/sandbox';
@@ -124,7 +124,8 @@ export function clientFiles(clientDir: string, sources: PageSources, visit: (pag
   return client;
 }
 
-const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...INDEXED].map((path) => `<url><loc>${HOSTED}${path}</loc></url>`).join('')}</urlset>\n`;
+const CHANGED = new Map(GUIDES.map((guide) => [guide.path, guide.updated]));
+const SITEMAP = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...INDEXED].map((path) => `<url><loc>${HOSTED}${path}</loc>${CHANGED.has(path) ? `<lastmod>${CHANGED.get(path)}</lastmod>` : ''}</url>`).join('')}</urlset>\n`;
 
 const canonical = (html: string, path: string) =>
   html.replace('</head>', () => `<link rel="canonical" href="${HOSTED}${path}" /><meta property="og:url" content="${HOSTED}${path}" /></head>`);
@@ -138,8 +139,10 @@ function landingPage(html: string): string {
   const list = (items: readonly string[], tag = 'ul') => `<${tag}>${items.map((item) => `<li>${item}</li>`).join('')}</${tag}>`;
   const { heading, line, keys, trial, features, move } = START_PAGE;
   const words = `<h1>${heading}</h1><p>${line}</p><h2>${keys.title}</h2><p>${keys.line}</p><h2>${trial.title}</h2>${list(trial.steps, 'ol')}<p>${trial.privacy}</p><h2>${features.title}</h2>${list(features.points)}<p><a href="${move.path}">${move.label}</a> · <a href="${GUIDE_INDEX.path}">${GUIDE_INDEX.title}</a> · <a href="${CALCULATOR_PAGE.path}">${CALCULATOR_PAGE.title}</a> · <a href="${PULSE_PAGE.path}">${PULSE_PAGE.title}</a></p>`;
-  return withWords(html.replace('</head>', () => `<script type="application/ld+json">${JSON.stringify(facts)}</script></head>`), words);
+  return withWords(withFacts(html, facts), words);
 }
+
+const withFacts = (html: string, ...facts: object[]) => html.replace('</head>', () => `${facts.map((each) => `<script type="application/ld+json">${JSON.stringify(each)}</script>`).join('')}</head>`);
 
 const escape = (text: string) => text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 
@@ -155,20 +158,41 @@ function worded(html: string, title: string, line: string): string {
 const titled = (title: string) => `${title} · 헤이젤`;
 
 function guideIndexPage(html: string): string {
-  const rows = GUIDES.map((guide) => `<li><a href="${guide.path}">${guide.title}</a></li>`).join('');
-  return withWords(worded(html, titled(GUIDE_INDEX.title), GUIDE_INDEX.line), `<h1>${GUIDE_INDEX.title}</h1><p>${GUIDE_INDEX.line}</p><ul>${rows}</ul>`);
+  const topics = Object.entries(GUIDE_TOPICS).flatMap(([topic, name]) => {
+    const rows = GUIDES.filter((guide) => guide.topic === topic).map((guide) => `<li><a href="${guide.path}">${guide.title}</a> ${guide.line}</li>`);
+    return rows.length ? `<h2>${name}</h2><ul>${rows.join('')}</ul>` : [];
+  });
+  return withWords(worded(html, titled(GUIDE_INDEX.title), GUIDE_INDEX.line), `<h1>${GUIDE_INDEX.title}</h1><p>${GUIDE_INDEX.line}</p>${topics.join('')}`);
+}
+
+const said = (text: string) => spans(text).map((span) => (span.control ? `<b>${span.text}</b>` : span.text)).join('');
+
+function stepWords(step: GuideStep): string {
+  if (typeof step === 'string') return `<li>${said(step)}</li>`;
+  const picture = step.picture && `<figure><img src="${step.picture.src}" alt="${step.picture.alt}" /><figcaption>${step.picture.caption}</figcaption></figure>`;
+  return `<li>${said(step.text)}${step.note ? `<p>${said(step.note)}</p>` : ''}${picture ?? ''}</li>`;
 }
 
 function guidePage(html: string, guide: Guide): string {
-  const sections = guide.sections.map(({ title, blocks }) => {
+  const sections = guide.sections.map(({ id, title, blocks }) => {
     const words = blocks.map((block) => {
-      if (typeof block === 'string') return `<p>${block}</p>`;
-      if ('steps' in block) return `<ol>${block.steps.map((step) => `<li>${step}</li>`).join('')}</ol>`;
-      return 'link' in block ? `<p><a href="${block.link}">${block.label}</a></p>` : '';
+      if (typeof block === 'string') return `<p>${said(block)}</p>`;
+      if ('steps' in block) return `<ol>${block.steps.map(stepWords).join('')}</ol>`;
+      if ('list' in block) return `<ul>${block.list.map((item) => `<li>${item}</li>`).join('')}</ul>`;
+      if ('table' in block) {
+        const row = (cells: string[], tag: string) => `<tr>${cells.map((cell) => `<${tag}>${cell}</${tag}>`).join('')}</tr>`;
+        return `<table><thead>${row(block.table.columns, 'th')}</thead><tbody>${block.table.rows.map((cells) => row(cells, 'td')).join('')}</tbody></table>`;
+      }
+      return `<p>${said('tip' in block ? block.tip : block.warn)}</p>`;
     });
-    return `<h2>${title}</h2>${words.join('')}`;
+    return `<h2 id="${id}">${title}</h2>${words.join('')}`;
   });
-  return withWords(worded(html, titled(guide.title), guide.line), `<h1>${guide.title}</h1><p>${guide.line}</p>${sections.join('')}`);
+  const faq = guide.faq.map(({ question, answer }) => `<h3>${question}</h3><p>${said(answer)}</p>`).join('');
+  const words = `<nav><a href="${GUIDE_INDEX.path}">${GUIDE_WORDS.path}</a> › ${GUIDE_TOPICS[guide.topic]}</nav><h1>${guide.title}</h1><p>${guide.line}</p><p>${guideMeta(guide)}</p><h2>${GUIDE_WORDS.needs}</h2><ul>${guide.needs.map((need) => `<li>${need}</li>`).join('')}</ul>${sections.join('')}<h2>${GUIDE_WORDS.faq}</h2>${faq}<h2>${guide.end.title}</h2><p>${guide.end.line}</p><p><a href="${guide.end.link}">${guide.end.label}</a></p>`;
+  const url = `${HOSTED}${guide.path}`;
+  const article = { '@context': 'https://schema.org', '@type': 'Article', headline: guide.title, description: guide.line, dateModified: guide.updated, inLanguage: 'ko', mainEntityOfPage: url, publisher: { '@type': 'Organization', name: '헤이젤', url: `${HOSTED}/` } };
+  const path = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: GUIDE_INDEX.title, item: `${HOSTED}${GUIDE_INDEX.path}` }, { '@type': 'ListItem', position: 2, name: guide.title, item: url }] };
+  return withWords(withFacts(worded(html, titled(guide.title), guide.line), article, path), words);
 }
 
 function calculatorPage(html: string, table: PriceTable | null): string {

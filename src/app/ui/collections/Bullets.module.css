@@ -1,0 +1,22 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-12);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+}
+
+.dot {
+  composes: dot from '../foundation/surface.module.css';
+  flex-shrink: 0;
+  transform: translateY(calc(var(--dot) / -2));
+}

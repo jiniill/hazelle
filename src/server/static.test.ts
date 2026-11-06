@@ -69,9 +69,9 @@ describe('the client files', () => {
     expect(home).toContain('<link rel="canonical" href="https://hazelle.app/" />');
     expect(home).toContain('<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication"');
     expect(home).toMatch(/<div id="root"><main class="boot landing"><h1>내 API 키로 바로 시작하는 AI 캐릭터 챗<\/h1>.*<p role="status">불러오는 중…<\/p><\/main><\/div>$/);
-    for (const path of ['/', '/now', '/tools/calculator', '/guide', '/guide/move-from-risu', '/guide/gone', '/terms', '/privacy', '/board', '/s/no-cover-share00', '/index.html']) {
+    for (const path of ['/', '/now', '/tools/calculator', '/guide', '/guide/api-key', '/guide/move-from-risu', '/guide/gone', '/terms', '/privacy', '/board', '/s/no-cover-share00', '/index.html']) {
       const response = await client.request(path, { headers: PAGE });
-      const hidden = !['/', '/now', '/tools/calculator', '/guide', '/guide/move-from-risu'].includes(path);
+      const hidden = !['/', '/now', '/tools/calculator', '/guide', '/guide/api-key', '/guide/move-from-risu'].includes(path);
       expect([path, response.headers.get('x-robots-tag'), (await response.text()).includes(`<link rel="canonical" href="https://hazelle.app${path}" />`)]).toEqual([path, hidden ? 'noindex' : null, !hidden]);
     }
     expect(await (await client.request('/index.html', { headers: PAGE })).text()).not.toContain('landing');
@@ -80,7 +80,7 @@ describe('the client files', () => {
 
   it('lists the public pages in the sitemap and points robots.txt at it', async () => {
     expect(await (await client.request('/sitemap.xml')).text()).toBe(
-      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url><url><loc>https://hazelle.app/tools/calculator</loc></url><url><loc>https://hazelle.app/guide</loc></url><url><loc>https://hazelle.app/guide/move-from-risu</loc></url></urlset>\n',
+      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url><url><loc>https://hazelle.app/tools/calculator</loc></url><url><loc>https://hazelle.app/guide</loc></url><url><loc>https://hazelle.app/guide/api-key</loc><lastmod>2026-11-06</lastmod></url><url><loc>https://hazelle.app/guide/move-from-risu</loc><lastmod>2026-11-06</lastmod></url></urlset>\n',
     );
     expect(await (await client.request('/robots.txt')).text()).toBe('User-agent: *\nDisallow: /api/\nSitemap: https://hazelle.app/sitemap.xml\n');
   });
@@ -149,13 +149,15 @@ describe('the client files', () => {
     for (const path of ['/now', '/s/no-cover-share00', '/tools/calculator', '/guide', '/guide/move-from-risu']) expect([path, (await client.request(path, { headers: ANY })).status]).toEqual([path, 200]);
   });
 
-  it("writes a guide's words into the page, its steps and links but no pictures", async () => {
-    writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><meta name="description" content="app" /><div id="root"><p class="boot" role="status">불러오는 중…</p></div>');
+  it("writes a guide's words into the page with its pictures, control names and Article", async () => {
+    writeFileSync(join(dir, 'index.html'), '<title>헤이젤</title><meta name="description" content="app" /></head><div id="root"><p class="boot" role="status">불러오는 중…</p></div>');
     const body = await (await client.request('/guide/move-from-risu', { headers: PAGE })).text();
     expect(body).toContain('<title>RisuAI·포켓리스 백업 옮기는 법 · 헤이젤</title>');
-    expect(body).toContain('<li>첫 화면에서 Risu에서 이사를 눌러요.</li>');
+    expect(body).toContain('<li>처음 가져올 때 나오는 안내를 읽고 <b>확인했어요</b>를 눌러요.</li>');
+    expect(body).toContain('<img src="/guide/move-dialog.png" alt="Risu에서 이사 창의 백업 파일 칸" />');
     expect(body).toContain('<a href="/connections/new">');
-    expect(body).not.toContain('<img');
+    expect(body).toContain('"@type":"Article","headline":"RisuAI·포켓리스 백업 옮기는 법","description":"RisuAI와 포켓리스의 캐릭터, 채팅, 페르소나, 프롬프트, 모듈을 백업 파일로 헤이젤에 옮겨요.","dateModified":"2026-11-06"');
+    expect(body).toContain('"@type":"BreadcrumbList"');
     writeFileSync(join(dir, 'index.html'), '<!doctype html>page');
   });
 
