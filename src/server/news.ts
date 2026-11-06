@@ -4,7 +4,7 @@ import type { DatabaseSync } from 'node:sqlite';
 // for silent releases; after publication the board post is the editable record (design §6.15).
 export type ReleaseNews = { version: string; title: string; text: string };
 export const RELEASE_NEWS: ReleaseNews | null = {
-  version: 'v0.6.21',
+  version: 'v0.6.22',
   title: '응답을 받는 동안 채팅 화면이 더 매끄럽게 움직여요',
   text: `## 응답 스트리밍과 이어 쓰기
 - **응답 중 화면 반응**: 긴 응답이나 추론을 받는 동안에도 채팅 화면과 빠른 스크롤 막대가 매끄럽게 움직여요.
