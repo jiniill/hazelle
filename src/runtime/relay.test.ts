@@ -138,7 +138,7 @@ it('reads again from the frame after the last one, not after a ping, when the co
 });
 
 it('reads a call again when its connection goes silent past the pings', async () => {
-  // Only the timers: the frames open through real crypto, which the turns below let finish.
+  // Only the timers: the frames open through real crypto, and the clock moves only once the read after them waits.
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   const turns = async () => { for (let turn = 0; turn < 50; turn++) await new Promise((done) => setImmediate(done)); };
   try {
@@ -146,13 +146,15 @@ it('reads a call again when its connection goes silent past the pings', async ()
     const cancel = vi.fn();
     const sent = [hello, head, await data(2, 'Hello, ')];
     // Never answers after its frames, as a connection dropped without a close.
-    const silent = new Response(new ReadableStream<Uint8Array>({ pull: (body) => (sent.length ? body.enqueue(sent.shift()!) : new Promise<void>(() => {})), cancel }, { highWaterMark: 0 }), { headers: { 'x-stream': 'frames' } });
+    let waits = () => {};
+    const waiting = new Promise<void>((done) => { waits = done; });
+    const silent = new Response(new ReadableStream<Uint8Array>({ pull: (body) => (sent.length ? body.enqueue(sent.shift()!) : (waits(), new Promise<void>(() => {}))), cancel }, { highWaterMark: 0 }), { headers: { 'x-stream': 'frames' } });
     const fetch = vi.fn<(url: string) => Promise<Response>>();
     fetch.mockResolvedValueOnce(silent);
     fetch.mockResolvedValueOnce(framed([hello, await data(3, 'traveler.'), await end(4)]));
     vi.stubGlobal('fetch', fetch);
     const text = stream(call, request, new AbortController().signal).then((response) => (response instanceof Response ? response.text() : null));
-    await turns();
+    await waiting;
     await vi.advanceTimersByTimeAsync(59_999);
     await turns();
     expect(fetch).toHaveBeenCalledOnce();
