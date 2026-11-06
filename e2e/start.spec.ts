@@ -180,6 +180,18 @@ test('the example conversation never moves the page, and the next notch goes on 
   await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(stop + 500);
 });
 
+test('the room lets a visitor without a key open the app', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
+  if (SHOTS) {
+    await page.waitForTimeout(3000);
+    await page.screenshot({ path: `${SHOTS}/room-without-key.png` });
+  }
+  await page.getByRole('button', { name: '키 없이 둘러보기' }).click();
+  await expect(page.getByRole('heading', { name: '비어 있어요', exact: true })).toBeVisible();
+});
+
 test('someone already using the app can walk it again and try it, uncounted, keeping nothing', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '가입 없이 열기' }).click();
@@ -195,6 +207,7 @@ test('someone already using the app can walk it again and try it, uncounted, kee
   const heading = again.getByRole('heading', { level: 1, name: '내 API 키로 바로 시작하는 AI 캐릭터 챗' });
   await expect(heading).toBeVisible();
   await expect(again.getByRole('button', { name: '가입 없이 열기' })).toHaveCount(0);
+  await expect(again.getByRole('button', { name: '키 없이 둘러보기' })).toHaveCount(0);
   await fakeAnthropic(again);
   await again.evaluate(`document.getElementById('trial').scrollIntoView()`);
   await again.getByLabel(/API 키$/).fill(KEY);

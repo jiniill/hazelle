@@ -1,5 +1,8 @@
 // The first visitor's page: the server writes these words for crawlers (static.ts) and the app draws the same words
 // around its live parts (app/start), so what a search engine reads is what a person reads.
+// The one name of the way into the app from a public page.
+export const OPEN_APP = '헤이젤 열기';
+
 export const START_PAGE = {
   title: '헤이젤 · 내 API 키로 웹에서 하는 AI 캐릭터 챗, RisuAI 봇까지',
   // Search results and link previews show this alone, so it stays a whole sentence; index.html carries the same words.
@@ -13,6 +16,8 @@ export const START_PAGE = {
     line: '여기서 연결한 키는 자동 저장돼요.',
     steps: ['API 키 붙여 넣기', '모델 선택', '대화하기'],
     privacy: '키는 이 브라우저에만 저장하고, 제공자에게 바로 보내요.',
+    skip: '키 없이 둘러보기',
+    walkOn: '키가 없어도 아래로 계속',
   },
   features: {
     title: '대화가 길어져도, 봇이 복잡해도',

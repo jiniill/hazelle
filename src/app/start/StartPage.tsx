@@ -1,7 +1,7 @@
 import { Fragment, lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { CONNECTION_TYPES, detect } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
-import { START_AGAIN, START_PAGE } from '../../contracts/start';
+import { OPEN_APP, START_AGAIN, START_PAGE } from '../../contracts/start';
 import { countFirstPage } from '../../runtime/first-page';
 import { LegalNotice } from '../common/LegalNotice';
 import { Beat, Brand, Button, Callout, ChoiceGroup, ExampleTalk, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps, Upcoming, WalkOnHint } from '../ui';
@@ -96,7 +96,7 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
                 />
               </Suspense>
             ) : (
-              <KeyForm refused={refused} privacy={doors ? trial.privacy : START_AGAIN.privacy} onEnter={(type, secret) => { if (doors) countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
+              <KeyForm refused={refused} privacy={doors ? trial.privacy : START_AGAIN.privacy} onSkip={doors ? enter : undefined} onEnter={(type, secret) => { if (doors) countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
             )}
           </PanelBody>
         </Indoors>
@@ -107,14 +107,15 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
           </Stack>
         </Beat>
         <Beat title={finish.title} kind="finish" foot={<LegalNotice />}>
-          <Button size="xl" onClick={enter}>헤이젤 열기</Button>
+          <Button size="xl" onClick={enter}>{OPEN_APP}</Button>
         </Beat>
       </main>
     </div>
   );
 }
 
-function KeyForm({ refused, privacy, onEnter }: { refused: string | null; privacy: string; onEnter: (type: ConnectionType, secret: string) => void }) {
+// onSkip: a first visit's way into the app without a key; the key is never the only way on.
+function KeyForm({ refused, privacy, onSkip, onEnter }: { refused: string | null; privacy: string; onSkip?: () => void; onEnter: (type: ConnectionType, secret: string) => void }) {
   const [picked, setPicked] = useState<string>(OFFERED[0].id);
   const [key, setKey] = useState('');
   const secret = key.trim();
@@ -132,7 +133,11 @@ function KeyForm({ refused, privacy, onEnter }: { refused: string | null; privac
         <ChoiceGroup label="제공자" options={OFFERED.map(({ id, name }) => ({ value: id, label: name }))} value={OFFERED.some(({ id }) => id === type.id) ? type.id : null} empty={type.label} onChange={setPicked} />
         <TextField label={`${type.label} API 키`} kind="key" value={key} onChange={setKey} placeholder={type.keyForm?.placeholder} help={privacy} />
         {refused && <Callout tone="warn" alert>{refused}</Callout>}
-        <div><Button type="submit" disabled={!secret}>모델 선택</Button></div>
+        <Row kind="actions">
+          <Button type="submit" disabled={!secret}>모델 선택</Button>
+          {onSkip && <Button variant="ghost" onClick={onSkip}>{START_PAGE.trial.skip}</Button>}
+        </Row>
+        <WalkOnHint>{START_PAGE.trial.walkOn}</WalkOnHint>
       </Stack>
     </form>
   );
