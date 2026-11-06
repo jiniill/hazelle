@@ -4,15 +4,22 @@ import type { DatabaseSync } from 'node:sqlite';
 // for silent releases; after publication the board post is the editable record (design §6.15).
 export type ReleaseNews = { version: string; title: string; text: string };
 export const RELEASE_NEWS: ReleaseNews | null = {
-  version: 'v0.6.19',
-  title: '에셋 미리보기에서 이전·다음 넘기기를 추가했어요',
-  text: `## 에셋 미리보기 넘기기
-- **이전·다음 버튼**: **에셋**에서 미리보기를 열면 상단의 **이전**·**다음** 버튼으로 창을 닫지 않고 다른 에셋을 이어서 볼 수 있어요.
-- **방향키와 밀어 넘기기**: 좌우 방향키를 누르거나 터치 화면을 옆으로 밀어 이전·다음 에셋으로 넘길 수 있어요.
-- **보이는 순서대로 이동**: 현재 목록이나 검색 결과에 보이는 순서대로 넘어가며, 끝에 닿으면 처음과 끝이 이어져요.
+  version: 'v0.6.20',
+  title: '본문에서 추론 블록 접어 보기를 추가했어요',
+  text: `## 본문에서 추론 접어 보기
+- **본문 제자리에서 접어 보기**: 응답이나 봇 정규식이 만든 추론 블록이 메시지 본문 제자리에 접혀 표시되어, **추론**을 눌러 펼쳐 볼 수 있어요.
+- **접지 않고 보기**: 캐릭터 편집에서 **추론을 본문에 표시**를 켜면 추론 블록을 접지 않고 본문에 보여 줘요.
+- **응답 정보 구분**: **응답 정보**의 추론 항목에는 모델이 보낸 추론 과정만 표시돼요.
+
+## 헤이젤 가이드 개편
+- **API 키 받는 법 추가**: 새로 추가된 **Claude·GPT·Gemini API 키 받는 법** 가이드에서 OpenRouter·OpenAI·Anthropic·Google의 키 발급과 연결 순서를 볼 수 있어요.
+- **목차와 단계별 안내**: **헤이젤 가이드**에서 준비할 것과 단계별 이미지, 자주 묻는 질문을 보고 목차를 눌러 원하는 항목으로 이동할 수 있어요.
+- **백업 이사 안내 보강**: **RisuAI·포켓리스 백업 옮기는 법**에서 백업으로 옮겨지는 항목과 제외되는 항목을 비교해 볼 수 있어요.
 
 ## 그 밖의 개선
-- **삽화 크게 보기 밀어 넘기기**: 채팅에서 여러 버전이 있는 **삽화**를 크게 볼 때도 화면을 옆으로 밀어 다른 버전으로 넘길 수 있어요.`,
+- **첫 화면에서 키 없이 둘러보기**: 처음 방문했을 때 API 키 입력 칸 아래의 **키 없이 둘러보기**를 눌러 키를 넣지 않고 앱을 열 수 있어요.
+- **채팅 맨 아래 여백 확보**: 대화를 끝까지 내렸을 때 마지막 메시지의 버전 넘기기와 도구 줄이 **맨 아래로** 버튼 자리에 가려지지 않아요.
+- **Anthropic 키 페이지 주소 변경**: **Anthropic 연결**의 키 발급 링크가 새 주소인 \`platform.claude.com\`으로 열려요.\`,
 };
 
 // Once per version: a restart finds the post there. Nothing before an operator exists, since the operator writes it.
