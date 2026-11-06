@@ -8,6 +8,7 @@ import { seoulMonthDay } from './seoul';
 const EVENTS: Record<AutoEvent, string> = {
   'app-error': '앱 오류',
   'worker-trouble': '워커 오류',
+  'evaluation-stuck': '처리 작업 멈춤',
   'turn-failed': '응답 실패',
   'memory-failed': '장기 기억 실패',
   'memory-gap': '기억에 없음',

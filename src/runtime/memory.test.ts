@@ -7,6 +7,8 @@ import { memoryId, type Chapter, type MemorySettings } from '../model/memory';
 import { appendUserMessage, editMessage, startChat } from './chat-log';
 import { api } from './api';
 import { setDefaultModel } from './assignment';
+import { autoChat } from './diagnostic-state';
+import { EvaluationStuck } from './evaluation';
 import * as retrieval from './retrieval';
 import { chatMemory } from './memory-read';
 import { editRecord, forgetRecord, removeFact, removeThread, setDefaultMemory, setFact, setThread } from './memory';
@@ -203,6 +205,26 @@ describe('Rememberer', () => {
       await vi.waitFor(() => expect(chatMemory(session.store, chat).records[0]).toMatchObject({ what: 'jin and Luna meet at the pier.' }));
       expect(log).toHaveLength(1);
     }));
+  it("tells a run the evaluation refused under the chat's verdict from one whose own job went silent, under the same bot-stuck", () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const chat = crypto.randomUUID();
+      await server.hold(session.store, chat);
+      await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+      await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'hello' });
+      const failed = () => autoChat(session, chat, null, session.memory.snapshot())?.work.failed;
+      session.store.projections.judge(chat);
+      session.memory.check(chat);
+      await vi.waitFor(() => expect(session.memory.snapshot().failed.get(chat)).toEqual({ kind: 'unsaved', failure: { ok: false, error: 'bot-stuck' }, refused: true }));
+      expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', refused: true, call: null });
+      session.store.projections.clear(chat);
+      const read = vi.spyOn(session.store.evaluation, 'read').mockRejectedValue(new EvaluationStuck('Evaluation worker stuck', true));
+      try {
+        session.memory.retry(chat);
+        await vi.waitFor(() => expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', refused: false, call: null }));
+      } finally { read.mockRestore(); }
+    }));
+
   it('keeps a thread said again as the one thread already open', () =>
     server.withSession(async (session) => {
       await answerable(session);

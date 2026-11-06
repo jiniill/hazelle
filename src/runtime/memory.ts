@@ -15,7 +15,7 @@ import type { Stream } from '../model/stream';
 import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiFailure, ApiResult } from './api';
 import { routeFields } from './connections';
-import { evaluationFailure } from './evaluation';
+import { evaluationFailure, EvaluationRefused } from './evaluation';
 import type { RouteFailure } from './assignment';
 import { gather, generate, receiptOf, resume, unsettled, type Reply } from './generate';
 import type { Session } from './session';
@@ -238,9 +238,16 @@ export type MemoryFailure =
   | { kind: 'tokenizer' }
   | { kind: 'failed'; receipt: Receipt }
   | { kind: 'invalid'; receipt: Receipt; reason: Invalid }
-  | { kind: 'unsaved'; failure: ApiFailure }
+  | { kind: 'unsaved'; failure: ApiFailure; refused?: boolean }
   | { kind: 'embed'; reason: Extract<Indexed, { reason: string }>['reason']; receipt: Receipt | null }
   | RanAway;
+
+// What a run that threw failed as, null for one that was stopped. refused: the evaluation turned its job away under the
+// chat's verdict; a bot-stuck without it is a job of the chat that went silent.
+const thrown = (error: unknown): MemoryFailure | null => {
+  const failure = evaluationFailure(error);
+  return failure.error === 'stopped' ? null : { kind: 'unsaved', failure, refused: error instanceof EvaluationRefused };
+};
 
 // Failures stay session-local and require retry; chapter failures do not block record summaries.
 // Index failures retry on explicit retry/chat open; indexing reports completed/total records.
@@ -364,8 +371,8 @@ export class Rememberer {
       if (failure) return this.change(chat, { failed: { kind: 'unsaved', failure } });
       if (!this.closed) await work();
     } catch (error) {
-      const failure = evaluationFailure(error);
-      if (failure.error !== 'stopped') this.change(chat, { failed: { kind: 'unsaved', failure } });
+      const failed = thrown(error);
+      if (failed) this.change(chat, { failed });
     } finally { lease.release(); }
   }
 
@@ -403,8 +410,7 @@ export class Rememberer {
       const done = await indexRecords(this.session, chat, control.signal, (embedded) => this.change(chat, { indexing: { done: embedded, total } }));
       this.change(chat, { indexing: null, indexFailed: done.ok ? null : 'failure' in done ? { kind: 'unsaved', failure: done.failure } : { kind: 'embed', reason: done.reason, receipt: done.receipt } });
     } catch (error) {
-      const failure = evaluationFailure(error);
-      this.change(chat, { indexing: null, indexFailed: failure.error === 'stopped' ? null : { kind: 'unsaved', failure } });
+      this.change(chat, { indexing: null, indexFailed: thrown(error) });
     } finally { this.aborts.delete(control); }
   }
 
