@@ -27,7 +27,7 @@ import {
   type Route,
 } from './registry';
 import { prepareChat } from './preparation';
-import { ConnectorError, type Connection, type Modality, type Model } from './types';
+import { ConnectorError, replyLimit, type Connection, type Modality, type Model } from './types';
 
 const embedRequest = (...args: Parameters<typeof embedRequests>) => embedRequests(...args)[0]!.request;
 
@@ -187,6 +187,13 @@ describe('catalogs', () => {
     expect(parseCatalog(connection('vercel'), { data: [{ ...bare, tags: undefined, modalities: undefined }] })).toEqual([
       expect.objectContaining({ input: null, output: null, reasoning: null, tools: null }),
     ]);
+  });
+
+  it('reads a Vercel output limit as large as the context window as an unknown reply length, and keeps a smaller one', () => {
+    const [language] = vercelModels.data;
+    const models = parseCatalog(connection('vercel'), { data: [1_000_000, 2_000_000, 128_000].map((max_tokens) => ({ ...language, max_tokens })) })!;
+    expect(models.map(({ contextLength }) => contextLength)).toEqual([1_000_000, 1_000_000, 1_000_000]);
+    expect(models.map((listed) => replyLimit(listed))).toEqual([null, null, 128_000]);
   });
 
   it('reads Anthropic capabilities, with a zero limit as unknown', () => {
@@ -377,6 +384,9 @@ describe('chat requests', () => {
     const later = JSON.parse(prepareChat(anthropic, { model: model({ maxOutput: 64000 }), messages: [...messages, { role: 'assistant', content: '안녕!' }, { role: 'system', content: '기억' }], settings: {} }).request.body!);
     expect(later).toMatchObject({ system: '짧게 답해.', messages: [messages[1], { role: 'assistant', content: '안녕!' }, { role: 'user', content: 'System: 기억' }] });
     expect(() => prepareChat(anthropic, { model: model(), messages, settings: {} }).request).toThrow(ConnectorError);
+    const shared = model({ contextLength: 200_000, maxOutput: 200_000 });
+    expect(() => prepareChat(anthropic, { model: shared, messages, settings: {} }).request).toThrow(new ConnectorError('max-tokens-unknown'));
+    expect(JSON.parse(prepareChat(anthropic, { model: shared, messages, settings: { maxOutput: 4000 } }).request.body!)).toMatchObject({ max_tokens: 4000 });
   });
 
   it('asks both formats for the whole reply when streaming is off, with no stream options', () => {

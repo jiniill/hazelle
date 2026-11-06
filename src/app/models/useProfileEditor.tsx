@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { modelSettings } from '../../connectors/registry';
 import { fit, SERVICE_TIERS, VERBOSITY, WHOLE, type Change, type ModelSettings, type PdfKeep, type Reasoning, type SettingsSchema } from '../../connectors/settings';
-import { entryName, type Starred } from '../../connectors/types';
+import { entryName, replyLimit, type Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
 import { profileUsers, renameProfile, setProfileSettings, withSettings, type ProfileUser } from '../../runtime/profiles';
 import { choices } from '../common/reading';
@@ -85,7 +85,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     const { label, help, unit, unset } = NUMBER[field];
     const value = shown[field];
     // null: the catalog gave no number, so the field keeps naming where the value comes from.
-    const known = (field === 'maxOutput' ? model?.maxOutput : field === 'context' ? model?.contextLength : null) ?? undefined;
+    const known = (field === 'maxOutput' ? model && replyLimit(model) : field === 'context' ? model?.contextLength : null) ?? undefined;
     const draft = typedText(drafts[field], (text) => readNumber(text, field), value, (number) => (number === undefined ? '' : String(number)));
     const typed = draft.trim() === '' ? null : readTyped(draft, whole(field));
     return (

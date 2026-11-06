@@ -46,6 +46,7 @@ export type Model = {
   input: Modality[] | null;
   output: Modality[] | null;
   contextLength: number | null;
+  // As the catalog states it; read it through replyLimit.
   maxOutput: number | null;
   reasoning: boolean | null;
   tools: boolean | null;
@@ -111,6 +112,10 @@ export type ToolCall = { id: string; name: string; arguments: string; echo?: unk
 export type ToolResult = { id: string; name: string; text: string };
 // type: the media type; data: the bytes as base64.
 export type InputPicture = { type: string; data: string };
+// A catalog output limit as large as the context window says only that the reply shares the window: the reply length
+// is unknown. Ruled where the limit is read, not where a catalog is parsed, so a stored snapshot follows it too.
+export const replyLimit = ({ contextLength, maxOutput }: Pick<Model, 'contextLength' | 'maxOutput'>): number | null =>
+  maxOutput !== null && contextLength !== null && maxOutput >= contextLength ? null : maxOutput;
 export const seesPictures = (model: Pick<Starred, 'input' | 'pictures'>) => (model.input === null ? model.pictures === true : model.input.includes('image'));
 export const carriesPictures = (message: ChatMessage) => (message.pictures?.length ?? 0) > 0;
 export type ChatRequest = { model: Model; messages: ChatMessage[]; settings: ModelSettings; tools?: ToolDef[] };

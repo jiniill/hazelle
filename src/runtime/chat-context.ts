@@ -1,7 +1,7 @@
 import type { TokenLimits } from '../model/token-calibration';
 import { modelSettings } from '../connectors/registry';
 import { fit, type ModelSettings } from '../connectors/settings';
-import type { Starred } from '../connectors/types';
+import { replyLimit, type Starred } from '../connectors/types';
 import type { Display } from '../engine/display';
 import type { Card, Pack } from '../engine/import/types';
 import type { LoreScan } from '../engine/lorebook/activate';
@@ -212,7 +212,7 @@ export function sentSettings(store: Reader['store'], { connection, model }: Rout
 }
 
 const contextOf = (model: Starred, settings: ModelSettings | null) => settings?.context ?? model.contextLength;
-const replyOf = (model: Starred, settings: ModelSettings | null) => settings?.maxOutput ?? model.maxOutput;
+const replyOf = (model: Starred, settings: ModelSettings | null) => settings?.maxOutput ?? replyLimit(model);
 
 function botModel(route: Route, settings: ModelSettings | null): ChatScope['model'] {
   const { connection, model } = route;
