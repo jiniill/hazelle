@@ -239,7 +239,8 @@ export const chatCompletions: Codec = {
     return { state: 'completed' };
   },
 
-  truncated: (finishReason) => finishReason === 'length',
+  // model_length: Mistral's context ran out. insufficient_system_resource: DeepSeek stopped the reply short.
+  truncated: (finishReason) => finishReason === 'length' || finishReason === 'model_length' || finishReason === 'insufficient_system_resource',
   refused: (finishReason) => finishReason === 'content_filter',
 
   usage(raw) {

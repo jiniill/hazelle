@@ -103,6 +103,13 @@ describe('chat completions stream', () => {
     expect(outcome).toMatchObject({ state: 'cut', cut: 'length', finishReason: 'length', usage: null, cost: null });
   });
 
+  it('marks a reply its provider stopped short under another name as cut', async () => {
+    for (const reason of ['model_length', 'insufficient_system_resource']) {
+      const { outcome } = await decode(openRouter, body(sse(chunk({ content: '길게 이어지다' }), chunk({}, reason), '[DONE]')));
+      expect(outcome).toMatchObject({ state: 'cut', cut: 'length', finishReason: reason });
+    }
+  });
+
   it('keeps the text a content filter stopped as a refused cut, and fails a filter that let nothing through', async () => {
     const kept = await decode(openRouter, body(sse(chunk({ content: '여기까지' }), chunk({}, 'content_filter'), '[DONE]')));
     expect(kept.text).toBe('여기까지');
@@ -185,6 +192,8 @@ describe('anthropic messages stream', () => {
   it('marks max_tokens as cut, a refusal after text as a refused cut, and an error event as failed', async () => {
     const truncated = sse(start, { type: 'message_delta', delta: { stop_reason: 'max_tokens' }, usage: { output_tokens: 9 } }, { type: 'message_stop' });
     expect((await decode(anthropic, body(truncated))).outcome).toMatchObject({ state: 'cut', cut: 'length' });
+    const windowed = sse(start, { type: 'message_delta', delta: { stop_reason: 'model_context_window_exceeded' }, usage: { output_tokens: 9 } }, { type: 'message_stop' });
+    expect((await decode(anthropic, body(windowed))).outcome).toMatchObject({ state: 'cut', cut: 'length' });
     const refused = sse(start, { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '여기까지' } }, { type: 'message_delta', delta: { stop_reason: 'refusal' }, usage: { output_tokens: 3 } }, { type: 'message_stop' });
     expect((await decode(anthropic, body(refused))).outcome).toMatchObject({ state: 'cut', cut: 'refused', finishReason: 'refusal' });
     const failed = sse(start, { type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } });

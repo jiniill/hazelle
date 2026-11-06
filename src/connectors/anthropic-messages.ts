@@ -259,7 +259,8 @@ export const anthropicMessages: Codec = {
     return { state: 'completed' };
   },
 
-  truncated: (finishReason) => finishReason === 'max_tokens',
+  // model_context_window_exceeded: the context ran out before max_tokens did.
+  truncated: (finishReason) => finishReason === 'max_tokens' || finishReason === 'model_context_window_exceeded',
   refused: (finishReason) => finishReason === 'refusal',
 
   // input_tokens counts only the uncached part; cache reads and writes are added to get what was sent.
