@@ -19,7 +19,7 @@ export const RELEASE_NEWS: ReleaseNews | null = {
 ## 그 밖의 개선
 - **첫 화면에서 키 없이 둘러보기**: 처음 방문했을 때 API 키 입력 칸 아래의 **키 없이 둘러보기**를 눌러 키를 넣지 않고 앱을 열 수 있어요.
 - **채팅 맨 아래 여백 확보**: 대화를 끝까지 내렸을 때 마지막 메시지의 버전 넘기기와 도구 줄이 **맨 아래로** 버튼 자리에 가려지지 않아요.
-- **Anthropic 키 페이지 주소 변경**: **Anthropic 연결**의 키 발급 링크가 새 주소인 \`platform.claude.com\`으로 열려요.\`,
+- **Anthropic 키 페이지 주소 변경**: **Anthropic 연결**의 키 발급 링크가 새 주소인 \`platform.claude.com\`으로 열려요.`,
 };
 
 // Once per version: a restart finds the post there. Nothing before an operator exists, since the operator writes it.
