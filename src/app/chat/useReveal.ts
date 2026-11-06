@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // Smooth provider/display bursts over the mean interarrival wait, intentionally lagging by about one burst.
 const FIRST_GAP = 100;
@@ -20,6 +20,12 @@ export function pace(current: Pace, total: number, now: number): Pace {
   return { ...current, shown: Math.min(total, current.shown + current.rate * (now - current.frame)), frame: now };
 }
 
+// A step draws the whole message again, which on a long one and a slow device takes longer than a frame: the next
+// step waits until REST times what the last took has passed, so the page has the rest of that time for everything else.
+const REST = 2;
+// at: the frame the last step was asked in; took: how long it took to draw, both in ms.
+export const rested = ({ at, took }: { at: number; took: number }, now: number) => now - at >= REST * took;
+
 // Start at existing live text so continuations do not retype history. Finish pacing after generation ends;
 // never snap in the final burst.
 export function useReveal(version: string, text: string, live: boolean): { text: string; revealing: boolean } {
@@ -30,11 +36,24 @@ export function useReveal(version: string, text: string, live: boolean): { text:
   if (live && !own) setState({ version, pace: startPace(text.length, performance.now()) });
   else if (!live && own && own.pace.shown >= text.length) setState(null);
   const revealing = own !== null && own.pace.shown < text.length;
+  // asked: a step waits to be drawn; from: when its render began, null before that. A render the text's arrival asks
+  // for is no step's, and is not timed.
+  const step = useRef<{ at: number; took: number; asked: boolean; from: number | null }>({ at: 0, took: 0, asked: false, from: null });
+  if (step.current.asked) step.current.from ??= performance.now();
+
+  // After the story's own layout effect, a child's, which draws the step.
+  useLayoutEffect(() => {
+    const { at, from } = step.current;
+    if (from !== null) step.current = { at, took: performance.now() - from, asked: false, from: null };
+  });
 
   useEffect(() => {
     if (!revealing) return;
     let frame = requestAnimationFrame(function tick(now) {
-      setState((current) => current && { ...current, pace: pace(current.pace, length.current, now) });
+      if (rested(step.current, now)) {
+        step.current = { ...step.current, at: now, asked: true };
+        setState((current) => current && { ...current, pace: pace(current.pace, length.current, now) });
+      }
       frame = requestAnimationFrame(tick);
     });
     return () => cancelAnimationFrame(frame);

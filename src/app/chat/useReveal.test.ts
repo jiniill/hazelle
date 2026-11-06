@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pace, revealCut, startPace } from './useReveal';
+import { pace, rested, revealCut, startPace } from './useReveal';
 
 describe('pace', () => {
   it('spreads each arrival over the measured wait for the next one, and ends one wait after the last', () => {
@@ -20,6 +20,14 @@ describe('pace', () => {
     frames(now + 120);
     expect(current.shown).toBe(2000);
     expect(pace(current, 1500, now).shown).toBe(1500);
+  });
+});
+
+describe('rested', () => {
+  it('lets the next frame follow a step drawn quickly, and holds the next step back after a slow one', () => {
+    expect(rested({ at: 100, took: 6 }, 116)).toBe(true);
+    expect(rested({ at: 100, took: 12 }, 116)).toBe(false);
+    expect(rested({ at: 100, took: 12 }, 133)).toBe(true);
   });
 });
 
