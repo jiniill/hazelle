@@ -46,7 +46,7 @@ export const anthropic: ConnectionType = {
   group: 'maker',
   major: true,
   description: 'Anthropic API로 Claude를 써요.',
-  keyPage: 'https://console.anthropic.com/settings/keys',
+  keyPage: 'https://platform.claude.com/settings/keys',
   endpoint: { baseUrl: 'https://api.anthropic.com/v1', protocol: 'anthropic-messages' },
   detect: { key: /^sk-ant-/, host: 'api.anthropic.com' },
   // Every active model takes batches, billed at half of all usage, cache reads and writes too.
