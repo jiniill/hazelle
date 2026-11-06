@@ -23,7 +23,9 @@ RUN ./node_modules/.bin/vite build \
  && cp -r node_modules/undici /out/node_modules/
 
 FROM node:24-alpine
-ENV NODE_ENV=production HAZELLE_DATA=/data PORT=8080 HAZELLE_CONTAINER=1
+# libuv's pool (4 by default) is shared by DNS lookups, each stream frame's sealing, picture reads and backup gzip:
+# a few lookups waiting on a slow resolver must not hold every live reply.
+ENV NODE_ENV=production HAZELLE_DATA=/data PORT=8080 HAZELLE_CONTAINER=1 UV_THREADPOOL_SIZE=16
 # node.ts finds dist/client relative to the working directory and migrations/ two levels above dist/server.
 WORKDIR /app
 COPY --from=build /src/package.json ./

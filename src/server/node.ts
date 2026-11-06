@@ -94,6 +94,15 @@ try {
 }
 
 const log = (event: string, detail: Record<string, unknown> = {}) => console.log(JSON.stringify({ at: new Date().toISOString(), event, ...detail }));
+// A timer or a worker's message has no request to answer for a throw, which would end the process: a write that fails
+// there (a full disk) is logged, and the requests that can still be served are.
+const logged = (event: string, task: () => void) => {
+  try {
+    task();
+  } catch (error) {
+    log(event, { error: String(error) });
+  }
+};
 
 mkdirSync(dataDir, { recursive: true });
 
@@ -116,7 +125,7 @@ const visits = openVisits(raw);
 let dayClose: ReturnType<typeof setTimeout>;
 const scheduleDayClose = () => {
   dayClose = setTimeout(() => {
-    visits.close();
+    logged('visit day not closed', () => visits.close());
     scheduleDayClose();
   }, visitDay(Date.now()) + DAY_MS - Date.now());
   dayClose.unref();
@@ -184,7 +193,7 @@ const frontend = new Worker(new URL(import.meta.url.endsWith('.ts') ? './fronten
 frontend.on('error', (error) => { log('frontend failed', { error: String(error) }); process.exit(1); });
 frontend.on('exit', (code) => { if (!draining) { log('frontend stopped', { code }); process.exit(1); } });
 frontend.on('message', (message: FrontendMessage) => {
-  if (typeof message !== 'string') visits.page(message);
+  if (typeof message !== 'string') logged('visit not counted', () => visits.page(message));
 });
 const frontendClosed = new Promise<void>((resolve) => frontend.on('message', (message: FrontendMessage) => { if (message === 'closed') resolve(); }));
 await once(frontend, 'message');
@@ -211,7 +220,7 @@ const timers = [
   }, 10_000),
   setInterval(hourly, HOUR_MS),
   setInterval(() => {
-    services.stores.evictIdle();
+    logged('idle stores not evicted', () => services.stores.evictIdle());
     limits.calls.evict();
     limits.botCalls.evict();
     for (const limit of Object.values(limits.visitors)) limit.evict();
