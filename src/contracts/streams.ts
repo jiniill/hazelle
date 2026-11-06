@@ -5,6 +5,10 @@ export const HEAD = 1;
 export const DATA = 2;
 export const END = 3;
 export const PING = 4;
+// The box pings a reader it has nothing for this often, before Cloudflare's 100 s and mobile carriers' 30–60 s idle
+// timeouts, a provider thinking before its first output included. A reader that hears nothing for much longer has a
+// dead connection.
+export const PING_MS = 25 * 1000;
 // Before a try is sent again (Retry); its body is empty. It comes only before head: past head the reply is the reader's.
 export const WAIT = 5;
 

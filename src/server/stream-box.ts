@@ -1,5 +1,5 @@
 import { RELAY_HEADER, type ServerError } from '../contracts/http';
-import { HELLO, HEAD, DATA, END, PING, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
+import { HELLO, HEAD, DATA, END, PING, PING_MS, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
 import { DAY_MS, isRecord } from './http';
 import type { RelayAllowance } from './limits';
 import { forward, RelayTrafficLimit, type Upstream } from './relay';
@@ -34,8 +34,6 @@ const LIMIT_BYTES = 32 * 1024 * 1024;
 const PAGE = 4;
 // Whatever no device came back for is dropped this long after the call started.
 const KEEP_MS = DAY_MS;
-// Ping idle readers before Cloudflare's 100 s/mobile 30–60 s timeouts, including provider thinking before first output.
-const PING_MS = 25 * 1000;
 
 const P256 = { name: 'ECDH', namedCurve: 'P-256' } as const;
 // Named through crypto itself, so this module reads the same under the server's Node types and the DOM types of tests and e2e.

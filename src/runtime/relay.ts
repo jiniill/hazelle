@@ -3,7 +3,7 @@ import type { ApiResult } from './api';
 import type { PreparedChat } from '../connectors/preparation';
 import type { CallCalibration, InputMeasurement, TokenFit } from '../model/token-calibration';
 import { BOT_HEADER, RELAY_HEADER } from '../contracts/http';
-import { HEAD, DATA, END, PING, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
+import { HEAD, DATA, END, PING, PING_MS, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
 import { providerCode, providerMessage } from '../connectors/errors';
 import { isRecord } from '../connectors/values';
 import type { ConnectionType, HttpRequest } from '../connectors/types';
@@ -342,9 +342,14 @@ async function* framesOf(id: string, first: ReadableStream<Uint8Array>, signal: 
   }
 }
 
+// Two pings missed: the connection died without saying so (a sleeping device, a changed network), and its read would
+// never end. Read as a broken body, so framesOf reaches the call again.
+const SILENT_MS = 2 * PING_MS + 10_000;
+
 async function* split(body: ReadableStream<Uint8Array>) {
   const reader = body.getReader();
   let buffer = new Uint8Array(0);
+  let silent: ReturnType<typeof setTimeout> | undefined;
   try {
     for (;;) {
       while (buffer.byteLength >= 4) {
@@ -354,7 +359,11 @@ async function* split(body: ReadableStream<Uint8Array>) {
         yield { type: view.getUint8(4), seq: view.getUint32(5), body: buffer.slice(9, 4 + length) };
         buffer = buffer.slice(4 + length);
       }
-      const { done, value } = await reader.read();
+      const { done, value } = await Promise.race([
+        reader.read(),
+        new Promise<never>((_, fail) => { silent = setTimeout(() => fail(new Error('The stream went silent.')), SILENT_MS); }),
+      ]);
+      clearTimeout(silent);
       if (done) return;
       const joined = new Uint8Array(buffer.byteLength + value.byteLength);
       joined.set(buffer);
@@ -362,6 +371,7 @@ async function* split(body: ReadableStream<Uint8Array>) {
       buffer = joined;
     }
   } finally {
+    clearTimeout(silent);
     void discardBody(reader);
   }
 }

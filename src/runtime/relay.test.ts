@@ -137,6 +137,32 @@ it('reads again from the frame after the last one, not after a ping, when the co
   expect(fetch.mock.calls[1]![0]).toBe(`/api/streams/${call.id}?from=3`);
 });
 
+it('reads a call again when its connection goes silent past the pings', async () => {
+  // Only the timers: the frames open through real crypto, which the turns below let finish.
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  const turns = async () => { for (let turn = 0; turn < 50; turn++) await new Promise((done) => setImmediate(done)); };
+  try {
+    const { call, hello, head, data, end } = await sealedCall();
+    const cancel = vi.fn();
+    const sent = [hello, head, await data(2, 'Hello, ')];
+    // Never answers after its frames, as a connection dropped without a close.
+    const silent = new Response(new ReadableStream<Uint8Array>({ pull: (body) => (sent.length ? body.enqueue(sent.shift()!) : new Promise<void>(() => {})), cancel }, { highWaterMark: 0 }), { headers: { 'x-stream': 'frames' } });
+    const fetch = vi.fn<(url: string) => Promise<Response>>();
+    fetch.mockResolvedValueOnce(silent);
+    fetch.mockResolvedValueOnce(framed([hello, await data(3, 'traveler.'), await end(4)]));
+    vi.stubGlobal('fetch', fetch);
+    const text = stream(call, request, new AbortController().signal).then((response) => (response instanceof Response ? response.text() : null));
+    await turns();
+    await vi.advanceTimersByTimeAsync(59_999);
+    await turns();
+    expect(fetch).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await text).toBe('Hello, traveler.');
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls[1]![0]).toBe(`/api/streams/${call.id}?from=3`);
+  } finally { vi.useRealTimers(); }
+});
+
 it('ends reconnects at a permanent account refusal', async () => {
   const fetch = vi.fn(async () => Response.json({ error: 'account-mismatch' }, { status: 409 }));
   vi.stubGlobal('fetch', fetch);
