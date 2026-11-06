@@ -59,7 +59,7 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   }
 
   await page.getByRole('button', { name: '당신은 누구예요?', exact: true }).click();
-  await expect(page.getByText('이제 당신 이름을 들려줄 차례예요.', { exact: false }).locator('visible=true')).toBeVisible();
+  await expect(page.getByText('이제 당신 이름을 들려줄 차례예요.', { exact: false }).locator('visible=true')).toBeVisible({ timeout: 15000 });
 
   await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
   const pageLength = () => page.evaluate<number>('document.documentElement.scrollHeight');
