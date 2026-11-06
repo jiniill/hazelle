@@ -198,6 +198,7 @@ test('a new account imports a card, chats through the fake provider and finds th
     expect(cover!.y).toBeGreaterThanOrEqual(message!.y);
     expect(cover!.y + cover!.height).toBeLessThanOrEqual(message!.y + message!.height);
     await expect(greeting.locator('#outside')).toHaveCount(0);
+    await expect(greeting.locator('#marked')).not.toHaveAttribute('data-picture');
     await expect(greeting.locator('form')).toHaveCount(0);
     await expect(greeting.locator('#field')).toHaveCount(1);
     await expect(greeting.locator('#out')).toHaveAttribute('rel', 'noopener noreferrer');

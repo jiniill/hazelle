@@ -46,6 +46,8 @@ export const HOSTILE = {
           '<form action="https://example.com/post"><input id="field"></form>',
           '<a id="out" href="https://example.com">out</a> <a id="js" href="javascript:window.ran = 1">js</a>',
           '<div id="tone" class="x-risu-tone" style="background: url(https://example.com/b.png)">tone</div>',
+          // The kit's own mark on a line whose picture is taken out.
+          '<div id="marked" data-picture="0"><img src="https://example.com/c.png"></div>',
           '{{button::누르기::go}}',
           '',
           '*nods* "hello"',

@@ -78,11 +78,12 @@ export const setStylesAside = (html: string) => html.replace(TAG, (tag) => tag.r
 // No forms (page CSP has no form-action restriction) or popover/command (top layer escapes containment).
 // Allow MathML semantics/annotation so DOMPurify does not unwrap TeX beside rendered formulas.
 // Add blob: to URL parsing; sanitize later restricts to app-owned sources and web links.
+// The kit's own marks are forbidden: one a bot wrote would stand where the code below reads what it set itself.
 const CONFIG = {
   RETURN_DOM_FRAGMENT: true as const,
   ADD_TAGS: ['semantics', 'annotation'],
   FORBID_TAGS: ['form', 'style'],
-  FORBID_ATTR: ['style', 'popover', 'popovertarget', 'popovertargetaction', 'command', 'commandfor'],
+  FORBID_ATTR: ['style', 'popover', 'popovertarget', 'popovertargetaction', 'command', 'commandfor', PICTURE, OPEN, HOVER, WIDE, VEILED, COVER, COPY],
   ADD_ATTR: ['risu-btn', 'risu-trigger', 'risu-id', 'risu-mark'],
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|blob):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 };
