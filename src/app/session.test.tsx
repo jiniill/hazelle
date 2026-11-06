@@ -12,7 +12,7 @@ import type { Turn } from '../runtime/talk';
 import * as display from '../runtime/chat-context';
 import { randomBytes } from '../vault/aead';
 import { AssetUrls } from '../runtime/assets';
-import { SessionProvider, useAssetUrl, useChatDisplay } from './session';
+import { SessionProvider, useAssetUrl, useChatDisplay, useReplying } from './session';
 import { probeRoot } from './ui/probe';
 
 const facts = new AccountFacts({ suspended: false, state: 'active', storage: { bytes: 0, bytesCap: null, fileBytes: 0, fileBytesCap: null }, unreadNotices: 0, unreadBoard: 0 });
@@ -72,6 +72,40 @@ it('C: composer and panel re-renders skip display, while streaming recomputes wi
     read.close();
     lease.release();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});
+
+it('hands a chat its turn\'s reply, and renders it once for all the chunks of its text', async () => {
+  let turn: Turn | null = null;
+  const listeners = new Set<() => void>();
+  const talk = { snapshot: (id: string) => (turn?.chat === id ? turn : null), subscribe: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener); } };
+  const session = { store: {}, talk } as unknown as Session;
+  let renders = 0;
+  let replying: Turn['reply'] | null = null;
+  function Probe() {
+    renders += 1;
+    replying = useReplying('chat');
+    return null;
+  }
+  const root = probeRoot();
+  const tell = (next: Turn | null) => act(() => {
+    turn = next;
+    for (const listener of listeners) listener();
+  });
+  try {
+    await act(() => root.render(<SessionProvider session={session} account={{ admin: false, localProviders: [], facts, guest: null, onLock() {}, onLogout: async () => null }}><Probe /></SessionProvider>));
+    expect(replying).toBeNull();
+    const reply = { id: 'reply', message: null, replaces: null, continues: null };
+    await tell({ chat: 'chat', said: null, reply, text: 'one', reasoning: '' });
+    const drawn = renders;
+    await tell({ chat: 'chat', said: null, reply, text: 'one two', reasoning: '' });
+    expect(replying).toBe(reply);
+    expect(renders).toBe(drawn);
+    await tell(null);
+    expect(replying).toBeNull();
+  } finally {
+    await act(() => root.unmount());
     vi.unstubAllGlobals();
   }
 });

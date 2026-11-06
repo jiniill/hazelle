@@ -28,7 +28,7 @@ import { NO_PERSONA_SLOT } from '../common/prompt-words';
 import { describeUnused } from '../common/unused';
 import { useCopy } from '../common/useCopy';
 import { LORE_BUDGET_LABEL } from '../common/words';
-import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSaves, useSession, useToolFrames, useTurn } from '../session';
+import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSaves, useSession, useToolFrames, useReplying } from '../session';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
 import { useChatEdits } from './ChatEdits';
@@ -69,7 +69,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const session = useSession();
   const { store, talk, drafts } = session;
   const saves = useSaves();
-  const turn = useTurn(chatId);
+  const replying = useReplying(chatId);
   const toast = useToast();
   const edits = useChatEdits();
   const copy = useCopy();
@@ -127,7 +127,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const frames = useToolFrames();
   const messageTools = useMemo(() => toolActions(tools, session.tools.actions), [tools, frames]);
   const composerTools = useMemo(() => toolComposer(tools), [tools]);
-  const busy = turn !== null;
+  const busy = replying !== null;
   const last = messages.at(-1);
   const answerable = id !== null && last !== undefined;
   // A cost still 확인 중 after a reload is looked up again wherever the usage line shows it, as ChatInfo does for its own.
@@ -139,8 +139,8 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     }
   }, [id, usageShown, messages]);
 
-  const replyTarget = busy ? (turn.reply.message ?? turn.reply.id) : null;
-  const anchor = busy && !turn.reply.continues ? anchorOf(messages, turn.reply.message ?? turn.reply.id) : null;
+  const replyTarget = replying ? (replying.message ?? replying.id) : null;
+  const anchor = replying && !replying.continues ? anchorOf(messages, replyTarget!) : null;
 
   const draft = useDraft(id, chat.character);
   const { actions: attachActions, ...attaching } = useChatAttachments(id, draft.key, chat, route);

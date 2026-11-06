@@ -283,9 +283,11 @@ export function useChatDisplay(id: string, opening: Opening, screen: ChatScope['
   return useMemo(() => ({ ...snapshot, retry: () => void model.refresh(), retryRegex: () => model.retryRegex() }), [snapshot, model]);
 }
 
-export function useTurn(chat: string): Turn | null {
+// The reply the chat's turn is writing, null with no turn. Not the turn: that is a new one with every chunk of its
+// text, and a screen that read it would render again for each.
+export function useReplying(chat: string): Turn['reply'] | null {
   const { talk } = useSession();
-  return useSyncExternalStore(talk.subscribe, () => talk.snapshot(chat));
+  return useSyncExternalStore(talk.subscribe, () => talk.snapshot(chat)?.reply ?? null);
 }
 
 export function useWritingChats(): ReadonlySet<string> {
