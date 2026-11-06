@@ -85,7 +85,7 @@ function failureFacts(failure: MemoryFailure | undefined): AutoFailure | null {
   if (!failure) return null;
   const reason = failure.kind === 'unsaved' ? failure.failure.error : 'reason' in failure ? failure.reason : null;
   const receipt = 'receipt' in failure ? failure.receipt : null;
-  return { kind: failure.kind, reason: reason && closedWord(reason), call: receipt && callFacts(receipt) };
+  return { kind: failure.kind, reason: reason && closedWord(reason), refused: failure.kind === 'unsaved' && failure.refused === true, call: receipt && callFacts(receipt) };
 }
 
 export function turnFacts(failure: TurnFailure): AutoChat['turn'] {

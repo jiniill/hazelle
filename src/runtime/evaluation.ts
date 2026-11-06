@@ -1,3 +1,4 @@
+import type { AutoJob, EvaluationAsker } from '../contracts/auto-diagnosis';
 import type { CacheComparison, CacheDiagnosis } from '../model/cache';
 import { Runaway } from '../engine/cbs/evaluate';
 import type { DisplayPatch } from '../engine/display';
@@ -14,11 +15,16 @@ import workerUrl from './evaluation-worker?worker&url';
 
 export class EvaluationStopped extends Error {}
 export class EvaluationFailed extends Error {}
-// Stuck means one started job exceeded STUCK_MS without progress, or a passive job was gated by that verdict.
-// regex records whether retrying without bot regex may recover.
+// Stuck means one started job exceeded STUCK_MS without progress, or a passive job was gated by that verdict, which
+// is Refused. regex records whether retrying without bot regex may recover.
 export class EvaluationStuck extends EvaluationFailed {
   constructor(message: string, readonly regex: boolean) {
     super(message);
+  }
+}
+export class EvaluationRefused extends EvaluationStuck {
+  constructor() {
+    super('refused under a verdict', false);
   }
 }
 
@@ -65,7 +71,7 @@ const GATES = {
   tool: 'press',
   export: 'press',
   trial: 'press',
-} as const;
+} as const satisfies Record<EvaluationAsker, 'display' | 'passive' | 'press'>;
 type Asker = keyof typeof GATES;
 // One job per caller/chat lane: replacement cancels the prior job. Retain history for changed-tail transport.
 export type Lane<A extends Asker = Asker> = { asker: A; chat: string; tool?: string };
@@ -75,17 +81,26 @@ type LooseJob =
   | { kind: 'patch'; owner: string; revision: number; generation: number; items: LuaResult[] }
   | { kind: 'count'; texts: string[] }
   | { kind: 'sample'; script: Omit<RegexScript, 'id'>; text: string };
-type Work = { key: string; on: { chat: string; gate: (typeof GATES)[Asker] } | null; scope: ChatScope | null; regex: boolean; job: EvaluationJob | LooseJob; resolve: (result: EvaluationResult) => void; reject: (error: Error) => void; stop: () => void; signal?: AbortSignal };
+type Work = { key: string; on: Lane | null; scope: ChatScope | null; regex: boolean; job: EvaluationJob | LooseJob; resolve: (result: EvaluationResult) => void; reject: (error: Error) => void; stop: () => void; signal?: AbortSignal };
 
 const keyOf = ({ asker, chat, tool }: Lane) => `${asker}:${chat}${tool === undefined ? '' : `:${tool}`}`;
-const onChat = ({ asker, chat }: Lane): Work['on'] => ({ chat, gate: GATES[asker] });
 const bare = (scope: ChatScope): ChatScope => ({ ...scope, packs: scope.packs.map((pack) => ({ ...pack, regex: [] })) });
+// 자동 진단's read of a job that went silent: its sizes and closed words, nothing a chat or a bot wrote or is named.
+const jobFacts = ({ on, scope, regex }: Work, jobs: number, ran: number): AutoJob => ({
+  asker: on?.asker ?? null,
+  regex,
+  scope: scope && { regex: scope.packs.reduce((sum, pack) => sum + pack.regex.length, 0), messages: scope.messages.length, chars: scope.messages.reduce((sum, { text }) => sum + text.length, 0), lore: scope.lore.length },
+  jobs,
+  ran,
+});
 
 export class Evaluation {
   private worker: Worker | null = null;
   private warming: ReturnType<typeof setTimeout> | null = null;
   private warmed: Worker | null = null;
-  private active: { id: number; work: Work; started: boolean } | null = null;
+  // started: when its pass began, null before. answered: the jobs this worker has answered.
+  private active: { id: number; work: Work; started: number | null } | null = null;
+  private answered = 0;
   private readonly waiting = new Map<string, Work>();
   private readonly histories = new Map<string, ChatScope['messages']>();
   private readonly heart = new Heartbeat(() => this.worker?.postMessage({ ping: true } satisfies EvaluationDown), () => this.silent());
@@ -95,81 +110,81 @@ export class Evaluation {
   constructor(private readonly verdicts: Verdicts) {}
 
   display(lane: Lane<'projection' | 'screen' | 'headless'>, scope: ChatScope, take: ReadonlySet<number>, signal?: AbortSignal, lua?: Extract<EvaluationJob, { kind: 'display' }>['lua']): Promise<DisplayEvaluation> {
-    return this.run(keyOf(lane), onChat(lane), scope, { kind: 'display', take, ...(lua && { lua }) }, signal) as Promise<DisplayEvaluation>;
+    return this.run(keyOf(lane), lane, scope, { kind: 'display', take, ...(lua && { lua }) }, signal) as Promise<DisplayEvaluation>;
   }
 
   patch(lane: Lane<'screen'>, revision: number, generation: number, items: LuaResult[], signal?: AbortSignal): Promise<DisplayPatch | null> {
-    return this.run(`patch:${keyOf(lane)}`, onChat(lane), null, { kind: 'patch', owner: keyOf(lane), revision, generation, items }, signal) as Promise<DisplayPatch | null>;
+    return this.run(`patch:${keyOf(lane)}`, lane, null, { kind: 'patch', owner: keyOf(lane), revision, generation, items }, signal) as Promise<DisplayPatch | null>;
   }
 
   prompt(lane: Lane<'send' | 'forecast' | 'memory' | 'view'>, input: Omit<PromptInput, 'countTokens'>, signal?: AbortSignal): Promise<EvaluatedPrompt> {
     const { scope, ...rest } = input;
-    return this.run(keyOf(lane), onChat(lane), scope, { kind: 'prompt', input: rest }, signal) as Promise<EvaluatedPrompt>;
+    return this.run(keyOf(lane), lane, scope, { kind: 'prompt', input: rest }, signal) as Promise<EvaluatedPrompt>;
   }
 
   cacheDiagnosis(chat: string, scope: ChatScope, input: CacheComparison, signal?: AbortSignal): Promise<CacheDiagnosis> {
-    return this.once('cache-diagnosis', onChat({ asker: 'cache-diagnosis', chat }), scope, { kind: 'cache-diagnosis', input }, signal) as Promise<CacheDiagnosis>;
+    return this.once('cache-diagnosis', { asker: 'cache-diagnosis', chat }, scope, { kind: 'cache-diagnosis', input }, signal) as Promise<CacheDiagnosis>;
   }
 
   rewrite(lane: Lane<'send'>, scope: ChatScope, input: Omit<Extract<EvaluationJob, { kind: 'rewrite' }>, 'kind'>, signal?: AbortSignal): Promise<EvaluatedPrompt> {
-    return this.run(keyOf(lane), onChat(lane), scope, { kind: 'rewrite', ...input }, signal) as Promise<EvaluatedPrompt>;
+    return this.run(keyOf(lane), lane, scope, { kind: 'rewrite', ...input }, signal) as Promise<EvaluatedPrompt>;
   }
 
   // On the send's own lane, after its rewrite: the worker holds the turn's history already.
   preread(lane: Lane<'send'>, input: Omit<PrereadInput, 'countTokens'>, signal?: AbortSignal): Promise<Counted<ReturnType<typeof assemblePreread>>> {
     const { scope, ...rest } = input;
-    return this.run(keyOf(lane), onChat(lane), scope, { kind: 'preread', input: rest }, signal) as Promise<Counted<ReturnType<typeof assemblePreread>>>;
+    return this.run(keyOf(lane), lane, scope, { kind: 'preread', input: rest }, signal) as Promise<Counted<ReturnType<typeof assemblePreread>>>;
   }
 
   memory(lane: Lane<'memory'>, input: Omit<MemoryTaskInput, 'countTokens'>): Promise<Counted<ReturnType<typeof assembleMemory>>> {
     const { scope, ...rest } = input;
-    return this.run(keyOf(lane), onChat(lane), scope, { kind: 'memory', input: rest }) as Promise<Counted<ReturnType<typeof assembleMemory>>>;
+    return this.run(keyOf(lane), lane, scope, { kind: 'memory', input: rest }) as Promise<Counted<ReturnType<typeof assembleMemory>>>;
   }
 
   read(lane: Lane<'memory' | 'view'>, scope: ChatScope, memory: Extract<EvaluationJob, { kind: 'read' }>['memory']): Promise<Counted<ChatTexts>> {
-    return this.run(keyOf(lane), onChat(lane), scope, { kind: 'read', memory }) as Promise<Counted<ChatTexts>>;
+    return this.run(keyOf(lane), lane, scope, { kind: 'read', memory }) as Promise<Counted<ChatTexts>>;
   }
 
   state(lane: Lane<'tool' | 'export'>, scope: ChatScope, prefix: string, signal?: AbortSignal): Promise<ToolState | RanAway> {
-    return this.run(keyOf(lane), onChat(lane), scope, { kind: 'state', prefix }, signal) as Promise<ToolState | RanAway>;
+    return this.run(keyOf(lane), lane, scope, { kind: 'state', prefix }, signal) as Promise<ToolState | RanAway>;
   }
 
   variables(lane: Lane<'view' | 'trial'>, scope: ChatScope, prefix: string, signal?: AbortSignal): Promise<VariableInspection> {
-    return this.run(keyOf(lane), onChat(lane), scope, { kind: 'variables', prefix }, signal) as Promise<VariableInspection>;
+    return this.run(keyOf(lane), lane, scope, { kind: 'variables', prefix }, signal) as Promise<VariableInspection>;
   }
 
   // A draft read after the chat (시험해 보기), on a lane of its own so it never stops 점검's.
   text(lane: Lane<'trial'>, scope: ChatScope, text: string, language: string | null, signal?: AbortSignal): Promise<TrialRead | RanAway> {
-    return this.run(keyOf(lane), onChat(lane), scope, { kind: 'text', text, language }, signal) as Promise<TrialRead | RanAway>;
+    return this.run(keyOf(lane), lane, scope, { kind: 'text', text, language }, signal) as Promise<TrialRead | RanAway>;
   }
 
   // A translation's, and a bot's lorebook read, may run beside others of the same chat: each has a lane of its own,
   // forgotten once it answers.
   translation(lane: Lane<'translation' | 'auto-translation'> | null, input: Omit<TranslationInput, 'countTokens'>, signal?: AbortSignal): Promise<Counted<ReturnType<typeof assembleTranslation>>> {
     const { scope, ...rest } = input;
-    return this.once(lane?.asker ?? 'translation', lane && onChat(lane), scope, { kind: 'translation', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleTranslation>>>;
+    return this.once(lane?.asker ?? 'translation', lane, scope, { kind: 'translation', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleTranslation>>>;
   }
 
   // Each its own lane, as a translation's: several messages' scenes may be written at once.
   illustration(lane: Lane<'illustration' | 'auto-illustration'>, input: Omit<IllustrationInput, 'countTokens'>, signal?: AbortSignal): Promise<Counted<ReturnType<typeof assembleIllustration>>> {
     const { scope, ...rest } = input;
-    return this.once(lane.asker, onChat(lane), scope, { kind: 'illustration', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleIllustration>>>;
+    return this.once(lane.asker, lane, scope, { kind: 'illustration', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleIllustration>>>;
   }
 
   // Each its own lane, as an illustration's.
   mascot(lane: Lane<'mascot'>, input: Omit<MascotInput, 'countTokens'>, signal?: AbortSignal): Promise<Counted<ReturnType<typeof assembleMascot>>> {
     const { scope, ...rest } = input;
-    return this.once(lane.asker, onChat(lane), scope, { kind: 'mascot', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleMascot>>>;
+    return this.once(lane.asker, lane, scope, { kind: 'mascot', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleMascot>>>;
   }
 
   // Each its own lane, as a translation's: a turn's pre agents run at once.
   agent(lane: Lane<'agent' | 'polish'>, input: Omit<AgentInput, 'countTokens'>, signal?: AbortSignal): Promise<Counted<ReturnType<typeof assembleAgent>>> {
     const { scope, ...rest } = input;
-    return this.once(lane.asker, onChat(lane), scope, { kind: 'agent', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleAgent>>>;
+    return this.once(lane.asker, lane, scope, { kind: 'agent', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleAgent>>>;
   }
 
   lore(lane: Lane<'lore'>, scope: ChatScope, seed: string, limit: number): Promise<Counted<{ role: 'system' | 'user' | 'assistant'; text: string }[] | RanAway>> {
-    return this.once(lane.asker, onChat(lane), scope, { kind: 'lore', seed, limit }) as Promise<Counted<{ role: 'system' | 'user' | 'assistant'; text: string }[] | RanAway>>;
+    return this.once(lane.asker, lane, scope, { kind: 'lore', seed, limit }) as Promise<Counted<{ role: 'system' | 'user' | 'assistant'; text: string }[] | RanAway>>;
   }
 
   count(texts: string[]): Promise<Counted<number[]>> {
@@ -238,6 +253,7 @@ export class Evaluation {
     worker.onmessage = ({ data }: MessageEvent<EvaluationUp>) => this.receive(data);
     worker.onerror = worker.onmessageerror = () => this.end(new EvaluationFailed('Evaluation worker failed'));
     this.worker = worker;
+    this.answered = 0;
     return worker;
   }
 
@@ -247,7 +263,7 @@ export class Evaluation {
     const work = this.next();
     if (!work) return this.heart.rest();
     const id = ++this.ids;
-    this.active = { id, work, started: false };
+    this.active = { id, work, started: null };
     try {
       const worker = this.open();
       let input: EvaluationInput;
@@ -273,10 +289,11 @@ export class Evaluation {
       if (!work) return undefined;
       this.waiting.delete(work.key);
       if (!work.on || !this.verdicts.verdict(work.on.chat)) return work;
-      if (work.on.gate === 'press') return work;
-      if (work.on.gate === 'display') return work.scope ? { ...work, scope: bare(work.scope), regex: false } : work;
+      const gate = GATES[work.on.asker];
+      if (gate === 'press') return work;
+      if (gate === 'display') return work.scope ? { ...work, scope: bare(work.scope), regex: false } : work;
       work.stop();
-      work.reject(new EvaluationStuck('refused under a verdict', false));
+      work.reject(new EvaluationRefused());
     }
   }
 
@@ -290,13 +307,14 @@ export class Evaluation {
     const active = this.active;
     if ('started' in data) {
       if (active?.id !== data.started) return;
-      active.started = true;
+      active.started = Date.now();
       this.heart.answered();
       this.heart.start(STUCK_MS);
       return;
     }
     if (!active || data.id !== active.id) return;
     this.active = null;
+    this.answered++;
     active.work.stop();
     if ('error' in data) active.work.reject(new EvaluationFailed(data.error));
     else {
@@ -312,7 +330,10 @@ export class Evaluation {
   // waiting go on in a new worker, which holds no history.
   private silent() {
     const active = this.active;
-    if (!active?.started) return this.end(new EvaluationFailed('Evaluation worker stuck'));
+    if (!active || active.started === null) return this.end(new EvaluationFailed('Evaluation worker stuck'));
+    const { on, job, regex } = active.work;
+    // One report for a chat's asker with the regex and one without it, so a verdict's rerun that stalls too is seen.
+    autoDiagnose({ event: 'evaluation-stuck', detail: job.kind, job: { id: [on?.chat, on?.asker, regex].join(':'), facts: jobFacts(active.work, this.answered, Date.now() - active.started) } });
     this.worker?.terminate();
     this.worker = null;
     this.cancelWarm();
@@ -320,8 +341,8 @@ export class Evaluation {
     this.histories.clear();
     this.active = null;
     active.work.stop();
-    active.work.reject(new EvaluationStuck('Evaluation worker stuck', active.work.regex));
-    if (active.work.on) this.verdicts.judged(active.work.on.chat);
+    active.work.reject(new EvaluationStuck('Evaluation worker stuck', regex));
+    if (on) this.verdicts.judged(on.chat);
     this.dispatch();
   }
 

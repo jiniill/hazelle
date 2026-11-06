@@ -6,7 +6,7 @@ import { MODEL_MOST, TYPE } from './pulse';
 
 export const AUTO_KEEP_DAYS = 30;
 
-const AUTO_EVENTS = ['app-error', 'worker-trouble', 'turn-failed', 'memory-failed', 'memory-gap', 'memory-gap-ended', 'chat-unopened', 'cache-broken'] as const;
+const AUTO_EVENTS = ['app-error', 'worker-trouble', 'evaluation-stuck', 'turn-failed', 'memory-failed', 'memory-gap', 'memory-gap-ended', 'chat-unopened', 'cache-broken'] as const;
 export type AutoEvent = (typeof AUTO_EVENTS)[number];
 
 // An error's name, or the kind of a failure. Never an error's message, which can quote what it failed on.
@@ -29,7 +29,12 @@ export type GapCause = (typeof GAP_CAUSES)[number];
 // The first cause a cache break proves, or the break's own kind without one.
 const CACHE_CAUSES = ['tag', 'lore', 'moved', 'edited', 'memory', 'model', 'account', 'reasoning', 'far', 'changed', 'added', 'removed'] as const;
 export type CacheCauseWord = (typeof CACHE_CAUSES)[number];
-const DETAILS = [...AUTO_ERROR_NAMES, ...FAILURES, ...GAP_CAUSES, ...CACHE_CAUSES] as const;
+// Who asks the evaluation worker for a job, and the kinds of job it runs: runtime/evaluation holds its lanes and its
+// jobs to these, so a word neither list has cannot be reported.
+const EVALUATION_ASKERS = ['projection', 'screen', 'headless', 'forecast', 'cache-diagnosis', 'memory', 'view', 'auto-translation', 'auto-illustration', 'mascot', 'polish', 'agent', 'send', 'translation', 'illustration', 'lore', 'tool', 'export', 'trial'] as const;
+export type EvaluationAsker = (typeof EVALUATION_ASKERS)[number];
+const EVALUATION_JOBS = ['cache-diagnosis', 'display', 'prompt', 'rewrite', 'translation', 'memory', 'illustration', 'mascot', 'preread', 'agent', 'read', 'lore', 'state', 'variables', 'text', 'patch', 'count', 'sample'] as const;
+const DETAILS = [...AUTO_ERROR_NAMES, ...FAILURES, ...GAP_CAUSES, ...CACHE_CAUSES, ...EVALUATION_JOBS] as const;
 
 const BROWSERS = ['chrome', 'edge', 'firefox', 'safari', 'samsung', 'other'] as const;
 const SYSTEMS = ['windows', 'mac', 'linux', 'android', 'ios', 'other'] as const;
@@ -59,7 +64,9 @@ const CALL = {
   total: 'number',
 } as const;
 
-const FAILURE = { kind: FAILURES, reason: orNull(WORD), call: orNull(CALL) } as const;
+// refused: the evaluation turned the job away under its chat's verdict. A bot-stuck reason without it is a job of the
+// chat that went silent on this page, which that job's evaluation-stuck report names.
+const FAILURE = { kind: FAILURES, reason: orNull(WORD), refused: 'flag', call: orNull(CALL) } as const;
 
 const SHAPE = {
   budget: 'number',
@@ -127,6 +134,20 @@ const CHAT = {
   }),
 } as const;
 
+// On evaluation-stuck, whose detail is the job's kind: the job that went silent, in closed words and sizes.
+const JOB = {
+  // null: a job no chat's lane asked for.
+  asker: orNull(EVALUATION_ASKERS),
+  // false: a verdict had already taken the bot's regex out of it.
+  regex: 'flag',
+  // What the job read, null for one that reads no chat: regex scripts as it ran, messages and their characters, lore entries.
+  scope: orNull({ regex: 'number', messages: 'number', chars: 'number', lore: 'number' }),
+  // The jobs its worker had answered before it, 0 on a worker just opened.
+  jobs: 'number',
+  // Milliseconds from its start to the silence that ended it.
+  ran: 'number',
+} as const;
+
 const REPORT = {
   event: AUTO_EVENTS,
   detail: orNull(DETAILS),
@@ -154,6 +175,7 @@ const REPORT = {
   height: 'number',
   language: orNull(/^[A-Za-z-]{2,20}$/),
   chat: orNull(CHAT),
+  job: orNull(JOB),
 } as const;
 
 type Spec = 'number' | 'numbers' | 'counts' | 'flag' | RegExp | readonly string[] | { readonly orNull: Spec } | { readonly [key: string]: Spec };
@@ -161,6 +183,7 @@ type Read<S> = S extends 'number' ? number : S extends 'numbers' ? number[] : S 
 
 export type AutoReport = Read<typeof REPORT>;
 export type AutoChat = Read<typeof CHAT>;
+export type AutoJob = Read<typeof JOB>;
 export type AutoCall = Read<typeof CALL>;
 export type AutoFailure = Read<typeof FAILURE>;
 export type AutoCache = Read<typeof CACHE>;

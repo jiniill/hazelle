@@ -1,4 +1,4 @@
-import { AUTO_BROWSER_MESSAGES, AUTO_ERROR_NAMES, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorCause, type AutoErrorName, type AutoEvent, type AutoReport } from '../contracts/auto-diagnosis';
+import { AUTO_BROWSER_MESSAGES, AUTO_ERROR_NAMES, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorCause, type AutoErrorName, type AutoEvent, type AutoJob, type AutoReport } from '../contracts/auto-diagnosis';
 import type { Place } from './diagnostic-state';
 import { without } from '../model/fields';
 import { EMPTY_SETTINGS, type Settings } from '../model/settings';
@@ -22,7 +22,7 @@ export const lastPlace = () => place;
 const FRAMES = 12;
 
 let armed = false;
-// For the page's life: a problem that repeats, as a failure does on each try, is one report per chat.
+// For the page's life: a problem that repeats, as a failure does on each try, is one report per chat or job.
 const said = new Set<string>();
 
 export function holdDiagnosis(on: boolean) {
@@ -73,16 +73,16 @@ export function errorFacts(error: object): { detail: AutoErrorName; cause: AutoE
 
 export type AutoOrigin = NonNullable<AutoReport['origin']>;
 
-type Problem = { event: AutoEvent; detail?: AutoDetail | null; cause?: AutoErrorCause | null; place?: string | null; frames?: string | null; origin?: AutoReport['origin']; chat?: { id: string; read: () => AutoChat | null } };
+type Problem = { event: AutoEvent; detail?: AutoDetail | null; cause?: AutoErrorCause | null; place?: string | null; frames?: string | null; origin?: AutoReport['origin']; chat?: { id: string; read: () => AutoChat | null }; job?: { id: string; facts: AutoJob } };
 
 // Never fails its caller, and a report that goes wrong tells no one: this is the app's own note about a problem.
-export function autoDiagnose({ event, detail = null, cause = null, place: thrown = null, frames = null, origin = null, chat }: Problem) {
+export function autoDiagnose({ event, detail = null, cause = null, place: thrown = null, frames = null, origin = null, chat, job }: Problem) {
   if (!armed) return;
-  const key = JSON.stringify([event, detail, cause, thrown, chat?.id ?? null]);
+  const key = JSON.stringify([event, detail, cause, thrown, (chat ?? job)?.id ?? null]);
   if (said.has(key)) return;
   said.add(key);
   try {
-    const report = readAutoReport({ event, detail, cause, version: BUILT_VERSION, place: thrown, frames, origin, ...deviceFacts(navigator.userAgent), ...pageFacts(), chat: chat?.read() ?? null });
+    const report = readAutoReport({ event, detail, cause, version: BUILT_VERSION, place: thrown, frames, origin, ...deviceFacts(navigator.userAgent), ...pageFacts(), chat: chat?.read() ?? null, job: job?.facts ?? null });
     if (report) void fetchApi('diagnoses', { anonymous: true, method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(report), keepalive: true }).catch(() => {
       // Reporting must not create another report, and a failed report is never queued or retried.
     });

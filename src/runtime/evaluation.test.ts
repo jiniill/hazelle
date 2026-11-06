@@ -2,7 +2,8 @@ import type { CacheComparison } from '../model/cache';
 import { afterEach, expect, it, vi } from 'vitest';
 import { display } from '../engine/display';
 import type { ChatScope } from '../engine/render';
-import { Evaluation, EvaluationFailed, EvaluationStopped, EvaluationStuck, type Verdicts } from './evaluation';
+import { holdDiagnosis } from './auto-diagnosis';
+import { Evaluation, EvaluationFailed, EvaluationRefused, EvaluationStopped, EvaluationStuck, type Verdicts } from './evaluation';
 import { Evaluator, type EvaluationDown, type EvaluationUp } from './evaluation-core';
 import { changedTail, sameHistory } from './history-delta';
 
@@ -31,6 +32,7 @@ function fakeWorkers(log: string[] = []) {
 }
 
 afterEach(() => {
+  holdDiagnosis(false);
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
@@ -224,6 +226,48 @@ it('says a display that went silent without the regex ran without it', async () 
   worker.receive({ started: jobs(worker)[0]!.id });
   await vi.advanceTimersByTimeAsync(5_000);
   await running;
+  evaluation.close();
+});
+
+it('reports a job that went silent by closed words and sizes, once with the regex and once without, and no refusal', async () => {
+  vi.useFakeTimers();
+  const sent = vi.fn<(path: string, init: RequestInit) => Promise<Response>>(async () => new Response(null, { status: 204 }));
+  vi.stubGlobal('fetch', sent);
+  vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Linux; Android 14) Chrome/141.0.0.0 Mobile', onLine: true, language: 'ko-KR', hardwareConcurrency: 8 });
+  vi.stubGlobal('document', { visibilityState: 'visible' });
+  vi.stubGlobal('matchMedia', () => ({ matches: false }));
+  vi.stubGlobal('innerWidth', 400);
+  vi.stubGlobal('innerHeight', 800);
+  holdDiagnosis(true);
+  const { workers, jobs } = fakeWorkers();
+  const judged = new Set<string>();
+  const evaluation = new Evaluation({ verdict: (chat) => judged.has(chat), judged: (chat) => judged.add(chat) });
+  const packs = [{ regex: [{ id: 'x', name: 'SECRET', find: 'SECRET', replace: 'b', stage: 'display' as const, flags: null }], triggers: [], toggles: [] }];
+  const chat = { ...scope, packs, messages: [message('a', 'SECRET'), message('b', 'two')] };
+  const lane = { asker: 'projection', chat: 'reported-chat' } as const;
+  const ahead = evaluation.display(screen('ahead'), scope, new Set());
+  workers[0]!.receive({ id: jobs(workers[0]!)[0]!.id, result: null });
+  await ahead;
+  const silence = async () => {
+    const running = expect(evaluation.display(lane, chat, new Set())).rejects.toBeInstanceOf(EvaluationStuck);
+    const worker = workers.at(-1)!;
+    worker.receive({ started: jobs(worker).at(-1)!.id });
+    await vi.advanceTimersByTimeAsync(5_000);
+    await running;
+  };
+  await silence();
+  await silence();
+  await silence();
+  expect(workers).toHaveLength(3);
+  await expect(evaluation.read({ asker: 'memory', chat: 'reported-chat' }, chat, null)).rejects.toBeInstanceOf(EvaluationRefused);
+  const reports = sent.mock.calls.map(([, init]) => JSON.parse(init.body as string) as { job: { ran: number } });
+  expect(reports).toMatchObject([
+    { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: true, scope: { regex: 1, messages: 2, chars: 9, lore: 0 }, jobs: 1 } },
+    { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: false, scope: { regex: 0, messages: 2, chars: 9, lore: 0 }, jobs: 0 } },
+  ]);
+  expect(reports).toHaveLength(2);
+  expect(reports[0]!.job.ran).toBeGreaterThanOrEqual(3_000);
+  expect(JSON.stringify(reports)).not.toMatch(/SECRET|reported-chat/);
   evaluation.close();
 });
 
