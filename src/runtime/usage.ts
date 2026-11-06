@@ -83,6 +83,9 @@ export class Usage {
     const pinned = await this.store.pin(signal);
     if (!pinned.ok) return pinned;
     const pin = pinned.data;
+    // A row lands through the store whoever wrote it (this device's write, another's with the pull) and raises this
+    // revision; at or under the cursor there is nothing past it to ask the server for.
+    if (this.cursor && this.store.revision({ kind: 'ledger', parent: SETTINGS_ID }) <= this.cursor) return { ok: true, data: this.countedRows ??= counted(this.rows.values()) };
     let unreadable = false;
     const walked = await this.store.walk(SETTINGS_ID, 'ledger', (row, value) => {
       if (isValue('ledger', value)) {

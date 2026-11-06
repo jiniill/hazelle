@@ -104,8 +104,13 @@ it('counts a reply as it is saved, and the cost booked for it after', async () =
   expect((await appendReply(store, id, { id: crypto.randomUUID(), message: null, replaces: null, at: 1, text: '답', receipt: call })).ok).toBe(true);
   const usage = new Usage(store);
   const signal = new AbortController().signal;
+  const walk = vi.spyOn(store, 'walk');
   expect(await usage.read(signal)).toMatchObject({ ok: true, data: [{ call: { id: call.id, cost: 'pending' }, chat: id }] });
+  // No row landed since: the same answer without asking the server again.
+  expect(await usage.read(signal)).toMatchObject({ ok: true, data: [{ call: { id: call.id, cost: 'pending' }, chat: id }] });
+  expect(walk).toHaveBeenCalledOnce();
   expect((await appendCost(store, id, call, { unit: 'usd', amount: 0.5, source: 'reported' })).ok).toBe(true);
   expect(await usage.read(signal)).toMatchObject({ ok: true, data: [{ call: { cost: { amount: 0.5 } } }] });
+  expect(walk).toHaveBeenCalledTimes(2);
   usage.close();
 });

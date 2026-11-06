@@ -683,6 +683,8 @@ it('walks the ledger from the device cache and past its cursor, and a store open
   expect(await calls(reopened)).toEqual(['first', 'second']);
   expect(walks()).toEqual(['0', '1']);
   f.restore({ rows: new Map(), rev: 2 }, 't1');
+  // The ledger hears of a restore as the rest of the store does, with its pull.
+  expect(await again.pull()).toEqual({ ok: false, error: 'timeline-changed' });
   expect(await calls(reopened)).toEqual({ ok: false, error: 'timeline-changed' });
   reopened.close();
   const restored = await after(again, () => f.open());
