@@ -90,7 +90,10 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const drawnText = part ? markPart(storyText, part.shown) : storyText;
   const url = useAssetUrl([row, drawnText, raw]);
   const decor = useMemo(() => ({ ...decoration, url }), [decoration, url]);
-  const html = useMemo(() => shownHtml(drawnText, decor), [drawnText, decor.bot, decor.url]);
+  // The parse apart from its pictures' addresses, which are looked up again whenever the row changes, as with every
+  // chunk of a reply being written.
+  const parsed = useMemo(() => storyHtml(drawnText, decor.bot), [drawnText, decor.bot]);
+  const html = useMemo(() => withPictures(parsed, decor), [parsed, decor.bot, decor.url]);
   const story = useRef<HTMLDivElement>(null);
   const running = drawing !== null && runs(drawing);
   const illustrations = places.map((place) => ({
@@ -405,4 +408,5 @@ export const speaker = (message: Message, character: { name: string } | null, me
   message.role === 'user' ? (me?.name ?? NO_PERSONA) : (character?.name ?? shown(message).receipt?.modelName ?? modelName ?? '모델');
 
 // Without the bot's style, only the chat's own pictures show: its inlays, whose markup alone the plain display keeps.
-export const shownHtml = (text: string, { bot, url }: { bot: boolean; url: PictureUrl }) => resolveAssets(storyHtml(text, bot), bot ? url : (kind, id) => (kind === 'inlay' ? url(kind, id) : undefined));
+const withPictures = (html: string, { bot, url }: { bot: boolean; url: PictureUrl }) => resolveAssets(html, bot ? url : (kind, id) => (kind === 'inlay' ? url(kind, id) : undefined));
+export const shownHtml = (text: string, decor: { bot: boolean; url: PictureUrl }) => withPictures(storyHtml(text, decor.bot), decor);
