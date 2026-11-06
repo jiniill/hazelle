@@ -1,4 +1,4 @@
-import { splitThoughts } from '../connectors/thoughts';
+import { splitThoughts, thoughtRuns } from '../connectors/thoughts';
 import type { ConversationPrompt, TextBlock } from '../model/prompt';
 import { unescapeCbs } from './cbs/escape';
 import { previousMessages } from './cbs/history';
@@ -111,7 +111,7 @@ export function renderChat(
   take: ReadonlySet<number> = new Set(),
   lua?: LuaDisplay,
   trace?: VariableTrace,
-): { texts: string[]; thoughts: string[]; staged: string[]; wrote: [string, string][][]; start: [string, string][]; variables: Map<string, string>; drawn: number[][]; boxes: Box[][]; missed: Missed[]; unfound: Set<string> | null; stopped: Runaway | null; finish: ((index: number, text: string) => ReturnType<typeof renderStage>) | null; failures: { input: Map<number, Runaway>; display: Map<number, Runaway> }; scripts: Scripts } {
+): { texts: string[]; staged: string[]; wrote: [string, string][][]; start: [string, string][]; variables: Map<string, string>; drawn: number[][]; boxes: Box[][]; missed: Missed[]; unfound: Set<string> | null; stopped: Runaway | null; finish: ((index: number, text: string) => ReturnType<typeof renderStage>) | null; failures: { input: Map<number, Runaway>; display: Map<number, Runaway> }; scripts: Scripts } {
   const unfound = stage === 'display' ? new Set<string>() : null;
   const context = contexts(scope, stage, null, '', unfound);
   const scripts = new Scripts(scope.packs.flatMap(({ regex }) => regex), scope.messages);
@@ -134,7 +134,6 @@ export function renderChat(
   const missed: Missed[] = [];
   const wrote: [string, string][][] = [];
   const drawn: number[][] = [];
-  const thoughts: string[] = [];
   const boxes: Box[][] = [];
   const past: string[] = [];
   let stopped: Runaway | null = null;
@@ -188,7 +187,7 @@ export function renderChat(
     variables.log = null;
     kept();
     past.push(unescapeCbs(replayed));
-    if (greeting && later) { drawn.push([]); boxes.push([]); thoughts.push(''); return replayed; }
+    if (greeting && later) { drawn.push([]); boxes.push([]); return replayed; }
     // A pass is made again when its message's place or the state as of it changes, and for the last LATEST
     // messages when the chat grows or shrinks, which is when Risu draws them again: bots draw their status on the
     // last message and take it off the one before. Older messages keep their pass until reloadDisplay.
@@ -197,7 +196,6 @@ export function renderChat(
     const shown = shownAt(index, place, id, replayed, `${place}/${place >= length - LATEST ? length : ''}/${variables.stamp}`);
     drawn.push(shown.drawn);
     boxes.push(shown.boxes);
-    thoughts.push(shown.thoughts);
     return shown.text;
   });
   variables.record = null;
@@ -213,9 +211,8 @@ export function renderChat(
     texts[0] = shown.text;
     drawn[0] = shown.drawn;
     boxes[0] = shown.boxes;
-    thoughts[0] = shown.thoughts;
   }
-  return { texts, thoughts, staged: past, wrote, start, variables, drawn, boxes, missed, unfound, stopped, finish: states ? (index, text) => renderStage(stage, scripts, context, scope, index, text, index === 0 && later ? variables : states.at(index), take) : null, failures, scripts };
+  return { texts, staged: past, wrote, start, variables, drawn, boxes, missed, unfound, stopped, finish: states ? (index, text) => renderStage(stage, scripts, context, scope, index, text, index === 0 && later ? variables : states.at(index), take) : null, failures, scripts };
 }
 
 function renderStage(stage: Stage, scripts: Scripts, context: ReturnType<typeof contexts>, { inlays, textfiles, messages, keepsThoughts }: Pick<ChatScope, 'inlays' | 'textfiles' | 'messages' | 'keepsThoughts'>, index: number, text: string, variables: ReadonlyMap<string, string>, take: ReadonlySet<number>) {
@@ -232,13 +229,18 @@ function renderStage(stage: Stage, scripts: Scripts, context: ReturnType<typeof 
   }
   // Before unescapeCbs, so an escaped tag stays text.
   const finished = (html: string) => unescapeCbs(stage === 'display' ? placeTextFiles(placeInlays(html, inlays), textfiles) : html);
-  // A bot's regex writes a thinking block around what the model planned: never story, and never sent back. By block,
-  // where Risu takes everything from the first opener to the last closer, the answer between them too. A user's
-  // message keeps what they typed; 추론을 본문에 표시 keeps a block where the screen shows it.
+  // A bot's regex writes a thinking block around what the model planned. It is never sent back, and is drawn folded
+  // where it stands, by block, where Risu folds from the first opener to its matching closer. A user's message keeps
+  // what they typed; 추론을 본문에 표시 keeps a block as written.
   const whole = finished(result.text);
-  const { text: body, reasoning } = messages[index]!.role === 'user' || (stage === 'display' && keepsThoughts) ? { text: whole, reasoning: '' } : splitThoughts(whole);
-  return { text: body, thoughts: reasoning, drawn: result.drawn, boxes: result.boxes.map((box) => ({ ...box, html: finished(box.html) })), stopped };
+  const kept = messages[index]!.role === 'user' || (stage === 'display' && keepsThoughts);
+  const body = kept ? whole : stage === 'display' ? foldThoughts(whole) : splitThoughts(whole).text;
+  return { text: body, drawn: result.drawn, boxes: result.boxes.map((box) => ({ ...box, html: finished(box.html) })), stopped };
 }
+
+// Named in app/ui/story (Story.tsx, Story.shadow.css), which writes the fold's summary. On lines of their own, so
+// markdown reads the block's text and what follows it.
+const foldThoughts = (text: string) => thoughtRuns(text).map((run) => (run.phase === 'text' ? run.text : `\n\n<details data-thoughts><summary></summary>\n\n${run.text}\n\n</details>\n\n`)).join('');
 
 // Recorded by the canonical input/output pass, including before/after writes. A Lua result changes only a row's
 // display stage; seeking these deltas preserves its original state without one full variable map per message.

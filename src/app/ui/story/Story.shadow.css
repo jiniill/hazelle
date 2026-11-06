@@ -146,6 +146,16 @@
     overflow-wrap: anywhere;
   }
 
+  /* A thinking block a bot's regex wrote (engine/render foldThoughts), folded as Risu draws it. */
+  [data-thoughts] {
+    color: var(--color-text-muted);
+  }
+
+  [data-thoughts] > summary {
+    cursor: pointer;
+    font: var(--text-sm) / var(--leading-tight) var(--font-sans);
+  }
+
   a {
     color: var(--color-accent);
   }

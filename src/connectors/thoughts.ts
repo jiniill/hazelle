@@ -135,13 +135,30 @@ export function thoughts(onText: (phase: Phase, text: string) => void, takeBack:
   };
 }
 
-export function splitThoughts(text: string): { text: string; reasoning: string } {
-  const parts = { text: '', reasoning: '' };
+// The text in order, with each thinking block a reasoning run of its own; blocks with no text between are one run.
+export function thoughtRuns(text: string): { phase: Phase; text: string }[] {
+  const runs: { phase: Phase; text: string }[] = [];
   const scanner = thoughts(
-    (phase, chunk) => (parts[phase] += chunk),
-    (chars) => (parts.reasoning = parts.reasoning.slice(0, parts.reasoning.length - chars)),
+    (phase, chunk) => {
+      const last = runs.at(-1);
+      if (last?.phase === phase) last.text += chunk;
+      // The scanner's blank-line separator, which only joins blocks within a run.
+      else runs.push({ phase, text: phase === 'reasoning' ? chunk.trimStart() : chunk });
+    },
+    // A run that began after text lost its separator, which the count still holds.
+    (chars) => {
+      const last = runs.at(-1)!;
+      last.text = last.text.slice(0, Math.max(0, last.text.length - chars));
+      if (!last.text) runs.pop();
+    },
   );
   scanner.push('text', text);
   scanner.end(true);
-  return parts;
+  return runs;
+}
+
+export function splitThoughts(text: string): { text: string; reasoning: string } {
+  const runs = thoughtRuns(text);
+  const of = (phase: Phase) => runs.filter((run) => run.phase === phase).map((run) => run.text);
+  return { text: of('text').join(''), reasoning: of('reasoning').join('\n\n') };
 }

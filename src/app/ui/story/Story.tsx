@@ -59,6 +59,8 @@ const COPY = 'data-copy';
 const INLAY_MISSING = 'data-inlay-missing';
 // Named in Story.shadow.css and in engine/assets.ts (placeTextFiles): a text file's name, empty for one the chat lacks.
 const TEXTFILE = 'data-textfile';
+// Named in Story.shadow.css and in engine/render.ts (foldThoughts): a thinking block, its summary left for these words.
+const THOUGHTS = 'data-thoughts';
 // Named in Story.shadow.css. chat/withOriginal ends each line of an original shown under its translation with the mark,
 // last so a line's own markdown (# , - , a bot's <div) still reads; the block it ends takes the attribute.
 const ORIGINAL = 'data-original';
@@ -402,6 +404,7 @@ function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFra
   }
   for (const missing of fragment.querySelectorAll(`[${INLAY_MISSING}]`)) missing.textContent = '옮기지 못한 이미지';
   for (const missing of fragment.querySelectorAll(`[${TEXTFILE}]:empty`)) missing.textContent = '찾을 수 없는 파일';
+  for (const summary of fragment.querySelectorAll(`[${THOUGHTS}] > summary`)) summary.textContent = '추론';
   const texts = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
   for (let node = texts.nextNode() as Text | null; node; node = texts.nextNode() as Text | null) {
     if (!node.data.includes(ORIGINAL_MARK)) continue;

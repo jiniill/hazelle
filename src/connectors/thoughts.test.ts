@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { thoughts } from './thoughts';
+import { thoughtRuns, thoughts } from './thoughts';
 
 // The answer fed in every chunk size, so each tag is also split at every place; every size must read the same.
 function read(answer: string, finished = true) {
@@ -35,4 +35,13 @@ describe('thoughts', () => {
     expect(read('<think>a</think>앞 <think>열린 채 </thi')).toEqual({ text: '앞 <think>열린 채 </thi', reasoning: 'a' });
     expect(read('<think>a</think>앞 <think>열린 채 </thi', false)).toEqual({ text: '앞 ', reasoning: 'a\n\n열린 채 </thi' });
   });
+});
+
+it('runs each block apart where text stands between, joins adjacent ones, and gives an unclosed one back to the text', () => {
+  expect(thoughtRuns('<think>a</think> x <think>b</think><think>c</think>y <think>open')).toEqual([
+    { phase: 'reasoning', text: 'a' },
+    { phase: 'text', text: 'x ' },
+    { phase: 'reasoning', text: 'b\n\nc' },
+    { phase: 'text', text: 'y <think>open' },
+  ]);
 });
