@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Chapter, Memory, MemoryRecord } from '../model/memory';
-import { fingerprint, memoryBefore, memoryBudget, nextChapters, nextMerge, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, standing, windowStart, type ChatRead, memoryShape } from './memory';
+import { chapterFormat, fingerprint, memoryBefore, memoryBudget, memoryFormat, nextChapters, nextMerge, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, standing, windowStart, type ChatRead, memoryShape } from './memory';
 
 const span = ['Luna: "I will  wait\nfor you until spring."', 'jin leaves the lighthouse.', 'Spring comes. Luna lights the lamp.'];
 const record = (to: number, lines: { speaker: string; text: string }[] = []) => ({
@@ -45,6 +45,15 @@ describe('parseRecords', () => {
     expect(parseRecords(answer([record(2)]), span)).toEqual({ ok: false, reason: 'short' });
     expect(parseRecords(answer([record(1), record(3, [{ speaker: 'Luna', text: 'I will wait for you until spring.' }])]), span)).toMatchObject({ ok: true, records: [{ lines: [] }, { lines: [] }] });
   });
+});
+
+it('asks for every field the parser reads as an array as a list, written [] when empty', () => {
+  const lists = (format: string) => [...format.matchAll(/"(\w+)" \(a list of /g)].map(([, field]) => field);
+  const records = memoryFormat(3, 100);
+  const chapter = chapterFormat(3, 100, false);
+  expect(lists(records)).toEqual(['who', 'lines', 'state', 'opens', 'closes']);
+  expect(lists(chapter)).toEqual(['who', 'lines']);
+  for (const format of [records, chapter]) expect(format).toContain('A list with nothing in it is written [], never null.');
 });
 
 describe('recordsTarget', () => {

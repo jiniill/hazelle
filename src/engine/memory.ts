@@ -480,13 +480,16 @@ export const chapterBefore = (before: Written | null) => memoryText([], [], befo
 
 export const spanText = (messages: { speaker: string; text: string }[]) => messages.map(({ speaker, text }, index) => `[#${index + 1} ${speaker}]\n${text}`).join('\n\n');
 
+// Both formats end with it: the parser reads null or a missing list as a wrong kind, never as [].
+const EMPTY_LIST = 'A list with nothing in it is written [], never null.';
+
 // The app's own sentence after a memory prompt, not a prompt's: the parser below depends on every word of it.
 export const memoryFormat = (count: number, target: number) =>
   [
     'Answer with one JSON object and nothing else: {"records": [...]}.',
     `The records are about ${target} tokens long in all, so a scene keeps its detail: who did what, what was agreed, what was said.`,
     `The records cover the numbered messages in order, without gaps: each record's "to" is the number of its last message, and the last record's "to" is ${count}. Start a new record only at a scene break.`,
-    'Every record has every field: "to" (a number); "when" and "where" (text, or null when the messages do not say); "who" (a list of the names of those present, one spelling per person); "what" (what happened); "lines" (key lines, each {"speaker": who says the line in the text, not always the author of the message, "text": the line copied word for word from the messages}); "outcome" (text); "state" (only the facts this record changes, each {"about": name, "field": what it is, "value": its new value, or null when the fact no longer holds, such as a healed injury, an item given away or a place left}; one value per field, so merge duplicates of the same about and field into one); "opens" (new unresolved promises, foreshadowing or events, as text); "closes" (the labels of the open threads it resolves, such as "T-1a2b3c4d").',
+    `Every record has every field: "to" (a number); "when" and "where" (text, or null when the messages do not say); "who" (a list of the names of those present, one spelling per person); "what" (what happened); "lines" (a list of key lines, each {"speaker": who says the line in the text, not always the author of the message, "text": the line copied word for word from the messages}); "outcome" (text); "state" (a list of only the facts this record changes, each {"about": name, "field": what it is, "value": its new value, or null when the fact no longer holds, such as a healed injury, an item given away or a place left}; one value per field, so merge duplicates of the same about and field into one); "opens" (a list of new unresolved promises, foreshadowing or events, each as text); "closes" (a list of the labels of the open threads it resolves, such as ["T-1a2b3c4d"]). ${EMPTY_LIST}`,
   ].join('\n');
 
 // The app's own sentence after a memory prompt for a chapter, which overrides what the prompt asks of records:
@@ -496,7 +499,7 @@ export const chapterFormat = (count: number, target: number, merged: boolean) =>
   return [
     'Answer with one JSON object and nothing else: {"chapter": {...}}.',
     `The chapter is one summary of all ${count} numbered ${merged ? 'earlier chapters, each already a summary of many messages' : 'messages'}, about ${target} tokens long. Write no state and no threads, whatever the instructions above ask.`,
-    `It has every field: "when" and "where" (text, or null when the ${read} do not say); "who" (a list of the names of those present); "what" (what happened); "lines" (key lines, each {"speaker": name, "text": the line copied word for word from the ${read}}); "outcome" (text).`,
+    `It has every field: "when" and "where" (text, or null when the ${read} do not say); "who" (a list of the names of those present); "what" (what happened); "lines" (a list of key lines, each {"speaker": name, "text": the line copied word for word from the ${read}}); "outcome" (text). ${EMPTY_LIST}`,
   ].join('\n');
 };
 
