@@ -16,7 +16,7 @@ import { ShelfFace, shelfName } from '../library/shelf';
 import { useAccount, useCharacter, useChatModel, useChatSummary, useConnections, useSession, useSettings, useStored, useTool } from '../session';
 import { Button, Callout, Empty, Intro, ListDetail, NavBar, Progress, Screen, useSplit, useWide } from '../ui';
 import { backBar, navigate } from './router';
-import { backTo, HOME, listOf, up, type Back, type Below, type Route } from './routes';
+import { backTo, HOME, href, listOf, up, type Back, type Below, type Route } from './routes';
 import { SettingsList, settingsEntry } from './settings/SettingsNav';
 import { ToolsList, toolsEntry } from './tools/ToolsNav';
 
@@ -66,7 +66,7 @@ const CalculatorScreen = lazy(() => import('../tools/CalculatorScreen').then(({ 
 const SearchScreen = lazy(() => import('../search/SearchScreen').then(({ SearchScreen }) => ({ default: SearchScreen })));
 const ChatSide = lazy(() => import('./ChatSide').then(({ ChatSide }) => ({ default: ChatSide })));
 
-const side = (at: SideAt) => <ScreenLoad><ChatSide {...at} /></ScreenLoad>;
+const side = (at: SideAt) => <ScreenLoad at={`${at.open.kind}/${at.open.id ?? ''}`}><ChatSide {...at} /></ScreenLoad>;
 type At<K extends Route['kind']> = Extract<Route, { kind: K }>;
 const missing = (what: Absent, wide: boolean) => <Missing what={what} back={backTo(HOME, wide)} />;
 type ItemKind = 'character' | 'prompt' | 'persona' | 'module' | 'profile';
@@ -191,14 +191,15 @@ export function Page({ route, closeLayer, onPaired }: { route: Route; closeLayer
     }
   }
 
+  const at = href(route);
   const list = listOf(route);
-  if (!list) return <ScreenLoad>{screen(route)}</ScreenLoad>;
+  if (!list) return <ScreenLoad at={at}>{screen(route)}</ScreenLoad>;
   const detail = route.kind === list.kind ? null : screen(route);
   const variant = VARIANTS[list.kind];
   const pane = detail ?? (list.kind === 'connections' ? <Landing /> : <Empty variant="pane">연결할 제공자를 선택해 주세요.</Empty>);
   // One boundary for the pair, so a first visit shows one loader, and one inside for the detail alone.
-  if (split) return <ScreenLoad><ListDetail variant={variant} list={screen(list)} detail={<ScreenLoad>{pane}</ScreenLoad>} /></ScreenLoad>;
-  return <ScreenLoad>{detail ?? screen(list)}</ScreenLoad>;
+  if (split) return <ScreenLoad at={at}><ListDetail variant={variant} list={screen(list)} detail={<ScreenLoad at={at}>{pane}</ScreenLoad>} /></ScreenLoad>;
+  return <ScreenLoad at={at}>{detail ?? screen(list)}</ScreenLoad>;
 }
 
 // API 연결 opens on its connection: the 대화 모델's, else the first, replaced before paint so 뒤로 does not land here again.
