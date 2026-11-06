@@ -82,6 +82,6 @@ export const LUA_EVENTS: readonly LuaFunction[] = [
 ];
 
 // Set for the prelude's own use, never written by a bot: completion leaves them out.
-export const LUA_INTERNAL = ['getChatMain', 'getFullChatMain', 'getRecentChatsMain', 'setFullChatMain', 'getLoreBooksMain', 'loadLoreBooksMain', 'setBackgroundEmbeddingMain', 'LLMMain', 'axLLMMain', 'logMain', 'callListenMain'];
+export const LUA_INTERNAL = ['getChatMain', 'getFullChatMain', 'getRecentChatsMain', 'setFullChatMain', 'getLoreBooksMain', 'loadLoreBooksMain', 'setBackgroundEmbeddingMain', 'LLMMain', 'axLLMMain', 'logMain', 'callListenMain', 'afterMain'];
 
 export { UNSUPPORTED as LUA_UNSUPPORTED };

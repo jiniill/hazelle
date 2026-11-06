@@ -386,6 +386,18 @@ export class Lua {
   }
 
   private declare(engine: Engine) {
+    // The prelude's async continues a coroutine after what it awaited, from here: resuming it can throw (a slice
+    // that ran out), and thrown inside the promise's own callback that would reach no one, leaving the run pending.
+    engine.lua.global.set('afterMain', (awaited: Promise<unknown>, step: () => void, fail: (reason: string) => void) => {
+      const resume = () => {
+        try {
+          step();
+        } catch (error) {
+          fail(describe(error));
+        }
+      };
+      void awaited.then(resume, resume);
+    });
     const bind = (name: string, api: (...args: never[]) => unknown) => engine.lua.global.set(name, (...args: never[]) => {
       engine.run?.signal?.throwIfAborted();
       return api(...args);

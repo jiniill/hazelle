@@ -108,7 +108,7 @@ function async(callback)
 
             checkresult = function()
                 if safe and result == Promise.resolve(result) then
-                    result:finally(step)
+                    afterMain(result, step, reject)
                 else
                     step()
                 end

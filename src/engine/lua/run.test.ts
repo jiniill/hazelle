@@ -217,6 +217,10 @@ describe('Lua runs', () => {
     expect(await run(`onStart = async(function(id) local image = generateImage(id, 'x'):await() setChatVar(id, 'after', tostring(image)) end)`, { kind: 'start' })).toMatchObject({ errors: [], missing: ['generateImage'], writes: [['after', 'nil']] });
     expect((await run(`syntax error here`, { kind: 'start' })).errors).toHaveLength(1);
     expect((await run(`function onStart(id) while true do end end`, { kind: 'start' })).errors[0]).toMatchObject({ message: expect.stringContaining('timeout') });
+    // After an await the loop runs in the promise's continuation: the run still ends, and its engine takes the next.
+    const awaited: Script[] = [{ owner: OWNER, kind: 'lua', name: 'main', code: `onStart = async(function(id) getTokens(id, 'x'):await() while true do end end) function onOutput(id) setChatVar(id, 'after', 'ran') end` }];
+    expect((await lua.run('awaited', awaited, SNAPSHOT, { kind: 'start' }, host(), 'event')).errors[0]).toMatchObject({ message: expect.stringContaining('timeout') });
+    expect(await lua.run('awaited', awaited, SNAPSHOT, { kind: 'output' }, host(), 'event')).toMatchObject({ errors: [], writes: [['after', 'ran']] });
   });
 
   it('evaluates CBS with the run\'s writes, reads the lorebook by name and as the prompt would hold it, and takes a whole chat', async () => {
