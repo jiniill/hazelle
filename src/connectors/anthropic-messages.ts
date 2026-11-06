@@ -1,6 +1,6 @@
 import { failedTerminal } from './errors';
 import type { Cache, Reasoning } from './settings';
-import { carriesPictures, ConnectorError, type ChatMessage, type Codec, type InputPicture, type Modality, type StreamFacts, type ToolCall, type ToolResult } from './types';
+import { carriesPictures, ConnectorError, replyLimit, type ChatMessage, type Codec, type InputPicture, type Modality, type StreamFacts, type ToolCall, type ToolResult } from './types';
 import { count, isRecord, jsonObject, list, modelEntries, nameOf } from './values';
 
 export const VERSION = { 'anthropic-version': '2023-06-01' };
@@ -162,7 +162,7 @@ export const anthropicMessages: Codec = {
   // The Messages API requires max_tokens. With no setting and no catalog limit there is no truthful
   // number to send, so the request is refused instead of guessed.
   chat(endpoint, { model, messages, settings, tools }, fields) {
-    const limit = settings.maxOutput ?? model.maxOutput;
+    const limit = settings.maxOutput ?? replyLimit(model);
     if (limit === null) throw new ConnectorError('max-tokens-unknown');
     return {
       url: `${endpoint.baseUrl}/messages`,

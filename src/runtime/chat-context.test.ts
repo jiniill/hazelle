@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { fold, type Chat } from '../model/chat';
+import { bareModel } from '../connectors/chat-completions';
+import type { Starred } from '../connectors/types';
 import { blankCard } from '../engine/import/card';
-import { evaluateChat, scopeOf, setSharedLoreScan } from './chat-context';
+import { budgetOf, evaluateChat, scopeOf, setSharedLoreScan, tokenLimits } from './chat-context';
 import { appendUserMessage, startChat } from './chat-log';
 import { addLore, setCharacterLoreScan } from './lore';
 import { testServer } from './testing';
@@ -55,5 +57,16 @@ describe('scopeOf', () => {
     expect(scan()).toMatchObject({ tokenBudget: 70_000, recursive: true });
     await setSharedLoreScan(store, 'scanDepth', 8);
     expect(scopeOf({ store }, null, { title: null, character: null, models: {} }, []).loreScan).toMatchObject({ scanDepth: 8, recursive: false });
+  });
+});
+
+describe('budgetOf', () => {
+  it('reserves no reply for a starred model whose catalog output limit is as large as its context, until one is set', () => {
+    const shared: Starred = { ...bareModel('m'), contextLength: 1_000_000, maxOutput: 1_000_000 };
+    expect(budgetOf(shared, {})).toBe(1_000_000);
+    expect(tokenLimits(shared, {})).toEqual({ hard: 1_000_000, user: null, output: 0 });
+    expect(budgetOf(shared, { maxOutput: 8000 })).toBe(992_000);
+    expect(tokenLimits(shared, { maxOutput: 8000 }).output).toBe(8000);
+    expect(budgetOf({ ...shared, maxOutput: 128_000 }, {})).toBe(872_000);
   });
 });

@@ -71,6 +71,17 @@ describe('what a model takes', () => {
   });
 });
 
+describe('응답 최대 길이', () => {
+  it('is capped at the catalog output limit, and uncapped where that limit is as large as the context window', () => {
+    const shared: Model = { ...bare, contextLength: 1_000_000, maxOutput: 1_000_000 };
+    const schema = modelSettings(generic, shared)!;
+    expect(schema.numbers.maxOutput.max).toBeNull();
+    expect(fit(schema, { maxOutput: 800_000 })).toEqual({ settings: { maxOutput: 800_000 }, changes: [] });
+    const capped = modelSettings(generic, { ...shared, maxOutput: 128_000 })!;
+    expect(fit(capped, { maxOutput: 800_000 })).toEqual({ settings: { maxOutput: 128_000 }, changes: [{ setting: 'maxOutput', change: 'capped', to: 128_000 }] });
+  });
+});
+
 describe('생각 줄이기', () => {
   it('asks for the least thinking a model is known to take, whatever order its catalog lists levels in', () => {
   const schema = modelSettings(connection('openrouter'), listed('openrouter', openRouterModels, 'anthropic/claude-opus-5.5'))!;

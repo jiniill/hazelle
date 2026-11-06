@@ -1,4 +1,4 @@
-import type { Model } from './types';
+import { replyLimit, type Model } from './types';
 
 export const NUMBERS = ['maxOutput', 'temperature', 'topP', 'topK', 'frequencyPenalty', 'presencePenalty', 'repetitionPenalty', 'minP', 'seed'] as const;
 export type NumberSetting = (typeof NUMBERS)[number];
@@ -117,7 +117,7 @@ export function settingsSchema(carries: Carries, model: Model): SettingsSchema {
     NUMBERS.map((name): [NumberSetting, Rule] => {
       const bounds = carries.numbers[name];
       const accepted = !bounds ? false : bounds.always ? true : takes(name);
-      const max = name === 'maxOutput' ? model.maxOutput : (bounds?.max ?? null);
+      const max = name === 'maxOutput' ? replyLimit(model) : (bounds?.max ?? null);
       return [name, { accepted, min: bounds?.min ?? null, max, whole: WHOLE.has(name) }];
     }),
   ) as Record<NumberSetting, Rule>;
