@@ -8,8 +8,11 @@ import { stepFrom, storyStops, type Direction, type Step } from './storySteps';
 // place it reached, as the step buttons show it.
 export function useStorySteps(messages: readonly Message[], scrollRef: RefObject<HTMLElement | null>, seekTo: (key: string, lands: Seek['lands']) => void, follow: () => void) {
   const { display } = useDisplay();
-  const keys = useMemo(() => messages.map(({ id }) => id), [messages]);
-  const stops = useMemo(() => storyStops(messages, display.userStops), [messages, display.userStops]);
+  // By the ids, not the array: a reply being written hands over a new one with every chunk, and the scrubber places
+  // itself again whenever its keys or stops change.
+  const ids = messages.map(({ id }) => id).join();
+  const keys = useMemo(() => messages.map(({ id }) => id), [ids]);
+  const stops = useMemo(() => storyStops(messages, display.userStops), [ids, display.userStops]);
 
   function reach(target: Step): string {
     if (target === 'end') {
