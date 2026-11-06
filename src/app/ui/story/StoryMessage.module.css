@@ -159,7 +159,7 @@
   .foot {
     position: sticky;
     bottom: calc(var(--footer-height) + var(--space-8));
-    --above-pill: calc(var(--footer-height) + var(--space-12) + var(--control-chip) + var(--space-8));
+    --above-pill: calc(var(--footer-height) + var(--story-pill-room));
     container-type: scroll-state;
     pointer-events: none;
     /* Sticky makes the foot a stacking context: without a layer, a menu opened from it falls under the next message,
