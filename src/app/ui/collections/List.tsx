@@ -3,9 +3,9 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import { useSeekRow } from '../foundation/seek';
 import { Tag } from '../foundation/Tag';
-import { MenuSlot, useMenuSlot } from '../overlays/MoreMenu';
 import { FolderMark } from './FolderMark';
 import { Item } from './Item';
+import { RowControl } from './RowControl';
 import { Viewport } from './Viewport';
 import styles from './List.module.css';
 
@@ -66,7 +66,6 @@ type ItemProps = {
 export function ListItem({ leading, folder = false, title, badge, code, description, tags = [], note, trailing, onClick, control, detail, children, selected, current, expanded, tone }: ItemProps) {
   const windowed = useContext(Windowed);
   const places = useContext(Places);
-  const slot = useMenuSlot();
   const self = useSeekRow<HTMLLIElement>(title);
   const end = trailing ?? ((places || (folder && expanded === undefined)) && onClick ? <Icon icon={ChevronRight} /> : undefined);
   const meta =
@@ -113,16 +112,7 @@ export function ListItem({ leading, folder = false, title, badge, code, descript
   );
   const content = (
     <>
-      {control ? (
-        <div className={styles.withControl} onContextMenu={slot.onContextMenu}>
-          {row}
-          <span className={styles.control}>
-            <MenuSlot value={slot.held}>{control}</MenuSlot>
-          </span>
-        </div>
-      ) : (
-        row
-      )}
+      <RowControl control={control}>{row}</RowControl>
       {detail && <div className={styles.detail}>{detail}</div>}
       {children && <ul className={styles.nested}>{children}</ul>}
     </>

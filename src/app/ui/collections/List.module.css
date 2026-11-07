@@ -41,19 +41,9 @@
   gap: var(--space-8);
 }
 
-.withControl {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-}
-
-.control {
-  flex-shrink: 0;
-}
-
-/* In a box the control keeps the rows' inset from its edge. */
-.box .control {
-  padding-inline-end: max(var(--space-8), var(--box-inset));
+/* In a box a row's control keeps the rows' inset from its edge (RowControl). */
+.box {
+  --control-inset: max(var(--space-8), var(--box-inset));
 }
 
 .detail {

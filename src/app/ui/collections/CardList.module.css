@@ -12,17 +12,6 @@
   padding: var(--space-4);
 }
 
-.head {
-  min-width: 0;
-  display: flex;
-  gap: var(--space-4);
-}
-
-.control {
-  flex-shrink: 0;
-  align-self: center;
-}
-
 /* On the line of the button's words, inside its padding. */
 .detail {
   padding: 0 var(--space-8) var(--space-8);

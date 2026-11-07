@@ -7,6 +7,7 @@ import { openCharacter } from '../../chat/characterBeside';
 import { ChatNameDialog, useChatEdits } from '../../chat/ChatEdits';
 import { ChatFolderMenu, useChatFolders } from '../../chat/ChatFolderMenu';
 import { ACTS } from '../../common/acts';
+import { groupCopies, latestFirst, type Copied } from '../../common/copies';
 import { FolderMenu, MOVE_TO_FOLDER, named, useMoving, useNaming } from '../../common/folders/FolderParts';
 import { useFolderIndex, whereIs } from '../../common/folders/filing';
 import { useFolderActions } from '../../common/folders/useFolderActions';
@@ -17,13 +18,18 @@ import { useImport } from '../../common/importing';
 import { ago } from '../../common/time';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
 import { useWritingChats } from '../../session';
-import { Button, Divider, Empty, FolderRow, IconButton, ItemRow, Menu, MenuItem, NavRow, Row, SideTitle, Sidebar, TreeRow, useMenuHandle, Viewport } from '../../ui';
+import { Button, Divider, Empty, FoldButton, FolderRow, IconButton, ItemRow, Menu, MenuItem, NavRow, Row, SideTitle, Sidebar, TreeRow, useMenuHandle, Viewport } from '../../ui';
 import { navigate, useRoute } from '../router';
 import { HOME } from '../routes';
 import { LayerButtons } from './LayerButtons';
 
 // Its own key: the character tree's open folders are LibrarySidebar's, and two hooks on one key miss each other's writes.
 const OPEN_FOLDERS = 'risu-alpha:open-chat-folders';
+const OPEN_GROUPS = 'risu-alpha:open-chat-groups';
+
+// A branch (여기서 분기) or a copy hangs under the chat it came from.
+const CHAT: Copied<ChatSummary> = { id: (item) => item.id, origin: (item) => item.chat.origin?.id, folder: chatFolderOf };
+const toggled = (list: readonly string[], id: string) => (list.includes(id) ? list.filter((each) => each !== id) : [...list, id]);
 
 type Props = {
   page: boolean;
@@ -44,12 +50,15 @@ export function ShelfChats({ page, shelf }: Props) {
     compact: true,
   });
   const [openFolders, setOpenFolders] = usePersisted(OPEN_FOLDERS, storedStrings, []);
+  const [openGroups, setOpenGroups] = usePersisted(OPEN_GROUPS, storedStrings, []);
   const chatMenu = useMenuHandle();
   const folderMenu = useMenuHandle();
   const chatFolders = useChatFolders(shelf.id);
   const [asked, setAsked] = useState<{ chat: ChatSummary; at?: { x: number; y: number } } | null>(null);
   const [renaming, setRenaming] = useState<ChatSummary | null>(null);
   const opened = useMemo(() => new Set(openFolders), [openFolders]);
+  const unfolded = useMemo(() => new Set(openGroups), [openGroups]);
+  const grouped = useMemo(() => groupCopies(shelf.chats, CHAT), [shelf.chats]);
   const { field, found, none, words } = useSearch(shelf.chats, '이 목록에서 검색', (item) => [item.title, item.preview ?? '']);
   const writing = useWritingChats();
   const { pickChats } = useImport();
@@ -59,26 +68,41 @@ export function ShelfChats({ page, shelf }: Props) {
   // 캐릭터 없이 has a page only beside its chats.
   const open = id !== null ? () => openCharacter(id, !page) : page ? undefined : () => navigate({ kind: 'shelf', character: null });
 
+  // Searching and picking several keep every chat in its own place, so each can be found and picked.
+  const flat = Boolean(words) || moving.picked !== null;
   const rows = useMemo(() => {
     if (words) return found.map((chat): ListRow => ({ key: chat.id, depth: 0, chat }));
     const result: ListRow[] = [];
+    const latest = latestFirst(CHAT, (item) => item.at, grouped.copies);
+    const top = new Set(grouped.top);
+    // A chat with branches stands where its latest branch would, its branches under it while unfolded.
+    const hang = (chat: ChatSummary, depth: number) => {
+      result.push({ key: chat.id, depth, chat });
+      if (unfolded.has(chat.id)) (grouped.copies.get(chat.id) ?? []).toSorted(latest).forEach((copy) => hang(copy, depth + 1));
+    };
+    const place = (chats: readonly ChatSummary[], depth: number) => {
+      if (flat) chats.forEach((chat) => result.push({ key: chat.id, depth, chat }));
+      else chats.filter((chat) => top.has(chat)).toSorted(latest).forEach((chat) => hang(chat, depth));
+    };
     const visit = (folder: FolderTree, depth: number) => {
       result.push({ key: folder.id, depth, folder });
       if (!opened.has(folder.id)) return;
       folder.children.forEach((child) => visit(child, depth + 1));
-      index.byFolder.get(folder.id)!.direct.forEach((chat) => result.push({ key: chat.id, depth: depth + 1, chat }));
+      place(index.byFolder.get(folder.id)!.direct, depth + 1);
     };
     index.folders.forEach((folder) => visit(folder, 0));
-    index.loose.forEach((chat) => result.push({ key: chat.id, depth: 0, chat }));
+    place(index.loose, 0);
     return result;
-  }, [words, found, index, opened]);
+  }, [words, found, index, opened, grouped, unfolded, flat]);
 
   const listed = useMemo(() => rows.flatMap((row) => ('chat' in row ? [row.chat.id] : [])), [rows]);
-  const toggleFolder = (folder: string) => setOpenFolders(opened.has(folder) ? openFolders.filter((each) => each !== folder) : [...openFolders, folder]);
+  const toggleFolder = (folder: string) => setOpenFolders(toggled(openFolders, folder));
+  const toggleGroup = (chat: string) => setOpenGroups(toggled(openGroups, chat));
 
   const chatRow = (item: ChatSummary) => {
     const preview = item.preview ?? '미리보기 없음';
     const where = words ? whereIs(index, chatFolderOf(item)) : undefined;
+    const hung = flat ? 0 : (grouped.copies.get(item.id)?.length ?? 0);
     return (
       <ItemRow
         key={item.id}
@@ -88,6 +112,7 @@ export function ShelfChats({ page, shelf }: Props) {
         preview={where ? `${where} · ${preview}` : preview}
         current={item.id === openChat}
         selected={moving.picked ? moving.picked.has(item.id) : undefined}
+        control={hung > 0 && <FoldButton open={unfolded.has(item.id)} onToggle={() => toggleGroup(item.id)}>{`분기·사본 ${hung}개`}</FoldButton>}
         drag={moving.dropInto && item.id}
         onDropCard={words ? undefined : moving.dropInto?.(chatFolderOf(item))}
         menu={moving.picked ? undefined : { handle: chatMenu, onOpen: () => setAsked({ chat: item, at: chatMenu.read().at }) }}

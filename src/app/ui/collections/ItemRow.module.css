@@ -1,7 +1,3 @@
 .typing {
   color: var(--color-accent);
 }
-
-.dropping {
-  composes: dropping from '../foundation/surface.module.css';
-}
