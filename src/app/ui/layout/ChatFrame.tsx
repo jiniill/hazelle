@@ -188,34 +188,36 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
   );
 }
 
+// name: the character's, with its face; sub: the chat's name under them. Two targets: the face and name open the
+// character (onClick, expanded), and the chat's name renames it (onRename).
 type TitleProps = {
   name: string;
   sub?: string;
   face?: ReactNode;
   expanded?: boolean;
   onClick?: () => void;
+  onRename?: () => void;
 };
 
-export function ChatTitle({ name, sub, face, expanded, onClick }: TitleProps) {
-  const lines = (
+export function ChatTitle({ name, sub, face, expanded, onClick, onRename }: TitleProps) {
+  const who = (
     <>
       {face}
-      <span className={styles.lines}>
-        <span className={styles.name}>{name}</span>
-        {sub && <span className={styles.sub}>{sub}</span>}
-      </span>
+      <span className={styles.name}>{name}</span>
       {onClick && <ChevronRight className={styles.chevron} size={16} aria-hidden />}
     </>
   );
+  const under = face ? `${styles.sub} ${styles.beside}` : styles.sub;
   return (
     <h1 className={styles.heading}>
       {onClick ? (
-        <button type="button" className={`${styles.box} ${styles.press}`} aria-expanded={expanded} onClick={onClick}>
-          {lines}
+        <button type="button" className={`${styles.who} ${styles.press}`} aria-expanded={expanded} onClick={onClick}>
+          {who}
         </button>
       ) : (
-        <span className={styles.box}>{lines}</span>
+        <span className={styles.who}>{who}</span>
       )}
+      {sub && (onRename ? <button type="button" className={`${under} ${styles.press}`} onClick={onRename}>{sub}</button> : <span className={under}>{sub}</span>)}
     </h1>
   );
 }

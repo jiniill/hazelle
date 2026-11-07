@@ -1,6 +1,6 @@
-import type { ChatItem, Message } from '../model/chat';
+import type { Message } from '../model/chat';
 import type { ApiResult } from './api';
-import { branchChat, copyShown, editMessage, removeMessage, removeMessages, restoreMessage, restoreMessages, selectVersion } from './chat-log';
+import { copyChat, copyShown, editMessage, removeMessage, removeMessages, restoreMessage, restoreMessages, selectVersion, type Copy } from './chat-log';
 import type { Session } from './session';
 
 // The user's own acts on a chat's messages, each told to the chat's tools once it is saved (Hazelle change and branch
@@ -56,10 +56,15 @@ export async function undeleteMessages(session: Acting, chat: string, messages: 
   });
 }
 
-export async function branchFrom(session: Acting, item: ChatItem, message: string): Promise<ApiResult<string>> {
-  const made = await branchChat(session.store, item, message);
+// Either copy is a branch to the chat's tools: their data and badges come along, and the branch event names the copies.
+async function copied(session: Acting, chat: string, copy: Copy): Promise<ApiResult<string>> {
+  const made = await copyChat(session.store, chat, copy);
   if (!made.ok) return made;
   const { id, ...from } = made.data;
   session.scriptCommands.branched(id, from);
   return { ok: true, data: id };
 }
+
+export const branchFrom = (session: Acting, chat: string, message: string) => copied(session, chat, { kind: 'branch', at: message });
+
+export const duplicateChat = (session: Acting, chat: string, title: string) => copied(session, chat, { kind: 'duplicate', title });

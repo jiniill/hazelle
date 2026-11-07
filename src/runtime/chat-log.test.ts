@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { calls, fold, foldTree, shown, translationOutdated, type Chat, type ChatItem, type Message, type Receipt, type Version } from '../model/chat';
+import { calls, fold, foldTree, shown, translationOutdated, type Chat, type Message, type Receipt, type Version } from '../model/chat';
 import { cachePrintId } from '../model/cache';
 import { memoryId, type MemoryRecord } from '../model/memory';
 import { chatPrint } from './cache';
 import { chatFile, readChatFile } from './chat-file';
-import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, branchChat, copyShown, editMessage, forgetOrigin, importChat, nameBookmark, removeMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setVariableByHand, startChat, withOwn } from './chat-log';
+import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, copyChat, copyShown, editMessage, forgetOrigin, importChat, nameBookmark, removeMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setVariableByHand, startChat, withOwn } from './chat-log';
 import { setChatModel, withMainModel } from './assignment';
 import type { Files } from './files';
 import { summaryId } from './summary';
@@ -174,9 +174,7 @@ describe('bookmarks', () => {
     await server.hold(store, imported.data.id);
     expect(shownTexts(imported.data.id)).toEqual([['말 0', '시작'], ['말 2', undefined]]);
 
-    const messages = fold(store.children('entry', id));
-    const item: ChatItem = { id, chat: store.get('chat', id)!.value, messages, count: messages.length, title: '등대', preview: '', at: null, order: 0 };
-    const branched = await branchChat(store, item, first!);
+    const branched = await copyChat(store, id, { kind: 'branch', at: first! });
     if (!branched.ok) throw new Error(branched.error);
     await server.hold(store, branched.data.id);
     expect(shownTexts(branched.data.id)).toEqual([['말 0', '시작']]);
@@ -195,9 +193,7 @@ describe('a chat folder', () => {
     const folder = made.ok ? made.data.id : '';
     await moveInto(store, 'chat', [id], folder);
 
-    const messages = fold(store.children('entry', id));
-    const item: ChatItem = { id, chat: store.get('chat', id)!.value, messages, count: messages.length, title: '등대', preview: '', at: null, order: 0 };
-    const branched = await branchChat(store, item, first);
+    const branched = await copyChat(store, id, { kind: 'branch', at: first });
     if (!branched.ok) throw new Error(branched.error);
     expect(store.get('chat', branched.data.id)!.value.folder).toBe(folder);
 
@@ -226,7 +222,7 @@ describe('a chat not saved yet', () => {
   });
 });
 
-describe('branchChat', () => {
+describe('copyChat', () => {
   it('names a branch of an untitled branch after the root, and forgetOrigin drops the origin', async () => {
     const { store } = await server.account();
     const source = crypto.randomUUID();
@@ -235,17 +231,36 @@ describe('branchChat', () => {
     await startChat(store, source, chat, null);
     const said = crypto.randomUUID();
     await appendUserMessage(store, source, { id: said, text: '안녕' });
-    const messages = () => fold(store.children('entry', source));
-    const first = await branchChat(store, { id: source, chat, messages: messages(), count: 1, title: '기숙사의 밤', preview: '', at: null, order: 0 }, said);
+    const first = await copyChat(store, source, { kind: 'branch', at: said });
     if (!first.ok) throw new Error(first.error);
     await server.hold(store, first.data.id);
-    const branch = store.get('chat', first.data.id)!.value;
-    const again = await branchChat(store, { id: first.data.id, chat: branch, messages: fold(store.children('entry', first.data.id)), count: 1, title: '기숙사의 밤 · 분기', preview: '', at: null, order: 0 }, first.data.messages[said]!);
+    const again = await copyChat(store, first.data.id, { kind: 'branch', at: first.data.messages[said]! });
     if (!again.ok) throw new Error(again.error);
     await server.hold(store, again.data.id);
     expect(store.get('chat', again.data.id)!.value.origin).toMatchObject({ id: first.data.id, name: '기숙사의 밤' });
     expect(await forgetOrigin(store, again.data.id)).toMatchObject({ ok: true });
     expect(store.get('chat', again.data.id)!.value.origin).toBeUndefined();
+  });
+
+  it("duplicates a chat whole under the name given, as no one's branch, keeping the seed", async () => {
+    const { store } = await server.account();
+    const source = crypto.randomUUID();
+    await server.hold(store, source);
+    const chat: Chat = { title: '기숙사의 밤', character: null, models: {} };
+    await startChat(store, source, chat, null);
+    const last = crypto.randomUUID();
+    await appendUserMessage(store, source, { id: crypto.randomUUID(), text: '안녕' });
+    await appendUserMessage(store, source, { id: last, text: '잘 자' });
+    const branched = await copyChat(store, source, { kind: 'branch', at: last });
+    if (!branched.ok) throw new Error(branched.error);
+    await server.hold(store, branched.data.id);
+    const copied = await copyChat(store, branched.data.id, { kind: 'duplicate', title: '기숙사의 밤 · 분기 (사본)' });
+    if (!copied.ok) throw new Error(copied.error);
+    await server.hold(store, copied.data.id);
+    const texts = (id: string) => fold(store.children('entry', id)).map((message) => shown(message).text);
+    expect(texts(copied.data.id)).toEqual(['안녕', '잘 자']);
+    expect(store.get('chat', copied.data.id)!.value).toEqual({ ...chat, title: '기숙사의 밤 · 분기 (사본)', seed: source });
+    expect(copied.data.from).toBe(branched.data.id);
   });
 
   it("carries what the bot's Lua wrote, the texts it staged, the tools' data, badges on the branch's messages, the chat's inlays and its cache print", async () => {
@@ -275,8 +290,7 @@ describe('branchChat', () => {
     const print = { call: 'r', connection: 'c', account: 'a', model: 'm', messages: [{ role: 'user' as const, hash: 'h', tokens: 1, from: { kind: 'block' as const, name: null, slot: null } }] };
     await store.create('cacheprint', print, { id: cachePrintId(source), parent: source });
 
-    const item: ChatItem = { id: source, chat, messages: folded(), count: 2, title: '', preview: '', at: null, order: 0 };
-    const branched = await branchChat(store, item, folded()[1]!.id);
+    const branched = await copyChat(store, source, { kind: 'branch', at: folded()[1]!.id });
     if (!branched.ok) throw new Error(branched.error);
     await server.hold(store, branched.data.id);
     const copy = fold(store.children('entry', branched.data.id));
@@ -289,7 +303,7 @@ describe('branchChat', () => {
     await appendScripted(store, source, { edits: [], removed: [], added: [{ follows: said, ahead: folded()[1]!, messages: [{ role: 'user', text: 'between' }] }], vars: null });
     const texts = (messages: Message[]) => messages.map((message) => shown(message).text);
     expect(texts(folded())).toEqual(['안녕!', 'between', 'narration']);
-    const inserted = await branchChat(store, { ...item, messages: folded() }, folded()[2]!.id);
+    const inserted = await copyChat(store, source, { kind: 'branch', at: folded()[2]!.id });
     if (!inserted.ok) throw new Error(inserted.error);
     await server.hold(store, inserted.data.id);
     expect(texts(fold(store.children('entry', inserted.data.id)))).toEqual(['안녕!', 'between', 'narration']);
@@ -329,11 +343,11 @@ describe('branchChat', () => {
     );
     await appendUserMessage(store, source, { id: split, text: '여기서' });
     await appendUserMessage(store, source, { id: crypto.randomUUID(), text: '갈래에 없는 말' });
-    const item: ChatItem = { id: source, chat, messages: folded(), count: folded().length, title: '기숙사의 밤', preview: '', at: null, order: 0 };
-    expect(shown(item.messages[1]!).seed).toBe(said);
+    const story = folded();
+    expect(shown(story[1]!).seed).toBe(said);
 
     const requests = vi.spyOn(globalThis, 'fetch');
-    const branched = await branchChat(store, item, split);
+    const branched = await copyChat(store, source, { kind: 'branch', at: split });
     if (!branched.ok) throw new Error(branched.error);
     await server.hold(store, branched.data.id);
     const entries = store.children('entry', branched.data.id);
@@ -345,13 +359,13 @@ describe('branchChat', () => {
     const copy = fold(entries);
     const withoutIds = (messages: Message[]) =>
       messages.map(({ role, at, selected, versions }) => ({ role, at, selected, versions: versions.map(({ seed, text, receipt, edited, at: written, translation, greeting }) => ({ seed, text, receipt, edited, written, translation, greeting })) }));
-    expect(withoutIds(copy)).toEqual(withoutIds(item.messages.slice(0, -1)));
+    expect(withoutIds(copy)).toEqual(withoutIds(story.slice(0, -1)));
     expect([copy[0]!.versions.length, shown(copy[1]!).text, shown(copy[1]!).edited]).toEqual([3, '안녕하세요', true]);
     expect([shown(copy[2]!).text, copy[2]!.versions.length, calls(shown(copy[2]!).receipt!).map((call) => call.cost)]).toEqual(['답장', 1, [{ unit: 'usd', amount: 0.01, source: 'reported' }, null]]);
     const stored = store.get('chat', branched.data.id)!;
     expect(stored.value).toEqual({ ...chat, title: null, origin: { id: source, name: '기숙사의 밤', after: copy.at(-1)!.id }, seed: source });
     const reader = { store, username: 'jin' };
-    expect(await evaluateChat(reader, branched.data.id, stored.value, copy)).toEqual(await evaluateChat(reader, source, chat, item.messages.slice(0, -1)));
+    expect(await evaluateChat(reader, branched.data.id, stored.value, copy)).toEqual(await evaluateChat(reader, source, chat, story.slice(0, -1)));
     expect(stored.rev).toBeGreaterThan(Math.max(...entries.map((entry) => entry.rev)));
   }, 15_000);
   it('carries the memory records whose every message lies before the split, their sources remapped, with the facts and threads as they stood before a later record changed them, and a chapter only with all its records and messages', async () => {
@@ -387,8 +401,7 @@ describe('branchChat', () => {
       },
       { id: memoryId(source), parent: source },
     );
-    const item: ChatItem = { id: source, chat, messages, count: messages.length, title: '', preview: '', at: null, order: 0 };
-    const branched = await branchChat(store, item, ids[2]!);
+    const branched = await copyChat(store, source, { kind: 'branch', at: ids[2]! });
     if (!branched.ok) throw new Error(branched.error);
     await server.hold(store, branched.data.id);
     const copy = fold(store.children('entry', branched.data.id));
@@ -529,9 +542,7 @@ describe('채팅 로어북', () => {
     if (!imported.ok) throw new Error(imported.error);
     expect(lore(imported.data.id)).toEqual(lore(id));
 
-    const messages = fold(store.children('entry', id));
-    const item: ChatItem = { id, chat: store.get('chat', id)!.value, messages, count: messages.length, title: '등대', preview: '', at: null, order: 0 };
-    const branched = await branchChat(store, item, message);
+    const branched = await copyChat(store, id, { kind: 'branch', at: message });
     if (!branched.ok) throw new Error(branched.error);
     expect(lore(branched.data.id)).toEqual(lore(id));
   });
@@ -569,9 +580,7 @@ describe('마스코트 대사', () => {
     await server.hold(store, imported.data.id);
     expect(lines(imported.data.id)).toEqual(lines(source));
 
-    const messages = fold(store.children('entry', source));
-    const item: ChatItem = { id: source, chat: store.get('chat', source)!.value, messages, count: messages.length, title: '', preview: '', at: null, order: 0 };
-    const branched = await branchChat(store, item, first);
+    const branched = await copyChat(store, source, { kind: 'branch', at: first });
     if (!branched.ok) throw new Error(branched.error);
     await server.hold(store, branched.data.id);
     expect(lines(branched.data.id)).toEqual([['둘째 답', '둘째 줄'], ['첫 답', '첫 줄']]);
