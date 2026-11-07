@@ -3,24 +3,22 @@ import { Button } from '../controls/Button';
 import styles from './Divider.module.css';
 import { Icon } from './Icon';
 
-type Story = { label: string; icon?: LucideIcon; action?: { label: string; onClick: () => void } };
+type Story = { label: string; icon?: LucideIcon; actions?: { label: string; onClick: () => void }[] };
 type Props = Story | { variant: 'menu' | 'tools' | 'rail' };
 
 export function Divider(props: Props) {
   if ('label' in props) {
-    const { label, icon, action } = props;
+    const { label, icon, actions = [] } = props;
     // A separator's children are presentational, so a line holding a button is not one.
     return (
-      <div className={icon ? `${styles.story} ${styles.marked}` : styles.story} role={action ? undefined : 'separator'}>
+      <div className={icon ? `${styles.story} ${styles.marked}` : styles.story} role={actions.length ? undefined : 'separator'}>
         <span className={styles.rule} />
         {icon && <Icon icon={icon} size="sm" />}
-        {label}
-        {action && (
-          <Button variant="link" size="xs" onClick={action.onClick}>
-            {action.label}
-          </Button>
-        )}
-        {(label || icon || action) && <span className={styles.rule} />}
+        {label && <span className={styles.label}>{label}</span>}
+        {actions.length > 0 && <span className={styles.actions}>
+          {actions.map((action) => <Button key={action.label} variant="link" size="xs" onClick={action.onClick}>{action.label}</Button>)}
+        </span>}
+        {(label || icon || actions.length > 0) && <span className={styles.rule} />}
       </div>
     );
   }

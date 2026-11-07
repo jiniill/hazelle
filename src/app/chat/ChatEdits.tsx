@@ -1,5 +1,5 @@
 import { allWritten } from '../../runtime/api';
-import { removeChat, renameChat, restoreChat } from '../../runtime/chat-log';
+import { forgetOrigin as forgetChatOrigin, removeChat, renameChat, restoreChat } from '../../runtime/chat-log';
 import { NameDialog } from '../common/NameDialog';
 import { BIN_KEEPS } from '../common/words';
 import { useSession } from '../session';
@@ -34,7 +34,8 @@ export function useChatEdits() {
       return restored;
     }, BIN_KEEPS);
   };
-  return { rename, drop };
+  const forgetOrigin = (id: string) => toast.settled(forgetChatOrigin(store, id));
+  return { rename, drop, forgetOrigin };
 }
 
 export const ChatNameDialog = ({ title, onSave, onClose }: { title: string; onSave: (name: string) => void; onClose: () => void }) => (

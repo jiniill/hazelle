@@ -5,6 +5,7 @@ import { day } from '../common/time';
 import { useChatSummary } from '../session';
 import { navigate } from '../shell/router';
 import { Callout, Divider, Empty, Progress, Text, TimePinContext, Viewport } from '../ui';
+import { useChatEdits } from './ChatEdits';
 import { ChatMessage } from './ChatMessage';
 import { messageRow } from './messageRow';
 import type { OpenChat } from './useChat';
@@ -17,6 +18,8 @@ export function ChatLog({ chat }: { chat: OpenChat }) {
   const rowActions = useMemo(() => Object.fromEntries(Object.keys(actions).map((key) => [key, (...args: unknown[]) =>
     Reflect.apply(latestActions.current[key as keyof typeof actions], undefined, args),
   ])) as typeof actions, []);
+  const edits = useChatEdits();
+  // The origin's name as it is now; the one kept at branch time only once the origin is gone.
   const originChat = useChatSummary(item?.chat.origin?.id ?? null);
   const origin = item?.chat.origin;
   if (chat.displayPending) return chat.displayError === undefined ? <Progress steps={[{ label: '채팅을 불러오는 중' }]} /> : (
@@ -44,8 +47,11 @@ export function ChatLog({ chat }: { chat: OpenChat }) {
         {/* Deleting the message the split comes after takes its divider with it, until 되돌리기. */}
         {origin?.after === message.id && <Divider
           icon={GitBranch}
-          label={originChat !== null ? `'${origin.name}'에서 분기됨` : `삭제된 채팅 '${origin.name}'에서 분기됨`}
-          action={originChat !== null ? { label: '원래 채팅 보기', onClick: () => navigate({ kind: 'chat', id: origin.id }) } : undefined}
+          label={originChat !== null ? `'${originChat.title}'에서 분기됨` : `삭제된 채팅 '${origin.name}'에서 분기됨`}
+          actions={[
+            ...(originChat !== null ? [{ label: '원래 채팅 보기', onClick: () => navigate({ kind: 'chat', id: origin.id }) }] : []),
+            { label: '분기 표시 삭제', onClick: () => edits.forgetOrigin(item!.id) },
+          ]}
         />}
       </Fragment>;
     }}</Viewport></TimePinContext>}

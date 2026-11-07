@@ -111,7 +111,7 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 | foundation | `Brand` | `Brand.module.css` | The wordmark |
 | foundation | `ControlName` | `ControlName.module.css` | A Hazelle control's name inside running text, drawn as the button it names (a guide's 「」) |
 | foundation | `Figure` | `Figure.module.css` | A picture in a guide's text, its caption under it |
-| foundation | `Divider` | `Divider.module.css` | Lines between groups: a labeled line, the story's (with an icon and an action where a branch split) or a toggle list's, one plain rule when it has no label; and the menu, tools and rail lines |
+| foundation | `Divider` | `Divider.module.css` | Lines between groups: a labeled line, the story's (with an icon, a title cut to one line and actions where a branch split) or a toggle list's, one plain rule when it has no label; and the menu, tools and rail lines |
 | foundation | `Icon` | `Icon.module.css` | Icon sizes and stroke |
 | foundation | `Kbd` (inside the kit only) | `Kbd.module.css` | One key cap, in a notice's action and the 단축키 list |
 | foundation | `Byline` | `Byline.module.css` | Who wrote a thing: their face, name and marks, and when, on one line (sm) or with the time under the name (md); the operator's in the accent |
