@@ -68,7 +68,7 @@ function greetingWrites(chat: string, { choices, selected }: Greetings, at: numb
 }
 
 // A branch: the story up to a message, untitled and read as its origin's (분기됨). A duplicate: the whole story under its
-// own name, no one's branch.
+// own name. Both remember their origin, which the sidebar nests them under.
 export type Copy = { kind: 'branch'; at: string } | { kind: 'duplicate'; title: string };
 
 // Copy choices, not links: deleting either chat must leave the other whole. Either copy keeps the seed, so its tags
@@ -93,9 +93,10 @@ export async function copyChat(store: ObjectStore, source: string, copy: Copy): 
     const print = chatPrint(store, source);
     if (print) writes.push({ type: 'create', kind: 'cacheprint', id: cachePrintId(id), parent: id, value: print.value });
     const chat = { ...withBookmarks(item.chat, carried(item.chat.bookmarks, messages)), seed: item.chat.seed ?? source };
-    // An untitled branch's own title is its origin's with · 분기, so a branch of it names that origin, never X · 분기 · 분기.
+    // An untitled branch's or copy's own title is its origin's with · 분기/· 사본 (originTitle), so a copy of it names that
+    // origin, never X · 분기 · 사본.
     const name = item.chat.title ?? item.chat.origin?.name ?? item.title;
-    const own = copy.kind === 'branch' ? { ...chat, title: null, origin: { id: source, name, after } } : { ...without(chat, 'origin'), title: copy.title };
+    const own = copy.kind === 'branch' ? { ...chat, title: null, origin: { id: source, name, after } } : { ...chat, title: copy.title, origin: { id: source, name, after: null } };
     writes.push({ type: 'create', kind: 'chat', id, parent: null, value: own });
     const created = await store.batch(writes);
     return created.ok ? { ok: true, data: { id, from: source, messages: Object.fromEntries(messages), versions: Object.fromEntries(versions) } } : created;
@@ -125,7 +126,8 @@ export async function importChat({ store, files }: Pick<Session, 'store' | 'file
   const held = (kind: 'prompt' | 'persona' | 'character' | 'chat', ref: string | undefined): ref is string => ref !== undefined && live(store.get(kind, ref)) !== null;
   const kept = cast.filter((each) => held('character', each));
   const roles = Object.entries(models).filter(([, ref]) => ref && !('kind' in routeOf(store, ref)));
-  const after = origin && messages.get(origin.after);
+  // A whole copy's origin has no split to remap.
+  const after = origin && (origin.after === null ? null : messages.get(origin.after));
   const chat: Chat = {
     ...value,
     character,
@@ -133,7 +135,7 @@ export async function importChat({ store, files }: Pick<Session, 'store' | 'file
     seed: value.seed ?? file.chat.id,
     ...(held('prompt', prompt) && { prompt }),
     ...(held('persona', persona) && { persona }),
-    ...(origin && after && held('chat', origin.id) && { origin: { ...origin, after } }),
+    ...(origin && after !== undefined && held('chat', origin.id) && { origin: { ...origin, after } }),
     ...(folder !== undefined && isChatFolderOf(store.get('folder', folder)?.value, character) && { folder }),
   };
   const dropped = {
