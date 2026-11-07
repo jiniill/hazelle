@@ -1,9 +1,9 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { Tag } from '../foundation/Tag';
-import { MenuSlot, useMenuSlot } from '../overlays/MoreMenu';
 import { cardDrag, useCardDrop } from './cardDrag';
 import { FolderMark } from './FolderMark';
 import { Item } from './Item';
+import { RowControl } from './RowControl';
 import styles from './CardList.module.css';
 
 const Folded = createContext(false);
@@ -43,7 +43,6 @@ type Props = {
 export function CardItem({ folder = false, title, badge, tags = [], description, note, control, detail, current, onClick, children, selected, drag, onDropCard }: Props) {
   const folded = useContext(Folded);
   const drop = useCardDrop(onDropCard);
-  const slot = useMenuSlot();
   const meta =
     badge || tags.length > 0 ? (
       <>
@@ -55,14 +54,9 @@ export function CardItem({ folder = false, title, badge, tags = [], description,
     ) : undefined;
   return (
     <li className={[folded ? undefined : styles.card, folder && styles.folder, drop.over && styles.dropping].filter(Boolean).join(' ') || undefined} {...(drag === undefined ? {} : cardDrag(drag))} {...drop.props}>
-      <div className={styles.head} onContextMenu={slot.onContextMenu}>
+      <RowControl control={control}>
         <Item density="regular" scheme="list" leading={folder && <FolderMark size="md" />} title={title} meta={meta} preview={[description, note].filter(Boolean).join(' · ') || undefined} current={current} pressed={selected} onClick={onClick} />
-        {control && (
-          <span className={styles.control}>
-            <MenuSlot value={slot.held}>{control}</MenuSlot>
-          </span>
-        )}
-      </div>
+      </RowControl>
       {detail && <div className={styles.detail}>{detail}</div>}
       {children && (
         <Folded value>

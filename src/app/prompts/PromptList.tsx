@@ -1,4 +1,3 @@
-import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Stored } from '../../model/kinds';
 import type { PromptSort } from '../../model/prompt';
@@ -12,7 +11,7 @@ import { useSearch } from '../common/useSearch';
 import { useConnections, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_ROLES, PAGES, PRE_READ, promptName, STAGE_NAMES } from '../common/words';
-import { Button, CardItem, CardList, ChoiceGroup, Columns, Disclosure, Empty, Hint, Menu, MenuItem, PickCard, Row, Stack, Tabs } from '../ui';
+import { Button, CardItem, CardList, ChoiceGroup, Columns, Disclosure, Empty, FoldButton, Hint, Menu, MenuItem, PickCard, Row, Stack, Tabs } from '../ui';
 import { taskModelWords } from './ModelPane';
 import { useImport } from '../common/importing';
 import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse';
@@ -128,13 +127,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
         selected={picking ? moving.picked!.has(prompt.id) : undefined}
         drag={moving.dropInto && !nested ? prompt.id : undefined}
         onClick={() => (picking ? moving.toggle(prompt.id) : onPick(prompt.id))}
-        control={
-          copies.length > 0 && (
-            <Button variant="ghost" size="sm" icon={expanded ? ChevronDown : ChevronRight} expanded={expanded} onClick={flip}>
-              {`사본 ${copies.length}개`}
-            </Button>
-          )
-        }
+        control={copies.length > 0 && <FoldButton open={expanded} onToggle={flip}>{`사본 ${copies.length}개`}</FoldButton>}
       >
         {expanded && copies.map((copy) => row(copy, true))}
       </CardItem>

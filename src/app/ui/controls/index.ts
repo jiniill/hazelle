@@ -10,6 +10,7 @@ export { FontPicker } from './FontPicker';
 export { Composer } from './Composer';
 export { EditBox } from './EditBox';
 export { FileButton, pickFiles } from './FileButton';
+export { FoldButton } from './FoldButton';
 export { IconButton } from './IconButton';
 export { Link } from './Link';
 export { MarkupArea, typeInto } from './MarkupArea';
