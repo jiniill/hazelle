@@ -127,7 +127,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
         selected={picking ? moving.picked!.has(prompt.id) : undefined}
         drag={moving.dropInto && !nested ? prompt.id : undefined}
         onClick={() => (picking ? moving.toggle(prompt.id) : onPick(prompt.id))}
-        control={copies.length > 0 && <FoldButton open={expanded} onToggle={flip}>{`사본 ${copies.length}개`}</FoldButton>}
+        control={copies.length > 0 && <FoldButton open={expanded} onToggle={flip} noun="사본" count={copies.length} />}
       >
         {expanded && copies.map((copy) => row(copy, true))}
       </CardItem>

@@ -112,7 +112,7 @@ export function ShelfChats({ page, shelf }: Props) {
         preview={where ? `${where} · ${preview}` : preview}
         current={item.id === openChat}
         selected={moving.picked ? moving.picked.has(item.id) : undefined}
-        control={hung > 0 && <FoldButton open={unfolded.has(item.id)} onToggle={() => toggleGroup(item.id)}>{`분기·사본 ${hung}개`}</FoldButton>}
+        control={hung > 0 && <FoldButton open={unfolded.has(item.id)} onToggle={() => toggleGroup(item.id)} noun="분기·사본" count={hung} brief />}
         drag={moving.dropInto && item.id}
         onDropCard={words ? undefined : moving.dropInto?.(chatFolderOf(item))}
         menu={moving.picked ? undefined : { handle: chatMenu, onOpen: () => setAsked({ chat: item, at: chatMenu.read().at }) }}
