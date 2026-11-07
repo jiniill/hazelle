@@ -8,7 +8,10 @@ export type Part = { from: number; to: number };
 export const PART_MARK = '\uE002';
 
 // What a line reads as once drawn: markdown drops its marks and the story its tags, so only letters and digits count.
-const letters = (text: string) => text.replace(/<[^>]*>/g, '').replace(/[^\p{L}\p{N}]/gu, '');
+const PIECES = /<[^>]*>|[\s\S]/gu;
+const LETTER = /^[\p{L}\p{N}]$/u;
+const drawn = (text: string) => [...text.matchAll(PIECES)].filter(([piece]) => LETTER.test(piece));
+const letters = (text: string) => drawn(text).map(([piece]) => piece).join('');
 
 // The paragraphs of text from where the first piece is to where the last is, each piece a run of drawn text; null when
 // a piece is in no paragraph, or the run could start in more than one.
@@ -37,4 +40,12 @@ export function withPart(text: string, { from, to }: Part, value: string): strin
 export function markPart(text: string, { from, to }: Part): string {
   const lines = text.split('\n');
   return [...lines.slice(0, from), PART_MARK, ...lines.slice(from, to + 1).filter((line) => withoutMarks(line) !== line), ...lines.slice(to + 1)].join('\n');
+}
+
+// A key typed where a selection starts, before being the drawn text ahead of it in its paragraph: the drawn text keeps
+// no source offsets, so the caret goes before the source letter that as many letters as before holds come ahead of, or
+// at the end.
+export function typeAt(value: string, before: string, key: string): { value: string; caret: number } {
+  const at = drawn(value)[letters(before).length]?.index ?? value.length;
+  return { value: value.slice(0, at) + key + value.slice(at), caret: at + key.length };
 }
