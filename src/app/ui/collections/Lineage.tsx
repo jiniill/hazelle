@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { placeStems, type Metrics, type PlacedSprout, type Sprout, type Stem } from './stems';
 import styles from './Lineage.module.css';
 
@@ -26,6 +26,11 @@ const markOf = ({ kind, at }: Sprout) => (kind === 'copy' ? styles.copyMark : at
 export function Lineage({ root, label, head, onSprout }: Props) {
   const [metrics] = useState(readMetrics);
   const { width, height, stems, sprouts } = useMemo(() => placeStems(root, metrics), [root, metrics]);
+  // The map opens on the reader's own stem, which may stand past the panel's edge.
+  const own = useRef<HTMLLIElement>(null);
+  useLayoutEffect(() => {
+    own.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, []);
   return (
     <div className={styles.map} style={{ width, height }}>
       <svg className={styles.lines} width={width} height={height} aria-hidden>
@@ -38,7 +43,7 @@ export function Lineage({ root, label, head, onSprout }: Props) {
       </svg>
       <ul className={styles.heads} aria-label={label}>
         {stems.map(({ stem, x, top }) => (
-          <li key={stem.key} className={styles.head} style={{ left: x - metrics.head.width / 2, top }}>
+          <li key={stem.key} ref={stem.current ? own : undefined} className={styles.head} style={{ left: x - metrics.head.width / 2, top }}>
             {head(stem)}
           </li>
         ))}

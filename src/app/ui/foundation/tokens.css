@@ -468,7 +468,7 @@
   --lineage-unit: 4px;
   --lineage-line-min: 48px;
   --lineage-line-max: 360px;
-  --lineage-head-width: 168px;
+  --lineage-head-width: 208px;
   --lineage-head: var(--row-min-height);
   --lineage-gap: 16px;
   --lineage-drop: 40px;

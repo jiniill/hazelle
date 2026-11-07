@@ -17,9 +17,12 @@ export type Placement = { width: number; height: number; stems: PlacedStem[]; sp
 
 type Held = { from: number; to: number };
 
+const holdsCurrent = (stem: Stem): boolean => stem.current === true || stem.children.some(({ stem: child }) => holdsCurrent(child));
+
 // Time runs down and siblings stand in lanes to the right of their parent. A child takes the nearest lane right of its
-// parent's that is free from its sprout to its line's end, a drop clear of what the lane holds; the lowest sprout of a
-// stem is placed first, so the lanes nearest the stem go to the sprouts whose run across is shortest.
+// parent's that is free from its sprout to its line's end, a drop clear of what the lane holds. The sprout leading to
+// the current stem is placed first, so the reader's own line stays nearest; then the lowest sprout of a stem, so the
+// lanes nearest the stem go to the sprouts whose run across is shortest.
 export function placeStems(root: Stem, metrics: Metrics): Placement {
   const { unit, min, max, head, gap, drop } = metrics;
   const lanes: Held[][] = [];
@@ -33,7 +36,8 @@ export function placeStems(root: Stem, metrics: Metrics): Placement {
     (lanes[lane] ??= []).push({ from: top, to: placed.to });
     stems.push(placed);
     const at = (sprout: Sprout) => (sprout.at === null ? placed.to : from + (placed.to - from) * Math.min(sprout.at / stem.length, 1));
-    for (const sprout of stem.children.map((sprout) => ({ sprout, y: at(sprout) })).sort((a, b) => b.y - a.y)) {
+    const order = (a: { sprout: Sprout; y: number }, b: { sprout: Sprout; y: number }) => Number(holdsCurrent(b.sprout.stem)) - Number(holdsCurrent(a.sprout.stem)) || b.y - a.y;
+    for (const sprout of stem.children.map((sprout) => ({ sprout, y: at(sprout) })).sort(order)) {
       const childTop = sprout.y + drop;
       const end = childTop + head.height + line(sprout.sprout.stem);
       let next = lane + 1;

@@ -48,9 +48,9 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
     return (
       <ItemRow
         title={chat.title}
-        time={chat.at === null ? '' : ago(chat.at)}
+        time=""
         typing={false}
-        preview={[chat.count === null ? null : `메시지 ${chat.count}개`, chat.preview].filter((part) => part !== null).join(' · ')}
+        preview={[chat.count === null ? null : `메시지 ${chat.count}개`, chat.at === null ? null : ago(chat.at)].filter((part) => part !== null).join(' · ')}
         current={chat.id === current}
         control={
           <MoreMenu of="채팅">

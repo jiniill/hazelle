@@ -46,3 +46,9 @@ it('keeps a grandchild right of its parent, and a sibling past every lane their 
     ['c', 3],
   ]);
 });
+
+it('places the sprout leading to the current stem first, so its lane is nearest', () => {
+  const root = stem('a', 100, [sprout('branch', 10, { ...stem('b', 100), children: [sprout('branch', 5, { ...stem('e', 10), current: true })] }), sprout('branch', 50, stem('c', 10)), sprout('copy', null, stem('d', 10))]);
+  const { stems } = placeStems(root, metrics);
+  expect(stems.map(({ stem, lane }) => [stem.key, lane])).toEqual([['a', 0], ['b', 1], ['e', 2], ['d', 2], ['c', 3]]);
+});
