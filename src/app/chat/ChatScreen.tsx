@@ -13,6 +13,7 @@ import { aimedAtPanel, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, usePan
 import { ChatAutopilot } from './ChatAutopilot';
 import { ChatBookmarks } from './ChatBookmarks';
 import { ChatInspect } from './ChatInspect';
+import { ChatLineage } from './ChatLineage';
 import { ChatComposer } from './ChatComposer';
 import { ChatDialogs, ChatHeaderActions, ChatHeading } from './ChatHeader';
 import { ChatInfo } from './ChatInfo';
@@ -110,6 +111,8 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
             />
           ) : panel?.kind === 'bookmarks' ? (
             chat.item && <ChatBookmarks item={chat.item} messages={chat.messages} texts={chat.texts} names={chat.names} onShow={actions.showBookmark} onUnmark={actions.bookmark} onRename={actions.renameBookmark} onClose={actions.closePanel} />
+          ) : panel?.kind === 'lineage' ? (
+            id && <ChatLineage current={id} shelf={shelf} onClose={actions.closePanel} />
           ) : panel?.kind === 'autopilot' ? (
             <ChatAutopilot autopilot={autopilot} busy={busy} onClose={actions.closePanel} />
           ) : panel?.kind === 'lore' ? (

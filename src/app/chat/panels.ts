@@ -12,7 +12,7 @@ export type Side = { kind: 'prompts'; id: string | null; pane: PromptPane | null
 export type InspectTab = 'request' | 'cache' | 'variables' | 'modules' | 'scripts' | 'log';
 type InspectPanel = { kind: 'inspect'; tab: InspectTab };
 export type InfoTab = 'reply' | 'lore' | 'memory' | 'request' | 'response';
-export type Panel = InspectPanel | { kind: 'toggles' } | { kind: 'memory'; record: string | null } | { kind: 'info'; tab: InfoTab } | { kind: 'tool'; module: string } | { kind: 'bookmarks' } | { kind: 'lore' } | { kind: 'autopilot' } | Side;
+export type Panel = InspectPanel | { kind: 'toggles' } | { kind: 'memory'; record: string | null } | { kind: 'info'; tab: InfoTab } | { kind: 'tool'; module: string } | { kind: 'bookmarks' } | { kind: 'lineage' } | { kind: 'lore' } | { kind: 'autopilot' } | Side;
 
 const isSide = (panel: Panel): panel is Side => panel.kind === 'prompts' || panel.kind === 'character' || panel.kind === 'module';
 
@@ -21,6 +21,19 @@ const isSide = (panel: Panel): panel is Side => panel.kind === 'prompts' || pane
 export type Panels = { panel: Exclude<Panel, InspectPanel> | null; inspect: InspectPanel | null };
 
 export const NO_PANELS: Panels = { panel: null, inspect: null };
+
+// A panel kept open into the chat it opens, such as the 분기 지도 whose nodes open chats: that chat takes it as it mounts.
+let carried: { chat: string; panel: Panel } | null = null;
+
+export function carryPanel(chat: string, panel: Panel) {
+  carried = { chat, panel };
+}
+
+export function takeCarried(chat: string): Panel | null {
+  const held = carried;
+  carried = null;
+  return held?.chat === chat ? held.panel : null;
+}
 
 export const inspectShown = ({ panel, inspect }: Panels, pairs: boolean) => panel === null || pairs ? inspect : null;
 

@@ -6,6 +6,7 @@ import { useChatSummary } from '../session';
 import { navigate } from '../shell/router';
 import { Callout, Divider, Empty, Progress, Text, TimePinContext, Viewport } from '../ui';
 import { useChatEdits } from './ChatEdits';
+import { FORGET_ORIGIN, LINEAGE } from './ChatLineage';
 import { ChatMessage } from './ChatMessage';
 import { messageRow } from './messageRow';
 import type { OpenChat } from './useChat';
@@ -50,7 +51,8 @@ export function ChatLog({ chat }: { chat: OpenChat }) {
           label={originChat !== null ? `'${originChat.title}'에서 분기됨` : `삭제된 채팅 '${origin.name}'에서 분기됨`}
           actions={[
             ...(originChat !== null ? [{ label: '원래 채팅 보기', onClick: () => navigate({ kind: 'chat', id: origin.id }) }] : []),
-            { label: '분기 표시 삭제', onClick: () => edits.forgetOrigin(item!.id) },
+            { label: LINEAGE, onClick: actions.lineage },
+            { label: FORGET_ORIGIN, onClick: () => edits.forgetOrigin(item!.id) },
           ]}
         />}
       </Fragment>;

@@ -22,11 +22,13 @@ type Props = {
   menu?: { handle: MenuHandle; onOpen: () => void };
   // A dragged row's key, let go over this one.
   onDropCard?: (key: string) => void;
+  // muted: a row standing in for a chat gone, which opens nothing.
+  tone?: 'plain' | 'muted';
   // event: its modifier keys pick several (Ctrl, Shift) where the list offers it.
-  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
-export function ItemRow({ avatar, title, time, typing, preview, current = false, selected, control, drag, menu, onDropCard, onClick }: Props) {
+export function ItemRow({ avatar, title, time, typing, preview, current = false, selected, control, drag, menu, onDropCard, tone, onClick }: Props) {
   return (
     <RowControl control={control} drag={drag} onDropCard={onDropCard} onContextMenu={menu && ((event) => openAtPointer(menu.handle, event) && menu.onOpen())}>
       <Item
@@ -38,6 +40,7 @@ export function ItemRow({ avatar, title, time, typing, preview, current = false,
         preview={preview}
         current={current}
         pressed={selected}
+        tone={tone}
         onClick={onClick}
       />
     </RowControl>

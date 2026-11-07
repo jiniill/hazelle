@@ -1,5 +1,5 @@
 import { toolMenu } from './toolMenu';
-import { BookKey, BookOpen, Bookmark, Brain, FolderInput, Keyboard, MessageSquarePlus, Package, PlaneTakeoff, ScanSearch, Search, SlidersHorizontal, SquarePen, ToggleRight, UsersRound } from 'lucide-react';
+import { BookKey, BookOpen, Bookmark, Brain, FolderInput, GitGraph, Keyboard, MessageSquarePlus, Package, PlaneTakeoff, ScanSearch, Search, SlidersHorizontal, SquarePen, ToggleRight, UsersRound } from 'lucide-react';
 import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
@@ -13,6 +13,7 @@ import { MOVE_TO_FOLDER } from '../common/folders/FolderParts';
 import { ChatNameDialog } from './ChatEdits';
 import { ChatFolderMenu, useChatFolders } from './ChatFolderMenu';
 import { ChatExport } from './ChatExport';
+import { LINEAGE } from './ChatLineage';
 import { ModelMenu } from '../common/ModelMenu';
 import { PersonaDialog } from './ChatPersonaPicker';
 import { ChatPromptPicker, PromptDialog } from './ChatPromptPicker';
@@ -83,6 +84,7 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
         <Divider variant="menu" />
         <MenuItem icon={Search} label="검색" onClick={actions.openSearch} />
         {item && !chat.displayPending && <MenuItem icon={Bookmark} label={BOOKMARK} onClick={actions.bookmarks} />}
+        {item && <MenuItem icon={GitGraph} label={LINEAGE} onClick={actions.lineage} />}
         {item && features.memory && <MenuItem icon={Brain} label={FEATURE_NAMES.memory} sub={failed ? '정리 실패' : indexing ? `검색 준비 ${indexing.done}/${indexing.total}` : undefined} onClick={toggleMemory} />}
         <MenuItem icon={ToggleRight} label={FEATURES_TITLE} onClick={openFeatures.onClick} />
         {item && <MenuItem icon={BookKey} label={CHAT_LORE} onClick={actions.lore} />}

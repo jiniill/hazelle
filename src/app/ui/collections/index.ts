@@ -11,6 +11,8 @@ export { FolderRow, TreeRow } from './FolderRow';
 export { FoundRow, type Marked } from './FoundRow';
 export { HowTo, type HowToStep } from './HowTo';
 export { ItemRow } from './ItemRow';
+export { Lineage } from './Lineage';
+export type { Sprout, Stem } from './stems';
 export { List, ListItem } from './List';
 export { NavGroup } from './NavGroup';
 export { NavRow } from './NavRow';

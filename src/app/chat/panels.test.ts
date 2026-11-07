@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { Card } from '../../engine/import/types';
 import type { Block } from '../../model/prompt';
-import { inspectShown, editorOf, loreBudgetEditor, NO_PANELS, opened, promptEditor, toggleEditor } from './panels';
+import { carryPanel, inspectShown, editorOf, loreBudgetEditor, NO_PANELS, opened, promptEditor, takeCarried, toggleEditor } from './panels';
 
 describe('the panels beside the story', () => {
   const editor = { kind: 'character', id: 'c', part: null } as const;
+
+  it('hands a carried panel to the chat it was carried into, once, and to no other', () => {
+    carryPanel('next', { kind: 'lineage' });
+    expect(takeCarried('other')).toBeNull();
+    carryPanel('next', { kind: 'lineage' });
+    expect(takeCarried('next')).toEqual({ kind: 'lineage' });
+    expect(takeCarried('next')).toBeNull();
+  });
 
   it('keeps every inspect tab beside an editor where two fit, and one panel at a time elsewhere', () => {
     for (const tab of ['request', 'variables', 'modules', 'scripts', 'log'] as const) {

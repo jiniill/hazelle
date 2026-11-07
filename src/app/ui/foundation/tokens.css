@@ -463,6 +463,17 @@
   --outline-gap: 4px;
   --outline-gap-kind: 14px;
   --outline-gap-cut: 20px;
+  /* 분기 지도: a message's length of stem, the stem's bounds, a head card (two fit a panel's width), the lanes' gap, the
+     drop from a sprout to the head under it, the sprout's dot and the dash of a copy's or a gone chat's line. */
+  --lineage-unit: 4px;
+  --lineage-line-min: 48px;
+  --lineage-line-max: 360px;
+  --lineage-head-width: 168px;
+  --lineage-head: var(--row-min-height);
+  --lineage-gap: 16px;
+  --lineage-drop: 40px;
+  --lineage-mark: 10px;
+  --lineage-dash: 6 4;
   --editor-max-width: 760px;
   --editor-header: 68px;
   --editor-foot: 140px;

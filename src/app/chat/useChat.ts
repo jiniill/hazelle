@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { entryName } from '../../connectors/types';
 import { resolveAssets, withAttachments } from '../../engine/assets';
 import { holdsPersona, unused } from '../../engine/pipeline';
@@ -32,7 +32,7 @@ import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, 
 import { useToast } from '../toast';
 import { useChatEdits } from './ChatEdits';
 import { storyText, useMenuHandle, usePanelsBeside, useTimePin, useViewport, type BotButton, type Reading } from '../ui';
-import { inspectShown, NO_PANELS, opened, type InfoTab, type InspectTab, type Panel, type Panels } from './panels';
+import { inspectShown, NO_PANELS, opened, takeCarried, type InfoTab, type InspectTab, type Panel, type Panels } from './panels';
 import { useSendNotes } from './useSendNotes';
 import { displayed } from './exportLog';
 import { useDraft } from './useDraft';
@@ -154,6 +154,10 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const pairs = usePanelsBeside();
   const [panels, setPanels] = useState<Panels>(NO_PANELS);
   const { panel } = panels;
+  useLayoutEffect(() => {
+    const carried = takeCarried(chatId);
+    if (carried) setPanels(opened(NO_PANELS, carried, pairs));
+  }, []);
   // null follows the latest.
   const [infoPick, setInfoPick] = useState<string | null>(null);
   const open = (next: Panel) => setPanels((current) => opened(current, next, pairs));
@@ -167,7 +171,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   })?.module;
   useEffect(() => { if (askingTool) setPanels((current) => opened(current, { kind: 'tool', module: askingTool }, pairs)); }, [askingTool, pairs]);
   const flipPanel = (next: Panel, same: (current: Panel) => boolean) => setPanels((current) => (current.panel && same(current.panel) ? { ...current, panel: null } : opened(current, next, pairs)));
-  const flipKind = (kind: 'bookmarks' | 'lore' | 'autopilot' | 'toggles') => flipPanel({ kind }, (current) => current.kind === kind);
+  const flipKind = (kind: 'bookmarks' | 'lineage' | 'lore' | 'autopilot' | 'toggles') => flipPanel({ kind }, (current) => current.kind === kind);
   const timePin = useTimePin();
   const [branching, setBranching] = useState(false);
   const { found, search, actions: searchActions } = useChatSearch(messages, texts, translation.translating, translation.flipped, seekTo, seed);
@@ -467,6 +471,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       press: (button: BotButton | null) => void press(button),
       branch,
       bookmarks: () => flipKind('bookmarks'),
+      lineage: () => flipKind('lineage'),
       lore: () => flipKind('lore'),
       autopilot: () => flipKind('autopilot'),
       follow,
