@@ -9,26 +9,29 @@ type Props = {
   onChange: (value: string) => void;
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
   second?: Field & { firstLabel: string };
+  // Where the caret starts, the end when absent; read once, as the box opens.
+  caret?: number;
 };
 
-export function EditBox({ value, onChange, onKeyDown, second }: Props) {
+export function EditBox({ value, onChange, onKeyDown, second, caret }: Props) {
   return (
     <div className={styles.box}>
-      <Area label={second?.firstLabel ?? '메시지 수정'} shown={second !== undefined} value={value} onChange={onChange} onKeyDown={onKeyDown} focus />
+      <Area label={second?.firstLabel ?? '메시지 수정'} shown={second !== undefined} value={value} onChange={onChange} onKeyDown={onKeyDown} focus caret={caret} />
       {second && <Area label={second.label} shown value={second.value} onChange={second.onChange} onKeyDown={onKeyDown} focus={false} />}
 
     </div>
   );
 }
 
-function Area({ label, shown, value, onChange, onKeyDown, focus }: Field & { shown: boolean; onKeyDown: Props['onKeyDown']; focus: boolean }) {
+function Area({ label, shown, value, onChange, onKeyDown, focus, caret }: Field & { shown: boolean; onKeyDown: Props['onKeyDown']; focus: boolean; caret?: number }) {
   const id = useId();
   const area = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (!focus) return;
-    const element = area.current;
-    element?.focus();
-    element?.setSelectionRange(element.value.length, element.value.length);
+    const element = area.current!;
+    const at = caret ?? element.value.length;
+    element.focus();
+    element.setSelectionRange(at, at);
   }, [focus]);
   useAutosize(area, value);
   return (

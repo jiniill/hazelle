@@ -27,7 +27,7 @@ import { ChatPicture } from './ChatPicture';
 import { linesOf, markPart, PART_MARK, partOf } from './editPart';
 import { picturePlaces } from './picturePlaces';
 import type { ChatActions } from './useChat';
-import type { EditPart } from './useMessageEdit';
+import type { PartAt } from './useMessageEdit';
 import type { MessageRow } from './messageRow';
 import { rowEqual, sameParts } from './rowPart';
 import { seenText } from './search';
@@ -116,13 +116,16 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   };
 
   const findPart = (pieces: string[]) => {
-    const side: EditPart['side'] = translation && !flipped ? 'translation' : 'text';
+    const side: PartAt['side'] = translation && !flipped ? 'translation' : 'text';
     const source = side === 'text' ? version.text : translation!.text;
     const found = partOf(source, pieces);
     const drawn = found && partOf(storyText, linesOf(source, found).split('\n'));
     return found && drawn ? { ...found, side, shown: drawn } : null;
   };
-  const selected = useSelectedPart(story, findPart, editing === null && !live && !message.unstored && !opening && !failed && !empty);
+  const selected = useSelectedPart(story, findPart, editing === null && !live && !message.unstored && !opening && !failed && !empty, {
+    edit: (part, typed) => actions.edit(message, part, typed),
+    remove: (part) => actions.removePart(message, part),
+  });
 
   let body = null;
   if (editing !== null && !part) {
@@ -192,7 +195,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
             tone={pending ? 'faded' : 'plain'}
             cursor={live || reveal.revealing || (translatingText !== null && !flipped)}
             illustrations={illustrations}
-            inlays={part ? [{ mark: PART_MARK, node: <EditBox value={part.value} onChange={actions.changePart} onKeyDown={editKeys} /> }] : undefined}
+            inlays={part ? [{ mark: PART_MARK, node: <EditBox value={part.value} caret={part.caret} onChange={actions.changePart} onKeyDown={editKeys} /> }] : undefined}
             ref={story}
           />
         )}
@@ -243,7 +246,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   );
   const after = (
     <>
-      {selected && <SelectionButton icon={SquarePen} label="수정" at={selected.end} onPress={() => actions.edit(message, selected.part)} />}
+      {selected && <SelectionButton at={selected.end} acts={[{ icon: SquarePen, label: '수정', onPress: selected.edit }, { ...ACTS.remove, onPress: selected.remove }]} />}
       {editing === null && translationMark}
       {editing === null && receipt?.toolsRefused && <Marker reason="tool" label="이 모델은 모델 도구를 지원하지 않아서 도구 없이 응답했어요." />}
       {editing === null && receipt && toolLine(receipt) && <Marker reason="tool" label={toolLine(receipt)!} />}

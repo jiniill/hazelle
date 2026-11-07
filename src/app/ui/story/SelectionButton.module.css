@@ -1,4 +1,4 @@
-.button {
+.group {
   composes: glass from '../foundation/surface.module.css';
   composes: dropIn from '../foundation/motion.module.css';
   position: fixed;
@@ -6,6 +6,13 @@
   top: calc(var(--selection-y) + var(--space-32));
   left: var(--selection-x);
   z-index: var(--layer-menu);
+  display: inline-flex;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  translate: -50% 0;
+}
+
+.button {
   display: inline-flex;
   align-items: center;
   gap: var(--space-4);
@@ -15,21 +22,19 @@
   color: var(--color-text);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  white-space: nowrap;
-  translate: -50% 0;
 }
 
 .button:hover {
   background: var(--color-glass-press);
 }
 
-.button[data-above] {
+.group[data-above] {
   top: calc(var(--selection-y) - var(--space-8));
   translate: -50% -100%;
 }
 
 @media (pointer: fine) {
-  .button:not([data-above]) {
+  .group:not([data-above]) {
     top: calc(var(--selection-y) + var(--space-8));
   }
 }

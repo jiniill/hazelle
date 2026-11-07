@@ -440,7 +440,8 @@ const BLOCK = 'p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, td, th, div';
 
 // Select first/last block text separately: Range.toString joins block text without usable boundaries.
 // Null when either endpoint is outside the story.
-export function storySelection(story: HTMLElement): { pieces: string[]; end: SelectionEnd } | null {
+// before: the drawn text of the selection's first block ahead of where it starts.
+export function storySelection(story: HTMLElement): { pieces: string[]; end: SelectionEnd; before: string } | null {
   const root = story.firstElementChild?.shadowRoot;
   const selection = document.getSelection();
   if (!root || !selection || !('getComposedRanges' in selection)) return null;
@@ -459,8 +460,9 @@ export function storySelection(story: HTMLElement): { pieces: string[]; end: Sel
   const line = [...whole.getClientRects()].at(-1) ?? whole.getBoundingClientRect();
   const end = { x: line.right, top: line.top, bottom: line.bottom };
   const [first, last] = [block(range.startContainer), block(range.endContainer)];
-  if (first === last) return { pieces: [whole.toString()], end };
-  return { pieces: [text(range.startContainer, range.startOffset, first, first.childNodes.length), text(last, 0, range.endContainer, range.endOffset)], end };
+  const before = text(first, 0, range.startContainer, range.startOffset);
+  if (first === last) return { pieces: [whole.toString()], end, before };
+  return { pieces: [text(range.startContainer, range.startOffset, first, first.childNodes.length), text(last, 0, range.endContainer, range.endOffset)], end, before };
 }
 
 // A picture removed before it loaded has no line left to mark.

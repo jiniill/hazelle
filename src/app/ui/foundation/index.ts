@@ -7,7 +7,7 @@ export { Divider } from './Divider';
 export { Figure } from './Figure';
 export { FONT_IDS, FONT_KIND, FONTS, type FontId } from './fonts';
 export { Icon } from './Icon';
-export { formatKeys, pressed, pressedKey, type Chord } from './keys';
+export { formatKeys, isComposing, pressed, pressedKey, type Chord } from './keys';
 export { hasFinePointer, isDarkScheme, isInstalled, useCoarsePointer, useDarkScheme, usePanelsBeside, useSplit, useViewport, useWide } from './media';
 export { markScrollbars } from './scrollbar';
 export { seekRow } from './seek';
