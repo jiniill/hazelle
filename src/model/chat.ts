@@ -25,7 +25,8 @@ export type Chat = Mark & {
   note?: string;
   // 삽화 노트, sent to the scene writer through the 삽화 prompt's slot; absent is none.
   illustrateNote?: string;
-  // Keep the original name through renames and deletion.
+  // name: the original's title at branch time, for an untitled branch's own title and for the split mark once the
+  // original is gone; while it lives, the mark shows its name as it is now (app/chat ChatLog).
   origin?: { id: string; name: string; after: string };
   // A branch keeps its original's, so the history it copied reads the same.
   seed?: string;

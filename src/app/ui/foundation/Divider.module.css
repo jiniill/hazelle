@@ -11,6 +11,18 @@
   color: var(--color-text-muted);
 }
 
+/* The label gives way before the rules and the actions: a long origin title ends in an ellipsis on its one line. */
+.label {
+  composes: ellipsis from './a11y.module.css';
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  gap: inherit;
+}
+
 .rule {
   flex-grow: 1;
   height: var(--border-thin);
