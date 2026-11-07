@@ -15,7 +15,7 @@ import { ModuleSwitches } from '../common/ModuleSwitches';
 import { NO_PERSONA_SLOT, SLOT } from '../common/prompt-words';
 import type { Frame } from '../common/frame';
 import { useAutosave } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, copyName, copyOf, ORIGINAL_GONE, PRE_READ, promptName, SEE_ORIGINAL, SET_DEFAULT, STAGE_NAMES } from '../common/words';
+import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, copyOf, ORIGINAL_GONE, PRE_READ, promptName, SEE_ORIGINAL, SET_DEFAULT, STAGE_NAMES } from '../common/words';
 import { useConnections, useSettings, useStore, useStored } from '../session';
 import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
@@ -248,8 +248,8 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
     const copying = copyPrompt(store, stored.id, copyName(promptName(latest.current.name)), made);
     onOpen(made);
     const copied = await copying;
-    if (!copied.ok) return toast.failed(copied, '사본을 만들지 못했어요.');
-    toast.show('사본을 만들었어요.');
+    if (!copied.ok) return toast.failed(copied, COPY_SAID.failed);
+    toast.show(COPY_SAID.made);
   };
   const resetBlocks = async () => {
     if (!(await save.flush())) return;

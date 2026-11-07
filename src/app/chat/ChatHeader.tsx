@@ -3,7 +3,7 @@ import { BookKey, BookOpen, Bookmark, Brain, FolderInput, GitGraph, Keyboard, Me
 import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
-import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, NO_CHARACTER } from '../common/words';
+import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER } from '../common/words';
 import { useRemembering, useSession, useToolFrames } from '../session';
 import { navigate } from '../shell/router';
 import { runShortcut } from '../shortcuts';
@@ -13,7 +13,6 @@ import { MOVE_TO_FOLDER } from '../common/folders/FolderParts';
 import { ChatNameDialog } from './ChatEdits';
 import { ChatFolderMenu, useChatFolders } from './ChatFolderMenu';
 import { ChatExport } from './ChatExport';
-import { LINEAGE } from './ChatLineage';
 import { ModelMenu } from '../common/ModelMenu';
 import { PersonaDialog } from './ChatPersonaPicker';
 import { ChatPromptPicker, PromptDialog } from './ChatPromptPicker';
@@ -127,7 +126,7 @@ export function ChatDialogs({ chat }: { chat: OpenChat }) {
   if (dialog === 'reading') return <ReadingDialog onClose={actions.closeDialog} />;
   if (dialog === 'export' && item) return <ChatExport item={item} messages={chat.messages} view={chat.view} placed={chat.placed} pictures={chat.pictures} flipped={chat.flipped} busy={chat.busy} bot={chat.decor.bot} characterName={chat.card?.name ?? null} names={chat.names} replyLanguage={chat.translate.replyLanguage} onTranslate={chat.features.translate ? actions.translate : undefined} onClose={actions.closeDialog} />;
   if (dialog === 'rename' && item) {
-    return <ChatNameDialog title={item.title} onSave={actions.rename} onClose={actions.closeDialog} />;
+    return <ChatNameDialog title={item.title} origin={item.chat.origin !== undefined} onSave={actions.rename} onClose={actions.closeDialog} />;
   }
   return null;
 }

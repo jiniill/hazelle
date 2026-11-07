@@ -9,7 +9,7 @@ import { exportRisuChats } from '../../runtime/risu-export';
 import { newOf } from '../common/acts';
 import { fileNamed } from '../common/download';
 import { runExport } from '../common/exporting';
-import { BIN_KEEPS, copyName, moduleName, promptName, RISU_CHAT_FILE, risuLeftOut, TOOL } from '../common/words';
+import { BIN_KEEPS, COPY_SAID, copyName, moduleName, promptName, RISU_CHAT_FILE, risuLeftOut, TOOL } from '../common/words';
 import { useFiles, useStore } from '../session';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
@@ -59,8 +59,8 @@ export function useCharacterActions(editing?: Editing) {
     if (editing && !(await editing.flush())) return setBusy(null);
     const copied = await copyCharacter(store, id, copyName(character.card.name), (step) => setBusy({ id, label: describeStep(step) }));
     setBusy(null);
-    if (!copied.ok) return toast.failed(copied, '사본을 만들지 못했어요.');
-    toast.show('사본을 만들었어요.');
+    if (!copied.ok) return toast.failed(copied, COPY_SAID.failed);
+    toast.show(COPY_SAID.made);
     navigate({ kind: 'edit', character: copied.data });
   }
 

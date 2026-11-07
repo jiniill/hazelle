@@ -88,7 +88,7 @@ it('marks the split with the origin as it is named now, its kept name once the o
   try {
     await act(() => root.render(<ChatLog chat={frame(messages, item)} />));
     expect(split().label).toBe("'지금 이름'에서 분기됨");
-    expect(labels()).toEqual(['원래 채팅 보기', '분기 지도', '분기 표시 삭제']);
+    expect(labels()).toEqual(['원본 보기', '분기 지도', '원본 연결 끊기']);
     split().actions![1]!.onClick();
     expect(lineage).toHaveBeenCalled();
     split().actions![2]!.onClick();
@@ -96,7 +96,7 @@ it('marks the split with the origin as it is named now, its kept name once the o
     live.origin = null;
     await act(() => root.render(<ChatLog chat={frame(messages, item)} />));
     expect(split().label).toBe("삭제된 채팅 '그때 이름'에서 분기됨");
-    expect(labels()).toEqual(['분기 지도', '분기 표시 삭제']);
+    expect(labels()).toEqual(['분기 지도', '원본 연결 끊기']);
   } finally {
     await act(() => root.unmount());
   }

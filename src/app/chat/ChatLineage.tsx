@@ -2,17 +2,15 @@ import { useMemo, useState } from 'react';
 import type { ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
 import { ACTS } from '../common/acts';
+import { deletedChat, FORGET_ORIGIN, LINEAGE } from '../common/words';
 import { ago } from '../common/time';
 import { usePersisted } from '../common/usePersisted';
 import { useLibrary } from '../session';
 import { navigate } from '../shell/router';
 import { ChoiceGroup, Divider, Lineage, LineageList, MenuItem, MoreMenu, SidePanel, useWide, type LineageHead, type Sprout, type Stem } from '../ui';
 import { ChatNameDialog, useChatEdits } from './ChatEdits';
-import { family, measure, type Child, type Member } from './lineage';
+import { countChats, family, type Child, type Member } from './lineage';
 import { carryPanel } from './panels';
-
-export const LINEAGE = '분기 지도';
-export const FORGET_ORIGIN = '분기 표시 삭제';
 
 type Props = { current: string; shelf: CharacterShelf<ChatSummary> | null; onClose: () => void };
 
@@ -64,7 +62,7 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
   const view = views[mode] ?? DEFAULT_VIEW[mode];
   const [preview, setPreview] = usePersisted('risu-alpha:lineage-preview', (stored) => stored === 'true', true, String);
   const tree = useMemo(() => family(chats, current), [chats, current]);
-  const { count, depth } = useMemo(() => measure(tree), [tree]);
+  const count = useMemo(() => countChats(tree), [tree]);
   const { root, members } = useMemo(() => stemsOf(tree, current), [tree, current]);
   // Beside the story the map stays open in the chat it opens; covering it, the chat takes its place.
   function open(id: string) {
@@ -73,7 +71,7 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
   }
   const head = (stem: Stem): LineageHead => {
     const member = members.get(stem.key)!;
-    if (member.kind === 'ghost') return { title: `삭제된 채팅 '${member.name}'` };
+    if (member.kind === 'ghost') return { title: deletedChat(member.name) };
     const { chat } = member;
     return {
       title: chat.title,
@@ -100,7 +98,7 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
   return (
     <SidePanel
       title={LINEAGE}
-      subtitle={`채팅 ${count}개 · 깊이 ${depth}`}
+      subtitle={`채팅 ${count}개`}
       expandable
       onExpand={setExpanded}
       fill
@@ -119,6 +117,7 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
       {naming && (
         <ChatNameDialog
           title={naming.title}
+          origin={naming.chat.origin !== undefined}
           onSave={(name) => {
             edits.rename(naming.id, name);
             setNaming(null);

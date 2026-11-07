@@ -13,7 +13,7 @@ import { PackToggles } from '../common/PackToggles';
 import { ScriptsEditor } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
-import { ALWAYS, BIN_KEEPS, copyName, moduleName, PAGES, promptName } from '../common/words';
+import { ALWAYS, BIN_KEEPS, COPY_SAID, copyName, moduleName, PAGES, promptName } from '../common/words';
 import { useChildren, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate } from '../shell/router';
 import { characterPage, type Back } from '../shell/routes';
@@ -128,8 +128,8 @@ export function ModuleScreen({ stored, pane, back }: { stored: Stored<'module'>;
     const copying = copyModule(store, id, copyName(moduleName(name)), made);
     navigate({ kind: 'module', id: made, pane: null });
     const copied = await copying;
-    if (!copied.ok) return toast.failed(copied, '사본을 만들지 못했어요.');
-    toast.show('사본을 만들었어요.');
+    if (!copied.ok) return toast.failed(copied, COPY_SAID.failed);
+    toast.show(COPY_SAID.made);
   }
 
   const { name, top, describing } = useModuleEditor(stored, 'modules', back, (flush) => (

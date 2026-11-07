@@ -5,7 +5,7 @@ import { addProfile, modelProfile, removeProfile, restoreProfile, setDefaultProf
 import { ACTS, addOf } from '../common/acts';
 import { useSearch } from '../common/useSearch';
 import { saveWords } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, copyName, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SET_DEFAULT } from '../common/words';
+import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SET_DEFAULT } from '../common/words';
 import { useConnections, useProfiles, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -43,8 +43,8 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
     const making = addProfile(store, { name: copyName(name), settings: shown }, copied);
     navigate({ kind: 'profile', id: copied });
     const made = await making;
-    if (!made.ok) return toast.failed(made, '사본을 만들지 못했어요.');
-    toast.show('사본을 만들었어요.');
+    if (!made.ok) return toast.failed(made, COPY_SAID.failed);
+    toast.show(COPY_SAID.made);
   }
 
   async function clearAll() {

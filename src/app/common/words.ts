@@ -183,6 +183,8 @@ export const portraitName = (name: string) => name.trim() || '이름 없는 인�
 export const copyName = (name: string) => `${name} (사본)`;
 export const copyOf = (name: string) => `'${name}'의 사본`;
 export const SEE_ORIGINAL = '원본 보기';
+// Making a copy of anything: the busy toast, the failure and the result.
+export const COPY_SAID = { busy: '사본 만드는 중…', failed: '사본을 만들지 못했어요.', made: '사본을 만들었어요.' };
 export const ORIGINAL_GONE = '원본이 삭제됐어요';
 // A delete that cannot run now stays in the ⋯, disabled, saying why.
 export const cannotRemove = (because: string) => `${withParticle(because, '이라서/라서')} 삭제할 수 없어요`;
@@ -194,6 +196,10 @@ export const noStarred = (then: string) => `추가한 모델이 없어요. ${inS
 export const CAST = '등장인물';
 
 export const BOOKMARK = '북마크';
+
+export const LINEAGE = '분기 지도';
+export const FORGET_ORIGIN = '원본 연결 끊기';
+export const deletedChat = (name: string) => `삭제된 채팅 '${name}'`;
 
 export const DEFAULT_VARIABLES = '기본 변수';
 

@@ -2,11 +2,11 @@ import { GitBranch } from 'lucide-react';
 import { Fragment, useLayoutEffect, useMemo, useRef } from 'react';
 import { ACTS } from '../common/acts';
 import { day } from '../common/time';
+import { deletedChat, FORGET_ORIGIN, LINEAGE, SEE_ORIGINAL } from '../common/words';
 import { useChatSummary } from '../session';
 import { navigate } from '../shell/router';
 import { Callout, Divider, Empty, Progress, Text, TimePinContext, Viewport } from '../ui';
 import { useChatEdits } from './ChatEdits';
-import { FORGET_ORIGIN, LINEAGE } from './ChatLineage';
 import { ChatMessage } from './ChatMessage';
 import { messageRow } from './messageRow';
 import type { OpenChat } from './useChat';
@@ -48,9 +48,9 @@ export function ChatLog({ chat }: { chat: OpenChat }) {
         {/* Deleting the message the split comes after takes its divider with it, until 되돌리기. */}
         {origin?.after === message.id && <Divider
           icon={GitBranch}
-          label={originChat !== null ? `'${originChat.title}'에서 분기됨` : `삭제된 채팅 '${origin.name}'에서 분기됨`}
+          label={`${originChat !== null ? `'${originChat.title}'` : deletedChat(origin.name)}에서 분기됨`}
           actions={[
-            ...(originChat !== null ? [{ label: '원래 채팅 보기', onClick: () => navigate({ kind: 'chat', id: origin.id }) }] : []),
+            ...(originChat !== null ? [{ label: SEE_ORIGINAL, onClick: () => navigate({ kind: 'chat', id: origin.id }) }] : []),
             { label: LINEAGE, onClick: actions.lineage },
             { label: FORGET_ORIGIN, onClick: () => edits.forgetOrigin(item!.id) },
           ]}

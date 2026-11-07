@@ -3,7 +3,7 @@ import { allWritten, type ApiResult } from '../../runtime/api';
 import { forgetOrigin as forgetChatOrigin, removeChat, renameChat, restoreChat } from '../../runtime/chat-log';
 import { branchFrom, duplicateChat } from '../../runtime/message-acts';
 import { NameDialog } from '../common/NameDialog';
-import { BIN_KEEPS, copyName } from '../common/words';
+import { BIN_KEEPS, COPY_SAID, copyName } from '../common/words';
 import { useSession } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import { useToast } from '../toast';
@@ -46,10 +46,11 @@ export function useChatEdits() {
     toast.show(said.made, { action: { label: '열기', onClick: () => navigate({ kind: 'chat', id: copy.data }) } });
   };
   const branch = (chat: string, message: string) => copying(branchFrom(session, chat, message), { busy: '채팅 분기 중…', failed: '채팅을 분기하지 못했어요.', made: '새 채팅으로 분기했어요.' });
-  const duplicate = ({ id, title }: Pick<ChatSummary, 'id' | 'title'>) => copying(duplicateChat(session, id, copyName(title)), { busy: '사본 만드는 중…', failed: '사본을 만들지 못했어요.', made: '사본을 만들었어요.' });
+  const duplicate = ({ id, title }: Pick<ChatSummary, 'id' | 'title'>) => copying(duplicateChat(session, id, copyName(title)), COPY_SAID);
   return { rename, drop, forgetOrigin, branch, duplicate };
 }
 
-export const ChatNameDialog = ({ title, onSave, onClose }: { title: string; onSave: (name: string) => void; onClose: () => void }) => (
-  <NameDialog title="채팅 이름 바꾸기" value={title} blank="비워 두면 첫 메시지가 제목으로 표시돼요." onSave={onSave} onClose={onClose} />
+// A branch or copy left untitled is named after its origin (chatTitle), not its first message.
+export const ChatNameDialog = ({ title, origin, onSave, onClose }: { title: string; origin: boolean; onSave: (name: string) => void; onClose: () => void }) => (
+  <NameDialog title="채팅 이름 바꾸기" value={title} blank={origin ? '비워 두면 원래 채팅의 이름을 따라 표시돼요.' : '비워 두면 첫 메시지가 제목으로 표시돼요.'} onSave={onSave} onClose={onClose} />
 );

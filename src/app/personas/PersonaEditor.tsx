@@ -15,7 +15,7 @@ import { PersonaPickDialog } from '../common/PersonaPickDialog';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { BIN_KEEPS, cannotRemove, copyName } from '../common/words';
+import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName } from '../common/words';
 import { navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
@@ -60,8 +60,8 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
     const copying = copyPersona(store, id, copyName(held.name), made);
     navigate({ kind: 'persona', id: made });
     const copied = await copying;
-    if (!copied.ok) return toast.failed(copied, '사본을 만들지 못했어요.');
-    toast.show('사본을 만들었어요.');
+    if (!copied.ok) return toast.failed(copied, COPY_SAID.failed);
+    toast.show(COPY_SAID.made);
   }
 
   const makeCurrent = () => toast.settled(setCurrentPersona(store, id), '현재 페르소나로 지정하지 못했어요.');

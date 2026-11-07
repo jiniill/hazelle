@@ -50,7 +50,7 @@ function Head({ stem, via, onPath, head, preview, own, style }: HeadProps) {
 
 const PILLS = { branch: '', copy: styles.copyPill, unplaced: styles.unplacedPill };
 const pillText = ({ kind, at }: PlacedPill['pill']) => (kind === 'branch' ? at : kind === 'copy' ? '사본' : '?');
-const pillLabel = ({ kind, at, sprouts }: PlacedPill['pill']) => `${kind === 'branch' ? `${at}번째 메시지에서 분기` : kind === 'copy' ? '사본' : '분기 · 갈라진 메시지를 몰라요'}${sprouts.length > 1 ? ` ${sprouts.length}개` : ''}`;
+const pillLabel = ({ kind, at, sprouts }: PlacedPill['pill']) => `${kind === 'branch' ? `${at}번째 메시지에서 분기` : kind === 'copy' ? '사본' : '분기 위치 알 수 없음'}${sprouts.length > 1 ? ` · ${sprouts.length}개` : ''}`;
 
 // start: hung from its point by its start, not its middle, where the lane left of it is close (the list).
 function Pill({ placed, start = false, onPill }: { placed: PlacedPill; start?: boolean; onPill: (parent: Stem) => void }) {
@@ -81,7 +81,7 @@ function Legend() {
     <ul className={styles.legend} aria-label="범례">
       <li>
         <span className={styles.branchMark} aria-hidden />
-        분기 · 숫자는 갈라진 메시지
+        분기 (숫자: 메시지 번호)
       </li>
       <li>
         <span className={styles.copyMark} aria-hidden />
@@ -93,7 +93,7 @@ function Legend() {
       </li>
       <li className={styles.lit}>
         <span className={styles.pathMark} aria-hidden />
-        지금 채팅까지의 길
+        현재 채팅까지의 경로
       </li>
     </ul>
   );

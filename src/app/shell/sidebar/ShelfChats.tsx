@@ -184,6 +184,7 @@ export function ShelfChats({ page, shelf }: Props) {
       {renaming && (
         <ChatNameDialog
           title={renaming.title}
+          origin={renaming.chat.origin !== undefined}
           onSave={(name) => {
             edits.rename(renaming.id, name);
             setRenaming(null);
