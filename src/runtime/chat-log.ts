@@ -89,7 +89,9 @@ export async function branchChat(store: ObjectStore, item: ChatItem, message: st
     const print = chatPrint(store, item.id);
     if (print) writes.push({ type: 'create', kind: 'cacheprint', id: cachePrintId(id), parent: id, value: print.value });
     const chat = withBookmarks(item.chat, carried(item.chat.bookmarks, messages));
-    writes.push({ type: 'create', kind: 'chat', id, parent: null, value: { ...chat, title: null, origin: { id: item.id, name: item.title, after }, seed: item.chat.seed ?? item.id } });
+    // An untitled branch's own title is its origin's with · 분기, so a branch of it names that origin, never X · 분기 · 분기.
+    const name = item.chat.title ?? item.chat.origin?.name ?? item.title;
+    writes.push({ type: 'create', kind: 'chat', id, parent: null, value: { ...chat, title: null, origin: { id: item.id, name, after }, seed: item.chat.seed ?? item.id } });
     const created = await store.batch(writes);
     return created.ok ? { ok: true, data: { id, from: item.id, messages: Object.fromEntries(messages), versions: Object.fromEntries(versions) } } : created;
   });
@@ -273,6 +275,9 @@ export function copyShown(store: ObjectStore, chat: string, message: Message) {
 
 // A blank name gives the chat back its first message as its name.
 export const renameChat = (store: ObjectStore, id: string, name: string) => store.update('chat', id, (current) => ({ ...current, title: name.trim() || null }));
+
+// Drops the 분기됨 divider and the branch title fallback; the chat reads as one of its own from then on.
+export const forgetOrigin = (store: ObjectStore, id: string) => store.update('chat', id, (current) => without(current, 'origin'));
 
 // The chat stays whole, read as gone (model/library live), until purgeExpired removes it with all it owns; restoreChat
 // (되돌리기) brings it back until then.

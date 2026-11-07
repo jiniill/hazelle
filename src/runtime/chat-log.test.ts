@@ -4,7 +4,7 @@ import { cachePrintId } from '../model/cache';
 import { memoryId, type MemoryRecord } from '../model/memory';
 import { chatPrint } from './cache';
 import { chatFile, readChatFile } from './chat-file';
-import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, branchChat, copyShown, editMessage, importChat, nameBookmark, removeMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setVariableByHand, startChat, withOwn } from './chat-log';
+import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, branchChat, copyShown, editMessage, forgetOrigin, importChat, nameBookmark, removeMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setVariableByHand, startChat, withOwn } from './chat-log';
 import { setChatModel, withMainModel } from './assignment';
 import type { Files } from './files';
 import { summaryId } from './summary';
@@ -227,6 +227,27 @@ describe('a chat not saved yet', () => {
 });
 
 describe('branchChat', () => {
+  it('names a branch of an untitled branch after the root, and forgetOrigin drops the origin', async () => {
+    const { store } = await server.account();
+    const source = crypto.randomUUID();
+    await server.hold(store, source);
+    const chat: Chat = { title: '기숙사의 밤', character: null, models: {} };
+    await startChat(store, source, chat, null);
+    const said = crypto.randomUUID();
+    await appendUserMessage(store, source, { id: said, text: '안녕' });
+    const messages = () => fold(store.children('entry', source));
+    const first = await branchChat(store, { id: source, chat, messages: messages(), count: 1, title: '기숙사의 밤', preview: '', at: null, order: 0 }, said);
+    if (!first.ok) throw new Error(first.error);
+    await server.hold(store, first.data.id);
+    const branch = store.get('chat', first.data.id)!.value;
+    const again = await branchChat(store, { id: first.data.id, chat: branch, messages: fold(store.children('entry', first.data.id)), count: 1, title: '기숙사의 밤 · 분기', preview: '', at: null, order: 0 }, first.data.messages[said]!);
+    if (!again.ok) throw new Error(again.error);
+    await server.hold(store, again.data.id);
+    expect(store.get('chat', again.data.id)!.value.origin).toMatchObject({ id: first.data.id, name: '기숙사의 밤' });
+    expect(await forgetOrigin(store, again.data.id)).toMatchObject({ ok: true });
+    expect(store.get('chat', again.data.id)!.value.origin).toBeUndefined();
+  });
+
   it("carries what the bot's Lua wrote, the texts it staged, the tools' data, badges on the branch's messages, the chat's inlays and its cache print", async () => {
     const { store, files } = await server.account();
     const source = crypto.randomUUID();
