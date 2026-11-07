@@ -119,6 +119,8 @@ export function Lineage({ root, label, head, preview, onPill }: Props) {
   const draw = useMemo(() => ({ metrics: mapMetrics(preview), ...marks() }), [preview]);
   const { width, height, stems, pills, sprouts } = useMemo(() => placeStems(root, draw.metrics), [root, draw]);
   const own = useOwn();
+  // A branch at a stem's last message sits on the cap, its pill reading what the count would.
+  const counted = new Set(pills.flatMap(({ pill, parent }) => (pill.kind === 'branch' && pill.at >= parent.length ? [parent.key] : [])));
   // The fade at the edge shows while more of the map stands past it.
   const scroll = useRef<HTMLDivElement>(null);
   const [more, setMore] = useState(false);
@@ -161,7 +163,8 @@ export function Lineage({ root, label, head, preview, onPill }: Props) {
             </ul>
             {stems.map(
               ({ stem, x, to, onPath }) =>
-                !stem.ghost && (
+                !stem.ghost &&
+                !counted.has(stem.key) && (
                   <span key={stem.key} className={classes(styles.count, onPath && styles.lit)} style={{ left: x, top: to }} aria-hidden>
                     {stem.length}
                   </span>

@@ -114,7 +114,8 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
       }
       onClose={onClose}
     >
-      <Family root={root} label={LINEAGE} head={head} preview={preview} onPill={onPill} />
+      {/* Widened or narrowed, the family is laid out afresh, so the scroll to the open chat starts over. */}
+      <Family key={mode} root={root} label={LINEAGE} head={head} preview={preview} onPill={onPill} />
       {naming && (
         <ChatNameDialog
           title={naming.title}
