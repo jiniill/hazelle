@@ -13,6 +13,18 @@
   min-width: 0;
 }
 
+/* A card's control stands in its top end corner, over it; the card keeps that corner clear (LineageCard). */
+.corner {
+  position: relative;
+  height: 100%;
+}
+
+.corner > .control {
+  position: absolute;
+  top: var(--space-4);
+  inset-inline-end: var(--space-4);
+}
+
 /* --control-inset: what a box of rows (List box) keeps between the control and its edge. */
 .control {
   flex-shrink: 0;

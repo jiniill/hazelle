@@ -19,3 +19,10 @@ export function family(chats: readonly ChatSummary[], current: string): Member {
   const { origin } = top.chat;
   return origin ? { kind: 'ghost', id: origin.id, name: origin.name, children: childrenOf(origin.id, null) } : member(top);
 }
+
+// How many chats the family holds and how many generations deep it goes; a ghost is neither.
+export function measure(member: Member): { count: number; depth: number } {
+  const own = member.kind === 'chat' ? 1 : 0;
+  const below = member.children.map(({ member }) => measure(member));
+  return { count: own + below.reduce((sum, { count }) => sum + count, 0), depth: own + Math.max(0, ...below.map(({ depth }) => depth)) };
+}

@@ -1,0 +1,85 @@
+/* A stem's head in the 분기 지도: as tall as --lineage-head, which the placement (stems.ts) reads too. */
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  height: var(--lineage-head);
+  padding: var(--space-8) var(--space-12);
+  overflow: hidden;
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  text-align: start;
+  transition:
+    border-color var(--duration-fast),
+    background var(--duration-fast);
+}
+
+.card:is(button):hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+.copy {
+  border-style: dashed;
+}
+
+.ghost {
+  border-style: dotted;
+  background: none;
+  box-shadow: none;
+}
+
+.current,
+.current:is(button):hover {
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-bg);
+  box-shadow: var(--lineage-ring);
+}
+
+/* The corner is the ⋯'s (RowControl corner). */
+.title {
+  composes: ellipsis from '../foundation/a11y.module.css';
+  display: block;
+  padding-inline-end: var(--control-xs);
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.ghost .title {
+  color: var(--color-text-muted);
+  font-weight: var(--weight-regular);
+}
+
+.spark {
+  composes: dot from '../foundation/surface.module.css';
+  display: inline-block;
+  margin-inline-end: var(--space-8);
+  vertical-align: middle;
+  filter: var(--lineage-glow);
+}
+
+.meta {
+  composes: detail from '../foundation/type.module.css';
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+  color: var(--color-text-faint);
+  line-height: var(--leading-tight);
+  white-space: nowrap;
+}
+
+.preview {
+  composes: detail from '../foundation/type.module.css';
+  composes: ellipsis from '../foundation/a11y.module.css';
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--color-text-faint);
+  line-height: var(--leading-tight);
+}
