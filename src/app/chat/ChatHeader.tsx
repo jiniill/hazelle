@@ -30,6 +30,7 @@ export function ChatHeading({ chat }: { chat: OpenChat }) {
       face={shelf && card && <Avatar face={card.name} image={shelf.face} size="sm" />}
       expanded={shelf ? open : undefined}
       onClick={shelf ? () => (open ? actions.closePanel() : actions.side({ kind: 'character', id: shelf.id, part: null })) : undefined}
+      onRename={item ? () => actions.openDialog('rename') : undefined}
     />
   );
 }
@@ -75,6 +76,7 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
         {shelf && <MenuItem icon={SquarePen} label="캐릭터 편집" onClick={() => actions.side({ kind: 'character', id: shelf.id, part: null })} />}
         {!wide && <MenuItem icon={MessageSquarePlus} label="새 채팅" onClick={() => navigate({ kind: 'new-chat', character: shelf?.id ?? null })} />}
         {item && <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => actions.openDialog('rename')} />}
+        {item && <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={actions.duplicate} />}
         {fileable && <MenuItem icon={FolderInput} label={MOVE_TO_FOLDER} onClick={openFolders.onClick} />}
         <MenuItem icon={UsersRound} label={CAST} sub={cast.length ? `${cast.length}명` : undefined} onClick={openCast.onClick} />
         {item && !chat.displayPending && <MenuItem icon={ACTS.export.icon} label={EXPORT} onClick={() => actions.openDialog('export')} />}

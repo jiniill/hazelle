@@ -10,7 +10,7 @@ import { resetToggles, setToggle } from '../../runtime/characters';
 import { chatTranslate, featuresOf } from '../../runtime/features';
 import { restoreRaw } from '../../runtime/chat-log';
 import { keepAttachments } from '../../runtime/attachments';
-import { branchFrom, pickVersion } from '../../runtime/message-acts';
+import { pickVersion } from '../../runtime/message-acts';
 import { badgesByVersion, toolActions, toolComposer } from './toolMenu';
 import type { ScreenAt } from '../../runtime/script-pages';
 import { triggersOf } from '../../runtime/script-selection';
@@ -29,7 +29,6 @@ import { describeUnused } from '../common/unused';
 import { useCopy } from '../common/useCopy';
 import { LORE_BUDGET_LABEL } from '../common/words';
 import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSaves, useSession, useToolFrames, useReplying } from '../session';
-import { navigate } from '../shell/router';
 import { useToast } from '../toast';
 import { useChatEdits } from './ChatEdits';
 import { storyText, useMenuHandle, usePanelsBeside, useTimePin, useViewport, type BotButton, type Reading } from '../ui';
@@ -350,16 +349,16 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   async function branch(message: Shown) {
     if (!item || branching) return;
     setBranching(true);
-    toast.show('채팅 분기 중…');
-    const made = await branchFrom(session, item, message.id);
+    await edits.branch(item.id, message.id);
     setBranching(false);
-    if (!made.ok) return toast.failed(made, '채팅을 분기하지 못했어요.');
-    navigate({ kind: 'chat', id: made.data });
-    toast.show('새 채팅으로 분기했어요.');
   }
 
   function drop() {
     if (item) edits.drop([{ id: item.id, title: item.title, character: chat.character }]);
+  }
+
+  function duplicate() {
+    if (item) void edits.duplicate(item);
   }
 
   // A value is the character's, in every chat of it, or shared by every 캐릭터 없이 chat.
@@ -493,6 +492,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       resetToggles: reset,
       rename,
       drop,
+      duplicate,
     }),
   });
 }

@@ -148,6 +148,7 @@ export function ShelfChats({ page, shelf }: Props) {
         {asked && (
           <>
             <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setRenaming(asked.chat)} />
+            <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void edits.duplicate(asked.chat)} />
             {index.folders.length > 0 && <MenuItem icon={FolderInput} label={MOVE_TO_FOLDER} onClick={() => folderMenu.set({ open: true, from: null, at: asked.at })} />}
             <Divider variant="menu" />
             <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => edits.drop([{ id: asked.chat.id, title: asked.chat.title, character: shelf.id }])} />

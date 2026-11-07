@@ -261,19 +261,20 @@
   min-width: 0;
   max-width: var(--chat-title-max-width);
   display: flex;
+  flex-direction: column;
+  line-height: var(--leading-tight);
   font-family: var(--font-serif);
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
 }
 
-.box {
+.who {
   min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--space-8);
-  padding: var(--space-2) var(--space-8);
+  padding: var(--space-2) var(--space-8) 0;
   border-radius: var(--radius-sm);
-  text-align: start;
 }
 
 .press:hover,
@@ -286,21 +287,23 @@
   color: var(--color-text-muted);
 }
 
-.lines {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: var(--leading-tight);
-}
-
 .name {
   composes: ellipsis from '../foundation/a11y.module.css';
+  min-width: 0;
 }
 
 .sub {
   composes: ellipsis from '../foundation/a11y.module.css';
   composes: detail from '../foundation/type.module.css';
+  padding: 0 var(--space-8) var(--space-2);
+  border-radius: var(--radius-sm);
   font-weight: var(--weight-regular);
+  text-align: start;
+}
+
+/* Under the name, past the face beside it. */
+.beside {
+  margin-inline-start: calc(var(--avatar-sm) + var(--space-8));
 }
 
 @media (max-width: 959px) {

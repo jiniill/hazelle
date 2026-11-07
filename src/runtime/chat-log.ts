@@ -2,7 +2,7 @@ import type { Cost } from '../connectors/types';
 import type { RisuMessage } from '../engine/import/types';
 import { memoryThrough } from '../engine/memory';
 import { VARIABLE_LIMITS } from '../engine/render';
-import { CAST_MAX, foldTree, shown, standing, translationOutdated, type AgentRun, type Bookmark, type Chat, type ChatItem, type Entry, type Message, type Receipt, type Translation, type Version, type Writes } from '../model/chat';
+import { CAST_MAX, foldTree, shown, standing, translationOutdated, type AgentRun, type Bookmark, type Chat, type Entry, type Message, type Receipt, type Translation, type Version, type Writes } from '../model/chat';
 import { cachePrintId } from '../model/cache';
 import { isChatFolderOf } from '../model/folders';
 import type { Illustration } from '../model/illustration';
@@ -67,33 +67,38 @@ function greetingWrites(chat: string, { choices, selected }: Greetings, at: numb
   return entries.map(([id, value]) => ({ type: 'create', kind: 'entry', id, parent: chat, value }));
 }
 
-// Copy choices, not links: deleting either chat must leave the other whole.
-// Carry the cache print for shared prefixes, but only while its call is the branch's latest (cache prior).
-export async function branchChat(store: ObjectStore, item: ChatItem, message: string): Promise<ApiResult<Hazelle.Branched & { id: string }>> {
-  return store.withChat(item.id, async () => {
-    const current = store.projections.get(item.id)?.model;
-    if (!current) return { ok: false, error: 'gone' };
-    item = current;
-    const upTo = item.messages.findIndex((candidate) => candidate.id === message);
-    if (upTo === -1) return { ok: false, error: 'gone' };
+// A branch: the story up to a message, untitled and read as its origin's (분기됨). A duplicate: the whole story under its
+// own name, no one's branch.
+export type Copy = { kind: 'branch'; at: string } | { kind: 'duplicate'; title: string };
+
+// Copy choices, not links: deleting either chat must leave the other whole. Either copy keeps the seed, so its tags
+// roll as the original's did.
+// Carry the cache print for shared prefixes, but only while its call is the copy's latest (cache prior).
+export async function copyChat(store: ObjectStore, source: string, copy: Copy): Promise<ApiResult<Hazelle.Branched & { id: string }>> {
+  return store.withChat(source, async () => {
+    const item = store.projections.get(source)?.model;
+    if (!item) return { ok: false, error: 'gone' };
+    const kept = copy.kind === 'branch' ? item.messages.findIndex((candidate) => candidate.id === copy.at) + 1 : item.messages.length;
+    if (copy.kind === 'branch' && !kept) return { ok: false, error: 'gone' };
     const id = crypto.randomUUID();
-    const memory = storedMemory(store, item.id)?.value;
-    const illustrations = store.children('illustration', item.id).map(({ value }) => value);
-    const remarks = store.children('remark', item.id).map(({ value }) => value);
-    const inlays = store.children('inlay', item.id).map(({ value }) => value);
-    const textfiles = store.children('textfile', item.id).map(({ value }) => value);
-    const lore = store.children('lore', item.id).map(({ value }) => value);
-    const line = item.messages.slice(0, upTo + 1).map((each, index, all) => ({ message: each, follows: index === 0 ? null : shown(all[index - 1]!).id }));
+    const memory = storedMemory(store, source)?.value;
+    const illustrations = store.children('illustration', source).map(({ value }) => value);
+    const remarks = store.children('remark', source).map(({ value }) => value);
+    const inlays = store.children('inlay', source).map(({ value }) => value);
+    const textfiles = store.children('textfile', source).map(({ value }) => value);
+    const lore = store.children('lore', source).map(({ value }) => value);
+    const line = item.messages.slice(0, kept).map((each, index, all) => ({ message: each, follows: index === 0 ? null : shown(all[index - 1]!).id }));
     const { writes, after, messages, versions } = copyWrites(id, line, memory, illustrations, remarks, inlays, textfiles, lore);
-    writes.push(...(await branchToolData(store, item.id, id, messages, versions)));
-    const print = chatPrint(store, item.id);
+    writes.push(...(await branchToolData(store, source, id, messages, versions)));
+    const print = chatPrint(store, source);
     if (print) writes.push({ type: 'create', kind: 'cacheprint', id: cachePrintId(id), parent: id, value: print.value });
-    const chat = withBookmarks(item.chat, carried(item.chat.bookmarks, messages));
+    const chat = { ...withBookmarks(item.chat, carried(item.chat.bookmarks, messages)), seed: item.chat.seed ?? source };
     // An untitled branch's own title is its origin's with · 분기, so a branch of it names that origin, never X · 분기 · 분기.
     const name = item.chat.title ?? item.chat.origin?.name ?? item.title;
-    writes.push({ type: 'create', kind: 'chat', id, parent: null, value: { ...chat, title: null, origin: { id: item.id, name, after }, seed: item.chat.seed ?? item.id } });
+    const own = copy.kind === 'branch' ? { ...chat, title: null, origin: { id: source, name, after } } : { ...without(chat, 'origin'), title: copy.title };
+    writes.push({ type: 'create', kind: 'chat', id, parent: null, value: own });
     const created = await store.batch(writes);
-    return created.ok ? { ok: true, data: { id, from: item.id, messages: Object.fromEntries(messages), versions: Object.fromEntries(versions) } } : created;
+    return created.ok ? { ok: true, data: { id, from: source, messages: Object.fromEntries(messages), versions: Object.fromEntries(versions) } } : created;
   });
 }
 
@@ -451,7 +456,7 @@ export const savedElsewhere = (store: ObjectStore, chat: string, id: string, fai
   failure.error === 'conflict' && store.children('entry', chat).some((entry) => entry.id === id);
 
 // The user's own acts go through runtime/message-acts, which tells the chat's tools once they are saved; editMessage
-// and branchChat above are its writes too.
+// and copyChat above are its writes too.
 export const selectVersion = (store: ObjectStore, chat: string, message: string, version: string) => append(store, chat, { type: 'select', message, version, at: Date.now() });
 
 export const removeMessage = (store: ObjectStore, chat: string, message: string) => append(store, chat, { type: 'delete', message, at: Date.now() });
