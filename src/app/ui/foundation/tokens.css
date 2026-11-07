@@ -218,6 +218,7 @@
   --markup-heading-shadow: 0.35px 0 0 var(--color-markup-heading), -0.35px 0 0 var(--color-markup-heading);
 
   --shadow-popover: 0 12px 32px var(--palette-shadow);
+  --shadow-card: 0 6px 18px var(--palette-shadow);
   --shadow-cheer: 0 0 0 8px var(--color-accent-bg), 0 14px 36px var(--color-accent-border);
 
   --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
@@ -463,17 +464,38 @@
   --outline-gap: 4px;
   --outline-gap-kind: 14px;
   --outline-gap-cut: 20px;
-  /* 분기 지도: a message's length of stem, the stem's bounds, a head card (two fit a panel's width), the lanes' gap, the
-     drop from a sprout to the head under it, the sprout's dot and the dash of a copy's or a gone chat's line. */
+  /* 분기 지도: a message's length of stem, the stem's bounds and width; a head card (two fit a panel's width), its height
+     and its height with a preview line; the map's lanes' gap and the drop from a pill to the head under it; a pill's
+     height, the least room between two on one stem, and how far under a stem's end one hangs; the end cap; the ticks
+     (one every ten messages, or fifty, a hundred, while they stand the least room apart); the dash of a copy's line and
+     the dots of a gone chat's; the list's lane pitch, row gap and the room after its deepest lane; the map's dot grid
+     and the fade at its edge; the glow on the way to the current chat and the ring on its card; the legend's mark. */
   --lineage-unit: 4px;
   --lineage-line-min: 48px;
   --lineage-line-max: 360px;
+  --lineage-stem: 3px;
   --lineage-head-width: 208px;
-  --lineage-head: var(--row-min-height);
+  --lineage-head: 60px;
+  --lineage-head-preview: 80px;
   --lineage-gap: 16px;
   --lineage-drop: 40px;
+  --lineage-pill: 20px;
+  --lineage-pill-step: 24px;
+  --lineage-end-drop: 16px;
+  --lineage-cap: 8px;
+  --lineage-tick: 8px;
+  --lineage-tick-min: 24px;
+  --lineage-dash: 5 5;
+  --lineage-dots: 2 6;
+  --lineage-lane: 24px;
+  --lineage-row-gap: 8px;
+  --lineage-gutter-end: 56px;
+  --lineage-grid: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--color-text-soft) 12%, transparent) 1px, transparent 1.4px);
+  --lineage-grid-pitch: 18px;
+  --lineage-fade: 56px;
+  --lineage-glow: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 45%, transparent));
+  --lineage-ring: 0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent), var(--shadow-card);
   --lineage-mark: 10px;
-  --lineage-dash: 6 4;
   --editor-max-width: 760px;
   --editor-header: 68px;
   --editor-foot: 140px;
@@ -768,6 +790,7 @@
   --color-weight-negative: var(--palette-rose-700);
 
   --shadow-popover: 0 12px 32px var(--palette-shadow-soft);
+  --shadow-card: 0 6px 18px var(--palette-shadow-soft);
   --color-glass-edge: var(--palette-ink-line);
   --color-glass-press: var(--palette-ink-wash);
   --shadow-glass: 0 10px 28px var(--palette-shadow-soft), inset 0 1px 0 var(--palette-white);

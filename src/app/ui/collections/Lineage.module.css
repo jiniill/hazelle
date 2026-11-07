@@ -1,35 +1,95 @@
-/* Sized by the placement (stems.ts): wider than its panel, it scrolls inside it. */
+/* The 분기 지도 fills its panel (SidePanel fill): the map or the rows scroll inside it, the legend stays at its foot. */
+.frame {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.view {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+}
+
+.canvas {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--space-16);
+  overflow: auto;
+  background-image: var(--lineage-grid);
+  background-attachment: local;
+  background-size: var(--lineage-grid-pitch) var(--lineage-grid-pitch);
+}
+
+.rows {
+  flex: 1 1 0;
+  min-height: 0;
+  padding: var(--space-8) var(--space-8) var(--space-16) 0;
+  overflow-y: auto;
+}
+
+/* Sized by the placement (stems.ts): wider than its panel, the map scrolls inside it. */
 .map {
   position: relative;
   flex-shrink: 0;
 }
 
+/* The heads grow a preview line; the placement was told the same height. */
+.withPreview {
+  --lineage-head: var(--lineage-head-preview);
+}
+
 .lines {
   position: absolute;
   inset: 0;
+  overflow: visible;
 }
 
-.line,
-.current,
-.ghost,
-.copy {
+.stem,
+.link {
   fill: none;
   stroke: var(--color-border-strong);
-  stroke-width: var(--border-thick);
   stroke-linecap: round;
 }
 
-.current {
+.stem {
+  stroke-width: var(--lineage-stem);
+}
+
+.link {
+  stroke-width: var(--border-thick);
+}
+
+.onPath {
   stroke: var(--color-accent);
+  filter: var(--lineage-glow);
 }
 
 .ghost {
-  stroke: var(--color-divider);
+  stroke-width: var(--border-thick);
+  stroke-dasharray: var(--lineage-dots);
+}
+
+.dashed {
   stroke-dasharray: var(--lineage-dash);
 }
 
-.copy {
-  stroke-dasharray: var(--lineage-dash);
+/* Cut through the stem in the ground's colour. */
+.tick {
+  stroke: var(--color-sidebar);
+  stroke-width: var(--border-medium);
+}
+
+.cap {
+  fill: var(--color-sidebar);
+  stroke: var(--color-border-strong);
+  stroke-width: var(--border-thick);
+}
+
+.cap.current {
+  fill: var(--color-accent);
 }
 
 .heads {
@@ -40,52 +100,125 @@
 
 .head {
   position: absolute;
-  width: var(--lineage-head-width);
   height: var(--lineage-head);
 }
 
-/* A press's box around a small dot, centred on the sprout's point. */
-.mark {
+/* Beside the cap at a stem's end: how many messages the stem holds. */
+.count {
+  composes: detail from '../foundation/type.module.css';
+  position: absolute;
+  padding-inline-start: calc(var(--lineage-cap) / 2 + var(--space-4));
+  color: var(--color-text-faint);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-none);
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+/* Centred on its point on the stem. */
+.pill {
   position: absolute;
   z-index: var(--layer-raised);
-  width: var(--control-xs);
-  height: var(--control-xs);
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  height: var(--lineage-pill);
+  padding: 0 var(--space-8);
+  border: var(--border-thin) solid var(--color-border-strong);
   border-radius: var(--radius-full);
+  background: var(--color-surface-hover);
+  color: var(--color-text-soft);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-none);
+  white-space: nowrap;
   transform: translate(-50%, -50%);
+  transition:
+    border-color var(--duration-fast),
+    background var(--duration-fast);
 }
 
-.mark::before {
-  content: '';
+.pill:is(button):hover,
+.pill:is(button):focus-visible {
+  border-color: var(--color-text-muted);
+  background: var(--color-surface-raised);
+}
+
+.pill.lit {
+  border-color: var(--color-accent);
+  background: var(--color-accent-bg);
+}
+
+/* HTML on the way to the current chat (a count, a pill's words, the legend's line); .onPath is the lines'. After the
+   count and the pill, whose own colour it takes over. */
+.lit {
+  color: var(--color-accent-hover);
+}
+
+.copyPill {
+  border-style: dashed;
+  color: var(--color-text-muted);
+}
+
+.unplacedPill {
+  border-style: dotted;
+  color: var(--color-text-muted);
+}
+
+.start {
+  transform: translate(calc(var(--lineage-pill) / -2), -50%);
+}
+
+.fade {
   position: absolute;
-  inset: 50%;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--lineage-fade);
+  background: linear-gradient(to right, transparent, var(--color-sidebar));
+  pointer-events: none;
+}
+
+.legend {
+  composes: detail from '../foundation/type.module.css';
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-12);
+  margin: 0;
+  padding: var(--space-8) var(--space-16);
+  border-top: var(--border-thin) solid var(--color-divider);
+  color: var(--color-text-faint);
+  list-style: none;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.branchMark {
+  composes: dot from '../foundation/surface.module.css';
   width: var(--lineage-mark);
   height: var(--lineage-mark);
+}
+
+.copyMark,
+.ghostMark {
+  width: var(--lineage-mark);
+  height: var(--lineage-mark);
+  border: var(--border-medium) dashed var(--color-text-muted);
+  border-radius: var(--radius-full);
+}
+
+.ghostMark {
+  border-style: dotted;
+}
+
+.pathMark {
+  width: var(--lineage-mark);
+  height: var(--lineage-stem);
   border-radius: var(--radius-full);
   background: var(--color-accent);
-  transform: translate(-50%, -50%);
-  transition: transform var(--duration-fast);
-}
-
-.mark:hover::before,
-.mark:focus-visible::before {
-  transform: translate(-50%, -50%) scale(1.4);
-}
-
-.copyMark {
-  composes: mark;
-}
-
-.copyMark::before {
-  border: var(--border-medium) dashed var(--color-text-muted);
-  background: var(--color-sidebar);
-}
-
-.unplacedMark {
-  composes: mark;
-}
-
-.unplacedMark::before {
-  border: var(--border-medium) dotted var(--color-text-muted);
-  background: var(--color-sidebar);
+  filter: var(--lineage-glow);
 }

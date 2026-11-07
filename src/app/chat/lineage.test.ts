@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import type { Chat, ChatSummary } from '../../model/chat';
-import { family, type Member } from './lineage';
+import { family, measure, type Member } from './lineage';
 
 const chat = (id: string, origin?: Chat['origin'], count: number | null = 10): ChatSummary => ({ id, chat: { title: null, character: null, models: {}, ...(origin && { origin }) }, count, title: id, preview: null, at: null, order: 0 });
 const shape = (member: Member): unknown => [member.kind === 'chat' ? member.chat.id : `ghost:${member.name}`, member.children.map(({ kind, at, member }) => [kind, at, shape(member)])];
@@ -28,4 +28,10 @@ it('stands a ghost in for an origin no longer listed, its children hung from its
 
 it('places no split on an origin whose messages are not counted', () => {
   expect(shape(family([chat('a', undefined, null), chat('b', { id: 'a', name: 'a', after: 'm5', shared: 5 })], 'a'))).toEqual(['a', [['branch', null, ['b', []]]]]);
+});
+
+it('counts the chats and the generations, a ghost as neither', () => {
+  const chats = [chat('a'), chat('b', { id: 'a', name: 'a', after: 'm5', shared: 5 }), chat('c', { id: 'b', name: 'b', after: 'm8', shared: 8 }), chat('d', { id: 'a', name: 'a', after: null, shared: 10 })];
+  expect(measure(family(chats, 'c'))).toEqual({ count: 4, depth: 3 });
+  expect(measure(family([chat('g', { id: 'gone', name: '옛 채팅', after: 'm3', shared: 3 }), chat('h', { id: 'gone', name: '옛 채팅', after: null })], 'g'))).toEqual({ count: 2, depth: 1 });
 });
