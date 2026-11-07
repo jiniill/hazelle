@@ -259,7 +259,7 @@ describe('copyChat', () => {
     await server.hold(store, copied.data.id);
     const texts = (id: string) => fold(store.children('entry', id)).map((message) => shown(message).text);
     expect(texts(copied.data.id)).toEqual(['안녕', '잘 자']);
-    expect(store.get('chat', copied.data.id)!.value).toEqual({ ...chat, title: '기숙사의 밤 · 분기 (사본)', seed: source, origin: { id: branched.data.id, name: '기숙사의 밤', after: null } });
+    expect(store.get('chat', copied.data.id)!.value).toEqual({ ...chat, title: '기숙사의 밤 · 분기 (사본)', seed: source, origin: { id: branched.data.id, name: '기숙사의 밤', after: null, shared: 2 } });
     expect(copied.data.from).toBe(branched.data.id);
   });
 
@@ -363,7 +363,7 @@ describe('copyChat', () => {
     expect([copy[0]!.versions.length, shown(copy[1]!).text, shown(copy[1]!).edited]).toEqual([3, '안녕하세요', true]);
     expect([shown(copy[2]!).text, copy[2]!.versions.length, calls(shown(copy[2]!).receipt!).map((call) => call.cost)]).toEqual(['답장', 1, [{ unit: 'usd', amount: 0.01, source: 'reported' }, null]]);
     const stored = store.get('chat', branched.data.id)!;
-    expect(stored.value).toEqual({ ...chat, title: null, origin: { id: source, name: '기숙사의 밤', after: copy.at(-1)!.id }, seed: source });
+    expect(stored.value).toEqual({ ...chat, title: null, origin: { id: source, name: '기숙사의 밤', after: copy.at(-1)!.id, shared: copy.length }, seed: source });
     const reader = { store, username: 'jin' };
     expect(await evaluateChat(reader, branched.data.id, stored.value, copy)).toEqual(await evaluateChat(reader, source, chat, story.slice(0, -1)));
     expect(stored.rev).toBeGreaterThan(Math.max(...entries.map((entry) => entry.rev)));
@@ -602,6 +602,6 @@ describe('마스코트 대사', () => {
     const imported = await importChat({ store, files }, read.file, null);
     if (!imported.ok) throw new Error(imported.error);
     await server.hold(store, imported.data.id);
-    expect(store.get('chat', imported.data.id)!.value.origin).toEqual({ id: source, name: '기숙사의 밤', after: null });
+    expect(store.get('chat', imported.data.id)!.value.origin).toEqual({ id: source, name: '기숙사의 밤', after: null, shared: 1 });
   });
 });

@@ -28,7 +28,9 @@ export type Chat = Mark & {
   // The chat this was copied from. after: the copied message the split comes after (the mark in app/chat ChatLog), or
   // null for a whole copy, which has no split. name: the original's title at copy time, for an untitled copy's own
   // title and for the split mark once the original is gone; while it lives, the mark shows its name as it is now.
-  origin?: { id: string; name: string; after: string | null };
+  // shared: how many messages the two held in common at the copy, which places the split on the original's line
+  // without opening either; copies made before it was kept have none.
+  origin?: { id: string; name: string; after: string | null; shared?: number };
   // A branch keeps its original's, so the history it copied reads the same.
   seed?: string;
   memory?: MemorySettings;

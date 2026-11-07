@@ -96,7 +96,7 @@ export async function copyChat(store: ObjectStore, source: string, copy: Copy): 
     // An untitled branch's or copy's own title is its origin's with · 분기/· 사본 (originTitle), so a copy of it names that
     // origin, never X · 분기 · 사본.
     const name = item.chat.title ?? item.chat.origin?.name ?? item.title;
-    const own = copy.kind === 'branch' ? { ...chat, title: null, origin: { id: source, name, after } } : { ...chat, title: copy.title, origin: { id: source, name, after: null } };
+    const own = copy.kind === 'branch' ? { ...chat, title: null, origin: { id: source, name, after, shared: kept } } : { ...chat, title: copy.title, origin: { id: source, name, after: null, shared: kept } };
     writes.push({ type: 'create', kind: 'chat', id, parent: null, value: own });
     const created = await store.batch(writes);
     return created.ok ? { ok: true, data: { id, from: source, messages: Object.fromEntries(messages), versions: Object.fromEntries(versions) } } : created;
