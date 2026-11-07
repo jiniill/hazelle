@@ -46,3 +46,26 @@ it('finds where a run of like paragraphs lost one by the numbers both sides hold
 it("keeps a picture's mark after its translated paragraph and that paragraph's original", () => {
   expect(withOriginal(withMarks('하나\n둘', new Set([0])), 'One\nTwo')).toBe(`하나\n\nOne${O}\n\n${placeMark(0)}\n둘\n\nTwo${O}\n`);
 });
+
+it('pairs a line of speech and its tag with the translation that merged them tag first', () => {
+  const original = ['She looked up at him, eyes wide.', '"Anything,"', 'he whispered.', 'For a while neither of them moved.'];
+  const translated = ['그녀가 눈을 동그랗게 뜨고 그를 올려다보았다.', '그가 속삭였다. "뭐든지."', '한동안 둘 다 움직이지 않았다.'];
+  const under = (at: number) => `\n${original[at]}${O}\n`;
+  expect(withOriginal(translated.join('\n'), original.join('\n'))).toBe([translated[0], under(0), translated[1], under(1), under(2), translated[2], under(3)].join('\n'));
+});
+
+it('pairs a paragraph of speech, tag and speech with the three lines its translation broke it into', () => {
+  const original = ['She opened the door.', '"You\'re back?" he asked. "Just now?"', 'She hung up her coat without answering.', 'The kitchen light was still on.', '"I\'m hungry."'];
+  const translated = ['그녀가 문을 열었다.', '"왔어?"', '그가 물었다.', '"방금 온 거야?"', '그녀는 대답 없이 코트를 벗어 걸었다.', '부엌 불은 아직 켜져 있었다.', '"배고파."'];
+  const under = (at: number) => `\n${original[at]}${O}\n`;
+  const pairs = [[0], [], [], [1], [2], [3], [4]].map((indices, index) => [translated[index]!, ...indices.map(under)].join('\n'));
+  expect(withOriginal(translated.join('\n'), original.join('\n'))).toBe(pairs.join('\n'));
+});
+
+it('pairs a paragraph with the four lines its translation broke it into', () => {
+  const original = ['She opened the door.', '"You\'re back?" he asked, and set down his cup. "Just now?" He looked at the clock.', 'She hung up her coat without answering.', '"I\'m hungry."'];
+  const translated = ['그녀가 문을 열었다.', '"왔어?"', '그가 컵을 내려놓으며 물었다.', '"방금 온 거야?"', '그는 시계를 올려다보았다.', '그녀는 대답 없이 코트를 벗어 걸었다.', '"배고파."'];
+  const under = (at: number) => `\n${original[at]}${O}\n`;
+  const pairs = [[0], [], [], [], [1], [2], [3]].map((indices, index) => [translated[index]!, ...indices.map(under)].join('\n'));
+  expect(withOriginal(translated.join('\n'), original.join('\n'))).toBe(pairs.join('\n'));
+});
