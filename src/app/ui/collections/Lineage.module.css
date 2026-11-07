@@ -1,0 +1,91 @@
+/* Sized by the placement (stems.ts): wider than its panel, it scrolls inside it. */
+.map {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.lines {
+  position: absolute;
+  inset: 0;
+}
+
+.line,
+.current,
+.ghost,
+.copy {
+  fill: none;
+  stroke: var(--color-border-strong);
+  stroke-width: var(--border-thick);
+  stroke-linecap: round;
+}
+
+.current {
+  stroke: var(--color-accent);
+}
+
+.ghost {
+  stroke: var(--color-divider);
+  stroke-dasharray: var(--lineage-dash);
+}
+
+.copy {
+  stroke-dasharray: var(--lineage-dash);
+}
+
+.heads {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.head {
+  position: absolute;
+  width: var(--lineage-head-width);
+  height: var(--lineage-head);
+}
+
+/* A press's box around a small dot, centred on the sprout's point. */
+.mark {
+  position: absolute;
+  z-index: var(--layer-raised);
+  width: var(--control-xs);
+  height: var(--control-xs);
+  padding: 0;
+  border-radius: var(--radius-full);
+  transform: translate(-50%, -50%);
+}
+
+.mark::before {
+  content: '';
+  position: absolute;
+  inset: 50%;
+  width: var(--lineage-mark);
+  height: var(--lineage-mark);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  transform: translate(-50%, -50%);
+  transition: transform var(--duration-fast);
+}
+
+.mark:hover::before,
+.mark:focus-visible::before {
+  transform: translate(-50%, -50%) scale(1.4);
+}
+
+.copyMark {
+  composes: mark;
+}
+
+.copyMark::before {
+  border: var(--border-medium) dashed var(--color-text-muted);
+  background: var(--color-sidebar);
+}
+
+.unplacedMark {
+  composes: mark;
+}
+
+.unplacedMark::before {
+  border: var(--border-medium) dotted var(--color-text-muted);
+  background: var(--color-sidebar);
+}

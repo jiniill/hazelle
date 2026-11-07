@@ -30,6 +30,7 @@ const picture = { id: 'picture', value: { version: 'old', at: 1, scene: { paragr
 const closed = { open: false, from: null };
 const modelMenu = { read: () => closed, subscribe: () => () => {}, set: () => {} };
 const messageTools: OpenChat['messageTools'] = [];
+const lineage = vi.fn();
 let translations = new Map<string, string>();
 let status = 'HP 7';
 let bookmarked = new Set<string>();
@@ -44,7 +45,7 @@ const frame = (messages: OpenChat['messages'], item: OpenChat['item'] = null) =>
   hosted: (index: number) => index === 0 ? [{ id: 'status', script: 0, html: status, at: 'top', message: 0 }] : [],
   offered: () => [{ id: 'status', name: 'Status', marked: true }],
   bookmarked, busy: true, branching: false, editing: null, timePin: null, scroll: { seek: null }, modelMenu,
-  actions: { watch: () => () => {}, copy: () => {} },
+  actions: { watch: () => () => {}, copy: () => {}, lineage },
 }) as unknown as OpenChat;
 
 it('renders only changed rows through chunks and translation, including rebuilt feature values and illustrated history', async () => {
@@ -77,7 +78,7 @@ it('renders only changed rows through chunks and translation, including rebuilt 
   rowPart({ feature: { enabled: true } }, {});
 });
 
-it('marks the split with the origin as it is named now, its kept name once the origin is gone, and an act that forgets it', async () => {
+it('marks the split with the origin as it is named now, its kept name once the origin is gone, an act that opens the map and one that forgets it', async () => {
   const messages: Shown[] = [{ id: 'u1', role: 'user', at: 1, selected: 0, live: null, versions: [{ id: 'u1', seed: 'u1', text: 'Hi', at: 1, receipt: null, edited: false }] }];
   const item = { id: 'branch', chat: { title: null, character: null, models: {}, origin: { id: 'a', name: '그때 이름', after: 'u1' } } } as OpenChat['item'];
   const split = () => divided.mock.calls.map(([props]) => props).findLast((props) => props.icon)!;
@@ -87,13 +88,15 @@ it('marks the split with the origin as it is named now, its kept name once the o
   try {
     await act(() => root.render(<ChatLog chat={frame(messages, item)} />));
     expect(split().label).toBe("'지금 이름'에서 분기됨");
-    expect(labels()).toEqual(['원래 채팅 보기', '분기 표시 삭제']);
+    expect(labels()).toEqual(['원래 채팅 보기', '분기 지도', '분기 표시 삭제']);
     split().actions![1]!.onClick();
+    expect(lineage).toHaveBeenCalled();
+    split().actions![2]!.onClick();
     expect(live.edits.forgetOrigin).toHaveBeenCalledWith('branch');
     live.origin = null;
     await act(() => root.render(<ChatLog chat={frame(messages, item)} />));
     expect(split().label).toBe("삭제된 채팅 '그때 이름'에서 분기됨");
-    expect(labels()).toEqual(['분기 표시 삭제']);
+    expect(labels()).toEqual(['분기 지도', '분기 표시 삭제']);
   } finally {
     await act(() => root.unmount());
   }
