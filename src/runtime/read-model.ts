@@ -1,7 +1,7 @@
 import { ChangeSignal } from '../change-signal';
 import type { Display } from '../engine/display';
 import type { ChatScope } from '../engine/render';
-import { chatTitle, shown, standing, type Chat, type ChatSummary, type Message } from '../model/chat';
+import { chatTitle, originTitle, shown, standing, type Chat, type ChatSummary, type Message } from '../model/chat';
 import { placeOf, withMarks, withoutMarks } from '../model/illustration';
 import type { Illustrating, Illustrator } from './illustrate';
 import type { Kind, Stored, Values } from '../model/kinds';
@@ -245,7 +245,7 @@ export class ReadModels {
     const saved = this.store.get('summary', summaryId(id))?.value;
     return {
       id, chat, count: saved?.count ?? null,
-      title: chat.title ?? (chat.origin ? `${chat.origin.name} · 분기` : saved?.title ?? chatTitle(chat, [], [])),
+      title: chat.title ?? (chat.origin ? originTitle(chat.origin) : saved?.title ?? chatTitle(chat, [], [])),
       preview: saved?.preview ?? null, at: saved?.at ?? null, order: saved?.order ?? rev,
     };
   }

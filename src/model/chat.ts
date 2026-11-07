@@ -25,9 +25,10 @@ export type Chat = Mark & {
   note?: string;
   // 삽화 노트, sent to the scene writer through the 삽화 prompt's slot; absent is none.
   illustrateNote?: string;
-  // name: the original's title at branch time, for an untitled branch's own title and for the split mark once the
-  // original is gone; while it lives, the mark shows its name as it is now (app/chat ChatLog).
-  origin?: { id: string; name: string; after: string };
+  // The chat this was copied from. after: the copied message the split comes after (the mark in app/chat ChatLog), or
+  // null for a whole copy, which has no split. name: the original's title at copy time, for an untitled copy's own
+  // title and for the split mark once the original is gone; while it lives, the mark shows its name as it is now.
+  origin?: { id: string; name: string; after: string | null };
   // A branch keeps its original's, so the history it copied reads the same.
   seed?: string;
   memory?: MemorySettings;
@@ -584,10 +585,13 @@ export function previewLine(text: string, story: string): string {
   return all.find((line) => prose(line) && own(squash(line))) ?? all.find(prose) ?? all[0] ?? '';
 }
 
+// An untitled branch's or copy's title: its origin's name as kept, with which of the two it is.
+export const originTitle = ({ name, after }: NonNullable<Chat['origin']>) => `${name} · ${after === null ? '사본' : '분기'}`;
+
 // texts: each message's text as it is displayed (engine/render, which the model cannot call).
 export function chatTitle(chat: Chat, messages: Message[], texts: string[]): string {
   if (chat.title) return chat.title;
-  if (chat.origin) return `${chat.origin.name} · 분기`;
+  if (chat.origin) return originTitle(chat.origin);
   const first = messages.findIndex((message) => message.role === 'user');
   return (first !== -1 && firstLine(texts[first]!)) || '새 채팅';
 }

@@ -266,6 +266,10 @@ describe('chatTitle', () => {
     expect(chatTitle({ title: null, character: null, models: {}, origin: { id: 'a', name: '기숙사의 밤', after: 'u1' } }, messages, asStored(messages))).toBe('기숙사의 밤 · 분기');
     expect(chatTitle({ title: null, character: null, models: {} }, [], [])).toBe('새 채팅');
   });
+
+  it('reads an untitled whole copy as its origin with · 사본', () => {
+    expect(chatTitle({ title: null, character: null, models: {}, origin: { id: 'a', name: '기숙사의 밤', after: null } }, [], [])).toBe('기숙사의 밤 · 사본');
+  });
 });
 
 describe('recentModels', () => {

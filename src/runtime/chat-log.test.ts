@@ -242,7 +242,7 @@ describe('copyChat', () => {
     expect(store.get('chat', again.data.id)!.value.origin).toBeUndefined();
   });
 
-  it("duplicates a chat whole under the name given, as no one's branch, keeping the seed", async () => {
+  it('duplicates a chat whole under the name given, remembering its origin with no split, keeping the seed', async () => {
     const { store } = await server.account();
     const source = crypto.randomUUID();
     await server.hold(store, source);
@@ -259,7 +259,7 @@ describe('copyChat', () => {
     await server.hold(store, copied.data.id);
     const texts = (id: string) => fold(store.children('entry', id)).map((message) => shown(message).text);
     expect(texts(copied.data.id)).toEqual(['안녕', '잘 자']);
-    expect(store.get('chat', copied.data.id)!.value).toEqual({ ...chat, title: '기숙사의 밤 · 분기 (사본)', seed: source });
+    expect(store.get('chat', copied.data.id)!.value).toEqual({ ...chat, title: '기숙사의 밤 · 분기 (사본)', seed: source, origin: { id: branched.data.id, name: '기숙사의 밤', after: null } });
     expect(copied.data.from).toBe(branched.data.id);
   });
 
@@ -584,5 +584,24 @@ describe('마스코트 대사', () => {
     if (!branched.ok) throw new Error(branched.error);
     await server.hold(store, branched.data.id);
     expect(lines(branched.data.id)).toEqual([['둘째 답', '둘째 줄'], ['첫 답', '첫 줄']]);
+  });
+
+  it("keeps a whole copy's origin, which has no split to remap, while the origin chat is here", async () => {
+    const { store, files } = await server.account();
+    const source = crypto.randomUUID();
+    await server.hold(store, source);
+    await startChat(store, source, { title: '기숙사의 밤', character: null, models: {} }, null);
+    await appendUserMessage(store, source, { id: crypto.randomUUID(), text: '안녕' });
+    const copied = await copyChat(store, source, { kind: 'duplicate', title: '기숙사의 밤 (사본)' });
+    if (!copied.ok) throw new Error(copied.error);
+    await server.hold(store, copied.data.id);
+    const written = await chatFile({ store, files }, copied.data.id);
+    if (!written.ok) throw new Error(written.error);
+    const read = readChatFile(JSON.parse(written.data));
+    if (!read.ok) throw new Error(read.error);
+    const imported = await importChat({ store, files }, read.file, null);
+    if (!imported.ok) throw new Error(imported.error);
+    await server.hold(store, imported.data.id);
+    expect(store.get('chat', imported.data.id)!.value.origin).toEqual({ id: source, name: '기숙사의 밤', after: null });
   });
 });
