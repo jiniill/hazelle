@@ -50,8 +50,12 @@ const OWNER = '사용자';
 // Remember last account to avoid presenting a lapsed session as an empty guest/lost data.
 // Explicit guest choice stores empty; older browsers infer from device cache. Storage failure loses only the hint.
 const ENTRY = 'risu-alpha:entry';
+const storedEntry = () => readPersisted<string | null>(ENTRY, (value) => value, null);
+// A browser that entered an account or picked the guest here: it opens a workspace again, so what that waits for is
+// fetched while the server answers (main.tsx, loadState).
+export const returning = () => storedEntry() !== null;
 async function entry(): Promise<string | null> {
-  const stored = readPersisted<string | null>(ENTRY, (value) => value, null);
+  const stored = storedEntry();
   if (stored !== null) return stored === '' ? null : stored;
   return (await cachedAccounts().catch(() => false)) ? '' : null;
 }
@@ -65,14 +69,19 @@ function enterAs(username: string) {
 
 // A browser that has held neither an account nor a guest, asking for the site's front door. A search engine is one.
 // entry() reads a chosen guest ('') as no account, so the stored hint is asked apart: a person who picked 손님으로 쓰기 has been here.
-const firstVisit = async () => location.pathname === '/' && !selfHost() && readPersisted<string | null>(ENTRY, (value) => value, null) === null && (await entry()) === null && (await recallGuest()) === null;
+const firstVisit = async () => location.pathname === '/' && !selfHost() && !returning() && (await entry()) === null && (await recallGuest()) === null;
 
 export type FirstDoors = { onOpen: () => void; onSignIn: () => void };
+
+// Imported when an account opens, not at the top: the transfer brings the store, which a first visit's page must not
+// wait for.
+const guestTransfer = () => import('../../runtime/guest-transfer');
 
 // Signed out, the page opens as this browser's guest (design F1), unless it came from leaving an account or this
 // browser has opened one before; guest: the person picked 손님으로 쓰기.
 async function loadState(notice: string | null = null, prefer: 'auto' | 'guest' | 'login' = 'auto', greets = false): Promise<Loaded> {
   void clearDownloads();
+  if (returning()) void guestTransfer().catch(() => {});
   const result = await loadSession();
   if (!result.ok) return { kind: 'unreachable', message: describeFailure(result) };
   const boot = result.data;
@@ -137,8 +146,7 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
   // otherwise await explicit upload/discard before opening it.
   async function land(session: SessionFacts, vaultKey: VaultKey) {
     try {
-      // Imported here, not at the top: the transfer brings the store, which a first visit's page must not wait for.
-      const held = await (await import('../../runtime/guest-transfer')).guestWithContent();
+      const held = await (await guestTransfer()).guestWithContent();
       if (!held.ok) return show({ kind: 'unreachable', message: describeFailure(held) });
       const guest = held.data;
       if (guest?.accountId === session.accountId) {
@@ -256,7 +264,7 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
             await land(session, vaultKey);
           }}
           onDiscard={async () => {
-            const discarded = await (await import('../../runtime/guest-transfer')).discardGuest();
+            const discarded = await (await guestTransfer()).discardGuest();
             if (!discarded.ok) return describeFailure(discarded);
             await land(session, vaultKey);
             return null;
