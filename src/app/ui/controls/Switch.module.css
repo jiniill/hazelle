@@ -23,6 +23,20 @@
   transition: inset-inline-start var(--duration-fast);
 }
 
+.labeled {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.labeled:has(:disabled) {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
 .switch:checked {
   border-color: var(--color-accent);
   background: var(--color-accent);

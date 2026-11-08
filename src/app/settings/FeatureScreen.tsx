@@ -26,9 +26,12 @@ import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
 import { Callout, NavBar, NumberInput, Screen, SettingGroup, SettingRow, Switch } from '../ui';
-import { FEATURE_HELP, FeatureSwitch } from './FeatureDefaults';
+import { FeatureSwitch } from './FeatureDefaults';
 
 import { MemoryDefaults } from './MemoryDefaults';
+
+// What the feature is, for the two whose name does not say it.
+const HEAD_HELP: Partial<Record<Feature, string>> = { preread: PRE_READ_HELP, agents: AGENTS_HELP };
 
 // Without a prompt to open, the list opens on the feature's own sort.
 const editPrompt = (sort: PromptSort) => (door: PromptDoor) => navigate(door ? { kind: 'prompt', ...door } : { kind: 'prompts', place: null, sort });
@@ -39,10 +42,7 @@ export function FeatureScreen({ feature, back }: { feature: Feature; back: Back 
   const Defaults = DEFAULTS[feature];
   if (!available) return <Missing what="feature" back={back} />;
   return (
-    <Screen width="form" top={<NavBar title={name} subtitle={PAGES.chat} {...backBar(back)} />}>
-      <SettingGroup label={name}>
-        <SettingRow label={name} help={feature === 'preread' ? `${PRE_READ_HELP} ${FEATURE_HELP}` : feature === 'agents' ? `${AGENTS_HELP} ${FEATURE_HELP}` : FEATURE_HELP} control={<FeatureSwitch feature={feature} />} />
-      </SettingGroup>
+    <Screen width="form" top={<NavBar title={name} subtitle={PAGES.chat} help={HEAD_HELP[feature]} {...backBar(back)} actions={<FeatureSwitch feature={feature} variant="labeled" />} />}>
       <Defaults />
     </Screen>
   );

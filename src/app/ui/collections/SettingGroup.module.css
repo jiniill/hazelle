@@ -10,7 +10,8 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-4) var(--space-16);
-  min-height: var(--row-min-height);
+  /* Shorter than a list row: most settings are one line of words beside a switch. */
+  min-height: var(--control-lg);
   padding: var(--space-12) max(var(--space-8), var(--box-inset));
 }
 
@@ -68,7 +69,8 @@
 }
 
 .label {
-  composes: fieldLabel from '../foundation/type.module.css';
+  color: var(--color-text);
+  font-size: var(--text-md);
 }
 
 .row:has(> .control > [role='switch']:not(:disabled):only-child) .label {
@@ -84,7 +86,6 @@
 
 .panel .label {
   font-size: var(--text-sm);
-  font-weight: var(--weight-regular);
 }
 
 .changed {

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { ButtonSlot } from '../controls/Button';
 import { IconButton } from '../controls/IconButton';
 import { TitleField } from '../controls/TitleField';
+import { Hint, type Help } from '../overlays/Hint';
 import { MoreMenu } from '../overlays/MoreMenu';
 import { usePane } from './ListDetail';
 import styles from './NavBar.module.css';
@@ -12,6 +13,8 @@ export type NavBarProps = {
   title: string;
   rename?: { label: string; placeholder: string; blank?: string; onChange: (title: string) => void };
   subtitle?: ReactNode;
+  // What the page's thing is, behind an ⓘ by the title.
+  help?: Help;
   status?: string;
   actions?: ReactNode;
   menu?: { of: string; items: ReactNode };
@@ -19,7 +22,7 @@ export type NavBarProps = {
   line?: boolean;
 } & Back;
 
-export function NavBar({ title, rename, subtitle, status, backLabel, onBack, close = false, actions, menu, line = false }: NavBarProps) {
+export function NavBar({ title, rename, subtitle, help, status, backLabel, onBack, close = false, actions, menu, line = false }: NavBarProps) {
   const pane = usePane();
   return (
     <div className={line ? `${styles.bar} ${styles.line}` : styles.bar}>
@@ -29,7 +32,10 @@ export function NavBar({ title, rename, subtitle, status, backLabel, onBack, clo
         </span>
       )}
       <div className={styles.titles}>
-        <h1 className={styles.title}>{rename ? <TitleField label={rename.label} value={title} placeholder={rename.placeholder} blank={rename.blank} onChange={rename.onChange} place={line ? 'line' : 'page'} /> : title}</h1>
+        <span className={styles.name}>
+          <h1 className={styles.title}>{rename ? <TitleField label={rename.label} value={title} placeholder={rename.placeholder} blank={rename.blank} onChange={rename.onChange} place={line ? 'line' : 'page'} /> : title}</h1>
+          {help && <Hint label={title}>{help}</Hint>}
+        </span>
         {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
       </div>
       {status !== undefined && (

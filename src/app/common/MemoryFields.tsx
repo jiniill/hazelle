@@ -35,15 +35,15 @@ const MEMORY_HELP = '오래된 대화를 기록으로 정리해서 모델에게 
 type Props = {
   value: MemorySettings;
   onChange: (change: Partial<MemorySettings>) => void;
-  // 사용's ⓘ, MEMORY_HELP by default.
-  help?: string;
-  // Between 사용 and 세부 설정.
+  // The on row's name: 사용 in a chat; 설정's page sets what new chats start with.
+  label?: string;
+  // Between the on row and 세부 설정.
   children?: ReactNode;
 };
 
 // A number is passed on only once it is valid. A caller that resets the values from outside remounts this, so a number
 // typed and not valid does not stand over the reset.
-export function MemoryFields({ value, onChange, help: usage = MEMORY_HELP, children }: Props) {
+export function MemoryFields({ value, onChange, label = '사용', children }: Props) {
   const [drafts, setDrafts] = useState<Partial<Record<Count, string>>>({});
   const row = (field: Count) => {
     const { label, unit, help } = COUNTS[field];
@@ -68,7 +68,7 @@ export function MemoryFields({ value, onChange, help: usage = MEMORY_HELP, child
   return (
     <>
       <SettingGroup label="장기 기억">
-        <SettingRow label="사용" help={usage} control={<Switch label="장기 기억" checked={value.on} onChange={(on) => onChange({ on })} />} />
+        <SettingRow label={label} help={MEMORY_HELP} control={<Switch label="장기 기억" checked={value.on} onChange={(on) => onChange({ on })} />} />
       </SettingGroup>
       {children}
       <DetailFold set={0}>{rows}</DetailFold>

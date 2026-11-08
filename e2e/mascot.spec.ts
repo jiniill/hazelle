@@ -30,7 +30,7 @@ test('the mascot, switched on, leaves a line on the reply that survives a reload
 
   await test.step('the mascot starts off; switch it on for every chat', async () => {
     await page.goto('/settings/chat/mascot');
-    const on = page.getByRole('switch', { name: '마스코트', exact: true });
+    const on = page.getByRole('switch', { name: '채팅에서 쓰기' });
     await expect(on).not.toBeChecked();
     const saved = saving(page);
     await on.click();
@@ -65,7 +65,7 @@ test('the mascot, switched on, leaves a line on the reply that survives a reload
   await test.step('switch it off again, since the specs after this one share the account', async () => {
     await page.goto('/settings/chat/mascot');
     const saved = saving(page);
-    await page.getByRole('switch', { name: '마스코트', exact: true }).click();
+    await page.getByRole('switch', { name: '채팅에서 쓰기' }).click();
     await saved;
   });
 });

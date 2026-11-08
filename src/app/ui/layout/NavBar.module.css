@@ -19,6 +19,12 @@
   min-width: min(100%, var(--title-min-width));
 }
 
+.name {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
 /* Under the title when both cannot stand at the title's least width, rather than squeezing it a letter a line. */
 .actions {
   margin-left: auto;
@@ -61,6 +67,7 @@
 }
 
 .line .title {
+  min-width: 0;
   font-size: var(--text-xl);
   overflow: hidden;
   white-space: nowrap;

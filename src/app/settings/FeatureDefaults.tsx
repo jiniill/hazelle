@@ -18,7 +18,9 @@ import { navigate } from '../shell/router';
 import { useToast } from '../toast';
 import { List, ListItem, Section, Switch } from '../ui';
 
-export const FEATURE_HELP = '끄면 채팅에서 보이지 않고 작동하지 않아요.';
+const USE_IN_CHAT = '채팅에서 쓰기';
+
+const FEATURE_HELP = '끄면 채팅에서 보이지 않고 작동하지 않아요.';
 
 const state = (on: boolean) => (on ? '켜짐' : '꺼짐');
 
@@ -51,14 +53,16 @@ const LINES: Record<Feature, (store: ObjectStore, routes: ReturnType<typeof draw
 };
 
 // 공용's availability, the bottom rung of the 기능 ladder: a switch with no layer above it to follow.
-export function FeatureSwitch({ feature }: { feature: Feature }) {
+// labeled, on the feature's own page head, it says what it switches instead of the feature's name.
+export function FeatureSwitch({ feature, variant = 'bare' }: { feature: Feature; variant?: 'bare' | 'labeled' }) {
   const store = useStore();
   const toast = useToast();
   // Subscribed for sharedFeatures, which reads the settings from the store.
   useSettings();
   return (
     <Switch
-      label={FEATURE_NAMES[feature]}
+      label={variant === 'labeled' ? USE_IN_CHAT : FEATURE_NAMES[feature]}
+      variant={variant}
       checked={sharedFeatures(store)[feature]}
       onChange={(on) => toast.settled(setFeatureAt(store, { kind: 'settings' }, feature, on), SAVE_FAILED)}
     />
