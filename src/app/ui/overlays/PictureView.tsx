@@ -32,8 +32,10 @@ type Size = { src: string; width: number; height: number };
 
 export function PictureView({ src, label, video = false, title, note, actions = [], pages, onClose }: Props) {
   const view = useRef<HTMLDivElement>(null);
-  // The picture and its buttons are not the backdrop; every empty box around them is.
-  useLayer(true, { outside: (target) => view.current!.contains(target) && !(target as Element).closest(`img, video, .${styles.chrome}`), close: onClose, takesBack: true });
+  const stage = useRef<HTMLDivElement>(null);
+  // Only its empty boxes are the backdrop: the picture and every bar sit inside them. Never matched by a class
+  // selector, which a composed module class breaks.
+  useLayer(true, { outside: (target) => target === view.current || target === stage.current, close: onClose, takesBack: true });
   const trap = useFocusTrap(view);
   const paged = stepping(pages);
   const swipe = useSwipe(paged);
@@ -85,7 +87,7 @@ export function PictureView({ src, label, video = false, title, note, actions = 
           <IconButton icon={X} label="닫기" title={titled('닫기', [{ key: 'Escape' }])} onClick={onClose} />
         </span>
       </div>
-      <div className={zoomed ? `${styles.stage} ${styles.zoomed}` : styles.stage}>
+      <div ref={stage} className={zoomed ? `${styles.stage} ${styles.zoomed}` : styles.stage}>
         {src === undefined ? null : video ? (
           <video key={src} className={shape} style={ratio} src={src} aria-label={label} controls autoPlay muted loop playsInline onLoadedMetadata={({ currentTarget: { videoWidth, videoHeight } }) => setSize({ src, width: videoWidth, height: videoHeight })} />
         ) : (
