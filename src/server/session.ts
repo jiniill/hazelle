@@ -13,10 +13,12 @@ const SESSION_LIFETIME_MS = 30 * DAY_MS;
 
 // A leaving account has no session: its deletion has begun (lifecycle.ts), and only 탈퇴 itself, run again to finish
 // it, is admitted (requireOwnSession).
-export async function currentAccount(c: Context<AppEnv>): Promise<Account | null> {
+export async function currentAccount(c: Context<AppEnv>): Promise<Present | null> {
   const account = await sessionAccount(c);
-  return account?.state === 'leaving' ? null : account;
+  return account && present(account) ? account : null;
 }
+type Present = Account & { state: Exclude<AccountState, 'leaving'> };
+const present = (account: Account): account is Present => account.state !== 'leaving';
 
 async function sessionAccount(c: Context<AppEnv>): Promise<Account | null> {
   const token = getCookie(c, 'session', 'host');

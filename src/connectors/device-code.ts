@@ -1,4 +1,5 @@
-import type { HttpRequest, SignIn } from './types';
+import type { SignIn } from './types';
+import type { HttpRequest } from '../contracts/http';
 import { isRecord } from './values';
 
 // RFC 8628, read as GitHub sends it. The code's lifetime and the polling interval are in seconds.

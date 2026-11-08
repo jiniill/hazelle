@@ -1,11 +1,12 @@
 import { ChangeSignal } from '../change-signal';
+import type { ServerError } from '../contracts/http';
 import type { ApiFailure, ApiResult } from './api';
 import { pause } from './pause';
 
 // The last pause repeats until the server answers or the caller stops.
 const RECONNECT_PAUSES = [1000, 2000, 4000, 8000, 15000];
 // busy: the server's upload budget is full (server/limits). too-many-writes: the account's batch rate (server/objects).
-const WAITED = new Set(['offline', 'account-restoring', 'store-unavailable', 'busy', 'too-many-writes']);
+const WAITED = new Set<string>(['offline', 'account-restoring', 'store-unavailable', 'busy', 'too-many-writes'] satisfies (ServerError | 'offline')[]);
 const waits = (result: ApiResult<unknown> | null): result is ApiFailure => result?.ok === false && WAITED.has(result.error);
 
 export class ConnectionWait {

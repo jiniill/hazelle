@@ -5,7 +5,7 @@ import { createMiddleware } from 'hono/factory';
 import { MAX_REPORT_LENGTH } from '../contracts/admin';
 import { FILE_ID } from '../contracts/files';
 import { ACCOUNT_USAGE_HEADERS } from '../contracts/http';
-import { COVER_LENGTH, MAX_SHARE_FILES, MAX_SHARE_LINK, SHARE_CONSENT, SHARE_ID, SHARE_LIMITS, type ShareCover, type ShareState } from '../contracts/shares';
+import { COVER_LENGTH, MAX_SHARE_FILES, MAX_SHARE_LINK, SHARE_CONSENT, SHARE_ID, SHARE_LIMITS, type MyShares, type ShareCover, type SharedLink, type ShareState } from '../contracts/shares';
 import { ROW_BYTES } from './caps';
 import type { Db, SqlValue, Statement } from './db/service-db';
 import { fileKey } from './files/bucket';
@@ -109,9 +109,9 @@ shares.get('/mine', requireSession, async (c) => {
          FROM shares s WHERE s.incarnation = ? AND s.cut_at IS NULL ORDER BY s.created_at DESC`,
       )
       .bind(incarnation)
-      .all<{ held: number; removed: number; covered: number }>(),
+      .all<Omit<SharedLink, 'held' | 'removed' | 'covered'> & { held: number; removed: number; covered: number }>(),
   ]);
-  return c.json({ consent, shares: results.map((row) => ({ ...row, held: Boolean(row.held), removed: Boolean(row.removed), covered: Boolean(row.covered) })) });
+  return c.json({ consent, shares: results.map((row) => ({ ...row, held: Boolean(row.held), removed: Boolean(row.removed), covered: Boolean(row.covered) })) } satisfies MyShares);
 });
 
 shares.post('/', requireSession, canWrite, publishable, async (c) => {

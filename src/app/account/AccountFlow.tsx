@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { AccountFacts, changePassword, credentialFor, passwordCredentialFor, guestFacts, loadSession, logIn, logOut, prepareGuestSignup, signUpGuest, uploadGuest, type GuestSignup, type SessionFacts, type SignedIn } from '../../runtime/account';
+import { AccountFacts, changePassword, credentialFor, passwordCredentialFor, guestFacts, loadSession, logIn, logOut, prepareGuestSignup, signUpGuest, uploadGuest, type GuestSignup, type SignedIn } from '../../runtime/account';
+import type { SessionFacts } from '../../contracts/accounts';
 import { holdAccount } from '../../runtime/api';
 import { cachedAccounts, forgetVault } from '../../runtime/device-cache';
 import { guestAccount } from '../../runtime/guest-store';

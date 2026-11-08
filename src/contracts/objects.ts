@@ -11,3 +11,22 @@ export type SealedChange = { id: string; kind: string; parent: string | null; re
 export type FeedQuery = { timeline: string | null; since: number; known: number; until: number | null; bootstrap: boolean; metadata: boolean; excluded: string[]; parent: string | null; kind: string | null; count: boolean };
 export type FeedAnswer = { limits: BatchLimits; timeline: string; until?: number; changes: SealedChange[]; cursor: number; more: boolean; total?: number };
 export type BatchAnswer = { revs: number[]; timeline: string };
+
+// A feed page stops at its row count or its body budget, always admitting its first row (server/account-store,
+// runtime/guest-store). A metadata row is a hundred bytes, so a backup's walk over a whole account takes few round trips.
+export const FEED_PAGE_BODY_BYTES = 4_000_000;
+export const feedPageRows = ({ metadata }: Pick<FeedQuery, 'metadata'>) => (metadata ? 10_000 : 500);
+
+export const KIND = /^[a-z][a-z-]{0,31}$/;
+const utf8 = new TextEncoder();
+
+// What both stores refuse of a batch whose writes are well formed (server/objects, runtime/guest-store).
+export function refusedWrites(writes: SealedWrite[]): 'bad-input' | 'too-large' | null {
+  if (writes.length > BATCH_LIMITS.items) return 'too-large';
+  if (!writes.length || new Set(writes.map(({ id }) => id)).size < writes.length || !writes.every(validWrite)) return 'bad-input';
+  return writes.some(({ body }) => body !== null && utf8.encode(body).length > BATCH_LIMITS.body) ? 'too-large' : null;
+}
+
+// A deletion names the rev it deletes; once is only a create's.
+const validWrite = ({ kind, body, baseRev, once }: SealedWrite) =>
+  KIND.test(kind) && body !== '' && (body !== null || baseRev !== null) && (!once || (body !== null && baseRev === null));

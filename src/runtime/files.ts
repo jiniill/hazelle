@@ -1,5 +1,6 @@
 import { isRecord } from '../connectors/values';
 import { FILE_ID, MAX_FILE_IDS, type MissingFiles } from '../contracts/files';
+import type { ServerError } from '../contracts/http';
 import { FILE_KINDS } from '../model/kinds';
 import { fileId, openFile, sealFile, type FileRef } from '../vault/files';
 import type { ApiFailure, ApiResult } from './api';
@@ -15,7 +16,7 @@ export const TRANSFERS = { multiplexed: 24, http1: 4 } as const;
 // What a run of transfers holds started and not yet taken (inOrder): a phone's memory sets it, not the speed.
 export const HELD_AHEAD = 64 * 1024 * 1024;
 const SWEEP_TRIES = 3;
-const REFUSED = new Set(['too-large', 'file-blocked', 'files-full']);
+const REFUSED = new Set<string>(['too-large', 'file-blocked', 'files-full'] satisfies ServerError[]);
 
 // Plain http is always HTTP/1.1; behind https a browser that names no protocol is taken to multiplex.
 export function transferSlots(protocol: string, nextHop: string | undefined): number {

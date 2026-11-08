@@ -9,6 +9,11 @@ export const UNREAD_BOARD_HEADER = 'x-unread-board';
 // Named for what it once said: a tab of a release from before is told only through this name.
 export const BUILD_HEADER = 'x-hazelle-version';
 export const RELAY_HEADER = 'x-relay';
+// Who answered a relayed call: the provider, or the relay refusing it (RelayError).
+export const RELAY_SOURCE = { upstream: 'upstream', error: 'error' } as const;
+// A stream's answer that carries its frames (contracts/streams), not a refusal.
+export const STREAM_HEADER = 'x-stream';
+export const STREAM_FRAMES = 'frames';
 // The chat whose bot's script makes a relayed call (an embedding), counted in that chat's cap as its streams are.
 export const BOT_HEADER = 'x-hazelle-bot';
 // 헤이젤 나우's label (contracts/pulse), sent only while the account shares its usage.
@@ -80,5 +85,10 @@ export type ServerError =
   | 'guest-board-blocked'
   | 'guest-board-closed'
   | 'wrong-login';
+// A provider call the relay forwards as given.
+export const RELAY_METHODS = ['GET', 'POST'] as const;
+export type HttpRequest = { url: string; method: (typeof RELAY_METHODS)[number]; headers: Record<string, string>; body: string | null };
+// A keyset page of a list: next is what the following page is asked after, null on the last.
+export type Paged<K extends string, T> = Record<K, T[]> & { next: string | null };
 // The relay's own refusals, answered marked RELAY_HEADER: error (server/relay).
 export type RelayError = 'bad-envelope' | 'not-https' | 'not-public' | 'upstream-unreachable' | 'upstream-redirect' | 'upstream-not-api' | 'relay-traffic-limit' | 'relay-host-limit';

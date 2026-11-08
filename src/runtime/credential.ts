@@ -1,5 +1,6 @@
 import type { Resolved } from '../connectors/registry';
-import { ConnectorError, type HttpRequest, type Token } from '../connectors/types';
+import { ConnectorError, type Token } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import { Pool } from './pool';
 import { transportProblem, relayJson, type RelayFailure } from './relay';
 

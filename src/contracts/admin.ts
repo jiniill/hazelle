@@ -32,3 +32,99 @@ export const SELF_RESTORES_PER_DAY = 3;
 export type SnapshotKind = 'baseline' | 'checkpoint';
 export type RestoreAction = 'resume' | 'cancel' | 'finalize';
 export type RestoreError = 'too-early' | 'store-unavailable' | 'not-rewound' | 'not-verified' | 'stuck';
+
+// How many days a snapshot, a backup generation and an ended operation's pins last; a finished rewind's undo too.
+export const RETENTION_DAYS = 7;
+// A restore asks for a time at least this far back, so the snapshot chosen for it lies before the restore's own mark.
+export const NEWEST_RESTORE_MINUTES = 10;
+// A day less than retention leaves an operation time to choose its target, which is pinned from then on
+// (server/backup/snapshots.ts), so nothing expires between choosing it and installing it.
+export const OLDEST_RESTORE_DAYS = RETENTION_DAYS - 1;
+// How long a resolved report, a settled operator-only post and a log row are kept, as the privacy page says. An open
+// report stays whatever its age, and a public post is never forgotten by age.
+export const KEEP_YEARS = 1;
+
+// What the operator's screens read (server/admin.ts).
+
+// accounts includes leaving rows until deletion; people excludes them. Null caps mean unlimited.
+// pending may double-count reported held shares: use only zero/nonzero.
+// Database backups omit daily visitor keys/hashes; backupAgeHours is null before any off-site copy.
+export type Service = {
+  signupCap: number;
+  accountBytesCap: number | null;
+  accountFileBytesCap: number | null;
+  accounts: number;
+  people: number;
+  pending: number;
+  fileBytes: number;
+  links: number;
+  databaseBytes: number;
+  backupAgeHours: number | null;
+  diskFreePercent: number;
+  warnings: BackupWarning[];
+  backupFolder?: BackupFolder;
+};
+// An account's own cap: bytes, null for none, or 'default' for the service's.
+export type OwnCap = number | null | 'default';
+// bytes and disk (what the account's store takes on the server) are null when its store was not read: it did not answer in
+// time, or the account is not active.
+export type AdminAccount = {
+  accountId: string;
+  username: string;
+  createdAt: number;
+  suspended: boolean;
+  state: AccountState;
+  bytes: number | null;
+  disk: number | null;
+  fileBytes: number;
+  bytesCap: OwnCap;
+  fileBytesCap: OwnCap;
+};
+// The accounts read at readAt; the sums leave out the unread ones.
+export type Totals = { bytes: number; disk: number; unread: number; readAt: number };
+export type UsagePage = { totals: Totals; accounts: number; next: string | null };
+// Reports target shares or board content; accountId/username are null for anonymous reporters.
+// Resolve shared/postTitle/commentText from current state, null after deletion.
+export type SharedState = { held: boolean; reviewed: boolean; cut: boolean; removed: boolean; ownerId: string | null; ownerName: string | null };
+export type Report = {
+  id: number;
+  accountId: string | null;
+  username: string | null;
+  text: string;
+  createdAt: number;
+  resolvedAt: number | null;
+  share: string | null;
+  shareVersion: number | null;
+  link: string | null;
+  shared: SharedState | null;
+  postId: number | null;
+  commentId: number | null;
+  postTitle: string | null;
+  commentText: string | null;
+};
+export type LogRow = { id: number; at: number; action: string; target: string; detail: unknown };
+export type Visits = { days: VisitDay[]; cohorts: VisitCohorts };
+// A share in any state: its versions, the manifest's file id of each.
+export type ShareVersion = { version: number; manifest: string; createdAt: number };
+
+// postId links operator restores to a private report; at null requests undo.
+// targetAt stays null until selected; verified means reopened after done; server actions govern phase transitions.
+export type Restore = {
+  id: number;
+  postId: number | null;
+  at: number | null;
+  undoes: number | null;
+  targetAt: number | null;
+  phase: RestorePhase;
+  verified: boolean;
+  error: string | null;
+  createdAt: number;
+  updatedAt: number;
+  canUndo: boolean;
+  undoExpiresAt: number | null;
+  actions: RestoreAction[];
+};
+export type RestoreRun = Pick<Restore, 'id' | 'phase' | 'verified' | 'error'>;
+// What a restore can land on now, newest first (server/lifecycle restorePoints). at: the time a restore to it asks for.
+// takenAt: when the account was in that state.
+export type RestorePoint = { at: number; takenAt: number; kind: SnapshotKind };

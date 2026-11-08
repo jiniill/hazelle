@@ -7,7 +7,8 @@ import { batchLane, cacheView, laneBusy, resolveConnection, resolveModel, RETRYA
 import { decodeStream, type InlineThoughts, type Outcome } from '../connectors/stream';
 import type { ModelSettings } from '../connectors/settings';
 import type { PulseLabel } from '../contracts/pulse';
-import { ConnectorError, type Account, type Batches, type ChatMessage, type Connection, type HttpRequest, type Model, type Phase, type Starred, type ToolDef } from '../connectors/types';
+import { ConnectorError, type Account, type Batches, type ChatMessage, type Connection, type Model, type Phase, type Starred, type ToolDef } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import { callRef, type Receipt, type ReceiptError } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import type { Stream } from '../model/stream';

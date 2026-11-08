@@ -1,10 +1,11 @@
 import { History, Play, Undo2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { BEFORE_ARMED, SELF_RESTORES_PER_DAY, type RestoreAction, type RestoreError, type RestorePhase } from '../../contracts/admin';
+import { BEFORE_ARMED, RETENTION_DAYS, SELF_RESTORES_PER_DAY, type Restore, type RestoreAction, type RestoreError, type RestorePhase, type RestorePoint, type RestoreRun } from '../../contracts/admin';
 import type { ServerError } from '../../contracts/http';
 import type { ApiResult } from '../../runtime/api';
-import { beginRestore, continueRestore, readPoints, readRestores, type Restore, type RestorePoint, type RestoreRun } from '../../runtime/restores';
+import { beginRestore, continueRestore, readPoints, readRestores } from '../../runtime/restores';
 import { ago, moment } from './time';
+import { RESTORE_SPAN } from './words';
 import { useAttempt } from './useAttempt';
 import { useLoaded } from './useLoaded';
 import { useToast } from '../toast';
@@ -43,8 +44,8 @@ export const restoreError = (code: string) => ERRORS[code] ?? code;
 const REFUSED: Partial<Record<ServerError, string>> = {
   'bad-post': "해당 계정이 작성한 '운영자에게만' 글에서만 복원할 수 있어요.",
   'too-many-restores': `복원은 하루에 최대 ${SELF_RESTORES_PER_DAY}번까지 할 수 있어요.`,
-  'bad-time': '10분 전부터 6일 전 사이의 시점으로만 복원할 수 있어요.',
-  'cannot-undo': '가장 최근에 한 복원만, 끝난 뒤 7일 안에 한 번 되돌릴 수 있어요.',
+  'bad-time': `${RESTORE_SPAN}의 시점으로만 복원할 수 있어요.`,
+  'cannot-undo': `가장 최근에 한 복원만, 끝난 뒤 ${RETENTION_DAYS}일 안에 한 번 되돌릴 수 있어요.`,
   'account-busy': '이미 다른 복원이나 탈퇴가 진행 중이에요.',
   'cannot-cancel': '이미 복원이 적용돼서 취소할 수 없어요. 이어서 하기를 눌러 끝까지 완료해 주세요.',
 };
@@ -129,7 +130,7 @@ export function RestoresDialog({ operated, onClose, onActed }: { operated: Opera
   if (asking?.kind === 'restore') {
     return (
       <ConfirmDialog title={`${subject}을 ${moment(asking.point.takenAt)} 기록으로 복원할까요?`} confirm="복원" icon={History} busy={busy} onConfirm={() => void go(() => beginRestore(whose, { post, at: asking.point.at }))} onClose={() => setAsking(null)}>
-        {standing('그 기록 이후에 저장한 내용은 모두 사라져요. 복원하는 동안에는 계정을 쓸 수 없고, 7일 안에는 복원 전으로 되돌릴 수 있어요.')}
+        {standing(`그 기록 이후에 저장한 내용은 모두 사라져요. 복원하는 동안에는 계정을 쓸 수 없고, ${RETENTION_DAYS}일 안에는 복원 전으로 되돌릴 수 있어요.`)}
       </ConfirmDialog>
     );
   }

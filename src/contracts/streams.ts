@@ -1,3 +1,5 @@
+import type { HttpRequest } from './http';
+
 // Frame: [u32 length of remainder][u8 type][u32 seq][body]. hello is a cleartext ECDH key; other bodies are sealed.
 // ping is empty, unstored, seq 0; skip its type before checking seq so it cannot affect reply replay.
 export const HELLO = 0;
@@ -16,6 +18,8 @@ export const WAIT = 5;
 // The connector chooses transient statuses; unreachable providers are also retryable.
 export type Retry = { times: number; statuses: readonly number[] };
 export const RETRY_MOST = 5;
+// A detached call's start (server/streams): key, the reader's public ECDH key; bot, the chat whose script makes the call.
+export type StreamStart = { key?: string; request: HttpRequest; bot?: string; retry?: Retry };
 // A Retry-After past this is the provider saying no for now, and the failure is final.
 const WAIT_MOST_MS = 60_000;
 

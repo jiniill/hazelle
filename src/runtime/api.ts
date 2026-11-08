@@ -1,4 +1,4 @@
-import { ACCOUNT_HEADER, RELAY_HEADER, ACCOUNT_USAGE_HEADERS, PULSE_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, BUILD_HEADER } from '../contracts/http';
+import { ACCOUNT_HEADER, RELAY_HEADER, ACCOUNT_USAGE_HEADERS, PULSE_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, BUILD_HEADER, type ServerError } from '../contracts/http';
 import { pulseHeader, type PulseLabel } from '../contracts/pulse';
 import { isRecord } from '../connectors/values';
 
@@ -8,12 +8,13 @@ export type ApiResult<T> = { ok: true; data: T } | ApiFailure;
 // What an answer says of the account the page holds rather than of the request.
 export type Heard = { kind: 'elsewhere' } | { kind: 'suspended' } | { kind: 'storage-full' } | { kind: 'restoring' } | { kind: 'bytes'; bytes: number } | { kind: 'file-bytes'; fileBytes: number } | { kind: 'notices'; unread: number } | { kind: 'board'; unread: number };
 
-const REFUSALS: Record<string, 'elsewhere' | 'suspended' | 'storage-full' | 'restoring'> = {
+type Refusal = 'elsewhere' | 'suspended' | 'storage-full' | 'restoring';
+const REFUSALS: Partial<Record<string, Refusal>> = {
   'account-mismatch': 'elsewhere',
   suspended: 'suspended',
   'storage-full': 'storage-full',
   'account-restoring': 'restoring',
-};
+} satisfies Partial<Record<ServerError, Refusal>>;
 
 // Every request states it, and the server refuses one whose cookie has come to name another account (server/session).
 let held: string | null = null;

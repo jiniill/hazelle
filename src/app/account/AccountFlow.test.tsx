@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { act, type ReactNode } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import type { SessionFacts } from '../../runtime/account';
+import type { SessionFacts } from '../../contracts/accounts';
 import { randomBytes } from '../../vault/aead';
 import { probeRoot } from '../ui/probe';
 import type { Unlocked } from './AccountFlow';

@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CLAIM_SETTLE_MS } from '../contracts/files';
+import { BATCH_LIMITS } from '../contracts/objects';
 import type { Connection } from '../connectors/types';
 import { randomBytes } from '../vault/aead';
 import { feedQuery } from './backend';
@@ -93,6 +94,20 @@ describe('a guest’s browser store', () => {
     expect(await writer.batch([{ type: 'create', kind: 'entry', id: crypto.randomUUID(), parent: crypto.randomUUID(), value: { type: 'delete', message: 'm', at: 0 } }], undefined, { unheld: true })).toEqual({ ok: true, data: null });
     const kindOnly = await backend.feed(feedQuery({ since: 0, timeline: null, kind: 'entry' }));
     expect(kindOnly.ok && kindOnly.data.changes.length && kindOnly.data.changes.every(({ kind }) => kind === 'entry')).toBe(true);
+  });
+
+  it('refuses the batches the server refuses and writes none of them', async () => {
+    const { backend } = await guest();
+    const head = await backend.feed(feedQuery({ since: 0, timeline: null }));
+    if (!head.ok) throw new Error(head.error);
+    const create = (id = crypto.randomUUID(), body = 'sealed') => ({ id, kind: 'connection', parent: null, body, baseRev: null });
+    const id = crypto.randomUUID();
+    expect(await backend.batch(head.data.timeline, [create(id), create(id)], [])).toEqual({ ok: false, error: 'bad-input' });
+    expect(await backend.batch(head.data.timeline, [{ ...create(), kind: 'Connection' }], [])).toEqual({ ok: false, error: 'bad-input' });
+    expect(await backend.batch(head.data.timeline, [create(undefined, 'x'.repeat(BATCH_LIMITS.body + 1))], [])).toEqual({ ok: false, error: 'too-large' });
+    expect(await backend.batch(head.data.timeline, Array.from({ length: BATCH_LIMITS.items + 1 }, () => create()), [])).toEqual({ ok: false, error: 'too-large' });
+    const after = await backend.feed(feedQuery({ since: 0, timeline: head.data.timeline }));
+    expect(after.ok && after.data.cursor).toBe(head.data.cursor);
   });
 
   it('keeps pictures in the browser and releases one no object names only after its claim settles', async () => {

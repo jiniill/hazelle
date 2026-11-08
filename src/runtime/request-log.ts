@@ -1,5 +1,6 @@
 import { ChangeSignal } from '../change-signal';
-import type { Connection, HttpRequest } from '../connectors/types';
+import type { Connection } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import type { Assembled } from '../engine/pipeline';
 import type { CacheDiagnosis, CacheForecast, CacheText } from '../model/cache';
 import type { Receipt } from '../model/chat';

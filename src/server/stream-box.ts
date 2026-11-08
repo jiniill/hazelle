@@ -1,4 +1,4 @@
-import { RELAY_HEADER, type ServerError } from '../contracts/http';
+import { RELAY_HEADER, RELAY_SOURCE, STREAM_FRAMES, STREAM_HEADER, type ServerError } from '../contracts/http';
 import { HELLO, HEAD, DATA, END, PING, PING_MS, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
 import { DAY_MS, isRecord } from './http';
 import type { RelayAllowance } from './limits';
@@ -84,7 +84,7 @@ const json = (status: number, error: ServerError) => Response.json({ error }, { 
 
 // Of the relay's own refusals, only an address it could not reach is worth a try sent again.
 async function passing(response: Response, statuses: Retry['statuses']): Promise<boolean> {
-  if (response.headers.get(RELAY_HEADER) === 'upstream') return statuses.includes(response.status);
+  if (response.headers.get(RELAY_HEADER) === RELAY_SOURCE.upstream) return statuses.includes(response.status);
   const body: unknown = await response.clone().json().catch(() => null);
   return isRecord(body) && body.error === 'upstream-unreachable';
 }
@@ -417,6 +417,6 @@ export class StreamBox {
       },
       { highWaterMark: 0 },
     );
-    return new Response(body, { headers: { 'content-type': 'application/octet-stream', 'cache-control': 'no-store', 'x-stream': 'frames' } });
+    return new Response(body, { headers: { 'content-type': 'application/octet-stream', 'cache-control': 'no-store', [STREAM_HEADER]: STREAM_FRAMES } });
   }
 }

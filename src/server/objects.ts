@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { ACCOUNT_USAGE_HEADERS } from '../contracts/http';
 import { FILE_ID } from '../contracts/files';
-import { BATCH_LIMITS, type BatchAnswer, type FeedAnswer, type FeedQuery, type SealedWrite } from '../contracts/objects';
+import { BATCH_LIMITS, KIND, refusedWrites, type BatchAnswer, type FeedAnswer, type FeedQuery, type SealedWrite } from '../contracts/objects';
 import { fail, ID, isPositive, isRecord, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
 import { store } from './lifecycle';
 import { canWrite, requireSession } from './session';
@@ -10,7 +10,6 @@ import { claimFiles } from './files/claims';
 import { tokenBucket } from './limits';
 import { tellUnread } from './unread';
 
-const KIND = /^[a-z][a-z-]{0,31}$/;
 // A timeline is 16 random bytes in hex (migrations/0001_baseline.sql).
 const TIMELINE =/^[0-9a-f]{32}$/;
 
@@ -64,23 +63,17 @@ objects.get('/', async (c) => {
 
 objects.post('/batch', canWrite, throttle, async (c) => {
   const input = await readObject(c);
-  if (!input || typeof input.timeline !== 'string' || !TIMELINE.test(input.timeline) || !Array.isArray(input.writes) || !input.writes.length) {
+  if (!input || typeof input.timeline !== 'string' || !TIMELINE.test(input.timeline) || !Array.isArray(input.writes)) {
     return fail(c, 400, 'bad-input');
   }
   const files = input.files;
   if (!Array.isArray(files) || files.length > BATCH_LIMITS.items || !files.every((id): id is string => typeof id === 'string' && FILE_ID.test(id))) {
     return fail(c, 400, 'bad-input');
   }
-  if (input.writes.length > BATCH_LIMITS.items) return fail(c, 413, 'too-large');
-  const writes: SealedWrite[] = [];
-  const ids = new Set<string>();
-  for (const item of input.writes) {
-    const write = readWrite(item);
-    if (!write || ids.has(write.id)) return fail(c, 400, 'bad-input');
-    if (write.body !== null && Buffer.byteLength(write.body, 'utf8') > BATCH_LIMITS.body) return fail(c, 413, 'too-large');
-    ids.add(write.id);
-    writes.push(write);
-  }
+  const writes = input.writes.map(readWrite);
+  if (!writes.every((write) => write !== null)) return fail(c, 400, 'bad-input');
+  const refusal = refusedWrites(writes);
+  if (refusal) return fail(c, refusal === 'too-large' ? 413 : 400, refusal);
   const account = c.get('account');
   const asked = Date.now();
   const timeline = input.timeline;
@@ -128,11 +121,10 @@ function readWrite(input: unknown): SealedWrite | null {
   if (!isRecord(input)) return null;
   const { id, kind, parent, body, baseRev, once } = input;
   if (typeof id !== 'string' || !ID.test(id)) return null;
-  if (typeof kind !== 'string' || !KIND.test(kind)) return null;
+  if (typeof kind !== 'string') return null;
   if (parent !== null && (typeof parent !== 'string' || !ID.test(parent))) return null;
   if (baseRev !== null && !isPositive(baseRev)) return null;
-  if (body !== null && (typeof body !== 'string' || !body)) return null;
-  if (body === null && baseRev === null) return null;
-  if (once !== undefined && (once !== true || body === null || baseRev !== null)) return null;
+  if (body !== null && typeof body !== 'string') return null;
+  if (once !== undefined && once !== true) return null;
   return { id, kind, parent, body, baseRev, ...(once && { once }) };
 }

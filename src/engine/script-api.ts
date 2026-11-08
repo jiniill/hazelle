@@ -1,4 +1,5 @@
-import type { EmbedPurpose, HttpRequest } from '../connectors/types';
+import type { EmbedPurpose } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import type { Lore, PackOwner } from '../model/library';
 import type { Trigger } from './import/types';
 

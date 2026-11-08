@@ -1,5 +1,5 @@
 import { CLAIM_SETTLE_MS, MAX_FILE_BYTES, MAX_FILE_IDS } from '../contracts/files';
-import { BATCH_LIMITS, type BatchAnswer, type FeedAnswer, type FeedQuery, type SealedChange, type SealedWrite } from '../contracts/objects';
+import { BATCH_LIMITS, FEED_PAGE_BODY_BYTES, feedPageRows, refusedWrites, type BatchAnswer, type FeedAnswer, type FeedQuery, type SealedChange, type SealedWrite } from '../contracts/objects';
 import { hex } from '../hex';
 import { randomBytes } from '../vault/aead';
 import { recallGuest, rememberVault } from '../vault/device';
@@ -18,10 +18,6 @@ type Head = { rev: number; timeline: string; boardSecret?: string; throwaway?: n
 // every message without opening it.
 type Row = { account: string; id: string; kind: string; parent: string | null; rev: number; body: string | null; scope: string };
 type HeldFile = { body: Uint8Array<ArrayBuffer>; claimed: number };
-
-const PAGE_ROWS = 500;
-const METADATA_PAGE_ROWS = 10_000;
-const PAGE_BODY_BYTES = 4_000_000;
 
 const failure = (error: string): ApiFailure => ({ ok: false, error });
 const RESET = failure('cache-reset');
@@ -175,7 +171,7 @@ async function feed(tx: IDBTransaction, account: string, query: FeedQuery): Prom
     ? ['parent', [account, query.parent, query.since], [account, query.parent, Infinity]]
     : query.kind !== null ? ['kind', [account, query.kind, query.since], [account, query.kind, until ?? Infinity]]
     : fedOnly ? ['scope', [account, '', query.since], [account, '', until]] : ['rev', [account, query.since], [account, until ?? Infinity]];
-  const pageRows = query.metadata ? METADATA_PAGE_ROWS : PAGE_ROWS;
+  const pageRows = feedPageRows(query);
   const changes: SealedChange[] = [];
   let bytes = 0;
   let more = false;
@@ -185,7 +181,7 @@ async function feed(tx: IDBTransaction, account: string, query: FeedQuery): Prom
     if (query.kind !== null && row.kind !== query.kind) return true;
     if (until !== null && (excluded.has(row.kind) || row.rev > until)) return true;
     // The first row always fits; after it, a page stops at its row count or its body budget.
-    if (changes.length === pageRows || bytes >= PAGE_BODY_BYTES) {
+    if (changes.length === pageRows || bytes >= FEED_PAGE_BODY_BYTES) {
       more = true;
       return false;
     }
@@ -204,6 +200,8 @@ async function feed(tx: IDBTransaction, account: string, query: FeedQuery): Prom
 
 // The rules of server/account-store.ts batch: every fresh write takes the next rev in the order given, all or none.
 async function batch(tx: IDBTransaction, account: string, timeline: string, writes: SealedWrite[]): Promise<ApiResult<BatchAnswer>> {
+  const refused = refusedWrites(writes);
+  if (refused) return failure(refused);
   const head = await headOf(tx, account);
   if (!head) return failure('browser-storage');
   if (head.timeline !== timeline) return RESET;

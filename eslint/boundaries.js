@@ -18,16 +18,16 @@ const AREAS = {
   contracts: { paths: ['src/contracts'], why: 'wire values shared by the server and client import no other layer.' },
   connectors: {
     paths: ['src/connectors'],
-    imports: ['base64', 'modelsDev', 'destination'],
-    why: 'connectors are the provider contract the engine and the model build on, so they import no other layer, and touch no DOM, network or storage so their golden tests run in node.',
+    imports: ['base64', 'contracts', 'modelsDev', 'destination'],
+    why: 'connectors are the provider contract the engine and the model build on, so they import no other layer but the wire contracts (the relayed request they build), and touch no DOM, network or storage so their golden tests run in node.',
   },
   modelsDev: { paths: ['src/connectors/models-dev'], why: 'which models.dev list a connection type reads, the words it uses for inputs and outputs, and its shape, is data and types only, shared by the connectors and the server.' },
   destination: { paths: ['src/connectors/destination'], why: 'how an address is matched against the operator\'s local providers is shared by 직접 연결 and the server\'s outbound policy, so it imports nothing.' },
   engine: {
     paths: ['src/engine'],
-    imports: ['base64', 'hex', 'connectors', 'toolApi'],
+    imports: ['base64', 'hex', 'contracts', 'connectors', 'toolApi'],
     types: ['model'],
-    why: 'the engine stays free of UI, network, storage and server code so its golden tests run in node, and takes only types from the model; the tool contract imports no application code, so its values keep the engine node-pure.',
+    why: 'the engine stays free of UI, network, storage and server code so its golden tests run in node, and takes only types from the model; the wire contracts and the tool contract import no application code, so their values keep the engine node-pure.',
   },
   model: {
     paths: ['src/model'],

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { HttpRequest } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import { streamKey } from '../vault/streams';
 import { holdAccount, holdPulse } from './api';
 import { directTransport, dropStream, relay, relayJson, stopStream, stream } from './relay';

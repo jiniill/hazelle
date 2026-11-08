@@ -1,7 +1,9 @@
+import type { Notice } from '../contracts/accounts';
 import type { BoardSettings } from '../contracts/board';
 import { Hono, type Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
-import { type AccountState, type BackupFolder, type RestoreAction, MAX_NOTICE_LENGTH } from '../contracts/admin';
+import { KEEP_YEARS, MAX_NOTICE_LENGTH, type AccountState, type AdminAccount, type BackupFolder, type LogRow, type Report, type RestoreAction, type Service, type ShareVersion, type UsagePage, type Visits } from '../contracts/admin';
+import type { Paged } from '../contracts/http';
 import { savedFolder } from './backup/backups';
 import { SHARE_ID } from '../contracts/shares';
 import { blockFiles, fileBlocks } from './files';
@@ -18,9 +20,7 @@ import { readVisits } from './visits';
 // Reports are plaintext rows no byte cap counts, so one account's unresolved ones are bounded (board.ts).
 export const MAX_OPEN_REPORTS = 20;
 const PAGE_ROWS = 100;
-// How long a resolved report, a settled operator-only post and a log row are kept, as the privacy page says. An open
-// report stays whatever its age, and a public post is never forgotten by age.
-const KEEP_MS = 365 * DAY_MS;
+const KEEP_MS = KEEP_YEARS * 365 * DAY_MS;
 
 // Also the rows of cut links whose reports were resolved or forgotten since (shares.ts forgetCut).
 export async function forgetOldRecords(db: Db): Promise<void> {
@@ -40,13 +40,13 @@ export async function forgetOldRecords(db: Db): Promise<void> {
 export const notices = new Hono<AppEnv>()
   .use(requireSession)
   .get('/', async (c) => {
-    const listed = await page(
+    const listed = await page<Notice>(
       c,
       'SELECT id, text, created_at AS createdAt FROM notices',
       `EXISTS (SELECT 1 FROM accounts WHERE accounts.incarnation = ?3 AND ${VISIBLE})`,
       c.get('account').incarnation,
     );
-    return listed ? c.json({ notices: listed.rows, next: listed.next }) : fail(c, 400, 'bad-input');
+    return listed ? c.json({ notices: listed.rows, next: listed.next } satisfies Paged<'notices', Notice>) : fail(c, 400, 'bad-input');
   })
   // id: the newest notice the page showed, so one sent since it was read stays unread.
   .post('/seen', async (c) => {
@@ -64,7 +64,7 @@ export const admin = new Hono<AppEnv>();
 admin.use(requireSession);
 admin.use(operator);
 
-admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db), cohorts: await readCohorts(c.env.db) }));
+admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db), cohorts: await readCohorts(c.env.db) } satisfies Visits));
 admin.get('/diagnoses', async (c) => c.json({ rows: await readDiagnoses(c.env.db) }));
 
 // Atomically log then act, gated on target existence; deletion would make later target lookup impossible.
@@ -152,7 +152,7 @@ admin.get('/accounts', async (c) => {
   const listed = await accountPage<AccountRow>(c, ACCOUNT_COLUMNS, c.req.query('flagged') === '1' ? "(suspended_at IS NOT NULL OR state != 'active')" : 'TRUE');
   if (!listed) return fail(c, 400, 'bad-input');
   const usages = await accountUsage(c.env, listed.rows);
-  return c.json({ accounts: listed.rows.map((row, index) => shownAccount(row, usages[index]!)), next: listed.next });
+  return c.json({ accounts: listed.rows.map((row, index) => shownAccount(row, usages[index]!)), next: listed.next } satisfies Paged<'accounts', AdminAccount>);
 });
 
 // Each request calls only this page's stores and answers sums. Ordinary actions never start this scan.
@@ -167,7 +167,7 @@ admin.get('/usage', async (c) => {
       totals.disk += usage.disk;
     }
   }
-  return c.json({ totals: { ...totals, readAt: Date.now() }, accounts: listed.rows.length, next: listed.next });
+  return c.json({ totals: { ...totals, readAt: Date.now() }, accounts: listed.rows.length, next: listed.next } satisfies UsagePage);
 });
 
 // A change refreshes only its row. A deleted account is absent rather than a reason to reload the service.
@@ -176,7 +176,7 @@ admin.get('/accounts/:id', async (c) => {
   if (!ID.test(id)) return fail(c, 400, 'bad-input');
   const row = await c.env.db.prepare(`SELECT ${ACCOUNT_COLUMNS} FROM accounts WHERE id = ?`).bind(id).first<AccountRow>();
   const usage = row ? (await accountUsage(c.env, [row]))[0]! : null;
-  return c.json({ account: row ? shownAccount(row, usage) : null });
+  return c.json({ account: row ? shownAccount(row, usage) : null } satisfies { account: AdminAccount | null });
 });
 
 async function accountUsage(env: Services, rows: Pick<AccountRow, 'state' | 'incarnation'>[]): Promise<Usage[]> {
@@ -188,7 +188,7 @@ async function accountUsage(env: Services, rows: Pick<AccountRow, 'state' | 'inc
   return answers.map((usage) => usage && 'bytes' in usage ? usage : null);
 }
 
-function shownAccount(row: AccountRow, usage: Usage) {
+function shownAccount(row: AccountRow, usage: Usage): AdminAccount {
   return {
     accountId: row.accountId,
     username: row.username,
@@ -326,10 +326,10 @@ admin.get('/service', async (c) => {
        (SELECT COUNT(*) FROM shares WHERE cut_at IS NULL) AS links,
        (SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()) AS databaseBytes
      FROM service`,
-  ).first();
+  ).first<Omit<Service, 'backupAgeHours' | 'diskFreePercent' | 'warnings' | 'backupFolder'>>();
   const backups = c.env.backups;
   const backupFolder: BackupFolder | undefined = backups.copier === 'folder' ? { path: await savedFolder(c.env), failure: backups.copyFailure() } : undefined;
-  return c.json({ ...row, ...(await backups.freshness(c.env, Date.now())), backupFolder });
+  return c.json({ ...row!, ...(await backups.freshness(c.env, Date.now())), backupFolder } satisfies Service);
 });
 
 // null clears it. A saved folder is copied to at once, so its first pass is not an hour away.
@@ -394,7 +394,7 @@ const SHARED = `(SELECT json_object('held', s.held_at IS NOT NULL, 'reviewed', s
 
 // open excludes resolved reports. Board reports expose current target text and reporter nickname, null once absent.
 admin.get('/reports', async (c) => {
-  const listed = await page<{ id: number; share: string | null; shared: string | null }>(
+  const listed = await page<Omit<Report, 'shared'> & { shared: string | null }>(
     c,
     `SELECT id, account_id AS accountId, CASE WHEN share IS NULL THEN (SELECT name FROM board_names WHERE board_names.account_id = reports.account_id) ELSE username END AS username,
        text, created_at AS createdAt, resolved_at AS resolvedAt, share, share_version AS shareVersion, link, ${SHARED} AS shared,
@@ -405,11 +405,11 @@ admin.get('/reports', async (c) => {
   if (!listed) return fail(c, 400, 'bad-input');
   return c.json({
     next: listed.next,
-    reports: listed.rows.map(({ shared, ...row }) => {
+    reports: listed.rows.map(({ shared, ...row }): Report => {
       const state = shared === null ? null : (JSON.parse(shared) as ShareRow);
       return { ...row, shared: state && { held: Boolean(state.held), reviewed: Boolean(state.reviewed), cut: Boolean(state.cut), removed: Boolean(state.removed), ownerId: state.ownerId, ownerName: state.ownerName } };
     }),
-  });
+  } satisfies Paged<'reports', Report>);
 });
 
 admin.post('/reports/:id/resolve', async (c) => {
@@ -430,8 +430,8 @@ admin.route('/', fileBlocks);
 admin.get('/shares/:id', async (c) => {
   const id = c.req.param('id');
   if (!SHARE_ID.test(id)) return fail(c, 400, 'bad-input');
-  const { results } = await c.env.db.prepare('SELECT version, manifest, created_at AS createdAt FROM share_versions WHERE share = ? ORDER BY version').bind(id).all();
-  return results.length ? c.json({ versions: results }) : fail(c, 404, 'not-found');
+  const { results } = await c.env.db.prepare('SELECT version, manifest, created_at AS createdAt FROM share_versions WHERE share = ? ORDER BY version').bind(id).all<ShareVersion>();
+  return results.length ? c.json({ versions: results } satisfies { versions: ShareVersion[] }) : fail(c, 404, 'not-found');
 });
 
 admin.get('/shares/:id/files/:file', (c) => serveShareFile(c, true));
@@ -494,7 +494,7 @@ admin.post('/shares/:id/block', async (c) => {
 const resolveShareReports = (db: Db, share: string, at: number) => db.prepare('UPDATE reports SET resolved_at = ? WHERE share = ? AND resolved_at IS NULL').bind(at, share);
 
 admin.get('/log', async (c) => {
-  const listed = await page<{ id: number; detail: string | null }>(c, 'SELECT id, at, action, target, detail FROM admin_log');
+  const listed = await page<Omit<LogRow, 'detail'> & { detail: string | null }>(c, 'SELECT id, at, action, target, detail FROM admin_log');
   if (!listed) return fail(c, 400, 'bad-input');
-  return c.json({ log: listed.rows.map((row) => ({ ...row, detail: row.detail === null ? null : (JSON.parse(row.detail) as unknown) })), next: listed.next });
+  return c.json({ log: listed.rows.map((row) => ({ ...row, detail: row.detail === null ? null : (JSON.parse(row.detail) as unknown) })), next: listed.next } satisfies Paged<'log', LogRow>);
 });

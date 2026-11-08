@@ -1,5 +1,6 @@
 import { sending, sentRequest, type Route } from './registry';
-import type { ChatRequest, HttpRequest } from './types';
+import type { ChatRequest } from './types';
+import type { HttpRequest } from '../contracts/http';
 import { isRecord, list } from './values';
 
 export type WireText = { segments: { role: string; text: string }[]; messages: number; pictures: number };
