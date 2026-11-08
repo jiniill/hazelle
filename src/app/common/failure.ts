@@ -21,7 +21,7 @@ import type { TurnFailure } from '../../runtime/turn';
 import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
-import { BIN, BOT_STUCK, DISCOUNT, inSettings, MODEL_ROLES, MODEL_SETTINGS, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, UNREADABLE_IMAGE } from './words';
+import { BIN, BOT_STUCK, DISCOUNT, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -130,8 +130,9 @@ const GONE_MESSAGE = '삭제된 메시지예요.';
 
 // model ends in 모델: 이 and 은 are its particles.
 // prompt: the task prompt that may name its own model; null when only 설정 › 모델 chooses it.
-function describeRoute(failure: RouteFailure | { kind: 'profile-missing'; own: boolean }, model: string, prompt: string | null): string {
-  const where = prompt === null ? `${inSettings('models')}에서` : `${prompt} 프롬프트나 ${inSettings('models')}에서`;
+// place: where the task's own model is picked, beside 설정 › 모델's roles it falls back to.
+function describeRoute(failure: RouteFailure | { kind: 'profile-missing'; own: boolean }, model: string, place: string | null): string {
+  const where = place === null ? `${inSettings('models')}에서` : `${place} 또는 ${inSettings('models')}에서`;
   switch (failure.kind) {
     case 'no-model':
       return `${model}이 지정되지 않았어요. ${where} 모델을 선택해 주세요.`;
@@ -325,7 +326,7 @@ export function describeAgentFailure({ name, failure }: AgentFailed): string {
     case 'model-gone':
     case 'image-only':
     case 'profile-missing':
-      return describeRoute(failure, `${name} 모델`, name);
+      return describeRoute(failure, `${name} 모델`, `${name} 프롬프트`);
     case 'tokenizer':
       return TOKENIZER;
     case 'runaway':
@@ -347,7 +348,7 @@ export function describePrereadFailure(failure: Exclude<PrereadFailure, { kind: 
     case 'model-gone':
     case 'image-only':
     case 'profile-missing':
-      return describeRoute(failure, `${PRE_READ} 모델`, PRE_READ);
+      return describeRoute(failure, TASK_MODELS.preread, inFeature('preread'));
     case 'prompt-missing':
       return `기본 ${PRE_READ} 프롬프트가 없어요. ${inSettings('prompts')}에서 ${PRE_READ} 프롬프트 하나를 기본으로 지정해 주세요.`;
     case 'tokenizer':
@@ -386,7 +387,7 @@ export function describeTranslateFailure(failure: Exclude<TranslateFailure, { ki
     case 'model-gone':
     case 'image-only':
     case 'profile-missing':
-      return describeRoute(failure, '번역 모델', '번역');
+      return describeRoute(failure, TASK_MODELS.translate, inFeature('translate'));
     case 'failed':
       return failure.receipt.error ? describeReplyError(failure.receipt.error) : '모델이 내용이 비어 있는 번역 결과를 보냈어요.';
     case 'unsaved':
@@ -424,7 +425,7 @@ export function describeMemoryFailure(failure: MemoryFailure): string {
     case 'model-gone':
     case 'image-only':
     case 'profile-missing':
-      return describeRoute(failure, '기억 모델', '기억');
+      return describeRoute(failure, TASK_MODELS.memory, inFeature('memory'));
     case 'prompt-missing':
       return `기본 기억 프롬프트가 없어요. ${inSettings('prompts')}에서 기억 프롬프트 하나를 기본으로 지정해 주세요.`;
     case 'runaway':
@@ -462,7 +463,7 @@ export function describeIllustrateFailure(failure: IllustrateFailure): string {
     case 'model-gone':
     case 'image-only':
     case 'profile-missing':
-      return describeRoute(failure, '장면 모델', '삽화');
+      return describeRoute(failure, TASK_MODELS.illustrate, inFeature('illustrate'));
     case 'prompt-missing':
       return failure.own ? '선택한 삽화 프롬프트가 삭제됐어요. 채팅의 삽화 메뉴에서 다른 프롬프트를 선택해 주세요.' : `기본 삽화 프롬프트가 없어요. ${inSettings('prompts')}에서 삽화 프롬프트 하나를 기본으로 지정해 주세요.`;
     case 'tokenizer':
@@ -494,7 +495,7 @@ export function describeIllustrateFailure(failure: IllustrateFailure): string {
   }
 }
 
-// The profiles are written by the 삽화 prompt's scene model, so its failures read as the scene's.
+// The profiles are written by the 장면 모델, so its failures read as the scene's.
 export function describeLikenessFailure(failure: LikenessFailure): string {
   switch (failure.kind) {
     case 'unread':
@@ -516,7 +517,7 @@ export function describeMascotFailure(failure: MascotFailure): string {
     case 'model-gone':
     case 'image-only':
     case 'profile-missing':
-      return describeRoute(failure, '대사 모델', '마스코트');
+      return describeRoute(failure, TASK_MODELS.mascot, inFeature('mascot'));
     case 'prompt-missing':
       return `기본 마스코트 프롬프트가 없어요. ${inSettings('prompts')}에서 마스코트 프롬프트 하나를 기본으로 지정해 주세요.`;
     case 'tokenizer':

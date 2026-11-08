@@ -37,13 +37,15 @@ type Props = {
   onChange: (change: Partial<MemorySettings>) => void;
   // The on row's name: 사용 in a chat; 설정's page sets what new chats start with.
   label?: string;
+  // Rows after the on row in its group, such as 설정's 기억 모델.
+  rows?: ReactNode;
   // Between the on row and 세부 설정.
   children?: ReactNode;
 };
 
 // A number is passed on only once it is valid. A caller that resets the values from outside remounts this, so a number
 // typed and not valid does not stand over the reset.
-export function MemoryFields({ value, onChange, label = '사용', children }: Props) {
+export function MemoryFields({ value, onChange, label = '사용', rows: more, children }: Props) {
   const [drafts, setDrafts] = useState<Partial<Record<Count, string>>>({});
   const row = (field: Count) => {
     const { label, unit, help } = COUNTS[field];
@@ -69,6 +71,7 @@ export function MemoryFields({ value, onChange, label = '사용', children }: Pr
     <>
       <SettingGroup label="장기 기억">
         <SettingRow label={label} help={MEMORY_HELP} control={<Switch label="장기 기억" checked={value.on} onChange={(on) => onChange({ on })} />} />
+        {more}
       </SettingGroup>
       {children}
       <DetailFold set={0}>{rows}</DetailFold>

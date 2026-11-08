@@ -4,8 +4,7 @@ import { entryKey, entryName } from '../../connectors/types';
 import type { IllustrateSwitches, Rung } from '../../model/illustration';
 import type { IllustrateSetup } from '../../runtime/characters';
 import { drawingModels, type ImageRoute, type sceneWriterOf } from '../../runtime/illustrate';
-import { illustrationPrompt } from '../../runtime/prompts';
-import { useCaptured, useConnections } from '../session';
+import { useConnections } from '../session';
 import { navigate } from '../shell/router';
 import { Button, ChipButton, Menu, MenuHeading, MenuItem, NumberInput, SettingGroup, SettingRow, Switch } from '../ui';
 import { ACTS, addOf, newOf } from './acts';
@@ -14,7 +13,7 @@ import { EntryList } from './EntryList';
 import { describeIllustrateFailure } from './failure';
 import { readTyped } from './typedNumber';
 import { appliesTo, TaskModelRow, TaskPromptMenu, type PromptDoor } from './TaskPrompt';
-import { follows, NOT_STARRED } from './words';
+import { follows, NOT_STARRED, TASK_MODELS } from './words';
 
 type Props = {
   illustrate: IllustrateSetup;
@@ -30,7 +29,6 @@ type Props = {
 // Share these rows between chat dialog and global settings; details count only explicitly set values.
 export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange, onEditPrompt, children }: Props) {
   const routes = drawingModels(useConnections());
-  const prompt = useCaptured((store) => illustrationPrompt(store, illustrate.prompt), [illustrate.prompt]);
   const set = [illustrate.ladder.length > 0, illustrate.pov, illustrate.comic, illustrate.spend, illustrate.model !== undefined, illustrate.prompt !== undefined].filter(Boolean).length;
   return (
     <>
@@ -52,6 +50,12 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
               </Button>
             )
           }
+        />
+        <TaskModelRow
+          label={TASK_MODELS.illustrate}
+          own={illustrate.sceneModel}
+          runs={'kind' in sceneWriter ? { why: describeIllustrateFailure(sceneWriter) } : sceneWriter}
+          onPick={(ref) => onChange({ sceneModel: ref ?? undefined })}
         />
         {children}
       </SettingGroup>
@@ -76,7 +80,6 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
           label="삽화 프롬프트"
           control={<TaskPromptMenu task="illustrate" chosen={illustrate.prompt} heading={appliesTo(card, illustrate.own)} opens={opens} onPick={(prompt) => onChange({ prompt })} onEdit={onEditPrompt} />}
         />
-        <TaskModelRow label="장면 모델" noun="삽화" choice={prompt} model={'kind' in sceneWriter ? describeIllustrateFailure(sceneWriter) : entryName(sceneWriter.route.model)} onEdit={onEditPrompt} />
       </DetailFold>
     </>
   );

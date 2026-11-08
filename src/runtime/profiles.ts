@@ -30,8 +30,8 @@ export function modelProfile(store: Pick<ObjectStore, 'get'>, model: Starred): P
   return profile ? { kind: 'profile', profile, own } : { kind: 'missing', own };
 }
 
-// A task prompt's own model, else the chat's 보조, with its 설정 묶음: what a 삽화 scene, a pack's profiles and a mascot's
-// line are written by.
+// A task's own model (runtime/assignment taskModel), else the chat's 보조, with its 설정 묶음: what a 삽화 scene, a
+// pack's profiles and a mascot's line are written by.
 export function taskWriter(store: Pick<ObjectStore, 'get'>, chat: Chat, own: ModelRef | undefined): { route: Route; settings: ModelSettings } | RouteFailure | { kind: 'profile-missing'; own: boolean } {
   const route = taskModel(store, chat, own);
   if ('kind' in route) return route;

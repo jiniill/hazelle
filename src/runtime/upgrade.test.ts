@@ -3,7 +3,11 @@ import { blankCard } from '../engine/import/card';
 import { memoryId } from '../model/memory';
 import { startChat } from './chat-log';
 import { testServer } from './testing';
-import { readRow, saveUpgraded, upgradeValue } from './upgrade';
+import { setAccountTaskModel } from './assignment';
+import { accountSettings } from './account-settings';
+import { createCharacter, setOwnIllustrate, setOwnTranslate, setTranslate } from './characters';
+import { addAgent, addPrompt, COMMENTATOR_ID, ILLUSTRATOR_ID, MEMORY_PROMPT_ID, TRANSLATOR_ID } from './prompts';
+import { moveTaskModels, readRow, saveUpgraded, upgradeValue } from './upgrade';
 
 const server = testServer();
 
@@ -166,3 +170,36 @@ it('upgrades old encrypted ledger and stream values through the backup/restore r
   take.mockRestore();
   batch.mockRestore();
 });
+
+it('moves a task prompt’s model into every layer that runs the prompt and has none, then off the prompt, the same when run again', () =>
+  server.withSession(async ({ store }) => {
+    const ref = (model: string) => ({ connection: 'c', model });
+    const pin = (id: string, model: string) => store.update('prompt', id, (current) => ({ ...current, model: ref(model) }) as never);
+    const other = crypto.randomUUID();
+    await addPrompt(store, 'Other', 'translate', other);
+    const agent = await addAgent(store, 'pre', 'Scene');
+    if (!agent.ok) throw new Error(agent.error);
+    for (const [id, model] of [[TRANSLATOR_ID, 'tr'], [other, 'other'], [ILLUSTRATOR_ID, 'scene'], [MEMORY_PROMPT_ID, 'memory'], [COMMENTATOR_ID, 'mascot'], [agent.data.id, 'agent']] as const) await pin(id, model);
+    // 마스코트 has its own model already, so its prompt's is dropped. Of the characters' own 번역, one follows the default
+    // prompt, one chooses another, one has its own model.
+    await setAccountTaskModel(store, 'mascot', ref('kept'));
+    const [follows, chooses, owns] = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+    for (const id of [follows, chooses, owns]) {
+      await createCharacter(store, id, id);
+      await setOwnTranslate(store, id, true);
+    }
+    await setOwnIllustrate(store, follows, true);
+    await setTranslate(store, chooses, { prompt: other });
+    await setTranslate(store, owns, { model: ref('own') });
+
+    const state = () => ({ settings: accountSettings(store), characters: store.list('character').map(({ value }) => [value.ownTranslate, value.ownIllustrate]), prompts: store.list('prompt').map(({ value }) => value) });
+    await moveTaskModels(store);
+    const moved = state();
+    expect(moved.settings).toMatchObject({ translate: { model: ref('tr') }, illustrate: { sceneModel: ref('scene') }, memoryModel: ref('memory'), mascotModel: ref('kept') });
+    expect(moved.settings.prereadModel).toBeUndefined();
+    const own = (id: string) => store.get('character', id)!.value;
+    expect([own(follows).ownTranslate?.model, own(follows).ownIllustrate?.sceneModel, own(chooses).ownTranslate?.model, own(owns).ownTranslate?.model]).toEqual([ref('tr'), ref('scene'), ref('other'), ref('own')]);
+    expect(moved.prompts.filter((prompt) => 'model' in prompt).map(({ name }) => name)).toEqual(['Scene']);
+    await moveTaskModels(store);
+    expect(state()).toEqual(moved);
+  }));

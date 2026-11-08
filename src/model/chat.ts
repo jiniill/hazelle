@@ -151,8 +151,8 @@ export type Translation = {
 
 // Character.ownTranslate overrides the shared settings; only runtime/characters translateSwitches resolves defaults.
 // replies applies to the latest reply; reverse sends translations instead of text; original pairs original paragraphs.
-// Language values are English names consumed by the prompt.
-export type TranslateSwitches = { replies: boolean; input: boolean; reverse?: boolean; original?: boolean; replyLanguage?: string; inputLanguage?: string; prompt?: string };
+// Language values are English names consumed by the prompt. model: 번역 모델, absent for the chat's 보조 모델.
+export type TranslateSwitches = { replies: boolean; input: boolean; reverse?: boolean; original?: boolean; replyLanguage?: string; inputLanguage?: string; prompt?: string; model?: ModelRef };
 
 // Entries are append-only; rev orders them, while at is display-only wall time.
 // Preserve seed across branches, edits and continuations so existing random tags never reroll.

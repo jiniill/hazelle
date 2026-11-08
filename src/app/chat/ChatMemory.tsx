@@ -1,4 +1,3 @@
-import { entryName } from '../../connectors/types';
 import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import type { Chat, ChatItem } from '../../model/chat';
 import { emptyMemory, type Fact, type MemorySettings, type Thread } from '../../model/memory';
@@ -6,15 +5,14 @@ import { embedModel } from '../../runtime/assignment';
 import { memoryOwner, memorySetup, memoryWriter } from '../../runtime/memory-read';
 import { memoryView, type MemoryView } from '../../runtime/memory-view';
 import { removeFact, removeThread, setChatMemory, setFact, setThread } from '../../runtime/memory';
-import { memoryPrompt } from '../../runtime/prompts';
 import { ACTS, addOf } from '../common/acts';
 import { describeMemoryFailure } from '../common/failure';
 import { MemoryFields, MemorySplit, settingsOf } from '../common/MemoryFields';
 import { tokens } from '../common/receipt';
-import { TaskModelRow, type PromptDoor } from '../common/TaskPrompt';
+import { AccountTaskModel } from '../common/TaskPrompt';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
-import { CHAPTER, follows, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag } from '../common/words';
+import { CHAPTER, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag } from '../common/words';
 import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
@@ -51,12 +49,11 @@ type Props = Pick<OpenChat, 'messages' | 'busy'> & {
   onClose: () => void;
   onTool: (id: string) => void;
   onEditPrompt: (() => void) | undefined;
-  onEditTaskPrompt: (door: PromptDoor) => void;
   onRecord: (id: string | null) => void;
   renderRecord: (record: Omit<ComponentProps<typeof ChatMemoryRecord>, 'actions'>) => ReactNode;
 };
 
-export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEditPrompt, onEditTaskPrompt, onRecord, renderRecord }: Props) {
+export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEditPrompt, onRecord, renderRecord }: Props) {
   const { id, chat: own } = item;
   const session = useSession();
   const { store } = session;
@@ -144,7 +141,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
         </Callout>
       )}
       {view && owner?.kind === 'built-in' && <MemoryFill view={view} />}
-      {owner?.kind === 'built-in' && <WriterRow chat={own} onEditPrompt={onEditTaskPrompt} />}
+      {owner?.kind === 'built-in' && <WriterRow chat={own} />}
 
       {(!holder || memory.state.length > 0) && <Section
         level={3}
@@ -226,18 +223,10 @@ function MemoryFill({ view }: { view: MemoryView }) {
   );
 }
 
-function WriterRow({ chat, onEditPrompt }: { chat: Chat; onEditPrompt: (door: PromptDoor) => void }) {
-  const { writer, prompt } = useCaptured((store) => ({ writer: memoryWriter(store, chat), prompt: memoryPrompt(store) }), [chat]);
-  return (
-    <TaskModelRow
-      label="기억 모델"
-      noun="기억"
-      choice={prompt}
-      sub={prompt.kind === 'prompt' && !prompt.prompt.value.model ? follows(MODEL_ROLES.aux) : undefined}
-      model={'kind' in writer ? describeMemoryFailure(writer) : entryName(writer.route.model)}
-      onEdit={onEditPrompt}
-    />
-  );
+// 공용's alone, so a pick here holds in every chat; the 설정 section under it is this chat's.
+function WriterRow({ chat }: { chat: Chat }) {
+  const writer = useCaptured((store) => memoryWriter(store, chat), [chat]);
+  return <AccountTaskModel task="memory" help="모든 채팅에 적용돼요." runs={'kind' in writer ? { why: describeMemoryFailure(writer) } : writer} />;
 }
 
 // Whom a fact concerns and which field stay, so a rename is a delete and an add.

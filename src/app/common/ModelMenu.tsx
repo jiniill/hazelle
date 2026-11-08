@@ -1,4 +1,4 @@
-import { Layers } from 'lucide-react';
+import { Layers, Pin } from 'lucide-react';
 import { refOf, sameModelRef, type ModelRef } from '../../connectors/assignment';
 import { recentModels } from '../../model/chat';
 import { entryName, entryOf, entryTerms } from '../../connectors/types';
@@ -7,10 +7,10 @@ import { modelProfile } from '../../runtime/profiles';
 import { byConnection, starredModels } from './RolePicker';
 import { profileLine } from './settingWords';
 import { useSearch } from './useSearch';
-import { MODEL_SETTINGS, noStarred } from './words';
+import { MODEL_PINNED, MODEL_SETTINGS, noStarred } from './words';
 import { useCaptured, useSummaries, useConnections, useSettings } from '../session';
 import { navigate } from '../shell/router';
-import { ChipButton, Divider, Empty, Icon, Menu, MenuHeading, MenuItem, type MenuHandle } from '../ui';
+import { ChipButton, Divider, Empty, Icon, Menu, MenuHeading, MenuItem, Tag, type MenuHandle } from '../ui';
 
 type Props = {
   current: ModelRef | null;
@@ -20,12 +20,25 @@ type Props = {
 
 const RECENT = 3;
 
-// Added models only, recent ones first. It never lists providers.
-export function ModelMenu({ route, onPick, handle }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure }) {
+// Added models only, recent ones first. It never lists providers. pin: the prompt whose own model the chat talks on
+// (runtime/assignment pinnedBy), marked on the button and opened from the menu's head.
+export function ModelMenu({ route, pin, onPick, handle }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure; pin?: { name: string; open: () => void } | null }) {
   const current = 'kind' in route ? null : refOf(route.connection.id, route.model);
   const label = 'kind' in route ? '모델 선택' : entryName(route.model);
   return (
-    <Menu handle={handle} place="below-end" size="lg" label="모델" trigger={(opener) => <ChipButton label={label} title="모델 바꾸기" leading={<Icon icon={Layers} size="sm" />} phone="icon" {...opener} />}>
+    <Menu
+      handle={handle}
+      place="below-end"
+      size="lg"
+      label="모델"
+      trigger={(opener) => <ChipButton label={label} title={pin ? `모델 바꾸기 · ${MODEL_PINNED}` : '모델 바꾸기'} leading={<Icon icon={pin ? Pin : Layers} size="sm" />} phone="icon" {...opener} />}
+    >
+      {pin && (
+        <>
+          <MenuItem tone="muted" label={pin.name} sub="이 프롬프트가 정한 모델이에요. 여기서 고르면 이 채팅에만 적용돼요." tag={<Tag>{MODEL_PINNED}</Tag>} onClick={pin.open} />
+          <Divider variant="menu" />
+        </>
+      )}
       <ModelChoices current={current} onPick={onPick} />
       <Divider variant="menu" />
       {current && <ProfileItem current={current} />}

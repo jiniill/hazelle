@@ -4,7 +4,8 @@ import { BookKey, BookOpen, Bookmark, FolderInput, GitGraph, Keyboard, Package, 
 import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
-import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER } from '../common/words';
+import { pinnedBy } from '../../runtime/assignment';
+import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, promptName } from '../common/words';
 import { useRemembering, useSession, useToolFrames } from '../session';
 import { navigate } from '../shell/router';
 import { runShortcut } from '../shortcuts';
@@ -54,11 +55,12 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
   const openFolders = useMenuOpener(folderMenu);
   const folders = useChatFolders(shelf?.id ?? null);
   const fileable = item && folders.index.folders.length > 0;
+  const pin = pinnedBy(place, chat.prompt);
   return (
     <>
       <ChatPromptPicker prompt={chat.prompt} out={chat.promptOut && chat.card === null} open={chat.dialog === 'prompt'} onOpen={() => actions.openDialog('prompt')} />
       <ChatCastMenu handle={castMenu} cast={cast} character={shelf?.id ?? null} onChange={actions.setCast} />
-      <ModelMenu handle={modelMenu} route={route} onPick={actions.pickModel} />
+      <ModelMenu handle={modelMenu} route={route} pin={pin && { name: promptName(pin.value.name), open: () => actions.side({ kind: 'prompts', id: pin.id, pane: 'model' }) }} onPick={actions.pickModel} />
       {fileable && <ChatFolderMenu handle={folderMenu} chat={item.id} folder={item.chat.folder ?? null} folders={folders} />}
       <Menu kind="dialog" size="form" handle={featuresMenu} place="below-end" label={FEATURES_TITLE} trigger={() => null}>
         <FeatureSwitches owner={{ kind: 'chat', chat: place }} own={place.features} onChange={actions.setFeature} />

@@ -6,7 +6,6 @@ import type { Chat, Receipt } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import { live, type Asset } from '../model/library';
 import { likenessId, PORTRAITS_MOST, type Likeness, type Portrait } from '../model/likeness';
-import type { IllustratePrompt } from '../model/prompt';
 import type { ApiFailure, ApiResult } from './api';
 import type { RouteFailure } from './assignment';
 import { illustrateSwitches } from './characters';
@@ -16,7 +15,6 @@ import { seesPicturesNow } from './connections';
 import { PERMANENT } from './files';
 import { shownPicture } from './picture';
 import { taskWriter } from './profiles';
-import { illustrationPrompt } from './prompts';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
 import { pageAnswer } from './talk';
@@ -30,7 +28,6 @@ import { fromBase64 } from '../base64';
 // deleted.
 export type LikenessFailure =
   | RouteFailure
-  | { kind: 'prompt-missing'; own: boolean }
   | { kind: 'profile-missing'; own: boolean }
   | { kind: 'unread'; failure: ApiFailure }
   | { kind: 'failed'; receipt: Receipt }
@@ -125,14 +122,13 @@ export class Likenesses {
   }
 
   // Build missing profiles first in pack → cast → persona order; failures omit that owner, never the picture.
-  // The selected illustration prompt supplies the profile-writing model.
-  async portraits(chat: Chat, prompt: IllustratePrompt, signal: AbortSignal): Promise<Portrait[]> {
+  async portraits(chat: Chat, signal: AbortSignal): Promise<Portrait[]> {
     const { store } = this.deps;
     // A 등장인물 is drawn from its own card's portraits, after the packs, as its lorebook and pictures are read.
     const cast = (chat.cast ?? []).filter((member) => live(store.get('character', member)));
     const persona = chatPersona(store, chat);
     const owners = [...new Set([...packsOf(store, chat).map(({ id }) => id), ...cast, ...(persona.kind === 'persona' ? [persona.persona.id] : [])])];
-    await Promise.all(owners.filter((owner) => !store.get('likeness', likenessId(owner))).map((owner) => this.start(owner, chat, prompt, signal)));
+    await Promise.all(owners.filter((owner) => !store.get('likeness', likenessId(owner))).map((owner) => this.start(owner, chat, signal)));
     return owners.flatMap((owner) => store.get('likeness', likenessId(owner))?.value.portraits ?? []);
   }
 
@@ -142,13 +138,8 @@ export class Likenesses {
     const { store } = this.deps;
     const character = live(store.get('character', owner)) ? owner : null;
     const persona = live(store.get('persona', owner)) ? { persona: owner } : {};
-    const prompt = illustrationPrompt(store, illustrateSwitches(store, character).prompt);
-    if (prompt.kind === 'missing') {
-      this.change(owner, { stage: 'failed', failure: { kind: 'prompt-missing', own: prompt.own } });
-      return null;
-    }
     const before = store.get('likeness', likenessId(owner));
-    await this.start(owner, { title: null, character, models: {}, ...persona }, prompt.prompt.value, this.closing.signal);
+    await this.start(owner, { title: null, character, models: {}, ...persona }, this.closing.signal);
     return before && store.get('likeness', likenessId(owner))?.value !== before.value ? before : null;
   }
 
@@ -158,11 +149,11 @@ export class Likenesses {
   }
 
   // signal: the draw's that asked first; a draw joining it goes on without the pack's portraits if it stops.
-  private start(owner: string, chat: Chat, prompt: IllustratePrompt, signal: AbortSignal): Promise<void> {
+  private start(owner: string, chat: Chat, signal: AbortSignal): Promise<void> {
     const running = this.building.get(owner);
     if (running || this.closed) return running ?? Promise.resolve();
     this.change(owner, { stage: 'building' });
-    const run = this.build(owner, chat, prompt, AbortSignal.any([signal, this.closing.signal]))
+    const run = this.build(owner, chat, AbortSignal.any([signal, this.closing.signal]))
       .then(
         (outcome) => this.change(owner, outcome === null || outcome.kind === 'stopped' ? null : { stage: 'failed', failure: outcome }),
         (error: unknown) => {
@@ -202,7 +193,7 @@ export class Likenesses {
 
   // Use NovelAI metadata, vision if supported, then owner text/lore.
   // With no material, call/save nothing so later-added descriptions can still trigger the first build.
-  private async build(owner: string, chat: Chat, prompt: IllustratePrompt, signal: AbortSignal): Promise<LikenessFailure | Stopped | null> {
+  private async build(owner: string, chat: Chat, signal: AbortSignal): Promise<LikenessFailure | Stopped | null> {
     const { store, files } = this.deps;
     const material = this.material(owner);
     if (!material) return { kind: 'gone' };
@@ -215,7 +206,7 @@ export class Likenesses {
     };
     const empty = { portraits: [], at: Date.now(), receipt: null };
     if (!material.files.length && !material.held.length && !texts.some(({ text }) => text.trim()) && !lore.some(({ content }) => content.trim())) return null;
-    const writer = taskWriter(store, chat, prompt.model);
+    const writer = taskWriter(store, chat, illustrateSwitches(store, chat.character).sceneModel);
     if ('kind' in writer) return writer;
 
     const read = await Promise.all(material.files.map(async (picture) => ({ picture, read: await files.read(picture.file, { signal }) })));

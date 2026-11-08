@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fold, shown, type Message } from '../model/chat';
+import { fold, shown, type Chat, type Message } from '../model/chat';
 import { textTranslation } from '../model/library';
 import { appendUserMessage, startChat } from './chat-log';
 import { answerable, inTurn, saying, stubRelay, testServer } from './testing';
-import { setTranslate, setTranslatorNote } from './characters';
-import { accountSettings } from './account-settings';
-import { setDefaultModel, setTaskModel } from './assignment';
+import { createCharacter, setOwnTranslate, setTranslate, setTranslatorNote } from './characters';
+import { setDefaultModel } from './assignment';
 import { setToolNote, translate, translatorOf, translateOnTool, translateText, type Translating } from './translate';
 import { takeTurn } from './turn';
 import { SHARED_CHAT } from './features';
@@ -191,22 +190,30 @@ describe('Translator', () => {
       expect(log).toHaveLength(0);
     }));
 
-  it('translates with the translation prompt’s own model, and without one with the chat’s 보조 모델', () =>
+  it('translates with 번역’s own model, a character’s own over 공용’s, and without one with the chat’s 보조 모델', () =>
     server.withSession(async (session) => {
       await answerable(session);
       const [connection] = session.store.list('connection');
       const starred = (id: string) => ({ ...connection!.value.starred[0]!, id, name: id });
       await session.store.update('connection', connection!.id, (current) => ({ ...current, starred: [...current.starred, starred('aux'), starred('tr')] }));
-      const chat = { title: null, character: null, models: {} };
-      const model = () => {
+      const character = crypto.randomUUID();
+      await createCharacter(session.store, 'Mira', character);
+      const model = (chat: Chat) => {
         const translator = translatorOf(session.store, chat);
         return translator.ok ? translator.route.model.id : translator.failure.kind;
       };
-      expect(model()).toBe('m');
-      await setDefaultModel(session.store, 'aux', { connection: connection!.id, model: 'aux' });
-      expect(model()).toBe('aux');
-      await setTaskModel(session.store, accountSettings(session.store).translatePrompt!, { connection: connection!.id, model: 'tr' });
-      expect(model()).toBe('tr');
+      const ref = (model: string) => ({ connection: connection!.id, model });
+      const theirs = { title: null, character, models: {} };
+      expect(model(SHARED_CHAT)).toBe('m');
+      await setDefaultModel(session.store, 'aux', ref('aux'));
+      expect(model(SHARED_CHAT)).toBe('aux');
+      await setTranslate(session.store, null, { model: ref('tr') });
+      expect([model(SHARED_CHAT), model(theirs)]).toEqual(['tr', 'tr']);
+      await setOwnTranslate(session.store, character, true);
+      await setTranslate(session.store, character, { model: ref('aux') });
+      expect([model(SHARED_CHAT), model(theirs)]).toEqual(['tr', 'aux']);
+      await setTranslate(session.store, null, { model: undefined });
+      expect(model(SHARED_CHAT)).toBe('aux');
     }));
 
   it('translates on 번역기 with 설정 › 모델’s 보조 모델, its own prompt and its own note, never the 전역 one', () =>

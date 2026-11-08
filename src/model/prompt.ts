@@ -95,23 +95,21 @@ export type ConversationPrompt = {
   agents?: string[];
 };
 
-// Translation model falls back to the chat's auxiliary model. Text blocks have no card-replacement marks.
+// No task prompt but an agent's picks a model: its feature's settings do (runtime/assignment taskModel; stored ones
+// moved there by runtime/upgrade moveTaskModels). Text blocks have no card-replacement marks.
 // protect regex sources use gu and join engine/protect spans passed through unchanged.
 export type TranslatePrompt = {
   task: 'translate';
   name: string;
-  model?: ModelRef;
   blocks: Block[];
   toggles: ToggleLine[];
   protect?: string[];
   origin?: { id: string; name: string };
 };
 
-// model: the one place the memory's model is chosen; without one, the chat's 보조 모델, then its 대화 모델.
 export type MemoryPrompt = {
   task: 'memory';
   name: string;
-  model?: ModelRef;
   blocks: Block[];
   toggles: ToggleLine[];
   origin?: { id: string; name: string };
@@ -125,12 +123,10 @@ export type PictureTags = { artist: string; quality: string; negative: string };
 export type PictureSize = 'normal' | 'large';
 export type PictureSettings = { steps?: number; scale?: number; rescale?: number; sampler?: string; seed?: number; size?: PictureSize };
 
-// Scene-model fallback: auxiliary, then chat model; image model comes from illustration switches.
 // Absent tags use PICTURE_DEFAULTS, but empty tags send nothing.
 export type IllustratePrompt = {
   task: 'illustrate';
   name: string;
-  model?: ModelRef;
   tags?: PictureTags;
   picture?: PictureSettings;
   blocks: Block[];
@@ -138,27 +134,24 @@ export type IllustratePrompt = {
   origin?: { id: string; name: string };
 };
 
-// model: the one place the mascot's model is chosen; without one, the chat's 보조 모델, then its 대화 모델.
 export type MascotPrompt = {
   task: 'mascot';
   name: string;
-  model?: ModelRef;
   blocks: Block[];
   toggles: ToggleLine[];
   origin?: { id: string; name: string };
 };
 
-// model: the one place the 토큰 절약 model is chosen; without one, the chat's 보조 모델, then its 대화 모델.
 export type PrereadPrompt = {
   task: 'preread';
   name: string;
-  model?: ModelRef;
   blocks: Block[];
   toggles: ToggleLine[];
   origin?: { id: string; name: string };
 };
 
-// Pre agents leave notes; post agents rewrite replies. Model fallback is auxiliary, then chat model.
+// Pre agents leave notes; post agents rewrite replies. The one task prompt with a model: the agent is its prompt.
+// Model fallback is auxiliary, then chat model.
 // protect follows translation rules; absent place replaces text rather than adding before/after it.
 export type AgentStage = 'pre' | 'post';
 export type AgentPlace = 'before' | 'after';
@@ -178,3 +171,6 @@ export type Prompt = (ConversationPrompt | TranslatePrompt | MemoryPrompt | Illu
 export type PromptOf<S extends PromptSort> = { conversation: ConversationPrompt; translate: TranslatePrompt; memory: MemoryPrompt; illustrate: IllustratePrompt; mascot: MascotPrompt; preread: PrereadPrompt; agent: AgentPrompt }[S];
 
 export const sortOf = (prompt: Prompt): PromptSort => prompt.task ?? 'conversation';
+
+// 모델 고정: its chats talk on its models over 공용's; 임베딩 모델 is 공용's alone (connectors/assignment ROLES).
+export const pinsModels = ({ models }: ConversationPrompt) => models.main !== undefined || models.aux !== undefined;

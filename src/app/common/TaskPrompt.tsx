@@ -1,11 +1,15 @@
-import type { PromptSort } from '../../model/prompt';
-import { ofSort, translationPrompt, illustrationPrompt, mascotPrompt, prereadPrompt, type PromptChoice } from '../../runtime/prompts';
+import type { ModelRef } from '../../connectors/assignment';
+import { entryName } from '../../connectors/types';
+import { accountTaskModel, setAccountTaskModel, type AccountTask, type Route } from '../../runtime/assignment';
+import { ofSort, translationPrompt, illustrationPrompt, mascotPrompt, prereadPrompt } from '../../runtime/prompts';
 import type { ObjectStore } from '../../runtime/store';
 import type { PromptPane } from '../shell/routes';
 import { byPromptName } from './promptCopies';
-import { defaultMark, DELETED_PROMPT, follows, PRE_READ, taskModelHelp } from './words';
-import { useSession, useSettings, usePrompts } from '../session';
-import { ChipButton, Divider, Menu, MenuHeading, MenuItem, SettingRow, Switch, Tag, Text } from '../ui';
+import { RolePicker } from './RolePicker';
+import { defaultMark, DELETED_PROMPT, follows, MODEL_ROLES, PRE_READ, SAVE_FAILED, TASK_MODELS } from './words';
+import { useConnections, useSession, useSettings, usePrompts } from '../session';
+import { useToast } from '../toast';
+import { ChipButton, Divider, Menu, MenuHeading, MenuItem, SettingRow, Switch, Tag } from '../ui';
 type NamedCharacter = { name: string } | null;
 type Reader = Pick<ObjectStore, 'get'>;
 // A prompt and the editor pane a door names; null, the prompt list.
@@ -71,14 +75,19 @@ export function TaskPromptMenu({ task, chosen, heading, opens, onPick, onEdit }:
   );
 }
 
-export function TaskModelRow<S extends PromptSort>({ label, noun, choice, sub, model, onEdit }: { label: string; noun: string; choice: PromptChoice<S>; sub?: string; model: string; onEdit: (door: PromptDoor) => void }) {
-  const help = taskModelHelp(noun, choice.kind === 'prompt');
-  return (
-    <SettingRow
-      label={label}
-      help={{ text: help.text, open: { label: help.door, onClick: () => onEdit(choice.kind === 'prompt' ? { id: choice.prompt.id, pane: 'model' } : null) } }}
-      sub={sub}
-      control={<Text variant="note">{model}</Text>}
-    />
-  );
+// A task's own model, else 보조 모델. runs: what the task runs on now, or why it cannot; said under the row while it
+// follows 보조 모델 or fails.
+export function TaskModelRow({ label, help, own, runs, onPick }: { label: string; help?: string; own: ModelRef | undefined; runs: { route: Route } | { why: string }; onPick: (ref: ModelRef | null) => void }) {
+  const connections = useConnections();
+  const sub = 'why' in runs ? runs.why : own ? undefined : entryName(runs.route.model);
+  return <RolePicker role="aux" label={label} help={help} own={own} follow={follows(MODEL_ROLES.aux)} sub={sub} connections={connections} onPick={onPick} />;
+}
+
+// 장기 기억's, 마스코트's and 토큰 절약's model, 공용's alone as their prompts are: a pick here holds for every chat.
+export function AccountTaskModel({ task, help, runs }: { task: AccountTask; help?: string; runs: { route: Route } | { why: string } }) {
+  const { store } = useSession();
+  const toast = useToast();
+  // Subscribed for accountTaskModel, which reads the settings from the store.
+  useSettings();
+  return <TaskModelRow label={TASK_MODELS[task]} help={help} own={accountTaskModel(store, task)} runs={runs} onPick={(ref) => toast.settled(setAccountTaskModel(store, task, ref), SAVE_FAILED)} />;
 }

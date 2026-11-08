@@ -134,9 +134,10 @@ function translated(call: Stream['call'], answer: Reply, text: string, spans: re
 }
 
 export function translatorOf(store: ObjectStore, chat: Chat): { ok: true; prompt: TranslatePrompt; route: Route } | { ok: false; failure: RouteFailure | { kind: 'prompt-missing'; own: boolean } } {
-  const prompt = translationPrompt(store, chatTranslate(store, chat).prompt);
+  const switches = chatTranslate(store, chat);
+  const prompt = translationPrompt(store, switches.prompt);
   if (prompt.kind === 'missing') return { ok: false, failure: { kind: 'prompt-missing', own: prompt.own } };
-  const route = taskModel(store, chat, prompt.prompt.value.model);
+  const route = taskModel(store, chat, switches.model);
   return 'kind' in route ? { ok: false, failure: route } : { ok: true, prompt: prompt.prompt.value, route };
 }
 
