@@ -82,7 +82,7 @@ test('tools keep a notepad across reload and put versioned aux summaries into th
   await test.step('write in the chat panel and reopen the persisted note after reload', async () => {
     await page.goto('/');
     const report = await importFile(page, pickBot, CARD);
-    await report.getByRole('button', { name: '채팅 시작', exact: true }).click();
+    await report.getByRole('button', { name: '새 채팅', exact: true }).click();
     // A saved chat owns the page context; the first send happens before memory is imported.
     await page.getByLabel('메시지', { exact: true }).fill('Keep this note for the journey.');
     await page.getByRole('button', { name: '보내기', exact: true }).click();
@@ -198,7 +198,7 @@ test('a memory tool holds the memory slot, recalls by embedding, badges, follows
   await test.step('allow the plugin once, for its memory claim and model calls, then a chunk closes', async () => {
     await page.goto('/');
     const report = await importFile(page, pickBot, RECALL_CARD);
-    await report.getByRole('button', { name: '채팅 시작', exact: true }).click();
+    await report.getByRole('button', { name: '새 채팅', exact: true }).click();
     // Pressed in a chat not saved yet: the press saves it, and the run lives through that first save.
     const input = page.getByLabel('메시지', { exact: true });
     await input.fill('first words');
@@ -320,7 +320,7 @@ test('a plugin tool the chat model calls runs in the turn, and the reply shows t
   await importPlugin(page, 'dice');
   await page.goto('/');
   const report = await importFile(page, pickBot, CARD);
-  await report.getByRole('button', { name: '채팅 시작', exact: true }).click();
+  await report.getByRole('button', { name: '새 채팅', exact: true }).click();
   await page.getByLabel('메시지', { exact: true }).fill('Roll a d20 for me.');
   await page.getByRole('button', { name: '보내기', exact: true }).click();
   const reply = page.getByRole('article').last();

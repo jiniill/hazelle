@@ -61,7 +61,7 @@ test('a shared link opens signed out, gives its file, and a report holds it', as
   await test.step('report it, and the link holds', async () => {
     await guest.getByRole('button', { name: '신고', exact: true }).click();
     await guest.getByLabel('신고 이유', { exact: true }).fill('e2e report');
-    await guest.getByRole('button', { name: '보내기', exact: true }).click();
+    await guest.getByRole('dialog', { name: '신고', exact: true }).getByRole('button', { name: '신고', exact: true }).click();
     await expect(guest.getByRole('heading', { name: '보류된 링크', exact: true })).toBeVisible();
     await guest.reload();
     await expect(guest.getByRole('heading', { name: '보류된 링크', exact: true })).toBeVisible();

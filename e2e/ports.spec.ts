@@ -73,7 +73,7 @@ test('the HypaPlus port summarizes chunks, holds the memory slot, recalls after 
   await test.step('allow the plugin once, for its memory claim and model calls, then a chunk closes', async () => {
     await page.goto('/');
     const report = await importFile(page, pickBot, CARD);
-    await report.getByRole('button', { name: '채팅 시작', exact: true }).click();
+    await report.getByRole('button', { name: '새 채팅', exact: true }).click();
     await send('We climb the stairs.');
     await expect(page.getByText('이 플러그인이 모델을 추가로 호출하고, 기본 장기 기억 대신 기억을 관리할 수 있어요', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: '허용', exact: true }).click();

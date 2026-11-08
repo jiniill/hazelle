@@ -78,7 +78,7 @@ test('a new account imports a card, chats through the fake provider and finds th
     await (await chooser).setFiles(CARD);
     await expect(page.getByRole('dialog', { name: '가져올까요?', exact: true })).toContainText('첫인사 1개 · 로어북 1개 · 정규식 1개');
     const report = await confirmImport(page);
-    await report.getByRole('button', { name: '채팅 시작', exact: true }).click();
+    await report.getByRole('button', { name: '새 채팅', exact: true }).click();
     await expect(messages).toHaveCount(1);
     await expect(messages.first()).toContainText(GREETING);
   });
@@ -185,7 +185,7 @@ test('a new account imports a card, chats through the fake provider and finds th
     const chooser = page.waitForEvent('filechooser');
     await pickBot(page);
     await (await chooser).setFiles(HOSTILE);
-    await (await confirmImport(page)).getByRole('button', { name: '채팅 시작', exact: true }).click();
+    await (await confirmImport(page)).getByRole('button', { name: '새 채팅', exact: true }).click();
     const greeting = messages.first();
     // The message is drawn again once its picture loads, so the rest is measured after.
     await expect(greeting.locator('#pic img')).toHaveAttribute('src', /^blob:/);
@@ -216,7 +216,7 @@ test('a new account imports a card, chats through the fake provider and finds th
     const chooser = page.waitForEvent('filechooser');
     await pickBot(page);
     await (await chooser).setFiles(SCRIPTED);
-    await (await confirmImport(page)).getByRole('button', { name: '채팅 시작', exact: true }).click();
+    await (await confirmImport(page)).getByRole('button', { name: '새 채팅', exact: true }).click();
     const greeting = messages.first();
     await expect(greeting).toContainText('[door:null]');
     await greeting.getByRole('button', { name: '문 열기', exact: true }).click();

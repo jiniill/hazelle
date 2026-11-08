@@ -42,7 +42,7 @@ test('the mascot, switched on, leaves a line on the reply that survives a reload
   await test.step('a reply gets the mark, and pointing at it shows the line and the face', async () => {
     await page.goto('/');
     const report = await importFile(page, pickBot, CARD);
-    await report.getByRole('button', { name: '채팅 시작', exact: true }).click();
+    await report.getByRole('button', { name: '새 채팅', exact: true }).click();
     await page.getByLabel('메시지', { exact: true }).fill('hi');
     await page.getByRole('button', { name: '보내기', exact: true }).click();
     await expect(mark).toBeVisible();

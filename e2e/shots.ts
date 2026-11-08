@@ -30,5 +30,5 @@ export async function enterShots(page: Page) {
   await pickBot(page);
   await page.getByRole('button', { name: '확인했어요', exact: true }).click();
   await (await chooser).setFiles(CARD);
-  await (await confirmImport(page)).getByRole('button', { name: '채팅 시작', exact: true }).click();
+  await (await confirmImport(page)).getByRole('button', { name: '새 채팅', exact: true }).click();
 }

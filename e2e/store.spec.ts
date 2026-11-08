@@ -54,6 +54,16 @@ async function json<T>(response: APIResponse, status = 200): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+// The store id the server keeps for an account: never on the wire, so read from the service database.
+function incarnation(accountId: string): string {
+  const db = new DatabaseSync(join(DATA, 'service.sqlite'), { readOnly: true });
+  try {
+    return db.prepare('SELECT incarnation FROM accounts WHERE id = ?').get(accountId)!.incarnation as string;
+  } finally {
+    db.close();
+  }
+}
+
 // The account's database as the server keeps it: accounts/<incarnation>.sqlite with its -wal and -shm. Opened beside
 // the server's own connection, read only by what is asked, and closed again.
 function inspect(account: Account): Inspection {
@@ -90,10 +100,10 @@ async function signup(request: APIRequestContext, accountId: string = randomUUID
       passwordWrap: 'cGFzc3dvcmQgd3JhcA==', recoveryWrap: 'cmVjb3Zlcnkgd3JhcA==',
     },
   });
-  const account = await json<Omit<Account, 'cookie'>>(response, 201);
+  const account = await json<Omit<Account, 'cookie' | 'incarnation'>>(response, 201);
   const cookie = response.headers()['set-cookie']?.split(';')[0];
   expect(cookie).toMatch(/^__Host-session=.+/);
-  return { ...account, cookie: cookie! };
+  return { ...account, cookie: cookie!, incarnation: incarnation(account.accountId) };
 }
 
 async function feed(request: APIRequestContext, account: Account, params: Record<string, string | number> = {}) {
