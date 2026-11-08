@@ -12,6 +12,3 @@ export function typedCap(text: string): number | null | undefined {
   const bytes = Math.round(Number(trimmed) * MB);
   return Number.isSafeInteger(bytes) && bytes >= 0 ? bytes : undefined;
 }
-
-// A whole count of accounts; undefined for anything else.
-export const typedCount = (text: string): number | undefined => (/^\d{1,9}$/.test(text.trim()) ? Number(text.trim()) : undefined);

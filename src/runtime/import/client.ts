@@ -1,3 +1,4 @@
+import { errorMessage } from '../../error-message';
 import type { PresetRead } from '../../engine/import/preset';
 import type { ImportedTool } from '../../engine/import/tool';
 import type { BackupResult, Imported, ImportedModule, ImportResult, RisuCharacter, RisuChat } from '../../engine/import/types';
@@ -95,7 +96,7 @@ export class ImportWorker {
       this.open().postMessage({ id, request } satisfies Down<K>);
       this.heart.start(this.limit);
     } catch (error) {
-      this.end(new ImportReadError(error instanceof Error ? error.message : String(error)));
+      this.end(new ImportReadError(errorMessage(error)));
     }
     return promise as Promise<Replies[K]>;
   }

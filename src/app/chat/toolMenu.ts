@@ -1,4 +1,4 @@
-import type { Badges, ToolChatData } from '../../model/tool';
+import { badgesOf, type ToolChatData } from '../../model/tool';
 import type { ToolField } from '../../tool-api/manifest';
 import type { MenuItem, ToolMenu } from '../../runtime/tools/facade';
 
@@ -35,10 +35,13 @@ const BADGE_CHARS = 10;
 // hides it, and showing that one again brings it back.
 export function badgesByVersion(rows: readonly { value: ToolChatData }[], tools: ToolMenu[]): ReadonlyMap<string, string[]> {
   const order = new Map(tools.map(({ module }, index) => [module, index]));
-  const records = rows.flatMap(({ value }) => (value.key === null && order.has(value.module) ? [value] : [])).sort((a, b) => order.get(a.module)! - order.get(b.module)!);
+  const records = rows.flatMap(({ value }) => {
+    const badges = badgesOf(value);
+    return badges && order.has(value.module) ? [{ module: value.module, badges }] : [];
+  }).sort((a, b) => order.get(a.module)! - order.get(b.module)!);
   const versions = new Map<string, string[]>();
-  for (const { value } of records) {
-    for (const { version, text } of Object.values(value as Badges)) {
+  for (const { badges } of records) {
+    for (const { version, text } of Object.values(badges)) {
       const badge = [...text].slice(0, BADGE_CHARS).join('');
       const badges = versions.get(version);
       if (badges) badges.push(badge);

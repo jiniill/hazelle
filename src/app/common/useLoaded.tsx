@@ -28,10 +28,19 @@ export function useLoaded<T>(load: (signal: AbortSignal) => Promise<ApiResult<T>
     loading: data === null && failure === null && LOADING_NOTE,
     failure: failure && <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: reload }}>{failure}</Callout>,
     reload,
+    refresh: <Refresh onClick={reload} />,
   };
 }
 
 const LOADING_NOTE = <Text variant="note">{LOADING}</Text>;
+
+function Refresh({ busy, onClick }: { busy?: boolean; onClick: () => void }) {
+  return (
+    <Button variant="ghost" busy={busy} onClick={onClick}>
+      새로고침
+    </Button>
+  );
+}
 
 // How many rows a list shows on a page that leads elsewhere to it whole (운영, 설정 › 계정): the newest, or what waits.
 export const HEAD_ROWS = 5;
@@ -77,6 +86,7 @@ export function usePages<T>(load: (after: string | null) => Promise<ApiResult<Pa
     ),
     // After an act that changed rows not in hand, such as every report on one share: the first page again.
     reload: () => void fetch(null),
+    refresh: <Refresh busy={busy} onClick={() => void fetch(null)} />,
     update: (change: (shown: T[]) => T[]) => setRows((shown) => shown && change(shown)),
   };
 }

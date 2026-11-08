@@ -6,7 +6,7 @@ import { live, type PackOwner } from '../model/library';
 import type { ToolUnit } from '../model/tool';
 import type { EventName } from '../tool-api/protocol';
 import { packsOf, scopeOf } from './chat-context';
-import type { Written } from './chat-log';
+import { replyMessage, type Written } from './chat-log';
 import type { ScriptOutcome } from './lua/event';
 import type { ReadModels } from './read-model';
 import { noOutcome, ToolLate, ToolStopped, until, type Binding, type LuaRunner } from './script-binding';
@@ -102,7 +102,7 @@ export class ScriptExecution {
     const units = toolsOf(this.session.store, stored.value);
     if (!units.length) return;
     const scope = scopeFor(this.session, chat);
-    const at = atOf(scope, reply.message ?? reply.id);
+    const at = atOf(scope, replyMessage(reply));
     // The saved reply's snapshot and anchor travel with this job, even if another version is shown before it runs.
     if (at) for (const unit of units) void this.schedule.lane(chat, unit, () => this.dispatch(chat, { tool: unit, event: { kind: 'reply', reply: { ...at, version: reply.id } } }, scope, { version: reply.id }, this.closing));
   }

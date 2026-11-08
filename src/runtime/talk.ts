@@ -17,7 +17,7 @@ import type { Stream } from '../model/stream';
 import type { ApiFailure } from './api';
 import type { Route, RouteFailure } from './assignment';
 import { cacheKept, prefixKept, wireOf, wireTextOf, writePrint } from './cache';
-import { appendReply, appendUserMessage, savedElsewhere, type Said, type Written } from './chat-log';
+import { appendReply, appendUserMessage, replyMessage, savedElsewhere, type Said, type Written } from './chat-log';
 import { refuseTools, routeFields } from './connections';
 import { TOOL_ROUNDS, toolLoop, type Tool } from './tool-loop';
 import type { Costs } from './cost';
@@ -93,7 +93,7 @@ export function withTurn(messages: Message[], turn: Turn | null, chat: string): 
   const live = { live: reply.id, ...(turn.whole && { whole: true as const }), ...(turn.batch && { batch: true as const }), ...(turn.retrying && { retrying: true as const }), ...(turn.stopping && { stopping: true as const }), ...(turn.preparing && { preparing: turn.preparing }), ...(turn.reading && { reading: turn.reading }) };
   // A reply saved while its turn is held stays live until the turn ends, so nothing between its save and Talk's end
   // shows it settled (Translator.expect).
-  const saved = out.findIndex((message) => message.id === (reply.message ?? reply.id) && message.versions.some((existing) => existing.id === reply.id));
+  const saved = out.findIndex((message) => message.id === replyMessage(reply) && message.versions.some((existing) => existing.id === reply.id));
   if (saved !== -1) {
     out[saved] = { ...out[saved]!, ...live };
     return out;

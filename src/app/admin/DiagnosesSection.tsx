@@ -2,7 +2,7 @@ import { AUTO_KEEP_DAYS, type AutoErrorCause, type AutoEvent, type AutoRow } fro
 import { readDiagnoses } from '../../runtime/admin';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
-import { Button, Disclosure, Empty, Panel, Stack, TextField } from '../ui';
+import { Disclosure, Empty, Panel, Stack, TextField } from '../ui';
 import { seoulMonthDay } from './seoul';
 
 const EVENTS: Record<AutoEvent, string> = {
@@ -26,7 +26,7 @@ export const lineOf = ({ day, version, event, detail, place, people, times, fact
 export function DiagnosesSection() {
   const loaded = useLoaded(readDiagnoses);
   return (
-    <Panel title="자동 진단" note={`최근 ${AUTO_KEEP_DAYS}일`} help={HELP} action={<Button variant="ghost" onClick={loaded.reload}>새로고침</Button>}>
+    <Panel title="자동 진단" note={`최근 ${AUTO_KEEP_DAYS}일`} help={HELP} action={loaded.refresh}>
       {loaded.loading}
       {loaded.failure}
       {loaded.data && loaded.data.rows.length === 0 && <Empty variant="section">받은 진단이 없어요.</Empty>}

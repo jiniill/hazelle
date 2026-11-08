@@ -1,3 +1,4 @@
+import { errorMessage } from '../../error-message';
 import { ImportReader } from './reader';
 import type { Down, Up } from './protocol';
 import { postProgress } from '../worker';
@@ -13,6 +14,6 @@ addEventListener('message', ({ data }: MessageEvent<Down>) => {
       const bytes = result instanceof Uint8Array ? result : result && 'bytes' in result ? result.bytes : null;
       scope.postMessage({ id: data.id, result }, bytes ? [bytes.buffer] : []);
     },
-    (error: unknown) => scope.postMessage({ id: data.id, error: error instanceof Error ? error.message : String(error) }, []),
+    (error: unknown) => scope.postMessage({ id: data.id, error: errorMessage(error) }, []),
   );
 });

@@ -1,3 +1,4 @@
+import { errorMessage } from '../error-message';
 import { openObject, sealObject, type ObjectAddress } from '../vault/objects';
 
 export type OpenItem = ObjectAddress & { body: string };
@@ -17,7 +18,7 @@ export async function codeObjects(key: CryptoKey, account: string, job: CodecJob
       // An oversized body never crosses back to the caller only to be discarded there.
       return { ok: true, value: body.length > job.limit ? null : body };
     } catch (error) {
-      return { ok: false, name: error instanceof Error ? error.name : 'Error', message: error instanceof Error ? error.message : String(error) };
+      return { ok: false, name: error instanceof Error ? error.name : 'Error', message: errorMessage(error) };
     }
   }));
 }

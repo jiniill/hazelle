@@ -1,3 +1,4 @@
+import { errorMessage } from '../../error-message';
 import { isRecord, jsonObject, list } from '../../connectors/values';
 import { SIGNATURE } from '../assets';
 import { imageType } from './card';
@@ -67,7 +68,7 @@ export async function readBackup(sources: FileSource[]): Promise<BackupResult> {
     return { ok: true, backup: await fromDatabase(db, files) };
   } catch (error) {
     if (error instanceof TooLarge) return fail('expands-too-far');
-    return fail('unreadable', error instanceof Error ? error.message : String(error));
+    return fail('unreadable', errorMessage(error));
   }
 }
 

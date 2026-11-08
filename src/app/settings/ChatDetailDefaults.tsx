@@ -101,7 +101,7 @@ function SharedLoreNumber({ field, changed }: { field: 'tokenBudget' | 'scanDept
   const store = useStore();
   const { label, help, unit, amount, is } = LORE_SCAN_WORDS[field];
   const save = useAutosave<{ value: number }>(`lore-${field}`, (patch) => setSharedLoreScan(store, field, patch.value!));
-  const typed = useTypedNumber(readCount, save.unsaved.value ?? sharedLoreScan(store)[field], { error: '1 이상의 정수를 입력해 주세요.', onChange: (value) => save.change({ value }) });
+  const typed = useTypedNumber(readCount, save.unsaved.value ?? sharedLoreScan(store)[field], { error: readCount.error, onChange: (value) => save.change({ value }) });
   return (
     <SettingRow
       label={label}

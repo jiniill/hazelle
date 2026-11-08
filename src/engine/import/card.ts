@@ -1,3 +1,4 @@
+import { errorMessage } from '../../error-message';
 import { add, cardSource, convert, convertModule, counted, extensionOf, lorebookSource, record, text, type Converted, type ConvertedModule, type Json, type Tally } from './convert';
 import { readLorebook } from './lorebook';
 import { METADATA_BYTES } from './inflate';
@@ -46,7 +47,7 @@ export function importCard(fileName: string, bytes: Uint8Array<ArrayBuffer>, asM
         return fail('unknown-format');
     }
   } catch (error) {
-    return fail('unreadable', error instanceof Error ? error.message : String(error));
+    return fail('unreadable', errorMessage(error));
   }
 }
 
@@ -122,7 +123,7 @@ export async function importRisum(source: FileSource): Promise<{ ok: true; modul
     const assets = read.assets.slice(0, names.length).map((block, index) => ({ name: names[index]!, read: block }));
     return { ok: true, module: { ...module, assets, unsupported: counted(UNSUPPORTED_KINDS, tally) } };
   } catch (error) {
-    return fail('unreadable', error instanceof Error ? error.message : String(error));
+    return fail('unreadable', errorMessage(error));
   }
 }
 

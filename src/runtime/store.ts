@@ -1,5 +1,5 @@
 import { ChatFold } from '../model/chat';
-import { KINDS, type AppendOnly, type Kind, type Singleton, type Stored, type Values } from '../model/kinds';
+import { KINDS, type AppendOnly, type Kind, type Singleton, type Stored, type StoreRead, type Values } from '../model/kinds';
 import { objectKey } from '../vault/objects';
 import type { VaultKey } from '../vault/keys';
 import type { FeedAnswer, SealedChange } from '../contracts/objects';
@@ -13,7 +13,7 @@ import { ObjectCacheSession } from './object-cache-session';
 import { Evaluation, EvaluationFailed, EvaluationStopped, EvaluationStuck } from './evaluation';
 import { ChatProjections } from './summary';
 import { ScopeUnavailable, type ChatLease, type ScopeState } from './chat-scope';
-import { ObjectIndex, type Held, type StoreChange, type StoreRead } from './object-index';
+import { ObjectIndex, type Held, type StoreChange } from './object-index';
 import { ObjectWrites, type Limits, type Pending, type Resolved, type Write, type WriteStep } from './object-writes';
 import { PendingWrites, chatOf, type Overlay, type PendingCommit } from './pending-writes';
 import { upgradeValue } from './upgrade';

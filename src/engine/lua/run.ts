@@ -1,3 +1,4 @@
+import { errorMessage } from '../../error-message';
 import { jsonObject } from '../../connectors/values';
 import { hex } from '../../hex';
 import type { PackOwner } from '../../model/library';
@@ -45,8 +46,7 @@ export type RunLane = 'event' | 'preview';
 export type SyntaxProblem = { line: number | null; message: string };
 type Workset = { engines: Map<string, Promise<Engine>>; codes: Set<string>; held: number; retired: boolean };
 
-const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
-const failure = (run: Run, error: unknown): Failure => (run.ranAway ? { runaway: true } : { message: describe(error) });
+const failure = (run: Run, error: unknown): Failure => (run.ranAway ? { runaway: true } : { message: errorMessage(error) });
 const roleOf = (value: unknown): Working['role'] => (value === 'user' ? 'user' : 'char');
 const view = ({ role, data, time }: Working) => ({ role, data, time });
 
@@ -350,8 +350,8 @@ export class Lua {
       global.loadString(code, '=code');
       return null;
     } catch (error) {
-      const found = /^code:(\d+): (.*)$/s.exec(describe(error));
-      return found ? { line: Number(found[1]), message: found[2]! } : { line: null, message: describe(error) };
+      const found = /^code:(\d+): (.*)$/s.exec(errorMessage(error));
+      return found ? { line: Number(found[1]), message: found[2]! } : { line: null, message: errorMessage(error) };
     } finally {
       global.setTop(top);
     }
@@ -376,7 +376,7 @@ export class Lua {
         lua.global.remove(index);
       }
     } catch (error) {
-      engine.failed = describe(error);
+      engine.failed = errorMessage(error);
     }
     engine.own = new Set(globals(lua).filter((name) => !before.has(name)));
     loaded.duration = performance.now() - began;
@@ -393,7 +393,7 @@ export class Lua {
         try {
           step();
         } catch (error) {
-          fail(describe(error));
+          fail(errorMessage(error));
         }
       };
       void awaited.then(resume, resume);

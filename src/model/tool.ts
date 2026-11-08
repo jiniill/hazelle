@@ -15,5 +15,6 @@ export type ToolFile = { key: string; size: number; file: FileRef };
 // key null stores host-owned Badges rather than tool chat data.
 export type ToolChatData = { module: string; key: string | null; value: Json };
 export type Badges = Record<string, { version: string; text: string }>;
+export const badgesOf = ({ key, value }: ToolChatData): Badges | null => (key === null ? (value as Badges) : null);
 export type ToolUnit = { module: string; tool: Tool };
 export const toolId = firstInverted;

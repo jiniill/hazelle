@@ -24,7 +24,7 @@ import { FolderMenu, useNaming, type FolderActions, type Naming } from './folder
 import { OpenRow, RowFoot, useOpenRows, type OpenRows } from './OpenRows';
 import { SLOT } from './prompt-words';
 import { typedText, useTypedNumber } from './typed';
-import { count, readOptional } from './typedNumber';
+import { count, readCount, readOptional } from './typedNumber';
 import { useAutosave } from './useAutosave';
 import { useSearch } from './useSearch';
 import { follows, LORE_SCAN_WORDS, loreName, SCOPE } from './words';
@@ -42,10 +42,7 @@ const KEYS_SHOWN = 3;
 
 const readNumber = (draft: string) => readOptional(draft, false);
 // undefined: empty, which follows the account's value.
-const readOwnCount = (draft: string) => {
-  const typed = readOptional(draft, true);
-  return typed === null || (typed !== undefined && typed < 1) ? null : typed;
-};
+const readOwnCount = (draft: string) => (draft.trim() === '' ? undefined : readCount(draft));
 
 type Scan = Card['loreSettings'];
 
@@ -102,7 +99,7 @@ function LoreScanFold({ id }: { id: string }) {
 
 function OwnScanNumber({ field, own, shared, onChange }: { field: 'tokenBudget' | 'scanDepth'; own: number | null; shared: number; onChange: (value: number | null) => void }) {
   const { label, help, unit, amount } = LORE_SCAN_WORDS[field];
-  const typed = useTypedNumber(readOwnCount, own ?? undefined, { error: '1 이상의 정수를 입력해 주세요.', onChange: (value) => onChange(value ?? null) });
+  const typed = useTypedNumber(readOwnCount, own ?? undefined, { error: readCount.error, onChange: (value) => onChange(value ?? null) });
   return (
     <SettingRow
       label={label}

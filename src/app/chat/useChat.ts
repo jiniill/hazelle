@@ -8,7 +8,7 @@ import { autoDiagnose } from '../../runtime/auto-diagnosis';
 import { autoChat, turnFacts } from '../../runtime/diagnostic-state';
 import { resetToggles, setToggle } from '../../runtime/characters';
 import { chatTranslate, featuresOf } from '../../runtime/features';
-import { restoreRaw } from '../../runtime/chat-log';
+import { replyMessage, restoreRaw } from '../../runtime/chat-log';
 import { keepAttachments } from '../../runtime/attachments';
 import { pickVersion } from '../../runtime/message-acts';
 import { badgesByVersion, toolActions, toolComposer } from './toolMenu';
@@ -23,6 +23,7 @@ import { skippedStep, type Skip, type StepFailure } from '../../runtime/turn-ste
 import { agentsOf } from '../../runtime/agents';
 import type { PersonaChoice } from '../../runtime/personas';
 import type { PromptChoice } from '../../runtime/prompts';
+import { ACTS } from '../common/acts';
 import { describeTurnFailure } from '../common/failure';
 import { NO_PERSONA_SLOT } from '../common/prompt-words';
 import { describeUnused } from '../common/unused';
@@ -106,7 +107,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   // A display that fails after one was shown leaves that one up; one that never showed says so in the log (ChatLog).
   useEffect(() => {
     if (displayError === undefined || displayPending) return;
-    toast.error('채팅을 화면에 표시하지 못했어요.', { detail: displayError instanceof Error ? displayError.message : undefined, action: { label: '다시 시도', onClick: retryDisplay } });
+    toast.error('채팅을 화면에 표시하지 못했어요.', { detail: displayError instanceof Error ? displayError.message : undefined, action: { label: ACTS.retry.label, onClick: retryDisplay } });
   }, [displayError]);
   const { texts, css } = view;
   const bot = shelf?.character.decor !== false;
@@ -138,7 +139,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     }
   }, [id, usageShown, messages]);
 
-  const replyTarget = replying ? (replying.message ?? replying.id) : null;
+  const replyTarget = replying ? replyMessage(replying) : null;
   const anchor = replying && !replying.continues ? anchorOf(messages, replyTarget!) : null;
 
   const draft = useDraft(id, chat.character);

@@ -1,4 +1,5 @@
-import type { StoreChange, StoreRead } from './object-index';
+import type { StoreRead } from '../model/kinds';
+import type { StoreChange } from './object-index';
 
 export const readsChanged = (reads: StoreRead[], changes: readonly StoreChange[]) =>
   reads.some((read) => changes.some((change) => read.kind === change.kind && ('list' in read || ('id' in read ? read.id === change.id : read.parent === change.parent))));

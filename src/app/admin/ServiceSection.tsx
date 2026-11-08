@@ -3,10 +3,10 @@ import { setService, type Service } from '../../runtime/admin';
 import { selfHost } from '../../runtime/installation';
 import { describeFailure } from '../common/failure';
 import { sizeText } from '../common/size';
-import { count } from '../common/typedNumber';
+import { count, readWhole } from '../common/typedNumber';
 import { useAttempt } from '../common/useAttempt';
 import { Button, Callout, NumberInput, Section, SettingGroup, SettingRow, Text } from '../ui';
-import { CAP_ERROR, capText, typedCap, typedCount } from './bytes';
+import { CAP_ERROR, capText, typedCap } from './bytes';
 
 // The operator raises the cap in steps, so each cap sits with the count it bounds.
 export function ServiceSection({ service, onSaved }: { service: Service; onSaved: () => void }) {
@@ -15,10 +15,10 @@ export function ServiceSection({ service, onSaved }: { service: Service; onSaved
   const [cap, setCap] = useState<string | null>(null);
   const [fileCap, setFileCap] = useState<string | null>(null);
   const { busy, failure, run } = useAttempt();
-  const signupCap = seats === null ? service.signupCap : typedCount(seats);
+  const signupCap = seats === null ? service.signupCap : readWhole(seats);
   const accountBytesCap = cap === null ? service.accountBytesCap : typedCap(cap);
   const accountFileBytesCap = fileCap === null ? service.accountFileBytesCap : typedCap(fileCap);
-  const valid = signupCap !== undefined && accountBytesCap !== undefined && accountFileBytesCap !== undefined;
+  const valid = signupCap !== null && accountBytesCap !== undefined && accountFileBytesCap !== undefined;
   const changed = signupCap !== service.signupCap || accountBytesCap !== service.accountBytesCap || accountFileBytesCap !== service.accountFileBytesCap;
 
   const save = () =>
@@ -46,8 +46,8 @@ export function ServiceSection({ service, onSaved }: { service: Service; onSaved
           label="가입 정원"
           help="전체 계정 수가 정원보다 적을 때만 새로 가입할 수 있어요. 1명이면 혼자 쓰는 헤이젤이라 아이디 없이 비밀번호로만 로그인해요."
           sub={`지금 ${count(service.accounts)}명`}
-          error={signupCap === undefined ? '0 이상의 정수를 입력해 주세요.' : undefined}
-          control={<NumberInput label="가입 정원" unit="명" value={seats ?? String(service.signupCap)} invalid={signupCap === undefined} onChange={setSeats} />}
+          error={signupCap === null ? readWhole.error : undefined}
+          control={<NumberInput label="가입 정원" unit="명" value={seats ?? String(service.signupCap)} invalid={signupCap === null} onChange={setSeats} />}
         />
         <SettingRow
           label="계정당 텍스트 한도"

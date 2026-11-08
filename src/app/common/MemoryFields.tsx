@@ -59,7 +59,7 @@ export function MemoryFields({ value, onChange, help: usage = MEMORY_HELP, child
         key={field}
         label={label}
         help={help}
-        error={invalid ? '1 이상의 정수를 입력해 주세요.' : undefined}
+        error={invalid ? readCount.error : undefined}
         control={<NumberInput label={label} unit={unit} value={draft} invalid={invalid} onChange={type} />}
       />
     );
