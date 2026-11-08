@@ -5,6 +5,7 @@ import type { BackupCatalog, BackupFailure, BundledModule, Imported, ImportedMod
 import type { ChatFile } from '../chat-file';
 
 export type AssetRead = { name: string; handle: number };
+export type PartRead = { path: string; handle: number };
 export type ModuleData = Omit<ImportedModule, 'assets'> & { assets: AssetRead[] };
 export type CardData = Omit<Imported, 'avatar' | 'assets' | 'bundled'> & { avatar: number | null; assets: AssetRead[]; bundled: (ModuleData & Pick<BundledModule, 'likeness'>)[] };
 export type CharacterData = Omit<RisuCharacter, 'avatar' | 'assets' | 'chats'> & { avatar: number; assets: AssetRead[]; chatCount: number };
@@ -24,6 +25,7 @@ type Inputs = {
   chat: { index: number };
   messages: { index: number; from: number };
   release: object;
+  original: object;
   asset: { handle: number };
   picture: { handle: number };
 };
@@ -38,6 +40,8 @@ export type Replies = {
   chat: { header: Omit<RisuChat, 'messages'>; messages: number };
   messages: { messages: RisuMessage[]; next: number };
   release: null;
+  // The pieces of the last card file read, which their 'asset' handles give.
+  original: PartRead[];
   asset: Uint8Array<ArrayBuffer> | null;
   picture: Picture | null;
 };

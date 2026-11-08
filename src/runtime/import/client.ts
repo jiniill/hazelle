@@ -2,6 +2,7 @@ import type { PresetRead } from '../../engine/import/preset';
 import type { ImportedTool } from '../../engine/import/tool';
 import type { BackupResult, Imported, ImportedModule, ImportResult, RisuCharacter, RisuChat } from '../../engine/import/types';
 import { ImportReadError, ImportStuck, type AssetRead, type ChatsRead, type Down, type Method, type ModuleData, type Replies, type Request, type Up } from './protocol';
+import type { OriginalFile } from '../originals';
 import { PendingRequests } from '../pending-requests';
 import { Heartbeat, moduleWorker } from '../worker';
 import workerUrl from './worker?worker&url';
@@ -32,6 +33,12 @@ export class ImportWorker {
     }
     const { avatar, assets, bundled, ...card } = result.card;
     return { ok: true, card: { ...card, avatar: avatar === null ? null : await this.ask({ kind: 'picture', handle: avatar }), assets: this.assets(assets), bundled: bundled.map((module) => this.module(module)) } };
+  }
+
+  // Asked after the card file read last is saved, so a preview never splits it.
+  async original(name: string): Promise<OriginalFile> {
+    const parts = await this.ask({ kind: 'original' });
+    return { name, parts: parts.map(({ path, handle }) => ({ path, read: () => this.ask({ kind: 'asset', handle }) })) };
   }
 
   async backup(files: File[]): Promise<BackupResult> {

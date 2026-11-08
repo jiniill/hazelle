@@ -11,7 +11,7 @@ import type { ToggleValues } from '../model/prompt';
 import { ORDER_ID, rearrange, toFront } from '../model/order';
 import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiResult } from './api';
-import { inOrder, type Files } from './files';
+import { saveEach, type Files } from './files';
 import { thumbnail } from './picture';
 import { markDeleted } from './removal';
 import { without } from '../model/fields';
@@ -19,12 +19,9 @@ import type { ObjectStore } from './store';
 import { accountSettings } from './account-settings';
 import type { Write } from './object-writes';
 
-export type Progress = (step: { kind: 'picture' } | { kind: 'assets' | 'saving'; done: number; total: number }) => void;
+export type Progress = (step: { kind: 'picture' } | { kind: 'assets' | 'original' | 'saving'; done: number; total: number }) => void;
 
 type Owned = { avatar: Avatar | null; assets: Asset[]; lore: Lore[]; likeness: Likeness | null };
-
-// Files are read this many at a time and each window saved as one, so a bot of thousands never holds them all at once.
-const FILE_WINDOW = 32;
 
 // Write owned rows, move chat roots, then character: only complete characters become skippable on retry.
 // store.commit packs backward so roots share the character request unless count/bytes push them out.
@@ -49,31 +46,21 @@ export async function addCharacter(store: ObjectStore, character: Character, { a
 // Both import entrances use faceless for thumbnail failures and refused uploads, not absent source pictures.
 export type ImportedCharacter = { id: string; unsupported: Unsupported; faceless: boolean };
 
-// Pipeline read/upload windows, retaining at most two. typeOf null skips a file; inlays allow pictures/signatures only.
+// typeOf null skips a file; inlays allow pictures/signatures only.
 export async function saveAssets(files: Files, assets: Imported['assets'], progress: Progress, typeOf: (bytes: Uint8Array) => string | null = assetType, signal?: AbortSignal): Promise<ApiResult<{ kept: Asset[]; unsupported: Unsupported }>> {
-  const kept: Asset[] = [];
   const tally: Tally = new Map();
-  const saveWindow = async (start: number) => {
-    const window = await Promise.all(assets.slice(start, start + FILE_WINDOW).map(async ({ name, read }) => ({ name, bytes: await read() })));
-    const read = window.flatMap(({ name, bytes }) => {
-      const type = bytes && typeOf(bytes);
-      if (!bytes) add(tally, 'missing-asset');
-      else if (!type) add(tally, 'unsupported-file');
-      return type ? [{ name, type, bytes: bytes! }] : [];
-    });
-    return { read, saved: await files.save(read.map(({ bytes }) => bytes), { bulk: true, signal }) };
-  };
-  const starts = Array.from({ length: Math.ceil(assets.length / FILE_WINDOW) }, (_, index) => index * FILE_WINDOW);
-  for await (const [start, { read, saved }] of inOrder(starts, saveWindow, { ahead: 2 })) {
-    progress({ kind: 'assets', done: start, total: assets.length });
-    if (!saved.ok) return saved;
-    read.forEach(({ name, type, bytes }, index) => {
-      const file = saved.data[index];
-      if (file) kept.push({ name, type, size: bytes.length, file });
-      else add(tally, isVideo(type) ? 'refused-video' : 'refused-picture');
-    });
-  }
-  if (assets.length) progress({ kind: 'assets', done: assets.length, total: assets.length });
+  const saved = await saveEach(files, assets, ({ name }, bytes) => {
+    const type = bytes && typeOf(bytes);
+    if (!bytes) add(tally, 'missing-asset');
+    else if (!type) add(tally, 'unsupported-file');
+    return type ? { name, type } : null;
+  }, (done) => progress({ kind: 'assets', done, total: assets.length }), signal);
+  if (!saved.ok) return saved;
+  const kept = saved.data.flatMap(({ value, size, file }): Asset[] => {
+    if (file) return [{ ...value, size, file }];
+    add(tally, isVideo(value.type) ? 'refused-video' : 'refused-picture');
+    return [];
+  });
   return { ok: true, data: { kept, unsupported: counted(UNSUPPORTED_KINDS, tally) } };
 }
 

@@ -191,6 +191,9 @@ it('reads a .risum from slices of the file, never the whole of it', async () => 
   const read = await ask(reader, { kind: 'card', file, asModule: false });
   if (!read.ok || !('module' in read)) throw new Error('not a module');
   expect(await ask(reader, { kind: 'asset', handle: read.module.assets[0]!.handle })).toEqual(PNG);
+  const original = await ask(reader, { kind: 'original' });
+  expect(original.map(({ path }) => path)).toEqual(['risum-module', 'risum-block/0']);
+  expect(await ask(reader, { kind: 'asset', handle: original[1]!.handle })).toEqual(PNG);
   expect(whole).not.toHaveBeenCalled();
 });
 

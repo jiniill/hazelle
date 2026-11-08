@@ -87,6 +87,38 @@ export async function* inOrder<T, R>(items: readonly T[], start: (item: T) => Pr
   }
 }
 
+// Files are read this many at a time and each window saved as one, so a bot of thousands never holds them all at once.
+const FILE_WINDOW = 32;
+
+// Each item read and saved in windows, retaining at most two. prepare: what to keep of an item and its bytes (null when
+// unreadable), or null to leave it out. file null: the server refused it (Files.save).
+export async function saveEach<T extends { read: () => Promise<Uint8Array<ArrayBuffer> | null> }, P>(
+  files: Files,
+  items: readonly T[],
+  prepare: (item: T, bytes: Uint8Array<ArrayBuffer> | null) => P | null,
+  progress: (done: number) => void,
+  signal?: AbortSignal,
+): Promise<ApiResult<{ value: P; size: number; file: FileRef | null }[]>> {
+  const saved: { value: P; size: number; file: FileRef | null }[] = [];
+  const saveWindow = async (start: number) => {
+    const window = await Promise.all(items.slice(start, start + FILE_WINDOW).map(async (item) => {
+      const bytes = await item.read();
+      const value = prepare(item, bytes);
+      return value === null || bytes === null ? [] : [{ value, bytes }];
+    }));
+    const kept = window.flat();
+    return { kept, refs: await files.save(kept.map(({ bytes }) => bytes), { bulk: true, signal }) };
+  };
+  const starts = Array.from({ length: Math.ceil(items.length / FILE_WINDOW) }, (_, index) => index * FILE_WINDOW);
+  for await (const [start, { kept, refs }] of inOrder(starts, saveWindow, { ahead: 2 })) {
+    progress(start);
+    if (!refs.ok) return refs;
+    kept.forEach(({ value, bytes }, index) => saved.push({ value, size: bytes.length, file: refs.data[index] ?? null }));
+  }
+  if (items.length) progress(items.length);
+  return { ok: true, data: saved };
+}
+
 export const namedFile = (value: unknown): string | null => (isRecord(value) && isRecord(value.file) && typeof value.file.id === 'string' && FILE_ID.test(value.file.id) ? value.file.id : null);
 
 // Content-sealed files deduplicate within an account, never across accounts (server/files.ts).

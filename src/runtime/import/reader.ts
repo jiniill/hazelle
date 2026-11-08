@@ -5,10 +5,11 @@ import { unpackZip } from '../../engine/import/archive';
 import { importCard, importRisum } from '../../engine/import/card';
 import { importPreset, isPresetFile } from '../../engine/import/preset';
 import { risuChatFile } from '../../engine/import/risu-character';
+import { originalParts, risumParts, type Part } from '../../engine/import/original';
 import { fileSource } from '../../engine/import/source';
 import { readChatFile } from '../chat-file';
 import type { Imported, ImportedModule, Picture, RisuBackup, RisuChat } from '../../engine/import/types';
-import { MESSAGE_BYTES, MESSAGE_PAGE, type AssetRead, type CardData, type Method, type ModuleData, type Replies, type Request } from './protocol';
+import { MESSAGE_BYTES, MESSAGE_PAGE, type AssetRead, type CardData, type Method, type ModuleData, type PartRead, type Replies, type Request } from './protocol';
 
 
 // null for a JSON that is no file of chats, which importCard then reads as a card, parsing it again.
@@ -32,6 +33,8 @@ export class ImportReader {
   private next = 0;
   private assets = new Map<number, Imported['assets'][number]['read']>();
   private pictures = new Map<number, () => Promise<Picture | null>>();
+  // The last card file, for its original: a .risum is read in slices, any other file is held whole by its reads.
+  private opened: (() => Promise<Part[]>) | null = null;
 
   async handle(request: Request): Promise<Replies[Method]> {
     switch (request.kind) {
@@ -47,13 +50,16 @@ export class ImportReader {
         this.clear();
         this.backup = null;
         if (request.file.name.toLowerCase().endsWith('.risum')) {
-          const result = await importRisum(fileSource(request.file));
+          const source = fileSource(request.file);
+          this.opened = () => risumParts(source);
+          const result = await importRisum(source);
           return result.ok ? { ok: true, module: this.module(result.module) } : result;
         }
         const tool = request.file.name.toLowerCase().endsWith('.js');
         if (tool && request.file.size > TOOL_FILE_BYTES) return { ok: false, failure: { kind: 'unreadable', detail: 'tool-too-large' } };
         const bytes = new Uint8Array(await request.file.arrayBuffer());
         if (tool) return readToolFile(bytes);
+        this.opened = async () => originalParts(bytes);
         if (isPresetFile(request.file.name)) {
           const read = await importPreset(request.file.name, bytes);
           if (read.ok) return { ok: true, preset: { prompt: read.prompt, regex: read.regex, unsupported: read.unsupported } };
@@ -112,6 +118,8 @@ export class ImportReader {
       case 'release':
         this.chats = [];
         return null;
+      case 'original':
+        return (await this.opened!()).map(({ path, read }): PartRead => ({ path, handle: this.read(read) }));
       case 'asset': {
         const bytes = await this.assets.get(request.handle)!();
         // A reader can return a view into the archive. Transferring it would detach other pictures and retries.
@@ -125,17 +133,20 @@ export class ImportReader {
   }
 
   private clear() {
+    this.opened = null;
     this.chats = [];
     this.assets.clear();
     this.pictures.clear();
   }
 
   private reads(assets: Imported['assets']): AssetRead[] {
-    return assets.map(({ name, read }) => {
-      const handle = ++this.next;
-      this.assets.set(handle, read);
-      return { name, handle };
-    });
+    return assets.map(({ name, read }) => ({ name, handle: this.read(read) }));
+  }
+
+  private read(read: Imported['assets'][number]['read']): number {
+    const handle = ++this.next;
+    this.assets.set(handle, read);
+    return handle;
   }
 
   private picture(read: () => Promise<Picture | null>): number {

@@ -16,6 +16,7 @@ import { downloadLink, readLink, type BotLink, type LinkFailure } from '../../ru
 import { ImportReadError, ImportStuck, type ChatsRead } from '../../runtime/import/protocol';
 import { importModule, pairWithPrompts, replaceModules, sameNamespace, setModuleAt, setModuleDeleted, type ModulePlace } from '../../runtime/modules';
 import { fillPictures, importRisuChats, risuMatch } from '../../runtime/move';
+import { keepOriginal } from '../../runtime/originals';
 import { addRisuPersona, removePersona } from '../../runtime/personas';
 import { ofSort, removePrompt, savePreset } from '../../runtime/prompts';
 import type { ObjectStore } from '../../runtime/store';
@@ -31,7 +32,7 @@ import { useFiles, useLibrary, useSession, useSettings, useStore } from '../sess
 import { navigate, useRoute } from '../shell/router';
 import type { Route } from '../shell/routes';
 import { Avatar, Button, Callout, Checkbox, ChipButton, ChoiceGroup, ConfirmDialog, Dialog, DropOverlay, Empty, Hint, List, ListItem, Menu, MenuItem, Outcome, pickFiles, Progress, Stack, Text, TextField, useFileDrop, type ProgressStep } from '../ui';
-import { characterOutcome, characterPreview, chatOutcome, chatPreview, moduleOutcome, modulePreview, personaOutcome, personaPreview, promptOutcome, promptPreview, quoted, toolOutcome, toolPreview, type ImportKind, type ImportOutcome, type Line, type Preview } from './importOutcome';
+import { characterOutcome, characterPreview, chatOutcome, chatPreview, moduleOutcome, modulePreview, personaOutcome, personaPreview, promptOutcome, promptPreview, quoted, toolOutcome, toolPreview, withOriginal, type ImportKind, type ImportOutcome, type Line, type Preview } from './importOutcome';
 import { chatMissed, missedLines, moveMissed } from './missed';
 import { MoveDialog } from './MoveDialog';
 import { MoveFlow } from './MoveFlow';
@@ -171,10 +172,10 @@ export function ImportProvider({ children }: { children: ReactNode }) {
 
   // A file is read once for its preview and again to save it, so a batch never holds every archive while the user looks.
 // A zip's files are the exception: unpacked, they stay in memory until the dialog closes.
-  async function reading<T extends object>(file: File, place: ModulePlace | null, use: (parsed: Parsed) => Promise<T>): Promise<T | string> {
+  async function reading<T extends object>(file: File, place: ModulePlace | null, use: (parsed: Parsed, reader: ImportWorker) => Promise<T>): Promise<T | string> {
     return withReader(async (reader) => {
       const parsed = await reader.card(file, place?.kind === 'always');
-      return parsed.ok ? use(parsed) : describeImportFailure(parsed.failure);
+      return parsed.ok ? use(parsed, reader) : describeImportFailure(parsed.failure);
     });
   }
 
@@ -240,7 +241,17 @@ export function ImportProvider({ children }: { children: ReactNode }) {
 
   // offer: its 되돌리기. A new tool offers none: importTool refuses its identity again while the binned one is kept.
   async function save({ file, preview: { title }, choice }: Read, place: ModulePlace | null, progress: (step: ProgressStep) => void, offer: (undo: Undo) => void): Promise<Result> {
-    const saved = await reading(file, place, async (parsed): Promise<Result> => {
+    const saved = await reading(file, place, async (parsed, reader): Promise<Result> => {
+      // Once what it made is saved, which stays when this fails.
+      const keep = async (id: string, made: ImportOutcome): Promise<Result> => {
+        try {
+          const kept = await keepOriginal(store, files, id, await reader.original(file.name), (step) => progress(stepOf(step)));
+          return withOriginal(made, kept.ok ? kept.data : describeFailure(kept));
+        } catch (error) {
+          if (!(error instanceof ImportReadError)) throw error;
+          return withOriginal(made, '파일을 다시 읽지 못했어요.');
+        }
+      };
       if ('chat' in parsed || 'risuChats' in parsed) {
         const character = choice?.kind === 'character' ? choice.picked : null;
         if ('chat' in parsed) {
@@ -263,7 +274,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         if (!saved.ok) return unsaved(file.name, saved);
         offer(undoPrompt(store, saved.data.id, parsed.preset.prompt.name, saved.data.made));
         const modules = saved.data.paired.map((id) => moduleName(store.get('module', id)!.value.name));
-        return promptOutcome(file.name, title, saved.data.id, modules, saved.data.waiting);
+        return keep(saved.data.id, promptOutcome(file.name, title, saved.data.id, modules, saved.data.waiting));
       }
       if ('module' in parsed) {
         const { namespace } = parsed.module;
@@ -278,7 +289,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         const replacing = replaced && { names: olds.map(({ value }) => moduleName(value.name)), places: replaced.ok ? replaced.data : 0, failure: replaced.ok ? null : describeFailure(replaced) };
         const paired = await pairWithPrompts(store, saved.data.id, parsed.module);
         const pairing = paired.ok ? { prompts: paired.data.map((prompt) => promptName(prompt.value.name)), failure: null } : { prompts: [], failure: describeFailure(paired) };
-        return moduleOutcome(file.name, title, saved.data.id, saved.data.unsupported, { at: place?.kind ?? null, failure }, pairing, replacing);
+        return keep(saved.data.id, moduleOutcome(file.name, title, saved.data.id, saved.data.unsupported, { at: place?.kind ?? null, failure }, pairing, replacing));
       }
       if ('persona' in parsed) {
         const saved = await addRisuPersona(store, parsed.persona, await parsed.persona.picture());
@@ -295,7 +306,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       const saved = await importCardFile(store, files, parsed.card, (step) => progress(stepOf(step)));
       if (!saved.ok) return unsaved(file.name, saved);
       offer(undoCharacter(store, saved.data.id, parsed.card.card.name));
-      return characterOutcome(file.name, title, saved.data);
+      return keep(saved.data.id, characterOutcome(file.name, title, saved.data));
     });
     return typeof saved === 'string' ? failed(file.name, saved) : saved;
   }

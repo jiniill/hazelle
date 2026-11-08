@@ -13,7 +13,7 @@ import { aliased } from '../common/alias';
 import { packHolds } from '../common/pack';
 import { describeUnused } from '../common/unused';
 import { ALWAYS, DEFAULT_VARIABLES, inSettings, moduleName, NO_CHARACTER, promptName, RISU_PLUGIN, SCRIPTS, toolVersion } from '../common/words';
-import { cardMissed, missedLines, presetMissed } from './missed';
+import { cardMissed, missedLines, presetMissed, unkeptMissed } from './missed';
 
 // Never retain asset readers/source bytes in previews or outcomes: closures would keep entire archives alive.
 // Previews describe parsed content; outcomes add save-only facts. placed records activation/destination.
@@ -80,6 +80,13 @@ const outcome = (lines: (Line | null)[]) => lines.filter((line): line is Line =>
 
 export const characterOutcome = (file: string, title: string, { id, unsupported, faceless }: ImportedCharacter): ImportOutcome =>
   ({ kind: 'character', file, id, title, lines: [], missed: cardMissed(unsupported, faceless) });
+
+// After keeping the file it came from (runtime/originals): the pieces refused, or, a string, why none was kept. The
+// import itself stands either way.
+export function withOriginal(outcome: ImportOutcome, kept: { unkept: number } | string): ImportOutcome {
+  if (typeof kept === 'string') return { ...outcome, lines: [...outcome.lines, { text: `원본 파일을 보관하지 못했어요. ${kept}`, failed: true }] };
+  return kept.unkept > 0 ? { ...outcome, missed: [...outcome.missed, unkeptMissed(kept.unkept)] } : outcome;
+}
 
 export const quoted = (names: string[]) => names.map((name) => `'${name}'`).join(', ');
 

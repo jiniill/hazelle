@@ -66,6 +66,9 @@ export const presetMissed = (unsupported: PresetUnsupported[]): string[] =>
 
 export const cardMissed = (unsupported: Unsupported, faceless: boolean): string[] => [...(faceless ? ['이미지: 가져오지 못함'] : []), ...missedLines(unsupported)];
 
+// The pieces of an imported file the store refused to keep (runtime/originals).
+export const unkeptMissed = (count: number) => `보관하지 못한 원본 파일 조각 ${count}개`;
+
 export const moveMissed = (items: MoveUnsupported[]): string[] => items.map((item) => MOVE_UNSUPPORTED[item.kind](item.count));
 
 const DROPPED: Record<keyof Dropped, (count: number) => string> = {
