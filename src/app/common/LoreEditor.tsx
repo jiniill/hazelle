@@ -24,10 +24,10 @@ import { FolderMenu, useNaming, type FolderActions, type Naming } from './folder
 import { OpenRow, RowFoot, useOpenRows, type OpenRows } from './OpenRows';
 import { SLOT } from './prompt-words';
 import { typedText, useTypedNumber } from './typed';
-import { count, readCount, readOptional } from './typedNumber';
+import { count, readCount, readOptional, reader } from './typedNumber';
 import { useAutosave } from './useAutosave';
 import { useSearch } from './useSearch';
-import { follows, LORE_SCAN_WORDS, loreName, SCOPE } from './words';
+import { follows, LORE_SCAN_WORDS, loreName, SAVE_FAILED, SCOPE } from './words';
 
 type Position = Lore['position'];
 const POSITIONS: { value: NonNullable<Position> | 'lorebook'; label: string }[] = [
@@ -42,7 +42,7 @@ const KEYS_SHOWN = 3;
 
 const readNumber = (draft: string) => readOptional(draft, false);
 // undefined: empty, which follows the account's value.
-const readOwnCount = (draft: string) => (draft.trim() === '' ? undefined : readCount(draft));
+const readOwnCount = reader((draft) => (draft.trim() === '' ? undefined : readCount(draft)), readCount.error);
 
 type Scan = Card['loreSettings'];
 
@@ -99,7 +99,7 @@ function LoreScanFold({ id }: { id: string }) {
 
 function OwnScanNumber({ field, own, shared, onChange }: { field: 'tokenBudget' | 'scanDepth'; own: number | null; shared: number; onChange: (value: number | null) => void }) {
   const { label, help, unit, amount } = LORE_SCAN_WORDS[field];
-  const typed = useTypedNumber(readOwnCount, own ?? undefined, { error: readCount.error, onChange: (value) => onChange(value ?? null) });
+  const typed = useTypedNumber(readOwnCount, own ?? undefined, { onChange: (value) => onChange(value ?? null) });
   return (
     <SettingRow
       label={label}
@@ -134,8 +134,8 @@ function useLoreFolders(owner: LoreOwner): FolderActions {
   const toast = useToast();
   return {
     deepest: 1,
-    create: (name) => toast.settled(addLoreFolder(store, owner, name), '저장하지 못했어요.'),
-    rename: (id, name) => toast.settled(renameLoreFolder(store, owner, id, name), '저장하지 못했어요.'),
+    create: (name) => toast.settled(addLoreFolder(store, owner, name), SAVE_FAILED),
+    rename: (id, name) => toast.settled(renameLoreFolder(store, owner, id, name), SAVE_FAILED),
     remove: (folder) => {
       const removal = loreFolderRemoval(store, owner, folder.id);
       if (!removal) return false;

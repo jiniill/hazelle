@@ -31,7 +31,7 @@ import { ScriptsEditor } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import type { CharacterPart } from '../common/characterPart';
 import type { Frame } from '../common/frame';
-import { PICTURE_PERCENT_ERROR, readPicturePercent } from '../common/picturePercent';
+import { readPicturePercent } from '../common/picturePercent';
 import { FaceChange } from '../common/FaceChange';
 import { useTypedNumber } from '../common/typed';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
@@ -150,8 +150,8 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
     toast.settled(SWITCHES[field](store, id, on), SAVE_FAILED);
   }
 
-  const peek = useTypedNumber(readPicturePercent, pictures.peek, { error: PICTURE_PERCENT_ERROR, onChange: (value) => pictureSave.change({ peek: value }) });
-  const widest = useTypedNumber(readPicturePercent, pictures.widest, { error: PICTURE_PERCENT_ERROR, onChange: (value) => pictureSave.change({ widest: value }) });
+  const peek = useTypedNumber(readPicturePercent, pictures.peek, { onChange: (value) => pictureSave.change({ peek: value }) });
+  const widest = useTypedNumber(readPicturePercent, pictures.widest, { onChange: (value) => pictureSave.change({ widest: value }) });
 
   const percentRow = (percent: typeof peek, label: string, help: Help, placeholder: string) => (
     <SettingRow

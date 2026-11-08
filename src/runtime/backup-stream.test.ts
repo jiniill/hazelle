@@ -109,6 +109,13 @@ it('restores a backup built by the previous zipSync format', async () => {
   expect(next.held.size).toBe(source.objects.length);
 });
 
+it('fails a backup its destination cannot take as a file write, as every export does, and aborts it', async () => {
+  const output: BackupOutput = { write: vi.fn(async () => { throw new Error('disk full'); }), close: vi.fn(async () => {}), abort: vi.fn(async () => {}) };
+  expect(await exportBackup({ ...pins, scan: store([persona('person', 1)]).api.scan }, { read: vi.fn(), missing }, output)).toEqual({ ok: false, error: 'export-write' });
+  expect(output.close).not.toHaveBeenCalled();
+  expect(output.abort).toHaveBeenCalled();
+});
+
 it('serializes each decrypted body before releasing it and backpressures a slow destination', async () => {
   const count = 1024;
   let decrypted = 0;

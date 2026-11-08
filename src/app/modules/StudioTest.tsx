@@ -11,6 +11,7 @@ import type { Session } from '../../runtime/session';
 import { bodyLine, draftTrial, type DraftFile } from '../../runtime/tools/drafts';
 import { ToolFailure, type TrialWrite } from '../../runtime/tools/frame-state';
 import { trialReport, type PluginRunner, type TestMessage, type TestMoment, type TestRun, type TestStep } from '../../runtime/tools/plugin-writer';
+import { errorMessage } from '../../error-message';
 import { describeImportFailure } from '../common/importFailure';
 import { ModelMenu } from '../common/ModelMenu';
 import { cost } from '../common/receipt';
@@ -34,7 +35,7 @@ async function runTest(session: Session, draft: DraftFile, chat: string, moments
   if (!read.ok) return [{ failed: describeImportFailure(read.failure), line: null, code: true }];
   const failed = (error: unknown): Tested => {
     const code = error instanceof ToolFailure;
-    return { failed: error instanceof Error ? error.message : String(error), line: code && error.line !== null ? bodyLine(draft, error.line) : null, code };
+    return { failed: errorMessage(error), line: code && error.line !== null ? bodyLine(draft, error.line) : null, code };
   };
   try {
     const scope = await chatNow(session, chat, signal);

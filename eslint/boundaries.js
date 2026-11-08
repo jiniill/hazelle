@@ -11,11 +11,11 @@ const FEATURE = {
 };
 const AREAS = {
   toolApi: { paths: ['src/tool-api'], why: 'the public tool contract imports no application code.' },
-  sandbox: { paths: ['src/sandbox'], imports: ['toolApi'], why: 'the sandbox reaches only the public tool contract.' },
+  sandbox: { paths: ['src/sandbox'], imports: ['toolApi', 'errorMessage'], why: 'the sandbox reaches only the public tool contract and the one way to say what was thrown.' },
   changeSignal: { paths: ['src/change-signal'], why: 'argument-free change notifications import no application or environment code.' },
   base64: { paths: ['src/base64'], why: 'one base64 codec for the vault, the connectors and the engine; it imports nothing, so none of them learns of another layer through it.' },
   hex: { paths: ['src/hex'], why: 'one lowercase hex writer for the ids and names the runtime, the vault, the engine and the server derive from bytes; it imports nothing, so none of them learns of another layer through it.' },
-  errorMessage: { paths: ['src/error-message'], why: 'one way to say what was thrown for the runtime, the engine and the connectors; it imports nothing, so none of them learns of another layer through it.' },
+  errorMessage: { paths: ['src/error-message'], why: 'one way to say what was thrown for the runtime, the engine, the connectors, the server and the sandbox; it imports nothing, so none of them learns of another layer through it.' },
   contracts: { paths: ['src/contracts'], why: 'wire values shared by the server and client import no other layer.' },
   connectors: {
     paths: ['src/connectors'],
@@ -38,8 +38,8 @@ const AREAS = {
   vault: { paths: ['src/vault'], imports: ['base64', 'hex'], why: 'the vault is crypto and device storage only; it never reaches the network.' },
   server: {
     paths: ['src/server'],
-    imports: ['contracts', 'hex', 'modelsDev', 'destination'],
-    why: 'the server knows nothing about the client or providers, but their wire contracts, which models.dev lists to keep (connectors/models-dev), how a local provider\'s address is matched (connectors/destination) and the hex writer its file ids and session tokens share with the client.',
+    imports: ['contracts', 'hex', 'errorMessage', 'modelsDev', 'destination'],
+    why: 'the server knows nothing about the client or providers, but their wire contracts, which models.dev lists to keep (connectors/models-dev), how a local provider\'s address is matched (connectors/destination), the hex writer its file ids and session tokens share with the client and the one way to say what was thrown.',
   },
   runtime: {
     paths: ['src/runtime'],

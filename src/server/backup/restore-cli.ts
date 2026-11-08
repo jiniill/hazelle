@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { errorMessage } from '../../error-message';
 import { chooseBucket } from '../files/choose';
 import { restoreGeneration } from './restore';
 
@@ -16,6 +17,6 @@ try {
   const options = { fromStore: flags.includes('--snapshots-from-store'), withoutDepartures: flags.includes('--without-departures') };
   console.log(JSON.stringify(await restoreGeneration(generation, dataDir, migrationsDir, chooseBucket(process.env, dataDir), options)));
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(errorMessage(error));
   process.exit(1);
 }

@@ -164,7 +164,7 @@ export async function exportBackup(
     complete = true;
     return { ok: true, data: { left, skipped } };
   } catch {
-    return refused ?? { ok: false, error: signal.aborted ? 'stopped' : 'backup-write' };
+    return refused ?? { ok: false, error: signal.aborted ? 'stopped' : 'export-write' };
   } finally {
     if (!complete) await output.abort();
   }

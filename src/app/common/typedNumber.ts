@@ -18,11 +18,14 @@ export function readOptional(draft: string, whole: boolean): number | null | und
   return typed.ok ? typed.value : null;
 }
 
-// A whole number from least up; null: not one the field takes, as error says.
-const readAtLeast = (least: number) => Object.assign((draft: string): number | null => {
+// A field's reader: null for a text the field does not take, as error says.
+export type Reader<V> = ((draft: string) => V | null) & { error: string };
+export const reader = <V>(read: (draft: string) => V | null, error: string): Reader<V> => Object.assign(read, { error });
+
+const readAtLeast = (least: number) => reader((draft) => {
   const typed = readTyped(draft, true);
   return typed.ok && typed.value >= least ? typed.value : null;
-}, { error: `${least} 이상의 정수를 입력해 주세요.` });
+}, `${least} 이상의 정수를 입력해 주세요.`);
 
 export const readCount = readAtLeast(1);
 export const readWhole = readAtLeast(0);

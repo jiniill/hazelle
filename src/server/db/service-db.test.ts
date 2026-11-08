@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
+import { errorMessage } from '../../error-message';
 import { migrate } from './migrate';
 import { placeholders, serviceDb, type Db } from './service-db';
 
@@ -117,7 +118,7 @@ describe('the service adapter', () => {
           raw.prepare(sql);
           return [];
         } catch (error) {
-          return [`${file}: ${sql.trim().slice(0, 60)} → ${error instanceof Error ? error.message : String(error)}`];
+          return [`${file}: ${sql.trim().slice(0, 60)} → ${errorMessage(error)}`];
         }
       });
     expect(failed).toEqual([]);

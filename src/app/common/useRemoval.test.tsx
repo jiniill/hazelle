@@ -2,6 +2,7 @@ import { act } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { probeRoot } from '../ui/probe';
 import { useRemoval } from './useRemoval';
+import { REMOVE_FAILED } from './words';
 
 const toast = { failed: vi.fn(), undoable: vi.fn() };
 vi.mock('../toast', () => ({ useToast: () => toast }));
@@ -22,7 +23,7 @@ it('says why a delete failed, else leaves and offers the 되돌리기 with what 
     removal({ name: (removed) => removed, noun: '프롬프트', task, restore, then, detail: '휴지통' });
 
   expect(await remove(async () => ({ ok: false, error: 'gone' }))).toBe(false);
-  expect(toast.failed).toHaveBeenCalledWith({ ok: false, error: 'gone' }, '삭제하지 못했어요.');
+  expect(toast.failed).toHaveBeenCalledWith({ ok: false, error: 'gone' }, REMOVE_FAILED);
   expect(then).not.toHaveBeenCalled();
 
   expect(await remove(async () => ({ ok: true, data: '짝' }))).toBe(true);

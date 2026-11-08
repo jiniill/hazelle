@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SELF_RESTORES_PER_DAY } from '../../contracts/admin';
 import { exportBackup, readBackup, restoreBackup, type Backup, type BackupStep } from '../../runtime/backup';
 import { ACTS, importOf } from '../common/acts';
-import { FILE_UNSAVED, runExport } from '../common/exporting';
+import { runExport } from '../common/exporting';
 import { RELOAD_RETRY } from '../common/failure';
 import { RestoresDialog } from '../common/RestoresDialog';
 import { ACCOUNT_ONLY, RESTORE_SPAN, SAVING_FILE, STOP } from '../common/words';
@@ -78,7 +78,7 @@ export function BackupSection() {
         const detail = [left ? `암호화 키로 열리지 않는 항목 ${left}개는 뺐어요.` : '', skipped ? `차단된 이미지 ${skipped}개는 뺐어요.` : ''].filter(Boolean).join(' ');
         toast.show('백업을 내보냈어요.', detail ? { detail } : undefined);
       },
-      { own: { 'backup-crashed': UNREAD['backup-crashed'], 'backup-write': FILE_UNSAVED } },
+      { own: { 'backup-crashed': UNREAD['backup-crashed'] } },
     );
   }
 

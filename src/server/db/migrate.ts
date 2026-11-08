@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
+import { errorMessage } from '../../error-message';
 import { transaction } from './transaction';
 
 // Apply whole migrations in filename order, atomically with ledger entries. Require an unchanged ordered prefix:
@@ -33,7 +34,7 @@ export function migrate(db: DatabaseSync, directory: string): { applied: string[
         db.prepare('INSERT INTO migrations (name, checksum, applied_at) VALUES (?, ?, ?)').run(file.name, file.checksum, Date.now());
       });
     } catch (error) {
-      throw new Error(`migrations: ${file.name} failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+      throw new Error(`migrations: ${file.name} failed: ${errorMessage(error)}`, { cause: error });
     }
     applied.push(file.name);
   }

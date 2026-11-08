@@ -4,10 +4,11 @@ import { storyHtml } from '../../engine/display';
 import { addLook, editLook, moveLook, removeLook, restoreLook } from '../../runtime/looks';
 import { ACTS } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
-import { PICTURE_PERCENT_ERROR, readPicturePercent } from '../common/picturePercent';
+import { readPicturePercent } from '../common/picturePercent';
 import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRows';
 import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
+import { reader } from '../common/typedNumber';
 import { DETAIL, detailLabel, PAGES, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useStore } from '../session';
@@ -167,11 +168,11 @@ export function DisplayScreen({ back }: { back: Back | null }) {
 }
 
 // Unlike a character's, this one is never empty: it is what an empty one follows.
-const readWidest = (draft: string) => readPicturePercent(draft) ?? null;
+const readWidest = reader((draft) => readPicturePercent(draft) ?? null, readPicturePercent.error);
 
 function PictureWidestRow() {
   const { display, changeDisplay } = useDisplay();
-  const widest = useTypedNumber(readWidest, display.pictureWidest, { error: PICTURE_PERCENT_ERROR, onChange: (pictureWidest) => changeDisplay({ pictureWidest }) });
+  const widest = useTypedNumber(readWidest, display.pictureWidest, { onChange: (pictureWidest) => changeDisplay({ pictureWidest }) });
   return (
     <SettingRow
       label="이미지 최대 폭"

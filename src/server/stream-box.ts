@@ -1,5 +1,6 @@
 import { RELAY_HEADER, RELAY_SOURCE, STREAM_FRAMES, STREAM_HEADER, type ServerError } from '../contracts/http';
 import { HELLO, HEAD, DATA, END, PING, PING_MS, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
+import { errorMessage } from '../error-message';
 import { DAY_MS, isRecord } from './http';
 import type { RelayAllowance } from './limits';
 import { forward, RelayTrafficLimit, type Upstream } from './relay';
@@ -235,7 +236,7 @@ export class StreamBox {
         else gathering ??= setTimeout(flush, GATHER_MS);
       }
     } catch (error) {
-      end = limited || error instanceof RelayTrafficLimit || signal.reason instanceof RelayTrafficLimit ? { reason: 'limit' } : signal.aborted ? { reason: 'stopped' } : { reason: 'network', detail: error instanceof Error ? error.message : String(error) };
+      end = limited || error instanceof RelayTrafficLimit || signal.reason instanceof RelayTrafficLimit ? { reason: 'limit' } : signal.aborted ? { reason: 'stopped' } : { reason: 'network', detail: errorMessage(error) };
     } finally {
       clearTimeout(limit);
     }
