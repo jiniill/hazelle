@@ -6,7 +6,7 @@ import { stepByKey, strokeStep } from './pages';
 const element = (tag: string) => ({ closest: (selector: string) => (selector.split(', ').includes(tag) ? {} : null) });
 
 const press = (key: string, target: ReturnType<typeof element>, shiftKey = false) =>
-  ({ key, target, shiftKey, altKey: false, ctrlKey: false, metaKey: false, preventDefault: vi.fn() }) as unknown as KeyboardEvent;
+  ({ key, code: '', target, shiftKey, altKey: false, ctrlKey: false, metaKey: false, nativeEvent: { isComposing: false, keyCode: 0 }, preventDefault: vi.fn() }) as unknown as KeyboardEvent;
 
 it('steps with ← →, and leaves the arrows to a field, a video and a held modifier', () => {
   const onStep = vi.fn();

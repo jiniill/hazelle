@@ -7,7 +7,7 @@ const lockName = (name: string) => `${TEMPORARY}/${name}`;
 type Spool = { written: boolean; end: () => Promise<void> };
 const spools = new Set<Spool>();
 
-function clickDownload(filename: string, url: string) {
+export function clickDownload(filename: string, url: string) {
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;

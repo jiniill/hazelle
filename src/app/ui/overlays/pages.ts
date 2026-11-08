@@ -1,4 +1,5 @@
 import { useRef, type KeyboardEvent, type TouchEvent } from 'react';
+import { pressedKey } from '../foundation/keys';
 
 // What an overlay steps through: the versions of a picture, the assets of a list.
 export type Pages = { at: number; count: number; onStep: (by: -1 | 1) => void };
@@ -8,11 +9,14 @@ const OWN_ARROWS = 'input, textarea, select, video, audio, [contenteditable]:not
 
 export const stepping = (pages: Pages | undefined) => (pages && pages.count > 1 ? pages : undefined);
 
+export const STEP_KEYS = { label: '이전 · 다음', keys: [{ key: 'ArrowLeft', mod: false, shift: false }, { key: 'ArrowRight', mod: false, shift: false }] } as const;
+
 export function stepByKey(pages: Pages | undefined, event: KeyboardEvent) {
-  if (!pages || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || (event.target as Element).closest(OWN_ARROWS)) return;
+  if (!pages) return;
+  const step = pressedKey(event, STEP_KEYS.keys);
+  if (step === -1 || (event.target as Element).closest(OWN_ARROWS)) return;
   event.preventDefault();
-  pages.onStep(event.key === 'ArrowLeft' ? -1 : 1);
+  pages.onStep(step === 0 ? -1 : 1);
 }
 
 type Point = { x: number; y: number };

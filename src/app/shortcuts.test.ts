@@ -1,6 +1,7 @@
 import { act, createElement, Fragment } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { keysOf, Quiet, runShortcut, SHORTCUT_GROUPS, SHORTCUTS, titled, useShortcut } from './shortcuts';
+import { keysOf, Quiet, runShortcut, SHORTCUT_GROUPS, SHORTCUTS, useShortcut } from './shortcuts';
+import { titled } from './ui';
 import { probeRoot } from './ui/probe';
 
 describe('shortcuts', () => {

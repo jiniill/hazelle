@@ -28,3 +28,5 @@ const NAMES: Record<string, string> = { Escape: 'Esc', ArrowUp: '↑', ArrowDown
 export const keyCaps = ({ key, shift, mod, alt }: Chord) => [...(mod ? ['Ctrl'] : []), ...(alt ? ['Alt'] : []), ...(shift ? ['Shift'] : []), NAMES[key] ?? (LETTER.test(key) ? key.toUpperCase() : key)];
 
 export const formatKeys = (chords: readonly Chord[]) => chords.map((chord) => keyCaps(chord).join('+')).join(' ');
+
+export const titled = (label: string, keys: readonly Chord[]) => `${label} · ${formatKeys(keys)}`;

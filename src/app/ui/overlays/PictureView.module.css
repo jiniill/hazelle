@@ -1,42 +1,69 @@
+/* Its bars take their own rows, so they never cover the picture, and the picture fills the row between them. */
 .view {
   composes: fadeIn from '../foundation/motion.module.css';
   position: fixed;
   inset: 0;
   z-index: var(--layer-dialog);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--space-12);
+  padding: var(--space-16);
   background: var(--color-scrim);
+  backdrop-filter: var(--filter-scrim);
 }
 
-/* The whole window, which the picture is measured against, so it grows past its own pixels to fill it. The buttons float
-   over it and take none of its room. */
+/* The room the picture is measured against. */
 .stage {
-  position: absolute;
-  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-16);
+  min-height: 0;
   container-type: size;
 }
 
-/* Size the box from PictureView --ratio so outside-picture clicks hit backdrop, not letterbox. Contain mismatched files without stretching. */
+/* Zoomed it may pass the room, and the room scrolls; margin keeps a smaller one centred. */
+.zoomed {
+  overflow: auto;
+}
+
+/* Size the box from --ratio so outside-picture clicks hit backdrop, not letterbox. Contain mismatched files without stretching. */
 .image {
-  --whole: min(100cqw, 100cqh * var(--ratio));
+  --room: min(100cqw, 100cqh * var(--ratio));
 
   display: block;
-  width: var(--whole);
+  /* Never past its own pixels until zoomed, so a small picture is not blurred unasked. */
+  width: min(var(--room), var(--own-width));
   aspect-ratio: var(--ratio);
   border-radius: var(--radius-md);
   object-fit: contain;
 }
 
-/* Over the picture's top; a press there passes through to the picture or the backdrop. */
+img.image {
+  cursor: zoom-in;
+}
+
+.zoomed .image {
+  /* The room filled, or every pixel of one larger than the room. */
+  flex-shrink: 0;
+  width: max(var(--room), var(--own-width));
+  margin: auto;
+}
+
+.zoomed img.image {
+  cursor: zoom-out;
+}
+
+/* Until its size is read, so it never shows at a size it is about to leave. */
+.waiting {
+  visibility: hidden;
+}
+
+/* A press on its empty part passes through to the backdrop. */
 .top {
-  position: absolute;
-  top: var(--space-16);
-  right: var(--space-16);
-  left: var(--space-16);
   display: flex;
   align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
   pointer-events: none;
 }
 
@@ -49,6 +76,7 @@
   pointer-events: auto;
 }
 
+.about,
 .count {
   height: var(--control-md);
   padding: 0 var(--space-12);
@@ -57,8 +85,30 @@
   font-variant-numeric: tabular-nums;
 }
 
-.close {
+.about {
+  gap: var(--space-8);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.title {
+  overflow: hidden;
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+}
+
+.tools {
   margin-left: auto;
+}
+
+/* Wraps on a narrow window, so its corners stay round on more than one line. */
+.foot {
+  flex-wrap: wrap;
+  justify-content: center;
+  justify-self: center;
+  max-width: 100%;
+  border-radius: var(--radius-lg);
 }
 
 .side {

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
+import { ACTS } from './common/acts';
 import { UNDO } from './common/words';
-import { formatKeys, pressed, type Chord } from './ui';
+import { ZOOM_KEYS, pressed, STEP_KEYS, type Chord } from './ui';
 
 type Shortcut = { label: string; keys: readonly Chord[] };
 
@@ -40,6 +41,13 @@ export const SHORTCUTS = {
   redo: { label: '다시 실행', keys: [{ key: 'z', mod: true, shift: true }, { key: 'y', mod: true }] },
   // Not Risu's Ctrl+X: in a text field that is cut. Shift held, no other chord here matches it.
   bigEdit: { label: '크게 편집 열기 · 닫기', keys: [{ key: 'x', mod: true, shift: true }] },
+  // Handled by PictureView itself, listed here.
+  pictureStep: STEP_KEYS,
+  pictureZoom: ZOOM_KEYS,
+  assetExport: { label: ACTS.export.label, keys: [{ key: 's', mod: false, shift: false }] },
+  assetTag: { label: `태그 ${ACTS.copy.label}`, keys: [{ key: 'c', mod: true }] },
+  assetRename: { label: ACTS.rename.label, keys: [{ key: 'F2' }] },
+  assetRemove: { label: ACTS.remove.label, keys: [{ key: 'Delete' }] },
 } as const satisfies Record<string, Shortcut>;
 
 type Name = keyof typeof SHORTCUTS;
@@ -56,6 +64,8 @@ export const SHORTCUT_GROUPS: readonly { title: string; note?: string; names: re
   { title: '번역기', note: '원문 칸에서 작동해요.', names: ['translate'] },
   { title: '프롬프트 편집', note: '블록과 토글 변경을 되돌리고, 텍스트 칸 안에서는 입력한 내용을 되돌려요.', names: ['undo', 'redo'] },
   { title: '긴 텍스트 칸', note: '로어북 항목 내용, 프롬프트 블록의 텍스트 칸, 트리거 코드 칸에서 작동해요.', names: ['bigEdit'] },
+  { title: '이미지 크게 보기', note: '채팅의 이미지와 에셋을 눌러 크게 볼 때 작동해요. 이미지를 눌러도 확대돼요.', names: ['pictureStep', 'pictureZoom'] },
+  { title: '에셋 크게 보기', names: ['assetExport', 'assetTag', 'assetRename', 'assetRemove'] },
 ];
 
 const TEXT_INPUTS = new Set(['text', 'search', 'password']);
@@ -112,4 +122,3 @@ export function runShortcut(name: Name) {
   for (const entry of inTurn()) if (entry.name === name && entry.run() !== false) return;
 }
 
-export const titled = (label: string, keys: readonly Chord[]) => `${label} · ${formatKeys(keys)}`;

@@ -1,13 +1,16 @@
 import { unsupportedCount } from '../../engine/import/types';
-import { ImageUp, type LucideIcon } from 'lucide-react';
+import { ImageUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { findAsset, isVideo } from '../../engine/assets';
+import { extensionOf } from '../../engine/import/convert';
 import type { Stored } from '../../model/kinds';
 import { addAssets, removeAssets, renameAsset, replaceAsset, restoreAssets } from '../../runtime/characters';
 import { useAssetUrl, useChildren, useFiles, useStore, useUnfoundAssets } from '../session';
+import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
-import { Button, Callout, CardGrid, Dialog, DropOverlay, Empty, FaceCard, FileButton, MenuItem, MoreMenu, pickFiles, Preview, Row, Section, Stack, useFileDrop, type Pages } from '../ui';
+import { Button, Callout, CardGrid, DropOverlay, Empty, FaceCard, FileButton, MenuItem, MoreMenu, pickFiles, PictureView, Row, Section, Stack, useFileDrop, type Pages, type PictureAction } from '../ui';
 import { ACTS, addOf } from './acts';
+import { clickDownload, fileNamed } from './download';
 import { NameDialog } from './NameDialog';
 import { useCopy } from './useCopy';
 import { useSearch } from './useSearch';
@@ -77,11 +80,11 @@ export function AssetsEditor({ owner }: { owner: string }) {
     toast.settled(renameAsset(store, asset.id, name), SAVE_FAILED);
   }
 
-  const actionsOf = (asset: Stored<'asset'>): Action[] => [
-    { icon: ACTS.copy.icon, label: `태그 ${ACTS.copy.label}`, run: () => copy(`{{${isVideo(asset.value.type) ? 'video' : 'img'}::${asset.value.name}}}`) },
-    { icon: ACTS.rename.icon, label: ACTS.rename.label, run: () => setNaming(asset) },
+  const actionsOf = (asset: Stored<'asset'>): PictureAction[] => [
+    { icon: ACTS.copy.icon, ...SHORTCUTS.assetTag, run: () => copy(`{{${isVideo(asset.value.type) ? 'video' : 'img'}::${asset.value.name}}}`) },
+    { icon: ACTS.rename.icon, ...SHORTCUTS.assetRename, run: () => setNaming(asset) },
     { icon: ImageUp, label: isVideo(asset.value.type) ? '영상 바꾸기' : CHANGE_IMAGE, run: () => pickFiles(ACCEPT, false, ([file]) => void replace(asset.id, file!)) },
-    { icon: ACTS.remove.icon, label: ACTS.remove.label, warn: true, run: () => { setViewing(null); void remove([asset.id]); } },
+    { icon: ACTS.remove.icon, ...SHORTCUTS.assetRemove, warn: true, run: () => { setViewing(null); void remove([asset.id]); } },
   ];
 
   const press = (id: string) => (picked ? selection.toggle(id) : setViewing(id));
@@ -130,10 +133,9 @@ export function AssetsEditor({ owner }: { owner: string }) {
   );
 }
 
-type Action = { icon: LucideIcon; label: string; warn?: boolean; run: () => void };
 const kindOf = ({ value }: Stored<'asset'>) => value.type.slice(value.type.indexOf('/') + 1).toUpperCase();
 
-type CardProps = { asset: Stored<'asset'>; shared: number; picked: boolean | null; onPress: () => void; actions: Action[] };
+type CardProps = { asset: Stored<'asset'>; shared: number; picked: boolean | null; onPress: () => void; actions: PictureAction[] };
 
 // Each card holds its own file while drawn, so a grid of thousands keeps only the rows on screen.
 function AssetCard({ asset, shared, picked, onPress, actions }: CardProps) {
@@ -162,22 +164,10 @@ function AssetCard({ asset, shared, picked, onPress, actions }: CardProps) {
 }
 
 // Its own view, so the whole file is held only while it is open.
-function AssetPreview({ asset, actions, pages, onClose }: { asset: Stored<'asset'>; actions: Action[]; pages: Pages | undefined; onClose: () => void }) {
+function AssetPreview({ asset, actions, pages, onClose }: { asset: Stored<'asset'>; actions: PictureAction[]; pages: Pages | undefined; onClose: () => void }) {
   const url = useAssetUrl([asset]);
-  return (
-    <Dialog
-      title={asset.value.name}
-      note={kindOf(asset)}
-      size="wide"
-      pages={pages}
-      onClose={onClose}
-      actions={actions.map(({ icon, label, warn, run }) => (
-        <Button key={label} variant={warn ? 'danger' : 'secondary'} icon={icon} onClick={run}>
-          {label}
-        </Button>
-      ))}
-    >
-      <Preview image={url('asset', asset.id) ?? null} video={isVideo(asset.value.type)} name={asset.value.name} />
-    </Dialog>
-  );
+  const src = url('asset', asset.id);
+  const { name, type } = asset.value;
+  const shown = src ? [{ icon: ACTS.export.icon, ...SHORTCUTS.assetExport, run: () => clickDownload(fileNamed(name, ASSET, extensionOf(type)), src) }, ...actions] : actions;
+  return <PictureView src={src} label={name} video={isVideo(type)} title={name} note={kindOf(asset)} actions={shown} pages={pages} onClose={onClose} />;
 }

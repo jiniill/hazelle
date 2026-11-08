@@ -4,7 +4,7 @@ import { probeRoot } from '../ui/probe';
 import type { PartAt } from './useMessageEdit';
 import { useSelectedPart } from './useSelectedPart';
 
-vi.mock('../ui', async () => ({ ...(await import('../ui/foundation/keys')), storySelection: () => ({ pieces: ['비가'], end: { x: 0, top: 0, bottom: 0 }, before: '오늘은 ' }) }));
+vi.mock('../ui', async () => ({ ...(await import('../ui/foundation/keys')), STEP_KEYS: (await import('../ui/overlays/pages')).STEP_KEYS, ZOOM_KEYS: (await import('../ui/overlays/PictureView')).ZOOM_KEYS, storySelection: () => ({ pieces: ['비가'], end: { x: 0, top: 0, bottom: 0 }, before: '오늘은 ' }) }));
 
 afterEach(() => {
   vi.unstubAllGlobals();

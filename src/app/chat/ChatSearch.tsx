@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent } from 'react';
-import { SHORTCUTS, titled } from '../shortcuts';
-import { IconButton, pressed, SearchField, Switcher } from '../ui';
+import { SHORTCUTS } from '../shortcuts';
+import { IconButton, pressed, SearchField, Switcher, titled } from '../ui';
 import type { useChatSearch } from './useChatSearch';
 
 type Search = ReturnType<typeof useChatSearch>;

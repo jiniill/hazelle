@@ -24,12 +24,7 @@ export function StoryPicture({ src, label, width, height, status, foot, pages }:
   // A veil tapped open or shut changes only veil.revealed, which no render sees.
   const [, tapVeil] = useReducer((count: number) => count + 1, 0);
   const [open, setOpen] = useState(false);
-  // A version stepped to inside the view is seen there, so it stays uncovered when the view closes.
   const veiled = veil !== null && src !== undefined && !open && !veil.revealed.has(src);
-  const close = () => {
-    if (veil && src) veil.revealed.add(src);
-    setOpen(false);
-  };
   return (
     <figure className={styles.picture}>
       <div className={status ? `${styles.frame} ${styles.making}` : styles.frame} style={{ '--ratio': width / height } as CSSProperties}>
@@ -52,7 +47,7 @@ export function StoryPicture({ src, label, width, height, status, foot, pages }:
               <button type="button" className={styles.open} aria-label={`${label} 크게 보기`} onClick={() => setOpen(true)}>
                 <img className={styles.image} src={src} alt={label} />
               </button>
-              {open && <PictureView src={src} label={label} ratio={width / height} pages={pages && { at: pages.at, count, onStep: step }} onClose={close} />}
+              {open && <PictureView src={src} label={label} pages={pages && { at: pages.at, count, onStep: step }} onClose={() => setOpen(false)} />}
               {veil && (
                 <button
                   type="button"

@@ -438,7 +438,6 @@
   --mascot-card-width: 360px;
   --mascot-portrait-width: 132px;
   --mascot-portrait-width-phone: 100px;
-  --preview-max-height: 60dvh;
   --header-height: 60px;
   --control-compact: 38px;
   --avatar-sm: 22px;
@@ -558,6 +557,7 @@
   --border-medium: 1.5px;
   --border-thick: 2px;
   --filter-glass: blur(16px) saturate(150%);
+  --filter-scrim: blur(4px);
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
   /* How far a ring reaches past its element: the room a box that scrolls or clips keeps around what can take focus. */
