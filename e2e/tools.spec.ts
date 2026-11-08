@@ -242,6 +242,7 @@ test('a memory tool holds the memory slot, recalls by embedding, badges, follows
     await covered.hover();
     await covered.getByRole('button', { name: '메시지 메뉴', exact: true }).click();
     await page.getByRole('menuitem', { name: '여기서 분기', exact: true }).click();
+    await page.getByRole('status').getByRole('button', { name: '열기', exact: true }).click();
     await expect(page).not.toHaveURL(chat);
     await send('Back on the stairs.');
     expect(main().at(-1)!.messages.some(({ content }) => content === node(1))).toBe(true);

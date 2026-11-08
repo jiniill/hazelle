@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContext, type Page, type Route } from '@playwright/test';
 import { build, type Rollup } from 'vite';
 import { fileURLToPath } from 'node:url';
+import { UNFED } from '../src/runtime/object-cache';
 import { GENERATION_STEPS } from '../src/runtime/testing/cache';
 import { CARD, confirmImport, pickBot, settingsPage, signUpAsGuest } from './helpers';
 
@@ -47,8 +48,9 @@ class FakeServer {
     this.timeline = timeline;
   }
 
+  // The rows a tab's cache holds: a kind read under its parent is never fed, so never cached until that parent opens.
   ids(): string[] {
-    return [...this.rows.keys()].toSorted();
+    return [...this.rows.values()].filter((row) => !UNFED.has(row.kind)).map((row) => row.id).toSorted();
   }
 
   // A page's matching requests are answered as the server saw them when they came, but only once released.

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('session loading and retry stay visible without downloading the workspace', async ({ page }) => {
+test('session loading and retry stay visible without downloading a screen', async ({ page }) => {
   let respond = () => {};
   let attempts = 0;
   const scripts: string[] = [];
@@ -27,6 +27,7 @@ test('session loading and retry stay visible without downloading the workspace',
   await expect(page.getByRole('button', { name: '로그인', exact: true })).toBeVisible();
   await expect(page.getByLabel('아이디', { exact: true })).toHaveValue('e2e');
   await expect(progress).toHaveCount(0);
-  expect(scripts.some((url) => /\/(Workspace|AdminScreen|ChatScreen|PromptScreen)-/.test(url))).toBe(false);
+  // A returning browser fetches the workspace while the server answers (main.tsx); a screen waits for its place.
+  expect(scripts.some((url) => /\/(AdminScreen|ChatScreen|PromptScreen)-/.test(url))).toBe(false);
   expect(errors).toEqual([]);
 });
