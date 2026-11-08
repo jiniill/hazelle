@@ -152,8 +152,11 @@
   composes: fill from '../foundation/hover.module.css';
 }
 
+/* Also written under the pointer, so the current fill outranks the hover fill. */
 .item[aria-current],
-.item[aria-pressed='true'] {
+.item[aria-pressed='true'],
+.item[aria-current]:hover:not(:disabled),
+.item[aria-pressed='true']:hover:not(:disabled) {
   background: var(--current-fill, var(--color-surface-raised));
 }
 
