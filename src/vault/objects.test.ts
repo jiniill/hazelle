@@ -14,6 +14,13 @@ describe('object bodies', () => {
     expect(await openObject(key, 'account-1', address, body)).toEqual(value);
   });
 
+  it('opens values larger than the reused inflate buffer, and many values at once, each whole', async () => {
+    const key = await objectKey(randomBytes(32));
+    const values = [{ notes: '반복 '.repeat(400_000) }, ...Array.from({ length: 20 }, (_, index) => ({ index, notes: '짧은 글 '.repeat(index) }))];
+    const bodies = await Promise.all(values.map((value) => sealObject(key, 'account-1', address, value)));
+    expect(await Promise.all(bodies.map((body) => openObject(key, 'account-1', address, body)))).toEqual(values);
+  });
+
   it('refuses a body moved to another object, kind, parent or account, or opened with another key', async () => {
     const vaultKey = randomBytes(32);
     const key = await objectKey(vaultKey);
