@@ -19,11 +19,12 @@ import { Likenesses } from './likeness';
 import { Commentator } from './mascot';
 import { Polisher } from './agents';
 import type { Briefs } from './preread';
-import { deviceCache } from './device-cache';
+import { deviceCache, logCache, type BrowserLogCache } from './device-cache';
 import { Drafts } from './drafts';
 import type { DeviceCache } from './object-cache';
 import { Rememberer } from './memory';
 import { RequestLog } from './request-log';
+import { DeviceLog } from './device-log';
 import { addFirstPersona, recordChatPersonas } from './personas';
 import { addFirstProfile } from './profiles';
 import { addDefaults } from './prompts';
@@ -99,7 +100,7 @@ const luaWorker = (): Promise<LuaRunner> => Promise.resolve(new LuaWorker());
 
 // Aborted opens start nothing; cached opens never wait on network. Caller keeps drafts for the unlocked vault.
 // Guests use their browser master directly, without a redundant device cache.
-export async function openSession(accountId: string, vaultKey: VaultKey, username: string, signal: AbortSignal, progress?: (progress: PullProgress) => void, kept: { backend: Backend; cache?: DeviceCache; transport?: Transport } = { backend: serverBackend(), cache: deviceCache(accountId) }, bindings: { lua?: () => Promise<LuaRunner>; tools?: typeof createTools; drafts?: Drafts } = {}): Promise<ApiResult<Session>> {
+export async function openSession(accountId: string, vaultKey: VaultKey, username: string, signal: AbortSignal, progress?: (progress: PullProgress) => void, kept: { backend: Backend; cache?: DeviceCache; log?: BrowserLogCache; transport?: Transport } = { backend: serverBackend(), cache: deviceCache(accountId), log: logCache(accountId) }, bindings: { lua?: () => Promise<LuaRunner>; tools?: typeof createTools; drafts?: Drafts } = {}): Promise<ApiResult<Session>> {
   const transport = kept.transport ?? accountTransport;
   const opening = async () => {
     const store = await ObjectStore.open(accountId, vaultKey, kept.backend, kept.cache, signal);
@@ -142,7 +143,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   const tokens = new Tokens(usage);
   const drafts = bindings.drafts ?? new Drafts();
   const reading = new Set<string>();
-  const log = new RequestLog(store);
+  const log = new RequestLog(store, kept.log ? new DeviceLog(accountId, vaultKey, kept.log) : null);
   const cues = new Cues();
   const translator = new Translator(store, credentials, log, costs, tokens, reading, cues);
   let runner: Promise<LuaRunner> | null = null;
@@ -284,7 +285,7 @@ export async function openGuestSession(signal: AbortSignal, progress?: (progress
   const { accountId, vaultKey } = await guestAccount();
   if (signal.aborted) return { ok: false, error: 'stopped' };
   holdAccount(null);
-  const opened = await openSession(accountId, vaultKey, '손님', signal, progress, { backend: guestBackend(accountId), transport: directTransport(accountId) }, bindings);
+  const opened = await openSession(accountId, vaultKey, '손님', signal, progress, { backend: guestBackend(accountId), log: logCache(accountId), transport: directTransport(accountId) }, bindings);
   if (opened.ok) countGuest(accountId, 'opened');
   return opened;
 }

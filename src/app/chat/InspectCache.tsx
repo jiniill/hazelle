@@ -55,7 +55,7 @@ export function NextCacheView({ chat, sending, cache, editor, onEdit }: { chat: 
   );
 }
 
-// The log's entry, page memory only, adds the diagnosis to a stored receipt; subscribed so one landing late shows.
+// The log's entry, this device's only, adds the diagnosis to a stored receipt; subscribed so one landing late shows.
 function PastReplies({ chat, replies }: { chat: string; replies: CacheNotes['replies'] }) {
   const { log } = useSession();
   useSyncExternalStore(log.subscribe, () => log.of(chat));

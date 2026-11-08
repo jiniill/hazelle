@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { Receipt } from '../model/chat';
 import { chatModel } from './assignment';
 import { appendUserMessage, startChat } from './chat-log';
-import { redacted, REQUEST_LOG_LIMITS, RequestLog, type LogEntry } from './request-log';
-import type { ObjectStore } from './store';
+import { redacted, REQUEST_LOG_LIMITS, type LogEntry } from './request-log';
 import { pageAnswer } from './talk';
-import { answerable, saying, stubRelay, testConnection, testServer } from './testing';
+import { answerable, saying, stubRelay, testConnection, testLog, testServer } from './testing';
 import { takeTurn } from './turn';
 
 const server = testServer();
@@ -40,18 +39,23 @@ describe('the request log', () => {
     expect(redacted({ url: 'https://me:pw@x.test/v1?key=abc&alt=sse', body: '{"note":"sk-or-x"}' }, connection)).toEqual({ url: 'https://REDACTED@x.test/v1?key=REDACTED&alt=sse', body: '{"note":"REDACTED"}' });
   });
 
-  it('drops a chat’s entries when its scope is released, and keeps the others', () => {
-    let listener: Parameters<ObjectStore['subscribe']>[0] = () => {};
-    const log = new RequestLog({ subscribe: (heard) => ((listener = heard), () => true), scopeState: (chat) => (chat === 'a' ? 'unloaded' : 'loaded') });
-    log.record(entry('a', '1'));
-    log.record(entry('b', '2'));
-    listener([{ kind: 'scope', id: 'a', parent: null }]);
-    expect(log.of('a').entries).toEqual([]);
-    expect(log.entry('b', '2')).not.toBeNull();
-  });
+  it('keeps a chat’s entries after the chat closes, letting the chat written least recently go past the page bound', () =>
+    server.withSession(async (session) => {
+      const lease = session.store.retainChat('a', { created: true });
+      await lease.ready;
+      session.log.record(entry('a', '1'));
+      lease.release();
+      expect(session.log.entry('a', '1')).not.toBeNull();
+      const chunk = 'x'.repeat(REQUEST_LOG_LIMITS.page / 3);
+      session.log.record(entry('b', '2', chunk));
+      session.log.record(entry('c', '3', chunk));
+      session.log.record(entry('a', '4', 'y'));
+      session.log.record(entry('d', '5', chunk));
+      expect(['a', 'b', 'c', 'd'].map((chat) => session.log.of(chat).entries.length)).toEqual([2, 0, 1, 1]);
+    }));
 
   it('counts attached wire text and diagnosis when trimming and never reattaches an evicted call', () => {
-    const log = new RequestLog({ subscribe: () => () => true, scopeState: () => 'loaded' });
+    const log = testLog();
     log.record(entry('a', 'old', 'x'.repeat(REQUEST_LOG_LIMITS.characters - 100)));
     log.record(entry('a', 'new'));
     log.attach('a', 'new', { wire: [{ content: 'w'.repeat(200), index: 3 }] });
@@ -66,7 +70,7 @@ describe('the request log', () => {
   });
 
   it('keeps a bounded number of entries per chat, counting what it let go, and always the newest', () => {
-    const log = new RequestLog({ subscribe: () => () => true, scopeState: () => 'loaded' });
+    const log = testLog();
     for (let index = 0; index <= REQUEST_LOG_LIMITS.entries; index++) log.record(entry('a', String(index)));
     expect(log.of('a')).toMatchObject({ entries: { length: REQUEST_LOG_LIMITS.entries }, omitted: 1 });
     log.record(entry('a', 'huge', 'x'.repeat(REQUEST_LOG_LIMITS.characters + 1)));

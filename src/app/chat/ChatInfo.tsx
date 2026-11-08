@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { calls, handEdited, shown, type AgentRun, type Receipt, type Version } from '../../model/chat';
 import { setAgentMemory } from '../../runtime/chat-log';
 import type { LogEntry } from '../../runtime/request-log';
@@ -53,6 +53,8 @@ type Props = Pick<OpenChat, 'id' | 'shelf' | 'messages' | 'infoPick'> & {
 
 export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onTab, onPick, onRecord, onEdit, onCache, onClose }: Props) {
   const { log, costs } = useSession();
+  // A chat's saved log is read back after the chat opens.
+  useSyncExternalStore(log.subscribe, () => (chat ? log.of(chat) : null));
   const memory = useChatMemory(chat);
   const tab = picked === 'memory' && !onRecord ? 'reply' : picked;
   const replies = messages.filter((message) => message.role === 'assistant');

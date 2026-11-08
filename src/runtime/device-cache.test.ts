@@ -28,7 +28,7 @@ it('keeps a version-2 cache’s rows when it adds the guest stores', async () =>
   await done(tx);
   v2.close();
   const db = await database();
-  expect([...db.objectStoreNames].sort()).toEqual(['drafts', 'generations', 'guest-files', 'guest-heads', 'guest-objects', 'objects', 'states']);
+  expect([...db.objectStoreNames].sort()).toEqual(['drafts', 'generations', 'guest-files', 'guest-heads', 'guest-objects', 'objects', 'request-logs', 'states']);
   expect(await done(db.transaction('objects').objectStore('objects').get(['account', 'kept']))).toEqual({ id: 'kept', scope: '' });
 });
 
@@ -48,17 +48,17 @@ it('retries a blocked cache upgrade without keeping its rejected promise or late
     v2.close();
   }
   const db = await database();
-  expect(db.version).toBe(4);
+  expect(db.version).toBe(5);
   await new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase('risu-alpha-objects');
     req.onsuccess = () => resolve();
     req.onblocked = () => reject(new Error('A late or current connection stayed open'));
     req.onerror = () => reject(req.error);
   });
-  expect((await database()).version).toBe(4);
+  expect((await database()).version).toBe(5);
 });
 
-it('adds only drafts to a version-3 database, retaining account and guest data', async () => {
+it('adds drafts and request logs to a version-3 database, retaining account and guest data', async () => {
   const old = indexedDB.open('risu-alpha-objects', 3);
   old.onupgradeneeded = () => {
     const db = old.result;
@@ -82,8 +82,8 @@ it('adds only drafts to a version-3 database, retaining account and guest data',
 
   const { database } = await import('./device-cache');
   const db = await database();
-  expect(db.version).toBe(4);
-  expect([...db.objectStoreNames]).toEqual(['drafts', ...stores]);
+  expect(db.version).toBe(5);
+  expect([...db.objectStoreNames].sort()).toEqual(['drafts', 'request-logs', ...stores].sort());
   for (const store of stores) {
     expect(await done(db.transaction(store).objectStore(store).get(['account', 'kept']))).toEqual({ kept: store });
   }
@@ -100,4 +100,20 @@ it('forgets only the account’s drafts and rejects its late writes', async () =
   await expect(account.write([['chat', 'late sealed']])).rejects.toThrow('This account was logged out');
   expect(await draftCache('account').read()).toEqual([]);
   expect(await other.read()).toEqual([['chat', 'other sealed']]);
+});
+
+it('keeps the account’s newest log rows across its chats, and forgets them with the account', async () => {
+  const { forgetVault, logCache } = await import('./device-cache');
+  const row = (at: number) => ({ account: 'account', at, build: null, body: `sealed ${at}` });
+  const account = logCache('account');
+  await account.write([{ chat: 'a', call: '1', row: row(1) }, { chat: 'b', call: '2', row: row(2) }, { chat: 'a', call: '3', row: row(3) }], 2);
+  await logCache('other').write([{ chat: 'a', call: '1', row: { ...row(0), account: 'other' } }], 2);
+  expect(await account.read('a')).toEqual([['3', row(3)]]);
+  expect(await account.read('b')).toEqual([['2', row(2)]]);
+  await account.write([{ chat: 'b', call: '2', row: null }], 2);
+  expect(await account.read('b')).toEqual([]);
+  await forgetVault('account');
+  await expect(account.write([{ chat: 'a', call: '4', row: row(4) }], 2)).rejects.toThrow('This account was logged out');
+  expect(await logCache('account').read('a')).toEqual([]);
+  expect(await logCache('other').read('a')).toHaveLength(1);
 });

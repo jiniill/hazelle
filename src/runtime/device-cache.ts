@@ -5,6 +5,7 @@ import { adoptable, cacheNewer, cacheScope, GenerationChanged, sameGeneration, t
 
 const caches = new Map<string, BrowserCache>();
 const draftCaches = new Map<string, BrowserDraftCache>();
+const logCaches = new Map<string, BrowserLogCache>();
 const STORES = ['generations', 'states', 'objects'];
 
 export function deviceCache(account: string): DeviceCache {
@@ -19,7 +20,15 @@ export async function forgetVault(account: string, cache = deviceCache(account))
   const drafts = draftCache(account);
   drafts.forgotten = true;
   draftCaches.delete(account);
-  await Promise.all([lockVault(), cache.forget().catch(() => {}), drafts.forget().catch(() => {})]);
+  await Promise.all([lockVault(), cache.forget().catch(() => {}), drafts.forget().catch(() => {}), forgetLog(account)]);
+}
+
+// A guest that is discarded or becomes an account leaves no request text behind it.
+export function forgetLog(account: string): Promise<void> {
+  const log = logCache(account);
+  log.forgotten = true;
+  logCaches.delete(account);
+  return log.forget().catch(() => {});
 }
 
 export function draftCache(account: string): BrowserDraftCache {
@@ -61,6 +70,62 @@ class BrowserDraftCache {
     const tx = (await database()).transaction('drafts', 'readwrite');
     const done = completed(tx);
     tx.objectStore('drafts').delete(IDBKeyRange.bound([this.account], [this.account, []]));
+    await done;
+  }
+}
+
+export function logCache(account: string): BrowserLogCache {
+  let cache = logCaches.get(account);
+  if (!cache) logCaches.set(account, (cache = new BrowserLogCache(account)));
+  return cache;
+}
+
+// One request-log entry of this device, sealed (runtime/device-log); build names the page build that wrote it.
+export type LogRow = { account: string; at: number; build: string | null; body: string };
+// A row to write under [account, chat, call], or null to delete it.
+export type LogWrite = { chat: string; call: string; row: LogRow | null };
+
+export class BrowserLogCache {
+  forgotten = false;
+  constructor(private readonly account: string) {}
+
+  async read(chat: string): Promise<[string, LogRow][]> {
+    const tx = (await database()).transaction('request-logs');
+    const done = completed(tx);
+    const store = tx.objectStore('request-logs');
+    const range = IDBKeyRange.bound([this.account, chat], [this.account, chat, []]);
+    const keys = store.getAllKeys(range);
+    const values = store.getAll(range);
+    await done;
+    return keys.result.map((key, index) => [(key as string[])[2]!, values.result[index] as LogRow]);
+  }
+
+  // Past keep, the account's oldest rows go, whichever chat they are of.
+  async write(rows: readonly LogWrite[], keep: number): Promise<void> {
+    const db = await database();
+    if (this.forgotten) throw new Error('This account was logged out');
+    const tx = db.transaction('request-logs', 'readwrite');
+    const done = completed(tx);
+    const store = tx.objectStore('request-logs');
+    for (const { chat, call, row } of rows) {
+      if (row) store.put(row, [this.account, chat, call]);
+      else store.delete([this.account, chat, call]);
+    }
+    let kept = 0;
+    const newest = store.index('recent').openKeyCursor(IDBKeyRange.bound([this.account, -Infinity], [this.account, Infinity]), 'prev');
+    newest.onsuccess = () => {
+      const cursor = newest.result;
+      if (!cursor) return;
+      if (++kept > keep) store.delete(cursor.primaryKey);
+      cursor.continue();
+    };
+    await done;
+  }
+
+  async forget(): Promise<void> {
+    const tx = (await database()).transaction('request-logs', 'readwrite');
+    const done = completed(tx);
+    tx.objectStore('request-logs').delete(IDBKeyRange.bound([this.account], [this.account, []]));
     await done;
   }
 }
@@ -208,7 +273,7 @@ const changed = new WeakSet<IDBTransaction>();
 
 // Also a guest's own store (runtime/guest-store), the account's master rather than a copy of the server's.
 // An account's page goes on without a blocked cache; the guest store cannot, so it surfaces the block.
-export const database = cachedDatabase('risu-alpha-objects', 4, (req, event) => {
+export const database = cachedDatabase('risu-alpha-objects', 5, (req, event) => {
   const db = req.result;
   if (event.oldVersion === 0) {
     db.createObjectStore('generations');
@@ -225,6 +290,7 @@ export const database = cachedDatabase('risu-alpha-objects', 4, (req, event) => 
     db.createObjectStore('guest-files');
   }
   if (event.oldVersion < 4) db.createObjectStore('drafts');
+  if (event.oldVersion < 5) db.createObjectStore('request-logs').createIndex('recent', ['account', 'at']);
 });
 
 function completed(tx: IDBTransaction): Promise<void> {

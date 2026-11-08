@@ -5,6 +5,7 @@ import type { CacheDiagnosis, CacheForecast, CacheText } from '../model/cache';
 import type { Receipt } from '../model/chat';
 import type { AgentStage } from '../model/prompt';
 import type { Stream } from '../model/stream';
+import type { DeviceLog } from './device-log';
 import type { ObjectStore } from './store';
 import type { PageClass } from './streams';
 
@@ -25,9 +26,9 @@ export type LogEntry = Omit<Logged, 'call'> & { at: number; picked: boolean; rec
 
 export type ChatLog = { entries: readonly LogEntry[]; omitted: number };
 
-// Per chat; characters count request bodies, responses and attached prompt/diagnosis text. The newest entry always stays, so the
-// reply just made keeps its 요청 원문 however large it is.
-export const REQUEST_LOG_LIMITS = { entries: 100, characters: 8_000_000 } as const;
+// Per chat, and characters across the page; characters count request bodies, responses and attached prompt/diagnosis text.
+// The newest entry always stays, so the reply just made keeps its 요청 원문 however large it is.
+export const REQUEST_LOG_LIMITS = { entries: 100, characters: 8_000_000, page: 24_000_000 } as const;
 const EMPTY: ChatLog = { entries: [], omitted: 0 };
 
 const SECRET_PARAM = /^(key|api[_-]?key|access[_-]?token|token|authorization)$/i;
@@ -57,19 +58,20 @@ export function redacted(request: SentRequest, connection: Connection): SentRequ
 const charactersOf = (value: unknown): number => typeof value === 'string' ? value.length : value && typeof value === 'object' ? Object.values(value).reduce<number>((sum, each) => sum + charactersOf(each), 0) : 0;
 const size = ({ request, response, prompt, agent, wire, diagnosis }: LogEntry) => (request?.body?.length ?? 0) + (response?.length ?? 0) + charactersOf({ prompt, agent, wire, diagnosis });
 
-// Every model call this page makes, in page memory only (ruling: nothing here is stored or survives a reload). A
-// chat's entries go when its scope is released, as what a reply sent always did; a likeness's (chat null) on close.
+// Every model call this page makes, in page memory and, sealed, on this device alone (device: none for a page nobody
+// returns to). Past the page bound the chat written least recently leaves memory whole; opened again, it is read back.
 export class RequestLog {
+  // In the order chats were last written.
   private readonly chats = new Map<string | null, { log: ChatLog; characters: number }>();
   private readonly changes = new ChangeSignal();
+  // Chats read back from the device, or being read.
+  private readonly read = new Set<string>();
   private readonly leave: () => void;
+  private closed = false;
 
-  constructor(store: Pick<ObjectStore, 'subscribe' | 'scopeState'>) {
+  constructor(store: Pick<ObjectStore, 'subscribe' | 'scopeState'>, private readonly device: DeviceLog | null) {
     this.leave = store.subscribe((changes) => {
-      const released = changes.filter((change) => change.kind === 'scope' && this.chats.has(change.id) && store.scopeState(change.id) === 'unloaded');
-      if (!released.length) return;
-      for (const { id } of released) this.chats.delete(id);
-      this.changes.notify();
+      for (const change of changes) if (change.kind === 'scope' && store.scopeState(change.id) !== 'unloaded') this.readBack(change.id);
     });
   }
 
@@ -78,23 +80,16 @@ export class RequestLog {
   readonly of = (chat: string): ChatLog => this.chats.get(chat)?.log ?? EMPTY;
 
   // By the call's id, which its receipt keeps through an edit, a branch and a continuation (model/chat Receipt). null:
-  // its chat was released, the bound let it go, or this page did not make the call.
+  // a bound let it go, a new build or another device made it, or its chat is still being read back.
   entry(chat: string, call: string): LogEntry | null {
     return this.of(chat).entries.find((entry) => entry.receipt.id === call) ?? null;
   }
 
   record(entry: LogEntry) {
     entry = { ...entry, diagnosis: entry.diagnosis ?? null };
+    if (entry.chat !== null) this.device?.put(entry.chat, entry);
     const held = this.chats.get(entry.chat) ?? { log: EMPTY, characters: 0 };
-    const entries = [...held.log.entries, entry];
-    let { omitted } = held.log;
-    let characters = held.characters + size(entry);
-    while (entries.length > 1 && (entries.length > REQUEST_LOG_LIMITS.entries || characters > REQUEST_LOG_LIMITS.characters)) {
-      characters -= size(entries.shift()!);
-      omitted++;
-    }
-    this.chats.set(entry.chat, { log: { entries, omitted }, characters });
-    this.changes.notify();
+    this.put(entry.chat, [...held.log.entries, entry], held.log.omitted, held.characters + size(entry));
   }
 
   // forecast: what the send expected of the cache, as its receipt keeps it.
@@ -105,19 +100,46 @@ export class RequestLog {
     if (!held || at === -1) return;
     const entry = held.log.entries[at]!;
     const next = { ...entry, ...(prompt && { prompt }), ...(agent && { agent }), ...(wire && { wire }), ...('diagnosis' in attachment && { diagnosis }), ...(forecast && { receipt: { ...entry.receipt, forecast } }) };
-    const entries = held.log.entries.with(at, next);
-    held.characters += size(next) - size(entry);
-    let { omitted } = held.log;
-    while (entries.length > 1 && held.characters > REQUEST_LOG_LIMITS.characters) {
-      held.characters -= size(entries.shift()!);
+    this.device?.put(chat, next);
+    this.put(chat, held.log.entries.with(at, next), held.log.omitted, held.characters + size(next) - size(entry));
+  }
+
+  private put(chat: string | null, entries: LogEntry[], omitted: number, characters: number) {
+    while (entries.length > 1 && (entries.length > REQUEST_LOG_LIMITS.entries || characters > REQUEST_LOG_LIMITS.characters)) {
+      const gone = entries.shift()!;
+      characters -= size(gone);
       omitted++;
+      if (chat !== null) this.device?.drop(chat, gone.receipt.id);
     }
-    held.log = { entries, omitted };
+    this.chats.delete(chat);
+    this.chats.set(chat, { log: { entries, omitted }, characters });
+    let total = [...this.chats.values()].reduce((sum, held) => sum + held.characters, 0);
+    for (const [other, held] of this.chats) {
+      if (other === chat || total <= REQUEST_LOG_LIMITS.page) break;
+      this.chats.delete(other);
+      if (other !== null) this.read.delete(other);
+      total -= held.characters;
+    }
     this.changes.notify();
   }
 
+  // Calls this page made before the read answered stay; the device's go before them.
+  private readBack(chat: string) {
+    if (!this.device || this.read.has(chat)) return;
+    this.read.add(chat);
+    void this.device.read(chat).then((saved) => {
+      const held = this.chats.get(chat) ?? { log: EMPTY, characters: 0 };
+      const made = new Set(held.log.entries.map(({ receipt }) => receipt.id));
+      const older = saved.filter(({ receipt }) => !made.has(receipt.id));
+      if (this.closed || !older.length) return;
+      this.put(chat, [...older, ...held.log.entries], held.log.omitted, older.reduce((sum, entry) => sum + size(entry), held.characters));
+    }, () => {});
+  }
+
   close() {
+    this.closed = true;
     this.leave();
+    void this.device?.close();
     this.chats.clear();
     this.changes.notify();
     this.changes.clear();

@@ -7,7 +7,7 @@ import { sameVaultKey, type VaultKey } from '../vault/keys';
 import { objectKey, openObject, sealObject } from '../vault/objects';
 import { feedQuery, serverBackend, type Backend } from './backend';
 import { api, type ApiFailure, type ApiResult } from './api';
-import { deviceCache } from './device-cache';
+import { deviceCache, forgetLog } from './device-cache';
 import { clearGuestStore, guestBackend, guestBoardSecret } from './guest-store';
 import { SEEDED } from './backup-core';
 import { inOrder, transfers } from './files';
@@ -57,6 +57,7 @@ export async function discardGuest(): Promise<ApiResult<null>> {
   if (!guest) return { ok: true, data: null };
   const cleared = await clearGuestStore(guest.accountId);
   if (!cleared.ok) return cleared;
+  await forgetLog(guest.accountId);
   await forgetGuestVault(guest.accountId);
   return cleared;
 }
@@ -199,6 +200,7 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
   if (!cleared.ok) return cleared;
   // Remember before removing the only guest key: a close between these writes can still sign in and finish cleanup.
   await rememberVault(accountId, vaultKey);
+  await forgetLog(guest.accountId);
   await forgetGuestVault(guest.accountId);
   return { ok: true, data: null };
 }

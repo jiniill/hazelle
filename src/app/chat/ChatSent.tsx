@@ -18,8 +18,8 @@ import { ANSWER_INSTRUCTION_LABEL, CHAPTER, COMMAND, inSettings, LORE_BUDGET_LAB
 
 type Lore = NonNullable<Assembled['lore']>[number];
 
-// Unavailable is not none: requests are page-local, chat-leased and bounded, so reloads/other devices/old calls lack them.
-const UNKEPT = '요청을 보낸 기기에서 채팅 화면을 열어 둔 동안 최근 요청만 볼 수 있어요.';
+// Unavailable is not none: requests are device-local, bounded and dropped by a new build, so other devices and old calls lack them.
+const UNKEPT = '요청을 보낸 기기에서 최근 요청만 볼 수 있어요.';
 const PICKED = '새로고침 전에 보낸 요청이라 원문을 알 수 없어요.';
 
 export function partName(from: From, role: Role): string {

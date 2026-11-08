@@ -107,7 +107,7 @@ export const testModel: Model = { ...bareModel('m'), name: 'M' };
 export const testConnection: Connection = { type: 'openrouter', label: 'OpenRouter', baseUrl: null, protocol: null, accounts: [{ id: 'key', secret: 'sk-or-x' }], turns: null, starred: [testModel] };
 
 // For a call made outside a session: a log no store releases, and a call's names.
-export const testLog = () => new RequestLog({ subscribe: () => () => true, scopeState: () => 'loaded' });
+export const testLog = () => new RequestLog({ subscribe: () => () => true, scopeState: () => 'loaded' }, null);
 export const LOGGED: Logged = { chat: null, purpose: 'reply', call: { connection: 'c', source: 'OpenRouter', model: 'm', modelName: 'M' } };
 
 export async function answerable(session: Session): Promise<void> {

@@ -61,7 +61,7 @@ export type Bookmark = { message: string; name?: string };
 
 export const CAST_MAX = 5;
 
-// The raw request is never stored.
+// The raw request is never stored in the account; only the device that sent it keeps it (runtime/device-log).
 export type Receipt = {
   calibration?: CallCalibration;
   // Stable across edits, branches and continuations; also identifies the ledger row (runtime/usage ledgerId).

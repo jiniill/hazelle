@@ -216,7 +216,7 @@ describe('Talk', () => {
       await vi.waitFor(() => expect(log.map(({ sent }) => sent.url)).toContain('https://api.anthropic.com/v1/messages/batches/b1/cancel'));
     }));
 
-  it('keeps what each call sent, its address and body and never its headers, through an edit and while its chat is held', () =>
+  it('keeps what each call sent, its address and body and never its headers, and through an edit', () =>
     server.withSession(async (session) => {
       await answerable(session);
       const chat = crypto.randomUUID();
@@ -236,8 +236,6 @@ describe('Talk', () => {
       expect(shown(message()).receipt!.id).toBe(call);
       expect(session.log.entry(chat, call)).not.toBeNull();
       lease.release();
-      await vi.waitFor(() => expect(session.store.scopeState(chat)).toBe('unloaded'));
-      expect(session.log.entry(chat, call)).toBeNull();
     }));
 
   it('attaches the sent wire and an asynchronous break diagnosis, without diagnosing an intact send', () =>
