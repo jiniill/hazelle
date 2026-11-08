@@ -3,10 +3,11 @@ import type { Opened, ShareSource } from '../../runtime/share';
 import { writeShared } from '../../runtime/share';
 import { Button, Intro, Portrait, Row, Stack, Text } from '../ui';
 import { ACTS } from './acts';
-import { downloadOutput, fileNamed } from './download';
+import { fileNamed } from './download';
+import { runExport } from './exporting';
 import { describeFailure } from './failure';
 import { count } from './typedNumber';
-import { SAVING_FILE, SHARE } from './words';
+import { SHARE } from './words';
 
 // Use the same charx export on public/operator previews; onDownloaded fires only after the whole file is written.
 type Props = { source: ShareSource; opened: Opened; first?: ReactNode; received?: number; onDownloaded?: () => void; failed: (failure: string) => void };
@@ -22,22 +23,15 @@ export function SharePreview({ source, opened, first, received, onDownloaded, fa
     return () => URL.revokeObjectURL(url);
   }, [preview.avatar]);
 
-  // The save picker opens before any await, inside the press that asked for it.
-  function download() {
-    const destination = downloadOutput(fileNamed(preview.name, '캐릭터', 'charx'));
-    setBusy('받는 중');
-    void (async () => {
-      try {
-        const written = await writeShared(source, opened.content, await destination, ({ done, total }) => setBusy(done < total ? `받는 중 · ${done} / ${total}` : `${SAVING_FILE} 중`));
-        if (written.ok) onDownloaded?.();
-        else failed(written.error === 'export-write' ? '파일을 저장하지 못했어요.' : describeFailure(written));
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === 'AbortError')) failed('파일을 저장하지 못했어요.');
-      } finally {
-        setBusy(null);
-      }
-    })();
-  }
+  const download = () =>
+    runExport(
+      { error: (message, extra) => failed([message, extra?.detail].filter(Boolean).join(' ')), failed: (failure) => failed(describeFailure(failure)) },
+      fileNamed(preview.name, '캐릭터', 'charx'),
+      (output, progress) => writeShared(source, opened.content, output, progress),
+      setBusy,
+      () => onDownloaded?.(),
+      { doing: '받는 중' },
+    );
 
   return (
     <Stack gap="group">

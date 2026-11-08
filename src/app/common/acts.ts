@@ -1,4 +1,4 @@
-import { CopyPlus, Copy, Download, Pencil, Plus, RefreshCw, RotateCcw, RotateCw, Trash2, Upload, type LucideIcon } from 'lucide-react';
+import { CopyPlus, Copy, Download, Flag, MessageSquarePlus, Pencil, Plus, RefreshCw, RotateCcw, RotateCw, Trash2, Upload, type LucideIcon } from 'lucide-react';
 import { EXPORT } from './words';
 
 // Keep action icons synchronized across screens (lint-enforced). Retry, regenerate and restore are distinct acts.
@@ -16,6 +16,8 @@ export const ACTS = {
   retry: { label: '다시 시도', icon: RotateCw },
   regenerate: { label: '다시 생성', icon: RefreshCw },
   restore: { label: '복원', icon: RotateCcw },
+  newChat: { label: '새 채팅', icon: MessageSquarePlus },
+  report: { label: '신고', icon: Flag },
 } satisfies Record<string, Act>;
 
 // 새 X makes a thing of its own; X 추가 puts an entry into the list that owns it.

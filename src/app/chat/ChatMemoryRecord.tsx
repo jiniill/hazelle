@@ -5,7 +5,7 @@ import { editRecord, forgetRecord, pinRecord, recallRecord, restoreRecord, type 
 import { EntryList } from '../common/EntryList';
 import { ago } from '../common/time';
 import { useAutosave } from '../common/useAutosave';
-import { CHAPTER } from '../common/words';
+import { CHAPTER, REMOVE_FAILED, SAVE_FAILED } from '../common/words';
 import { useSession } from '../session';
 import { useToast } from '../toast';
 import { Button, Callout, List, ListItem, PhraseField, Row, Section, SettingGroup, SettingRow, SidePanel, Stack, Switch, Text, TextField, useWide } from '../ui';
@@ -53,17 +53,17 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
   }
 
   function pin(on: boolean) {
-    toast.settled(pinRecord(store, chat, item.id, on), '저장하지 못했어요.');
+    toast.settled(pinRecord(store, chat, item.id, on), SAVE_FAILED);
   }
 
   function recall(on: boolean) {
-    toast.settled(recallRecord(store, chat, item.id, on), '저장하지 못했어요.');
+    toast.settled(recallRecord(store, chat, item.id, on), SAVE_FAILED);
   }
 
   async function forget() {
     const done = await save.remove(() => forgetRecord(store, chat, item.id));
     if (!done) return;
-    if (!done.ok) return toast.failed(done, '삭제하지 못했어요.');
+    if (!done.ok) return toast.failed(done, REMOVE_FAILED);
     back();
     toast.undoable(`${noun}${chapter ? '를' : '을'} 삭제했어요.`, () => restoreRecord(store, chat, done.data));
   }

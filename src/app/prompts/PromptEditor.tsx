@@ -19,6 +19,7 @@ import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, copyOf, ORIGINAL_GONE, PR
 import { useConnections, useSettings, useStore, useStored } from '../session';
 import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
+import { useRemoval } from '../common/useRemoval';
 import { useOwnUndo, useToast } from '../toast';
 import { Button, Callout, Divider, MenuHeading, MenuItem, NavRow, Outline, Row, Section, Stack, Tag, typeInto, type NavBarProps, type OutlineStop } from '../ui';
 import { BlockPane } from './BlockPane';
@@ -99,6 +100,7 @@ type Props = {
 export function PromptEditor({ stored, layout, pane, onPane, block: openAt, paneBack, backLabel, onBack, onOpen, onErased, frame }: Props) {
   const store = useStore();
   const toast = useToast();
+  const removal = useRemoval();
   const settings = useSettings();
   // 에이전트 노트 is offered only while the 실험실 switch is on, as everything of an experiment.
   const agentsLab = labOn(settings, 'agents');
@@ -262,13 +264,8 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
     const saved = await setDefaultPrompt(store, stored.id);
     if (!saved.ok) toast.failed(saved, '기본으로 지정하지 못했어요.');
   };
-  const erase = async () => {
-    const removed = await save.remove(() => removePrompt(store, stored.id));
-    if (!removed) return;
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
-    onErased();
-    toast.undoable(`'${promptName(removed.data.value.name)}' 프롬프트를 삭제했어요.`, () => restorePrompt(store, stored.id), BIN_KEEPS);
-  };
+  const erase = () =>
+    removal({ name: ({ value }) => promptName(value.name), noun: '프롬프트', task: () => removePrompt(store, stored.id), queue: save.remove, restore: () => restorePrompt(store, stored.id), then: onErased, detail: BIN_KEEPS });
 
   const cacheAt = (id: string) => {
     const target = latest.current.blocks.find((each) => each.id === id);

@@ -7,12 +7,15 @@ import { isToggle } from '../../model/prompt';
 import type { Tool } from '../../model/tool';
 import { unused } from '../../engine/pipeline';
 import type { ImportedCharacter } from '../../runtime/characters';
+import type { ApiFailure, ApiResult } from '../../runtime/api';
+import type { Kept } from '../../runtime/import/save';
 import type { ModulePlace } from '../../runtime/modules';
 import type { Stored } from '../../model/kinds';
 import { aliased } from '../common/alias';
+import { describeFailure } from '../common/failure';
 import { packHolds } from '../common/pack';
 import { describeUnused } from '../common/unused';
-import { ALWAYS, DEFAULT_VARIABLES, inSettings, moduleName, NO_CHARACTER, promptName, RISU_PLUGIN, SCRIPTS, toolVersion } from '../common/words';
+import { ALWAYS, DEFAULT_VARIABLES, inSettings, moduleName, NO_CHARACTER, promptName, RISU_PLUGIN, SAVE_FAILED, SCRIPTS, toolVersion, UNREADABLE_FILE } from '../common/words';
 import { cardMissed, missedLines, presetMissed, unkeptMissed } from './missed';
 
 // Never retain asset readers/source bytes in previews or outcomes: closures would keep entire archives alive.
@@ -29,6 +32,11 @@ export type Placement = { at: ModulePlace['kind'] | null; failure: string | null
 type Pairing = { prompts: string[]; failure: string | null };
 // names: the older versions' names. places: how many places they were on in, where it now is.
 export type Replacing = { names: string[]; places: number; failure: string | null };
+
+export const failureOf = (result: ApiResult<unknown>) => (result.ok ? null : describeFailure(result));
+export const unsaved = (failure: ApiFailure) => `${SAVE_FAILED} ${describeFailure(failure)}`;
+// placed: turning it on at place, null with no place.
+export const placement = (place: ModulePlace | null, placed: ApiResult<unknown> | null): Placement => ({ at: place?.kind ?? null, failure: placed && failureOf(placed) });
 
 const PLACES: Record<ModulePlace['kind'], string> = { character: '이 캐릭터에', prompt: '이 프롬프트에', persona: '이 페르소나에', always: ALWAYS };
 
@@ -81,11 +89,10 @@ const outcome = (lines: (Line | null)[]) => lines.filter((line): line is Line =>
 export const characterOutcome = (file: string, title: string, { id, unsupported, faceless }: ImportedCharacter): ImportOutcome =>
   ({ kind: 'character', file, id, title, lines: [], missed: cardMissed(unsupported, faceless) });
 
-// After keeping the file it came from (runtime/originals): the pieces refused, or, a string, why none was kept. The
-// import itself stands either way.
-export function withOriginal(outcome: ImportOutcome, kept: { unkept: number } | string): ImportOutcome {
-  if (typeof kept === 'string') return { ...outcome, lines: [...outcome.lines, { text: `원본 파일을 보관하지 못했어요. ${kept}`, failed: true }] };
-  return kept.unkept > 0 ? { ...outcome, missed: [...outcome.missed, unkeptMissed(kept.unkept)] } : outcome;
+// After keeping the file it came from: the pieces refused, or why none was kept.
+export function withOriginal(outcome: ImportOutcome, kept: Kept): ImportOutcome {
+  if (kept === null || !kept.ok) return { ...outcome, lines: [...outcome.lines, { text: `원본 파일을 보관하지 못했어요. ${kept === null ? UNREADABLE_FILE : describeFailure(kept)}`, failed: true }] };
+  return kept.data.unkept > 0 ? { ...outcome, missed: [...outcome.missed, unkeptMissed(kept.data.unkept)] } : outcome;
 }
 
 export const quoted = (names: string[]) => names.map((name) => `'${name}'`).join(', ');

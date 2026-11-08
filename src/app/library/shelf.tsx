@@ -10,8 +10,8 @@ export const shelfName = ({ character }: Shelf<ChatSummary>) => (character ? ali
 
 export const NO_CHATS = '채팅이 없어요';
 
-// What removing a character takes with it, as the object of 삭제했어요 or 삭제해요.
-export const withChats = (shelf: CharacterShelf<ChatSummary>) => (shelf.chats.length ? `캐릭터와 채팅 ${shelf.chats.length}개를` : '캐릭터를');
+// What removing a character takes with it, the noun 삭제했어요 or 삭제해요 takes.
+export const withChats = (shelf: CharacterShelf<ChatSummary>) => (shelf.chats.length ? `캐릭터와 채팅 ${shelf.chats.length}개` : '캐릭터');
 
 export function ShelfFace({ shelf, size }: { shelf: Shelf<ChatSummary>; size?: 'sm' | 'md' | 'rail' | 'lg' }) {
   return shelf.character ? <Avatar face={shelf.character.card.name} image={shelf.face} size={size} /> : <Avatar face={MessageSquare} size={size} />;

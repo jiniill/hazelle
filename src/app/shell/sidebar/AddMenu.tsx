@@ -1,4 +1,4 @@
-import { Link, MessageSquarePlus, PackageOpen, UserRoundPlus } from 'lucide-react';
+import { Link, PackageOpen, UserRoundPlus } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { ACTS, importOf, newOf } from '../../common/acts';
 import { useImport } from '../../common/importing';
@@ -16,7 +16,7 @@ export function AddMenu({ trigger }: Pick<ComponentProps<typeof Menu>, 'trigger'
       <MenuItem icon={Link} label="링크로 가져오기" onClick={pickLink} />
       <MenuItem icon={UserRoundPlus} label={newOf('캐릭터')} onClick={create} />
       <MenuItem icon={PackageOpen} label="Risu에서 이사" onClick={move} />
-      <MenuItem icon={MessageSquarePlus} label={`${NO_CHARACTER} 새 채팅`} onClick={() => navigate({ kind: 'new-chat', character: null })} />
+      <MenuItem icon={ACTS.newChat.icon} label={`${NO_CHARACTER} ${ACTS.newChat.label}`} onClick={() => navigate({ kind: 'new-chat', character: null })} />
     </Menu>
   );
 }

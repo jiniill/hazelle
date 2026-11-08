@@ -1,4 +1,4 @@
-import { Link, MessageSquarePlus, PackageOpen, Plug, UserRoundPlus } from 'lucide-react';
+import { Link, PackageOpen, Plug, UserRoundPlus } from 'lucide-react';
 import { ACTS, importOf, newOf } from '../common/acts';
 import { GuestAgreement, GuestLine } from '../common/GuestNotice';
 import { MARKS } from '../common/tutorial';
@@ -28,7 +28,7 @@ export function Welcome() {
       <Stack>
         <Columns min="wide">
           {connections.length > 0 ? (
-            <ActionCard tone="accent" icon={MessageSquarePlus} title="새 채팅" description="캐릭터 없이 모델과 바로 대화해요" onClick={() => navigate({ kind: 'new-chat', character: null })} />
+            <ActionCard tone="accent" icon={ACTS.newChat.icon} title={ACTS.newChat.label} description="캐릭터 없이 모델과 바로 대화해요" onClick={() => navigate({ kind: 'new-chat', character: null })} />
           ) : (
             <GuideMark name={MARKS.connectNew}>
               <ActionCard tone="accent" icon={Plug} title={newOf('연결')} description="제공자를 선택하고 API 키를 입력해요" onClick={() => navigate({ kind: 'add-connection' })} />

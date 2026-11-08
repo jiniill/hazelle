@@ -1,4 +1,3 @@
-import { Flag, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { MAX_REPORT_LENGTH } from '../../contracts/admin';
 import { openVersion, type Opened } from '../../runtime/share';
@@ -6,7 +5,7 @@ import { countReceived, readShareState, reportShare, shareLink } from '../../run
 import { describeFailure } from '../common/failure';
 import { LegalNotice } from '../common/LegalNotice';
 import { SharePreview } from '../common/SharePreview';
-import { TextDialog } from '../common/TextDialog';
+import { ReportDialog } from '../common/ReportDialog';
 import { ACTS } from '../common/acts';
 import { LOADING, SHARE } from '../common/words';
 import { Brand, Button, Callout, Divider, Intro, Screen, Stack, Text } from '../ui';
@@ -57,8 +56,8 @@ export function SharePage({ id, shareKey }: { id: string; shareKey: string | nul
         <>
           <Brand />
           {view.kind === 'live' && (
-            <Button variant="link" icon={Flag} onClick={() => setReporting(true)}>
-              {SHARE.report}
+            <Button variant="link" icon={ACTS.report.icon} onClick={() => setReporting(true)}>
+              {ACTS.report.label}
             </Button>
           )}
         </>
@@ -85,16 +84,14 @@ export function SharePage({ id, shareKey }: { id: string; shareKey: string | nul
         </Stack>
       )}
       {reporting && view.kind === 'live' && shareKey !== null && (
-        <TextDialog
-          title={SHARE.report}
-          label="신고 이유"
+        <ReportDialog
+          title={ACTS.report.label}
           lines={4}
           help="운영자가 이 링크를 열어 확인해요. 확인하는 동안 링크가 보류될 수 있어요."
           placeholder="예: 미성년자로 보이는 캐릭터의 성적인 이미지가 있어요."
           max={MAX_REPORT_LENGTH}
           quiet
           cancel
-          confirm={{ label: '보내기', icon: Send }}
           send={(text) => reportShare(id, text, shareLink(location.origin, id, shareKey), view.version)}
           onClose={() => setReporting(false)}
           onDone={() => {

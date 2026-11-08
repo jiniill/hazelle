@@ -18,6 +18,7 @@ import { useIdentityFields } from '../common/useIdentityFields';
 import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName } from '../common/words';
 import { navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
+import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { Avatar, Facts, MenuItem } from '../ui';
 import { PersonaExport } from './PersonaExport';
@@ -26,6 +27,7 @@ import { PersonaExport } from './PersonaExport';
 export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; back: Back }) {
   const store = useStore();
   const toast = useToast();
+  const removal = useRemoval();
   const settings = useSettings();
   const library = useLibrary();
   const { id } = stored;
@@ -46,13 +48,8 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
     return { ok: true };
   }
 
-  async function remove() {
-    const removed = await autosave.remove(() => removePersona(store, id));
-    if (!removed) return;
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
-    navigate({ kind: 'personas', place: null });
-    toast.undoable(`'${removed.data.value.name}' 페르소나를 삭제했어요.`, () => restorePersona(store, id), BIN_KEEPS);
-  }
+  const remove = () =>
+    removal({ name: ({ value }) => value.name, noun: '페르소나', task: () => removePersona(store, id), queue: autosave.remove, restore: () => restorePersona(store, id), then: () => navigate({ kind: 'personas', place: null }), detail: BIN_KEEPS });
 
   async function copy() {
     if (!(await autosave.flush())) return;

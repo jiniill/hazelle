@@ -8,11 +8,12 @@ import { PICTURE_PERCENT_ERROR, readPicturePercent } from '../common/picturePerc
 import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRows';
 import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
-import { DETAIL, detailLabel, PAGES } from '../common/words';
+import { DETAIL, detailLabel, PAGES, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useStore } from '../session';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
+import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { ACCENT, BG, Button, DIALOGUE, QUOTE_SHAPE, ChoiceGroup, ColorDot, Disclosure, INK, MenuItem, NavBar, NumberInput, ReadingPreview, Screen, Section, SettingGroup, SettingRow, Swatches, Switch, THEME, type PreviewRow, type Theme } from '../ui';
 
@@ -33,6 +34,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
   const { reading, display, presets, own, changeDisplay, pick, followSystem, assign } = useDisplay();
   const store = useStore();
   const toast = useToast();
+  const removal = useRemoval();
   const all = [...presets, ...own.presets];
   const current = presetOf(all, reading, display);
   const [naming, setNaming] = useState<{ preset: Preset | null } | null>(null);
@@ -44,14 +46,10 @@ export function DisplayScreen({ back }: { back: Back | null }) {
     const preset = naming?.preset;
     setNaming(null);
     if (preset) return toast.settled(editLook(store, preset.id, { name: typed.trim() || preset.name }), '이름을 바꾸지 못했어요.');
-    toast.settled(addLook(store, { id: crypto.randomUUID(), name: typed.trim() || `내 프리셋 ${own.presets.length + 1}`, look: lookOf(reading, display) }), '저장하지 못했어요.');
+    toast.settled(addLook(store, { id: crypto.randomUUID(), name: typed.trim() || `내 프리셋 ${own.presets.length + 1}`, look: lookOf(reading, display) }), SAVE_FAILED);
   }
 
-  async function remove({ id, name }: Preset) {
-    const removed = await removeLook(store, id);
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
-    toast.undoable(`'${name}' 프리셋을 삭제했어요.`, () => restoreLook(store, removed.data));
-  }
+  const remove = ({ id, name }: Preset) => removal({ name: () => name, noun: '프리셋', task: () => removeLook(store, id), restore: (removed) => restoreLook(store, removed) });
 
   const move = (from: number, to: number) => toast.settled(moveLook(store, own.presets[from]!.id, own.presets[to]!.id), '옮기지 못했어요.');
 
@@ -59,7 +57,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
   const menu = (preset: Preset, index: number) => (
     <>
       <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setNaming({ preset })} />
-      {preset !== current && <MenuItem icon={Save} label="현재 설정으로 덮어쓰기" onClick={() => toast.settled(editLook(store, preset.id, { look: lookOf(reading, display) }), '저장하지 못했어요.')} />}
+      {preset !== current && <MenuItem icon={Save} label="현재 설정으로 덮어쓰기" onClick={() => toast.settled(editLook(store, preset.id, { look: lookOf(reading, display) }), SAVE_FAILED)} />}
       {index > 0 && <MenuItem icon={ArrowLeft} label="앞으로 옮기기" onClick={() => move(index, index - 1)} />}
       {index < own.presets.length - 1 && <MenuItem icon={ArrowRight} label="뒤로 옮기기" onClick={() => move(index, index + 1)} />}
       <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => void remove(preset)} />

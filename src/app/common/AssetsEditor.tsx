@@ -12,7 +12,7 @@ import { NameDialog } from './NameDialog';
 import { useCopy } from './useCopy';
 import { useSearch } from './useSearch';
 import { useSelection } from './useSelection';
-import { CHANGE_IMAGE } from './words';
+import { CHANGE_IMAGE, REMOVE_FAILED, SAVE_FAILED } from './words';
 
 const ASSET = '에셋';
 // What runtime/characters keeps as an asset (engine/import assetType).
@@ -60,7 +60,7 @@ export function AssetsEditor({ owner }: { owner: string }) {
 
   async function remove(ids: readonly string[]) {
     const removed = await removeAssets(store, ids);
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
+    if (!removed.ok) return toast.failed(removed, REMOVE_FAILED);
     const [only] = removed.data;
     toast.undoable(removed.data.length === 1 ? `'${only!.value.name}' ${ASSET}을 삭제했어요.` : `${ASSET} ${removed.data.length}개를 삭제했어요.`, () => restoreAssets(store, removed.data));
   }
@@ -74,7 +74,7 @@ export function AssetsEditor({ owner }: { owner: string }) {
 
   function rename(asset: Stored<'asset'>, name: string) {
     setNaming(null);
-    toast.settled(renameAsset(store, asset.id, name), '저장하지 못했어요.');
+    toast.settled(renameAsset(store, asset.id, name), SAVE_FAILED);
   }
 
   const actionsOf = (asset: Stored<'asset'>): Action[] => [

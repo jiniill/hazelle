@@ -16,6 +16,7 @@ import { count as countText } from '../common/typedNumber';
 import { LORE_BUDGET_LABEL, MISSED, moduleName, UNREADABLE_FILE } from '../common/words';
 import { useFiles, useStanding, useStore } from '../session';
 import { Button, Callout, Checkbox, Dialog, Outcome, Progress, Section, Stack, Text, type ProgressStep } from '../ui';
+import { unsaved } from './importOutcome';
 import { cardMissed, missedLines, moveMissed } from './missed';
 import { hasModule, stepsOf, tickable, tickCount, toPick, type Have, type Ticks } from './movePick';
 
@@ -137,7 +138,7 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
       };
       // A retry would stop at once on a full account, so none is offered.
       if (moved.error === 'storage-full') return setPhase({ kind: 'failed', message: '텍스트 저장 공간이 가득 차서 멈췄어요. 멈추기 전까지 가져온 내용은 저장됐어요.', again: null });
-      setPhase({ kind: 'failed', message: `저장하지 못했어요. ${describeFailure(moved)}`, again: () => void run(backup, inlays, rest) });
+      setPhase({ kind: 'failed', message: unsaved(moved), again: () => void run(backup, inlays, rest) });
     } catch (error) {
       if (reader.current !== source) return;
       if (!(error instanceof ImportReadError)) throw error;

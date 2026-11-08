@@ -7,7 +7,7 @@ import { useToast } from '../toast';
 import { IconButton, Section, SettingGroup, SettingRow, Switch, Text } from '../ui';
 import { folderNote, placeIn, useFolderIndex } from './folders/filing';
 import { FolderPath } from './folders/FolderParts';
-import { ALWAYS, moduleName, PAGES } from './words';
+import { ALWAYS, moduleName, PAGES, SAVE_FAILED } from './words';
 
 type Owner = Exclude<ModulePlace, { kind: 'always' }>;
 
@@ -32,7 +32,7 @@ export function ModuleSwitches({ owner, own }: { owner: Owner; own: string[] }) 
 
   async function change(module: string, on: boolean) {
     const saved = await setModuleAt(store, owner, module, on);
-    if (!saved.ok) toast.failed(saved, '저장하지 못했어요.');
+    if (!saved.ok) toast.failed(saved, SAVE_FAILED);
   }
 
   if (modules.length === 0) return null;

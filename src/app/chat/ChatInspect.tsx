@@ -13,6 +13,7 @@ import { Variables } from './InspectVariables';
 import { editorOf, type InspectTab, type Side } from './panels';
 import type { OpenChat } from './useChat';
 import type { SendNotes } from './useSendNotes';
+import { COUNTING } from '../common/words';
 
 const TABS: { value: InspectTab; label: string }[] = [
   { value: 'request', label: '요청' },
@@ -36,7 +37,7 @@ export function ChatInspect({ chat, character, tab, notes, busy, prompt, onTab, 
     : notes.sending === null ? <Empty variant="section">지금은 요청을 보낼 수 없어서 계산하지 못했어요.</Empty>
     : notes.sending && 'turn' in notes.sending ? view(notes.sending)
     : notes.sending ? <Empty variant="section">{describeTurnFailure(notes.sending)}</Empty>
-    : <Text variant="note">계산하는 중…</Text>;
+    : <Text variant="note">{COUNTING}</Text>;
   return (
     <SidePanel title="점검" onClose={onClose}>
       {tabs}

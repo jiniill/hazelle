@@ -14,7 +14,7 @@ import { tokens } from '../common/receipt';
 import { TaskModelRow, type PromptDoor } from '../common/TaskPrompt';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
-import { CHAPTER, follows, inFeature, inSettings, MODEL_ROLES, opens, resetTo, SCOPE, scopeTag } from '../common/words';
+import { CHAPTER, follows, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag } from '../common/words';
 import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
@@ -257,7 +257,7 @@ function FactRow({ chat, fact }: { chat: string; fact: Fact }) {
   async function remove() {
     const removed = await save.remove(() => removeFact(store, chat, fact));
     if (!removed) return;
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
+    if (!removed.ok) return toast.failed(removed, REMOVE_FAILED);
     toast.undoable(`'${name}' 상태를 삭제했어요.`, () => setFact(store, chat, removed.data, null));
   }
 
@@ -287,7 +287,7 @@ function NewFact({ chat }: { chat: string }) {
   }
   const ready = draft.about.trim() !== '' && draft.field.trim() !== '' && draft.value.trim() !== '';
   function add() {
-    toast.settled(setFact(store, chat, { ...draft!, record: null }, null), '저장하지 못했어요.');
+    toast.settled(setFact(store, chat, { ...draft!, record: null }, null), SAVE_FAILED);
     setDraft(null);
   }
   return (
@@ -350,7 +350,7 @@ function ThreadRow({ chat, thread, name, onDrop }: { chat: string; thread: Threa
   async function remove() {
     const removed = await save.remove(() => removeThread(store, chat, thread.id));
     if (!removed) return;
-    if (!removed.ok) return removed.error === 'gone' ? onDrop() : toast.failed(removed, '삭제하지 못했어요.');
+    if (!removed.ok) return removed.error === 'gone' ? onDrop() : toast.failed(removed, REMOVE_FAILED);
     toast.undoable('미해결 사건을 삭제했어요.', () => setThread(store, chat, removed.data, false));
   }
 

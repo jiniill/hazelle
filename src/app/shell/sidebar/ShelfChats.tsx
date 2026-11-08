@@ -1,4 +1,4 @@
-import { ChevronLeft, FolderInput, FolderPlus, MessageSquarePlus } from 'lucide-react';
+import { ChevronLeft, FolderInput, FolderPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { chatFolderOf, type ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
@@ -139,8 +139,8 @@ export function ShelfChats({ page, shelf }: Props) {
             onOpen={open}
           />
           <Row kind="spread">
-            <Button variant="secondary" size="sm" icon={MessageSquarePlus} onClick={() => navigate({ kind: 'new-chat', character: shelf.id })}>
-              새 채팅
+            <Button variant="secondary" size="sm" icon={ACTS.newChat.icon} onClick={() => navigate({ kind: 'new-chat', character: shelf.id })}>
+              {ACTS.newChat.label}
             </Button>
             {moving.button}
             <IconButton icon={FolderPlus} label="새 폴더" size="sm" onClick={() => naming.name({ id: null, name: '' })} />

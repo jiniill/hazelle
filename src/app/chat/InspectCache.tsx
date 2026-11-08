@@ -9,7 +9,7 @@ import type { Sending } from '../../runtime/turn-context';
 import { cacheShare, cost, tokens } from '../common/receipt';
 import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ago } from '../common/time';
-import { CACHE_GUARD, MODEL_SETTINGS, opens, UNKNOWN } from '../common/words';
+import { CACHE_GUARD, COUNTING, MODEL_SETTINGS, opens, UNKNOWN } from '../common/words';
 import { useLab } from '../common/labs';
 import { useCaptured, useSession } from '../session';
 import { navigate } from '../shell/router';
@@ -46,7 +46,7 @@ export function Cache({ chat, next, cache }: { chat: string; next: ReactNode; ca
 
 export function NextCacheView({ chat, sending, cache, editor, onEdit }: { chat: string; sending: Sending; cache: CacheNotes; editor: (from: From) => Side | null; onEdit: (side: Side) => void }) {
   const lead = useSendTimeNote(chat, sending);
-  if (!cache.next) return cache.next === null ? <Empty variant="section">이전 응답에서 남은 캐시 기록이 없어요.</Empty> : <Text variant="note">계산하는 중…</Text>;
+  if (!cache.next) return cache.next === null ? <Empty variant="section">이전 응답에서 남은 캐시 기록이 없어요.</Empty> : <Text variant="note">{COUNTING}</Text>;
   return (
     <Stack gap="related">
       {lead}

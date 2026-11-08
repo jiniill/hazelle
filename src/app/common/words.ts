@@ -86,6 +86,13 @@ export const ACCOUNT_ONLY = '계정을 만들면 돼요';
 export const PULSE = { ...PULSE_PAGE, sharing: `${PULSE_PAGE.title} 집계 참여` };
 export const AUTO_DIAGNOSIS = { label: '자동 진단 보내기', help: '켜 두면 오류가 나거나 기억에 없는 메시지가 생겼을 때 앱 버전, 브라우저 종류, 모델, 설정값, 메시지 수와 토큰 수를 보내요. 아이디, 대화 내용, 이름, 오류 메시지는 보내지 않아요.' };
 
+// A write's failure, before why (toast.failed).
+export const SAVE_FAILED = '저장하지 못했어요.';
+export const REMOVE_FAILED = '삭제하지 못했어요.';
+export const COUNTING = '계산하는 중…';
+// One named thing as the object of a sentence: '루나' 캐릭터를.
+export const namedObject = (name: string, noun: string) => `'${name}' ${withParticle(noun, '을/를')}`;
+
 export const BIN = '휴지통';
 export const BIN_KEEPS = `${KEEP_DAYS}일 안에 '${BIN}'에서 복원할 수 있어요.`;
 
@@ -288,5 +295,4 @@ export const SHARE = {
   goneNote: '공유가 중단됐거나 운영자가 내린 링크예요.',
   download: '파일로 받기',
   bring: '헤이젤로 가져오기',
-  report: '신고',
 };

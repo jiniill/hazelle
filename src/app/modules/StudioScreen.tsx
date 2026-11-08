@@ -20,10 +20,11 @@ import { ModelMenu } from '../common/ModelMenu';
 import { FileExport } from '../common/FileExport';
 import { cost } from '../common/receipt';
 import { useAutosave } from '../common/useAutosave';
-import { STOP, TOOL, toolVersion } from '../common/words';
+import { SAVE_FAILED, STOP, TOOL, toolVersion } from '../common/words';
 import { useChats, useConnections, useSession, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
+import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { Button, Callout, CodeField, CommentBox, Empty, Exchange, Facts, MenuItem, NavBar, Row, Screen, Section, Stack, Tag, TextDiff, TextField, type CodeAside } from '../ui';
 import { ApplyDialog } from './ApplyDialog';
@@ -38,7 +39,7 @@ function askFoot(store: ObjectStore, ask: Pick<DraftAsk, 'model' | 'cost'>): str
 
 export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; back: Back }) {
   const store = useStore();
-  const toast = useToast();
+  const removal = useRemoval();
   const { id, value } = stored;
   const autosave = useAutosave<DraftFile>(`tooldraft:${id}`, (patch) => saveDraft(store, id, patch));
   const draft: ToolDraft = { ...value, identity: autosave.unsaved.identity ?? value.identity, body: autosave.unsaved.body ?? value.body };
@@ -49,13 +50,8 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
   const [fix, setFix] = useState<Fix | null>(null);
   const [setup, setSetup] = useState<TestSetup>({ chat: null, calling: false, model: null });
 
-  async function remove() {
-    const removed = await autosave.remove(() => deleteDraft(store, id));
-    if (!removed) return;
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
-    navigate({ kind: 'plugins' });
-    toast.undoable(`'${title}' 초안을 삭제했어요.`, () => restoreDraft(store, id, draft));
-  }
+  const remove = () =>
+    removal({ name: () => title, noun: '초안', task: () => deleteDraft(store, id), queue: autosave.remove, restore: () => restoreDraft(store, id, draft), then: () => navigate({ kind: 'plugins' }) });
 
   const asides: CodeAside[] = [
     { label: 'AI', body: () => <AiPane id={id} draft={draft} flush={autosave.flush} fix={fix} setup={setup} /> },
@@ -167,7 +163,7 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
     }
     if (!answer.answer.ok) {
       const kept = await addDraftAsk(store, id, { ask: asked, note: answer.answer.note, model: answer.model, cost: answer.cost, at: Date.now() }, null);
-      if (!kept.ok) toast.failed(kept, '저장하지 못했어요.');
+      if (!kept.ok) toast.failed(kept, SAVE_FAILED);
       return setRun({ kind: 'idle' });
     }
     setRun({ kind: 'answered', pending: { ask: asked, before, asked: answer } });
@@ -176,7 +172,7 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
   async function settle({ ask: asked, asked: { answer, model, cost: spent } }: Pending, keep: boolean) {
     if (!answer.ok) return;
     const kept = await addDraftAsk(store, id, { ask: asked, note: answer.note, model, cost: spent, at: Date.now() }, keep ? answer.body : null);
-    if (!kept.ok) return toast.failed(kept, '저장하지 못했어요.');
+    if (!kept.ok) return toast.failed(kept, SAVE_FAILED);
     setRun({ kind: 'idle' });
   }
 

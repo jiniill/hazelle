@@ -5,10 +5,11 @@ import { addProfile, modelProfile, removeProfile, restoreProfile, setDefaultProf
 import { ACTS, addOf } from '../common/acts';
 import { useSearch } from '../common/useSearch';
 import { saveWords } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SET_DEFAULT } from '../common/words';
+import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SAVE_FAILED, SET_DEFAULT } from '../common/words';
 import { useConnections, useProfiles, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
+import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { Button, Empty, List, ListItem, Menu, MenuHeading, MenuItem, NavBar, Screen, Section, Tag } from '../ui';
 import { changeWords, NOT_CALLABLE } from '../common/settingWords';
@@ -20,6 +21,7 @@ const USERS = '사용 중인 모델';
 export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; back: Back }) {
   const store = useStore();
   const toast = useToast();
+  const removal = useRemoval();
   const settings = useSettings();
   const connections = useConnections();
   // modelProfile reads the store directly; profile edits must still refresh the attach-menu labels.
@@ -35,7 +37,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
     return choice.kind === 'profile' ? choice.profile.value.name : '없음';
   };
   const others = connections.map((connection) => ({ connection, models: connection.value.starred.filter((model) => !using.has(`${connection.id}/${entryKey(model)}`)) })).filter((group) => group.models.length > 0);
-  const attach = (connection: string, model: string) => toast.settled(setModelProfile(store, connection, model, id), '저장하지 못했어요.');
+  const attach = (connection: string, model: string) => toast.settled(setModelProfile(store, connection, model, id), SAVE_FAILED);
 
   async function copy() {
     if (!(await flush())) return;
@@ -52,14 +54,16 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
     if (previous) toast.undoable(`'${stored.value.name}' ${MODEL_SETTINGS}을 ${ORIGINAL}으로 되돌렸어요.`, () => setProfileSettings(store, id, previous));
   }
 
-  async function remove() {
-    const removed = await removing(() => removeProfile(store, id));
-    if (!removed) return;
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
-    navigate({ kind: 'models' });
-    const note = users.length ? `이 ${MODEL_SETTINGS}을 쓰던 모델 ${users.length}개는 다른 ${MODEL_SETTINGS}을 선택해야 쓸 수 있어요. ${BIN_KEEPS}` : BIN_KEEPS;
-    toast.undoable(`'${removed.data.value.name}' ${MODEL_SETTINGS}을 삭제했어요.`, () => restoreProfile(store, id), note);
-  }
+  const remove = () =>
+    removal({
+      name: ({ value }) => value.name,
+      noun: MODEL_SETTINGS,
+      task: () => removeProfile(store, id),
+      queue: removing,
+      restore: () => restoreProfile(store, id),
+      then: () => navigate({ kind: 'models' }),
+      detail: users.length ? `이 ${MODEL_SETTINGS}을 쓰던 모델 ${users.length}개는 다른 ${MODEL_SETTINGS}을 선택해야 쓸 수 있어요. ${BIN_KEEPS}` : BIN_KEEPS,
+    });
 
   const mark = defaultMark(isDefault, stored.value.name);
 

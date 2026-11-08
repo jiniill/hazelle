@@ -1,4 +1,4 @@
-import { Check, EyeOff, Sparkles, Eye, Flag, History, Lock, LockOpen, PenLine, Tag as TagIcon, ThumbsUp } from 'lucide-react';
+import { Check, EyeOff, Sparkles, Eye, History, Lock, LockOpen, PenLine, Tag as TagIcon, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
 import { HOLD_DAYS_MAX, MAX_COMMENT_LENGTH, MAX_REASON_LENGTH, OPERATOR_NAME, STATUSES, type Comment, type Hidden, type Post, type Status } from '../../contracts/board';
 import type { ApiResult } from '../../runtime/api';
@@ -24,12 +24,13 @@ import { TOUR, TourDialog } from '../common/Tour';
 import { AuthorLine, authorName, PostMarks, statusIcon } from '../common/postRow';
 import { withParticle } from '../common/particles';
 import { RestoresDialog } from '../common/RestoresDialog';
+import { ReportDialog } from '../common/ReportDialog';
 import { counted, TextDialog } from '../common/TextDialog';
 import { ago, moment } from '../common/time';
 import { count, readCount } from '../common/typedNumber';
 import { useAttempt } from '../common/useAttempt';
 import { useLoaded } from '../common/useLoaded';
-import { BOARD, SHARE } from '../common/words';
+import { BOARD, REMOVE_FAILED } from '../common/words';
 import { useAccount } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -93,7 +94,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
     run(async () => {
       const removed = await deletePost(post.id);
       if (!removed.ok) {
-        toast.failed(removed, '삭제하지 못했어요.');
+        toast.failed(removed, REMOVE_FAILED);
         return null;
       }
       toast.show('삭제했어요.');
@@ -106,7 +107,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
   const removeComment = (comment: Comment) =>
     run(async () => {
       const removed = await deleteComment(comment.id);
-      if (!removed.ok) toast.failed(removed, '삭제하지 못했어요.');
+      if (!removed.ok) toast.failed(removed, REMOVE_FAILED);
       else done();
       return null;
     });
@@ -119,7 +120,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
           <MenuItem key="delete" icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => setAsking({ kind: 'delete-post' })} />,
         ]
       : []),
-    ...(!mine && live && !guest ? [<MenuItem key="report" icon={Flag} label={SHARE.report} onClick={() => setAsking({ kind: 'report-post' })} />] : []),
+    ...(!mine && live && !guest ? [<MenuItem key="report" icon={ACTS.report.icon} label={ACTS.report.label} onClick={() => setAsking({ kind: 'report-post' })} />] : []),
     ...(admin
       ? [
           <MenuHeading key="operate">운영</MenuHeading>,
@@ -190,14 +191,12 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
         </ConfirmDialog>
       )}
       {(asking?.kind === 'report-post' || asking?.kind === 'report-comment') && (
-        <TextDialog
+        <ReportDialog
           title={asking.kind === 'report-post' ? '글 신고' : '댓글 신고'}
           note="운영자가 확인해요."
-          label="신고 이유"
           lines={3}
           max={MAX_REASON_LENGTH}
           trim
-          confirm={{ label: SHARE.report, icon: Flag }}
           send={(reason) => (asking.kind === 'report-post' ? reportPost(post.id, reason) : reportComment(asking.comment.id, reason))}
           onDone={() => {
             close();
@@ -252,7 +251,7 @@ function Comments({ post, admin, guest, gate, onAsk, onChanged }: { post: Post; 
             <MenuItem key="delete" icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onAsk({ kind: 'delete-comment', comment })} />,
           ]
         : []),
-      ...(!mine && live && !guest ? [<MenuItem key="report" icon={Flag} label={SHARE.report} onClick={() => onAsk({ kind: 'report-comment', comment })} />] : []),
+      ...(!mine && live && !guest ? [<MenuItem key="report" icon={ACTS.report.icon} label={ACTS.report.label} onClick={() => onAsk({ kind: 'report-comment', comment })} />] : []),
       ...(admin && !comment.deleted
         ? [
             <MenuHeading key="operate">운영</MenuHeading>,

@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { SELF_RESTORES_PER_DAY } from '../../contracts/admin';
 import { exportBackup, readBackup, restoreBackup, type Backup, type BackupStep } from '../../runtime/backup';
 import { ACTS, importOf } from '../common/acts';
-import { downloadOutput } from '../common/download';
+import { FILE_UNSAVED, runExport } from '../common/exporting';
+import { RELOAD_RETRY } from '../common/failure';
 import { RestoresDialog } from '../common/RestoresDialog';
 import { ACCOUNT_ONLY, SAVING_FILE, STOP } from '../common/words';
 import { useToast } from '../toast';
@@ -15,7 +16,7 @@ const UNREAD: Record<'not-backup' | 'other-version' | 'backup-storage' | 'backup
   'not-backup': { message: '헤이젤 백업 파일이 아니거나 손상된 파일이에요.' },
   'other-version': { message: '이전 버전에서 만든 백업이라 가져올 수 없어요.' },
   'backup-storage': { message: '백업을 준비하지 못했어요.', detail: '기기 저장 공간과 브라우저 저장 설정을 확인해 주세요.' },
-  'backup-crashed': { message: '백업이 중간에 멈췄어요.', detail: '새로고침한 뒤 다시 시도해 주세요.' },
+  'backup-crashed': { message: '백업이 중간에 멈췄어요.', detail: RELOAD_RETRY },
 };
 
 // sv-SE writes the local date as 2026-09-29.
@@ -65,25 +66,20 @@ export function BackupSection() {
 
   const unread = (error: keyof typeof UNREAD) => toast.error(UNREAD[error].message, { detail: UNREAD[error].detail });
 
-  async function save() {
+  function save() {
     const options = begin('save');
-    try {
-      const destination = downloadOutput(`hazelle-${username}-${today()}.zip`);
-      const made = await exportBackup(store, files, await destination, options);
-      if (!made.ok) {
-        if (made.error === 'stopped') return;
-        if (made.error === 'backup-crashed') return unread(made.error);
-        if (made.error === 'backup-write') return toast.error('백업 파일을 저장하지 못했어요.', { detail: '저장 공간을 확인한 뒤 다시 시도해 주세요.' });
-        return toast.failed(made, '백업을 만들지 못했어요.');
-      }
-      const { left, skipped } = made.data;
-      const detail = [left ? `암호화 키로 열리지 않는 항목 ${left}개는 뺐어요.` : '', skipped ? `차단된 이미지 ${skipped}개는 뺐어요.` : ''].filter(Boolean).join(' ');
-      toast.show('백업을 내보냈어요.', detail ? { detail } : undefined);
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) toast.error('백업을 저장하지 못했어요.');
-    } finally {
-      end();
-    }
+    runExport(
+      toast,
+      `hazelle-${username}-${today()}.zip`,
+      (output) => exportBackup(store, files, output, options),
+      // The dialog shows the job's own steps.
+      (label) => label === null && end(),
+      ({ left, skipped }) => {
+        const detail = [left ? `암호화 키로 열리지 않는 항목 ${left}개는 뺐어요.` : '', skipped ? `차단된 이미지 ${skipped}개는 뺐어요.` : ''].filter(Boolean).join(' ');
+        toast.show('백업을 내보냈어요.', detail ? { detail } : undefined);
+      },
+      { own: { 'backup-crashed': UNREAD['backup-crashed'], 'backup-write': FILE_UNSAVED } },
+    );
   }
 
   async function load(file: File) {
@@ -115,7 +111,7 @@ export function BackupSection() {
           label="전체 백업"
           help="API 키까지 포함해 암호화되지 않은 zip 파일로 내보내요."
           control={
-            <Button variant="secondary" size="sm" icon={ACTS.export.icon} disabled={active !== null} onClick={() => void save()}>
+            <Button variant="secondary" size="sm" icon={ACTS.export.icon} disabled={active !== null} onClick={save}>
               {ACTS.export.label}
             </Button>
           }

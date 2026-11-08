@@ -1,5 +1,6 @@
 import { Component, lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { Button, Intro, Progress, Screen } from '../ui';
+import { RELOAD_RETRY } from './failure';
 
 type Loaded<P> = { default: ComponentType<P> };
 
@@ -41,7 +42,7 @@ export class ScreenLoad extends Component<{ at?: string; children: ReactNode }, 
   render() {
     if (this.state.failed) return (
       <Screen align="center">
-        <Intro title="화면을 열지 못했어요">새로고침한 뒤 다시 시도해 주세요.</Intro>
+        <Intro title="화면을 열지 못했어요">{RELOAD_RETRY}</Intro>
         <Button onClick={() => location.reload()}>새로고침</Button>
       </Screen>
     );

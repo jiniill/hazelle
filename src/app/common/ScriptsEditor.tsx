@@ -18,7 +18,7 @@ import { choices } from './reading';
 import { OpenRow, RowFoot, useOpenRows, type OpenRows } from './OpenRows';
 import { useAutosave } from './useAutosave';
 import { useSearch } from './useSearch';
-import { COMMAND, scriptName, SCRIPTS, STAGES } from './words';
+import { COMMAND, SAVE_FAILED, scriptName, SCRIPTS, STAGES } from './words';
 
 type Lua = Extract<Trigger, { kind: 'lua' }>;
 type Blocks = Extract<Trigger, { kind: 'blocks' }>;
@@ -153,12 +153,12 @@ function useScriptActions({ owner, pack, drop }: ItemProps, list: ScriptList, sc
   const toast = useToast();
   const move = (by: -1 | 1, icon: LucideIcon, label: string) => {
     const past = neighbour(pack, list, script.id, by);
-    return <IconButton icon={icon} size="sm" label={label} disabled={past === null} onClick={() => toast.settled(moveScript(store, owner, list, script.id, by, past!), '저장하지 못했어요.')} />;
+    return <IconButton icon={icon} size="sm" label={label} disabled={past === null} onClick={() => toast.settled(moveScript(store, owner, list, script.id, by, past!), SAVE_FAILED)} />;
   };
   return (words: string | undefined) => (
     <>
       <SettingGroup label="켬">
-        <SettingRow label="켬" control={<Switch label="켬" checked={!script.off} onChange={(on) => toast.settled(setScriptOff(store, owner, list, script.id, !on), '저장하지 못했어요.')} />} />
+        <SettingRow label="켬" control={<Switch label="켬" checked={!script.off} onChange={(on) => toast.settled(setScriptOff(store, owner, list, script.id, !on), SAVE_FAILED)} />} />
       </SettingGroup>
       <RowFoot noun={SCRIPTS[list]} words={words} onRemove={() => void drop({ id: script.id, noun: SCRIPTS[list], name }, remove(() => removeScript(store, owner, list, script.id)), (removed) => restoreScript(store, owner, removed))}>
         {move(-1, ChevronUp, '위로')}

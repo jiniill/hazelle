@@ -5,7 +5,7 @@ import { afterEnter, previewRequest, type AfterEnter, type Sending } from '../..
 import { describeTurnFailure, runaway } from '../common/failure';
 import { MESSAGE_ROLES, SLOT } from '../common/prompt-words';
 import { tokens } from '../common/receipt';
-import { PRE_READ } from '../common/words';
+import { COUNTING, PRE_READ } from '../common/words';
 import { useSession } from '../session';
 import { Callout, CodeBlock, Disclosure, Empty, Facts, Gauge, List, ListItem, Section, Stack, Text } from '../ui';
 import { partName, RequestView } from './ChatSent';
@@ -75,7 +75,7 @@ function Rehearsed({ chat, sending, editor, onEdit }: { chat: string; sending: S
   return (
     <Section title="스크립트 실행 예상" help="보내기 전에 실행되는 봇 스크립트를 미리 실행해 본 결과예요.">
       {rehearsal === undefined ? (
-        <Text variant="note">계산하는 중…</Text>
+        <Text variant="note">{COUNTING}</Text>
       ) : rehearsal === 'failed' ? (
         <Empty variant="section">스크립트를 미리 실행하지 못했어요.</Empty>
       ) : (

@@ -21,6 +21,7 @@ import { MARKS } from '../common/tutorial';
 import { useSession, useSettings } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
+import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { Button, Callout, ChoiceGroup, Columns, Empty, GuideMark, IconButton, ItemSection, List, ListItem, MenuItem, NavBar, Panel, Row, Screen, Stack, Text, usePane } from '../ui';
 import { ConnectionAccounts } from './ConnectionAccounts';
@@ -50,6 +51,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
   const { store, catalogs } = useSession();
   const { retries: shared, profile: defaultProfile } = useSettings();
   const toast = useToast();
+  const removal = useRemoval();
   const { id, value: connection } = stored;
   const [catalog, setCatalog] = useState<CatalogResult | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -160,13 +162,8 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
     );
   }
 
-  async function remove() {
-    const removed = await naming.remove(() => removeConnection(store, id));
-    if (!removed) return;
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
-    navigate({ kind: 'connections' });
-    toast.undoable(`'${removed.data.value.label}' 연결을 삭제했어요.`, () => restoreConnection(store, removed.data));
-  }
+  const remove = () =>
+    removal({ name: ({ value }) => value.label, noun: '연결', task: () => removeConnection(store, id), queue: naming.remove, restore: (removed) => restoreConnection(store, removed), then: () => navigate({ kind: 'connections' }) });
 
   const resolved = resolveConnection(connection);
   const signIn = resolved?.type?.signIn;
