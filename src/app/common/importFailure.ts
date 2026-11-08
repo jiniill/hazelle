@@ -2,12 +2,12 @@ import { EXPANSION, METADATA_BYTES } from '../../engine/import/inflate';
 import { USES } from '../../engine/import/tool';
 import type { ImportFailure } from '../../engine/import/types';
 import { sizeText } from './size';
-import { RISU_PLUGIN } from './words';
+import { RISU_PLUGIN, UNREADABLE_FILE } from './words';
 
 const FAILURE: Record<ImportFailure['kind'], string> = {
   'unknown-format': '가져올 수 없는 파일 형식이에요.',
   encrypted: '암호화된 캐릭터 카드라 열 수 없어요.',
-  unreadable: '파일을 읽지 못했어요.',
+  unreadable: UNREADABLE_FILE,
 };
 
 // Importer detail codes not listed here use the generic unreadable-file message.

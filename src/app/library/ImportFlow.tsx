@@ -27,7 +27,7 @@ import { ACTS } from '../common/acts';
 import { IMPORT_ACCEPT, ImportContext } from '../common/importing';
 import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import { useSearch } from '../common/useSearch';
-import { BIN, MISSED, moduleName, NO_CHARACTER, promptName, TOOL } from '../common/words';
+import { BIN, MISSED, moduleName, NO_CHARACTER, promptName, TOOL, UNREADABLE_FILE } from '../common/words';
 import { useFiles, useLibrary, useSession, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import type { Route } from '../shell/routes';
@@ -77,7 +77,7 @@ const linkFailure = (failure: Exclude<LinkFailure, { kind: 'cancelled' | 'needs-
     case 'guest-blocked': return '이 사이트는 손님 모드에서 바로 가져올 수 없어요. 파일을 직접 받아서 넣어 주세요.';
     case 'needs-account': return 'Proton 링크는 손님 모드에서 가져올 수 없어요. 파일을 직접 받아서 넣어 주세요.';
     case 'no-bot-file': return '가져올 수 있는 파일이 없어요.';
-    case 'damaged': return '파일을 읽지 못했어요. 링크가 잘렸거나 파일이 손상됐을 수 있어요.';
+    case 'damaged': return `${UNREADABLE_FILE} 링크가 잘렸거나 파일이 손상됐을 수 있어요.`;
     case 'lost': return '다운로드가 끊겼어요. 인터넷 연결을 확인해 주세요.';
     case 'relay': return describeReplyError(failure.failure);
   }
@@ -186,7 +186,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       return await use(reader);
     } catch (error) {
       if (!(error instanceof ImportReadError)) throw error;
-      return error instanceof ImportStuck ? '파일을 읽는 중 응답이 없어 중단했어요. 파일이 손상됐을 수 있어요.' : '파일을 읽지 못했어요. 다시 가져와 주세요.';
+      return error instanceof ImportStuck ? '파일을 읽는 중 응답이 없어 중단했어요. 파일이 손상됐을 수 있어요.' : `${UNREADABLE_FILE} 다시 가져와 주세요.`;
     } finally {
       reader.close();
       readers.current.delete(reader);
@@ -249,7 +249,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
           return withOriginal(made, kept.ok ? kept.data : describeFailure(kept));
         } catch (error) {
           if (!(error instanceof ImportReadError)) throw error;
-          return withOriginal(made, '파일을 다시 읽지 못했어요.');
+          return withOriginal(made, UNREADABLE_FILE);
         }
       };
       if ('chat' in parsed || 'risuChats' in parsed) {

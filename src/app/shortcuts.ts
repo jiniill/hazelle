@@ -26,7 +26,7 @@ export const SHORTCUTS = {
   saveEdit: { label: '수정 저장', keys: [{ key: 'Enter', mod: true }] },
   translate: { label: '번역하기', keys: [{ key: 'Enter', mod: true }] },
   cancelEdit: { label: '수정 취소', keys: [{ key: 'Escape' }] },
-  removePart: { label: '드래그한 문단 삭제', keys: [{ key: 'Delete', mod: false }, { key: 'Backspace', mod: false }] },
+  removePart: { label: '선택한 문단 삭제', keys: [{ key: 'Delete', mod: false }, { key: 'Backspace', mod: false }] },
   // Its handler stays mounted only with a chat open and passes a key aimed at a side panel, so elsewhere the key is the
   // browser's find.
   find: { label: '채팅 내 검색', keys: [{ key: 'f', mod: true }] },

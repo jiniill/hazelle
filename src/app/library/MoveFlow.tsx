@@ -13,7 +13,7 @@ import { describeFailure } from '../common/failure';
 import { sizeText } from '../common/size';
 import { describeUnused } from '../common/unused';
 import { count as countText } from '../common/typedNumber';
-import { LORE_BUDGET_LABEL, MISSED, moduleName } from '../common/words';
+import { LORE_BUDGET_LABEL, MISSED, moduleName, UNREADABLE_FILE } from '../common/words';
 import { useFiles, useStanding, useStore } from '../session';
 import { Button, Callout, Checkbox, Dialog, Outcome, Progress, Section, Stack, Text, type ProgressStep } from '../ui';
 import { cardMissed, missedLines, moveMissed } from './missed';
@@ -67,7 +67,7 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
       try {
         sorted = await sortRisuFiles(dropped);
       } catch {
-        if (live) setPhase({ kind: 'failed', message: '파일을 읽지 못했어요. 다시 가져와 주세요.', again: null });
+        if (live) setPhase({ kind: 'failed', message: `${UNREADABLE_FILE} 다시 가져와 주세요.`, again: null });
         return;
       }
       if (!live) return;
