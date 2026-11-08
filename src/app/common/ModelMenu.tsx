@@ -35,7 +35,7 @@ export function ModelMenu({ route, pin, onPick, handle }: Pick<Props, 'onPick' |
     >
       {pin && (
         <>
-          <MenuItem tone="muted" label={pin.name} sub="이 프롬프트가 정한 모델이에요. 여기서 고르면 이 채팅에만 적용돼요." tag={<Tag>{MODEL_PINNED}</Tag>} onClick={pin.open} />
+          <MenuItem tone="muted" label={pin.name} sub="이 프롬프트가 지정한 모델이에요. 여기서 바꾸면 이 채팅에만 적용돼요." tag={<Tag>{MODEL_PINNED}</Tag>} onClick={pin.open} />
           <Divider variant="menu" />
         </>
       )}

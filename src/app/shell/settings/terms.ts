@@ -1,7 +1,7 @@
 import { ACTS, importOf, newOf } from '../../common/acts';
 import { LABS } from '../../common/labs';
 import { NUMBER, PROFILE_LABELS, PROFILE_ROWS } from '../../common/settingWords';
-import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, ILLUSTRATION_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, TASK_MODELS, TOOL, TRANSLATOR_NOTE } from '../../common/words';
+import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, TASK_MODELS, TOOL, TRANSLATOR_NOTE } from '../../common/words';
 import type { Settings } from '../../../model/settings';
 import { BIN_PLACE, type Route, type SettingsPage } from '../routes';
 
@@ -13,7 +13,7 @@ const TERMS: Record<SettingsPage, string[]> = {
   connections: ['모델', '계정', '계정 추가', '그룹', '전환일', '사용량과 한도', RETRY_COUNT, '사용 내역', '연결 이름', '키 변경', '모델 ID로 추가'],
   chat: [...Object.values(CHAT_DETAIL), MODEL_ROLES.main, RETRY_COUNT, '모델 도구 호출 횟수', ANSWER_INSTRUCTION_LABEL, ...Object.values(LORE_SCAN_WORDS).map(({ label }) => label)],
   translate: ['응답 번역', '응답 번역 언어', '내 메시지 번역', '내 메시지 번역 언어', '원문 함께 보기', '반전 모드', TRANSLATOR_NOTE, '번역 프롬프트', TASK_MODELS.translate],
-  illustrate: ['자동 삽화', '이미지 모델', '페르소나 시점', '만화 형식', '유료 생성 시 확인 생략', '삽화 프롬프트', TASK_MODELS.illustrate, '삽화 수', ILLUSTRATION_PLACE],
+  illustrate: ['자동 삽화', '이미지 모델', '페르소나 시점', '만화 형식', '유료 생성 시 확인 생략', '삽화 프롬프트', TASK_MODELS.illustrate, '삽화 수', PICTURE_PLACE],
   memory: ['새 채팅에서 켜기', TASK_MODELS.memory, '기록 최대 분량', '임베딩 모델로 찾는 기록', '원문으로 보낼 최근 대화', '한 번에 정리할 분량'],
   mascot: [TASK_MODELS.mascot, '마스코트 프롬프트'],
   preread: [TASK_MODELS.preread, '요약할 대상', '원문으로 유지할 최근 대화', '한 번에 요약할 분량', '추론 최소화', `${PRE_READ} 프롬프트`],
@@ -23,7 +23,7 @@ const TERMS: Record<SettingsPage, string[]> = {
   personas: [newOf('페르소나'), importOf('페르소나'), '삽화 프로필'],
   modules: [newOf('모듈'), importOf('모듈'), '로어북', SCRIPTS.regex, SCRIPTS.triggers, '토글', '스타일'],
   plugins: [newOf(TOOL), importOf(PAGES.plugins), NETWORK],
-  display: [CHAT_LOOK, '사용량 표시', '캐시 표시', '미리보기', '프리셋', '내 프리셋', '시스템 설정 연동', '밝은 모드일 때', '어두운 모드일 때', '색', '테마', '배경', '글자', '대사', '강조', '이미지', '이미지 가리기', '가로 이미지는 꽉 채우기', '삽화를 본문에 넣기', '이미지 위치', '캐릭터 이미지 크게 보기', '이미지 최대 폭', '텍스트', '글꼴', '글자 크기', '줄 간격', '읽기 폭', '대사 따옴표'],
+  display: [CHAT_LOOK, '사용량 표시', '캐시 표시', '미리보기', '프리셋', '내 프리셋', '시스템 설정 연동', '밝은 모드일 때', '어두운 모드일 때', '색', '테마', '배경', '글자', '대사', '강조', '이미지', '이미지 가리기', '가로 이미지는 꽉 채우기', '삽화를 본문에 넣기', PICTURE_PLACE, '캐릭터 이미지 크게 보기', '이미지 최대 폭', '텍스트', '글꼴', '글자 크기', '줄 간격', '읽기 폭', '대사 따옴표'],
   controls: ['스크롤할 때', '응답 수신 시', '자동 스크롤', '헤더 숨기기', '입력창 접기', '빠른 스크롤 막대', '메시지 이동 버튼', '내 메시지에서도 멈추기', '입력창', 'Enter로 보내기', '단축키', '단축키 목록'],
   sounds: ['알림음', '세부 설정', '응답이 시작될 때', '응답이 도착했을 때', '번역이 끝났을 때'],
   account: ['저장 공간', PAGES.usage, '잠그기', '로그아웃', '다른 기기에서 로그아웃', '백업', '전체 백업', ACTS.export.label, 'Risu로 옮길 파일', importOf('백업'), '이전 시점으로 복원', SHARE.list, NOTICES.from, BOARD.title, BOARD.mine, BOARD.toOperator, '새 소식', '앱 정보', '버전', PULSE.sharing, AUTO_DIAGNOSIS.label, '문제 진단', '탈퇴', '계정 삭제'],

@@ -9,7 +9,7 @@ import { RolePicker } from '../common/RolePicker';
 import { filled, typedText, useTypedNumber } from '../common/typed';
 import { count, readCount } from '../common/typedNumber';
 import { useAutosave } from '../common/useAutosave';
-import { ANSWER_INSTRUCTION_LABEL, CHAT_DETAIL, DEFAULT_MODELS, LORE_SCAN_WORDS, MAIN_HELP, MODEL_SETTINGS, RETRY_COUNT, RETRY_HELP } from '../common/words';
+import { ANSWER_INSTRUCTION_LABEL, CHAT_DETAIL, DEFAULT_MODELS_FAILED, LORE_SCAN_WORDS, MAIN_HELP, MODEL_SETTINGS, RETRY_COUNT, RETRY_HELP } from '../common/words';
 import { useConnections, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { NumberInput, Section, SettingGroup, SettingRow, Stepper, Switch, TextField } from '../ui';
@@ -32,7 +32,7 @@ export function ChatDetailDefaults() {
     <>
       <Section title={CHAT_DETAIL.reply}>
         <SettingGroup label={CHAT_DETAIL.reply}>
-          <RolePicker role="main" help={MAIN_HELP} own={models.main} follow={null} connections={connections} onPick={(ref) => ref && toast.settled(setDefaultModel(store, 'main', ref), `${DEFAULT_MODELS}을 바꾸지 못했어요.`)} />
+          <RolePicker role="main" help={MAIN_HELP} own={models.main} follow={null} connections={connections} onPick={(ref) => ref && toast.settled(setDefaultModel(store, 'main', ref), DEFAULT_MODELS_FAILED)} />
           <SettingRow
             label={RETRY_COUNT}
             help={`${RETRY_HELP} API 연결이나 ${MODEL_SETTINGS}마다 따로 정할 수도 있어요.`}

@@ -11,7 +11,7 @@ import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRo
 import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
 import { reader } from '../common/typedNumber';
-import { CHAT_LOOK, DETAIL, detailLabel, PAGES, SAVE_FAILED } from '../common/words';
+import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useSettings, useStore } from '../session';
 import { backBar } from '../shell/router';
@@ -148,9 +148,9 @@ export function DisplayScreen({ back }: { back: Back | null }) {
             control={<Switch label="삽화를 본문에 넣기" checked={display.inlineIllustrations} onChange={(inlineIllustrations) => changeDisplay({ inlineIllustrations })} />}
           />
           <SettingRow
-            label="이미지 위치"
+            label={PICTURE_PLACE}
             help={{ text: '넓은 화면에서 삽화와 캐릭터 이미지를 채팅 어느 쪽에 둘지 정해요.', demo: { name: 'pictureSide', ways: { labels: [SIDE.right, SIDE.left], now: display.pictureSide === 'right' ? 0 : 1 } } }}
-            control={<ChoiceGroup layout="fit" label="이미지 위치" options={choices(SIDE)} value={display.pictureSide} onChange={(pictureSide) => changeDisplay({ pictureSide })} />}
+            control={<ChoiceGroup layout="fit" label={PICTURE_PLACE} options={choices(SIDE)} value={display.pictureSide} onChange={(pictureSide) => changeDisplay({ pictureSide })} />}
           />
           <SettingRow
             label="캐릭터 이미지 크게 보기"

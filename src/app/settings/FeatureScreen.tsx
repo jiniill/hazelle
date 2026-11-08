@@ -20,7 +20,7 @@ import { TranslateRows } from '../common/TranslateRows';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { useTypedNumber } from '../common/typed';
 import { readWhole } from '../common/typedNumber';
-import { AGENTS_HELP, FEATURE_NAMES, ILLUSTRATION_PLACE, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED, TASK_MODELS } from '../common/words';
+import { AGENTS_HELP, EVERY_CHAT, FEATURE_NAMES, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PICTURE_PLACE, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED, TASK_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -104,7 +104,7 @@ function IllustrateDefaults() {
       onEditPrompt={editPrompt('illustrate')}
     >
       <SettingRow
-        label={ILLUSTRATION_PLACE}
+        label={PICTURE_PLACE}
         control={
           <Button variant="secondary" size="sm" onClick={openPicturePlace}>
             보기
@@ -118,7 +118,7 @@ function IllustrateDefaults() {
 // Where a picture stands is 디스플레이's, on this device; the 삽화 page only leads there.
 const openPicturePlace = () => {
   navigate({ kind: 'display' });
-  seekRow('이미지 위치');
+  seekRow(PICTURE_PLACE);
 };
 
 // The mascot's prompt is the account's default alone (design §6.11): picking one here makes it the default.
@@ -133,15 +133,14 @@ function MascotDefaults() {
   const writer = mascotWriterOf(store, SHARED_CHAT);
   return (
     <SettingGroup label={FEATURE_NAMES.mascot}>
-      <AccountTaskModel task="mascot" runs={'kind' in writer ? { why: describeMascotFailure(writer) } : writer} />
+      <AccountTaskModel task="mascot" help="응답마다 모델을 한 번 더 호출해요." runs={'kind' in writer ? { why: describeMascotFailure(writer) } : writer} />
       <SettingRow
         label="마스코트 프롬프트"
-        help="응답마다 모델을 한 번 더 호출해요."
         control={
           <TaskPromptMenu
             task="mascot"
             chosen={settings.mascotPrompt}
-            heading="모든 채팅에 적용돼요."
+            heading={EVERY_CHAT}
             opens="down"
             onPick={(prompt) => toast.settled(setDefaultPrompt(store, prompt!))}
             onEdit={editPrompt('mascot')}
@@ -216,12 +215,11 @@ function PrereadDefaults() {
         />
         <SettingRow
           label={`${PRE_READ} 프롬프트`}
-          help="응답마다 모델을 한 번 더 호출해요."
           control={
             <TaskPromptMenu
               task="preread"
               chosen={settings.prereadPrompt}
-              heading="모든 채팅에 적용돼요."
+              heading={EVERY_CHAT}
               opens="down"
               onPick={(prompt) => toast.settled(setDefaultPrompt(store, prompt!))}
               onEdit={editPrompt('preread')}

@@ -45,7 +45,7 @@ const REFUSED: Partial<Record<ServerError, string>> = {
   'bad-post': "해당 계정이 작성한 '운영자에게만' 글에서만 복원할 수 있어요.",
   'too-many-restores': `복원은 하루에 최대 ${SELF_RESTORES_PER_DAY}번까지 할 수 있어요.`,
   'bad-time': `${RESTORE_SPAN}의 시점으로만 복원할 수 있어요.`,
-  'cannot-undo': `가장 최근에 한 복원만, 끝난 뒤 ${RETENTION_DAYS}일 안에 한 번 되돌릴 수 있어요.`,
+  'cannot-undo': `복원 전으로 되돌리기는 가장 최근 복원이 끝난 뒤 ${RETENTION_DAYS}일 안에 한 번만 할 수 있어요.`,
   'account-busy': '이미 다른 복원이나 탈퇴가 진행 중이에요.',
   'cannot-cancel': '이미 복원이 적용돼서 취소할 수 없어요. 이어서 하기를 눌러 끝까지 완료해 주세요.',
 };

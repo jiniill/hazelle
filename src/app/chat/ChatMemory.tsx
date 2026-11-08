@@ -12,7 +12,7 @@ import { tokens } from '../common/receipt';
 import { AccountTaskModel } from '../common/TaskPrompt';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
-import { CHAPTER, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag } from '../common/words';
+import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag } from '../common/words';
 import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
@@ -226,7 +226,7 @@ function MemoryFill({ view }: { view: MemoryView }) {
 // 공용's alone, so a pick here holds in every chat; the 설정 section under it is this chat's.
 function WriterRow({ chat }: { chat: Chat }) {
   const writer = useCaptured((store) => memoryWriter(store, chat), [chat]);
-  return <AccountTaskModel task="memory" help="모든 채팅에 적용돼요." runs={'kind' in writer ? { why: describeMemoryFailure(writer) } : writer} />;
+  return <AccountTaskModel task="memory" help={EVERY_CHAT} runs={'kind' in writer ? { why: describeMemoryFailure(writer) } : writer} />;
 }
 
 // Whom a fact concerns and which field stay, so a rename is a delete and an add.

@@ -34,7 +34,7 @@ const doing = (features: readonly Feature[]): Group => ({
 });
 // What the person has, which the features use.
 const HAVE: Group = {
-  title: '재료',
+  title: '구성 요소',
   places: [
     { page: 'prompts', label: PAGES.prompts, icon: FileText, route: { kind: 'prompts', place: null, sort: null } },
     { page: 'personas', label: PAGES.personas, icon: User, route: { kind: 'personas', place: null } },

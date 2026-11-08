@@ -44,7 +44,7 @@ export function ReplyRow() {
   return (
     <SettingRow
       label="응답 수신 시"
-      help={{ text: '응답이 오는 동안 화면이 따라 내려갈지, 읽던 자리에 머물지 정해요.', demo: { name: 'replyScroll', ways: { labels: [REPLY.follow, REPLY.stay], now: reading.reply === 'follow' ? 0 : 1 } } }}
+      help={{ text: '응답이 길어져 화면 아래로 넘어갈 때 새 줄을 따라 내려갈지, 읽던 위치를 유지할지 정해요.', demo: { name: 'replyScroll', ways: { labels: [REPLY.follow, REPLY.stay], now: reading.reply === 'follow' ? 0 : 1 } } }}
       control={<ChoiceGroup layout="segmented" label="응답 수신 시" options={choices(REPLY)} value={reading.reply} onChange={(reply) => changeReading({ reply })} />}
     />
   );

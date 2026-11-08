@@ -162,7 +162,7 @@ export function PovDemo({ way }: { way: Way }) {
       </Picture>
       <span className={styles.legend}>
         {way === 0 ? <Icon icon={Eye} size="sm" /> : <span className={styles.persona} />}
-        {way === 0 ? '페르소나의 눈으로' : '페르소나'}
+        {way === 0 ? '1인칭 시점' : '3인칭 시점'}
       </span>
     </span>
   );

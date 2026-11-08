@@ -58,7 +58,7 @@ type OnFallback =
   | 'too-many-restores';
 
 const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in OnFallback]?: never } & Partial<Record<string, string>> = {
-  'bad-username': `아이디는 ${count(USERNAME_LENGTH.min)}~${count(USERNAME_LENGTH.max)}자의 글자와 숫자, ${[...USERNAME_MARKS].join(' ')} 로만 만들 수 있어요.`,
+  'bad-username': `아이디는 ${count(USERNAME_LENGTH.min)}~${count(USERNAME_LENGTH.max)}자의 글자와 숫자, ${[...USERNAME_MARKS].join(' ')}로만 만들 수 있어요.`,
   'signup-closed': '가입 정원이 다 차서 새 계정을 만들 수 없어요.',
   'too-many-signups': '가입을 너무 여러 번 시도했어요. 10분쯤 뒤에 다시 시도해 주세요.',
   // Signup's last step, after the recovery key; the name is set on the step before.

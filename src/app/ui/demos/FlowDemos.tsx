@@ -55,7 +55,7 @@ const { translated, original } = PARAGRAPHS[1];
 // look: the version's own, which its copy sent to the model keeps.
 type Version = { label: string; text: string; look?: string };
 const VERSIONS: readonly [Version, Version] = [
-  { label: '화면', text: translated },
+  { label: '번역문', text: translated },
   { label: '원문', text: original, look: styles.original },
 ];
 const PICKED = 0.14;

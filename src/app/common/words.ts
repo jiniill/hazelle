@@ -114,6 +114,7 @@ export const PAGES = { models: '모델', connections: 'API 연결', chat: '대�
 export const ALWAYS = '항상';
 
 export const DEFAULT_MODELS = '기본 모델';
+export const DEFAULT_MODELS_FAILED = `${DEFAULT_MODELS}을 바꾸지 못했어요.`;
 
 export const MODEL_SETTINGS = '모델 설정';
 
@@ -157,15 +158,16 @@ export const opens = (place: string) => `${place} 열기`;
 // The only words for a layer's state, a tag beside the title of a panel that overrides a shared value (design, Secondary
 // screens; user 2026-10-15). default: the shared layer's word, re-ruled 2026-10-16 to 공용, leaving 기본값 a field's
 // starting value only.
+export const EVERY_CHAT = '모든 채팅에 적용돼요.';
 export const SCOPE = { default: '공용', chat: '이 채팅만', character: '이 캐릭터만' } as const;
 export const scopeTag = (scope: keyof typeof SCOPE) => ({ label: SCOPE[scope], tone: scope === 'default' ? 'plain' : 'accent' }) as const;
 
 export const FEATURES_TITLE = '기능';
 // A switch's state in a line of facts.
 export const onOff = (on: boolean) => (on ? '켬' : '끔');
-// 디스플레이's section for how a chat's own lines show, and the 삽화 page's door to where pictures stand.
+// 디스플레이's section for how a chat's own lines show, and its row for where pictures stand (the 삽화 page's door to it).
 export const CHAT_LOOK = '채팅 화면';
-export const ILLUSTRATION_PLACE = '삽화가 보이는 위치';
+export const PICTURE_PLACE = '이미지 위치';
 // 토큰 절약 (runtime/preread), a 실험실 experiment whose name may still change: every screen names it through this.
 export const PRE_READ = '토큰 절약';
 export const PRE_READ_HELP = `${MODEL_ROLES.aux}이 긴 내용을 요약해 ${MODEL_ROLES.main}의 입력 토큰을 아껴요. 요약에서 빠진 내용은 반영되지 않을 수 있어요. pdf-pod 플러그인에서 가져온 아이디어예요.`;
