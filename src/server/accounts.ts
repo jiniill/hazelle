@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { Hono, type Context } from 'hono';
-import type { Door } from '../contracts/accounts';
+import { USERNAME, type Door, type SessionFacts } from '../contracts/accounts';
 import type { RestoreAction } from '../contracts/admin';
 import { CAP } from './caps';
 import { checkProof, findAccount, hashProof, outsideVisitor, readMethod, readProof } from './credentials';
@@ -10,7 +10,6 @@ import { canWrite, currentAccount, dropSessionCookie, endOtherSessions, endSessi
 import { insertVault, readVault, readWrap } from './vaults';
 import { UNREAD_BOARD, UNREAD_NOTICES } from './unread';
 
-const USERNAME = /^[\p{L}\p{N}_.-]{2,32}$/u;
 const ROOM = '(SELECT COUNT(*) FROM accounts) < (SELECT signup_cap FROM service)';
 
 export const accounts = new Hono<AppEnv>();
@@ -81,7 +80,8 @@ accounts.post('/login', async (c) => {
   const started = await startSession(db, account.id);
   await started.insert.run();
   setSessionCookie(c, started.token);
-  const [session, vault] = await Promise.all([describe(c, { ...account, suspended: account.suspended_at !== null, admin: account.admin === 1 }), readVault(db, account.id)]);
+  // state again, as the leaving check above narrowed it.
+  const [session, vault] = await Promise.all([describe(c, { ...account, state: account.state, suspended: account.suspended_at !== null, admin: account.admin === 1 }), readVault(db, account.id)]);
   return c.json({ session, vault });
 });
 
@@ -154,8 +154,7 @@ accounts.post('/account/restores/:id/:action{resume|finalize|cancel}', requireSe
   return answerAction(c, id, c.req.param('action') as RestoreAction);
 });
 
-// Return account id for vault AAD. Null caps mean unlimited; null bytes means the store is unavailable/restoring.
-async function describe(c: Context<AppEnv>, account: Pick<Account, 'id' | 'username' | 'suspended' | 'incarnation' | 'state' | 'admin'>) {
+async function describe(c: Context<AppEnv>, account: Pick<Account, 'id' | 'username' | 'suspended' | 'incarnation' | 'admin'> & Pick<SessionFacts, 'state'>): Promise<SessionFacts> {
   const { incarnation } = account;
   const [usage, facts] = await Promise.all([
     store(c.env, incarnation).usage(incarnation),
@@ -174,7 +173,6 @@ async function describe(c: Context<AppEnv>, account: Pick<Account, 'id' | 'usern
     admin: account.admin,
     suspended: account.suspended,
     state: account.state,
-    incarnation,
     storage: { bytes: 'bytes' in usage ? usage.bytes : null, ...storage },
     unreadNotices,
     unreadBoard,

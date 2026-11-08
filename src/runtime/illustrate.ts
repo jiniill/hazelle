@@ -1,7 +1,8 @@
 import { ChangeSignal } from '../change-signal';
 import { refOf, sameModelRef, type ModelRef } from '../connectors/assignment';
 import { resolveConnection } from '../connectors/registry';
-import { ConnectorError, type Costs, type Draws, type HttpRequest, type Picture, type PictureRequest } from '../connectors/types';
+import { ConnectorError, type Costs, type Draws, type Picture, type PictureRequest } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import { imageSize } from '../engine/import/card';
 import { asPov, parseScenes, pictureRequest, toldProfiles, type Earlier, type SceneInvalid } from '../engine/illustrate';
 import { namesOf } from '../engine/likeness';

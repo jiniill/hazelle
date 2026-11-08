@@ -1,6 +1,6 @@
 import { Hono, type Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
-import { RETRY_MOST, type Retry } from '../contracts/streams';
+import { RETRY_MOST, type Retry, type StreamStart } from '../contracts/streams';
 import { admitCall } from './calls';
 import { fail, ID, isRecord, type AppEnv } from './http';
 import { botCalls, canCall, requireSession } from './session';
@@ -23,7 +23,7 @@ export const streams = new Hono<AppEnv>()
   .post('/:id', canCall, async (c) => {
     const call = await admitCall(c);
     if (call instanceof Response) return call;
-    const body = isRecord(call.body) ? call.body : null;
+    const body: { [K in keyof StreamStart]?: unknown } | null = isRecord(call.body) ? call.body : null;
     const retry = body?.retry;
     if (!body || (body.bot !== undefined && (typeof body.bot !== 'string' || !ID.test(body.bot))) || (retry !== undefined && !isRetry(retry))) {
       call.leave();

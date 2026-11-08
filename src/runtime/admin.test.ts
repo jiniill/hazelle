@@ -3,7 +3,8 @@ import type { Connection } from '../connectors/types';
 import { loadSession, markNoticesSeen, readNotices } from './account';
 import { readAccounts, readAdminAccount, readServiceUsage, readLog, readService, removeAccount, sendNotice, setService, suspend } from './admin';
 import { markActivitySeen, readActivity, readPosts, setNickname, setPostStatus, writeComment, writePost } from './board';
-import { beginRestore, continueRestore, readPoints, readRestores, type Restore } from './restores';
+import type { Restore } from '../contracts/admin';
+import { beginRestore, continueRestore, readPoints, readRestores } from './restores';
 import { testServer } from './testing';
 
 const server = testServer();

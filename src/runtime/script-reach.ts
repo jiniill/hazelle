@@ -1,6 +1,7 @@
 import type { ModelRef, Role } from '../connectors/assignment';
 import type { Cost } from '../connectors/types';
-import type { EmbedPurpose, HttpRequest } from '../connectors/types';
+import type { EmbedPurpose } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import type { ChatScope } from '../engine/render';
 import type { EmbedResult, FetchResult, Host, ModelMessage, ModelRefusal, ModelResult, ToolReach } from '../engine/script-api';
 import { live, type PackOwner } from '../model/library';

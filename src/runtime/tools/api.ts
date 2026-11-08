@@ -1,4 +1,4 @@
-import type { HttpRequest } from '../../connectors/types';
+import type { HttpRequest } from '../../contracts/http';
 import { isRecord } from '../../connectors/values';
 import { RELAY_HEADER } from '../../contracts/http';
 import { Runaway } from '../../engine/cbs/evaluate';

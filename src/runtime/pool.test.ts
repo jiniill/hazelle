@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONNECTION_TYPES, RETRIES } from '../connectors/registry';
 import { bareModel } from '../connectors/chat-completions';
-import type { Connection, HttpRequest, Model } from '../connectors/types';
+import type { Connection, Model } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import { cycleOf } from '../model/turns';
 import { streamKey } from '../vault/streams';
 import { Credentials } from './credential';

@@ -2,7 +2,7 @@ import { CALCULATOR_PAGE } from '../../contracts/prices';
 import { CONNECTION_TYPES } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
 import { CATEGORIES, type Category } from '../../contracts/board';
-import { SHARE_ID } from '../../contracts/shares';
+import { SHARE_ID, SHARE_PAGE } from '../../contracts/shares';
 import { FEATURES, type Feature } from '../../model/features';
 import type { Shelf } from '../../model/library';
 import { PROMPT_SORTS, type PromptSort } from '../../model/prompt';
@@ -124,7 +124,7 @@ export function parseRoute(at: string): Route {
     if (sub === 'new') return { kind: 'new-chat', character: id };
     return HOME;
   }
-  if (top === 's' && id !== undefined && sub === undefined) return SHARE_ID.test(id) ? { kind: 'share', id } : HOME;
+  if (`/${top}` === SHARE_PAGE.path && id !== undefined && sub === undefined) return SHARE_ID.test(id) ? { kind: 'share', id } : HOME;
   if (top === 'chats' && id !== undefined && sub === undefined) {
     if (id === 'new') return { kind: 'new-chat', character: null };
     if (!ID.test(id)) return HOME;
@@ -316,7 +316,7 @@ export function href(route: Route): string {
     case 'admin-list':
       return `/settings/admin/${route.list}`;
     case 'share':
-      return `/s/${route.id}`;
+      return `${SHARE_PAGE.path}/${route.id}`;
     case 'settings':
       return '/settings';
   }

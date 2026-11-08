@@ -1,5 +1,5 @@
 import type { AccountState } from '../contracts/admin';
-import type { FeedQuery, SealedChange, SealedWrite } from '../contracts/objects';
+import { FEED_PAGE_BODY_BYTES, feedPageRows, type FeedQuery, type SealedChange, type SealedWrite } from '../contracts/objects';
 import { ROW_BYTES, SHARED_BYTES } from './caps';
 import type { Db, SqlValue } from './db/service-db';
 import { isRecord } from './http';
@@ -45,10 +45,6 @@ export const serviceReads = (db: Db): StoreReads => ({
   shared: (incarnation) => db.prepare(SHARED_BYTES).bind(incarnation).first('bytes'),
 });
 
-const PAGE_ROWS = 500;
-// A metadata row is a hundred bytes, so a backup's walk over a whole account takes few round trips.
-const METADATA_PAGE_ROWS = 10_000;
-const PAGE_BODY_BYTES = 4_000_000;
 // How far past its cap an account's updates may still grow it, so a full account can still mark what it means to delete
 // (휴지통's mark: a body that grows a little), while nothing new is created. The account's bytes never
 // pass cap + this.
@@ -102,7 +98,7 @@ export class StoreRules {
       // Limit candidates before the window sum, not outside it. Cast body to BLOB: text LENGTH counts characters
       // and stops at NUL, undercounting the byte budget.
       const excluded = JSON.stringify(query.excluded);
-      const pageRows = query.metadata ? METADATA_PAGE_ROWS : PAGE_ROWS;
+      const pageRows = feedPageRows(query);
       const rows = this.db.exec<Row>(
         `SELECT id, kind, parent_id, rev, deleted_at IS NOT NULL AS deleted, omitted, start < ? AS fits, CASE WHEN start < ? THEN body END AS body
          FROM (
@@ -119,7 +115,7 @@ export class StoreRules {
              ORDER BY rev LIMIT ?
            ))
          ) ORDER BY rev`,
-        ...[PAGE_BODY_BYTES, PAGE_BODY_BYTES, excluded, excluded, query.since],
+        ...[FEED_PAGE_BODY_BYTES, FEED_PAGE_BODY_BYTES, excluded, excluded, query.since],
         ...(query.parent === null ? [] : [query.parent]),
         ...(query.kind === null ? [] : [query.kind]),
         ...(until === null ? [] : [excluded, until]),

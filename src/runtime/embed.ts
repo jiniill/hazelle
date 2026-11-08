@@ -1,5 +1,6 @@
 import { embedAnswer, embedRequests, embedRoute, withCredential } from '../connectors/registry';
-import type { Cost, EmbedPurpose, HttpRequest, Usage } from '../connectors/types';
+import type { Cost, EmbedPurpose, Usage } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import type { Receipt } from '../model/chat';
 import type { Route } from './assignment';
 import type { Credentials } from './credential';

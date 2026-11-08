@@ -10,7 +10,7 @@ import { GUIDE_INDEX, GUIDE_TOPICS, GUIDE_WORDS, GUIDES, guideMeta, spans, type 
 import { CALCULATOR_PAGE } from '../contracts/prices';
 import { PULSE_PAGE, type PulseAnswer } from '../contracts/pulse';
 import { TOOL_SANDBOX } from '../contracts/sandbox';
-import { SHARE_ID, type ShareCover } from '../contracts/shares';
+import { SHARE_ID, SHARE_PAGE, type ShareCover } from '../contracts/shares';
 import { VISITOR_HEADER } from '../contracts/http';
 import { HOSTED } from '../contracts/installation';
 import type { PageVisit } from './visits';
@@ -86,7 +86,7 @@ export function clientFiles(clientDir: string, sources: PageSources, visit: (pag
   });
   client.get('/robots.txt', (c) => c.text(`User-agent: *\nDisallow: /api/\n${selfHost ? '' : `Sitemap: ${HOSTED}/sitemap.xml\n`}`));
   client.get('/sitemap.xml', (c) => (selfHost ? c.notFound() : c.body(SITEMAP, 200, { 'Content-Type': 'application/xml; charset=utf-8' })));
-  client.get('/s/:id', async (c, next) => {
+  client.get(`${SHARE_PAGE.path}/:id`, async (c, next) => {
     const id = c.req.param('id');
     if (!SHARE_ID.test(id)) return next();
     const shared = await sources.cover(id);

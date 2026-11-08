@@ -1,4 +1,4 @@
-import type { SnapshotKind } from '../../contracts/admin';
+import { RETENTION_DAYS, type SnapshotKind } from '../../contracts/admin';
 import { createHash, randomBytes } from 'node:crypto';
 import { createWriteStream, existsSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -37,8 +37,7 @@ export const CURRENT_BASELINE = (column: 'id' | 'taken_at' | 'rev', a: string, n
      AND taken_at <= ${now}
    ORDER BY taken_at DESC, id DESC LIMIT 1`;
 
-// How long a snapshot, a backup generation and an ended operation's pins last; a finished rewind's undo too.
-export const RETENTION_MS = 7 * DAY_MS;
+export const RETENTION_MS = RETENTION_DAYS * DAY_MS;
 // A day short of retention, and expiry runs in the daily job: a base chosen for a capture is at least a day from expiry,
 // longer than any capture takes to name it.
 const BASE_WINDOW_MS = RETENTION_MS - DAY_MS;

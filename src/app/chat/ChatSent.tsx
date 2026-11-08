@@ -5,7 +5,7 @@ import type { Receipt } from '../../model/chat';
 import { isChapter } from '../../engine/memory';
 import type { Chapter, Memory, MemoryRecord } from '../../model/memory';
 import type { Role } from '../../model/prompt';
-import type { HttpRequest } from '../../connectors/types';
+import type { HttpRequest } from '../../contracts/http';
 import type { LogEntry } from '../../runtime/request-log';
 import { MESSAGE_ROLES, SLOT, textName } from '../common/prompt-words';
 import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, List, ListItem, Row, Section, Stack, Text } from '../ui';

@@ -1,4 +1,5 @@
-import { readLog, type LogRow } from '../../runtime/admin';
+import type { LogRow } from '../../contracts/admin';
+import { readLog } from '../../runtime/admin';
 import { sizeText } from '../common/size';
 import { ago, moment } from '../common/time';
 import { BOARD, NOTICES } from '../common/words';

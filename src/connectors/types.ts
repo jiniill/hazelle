@@ -1,3 +1,4 @@
+import type { HttpRequest } from '../contracts/http';
 import type { Rates } from './models-dev';
 import type { Accepts, Carries, ModelSettings, Pdf, Takes } from './settings';
 
@@ -34,8 +35,6 @@ export type Account = { id: string; secret: string; name?: string };
 // anchor identifies the group at the stored cycle (model/turns cycleOf).
 export type Turns = { day: number; groups: Group[]; anchor: { group: string; cycle: number } };
 export type Group = { id: string; name: string; accounts: string[] };
-
-export type HttpRequest = { url: string; method: 'GET' | 'POST'; headers: Record<string, string>; body: string | null };
 
 export type Modality = 'text' | 'image' | 'audio' | 'video' | 'file' | 'embedding';
 

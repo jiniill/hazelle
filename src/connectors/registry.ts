@@ -32,7 +32,8 @@ import { voyage } from './voyage';
 import { xai } from './xai';
 import { MODELS_DEV_LISTS } from './models-dev';
 import { priceCost } from './pricing';
-import { carriesPictures, ConnectorError, seesPictures, type Batches, type CacheWay, type ChatMessage, type ChatRequest, type Codec, type Connection, type ConnectionType, type Cost, type EmbedPurpose, type Endpoint, type HttpRequest, type Model, type Usage } from './types';
+import { carriesPictures, ConnectorError, seesPictures, type Batches, type CacheWay, type ChatMessage, type ChatRequest, type Codec, type Connection, type ConnectionType, type Cost, type EmbedPurpose, type Endpoint, type Model, type Usage } from './types';
+import type { HttpRequest } from '../contracts/http';
 
 // Adding a provider means adding its connection type here. Nothing else names one. The order is the screen's, 주요 too.
 export const CONNECTION_TYPES: readonly ConnectionType[] = [

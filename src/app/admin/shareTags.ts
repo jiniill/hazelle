@@ -1,4 +1,4 @@
-import type { SharedState } from '../../runtime/admin';
+import type { SharedState } from '../../contracts/admin';
 import { SHARE } from '../common/words';
 
 // A reported share's state as the inbox shows it. 검토됨: the operator lifted a hold, so a later report waits here

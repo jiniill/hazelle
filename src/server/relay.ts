@@ -1,4 +1,4 @@
-import { RELAY_HEADER, type RelayError } from '../contracts/http';
+import { RELAY_HEADER, RELAY_METHODS, RELAY_SOURCE, type HttpRequest, type RelayError } from '../contracts/http';
 import { HOP_BY_HOP } from './hop-by-hop';
 import { isRecord } from './http';
 import { PolicyRefusal } from './ssrf';
@@ -16,9 +16,8 @@ export type UpstreamInit = {
 // that failed on the way.
 export type Upstream = (url: URL, init: UpstreamInit) => Promise<Response>;
 
-type Envelope = { url: URL; method: string; headers: Record<string, string>; body: string | null };
+type Envelope = Omit<HttpRequest, 'url'> & { url: URL };
 
-const METHODS = new Set(['GET', 'POST']);
 const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 
 const DROPPED_REQUEST_HEADERS = new Set([
@@ -116,7 +115,7 @@ export async function forward(upstream: Upstream, body: unknown, bytes: number, 
   response.headers.forEach((value, name) => {
     if (!DROPPED_RESPONSE_HEADERS.has(name) && !(page && name === 'content-type')) headers.set(name, value);
   });
-  headers.set(RELAY_HEADER, 'upstream');
+  headers.set(RELAY_HEADER, RELAY_SOURCE.upstream);
   headers.set('cache-control', 'no-store');
   const reader = page ? undefined : response.body?.getReader();
   const metered = reader
@@ -149,9 +148,10 @@ export async function forward(upstream: Upstream, body: unknown, bytes: number, 
 
 function parseEnvelope(value: unknown): Envelope | null {
   if (!isRecord(value)) return null;
-  const { url, method, headers, body } = value;
+  const { url, headers, body } = value;
   if (typeof url !== 'string' || !URL.canParse(url)) return null;
-  if (typeof method !== 'string' || !METHODS.has(method)) return null;
+  const method = RELAY_METHODS.find((each) => each === value.method);
+  if (!method) return null;
   if (typeof headers !== 'object' || headers === null) return null;
   if (!Object.values(headers).every((v) => typeof v === 'string')) return null;
   if (body !== null && typeof body !== 'string') return null;
@@ -185,5 +185,5 @@ function errorCodes(error: unknown): string[] {
 }
 
 export function refuse(status: number, error: RelayError, detail: Record<string, unknown> = {}): Response {
-  return Response.json({ error, ...detail }, { status, headers: { [RELAY_HEADER]: 'error', 'cache-control': 'no-store' } });
+  return Response.json({ error, ...detail }, { status, headers: { [RELAY_HEADER]: RELAY_SOURCE.error, 'cache-control': 'no-store' } });
 }

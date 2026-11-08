@@ -1,5 +1,5 @@
 import type { Context, ExecutionContext } from 'hono';
-import { BEFORE_ARMED, SELF_RESTORES_PER_DAY, type RestoreAction, type RestoreError, type RestorePhase, type SnapshotKind } from '../contracts/admin';
+import { BEFORE_ARMED, NEWEST_RESTORE_MINUTES, OLDEST_RESTORE_DAYS, SELF_RESTORES_PER_DAY, type Restore, type RestoreAction, type RestoreError, type RestorePhase, type RestorePoint, type RestoreRun, type SnapshotKind } from '../contracts/admin';
 import type { Life, Unavailable } from './account-store';
 import { landing, RETENTION_MS } from './db/account-db';
 import type { Db } from './db/service-db';
@@ -11,11 +11,8 @@ import { takeBackFiles } from './files/claims';
 // Any await may be interrupted and retried: service writes use compare-and-set; store calls must be repeatable.
 // Every statement names the incarnation so old runners cannot touch a recreated account with the same id.
 
-// A restore asks for a time at least this far back, so the snapshot chosen for it lies before the restore's own mark.
-const NEWEST_MS = 10 * MINUTE_MS;
-// Snapshots are kept for RETENTION_MS (db/account-db.ts). A day less leaves an operation time to choose its target, which
-// is pinned from then on (backup/snapshots.ts), so nothing expires between choosing it and installing it.
-const OLDEST_MS = RETENTION_MS - DAY_MS;
+const NEWEST_MS = NEWEST_RESTORE_MINUTES * MINUTE_MS;
+const OLDEST_MS = OLDEST_RESTORE_DAYS * DAY_MS;
 // Restarts that did not apply the armed rewind before the operation stops and waits for the operator.
 const ARM_TRIES = 3;
 // Steps one run takes before it stops: every phase once, the re-arms, and the compare-and-sets a parallel run won.
@@ -107,8 +104,6 @@ async function leave(
   return 'left';
 }
 
-export type Run = { id: number; phase: RestorePhase; verified: boolean; error: string | null };
-
 type Operation = {
   id: number;
   incarnation: string;
@@ -184,7 +179,7 @@ export async function beginRestore(env: Services, accountId: string, post: numbe
 
 // null: no such operation.
 // Every step re-reads the operation, so a run that lost a compare-and-set to a parallel run follows where it went.
-export async function runRestore(env: Services, id: number): Promise<Run | null> {
+export async function runRestore(env: Services, id: number): Promise<RestoreRun | null> {
   let arms = 0;
   for (let steps = 0; ; steps++) {
     const stepped = await env.backups.hold(async () => {
@@ -205,7 +200,7 @@ export async function runRestore(env: Services, id: number): Promise<Run | null>
 
 // Gives the account back with its timeline unchanged, possible only before the rewind is armed. too-late: armed or
 // later, from where an operation only goes forward.
-export async function cancelRestore(env: Services, id: number): Promise<Run | null | 'too-late'> {
+export async function cancelRestore(env: Services, id: number): Promise<RestoreRun | null | 'too-late'> {
   const cancelled = await env.backups.hold(async () => {
     const operation = await readOperation(env.db, id);
     if (!operation) return null;
@@ -341,7 +336,7 @@ function readOperation(db: Db, id: number) {
     .first<Operation>();
 }
 
-function run({ id, phase, verified, error }: Pick<Operation, 'id' | 'phase' | 'verified' | 'error'>): Run {
+function run({ id, phase, verified, error }: Pick<Operation, 'id' | 'phase' | 'verified' | 'error'>): RestoreRun {
   return { id, phase, verified: Boolean(verified), error };
 }
 
@@ -374,7 +369,7 @@ export async function answerBegin(c: Context<AppEnv>, accountId: string, post: n
 const EDGE_MS = 15 * MINUTE_MS;
 export const incarnationOf = (db: Db, accountId: string) => db.prepare('SELECT incarnation FROM accounts WHERE id = ?').bind(accountId).first<string>('incarnation');
 
-export async function restorePoints(db: Db, accountId: string, now = Date.now()) {
+export async function restorePoints(db: Db, accountId: string, now = Date.now()): Promise<RestorePoint[] | null> {
   const incarnation = await incarnationOf(db, accountId);
   if (incarnation === null) return null;
   const { results } = await db
@@ -390,7 +385,7 @@ export async function restorePoints(db: Db, accountId: string, now = Date.now())
 
 // Newest first. targetAt: when the snapshot it rewinds to was taken, null until it is chosen. report_id is the shipped column
 // name (migration 0005) for the operator-only post a restore answers.
-export async function restoresOf(db: Db, accountId: string) {
+export async function restoresOf(db: Db, accountId: string): Promise<Restore[]> {
   const { results } = await db
     .prepare(
       `SELECT r.id, r.report_id AS postId, r.at, r.undoes, r.phase, r.verified, r.error, r.created_at AS createdAt, r.updated_at AS updatedAt,
@@ -398,7 +393,7 @@ export async function restoresOf(db: Db, accountId: string) {
        FROM restores r JOIN accounts ON accounts.incarnation = r.incarnation WHERE accounts.id = ?1 ORDER BY r.id DESC`,
     )
     .bind(accountId, Date.now())
-    .all<{ phase: RestorePhase; verified: number; canUndo: number; ended_at: number | null }>();
+    .all<Omit<Restore, 'verified' | 'canUndo' | 'undoExpiresAt' | 'actions'> & { verified: number; canUndo: number; ended_at: number | null }>();
   return results.map(({ ended_at, canUndo, ...row }) => ({
     ...row,
     verified: Boolean(row.verified),

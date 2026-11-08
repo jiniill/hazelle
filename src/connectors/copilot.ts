@@ -1,6 +1,7 @@
 import { bareModel } from './chat-completions';
 import { effortLevels, type ReasoningTakes } from './settings';
-import type { CacheMark, ConnectionType, HttpRequest, Meter, Modality, Model, Protocol } from './types';
+import type { CacheMark, ConnectionType, Meter, Modality, Model, Protocol } from './types';
+import type { HttpRequest } from '../contracts/http';
 import { count, flag, isRecord, modelEntries, nameOf } from './values';
 
 // Copilot serves only clients it knows, so every request names VS Code's Copilot Chat, as provider-hub

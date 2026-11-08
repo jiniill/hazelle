@@ -2,11 +2,12 @@ import type { ModelSettings } from '../connectors/settings';
 import type { ApiResult } from './api';
 import type { PreparedChat } from '../connectors/preparation';
 import type { CallCalibration, InputMeasurement, TokenFit } from '../model/token-calibration';
-import { BOT_HEADER, RELAY_HEADER } from '../contracts/http';
-import { HEAD, DATA, END, PING, PING_MS, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
+import { BOT_HEADER, RELAY_HEADER, RELAY_SOURCE, STREAM_FRAMES, STREAM_HEADER } from '../contracts/http';
+import { HEAD, DATA, END, PING, PING_MS, WAIT, askedWait, retryWait, type Retry, type StreamStart } from '../contracts/streams';
 import { providerCode, providerMessage } from '../connectors/errors';
 import { isRecord } from '../connectors/values';
-import type { ConnectionType, HttpRequest } from '../connectors/types';
+import type { ConnectionType } from '../connectors/types';
+import type { HttpRequest } from '../contracts/http';
 import type { GuestStep } from '../contracts/admin';
 import type { PulseLabel } from '../contracts/pulse';
 import { streamOpener } from '../vault/streams';
@@ -135,10 +136,10 @@ async function accountRaw(request: HttpRequest, signal?: AbortSignal, bot?: stri
 
 async function sourced(response: Response): Promise<Response | RelayFailure> {
   const source = response.headers.get(RELAY_HEADER);
-  if (source === 'upstream') return response;
+  if (source === RELAY_SOURCE.upstream) return response;
   const body: unknown = await response.json().catch(() => null);
   const code = codeOf(body);
-  if (source !== 'error') return { kind: 'app', code };
+  if (source !== RELAY_SOURCE.error) return { kind: 'app', code };
   return { kind: 'relay', code, ...(isRecord(body) && typeof body.location === 'string' && { location: body.location }) };
 }
 
@@ -215,11 +216,11 @@ async function accountStream(call: StreamCall, request: HttpRequest | null, sign
   if (request) {
     let response: Response;
     try {
-      response = await fetchApi(`streams/${call.id}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ key: call.public, request, ...(call.bot && { bot: call.bot }), ...(retry && { retry }) }), signal, pulse });
+      response = await fetchApi(`streams/${call.id}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ key: call.public, request, ...(call.bot && { bot: call.bot }), ...(retry && { retry }) } satisfies StreamStart), signal, pulse });
     } catch {
       return lost(signal);
     }
-    if (response.headers.get('x-stream') !== 'frames' || !response.body) return sourced(response);
+    if (response.headers.get(STREAM_HEADER) !== STREAM_FRAMES || !response.body) return sourced(response);
     // A call stopped as its start was answered gets no marker: whoever stopped it ends it, and a marker landing after
     // that end would be picked up as a call to save.
     if (signal.aborted) {
@@ -256,7 +257,7 @@ async function reach(id: string, from: number, tries: number, signal: AbortSigna
     if (wait) await pause(wait, signal);
     signal.throwIfAborted();
     const response = await fetchApi(`streams/${id}?from=${from}`, { signal }).catch(() => null);
-    if (response?.ok && response.headers.get('x-stream') === 'frames' && response.body) return response.body;
+    if (response?.ok && response.headers.get(STREAM_HEADER) === STREAM_FRAMES && response.body) return response.body;
     if (response?.status === 404) {
       void discardBody(response.body);
       return { kind: 'app', code: 'stream-gone' };
@@ -264,7 +265,7 @@ async function reach(id: string, from: number, tries: number, signal: AbortSigna
     const retryAfter = response?.headers.get('retry-after') ?? null;
     const next = retryWait(Math.min(tries, 5), retryAfter, Date.now(), Infinity);
     if (response && ![408, 429, 500, 502, 503, 504].includes(response.status)) {
-      return { kind: response.headers.get(RELAY_HEADER) === 'error' ? 'relay' : 'app', code: await errorCode(response) };
+      return { kind: response.headers.get(RELAY_HEADER) === RELAY_SOURCE.error ? 'relay' : 'app', code: await errorCode(response) };
     }
     void discardBody(response?.body);
     wait = retryAfter === null ? Math.min(next!, 30_000) : next!;

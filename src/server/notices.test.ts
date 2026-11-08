@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
+import type { Notice } from '../contracts/accounts';
 import { UNREAD_NOTICES_HEADER } from '../contracts/http';
 import { testApp } from './testing';
 
@@ -15,7 +16,6 @@ beforeEach(async () => {
 // The first signup of an installation is its operator, so a test calls this before t.signUp().
 const operator = () => t.signUp('operator');
 
-type Notice = { id: number; text: string; createdAt: number };
 const read = async (cookie: string) => ((await (await t.get('notices', cookie)).json()) as { notices: Notice[] }).notices;
 const unread = async (cookie: string) => ((await (await t.get('session', cookie)).json()) as { session: { unreadNotices: number } }).session.unreadNotices;
 const log = async (cookie: string) => ((await (await t.get('admin/log', cookie)).json()) as { log: { action: string; target: string; detail: unknown }[] }).log;

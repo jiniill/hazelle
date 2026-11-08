@@ -1,6 +1,5 @@
 import { ChangeSignal } from '../change-signal';
-import type { Door } from '../contracts/accounts';
-import type { AccountState } from '../contracts/admin';
+import type { Door, Notice, SessionFacts, Storage } from '../contracts/accounts';
 import { createVault, openVault, passwordCredential, recoveryCredential, sameVaultKey, type Credential, type Method, type VaultKey, type VaultRecord } from '../vault/keys';
 import { api, holdAccount, SLOW_ROUTE_WAIT, type ApiResult, type Heard } from './api';
 import { page } from './pages';
@@ -8,10 +7,6 @@ import { stretchInWorker } from './password';
 import { guestSignupRecovery, recallGuest } from '../vault/device';
 import type { GuestTransferOptions } from './guest-transfer';
 
-// Null caps mean unlimited; null bytes means unread/restoring.
-// fileBytes tracks held files, not files currently referenced by app objects (server/files).
-export type Storage = { bytes: number | null; bytesCap: number | null; fileBytes: number; fileBytesCap: number | null };
-export type SessionFacts = { accountId: string; username: string; admin: boolean; suspended: boolean; state: Exclude<AccountState, 'leaving'>; storage: Storage; unreadNotices: number; unreadBoard: number; localProviders: readonly string[] };
 export type SignedIn = { session: SessionFacts; vault: VaultRecord };
 type Boot = { session: null; door: Door } | SignedIn;
 export type Signup = { accountId: string; username: string; passwordProof: string; passwordWrap: string; recoveryProof: string; recoveryWrap: string };
@@ -128,7 +123,6 @@ export const changePassword = (current: Proof, next: { passwordProof: string; pa
 
 export const deleteAccount = (credential: Proof) => api<undefined>('DELETE', 'account', proven(credential), undefined, SLOW_ROUTE_WAIT);
 
-export type Notice = { id: number; text: string; createdAt: number };
 export const readNotices = (after: string | null, ask: { limit?: number } = {}) => page<'notices', Notice>('notices', 'notices', after, ask);
 // newest: the newest notice shown, so one sent since stays unread.
 export const markNoticesSeen = (newest: number) => api<undefined>('POST', 'notices/seen', { id: newest });
