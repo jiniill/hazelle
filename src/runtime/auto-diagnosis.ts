@@ -1,4 +1,4 @@
-import { AUTO_BROWSER_MESSAGES, AUTO_ERROR_NAMES, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorCause, type AutoErrorName, type AutoEvent, type AutoJob, type AutoReport } from '../contracts/auto-diagnosis';
+import { AUTO_BROWSER_MESSAGES, AUTO_ERROR_NAMES, AUTO_OPEN_FAILURES, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorCause, type AutoErrorName, type AutoEvent, type AutoJob, type AutoReport } from '../contracts/auto-diagnosis';
 import type { Place } from './diagnostic-state';
 import { without } from '../model/fields';
 import type { Settings } from '../model/settings';
@@ -71,6 +71,8 @@ export function errorFacts(error: object): { detail: AutoErrorName; cause: AutoE
   const cause = AUTO_BROWSER_MESSAGES.find((known) => known.message === message)?.cause ?? 'other';
   return { detail: AUTO_ERROR_NAMES.find((known) => known === name) ?? 'other', cause, place: frames[0] ?? null, frames: frames.join(' ') || null };
 }
+
+export const openFailure = (error: string): AutoDetail => AUTO_OPEN_FAILURES.find((known) => known === error) ?? 'other';
 
 export type AutoOrigin = NonNullable<AutoReport['origin']>;
 

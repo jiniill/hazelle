@@ -1,5 +1,5 @@
 import { toolId } from '../model/tool';
-import { autoDiagnose } from '../runtime/auto-diagnosis';
+import { autoDiagnose, openFailure } from '../runtime/auto-diagnosis';
 import type { ToolFrames, ToolMenu } from '../runtime/tools/facade';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { PictureUrl } from '../engine/assets';
@@ -21,7 +21,7 @@ import { draftsOf } from '../runtime/tools/drafts';
 import type { Session } from '../runtime/session';
 import { CapturedRead, type ChatScopeRead, type Opening } from '../runtime/read-model';
 import type { ScriptsState } from '../runtime/scripts/interactions';
-import type { ObjectStore } from '../runtime/store';
+import { isHalted, type ObjectStore } from '../runtime/store';
 import type { Turn } from '../runtime/talk';
 import type { Translating } from '../runtime/translate';
 import { Saves } from './common/saveQueue';
@@ -118,7 +118,8 @@ export function useChatModel(id: string | null) {
     if (id === null || !exists) return;
     const lease = store.retainChat(id);
     void lease.ready.then((failure) => {
-      if (failure) autoDiagnose({ event: 'chat-unopened' });
+      // A lease released before its chat opened ends it stopped, which is leaving the chat, not a failure.
+      if (failure && !isHalted(failure)) autoDiagnose({ event: 'chat-unopened', detail: openFailure(failure.error) });
     });
     return lease.release;
   }, [store, id, attempt, exists]);

@@ -15,6 +15,7 @@ import { openGuestSession, type Session } from './session';
 import { FIRST_PROFILE_ID } from './profiles';
 import { requestCode } from './sign-in';
 import { takeTurn } from './turn';
+import { stubPage } from './testing';
 
 let session: Session | undefined;
 afterEach(() => {
@@ -29,7 +30,7 @@ const saying = () => new Response('data: {"choices":[{"delta":{"content":"Hello"
 
 it('opens a guest session, sends a turn directly, parses and saves it in-page, and tells the app only the steps of a guest', async () => {
   vi.stubGlobal('window', new EventTarget());
-  vi.stubGlobal('document', { visibilityState: 'hidden' });
+  stubPage('hidden');
   let release!: () => void;
   const waiting = new Promise<void>((resolve) => { release = resolve; });
   const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async (url) => {
@@ -150,7 +151,7 @@ it('mints a Vertex token through the browser’s existing exchange and uses it o
 
 it('refuses guest batch discounts before sending because a provider batch can outlive the page', async () => {
   vi.stubGlobal('window', new EventTarget());
-  vi.stubGlobal('document', { visibilityState: 'hidden' });
+  stubPage('hidden');
   const fetch = vi.fn();
   vi.stubGlobal('fetch', fetch);
   const opened = await openGuestSession(new AbortController().signal);

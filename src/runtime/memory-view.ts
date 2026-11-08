@@ -62,7 +62,7 @@ export const leaving = (prompt: Assembled): number => (prompt.memory?.missing ??
 // Every reason that holds now. The first names the warning, so what ends by itself comes before what waits for the user.
 export function leavingCauses({ memory, dropped }: Pick<Assembled, 'memory' | 'dropped'>, chat: string, { running, failed, chapterFailed }: Pick<Remembering, 'running' | 'failed' | 'chapterFailed'>): GapCause[] {
   const missing = memory?.missing ?? 0;
-  const records = memory?.by === null ? memory.records : null;
+  const recorded = memory?.by === null ? memory : null;
   const causes: GapCause[] = [];
   if (running.has(chat)) causes.push('working');
   if (failed.has(chat) || chapterFailed.has(chat)) causes.push('failed');
@@ -70,10 +70,11 @@ export function leavingCauses({ memory, dropped }: Pick<Assembled, 'memory' | 'd
   if (memory?.by != null && memory.covered === 0 && dropped > 0) causes.push('tool');
   if (!memory && dropped > 0) causes.push('off');
   if (memory && !memory.slot && missing > 0) causes.push('no-slot');
-  if (missing > 0 && memory?.slot && records) {
-    if (records.stale > 0) causes.push('stale');
-    if (records.over > 0) causes.push('over');
-    if (records.forgotten > 0) causes.push('forgotten');
+  if (missing > 0 && recorded?.slot) {
+    if (recorded.records.stale > 0) causes.push('stale');
+    if (recorded.records.over > 0) causes.push('over');
+    if (recorded.records.forgotten > 0) causes.push('forgotten');
+    if (recorded.unrecorded > 0) causes.push('unrecorded');
   }
   if (memory && memory.by === null && dropped > 0) causes.push('no-room');
   return causes.length ? causes : ['unknown'];

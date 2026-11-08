@@ -33,6 +33,9 @@ const FILL_SAVE_MS = 5_000;
 const FILL_EXCLUDED = Object.keys(KINDS).filter((kind) => !SCOPED.has(kind));
 type Scope = { fold: ChatFold; opening: Promise<ApiFailure | null> | null; abort: AbortController; state: ScopeState; users: number; cursor: number; head: number; loading: Promise<ApiFailure | null> | null; error: ApiFailure | null; summarize: boolean };
 // The backend owns confirmed state; conflicts pull the latest copy and reapply the change.
+// A failure halted() answered, which is no failure of the work itself.
+export const isHalted = ({ error }: ApiFailure) => error === 'stopped' || error === 'timeline-changed';
+
 // A store belongs to one timeline: rewind ends it, and the next store inherits no state or work.
 export class ObjectStore {
   private readonly closing = new AbortController();

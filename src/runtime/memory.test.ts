@@ -15,7 +15,7 @@ import { editRecord, forgetRecord, removeFact, removeThread, setDefaultMemory, s
 import { addPrompt, editPrompt } from './prompts';
 import { ObjectStore } from './store';
 import { openSession, type Session } from './session';
-import { answerable, inTurn, saying, stubRelay, testConnection, testModel, testServer } from './testing';
+import { answerable, inTurn, saying, stubPage, stubRelay, testConnection, testModel, testServer } from './testing';
 import { leaving, memoryView } from './memory-view';
 import { importRisuChats } from './move';
 import { wouldSend } from './turn-context';
@@ -305,7 +305,7 @@ describe('an edit of memory', () => {
 describe('a summary picked up after a reload', () => {
   it('is dropped when its messages render differently than the call read them, though their versions are the same', async () => {
     vi.stubGlobal('window', new EventTarget());
-    vi.stubGlobal('document', { visibilityState: 'hidden' });
+    stubPage('hidden');
     const { accountId, vaultKey } = await server.account();
     const open = async () => {
       const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal);
@@ -581,7 +581,7 @@ describe('chapters', () => {
 
   it('commits a chapter call picked up after a reload as a chapter', async () => {
     vi.stubGlobal('window', new EventTarget());
-    vi.stubGlobal('document', { visibilityState: 'hidden' });
+    stubPage('hidden');
     const { accountId, vaultKey } = await server.account();
     const open = async () => {
       const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal);
@@ -615,7 +615,7 @@ describe('chapters', () => {
 
   it('keeps the words of a chapter the user edits while a call making it again is picked up after a reload', async () => {
     vi.stubGlobal('window', new EventTarget());
-    vi.stubGlobal('document', { visibilityState: 'hidden' });
+    stubPage('hidden');
     const { accountId, vaultKey } = await server.account();
     const open = async () => {
       const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal);

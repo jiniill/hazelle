@@ -7,7 +7,7 @@ import { SETTINGS_ID } from '../model/settings';
 import { counted, type Counted, type Ledger, type UsageCall } from '../model/usage';
 import type { ApiFailure, ApiResult } from './api';
 import type { Write } from './object-writes';
-import type { ObjectStore, Pin } from './store';
+import { isHalted, type ObjectStore, type Pin } from './store';
 import { accountSettings, changeSettings } from './account-settings';
 
 // Derive a stable UUID-v8 ledger id from the call id; random UUID-v4 stream ids cannot collide.
@@ -114,7 +114,7 @@ export class Usage {
     } catch {
       failure = { ok: false, error: 'usage-unavailable' };
     }
-    this.filled = !failure || failure.error === 'stopped' || failure.error === 'timeline-changed' ? null : 'failed';
+    this.filled = !failure || isHalted(failure) ? null : 'failed';
     this.changes.notify();
   }
 

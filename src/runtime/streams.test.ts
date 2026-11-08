@@ -4,7 +4,7 @@ import { fold, shown } from '../model/chat';
 import { setTranslate } from './characters';
 import { appendUserMessage, startChat } from './chat-log';
 import { openSession, type Session } from './session';
-import { answerable, inTurn, saying, stubRelay, testServer } from './testing';
+import { answerable, inTurn, saying, stubPage, stubRelay, testServer } from './testing';
 import { takeTurn } from './turn';
 import { translationInput } from './chat-context';
 
@@ -15,7 +15,7 @@ const ending = encode('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n
 
 async function pages() {
   vi.stubGlobal('window', new EventTarget());
-  vi.stubGlobal('document', { visibilityState: 'hidden' });
+  stubPage('hidden');
   const { accountId, vaultKey } = await server.account();
   const open = async () => {
     const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal);

@@ -42,10 +42,18 @@ export class Heartbeat {
 
   constructor(private readonly ping: () => void, private readonly stuck: () => void) {}
 
+  // A page frozen in the background (Chrome on Android) freezes its workers with it: the ping that waited out the
+  // freeze is asked again. resume fires before the frozen timers run.
+  private readonly thaw = () => {
+    this.pinged = null;
+  };
+
   // limit: for the job running now, which may differ from the one before it.
   start(limit: number) {
     this.limit = limit;
-    this.beat ??= setInterval(() => this.check(), BEAT_MS);
+    if (this.beat) return;
+    this.beat = setInterval(() => this.check(), BEAT_MS);
+    globalThis.document?.addEventListener('resume', this.thaw);
   }
 
   answered() {
@@ -54,6 +62,7 @@ export class Heartbeat {
 
   rest() {
     if (this.beat) clearInterval(this.beat);
+    globalThis.document?.removeEventListener('resume', this.thaw);
     this.beat = null;
     this.pinged = null;
     this.last = null;

@@ -10,6 +10,7 @@ import { Files } from './files';
 import { openSession } from './session';
 import { ObjectStore, type PullProgress } from './store';
 import { accountSettings } from './account-settings';
+import { stubPage } from './testing';
 
 const connection = (label: string): Connection => ({ type: 'openrouter', label, baseUrl: null, protocol: null, accounts: [{ id: 'key', secret: 'sk-or-x' }], turns: null, starred: [] });
 
@@ -129,7 +130,7 @@ describe('a guest’s browser store', () => {
     const fetched = vi.fn(() => Promise.reject(new Error('no network for a guest')));
     vi.stubGlobal('fetch', fetched);
     vi.stubGlobal('window', new EventTarget());
-    vi.stubGlobal('document', { visibilityState: 'hidden' });
+    stubPage('hidden');
     const { accountId, vaultKey, backend } = await guest();
     const opened = await openSession(accountId, vaultKey, '손님', new AbortController().signal, undefined, { backend });
     if (!opened.ok) throw new Error(opened.error);

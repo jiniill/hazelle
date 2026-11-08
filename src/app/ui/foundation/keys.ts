@@ -2,7 +2,8 @@
 export type Chord = { key: string; shift?: boolean; mod?: boolean; alt?: boolean };
 
 type KeyState = { isComposing: boolean; keyCode: number };
-type Press = { key: string; code: string; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean; altKey: boolean; nativeEvent: KeyState };
+// key: Chrome's autofill sends keydown as a plain Event, which has none, whatever KeyboardEvent's type says.
+type Press = { key: string | undefined; code: string; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean; altKey: boolean; nativeEvent: KeyState };
 
 // Never intercept IME composition keys: Enter/Esc belongs to the unfinished syllable, not send/close.
 export const isComposing = (event: KeyState) => event.isComposing || event.keyCode === 229;
@@ -11,7 +12,7 @@ export const isComposing = (event: KeyState) => event.isComposing || event.keyCo
 // input mode (ㅋ) and other layouts all reach it.
 const LETTER = /^[a-z]$/;
 const sameKey = (event: Press, key: string) =>
-  LETTER.test(key) ? event.key.toLowerCase() === key || event.code === `Key${key.toUpperCase()}` : event.key === key;
+  LETTER.test(key) ? event.key?.toLowerCase() === key || event.code === `Key${key.toUpperCase()}` : event.key === key;
 
 const matches = (event: Press, { key, shift, mod, alt = false }: Chord) =>
   sameKey(event, key) && (shift === undefined || shift === event.shiftKey) && (mod === undefined || mod === (event.ctrlKey || event.metaKey)) && alt === event.altKey;

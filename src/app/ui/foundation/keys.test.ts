@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatKeys, keyCaps, pressed, pressedKey, type Chord } from './keys';
 
-const press = (key: string, { shift = false, ctrl = false, meta = false, alt = false, composing = false, keyCode = 0, code = '' } = {}) => ({
+const press = (key: string | undefined, { shift = false, ctrl = false, meta = false, alt = false, composing = false, keyCode = 0, code = '' } = {}) => ({
   key,
   code,
   shiftKey: shift,
@@ -32,6 +32,10 @@ describe('keys', () => {
     expect(pressedKey(press('ArrowLeft', { shift: true }), arrows)).toBe(0);
     expect(pressedKey(press('ArrowRight'), arrows)).toBe(1);
     expect(pressedKey(press('ArrowUp'), arrows)).toBe(-1);
+  });
+
+  it('passes over a keydown with no key, as Chrome sends on autofill', () => {
+    expect(pressed(press(undefined, { ctrl: true }), [{ key: 'z', mod: true }, { key: 'Enter' }])).toBe(false);
   });
 
   it('matches a letter chord by the letter or the key it sits on', () => {

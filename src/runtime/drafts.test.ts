@@ -1,13 +1,13 @@
 import { expect, it, vi } from 'vitest';
 import { draftKey, Drafts } from './drafts';
 import { openSession } from './session';
-import { testServer } from './testing';
+import { stubPage, testServer } from './testing';
 
 const server = testServer();
 
 it('outlives the session it was handed to, which a restore ends', async () => {
   vi.stubGlobal('window', new EventTarget());
-  vi.stubGlobal('document', { visibilityState: 'hidden' });
+  stubPage('hidden');
   const { accountId, vaultKey } = await server.account();
   const drafts = new Drafts();
   const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal, undefined, undefined, { drafts });

@@ -23,7 +23,7 @@ import { EvaluationFailed, EvaluationStuck } from '../evaluation';
 import { projectGreetings } from '../greetings';
 
 import { openSession, type Session } from '../session';
-import { answerable, inTurn, saying, stubRelay, testServer, upstream } from '../testing';
+import { answerable, inTurn, saying, stubPage, stubRelay, testServer, upstream } from '../testing';
 import { RELAY_HEADER } from '../../contracts/http';
 import { blankCard } from '../../engine/import/card';
 import { chatNow, evaluateChat } from '../chat-context';
@@ -297,7 +297,7 @@ describe("a request the bot's Lua rewrote", () => {
 describe("the bot scripts' machine", () => {
   it('is ended when its session closes, one still being made then too', async () => {
     vi.stubGlobal('window', new EventTarget());
-    vi.stubGlobal('document', { visibilityState: 'hidden' });
+    stubPage('hidden');
     const { accountId, vaultKey } = await server.account();
     let made!: (runner: LuaRunner) => void;
     const lua = vi.fn(() => new Promise<LuaRunner>((resolve) => (made = resolve)));

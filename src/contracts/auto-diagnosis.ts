@@ -22,9 +22,11 @@ export const AUTO_BROWSER_MESSAGES = [
   { message: 'Importing a module script failed.', cause: 'module-import' },
   { message: 'Importing a module script is canceled.', cause: 'module-import' },
 ] as const satisfies readonly { message: string; cause: AutoErrorCause }[];
+// Why a held chat did not open (runtime/store): its own failures and the server's two; any other code is 'other'.
+export const AUTO_OPEN_FAILURES = ['offline', 'server-error', 'unreadable', 'bot-stuck', 'evaluation-unavailable', 'codec-unavailable'] as const;
 const FAILURES = ['unsent', 'unsaved', 'too-long', 'runaway', 'tokenizer', 'unstarted', 'unpulled', 'gone', 'untranslated', 'preread', 'agent', 'no-model', 'model-gone', 'image-only', 'prompt-missing', 'profile-missing', 'failed', 'invalid', 'embed'] as const;
 // Why messages leave a request and are in no memory sent: the first that holds names the warning (runtime/memory-view).
-const GAP_CAUSES = ['working', 'failed', 'tool', 'off', 'no-slot', 'stale', 'over', 'forgotten', 'no-room', 'unknown'] as const;
+const GAP_CAUSES = ['working', 'failed', 'tool', 'off', 'no-slot', 'stale', 'over', 'forgotten', 'unrecorded', 'no-room', 'unknown'] as const;
 export type GapCause = (typeof GAP_CAUSES)[number];
 // The first cause a cache break proves, or the break's own kind without one.
 const CACHE_CAUSES = ['tag', 'lore', 'moved', 'edited', 'memory', 'model', 'account', 'reasoning', 'far', 'changed', 'added', 'removed'] as const;
@@ -34,7 +36,7 @@ export type CacheCauseWord = (typeof CACHE_CAUSES)[number];
 const EVALUATION_ASKERS = ['projection', 'screen', 'headless', 'forecast', 'cache-diagnosis', 'memory', 'view', 'auto-translation', 'auto-illustration', 'mascot', 'polish', 'agent', 'send', 'translation', 'illustration', 'lore', 'tool', 'export', 'trial'] as const;
 export type EvaluationAsker = (typeof EVALUATION_ASKERS)[number];
 const EVALUATION_JOBS = ['cache-diagnosis', 'display', 'prompt', 'rewrite', 'translation', 'memory', 'illustration', 'mascot', 'preread', 'agent', 'read', 'lore', 'state', 'variables', 'text', 'patch', 'count', 'sample'] as const;
-const DETAILS = [...AUTO_ERROR_NAMES, ...FAILURES, ...GAP_CAUSES, ...CACHE_CAUSES, ...EVALUATION_JOBS] as const;
+const DETAILS = [...AUTO_ERROR_NAMES, ...AUTO_OPEN_FAILURES, ...FAILURES, ...GAP_CAUSES, ...CACHE_CAUSES, ...EVALUATION_JOBS] as const;
 
 const BROWSERS = ['chrome', 'edge', 'firefox', 'safari', 'samsung', 'other'] as const;
 const SYSTEMS = ['windows', 'mac', 'linux', 'android', 'ios', 'other'] as const;
