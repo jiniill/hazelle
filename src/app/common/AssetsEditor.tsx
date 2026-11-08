@@ -15,9 +15,8 @@ import { NameDialog } from './NameDialog';
 import { useCopy } from './useCopy';
 import { useSearch } from './useSearch';
 import { useSelection } from './useSelection';
-import { CHANGE_IMAGE, REMOVE_FAILED, SAVE_FAILED } from './words';
+import { ASSET, CHANGE_IMAGE, REMOVE_FAILED, SAVE_FAILED } from './words';
 
-const ASSET = '에셋';
 // What runtime/characters keeps as an asset (engine/import assetType).
 const ACCEPT = 'image/*,video/mp4,video/webm';
 const NOT_KEPT = '이미지나 영상(MP4, WebM) 파일이 아니거나 용량이 너무 커요.';

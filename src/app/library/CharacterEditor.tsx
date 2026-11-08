@@ -36,7 +36,7 @@ import { FaceChange } from '../common/FaceChange';
 import { useTypedNumber } from '../common/typed';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STOP, TRANSLATOR_NOTE } from '../common/words';
+import { ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STOP, TRANSLATOR_NOTE } from '../common/words';
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
@@ -65,7 +65,7 @@ const PARTS: Record<CharacterPart, { label: string; icon: LucideIcon }> = {
   scripts: { label: SCRIPTS.part, icon: Braces },
   toggles: { label: '토글', icon: SlidersHorizontal },
   variables: { label: DEFAULT_VARIABLES, icon: Variable },
-  assets: { label: '에셋', icon: Images },
+  assets: { label: ASSET, icon: Images },
   illustration: { label: '삽화', icon: Palette },
   display: { label: '표시', icon: Eye },
 };

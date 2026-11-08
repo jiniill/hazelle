@@ -1,6 +1,6 @@
 import type { Pack } from '../../engine/import/types';
 import { isToggle } from '../../model/prompt';
-import { SCRIPTS } from './words';
+import { ASSET, SCRIPTS } from './words';
 
 export const counted = (counts: [string, number][]) => counts.flatMap(([label, count]) => (count > 0 ? [`${label} ${count}개`] : []));
 const scriptCounts = ({ regex, triggers }: { regex: number; triggers: number }) => counted([[SCRIPTS.regex, regex], [SCRIPTS.triggers, triggers]]);
@@ -20,7 +20,7 @@ export const packParts = (pack: Pack, lore: number, assets: number): PackParts =
 });
 
 export function holdsLine({ lore, regex, triggers, toggles, assets, style }: PackParts): string {
-  const held = [...counted([['로어북', lore]]), ...scriptCounts({ regex, triggers }), ...counted([['토글', toggles], ['에셋', assets]]), ...(style ? ['스타일'] : [])];
+  const held = [...counted([['로어북', lore]]), ...scriptCounts({ regex, triggers }), ...counted([['토글', toggles], [ASSET, assets]]), ...(style ? ['스타일'] : [])];
   return held.length > 0 ? held.join(' · ') : '안에 담긴 항목이 없어요';
 }
 

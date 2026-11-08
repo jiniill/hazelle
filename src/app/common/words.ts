@@ -96,6 +96,7 @@ export const BIN = '휴지통';
 export const BIN_KEEPS = `${KEEP_DAYS}일 안에 '${BIN}'에서 복원할 수 있어요.`;
 
 export const COMMAND = '명령어';
+export const ASSET = '에셋';
 
 export const CHANGE_IMAGE = '이미지 바꾸기';
 export const UNREADABLE_IMAGE = '이 이미지는 열 수 없어요.';

@@ -10,7 +10,7 @@ import styles from './PictureView.module.css';
 import { useFocusTrap, useLayer } from './layers';
 
 // Mod and Shift held are left to the page: Ctrl+Z is undo.
-export const ZOOM_KEYS = { label: '확대 · 화면에 맞추기', keys: [{ key: 'z', mod: false, shift: false }] } as const;
+export const ZOOM_KEYS = { label: '확대 · 축소', keys: [{ key: 'z', mod: false, shift: false }] } as const;
 
 export type PictureAction = { icon: LucideIcon; label: string; warn?: boolean; keys?: readonly Chord[]; run: () => void };
 
@@ -83,7 +83,7 @@ export function PictureView({ src, label, video = false, title, note, actions = 
         )}
         {paged && <span className={`${styles.chrome} ${styles.count}`}>{`${paged.at + 1} / ${paged.count}`}</span>}
         <span className={`${styles.chrome} ${styles.tools}`}>
-          <IconButton icon={ZoomIn} label="확대" title={titled(ZOOM_KEYS.label, ZOOM_KEYS.keys)} pressed={zoomed} onClick={toggle} />
+          <IconButton icon={ZoomIn} label="확대" title={titled(zoomed ? '축소' : '확대', ZOOM_KEYS.keys)} pressed={zoomed} onClick={toggle} />
           <IconButton icon={X} label="닫기" title={titled('닫기', [{ key: 'Escape' }])} onClick={onClose} />
         </span>
       </div>

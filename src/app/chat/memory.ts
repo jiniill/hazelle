@@ -2,7 +2,9 @@ import { isChapter, type RecordStatus, type Staleness } from '../../engine/memor
 import type { Chapter, Fact, Memory, MemoryRecord, Source, Written } from '../../model/memory';
 import { CHAPTER } from '../common/words';
 
-const STATUS_WORDS: Record<RecordStatus, string> = { sent: '보냄', stale: '원문 바뀜', over: '한도 넘음', forgotten: '삭제됨', chaptered: `${CHAPTER}로 보냄`, 'recall-over': '요약 보냄' };
+export const STALE = '원문 바뀜';
+
+const STATUS_WORDS: Record<RecordStatus, string> = { sent: '보냄', stale: STALE, over: '한도 넘음', forgotten: '삭제됨', chaptered: `${CHAPTER}로 보냄`, 'recall-over': '요약 보냄' };
 
 export const statusWord = (status: RecordStatus | undefined, stale: Staleness | undefined) =>
   status === 'sent' && stale ? [stale === 'rendered' ? '원문 불일치' : STATUS_WORDS.stale] : status === undefined || status === 'sent' ? [] : [status === 'stale' && stale === 'records' ? '기록 바뀜' : STATUS_WORDS[status]];

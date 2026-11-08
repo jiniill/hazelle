@@ -10,6 +10,7 @@ import { withParticle } from '../common/particles';
 import { ACTS } from '../common/acts';
 import { count } from '../common/typedNumber';
 import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES } from '../common/words';
+import { STALE } from './memory';
 import type { PromptDoor } from '../common/TaskPrompt';
 import { navigate } from '../shell/router';
 import { keysOf, SHORTCUTS, typing, useShortcut } from '../shortcuts';
@@ -38,10 +39,10 @@ const LEAVING: Record<GapCause, { words: string; why: string }> = {
   tool: { words: '플러그인 응답 전', why: '장기 기억을 맡은 플러그인이 아직 응답하지 않아서 보내기 전에는 정확한 수를 알 수 없어요.' },
   off: { words: '장기 기억 꺼짐', why: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠지는데, 장기 기억이 꺼져 있어요.' },
   'no-slot': { words: '프롬프트에 기억 없음', why: '기록은 있지만 프롬프트에 장기 기억 블록이 없거나 토글로 꺼져 있어서 보내지 않아요.' },
-  stale: { words: '원문 바뀜', why: '원문 메시지가 수정되거나 삭제된 기록은 다시 만들 때까지 보내지 않아요.' },
+  stale: { words: STALE, why: '원문 메시지가 수정되거나 삭제된 기록은 다시 만들 때까지 보내지 않아요.' },
   over: { words: '기록 한도 넘음', why: '기록이 이 요청의 한도를 넘어서 오래된 기록부터 빠져요. 컨텍스트 길이가 짧은 모델이면 한도도 줄어요.' },
   forgotten: { words: '기록 삭제됨', why: '삭제한 기록의 메시지는 요청에도 기억에도 없어요.' },
-  unrecorded: { words: '기록에 없는 메시지', why: '이미 정리한 메시지 사이에 나중에 들어온 메시지는 장기 기억에 들어가지 않아요.' },
+  unrecorded: { words: '기록에서 빠짐', why: '정리된 기록 사이에 끼어든 메시지는 기록에 들어가지 않아요.' },
   'no-room': { words: '컨텍스트 부족', why: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠지는데, 아직 장기 기억에 없어요.' },
   unknown: { words: '기억에 없음', why: '오래된 메시지가 요청에서 빠지는데, 장기 기억에도 없어요.' },
 };
