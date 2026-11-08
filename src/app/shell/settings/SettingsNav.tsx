@@ -1,4 +1,4 @@
-import { FileText, FlaskConical, Hand, Layers, Lock, MessageSquare, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
+import { FileText, FlaskConical, Hand, Layers, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useSearch } from '../../common/useSearch';
 import { FEATURE_ICONS } from '../../common/featureIcons';
@@ -14,8 +14,10 @@ import type { Route, SettingsPage } from '../routes';
 import { hitsOf, hitTexts, subpages, type Hit } from './terms';
 
 type Place = { page: SettingsPage; label: string; icon: LucideIcon; route: Route };
-type Group = { title: string; places: Place[] };
+// Untitled: a place that stands apart from every set, such as 내 구성 at the top.
+type Group = { title?: string; places: Place[] };
 
+const SETUP: Group = { places: [{ page: 'setup', label: PAGES.setup, icon: Network, route: { kind: 'setup' } }] };
 // List built pages only; group headings cannot repeat child labels. A connection comes before the models it adds.
 const AI: Group = {
   title: 'AI 엔진',
@@ -53,7 +55,7 @@ const ADMIN: Place = { page: 'admin', label: PAGES.admin, icon: ShieldCheck, rou
 
 function useSettingsNav() {
   const { admin } = useAccount();
-  const groups: Group[] = [AI, doing(availableFeatures(useSettings())), HAVE, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
+  const groups: Group[] = [SETUP, AI, doing(availableFeatures(useSettings())), HAVE, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
   return { groups, holds: useHolds(), search: useSettingsSearch(groups.flatMap(({ places }) => places)) };
 }
 
@@ -71,6 +73,7 @@ function useHolds(): Record<SettingsPage, string | undefined> {
   const used = sharedFeatures(store);
   const state = (feature: Feature) => [FEATURE_LABS[feature] && '실험', onOff(used[feature])].filter(Boolean).join(' · ');
   return {
+    setup: undefined,
     models: `${connections.reduce((sum, connection) => sum + connection.value.starred.length, 0)}개`,
     connections: `${connections.length}개`,
     chat: undefined,
@@ -115,7 +118,7 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
         )
       ) : (
         groups.map(({ title, places }) => (
-          <NavGroup key={title} title={title}>
+          <NavGroup key={title ?? places[0]!.page} title={title}>
             {places.map((place) => (
               <NavRow key={place.page} icon={place.icon} label={place.label} meta={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route, { replace: true })} />
             ))}
@@ -143,8 +146,8 @@ export function SettingsList({ onClose }: { onClose: () => void }) {
         )
       ) : (
         groups.map(({ title, places }) => (
-          <NavGroup key={title} title={title}>
-            <List places label={title}>
+          <NavGroup key={title ?? places[0]!.page} title={title}>
+            <List places label={title ?? SETTINGS}>
               {places.map((place) => (
                 <ListItem key={place.page} title={place.label} note={holds[place.page]} onClick={() => navigate(place.route)} />
               ))}

@@ -3,8 +3,8 @@ import { refOf, sameModelRef } from '../../connectors/assignment';
 import { entryKey, entryName } from '../../connectors/types';
 import type { IllustrateSwitches, Rung } from '../../model/illustration';
 import type { IllustrateSetup } from '../../runtime/characters';
-import { drawingModels, type ImageRoute, type sceneWriterOf } from '../../runtime/illustrate';
-import { useConnections } from '../session';
+import { drawingModels, imageRoute, type ImageRoute, type sceneWriterOf } from '../../runtime/illustrate';
+import { useConnections, useStore } from '../session';
 import { navigate } from '../shell/router';
 import { Button, ChipButton, Menu, MenuHeading, MenuItem, NumberInput, SettingGroup, SettingRow, Switch } from '../ui';
 import { ACTS, addOf, newOf } from './acts';
@@ -170,20 +170,15 @@ function PictureLadder({ ladder, onChange }: { ladder: Rung[]; onChange: (ladder
   );
 }
 
-const imageModelOf = (routes: ImageRoute[], illustrate: IllustrateSetup) => {
-  const own = illustrate.model;
-  return own ? routes.find(({ connection, model }) => sameModelRef(own, refOf(connection.id, model))) : routes[0];
-};
-
 // One no longer added shows as missing, never as another model.
 function ImageModelMenu({ routes, illustrate, card, opens, onPick }: Pick<Props, 'illustrate' | 'card' | 'opens'> & { routes: ImageRoute[]; onPick: Props['onChange'] }) {
   const own = illustrate.model;
-  const choice = imageModelOf(routes, illustrate);
+  const choice = imageRoute(useStore(), own);
   return (
     <Menu
       place={opens === 'up' ? 'above-end' : 'below-end'}
       label="이미지 모델"
-      trigger={(opener) => <ChipButton variant="field" opens={opens} label={choice ? entryName(choice.model) : NOT_STARRED} title="이미지 모델" tone={choice ? 'plain' : 'warn'} {...opener} />}
+      trigger={(opener) => <ChipButton variant="field" opens={opens} label={'kind' in choice ? NOT_STARRED : entryName(choice.model)} title="이미지 모델" tone={'kind' in choice ? 'warn' : 'plain'} {...opener} />}
     >
       <MenuHeading>{appliesTo(card, illustrate.own)}</MenuHeading>
       <MenuItem label={follows('첫 이미지 모델')} sub={entryName(routes[0]!.model)} checked={!own} onClick={() => onPick({ model: undefined })} />

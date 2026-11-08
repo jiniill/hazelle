@@ -119,7 +119,7 @@ export function sceneWriterOf(store: Deps['store'], chat: Chat): ReturnType<type
 
 export const sendsIllustrateNote = (prompt: IllustratePrompt) => prompt.blocks.some((block) => block.kind === 'slot' && block.slot === 'illustrateNote');
 
-function imageRoute(store: Deps['store'], ref: ModelRef | undefined): ImageRoute | { kind: 'no-image-model' } | { kind: 'image-model-gone' } {
+export function imageRoute(store: Pick<ObjectStore, 'list'>, ref: ModelRef | undefined): ImageRoute | { kind: 'no-image-model' } | { kind: 'image-model-gone' } {
   const routes = drawingModels(store.list('connection'));
   if (!ref) return routes[0] ?? { kind: 'no-image-model' };
   return routes.find(({ connection, model }) => sameModelRef(refOf(connection.id, model), ref)) ?? { kind: 'image-model-gone' };

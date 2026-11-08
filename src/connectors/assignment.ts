@@ -20,12 +20,13 @@ export const sameModelRef = (a: ModelRef, b: ModelRef): boolean => a.connection 
 
 export const rolesOf = (assignment: Assignment, ref: ModelRef): Role[] => (Object.keys(ROLES) as Role[]).filter((role) => assignment[role] && sameModelRef(assignment[role], ref));
 
+// layer: the index of the layer that picked it; role: whose pick it is, another role's where it fell back.
+export type Resolved = { ref: ModelRef; layer: number; role: Role };
+
 // Resolve every layer for a role before falling back to another role; global auxiliary outranks chat-local chat.
-export function resolveRole(role: Role, layers: Assignment[]): ModelRef | null {
-  for (const layer of layers) {
-    const choice = layer[role];
-    if (choice) return choice;
-  }
+export function resolveRole(role: Role, layers: Assignment[]): Resolved | null {
+  const layer = layers.findIndex((each) => each[role]);
+  if (layer !== -1) return { ref: layers[layer]![role]!, layer, role };
   const next = ROLES[role].fallsBackTo;
   return next ? resolveRole(next, layers) : null;
 }

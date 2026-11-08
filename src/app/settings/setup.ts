@@ -1,0 +1,141 @@
+import type { ModelRef, Role } from '../../connectors/assignment';
+import { entryKey, entryName } from '../../connectors/types';
+import { FEATURE_LABS, type Feature } from '../../model/features';
+import type { Stored } from '../../model/kinds';
+import type { Route, RouteFailure, RolePick } from '../../runtime/assignment';
+import type { Overview, Runs, TaskRun } from '../../runtime/overview';
+import {
+  describeIllustrateFailure,
+  describeMascotFailure,
+  describeMemoryFailure,
+  describePrereadFailure,
+  describeRoleFailure,
+  describeTranslateFailure,
+  describeTurnFailure,
+} from '../common/failure';
+import { FEATURE_NAMES, FEATURES_TITLE, follows, MODEL_PINNED, MODEL_ROLES, NOT_PICKED, NOT_STARRED, onOff, PAGES, promptName, STARRED } from '../common/words';
+import type { FlowColumn, FlowEdge, FlowKind, FlowNode } from '../ui';
+
+// 내 구성: the map and what needs fixing, both read off one Overview (runtime/overview).
+
+export const ROLES_TITLE = '역할';
+export const LEGEND: Partial<Record<FlowKind, string>> = { follow: '기본값을 따라감', own: '따로 고름 · 고정', gap: '비어 있음', off: '꺼진 기능' };
+
+export const nodeOf = {
+  connection: (id: string) => `c:${id}`,
+  model: (ref: ModelRef) => `m:${ref.connection}/${ref.model}`,
+  role: (role: Role) => `r:${role}`,
+  feature: (feature: Feature | 'talk') => `f:${feature}`,
+};
+const routeNode = (route: Route) => nodeOf.model({ connection: route.connection.id, model: entryKey(route.model) });
+
+export type Finding = { node: string; title: string; why: string };
+// What a node stands for, which its detail opens.
+export type Target = { kind: 'connection'; connection: Stored<'connection'> } | { kind: 'model'; ref: ModelRef; name: string } | { kind: 'role'; role: Role } | { kind: 'talk'; pins: Overview['talk']['pins'] } | { kind: 'task'; task: TaskRun };
+
+const said = <F>(runs: Runs<F>, describe: (failure: F) => string): { route: Route } | { why: string } => ('route' in runs ? runs : { why: describe(runs.failure) });
+
+// What a task runs on, or why it cannot in its own feature's words: what a task's model row says under it.
+export function taskRuns(task: TaskRun): { route: Route } | { why: string } {
+  switch (task.feature) {
+    case 'translate':
+      return said(task.runs, describeTranslateFailure);
+    case 'illustrate':
+      return said(task.runs, describeIllustrateFailure);
+    case 'memory':
+      return said(task.runs, describeMemoryFailure);
+    case 'mascot':
+      return said(task.runs, describeMascotFailure);
+    case 'preread':
+      return said(task.runs, describePrereadFailure);
+  }
+}
+
+const NO_EMBED = `${MODEL_ROLES.embed}이 없어서 ${FEATURE_NAMES.memory}이 비슷한 기록을 찾아 넣지 않아요.`;
+
+// What fails now, truthfully: each said once, where it starts. A task that follows a 보조 모델 which fails is that
+// role's finding, not its own.
+export function findingsOf({ roles, talk, tasks }: Overview, available: readonly Feature[]): Finding[] {
+  const found: Finding[] = [];
+  const role = (each: Role, runs: RouteFailure) => found.push({ node: nodeOf.role(each), title: MODEL_ROLES[each], why: describeRoleFailure(each, runs) });
+  if ('kind' in roles.main.runs) role('main', roles.main.runs);
+  if ('kind' in roles.aux.runs && roles.aux.from?.role === 'aux') role('aux', roles.aux.runs);
+  if (talk.prompt.kind === 'missing') found.push({ node: nodeOf.feature('talk'), title: PAGES.chat, why: describeTurnFailure({ kind: 'prompt-missing', own: talk.prompt.own }) });
+  for (const task of tasks) {
+    if (!available.includes(task.feature) || !task.on || (task.feature === 'memory' && task.by !== null)) continue;
+    const at = { node: nodeOf.feature(task.feature), title: FEATURE_NAMES[task.feature] };
+    const runs = taskRuns(task);
+    if ('why' in runs && (task.own !== undefined || !('kind' in roles.aux.runs))) found.push({ ...at, why: runs.why });
+    if (task.feature === 'illustrate' && 'kind' in task.draws) found.push({ ...at, why: describeIllustrateFailure(task.draws) });
+    if (task.feature === 'memory' && 'kind' in roles.embed.runs) {
+      const runs = roles.embed.runs;
+      found.push({ node: nodeOf.role('embed'), title: MODEL_ROLES.embed, why: runs.kind === 'no-model' ? NO_EMBED : describeRoleFailure('embed', runs) });
+    }
+  }
+  return found;
+}
+
+const SHORT: Record<RouteFailure['kind'], string> = { 'no-model': NOT_PICKED, 'model-gone': NOT_STARRED, 'image-only': '이미지만 만드는 모델' };
+const NEEDS_LOOK = '확인 필요';
+const APART = '캐릭터 따로';
+const LAYERS = { chat: '이 채팅에서 고름', prompt: MODEL_PINNED, settings: undefined };
+
+function roleNode(role: Role, { runs, from }: RolePick): Omit<FlowNode, 'id'> {
+  if ('kind' in runs) return { lead: MODEL_ROLES[role], title: SHORT[runs.kind] };
+  return { lead: MODEL_ROLES[role], title: entryName(runs.model), note: from && from.role !== role ? follows(MODEL_ROLES[from.role]) : from ? LAYERS[from.layer] : undefined };
+}
+
+function taskNode(task: TaskRun): Omit<FlowNode, 'id' | 'tone'> {
+  const badge = !task.on ? onOff(false) : task.apart ? APART : FEATURE_LABS[task.feature] ? '실험' : undefined;
+  const note = task.feature === 'memory' && task.by !== null ? `플러그인 · ${task.by}` : 'route' in task.runs ? (task.own ? entryName(task.runs.route.model) : follows(MODEL_ROLES.aux)) : NEEDS_LOOK;
+  return { title: FEATURE_NAMES[task.feature], badge, note };
+}
+
+// Lines run from a connection to its models, from a model to the role or feature that picked it, and from a role to
+// what follows it; a line to a feature that is off is drawn as off.
+export function mapOf(overview: Overview, connections: readonly Stored<'connection'>[], available: readonly Feature[], findings: readonly Finding[]): { columns: FlowColumn[]; edges: FlowEdge[]; targets: Map<string, Target> } {
+  const { roles, talk } = overview;
+  const tasks = overview.tasks.filter(({ feature }) => available.includes(feature));
+  const tone = (id: string, on = true): FlowNode['tone'] => (findings.some(({ node }) => node === id) ? 'warn' : on ? 'plain' : 'off');
+  const role = (each: Role): FlowNode => ({ id: nodeOf.role(each), ...roleNode(each, roles[each]), tone: tone(nodeOf.role(each)) });
+  const columns: FlowColumn[] = [
+    { title: PAGES.connections, nodes: connections.map(({ id, value }) => ({ id: nodeOf.connection(id), title: value.label, note: `모델 ${value.starred.length}개` })) },
+    { title: STARRED, nodes: connections.flatMap(({ id, value }) => value.starred.map((model) => ({ id: nodeOf.model({ connection: id, model: entryKey(model) }), title: entryName(model), note: value.label }))) },
+    { title: ROLES_TITLE, nodes: [role('main'), role('aux'), role('embed')] },
+    {
+      title: FEATURES_TITLE,
+      nodes: [
+        { id: nodeOf.feature('talk'), title: PAGES.chat, note: talk.prompt.kind === 'prompt' ? promptName(talk.prompt.prompt.value.name) : NEEDS_LOOK, badge: talk.pins.length ? `${MODEL_PINNED} ${talk.pins.length}` : undefined, tone: tone(nodeOf.feature('talk')) },
+        ...tasks.map((task) => ({ id: nodeOf.feature(task.feature), ...taskNode(task), tone: tone(nodeOf.feature(task.feature), task.on) })),
+      ],
+    },
+  ];
+
+  const edges: FlowEdge[] = connections.flatMap(({ id, value }) => value.starred.map((model) => ({ from: nodeOf.connection(id), to: nodeOf.model({ connection: id, model: entryKey(model) }), kind: 'follow' as const })));
+  for (const each of ['main', 'aux', 'embed'] as const) {
+    const { runs, from } = roles[each];
+    if (!('kind' in runs)) edges.push({ from: routeNode(runs), to: nodeOf.role(each), kind: from?.layer === 'settings' || from?.role !== each ? 'follow' : 'own', label: from?.layer === 'prompt' ? MODEL_PINNED : undefined });
+  }
+  edges.push({ from: nodeOf.role('main'), to: nodeOf.feature('talk'), kind: 'follow' });
+  for (const { ref } of talk.pins) edges.push({ from: nodeOf.model(ref), to: nodeOf.feature('talk'), kind: 'own', label: MODEL_PINNED });
+  for (const task of tasks) {
+    const to = nodeOf.feature(task.feature);
+    const off = (kind: FlowKind): FlowKind => (task.on ? kind : 'off');
+    if (task.feature === 'memory' && task.by !== null) continue;
+    if (task.own === undefined) edges.push({ from: nodeOf.role('aux'), to, kind: off('follow') });
+    else if ('route' in task.runs) edges.push({ from: routeNode(task.runs.route), to, kind: off('own') });
+    if (task.feature === 'illustrate' && !('kind' in task.draws)) edges.push({ from: routeNode(task.draws), to, kind: off('follow'), label: '이미지' });
+    if (task.feature === 'memory') edges.push({ from: nodeOf.role('embed'), to, kind: off('kind' in roles.embed.runs ? 'gap' : 'follow') });
+  }
+  const targets = new Map<string, Target>([
+    ...connections.map((connection) => [nodeOf.connection(connection.id), { kind: 'connection', connection }] as const),
+    ...connections.flatMap(({ id, value }) => value.starred.map((model) => {
+      const ref = { connection: id, model: entryKey(model) };
+      return [nodeOf.model(ref), { kind: 'model', ref, name: entryName(model) }] as const;
+    })),
+    ...(['main', 'aux', 'embed'] as const).map((each) => [nodeOf.role(each), { kind: 'role', role: each }] as const),
+    [nodeOf.feature('talk'), { kind: 'talk', pins: talk.pins }] as const,
+    ...tasks.map((task) => [nodeOf.feature(task.feature), { kind: 'task', task }] as const),
+  ]);
+  return { columns, edges: edges.filter(({ from, to }) => targets.has(from) && targets.has(to)), targets };
+}

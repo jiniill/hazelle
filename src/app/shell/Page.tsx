@@ -47,6 +47,7 @@ const PromptScreen = lazy(() => import('../prompts/PromptScreen').then(({ Prompt
 const PromptsScreen = lazy(() => import('../prompts/PromptsScreen').then(({ PromptsScreen }) => ({ default: PromptsScreen })));
 const AccountScreen = lazy(() => import('../settings/AccountScreen').then(({ AccountScreen }) => ({ default: AccountScreen })));
 const FeatureScreen = lazy(() => import('../settings/FeatureScreen').then(({ FeatureScreen }) => ({ default: FeatureScreen })));
+const SetupScreen = lazy(() => import('../settings/SetupScreen').then(({ SetupScreen }) => ({ default: SetupScreen })));
 const ChatSettingsScreen = lazy(() => import('../settings/ChatSettingsScreen').then(({ ChatSettingsScreen }) => ({ default: ChatSettingsScreen })));
 const DisplayScreen = lazy(() => import('../settings/DisplayScreen').then(({ DisplayScreen }) => ({ default: DisplayScreen })));
 const ControlsScreen = lazy(() => import('../settings/ControlsScreen').then(({ ControlsScreen }) => ({ default: ControlsScreen })));
@@ -149,6 +150,8 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
       case 'notices':
         if (guest) return <Replace to={{ kind: 'account', section: null }} />;
         return <NoticesScreen back={back(at)} />;
+      case 'setup':
+        return <SetupScreen back={sideBack(at)} />;
       case 'chat-settings':
         return <ChatSettingsScreen back={sideBack(at)} />;
       case 'feature':

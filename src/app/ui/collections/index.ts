@@ -7,6 +7,8 @@ export { PathBar } from './PathBar';
 export { PostCard, PostFeed, PostStat } from './PostCard';
 export { Ranking, type Ranked } from './Ranking';
 export { Facts } from './Facts';
+export { FlowMap, type FlowColumn, type FlowNode } from './FlowMap';
+export type { FlowEdge, FlowKind } from './flow';
 export { FolderRow, TreeRow } from './FolderRow';
 export { FoundRow, type Marked } from './FoundRow';
 export { HowTo, type HowToStep } from './HowTo';

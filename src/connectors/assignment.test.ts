@@ -13,16 +13,16 @@ describe('model assignment', () => {
   it('takes the most specific layer that sets the role', () => {
     const general = { main: { connection: 'c1', model: 'claude' } };
     const chat = { main: { connection: 'c2', model: 'gemini' } };
-    expect(resolveRole('main', [chat, {}, general])).toEqual(chat.main);
-    expect(resolveRole('main', [{}, general])).toEqual(general.main);
+    expect(resolveRole('main', [chat, {}, general])).toEqual({ ref: chat.main, layer: 0, role: 'main' });
+    expect(resolveRole('main', [{}, general])).toEqual({ ref: general.main, layer: 1, role: 'main' });
     expect(resolveRole('main', [{}, {}])).toBeNull();
   });
 
   it('falls back from 보조 모델 to 대화 모델 only after every layer is asked', () => {
     const main = { connection: 'c1', model: 'claude' };
     const aux = { connection: 'c1', model: 'haiku' };
-    expect(resolveRole('aux', [{ main }, { aux }])).toEqual(aux);
-    expect(resolveRole('aux', [{ main }, {}])).toEqual(main);
+    expect(resolveRole('aux', [{ main }, { aux }])).toEqual({ ref: aux, layer: 1, role: 'aux' });
+    expect(resolveRole('aux', [{ main }, {}])).toEqual({ ref: main, layer: 0, role: 'main' });
   });
 
   it('offers a model whose output is unknown, not one that cannot write text', () => {

@@ -496,6 +496,15 @@
      (one every ten messages, or fifty, a hundred, while they stand the least room apart); the dash of a copy's line and
      the dots of a gone chat's; the list's lane pitch, row gap and the room after its deepest lane; the map's dot grid
      and the fade at its edge; the glow on the way to the current chat and the ring on its card; the legend's mark. */
+  /* 내 구성's map (FlowMap): room between its columns for the lines, the width below which they stack. */
+  --flow-gap: 36px;
+  --flow-stack: 640px;
+  --flow-dim: 0.4;
+  --flow-line-dim: 0.25;
+  --flow-dash: 4 4;
+  --flow-dots: 2 4;
+  --flow-label-inset: 6px;
+  --flow-swatch: 26px;
   --lineage-unit: 4px;
   --lineage-line-min: 48px;
   --lineage-line-max: 360px;

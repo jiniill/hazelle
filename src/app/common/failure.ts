@@ -1,6 +1,7 @@
 import type { PluginAsked } from '../../runtime/tools/plugin-writer';
 import { USERNAME_LENGTH, USERNAME_MARKS } from '../../contracts/accounts';
 import { COMMENTS_PER_DAY, MAX_POST_PICTURES, NICKNAME_LENGTH, PICTURES_PER_DAY, POSTS_PER_DAY } from '../../contracts/board';
+import type { Role } from '../../connectors/assignment';
 import type { Costs } from '../../connectors/types';
 import type { RelayError, ServerError } from '../../contracts/http';
 import type { ApiFailure } from '../../runtime/api';
@@ -144,6 +145,9 @@ function describeRoute(failure: RouteFailure | { kind: 'profile-missing'; own: b
       return failure.own ? profileGone(`${model}이`) : NO_DEFAULT_PROFILE;
   }
 }
+
+// A role's own model as 설정 › 모델 picks it.
+export const describeRoleFailure = (role: Role, failure: RouteFailure) => describeRoute(failure, MODEL_ROLES[role], null);
 
 const SECRET = { password: '비밀번호가', recovery: '복구 키가' } as const;
 

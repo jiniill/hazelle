@@ -29,6 +29,7 @@ export const UNKNOWN_PICTURES = `이 모델이 이미지 입력을 지원하는�
 
 export const MAIN_HELP = '프롬프트나 채팅에서 모델을 따로 정하지 않았을 때 쓰는 모델이에요.';
 export const AUX_HELP = '번역이나 장기 기억 정리처럼 대화 밖의 작업에 써요.';
+export const EMBED_HELP = '장기 기억과 플러그인이 비슷한 내용을 찾을 때 써요. 모델을 바꾸면 기록을 다시 준비해요.';
 
 export const BOT_MODELS = '봇의 모델 호출';
 export const BOT_MODELS_HELP = '봇 스크립트가 대화 응답과 별개로 모델을 호출해요. 호출할 때마다 토큰과 비용이 추가로 사용돼요.';
@@ -109,7 +110,7 @@ export const NOTE_UNSENT = `번역 프롬프트에 '${TRANSLATOR_NOTE}' 블록�
 export const ILLUSTRATE_NOTE = '삽화 노트';
 export const ILLUSTRATE_NOTE_UNSENT = `삽화 프롬프트에 '${ILLUSTRATE_NOTE}' 블록을 추가해야 노트가 적용돼요.`;
 
-export const PAGES = { models: '모델', connections: 'API 연결', chat: '대화', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용량', admin: '운영' };
+export const PAGES = { setup: '내 구성', models: '모델', connections: 'API 연결', chat: '대화', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용량', admin: '운영' };
 
 // Keep always-on module wording consistent: editable only in global settings, read-only marks elsewhere.
 export const ALWAYS = '항상';
@@ -207,6 +208,11 @@ export const ORIGINAL_GONE = '원본이 삭제됐어요';
 export const cannotRemove = (because: string) => `${withParticle(because, '이라서/라서')} 삭제할 수 없어요`;
 
 export const NOT_STARRED = '추가한 모델에 없음';
+export const STARRED = '추가한 모델';
+// 내 구성's list of what fails now.
+export const FINDINGS = '고칠 곳';
+// A role no layer picks.
+export const NOT_PICKED = '지정 안 함';
 
 export const noStarred = (then: string) => `추가한 모델이 없어요. ${inSettings('connections')}에서 모델을 추가하면 여기서 ${then}.`;
 

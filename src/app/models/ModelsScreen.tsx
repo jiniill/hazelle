@@ -1,7 +1,8 @@
 import { refOf, rolesOf, sameModelRef, type ModelRef, type Role } from '../../connectors/assignment';
 import { entryKey, entryName, entryTerms } from '../../connectors/types';
 import { pinsModels } from '../../model/prompt';
-import { imageOnly, setDefaultModel, sharedTaskModels } from '../../runtime/assignment';
+import { imageOnly, setDefaultModel } from '../../runtime/assignment';
+import { overviewOf } from '../../runtime/overview';
 import { availableFeatures } from '../../runtime/features';
 import { ofSort, type StoredPrompt } from '../../runtime/prompts';
 import { addDefaultProfile, modelProfile, profileUsers } from '../../runtime/profiles';
@@ -9,14 +10,12 @@ import { findStarred, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { newOf } from '../common/acts';
-import { AUX_HELP, DEFAULT_MODELS_FAILED, defaultMark, FEATURE_NAMES, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE } from '../common/words';
+import { AUX_HELP, DEFAULT_MODELS_FAILED, EMBED_HELP, defaultMark, FEATURE_NAMES, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, NOT_PICKED } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
 import { Beside, Callout, Columns, Empty, List, ListItem, NavBar, Row, Screen, Section } from '../ui';
-
-const STARRED = '추가한 모델';
 
 // The bottom rung of every chat's settings: what a prompt, a character or a chat does not set reads from here.
 const DEFAULTS = SCOPE.default;
@@ -46,8 +45,8 @@ export function ModelsScreen({ back }: { back: Back | null }) {
   const sorted = defaultFirst(profiles, settings.profile);
   const defaultProfile = profiles.find((profile) => profile.id === settings.profile);
   const pinned = prompts.filter((prompt): prompt is StoredPrompt<'conversation'> => ofSort(prompt, 'conversation') && pinsModels(prompt.value));
-  const taskModels = sharedTaskModels(store);
-  const tasks = availableFeatures(settings).flatMap((feature) => (feature === 'agents' ? [] : [{ feature, own: taskModels[feature] }]));
+  const available = availableFeatures(settings);
+  const tasks = overviewOf(store, null).tasks.filter(({ feature }) => available.includes(feature));
   const nameOf = (ref: ModelRef) => findStarred(ref, connections)?.name ?? NOT_STARRED;
 
   const side = (
@@ -108,7 +107,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
         <Columns>
           <RoleCard role="main" help={MAIN_HELP} own={main} follow={null} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
           <RoleCard role="aux" help={AUX_HELP} own={settings.models.aux} follow={follows(MODEL_ROLES.main)} connections={connections} onPick={(ref) => pickModel('aux', ref)} {...cardOf(settings.models.aux)} />
-          <RoleCard role="embed" help="장기 기억과 플러그인이 비슷한 내용을 찾을 때 써요. 모델을 바꾸면 기록을 다시 준비해요." own={settings.models.embed} follow="지정 안 함" connections={connections} onPick={(ref) => pickModel('embed', ref)} />
+          <RoleCard role="embed" help={EMBED_HELP} own={settings.models.embed} follow={NOT_PICKED} connections={connections} onPick={(ref) => pickModel('embed', ref)} />
         </Columns>
         {main && !findStarred(main, connections) && <Callout tone="warn">{`${MODEL_ROLES.main}로 정한 모델이 ${STARRED}에 없어요.`}</Callout>}
       </Section>

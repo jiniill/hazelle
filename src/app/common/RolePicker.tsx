@@ -4,7 +4,7 @@ import { entryName, entryOf } from '../../connectors/types';
 import { embedRoute } from '../../connectors/registry';
 import type { Stored } from '../../model/kinds';
 import { ChipButton, Empty, Menu, MenuHeading, MenuItem, PickCard, SettingRow } from '../ui';
-import { MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, noStarred } from './words';
+import { MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, noStarred, NOT_PICKED } from './words';
 
 // 임베딩 모델 offers only what its connection embeds: the type says so, not the model (design §4).
 export function starredModels(connections: readonly Stored<'connection'>[], role: Role) {
@@ -49,7 +49,7 @@ type Props = {
 };
 
 export function RolePicker({ role, label = MODEL_ROLES[role], help, sub, own, follow, connections, onPick }: Props) {
-  const current = own ? modelName(own, connections) : (follow ?? '지정 안 함');
+  const current = own ? modelName(own, connections) : (follow ?? NOT_PICKED);
   return (
     <SettingRow
       label={label}
@@ -77,7 +77,7 @@ export function RoleCard({ role, help, own, follow, connections, onPick, values,
       trigger={(opener) => (
         <PickCard
           label={label}
-          value={own ? (choice ? choice.name : NOT_STARRED) : (follow ?? '지정 안 함')}
+          value={own ? (choice ? choice.name : NOT_STARRED) : (follow ?? NOT_PICKED)}
           note={choice ? [choice.source, values].filter(Boolean).join(' · ') : undefined}
           help={help}
           tone={own && !choice ? 'warn' : 'plain'}

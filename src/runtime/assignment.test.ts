@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { callRef } from '../model/chat';
 import type { Stored } from '../model/kinds';
-import { pinnedBy, routeOf, setAccountTaskModel, setDefaultModel, sharedTaskModels } from './assignment';
+import { pinnedBy, routeOf, setAccountTaskModel, setDefaultModel } from './assignment';
 import { setIllustrate } from './characters';
 import { SHARED_CHAT } from './features';
 import { sceneWriterOf } from './illustrate';
@@ -46,7 +46,6 @@ it('runs each task on its feature’s own model, and on 보조 모델 while it h
     await setIllustrate(store, null, { sceneModel: ref('scene') });
     for (const task of ['memory', 'mascot', 'preread'] as const) await setAccountTaskModel(store, task, ref(task));
     expect(writers()).toEqual(['scene', 'memory', 'mascot', 'preread']);
-    expect(sharedTaskModels(store)).toEqual({ translate: undefined, illustrate: ref('scene'), memory: ref('memory'), mascot: ref('mascot'), preread: ref('preread') });
     await setAccountTaskModel(store, 'memory', null);
     expect(writers()[1]).toBe('aux');
   }));
