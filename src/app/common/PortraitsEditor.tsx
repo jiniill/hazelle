@@ -11,7 +11,7 @@ import { EntryList } from './EntryList';
 import { describeLikenessFailure } from './failure';
 import { filled, typedText } from './typed';
 import { useAutosave } from './useAutosave';
-import { portraitName } from './words';
+import { portraitName, REMOVE_FAILED } from './words';
 
 const SOURCES: Record<PortraitSource, string> = { metadata: '이미지 메타데이터', vision: '이미지 분석', text: '캐릭터 설명', user: '직접 입력' };
 
@@ -46,7 +46,7 @@ export function PortraitsEditor({ owner }: { owner: string }) {
   async function removeAll() {
     await settle();
     const removed = await removeLikeness(store, owner);
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
+    if (!removed.ok) return toast.failed(removed, REMOVE_FAILED);
     toast.undoable('삽화 프로필을 삭제했어요.', () => restoreLikeness(store, removed.data));
   }
 
@@ -70,7 +70,7 @@ export function PortraitsEditor({ owner }: { owner: string }) {
   async function remove(index: number, name: string) {
     await settle();
     const removed = await removePortrait(store, owner, { index, name });
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
+    if (!removed.ok) return toast.failed(removed, REMOVE_FAILED);
     toast.undoable(`'${portraitName(name)}' 프로필을 삭제했어요.`, () => restoreLikeness(store, removed.data));
   }
 

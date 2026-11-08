@@ -1,38 +1,32 @@
-import { importFile, undoFileImport } from '../../runtime/tools/drafts';
 import { sameTool } from '../../runtime/tools/store';
 import { useToast } from '../toast';
-import { Check, FileText, MessageSquare, MessageSquarePlus, Package, Puzzle, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react';
+import { Check, FileText, MessageSquare, Package, Puzzle, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { characterTexts, live } from '../../model/library';
-import { importCardFile } from '../../runtime/card-file';
-import { setDeleted } from '../../runtime/characters';
+import { allWritten, type ApiFailure } from '../../runtime/api';
 import { importChat } from '../../runtime/chat-log';
 import { markImportNoticed } from '../../runtime/chat-context';
-import type { ApiFailure } from '../../runtime/api';
 import type { UnpackFailure } from '../../engine/import/archive';
 import { PACKED_EXTENSION } from '../../engine/import/extensions';
 import { ImportWorker } from '../../runtime/import/client';
 import { downloadLink, readLink, type BotLink, type LinkFailure } from '../../runtime/import/link';
-import { ImportReadError, ImportStuck, type ChatsRead } from '../../runtime/import/protocol';
-import { importModule, pairWithPrompts, replaceModules, sameNamespace, setModuleAt, setModuleDeleted, type ModulePlace } from '../../runtime/modules';
+import { ImportReadError, ImportStuck } from '../../runtime/import/protocol';
+import { chatDestination, placeOn, saveCharacter, saveModule, savePersona, savePrompt, saveTool, type ImportPage, type Undo } from '../../runtime/import/save';
+import { sameNamespace, type ModulePlace } from '../../runtime/modules';
 import { fillPictures, importRisuChats, risuMatch } from '../../runtime/move';
-import { keepOriginal } from '../../runtime/originals';
-import { addRisuPersona, removePersona } from '../../runtime/personas';
-import { ofSort, removePrompt, savePreset } from '../../runtime/prompts';
-import type { ObjectStore } from '../../runtime/store';
 import { aliased } from '../common/alias';
-import { describeFailure, describeReplyError } from '../common/failure';
+import { describeReplyError } from '../common/failure';
 import { describeImportFailure } from '../common/importFailure';
 import { ACTS } from '../common/acts';
 import { IMPORT_ACCEPT, ImportContext } from '../common/importing';
 import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import { useSearch } from '../common/useSearch';
-import { BIN, MISSED, moduleName, NO_CHARACTER, promptName, TOOL, UNREADABLE_FILE } from '../common/words';
-import { useFiles, useLibrary, useSession, useSettings, useStore } from '../session';
+import { BIN, MISSED, moduleName, namedObject, NO_CHARACTER, promptName, TOOL, UNREADABLE_FILE } from '../common/words';
+import { useFiles, useLibrary, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import type { Route } from '../shell/routes';
 import { Avatar, Button, Callout, Checkbox, ChipButton, ChoiceGroup, ConfirmDialog, Dialog, DropOverlay, Empty, Hint, List, ListItem, Menu, MenuItem, Outcome, pickFiles, Progress, Stack, Text, TextField, useFileDrop, type ProgressStep } from '../ui';
-import { characterOutcome, characterPreview, chatOutcome, chatPreview, moduleOutcome, modulePreview, personaOutcome, personaPreview, promptOutcome, promptPreview, quoted, toolOutcome, toolPreview, withOriginal, type ImportKind, type ImportOutcome, type Line, type Preview } from './importOutcome';
+import { characterOutcome, characterPreview, chatOutcome, chatPreview, failureOf, moduleOutcome, modulePreview, personaOutcome, personaPreview, placement, promptOutcome, promptPreview, quoted, toolOutcome, toolPreview, unsaved, withOriginal, type ImportKind, type ImportOutcome, type Line, type Preview } from './importOutcome';
 import { chatMissed, missedLines, moveMissed } from './missed';
 import { MoveDialog } from './MoveDialog';
 import { MoveFlow } from './MoveFlow';
@@ -65,8 +59,8 @@ type State =
   | { kind: 'preview'; rows: Row[]; place: ModulePlace | null }
   | { kind: 'saving'; file: string; steps: ProgressStep[] }
   | { kind: 'done'; results: Result[] };
-// 되돌리기 for what one file brought. Its closure holds ids, never the parsed file, which would stay alive with it.
-type Undo = { message: string; run: () => Promise<{ ok: true } | ApiFailure> };
+// What one file brought, offered back with its 되돌리기.
+type Offer = { message: string; run: Undo };
 
 const LINK = '링크';
 const linkFailure = (failure: Exclude<LinkFailure, { kind: 'cancelled' | 'needs-password' | 'wrong-password' }>) => {
@@ -92,44 +86,23 @@ const skippedLine = (names: string[]) =>
   `가져오지 않은 파일 ${names.length}개: ${names.slice(0, SKIPPED_SHOWN).join(', ')}${names.length > SKIPPED_SHOWN ? ' 등' : ''}`;
 
 const failed = (file: string, failure: string): Result => ({ kind: 'failed', file, failure });
-const unsaved = (file: string, failure: ApiFailure): Result => failed(file, `저장하지 못했어요. ${describeFailure(failure)}`);
+const notSaved = (file: string, failure: ApiFailure): Result => failed(file, unsaved(failure));
+const offered = (name: string, noun: string, run: Undo): Offer => ({ message: `${namedObject(name, noun)} 가져왔어요.`, run });
 
-// An import is undone as its kind is deleted, to 휴지통; a module that replaced older versions brings them back.
-const undoCharacter = (store: ObjectStore, id: string, name: string): Undo => ({ message: `'${name}' 캐릭터를 가져왔어요.`, run: () => setDeleted(store, id, Date.now()) });
-const undoModule = (store: ObjectStore, id: string, name: string, replaced: string[]): Undo => ({
-  message: `'${moduleName(name)}' 모듈을 가져왔어요.`,
-  run: () => allDone([setModuleDeleted(store, id, Date.now()), ...replaced.map((old) => setModuleDeleted(store, old, null))]),
-});
-const undoPrompt = (store: ObjectStore, id: string, name: string, made: string | null): Undo => ({
-  message: `'${promptName(name)}' 프롬프트를 가져왔어요.`,
-  run: () => allDone([removePrompt(store, id), ...(made === null ? [] : [setModuleDeleted(store, made, Date.now())])]),
-});
-const undoPersona = (store: ObjectStore, id: string, name: string): Undo => ({ message: `'${name}' 페르소나를 가져왔어요.`, run: () => removePersona(store, id) });
-
-async function allDone(runs: Promise<{ ok: true } | ApiFailure>[]): Promise<{ ok: true } | ApiFailure> {
-  const done = await Promise.all(runs);
-  return done.find((result): result is ApiFailure => !result.ok) ?? { ok: true };
-}
-
-// Where a module dropped or picked on this route is turned on first (design §6.5): a character's page, editor or chat,
-// a conversation prompt's editor, a persona's page, or 설정 › 모듈 for 항상, which also reads any .charx as a module. A file of chats that names no character goes to the character found here too.
-function placeOf(store: ObjectStore, route: Route): ModulePlace | null {
+// The page a route shows, where a module dropped or picked there is turned on first (placeOn): a character's page,
+// editor or chat, a prompt's editor, a persona's page, or 설정 › 모듈 for 항상, which also reads any .charx as a module.
+// A file of chats that names no character goes to the character found here too.
+function pageOf(route: Route): ImportPage | null {
   switch (route.kind) {
     case 'shelf':
     case 'new-chat':
       return route.character === null ? null : { kind: 'character', id: route.character };
     case 'edit':
       return { kind: 'character', id: route.character };
-    case 'chat': {
-      const character = store.get('chat', route.id)?.value.character ?? null;
-      return character === null ? null : { kind: 'character', id: character };
-    }
-    case 'prompt': {
-      const prompt = live(store.get('prompt', route.id));
-      return prompt && ofSort(prompt, 'conversation') ? { kind: 'prompt', prompt } : null;
-    }
+    case 'chat':
+    case 'prompt':
     case 'persona':
-      return live(store.get('persona', route.id)) ? { kind: 'persona', id: route.id } : null;
+      return { kind: route.kind, id: route.id };
     case 'modules':
     case 'module':
     case 'plugins':
@@ -149,7 +122,6 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const files = useFiles();
   const toast = useToast();
   const route = useRoute();
-  const { read } = useSession();
   const noticed = useSettings().importNotice === true;
   const [notice, setNotice] = useState<(() => void) | null>(null);
   const readers = useRef(new Set<ImportWorker>());
@@ -198,25 +170,12 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     return shown && aliased(shown.card.name, shown.alias);
   };
 
-  // A file of chats goes where the way in named, else to the character it was with when that one is here, else, when
-  // it names none, to the route's character. Otherwise the user picks, a character of the file's name picked first.
-  function destination(chats: ChatsRead, target: Target, place: ModulePlace | null): Choice {
-    const named = 'chat' in chats ? chats.chat.character : null;
-    const routed = place?.kind === 'character' && live(store.get('character', place.id)) ? place.id : null;
-    const fixed = (picked: string | null): Choice => ({ kind: 'character', asked: false, name: null, picked });
-    if (target !== undefined) return fixed(target);
-    if (named === null) return routed === null ? { kind: 'character', asked: true, name: null, picked: null } : fixed(routed);
-    if (live(store.get('character', named.id))) return fixed(named.id);
-    const same = read.library.snapshot().characters.find(({ character }) => character.card.name === named.name)?.id;
-    return { kind: 'character', asked: true, name: named.name, picked: same ?? routed };
-  }
-
   async function previewOf(file: File, place: ModulePlace | null, target: Target): Promise<Row> {
     const at = place?.kind ?? null;
     const row = await reading(file, place, async (parsed): Promise<Row> => {
       const shown = (preview: Preview, choice: Choice | null = null): Row => ({ file, preview, choice, ticked: true });
       if ('chat' in parsed || 'risuChats' in parsed) {
-        const choice = destination(parsed, target, place);
+        const choice: Choice = { kind: 'character', ...chatDestination(store, parsed, target, place) };
         const count = 'chat' in parsed ? 1 : parsed.risuChats.length;
         return shown(chatPreview(file.name, count, 'chat' in parsed ? [] : moveMissed(parsed.missed), choice.kind === 'character' && !choice.asked ? nameOf(choice.picked) : undefined), choice);
       }
@@ -239,74 +198,58 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     return typeof row === 'string' ? { file, failure: row } : row;
   }
 
-  // offer: its 되돌리기. A new tool offers none: importTool refuses its identity again while the binned one is kept.
-  async function save({ file, preview: { title }, choice }: Read, place: ModulePlace | null, progress: (step: ProgressStep) => void, offer: (undo: Undo) => void): Promise<Result> {
+  async function save({ file, preview: { title }, choice }: Read, place: ModulePlace | null, progress: (step: ProgressStep) => void, offer: (offer: Offer) => void): Promise<Result> {
     const saved = await reading(file, place, async (parsed, reader): Promise<Result> => {
-      // Once what it made is saved, which stays when this fails.
-      const keep = async (id: string, made: ImportOutcome): Promise<Result> => {
-        try {
-          const kept = await keepOriginal(store, files, id, await reader.original(file.name), (step) => progress(stepOf(step)));
-          return withOriginal(made, kept.ok ? kept.data : describeFailure(kept));
-        } catch (error) {
-          if (!(error instanceof ImportReadError)) throw error;
-          return withOriginal(made, UNREADABLE_FILE);
-        }
-      };
+      const sink = { store, files };
+      const original = () => reader.original(file.name);
+      const step = (each: Parameters<typeof stepOf>[0]) => progress(stepOf(each));
       if ('chat' in parsed || 'risuChats' in parsed) {
         const character = choice?.kind === 'character' ? choice.picked : null;
         if ('chat' in parsed) {
-          const saved = await importChat({ store, files }, parsed.chat, character);
-          return saved.ok ? chatOutcome(file.name, [saved.data.id], nameOf(character), chatMissed(saved.data.dropped)) : unsaved(file.name, saved);
+          const saved = await importChat(sink, parsed.chat, character);
+          return saved.ok ? chatOutcome(file.name, [saved.data.id], nameOf(character), chatMissed(saved.data.dropped)) : notSaved(file.name, saved);
         }
         const saved = await importRisuChats(store, character, parsed.risuChats);
-        return saved.ok ? chatOutcome(file.name, saved.data, nameOf(character), []) : unsaved(file.name, saved);
+        return saved.ok ? chatOutcome(file.name, saved.data, nameOf(character), []) : notSaved(file.name, saved);
       }
       if ('tool' in parsed) {
-        const saved = await importFile(store, files, parsed.tool);
-        if (!saved.ok) return unsaved(file.name, saved);
-        const { previous } = saved.data;
-        const placed = !previous && place && (await setModuleAt(store, place, saved.data.id, true));
-        if (previous) offer({ message: `'${parsed.tool.manifest.displayName}' ${TOOL}을 가져왔어요.`, run: () => undoFileImport(store, saved.data, previous) });
-        return toolOutcome(file.name, title, saved.data, { at: place?.kind ?? null, failure: placed && !placed.ok ? describeFailure(placed) : null });
+        const saved = await saveTool(sink, parsed.tool, place);
+        if (!saved.ok) return notSaved(file.name, saved);
+        if (saved.data.undo) offer(offered(parsed.tool.manifest.displayName, TOOL, saved.data.undo));
+        return toolOutcome(file.name, title, saved.data.saved, placement(place, saved.data.placed));
       }
       if ('preset' in parsed) {
-        const saved = await savePreset(store, parsed.preset);
-        if (!saved.ok) return unsaved(file.name, saved);
-        offer(undoPrompt(store, saved.data.id, parsed.preset.prompt.name, saved.data.made));
-        const modules = saved.data.paired.map((id) => moduleName(store.get('module', id)!.value.name));
-        return keep(saved.data.id, promptOutcome(file.name, title, saved.data.id, modules, saved.data.waiting));
+        const saved = await savePrompt(sink, parsed.preset, original, step);
+        if (!saved.ok) return notSaved(file.name, saved);
+        const { id, paired, waiting, kept, undo } = saved.data;
+        offer(offered(promptName(parsed.preset.prompt.name), '프롬프트', undo));
+        return withOriginal(promptOutcome(file.name, title, id, paired.map((each) => moduleName(store.get('module', each)!.value.name)), waiting), kept);
       }
       if ('module' in parsed) {
-        const { namespace } = parsed.module;
-        const olds = choice?.kind === 'replace' && choice.on && namespace !== null ? sameNamespace(store, namespace) : [];
-        const saved = await importModule(store, files, parsed.module, (step) => progress(stepOf(step)));
-        if (!saved.ok) return unsaved(file.name, saved);
-        offer(undoModule(store, saved.data.id, parsed.module.name, olds.map(({ id }) => id)));
-        const placed = place && (await setModuleAt(store, place, saved.data.id, true));
-        const failure = placed && !placed.ok ? describeFailure(placed) : null;
-        // After the placement, which appends: replacing puts it where the older version was in that list too.
-        const replaced = olds.length > 0 ? await replaceModules(store, saved.data.id, olds.map(({ id }) => id)) : null;
-        const replacing = replaced && { names: olds.map(({ value }) => moduleName(value.name)), places: replaced.ok ? replaced.data : 0, failure: replaced.ok ? null : describeFailure(replaced) };
-        const paired = await pairWithPrompts(store, saved.data.id, parsed.module);
-        const pairing = paired.ok ? { prompts: paired.data.map((prompt) => promptName(prompt.value.name)), failure: null } : { prompts: [], failure: describeFailure(paired) };
-        return keep(saved.data.id, moduleOutcome(file.name, title, saved.data.id, saved.data.unsupported, { at: place?.kind ?? null, failure }, pairing, replacing));
+        const saved = await saveModule(sink, parsed.module, choice?.kind === 'replace' && choice.on, place, original, step);
+        if (!saved.ok) return notSaved(file.name, saved);
+        const { id, unsupported, placed, replaced, paired, kept, undo } = saved.data;
+        offer(offered(moduleName(parsed.module.name), '모듈', undo));
+        const replacing = replaced && { names: replaced.olds.map(({ value }) => moduleName(value.name)), places: replaced.places.ok ? replaced.places.data : 0, failure: failureOf(replaced.places) };
+        const pairing = { prompts: paired.ok ? paired.data.map((prompt) => promptName(prompt.value.name)) : [], failure: failureOf(paired) };
+        return withOriginal(moduleOutcome(file.name, title, id, unsupported, placement(place, placed), pairing, replacing), kept);
       }
       if ('persona' in parsed) {
-        const saved = await addRisuPersona(store, parsed.persona, await parsed.persona.picture());
-        if (!saved.ok) return unsaved(file.name, saved);
-        offer(undoPersona(store, saved.data.id, aliased(parsed.persona.name, parsed.persona.alias)));
-        return personaOutcome(file.name, title, saved.data);
+        const saved = await savePersona(store, parsed.persona);
+        if (!saved.ok) return notSaved(file.name, saved);
+        offer(offered(aliased(parsed.persona.name, parsed.persona.alias), '페르소나', saved.data.undo));
+        return personaOutcome(file.name, title, saved.data.saved);
       }
       if (choice?.kind === 'fill' && choice.on) {
         progress(stepOf({ kind: 'picture' }));
         const filled = await fillPictures(store, files, { kind: 'asset', parent: choice.into }, parsed.card.assets);
-        if (!filled.ok) return unsaved(file.name, filled);
+        if (!filled.ok) return notSaved(file.name, filled);
         return { kind: 'filled', file: file.name, title, lines: [{ text: `이미지 ${filled.data.kept.length}개를 가져왔어요.`, failed: false }], missed: missedLines(filled.data.unsupported) };
       }
-      const saved = await importCardFile(store, files, parsed.card, (step) => progress(stepOf(step)));
-      if (!saved.ok) return unsaved(file.name, saved);
-      offer(undoCharacter(store, saved.data.id, parsed.card.card.name));
-      return keep(saved.data.id, characterOutcome(file.name, title, saved.data));
+      const saved = await saveCharacter(sink, parsed.card, original, step);
+      if (!saved.ok) return notSaved(file.name, saved);
+      offer(offered(parsed.card.card.name, '캐릭터', saved.data.undo));
+      return withOriginal(characterOutcome(file.name, title, saved.data.saved), saved.data.kept);
     });
     return typeof saved === 'string' ? failed(file.name, saved) : saved;
   }
@@ -371,7 +314,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       setMoving({ files: backups, aside: files.length - backups.length });
       return [];
     }
-    const place = placeOf(store, route);
+    const page = pageOf(route);
+    const place = page && placeOn(store, page);
     for (const file of files) {
       if (!mounted.current) return [];
       setState({ kind: 'reading', file: file.name });
@@ -385,7 +329,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   // A row that did not read stands among the results only when no preview showed it.
   async function run(rows: Row[], place: ModulePlace | null): Promise<Result[]> {
     const results: Result[] = [];
-    const undos: Undo[] = [];
+    const undos: Offer[] = [];
     for (const row of rows) {
       if (!mounted.current) return results;
       if ('failure' in row) {
@@ -396,7 +340,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       results.push(await save(row, place, (step) => setState({ kind: 'saving', file: row.file.name, steps: [step] }), (undo) => undos.push(undo)));
     }
     if (undos.length === 1) toast.undoable(undos[0]!.message, undos[0]!.run);
-    else if (undos.length > 1) toast.undoable(`${undos.length}개를 가져왔어요.`, () => allDone(undos.map(({ run }) => run())));
+    else if (undos.length > 1) toast.undoable(`${undos.length}개를 가져왔어요.`, () => allWritten(undos.map(({ run }) => run())));
     setState(results.length > 0 ? { kind: 'done', results } : null);
     return results;
   }
@@ -431,8 +375,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       ] : [];
     }),
     ...(done.length === 1 ? [
-      <Button key="chat" icon={MessageSquarePlus} onClick={() => go({ kind: 'new-chat', character: done[0]! })}>
-        채팅 시작
+      <Button key="chat" icon={ACTS.newChat.icon} onClick={() => go({ kind: 'new-chat', character: done[0]! })}>
+        {ACTS.newChat.label}
       </Button>,
     ] : []),
   ];

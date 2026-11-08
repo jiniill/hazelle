@@ -13,10 +13,11 @@ import { PackToggles } from '../common/PackToggles';
 import { ScriptsEditor } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
-import { ALWAYS, BIN_KEEPS, COPY_SAID, copyName, moduleName, PAGES, promptName } from '../common/words';
+import { ALWAYS, BIN_KEEPS, COPY_SAID, copyName, moduleName, PAGES, promptName, SAVE_FAILED } from '../common/words';
 import { useChildren, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate } from '../shell/router';
 import { characterPage, type Back } from '../shell/routes';
+import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { Avatar, Empty, List, ListItem, MenuItem, NavBar, Screen, Section, SettingGroup, SettingRow, Switch, Text, TextField, useWide } from '../ui';
 import { ModuleExport } from './ModuleExport';
@@ -32,18 +33,21 @@ const PERSONAS_USING = '사용 중인 페르소나';
 export function useModuleEditor({ id, value }: Stored<'module'>, page: 'modules' | 'plugins', back: Back, items?: (flush: () => Promise<boolean>) => ReactNode) {
   const noun = PAGES[page];
   const store = useStore();
-  const toast = useToast();
+  const removal = useRemoval();
   const autosave = useAutosave<{ name: string; description: string }>(`module:${id}`, (patch) => editModule(store, id, patch));
   const name = autosave.unsaved.name ?? value.name;
   const description = autosave.unsaved.description ?? value.description;
 
-  async function remove() {
-    const removed = await autosave.remove(() => setModuleDeleted(store, id, Date.now()));
-    if (!removed) return;
-    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
-    navigate(page === 'modules' ? { kind: 'modules', place: null } : { kind: 'plugins' });
-    toast.undoable(`'${moduleName(name)}' ${noun}을 삭제했어요.`, () => setModuleDeleted(store, id, null), BIN_KEEPS);
-  }
+  const remove = () =>
+    removal({
+      name: ({ value }) => moduleName(value.name),
+      noun,
+      task: () => setModuleDeleted(store, id, Date.now()),
+      queue: autosave.remove,
+      restore: () => setModuleDeleted(store, id, null),
+      then: () => navigate(page === 'modules' ? { kind: 'modules', place: null } : { kind: 'plugins' }),
+      detail: BIN_KEEPS,
+    });
 
   const top = (
     <NavBar
@@ -72,7 +76,7 @@ export function AlwaysSwitch({ id }: { id: string }) {
   const always = useSettings().modules?.includes(id) ?? false;
   async function setAlways(on: boolean) {
     const saved = await setModuleAlways(store, id, on);
-    if (!saved.ok) toast.failed(saved, '저장하지 못했어요.');
+    if (!saved.ok) toast.failed(saved, SAVE_FAILED);
   }
   return (
     <SettingGroup label={ALWAYS_ON}>

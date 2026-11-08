@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useSaves } from '../session';
 import { useToast } from '../toast';
 import type { SaveStatus, Write } from './saveQueue';
+import { SAVE_FAILED } from './words';
 
 const SAVE_STATUS: Record<SaveStatus, string> = { saving: '저장 중', saved: '저장됨', failed: '저장 못 함' };
 
@@ -21,7 +22,7 @@ export function useAutosave<T extends object>(key: string, write: Write<T>) {
   const view = useSyncExternalStore(subscribe, () => saves.view<T>(key));
   useEffect(() => () => void saves.flush(key), [saves, key]);
 
-  const queue = () => saves.queue<T>(key, (patch) => latest.current(patch), (failure) => toast.failed(failure, '저장하지 못했어요.'));
+  const queue = () => saves.queue<T>(key, (patch) => latest.current(patch), (failure) => toast.failed(failure, SAVE_FAILED));
   return {
     ...view,
     words: saveWords(view.status),

@@ -13,6 +13,7 @@ import { HookDetail } from '../HookDetail';
 import { LUA_EVENTS } from './luaApi';
 import { SAMPLE, SAMPLE_LANGUAGE, SAMPLE_NOTE } from './sample';
 import { chatVariable, writerName, type ChatVariables, type Defaults, type Variables } from './variables';
+import { COUNTING } from '../words';
 
 const LABEL = '테스트';
 // The lane name the sample runs on, which no chat id takes.
@@ -130,7 +131,7 @@ function CbsTrial({ text, trial, reveal }: { text: string; trial: TrialChat; rev
       {scope === 'failed' ? (
         <Text variant="note">채팅을 열지 못했어요.</Text>
       ) : shown === undefined ? (
-        <Text variant="note">계산하는 중…</Text>
+        <Text variant="note">{COUNTING}</Text>
       ) : shown.result === 'failed' ? (
         <Text variant="note">결과를 만들지 못했어요.</Text>
       ) : shown.result === null ? (

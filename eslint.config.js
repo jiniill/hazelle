@@ -6,7 +6,7 @@ import boundaries from './eslint/boundaries.js';
 const CSS_IMPORT = { regex: '\\.css$', message: 'Only src/app/ui imports CSS (src/app/ui/README.md).' };
 const ACT_ICONS = {
   name: 'lucide-react',
-  importNames: ['Plus', 'Import', 'Download', 'Upload', 'FileUp', 'FileDown', 'Trash', 'Trash2', 'Copy', 'CopyPlus', 'Pencil', 'RefreshCw', 'RotateCcw', 'RotateCw', 'MoreHorizontal', 'Ellipsis'],
+  importNames: ['Plus', 'Import', 'Download', 'Upload', 'FileUp', 'FileDown', 'Trash', 'Trash2', 'Copy', 'CopyPlus', 'Pencil', 'RefreshCw', 'RotateCcw', 'RotateCw', 'MoreHorizontal', 'Ellipsis', 'MessageSquarePlus', 'Flag'],
   message: 'An act reads one way on every screen: take its icon from src/app/common/acts.ts (ACTS), a ⋯ from MoreMenu.',
 };
 const HEX_COLOR = {

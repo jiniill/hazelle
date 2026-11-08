@@ -7,7 +7,7 @@ import { navigate } from '../shell/router';
 import { useToast } from '../toast';
 import { Button, Empty, Section, SettingGroup, SettingRow, Switch, Text } from '../ui';
 import { useLab } from './labs';
-import { AGENTS, promptName, SCOPE, STAGE_NAMES } from './words';
+import { AGENTS, promptName, SAVE_FAILED, SCOPE, STAGE_NAMES } from './words';
 
 type Owner = { kind: 'settings' } | FeatureLayer;
 
@@ -35,7 +35,7 @@ export function AgentSwitches({ owner, own, onChange }: { owner: Owner; own: str
 
   async function change(agent: string, on: boolean) {
     const saved = await onChange(agent, on);
-    if (!saved.ok) toast.failed(saved, '저장하지 못했어요.');
+    if (!saved.ok) toast.failed(saved, SAVE_FAILED);
   }
 
   const making = (

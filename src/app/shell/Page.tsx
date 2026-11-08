@@ -1,4 +1,3 @@
-import { MessageSquarePlus } from 'lucide-react';
 import { lazy, useLayoutEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { Stored } from '../../model/kinds';
 import { entryOf } from '../../connectors/types';
@@ -233,7 +232,7 @@ function CharacterPage({ at, wide, back }: { at: At<'shelf' | 'edit'>; wide: boo
   if (at.character === null) return (
     <Screen align="center">
       <Intro title={NO_CHARACTER} />
-      <Button icon={MessageSquarePlus} onClick={() => navigate({ kind: 'new-chat', character: null })}>새 채팅</Button>
+      <Button icon={ACTS.newChat.icon} onClick={() => navigate({ kind: 'new-chat', character: null })}>{ACTS.newChat.label}</Button>
     </Screen>
   );
   if (!shelf) return missing(absentItem('character', stored), wide);

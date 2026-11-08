@@ -23,6 +23,8 @@ import { count } from './typedNumber';
 import { withParticle } from './particles';
 import { BIN, BOT_STUCK, DISCOUNT, inSettings, MODEL_ROLES, MODEL_SETTINGS, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, UNREADABLE_IMAGE } from './words';
 
+export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
+
 // The server's codes left on the generic fallback, which names the code for the operator. Every other server code needs
 // words in MESSAGES; its remaining keys are codes the runtime makes itself.
 type OnFallback =
@@ -99,14 +101,14 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'no-session': '로그인이 풀렸어요. 새로고침한 뒤 다시 로그인해 주세요.',
   conflict: '다른 기기에서 동시에 바꿔서 저장하지 못했어요. 다시 시도해 주세요.',
   unreadable: '암호화 키로 열 수 없는 항목이라 바꿀 수 없어요.',
-  'evaluation-unavailable': '채팅을 처리하지 못했어요. 새로고침한 뒤 다시 시도해 주세요.',
+  'evaluation-unavailable': `채팅을 처리하지 못했어요. ${RELOAD_RETRY}`,
   'bot-stuck': `${BOT_STUCK}.`,
-  'codec-unavailable': '데이터를 처리하지 못했어요. 새로고침한 뒤 다시 시도해 주세요.',
+  'codec-unavailable': `데이터를 처리하지 못했어요. ${RELOAD_RETRY}`,
   gone: '다른 기기나 탭에서 삭제된 항목이라 바꿀 수 없어요.',
   'too-large': '용량이 너무 커서 저장할 수 없어요.',
   // A guest's store (runtime/guest-store).
   'browser-full': `브라우저 저장 공간이 꽉 찼어요. ${BIN}에서 영구 삭제하거나 계정을 만들면 공간이 생겨요.`,
-  'browser-storage': '이 브라우저의 저장소를 열지 못했어요. 새로고침한 뒤 다시 시도해 주세요.',
+  'browser-storage': `이 브라우저의 저장소를 열지 못했어요. ${RELOAD_RETRY}`,
   'browser-storage-blocked': '다른 탭에서 열어 둔 헤이젤을 닫고 다시 시도해 주세요.',
   offline: '서버에 연결하지 못했어요. 네트워크 상태를 확인해 주세요.',
   'timeline-changed': '계정이 복원돼서 작업을 멈췄어요. 다시 시도해 주세요.',
@@ -122,7 +124,7 @@ const SERVER_TROUBLE = '서버에 문제가 생겼어요. 잠시 뒤에 다시 �
 // model: the subject of 쓰던, particle and all.
 const profileGone = (model: string) => `${model} 쓰던 ${MODEL_SETTINGS}이 삭제됐어요. ${inSettings('models')}에서 다른 ${MODEL_SETTINGS}을 선택해 주세요.`;
 const NO_DEFAULT_PROFILE = `기본으로 지정한 ${MODEL_SETTINGS}이 없어요. ${inSettings('models')}에서 ${MODEL_SETTINGS} 하나를 기본으로 지정해 주세요.`;
-const TOKENIZER = '토큰 수를 계산하지 못했어요. 새로고침한 뒤 다시 시도해 주세요.';
+const TOKENIZER = `토큰 수를 계산하지 못했어요. ${RELOAD_RETRY}`;
 const EMPTY_REPLY = '모델이 내용이 비어 있는 응답을 보냈어요.';
 const GONE_MESSAGE = '삭제된 메시지예요.';
 
@@ -162,7 +164,7 @@ export function describeFailure(failure: ApiFailure, own: Partial<Record<ServerE
 const REFUSED: Record<string, string> = {
   'max-tokens-unknown': '이 모델의 응답 최대 길이를 알 수 없어서 요청을 보낼 수 없어요.',
   'context-fit': '요청 내용이 이 모델의 컨텍스트 길이를 넘을 것 같아서 보내지 않았어요. 컨텍스트 길이가 더 긴 모델을 선택하거나 프롬프트 내용을 줄여 주세요.',
-  tokenizer: '토큰 수를 계산하지 못해서 보내지 않았어요. 새로고침한 뒤 다시 시도해 주세요.',
+  tokenizer: `토큰 수를 계산하지 못해서 보내지 않았어요. ${RELOAD_RETRY}`,
   'unknown-connection-type': '지원하지 않는 연결 방식이에요. 화면을 새로고침해 주세요.',
   'unreadable-key': '키를 읽지 못했어요. 키 파일의 내용을 그대로 붙여 넣어 주세요.',
   'unsupported-protocol': '이 모델의 요청 방식은 지원하지 않아요.',

@@ -12,7 +12,7 @@ import { imageModelOf } from '../common/IllustrateRows';
 import { languageLabel } from '../common/languages';
 import { chosenPrompt } from '../common/TaskPrompt';
 import { count } from '../common/typedNumber';
-import { FEATURE_NAMES, FEATURES_TITLE, NOT_STARRED, PRE_READ_PARTS, STAGE_NAMES } from '../common/words';
+import { FEATURE_NAMES, FEATURES_TITLE, NOT_STARRED, PRE_READ_PARTS, SAVE_FAILED, STAGE_NAMES } from '../common/words';
 import { useConnections, usePrompts, useSettings, useStore } from '../session';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
@@ -60,7 +60,7 @@ export function FeatureSwitch({ feature }: { feature: Feature }) {
     <Switch
       label={FEATURE_NAMES[feature]}
       checked={sharedFeatures(store)[feature]}
-      onChange={(on) => toast.settled(setFeatureAt(store, { kind: 'settings' }, feature, on), '저장하지 못했어요.')}
+      onChange={(on) => toast.settled(setFeatureAt(store, { kind: 'settings' }, feature, on), SAVE_FAILED)}
     />
   );
 }

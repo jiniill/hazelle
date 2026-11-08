@@ -3,6 +3,7 @@ import type { ApiResult } from '../../runtime/api';
 import { useToast } from '../toast';
 import { Button, ListItem, Row, Stack, Tag, Text } from '../ui';
 import { withParticle } from './particles';
+import { REMOVE_FAILED } from './words';
 
 // Script editors open one row; lore opens several for side-by-side reading/copying (user ruling, not a kit limit).
 export function useOpenRows(several = false) {
@@ -29,7 +30,7 @@ export function useOpenRows(several = false) {
   async function remove<R>({ id, noun, name }: { id: string; noun: string; name: string }, removing: Promise<ApiResult<R> | null>, restore: (removed: R) => Promise<ApiResult<unknown>>) {
     const done = await removing;
     if (!done) return;
-    if (!done.ok) return toast.failed(done, '삭제하지 못했어요.');
+    if (!done.ok) return toast.failed(done, REMOVE_FAILED);
     setOpen(id, false);
     toast.undoable(`'${name}' ${withParticle(noun, '을/를')} 삭제했어요.`, () => restore(done.data));
   }

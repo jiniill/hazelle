@@ -11,7 +11,7 @@ import { ShortfallNote } from './CacheDiagnosis';
 import { SentLore, SentMemory, SentRequest, SentResponse } from './ChatSent';
 import { money } from '../common/money';
 import { cost, finish, seconds, speed, streaming, tokens } from '../common/receipt';
-import { DISCOUNT, PDF_SEND, PRE_READ, STAGE_NAMES, UNKNOWN } from '../common/words';
+import { DISCOUNT, PDF_SEND, PRE_READ, SAVE_FAILED, STAGE_NAMES, UNKNOWN } from '../common/words';
 import { infoReply } from './infoReply';
 import type { InfoTab, Side } from './panels';
 import type { OpenChat } from './useChat';
@@ -184,7 +184,7 @@ function AgentCall({ chat, version, run: { agent, name, stage, receipt, note, me
   const toast = useToast();
   const kept = version.memories?.[agent] ?? memory;
   const [draft, setDraft] = useState<string | null>(null);
-  const save = () => void setAgentMemory(store, chat, version.id, agent, draft!).then((saved) => (saved.ok ? setDraft(null) : toast.failed(saved, '저장하지 못했어요.')));
+  const save = () => void setAgentMemory(store, chat, version.id, agent, draft!).then((saved) => (saved.ok ? setDraft(null) : toast.failed(saved, SAVE_FAILED)));
   return (
     <Section level={3} title={name} note={STAGE_NAMES[stage]}>
       <Text variant="note">{reused ? '이전 응답에서 작성한 노트를 재사용했어요.' : `${receipt.modelName} · ${receipt.source}`}</Text>

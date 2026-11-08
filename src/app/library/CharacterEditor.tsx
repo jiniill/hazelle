@@ -36,7 +36,7 @@ import { FaceChange } from '../common/FaceChange';
 import { useTypedNumber } from '../common/typed';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SCRIPTS, SEE_ORIGINAL, STOP, TRANSLATOR_NOTE } from '../common/words';
+import { BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STOP, TRANSLATOR_NOTE } from '../common/words';
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
@@ -147,7 +147,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
   const keepThoughts = character.keepThoughts === true;
 
   function flip(field: Switched, on: boolean) {
-    toast.settled(SWITCHES[field](store, id, on), '저장하지 못했어요.');
+    toast.settled(SWITCHES[field](store, id, on), SAVE_FAILED);
   }
 
   const peek = useTypedNumber(readPicturePercent, pictures.peek, { error: PICTURE_PERCENT_ERROR, onChange: (value) => pictureSave.change({ peek: value }) });

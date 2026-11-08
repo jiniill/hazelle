@@ -6,7 +6,7 @@ import { accountSettings } from '../../runtime/account-settings';
 import { useLibrary, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { ChoiceGroup, Section, SettingGroup, SettingRow } from '../ui';
-import { FEATURE_NAMES, FEATURES_TITLE, follows, SCOPE, scopeTag } from './words';
+import { FEATURE_NAMES, FEATURES_TITLE, follows, SAVE_FAILED, SCOPE, scopeTag } from './words';
 
 type Choice = 'default' | 'on' | 'off';
 
@@ -39,7 +39,7 @@ export function FeatureSwitches({ owner, own, onChange }: { owner: FeatureLayer;
 
   async function change(feature: Feature, choice: Choice) {
     const saved = await onChange(feature, choice === 'default' ? null : choice === 'on');
-    if (!saved.ok) toast.failed(saved, '저장하지 못했어요.');
+    if (!saved.ok) toast.failed(saved, SAVE_FAILED);
   }
 
   return (

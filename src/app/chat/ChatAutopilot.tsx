@@ -1,5 +1,5 @@
 import { cost, tokens } from '../common/receipt';
-import { STOP } from '../common/words';
+import { COUNTING, STOP } from '../common/words';
 import { Button, Callout, Progress, Row, Section, SidePanel, Stack, Text, TextField } from '../ui';
 import type { RunEnd } from './autopilot';
 import type { Autopilot, Outlook } from './useAutopilot';
@@ -36,7 +36,7 @@ export function ChatAutopilot({ autopilot: { text, messages, outlook, running, e
 }
 
 function costLine(outlook: Exclude<Outlook, { kind: 'unsendable' }>): string {
-  if (outlook.kind === 'pending') return '계산하는 중…';
+  if (outlook.kind === 'pending') return COUNTING;
   if (outlook.kind === 'unknown') return '비용은 알 수 없어요';
   return outlook.cost ? cost(outlook.cost) : `입력 약 ${tokens(outlook.input)} 토큰 · 비용은 알 수 없어요`;
 }
