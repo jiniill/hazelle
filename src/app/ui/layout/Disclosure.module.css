@@ -19,16 +19,13 @@
 
 .toggle {
   composes: note from '../foundation/type.module.css';
+  /* Text only, never a fill: a fill left under the pointer after a press reads as a chip. */
+  composes: ink from '../foundation/hover.module.css';
   display: inline-flex;
   align-items: center;
   gap: var(--space-8);
   min-height: var(--control-chip);
   border-radius: var(--radius-sm);
-}
-
-/* Text only, never a fill: a fill left under the pointer after a press reads as a chip. */
-.toggle:hover {
-  color: var(--color-text);
 }
 
 .chevron {

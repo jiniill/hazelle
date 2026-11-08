@@ -7,6 +7,7 @@
 
 .card {
   composes: box from '../foundation/surface.module.css';
+  composes: fillOpen from '../foundation/hover.module.css';
   flex: 1;
   min-width: 0;
   min-height: var(--row-min-height);
@@ -16,11 +17,6 @@
   gap: var(--space-2);
   color: var(--color-text);
   text-align: left;
-}
-
-.card:hover,
-.card[aria-expanded='true'] {
-  background: var(--color-surface-hover);
 }
 
 .label {

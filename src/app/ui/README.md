@@ -19,7 +19,7 @@ and only this folder styles elements.**
   `media.test.ts` fails on any `@media` that `MEDIA` does not list.
 - `foundation/motion.module.css` holds every keyframe, `foundation/a11y.module.css` the
   screen-reader-only box and the one-line ellipsis, and `type.module.css` and `surface.module.css` the looks several
-  components share (a note, a detail line, a row's title, a box of rows, a field, a fraction bar). Components take them with `composes` and never redeclare them. These four files sit in the `looks` cascade layer, and `global.css` in `reset` under it, so a component's own rule that changes a property of a look it composes wins whatever order the build gives the files.
+  components share (a note, a detail line, a row's title, a box of rows, a field, a fraction bar), and `hover.module.css` how a control answers the pointer. Components take them with `composes` and never redeclare them. These five files sit in the `looks` cascade layer, and `global.css` in `reset` under it, so a component's own rule that changes a property of a look it composes wins whatever order the build gives the files. Only the hover and open rules stand outside it, so they beat the resting fill a component sets: a state that must hold under the pointer is written over their three classes.
 - `overlays/layers.ts` is the only document listener for keys and presses. Menus and dialogs join
   its stack with `useLayer`, and Esc or a press outside reaches the newest one only. A layer that
   says `takesBack` (menus, dialogs, the picture view, a covering side panel, a held peek) also closes
@@ -99,6 +99,7 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 | foundation | — | `a11y.module.css` | Screen-reader-only labels; one-line ellipsis |
 | foundation | — | `type.module.css` | Shared text looks: a note (sm; a class named `note` is this one), a detail line (xs; a class named `detail` or `sub`), a row's title, an error line, a field's label |
 | foundation | — | `surface.module.css` | Shared surfaces: a box of rows and the line between them, glass over the story, the floating ground of a menu, a dialog or a bubble, a field's frame, a field and its compact size, a fraction bar's track and fill, where a dragged thing would land, an accent dot, a count of what waits behind a button |
+| foundation | — | `hover.module.css` | How a control answers the pointer: a fill (`fill`) or brighter words (`ink`) where a pointer hovers, kept while what it opens is open (`fillOpen`, `inkOpen`), and the easing of a colour change (`eased`) |
 | foundation | `media.ts` (`MEDIA`, `useWide`, `useSplit`, `useHover`, `usePanelsBeside`, `useViewport`, `hasFinePointer`) | — | Every breakpoint and media query |
 | foundation | `theme.ts` (`applyScheme`, `schemeAttributes`, `THEME`, `BG`, `INK`, `ACCENT`) | — | The theme and color picks on the document or an element |
 | foundation | `ColorDot` | `ColorDot.module.css` | A color pick as the current theme draws it |

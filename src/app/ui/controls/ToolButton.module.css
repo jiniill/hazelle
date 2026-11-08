@@ -1,5 +1,6 @@
 .tool {
   composes: note from '../foundation/type.module.css';
+  composes: fillOpen inkOpen from '../foundation/hover.module.css';
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -7,13 +8,6 @@
   height: var(--control-chip);
   padding: 0 var(--space-8);
   border-radius: var(--radius-sm);
-  transition: background-color var(--duration-fast), color var(--duration-fast);
-}
-
-.tool:hover,
-.tool[aria-expanded='true'] {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
 }
 
 .spinner {

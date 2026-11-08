@@ -11,10 +11,11 @@ const messages = stylelint.utils.ruleMessages(ruleName, {
 const FOUNDATION = new URL('./src/app/ui/foundation/', import.meta.url);
 const TEXT = ['font-size', 'color', 'font-weight'];
 
-// postcss is stylelint's dependency, not this repo's; the looks are rules of one plain class each, which a pattern reads.
-function looksIn(file, names) {
+// postcss is stylelint's dependency, not this repo's; the looks are rules of one plain class each (with its state, for a
+// hover look), which a pattern reads.
+function looksIn(file, names, state = '') {
   const looks = new Map();
-  for (const [, name, body] of readFileSync(new URL(file, FOUNDATION), 'utf8').matchAll(/^\s*\.(\w+) \{([^}]*)\}/gm)) {
+  for (const [, name, body] of readFileSync(new URL(file, FOUNDATION), 'utf8').matchAll(new RegExp(`^\\s*\\.(\\w+)${state} \\{([^}]*)\\}`, 'gm'))) {
     if (!names.includes(name)) continue;
     const found = {};
     for (const [, prop, value] of body.matchAll(/([a-z-]+): ([^;]+);/g)) if (prop !== 'composes') found[prop] = value;
@@ -36,6 +37,7 @@ const textLooks = looksIn('type.module.css', ['note', 'detail', 'title', 'fieldL
 textLooks.set('error', { ...textLooks.get('note'), ...textLooks.get('error') });
 const track = looksIn('surface.module.css', ['track']).get('track');
 const grounds = looksIn('surface.module.css', ['glass', 'floating']);
+const hovers = looksIn('hover.module.css', ['fill', 'ink'], String.raw`:hover:not\(:disabled\)`);
 
 // Report matching text looks only when no text property differs; e.g. an independent weight makes a distinct look.
 const redeclaresText = (own, look) =>
@@ -48,6 +50,20 @@ const redeclaresTrack = (own) => own.height === track.height && own['border-radi
 const redeclaresGround = (node, own, look) =>
   node.parent.type === 'root' && /^\.[\w-]+$/.test(node.selector) && Object.entries(look).every(([prop, value]) => own[prop] === value);
 
+// A hover of one class, or with its open state, that declares nothing but hover looks; one that also changes its border,
+// or is written on more than one class, is a distinct look.
+const HOVER = /^\.[\w-]+:hover(:not\(:disabled\))?$/;
+const OPEN = /^\.[\w-]+\[aria-expanded='true'\]$/;
+function redeclaredHovers(node, own) {
+  const { 'background-color': fill, ...rest } = own;
+  const flat = fill === undefined ? own : { background: fill, ...rest };
+  if (!node.selectors.some((selector) => HOVER.test(selector)) || !node.selectors.every((selector) => HOVER.test(selector) || OPEN.test(selector))) return [];
+  const found = [...hovers].filter(([, look]) => Object.entries(look).every(([prop, value]) => flat[prop] === value));
+  if (!Object.keys(flat).every((prop) => found.some(([, look]) => prop in look))) return [];
+  const open = node.selectors.some((selector) => OPEN.test(selector)) ? 'Open' : '';
+  return found.map(([name]) => name + open);
+}
+
 const rule = (enabled) => (root, result) => {
   if (!stylelint.utils.validateOptions(result, ruleName, { actual: enabled, possible: [true] })) return;
   root.walkRules((node) => {
@@ -59,6 +75,7 @@ const rule = (enabled) => (root, result) => {
     for (const [look, values] of grounds) {
       if (redeclaresGround(node, own, values)) stylelint.utils.report({ ruleName, result, node, message: messages.look(look, 'surface.module.css') });
     }
+    for (const look of redeclaredHovers(node, own)) stylelint.utils.report({ ruleName, result, node, message: messages.look(look, 'hover.module.css') });
   });
 };
 rule.ruleName = ruleName;

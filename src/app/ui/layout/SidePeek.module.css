@@ -20,6 +20,7 @@
 /* Over every drawer, its own included, so a pointer resting on it can still press it. */
 .tab {
   composes: detail from '../foundation/type.module.css';
+  composes: ink from '../foundation/hover.module.css';
   position: relative;
   z-index: var(--layer-raised);
   padding: var(--space-12) var(--space-4);
@@ -33,7 +34,6 @@
   pointer-events: auto;
 }
 
-.tab:hover,
 .open .tab {
   color: var(--color-text);
 }

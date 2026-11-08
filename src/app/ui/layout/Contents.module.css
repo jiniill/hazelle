@@ -49,17 +49,16 @@
 
 .link {
   composes: note from '../foundation/type.module.css';
+  composes: ink from '../foundation/hover.module.css';
   display: block;
   margin-left: calc(var(--border-thin) * -1);
   padding: var(--space-4) var(--space-12);
   border-left: var(--border-thick) solid transparent;
 }
 
-.link:hover {
-  color: var(--color-text);
-}
-
-.link[aria-current] {
+/* Over ink's hover (three classes), so the section in view stays gold under the pointer. */
+.link[aria-current],
+.link[aria-current]:hover:not(:disabled) {
   border-left-color: var(--color-accent);
   color: var(--color-accent);
   font-weight: var(--weight-semibold);

@@ -1,5 +1,6 @@
 /* A round-ended pill with a border and a face, apart from the borderless square ⋯ among a message's tools. */
 .mark {
+  composes: fillOpen inkOpen from '../foundation/hover.module.css';
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
@@ -9,15 +10,6 @@
   border: var(--border-thin) solid var(--color-border);
   border-radius: var(--radius-full);
   color: var(--color-text-muted);
-  transition:
-    background-color var(--duration-fast),
-    color var(--duration-fast);
-}
-
-.mark:hover,
-.mark[aria-expanded='true'] {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
 }
 
 .face {

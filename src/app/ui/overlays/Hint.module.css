@@ -6,6 +6,7 @@
 }
 
 .button {
+  composes: inkOpen from '../foundation/hover.module.css';
   position: relative;
   display: flex;
   align-items: center;
@@ -14,11 +15,6 @@
   height: var(--control-mark);
   border-radius: var(--radius-full);
   color: var(--color-text-faint);
-}
-
-.button:hover,
-.button[aria-expanded='true'] {
-  color: var(--color-text);
 }
 
 @media (pointer: coarse) {

@@ -1,4 +1,5 @@
 .chip {
+  composes: fillOpen from '../foundation/hover.module.css';
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -13,11 +14,6 @@
   font-weight: var(--weight-medium);
 }
 
-.chip:hover,
-.chip[aria-expanded='true'] {
-  background: var(--color-surface-hover);
-}
-
 .field {
   justify-content: space-between;
   gap: var(--space-8);
@@ -28,6 +24,7 @@
 }
 
 .ghost {
+  composes: inkOpen from '../foundation/hover.module.css';
   gap: var(--space-8);
   padding: 0 var(--space-8) 0 var(--space-4);
   border-color: transparent;
@@ -42,11 +39,6 @@
   composes: ghost;
   max-width: var(--chip-max-width-narrow);
   margin-inline-end: calc(var(--space-8) * -1);
-}
-
-.ghost:hover,
-.ghost[aria-expanded='true'] {
-  color: var(--color-text);
 }
 
 .chip svg {

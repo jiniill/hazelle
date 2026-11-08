@@ -1,0 +1,49 @@
+/* How a control answers the pointer. A component takes a look by composing its class and never redeclares it. */
+@layer reset, looks;
+
+@layer looks {
+  /* A class that composes these and transitions more writes the whole list. */
+  .eased {
+    transition:
+      background-color var(--duration-fast) var(--ease-enter),
+      color var(--duration-fast) var(--ease-enter);
+  }
+
+  .fill {
+    composes: eased;
+  }
+
+  .ink {
+    composes: eased;
+  }
+
+  /* Lit while what it opens is open, as under the pointer. */
+  .fillOpen {
+    composes: fill;
+  }
+
+  .inkOpen {
+    composes: ink;
+  }
+}
+
+/* Outside the layer, unlike every other look: a hover must beat the resting fill and colour that the component's own
+   unlayered rule sets. Three (a class, :hover, :not(:disabled)) also beat its states of two, such as a current or
+   pressed fill; a state that must hold under the pointer is written with more. */
+@media (hover: hover) {
+  .fill:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+
+  .ink:hover:not(:disabled) {
+    color: var(--color-text);
+  }
+}
+
+.fillOpen[aria-expanded='true'] {
+  background: var(--color-surface-hover);
+}
+
+.inkOpen[aria-expanded='true'] {
+  color: var(--color-text);
+}

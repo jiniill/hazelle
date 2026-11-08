@@ -277,9 +277,8 @@
   border-radius: var(--radius-sm);
 }
 
-.press:hover,
-.press[aria-expanded='true'] {
-  background: var(--color-surface-hover);
+.press {
+  composes: fillOpen from '../foundation/hover.module.css';
 }
 
 .chevron {

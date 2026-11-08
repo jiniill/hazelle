@@ -28,13 +28,13 @@
 }
 
 .step {
+  composes: eased from '../foundation/hover.module.css';
   display: flex;
   align-items: center;
   justify-content: center;
   width: var(--control-chip);
   height: var(--control-chip);
   color: var(--color-text);
-  transition: background-color var(--duration-fast);
   touch-action: manipulation;
   user-select: none;
   -webkit-touch-callout: none;

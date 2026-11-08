@@ -18,14 +18,10 @@
 }
 
 .up {
+  composes: fill ink from '../foundation/hover.module.css';
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
-}
-
-.up:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
 }
 
 .here {

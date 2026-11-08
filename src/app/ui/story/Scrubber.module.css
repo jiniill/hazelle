@@ -27,6 +27,7 @@
 }
 
 .thumb {
+  composes: eased from '../foundation/hover.module.css';
   position: absolute;
   top: calc(var(--scrubber-at, 0) * (100% - var(--scrubber-thumb)));
   left: 50%;
@@ -35,7 +36,6 @@
   border-radius: var(--radius-full);
   background: var(--color-text-faint);
   transform: translateX(-50%);
-  transition: background-color var(--duration-fast);
   pointer-events: auto;
 }
 

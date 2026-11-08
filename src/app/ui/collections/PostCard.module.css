@@ -8,6 +8,7 @@
 }
 
 .card {
+  composes: fill from '../foundation/hover.module.css';
   position: relative;
   display: flex;
   gap: var(--space-16);
@@ -15,11 +16,6 @@
   border: var(--border-thin) solid var(--box-line, var(--color-divider));
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  transition: background-color var(--duration-fast);
-}
-
-.card:hover {
-  background: var(--color-surface-hover);
 }
 
 .card:has(.open:focus-visible) {

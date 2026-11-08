@@ -23,6 +23,7 @@
 }
 
 .remove {
+  composes: fill ink from '../foundation/hover.module.css';
   display: flex;
   align-items: center;
   justify-content: center;
@@ -30,11 +31,6 @@
   height: var(--control-xs);
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
-}
-
-.remove:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
 }
 
 .input {

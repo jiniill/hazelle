@@ -39,7 +39,6 @@
   min-height: var(--row-min-height);
   padding: var(--space-8) max(var(--space-8), var(--box-inset));
   border-radius: var(--radius-md);
-  transition: background-color var(--duration-fast);
 }
 
 /* A tall row with nothing under its title keeps a tap's height, not two lines' worth of empty space. */
@@ -149,9 +148,8 @@
   composes: ellipsis from '../foundation/a11y.module.css';
 }
 
-/* Hover comes first so the current fill stays under the pointer. */
-.pressable:hover:not(:disabled) {
-  background: var(--color-surface-hover);
+.pressable {
+  composes: fill from '../foundation/hover.module.css';
 }
 
 .item[aria-current],
@@ -166,10 +164,10 @@
 }
 
 .side {
+  composes: ink from '../foundation/hover.module.css';
   color: var(--color-text-muted);
 }
 
-.side:hover,
 .side[aria-current] {
   color: var(--color-text);
 }
@@ -187,11 +185,8 @@
 }
 
 .tab {
+  composes: ink from '../foundation/hover.module.css';
   color: var(--color-text-muted);
-}
-
-.tab:hover {
-  color: var(--color-text);
 }
 
 .tab[aria-pressed='true'] {

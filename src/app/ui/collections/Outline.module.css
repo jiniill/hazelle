@@ -211,12 +211,12 @@
 }
 
 .row {
+  composes: eased from '../foundation/hover.module.css';
   --row-bg: var(--color-bg);
 
   position: relative;
   border-radius: var(--radius-sm);
   background: var(--row-bg);
-  transition: background-color var(--duration-fast);
 }
 
 .row:hover {
@@ -384,6 +384,7 @@
 
 .append {
   composes: note from '../foundation/type.module.css';
+  composes: fillOpen inkOpen from '../foundation/hover.module.css';
   grid-template-columns: var(--outline-number) var(--outline-node-chat) minmax(0, 1fr);
   width: 100%;
   height: var(--control-compact);
@@ -399,10 +400,4 @@
 
 .append span {
   grid-column: 3;
-}
-
-.append:hover,
-.append[aria-expanded='true'] {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
 }

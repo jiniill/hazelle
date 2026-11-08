@@ -1,4 +1,5 @@
 .button {
+  composes: eased from '../foundation/hover.module.css';
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -8,7 +9,6 @@
   border: var(--border-thin) solid transparent;
   border-radius: var(--radius-lg);
   font-weight: var(--weight-semibold);
-  transition: background-color var(--duration-fast), color var(--duration-fast);
 }
 
 .sm {
@@ -46,21 +46,14 @@
 }
 
 .secondary {
+  composes: fill from '../foundation/hover.module.css';
   border-color: var(--color-border);
   color: var(--color-text);
 }
 
-.secondary:hover:not(:disabled) {
-  background: var(--color-surface-hover);
-}
-
 .ghost {
+  composes: fill ink from '../foundation/hover.module.css';
   color: var(--color-text-muted);
-}
-
-.ghost:hover:not(:disabled) {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
 }
 
 .danger {
@@ -72,6 +65,7 @@
 }
 
 .link {
+  composes: fill from '../foundation/hover.module.css';
   padding: 0 var(--space-12);
   border: 0;
   border-radius: var(--radius-md);
@@ -80,15 +74,16 @@
   white-space: nowrap;
 }
 
-.link:not(.xs):hover:not(:disabled) {
-  background: var(--color-surface-hover);
-}
-
 /* After .link, so a link this small keeps this padding and square corners. */
 .xs {
   height: var(--control-xs);
   padding: 0 var(--space-4);
   border-radius: 0;
+}
+
+/* Over fill's hover (three classes): a link this small takes no fill. */
+.link.xs:hover:not(:disabled) {
+  background: transparent;
 }
 
 .ghost.xs {

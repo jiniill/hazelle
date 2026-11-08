@@ -1,4 +1,5 @@
 .button {
+  composes: fillOpen inkOpen from '../foundation/hover.module.css';
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -8,7 +9,6 @@
   flex-shrink: 0;
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
-  transition: background-color var(--duration-fast), color var(--duration-fast);
 }
 
 .sm {
@@ -24,8 +24,6 @@
   color: var(--color-text-soft);
 }
 
-.button:hover:not(:disabled),
-.button[aria-expanded='true'],
 .button[aria-current] {
   background: var(--color-surface-hover);
   color: var(--color-text);
