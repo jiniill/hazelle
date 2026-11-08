@@ -1,15 +1,16 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { EMPTY_SETTINGS } from '../model/settings';
 import { holdAccount } from './api';
-import { autoDiagnose, deviceFacts, errorFacts, holdDiagnosis, sharesDiagnosis } from './auto-diagnosis';
+import { autoDiagnose, deviceFacts, errorFacts, holdDiagnosis, openFailure, sharesDiagnosis } from './auto-diagnosis';
 import { markSelfHost } from './installation';
+import { stubPage } from './testing';
 
 const sent = vi.fn<(path: string, init: RequestInit) => Promise<Response>>(async () => new Response(null, { status: 204 }));
 beforeEach(() => {
   sent.mockClear();
   vi.stubGlobal('fetch', sent);
   vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (X11; Linux x86_64) Chrome/141.0.0.0', onLine: true, language: 'ko-KR', hardwareConcurrency: 8 });
-  vi.stubGlobal('document', { visibilityState: 'visible' });
+  stubPage('visible');
   vi.stubGlobal('matchMedia', () => ({ matches: false }));
   vi.stubGlobal('innerWidth', 1280);
   vi.stubGlobal('innerHeight', 800);
@@ -84,4 +85,12 @@ it('sends distinct stackless causes once each without their messages, and drops 
 it('reduces a browser to its family, major version and system', () => {
   expect(deviceFacts('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36')).toEqual({ browser: 'chrome', major: 141, os: 'windows', mobile: false });
   expect(deviceFacts('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1')).toEqual({ browser: 'safari', major: 18, os: 'ios', mobile: true });
+});
+
+it('names why a chat did not open by its own words, any other server code as other', () => {
+  holdDiagnosis(true);
+  autoDiagnose({ event: 'chat-unopened', detail: openFailure('bot-stuck') });
+  expect(JSON.parse(sent.mock.calls[0]![1].body as string).detail).toBe('bot-stuck');
+  expect(openFailure('offline')).toBe('offline');
+  expect(openFailure('account-locked: abc')).toBe('other');
 });

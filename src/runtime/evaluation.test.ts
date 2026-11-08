@@ -6,6 +6,7 @@ import { holdDiagnosis } from './auto-diagnosis';
 import { Evaluation, EvaluationFailed, EvaluationRefused, EvaluationStopped, EvaluationStuck, type Verdicts } from './evaluation';
 import { Evaluator, type EvaluationDown, type EvaluationUp } from './evaluation-core';
 import { changedTail, sameHistory } from './history-delta';
+import { stubPage } from './testing';
 
 const scope: ChatScope = { card: null, cast: [], packs: [], persona: null, prompt: null, promptOut: false, note: null, lore: [], loreFolders: {}, loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false }, messages: [], variables: [], greeting: null, toggles: new Map(), model: null, axModel: null, clock: { now: 0, timeZone: 'UTC' }, assets: [], inlays: [], textfiles: [], modules: [], faces: { char: null, user: null }, screen: null, pick: '' };
 const message = (id: string, text: string) => ({ id, message: id, seed: id, role: 'user' as const, text, time: 0 });
@@ -203,7 +204,7 @@ it('kills only a started job that goes silent, judges its chat before the next i
 
 it('judges a started job that goes silent in a hidden tab, whose every beat comes late', async () => {
   vi.useFakeTimers();
-  vi.stubGlobal('document', { visibilityState: 'hidden' });
+  stubPage('hidden');
   const { workers, jobs } = fakeWorkers();
   const evaluation = new Evaluation(none);
   const running = expect(evaluation.display(screen(), scope, new Set())).rejects.toBeInstanceOf(EvaluationStuck);
@@ -214,6 +215,27 @@ it('judges a started job that goes silent in a hidden tab, whose every beat come
   await vi.advanceTimersByTimeAsync(1_000);
   await running;
   expect(worker.ended).toBe(true);
+  evaluation.close();
+});
+
+it('asks again on resume, not blaming a worker the page froze with it', async () => {
+  vi.useFakeTimers();
+  const page = stubPage('hidden');
+  const { workers, jobs } = fakeWorkers();
+  const evaluation = new Evaluation(none);
+  const running = evaluation.display(screen(), scope, new Set());
+  const worker = workers[0]!;
+  const { id } = jobs(worker)[0]!;
+  worker.receive({ started: id });
+  await vi.advanceTimersByTimeAsync(1_000);
+  vi.setSystemTime(Date.now() + 30_000);
+  page.dispatchEvent(new Event('resume'));
+  await vi.advanceTimersByTimeAsync(1_000);
+  worker.receive({ pong: true });
+  await vi.advanceTimersByTimeAsync(1_000);
+  expect(worker.ended).toBe(false);
+  worker.receive({ id, result: await new Evaluator().run(jobs(worker)[0]!.input, () => {}) });
+  expect((await running).display.texts).toEqual([]);
   evaluation.close();
 });
 
@@ -234,7 +256,7 @@ it('reports a job that went silent by closed words and sizes, once with the rege
   const sent = vi.fn<(path: string, init: RequestInit) => Promise<Response>>(async () => new Response(null, { status: 204 }));
   vi.stubGlobal('fetch', sent);
   vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Linux; Android 14) Chrome/141.0.0.0 Mobile', onLine: true, language: 'ko-KR', hardwareConcurrency: 8 });
-  vi.stubGlobal('document', { visibilityState: 'visible' });
+  stubPage('visible');
   vi.stubGlobal('matchMedia', () => ({ matches: false }));
   vi.stubGlobal('innerWidth', 400);
   vi.stubGlobal('innerHeight', 800);

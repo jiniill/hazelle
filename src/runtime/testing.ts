@@ -104,6 +104,13 @@ export const saying = (text: string) =>
 // The bytes of a picture as far as the import reads one: a PNG's signature.
 export const png = () => new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, ...randomBytes(16)]);
 
+// The page as runtime code reads it: its visibility, and events such as resume (runtime/worker).
+export function stubPage(visibilityState: DocumentVisibilityState) {
+  const page = Object.assign(new EventTarget(), { visibilityState });
+  vi.stubGlobal('document', page);
+  return page;
+}
+
 export const testModel: Model = { ...bareModel('m'), name: 'M' };
 export const testConnection: Connection = { type: 'openrouter', label: 'OpenRouter', baseUrl: null, protocol: null, accounts: [{ id: 'key', secret: 'sk-or-x' }], turns: null, starred: [testModel] };
 
@@ -174,7 +181,7 @@ export function testServer() {
     // pulls only while the tab is visible, so a hidden one never pulls on its own.
     async withSession(test: (session: Session) => Promise<void>, tools?: Binding<ToolUnit, ToolEvent> | typeof createTools) {
       vi.stubGlobal('window', new EventTarget());
-      vi.stubGlobal('document', { visibilityState: 'hidden' });
+      stubPage('hidden');
       const { accountId, vaultKey } = await harness.account();
       const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal, undefined, undefined, { tools: typeof tools === 'function' ? tools : tools && (({ store }) => ({
         ...tools, warm: async () => {}, menus: () => [], menusOf: () => [], draft: () => () => {}, page: () => () => {}, attach: () => () => {}, subscribe: () => () => {}, frames: () => new Map(), hosts: () => new Map(), trial: (_chat, _draft, _signal, use) => use(async () => null),

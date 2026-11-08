@@ -131,6 +131,12 @@ describe('chapters and recall in what memory sends', () => {
   });
   const memoryOf = (records: MemoryRecord[], chapters: Chapter[] = []): Memory => ({ records, chapters, state: [], threads: [] });
 
+  it('counts a message put among recorded ones, which no record holds, apart from a forgotten record’s', () => {
+    const memory = memoryOf([record('r1', [0, 1], 'They arrive.'), record('r2', [3], 'Morning.'), record('r3', [4], 'Night.', { forgotten: true })]);
+    const sent = standing(memory, read, 10_000, count);
+    expect([sent.covered, sent.held, sent.unrecorded]).toEqual([5, 3, 1]);
+  });
+
   it('sends a chapter in its records’ place, a pinned record in it beside it, and its records again once one changed, but not when only a message under it did', () => {
     const [r1, r2, r3] = [record('r1', [0, 1], 'They arrive.'), record('r2', [2, 3], 'jin promises.', { pinned: true }), record('r3', [4], 'Morning.')];
     const c1 = chapter('c1', [r1, r2], 'jin and Luna arrive, and jin promises to come back.');

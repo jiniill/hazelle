@@ -431,7 +431,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
       invalidKeys: activation ? activation.invalidKeys.map((invalid) => ({ ...invalid, name: named(invalid.entry) })) : [],
       loreBudget: scope.loreScan.tokenBudget,
       memoryShape: recalled ? memoryShape(built!.memory, recalled, tokens) : null,
-      memory: told ? { by: told.name, text: told.text, covered, missing: 0, slot } : recalled && { by: null, sent: recalled.sent, found: retrieved?.ids ?? [], records: recordCounts(recalled), covered, missing: slot ? covered - recalled.held : covered, slot },
+      memory: told ? { by: told.name, text: told.text, covered, missing: 0, slot } : recalled && { by: null, sent: recalled.sent, found: retrieved?.ids ?? [], records: recordCounts(recalled), unrecorded: recalled.unrecorded, covered, missing: slot ? covered - recalled.held : covered, slot },
       dropped,
       problems,
       unseen,

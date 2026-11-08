@@ -7,7 +7,7 @@ import { fetchApi } from './api';
 import { editPersona } from './personas';
 import { autoDiagnose, setDiagnosisSharing } from './auto-diagnosis';
 import { setPulseSharing } from './pulse';
-import { stubRelay, testServer, upstream } from './testing';
+import { stubPage, stubRelay, testServer, upstream } from './testing';
 
 const server = testServer();
 
@@ -101,7 +101,7 @@ describe('session', () => {
         return fetch(url, init);
       });
       vi.stubGlobal('navigator', { userAgent: 'test', onLine: true, language: 'ko-KR', hardwareConcurrency: 8 });
-      vi.stubGlobal('document', { visibilityState: 'visible' });
+      stubPage('visible');
       vi.stubGlobal('matchMedia', () => ({ matches: false }));
       vi.stubGlobal('innerWidth', 1280);
       vi.stubGlobal('innerHeight', 800);

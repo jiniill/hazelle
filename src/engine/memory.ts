@@ -6,7 +6,7 @@ import { args } from './lorebook/decorators';
 // covered messages leave chat slots; missing counts those with no sent memory (stale/over/forgotten/unreachable slot).
 // slot reports prompt reachability independently of content. by null selects built-in sent records/chapters;
 // otherwise text is the tool-owned memory.
-export type MemorySent = ({ by: null; sent: string[]; found: string[]; records: RecordCounts } | { by: string; text: string }) & { covered: number; missing: number; slot: boolean };
+export type MemorySent = ({ by: null; sent: string[]; found: string[]; records: RecordCounts; unrecorded: number } | { by: string; text: string }) & { covered: number; missing: number; slot: boolean };
 
 // Why messages are not in the memory sent, in numbers: the request has read every record's standing already.
 export type RecordCounts = { over: number; stale: number; forgotten: number; deleted: number; changed: number; rendered: number };
@@ -186,6 +186,9 @@ export type Standing = {
   text: string;
   sent: string[];
   held: number;
+  // Messages before covered that no record holds, forgotten or not, such as one a bot's insertChat put among recorded
+  // ones: the next span starts at covered, so nothing records them.
+  unrecorded: number;
   tokens: { used: number; budget: number; state: number; stateLimit: number };
   costs: Map<string, number>;
   fixed: number;
@@ -271,6 +274,7 @@ export function standing(memory: Memory, chat: ChatRead, budget: number, countTo
   const text = memoryText(memory.state, threads, sent.map(({ id }) => texts.get(id)!));
   const covered = coveredBy(memory, places);
   const held = new Set(sent.flatMap(({ sources }) => sources.flatMap(({ message }) => places.get(message) ?? [])));
+  const recorded = new Set(memory.records.flatMap(({ sources }) => sources.flatMap(({ message }) => places.get(message) ?? [])));
   const state = memoryText(memory.state, [], []);
   return {
     covered,
@@ -279,6 +283,7 @@ export function standing(memory: Memory, chat: ChatRead, budget: number, countTo
     text,
     sent: sent.map(({ id }) => id),
     held: held.size,
+    unrecorded: covered - recorded.size,
     tokens: { used: text ? countTokens(text) : 0, budget, state: state ? countTokens(state) : 0, stateLimit: stateLimit(budget) },
     costs,
     fixed: always,

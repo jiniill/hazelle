@@ -19,6 +19,7 @@ import { ObjectStore } from './store';
 import type { StoreChange } from './object-index';
 import type { Turn } from './talk';
 import { changeSettings } from './account-settings';
+import { stubPage } from './testing';
 
 type Wire = StoreChange & { rev: number; body: string | null };
 async function account() {
@@ -98,7 +99,7 @@ describe('selective account reads', () => {
     const folded = vi.spyOn(chatModel.ChatFold.prototype, 'snapshot');
     const displayed = vi.spyOn(store.evaluation, 'display');
     vi.stubGlobal('window', new EventTarget());
-    vi.stubGlobal('document', { visibilityState: 'hidden' });
+    stubPage('hidden');
     vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
       const answer = await request(init.method as 'GET' | 'POST', url.slice('/api/'.length), init.body ? JSON.parse(init.body as string) : undefined);
       return Response.json(answer.ok ? answer.data : answer, { status: answer.ok ? 200 : 500 });

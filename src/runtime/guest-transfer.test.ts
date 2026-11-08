@@ -17,7 +17,7 @@ import { FIRST_ID } from './personas';
 import { FIRST_PROFILE_ID } from './profiles';
 import { KINDS, type Kind } from '../model/kinds';
 import { memoryId, vectorsId } from '../model/memory';
-import { testApp, sessionCookie, signupBody, testConnection, png } from './testing';
+import { png, sessionCookie, signupBody, stubPage, testApp, testConnection } from './testing';
 import { randomBytes } from '../vault/aead';
 import { lockVault, recallGuest, recallVault, rememberVault } from '../vault/device';
 import { createVault, openVault, passwordCredential, stretchPassword, recoveryCredential } from '../vault/keys';
@@ -53,7 +53,7 @@ beforeEach(async () => {
   cookie = null;
   dropBatches = false;
   vi.stubGlobal('window', new EventTarget());
-  vi.stubGlobal('document', { visibilityState: 'hidden' });
+  stubPage('hidden');
   vi.stubGlobal('fetch', async (url: string, init: RequestInit = {}) => {
     const path = url.slice('/api/'.length);
     const response = await app.raw(path, { ...init, headers: { ...(init.headers as Record<string, string>), ...(cookie && { cookie }) } });

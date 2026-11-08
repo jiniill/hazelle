@@ -16,6 +16,7 @@ import { summaryId } from './summary';
 import { Usage } from './usage';
 import { exportBackup } from './testing/backup';
 import { GENERATION_STEPS, generationSteps, MemoryCache } from './testing/cache';
+import { stubPage } from './testing';
 
 vi.mock('../vault/device', () => ({ lockVault: vi.fn(async () => {}) }));
 
@@ -177,7 +178,7 @@ it('reopens a session with sealed cached objects before any network read', async
   f.fetch.mockClear();
   f.fetch.mockImplementation(() => new Promise(() => {}));
   vi.stubGlobal('window', new EventTarget());
-  vi.stubGlobal('document', { visibilityState: 'visible' });
+  stubPage('visible');
   const opened = await openSession('account', f.vault, 'jin', new AbortController().signal, undefined, { backend: serverBackend(), cache: f.cache });
   expect(opened.ok).toBe(true);
   if (!opened.ok) return;
@@ -193,7 +194,7 @@ it('opens the session again on the restored account when its opening pull hears 
   await f.add('kept', 'connection', null, connection);
   f.fetch.mockImplementationOnce(async () => Response.json({ error: 'cache-reset' }, { status: 409 }));
   vi.stubGlobal('window', new EventTarget());
-  vi.stubGlobal('document', { visibilityState: 'hidden' });
+  stubPage('hidden');
   const opened = await openSession('account', f.vault, 'jin', new AbortController().signal, undefined, { backend: serverBackend(), cache: f.cache });
   expect(opened.ok).toBe(true);
   if (!opened.ok) return;
@@ -226,7 +227,7 @@ it('renders a saved bootstrap prefix and resumes its original until bound in the
   f.fetch.mockClear();
   f.fetch.mockImplementation(() => new Promise(() => {}));
   vi.stubGlobal('window', new EventTarget());
-  vi.stubGlobal('document', { visibilityState: 'visible' });
+  stubPage('visible');
   const opened = await openSession('account', f.vault, 'jin', new AbortController().signal, undefined, { backend: serverBackend(), cache: f.cache });
   if (!opened.ok) throw new Error(opened.error);
   expect(opened.data.store.list('connection').map((row) => row.id)).toEqual(['first']);

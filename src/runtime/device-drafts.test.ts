@@ -4,6 +4,7 @@ import { randomBytes } from '../vault/aead';
 import { draftEncryptionKey, openDraft, sealDraft } from '../vault/drafts';
 import { draftCache } from './device-cache';
 import { Drafts } from './drafts';
+import { stubPage } from './testing';
 
 let account: string;
 let vaultKey: Uint8Array<ArrayBuffer>;
@@ -13,7 +14,7 @@ beforeEach(() => {
   account = crypto.randomUUID();
   vaultKey = randomBytes(32);
   vi.stubGlobal('window', new EventTarget());
-  vi.stubGlobal('document', Object.assign(new EventTarget(), { visibilityState: 'visible' }));
+  stubPage('visible');
 });
 
 afterEach(async () => {
