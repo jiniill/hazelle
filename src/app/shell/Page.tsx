@@ -14,7 +14,7 @@ import { ShareArrival } from '../library/ShareArrival';
 import { ShelfFace, shelfName } from '../library/shelf';
 import { useAccount, useCharacter, useChatModel, useChatSummary, useConnections, useSession, useSettings, useStored, useTool } from '../session';
 import { Button, Callout, Empty, Intro, ListDetail, NavBar, Progress, Screen, useSplit, useWide } from '../ui';
-import { backBar, navigate } from './router';
+import { backBar, closeLayer, navigate } from './router';
 import { backTo, HOME, href, listOf, up, type Back, type Below, type Route } from './routes';
 import { SettingsList, settingsEntry } from './settings/SettingsNav';
 import { ToolsList, toolsEntry } from './tools/ToolsNav';
@@ -77,7 +77,7 @@ const VARIANTS = { connections: 'stack', 'add-connection': 'list' } as const;
 
 // The chat, character or connection a route names is looked up here, so each screen is given what it
 // shows, and Missing stands in when that is not there.
-export function Page({ route, closeLayer, onPaired }: { route: Route; closeLayer: () => void; onPaired: (paired: boolean) => void }) {
+export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boolean) => void }) {
   const { guest } = useAccount();
   const wide = useWide();
   const split = useSplit();

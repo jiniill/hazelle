@@ -64,12 +64,11 @@ function page(initial: Stored<Kind>[], guest = false) {
   const account: Account = { admin: false, localProviders: [], facts: {} as AccountFacts, ...(guest ? { guest: { signupOpen: true, onSignup() {}, onSignIn() {} } } : { guest: null, onLock() {}, onLogout: async () => null }) };
   const root = probeRoot();
   const commits = vi.fn();
-  const closeLayer = () => {};
   list.mockClear();
   return {
     items, models, read, list, retain, release, commits,
     announce: (kind: Kind, id: string) => { for (const listener of listeners) listener([{ kind, id, parent: null }]); },
-    render: (route: Route) => act(async () => root.render(<SessionProvider session={session} account={account}><Profiler id="page" onRender={commits}><Page route={route} closeLayer={closeLayer} onPaired={() => {}} /></Profiler></SessionProvider>)),
+    render: (route: Route) => act(async () => root.render(<SessionProvider session={session} account={account}><Profiler id="page" onRender={commits}><Page route={route} onPaired={() => {}} /></Profiler></SessionProvider>)),
     close: async () => { await act(() => root.unmount()); read.close(); },
   };
 }

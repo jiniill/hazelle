@@ -19,7 +19,7 @@ export function ToolsSidebar({ current, onClose }: { current: ToolsPage | 'list'
     <LayerSidebar title={TOOLS} onClose={onClose}>
       <NavGroup>
         {PLACES.map((place) => (
-          <NavRow key={place.page} icon={place.icon} label={place.label} current={place.page === current} onClick={() => navigate(place.route)} />
+          <NavRow key={place.page} icon={place.icon} label={place.label} current={place.page === current} onClick={() => navigate(place.route, { replace: true })} />
         ))}
       </NavGroup>
     </LayerSidebar>

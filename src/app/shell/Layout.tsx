@@ -4,8 +4,8 @@ import { useDisplay } from '../display';
 import { keysOf, Quiet, SHORTCUT_GROUPS, SHORTCUTS, useShortcut } from '../shortcuts';
 import { backLayers, Dialog, LayerWindow, Section, Shell, Shortcuts, Stack, Text, useWide } from '../ui';
 import { Page } from './Page';
-import { HeldRoute, holdBack, navigate, useRoute } from './router';
-import { HOME, settingsPage, sidebarPage, toolsPage, type Route } from './routes';
+import { closeLayer, HeldRoute, holdBack, navigate, useAddress } from './router';
+import { HOME, settingsPage, sidebarPage, toolsPage } from './routes';
 import { SETTINGS, TOOLS } from '../common/words';
 import { settingsEntry, SettingsSidebar } from './settings/SettingsNav';
 import { ToolsSidebar } from './tools/ToolsNav';
@@ -14,7 +14,7 @@ import { LibrarySidebar } from './sidebar/LibrarySidebar';
 const COLLAPSED = 'risu-alpha:sidebar-collapsed';
 
 export function Layout() {
-  const route = useRoute();
+  const { route, under } = useAddress();
   const wide = useWide();
   useEffect(() => holdBack(backLayers), []);
   const [collapsed, setCollapsed] = usePersisted(COLLAPSED, (stored) => stored === '1', false, (folded) => (folded ? '1' : '0'));
@@ -30,10 +30,6 @@ export function Layout() {
   };
   const settings = settingsPage(route);
   const tools = toolsPage(route);
-  // Where the × of 설정 or 도구 goes: the last place outside both, or home after a reload inside one.
-  const [outside, setOutside] = useState<Route>(HOME);
-  if (settings === null && tools === null && outside !== route) setOutside(route);
-  const closeLayer = () => navigate(outside);
   const [listing, setListing] = useState(false);
   const { display, changeDisplay } = useDisplay();
 
@@ -49,7 +45,7 @@ export function Layout() {
   const listed = listing && <ShortcutList enterSends={display.enterSends} onClose={() => setListing(false)} />;
   const page = (
     <>
-      <Page route={route} closeLayer={closeLayer} onPaired={setPaired} />
+      <Page route={route} onPaired={setPaired} />
       {listed}
     </>
   );
@@ -58,13 +54,14 @@ export function Layout() {
   if (!wide) return settings !== null || tools !== null || !sidebarPage(route) ? page : sidebar(true);
   const layer = settings !== null ? { label: SETTINGS, side: <SettingsSidebar current={settings} onClose={closeLayer} /> } : tools !== null ? { label: TOOLS, side: <ToolsSidebar current={tools} onClose={closeLayer} /> } : null;
   const held = layer !== null;
+  const outside = under ?? HOME;
   // The page a layer is opened from keeps its place in the tree, so it stays as it was behind the window.
   return (
     <>
       <HeldRoute.Provider value={held ? outside : null}>
         <Quiet.Provider value={held}>
           <Shell side={sidebar(false)} held={held}>
-            <Page route={held ? outside : route} closeLayer={closeLayer} onPaired={setPaired} />
+            <Page route={held ? outside : route} onPaired={setPaired} />
             {!held && listed}
           </Shell>
         </Quiet.Provider>

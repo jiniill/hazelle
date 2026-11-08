@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONNECTION_TYPES } from '../../connectors/registry';
 import { FEATURES } from '../../model/features';
-import { backTo, HOME, href, listOf, parseRoute, settingsPage, shelfOf, up, type Route } from './routes';
+import { addressOf, backTo, HOME, href, listOf, parseAddress, parseRoute, settingsPage, shelfOf, up, type Route } from './routes';
 
 const CHARACTER = '6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b';
 const CHAT = 'a0b1c2d3-e4f5-4a6b-8c7d-9e0f1a2b3c4d';
@@ -164,4 +164,18 @@ it('opens the compose with 운영자에게만 preset from ?to=operator, and goes
 
 it('lands the old 새 소식 address of 계정 on the board\'s 소식', () => {
   expect(parseRoute('/account?section=news')).toEqual({ kind: 'board', operator: false, category: 'news' });
+});
+
+describe('a layer in the address', () => {
+  const CHAT = '/chats/00000000-0000-4000-8000-000000000001';
+  it('rides in the hash over the page it was opened from', () => {
+    const at = `${CHAT}#/settings/display`;
+    expect(parseAddress(at)).toEqual({ route: { kind: 'display' }, under: parseRoute(CHAT) });
+    expect(addressOf(parseAddress(at))).toBe(at);
+  });
+  it('stands over home from its own path, and ignores a hash that names no layer', () => {
+    expect(parseAddress('/settings/display')).toEqual({ route: { kind: 'display' }, under: HOME });
+    expect(parseAddress(`${CHAT}#/chats/new`)).toEqual({ route: parseRoute(CHAT), under: null });
+    expect(parseAddress(`${CHAT}#key`)).toEqual({ route: parseRoute(CHAT), under: null });
+  });
 });

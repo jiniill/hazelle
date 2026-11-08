@@ -117,7 +117,7 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
         groups.map(({ title, places }) => (
           <NavGroup key={title} title={title}>
             {places.map((place) => (
-              <NavRow key={place.page} icon={place.icon} label={place.label} meta={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route)} />
+              <NavRow key={place.page} icon={place.icon} label={place.label} meta={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route, { replace: true })} />
             ))}
           </NavGroup>
         ))

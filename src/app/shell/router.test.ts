@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChangeSignal } from '../../change-signal';
 import { HOSTED } from '../../contracts/installation';
 import { markSelfHost } from '../../runtime/installation';
-import { holdBack, navigate } from './router';
+import { closeLayer, holdBack, navigate } from './router';
 import { href, type Route } from './routes';
 
 afterEach(() => {
@@ -15,7 +15,7 @@ it("opens every way into a self-host's 게시판 on hazelle.app and leaves the p
   const pushState = vi.fn();
   vi.stubGlobal('window', { open });
   vi.stubGlobal('history', { pushState });
-  vi.stubGlobal('location', { pathname: '/', search: '' });
+  vi.stubGlobal('location', { pathname: '/', search: '', hash: '' });
   markSelfHost(true);
   navigate({ kind: 'board', operator: false, category: 'news' });
   navigate({ kind: 'post', id: 7 });
@@ -26,9 +26,9 @@ it("opens every way into a self-host's 게시판 on hazelle.app and leaves the p
 const popstate = new Set<() => void>();
 
 // A session history as a browser keeps it: a traversal waits for land(), as history.go does.
-function browser(state: unknown = null) {
-  const entries = [{ state: null as unknown, url: '/' }];
-  if (state !== null) entries.push({ state, url: '/' });
+function browser(state: unknown = null, start = '/') {
+  const entries = [{ state: null as unknown, url: start }];
+  if (state !== null) entries.push({ state, url: start });
   let at = entries.length - 1;
   const hops: number[] = [];
   const scrollTo = vi.fn();
@@ -39,7 +39,11 @@ function browser(state: unknown = null) {
   vi.stubGlobal('window', { addEventListener: (_: string, listener: () => void) => popstate.add(listener), dispatchEvent: () => true, scrollTo });
   vi.stubGlobal('location', {
     get pathname() {
-      return entries[at]!.url;
+      return entries[at]!.url.split('#')[0];
+    },
+    get hash() {
+      const url = entries[at]!.url;
+      return url.includes('#') ? url.slice(url.indexOf('#')) : '';
     },
     search: '',
   });
@@ -80,8 +84,8 @@ function layers() {
   return { open, set, count: () => open.length, closeAbove: (keep: number) => void open.splice(keep), subscribe: signal.subscribe };
 }
 
-const DISPLAY: Route = { kind: 'display' };
-const USAGE: Route = { kind: 'usage' };
+const MINE: Route = { kind: 'board-mine' };
+const SEARCH: Route = { kind: 'search', query: '' };
 
 describe('back with overlays open', () => {
   let release = () => {};
@@ -94,18 +98,18 @@ describe('back with overlays open', () => {
 
   it('closes the newest and stays, and the next back goes on as usual', async () => {
     const { page, overlays } = start();
-    navigate(DISPLAY);
+    navigate(MINE);
     await overlays.set('menu');
     page.back();
     expect(overlays.open).toEqual([]);
-    expect(page.url()).toBe(href(DISPLAY));
+    expect(page.url()).toBe(href(MINE));
     page.back();
     expect(page.url()).toBe('/');
   });
 
   it('gives its entry up when closed some other way, leaving no dead back and no scroll reset', async () => {
     const { page, overlays } = start();
-    navigate(DISPLAY);
+    navigate(MINE);
     page.scrollTo.mockClear();
     await overlays.set('menu');
     await overlays.set();
@@ -120,10 +124,10 @@ describe('back with overlays open', () => {
     const { page, overlays } = start();
     await overlays.set('menu');
     await overlays.set();
-    navigate(USAGE);
+    navigate(SEARCH);
     expect(page.url()).toBe('/');
     page.land();
-    expect(page.url()).toBe(href(USAGE));
+    expect(page.url()).toBe(href(SEARCH));
     page.back();
     expect(page.url()).toBe('/');
   });
@@ -131,8 +135,8 @@ describe('back with overlays open', () => {
   it('lets an item navigate in one step, its guard becoming the route', async () => {
     const { page, overlays } = start();
     await overlays.set('menu');
-    navigate(USAGE);
-    expect(page.url()).toBe(href(USAGE));
+    navigate(SEARCH);
+    expect(page.url()).toBe(href(SEARCH));
     await overlays.set();
     page.back();
     expect(page.url()).toBe('/');
@@ -141,23 +145,23 @@ describe('back with overlays open', () => {
   it('keeps a guard for an overlay that stays across the route', async () => {
     const { page, overlays } = start();
     await overlays.set('dialog');
-    navigate(USAGE);
+    navigate(SEARCH);
     await Promise.resolve();
     page.back();
     expect(overlays.open).toEqual([]);
-    expect(page.url()).toBe(href(USAGE));
+    expect(page.url()).toBe(href(SEARCH));
     page.back();
     expect(page.url()).toBe('/');
   });
 
   it('takes the page itself on a replace from inside', async () => {
     const { page, overlays } = start();
-    navigate(DISPLAY);
+    navigate(MINE);
     await overlays.set('dialog');
-    navigate(USAGE, { replace: true });
+    navigate(SEARCH, { replace: true });
     await overlays.set();
     page.land();
-    expect(page.url()).toBe(href(USAGE));
+    expect(page.url()).toBe(href(SEARCH));
     page.back();
     expect(page.url()).toBe('/');
   });
@@ -168,10 +172,10 @@ describe('back with overlays open', () => {
     page.back();
     expect(overlays.open).toEqual(['dialog']);
     await overlays.set('dialog', 'menu');
-    navigate(USAGE);
+    navigate(SEARCH);
     await overlays.set();
     page.land();
-    expect(page.url()).toBe(href(USAGE));
+    expect(page.url()).toBe(href(SEARCH));
     page.back();
     expect(page.url()).toBe('/');
   });
@@ -188,5 +192,58 @@ describe('back with overlays open', () => {
     const { page } = start(browser({ guards: 1 }));
     page.land();
     expect(page.at()).toBe(0);
+  });
+});
+
+describe('a layer over a page', () => {
+  let release = () => {};
+  afterEach(() => release());
+  const CHAT: Route = { kind: 'chat', id: '00000000-0000-4000-8000-000000000001' };
+  const SHELF: Route = { kind: 'shelf', character: null };
+  const DISPLAY: Route = { kind: 'display' };
+  const CONTROLS: Route = { kind: 'controls' };
+  const PROMPT: Route = { kind: 'prompt', id: '00000000-0000-4000-8000-000000000002', pane: null };
+  const over = (route: Route) => `${href(CHAT)}#${href(route)}`;
+  function start(page = browser()) {
+    release = holdBack(layers());
+    return page;
+  }
+
+  it('walks in the hash and closes back to the page it was opened from, leaving no entry to back into', () => {
+    const page = start();
+    navigate(CHAT);
+    navigate(DISPLAY);
+    expect(page.url()).toBe(over(DISPLAY));
+    navigate(CONTROLS, { replace: true });
+    navigate(PROMPT);
+    page.back();
+    expect(page.url()).toBe(over(CONTROLS));
+    navigate(PROMPT);
+    closeLayer();
+    page.land();
+    expect(page.url()).toBe(href(CHAT));
+    page.back();
+    expect(page.url()).toBe('/');
+  });
+
+  it('leaves for another page from the one under it', () => {
+    const page = start();
+    navigate(CHAT);
+    navigate(DISPLAY);
+    navigate(PROMPT);
+    navigate(SHELF);
+    page.land();
+    expect(page.url()).toBe(href(SHELF));
+    page.back();
+    expect(page.url()).toBe(href(CHAT));
+  });
+
+  it('opened from a link stands over home, and closes in place', () => {
+    const page = start(browser(null, href(DISPLAY)));
+    navigate(CONTROLS);
+    expect(page.url()).toBe(`/#${href(CONTROLS)}`);
+    closeLayer();
+    expect(page.url()).toBe('/');
+    expect(page.at()).toBe(1);
   });
 });

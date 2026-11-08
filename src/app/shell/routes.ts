@@ -409,6 +409,24 @@ export function toolsPage(route: Route): ToolsPage | 'list' | null {
   }
 }
 
+// 설정 and 도구 stand over the page they were opened from, which keeps the path while the layer rides in the hash:
+// /chats/…#/settings/display. A layer's own path, as a bookmark or a link from outside, stands over home.
+export const layered = (route: Route) => settingsPage(route) !== null || toolsPage(route) !== null;
+// under: the page a layer stands over, null while none is open.
+export type Address = { route: Route; under: Route | null };
+
+// at: a path with its query and hash, as the address bar holds it. A hash that names no layer is not the router's.
+export function parseAddress(at: string): Address {
+  const mark = at.indexOf('#');
+  const path = parseRoute(mark < 0 ? at : at.slice(0, mark));
+  const hash = mark < 0 ? '' : at.slice(mark + 1);
+  const layer = hash.startsWith('/') ? parseRoute(hash) : null;
+  if (layered(path)) return { route: layer && layered(layer) ? layer : path, under: HOME };
+  return layer && layered(layer) ? { route: layer, under: path } : { route: path, under: null };
+}
+
+export const addressOf = ({ route, under }: Address) => (under === null ? href(route) : `${href(under)}#${href(route)}`);
+
 // null is 캐릭터 없이; undefined means no known shelf. Chat routes need their owner supplied as chatShelf.
 export function shelfOf(route: Route, chatShelf?: string | null): string | null | undefined {
   switch (route.kind) {

@@ -8,7 +8,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 it('gives the page held behind a window the route it was opened on', async () => {
   const root = probeRoot();
-  vi.stubGlobal('location', { pathname: '/settings/controls', search: '' });
+  vi.stubGlobal('location', { pathname: '/settings/controls', search: '', hash: '' });
   const seen: Route[] = [];
   function Probe() {
     seen.push(useRoute());
