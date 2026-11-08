@@ -4,7 +4,7 @@ import type { Feature } from '../../model/features';
 import type { PromptSort } from '../../model/prompt';
 import type { PrereadParts } from '../../model/settings';
 import { illustrateSwitches, setIllustrate, setTranslate, setTranslatorNote, translateSwitches } from '../../runtime/characters';
-import { SHARED_CHAT, availableFeatures } from '../../runtime/features';
+import { SHARED_CHAT, availableFeatures, setFeatureAt, sharedFeatures } from '../../runtime/features';
 import { setAgentAt } from '../../runtime/agents';
 import { briefsWithChatModel, briefWriterOf, PREREAD_STARTS, prereadSetup, setPreread } from '../../runtime/preread';
 import { describePrereadFailure } from '../common/failure';
@@ -20,15 +20,23 @@ import { TranslateRows } from '../common/TranslateRows';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { useTypedNumber } from '../common/typed';
 import { readWhole } from '../common/typedNumber';
-import { AGENTS_HELP, FEATURE_NAMES, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PAGES, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS } from '../common/words';
+import { AGENTS_HELP, FEATURE_NAMES, ILLUSTRATION_PLACE, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
-import { Callout, NavBar, NumberInput, Screen, SettingGroup, SettingRow, Switch } from '../ui';
-import { FeatureSwitch } from './FeatureDefaults';
+import { Button, Callout, NavBar, NumberInput, Screen, seekRow, SettingGroup, SettingRow, Switch } from '../ui';
 
 import { MemoryDefaults } from './MemoryDefaults';
+
+// 공용's availability, the bottom rung of the 기능 ladder: a switch with no layer above it to follow.
+function FeatureSwitch({ feature }: { feature: Feature }) {
+  const store = useStore();
+  const toast = useToast();
+  // Subscribed for sharedFeatures, which reads the settings from the store.
+  useSettings();
+  return <Switch variant="labeled" label="채팅에서 쓰기" checked={sharedFeatures(store)[feature]} onChange={(on) => toast.settled(setFeatureAt(store, { kind: 'settings' }, feature, on), SAVE_FAILED)} />;
+}
 
 // What the feature is, for the two whose name does not say it.
 const HEAD_HELP: Partial<Record<Feature, string>> = { preread: PRE_READ_HELP, agents: AGENTS_HELP };
@@ -36,13 +44,13 @@ const HEAD_HELP: Partial<Record<Feature, string>> = { preread: PRE_READ_HELP, ag
 // Without a prompt to open, the list opens on the feature's own sort.
 const editPrompt = (sort: PromptSort) => (door: PromptDoor) => navigate(door ? { kind: 'prompt', ...door } : { kind: 'prompts', place: null, sort });
 
-export function FeatureScreen({ feature, back }: { feature: Feature; back: Back }) {
+export function FeatureScreen({ feature, back }: { feature: Feature; back: Back | null }) {
   const available = availableFeatures(useSettings()).includes(feature);
   const name = FEATURE_NAMES[feature];
   const Defaults = DEFAULTS[feature];
   if (!available) return <Missing what="feature" back={back} />;
   return (
-    <Screen width="form" top={<NavBar title={name} subtitle={PAGES.chat} help={HEAD_HELP[feature]} {...backBar(back)} actions={<FeatureSwitch feature={feature} variant="labeled" />} />}>
+    <Screen width="form" top={<NavBar title={name} help={HEAD_HELP[feature]} {...backBar(back)} actions={<FeatureSwitch feature={feature} />} />}>
       <Defaults />
     </Screen>
   );
@@ -94,9 +102,24 @@ function IllustrateDefaults() {
       opens="down"
       onChange={(change) => toast.settled(setIllustrate(store, null, change))}
       onEditPrompt={editPrompt('illustrate')}
-    />
+    >
+      <SettingRow
+        label={ILLUSTRATION_PLACE}
+        control={
+          <Button variant="secondary" size="sm" onClick={openPicturePlace}>
+            보기
+          </Button>
+        }
+      />
+    </IllustrateRows>
   );
 }
+
+// Where a picture stands is 디스플레이's, on this device; the 삽화 page only leads there.
+const openPicturePlace = () => {
+  navigate({ kind: 'display' });
+  seekRow('이미지 위치');
+};
 
 // The mascot's prompt is the account's default alone (design §6.11): picking one here makes it the default.
 function MascotDefaults() {

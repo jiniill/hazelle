@@ -181,9 +181,12 @@ export function parseRoute(at: string): Route {
   if (top === 'account' && id === 'notices' && sub === undefined) return { kind: 'notices' };
   if (top === 'settings' && id === 'chat') {
     if (sub === undefined) return { kind: 'chat-settings' };
+    // A feature's page stood under 채팅 until 2026-11-08.
     const feature = FEATURES.find((candidate) => candidate === sub);
     return feature ? { kind: 'feature', feature } : HOME;
   }
+  const feature = FEATURES.find((candidate) => candidate === id);
+  if (top === 'settings' && feature && sub === undefined) return { kind: 'feature', feature };
   if (top === 'settings' && id === 'display' && sub === undefined) return { kind: 'display' };
   if (top === 'settings' && id === 'controls' && sub === undefined) return { kind: 'controls' };
   if (top === 'settings' && id === 'sounds' && sub === undefined) return { kind: 'sounds' };
@@ -284,7 +287,7 @@ export function href(route: Route): string {
     case 'chat-settings':
       return '/settings/chat';
     case 'feature':
-      return `/settings/chat/${route.feature}`;
+      return `/settings/${route.feature}`;
     case 'display':
       return '/settings/display';
     case 'controls':
@@ -339,7 +342,8 @@ export function listOf(route: Route): Kind<'connections' | 'add-connection'> | n
   }
 }
 
-export type SettingsPage = 'models' | 'connections' | 'chat' | 'prompts' | 'personas' | 'modules' | 'plugins' | 'display' | 'controls' | 'sounds' | 'labs' | 'account' | 'admin';
+// A feature's page is one of 설정's own, named by the feature.
+export type SettingsPage = 'models' | 'connections' | 'chat' | Feature | 'prompts' | 'personas' | 'modules' | 'plugins' | 'display' | 'controls' | 'sounds' | 'labs' | 'account' | 'admin';
 
 // 'list' for 설정's own list, or null outside 설정. While it is not null, the settings layer stands in for the library.
 export function settingsPage(route: Route): SettingsPage | 'list' | null {
@@ -376,8 +380,9 @@ export function settingsPage(route: Route): SettingsPage | 'list' | null {
     case 'notices':
       return 'account';
     case 'chat-settings':
-    case 'feature':
       return 'chat';
+    case 'feature':
+      return route.feature;
     case 'settings':
       return 'list';
     default:
@@ -456,6 +461,7 @@ export function up(route: Below, chatShelf?: string | null): Route {
     case 'sounds':
     case 'labs':
     case 'admin':
+    case 'feature':
       return { kind: 'settings' };
     case 'translator':
     case 'calculator':
@@ -474,8 +480,6 @@ export function up(route: Below, chatShelf?: string | null): Route {
       return { kind: 'post', id: route.id };
     case 'admin-list':
       return { kind: 'admin' };
-    case 'feature':
-      return { kind: 'chat-settings' };
     case 'add-connection':
     case 'connection':
       return { kind: 'connections' };

@@ -167,7 +167,7 @@ function PictureLadder({ ladder, onChange }: { ladder: Rung[]; onChange: (ladder
   );
 }
 
-export const imageModelOf = (routes: ImageRoute[], illustrate: IllustrateSetup) => {
+const imageModelOf = (routes: ImageRoute[], illustrate: IllustrateSetup) => {
   const own = illustrate.model;
   return own ? routes.find(({ connection, model }) => sameModelRef(own, refOf(connection.id, model))) : routes[0];
 };

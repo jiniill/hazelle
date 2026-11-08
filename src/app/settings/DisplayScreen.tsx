@@ -1,7 +1,9 @@
 import { ArrowLeft, ArrowRight, Save } from 'lucide-react';
 import { useState } from 'react';
 import { storyHtml } from '../../engine/display';
+import { setUsageShown } from '../../runtime/chat-context';
 import { addLook, editLook, moveLook, removeLook, restoreLook } from '../../runtime/looks';
+import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ACTS } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
 import { readPicturePercent } from '../common/picturePercent';
@@ -9,9 +11,9 @@ import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRo
 import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
 import { reader } from '../common/typedNumber';
-import { DETAIL, detailLabel, PAGES, SAVE_FAILED } from '../common/words';
+import { CHAT_LOOK, DETAIL, detailLabel, PAGES, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
-import { useStore } from '../session';
+import { useSettings, useStore } from '../session';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useRemoval } from '../common/useRemoval';
@@ -163,6 +165,12 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           <SettingRow label="대사 따옴표" control={<ChoiceGroup layout="fit" label="대사 따옴표" options={choices(QUOTE_SHAPE)} value={display.quotes} onChange={(quotes) => changeDisplay({ quotes })} />} />
         </SettingGroup>
       </Section>
+      <Section title={CHAT_LOOK}>
+        <SettingGroup label={CHAT_LOOK}>
+          <UsageShownRow />
+          <CacheNoteRow />
+        </SettingGroup>
+      </Section>
     </Screen>
   );
 }
@@ -179,6 +187,21 @@ function PictureWidestRow() {
       help="읽기 폭 대비 비율이에요."
       error={widest.error}
       control={<NumberInput label="이미지 최대 폭" value={widest.text} unit="%" invalid={widest.error !== undefined} onChange={widest.change} />}
+    />
+  );
+}
+
+// An account's setting, not this device's: the usage line is part of the reply wherever it is read.
+function UsageShownRow() {
+  const store = useStore();
+  const toast = useToast();
+  const { usageShown } = useSettings();
+  return (
+    <SettingRow
+      label="사용량 표시"
+      help="응답 아래에 비용과 토큰을 한 줄로 보여 줘요. 누르면 자세한 내용이 펼쳐져요."
+      changed={usageShown !== undefined}
+      control={<Switch label="사용량 표시" checked={usageShown !== undefined} onChange={(on) => toast.settled(setUsageShown(store, on))} />}
     />
   );
 }

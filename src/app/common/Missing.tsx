@@ -27,7 +27,7 @@ const COPY = {
 
 export type Absent = keyof typeof COPY;
 
-export function Missing({ what, back }: { what: Absent; back: Back }) {
+export function Missing({ what, back }: { what: Absent; back: Back | null }) {
   const { title, message } = COPY[what];
   return (
     <Screen top={<NavBar title={title} {...backBar(back)} />}>

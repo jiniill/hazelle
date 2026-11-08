@@ -1,23 +1,24 @@
 import { useState } from 'react';
 import { RETRIES } from '../../connectors/registry';
 import { RETRY_MOST } from '../../contracts/streams';
-import { ANSWER_INSTRUCTION, answerInstructionOf, LORE_SCAN, setAnswerInstruction, setSharedLoreScan, setToolRounds, setUsageShown, sharedLoreScan } from '../../runtime/chat-context';
+import { setDefaultModel } from '../../runtime/assignment';
+import { ANSWER_INSTRUCTION, answerInstructionOf, LORE_SCAN, setAnswerInstruction, setSharedLoreScan, setToolRounds, sharedLoreScan } from '../../runtime/chat-context';
 import { TOOL_ROUNDS } from '../../runtime/tool-loop';
 import { setSharedRetries } from '../../runtime/connections';
-import { CacheNoteRow } from '../common/CacheNoteRow';
-import { DetailFold } from '../common/DetailFold';
+import { RolePicker } from '../common/RolePicker';
 import { filled, typedText, useTypedNumber } from '../common/typed';
 import { count, readCount } from '../common/typedNumber';
 import { useAutosave } from '../common/useAutosave';
-import { ANSWER_INSTRUCTION_LABEL, CHAT_DETAIL, LORE_SCAN_WORDS, MODEL_SETTINGS, RETRY_COUNT, RETRY_HELP } from '../common/words';
-import { useSettings, useStore } from '../session';
+import { ANSWER_INSTRUCTION_LABEL, CHAT_DETAIL, DEFAULT_MODELS, LORE_SCAN_WORDS, MAIN_HELP, MODEL_SETTINGS, RETRY_COUNT, RETRY_HELP } from '../common/words';
+import { useConnections, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
-import { NumberInput, SettingRow, Stepper, Switch, TextField } from '../ui';
+import { NumberInput, Section, SettingGroup, SettingRow, Stepper, Switch, TextField } from '../ui';
 
 export function ChatDetailDefaults() {
   const store = useStore();
   const toast = useToast();
-  const { retries, toolRounds, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown, cacheNoteHidden } = useSettings();
+  const { retries, toolRounds, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, models } = useSettings();
+  const connections = useConnections();
   const shared = sharedLoreScan(store);
   const flag = (key: 'recursive' | 'fullWordMatching', set: boolean | undefined) => (
     <SettingRow
@@ -28,73 +29,57 @@ export function ChatDetailDefaults() {
     />
   );
   return (
-    <DetailFold
-      set={[retries, toolRounds, loreBudget, loreDepth, loreRecursive, loreFullWord, answerInstruction, usageShown, cacheNoteHidden].filter((value) => value !== undefined).length}
-      sections={[
-        {
-          title: CHAT_DETAIL.reply,
-          rows: (
-            <>
-              <SettingRow
+    <>
+      <Section title={CHAT_DETAIL.reply}>
+        <SettingGroup label={CHAT_DETAIL.reply}>
+          <RolePicker role="main" help={MAIN_HELP} own={models.main} follow={null} connections={connections} onPick={(ref) => ref && toast.settled(setDefaultModel(store, 'main', ref), `${DEFAULT_MODELS}을 바꾸지 못했어요.`)} />
+          <SettingRow
+            label={RETRY_COUNT}
+            help={`${RETRY_HELP} API 연결이나 ${MODEL_SETTINGS}마다 따로 정할 수도 있어요.`}
+            changed={retries !== undefined}
+            control={
+              <Stepper
                 label={RETRY_COUNT}
-                help={`${RETRY_HELP} API 연결이나 ${MODEL_SETTINGS}마다 따로 정할 수도 있어요.`}
-                changed={retries !== undefined}
-                control={
-                  <Stepper
-                    label={RETRY_COUNT}
-                    less="1회 줄이기"
-                    more="1회 늘리기"
-                    value={retries ?? RETRIES}
-                    min={0}
-                    max={RETRY_MOST}
-                    onChange={(next) => toast.settled(setSharedRetries(store, next))}
-                  />
-                }
+                less="1회 줄이기"
+                more="1회 늘리기"
+                value={retries ?? RETRIES}
+                min={0}
+                max={RETRY_MOST}
+                onChange={(next) => toast.settled(setSharedRetries(store, next))}
               />
-              <SettingRow
+            }
+          />
+          <SettingRow
+            label={TOOL_ROUNDS_LABEL}
+            help={`플러그인의 모델 도구를 쓸 때 응답 하나에 모델을 호출하는 최대 횟수예요. 기본값은 ${TOOL_ROUNDS}회예요.`}
+            changed={toolRounds !== undefined}
+            control={
+              <Stepper
                 label={TOOL_ROUNDS_LABEL}
-                help={`플러그인의 모델 도구를 쓸 때 응답 하나에 모델을 호출하는 최대 횟수예요. 기본값은 ${TOOL_ROUNDS}회예요.`}
-                changed={toolRounds !== undefined}
-                control={
-                  <Stepper
-                    label={TOOL_ROUNDS_LABEL}
-                    less="1회 줄이기"
-                    more="1회 늘리기"
-                    value={toolRounds ?? TOOL_ROUNDS}
-                    min={2}
-                    max={10}
-                    onChange={(next) => toast.settled(setToolRounds(store, next))}
-                  />
-                }
+                less="1회 줄이기"
+                more="1회 늘리기"
+                value={toolRounds ?? TOOL_ROUNDS}
+                min={2}
+                max={10}
+                onChange={(next) => toast.settled(setToolRounds(store, next))}
               />
-              <AnswerInstructionField changed={answerInstruction !== undefined} />
-              <SettingRow
-                label={USAGE_SHOWN}
-                help="응답 아래에 비용과 토큰을 한 줄로 보여 줘요. 누르면 자세한 내용이 펼쳐져요."
-                changed={usageShown !== undefined}
-                control={<Switch label={USAGE_SHOWN} checked={usageShown !== undefined} onChange={(on) => toast.settled(setUsageShown(store, on))} />}
-              />
-              <CacheNoteRow />
-            </>
-          ),
-        },
-        {
-          title: CHAT_DETAIL.lore,
-          rows: (
-            <>
-              <SharedLoreNumber field="tokenBudget" changed={loreBudget !== undefined} />
-              {flag('recursive', loreRecursive)}
-              <SharedLoreNumber field="scanDepth" changed={loreDepth !== undefined} />
-              {flag('fullWordMatching', loreFullWord)}
-            </>
-          ),
-        },
-      ]}
-    />
+            }
+          />
+          <AnswerInstructionField changed={answerInstruction !== undefined} />
+        </SettingGroup>
+      </Section>
+      <Section title={CHAT_DETAIL.lore}>
+        <SettingGroup label={CHAT_DETAIL.lore}>
+          <SharedLoreNumber field="tokenBudget" changed={loreBudget !== undefined} />
+          {flag('recursive', loreRecursive)}
+          <SharedLoreNumber field="scanDepth" changed={loreDepth !== undefined} />
+          {flag('fullWordMatching', loreFullWord)}
+        </SettingGroup>
+      </Section>
+    </>
   );
 }
 
-const USAGE_SHOWN = '사용량 표시';
 const TOOL_ROUNDS_LABEL = '모델 도구 호출 횟수';
 
 function SharedLoreNumber({ field, changed }: { field: 'tokenBudget' | 'scanDepth'; changed: boolean }) {

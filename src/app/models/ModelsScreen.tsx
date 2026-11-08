@@ -7,7 +7,7 @@ import { findStarred, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { ACTS, newOf } from '../common/acts';
-import { AUX_HELP, DEFAULT_MODELS, defaultMark, follows, MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, noStarred, PAGES, ROLE_TAGS, SAVE_FAILED, SCOPE } from '../common/words';
+import { AUX_HELP, DEFAULT_MODELS, defaultMark, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SAVE_FAILED, SCOPE } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -86,7 +86,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
     <Screen width="page" top={<NavBar title={PAGES.models} {...backBar(back)} />}>
       <Section title={DEFAULTS}>
         <Columns>
-          <RoleCard role="main" help="프롬프트나 채팅에서 모델을 따로 정하지 않았을 때 쓰는 모델이에요." own={main} follow={null} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
+          <RoleCard role="main" help={MAIN_HELP} own={main} follow={null} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
           <RoleCard role="aux" help={AUX_HELP} own={settings.models.aux} follow={follows(MODEL_ROLES.main)} connections={connections} onPick={(ref) => pickModel('aux', ref)} {...cardOf(settings.models.aux)} />
           <RoleCard role="embed" help="장기 기억과 플러그인이 비슷한 내용을 찾을 때 써요. 모델을 바꾸면 기록을 다시 준비해요." own={settings.models.embed} follow="지정 안 함" connections={connections} onPick={(ref) => pickModel('embed', ref)} />
           {defaultProfile ? (

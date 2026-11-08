@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { LABS } from '../../common/labs';
 import { matches } from '../../common/search';
-import { PAGES } from '../../common/words';
+import { FEATURE_NAMES, PAGES } from '../../common/words';
+import { FEATURES } from '../../../model/features';
 import { EMPTY_SETTINGS } from '../../../model/settings';
 import type { SettingsPage } from '../routes';
 import { hitsOf, hitTexts, subpages } from './terms';
 
-const PLACES = (['models', 'connections', 'chat', 'labs', 'prompts', 'personas', 'modules', 'plugins', 'display', 'controls', 'sounds', 'account', 'admin'] satisfies SettingsPage[]).map((page) => ({ page, label: PAGES[page], route: { kind: 'settings' } as const }));
-const hits = hitsOf(PLACES, subpages({ ...EMPTY_SETTINGS, profile: 'main', labs: LABS.map(({ id }) => id) }, [{ id: 'main' }]));
+const PLACES = [
+  ...(['models', 'connections', 'chat', 'labs', 'prompts', 'personas', 'modules', 'plugins', 'display', 'controls', 'sounds', 'account', 'admin'] satisfies SettingsPage[]).map((page) => ({ page, label: PAGES[page] })),
+  ...FEATURES.map((page) => ({ page, label: FEATURE_NAMES[page] })),
+].map((place) => ({ ...place, route: { kind: 'settings' } as const }));
+const hits = hitsOf(PLACES, subpages({ ...EMPTY_SETTINGS, profile: 'main' }, [{ id: 'main' }]));
 const search = (words: string) => hits.filter((hit) => matches(words, ...hitTexts(hit)));
 
 const SHOWN = Object.values(
@@ -15,8 +18,8 @@ const SHOWN = Object.values(
 );
 // The element's own label or title, past attributes before it; an inner control's own label is not it.
 const LITERAL = /<(?:SettingRow|CountRow|TaskModelRow|Section|Panel)\s+(?:\w+=(?:\{[^}]*\}|"[^"]*")\s+)*(?:label|title)="([^"]+)"/g;
-// Shown, but no one searches by them: the usage page's table heads, an operator dialog's field, 장기 기억's on-switch.
-const NOT_SOUGHT = new Set(['합계', '캐릭터', '신고 이유', '사용']);
+// Shown, but no one searches by them: the usage page's table heads and sections, an operator dialog's field, 장기 기억's on-switch.
+const NOT_SOUGHT = new Set(['합계', '캐릭터', '채팅', '신고 이유', '사용']);
 
 describe('설정 검색', () => {
   it('holds every literal title and row label the settings pages show', () => {

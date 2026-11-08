@@ -32,6 +32,7 @@ export const NO_PICTURES = '이 모델은 이미지를 읽을 수 없어요.';
 export const PICTURE_INPUT = '이미지 읽기';
 export const UNKNOWN_PICTURES = `이 모델이 이미지 입력을 지원하는지 확인할 수 없어요. 이미지를 지원하는 모델이라면 모델 설정 화면에서 ${PICTURE_INPUT}를 켜 주세요.`;
 
+export const MAIN_HELP = '프롬프트나 채팅에서 모델을 따로 정하지 않았을 때 쓰는 모델이에요.';
 export const AUX_HELP = '번역이나 장기 기억 정리처럼 대화 밖의 작업에 써요.';
 
 export const BOT_MODELS = '봇의 모델 호출';
@@ -112,7 +113,7 @@ export const NOTE_UNSENT = `번역 프롬프트에 '${TRANSLATOR_NOTE}' 블록�
 export const ILLUSTRATE_NOTE = '삽화 노트';
 export const ILLUSTRATE_NOTE_UNSENT = `삽화 프롬프트에 '${ILLUSTRATE_NOTE}' 블록을 추가해야 노트가 적용돼요.`;
 
-export const PAGES = { models: '모델', connections: 'API 연결', chat: '채팅', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용량', admin: '운영' };
+export const PAGES = { models: '모델', connections: 'API 연결', chat: '대화', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용량', admin: '운영' };
 
 // Keep always-on module wording consistent: editable only in global settings, read-only marks elsewhere.
 export const ALWAYS = '항상';
@@ -154,7 +155,7 @@ export const CHAT_SEARCH = '채팅 검색';
 export const TOOL_PAGES = { translator: '번역기', calculator: '비용 계산기' };
 
 export const inSettings = (page: keyof typeof PAGES) => `${SETTINGS} › ${PAGES[page]}`;
-export const inFeature = (feature: Feature) => `${inSettings('chat')} › ${FEATURE_NAMES[feature]}`;
+export const inFeature = (feature: Feature) => `${SETTINGS} › ${FEATURE_NAMES[feature]}`;
 
 export const opens = (place: string) => `${place} 열기`;
 
@@ -165,6 +166,11 @@ export const SCOPE = { default: '공용', chat: '이 채팅만', character: '이
 export const scopeTag = (scope: keyof typeof SCOPE) => ({ label: SCOPE[scope], tone: scope === 'default' ? 'plain' : 'accent' }) as const;
 
 export const FEATURES_TITLE = '기능';
+// A switch's state in a line of facts.
+export const onOff = (on: boolean) => (on ? '켬' : '끔');
+// 디스플레이's section for how a chat's own lines show, and the 삽화 page's door to where pictures stand.
+export const CHAT_LOOK = '채팅 화면';
+export const ILLUSTRATION_PLACE = '삽화가 보이는 위치';
 // 토큰 절약 (runtime/preread), a 실험실 experiment whose name may still change: every screen names it through this.
 export const PRE_READ = '토큰 절약';
 export const PRE_READ_HELP = `${MODEL_ROLES.aux}이 긴 내용을 요약해 ${MODEL_ROLES.main}의 입력 토큰을 아껴요. 요약에서 빠진 내용은 반영되지 않을 수 있어요. pdf-pod 플러그인에서 가져온 아이디어예요.`;

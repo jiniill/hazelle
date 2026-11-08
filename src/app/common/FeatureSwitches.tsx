@@ -6,7 +6,7 @@ import { accountSettings } from '../../runtime/account-settings';
 import { useLibrary, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { ChoiceGroup, Section, SettingGroup, SettingRow } from '../ui';
-import { FEATURE_NAMES, FEATURES_TITLE, follows, SAVE_FAILED, SCOPE, scopeTag } from './words';
+import { FEATURE_NAMES, FEATURES_TITLE, follows, onOff, SAVE_FAILED, SCOPE, scopeTag } from './words';
 
 type Choice = 'default' | 'on' | 'off';
 
@@ -22,12 +22,12 @@ const followsAbove = (owner: FeatureLayer) => follows(ABOVE[above(owner)]);
 
 // A layer's line in a list of parts: what it follows while it sets nothing shown, else what it sets, 번역 끔 · 삽화 켬.
 export const featureHolds = (store: ObjectStore, owner: FeatureLayer, own: Switches | undefined) =>
-  availableFeatures(accountSettings(store)).flatMap((feature) => (own?.[feature] === undefined ? [] : [`${FEATURE_NAMES[feature]} ${own[feature] ? '켬' : '끔'}`])).join(' · ') || followsAbove(owner);
+  availableFeatures(accountSettings(store)).flatMap((feature) => (own?.[feature] === undefined ? [] : [`${FEATURE_NAMES[feature]} ${onOff(own[feature])}`])).join(' · ') || followsAbove(owner);
 
 const choiceOf = (value: boolean | undefined): Choice => (value === undefined ? 'default' : value ? 'on' : 'off');
 
 // own: the owner's features as stored; onChange writes one, null following the layer above again. 공용's own switches
-// are settings/FeatureDefaults' FeatureSwitch, which follows nothing.
+// are the head switch on each feature's 설정 page (settings/FeatureScreen), which follows nothing.
 export function FeatureSwitches({ owner, own, onChange }: { owner: FeatureLayer; own: Switches | undefined; onChange: (feature: Feature, value: boolean | null) => Promise<{ ok: true } | ApiFailure> }) {
   const store = useStore();
   const toast = useToast();

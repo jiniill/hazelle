@@ -1,4 +1,4 @@
-import { Languages } from 'lucide-react';
+import { FEATURE_ICONS } from '../common/featureIcons';
 import { sendsNotes, type translatorOf } from '../../runtime/translate';
 import { PerCharacter, type PromptDoor } from '../common/TaskPrompt';
 import { TranslateRows } from '../common/TranslateRows';
@@ -24,7 +24,7 @@ type Props = {
 
 const translateOn = (translate: Props['translate']) => [translate.replies && '응답 번역', translate.input && '내 메시지 번역', translate.reverse && '반전 모드'].filter(Boolean).join(', ');
 
-export const translateTool = (props: Props): RowTool => ({ key: 'translate', label: '번역', icon: Languages, live: translateOn(props.translate) !== '', node: <ChatTranslate {...props} />, open: <TranslateForm {...props} /> });
+export const translateTool = (props: Props): RowTool => ({ key: 'translate', label: '번역', icon: FEATURE_ICONS.translate, live: translateOn(props.translate) !== '', node: <ChatTranslate {...props} />, open: <TranslateForm {...props} /> });
 
 function ChatTranslate(props: Props) {
   const on = translateOn(props.translate);
@@ -34,7 +34,7 @@ function ChatTranslate(props: Props) {
       size="form"
       place="above-start"
       label="번역"
-      trigger={(opener) => <ToolButton icon={Languages} label="번역" phone="icon" detail={on ? `${on} 켜짐` : undefined} mark={on ? { kind: 'dot' } : undefined} {...opener} />}
+      trigger={(opener) => <ToolButton icon={FEATURE_ICONS.translate} label="번역" phone="icon" detail={on ? `${on} 켜짐` : undefined} mark={on ? { kind: 'dot' } : undefined} {...opener} />}
     >
       <TranslateForm {...props} />
     </Menu>

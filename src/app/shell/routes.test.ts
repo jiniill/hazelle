@@ -105,7 +105,7 @@ describe('routes', () => {
     expect(parseRoute(`/modules/${CHAT}/page`)).toEqual({ kind: 'plugin-page', id: CHAT });
   });
 
-  it.each(['/nope', '/characters/', '/characters/abc', '/characters/none/about', `/characters/${CHARACTER}/other`, '/chats', `/chats/${CHAT}/x`, '/connections/', '/connections/new/nope', '/prompts/abc', `/prompts/${CHAT}/x`, `/connections/abc/model`, `/connections/${CHAT}/model`, '/personas/abc', `/personas/${CHAT}/x`, '/modules/abc', `/modules/${CHAT}/x`, '/plugins/abc', `/plugins/${CHAT}/x`, '/plugins/drafts', '/plugins/drafts/abc', '/plugins/new/x', '/models/abc', `/models/abc/x`, `/models/${CHAT}/%E0%A4%A`, '/settings/x', '/settings/chat/nope', '/settings/chat/memory/x', '/account/sent', '/board/0', '/board/01', '/board/abc', '/board/12/x', '/board/write/x'])(
+  it.each(['/nope', '/characters/', '/characters/abc', '/characters/none/about', `/characters/${CHARACTER}/other`, '/chats', `/chats/${CHAT}/x`, '/connections/', '/connections/new/nope', '/prompts/abc', `/prompts/${CHAT}/x`, `/connections/abc/model`, `/connections/${CHAT}/model`, '/personas/abc', `/personas/${CHAT}/x`, '/modules/abc', `/modules/${CHAT}/x`, '/plugins/abc', `/plugins/${CHAT}/x`, '/plugins/drafts', '/plugins/drafts/abc', '/plugins/new/x', '/models/abc', `/models/abc/x`, `/models/${CHAT}/%E0%A4%A`, '/settings/x', '/settings/chat/nope', '/settings/chat/memory/x', '/settings/memory/x', '/account/sent', '/board/0', '/board/01', '/board/abc', '/board/12/x', '/board/write/x'])(
     '%s is home',
     (at) => {
       expect(parseRoute(at)).toEqual(HOME);
@@ -148,11 +148,12 @@ it("goes back from a module's 토글 page to the module", () => {
   expect(up({ kind: 'module', id: CHAT, pane: 'toggles' })).toEqual({ kind: 'module', id: CHAT, pane: null });
 });
 
-it('opens a feature under 설정 › 채팅, which stays lit and is the way back', () => {
+it("opens a feature as 설정's own page, lit by its feature, its way back 설정", () => {
   const route = { kind: 'feature', feature: 'memory' } as const;
-  expect(href(route)).toBe('/settings/chat/memory');
-  expect(up(route)).toEqual({ kind: 'chat-settings' });
-  expect(settingsPage(route)).toBe('chat');
+  expect(href(route)).toBe('/settings/memory');
+  expect(parseRoute('/settings/chat/memory')).toEqual(route);
+  expect(up(route)).toEqual({ kind: 'settings' });
+  expect(settingsPage(route)).toBe('memory');
 });
 
 it('opens the compose with 운영자에게만 preset from ?to=operator, and goes back from an edit to its post and from a post to the list', () => {

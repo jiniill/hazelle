@@ -152,7 +152,7 @@ export function Page({ route, closeLayer, onPaired }: { route: Route; closeLayer
       case 'chat-settings':
         return <ChatSettingsScreen back={sideBack(at)} />;
       case 'feature':
-        return <FeatureScreen key={at.feature} feature={at.feature} back={back(at)} />;
+        return <FeatureScreen key={at.feature} feature={at.feature} back={sideBack(at)} />;
       case 'display':
         return <DisplayScreen back={sideBack(at)} />;
       case 'controls':

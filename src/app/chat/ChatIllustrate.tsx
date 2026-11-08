@@ -1,4 +1,4 @@
-import { ImageIcon } from 'lucide-react';
+import { FEATURE_ICONS } from '../common/featureIcons';
 import { IllustrateRows } from '../common/IllustrateRows';
 import { PerCharacter } from '../common/TaskPrompt';
 import { ILLUSTRATE_NOTE, ILLUSTRATE_NOTE_UNSENT, scopeTag } from '../common/words';
@@ -25,7 +25,7 @@ type Props = {
   onEditPrompt: (door: PromptDoor) => void;
 };
 
-export const illustrateTool = (props: Props): RowTool => ({ key: 'illustrate', label: '삽화', icon: ImageIcon, live: props.illustrate.auto || Boolean(props.note), node: <ChatIllustrate {...props} />, open: <IllustrateForm {...props} /> });
+export const illustrateTool = (props: Props): RowTool => ({ key: 'illustrate', label: '삽화', icon: FEATURE_ICONS.illustrate, live: props.illustrate.auto || Boolean(props.note), node: <ChatIllustrate {...props} />, open: <IllustrateForm {...props} /> });
 
 function ChatIllustrate(props: Props) {
   const { illustrate, note } = props;
@@ -35,7 +35,7 @@ function ChatIllustrate(props: Props) {
       size="form"
       place="above-start"
       label="삽화"
-      trigger={(opener) => <ToolButton icon={ImageIcon} label="삽화" phone="icon" detail={illustrate.auto ? '자동 삽화 켜짐' : undefined} mark={illustrate.auto || note ? { kind: 'dot' } : undefined} {...opener} />}
+      trigger={(opener) => <ToolButton icon={FEATURE_ICONS.illustrate} label="삽화" phone="icon" detail={illustrate.auto ? '자동 삽화 켜짐' : undefined} mark={illustrate.auto || note ? { kind: 'dot' } : undefined} {...opener} />}
     >
       <IllustrateForm {...props} />
     </Menu>
