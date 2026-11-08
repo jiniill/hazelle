@@ -158,7 +158,7 @@ describe('moveFromRisu', () => {
     const backup = source({ characters: [{ ...luna, chats: [{ ...luna.chats[0]!, persona: null }] }], personas: [persona('진'), persona('솔')] });
     await moveFromRisu(store, files, backup, backup.catalog, null, () => {});
     const jin = store.list('persona').find(({ value }) => value.name === '진')!.id;
-    expect([accountSettings(store)!.persona, store.list('chat')[0]!.value.persona]).toEqual([jin, jin]);
+    expect([accountSettings(store).persona, store.list('chat')[0]!.value.persona]).toEqual([jin, jin]);
   });
 
   it.each(['entry', 'character'] as const)('stages every chat of a character in one batch, publishes the roots with their character, summarizes them in one request from what it wrote, and retries a cut at the %s write leaving no chat without its character', async (cut) => {
@@ -235,7 +235,7 @@ describe('moveFromRisu', () => {
     const moved = await moveFromRisu(store, files, backup, backup.catalog, null, () => {});
     expect(moved).toMatchObject({ ok: true, data: { toggles: 2 } });
     expect(store.get('character', moved.ok ? moved.data.characters[0]!.id : '')!.value.toggles).toEqual({ tagger: '1', style: '2' });
-    expect(accountSettings(store)!.toggles).toEqual({ tagger: '0', style: '2' });
+    expect(accountSettings(store).toggles).toEqual({ tagger: '0', style: '2' });
     expect(await moveFromRisu(store, files, backup, backup.catalog, null, () => {})).toMatchObject({ ok: true, data: { toggles: 0 } });
   });
 

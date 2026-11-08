@@ -1,16 +1,17 @@
 import { AUTO_BROWSER_MESSAGES, AUTO_ERROR_NAMES, readAutoReport, type AutoChat, type AutoDetail, type AutoErrorCause, type AutoErrorName, type AutoEvent, type AutoJob, type AutoReport } from '../contracts/auto-diagnosis';
 import type { Place } from './diagnostic-state';
 import { without } from '../model/fields';
-import { EMPTY_SETTINGS, type Settings } from '../model/settings';
+import type { Settings } from '../model/settings';
 import { fetchApi } from './api';
 import { BUILT_VERSION, selfHost } from './installation';
 import type { ObjectStore } from './store';
+import { changeSettings } from './account-settings';
 
 // 자동 진단 (design §6.13): the account's switch, on unless set off. A guest and a self-host send none.
-export const sharesDiagnosis = (settings: Settings | undefined) => !selfHost() && settings?.diagnosis !== false;
+export const sharesDiagnosis = (settings: Settings) => !selfHost() && settings.diagnosis !== false;
 
 export const setDiagnosisSharing = (store: ObjectStore, on: boolean) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => (on ? without(current, 'diagnosis') : { ...current, diagnosis: false }));
+  changeSettings(store, (current) => (on ? without(current, 'diagnosis') : { ...current, diagnosis: false }));
 
 // Null leaves the last place standing: 앱 정보 and the board are where a report is written, not what it is about.
 let place: Place | null = null;

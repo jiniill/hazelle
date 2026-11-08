@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { blankCard } from '../engine/import/card';
-import { EMPTY_SETTINGS } from '../model/settings';
 import { above, chatIllustrate, chatTranslate, featuresOf, inherited, setFeatureAt } from './features';
 import { addPrompt } from './prompts';
 import { setIllustrate, setTranslate } from './characters';
 import { testServer } from './testing';
+import { changeSettings } from './account-settings';
 
 const server = testServer();
 
@@ -74,7 +74,7 @@ describe('features', () => {
       if (!created.ok) throw new Error(created.error);
       const chat = () => store.get('chat', created.data.id)!.value;
       expect(featuresOf(store, chat()).preread).toBe(false);
-      await store.upsert('settings', (settings = EMPTY_SETTINGS) => ({ ...settings, labs: ['preread'] }));
+      await changeSettings(store, (settings) => ({ ...settings, labs: ['preread'] }));
       expect(featuresOf(store, chat()).preread).toBe(true);
     }));
 });

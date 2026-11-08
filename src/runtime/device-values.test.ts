@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EMPTY_SETTINGS, type Settings } from '../../model/settings';
-import { carryDeviceValues, withDeviceValues } from './carryDeviceValues';
+import { EMPTY_SETTINGS, type Settings } from '../model/settings';
+import { carryDeviceValues, withDeviceValues } from './device-values';
 
 describe('values carried from the device to the account', () => {
   it('fills what the account lacks, and never replaces what it holds', () => {
@@ -11,18 +11,18 @@ describe('values carried from the device to the account', () => {
   });
 
   it('clears the device keys only once the write landed, and writes nothing when there are none', async () => {
-    const device = new Map([['risu-alpha:tour-seen', 'v1']]);
-    vi.stubGlobal('localStorage', { getItem: (key: string) => device.get(key) ?? null, removeItem: (key: string) => device.delete(key) });
+    const kept = new Map([['risu-alpha:tour-seen', 'v1']]);
+    const device = { read: (key: string) => kept.get(key) ?? null, forget: (key: string) => void kept.delete(key) };
     const written = vi.fn(async () => ({ ok: false as const, error: 'offline' as const }));
-    carryDeviceValues({ upsert: written } as never);
+    carryDeviceValues({ upsert: written } as never, device);
     await vi.waitFor(() => expect(written).toHaveBeenCalledTimes(1));
-    expect(device.get('risu-alpha:tour-seen')).toBe('v1');
+    expect(kept.get('risu-alpha:tour-seen')).toBe('v1');
 
     const landed = vi.fn(async () => ({ ok: true as const, data: null }));
-    carryDeviceValues({ upsert: landed } as never);
-    await vi.waitFor(() => expect(device.size).toBe(0));
+    carryDeviceValues({ upsert: landed } as never, device);
+    await vi.waitFor(() => expect(kept.size).toBe(0));
 
-    carryDeviceValues({ upsert: landed } as never);
+    carryDeviceValues({ upsert: landed } as never, device);
     expect(landed).toHaveBeenCalledTimes(1);
   });
 });

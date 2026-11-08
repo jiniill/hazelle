@@ -6,7 +6,6 @@ import { illustratorPrompt } from '../../engine/illustrate';
 import { translatorPrompt } from '../../engine/translate';
 import type { Chat } from '../../model/chat';
 import type { Character } from '../../model/library';
-import { EMPTY_SETTINGS } from '../../model/settings';
 import { AccountFacts } from '../../runtime/account';
 import type { api, ApiResult } from '../../runtime/api';
 import { serverBackend } from '../../runtime/backend';
@@ -23,6 +22,7 @@ import { useChatSettings } from './useChatSettings';
 import { useChatStatus } from './useChatStatus';
 import { useChatTranslation } from './useChatTranslation';
 import { useSendNotes } from './useSendNotes';
+import { changeSettings } from '../../runtime/account-settings';
 
 vi.mock('../toast', () => ({ useToast: () => ({ settled: vi.fn(), show: vi.fn(), error: vi.fn(), undoable: vi.fn(), failed: vi.fn() }) }));
 vi.mock('../../runtime/turn-context', async (original) => ({ ...(await original<typeof import('../../runtime/turn-context')>()), forecastSend: vi.fn(async () => null) }));
@@ -108,7 +108,7 @@ it("follows the chat's model, prompt and persona as they are written", async () 
     expect(settings!.prompt.kind).toBe('missing');
     await act(async () => {
       await store.create('prompt', prompt, { id: 'p' });
-      await store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, prompt: 'p' }));
+      await changeSettings(store, (current) => ({ ...current, prompt: 'p' }));
     });
     expect(settings!.prompt).toMatchObject({ kind: 'prompt', prompt: { value: { name: '대화' } } });
     await act(() => store.update('prompt', 'p', (current) => ({ ...current, name: '바뀐 대화' })));
@@ -129,7 +129,7 @@ it("names a status script by its module's name as the module is renamed", async 
   try {
     await act(async () => {
       await store.create('module', { name: '종', description: '', namespace: null, regex: [{ id: 'r', name: '상태', find: 'a', replace: 'b', stage: 'display', flags: null }], triggers: [], toggles: [], loreFolders: [] }, { id: 'm' });
-      await store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, modules: ['m'] }));
+      await changeSettings(store, (current) => ({ ...current, modules: ['m'] }));
     });
     await render(<Probe />);
     expect(name).toContain('종');
@@ -157,7 +157,7 @@ it('follows the translation and illustration prompts as they are written', async
     await act(async () => {
       await store.create('prompt', translatorPrompt(), { id: 'tp' });
       await store.create('prompt', illustratorPrompt(), { id: 'ip' });
-      await store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, translatePrompt: 'tp', illustratePrompt: 'ip' }));
+      await changeSettings(store, (current) => ({ ...current, translatePrompt: 'tp', illustratePrompt: 'ip' }));
     });
     expect(translation!.translation).not.toMatchObject({ ok: false, failure: { kind: 'prompt-missing' } });
     expect(illustration!.sceneWriter).not.toMatchObject({ kind: 'prompt-missing' });

@@ -277,7 +277,7 @@ export class ToolApi {
       }
       case 'account': {
         const { store } = this.session;
-        const current = accountSettings(store)?.persona;
+        const current = accountSettings(store).persona;
         return {
           personas: store.list('persona').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.name, description: each.value.description, current: each.id === current }] : []),
           characters: store.list('character').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.card.name }] : []),

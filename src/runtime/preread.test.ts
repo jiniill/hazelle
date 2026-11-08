@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { bareModel } from '../connectors/chat-completions';
 import { RELAY_HEADER } from '../contracts/http';
 import { fold, shown } from '../model/chat';
-import { EMPTY_SETTINGS } from '../model/settings';
 import { setDefaultModel } from './assignment';
 import { appendUserMessage, startChat } from './chat-log';
 import { featuresOf, setFeatureAt } from './features';
@@ -11,6 +10,7 @@ import { addDefaults } from './prompts';
 import type { Session } from './session';
 import { answerable, inTurn, saying, stubRelay, testConnection, testModel, testServer, upstream } from './testing';
 import { takeTurn } from './turn';
+import { changeSettings } from './account-settings';
 
 const server = testServer();
 
@@ -19,7 +19,7 @@ const SAID = ['The knight swore an oath.', 'She hid the key.', 'Go on'];
 // batch 0 shortens whatever there is, so short messages make a call.
 async function chatted(session: Session, { lab = true, batch = 0, texts = SAID }: { lab?: boolean; batch?: number; texts?: string[] } = {}) {
   await answerable(session);
-  if (lab) await session.store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, labs: ['preread'] }));
+  if (lab) await changeSettings(session.store, (current) => ({ ...current, labs: ['preread'] }));
   await addDefaults(session.store);
   await setFeatureAt(session.store, { kind: 'settings' }, 'preread', true);
   await setPreread(session.store, { recent: 0, batch });

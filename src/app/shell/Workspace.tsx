@@ -10,7 +10,8 @@ import type { Unlocked } from '../account/AccountFlow';
 import { UnreachableScreen } from '../account/UnreachableScreen';
 import { describeFailure } from '../common/failure';
 import { readPosts } from '../../runtime/board';
-import { carryDeviceValues } from '../common/carryDeviceValues';
+import { carryDeviceValues, type DeviceStorage } from '../../runtime/device-values';
+import { forgetPersisted, readPersisted } from '../common/usePersisted';
 import { openedNewRelease, TOURS, tourToShow, type Tour } from '../common/release';
 import { TourDialog } from '../common/Tour';
 import { TutorialProvider, useTutorials } from '../common/Tutorial';
@@ -41,6 +42,7 @@ const subscribeNothing = () => () => {};
 const NOT_PULLED: PullProgress = { objects: 0, pages: 0, waiting: false };
 const FIRST_LOAD = '처음에만 오래 걸려요.';
 const notWaiting = () => false;
+const DEVICE: DeviceStorage = { read: (key) => readPersisted<string | null>(key, String, null), forget: forgetPersisted };
 
 // Said once in the session opened after the last one heard the account was restored, with the writes the restore
 // dropped. The ref: StrictMode runs a mount's effect twice.
@@ -227,7 +229,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
       if (abandon.signal.aborted) return;
       if (!result.ok) return setFailure(describeFailure(result));
       opened = result.data;
-      carryDeviceValues(opened.store);
+      carryDeviceValues(opened.store, DEVICE);
       setSession(opened);
     });
     return () => {

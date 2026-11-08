@@ -205,7 +205,7 @@ describe('Translator', () => {
       expect(model()).toBe('m');
       await setDefaultModel(session.store, 'aux', { connection: connection!.id, model: 'aux' });
       expect(model()).toBe('aux');
-      await setTaskModel(session.store, accountSettings(session.store)!.translatePrompt!, { connection: connection!.id, model: 'tr' });
+      await setTaskModel(session.store, accountSettings(session.store).translatePrompt!, { connection: connection!.id, model: 'tr' });
       expect(model()).toBe('tr');
     }));
 

@@ -35,6 +35,7 @@ import { ObjectStore } from './store';
 import { exportBackup, readBackup, restoreBackup } from './testing/backup';
 import type { BackupOutput } from './backup-zip';
 import { importTool, readToolAsset, saveToolAsset, saveToolChat, setToolData, toolChatId, toolData, toolDataId, toolFileId, TOOL_ROW_BYTES } from './tools/store';
+import { changeSettings } from './account-settings';
 
 let app: Awaited<ReturnType<typeof testApp>>;
 let password: Awaited<ReturnType<typeof passwordCredential>>;
@@ -122,7 +123,7 @@ async function contents() {
     { type: 'create', kind: 'avatar', id: crypto.randomUUID(), parent: character, value: { type: 'image/png', size: image.length, thumb: 'thumb', file: ref } },
   ], undefined, { unheld: true });
   expect(written.ok).toBe(true);
-  await held.store.upsert('settings', () => ({ models: {}, persona: FIRST_ID }));
+  await changeSettings(held.store, () => ({ models: {}, persona: FIRST_ID }));
   return { ...held, character, chat, message, image, ref };
 }
 
@@ -250,7 +251,7 @@ it('remaps inventory ids regardless of field names, preserving engine seeds, lit
   const target = await ObjectStore.open(accountId, account.vaultKey, serverBackend());
   stores.push(target);
   await target.pull();
-  await target.upsert('settings', () => ({ models: {}, persona: FIRST_ID, prompt: STARTER_ID, translatorNote: 'Account preference' }));
+  await changeSettings(target, () => ({ models: {}, persona: FIRST_ID, prompt: STARTER_ID, translatorNote: 'Account preference' }));
   await target.create('persona', { name: 'Account persona', description: '', picture: null }, { id: FIRST_ID });
   await target.create('profile', { name: 'Account profile', settings: {} }, { id: FIRST_PROFILE_ID });
   await addPrompt(target, 'Account starter', 'conversation', STARTER_ID);
@@ -481,11 +482,11 @@ it.each(['edited', 'deleted'] as const)('finishes an interrupted import without 
 
 it('adds the guest pre-reader alongside the account pre-reader without changing the account prompt or settings', async () => {
   const source = await guest();
-  await source.store.upsert('settings', () => ({ models: {}, labs: ['preread'] }));
+  await changeSettings(source.store, () => ({ models: {}, labs: ['preread'] }));
   await addDefaults(source.store);
   await source.store.update('prompt', PREREADER_ID, (value) => ({ ...value, name: 'Guest pre-reader' }));
   const target = await destination();
-  await target.store.upsert('settings', () => ({ models: {}, labs: ['preread'] }));
+  await changeSettings(target.store, () => ({ models: {}, labs: ['preread'] }));
   await addDefaults(target.store);
   const before = await rows(target.backend);
   expect(await transferGuest(target.accountId, target.vaultKey)).toEqual({ ok: true, data: null });

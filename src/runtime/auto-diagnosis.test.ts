@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { EMPTY_SETTINGS } from '../model/settings';
 import { holdAccount } from './api';
 import { autoDiagnose, deviceFacts, errorFacts, holdDiagnosis, sharesDiagnosis } from './auto-diagnosis';
 import { markSelfHost } from './installation';
@@ -40,10 +41,10 @@ it('says nothing of the account: no cookie, no account header', () => {
 });
 
 it('goes by the switch, and never from a self-host', () => {
-  expect(sharesDiagnosis(undefined)).toBe(true);
-  expect(sharesDiagnosis({ diagnosis: false } as never)).toBe(false);
+  expect(sharesDiagnosis(EMPTY_SETTINGS)).toBe(true);
+  expect(sharesDiagnosis({ ...EMPTY_SETTINGS, diagnosis: false })).toBe(false);
   markSelfHost(true);
-  expect(sharesDiagnosis(undefined)).toBe(false);
+  expect(sharesDiagnosis(EMPTY_SETTINGS)).toBe(false);
 });
 
 it('takes an error\'s name and bundle position, never its message or a function name', () => {

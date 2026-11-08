@@ -1,12 +1,12 @@
 import { ArrowLeft, ArrowRight, Save } from 'lucide-react';
 import { useState } from 'react';
 import { storyHtml } from '../../engine/display';
-import { EMPTY_SETTINGS, type SavedLook } from '../../model/settings';
+import { addLook, editLook, moveLook, removeLook, restoreLook } from '../../runtime/looks';
 import { ACTS } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
 import { PICTURE_PERCENT_ERROR, readPicturePercent } from '../common/picturePercent';
 import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRows';
-import { choices, SIDE, lookOf, moveLook, presetOf, type Preset } from '../common/reading';
+import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
 import { DETAIL, detailLabel, PAGES } from '../common/words';
 import { useDisplay } from '../display';
@@ -40,36 +40,26 @@ export function DisplayScreen({ back }: { back: Back | null }) {
   // Folded, a slot whose preset is gone would say so to no one.
   const [detailOpen, setDetailOpen] = useState(() => MODE_KEYS.some(missing));
 
-  async function change(looks: (looks: SavedLook[]) => SavedLook[], failure: string) {
-    const done = await store.upsert('settings', (settings = EMPTY_SETTINGS) => ({ ...settings, looks: looks(settings.looks ?? []) }));
-    if (!done.ok) toast.failed(done, failure);
-    return done.ok;
-  }
-
   function name(typed: string) {
     const preset = naming?.preset;
     setNaming(null);
-    if (preset) return void change((looks) => looks.map((look) => (look.id === preset.id ? { ...look, name: typed.trim() || preset.name } : look)), '이름을 바꾸지 못했어요.');
-    const look = { id: crypto.randomUUID(), name: typed.trim() || `내 프리셋 ${own.presets.length + 1}`, look: lookOf(reading, display) };
-    void change((looks) => [...looks, look], '저장하지 못했어요.');
+    if (preset) return toast.settled(editLook(store, preset.id, { name: typed.trim() || preset.name }), '이름을 바꾸지 못했어요.');
+    toast.settled(addLook(store, { id: crypto.randomUUID(), name: typed.trim() || `내 프리셋 ${own.presets.length + 1}`, look: lookOf(reading, display) }), '저장하지 못했어요.');
   }
 
-  async function remove({ id, name, look }: Preset) {
-    let at = 0;
-    const removed = await change((looks) => {
-      at = looks.findIndex((saved) => saved.id === id);
-      return looks.filter((saved) => saved.id !== id);
-    }, '삭제하지 못했어요.');
-    if (removed) toast.undoable(`'${name}' 프리셋을 삭제했어요.`, () => store.upsert('settings', (settings = EMPTY_SETTINGS) => ({ ...settings, looks: (settings.looks ?? []).toSpliced(at, 0, { id, name, look }) })));
+  async function remove({ id, name }: Preset) {
+    const removed = await removeLook(store, id);
+    if (!removed.ok) return toast.failed(removed, '삭제하지 못했어요.');
+    toast.undoable(`'${name}' 프리셋을 삭제했어요.`, () => restoreLook(store, removed.data));
   }
 
-  const move = (from: number, to: number) => void change((looks) => moveLook(looks, own.presets[from]!.id, own.presets[to]!.id), '옮기지 못했어요.');
+  const move = (from: number, to: number) => toast.settled(moveLook(store, own.presets[from]!.id, own.presets[to]!.id), '옮기지 못했어요.');
 
   const swatch = (preset: Preset) => ({ name: preset.name, ...preset.look, pressed: preset === current, onPick: () => pick(preset) });
   const menu = (preset: Preset, index: number) => (
     <>
       <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setNaming({ preset })} />
-      {preset !== current && <MenuItem icon={Save} label="현재 설정으로 덮어쓰기" onClick={() => void change((looks) => looks.map((look) => (look.id === preset.id ? { ...look, look: lookOf(reading, display) } : look)), '저장하지 못했어요.')} />}
+      {preset !== current && <MenuItem icon={Save} label="현재 설정으로 덮어쓰기" onClick={() => toast.settled(editLook(store, preset.id, { look: lookOf(reading, display) }), '저장하지 못했어요.')} />}
       {index > 0 && <MenuItem icon={ArrowLeft} label="앞으로 옮기기" onClick={() => move(index, index - 1)} />}
       {index < own.presets.length - 1 && <MenuItem icon={ArrowRight} label="뒤로 옮기기" onClick={() => move(index, index + 1)} />}
       <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => void remove(preset)} />

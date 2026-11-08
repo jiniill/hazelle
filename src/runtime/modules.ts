@@ -2,7 +2,6 @@ import type { ImportedModule, Profiles, Unsupported } from '../engine/import/typ
 import { likenessId } from '../model/likeness';
 import type { Stored } from '../model/kinds';
 import { live, type Module } from '../model/library';
-import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiResult } from './api';
 import { without } from '../model/fields';
 import { markDeleted } from './removal';
@@ -11,7 +10,7 @@ import type { Files } from './files';
 import { importedLore } from './lore';
 import type { StoredPrompt } from './prompts';
 import type { ObjectStore } from './store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 import type { Write } from './object-writes';
 
 // Save pictures first, then owned rows and module last so only whole modules become visible.
@@ -56,9 +55,9 @@ const beside = (ids: string[], id: string, olds: string[]) => {
 // Replace olds in every activation list and bin them; retain their positions so restoring olds/deleting the new module
 // exactly undoes the replacement. data counts affected places.
 export async function replaceModules(store: ObjectStore, id: string, olds: string[]): Promise<ApiResult<number>> {
-  const holds = (value: { modules?: string[] } | undefined) => !!value?.modules?.some((each) => olds.includes(each));
+  const holds = (value: { modules?: string[] }) => !!value.modules?.some((each) => olds.includes(each));
   const places: (() => Promise<ApiResult<unknown>>)[] = [
-    ...(holds(accountSettings(store)) ? [() => store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, modules: beside(current.modules ?? [], id, olds) }))] : []),
+    ...(holds(accountSettings(store)) ? [() => changeSettings(store, (current) => ({ ...current, modules: beside(current.modules ?? [], id, olds) }))] : []),
     ...store.list('character').filter(({ value }) => holds(value)).map(({ id: character }) => () => store.update('character', character, (current) => ({ ...current, modules: beside(current.modules ?? [], id, olds) }))),
     ...store.list('persona').filter(({ value }) => holds(value)).map(({ id: persona }) => () => store.update('persona', persona, (current) => ({ ...current, modules: beside(current.modules ?? [], id, olds) }))),
     ...store.list('prompt').filter((prompt): prompt is StoredPrompt<'conversation'> => prompt.value.task === undefined && holds(prompt.value)).map(({ id: prompt }) => () => store.update('prompt', prompt, (current) => (current.task === undefined ? { ...current, modules: beside(current.modules ?? [], id, olds) } : current))),
@@ -93,7 +92,7 @@ export function editModule(store: ObjectStore, id: string, patch: { name?: strin
 }
 
 export function setModuleAlways(store: ObjectStore, id: string, on: boolean): Promise<ApiResult<Stored<'settings'>>> {
-  return store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, modules: switched(current.modules, id, on) }));
+  return changeSettings(store, (current) => ({ ...current, modules: switched(current.modules, id, on) }));
 }
 
 export function setCharacterModule(store: ObjectStore, character: string, id: string, on: boolean): Promise<ApiResult<Stored<'character'>>> {

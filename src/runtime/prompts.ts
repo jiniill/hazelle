@@ -9,17 +9,17 @@ import type { Chat } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import { live, type Module } from '../model/library';
 import { sortOf, type AgentPlace, type Block, type ConversationPrompt, type PictureSettings, type PictureTags, type Prompt, type PromptOf, type PromptSort, type ToggleLine } from '../model/prompt';
-import { EMPTY_SETTINGS, labOn, type LabId, type Settings } from '../model/settings';
+import { labOn, type LabId, type Settings } from '../model/settings';
 import { fromBase64 } from '../base64';
 import type { ApiResult } from './api';
 import type { BackupOutput } from './backup-zip';
 import { writeWhole } from './export-file';
-import { companionModules } from './modules';
+import { companionModules, switched } from './modules';
 import type { Write } from './object-writes';
 import { markDeleted } from './removal';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 
 // Every write of `prompt` objects and of the default prompts, except a conversation prompt's `models` layer, which
 // runtime/assignment writes with the other layers, and a backup's restore.
@@ -58,7 +58,7 @@ export type PromptChoice<S extends PromptSort = 'conversation'> = { kind: 'promp
 
 function choose<S extends Defaulted>(store: Pick<ObjectStore, 'get'>, sort: S, chosen: string | undefined): PromptChoice<S> {
   const own = chosen !== undefined;
-  const id = chosen ?? accountSettings(store)?.[DEFAULTS[sort].setting];
+  const id = chosen ?? accountSettings(store)[DEFAULTS[sort].setting];
   const prompt = id === undefined ? null : live(store.get('prompt', id));
   return prompt && ofSort(prompt, sort) ? { kind: 'prompt', prompt, own } : { kind: 'missing', own };
 }
@@ -135,14 +135,21 @@ export async function addDefaults(store: ObjectStore): Promise<void> {
   const added = await Promise.all(
     Object.values(DEFAULTS).map(async (entry) => {
       const settings = accountSettings(store);
-      if (settings?.[entry.setting] !== undefined || ('lab' in entry && !labOn(settings, entry.lab))) return [];
+      if (settings[entry.setting] !== undefined || ('lab' in entry && !labOn(settings, entry.lab))) return [];
       if (store.get('prompt', entry.id)) return [entry];
       const made = await entry.make();
       return made && (await store.create('prompt', made, { id: entry.id })).ok ? [entry] : [];
     }),
   );
   if (added.flat().length === 0) return;
-  await store.upsert('settings', (current = EMPTY_SETTINGS) => added.flat().reduce((next, { setting, id }) => (next[setting] === undefined ? { ...next, [setting]: id } : next), current));
+  await changeSettings(store, (current) => added.flat().reduce((next, { setting, id }) => (next[setting] === undefined ? { ...next, [setting]: id } : next), current));
+}
+
+// An experiment's default prompt is added once it is on.
+export async function switchLab(store: ObjectStore, id: LabId, on: boolean): Promise<ApiResult<Stored<'settings'>>> {
+  const saved = await changeSettings(store, (current) => ({ ...current, labs: switched(current.labs, id, on) }));
+  if (saved.ok && on) await addDefaults(store);
+  return saved;
 }
 
 // The preset's authors write in English and read through translation; someone who just arrived expects their own language at once.
@@ -201,7 +208,7 @@ export function copyPrompt(store: ObjectStore, id: string, name: string, copy?: 
 // default.
 export async function removePrompt(store: ObjectStore, id: string): Promise<ApiResult<Stored<'prompt'>> | { ok: false; error: 'default' }> {
   const settings = accountSettings(store);
-  if (Object.values(DEFAULTS).some(({ setting }) => settings?.[setting] === id)) return { ok: false, error: 'default' };
+  if (Object.values(DEFAULTS).some(({ setting }) => settings[setting] === id)) return { ok: false, error: 'default' };
   return markDeleted(store, 'prompt', id, Date.now());
 }
 
@@ -216,5 +223,5 @@ export function setDefaultPrompt(store: ObjectStore, id: string): Promise<ApiRes
   const prompt = store.get('prompt', id);
   const sort = prompt && sortOf(prompt.value);
   if (!sort || sort === 'agent') return Promise.resolve({ ok: false, error: 'gone' });
-  return store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, [DEFAULTS[sort].setting]: id }));
+  return changeSettings(store, (current) => ({ ...current, [DEFAULTS[sort].setting]: id }));
 }

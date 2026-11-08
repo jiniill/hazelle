@@ -4,10 +4,10 @@ import { useToast } from '../toast';
 import { Check, FileText, MessageSquare, MessageSquarePlus, Package, Puzzle, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { characterTexts, live } from '../../model/library';
-import { EMPTY_SETTINGS } from '../../model/settings';
 import { importCardFile } from '../../runtime/card-file';
 import { setDeleted } from '../../runtime/characters';
 import { importChat } from '../../runtime/chat-log';
+import { markImportNoticed } from '../../runtime/chat-context';
 import type { ApiFailure } from '../../runtime/api';
 import type { UnpackFailure } from '../../engine/import/archive';
 import { PACKED_EXTENSION } from '../../engine/import/extensions';
@@ -474,7 +474,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
           icon={Check}
           onConfirm={() => {
             setNotice(null);
-            void store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, importNotice: true }));
+            toast.settled(markImportNoticed(store));
             notice();
           }}
           onClose={() => setNotice(null)}

@@ -224,7 +224,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
       void backfillSummaries(store, closing.signal);
       // A purge before the ledger's fill took a chat's calls would lose them: the trash empties only once it has.
       void usage.fill(closing.signal).then(() => {
-        if (accountSettings(store)?.ledger === 'filled') void purgeExpired(store, files, Date.now(), closing.signal);
+        if (accountSettings(store).ledger === 'filled') void purgeExpired(store, files, Date.now(), closing.signal);
       });
     })();
   };

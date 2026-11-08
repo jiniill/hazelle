@@ -1,4 +1,3 @@
-import { moved } from '../../model/fields';
 import { PICTURE_PERCENT } from '../../model/library';
 import type { SavedLook } from '../../model/settings';
 import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, isDarkScheme, QUOTE_SHAPE, readingDefault, THEME, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme } from '../ui';
@@ -165,13 +164,4 @@ function parseLook(look: SavedLook['look']): Look | null {
     width: named(SPACING, look.width),
   };
   return LOOK_KEYS.every((key) => read[key] !== undefined) ? (read as Look) : null;
-}
-
-// The look ends where target was, before it when moved toward the front and after it when moved toward the back; an
-// unread look keeps its place among the rest.
-export function moveLook(looks: SavedLook[], id: string, target: string): SavedLook[] {
-  const from = looks.findIndex((look) => look.id === id);
-  const to = looks.findIndex((look) => look.id === target);
-  if (from < 0 || to < 0 || from === to) return looks;
-  return moved(looks, from, to);
 }

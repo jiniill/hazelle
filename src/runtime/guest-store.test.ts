@@ -118,7 +118,7 @@ describe('a guest’s browser store', () => {
     const { accountId, vaultKey, backend } = await guest();
     const opened = await openSession(accountId, vaultKey, '손님', new AbortController().signal, undefined, { backend });
     if (!opened.ok) throw new Error(opened.error);
-    expect(accountSettings(opened.data.store)?.persona).toBeDefined();
+    expect(accountSettings(opened.data.store).persona).toBeDefined();
     opened.data.close();
     expect(fetched).not.toHaveBeenCalled();
   });
