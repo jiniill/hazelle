@@ -2,7 +2,7 @@ import * as attachments from './attachments';
 import { readTool } from '../engine/import/tool';
 import type { ToolUnit } from '../model/tool';
 import { setModuleAlways } from './modules';
-import { noOutcome, type Binding } from './script-binding';
+import { noOutcome, type Binding } from './scripts/binding';
 import { importTool } from './tools/store';
 import { describe, expect, it, vi } from 'vitest';
 import type { Card } from '../engine/import/types';

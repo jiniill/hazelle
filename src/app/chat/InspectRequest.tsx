@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { tokenGroups, type From, type TokenSource } from '../../engine/pipeline';
-import type { Rehearsal } from '../../runtime/script-preview';
+import type { Rehearsal } from '../../runtime/scripts/preview';
 import { afterEnter, previewRequest, type AfterEnter, type Sending } from '../../runtime/turn-context';
 import { describeTurnFailure, runaway } from '../common/failure';
 import { MESSAGE_ROLES, SLOT } from '../common/prompt-words';

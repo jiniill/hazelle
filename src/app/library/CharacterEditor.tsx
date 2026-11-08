@@ -11,7 +11,7 @@ import type { CharacterShelf, Pictures } from '../../model/library';
 import { likenessId } from '../../model/likeness';
 import { isToggle } from '../../model/prompt';
 import { editCharacter, setAvatar, setCardWrites, setDecor, setKeepThoughts, setPictures, setTranslatorNote, type CharacterText } from '../../runtime/characters';
-import { scriptsOf } from '../../runtime/script-selection';
+import { scriptsOf } from '../../runtime/scripts/selection';
 import { packsOf } from '../../runtime/chat-context';
 import { aliased } from '../common/alias';
 import { cbsLanguage } from '../common/code/cbs';

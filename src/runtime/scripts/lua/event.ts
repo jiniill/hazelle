@@ -1,6 +1,6 @@
-import type { Event, Host, Outcome, ScriptUnit } from '../../engine/script-api';
-import type { HookTrace, Lua, RunLane } from '../../engine/lua/run';
-import { renderChat, type ChatScope } from '../../engine/render';
+import type { Event, Host, Outcome, ScriptUnit } from '../../../engine/script-api';
+import type { HookTrace, Lua, RunLane } from '../../../engine/lua/run';
+import { renderChat, type ChatScope } from '../../../engine/render';
 import { luaSnapshot, luaStanding } from './snapshot';
 
 // tool: what a tool's run did to its own data for the chat, and to its badges by message index (runtime/tools/store

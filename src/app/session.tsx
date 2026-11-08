@@ -20,7 +20,7 @@ import { modulesOf } from '../runtime/modules';
 import { draftsOf } from '../runtime/tools/drafts';
 import type { Session } from '../runtime/session';
 import { CapturedRead, type ChatScopeRead, type Opening } from '../runtime/read-model';
-import type { ScriptsState } from '../runtime/script-interactions';
+import type { ScriptsState } from '../runtime/scripts/interactions';
 import type { ObjectStore } from '../runtime/store';
 import type { Turn } from '../runtime/talk';
 import type { Translating } from '../runtime/translate';

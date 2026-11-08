@@ -22,7 +22,7 @@ import { wouldSend } from './turn-context';
 import { takeTurn } from './turn';
 import { readTool } from '../engine/import/tool';
 import { setModuleAlways } from './modules';
-import { noOutcome } from './script-binding';
+import { noOutcome } from './scripts/binding';
 import { importTool } from './tools/store';
 
 const server = testServer();

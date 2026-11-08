@@ -1,8 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { Lua } from '../../engine/lua/run';
+import { Lua } from '../../../engine/lua/run';
 import type { Down } from './client';
 
-vi.mock('../../engine/lua/run', () => ({ Lua: { create: vi.fn() } }));
+vi.mock('../../../engine/lua/run', () => ({ Lua: { create: vi.fn() } }));
 afterEach(() => vi.unstubAllGlobals());
 
 it('reports a failed WASM load to its job without rejecting again when that display is forgotten', async () => {

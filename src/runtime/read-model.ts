@@ -12,7 +12,7 @@ import type { Settings } from '../model/settings';
 import type { ApiFailure } from './api';
 import type { ScopeState } from './chat-scope';
 import { EvaluationStopped, EvaluationStuck } from './evaluation';
-import type { ScriptDisplay } from './script-display';
+import type { ScriptDisplay } from './scripts/display';
 import { type ObjectStore } from './store';
 import { accountSettings } from './account-settings';
 import { readsChanged } from './store-changes';

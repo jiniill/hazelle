@@ -1,7 +1,7 @@
 import type { ToolEvent } from '../engine/script-api';
 import { serverBackend } from './backend';
 import type { createTools } from './tools/host';
-import type { Binding } from './script-binding';
+import type { Binding } from './scripts/binding';
 import { toolId, type ToolUnit } from '../model/tool';
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 import { RELAY_HEADER } from '../contracts/http';
@@ -15,7 +15,7 @@ import { randomBytes } from '../vault/aead';
 import type { VaultKey } from '../vault/keys';
 import { api, holdAccount } from './api';
 import { setDefaultModel } from './assignment';
-import { runEvent } from './lua/event';
+import { runEvent } from './scripts/lua/event';
 import { Files } from './files';
 import { RequestLog, type Logged } from './request-log';
 import { openSession, type Session } from './session';

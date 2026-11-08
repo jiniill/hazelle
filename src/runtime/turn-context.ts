@@ -6,7 +6,7 @@ import type { Toggle } from '../model/prompt';
 import { chatPrompt } from './prompts';
 import { chatTranslate, featuresOf } from './features';
 import { retrievalOf } from './retrieval';
-import { triggersOf } from './script-selection';
+import { triggersOf } from './scripts/selection';
 import { toolsOf } from './tools/store';
 import { prepareChat } from '../connectors/preparation';
 import { seesPictures } from '../connectors/types';

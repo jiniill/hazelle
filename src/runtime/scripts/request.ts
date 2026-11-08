@@ -1,7 +1,7 @@
-import type { ChatMessage } from '../connectors/types';
-import { isRecord } from '../connectors/values';
-import type { Assembled } from '../engine/pipeline';
-import type { Event, Outcome } from '../engine/script-api';
+import type { ChatMessage } from '../../connectors/types';
+import { isRecord } from '../../connectors/values';
+import type { Assembled } from '../../engine/pipeline';
+import type { Event, Outcome } from '../../engine/script-api';
 
 // A request message with origin, the id of the chat message it renders (Assembled parts).
 type Sent = { message: ChatMessage; origin?: string };

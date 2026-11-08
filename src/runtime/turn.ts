@@ -11,7 +11,7 @@ import type { Stored } from '../model/kinds';
 import { chatIllustrate, chatTranslate, featuresOf } from './features';
 import type { Session } from './session';
 import type { ApiFailure } from './api';
-import type { Halted } from './script-turns';
+import type { Halted } from './scripts/turns';
 import { appendUserMessage, replyMessage, type Written } from './chat-log';
 import type { Ask, TalkFailure } from './talk';
 import { EvaluationFailed, EvaluationStopped, evaluationFailure } from './evaluation';

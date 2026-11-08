@@ -1,6 +1,6 @@
 import { TOOL_ALLOW, TOOL_SANDBOX } from '../../contracts/sandbox';
 import type { Port, Role } from '../../tool-api/protocol';
-import { ToolStopped } from '../script-binding';
+import { ToolStopped } from '../scripts/binding';
 import type { ToolPage } from './facade';
 
 // frame: the iframe a frame tool's document runs in, which its page shows. close: resolves once the port is closed.
