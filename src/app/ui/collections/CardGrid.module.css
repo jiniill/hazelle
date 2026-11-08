@@ -214,24 +214,6 @@
   gap: var(--card-gap);
 }
 
-.preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--portrait-width);
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-  font-size: var(--text-hero);
-}
-
-.whole {
-  display: block;
-  max-width: 100%;
-  max-height: var(--preview-max-height);
-  object-fit: contain;
-}
-
 .folder {
   display: flex;
   flex-direction: column;

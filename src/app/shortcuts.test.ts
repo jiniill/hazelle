@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { keysOf, SHORTCUT_GROUPS, SHORTCUTS, titled } from './shortcuts';
+import { keysOf, SHORTCUT_GROUPS, SHORTCUTS } from './shortcuts';
+import { titled } from './ui';
 
 describe('shortcuts', () => {
   it('writes the titles the chat shows', () => {

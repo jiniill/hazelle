@@ -19,9 +19,9 @@ import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_R
 import type { Reading } from '../../runtime/talk';
 import type { Preparing } from '../../runtime/turn-steps';
 import { useAssetUrl } from '../session';
-import { SHORTCUTS, titled } from '../shortcuts';
+import { SHORTCUTS } from '../shortcuts';
 import { MASCOTS } from '../../model/mascot';
-import { Avatar, Button, Divider, EditBox, Failure, IconButton, Marker, MascotRemark, Menu, MenuHeading, MenuItem, MoreMenu, pressed, SelectionButton, Story, StoryMessage, Switcher, Text, Usage, useMenuOpener, useWide, Waiting, type MenuHandle } from '../ui';
+import { Avatar, Button, Divider, EditBox, Failure, IconButton, Marker, MascotRemark, Menu, MenuHeading, MenuItem, MoreMenu, pressed, SelectionButton, Story, StoryMessage, Switcher, Text, titled, Usage, useMenuOpener, useWide, Waiting, type MenuHandle } from '../ui';
 import { useNow } from './ChatCache';
 import { ChatPicture } from './ChatPicture';
 import { linesOf, markPart, PART_MARK, partOf } from './editPart';

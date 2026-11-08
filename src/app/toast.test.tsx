@@ -6,7 +6,10 @@ import { probeRoot } from './ui/probe';
 let shown: unknown[] = [];
 let waiting = 0;
 const report = vi.fn();
-vi.mock('./ui', () => ({
+// shortcuts.ts lists PictureView's keys as it loads.
+vi.mock('./ui', async () => ({
+  STEP_KEYS: (await import('./ui/overlays/pages')).STEP_KEYS,
+  ZOOM_KEYS: (await import('./ui/overlays/PictureView')).ZOOM_KEYS,
   Toast: () => null,
   ToastStack: (props: { items: unknown[]; waiting: number }) => {
     shown = props.items;

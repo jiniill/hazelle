@@ -9,7 +9,7 @@ export type Attached = { key: string; label: string; state: 'saving' | 'saved' |
 
 // opens: a picture pressed shows large. No onRemove: what is attached stays.
 export function Attachments({ items, onRemove, opens = false }: { items: readonly Attached[]; onRemove?: (key: string) => void; opens?: boolean }) {
-  const [open, setOpen] = useState<{ url: string; label: string; ratio: number } | null>(null);
+  const [open, setOpen] = useState<{ url: string; label: string } | null>(null);
   if (!items.length) return null;
   return (
     <>
@@ -22,10 +22,7 @@ export function Attachments({ items, onRemove, opens = false }: { items: readonl
                 type="button"
                 className={styles.open}
                 aria-label={`${item.label} 크게 보기`}
-                onClick={({ currentTarget }) => {
-                  const { naturalWidth, naturalHeight } = currentTarget.firstElementChild as HTMLImageElement;
-                  setOpen({ url: item.url, label: item.label, ratio: naturalWidth / naturalHeight });
-                }}
+                onClick={() => setOpen({ url: item.url, label: item.label })}
               >
                 <img className={styles.picture} src={item.url} alt={item.label} />
               </button>
@@ -59,7 +56,7 @@ export function Attachments({ items, onRemove, opens = false }: { items: readonl
         </li>
       ))}
     </ul>
-    {open && <PictureView src={open.url} label={open.label} ratio={open.ratio} onClose={() => setOpen(null)} />}
+    {open && <PictureView src={open.url} label={open.label} onClose={() => setOpen(null)} />}
     </>
   );
 }

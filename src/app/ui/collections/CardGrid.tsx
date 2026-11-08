@@ -188,12 +188,6 @@ export function Portrait({ image, name }: { image: string | null; name: string }
   );
 }
 
-export function Preview({ image, video = false, name }: { image: string | null; video?: boolean; name: string }) {
-  const veil = useVeil();
-  if (!image || veil) return <span className={styles.preview}><Face image={null} name={name} /></span>;
-  return <span className={styles.preview}>{video ? <video className={styles.whole} src={image} aria-label={name} controls autoPlay muted loop playsInline /> : <img className={styles.whole} src={image} alt={name} />}</span>;
-}
-
 // still: the picture does not drag itself, so the card it sits in drags instead (cardDrag).
 function Face({ image, video = false, name, still = false }: { image: string | null; video?: boolean; name: string; still?: boolean }) {
   const veil = useVeil();
