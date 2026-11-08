@@ -391,6 +391,16 @@
   --toast-words-most: 50vh;
   --screen-offset-top: 10vh;
   --sidebar-width: 272px;
+  /* 설정 and 도구 on a wide screen: a window over the page they were opened from, and its smaller desktop scale. */
+  --window-width: 1040px;
+  --window-height: 760px;
+  --window-margin: 32px;
+  --window-radius: 14px;
+  --window-side-width: 216px;
+  --window-control-md: 36px;
+  --window-control-lg: 44px;
+  --window-radius-md: 8px;
+  --window-radius-lg: 10px;
   --rail-width: 72px;
   --panel-width: 400px;
   --tool-frame-min-height: 16rem;
@@ -699,6 +709,7 @@
   --landing-finish-ink: #fff8ea;
   --landing-finish-shadow: 0 1px 2px #2a124066, 0 0 36px #2a1240a6;
   --layer-raised: 2;
+  --layer-window: 10;
   --layer-menu: 20;
   --layer-panel: 30;
   --layer-coach: 35;

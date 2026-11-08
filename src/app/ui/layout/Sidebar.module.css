@@ -2,7 +2,7 @@
   position: sticky;
   top: 0;
   width: var(--sidebar-width);
-  height: 100dvh;
+  height: var(--sidebar-height, 100dvh);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -31,7 +31,7 @@
 }
 
 .title {
-  font-family: var(--font-serif);
+  font-family: var(--screen-title-font, var(--font-serif));
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
 }

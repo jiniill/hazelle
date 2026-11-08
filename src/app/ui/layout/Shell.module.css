@@ -8,6 +8,47 @@
   min-width: 0;
 }
 
+/* Its own stacking context, so nothing raised in the page (the composer, a header) stands over the window. */
+.behind {
+  isolation: isolate;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.scrim {
+  composes: fadeIn from '../foundation/motion.module.css';
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-window);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--window-margin);
+  background: var(--color-scrim);
+}
+
+.window {
+  composes: floating from '../foundation/surface.module.css';
+  /* Read by Sidebar.module.css; the titles by NavBar, TitleField, ItemSection and Sidebar. */
+  --sidebar-width: var(--window-side-width);
+  --sidebar-height: 100%;
+  --screen-title-font: var(--font-sans);
+  --screen-title-size: var(--text-xl);
+
+  width: var(--window-width);
+  max-width: 100%;
+  height: var(--window-height);
+  max-height: 100%;
+  display: flex;
+  overflow: hidden;
+  border-radius: var(--window-radius);
+  background: var(--color-sidebar);
+}
+
+.window > .main {
+  overflow-y: auto;
+}
+
 /* Read by Screen.module.css. */
 .start {
   --screen-margin-inline: 0;

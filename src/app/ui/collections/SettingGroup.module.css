@@ -1,5 +1,9 @@
 .group {
   composes: box from '../foundation/surface.module.css';
+  /* Read from Screen.module.css: in the window, rows stand on the window itself, parted by their rules. */
+  background: var(--group-fill, var(--color-surface));
+  box-shadow: var(--group-rules, none);
+  border-radius: var(--group-radius, var(--radius-lg));
   container-type: inline-size;
   display: flex;
   flex-direction: column;

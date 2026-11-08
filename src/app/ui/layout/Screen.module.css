@@ -160,3 +160,20 @@
 .screen.pane.split {
   max-width: var(--screen-split-max-width);
 }
+
+/* In a layer's window (Shell.tsx): the desktop scale, rows on the window itself, and the window's height for the viewport's. */
+.screen.windowed {
+  --section-title: var(--text-md);
+  --section-gap: var(--space-24);
+  --box-inset: 0px;
+  --group-fill: transparent;
+  --group-radius: 0;
+  --group-rules: inset 0 var(--border-thin) var(--color-divider), inset 0 calc(-1 * var(--border-thin)) var(--color-divider);
+  --control-md: var(--window-control-md);
+  --control-lg: var(--window-control-lg);
+  --radius-md: var(--window-radius-md);
+  --radius-lg: var(--window-radius-lg);
+
+  min-height: 100%;
+  padding: var(--space-24) var(--space-32) var(--space-32);
+}

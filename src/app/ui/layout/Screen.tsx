@@ -1,5 +1,6 @@
-import type { FormEvent, ReactNode } from 'react';
+import { useContext, type FormEvent, type ReactNode } from 'react';
 import { usePane } from './ListDetail';
+import { InWindow } from './Shell';
 import styles from './Screen.module.css';
 
 type Props = {
@@ -24,6 +25,7 @@ type Props = {
 
 export function Screen({ top, lead, align = 'start', width = 'narrow', actions, fill = false, aside, stickyAside = false, asideSize = 'md', onSubmit, children }: Props) {
   const pane = usePane();
+  const windowed = useContext(InWindow);
   // A page has one main landmark; beside a list, a screen is one section of it.
   const Root = pane ? 'section' : 'main';
   const content = align === 'center' ? `${styles.content} ${styles.center}` : styles.content;
@@ -46,7 +48,7 @@ export function Screen({ top, lead, align = 'start', width = 'narrow', actions, 
     </>
   );
   return (
-    <Root className={[styles.screen, pane && styles.pane, fill && styles.fill, align === 'center' && styles.centered, width !== 'narrow' && styles[width], aside && styles.split, aside && asideSize === 'sm' && styles.asideSm].filter(Boolean).join(' ')}>
+    <Root className={[styles.screen, pane && styles.pane, fill && styles.fill, align === 'center' && styles.centered, width !== 'narrow' && styles[width], aside && styles.split, aside && asideSize === 'sm' && styles.asideSm, windowed && styles.windowed].filter(Boolean).join(' ')}>
       {top && <header className={styles.top}>{top}</header>}
       {onSubmit ? (
         <form className={content} onSubmit={onSubmit} noValidate>

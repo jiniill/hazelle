@@ -22,7 +22,7 @@
 .title {
   word-break: keep-all;
   overflow-wrap: anywhere;
-  font-family: var(--font-serif);
+  font-family: var(--screen-title-font, var(--font-serif));
   font-size: var(--text-xl);
   font-weight: var(--weight-bold);
 }

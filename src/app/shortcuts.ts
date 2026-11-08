@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef } from 'react';
 import { UNDO } from './common/words';
 import { formatKeys, pressed, type Chord } from './ui';
 
@@ -89,10 +89,15 @@ function onKey(event: KeyboardEvent) {
   }
 }
 
+// A page held inert behind a layer's window answers no keys.
+export const Quiet = createContext(false);
+
 export function useShortcut(name: Name, handler: Handler, { fallback = false } = {}) {
   const latest = useRef(handler);
   latest.current = handler;
+  const quiet = useContext(Quiet);
   useEffect(() => {
+    if (quiet) return;
     const entry = { name, run: (event?: KeyboardEvent) => latest.current(event), fallback };
     if (handlers.length === 0) window.addEventListener('keydown', onKey);
     handlers.push(entry);
@@ -100,7 +105,7 @@ export function useShortcut(name: Name, handler: Handler, { fallback = false } =
       handlers.splice(handlers.indexOf(entry), 1);
       if (handlers.length === 0) window.removeEventListener('keydown', onKey);
     };
-  }, [name, fallback]);
+  }, [name, fallback, quiet]);
 }
 
 export function runShortcut(name: Name) {

@@ -3,7 +3,6 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { Brand } from '../foundation/Brand';
 import { Divider } from '../foundation/Divider';
-import { useLayer } from '../overlays/layers';
 import styles from './Sidebar.module.css';
 
 type Props = {
@@ -30,10 +29,8 @@ export function Sidebar({ page = false, actions, children, corner }: Props) {
   );
 }
 
-// Esc joins the layer stack, so a menu open over the page closes first.
 // seek: changes with the current row, which then comes into view: on opening, on going back, when a search gives way to the list.
 export function LayerSidebar({ title, onClose, search, seek, children }: { title: string; onClose: () => void; search?: ReactNode; seek?: string; children: ReactNode }) {
-  useLayer(true, { outside: () => false, close: onClose });
   const list = useRef<HTMLElement>(null);
   useEffect(() => {
     list.current?.querySelector('[aria-current]')?.scrollIntoView({ block: 'nearest' });

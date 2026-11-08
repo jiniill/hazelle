@@ -17,6 +17,9 @@
   --section-title: initial;
   --section-gap: initial;
   --box-line: initial;
+  --group-fill: initial;
+  --group-rules: initial;
+  --group-radius: initial;
 
   width: var(--dialog-width);
   max-width: 100%;

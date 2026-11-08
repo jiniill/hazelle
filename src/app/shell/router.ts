@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from 'react';
+import { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
 import { HOSTED } from '../../contracts/installation';
 import { selfHost } from '../../runtime/installation';
 import { href, onBoard, parseRoute, type Back, type Route } from './routes';
@@ -16,9 +16,14 @@ function subscribe(listener: () => void) {
 
 const address = () => location.pathname + location.search;
 
+// The page held behind a layer's window keeps reading the route it was opened on.
+export const HeldRoute = createContext<Route | null>(null);
+
 export function useRoute(): Route {
+  const held = useContext(HeldRoute);
   const at = useSyncExternalStore(subscribe, address);
-  return useMemo(() => parseRoute(at), [at]);
+  const route = useMemo(() => parseRoute(at), [at]);
+  return held ?? route;
 }
 
 // An open overlay holds one same-URL entry of its own, so a back that closes the newest writes no history. An entry's

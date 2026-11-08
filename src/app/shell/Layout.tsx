@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { usePersisted } from '../common/usePersisted';
 import { useDisplay } from '../display';
-import { keysOf, SHORTCUT_GROUPS, SHORTCUTS, useShortcut } from '../shortcuts';
+import { keysOf, Quiet, SHORTCUT_GROUPS, SHORTCUTS, useShortcut } from '../shortcuts';
 import { backLayers, Dialog, Section, Shell, Shortcuts, Stack, Text, useWide } from '../ui';
 import { Page } from './Page';
-import { holdBack, navigate, useRoute } from './router';
+import { HeldRoute, holdBack, navigate, useRoute } from './router';
 import { HOME, settingsPage, sidebarPage, toolsPage, type Route } from './routes';
+import { SETTINGS, TOOLS } from '../common/words';
 import { settingsEntry, SettingsSidebar } from './settings/SettingsNav';
 import { ToolsSidebar } from './tools/ToolsNav';
 import { LibrarySidebar } from './sidebar/LibrarySidebar';
@@ -52,9 +53,23 @@ export function Layout() {
     </>
   );
 
-  if (settings !== null) return wide ? <Shell align="start" side={<SettingsSidebar current={settings} onClose={closeLayer} />}>{page}</Shell> : page;
-  if (tools !== null) return wide ? <Shell align="start" side={<ToolsSidebar current={tools} onClose={closeLayer} />}>{page}</Shell> : page;
   const sidebar = (asPage: boolean) => <LibrarySidebar page={asPage} collapsed={folded} onCollapse={fold} />;
+  // The page the layer was opened from stays mounted behind its window, as it was.
+  const layer = (label: string) => ({
+    label,
+    onClose: closeLayer,
+    behind: (
+      <HeldRoute.Provider value={outside}>
+        <Quiet.Provider value>
+          <Shell side={sidebar(false)}>
+            <Page route={outside} closeLayer={closeLayer} onPaired={setPaired} />
+          </Shell>
+        </Quiet.Provider>
+      </HeldRoute.Provider>
+    ),
+  });
+  if (settings !== null) return wide ? <Shell layer={layer(SETTINGS)} side={<SettingsSidebar current={settings} onClose={closeLayer} />}>{page}</Shell> : page;
+  if (tools !== null) return wide ? <Shell layer={layer(TOOLS)} side={<ToolsSidebar current={tools} onClose={closeLayer} />}>{page}</Shell> : page;
   if (!wide) return sidebarPage(route) ? sidebar(true) : page;
   return <Shell side={sidebar(false)}>{page}</Shell>;
 }
