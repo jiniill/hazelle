@@ -1,0 +1,305 @@
+/* The parts of every drawing (DemoParts.tsx), and the motions drawings share. A step starts at --at, a share of one
+   round (--duration-demo): a demo's stage remounts its drawing each round. A drawing recolors the lines inside it
+   with --line. The parts' looks sit in the looks layer, so a drawing's own class on a part wins whatever the order. */
+@layer reset, looks;
+
+@layer looks {
+  .feed {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    padding: var(--space-12);
+  }
+
+  .message {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: var(--space-4);
+    width: 82%;
+    padding: var(--space-8) var(--space-12);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-raised);
+  }
+
+  .mine {
+    align-self: flex-end;
+    width: 52%;
+    background: var(--color-you-bg);
+  }
+
+  .line {
+    display: block;
+    flex: none;
+    width: var(--w);
+    height: var(--demo-line);
+    border-radius: var(--radius-full);
+    background: var(--line, var(--color-border-strong));
+  }
+
+  .typed {
+    animation: type var(--duration-demo) var(--ease-enter) both;
+    animation-delay: calc(var(--duration-demo) * var(--at));
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    height: var(--demo-bar);
+    padding-inline: var(--space-12);
+    border-bottom: var(--border-thin) solid var(--color-divider);
+    background: var(--color-sidebar);
+  }
+
+  .face {
+    width: var(--demo-face);
+    height: var(--demo-face);
+    border-radius: var(--radius-full);
+    background: var(--color-accent-border);
+  }
+
+  .title {
+    width: 30%;
+    height: var(--demo-line);
+    border-radius: var(--radius-full);
+    background: var(--color-border-strong);
+  }
+
+  .tools {
+    display: flex;
+    gap: var(--space-8);
+    margin-inline-start: auto;
+  }
+
+  .tools span {
+    width: var(--demo-tick);
+    height: var(--demo-tick);
+    border: var(--border-medium) solid var(--color-text-faint);
+    border-radius: var(--radius-xs);
+  }
+
+  .composer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    height: var(--demo-composer);
+    padding-inline: var(--space-12) var(--space-8);
+    overflow: hidden;
+    border: var(--border-thin) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-raised);
+  }
+
+  .draft {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .send {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--control-mark);
+    height: var(--control-mark);
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  .glyph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--control-mark);
+    height: var(--control-mark);
+    border: var(--border-thin) solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: var(--color-surface-raised);
+    color: var(--color-text-muted);
+  }
+
+  .wide {
+    width: fit-content;
+    padding-inline: var(--space-12);
+  }
+
+  /* A sun over a hill; figures stand on the hill. */
+  .picture {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: flex-end;
+    justify-content: center;
+    gap: var(--space-4);
+    aspect-ratio: var(--ratio);
+    overflow: hidden;
+    border-radius: var(--radius-xs);
+    outline: var(--border-thin) solid var(--color-border-strong);
+    outline-offset: calc(-1 * var(--border-thin));
+    background:
+      radial-gradient(ellipse 90% 45% at 50% 105%, var(--color-border-strong) 98%, transparent),
+      var(--color-accent-bg);
+  }
+
+  .picture::before {
+    content: '';
+    position: absolute;
+    top: 16%;
+    right: 18%;
+    width: 14%;
+    aspect-ratio: 1;
+    border-radius: var(--radius-full);
+    background: var(--color-accent-border);
+  }
+
+  .figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    width: var(--size, 24%);
+    --figure: var(--color-text-faint);
+  }
+
+  .figure::before,
+  .figure::after {
+    content: '';
+    background: var(--figure);
+  }
+
+  .figure::before {
+    width: 46%;
+    aspect-ratio: 1;
+    border-radius: var(--radius-full);
+  }
+
+  .figure::after {
+    width: 100%;
+    aspect-ratio: 1.6;
+    border-radius: var(--radius-full) var(--radius-full) 0 0;
+  }
+
+  .persona {
+    --figure: var(--color-accent);
+  }
+
+  .key {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--space-4);
+    border: var(--border-thin) solid var(--color-border-strong);
+    border-bottom-width: var(--border-thick);
+    border-radius: var(--radius-xs);
+    background: var(--color-surface-raised);
+    font-size: var(--text-mark);
+    line-height: var(--leading-tight);
+    color: var(--color-text-muted);
+  }
+
+  /* Shared places: a feed from the stage's top, a composer at its bottom. */
+  .top {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+  }
+
+  .dock {
+    position: absolute;
+    inset-inline: var(--space-8);
+    bottom: var(--space-8);
+  }
+
+  /* Shared motions: comes into view at --at and stays; is pressed at --at; opens (or, away, closes) at --at. */
+  .appears {
+    animation: appear var(--duration-demo) var(--ease-enter) both;
+    animation-delay: calc(var(--duration-demo) * var(--at));
+  }
+
+  .pressed {
+    animation: press var(--duration-demo) both;
+    animation-delay: calc(var(--duration-demo) * var(--at));
+  }
+
+  .unfold {
+    display: grid;
+    animation: unfold var(--duration-demo) var(--ease-enter) both;
+    animation-delay: calc(var(--duration-demo) * var(--at));
+  }
+
+  .away {
+    animation-name: foldAway;
+  }
+
+  .folding {
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+@keyframes type {
+  0% {
+    width: 0;
+  }
+
+  12%,
+  100% {
+    width: var(--w);
+  }
+}
+
+@keyframes appear {
+  0% {
+    opacity: 0;
+    translate: 0 var(--space-4);
+  }
+
+  8%,
+  100% {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+@keyframes press {
+  0%,
+  10%,
+  100% {
+    scale: 1;
+    box-shadow: none;
+  }
+
+  4% {
+    scale: 0.88;
+    box-shadow: 0 0 0 var(--border-thick) var(--color-accent-border);
+  }
+}
+
+@keyframes unfold {
+  0% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+
+  14%,
+  100% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@keyframes foldAway {
+  0% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  14%,
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}

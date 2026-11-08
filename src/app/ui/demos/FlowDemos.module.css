@@ -1,0 +1,352 @@
+/* Every step is a share of one round (--duration-demo): a demo's stage remounts its drawing each round. Steps with a
+   delay start at --at; the rest are keyframe percentages of the round. */
+.flow {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-16);
+  padding: var(--space-12) var(--space-16);
+}
+
+.which {
+  color: var(--color-text-faint);
+}
+
+/* Lights up in the accent at --at and stays. */
+.marked {
+  animation: mark var(--duration-demo) both;
+  animation-delay: calc(var(--duration-demo) * var(--at));
+}
+
+.part {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-raised);
+  line-height: var(--leading-tight);
+  white-space: nowrap;
+}
+
+.added {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  --line: var(--color-accent-border);
+}
+
+.stack {
+  composes: detail from '../foundation/type.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.turns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-8);
+}
+
+/* 캐시: two requests, the second reading the first's front from the cache. */
+.request {
+  composes: detail from '../foundation/type.module.css';
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4) var(--space-12);
+}
+
+.bar {
+  display: flex;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  line-height: var(--leading-tight);
+}
+
+.prefix,
+.rest {
+  padding: var(--space-2) var(--space-8);
+  white-space: nowrap;
+}
+
+.prefix {
+  flex: 4;
+  overflow: hidden;
+  background: var(--color-surface-raised);
+}
+
+.cached {
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+}
+
+.rest {
+  flex: 1;
+  background: var(--color-surface-hover);
+}
+
+.cost {
+  height: var(--demo-line);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-divider);
+}
+
+.spent {
+  display: block;
+  height: 100%;
+  background: var(--color-text-faint);
+  animation: spend var(--duration-demo) var(--ease-enter) both;
+  animation-delay: calc(var(--duration-demo) * var(--at));
+}
+
+.saved {
+  background: var(--color-accent);
+}
+
+/* 반전 모드: the message's two versions, and the one the model is sent. */
+.lanes {
+  composes: detail from '../foundation/type.module.css';
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-content: center;
+  gap: var(--space-8) var(--space-12);
+  padding: var(--space-12);
+}
+
+.lane {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+/* The arrow and the model's row, coming in as one. */
+.sent {
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+}
+
+.lane > .which {
+  display: flex;
+  justify-content: center;
+}
+
+.said,
+.asked {
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.said {
+  white-space: nowrap;
+}
+
+/* Smaller, as originals stand under translations; it keeps the line whole. */
+.original {
+  font-size: var(--text-mark);
+}
+
+/* 로어북: the book's entries beside the chat and its prompt. */
+.lore {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-content: start;
+  align-items: start;
+  gap: var(--space-12) var(--space-16);
+  padding: var(--space-12) var(--space-16);
+}
+
+.asked {
+  grid-column: 2;
+  justify-self: end;
+  background: var(--color-you-bg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.keyword {
+  border-radius: var(--radius-xs);
+}
+
+/* 장기 기억: what is sent, its older turns folding into their record. */
+.memory {
+  composes: detail from '../foundation/type.module.css';
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-content: start;
+  align-items: center;
+  gap: var(--space-8) var(--space-12);
+  padding: var(--space-12) var(--space-16);
+}
+
+.memory > :first-child {
+  grid-column: 1 / -1;
+}
+
+.swap {
+  display: grid;
+}
+
+.swap > * {
+  grid-area: 1 / 1;
+}
+
+.gone {
+  animation: gone var(--duration-demo) both;
+  animation-delay: calc(var(--duration-demo) * var(--at));
+}
+
+.older {
+  border-radius: var(--radius-xs);
+  animation: record var(--duration-demo) var(--ease-enter) both;
+  animation-delay: calc(var(--duration-demo) * var(--at));
+}
+
+/* 시스템 설정 연동: the device's mode switch, and the app's preset that follows it. */
+.modes {
+  composes: detail from '../foundation/type.module.css';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-16);
+  color: var(--color-text-faint);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.device {
+  position: relative;
+  display: flex;
+  padding: var(--space-4);
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+}
+
+.device > svg {
+  position: relative;
+  box-sizing: content-box;
+  padding: var(--space-4);
+}
+
+/* Sits behind the icon of the device's mode. */
+.knob {
+  position: absolute;
+  inset-block: var(--space-4);
+  left: var(--space-4);
+  width: calc(50% - var(--space-4));
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  animation: flip var(--duration-demo) var(--ease-loop) both;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 46%;
+  padding-bottom: var(--space-16);
+  overflow: hidden;
+  border: var(--border-thin) solid var(--color-divider);
+  border-radius: var(--radius-sm);
+  animation: preset var(--duration-demo) var(--ease-loop) both;
+}
+
+.app > :not(.appBar) {
+  margin-inline: var(--space-12);
+}
+
+.appBar {
+  height: var(--demo-bar);
+  background: var(--bar);
+}
+
+/* Starts from the element's own look. */
+@keyframes mark {
+  8%,
+  100% {
+    background: var(--color-accent-bg);
+    color: var(--color-accent);
+  }
+}
+
+@keyframes spend {
+  0%,
+  8% {
+    width: 0;
+  }
+
+  22%,
+  100% {
+    width: var(--spent);
+  }
+}
+
+@keyframes gone {
+  0% {
+    opacity: 1;
+  }
+
+  8%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes record {
+  0% {
+    background: transparent;
+    --line: var(--color-border-strong);
+  }
+
+  14%,
+  100% {
+    background: var(--color-accent-bg);
+    --line: var(--color-accent-border);
+  }
+}
+
+/* The device turns dark at 30% and light at 70%; the app follows each a step later. */
+@keyframes flip {
+  0%,
+  30%,
+  76%,
+  100% {
+    translate: 0;
+  }
+
+  36%,
+  70% {
+    translate: 100%;
+  }
+}
+
+/* --line and --bar flip with the ground; a custom property does not ease. */
+@keyframes preset {
+  0%,
+  36%,
+  82%,
+  100% {
+    background: var(--demo-day);
+    --line: var(--demo-day-line);
+    --bar: var(--demo-day-line);
+  }
+
+  42%,
+  76% {
+    background: var(--demo-night);
+    --line: var(--demo-night-line);
+    --bar: var(--demo-night-line);
+  }
+}

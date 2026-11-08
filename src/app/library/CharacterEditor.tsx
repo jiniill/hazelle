@@ -355,17 +355,17 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
     display: (
       <Section title={PARTS.display.label}>
         <SettingGroup label={PARTS.display.label}>
-          <SettingRow label="봇 스타일" help="봇이 만든 상태창과 스타일, 버튼을 화면에 보여 줘요." control={<Switch label="봇 스타일" checked={decor} onChange={(on) => flip('decor', on)} />} />
+          <SettingRow label="봇 스타일" help={{ text: '봇이 만든 상태창과 스타일, 버튼을 화면에 보여 줘요.', demo: { name: 'botStyle', ways: { on: decor } } }} control={<Switch label="봇 스타일" checked={decor} onChange={(on) => flip('decor', on)} />} />
           {decor && (
             <SettingRow
               label="긴 이미지 접기"
-              help="이미지만 있는 줄은 길이를 접어 윗부분만 먼저 보여 줘요."
+              help={{ text: '이미지만 있는 줄은 길이를 접어 윗부분만 먼저 보여 줘요.', demo: { name: 'foldLong', ways: { on: fold } } }}
               control={<Switch label="긴 이미지 접기" checked={fold} onChange={(on) => pictureSave.change({ fold: on ? undefined : false })} />}
             />
           )}
           <SettingRow
             label="추론을 본문에 표시"
-            help="<Thoughts> 같은 추론 블록을 숨기지 않고 본문에 그대로 보여 줘요."
+            help={{ text: '<Thoughts> 같은 추론 블록을 숨기지 않고 본문에 그대로 보여 줘요.', demo: { name: 'thoughts' } }}
             control={<Switch label="추론을 본문에 표시" checked={keepThoughts} onChange={(on) => flip('keepThoughts', on)} />}
           />
           {scripted && <SettingRow label={BOT_MODELS} help={BOT_MODELS_HELP} control={<Switch label={BOT_MODELS} checked={botModels} onChange={(on) => flip('botModels', on)} />} />}

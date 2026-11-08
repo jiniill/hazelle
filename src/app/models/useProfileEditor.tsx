@@ -185,7 +185,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     <SettingRow
       key="cache"
       label={PROFILE_ROWS.cache}
-      help="전송한 프롬프트의 앞부분을 캐시에 저장해 두고 다음 요청에서 저렴하게 읽어요. 처음 캐시에 쓸 때는 비용이 조금 더 발생해요"
+      help={{ text: '전송한 프롬프트의 앞부분을 캐시에 저장해 두고 다음 요청에서 저렴하게 읽어요. 처음 캐시에 쓸 때는 비용이 조금 더 발생해요', demo: { name: 'promptCache' } }}
       changed={shown.cache !== undefined}
       note={noteFor('cache')}
       control={

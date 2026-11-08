@@ -71,6 +71,8 @@ export const useHover = watch(MEDIA.hover);
 export const useCoarsePointer = watch(MEDIA.coarsePointer);
 
 export const useDarkScheme = watch(MEDIA.darkScheme);
+
+export const useReducedMotion = watch(MEDIA.reducedMotion);
 export const isDarkScheme = () => mediaQuery(MEDIA.darkScheme).read();
 
 // A string, so an unchanged size is the same snapshot.

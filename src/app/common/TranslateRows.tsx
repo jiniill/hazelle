@@ -51,12 +51,12 @@ export function TranslateRows({ translate, translation, card, note, opens, onCha
     <DetailFold set={set} above={group}>
       <SettingRow
         label="원문 함께 보기"
-        help="번역된 문단마다 아래에 원문을 작게 함께 표시해요."
+        help={{ text: '번역된 문단마다 아래에 원문을 작게 함께 표시해요.', demo: { name: 'translateOriginal' } }}
         control={<Switch label="원문 함께 보기" checked={translate.original} onChange={(original) => onChange({ original })} />}
       />
       <SettingRow
         label="반전 모드"
-        help="모델에게도 화면에 보이는 내용 그대로 보내요."
+        help={{ text: '모델에게도 화면에 보이는 내용 그대로 보내요.', demo: { name: 'reverse', ways: { on: translate.reverse } } }}
         control={<Switch label="반전 모드" checked={translate.reverse} onChange={(reverse) => onChange({ reverse })} />}
       />
       {note}

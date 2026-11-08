@@ -1,0 +1,192 @@
+/* Every step is a share of one round (--duration-demo). */
+
+/* Words drawn inside a message, at the drawing's scale. */
+.usageLine,
+.facts,
+.tag,
+.stat,
+.plain {
+  font-size: var(--text-mark);
+  line-height: var(--leading-tight);
+  white-space: nowrap;
+}
+
+.usage {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.usageLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-8);
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-faint);
+}
+
+.lead {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+/* The chevron turns as the line is pressed (the line's --at). */
+.flips {
+  display: flex;
+  animation: flip var(--duration-demo) both;
+  animation-delay: calc(var(--duration-demo) * var(--at));
+}
+
+.facts {
+  display: flex;
+  gap: var(--space-16);
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-12);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+}
+
+.factLabel {
+  color: var(--color-text-faint);
+}
+
+.tag {
+  font-family: var(--font-mono);
+  color: var(--color-text-faint);
+}
+
+/* The reasoning: a block of the text itself, set off only by its tint and rule. */
+.thought {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding-inline-start: var(--space-8);
+  border-inline-start: var(--border-thick) solid var(--color-accent-border);
+  --line: var(--color-accent-border);
+}
+
+/* A status panel as a bot would style it. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding: var(--space-8);
+  border: var(--border-thin) solid var(--color-accent-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-bg);
+}
+
+.badge {
+  width: fit-content;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-xs);
+  background: var(--color-accent);
+  font-size: var(--text-mark);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  color: var(--color-on-accent);
+}
+
+.stat {
+  display: grid;
+  grid-template-columns: var(--space-24) 1fr;
+  align-items: center;
+  font-weight: var(--weight-bold);
+  color: var(--color-accent);
+}
+
+.meter {
+  height: var(--demo-line);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-divider);
+}
+
+.meter > span {
+  display: block;
+  width: var(--w);
+  height: 100%;
+  background: var(--color-accent);
+}
+
+.choices {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30%;
+  height: var(--control-mark);
+  border: var(--border-thin) solid var(--color-accent-border);
+  border-radius: var(--radius-full);
+  --line: var(--color-accent);
+}
+
+/* The same status as text with no style: its words as written, and its buttons as lines. */
+.plain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.prose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  word-break: keep-all;
+}
+
+.paragraph {
+  display: flex;
+  flex-direction: column;
+}
+
+.translated {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+/* Faded, not recoloured, as the story draws an original. */
+.original {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--color-text);
+  opacity: var(--prose-faded-opacity);
+}
+
+@keyframes flip {
+  0%,
+  3% {
+    rotate: none;
+  }
+
+  6%,
+  100% {
+    rotate: 180deg;
+  }
+}

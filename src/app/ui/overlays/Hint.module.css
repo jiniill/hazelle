@@ -44,6 +44,20 @@
   translate: var(--nudge, 0) 0;
 }
 
+/* Text under a demo keeps to the demo's width. */
+.withDemo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: min(var(--demo-width), calc(100vw - 2 * var(--menu-edge)));
+  max-width: none;
+  padding: var(--space-8);
+}
+
+.withDemo > .words {
+  padding-inline: var(--space-4);
+}
+
 .bubble[data-flipped] {
   top: auto;
   bottom: calc(var(--anchor-above) + var(--space-8));

@@ -5,13 +5,13 @@ import { ChipButton } from './ChipButton';
 import styles from './ChoiceGroup.module.css';
 
 // fit uses chips only for a few short choices; long/many choices use a menu to avoid crushed labels.
-// mark precedes the label; menu renders a quiet inline chooser.
+// mark precedes the label, tag follows it (segmented and buttons); menu renders a quiet inline chooser.
 const STRIP = { options: 4, letters: 14 };
 
 type Props<T extends string> = {
   label: string;
   showLabel?: boolean;
-  options: { value: T; label: string; sub?: string; mark?: ReactNode }[];
+  options: { value: T; label: string; sub?: string; mark?: ReactNode; tag?: string }[];
   value: T | null;
   // fit and menu: the chip's words while value is none of the options.
   empty?: string;
@@ -70,6 +70,7 @@ export function ChoiceGroup<T extends string>({ label, showLabel = false, option
               <>
                 {option.mark}
                 {option.label}
+                {option.tag && <span className={styles.tag}>{option.tag}</span>}
               </>
             )}
           </button>

@@ -10,7 +10,7 @@ export function CacheNoteRow() {
   return (
     <SettingRow
       label="캐시 표시"
-      help="보내기 버튼 옆에 남은 시간과 경고를 보여 줘요. 꺼도 캐시는 그대로 쓰고, 점검에서 볼 수 있어요."
+      help={{ text: '보내기 버튼 옆에 남은 시간과 경고를 보여 줘요. 꺼도 캐시는 그대로 쓰고, 점검에서 볼 수 있어요.', demo: { name: 'cacheNote' } }}
       changed={cacheNoteHidden !== undefined}
       control={<Switch label="캐시 표시" checked={cacheNoteHidden === undefined} onChange={(on) => toast.settled(setCacheNoteHidden(store, !on))} />}
     />

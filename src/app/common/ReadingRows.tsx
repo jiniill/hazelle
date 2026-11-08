@@ -44,6 +44,7 @@ export function ReplyRow() {
   return (
     <SettingRow
       label="응답 수신 시"
+      help={{ text: '응답이 오는 동안 화면이 따라 내려갈지, 읽던 자리에 머물지 정해요.', demo: { name: 'replyScroll', ways: { labels: [REPLY.follow, REPLY.stay], now: reading.reply === 'follow' ? 0 : 1 } } }}
       control={<ChoiceGroup layout="segmented" label="응답 수신 시" options={choices(REPLY)} value={reading.reply} onChange={(reply) => changeReading({ reply })} />}
     />
   );
@@ -54,7 +55,7 @@ export function HidePicturesRow() {
   return (
     <SettingRow
       label="이미지 가리기"
-      help="채팅에 있는 이미지는 눌러서 하나씩 크게 볼 수 있어요."
+      help={{ text: '채팅에 있는 이미지는 눌러서 하나씩 크게 볼 수 있어요.', demo: { name: 'hidePictures', ways: { on: display.hidePictures } } }}
       control={<Switch label="이미지 가리기" checked={display.hidePictures} onChange={(hidePictures) => changeDisplay({ hidePictures })} />}
     />
   );

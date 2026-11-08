@@ -34,7 +34,7 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
     <SettingGroup label="삽화">
       <SettingRow
         label="자동 삽화"
-        help="응답을 받을 때마다 삽화를 만들어요. 만들 때마다 연결된 이미지 모델의 사용량이 차감돼요."
+        help={{ text: '응답을 받을 때마다 삽화를 만들어요. 만들 때마다 연결된 이미지 모델의 사용량이 차감돼요.', demo: { name: 'autoIllustrate' } }}
         control={<Switch label="자동 삽화" checked={illustrate.auto} onChange={(auto) => onChange({ auto })} />}
       />
       <SettingRow
@@ -64,12 +64,12 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
       <PictureLadder ladder={illustrate.ladder} onChange={(ladder) => onChange({ ladder: ladder.length ? ladder : undefined })} />
       <SettingRow
         label="페르소나 시점"
-        help="페르소나의 눈으로 보는 장면을 그려요. 페르소나는 삽화에 나오지 않아요."
+        help={{ text: '페르소나의 눈으로 보는 장면을 그려요. 페르소나는 삽화에 나오지 않아요.', demo: { name: 'pov', ways: { on: illustrate.pov } } }}
         control={<Switch label="페르소나 시점" checked={illustrate.pov} onChange={(pov) => onChange({ pov })} />}
       />
       <SettingRow
         label="만화 형식"
-        help="한 장을 여러 컷으로 나뉜 만화 페이지로 그려요. 말풍선 속 글자는 이미지 모델이 임의로 그려서 읽을 수 없어요."
+        help={{ text: '한 장을 여러 컷으로 나뉜 만화 페이지로 그려요. 말풍선 속 글자는 이미지 모델이 임의로 그려서 읽을 수 없어요.', demo: { name: 'comic', ways: { on: illustrate.comic } } }}
         control={<Switch label="만화 형식" checked={illustrate.comic} onChange={(comic) => onChange({ comic })} />}
       />
       <SettingRow

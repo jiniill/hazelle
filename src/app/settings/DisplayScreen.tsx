@@ -97,7 +97,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           <SettingGroup label={DETAIL}>
             <SettingRow
               label="시스템 설정 연동"
-              help="기기의 밝은·어두운 모드에 맞춰 프리셋을 자동으로 전환해요. 직접 변경한 값은 모드가 바뀔 때 프리셋 설정으로 돌아가요."
+              help={{ text: '기기의 밝은·어두운 모드에 맞춰 프리셋을 자동으로 전환해요. 직접 변경한 값은 모드가 바뀔 때 프리셋 설정으로 돌아가요.', demo: { name: 'followSystem' } }}
               control={<Switch label="시스템 설정 연동" checked={display.follow !== null} onChange={followSystem} />}
             />
             {display.follow &&
@@ -139,22 +139,22 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           <PictureWidestRow />
           <SettingRow
             label="가로 이미지는 꽉 채우기"
-            help="가로가 세로보다 긴 이미지는 최대 폭과 상관없이 읽기 폭을 꽉 채워요."
+            help={{ text: '가로가 세로보다 긴 이미지는 최대 폭과 상관없이 읽기 폭을 꽉 채워요.', demo: { name: 'wideFill', ways: { on: display.wideFill } } }}
             control={<Switch label="가로 이미지는 꽉 채우기" checked={display.wideFill} onChange={(wideFill) => changeDisplay({ wideFill })} />}
           />
           <SettingRow
             label="삽화를 본문에 넣기"
-            help="넓은 화면에서도 삽화를 옆에 띄우지 않고 그 문단 바로 뒤에 넣어요."
+            help={{ text: '넓은 화면에서도 삽화를 옆에 띄우지 않고 그 문단 바로 뒤에 넣어요.', demo: { name: 'inlineIllustrations', ways: { on: display.inlineIllustrations } } }}
             control={<Switch label="삽화를 본문에 넣기" checked={display.inlineIllustrations} onChange={(inlineIllustrations) => changeDisplay({ inlineIllustrations })} />}
           />
           <SettingRow
             label="이미지 위치"
-            help="넓은 화면에서 삽화와 캐릭터 이미지를 채팅 어느 쪽에 둘지 정해요."
+            help={{ text: '넓은 화면에서 삽화와 캐릭터 이미지를 채팅 어느 쪽에 둘지 정해요.', demo: { name: 'pictureSide', ways: { labels: [SIDE.right, SIDE.left], now: display.pictureSide === 'right' ? 0 : 1 } } }}
             control={<ChoiceGroup layout="fit" label="이미지 위치" options={choices(SIDE)} value={display.pictureSide} onChange={(pictureSide) => changeDisplay({ pictureSide })} />}
           />
           <SettingRow
             label="캐릭터 이미지 크게 보기"
-            help="넓은 화면에서 채팅 옆에 캐릭터 이미지를 크게 띄워요."
+            help={{ text: '넓은 화면에서 채팅 옆에 캐릭터 이미지를 크게 띄워요.', demo: { name: 'portrait' } }}
             control={<Switch label="캐릭터 이미지 크게 보기" checked={display.portrait} onChange={(portrait) => changeDisplay({ portrait })} />}
           />
         </SettingGroup>
@@ -199,7 +199,7 @@ function UsageShownRow() {
   return (
     <SettingRow
       label="사용량 표시"
-      help="응답 아래에 비용과 토큰을 한 줄로 보여 줘요. 누르면 자세한 내용이 펼쳐져요."
+      help={{ text: '응답 아래에 비용과 토큰을 한 줄로 보여 줘요. 누르면 자세한 내용이 펼쳐져요.', demo: { name: 'usage' } }}
       changed={usageShown !== undefined}
       control={<Switch label="사용량 표시" checked={usageShown !== undefined} onChange={(on) => toast.settled(setUsageShown(store, on))} />}
     />

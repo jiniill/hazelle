@@ -30,7 +30,7 @@ export function MemorySplit({ total, whole, records, found, waiting, recent }: {
   return <Breakdown total={total} shares={parts.map((part) => part.tokens / whole)} parts={parts.map(({ label, value, mark }) => ({ label, value, mark }))} />;
 }
 
-const MEMORY_HELP = '오래된 대화를 기록으로 정리해서 모델에게 보내요.';
+const MEMORY_HELP = { text: '오래된 대화를 기록으로 정리해서 모델에게 보내요.', demo: { name: 'memory' } } as const;
 
 type Props = {
   value: MemorySettings;

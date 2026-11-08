@@ -1,0 +1,409 @@
+/* Every step is a share of one round (--duration-demo). A motion composed with .stepped runs over the round from its
+   --at; it names only its keyframes and easing. */
+.stepped {
+  animation-duration: var(--duration-demo);
+  animation-delay: calc(var(--duration-demo) * var(--at));
+  animation-fill-mode: both;
+}
+.prose {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: var(--space-4);
+}
+
+.full {
+  width: 100%;
+}
+
+/* A picture and what stands over it, in one place. */
+.framed {
+  display: grid;
+  margin-top: var(--space-4);
+}
+
+.framed > * {
+  grid-area: 1 / 1;
+}
+
+/* The picture's frame while veiled, and its button, as StoryPicture draws them. */
+.veil {
+  composes: stepped;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  animation-name: vanish;
+  animation-timing-function: var(--ease-enter);
+  --at: 0.46;
+}
+
+.open {
+  padding: var(--space-2) var(--space-8);
+  border: var(--border-thin) dashed var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  font-size: var(--text-mark);
+  line-height: var(--leading-tight);
+  color: var(--color-text-muted);
+}
+
+/* The reading width, and the dashed most a picture takes of it. */
+.reading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12);
+}
+
+.widest {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: 20%;
+  border-inline: var(--border-thin) dashed var(--color-border-strong);
+}
+
+.capped {
+  width: 60%;
+}
+
+.fills {
+  animation: fill var(--duration-demo) var(--ease-loop) both;
+}
+
+/* A wide window: the story's column, with the pictures beside it. */
+.column {
+  position: absolute;
+  inset-block: 0;
+  left: 20%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 60%;
+  padding: var(--space-12);
+}
+
+/* Where the first paragraph ends; it adds no gap of its own, so an inline picture brings its own. */
+.paragraphEnd {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin-top: calc(-1 * var(--space-12));
+}
+
+.inline {
+  display: flex;
+  padding-top: var(--space-12);
+}
+
+/* Beside the column, level with where an inline picture would start. */
+.margin {
+  position: absolute;
+  top: var(--space-12);
+  left: calc(100% + 2 * var(--space-12));
+  width: 55%;
+}
+
+.leftOfSide {
+  left: 4%;
+}
+
+.rightOfSide {
+  left: 36%;
+}
+
+.side {
+  position: absolute;
+  top: var(--space-12);
+  width: 30%;
+}
+
+.right {
+  right: 4%;
+}
+
+.left {
+  left: 4%;
+}
+
+.fromRight,
+.fromLeft {
+  composes: stepped;
+  animation-name: slideIn;
+  animation-timing-function: var(--ease-enter);
+  --at: 0.12;
+  --from: var(--space-16);
+}
+
+.fromLeft {
+  --from: calc(-1 * var(--space-16));
+}
+
+.close {
+  --size: 48%;
+}
+
+.closest {
+  --size: 62%;
+}
+
+/* From the centre to the left, as the portrait takes the stage. */
+.besidePortrait {
+  composes: stepped;
+  left: 2%;
+  animation-name: aside;
+  animation-timing-function: var(--ease-enter);
+  --at: 0.1;
+}
+
+.portrait {
+  position: absolute;
+  top: var(--space-8);
+  right: var(--space-8);
+  height: calc(100% - 2 * var(--space-8));
+}
+
+.grows {
+  composes: stepped;
+  animation-name: grow;
+  animation-timing-function: var(--ease-enter);
+  --at: 0.1;
+}
+
+.readsOn {
+  animation: readOn var(--duration-demo) var(--ease-loop) both;
+}
+
+/* A long picture is longer than the stage; folded, its line shows the top part (the app's 40vh), and opens to the rest. */
+.tall,
+.folded {
+  --long: calc(1.2 * var(--demo-height));
+}
+
+.tall {
+  align-self: center;
+  height: var(--long);
+}
+
+.tapped {
+  display: flex;
+  align-self: center;
+  border-radius: var(--radius-xs);
+}
+
+.folded {
+  composes: stepped;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation-name: unfoldLong;
+  animation-timing-function: var(--ease-enter);
+  --at: 0.54;
+  --fold: calc(0.4 * var(--demo-height));
+}
+
+/* The fade says the picture goes on past the fold. */
+.folded::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 0;
+  background: linear-gradient(transparent, var(--color-surface-raised));
+  animation: vanish var(--duration-demo) var(--ease-enter) both;
+  animation-delay: inherit;
+}
+
+.making {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-thin) dashed var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  animation: making var(--duration-demo) both;
+}
+
+.made {
+  animation: made var(--duration-demo) var(--ease-enter) both;
+}
+
+.shown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  padding: var(--space-12);
+}
+
+.scene {
+  width: 70%;
+}
+
+/* Close enough to fill the persona's view, and still whole under the picture's top. */
+.seen {
+  --size: 40%;
+}
+
+.legend {
+  composes: detail from '../foundation/type.module.css';
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-text-faint);
+}
+
+.persona {
+  width: var(--demo-line);
+  height: var(--demo-line);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+/* One page: a wide panel over two, with gutters between; as large as the single picture. */
+.page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  width: 58%;
+}
+
+.panel {
+  position: relative;
+  display: flex;
+}
+
+.panel:first-child {
+  grid-column: 1 / -1;
+}
+
+.bubble {
+  position: absolute;
+  top: 8%;
+  left: 8%;
+  width: 26%;
+  height: 18%;
+  border: var(--border-thin) solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.single {
+  width: 58%;
+}
+
+@keyframes vanish {
+  0% {
+    opacity: 1;
+  }
+
+  6%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fill {
+  0%,
+  22% {
+    width: 60%;
+  }
+
+  40%,
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    translate: var(--from) 0;
+  }
+
+  10%,
+  100% {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+/* 30% of the column is 18% of the stage: from left 20%, centred, to 2%. */
+@keyframes aside {
+  0% {
+    translate: 30% 0;
+  }
+
+  14%,
+  100% {
+    translate: none;
+  }
+}
+
+@keyframes grow {
+  0% {
+    opacity: 0;
+    scale: 0.94;
+  }
+
+  12%,
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes readOn {
+  0%,
+  15% {
+    transform: none;
+  }
+
+  85%,
+  100% {
+    transform: translateY(-45%);
+  }
+}
+
+@keyframes unfoldLong {
+  0% {
+    max-height: var(--fold);
+  }
+
+  16%,
+  100% {
+    max-height: var(--long);
+  }
+}
+
+@keyframes making {
+  0%,
+  30%,
+  50% {
+    opacity: 0.5;
+  }
+
+  40%,
+  60% {
+    opacity: 1;
+  }
+
+  64%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes made {
+  0%,
+  60% {
+    opacity: 0;
+  }
+
+  68%,
+  100% {
+    opacity: 1;
+  }
+}

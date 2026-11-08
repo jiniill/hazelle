@@ -1,0 +1,47 @@
+.demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* The demo's drawings (ChatDemos, FlowDemos) fill it and draw inside it only. */
+.stage {
+  position: relative;
+  height: var(--demo-height);
+  overflow: hidden;
+  border: var(--border-thin) solid var(--color-divider);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.stage > * {
+  position: absolute;
+  inset: 0;
+}
+
+.clock {
+  display: block;
+  margin: calc(-1 * var(--space-4)) var(--space-4) 0;
+  height: var(--border-thick);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-divider);
+}
+
+.hand {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--color-text-faint);
+  animation: clock var(--duration-demo) linear forwards;
+}
+
+.held {
+  background: var(--color-accent);
+}
+
+@keyframes clock {
+  to {
+    width: 100%;
+  }
+}

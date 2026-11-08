@@ -17,7 +17,7 @@ and only this folder styles elements.**
 - `foundation/media.ts` lists every media query in `MEDIA` and reads them in JavaScript (`useWide`,
   `useSplit`, `useHover`, `usePanelsBeside`, `useViewport`, `hasFinePointer`). A stylesheet cannot read it, so it writes the query out in full, and
   `media.test.ts` fails on any `@media` that `MEDIA` does not list.
-- `foundation/motion.module.css` holds every keyframe, `foundation/a11y.module.css` the
+- `foundation/motion.module.css` holds every keyframe but the drawings' own (`landing`, `demos`), `foundation/a11y.module.css` the
   screen-reader-only box and the one-line ellipsis, and `type.module.css` and `surface.module.css` the looks several
   components share (a note, a detail line, a row's title, a box of rows, a field, a fraction bar), and `hover.module.css` how a control answers the pointer. Components take them with `composes` and never redeclare them. These five files sit in the `looks` cascade layer, and `global.css` in `reset` under it, so a component's own rule that changes a property of a look it composes wins whatever order the build gives the files. Only the hover and open rules stand outside it, so they beat the resting fill a component sets: a state that must hold under the pointer is written over their three classes.
 - `overlays/layers.ts` is the only document listener for keys and presses. Menus and dialogs join
@@ -45,7 +45,7 @@ and only this folder styles elements.**
   - `description`: what a thing holds, under its name. `note`: quiet words by it, by a title, at a row's end (where
     it is used, when, how much) or under a figure (`notes` for several). `detail`: a node under a row, such as a gauge.
     `lines`: a text area's height in lines.
-  - `aside`: a column beside the main one, a screen's or a code pane's. `help`: the ⓘ's explanation. `hint`: a
+  - `aside`: a column beside the main one, a screen's or a code pane's. `help`: the ⓘ's explanation, and its `demo`. `hint`: a
     field's line under it.
 - Screens (the feature folders beside this one) and the app shell compose these components, imported from `src/app/ui`. They
   import no CSS and pass no `className` or `style`.
@@ -212,7 +212,8 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 | overlays | `DropOverlay` | `DropOverlay.module.css` | The drop target while files are dragged in |
 | overlays | `useFileDrop.ts` | — | Whether files are being dragged over the window, and the files dropped, each dropped folder's included; a screen's own drop over the app's, the last mounted over the others |
 | overlays | `MoreMenu` | — | The ⋯ that opens what is done to a thing as a whole, in a screen's head (`NavBar` `menu`) or a row, named '{of} 메뉴' |
-| overlays | `Hint` | `Hint.module.css` | An ⓘ that shows an explanation (`Help`): after a moment's hover while the pointer stays on the ⓘ or its bubble, or pinned by a click or tap; a help that names a place ends in a door to it, which the caller's `onClick` opens |
+| overlays | `Hint` | `Hint.module.css` | An ⓘ that shows an explanation (`Help`): after a moment's hover while the pointer stays on the ⓘ or its bubble, or pinned by a click or tap; a help that names a place ends in a door to it, which the caller's `onClick` opens; a help with a `demo` plays it above the text |
+| demos | `Demo` (inside the kit only) | `Demo.module.css`, `DemoParts.module.css` (the parts and motions every drawing shares), `ScrollDemos`, `ComposerDemos`, `ReplyDemos`, `PictureDemos`, `FlowDemos` (`.module.css` each) | An ⓘ's demo: a small drawing of what a setting does, by name (`DRAWINGS`), replayed each round of `--duration-demo`. Without `ways` it plays what turning the setting on adds; with them (a switch's `on`, or a choice of two) it alternates both, the current one tagged 지금, and a picked one holds. Under reduced motion it stops after one round |
 | overlays | `Menu` (`MenuItem`, `MenuBack`, `MenuHeading`, `MenuHandle`, `useMenuHandle`, `useMenuOpener`, `useMenuClose`) | `Menu.module.css` | Menus opened from a button, each keeping its own open state, which a handle shares with other buttons; checked items (one of several or `multiple`), disabled items, and a small form opened the same way (kind dialog) with menus inside it |
 | overlays | `Toast` (`ToastAction`) | `Toast.module.css` | A notice on the floating surface, a pill while it is one line: plain (message, detail, one action in the accent, its time running down as a line, ×N when said again) or warn (a warn mark before the words); someone else's words, such as a bot's, on one line after their face and name, 보기 opening the whole; a × on its corner while a pointer is on it, and in the head of a notice opened to stay |
 | overlays | `ToastStack` | `ToastStack.module.css` | Notices, newest in front, bottom right (under the header on a phone), those behind as edges the front one's width, and +N for the ones waiting; a mouse pointing at it, or the focus in it, opens it and holds their time, a finger slides one sideways or away from the edge it stands at to put it away. Above every layer but the file drop |

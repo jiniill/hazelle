@@ -1,0 +1,186 @@
+/* Every step is a share of one round (--duration-demo), from --at. */
+.draft,
+.keys,
+.edited,
+.rewritten,
+.note,
+.turns,
+.widens,
+.second {
+  animation-duration: var(--duration-demo);
+  animation-fill-mode: both;
+  animation-delay: calc(var(--duration-demo) * var(--at));
+}
+
+/* What was written leaves the composer when it is sent. */
+.draft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation-name: send;
+}
+
+.keys {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  opacity: 0;
+  animation-name: keystroke;
+}
+
+.key {
+  padding: var(--space-2) var(--space-8);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+}
+
+.edited {
+  animation-name: edit;
+}
+
+.rewritten {
+  animation-name: rewrite;
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-mark);
+  line-height: var(--leading-tight);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  animation-name: warn;
+}
+
+/* Pieces in one cell: a later one covers the one under it. */
+.stack {
+  display: grid;
+}
+
+.stack > * {
+  grid-area: 1 / 1;
+}
+
+.second {
+  background: var(--color-surface-raised);
+  animation-name: tick;
+}
+
+.turns {
+  display: flex;
+  background: var(--color-surface-raised);
+  animation-name: tick;
+}
+
+/* The warning's words open sideways, so the time beside them slides over rather than jumps. */
+.widens {
+  display: grid;
+  animation-name: widen;
+}
+
+.widens > span {
+  min-width: 0;
+  overflow: hidden;
+}
+
+@keyframes send {
+  0% {
+    opacity: 1;
+  }
+
+  4%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes keystroke {
+  0% {
+    opacity: 0;
+    translate: 0 var(--space-4);
+  }
+
+  3% {
+    opacity: 1;
+    translate: none;
+  }
+
+  5% {
+    translate: 0 var(--space-2);
+  }
+
+  8%,
+  16% {
+    opacity: 1;
+    translate: none;
+  }
+
+  22%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes edit {
+  0%,
+  20%,
+  100% {
+    box-shadow: none;
+  }
+
+  4%,
+  12% {
+    box-shadow: 0 0 0 var(--border-thick) var(--color-accent-border);
+  }
+}
+
+@keyframes rewrite {
+  0% {
+    width: var(--w);
+  }
+
+  4% {
+    width: 0;
+  }
+
+  12%,
+  100% {
+    width: var(--w);
+  }
+}
+
+@keyframes warn {
+  0% {
+    color: var(--color-text-muted);
+  }
+
+  1%,
+  100% {
+    color: var(--color-warn-text);
+  }
+}
+
+@keyframes tick {
+  0% {
+    opacity: 0;
+  }
+
+  1%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes widen {
+  0% {
+    grid-template-columns: 0fr;
+  }
+
+  8%,
+  100% {
+    grid-template-columns: 1fr;
+  }
+}

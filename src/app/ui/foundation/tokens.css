@@ -222,6 +222,13 @@
   --shadow-cheer: 0 0 0 8px var(--color-accent-bg), 0 14px 36px var(--color-accent-border);
 
   --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
+  /* A segmented choice's trough: a shade over whatever ground it stands on. */
+  --color-trough: color-mix(in oklab, var(--palette-black) 26%, transparent);
+  /* 시스템 설정 연동's demo draws both modes at once, whichever the app is in. */
+  --demo-day: var(--palette-paper-150);
+  --demo-day-line: var(--palette-paper-500);
+  --demo-night: var(--palette-ink-900);
+  --demo-night-line: var(--palette-ink-500);
   --color-glass-edge: var(--palette-cream-line);
   --color-glass-press: var(--palette-cream-wash);
   --shadow-glass: 0 10px 28px var(--palette-shadow), inset 0 1px 0 var(--palette-cream-line);
@@ -289,6 +296,8 @@
   --brand-mark: 26px;
   --hero-mark: 96px;
 
+  /* A word marked inside a control's label, such as 지금: under the reading scale on purpose. */
+  --text-mark: 11px;
   --text-xs: 13px;
   --text-sm: 14px;
   --text-md: 15px;
@@ -445,6 +454,14 @@
   --menu-width: 300px;
   --chat-title-max-width: 320px;
   --hint-width: 280px;
+  /* An ⓘ's demo: a chat drawn small, its lines and bars at the drawing's own scale. */
+  --demo-width: 320px;
+  --demo-height: 168px;
+  --demo-line: 6px;
+  --demo-bar: 28px;
+  --demo-face: 14px;
+  --demo-tick: 12px;
+  --demo-composer: 44px;
   --dialog-width: 440px;
   --dialog-width-wide: 780px;
   --dialog-height-wide: 640px;
@@ -561,6 +578,8 @@
   --duration-pop: 480ms;
   --duration-burst: 1.7s;
   --duration-ripple: 2.6s;
+  /* One round of an ⓘ's demo; its steps are shares of it. */
+  --duration-demo: 4.6s;
   --ease-enter: ease-out;
   --ease-loop: ease-in-out;
 
@@ -732,6 +751,7 @@
   /* Panes and what stands on them are lighter than the page, as in dark; under the pointer and current go darker. */
   --color-bg: var(--palette-paper-150);
   --color-sidebar: var(--palette-paper-50);
+  --color-trough: color-mix(in oklab, var(--palette-black) 6%, transparent);
   --color-surface: var(--palette-paper-10);
   --color-surface-hover: var(--palette-paper-200);
   --color-surface-raised: var(--palette-paper-300);

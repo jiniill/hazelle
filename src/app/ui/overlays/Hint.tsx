@@ -4,12 +4,14 @@ import { createPortal } from 'react-dom';
 import { Button, ButtonSlot } from '../controls/Button';
 import { Icon } from '../foundation/Icon';
 import { useHover } from '../foundation/media';
+import { Demo, type DemoSpec } from '../demos/Demo';
 import { useAnchored, useLayer } from './layers';
 import { useMenuClose } from './Menu';
 import styles from './Hint.module.css';
 
 // open: a door to the place the text names. The kit knows no routes, so the caller says what it does.
-export type Help = string | { text: string; open: { label: string; onClick: () => void } };
+// demo: a small drawing above the text that plays what the setting does.
+export type Help = string | { text: string; open?: { label: string; onClick: () => void }; demo?: DemoSpec };
 
 // Long enough that a pointer passing over a column of ⓘ opens none of them.
 const PEEK_DELAY = 300;
@@ -21,11 +23,11 @@ export function Hint({ label, children }: { label: string; children: Help }) {
   const [state, setState] = useState<'closed' | 'peek' | 'pinned'>('closed');
   const timer = useRef(0);
   const box = useRef<HTMLSpanElement>(null);
-  const bubble = useRef<HTMLSpanElement>(null);
+  const bubble = useRef<HTMLDivElement>(null);
   const door = useRef<HTMLButtonElement>(null);
   const closeMenu = useMenuClose();
   const id = useId();
-  const { text, open } = typeof children === 'string' ? { text: children, open: undefined } : children;
+  const { text, open, demo } = typeof children === 'string' ? { text: children, open: undefined, demo: undefined } : children;
   const button = () => box.current?.querySelector('button');
 
   // Register peeks as layers too: otherwise clicking a door inside a menu closes/unmounts it before its click.
@@ -88,15 +90,16 @@ export function Hint({ label, children }: { label: string; children: Help }) {
       </button>
       {state !== 'closed' &&
         createPortal(
-          <span
+          <div
             ref={bubble}
             id={id}
             role="note"
-            className={styles.bubble}
+            className={demo ? `${styles.bubble} ${styles.withDemo}` : styles.bubble}
             onPointerEnter={hover ? stay : undefined}
             onPointerLeave={hover ? leave : undefined}
           >
-            {text}
+            {demo && <Demo label={label} {...demo} />}
+            {demo ? <span className={styles.words}>{text}</span> : text}
             {open && (
               <span className={styles.door} onKeyDown={tab}>
                 <ButtonSlot value={null}>
@@ -106,7 +109,7 @@ export function Hint({ label, children }: { label: string; children: Help }) {
                 </ButtonSlot>
               </span>
             )}
-          </span>,
+          </div>,
           document.body,
         )}
     </span>
