@@ -10,7 +10,7 @@ import { Button, NavBar, Screen, Section, SettingGroup, SettingRow, Switch } fro
 export function ControlsScreen({ back }: { back: Back | null }) {
   const { display, changeDisplay } = useDisplay();
   return (
-    <Screen width="page" top={<NavBar title={PAGES.controls} {...backBar(back)} />}>
+    <Screen width="form" top={<NavBar title={PAGES.controls} {...backBar(back)} />}>
       <Section title="스크롤할 때">
         <SettingGroup label="스크롤할 때">
           <ReplyRow />

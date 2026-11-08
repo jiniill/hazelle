@@ -5,8 +5,9 @@ import { DETAIL, detailLabel } from './words';
 type Rows = { children: ReactNode; sections?: never } | { sections: { title: string; rows: ReactNode }[]; children?: never };
 
 // Keep this a quiet line, never a row/box header (user ruling). set counts configured rows across sections.
-export function DetailFold({ set, children, sections }: { set: number } & Rows) {
-  return (
+// above: the rows it details. The fold then sits the related gap under them, whatever flow holds the two.
+export function DetailFold({ set, above, children, sections }: { set: number; above?: ReactNode } & Rows) {
+  const fold = (
     <Disclosure label={detailLabel(set)}>
       {sections ? (
         <Stack gap="section">
@@ -20,5 +21,12 @@ export function DetailFold({ set, children, sections }: { set: number } & Rows) 
         <SettingGroup label={DETAIL}>{children}</SettingGroup>
       )}
     </Disclosure>
+  );
+  if (!above) return fold;
+  return (
+    <Stack gap="related">
+      {above}
+      {fold}
+    </Stack>
   );
 }

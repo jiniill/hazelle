@@ -44,7 +44,6 @@ export function ReplyRow() {
   return (
     <SettingRow
       label="응답 수신 시"
-      wide
       control={<ChoiceGroup layout="segmented" label="응답 수신 시" options={choices(REPLY)} value={reading.reply} onChange={(reply) => changeReading({ reply })} />}
     />
   );

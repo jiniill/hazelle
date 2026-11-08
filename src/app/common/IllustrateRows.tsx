@@ -30,58 +30,58 @@ type Props = {
 export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange, onEditPrompt, children }: Props) {
   const routes = drawingModels(useConnections());
   const set = [illustrate.ladder.length > 0, illustrate.pov, illustrate.comic, illustrate.spend, illustrate.model !== undefined, illustrate.prompt !== undefined].filter(Boolean).length;
+  const group = (
+    <SettingGroup label="삽화">
+      <SettingRow
+        label="자동 삽화"
+        help="응답을 받을 때마다 삽화를 만들어요. 만들 때마다 연결된 이미지 모델의 사용량이 차감돼요."
+        control={<Switch label="자동 삽화" checked={illustrate.auto} onChange={(auto) => onChange({ auto })} />}
+      />
+      <SettingRow
+        label="이미지 모델"
+        sub={routes.length ? undefined : '이미지를 만들 모델이 없어요'}
+        control={
+          routes.length ? (
+            <ImageModelMenu routes={routes} illustrate={illustrate} card={card} opens={opens} onPick={onChange} />
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => navigate({ kind: 'add-connection' })}>
+              {newOf('연결')}
+            </Button>
+          )
+        }
+      />
+      <TaskModelRow
+        label={TASK_MODELS.illustrate}
+        own={illustrate.sceneModel}
+        runs={'kind' in sceneWriter ? { why: describeIllustrateFailure(sceneWriter) } : sceneWriter}
+        onPick={(ref) => onChange({ sceneModel: ref ?? undefined })}
+      />
+      {children}
+    </SettingGroup>
+  );
   return (
-    <>
-      <SettingGroup label="삽화">
-        <SettingRow
-          label="자동 삽화"
-          help="응답을 받을 때마다 삽화를 만들어요. 만들 때마다 연결된 이미지 모델의 사용량이 차감돼요."
-          control={<Switch label="자동 삽화" checked={illustrate.auto} onChange={(auto) => onChange({ auto })} />}
-        />
-        <SettingRow
-          label="이미지 모델"
-          sub={routes.length ? undefined : '이미지를 만들 모델이 없어요'}
-          control={
-            routes.length ? (
-              <ImageModelMenu routes={routes} illustrate={illustrate} card={card} opens={opens} onPick={onChange} />
-            ) : (
-              <Button variant="ghost" size="sm" onClick={() => navigate({ kind: 'add-connection' })}>
-                {newOf('연결')}
-              </Button>
-            )
-          }
-        />
-        <TaskModelRow
-          label={TASK_MODELS.illustrate}
-          own={illustrate.sceneModel}
-          runs={'kind' in sceneWriter ? { why: describeIllustrateFailure(sceneWriter) } : sceneWriter}
-          onPick={(ref) => onChange({ sceneModel: ref ?? undefined })}
-        />
-        {children}
-      </SettingGroup>
-      <DetailFold set={set}>
-        <PictureLadder ladder={illustrate.ladder} onChange={(ladder) => onChange({ ladder: ladder.length ? ladder : undefined })} />
-        <SettingRow
-          label="페르소나 시점"
-          help="페르소나의 눈으로 보는 장면을 그려요. 페르소나는 삽화에 나오지 않아요."
-          control={<Switch label="페르소나 시점" checked={illustrate.pov} onChange={(pov) => onChange({ pov })} />}
-        />
-        <SettingRow
-          label="만화 형식"
-          help="한 장을 여러 컷으로 나뉜 만화 페이지로 그려요. 말풍선 속 글자는 이미지 모델이 임의로 그려서 읽을 수 없어요."
-          control={<Switch label="만화 형식" checked={illustrate.comic} onChange={(comic) => onChange({ comic })} />}
-        />
-        <SettingRow
-          label="유료 생성 시 확인 생략"
-          help="요금이 나갈 때도 물어보지 않고 만들어요."
-          control={<Switch label="유료 생성 시 확인 생략" checked={illustrate.spend} onChange={(spend) => onChange({ spend })} />}
-        />
-        <SettingRow
-          label="삽화 프롬프트"
-          control={<TaskPromptMenu task="illustrate" chosen={illustrate.prompt} heading={appliesTo(card, illustrate.own)} opens={opens} onPick={(prompt) => onChange({ prompt })} onEdit={onEditPrompt} />}
-        />
-      </DetailFold>
-    </>
+    <DetailFold set={set} above={group}>
+      <PictureLadder ladder={illustrate.ladder} onChange={(ladder) => onChange({ ladder: ladder.length ? ladder : undefined })} />
+      <SettingRow
+        label="페르소나 시점"
+        help="페르소나의 눈으로 보는 장면을 그려요. 페르소나는 삽화에 나오지 않아요."
+        control={<Switch label="페르소나 시점" checked={illustrate.pov} onChange={(pov) => onChange({ pov })} />}
+      />
+      <SettingRow
+        label="만화 형식"
+        help="한 장을 여러 컷으로 나뉜 만화 페이지로 그려요. 말풍선 속 글자는 이미지 모델이 임의로 그려서 읽을 수 없어요."
+        control={<Switch label="만화 형식" checked={illustrate.comic} onChange={(comic) => onChange({ comic })} />}
+      />
+      <SettingRow
+        label="유료 생성 시 확인 생략"
+        help="요금이 나갈 때도 물어보지 않고 만들어요."
+        control={<Switch label="유료 생성 시 확인 생략" checked={illustrate.spend} onChange={(spend) => onChange({ spend })} />}
+      />
+      <SettingRow
+        label="삽화 프롬프트"
+        control={<TaskPromptMenu task="illustrate" chosen={illustrate.prompt} heading={appliesTo(card, illustrate.own)} opens={opens} onPick={(prompt) => onChange({ prompt })} onEdit={onEditPrompt} />}
+      />
+    </DetailFold>
   );
 }
 

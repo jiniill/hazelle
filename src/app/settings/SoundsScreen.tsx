@@ -21,7 +21,7 @@ export function SoundsScreen({ back }: { back: Back | null }) {
   const { display, changeDisplay } = useDisplay();
   const toast = useToast();
   return (
-    <Screen width="page" top={<NavBar title={PAGES.sounds} {...backBar(back)} />}>
+    <Screen width="form" top={<NavBar title={PAGES.sounds} {...backBar(back)} />}>
       <Section title={ALERTS}>
         <SettingGroup label={ALERTS}>
           <SettingRow

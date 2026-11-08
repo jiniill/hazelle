@@ -68,13 +68,19 @@ export function MemoryFields({ value, onChange, label = '사용', rows: more, ch
   };
   const rows = [row('budget'), row('window'), row('batch')];
   return (
-    <>
-      <SettingGroup label="장기 기억">
-        <SettingRow label={label} help={MEMORY_HELP} control={<Switch label="장기 기억" checked={value.on} onChange={(on) => onChange({ on })} />} />
-        {more}
-      </SettingGroup>
-      {children}
-      <DetailFold set={0}>{rows}</DetailFold>
-    </>
+    <DetailFold
+      set={0}
+      above={
+        <>
+          <SettingGroup label="장기 기억">
+            <SettingRow label={label} help={MEMORY_HELP} control={<Switch label="장기 기억" checked={value.on} onChange={(on) => onChange({ on })} />} />
+            {more}
+          </SettingGroup>
+          {children}
+        </>
+      }
+    >
+      {rows}
+    </DetailFold>
   );
 }

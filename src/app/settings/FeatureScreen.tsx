@@ -190,18 +190,22 @@ function PrereadDefaults() {
       <SettingGroup label={PRE_READ}>
         <AccountTaskModel task="preread" runs={'kind' in writer ? { why: describePrereadFailure(writer) } : writer} />
       </SettingGroup>
-      <SettingGroup label="요약할 대상">
-        {(Object.entries(PRE_READ_PARTS) as [keyof PrereadParts, string][]).map(([part, label]) => (
-          <SettingRow
-            key={part}
-            label={label}
-            help={PART_HELP[part]}
-            changed={setup.parts[part] !== PREREAD_STARTS.parts[part]}
-            control={<Switch label={label} checked={setup.parts[part]} onChange={(on) => save({ parts: { ...setup.parts, [part]: on } })} />}
-          />
-        ))}
-      </SettingGroup>
-      <DetailFold set={set}>
+      <DetailFold
+        set={set}
+        above={
+          <SettingGroup label="요약할 대상">
+            {(Object.entries(PRE_READ_PARTS) as [keyof PrereadParts, string][]).map(([part, label]) => (
+              <SettingRow
+                key={part}
+                label={label}
+                help={PART_HELP[part]}
+                changed={setup.parts[part] !== PREREAD_STARTS.parts[part]}
+                control={<Switch label={label} checked={setup.parts[part]} onChange={(on) => save({ parts: { ...setup.parts, [part]: on } })} />}
+              />
+            ))}
+          </SettingGroup>
+        }
+      >
         <CountRow label="원문으로 유지할 최근 대화" unit="개" help="마지막으로 보낸 내 메시지는 이 수와 상관없이 그대로 보내요." value={setup.recent} start={PREREAD_STARTS.recent} onChange={(recent) => save({ recent })} />
         <CountRow label="한 번에 요약할 분량" unit="토큰" help="요약할 내용이 이만큼 쌓이면 그때 요약해요. 그보다 적으면 원문 그대로 보내요." value={setup.batch} start={PREREAD_STARTS.batch} onChange={(batch) => save({ batch })} />
         <SettingRow
