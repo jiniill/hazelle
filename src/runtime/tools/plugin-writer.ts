@@ -17,7 +17,7 @@ import type { RequestLog } from '../request-log';
 import type { ObjectStore } from '../store';
 import { callOf, endCall, pageCall } from '../streams';
 import type { Tokens } from '../token-calibration';
-import type { ToolTrial } from '../script-preview';
+import type { ToolTrial } from '../scripts/preview';
 import { toolLoop, type ToolArgs } from '../tool-loop';
 import { keepRow } from '../usage';
 

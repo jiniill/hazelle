@@ -3,7 +3,7 @@ import { PULSE_FLOORS } from '../../contracts/pulse';
 import { readVisits } from '../../runtime/admin';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
-import { Button, Empty, Panel, Table, type TableColumn } from '../ui';
+import { Empty, Panel, Table, type TableColumn } from '../ui';
 import { seoulDate, seoulMonthDay } from './seoul';
 
 const OPENED = '손님 방문';
@@ -51,7 +51,7 @@ export function VisitsSection() {
   const loaded = useLoaded(readVisits);
   return (
     <>
-      <Panel title="방문자 통계" note="최근 14일 · 한국 시간" help={HELP} action={<Button variant="ghost" onClick={loaded.reload}>새로고침</Button>}>
+      <Panel title="방문자 통계" note="최근 14일 · 한국 시간" help={HELP} action={loaded.refresh}>
         {loaded.loading}
         {loaded.failure}
         {loaded.data && <Table label="방문자 통계" columns={COLUMNS} rows={loaded.data.days.map((day) => ({

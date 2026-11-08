@@ -12,4 +12,5 @@ describe('readTyped', () => {
 it('reads a count from one and a whole number from zero, refusing what is below or not whole', () => {
   expect(['0', '3', '-1', '1.5'].map(readCount)).toEqual([null, 3, null, null]);
   expect(['0', '3', '-1', '1.5'].map(readWhole)).toEqual([0, 3, null, null]);
+  expect([readCount.error, readWhole.error]).toEqual(['1 이상의 정수를 입력해 주세요.', '0 이상의 정수를 입력해 주세요.']);
 });

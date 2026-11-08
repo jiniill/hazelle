@@ -4,7 +4,7 @@ import { cachePrintId } from '../model/cache';
 import { memoryId, type MemoryRecord } from '../model/memory';
 import { chatPrint } from './cache';
 import { chatFile, readChatFile } from './chat-file';
-import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, copyChat, copyShown, editMessage, forgetOrigin, importChat, nameBookmark, removeMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setVariableByHand, startChat, withOwn } from './chat-log';
+import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, copyChat, copyShown, editMessage, forgetOrigin, importChat, nameBookmark, removeMessage, replyMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setVariableByHand, startChat, withOwn } from './chat-log';
 import { setChatModel, withMainModel } from './assignment';
 import type { Files } from './files';
 import { summaryId } from './summary';
@@ -45,6 +45,13 @@ describe('startChat', () => {
     };
     expect(await opened(0)).toEqual(['하나 {{pick}} {{random}}', 3]);
     expect(await opened(2)).toEqual(['셋', 3]);
+  });
+});
+
+describe('replyMessage', () => {
+  it("is the message a version joins, and a new message's own id when it joins none", () => {
+    expect(replyMessage({ id: 'v2', message: 'm1' })).toBe('m1');
+    expect(replyMessage({ id: 'v1', message: null })).toBe('v1');
   });
 });
 

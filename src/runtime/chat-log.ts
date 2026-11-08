@@ -9,7 +9,7 @@ import type { Illustration } from '../model/illustration';
 import type { Remark } from '../model/mascot';
 import { live, type Asset, type Lore, type TextFile } from '../model/library';
 import { memoryId, type Memory, type Source } from '../model/memory';
-import type { Badges } from '../model/tool';
+import { badgesOf } from '../model/tool';
 import type { ApiFailure, ApiResult } from './api';
 import { routeOf } from './assignment';
 import { chatPrint } from './cache';
@@ -213,8 +213,10 @@ function copyWrites(id: string, source: { message: Message; follows: string | nu
 // Branch tool data as-is; remap host badges, but let the tool branch event remap its own embedded ids.
 // Chat files omit tool data because their modules belong to another account.
 async function branchToolData(store: ObjectStore, from: string, to: string, messages: ReadonlyMap<string, string>, versions: ReadonlyMap<string, string>): Promise<Write[]> {
-  return Promise.all(store.children('toolchat', from).flatMap(({ value: { module, key, value } }) => {
-    const badges = key === null && Object.entries(value as Badges).flatMap(([message, { version, text }]) => (messages.has(message) ? [[messages.get(message)!, { version: versions.get(version) ?? version, text }]] : []));
+  return Promise.all(store.children('toolchat', from).flatMap(({ value: row }) => {
+    const { module, key, value } = row;
+    const held = badgesOf(row);
+    const badges = held && Object.entries(held).flatMap(([message, { version, text }]) => (messages.has(message) ? [[messages.get(message)!, { version: versions.get(version) ?? version, text }]] : []));
     if (badges && !badges.length) return [];
     return [toolChatId(module, to, key).then((id): Write => ({ type: 'create', kind: 'toolchat', id, parent: to, value: { module, key, value: badges ? Object.fromEntries(badges) : value } }))];
   }));
@@ -359,6 +361,8 @@ export const appendUserMessage = (store: ObjectStore, chat: string, { id, text, 
 // at is the reply's own, never the time of the save, so saving it again (Talk.saveAgain) sends the same entry, and a
 // first try that landed unanswered is found as it is.
 export type Written = { id: string; message: string | null; replaces: string | null; follows?: string | null; at: number; text: string; receipt: Receipt; seed?: string; before?: Writes; reasoning?: string };
+// message null: a new message, whose id is the reply's own.
+export const replyMessage = ({ id, message }: Pick<Written, 'id' | 'message'>) => message ?? id;
 
 export function appendReply(store: ObjectStore, chat: string, { id, message, replaces, follows, at, text, receipt, seed, before, reasoning }: Written) {
   const held = { at, text, receipt, ...(before && { before }), ...(reasoning && { reasoning }) };

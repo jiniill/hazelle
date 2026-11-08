@@ -11,8 +11,8 @@ import type { Stored } from '../model/kinds';
 import { chatIllustrate, chatTranslate, featuresOf } from './features';
 import type { Session } from './session';
 import type { ApiFailure } from './api';
-import type { Halted } from './script-turns';
-import { appendUserMessage, type Written } from './chat-log';
+import type { Halted } from './scripts/turns';
+import { appendUserMessage, replyMessage, type Written } from './chat-log';
 import type { Ask, TalkFailure } from './talk';
 import { EvaluationFailed, EvaluationStopped, evaluationFailure } from './evaluation';
 import { endCall } from './streams';
@@ -83,14 +83,14 @@ export async function receiveReply(session: Session, chat: string, reply: Writte
     await idle(session.talk, chat);
     const last = (await displayed(session, chat))?.messages.at(-1);
     // An onOutput edit is a version of its own, which is not continued, as 이어 쓰기 is not offered on it.
-    if (last?.id === (reply.message ?? reply.id) && shown(last).id === reply.id) {
+    if (last?.id === replyMessage(reply) && shown(last).id === reply.id) {
       const failure = await takeTurn(session, chat, { kind: 'continue', message: last.id, version: reply.id });
       if (!failure) return;
     }
   }
   // 멈추기 is pressed by someone watching the reply.
   if (reply.receipt.cut !== 'stopped') session.cues.emit('reply-received');
-  const message = reply.message ?? reply.id;
+  const message = replyMessage(reply);
   await polished(session, chat, message, reply.id);
   const received = shownReceived(session, chat, message);
   if (!received) return;

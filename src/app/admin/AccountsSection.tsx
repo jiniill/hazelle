@@ -14,7 +14,7 @@ import { TextDialog } from '../common/TextDialog';
 import { useSession } from '../session';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
-import { Button, ConfirmDialog, Empty, MenuItem, MoreMenu, Panel, Table, Tag, type TableColumn } from '../ui';
+import { ConfirmDialog, Empty, MenuItem, MoreMenu, Panel, Table, Tag, type TableColumn } from '../ui';
 import { CapsDialog } from './CapsDialog';
 import { NOTICE_TEXT } from './notice';
 import type { useAccounts } from './useAccounts';
@@ -72,11 +72,7 @@ export function AccountsSection({ loaded, total, onActed, children }: { loaded: 
       note={total === null ? undefined : `${count(total)}명`}
       action={
         // Not hidden when the head is whole: it holds only the flagged accounts, and every other one is behind this door.
-        head ? (
-          <SeeAll onClick={() => navigate({ kind: 'admin-list', list: 'accounts' })} />
-        ) : (
-          <Button variant="ghost" busy={loaded.busy} onClick={loaded.reload}>새로고침</Button>
-        )
+        head ? <SeeAll onClick={() => navigate({ kind: 'admin-list', list: 'accounts' })} /> : loaded.refresh
       }
       help={head ? `정지됐거나 복원·탈퇴 중인 계정만 여기에 보여요. ${COLUMNS_HELP}` : COLUMNS_HELP}
     >

@@ -1,3 +1,4 @@
+import { errorMessage } from '../../error-message';
 import { ChangeSignal } from '../../change-signal';
 import { isRecord } from '../../connectors/values';
 import type { ToolEvent, ToolReach } from '../../engine/script-api';
@@ -7,8 +8,8 @@ import { live } from '../../model/library';
 import { toolId, type Tool, type ToolUnit } from '../../model/tool';
 import type { FileRef } from '../../vault/files';
 import type { Down, EventName } from '../../tool-api/protocol';
-import type { ScriptOutcome } from '../lua/event';
-import { aborted, noOutcome, ToolStopped, ToolStuck, until, type Binding } from '../script-binding';
+import type { ScriptOutcome } from '../scripts/lua/event';
+import { aborted, noOutcome, ToolStopped, ToolStuck, until, type Binding } from '../scripts/binding';
 import type { Session } from '../session';
 import type { StoreChange } from '../object-index';
 import type { ObjectStore } from '../store';
@@ -24,7 +25,6 @@ const EVENTS = new Set<EventName>(['reply', 'replying', 'sending', 'requesting',
 const IDLE_MS = 10 * 60_000;
 const STUCK_MS = 8000;
 const STALLS = 3;
-const describe = (error: unknown) => error instanceof Error ? error.message : String(error);
 // A stored value as a change compares it: a file's by its id, which its bytes name, so 4 MB is never stringified.
 const storedAt = (store: ObjectStore, kind: 'tooldata' | 'toolfile', id: string) => {
   if (kind === 'tooldata') { const row = store.get('tooldata', id)?.value; return row && { key: row.key, json: JSON.stringify(row.value) }; }
@@ -358,7 +358,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
       frame.calls.set(call, cancel);
       void this.api.call(frame, data.method, data.args, data.event, cancel.signal).then(
         (value) => this.send(frame, { kind: 'answer', call, ok: true, value }),
-        (error: unknown) => this.send(frame, { kind: 'answer', call, ok: false, value: describe(error) }),
+        (error: unknown) => this.send(frame, { kind: 'answer', call, ok: false, value: errorMessage(error) }),
       ).finally(() => frame.calls.delete(call));
       return;
     }
@@ -372,7 +372,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
         else if (data.kind === 'done' && this.api.chatOf(frame)) {
           void this.api.pageWrite(frame, data.outcome).then(
             () => this.send(frame, { kind: 'answer', call: 0, ok: true, value: null }),
-            (error: unknown) => this.send(frame, { kind: 'answer', call: 0, ok: false, value: describe(error) }),
+            (error: unknown) => this.send(frame, { kind: 'answer', call: 0, ok: false, value: errorMessage(error) }),
           );
         }
         return;

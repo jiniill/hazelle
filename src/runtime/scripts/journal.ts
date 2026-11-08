@@ -1,10 +1,10 @@
-import { ChangeSignal } from '../change-signal';
-import { isRecord } from '../connectors/values';
-import type { HookLog, HookTrace } from '../engine/lua/run';
-import type { Outcome } from '../engine/script-api';
-import { live, type PackOwner } from '../model/library';
-import type { ScriptInteractions } from './script-interactions';
-import type { ObjectStore } from './store';
+import { ChangeSignal } from '../../change-signal';
+import { isRecord } from '../../connectors/values';
+import type { HookLog, HookTrace } from '../../engine/lua/run';
+import type { Outcome } from '../../engine/script-api';
+import { live, type PackOwner } from '../../model/library';
+import type { ScriptInteractions } from './interactions';
+import type { ObjectStore } from '../store';
 
 export type ScriptLog = { entries: readonly HookLog[]; omitted: number };
 // Page memory only; evict by both entry count and serialized characters, since a script controls its text.

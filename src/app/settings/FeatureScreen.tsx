@@ -128,7 +128,7 @@ function MascotDefaults() {
 const PART_HELP: Partial<Record<keyof PrereadParts, string>> = { system: '시스템 프롬프트를 요약하면 출력 형식이나 세부 지시사항이 잘 지켜지지 않을 수 있어요.' };
 
 function CountRow({ label, unit, help, value, start, onChange }: { label: string; unit: string; help: string; value: number; start: number; onChange: (value: number) => void }) {
-  const count = useTypedNumber(readWhole, value, { error: '0 이상의 정수를 입력해 주세요.', onChange });
+  const count = useTypedNumber(readWhole, value, { error: readWhole.error, onChange });
   return (
     <SettingRow
       label={label}

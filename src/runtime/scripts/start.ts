@@ -1,6 +1,6 @@
-import type { ChatScope } from '../engine/render';
-import type { Event, Outcome } from '../engine/script-api';
-import type { Writes } from '../model/chat';
+import type { ChatScope } from '../../engine/render';
+import type { Event, Outcome } from '../../engine/script-api';
+import type { Writes } from '../../model/chat';
 
 export type StartStage = 'onInput' | 'editInput' | 'onStart';
 type StartSteps<F> = {

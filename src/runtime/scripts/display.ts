@@ -1,19 +1,19 @@
-import type { LuaRunner } from './script-binding';
-import type { Display } from '../engine/display';
-import type { DisplayBatch, Displayed, Script } from '../engine/lua/run';
-import type { Snapshot } from '../engine/lua/state';
-import type { ChatScope, Missed } from '../engine/render';
-import type { Chat, Message } from '../model/chat';
-import type { UnfoundAssets } from './assets';
-import { EvaluationStopped, EvaluationStuck } from './evaluation';
+import type { LuaRunner } from './binding';
+import type { Display } from '../../engine/display';
+import type { DisplayBatch, Displayed, Script } from '../../engine/lua/run';
+import type { Snapshot } from '../../engine/lua/state';
+import type { ChatScope, Missed } from '../../engine/render';
+import type { Chat, Message } from '../../model/chat';
+import type { UnfoundAssets } from '../assets';
+import { EvaluationStopped, EvaluationStuck } from '../evaluation';
 
 import { luaSnapshot, luaStanding } from './lua/snapshot';
-import { scriptsOf } from './script-selection';
-import type { ScriptExecution } from './script-execution';
-import type { ScriptEffects } from './script-effects';
-import type { ToolUnit } from '../model/tool';
-import type { ObjectStore } from './store';
-import { packsOf, pinned, scopeOf } from './chat-context';
+import { scriptsOf } from './selection';
+import type { ScriptExecution } from './execution';
+import type { ScriptEffects } from './effects';
+import type { ToolUnit } from '../../model/tool';
+import type { ObjectStore } from '../store';
+import { packsOf, pinned, scopeOf } from '../chat-context';
 
 // tools: those that may answer showing, run over each stretch after the Lua (ScriptExecution.showing).
 type Pass = { revision: number; generation: number; scripts: Script[]; tools: ToolUnit[]; scope: ChatScope; snapshot: Snapshot; items: Missed[]; remaining: number; installed: boolean; view: Display; signal?: AbortSignal };

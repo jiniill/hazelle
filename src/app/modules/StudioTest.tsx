@@ -6,7 +6,7 @@ import type { ToolDraft } from '../../model/tool';
 import { splitTool } from '../../engine/import/tool';
 import { chatNow } from '../../runtime/chat-context';
 import type { ChatScope } from '../../engine/render';
-import type { ToolTrial } from '../../runtime/script-preview';
+import type { ToolTrial } from '../../runtime/scripts/preview';
 import type { Session } from '../../runtime/session';
 import { bodyLine, draftTrial, type DraftFile } from '../../runtime/tools/drafts';
 import { ToolFailure, type TrialWrite } from '../../runtime/tools/frame-state';

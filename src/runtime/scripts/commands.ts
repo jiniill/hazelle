@@ -1,13 +1,13 @@
-import type { Event, ToolEvent } from '../engine/script-api';
-import { live } from '../model/library';
-import type { ReadModels } from './read-model';
-import { onLast } from './script-effects';
-import type { ScriptExecution } from './script-execution';
-import type { ScriptSchedule } from './script-schedule';
-import { atOf, scopeFor, unitFor } from './script-selection';
-import type { ObjectStore } from './store';
-import type { Tools } from './tools/facade';
-import { toolsOf } from './tools/store';
+import type { Event, ToolEvent } from '../../engine/script-api';
+import { live } from '../../model/library';
+import type { ReadModels } from '../read-model';
+import { onLast } from './effects';
+import type { ScriptExecution } from './execution';
+import type { ScriptSchedule } from './schedule';
+import { atOf, scopeFor, unitFor } from './selection';
+import type { ObjectStore } from '../store';
+import type { Tools } from '../tools/facade';
+import { toolsOf } from '../tools/store';
 
 export class ScriptCommands {
   // Presses queued behind an earlier run and not begun, by chat and button.

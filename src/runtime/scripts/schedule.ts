@@ -1,9 +1,9 @@
-import { live } from '../model/library';
-import type { ToolUnit } from '../model/tool';
-import { evaluationFailure } from './evaluation';
-import type { ScriptInteractions } from './script-interactions';
-import type { ObjectStore } from './store';
-import { toolsOf } from './tools/store';
+import { live } from '../../model/library';
+import type { ToolUnit } from '../../model/tool';
+import { evaluationFailure } from '../evaluation';
+import type { ScriptInteractions } from './interactions';
+import type { ObjectStore } from '../store';
+import { toolsOf } from '../tools/store';
 
 export class ScriptSchedule {
   private readonly queues = new Map<string, Promise<unknown>>();

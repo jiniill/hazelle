@@ -62,7 +62,7 @@ export function CalculatorScreen({ back }: { back: Back | null }) {
       key={key}
       label={LABELS[key]}
       help={HELPS[key]}
-      error={counts[key] === null ? '0 이상의 정수를 입력해 주세요.' : undefined}
+      error={counts[key] === null ? readWhole.error : undefined}
       control={<NumberInput label={LABELS[key]} value={texts[key]} unit="토큰" placeholder="0" invalid={counts[key] === null} onChange={(text) => setTexts({ ...texts, [key]: text })} />}
     />
   );

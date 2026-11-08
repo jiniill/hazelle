@@ -1,3 +1,4 @@
+import { errorMessage } from '../error-message';
 import { discounted, priceCost } from './pricing';
 import { costUnit, type Route } from './registry';
 import { Repetition } from './repetition';
@@ -76,7 +77,7 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
   } catch (error) {
     if (repeated) return finish('cut', 'repeated', null);
     if (signal.aborted) return finish('cut', 'stopped', null);
-    return finish('failed', null, { kind: 'network', detail: error instanceof Error ? error.message : String(error) });
+    return finish('failed', null, { kind: 'network', detail: errorMessage(error) });
   }
 
   if ('badEvent' in ended) return finish('failed', null, { kind: 'bad-event', detail: ended.badEvent });

@@ -1,5 +1,5 @@
 import { runInNewContext } from 'node:vm';
-import { noOutcome } from '../script-binding';
+import { noOutcome } from '../scripts/binding';
 import { describe, expect, it, vi } from 'vitest';
 import portingSample from '../../engine/import/fixtures/porting-sample.js.txt?raw';
 import { readToolFile } from '../../engine/import/risu-plugin';
@@ -10,7 +10,7 @@ import type { Down, Up } from '../../tool-api/protocol';
 import { shown } from '../../model/chat';
 import { appendScripted, appendUserMessage, editMessage, startChat } from '../chat-log';
 import { setModuleAlways, setModuleDeleted } from '../modules';
-import { ToolLate, ToolStuck } from '../script-binding';
+import { ToolLate, ToolStuck } from '../scripts/binding';
 import type { Session } from '../session';
 import { answerable, stubRelay, testServer } from '../testing';
 import { RELAY_HEADER } from '../../contracts/http';

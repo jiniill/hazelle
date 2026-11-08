@@ -7,7 +7,7 @@ import { fieldValue, type ImportedTool } from '../../engine/import/tool';
 import { hex } from '../../hex';
 import { without } from '../../model/fields';
 import { live } from '../../model/library';
-import { toolId, type Badges, type Tool } from '../../model/tool';
+import { badgesOf, toolId, type Badges, type Tool } from '../../model/tool';
 import type { Json, Settings, ToolManifest } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
 import type { BackupOutput } from '../backup-zip';
@@ -194,7 +194,7 @@ export async function readToolAsset(store: ObjectStore, files: Files, module: st
 const chatRows = (store: ObjectStore, module: string, chat: string) => store.children('toolchat', chat).filter(({ value }) => value.module === module);
 export const toolChatData = (store: ObjectStore, module: string, chat: string, key: string): Json | undefined => chatRows(store, module, chat).find(({ value }) => value.key === key)?.value.value;
 export const toolChatKeys = (store: ObjectStore, module: string, chat: string): string[] => chatRows(store, module, chat).flatMap(({ value }) => (value.key === null ? [] : [value.key]));
-export const toolBadges = (store: ObjectStore, module: string, chat: string): Badges => (chatRows(store, module, chat).find(({ value }) => value.key === null)?.value.value ?? {}) as Badges;
+export const toolBadges = (store: ObjectStore, module: string, chat: string): Badges => chatRows(store, module, chat).map(({ value }) => badgesOf(value)).find(Boolean) ?? {};
 
 // Save event chat data and badges in one batch/rate unit, not one write per key; null clears a badge.
 export async function saveToolChat(store: ObjectStore, module: string, chat: string, data: [string, Json | undefined][], badges: { message: string; version: string; text: string | null }[]): Promise<ApiResult<null>> {
@@ -206,7 +206,7 @@ export async function saveToolChat(store: ObjectStore, module: string, chat: str
   if (data.some(([key]) => key.length > TOOL_KEY_CHARS)) return { ok: false, error: 'key-too-long' };
   if (data.some(([key, value]) => value !== undefined && dataBytes(key, value) > TOOL_ROW_BYTES)) return { ok: false, error: 'too-large' };
   if (badges.length) {
-    const held: Badges = { ...(rows.get(null) as Badges | undefined) };
+    const held = { ...toolBadges(store, module, chat) };
     for (const { message, version, text } of badges) {
       if (text === null) delete held[message];
       else held[message] = { version, text };

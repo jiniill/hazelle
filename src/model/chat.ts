@@ -4,7 +4,7 @@ import type { Cache } from '../connectors/settings';
 import type { Cost, Usage } from '../connectors/types';
 import type { CacheForecast } from './cache';
 import type { FeatureSwitches } from './features';
-import type { Kind, Stored } from './kinds';
+import type { Stored, StoreRead } from './kinds';
 import type { LoreFolder, Mark } from './library';
 import type { MemorySettings } from './memory';
 import type { AgentStage } from './prompt';
@@ -602,7 +602,7 @@ export function chatTitle(chat: Chat, messages: Message[], texts: string[]): str
 export type ChatSummary = { id: string; chat: Chat; count: number | null; title: string; preview: string | null; at: number | null; order: number };
 export const chatFolderOf = ({ chat }: Pick<ChatSummary, 'chat'>) => chat.folder ?? null;
 export type ChatItem = ChatSummary & { count: number; preview: string; messages: Message[] };
-export type SummaryRead = ({ kind: Kind; id: string } | { kind: Kind; list: true } | { kind: Kind; parent: string }) & { rev: number };
+export type SummaryRead = StoreRead & { rev: number };
 export type Summary = {
   version: number;
   head: number;

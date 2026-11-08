@@ -1,8 +1,7 @@
-import type { Kind } from '../model/kinds';
+import type { StoreRead } from '../model/kinds';
 import type { CacheState } from './object-cache';
 
 export type StoreChange = { kind: string; id: string; parent: string | null };
-export type StoreRead = { kind: Kind; id: string } | { kind: Kind; list: true } | { kind: Kind; parent: string };
 
 // value is undefined for a body that did not open. Such an object is counted, never
 // shown as if it were empty, and never overwritten. kind may be one a newer version wrote.

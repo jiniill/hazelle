@@ -5,7 +5,7 @@ import type { Event, ScriptUnit } from '../../../engine/script-api';
 import type { LoreOwner } from '../../../model/library';
 import { chatNow } from '../../../runtime/chat-context';
 import type { TrialRead } from '../../../runtime/evaluation-core';
-import type { Trial } from '../../../runtime/script-preview';
+import type { Trial } from '../../../runtime/scripts/preview';
 import { useChats, useSession } from '../../session';
 import { Button, Callout, ChoiceGroup, CodeBlock, Facts, Stack, StepList, Text, type CodeAside, type StepRow } from '../../ui';
 import { runaway } from '../failure';

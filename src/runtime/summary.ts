@@ -3,7 +3,7 @@ import { chatTitle, previewLine, recentIn, shown, type Chat, type ChatItem, type
 import { live } from '../model/library';
 import type { ApiFailure } from './api';
 import type { ObjectStore } from './store';
-import type { StoreRead } from './object-index';
+import type { StoreRead } from '../model/kinds';
 import { EvaluationStuck, type Evaluation } from './evaluation';
 import { ScopeUnavailable, type ChatLease, type ScopeState } from './chat-scope';
 import { pinned, scopeOf } from './chat-context';

@@ -31,7 +31,7 @@ export type Card = {
 // never a card's or a module's apart.
 export type Pack = {
   regex: RegexScript[];
-  // The triggers that do something, in Risu's order, which is the order a run walks them in (runtime/script-selection).
+  // The triggers that do something, in Risu's order, which is the order a run walks them in (runtime/scripts/selection).
   triggers: Trigger[];
   // Risu's backgroundHTML, absent when there is none. Only its <style> blocks are shown (design §6.4).
   background?: string;

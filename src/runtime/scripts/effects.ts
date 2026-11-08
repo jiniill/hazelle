@@ -1,15 +1,15 @@
-import type { ChatScope } from '../engine/render';
-import type { Outcome } from '../engine/script-api';
-import { shown } from '../model/chat';
-import type { PackOwner } from '../model/library';
-import { allWritten } from './api';
-import { appendScripted } from './chat-log';
-import { upsertChatLore } from './lore';
+import type { ChatScope } from '../../engine/render';
+import type { Outcome } from '../../engine/script-api';
+import { shown } from '../../model/chat';
+import type { PackOwner } from '../../model/library';
+import { allWritten } from '../api';
+import { appendScripted } from '../chat-log';
+import { upsertChatLore } from '../lore';
 import type { ScriptOutcome } from './lua/event';
-import type { ReadModels } from './read-model';
-import type { ScriptInteractions } from './script-interactions';
-import type { ObjectStore } from './store';
-import { saveToolChat } from './tools/store';
+import type { ReadModels } from '../read-model';
+import type { ScriptInteractions } from './interactions';
+import type { ObjectStore } from '../store';
+import { saveToolChat } from '../tools/store';
 
 export type Anchor = { version: string; stays?: true };
 

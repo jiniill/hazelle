@@ -1,12 +1,12 @@
-import type { LuaRunner } from '../script-binding';
-import type { Event, Host, ScriptUnit } from '../../engine/script-api';
-import type { DisplayBatch, DisplayItem, RunLane, Script, SyntaxProblem } from '../../engine/lua/run';
-import type { LuaMessage, Snapshot } from '../../engine/lua/state';
-import type { ChatBasis, ChatScope } from '../../engine/render';
+import type { LuaRunner } from '../binding';
+import type { Event, Host, ScriptUnit } from '../../../engine/script-api';
+import type { DisplayBatch, DisplayItem, RunLane, Script, SyntaxProblem } from '../../../engine/lua/run';
+import type { LuaMessage, Snapshot } from '../../../engine/lua/state';
+import type { ChatBasis, ChatScope } from '../../../engine/render';
 import type { ScriptOutcome } from './event';
-import { changedTail, sameHistory, type Tail } from '../history-delta';
-import { PendingRequests } from '../pending-requests';
-import { Heartbeat, moduleWorker } from '../worker';
+import { changedTail, sameHistory, type Tail } from '../../history-delta';
+import { PendingRequests } from '../../pending-requests';
+import { Heartbeat, moduleWorker } from '../../worker';
 import workerUrl from './worker?worker&url';
 
 type EventInput = { scope: ChatBasis; history: Tail<ChatScope['messages'][number]> };

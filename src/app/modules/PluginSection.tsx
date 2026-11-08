@@ -1,7 +1,7 @@
 import { ExternalLink } from 'lucide-react';
 import type { Stored } from '../../model/kinds';
 import { setModels, setNetwork, setTakesMemory } from '../../runtime/pack';
-import { scriptsOf } from '../../runtime/script-selection';
+import { scriptsOf } from '../../runtime/scripts/selection';
 import { ToolSetting } from '../common/ToolSetting';
 import { opensPage } from '../common/ToolView';
 import type { Write } from '../common/saveQueue';

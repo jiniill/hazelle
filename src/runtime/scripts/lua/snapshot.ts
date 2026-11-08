@@ -1,7 +1,7 @@
-import { TOGGLE_GLOBAL } from '../../engine/cbs/tags';
-import type { Snapshot } from '../../engine/lua/state';
-import { personaName } from '../../engine/memory';
-import { authorNote, type ChatScope } from '../../engine/render';
+import { TOGGLE_GLOBAL } from '../../../engine/cbs/tags';
+import type { Snapshot } from '../../../engine/lua/state';
+import { personaName } from '../../../engine/memory';
+import { authorNote, type ChatScope } from '../../../engine/render';
 
 // Display freshness includes these snapshot fields; CBS/lore reads also depend on scope.
 type LuaStanding = Pick<Snapshot, 'globals' | 'character' | 'persona' | 'note'>;

@@ -53,6 +53,7 @@ export type Values = {
   profile: Profile;
 };
 export type Kind = keyof Values;
+export type StoreRead = { kind: Kind; id: string } | { kind: Kind; list: true } | { kind: Kind; parent: string };
 
 // parent is immutable, cleartext and bound into sealing; use owner for sealed ownership links.
 // Singleton ids and appendOnly constrain writes; file metadata drives backup discovery.

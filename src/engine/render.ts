@@ -128,7 +128,7 @@ export function renderChat(
   variables.record = states;
   const failures = { input: new Map<number, Runaway>(), display: new Map<number, Runaway>() };
   const first = scope.greeting === null ? 0 : 1;
-  // Once a reply stands, the greeting's buttons write to the last message (runtime/script-effects onLast), so the greeting
+  // Once a reply stands, the greeting's buttons write to the last message (runtime/scripts/effects onLast), so the greeting
   // is read again below with the chat's current variables, as Risu reads it (ruled 2026-10-14).
   const later = first === 1 && scope.messages.length > 1;
   const missed: Missed[] = [];
