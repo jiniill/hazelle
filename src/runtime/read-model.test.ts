@@ -18,6 +18,7 @@ import { Streams } from './streams';
 import { ObjectStore } from './store';
 import type { StoreChange } from './object-index';
 import type { Turn } from './talk';
+import { changeSettings } from './account-settings';
 
 type Wire = StoreChange & { rev: number; body: string | null };
 async function account() {
@@ -822,7 +823,7 @@ describe('per-chat read models', () => {
     await store.projections.save('b');
     const summaries = read.chats.snapshot();
     const library = read.library.snapshot();
-    await store.upsert('settings', () => ({ models: {} }));
+    await changeSettings(store, () => ({ models: {} }));
     expect(read.chats.snapshot()).toBe(summaries);
     expect(read.library.snapshot()).toBe(library);
     expect(read.chat('a').snapshot()?.messages).toBe(messages);

@@ -57,7 +57,7 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
   const personaIds = new Map<string, string>();
   const movedModules: MovedModule[] = [];
   // Only onto an account that has set none: one set here is the user's later choice.
-  const loreBudget = accountSettings(store)?.loreBudget === undefined ? backup.catalog.loreBudget : null;
+  const loreBudget = accountSettings(store).loreBudget === undefined ? backup.catalog.loreBudget : null;
   if (loreBudget !== null) {
     const set = await setSharedLoreScan(store, 'tokenBudget', loreBudget);
     if (!set.ok) return set;
@@ -65,7 +65,7 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
   // Risu kept one value per key for every chat, so every character this run brings takes them all. 캐릭터 없이 takes only
   // the keys it holds none for, as the budget above. Not filtered by what is declared: a key nothing declares yet reads
   // nothing until a prompt or pack declares it.
-  const held = accountSettings(store)?.toggles ?? {};
+  const held = accountSettings(store).toggles ?? {};
   const unset = Object.entries(backup.catalog.toggles).filter(([key]) => !Object.hasOwn(held, key));
   for (const [key, value] of unset) {
     const set = await setToggle(store, null, key, value);
@@ -135,7 +135,7 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
   // Chats and characters are listed by the server's rev, the latest first, and a batch takes its revs in the order
   // written. So what was talked in last is written last, whatever order Risu kept it in (due).
   const chatTotal = due.reduce((sum, { chatCount }) => sum + chatCount, 0);
-  const current = accountSettings(store)?.persona;
+  const current = accountSettings(store).persona;
   let chatsDone = 0;
   const moved: MovedCharacter[] = [];
   for (const [done, { key }] of due.entries()) {
@@ -214,7 +214,7 @@ async function folderNamed(store: ObjectStore, name: string): Promise<ApiResult<
 // Chats Risu saved to a file of their own, to character. They start as moved chats do: memory off, the current persona.
 export async function importRisuChats(store: ObjectStore, character: string | null, chats: RisuChat[]): Promise<ApiResult<string[]>> {
   const card = character === null ? null : (store.get('character', character)?.value.card ?? null);
-  const current = accountSettings(store)?.persona;
+  const current = accountSettings(store).persona;
   const made = [...chats].sort((a, b) => lastTalk(a) - lastTalk(b)).map((chat) => chatOf(crypto.randomUUID(), character, card, chat, new Map(), current, movedMemory(store), []));
   const failure = await saveNewChats(store, made.map(({ root }) => root.id), made.flatMap(({ entries, root }) => [...entries, root]));
   return failure ?? { ok: true, data: made.map(({ root }) => root.id) };

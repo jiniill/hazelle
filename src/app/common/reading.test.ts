@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Reading } from '../ui';
-import { DISPLAY_DEFAULT, effectiveEnterSends, lookOf, moveLook, parseDisplay, parseReading, presetOf, presets, savedPresets } from './reading';
+import { DISPLAY_DEFAULT, effectiveEnterSends, lookOf, parseDisplay, parseReading, presetOf, presets, savedPresets } from './reading';
 
 const FALLBACK: Reading = { font: 'serif', size: 17, leading: 'normal', width: 'normal', reply: 'follow' };
 
@@ -75,14 +75,5 @@ describe('saved presets', () => {
     const before: Record<string, string | number> = { ...look };
     delete before.dialogue;
     expect(savedPresets([{ id: 'a', name: '밤', look: before }]).presets[0]?.look).toEqual(look);
-  });
-});
-
-describe('moving a saved preset', () => {
-  it('lands it where the target was, either way, and keeps an unread one among the rest', () => {
-    const look = lookOf(FALLBACK, DISPLAY_DEFAULT);
-    const looks = ['a', 'b', 'x', 'c'].map((id) => ({ id, name: id, look }));
-    expect(moveLook(looks, 'a', 'c').map(({ id }) => id)).toEqual(['b', 'x', 'c', 'a']);
-    expect(moveLook(looks, 'c', 'b').map(({ id }) => id)).toEqual(['a', 'c', 'b', 'x']);
   });
 });

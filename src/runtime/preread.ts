@@ -7,7 +7,7 @@ import type { Assembled, RanAway } from '../engine/pipeline';
 import { coverage, placeBrief, prereadPlan, savedCost, type Covered } from '../engine/preread';
 import type { ChatScope } from '../engine/render';
 import type { Chat, Receipt } from '../model/chat';
-import { EMPTY_SETTINGS, type PrereadSettings } from '../model/settings';
+import type { PrereadSettings } from '../model/settings';
 import type { ApiFailure } from './api';
 import { chatModel, type Route, type RouteFailure } from './assignment';
 import { evaluatingTask } from './evaluation';
@@ -15,7 +15,7 @@ import { taskWriter } from './profiles';
 import { prereadPrompt } from './prompts';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 import { pageAnswer } from './talk';
 import { tokenProjection } from './token-calibration';
 import { chatPlace, keepRow } from './usage';
@@ -28,7 +28,7 @@ import { chatPlace, keepRow } from './usage';
 export const PREREAD_STARTS: PrereadSettings = { parts: { chat: true, system: false, lore: true }, recent: 6, batch: 4000, thinkLess: true };
 
 export function prereadSetup(store: Pick<ObjectStore, 'get'>): PrereadSettings {
-  const own = accountSettings(store)?.preread;
+  const own = accountSettings(store).preread;
   return { parts: { ...PREREAD_STARTS.parts, ...own?.parts }, recent: own?.recent ?? PREREAD_STARTS.recent, batch: own?.batch ?? PREREAD_STARTS.batch, thinkLess: own?.thinkLess ?? PREREAD_STARTS.thinkLess };
 }
 
@@ -46,7 +46,7 @@ export function briefsWithChatModel(store: Pick<ObjectStore, 'get'>, chat: Chat)
 }
 
 export const setPreread = (store: ObjectStore, change: Partial<PrereadSettings>) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, preread: { ...current.preread, ...change } }));
+  changeSettings(store, (current) => ({ ...current, preread: { ...current.preread, ...change } }));
 
 // failed: the call failed, or answered with no brief. Either fails the turn: sending the whole prompt unasked could cost
 // many times more and overflow the chat model's window.

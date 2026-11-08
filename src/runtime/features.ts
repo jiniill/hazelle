@@ -1,12 +1,12 @@
 import type { Chat } from '../model/chat';
 import { FEATURE_LABS, FEATURE_STARTS, FEATURES, type Feature, type FeatureSwitches } from '../model/features';
 import { without } from '../model/fields';
-import { EMPTY_SETTINGS, labOn, type Settings } from '../model/settings';
+import { labOn, type Settings } from '../model/settings';
 import type { ApiResult } from './api';
 import { illustrateSwitches, translateSwitches, type IllustrateSetup, type TranslateSetup } from './characters';
 import { chatPrompt } from './prompts';
 import type { ObjectStore } from './store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 
 // A new 캐릭터 없이 chat: what the 공용 layer resolves to when no chat or card of its own sets anything.
 export const SHARED_CHAT: Chat = { title: null, character: null, models: {} };
@@ -19,7 +19,7 @@ export type FeatureOwner = { kind: 'settings' } | { kind: 'prompt' | 'character'
 export type FeatureLayer = { kind: 'prompt' } | { kind: 'character' } | { kind: 'chat'; chat: Place };
 
 // The features a screen lists: an experiment's only while its 실험실 switch is on.
-export const availableFeatures = (settings: Pick<Settings, 'labs'> | undefined): Feature[] =>
+export const availableFeatures = (settings: Pick<Settings, 'labs'>): Feature[] =>
   FEATURES.filter((feature) => {
     const lab = FEATURE_LABS[feature];
     return lab === undefined || labOn(settings, lab);
@@ -31,7 +31,7 @@ function decided(store: Reader, layers: (FeatureSwitches | undefined)[]): Featur
   return Object.fromEntries(FEATURES.map((feature) => [feature, available.includes(feature) && (layers.find((layer) => layer?.[feature] !== undefined)?.[feature] ?? FEATURE_STARTS[feature])])) as Features;
 }
 
-const settingsLayer = (store: Reader) => accountSettings(store)?.features;
+const settingsLayer = (store: Reader) => accountSettings(store).features;
 const characterLayer = (store: Reader, character: string | null) => (character === null ? undefined : store.get('character', character)?.value.features);
 function promptLayer(store: Reader, chat: Pick<Chat, 'prompt'>) {
   const prompt = chatPrompt(store, chat);
@@ -66,7 +66,7 @@ export function withFeature<T extends { features?: FeatureSwitches }>(current: T
 
 export function setFeatureAt(store: ObjectStore, owner: FeatureOwner, feature: Feature, value: boolean | null): Promise<ApiResult<unknown>> {
   const set = <T extends { features?: FeatureSwitches }>(current: T): T => withFeature(current, feature, value);
-  if (owner.kind === 'settings') return store.upsert('settings', (current = EMPTY_SETTINGS) => set(current));
+  if (owner.kind === 'settings') return changeSettings(store, set);
   if (owner.kind === 'prompt') return store.update('prompt', owner.id, (current) => (current.task === undefined ? set(current) : current));
   if (owner.kind === 'character') return store.update('character', owner.id, set);
   return store.update('chat', owner.id, set);

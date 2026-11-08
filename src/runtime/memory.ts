@@ -12,7 +12,6 @@ import type { Stored } from '../model/kinds';
 import { live } from '../model/library';
 import { emptyMemory, memoryId, type Chapter, type Fact, type Memory, type MemoryRecord, type MemorySettings, type Source, type Thread, type Written } from '../model/memory';
 import type { Stream } from '../model/stream';
-import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiFailure, ApiResult } from './api';
 import { routeFields } from './connections';
 import { evaluationFailure, EvaluationRefused } from './evaluation';
@@ -26,6 +25,7 @@ import { chatPlace, keepRow } from './usage';
 import { tokenLimits, promptBudget, sentSettings } from './chat-context';
 import { wouldSend } from './turn-context';
 import { indexRecords, unembedded, type Indexed } from './retrieval';
+import { changeSettings } from './account-settings';
 
 // The only writer of `memory` objects and of the memory settings (design §6.2).
 
@@ -34,7 +34,7 @@ export const setChatMemory = (store: ObjectStore, chat: string, settings: Memory
   store.update('chat', chat, (current) => (settings === null ? without(current, 'memory') : { ...current, memory: settings }));
 
 export const setDefaultMemory = (store: ObjectStore, change: Partial<MemorySettings>) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, memory: { ...current.memory, ...change } }));
+  changeSettings(store, (current) => ({ ...current, memory: { ...current.memory, ...change } }));
 
 type Write<T = Stored<'memory'>> = Promise<ApiResult<T>>;
 

@@ -8,7 +8,7 @@ import { counted, type Counted, type Ledger, type UsageCall } from '../model/usa
 import type { ApiFailure, ApiResult } from './api';
 import type { Write } from './object-writes';
 import type { ObjectStore, Pin } from './store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 
 // Derive a stable UUID-v8 ledger id from the call id; random UUID-v4 stream ids cannot collide.
 // Repeating the same call lands idempotently (server once).
@@ -119,9 +119,8 @@ export class Usage {
   }
 
   private async filledAll(pin: Pin, signal: AbortSignal): Promise<ApiFailure | null> {
-    const settings = accountSettings(this.store);
-    if (!settings || settings.ledger === 'filled') return null;
-    const { ledger } = settings;
+    const { ledger } = accountSettings(this.store);
+    if (ledger === 'filled') return null;
     const depth = ({ value }: Stored<'chat'>) => {
       let depth = 0;
       for (let origin = value.origin?.id; origin; origin = this.store.get('chat', origin)?.value.origin?.id) depth++;
@@ -131,7 +130,7 @@ export class Usage {
     const chats = this.store.list('chat').map((chat) => ({ chat, order: order(chat) })).filter((one) => one.order > (ledger?.after ?? ''))
       .sort((a, b) => (a.order < b.order ? -1 : 1));
     const mark = async (ledger: 'filled' | { after: string }) => {
-      const marked = await this.store.upsert('settings', (current) => ({ ...current!, ledger }));
+      const marked = await changeSettings(this.store, (current) => ({ ...current, ledger }));
       return marked.ok ? null : marked;
     };
     const write = async (rows: Write[]) => {

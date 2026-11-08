@@ -12,7 +12,7 @@ import { keepsPromptOut, shown, type Chat, type Message } from '../model/chat';
 import { live } from '../model/library';
 import type { Toggle, ToggleLine } from '../model/prompt';
 import { without } from '../model/fields';
-import { EMPTY_SETTINGS, type Seen, type Settings } from '../model/settings';
+import type { Seen, Settings } from '../model/settings';
 import { chatToggles, toggleValue } from '../model/toggles';
 import { chatModel, type Route } from './assignment';
 import { chatTranslate } from './features';
@@ -22,7 +22,7 @@ import { modelProfile } from './profiles';
 import { chatPrompt, type PromptChoice } from './prompts';
 import type { ReadModels } from './read-model';
 import type { ObjectStore } from './store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 import type { Shown } from './talk';
 import { TOOL_ROUNDS } from './tool-loop';
 import type { TranslateInput } from './translate';
@@ -37,7 +37,7 @@ export function packsOf(store: Reader['store'], chat: Pick<Chat, 'character' | '
   const persona = chatPersona(store, chat);
   const modules = [
     ...new Set([
-      ...(accountSettings(store)?.modules ?? []),
+      ...(accountSettings(store).modules ?? []),
       ...(prompt.kind === 'prompt' ? (prompt.prompt.value.modules ?? []) : []),
       ...(character?.value.modules ?? []),
       ...(persona.kind === 'persona' ? (persona.persona.value.modules ?? []) : []),
@@ -61,16 +61,16 @@ const SHARED_SCAN = { scanDepth: 'loreDepth', tokenBudget: 'loreBudget', recursi
 export function sharedLoreScan(store: Reader['store']): LoreScan {
   const settings = accountSettings(store);
   return {
-    scanDepth: settings?.loreDepth ?? LORE_SCAN.scanDepth,
-    tokenBudget: settings?.loreBudget ?? LORE_SCAN.tokenBudget,
-    recursive: settings?.loreRecursive ?? LORE_SCAN.recursive,
-    fullWordMatching: settings?.loreFullWord ?? LORE_SCAN.fullWordMatching,
+    scanDepth: settings.loreDepth ?? LORE_SCAN.scanDepth,
+    tokenBudget: settings.loreBudget ?? LORE_SCAN.tokenBudget,
+    recursive: settings.loreRecursive ?? LORE_SCAN.recursive,
+    fullWordMatching: settings.loreFullWord ?? LORE_SCAN.fullWordMatching,
   };
 }
 
 // The default is kept as none, so it follows the default.
 export const setSharedLoreScan = <K extends keyof LoreScan>(store: ObjectStore, key: K, value: LoreScan[K]) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => (value === LORE_SCAN[key] ? without(current, SHARED_SCAN[key]) : { ...current, [SHARED_SCAN[key]]: value }));
+  changeSettings(store, (current) => (value === LORE_SCAN[key] ? without(current, SHARED_SCAN[key]) : { ...current, [SHARED_SCAN[key]]: value }));
 
 // The character's own over the account's (ruled 2026-10-14), for every lorebook in its chats.
 export function loreScanOf(store: Reader['store'], card: Card | null): LoreScan {
@@ -86,24 +86,26 @@ export function loreScanOf(store: Reader['store'], card: Card | null): LoreScan 
 
 export const ANSWER_INSTRUCTION = '(OOC: Continue the story with your next reply.)';
 
-export const answerInstructionOf = (store: Reader['store']) => accountSettings(store)?.answerInstruction ?? ANSWER_INSTRUCTION;
+export const answerInstructionOf = (store: Reader['store']) => accountSettings(store).answerInstruction ?? ANSWER_INSTRUCTION;
 
 export const setAnswerInstruction = (store: ObjectStore, text: string) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => (text === ANSWER_INSTRUCTION ? without(current, 'answerInstruction') : { ...current, answerInstruction: text }));
+  changeSettings(store, (current) => (text === ANSWER_INSTRUCTION ? without(current, 'answerInstruction') : { ...current, answerInstruction: text }));
 
-export const usageShownOf = (store: Reader['store']) => accountSettings(store)?.usageShown ?? false;
+export const usageShownOf = (store: Reader['store']) => accountSettings(store).usageShown ?? false;
 
 export const setToolRounds = (store: ObjectStore, rounds: number) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => (rounds === TOOL_ROUNDS ? without(current, 'toolRounds') : { ...current, toolRounds: rounds }));
+  changeSettings(store, (current) => (rounds === TOOL_ROUNDS ? without(current, 'toolRounds') : { ...current, toolRounds: rounds }));
 
 export const setUsageShown = (store: ObjectStore, shown: boolean) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => (shown ? { ...current, usageShown: true } : without(current, 'usageShown')));
+  changeSettings(store, (current) => (shown ? { ...current, usageShown: true } : without(current, 'usageShown')));
 
 export const markSeen = (store: ObjectStore, change: Seen) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, seen: { ...current.seen, ...change } }));
+  changeSettings(store, (current) => ({ ...current, seen: { ...current.seen, ...change } }));
+
+export const markImportNoticed = (store: ObjectStore) => changeSettings(store, (current) => ({ ...current, importNotice: true }));
 
 export const setCacheNoteHidden = (store: ObjectStore, hidden: boolean) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => (hidden ? { ...current, cacheNoteHidden: true } : without(current, 'cacheNoteHidden')));
+  changeSettings(store, (current) => (hidden ? { ...current, cacheNoteHidden: true } : without(current, 'cacheNoteHidden')));
 
 // Whom a chat's text names: {{char}} its card, {{user}} its persona.
 export function namedIn(store: Reader['store'], chat: Pick<Chat, 'character' | 'persona'>): Pick<ChatScope, 'card' | 'persona'> {
@@ -189,7 +191,7 @@ export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoi
     })),
   ];
   const declared = chatToggles(sources.flatMap(({ lines }) => lines));
-  return { declared, sources, value:toggleValue(declared, (character ? character.toggles : accountSettings(store)?.toggles) ?? {}) };
+  return { declared, sources, value:toggleValue(declared, (character ? character.toggles : accountSettings(store).toggles) ?? {}) };
 }
 
 type InspectedToggle = { declaration: Toggle; value: string | null; sources: ToggleSource[] };

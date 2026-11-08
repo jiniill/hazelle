@@ -6,7 +6,6 @@ import type { ChatScope } from '../engine/render';
 import { fold, shown, type AgentRun, type Chat, type Message, type Receipt } from '../model/chat';
 import { live } from '../model/library';
 import type { AgentStage } from '../model/prompt';
-import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiFailure, ApiResult } from './api';
 import type { RouteFailure } from './assignment';
 import { scopeOf } from './chat-context';
@@ -18,7 +17,7 @@ import { taskWriter } from './profiles';
 import { chatPrompt, ofSort, type StoredPrompt } from './prompts';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 import { pageAnswer } from './talk';
 import type { Preparing } from './turn-steps';
 import { chatPlace, keepRow } from './usage';
@@ -34,7 +33,7 @@ type Agent = StoredPrompt<'agent'>;
 function layers(store: Reader, chat: Place): string[][] {
   const prompt = chatPrompt(store, chat);
   return [
-    accountSettings(store)?.agents ?? [],
+    accountSettings(store).agents ?? [],
     prompt.kind === 'prompt' ? (prompt.prompt.value.agents ?? []) : [],
     chat.character === null ? [] : (store.get('character', chat.character)?.value.agents ?? []),
     chat.agents ?? [],
@@ -74,7 +73,7 @@ export const withAgent = <T extends { agents?: string[] }>(current: T, id: strin
 
 export function setAgentAt(store: ObjectStore, owner: AgentOwner, id: string, on: boolean): Promise<ApiResult<unknown>> {
   const set = <T extends { agents?: string[] }>(current: T): T => withAgent(current, id, on);
-  if (owner.kind === 'settings') return store.upsert('settings', (current = EMPTY_SETTINGS) => set(current));
+  if (owner.kind === 'settings') return changeSettings(store, set);
   if (owner.kind === 'prompt') return store.update('prompt', owner.id, (current) => (current.task === undefined ? set(current) : current));
   if (owner.kind === 'character') return store.update('character', owner.id, set);
   return store.update('chat', owner.id, set);

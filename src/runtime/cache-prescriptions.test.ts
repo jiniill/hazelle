@@ -23,7 +23,7 @@ async function setup(session: Session, blocks: Block[]) {
   const connection = await store.create('connection', { ...testConnection, type: 'generic', protocol: 'anthropic-messages', baseUrl: 'https://example.test', starred: [{ ...testModel, price: { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5, tiers: [] } }] });
   if (!connection.ok) throw new Error(connection.error);
   await setDefaultModel(store, 'main', { connection: connection.data.id, model: testModel.id });
-  const settings = accountSettings(store)!;
+  const settings = accountSettings(store);
   await store.update('profile', settings.profile!, (profile) => ({ ...profile, settings: { ...profile.settings, cache: '5m', maxOutput: 100 } }));
   const prompt = settings.prompt!;
   await editPrompt(store, prompt, { blocks });

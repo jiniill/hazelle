@@ -76,7 +76,7 @@ describe('addModel', () => {
       await addModel(store, id, model('painter', ['image']));
       await addModel(store, id, model('first'));
       await addModel(store, id, model('second'));
-      expect(accountSettings(store)?.models.main).toEqual({ connection: id, model: 'first' });
+      expect(accountSettings(store).models.main).toEqual({ connection: id, model: 'first' });
     }));
 
   it("keys a model's first entry by its id and a copy by the entry it was given, and adds neither twice", () =>

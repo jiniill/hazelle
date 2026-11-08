@@ -204,7 +204,7 @@ export function moduleContributions({ store }: Reader, chat: Chat, preview: Asse
   const prompt = chatPrompt(store, chat);
   const persona = chatPersona(store, chat);
   const attachments = [
-    { kind: 'settings' as const, id: SETTINGS_ID, modules: accountSettings(store)?.modules ?? [] },
+    { kind: 'settings' as const, id: SETTINGS_ID, modules: accountSettings(store).modules ?? [] },
     ...(prompt.kind === 'prompt' ? [{ kind: 'prompt' as const, id: prompt.prompt.id, modules: prompt.prompt.value.modules ?? [] }] : []),
     ...(character ? [{ kind: 'character' as const, id: character.id, modules: character.value.modules ?? [] }] : []),
     ...(persona.kind === 'persona' ? [{ kind: 'persona' as const, id: persona.persona.id, modules: persona.persona.value.modules ?? [] }] : []),

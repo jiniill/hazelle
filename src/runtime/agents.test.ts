@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { RELAY_HEADER } from '../contracts/http';
 import { fold, shown } from '../model/chat';
-import { EMPTY_SETTINGS } from '../model/settings';
 import { setAgentAt } from './agents';
 import { setTranslate } from './characters';
 import { appendUserMessage, editMessage, restoreRaw, startChat } from './chat-log';
@@ -9,12 +8,13 @@ import { addAgent, editPrompt } from './prompts';
 import type { Session } from './session';
 import { answerable, inTurn, saying, stubRelay, testServer, upstream } from './testing';
 import { polishAgain, takeTurn } from './turn';
+import { changeSettings } from './account-settings';
 
 const server = testServer();
 
 async function chatted(session: Session) {
   await answerable(session);
-  await session.store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, labs: ['agents'] }));
+  await changeSettings(session.store, (current) => ({ ...current, labs: ['agents'] }));
   const chat = crypto.randomUUID();
   await server.hold(session.store, chat);
   await startChat(session.store, chat, { title: null, character: null, models: {} }, null);

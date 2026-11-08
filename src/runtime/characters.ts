@@ -9,14 +9,13 @@ import { readableTexts, type Asset, type Avatar, type Character, type Lore, type
 import { likenessId, type Likeness } from '../model/likeness';
 import type { ToggleValues } from '../model/prompt';
 import { ORDER_ID, rearrange, toFront } from '../model/order';
-import { EMPTY_SETTINGS } from '../model/settings';
 import type { ApiResult } from './api';
 import { saveEach, type Files } from './files';
 import { thumbnail } from './picture';
 import { markDeleted } from './removal';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 import type { Write } from './object-writes';
 
 export type Progress = (step: { kind: 'picture' } | { kind: 'assets' | 'original' | 'saving'; done: number; total: number }) => void;
@@ -221,7 +220,7 @@ export function setKeepThoughts(store: ObjectStore, id: string, keep: boolean): 
 
 // A toggle's value for a character's chats, or with character null for 캐릭터 없이's.
 export function setToggle(store: ObjectStore, character: string | null, key: string, value: string): Promise<ApiResult<Stored<'character'> | Stored<'settings'>>> {
-  if (character === null) return store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, toggles: { ...current.toggles, [key]: value } }));
+  if (character === null) return changeSettings(store, (current) => ({ ...current, toggles: { ...current.toggles, [key]: value } }));
   return store.update('character', character, (current) => ({ ...current, toggles: { ...current.toggles, [key]: value } }));
 }
 
@@ -237,7 +236,7 @@ export const setOrder = (store: ObjectStore, sequence: string[]) => store.upsert
 export const orderFirst = (store: ObjectStore, ids: string[]) => store.upsert('order', (current) => ({ ids: toFront(current?.ids ?? [], ids) }));
 
 function listInSettings(store: ObjectStore, list: 'pinnedToggles' | 'hiddenTools', key: string, listed: boolean): Promise<ApiResult<Stored<'settings'>>> {
-  return store.upsert('settings', (current = EMPTY_SETTINGS) => {
+  return changeSettings(store, (current) => {
     const keys = (current[list] ?? []).filter((each) => each !== key);
     if (listed) keys.push(key);
     return keys.length ? { ...current, [list]: keys } : without(current, list);
@@ -247,13 +246,13 @@ function listInSettings(store: ObjectStore, list: 'pinnedToggles' | 'hiddenTools
 export const pinToggle = (store: ObjectStore, key: string, pinned: boolean) => listInSettings(store, 'pinnedToggles', key, pinned);
 
 export const setPinnedTogglesSpread = (store: ObjectStore, spread: boolean) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => (spread ? { ...current, pinnedTogglesSpread: true } : without(current, 'pinnedTogglesSpread')));
+  changeSettings(store, (current) => (spread ? { ...current, pinnedTogglesSpread: true } : without(current, 'pinnedTogglesSpread')));
 
 export const hideTool = (store: ObjectStore, key: string, hidden: boolean) => listInSettings(store, 'hiddenTools', key, hidden);
 
 // sequence: this chat's tools; a plugin only other chats have keeps its slot.
 export const setToolOrder = (store: ObjectStore, sequence: string[]) =>
-  store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, toolOrder: rearrange(current.toolOrder ?? [], sequence) }));
+  changeSettings(store, (current) => ({ ...current, toolOrder: rearrange(current.toolOrder ?? [], sequence) }));
 
 // What a switch not stored reads as. Switches stored before 반전 모드, the languages and the prompt choice existed
 // hold none of those, and read as these.
@@ -270,7 +269,7 @@ const FILL: { [S in Scoped]: (saved: SwitchesOf[S] | undefined, change?: Partial
 
 function scoped<S extends Scoped>(store: Pick<ObjectStore, 'get'>, character: string | null, scope: S): { switches: SwitchesOf[S] | undefined; own: boolean } {
   const own = character === null ? undefined : (store.get('character', character)?.value[OWN[scope]] as SwitchesOf[S] | undefined);
-  return { switches: own ?? (accountSettings(store)?.[scope] as SwitchesOf[S] | undefined), own: own !== undefined };
+  return { switches: own ?? (accountSettings(store)[scope] as SwitchesOf[S] | undefined), own: own !== undefined };
 }
 
 // Only the switches given, merged into the ones a chat of character reads: its own, or else the shared ones. A field
@@ -281,13 +280,13 @@ function setScoped<S extends Scoped>(store: ObjectStore, character: string | nul
   if (character !== null && store.get('character', character)?.value[own]) {
     return store.update('character', character, (current) => ({ ...current, [own]: fill(current[own] as SwitchesOf[S], change) }));
   }
-  return store.upsert('settings', (current = EMPTY_SETTINGS) => ({ ...current, [scope]: fill(current[scope] as SwitchesOf[S] | undefined, change) }));
+  return changeSettings(store, (current) => ({ ...current, [scope]: fill(current[scope] as SwitchesOf[S] | undefined, change) }));
 }
 
 // On starts from the shared switches as they are; off follows them again.
 function setOwnScoped<S extends Scoped>(store: ObjectStore, character: string, scope: S, own: boolean): Promise<ApiResult<Stored<'character'>>> {
   const fill = FILL[scope] as (saved: SwitchesOf[S] | undefined) => SwitchesOf[S];
-  const copy = fill(accountSettings(store)?.[scope] as SwitchesOf[S] | undefined);
+  const copy = fill(accountSettings(store)[scope] as SwitchesOf[S] | undefined);
   return store.update('character', character, (current) => (own ? { ...current, [OWN[scope]]: copy } : without(current, OWN[scope])));
 }
 
@@ -319,7 +318,7 @@ export const setOwnIllustrate = (store: ObjectStore, character: string, own: boo
 
 // Append global then character note. Trim only on read: autosave trimming would eat a newline still being typed.
 export function translatorNotes(store: ObjectStore, character: string | null): string {
-  const global = accountSettings(store)?.translatorNote;
+  const global = accountSettings(store).translatorNote;
   const own = character === null ? undefined : store.get('character', character)?.value.translatorNote;
   return [global, own].map((note) => note?.trim() ?? '').filter(Boolean).join('\n\n');
 }
@@ -327,7 +326,7 @@ export function translatorNotes(store: ObjectStore, character: string | null): s
 // character null is the 전역 note, unlike setTranslate's null, which is 캐릭터 없이's switches. Blank removes the note.
 export function setTranslatorNote(store: ObjectStore, character: string | null, text: string): Promise<ApiResult<Stored<'character'> | Stored<'settings'>>> {
   const noted = <T extends { translatorNote?: string }>(current: T): T => (text.trim() ? { ...current, translatorNote: text } : without(current, 'translatorNote'));
-  if (character === null) return store.upsert('settings', (current = EMPTY_SETTINGS) => noted(current));
+  if (character === null) return changeSettings(store, noted);
   return store.update('character', character, noted);
 }
 
@@ -342,6 +341,6 @@ export function setTextTranslation(store: ObjectStore, character: string, source
 }
 
 export function resetToggles(store: ObjectStore, character: string | null): Promise<ApiResult<Stored<'character'> | Stored<'settings'>>> {
-  if (character === null) return store.upsert('settings', (current = EMPTY_SETTINGS) => without(current, 'toggles'));
+  if (character === null) return changeSettings(store, (current) => without(current, 'toggles'));
   return store.update('character', character, (current) => without(current, 'toggles'));
 }

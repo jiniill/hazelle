@@ -340,7 +340,7 @@ describe('setToggle', () => {
     await setToggle(store, id, 'sims', '1');
     await setToggle(store, id, 'mode', '2');
     await setToggle(store, null, 'sims', '0');
-    expect([store.get('character', id)?.value.toggles, accountSettings(store)?.toggles]).toEqual([{ sims: '1', mode: '2' }, { sims: '0' }]);
+    expect([store.get('character', id)?.value.toggles, accountSettings(store).toggles]).toEqual([{ sims: '1', mode: '2' }, { sims: '0' }]);
     await resetToggles(store, id);
     expect(store.get('character', id)?.value.toggles).toBeUndefined();
   });
@@ -350,7 +350,7 @@ describe('setPinnedTogglesSpread', () => {
   it('stores the spread layout and drops the field for the gathered one', async () => {
     const { store } = await server.account();
     await setPinnedTogglesSpread(store, true);
-    expect(accountSettings(store)?.pinnedTogglesSpread).toBe(true);
+    expect(accountSettings(store).pinnedTogglesSpread).toBe(true);
     await setPinnedTogglesSpread(store, false);
     expect(accountSettings(store)).not.toHaveProperty('pinnedTogglesSpread');
   });
@@ -360,7 +360,7 @@ describe('hideTool', () => {
   it('lists a hidden tool and drops the field when none is left', async () => {
     const { store } = await server.account();
     await hideTool(store, 'note', true);
-    expect(accountSettings(store)?.hiddenTools).toEqual(['note']);
+    expect(accountSettings(store).hiddenTools).toEqual(['note']);
     await hideTool(store, 'note', false);
     expect(accountSettings(store)).not.toHaveProperty('hiddenTools');
   });
@@ -371,7 +371,7 @@ describe('setToolOrder', () => {
     const { store } = await server.account();
     await setToolOrder(store, ['note', 'elsewhere', 'attach']);
     await setToolOrder(store, ['attach', 'note']);
-    expect(accountSettings(store)?.toolOrder).toEqual(['attach', 'elsewhere', 'note']);
+    expect(accountSettings(store).toolOrder).toEqual(['attach', 'elsewhere', 'note']);
   });
 });
 
@@ -381,7 +381,7 @@ describe('pinToggle', () => {
     await pinToggle(store, 'sims', true);
     await pinToggle(store, 'mode', true);
     await pinToggle(store, 'sims', true);
-    expect(accountSettings(store)?.pinnedToggles).toEqual(['mode', 'sims']);
+    expect(accountSettings(store).pinnedToggles).toEqual(['mode', 'sims']);
     await pinToggle(store, 'mode', false);
     await pinToggle(store, 'sims', false);
     expect(accountSettings(store)).not.toHaveProperty('pinnedToggles');

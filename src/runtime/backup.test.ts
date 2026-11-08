@@ -14,7 +14,7 @@ import { addFirstPersona } from './personas';
 import { FIRST_PROFILE_ID, addFirstProfile, setProfileSettings } from './profiles';
 import { addDefaults, addPrompt, PREREADER_ID, removePrompt } from './prompts';
 import type { ObjectStore } from './store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 import type { Write } from './object-writes';
 import { SUMMARY_WINDOW, summaryId, summaryStale } from './summary';
 import { png, testConnection, testServer } from './testing';
@@ -300,19 +300,19 @@ describe('backup', () => {
   it.each([true, false])('treats the lab pre-reader as a seeded default when restoring (in backup: %s)', async (included) => {
     const old = await open('old');
     if (included) {
-      await old.store.upsert('settings', (value) => ({ ...value!, labs: ['preread'] }));
+      await changeSettings(old.store, (value) => ({ ...value, labs: ['preread'] }));
       await addDefaults(old.store);
       await old.store.update('prompt', PREREADER_ID, (value) => ({ ...value, name: 'Backed up pre-reader' }));
     }
     const backup = await read(await exported(old.store, old.files));
     await server.wipe();
     const fresh = await open('new');
-    await fresh.store.upsert('settings', (value) => ({ ...value!, labs: ['preread'] }));
+    await changeSettings(fresh.store, (value) => ({ ...value, labs: ['preread'] }));
     await addDefaults(fresh.store);
     expect(fresh.store.get('prompt', PREREADER_ID)).not.toBeNull();
     expect(await restoreBackup(fresh.store, fresh.files, backup)).toEqual({ ok: true, data: { skipped: 0 } });
     expect(fresh.store.get('prompt', PREREADER_ID)?.value.name ?? null).toBe(included ? 'Backed up pre-reader' : null);
-    expect(accountSettings(fresh.store)?.prereadPrompt).toBe(included ? PREREADER_ID : undefined);
+    expect(accountSettings(fresh.store).prereadPrompt).toBe(included ? PREREADER_ID : undefined);
     const restored = await held(fresh.store);
     expect(await restoreBackup(fresh.store, fresh.files, backup)).toEqual({ ok: true, data: { skipped: 0 } });
     expect(await held(fresh.store)).toEqual(restored);

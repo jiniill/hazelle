@@ -20,7 +20,7 @@ export const MEMORY_DEFAULTS: MemorySettings = { on: true, budget: 25_000, windo
 
 export type MemorySetup = MemorySettings & { own: boolean };
 
-export const defaultMemory = (store: Pick<ObjectStore, 'get'>): MemorySettings => ({ ...MEMORY_DEFAULTS, ...accountSettings(store)?.memory });
+export const defaultMemory = (store: Pick<ObjectStore, 'get'>): MemorySettings => ({ ...MEMORY_DEFAULTS, ...accountSettings(store).memory });
 
 export const memorySetup = (store: Pick<ObjectStore, 'get'>, chat: Chat): MemorySetup => (chat.memory ? { ...chat.memory, own: true } : { ...defaultMemory(store), own: false });
 

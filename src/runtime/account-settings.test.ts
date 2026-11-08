@@ -1,12 +1,13 @@
 import { expect, it } from 'vitest';
-import { accountSettings } from './account-settings';
+import { EMPTY_SETTINGS } from '../model/settings';
+import { accountSettings, changeSettings } from './account-settings';
 import { testServer } from './testing';
 
 const server = testServer();
 
-it('reads no settings before their first write, then the written value', async () => {
+it('reads empty settings before their first write, and a change starts from them', async () => {
   const { store } = await server.account();
-  expect(accountSettings(store)).toBeUndefined();
-  await store.upsert('settings', () => ({ models: {}, persona: 'p' }));
+  expect(accountSettings(store)).toBe(EMPTY_SETTINGS);
+  await changeSettings(store, (current) => ({ ...current, persona: 'p' }));
   expect(accountSettings(store)).toEqual({ models: {}, persona: 'p' });
 });

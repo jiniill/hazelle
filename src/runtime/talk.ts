@@ -285,7 +285,7 @@ export class Talk {
     let last = null as Called | null;
     let refused = false as boolean;
     let named = false as boolean;
-    const rounds = accountSettings(this.store)?.toolRounds ?? TOOL_ROUNDS;
+    const rounds = accountSettings(this.store).toolRounds ?? TOOL_ROUNDS;
     const looped = await toolLoop({ tools: calling?.tools ?? [], rounds, signal: abort.signal, onText: this.writer(held, true) }, async (exchange, offered, onText) => {
       if (last) {
         const results = exchange.at(-1)!.results!;
