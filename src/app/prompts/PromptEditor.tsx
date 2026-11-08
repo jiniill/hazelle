@@ -5,7 +5,8 @@ import type { Stored } from '../../model/kinds';
 import { live } from '../../model/library';
 import { labOn } from '../../model/settings';
 import { isToggle, slotsOf, sortOf, type Block, type PromptSort, type TextBlock, type Toggle, type WrappedSlot } from '../../model/prompt';
-import { setPromptModel, setTaskModel } from '../../runtime/assignment';
+import type { ApiResult } from '../../runtime/api';
+import { setAgentModel, setPromptModel } from '../../runtime/assignment';
 import { setAgentAt } from '../../runtime/agents';
 import { setFeatureAt } from '../../runtime/features';
 import { copyPrompt, editPrompt, isDefaultPrompt, ofSort, removePrompt, resetPromptBlocks, restorePrompt, setDefaultPrompt, type PromptPatch } from '../../runtime/prompts';
@@ -48,7 +49,7 @@ import {
   type Step,
   type Turned,
 } from './history';
-import { ModelPane, modelWords, TaskModelPane, taskModelWords } from './ModelPane';
+import { AgentModelPane, agentModelWords, ModelPane, modelWords } from './ModelPane';
 import { chatWarning } from './ranges';
 import { PicturePane } from './PicturePane';
 import { PresetExport } from './PresetExport';
@@ -124,15 +125,18 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
     save.change(patch);
   };
 
-  const firstText = () => latest.current.blocks.find(isText)?.id ?? MODEL;
+  // Only a conversation prompt and an agent pick models; another task's model is its feature's (runtime/assignment taskModel).
+  const picksModel = sort === 'conversation' || sort === 'agent';
+  const firstText = () => latest.current.blocks.find(isText)?.id ?? (picksModel ? MODEL : TOGGLES);
   // A block only: the pane open in its place is the pane prop's.
   const [picked, setPicked] = useState(openAt);
   const [drilled, setDrilled] = useState(openAt !== undefined);
   const [reordering, setReordering] = useState(false);
   const [addingToggle, setAddingToggle] = useState(false);
   const [exporting, setExporting] = useState(false);
-  // 이미지 is an illustration prompt's only; an address naming it on another opens as if it named none.
-  const shownPane = pane === PICTURE && sort !== 'illustrate' ? null : pane;
+  // 이미지 is an illustration prompt's only, and 모델 a prompt's that picks one; an address naming either on another
+  // opens as if it named none.
+  const shownPane = (pane === PICTURE && sort !== 'illustrate') || (pane === MODEL && !picksModel) ? null : pane;
   const open = shownPane ?? (picked !== undefined && draft.blocks.some((block) => block.id === picked) ? picked : firstText());
   const index = draft.blocks.findIndex((block) => block.id === open);
   const block = draft.blocks[index];
@@ -241,7 +245,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
     if (!perform(renameKey(toggle, to))) return;
     toast.show('키를 바꿨어요.', count ? { detail: `조건 ${count}곳도 함께 바꿨어요.` } : undefined);
   };
-  const modelSaved = (saving: ReturnType<typeof setTaskModel>) => toast.settled(saving, '모델을 바꾸지 못했어요.');
+  const modelSaved = (saving: Promise<ApiResult<unknown>>) => toast.settled(saving, '모델을 바꾸지 못했어요.');
 
   const isDefault = isDefaultPrompt(settings, stored);
   const copy = async () => {
@@ -301,18 +305,13 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
     </>
   );
 
+  const modelMeta = ofSort(stored, 'conversation') ? modelWords(stored.value.models, connections) : ofSort(stored, 'agent') ? agentModelWords(stored.value.model, connections) : null;
   const warning = sort === 'conversation' ? chatWarning(draft.blocks) : null;
   const noPersona = sort === 'conversation' && !holdsPersona(draft.blocks);
   const outline = (
     <>
       <Stack gap="related">
-        <NavRow
-          icon={Cpu}
-          label="모델"
-          meta={stored.value.task === undefined ? modelWords(stored.value.models, connections) : taskModelWords(stored.value.model, connections)}
-          current={split && open === MODEL}
-          onClick={() => pick(MODEL)}
-        />
+        {modelMeta !== null && <NavRow icon={Cpu} label="모델" meta={modelMeta} current={split && open === MODEL} onClick={() => pick(MODEL)} />}
         {sort === 'illustrate' && <NavRow icon={ImageIcon} label="이미지" meta={draft.tags || Object.values(draft.picture ?? {}).some((value) => value !== undefined) ? '직접 지정' : '기본값'} current={split && open === PICTURE} onClick={() => pick(PICTURE)} />}
         <NavRow icon={SlidersHorizontal} label="토글" meta={`${draft.toggles.filter(isToggle).length}개`} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
       </Stack>
@@ -370,12 +369,10 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
   );
 
   const page: ReactNode =
-    open === MODEL ? (
-      stored.value.task === undefined ? (
-        <ModelPane models={stored.value.models} defaults={settings.models} connections={connections} onPick={(role, ref) => modelSaved(setPromptModel(store, stored.id, role, ref))} />
-      ) : (
-        <TaskModelPane task={stored.value.task} own={stored.value.model} connections={connections} onPick={(ref) => modelSaved(setTaskModel(store, stored.id, ref))} />
-      )
+    open === MODEL && ofSort(stored, 'conversation') ? (
+      <ModelPane models={stored.value.models} defaults={settings.models} connections={connections} onPick={(role, ref) => modelSaved(setPromptModel(store, stored.id, role, ref))} />
+    ) : open === MODEL && ofSort(stored, 'agent') ? (
+      <AgentModelPane own={stored.value.model} connections={connections} onPick={(ref) => modelSaved(setAgentModel(store, stored.id, ref))} />
     ) : open === PICTURE ? (
       <PicturePane tags={draft.tags} picture={draft.picture} onTags={(tags) => update(() => ({ tags }))} onPicture={(picture) => update(() => ({ picture }))} />
     ) : open === TOGGLES ? (

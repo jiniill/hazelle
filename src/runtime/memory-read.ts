@@ -5,7 +5,7 @@ import type { ModelSettings } from '../connectors/settings';
 import type { Stored } from '../model/kinds';
 import { emptyMemory, memoryId, type Memory, type MemorySettings, type Source } from '../model/memory';
 import type { ToolUnit } from '../model/tool';
-import type { Route } from './assignment';
+import { accountTaskModel, type Route } from './assignment';
 import { featuresOf } from './features';
 import type { MemoryFailure } from './memory';
 import { taskWriter } from './profiles';
@@ -58,6 +58,6 @@ export type Tools = { prompt: MemoryPrompt; route: Route; settings: ModelSetting
 export function memoryWriter(store: Pick<ObjectStore, 'get'>, chat: Chat): Tools | MemoryFailure {
   const prompt = memoryPrompt(store);
   if (prompt.kind === 'missing') return { kind: 'prompt-missing' };
-  const writer = taskWriter(store, chat, prompt.prompt.value.model);
+  const writer = taskWriter(store, chat, accountTaskModel(store, 'memory'));
   return 'kind' in writer ? writer : { prompt: prompt.prompt.value, ...writer };
 }

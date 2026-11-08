@@ -1,7 +1,7 @@
 import { ACTS, importOf, newOf } from '../../common/acts';
 import { LABS } from '../../common/labs';
 import { NUMBER, PROFILE_LABELS, PROFILE_ROWS } from '../../common/settingWords';
-import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, ILLUSTRATION_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, TOOL, TRANSLATOR_NOTE } from '../../common/words';
+import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, ILLUSTRATION_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, TASK_MODELS, TOOL, TRANSLATOR_NOTE } from '../../common/words';
 import type { Settings } from '../../../model/settings';
 import { BIN_PLACE, type Route, type SettingsPage } from '../routes';
 
@@ -9,14 +9,14 @@ import { BIN_PLACE, type Route, type SettingsPage } from '../routes';
 // a literal label a page shows and this does not hold; a label given as a constant is only held by being named here.
 // A row on one item's page (a connection, a model) sits here under the list that leads to it, since no item is implied.
 const TERMS: Record<SettingsPage, string[]> = {
-  models: [DEFAULT_MODELS, SCOPE.default, MODEL_ROLES.main, MODEL_ROLES.aux, MODEL_ROLES.embed, '추가한 모델', MODEL_SETTINGS, '프롬프트별 지정 모델', '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT],
+  models: [DEFAULT_MODELS, SCOPE.default, MODEL_ROLES.main, MODEL_ROLES.aux, MODEL_ROLES.embed, '추가한 모델', MODEL_SETTINGS, '기능별 모델', '프롬프트별 지정 모델', '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT],
   connections: ['모델', '계정', '계정 추가', '그룹', '전환일', '사용량과 한도', RETRY_COUNT, '사용 내역', '연결 이름', '키 변경', '모델 ID로 추가'],
   chat: [...Object.values(CHAT_DETAIL), MODEL_ROLES.main, RETRY_COUNT, '모델 도구 호출 횟수', ANSWER_INSTRUCTION_LABEL, ...Object.values(LORE_SCAN_WORDS).map(({ label }) => label)],
-  translate: ['응답 번역', '응답 번역 언어', '내 메시지 번역', '내 메시지 번역 언어', '원문 함께 보기', '반전 모드', TRANSLATOR_NOTE, '번역 프롬프트', '번역 모델'],
-  illustrate: ['자동 삽화', '이미지 모델', '페르소나 시점', '만화 형식', '유료 생성 시 확인 생략', '삽화 프롬프트', '장면 모델', '삽화 수', ILLUSTRATION_PLACE],
-  memory: ['새 채팅에서 켜기', '기록 최대 분량', '임베딩 모델로 찾는 기록', '원문으로 보낼 최근 대화', '한 번에 정리할 분량'],
-  mascot: ['마스코트 프롬프트'],
-  preread: [`${PRE_READ} 모델`, '요약할 대상', '원문으로 유지할 최근 대화', '한 번에 요약할 분량', '추론 최소화', `${PRE_READ} 프롬프트`],
+  translate: ['응답 번역', '응답 번역 언어', '내 메시지 번역', '내 메시지 번역 언어', '원문 함께 보기', '반전 모드', TRANSLATOR_NOTE, '번역 프롬프트', TASK_MODELS.translate],
+  illustrate: ['자동 삽화', '이미지 모델', '페르소나 시점', '만화 형식', '유료 생성 시 확인 생략', '삽화 프롬프트', TASK_MODELS.illustrate, '삽화 수', ILLUSTRATION_PLACE],
+  memory: ['새 채팅에서 켜기', TASK_MODELS.memory, '기록 최대 분량', '임베딩 모델로 찾는 기록', '원문으로 보낼 최근 대화', '한 번에 정리할 분량'],
+  mascot: [TASK_MODELS.mascot, '마스코트 프롬프트'],
+  preread: [TASK_MODELS.preread, '요약할 대상', '원문으로 유지할 최근 대화', '한 번에 요약할 분량', '추론 최소화', `${PRE_READ} 프롬프트`],
   agents: Object.values(STAGE_NAMES),
   labs: ['실험 중인 기능', ...LABS.map(({ name }) => name)],
   prompts: ['기본 프롬프트', 'Risu 프리셋 가져오기', '새 프롬프트'],
@@ -45,7 +45,7 @@ const HIDDEN: Record<string, string[]> = {
 type Subpage = { label: string; where?: string; route: Route; terms: string[] };
 
 // A page's own pages: a hit on one of their labels or terms opens that page. Which 모델 설정 a row's term means is not
-// implied either, so it opens the default one, and 모델 when there is none, whose card makes one.
+// implied either, so it opens the default one, and 모델 when there is none, whose 모델 설정 section makes one.
 export const subpages = (settings: Settings, profiles: readonly { id: string }[]): Partial<Record<SettingsPage, Subpage[]>> => {
   const profile = profiles.find(({ id }) => id === settings.profile);
   return {

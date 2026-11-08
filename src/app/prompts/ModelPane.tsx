@@ -1,15 +1,12 @@
 import type { Assignment, ModelRef, Role } from '../../connectors/assignment';
 import type { Stored } from '../../model/kinds';
-import type { PromptSort } from '../../model/prompt';
 import { findStarred, RolePicker } from '../common/RolePicker';
-import { AUX_HELP, DEFAULT_MODELS, follows, inSettings, MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, opens, PRE_READ } from '../common/words';
+import { AGENTS, AUX_HELP, DEFAULT_MODELS, follows, inSettings, MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, opens } from '../common/words';
 import { navigate } from '../shell/router';
 import { Section, SettingGroup, type Help } from '../ui';
 
 const DEFAULTS = follows(DEFAULT_MODELS);
 const AUX = follows(MODEL_ROLES.aux);
-
-type Task = Exclude<PromptSort, 'conversation'>;
 
 const nameOf = (ref: ModelRef, connections: readonly Stored<'connection'>[]) => findStarred(ref, connections)?.name ?? NOT_STARRED;
 
@@ -18,7 +15,7 @@ export function modelWords(models: Assignment, connections: readonly Stored<'con
   return models.aux ? `${main} · ${MODEL_ROLES.aux} 별도 지정` : main;
 }
 
-export const taskModelWords = (own: ModelRef | undefined, connections: readonly Stored<'connection'>[]) => (own ? nameOf(own, connections) : AUX);
+export const agentModelWords = (own: ModelRef | undefined, connections: readonly Stored<'connection'>[]) => (own ? nameOf(own, connections) : AUX);
 
 function tuning(picked: ModelRef | undefined, connections: readonly Stored<'connection'>[]): Help {
   const model = picked && findStarred(picked, connections);
@@ -44,16 +41,14 @@ export function ModelPane({ models, defaults, connections, onPick }: Props) {
   );
 }
 
-const TASK_LABELS = { translate: '번역 모델', memory: '기억 모델', illustrate: '장면 모델', mascot: '대사 모델', preread: `${PRE_READ} 모델`, agent: '에이전트 모델' } satisfies Record<Task, string>;
+type AgentProps = { own: ModelRef | undefined; connections: readonly Stored<'connection'>[]; onPick: (ref: ModelRef | null) => void };
 
-type TaskProps = { task: Task; own: ModelRef | undefined; connections: readonly Stored<'connection'>[]; onPick: (ref: ModelRef | null) => void };
-
-// A task prompt's own model, the one place its task's model is chosen.
-export function TaskModelPane({ task, own, connections, onPick }: TaskProps) {
+// An agent's own model, which its prompt holds since the agent is its prompt; the other tasks' are their features'.
+export function AgentModelPane({ own, connections, onPick }: AgentProps) {
   return (
     <Section title="모델" help={tuning(own, connections)}>
       <SettingGroup label="모델">
-        <RolePicker role="aux" label={TASK_LABELS[task]} own={own} follow={AUX} connections={connections} onPick={onPick} />
+        <RolePicker role="aux" label={`${AGENTS} 모델`} own={own} follow={AUX} connections={connections} onPick={onPick} />
       </SettingGroup>
     </Section>
   );

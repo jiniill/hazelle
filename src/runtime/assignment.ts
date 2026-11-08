@@ -3,14 +3,16 @@ import { embedRoute } from '../connectors/registry';
 import { entryOf, type Model, type Starred } from '../connectors/types';
 import type { Chat } from '../model/chat';
 import type { Stored } from '../model/kinds';
+import type { Settings } from '../model/settings';
 import type { ApiResult } from './api';
-import { chatPrompt } from './prompts';
+import { chatPrompt, type PromptChoice } from './prompts';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
 import { accountSettings, changeSettings } from './account-settings';
+import { illustrateSwitches, translateSwitches } from './characters';
 
 // The chat layer lives in the chat object and the prompt layer in the prompt, which runtime/chat-log and runtime/prompts
-// write otherwise; their `models` fields are written only here.
+// write otherwise; their `models` fields, and an agent prompt's `model`, are written only here.
 
 export type Route = { connection: Stored<'connection'>; model: Starred };
 // image-only: the model draws and writes no text, so it cannot answer a chat or a task (design §6.6).
@@ -28,6 +30,9 @@ export function chatModel(store: Pick<ObjectStore, 'get'>, chat: Chat, role: Rol
   return ref ? writes(routeOf(store, ref)) : { kind: 'no-model' };
 }
 
+// 모델 고정: the prompt whose own 대화 모델 the chat talks on, the chat picking none of its own.
+export const pinnedBy = (chat: Pick<Chat, 'models'>, prompt: PromptChoice) => (chat.models.main === undefined && prompt.kind === 'prompt' && prompt.prompt.value.models.main !== undefined ? prompt.prompt : null);
+
 // 임베딩 모델 is set in 공용 alone (connectors/assignment ROLES). A model whose connection serves no embeddings is gone
 // for this role, as one no longer added is.
 export function embedModel(store: Pick<ObjectStore, 'get'>): Route | RouteFailure {
@@ -43,8 +48,27 @@ export function sharedModel(store: Pick<ObjectStore, 'get'>, role: Role, own: Mo
   return ref ? writes(routeOf(store, ref)) : { kind: 'no-model' };
 }
 
+// own: the task's feature's model (번역's and 삽화's in their switches, accountTaskModel for the rest, an agent's in its
+// prompt); without one, the chat's 보조 모델, then its 대화 모델.
 export function taskModel(store: Pick<ObjectStore, 'get'>, chat: Chat, own: ModelRef | undefined): Route | RouteFailure {
   return own ? writes(routeOf(store, own)) : chatModel(store, chat, 'aux');
+}
+
+// 공용's alone, as these tasks' prompts are (runtime/prompts memoryPrompt).
+const ACCOUNT_TASKS = { memory: 'memoryModel', mascot: 'mascotModel', preread: 'prereadModel' } as const satisfies Record<string, keyof Settings>;
+export type AccountTask = keyof typeof ACCOUNT_TASKS;
+
+export const accountTaskModel = (store: Pick<ObjectStore, 'get'>, task: AccountTask): ModelRef | undefined => accountSettings(store)[ACCOUNT_TASKS[task]];
+
+// Each task's model as 공용 sets it, undefined while it follows 보조 모델. 에이전트 are no one task: each agent's model is
+// its prompt's.
+export function sharedTaskModels(store: Pick<ObjectStore, 'get'>): Record<'translate' | 'illustrate' | AccountTask, ModelRef | undefined> {
+  return { translate: translateSwitches(store, null).model, illustrate: illustrateSwitches(store, null).sceneModel, memory: accountTaskModel(store, 'memory'), mascot: accountTaskModel(store, 'mascot'), preread: accountTaskModel(store, 'preread') };
+}
+
+export function setAccountTaskModel(store: ObjectStore, task: AccountTask, ref: ModelRef | null): Promise<ApiResult<Stored<'settings'>>> {
+  const field = ACCOUNT_TASKS[task];
+  return changeSettings(store, (current) => (ref === null ? without(current, field) : { ...current, [field]: ref }));
 }
 
 export function routeOf(store: Pick<ObjectStore, 'get'>, ref: ModelRef): Route | RouteFailure {
@@ -68,8 +92,8 @@ export function setPromptModel(store: ObjectStore, prompt: string, role: Role, r
   return store.update('prompt', prompt, (current) => (current.task === undefined ? { ...current, models: assign(current.models, role, ref) } : current));
 }
 
-export function setTaskModel(store: ObjectStore, prompt: string, ref: ModelRef | null): Promise<ApiResult<Stored<'prompt'>>> {
-  return store.update('prompt', prompt, (current) => (current.task === undefined ? current : ref === null ? without(current, 'model') : { ...current, model: ref }));
+export function setAgentModel(store: ObjectStore, prompt: string, ref: ModelRef | null): Promise<ApiResult<Stored<'prompt'>>> {
+  return store.update('prompt', prompt, (current) => (current.task !== 'agent' ? current : ref === null ? without(current, 'model') : { ...current, model: ref }));
 }
 
 export function setDefaultModel(store: ObjectStore, role: Role, ref: ModelRef | null): Promise<ApiResult<Stored<'settings'>>> {

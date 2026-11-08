@@ -1,4 +1,4 @@
-import type { Assignment } from '../connectors/assignment';
+import type { Assignment, ModelRef } from '../connectors/assignment';
 import type { TranslateSwitches } from './chat';
 import type { FeatureSwitches } from './features';
 import type { IllustrateSwitches } from './illustration';
@@ -33,6 +33,10 @@ export type Settings = {
   illustratePrompt?: string;
   mascotPrompt?: string;
   prereadPrompt?: string;
+  // 공용's alone, as their prompts are; absent for the chat's 보조 모델. 번역's and 삽화's are in their switches.
+  memoryModel?: ModelRef;
+  mascotModel?: ModelRef;
+  prereadModel?: ModelRef;
   persona?: string;
   toggles?: ToggleValues;
   // 입력창에 고정: toggle keys shown beside the composer of every chat whose prompt, card or modules declare them.

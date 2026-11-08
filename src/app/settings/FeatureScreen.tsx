@@ -1,5 +1,4 @@
 import type { ComponentType } from 'react';
-import { entryName } from '../../connectors/types';
 import type { Feature } from '../../model/features';
 import type { PromptSort } from '../../model/prompt';
 import type { PrereadParts } from '../../model/settings';
@@ -7,20 +6,21 @@ import { illustrateSwitches, setIllustrate, setTranslate, setTranslatorNote, tra
 import { SHARED_CHAT, availableFeatures, setFeatureAt, sharedFeatures } from '../../runtime/features';
 import { setAgentAt } from '../../runtime/agents';
 import { briefsWithChatModel, briefWriterOf, PREREAD_STARTS, prereadSetup, setPreread } from '../../runtime/preread';
-import { describePrereadFailure } from '../common/failure';
+import { describeMascotFailure, describePrereadFailure } from '../common/failure';
 import { sceneWriterOf } from '../../runtime/illustrate';
-import { prereadPrompt, setDefaultPrompt } from '../../runtime/prompts';
+import { mascotWriterOf } from '../../runtime/mascot';
+import { setDefaultPrompt } from '../../runtime/prompts';
 import { sendsNotes, translatorOf } from '../../runtime/translate';
 import { AgentSwitches } from '../common/AgentSwitches';
 import { DetailFold } from '../common/DetailFold';
 import { IllustrateRows } from '../common/IllustrateRows';
 import { Missing } from '../common/Missing';
-import { TaskModelRow, TaskPromptMenu, type PromptDoor } from '../common/TaskPrompt';
+import { AccountTaskModel, TaskPromptMenu, type PromptDoor } from '../common/TaskPrompt';
 import { TranslateRows } from '../common/TranslateRows';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { useTypedNumber } from '../common/typed';
 import { readWhole } from '../common/typedNumber';
-import { AGENTS_HELP, FEATURE_NAMES, ILLUSTRATION_PLACE, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED } from '../common/words';
+import { AGENTS_HELP, FEATURE_NAMES, ILLUSTRATION_PLACE, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED, TASK_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -126,13 +126,17 @@ function MascotDefaults() {
   const store = useStore();
   const toast = useToast();
   const settings = useSettings();
-  // chosenPrompt reads these.
+  // chosenPrompt and mascotWriterOf read these.
   usePrompts();
+  useConnections();
+  useProfiles();
+  const writer = mascotWriterOf(store, SHARED_CHAT);
   return (
     <SettingGroup label={FEATURE_NAMES.mascot}>
+      <AccountTaskModel task="mascot" runs={'kind' in writer ? { why: describeMascotFailure(writer) } : writer} />
       <SettingRow
         label="마스코트 프롬프트"
-        help={`응답마다 ${MODEL_ROLES.aux}을 추가로 한 번 호출해요.`}
+        help="응답마다 모델을 한 번 더 호출해요."
         control={
           <TaskPromptMenu
             task="mascot"
@@ -171,7 +175,7 @@ function PrereadDefaults() {
   // chosenPrompt and briefWriterOf read these.
   usePrompts();
   useConnections();
-  const choice = prereadPrompt(store);
+  useProfiles();
   const writer = briefWriterOf(store, SHARED_CHAT);
   const setup = prereadSetup(store);
   const set = [setup.recent !== PREREAD_STARTS.recent, setup.batch !== PREREAD_STARTS.batch, setup.thinkLess !== PREREAD_STARTS.thinkLess].filter(Boolean).length;
@@ -179,12 +183,12 @@ function PrereadDefaults() {
   return (
     <>
       {briefsWithChatModel(store, SHARED_CHAT) && (
-        <Callout tone="warn" action={{ label: `${PRE_READ} 모델 선택`, onClick: () => editPrompt('preread')(choice.kind === 'prompt' ? { id: choice.prompt.id, pane: 'model' } : null) }}>
-          {`${PRE_READ} 모델이 ${MODEL_ROLES.main}과 같아요. 이러면 비용이 오히려 늘 수 있어요.`}
+        <Callout tone="warn" action={{ label: `${TASK_MODELS.preread} 선택`, onClick: () => seekRow(TASK_MODELS.preread) }}>
+          {`${TASK_MODELS.preread}이 ${MODEL_ROLES.main}과 같아요. 이러면 비용이 오히려 늘 수 있어요.`}
         </Callout>
       )}
       <SettingGroup label={PRE_READ}>
-        <TaskModelRow label={`${PRE_READ} 모델`} noun={PRE_READ} choice={choice} model={'kind' in writer ? describePrereadFailure(writer) : entryName(writer.route.model)} onEdit={editPrompt('preread')} />
+        <AccountTaskModel task="preread" runs={'kind' in writer ? { why: describePrereadFailure(writer) } : writer} />
       </SettingGroup>
       <SettingGroup label="요약할 대상">
         {(Object.entries(PRE_READ_PARTS) as [keyof PrereadParts, string][]).map(([part, label]) => (
@@ -208,7 +212,7 @@ function PrereadDefaults() {
         />
         <SettingRow
           label={`${PRE_READ} 프롬프트`}
-          help={`응답마다 ${MODEL_ROLES.aux}을 추가로 호출해요. ${PRE_READ} 프롬프트에서 다른 모델을 선택할 수 있어요.`}
+          help="응답마다 모델을 한 번 더 호출해요."
           control={
             <TaskPromptMenu
               task="preread"

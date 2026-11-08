@@ -6,6 +6,7 @@ import { BackupPeer, type BackupMessage } from './backup-peer';
 import type { BackupOutput } from './backup-zip';
 import type { ObjectStore } from './store';
 import { saveSummaries } from './summary';
+import { moveTaskModels } from './upgrade';
 import { moduleWorker } from './worker';
 import type { FileRef } from '../vault/files';
 import workerUrl from './backup-worker?worker&url';
@@ -147,9 +148,12 @@ export async function readBackup(file: Blob, options: Options = {}): Promise<{ o
   }
 }
 
+// A backup from before 2026-11-08 holds task prompts with their models, which move as the session's opening moves them.
 export async function restoreBackup(store: ObjectStore, files: RestoreFiles, backup: Backup, options: Options = {}): Promise<ApiResult<{ skipped: number }>> {
   try {
-    return await store.pinned((pin) => backup.worker.run({ kind: 'restore', pin }, { store, files }, options), options.signal);
+    const restored = await store.pinned((pin) => backup.worker.run<ApiResult<{ skipped: number }>>({ kind: 'restore', pin }, { store, files }, options), options.signal);
+    if (restored.ok) await moveTaskModels(store);
+    return restored;
   } catch {
     return { ok: false, error: options.signal?.aborted ? 'stopped' : 'backup-crashed' };
   }

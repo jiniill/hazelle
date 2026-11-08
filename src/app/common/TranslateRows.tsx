@@ -1,15 +1,13 @@
-import { entryName } from '../../connectors/types';
 import type { ReactNode } from 'react';
 import type { TranslateSwitches } from '../../model/chat';
 import type { TranslateSetup } from '../../runtime/characters';
-import { translationPrompt } from '../../runtime/prompts';
 import type { translatorOf } from '../../runtime/translate';
-import { useCaptured } from '../session';
 import { SettingGroup, SettingRow, Switch } from '../ui';
 import { DetailFold } from './DetailFold';
 import { describeTranslateFailure } from './failure';
 import { IntoLanguage } from './IntoLanguage';
 import { appliesTo, TaskModelRow, TaskPromptMenu, type PromptDoor } from './TaskPrompt';
+import { TASK_MODELS } from './words';
 
 type Props = {
   translate: TranslateSetup;
@@ -26,7 +24,6 @@ type Props = {
 
 // Shared by chat dialog and global settings; fold uncommon settings and count explicit values.
 export function TranslateRows({ translate, translation, card, note, opens, onChange, onEditPrompt, children }: Props) {
-  const prompt = useCaptured((store) => translationPrompt(store, translate.prompt), [translate.prompt]);
   const set = [translate.original, translate.reverse, translate.prompt !== undefined].filter(Boolean).length;
   return (
     <>
@@ -41,6 +38,12 @@ export function TranslateRows({ translate, translation, card, note, opens, onCha
           sentence={<IntoLanguage before="내 메시지를" after="번역해서 보내기" label="내 메시지 번역 언어" value={translate.inputLanguage} opens={opens} onPick={(inputLanguage) => onChange({ inputLanguage })} />}
           sub={translate.reverse ? '반전 모드에서는 원문으로 보내요' : undefined}
           control={<Switch label="내 메시지 번역" checked={translate.input} disabled={translate.reverse} onChange={(input) => onChange({ input })} />}
+        />
+        <TaskModelRow
+          label={TASK_MODELS.translate}
+          own={translate.model}
+          runs={translation.ok ? translation : { why: describeTranslateFailure(translation.failure) }}
+          onPick={(ref) => onChange({ model: ref ?? undefined })}
         />
         {children}
       </SettingGroup>
@@ -60,7 +63,6 @@ export function TranslateRows({ translate, translation, card, note, opens, onCha
           label="번역 프롬프트"
           control={<TaskPromptMenu task="translate" chosen={translate.prompt} heading={appliesTo(card, translate.own)} opens={opens} onPick={(prompt) => onChange({ prompt })} onEdit={onEditPrompt} />}
         />
-        <TaskModelRow label="번역 모델" noun="번역" choice={prompt} model={translation.ok ? entryName(translation.route.model) : describeTranslateFailure(translation.failure)} onEdit={onEditPrompt} />
       </DetailFold>
     </>
   );

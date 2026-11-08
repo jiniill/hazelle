@@ -39,6 +39,7 @@ type Props = {
   role: Role;
   label?: string;
   help?: string;
+  sub?: string;
   own: ModelRef | undefined;
   // Name the inherited role, never a concrete model: chat/prompt overrides can choose a different one.
   // Null means the picker cannot be left unset.
@@ -47,12 +48,13 @@ type Props = {
   onPick: (ref: ModelRef | null) => void;
 };
 
-export function RolePicker({ role, label = MODEL_ROLES[role], help, own, follow, connections, onPick }: Props) {
+export function RolePicker({ role, label = MODEL_ROLES[role], help, sub, own, follow, connections, onPick }: Props) {
   const current = own ? modelName(own, connections) : (follow ?? '지정 안 함');
   return (
     <SettingRow
       label={label}
       help={help}
+      sub={sub}
       control={
         <Menu place="below-end" label={label} trigger={(opener) => <ChipButton variant="field" label={current} title={label} {...opener} />}>
           <RoleChoices role={role} own={own} follow={follow} connections={connections} onPick={onPick} />
@@ -64,7 +66,7 @@ export function RolePicker({ role, label = MODEL_ROLES[role], help, own, follow,
 
 // values: what the chosen model's 모델 설정 sets, under its connection; open: the door to that model's page, the
 // menu's first item, so the values are read on the card and reached in one press.
-type CardProps = Omit<Props, 'label'> & { values?: string; open?: () => void };
+type CardProps = Omit<Props, 'label' | 'sub'> & { values?: string; open?: () => void };
 
 export function RoleCard({ role, help, own, follow, connections, onPick, values, open }: CardProps) {
   const label = MODEL_ROLES[role];

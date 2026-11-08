@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Stored } from '../../model/kinds';
-import type { PromptSort } from '../../model/prompt';
+import { pinsModels, type PromptSort } from '../../model/prompt';
 import { availableFeatures } from '../../runtime/features';
 import { addAgent, addPrompt, isDefaultPrompt, ofSort } from '../../runtime/prompts';
 import type { AgentStart } from '../../engine/agent';
@@ -8,11 +8,10 @@ import { ACTS } from '../common/acts';
 import type { Frame } from '../common/frame';
 import { TASK_NAMES } from '../common/prompt-words';
 import { useSearch } from '../common/useSearch';
-import { useConnections, usePrompts, useSettings, useStore } from '../session';
+import { usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
-import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_ROLES, PAGES, PRE_READ, promptName, STAGE_NAMES } from '../common/words';
+import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_PINNED, MODEL_ROLES, PAGES, PRE_READ, promptName, STAGE_NAMES } from '../common/words';
 import { Button, CardItem, CardList, ChoiceGroup, Columns, Disclosure, Empty, FoldButton, Hint, Menu, MenuItem, PickCard, Row, Stack, Tabs } from '../ui';
-import { taskModelWords } from './ModelPane';
 import { useImport } from '../common/importing';
 import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse';
 import { byLastUse, byPromptName, groupPrompts, promptFolder as folderOf } from '../common/promptCopies';
@@ -63,7 +62,6 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   const store = useStore();
   const toast = useToast();
   const prompts = usePrompts();
-  const connections = useConnections();
   const grouped = useMemo(() => groupPrompts(prompts), [prompts]);
   const settings = useSettings();
   // An experiment's prompts show only while its 실험실 switch is on.
@@ -92,7 +90,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   const moving = useMoving('prompt', index, filedAt, { off: !filing, carry });
 
   const badge = (prompt: Stored<'prompt'>) => defaultMark(isDefaultPrompt(settings, prompt), prompt.value.name);
-  const tags = (id: string) => (id === inUse ? ['사용 중'] : []);
+  const tags = (prompt: Stored<'prompt'>) => [...(ofSort(prompt, 'conversation') && pinsModels(prompt.value) ? [MODEL_PINNED] : []), ...(prompt.id === inUse ? ['사용 중'] : [])];
   // Only conversation prompts are used by chats; a translation prompt is chosen by a character's 번역.
   const usage = (prompt: Stored<'prompt'>) => (ofSort(prompt, 'conversation') ? promptUseWords(uses.get(prompt.id) ?? EMPTY_USE) : ofSort(prompt, 'agent') ? STAGE_NAMES[prompt.value.stage] : undefined);
 
@@ -122,7 +120,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
         key={prompt.id}
         title={promptName(prompt.value.name)}
         badge={badge(prompt)}
-        tags={tags(prompt.id)}
+        tags={tags(prompt)}
         note={usage(prompt)}
         selected={picking ? moving.picked!.has(prompt.id) : undefined}
         drag={moving.dropInto && !nested ? prompt.id : undefined}
@@ -152,8 +150,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
       <Columns>
         {defaultPicks.map(({ sort, label, prompt }) => {
           if (!prompt) return <PickCard key={sort} label={label} value="없음" tone="warn" onClick={() => setShown(sort)} />;
-          const model = prompt.value.task && prompt.value.model;
-          return <PickCard key={sort} label={label} value={promptName(prompt.value.name)} note={model ? taskModelWords(model, connections) : usage(prompt)} onClick={() => onPick(prompt.id)} />;
+          return <PickCard key={sort} label={label} value={promptName(prompt.value.name)} note={usage(prompt)} onClick={() => onPick(prompt.id)} />;
         })}
       </Columns>
     </Disclosure>
@@ -243,7 +240,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
                   key={prompt.id}
                   title={promptName(prompt.value.name)}
                   badge={badge(prompt)}
-                  tags={[...(prompt.value.task ? [TASK_NAMES[prompt.value.task]] : []), ...tags(prompt.id)]}
+                  tags={[...(prompt.value.task ? [TASK_NAMES[prompt.value.task]] : []), ...tags(prompt)]}
                   note={[whereIs(index, folderOf(prompt)), usage(prompt)].filter(Boolean).join(' · ') || undefined}
                   onClick={() => onPick(prompt.id)}
                 />

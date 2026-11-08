@@ -24,7 +24,7 @@ import { ChatSearch } from './ChatSearch';
 import { ChatStatusPeek } from './ChatStatus';
 import { ChatToggles } from './ChatToggles';
 import { useEditBeside } from './characterBeside';
-import { promptEditor, toggleEditor, type Panel, type Side } from './panels';
+import { toggleEditor, type Panel, type Side } from './panels';
 import { useAutopilot } from './useAutopilot';
 import { useChat } from './useChat';
 import type { SearchSeed } from './useChatSearch';
@@ -105,7 +105,6 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
               onClose={actions.closePanel}
               onTool={actions.tool}
               onEditPrompt={prompt.kind === 'prompt' ? () => actions.side({ kind: 'prompts', id: prompt.prompt.id, pane: null }) : undefined}
-              onEditTaskPrompt={(door) => actions.side(promptEditor(door))}
               onRecord={actions.memory}
               renderRecord={(record) => <ChatMemoryRecord {...record} actions={actions} />}
             />

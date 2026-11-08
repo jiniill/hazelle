@@ -20,13 +20,8 @@ import { withParticle } from './particles';
 
 export const MODEL_ROLES: Record<Role, string> = { main: '대화 모델', aux: '보조 모델', embed: '임베딩 모델' };
 export const ROLE_TAGS: Record<Role, string> = { main: '대화', aux: '보조', embed: '임베딩' };
-
-// Task model doors lead to its prompt picker. Missing prompts lead to the prompt list,
-// never directly to the auxiliary model because the task cannot run without a prompt.
-export const taskModelHelp = (task: string, prompted: boolean) => ({
-  text: `${task} 프롬프트에서 선택해요. 따로 선택하지 않으면 ${MODEL_ROLES.aux}을 사용해요.`,
-  door: prompted ? opens(`${task} 프롬프트`) : opens(inSettings('prompts')),
-});
+// A conversation prompt that picks its own models (model/prompt pinsModels), marked wherever it stands.
+export const MODEL_PINNED = '모델 고정';
 
 export const NO_PICTURES = '이 모델은 이미지를 읽을 수 없어요.';
 export const PICTURE_INPUT = '이미지 읽기';
@@ -187,6 +182,8 @@ export const agentsWaiting = ({ running, retrying, total }: { running: readonly 
 export const polishingNow = ({ name, at, total, retrying }: { name: string; at: number; total: number; retrying?: true }) => `${withParticle(name, '이/가')} ${retrying ? RESENDING : '응답을 다듬고 있어요'}${total > 1 ? ` · ${at}/${total}` : '.'}`;
 export const toolWaiting = (name: string) => `${withParticle(name, '이/가')} 보낼 내용을 준비하는 중`;
 export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS };
+// A feature's own model row; an agent's model is its prompt's.
+export const TASK_MODELS = { translate: '번역 모델', illustrate: '장면 모델', memory: '기억 모델', mascot: '대사 모델', preread: `${PRE_READ} 모델` } as const satisfies Partial<Record<Feature, string>>;
 
 // An unset choice takes its value from somewhere else, and names it: 기본 모델 사용, 보조 모델 사용.
 export const follows = (source: string) => `${source} 사용`;

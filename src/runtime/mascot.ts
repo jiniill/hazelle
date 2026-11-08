@@ -2,17 +2,18 @@ import { ChangeSignal } from '../change-signal';
 import { refOf } from '../connectors/assignment';
 import { parseRemark, type RemarkInvalid } from '../engine/mascot';
 import type { RanAway } from '../engine/pipeline';
-import { fold, shown, type Message, type Receipt } from '../model/chat';
+import { fold, shown, type Chat, type Message, type Receipt } from '../model/chat';
 import type { Stored } from '../model/kinds';
 import { live } from '../model/library';
 import { MASCOT, type Remark } from '../model/mascot';
 import type { ApiFailure } from './api';
-import type { RouteFailure } from './assignment';
+import { accountTaskModel, type RouteFailure } from './assignment';
 import { pinned, scopeOf } from './chat-context';
 import { evaluatingTask } from './evaluation';
 import { taskWriter } from './profiles';
 import { mascotPrompt } from './prompts';
 import type { Session } from './session';
+import type { ObjectStore } from './store';
 import { pageAnswer } from './talk';
 import { chatPlace, receiptRow } from './usage';
 
@@ -45,6 +46,9 @@ function saidBefore(remarks: readonly Stored<'remark'>[], before: readonly Messa
   const byVersion = new Map(remarks.map(({ value }) => [value.version, value.line]));
   return before.flatMap((message) => byVersion.get(shown(message).id) ?? []).slice(-SAID);
 }
+
+// Who writes a chat's line: 마스코트's own model, else the chat's 보조 모델, else its 대화 모델.
+export const mascotWriterOf = (store: Pick<ObjectStore, 'get'>, chat: Chat) => taskWriter(store, chat, accountTaskModel(store, 'mascot'));
 
 // Several versions are written at once, each going on when its chat is left. A failure is never tried again on its own.
 export class Commentator {
@@ -102,7 +106,7 @@ export class Commentator {
     if (!stored || selected === -1) return { kind: 'gone' };
     const prompt = mascotPrompt(store);
     if (prompt.kind === 'missing') return { kind: 'prompt-missing' };
-    const writer = taskWriter(store, stored.value, prompt.prompt.value.model);
+    const writer = mascotWriterOf(store, stored.value);
     if ('kind' in writer) return writer;
     const { route } = writer;
     const history = [...messages.slice(0, index), { ...messages[index]!, selected }];

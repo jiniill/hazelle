@@ -110,9 +110,11 @@ export const runs = (drawing: Drawing) => drawing.writing || drawing.sketches.so
 type Stopped = { kind: 'stopped' };
 type Deps = Pick<Session, 'tokens' | 'store' | 'credentials' | 'log' | 'files' | 'likenesses'>;
 
+const sceneWriter = (store: Deps['store'], chat: Chat) => taskWriter(store, chat, chatIllustrate(store, chat).sceneModel);
+
 export function sceneWriterOf(store: Deps['store'], chat: Chat): ReturnType<typeof taskWriter> | { kind: 'prompt-missing'; own: boolean } {
   const prompt = illustrationPrompt(store, chatIllustrate(store, chat).prompt);
-  return prompt.kind === 'missing' ? { kind: 'prompt-missing', own: prompt.own } : taskWriter(store, chat, prompt.prompt.value.model);
+  return prompt.kind === 'missing' ? { kind: 'prompt-missing', own: prompt.own } : sceneWriter(store, chat);
 }
 
 export const sendsIllustrateNote = (prompt: IllustratePrompt) => prompt.blocks.some((block) => block.kind === 'slot' && block.slot === 'illustrateNote');
@@ -216,7 +218,7 @@ export class Illustrator {
     const prompt = illustrationPrompt(store, switches.prompt);
     if (prompt.kind === 'missing') return { kind: 'prompt-missing', own: prompt.own };
     // Before the scene call, which is told their names; a pack whose build fails is drawn without its portraits.
-    const portraits = await this.deps.likenesses.portraits(stored.value, prompt.prompt.value, signal);
+    const portraits = await this.deps.likenesses.portraits(stored.value, signal);
     const persona = switches.pov ? chatPersona(store, stored.value) : null;
     const viewer = persona?.kind === 'persona' ? persona.persona : null;
     let scenes = given ? [given] : [];
@@ -277,7 +279,7 @@ export class Illustrator {
     chat: string, value: Stored<'chat'>['value'], history: ReturnType<typeof fold>, paragraphs: string[], count: number, portraits: Portrait[], looks: Pick<IllustrationInput, 'pov' | 'comic'>, prompt: IllustratePrompt, auto: boolean, signal: AbortSignal,
   ): Promise<{ scenes: Scene[]; receipt: Receipt } | IllustrateFailure | Stopped> {
     const { store } = this.deps;
-    const writer = taskWriter(store, value, prompt.model);
+    const writer = sceneWriter(store, value);
     if ('kind' in writer) return writer;
     const lane = { asker: auto ? ('auto-illustration' as const) : ('illustration' as const), chat };
     const scope = scopeOf({ store }, chat, value, history);

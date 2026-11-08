@@ -290,9 +290,9 @@ function setOwnScoped<S extends Scoped>(store: ObjectStore, character: string, s
   return store.update('character', character, (current) => (own ? { ...current, [OWN[scope]]: copy } : without(current, OWN[scope])));
 }
 
-// Reverse disables input translation regardless of saved input. Absent prompt follows the account translation default.
-// Readers must still apply the feature switch (runtime/features chatTranslate).
-export type TranslateSetup = typeof TRANSLATE_DEFAULTS & Pick<TranslateSwitches, 'prompt'> & { own: boolean };
+// Reverse disables input translation regardless of saved input. Absent prompt follows the account translation default,
+// absent model the chat's 보조 모델. Readers must still apply the feature switch (runtime/features chatTranslate).
+export type TranslateSetup = typeof TRANSLATE_DEFAULTS & Pick<TranslateSwitches, 'prompt' | 'model'> & { own: boolean };
 
 export function translateSwitches(store: Pick<ObjectStore, 'get'>, character: string | null): TranslateSetup {
   const { switches: held, own } = scoped(store, character, 'translate');

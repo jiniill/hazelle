@@ -9,7 +9,7 @@ import type { ChatScope } from '../engine/render';
 import type { Chat, Receipt } from '../model/chat';
 import type { PrereadSettings } from '../model/settings';
 import type { ApiFailure } from './api';
-import { chatModel, type Route, type RouteFailure } from './assignment';
+import { accountTaskModel, chatModel, type Route, type RouteFailure } from './assignment';
 import { evaluatingTask } from './evaluation';
 import { taskWriter } from './profiles';
 import { prereadPrompt } from './prompts';
@@ -32,10 +32,10 @@ export function prereadSetup(store: Pick<ObjectStore, 'get'>): PrereadSettings {
   return { parts: { ...PREREAD_STARTS.parts, ...own?.parts }, recent: own?.recent ?? PREREAD_STARTS.recent, batch: own?.batch ?? PREREAD_STARTS.batch, thinkLess: own?.thinkLess ?? PREREAD_STARTS.thinkLess };
 }
 
-// Who writes a chat's brief: the 토큰 절약 prompt's own model, else the chat's 보조 모델, else its 대화 모델.
+// Who writes a chat's brief: 토큰 절약's own model, else the chat's 보조 모델, else its 대화 모델.
 export function briefWriterOf(store: Pick<ObjectStore, 'get'>, chat: Chat): ReturnType<typeof taskWriter> | { kind: 'prompt-missing' } {
   const prompt = prereadPrompt(store);
-  return prompt.kind === 'missing' ? { kind: 'prompt-missing' } : taskWriter(store, chat, prompt.prompt.value.model);
+  return prompt.kind === 'missing' ? { kind: 'prompt-missing' } : taskWriter(store, chat, accountTaskModel(store, 'preread'));
 }
 
 // Whether the 대화 모델 writes the chat's brief itself, reading the whole material before it writes the reply too.
