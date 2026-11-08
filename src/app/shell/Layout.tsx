@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { usePersisted } from '../common/usePersisted';
 import { useDisplay } from '../display';
 import { keysOf, Quiet, SHORTCUT_GROUPS, SHORTCUTS, useShortcut } from '../shortcuts';
-import { backLayers, Dialog, Section, Shell, Shortcuts, Stack, Text, useWide } from '../ui';
+import { backLayers, Dialog, LayerWindow, Section, Shell, Shortcuts, Stack, Text, useWide } from '../ui';
 import { Page } from './Page';
 import { HeldRoute, holdBack, navigate, useRoute } from './router';
 import { HOME, settingsPage, sidebarPage, toolsPage, type Route } from './routes';
@@ -46,32 +46,36 @@ export function Layout() {
   useShortcut('sidebar', () => (wide && settings === null && tools === null ? fold(!folded) : false), fallback);
   useShortcut('pictures', () => changeDisplay({ hidePictures: !display.hidePictures }), fallback);
 
+  const listed = listing && <ShortcutList enterSends={display.enterSends} onClose={() => setListing(false)} />;
   const page = (
     <>
       <Page route={route} closeLayer={closeLayer} onPaired={setPaired} />
-      {listing && <ShortcutList enterSends={display.enterSends} onClose={() => setListing(false)} />}
+      {listed}
     </>
   );
 
   const sidebar = (asPage: boolean) => <LibrarySidebar page={asPage} collapsed={folded} onCollapse={fold} />;
-  // The page the layer was opened from stays mounted behind its window, as it was.
-  const layer = (label: string) => ({
-    label,
-    onClose: closeLayer,
-    behind: (
-      <HeldRoute.Provider value={outside}>
-        <Quiet.Provider value>
-          <Shell side={sidebar(false)}>
-            <Page route={outside} closeLayer={closeLayer} onPaired={setPaired} />
+  if (!wide) return settings !== null || tools !== null || !sidebarPage(route) ? page : sidebar(true);
+  const layer = settings !== null ? { label: SETTINGS, side: <SettingsSidebar current={settings} onClose={closeLayer} /> } : tools !== null ? { label: TOOLS, side: <ToolsSidebar current={tools} onClose={closeLayer} /> } : null;
+  const held = layer !== null;
+  // The page a layer is opened from keeps its place in the tree, so it stays as it was behind the window.
+  return (
+    <>
+      <HeldRoute.Provider value={held ? outside : null}>
+        <Quiet.Provider value={held}>
+          <Shell side={sidebar(false)} held={held}>
+            <Page route={held ? outside : route} closeLayer={closeLayer} onPaired={setPaired} />
+            {!held && listed}
           </Shell>
         </Quiet.Provider>
       </HeldRoute.Provider>
-    ),
-  });
-  if (settings !== null) return wide ? <Shell layer={layer(SETTINGS)} side={<SettingsSidebar current={settings} onClose={closeLayer} />}>{page}</Shell> : page;
-  if (tools !== null) return wide ? <Shell layer={layer(TOOLS)} side={<ToolsSidebar current={tools} onClose={closeLayer} />}>{page}</Shell> : page;
-  if (!wide) return sidebarPage(route) ? sidebar(true) : page;
-  return <Shell side={sidebar(false)}>{page}</Shell>;
+      {layer && (
+        <LayerWindow label={layer.label} side={layer.side} onClose={closeLayer}>
+          {page}
+        </LayerWindow>
+      )}
+    </>
+  );
 }
 
 function ShortcutList({ enterSends, onClose }: { enterSends: boolean; onClose: () => void }) {

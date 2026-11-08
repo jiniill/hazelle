@@ -13,7 +13,7 @@ export { Panel } from './Panel';
 export { Row } from './Row';
 export { Screen } from './Screen';
 export { Section } from './Section';
-export { Shell } from './Shell';
+export { LayerWindow, Shell } from './Shell';
 export { FaceButton, LayerSidebar, Rail, Sidebar } from './Sidebar';
 export { aimedAtPanel, SidePanel } from './SidePanel';
 export { SidePeek, SidePeeks } from './SidePeek';

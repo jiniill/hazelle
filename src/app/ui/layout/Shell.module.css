@@ -8,10 +8,13 @@
   min-width: 0;
 }
 
-/* Its own stacking context, so nothing raised in the page (the composer, a header) stands over the window. */
-.behind {
+/* Its own stacking context, so nothing raised in the page (the composer, a header) stands over the window; the
+   document stops scrolling under it, and keeps its scroll. */
+.held {
   isolation: isolate;
-  height: 100dvh;
+}
+
+:root:has(.held) {
   overflow: hidden;
 }
 
