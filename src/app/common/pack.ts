@@ -2,6 +2,9 @@ import type { Pack } from '../../engine/import/types';
 import { isToggle } from '../../model/prompt';
 import { ASSET, SCRIPTS } from './words';
 
+// A count of none says nothing.
+export const howMany = (count: number, unit = '개') => (count > 0 ? `${count}${unit}` : undefined);
+
 export const counted = (counts: [string, number][]) => counts.flatMap(([label, count]) => (count > 0 ? [`${label} ${count}개`] : []));
 const scriptCounts = ({ regex, triggers }: { regex: number; triggers: number }) => counted([[SCRIPTS.regex, regex], [SCRIPTS.triggers, triggers]]);
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PLAIN_LUA, type Pack } from '../../engine/import/types';
 import type { ToggleLine } from '../../model/prompt';
-import { packHolds, packParts, scriptHolds } from './pack';
+import { howMany, packHolds, packParts, scriptHolds } from './pack';
 
 const EMPTY: Pack = { regex: [], triggers: [], toggles: [] };
 const check = (key: string): ToggleLine => ({ key, label: key, kind: 'check', default: '0' });
@@ -20,6 +20,12 @@ describe('what a pack holds', () => {
     expect(packHolds(pack, 6, 0)).toBe('로어북 6개 · 트리거 2개 · 토글 2개 · 스타일');
     expect(packHolds(EMPTY, 0, 12)).toBe('에셋 12개');
     expect(scriptHolds(pack)).toBe('트리거 2개');
+  });
+
+  it('counts a part of an editor and says nothing for one it has none of', () => {
+    expect(howMany(3)).toBe('3개');
+    expect(howMany(2, '명')).toBe('2명');
+    expect(howMany(0)).toBeUndefined();
   });
 
   it('says so when it holds nothing', () => {

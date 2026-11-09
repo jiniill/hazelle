@@ -10,10 +10,10 @@ import { holdsLine } from '../common/pack';
 import { AssetsEditor } from '../common/AssetsEditor';
 import { LoreEditor } from '../common/LoreEditor';
 import { PackToggles } from '../common/PackToggles';
-import { ScriptsEditor } from '../common/ScriptsEditor';
+import { ScriptsEditor, scriptList } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
-import { ALWAYS, BIN_KEEPS, COPY_SAID, copyName, moduleName, PAGES, promptName, SAVE_FAILED } from '../common/words';
+import { ALWAYS, BIN_KEEPS, COPY_SAID, copyName, moduleName, PAGES, promptName, SAVE_FAILED, SCRIPTS } from '../common/words';
 import { useChildren, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate, openPart } from '../shell/router';
 import { characterPage, type Back } from '../shell/routes';
@@ -150,6 +150,16 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
       </Screen>
     );
 
+  const openScript = (next: string | null) => openPart({ kind: 'module', id, pane: null, ...(next && { script: next }) }, wide);
+  const scripts = <ScriptsEditor owner={{ kind: 'module', id }} pack={value} drill={!wide} open={script ?? null} onOpen={openScript} />;
+  // On a phone a script open stands alone, and the head's back leaves it for the module's page.
+  if (!wide && scriptList(value, script ?? null))
+    return (
+      <Screen width="form" top={<NavBar title={moduleName(name)} onBack={() => openScript(null)} backLabel={SCRIPTS.list} />}>
+        {scripts}
+      </Screen>
+    );
+
   return (
     <Screen width="form" top={top}>
       {describing}
@@ -161,7 +171,7 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
         <ListItem title="토글" note={`${value.toggles.filter(isToggle).length}개`} onClick={() => navigate({ kind: 'module', id, pane: 'toggles' })} />
       </List>
       <LoreEditor owner={{ kind: 'module', id }} folders={value.loreFolders} />
-      <ScriptsEditor owner={{ kind: 'module', id }} pack={value} drill={!wide} open={script ?? null} onOpen={(next) => openPart({ kind: 'module', id, pane: null, ...(next && { script: next }) }, wide)} />
+      {scripts}
       <AssetsEditor owner={id} />
       {describes && <PortraitsEditor owner={id} />}
       {exporting && <ModuleExport id={id} name={name} onClose={() => setExporting(false)} />}

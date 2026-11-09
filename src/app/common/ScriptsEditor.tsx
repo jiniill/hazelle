@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, ChevronUp, type LucideIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, type LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Pack, RegexScript, Trigger } from '../../engine/import/types';
 import { checkScript, type ScriptCheck } from '../../engine/regex/scripts';
@@ -29,8 +29,11 @@ const ON: Record<string, string> = { start: '채팅 시작', input: STAGES.input
 const OFF = '꺼짐';
 const ADDED: Record<ScriptList, string> = { regex: SCRIPTS.regex, triggers: 'Lua' };
 
-// open: the one script open, which the caller holds; drill isolates it. status uses character card.regex ids; variables
-// feeds editor completion.
+// The list holding the script open; none where the id names none, such as a script deleted, and then the lists show.
+export const scriptList = (pack: Pick<Pack, 'regex' | 'triggers'>, open: string | null) => (open === null ? undefined : (['regex', 'triggers'] as const).find((list) => pack[list].some((script) => script.id === open)));
+
+// open: the one script open, which the caller holds; drill isolates it, and the caller's head then holds the back to
+// the lists (scriptList says when). status uses character card.regex ids; variables feeds editor completion.
 export function ScriptsEditor({ owner, pack, drill, open, onOpen, status = [], variables }: { owner: PackOwner; pack: Pack; drill: boolean; open: string | null; onOpen: (id: string | null) => void; status?: readonly string[]; variables?: Defaults }) {
   const store = useStore();
   const { scriptPreview } = useSession();
@@ -67,18 +70,8 @@ export function ScriptsEditor({ owner, pack, drill, open, onOpen, status = [], v
     `${SCRIPTS.part} 검색`,
     ({ texts }) => texts,
   );
-  const opened = drill && open !== null ? (['regex', 'triggers'] as const).find((list) => pack[list].some((script) => script.id === open)) : undefined;
-  if (opened && open)
-    return (
-      <Stack gap="related">
-        <Row kind="toolbar">
-          <Button variant="ghost" size="sm" icon={ChevronLeft} onClick={() => onOpen(null)}>
-            {`${SCRIPTS.part} 목록`}
-          </Button>
-        </Row>
-        {item(opened, open, true)}
-      </Stack>
-    );
+  const opened = drill ? scriptList(pack, open) : undefined;
+  if (opened) return item(opened, open!, true);
 
   const lists = (
     <>

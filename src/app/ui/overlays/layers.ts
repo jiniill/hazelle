@@ -11,7 +11,7 @@ type Layer = {
   close?: (refocus: boolean) => void;
   // Opt-in: a hover peek must write no history, and a sidebar that stands as long as its page is no overlay to back out of.
   takesBack?: true;
-  // A step back inside the layer under it, named by where it stands (a covering panel's open part): only a back
+  // A step back inside the layer under it, named by where it goes back to (a covering panel's head's back): only a back
   // takes it, Esc and presses go to that layer. A new name joins anew, so each step has an entry for its back.
   step?: string;
 };

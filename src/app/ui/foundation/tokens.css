@@ -531,6 +531,9 @@
   --lineage-ring: 0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent), var(--shadow-card);
   --lineage-mark: 10px;
   --editor-max-width: 760px;
+  /* The least room an editor splits in (EditorRoom): the outline at its least beside an open part whose page, inside
+     its padding, is a phone's 358px. EditorFrame.test.ts checks it against both. */
+  --editor-split: 682px;
   --editor-header: 68px;
   --editor-foot: 140px;
   --read-narrow: 700px;

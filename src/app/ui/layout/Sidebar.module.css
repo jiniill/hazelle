@@ -96,6 +96,9 @@
   gap: var(--space-4);
   overflow-y: auto;
   scrollbar-width: none;
+  /* It rests on a whole face, its ring inside, wherever a scroll or a seek to the current one stops. */
+  scroll-snap-type: y mandatory;
+  scroll-padding-top: var(--focus-ring-reach);
 }
 
 .railPlaces {
@@ -109,6 +112,7 @@
 .faceButton {
   composes: fill ink from '../foundation/hover.module.css';
   position: relative;
+  scroll-snap-align: start;
   display: flex;
   align-items: center;
   justify-content: center;

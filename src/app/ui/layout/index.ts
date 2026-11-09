@@ -5,7 +5,7 @@ export { Contents } from './Contents';
 export { Disclosure } from './Disclosure';
 export { FaceRow } from './FaceRow';
 export { FieldRow } from './FieldRow';
-export { EditorFrame } from './EditorFrame';
+export { EditorFrame, EditorRoom, type EditorLayout } from './EditorFrame';
 export { ItemSection } from './ItemSection';
 export { ListDetail, usePane } from './ListDetail';
 export { NavBar, type NavBarProps } from './NavBar';

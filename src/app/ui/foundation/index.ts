@@ -8,7 +8,7 @@ export { Figure } from './Figure';
 export { FONT_IDS, FONT_KIND, FONTS, type FontId } from './fonts';
 export { Icon } from './Icon';
 export { formatKeys, isComposing, pressed, pressedKey, titled, type Chord } from './keys';
-export { hasFinePointer, isDarkScheme, isInstalled, useCoarsePointer, useDarkScheme, usePanelsBeside, useSplit, useViewport, useWide } from './media';
+export { hasFinePointer, isDarkScheme, isInstalled, useCoarsePointer, useDarkScheme, useHover, usePanelsBeside, useSplit, useViewport, useWide } from './media';
 export { markScrollbars } from './scrollbar';
 export { seekRow } from './seek';
 export { Tag } from './Tag';

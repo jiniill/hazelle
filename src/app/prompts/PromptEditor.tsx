@@ -11,6 +11,7 @@ import { setAgentAt } from '../../runtime/agents';
 import { setFeatureAt } from '../../runtime/features';
 import { copyPrompt, editPrompt, isDefaultPrompt, ofSort, removePrompt, resetPromptBlocks, restorePrompt, setDefaultPrompt, type PromptPatch } from '../../runtime/prompts';
 import { ACTS } from '../common/acts';
+import { howMany } from '../common/pack';
 import { DefaultVariables } from '../common/DefaultVariables';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { ModuleSwitches } from '../common/ModuleSwitches';
@@ -23,7 +24,7 @@ import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
 import { useRemoval } from '../common/useRemoval';
 import { useOwnUndo, useToast } from '../toast';
-import { Button, Callout, Divider, MenuHeading, MenuItem, NavRow, Outline, Row, Section, Stack, Tag, typeInto, type NavBarProps, type OutlineStop } from '../ui';
+import { Button, Callout, Divider, MenuHeading, MenuItem, NavRow, Outline, Row, Section, Stack, Tag, typeInto, useHover, type EditorLayout, type NavBarProps, type OutlineStop } from '../ui';
 import { BlockPane } from './BlockPane';
 import { blockIcon, blockKind, blockMeta, blockTitle, cacheMarks, hasConditions, isText, MARKS, rangeKey, TEXTS } from './blocks';
 import { conditionSnippet, countUses, draftOf, newBlock, placedOnce, withMark, type Draft, type NewBlock, type Snippet } from './edits';
@@ -86,7 +87,7 @@ export type PromptAt = { pane: PromptPane | null; block?: string };
 type Props = {
   stored: Stored<'prompt'>;
   // The caller decides, since a side panel is narrow on any screen.
-  layout: 'split' | 'drill';
+  layout: EditorLayout;
   // The pane or the block open, drilled into, or neither: the list of blocks. A page keeps it in its address, a panel in
   // its own state.
   at: PromptAt;
@@ -113,6 +114,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const uses = usePromptUse().get(stored.id) ?? EMPTY_USE;
   const original = live(useStored('prompt', stored.value.origin?.id ?? null));
   const split = layout === 'split';
+  const hover = useHover();
   const save = useAutosave<PromptPatch>(`prompt:${stored.id}`, (patch) => editPrompt(store, stored.id, patch));
   const sort = sortOf(stored.value);
   // An agent has no default: the chats whose lists hold it run it (runtime/agents).
@@ -310,15 +312,16 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
       <Stack gap="related">
         {modelMeta !== null && <NavRow icon={Cpu} label="모델" meta={modelMeta} current={split && open === MODEL} onClick={() => pick(MODEL)} />}
         {sort === 'illustrate' && <NavRow icon={ImageIcon} label="이미지" meta={draft.tags || Object.values(draft.picture ?? {}).some((value) => value !== undefined) ? '직접 지정' : '기본값'} current={split && open === PICTURE} onClick={() => pick(PICTURE)} />}
-        <NavRow icon={SlidersHorizontal} label="토글" meta={`${draft.toggles.filter(isToggle).length}개`} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
-        {draft.variables && <NavRow icon={Variable} label={DEFAULT_VARIABLES} meta={`${draft.variables.length}개`} current={split && open === VARIABLES} onClick={() => pick(VARIABLES)} />}
+        <NavRow icon={SlidersHorizontal} label="토글" meta={howMany(draft.toggles.filter(isToggle).length)} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
+        {draft.variables && <NavRow icon={Variable} label={DEFAULT_VARIABLES} meta={howMany(draft.variables.length)} current={split && open === VARIABLES} onClick={() => pick(VARIABLES)} />}
       </Stack>
       <Section
         title="전송 순서"
         level={3}
         note={`${draft.blocks.length}개`}
         action={
-          !split && (
+          // The rows' own tools show only under a pointer that hovers; drilled, a press on a row opens its block.
+          !(split && hover) && (
             <Button variant="link" onClick={() => setReordering(!reordering)}>
               {reordering ? '완료' : '순서 변경'}
             </Button>
