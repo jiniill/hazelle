@@ -559,7 +559,7 @@ it('notifies a running tool after pulling a data change written on another devic
   await startChat(account.store, chat, { title: null, character: null, models: {} }, null);
   const changes = vi.fn();
   const transport = inProcessTools((api) => { api.storage.onChange(changes); });
-  const host = new ToolHost(account, { journal: { report: () => {} }, pages: { pageContext: () => null, pageWrite: async () => {}, send: async () => ({ ok: true as const }), rendered: () => null } }, transport.open);
+  const host = new ToolHost(account, { journal: { report: () => {} }, pages: { pageContext: () => null, pageWrite: async () => {}, send: async () => ({ ok: true as const }), rendered: () => null, editCard: async () => ({ ok: true as const }) } }, transport.open);
   try {
     await host.warm(chat);
     const peer = await account.open();
@@ -785,6 +785,25 @@ it('reads the chat\'s lorebook by owner, how the chat is set up with its modules
     expect(account.characters).toEqual([{ id: character, name: 'Mira' }]);
     const setup = await api.page!.chat!.setup();
     expect(setup).toEqual({ persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test', regex: [bold] }] });
+  } finally { close(); host.close(); }
+}));
+
+it('rewrites the chat\'s character\'s card under the character\'s one answer, the first greeting in place', () => withTools(async (session, connect) => {
+  const f = await fixture(session, undefined, 'Hello.');
+  const character = session.store.get('chat', f.chat)!.value.character!;
+  await session.store.update('character', character, (current) => ({ ...current, card: { ...current.card, greetings: ['Hello.', 'Hi again.'] } }));
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const asked = chat.editCard({ description: 'A captain', greeting: 'Ahoy.' });
+    await vi.waitFor(() => expect(session.scriptInteractions.snapshot().questions).toEqual([expect.objectContaining({ question: { kind: 'card' }, from: { kind: 'module', id: f.module } })]));
+    session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'yes');
+    expect(await asked).toEqual({ ok: true });
+    expect(session.store.get('character', character)!.value).toMatchObject({ cardWrites: true, card: { description: 'A captain', greetings: ['Ahoy.', 'Hi again.'] } });
+    await expect(chat.editCard({ description: 3 } as never)).rejects.toThrow('Invalid tool call');
   } finally { close(); host.close(); }
 }));
 

@@ -36,13 +36,14 @@ function fakeApi({ open = true } = {}) {
   const settings: Hazelle.Settings = { image_base: 'none' };
   const model = vi.fn<Hazelle.Chat['model']>(async () => ({ ok: true, text: 'made' }));
   const send = vi.fn<Hazelle.Chat['send']>(async () => ({ ok: true }));
+  const editCard = vi.fn<Hazelle.Chat['editCard']>(async () => ({ ok: true }));
   const chat = {
     id: 'chat-1', character: { name: 'Mira', description: 'A sailor' }, persona: null, length: messages.length,
     messages: async () => messages, greeting: async () => null, card: async () => card, lorebook: async () => lorebook, setup: async () => setup,
     edit: (index: number, text: string) => { edits.push([index, text]); }, add: (role: Hazelle.Role, text: string) => { added.push([role, text]); },
     writeLore: (entry: Omit<Hazelle.LoreEntry, 'owner'>) => { lore.push(entry); },
     variables: { set: (name: string, value: string) => { variables.push([name, value]); } },
-    model, send, say: (text: string) => { said.push(text); },
+    model, send, editCard, say: (text: string) => { said.push(text); },
     rendered: async (at: Hazelle.At | null) => (at === null ? { html: '<i>welcome</i>', css: '.b { color: red; }', text: 'welcome' } : at.id === 'm1' ? { html: '<b>hi there</b>', css: '.b { color: red; }', text: 'hi there' } : null),
   } as unknown as Hazelle.Chat;
   const api = {
@@ -56,7 +57,7 @@ function fakeApi({ open = true } = {}) {
     frame: { chat: async () => (open ? chat : null), show: vi.fn(), hide: vi.fn(), menu: (items: { id: string; label: string }[]) => { menus.push(items); }, missing: (name: string) => { missing.push(name); } },
   } as unknown as Hazelle.Api;
   const fire = (event: string, ...args: unknown[]) => (handlers.get(event) as (...args: unknown[]) => unknown)(...args);
-  return { api, chat, card, handlers, storage, menus, missing, edits, added, said, lore, variables, model, send, settings, fire };
+  return { api, chat, card, handlers, storage, menus, missing, edits, added, said, lore, variables, model, send, editCard, settings, fire };
 }
 const install = (fake: ReturnType<typeof fakeApi>, scope: Record<string, unknown> = {}) => {
   installRisu(fake.api, scope);
@@ -98,6 +99,32 @@ describe('the Risu adapter', () => {
     expect(fake.missing).toEqual(['setChatToIndex:name', 'setChatToIndex:scriptstate.plain']);
     await Risuai.setChatToIndex!(...at, { ...chat, localLore: [] } as never);
     expect(fake.missing).toContain('setChatToIndex:localLore.remove');
+  });
+
+  it('writes only the character\'s fields that changed, skips a refused write as Risu does, and tells a key it cannot write', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const held = await Risuai.getCharacter!() as Record<string, unknown>;
+    await Risuai.setCharacter!(held as never);
+    expect(fake.editCard).not.toHaveBeenCalled();
+    await Risuai.setCharacter!({ ...held, desc: 'A captain', firstMessage: 'Ahoy', globalLore: [], emotionImages: [] } as never);
+    expect(fake.editCard).toHaveBeenCalledWith({ description: 'A captain', greeting: 'Ahoy' });
+    expect(fake.missing).toEqual(['setCharacter:globalLore', 'setCharacter:emotionImages']);
+    fake.editCard.mockResolvedValueOnce({ ok: false, reason: 'not-allowed' });
+    await expect(Risuai.setChar!({ ...held, name: 'Mia' } as never)).resolves.toBeUndefined();
+    fake.editCard.mockResolvedValueOnce({ ok: false, reason: 'failed' });
+    await expect(Risuai.setCharacterToIndex!(0 as never, { ...held, tags: ['sea', 'ship'] } as never)).rejects.toThrow("Risu API 'setCharacterToIndex' failed in Hazelle: failed");
+    await expect(Risuai.setCharacterToIndex!(1 as never, held as never)).rejects.toThrow('reaches only the open chat\'s character');
+  });
+
+  it('takes back the database as getDatabase read it, and fails a key that changed, told to 점검', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const db = await Risuai.getDatabase!() as Record<string, unknown>;
+    await Risuai.setDatabase!(db as never);
+    await Risuai.setDatabaseLite!({ ...db, plugins: [{ name: 'other' }] } as never);
+    await expect(Risuai.setDatabase!({ ...db, username: 'Ann', temperature: 70 } as never)).rejects.toThrow("Risu API 'setDatabase' cannot write username, temperature in Hazelle");
+    expect(fake.missing).toEqual(['setDatabase:username', 'setDatabase:temperature']);
   });
 
   it('sends as the user through the chat, answering false when models are refused as Risu does its permission', async () => {

@@ -36,6 +36,9 @@ declare namespace Hazelle {
     readonly id: string; name: string; description: string; personality: string; scenario: string; greeting: string | null;
     creatorNotes: string; tags: string[];
   }
+  // The fields of a card a tool rewrites; greeting takes the place of the first. no-character: the chat has none.
+  type CardEdit = Partial<Pick<Card, 'name' | 'description' | 'personality' | 'scenario' | 'creatorNotes' | 'tags'>> & { greeting?: string };
+  type CardAnswer = { ok: true } | { ok: false; reason: 'not-allowed' | 'no-character' | 'failed' };
   // A lorebook entry as written, before any activation. on: whether it is switched on. owner: whose lorebook holds it,
   // with that one's id: the chat's character, one of its 등장인물, the chat itself, or a module on in it.
   interface LoreEntry { name: string; keys: string[]; text: string; always: boolean; on: boolean; owner: { kind: 'character' | 'cast' | 'chat' | 'module'; id: string } }
@@ -111,6 +114,9 @@ declare namespace Hazelle {
     // Bound to the chat, as picture is. at null: the greeting. null while the chat is not open on the screen, or the
     // version is not the one shown.
     rendered(at: At | null): Promise<Rendered | null>;
+    // Rewrites the chat's character's card, in every chat with it, under the user's one answer for this character's
+    // card, which the bot's own scripts share. Bound to the chat, as picture is; answers once saved.
+    editCard(edit: CardEdit): Promise<CardAnswer>;
   }
   // Tool data: synced, owned by the module. A value is at most 4 MB of JSON and a tool's values 32 MB; one past 512 KB is
   // kept as a file counted in the account's picture budget, read when asked. set throws too-large past either, or

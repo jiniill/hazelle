@@ -1,6 +1,7 @@
 import type { ChatScope } from '../../engine/render';
 import type { ToolReach } from '../../engine/script-api';
-import type { PackOwner } from '../../model/library';
+import { live, type PackOwner } from '../../model/library';
+import { editCharacter } from '../characters';
 import type { ScriptOutcome } from './lua/event';
 import type { ReadModels } from '../read-model';
 import { onLast, type ScriptEffects } from './effects';
@@ -52,6 +53,19 @@ export class ScriptPages {
     if (!screen || signal.aborted) return { ok: false, reason: 'closed' };
     const refused = await screen.send(text);
     return refused ? { ok: false, reason: refused } : { ok: true };
+  }
+
+  // A tool's rewrite of the chat's character's card (Hazelle.Chat.editCard), under the character's one answer, which its
+  // bot's scripts share (design §6.8).
+  async editCard(chat: string, { greeting, ...edit }: Hazelle.CardEdit, from: PackOwner, signal: AbortSignal): Promise<Hazelle.CardAnswer> {
+    const { store } = this.session;
+    const character = live(store.get('chat', chat))?.value.character ?? null;
+    if (character === null) return { ok: false, reason: 'no-character' };
+    if (!(await this.interactions.mayRewrite(chat, character, from, false, signal))) return { ok: false, reason: 'not-allowed' };
+    const card = live(store.get('character', character))?.value.card;
+    if (!card || signal.aborted) return { ok: false, reason: 'failed' };
+    const saved = await editCharacter(store, character, greeting === undefined ? edit : { ...edit, greetings: [greeting, ...card.greetings.slice(1)] });
+    return saved.ok ? { ok: true } : { ok: false, reason: 'failed' };
   }
 
   pageWrite(chat: string, module: string, outcome: ScriptOutcome): Promise<void> {

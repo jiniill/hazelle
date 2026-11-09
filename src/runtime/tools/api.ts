@@ -67,6 +67,9 @@ function isAnswer(value: unknown): value is Hazelle.PromptAnswer | undefined {
   if (!isRecord(value) || !isText(value.tool)) return false;
   return value.memory === undefined || (isRecord(value.memory) && typeof value.memory.text === 'string' && (value.memory.through === null || typeof value.memory.through === 'string'));
 }
+const CARD_TEXTS = new Set(['name', 'description', 'personality', 'scenario', 'creatorNotes', 'greeting']);
+const isCardEdit = (value: unknown): value is Hazelle.CardEdit => isRecord(value) && Object.entries(value).every(([key, field]) =>
+  CARD_TEXTS.has(key) ? typeof field === 'string' : key === 'tags' && Array.isArray(field) && field.every((tag) => typeof tag === 'string'));
 const isRequestMessages = (value: unknown): value is Hazelle.RequestMessage[] => Array.isArray(value) && value.every((message) => isModelMessages([message])
   && (message.message === undefined || typeof message.message === 'string') && (message.cache === undefined || message.cache === true));
 const answers = (event: ToolEvent['kind'] | undefined, value: unknown) => {
@@ -110,7 +113,7 @@ function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unkno
       trial.writes.push({ kind: 'setting', key: field.key, value: second });
       return { answer: undefined };
     }
-    case 'assets.save': case 'chat.picture': case 'chat.send':
+    case 'assets.save': case 'chat.picture': case 'chat.send': case 'chat.card.edit':
       trial.writes.push({ kind: 'refused', call: method });
       throw new Error('Not run in a test');
     default: return null;
@@ -136,7 +139,7 @@ function lorebookOf(chat: string, character: string | null, scope: ChatScope): H
 }
 export const header = (chat: string, scope: ChatScope): ChatHeader => ({ id: chat, character: scope.card && { name: scope.card.name, description: scope.card.description }, persona: scope.persona, length: scope.messages.length - (scope.greeting === null ? 0 : 1) });
 
-export type ToolServices = { pages: Pick<ScriptPages, 'pageContext' | 'pageWrite' | 'send' | 'rendered'>; journal: Pick<ScriptJournal, 'report'> };
+export type ToolServices = { pages: Pick<ScriptPages, 'pageContext' | 'pageWrite' | 'send' | 'rendered' | 'editCard'>; journal: Pick<ScriptJournal, 'report'> };
 
 type FrameRuntime = {
   allowed(chat: string, module: string): boolean;
@@ -259,6 +262,11 @@ export class ToolApi {
         if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
         if (!entry.tool.manifest.uses.includes('model')) return { ok: false, reason: 'not-declared' } satisfies Hazelle.SendAnswer;
         return this.services.pages.send(first, second, { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
+      }
+      case 'chat.card.edit': {
+        if (typeof first !== 'string' || !isCardEdit(second)) break;
+        if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
+        return this.services.pages.editCard(first, second, { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
       }
       case 'chat.rendered': {
         const at = second === null ? null : isRecord(second) && typeof second.id === 'string' && typeof second.version === 'string' ? { id: second.id, version: second.version } : undefined;

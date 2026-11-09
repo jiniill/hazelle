@@ -27,6 +27,10 @@ const character = (card: Hazelle.Card, lorebook: Hazelle.LoreEntry[]) => ({
   globalLore: lorebook.filter(({ owner }) => owner.kind === 'character').map(loreEntry),
 });
 
+// The keys of character a write takes, by the Card field each lands in; another that changed is told to 점검.
+const CARD_FIELDS = { name: 'name', desc: 'description', personality: 'personality', scenario: 'scenario', firstMessage: 'greeting', creatorNotes: 'creatorNotes', tags: 'tags' } as const;
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
 // localLore: the chat's own lorebook, which setChatToIndex writes back.
 const chatOf = (id: string, messages: Hazelle.Message[], lorebook: Hazelle.LoreEntry[]) => ({
   id, message: messages.map((message) => ({ role: message.role, data: message.raw, time: message.time, chatId: message.id })),
@@ -240,7 +244,43 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   const local = storage('local:');
   const getArgument = async (key: string) => (await api.settings())[key];
   const setArgument = (key: string, value: string | number) => api.setSetting(key, value);
+  // Risu's database as getDatabase builds it, of the keys asked that it builds.
+  const database = async (keys: string[]) => {
+    const chat = await frame.chat();
+    const reads: Reads = { account: once(() => api.account()), setup: once(async () => chat && chat.setup()), lorebook: once(async () => chat ? chat.lorebook() : []) };
+    const built: Record<string, unknown> = {};
+    for (const key of keys.filter((each) => Object.hasOwn(DATABASE, each))) {
+      const value = await DATABASE[key]!(reads);
+      if (value !== undefined) built[key] = value;
+    }
+    return built;
+  };
   const getCharacter = async () => { const current = await opened(); return current && characterOf(current); };
+  // Only the keys that changed from what getCharacter reads are written, as Risu's dbWrite asks before a write: under the
+  // card's one answer, a refusal skipping it.
+  const setCharacter = (name: string) => async (characterIndex: number | null, value: Record<string, unknown>) => {
+    const current = await opened();
+    if (!current?.card) throw new Error(`Risu API '${name}' found no character in the open chat`);
+    if (characterIndex !== null && characterIndex !== current.characterIndex) throw new Error(`Risu API '${name}' reaches only the open chat's character in Hazelle`);
+    const held: Record<string, unknown> = character(current.card, await current.chat.lorebook());
+    const edit: Record<string, unknown> = {};
+    for (const [key, written] of Object.entries(value)) {
+      if (same(written, held[key])) continue;
+      if (Object.hasOwn(CARD_FIELDS, key)) edit[CARD_FIELDS[key as keyof typeof CARD_FIELDS]] = written;
+      else tell(`${name}:${key}`);
+    }
+    if (!Object.keys(edit).length) return;
+    const answer = await current.chat.editCard(edit);
+    if (!answer.ok && answer.reason !== 'not-allowed') throw new Error(`Risu API '${name}' failed in Hazelle: ${answer.reason}`);
+  };
+  // Nothing of Risu's database is written here: one handed back as getDatabase read it is left as it is, and a key that
+  // changed fails the write, each told to 점검.
+  const setDatabase = (name: string) => async (value: Record<string, unknown>) => {
+    const read = await database(Object.keys(value));
+    const changed = Object.keys(value).filter((key) => !same(value[key], read[key]));
+    for (const key of changed) tell(`${name}:${key}`);
+    if (changed.length) throw new Error(`Risu API '${name}' cannot write ${changed.join(', ')} in Hazelle`);
+  };
   const mapped: Scope = {
     apiVersion: API_VERSION,
     apiVersionCompatibleWith: [API_VERSION],
@@ -301,16 +341,12 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       },
     }),
     getDatabase: async (keys: string[] | 'all' = 'all') => {
-      const chat = await frame.chat();
-      const reads: Reads = { account: once(() => api.account()), setup: once(async () => chat && chat.setup()), lorebook: once(async () => chat ? chat.lorebook() : []) };
-      const database: Record<string, unknown> = {};
-      for (const key of keys === 'all' ? Object.keys(DATABASE) : keys) {
-        if (!Object.hasOwn(DATABASE, key)) { tell(`getDatabase:${key}`); continue; }
-        const value = await DATABASE[key]!(reads);
-        if (value !== undefined) database[key] = value;
-      }
-      return database;
+      for (const key of keys === 'all' ? [] : keys) if (!Object.hasOwn(DATABASE, key)) tell(`getDatabase:${key}`);
+      return database(keys === 'all' ? Object.keys(DATABASE) : keys);
     },
+    setDatabase: setDatabase('setDatabase'),
+    // Risu's Lite leaves the plugin list as it is, whatever it is handed.
+    setDatabaseLite: async (value: Record<string, unknown>) => setDatabase('setDatabaseLite')(Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'plugins'))),
     getCurrentLorebookEntries: async () => {
       const chat = await frame.chat();
       return chat ? (await chat.lorebook()).map(loreEntry) : [];
@@ -318,6 +354,9 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     requestPluginPermission: async () => true,
     getCharacter,
     getChar: getCharacter,
+    setCharacter: async (value: Record<string, unknown>) => setCharacter('setCharacter')(null, value),
+    setChar: async (value: Record<string, unknown>) => setCharacter('setChar')(null, value),
+    setCharacterToIndex: setCharacter('setCharacterToIndex'),
     getCharacterFromIndex: async (characterIndex: number) => {
       const current = await opened();
       return current && current.characterIndex === characterIndex ? characterOf(current) : null;

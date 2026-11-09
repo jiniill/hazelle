@@ -27,7 +27,7 @@ export type Frame = {
 // leaving lasts one commit so reattaching a slot is a remount, not a close.
 // A studio draft's test run (ToolHost.trial), its code held as text. What it would write outside its outcome lands in
 // its own copy (storage, settings) or is refused, each listed in writes.
-export type TrialWrite = { kind: 'storage' | 'setting'; key: string; value: Json | undefined } | { kind: 'refused'; call: 'assets.save' | 'chat.picture' | 'chat.send' };
+export type TrialWrite = { kind: 'storage' | 'setting'; key: string; value: Json | undefined } | { kind: 'refused'; call: 'assets.save' | 'chat.picture' | 'chat.send' | 'chat.card.edit' };
 export type EntryTrial = { code: string; chat: string; storage: Map<string, Json>; writes: TrialWrite[] };
 export type EntryCode = { file: FileRef; trial: null } | { file: null; trial: EntryTrial };
 export type Entry = EntryCode & {

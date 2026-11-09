@@ -19,7 +19,7 @@ export const RISU_MAPPED: ReadonlySet<string> = new Set([
   'runLLMModel', 'addRisuReplacer', 'removeRisuReplacer', 'addRisuChatListener', 'removeRisuChatListener',
   'addRisuScriptHandler', 'removeRisuScriptHandler', 'getDatabase', 'getCurrentLorebookEntries', 'getCharacterFromIndex', 'setArgument', 'setArg',
   'unwarpSafeArray', 'nativeFetch', 'risuFetch', 'getRuntimeInfo', 'saveAsset', 'readImage', 'sendChat', 'getRootDocument',
-  'apiVersion', 'apiVersionCompatibleWith', 'checkCharOrder',
+  'apiVersion', 'apiVersionCompatibleWith', 'checkCharOrder', 'setCharacter', 'setChar', 'setCharacterToIndex', 'setDatabase', 'setDatabaseLite',
 ]);
 // addRisuReplacer kinds the adapter runs; another kind is missing as `addRisuReplacer:<kind>`.
 export const RISU_REPLACERS: ReadonlySet<string> = new Set(['beforeRequest', 'afterRequest']);
