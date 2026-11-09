@@ -60,6 +60,8 @@ export type Settings = {
   toolLanguage?: string;
   importNotice?: true;
   ledger?: 'filled' | { after: string };
+  // How many of runtime/reread's steps every import original kept here has had; absent, none.
+  reread?: number;
   looks?: SavedLook[];
   // How many model calls one reply may make while its model calls plugin tools, absent for TOOL_ROUNDS.
   toolRounds?: number;

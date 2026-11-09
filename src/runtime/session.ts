@@ -54,6 +54,7 @@ import { Streams } from './streams';
 import { backfillSummaries } from './summary';
 import { receiveReply, resumeSend } from './turn';
 import { moveTaskModels, saveUpgraded } from './upgrade';
+import { rereadOriginals } from './reread';
 import { accountTransport, countGuest, directTransport, holdTransport, type Transport } from './relay';
 import { guestAccount, dropGuestStore, guestBackend, throwawayGuest } from './guest-store';
 
@@ -226,6 +227,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
       const library = read.library.snapshot();
       void seedOrder(store, [...library.folders.flatMap(withInside), ...library.characters].map(({ id }) => id));
       void backfillSummaries(store, closing.signal);
+      void rereadOriginals(store, files, closing.signal);
       // A purge before the ledger's fill took a chat's calls would lose them: the trash empties only once it has.
       void usage.fill(closing.signal).then(() => {
         if (accountSettings(store).ledger === 'filled') void purgeExpired(store, files, Date.now(), closing.signal);
