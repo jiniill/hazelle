@@ -3,6 +3,7 @@ import { backBar } from '../shell/router';
 import { BIN, FEATURES_TITLE, PAGES } from './words';
 import type { Back } from '../shell/routes';
 import { Empty, NavBar, Screen } from '../ui';
+import { useLeaving } from './useRemoval';
 
 const RESTORE = `캐릭터 둘러보기의 '${BIN}'에서 복원할 수 있어요.`;
 const COPY = {
@@ -27,7 +28,10 @@ const COPY = {
 
 export type Absent = keyof typeof COPY;
 
+// Nothing while its own page is being left by a removal (useLeaving), which would otherwise flash here.
 export function Missing({ what, back }: { what: Absent; back: Back | null }) {
+  const leaving = useLeaving();
+  if (leaving) return null;
   const { title, message } = COPY[what];
   return (
     <Screen top={<NavBar title={title} {...backBar(back)} />}>

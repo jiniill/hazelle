@@ -70,9 +70,24 @@ export function ChatDetailDefaults() {
       </Section>
       <Section title={CHAT_DETAIL.lore}>
         <SettingGroup label={CHAT_DETAIL.lore}>
-          <SharedLoreNumber field="tokenBudget" changed={loreBudget !== undefined} />
+          <SharedLoreBudget changed={loreBudget !== undefined} />
           {flag('recursive', loreRecursive)}
-          <SharedLoreNumber field="scanDepth" changed={loreDepth !== undefined} />
+          <SettingRow
+            label={depth.label}
+            help={sharedHelp('scanDepth')}
+            changed={loreDepth !== undefined}
+            control={
+              <Stepper
+                label={depth.label}
+                less={`1${depth.unit} 줄이기`}
+                more={`1${depth.unit} 늘리기`}
+                value={shared.scanDepth}
+                min={1}
+                max={DEPTH_MOST}
+                onChange={(next) => toast.settled(setSharedLoreScan(store, 'scanDepth', next))}
+              />
+            }
+          />
           {flag('fullWordMatching', loreFullWord)}
         </SettingGroup>
       </Section>
@@ -81,16 +96,23 @@ export function ChatDetailDefaults() {
 }
 
 const TOOL_ROUNDS_LABEL = '모델 도구 호출 횟수';
+const depth = LORE_SCAN_WORDS.scanDepth;
+// The stepper's reach, not a limit of the lorebook's, which takes any depth a character sets.
+const DEPTH_MOST = 50;
+const sharedHelp = (field: 'tokenBudget' | 'scanDepth') => {
+  const { help, amount, is } = LORE_SCAN_WORDS[field];
+  return `${help} 기본값은 ${amount(count(LORE_SCAN[field]))}${is}.`;
+};
 
-function SharedLoreNumber({ field, changed }: { field: 'tokenBudget' | 'scanDepth'; changed: boolean }) {
+function SharedLoreBudget({ changed }: { changed: boolean }) {
   const store = useStore();
-  const { label, help, unit, amount, is } = LORE_SCAN_WORDS[field];
-  const save = useAutosave<{ value: number }>(`lore-${field}`, (patch) => setSharedLoreScan(store, field, patch.value!));
-  const typed = useTypedNumber(readCount, save.unsaved.value ?? sharedLoreScan(store)[field], { onChange: (value) => save.change({ value }) });
+  const { label, unit } = LORE_SCAN_WORDS.tokenBudget;
+  const save = useAutosave<{ value: number }>('lore-tokenBudget', (patch) => setSharedLoreScan(store, 'tokenBudget', patch.value!));
+  const typed = useTypedNumber(readCount, save.unsaved.value ?? sharedLoreScan(store).tokenBudget, { onChange: (value) => save.change({ value }) });
   return (
     <SettingRow
       label={label}
-      help={`${help} 기본값은 ${amount(count(LORE_SCAN[field]))}${is}.`}
+      help={sharedHelp('tokenBudget')}
       changed={changed}
       error={typed.error}
       control={<NumberInput label={label} unit={unit} value={typed.text} invalid={typed.error !== undefined} onChange={typed.change} />}

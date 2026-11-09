@@ -62,9 +62,14 @@ export const modulePreview = (module: ImportedModule, at: ModulePlace['kind'] | 
 
 const putInto = (character: string | null, verb: string) => character === null ? `${NO_CHARACTER} ${verb}` : `${character}에 ${verb}`;
 
+// titles: each chat's own, null or blank where it has none. A file of one titled chat goes by that title, any other by
+// the file's name.
+const chatTitle = (file: string, titles: (string | null)[]) => (titles.length === 1 && titles[0]?.trim()) || file;
+const chatsHeld = (count: number) => `채팅 ${count}개`;
+
 // character: the name of the one they go to, null for 캐릭터 없이, undefined while the user picks it.
-export const chatPreview = (file: string, count: number, missed: string[], character: string | null | undefined): Preview =>
-  preview('chat', file, `채팅 ${count}개`, { placed: character === undefined ? null : { text: putInto(character, '넣어요.'), failed: false }, missed });
+export const chatPreview = (file: string, titles: (string | null)[], missed: string[], character: string | null | undefined): Preview =>
+  preview('chat', chatTitle(file, titles), chatsHeld(titles.length), { placed: character === undefined ? null : { text: putInto(character, '넣어요.'), failed: false }, missed });
 
 export function promptPreview({ prompt, unsupported }: PresetRead): Preview {
   const toggles = prompt.toggles.filter(isToggle).length;
@@ -111,8 +116,8 @@ export function moduleOutcome(file: string, title: string, id: string, unsupport
 }
 
 // character: the name of the one they went to, null for 캐릭터 없이.
-export const chatOutcome = (file: string, ids: string[], character: string | null, missed: string[]): ImportOutcome =>
-  ({ kind: 'chat', file, id: ids.length === 1 ? ids[0]! : null, title: file, lines: [{ text: putInto(character, '넣었어요.'), failed: false }], missed });
+export const chatOutcome = (file: string, title: string, ids: string[], character: string | null, missed: string[]): ImportOutcome =>
+  ({ kind: 'chat', file, id: ids.length === 1 ? ids[0]! : null, title, lines: [{ text: `${chatsHeld(ids.length)}를 ${putInto(character, '넣었어요.')}`, failed: false }], missed });
 
 // modules: the names of the modules its preset named that were here, turned on for it. waiting: the names it gave that
 // no module answered, as written.

@@ -143,6 +143,11 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, 
     );
   }
 
+  const create = (
+    <Button variant="secondary" icon={ACTS.create.icon} onClick={() => onAdding(true)}>
+      {newOf('토글')}
+    </Button>
+  );
   return (
     <Section
       title="토글"
@@ -155,15 +160,13 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, 
             <MenuItem label={LINE_WORDS.caption} onClick={() => setEditing({ add: 'caption' })} />
             <MenuItem label={LINE_WORDS.group} onClick={() => setEditing({ add: 'group' })} />
           </Menu>
-          <Button variant="secondary" icon={ACTS.create.icon} onClick={() => onAdding(true)}>
-            {newOf('토글')}
-          </Button>
+          {create}
         </Row>
       }
     >
       {search.field && <Row kind="toolbar">{search.field}</Row>}
       {lines.length === 0 || search.none ? (
-        <Empty variant="section">{search.none ?? '토글이 없어요.'}</Empty>
+        <Empty variant="section" action={search.none ? undefined : create}>{search.none ?? '토글이 없어요.'}</Empty>
       ) : search.words ? (
         search.found.map(row)
       ) : (

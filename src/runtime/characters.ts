@@ -8,7 +8,7 @@ import type { Stored, Values } from '../model/kinds';
 import { readableTexts, type Asset, type Avatar, type Character, type Lore, type Pictures } from '../model/library';
 import { likenessId, type Likeness } from '../model/likeness';
 import type { ToggleValues } from '../model/prompt';
-import { ORDER_ID, rearrange, toFront } from '../model/order';
+import { ORDER_ID, putBack, rearrange, toFront } from '../model/order';
 import type { ApiResult } from './api';
 import { saveEach, type Files } from './files';
 import { thumbnail } from './picture';
@@ -238,6 +238,9 @@ export async function seedOrder(store: ObjectStore, ids: string[]): Promise<void
 export const setOrder = (store: ObjectStore, sequence: string[]) => store.upsert('order', (current) => ({ ids: rearrange(current?.ids ?? [], sequence) }));
 
 export const orderFirst = (store: ObjectStore, ids: string[]) => store.upsert('order', (current) => ({ ids: toFront(current?.ids ?? [], ids) }));
+
+// orderFirst taken back: before, the order as it stood.
+export const orderBack = (store: ObjectStore, before: readonly string[], ids: string[]) => store.upsert('order', (current) => ({ ids: putBack(current?.ids ?? [], before, ids) }));
 
 function listInSettings(store: ObjectStore, list: 'pinnedToggles' | 'hiddenTools', key: string, listed: boolean): Promise<ApiResult<Stored<'settings'>>> {
   return changeSettings(store, (current) => {

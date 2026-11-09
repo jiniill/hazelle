@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrange, placeBefore, rearrange, toFront } from './order';
+import { arrange, placeBefore, putBack, rearrange, toFront } from './order';
 
 const named = (...names: string[]) => names.map((name) => ({ id: name, name }));
 const ids = (items: { id: string }[]) => items.map(({ id }) => id);
@@ -16,6 +16,12 @@ describe('직접 순서', () => {
 
   it('files moved things first', () => {
     expect(toFront(['a', 'b', 'c'], ['c'])).toEqual(['c', 'a', 'b']);
+  });
+
+  it('puts moved things back where they stood, the rest kept as they now are', () => {
+    // c and d were filed first; b moved since. e had no place; f's follower x has gone.
+    expect(putBack(['c', 'd', 'e', 'f', 'a', 'y', 'b'], ['a', 'c', 'd', 'b', 'f', 'x', 'y'], ['c', 'd', 'e', 'f'])).toEqual(['a', 'y', 'c', 'd', 'b', 'f']);
+    expect(putBack(['c', 'a', 'b'], ['a', 'b', 'c'], ['c'])).toEqual(['a', 'b', 'c']);
   });
 
   it('moves one before another, or last', () => {

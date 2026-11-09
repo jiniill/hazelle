@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addPersona, removePersona } from './personas';
 import { createCharacter, seedOrder } from './characters';
 import { ORDER_ID } from '../model/order';
-import { createFolder, folderRemoval, moveInto, removeFolder, restoreFolder } from './folders';
+import { createFolder, filingOf, folderRemoval, moveBack, moveInto, removeFolder, restoreFolder } from './folders';
 import { removeChat } from './chat-log';
 import { testServer } from './testing';
 
@@ -20,6 +20,34 @@ describe('folders', () => {
     const folder = await createFolder(store, 'character', '즐겨찾기', null);
     await moveInto(store, 'character', [c], folder.ok ? folder.data.id : null);
     expect(order()).toEqual([c, a, b]);
+  });
+
+  it('takes a move back to the folders and the order it left, but not for one moved on since', async () => {
+    const { store } = await server.account();
+    const order = () => store.get('order', ORDER_ID)?.value.ids;
+    const [a, b, c] = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+    for (const id of [a, b, c]) await createCharacter(store, id, id);
+    await seedOrder(store, [a, b, c]);
+    const made = await createFolder(store, 'character', '즐겨찾기', null);
+    const kept = made.ok ? made.data.id : '';
+    await moveInto(store, 'character', [b], kept);
+    const filing = filingOf(store, 'character', [b, c]);
+    await moveInto(store, 'character', [b, c], null);
+    expect(order()).toEqual([b, c, a]);
+    await moveBack(store, filing, null);
+    expect([store.get('character', b)?.value.folder, store.get('character', c)?.value.folder, order()]).toEqual([kept, null, [b, a, c]]);
+
+    const people = await Promise.all(['진', '린'].map((name) => addPersona(store, { name, description: '', picture: null })));
+    const [jin, rin] = people.map((added) => (added.ok ? added.data.id : ''));
+    const [folder, later] = await Promise.all(['판타지', '나중에'].map(async (name) => {
+      const saved = await createFolder(store, 'persona', name, null);
+      return saved.ok ? saved.data.id : '';
+    }));
+    const persons = filingOf(store, 'persona', [jin!, rin!]);
+    await moveInto(store, 'persona', [jin!, rin!], folder!);
+    await moveInto(store, 'persona', [rin!], later!);
+    await moveBack(store, persons, folder!);
+    expect(['folder' in store.get('persona', jin!)!.value, store.get('persona', rin!)?.value.folder]).toEqual([false, later]);
   });
 
 

@@ -188,8 +188,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       const shown = (preview: Preview, choice: Choice | null = null): Row => ({ file, password, preview, choice, ticked: true });
       if ('chat' in parsed || 'risuChats' in parsed) {
         const choice: Choice = { kind: 'character', ...chatDestination(store, parsed, target, place) };
-        const count = 'chat' in parsed ? 1 : parsed.risuChats.length;
-        return shown(chatPreview(file.name, count, 'chat' in parsed ? [] : moveMissed(parsed.missed), choice.kind === 'character' && !choice.asked ? nameOf(choice.picked) : undefined), choice);
+        const titles = 'chat' in parsed ? [parsed.chat.chat.value.title] : parsed.risuChats.map(({ title }) => title);
+        return shown(chatPreview(file.name, titles, 'chat' in parsed ? [] : moveMissed(parsed.missed), choice.kind === 'character' && !choice.asked ? nameOf(choice.picked) : undefined), choice);
       }
       if ('tool' in parsed) {
         const previous = sameTool(store, parsed.tool.manifest);
@@ -225,10 +225,10 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         const character = choice?.kind === 'character' ? choice.picked : null;
         if ('chat' in parsed) {
           const saved = await importChat(sink, parsed.chat, character);
-          return saved.ok ? chatOutcome(file.name, [saved.data.id], nameOf(character), chatMissed(saved.data.dropped)) : notSaved(file.name, saved);
+          return saved.ok ? chatOutcome(file.name, title, [saved.data.id], nameOf(character), chatMissed(saved.data.dropped)) : notSaved(file.name, saved);
         }
         const saved = await importRisuChats(store, character, parsed.risuChats);
-        return saved.ok ? chatOutcome(file.name, saved.data, nameOf(character), []) : notSaved(file.name, saved);
+        return saved.ok ? chatOutcome(file.name, title, saved.data, nameOf(character), []) : notSaved(file.name, saved);
       }
       if ('tool' in parsed) {
         const saved = await saveTool(sink, parsed.tool, place);

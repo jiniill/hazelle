@@ -2,7 +2,8 @@ import { holds, isChatFolderOf, kindOf, nest, setOf, withInside, type Filed, typ
 import type { Stored, Values } from '../model/kinds';
 import { without } from '../model/fields';
 import { allWritten } from './api';
-import { orderFirst } from './characters';
+import { ORDER_ID } from '../model/order';
+import { orderBack, orderFirst } from './characters';
 import type { ObjectStore } from './store';
 
 type Placement = { id: string; folder: string | null };
@@ -25,6 +26,24 @@ function place(store: ObjectStore, kind: Filed, placements: Placement[], still: 
 export function moveInto(store: ObjectStore, kind: Filed, ids: string[], folder: string | null) {
   const moved = place(store, kind, ids.map((id) => ({ id, folder })));
   return kind === 'character' ? allWritten([moved, orderFirst(store, ids)]) : moved;
+}
+
+// Where things stand before a move, for moveBack: their folders, and a character's order.
+export type Filing = { kind: Filed; placements: Placement[]; order: string[] | null };
+
+export const filingOf = (store: ObjectStore, kind: Filed, ids: string[]): Filing => ({
+  kind,
+  placements: ids.flatMap((id) => {
+    const stored = store.get(kind, id);
+    return stored ? [{ id, folder: folderOf(stored.value) }] : [];
+  }),
+  order: kind === 'character' ? (store.get('order', ORDER_ID)?.value.ids ?? []) : null,
+});
+
+// A move into to taken back: only what still stands there goes back.
+export function moveBack(store: ObjectStore, { kind, placements, order }: Filing, to: string | null) {
+  const placed = place(store, kind, placements, (folder) => folder === to);
+  return order ? allWritten([placed, orderBack(store, order, placements.map(({ id }) => id))]) : placed;
 }
 
 export const createFolder = (store: ObjectStore, set: FolderSet, name: string, parent: string | null) =>
