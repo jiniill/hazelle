@@ -10,7 +10,7 @@ import type { Unlocked } from './AccountFlow';
 const seen = vi.hoisted(() => ({
   failure: null as { message: string; onRetry: () => void } | null,
   choice: false,
-  password: null as { mode: string; onBack?: () => void; onSignIn?: () => void; onDone: (username: string, password: string) => Promise<string | null> } | null,
+  password: null as { mode: string; username: string; password?: string; onBack?: () => void; onSignIn?: () => void; onDone: (username: string, password: string) => Promise<string | null> } | null,
   recovery: null as { username: string } | null,
   signIn: null as { username?: string; solo?: boolean; onGuest?: () => void } | null,
 }));
@@ -25,10 +25,19 @@ vi.mock('../ui', async (original) => ({
   Brand: () => null,
   Progress: () => null,
 }));
+// The router's side of a step is router.test's; here, what the flow hands it.
+const held = vi.hoisted(() => ({ steps: null as { count: () => number; closeAbove: (keep: number) => void } | null }));
+vi.mock('../shell/router', () => ({
+  holdBack: (steps: NonNullable<typeof held.steps>) => {
+    held.steps = steps;
+    return () => void (held.steps = null);
+  },
+}));
 vi.mock('../common/download', () => ({ clearDownloads: vi.fn(async () => {}) }));
 vi.mock('../../runtime/account', async (original) => ({
   ...await original<typeof import('../../runtime/account')>(),
   loadSession: vi.fn(),
+  checkUsername: vi.fn(),
   uploadGuest: vi.fn(),
 }));
 vi.mock('../../runtime/guest-transfer', async (original) => ({
@@ -195,6 +204,38 @@ it("signs in to a one-person installation's account by its password alone, with 
   try {
     await act(() => root.render(<AccountFlow>{() => null}</AccountFlow>));
     await waitFor(() => expect(seen.signIn).toMatchObject({ username: 'jin', solo: true, onGuest: undefined }));
+  } finally {
+    await act(() => root.unmount());
+  }
+});
+
+it("holds a step for each screen in from the guest, which back takes back, and asks for the username at 다음, keeping the password", async () => {
+  const { loadSession, checkUsername } = await import('../../runtime/account');
+  vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'open' } } });
+  vi.mocked(checkUsername).mockResolvedValueOnce({ ok: false, error: 'username-taken', status: 409 }).mockResolvedValueOnce({ ok: false, error: 'offline' }).mockResolvedValue({ ok: true, data: undefined });
+  const { AccountFlow } = await import('./AccountFlow');
+  const children = vi.fn<(account: Unlocked) => ReactNode>(() => null);
+  const root = probeRoot();
+  try {
+    await act(() => root.render(<AccountFlow>{children}</AccountFlow>));
+    await waitFor(() => expect(children).toHaveBeenCalled());
+    expect(held.steps).toBeNull();
+    await act(() => children.mock.lastCall![0].guest!.onSignup());
+    expect(held.steps!.count()).toBe(1);
+    const typed = 'correct horse battery';
+    for (let i = 0; i < 2; i++) expect(await act(() => seen.password!.onDone('jin', typed))).not.toBeNull();
+    expect(seen.recovery).toBeNull();
+    await act(async () => { await seen.password!.onDone('jin', typed); });
+    await waitFor(() => expect(seen.recovery).toMatchObject({ username: 'jin' }));
+    expect(checkUsername).toHaveBeenCalledWith('jin');
+    expect(held.steps!.count()).toBe(2);
+    seen.password = null;
+    await act(() => held.steps!.closeAbove(1));
+    expect(seen.password).toMatchObject({ username: 'jin', password: typed });
+    children.mockClear();
+    await act(() => held.steps!.closeAbove(0));
+    expect(children.mock.lastCall![0].guest).not.toBeNull();
+    expect(held.steps).toBeNull();
   } finally {
     await act(() => root.unmount());
   }

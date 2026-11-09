@@ -41,7 +41,8 @@ let listening = false;
 let traveling = false;
 let afterTravel: (() => void) | null = null;
 
-type Entry = { guards?: number; depth?: number };
+// from: the address of the entry under this one, as this router wrote it.
+type Entry = { guards?: number; depth?: number; from?: string };
 const entry = () => (history.state as Entry | null) ?? {};
 const guards = () => (overlays && entry().guards) || 0;
 const depth = () => entry().depth ?? 0;
@@ -88,11 +89,13 @@ export function holdBack(layers: BackLayers) {
   };
 }
 
+const target = (route: Route, now: Address) => addressOf({ route, under: layered(route) ? (now.under ?? now.route) : null });
+
 // replace: write over the entry standing, as 설정's sidebar does walking between its pages.
 export function navigate(route: Route, { replace = false } = {}) {
   const now = parseAddress(address());
   const over = layered(route);
-  const at = addressOf({ route, under: over ? (now.under ?? now.route) : null });
+  const at = target(route, now);
   // A self-host's 게시판 is hazelle.app's, where release news and questions meet, so every way into it opens there.
   if (selfHost() && onBoard(route)) return void window.open(HOSTED + at, '_blank', 'noopener');
   if (at === addressOf(now)) return;
@@ -116,7 +119,8 @@ export function navigate(route: Route, { replace = false } = {}) {
   }
   // A guard replaced counts as pushed: it stood above the entry.
   const walked = over ? (now.under === null ? Number(!replace) : !replace && depth() > 0 ? depth() + 1 : depth()) : 0;
-  history[replace || have > 0 ? 'replaceState' : 'pushState'](walked ? { depth: walked } : null, '', at);
+  const from = replace ? entry().from : addressOf(now);
+  history[replace || have > 0 ? 'replaceState' : 'pushState']({ from, ...(walked ? { depth: walked } : {}) }, '', at);
   window.scrollTo(0, 0);
   window.dispatchEvent(new Event(NAVIGATED));
   // An overlay that stays across the route (단축키 over a keyboard shortcut) has just lost its guard, with no layer change to say so.
@@ -133,5 +137,12 @@ export function closeLayer() {
   if (under) navigate(under);
 }
 
+// To the entry just under this one it is the browser's back, so the back after it leaves as it would have and the page
+// under keeps its scroll; elsewhere, a link from outside or a reload's, a step of its own.
+function goBack(to: Route) {
+  if (!traveling && guards() === 0 && entry().from === target(to, parseAddress(address()))) history.back();
+  else navigate(to);
+}
+
 // NavBar's back; none where back is null, since a sidebar beside the screen is the way back.
-export const backBar = (back: Back | null) => (back ? { onBack: () => navigate(back.to), backLabel: back.label } : {});
+export const backBar = (back: Back | null) => (back ? { onBack: () => goBack(back.to), backLabel: back.label } : {});

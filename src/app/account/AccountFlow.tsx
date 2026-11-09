@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { AccountFacts, changePassword, credentialFor, passwordCredentialFor, guestFacts, loadSession, logIn, logOut, prepareGuestSignup, signUpGuest, uploadGuest, type GuestSignup, type SignedIn } from '../../runtime/account';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ChangeSignal } from '../../change-signal';
+import { AccountFacts, changePassword, checkUsername, credentialFor, passwordCredentialFor, guestFacts, loadSession, logIn, logOut, prepareGuestSignup, signUpGuest, uploadGuest, type GuestSignup, type SignedIn } from '../../runtime/account';
 import type { SessionFacts } from '../../contracts/accounts';
 import { holdAccount } from '../../runtime/api';
 import { cachedAccounts, forgetVault } from '../../runtime/device-cache';
@@ -13,6 +14,7 @@ import { clearDownloads } from '../common/download';
 import { describeFailure, wrongSecret } from '../common/failure';
 import { readPersisted } from '../common/usePersisted';
 import type { Account } from '../session';
+import { holdBack } from '../shell/router';
 import { Brand, Progress, Screen } from '../ui';
 import { GuestDataScreen } from './GuestDataScreen';
 import { MovingScreen, type Moved } from './MovingScreen';
@@ -26,9 +28,10 @@ type State =
   | { kind: 'first' }
   | { kind: 'unreachable'; message: string }
   | { kind: 'guest'; accountId: string; vaultKey: VaultKey; signupOpen: boolean; facts: AccountFacts }
-  // draft: kept until the upload lands, so going back, or a failed upload, keeps the same recovery key.
-  // setup: the one account of a one-person installation (Door), which takes no username and has no guest to go back to.
-  | { kind: 'signup'; step: 'password'; draft: GuestSignup | null; setup: boolean }
+  // draft: kept until the upload lands, so going back, or a failed upload, keeps the same recovery key; password, the
+  // one typed for it. setup: the one account of a one-person installation (Door), which takes no username and has no
+  // guest to go back to.
+  | { kind: 'signup'; step: 'password'; draft: GuestSignup | null; password: string; setup: boolean }
   | { kind: 'signup'; step: 'recovery'; draft: GuestSignup; failure: string | null; setup: boolean }
   | { kind: 'moving'; moved: Moved }
   | { kind: 'guest-data'; session: SessionFacts; vaultKey: VaultKey; failure: string | null }
@@ -47,6 +50,7 @@ const GUEST_NAME = '손님';
 // Setup username becomes the first persona/{{user}} even though solo login hides it.
 // Use a person-like name, never an ownership placeholder.
 const OWNER = '사용자';
+const TAKEN = '이미 쓰고 있는 아이디예요. 다른 아이디를 입력해 주세요.';
 
 // Remember last account to avoid presenting a lapsed session as an empty guest/lost data.
 // Explicit guest choice stores empty; older browsers infer from device cache. Storage failure loses only the hint.
@@ -91,7 +95,7 @@ async function loadState(notice: string | null = null, prefer: 'auto' | 'guest' 
     if (door.kind === 'setup') {
       // The signup is a guest's (prepareGuestSignup), so this browser's guest must exist first.
       await guestAccount();
-      return { kind: 'signup', step: 'password', draft: null, setup: true };
+      return { kind: 'signup', step: 'password', draft: null, password: '', setup: true };
     }
     if (door.kind === 'solo') return { kind: 'login', notice, username: door.username, solo: true };
     if (greets && prefer === 'auto' && notice === null && (await firstVisit())) return { kind: 'first' };
@@ -108,6 +112,11 @@ async function loadState(notice: string | null = null, prefer: 'auto' | 'guest' 
 // first: what a first visit opens on; without it the flow goes straight on to the guest.
 export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) => ReactNode; children: (unlocked: Unlocked) => ReactNode }) {
   const [state, setState] = useState<State>({ kind: 'loading' });
+  // The screens back returns to, newest last. While a step screen stands the router holds an entry for each, so the
+  // browser's back walks them as the screens' own 이전 does; a reload starts the trail over.
+  const trail = useRef<State[]>([]);
+  const [trailed] = useState(() => new ChangeSignal());
+  const stepping = state.kind === 'login' || state.kind === 'signup';
 
   // Keep the page-held account through lock/loading/outages, rejecting cookie-account mismatches until rechecked.
   // A confirmed different cookie account closes old state. Unlocked responses update facts; guests hold no server account.
@@ -129,7 +138,25 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
     show({ kind: 'unreachable', message: describeFailure({ ok: false, error: error instanceof DatabaseBlocked ? 'browser-storage-blocked' : 'browser-storage' }) });
   }
 
-  function reload(notice: string | null = null, prefer: 'auto' | 'guest' | 'login' = 'auto') {
+  function retrace(next: State[]) {
+    trail.current = next;
+    trailed.notify();
+  }
+
+  function step(next: State, back: State = state) {
+    retrace([...trail.current, back]);
+    show(next);
+  }
+
+  function stepBack(keep = trail.current.length - 1) {
+    const to = trail.current[keep]!;
+    retrace(trail.current.slice(0, keep));
+    show(to);
+  }
+
+  // from: the screen this load is a step from.
+  function reload(notice: string | null = null, prefer: 'auto' | 'guest' | 'login' = 'auto', from: State | null = null) {
+    retrace(from ? [...trail.current, from] : []);
     show({ kind: 'loading' });
     void loadState(notice, prefer, first !== undefined).then(settle).catch(failed);
   }
@@ -139,6 +166,8 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
     if (first) void firstVisit().then((yes) => yes && setState((now) => (now.kind === 'loading' ? { kind: 'first' } : now))).catch(() => {});
     reload();
   }, []);
+
+  useEffect(() => (stepping ? holdBack({ count: () => trail.current.length, closeAbove: stepBack, subscribe: trailed.subscribe }) : undefined), [stepping]);
 
   const moving = (title: string) => (step: GuestTransferStep) =>
     setState((now) => (now.kind === 'moving' ? { kind: 'moving', moved: { title, steps: { ...now.moved.steps, [step.kind]: step } } } : now));
@@ -198,7 +227,7 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
           enterAs('');
           reload(null, 'guest');
         },
-        onSignIn: () => reload(null, 'login'),
+        onSignIn: () => reload(null, 'login', state),
       });
     case 'guest':
       return children({
@@ -210,8 +239,8 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
         facts: state.facts,
         guest: {
           signupOpen: state.signupOpen,
-          onSignup: () => show({ kind: 'signup', step: 'password', draft: null, setup: false }),
-          onSignIn: () => show({ kind: 'login', notice: null, username: '', solo: false }),
+          onSignup: () => step({ kind: 'signup', step: 'password', draft: null, password: '', setup: false }),
+          onSignIn: () => step({ kind: 'login', notice: null, username: '', solo: false }),
         },
       });
     case 'signup': {
@@ -225,7 +254,7 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
             recoveryKey={draft.recoveryKey}
             saved={state.failure !== null}
             failure={state.failure}
-            onBack={() => show({ kind: 'signup', step: 'password', draft, setup })}
+            onBack={() => stepBack()}
             onStart={async () => {
               show({ kind: 'moving', moved: { title, steps: {} } });
               const result = await signUpGuest(draft, { progress: moving(title) });
@@ -240,12 +269,17 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
         <PasswordScreen
           mode={setup ? 'setup' : 'signup'}
           username={draft?.username ?? ''}
-          onBack={setup ? undefined : () => reload(null, 'guest')}
-          onSignIn={setup ? undefined : () => show({ kind: 'login', notice: null, username: '', solo: false })}
+          password={state.password}
+          onBack={setup ? undefined : () => stepBack()}
+          onSignIn={setup ? undefined : () => step({ kind: 'login', notice: null, username: '', solo: false })}
           onDone={async (typed, password) => {
             const username = setup ? OWNER : canonicalUsername(typed);
+            if (!setup) {
+              const free = await checkUsername(username);
+              if (!free.ok) return describeFailure(free, { 'username-taken': TAKEN });
+            }
             const prepared = await prepareGuestSignup(username, await passwordCredentialFor(username, password));
-            show({ kind: 'signup', step: 'recovery', draft: prepared, failure: null, setup });
+            step({ kind: 'signup', step: 'recovery', draft: prepared, failure: null, setup }, { ...state, draft: prepared, password });
             return null;
           }}
         />

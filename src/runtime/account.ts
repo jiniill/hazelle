@@ -70,6 +70,7 @@ export const guestFacts = () => new AccountFacts({ suspended: false, state: 'act
 
 export const loadSession = () => api<Boot>('GET', 'session');
 export const signUp = (signup: Signup, signal?: AbortSignal) => api<SessionFacts>('POST', 'signup', signup, signal);
+export const checkUsername = (username: string) => api<undefined>('POST', 'signup/check', { username });
 export async function logIn(username: string, credential: Credential, options: GuestTransferOptions = {}): Promise<ApiResult<SignedIn>> {
   const signedIn = await api<SignedIn>('POST', 'login', { username, ...proven(credential) }, options.signal);
   if (!signedIn.ok) return signedIn;

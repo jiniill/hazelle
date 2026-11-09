@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChangeSignal } from '../../change-signal';
 import { HOSTED } from '../../contracts/installation';
 import { markSelfHost } from '../../runtime/installation';
-import { closeLayer, holdBack, navigate, openPart } from './router';
+import { backBar, closeLayer, holdBack, navigate, openPart } from './router';
 import { href, type Route } from './routes';
 
 afterEach(() => {
@@ -72,6 +72,7 @@ function browser(state: unknown = null, start = '/') {
       entries[at] = { state: next, url };
     },
     go: (by: number) => hops.push(by),
+    back: () => hops.push(-1),
   });
   return {
     land,
@@ -249,6 +250,28 @@ describe('a layer over a page', () => {
     expect(page.url()).toBe(href(SHELF));
     page.back();
     expect(page.url()).toBe(href(CHAT));
+  });
+
+  it('takes ‹ back in history to the entry it was opened from, and steps on to it from a link', () => {
+    const page = start();
+    const LIST: Route = { kind: 'settings' };
+    navigate(CHAT);
+    navigate(LIST);
+    navigate(DISPLAY);
+    page.scrollTo.mockClear();
+    backBar({ to: LIST, label: '뒤로' }).onBack!();
+    page.land();
+    expect(page.url()).toBe(over(LIST));
+    expect(page.at()).toBe(2);
+    expect(page.scrollTo).not.toHaveBeenCalled();
+    backBar({ to: CHAT, label: '뒤로' }).onBack!();
+    page.land();
+    expect(page.url()).toBe(href(CHAT));
+    release();
+    const linked = start(browser(null, href(SHELF)));
+    backBar({ to: CHAT, label: '뒤로' }).onBack!();
+    expect(linked.url()).toBe(href(CHAT));
+    expect(linked.at()).toBe(1);
   });
 
   it('opened from a link stands over home, and closes in place', () => {

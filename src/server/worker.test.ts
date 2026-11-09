@@ -72,6 +72,21 @@ describe('accounts', () => {
     expect(await (await post('signup', signupBody('third'))).json()).toEqual({ error: 'signup-closed' });
   });
 
+  it('answers a username check as signup would, in the signup bucket', async () => {
+    await t.env.db.prepare('UPDATE service SET signup_cap = 2').run();
+    await post('signup', signupBody());
+    const check = (username: string) => post('signup/check', { username });
+    expect((await check('other')).status).toBe(204);
+    expect(await (await check('jin')).json()).toEqual({ error: 'username-taken' });
+    expect(await (await check('Jin')).json()).toEqual({ error: 'bad-username' });
+    await post('signup', signupBody('other'));
+    expect(await (await check('third')).json()).toEqual({ error: 'signup-closed' });
+    const asked = () => t.raw('signup/check', { method: 'POST', headers: { 'content-type': 'application/json', [VISITOR_HEADER]: '203.0.113.9' }, body: JSON.stringify({ username: 'third' }) });
+    const statuses = [];
+    for (let i = 0; i < 11; i++) statuses.push((await asked()).status);
+    expect(statuses).toEqual([...Array(10).fill(403), 429]);
+  });
+
   it('limits signup attempts per outside visitor, and never counts this machine', async () => {
     await t.env.db.prepare('UPDATE service SET signup_cap = 100').run();
     const signup = (visitor: string, username: string) =>

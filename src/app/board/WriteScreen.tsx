@@ -102,7 +102,8 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
   // Not kept in the draft, which is localStorage text.
   const picturing = !editing && operatorOnly && !guest && !suspended;
   // The report says what happened by itself, so it may go without the template filled in.
-  const ready = titled.length > 0 && !titled.over && body.length > 0 && (text !== BUG_TEMPLATE || attaching) && !body.over && category !== null && (!attaching || report !== null);
+  const unfilled = text === BUG_TEMPLATE && !attaching;
+  const ready = titled.length > 0 && !titled.over && body.length > 0 && !unfilled && !body.over && category !== null && (!attaching || report !== null);
 
   useEffect(() => {
     if (attaching && report === null) void diagnosticReport(BUILT_VERSION, stateFacts(session, lastPlace())).then(setReport);
@@ -175,7 +176,7 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
       )}
       <ChoiceGroup label="분류" showLabel options={admin ? CATEGORY_CARDS : CATEGORY_CARDS.filter(({ value }) => value !== 'news')} value={category} onChange={pick} layout="cards" />
       <TextField label="제목" value={title} onChange={setTitle} placeholder="한 줄로 요약해 주세요" hint={titled.hint} error={titled.error} />
-      <TextField label="내용" lines={12} value={text} onChange={setText} hint={body.hint} error={body.error} onFiles={picturing ? pictures.add : undefined} />
+      <TextField label="내용" lines={12} value={text} onChange={setText} hint={unfilled ? '재현 순서와 결과를 채워야 올릴 수 있어요.' : body.hint} error={body.error} onFiles={picturing ? pictures.add : undefined} />
       {!editing &&
         !news &&
         (suspended ? (
