@@ -9,8 +9,8 @@ import { contexts, renderChat, type ChatScope, type LuaDisplay, type Missed } fr
 
 // Extract styles from texts, status boxes and pack backgroundHTML into chat-wide css, as Risu does.
 // drawn indexes pack regex per message; boxes are the extracted 상태창 지정 output. unfound includes background assets.
-// background: the character's background asset, then the packs' backgroundHTML past CBS and the display regex, its
-// styles taken out, which Risu draws behind the chat; '' when only styles stand there.
+// background: the character's background asset (Hazelle's own; Risu never draws it), then the packs' backgroundHTML
+// past CBS and the display regex, its styles taken out, which Risu draws behind the chat; '' when only styles stand there.
 // pass means Lua editDisplay has pending messages; stopped records a Runaway, with runaway backgroundHTML omitted.
 export type Display = { texts: string[]; css: string; background: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
 
