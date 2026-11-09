@@ -19,6 +19,7 @@ import { Likenesses } from './likeness';
 import { Commentator } from './mascot';
 import { Polisher } from './agents';
 import type { Briefs } from './preread';
+import type { Additions } from './additional';
 import { deviceCache, logCache, type BrowserLogCache } from './device-cache';
 import { Drafts } from './drafts';
 import type { DeviceCache } from './object-cache';
@@ -76,6 +77,7 @@ export type Session = {
   commentator: Commentator;
   polisher: Polisher;
   briefs: Briefs;
+  additions: Additions;
   drafts: Drafts;
   streams: Streams;
   scriptInteractions: ScriptInteractions;
@@ -163,6 +165,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   const commentator = new Commentator({ tokens, store, credentials, log });
   const polisher = new Polisher({ tokens, store, credentials, log });
   const briefs: Briefs = new Map();
+  const additions: Additions = new Map();
   const scriptEffects = new ScriptEffects({ store, read }, scriptInteractions);
   const scriptPages = new ScriptPages({ store, read }, scriptInteractions, scriptSchedule, scriptReach, scriptEffects, scriptClosing.signal);
   const tools = (bindings.tools ?? createTools)({ store, files }, { pages: scriptPages, journal: scriptJournal });
@@ -175,7 +178,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     scriptJournal.prune();
     scriptTurns.prune();
   });
-  const memory = new Rememberer({ store, read, credentials, log, costs, scriptTurns, tokens }, reading);
+  const memory = new Rememberer({ store, read, credentials, log, costs, scriptTurns, tokens, additions }, reading);
   const talk = new Talk(
     store,
     credentials,
@@ -265,7 +268,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     assets.close();
     store.close();
   };
-  const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, polisher, briefs, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, finder, close, startBackground };
+  const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, polisher, briefs, additions, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, finder, close, startBackground };
   return { ok: true, data: session };
 }
 

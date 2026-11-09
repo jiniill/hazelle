@@ -9,7 +9,7 @@ import { setDefaultModel } from './assignment';
 import { appendUserMessage, startChat } from './chat-log';
 import { chatMemory } from './memory-read';
 import { setDefaultMemory } from './memory';
-import { chatVectors, indexRecords, queryOf, retrievalOf } from './retrieval';
+import { vectorsOf, indexRecords, queryOf, retrievalOf } from './retrieval';
 import { answerable, inTurn, saying, stubRelay, testServer, upstream } from './testing';
 import { takeTurn } from './turn';
 
@@ -35,9 +35,9 @@ describe('retrieval', () => {
       const log = stubRelay(inTurn([saying('Luna waves.'), ...texts.map((text) => saying(summary(text))), embedding([1, 0, 0], [0, 1, 0], [0, 0, 1], [0.7, 0.7, 0])]));
       expect(await takeTurn(session, chat, { kind: 'answer' })).toBeNull();
       await vi.waitFor(() => expect(chatMemory(session.store, chat).records).toHaveLength(4));
-      await vi.waitFor(() => expect(Object.keys(chatVectors(session.store, chat)?.value.items ?? {})).toHaveLength(4));
+      await vi.waitFor(() => expect(Object.keys(vectorsOf(session.store, chat)?.value.items ?? {})).toHaveLength(4));
       const records = chatMemory(session.store, chat).records;
-      const vectors = chatVectors(session.store, chat)!;
+      const vectors = vectorsOf(session.store, chat)!;
       expect(vectors.parent).toBe(chat);
       expect(vectors.value.model).toBe('m');
       records.forEach((record) => expect(vectors.value.items[record.id]).toMatchObject({ at: record.at }));
@@ -60,7 +60,7 @@ describe('retrieval', () => {
       expect(sent.prompt.messages[at]!.content).toContain(`The messages, word for word:\njin: ${texts[0]}`);
       expect(sent.prompt.messages[at]!.content).toContain(`The messages, word for word:\njin: ${texts[3]}`);
       expect(sent.prompt.messages[at + 1]!.content).toBe('Do you remember the pier, Luna? Tell me what we said there that morning.');
-      await vi.waitFor(() => expect(Object.keys(chatVectors(session.store, chat)?.value.items ?? {})).toHaveLength(6));
+      await vi.waitFor(() => expect(Object.keys(vectorsOf(session.store, chat)?.value.items ?? {})).toHaveLength(6));
       expect(again).toHaveLength(5);
     }));
 
@@ -136,5 +136,5 @@ it('overwrites broken stored vectors with a fresh index', () => server.withSessi
   expect((await session.store.create('vectors', { model: 'm', items: { 'record-0': { at: 0, scale: 1, data: '%' } } }, { id, parent: chat })).ok).toBe(true);
   vi.spyOn(embeddingCalls, 'embedTexts').mockResolvedValue({ answer: { ok: true, model: 'm', vectors: [[1, 0]] }, receipt: null });
   expect(await indexRecords(session, chat, new AbortController().signal, () => {})).toEqual({ ok: true });
-  expect(chatVectors(session.store, chat)?.value.items['record-0']?.data).not.toBe('%');
+  expect(vectorsOf(session.store, chat)?.value.items['record-0']?.data).not.toBe('%');
 }));

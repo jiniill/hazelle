@@ -63,7 +63,7 @@ const onCard = (step: (pack: Record<string, unknown>) => Record<string, unknown>
 // gives.
 function upgradeCharacter(value: Record<string, unknown>) {
   let upgraded: Record<string, unknown> | null = null;
-  for (const step of [dropTranslate, translationsByText, onCard(scriptIds), statusIds, dropKeepStatus, onCard(luaSteps), onCard(effectsRead), onCard(togglesRead), dropPictureHeight]) upgraded = step(upgraded ?? value) ?? upgraded;
+  for (const step of [dropTranslate, translationsByText, onCard(scriptIds), statusIds, dropKeepStatus, onCard(luaSteps), onCard(effectsRead), onCard(togglesRead), dropPictureHeight, onCard(additionalText)]) upgraded = step(upgraded ?? value) ?? upgraded;
   return upgraded;
 }
 
@@ -146,6 +146,11 @@ function dropPictureHeight(value: Record<string, unknown>) {
   if (!isRecord(value.pictures) || !('most' in value.pictures)) return null;
   const pictures = without(value.pictures, 'most');
   return Object.keys(pictures).length ? { ...value, pictures } : without(value, 'pictures');
+}
+
+// Until 2026-11-09 a card dropped Risu's additionalText.
+function additionalText(card: Record<string, unknown>) {
+  return typeof card.additionalText !== 'string' ? { ...card, additionalText: '' } : null;
 }
 
 // Until 2026-10-08 a chat's memory held no chapters.

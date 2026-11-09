@@ -28,7 +28,7 @@ export type Facts = { [key: string]: number | number[] | boolean | null | Known 
 // Where the user was before opening the report; its id only picks what to read and is never reported.
 export type Place = { kind: string; id: string | null };
 
-type Reader = Pick<Session, 'store' | 'read' | 'scriptTurns' | 'tokens' | 'memory' | 'credentials' | 'log'>;
+type Reader = Pick<Session, 'store' | 'read' | 'scriptTurns' | 'tokens' | 'memory' | 'credentials' | 'log' | 'additions'>;
 
 const STATE_MS = 10_000;
 const LISTED = 40;

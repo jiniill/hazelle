@@ -18,6 +18,7 @@ import { EvaluationFailed, EvaluationStopped, evaluationFailure } from './evalua
 import { endCall } from './streams';
 import { resumeTranslation, translate, type TranslateFailure, type TranslationTarget } from './translate';
 import { findRecords } from './retrieval';
+import { findAdditional, type AdditionalFailure } from './additional';
 import { preread } from './preread';
 import { withPictures } from './attachments';
 import { attachmentLead } from '../engine/assets';
@@ -35,6 +36,7 @@ export type TurnFailure = (
   | { kind: 'unpulled'; failure: ApiFailure }
   | { kind: 'gone' }
   | { kind: 'untranslated'; failure: TranslateFailure }
+  | AdditionalFailure
   | StepFailure
 ) & { kept?: true };
 
@@ -190,6 +192,9 @@ async function prepare(session: Session, chat: string, gathered: TurnContext, si
   const { route, settings, scope, budget, said, reply } = turn;
   const memory = turn.memory?.kind === 'built-in' ? { ...turn.memory, found: await findRecords(session, chat, scope.messages, signal) } : turn.memory;
   const kept = translated.said !== null && said === null ? { kept: true as const } : {};
+  const additional = turn.chat.character === null ? [] : await findAdditional(session, chat, turn.chat.character, scope, signal);
+  if (signal.aborted) return { kind: 'halted' };
+  if ('kind' in additional) return { ...additional, ...kept };
   const agents = !skip.agents && reply.continues === null && agentsOf(session.store, turn.chat).pre.length > 0 ? await runPre(session, chat, turn, signal, preparing, skip) : { runs: [], notes: '' };
   if ('kind' in agents) return { kind: 'halted' };
   if ('failure' in agents) return { kind: 'agent', failure: agents, ...kept };
@@ -197,7 +202,7 @@ async function prepare(session: Session, chat: string, gathered: TurnContext, si
   if (!snapshot.ok) return { kind: 'unsent', failure: snapshot, ...kept };
   const calibration = snapshot.data;
   const fit = providerFit(route, settings, calibration.fit.allowance);
-  const prompt = await evaluating(session.store.evaluation.prompt({ asker: 'send', chat }, { tools, scope, seed: reply.id, budget, fit, continuing: reply.continues !== null, answerInstruction: answerInstructionOf(session.store), memory, notes: agents.notes, pictures: turn.pictures }, signal));
+  const prompt = await evaluating(session.store.evaluation.prompt({ asker: 'send', chat }, { tools, scope, seed: reply.id, budget, fit, continuing: reply.continues !== null, answerInstruction: answerInstructionOf(session.store), memory, notes: agents.notes, additional, pictures: turn.pictures }, signal));
   if ('kind' in prompt) return { ...prompt, ...kept };
   const requested = await session.scriptTurns.requesting(chat, turn, prompt, signal, (name) => preparing({ step: 'tools', running: name, since: Date.now() }));
   if (signal.aborted) return { kind: 'halted' };

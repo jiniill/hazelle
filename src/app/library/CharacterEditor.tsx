@@ -36,7 +36,7 @@ import { FaceChange } from '../common/FaceChange';
 import { useTypedNumber } from '../common/typed';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STOP, TRANSLATOR_NOTE } from '../common/words';
+import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STOP, TRANSLATOR_NOTE } from '../common/words';
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
@@ -254,6 +254,16 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
             {legacy.personality && <CountedField label="성격" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.personality} onChange={(value) => change({ personality: value })} />}
             {legacy.scenario && <CountedField label="상황" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.scenario} onChange={(value) => change({ scenario: value })} />}
             <CountedField label="예시 대화" lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.exampleDialogue} onChange={(value) => change({ exampleDialogue: value })} />
+            <CountedField
+              label={ADDITIONAL_TEXT}
+              lines={6}
+              expand={SHORTCUTS.bigEdit.keys}
+              language={cbs}
+              aside={trial.cbs}
+              value={text.additionalText}
+              onChange={(value) => change({ additionalText: value })}
+              help={{ text: ADDITIONAL_TEXT_HELP, open: { label: opens(inSettings('models')), onClick: () => navigate({ kind: 'models' }) } }}
+            />
           </>
         )}
       </Section>

@@ -14,14 +14,15 @@ import type { ObjectStore } from './store';
 
 type Reader = Pick<Session, 'store' | 'read' | 'credentials' | 'costs' | 'log'>;
 
-export const chatVectors = (store: Pick<ObjectStore, 'children'>, chat: string): Stored<'vectors'> | undefined => store.children('vectors', chat).find((entry) => entry.id === vectorsId(chat) && isValue('vectors', entry.value));
+// owner: the chat whose records, or the character whose additionalText (runtime/additional), the vectors are of.
+export const vectorsOf = (store: Pick<ObjectStore, 'children'>, owner: string): Stored<'vectors'> | undefined => store.children('vectors', owner).find((entry) => entry.id === vectorsId(owner) && isValue('vectors', entry.value));
 
 // Which live records have no vector at the current 임베딩 모델 (design §6.2, Retrieval): every one, when the vectors
 // were written by another model. null when retrieval is off, with no model to embed with.
 export function unembedded(store: Pick<ObjectStore, 'get' | 'children'>, chat: string): { route: Route; records: MemoryRecord[]; kept: Record<string, Vector>; stale: boolean } | null {
   const route = embedModel(store);
   if ('kind' in route) return null;
-  const vectors = chatVectors(store, chat);
+  const vectors = vectorsOf(store, chat);
   const items = vectors?.value.model === route.model.id ? vectors.value.items : {};
   const live = chatMemory(store, chat).records.filter((record) => !record.forgotten);
   const records: MemoryRecord[] = [];
@@ -47,6 +48,7 @@ export async function indexRecords(session: Reader, chat: string, signal: AbortS
   if (!missing) return { ok: true };
   const { route, records, kept: items, stale } = missing;
   if (!records.length && !stale) return { ok: true };
+  const save = () => store.withChat(chat, () => saveVectors(store, chat, { model: route.model.id, items }));
   let done = 0;
   let saved = Date.now();
   for (let from = 0; from < records.length; from += EMBED_TEXTS) {
@@ -55,32 +57,30 @@ export async function indexRecords(session: Reader, chat: string, signal: AbortS
     if (receipt) await keepCall(session, chat, receipt);
     if (!answer.ok) {
       if (Object.keys(items).length) {
-        const saved = await writeVectors(store, chat, { model: route.model.id, items });
+        const saved = await save();
         if (!saved.ok) return { ok: false, failure: saved };
       }
       return { ok: false, reason: answer.reason, receipt };
     }
     batch.forEach((record, index) => (items[record.id] = quantize(answer.vectors[index]!, record.at)));
     if (from + EMBED_TEXTS < records.length && Date.now() - saved >= SAVE_EVERY) {
-      const checkpoint = await writeVectors(store, chat, { model: route.model.id, items });
+      const checkpoint = await save();
       if (!checkpoint.ok) return { ok: false, failure: checkpoint };
       saved = Date.now();
     }
   }
-  const final = await writeVectors(store, chat, { model: route.model.id, items });
+  const final = await save();
   return final.ok ? { ok: true } : { ok: false, failure: final };
 }
 
-async function writeVectors(store: ObjectStore, chat: string, value: Vectors) {
-  return store.withChat(chat, async () => {
-    const id = vectorsId(chat);
-    // By id, not chatVectors: a broken stored value is overwritten by a fresh index rather than conflicting forever.
-    if (!store.get('vectors', id)) {
-      const created = await store.create('vectors', value, { id, parent: chat });
-      if (created.ok || created.error !== 'conflict' || !store.get('vectors', id)) return created;
-    }
-    return store.update('vectors', id, () => value);
-  });
+export async function saveVectors(store: ObjectStore, owner: string, value: Vectors) {
+  const id = vectorsId(owner);
+  // By id, not vectorsOf: a broken stored value is overwritten by a fresh index rather than conflicting forever.
+  if (!store.get('vectors', id)) {
+    const created = await store.create('vectors', value, { id, parent: owner });
+    if (created.ok || created.error !== 'conflict' || !store.get('vectors', id)) return created;
+  }
+  return store.update('vectors', id, () => value);
 }
 
 // What the latest message asks about: the latest user message, and under QUERY_LEAST characters the end of the reply
@@ -100,7 +100,7 @@ export function queryOf(messages: HistoryMessage[]): string | null {
 export function retrievalOf(store: Pick<ObjectStore, 'get' | 'children'>, chat: string, messages: HistoryMessage[]): { route: Route; items: Record<string, Vector>; query: string } | null {
   const route = embedModel(store);
   if ('kind' in route) return null;
-  const vectors = chatVectors(store, chat);
+  const vectors = vectorsOf(store, chat);
   if (vectors?.value.model !== route.model.id || !Object.keys(vectors.value.items).length) return null;
   const query = queryOf(messages);
   return query ? { route, items: vectors.value.items, query } : null;

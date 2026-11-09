@@ -34,7 +34,7 @@ const VIEW: Display = { texts: [], css: '', background: '', drawn: [[0]], boxes:
 const TRANSLATING = { awaited: new Set(), live: new Map(), failed: new Map() };
 const DRAWINGS = new Map();
 const quiet = { snapshot: () => DRAWINGS, subscribe: () => () => true };
-const card: Card = { name: 'Bot', nickname: null, description: '', personality: '', scenario: '', greetings: [], exampleDialogue: '', systemPrompt: '', postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null } };
+const card: Card = { name: 'Bot', nickname: null, description: '', personality: '', scenario: '', greetings: [], exampleDialogue: '', additionalText: '', systemPrompt: '', postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null } };
 const prompt = { name: '대화', blocks: [], toggles: [], authorNote: '', models: {} };
 
 afterEach(() => {

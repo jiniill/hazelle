@@ -397,7 +397,6 @@ describe('importCard', () => {
       { kind: 'blocks', id: 'trigger-1', name: 'set', on: 'manual', conditions: [], effects: [{ kind: 'set', name: '', operator: null, value: { kind: 'text', text: '' } }] },
     ]);
     expect(imported.report.unsupported).toEqual([
-      { kind: 'additional-text', count: 1 },
       { kind: 'prebuilt-asset-command', count: 1 },
       { kind: 'large-portrait', count: 1 },
       { kind: 'view-screen', count: 1 },

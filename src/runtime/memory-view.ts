@@ -39,7 +39,7 @@ export type MemoryView = {
   crowded: boolean;
 };
 
-export async function memoryView(session: Pick<Session, 'store' | 'read' | 'scriptTurns' | 'tokens'>, chat: string): Promise<MemoryView | null> {
+export async function memoryView(session: Pick<Session, 'store' | 'read' | 'scriptTurns' | 'tokens' | 'additions'>, chat: string): Promise<MemoryView | null> {
   const memory = chatMemory(session.store, chat);
   const sent = await chatSent(session, chat, 'view', memory);
   if (!sent || 'kind' in sent) return null;

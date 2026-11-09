@@ -57,7 +57,7 @@ async function pictureObjects() {
     id: 'character', kind: 'character', parent: null, rev: 3,
     value: {
       card: {
-        name: '달', nickname: null, description: '', personality: '', scenario: '', greetings: [], exampleDialogue: '', systemPrompt: '',
+        name: '달', nickname: null, description: '', personality: '', scenario: '', greetings: [], exampleDialogue: '', additionalText: '', systemPrompt: '',
         postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false,
         bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null },
       },

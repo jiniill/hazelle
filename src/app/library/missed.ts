@@ -12,7 +12,6 @@ const UNSUPPORTED: Record<UnsupportedKind, (count: number) => string> = {
   'unsupported-file': (count) => `지원하지 않는 형식의 파일 ${count}개`,
   'refused-picture': (count) => `올리지 못한 이미지 ${count}개`,
   'refused-video': (count) => `올리지 못한 영상 ${count}개`,
-  'additional-text': () => '추가 설명(임베딩)',
   'prebuilt-asset-command': () => '에셋 명령',
   'large-portrait': () => '큰 초상화로 보기',
   'view-screen': () => '추가 캐릭터 스크린(감정 이미지·이미지 생성)',

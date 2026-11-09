@@ -11,7 +11,7 @@ import { MemoryCache } from './testing/cache';
 
 const server = testServer();
 
-const card = (name: string): Card => ({ name, nickname: null, description: '', personality: '', scenario: '', greetings: [], exampleDialogue: '', systemPrompt: '', postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null } });
+const card = (name: string): Card => ({ name, nickname: null, description: '', personality: '', scenario: '', greetings: [], exampleDialogue: '', additionalText: '', systemPrompt: '', postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null } });
 const said = (chat: string, text: string): Write => ({ type: 'create', kind: 'entry', id: crypto.randomUUID(), parent: chat, value: { type: 'message', role: 'user', at: 0, text, receipt: null } });
 
 // Each chat written on its own, so the later one is the newer.

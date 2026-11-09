@@ -19,7 +19,7 @@ const utf8 = new TextDecoder();
 const fail = (kind: ImportFailure['kind'], detail?: string): { ok: false; failure: ImportFailure } => ({ ok: false, failure: detail ? { kind, detail } : { kind } });
 
 export const blankCard = (name: string): Card => ({
-  name, nickname: null, description: '', personality: '', scenario: '', greetings: [], exampleDialogue: '', systemPrompt: '', postHistoryInstructions: '',
+  name, nickname: null, description: '', personality: '', scenario: '', greetings: [], exampleDialogue: '', additionalText: '', systemPrompt: '', postHistoryInstructions: '',
   creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [],
   loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null },
 });
