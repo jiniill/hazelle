@@ -55,3 +55,8 @@ it('brings an entry Risu switched on for one chat as a constant copy of the char
   expect(moved.missed).toEqual([{ kind: 'lore-copy', count: 1 }, { kind: 'lore-unfound', count: 1 }]);
   expect(risuChatFile({ type: 'risuChat', ver: 2, data: chat })!.missed).toEqual([{ kind: 'lore-unfound', count: 2 }]);
 });
+
+it("carries a backup character's 시작 전 설문", () => {
+  const onboarding = { enabled: true, mode: 'html', html: '<div risu-change-var-name="lang" risu-change-var-value="ko">한국어</div>' };
+  expect(risuCharacter({ chaId: 'c', name: 'Mira', onboarding }, [], null, () => null).card.onboarding).toMatchObject(onboarding);
+});

@@ -41,6 +41,7 @@ import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HE
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
+import { OnboardingEditor } from './OnboardingEditor';
 import { ShareDialog } from './ShareDialog';
 import { useCharacter, useChildren, useFiles, useModules, useSettings, useStore, useStored } from '../session';
 import { navigate } from '../shell/router';
@@ -334,7 +335,12 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
     ),
     scripts: <ScriptsEditor owner={{ kind: 'character', id }} pack={card} drill={!split} status={character.statusScripts} variables={card.variables} />,
     toggles: <PackToggles owner={{ kind: 'character', id }} lines={card.toggles} />,
-    variables: <DefaultVariables variables={text.variables} help="새 채팅을 시작할 때 변수에 설정되는 초기값이에요. 기존 채팅에서도 아직 값이 바뀌지 않은 변수는 이 값을 사용해요." onChange={(variables) => change({ variables })} />,
+    variables: (
+      <>
+        <DefaultVariables variables={text.variables} help="새 채팅을 시작할 때 변수에 설정되는 초기값이에요. 기존 채팅에서도 아직 값이 바뀌지 않은 변수는 이 값을 사용해요." onChange={(variables) => change({ variables })} />
+        <OnboardingEditor onboarding={text.onboarding} onChange={(onboarding) => change({ onboarding })} />
+      </>
+    ),
     assets: <AssetsEditor owner={id} shelves />,
     illustration: <PortraitsEditor owner={id} />,
     display: (

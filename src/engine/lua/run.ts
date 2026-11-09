@@ -105,7 +105,7 @@ export class Lua {
         for (const script of triggers) {
           if (!listens(script, event)) continue;
           const outer = active;
-          const entry = hookLog(event.kind === 'edit' ? event.stage : event.kind === 'call' ? event.name : event.kind === 'button' ? 'button' : handler(event.kind), script.owner, script.name);
+          const entry = hookLog(event.kind === 'edit' ? event.stage : event.kind === 'call' ? event.name : event.kind === 'button' || event.kind === 'form' ? event.kind : handler(event.kind), script.owner, script.name);
           const began = performance.now();
           const before = event.kind === 'edit' ? JSON.stringify(value) : undefined;
           const stopped = run.stop;
@@ -128,11 +128,12 @@ export class Lua {
                   handled = entry.handled = true;
                   return;
                 }
-                const name = event.kind === 'call' ? (PRESSABLE_EVENTS.has(event.name) ? handler(event.name) : event.name) : event.kind === 'button' ? 'onButtonClick' : handler(event.kind);
+                const name = event.kind === 'call' ? (PRESSABLE_EVENTS.has(event.name) ? handler(event.name) : event.name) : event.kind === 'button' ? 'onButtonClick' : event.kind === 'form' ? 'onFormSubmit' : handler(event.kind);
                 if (event.kind === 'call' && !engine.own.has(name)) return;
                 if (typeof engine.lua.global.get(name) !== 'function') return;
                 handled = entry.handled = true;
-                if ((await this.call(engine, name, KEY, ...(event.kind === 'button' ? [event.data] : []))) === false) run.stop = true;
+                const args = event.kind === 'button' ? [event.data] : event.kind === 'form' ? [event.name, JSON.stringify({ data: event.fields })] : [];
+                if ((await this.call(engine, name, KEY, ...args)) === false) run.stop = true;
               } catch (error) {
                 failed(script, failure(run, error));
               } finally {

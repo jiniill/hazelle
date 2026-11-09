@@ -59,6 +59,8 @@ export type Event =
   | ToolEvent
   | { kind: 'input' | 'start' | 'output' }
   | { kind: 'button'; data: string }
+  // A <form risu-form> submitted: onFormSubmit's, with Risu's arguments (name, then the fields as JSON under data).
+  | { kind: 'form'; name: string; fields: Record<string, string | string[]> }
   // risu-trigger runs Lua globals and block triggers by name regardless of event; id is risu-id or empty.
   | { kind: 'call'; name: string; id: string }
   | { kind: 'edit'; stage: EditStage; value: unknown; meta: Record<string, unknown> };

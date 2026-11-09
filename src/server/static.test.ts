@@ -213,6 +213,7 @@ it('serves the opaque tool document with a classic script and its own CSP, never
   expect(SANDBOX_CSP).toContain("connect-src 'none'");
   expect(SANDBOX_CSP).toContain("frame-src 'none'");
   expect(CSP).toContain("frame-src 'self'");
+  expect(CSP).toContain("form-action 'none'");
   expect(CSP).not.toContain('sandbox allow-scripts');
   const app = await client.request('/', { headers: PAGE });
   expect(app.headers.get('content-security-policy')).toBe(pagePolicy(app));

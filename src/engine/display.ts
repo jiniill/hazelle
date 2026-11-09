@@ -3,6 +3,7 @@ import { assetsOf, assetUrl, backdrop, OWN_MARKUP } from './assets';
 import { unescapeCbs } from './cbs/escape';
 import { evaluate, Runaway } from './cbs/evaluate';
 import { BACKGROUND } from './cbs/tags';
+import type { RanAway } from './pipeline';
 import type { Box } from './regex/scripts';
 import { contexts, renderChat, type ChatScope, type LuaDisplay, type Missed } from './render';
 
@@ -110,6 +111,22 @@ export class DisplayPass {
   private css(): string {
     // Styles cascade in the original order: backgrounds, every text, then every taken box, not text/box pairs.
     return [...new Set([...this.backgroundStyles, ...this.textStyles.flat(), ...this.boxStyles.flat()].map((block) => block.trim()))].join('\n');
+  }
+}
+
+// A card's 시작 전 설문 page (Risu's onboarding html) as Risu reads it before a chat begins: its CBS read with the chat's
+// start, as a background's is outside any message, its styles taken out for the page's own sheet. Drawn as HTML without
+// markdown, as a background is.
+export function onboardingPage(scope: ChatScope, html: string): { html: string; css: string } | RanAway {
+  try {
+    const rendered = renderChat('display', scope);
+    const cbs = (text: string) => unescapeCbs(evaluate(text, contexts(scope, 'display', null, '', rendered.unfound)({ seed: 'onboarding' }, rendered.variables)));
+    const blocks: string[] = [];
+    const page = stripStyles(cbs(html), blocks, cbs);
+    return { html: page, css: blocks.join('\n') };
+  } catch (error) {
+    if (error instanceof Runaway) return { kind: 'runaway' };
+    throw error;
   }
 }
 

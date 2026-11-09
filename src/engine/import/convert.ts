@@ -4,6 +4,7 @@ import { isUnsupportedTag } from '../cbs/tags';
 import { args, parseDecorators } from '../lorebook/decorators';
 import { readToggles, writeToggles } from './toggles';
 import { blockConditions, blockEffects, conditionSources, effectSources } from './blocks';
+import { readOnboarding } from './onboarding';
 import { NEW_STAGE, type Card, type ImportedModule, type ImportReport, type LoreEntry, type Pack, type RegexScript, type Trigger, type UnsupportedKind } from './types';
 
 export type Json = Record<string, unknown>;
@@ -96,7 +97,7 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
   // sprite does not.
   if (risu.viewScreen === 'emotion' || risu.viewScreen === 'imggen') add(tally, 'view-screen');
   if (text(record(extensions.depth_prompt).prompt).trim()) add(tally, 'depth-prompt');
-  if (record(risu.onboarding).enabled === true) add(tally, 'onboarding');
+  const onboarding = readOnboarding(risu.onboarding);
 
   const greetings = [data.first_mes, ...list(data.alternate_greetings)].map(text);
   while (greetings.at(-1) === '') greetings.pop();
@@ -127,6 +128,7 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
       recursive: flag(book.recursive_scanning),
       fullWordMatching: flag(record(book.extensions).risu_fullWordMatching),
     },
+    ...(onboarding && { onboarding }),
   };
   const { lore, loreFolders } =
     nativeLore !== null ? nativeLorebook(nativeLore)
@@ -253,6 +255,7 @@ export function cardSource(card: Card, assets: Json[], extensions: Json, lowLeve
           toggles: writeToggles(card.toggles),
           additionalText: card.additionalText,
           ...(card.background !== undefined && { backgroundHTML: card.background }),
+          ...(card.onboarding && { onboarding: card.onboarding }),
           ...(lowLevelAccess && { lowLevelAccess: true }),
         },
         ...extensions,

@@ -213,6 +213,11 @@ describe('Lua runs', () => {
     expect((await run(code, { kind: 'call', name: 'nothing', id: '' })).handled).toBe(false);
   });
 
+  it("calls onFormSubmit with the form's name and its fields as Risu's JSON", async () => {
+    const code = `function onFormSubmit(id, name, meta) local fields = json.decode(meta).data setChatVar(id, name, fields.who .. '/' .. table.concat(fields.picks, ',')) end`;
+    expect((await run(code, { kind: 'form', name: 'save', fields: { who: 'Jin', picks: ['a', 'b'] } })).writes).toEqual([['save', 'Jin/a,b']]);
+  });
+
   it("calls a button's function over a name Lua or the prelude had, and a press named for an event its handler", async () => {
     const code = `function next(id) setChatVar(id, 'page', '2') end
       function onInput(id) setChatVar(id, 'sent', 'yes') end`;

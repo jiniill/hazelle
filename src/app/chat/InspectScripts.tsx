@@ -5,7 +5,7 @@ import { ago } from '../common/time';
 import { useCaptured, useSession } from '../session';
 import { Empty, List, ListItem, Section, Stack, Text } from '../ui';
 
-export const STAGES: Record<string, string> = { load: '처음 실행', onInput: '입력', editInput: '입력 편집', onStart: '시작', editRequest: '요청 편집', editOutput: '응답 편집', onOutput: '응답', editDisplay: '화면 편집', button: '버튼',
+export const STAGES: Record<string, string> = { load: '처음 실행', onInput: '입력', editInput: '입력 편집', onStart: '시작', editRequest: '요청 편집', editOutput: '응답 편집', onOutput: '응답', editDisplay: '화면 편집', button: '버튼', form: '양식 제출',
   reply: '응답 저장', replying: '응답 편집', sending: '입력 편집', requesting: '요청 편집', showing: '화면 편집', prompt: '프롬프트', change: '메시지 변경', branch: '분기', menu: '메뉴', action: '메시지 도구', call: '도구 호출',
 };
 

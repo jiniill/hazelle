@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { cleanCss, groundRules, setStylesAside } from './Story';
+import { cleanCss, formFields, groundRules, setStylesAside } from './Story';
 import shadowCss from './Story.shadow.css?raw';
 
 it("keeps the rule after an @import whose font URL holds a ;", () => {
@@ -75,4 +75,10 @@ it('lays a screen backdrop over the message, and reads vw against the message in
   expect(Object.fromEntries(box.values)).toEqual({ width: 'min(94cqw, 700px)', 'max-width': '.5cqw', 'min-width': 'var(--width-100vw, 80cqw)', 'font-size': '2vw' });
   expect(Object.fromEntries(drawer.values)).toEqual({ position: 'relative', display: 'none' });
   expect(box.priorities.get('width')).toBe('important');
+});
+
+it("reads a form's fields as Risu does, a name given again as a list, and __proto__ as a field", () => {
+  const fields = formFields([['who', 'Jin'], ['pick', 'a'], ['pick', 'b'], ['pick', 'c'], ['__proto__', 'x']]);
+  expect(fields).toEqual({ who: 'Jin', pick: ['a', 'b', 'c'], ['__proto__']: 'x' });
+  expect(Object.getPrototypeOf(fields)).toBe(Object.prototype);
 });

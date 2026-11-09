@@ -33,9 +33,9 @@ const CACHE_CAUSES = ['tag', 'lore', 'moved', 'edited', 'memory', 'model', 'acco
 export type CacheCauseWord = (typeof CACHE_CAUSES)[number];
 // Who asks the evaluation worker for a job, and the kinds of job it runs: runtime/evaluation holds its lanes and its
 // jobs to these, so a word neither list has cannot be reported.
-const EVALUATION_ASKERS = ['projection', 'screen', 'headless', 'forecast', 'cache-diagnosis', 'memory', 'view', 'auto-translation', 'auto-illustration', 'mascot', 'polish', 'agent', 'send', 'translation', 'illustration', 'lore', 'tool', 'export', 'trial'] as const;
+const EVALUATION_ASKERS = ['projection', 'screen', 'headless', 'forecast', 'cache-diagnosis', 'memory', 'view', 'auto-translation', 'auto-illustration', 'mascot', 'polish', 'agent', 'send', 'translation', 'illustration', 'lore', 'tool', 'export', 'trial', 'onboarding'] as const;
 export type EvaluationAsker = (typeof EVALUATION_ASKERS)[number];
-const EVALUATION_JOBS = ['cache-diagnosis', 'display', 'prompt', 'rewrite', 'translation', 'memory', 'illustration', 'mascot', 'preread', 'agent', 'read', 'lore', 'state', 'variables', 'text', 'patch', 'count', 'sample'] as const;
+const EVALUATION_JOBS = ['cache-diagnosis', 'display', 'prompt', 'rewrite', 'translation', 'memory', 'illustration', 'mascot', 'preread', 'agent', 'read', 'lore', 'state', 'variables', 'text', 'onboarding', 'patch', 'count', 'sample'] as const;
 const DETAILS = [...AUTO_ERROR_NAMES, ...AUTO_OPEN_FAILURES, ...FAILURES, ...GAP_CAUSES, ...CACHE_CAUSES, ...EVALUATION_JOBS] as const;
 
 const BROWSERS = ['chrome', 'edge', 'firefox', 'safari', 'samsung', 'other'] as const;

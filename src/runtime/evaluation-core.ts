@@ -2,7 +2,7 @@ import { cacheDiagnosis } from '../engine/cache-diagnosis';
 import type { CacheComparison, CacheDiagnosis } from '../model/cache';
 import { rewritten, type ProviderFit } from '../engine/prompt-budget';
 import type { CbsTrace } from '../engine/cbs/evaluate';
-import { DisplayPass, type Display, type DisplayPatch, type DisplayWork } from '../engine/display';
+import { DisplayPass, onboardingPage, type Display, type DisplayPatch, type DisplayWork } from '../engine/display';
 import { speakersOf, standing, type Standing } from '../engine/memory';
 import { activeLore, assemble, assembleAgent, assembleIllustration, assembleMascot, assembleMemory, assemblePreread, assembleTranslation, renderAfter, type AgentInput, type Assembled, type IllustrationInput, type MascotInput, type MemoryTaskInput, type PrereadInput, type PromptInput, type RanAway, type TranslationInput } from '../engine/pipeline';
 import type { RegexScript } from '../engine/import/types';
@@ -29,9 +29,11 @@ export type EvaluationJob =
   | { kind: 'lore'; seed: string; limit: number }
   | { kind: 'state'; prefix: string }
   | { kind: 'variables'; prefix: string }
-  | { kind: 'text'; text: string; language: string | null };
+  | { kind: 'text'; text: string; language: string | null }
+  | { kind: 'onboarding'; html: string };
 export type LuaResult = LuaText & { version: string };
 export type TrialRead = CbsTrace & { read: string };
+export type OnboardingPage = ReturnType<typeof onboardingPage>;
 export type EvaluationInput =
   | { lane: string; scope: ChatBasis; history: Tail<ChatScope['messages'][number]>; job: EvaluationJob }
   | { lane: string; patch: { revision: number; generation: number; items: LuaResult[] } }
@@ -54,6 +56,7 @@ export type EvaluationResult =
   | Counted<ReturnType<typeof assembleTranslation> | ReturnType<typeof assembleMemory> | ReturnType<typeof assembleIllustration> | ReturnType<typeof assembleMascot> | ReturnType<typeof assemblePreread> | ReturnType<typeof assembleAgent> | ChatTexts | { role: 'system' | 'user' | 'assistant'; text: string }[] | RanAway | number[]>
   | { sampled: string }
   | TrialRead
+  | OnboardingPage
   | null;
 // probe: 문제 진단's check, sent to a worker of its own: whether the tokenizer loads, and what stopped it if not.
 export type EvaluationDown = { id: number; input: EvaluationInput } | { forget: string } | { warm: true } | { ping: true } | { probe: true };
@@ -107,6 +110,10 @@ export class Evaluator {
       const trace: CbsTrace = { steps: [], omitted: 0 };
       const read = renderAfter(scope, job.text, { seed: 'trial' }, job.language, trace);
       return typeof read === 'string' ? { read, ...trace } : read;
+    }
+    if (job.kind === 'onboarding') {
+      started();
+      return onboardingPage(scope, job.html);
     }
     if (job.kind === 'state') {
       started();

@@ -230,6 +230,8 @@ export const FORGET_ORIGIN = '원본 연결 끊기';
 export const deletedChat = (name: string) => `삭제된 채팅 '${name}'`;
 
 export const DEFAULT_VARIABLES = '기본 변수';
+// A card's onboarding: questions a new chat asks, whose answers it starts from.
+export const ONBOARDING = '시작 전 설문';
 
 export const SCRIPTS = { part: '스크립트', regex: '정규식', triggers: '트리거' };
 export const STAGES: Record<RegexScript['stage'], string> = { input: '입력', output: '응답', process: '요청', display: '화면', translation: '번역' };
