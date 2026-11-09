@@ -1,5 +1,5 @@
 import { count, flag, isRecord, list, text } from '../../connectors/values';
-import type { AssetUse } from '../assets';
+import { mainOf, type AssetUse } from '../assets';
 import { isUnsupportedTag } from '../cbs/tags';
 import { args, parseDecorators } from '../lorebook/decorators';
 import { readToggles, writeToggles } from './toggles';
@@ -69,7 +69,7 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
   const book = record(data.character_book);
 
   const listed = spec === 'v3' ? list(data.assets) : [];
-  const icon = pickIcon(listed);
+  const icon = mainOf(listed.filter((asset): asset is Json => isRecord(asset) && asset.type === 'icon')) ?? null;
   // Risu's own assets: CCv3's x-risu-asset and background, and v2's additionalAssets as [name, uri, extension], whose uri
   // when it is no asset chunk holds the picture itself in base64 (characterCards.ts:830-839). Emotions, voices and other
   // asset types are not read.
@@ -313,12 +313,6 @@ function tavern(raw: Json): Json | null {
     first_mes: greeting,
     mes_example: raw.mes_example ?? raw.example_dialogue,
   };
-}
-
-// CCv3: the icon named main, else the first icon.
-function pickIcon(assets: unknown[]): Json | null {
-  const icons = assets.filter((asset): asset is Json => isRecord(asset) && asset.type === 'icon');
-  return icons.find((asset) => asset.name === 'main') ?? icons[0] ?? null;
 }
 
 // Header, comment and indent blocks do nothing on their own; most bots carry an empty pair of such triggers.

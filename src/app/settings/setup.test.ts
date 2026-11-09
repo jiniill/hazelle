@@ -13,7 +13,7 @@ const overview = (aux: RolePick): Overview => ({
   roles: { main: picked('main'), aux, embed: none },
   talk: { prompt: { kind: 'prompt', own: false, prompt: { id: 'p', value: { name: '기본' } } } as never, pins: [] },
   tasks: [
-    { feature: 'translate', on: true, own: undefined, apart: false, runs: 'kind' in aux.runs ? { failure: aux.runs } : { route } },
+    { feature: 'translate', on: true, own: undefined, apart: false, runs: 'kind' in aux.runs ? aux.runs : { route } },
     { feature: 'memory', on: true, own: undefined, apart: false, runs: { route }, by: null },
   ] as TaskRun[],
 });

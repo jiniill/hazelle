@@ -1,5 +1,5 @@
 import MarkdownIt, { type StateCore, type StateInline, type Token } from 'markdown-it';
-import { assetsOf, assetUrl, backdrop, OWN_MARKUP } from './assets';
+import { assetsOf, assetUrl, backdrop, mainOf, OWN_MARKUP } from './assets';
 import { unescapeCbs } from './cbs/escape';
 import { evaluate, Runaway } from './cbs/evaluate';
 import { BACKGROUND } from './cbs/tags';
@@ -46,8 +46,7 @@ export class DisplayPass {
     this.cbs = outside(scope, rendered, BACKGROUND);
     // CCv3's background asset, the one named main or else the first, which Risu keeps but never draws; drawn as {{bg}}
     // draws its picture.
-    const backgrounds = assetsOf(scope.assets, 'background');
-    const main = backgrounds.find((asset) => asset.name === 'main') ?? backgrounds[0];
+    const main = mainOf(assetsOf(scope.assets, 'background'));
     const background = main ? [backdrop(assetUrl(main.id))] : [];
     for (const pack of scope.packs) {
       if (!pack.background) continue;

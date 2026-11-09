@@ -8,6 +8,9 @@ export type AssetUse = 'background';
 // absent for the character's own. use: absent for the assets the asset tags find, the only kind a module holds.
 export type BotAsset = { id: string; name: string; type: string; module?: string | null; use?: AssetUse };
 
+// CCv3's pick among assets of one type: the one named main, else the first.
+export const mainOf = <A extends { name?: unknown }>(assets: readonly A[]): A | undefined => assets.find((asset) => asset.name === 'main') ?? assets[0];
+
 export const assetsOf = <A extends { use?: AssetUse }>(assets: readonly A[], use?: AssetUse) => assets.filter((asset) => asset.use === use);
 
 // Risu's {{bg}} markup: the picture covering what holds it, under an 80% black veil.

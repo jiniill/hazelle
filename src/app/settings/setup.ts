@@ -3,7 +3,7 @@ import { entryName } from '../../connectors/types';
 import { FEATURE_LABS, type Feature } from '../../model/features';
 import type { Stored } from '../../model/kinds';
 import type { Route, RouteFailure, RolePick } from '../../runtime/assignment';
-import type { Overview, Runs, TaskRun } from '../../runtime/overview';
+import type { Overview, TaskRun } from '../../runtime/overview';
 import {
   describeIllustrateFailure,
   describeMascotFailure,
@@ -34,20 +34,18 @@ export type Finding = { node: string; title: string; why: string };
 // What a node stands for, which its detail opens.
 export type Target = { kind: 'connection'; connection: Stored<'connection'> } | { kind: 'model'; ref: ModelRef; name: string } | { kind: 'role'; role: Role } | { kind: 'talk'; pins: Overview['talk']['pins'] } | { kind: 'task'; task: TaskRun };
 
-const writerOf = <F>(runs: Runs<F>): { route: Route } | F => ('route' in runs ? runs : runs.failure);
-
 export function saidOf(task: TaskRun): TaskRuns {
   switch (task.feature) {
     case 'translate':
-      return taskRuns(writerOf(task.runs), describeTranslateFailure);
+      return taskRuns(task.runs, describeTranslateFailure);
     case 'illustrate':
-      return taskRuns(writerOf(task.runs), describeIllustrateFailure);
+      return taskRuns(task.runs, describeIllustrateFailure);
     case 'memory':
-      return taskRuns(writerOf(task.runs), describeMemoryFailure);
+      return taskRuns(task.runs, describeMemoryFailure);
     case 'mascot':
-      return taskRuns(writerOf(task.runs), describeMascotFailure);
+      return taskRuns(task.runs, describeMascotFailure);
     case 'preread':
-      return taskRuns(writerOf(task.runs), describePrereadFailure);
+      return taskRuns(task.runs, describePrereadFailure);
   }
 }
 

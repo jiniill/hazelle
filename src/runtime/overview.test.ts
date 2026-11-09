@@ -24,7 +24,7 @@ it('says where each role was picked, which task follows 보조 모델 and which 
 
     await setDefaultModel(store, 'aux', ref('aux'));
     await setAccountTaskModel(store, 'mascot', ref('pin'));
-    const tasks = Object.fromEntries(read().tasks.map((task) => [task.feature, { own: task.own?.model, runs: 'route' in task.runs ? task.runs.route.model.id : task.runs.failure.kind }]));
+    const tasks = Object.fromEntries(read().tasks.map((task) => [task.feature, { own: task.own?.model, runs: 'kind' in task.runs ? task.runs.kind : task.runs.route.model.id }]));
     expect(read().roles.aux.from).toEqual({ layer: 'settings', role: 'aux' });
     expect(tasks.translate).toEqual({ own: undefined, runs: 'aux' });
     expect(tasks.mascot).toEqual({ own: 'pin', runs: 'pin' });
