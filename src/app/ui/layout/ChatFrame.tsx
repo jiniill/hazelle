@@ -48,6 +48,8 @@ type Props = {
   // close the other.
   beside?: ReactNode;
   peek?: ReactNode;
+  // Lies under the whole column, the header, story and composer over it: a bot's background (StoryBackdrop).
+  backdrop?: ReactNode;
   // Stands in the story's right gutter, from under the header down to the composer, at the gutter's foot.
   edge?: ReactNode;
   reading: Reading;
@@ -65,7 +67,7 @@ type Props = {
   onScroll: () => void;
 };
 
-export function ChatFrame({ back, title, actions, children, above, footer, dockRef, panel, beside, peek, edge, reading, hideHeader, stage, side, portrait, pictures, compact, scrollRef, onScroll }: Props) {
+export function ChatFrame({ back, title, actions, children, above, footer, dockRef, panel, beside, peek, backdrop, edge, reading, hideHeader, stage, side, portrait, pictures, compact, scrollRef, onScroll }: Props) {
   const scope = readingScope(reading);
   const pairs = usePanelsBeside();
   const [shown, setShown] = useState(true);
@@ -156,6 +158,7 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
           } as CSSProperties
         }
       >
+        {backdrop && <div className={styles.backdrop}>{backdrop}</div>}
         <div className={`${styles.top} ${shown || !hideHeader ? styles.shown : ''}`}>
           <header className={styles.header}>
             {back && <IconButton icon={ChevronLeft} label={back.label} onClick={back.onClick} />}

@@ -59,6 +59,20 @@ describe('display', () => {
     expect(texts).toEqual(['<div class="box">box</div>\n', 'The lamp. <div class="box">HP 7</div>\n']);
     expect(css.split('\n')).toEqual(['.hp::after { content: "7" }', '.x-risu-box { color: red }']);
   });
+
+  it('keeps the backgroundHTML’s markup past its styles, the character’s before the modules’, read as its styles are', () => {
+    expect(display(scope).background).toBe('');
+    const module = { regex: [], triggers: [], toggles: [], background: '\n<p>two</p>\n' };
+    const { background, css } = display({ ...scope, packs: [{ ...card, background: '<style>.a{}</style><div style="color: red">{{getvar::hp}}</div>' }, module] });
+    expect(background).toBe('<div style="color: red">7</div>\n\n<p>two</p>');
+    expect(css.split('\n')[0]).toBe('.a{}');
+  });
+
+  it('reads a <risu-style> a message holds with the chat’s last variables', () => {
+    const style = hex(new TextEncoder().encode('.hp{order:{{getvar::hp}}}'));
+    const { css } = display({ ...scope, messages: [message('s', 'assistant', `<risu-style>${style}</risu-style>`), ...scope.messages] });
+    expect(css.split('\n')).toContain('.hp{order:7}');
+  });
 });
 
 describe('stripStyles', () => {
@@ -68,7 +82,7 @@ describe('stripStyles', () => {
     const pick = () => pieces[(state = (state * 1103515245 + 12345) & 0x7fffffff) % pieces.length]!;
     const take = (text: string) => {
       const blocks: string[] = [];
-      return { text: stripStyles(text, blocks), blocks };
+      return { text: stripStyles(text, blocks, (css) => css), blocks };
     };
     for (let n = 0; n < 2000; n++) {
       const text = Array.from({ length: n % 13 }, pick).join('');
@@ -80,11 +94,12 @@ describe('stripStyles', () => {
     expect(take(open)).toEqual({ text: open, blocks: [] });
   });
 
-  it('reads the hex form a bot script writes, in order with plain styles, and takes unreadable hex as no style', () => {
+  it('reads the hex form a bot script writes, in order with plain styles, as far as it reads, its CSS alone given to CBS', () => {
     const encoded = hex(new TextEncoder().encode('.a{content:"한"}'));
     const blocks: string[] = [];
-    expect(stripStyles(`x<style>.z{}</style><risu-style>${encoded}</risu-style>y<risu-style>nope</risu-style>`, blocks)).toBe('xy');
-    expect(blocks).toEqual(['.z{}', '.a{content:"한"}', '']);
+    const cbs = (css: string) => `[${css}]`;
+    expect(stripStyles(`x<style>.z{}</style><risu-style>${encoded}</risu-style>y<risu-style>${hex(new TextEncoder().encode('.b{}'))}zz2e63</risu-style><risu-style>2e6</risu-style>`, blocks, cbs)).toBe('xy');
+    expect(blocks).toEqual(['.z{}', '[.a{content:"한"}]', '[.b{}]', '[.]']);
   });
 });
 

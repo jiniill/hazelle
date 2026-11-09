@@ -12,6 +12,7 @@ import { useCode } from './code';
 import { useMath } from './math';
 import styles from './Story.module.css';
 import shadowCss from './Story.shadow.css?inline';
+import backdropCss from './StoryBackdrop.shadow.css?inline';
 
 // One of the bot's buttons, as its HTML names it: risu-trigger names a function of its script, risu-btn carries data to it.
 // id: the trigger's element's risu-id, which {{triggerid}} reads; '' when it has none.
@@ -706,4 +707,23 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
       )}
     </>
   );
+}
+
+let backdropSheet: CSSStyleSheet | null = null;
+
+// A bot's background (Risu's backgroundHTML), drawn as Risu draws it: sanitized as a message is, without markdown or
+// the story's look, and with none of the bot's CSS, whose rules Risu scopes to its messages. It stands behind the
+// story, where nothing can be pressed: what 이미지 가리기 covers is left out rather than offered.
+export function StoryBackdrop({ html }: { html: string }) {
+  const veil = useVeil();
+  const host = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const root = host.current!.shadowRoot ?? host.current!.attachShadow({ mode: 'open' });
+    if (!backdropSheet) (backdropSheet = new CSSStyleSheet()).replaceSync(backdropCss);
+    root.adoptedStyleSheets = [backdropSheet];
+    const fragment = sanitize(html, false, veil);
+    for (const control of fragment.querySelectorAll(`[${VEILED}], [${COVER}]`)) control.remove();
+    morph(root, fragment);
+  }, [html, veil]);
+  return <div ref={host} className={styles.backdrop} aria-hidden />;
 }

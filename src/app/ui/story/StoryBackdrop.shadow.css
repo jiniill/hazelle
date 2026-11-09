@@ -1,0 +1,7 @@
+/* Inside a bot's background (Story.tsx StoryBackdrop): Risu draws it under its page's border-box reset, with none of the
+   story's look. */
+*,
+::before,
+::after {
+  box-sizing: border-box;
+}

@@ -736,6 +736,7 @@
   --landing-point-gap: clamp(32px, 7svh, 72px);
   --landing-finish-ink: #fff8ea;
   --landing-finish-shadow: 0 1px 2px #2a124066, 0 0 36px #2a1240a6;
+  --layer-behind: -1;
   --layer-raised: 2;
   --layer-window: 10;
   --layer-menu: 20;
