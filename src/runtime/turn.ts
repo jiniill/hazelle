@@ -190,10 +190,12 @@ async function prepare(session: Session, chat: string, gathered: TurnContext, si
   if ('kind' in prompted) return prompted;
   if (signal.aborted) return { kind: 'halted' };
   const { turn, tools } = prompted;
-  const { route, settings, scope, budget, said, reply } = turn;
-  const memory = turn.memory?.kind === 'built-in' ? { ...turn.memory, found: await findRecords(session, chat, scope.messages, signal) } : turn.memory;
+  const { route, settings, scope, budget, said, reply, memory: asked } = turn;
+  const [memory, additional] = await Promise.all([
+    asked?.kind === 'built-in' ? findRecords(session, chat, scope.messages, signal).then((found) => ({ ...asked, found })) : asked,
+    turn.chat.character === null ? [] : findAdditional(session, chat, turn.chat.character, scope, signal),
+  ]);
   const kept = translated.said !== null && said === null ? { kept: true as const } : {};
-  const additional = turn.chat.character === null ? [] : await findAdditional(session, chat, turn.chat.character, scope, signal);
   if (signal.aborted) return { kind: 'halted' };
   if ('kind' in additional) return { ...additional, ...kept };
   const agents = !skip.agents && reply.continues === null && agentsOf(session.store, turn.chat).pre.length > 0 ? await runPre(session, chat, turn, signal, preparing, skip) : { runs: [], notes: '' };

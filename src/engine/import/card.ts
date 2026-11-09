@@ -11,7 +11,7 @@ import type { FileSource } from './source';
 import { writeToggles } from './toggles';
 import { openZip, type Zip } from './zip';
 import { fromBase64 } from '../../base64';
-import { hex } from '../../hex';
+import { sha256Hex } from '../../hex';
 import { isRecord } from '../../connectors/values';
 import { unseal } from './risu-seal';
 
@@ -76,7 +76,7 @@ async function chunkCard(text: string, password: string | undefined): Promise<{ 
   const parts = text.split('||');
   if (parts[1] !== 'rccv1' || parts.length !== 5) return fail('unreadable', 'not an rccv1 card');
   const sealed = fromBase64(parts[2]!);
-  if (hex(new Uint8Array(await crypto.subtle.digest('SHA-256', sealed))) !== parts[3]) return fail('unreadable', 'the rcc card was changed');
+  if ((await sha256Hex(sealed)) !== parts[3]) return fail('unreadable', 'the rcc card was changed');
   const locked = Boolean(record(JSON.parse(utf8.decode(fromBase64(parts[4]!)))).usePassword);
   const secret = locked ? password : RCC_NONE;
   if (secret === undefined) return fail('needs-password');

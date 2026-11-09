@@ -1,6 +1,6 @@
 import { errorMessage } from '../../error-message';
 import { jsonObject } from '../../connectors/values';
-import { hex } from '../../hex';
+import { sha256Hex } from '../../hex';
 import type { PackOwner } from '../../model/library';
 import { LuaFactory, type LuaEngine } from 'wasmoon';
 import { runBlocks, type Unit } from './blocks';
@@ -526,7 +526,7 @@ export class Lua {
     // nil when a call is refused or fails, as Risu answers a script it does not let call.
     awaited('similarity', (run, source: unknown, values: unknown) => ranked(run, text(source), Object.values((values ?? {}) as Record<string, unknown>).map(text)));
 
-    set('hash', async (_run, value: unknown) => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text(value))))));
+    set('hash', async (_run, value: unknown) => sha256Hex(text(value)));
     bind('logMain', (value: string) => {
       if (engine.log) boundedItem(engine.log, engine.log.logs, clipped(engine.log, value));
     });

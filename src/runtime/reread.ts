@@ -1,4 +1,5 @@
-import { hex } from '../hex';
+import { assetsOf } from '../engine/assets';
+import { sha256Id } from '../hex';
 import { isFrame, joinOriginal, standIn, stoodFor } from '../engine/import/original';
 import type { PresetRead } from '../engine/import/preset';
 import { readFromSillyTavern } from '../engine/import/convert';
@@ -20,6 +21,9 @@ type Owner = Stored<'character'> | Stored<'module'> | Stored<'prompt'>;
 type Read = { card: Imported } | { module: ImportedModule } | { preset: PresetRead };
 // edited: the scripts it left because the user may have changed what the import made of them.
 type Step = (store: ObjectStore, files: Files, owner: Owner, read: Read, pieces: Map<string, Original>) => Promise<ApiResult<{ edited: number }>>;
+
+const done = (edited = 0): ApiResult<{ edited: number }> => ({ ok: true, data: { edited } });
+const after = (written: ApiResult<unknown>, edited = 0) => (written.ok ? done(edited) : written);
 
 type Scripts = Pick<Pack, 'regex' | 'triggers'>;
 const regexKey = ({ name, find, replace, stage, flags }: RegexScript) => JSON.stringify([name, find, replace, stage, flags]);
@@ -63,18 +67,12 @@ function addedCard(card: Card, read: Card): { card: Card; changed: boolean; edit
   };
 }
 
-// Derived, so two devices adding one picture at once write one asset, the later refused as a conflict.
-async function assetId(owner: string, file: string): Promise<string> {
-  const hash = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${owner}/${file}`))));
-  return [hash.slice(0, 8), hash.slice(8, 12), hash.slice(12, 16), hash.slice(16, 20), hash.slice(20, 32)].join('-');
-}
-
 // A background whose file the character has as one already is there. A picture read as its stand-in is fetched from
 // the piece it stands for.
 async function addBackgrounds(store: ObjectStore, files: Files, owner: string, read: Imported, pieces: Map<string, Original>): Promise<ApiResult<null>> {
-  const have = new Set(store.children('asset', owner).flatMap(({ value }) => (value.use === 'background' ? [value.file.id] : [])));
+  const have = new Set(assetsOf(store.children('asset', owner).map(({ value }) => value), 'background').map(({ file }) => file.id));
   const fetched: Imported['assets'] = [];
-  for (const asset of read.assets.filter(({ use }) => use === 'background')) {
+  for (const asset of assetsOf(read.assets, 'background')) {
     const bytes = await asset.read();
     const piece = bytes && stoodFor(bytes);
     const kept = piece === null ? null : pieces.get(piece)!.file;
@@ -92,7 +90,8 @@ async function addBackgrounds(store: ObjectStore, files: Files, owner: string, r
     added.push(asset);
   }
   if (!added.length) return { ok: true, data: null };
-  const writes = await Promise.all(added.map(async (value: Asset): Promise<Write> => ({ type: 'create', kind: 'asset', id: await assetId(owner, value.file.id), parent: owner, value })));
+  // Derived, so two devices adding one picture at once write one asset, the later refused as a conflict.
+  const writes = await Promise.all(added.map(async (value: Asset): Promise<Write> => ({ type: 'create', kind: 'asset', id: await sha256Id(`${owner}/${value.file.id}`), parent: owner, value })));
   return store.batch(writes);
 }
 
@@ -103,40 +102,39 @@ const since1109: Step = async (store, files, owner, read, pieces) => {
     const backgrounds = await addBackgrounds(store, files, owner.id, read.card, pieces);
     if (!backgrounds.ok) return backgrounds;
     const { changed, edited } = addedCard(owner.value.card, read.card.card);
-    if (!changed) return { ok: true, data: { edited } };
-    const written = await store.update('character', owner.id, (current) => ({ ...current, card: addedCard(current.card, read.card.card).card }));
-    return written.ok ? { ok: true, data: { edited } } : written;
+    if (!changed) return done(edited);
+    return after(await store.update('character', owner.id, (current) => ({ ...current, card: addedCard(current.card, read.card.card).card })), edited);
   }
   if (owner.kind === 'module' && 'module' in read) {
     const { changed, edited } = addedScripts(owner.value, read.module.pack);
-    if (!changed) return { ok: true, data: { edited } };
+    if (!changed) return done(edited);
     const written = await store.update('module', owner.id, (current) => {
       const { regex, triggers } = addedScripts(current, read.module.pack);
       return { ...current, regex, triggers };
     });
-    return written.ok ? { ok: true, data: { edited } } : written;
+    return after(written, edited);
   }
   if (owner.kind === 'prompt' && 'preset' in read) {
     const { variables } = read.preset.prompt;
     const takes = (prompt: Prompt) => prompt.task === undefined && !prompt.variables?.length;
-    if (!variables?.length || !takes(owner.value)) return { ok: true, data: { edited: 0 } };
-    const written = await store.update('prompt', owner.id, (current) => (takes(current) ? { ...current, variables } : current));
-    return written.ok ? { ok: true, data: { edited: 0 } } : written;
+    if (!variables?.length || !takes(owner.value)) return done();
+    return after(await store.update('prompt', owner.id, (current) => (takes(current) ? { ...current, variables } : current)));
   }
-  return { ok: true, data: { edited: 0 } };
+  return done();
 };
 
-// A card's SillyTavern regex scripts, read since 2026-11-09, join the end of its scripts; null when it has them all.
-function addedSillyTavern(regex: RegexScript[], read: RegexScript[]): RegexScript[] | null {
+// A card's SillyTavern regex scripts, read since 2026-11-09, join the end of its scripts; regex itself when it has them all.
+function addedSillyTavern(regex: RegexScript[], read: RegexScript[]): RegexScript[] {
   const held = new Set(regex.map(regexKey));
   const added = read.filter((script) => readFromSillyTavern(script) && !held.has(regexKey(script))).map((script) => ({ ...script, id: crypto.randomUUID() }));
-  return added.length ? [...regex, ...added] : null;
+  return added.length ? [...regex, ...added] : regex;
 }
 
 const sillyTavernScripts: Step = async (store, _files, owner, read) => {
-  if (owner.kind !== 'character' || !('card' in read) || !addedSillyTavern(owner.value.card.regex, read.card.card.regex)) return { ok: true, data: { edited: 0 } };
-  const written = await store.update('character', owner.id, (current) => ({ ...current, card: { ...current.card, regex: addedSillyTavern(current.card.regex, read.card.card.regex) ?? current.card.regex } }));
-  return written.ok ? { ok: true, data: { edited: 0 } } : written;
+  if (owner.kind !== 'character' || !('card' in read)) return done();
+  const { regex } = read.card.card;
+  if (addedSillyTavern(owner.value.card.regex, regex) === owner.value.card.regex) return done();
+  return after(await store.update('character', owner.id, (current) => ({ ...current, card: { ...current.card, regex: addedSillyTavern(current.card.regex, regex) } })));
 };
 
 // In the order the parser changes came; settings.reread counts those every original has had. Each only adds, or fills
@@ -153,14 +151,10 @@ function ownerOf(store: ObjectStore, id: string): Owner | null {
 // one that does not read again as what it made.
 async function readAgain(worker: ImportWorker, files: Files, owner: Owner, pieces: Original[], signal: AbortSignal): Promise<ApiResult<Read | null>> {
   const parts = new Map<string, Uint8Array<ArrayBuffer>>();
-  for (const { path, file } of pieces) {
-    if (!isFrame(path)) {
-      parts.set(path, standIn(path));
-      continue;
-    }
-    const bytes = await files.read(file, { signal, bulk: true });
+  const reads = await Promise.all(pieces.map(({ path, file }) => (isFrame(path) ? files.read(file, { signal, bulk: true }) : ({ ok: true, data: standIn(path) } as const))));
+  for (const [index, bytes] of reads.entries()) {
     if (!bytes.ok) return bytes;
-    parts.set(path, bytes.data);
+    parts.set(pieces[index]!.path, bytes.data);
   }
   const read = await worker.card(new File([await joinOriginal(parts)], pieces[0]!.name), owner.kind === 'module');
   if (!read.ok) return { ok: true, data: null };
@@ -173,7 +167,7 @@ async function readAgain(worker: ImportWorker, files: Files, owner: Owner, piece
 // whose file does not read again is left. Owners imported before originals were kept have none and are left too.
 export async function rereadOriginals(store: ObjectStore, files: Files, signal: AbortSignal): Promise<ApiResult<{ edited: number }>> {
   const due = STEPS.slice(accountSettings(store).reread ?? 0);
-  if (!due.length) return { ok: true, data: { edited: 0 } };
+  if (!due.length) return done();
   const kept: { parent: string; value: Original }[] = [];
   const scanned = await store.pinned((pin) => store.scan({ kind: 'original' }, ({ parent }, value) => void kept.push({ parent: parent!, value: value as Original }), pin, signal), signal);
   if (scanned) return scanned;
@@ -204,5 +198,5 @@ export async function rereadOriginals(store: ObjectStore, files: Files, signal: 
     worker.close();
   }
   const marked = await changeSettings(store, (settings) => ({ ...settings, reread: STEPS.length }));
-  return marked.ok ? { ok: true, data: { edited } } : marked;
+  return after(marked, edited);
 }

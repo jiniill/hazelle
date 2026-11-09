@@ -24,7 +24,7 @@ import { callOf, endCall, newCall, type CallTarget } from './streams';
 import { chatPlace, keepRow } from './usage';
 import { tokenLimits, promptBudget, sentSettings } from './chat-context';
 import { wouldSend } from './turn-context';
-import { indexRecords, unembedded, type Indexed } from './retrieval';
+import { indexRecords, unembedded, type EmbedFailure } from './retrieval';
 import { changeSettings } from './account-settings';
 
 // The only writer of `memory` objects and of the memory settings (design §6.2).
@@ -239,7 +239,7 @@ export type MemoryFailure =
   | { kind: 'failed'; receipt: Receipt }
   | { kind: 'invalid'; receipt: Receipt; reason: Invalid }
   | { kind: 'unsaved'; failure: ApiFailure; refused?: boolean }
-  | { kind: 'embed'; reason: Extract<Indexed, { reason: string }>['reason']; receipt: Receipt | null }
+  | EmbedFailure
   | RanAway;
 
 // What a run that threw failed as, null for one that was stopped. refused: the evaluation turned its job away under the

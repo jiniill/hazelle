@@ -165,11 +165,16 @@ export const sendsNotes = (prompt: TranslatePrompt) => prompt.blocks.some((block
 export type TranslatorFailure = Exclude<TranslateFailure, { kind: 'stopped' }>;
 
 // Risu's edittrans: the chat's translation-stage scripts over a message's translation each time it is shown; the
-// translation is kept as the model wrote it (design §6.3). Risu runs no CBS there (applyEdittransRegex).
+// translation is kept as the model wrote it (design §6.3). Risu runs no CBS there (applyEdittransRegex). One function
+// for every chat without such a script, so a row that holds it is not drawn again when the chat changes.
 export function translationShown(store: ObjectStore, chat: Pick<Chat, 'character' | 'prompt' | 'persona'>): (text: string) => string {
-  const scripts = new Scripts(packsOf(store, chat).flatMap(({ pack }) => pack.regex), []);
+  const regex = packsOf(store, chat).flatMap(({ pack }) => pack.regex.filter((script) => script.stage === 'translation' && !script.off));
+  if (!regex.length) return unchanged;
+  const scripts = new Scripts(regex, []);
   return (text) => scripts.apply('translation', text, { index: -1, cbs: (each) => each }).text;
 }
+
+const unchanged = (text: string) => text;
 
 // awaited: replies saved here whose 응답 번역 has not started yet (expect). failed: why the last try at a version did not
 // translate it, kept for the session.

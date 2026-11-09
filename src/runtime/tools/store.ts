@@ -4,7 +4,7 @@ import type { ToolUnit } from '../../model/tool';
 import { packsOf } from '../chat-context';
 import { assetType } from '../../engine/import/card';
 import { fieldValue, type ImportedTool } from '../../engine/import/tool';
-import { hex } from '../../hex';
+import { sha256Hex, sha256Id } from '../../hex';
 import { without } from '../../model/fields';
 import { live } from '../../model/library';
 import { badgesOf, toolId, type Badges, type Tool } from '../../model/tool';
@@ -105,19 +105,13 @@ export async function setToolSettings({ store }: Pick<Session, 'store'>, module:
   return store.update('tool', toolId(module), (current) => live(store.get('module', module)) ? { ...current, settings: { ...current.settings, ...Object.fromEntries(current.manifest.settings.flatMap((field) => Object.hasOwn(change, field.key) && fieldValue(field, change[field.key]) ? [[field.key, change[field.key]!]] : [])) } } : null);
 }
 
-async function keyId(text: string): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
-  const digits = hex(digest.slice(0, 16));
-  return `${digits.slice(0, 8)}-${digits.slice(8, 12)}-${digits.slice(12, 16)}-${digits.slice(16, 20)}-${digits.slice(20)}`;
-}
-
 // Every device addresses the same key. The module separates equal key names owned by different tools; a chat's badge
 // record has one part fewer, so no key a tool names reaches its id.
-export const toolDataId = (module: string, key: string) => keyId(`${module}\0${key}`);
-export const toolChatId = (module: string, chat: string, key: string | null) => keyId(key === null ? `${module}\0${chat}` : `${module}\0${chat}\0${key}`);
+export const toolDataId = (module: string, key: string) => sha256Id(`${module}\0${key}`);
+export const toolChatId = (module: string, chat: string, key: string | null) => sha256Id(key === null ? `${module}\0${chat}` : `${module}\0${chat}\0${key}`);
 
 // The first part keeps it apart from every toolDataId and toolAssetId.
-export const toolFileId = (module: string, key: string) => keyId(`file\0${module}\0${key}`);
+export const toolFileId = (module: string, key: string) => sha256Id(`file\0${module}\0${key}`);
 
 const rowOf = (store: ObjectStore, module: string, key: string) => store.children('tooldata', module).find(({ value }) => value.key === key);
 const fileOf = (store: ObjectStore, module: string, key: string) => store.children('toolfile', module).find(({ value }) => value.key === key);
@@ -167,13 +161,13 @@ export async function deleteToolData(store: ObjectStore, module: string, key: st
 
 // Module-owned assets use module + content-hash ids, distinct from toolDataId.
 // Repeated saves across devices reuse the same row/file without upload; removal follows the module.
-export const toolAssetId = (module: string, name: string) => keyId(`asset\0${module}\0${name}`);
+export const toolAssetId = (module: string, name: string) => sha256Id(`asset\0${module}\0${name}`);
 
 export async function saveToolAsset(store: ObjectStore, files: Files, module: string, bytes: Uint8Array<ArrayBuffer>): Promise<ApiResult<string>> {
   if (!live(store.get('module', module))) return { ok: false, error: 'gone' };
   const type = assetType(bytes);
   if (!type) return { ok: false, error: 'unsupported-file' };
-  const name = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
+  const name = await sha256Hex(bytes);
   const id = await toolAssetId(module, name);
   if (store.get('asset', id)) return { ok: true, data: name };
   const saved = await files.save([bytes]);

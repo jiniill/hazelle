@@ -12,6 +12,7 @@ import type { LikenessFailure } from '../../runtime/likeness';
 import type { MascotFailure } from '../../runtime/mascot';
 import type { MemoryFailure } from '../../runtime/memory';
 import type { PrereadFailure } from '../../runtime/preread';
+import type { EmbedFailure } from '../../runtime/retrieval';
 import type { AgentFailed } from '../../runtime/agents';
 import type { AdditionalFailure } from '../../runtime/additional';
 import type { KeyFailure } from '../../runtime/connections';
@@ -152,6 +153,8 @@ function describeRoute(failure: RouteFailure | { kind: 'profile-missing'; own: b
 
 // A role's own model as 설정 › 모델 picks it.
 const EMBED_UNCALLED = `${MODEL_ROLES.embed}을 호출하지 못했어요.`;
+// tooLarge: what was too long for one call, in the caller's words.
+const describeEmbedFailure = ({ reason, receipt }: EmbedFailure, tooLarge: string) => (reason === 'too-large' ? tooLarge : receipt?.error ? describeReplyError(receipt.error) : EMBED_UNCALLED);
 export const describeRoleFailure = (role: Role, failure: RouteFailure) => describeRoute(failure, MODEL_ROLES[role], null);
 
 const SECRET = { password: '비밀번호가', recovery: '복구 키가' } as const;
@@ -338,10 +341,8 @@ function describeAdditionalFailure(failure: AdditionalFailure['failure']): strin
     case 'model-gone':
     case 'image-only':
       return describeRoleFailure('embed', failure);
-    case 'too-large':
-      return `문단 하나가 ${MODEL_ROLES.embed}의 한도보다 길어요. 빈 줄로 더 나눠 주세요.`;
-    case 'failed':
-      return failure.receipt?.error ? describeReplyError(failure.receipt.error) : EMBED_UNCALLED;
+    case 'embed':
+      return describeEmbedFailure(failure, `문단 하나가 ${MODEL_ROLES.embed}의 한도보다 길어요. 빈 줄로 더 나눠 주세요.`);
   }
 }
 
@@ -465,13 +466,9 @@ export function describeMemoryFailure(failure: MemoryFailure): string {
     case 'unsaved':
       return `기억을 저장하지 못했어요. ${describeFailure(failure.failure)}`;
     case 'embed':
-      return EMBED[failure.reason] ?? (failure.receipt?.error ? describeReplyError(failure.receipt.error) : EMBED_UNCALLED);
+      return describeEmbedFailure(failure, `기록이 ${MODEL_ROLES.embed}의 한도보다 길어요.`);
   }
 }
-
-const EMBED: Partial<Record<Extract<MemoryFailure, { kind: 'embed' }>['reason'], string>> = {
-  'too-large': `기록이 ${MODEL_ROLES.embed}의 한도보다 길어요.`,
-};
 
 const SCENE_INVALID = { unreadable: UNREADABLE, fields: '모델 응답에 빠진 항목이 있어요.', paragraph: '모델이 메시지에 없는 문단 번호를 선택했어요.' } as const;
 
