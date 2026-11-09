@@ -47,7 +47,13 @@
 }
 
 .detail {
-  padding: 0 max(var(--space-8), var(--box-inset)) var(--space-8);
+  --inset: max(var(--space-8), var(--box-inset));
+  padding: 0 var(--inset) var(--space-8);
+}
+
+/* Under the title, past the leading face (an Avatar's md) and the row's gap. */
+.underTitle {
+  padding-inline-start: calc(var(--inset) + var(--avatar-md) + var(--space-8));
 }
 
 .nested {

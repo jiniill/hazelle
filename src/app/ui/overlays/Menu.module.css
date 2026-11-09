@@ -16,6 +16,14 @@
   overflow-y: auto;
   border-radius: var(--radius-lg);
   translate: var(--nudge, 0) 0;
+  /* A shadow under the edge where more rows lie past it. Each end's cover scrolls with the rows (local) and hides its
+     shadow while that end is in view. */
+  background:
+    linear-gradient(var(--color-surface) 30%, transparent) 0 0 / 100% var(--menu-cue-cover) no-repeat local,
+    linear-gradient(transparent, var(--color-surface) 70%) 0 100% / 100% var(--menu-cue-cover) no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--color-scroll-cue), transparent) 0 0 / 100% var(--menu-cue) no-repeat,
+    radial-gradient(farthest-side at 50% 100%, var(--color-scroll-cue), transparent) 0 100% / 100% var(--menu-cue) no-repeat,
+    var(--color-surface);
 }
 
 /* A menu longer than its height scrolls; its rows keep their own height instead of squeezing into it. */

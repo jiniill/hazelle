@@ -1,7 +1,7 @@
 import { act, StrictMode, useRef } from 'react';
 import { expect, it, vi } from 'vitest';
 import { probeRoot } from '../probe';
-import { backLayers, openingField, openingStop, useFocusTrap, useLayer } from './layers';
+import { backLayers, openingField, openingStop, useAnchored, useFocusTrap, useLayer } from './layers';
 
 it('counts only a layer that takes back, and closes the newest as Esc does', async () => {
   const root = probeRoot();
@@ -139,6 +139,29 @@ it('opens a trap by the opening rule, takes the focus back in when its control g
     drop();
     await act(async () => root.render(<StrictMode><Probe open={false} /></StrictMode>));
     expect(at()).toBe('opener');
+    await act(async () => root.unmount());
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it("flips a popover above its anchor where it would run past the foot of the window it was opened in, not only the screen's", async () => {
+  const root = probeRoot();
+  vi.stubGlobal('getComputedStyle', () => ({ overflowX: 'visible', getPropertyValue: () => '16' }));
+  Object.assign(window, { innerHeight: 900 });
+  Object.assign(document.documentElement, { clientWidth: 1440 });
+  const rect = (top: number, bottom: number) => ({ top, bottom, left: 400, right: 640 });
+  const popover = { style: { setProperty() {} }, dataset: {} as DOMStringMap, parentElement: null, getBoundingClientRect: () => rect(626, 886) };
+  const anchor = (frame: ReturnType<typeof rect> | null) => ({ getBoundingClientRect: () => rect(598, 616), closest: () => frame && { getBoundingClientRect: () => frame } });
+  function Probe({ frame }: { frame: ReturnType<typeof rect> | null }) {
+    useAnchored(true, useRef(popover as unknown as HTMLElement), useRef(anchor(frame) as unknown as HTMLElement), () => {});
+    return null;
+  }
+  try {
+    await act(async () => root.render(<Probe key="window" frame={rect(70, 830)} />));
+    expect(popover.dataset.flipped).toBe('');
+    await act(async () => root.render(<Probe key="page" frame={null} />));
+    expect(popover.dataset.flipped).toBeUndefined();
     await act(async () => root.unmount());
   } finally {
     vi.unstubAllGlobals();

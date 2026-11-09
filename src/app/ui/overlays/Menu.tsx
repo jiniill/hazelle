@@ -1,5 +1,5 @@
 import { Check, ChevronLeft, type LucideIcon } from 'lucide-react';
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { ChangeSignal } from '../../../change-signal';
 import { Item } from '../collections/Item';
@@ -123,7 +123,13 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
 
   // At the pointer it stands on the screen, not in its anchor's column: a list narrower than the menu would clip it.
   const body = (
-    <div ref={panel} className={`${styles.menu} ${at ? styles.point : styles[side]} ${styles[size]} ${kind === 'dialog' ? styles.dialog : ''}`} role={kind} aria-label={label}>
+    <div
+      ref={panel}
+      className={`${styles.menu} ${at ? styles.point : styles[side]} ${styles[size]} ${kind === 'dialog' ? styles.dialog : ''}`}
+      role={kind}
+      aria-label={label}
+      onKeyDown={kind === 'menu' ? (event) => moveByKey(panel.current!, event) : undefined}
+    >
       <Holders.Provider value={held}>
         <CloseMenu.Provider value={() => close(true)}>
           <ButtonSlot value={null}>{children}</ButtonSlot>
@@ -137,6 +143,20 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
       {open && (at ? createPortal(body, document.body) : body)}
     </div>
   );
+}
+
+// ↑ ↓ step through this menu's own items, round its ends, and Home End go to them; a menu inside it steps its own
+// first. A field in it keeps these keys for its caret.
+export function moveByKey(panel: HTMLElement, event: KeyboardEvent) {
+  if (event.defaultPrevented || (event.target as Element).matches('input, textarea')) return;
+  const items = [...panel.querySelectorAll<HTMLElement>('[role^="menuitem"]:not(:disabled)')].filter((item) => item.closest('[role="menu"]') === panel);
+  // -1 while the focus is on none of them, such as on MenuBack.
+  const at = items.indexOf(document.activeElement as HTMLElement);
+  const count = items.length;
+  const next = count === 0 ? undefined : ({ Home: 0, End: count - 1, ArrowDown: (at + 1) % count, ArrowUp: (at <= 0 ? count : at) - 1 } as Record<string, number>)[event.key];
+  if (next === undefined) return;
+  event.preventDefault();
+  items[next]!.focus();
 }
 
 // Drops from the pointer, or rises to it where the room below is shorter than the menu and than the room above.
