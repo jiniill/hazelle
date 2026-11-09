@@ -46,6 +46,11 @@
   outline: none;
 }
 
+/* The browser's own clear would stand beside the kit's × in a field that has one; Esc clears instead. */
+.input::-webkit-search-cancel-button {
+  display: none;
+}
+
 .grow {
   flex-grow: 1;
 }

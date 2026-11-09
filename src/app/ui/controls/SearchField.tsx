@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { useId, type KeyboardEvent, type ReactNode, type Ref } from 'react';
 import { Icon } from '../foundation/Icon';
+import { isComposing } from '../foundation/keys';
 import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './SearchField.module.css';
 
@@ -35,9 +36,18 @@ export function SearchField({ label, value, onChange, size = 'md', grow = false,
         value={value}
         placeholder={label}
         onChange={(event) => onChange(event.target.value)}
-        onKeyDown={onKeyDown}
+        onKeyDown={clearByEscape(value, onChange, onKeyDown)}
       />
       {after && <div className={styles.after}>{after}</div>}
     </div>
   );
 }
+
+// Esc with words typed clears them, taken so the layer under the field (설정's window, a menu) stays for the next
+// Esc. An Esc the caller took (the chat's search bar closes) clears nothing.
+export const clearByEscape = (value: string, onChange: (value: string) => void, onKeyDown?: Props['onKeyDown']) => (event: KeyboardEvent<HTMLInputElement>) => {
+  onKeyDown?.(event);
+  if (event.key !== 'Escape' || !value || event.defaultPrevented || isComposing(event.nativeEvent)) return;
+  event.preventDefault();
+  onChange('');
+};

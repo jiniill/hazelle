@@ -218,6 +218,7 @@
   --markup-heading-shadow: 0.35px 0 0 var(--color-markup-heading), -0.35px 0 0 var(--color-markup-heading);
 
   --shadow-popover: 0 12px 32px var(--palette-shadow);
+  --color-scroll-cue: var(--palette-shadow);
   --shadow-card: 0 6px 18px var(--palette-shadow);
   --shadow-cheer: 0 0 0 8px var(--color-accent-bg), 0 14px 36px var(--color-accent-border);
 
@@ -257,6 +258,8 @@
 
 :root {
   --color-accent-bg: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+  /* The accent as words on that tint; light takes it a step darker, so words of body size clear 4.5:1. */
+  --color-accent-text: var(--color-accent);
   --color-accent-border: color-mix(in srgb, var(--color-accent) 40%, var(--color-bg));
   --color-warn-bg: color-mix(in srgb, var(--color-warn) 10%, var(--color-bg));
   --color-warn-border: color-mix(in srgb, var(--color-warn) 40%, var(--color-bg));
@@ -497,6 +500,8 @@
      and the fade at its edge; the glow on the way to the current chat and the ring on its card; the legend's mark. */
   /* 내 구성's map (FlowMap): room between its columns for the lines, the width below which they stack. */
   --flow-gap: 36px;
+  /* A plain line, at 3:1 on the surface it is drawn on (설정's window). */
+  --color-flow-line: color-mix(in srgb, var(--color-text-muted) 75%, var(--color-surface));
   --flow-stack: 640px;
   --flow-dim: 0.4;
   --flow-line-dim: 0.25;
@@ -551,6 +556,9 @@
   --menu-edge: var(--space-16);
   --menu-max-height: 70vh;
   --menu-inner-max-height: 45vh;
+  /* A scrolling menu's shadow at an edge with more past it, and the cover that hides it at an end. */
+  --menu-cue: var(--space-12);
+  --menu-cue-cover: var(--space-24);
   --chip-max-width: 240px;
   --field-choice-width: 220px;
   --chip-max-width-narrow: 132px;
@@ -773,6 +781,7 @@
   --color-text-soft: var(--palette-lilac-800);
   --color-accent: var(--palette-gold-700);
   --color-accent-hover: var(--palette-gold-800);
+  --color-accent-text: var(--color-accent-hover);
   --color-on-accent: var(--palette-sand-10);
   --color-warn: var(--palette-coral-700);
   --color-success: var(--palette-mint-700);
@@ -830,6 +839,7 @@
   --color-weight-negative: var(--palette-rose-700);
 
   --shadow-popover: 0 12px 32px var(--palette-shadow-soft);
+  --color-scroll-cue: var(--palette-scrim-soft);
   --shadow-card: 0 6px 18px var(--palette-shadow-soft);
   --color-glass-edge: var(--palette-ink-line);
   --color-glass-press: var(--palette-ink-wash);

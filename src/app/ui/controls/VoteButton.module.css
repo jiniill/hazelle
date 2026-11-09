@@ -21,7 +21,7 @@
 .vote[aria-pressed='true'] {
   border-color: var(--color-accent-border);
   background: var(--color-accent-bg);
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .icon {

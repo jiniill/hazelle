@@ -81,11 +81,12 @@
   cursor: pointer;
 }
 
-.sentence {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-4);
+/* Words that wrap between words, its controls inline among them: as flex items, the words after a chip would leave it
+   as one piece on a narrow row. */
+.sentence > :not(.changed) {
+  display: inline-flex;
+  margin-inline: var(--space-4);
+  vertical-align: middle;
 }
 
 .panel .label {

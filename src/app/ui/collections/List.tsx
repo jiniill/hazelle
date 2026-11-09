@@ -113,7 +113,7 @@ export function ListItem({ leading, folder = false, title, badge, code, descript
   const content = (
     <>
       <RowControl control={control}>{row}</RowControl>
-      {detail && <div className={styles.detail}>{detail}</div>}
+      {detail && <div className={leading ? `${styles.detail} ${styles.underTitle}` : styles.detail}>{detail}</div>}
       {children && <ul className={styles.nested}>{children}</ul>}
     </>
   );
