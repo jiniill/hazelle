@@ -24,7 +24,7 @@
 
 /* Under everything in the column without making the column a stacking context, which would hold the composer's drop
    overlay and the story's menus under a panel. So nothing between it and the page's stacking context may draw a
-   background. Its containment keeps the bot's boxes, fixed ones too, inside it. */
+   background. Over it only the header stays opaque: the composer's strip gives way (.backdropped). Its containment keeps the bot's boxes, fixed ones too, inside it. */
 .backdrop {
   position: absolute;
   inset: 0;
@@ -237,7 +237,10 @@
   width: var(--read-width);
 }
 
-.compact:not(:focus-within) {
+/* The composer keeps its own surface; around it the story shows, as it does past the folded one, and the bot's
+   background reaches the column's foot. */
+.compact:not(:focus-within),
+.backdropped .footer {
   background-color: transparent;
 }
 

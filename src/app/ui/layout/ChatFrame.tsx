@@ -143,7 +143,7 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
     <div className={styles.frame}>
       <main
         ref={columnRef}
-        className={`${styles.column} ${scope.className} ${staged ? styles.staged : ''}`}
+        className={`${styles.column} ${scope.className} ${staged ? styles.staged : ''} ${backdrop ? styles.backdropped : ''}`}
         style={
           {
             ...scope.style,
