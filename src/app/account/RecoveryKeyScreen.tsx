@@ -40,14 +40,21 @@ export function RecoveryKeyScreen({ username, recoveryKey, saved: savedBefore, f
     setDownloaded(true);
   }
 
+  const waiting = !downloaded ? '복구 키 파일을 내보내야 시작할 수 있어요.' : !saved ? '안전한 곳에 저장했는지 확인해 주세요.' : null;
+
   return (
     <Screen
       top={<IconButton icon={ChevronLeft} label="이전" onClick={onBack} />}
       actions={
         <>
-          <Button disabled={!downloaded || !saved} onClick={onStart}>
+          <Button disabled={waiting !== null} onClick={onStart}>
             시작하기
           </Button>
+          {waiting && (
+            <Text variant="note" align="center">
+              {waiting}
+            </Text>
+          )}
           {/* A self-host has no terms: its operator is the person setting it up (common/legal.ts OUTBOUND). */}
           {!selfHost() && (
             <>

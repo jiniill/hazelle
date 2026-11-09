@@ -10,6 +10,8 @@ type Props = {
   // installation, which takes no username.
   mode: 'signup' | 'setup' | 'reset';
   username: string;
+  // signup: the password typed before, coming back from the recovery key.
+  password?: string;
   // signup: back to the guest it started from, and the way for someone who already has an account.
   onBack?: () => void;
   onSignIn?: () => void;
@@ -17,10 +19,10 @@ type Props = {
 };
 
 // The server never sees the password, so its rules are checked here and nowhere else.
-export function PasswordScreen({ mode, username: initialUsername, onBack, onSignIn, onDone }: Props) {
+export function PasswordScreen({ mode, username: initialUsername, password: typed = '', onBack, onSignIn, onDone }: Props) {
   const [username, setUsername] = useState(initialUsername);
-  const [password, setPassword] = useState('');
-  const [again, setAgain] = useState('');
+  const [password, setPassword] = useState(typed);
+  const [again, setAgain] = useState(typed);
   const { busy, failure, run, setFailure } = useAttempt();
   const signup = mode !== 'reset';
 

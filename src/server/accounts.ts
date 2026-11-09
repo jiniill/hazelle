@@ -14,11 +14,20 @@ const ROOM = '(SELECT COUNT(*) FROM accounts) < (SELECT signup_cap FROM service)
 
 export const accounts = new Hono<AppEnv>();
 
+// One bucket for signups and the asks before them: asking tells no more than an attempt would.
+function tooManySignups(c: Context<AppEnv>) {
+  const visitor = outsideVisitor(c);
+  return visitor && !c.env.limits.visitors.signups.limit(visitor).success ? fail(c, 429, 'too-many-signups') : null;
+}
+
+// The password salt comes from the username as the client wrote it, so any other form is refused, not fixed.
+const canonical = (username: unknown): username is string => typeof username === 'string' && USERNAME.test(username) && username === username.normalize('NFC').toLowerCase();
+
 // Prepare file before atomically inserting account/vault/session and first-operator claim.
 // Client must download recovery key first; interrupted signup may leave an orphan file, never an account without one.
 accounts.post('/signup', async (c) => {
-  const visitor = outsideVisitor(c);
-  if (visitor && !c.env.limits.visitors.signups.limit(visitor).success) return fail(c, 429, 'too-many-signups');
+  const refused = tooManySignups(c);
+  if (refused) return refused;
   const body = await readObject(c);
   const accountId = typeof body?.accountId === 'string' && ID.test(body.accountId) ? body.accountId : null;
   const passwordProof = readProof(body?.passwordProof);
@@ -28,9 +37,8 @@ accounts.post('/signup', async (c) => {
   if (!accountId || typeof body?.username !== 'string' || !passwordProof || !recoveryProof || !passwordWrap || !recoveryWrap) {
     return fail(c, 400, 'bad-input');
   }
-  // The password salt comes from the username as the client wrote it, so any other form is refused, not fixed.
   const username = body.username;
-  if (!USERNAME.test(username) || username !== username.normalize('NFC').toLowerCase()) return fail(c, 400, 'bad-username');
+  if (!canonical(username)) return fail(c, 400, 'bad-username');
   const db = c.env.db;
 
   const incarnation = randomBytes(16).toString('hex');
@@ -57,6 +65,18 @@ accounts.post('/signup', async (c) => {
   if (!created!.results.length) return room!.results[0]!.open ? fail(c, 409, 'username-taken') : fail(c, 403, 'signup-closed');
   setSessionCookie(c, session.token);
   return c.json(await describe(c, { id: accountId, username, suspended: false, incarnation, state: 'active', admin: claim!.meta.changes === 1 }), 201);
+});
+
+// What signup would answer for this username now, asked before the recovery key is saved with it in. Only the insert
+// decides: the name can still be taken between.
+accounts.post('/signup/check', async (c) => {
+  const refused = tooManySignups(c);
+  if (refused) return refused;
+  const username = (await readObject(c))?.username;
+  if (!canonical(username)) return fail(c, 400, 'bad-username');
+  const { open, taken } = (await c.env.db.prepare(`SELECT ${ROOM} AS open, EXISTS (SELECT 1 FROM accounts WHERE username = ?) AS taken`).bind(username).first<{ open: number; taken: number }>())!;
+  if (!open) return fail(c, 403, 'signup-closed');
+  return taken ? fail(c, 409, 'username-taken') : c.body(null, 204);
 });
 
 // Answers like GET /session, so the client opens the vault without another request.
