@@ -117,12 +117,15 @@ export function useAnchored(open: boolean, popover: RefObject<HTMLElement | null
     element.style.setProperty('--anchor-above', `${window.innerHeight - at.top}px`);
     keepOnScreen(element);
     delete element.dataset.flipped;
-    // Inside the modal window it was opened from (a dialog, 설정), not only the screen: below the window's foot it
-    // would hang over the scrim. It goes above only where there is more room there.
+    // Inside the modal window it was opened from (a dialog, 설정), not only the screen: past the window's edge it
+    // would hang over the scrim. Its CSS sets it below (Hint) or above (MascotRemark); it turns only toward more room.
     const frame = anchor.current!.closest('[aria-modal="true"]')?.getBoundingClientRect();
     const top = Math.max(0, frame?.top ?? 0);
     const bottom = Math.min(window.innerHeight, frame?.bottom ?? Infinity);
-    if (element.getBoundingClientRect().bottom > bottom && at.top - top > bottom - at.bottom) element.dataset.flipped = '';
+    const box = element.getBoundingClientRect();
+    const above = at.top - top;
+    const below = bottom - at.bottom;
+    if (box.top >= at.bottom ? box.bottom > bottom && above > below : box.top < top && below > above) element.dataset.flipped = '';
   }, [open, popover, anchor]);
   useEffect(() => {
     if (!open) return;
