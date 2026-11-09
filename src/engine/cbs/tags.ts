@@ -35,7 +35,7 @@ export class Return {
 // Backspace/erase return edits to preceding same-level text; only evaluateNodes owns that text.
 export type Erase = (before: string) => string;
 
-// null: the tag stays as written, as it does with fewer than min arguments.
+// An argument a tag was not given is undefined. null: the tag stays as written, as it does with fewer than min.
 type Run = (args: string[], env: Env) => string | Erase | null;
 const HANDLERS = new Map<string, { min: number; run: Run }>();
 
@@ -69,9 +69,15 @@ export const isUnsupportedTag = (name: string) => UNSUPPORTED.has(normalize(name
 
 export const bool = (value: boolean) => (value ? '1' : '0');
 // The one truthiness, for #when, #if, the logic tags and block triggers. Risu's and/or/not take only `1`.
-export const truthy = (value: string) => value === '1' || value === 'true';
+export const truthy = (value: string | undefined) => value === '1' || value === 'true';
+// An argument as Risu's JS makes text of it to name or search by: one not given reads `undefined`.
+export const jsText = (arg: string | undefined) => String(arg);
 
 export const readVar = (context: CbsContext, name: string) => context.variables.get(name) ?? UNSET;
+// What an unset name reads as: its default, or 'null' (parser/chatVar.svelte.ts getChatVar).
+export const unsetValue = (defaults: readonly [string, string][], name: string) => defaults.findLast(([key]) => key === name)?.[1] ?? UNSET;
+// No value unsets the name, as Risu's write of undefined does.
+const assign = (context: CbsContext, name: string, value: string | undefined) => context.variables.set(name, value ?? unsetValue(context.defaults, name));
 export const readToggle = (context: CbsContext, key: string) => context.toggle(key) ?? UNSET;
 // risu-alpha keeps no global variables: a toggle reads as `toggle_<key>`, and every other name is unset.
 export const TOGGLE_GLOBAL = 'toggle_';
@@ -109,7 +115,7 @@ function values(text: string): unknown[] {
 }
 export const items = (text: string) => values(text).map(asText);
 // As JS's join, which Risu's is: a null item joins as nothing.
-const joined = (array: string, separator: string) => values(array).map((value) => (value === null ? '' : asText(value))).join(separator);
+const joined = (array: string, separator: string | undefined) => values(array).map((value) => (value === null ? '' : asText(value))).join(separator);
 export function dict(text: string): Record<string, unknown> {
   const value = json(text);
   return isRecord(value) ? value : {};
@@ -185,17 +191,17 @@ define('source', 1, ([name], { context: { stage, faces } }) => {
 define('assetlist', 0, (_, { context: { card, assets } }) => (card ? serialize(assetsOf(assets).filter((asset) => asset.module === undefined).map(({ name }) => name)) : ''));
 // The asset prompt it lists from is counted at import and not brought (convert.ts), so it lists nothing.
 define('chardisplayasset', 0, (_, { context: { card } }) => (card ? '[]' : null));
-define('moduleenabled', 1, ([namespace], { context }) => (context.modules.includes(namespace!) ? '1' : '0'));
-define('moduleassetlist', 1, ([namespace], { context: { modules, assets } }) => (modules.includes(namespace!) ? serialize(assets.filter((asset) => asset.module === namespace).map(({ name }) => name)) : ''));
+define('moduleenabled', 0, ([namespace], { context }) => bool(context.modules.some((on) => on === namespace)));
+define('moduleassetlist', 0, ([namespace], { context: { modules, assets } }) => (modules.some((on) => on === namespace) ? serialize(assets.filter((asset) => asset.module === namespace).map(({ name }) => name)) : ''));
 
 // Prompt strips inlay/textfile tags and pipeline sends attachments separately.
 // Display preserves tags until post-regex placement (engine/assets).
 define('inlay inlayed inlayeddata', 1, (_, { context }) => (context.stage === 'display' ? null : ''));
 define('textfile', 1, (_, { context }) => (context.stage === 'display' ? null : ''));
 
-define('getvar', 1, ([name], { context }) => readVar(context, name!));
-define('setvar', 2, ([name, value], { context, writes }) => {
-  if (writes) context.variables.set(name!, value!);
+define('getvar', 0, ([name], { context }) => readVar(context, jsText(name)));
+define('setvar', 0, ([name, value], { context, writes }) => {
+  if (writes) assign(context, jsText(name), value);
   return '';
 });
 // Counting from 0 when the value is not a number, where Risu's gives NaN.
@@ -204,34 +210,36 @@ define('addvar', 2, ([name, amount], { context, writes }) => {
   return '';
 });
 // Unset is a missing name, not the text `null`, which a bot may have set.
-define('setdefaultvar', 2, ([name, value], { context, writes }) => {
+define('setdefaultvar', 0, ([name, value], { context, writes }) => {
   // A stored `null` is an unset variable too: what a Lua nil write leaves, and what Risu fills (cbs.ts:849).
-  const current = context.variables.get(name!);
-  if (writes && (!current || current === UNSET)) context.variables.set(name!, value!);
+  const key = jsText(name);
+  const current = context.variables.get(key);
+  if (writes && (!current || current === UNSET)) assign(context, key, value);
   return '';
 });
-define('getglobalvar', 1, ([name], { context }) => readGlobal(context, name!));
-define('tempvar gettempvar', 1, ([name], { temp }) => temp.get(name!) ?? '');
-define('settempvar', 2, ([name, value], { temp }) => {
-  temp.set(name!, value!);
+define('getglobalvar', 0, ([name], { context }) => readGlobal(context, jsText(name)));
+define('tempvar gettempvar', 0, ([name], { temp }) => temp.get(jsText(name)) ?? '');
+// No value reads back as nothing, as Risu's undefined does.
+define('settempvar', 0, ([name, value = ''], { temp }) => {
+  temp.set(jsText(name), value);
   return '';
 });
-define('return', 1, ([value]) => {
-  throw new Return(value!);
+define('return', 0, ([value = UNSET]) => {
+  throw new Return(value);
 });
 define('call', 1, ([name, ...args], env) => env.call(name!, args));
 define('arg', 1, ([index], env) => env.arg(Number(index)));
 define('slot', 1, ([name], env) => env.slot(name!));
 
-define('equal', 2, ([a, b]) => bool(a === b));
-define('notequal', 2, ([a, b]) => bool(a !== b));
-define('greater', 2, ([a, b]) => bool(Number(a) > Number(b)));
-define('less', 2, ([a, b]) => bool(Number(a) < Number(b)));
-define('greaterequal', 2, ([a, b]) => bool(Number(a) >= Number(b)));
-define('lessequal', 2, ([a, b]) => bool(Number(a) <= Number(b)));
-define('and', 2, ([a, b]) => bool(truthy(a!) && truthy(b!)));
-define('or', 2, ([a, b]) => bool(truthy(a!) || truthy(b!)));
-define('not', 1, ([a]) => bool(!truthy(a!)));
+define('equal', 0, ([a, b]) => bool(a === b));
+define('notequal', 0, ([a, b]) => bool(a !== b));
+define('greater', 0, ([a, b]) => bool(Number(a) > Number(b)));
+define('less', 0, ([a, b]) => bool(Number(a) < Number(b)));
+define('greaterequal', 0, ([a, b]) => bool(Number(a) >= Number(b)));
+define('lessequal', 0, ([a, b]) => bool(Number(a) <= Number(b)));
+define('and', 0, ([a, b]) => bool(truthy(a) && truthy(b)));
+define('or', 0, ([a, b]) => bool(truthy(a) || truthy(b)));
+define('not', 0, ([a]) => bool(!truthy(a)));
 define('all', 1, (args) => bool(variadic(args).every(truthy)));
 define('any', 1, (args) => bool(variadic(args).some(truthy)));
 export const isErrorText = (text: string) => /^error:/i.test(text);
@@ -256,7 +264,7 @@ define('ceil', 1, ([n]) => String(Math.ceil(Number(n))));
 define('abs', 1, ([n]) => String(Math.abs(Number(n))));
 define('remaind', 2, ([a, b]) => String(Number(a) % Number(b)));
 define('pow', 2, ([a, b]) => String(Number(a) ** Number(b)));
-define('fixnum fixnumber', 2, ([n, digits]) => Number(n).toFixed(Number(digits)));
+define('fixnum fixnumber', 0, ([n, digits]) => Number(n).toFixed(Number(digits)));
 define('min', 1, (args) => String(Math.min(...numbers(args))));
 define('max', 1, (args) => String(Math.max(...numbers(args))));
 define('sum', 1, (args) => String(numbers(args).reduce((total, n) => total + n, 0)));
@@ -377,17 +385,18 @@ define('role', 0, (_, { context }) => {
 define('isfirstmsg isfirstmessage', 0, (_, { context }) => bool(context.greeting !== null && messageIndex(context) === 0));
 
 define('replace', 3, ([text, find, replacement]) => text!.replaceAll(find!, replacement!));
-define('split', 2, ([text, separator]) => serialize(text!.split(separator!)));
-define('join', 2, ([array, separator]) => joined(array!, separator!));
+// As JS's: no separator splits nothing, and joins with commas.
+define('split', 1, ([text, separator]) => serialize(separator === undefined ? [text!] : text!.split(separator)));
+define('join', 1, ([array, separator]) => joined(array!, separator));
 define('spread', 1, ([array]) => joined(array!, '::'));
 define('trim', 1, ([text]) => text!.trim());
 define('length', 1, ([text]) => String([...text!].length));
 define('lower', 1, ([text]) => text!.toLowerCase());
 define('upper', 1, ([text]) => text!.toUpperCase());
 define('capitalize', 1, ([text]) => text!.charAt(0).toUpperCase() + text!.slice(1));
-define('startswith', 2, ([text, prefix]) => bool(text!.startsWith(prefix!)));
-define('endswith', 2, ([text, suffix]) => bool(text!.endsWith(suffix!)));
-define('contains', 2, ([text, part]) => bool(text!.includes(part!)));
+define('startswith', 1, ([text, prefix]) => bool(text!.startsWith(jsText(prefix))));
+define('endswith', 1, ([text, suffix]) => bool(text!.endsWith(jsText(suffix))));
+define('contains', 1, ([text, part]) => bool(text!.includes(jsText(part))));
 define('reverse', 1, ([text]) => [...text!].reverse().join(''));
 define('unicodeencode', 1, ([text, index = '0']) => {
   const code = text!.codePointAt(Number(index));
@@ -423,7 +432,7 @@ define('makedict dict object o d makeobject', 0, (args) =>
   serialize(Object.fromEntries(args.flatMap((pair) => (pair.includes('=') ? [[pair.slice(0, pair.indexOf('=')), pair.slice(pair.indexOf('=') + 1)]] : [])))),
 );
 define('arraylength', 1, ([array]) => String(items(array!).length));
-define('arrayelement', 2, ([array, index]) => items(array!).at(Number(index)) ?? UNSET);
+define('arrayelement', 1, ([array, index]) => items(array!).at(Number(index)) ?? UNSET);
 // An array answers its index too, as in Risu.
 define('dictelement objectelement', 2, ([object, key]) => {
   const container = json(object!);
@@ -495,7 +504,7 @@ const ESCAPE_NAMES: Record<string, string> = {
 for (const [char, names] of Object.entries(ESCAPE_NAMES)) define(`${char} ${names}`, 0, () => escapeCbs(char));
 define('comment', 1, ([text], { context }) => (context.stage === 'display' ? text! : ''));
 // The lorebook track scans the entry's raw text, so the key still chains entries.
-define('hiddenkey', 1, () => '');
+define('hiddenkey', 0, () => '');
 // The text up to its last character among stops, scanning back from the end only, since the text may be long.
 function upToLast(text: string, stops: string): string {
   let at = text.length;

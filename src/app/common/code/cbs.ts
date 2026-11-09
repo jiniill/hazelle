@@ -1,5 +1,5 @@
-import { blockHead, blockNames, conditionSteps, isBlockName, isProse, isRawBlock, separatorOf, whenArgs } from '../../../engine/cbs/evaluate';
-import { parse, type Block, type Legacy, type Node, type Tag } from '../../../engine/cbs/parse';
+import { conditionSteps, isOperator, isProse, separatorOf, whenArgs } from '../../../engine/cbs/evaluate';
+import { BLOCK_NAMES, blockHead, isBlockName, isRawBlock, parse, type Block, type Legacy, type Node, type Tag } from '../../../engine/cbs/parse';
 import { handlerFor, isUnsupportedTag, normalize } from '../../../engine/cbs/tags';
 import { nearest } from '../../../engine/edit-distance';
 import type { CodeCompletion, CodeDoc, CodeItem, CodeLanguage, CodeProblem, CodeSpan } from '../../ui';
@@ -26,7 +26,7 @@ const known = (name: string) => handlerFor(name) !== undefined || BY_NAME.has(no
 // The names a typo is matched against, as written and as compared.
 const pool = (names: string[]) => names.map((name) => ({ name, key: normalize(name) }));
 const TAG_POOL = pool(ENTRIES.flatMap(({ command, head }) => (command.names.length ? command.names : head.startsWith('#') ? [] : [head])));
-const BLOCK_POOL = pool(blockNames());
+const BLOCK_POOL = pool([...BLOCK_NAMES]);
 const WRITERS = new Set(['setvar', 'addvar', 'setdefaultvar']);
 const VARIABLE_TAGS = new Set(['getvar', ...WRITERS]);
 const VARIABLE_SLOT = new RegExp(`\\{\\{\\s*(?:${[...VARIABLE_TAGS].join('|')})::([^:{}]*)$`, 'i');
@@ -102,7 +102,11 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
     if (!found?.name) return;
     const { name } = found;
     const word = normalize(name);
-    if (name.startsWith('#')) problem(node.at, node.end, 'error', `블록을 닫는 {{/${name.slice(1)}}} 태그가 없어요.`);
+    if (name.startsWith('#')) {
+      // A head that names no block opens none, so it is a lone tag.
+      if (isBlockName(normalize(name.slice(1)))) problem(node.at, node.end, 'error', `블록을 닫는 {{/${name.slice(1)}}} 태그가 없어요.`);
+      else if (!isProse(word)) unknown(name, found, BLOCK_POOL);
+    }
     else if (name.startsWith('/')) problem(node.at, node.end, 'error', '열린 블록 없이 닫는 태그예요.');
     else if (name === ':else') {
       if (block !== 'when') problem(node.at, node.end, 'warning', '{{:else}}는 #when 블록 안에서만 써요.');
@@ -131,7 +135,8 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
       const whole = plain(node.head);
       if (name === 'when' && whole !== null) {
         const { condition } = whenArgs(blockHead(whole)!.rest);
-        if (condition.length === 0 || !conditionSteps(condition).valid) problem(node.head.at, node.head.end, 'warning', '조건식이 올바르지 않아 항상 거짓({{:else}}) 쪽 텍스트가 들어가요.');
+        if (condition.length === 0) problem(node.head.at, node.head.end, 'warning', '조건식이 없어서 항상 거짓({{:else}}) 쪽 텍스트가 들어가요.');
+        else if (conditionSteps(condition).some(({ op }) => !isOperator(op))) problem(node.head.at, node.head.end, 'warning', '알 수 없는 연산자는 빼고, 그 오른쪽 값이 참인지만 봐요.');
       }
     }
     // A raw block's body is text, whatever it holds.
@@ -207,7 +212,7 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
 // The innermost block still open where a `{{/` is typed, as written: parse reads an unclosed block's head as a lone
 // tag at the top, in order.
 function openBlock(before: string): string | null {
-  const heads = parse(before).filter((node): node is Tag => typeof node !== 'string' && node.kind === 'tag' && typeof node.parts[0] === 'string' && node.parts[0].trimStart().startsWith('#'));
+  const heads = parse(before).filter((node): node is Tag => typeof node !== 'string' && node.kind === 'tag' && typeof node.parts[0] === 'string' && node.parts[0].trimStart().startsWith('#') && isBlockName(blockHead(node.parts[0])!.name));
   const head = heads.at(-1)?.parts[0] as string | undefined;
   return head === undefined ? null : /^#([^\s:]*)/.exec(head.trimStart())![1]! || null;
 }

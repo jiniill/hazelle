@@ -2,7 +2,7 @@ import type { Lore, PackOwner } from '../../model/library';
 import { UNSET, type Host } from '../script-api';
 import { unescapeCbs } from '../cbs/escape';
 import { evaluate, Runaway } from '../cbs/evaluate';
-import { TOGGLE_GLOBAL } from '../cbs/tags';
+import { TOGGLE_GLOBAL, unsetValue } from '../cbs/tags';
 import { contexts, defaultVariables, type ChatScope } from '../render';
 
 // A message as a script reads it: role and data are Risu's names, which bots index by.
@@ -54,10 +54,10 @@ export const text = (value: unknown) => (value === undefined || value === null ?
 
 export const read = (run: Run, name: string) => run.written.get(name) ?? run.variables.get(name) ?? UNSET;
 
-// A nil write unsets the name, and Risu reads an unset name as its default or 'null' (parser/chatVar.svelte.ts
-// getChatVar). That reading is what is written, so the replay applies an unset as any other write.
+// A nil write unsets the name. What an unset name reads as is what is written, so the replay applies an unset as any
+// other write.
 export function write(run: Run, name: string, value: unknown): boolean {
-  const next = value === undefined || value === null ? (defaultVariables(run.snapshot.scope).findLast(([key]) => key === name)?.[1] ?? UNSET) : text(value);
+  const next = value === undefined || value === null ? unsetValue(defaultVariables(run.snapshot.scope), name) : text(value);
   if ((run.written.get(name) ?? run.variables.get(name)) === next) return false;
   run.written.set(name, next);
   return true;

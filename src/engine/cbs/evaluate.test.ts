@@ -25,6 +25,7 @@ const context = (over: Partial<CbsContext> = {}): CbsContext => {
     source: { seed: 'request-1' },
     greeting: { index: 0 },
     variables: new Map(),
+    defaults: [],
     toggle: () => null,
     model: { id: 'model', maxContext: null, prefill: null },
     axModel: 'aux',
@@ -69,6 +70,7 @@ describe('evaluate', () => {
     expect(problems).toEqual([
       { kind: 'unknown-tag', text: '{{nope::jin}}' },
       { kind: 'unknown-tag', text: '{{#gone x}}' },
+      { kind: 'unknown-tag', text: '{{/gone}}' },
       { kind: 'error-text', text: 'Error: bad is not a valid metadata key.' },
     ]);
   });
@@ -95,6 +97,33 @@ describe('evaluate', () => {
     const holds = (condition: string) => run(`{{#when::${condition}}}y{{:else}}n{{/when}}`, over);
     expect(['not::1::and::0', 'var::met', 'hp::vis::3', 'toggle::nsfw', 'mode::tis::2', '3::>::2', 'var::none', 'a::b'].map(holds)).toEqual(['y', 'y', 'y', 'y', 'y', 'y', 'n', 'n']);
     expect(run('{{#when 1}}y{{/when}}')).toBe('y');
+  });
+
+  it('tests the value right of a #when operator it does not know, and reads a missing left side as undefined, as Risu does', () => {
+    const holds = (condition: string) => run(`{{#when::${condition}}}y{{:else}}n{{/when}}`);
+    expect(['foo::1', '1::==::1', 'isnot::a', 'or::1', 'foo::0', 'and::1', 'is::a', 'vis::null'].map(holds).join('')).toBe('yyyynnny');
+  });
+
+  it('reads the first word of a space-form head, as Risu splits it at single spaces', () => {
+    expect(run('{{#if 1 extra}}a{{/if}}{{#when 1 extra}}b{{/when}}{{#if  1}}c{{/if}}{{#when  1}}d{{/when}}')).toBe('ab');
+    expect(run('{{#if {{getvar::x}}}}a{{/if}}', { variables: new Map([['x', '1 apple']]) })).toBe('a');
+  });
+
+  it('reads a # head that names no block as a lone tag, so a close after it closes the block around it, as Risu does', () => {
+    expect(run('{{#when::1}}{{#foo}}x{{/when}}|')).toBe('{{#foo}}x|');
+    // Where the body is kept as source, every # head nests, so its close pairs.
+    expect(run('{{#pure}}{{#foo}}x{{/foo}}{{/pure}}|{{#each ["a"] as x}}{{#foo}}{{slot::x}}{{/foo}}{{/each}}')).toBe('{{#foo}}x{{/foo}}|{{#foo}}a{{/foo}}');
+  });
+
+  it('runs a tag given too few arguments as Risu does, with the missing ones undefined, and keeps it where Risu does', () => {
+    const variables = new Map([['x', 'set'], ['y', 'set']]);
+    expect(run('{{setvar::x}}{{setvar::y}}{{getvar::x}}|{{getvar::y}}', { ...inMessage, variables, defaults: [['y', 'default']] })).toBe('null|default');
+    expect(run('{{settempvar::t::v}}{{settempvar::t}}[{{tempvar::t}}][{{tempvar}}]')).toBe('[][]');
+    expect(run('{{return}}tail')).toBe('null');
+    expect(run('{{equal::a}} {{equal}} {{and::1}} {{not}} [{{hiddenkey}}] {{join::["a","b"]}} {{split::abc}} {{arrayelement::["a","b"]}} {{fixnum::1.5}} {{startswith::a}} {{contains::a}} {{moduleenabled}} {{getvar}}')).toBe(
+      '0 1 0 1 [] a,b ["abc"] a 2 0 0 0 null',
+    );
+    expect(run('{{split}} {{join}} {{arrayelement}} {{startswith}} {{contains}}')).toBe('{{split}} {{join}} {{arrayelement}} {{startswith}} {{contains}}');
   });
 
   it('trims the blank lines around a #when branch unless keep, keeping the spaces of a single line', () => {
@@ -137,6 +166,10 @@ describe('evaluate', () => {
     expect(run('[{{#each {{getvar::none}} as x}}{{slot::x}}{{/each}}]')).toBe('[]');
     const rolls = run('{{#each [1,2,3] as n}}{{randint::1::1000000}},{{/each}}').split(',').slice(0, 3);
     expect(new Set(rolls).size).toBe(3);
+  });
+
+  it('gives a nested #each of the same name the outer item, as Risu fills the outer first', () => {
+    expect(run('{{#each ["a"] as x}}{{#each ["b"] as x}}{{slot::x}}{{/each}}{{/each}}')).toBe('a');
   });
 
   it('reads #each ::keep after a space too, as Risu does', () => {

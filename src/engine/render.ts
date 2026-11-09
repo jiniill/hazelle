@@ -95,6 +95,7 @@ export function contexts(scope: Omit<ChatScope, 'toggles' | 'cast'> & { toggles:
     problems: null,
     modules,
     faces,
+    defaults: defaultVariables(scope),
   };
   return (source, variables) => ({ ...fixed, source, variables, pickSeed: `${pick}:${'message' in source ? source.message : messages.length}` });
 }
