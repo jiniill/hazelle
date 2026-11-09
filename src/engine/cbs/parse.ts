@@ -1,3 +1,5 @@
+import { normalize } from './tags';
+
 // The whole tree is read before anything is evaluated, so a #when evaluates only the branch it takes and a pure
 // block still has its source.
 export type Node = string | Tag | Block | Legacy;
@@ -8,7 +10,27 @@ export type Block = { kind: 'block'; at: number; end: number; head: Tag; body: N
 // Risu's deprecated `{#if condition` newline body `#}`, still in imported bots. at: where its `{#` stands, end: just past its `#}`.
 export type Legacy = { kind: 'legacy'; at: number; end: number; parts: Node[] };
 
-type Frame = { nodes: Node[] } & ({ kind: 'root' } | { kind: 'tag' | 'legacy'; at: number } | { kind: 'block'; head: Tag; from: number });
+// source: the block stands in a body kept as source (a raw one, or #each's or #func's, which run later), where Risu
+// reads every # head as opening a block (its pure mode), so the closes pair as written.
+type Frame = { nodes: Node[] } & ({ kind: 'root' } | { kind: 'tag' | 'legacy'; at: number } | { kind: 'block'; head: Tag; from: number; source: boolean });
+
+const RAW = ['escape', 'pure', 'puredisplay'] as const;
+const SOURCE = [...RAW, 'each', 'func'] as const;
+export const BLOCK_NAMES = [...SOURCE, 'when', 'if', 'ifpure', 'code'] as const;
+export type BlockName = (typeof BLOCK_NAMES)[number];
+const among =
+  <T extends string>(names: readonly T[]) =>
+  (name: string): name is T =>
+    (names as readonly string[]).includes(name);
+// The blocks whose body is taken as its source and never evaluated, so a tag written in one is text.
+export const isRawBlock = among(RAW);
+export const isBlockName = among(BLOCK_NAMES);
+const isSource = among(SOURCE);
+
+export function blockHead(content: string): { name: string; rest: string } | null {
+  const match = /^\s*#([^\s:]*)([\s\S]*)$/.exec(content);
+  return match && { name: normalize(match[1]!), rest: match[2]! };
+}
 
 const TOKEN = /\{\{|\{#|\}\}|#\}/g;
 
@@ -54,8 +76,11 @@ export function parse(text: string): Node[] {
     const first = tag.parts[0];
     const lead = typeof first === 'string' ? first.trimStart() : '';
     const parent = top();
-    if (lead.startsWith('#')) {
-      stack.push({ kind: 'block', head: tag, from: at, nodes: [] });
+    const name = lead.startsWith('#') ? blockHead(lead)!.name : null;
+    const source = name !== null && stack.some((open) => open.kind === 'block' && open.source);
+    // A head that names no block is a lone tag, as Risu opens none for it, so a close after it closes the block around it.
+    if (name !== null && (source || isBlockName(name))) {
+      stack.push({ kind: 'block', head: tag, from: at, nodes: [], source: source || isSource(name) });
     } else if (lead.startsWith('/') && !lead.startsWith('//') && parent.kind === 'block') {
       stack.pop();
       append(top().nodes, { kind: 'block', at: parent.head.at, end: tag.end, head: parent.head, body: parent.nodes, raw: text.slice(parent.from, tag.at), close: tag });

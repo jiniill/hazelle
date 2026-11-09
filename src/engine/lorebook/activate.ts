@@ -481,13 +481,13 @@ function placement({ where, role, operation }: Rules): Placement {
   }
 }
 
-// Preserve Risu ties within one place (§e steps 7/14), from the final order: before the description, entries of one
-// insertion order in the order they fired; at a depth reverse @@depth, then keep @@reverse_depth order; at the end
+// Preserve Risu's order within one place (§e steps 7/14), from the final order: before the description its reverse,
+// as Risu puts each in front in turn; at a depth reverse @@depth, then keep @@reverse_depth order; at the end
 // keep the order with assistant entries last. The leading number keeps places apart; elsewhere return empty.
-function tieRank({ value, rules: { where, role } }: Book, index: number): number[] {
+function tieRank({ rules: { where, role } }: Book, index: number): number[] {
   switch (where.kind) {
     case 'description':
-      return where.side === 'before' ? [0, value.insertionOrder, -index] : [];
+      return where.side === 'before' ? [0, -index] : [];
     case 'depth':
       return where.reverse ? [1, where.depth, 1, index] : [1, where.depth, 0, -index];
     case 'end':

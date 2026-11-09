@@ -5,8 +5,8 @@ import { seeded } from '../random';
 import type { Stage } from '../render';
 import { escapeCbs } from './escape';
 import type { PreviousMessages } from './history';
-import { parse, type Block, type Legacy, type Node, type Tag } from './parse';
-import { bool, charName, handlerFor, isErrorText, isUnsupportedTag, items, normalize, readToggle, readVar, Return, truthy, userName, type Env, type Erase } from './tags';
+import { blockHead, isBlockName, parse, type Block, type BlockName, type Legacy, type Node, type Tag } from './parse';
+import { bool, charName, handlerFor, isErrorText, isUnsupportedTag, items, jsText, readToggle, readVar, Return, truthy, userName, type Env, type Erase } from './tags';
 
 // unknown-tag: a tag or block no handler takes, as written back, unless its name is prose. error-text: Risu's error text a tag gave ({{iserror}}).
 export type CbsProblem = { kind: 'unknown-tag' | 'error-text'; text: string };
@@ -28,6 +28,8 @@ export type CbsContext = {
   greeting: { index: number | null } | null;
   // The chat's variables as of this text, written in place, replayed over the card's defaults in message order.
   variables: Map<string, string>;
+  // The prompt's and the card's defaults (render defaultVariables), which a name reads as once unset.
+  defaults: readonly [string, string][];
   // null when nothing declares the toggle.
   toggle: (key: string) => string | null;
   // prefill: whether the model takes an assistant prefill, as its connection says; never read from the id.
@@ -201,11 +203,6 @@ function splitArgs(content: string): string[] {
   return sep === null ? [content] : content.split(sep);
 }
 
-export function blockHead(content: string): { name: string; rest: string } | null {
-  const match = /^\s*#([^\s:]*)([\s\S]*)$/.exec(content);
-  return match && { name: normalize(match[1]!), rest: match[2]! };
-}
-
 const GETVAR = handlerFor('getvar');
 
 // Evaluate inner tags before splitting the outer name/arguments so {{spread}} can supply arguments.
@@ -228,7 +225,7 @@ function evaluateTag(tag: Tag, frame: Frame, step: CbsStep | null): string | Era
   if (args.length < handler.min) return kept('args');
   try {
     const out = handler.run(args, env(frame, frame.prefix + tag.at));
-    if (step && handler === GETVAR) step.variable = args[0]!;
+    if (step && handler === GETVAR) step.variable = jsText(args[0]);
     if (typeof out === 'string' && isErrorText(out)) problems?.push({ kind: 'error-text', text: out });
     return out ?? kept('args');
   } catch (error) {
@@ -259,43 +256,35 @@ function env(frame: Frame, place: string): Env {
   };
 }
 
-// The blocks whose body is taken as its source and never evaluated, so a tag written in one is text.
-const RAW = new Map<string, (raw: string, rest: string) => string>([
-  ['escape', (raw, rest) => escapeCbs(rest === '::keep' ? raw : raw.trim(), '{}()')],
-  ['pure', (raw) => raw.trim()],
+// null: the block stays as written, as one no handler takes does, without counting as unknown. A raw block reads its
+// source and never evaluates its body.
+const BLOCKS: Record<BlockName, (block: Block, rest: string, frame: Frame, step: CbsStep | null) => string | null> = {
+  escape: ({ raw }, rest) => escapeCbs(rest === '::keep' ? raw : raw.trim(), '{}()'),
+  pure: ({ raw }) => raw.trim(),
   // Risu backslash-escapes the braces for its markdown; escaped braces survive the later passes and show as braces.
-  ['puredisplay', (raw) => escapeCbs(raw.trim(), '{}')],
-]);
-export const isRawBlock = (name: string) => RAW.has(name);
+  puredisplay: ({ raw }) => escapeCbs(raw.trim(), '{}'),
+  when,
+  if: (block, rest, frame, step) => (held(step, truthy(firstWord(rest))) ? trimLines(evaluateNodes(block.body, frame)) : ''),
+  ifpure: (block, rest, frame, step) => (held(step, truthy(firstWord(rest))) ? evaluateNodes(block.body, frame) : ''),
+  each,
+  code: (block, _rest, frame) => unbackslash(evaluateNodes(block.body, frame).trim().replace(/[\n\r\t]/g, '')),
+  func: (block, rest, frame) => {
+    // Names after the function's are not read: a body reads its arguments as {{arg::1}} on.
+    const name = rest.trim().split(/\s+/)[0];
+    if (!name) return null;
+    frame.run.functions.set(name, { body: trimEnds(block.body), traced: frame.traced });
+    return '';
+  },
+};
 
-// null: the block stays as written, as one no handler takes does, without counting as unknown.
-const BLOCKS = new Map<string, (block: Block, rest: string, frame: Frame, step: CbsStep | null) => string | null>([
-  ['when', when],
-  ['if', (block, rest, frame, step) => (held(step, truthy(rest.trim())) ? trimLines(evaluateNodes(block.body, frame)) : '')],
-  ['ifpure', (block, rest, frame, step) => (held(step, truthy(rest.trim())) ? evaluateNodes(block.body, frame) : '')],
-  ['each', each],
-  ['code', (block, _rest, frame) => unbackslash(evaluateNodes(block.body, frame).trim().replace(/[\n\r\t]/g, ''))],
-  [
-    'func',
-    (block, rest, frame) => {
-      // Names after the function's are not read: a body reads its arguments as {{arg::1}} on.
-      const name = rest.trim().split(/\s+/)[0];
-      if (!name) return null;
-      frame.run.functions.set(name, { body: trimEnds(block.body), traced: frame.traced });
-      return '';
-    },
-  ],
-]);
-export const isBlockName = (name: string) => RAW.has(name) || BLOCKS.has(name);
-export const blockNames = () => [...RAW.keys(), ...BLOCKS.keys()];
+// The space form's condition: the text up to the next space, as Risu splits the head at single spaces.
+const firstWord = (rest: string) => rest.split(' ', 2)[1] ?? '';
 
 function evaluateBlock(block: Block, outer: Frame, step: CbsStep | null): string {
   const frame = inside(outer);
   const head = evaluateNodes(block.head.parts, frame);
   const { name, rest } = blockHead(head)!;
-  const raw = RAW.get(name);
-  if (raw) return raw(block.raw, rest);
-  const run = BLOCKS.get(name);
+  const run = isBlockName(name) ? BLOCKS[name] : undefined;
   if (!run && !isProse(name)) {
     frame.run.context.problems?.push({ kind: 'unknown-tag', text: asWritten(head) });
     if (step) step.kept = 'unknown';
@@ -344,7 +333,8 @@ const UNARY = new Map<string, (value: string, context: CbsContext) => boolean>([
   ['var', (name, context) => truthy(readVar(context, name))],
   ['toggle', (key, context) => truthy(readToggle(context, key))],
 ]);
-const BINARY = new Map<string, (left: string, right: string, context: CbsContext) => boolean>([
+// left: undefined for one with nothing to its left, as Risu's stack gives it.
+const BINARY = new Map<string, (left: string | undefined, right: string, context: CbsContext) => boolean>([
   ['and', (a, b) => truthy(a) && truthy(b)],
   ['or', (a, b) => truthy(a) || truthy(b)],
   ['is', (a, b) => a === b],
@@ -353,38 +343,38 @@ const BINARY = new Map<string, (left: string, right: string, context: CbsContext
   ['<', (a, b) => Number(a) < Number(b)],
   ['>=', (a, b) => Number(a) >= Number(b)],
   ['<=', (a, b) => Number(a) <= Number(b)],
-  ['vis', (name, value, context) => readVar(context, name) === value],
-  ['visnot', (name, value, context) => readVar(context, name) !== value],
-  ['tis', (key, value, context) => readToggle(context, key) === value],
-  ['tisnot', (key, value, context) => readToggle(context, key) !== value],
+  ['vis', (name, value, context) => readVar(context, jsText(name)) === value],
+  ['visnot', (name, value, context) => readVar(context, jsText(name)) !== value],
+  ['tis', (key, value, context) => readToggle(context, jsText(key)) === value],
+  ['tisnot', (key, value, context) => readToggle(context, jsText(key)) !== value],
 ]);
+export const isOperator = (op: string) => UNARY.has(op) || BINARY.has(op);
 
 export function whenArgs(rest: string): { modes: string[]; condition: string[] } {
-  const trimmed = rest.trim();
-  const args = rest.startsWith(':') ? splitArgs(rest).slice(1) : trimmed ? [trimmed] : [];
+  const args = rest.startsWith(':') ? splitArgs(rest).slice(1) : rest.startsWith(' ') ? [firstWord(rest)] : [];
   let first = 0;
   while (args[first] === 'keep' || args[first] === 'legacy') first += 1;
   return { modes: args.slice(0, first), condition: args.slice(first) };
 }
 
 // Apply operators right-to-left over everything to their right: not::a::and::b means not (a and b).
-// Steps retain left-operand indices; the first consumes the final argument. A misplaced value makes it false.
-export function conditionSteps(condition: string[]): { steps: { op: string; left?: number }[]; valid: boolean } {
+// Steps retain left-operand indices; the first consumes the final argument. An operator it does not know tests the
+// value to its right and is dropped, as Risu's default case does.
+export function conditionSteps(condition: string[]): { op: string; left?: number }[] {
   const steps: { op: string; left?: number }[] = [];
   for (let i = condition.length - 2; i >= 0; i--) {
     const op = condition[i]!;
-    if (UNARY.has(op)) steps.push({ op });
-    else if (BINARY.has(op) && i > 0) steps.push({ op, left: --i });
-    else return { steps, valid: false };
+    steps.push(BINARY.has(op) && i > 0 ? { op, left: --i } : { op });
   }
-  return { steps, valid: true };
+  return steps;
 }
 
 function fold(condition: string[], context: CbsContext): boolean {
-  const { steps, valid } = conditionSteps(condition);
-  if (!valid) return false;
   let value = condition.at(-1)!;
-  for (const { op, left } of steps) value = bool(left === undefined ? UNARY.get(op)!(value, context) : BINARY.get(op)!(condition[left]!, value, context));
+  for (const { op, left } of conditionSteps(condition)) {
+    const binary = BINARY.get(op);
+    value = bool(binary ? binary(left === undefined ? undefined : condition[left], value, context) : (UNARY.get(op) ?? truthy)(value, context));
+  }
   return truthy(value);
 }
 
@@ -400,7 +390,8 @@ function each(block: Block, rest: string, frame: Frame): string | null {
   const body = keep ? block.body : trimEnds(unindent(block.body));
   const place = frame.prefix + block.at;
   return items(spec.slice(0, at).trim())
-    .map((item, i) => evaluateNodes(body, { ...frame, prefix: `${place}.${i}>`, slots: new Map([...frame.slots, [name, item]]) }))
+    // An outer #each's name wins, as Risu fills the outer's slots into the inner's source first.
+    .map((item, i) => evaluateNodes(body, { ...frame, prefix: `${place}.${i}>`, slots: new Map([[name, item], ...frame.slots]) }))
     .join('');
 }
 

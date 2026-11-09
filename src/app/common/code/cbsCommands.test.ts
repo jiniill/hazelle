@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blockNames } from '../../../engine/cbs/evaluate';
+import { BLOCK_NAMES } from '../../../engine/cbs/parse';
 import { normalize, tagNames } from '../../../engine/cbs/tags';
 import { COMMANDS } from './cbsCommands';
 
@@ -12,6 +12,6 @@ describe('COMMANDS', () => {
 
   it('describes only blocks the engine evaluates', () => {
     const heads = COMMANDS.flatMap((group) => group.commands).flatMap(({ form }) => /^\{\{#([^\s:}]+)/.exec(form)?.[1] ?? []);
-    expect(blockNames()).toEqual(expect.arrayContaining(heads));
+    expect(BLOCK_NAMES).toEqual(expect.arrayContaining(heads));
   });
 });

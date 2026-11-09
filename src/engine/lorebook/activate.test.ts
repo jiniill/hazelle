@@ -254,6 +254,12 @@ describe('activate', () => {
     expect(order(run(entries, []))).toEqual(['d', 'c', 'a', 'b']);
   });
 
+  it('lists entries before the description, CCv3 before_char ones too, highest insertion order first, and after it lowest first, as Risu does', () => {
+    const at = (id: string, insertionOrder: number, side: string) => lore(id, { constant: true, insertionOrder, content: `${side}\n${id}` });
+    const entries = [at('a', 1, '@@position before_desc'), at('b', 5, '@@position before_desc'), at('c', 10, '@@position before_desc'), at('d', 5, '@@position before_desc'), at('e', 1, '@@position after_desc'), at('f', 10, '@@position after_desc'), lore('g', { constant: true, insertionOrder: 7, position: 'before_char' })];
+    expect(order(run(entries, []))).toEqual(['e', 'f', 'c', 'g', 'b', 'd', 'a']);
+  });
+
   it('places bodies in the lorebook slot, around the description, at named positions and injection targets, trying @@@ fallbacks', () => {
     const entries = [
       lore('slot', { constant: true, content: '@@role assistant\nslot' }),

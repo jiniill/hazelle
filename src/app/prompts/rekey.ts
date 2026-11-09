@@ -1,5 +1,5 @@
-import { blockHead, conditionSteps, isRawBlock, separatorOf, whenArgs } from '../../engine/cbs/evaluate';
-import { parse, type Node, type Tag } from '../../engine/cbs/parse';
+import { conditionSteps, separatorOf, whenArgs } from '../../engine/cbs/evaluate';
+import { blockHead, isRawBlock, parse, type Node, type Tag } from '../../engine/cbs/parse';
 import { normalize, TOGGLE_GLOBAL } from '../../engine/cbs/tags';
 
 type ToggleUse = { key: string; at: number };
@@ -68,8 +68,8 @@ function when({ content, start }: Written, rest: string, uses: ToggleUse[]) {
   const at = (index: number) => [...modes, ...condition.slice(0, index)].reduce((place, arg) => place + arg.length + sep.length, first);
   const use = (index: number) => note(condition[index]!, at(index), uses);
   // Only the first step's operand is the key as written; a later one is an operator's result.
-  conditionSteps(condition).steps.forEach(({ op, left }, step) => {
+  conditionSteps(condition).forEach(({ op, left }, step) => {
     if (op === 'toggle' && step === 0) use(condition.length - 1);
-    if (op === 'tis' || op === 'tisnot') use(left!);
+    if ((op === 'tis' || op === 'tisnot') && left !== undefined) use(left);
   });
 }

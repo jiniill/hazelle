@@ -30,9 +30,11 @@ describe('cbsLanguage', () => {
       ['{{/each}}', '열린 블록 없이 닫는 태그예요.', undefined],
       ['{{', '짝이 되는 }}가 없어서 글자 그대로 들어가요.', undefined],
     ]);
-    expect(problems('{{#when::a::b}}x{{/when}} {{#if 1}}')).toEqual([
-      ['{{#when::a::b}}', '조건식이 올바르지 않아 항상 거짓({{:else}}) 쪽 텍스트가 들어가요.', undefined],
+    expect(problems('{{#when::a::b}}x{{/when}} {{#when}}x{{/when}} {{#if 1}} {{#whne::1}}')).toEqual([
+      ['{{#when::a::b}}', '알 수 없는 연산자는 빼고, 그 오른쪽 값이 참인지만 봐요.', undefined],
+      ['{{#when}}', '조건식이 없어서 항상 거짓({{:else}}) 쪽 텍스트가 들어가요.', undefined],
       ['{{#if 1}}', '블록을 닫는 {{/if}} 태그가 없어요.', undefined],
+      ['whne', 'when의 오타 같아요.', 'when'],
     ]);
     expect(problems('{{original}} {{position::a}} {{ }} {{-}} {{getvar::{{user}}}} {{? 1+1}}', cbsLanguage({ placeholder: 'original' }))).toEqual([]);
     expect(problems('{{original}}')).toEqual([['original', '알 수 없는 명령어라 입력한 그대로 남아요.', undefined]]);
