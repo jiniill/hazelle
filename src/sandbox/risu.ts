@@ -433,6 +433,16 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       if (name.includes('/') || name.includes('\\')) throw new Error('readImage path cannot contain \'/\' or \'\\\', except the assets/ prefix');
       return name.endsWith('.png') ? api.assets.read(name.slice(0, -'.png'.length)) : null;
     },
+    // Read after the chat's last message, its setvar setting nothing as Risu's runVar left off does: an option that asks
+    // for another reading fails it.
+    parseRisuChat: async (text: string, { messageIndex = -1, runVar, processRegex, role, cbsConditions }: { messageIndex?: number; runVar?: boolean; processRegex?: boolean; role?: string; cbsConditions?: object } = {}) => {
+      const unread = Object.entries({ messageIndex: messageIndex !== -1, runVar: runVar === true, processRegex: processRegex === true, role: role !== undefined, cbsConditions: cbsConditions !== undefined }).flatMap(([key, asked]) => (asked ? [key] : []));
+      for (const key of unread) tell(`parseRisuChat:${key}`);
+      if (unread.length) throw new Error(`Risu API 'parseRisuChat' cannot read with ${unread.join(', ')} in Hazelle`);
+      const chat = await frame.chat();
+      if (!chat) throw new Error('No active chat found');
+      return chat.cbs(String(text ?? ''));
+    },
     // Risu's inlay asset; type is the MIME type's own word (image, video, audio), as Risu's are.
     readInlay: async (id: string) => {
       const chat = await frame.chat();

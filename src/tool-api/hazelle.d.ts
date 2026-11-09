@@ -98,6 +98,9 @@ declare namespace Hazelle {
     // Throws for non-PNG/JPEG/GIF/WebP/AVIF bytes, a missing version or a refused file.
     picture(at: At, bytes: Uint8Array, options?: { caption?: string }): Promise<void>;
     tokens(text: string): Promise<number>;
+    // text with its CBS read after the chat's messages, with the variables they leave, as a prompt's text is; its setvar
+    // sets nothing.
+    cbs(text: string): Promise<string>;
     lore(reserve?: number): Promise<{ role: 'system' | 'user' | 'assistant'; text: string }[]>;
     lorebook(): Promise<LoreEntry[]>;           // every entry the chat's lorebooks hold, as written, in the prompt's order
     // A picture the chat holds, by the name a message's raw text gives it in {{inlay::name}}: its MIME type and bytes.

@@ -790,6 +790,20 @@ it('reads the chat\'s lorebook by owner, how the chat is set up with its modules
   } finally { close(); host.close(); }
 }));
 
+it('reads a text\'s CBS after the chat with the variables it leaves, setting none', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    chat.variables.set('hero', 'Jin');
+    await vi.waitFor(() => expect(session.store.children('entry', f.chat).some(({ value }) => value.type === 'vars')).toBe(true));
+    expect(await Promise.all([chat.cbs('{{getvar::hero}} {{setvar::hero::Rook}}{{getvar::hero}}'), chat.cbs('{{lastmessage}}')])).toEqual(['Jin Jin', 'hello']);
+  } finally { close(); host.close(); }
+}));
+
 it('reads a picture the chat holds by its inlay name, and no signature or missing one', () => withTools(async (session, connect) => {
   const f = await fixture(session);
   const bytes = new Uint8Array([137, 80, 78, 71]);

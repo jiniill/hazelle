@@ -236,6 +236,17 @@ describe('the Risu adapter', () => {
     await expect(Risuai.readImage!('..\\abc.png' as never)).rejects.toThrow('readImage path');
   });
 
+  it('reads a text\'s CBS after the chat, and fails an option that asks for another reading', async () => {
+    const fake = fakeApi();
+    const cbs = vi.fn(async (text: string) => text.replace('{{user}}', 'Rook'));
+    Object.assign(fake.chat, { cbs });
+    const { Risuai } = install(fake);
+    expect(await Risuai.parseRisuChat!('Hello, {{user}}' as never, { messageIndex: -1, rmVar: true } as never)).toBe('Hello, Rook');
+    await expect(Risuai.parseRisuChat!('x' as never, { messageIndex: 0, processRegex: true } as never)).rejects.toThrow("Risu API 'parseRisuChat' cannot read with messageIndex, processRegex in Hazelle");
+    expect(fake.missing).toEqual(['parseRisuChat:messageIndex', 'parseRisuChat:processRegex']);
+    expect(cbs).toHaveBeenCalledTimes(1);
+  });
+
   it('reads an inlay the chat holds as Risu\'s data URL, and none it does not as null', async () => {
     const fake = fakeApi();
     Object.assign(fake.chat, { inlay: async (name: string) => (name === 'pic-1' ? { type: 'image/webp', bytes: new Uint8Array([82, 73, 70, 70]) } : null) });

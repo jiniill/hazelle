@@ -15,6 +15,8 @@ import type { ChatHeader, Down, Message, ToolOutcome } from '../../tool-api/prot
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
 import { limitsOf, packsOf } from '../chat-context';
 import type { ToolState } from '../evaluation-core';
+import type { Lane } from '../evaluation';
+import type { RanAway } from '../../engine/pipeline';
 import { changedTail } from '../history-delta';
 import { attachIllustration } from '../illustrate';
 import type { ScriptOutcome } from '../scripts/lua/event';
@@ -313,6 +315,7 @@ export class ToolApi {
         }
         if (method === 'chat.card') return cardOf(live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
         if (method === 'chat.lorebook') return lorebookOf(context.chat, live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
+        if (method === 'chat.cbs' && typeof first === 'string') return (await this.read(frame, context, (lane) => this.session.store.evaluation.toolText(lane, context.scope, first, context.signal))).read;
         if (method === 'chat.inlay' && typeof first === 'string') {
           const inlay = context.scope.inlays.find(({ name, type }) => name === first && type !== SIGNATURE);
           if (!inlay) return null;
@@ -382,17 +385,20 @@ export class ToolApi {
   }
 
   private state(frame: Frame, context: Context): Promise<ToolState> {
-    if (context.state) return context.state;
-    const lane = { asker: 'tool', chat: context.chat, tool: `${frame.entry.module}:${frame.id}` } as const;
+    context.state ??= this.read(frame, context, (lane) => this.session.store.evaluation.state(lane, context.scope, '', context.signal));
+    return context.state;
+  }
+
+  // Concurrent events have immutable snapshots but one ordered changed-tail transport per frame.
+  private read<T extends object>(frame: Frame, context: Context, job: (lane: Lane<'tool'>) => Promise<T | RanAway>): Promise<T> {
     frame.lanes.add(context.chat);
-    // Concurrent events have immutable snapshots but one ordered changed-tail transport per frame.
+    const lane = { asker: 'tool', chat: context.chat, tool: `${frame.entry.module}:${frame.id}` } as const;
     const reading = frame.reading.catch(() => {}).then(async () => {
-      const state = await this.session.store.evaluation.state(lane, context.scope, '', context.signal);
-      if ('kind' in state) throw new Runaway();
-      return state;
+      const read = await job(lane);
+      if ('kind' in read) throw new Runaway();
+      return read;
     });
     frame.reading = reading.catch(() => {});
-    context.state = reading;
     return reading;
   }
 

@@ -158,6 +158,11 @@ export class Evaluation {
     return this.run(keyOf(lane), lane, scope, { kind: 'text', text, language }, signal) as Promise<TrialRead | RanAway>;
   }
 
+  // A tool's (Hazelle.Chat.cbs), beside its other reads on its lane, which this never replaces.
+  toolText(lane: Lane<'tool'>, scope: ChatScope, text: string, signal?: AbortSignal): Promise<TrialRead | RanAway> {
+    return this.once('tool', lane, scope, { kind: 'text', text, language: null }, signal) as Promise<TrialRead | RanAway>;
+  }
+
   // A translation's, and a bot's lorebook read, may run beside others of the same chat: each has a lane of its own,
   // forgotten once it answers.
   translation(lane: Lane<'translation' | 'auto-translation'> | null, input: Omit<TranslationInput, 'countTokens'>, signal?: AbortSignal): Promise<Counted<ReturnType<typeof assembleTranslation>>> {
