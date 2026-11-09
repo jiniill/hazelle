@@ -28,7 +28,7 @@ import { featureHolds, FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
 import { ModuleSwitches } from '../common/ModuleSwitches';
 import { PackToggles } from '../common/PackToggles';
-import { ScriptsEditor, scriptList } from '../common/ScriptsEditor';
+import { scriptsPage } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import type { Frame } from '../common/frame';
 import { readPicturePercent } from '../common/picturePercent';
@@ -208,6 +208,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
       {notUsed && <Callout tone="warn">{notUsed}</Callout>}
     </>
   );
+  const scripts = scriptsPage({ owner: { kind: 'character', id }, pack: card, drill: !split, open: script, onOpen: onScript, status: character.statusScripts, variables: card.variables });
   const pages: Record<CharacterPart, ReactNode> = {
     profile: (
       <>
@@ -281,7 +282,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
             empty="첫인사가 없어요."
             removed={(index) => `${index + 1}번째 첫인사를 삭제했어요.`}
           >
-            {({ value, name, added, set, remove }) => <CountedField label={name} lines={6} focus={added} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={value} onChange={set} action={remove} />}
+            {({ value, name, set, remove }) => <CountedField label={name} lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={value} onChange={set} action={remove} />}
           </EntryList>
         )}
       </Section>
@@ -337,7 +338,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
         <AgentSwitches owner={{ kind: 'character' }} own={character.agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'character', id }, agent, on)} />
       </>
     ),
-    scripts: <ScriptsEditor owner={{ kind: 'character', id }} pack={card} drill={!split} open={script} onOpen={onScript} status={character.statusScripts} variables={card.variables} />,
+    scripts: scripts.body,
     toggles: <PackToggles owner={{ kind: 'character', id }} lines={card.toggles} />,
     variables: (
       <>
@@ -416,8 +417,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     ));
     return frame({ head: { title, subtitle, status: state, menu }, side, body: <>{pages[open]}{shareDialog}</>, open });
   }
-  // A script open stands alone, and the head's back leaves it for the list of scripts.
-  if (part === 'scripts' && scriptList(card, script)) return frame({ head: { title, onBack: () => onScript(null), backLabel: SCRIPTS.list, status: state }, body: pages.scripts, open: script! });
+  if (part === 'scripts' && scripts.back) return frame({ head: { title, ...scripts.back, status: state }, body: scripts.body, open: script! });
   if (part && partBack) {
     const toList = (
       <Row kind="actions">

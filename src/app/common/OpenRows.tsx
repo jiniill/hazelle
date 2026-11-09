@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type FragmentInstance, type ReactNode, type Ref } from 'react';
 import type { ApiResult } from '../../runtime/api';
 import { useToast } from '../toast';
-import { Button, ListItem, Row, Stack, Tag, Text } from '../ui';
+import { Button, ListItem, openingFocus, Row, Stack, Tag, Text } from '../ui';
 import { withParticle } from './particles';
 import { REMOVE_FAILED } from './words';
 
@@ -19,11 +19,12 @@ export function useOpenRows() {
   return { isOpen: (id: string) => opened.has(id), setOpen, ...useRowEdits(setOpen) };
 }
 
-// setOpen: how a row opens and closes. added: the row the add just made, whose first field takes the focus, which
-// brings it into view.
+// setOpen: how a row opens and closes. opening: the ref for a row's fields, by which the row the add just made takes
+// the focus in its first field, which brings it into view.
 export function useRowEdits(setOpen: (id: string, on: boolean) => void) {
   const toast = useToast();
   const [added, setAdded] = useState<string | null>(null);
+  const opening = (id: string) => (id === added ? openingFocus : undefined);
 
   // The row opens as added, before the store holds it.
   async function add(noun: string, task: (id: string) => Promise<ApiResult<unknown>>) {
@@ -44,14 +45,14 @@ export function useRowEdits(setOpen: (id: string, on: boolean) => void) {
     toast.undoable(`'${name}' ${withParticle(noun, '을/를')} 삭제했어요.`, () => restore(done.data));
   }
 
-  return { added, add, remove };
+  return { opening, add, remove };
 }
 
 export type RowEdits = ReturnType<typeof useRowEdits>;
 export type OpenRows = ReturnType<typeof useOpenRows>;
 
-export function OpenRow({ title, note, tag, open, onOpen, children }: { title: string; note?: string; tag: string | null; open: boolean; onOpen: (open: boolean) => void; children: ReactNode }) {
-  return <ListItem title={title} note={note} trailing={tag && <Tag>{tag}</Tag>} expanded={open} onClick={() => onOpen(!open)} detail={open && <Stack gap="group">{children}</Stack>} />;
+export function OpenRow({ title, note, tag, open, onOpen, opening, children }: { title: string; note?: string; tag: string | null; open: boolean; onOpen: (open: boolean) => void; opening: Ref<FragmentInstance> | undefined; children: ReactNode }) {
+  return <ListItem title={title} note={note} trailing={tag && <Tag>{tag}</Tag>} expanded={open} onClick={() => onOpen(!open)} detail={open && <Stack gap="group"><Fragment ref={opening}>{children}</Fragment></Stack>} />;
 }
 
 // An open row's foot: its save state and its delete. children: tools before the save state, such as moves.

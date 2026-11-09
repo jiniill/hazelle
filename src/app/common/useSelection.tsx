@@ -1,7 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
-import { Button, IconButton, SelectionBar } from '../ui';
-import { useFocusReturn } from './useFocusReturn';
+import { Button, IconButton, SelectionBar, useFocusReturn } from '../ui';
 
 // counted: a count of picked things as the screen says it (3개, 캐릭터 3명). ask: the bar's words while none is picked.
 // every: the ids 모두 선택 picks, where the screen offers it. why: after those words, why an act on the bar is disabled.

@@ -14,7 +14,7 @@ import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
 import { toolLine, usageFacts, usageLine, writtenSoFar } from '../common/receipt';
 import { useTokens } from '../common/useTokens';
-import { useFocusReturn } from '../common/useFocusReturn';
+import { useFocusReturn } from '../ui';
 import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolWaiting } from '../common/words';
 import type { Reading } from '../../runtime/talk';

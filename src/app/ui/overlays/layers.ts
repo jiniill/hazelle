@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, type FragmentInstance, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react';
 import { ChangeSignal } from '../../../change-signal';
 import { isComposing } from '../foundation/keys';
 import { hasFinePointer } from '../foundation/media';
@@ -142,17 +142,65 @@ export const TAB_STOPS = 'a[href], button:not(:disabled), input:not(:disabled), 
 // keyboard would cover what it searches.
 export const openingField = (fine: boolean) => `input:not(:disabled, [type="checkbox"]${fine ? '' : ', [type="search"]'}), textarea:not(:disabled)`;
 
-export const openingStop = (box: ParentNode, fine: boolean) =>
-  box.querySelector<HTMLElement>('[data-autofocus]') ?? box.querySelector<HTMLElement>(openingField(fine)) ?? box.querySelector<HTMLElement>('button');
+const stopBy = (find: (selector: string) => HTMLElement | null, fine: boolean) => find('[data-autofocus]') ?? find(openingField(fine)) ?? find('button');
+
+export const openingStop = (box: ParentNode, fine: boolean) => stopBy((selector) => box.querySelector<HTMLElement>(selector), fine);
+
+// React 19.3 has it on a fragment's instance; @types/react-dom does not list it yet.
+declare module 'react' {
+  interface FragmentInstance {
+    compareDocumentPosition(node: Node): number;
+  }
+}
+
+// A fragment's ref that takes the focus by the opening rule as it appears: a list's new row, which has no box of its own
+// among its siblings. One function, so a render again does not take the focus again.
+export function openingFocus(fragment: FragmentInstance | null) {
+  if (!fragment) return;
+  const inside = (node: Node) => (fragment.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_CONTAINED_BY) !== 0;
+  stopBy((selector) => [...document.querySelectorAll<HTMLElement>(selector)].find(inside) ?? null, hasFinePointer())?.focus();
+}
+
+// Focus given back as what took it closes, to back's element, else to what held the focus as it opened: a dialog's
+// trap, or something open in place (a pick's bar, the chat's search, a message's edit). Focus that went on elsewhere,
+// such as to a control pressed outside a covering panel, stays there.
+export function useFocusReturn(open: boolean, back?: () => HTMLElement | null) {
+  // Set while open.
+  const opening = useRef<{ from: HTMLElement | null } | null>(null);
+  const latest = useRef(back);
+  latest.current = back;
+  const give = () => {
+    const focused = document.activeElement;
+    if (!opening.current || (focused && focused !== document.body)) return;
+    const to = latest.current?.() ?? opening.current.from;
+    if (to?.isConnected) to.focus();
+  };
+  // A layout effect: it reads the opener before what opened takes the focus in its own effect, and finds the focus on
+  // BODY once what closed in place has left the page.
+  useLayoutEffect(() => {
+    if (!open) {
+      give();
+      opening.current = null;
+      return;
+    }
+    // Kept across a run again (StrictMode's), which finds the focus already moved in.
+    opening.current ??= { from: document.activeElement as HTMLElement | null };
+  }, [open]);
+  // Opened as another closed (a dialog that replaced one), the focus is on BODY until that one gives its own back in
+  // its passive cleanup, which runs first: its opener is this one's too.
+  useEffect(() => {
+    if (open && opening.current?.from === document.body) opening.current.from = document.activeElement as HTMLElement | null;
+  }, [open]);
+  // Unmounted while open: a passive cleanup, which runs once what took the focus has left the page.
+  useEffect(() => () => give(), []);
+}
 
 // A box itself marked data-autofocus opens on itself: a panel to read, whose first field would raise a phone's keyboard.
 export function useFocusTrap(box: RefObject<HTMLElement | null>, active = true) {
-  const opener = useRef<HTMLElement | null>(null);
+  useFocusReturn(active);
   useEffect(() => {
     const element = box.current;
     if (!active || !element) return;
-    // Kept across a run again over the same box (StrictMode's), which finds the focus already inside.
-    if (!element.contains(document.activeElement)) opener.current = document.activeElement as HTMLElement | null;
     const aim = () => (element.hasAttribute('data-autofocus') ? element : openingStop(element, hasFinePointer()))?.focus();
     aim();
     // The control the focus was last in going away or turning disabled (a step changed in place) drops the focus to
@@ -169,8 +217,6 @@ export function useFocusTrap(box: RefObject<HTMLElement | null>, active = true) 
     return () => {
       element.removeEventListener('focusin', hold);
       watch.disconnect();
-      // Given back unless it went on elsewhere, such as to a control pressed outside a covering panel.
-      if (document.activeElement === document.body) opener.current?.focus();
     };
   }, [box, active]);
   return (event: ReactKeyboardEvent) => {

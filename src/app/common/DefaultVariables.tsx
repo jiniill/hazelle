@@ -25,9 +25,9 @@ export function DefaultVariables({ variables, help, onChange }: { variables: [st
         empty="변수가 없어요."
         removed={(index) => `${index + 1}번째 변수를 삭제했어요.`}
       >
-        {({ value: [name, value], index, name: label, added, set, remove }) => (
+        {({ value: [name, value], index, name: label, set, remove }) => (
           <FieldRow
-            name={<TextField label={`${label} 이름`} showLabel={false} placeholder="이름" kind="key" focus={added} value={name} onChange={(next) => set([next, value])} error={variableError(variables, index)} />}
+            name={<TextField label={`${label} 이름`} showLabel={false} placeholder="이름" kind="key" value={name} onChange={(next) => set([next, value])} error={variableError(variables, index)} />}
             value={<TextField label={`${label} 값`} showLabel={false} placeholder="값" kind="key" value={value} onChange={(next) => set([name, next])} />}
             action={remove}
           />
