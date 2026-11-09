@@ -31,7 +31,7 @@ export function fitChat(template: Part[], messages: ChatSent[], depths: { depth:
   const tokens = remembered(countTokens);
   const partsAt = (dropped: number) => {
     const kept = messages.slice(dropped);
-    // An entry at @@depth N goes before the message N from the end, wherever that message is.
+    // An entry at @@depth N goes before the message N from the end, wherever that message is; at 0, after the last.
     const before = new Map<number, Sent[]>();
     for (const { depth, sent } of depths) {
       const at = Math.max(kept.length - depth, 0);
@@ -103,6 +103,7 @@ function range(kept: ChatSent[], before: Map<number, Sent[]>, { range: { from, t
   const [start, end] = rangeBounds(kept.length, { from, to });
   const out: Sent[] = [];
   for (let index = start; index < end; index++) out.push(...(before.get(index) ?? []), { ...kept[index]!, from: slot });
+  if (end === kept.length) out.push(...(before.get(end) ?? []));
   return out;
 }
 

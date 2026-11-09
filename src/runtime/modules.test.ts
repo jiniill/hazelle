@@ -62,7 +62,7 @@ describe('modules', () => {
       expect((await shown()).texts[0]).toBe('the STAR');
     }));
 
-  it("orders a chat's packs as its character's own, then 항상, then its prompt's, then its character's, then its persona's, each once", async () => {
+  it("orders a chat's packs as its prompt's, then its character's own, then 항상, then its character's, then its persona's, each once", async () => {
     const { store, files } = await server.account();
     const module = async (name: string) => {
       const added = await importModule(store, files, { name, description: '', namespace: null, risu: null, pack: { regex: [], triggers: [], toggles: [] }, lore: [], loreFolders: [], assets: [], unsupported: [] }, () => {});
@@ -80,7 +80,7 @@ describe('modules', () => {
     if (!persona.ok) throw new Error(persona.error);
     await setModuleAt(store, { kind: 'persona', id: persona.data.id }, worn, true);
     await setModuleAt(store, { kind: 'persona', id: persona.data.id }, own, true);
-    expect(packsOf(store, { character: character.data.id, prompt: prompt.data.id, persona: persona.data.id }).map(({ id }) => id)).toEqual([character.data.id, always, both, own, worn]);
+    expect(packsOf(store, { character: character.data.id, prompt: prompt.data.id, persona: persona.data.id }).map(({ id }) => id)).toEqual([both, always, character.data.id, own, worn]);
   });
 
   it('puts a new version where each older one of its namespace is on, and deleting it and restoring them undoes that', async () => {
@@ -98,7 +98,7 @@ describe('modules', () => {
     await setPromptModule(store, prompt.data, first, true);
     await setModuleAlways(store, second, true);
     const chat = { character: character.data.id, prompt: prompt.data.id, persona: persona.data.id };
-    const on = () => packsOf(store, chat).map(({ id }) => id).slice(1);
+    const on = () => packsOf(store, chat).flatMap(({ id, module }) => (module ? [id] : []));
 
     expect(sameNamespace(store, '소악마').map(({ id }) => id).sort()).toEqual([first, second].sort());
     const fresh = await module('소악마 3', '소악마');
@@ -110,7 +110,7 @@ describe('modules', () => {
     expect(sameNamespace(store, '소악마').map(({ id }) => id)).toEqual([fresh]);
 
     await Promise.all([setModuleDeleted(store, fresh, Date.now()), setModuleDeleted(store, first, null), setModuleDeleted(store, second, null)]);
-    expect(on()).toEqual([second, first, other]);
+    expect(on()).toEqual([first, second, other]);
   });
 
   it('renames a module and rewrites its description, keeping its pack', async () => {

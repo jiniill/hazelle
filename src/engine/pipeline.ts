@@ -183,8 +183,10 @@ function lay(scope: ChatScope, blocks: Block[], history: HistoryMessage[], varia
         lorebook.push({ id, role: placement.role, body });
         break;
       case 'depth':
-        if (placement.depth === 0) last.push({ id, role: placement.role, body });
-        else depths.push({ id, role: placement.role, body, depth: placement.depth });
+        depths.push({ id, role: placement.role, body, depth: placement.depth });
+        break;
+      case 'end':
+        last.push({ id, role: placement.role, body });
         break;
       case 'description':
         sides[placement.side].push(body);

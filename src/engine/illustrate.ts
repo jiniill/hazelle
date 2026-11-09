@@ -217,7 +217,7 @@ export const PICTURE_DEFAULTS: PictureTags = {
 const tags = (...parts: string[]) => parts.map((part) => part.trim()).filter((part) => part !== '').join(', ');
 
 // Artist tags lead: prompt tags, else first drawn portrait. Unfixed seeds use random.
-// Match figures by profile name/alias and resolve outfit names; portraits arrive in pack order, character first.
+// Match figures by profile name/alias and resolve outfit names; portraits arrive in pack order.
 export function pictureRequest(scene: Scene, prompt: IllustratePrompt, model: Model, random: number, portraits: readonly Portrait[]): PictureRequest {
   const { artist, quality, negative } = prompt.tags ?? PICTURE_DEFAULTS;
   const { steps = null, scale = null, rescale = null, sampler = null, seed = random } = prompt.picture ?? {};

@@ -134,6 +134,15 @@ describe('activate', () => {
     expect(ids(run(entries, chat('to the castle'), { settings: { recursive: false } }))).toEqual(['castle', 'flat']);
   });
 
+  it('reads a recursive body from the next entry in the same pass, so a later @@exclude_keys stops on it at once', () => {
+    const entries = [
+      lore('before', { keys: ['gate'], content: '@@exclude_keys BLOCKED\nbefore' }),
+      lore('wall', { keys: ['gate'], content: 'BLOCKED' }),
+      lore('after', { keys: ['gate'], content: '@@exclude_keys BLOCKED\nafter' }),
+    ];
+    expect(ids(run(entries, chat('the gate')))).toEqual(['before', 'wall']);
+  });
+
   it('retains earlier key and exclusion evidence while consuming only new recursive bodies', () => {
     const entries = [
       lore('first', { constant: true, content: 'rain key-two red' }),
@@ -190,14 +199,16 @@ describe('activate', () => {
     expect(prepareLore([{ ...entries[0]!, value: { ...entries[0]!.value, enabled: false } }], SCAN).sticky).toBe(false);
   });
 
-  it('gates on the turn and the greeting, and fires @@activate without keys under the same gates', () => {
+  it('gates on the turn and the greeting, @@is_greeting 0 being first_mes as in Risu, and fires @@activate without keys under the same gates', () => {
     const entries = [
       lore('late', { constant: true, content: '@@activate_only_after 4\nlate' }),
       lore('even', { content: '@@activate\n@@activate_only_every 2\neven' }),
-      lore('second', { constant: true, content: '@@is_greeting 2\nsecond' }),
+      lore('first', { constant: true, content: '@@is_greeting 0\nfirst' }),
+      lore('second', { constant: true, content: '@@is_greeting 1\nsecond' }),
     ];
     expect(ids(run(entries, chat('a', 'b'), { greeting: 1 }))).toEqual(['second']);
-    expect(ids(run(entries, chat('a', 'b', 'c'), { greeting: 0 }))).toEqual(['even', 'late']);
+    expect(ids(run(entries, chat('a', 'b', 'c'), { greeting: 0 }))).toEqual(['even', 'first', 'late']);
+    expect(ids(run(entries, chat('a', 'b', 'c'), { greeting: null }))).toEqual(['even', 'late']);
   });
 
   it('lists in lorebook order each entry that did not fire with the first reason, leaving out those that matched and dropped', () => {
@@ -208,7 +219,7 @@ describe('activate', () => {
       lore('once', { constant: true, content: '@@dont_activate_after_match\n@@activate_only_after 4\nonce' }),
       lore('late', { constant: true, content: '@@activate_only_after 4\nlate' }),
       lore('even', { constant: true, content: '@@activate_only_every 2\neven' }),
-      lore('second', { constant: true, content: '@@is_greeting 2\nsecond' }),
+      lore('second', { constant: true, content: '@@is_greeting 1\nsecond' }),
       lore('keyless', {}),
       lore('missing', { keys: ['zebra'] }),
       lore('unlucky', { keys: ['a'], content: '@@probability 0\nunlucky' }),
@@ -238,6 +249,11 @@ describe('activate', () => {
     expect(order(run([lore('a', { constant: true }), lore('b', { constant: true })], []))).toEqual(['b', 'a']);
   });
 
+  it('lists entries of one insertion order before the description in the order they fired, as Risu does (row 10)', () => {
+    const entries = [lore('a', { constant: true, content: '@@position before_desc\na' }), lore('b', { constant: true, content: '@@position before_desc\nb' }), lore('c', { constant: true, content: '@@position after_desc\nc' }), lore('d', { constant: true, content: '@@position after_desc\nd' })];
+    expect(order(run(entries, []))).toEqual(['d', 'c', 'a', 'b']);
+  });
+
   it('places bodies in the lorebook slot, around the description, at named positions and injection targets, trying @@@ fallbacks', () => {
     const entries = [
       lore('slot', { constant: true, content: '@@role assistant\nslot' }),
@@ -258,7 +274,7 @@ describe('activate', () => {
     });
   });
 
-  it("counts depth from the end, @@reverse_depth too, and lists one depth's entries in Risu's order (row 3)", () => {
+  it("counts depth from the end, @@reverse_depth too, keeps @@depth 0 and @@end for the end, and lists one place's entries in Risu's order (row 3)", () => {
     const entries = [
       lore('d1', { constant: true, insertionOrder: 1, content: '@@depth 2\nd1' }),
       lore('d2', { constant: true, insertionOrder: 2, content: '@@depth 2\nd2' }),
@@ -269,12 +285,12 @@ describe('activate', () => {
       lore('r0', { constant: true, insertionOrder: 7, content: '@@reverse_depth 0\nr0' }),
     ];
     const result = run(entries, chat('hi'));
-    expect(order(result)).toEqual(['r0', 'end', 'prefill', 'd2', 'd1', 'r1', 'r2']);
+    expect(order(result)).toEqual(['r0', 'd2', 'd1', 'r1', 'r2', 'end', 'prefill']);
     expect(result.placed.map(({ placement }) => placement)).toEqual([
       { kind: 'depth', depth: 0, role: 'system' },
-      { kind: 'depth', depth: 0, role: 'system' },
-      { kind: 'depth', depth: 0, role: 'assistant' },
       ...Array.from({ length: 4 }, () => ({ kind: 'depth', depth: 2, role: 'system' })),
+      { kind: 'end', role: 'system' },
+      { kind: 'end', role: 'assistant' },
     ]);
   });
 
