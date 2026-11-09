@@ -472,9 +472,9 @@ describe.runIf(availableB)('the phase B acceptance plugins, unmodified', () => {
     expect(sent[0]).toEqual(request[0]);
     expect(sent.at(-1)).toEqual(request[1]);
     expect(sent.slice(1, -1).every(({ role, content }) => role === 'system' && content.includes('RISUPOT'))).toBe(true);
-    // It reaches for the app's page past a drawn message, which stays declined, and goes on without it; its scope id on
-    // the chat is not kept.
-    expect(fake.missing).toEqual(['getRootDocument:page', 'setChatToIndex:risupotWikiScopeId']);
+    // It reaches for the app's page past a drawn message and for the character's chats, both declined, and goes on
+    // without them; its scope id on the chat is not kept.
+    expect(fake.missing).toEqual(['getRootDocument:page', 'character.chats', 'setChatToIndex:risupotWikiScopeId']);
   }, 30_000);
 
   // Opening its screen needs a real document, which only a browser run gives.
