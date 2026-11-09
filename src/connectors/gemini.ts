@@ -9,16 +9,8 @@ import { count, isRecord, jsonObject, list, vector } from './values';
 
 const LEVELS = ['minimal', 'low', 'medium', 'high'];
 
-// A 설정 묶음 outlives its model, so a stored level the model refuses (see reasoning under carries) is carried to what
-// it takes: minimal to low, which is what Google does itself, and on 2.5 any level to dynamic.
-const NO_MINIMAL = /^gemini-(?:3\.1-pro|3\.[78]|4)/;
-const NO_LEVEL = /^gemini-2\./;
-function thinkingLevel(level: string, model: Model) {
-  if (NO_LEVEL.test(model.id)) return { thinkingBudget: -1 };
-  return { thinkingLevel: level === 'minimal' && NO_MINIMAL.test(model.id) ? 'low' : level };
-}
-
-// Gemini 3 uses thinkingLevel; 2.5 uses thinkingBudget (0 off, -1 dynamic); 3.1 Pro refuses off.
+// Gemini 3 uses thinkingLevel; 2.5 uses thinkingBudget (0 off, -1 dynamic). Which a model takes, and which levels, is
+// its catalog's word (models.dev reasoning_options); fit() leaves out what it refuses.
 // Ask includeThoughts only for configured reasoning or catalog-confirmed thinkers; others may reject it.
 function thinkingConfig(reasoning: Reasoning | undefined, model: Model) {
   switch (reasoning?.kind) {
@@ -29,9 +21,9 @@ function thinkingConfig(reasoning: Reasoning | undefined, model: Model) {
     case 'budget':
       return { thinkingConfig: { thinkingBudget: reasoning.tokens, includeThoughts: true } };
     case 'level':
-      return { thinkingConfig: { ...thinkingLevel(reasoning.level, model), includeThoughts: true } };
+      return { thinkingConfig: { thinkingLevel: reasoning.level, includeThoughts: true } };
     case 'adaptive':
-      return { thinkingConfig: { ...(reasoning.level === null ? { thinkingBudget: -1 } : thinkingLevel(reasoning.level, model)), includeThoughts: true } };
+      return { thinkingConfig: { ...(reasoning.level === null ? { thinkingBudget: -1 } : { thinkingLevel: reasoning.level }), includeThoughts: true } };
   }
 }
 

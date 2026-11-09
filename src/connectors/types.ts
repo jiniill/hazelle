@@ -172,7 +172,7 @@ export type Codec = {
   // first, whatever their place in the prompt.
   // Where the API takes system text only before the conversation (one system field), a system message after the first
   // other message stays in place as a user message after this prefix, RisuAI's own for the API; null where system
-  // messages are sent in place.
+  // messages are sent in place, unless the connection type says otherwise (ConnectionType inlineSystem).
   inlineSystem: string | null;
   // Runs after cache points are assigned, before chat builds the request.
   pack?(messages: ChatMessage[], pdf: Pdf): ChatMessage[];
@@ -249,6 +249,9 @@ type TypeHooks = {
   pictureHeaders?: Record<string, string>;
   // How its endpoint takes a cache point, per model, where the format has no mark of its own (chat completions).
   cachePoints?: (model: Model) => CacheWay;
+  // The codec's inlineSystem, where the format sends system messages in place but the provider refuses one after the
+  // conversation began (Mistral, after an assistant or tool message).
+  inlineSystem?: string;
   cost?: (reply: { facts: StreamFacts; usage: Usage | null; model: Model }) => Cost | null;
   // 할인 받기: the lane a 설정 묶음's discount switch takes; without one the switch is not offered. No pool type has one,
   // so a batch waited for after a reload is asked about with the connection's one account.

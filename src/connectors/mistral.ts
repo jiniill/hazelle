@@ -11,6 +11,9 @@ export const mistral: ConnectionType = {
   keyPage: 'https://console.mistral.ai',
   endpoint: { baseUrl: 'https://api.mistral.ai/v1', protocol: 'chat-completions' },
   detect: { key: null, host: 'api.mistral.ai' },
+  // mistral-common's validator refuses a system message after an assistant or tool one (_validate_message_order);
+  // RisuAI's prefix for Mistral.
+  inlineSystem: 'System:',
 
   // The list also holds embedding, OCR and moderation models, which say completion_chat: false.
   parseModels: (payload) =>

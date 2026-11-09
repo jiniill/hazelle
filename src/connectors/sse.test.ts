@@ -19,3 +19,9 @@ it('scans only new text plus a split boundary, then resets for the next event', 
     exec.mockRestore();
   }
 });
+
+it('dispatches no event whose data is empty', () => {
+  const parser = new SseParser();
+  expect(parser.push('data:\n\ndata: \n\ndata: a\n\n')).toEqual(['a']);
+  expect(parser.push('data:\ndata:\n\n')).toEqual(['\n']);
+});

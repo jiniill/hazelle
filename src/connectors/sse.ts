@@ -43,10 +43,12 @@ export class SseParser {
   }
 }
 
+// An event whose data is empty is not dispatched (WHATWG HTML, server-sent events: dispatch the event).
 function data(frame: string): string[] {
-  const lines = frame
+  const joined = frame
     .split(/\r?\n/)
     .filter((line) => line.startsWith('data:'))
-    .map((line) => line.slice(5).replace(/^ /, ''));
-  return lines.length ? [lines.join('\n')] : [];
+    .map((line) => line.slice(5).replace(/^ /, ''))
+    .join('\n');
+  return joined ? [joined] : [];
 }

@@ -413,7 +413,7 @@ export class Talk {
   private inline(held: Held): InlineThoughts {
     const character = this.store.get('chat', held.turn.chat)?.value.character;
     const keep = character ? this.store.get('character', character)?.value.keepThoughts === true : false;
-    return { keep, takeBack: (chars) => this.change(held, { ...held.turn, reasoning: held.turn.reasoning.slice(0, held.turn.reasoning.length - chars) }) };
+    return { keep, takeBack: (phase, chars) => this.change(held, { ...held.turn, [phase]: held.turn[phase].slice(0, held.turn[phase].length - chars) }) };
   }
 
   // tools: the calls the last call made and what answered them (asked), and toolsRefused.

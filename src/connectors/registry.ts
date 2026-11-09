@@ -185,7 +185,7 @@ export function modelSettings(connection: Connection, model: Model): SettingsSch
 // sentRequest writes it and cacheView reads it, so a forecast compares what is sent.
 export function sending(route: Route, { model, messages, settings: stored, tools }: ChatRequest): ChatRequest {
   const { settings } = fit(settingsSchema(carries(route, model), model), stored);
-  const roled = settings.systemAsUser ? messages.map((message) => (message.role === 'system' ? { ...message, role: 'user' as const } : message)) : inlined(route.codec.inlineSystem, messages);
+  const roled = settings.systemAsUser ? messages.map((message) => (message.role === 'system' ? { ...message, role: 'user' as const } : message)) : inlined(route.codec.inlineSystem ?? route.type?.inlineSystem ?? null, messages);
   const placed = cachePoints(roled, settings.cache !== undefined);
   return { model, messages: settings.pdf && route.codec.pack ? route.codec.pack(placed, settings.pdf) : placed, settings, ...(tools?.length && { tools }) };
 }

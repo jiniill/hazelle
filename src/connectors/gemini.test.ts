@@ -5,7 +5,8 @@ import { prepareChat } from './preparation';
 import { bareModel } from './chat-completions';
 import { gemini } from './gemini';
 import { decodeStream } from './stream';
-import type { Phase, StreamFacts } from './types';
+import { joinModelsDev } from './pricing';
+import type { Model, Phase, StreamFacts } from './types';
 
 const embedRequest = (...args: Parameters<typeof embedRequests>) => embedRequests(...args)[0]!.request;
 
@@ -85,11 +86,20 @@ describe('Gemini', () => {
     expect(outcome.usage).toEqual({ inputTokens: 120, cachedInputTokens: 100, cacheWriteInputTokens: null, outputTokens: 20, reasoningTokens: 16 });
   });
 
-  it('carries a stored level to what the model takes, as a 설정 묶음 outlives its model', () => {
-    const level = (id: string, setting: string) => (JSON.parse(prepareChat(google, { model: bareModel(id), messages: [{ role: 'user', content: '안녕' }], settings: { reasoning: { kind: 'level', level: setting } } }).request.body!) as { generationConfig: { thinkingConfig: unknown } }).generationConfig.thinkingConfig;
-    expect(level('gemini-3.1-pro', 'minimal')).toEqual({ thinkingLevel: 'low', includeThoughts: true });
-    expect(level('gemini-3.5-flash', 'minimal')).toEqual({ thinkingLevel: 'minimal', includeThoughts: true });
-    expect(level('gemini-2.5-flash', 'high')).toEqual({ thinkingBudget: -1, includeThoughts: true });
+  it('sends a stored level only where the catalog lists it, and what it lists as is', () => {
+    const listed = (reasoning: unknown[]) => ({ price: null, input: null, output: null, tools: null, reasoning });
+    const [pro, lite, old] = joinModelsDev([bareModel('gemini-3.1-pro-preview'), bareModel('gemini-3.5-flash-lite'), bareModel('gemini-2.5-pro')], {
+      fetchedAt: 1,
+      models: {
+        'gemini-3.1-pro-preview': listed([{ type: 'effort', values: ['low', 'medium', 'high'] }]),
+        'gemini-3.5-flash-lite': listed([{ type: 'effort', values: ['minimal', 'low', 'medium', 'high'] }]),
+        'gemini-2.5-pro': listed([{ type: 'budget_tokens', min: 128, max: 32768 }]),
+      },
+    });
+    const config = (model: Model, level: string) => (JSON.parse(prepareChat(google, { model, messages: [{ role: 'user', content: '안녕' }], settings: { reasoning: { kind: 'level', level } } }).request.body!) as { generationConfig?: unknown }).generationConfig;
+    expect(config(pro!, 'minimal')).toBeUndefined();
+    expect(config(lite!, 'minimal')).toEqual({ thinkingConfig: { thinkingLevel: 'minimal', includeThoughts: true } });
+    expect(config(old!, 'high')).toBeUndefined();
   });
 
   it('cuts at MAX_TOKENS, keeps the text a SAFETY stop came after as a refused cut, and fails one with none or a blocked prompt', async () => {

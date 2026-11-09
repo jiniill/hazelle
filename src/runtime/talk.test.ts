@@ -336,6 +336,20 @@ describe('Talk', () => {
       expect(shown(fold(session.store.children('entry', chat))[1]!)).toMatchObject({ text: '반가워요', reasoning: '인사를 받았다.' });
     }));
 
+  it('takes back the text a reply said before a lone closer and saves it as reasoning', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const chat = crypto.randomUUID();
+      await server.hold(session.store, chat);
+      await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+      await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: '안녕' });
+      const events = [{ choices: [{ delta: { content: '인사를 받았다.' } }] }, { choices: [{ delta: { content: '</think>\n\n반가워요' }, finish_reason: 'stop' }] }];
+      stubRelay(() => new Response(`${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`, { headers: { 'x-relay': 'upstream' } }));
+
+      await takeTurn(session, chat, { kind: 'answer' });
+      expect(shown(fold(session.store.children('entry', chat))[1]!)).toMatchObject({ text: '반가워요', reasoning: '인사를 받았다.' });
+    }));
+
   it('cues a reply as its text follows its reasoning and once it is received, but not one 멈추기 stopped', () =>
     server.withSession(async (session) => {
       await answerable(session);
