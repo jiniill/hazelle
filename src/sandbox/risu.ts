@@ -124,22 +124,16 @@ const unescapeCss = (text: string) => text.replace(/\\([0-9a-f]{1,6})\s?|\\(.)/g
 
 const API_VERSION = '3.0';
 // Why Hazelle has nothing for a Risu name it does not map, said by the error a call throws.
-const ABSENT: Record<string, string> = {
-  addTTSPreprocessor: 'Hazelle has no text-to-speech',
-  addTTSPostprocessor: 'Hazelle has no text-to-speech',
-  registerMCP: 'Hazelle registers no tools for the chat model at run time',
-  unregisterMCP: 'Hazelle registers no tools for the chat model at run time',
-  getFetchLogs: 'Hazelle shows no plugin the app\'s own requests',
-  saveSecretHeader: 'Hazelle has no write-only secret store',
-  loadPlugins: 'a plugin does not reload plugins in Hazelle',
-  createMutationObserver: 'Hazelle has no live page to watch; getRootDocument reads a copy',
-  getColorScheme: 'a plugin is not told the app\'s colors in Hazelle',
-  getTextTheme: 'a plugin is not told the app\'s colors in Hazelle',
-  changeColorScheme: 'the app\'s colors are the user\'s display settings in Hazelle',
-  setColorScheme: 'the app\'s colors are the user\'s display settings in Hazelle',
-  changeTextTheme: 'the app\'s colors are the user\'s display settings in Hazelle',
-  setCustomTextTheme: 'the app\'s colors are the user\'s display settings in Hazelle',
-};
+const ABSENT = new Map(Object.entries({
+  'Hazelle has no text-to-speech': ['addTTSPreprocessor', 'addTTSPostprocessor'],
+  'Hazelle registers no tools for the chat model at run time': ['registerMCP', 'unregisterMCP'],
+  'Hazelle shows no plugin the app\'s own requests': ['getFetchLogs'],
+  'Hazelle has no write-only secret store': ['saveSecretHeader'],
+  'a plugin does not reload plugins in Hazelle': ['loadPlugins'],
+  'Hazelle has no live page to watch; getRootDocument reads a copy': ['createMutationObserver'],
+  'a plugin is not told the app\'s colors in Hazelle': ['getColorScheme', 'getTextTheme'],
+  'the app\'s colors are the user\'s display settings in Hazelle': ['changeColorScheme', 'setColorScheme', 'changeTextTheme', 'setCustomTextTheme'],
+}).flatMap(([reason, names]) => names.map((name) => [name, reason])));
 
 // Run as an async function body for top-level await and private declarations (Risu apiV3/factory.ts).
 // Keep the trailing newline so a closing line comment cannot swallow the brace.
@@ -152,7 +146,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   const tell = (name: string) => { if (told.has(name)) return; told.add(name); frame.missing(name); };
   const refuse = (name: string): never => {
     tell(name);
-    throw new Error(`Risu API '${name}' is not available in Hazelle${Object.hasOwn(ABSENT, name) ? `: ${ABSENT[name]}` : ''}`);
+    throw new Error(`Risu API '${name}' is not available in Hazelle${ABSENT.has(name) ? `: ${ABSENT.get(name)}` : ''}`);
   };
   const buttons = new Map<string, { label: string; run: Callback }>();
   const messageActions = new Map<string, { label: string; run: MessageAction }>();
