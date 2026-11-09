@@ -2,9 +2,11 @@ import type { Version } from '../../model/chat';
 import { foldTerm, foldText } from '../../model/search';
 
 // What a message's version reads as: its translation unless flipped to the original, or the translation streaming in.
-// original: its text as the display shows it.
-export const seenText = (original: string, version: Version, translating: string | null, flipped: boolean) =>
-  flipped ? original : translating || (version.translation?.text ?? original);
+// original: its text as the display shows it. shownTranslation: the translation as the display shows it (runtime/translate).
+export function seenText(original: string, version: Version, translating: string | null, flipped: boolean, shownTranslation: (text: string) => string) {
+  const translation = translating || version.translation?.text;
+  return flipped || translation === undefined ? original : shownTranslation(translation);
+}
 
 // Cache each text's folded search by identity/content so streaming a long chat only refolds changed messages.
 export function finder() {

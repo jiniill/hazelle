@@ -5,7 +5,7 @@ import { RETRIES } from '../connectors/registry';
 import { bareModel } from '../connectors/chat-completions';
 import type { Connection, Model, Starred } from '../connectors/types';
 import { Credentials } from './credential';
-import { generate, resume, type GenerateInput } from './generate';
+import { gather, generate, resume, type GenerateInput } from './generate';
 import type { ObjectStore } from './store';
 import type { Stored } from '../model/kinds';
 import { firstTurns } from '../model/turns';
@@ -34,7 +34,7 @@ async function run(connection = openRouter, target: Starred = model, credentials
     messages: [{ role: 'user', content: '안녕' }],
     call: { id: crypto.randomUUID(), key: key.private, public: key.public, logged: LOGGED },
     signal: new AbortController().signal,
-    onText: (_, text) => texts.push(text),
+    onText: { text: (_, text) => texts.push(text), takeBack: () => {} },
   });
   return { reply, text: texts.join('') };
 }
@@ -74,7 +74,7 @@ describe('generate', () => {
     stubRelay(() => new Response('{}', { status: 429, headers: { 'x-relay': 'upstream', 'retry-after': '30' } }));
     const key = await streamKey();
     const call: GenerateInput['call'] = { id: crypto.randomUUID(), key: key.private, public: key.public, logged: LOGGED, retrying: () => stopStream(call.id) };
-    const reply = await generate({ credentials: new Credentials(), log: testLog(), connection: openRouter, model, settings: {}, retries: RETRIES, messages: [{ role: 'user', content: '안녕' }], call, signal: new AbortController().signal, onText: () => {} });
+    const reply = await generate({ credentials: new Credentials(), log: testLog(), connection: openRouter, model, settings: {}, retries: RETRIES, messages: [{ role: 'user', content: '안녕' }], call, signal: new AbortController().signal, onText: gather() });
     expect(reply).toMatchObject({ state: 'cut', cut: 'stopped', error: null });
     expect(await stream({ id: call.id, key: key.private }, null, new AbortController().signal)).toEqual({ kind: 'stopped' });
   });
@@ -211,7 +211,7 @@ describe('a reply through a discount lane’s batch', () => {
       messages: [{ role: 'user', content: '안녕' }],
       call: { id: crypto.randomUUID(), key: key.private, public: key.public, logged: LOGGED, started: (id) => marked.push(id), retrying: () => retried++ },
       signal: abort.signal,
-      onText: () => {},
+      onText: gather(),
       ...(batching && { batching: { waiting: () => (waited = true), cancel: cancel.signal } }),
     });
     let reply: Awaited<typeof replying> | null = null;
@@ -247,7 +247,7 @@ describe('a reply through a discount lane’s batch', () => {
     // The results line is the marker's call's: the call's id was the batch request's key.
     const log = stubRelay(({ url }) => (url === `${BATCHES}/b1` ? batch('ended') : new Response(JSON.stringify({ custom_id: marker.id, result: { type: 'succeeded', message } }), { headers: { 'x-relay': 'upstream' } })));
     let reply: Awaited<ReturnType<typeof resume>> | null = null;
-    void resume({ store, credentials: new Credentials(), log: testLog() }, marker, new AbortController().signal, () => {}).then((done) => (reply = done));
+    void resume({ store, credentials: new Credentials(), log: testLog() }, marker, new AbortController().signal, gather()).then((done) => (reply = done));
     for (let tick = 0; tick < 5 && !reply; tick++) await vi.advanceTimersByTimeAsync(5_000);
     expect(reply).toMatchObject({ call: marker.id, state: 'done', discount: 'batch', firstTextMs: null, request: null });
     expect(log[0]!.sent.headers['x-api-key']).toBe('sk-ant-x');

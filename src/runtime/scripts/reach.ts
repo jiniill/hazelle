@@ -111,7 +111,7 @@ export class ScriptReach {
       messages,
       call,
       signal: signal ? AbortSignal.any([this.closing, signal]) : this.closing,
-      onText: text.add,
+      onText: text,
     }).finally(() => endCall(store, call.id));
     return { answer, text: text.value() };
   }

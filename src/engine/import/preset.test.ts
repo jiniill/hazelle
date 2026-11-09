@@ -98,7 +98,7 @@ it('writes a .risup that Risu opens (msgpackr, AES-GCM) into the same prompt, ke
     { id: 'i', name: null, kind: 'text', role: 'assistant', text: '노트', mark: 'globalNote' },
   ];
   const prompt: ConversationPrompt = {
-    name: '프롬프트', blocks, authorNote: '기본 노트', models: {}, companions: ['risu-id'],
+    name: '프롬프트', blocks, authorNote: '기본 노트', models: {}, companions: ['risu-id'], variables: [['hp', '10'], ['mood', 'a=b']],
     toggles: [{ kind: 'group', label: '모드' }, { key: 'sims', label: '시뮬', kind: 'check', default: '0' }, { kind: 'groupEnd' }],
   };
   const written = await writePreset(prompt, ['ns', 'risu-id']);
@@ -117,6 +117,8 @@ it('writes a .risup that Risu opens (msgpackr, AES-GCM) into the same prompt, ke
   expect(read.prompt.toggles).toEqual(prompt.toggles);
   expect(read.prompt.authorNote).toBe('기본 노트');
   expect(read.prompt.companions).toEqual(['risu-id', 'ns']);
+  expect(preset.templateDefaultVariables).toBe('hp=10\nmood=a=b');
+  expect(read.prompt.variables).toEqual(prompt.variables);
 });
 
 it('refuses a preset that unpacks past its limit, saying so', async () => {

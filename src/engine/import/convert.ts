@@ -115,7 +115,7 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
     creator: text(data.creator),
     version: typeof data.character_version === 'number' ? String(data.character_version) : text(data.character_version),
     tags: strings(data.tags),
-    variables: variables(risu.defaultVariables),
+    variables: readVariables(risu.defaultVariables),
     utility: risu.utilityBot === true,
     bias: list(risu.bias)
       .filter((pair): pair is [string, number] => Array.isArray(pair) && typeof pair[0] === 'string' && typeof pair[1] === 'number')
@@ -249,7 +249,7 @@ export function cardSource(card: Card, assets: Json[], extensions: Json, lowLeve
         risuai: {
           bias: card.bias,
           utilityBot: card.utility,
-          defaultVariables: card.variables.map(([key, value]) => `${key}=${value}`).join('\n'),
+          defaultVariables: writeVariables(card.variables),
           toggles: writeToggles(card.toggles),
           additionalText: card.additionalText,
           ...(card.background !== undefined && { backgroundHTML: card.background }),
@@ -321,9 +321,10 @@ function pickIcon(assets: unknown[]): Json | null {
 // Header, comment and indent blocks do nothing on their own; most bots carry an empty pair of such triggers.
 const INERT = new Set<unknown>(['v2Header', 'v2Comment', 'v2EndIndent']);
 
+// Risu's name=value lines of default variables, a card's defaultVariables and a preset's templateDefaultVariables.
 // Each line splits at its first '='; Risu cuts the value at a second '='. `key=` keeps '' as the
 // default, where Risu drops the line.
-function variables(value: unknown): [string, string][] {
+export function readVariables(value: unknown): [string, string][] {
   return text(value)
     .split(/\r?\n/)
     .flatMap((line): [string, string][] => {
@@ -331,6 +332,8 @@ function variables(value: unknown): [string, string][] {
       return at > 0 ? [[line.slice(0, at), line.slice(at + 1)]] : [];
     });
 }
+
+export const writeVariables = (variables: readonly [string, string][]) => variables.map(([key, value]) => `${key}=${value}`).join('\n');
 
 // Switching a script off in Risu replaces its stage with 'disabled' (RegexData.svelte), so it comes in off at a new
 // script's stage, which the user picks again on turning it on. A script on a stage Risu has not is counted.

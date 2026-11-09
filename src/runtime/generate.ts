@@ -4,7 +4,7 @@ import type { CallCalibration } from '../model/token-calibration';
 import { completedCalibration } from './token-calibration';
 import { retryWait } from '../contracts/streams';
 import { batchLane, cacheView, laneBusy, resolveConnection, resolveModel, RETRYABLE, connectionRoute, withCredential, type CacheView, type Route } from '../connectors/registry';
-import { decodeStream, type InlineThoughts, type Outcome } from '../connectors/stream';
+import { decodeStream, type Outcome } from '../connectors/stream';
 import type { ModelSettings } from '../connectors/settings';
 import type { PulseLabel } from '../contracts/pulse';
 import { ConnectorError, type Account, type Batches, type ChatMessage, type Connection, type Model, type Phase, type Starred, type ToolDef } from '../connectors/types';
@@ -62,14 +62,15 @@ export type GenerateInput = {
   // logged: who the call is for, as newCall and pageCall know it.
   call: StreamCall & { logged: Logged };
   signal: AbortSignal;
-  onText: (phase: Phase, text: string) => void;
-  inline?: InlineThoughts;
+  onText: TextSink;
+  // 추론을 본문에 표시: a character reply keeps its thinking blocks in its text (connectors/stream InlineThoughts).
+  keep?: boolean;
   // Chat replies only, never auxiliary tasks (design §6.7). waiting marks provider acceptance;
   // cancel stops the provider batch, while signal only stops waiting and leaves the marker resumable.
   batching?: { waiting: () => void; cancel: AbortSignal };
 };
 
-export async function generate({ credentials, log, connection, model, settings, retries, messages, tools, call, signal, onText, inline, batching }: GenerateInput): Promise<Reply> {
+export async function generate({ credentials, log, connection, model, settings, retries, messages, tools, call, signal, onText, keep, batching }: GenerateInput): Promise<Reply> {
   const at = Date.now();
   const started = performance.now();
   let firstText: number | null = null;
@@ -146,15 +147,18 @@ export async function generate({ credentials, log, connection, model, settings, 
   };
   const credential = await credentials.get(resolved, serving.secret, signal);
   if (!credential.ok) return failed(credential.failure);
-  const timed = (phase: Phase, text: string) => {
-    firstText ??= performance.now();
-    onText(phase, text);
+  const timed: TextSink = {
+    text: (phase, text) => {
+      firstText ??= performance.now();
+      onText.text(phase, text);
+    },
+    takeBack: onText.takeBack,
   };
   const retry = retries ? { times: retries, statuses: RETRYABLE } : null;
   const pulse = callLabel(PULSE_ROLE[call.logged.purpose], connection, model.id);
   if (batches) {
     const { cancel } = batching!;
-    const asking: Asking = { route, model, batches, ask: (each) => withCredential(route, each, credential.credential), pulse, signal, cancel, onText, inline };
+    const asking: Asking = { route, model, batches, ask: (each) => withCredential(route, each, credential.credential), pulse, signal, cancel, onText, keep };
     // Not stopped midway: a batch the provider made with no marker naming it would answer, and be billed, unread.
     const submit = () => relayJson(asking.ask(batches.submit(route.endpoint, model, request, call.id)), undefined, undefined, undefined, route.type);
     let submitted = await submit();
@@ -188,7 +192,7 @@ export async function generate({ credentials, log, connection, model, settings, 
   if (!(response instanceof Response)) return failed(response.kind === 'provider' && laneBusy(route, asked, response.status, response.code ?? null) ? { kind: 'refused', code: 'discount-busy' } : response);
   const read = recorded(response);
   answered = read.body;
-  const outcome = await decodeStream(route, model, read.response, signal, timed, inline);
+  const outcome = await decoded(route, model, read.response, signal, timed, keep);
   // Reading stopped there, but a relayed call runs on the server until stopped, billing the loop to its end.
   if (outcome.cut === 'repeated') stopStream(call.id);
   if (outcome.error) credentials.pool.stale(connection, serving);
@@ -230,7 +234,7 @@ function refusalFields(protocol: string, outcome: Answered[0], error: Reply['err
 
 // ask: a request with the account's credential added. pulse: the label of the results read, where the reply arrives;
 // the submit, checks and cancel carry none. cancel: absent for a reader that cannot cancel the batch.
-type Asking = { route: Route; model: Model; batches: Batches; ask: (request: HttpRequest) => HttpRequest; pulse: PulseLabel; signal: AbortSignal; cancel?: AbortSignal; onText: GenerateInput['onText']; inline?: InlineThoughts };
+type Asking = { route: Route; model: Model; batches: Batches; ask: (request: HttpRequest) => HttpRequest; pulse: PulseLabel; signal: AbortSignal; cancel?: AbortSignal; onText: TextSink; keep?: boolean };
 
 // A batch is asked about through the relay, each ask a short call, so no server object holds it and a deploy cuts
 // nothing. Soon at first, since a batch of one often ends within minutes, then once a minute.
@@ -266,7 +270,7 @@ async function waitBatch(asking: Asking, batch: string, key: string): Promise<An
 
 // Read to its end once the batch ended, a stop meanwhile included: the answer is billed. null: not read this time, for a
 // failure worth waiting through, so the batch is asked about again.
-async function readBatch({ route, model, batches, ask, pulse, signal, onText, inline }: Asking, batch: string, key: string): Promise<Answered | null> {
+async function readBatch({ route, model, batches, ask, pulse, signal, onText, keep }: Asking, batch: string, key: string): Promise<Answered | null> {
   const response = await relay(ask(batches.results(route.endpoint, batch)), undefined, undefined, pulse, route.type);
   if (!(response instanceof Response)) return response.kind === 'stopped' || passing(response) ? null : failedWith(response);
   let body: string;
@@ -285,21 +289,29 @@ async function readBatch({ route, model, batches, ask, pulse, signal, onText, in
     case 'failed':
       return failedWith({ kind: 'provider', detail: answer.detail });
     case 'reply': {
-      const outcome = await decodeStream(route, model, new Response(JSON.stringify(answer.payload), { headers: { 'content-type': 'application/json' } }), signal, onText, inline, true);
+      const outcome = await decoded(route, model, new Response(JSON.stringify(answer.payload), { headers: { 'content-type': 'application/json' } }), signal, onText, keep, true);
       return [outcome, outcome.error];
     }
   }
 }
 
-// onText: told the whole text so far, not the chunk.
-export function gather(onText?: (text: string) => void) {
+// Where a reply's text goes: each chunk as it comes, and the trailing chars of a phase taken back when the thought
+// scanner reads them as the other phase (connectors/thoughts), so every task keeps only the answer as its text.
+export type TextSink = { text: (phase: Phase, chunk: string) => void; takeBack: (phase: Phase, chars: number) => void };
+
+const decoded = (route: Route, model: Model, response: Response, signal: AbortSignal, { text, takeBack }: TextSink, keep: boolean | undefined, batched?: boolean) =>
+  decodeStream(route, model, response, signal, text, { keep, takeBack }, batched);
+
+// The answer's text. onText: told the whole text so far, not the chunk.
+export function gather(onText?: (text: string) => void): TextSink & { value: () => string } {
   let text = '';
+  const tell = (next: string) => {
+    text = next;
+    onText?.(text);
+  };
   return {
-    add: (phase: Phase, chunk: string) => {
-      if (phase !== 'text') return;
-      text += chunk;
-      onText?.(text);
-    },
+    text: (phase, chunk) => phase === 'text' && tell(text + chunk),
+    takeBack: (phase, chars) => phase === 'text' && tell(text.slice(0, text.length - chars)),
     value: () => text,
   };
 }
@@ -314,7 +326,7 @@ export function cacheViewOf(connection: Connection, model: Starred, settings: Mo
 // live rest; or a batch, asked about again. Its request is gone, its time to first text unknown, and its duration the
 // server's, or for a batch the time until this page read its answer. turn: a reply's reader (Talk), told of each try
 // sent again (StreamCall retrying), and whose 멈추기 cancels a batch (GenerateInput batching).
-export async function resume({ store, credentials, log }: { store: ObjectStore; credentials: Credentials; log: RequestLog }, { id, parent, value }: Stored<'stream'>, signal: AbortSignal, onText: GenerateInput['onText'], inline?: InlineThoughts, turn?: { retrying: () => void; cancel: AbortSignal }): Promise<Reply> {
+export async function resume({ store, credentials, log }: { store: ObjectStore; credentials: Credentials; log: RequestLog }, { id, parent, value }: Stored<'stream'>, signal: AbortSignal, onText: TextSink, keep?: boolean, turn?: { retrying: () => void; cancel: AbortSignal }): Promise<Reply> {
   let took = 0;
   let tries: number | null = null;
   let protocol = '';
@@ -331,7 +343,7 @@ export async function resume({ store, credentials, log }: { store: ObjectStore; 
     if (lane?.lane !== 'batch') return reply(failedWith({ kind: 'refused', code: 'unknown-connection-type' }));
     const credential = await credentials.get(resolved, route.connection.value.accounts[0]!.secret, signal);
     if (!credential.ok) return reply(credential.failure.kind === 'stopped' ? STOPPED : failedWith(credential.failure));
-    const answered = await waitBatch({ route: routed, model: route.model, batches: lane.batches, ask: (each) => withCredential(routed, each, credential.credential), pulse: callLabel(PULSE_ROLE[who.purpose], route.connection.value, route.model.id), signal, cancel: turn?.cancel, onText, inline }, value.batch, id);
+    const answered = await waitBatch({ route: routed, model: route.model, batches: lane.batches, ask: (each) => withCredential(routed, each, credential.credential), pulse: callLabel(PULSE_ROLE[who.purpose], route.connection.value, route.model.id), signal, cancel: turn?.cancel, onText, keep }, value.batch, id);
     took = Date.now() - value.at;
     return reply(answered);
   }
@@ -340,7 +352,7 @@ export async function resume({ store, credentials, log }: { store: ObjectStore; 
   took = call.took ?? 0;
   tries = call.tries ?? null;
   if (!(response instanceof Response)) return reply(response.kind === 'stopped' ? STOPPED : failedWith(response));
-  const outcome = await decodeStream(routed, route.model, response, signal, onText, inline);
+  const outcome = await decoded(routed, route.model, response, signal, onText, keep);
   if (outcome.cut === 'repeated') stopStream(call.id);
   took = call.took ?? 0;
   return reply([outcome, outcome.error]);

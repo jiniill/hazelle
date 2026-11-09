@@ -639,6 +639,13 @@ describe('renderChat', () => {
     expect(renderChat('prompt', scope({ ...over, variables: [['count', '5']] })).texts).toEqual(['5 calm']);
   });
 
+  it("starts from the prompt's default variables under the card's, as Risu reads a preset's", () => {
+    const over = { card: card({ variables: [['mood', 'calm']], greetings: [] }), prompt: { ...starter, variables: [['mood', 'tense'], ['day', '1']] as [string, string][] }, messages: [message('u1', 'user', '{{getvar::mood}} {{getvar::day}}')], greeting: null };
+    const rendered = renderChat('prompt', scope(over));
+    expect(rendered.texts).toEqual(['calm 1']);
+    expect(rendered.start).toEqual([['mood', 'tense'], ['day', '1'], ['mood', 'calm']]);
+  });
+
   it("sets the bot's Lua writes around a message's own text, and those for the reply being made after the last", () => {
     const messages = [
       { ...message('u1', 'user', '{{getvar::turn}}{{setvar::turn::typed}}'), before: [['turn', 'lua']] as [string, string][], after: [['hp', '9']] as [string, string][] },

@@ -182,7 +182,7 @@ async function starterBytes(): Promise<Uint8Array<ArrayBuffer>> {
 
 // Merge only supplied fields against the latest copy. Clearing tags restores app defaults; clearing protect removes it;
 // clearing post-agent place restores in-place rewriting. Apply fields only to their owning prompt sorts.
-export type PromptPatch = Partial<{ name: string; blocks: Block[]; toggles: ToggleLine[]; authorNote: string; tags: PictureTags; picture: PictureSettings; protect: string[]; place: AgentPlace }>;
+export type PromptPatch = Partial<{ name: string; blocks: Block[]; toggles: ToggleLine[]; authorNote: string; variables: [string, string][]; tags: PictureTags; picture: PictureSettings; protect: string[]; place: AgentPlace }>;
 
 export const editPrompt = (store: ObjectStore, id: string, patch: PromptPatch) => store.update('prompt', id, (current): Prompt => ({ ...current, ...patch }));
 

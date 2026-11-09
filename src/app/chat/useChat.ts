@@ -177,7 +177,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const flipKind = (kind: 'bookmarks' | 'lineage' | 'lore' | 'autopilot' | 'toggles') => flipPanel({ kind }, (current) => current.kind === kind);
   const timePin = useTimePin();
   const [branching, setBranching] = useState(false);
-  const { found, search, actions: searchActions } = useChatSearch(messages, texts, translation.translating, translation.flipped, seekTo, seed);
+  const { found, search, actions: searchActions } = useChatSearch(messages, texts, translation.translating, translation.flipped, translation.shownTranslation, seekTo, seed);
   const { bookmarked, actions: bookmarkActions } = useChatBookmarks(id, chat.bookmarks, messages, busy, searchActions.find);
   const { actions: statusActions, ...status } = useChatStatus(chat, shelf?.character ?? null, view, messages);
   const { editing, actions: editActions } = useMessageEdit(id, messages, (message) => ask({ kind: 'regenerate', message: message.id }), translationActions.carryFlip);

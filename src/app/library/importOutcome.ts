@@ -43,12 +43,14 @@ const PLACES: Record<ModulePlace['kind'], string> = { character: '이 캐릭터�
 const preview = (kind: ImportKind, title: string, holds: string, fields: Partial<Omit<Preview, 'kind' | 'title' | 'holds'>> = {}): Preview => ({ kind, title, holds, verdict: null, placed: null, missed: [], unused: null, ...fields });
 const willPlace = (at: ModulePlace['kind'] | null): Line | null => at === null ? null : { text: `${PLACES[at]} 켜요.`, failed: false };
 
+const variablesHeld = (variables: unknown[]) => `${DEFAULT_VARIABLES} ${variables.length}개`;
+
 export function characterPreview({ card, lore, assets, report }: Imported): Preview {
   const holds = [
     `첫인사 ${card.greetings.length}개`,
     lore.length > 0 && `로어북 ${lore.length}개`,
     card.regex.length > 0 && `${SCRIPTS.regex} ${card.regex.length}개`,
-    card.variables.length > 0 && `${DEFAULT_VARIABLES} ${card.variables.length}개`,
+    card.variables.length > 0 && variablesHeld(card.variables),
     card.toggles.some(isToggle) && '토글',
     assets.length > 0 && `에셋 ${assets.length}개`,
   ].filter(Boolean).join(' · ');
@@ -66,7 +68,7 @@ export const chatPreview = (file: string, count: number, missed: string[], chara
 
 export function promptPreview({ prompt, unsupported }: PresetRead): Preview {
   const toggles = prompt.toggles.filter(isToggle).length;
-  return preview('prompt', promptName(prompt.name), [`블록 ${prompt.blocks.length}개`, toggles > 0 && `토글 ${toggles}개`, prompt.authorNote.trim() && '기본 노트'].filter(Boolean).join(' · '), { missed: presetMissed(unsupported) });
+  return preview('prompt', promptName(prompt.name), [`블록 ${prompt.blocks.length}개`, toggles > 0 && `토글 ${toggles}개`, prompt.variables && variablesHeld(prompt.variables), prompt.authorNote.trim() && '기본 노트'].filter(Boolean).join(' · '), { missed: presetMissed(unsupported) });
 }
 
 // The picture is the PNG itself, so every persona file holds one.

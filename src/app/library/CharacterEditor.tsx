@@ -20,6 +20,7 @@ import { CountedField } from '../common/CountedFields';
 import { describeTranslateFailure } from '../common/failure';
 import { describeUnused } from '../common/unused';
 import { AssetsEditor } from '../common/AssetsEditor';
+import { DefaultVariables } from '../common/DefaultVariables';
 import { EntryList } from '../common/EntryList';
 import { LoreEditor } from '../common/LoreEditor';
 import { scriptHolds } from '../common/pack';
@@ -46,7 +47,7 @@ import { navigate } from '../shell/router';
 import { characterPage, HOME } from '../shell/routes';
 import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
-import { Button, Callout, ChoiceGroup, Disclosure, FieldRow, List, ListItem, MenuItem, NavGroup, NavRow, NumberInput, Portrait, Row, Section, SettingGroup, SettingRow, Story, Switch, Tag, Text, TextField, useWide, type Help } from '../ui';
+import { Button, Callout, ChoiceGroup, Disclosure, List, ListItem, MenuItem, NavGroup, NavRow, NumberInput, Portrait, Row, Section, SettingGroup, SettingRow, Story, Switch, Tag, Text, TextField, useWide, type Help } from '../ui';
 import { useCardTranslation } from './useCardTranslation';
 import { useCharacterActions } from './useCharacterActions';
 import { useNoteDraft } from './useNoteDraft';
@@ -75,13 +76,6 @@ const GROUPS: CharacterPart[][] = [
   ['assets', 'illustration', 'display'],
 ];
 const LIST = '캐릭터 항목';
-// Keep variable fields single-line and names free of = so Risu name=value export round-trips.
-const variableError = (variables: [string, string][], index: number) => {
-  const name = variables[index]![0];
-  if (!name) return '이름을 입력해 주세요.';
-  if (name.includes('=')) return '이름에 =는 쓸 수 없어요.';
-  return variables.some(([other], at) => at > index && other === name) ? '아래에 같은 이름이 있어서 이 값은 쓰이지 않아요.' : undefined;
-};
 type Reading = 'source' | 'translated';
 const READINGS: { value: Reading; label: string }[] = [
   { value: 'source', label: '원문' },
@@ -340,26 +334,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
     ),
     scripts: <ScriptsEditor owner={{ kind: 'character', id }} pack={card} drill={!split} status={character.statusScripts} variables={card.variables} />,
     toggles: <PackToggles owner={{ kind: 'character', id }} lines={card.toggles} />,
-    variables: (
-      <Section title={DEFAULT_VARIABLES} help="새 채팅을 시작할 때 변수에 설정되는 초기값이에요. 기존 채팅에서도 아직 값이 바뀌지 않은 변수는 이 값을 사용해요.">
-        <EntryList
-          entries={text.variables}
-          onChange={(variables) => change({ variables })}
-          name={(index) => `변수 ${index + 1}`}
-          blank={['', ''] as [string, string]}
-          addLabel="변수 추가"
-          removed={(index) => `${index + 1}번째 변수를 삭제했어요.`}
-        >
-          {({ value: [name, value], index, name: label, set, remove }) => (
-            <FieldRow
-              name={<TextField label={`${label} 이름`} showLabel={false} placeholder="이름" kind="key" value={name} onChange={(next) => set([next, value])} error={variableError(text.variables, index)} />}
-              value={<TextField label={`${label} 값`} showLabel={false} placeholder="값" kind="key" value={value} onChange={(next) => set([name, next])} />}
-              action={remove}
-            />
-          )}
-        </EntryList>
-      </Section>
-    ),
+    variables: <DefaultVariables variables={text.variables} help="새 채팅을 시작할 때 변수에 설정되는 초기값이에요. 기존 채팅에서도 아직 값이 바뀌지 않은 변수는 이 값을 사용해요." onChange={(variables) => change({ variables })} />,
     assets: <AssetsEditor owner={id} shelves />,
     illustration: <PortraitsEditor owner={id} />,
     display: (

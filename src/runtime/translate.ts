@@ -107,7 +107,7 @@ async function translateWith(
     messages: assembled.messages,
     call: await newCall({ store, tokens }, route, spans.length ? { ...target, for: { ...target.for, spans } } : target),
     signal,
-    onText: text.add,
+    onText: text,
   });
   return translated(callOf(route), answer, text.value(), spans, language);
 }
@@ -118,7 +118,7 @@ export async function resumeTranslation(deps: Pick<Deps, 'store' | 'credentials'
   const purpose = stream.value.for;
   const spans = 'spans' in purpose ? (purpose.spans ?? []) : [];
   const text = gather((live) => onText(restore(live, spans).text));
-  const answer = await resume(deps, stream, signal, text.add);
+  const answer = await resume(deps, stream, signal, text);
   return translated(stream.value.call, answer, text.value(), spans, null);
 }
 
@@ -164,9 +164,9 @@ export const sendsNotes = (prompt: TranslatePrompt) => prompt.blocks.some((block
 
 export type TranslatorFailure = Exclude<TranslateFailure, { kind: 'stopped' }>;
 
-// Risu's edittrans: the chat's translation-stage scripts over a message's translation as it is made, and so as it is
-// kept; a text of no message (translateText) takes none, as in Risu. Risu runs no CBS there (applyEdittransRegex).
-function translationScripts(store: ObjectStore, chat: Chat): (text: string) => string {
+// Risu's edittrans: the chat's translation-stage scripts over a message's translation each time it is shown; the
+// translation is kept as the model wrote it (design §5 row 19). Risu runs no CBS there (applyEdittransRegex).
+export function translationShown(store: ObjectStore, chat: Pick<Chat, 'character' | 'prompt' | 'persona'>): (text: string) => string {
   const scripts = new Scripts(packsOf(store, chat).flatMap(({ pack }) => pack.regex), []);
   return (text) => scripts.apply('translation', text, { index: -1, cbs: (each) => each }).text;
 }
@@ -223,7 +223,7 @@ export class Translator {
   translate(chat: string, { id: version, text: original }: Version, input: TranslateInput): Promise<void> {
     if (this.closed || this.aborts.has(version)) return Promise.resolve();
     const target: TranslationTarget = { id: crypto.randomUUID(), chat: this.store.get('chat', chat) ? chat : null, result: crypto.randomUUID(), for: { kind: 'translation', version } };
-    return this.run(chat, version, target, () => input.chat, (signal, onText) => translate({ store: this.store, credentials: this.credentials, log: this.log, tokens: this.tokens }, input, target, signal, onText), (made) =>
+    return this.run(chat, version, target, (signal, onText) => translate({ store: this.store, credentials: this.credentials, log: this.log, tokens: this.tokens }, input, target, signal, onText), (made) =>
       this.store.get('chat', chat)
         ? appendTranslation(this.store, chat, version, made.translation, target.result)
         : setTextTranslation(this.store, input.chat.character!, original, made.language!, made.translation).then(async (saved) => {
@@ -236,14 +236,14 @@ export class Translator {
   resume(stream: Stored<'stream'>, version: string) {
     const chat = stream.parent!;
     if (this.closed || this.aborts.has(version)) return;
-    void this.run(chat, version, { id: stream.id, result: stream.value.result }, () => this.store.get('chat', chat)!.value, (signal, onText) => resumeTranslation({ store: this.store, credentials: this.credentials, log: this.log }, stream, signal, onText), (made) =>
+    void this.run(chat, version, { id: stream.id, result: stream.value.result }, (signal, onText) => resumeTranslation({ store: this.store, credentials: this.credentials, log: this.log }, stream, signal, onText), (made) =>
       appendTranslation(this.store, chat, version, made.translation, stream.value.result),
     );
   }
 
   // A failed call ends with its marker, since nothing would make it go otherwise; one stopped by close() keeps it
-  // for the next load. scripted: the chat whose translation scripts the text goes through, once its lease holds it.
-  private run(chat: string, version: string, { id, result }: { id: string; result: string }, scripted: () => Chat, make: (signal: AbortSignal, onText: (text: string) => void) => Promise<Translated>, save: (made: Extract<Translated, { ok: true }>) => Promise<ApiResult<unknown>>): Promise<void> {
+  // for the next load.
+  private run(chat: string, version: string, { id, result }: { id: string; result: string }, make: (signal: AbortSignal, onText: (text: string) => void) => Promise<Translated>, save: (made: Extract<Translated, { ok: true }>) => Promise<ApiResult<unknown>>): Promise<void> {
     const lease = this.store.retainChat(chat);
     const abort = new AbortController();
     this.aborts.set(version, abort);
@@ -254,9 +254,7 @@ export class Translator {
         this.change(version, { live: null, failed: { kind: 'unsaved', failure } });
         return null;
       }
-      const edit = translationScripts(this.store, scripted());
-      const made = await make(abort.signal, (text) => this.change(version, { live: edit(text) }));
-      return made.ok ? { ...made, translation: { ...made.translation, text: edit(made.translation.text) } } : made;
+      return make(abort.signal, (text) => this.change(version, { live: text }));
     })
       .then(
         async (made) => {

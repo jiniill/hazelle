@@ -1,4 +1,4 @@
-import { Cpu, ImageIcon, SlidersHorizontal } from 'lucide-react';
+import { Cpu, ImageIcon, SlidersHorizontal, Variable } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { holdsPersona } from '../../engine/pipeline';
 import type { Stored } from '../../model/kinds';
@@ -11,12 +11,13 @@ import { setAgentAt } from '../../runtime/agents';
 import { setFeatureAt } from '../../runtime/features';
 import { copyPrompt, editPrompt, isDefaultPrompt, ofSort, removePrompt, resetPromptBlocks, restorePrompt, setDefaultPrompt, type PromptPatch } from '../../runtime/prompts';
 import { ACTS } from '../common/acts';
+import { DefaultVariables } from '../common/DefaultVariables';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { ModuleSwitches } from '../common/ModuleSwitches';
 import { NO_PERSONA_SLOT, SLOT } from '../common/prompt-words';
 import type { Frame } from '../common/frame';
 import { useAutosave } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, copyOf, ORIGINAL_GONE, PRE_READ, promptName, SEE_ORIGINAL, SET_DEFAULT, STAGE_NAMES } from '../common/words';
+import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, copyOf, DEFAULT_VARIABLES, ORIGINAL_GONE, PRE_READ, promptName, SEE_ORIGINAL, SET_DEFAULT, STAGE_NAMES } from '../common/words';
 import { useConnections, useSettings, useStore, useStored } from '../session';
 import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
@@ -64,6 +65,7 @@ import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse'
 const MODEL = 'model' satisfies PromptPane;
 const TOGGLES = 'toggles' satisfies PromptPane;
 const PICTURE = 'picture' satisfies PromptPane;
+const VARIABLES = 'variables' satisfies PromptPane;
 const SORT_WORDS = {
   conversation: { default: '기본 프롬프트', makeDefault: '새 채팅을 시작할 때 이 프롬프트를 써요' },
   translate: { default: '기본 번역 프롬프트', makeDefault: '번역 프롬프트를 따로 선택하지 않은 채팅에 써요' },
@@ -134,9 +136,9 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
   const [reordering, setReordering] = useState(false);
   const [addingToggle, setAddingToggle] = useState(false);
   const [exporting, setExporting] = useState(false);
-  // 이미지 is an illustration prompt's only, and 모델 a prompt's that picks one; an address naming either on another
-  // opens as if it named none.
-  const shownPane = (pane === PICTURE && sort !== 'illustrate') || (pane === MODEL && !picksModel) ? null : pane;
+  // 이미지 is an illustration prompt's only, 기본 변수 a conversation prompt's, and 모델 a prompt's that picks one; an
+  // address naming one on another opens as if it named none.
+  const shownPane = (pane === PICTURE && sort !== 'illustrate') || (pane === VARIABLES && sort !== 'conversation') || (pane === MODEL && !picksModel) ? null : pane;
   const open = shownPane ?? (picked !== undefined && draft.blocks.some((block) => block.id === picked) ? picked : firstText());
   const index = draft.blocks.findIndex((block) => block.id === open);
   const block = draft.blocks[index];
@@ -161,7 +163,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
 
   const pick = (id: string) => {
     if (!split) setDrilled(true);
-    if (id === MODEL || id === PICTURE || id === TOGGLES) return onPane(id);
+    if (id === MODEL || id === PICTURE || id === TOGGLES || id === VARIABLES) return onPane(id);
     setPicked(id);
     if (pane) onPane(null);
   };
@@ -314,6 +316,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
         {modelMeta !== null && <NavRow icon={Cpu} label="모델" meta={modelMeta} current={split && open === MODEL} onClick={() => pick(MODEL)} />}
         {sort === 'illustrate' && <NavRow icon={ImageIcon} label="이미지" meta={draft.tags || Object.values(draft.picture ?? {}).some((value) => value !== undefined) ? '직접 지정' : '기본값'} current={split && open === PICTURE} onClick={() => pick(PICTURE)} />}
         <NavRow icon={SlidersHorizontal} label="토글" meta={`${draft.toggles.filter(isToggle).length}개`} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
+        {draft.variables && <NavRow icon={Variable} label={DEFAULT_VARIABLES} meta={`${draft.variables.length}개`} current={split && open === VARIABLES} onClick={() => pick(VARIABLES)} />}
       </Stack>
       <Section
         title="전송 순서"
@@ -375,6 +378,8 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
       <AgentModelPane own={stored.value.model} connections={connections} onPick={(ref) => modelSaved(setAgentModel(store, stored.id, ref))} />
     ) : open === PICTURE ? (
       <PicturePane tags={draft.tags} picture={draft.picture} onTags={(tags) => update(() => ({ tags }))} onPicture={(picture) => update(() => ({ picture }))} />
+    ) : open === VARIABLES && draft.variables ? (
+      <DefaultVariables variables={draft.variables} help="이 프롬프트를 쓰는 채팅의 변수 초기값이에요. 캐릭터의 기본 변수에 같은 이름이 있으면 그 값을 써요." onChange={(variables) => update(() => ({ variables }))} />
     ) : open === TOGGLES ? (
       <TogglePane
         owner={stored.id}
@@ -425,7 +430,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
 
   const status = save.words;
   if (!split && (drilled || shownPane !== null)) {
-    const title = open === MODEL ? '모델' : open === PICTURE ? '이미지' : open === TOGGLES ? '토글' : block ? blockTitle(block).title : '';
+    const title = open === MODEL ? '모델' : open === PICTURE ? '이미지' : open === TOGGLES ? '토글' : open === VARIABLES ? DEFAULT_VARIABLES : block ? blockTitle(block).title : '';
     if (open === TOGGLES && paneBack) {
       const toOutline = (
         <Row kind="actions">

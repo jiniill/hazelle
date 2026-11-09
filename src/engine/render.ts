@@ -115,10 +115,13 @@ export function renderChat(
   const unfound = stage === 'display' ? new Set<string>() : null;
   const context = contexts(scope, stage, null, '', unfound);
   const scripts = new Scripts(scope.packs.flatMap(({ regex }) => regex), scope.messages);
-  const start: [string, string][] = [...(scope.card?.variables ?? []), ...scope.variables];
+  // The card's defaults over the prompt's, as Risu reads its preset's templateDefaultVariables after the card's.
+  const start: [string, string][] = [...(scope.prompt?.variables ?? []), ...(scope.card?.variables ?? []), ...scope.variables];
   const variables = trace ? new Traced(trace) : new Logged();
   if (lua) variables.changed = new Set();
   // Through set, so the stamp tells one start from another; then cleared, since a pass begins from start.
+  trace?.at({ kind: 'prompt' });
+  for (const [name, value] of scope.prompt?.variables ?? []) variables.set(name, value);
   trace?.at({ kind: 'card' });
   for (const [name, value] of scope.card?.variables ?? []) variables.set(name, value);
   trace?.at({ kind: 'chat' });
@@ -293,7 +296,7 @@ class Logged extends Map<string, string> {
 }
 
 export type VariableWriter =
-  | { kind: 'card' | 'chat' | 'pending' }
+  | { kind: 'prompt' | 'card' | 'chat' | 'pending' }
   // Stored writes retain the version and phase, not whether Lua or a tool made them.
   | { kind: 'script'; version: string; message: string; index: number; phase: 'before' | 'after' }
   | { kind: 'hand'; version: string; message: string; index: number }

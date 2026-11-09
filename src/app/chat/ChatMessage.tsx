@@ -52,7 +52,7 @@ const MARK = { length: 'length', 'no-terminal': 'length', stopped: 'stopped', re
 export const ChatMessage = memo(function ChatMessage(props: Props) {
   const { row, modelMenu, actions } = props;
   const { message, text: original, decor: decoration, opening, last, busy, branching, usageShown } = row.story.value;
-  const { translatingText, untranslated, canTranslate, awaited, flipped, showOriginal } = row.translation.value;
+  const { translatingText, untranslated, canTranslate, awaited, flipped, showOriginal, shownTranslation } = row.translation.value;
   const { placed, pictures, drawing, canIllustrate, pictureSizes } = row.illustration.value;
   const { remark, fresh } = row.mascot.value;
   const { badges, toolActions } = row.tools.value;
@@ -75,7 +75,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const hasRaw = version.raw !== undefined && version.raw !== version.text;
   const [rawShown, setRawShown] = useState(false);
   const raw = hasRaw && rawShown;
-  const text = seenText(original, version, translatingText, flipped);
+  const text = seenText(original, version, translatingText, flipped, shownTranslation);
   const pending = !translatingText && (awaited || translatingText === '');
   const reveal = useReveal(version.id, text, live && !message.whole);
   const places = picturePlaces(drawing, pictures, version.text);

@@ -505,7 +505,7 @@ export class Rememberer {
     const target: CallTarget = { id: crypto.randomUUID(), chat, result: crypto.randomUUID(), for: { kind: 'memory', sources: job.sources, print: fingerprint(read), ...(job.chapter && { chapter: job.chapter }) } };
     const text = gather();
     const answer = await this.reads(target.id, async (signal) =>
-      generate({ credentials, log, ...routeFields(store, route, settings), messages, call: await newCall(this.session, route, target), signal, onText: text.add }),
+      generate({ credentials, log, ...routeFields(store, route, settings), messages, call: await newCall(this.session, route, target), signal, onText: text }),
     );
     return this.finish(chat, target.id, target.result, callOf(route), answer, text.value(), job, read);
   }
@@ -514,7 +514,7 @@ export class Rememberer {
   // validating against unseen text would both mischeck quotes and falsely mark the new records fresh.
   private async resumed(chat: string, stream: Stored<'stream'>, { sources, print, chapter }: Extract<Stream['for'], { kind: 'memory' }>) {
     const text = gather();
-    const answer = await this.reads(stream.id, (signal) => resume(this.session, stream, signal, text.add));
+    const answer = await this.reads(stream.id, (signal) => resume(this.session, stream, signal, text));
     const sent = await chatSent(this.session, chat, 'memory', null);
     if (sent && 'kind' in sent) return this.change(chat, { failed: sent });
     const places = placesOf(sent?.read.shown ?? []);

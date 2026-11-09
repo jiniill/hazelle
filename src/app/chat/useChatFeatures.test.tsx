@@ -25,7 +25,7 @@ vi.mock('../session', () => ({
 }));
 vi.mock('../toast', () => ({ useToast: () => toast }));
 vi.mock('../../runtime/message-acts', () => ({ pickVersion: vi.fn(async () => ({ ok: true })) }));
-vi.mock('../../runtime/translate', () => ({ translatorOf: () => ({ ok: false, failure: { kind: 'prompt-missing', own: false } }) }));
+vi.mock('../../runtime/translate', () => ({ translatorOf: () => ({ ok: false, failure: { kind: 'prompt-missing', own: false } }), translationShown: () => (text: string) => text }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -76,7 +76,7 @@ it('searches the original when translation is flipped and keeps the choice per r
   const chat: Chat = { title: null, character: null, models: {} };
   function Probe() {
     translation = useChatTranslation('chat', chat, messages, texts, translateSwitches(session.store, null));
-    search = useChatSearch(messages, texts, translation.translating, translation.flipped, () => {}, null);
+    search = useChatSearch(messages, texts, translation.translating, translation.flipped, translation.shownTranslation, () => {}, null);
     return null;
   }
   const root = probeRoot();

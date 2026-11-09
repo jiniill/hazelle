@@ -34,12 +34,13 @@ const lineage = vi.fn();
 let translations = new Map<string, string>();
 let status = 'HP 7';
 let bookmarked = new Set<string>();
+const plain = (text: string) => text;
 const frame = (messages: OpenChat['messages'], item: OpenChat['item'] = null) => ({
   item, messages, texts: messages.map((message) => shown(message).text), keys: messages.map(({ id }) => id),
   names: { character: { name: 'Bot', image: null }, me: null, modelName: null },
   decor: { bot: true, css: '', buttons: 'inert' },
   agents: { pre: false, post: true }, features: { translate: true, illustrate: true, mascot: false }, translate: { original: false },
-  translating: { live: translations, failed: new Map() }, awaited: () => false, flipped: new Set(),
+  translating: { live: translations, failed: new Map() }, awaited: () => false, flipped: new Set(), shownTranslation: plain,
   pictures: new Map([['old', [picture]]]), placed: new Map(), illustrating: new Map(), pictureSizes: pictureSizes({}),
   remarks: new Map(), polishing: new Map(), badges: new Map([['old', ['badge']]]), messageTools,
   hosted: (index: number) => index === 0 ? [{ id: 'status', script: 0, html: status, at: 'top', message: 0 }] : [],

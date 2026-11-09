@@ -89,6 +89,8 @@ export type ConversationPrompt = {
   modules?: string[];
   // Risu module ids/namespaces enable matching modules even when imported after the preset.
   companions?: string[];
+  // Chat variables' defaults in its chats, under the card's (Risu's templateDefaultVariables).
+  variables?: [string, string][];
   // 기능 in its chats, over the 공용 ones (runtime/features).
   features?: FeatureSwitches;
   // 에이전트 in its chats, stacked after 공용's (runtime/agents agentsOf).
