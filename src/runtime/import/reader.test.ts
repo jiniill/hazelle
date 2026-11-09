@@ -184,21 +184,17 @@ describe('ImportReader', () => {
       expect(picture.bytes.byteLength).toBe(0);
     }
   });
-  it("keeps an emotion image's and a background's use across the worker", async () => {
+  it("keeps a background's use across the worker", async () => {
     const archive = zipSync({
       'card.json': json({ spec: 'chara_card_v3', spec_version: '3.0', data: {
         name: 'Moods',
-        assets: [
-          { type: 'emotion', uri: 'embeded://smile.png', name: 'smile', ext: 'png' },
-          { type: 'background', uri: 'embeded://night.png', name: 'main', ext: 'png' },
-        ],
+        assets: [{ type: 'background', uri: 'embeded://night.png', name: 'main', ext: 'png' }],
       } }),
-      'smile.png': PNG,
       'night.png': PNG,
     }, { level: 0 });
     const result = await ask(new ImportReader(), { kind: 'card', file: new File([new Uint8Array(archive)], 'moods.charx'), asModule: false });
     if (!result.ok || !('card' in result)) throw new Error('card did not import');
-    expect(result.card.assets.map(({ name, use }) => [name, use])).toEqual([['smile', 'emotion'], ['main', 'background']]);
+    expect(result.card.assets.map(({ name, use }) => [name, use])).toEqual([['main', 'background']]);
   });
 });
 

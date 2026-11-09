@@ -345,14 +345,14 @@ describe('fillPictures', () => {
     expect(store.children('asset', id).find(({ value }) => value.name === 'smile')).toEqual(smile);
   });
 
-  it('adds an emotion image that shares a plain asset\'s name, once', async () => {
+  it('adds a background that shares a plain asset\'s name, once', async () => {
     const { store, files } = await server.account();
     const added = await importCharacter(store, files, { card: { name: '루나' } as Card, lore: [], loreFolders: [], assets: [{ name: 'smile', read: async () => png() }] }, null, () => {});
     const id = added.ok ? added.data.id : '';
-    const assets = [{ name: 'smile', read: async () => png(), use: 'emotion' as const }];
-    expect(await fillPictures(store, files, { kind: 'asset', parent: id }, assets)).toMatchObject({ ok: true, data: { kept: [{ name: 'smile', use: 'emotion' }] } });
+    const assets = [{ name: 'smile', read: async () => png(), use: 'background' as const }];
+    expect(await fillPictures(store, files, { kind: 'asset', parent: id }, assets)).toMatchObject({ ok: true, data: { kept: [{ name: 'smile', use: 'background' }] } });
     expect(await fillPictures(store, files, { kind: 'asset', parent: id }, assets)).toMatchObject({ ok: true, data: { kept: [] } });
-    expect(store.children('asset', id).map(({ value }) => value.use ?? 'plain').sort()).toEqual(['emotion', 'plain']);
+    expect(store.children('asset', id).map(({ value }) => value.use ?? 'plain').sort()).toEqual(['background', 'plain']);
   });
 });
 

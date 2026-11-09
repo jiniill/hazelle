@@ -1,8 +1,8 @@
 import { nearest } from './edit-distance';
 
-// A character's picture kept apart from the ones its text names by {{img}} and the like, as Risu keeps them: an emotion
-// image ({{emotion}}, {{emotionlist}}; CCv3's emotion asset) or a background (CCv3's background asset).
-export type AssetUse = 'emotion' | 'background';
+// A character's picture kept apart from the ones its text names by {{img}} and the like, as Risu keeps them: a
+// background (CCv3's background asset).
+export type AssetUse = 'background';
 
 // A bot's own picture or video (design §6.4). module: the namespace of the module it came with, null for a module that has none;
 // absent for the character's own. use: absent for the assets the asset tags find, the only kind a module holds.

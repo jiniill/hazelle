@@ -179,14 +179,14 @@ describe('addAssets', () => {
     expect(await files.read(asset!.value.file)).toEqual({ ok: true, data: smile });
   });
 
-  it('stores emotion images as their own use, pictures only', async () => {
+  it('stores backgrounds as their own use, pictures only', async () => {
     const { store, files } = await server.account();
     const imported = await importCharacter(store, files, { card: blankCard('루나'), lore: [], loreFolders: [], assets: [] }, null, () => {});
     const id = imported.ok ? imported.data.id : '';
-    expect(await addAssets(store, files, id, [new File([png()], 'joy.png'), new File([mp4()], 'dance.mp4')], 'emotion')).toEqual({ ok: true, data: { added: 1, unsupported: [{ kind: 'unsupported-file', count: 1 }] } });
-    const [joy] = store.children('asset', id);
-    expect(joy!.value).toMatchObject({ name: 'joy', type: 'image/png', use: 'emotion' });
-    expect(await replaceAsset(store, files, joy!.id, mp4())).toEqual({ ok: false, error: 'picture-unreadable' });
+    expect(await addAssets(store, files, id, [new File([png()], 'night.png'), new File([mp4()], 'dance.mp4')], 'background')).toEqual({ ok: true, data: { added: 1, unsupported: [{ kind: 'unsupported-file', count: 1 }] } });
+    const [night] = store.children('asset', id);
+    expect(night!.value).toMatchObject({ name: 'night', type: 'image/png', use: 'background' });
+    expect(await replaceAsset(store, files, night!.id, mp4())).toEqual({ ok: false, error: 'picture-unreadable' });
   });
 
   it('removes several assets in one write and brings them back as they were', async () => {

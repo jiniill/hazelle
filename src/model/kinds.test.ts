@@ -28,10 +28,9 @@ it('accepts an illustration as the run stores it, and refuses one whose scene lo
   expect(isValue('illustration', { ...illustration, scene: { ...scene, framing: undefined } })).toBe(false);
 });
 
-it('reads an asset stored before emotion images and backgrounds as a plain one, and refuses a use it does not know', () => {
+it('reads an asset stored before backgrounds as a plain one, and refuses a use it does not know', () => {
   const asset = { name: 'smile', type: 'image/png', size: 10, file: { id: 'f', key: 'k' } };
   expect(isValue('asset', asset)).toBe(true);
-  expect(isValue('asset', { ...asset, use: 'emotion' })).toBe(true);
   expect(isValue('asset', { ...asset, use: 'background' })).toBe(true);
   expect(isValue('asset', { ...asset, use: 'voice' })).toBe(false);
 });
