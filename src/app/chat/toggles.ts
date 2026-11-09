@@ -1,4 +1,4 @@
-import type { Toggle, ToggleLine } from '../../model/prompt';
+import type { Toggle, ToggleLine, TogglePreset, ToggleValues } from '../../model/prompt';
 import { toggleTree } from '../../model/toggles';
 import type { ChatToggleSet, ToggleSource } from '../../runtime/chat-context';
 import { laidOut, type Laid } from '../common/toggleLayout';
@@ -7,7 +7,7 @@ export type ToggleRow = { toggle: Toggle; value: string; changed: boolean };
 
 // A text toggle's typed value waits under this key (common/useAutosave) before it is stored.
 export const toggleSaveKey = (owner: string | null, key: string) => `toggle:${owner ?? ''}:${key}`;
-export type ToggleSection = Pick<ToggleSource, 'from' | 'id' | 'name'> & { rows: ToggleRow[]; items: Laid<ToggleRow>[] };
+export type ToggleSection = Pick<ToggleSource, 'from' | 'id' | 'name' | 'presets'> & { rows: ToggleRow[]; items: Laid<ToggleRow>[] };
 type ToggleRows = { sections: ToggleSection[]; changed: number };
 
 // A key declared again by a later source shows once, in the source that declares it (model/toggles chatToggles keeps
@@ -20,10 +20,11 @@ export function toggleRows({ declared, sources, value }: ChatToggleSet): ToggleR
     }),
   );
   const sections = sources
-    .map(({ from, id, name, lines }) => ({
+    .map(({ from, id, name, lines, presets }) => ({
       from,
       id,
       name,
+      presets,
       rows: lines.flatMap((line) => rows.get(line) ?? []),
       items: asRisu(laidOut(toggleTree(lines), (line) => rows.get(line) ?? null)),
     }))
@@ -48,3 +49,10 @@ export function shownRows(rows: readonly ToggleRow[], found: ReadonlySet<ToggleR
   const kept = rows.filter((row) => found.has(row) && (!onlyChanged || row.changed));
   return [...kept.filter((row) => first.has(row.toggle.key)), ...kept.filter((row) => !first.has(row.toggle.key))];
 }
+
+// A preset saves every toggle its section shows. Picked, it sets those the section still shows; one it lacks (added
+// since) keeps its value, so that preset is never current until it is saved again.
+export const sectionValues = ({ rows }: ToggleSection): ToggleValues => Object.fromEntries(rows.map(({ toggle, value }) => [toggle.key, value]));
+export const presetValues = ({ rows }: ToggleSection, { values }: TogglePreset): ToggleValues =>
+  Object.fromEntries(rows.flatMap(({ toggle }) => (Object.hasOwn(values, toggle.key) ? [[toggle.key, values[toggle.key]!]] : [])));
+export const currentPreset = ({ rows, presets }: ToggleSection) => presets.find(({ values }) => rows.every(({ toggle, value }) => values[toggle.key] === value)) ?? null;

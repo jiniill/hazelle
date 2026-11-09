@@ -1,4 +1,4 @@
-import { CopyPlus, Copy, Download, Flag, MessageSquarePlus, Pencil, Plus, RefreshCw, RotateCcw, RotateCw, Trash2, Upload, type LucideIcon } from 'lucide-react';
+import { CopyPlus, Copy, Download, Flag, MessageSquarePlus, Pencil, Plus, RefreshCw, RotateCcw, RotateCw, Save, Trash2, Upload, type LucideIcon } from 'lucide-react';
 import { EXPORT } from './words';
 
 // Keep action icons synchronized across screens (lint-enforced). Retry, regenerate and restore are distinct acts.
@@ -13,6 +13,8 @@ export const ACTS = {
   duplicate: { label: '사본 만들기', icon: CopyPlus },
   copy: { label: '복사', icon: Copy },
   rename: { label: '이름 바꾸기', icon: Pencil },
+  // A saved preset takes the values in use now.
+  overwrite: { label: '현재 설정으로 덮어쓰기', icon: Save },
   retry: { label: '다시 시도', icon: RotateCw },
   regenerate: { label: '다시 생성', icon: RefreshCw },
   restore: { label: '복원', icon: RotateCcw },

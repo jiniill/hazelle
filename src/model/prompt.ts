@@ -73,12 +73,16 @@ export const isToggle = (line: ToggleLine): line is Toggle => 'key' in line;
 
 export type ToggleValues = Record<string, string>;
 
+// 토글 프리셋: a value for every toggle of the one that declares it (a prompt, a card, a module) as it was when saved.
+export type TogglePreset = { id: string; name: string; values: ToggleValues };
+
 // Copies retain origin's captured name, but must not inherit imported. A chat note overrides authorNote.
 export type ConversationPrompt = {
   task?: never;
   name: string;
   blocks: Block[];
   toggles: ToggleLine[];
+  togglePresets?: TogglePreset[];
   authorNote: string;
   models: Assignment;
   origin?: { id: string; name: string };

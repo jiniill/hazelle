@@ -1,10 +1,10 @@
-import { Check, ChevronLeft, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, type LucideIcon } from 'lucide-react';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { ChangeSignal } from '../../../change-signal';
 import { Item } from '../collections/Item';
 import { ButtonSlot } from '../controls/Button';
-import { Icon } from '../foundation/Icon';
+import { CheckMark, Icon } from '../foundation/Icon';
 import { faceStyle, type FontId } from '../foundation/fonts';
 import { hasFinePointer } from '../foundation/media';
 import { keepOnScreen, menuEdge, room, useLayer } from './layers';
@@ -185,13 +185,7 @@ export function MenuItem({ label, sub, face, icon, avatar, tag, checked, multipl
       title={face === undefined ? label : <span className={styles.face} style={faceStyle(face)}>{label}</span>}
       meta={tag}
       preview={sub}
-      trailing={
-        checked && (
-          <span className={styles.check}>
-            <Icon icon={Check} size="sm" />
-          </span>
-        )
-      }
+      trailing={checked && <CheckMark />}
       onClick={() => {
         close();
         onClick();

@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import { createContext, useContext, type ReactNode } from 'react';
-import { Icon } from '../foundation/Icon';
+import { CheckMark, Icon } from '../foundation/Icon';
 import { useSeekRow } from '../foundation/seek';
 import { Tag } from '../foundation/Tag';
 import { FolderMark } from './FolderMark';
@@ -54,7 +54,7 @@ type ItemProps = {
   control?: ReactNode;
   detail?: ReactNode;
   children?: ReactNode;
-  // pressed: one of a set of choices. current: the item open beside the list (ListDetail). expanded: the row opens
+  // selected: the one chosen of a set, marked ✓. current: the item open beside the list (ListDetail). expanded: the row opens
   // its detail in place.
   selected?: boolean;
   current?: boolean;
@@ -67,7 +67,7 @@ export function ListItem({ leading, folder = false, title, badge, code, descript
   const windowed = useContext(Windowed);
   const places = useContext(Places);
   const self = useSeekRow<HTMLLIElement>(title);
-  const end = trailing ?? ((places || (folder && expanded === undefined)) && onClick ? <Icon icon={ChevronRight} /> : undefined);
+  const end = trailing ?? (selected ? <CheckMark /> : (places || (folder && expanded === undefined)) && onClick ? <Icon icon={ChevronRight} /> : undefined);
   const meta =
     code || tags.length > 0 ? (
       <>

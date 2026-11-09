@@ -1,14 +1,14 @@
 import type { Listed, Pack, RegexScript, Trigger } from '../engine/import/types';
 import { without } from '../model/fields';
 import type { PackOwner } from '../model/library';
-import type { ToggleLine } from '../model/prompt';
+import type { ToggleLine, TogglePreset } from '../model/prompt';
 import type { ApiResult } from './api';
 import { evaluationFailure } from './evaluation';
 import type { ObjectStore } from './store';
 
 export type ScriptList = 'regex' | 'triggers';
 type Scripts = Pick<Pack, ScriptList>;
-type Parts = Pick<Pack, ScriptList | 'toggles'>;
+type Parts = Pick<Pack, ScriptList | 'toggles' | 'togglePresets'>;
 
 // Own character.card vs module pack access here. Retry changes against the latest copy, preserving unrelated edits.
 // Changes must be idempotent; null means target gone, with no write.
@@ -105,6 +105,9 @@ export const restoreScript = (store: ObjectStore, owner: PackOwner, { list, scri
 
 // The whole list, as the prompt's is written (runtime/prompts editPrompt): its lines have no ids to merge by.
 export const setToggles = (store: ObjectStore, owner: PackOwner, toggles: ToggleLine[]) => updatePack(store, owner, () => ({ toggles }));
+
+export const changePackPresets = (store: ObjectStore, owner: PackOwner, change: (presets: TogglePreset[]) => TogglePreset[]) =>
+  updatePack(store, owner, (pack) => ({ togglePresets: change(pack.togglePresets ?? []) }));
 
 // Run samples in the watchdog-protected evaluation worker; newer samples replace pending ones of the same script.
 export const sampleScript = (store: ObjectStore, owner: PackOwner, script: RegexScript, text: string, signal: AbortSignal): Promise<ApiResult<string>> =>

@@ -4,7 +4,7 @@ import type { ToggleLine, ToggleValues } from '../../model/prompt';
 import { chatToggles, toggleValue } from '../../model/toggles';
 import type { ToggleSource } from '../../runtime/chat-context';
 import type { Laid } from '../common/toggleLayout';
-import { shownRows, toggleRows, type ToggleRow } from './toggles';
+import { currentPreset, presetValues, sectionValues, shownRows, toggleRows, type ToggleRow } from './toggles';
 
 const PROMPT: ToggleLine[] = [
   { key: 'sims', label: '시뮬레이터 모드', kind: 'check', default: '0' },
@@ -14,13 +14,13 @@ const set = (sources: ToggleSource[], values: ToggleValues) => {
   const declared = chatToggles(sources.flatMap(({ lines }) => lines));
   return { declared, sources, value: toggleValue(declared, values) };
 };
-const source = (from: ToggleSource['from'], name: string, text: string): ToggleSource => ({ from, id: name, name, lines: readToggles(text) });
+const source = (from: ToggleSource['from'], name: string, text: string): ToggleSource => ({ from, id: name, name, lines: readToggles(text), presets: [] });
 const shape = (item: Laid<ToggleRow>): unknown =>
   'row' in item ? item.row.toggle.key : 'group' in item ? [item.group.line.label, item.items.map(shape)] : `${item.note.line.kind}:${item.note.line.label}`;
 
 describe('toggle panel rows', () => {
   it('counts the toggles off their default, and keeps the ones changed at opening first while filtering', () => {
-    const rows = toggleRows(set([{ from: 'prompt', id: 'P', name: 'P', lines: PROMPT }, source('card', 'Ari', 'sims=겹침\nstorm=폭풍 이벤트\nweather=날씨 묘사')], { length: '2', weather: '0', storm: '1' }));
+    const rows = toggleRows(set([{ from: 'prompt', id: 'P', name: 'P', lines: PROMPT, presets: [] }, source('card', 'Ari', 'sims=겹침\nstorm=폭풍 이벤트\nweather=날씨 묘사')], { length: '2', weather: '0', storm: '1' }));
     const [prompt, card] = rows.sections;
     expect(prompt!.rows.map(({ toggle, value, changed }) => [toggle.key, value, changed])).toEqual([
       ['sims', '0', false],
@@ -59,5 +59,21 @@ describe('toggle panel rows', () => {
       ['note', '적어 둔 말'],
     ]);
     expect(rows.changed).toBe(1);
+  });
+});
+
+describe('toggle presets', () => {
+  it('saves every toggle of its section, sets on pick only those the section still shows, and is current only while all match', () => {
+    const sources = (presets: ToggleSource['presets']) => [{ from: 'prompt' as const, id: 'P', name: 'P', lines: PROMPT, presets }];
+    const [saved] = toggleRows(set(sources([]), { length: '2' })).sections;
+    expect(sectionValues(saved!)).toEqual({ sims: '0', length: '2' });
+
+    const novel = { id: 'n', name: '소설', values: { sims: '1', length: '0', gone: '1' } };
+    const short = { id: 's', name: '짧게', values: { length: '0' } };
+    const [section] = toggleRows(set(sources([short, novel]), { sims: '1', length: '0' })).sections;
+    expect(presetValues(section!, novel)).toEqual({ sims: '1', length: '0' });
+    expect(presetValues(section!, short)).toEqual({ length: '0' });
+    expect(currentPreset(section!)?.id).toBe('n');
+    expect(currentPreset({ ...section!, presets: [short] })).toBeNull();
   });
 });

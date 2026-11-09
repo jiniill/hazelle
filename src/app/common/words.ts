@@ -93,6 +93,9 @@ export const COUNTING = '계산하는 중…';
 // One named thing as the object of a sentence: '루나' 캐릭터를.
 export const namedObject = (name: string, noun: string) => `'${name}' ${withParticle(noun, '을/를')}`;
 
+// A preset of the user's own: 디스플레이's looks and a toggle section's.
+export const PRESET = { noun: '프리셋', save: '프리셋으로 저장', rename: '프리셋 이름 바꾸기', named: (count: number) => `내 프리셋 ${count + 1}` };
+
 export const BIN = '휴지통';
 export const BIN_KEEPS = `${KEEP_DAYS}일 안에 '${BIN}'에서 복원할 수 있어요.`;
 

@@ -6,9 +6,10 @@ import { ToggleFlip } from '../common/ToggleChoice';
 import { ToggleList } from '../common/ToggleList';
 import { useAutosave } from '../common/useAutosave';
 import { useSearch } from '../common/useSearch';
-import { onOff, PAGES, RESET, scopeTag } from '../common/words';
+import { onOff, PAGES, RESET } from '../common/words';
 import { useSettings, useStore } from '../session';
-import { Button, Empty, IconButton, Row, Section, SettingRow, SidePanel, Tabs, TextField } from '../ui';
+import { ChoiceGroup, Empty, IconButton, MenuItem, MoreMenu, Section, SettingRow, SidePanel, Stack, TextField } from '../ui';
+import { TogglePresets } from './TogglePresets';
 import { shownRows, toggleSaveKey, type ToggleRow, type ToggleSection } from './toggles';
 import type { OpenChat } from './useChat';
 
@@ -21,11 +22,13 @@ type Props = Pick<OpenChat, 'card' | 'toggles' | 'toggleOwner'> & {
   onFlip: OpenChat['actions']['flip'];
   onWrite: OpenChat['actions']['writeToggle'];
   onReset: () => void;
+  onPreset: OpenChat['actions']['pickPreset'];
+  sectionNow: OpenChat['actions']['sectionNow'];
   onEdit: (section: ToggleSection) => void;
   onClose: () => void;
 };
 
-export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onReset, onEdit, onClose }: Props) {
+export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onReset, onPreset, sectionNow, onEdit, onClose }: Props) {
   const store = useStore();
   const pinned = new Set(useSettings().pinnedToggles);
   const [filter, setFilter] = useState<'all' | 'changed'>('all');
@@ -35,9 +38,6 @@ export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onRes
   const search = useSearch(all, '토글 검색', (row) => [row.toggle.label]);
   const found = new Set(search.found);
   const laying = filter === 'all' && !search.words;
-  // Characterless values apply to all characterless chats, not a global layer.
-  // Unchanged means declared defaults; the global layer declares no toggles and must not label them.
-  const tag = toggles.changed === 0 ? ({ label: '기본값', tone: 'plain' } as const) : card ? scopeTag('character') : undefined;
   const visible = toggles.sections
     .map((section) => ({ ...section, shown: shownRows(section.rows, found, filter === 'changed', first) }))
     .filter((section) => section.shown.length > 0);
@@ -65,55 +65,51 @@ export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onRes
     />
   );
   return (
-    <SidePanel title="토글" onClose={onClose}>
+    <SidePanel
+      title="토글"
+      subtitle={all.length > 0 ? (card ? `${card.name}의 모든 채팅에 적용` : '캐릭터 없이 대화하는 모든 채팅에 적용') : undefined}
+      actions={
+        toggles.changed > 0 && (
+          <MoreMenu of="토글">
+            <MenuItem label={RESET} sub={`변경 ${toggles.changed}개`} onClick={onReset} />
+          </MoreMenu>
+        )
+      }
+      onClose={onClose}
+    >
       {all.length === 0 ? (
         <Empty variant="section">{card ? '이 채팅의 프롬프트와 캐릭터 카드에는 토글이 없어요.' : '이 채팅의 프롬프트에는 토글이 없어요.'}</Empty>
       ) : (
-        <Section
-          level={3}
-          title="설정"
-          tag={tag}
-          note={toggles.changed ? `변경 ${toggles.changed}개` : undefined}
-          help={card ? `바꾼 값은 ${card.name}의 모든 채팅에 적용돼요.` : '바꾼 값은 캐릭터 없이 대화하는 모든 채팅에 적용돼요.'}
-          action={
-            toggles.changed > 0 && (
-              <Button variant="link" onClick={onReset}>
-                {RESET}
-              </Button>
-            )
-          }
-        >
+        <>
           {search.field && (
-            <Row kind="toolbar">
+            <Stack gap="related">
               {search.field}
-              <Tabs
+              <ChoiceGroup
                 label="보기"
-                items={[
-                  { value: 'all', label: '전체', count: all.length },
-                  { value: 'changed', label: '변경', count: toggles.changed },
+                layout="segmented"
+                options={[
+                  { value: 'all', label: '전체', tag: String(all.length) },
+                  { value: 'changed', label: '변경', tag: String(toggles.changed) },
                 ]}
                 value={filter}
                 onChange={show}
               />
-            </Row>
+            </Stack>
           )}
           {visible.map((section, index) => (
             <Section
               key={index}
               level={3}
-              title={`${FROM[section.from]} · ${section.name}`}
+              title={section.name}
+              tag={{ label: FROM[section.from], tone: 'plain' }}
               note={String(section.rows.length)}
-              action={
-                <Button variant="link" onClick={() => onEdit(section)}>
-                  기본값 바꾸기
-                </Button>
-              }
+              action={<TogglePresets section={section} onPick={(preset) => onPreset(section, preset)} now={() => sectionNow(section.id)} onEdit={() => onEdit(section)} />}
             >
               {laying ? <ToggleList owner={section.id} items={section.items} row={row} /> : section.shown.map(row)}
             </Section>
           ))}
           {visible.length === 0 && <Empty variant="section">{search.none ?? '바꾼 토글이 없어요.'}</Empty>}
-        </Section>
+        </>
       )}
     </SidePanel>
   );

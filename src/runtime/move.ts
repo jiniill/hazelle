@@ -12,7 +12,7 @@ import { emptyMemory, memoryId, type Memory, type MemoryRecord, type MemorySetti
 import { fingerprint } from '../engine/memory';
 import type { ApiResult } from './api';
 import { createFolder } from './folders';
-import { importCharacter, orderFirst, saveAssets, setToggle, type ImportedCharacter, type Progress } from './characters';
+import { importCharacter, orderFirst, saveAssets, setToggleValues, type ImportedCharacter, type Progress } from './characters';
 import { setSharedLoreScan } from './chat-context';
 import { chatWrites, saveNewChats } from './chat-log';
 import type { Files } from './files';
@@ -67,8 +67,8 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
   // nothing until a prompt or pack declares it.
   const held = accountSettings(store).toggles ?? {};
   const unset = Object.entries(backup.catalog.toggles).filter(([key]) => !Object.hasOwn(held, key));
-  for (const [key, value] of unset) {
-    const set = await setToggle(store, null, key, value);
+  if (unset.length > 0) {
+    const set = await setToggleValues(store, null, Object.fromEntries(unset));
     if (!set.ok) return set;
   }
   for (const [done, { key, selected }] of personas.entries()) {

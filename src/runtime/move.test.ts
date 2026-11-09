@@ -8,7 +8,7 @@ import { accountSettings } from './account-settings';
 import { randomBytes } from '../vault/aead';
 import { sealFile } from '../vault/files';
 import { api } from './api';
-import { importCharacter, setToggle } from './characters';
+import { importCharacter, setToggleValues } from './characters';
 import { setSharedLoreScan, sharedLoreScan } from './chat-context';
 import { Files } from './files';
 import { MEMORY_DEFAULTS } from './memory-read';
@@ -230,7 +230,7 @@ describe('moveFromRisu', () => {
 
   it("gives every character it brings Risu's toggle values, and 캐릭터 없이 only the keys it holds none for", async () => {
     const { store, files } = await server.account();
-    await setToggle(store, null, 'tagger', '0');
+    await setToggleValues(store, null, { tagger: '0' });
     const backup = source({ characters: [luna], toggles: { tagger: '1', style: '2' } });
     const moved = await moveFromRisu(store, files, backup, backup.catalog, null, () => {});
     expect(moved).toMatchObject({ ok: true, data: { toggles: 2 } });
