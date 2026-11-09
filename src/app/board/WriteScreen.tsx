@@ -148,8 +148,12 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
       return null;
     });
 
-  function submit(event: FormEvent) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Enter in 제목, a one-line field, submits the form by itself; it moves on to 내용 instead, so only 올리기 posts.
+    const fields = [...event.currentTarget.elements];
+    const at = fields.findIndex((field) => field === document.activeElement && (field as HTMLInputElement).type === 'text');
+    if (at >= 0) return (fields[at + 1] as HTMLElement).focus();
     if (!ready || category === null) return;
     const picked = category;
     gate(() => void send(picked));

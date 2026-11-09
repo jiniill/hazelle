@@ -22,3 +22,6 @@ export function family(chats: readonly ChatSummary[], current: string): Member {
 
 // How many chats the family holds; a ghost is none.
 export const countChats = (member: Member): number => (member.kind === 'chat' ? 1 : 0) + member.children.reduce((sum, { member }) => sum + countChats(member), 0);
+
+// A chat no other is copied or branched from, itself from none: no family to draw.
+export const alone = (member: Member) => member.kind === 'chat' && member.children.length === 0;

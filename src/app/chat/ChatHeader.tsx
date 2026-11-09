@@ -16,6 +16,8 @@ import { ChatOnboarding } from './ChatOnboarding';
 import { MOVE_TO_FOLDER } from '../common/folders/FolderParts';
 import { ChatNameDialog } from './ChatEdits';
 import { ChatFolderMenu, useChatFolders } from './ChatFolderMenu';
+import { useFamily } from './ChatLineage';
+import { alone } from './lineage';
 import { ChatExport } from './ChatExport';
 import { ModelMenu } from '../common/ModelMenu';
 import { PersonaDialog } from './ChatPersonaPicker';
@@ -89,7 +91,7 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
         <Divider variant="menu" />
         <MenuItem icon={Search} label="검색" onClick={actions.openSearch} />
         {item && !chat.displayPending && <MenuItem icon={Bookmark} label={BOOKMARK} onClick={actions.bookmarks} />}
-        {item && <MenuItem icon={GitGraph} label={LINEAGE} onClick={actions.lineage} />}
+        {item && <LineageItem current={item.id} shelf={shelf} onClick={actions.lineage} />}
         {item && features.memory && <MenuItem icon={FEATURE_ICONS.memory} label={FEATURE_NAMES.memory} sub={failed ? '정리 실패' : indexing ? `검색 준비 ${indexing.done}/${indexing.total}` : undefined} onClick={toggleMemory} />}
         <MenuItem icon={ToggleRight} label={FEATURES_TITLE} onClick={openFeatures.onClick} />
         {item && <MenuItem icon={BookKey} label={CHAT_LORE} onClick={actions.lore} />}
@@ -111,6 +113,11 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
       </MoreMenu>
     </>
   );
+}
+
+// 분기 지도 is offered where it has a family to draw: a branch, a copy or an original.
+function LineageItem({ current, shelf, onClick }: { current: string; shelf: OpenChat['shelf']; onClick: () => void }) {
+  return alone(useFamily(current, shelf)) ? null : <MenuItem icon={GitGraph} label={LINEAGE} onClick={onClick} />;
 }
 
 // The persona and prompt dialogs mount here, not beside their chips: a folded composer hides its tool bar and a hidden

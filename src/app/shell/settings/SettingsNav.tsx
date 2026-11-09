@@ -2,7 +2,7 @@ import { FileText, FlaskConical, Hand, Layers, Lock, MessageSquare, Network, Pac
 import { useState } from 'react';
 import { useSearch } from '../../common/useSearch';
 import { FEATURE_ICONS } from '../../common/featureIcons';
-import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS } from '../../common/words';
+import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS, TOOLS } from '../../common/words';
 import { presetOf } from '../../common/reading';
 import { useDisplay } from '../../display';
 import { FEATURE_LABS, FEATURES, type Feature } from '../../../model/features';
@@ -10,7 +10,8 @@ import { availableFeatures, sharedFeatures } from '../../../runtime/features';
 import { useAccount, useConnections, useModulesAndPlugins, usePersonas, useProfiles, usePrompts, useSession, useSettings, useStore } from '../../session';
 import { Empty, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen, seekRow } from '../../ui';
 import { navigate } from '../router';
-import type { Route, SettingsPage } from '../routes';
+import type { Route, SettingsPage, ToolsPage } from '../routes';
+import { TOOL_PLACES } from '../tools/ToolsNav';
 import { hitsOf, hitTexts, subpages, type Hit } from './terms';
 
 type Place = { page: SettingsPage; label: string; icon: LucideIcon; route: Route };
@@ -52,11 +53,14 @@ const APP: Place[] = [
   { page: 'account', label: PAGES.account, icon: Lock, route: { kind: 'account', section: null } },
 ];
 const ADMIN: Place = { page: 'admin', label: PAGES.admin, icon: ShieldCheck, route: { kind: 'admin' } };
+// 설정 검색 finds 도구's pages too, under the window that holds them.
+type Sought = { page: SettingsPage | ToolsPage; label: string; icon: LucideIcon; route: Route; where?: string };
+const TOOLS_SOUGHT: Sought[] = TOOL_PLACES.map((place) => ({ ...place, where: TOOLS }));
 
 function useSettingsNav() {
   const { admin } = useAccount();
   const groups: Group[] = [SETUP, AI, doing(availableFeatures(useSettings())), HAVE, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
-  return { groups, holds: useHolds(), search: useSettingsSearch(groups.flatMap(({ places }) => places)) };
+  return { groups, holds: useHolds(), search: useSettingsSearch([...groups.flatMap(({ places }): Sought[] => places), ...TOOLS_SOUGHT]) };
 }
 
 // What each page holds, at its row's end in the sidebar and the phone list: a feature, whether chats use it.
@@ -92,10 +96,10 @@ function useHolds(): Record<SettingsPage, string | undefined> {
 }
 
 // 설정 검색: a page by its label, or by a title or label shown on it; a hit opens the page at that row and clears the words.
-function useSettingsSearch(places: Place[]) {
+function useSettingsSearch(places: Sought[]) {
   const query = useState('');
   const hits = hitsOf(places, subpages(useSettings(), useProfiles()));
-  const open = (hit: Hit<Place>) => {
+  const open = (hit: Hit<Sought>) => {
     query[1]('');
     navigate(hit.to);
     if (hit.seek) seekRow(hit.seek);

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import type { Chat, ChatSummary } from '../../model/chat';
-import { countChats, family, type Member } from './lineage';
+import { alone, countChats, family, type Member } from './lineage';
 
 const chat = (id: string, origin?: Chat['origin'], count: number | null = 10): ChatSummary => ({ id, chat: { title: null, character: null, models: {}, ...(origin && { origin }) }, count, title: id, preview: null, at: null, order: 0 });
 const shape = (member: Member): unknown => [member.kind === 'chat' ? member.chat.id : `ghost:${member.name}`, member.children.map(({ kind, at, member }) => [kind, at, shape(member)])];
@@ -34,4 +34,9 @@ it('counts the chats, a ghost as none', () => {
   const chats = [chat('a'), chat('b', { id: 'a', name: 'a', after: 'm5', shared: 5 }), chat('c', { id: 'b', name: 'b', after: 'm8', shared: 8 }), chat('d', { id: 'a', name: 'a', after: null, shared: 10 })];
   expect(countChats(family(chats, 'c'))).toBe(4);
   expect(countChats(family([chat('g', { id: 'gone', name: '옛 채팅', after: 'm3', shared: 3 }), chat('h', { id: 'gone', name: '옛 채팅', after: null })], 'g'))).toBe(2);
+});
+
+it('takes a chat as alone only with no copy or branch of it and no origin, deleted or not', () => {
+  const chats = [chat('lone'), chat('a'), chat('b', { id: 'a', name: 'a', after: null }), chat('c', { id: 'gone', name: '옛 채팅', after: 'm1' })];
+  expect(['lone', 'a', 'b', 'c'].map((id) => alone(family(chats, id)))).toEqual([true, false, false, false]);
 });

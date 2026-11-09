@@ -3,13 +3,15 @@ import { LABS } from '../../common/labs';
 import { NUMBER, PROFILE_LABELS, PROFILE_ROWS } from '../../common/settingWords';
 import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE } from '../../common/words';
 import type { Settings } from '../../../model/settings';
-import { BIN_PLACE, type Route, type SettingsPage } from '../routes';
+import { BIN_PLACE, type Route, type SettingsPage, type ToolsPage } from '../routes';
 import { ROLES_TITLE } from '../../settings/setup';
 
-// 설정 검색's index: the section titles and setting labels each page shows, beside its own label. terms.test.ts fails on
-// a literal label a page shows and this does not hold; a label given as a constant is only held by being named here.
-// A row on one item's page (a connection, a model) sits here under the list that leads to it, since no item is implied.
-const TERMS: Record<SettingsPage, string[]> = {
+// 설정 검색's index: the section titles and setting labels each page shows, beside its own label; 도구's pages too.
+// terms.test.ts fails on a literal label a page shows and this does not hold; a label given as a constant is only held by
+// being named here. A row on one item's page (a connection, a model) sits here under the list that leads to it, since no
+// item is implied.
+type Page = SettingsPage | ToolsPage;
+const TERMS: Record<Page, string[]> = {
   setup: [FINDINGS, ROLES_TITLE, STARRED, FEATURES_TITLE],
   models: [DEFAULT_MODELS, SCOPE.default, MODEL_ROLES.main, MODEL_ROLES.aux, MODEL_ROLES.embed, STARRED, MODEL_SETTINGS, '기능별 모델', '프롬프트별 지정 모델', '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT],
   connections: ['모델', '계정', '계정 추가', '그룹', '전환일', '사용량과 한도', RETRY_COUNT, '사용 내역', '연결 이름', '키 변경', '모델 ID로 추가'],
@@ -29,6 +31,8 @@ const TERMS: Record<SettingsPage, string[]> = {
   controls: ['스크롤할 때', '응답 수신 시', '자동 스크롤', '헤더 숨기기', '입력창 접기', '빠른 스크롤 막대', '메시지 이동 버튼', '내 메시지에서도 멈추기', '입력창', 'Enter로 보내기', '단축키', '단축키 목록'],
   sounds: ['알림음', '세부 설정', '응답이 시작될 때', '응답이 도착했을 때', '번역이 끝났을 때'],
   account: ['저장 공간', PAGES.usage, '잠그기', '로그아웃', '다른 기기에서 로그아웃', '백업', '전체 백업', ACTS.export.label, 'Risu로 옮길 파일', importOf('백업'), '이전 시점으로 복원', SHARE.list, NOTICES.from, BOARD.title, BOARD.mine, BOARD.toOperator, '새 소식', '앱 정보', '버전', PULSE.sharing, AUTO_DIAGNOSIS.label, '문제 진단', '탈퇴', '계정 삭제'],
+  translator: ['원문', '번역 결과', '번역할 언어', MODEL_ROLES.aux, TRANSLATOR_NOTE],
+  calculator: ['모델', '토큰', '가격', '예상 비용'],
   admin: ['서비스', '가입 정원', '계정당 텍스트 한도', '계정당 이미지 한도', '백업 폴더', '관리 도구', `모두에게 ${NOTICES.send}`, '링크 보류', '파일 차단', '계정', '게시판', '손님 글쓰기', '기록', NOTICES.received, '운영자에게만 온 글', '자동 진단', '방문자 통계', '가입 주별 재방문'],
 };
 
@@ -41,6 +45,7 @@ const HIDDEN: Record<string, string[]> = {
   [NUMBER.temperature.label]: ['temperature'],
   [NUMBER.maxOutput.label]: ['최대 토큰'],
   [PAGES.connections]: ['API 키'],
+  [PICTURE_PLACE]: ['삽화 위치'],
 };
 
 // where: names the place when it is not under this page, as 휴지통 is not.
@@ -48,7 +53,7 @@ type Subpage = { label: string; where?: string; route: Route; terms: string[] };
 
 // A page's own pages: a hit on one of their labels or terms opens that page. Which 모델 설정 a row's term means is not
 // implied either, so it opens the default one, and 모델 when there is none, whose 모델 설정 section makes one.
-export const subpages = (settings: Settings, profiles: readonly { id: string }[]): Partial<Record<SettingsPage, Subpage[]>> => {
+export const subpages = (settings: Settings, profiles: readonly { id: string }[]): Partial<Record<Page, Subpage[]>> => {
   const profile = profiles.find(({ id }) => id === settings.profile);
   return {
     models: [{ label: `기본 ${MODEL_SETTINGS}`, route: profile ? { kind: 'profile', id: profile.id } : { kind: 'models' }, terms: [...PROFILE_LABELS, '사용 중인 모델', SET_DEFAULT] }],
@@ -61,9 +66,10 @@ export const subpages = (settings: Settings, profiles: readonly { id: string }[]
 // seek: the row or section it names on the page it opens; a page's own label names none.
 export type Hit<Place> = { term: string; place: Place; where: string | undefined; to: Route; seek: string | undefined };
 
-export const hitsOf = <Place extends { page: SettingsPage; label: string; route: Route }>(places: readonly Place[], subs: ReturnType<typeof subpages>): Hit<Place>[] =>
+// A place's where: names the place, as Subpage's does, when it is not in 설정, as 도구's pages are not.
+export const hitsOf = <Place extends { page: Page; label: string; route: Route; where?: string }>(places: readonly Place[], subs: ReturnType<typeof subpages>): Hit<Place>[] =>
   places.flatMap((place) => [
-    ...[place.label, ...TERMS[place.page]].map((term) => ({ term, place, where: term === place.label ? undefined : place.label, to: place.route, seek: term === place.label ? undefined : term })),
+    ...[place.label, ...TERMS[place.page]].map((term) => ({ term, place, where: term === place.label ? place.where : place.label, to: place.route, seek: term === place.label ? undefined : term })),
     ...(subs[place.page] ?? []).flatMap((sub) =>
       [sub.label, ...sub.terms].map((term) => ({ term, place, where: term === sub.label ? (sub.where ?? place.label) : `${place.label} › ${sub.label}`, to: sub.route, seek: term === sub.label ? undefined : term })),
     ),
