@@ -1,7 +1,7 @@
-import { Brand, Intro, Screen, Section, Stack, Text } from '../ui';
+import { Intro, Section, Stack, Text } from '../ui';
 import { selfHost } from '../../runtime/installation';
 import { EFFECTIVE, OUTBOUND, PRIVACY, TERMS, type LegalText } from './legal';
-import { LegalNotice } from './LegalNotice';
+import { PublicScreen } from './PublicScreen';
 
 // main.tsx asks before the account flow, so the pages read the same signed in or out. A self-host has OUTBOUND alone.
 export function legalPage(path: string) {
@@ -11,7 +11,7 @@ export function legalPage(path: string) {
 
 function LegalPage({ text }: { text: LegalText }) {
   return (
-    <Screen top={<Brand />} foot={<LegalNotice />}>
+    <PublicScreen here={text.path}>
       <Intro title={text.title}>{text === OUTBOUND ? '이 헤이젤에서 외부로 전송되는 데이터를 모두 정리했어요.' : `시행일: ${EFFECTIVE}`}</Intro>
       {text.sections.map((section) => (
         <Section key={section.title} title={section.title}>
@@ -22,6 +22,6 @@ function LegalPage({ text }: { text: LegalText }) {
           </Stack>
         </Section>
       ))}
-    </Screen>
+    </PublicScreen>
   );
 }

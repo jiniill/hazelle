@@ -9,6 +9,13 @@ it('shows the terms and the privacy page at their paths with no account, and not
   expect(legalPage('/')).toBeNull();
 });
 
+it('opens the app from its head, and its notice links the other pages but not itself', () => {
+  const html = renderToStaticMarkup(legalPage('/terms'));
+  expect(html).toContain('헤이젤 열기');
+  expect(html).not.toContain('href="/terms"');
+  expect(html).toContain('href="/privacy"');
+});
+
 it("shows a self-host what leaves it in place of hazelle.app's terms", () => {
   markSelfHost(true);
   try {

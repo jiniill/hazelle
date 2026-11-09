@@ -59,12 +59,15 @@ type OnFallback =
   | 'cannot-undo'
   | 'too-many-restores';
 
+// Said on the username field when 다음 checks the name.
+export const USERNAME_TAKEN = '이미 쓰고 있는 아이디예요.';
+
 const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in OnFallback]?: never } & Partial<Record<string, string>> = {
   'bad-username': `아이디는 ${count(USERNAME_LENGTH.min)}~${count(USERNAME_LENGTH.max)}자의 글자와 숫자, ${[...USERNAME_MARKS].join(' ')}로만 만들 수 있어요.`,
   'signup-closed': '가입 정원이 다 차서 새 계정을 만들 수 없어요.',
   'too-many-signups': '가입을 너무 여러 번 시도했어요. 10분쯤 뒤에 다시 시도해 주세요.',
-  // Signup's last step, after the recovery key; the name is set on the step before.
-  'username-taken': '이미 쓰고 있는 아이디예요. 이전 단계로 돌아가 다른 아이디를 입력해 주세요.',
+  // Signup's last step, after the recovery key: the name was taken after 다음 checked it, and is set on the step before.
+  'username-taken': `${USERNAME_TAKEN} 이전 단계로 돌아가 다른 아이디를 입력해 주세요.`,
   'account-mismatch': '다른 탭에서 다른 계정으로 로그인해서 이 탭에서 바꾼 내용을 저장하지 못했어요. 이 탭에서 다시 로그인해 주세요.',
   suspended: `정지된 계정이라 내용을 저장하거나 모델을 호출할 수 없어요. 백업 파일은 ${inSettings('account')}에서 받을 수 있어요.`,
   'too-many-calls': '모델을 너무 자주 호출했어요. 잠시 뒤에 다시 시도해 주세요.',

@@ -11,14 +11,13 @@
 }
 
 /* Keep disclosure a boundary under rows, never a boxed setting row (user, 2026-10-19). */
-.line {
+.rule {
   flex: 1;
   height: var(--border-thin);
   background: var(--color-divider);
 }
 
 .toggle {
-  composes: note from '../foundation/type.module.css';
   /* Text only, never a fill: a fill left under the pointer after a press reads as a chip. */
   composes: ink from '../foundation/hover.module.css';
   display: inline-flex;
@@ -28,9 +27,27 @@
   border-radius: var(--radius-sm);
 }
 
+.line {
+  composes: note from '../foundation/type.module.css';
+}
+
+.question {
+  composes: title from '../foundation/type.module.css';
+  flex: 1;
+  align-items: flex-start;
+  text-align: start;
+}
+
 .chevron {
   display: flex;
   transition: transform var(--duration-fast);
+}
+
+/* One line high, so the chevron stands level with the first line of a question that wraps. */
+.question .chevron {
+  align-items: center;
+  height: var(--one-line);
+  color: var(--color-text-muted);
 }
 
 .toggle[aria-expanded='true'] .chevron {

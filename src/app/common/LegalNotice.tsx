@@ -11,34 +11,32 @@ import { PULSE } from './words';
 // scripts/source.sh writes both files at build, so the dev server has neither.
 // The archive is the offer that holds for any image, one built from a fork included; the repository link is this
 // repository's tag, so it does not replace the archive.
-export function LegalNotice() {
+type Place = { path: string; title: string };
+
+// here: the page it closes, left out of its links.
+export function LegalNotice({ here }: { here?: string }) {
   const source = BUILT_VERSION ? `${REPOSITORY}/tree/${BUILT_VERSION}` : REPOSITORY;
+  const place = ({ path, title }: Place) =>
+    path !== here && (
+      <Link key={path} href={path}>
+        {title}
+      </Link>
+    );
+  const places: Place[] = selfHost() ? [OUTBOUND, { path: HOSTED + PRIVACY.path, title: `hazelle.app ${PRIVACY.title}` }, { path: HOSTED + PULSE.path, title: PULSE.title }] : [TERMS, PRIVACY, PULSE];
   return (
     <Stack gap="related">
       <Text variant="note">
         © 2026 {OPERATOR}. AGPL-3.0에 따라 누구나 쓰고, 수정하고, 다시 배포할 수 있는 자유 소프트웨어예요. 보증은 제공하지 않아요.
       </Text>
       <Row kind="tags">
-        <Link href={GUIDE_INDEX.path}>{GUIDE_INDEX.title}</Link>
+        {place(GUIDE_INDEX)}
         <Link href={source}>GitHub</Link>
         <Link href={INSTALL_GUIDE}>내 기기에 설치</Link>
         <Link href="/source.tar.gz" download="hazelle-source.tar.gz">
           소스 코드 받기
         </Link>
         <Link href="/license.txt">라이선스 전문</Link>
-        {selfHost() ? (
-          <>
-            <Link href={OUTBOUND.path}>{OUTBOUND.title}</Link>
-            <Link href={HOSTED + PRIVACY.path}>hazelle.app {PRIVACY.title}</Link>
-            <Link href={HOSTED + PULSE.path}>{PULSE.title}</Link>
-          </>
-        ) : (
-          <>
-            <Link href={TERMS.path}>{TERMS.title}</Link>
-            <Link href={PRIVACY.path}>{PRIVACY.title}</Link>
-            <Link href={PULSE.path}>{PULSE.title}</Link>
-          </>
-        )}
+        {places.map(place)}
       </Row>
     </Stack>
   );

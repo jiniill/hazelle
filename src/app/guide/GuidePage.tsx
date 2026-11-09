@@ -1,8 +1,7 @@
 import { Fragment } from 'react';
-import { Brand, Bullets, Button, Callout, Contents, ControlName, Disclosure, Figure, HowTo, Intro, Link, List, ListItem, PathBar, Screen, Section, Stack, Table, Text } from '../ui';
+import { Bullets, Button, Callout, Contents, ControlName, Disclosure, Figure, HowTo, Intro, List, ListItem, PathBar, Section, Stack, Table, Text } from '../ui';
 import { GUIDE_INDEX, GUIDE_TOPICS, GUIDE_WORDS, GUIDES, guideMeta, spans, type Guide, type GuideBlock, type GuideStep, type GuideTopic } from '../../contracts/guides';
-import { OPEN_APP } from '../../contracts/start';
-import { LegalNotice } from '../common/LegalNotice';
+import { PublicScreen } from '../common/PublicScreen';
 
 // main.tsx asks before the account flow, so a guide reads the same signed in or out.
 export function guidePage(path: string) {
@@ -11,19 +10,15 @@ export function guidePage(path: string) {
   return guide ? <GuideText guide={guide} /> : null;
 }
 
-const TOP = (
-  <>
-    <Brand />
-    <Link href="/">{OPEN_APP}</Link>
-  </>
-);
-
 const go = (path: string) => () => location.assign(path);
+
+// No guide's section takes this id (GuidePage.test).
+const FAQ = { id: 'faq', title: GUIDE_WORDS.faq };
 
 function GuideIndex() {
   const topics = (Object.entries(GUIDE_TOPICS) as [GuideTopic, string][]).map(([topic, name]) => [name, GUIDES.filter((guide) => guide.topic === topic)] as const);
   return (
-    <Screen top={TOP} foot={<LegalNotice />}>
+    <PublicScreen here={GUIDE_INDEX.path}>
       <Intro title={GUIDE_INDEX.title}>{GUIDE_INDEX.line}</Intro>
       {topics.map(
         ([name, guides]) =>
@@ -37,7 +32,7 @@ function GuideIndex() {
             </Section>
           ),
       )}
-    </Screen>
+    </PublicScreen>
   );
 }
 
@@ -65,8 +60,7 @@ function GuideText({ guide }: { guide: Guide }) {
     { key: guide.topic, name: GUIDE_TOPICS[guide.topic], onClick: go(GUIDE_INDEX.path) },
   ];
   return (
-    <Screen
-      top={TOP}
+    <PublicScreen
       lead={
         <Stack gap="related">
           <PathBar label="위치" parts={path} />
@@ -74,10 +68,9 @@ function GuideText({ guide }: { guide: Guide }) {
           <Text variant="note">{guideMeta(guide)}</Text>
         </Stack>
       }
-      aside={<Contents label={GUIDE_WORDS.contents} items={guide.sections} />}
+      aside={<Contents label={GUIDE_WORDS.contents} items={[...guide.sections, FAQ]} />}
       asideSize="sm"
       stickyAside
-      foot={<LegalNotice />}
     >
       <Section title={GUIDE_WORDS.needs}>
         <Bullets items={guide.needs} />
@@ -91,9 +84,9 @@ function GuideText({ guide }: { guide: Guide }) {
           </Stack>
         </Section>
       ))}
-      <Section title={GUIDE_WORDS.faq}>
+      <Section anchor={FAQ.id} title={FAQ.title}>
         {guide.faq.map(({ question, answer }) => (
-          <Disclosure key={question} label={question}>
+          <Disclosure key={question} variant="question" label={question}>
             <Text><Said text={answer} /></Text>
           </Disclosure>
         ))}
@@ -104,6 +97,6 @@ function GuideText({ guide }: { guide: Guide }) {
           {guide.end.label}
         </Button>
       </Section>
-    </Screen>
+    </PublicScreen>
   );
 }

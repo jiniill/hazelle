@@ -1,4 +1,6 @@
-import { useId, useRef, type ReactNode } from 'react';
+import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { pressed, type Chord } from '../foundation/keys';
+import { hasFinePointer } from '../foundation/media';
 import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './CommentBox.module.css';
 import { useAutosize } from './useAutosize';
@@ -14,13 +16,21 @@ type Props = {
   actions: ReactNode;
   // Takes the caret when it opens, as a 답글 or an edit does.
   focus?: boolean;
+  // The composer's send keys, under a pointer only: a finger's keyboard keeps Enter for the line. run is null while
+  // the box cannot be sent.
+  send?: { keys: readonly Chord[]; run: (() => void) | null };
 };
 
-export function CommentBox({ label, value, onChange, placeholder, hint, error, actions, focus = false }: Props) {
+export function CommentBox({ label, value, onChange, placeholder, hint, error, actions, focus = false, send }: Props) {
   const id = useId();
   const area = useRef<HTMLTextAreaElement>(null);
   useAutosize(area, value);
   const note = error ?? hint;
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!send || !hasFinePointer() || !pressed(event, send.keys)) return;
+    event.preventDefault();
+    send.run?.();
+  };
   return (
     <div className={styles.box} data-invalid={error ? true : undefined}>
       <textarea
@@ -34,6 +44,7 @@ export function CommentBox({ label, value, onChange, placeholder, hint, error, a
         value={value}
         autoFocus={focus}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={onKeyDown}
       />
       <div className={styles.foot}>
         <span id={id} className={error ? `${styles.note} ${styles.error}` : styles.note}>

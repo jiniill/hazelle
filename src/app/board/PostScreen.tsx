@@ -31,7 +31,9 @@ import { count, readCount } from '../common/typedNumber';
 import { useAttempt } from '../common/useAttempt';
 import { useLoaded } from '../common/useLoaded';
 import { BOARD, REMOVE_FAILED } from '../common/words';
+import { useDisplay } from '../display';
 import { useAccount } from '../session';
+import { keysOf } from '../shortcuts';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
@@ -389,14 +391,18 @@ function CommentComposer({ label, placeholder, initial = '', confirm, focus = fa
   const [text, setText] = useState(initial);
   const { busy, failure, run } = useAttempt();
   const { length, over, hint, error } = counted(text, MAX_COMMENT_LENGTH);
+  const sendKeys = keysOf('send', useDisplay().display.enterSends);
+  const ready = length > 0 && !over && text.trim() !== initial.trim();
   const submit = () =>
-    run(async () => {
-      const sent = await send(text.trim());
-      if (!sent.ok) return describeFailure(sent);
-      setText('');
-      onDone();
-      return null;
-    });
+    gate(() =>
+      void run(async () => {
+        const sent = await send(text.trim());
+        if (!sent.ok) return describeFailure(sent);
+        setText('');
+        onDone();
+        return null;
+      }),
+    );
   return (
     <Stack gap="related">
       <CommentBox
@@ -407,6 +413,7 @@ function CommentComposer({ label, placeholder, initial = '', confirm, focus = fa
         hint={length ? hint : undefined}
         error={error}
         focus={focus}
+        send={{ keys: sendKeys, run: ready && !busy ? submit : null }}
         actions={
           <>
             {onCancel && (
@@ -414,7 +421,7 @@ function CommentComposer({ label, placeholder, initial = '', confirm, focus = fa
                 취소
               </Button>
             )}
-            <Button size="sm" busy={busy} disabled={length === 0 || over || text.trim() === initial.trim()} onClick={() => gate(() => void submit())}>
+            <Button size="sm" busy={busy} disabled={!ready} onClick={submit}>
               {confirm}
             </Button>
           </>

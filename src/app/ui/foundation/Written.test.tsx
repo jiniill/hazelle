@@ -17,3 +17,7 @@ it('draws lists, emphasis, headings and web links, draws a picture as its link o
 it('reads a text without its marks', () => {
   expect(plainText('## 소식\n\n- **답**을 `빨리` 받아요')).toBe('소식 답을 빨리 받아요');
 });
+
+it('reads a line break as a space', () => {
+  expect(plainText('첫 줄이에요.\n둘째 줄이에요.')).toBe('첫 줄이에요. 둘째 줄이에요.');
+});

@@ -3,12 +3,12 @@ import { MAX_REPORT_LENGTH } from '../../contracts/admin';
 import { openVersion, type Opened } from '../../runtime/share';
 import { countReceived, readShareState, reportShare, shareLink } from '../../runtime/share-link';
 import { describeFailure } from '../common/failure';
-import { LegalNotice } from '../common/LegalNotice';
+import { PublicScreen } from '../common/PublicScreen';
 import { SharePreview } from '../common/SharePreview';
 import { ReportDialog } from '../common/ReportDialog';
 import { ACTS } from '../common/acts';
 import { LOADING, SHARE } from '../common/words';
-import { Brand, Button, Callout, Divider, Intro, Screen, Stack, Text } from '../ui';
+import { Button, Callout, Divider, Intro, Stack, Text } from '../ui';
 import { holdPending } from '../common/sharePending';
 
 type View =
@@ -51,19 +51,14 @@ export function SharePage({ id, shareKey }: { id: string; shareKey: string | nul
   };
 
   return (
-    <Screen
-      top={
-        <>
-          <Brand />
-          {view.kind === 'live' && (
-            <Button variant="link" icon={ACTS.report.icon} onClick={() => setReporting(true)}>
-              {ACTS.report.label}
-            </Button>
-          )}
-        </>
+    <PublicScreen
+      acts={
+        view.kind === 'live' && (
+          <Button variant="link" size="md" icon={ACTS.report.icon} onClick={() => setReporting(true)}>
+            {ACTS.report.label}
+          </Button>
+        )
       }
-      width="narrow"
-      foot={<LegalNotice />}
     >
       {view.kind === 'loading' && <Text variant="note">{LOADING}</Text>}
       {view.kind === 'failed' && <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => setAttempt((held) => held + 1) }}>{view.failure}</Callout>}
@@ -103,6 +98,6 @@ export function SharePage({ id, shareKey }: { id: string; shareKey: string | nul
         />
       )}
       <Divider label="" />
-    </Screen>
+    </PublicScreen>
   );
 }
