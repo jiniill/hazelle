@@ -244,6 +244,12 @@
   background-color: transparent;
 }
 
+/* Over the bot's background the story fades out by the composer's top, so no text shows in the strip around it; the
+   background, outside the scroll, still reaches the foot. */
+.backdropped .scroll {
+  mask-image: linear-gradient(to bottom, var(--color-accent) calc(100% - var(--footer-height) - var(--space-24)), transparent calc(100% - var(--footer-height)));
+}
+
 .dock {
   pointer-events: auto;
   width: 100%;
