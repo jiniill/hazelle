@@ -391,7 +391,6 @@ describe('importCard', () => {
     ]);
     expect(imported.report.unsupported).toEqual([
       { kind: 'emotion', count: 1 },
-      { kind: 'background-html', count: 1 },
       { kind: 'additional-text', count: 1 },
       { kind: 'prebuilt-asset-command', count: 1 },
       { kind: 'large-portrait', count: 1 },

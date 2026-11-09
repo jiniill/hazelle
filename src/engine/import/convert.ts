@@ -156,33 +156,9 @@ export function readTriggers(raw: unknown): Unstamped<Trigger>[] {
   return triggers;
 }
 
-// Strip only closed style blocks/comments. After an unmatched opener, stop seeking that kind's closer:
-// a global non-greedy regex would rescan the remaining input for every later opener.
-export function withoutStyles(html: string): string {
-  const opener = /<style\b|<!--/gi;
-  const closers = { style: /<\/style\s*>/gi, comment: /-->/g };
-  const open = new Set<keyof typeof closers>();
-  let kept = '';
-  let from = 0;
-  for (let found = opener.exec(html); found; found = opener.exec(html)) {
-    const kind = found[0] === '<!--' ? 'comment' : 'style';
-    if (open.has(kind)) continue;
-    const closer = closers[kind];
-    closer.lastIndex = opener.lastIndex;
-    if (!closer.exec(html)) {
-      open.add(kind);
-      continue;
-    }
-    kept += html.slice(from, found.index);
-    from = opener.lastIndex = closer.lastIndex;
-  }
-  return kept + html.slice(from);
-}
-
 function packOf(raw: { regex: unknown; trigger: unknown; background: unknown; toggles: unknown }, tally: Tally): Pack {
   const triggers = readTriggers(raw.trigger);
   const background = text(raw.background);
-  if (/<(?!style\b)[a-z]/i.test(withoutStyles(background))) add(tally, 'background-html');
   const toggles = readToggles(text(raw.toggles));
   add(tally, 'toggle-line', toggles.filter((line) => line.kind === 'unread').length);
   return { ...stampIds({ regex: regexScripts(list(raw.regex), tally), triggers }), ...(background.trim() ? { background } : {}), toggles };

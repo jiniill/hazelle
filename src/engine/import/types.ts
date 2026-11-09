@@ -33,7 +33,7 @@ export type Pack = {
   regex: RegexScript[];
   // The triggers that do something, in Risu's order, which is the order a run walks them in (runtime/scripts/selection).
   triggers: Trigger[];
-  // Risu's backgroundHTML, absent when there is none. Only its <style> blocks are shown (design §6.4).
+  // Risu's backgroundHTML, absent when there is none: its <style> joins the chat's CSS, the rest is drawn behind the chat (design §6.4).
   background?: string;
   toggles: ToggleLine[];
 };
@@ -117,7 +117,6 @@ export const UNSUPPORTED_KINDS = [
   'unsupported-file',
   'refused-picture',
   'refused-video',
-  'background-html',
   'additional-text',
   'prebuilt-asset-command',
   'large-portrait',
