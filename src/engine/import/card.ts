@@ -1,5 +1,5 @@
 import { errorMessage } from '../../error-message';
-import { add, cardSource, convert, convertModule, counted, extensionOf, lorebookSource, offSpec, record, text, type Converted, type ConvertedModule, type Json, type Tally } from './convert';
+import { add, cardSource, convert, convertModule, counted, extensionOf, lorebookSource, offSpec, record, type Converted, type ConvertedModule, type Json, type Tally } from './convert';
 import { readLorebook } from './lorebook';
 import { METADATA_BYTES } from './inflate';
 import { hazelleSource, printOf, readHazelle, readModule, type ConvertedBundle } from './hazelle';
@@ -12,7 +12,7 @@ import { writeToggles } from './toggles';
 import { openZip, type Zip } from './zip';
 import { fromBase64 } from '../../base64';
 import { hex } from '../../hex';
-import { isRecord } from '../../connectors/values';
+import { isRecord, text } from '../../connectors/values';
 import { unseal } from './risu-seal';
 
 const utf8 = new TextDecoder();

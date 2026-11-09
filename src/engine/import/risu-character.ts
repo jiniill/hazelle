@@ -1,9 +1,9 @@
 import { decodeHTML } from 'entities';
 import { splitThoughts } from '../../connectors/thoughts';
-import { isRecord, list } from '../../connectors/values';
+import { isRecord, list, text } from '../../connectors/values';
 import { inlayIds } from '../assets';
 import { assemble, imageType, type Resolve } from './card';
-import { add, chatLorebook, convert, counted, finite, localCopies, record, text, variableText, type Json, type Tally } from './convert';
+import { add, chatLorebook, convert, counted, finite, localCopies, record, variableText, type Json, type Tally } from './convert';
 import { MOVE_UNSUPPORTED_KINDS, type MoveUnsupported, type MoveUnsupportedKind, type Picture, type RisuCharacter, type RisuChat, type RisuSummary } from './types';
 
 export type Read = () => Promise<Uint8Array<ArrayBuffer>>;

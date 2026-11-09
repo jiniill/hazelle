@@ -1,8 +1,8 @@
-import { count, isRecord, list } from '../../connectors/values';
+import { count, isRecord, list, text } from '../../connectors/values';
 import type { Block, ConversationPrompt, Role, TextBlock } from '../../model/prompt';
 import { isProse, separatorOf } from '../cbs/evaluate';
 import { handlerFor, normalize } from '../cbs/tags';
-import { add, finite, record, sillyTavernRegex, text, type Json, type Tally } from './convert';
+import { add, finite, record, sillyTavernRegex, type Json, type Tally } from './convert';
 import type { PresetCounted } from './preset';
 import type { RegexScript } from './types';
 

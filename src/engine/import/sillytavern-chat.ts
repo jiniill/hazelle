@@ -1,5 +1,5 @@
-import { count, isRecord, jsonObject, list } from '../../connectors/values';
-import { add, counted, record, text, variableText, type Json, type Tally } from './convert';
+import { count, isRecord, jsonObject, list, text } from '../../connectors/values';
+import { add, counted, record, variableText, type Json, type Tally } from './convert';
 import type { RisuChats } from './risu-character';
 import { MOVE_UNSUPPORTED_KINDS, type MoveUnsupportedKind, type RisuMessage, type Said } from './types';
 

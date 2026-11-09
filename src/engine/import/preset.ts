@@ -1,8 +1,8 @@
 import { gzipSync } from 'fflate';
-import { isRecord, list } from '../../connectors/values';
+import { isRecord, list, text } from '../../connectors/values';
 import type { Block, ChatRange, ConversationPrompt, Role, SLOTS, SlotKind, TextBlock } from '../../model/prompt';
 import { args } from '../lorebook/decorators';
-import { add, counted, readVariables, record, regexScripts, stampIds, text, writeVariables, type Json, type Tally } from './convert';
+import { add, counted, readVariables, record, regexScripts, stampIds, writeVariables, type Json, type Tally } from './convert';
 import { expansionLimit, gunzip, TooLarge } from './inflate';
 import { readMsgpack, writeMsgpack } from './msgpack';
 import { pack, unpack } from './risum';

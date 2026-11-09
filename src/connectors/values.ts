@@ -7,6 +7,8 @@ export function modalities(value: unknown): Modality[] | null {
   return Array.isArray(value) ? value.flatMap((item) => MODALITIES[String(item)] ?? []) : null;
 }
 
+export const text = (value: unknown) => (typeof value === 'string' ? value : '');
+
 export function flag(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
 }

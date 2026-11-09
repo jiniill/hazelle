@@ -1,4 +1,4 @@
-import { isRecord, list, toggle } from '../../connectors/values';
+import { isRecord, list, text, toggle } from '../../connectors/values';
 
 // A card's 시작 전 설문 (Risu's extensions.risuai.onboarding), kept in Risu's own shape so a card exported again carries
 // it as it came. Each answer is a chat variable a new chat starts from.
@@ -24,8 +24,6 @@ export type Onboarding = {
   questions: OnboardingQuestion[];
 };
 
-const str = (value: unknown) => (typeof value === 'string' ? value : '');
-
 // As Risu reads an imported card's (onboarding.ts normalizeOnboarding): anything not an object is none, and every field
 // takes Risu's default when it is missing or of another type.
 export function readOnboarding(raw: unknown): Onboarding | undefined {
@@ -33,19 +31,19 @@ export function readOnboarding(raw: unknown): Onboarding | undefined {
   return {
     enabled: raw.enabled === true,
     mode: raw.mode === 'html' ? 'html' : 'form',
-    title: str(raw.title),
-    description: str(raw.description),
-    html: str(raw.html),
+    title: text(raw.title),
+    description: text(raw.description),
+    html: text(raw.html),
     floatingButton: raw.floatingButton === true,
     questions: list(raw.questions).filter(isRecord).map((question, index) => ({
-      id: str(question.id) || String(index),
-      title: str(question.title),
-      description: str(question.description),
+      id: text(question.id) || String(index),
+      title: text(question.title),
+      description: text(question.description),
       type: question.type === 'multiple' || question.type === 'text' ? question.type : 'single',
-      varName: str(question.varName),
+      varName: text(question.varName),
       required: question.required === true,
-      placeholder: str(question.placeholder),
-      options: list(question.options).filter(isRecord).map((option) => ({ label: str(option.label), value: str(option.value) })),
+      placeholder: text(question.placeholder),
+      options: list(question.options).filter(isRecord).map((option) => ({ label: text(option.label), value: text(option.value) })),
     })),
   };
 }

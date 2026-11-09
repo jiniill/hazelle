@@ -1,7 +1,7 @@
-import { count, isRecord, list } from '../../connectors/values';
+import { count, isRecord, list, text } from '../../connectors/values';
 import type { Portrait, PortraitSource } from '../../model/likeness';
 import { fingerprint } from '../memory';
-import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource, luaCodes, nativeHolds, readTriggers, record, regexScripts, stampIds, strings, text, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';
+import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource, luaCodes, nativeHolds, readTriggers, record, regexScripts, stampIds, strings, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';
 import { risuRegex } from '../../tool-api/risu-regex';
 import { readToggles, writeToggles } from './toggles';
 import type { Bot, BundledModule, CharacterOwn, HazelleOwn, LoreEntry, Profiles, RegexScript, Trigger, TypedModule } from './types';
