@@ -13,6 +13,7 @@ import { EntryList } from './EntryList';
 import { describeIllustrateFailure } from './failure';
 import { readTyped } from './typedNumber';
 import { appliesTo, TaskModelRow, TaskPromptMenu, type PromptDoor } from './TaskPrompt';
+import { taskRuns } from './taskRuns';
 import { follows, NOT_STARRED, TASK_MODELS } from './words';
 
 type Props = {
@@ -53,7 +54,7 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
       <TaskModelRow
         label={TASK_MODELS.illustrate}
         own={illustrate.sceneModel}
-        runs={'kind' in sceneWriter ? { why: describeIllustrateFailure(sceneWriter) } : sceneWriter}
+        runs={taskRuns(sceneWriter, describeIllustrateFailure)}
         onPick={(ref) => onChange({ sceneModel: ref ?? undefined })}
       />
       {children}

@@ -5,11 +5,11 @@ import { setDefaultModel } from '../../runtime/assignment';
 import { ANSWER_INSTRUCTION, answerInstructionOf, LORE_SCAN, setAnswerInstruction, setSharedLoreScan, setToolRounds, sharedLoreScan } from '../../runtime/chat-context';
 import { TOOL_ROUNDS } from '../../runtime/tool-loop';
 import { setSharedRetries } from '../../runtime/connections';
-import { RolePicker } from '../common/RolePicker';
+import { ROLE_ROWS, RolePicker } from '../common/RolePicker';
 import { filled, typedText, useTypedNumber } from '../common/typed';
 import { count, readCount } from '../common/typedNumber';
 import { useAutosave } from '../common/useAutosave';
-import { ANSWER_INSTRUCTION_LABEL, CHAT_DETAIL, DEFAULT_MODELS_FAILED, LORE_SCAN_WORDS, MAIN_HELP, MODEL_SETTINGS, RETRY_COUNT, RETRY_HELP } from '../common/words';
+import { ANSWER_INSTRUCTION_LABEL, CHAT_DETAIL, DEFAULT_MODELS_FAILED, LORE_SCAN_WORDS, MODEL_SETTINGS, RETRY_COUNT, RETRY_HELP } from '../common/words';
 import { useConnections, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { NumberInput, Section, SettingGroup, SettingRow, Stepper, Switch, TextField } from '../ui';
@@ -32,7 +32,7 @@ export function ChatDetailDefaults() {
     <>
       <Section title={CHAT_DETAIL.reply}>
         <SettingGroup label={CHAT_DETAIL.reply}>
-          <RolePicker role="main" help={MAIN_HELP} own={models.main} follow={null} connections={connections} onPick={(ref) => ref && toast.settled(setDefaultModel(store, 'main', ref), DEFAULT_MODELS_FAILED)} />
+          <RolePicker role="main" {...ROLE_ROWS.main} own={models.main} connections={connections} onPick={(ref) => ref && toast.settled(setDefaultModel(store, 'main', ref), DEFAULT_MODELS_FAILED)} />
           <SettingRow
             label={RETRY_COUNT}
             help={`${RETRY_HELP} API 연결이나 ${MODEL_SETTINGS}마다 따로 정할 수도 있어요.`}
@@ -104,15 +104,17 @@ const sharedHelp = (field: 'tokenBudget' | 'scanDepth') => {
   return `${help} 기본값은 ${amount(count(LORE_SCAN[field]))}${is}.`;
 };
 
+const BUDGET = 'tokenBudget';
+
 function SharedLoreBudget({ changed }: { changed: boolean }) {
   const store = useStore();
-  const { label, unit } = LORE_SCAN_WORDS.tokenBudget;
-  const save = useAutosave<{ value: number }>('lore-tokenBudget', (patch) => setSharedLoreScan(store, 'tokenBudget', patch.value!));
-  const typed = useTypedNumber(readCount, save.unsaved.value ?? sharedLoreScan(store).tokenBudget, { onChange: (value) => save.change({ value }) });
+  const { label, unit } = LORE_SCAN_WORDS[BUDGET];
+  const save = useAutosave<{ value: number }>(`lore-${BUDGET}`, (patch) => setSharedLoreScan(store, BUDGET, patch.value!));
+  const typed = useTypedNumber(readCount, save.unsaved.value ?? sharedLoreScan(store)[BUDGET], { onChange: (value) => save.change({ value }) });
   return (
     <SettingRow
       label={label}
-      help={sharedHelp('tokenBudget')}
+      help={sharedHelp(BUDGET)}
       changed={changed}
       error={typed.error}
       control={<NumberInput label={label} unit={unit} value={typed.text} invalid={typed.error !== undefined} onChange={typed.change} />}

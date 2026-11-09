@@ -10,6 +10,7 @@ import { describeMemoryFailure } from '../common/failure';
 import { MemoryFields, MemorySplit, settingsOf } from '../common/MemoryFields';
 import { tokens } from '../common/receipt';
 import { AccountTaskModel } from '../common/TaskPrompt';
+import { taskRuns } from '../common/taskRuns';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
 import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag } from '../common/words';
@@ -226,7 +227,7 @@ function MemoryFill({ view }: { view: MemoryView }) {
 // 공용's alone, so a pick here holds in every chat; the 설정 section under it is this chat's.
 function WriterRow({ chat }: { chat: Chat }) {
   const writer = useCaptured((store) => memoryWriter(store, chat), [chat]);
-  return <AccountTaskModel task="memory" help={EVERY_CHAT} runs={'kind' in writer ? { why: describeMemoryFailure(writer) } : writer} />;
+  return <AccountTaskModel task="memory" help={EVERY_CHAT} runs={taskRuns(writer, describeMemoryFailure)} />;
 }
 
 // Whom a fact concerns and which field stay, so a rename is a delete and an add.

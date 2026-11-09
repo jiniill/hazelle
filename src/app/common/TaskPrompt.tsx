@@ -1,10 +1,11 @@
 import type { ModelRef } from '../../connectors/assignment';
 import { entryName } from '../../connectors/types';
-import { accountTaskModel, setAccountTaskModel, type AccountTask, type Route } from '../../runtime/assignment';
+import { accountTaskModel, setAccountTaskModel, type AccountTask } from '../../runtime/assignment';
 import { ofSort, translationPrompt, illustrationPrompt, mascotPrompt, prereadPrompt } from '../../runtime/prompts';
 import type { ObjectStore } from '../../runtime/store';
 import type { PromptPane } from '../shell/routes';
 import { byPromptName } from './promptCopies';
+import type { TaskRuns } from './taskRuns';
 import { RolePicker } from './RolePicker';
 import { defaultMark, DELETED_PROMPT, follows, MODEL_ROLES, PRE_READ, SAVE_FAILED, TASK_MODELS } from './words';
 import { useConnections, useSession, useSettings, usePrompts } from '../session';
@@ -77,14 +78,14 @@ export function TaskPromptMenu({ task, chosen, heading, opens, onPick, onEdit }:
 
 // A task's own model, else 보조 모델. runs: what the task runs on now, or why it cannot; said under the row while it
 // follows 보조 모델 or fails.
-export function TaskModelRow({ label, help, own, runs, onPick }: { label: string; help?: string; own: ModelRef | undefined; runs: { route: Route } | { why: string }; onPick: (ref: ModelRef | null) => void }) {
+export function TaskModelRow({ label, help, own, runs, onPick }: { label: string; help?: string; own: ModelRef | undefined; runs: TaskRuns; onPick: (ref: ModelRef | null) => void }) {
   const connections = useConnections();
   const sub = 'why' in runs ? runs.why : own ? undefined : entryName(runs.route.model);
   return <RolePicker role="aux" label={label} help={help} own={own} follow={follows(MODEL_ROLES.aux)} sub={sub} connections={connections} onPick={onPick} />;
 }
 
 // 장기 기억's, 마스코트's and 토큰 절약's model, 공용's alone as their prompts are: a pick here holds for every chat.
-export function AccountTaskModel({ task, help, runs }: { task: AccountTask; help?: string; runs: { route: Route } | { why: string } }) {
+export function AccountTaskModel({ task, help, runs }: { task: AccountTask; help?: string; runs: TaskRuns }) {
   const { store } = useSession();
   const toast = useToast();
   // Subscribed for accountTaskModel, which reads the settings from the store.

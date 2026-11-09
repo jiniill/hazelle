@@ -30,3 +30,16 @@ export const RISU_REPLACERS: ReadonlySet<string> = new Set(['beforeRequest', 'af
 export const RISU_DECLINED: ReadonlySet<string> = new Set([
   'getRootDocument:page', 'character.chats', 'addProvider', 'registerBodyIntercepter', 'unregisterBodyIntercepter', 'addPluginChannelListener', 'postPluginChannelMessage',
 ]);
+// Names Hazelle will never have, each with why, said by the error a call throws (src/sandbox/risu.ts).
+export const RISU_ABSENT: ReadonlyMap<string, string> = new Map(Object.entries({
+  'Hazelle has no text-to-speech': ['addTTSPreprocessor', 'addTTSPostprocessor'],
+  'Hazelle registers no tools for the chat model at run time': ['registerMCP', 'unregisterMCP'],
+  'Hazelle shows no plugin the app\'s own requests': ['getFetchLogs'],
+  'Hazelle has no write-only secret store': ['saveSecretHeader'],
+  'a plugin does not reload plugins in Hazelle': ['loadPlugins'],
+  'Hazelle has no live page to watch; getRootDocument reads a copy': ['createMutationObserver'],
+  'a plugin is not told the app\'s colors in Hazelle': ['getColorScheme', 'getTextTheme'],
+  'the app\'s colors are the user\'s display settings in Hazelle': ['changeColorScheme', 'setColorScheme', 'changeTextTheme', 'setCustomTextTheme'],
+}).flatMap(([reason, names]) => names.map((name) => [name, reason])));
+// A name Hazelle will never answer, declined or absent, apart from one not mapped yet.
+export const risuNever = (name: string) => RISU_DECLINED.has(name) || RISU_ABSENT.has(name);

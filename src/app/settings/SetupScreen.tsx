@@ -4,22 +4,17 @@ import { setDefaultModel } from '../../runtime/assignment';
 import { setIllustrate, setTranslate } from '../../runtime/characters';
 import { availableFeatures } from '../../runtime/features';
 import { overviewOf, type TaskRun } from '../../runtime/overview';
-import { findStarred, RolePicker } from '../common/RolePicker';
+import { findStarred, ROLE_ROWS, RolePicker } from '../common/RolePicker';
 import { AccountTaskModel, TaskModelRow } from '../common/TaskPrompt';
-import { AUX_HELP, DEFAULT_MODELS_FAILED, EMBED_HELP, FINDINGS, follows, inFeature, inSettings, MAIN_HELP, MODEL_ROLES, NOT_PICKED, NOT_STARRED, opens, PAGES, SCOPE, TASK_MODELS, PROMPT_MODELS } from '../common/words';
+import { DEFAULT_MODELS_FAILED, FINDINGS, inFeature, inSettings, MODEL_ROLES, NOT_STARRED, opens, PAGES, SCOPE, TASK_MODELS, PROMPT_MODELS } from '../common/words';
 import { useCaptured, useConnections, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate, useAddress } from '../shell/router';
 import type { Back, Route } from '../shell/routes';
 import { useToast } from '../toast';
 import { Button, Callout, ChoiceGroup, FlowMap, List, ListItem, NavBar, Row, Screen, Section, SettingGroup } from '../ui';
-import { findingsOf, LEGEND, mapOf, taskRuns, type Target } from './setup';
+import { findingsOf, LEGEND, mapOf, saidOf, type Target } from './setup';
 
 const HERE = '이 채팅';
-const ROLE_ROWS: Record<Role, { help: string; follow: string | null }> = {
-  main: { help: MAIN_HELP, follow: null },
-  aux: { help: AUX_HELP, follow: follows(MODEL_ROLES.main) },
-  embed: { help: EMBED_HELP, follow: NOT_PICKED },
-};
 
 // 공용, or the chat the settings stand over: what it runs on as its own layers resolve it.
 function useScope() {
@@ -144,9 +139,8 @@ function DefaultModel({ role }: { role: Role }) {
   return (
     <RolePicker
       role={role}
-      help={ROLE_ROWS[role].help}
+      {...ROLE_ROWS[role]}
       own={own}
-      follow={ROLE_ROWS[role].follow}
       connections={useConnections()}
       onPick={(ref) => toast.settled(setDefaultModel(store, role, ref), DEFAULT_MODELS_FAILED)}
     />
@@ -170,7 +164,7 @@ function Pins({ pins }: { pins: Extract<Target, { kind: 'talk' }>['pins'] }) {
 function TaskModel({ task }: { task: TaskRun }) {
   const store = useStore();
   const toast = useToast();
-  const runs = taskRuns(task);
+  const runs = saidOf(task);
   switch (task.feature) {
     case 'translate':
       return <TaskModelRow label={TASK_MODELS.translate} own={task.own} runs={runs} onPick={(ref) => toast.settled(setTranslate(store, null, { model: ref ?? undefined }))} />;

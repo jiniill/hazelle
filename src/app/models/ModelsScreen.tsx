@@ -6,11 +6,11 @@ import { overviewOf } from '../../runtime/overview';
 import { availableFeatures } from '../../runtime/features';
 import { ofSort, type StoredPrompt } from '../../runtime/prompts';
 import { addDefaultProfile, modelProfile, profileUsers } from '../../runtime/profiles';
-import { findStarred, RoleCard } from '../common/RolePicker';
+import { findStarred, ROLE_ROWS, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { newOf } from '../common/acts';
-import { AUX_HELP, DEFAULT_MODELS_FAILED, EMBED_HELP, defaultMark, FEATURE_NAMES, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, NOT_PICKED, PROMPT_MODELS } from '../common/words';
+import { DEFAULT_MODELS_FAILED, defaultMark, FEATURE_NAMES, follows, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -105,9 +105,9 @@ export function ModelsScreen({ back }: { back: Back | null }) {
     <Screen width="page" top={<NavBar title={PAGES.models} {...backBar(back)} />}>
       <Section title={DEFAULTS}>
         <Columns>
-          <RoleCard role="main" help={MAIN_HELP} own={main} follow={null} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
-          <RoleCard role="aux" help={AUX_HELP} own={settings.models.aux} follow={follows(MODEL_ROLES.main)} connections={connections} onPick={(ref) => pickModel('aux', ref)} {...cardOf(settings.models.aux)} />
-          <RoleCard role="embed" help={EMBED_HELP} own={settings.models.embed} follow={NOT_PICKED} connections={connections} onPick={(ref) => pickModel('embed', ref)} />
+          <RoleCard role="main" {...ROLE_ROWS.main} own={main} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
+          <RoleCard role="aux" {...ROLE_ROWS.aux} own={settings.models.aux} connections={connections} onPick={(ref) => pickModel('aux', ref)} {...cardOf(settings.models.aux)} />
+          <RoleCard role="embed" {...ROLE_ROWS.embed} own={settings.models.embed} connections={connections} onPick={(ref) => pickModel('embed', ref)} />
         </Columns>
         {main && !findStarred(main, connections) && <Callout tone="warn">{`${MODEL_ROLES.main}로 정한 모델이 ${STARRED}에 없어요.`}</Callout>}
       </Section>

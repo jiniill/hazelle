@@ -1,5 +1,5 @@
 import type { RisuScan, ToolManifest } from '../../tool-api/manifest';
-import { RISU_DECLINED } from '../../tool-api/risu-methods';
+import { RISU_DECLINED, risuNever } from '../../tool-api/risu-methods';
 import type { ToolImport } from '../../runtime/tools/store';
 import type { PresetRead } from '../../engine/import/preset';
 import type { Imported, ImportedModule, ImportedPersona, Unsupported } from '../../engine/import/types';
@@ -149,9 +149,10 @@ export const DECLINED_WORDS: Record<string, string> = {
 };
 
 // Names not mapped yet stay as the plugin writes them: the set is open (any upstream name), so no wording covers it.
+// RISU_ABSENT's names have no words either and stay as written.
 function risuVerdict({ verdict, missing }: RisuScan): Line {
-  const never = [...new Set(missing.filter((name) => RISU_DECLINED.has(name)).map((name) => DECLINED_WORDS[name]!))];
-  const later = missing.filter((name) => !RISU_DECLINED.has(name));
+  const never = [...new Set(missing.filter(risuNever).map((name) => (RISU_DECLINED.has(name) ? DECLINED_WORDS[name]! : name)))];
+  const later = missing.filter((name) => !risuNever(name));
   const listed = [never.length > 0 && `앞으로도 지원하지 않아요: ${never.join(', ')}.`, later.length > 0 && `아직 지원하지 않아요: ${later.join(', ')}.`].filter(Boolean).join(' ');
   switch (verdict) {
     case 'all': return { text: `이 ${RISU_PLUGIN}이 사용하는 기능을 모두 지원해요.`, failed: false };

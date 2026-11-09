@@ -4,7 +4,14 @@ import { entryName, entryOf } from '../../connectors/types';
 import { embedRoute } from '../../connectors/registry';
 import type { Stored } from '../../model/kinds';
 import { ChipButton, Empty, Menu, MenuHeading, MenuItem, PickCard, SettingRow } from '../ui';
-import { MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, noStarred, NOT_PICKED } from './words';
+import { AUX_HELP, EMBED_HELP, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, noStarred, NOT_PICKED } from './words';
+
+// A role's own row in 공용: what it is for, and what it reads while unpicked.
+export const ROLE_ROWS: Record<Role, { help: string; follow: string | null }> = {
+  main: { help: MAIN_HELP, follow: null },
+  aux: { help: AUX_HELP, follow: follows(MODEL_ROLES.main) },
+  embed: { help: EMBED_HELP, follow: NOT_PICKED },
+};
 
 // 임베딩 모델 offers only what its connection embeds: the type says so, not the model (design §4).
 export function starredModels(connections: readonly Stored<'connection'>[], role: Role) {

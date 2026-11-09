@@ -7,6 +7,7 @@ import { DetailFold } from './DetailFold';
 import { describeTranslateFailure } from './failure';
 import { IntoLanguage } from './IntoLanguage';
 import { appliesTo, TaskModelRow, TaskPromptMenu, type PromptDoor } from './TaskPrompt';
+import { taskRuns } from './taskRuns';
 import { TASK_MODELS } from './words';
 
 type Props = {
@@ -41,7 +42,7 @@ export function TranslateRows({ translate, translation, card, note, opens, onCha
       <TaskModelRow
         label={TASK_MODELS.translate}
         own={translate.model}
-        runs={translation.ok ? translation : { why: describeTranslateFailure(translation.failure) }}
+        runs={taskRuns(translation.ok ? translation : translation.failure, describeTranslateFailure)}
         onPick={(ref) => onChange({ model: ref ?? undefined })}
       />
       {children}
