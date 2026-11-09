@@ -3,7 +3,7 @@ export { Dialog, Shortcuts } from './Dialog';
 export { DropOverlay } from './DropOverlay';
 export { Coach, GuideMark, guideShown, useGuideTarget } from './Guide';
 export { Hint, type Help } from './Hint';
-export { backLayers } from './layers';
+export { backLayers, openingFocus, useFocusReturn } from './layers';
 export { MoreMenu } from './MoreMenu';
 export { STEP_KEYS, type Pages } from './pages';
 export { ZOOM_KEYS, PictureView, type PictureAction } from './PictureView';

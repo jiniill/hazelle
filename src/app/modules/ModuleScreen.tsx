@@ -10,10 +10,10 @@ import { holdsLine, howMany } from '../common/pack';
 import { AssetsEditor } from '../common/AssetsEditor';
 import { LoreEditor } from '../common/LoreEditor';
 import { PackToggles } from '../common/PackToggles';
-import { ScriptsEditor, scriptList } from '../common/ScriptsEditor';
+import { scriptsPage } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
-import { ALWAYS, BIN_KEEPS, COPY_SAID, copyName, moduleName, PAGES, promptName, SAVE_FAILED, SCRIPTS } from '../common/words';
+import { ALWAYS, BIN_KEEPS, COPY_SAID, copyName, moduleName, PAGES, promptName, SAVE_FAILED } from '../common/words';
 import { useChildren, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate, openPart } from '../shell/router';
 import { characterPage, type Back } from '../shell/routes';
@@ -151,12 +151,11 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
     );
 
   const openScript = (next: string | null) => openPart({ kind: 'module', id, pane: null, ...(next && { script: next }) }, wide);
-  const scripts = <ScriptsEditor owner={{ kind: 'module', id }} pack={value} drill={!wide} open={script ?? null} onOpen={openScript} />;
-  // On a phone a script open stands alone, and the head's back leaves it for the module's page.
-  if (!wide && scriptList(value, script ?? null))
+  const scripts = scriptsPage({ owner: { kind: 'module', id }, pack: value, drill: !wide, open: script ?? null, onOpen: openScript });
+  if (scripts.back)
     return (
-      <Screen width="form" top={<NavBar title={moduleName(name)} onBack={() => openScript(null)} backLabel={SCRIPTS.list} />}>
-        {scripts}
+      <Screen width="form" top={<NavBar title={moduleName(name)} {...scripts.back} />}>
+        {scripts.body}
       </Screen>
     );
 
@@ -171,7 +170,7 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
         <ListItem title="토글" note={howMany(value.toggles.filter(isToggle).length)} onClick={() => navigate({ kind: 'module', id, pane: 'toggles' })} />
       </List>
       <LoreEditor owner={{ kind: 'module', id }} folders={value.loreFolders} />
-      {scripts}
+      {scripts.body}
       <AssetsEditor owner={id} />
       {describes && <PortraitsEditor owner={id} />}
       {exporting && <ModuleExport id={id} name={name} onClose={() => setExporting(false)} />}

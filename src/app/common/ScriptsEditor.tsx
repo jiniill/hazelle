@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, type LucideIcon } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type FragmentInstance, type ReactNode, type Ref } from 'react';
 import type { Pack, RegexScript, Trigger } from '../../engine/import/types';
 import { checkScript, type ScriptCheck } from '../../engine/regex/scripts';
 import type { ApiResult } from '../../runtime/api';
@@ -30,11 +30,19 @@ const OFF = '꺼짐';
 const ADDED: Record<ScriptList, string> = { regex: SCRIPTS.regex, triggers: 'Lua' };
 
 // The list holding the script open; none where the id names none, such as a script deleted, and then the lists show.
-export const scriptList = (pack: Pick<Pack, 'regex' | 'triggers'>, open: string | null) => (open === null ? undefined : (['regex', 'triggers'] as const).find((list) => pack[list].some((script) => script.id === open)));
+const scriptList = (pack: Pick<Pack, 'regex' | 'triggers'>, open: string | null) => (open === null ? undefined : (['regex', 'triggers'] as const).find((list) => pack[list].some((script) => script.id === open)));
 
-// open: the one script open, which the caller holds; drill isolates it, and the caller's head then holds the back to
-// the lists (scriptList says when). status uses character card.regex ids; variables feeds editor completion.
-export function ScriptsEditor({ owner, pack, drill, open, onOpen, status = [], variables }: { owner: PackOwner; pack: Pack; drill: boolean; open: string | null; onOpen: (id: string | null) => void; status?: readonly string[]; variables?: Defaults }) {
+type Props = { owner: PackOwner; pack: Pack; open: string | null; onOpen: (id: string | null) => void; status?: readonly string[]; variables?: Defaults };
+
+// open: the one script open, which the caller holds. In a drill it stands alone, and back is then the caller's head's
+// back, to the lists; the caller picks only the frame. status uses character card.regex ids; variables feeds editor
+// completion.
+export function scriptsPage({ drill, ...props }: Props & { drill: boolean }) {
+  const alone = drill ? scriptList(props.pack, props.open) : undefined;
+  return { back: alone && { onBack: () => props.onOpen(null), backLabel: SCRIPTS.list }, body: <ScriptsEditor {...props} alone={alone} /> };
+}
+
+function ScriptsEditor({ owner, pack, alone, open, onOpen, status = [], variables }: Props & { alone: ScriptList | undefined }) {
   const store = useStore();
   const { scriptPreview } = useSession();
   const trial = useTrial(owner, variables);
@@ -59,7 +67,7 @@ export function ScriptsEditor({ owner, pack, drill, open, onOpen, status = [], v
 
   const item = (list: ScriptList, id: string, page: boolean) => {
     const place = pack[list].findIndex((script) => script.id === id);
-    const shared = { owner, pack, place, page, added: rows.added === id, open: page || open === id, onOpen: (on: boolean) => onOpen(on ? id : null), drop: rows.remove };
+    const shared = { owner, pack, place, page, opening: rows.opening(id), open: page || open === id, onOpen: (on: boolean) => onOpen(on ? id : null), drop: rows.remove };
     if (list === 'regex') return <RegexItem key={id} {...shared} script={pack.regex[place]!} status={status.includes(id)} searched={search.words !== ''} language={replacement} />;
     const trigger = pack.triggers[place]!;
     return trigger.kind === 'lua' ? <LuaItem key={id} {...shared} trigger={trigger} language={lua} trial={trial.lua} draft={drafts.get(id) ?? null} onDraft={(code) => draft(id, code)} onApplied={(code) => applied(id, code)} /> : <BlocksItem key={id} {...shared} trigger={trigger} />;
@@ -70,8 +78,7 @@ export function ScriptsEditor({ owner, pack, drill, open, onOpen, status = [], v
     `${SCRIPTS.part} 검색`,
     ({ texts }) => texts,
   );
-  const opened = drill ? scriptList(pack, open) : undefined;
-  if (opened) return item(opened, open!, true);
+  if (alone) return item(alone, open!, true);
 
   const lists = (
     <>
@@ -119,17 +126,17 @@ export function ScriptsEditor({ owner, pack, drill, open, onOpen, status = [], v
   );
 }
 
-type ItemProps = { owner: PackOwner; pack: Pack; place: number; page: boolean; added: boolean; open: boolean; onOpen: (open: boolean) => void; drop: RowEdits['remove'] };
+type ItemProps = { owner: PackOwner; pack: Pack; place: number; page: boolean; opening: Ref<FragmentInstance> | undefined; open: boolean; onOpen: (open: boolean) => void; drop: RowEdits['remove'] };
 
-function Item({ page, open, onOpen, title, tag, note, children }: Pick<ItemProps, 'page' | 'open' | 'onOpen'> & { title: string; tag: string | null; note?: string; children: ReactNode }) {
+function Item({ page, opening, open, onOpen, title, tag, note, children }: Pick<ItemProps, 'page' | 'opening' | 'open' | 'onOpen'> & { title: string; tag: string | null; note?: string; children: ReactNode }) {
   if (page)
     return (
       <Section title={title} seek>
-        {children}
+        <Fragment ref={opening}>{children}</Fragment>
       </Section>
     );
   return (
-    <OpenRow title={title} note={note} tag={tag} open={open} onOpen={onOpen}>
+    <OpenRow title={title} note={note} tag={tag} open={open} onOpen={onOpen} opening={opening}>
       {children}
     </OpenRow>
   );
@@ -170,7 +177,7 @@ function RegexItem(props: ItemProps & { script: RegexScript; status: boolean; se
   const tag = shown.off ? OFF : check ? CHECKS[check] : status ? '상태창' : null;
   return (
     <Item {...props} title={name} tag={tag} note={searched ? STAGES[shown.stage] : undefined}>
-      <TextField label="이름" focus={props.added} value={shown.name} onChange={(value) => save.change({ name: value })} />
+      <TextField label="이름" value={shown.name} onChange={(value) => save.change({ name: value })} />
       <ChoiceGroup label="단계" showLabel layout="segmented" options={STAGE_OPTIONS} value={shown.stage} onChange={(stage) => save.change({ stage })} />
       <TextField label="패턴" kind="key" lines={2} value={shown.find} onChange={(find) => save.change({ find })} error={check === 'invalid' ? '패턴 형식이 맞지 않아요.' : undefined} />
       <TextField
@@ -231,7 +238,7 @@ function LuaItem(props: ItemProps & { trigger: Lua; language: CodeLanguage; tria
   const tag = shown.off ? OFF : pending ? '적용 전' : !shown.code.trim() ? '코드 없음' : null;
   return (
     <Item {...props} title={name} tag={tag}>
-      <TextField label="이름" focus={props.added} value={shown.name} onChange={(value) => save.change({ name: value })} />
+      <TextField label="이름" value={shown.name} onChange={(value) => save.change({ name: value })} />
       <TextField label="코드" kind="key" lines={20} expand={SHORTCUTS.bigEdit.keys} language={language} aside={trial({ ...trigger, owner })} value={code} onChange={onDraft} />
       {(shown.conditions.length > 0 || shown.effects.length > 0) && <Steps trigger={shown} />}
       <Row kind="actions">

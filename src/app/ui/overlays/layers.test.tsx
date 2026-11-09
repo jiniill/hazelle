@@ -1,7 +1,7 @@
-import { act, StrictMode, useRef } from 'react';
+import { act, StrictMode, useRef, type FragmentInstance } from 'react';
 import { expect, it, vi } from 'vitest';
 import { probeRoot } from '../probe';
-import { backLayers, openingField, openingStop, useAnchored, useFocusTrap, useLayer } from './layers';
+import { backLayers, openingField, openingFocus, openingStop, useAnchored, useFocusReturn, useFocusTrap, useLayer } from './layers';
 
 it('counts only a layer that takes back, and closes the newest as Esc does', async () => {
   const root = probeRoot();
@@ -64,6 +64,87 @@ it('lets a back leave a step while Esc goes to the layer under it, and keeps a l
     await act(async () => root.unmount());
   } finally {
     stop();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("takes the focus into a fragment by the opening rule, among the page's fields only those inside it", () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal('Node', { DOCUMENT_POSITION_CONTAINED_BY: 16 });
+  const focused: string[] = [];
+  const element = (name: string) => ({ name, focus: () => focused.push(name) });
+  const outside = element('outside');
+  const page: Record<string, ReturnType<typeof element>[]> = { [openingField(true)]: [outside, element('name'), element('text')], button: [element('remove')] };
+  vi.stubGlobal('document', { querySelectorAll: (selector: string) => page[selector] ?? [] });
+  const fragment = { compareDocumentPosition: (node: unknown) => (node === outside ? 2 : 16) } as unknown as FragmentInstance;
+  try {
+    openingFocus(fragment);
+    openingFocus(null);
+    expect(focused).toEqual(['name']);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it('gives the focus back as what was open in place closes with it, to its button or else its opener, never over a moved focus', async () => {
+  const root = probeRoot();
+  const element = () => ({ isConnected: true, focus: vi.fn() }) as unknown as HTMLElement & { focus: ReturnType<typeof vi.fn> };
+  const focus = (node: unknown) => Object.assign(document, { activeElement: node });
+  let back: HTMLElement | null = null;
+  function Probe({ open }: { open: boolean }) {
+    useFocusReturn(open, () => back);
+    return null;
+  }
+  const opener = element();
+  const button = element();
+  try {
+    await act(async () => root.render(<Probe open={false} />));
+    focus(opener);
+    await act(async () => root.render(<Probe open />));
+    focus(null);
+    await act(async () => root.render(<Probe open={false} />));
+    expect(opener.focus).toHaveBeenCalledOnce();
+
+    back = button;
+    await act(async () => root.render(<Probe open />));
+    focus(null);
+    await act(async () => root.render(<Probe open={false} />));
+    expect(button.focus).toHaveBeenCalledOnce();
+
+    await act(async () => root.render(<Probe open />));
+    focus(element());
+    await act(async () => root.render(<Probe open={false} />));
+    expect(button.focus).toHaveBeenCalledOnce();
+  } finally {
+    await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
+
+it('gives one that replaced another as it closed the focus back to the first one\'s opener', async () => {
+  const root = probeRoot();
+  const body = { name: 'body' };
+  const opener = { name: 'opener', isConnected: true, focus: () => Object.assign(document, { activeElement: opener }) };
+  const at = () => (document.activeElement as unknown as { name: string }).name;
+  function First() {
+    useFocusReturn(true);
+    return null;
+  }
+  function Second({ open }: { open: boolean }) {
+    useFocusReturn(open);
+    return null;
+  }
+  try {
+    Object.assign(document, { body, activeElement: opener });
+    await act(async () => root.render(<First />));
+    Object.assign(document, { activeElement: body });
+    await act(async () => root.render(<Second open />));
+    expect(at()).toBe('opener');
+    Object.assign(document, { activeElement: body });
+    await act(async () => root.render(<Second open={false} />));
+    expect(at()).toBe('opener');
+    await act(async () => root.unmount());
+  } finally {
     vi.unstubAllGlobals();
   }
 });

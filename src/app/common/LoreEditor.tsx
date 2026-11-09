@@ -259,8 +259,8 @@ function EntryRow({ stored, folders, language, trial, rows }: RowProps) {
   const name = loreName(shown.name);
   const remove = () => void rows.remove({ id: stored.id, noun: ENTRY, name }, save.remove(() => removeLore(store, stored.id)), (removed) => restoreLore(store, removed));
   return (
-    <OpenRow title={name} tag={when(shown)} open={rows.isOpen(stored.id)} onOpen={(on) => rows.setOpen(stored.id, on)}>
-      <EntryFields shown={shown} added={rows.added === stored.id} folders={folders} language={language} trial={trial} change={save.change} />
+    <OpenRow title={name} tag={when(shown)} open={rows.isOpen(stored.id)} onOpen={(on) => rows.setOpen(stored.id, on)} opening={rows.opening(stored.id)}>
+      <EntryFields shown={shown} folders={folders} language={language} trial={trial} change={save.change} />
       <RowFoot noun={ENTRY} words={save.words} onRemove={remove} />
     </OpenRow>
   );
@@ -268,14 +268,13 @@ function EntryRow({ stored, folders, language, trial, rows }: RowProps) {
 
 type FieldsProps = {
   shown: Lore;
-  added: boolean;
   folders: LoreFolder[];
   language: CodeLanguage;
   trial: (text: string) => CodeAside;
   change: (patch: Partial<Lore>, valid?: boolean) => void;
 };
 
-function EntryFields({ shown, added, folders, language, trial, change }: FieldsProps) {
+function EntryFields({ shown, folders, language, trial, change }: FieldsProps) {
   const [typed, setTyped] = useState<{ order?: string; priority?: string }>({});
   const order = typedText(typed.order, (draft) => readNumber(draft) ?? null, shown.insertionOrder, String);
   const priority = typedText(typed.priority, readNumber, shown.priority ?? undefined, (value) => (value === undefined ? '' : String(value)));
@@ -301,7 +300,7 @@ function EntryFields({ shown, added, folders, language, trial, change }: FieldsP
 
   return (
     <>
-      <TextField label="이름" focus={added} value={shown.name} onChange={(name) => change({ name })} />
+      <TextField label="이름" value={shown.name} onChange={(name) => change({ name })} />
       <SettingGroup label="키워드">
         <SettingRow label="키워드" help="최근 대화에 이 중 하나라도 나오면 내용이 프롬프트에 들어가요." wide control={<PhraseField label="키워드" phrases={shown.keys} onChange={(keys) => change({ keys })} />} />
         {toggle('selective', '보조 키워드 사용', '키워드 하나와 보조 키워드 하나가 함께 나와야 프롬프트에 들어가요.')}

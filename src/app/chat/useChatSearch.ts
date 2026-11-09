@@ -2,8 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { shown } from '../../model/chat';
 import type { Shown } from '../../runtime/talk';
 import type { Translating } from '../../runtime/translate';
-import type { Seek } from '../ui';
-import { useFocusReturn } from '../common/useFocusReturn';
+import { useFocusReturn, type Seek } from '../ui';
 import { finder, seenText } from './search';
 
 // What 채팅 검색 opened the chat with: its term, and the message it was found in.
