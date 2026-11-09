@@ -150,7 +150,8 @@ export function mergeUnsupported(...lists: Unsupported[]): Unsupported {
 export const unsupportedCount = (unsupported: Unsupported) => unsupported.reduce((sum, { count }) => sum + count, 0);
 
 // line: the declaration a tool file was refused for, as written.
-export type ImportFailure = { kind: 'unknown-format' | 'encrypted' | 'unreadable'; detail?: string; line?: string };
+// needs-password, wrong-password: an rcc card sealed under its maker's password.
+export type ImportFailure = { kind: 'unknown-format' | 'needs-password' | 'wrong-password' | 'unreadable'; detail?: string; line?: string };
 
 export type ImportedModule = {
   name: string;

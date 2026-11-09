@@ -7,6 +7,8 @@ import { fileSource } from './source';
 import { readRisum, readRisumModule, risumBlock, risumHead, RISUM_END, unpack, writeRisum } from './risum';
 import type { Bot, ImportResult, Imported, Trigger, TypedModule } from './types';
 import { crc32 } from './zip';
+import { hex } from '../../hex';
+import { seal } from './risu-seal';
 
 function chunk(type: string, data: Uint8Array): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(12 + data.length);
@@ -37,8 +39,8 @@ function ok(result: ImportResult): Imported {
 }
 // fflate's types leave the buffer open; the importer takes what a File's arrayBuffer gives.
 const own = (bytes: Uint8Array) => new Uint8Array(bytes);
-const json = (card: unknown) => ok(importCard('card.json', own(strToU8(JSON.stringify(card)))));
-const charx = (files: Record<string, Uint8Array>) => ok(importCard('card.charx', own(zipSync(files))));
+const json = async (card: unknown) => ok(await importCard('card.json', own(strToU8(JSON.stringify(card)))));
+const charx = async (files: Record<string, Uint8Array>) => ok(await importCard('card.charx', own(zipSync(files))));
 const counts = (imported: Imported) => Object.fromEntries(imported.report.unsupported.map(({ kind, count }) => [kind, count]));
 
 // The output size the zip's directory declares for one file, rewritten in place.
@@ -53,31 +55,31 @@ function declare(zip: Uint8Array, path: string, size: number): Uint8Array<ArrayB
 }
 
 describe('importCard', () => {
-  it('prefers the ccv3 chunk over chara in a PNG', () => {
-    const imported = ok(importCard('Mira.PNG', png(tEXt('chara', cardText(v2({ name: 'Old' }))), tEXt('ccv3', cardText(v3({ name: 'New' }))))));
+  it('prefers the ccv3 chunk over chara in a PNG', async () => {
+    const imported = ok(await importCard('Mira.PNG', png(tEXt('chara', cardText(v2({ name: 'Old' }))), tEXt('ccv3', cardText(v3({ name: 'New' }))))));
     expect(imported.card.name).toBe('New');
     expect(imported.report).toMatchObject({ format: 'png', spec: 'v3' });
   });
 
-  it('stores the PNG without the card chunks as the avatar', () => {
+  it('stores the PNG without the card chunks as the avatar', async () => {
     const software = tEXt('Software', 'paint');
     const file = png(software, tEXt('chara', cardText(v2({}))), tEXt('ccv3', cardText(v3({}))), tEXt('chara-ext-asset_:1', 'AAAA'));
-    expect(ok(importCard('Mira.png', file)).avatar).toEqual({ bytes: png(software), type: 'image/png' });
+    expect(ok(await importCard('Mira.png', file)).avatar).toEqual({ bytes: png(software), type: 'image/png' });
   });
 
   it('reads a Risu persona PNG, unless a card chunk is beside it, and fails one without its prompt', async () => {
     const persona = tEXt('persona', cardText({ name: '진', personaPrompt: '여행자', note: ' 부자 ' }));
-    const read = importCard('jin_export.png', png(persona));
+    const read = await importCard('jin_export.png', png(persona));
     if (!read.ok || !('persona' in read)) throw new Error(`import failed: ${JSON.stringify(read)}`);
     expect(read.persona).toMatchObject({ name: '진', alias: '부자', description: '여행자' });
     expect(await read.persona.picture()).toEqual({ bytes: png(), type: 'image/png' });
-    expect(ok(importCard('Mira.png', png(persona, tEXt('ccv3', cardText(v3({})))))).card.name).toBe('Mira');
-    expect(importCard('jin_export.png', png(tEXt('persona', cardText({ name: '진' }))))).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'persona-incomplete' } });
+    expect(ok(await importCard('Mira.png', png(persona, tEXt('ccv3', cardText(v3({})))))).card.name).toBe('Mira');
+    expect(await importCard('jin_export.png', png(tEXt('persona', cardText({ name: '진' }))))).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'persona-incomplete' } });
   });
 
-  it('takes the icon named main from a charx', () => {
+  it('takes the icon named main from a charx', async () => {
     const main = png(tEXt('Title', 'main'));
-    const imported = charx({
+    const imported = await charx({
       'card.json': strToU8(
         JSON.stringify(
           v3({
@@ -99,7 +101,7 @@ describe('importCard', () => {
 
   it('reads a charx’s x-risu-asset files when asked, and counts the ones no file holds', async () => {
     const smile = png(tEXt('Title', 'smile'));
-    const imported = charx({
+    const imported = await charx({
       'card.json': strToU8(
         JSON.stringify(
           v3({
@@ -123,59 +125,59 @@ describe('importCard', () => {
   it('reads a PNG’s v2 additionalAssets from its asset chunks', async () => {
     const picture = png(tEXt('Title', 'wave'));
     const file = png(tEXt('chara', cardText(v2({ extensions: { risuai: { additionalAssets: [['wave', '__asset:0', 'png']] } } }))), tEXt('chara-ext-asset_:0', base64(picture)));
-    expect(await Promise.all(ok(importCard('Mira.png', file)).assets.map(async ({ name, read }) => [name, await read()]))).toEqual([['wave', picture]]);
+    expect(await Promise.all(ok(await importCard('Mira.png', file)).assets.map(async ({ name, read }) => [name, await read()]))).toEqual([['wave', picture]]);
   });
 
   it('reads raw base64 in a v2 additionalAssets uri, and the PNG itself for a ccdefault: x-risu-asset, as Risu does', async () => {
     const picture = png(tEXt('Title', 'wave'));
-    const assets = async (card: unknown) => Promise.all(ok(importCard('Mira.png', png(tEXt('chara', cardText(card))))).assets.map(async ({ name, read }) => [name, await read()]));
+    const assets = async (card: unknown) => Promise.all(ok(await importCard('Mira.png', png(tEXt('chara', cardText(card))))).assets.map(async ({ name, read }) => [name, await read()]));
     expect(await assets(v2({ extensions: { risuai: { additionalAssets: [['wave', base64(picture), 'png']] } } }))).toEqual([['wave', picture]]);
     expect(await assets(v3({ assets: [{ type: 'x-risu-asset', uri: 'ccdefault:', name: 'self', ext: 'png' }] }))).toEqual([['self', png()]]);
   });
 
-  it('reads a PNG card of no spec as Risu’s PNG path does: a spec_version 2.0 one by its data, a v1 one missing its fields', () => {
-    const offSpec = ok(importCard('Mira.png', png(tEXt('chara', cardText({ spec_version: '2.0', data: { name: 'Mira', description: 'd', first_mes: 'hi', alternate_greetings: ['yo'] } })))));
+  it('reads a PNG card of no spec as Risu’s PNG path does: a spec_version 2.0 one by its data, a v1 one missing its fields', async () => {
+    const offSpec = ok(await importCard('Mira.png', png(tEXt('chara', cardText({ spec_version: '2.0', data: { name: 'Mira', description: 'd', first_mes: 'hi', alternate_greetings: ['yo'] } })))));
     expect([offSpec.card.name, offSpec.card.greetings, offSpec.report.spec]).toEqual(['Mira', ['hi', 'yo'], 'v2']);
-    const bare = ok(importCard('Mira.png', png(tEXt('chara', cardText({ char_name: 'Old', personality: 'shy' })))));
+    const bare = ok(await importCard('Mira.png', png(tEXt('chara', cardText({ char_name: 'Old', personality: 'shy' })))));
     expect([bare.card.name, bare.card.description, bare.card.greetings, bare.card.personality]).toEqual(['Old', '', [], 'shy']);
-    expect(importCard('card.json', own(strToU8(JSON.stringify({ name: 'Mira' }))))).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'not a character card' } });
+    expect(await importCard('card.json', own(strToU8(JSON.stringify({ name: 'Mira' }))))).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'not a character card' } });
   });
 
-  it('reads a zip appended to a JPEG and keeps the JPEG as the avatar', () => {
+  it('reads a zip appended to a JPEG and keeps the JPEG as the avatar', async () => {
     const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1, 0xff, 0xd9]);
-    const imported = ok(importCard('Mira.jpeg', concat([jpeg, zipSync({ 'card.json': strToU8(JSON.stringify(v3({ name: 'Jay' }))) })])));
+    const imported = ok(await importCard('Mira.jpeg', concat([jpeg, zipSync({ 'card.json': strToU8(JSON.stringify(v3({ name: 'Jay' }))) })])));
     expect(imported.card.name).toBe('Jay');
     expect(imported.avatar).toEqual({ bytes: jpeg, type: 'image/jpeg' });
     expect(imported.report.format).toBe('charx');
   });
 
-  it('resolves a data: icon, as Risu writes it into a JSON export', () => {
+  it('resolves a data: icon, as Risu writes it into a JSON export', async () => {
     const image = png();
-    const imported = json(v3({ assets: [{ type: 'icon', uri: `data:application/octet-stream;base64,${base64(image)}`, name: 'main', ext: 'png' }] }));
+    const imported = await json(v3({ assets: [{ type: 'icon', uri: `data:application/octet-stream;base64,${base64(image)}`, name: 'main', ext: 'png' }] }));
     expect(imported.avatar).toEqual({ bytes: image, type: 'image/png' });
   });
 
-  it('falls back to Tavern v1 fields, including the char_* names', () => {
-    const tavern = json({ name: 'Old', description: 'desc', personality: 'calm', scenario: 'inn', first_mes: 'hello', mes_example: '<START>' });
+  it('falls back to Tavern v1 fields, including the char_* names', async () => {
+    const tavern = await json({ name: 'Old', description: 'desc', personality: 'calm', scenario: 'inn', first_mes: 'hello', mes_example: '<START>' });
     expect(tavern.report.spec).toBe('v1');
     expect(tavern.card).toMatchObject({ name: 'Old', description: 'desc', personality: 'calm', scenario: 'inn', greetings: ['hello'], exampleDialogue: '<START>' });
-    const pygmalion = json({ char_name: 'Py', char_persona: 'p', world_scenario: 'w', char_greeting: 'g', example_dialogue: 'e' });
+    const pygmalion = await json({ char_name: 'Py', char_persona: 'p', world_scenario: 'w', char_greeting: 'g', example_dialogue: 'e' });
     expect(pygmalion.card).toMatchObject({ name: 'Py', description: 'p', scenario: 'w', greetings: ['g'], exampleDialogue: 'e' });
   });
 
-  it('imports a card without extensions', () => {
-    const imported = json(v2({ character_version: 2 }));
+  it('imports a card without extensions', async () => {
+    const imported = await json(v2({ character_version: 2 }));
     expect(imported.card).toMatchObject({ version: '2', regex: [], variables: [], toggles: [], utility: false, bias: [] });
     expect(imported.card.loreSettings).toEqual({ scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null });
     expect(imported.lore).toEqual([]);
   });
 
-  it('keeps greeting positions and drops only trailing empties', () => {
-    expect(json(v3({ first_mes: '', alternate_greetings: ['a', '', 'b', ''] })).card.greetings).toEqual(['', 'a', '', 'b']);
+  it('keeps greeting positions and drops only trailing empties', async () => {
+    expect((await json(v3({ first_mes: '', alternate_greetings: ['a', '', 'b', ''] }))).card.greetings).toEqual(['', 'a', '', 'b']);
   });
 
-  it('keeps each lore setting on its own', () => {
-    expect(json(v3({ character_book: { token_budget: 2000, entries: [] } })).card.loreSettings).toEqual({
+  it('keeps each lore setting on its own', async () => {
+    expect((await json(v3({ character_book: { token_budget: 2000, entries: [] } }))).card.loreSettings).toEqual({
       scanDepth: null,
       tokenBudget: 2000,
       recursive: null,
@@ -183,9 +185,9 @@ describe('importCard', () => {
     });
   });
 
-  it('honors enabled and case_sensitive and keeps CCv3 key arrays intact', () => {
+  it('honors enabled and case_sensitive and keeps CCv3 key arrays intact', async () => {
     const entry = { keys: ['dragon, wyrm', '/a{1,3}/', ' '], content: 'x', enabled: false, case_sensitive: true, insertion_order: 5, priority: 3, position: 'after_char' };
-    expect(json(v3({ character_book: { entries: [entry] } })).lore).toEqual([
+    expect((await json(v3({ character_book: { entries: [entry] } }))).lore).toEqual([
       {
         name: '',
         keys: ['dragon, wyrm', '/a{1,3}/'],
@@ -204,25 +206,25 @@ describe('importCard', () => {
     ]);
   });
 
-  it('turns SillyTavern entry extensions into decorators in front of the content', () => {
+  it('turns SillyTavern entry extensions into decorators in front of the content', async () => {
     const extensions = { useProbability: true, probability: 30, position: 4, depth: 2, role: 1, selectiveLogic: 2, delay: 3, match_whole_words: true };
     const entry = { keys: ['k'], secondary_keys: ['x', 'y'], selective: true, content: 'body', enabled: true, insertion_order: 1, extensions };
-    const [lore] = json(v3({ character_book: { entries: [entry] } })).lore;
+    const [lore] = (await json(v3({ character_book: { entries: [entry] } }))).lore;
     expect(lore).toMatchObject({
       selective: false,
       content: '@@match_full_word\n@@activate_only_after 3\n@@exclude_keys y\n@@exclude_keys x\n@@depth 2\n@@role user\n@@probability 30\nbody',
     });
   });
 
-  it('splits defaultVariables lines at the first =', () => {
-    const imported = json(v3({ extensions: { risuai: { defaultVariables: 'a=b=c\r\nhp=\n=x\nnoeq' } } }));
+  it('splits defaultVariables lines at the first =', async () => {
+    const imported = await json(v3({ extensions: { risuai: { defaultVariables: 'a=b=c\r\nhp=\n=x\nnoeq' } } }));
     expect(imported.card.variables).toEqual([
       ['a', 'b=c'],
       ['hp', ''],
     ]);
   });
 
-  it("applies a charx's module.risum over the card", () => {
+  it("applies a charx's module.risum over the card", async () => {
     const card = v3({
       extensions: { risuai: { customScripts: [{ comment: 'card', in: 'a', out: 'b', type: 'editoutput' }] } },
       character_book: {
@@ -233,7 +235,7 @@ describe('importCard', () => {
         entries: [{ keys: ['old'], content: 'old', enabled: true, insertion_order: 1 }],
       },
     });
-    const imported = charx({ 'card.json': strToU8(JSON.stringify(card)), 'module.risum': Uint8Array.from(atob(RISU_MODULE.join('')), (char) => char.charCodeAt(0)) });
+    const imported = await charx({ 'card.json': strToU8(JSON.stringify(card)), 'module.risum': Uint8Array.from(atob(RISU_MODULE.join('')), (char) => char.charCodeAt(0)) });
     expect(imported.card.regex).toEqual([
       { id: 'regex-0', name: '상태창 숨김', find: '<status>[\\s\\S]*?</status>', replace: '', stage: 'display', flags: 'gi' },
       { id: 'regex-1', name: 'translate', find: 'a', replace: 'b', stage: 'translation', flags: null },
@@ -293,7 +295,7 @@ describe('importCard', () => {
       extensions: { risuai: { backgroundHTML: '<style>.phone { color: red }</style>', toggles: 'ring=Ring', moduleNamespace: ' phone ' } },
     });
     const module = writeRisum({ name: 'Phone Module', description: '', regex: [{ comment: 'screen', in: 'a', out: 'b', type: 'editdisplay' }], trigger: [], lorebook: [{ key: 'phone', comment: 'Phone', content: 'It rings.', bookVersion: 2 }] });
-    const result = importCard('Phone.module(2).charx', own(zipSync({ 'card.json': strToU8(JSON.stringify(card)), 'module.risum': module, 'assets/other/image/wall.png': new Uint8Array([1, 2]) })));
+    const result = await importCard('Phone.module(2).charx', own(zipSync({ 'card.json': strToU8(JSON.stringify(card)), 'module.risum': module, 'assets/other/image/wall.png': new Uint8Array([1, 2]) })));
     if (!result.ok || !('module' in result)) throw new Error('not a module');
     const { assets, lore, ...read } = result.module;
     expect(read).toEqual({
@@ -309,10 +311,10 @@ describe('importCard', () => {
     expect(await Promise.all(assets.map(async ({ name, read }) => [name, [...(await read())!]]))).toEqual([['wall', [1, 2]]]);
   });
 
-  it("brings back as lore what Risu's module export moved into the card's description, greetings and global note", () => {
+  it("brings back as lore what Risu's module export moved into the card's description, greetings and global note", async () => {
     const card = v3({ name: 'Realm', description: 'The realm.', first_mes: 'Hello.', alternate_greetings: ['Hi.'], post_history_instructions: 'Stay terse.' });
     const module = writeRisum({ name: 'Realm', lorebook: [{ key: 'gate', comment: 'Gate', content: 'A gate.', bookVersion: 2 }] });
-    const result = importCard('Realm.module.charx', own(zipSync({ 'card.json': strToU8(JSON.stringify(card)), 'module.risum': module })));
+    const result = await importCard('Realm.module.charx', own(zipSync({ 'card.json': strToU8(JSON.stringify(card)), 'module.risum': module })));
     if (!result.ok || !('module' in result)) throw new Error('not a module');
     const entry = { keys: [], secondaryKeys: [], enabled: true, selective: false, useRegex: false, caseSensitive: false, insertionOrder: 0, priority: null, position: null, folder: null };
     expect(result.module.lore.slice(1)).toEqual([
@@ -323,36 +325,36 @@ describe('importCard', () => {
     expect(result.module.lore[0]).toMatchObject({ name: 'Gate' });
   });
 
-  it('reads any charx as a module when it comes in on the module list, and as a character elsewhere', () => {
+  it('reads any charx as a module when it comes in on the module list, and as a character elsewhere', async () => {
     const bytes = () => own(zipSync({ 'card.json': strToU8(JSON.stringify(v3({ name: 'Phone', creator_notes: 'A phone screen.' }))) }));
-    expect(importCard('Phone.charx', bytes(), true)).toMatchObject({ ok: true, module: { name: 'Phone', description: 'A phone screen.' } });
-    expect(importCard('Phone.charx', bytes())).toMatchObject({ ok: true, card: { card: { name: 'Phone' } } });
+    expect(await importCard('Phone.charx', bytes(), true)).toMatchObject({ ok: true, module: { name: 'Phone', description: 'A phone screen.' } });
+    expect(await importCard('Phone.charx', bytes())).toMatchObject({ ok: true, card: { card: { name: 'Phone' } } });
   });
 
-  it("reads Risu's lorebook and regex exports and SillyTavern's world info as modules made of them", () => {
-    const read = (fileName: string, value: unknown) => {
-      const result = importCard(fileName, own(strToU8(JSON.stringify(value))));
+  it("reads Risu's lorebook and regex exports and SillyTavern's world info as modules made of them", async () => {
+    const read = async (fileName: string, value: unknown) => {
+      const result = await importCard(fileName, own(strToU8(JSON.stringify(value))));
       if (!result.ok || !('module' in result)) throw new Error('not a module');
       return result.module;
     };
-    expect(read('lorebook_export.json', { type: 'risu', ver: 1, data: [{ key: 'gate, door', comment: 'Gate', content: 'A gate.', mode: 'normal', insertorder: 5, bookVersion: 2 }] })).toMatchObject({
+    expect(await read('lorebook_export.json', { type: 'risu', ver: 1, data: [{ key: 'gate, door', comment: 'Gate', content: 'A gate.', mode: 'normal', insertorder: 5, bookVersion: 2 }] })).toMatchObject({
       name: '',
       lore: [{ name: 'Gate', keys: ['gate', 'door'], content: 'A gate.', insertionOrder: 5 }],
     });
-    expect(read('regexscript_export.json', { type: 'regex', data: [{ comment: 'trim', in: 'a', out: 'b', type: 'editoutput' }] }).pack.regex).toMatchObject([{ name: 'trim', find: 'a', replace: 'b' }]);
+    expect((await read('regexscript_export.json', { type: 'regex', data: [{ comment: 'trim', in: 'a', out: 'b', type: 'editoutput' }] })).pack.regex).toMatchObject([{ name: 'trim', find: 'a', replace: 'b' }]);
     const world = { entries: { 0: { uid: 0, key: ['gate'], keysecondary: ['night'], comment: 'Gate', content: 'A gate.', constant: true, selective: true, order: 7 } } };
-    expect(read('World.json', world).lore).toMatchObject([{ name: 'Gate', keys: ['gate'], secondaryKeys: ['night'], content: 'A gate.', constant: true, selective: true, insertionOrder: 7 }]);
+    expect((await read('World.json', world)).lore).toMatchObject([{ name: 'Gate', keys: ['gate'], secondaryKeys: ['night'], content: 'A gate.', constant: true, selective: true, insertionOrder: 7 }]);
   });
 
-  it('imports the card alone when module.risum is unreadable', () => {
+  it('imports the card alone when module.risum is unreadable', async () => {
     const card = v3({ extensions: { risuai: { customScripts: [{ comment: 'card', in: 'a', out: 'b', type: 'editoutput', ableFlag: false, flag: 'i' }] } } });
-    const imported = charx({ 'card.json': strToU8(JSON.stringify(card)), 'module.risum': new Uint8Array([111, 0, 255, 255, 255, 255]) });
+    const imported = await charx({ 'card.json': strToU8(JSON.stringify(card)), 'module.risum': new Uint8Array([111, 0, 255, 255, 255, 255]) });
     expect(imported.card.regex).toEqual([{ id: 'regex-0', name: 'card', find: 'a', replace: 'b', stage: 'output', flags: null }]);
     expect(counts(imported)).toEqual({ module: 1 });
   });
 
-  it('counts what it cannot run, keeps the triggers that do something, and leaves the text as it was', () => {
-    const imported = json(
+  it('counts what it cannot run, keeps the triggers that do something, and leaves the text as it was', async () => {
+    const imported = await json(
       v3({
         description: '{{emotion::x}} {{getvar::y}} {{ JB_Toggled }}',
         assets: [
@@ -435,8 +437,8 @@ describe('importCard', () => {
   it('refuses a file past a size limit by what it declares, before unpacking or reading it', async () => {
     const file = zipSync({ 'card.json': strToU8(JSON.stringify(v3({}))), 'assets/other/image/0.png': new Uint8Array(1000) });
     const refused = (detail: string) => ({ ok: false, failure: { kind: 'unreadable', detail } });
-    expect(importCard('Mira.charx', declare(file, 'assets/other/image/0.png', 0xffffffff))).toEqual(refused('expands-too-far'));
-    expect(importCard('Mira.charx', declare(file, 'card.json', METADATA_BYTES + 1))).toEqual(refused('entry-too-large'));
+    expect(await importCard('Mira.charx', declare(file, 'assets/other/image/0.png', 0xffffffff))).toEqual(refused('expands-too-far'));
+    expect(await importCard('Mira.charx', declare(file, 'card.json', METADATA_BYTES + 1))).toEqual(refused('entry-too-large'));
     const head = new Uint8Array(6);
     head.set([111, 0]);
     new DataView(head.buffer).setUint32(2, METADATA_BYTES + 1, true);
@@ -444,12 +446,31 @@ describe('importCard', () => {
   });
 
   it('fails by kind instead of throwing', async () => {
-    expect(importCard('Mira.png', png(tEXt('chara', 'rcc||rccv1||abc||def||ghi')))).toEqual({ ok: false, failure: { kind: 'encrypted' } });
-    expect(importCard('Mira.webp', new Uint8Array())).toEqual({ ok: false, failure: { kind: 'unknown-format' } });
+    expect(await importCard('Mira.webp', new Uint8Array())).toEqual({ ok: false, failure: { kind: 'unknown-format' } });
     expect(await importRisum(fileSource(new File([new Uint8Array([111, 0])], 'Mira.risum')))).toMatchObject({ ok: false, failure: { kind: 'unreadable' } });
-    expect(importCard('Mira.png', own(strToU8('not a png')))).toMatchObject({ ok: false, failure: { kind: 'unreadable' } });
-    expect(importCard('Mira.json', own(strToU8('{')))).toMatchObject({ ok: false, failure: { kind: 'unreadable' } });
-    expect(importCard('Mira.charx', own(strToU8('PK')))).toMatchObject({ ok: false, failure: { kind: 'unreadable' } });
+    expect(await importCard('Mira.png', own(strToU8('not a png')))).toMatchObject({ ok: false, failure: { kind: 'unreadable' } });
+    expect(await importCard('Mira.json', own(strToU8('{')))).toMatchObject({ ok: false, failure: { kind: 'unreadable' } });
+    expect(await importCard('Mira.charx', own(strToU8('PK')))).toMatchObject({ ok: false, failure: { kind: 'unreadable' } });
+  });
+});
+
+describe("Risu's rcc card", () => {
+  // Sealed apart from this code, with Python's cryptography AES-GCM, under the password hazel.
+  const LOCKED = 'rcc||rccv1||2jn2BDFFo/K7MsOHBPoa8tsHQbFcASNNPqhAdno9eGhs4R/rFUG15vqomn7Sv57RRX6QbHZy292boDwkM/houvfh2wKc/s2b+c2khgOKcCKFrNC1l6iIJkj9cYiMyrxjEuKFw+H0uuu2N+rbRsOfiv0LnFxaqQ==||96da6a94416b3d633993644f18dd822940813fa1628d8f62d47554ec29ffad36||eyJ1c2VQYXNzd29yZCI6dHJ1ZX0=';
+
+  it("asks for its maker's password, and says when one does not open it", async () => {
+    const file = png(tEXt('chara', LOCKED));
+    expect(await importCard('Rin.png', file)).toEqual({ ok: false, failure: { kind: 'needs-password' } });
+    expect(await importCard('Rin.png', file, false, 'hazle')).toEqual({ ok: false, failure: { kind: 'wrong-password' } });
+    expect(ok(await importCard('Rin.png', file, false, 'hazel')).card.name).toBe('Rin');
+  });
+
+  it('opens one sealed without a password, and refuses one whose sealed bytes changed', async () => {
+    const sealed = await seal(own(strToU8(JSON.stringify(v2({})))), 'RISU_NONE');
+    const digest = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', sealed)));
+    const rcc = (bytes: Uint8Array) => png(tEXt('chara', `rcc||rccv1||${base64(bytes)}||${digest}||${btoa('{}')}`));
+    expect(ok(await importCard('Mira.png', rcc(sealed))).card.name).toBe('Mira');
+    expect(await importCard('Mira.png', rcc(sealed.toReversed()))).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'the rcc card was changed' } });
   });
 });
 

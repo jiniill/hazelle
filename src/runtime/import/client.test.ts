@@ -36,8 +36,8 @@ const catalog: Replies['backup'] = { ok: true, catalog: {
   personas: [], presets: [], modules: [], alwaysModules: [], loreBudget: null, toggles: {}, unsupported: [],
 } };
 
+const result = await importCard('card.json', new TextEncoder().encode(JSON.stringify({ spec: 'chara_card_v3', spec_version: '3.0', data: { name: 'Selected' } })));
 function character(): CharacterData {
-  const result = importCard('card.json', new TextEncoder().encode(JSON.stringify({ spec: 'chara_card_v3', spec_version: '3.0', data: { name: 'Selected' } })));
   if (!result.ok || !('card' in result)) throw new Error('card did not import');
   return { ...result.card, avatar: 1, assets: [], id: 'selected', folder: null, chatFolders: [], modules: [], missed: [], chatCount: 2 };
 }

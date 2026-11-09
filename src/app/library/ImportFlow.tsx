@@ -1,12 +1,13 @@
 import { sameTool } from '../../runtime/tools/store';
 import { useToast } from '../toast';
-import { Check, FileText, MessageSquare, Package, Puzzle, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react';
+import { Check, FileText, LockKeyhole, MessageSquare, Package, Puzzle, TriangleAlert, UserRound, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { characterTexts, live } from '../../model/library';
 import { allWritten, type ApiFailure } from '../../runtime/api';
 import { importChat } from '../../runtime/chat-log';
 import { markImportNoticed } from '../../runtime/chat-context';
 import type { UnpackFailure } from '../../engine/import/archive';
+import type { ImportFailure } from '../../engine/import/types';
 import { PACKED_EXTENSION } from '../../engine/import/extensions';
 import { ImportWorker } from '../../runtime/import/client';
 import { downloadLink, readLink, type BotLink, type LinkFailure } from '../../runtime/import/link';
@@ -21,7 +22,7 @@ import { ACTS } from '../common/acts';
 import { IMPORT_ACCEPT, ImportContext } from '../common/importing';
 import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import { useSearch } from '../common/useSearch';
-import { BIN, MISSED, moduleName, namedObject, NO_CHARACTER, promptName, TOOL, UNREADABLE_FILE } from '../common/words';
+import { BIN, MISSED, moduleName, namedObject, NO_CHARACTER, promptName, TOOL, UNREADABLE_FILE, WRONG_PASSWORD } from '../common/words';
 import { useFiles, useLibrary, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import type { Route } from '../shell/routes';
@@ -47,8 +48,11 @@ const OPENS: { kind: Exclude<ImportOutcome['kind'], 'character'>; icon: LucideIc
 type Choice = { kind: 'fill'; into: string; on: boolean } | { kind: 'replace'; olds: string[]; on: boolean } | { kind: 'character'; asked: boolean; name: string | null; picked: string | null };
 // Where a file of chats goes: a character's id, null for 캐릭터 없이, undefined where the way in names none.
 type Target = string | null | undefined;
-type Read = { file: File; preview: Preview; choice: Choice | null; ticked: boolean };
-type Row = { file: File; failure: string } | Read;
+// password: the one an rcc card opened with, which saving reads it with again.
+type Read = { file: File; password: string | undefined; preview: Preview; choice: Choice | null; ticked: boolean };
+// An rcc card waiting for its password, wrong once one was tried.
+type Locked = { file: File; locked: 'asked' | 'wrong' };
+type Row = { file: File; failure: string } | Locked | Read;
 type Parsed = Exclude<Awaited<ReturnType<ImportWorker['card']>>, { ok: false }>;
 // password: why a Proton link asks for its owner's password.
 type LinkStart = { text: string; password: 'asked' | 'wrong' | null };
@@ -144,10 +148,16 @@ export function ImportProvider({ children }: { children: ReactNode }) {
 
   // A file is read once for its preview and again to save it, so a batch never holds every archive while the user looks.
 // A zip's files are the exception: unpacked, they stay in memory until the dialog closes.
-  async function reading<T extends object>(file: File, place: ModulePlace | null, use: (parsed: Parsed, reader: ImportWorker) => Promise<T>): Promise<T | string> {
+  async function reading<T extends object>(
+    file: File,
+    password: string | undefined,
+    place: ModulePlace | null,
+    use: (parsed: Parsed, reader: ImportWorker) => Promise<T>,
+    refused: (failure: ImportFailure) => T | string = describeImportFailure,
+  ): Promise<T | string> {
     return withReader(async (reader) => {
-      const parsed = await reader.card(file, place?.kind === 'always');
-      return parsed.ok ? use(parsed, reader) : describeImportFailure(parsed.failure);
+      const parsed = await reader.card(file, place?.kind === 'always', password);
+      return parsed.ok ? use(parsed, reader) : refused(parsed.failure);
     });
   }
 
@@ -170,10 +180,12 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     return shown && aliased(shown.card.name, shown.alias);
   };
 
-  async function previewOf(file: File, place: ModulePlace | null, target: Target): Promise<Row> {
+  async function previewOf(file: File, place: ModulePlace | null, target: Target, password?: string): Promise<Row> {
     const at = place?.kind ?? null;
-    const row = await reading(file, place, async (parsed): Promise<Row> => {
-      const shown = (preview: Preview, choice: Choice | null = null): Row => ({ file, preview, choice, ticked: true });
+    const refused = (failure: ImportFailure): Row | string =>
+      failure.kind === 'needs-password' || failure.kind === 'wrong-password' ? { file, locked: failure.kind === 'needs-password' ? 'asked' : 'wrong' } : describeImportFailure(failure);
+    const row = await reading(file, password, place, async (parsed): Promise<Row> => {
+      const shown = (preview: Preview, choice: Choice | null = null): Row => ({ file, password, preview, choice, ticked: true });
       if ('chat' in parsed || 'risuChats' in parsed) {
         const choice: Choice = { kind: 'character', ...chatDestination(store, parsed, target, place) };
         const count = 'chat' in parsed ? 1 : parsed.risuChats.length;
@@ -194,12 +206,18 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       if ('persona' in parsed) return shown(personaPreview(parsed.persona));
       const into = parsed.card.assets.length > 0 ? risuMatch(store, parsed.card.card.name) : null;
       return shown(characterPreview(parsed.card), into === null ? null : { kind: 'fill', into, on: false });
-    });
+    }, refused);
     return typeof row === 'string' ? { file, failure: row } : row;
   }
 
-  async function save({ file, preview: { title }, choice }: Read, place: ModulePlace | null, progress: (step: ProgressStep) => void, offer: (offer: Offer) => void): Promise<Result> {
-    const saved = await reading(file, place, async (parsed, reader): Promise<Result> => {
+  // The row read again with its password, in place, while the preview stays open.
+  async function unlock(row: Locked, password: string, place: ModulePlace | null) {
+    const read = await previewOf(row.file, place, undefined, password);
+    if (mounted.current) setState((now) => (now?.kind === 'preview' ? { ...now, rows: now.rows.map((each) => (each === row ? read : each)) } : now));
+  }
+
+  async function save({ file, password, preview: { title }, choice }: Read, place: ModulePlace | null, progress: (step: ProgressStep) => void, offer: (offer: Offer) => void): Promise<Result> {
+    const saved = await reading(file, password, place, async (parsed, reader): Promise<Result> => {
       const sink = { store, files };
       const original = () => reader.original(file.name);
       const step = (each: Parameters<typeof stepOf>[0]) => progress(stepOf(each));
@@ -332,8 +350,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     const undos: Offer[] = [];
     for (const row of rows) {
       if (!mounted.current) return results;
-      if ('failure' in row) {
-        results.push(failed(row.file.name, row.failure));
+      if (!('preview' in row)) {
+        results.push(failed(row.file.name, 'failure' in row ? row.failure : describeImportFailure({ kind: 'needs-password' })));
         continue;
       }
       setState({ kind: 'saving', file: row.file.name, steps: [] });
@@ -382,12 +400,13 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   ];
   const rows = state?.kind === 'preview' ? state.rows : [];
   const ready = rows.filter((row): row is Read => 'preview' in row);
+  const locked = rows.some((row) => 'locked' in row);
   const ticked = ready.filter((row) => row.ticked);
   const title =
     state?.kind === 'downloading' ? '봇 받는 중'
     : state?.kind === 'reading' ? '파일 읽는 중'
     : state?.kind === 'saving' ? '가져오는 중'
-    : state?.kind === 'preview' ? (ready.length > 0 ? '가져올까요?' : '가져오지 못했어요')
+    : state?.kind === 'preview' ? (ready.length > 0 || locked ? '가져올까요?' : '가져오지 못했어요')
     : results.some((result) => result.kind !== 'failed') ? '가져왔어요' : '가져오지 못했어요';
   const actions =
     state?.kind === 'preview' ? (ready.length > 0 ? (
@@ -446,6 +465,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
           {state.kind === 'preview' ? (
             <List label="가져올 파일" box>
               {ready.map((row, index) => <PreviewRow key={index} row={row} many={ready.length > 1} onChange={(next) => change(row, next)} />)}
+              {rows.flatMap((row, index) => ('locked' in row ? [<LockedRow key={`locked-${index}`} row={row} onOpen={(password) => unlock(row, password, state.place)} />] : []))}
               {rows.flatMap((row, index) => ('failure' in row ? [<FailedRow key={`failed-${index}`} file={row.file.name} failure={row.failure} />] : []))}
             </List>
           ) : state.kind === 'done' ? (
@@ -540,11 +560,35 @@ function LinkDialog({ start, onBring, onClose }: { start: LinkStart; onBring: (l
             value={password}
             onChange={setPassword}
             hint="헤이젤은 Proton 공식 앱이 아니에요. 비밀번호는 이 브라우저에서만 쓰여요."
-            error={start.password === 'wrong' ? '비밀번호가 맞지 않아요.' : undefined}
+            error={start.password === 'wrong' ? WRONG_PASSWORD : undefined}
           />
         )}
       </Stack>
     </Dialog>
+  );
+}
+
+function LockedRow({ row: { file, locked }, onOpen }: { row: Locked; onOpen: (password: string) => Promise<void> }) {
+  const [password, setPassword] = useState('');
+  const [opening, setOpening] = useState(false);
+  const open = () => {
+    setOpening(true);
+    void onOpen(password).finally(() => setOpening(false));
+  };
+  return (
+    <ListItem
+      leading={<Avatar face={LockKeyhole} />}
+      title={file.name}
+      description={describeImportFailure({ kind: 'needs-password' })}
+      detail={
+        <Stack gap="related">
+          <TextField label="카드 비밀번호" kind="current-password" value={password} onChange={setPassword} error={locked === 'wrong' ? WRONG_PASSWORD : undefined} />
+          <Button variant="secondary" size="sm" busy={opening} disabled={password === ''} onClick={open}>
+            {locked === 'wrong' ? ACTS.retry.label : '열기'}
+          </Button>
+        </Stack>
+      }
+    />
   );
 }
 

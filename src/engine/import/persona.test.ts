@@ -29,7 +29,7 @@ it("writes a persona PNG that Risu's rule reads and the app's import reads back,
   const persona = { name: '하루 🐶', description: '키가 크고\n말이 적어요.', alias: '노트' };
   const written = writePersonaPng(PNG, persona);
   expect(risuReads(written)).toEqual({ persona: { name: '하루 🐶', personaPrompt: '키가 크고\n말이 적어요.', note: '노트' }, crcHolds: true });
-  const read = importCard('하루.png', written);
+  const read = await importCard('하루.png', written);
   if (!read.ok || !('persona' in read)) throw new Error(`import failed: ${JSON.stringify(read)}`);
   expect(read.persona).toMatchObject(persona);
   expect(await read.persona.picture()).toEqual({ bytes: PNG, type: 'image/png' });

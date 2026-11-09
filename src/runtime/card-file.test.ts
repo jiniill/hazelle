@@ -139,7 +139,7 @@ describe('a character file', () => {
     const risum = readRisumModule(unzipped.get('module.risum')!)!;
     expect([list(risum.regex).length, list(risum.trigger).length, list(risum.lorebook).length]).toEqual([2, 2, 7]);
 
-    const read = importCard('루나.charx', file);
+    const read = await importCard('루나.charx', file);
     if (!read.ok || !('card' in read)) throw new Error('not a card');
     expect(read.card.report.unsupported).toEqual([]);
 

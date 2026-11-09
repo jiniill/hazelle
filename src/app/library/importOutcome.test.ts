@@ -7,8 +7,8 @@ import { readToolFile } from '../../engine/import/risu-plugin';
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
 import { characterOutcome, characterPreview, chatOutcome, chatPreview, DECLINED_WORDS, moduleOutcome, modulePreview, promptOutcome, promptPreview, toolOutcome, toolPreview, type Placement } from './importOutcome';
 
-it('keeps card and module previews as detached text without asset readers or source bytes, and a saved card names only what the store refused', () => {
-  const parsed = importCard('card.json', new TextEncoder().encode(JSON.stringify({ spec: 'chara_card_v3', data: { name: 'Mira', first_mes: 'Hi' } })));
+it('keeps card and module previews as detached text without asset readers or source bytes, and a saved card names only what the store refused', async () => {
+  const parsed = await importCard('card.json', new TextEncoder().encode(JSON.stringify({ spec: 'chara_card_v3', data: { name: 'Mira', first_mes: 'Hi' } })));
   if (!parsed.ok || !('card' in parsed)) throw new Error('fixture');
   const bytes = new Uint8Array([1, 2, 3]);
   const imported = { ...parsed.card, assets: [{ name: 'picture', read: async () => bytes }] };

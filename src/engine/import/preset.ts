@@ -6,6 +6,7 @@ import { add, counted, record, regexScripts, stampIds, text, type Json, type Tal
 import { expansionLimit, gunzip, TooLarge } from './inflate';
 import { readMsgpack, writeMsgpack } from './msgpack';
 import { pack, unpack } from './risum';
+import { seal, unseal } from './risu-seal';
 import { readToggles, writeToggles } from './toggles';
 import type { RegexScript } from './types';
 
@@ -56,11 +57,10 @@ const REPEATING: Record<Repeating, true> = { chat: true, description: true, pers
 
 const fail = (kind: PresetFailure['kind']): PresetResult => ({ ok: false, failure: { kind } });
 
-const presetKey = async (usage: 'encrypt' | 'decrypt') => crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', new TextEncoder().encode('risupreset')), 'AES-GCM', false, [usage]);
-const SEAL = { name: 'AES-GCM', iv: new Uint8Array(12) };
+const PRESET_SECRET = 'risupreset';
 
-// Dispatch by extension (isPresetFile). MessagePack {type: 'preset', preset} holds AES-GCM-encrypted MessagePack in
-// preset (pres in v0). The fixed-string key hash and zero IV are format obfuscation, not protection.
+// Dispatch by extension (isPresetFile). MessagePack {type: 'preset', preset} holds MessagePack sealed under a fixed
+// string in preset (pres in v0).
 export async function importPreset(fileName: string, bytes: Uint8Array): Promise<PresetResult> {
   if (!isPresetFile(fileName)) return fail('unreadable');
   if (fileName.toLowerCase().endsWith('.preset')) {
@@ -79,15 +79,11 @@ export async function importPreset(fileName: string, bytes: Uint8Array): Promise
   }
   const sealed = isRecord(outer) ? (outer.preset ?? outer.pres) : null;
   if (!isRecord(outer) || outer.type !== 'preset' || !(sealed instanceof Uint8Array)) return fail('not-preset');
-  let opened: ArrayBuffer;
-  try {
-    opened = await crypto.subtle.decrypt(SEAL, await presetKey('decrypt'), sealed.slice());
-  } catch {
-    return fail('decrypt-failed');
-  }
+  const opened = await unseal(sealed.slice(), PRESET_SECRET);
+  if (!opened) return fail('decrypt-failed');
   let preset: unknown;
   try {
-    preset = readMsgpack(new Uint8Array(opened));
+    preset = readMsgpack(opened);
   } catch {
     return fail('unreadable');
   }
@@ -113,7 +109,7 @@ export type PresetWritten = { bytes: Uint8Array<ArrayBuffer>; tools: number };
 // for the prompt, which go to moduleIntergration after the companions its own preset named.
 export async function writePreset(prompt: ConversationPrompt, namespaces: readonly string[]): Promise<PresetWritten> {
   const { preset, tools } = botPreset(prompt, namespaces);
-  const sealed = new Uint8Array(await crypto.subtle.encrypt(SEAL, await presetKey('encrypt'), writeMsgpack(preset)));
+  const sealed = await seal(writeMsgpack(preset), PRESET_SECRET);
   return { bytes: pack(gzipSync(writeMsgpack({ presetVersion: 2, type: 'preset', preset: sealed }))), tools };
 }
 

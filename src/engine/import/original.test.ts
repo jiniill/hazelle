@@ -38,7 +38,7 @@ const card = {
 };
 
 // What a parse holds, with each asset's bytes read: the stored values and what was counted.
-async function read(result: ReturnType<typeof importCard> | Awaited<ReturnType<typeof importRisum>>) {
+async function read(result: Awaited<ReturnType<typeof importCard>> | Awaited<ReturnType<typeof importRisum>>) {
   if (!result.ok) throw new Error(JSON.stringify(result));
   const held = 'card' in result ? result.card : 'module' in result ? result.module : null;
   if (!held) throw new Error('not a card or module');
@@ -56,7 +56,7 @@ describe('joinOriginal', () => {
     const parts = originalParts(file);
     expect(parts.map(({ path }) => path)).toEqual(['zip-prefix', 'zip/card.json', 'zip/assets/other/smile.png', 'zip/assets/emotion/sad.png']);
     const joined = await joinOriginal(await kept(parts));
-    expect(await read(importCard('bot.charx', joined))).toEqual(await read(importCard('bot.charx', file)));
+    expect(await read(await importCard('bot.charx', joined))).toEqual(await read(await importCard('bot.charx', file)));
   });
 
   it('rebuilds a card PNG from its image, its card and its decoded asset chunks', async () => {
@@ -64,7 +64,7 @@ describe('joinOriginal', () => {
     const file = withText(withText(picture, 'chara', base64(strToU8(JSON.stringify(v2)))), 'chara-ext-asset_:0', base64(picture));
     const parts = await kept(originalParts(file));
     expect(parts.get('png-asset/0')).toEqual(picture);
-    expect(await read(importCard('bot.png', await joinOriginal(parts)))).toEqual(await read(importCard('bot.png', file)));
+    expect(await read(await importCard('bot.png', await joinOriginal(parts)))).toEqual(await read(await importCard('bot.png', file)));
   });
 
   it('rebuilds a .risum with its blocks in order', async () => {

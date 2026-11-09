@@ -11,7 +11,9 @@ import type { FileSource } from './source';
 import { writeToggles } from './toggles';
 import { openZip, type Zip } from './zip';
 import { fromBase64 } from '../../base64';
+import { hex } from '../../hex';
 import { isRecord } from '../../connectors/values';
+import { unseal } from './risu-seal';
 
 const utf8 = new TextDecoder();
 const fail = (kind: ImportFailure['kind'], detail?: string): { ok: false; failure: ImportFailure } => ({ ok: false, failure: detail ? { kind, detail } : { kind } });
@@ -28,13 +30,13 @@ const MODULE_CHARX = /\.module\s*(?:\(\d+\)\s*)?\.charx$/i;
 
 // Dispatch goes by extension and the way in, as in Risu, and a JSON by its shape. A charx is never sniffed: Risu's module
 // export leaves no mark in the card. asModule: the file came in on the module list, where Risu's importModule reads any
-// .charx as a module.
-export function importCard(fileName: string, bytes: Uint8Array<ArrayBuffer>, asModule = false): ImportResult {
+// .charx as a module. password: the one an rcc card asked for.
+export async function importCard(fileName: string, bytes: Uint8Array<ArrayBuffer>, asModule = false, password?: string): Promise<ImportResult> {
   const extension = fileName.slice(fileName.lastIndexOf('.') + 1).toLowerCase();
   try {
     switch (extension) {
       case 'png':
-        return fromPng(bytes);
+        return await fromPng(bytes, password);
       case 'charx':
         return asModule || MODULE_CHARX.test(fileName) ? fromModuleCharx(bytes) : fromCharx(bytes);
       case 'jpg':
@@ -51,14 +53,36 @@ export function importCard(fileName: string, bytes: Uint8Array<ArrayBuffer>, asM
   }
 }
 
-function fromPng(bytes: Uint8Array<ArrayBuffer>): ImportResult {
+async function fromPng(bytes: Uint8Array<ArrayBuffer>, password: string | undefined): Promise<ImportResult> {
   const png = readPng(bytes);
   if (!png) return fail('unreadable', 'not a PNG');
   if (!png.card) return png.persona === null ? fail('unreadable', 'the PNG holds no card') : readPersona(png.persona, png.image);
-  if (png.card.startsWith('rcc||')) return fail('encrypted');
+  const read = await chunkCard(png.card, password);
+  if (!read.ok) return read;
   const tally: Tally = new Map();
-  const converted = convert(offSpec(JSON.parse(utf8.decode(fromBase64(png.card)))), null, tally);
+  const converted = convert(offSpec(read.card), null, tally);
   return converted ? done('png', converted, { bytes: png.image, type: 'image/png' }, { chunks: png.assets, image: png.image }, tally, NOT_OWN) : fail('unreadable', 'not a character card');
+}
+
+const RCC = 'rcc||';
+// The key's string when the card's maker set no password.
+const RCC_NONE = 'RISU_NONE';
+
+// A PNG's card chunk: base64 card JSON, or Risu's rcc card (characterCards.ts importCharacterProcess) as plain text,
+// rcc||rccv1||<base64 sealed card JSON>||<SHA-256 hex of the sealed bytes>||<base64 JSON { usePassword }>.
+// The hash is checked first, so a seal that then fails to open was sealed under another password.
+async function chunkCard(text: string, password: string | undefined): Promise<{ ok: true; card: unknown } | { ok: false; failure: ImportFailure }> {
+  if (!text.startsWith(RCC)) return { ok: true, card: JSON.parse(utf8.decode(fromBase64(text))) };
+  const parts = text.split('||');
+  if (parts[1] !== 'rccv1' || parts.length !== 5) return fail('unreadable', 'not an rccv1 card');
+  const sealed = fromBase64(parts[2]!);
+  if (hex(new Uint8Array(await crypto.subtle.digest('SHA-256', sealed))) !== parts[3]) return fail('unreadable', 'the rcc card was changed');
+  const locked = Boolean(record(JSON.parse(utf8.decode(fromBase64(parts[4]!)))).usePassword);
+  const secret = locked ? password : RCC_NONE;
+  if (secret === undefined) return fail('needs-password');
+  const opened = await unseal(sealed, secret);
+  if (!opened) return locked ? fail('wrong-password') : fail('unreadable', 'the rcc card does not open');
+  return { ok: true, card: JSON.parse(utf8.decode(opened)) };
 }
 
 function readCharx(bytes: Uint8Array<ArrayBuffer>, tally: Tally): { zip: Zip; raw: unknown; converted: Converted } | ImportResult {
