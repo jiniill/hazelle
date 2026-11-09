@@ -116,6 +116,11 @@ export type Bot = {
   bundled: TypedModule[];
 };
 
+// What of a SillyTavern regex script, a card's or a preset's, this app does not run as SillyTavern does, counted once
+// per script (engine/import/convert sillyTavernRegex).
+export const SILLYTAVERN_REGEX_KINDS = ['regex-placement', 'regex-role', 'regex-depth', 'regex-trim', 'regex-escape'] as const;
+export type SillyTavernRegexKind = (typeof SILLYTAVERN_REGEX_KINDS)[number];
+
 // The asset kinds say why a listed asset was not kept. 'refused-picture' and 'refused-video' are counted where assets
 // are stored (runtime/characters saveAssets), the rest by the parsers.
 export const UNSUPPORTED_KINDS = [
@@ -134,6 +139,7 @@ export const UNSUPPORTED_KINDS = [
   'disable-ui-prompt',
   'cbs-tag',
   'regex-stage',
+  ...SILLYTAVERN_REGEX_KINDS,
   'module',
   'toggle-line',
   'mcp',

@@ -2,8 +2,9 @@ import { count, isRecord, list } from '../../connectors/values';
 import type { Block, ConversationPrompt, Role, TextBlock } from '../../model/prompt';
 import { isProse, separatorOf } from '../cbs/evaluate';
 import { handlerFor, normalize } from '../cbs/tags';
-import { add, finite, record, text, type Json, type Tally } from './convert';
+import { add, finite, record, sillyTavernRegex, text, type Json, type Tally } from './convert';
 import type { PresetCounted } from './preset';
+import type { RegexScript } from './types';
 
 // SillyTavern's chat-completion preset: its prompts by identifier, in the order of its global prompt_order, the one
 // SillyTavern reads for every character.
@@ -39,7 +40,7 @@ type Injected = { block: TextBlock; depth: number; order: number };
 const INJECTED_ROLES: Role[] = ['assistant', 'user', 'system'];
 
 // null when it has no global prompt_order.
-export function sillyTavernPreset(preset: Json, name: string): { prompt: ConversationPrompt; counts: Tally<PresetCounted> } | null {
+export function sillyTavernPreset(preset: Json, name: string): { prompt: ConversationPrompt; regex: RegexScript[]; counts: Tally<PresetCounted> } | null {
   const order = list(preset.prompt_order).find((entry) => isRecord(entry) && entry.character_id === GLOBAL_ORDER);
   if (!isRecord(order)) return null;
   const counts: Tally<PresetCounted> = new Map();
@@ -93,13 +94,13 @@ export function sillyTavernPreset(preset: Json, name: string): { prompt: Convers
   else blocks.splice(chatAt, 0, ...chatPieces(text(preset.new_chat_prompt), injected));
 
   add(counts, 'macro', unrun(blocks.flatMap((block) => (block.kind === 'text' ? [block.text] : []))));
-  add(counts, 'sillytavern-regex', list(record(preset.extensions).regex_scripts).length);
+  const regex = sillyTavernRegex(list(record(preset.extensions).regex_scripts), counts);
   const changed = Object.keys(ASSEMBLY).filter((field) => field in preset && preset[field] !== ASSEMBLY[field]).length;
   // Names go into the messages from 1 up; 0 and below send none in a chat with one character.
   add(counts, 'prompt-settings', changed + (typeof preset.names_behavior === 'number' && preset.names_behavior > 0 ? 1 : 0));
   // Model and generation settings belong to each model's settings; every preset has them.
   add(counts, 'settings');
-  return { prompt: { name, blocks, toggles: [], authorNote: '', models: {}, imported: 'sillytavern-preset' }, counts };
+  return { prompt: { name, blocks, toggles: [], authorNote: '', models: {}, imported: 'sillytavern-preset' }, regex, counts };
 }
 
 // A prompt limited to other kinds of generation (continue, swipe, impersonate…) is not sent with a reply.

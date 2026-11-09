@@ -1,6 +1,7 @@
 import { hex } from '../hex';
 import { isFrame, joinOriginal, standIn, stoodFor } from '../engine/import/original';
 import type { PresetRead } from '../engine/import/preset';
+import { readFromSillyTavern } from '../engine/import/convert';
 import { PLAIN_LUA, type Card, type Imported, type ImportedModule, type Pack, type RegexScript, type Trigger } from '../engine/import/types';
 import { grouped } from '../model/fields';
 import type { Stored } from '../model/kinds';
@@ -125,10 +126,23 @@ const since1109: Step = async (store, files, owner, read, pieces) => {
   return { ok: true, data: { edited: 0 } };
 };
 
+// A card's SillyTavern regex scripts, read since 2026-11-09, join the end of its scripts; null when it has them all.
+function addedSillyTavern(regex: RegexScript[], read: RegexScript[]): RegexScript[] | null {
+  const held = new Set(regex.map(regexKey));
+  const added = read.filter((script) => readFromSillyTavern(script) && !held.has(regexKey(script))).map((script) => ({ ...script, id: crypto.randomUUID() }));
+  return added.length ? [...regex, ...added] : null;
+}
+
+const sillyTavernScripts: Step = async (store, _files, owner, read) => {
+  if (owner.kind !== 'character' || !('card' in read) || !addedSillyTavern(owner.value.card.regex, read.card.card.regex)) return { ok: true, data: { edited: 0 } };
+  const written = await store.update('character', owner.id, (current) => ({ ...current, card: { ...current.card, regex: addedSillyTavern(current.card.regex, read.card.card.regex) ?? current.card.regex } }));
+  return written.ok ? { ok: true, data: { edited: 0 } } : written;
+};
+
 // In the order the parser changes came; settings.reread counts those every original has had. Each only adds, or fills
 // what is still as the old parser left it, so one run again after a stop lands the same. A later parser change that
 // reads a kind it counted adds a step: one applied again would bring back what the user has removed since.
-const STEPS: Step[] = [since1109];
+const STEPS: Step[] = [since1109, sillyTavernScripts];
 
 function ownerOf(store: ObjectStore, id: string): Owner | null {
   const owner = store.get('character', id) ?? store.get('module', id) ?? store.get('prompt', id);

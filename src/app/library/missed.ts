@@ -1,8 +1,17 @@
 import type { PresetUnsupported } from '../../engine/import/preset';
-import type { MoveUnsupported, MoveUnsupportedKind, Unsupported, UnsupportedKind } from '../../engine/import/types';
+import type { MoveUnsupported, MoveUnsupportedKind, SillyTavernRegexKind, Unsupported, UnsupportedKind } from '../../engine/import/types';
 import type { Dropped } from '../../runtime/chat-log';
 import { SLOT } from '../common/prompt-words';
-import { CAST, COMMAND, inSettings } from '../common/words';
+import { CAST, COMMAND, inSettings, SCRIPTS } from '../common/words';
+
+const TAVERN_REGEX = `SillyTavern ${SCRIPTS.regex}`;
+const SILLYTAVERN_REGEX: Record<SillyTavernRegexKind, (count: number) => string> = {
+  'regex-placement': (count) => `슬래시 명령·월드 인포·추론에 쓰던 ${TAVERN_REGEX} ${count}개`,
+  'regex-role': (count) => `한쪽 메시지에만 쓰던 ${TAVERN_REGEX} ${count}개(양쪽에 적용돼요)`,
+  'regex-depth': (count) => `깊이 제한이 있는 ${TAVERN_REGEX} ${count}개(모든 깊이에 적용돼요)`,
+  'regex-trim': (count) => `잘라낼 문자열이 있는 ${TAVERN_REGEX} ${count}개`,
+  'regex-escape': (count) => `패턴 속 매크로를 이스케이프하던 ${TAVERN_REGEX} ${count}개`,
+};
 
 const UNSUPPORTED: Record<UnsupportedKind, (count: number) => string> = {
   'extra-icon': (count) => `추가 아이콘 ${count}개`,
@@ -20,6 +29,7 @@ const UNSUPPORTED: Record<UnsupportedKind, (count: number) => string> = {
   'disable-ui-prompt': (count) => `@@disable_ui_prompt ${count}곳`,
   'cbs-tag': (count) => `지원하지 않는 ${COMMAND} ${count}개`,
   'regex-stage': (count) => `지원하지 않는 단계의 정규식 ${count}개`,
+  ...SILLYTAVERN_REGEX,
   module: () => '읽지 못한 모듈',
   'toggle-line': (count) => `읽지 못한 토글 줄 ${count}개(토글에서 수정할 수 있음)`,
   mcp: () => 'MCP 서버 연결',
@@ -56,7 +66,7 @@ const PRESET_UNSUPPORTED: Record<Exclude<PresetUnsupported['kind'], 'repeated-sl
   'preset-text': (count) => `템플릿 밖의 텍스트 ${count}개(Risu에서도 보내지 않던 것)`,
   macro: (count) => `실행되지 않는 SillyTavern 매크로 ${count}개`,
   'regex-stage': UNSUPPORTED['regex-stage'],
-  'sillytavern-regex': (count) => `SillyTavern 정규식 ${count}개`,
+  ...SILLYTAVERN_REGEX,
   'prompt-settings': (count) => `프롬프트 조립 설정 ${count}개(헤이젤에는 없음)`,
   settings: () => `모델과 생성 설정(${inSettings('models')}에서 정할 수 있음)`,
 };

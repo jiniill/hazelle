@@ -7,6 +7,7 @@ import { fileSource } from './source';
 import { readRisum, readRisumModule, risumBlock, risumHead, RISUM_END, unpack, writeRisum } from './risum';
 import { PLAIN_LUA, type Bot, type ImportResult, type Imported, type Trigger, type TypedModule } from './types';
 import { crc32 } from './zip';
+import { trySample } from '../regex/scripts';
 import { hex } from '../../hex';
 import { seal } from './risu-seal';
 
@@ -252,6 +253,41 @@ describe('importCard', () => {
     ]);
     expect(imported.card.triggers.map(({ kind }) => kind).sort()).toEqual(['blocks', 'lua']);
     expect(counts(imported)).toEqual({});
+  });
+
+  const tavern = (scriptName: string, over: object = {}) => ({ id: scriptName, scriptName, findRegex: '/a(b)/g', replaceString: '[{{match}}|$1]', trimStrings: [], placement: [2], disabled: false, markdownOnly: false, promptOnly: false, runOnEdit: true, substituteRegex: 0, minDepth: null, maxDepth: null, ...over });
+
+  it("reads a card's SillyTavern regex scripts onto the stages that run them, counting what runs otherwise here", async () => {
+    const imported = await json(v2({
+      extensions: {
+        regex_scripts: [
+          tavern('stored', { placement: [1, 2] }),
+          tavern('shown', { markdownOnly: true, findRegex: 'plain', replaceString: '<b>$&</b>' }),
+          tavern('both', { markdownOnly: true, promptOnly: true, placement: [1, 2], substituteRegex: 2, findRegex: '/{{char}}/i', trimStrings: ['x'] }),
+          tavern('deep', { promptOnly: true, placement: [1, 2], maxDepth: 2, disabled: true }),
+          tavern('lore', { placement: [5] }),
+        ],
+      },
+    }));
+    const { regex } = imported.card;
+    expect(regex.map(({ name, find, replace, stage, flags, off }) => [name, find, replace, stage, flags, off])).toEqual([
+      ['stored', 'a(b)', '[$&|$1]', 'input', 'g', undefined],
+      ['stored', 'a(b)', '[$&|$1]', 'output', 'g', undefined],
+      ['shown', 'plain', '<b>$$&</b>', 'display', 'd<no_end_nl>', undefined],
+      ['both', '{{char}}', '[$&|$1]', 'display', 'i<cbs>', undefined],
+      ['both', '{{char}}', '[$&|$1]', 'process', 'i<cbs>', undefined],
+      ['deep', 'a(b)', '[$&|$1]', 'process', 'g', true],
+      ['lore', 'a(b)', '[$&|$1]', 'display', 'g', true],
+    ]);
+    expect(counts(imported)).toEqual({ 'regex-placement': 1, 'regex-role': 1, 'regex-depth': 1, 'regex-trim': 1, 'regex-escape': 1 });
+    // As SillyTavern runs them: a plain pattern replaces its first match, and $& is written as itself.
+    expect(trySample(regex[0]!, 'ab ab')).toBe('[ab|b] [ab|b]');
+    expect(trySample(regex[2]!, 'plain plain')).toBe('<b>$&</b> plain');
+  });
+
+  it("brings a card's SillyTavern scripts in off beside its own Risu scripts, which Risu runs alone", async () => {
+    const imported = await json(v2({ extensions: { risuai: { customScripts: [{ comment: 'risu', in: 'a', out: 'b', type: 'editoutput' }] }, regex_scripts: [tavern('tavern')] } }));
+    expect(imported.card.regex.map(({ name, off }) => [name, off])).toEqual([['risu', undefined], ['tavern', true]]);
   });
 
   it('reads a module file as a module, with its pictures by the names its assets list gives them', async () => {
