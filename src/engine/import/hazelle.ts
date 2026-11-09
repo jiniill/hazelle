@@ -1,7 +1,8 @@
 import { count, isRecord, list } from '../../connectors/values';
 import type { Portrait, PortraitSource } from '../../model/likeness';
 import { fingerprint } from '../memory';
-import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource, luaCodes, nativeHolds, readTriggers, record, regexScripts, regexSource, stampIds, strings, text, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';
+import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource, luaCodes, nativeHolds, readTriggers, record, regexScripts, stampIds, strings, text, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';
+import { risuRegex } from '../../tool-api/risu-regex';
 import { readToggles, writeToggles } from './toggles';
 import type { Bot, BundledModule, CharacterOwn, HazelleOwn, LoreEntry, Profiles, RegexScript, Trigger, TypedModule } from './types';
 
@@ -39,11 +40,11 @@ function partition<T, S>(entries: T[], place: (entry: T) => Placed, kept: (entry
 // scripts turned off, and the lore entries the native lorebook cannot hold whole. lua: whether Risu's list holds Lua,
 // which Risu runs only with lowLevelAccess.
 function setApart(regex: RegexScript[], triggers: Trigger[], lore: LoreEntry[]) {
-  const scripts = partition(regex, (script) => (script.off ? 'own' : 'risu'), regexSource);
+  const scripts = partition(regex, (script) => (script.off ? 'own' : 'risu'), risuRegex);
   const run = partition(triggers, (trigger) => (trigger.off ? 'own' : 'risu'), triggerSource);
   const book = partition(lore, (entry) => (!entry.enabled ? 'own' : nativeHolds(entry) ? 'risu' : 'shared'), (entry) => entry);
   return {
-    regex: scripts.risu.map(regexSource),
+    regex: scripts.risu.map(risuRegex),
     triggers: run.risu.map(triggerSource),
     lore: book.risu,
     lua: run.risu.some((trigger) => luaCodes(trigger).length > 0),

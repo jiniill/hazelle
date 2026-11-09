@@ -57,9 +57,8 @@ export type Trigger = Listed & Steps & ({ kind: 'lua'; code: string } | { kind: 
 // A Lua trigger's steps when it holds nothing but its code. Risu's editor starts one at 'start'.
 export const PLAIN_LUA: Omit<Steps, 'name'> = { on: 'start', conditions: [], effects: [] };
 
-// flags: the custom flag string, <…> meta blocks included; null runs the default `g`. translation: Risu's edittrans, over
-// a message's translation (runtime/translate).
-export type RegexScript = Listed & { name: string; find: string; replace: string; stage: 'input' | 'output' | 'process' | 'display' | 'translation'; flags: string | null };
+// translation: Risu's edittrans, over a message's translation (runtime/translate).
+export type RegexScript = Listed & Hazelle.Script;
 // The stage of a script whose stage is unknown: a new one's, and one switched off in Risu, which keeps none.
 export const NEW_STAGE: RegexScript['stage'] = 'display';
 

@@ -11,7 +11,7 @@ export type ToolOutcome = {
   variables: [string, string][];
 };
 export type Method =
-  | 'chat.messages' | 'chat.greeting' | 'chat.card' | 'chat.state.get' | 'chat.variables.get' | 'chat.data.get' | 'chat.data.keys' | 'chat.lorebook' | 'chat.setup' | 'chat.picture' | 'chat.send' | 'chat.rendered' | 'model' | 'embed' | 'fetch' | 'ask' | 'say' | 'tokens' | 'lore'
+  | 'chat.messages' | 'chat.greeting' | 'chat.card' | 'chat.state.get' | 'chat.variables.get' | 'chat.data.get' | 'chat.data.keys' | 'chat.lorebook' | 'chat.inlay' | 'chat.cbs' | 'chat.setup' | 'chat.picture' | 'chat.send' | 'chat.rendered' | 'chat.card.edit' | 'model' | 'embed' | 'fetch' | 'ask' | 'say' | 'tokens' | 'lore'
   | 'storage.get' | 'storage.set' | 'storage.delete' | 'storage.keys' | 'assets.save' | 'assets.read' | 'settings' | 'settings.set' | 'account' | 'post' | 'page.close' | 'frame.chat' | 'frame.show' | 'frame.hide' | 'frame.menu' | 'frame.actions' | 'frame.missing';
 export type Role = 'background' | 'page' | 'frame';
 export type Down =

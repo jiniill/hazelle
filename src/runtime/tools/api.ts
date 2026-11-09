@@ -2,6 +2,7 @@ import type { HttpRequest } from '../../contracts/http';
 import { isRecord } from '../../connectors/values';
 import { RELAY_HEADER } from '../../contracts/http';
 import { Runaway } from '../../engine/cbs/evaluate';
+import { SIGNATURE } from '../../engine/assets';
 import { DEFAULT_ORDER } from '../../engine/import/convert';
 import { fieldValue, TOOL_ACTION_CHARS, TOOL_ACTIONS } from '../../engine/import/tool';
 import type { ToolEvent, ModelMessage, Question } from '../../engine/script-api';
@@ -14,6 +15,8 @@ import type { ChatHeader, Down, Message, ToolOutcome } from '../../tool-api/prot
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
 import { limitsOf, packsOf } from '../chat-context';
 import type { ToolState } from '../evaluation-core';
+import type { Lane } from '../evaluation';
+import type { RanAway } from '../../engine/pipeline';
 import { changedTail } from '../history-delta';
 import { attachIllustration } from '../illustrate';
 import type { ScriptOutcome } from '../scripts/lua/event';
@@ -67,6 +70,9 @@ function isAnswer(value: unknown): value is Hazelle.PromptAnswer | undefined {
   if (!isRecord(value) || !isText(value.tool)) return false;
   return value.memory === undefined || (isRecord(value.memory) && typeof value.memory.text === 'string' && (value.memory.through === null || typeof value.memory.through === 'string'));
 }
+const CARD_TEXTS = new Set(['name', 'description', 'personality', 'scenario', 'creatorNotes', 'greeting']);
+const isCardEdit = (value: unknown): value is Hazelle.CardEdit => isRecord(value) && Object.entries(value).every(([key, field]) =>
+  CARD_TEXTS.has(key) ? typeof field === 'string' : key === 'tags' && Array.isArray(field) && field.every((tag) => typeof tag === 'string'));
 const isRequestMessages = (value: unknown): value is Hazelle.RequestMessage[] => Array.isArray(value) && value.every((message) => isModelMessages([message])
   && (message.message === undefined || typeof message.message === 'string') && (message.cache === undefined || message.cache === true));
 const answers = (event: ToolEvent['kind'] | undefined, value: unknown) => {
@@ -110,7 +116,7 @@ function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unkno
       trial.writes.push({ kind: 'setting', key: field.key, value: second });
       return { answer: undefined };
     }
-    case 'assets.save': case 'chat.picture': case 'chat.send':
+    case 'assets.save': case 'chat.picture': case 'chat.send': case 'chat.card.edit':
       trial.writes.push({ kind: 'refused', call: method });
       throw new Error('Not run in a test');
     default: return null;
@@ -136,7 +142,7 @@ function lorebookOf(chat: string, character: string | null, scope: ChatScope): H
 }
 export const header = (chat: string, scope: ChatScope): ChatHeader => ({ id: chat, character: scope.card && { name: scope.card.name, description: scope.card.description }, persona: scope.persona, length: scope.messages.length - (scope.greeting === null ? 0 : 1) });
 
-export type ToolServices = { pages: Pick<ScriptPages, 'pageContext' | 'pageWrite' | 'send' | 'rendered'>; journal: Pick<ScriptJournal, 'report'> };
+export type ToolServices = { pages: Pick<ScriptPages, 'pageContext' | 'pageWrite' | 'send' | 'rendered' | 'editCard'>; journal: Pick<ScriptJournal, 'report'> };
 
 type FrameRuntime = {
   allowed(chat: string, module: string): boolean;
@@ -260,6 +266,11 @@ export class ToolApi {
         if (!entry.tool.manifest.uses.includes('model')) return { ok: false, reason: 'not-declared' } satisfies Hazelle.SendAnswer;
         return this.services.pages.send(first, second, { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
       }
+      case 'chat.card.edit': {
+        if (typeof first !== 'string' || !isCardEdit(second)) break;
+        if (!this.runtime.allowed(first, entry.module)) throw new ToolStopped();
+        return this.services.pages.editCard(first, second, { kind: 'module', id: entry.module }, AbortSignal.any([frame.closing.signal, cancel]));
+      }
       case 'chat.rendered': {
         const at = second === null ? null : isRecord(second) && typeof second.id === 'string' && typeof second.version === 'string' ? { id: second.id, version: second.version } : undefined;
         if (typeof first !== 'string' || at === undefined) break;
@@ -279,7 +290,7 @@ export class ToolApi {
         const { store } = this.session;
         const current = accountSettings(store).persona;
         return {
-          personas: store.list('persona').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.name, description: each.value.description, current: each.id === current }] : []),
+          personas: store.list('persona').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.name, description: each.value.description, picture: each.value.picture, current: each.id === current }] : []),
           characters: store.list('character').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.card.name }] : []),
         } satisfies Hazelle.Account;
       }
@@ -297,13 +308,25 @@ export class ToolApi {
         if (method === 'chat.messages') {
           const state = await this.state(frame, context);
           const greeting = context.scope.greeting === null ? 0 : 1;
-          const messages: Message[] = context.scope.messages.slice(greeting).map((message, index) => ({ index, id: message.message, version: message.id, role: message.role === 'user' ? 'user' : 'char', text: state.texts[index + greeting]!, raw: message.text, time: message.time ?? 0 }));
-          const tail = changedTail(frame.messages, messages, (a, b) => a.id === b.id && a.version === b.version && a.role === b.role && a.text === b.text && a.raw === b.raw && a.time === b.time);
+          const translations = new Map(this.session.store.foldedChat(context.chat).messages.flatMap(({ versions }) => versions.flatMap(({ id, translation }) => (translation ? [[id, { text: translation.text, sent: translation.sentIn !== undefined }] as const] : []))));
+          const messages: Message[] = context.scope.messages.slice(greeting).map((message, index) => ({
+            index, id: message.message, version: message.id, role: message.role === 'user' ? 'user' : 'char', text: state.texts[index + greeting]!, raw: message.text, time: message.time ?? 0, translation: translations.get(message.id) ?? null,
+          }));
+          const tail = changedTail(frame.messages, messages, (a, b) => a.id === b.id && a.version === b.version && a.role === b.role && a.text === b.text && a.raw === b.raw && a.time === b.time
+            && a.translation?.text === b.translation?.text && a.translation?.sent === b.translation?.sent);
           frame.messages = messages;
           return tail;
         }
         if (method === 'chat.card') return cardOf(live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
         if (method === 'chat.lorebook') return lorebookOf(context.chat, live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
+        if (method === 'chat.cbs' && typeof first === 'string') return (await this.read(frame, context, (lane) => this.session.store.evaluation.toolText(lane, context.scope, first, context.signal))).read;
+        if (method === 'chat.inlay' && typeof first === 'string') {
+          const inlay = context.scope.inlays.find(({ name, type }) => name === first && type !== SIGNATURE);
+          if (!inlay) return null;
+          const read = await this.session.files.read(this.session.store.get('inlay', inlay.id)!.value.file, { signal: context.signal });
+          if (!read.ok) throw new Error(read.error);
+          return { type: inlay.type, bytes: read.data };
+        }
         if (method === 'chat.setup') {
           const { store } = this.session;
           const chat = live(store.get('chat', context.chat))!.value;
@@ -311,7 +334,7 @@ export class ToolApi {
           return {
             persona: persona.kind === 'persona' ? persona.persona.id : null,
             limits: limitsOf(store, chat),
-            modules: packsOf(store, chat).flatMap(({ id, module }) => module ? [{ id, name: store.get('module', id)!.value.name }] : []),
+            modules: packsOf(store, chat).flatMap(({ id, pack, module }) => module ? [{ id, name: store.get('module', id)!.value.name, regex: pack.regex.flatMap(({ name, find, replace, stage, flags, off }) => off ? [] : [{ name, find, replace, stage, flags }]) }] : []),
           } satisfies Hazelle.Setup;
         }
         if (method === 'chat.greeting') return context.scope.greeting === null ? null : (await this.state(frame, context)).texts[0]!;
@@ -366,17 +389,20 @@ export class ToolApi {
   }
 
   private state(frame: Frame, context: Context): Promise<ToolState> {
-    if (context.state) return context.state;
-    const lane = { asker: 'tool', chat: context.chat, tool: `${frame.entry.module}:${frame.id}` } as const;
+    context.state ??= this.read(frame, context, (lane) => this.session.store.evaluation.state(lane, context.scope, '', context.signal));
+    return context.state;
+  }
+
+  // Concurrent events have immutable snapshots but one ordered changed-tail transport per frame.
+  private read<T extends object>(frame: Frame, context: Context, job: (lane: Lane<'tool'>) => Promise<T | RanAway>): Promise<T> {
     frame.lanes.add(context.chat);
-    // Concurrent events have immutable snapshots but one ordered changed-tail transport per frame.
+    const lane = { asker: 'tool', chat: context.chat, tool: `${frame.entry.module}:${frame.id}` } as const;
     const reading = frame.reading.catch(() => {}).then(async () => {
-      const state = await this.session.store.evaluation.state(lane, context.scope, '', context.signal);
-      if ('kind' in state) throw new Runaway();
-      return state;
+      const read = await job(lane);
+      if ('kind' in read) throw new Runaway();
+      return read;
     });
     frame.reading = reading.catch(() => {});
-    context.state = reading;
     return reading;
   }
 

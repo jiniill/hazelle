@@ -124,10 +124,13 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       // Bound to the chat, not the event: a picture often lands after its event has ended.
       picture: (at, bytes, options) => call('chat.picture', [header.id, at, bytes, options?.caption ?? null]),
       tokens: (text) => call('tokens', [text], event),
+      cbs: (text) => call('chat.cbs', [text], event),
       lore: (reserve) => call('lore', [reserve ?? null], event),
       lorebook: () => call('chat.lorebook', [], event),
+      inlay: (name) => call('chat.inlay', [name], event),
       send: async (text) => { await landed(); return call('chat.send', [header.id, text]); },
       rendered: (at) => call('chat.rendered', [header.id, at]),
+      editCard: (edit) => call('chat.card.edit', [header.id, edit]),
       setup: () => call('chat.setup', [], event),
       ask: (question) => call('ask', [question], event),
       say: (text, tone = 'normal') => fire('say', [tone, text], event),

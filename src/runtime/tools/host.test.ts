@@ -8,7 +8,9 @@ import type { Host, ToolEvent, ToolReach } from '../../engine/script-api';
 import { toolId } from '../../model/tool';
 import type { Down, Up } from '../../tool-api/protocol';
 import { shown } from '../../model/chat';
-import { appendScripted, appendUserMessage, editMessage, startChat } from '../chat-log';
+import { SIGNATURE } from '../../engine/assets';
+import { keepAttachments } from '../attachments';
+import { appendScripted, appendTranslation, appendUserMessage, editMessage, startChat } from '../chat-log';
 import { setModuleAlways, setModuleDeleted } from '../modules';
 import { ToolLate, ToolStuck } from '../scripts/binding';
 import type { Session } from '../session';
@@ -16,6 +18,7 @@ import { answerable, stubRelay, testServer } from '../testing';
 import { RELAY_HEADER } from '../../contracts/http';
 import { setModels, setNetwork } from '../pack';
 import { blankCard } from '../../engine/import/card';
+import { chatNow } from '../chat-context';
 import { projectGreetings } from '../greetings';
 import { upsertChatLore } from '../lore';
 import { inProcessRisu, inProcessTools } from '../testing/tool-transport';
@@ -158,6 +161,44 @@ it('runs a draft as no installed plugin, keeping its storage and settings writes
     await expect(trial({ kind: 'menu', item: 'now' })).rejects.toMatchObject({ message: 'boom', line: 7 });
     expect(await trial({ kind: 'input', item: 'tidy', text: '' })).toEqual([null]);
     expect(stored()).toEqual(before);
+  } finally { host.close(); Reflect.deleteProperty(globalThis, 'hazelle'); }
+}));
+
+it('reads a version\'s translation with its message', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const said = shown(session.store.foldedChat(f.chat).messages[0]!);
+  await appendTranslation(session.store, f.chat, said.id, { text: '안녕', receipt: null, at: 1 }, crypto.randomUUID());
+  let read: Hazelle.Message[] = [];
+  const transport = inProcessTools((api) => { api.on('prompt', async (chat) => { read = await chat.messages(); return null; }); });
+  const host = connect(transport.open);
+  try {
+    const context = f.context();
+    await host.run(f.chat, f.tool(), context.scope, { kind: 'prompt', turn: { memory: false } }, context.host);
+    expect(read).toEqual([expect.objectContaining({ text: 'hello', translation: { text: '안녕', sent: false } })]);
+  } finally { host.close(); }
+}));
+
+it('keeps a draft\'s chat open for its run, so it reads the chat\'s log after the studio\'s read of it let go', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const chat = crypto.randomUUID();
+  const writing = session.store.retainChat(chat, { created: true });
+  await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+  await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'hello' });
+  writing.release();
+  const scope = (await chatNow(session, chat, new AbortController().signal))!;
+  await vi.waitFor(() => expect(session.store.scopeState(chat)).toBe('unloaded'));
+  const code = ['//@api 1', '//@name draft', '//@author jin', '', 'hazelle.on("prompt", async (chat) => (await chat.messages()).map(({ text }) => text).join());'].join('\n');
+  const read = readTool(new TextEncoder().encode(code));
+  if (!read.ok) throw new Error('fixture');
+  const transport = inProcessTools((api, text) => {
+    Object.defineProperty(globalThis, 'hazelle', { value: api, configurable: true });
+    return (0, eval)(text) as void;
+  });
+  const host = connect(transport.open);
+  try {
+    const ran = await host.trial(chat, { code, tool: { manifest: read.tool.manifest, settings: {} } }, new AbortController().signal, (run) => run(scope, { kind: 'prompt', turn: { memory: false } }, f.context().host));
+    expect(ran).toMatchObject({ outcome: { value: 'hello' } });
+    expect(session.store.scopeState(chat)).toBe('unloaded');
   } finally { host.close(); Reflect.deleteProperty(globalThis, 'hazelle'); }
 }));
 
@@ -559,7 +600,7 @@ it('notifies a running tool after pulling a data change written on another devic
   await startChat(account.store, chat, { title: null, character: null, models: {} }, null);
   const changes = vi.fn();
   const transport = inProcessTools((api) => { api.storage.onChange(changes); });
-  const host = new ToolHost(account, { journal: { report: () => {} }, pages: { pageContext: () => null, pageWrite: async () => {}, send: async () => ({ ok: true as const }), rendered: () => null } }, transport.open);
+  const host = new ToolHost(account, { journal: { report: () => {} }, pages: { pageContext: () => null, pageWrite: async () => {}, send: async () => ({ ok: true as const }), rendered: () => null, editCard: async () => ({ ok: true as const }) } }, transport.open);
   try {
     await host.warm(chat);
     const peer = await account.open();
@@ -768,10 +809,12 @@ it('writes a tool\'s own settings field and refuses a value the field cannot hol
   } finally { host.close(); }
 }));
 
-it('reads the chat\'s lorebook by owner, how the chat is set up, and the account\'s personas and characters', () => withTools(async (session, connect) => {
+it('reads the chat\'s lorebook by owner, how the chat is set up with its modules\' scripts that are on, and the account\'s personas and characters', () => withTools(async (session, connect) => {
   const f = await fixture(session, undefined, 'Hello.');
   const character = session.store.get('chat', f.chat)!.value.character!;
   await upsertChatLore(session.store, f.chat, { name: 'Gate', keys: ['gate'], secondaryKeys: [], content: 'The gate is shut.', enabled: true, constant: false, selective: false, useRegex: false, caseSensitive: false, insertionOrder: 0, priority: null, position: null });
+  const bold = { name: 'bold', find: '\\*(.+?)\\*', replace: '<b>$1</b>', stage: 'display', flags: null } as const;
+  await session.store.update('module', f.module, (module) => ({ ...module, regex: [{ id: 'r1', ...bold }, { id: 'r2', ...bold, name: 'off', off: true }] }));
   const transport = inProcessTools(() => {});
   const host = connect(transport.open);
   const close = host.page(f.module, page(f.chat));
@@ -782,7 +825,58 @@ it('reads the chat\'s lorebook by owner, how the chat is set up, and the account
     const account = await api.account();
     expect(account.characters).toEqual([{ id: character, name: 'Mira' }]);
     const setup = await api.page!.chat!.setup();
-    expect(setup).toEqual({ persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test' }] });
+    expect(setup).toEqual({ persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test', regex: [bold] }] });
+  } finally { close(); host.close(); }
+}));
+
+it('reads a text\'s CBS after the chat with the variables it leaves, setting none', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    chat.variables.set('hero', 'Jin');
+    await vi.waitFor(() => expect(session.store.children('entry', f.chat).some(({ value }) => value.type === 'vars')).toBe(true));
+    expect(await Promise.all([chat.cbs('{{getvar::hero}} {{setvar::hero::Rook}}{{getvar::hero}}'), chat.cbs('{{lastmessage}}')])).toEqual(['Jin Jin', 'hello']);
+  } finally { close(); host.close(); }
+}));
+
+it('reads a picture the chat holds by its inlay name, and no signature or missing one', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const bytes = new Uint8Array([137, 80, 78, 71]);
+  const saved = await session.files.save([bytes, new Uint8Array([1])]);
+  if (!saved.ok) throw new Error(saved.error);
+  await keepAttachments(session.store, f.chat, [{ name: 'pic', type: 'image/png', size: 4, file: saved.data[0]! }, { name: 'sig', type: SIGNATURE, size: 1, file: saved.data[1]! }], []);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    expect(await chat.inlay('pic')).toEqual({ type: 'image/png', bytes });
+    expect(await chat.inlay('sig')).toBeNull();
+    expect(await chat.inlay('none')).toBeNull();
+  } finally { close(); host.close(); }
+}));
+
+it('rewrites the chat\'s character\'s card under the character\'s one answer, the first greeting in place', () => withTools(async (session, connect) => {
+  const f = await fixture(session, undefined, 'Hello.');
+  const character = session.store.get('chat', f.chat)!.value.character!;
+  await session.store.update('character', character, (current) => ({ ...current, card: { ...current.card, greetings: ['Hello.', 'Hi again.'] } }));
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    const asked = chat.editCard({ description: 'A captain', greeting: 'Ahoy.' });
+    await vi.waitFor(() => expect(session.scriptInteractions.snapshot().questions).toEqual([expect.objectContaining({ question: { kind: 'card' }, from: { kind: 'module', id: f.module } })]));
+    session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'yes');
+    expect(await asked).toEqual({ ok: true });
+    expect(session.store.get('character', character)!.value).toMatchObject({ cardWrites: true, card: { description: 'A captain', greetings: ['Ahoy.', 'Hi again.'] } });
+    await expect(chat.editCard({ description: 3 } as never)).rejects.toThrow('Invalid tool call');
   } finally { close(); host.close(); }
 }));
 

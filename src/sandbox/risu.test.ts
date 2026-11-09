@@ -17,8 +17,8 @@ function fakeApi({ open = true } = {}) {
   const lore: Omit<Hazelle.LoreEntry, 'owner'>[] = [];
   const variables: [string, string][] = [];
   const messages: Hazelle.Message[] = [
-    { index: 0, id: 'm0', version: 'v0', role: 'user', text: 'hello', raw: 'hello', time: 1 },
-    { index: 1, id: 'm1', version: 'v1', role: 'char', text: 'hi there', raw: '<b>hi there</b>', time: 2 },
+    { index: 0, id: 'm0', version: 'v0', role: 'user', text: 'hello', raw: 'hello', time: 1, translation: { text: '안녕', sent: true } },
+    { index: 1, id: 'm1', version: 'v1', role: 'char', text: 'hi there', raw: '<b>hi there</b>', time: 2, translation: { text: '반가워', sent: false } },
   ];
   const card: Hazelle.Card = {
     id: 'character-1', name: 'Mira', description: 'A sailor', personality: 'calm', scenario: 'harbor', greeting: null, creatorNotes: '', tags: ['sea'],
@@ -29,20 +29,21 @@ function fakeApi({ open = true } = {}) {
     { name: 'Ships', keys: ['ship'], text: 'Many ships.', always: false, on: false, owner: { kind: 'module', id: 'module-1' } },
   ];
   const account: Hazelle.Account = {
-    personas: [{ id: 'p0', name: 'Jin', description: 'A reader', current: true }, { id: 'p1', name: 'Rook', description: 'A sailor too', current: false }],
+    personas: [{ id: 'p0', name: 'Jin', description: 'A reader', picture: null, current: true }, { id: 'p1', name: 'Rook', description: 'A sailor too', picture: 'data:image/webp;base64,UklG', current: false }],
     characters: [{ id: 'character-1', name: 'Mira' }],
   };
-  const setup: Hazelle.Setup = { persona: 'p1', limits: { context: 8000, reply: null }, modules: [{ id: 'module-1', name: 'Harbor' }] };
+  const setup: Hazelle.Setup = { persona: 'p1', limits: { context: 8000, reply: null }, modules: [{ id: 'module-1', name: 'Harbor', regex: [{ name: 'bold', find: '\\*(.+?)\\*', replace: '<b>$1</b>', stage: 'display', flags: null }] }] };
   const settings: Hazelle.Settings = { image_base: 'none' };
   const model = vi.fn<Hazelle.Chat['model']>(async () => ({ ok: true, text: 'made' }));
   const send = vi.fn<Hazelle.Chat['send']>(async () => ({ ok: true }));
+  const editCard = vi.fn<Hazelle.Chat['editCard']>(async () => ({ ok: true }));
   const chat = {
     id: 'chat-1', character: { name: 'Mira', description: 'A sailor' }, persona: null, length: messages.length,
     messages: async () => messages, greeting: async () => null, card: async () => card, lorebook: async () => lorebook, setup: async () => setup,
     edit: (index: number, text: string) => { edits.push([index, text]); }, add: (role: Hazelle.Role, text: string) => { added.push([role, text]); },
     writeLore: (entry: Omit<Hazelle.LoreEntry, 'owner'>) => { lore.push(entry); },
     variables: { set: (name: string, value: string) => { variables.push([name, value]); } },
-    model, send, say: (text: string) => { said.push(text); },
+    model, send, editCard, say: (text: string) => { said.push(text); },
     rendered: async (at: Hazelle.At | null) => (at === null ? { html: '<i>welcome</i>', css: '.b { color: red; }', text: 'welcome' } : at.id === 'm1' ? { html: '<b>hi there</b>', css: '.b { color: red; }', text: 'hi there' } : null),
   } as unknown as Hazelle.Chat;
   const api = {
@@ -56,7 +57,7 @@ function fakeApi({ open = true } = {}) {
     frame: { chat: async () => (open ? chat : null), show: vi.fn(), hide: vi.fn(), menu: (items: { id: string; label: string }[]) => { menus.push(items); }, missing: (name: string) => { missing.push(name); } },
   } as unknown as Hazelle.Api;
   const fire = (event: string, ...args: unknown[]) => (handlers.get(event) as (...args: unknown[]) => unknown)(...args);
-  return { api, chat, card, handlers, storage, menus, missing, edits, added, said, lore, variables, model, send, settings, fire };
+  return { api, chat, card, handlers, storage, menus, missing, edits, added, said, lore, variables, model, send, editCard, settings, fire };
 }
 const install = (fake: ReturnType<typeof fakeApi>, scope: Record<string, unknown> = {}) => {
   installRisu(fake.api, scope);
@@ -98,6 +99,32 @@ describe('the Risu adapter', () => {
     expect(fake.missing).toEqual(['setChatToIndex:name', 'setChatToIndex:scriptstate.plain']);
     await Risuai.setChatToIndex!(...at, { ...chat, localLore: [] } as never);
     expect(fake.missing).toContain('setChatToIndex:localLore.remove');
+  });
+
+  it('writes only the character\'s fields that changed, skips a refused write as Risu does, and tells a key it cannot write', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const held = await Risuai.getCharacter!() as Record<string, unknown>;
+    await Risuai.setCharacter!(held as never);
+    expect(fake.editCard).not.toHaveBeenCalled();
+    await Risuai.setCharacter!({ ...held, desc: 'A captain', firstMessage: 'Ahoy', globalLore: [], emotionImages: [] } as never);
+    expect(fake.editCard).toHaveBeenCalledWith({ description: 'A captain', greeting: 'Ahoy' });
+    expect(fake.missing).toEqual(['setCharacter:globalLore', 'setCharacter:emotionImages']);
+    fake.editCard.mockResolvedValueOnce({ ok: false, reason: 'not-allowed' });
+    await expect(Risuai.setChar!({ ...held, name: 'Mia' } as never)).resolves.toBeUndefined();
+    fake.editCard.mockResolvedValueOnce({ ok: false, reason: 'failed' });
+    await expect(Risuai.setCharacterToIndex!(0 as never, { ...held, tags: ['sea', 'ship'] } as never)).rejects.toThrow("Risu API 'setCharacterToIndex' failed in Hazelle: failed");
+    await expect(Risuai.setCharacterToIndex!(1 as never, held as never)).rejects.toThrow('reaches only the open chat\'s character');
+  });
+
+  it('takes back the database as getDatabase read it, and fails a key that changed, told to 점검', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const db = await Risuai.getDatabase!() as Record<string, unknown>;
+    await Risuai.setDatabase!(db as never);
+    await Risuai.setDatabaseLite!({ ...db, plugins: [{ name: 'other' }] } as never);
+    await expect(Risuai.setDatabase!({ ...db, username: 'Ann', temperature: 70 } as never)).rejects.toThrow("Risu API 'setDatabase' cannot write username, temperature in Hazelle");
+    expect(fake.missing).toEqual(['setDatabase:username', 'setDatabase:temperature']);
   });
 
   it('sends as the user through the chat, answering false when models are refused as Risu does its permission', async () => {
@@ -151,13 +178,21 @@ describe('the Risu adapter', () => {
     const scope = install(fake);
     const { Risuai } = scope;
     for (const name of RISU_MAPPED) expect(Risuai[name], name).toBeDefined();
-    await expect(Risuai.readInlay!()).rejects.toThrow("Risu API 'readInlay' is not available in Hazelle");
-    await expect(Risuai.readInlay!()).rejects.toThrow();
+    await expect(Risuai.setChatPanel!()).rejects.toThrow("Risu API 'setChatPanel' is not available in Hazelle");
+    await expect(Risuai.setChatPanel!()).rejects.toThrow();
     expect(typeof Risuai.addProvider).toBe('undefined');
     await expect(Risuai.addRisuReplacer!('beforeTranslate' as never, (() => []) as never)).rejects.toThrow("'addRisuReplacer:beforeTranslate'");
     expect((Risuai as Record<string, unknown>).then).toBeUndefined();
-    expect(fake.missing).toEqual(['readInlay', 'addProvider', 'addRisuReplacer:beforeTranslate']);
+    expect(fake.missing).toEqual(['setChatPanel', 'addProvider', 'addRisuReplacer:beforeTranslate']);
     expect(await Risuai.getRuntimeInfo!()).toEqual({ apiVersion: '3.0', platform: 'hazelle', saveMethod: 'account' });
+    expect([Risuai.apiVersion, Risuai.apiVersionCompatibleWith]).toEqual(['3.0', ['3.0']]);
+    await expect(Risuai.checkCharOrder!()).resolves.toBeUndefined();
+  });
+
+  it('says why a name with nothing in Hazelle fails, and why staticModel does', async () => {
+    const { Risuai } = install(fakeApi());
+    await expect(Risuai.addTTSPreprocessor!((() => {}) as never)).rejects.toThrow("Risu API 'addTTSPreprocessor' is not available in Hazelle: Hazelle has no text-to-speech");
+    expect(await Risuai.runLLMModel!({ messages: [], mode: 'model', staticModel: 'gemini-2.5-pro' } as never)).toEqual({ type: 'fail', result: 'staticModel names a RisuAI model; Hazelle sends to the chat\'s own models only' });
   });
 
   it('finds in getRootDocument the chat screen\'s rows, greeting at -1, a body by chatId as CSS.escape writes it or by index, and the bot\'s sheet', async () => {
@@ -199,6 +234,33 @@ describe('the Risu adapter', () => {
     expect(await Risuai.readImage!('abc' as never)).toBeNull();
     await expect(Risuai.readImage!('assets/../abc.png' as never)).rejects.toThrow('readImage path');
     await expect(Risuai.readImage!('..\\abc.png' as never)).rejects.toThrow('readImage path');
+  });
+
+  it('answers the translation cache from the open chat\'s translations, a message sent translated from the user\'s own words', async () => {
+    const { Risuai } = install(fakeApi());
+    expect(await Risuai.getTranslationCache!('hi there' as never)).toBe('반가워');
+    expect(await Risuai.getTranslationCache!('hello' as never)).toBeNull();
+    expect(await Risuai.searchTranslationCache!('' as never)).toEqual([{ key: '안녕', value: 'hello' }, { key: 'hi there', value: '반가워' }]);
+    expect(await Risuai.searchTranslationCache!('there' as never)).toEqual([{ key: 'hi there', value: '반가워' }]);
+  });
+
+  it('reads a text\'s CBS after the chat, and fails an option that asks for another reading', async () => {
+    const fake = fakeApi();
+    const cbs = vi.fn(async (text: string) => text.replace('{{user}}', 'Rook'));
+    Object.assign(fake.chat, { cbs });
+    const { Risuai } = install(fake);
+    expect(await Risuai.parseRisuChat!('Hello, {{user}}' as never, { messageIndex: -1, rmVar: true } as never)).toBe('Hello, Rook');
+    await expect(Risuai.parseRisuChat!('x' as never, { messageIndex: 0, processRegex: true } as never)).rejects.toThrow("Risu API 'parseRisuChat' cannot read with messageIndex, processRegex in Hazelle");
+    expect(fake.missing).toEqual(['parseRisuChat:messageIndex', 'parseRisuChat:processRegex']);
+    expect(cbs).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads an inlay the chat holds as Risu\'s data URL, and none it does not as null', async () => {
+    const fake = fakeApi();
+    Object.assign(fake.chat, { inlay: async (name: string) => (name === 'pic-1' ? { type: 'image/webp', bytes: new Uint8Array([82, 73, 70, 70]) } : null) });
+    const { Risuai } = install(fake);
+    expect(await Risuai.readInlay!('pic-1' as never)).toEqual({ data: 'data:image/webp;base64,UklGRg==', ext: 'webp', name: 'pic-1', type: 'image' });
+    expect(await Risuai.readInlay!('other' as never)).toBeNull();
   });
 
   it('chains afterRequest replacers over the reply and answers runLLMModel in Risu shape', async () => {
@@ -269,19 +331,23 @@ describe('the Risu adapter', () => {
     expect(await fake.fire('showing', fake.chat, [{ at: null, text: 'kept' }])).toEqual(['KEPT']);
   });
 
-  it('builds the database keys asked for, and tells one it does not build', async () => {
+  it('builds the database keys asked for, leaves out one Risu never answers, and tells one it does not build', async () => {
     const fake = fakeApi();
     const { Risuai } = install(fake);
-    expect(await Risuai.getDatabase!(['personas', 'selectedPersona', 'presetRegex'] as never)).toEqual({
-      personas: [{ id: 'p0', name: 'Jin', personaPrompt: 'A reader' }, { id: 'p1', name: 'Rook', personaPrompt: 'A sailor too' }], selectedPersona: 1,
+    expect(await Risuai.getDatabase!(['personas', 'selectedPersona', 'presetRegex', 'temperature'] as never)).toEqual({
+      personas: [{ id: 'p0', name: 'Jin', personaPrompt: 'A reader', icon: '' }, { id: 'p1', name: 'Rook', personaPrompt: 'A sailor too', icon: 'data:image/webp;base64,UklG' }], selectedPersona: 1,
     });
-    expect(fake.missing).toEqual(['getDatabase:presetRegex']);
+    expect(fake.missing).toEqual(['getDatabase:temperature']);
     expect(await Risuai.getDatabase!()).toEqual({
       username: 'Rook', personaPrompt: 'A sailor too', personas: expect.any(Array), selectedPersona: 1, characters: [{ chaId: 'character-1', type: 'character', name: 'Mira' }],
-      maxContext: 8000, modules: [{ id: 'module-1', name: 'Harbor', lorebook: [{ comment: 'Ships', key: 'ship', content: 'Many ships.', alwaysActive: false, disabled: true }] }], enabledModules: ['module-1'],
+      maxContext: 8000, enabledModules: ['module-1'], moduleIntergration: '',
+      modules: [{
+        id: 'module-1', name: 'Harbor', lorebook: [{ comment: 'Ships', key: 'ship', content: 'Many ships.', alwaysActive: false, disabled: true }],
+        regex: [{ comment: 'bold', in: '\\*(.+?)\\*', out: '<b>$1</b>', type: 'editdisplay', ableFlag: false, flag: '' }],
+      }],
     });
     const closed = install(fakeApi({ open: false })).Risuai;
-    expect(await closed.getDatabase!(['selectedPersona', 'maxContext', 'modules'] as never)).toEqual({ selectedPersona: 0 });
+    expect(await closed.getDatabase!(['selectedPersona', 'maxContext', 'modules', 'moduleIntergration'] as never)).toEqual({ selectedPersona: 0 });
   });
 
   it('reads the open chat\'s lorebook entries in Risu shape and its character by the current index only', async () => {

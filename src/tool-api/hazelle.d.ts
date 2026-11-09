@@ -4,7 +4,9 @@ declare namespace Hazelle {
   type Role = 'user' | 'char';
   // index excludes the greeting and is zero-based, as in Lua. id stays stable across versions.
   // text is prompt-rendered; raw is pre-script/CBS text, matching Risu chat data.
-  interface Message { index: number; id: string; version: string; role: Role; text: string; raw: string; time: number }
+  // translation: the version's own, as 번역 shows it, null when it has none; sent: the message went out translated, so
+  // its text is the user's own words and raw the translation sent.
+  interface Message { index: number; id: string; version: string; role: Role; text: string; raw: string; time: number; translation: { text: string; sent: boolean } | null }
   type At = { index: number; id: string; version: string };
   interface ModelMessage { role: 'system' | 'user' | 'assistant'; content: string }
   // Retaining message on a replacement request message preserves its pictures.
@@ -36,14 +38,22 @@ declare namespace Hazelle {
     readonly id: string; name: string; description: string; personality: string; scenario: string; greeting: string | null;
     creatorNotes: string; tags: string[];
   }
+  // The fields of a card a tool rewrites; greeting takes the place of the first. no-character: the chat has none.
+  type CardEdit = Partial<Pick<Card, 'name' | 'description' | 'personality' | 'scenario' | 'creatorNotes' | 'tags'>> & { greeting?: string };
+  type CardAnswer = { ok: true } | { ok: false; reason: 'not-allowed' | 'no-character' | 'failed' };
   // A lorebook entry as written, before any activation. on: whether it is switched on. owner: whose lorebook holds it,
   // with that one's id: the chat's character, one of its 등장인물, the chat itself, or a module on in it.
   interface LoreEntry { name: string; keys: string[]; text: string; always: boolean; on: boolean; owner: { kind: 'character' | 'cast' | 'chat' | 'module'; id: string } }
-  // The account's personas (current: the one chats start with) and characters, read only; no chat of theirs is offered.
-  interface Account { personas: { id: string; name: string; description: string; current: boolean }[]; characters: { id: string; name: string }[] }
+  // The account's personas (current: the one chats start with; picture: its thumbnail as a data URL, null when it has
+  // none) and characters, read only; no chat of theirs is offered.
+  interface Account { personas: { id: string; name: string; description: string; picture: string | null; current: boolean }[]; characters: { id: string; name: string }[] }
+  // A regex script as written. flags: the custom flag string, <…> meta blocks included; null runs the default g.
+  // translation: over a message's translation.
+  interface Script { name: string; find: string; replace: string; stage: 'input' | 'output' | 'process' | 'display' | 'translation'; flags: string | null }
   // persona: the id of the persona this chat speaks as, null when it is gone. limits: the chat model's context and reply
-  // lengths in tokens, null where unknown or no model is set. modules: those on in the chat, in pack order.
-  interface Setup { persona: string | null; limits: { context: number | null; reply: number | null }; modules: { id: string; name: string }[] }
+  // lengths in tokens, null where unknown or no model is set. modules: those on in the chat, in pack order, a
+  // conversation prompt's own included, each with its regex scripts that are on, in its order.
+  interface Setup { persona: string | null; limits: { context: number | null; reply: number | null }; modules: { id: string; name: string; regex: Script[] }[] }
 
   interface ChatState {                         // this tool's own per-chat variables, replayed with the story
     get<T extends Json = Json>(key: string): Promise<T | undefined>;
@@ -90,8 +100,14 @@ declare namespace Hazelle {
     // Throws for non-PNG/JPEG/GIF/WebP/AVIF bytes, a missing version or a refused file.
     picture(at: At, bytes: Uint8Array, options?: { caption?: string }): Promise<void>;
     tokens(text: string): Promise<number>;
+    // text with its CBS read after the chat's messages, with the variables they leave, as a prompt's text is; its setvar
+    // sets nothing.
+    cbs(text: string): Promise<string>;
     lore(reserve?: number): Promise<{ role: 'system' | 'user' | 'assistant'; text: string }[]>;
     lorebook(): Promise<LoreEntry[]>;           // every entry the chat's lorebooks hold, as written, in the prompt's order
+    // A picture the chat holds, by the name a message's raw text gives it in {{inlay::name}}: its MIME type and bytes.
+    // null when the chat holds no picture by that name; throws when its file cannot be read.
+    inlay(name: string): Promise<{ type: string; bytes: Uint8Array } | null>;
     // An entry of the chat's own lorebook, taking the place of every one of its name there, as Lua's
     // upsertLocalLoreBook does; lands with the event's outcome.
     writeLore(entry: Omit<LoreEntry, 'owner'>): void;
@@ -106,6 +122,9 @@ declare namespace Hazelle {
     // Bound to the chat, as picture is. at null: the greeting. null while the chat is not open on the screen, or the
     // version is not the one shown.
     rendered(at: At | null): Promise<Rendered | null>;
+    // Rewrites the chat's character's card, in every chat with it, under the user's one answer for this character's
+    // card, which the bot's own scripts share. Bound to the chat, as picture is; answers once saved.
+    editCard(edit: CardEdit): Promise<CardAnswer>;
   }
   // Tool data: synced, owned by the module. A value is at most 4 MB of JSON and a tool's values 32 MB; one past 512 KB is
   // kept as a file counted in the account's picture budget, read when asked. set throws too-large past either, or

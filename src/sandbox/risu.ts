@@ -1,4 +1,6 @@
+import { toBase64 } from '../base64';
 import { RISU_DECLINED, RISU_REPLACERS } from '../tool-api/risu-methods';
+import { risuRegex } from '../tool-api/risu-regex';
 
 // Risu v3 shapes stay in this adapter over `api`, never in tool-api/protocol.ts (research/risu-plugin-adapter-plan.md §3).
 // Unmapped calls throw; declined methods read as undefined for typeof guards. Both report to 점검.
@@ -25,6 +27,10 @@ const character = (card: Hazelle.Card, lorebook: Hazelle.LoreEntry[]) => ({
   firstMessage: card.greeting ?? '', creatorNotes: card.creatorNotes, tags: card.tags,
   globalLore: lorebook.filter(({ owner }) => owner.kind === 'character').map(loreEntry),
 });
+
+// The keys of character a write takes, by the Card field each lands in; another that changed is told to 점검.
+const CARD_FIELDS = { name: 'name', desc: 'description', personality: 'personality', scenario: 'scenario', firstMessage: 'greeting', creatorNotes: 'creatorNotes', tags: 'tags' } as const;
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 // localLore: the chat's own lorebook, which setChatToIndex writes back.
 const chatOf = (id: string, messages: Hazelle.Message[], lorebook: Hazelle.LoreEntry[]) => ({
@@ -62,7 +68,7 @@ const persona = async (read: Reads) => {
 const DATABASE: Record<string, (read: Reads) => Promise<unknown>> = {
   username: async (read) => (await persona(read))?.name,
   personaPrompt: async (read) => (await persona(read))?.description,
-  personas: async (read) => (await read.account()).personas.map(({ id, name, description }) => ({ id, name, personaPrompt: description })),
+  personas: async (read) => (await read.account()).personas.map(({ id, name, description, picture }) => ({ id, name, personaPrompt: description, icon: picture ?? '' })),
   selectedPersona: async (read) => {
     const selected = await persona(read);
     return selected && (await read.account()).personas.indexOf(selected);
@@ -73,9 +79,14 @@ const DATABASE: Record<string, (read: Reads) => Promise<unknown>> = {
   modules: async (read) => {
     const setup = await read.setup();
     const lorebook = setup ? await read.lorebook() : [];
-    return setup?.modules.map(({ id, name }) => ({ id, name, lorebook: lorebook.filter(({ owner }) => owner.kind === 'module' && owner.id === id).map(loreEntry) }));
+    return setup?.modules.map(({ id, name, regex }) => ({ id, name, lorebook: lorebook.filter(({ owner }) => owner.kind === 'module' && owner.id === id).map(loreEntry), regex: regex.map(risuRegex) }));
   },
   enabledModules: async (read) => (await read.setup())?.modules.map(({ id }) => id),
+  // Every module on in the chat is in enabledModules, a conversation prompt's own included, which leaves Risu's list of
+  // modules a preset turns on besides them empty.
+  moduleIntergration: async (read) => ((await read.setup()) ? '' : undefined),
+  // Risu's getDatabase never answers it (allowedDbKeys); a preset's regex is a module here, in modules.
+  presetRegex: async () => undefined,
 };
 const once = <T>(read: () => Promise<T>) => {
   let held: Promise<T> | undefined;
@@ -111,6 +122,19 @@ const rowOf = (row: Row) => ({
 });
 const unescapeCss = (text: string) => text.replace(/\\([0-9a-f]{1,6})\s?|\\(.)/gi, (_, hex?: string, char?: string) => (hex ? String.fromCodePoint(parseInt(hex, 16)) : char!));
 
+const API_VERSION = '3.0';
+// Why Hazelle has nothing for a Risu name it does not map, said by the error a call throws.
+const ABSENT = new Map(Object.entries({
+  'Hazelle has no text-to-speech': ['addTTSPreprocessor', 'addTTSPostprocessor'],
+  'Hazelle registers no tools for the chat model at run time': ['registerMCP', 'unregisterMCP'],
+  'Hazelle shows no plugin the app\'s own requests': ['getFetchLogs'],
+  'Hazelle has no write-only secret store': ['saveSecretHeader'],
+  'a plugin does not reload plugins in Hazelle': ['loadPlugins'],
+  'Hazelle has no live page to watch; getRootDocument reads a copy': ['createMutationObserver'],
+  'a plugin is not told the app\'s colors in Hazelle': ['getColorScheme', 'getTextTheme'],
+  'the app\'s colors are the user\'s display settings in Hazelle': ['changeColorScheme', 'setColorScheme', 'changeTextTheme', 'setCustomTextTheme'],
+}).flatMap(([reason, names]) => names.map((name) => [name, reason])));
+
 // Run as an async function body for top-level await and private declarations (Risu apiV3/factory.ts).
 // Keep the trailing newline so a closing line comment cannot swallow the brace.
 export const risuScript = (code: string) => `(async () => {${code}\n})()`;
@@ -122,7 +146,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   const tell = (name: string) => { if (told.has(name)) return; told.add(name); frame.missing(name); };
   const refuse = (name: string): never => {
     tell(name);
-    throw new Error(`Risu API '${name}' is not available in Hazelle`);
+    throw new Error(`Risu API '${name}' is not available in Hazelle${ABSENT.has(name) ? `: ${ABSENT.get(name)}` : ''}`);
   };
   const buttons = new Map<string, { label: string; run: Callback }>();
   const messageActions = new Map<string, { label: string; run: MessageAction }>();
@@ -215,9 +239,55 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   const local = storage('local:');
   const getArgument = async (key: string) => (await api.settings())[key];
   const setArgument = (key: string, value: string | number) => api.setSetting(key, value);
+  // Risu's translation cache, from each text translated to its translation, over the open chat's translations only, where
+  // Risu's spans every chat.
+  const translated = async () => {
+    const chat = await frame.chat();
+    return chat ? (await chat.messages()).flatMap(({ text, raw, translation }) => (translation ? [translation.sent ? { key: translation.text, value: raw } : { key: text, value: translation.text }] : [])) : [];
+  };
+  // Risu's database as getDatabase builds it, of the keys asked that it builds.
+  const database = async (keys: string[]) => {
+    const chat = await frame.chat();
+    const reads: Reads = { account: once(() => api.account()), setup: once(async () => chat && chat.setup()), lorebook: once(async () => chat ? chat.lorebook() : []) };
+    const built: Record<string, unknown> = {};
+    for (const key of keys.filter((each) => Object.hasOwn(DATABASE, each))) {
+      const value = await DATABASE[key]!(reads);
+      if (value !== undefined) built[key] = value;
+    }
+    return built;
+  };
   const getCharacter = async () => { const current = await opened(); return current && characterOf(current); };
+  // Only the keys that changed from what getCharacter reads are written, as Risu's dbWrite asks before a write: under the
+  // card's one answer, a refusal skipping it.
+  const setCharacter = (name: string) => async (characterIndex: number | null, value: Record<string, unknown>) => {
+    const current = await opened();
+    if (!current?.card) throw new Error(`Risu API '${name}' found no character in the open chat`);
+    if (characterIndex !== null && characterIndex !== current.characterIndex) throw new Error(`Risu API '${name}' reaches only the open chat's character in Hazelle`);
+    const held: Record<string, unknown> = character(current.card, await current.chat.lorebook());
+    const edit: Record<string, unknown> = {};
+    for (const [key, written] of Object.entries(value)) {
+      if (same(written, held[key])) continue;
+      if (Object.hasOwn(CARD_FIELDS, key)) edit[CARD_FIELDS[key as keyof typeof CARD_FIELDS]] = written;
+      else tell(`${name}:${key}`);
+    }
+    if (!Object.keys(edit).length) return;
+    const answer = await current.chat.editCard(edit);
+    if (!answer.ok && answer.reason !== 'not-allowed') throw new Error(`Risu API '${name}' failed in Hazelle: ${answer.reason}`);
+  };
+  // Nothing of Risu's database is written here: one handed back as getDatabase read it is left as it is, and a key that
+  // changed fails the write, each told to 점검.
+  const setDatabase = (name: string) => async (value: Record<string, unknown>) => {
+    const read = await database(Object.keys(value));
+    const changed = Object.keys(value).filter((key) => !same(value[key], read[key]));
+    for (const key of changed) tell(`${name}:${key}`);
+    if (changed.length) throw new Error(`Risu API '${name}' cannot write ${changed.join(', ')} in Hazelle`);
+  };
   const mapped: Scope = {
-    getRuntimeInfo: async () => ({ apiVersion: '3.0', platform: 'hazelle', saveMethod: 'account' }),
+    apiVersion: API_VERSION,
+    apiVersionCompatibleWith: [API_VERSION],
+    getRuntimeInfo: async () => ({ apiVersion: API_VERSION, platform: 'hazelle', saveMethod: 'account' }),
+    // Risu's repair of its character order, which here is the app's own and never out of step with the characters.
+    checkCharOrder: async () => {},
     showContainer: async () => frame.show(),
     hideContainer: async () => frame.hide(),
     registerButton: async (arg: { name: string; id?: string }, callback: Callback) => {
@@ -272,16 +342,12 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       },
     }),
     getDatabase: async (keys: string[] | 'all' = 'all') => {
-      const chat = await frame.chat();
-      const reads: Reads = { account: once(() => api.account()), setup: once(async () => chat && chat.setup()), lorebook: once(async () => chat ? chat.lorebook() : []) };
-      const database: Record<string, unknown> = {};
-      for (const key of keys === 'all' ? Object.keys(DATABASE) : keys) {
-        if (!Object.hasOwn(DATABASE, key)) { tell(`getDatabase:${key}`); continue; }
-        const value = await DATABASE[key]!(reads);
-        if (value !== undefined) database[key] = value;
-      }
-      return database;
+      for (const key of keys === 'all' ? [] : keys) if (!Object.hasOwn(DATABASE, key)) tell(`getDatabase:${key}`);
+      return database(keys === 'all' ? Object.keys(DATABASE) : keys);
     },
+    setDatabase: setDatabase('setDatabase'),
+    // Risu's Lite leaves the plugin list as it is, whatever it is handed.
+    setDatabaseLite: async (value: Record<string, unknown>) => setDatabase('setDatabaseLite')(Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'plugins'))),
     getCurrentLorebookEntries: async () => {
       const chat = await frame.chat();
       return chat ? (await chat.lorebook()).map(loreEntry) : [];
@@ -289,6 +355,9 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     requestPluginPermission: async () => true,
     getCharacter,
     getChar: getCharacter,
+    setCharacter: async (value: Record<string, unknown>) => setCharacter('setCharacter')(null, value),
+    setChar: async (value: Record<string, unknown>) => setCharacter('setChar')(null, value),
+    setCharacterToIndex: setCharacter('setCharacterToIndex'),
     getCharacterFromIndex: async (characterIndex: number) => {
       const current = await opened();
       return current && current.characterIndex === characterIndex ? characterOf(current) : null;
@@ -335,7 +404,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       throw new Error(answer.reason === 'busy' ? 'A chat is already in progress' : `Risu API 'sendChat' failed in Hazelle: ${answer.reason}`);
     },
     runLLMModel: async ({ messages, mode, staticModel }: { messages: { role: string; content: unknown }[]; mode: string; staticModel?: string }) => {
-      if (staticModel !== undefined) return { type: 'fail', result: 'staticModel is not available in Hazelle' };
+      // A RisuAI model id, which nothing here may match to a connection by its name.
+      if (staticModel !== undefined) return { type: 'fail', result: 'staticModel names a RisuAI model; Hazelle sends to the chat\'s own models only' };
       if (!messages.every((message) => MODEL_ROLES.has(message.role) && typeof message.content === 'string')) return { type: 'fail', result: 'only system, user and assistant text messages are sent' };
       const chat = await frame.chat();
       if (!chat) return { type: 'fail', result: 'no chat is open' };
@@ -362,6 +432,26 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       const name = path.startsWith('assets/') ? path.slice('assets/'.length) : path;
       if (name.includes('/') || name.includes('\\')) throw new Error('readImage path cannot contain \'/\' or \'\\\', except the assets/ prefix');
       return name.endsWith('.png') ? api.assets.read(name.slice(0, -'.png'.length)) : null;
+    },
+    getTranslationCache: async (key: string) => (await translated()).find((entry) => entry.key === key)?.value ?? null,
+    searchTranslationCache: async (partial: string) => (await translated()).filter(({ key }) => key.includes(partial)),
+    // Read after the chat's last message, its setvar setting nothing as Risu's runVar left off does: an option that asks
+    // for another reading fails it.
+    parseRisuChat: async (text: string, { messageIndex = -1, runVar, processRegex, role, cbsConditions }: { messageIndex?: number; runVar?: boolean; processRegex?: boolean; role?: string; cbsConditions?: object } = {}) => {
+      const unread = Object.entries({ messageIndex: messageIndex !== -1, runVar: runVar === true, processRegex: processRegex === true, role: role !== undefined, cbsConditions: cbsConditions !== undefined }).flatMap(([key, asked]) => (asked ? [key] : []));
+      for (const key of unread) tell(`parseRisuChat:${key}`);
+      if (unread.length) throw new Error(`Risu API 'parseRisuChat' cannot read with ${unread.join(', ')} in Hazelle`);
+      const chat = await frame.chat();
+      if (!chat) throw new Error('No active chat found');
+      return chat.cbs(String(text ?? ''));
+    },
+    // Risu's inlay asset; type is the MIME type's own word (image, video, audio), as Risu's are.
+    readInlay: async (id: string) => {
+      const chat = await frame.chat();
+      const inlay = chat && await chat.inlay(String(id));
+      if (!inlay) return null;
+      const [type, ext] = inlay.type.split('/');
+      return { data: `data:${inlay.type};base64,${toBase64(inlay.bytes)}`, ext, name: id, type };
     },
     nativeFetch: fetchOf,
     // globalFetch defaults JSON requests to POST; rawResponse returns bytes.

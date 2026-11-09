@@ -38,8 +38,8 @@ export const BOT_MODELS_HELP = '봇 스크립트가 대화 응답과 별개로 �
 export const ADDITIONAL_TEXT = '추가 설명';
 export const ADDITIONAL_TEXT_HELP = `빈 줄로 나눈 문단 중 대화 첫 부분과 가장 가까운 ${ADDITIONAL_MOST}개를 ${MODEL_ROLES.embed}로 찾아 설명 뒤에 넣어요.`;
 export const CARD_WRITES = '스크립트의 카드 수정';
-export const CARD_WRITES_HELP = '스크립트가 이 캐릭터의 배경 HTML을 바꿔서 저장해요. 바뀐 배경은 이 캐릭터의 모든 채팅에 적용돼요.';
-export const CARD_WRITE_ASK_HELP = '허용하면 이 캐릭터의 배경 HTML이 바뀌고 모든 채팅에 적용돼요. 나중에 캐릭터 편집에서 다시 바꿀 수 있어요.';
+export const CARD_WRITES_HELP = '봇 스크립트나 플러그인이 이 캐릭터의 카드(배경 HTML, 설명, 첫 메시지 등)를 바꿔서 저장해요. 바뀐 카드는 이 캐릭터의 모든 채팅에 적용돼요.';
+export const CARD_WRITE_ASK_HELP = '허용하면 이 캐릭터의 카드가 바뀌고 모든 채팅에 적용돼요. 나중에 캐릭터 편집에서 다시 바꿀 수 있어요.';
 export const BOT_STUCK = '봇 스크립트가 끝나지 않아서 멈췄어요';
 
 export const TOOL = '플러그인';

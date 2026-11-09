@@ -11,9 +11,9 @@ const FEATURE = {
 };
 const AREAS = {
   toolApi: { paths: ['src/tool-api'], why: 'the public tool contract imports no application code.' },
-  sandbox: { paths: ['src/sandbox'], imports: ['toolApi', 'errorMessage'], why: 'the sandbox reaches only the public tool contract and the one way to say what was thrown.' },
+  sandbox: { paths: ['src/sandbox'], imports: ['toolApi', 'errorMessage', 'base64'], why: 'the sandbox reaches only the public tool contract, the one way to say what was thrown and the one base64 codec.' },
   changeSignal: { paths: ['src/change-signal'], why: 'argument-free change notifications import no application or environment code.' },
-  base64: { paths: ['src/base64'], why: 'one base64 codec for the vault, the connectors and the engine; it imports nothing, so none of them learns of another layer through it.' },
+  base64: { paths: ['src/base64'], why: 'one base64 codec for the vault, the connectors, the engine and the sandbox; it imports nothing, so none of them learns of another layer through it.' },
   hex: { paths: ['src/hex'], why: 'one lowercase hex writer for the ids and names the runtime, the vault, the engine and the server derive from bytes; it imports nothing, so none of them learns of another layer through it.' },
   errorMessage: { paths: ['src/error-message'], why: 'one way to say what was thrown for the runtime, the engine, the connectors, the server and the sandbox; it imports nothing, so none of them learns of another layer through it.' },
   contracts: { paths: ['src/contracts'], why: 'wire values shared by the server and client import no other layer.' },
