@@ -82,7 +82,7 @@ export const KINDS = {
   summary: { parent: 'chat' },
   stream: { parent: 'chat' },
   memory: { parent: 'chat' },
-  vectors: { parent: 'chat' },
+  vectors: { parent: ['chat', 'character'] },
   cacheprint: { parent: 'chat' },
   illustration: { parent: 'chat', file: true },
   remark: { parent: 'chat' },
@@ -162,7 +162,7 @@ const BASE64 = /^(?=.)(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3
 const SHAPES = {
   character: shape({
     card: shape({
-      ...all(str, 'name', 'description', 'personality', 'scenario', 'exampleDialogue', 'systemPrompt', 'postHistoryInstructions'),
+      ...all(str, 'name', 'description', 'personality', 'scenario', 'exampleDialogue', 'additionalText', 'systemPrompt', 'postHistoryInstructions'),
       ...all(str, 'creatorNotes', 'creator', 'version'),
       toggles: listOf(toggleLine),
       nickname: orNull(str),

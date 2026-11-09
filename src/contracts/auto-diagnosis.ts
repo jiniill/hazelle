@@ -24,7 +24,7 @@ export const AUTO_BROWSER_MESSAGES = [
 ] as const satisfies readonly { message: string; cause: AutoErrorCause }[];
 // Why a held chat did not open (runtime/store): its own failures and the server's two; any other code is 'other'.
 export const AUTO_OPEN_FAILURES = ['offline', 'server-error', 'unreadable', 'bot-stuck', 'evaluation-unavailable', 'codec-unavailable'] as const;
-const FAILURES = ['unsent', 'unsaved', 'too-long', 'runaway', 'tokenizer', 'unstarted', 'unpulled', 'gone', 'untranslated', 'preread', 'agent', 'no-model', 'model-gone', 'image-only', 'prompt-missing', 'profile-missing', 'failed', 'invalid', 'embed'] as const;
+const FAILURES = ['unsent', 'unsaved', 'too-long', 'runaway', 'tokenizer', 'unstarted', 'unpulled', 'gone', 'untranslated', 'additional', 'preread', 'agent', 'no-model', 'model-gone', 'image-only', 'prompt-missing', 'profile-missing', 'failed', 'invalid', 'embed'] as const;
 // Why messages leave a request and are in no memory sent: the first that holds names the warning (runtime/memory-view).
 const GAP_CAUSES = ['working', 'failed', 'tool', 'off', 'no-slot', 'stale', 'over', 'forgotten', 'unrecorded', 'no-room', 'unknown'] as const;
 export type GapCause = (typeof GAP_CAUSES)[number];

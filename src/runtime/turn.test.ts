@@ -47,6 +47,7 @@ const luna: Card = {
   scenario: '',
   greetings: ['어서 와, {{user}}.', '또 왔네, {{char}}야.'],
   exampleDialogue: '',
+  additionalText: '',
   systemPrompt: '',
   postHistoryInstructions: '',
   creatorNotes: '',

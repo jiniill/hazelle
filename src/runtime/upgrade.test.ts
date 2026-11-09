@@ -39,7 +39,7 @@ describe('upgradeValue', () => {
 
   it("gives a character's and a module's scripts ids by place, and turns 상태창 지정's places into those ids", () => {
     const script = (name: string) => ({ name, find: name, replace: '', stage: 'display', flags: null });
-    const card = { name: '루나', regex: [script('a'), script('b')], triggers: [{ kind: 'lua', name: 'main', code: 'x()' }] };
+    const card = { name: '루나', additionalText: '', regex: [script('a'), script('b')], triggers: [{ kind: 'lua', name: 'main', code: 'x()' }] };
     expect(upgradeValue('character', { card, statusScripts: [1, 5] })).toEqual({
       card: { ...card, regex: [{ ...script('a'), id: 'regex-0' }, { ...script('b'), id: 'regex-1' }], triggers: [{ kind: 'lua', name: 'main', code: 'x()', id: 'trigger-0' }] },
       statusScripts: ['regex-1'],
@@ -50,7 +50,7 @@ describe('upgradeValue', () => {
 
   it('reads a place a tab on the old build added among ids through the card as it stands, once each', () => {
     const regex = [{ id: 'new', name: 'n' }, { id: 'regex-0', name: 'a' }];
-    expect(upgradeValue('character', { card: { regex, triggers: [] }, statusScripts: ['regex-0', 0, 1] })).toEqual({ card: { regex, triggers: [] }, statusScripts: ['regex-0', 'new'] });
+    expect(upgradeValue('character', { card: { regex, triggers: [], additionalText: '' }, statusScripts: ['regex-0', 0, 1] })).toEqual({ card: { regex, triggers: [], additionalText: '' }, statusScripts: ['regex-0', 'new'] });
   });
 
   it('drops the translation switches a character kept before they were shared, and leaves its own', () => {
@@ -71,7 +71,7 @@ describe('upgradeValue', () => {
     const loop = { type: 'v2LoopNTimes', value: '2', valueType: 'value', indent: 0 };
     const trigger = { id: 'trigger-0', kind: 'blocks', name: 'go', on: 'manual', conditions: [], effects: [{ kind: 'opaque', type: 'v2ConcatString', raw: concat }, { kind: 'opaque', type: 'v2LoopNTimes', raw: loop }] };
     const effects = [{ kind: 'call', type: 'v2ConcatString', inputs: [{ kind: 'text', text: 'a' }, { kind: 'text', text: 'b' }], name: '', output: 'ab', option: '' }, trigger.effects[1]];
-    expect(upgradeValue('character', { card: { regex: [], triggers: [trigger] } })).toEqual({ card: { regex: [], triggers: [{ ...trigger, effects }] } });
+    expect(upgradeValue('character', { card: { regex: [], triggers: [trigger], additionalText: '' } })).toEqual({ card: { regex: [], triggers: [{ ...trigger, effects }], additionalText: '' } });
     expect(upgradeValue('module', { regex: [], triggers: [trigger] })).toEqual({ regex: [], triggers: [{ ...trigger, effects }] });
     expect(upgradeValue('module', { regex: [], triggers: [{ ...trigger, effects: [trigger.effects[1]] }] })).toBeNull();
   });
@@ -86,9 +86,13 @@ describe('upgradeValue', () => {
     expect(row('character', character)).toEqual({ ...character, card: { ...character.card, toggles: lines } });
   });
 
+  it("gives a card from before it kept Risu's additionalText an empty one", () => {
+    expect(upgradeValue('character', { folder: null, card: { regex: [], triggers: [] } })).toEqual({ folder: null, card: { regex: [], triggers: [], additionalText: '' } });
+  });
+
   it('leaves a current character or module alone, so the write-back touches only old ones', () => {
-    expect(upgradeValue('character', { folder: null, card: { regex: [], triggers: [] } })).toBeNull();
-    expect(upgradeValue('character', { card: { regex: [{ id: 'x' }], triggers: [{ id: 'y' }] }, statusScripts: ['x'] })).toBeNull();
+    expect(upgradeValue('character', { folder: null, card: { regex: [], triggers: [], additionalText: '' } })).toBeNull();
+    expect(upgradeValue('character', { card: { regex: [{ id: 'x' }], triggers: [{ id: 'y' }], additionalText: '' }, statusScripts: ['x'] })).toBeNull();
     expect(upgradeValue('module', { regex: [{ id: 'x' }], triggers: [] })).toBeNull();
   });
 

@@ -103,7 +103,7 @@ export class ScriptPreview {
   // Use separate Lua engines off the send queue; never save or log rehearsal effects.
   // Dismiss questions/refuse model calls, so real branching can differ. Never rehearse tools: storage writes are real.
   // Null means no triggers.
-  async rehearse(chat: string, { turn, prompt, calibration }: Sending, signal: AbortSignal): Promise<Rehearsal | null> {
+  async rehearse(chat: string, { turn, prompt, calibration, input: { additional } }: Sending, signal: AbortSignal): Promise<Rehearsal | null> {
     const scripts = triggersOf(packsOf(this.session.store, turn.chat));
     if (scripts.length === 0) return null;
     const trace: HookTrace = { entries: [], omitted: 0 };
@@ -145,7 +145,7 @@ export class ScriptPreview {
     }
     const rehearsal = () => ({ ...heard, trace, scope, input, prompt: null, request: null, changed: false });
     if (end.kind === 'stopped') return { ...rehearsal(), stopped: end.stage };
-    const built = touched ? await this.session.store.evaluation.prompt({ asker: 'view', chat }, { scope, seed: turn.reply.id, budget: turn.budget, fit: providerFit(turn.route, turn.settings, calibration.fit.allowance), ...this.turns.cachedPrompt(chat, { scope, memory: memoryOver(turn.memory, scope.messages) }), continuing: false, answerInstruction: answerInstructionOf(this.session.store), pictures: turn.pictures }, signal) : prompt;
+    const built = touched ? await this.session.store.evaluation.prompt({ asker: 'view', chat }, { scope, seed: turn.reply.id, budget: turn.budget, fit: providerFit(turn.route, turn.settings, calibration.fit.allowance), ...this.turns.cachedPrompt(chat, { scope, memory: memoryOver(turn.memory, scope.messages) }), additional, continuing: false, answerInstruction: answerInstructionOf(this.session.store), pictures: turn.pictures }, signal) : prompt;
     const after = 'kind' in built || JSON.stringify(built.messages) !== JSON.stringify(prompt.messages) ? built : null;
     if ('kind' in built) return { ...rehearsal(), stopped: null, prompt: after, changed: true };
     const edited = await run(requestEvent(sentOf(built)), scope);

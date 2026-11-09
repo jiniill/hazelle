@@ -39,6 +39,8 @@ export type PromptInput = {
   memory: MemoryFill | null;
   // Pre-agent notes (engine/agent agentNotes).
   notes?: string;
+  // The card's additionalText paragraphs found for this send, nearest first (runtime/additional).
+  additional?: string[];
   pictures: PictureSend;
 };
 
@@ -239,7 +241,7 @@ function placedLore(scope: ChatScope, seed: string, countTokens: (text: string) 
 }
 
 type Filling =
-  | { sort: 'conversation'; note: string; memory: string; tools: PromptInput['tools']; notes: string }
+  | { sort: 'conversation'; note: string; memory: string; tools: PromptInput['tools']; notes: string; additional: string[] }
   | { sort: 'translate'; note: string; recent: (block: RecentSlot) => string; source: string }
   | { sort: 'illustrate'; note: string; recent: (block: RecentSlot) => string; source: string }
   | { sort: 'mascot'; recent: (block: RecentSlot) => string; source: string; sheet: string }
@@ -281,9 +283,9 @@ function templateOf(blocks: Block[], laid: Laid, persona: ChatScope['persona'], 
           verbatim(
             block,
             [
-              render(joined([...sides.before, ...describe(card)]), `${block.id}:own`),
+              render(joined([...sides.before, ...describe(card, filling.sort === 'conversation' ? filling.additional : [])]), `${block.id}:own`),
               ...cast.map(({ id, card: own }) => {
-                const text = joined(describe(own));
+                const text = joined(describe(own, []));
                 return text && render(`[{{char}}]\n${text}`, `${block.id}:${id}`, id);
               }),
               render(joined(sides.after), `${block.id}:after`),
@@ -365,7 +367,7 @@ const UTILITY: Block[] = [
 // A chat whose prompt is gone has no block for an @@inject_at entry to go into.
 export const conversationBlocks = (scope: ChatScope) => (scope.promptOut ? UTILITY : (scope.prompt?.blocks ?? []));
 
-function conversation({ scope, seed, countTokens, budget, fit, continuing, answerInstruction, memory, tools, notes = '', pictures }: PromptInput): Assembled | TooLong {
+function conversation({ scope, seed, countTokens, budget, fit, continuing, answerInstruction, memory, tools, notes = '', additional = [], pictures }: PromptInput): Assembled | TooLong {
   const { prompt } = scope;
   const blocks = conversationBlocks(scope);
   const chat = renderChat('prompt', scope);
@@ -378,7 +380,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
   const recalled = built && standing(built.memory, read!, memoryBudget(built.budget, budget), tokens);
   const told = memory?.kind === 'tool' ? memory : null;
 
-  const { parts: template, memory: slot } = templateOf(blocks, laid, scope.persona, { sort: 'conversation', note: prompt ? authorNote(scope.note, prompt) : (scope.note ?? ''), memory: told?.text ?? recalled?.text ?? '', tools, notes });
+  const { parts: template, memory: slot } = templateOf(blocks, laid, scope.persona, { sort: 'conversation', note: prompt ? authorNote(scope.note, prompt) : (scope.note ?? ''), memory: told?.text ?? recalled?.text ?? '', tools, notes, additional });
   // Retrieval rides only where memory does, before the latest user message so it follows the last cache point.
   const found = built && slot ? retrieval(built.memory, built.found, recalled!, read!, retrievalRoom(memoryBudget(built.budget, budget)), tokens) : null;
   // A tool's text stands for its messages only where it reaches the request: without it there, none leave.
@@ -735,11 +737,13 @@ function atPositions(text: string, positions: Map<string, string[]>): string {
 
 const joined = (parts: string[]) => parts.filter((part) => part.trim()).join('\n\n');
 
-// Example dialogue has no slot of its own, so it goes here.
-function describe(card: Card | null): string[] {
+// Example dialogue has no slot of its own, so it goes here. additional: the paragraphs a send found, after the
+// description as Risu puts them.
+function describe(card: Card | null, additional: string[]): string[] {
   if (!card) return [];
   return [
     card.description,
+    ...additional,
     card.personality && `{{char}}'s personality: ${card.personality}`,
     card.scenario && `Scenario: ${card.scenario}`,
     card.exampleDialogue && `Example dialogue:\n${card.exampleDialogue}`,

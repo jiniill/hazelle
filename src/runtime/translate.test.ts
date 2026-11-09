@@ -109,7 +109,7 @@ describe('Translator', () => {
   it('leaves a new chat’s greeting to 번역', () =>
     server.withSession(async (session) => {
       await answerable(session);
-      const card = { name: 'Luna', nickname: null, description: '', personality: '', scenario: '', greetings: ['Hello'], exampleDialogue: '', systemPrompt: '', postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null } };
+      const card = { name: 'Luna', nickname: null, description: '', personality: '', scenario: '', greetings: ['Hello'], exampleDialogue: '', additionalText: '', systemPrompt: '', postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null } };
       const created = await session.store.create('character', { card, folder: null, loreFolders: [] });
       const character = created.ok ? created.data.id : '';
       await setTranslate(session.store, character, { replies: true });
@@ -267,7 +267,7 @@ describe('Translator', () => {
   it('translates a character’s text with its 번역가의 노트 and without its card', () =>
     server.withSession(async (session) => {
       await answerable(session);
-      const card = { name: 'Luna', nickname: null, description: 'Luna keeps the lighthouse.', personality: '', scenario: '', greetings: [], exampleDialogue: '', systemPrompt: '', postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null } };
+      const card = { name: 'Luna', nickname: null, description: 'Luna keeps the lighthouse.', personality: '', scenario: '', greetings: [], exampleDialogue: '', additionalText: '', systemPrompt: '', postHistoryInstructions: '', creatorNotes: '', creator: '', version: '', tags: [], variables: [], toggles: [], utility: false, bias: [], regex: [], triggers: [], loreSettings: { scanDepth: null, tokenBudget: null, recursive: null, fullWordMatching: null } };
       const created = await session.store.create('character', { card, folder: null, loreFolders: [] });
       const character = created.ok ? created.data.id : '';
       await setTranslatorNote(session.store, character, 'Luna -> 루나');

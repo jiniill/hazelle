@@ -42,6 +42,7 @@ const card: Card = {
   scenario: '',
   greetings: [],
   exampleDialogue: '',
+  additionalText: '',
   systemPrompt: '',
   postHistoryInstructions: '',
   creatorNotes: '',

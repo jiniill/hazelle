@@ -6,6 +6,7 @@ import type { PrereadParts } from '../../model/settings';
 import type { AgentStage } from '../../model/prompt';
 import { KEEP_DAYS } from '../../model/library';
 import { FIRST_PROFILE_NAME } from '../../model/profile';
+import { ADDITIONAL_MOST } from '../../engine/additional';
 import { PULSE_PAGE } from '../../contracts/pulse';
 import { NEWEST_RESTORE_MINUTES, OLDEST_RESTORE_DAYS } from '../../contracts/admin';
 import type { Category, Status } from '../../contracts/board';
@@ -33,6 +34,9 @@ export const EMBED_HELP = '장기 기억과 플러그인이 비슷한 내용을 
 
 export const BOT_MODELS = '봇의 모델 호출';
 export const BOT_MODELS_HELP = '봇 스크립트가 대화 응답과 별개로 모델을 호출해요. 호출할 때마다 토큰과 비용이 추가로 사용돼요.';
+// Risu's additionalText (runtime/additional).
+export const ADDITIONAL_TEXT = '추가 설명';
+export const ADDITIONAL_TEXT_HELP = `빈 줄로 나눈 문단 중 대화 첫 부분과 가장 가까운 ${ADDITIONAL_MOST}개를 ${MODEL_ROLES.embed}로 찾아 설명 뒤에 넣어요.`;
 export const CARD_WRITES = '스크립트의 카드 수정';
 export const CARD_WRITES_HELP = '스크립트가 이 캐릭터의 배경 HTML을 바꿔서 저장해요. 바뀐 배경은 이 캐릭터의 모든 채팅에 적용돼요.';
 export const CARD_WRITE_ASK_HELP = '허용하면 이 캐릭터의 배경 HTML이 바뀌고 모든 채팅에 적용돼요. 나중에 캐릭터 편집에서 다시 바꿀 수 있어요.';

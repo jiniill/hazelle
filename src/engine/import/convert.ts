@@ -88,7 +88,6 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
     add(tally, 'voice', Object.keys(record(risu.vits)).length);
   }
   const pack = packOf({ regex: module ? module.regex : risu.customScripts, trigger: module ? module.trigger : risu.triggerscript, background: risu.backgroundHTML, toggles: risu.toggles }, tally);
-  if (text(risu.additionalText).trim()) add(tally, 'additional-text');
   if (risu.prebuiltAssetCommand === true) add(tally, 'prebuilt-asset-command');
   if (risu.largePortrait === true) add(tally, 'large-portrait');
   // Risu's inlay mode and its instruction text (newGenData) act only while this is on.
@@ -106,6 +105,7 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
     scenario: text(data.scenario),
     greetings,
     exampleDialogue: text(data.mes_example),
+    additionalText: text(risu.additionalText),
     systemPrompt: text(data.system_prompt),
     postHistoryInstructions: text(data.post_history_instructions),
     creatorNotes: text(data.creator_notes),
@@ -243,6 +243,7 @@ export function cardSource(card: Card, assets: Json[], extensions: Json, lowLeve
           utilityBot: card.utility,
           defaultVariables: card.variables.map(([key, value]) => `${key}=${value}`).join('\n'),
           toggles: writeToggles(card.toggles),
+          additionalText: card.additionalText,
           ...(card.background !== undefined && { backgroundHTML: card.background }),
           ...(lowLevelAccess && { lowLevelAccess: true }),
         },
@@ -464,6 +465,7 @@ function countInText(card: Card, lore: LoreEntry[], tally: Tally) {
     card.scenario,
     ...card.greetings,
     card.exampleDialogue,
+    card.additionalText,
     card.systemPrompt,
     card.postHistoryInstructions,
     ...card.bias.map(([key]) => key),

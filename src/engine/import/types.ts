@@ -14,6 +14,9 @@ export type Card = {
   // and `{{firstmsgindex}}` point at, so an empty greeting is kept rather than shifting the ones after it.
   greetings: string[];
   exampleDialogue: string;
+  // Risu's additionalText: paragraphs, split at blank lines, that a send finds by embedding and sends after the
+  // description (runtime/additional).
+  additionalText: string;
   systemPrompt: string;
   postHistoryInstructions: string;
   creatorNotes: string;
@@ -117,7 +120,6 @@ export const UNSUPPORTED_KINDS = [
   'unsupported-file',
   'refused-picture',
   'refused-video',
-  'additional-text',
   'prebuilt-asset-command',
   'large-portrait',
   'view-screen',

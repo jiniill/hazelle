@@ -19,9 +19,10 @@ type Located = { name: string; uri: string };
 export type ConvertedBundle = Omit<BundledModule, 'assets'> & { assets: Located[] };
 
 // toggles: the card's toggle text as card.json holds it. The card read keeps its toggles as lines, but the print takes
-// the text it took before they were, so a charx written then still matches.
-export const printOf = ({ card, lore, loreFolders, assets }: Converted, toggles: string) =>
-  fingerprint([{ role: 'charx', text: JSON.stringify([{ ...card, toggles }, lore, loreFolders, assets.map(({ name }) => name)]) }]);
+// the text it took before they were, so a charx written then still matches. additionalText, which no charx held before
+// the card kept it, joins the print last and only when there is one, for the same reason.
+export const printOf = ({ card: { additionalText, ...card }, lore, loreFolders, assets }: Converted, toggles: string) =>
+  fingerprint([{ role: 'charx', text: JSON.stringify([{ ...card, toggles, ...(additionalText && { additionalText }) }, lore, loreFolders, assets.map(({ name }) => name)]) }]);
 
 function partition<T, S>(entries: T[], place: (entry: T) => Placed, kept: (entry: T) => S): { risu: T[]; kept: Kept<S>[] } {
   const risu: T[] = [];

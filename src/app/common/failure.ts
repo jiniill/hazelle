@@ -13,6 +13,7 @@ import type { MascotFailure } from '../../runtime/mascot';
 import type { MemoryFailure } from '../../runtime/memory';
 import type { PrereadFailure } from '../../runtime/preread';
 import type { AgentFailed } from '../../runtime/agents';
+import type { AdditionalFailure } from '../../runtime/additional';
 import type { KeyFailure } from '../../runtime/connections';
 import type { ReplyError } from '../../runtime/generate';
 import type { MetersFailure } from '../../runtime/meters';
@@ -22,7 +23,7 @@ import type { TurnFailure } from '../../runtime/turn';
 import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
-import { BIN, BOT_STUCK, DISCOUNT, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE } from './words';
+import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -320,6 +321,21 @@ export function describeTurnFailure(failure: TurnFailure): string {
       return failure.failure.kind === 'stopped' ? `${PRE_READ} 중에 멈춰서 메시지를 보내지 않았어요.` : `${PRE_READ}에 실패해서 메시지를 보내지 않았어요. ${describePrereadFailure(failure.failure)}`;
     case 'agent':
       return `${withParticle(failure.failure.name, '이/가')} 실패해서 메시지를 보내지 않았어요. ${describeAgentFailure(failure.failure)}`;
+    case 'additional':
+      return `${ADDITIONAL_TEXT}을 찾지 못해서 메시지를 보내지 않았어요. ${describeAdditionalFailure(failure.failure)}`;
+  }
+}
+
+function describeAdditionalFailure(failure: AdditionalFailure['failure']): string {
+  switch (failure.kind) {
+    case 'no-model':
+    case 'model-gone':
+    case 'image-only':
+      return describeRoleFailure('embed', failure);
+    case 'too-large':
+      return `문단 하나가 ${MODEL_ROLES.embed}의 한도보다 길어요. 빈 줄로 더 나눠 주세요.`;
+    case 'failed':
+      return failure.receipt?.error ? describeReplyError(failure.receipt.error) : `${MODEL_ROLES.embed}을 호출하지 못했어요.`;
   }
 }
 

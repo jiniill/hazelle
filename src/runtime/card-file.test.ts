@@ -63,6 +63,7 @@ describe('a character file', () => {
     const card: Card = {
       ...blankCard('루나'),
       description: 'A lighthouse keeper.',
+      additionalText: 'The lamp is old.\n\nThe pier is long.',
       greetings: ['안녕', '', '또 왔네'],
       tags: ['바다'],
       variables: [['hp', '10']],
