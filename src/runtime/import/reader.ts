@@ -70,7 +70,7 @@ export class ImportReader {
         if (isPresetFile(request.file.name)) return presetReply(await importPreset(request.file.name, bytes));
         const shaped = request.file.name.toLowerCase().endsWith('.json') ? shapedJson(bytes) : null;
         if (shaped) return shaped;
-        const result = importCard(request.file.name, bytes, request.asModule);
+        const result = await importCard(request.file.name, bytes, request.asModule, request.password);
         if (!result.ok) return result;
         if ('persona' in result) return { ok: true, persona: { ...result.persona, picture: this.picture(result.persona.picture) } };
         return 'card' in result ? { ok: true, card: this.card(result.card) } : { ok: true, module: this.module(result.module) };

@@ -24,8 +24,8 @@ export class ImportWorker {
     return this.ask({ kind: 'zip', file });
   }
 
-  async card(file: File, asModule: boolean): Promise<ImportResult | ChatsRead | { ok: true; tool: ImportedTool } | { ok: true; preset: PresetRead }> {
-    const result = await this.ask({ kind: 'card', file, asModule });
+  async card(file: File, asModule: boolean, password?: string): Promise<ImportResult | ChatsRead | { ok: true; tool: ImportedTool } | { ok: true; preset: PresetRead }> {
+    const result = await this.ask({ kind: 'card', file, asModule, password });
     if (!result.ok || 'tool' in result || 'preset' in result || 'chat' in result || 'risuChats' in result) return result;
     if ('module' in result) return { ok: true, module: this.module(result.module) };
     if ('persona' in result) {

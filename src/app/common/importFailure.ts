@@ -2,11 +2,12 @@ import { EXPANSION, METADATA_BYTES } from '../../engine/import/inflate';
 import { USES } from '../../engine/import/tool';
 import type { ImportFailure } from '../../engine/import/types';
 import { sizeText } from './size';
-import { RISU_PLUGIN, UNREADABLE_FILE } from './words';
+import { RISU_PLUGIN, UNREADABLE_FILE, WRONG_PASSWORD } from './words';
 
 const FAILURE: Record<ImportFailure['kind'], string> = {
   'unknown-format': '가져올 수 없는 파일 형식이에요.',
-  encrypted: '암호화된 캐릭터 카드라 열 수 없어요.',
+  'needs-password': '비밀번호가 걸린 카드예요.',
+  'wrong-password': WRONG_PASSWORD,
   unreadable: UNREADABLE_FILE,
 };
 

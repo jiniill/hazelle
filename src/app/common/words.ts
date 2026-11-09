@@ -102,6 +102,7 @@ export const ASSET = '에셋';
 export const CHANGE_IMAGE = '이미지 바꾸기';
 export const UNREADABLE_IMAGE = '이 이미지는 열 수 없어요.';
 export const UNREADABLE_FILE = '파일을 읽지 못했어요.';
+export const WRONG_PASSWORD = '비밀번호가 맞지 않아요.';
 
 export const TRANSLATOR_NOTE = '번역가의 노트';
 export const NOTE_PLACEHOLDER = 'Master -> 주인님\n존댓말은 그대로 유지해 주세요';
