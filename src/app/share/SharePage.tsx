@@ -52,6 +52,7 @@ export function SharePage({ id, shareKey }: { id: string; shareKey: string | nul
 
   return (
     <PublicScreen
+      width="narrow"
       acts={
         view.kind === 'live' && (
           <Button variant="link" size="md" icon={ACTS.report.icon} onClick={() => setReporting(true)}>
