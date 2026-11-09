@@ -194,7 +194,7 @@ export const COMMANDS: readonly CommandGroup[] = [
       { names: ['arraypop'], form: '{{arraypop::배열}}', what: '맨 마지막 항목을 뺀 배열이에요.', example: ['{{arraypop::["가","나"]}}', '["가"]'] },
       { names: ['arrayshift'], form: '{{arrayshift::배열}}', what: '맨 첫 번째 항목을 뺀 배열이에요.', example: ['{{arrayshift::["가","나"]}}', '["나"]'] },
       { names: ['arraysplice'], form: '{{arraysplice::배열::시작::개수::값}}', what: '시작 번호부터 지정한 개수만큼 항목을 빼고, 그 자리에 새 값을 넣은 배열이에요.', example: ['{{arraysplice::["가","나","다"]::1::1::x}}', '["가","x","다"]'] },
-      { names: ['arrayassert'], form: '{{arrayassert::배열::번호::값}}', what: '해당 번호 자리가 비어 있을 때만 값을 넣은 배열이에요.', example: ['{{arrayassert::["가"]::2::다}}', '["가","","다"]'] },
+      { names: ['arrayassert'], form: '{{arrayassert::배열::번호::값}}', what: '해당 번호 자리가 비어 있을 때만 값을 넣은 배열이에요.', example: ['{{arrayassert::["가"]::2::다}}', '["가",null,"다"]'] },
       { names: ['objectassert', 'dictassert'], form: '{{objectassert::사전::키::값}}', what: '해당 키가 없을 때만 값을 넣은 사전이에요.', example: ['{{objectassert::{"a":"1"}::b::2}}', '{"a":"1","b":"2"}'] },
       { names: ['range'], form: '{{range::[개수]}}', what: '0부터 지정한 개수 직전까지의 숫자로 이루어진 배열이에요. [시작, 끝, 간격] 형식으로도 쓸 수 있어요.', example: ['{{range::[3]}}', '["0","1","2"]'] },
       { names: ['filter'], form: '{{filter::배열}}', what: '빈 항목과 중복된 항목을 뺀 배열이에요. 뒤에 ::nonempty를 붙이면 빈 항목만 빼고, ::unique를 붙이면 중복된 항목만 빼요.', example: ['{{filter::["가","","가","나"]}}', '["가","나"]'] },

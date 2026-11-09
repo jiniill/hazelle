@@ -97,16 +97,27 @@ describe('evaluate', () => {
     expect(run('{{#when 1}}y{{/when}}')).toBe('y');
   });
 
-  it('trims the blank lines around a #when branch unless keep, and keeps what inner tags output', () => {
+  it('trims the blank lines around a #when branch unless keep, keeping the spaces of a single line', () => {
     expect(run('{{#when::1}}\n  yes\n{{:else}}\nno\n{{/when}}')).toBe('  yes');
     expect(run('{{#when::keep::1}}\nyes\n{{/when}}')).toBe('\nyes\n');
-    expect(run('{{#when::1}}{{br}}yes{{/when}}')).toBe('\nyes');
+    expect(run('{{#when::1}} yes {{/when}}|')).toBe(' yes |');
+  });
+
+  it('trims a block by what its inner tags and blocks gave, as Risu does', () => {
+    expect(run('{{#when::1}}\n{{setvar::a::1}}\n\ntext\n{{/when}}|')).toBe('text|');
+    expect(run('{{#when::1}}\n{{#when::0}}x{{/when}}\n{{#when::0}}y{{/when}}\n{{/when}}|')).toBe('|');
+    expect(run('{{#if 1}}\n{{#if_pure 1}}\nmatch\n{{/if}}\n{{/if}}|{{#when::1}}{{br}}yes{{/when}}')).toBe('match|yes');
+    expect(run('{{#each ["a"] as x}}\n  {{#when::1}}\n    <i>{{slot::x}}</i>\n  {{/when}}\n{{/each}}')).toBe('<i>a</i>');
   });
 
   it('trims each line of a true #if, leaves a false one unevaluated, and keeps whitespace in #if_pure', () => {
     const variables = new Map<string, string>();
     expect(run('{{#if 1}}\n  a\n  b\n{{/if}}|{{#if 0}}{{setvar::x::1}}{{/if}}|{{#if_pure true}} c {{/if_pure}}', { ...inMessage, variables })).toBe('a\nb|| c ');
     expect(variables.size).toBe(0);
+  });
+
+  it('trims the ends of #pure, #puredisplay, #escape, #code and #func bodies, as Risu does', () => {
+    expect(unescapeCbs(run('{{#pure}} a(b) {{/pure}}|{{#puredisplay}} p {{/puredisplay}}|{{#escape}} [x] {{/escape}}|{{#code}} c {{/code}}|{{#func f}} x {{/func}}[{{call::f}}]'))).toBe('a(b)|p|[x]|c|[x]');
   });
 
   it("reads Risu's legacy {#if …#} by its own falsy values, evaluates a false body not at all, and leaves other {# as written", () => {
@@ -128,6 +139,10 @@ describe('evaluate', () => {
     expect(new Set(rolls).size).toBe(3);
   });
 
+  it('reads #each ::keep after a space too, as Risu does', () => {
+    expect(run('{{#each ::keep ["a"] as x}} {{slot::x}} {{/each}}|')).toBe(' a |');
+  });
+
   it('keeps escaped text through a later pass, and unescapes {{<}} to the character itself', () => {
     const once = run('{{#escape}}{{user}}(){{/escape}} {{<}}b{{>}} {{#puredisplay}}{{char}}{{/puredisplay}}');
     expect(unescapeCbs(run(once))).toBe('{{user}}() <b> {{char}}');
@@ -138,6 +153,11 @@ describe('evaluate', () => {
     expect(run('{{#func greet}}\nHi {{arg::1}}\n{{/func}}{{call::greet::Bo}}')).toBe('Hi Bo');
     expect(run('{{#func test}}{{#if {{arg::1}}}}{{return::yes}}{{/if}}no{{/func}}{{call::test::1}}/{{call::test::0}}')).toBe('yes/no');
     expect(run('{{#func loop}}{{call::loop}}{{/func}}{{iserror::{{call::loop}}}}')).toBe('1');
+  });
+
+  it('gives each call its own temp variables, apart from those of the text around it', () => {
+    const text = '{{settempvar::outer::o}}{{#func f}}{{#if {{arg::1}}}}{{settempvar::found::1}}{{/if}}{{gettempvar::found}}{{gettempvar::outer}}{{/func}}[{{call::f::1}}][{{call::f::0}}][{{gettempvar::found}}]';
+    expect(run(text)).toBe('[1][][]');
   });
 
   it('drops {{//…}} in the prompt and leaves it in display', () => {
@@ -175,12 +195,19 @@ describe('evaluate', () => {
     expect(run(picks, { source: { seed: 'request-2' } })).toBe(run(picks));
   });
 
-  it('rolls XdY, dY or Y, and 1d6 for {{roll}} with no argument', () => {
+  it('rolls XdY, dY or Y, six sides or one die where one is left out, and 1d6 for {{roll}} with no argument', () => {
     const rolls = (text: string) => Array.from({ length: 40 }, (_, i) => Number(run(text, { source: { seed: `r${i}` } })));
     const within = (all: number[], low: number, high: number) => all.every((n) => Number.isInteger(n) && n >= low && n <= high) && new Set(all).size > 1;
     expect(within(rolls('{{roll}}'), 1, 6)).toBe(true);
     expect(within(rolls('{{roll::20}}'), 1, 20)).toBe(true);
     expect(within(rolls('{{dice::3d4}}'), 3, 12)).toBe(true);
+    expect(within(rolls('{{roll::2d}}'), 2, 12)).toBe(true);
+    expect(within(rolls('{{roll::d}}'), 1, 6)).toBe(true);
+    expect(within(rolls('{{randint::10::1}}'), 1, 10)).toBe(true);
+  });
+
+  it('reads an empty timestamp, or one that is no number, as now', () => {
+    expect(run('{{date::YYYY::}} {{date::YYYY::abc}} {{time:HH:mm}}')).toBe('2026 2026 05');
   });
 
   it('reads a date or time timestamp argument as seconds, in the clock time zone', () => {
@@ -188,9 +215,9 @@ describe('evaluate', () => {
     expect(run('{{time}} {{date}} {{unixtime}}')).toBe('5:4:3 2026-9-28 1790571843');
   });
 
-  it('reads {{? …}} as calc with $name from the chat variables, and leaves an expression it cannot read as written', () => {
-    expect(run('{{? $hp * 2 + 1}} {{calc::2 + abc}}', { variables: new Map([['hp', '4']]) })).toBe('9 {{calc::2 + abc}}');
-    expect(run('{{? {{getvar::x}}??50}} {{calc::(1>=1)?0.65:0}}')).toBe('50 0.65');
+  it("reads {{? …}} as calc with $name from the chat variables by its leading number, and text it cannot place as 0", () => {
+    expect(run('{{? $hp * 2 + 1}} {{calc::2 + abc}} {{? $w+1}}', { variables: new Map([['hp', '4'], ['w', '50%']]) })).toBe('9 2 51');
+    expect(run('{{? {{getvar::x}}??50}} {{calc::(1>=1)?0.65:0}} {{? 1?2}}')).toBe('50 0.65 {{? 1?2}}');
   });
 
   it('indexes previous roles across same-role runs while returning raw text relative to the source', () => {
@@ -266,14 +293,14 @@ describe('evaluate', () => {
   });
 
   it('leaves a tag with an argument out of range as written', () => {
-    expect(run('{{fixnum::1.5::200}} {{date::YYYY::soon}}')).toBe('{{fixnum::1.5::200}} {{date::YYYY::soon}}');
+    expect(run('{{fixnum::1.5::200}}')).toBe('{{fixnum::1.5::200}}');
   });
 
   it('leaves a tag as written when its count would size an endless loop or a huge allocation', () => {
     const huge = '9'.repeat(309);
     const text = `{{roll::${huge}d6}} {{rollp::10001d6}} {{dice::2d${huge}}} {{cbr::1e9}} {{arrayassert::[]::1e9::x}} {{range::[0,1,0]}} {{range::[20000]}}`;
     expect(run(text)).toBe(text);
-    expect(run('{{cbr::2}}{{arrayassert::[]::1::x}}')).toBe('\\n\\n["","x"]');
+    expect(run('{{cbr::2}}{{arrayassert::[]::1::x}}')).toBe('\\n\\n[null,"x"]');
     expect(run('{{cnl}}{{cnewline::2}}')).toBe('\\n\\n\\n');
   });
 
@@ -285,7 +312,13 @@ describe('evaluate', () => {
 
   it('counts with range, up or down, and filters out empty and repeated items', () => {
     expect(run('{{range::[3]}} {{range::[2,8,3]}} {{range::[3,0,-1]}} {{range::[3,1]}} {{range::[a]}}')).toBe('["0","1","2"] ["2","5"] ["3","2","1"] [] []');
-    expect(run('{{filter::["a","","a",1,"1"]}} {{filter::["a","","a"]::nonempty}} {{filter::["a","","a"]::unique}}')).toBe('["a","1"] ["a","a"] ["a",""]');
+    expect(run('{{filter::["a","","a",1,"1"]}} {{filter::["a","","a"]::nonempty}} {{filter::["a","","a"]::unique}}')).toBe('["a",1] ["a","a"] ["a",""]');
+  });
+
+  it('keeps what an array carries through the array tags, and sets only an index past the end', () => {
+    expect(run('{{arraypush::[{"a":1},2]::x}} {{arraypop::[1,2]}} {{arrayshift::[1,null]}} {{join::[null,1]::-}} {{arraypush::[1]::a::b}}')).toBe('[{"a":1},2,"x"] [1] [null] -1 [1,"a"]');
+    expect(run('{{arrayassert::["a"]::-1::b}} {{arrayassert::["a"]::0::b}} {{arrayassert::["a"]::3::b}} {{arrayelement::{{arrayassert::["a"]::2::b}}::1}}')).toBe('["a"] ["a"] ["a",null,null,"b"] null');
+    expect(run('{{dictelement::["p","q"]::1}}')).toBe('q');
   });
 
   it('draws ruby and an escaped code block, and gives a file its decoded text in the prompt only', () => {

@@ -1,9 +1,18 @@
 type Operator = (a: number, b: number) => number;
 
+const or: Operator = (a, b) => Number(a !== 0 || b !== 0);
+const and: Operator = (a, b) => Number(a !== 0 && b !== 0);
 // Loosest first. Every operator is left-associative, ^ included (spec §d Math).
 const LEVELS: Map<string, Operator>[] = [
-  new Map<string, Operator>([['||', (a, b) => Number(a !== 0 || b !== 0)]]),
-  new Map<string, Operator>([['&&', (a, b) => Number(a !== 0 && b !== 0)]]),
+  // Risu reads its single & and | as && and ||.
+  new Map<string, Operator>([
+    ['||', or],
+    ['|', or],
+  ]),
+  new Map<string, Operator>([
+    ['&&', and],
+    ['&', and],
+  ]),
   new Map<string, Operator>([
     // Risu folds == != <= >= into = ≠ ≤ ≥ before it reads, so a preset may write either form; a single = is equality.
     ['==', (a, b) => Number(a === b)],
@@ -28,21 +37,37 @@ const LEVELS: Map<string, Operator>[] = [
   ]),
   new Map<string, Operator>([['^', (a, b) => a ** b]]),
 ];
-const TOKENS = /\d+(?:\.\d+)?|\.\d+|[$@][\p{L}\p{N}_]+|null|<=|>=|==|!=|&&|\|\||\?\?|[-+*/%^<>=≠≤≥!()?:]/giu;
+// A word is everything between two operators, so no text is left over.
+const TOKENS = /<=|>=|==|!=|&&|\|\||\?\?|[-+*/%^<>=≠≤≥!()?:&|]|[^-+*/%^<>=≠≤≥!()?:&|]+/gu;
+const VARIABLE = /^[$@][\p{L}\p{N}_]+$/u;
 
 // What may follow an operand: where one comes first, the operand is missing. `-` is left out, since it also negates.
 const AFTER_OPERAND = new Set([...LEVELS.flatMap((operators) => [...operators.keys()]).filter((op) => op !== '-'), ')', '??', '?', ':']);
 
+// A text as calc reads it, as Risu's parseFloat does: its leading number (`1,000` is 1), else 0.
+export const leadingNumber = (text: string) => Number.parseFloat(text) || 0;
+
+// As in Risu, a `)` that closes nothing is dropped, and the end closes what is still open.
+function balanced(tokens: string[]): string[] {
+  const out: string[] = [];
+  let open = 0;
+  for (const token of tokens) {
+    if (token === ')' && open === 0) continue;
+    if (token === '(') open++;
+    if (token === ')') open--;
+    out.push(token);
+  }
+  return [...out, ...Array<string>(open).fill(')')];
+}
+
 class Invalid {}
 
-// Missing operands and unset-variable null text count as 0, as in Risu.
-// Unparseable expressions return null and stay literal; never discard bad tokens and evaluate the rest.
+// As in Risu, a missing operand, `null` (an unset variable's text) and a word that is no number read as 0. Only a
+// ?: missing its other half gives null, which leaves the tag as written.
 // Ruled 2026-10-31: `a ?? b` and `c ? a : b` mean what their authors meant, where Risu's tokenizer reads a text it
 // cannot place as 0 and gives `null??50` as 0. `??` alone sees a missing operand or null as absent.
 export function calc(expression: string, variable: (token: string) => number | null): number | null {
-  const source = expression.replace(/\s/g, '');
-  const tokens = source.match(TOKENS) ?? [];
-  if (tokens.join('') !== source) return null;
+  const tokens = balanced(expression.replace(/\s/g, '').match(TOKENS) ?? []);
   let at = 0;
 
   const operand = (): number | null => {
@@ -55,10 +80,9 @@ export function calc(expression: string, variable: (token: string) => number | n
       if (tokens[at++] !== ')') throw new Invalid();
       return value;
     }
-    if (token.startsWith('$') || token.startsWith('@')) return variable(token);
+    if (VARIABLE.test(token)) return variable(token);
     if (token.toLowerCase() === 'null') return null;
-    if (!/^[\d.]/.test(token)) throw new Invalid();
-    return Number(token);
+    return leadingNumber(token);
   };
   const level = (depth: number): number | null => {
     const operators = LEVELS[depth];

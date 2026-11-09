@@ -96,19 +96,20 @@ export type CbsTrace = { steps: CbsStep[]; omitted: number };
 const MOST_STEPS = 500;
 const MOST_RESULT = 1000;
 
-// Temp variables and functions live as long as it, and spent counts against its limits.
-type Run = { context: CbsContext; seed: string; temp: Map<string, string>; functions: Map<string, { body: Node[]; traced: boolean }>; spent: { tags: number; chars: number }; trace: CbsTrace | null };
+// Functions live as long as it, and spent counts against its limits.
+type Run = { context: CbsContext; seed: string; functions: Map<string, { body: Node[]; traced: boolean }>; spent: { tags: number; chars: number }; trace: CbsTrace | null };
 // prefix sets the tags of an inserted text, a call or an #each item apart from those of the text around it,
 // so each rolls its own. traced: its nodes stand in the text the trace places them in; level: their step depth.
-type Frame = { run: Run; prefix: string; writes: boolean; depth: number; args: string[] | null; slots: Map<string, string>; traced: boolean; level: number };
+// temp: one per text, a call and an inserted text each getting their own, as in Risu.
+type Frame = { run: Run; prefix: string; writes: boolean; depth: number; args: string[] | null; slots: Map<string, string>; temp: Map<string, string>; traced: boolean; level: number };
 
 // Callers must unescapeCbs once, at the very end. Runaway aborts the whole evaluation, never returning partial output.
 export function evaluate(text: string, context: CbsContext, trace: CbsTrace | null = null): string {
   const { source } = context;
   const message = 'message' in source;
   const seed = message ? context.messages[source.message]!.seed : source.seed;
-  const run: Run = { context, seed, temp: new Map(), functions: new Map(), spent: { tags: 0, chars: 0 }, trace };
-  const out = enter(parse(prestep(text)), { run, prefix: '', writes: message, depth: 0, args: null, slots: new Map(), traced: trace !== null, level: 0 });
+  const run: Run = { context, seed, functions: new Map(), spent: { tags: 0, chars: 0 }, trace };
+  const out = enter(parse(prestep(text)), { run, prefix: '', writes: message, depth: 0, args: null, slots: new Map(), temp: new Map(), traced: trace !== null, level: 0 });
   if (trace) {
     const written = unstep(text);
     for (const step of trace.steps) Object.assign(step, { at: written(step.at), end: written(step.end) }, step.headEnd !== undefined && { headEnd: written(step.headEnd) });
@@ -241,11 +242,11 @@ function env(frame: Frame, place: string): Env {
   const { run } = frame;
   let rolls: (() => number) | null = null;
   // traced: a function's body has places in the text it was defined in; an inserted text has none.
-  const nested = (args: string[] | null, writes: boolean, traced: boolean): Frame => ({ run, prefix: `${place}>`, writes, depth: frame.depth + 1, args, slots: new Map(), traced, level: frame.level + 1 });
+  const nested = (args: string[] | null, writes: boolean, traced: boolean): Frame => ({ run, prefix: `${place}>`, writes, depth: frame.depth + 1, args, slots: new Map(), temp: new Map(), traced, level: frame.level + 1 });
   return {
     context: run.context,
     writes: frame.writes,
-    temp: run.temp,
+    temp: frame.temp,
     random: () => (rolls ??= seeded(`${run.seed}:${place}`))(),
     // An inserted text is not a chat message, so it writes no variables.
     insert: (text) => enter(parse(prestep(text)), nested(null, false, false)),
@@ -260,27 +261,27 @@ function env(frame: Frame, place: string): Env {
 
 // The blocks whose body is taken as its source and never evaluated, so a tag written in one is text.
 const RAW = new Map<string, (raw: string, rest: string) => string>([
-  ['escape', (raw, rest) => escapeCbs(rest === '::keep' ? raw : trimBlank(raw), '{}()')],
-  ['pure', (raw) => raw],
+  ['escape', (raw, rest) => escapeCbs(rest === '::keep' ? raw : raw.trim(), '{}()')],
+  ['pure', (raw) => raw.trim()],
   // Risu backslash-escapes the braces for its markdown; escaped braces survive the later passes and show as braces.
-  ['puredisplay', (raw) => escapeCbs(raw, '{}')],
+  ['puredisplay', (raw) => escapeCbs(raw.trim(), '{}')],
 ]);
 export const isRawBlock = (name: string) => RAW.has(name);
 
 // null: the block stays as written, as one no handler takes does, without counting as unknown.
 const BLOCKS = new Map<string, (block: Block, rest: string, frame: Frame, step: CbsStep | null) => string | null>([
   ['when', when],
-  ['if', (block, rest, frame, step) => (held(step, truthy(rest.trim())) ? evaluateNodes(trimLines(block.body), frame) : '')],
+  ['if', (block, rest, frame, step) => (held(step, truthy(rest.trim())) ? trimLines(evaluateNodes(block.body, frame)) : '')],
   ['ifpure', (block, rest, frame, step) => (held(step, truthy(rest.trim())) ? evaluateNodes(block.body, frame) : '')],
   ['each', each],
-  ['code', (block, _rest, frame) => unbackslash(evaluateNodes(block.body, frame).replace(/[\n\r\t]/g, ''))],
+  ['code', (block, _rest, frame) => unbackslash(evaluateNodes(block.body, frame).trim().replace(/[\n\r\t]/g, ''))],
   [
     'func',
     (block, rest, frame) => {
       // Names after the function's are not read: a body reads its arguments as {{arg::1}} on.
       const name = rest.trim().split(/\s+/)[0];
       if (!name) return null;
-      frame.run.functions.set(name, { body: blankEnds(block.body), traced: frame.traced });
+      frame.run.functions.set(name, { body: trimEnds(block.body), traced: frame.traced });
       return '';
     },
   ],
@@ -314,10 +315,11 @@ function when(block: Block, rest: string, frame: Frame, step: CbsStep | null): s
   const { modes, condition } = whenArgs(rest);
   if (step) step.condition = condition.map((arg) => arg.slice(0, MOST_RESULT));
   const holds = held(step, condition.length > 0 && fold(condition, frame.run.context));
-  if (modes.includes('legacy')) return holds ? evaluateNodes(trimLines(block.body), frame) : '';
+  if (modes.includes('legacy')) return holds ? trimLines(evaluateNodes(block.body, frame)) : '';
   const split = block.body.findIndex(isElse);
   const branch = holds ? (split === -1 ? block.body : block.body.slice(0, split)) : split === -1 ? [] : block.body.slice(split + 1);
-  return evaluateNodes(modes.includes('keep') ? branch : blankEnds(branch), frame);
+  const out = evaluateNodes(branch, frame);
+  return modes.includes('keep') ? out : blankLines(out);
 }
 
 // Legacy if uses Risu's '', '0', '-1' falsiness, not #if truthiness; evaluate only the taken body.
@@ -331,15 +333,7 @@ function legacy(node: Legacy, outer: Frame, step: CbsStep | null): string {
   const statement = evaluateNodes([...node.parts.slice(0, split), line.slice(0, newline)], frame).split(' ', 2);
   if (statement[0] !== 'if') return asLegacy();
   if (!held(step, !['', '0', '-1'].includes(statement[1]!))) return '';
-  const body = [line.slice(newline + 1), ...node.parts.slice(split + 1)];
-  return evaluateNodes(
-    trimEnds(
-      body,
-      (text) => text.trimStart(),
-      (text) => text.trimEnd(),
-    ),
-    frame,
-  );
+  return evaluateNodes([line.slice(newline + 1), ...node.parts.slice(split + 1)], frame).trim();
 }
 
 // Anywhere on the block's own level; Risu wants it alone on a line in a body of several lines.
@@ -396,45 +390,47 @@ function fold(condition: string[], context: CbsContext): boolean {
 
 // #each ARRAY as NAME, or ARRAY NAME; `::keep` right after #each keeps the body's layout. null: no name.
 function each(block: Block, rest: string, frame: Frame): string | null {
-  const keep = rest.startsWith('::keep');
+  const keep = rest.trimStart().startsWith('::keep');
   // Split before trimming: an unset array leaves ` as x`, which is no items.
-  const spec = (keep ? rest.slice('::keep'.length) : rest).trimEnd();
+  const spec = (keep ? rest.trimStart().slice('::keep'.length) : rest).trimEnd();
   const as = spec.lastIndexOf(' as ');
   const at = as === -1 ? spec.lastIndexOf(' ') : as;
   if (at === -1) return null;
   const name = spec.slice(at + (as === -1 ? 1 : ' as '.length)).trim();
-  const body = keep ? block.body : trimLines(block.body);
+  const body = keep ? block.body : trimEnds(unindent(block.body));
   const place = frame.prefix + block.at;
   return items(spec.slice(0, at).trim())
     .map((item, i) => evaluateNodes(body, { ...frame, prefix: `${place}.${i}>`, slots: new Map([...frame.slots, [name, item]]) }))
     .join('');
 }
 
-// Trim source layout only, never whitespace emitted by inner tags such as {{br}}; Risu trims output instead.
-function trimEnds(nodes: Node[], start: (text: string) => string, end: (text: string) => string): Node[] {
+// #each and #func bodies are trimmed as source, before they run, as Risu keeps them unevaluated. Every other
+// block's output is trimmed after it ran, so whitespace an inner tag or block gave goes too.
+const INDENT = /\n[^\S\n]+/g;
+function trimEnds(nodes: Node[]): Node[] {
   const out = [...nodes];
   const first = out[0];
-  if (typeof first === 'string') out[0] = start(first);
+  if (typeof first === 'string') out[0] = first.trimStart();
   const last = out.at(-1);
-  if (typeof last === 'string') out[out.length - 1] = end(last);
+  if (typeof last === 'string') out[out.length - 1] = last.trimEnd();
   return out;
 }
-const LEADING_BLANK = /^(?:[ \t]*\r?\n)+/;
-const TRAILING_BLANK = /(?:\r?\n[ \t]*)+$/;
-const trimBlank = (text: string) => text.replace(LEADING_BLANK, '').replace(TRAILING_BLANK, '');
-const blankEnds = (nodes: Node[]) =>
-  trimEnds(
-    nodes,
-    (text) => text.replace(LEADING_BLANK, ''),
-    (text) => text.replace(TRAILING_BLANK, ''),
-  );
-// #if and #each: each line's leading whitespace, then the whole body.
-const trimLines = (nodes: Node[]) =>
-  trimEnds(
-    nodes.map((node) => (typeof node === 'string' ? node.replace(/\n[ \t]+/g, '\n') : node)),
-    (text) => text.trimStart(),
-    (text) => text.trimEnd(),
-  );
+// Every line's indent at any depth, inside the tags and blocks of the body too.
+const unindent = (nodes: Node[]): Node[] =>
+  nodes.map((node) => {
+    if (typeof node === 'string') return node.replace(INDENT, '\n');
+    if (node.kind !== 'block') return { ...node, parts: unindent(node.parts) };
+    const unindentTag = (tag: Tag): Tag => ({ ...tag, parts: unindent(tag.parts) });
+    return { ...node, head: unindentTag(node.head), body: unindent(node.body), raw: node.raw.replace(INDENT, '\n'), close: unindentTag(node.close) };
+  });
+// #if: every line's indent, then both ends.
+const trimLines = (text: string) => text.replace(INDENT, '\n').trim();
+// #when: blank first and last lines, so a single line keeps its spaces.
+function blankLines(text: string): string {
+  const from = text.lastIndexOf('\n', text.length - text.trimStart().length - 1) + 1;
+  const to = text.indexOf('\n', text.trimEnd().length);
+  return text.slice(from, to === -1 ? text.length : to);
+}
 
 const BACKSLASHED: Record<string, string> = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', v: '\v', 0: '\0' };
 const unbackslash = (text: string) =>
