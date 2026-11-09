@@ -18,6 +18,8 @@ export type ModelSettings = { [S in NumberSetting]?: number } & {
   context?: number;
   stop?: string[];
   reasoning?: Reasoning;
+  // Asks for the reasoning summary where the format has the field; OpenAI may refuse it to an unverified organization.
+  reasoningSummary?: true;
   systemAsUser?: true;
   // Every model takes it, so fit() never leaves it out.
   streaming?: false;
@@ -54,7 +56,7 @@ export type ReasoningTakes = { off: boolean | null; levels: string[] | null; bud
 // always means unconditionally sent; least is null when supported levels differ across models.
 export type Carries = {
   numbers: { [S in NumberSetting]?: Bounds & { always?: true } };
-  reasoning: { off: boolean; levels: string[]; least: string | null; budget: Bounds | null; adaptive: boolean };
+  reasoning: { off: boolean; levels: string[]; least: string | null; budget: Bounds | null; adaptive: boolean; summary: boolean };
   stop: boolean;
   verbosity: boolean;
   serviceTier: boolean;
@@ -75,7 +77,7 @@ export type SettingsSchema = {
   context: Rule;
   stop: Accepts;
   // least: the least level the model is known to take, from its catalog, else its format's; null where neither says.
-  reasoning: { off: Accepts; level: Accepts; levels: string[]; least: string | null; budget: Rule; adaptive: Accepts };
+  reasoning: { off: Accepts; level: Accepts; levels: string[]; least: string | null; budget: Rule; adaptive: Accepts; summary: Accepts };
   prefill: Accepts;
   cache: Accepts;
   verbosity: Accepts;
@@ -97,7 +99,7 @@ export function leastReasoning({ reasoning }: SettingsSchema): Reasoning | null 
 }
 
 // left-out: the model does not take it, or not the level named. capped: brought within the model's bounds, to that value.
-export type Change = { setting: Setting | 'context' | 'cache' | 'discount' | 'pdf'; change: 'left-out' } | { setting: NumberSetting | 'context' | 'reasoning'; change: 'capped'; to: number };
+export type Change = { setting: Setting | 'context' | 'reasoningSummary' | 'cache' | 'discount' | 'pdf'; change: 'left-out' } | { setting: NumberSetting | 'context' | 'reasoning'; change: 'capped'; to: number };
 export type Fitted = { settings: ModelSettings; changes: Change[] };
 
 // Catalogs list 'none' among the effort levels of a model whose reasoning can be turned off; here that
@@ -161,6 +163,7 @@ export function settingsSchema(carries: Carries, model: Model): SettingsSchema {
         whole: true,
       },
       adaptive: control(carries.reasoning.adaptive, facts?.adaptive),
+      summary: control(carries.reasoning.summary, reasoning),
     },
     // Catalogs checked 2026-09-28 do not state prefill; Messages alone cannot promise it (Anthropic 4.6+ refuses).
     // Only provider-specific per-model evidence may fill it.
@@ -199,6 +202,7 @@ export function fit(schema: SettingsSchema, settings: ModelSettings): Fitted {
   }
   if (settings.context !== undefined) cap('context', settings.context, schema.context);
   if (settings.stop && schema.stop === false) leave('stop');
+  if (settings.reasoningSummary && schema.reasoning.summary === false) leave('reasoningSummary');
   if (settings.cache && schema.cache === false) leave('cache');
   if (settings.verbosity && schema.verbosity === false) leave('verbosity');
   if (settings.serviceTier && schema.serviceTier === false) leave('serviceTier');

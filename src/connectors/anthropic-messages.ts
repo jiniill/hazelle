@@ -151,7 +151,7 @@ export const anthropicMessages: Codec = {
 
   carries: {
     numbers: { maxOutput: { min: 1, max: null, always: true }, temperature: { min: 0, max: 1 }, topP: { min: 0, max: 1 }, topK: { min: 0, max: null } },
-    reasoning: { off: true, levels: LEVELS, least: null, budget: { min: 1024, max: null }, adaptive: true },
+    reasoning: { off: true, levels: LEVELS, least: null, budget: { min: 1024, max: null }, adaptive: true, summary: false },
     stop: true,
     verbosity: false,
     serviceTier: true,

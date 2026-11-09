@@ -157,7 +157,7 @@ export const gemini: Codec = {
     },
     // Gemini 3.7/3.8 Flash, 3.1 Pro and 4 Argon refuse minimal and every Gemini 3 takes low (Vertex AI, 2026-10-23);
     // Gemini 2.5 refuses any level.
-    reasoning: { off: true, levels: LEVELS, least: 'low', budget: { min: null, max: null }, adaptive: true },
+    reasoning: { off: true, levels: LEVELS, least: 'low', budget: { min: null, max: null }, adaptive: true, summary: false },
     stop: true,
     verbosity: false,
     serviceTier: false,

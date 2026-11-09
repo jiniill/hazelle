@@ -44,6 +44,7 @@ export const PROFILE_ROWS = {
   frequent: '자주 쓰는 설정',
   reasoning: '추론',
   budget: '추론 예산',
+  summary: '추론 요약 받기',
   cache: '캐시',
   recent: '원문으로 보낼 최근 대화',
   stop: '멈춤 문구',
@@ -54,7 +55,7 @@ export const PROFILE_ROWS = {
 // 설정 검색's index (shell/settings/terms.ts) reads this: a row of the editor is named here too, or the search misses it.
 export const PROFILE_LABELS = [...Object.values(PROFILE_ROWS), ...[...MAIN, ...DETAIL].map((field) => NUMBER[field].label), DISCOUNT, PDF_SEND, VERBOSITY_LABEL, SERVICE_TIER_LABEL, RETRY_COUNT, EXTRA_LABEL];
 
-const NAMED: Record<Exclude<Change['setting'], Field>, string> = { stop: PROFILE_ROWS.stop, reasoning: PROFILE_ROWS.reasoning, cache: PROFILE_ROWS.cache, verbosity: VERBOSITY_LABEL, serviceTier: SERVICE_TIER_LABEL, discount: DISCOUNT, pdf: PDF_SEND };
+const NAMED: Record<Exclude<Change['setting'], Field>, string> = { stop: PROFILE_ROWS.stop, reasoning: PROFILE_ROWS.reasoning, reasoningSummary: PROFILE_ROWS.summary, cache: PROFILE_ROWS.cache, verbosity: VERBOSITY_LABEL, serviceTier: SERVICE_TIER_LABEL, discount: DISCOUNT, pdf: PDF_SEND };
 const isField = (setting: Change['setting']): setting is Field => setting in NUMBER;
 const settingLabel = (setting: Change['setting']) => (isField(setting) ? NUMBER[setting].label : NAMED[setting]);
 
@@ -66,7 +67,7 @@ export const NO_PROFILE_VALUES = UNSET;
 
 // What a 모델 설정 sets, in the order the editor shows them.
 export function valuesLine(settings: ModelSettings, unset: string = NO_VALUES): string {
-  const { reasoning, stop, systemAsUser, streaming, cache, verbosity, serviceTier, discount, pdf, retries, extra } = settings;
+  const { reasoning, reasoningSummary, stop, systemAsUser, streaming, cache, verbosity, serviceTier, discount, pdf, retries, extra } = settings;
   const number = (field: Field) => {
     const value = settings[field];
     return value === undefined ? [] : [`${NUMBER[field].label} ${count(value)}`];
@@ -74,7 +75,7 @@ export function valuesLine(settings: ModelSettings, unset: string = NO_VALUES): 
   const thinking = !reasoning
     ? []
     : [`${PROFILE_ROWS.reasoning} ${reasoning.kind === 'off' ? '끔' : reasoning.kind === 'budget' ? `예산 ${count(reasoning.tokens)}` : reasoning.kind === 'adaptive' ? (reasoning.level === null ? '적응형' : `적응형 · ${levelName(reasoning.level)}`) : levelName(reasoning.level)}`];
-  const words = [...MAIN.flatMap(number), ...thinking, ...(cache ? [`${PROFILE_ROWS.cache} ${CACHE[cache]}`] : []), ...(discount ? [DISCOUNT] : []), ...(pdf ? [`${PDF_SEND} ${PDF_KEEP_WORDS[pdf.keep]}${pdf.keep === 'recent' ? ` ${pdf.recent}%` : ''}`] : []), ...DETAIL.flatMap(number), ...(stop ? [`${PROFILE_ROWS.stop} ${stop.length}개`] : []), ...(verbosity ? [`${VERBOSITY_LABEL} ${VERBOSITY_WORDS[verbosity]}`] : []), ...(serviceTier ? [`${SERVICE_TIER_LABEL} ${SERVICE_TIER_WORDS[serviceTier]}`] : []), ...(systemAsUser ? ['시스템 메시지를 사용자 메시지로 변환'] : []), ...(streaming === false ? [`${PROFILE_ROWS.streaming} 끔`] : []), ...(retries === undefined ? [] : [`${RETRY_COUNT} ${retries}번`]), ...(extra === undefined ? [] : [extraWords(extra)])];
+  const words = [...MAIN.flatMap(number), ...thinking, ...(reasoningSummary ? [PROFILE_ROWS.summary] : []), ...(cache ? [`${PROFILE_ROWS.cache} ${CACHE[cache]}`] : []), ...(discount ? [DISCOUNT] : []), ...(pdf ? [`${PDF_SEND} ${PDF_KEEP_WORDS[pdf.keep]}${pdf.keep === 'recent' ? ` ${pdf.recent}%` : ''}`] : []), ...DETAIL.flatMap(number), ...(stop ? [`${PROFILE_ROWS.stop} ${stop.length}개`] : []), ...(verbosity ? [`${VERBOSITY_LABEL} ${VERBOSITY_WORDS[verbosity]}`] : []), ...(serviceTier ? [`${SERVICE_TIER_LABEL} ${SERVICE_TIER_WORDS[serviceTier]}`] : []), ...(systemAsUser ? ['시스템 메시지를 사용자 메시지로 변환'] : []), ...(streaming === false ? [`${PROFILE_ROWS.streaming} 끔`] : []), ...(retries === undefined ? [] : [`${RETRY_COUNT} ${retries}번`]), ...(extra === undefined ? [] : [extraWords(extra)])];
   return words.length ? words.join(' · ') : unset;
 }
 
