@@ -16,8 +16,8 @@ export type Portrait = { name: string; aliases: string[]; look: string; outfits:
 // receipt: the call that wrote it. portraits empty: the pack describes no one's looks, which is kept so no draw asks again.
 export type Likeness = { portraits: Portrait[]; at: number; receipt: Receipt | null };
 
-// Ruled 2026-10-11: the characters past this are written per scene, as before profiles.
-export const PORTRAITS_MOST = 8;
+// Ruled 2026-11-09: the characters past this are written per scene, as before profiles.
+export const PORTRAITS_MOST = 24;
 
 // Deterministic id makes concurrent creation conflict instead of duplicating profiles; same scheme as memoryId.
 export const likenessId = secondInverted;
