@@ -49,7 +49,7 @@ import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
 import { Button, Callout, ChoiceGroup, Disclosure, List, ListItem, MenuItem, NavGroup, NavRow, NumberInput, Portrait, Row, Section, SettingGroup, SettingRow, Story, Switch, Tag, Text, TextField, useWide, type Help } from '../ui';
 import { useCardTranslation } from './useCardTranslation';
-import { useCharacterActions } from './useCharacterActions';
+import { useCharacterActions, useJustMade } from './useCharacterActions';
 import { useNoteDraft } from './useNoteDraft';
 
 const SWITCHES = { decor: setDecor, botModels: (store: ObjectStore, id: string, on: boolean) => setModels(store, { kind: 'character', id }, on), cardWrites: setCardWrites, keepThoughts: setKeepThoughts };
@@ -128,7 +128,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
   noteNow.current = noteText;
   const noteDraft = useNoteDraft(id, noteSave.flush, (lines) => noteSave.change({ note: noteNow.current.trim() ? `${noteNow.current.trimEnd()}\n\n${lines}` : lines }));
   const held: CharacterText = { ...character.card, alias: character.alias ?? '', ...unsaved };
-  const identity = useIdentityFields({ name: held.name, alias: held.alias, aliasExample: '겨울 버전', onChange: change });
+  const identity = useIdentityFields({ name: held.name, alias: held.alias, aliasExample: '겨울 버전', focus: useJustMade(id), onChange: change });
   const text = { ...held, name: identity.name };
   // Most cards leave these two empty. Fixed at mount, so clearing one while typing does not hide it.
   const [legacy] = useState(() => ({ personality: !!held.personality, scenario: !!held.scenario }));
@@ -279,7 +279,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
             addLabel="첫인사 추가"
             removed={(index) => `${index + 1}번째 첫인사를 삭제했어요.`}
           >
-            {({ value, name, set, remove }) => <CountedField label={name} lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={value} onChange={set} action={remove} />}
+            {({ value, name, added, set, remove }) => <CountedField label={name} lines={6} focus={added} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={value} onChange={set} action={remove} />}
           </EntryList>
         )}
       </Section>

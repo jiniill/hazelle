@@ -14,6 +14,7 @@ import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
 import { toolLine, usageFacts, usageLine, writtenSoFar } from '../common/receipt';
 import { useTokens } from '../common/useTokens';
+import { useFocusReturn } from '../common/useFocusReturn';
 import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolWaiting } from '../common/words';
 import type { Reading } from '../../runtime/talk';
@@ -95,6 +96,8 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const parsed = useMemo(() => storyHtml(drawnText, decor.bot), [drawnText, decor.bot]);
   const html = useMemo(() => withPictures(parsed, decor), [parsed, decor.bot, decor.url]);
   const story = useRef<HTMLDivElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  useFocusReturn(editing !== null, () => editButton.current);
   const running = drawing !== null && runs(drawing);
   const illustrations = places.map((place) => ({
     mark: place.paragraph === null ? null : placeMark(place.paragraph),
@@ -324,7 +327,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       {!mine && !greeting && !failed && !busy && <IconButton icon={ACTS.regenerate.icon} size="sm" label={ACTS.regenerate.label} onClick={() => actions.regenerate(message)} />}
       {!mine && failed && !busy && <IconButton icon={ACTS.retry.icon} size="sm" label={ACTS.retry.label} onClick={() => actions.retry(message)} />}
       {translateTool}
-      {!failed && <IconButton icon={SquarePen} size="sm" label="수정" onClick={() => actions.edit(message, selected?.part ?? null)} />}
+      {!failed && <IconButton ref={editButton} icon={SquarePen} size="sm" label="수정" onClick={() => actions.edit(message, selected?.part ?? null)} />}
       {!empty && <IconButton icon={ACTS.copy.icon} size="sm" label={ACTS.copy.label} onClick={() => actions.copy(text)} />}
       {bookmarked && <IconButton icon={Bookmark} size="sm" label={BOOKMARK} pressed onClick={() => actions.bookmark(message.id)} />}
       {!failed ? (

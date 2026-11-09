@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ChatSummary } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
 import type { CharacterShelf, Removable } from '../../model/library';
@@ -36,14 +36,24 @@ export const binnedPrompt = ({ id, value }: Stored<'prompt'>): Binned => one('pr
 export const binnedPersona = ({ id, value }: Stored<'persona'>): Binned => one('persona', id, value.name);
 export const binnedProfile = ({ id, value }: Stored<'profile'>): Binned => one('profile', id, value.name);
 
+// Characters just made, until their editor opens with the name to type over.
+const made = new Set<string>();
+
 export function useNewCharacter() {
   const store = useStore();
   const toast = useToast();
   return () => {
     const id = crypto.randomUUID();
+    made.add(id);
     toast.settled(createCharacter(store, newOf('캐릭터'), id), '캐릭터를 만들지 못했어요.');
-    navigate({ kind: 'edit', character: id });
+    navigate({ kind: 'edit', character: id, part: 'profile' });
   };
+}
+
+export function useJustMade(id: string) {
+  const just = made.has(id);
+  useEffect(() => void made.delete(id), [id]);
+  return just;
 }
 
 // editing: the open editor's queues, when the actions run from it.

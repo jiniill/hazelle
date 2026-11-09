@@ -243,14 +243,14 @@ export class Talk {
   }
 
   // Publish the turn before prepare so input shows immediately. Prepare may save/translate/build; stop must abort it.
-  // Preparation failures end unsent.
-  async run<F extends { kind: string }>({ chat, said, reply: asked }: Omit<Turn, 'text' | 'reasoning'>, prepare: Prepare<F>): Promise<TalkFailure | F | null> {
+  // Preparation failures end unsent. onSaid: the user's message is saved, by prepare (a bot's Lua) or after it.
+  async run<F extends { kind: string }>({ chat, said, reply: asked }: Omit<Turn, 'text' | 'reasoning'>, prepare: Prepare<F>, onSaid?: () => void): Promise<TalkFailure | F | null> {
     if (this.turns.has(chat)) return null;
     const lease = this.store.retainChat(chat);
     const held = this.seat(chat, said, asked);
     try {
       // A turn is one workflow: begun on one timeline, none of its writes lands on the next (store pinned).
-      const ran = await this.store.pinned(() => this.turnOn(held, said, asked, lease, prepare));
+      const ran = await this.store.pinned(() => this.turnOn(held, said, asked, lease, prepare, onSaid));
       return ran !== null && 'ok' in ran ? { kind: 'unsent', failure: ran } : ran;
     } finally {
       this.unseat(held);
@@ -258,7 +258,7 @@ export class Talk {
     }
   }
 
-  private async turnOn<F extends { kind: string }>(held: Held, said: Turn['said'], asked: Turn['reply'], lease: ChatLease, prepare: Prepare<F>): Promise<TalkFailure | F | null> {
+  private async turnOn<F extends { kind: string }>(held: Held, said: Turn['said'], asked: Turn['reply'], lease: ChatLease, prepare: Prepare<F>, onSaid?: () => void): Promise<TalkFailure | F | null> {
     const { chat } = held.turn;
     const { abort } = held;
     const failure = await lease.ready;
@@ -270,7 +270,11 @@ export class Talk {
     const reply = ready.before ? { ...asked, before: ready.before } : asked;
     // A message sent translated or changed by the bot shows as it is saved from the moment it is made so.
     this.change(held, { ...without(held.turn, 'preparing'), reply, said: ready.said ?? said, ...(settings.streaming === false && { whole: true as const }) });
-    const sending = ready.said && appendUserMessage(this.store, chat, ready.said);
+    if (said && !ready.said) onSaid?.();
+    const sending = ready.said && appendUserMessage(this.store, chat, ready.said).then((sent) => {
+      if (sent.ok) onSaid?.();
+      return sent;
+    });
     const batching = { waiting: () => this.change(held, { ...held.turn, whole: true, batch: true }), cancel: held.cancel.signal };
     const calling = ready.tools ?? null;
     // Each round after the first continues the one before it, as 이어 쓰기 does: its marker carries the text and the

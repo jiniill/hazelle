@@ -134,6 +134,7 @@ export function FolderTile<T>({ kind, contents, depth, faces, onOpen, onName, dr
 }
 
 export const MOVE_TO_FOLDER = '폴더로 옮기기';
+const NO_FOLDER = '옮길 폴더가 없어요';
 
 // A move's places: every folder by its path, then out of every folder.
 export function FolderChoices<T>({ index, onPick }: { index: FolderIndex<T>; onPick: (to: FolderTree | null) => void }) {
@@ -175,15 +176,17 @@ export function useMoving<T>(set: FolderSet, index: FolderIndex<T>, folderOf: (i
     moveIds([...picked!], to?.id ?? null);
     selection.clear();
   };
+  const foldered = index.folders.length > 0;
+  // Beside a delete, the move shows once a folder exists; alone, it stays disabled and the bar says why.
   const bar = !off && selection.bar(
-    { counted: (count) => filedCount(kind, count), ask: `${remove ? '' : '옮길 '}${withParticle(filedNoun(kind), '을/를')} 선택해 주세요` },
+    { counted: (count) => filedCount(kind, count), ask: `${remove ? '' : '옮길 '}${withParticle(filedNoun(kind), '을/를')} 선택해 주세요`, why: remove || foldered ? undefined : NO_FOLDER },
     <>
-      {(!remove || index.folders.length > 0) && (
+      {(!remove || foldered) && (
         <Menu
           place="above-end"
           label="이동할 폴더"
           trigger={(opener) => (
-            <Button size="sm" disabled={!picked?.size || index.folders.length === 0} {...opener}>
+            <Button size="sm" disabled={!picked?.size || !foldered} {...opener}>
               {MOVE_TO_FOLDER}
             </Button>
           )}

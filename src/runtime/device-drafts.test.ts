@@ -49,14 +49,22 @@ it('round trips encrypted text into a new Drafts without persisting attachments'
   expect(restored.attachments('chat')).toEqual([]);
 });
 
-it('removes the device copy when a send takes the text', async () => {
+it("keeps a send's text on the device until its message is saved, through a new chat's move", async () => {
   const drafts = await reload();
-  drafts.set('chat', 'Send this');
+  drafts.set('new-character', 'Send this');
+  const taken = drafts.take('new-character');
+  drafts.set('new-character', 'Typed since');
   await drafts.flush();
-  drafts.take('chat');
+  expect(drafts.text('new-character')).toBe('Typed since');
+  // The page reloads mid-send, the message not yet written.
+  expect((await reload()).text('new-character')).toBe('Send this\nTyped since');
+
+  drafts.move('new-character', 'chat');
   await drafts.flush();
-  expect(await draftCache(account).read()).toEqual([]);
-  expect((await reload()).text('chat')).toBe('');
+  expect((await reload()).text('chat')).toBe('Send this\nTyped since');
+  drafts.sent(taken);
+  await drafts.flush();
+  expect((await reload()).text('chat')).toBe('Typed since');
 });
 
 it('merges loaded text before text typed while the read was pending', async () => {
@@ -87,7 +95,7 @@ it('persists a failed send’s putBack before text typed since', async () => {
   const taken = drafts.take('chat');
   await drafts.flush();
   drafts.set('chat', 'New');
-  drafts.putBack('chat', taken.text);
+  drafts.putBack('chat', taken);
   await drafts.flush();
   expect((await reload()).text('chat')).toBe('Sent\nNew');
 });
@@ -119,7 +127,7 @@ it('keeps typing and send recovery working when a device write fails', async () 
   drafts.set('chat', 'Draft');
   await drafts.flush();
   const taken = drafts.take('chat');
-  drafts.putBack('chat', taken.text);
+  drafts.putBack('chat', taken);
   await drafts.flush();
   expect(drafts.text('chat')).toBe('Draft');
 });

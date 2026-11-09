@@ -1,7 +1,7 @@
 import { entryName } from '../../connectors/types';
 import { ArrowRight, ChevronDown, ChevronUp, Eraser, Languages, Square } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { translateOnTool, setToolLanguage, setToolNote, toolTranslatorOf } from '../../runtime/translate';
+import { translateOnTool, setToolLanguage, setToolNote, toolTranslatorOf, type TranslatorFailure } from '../../runtime/translate';
 import { ACTS } from '../common/acts';
 import { describeTranslateFailure } from '../common/failure';
 import { LanguageMenu } from '../common/IntoLanguage';
@@ -15,7 +15,17 @@ import type { Back } from '../shell/routes';
 import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
 import { Button, Callout, ChipButton, formatKeys, Icon, Menu, MenuHeading, MenuItem, NavBar, pressed, Screen, TranslateDesk } from '../ui';
-import { useTranslatorDesk } from './translatorDesk';
+import { toolDesk } from './desk';
+
+// text: what came before a stop or a failure, kept in view.
+type Run =
+  | { kind: 'idle' }
+  | { kind: 'running'; text: string }
+  | { kind: 'done'; text: string; cut: boolean }
+  | { kind: 'stopped'; text: string }
+  | { kind: 'failed'; text: string; failure: TranslatorFailure };
+
+const useDesk = toolDesk<{ source: string; run: Run }>({ source: '', run: { kind: 'idle' } });
 
 const characters = (text: string) => (text ? `${count(text.length)}자` : '');
 
@@ -28,7 +38,9 @@ export function TranslatorScreen({ back }: { back: Back | null }) {
   const copy = useCopy();
   const language = settings.toolLanguage ?? 'Korean';
   const toast = useToast();
-  const { source, setSource, run, setRun } = useTranslatorDesk(session);
+  const [{ source, run }, change] = useDesk(session);
+  const setSource = (source: string) => change({ source });
+  const setRun = (run: Run) => change({ run });
   const [noteOpen, setNoteOpen] = useState(false);
   const abort = useRef<AbortController | null>(null);
   useEffect(() => () => abort.current?.abort(), []);

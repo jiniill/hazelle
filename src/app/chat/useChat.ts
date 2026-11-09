@@ -238,12 +238,12 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     timePin.clear();
   }
 
-  // The one way a message goes out, typed or one of 오토파일럿's.
-  async function say(text: string, skip: Skip = {}) {
+  // The one way a message goes out, typed or one of 오토파일럿's. onSaid: the message is saved (Talk.run).
+  async function say(text: string, skip: Skip = {}, onSaid?: () => void) {
     setStopped(false);
     asking();
     const target = { kind: 'send' as const, text };
-    const failure = await takeTurn(session, chatId, target, id === null ? starting() : null, skip);
+    const failure = await takeTurn(session, chatId, target, id === null ? starting() : null, skip, onSaid);
     report(failure, target, skip);
     return failure;
   }
@@ -266,7 +266,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       if (talk.snapshot(chatId)) return;
       const taken = drafts.take(draft.key);
       // Wherever the chat's draft is by now: a new chat may have been saved meanwhile, or not at all.
-      const putBack = () => drafts.putBack(store.get('chat', chatId) ? chatId : draft.key, taken.text, taken.attachments);
+      const putBack = () => drafts.putBack(store.get('chat', chatId) ? chatId : draft.key, taken);
       try {
         const text = taken.text.trim();
         const pictures = settled.flatMap((state) => (state.kind === 'saved' ? [state.value] : []));
@@ -280,10 +280,13 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
             return;
           }
         }
-        const failure = await say(withAttachments({ pictures: pictures.map(({ name }) => name), files: files.map(({ name }) => name) }, text), skip);
+        const failure = await say(withAttachments({ pictures: pictures.map(({ name }) => name), files: files.map(({ name }) => name) }, text), skip, () => drafts.sent(taken));
         // An unsaved reply or a kept failure means the user's message was saved.
         if (failure && failure.kind !== 'unsaved' && !failure.kept) putBack();
-        else drafts.release(taken.attachments);
+        else {
+          drafts.sent(taken);
+          drafts.release(taken.attachments);
+        }
       } catch (error) {
         // A rejected send may already be saved; restoring a duplicate is safer than losing the draft.
         putBack();

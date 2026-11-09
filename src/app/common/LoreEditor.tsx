@@ -202,13 +202,8 @@ export function LoreEditor({ owner, folders, variables }: { owner: LoreOwner; fo
     <Section title={owner.kind === 'chat' ? '항목' : '로어북'} note={`${entries.length}개`} help={{ text: `대화에 키워드가 나오면 그 항목의 내용이 프롬프트에 들어가요.${owner.kind === 'chat' ? ' 현재 채팅에서만 사용돼요.' : ''}`, demo: { name: 'lorebook' } }}>
       <Stack gap="related">
         {owner.kind === 'character' && <LoreScanFold id={owner.id} />}
-        {search.field}
-        {search.shown(listed, (found) => (
-          <List box label="찾은 로어북 항목">
-            {rows(found)}
-          </List>
-        ))}
-        <Row kind="actions">
+        <Row kind="toolbar">
+          {search.field}
           <Button variant="secondary" size="sm" icon={ACTS.create.icon} onClick={() => void add(null)}>
             {addOf('항목')}
           </Button>
@@ -224,6 +219,11 @@ export function LoreEditor({ owner, folders, variables }: { owner: LoreOwner; fo
             </Button>
           )}
         </Row>
+        {search.shown(listed, (found) => (
+          <List box label="찾은 로어북 항목">
+            {rows(found)}
+          </List>
+        ))}
       </Stack>
       {naming.dialog}
     </Section>
@@ -260,7 +260,7 @@ function EntryRow({ stored, folders, language, trial, rows }: RowProps) {
   const remove = () => void rows.remove({ id: stored.id, noun: ENTRY, name }, save.remove(() => removeLore(store, stored.id)), (removed) => restoreLore(store, removed));
   return (
     <OpenRow title={name} tag={when(shown)} open={rows.isOpen(stored.id)} onOpen={(on) => rows.setOpen(stored.id, on)}>
-      <EntryFields shown={shown} folders={folders} language={language} trial={trial} change={save.change} />
+      <EntryFields shown={shown} added={rows.added === stored.id} folders={folders} language={language} trial={trial} change={save.change} />
       <RowFoot noun={ENTRY} words={save.words} onRemove={remove} />
     </OpenRow>
   );
@@ -268,13 +268,14 @@ function EntryRow({ stored, folders, language, trial, rows }: RowProps) {
 
 type FieldsProps = {
   shown: Lore;
+  added: boolean;
   folders: LoreFolder[];
   language: CodeLanguage;
   trial: (text: string) => CodeAside;
   change: (patch: Partial<Lore>, valid?: boolean) => void;
 };
 
-function EntryFields({ shown, folders, language, trial, change }: FieldsProps) {
+function EntryFields({ shown, added, folders, language, trial, change }: FieldsProps) {
   const [typed, setTyped] = useState<{ order?: string; priority?: string }>({});
   const order = typedText(typed.order, (draft) => readNumber(draft) ?? null, shown.insertionOrder, String);
   const priority = typedText(typed.priority, readNumber, shown.priority ?? undefined, (value) => (value === undefined ? '' : String(value)));
@@ -300,7 +301,7 @@ function EntryFields({ shown, folders, language, trial, change }: FieldsProps) {
 
   return (
     <>
-      <TextField label="이름" value={shown.name} onChange={(name) => change({ name })} />
+      <TextField label="이름" focus={added} value={shown.name} onChange={(name) => change({ name })} />
       <SettingGroup label="키워드">
         <SettingRow label="키워드" help="최근 대화에 이 중 하나라도 나오면 내용이 프롬프트에 들어가요." wide control={<PhraseField label="키워드" phrases={shown.keys} onChange={(keys) => change({ keys })} />} />
         {toggle('selective', '보조 키워드 사용', '키워드 하나와 보조 키워드 하나가 함께 나와야 프롬프트에 들어가요.')}

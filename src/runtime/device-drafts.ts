@@ -12,7 +12,7 @@ export class DeviceDrafts {
   private writing = Promise.resolve();
   private loaded = false;
 
-  constructor(private readonly account: string, vaultKey: VaultKey, private readonly texts: ReadonlyMap<string, string>, restore: (key: string, text: string) => void) {
+  constructor(private readonly account: string, vaultKey: VaultKey, private readonly texts: Pick<ReadonlyMap<string, string>, 'get' | 'keys'>, restore: (key: string, text: string) => void) {
     this.cache = draftCache(account);
     this.key = draftEncryptionKey(vaultKey);
     this.ready = Promise.all([this.key, this.cache.read()]).then(async ([key, rows]) => {

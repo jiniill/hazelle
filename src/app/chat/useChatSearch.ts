@@ -3,6 +3,7 @@ import { shown } from '../../model/chat';
 import type { Shown } from '../../runtime/talk';
 import type { Translating } from '../../runtime/translate';
 import type { Seek } from '../ui';
+import { useFocusReturn } from '../common/useFocusReturn';
 import { finder, seenText } from './search';
 
 // What 채팅 검색 opened the chat with: its term, and the message it was found in.
@@ -14,6 +15,7 @@ export function useChatSearch(messages: Shown[], texts: string[], translating: T
   // the focus again, as Ctrl+F does while the bar is open; 0, a bar opened with the chat, leaves the focus where it is,
   // so a phone's keyboard does not cover the message it landed on.
   const [search, setSearch] = useState<{ term: string; at: string | null; focus: number } | null>(seed && { ...seed, focus: 0 });
+  useFocusReturn(search !== null);
   // The view goes to the seed's message once the story holds it, whether its shown text holds the term or not.
   const landed = useRef(seed === null);
   useLayoutEffect(() => {
