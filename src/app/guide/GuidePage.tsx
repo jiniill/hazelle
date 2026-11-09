@@ -23,7 +23,7 @@ const go = (path: string) => () => location.assign(path);
 function GuideIndex() {
   const topics = (Object.entries(GUIDE_TOPICS) as [GuideTopic, string][]).map(([topic, name]) => [name, GUIDES.filter((guide) => guide.topic === topic)] as const);
   return (
-    <Screen top={TOP}>
+    <Screen top={TOP} foot={<LegalNotice />}>
       <Intro title={GUIDE_INDEX.title}>{GUIDE_INDEX.line}</Intro>
       {topics.map(
         ([name, guides]) =>
@@ -37,7 +37,6 @@ function GuideIndex() {
             </Section>
           ),
       )}
-      <LegalNotice />
     </Screen>
   );
 }
@@ -55,7 +54,7 @@ function Block({ block }: { block: GuideBlock }) {
   if ('list' in block) return <Bullets items={block.list} />;
   if ('table' in block) {
     const { columns, rows } = block.table;
-    return <Table label={columns[0]!} columns={columns.map((label, index) => (index === 0 ? { label, track: 'name' } : { label, track: 'fill', keep: true }))} rows={rows.map((cells) => ({ key: cells[0]!, cells }))} />;
+    return <Table variant="read" label={columns[0]!} columns={columns.map((label, index) => (index === 0 ? { label, track: 'name' } : { label, track: 'fill', keep: true }))} rows={rows.map((cells) => ({ key: cells[0]!, cells }))} />;
   }
   return 'tip' in block ? <Callout tone="tip"><Said text={block.tip} /></Callout> : <Callout tone="warn"><Said text={block.warn} /></Callout>;
 }
@@ -78,6 +77,7 @@ function GuideText({ guide }: { guide: Guide }) {
       aside={<Contents label={GUIDE_WORDS.contents} items={guide.sections} />}
       asideSize="sm"
       stickyAside
+      foot={<LegalNotice />}
     >
       <Section title={GUIDE_WORDS.needs}>
         <Bullets items={guide.needs} />
@@ -104,7 +104,6 @@ function GuideText({ guide }: { guide: Guide }) {
           {guide.end.label}
         </Button>
       </Section>
-      <LegalNotice />
     </Screen>
   );
 }

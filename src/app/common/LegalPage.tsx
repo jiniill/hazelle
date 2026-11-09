@@ -11,7 +11,7 @@ export function legalPage(path: string) {
 
 function LegalPage({ text }: { text: LegalText }) {
   return (
-    <Screen top={<Brand />}>
+    <Screen top={<Brand />} foot={<LegalNotice />}>
       <Intro title={text.title}>{text === OUTBOUND ? '이 헤이젤에서 외부로 전송되는 데이터를 모두 정리했어요.' : `시행일: ${EFFECTIVE}`}</Intro>
       {text.sections.map((section) => (
         <Section key={section.title} title={section.title}>
@@ -22,7 +22,6 @@ function LegalPage({ text }: { text: LegalText }) {
           </Stack>
         </Section>
       ))}
-      <LegalNotice />
     </Screen>
   );
 }

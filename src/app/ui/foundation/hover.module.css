@@ -1,4 +1,4 @@
-/* How a control answers the pointer. A component takes a look by composing its class and never redeclares it. */
+/* How a control answers the pointer, and how far from it a finger may press. A component takes a look by composing its class and never redeclares it. */
 @layer reset, looks;
 
 @layer looks {
@@ -24,6 +24,20 @@
 
   .inkOpen {
     composes: ink;
+  }
+
+  .reach {
+    position: relative;
+  }
+
+  /* Under a finger the press area grows to a control's height each way, the drawing unchanged. A later sibling's
+     reach lies over an earlier one's own box, so a control that stands in a packed row raises its own box over it. */
+  @media (pointer: coarse) {
+    .reach::after {
+      position: absolute;
+      inset: min(0px, (100% - var(--control-md)) / 2);
+      content: '';
+    }
   }
 }
 

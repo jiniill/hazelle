@@ -1,6 +1,5 @@
 .button {
-  composes: fillOpen inkOpen from '../foundation/hover.module.css';
-  position: relative;
+  composes: fillOpen inkOpen reach from '../foundation/hover.module.css';
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -61,4 +60,14 @@
   position: absolute;
   top: calc(-1 * var(--space-4));
   right: calc(-1 * var(--space-4));
+}
+
+/* Its own box over the reach of a button beside it, which would take a press on its edge otherwise. */
+@media (pointer: coarse) {
+  .button::before {
+    position: absolute;
+    inset: 0;
+    z-index: var(--layer-raised);
+    content: '';
+  }
 }

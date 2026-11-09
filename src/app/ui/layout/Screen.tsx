@@ -9,6 +9,8 @@ type Props = {
   // page: 설정's pages, which use the column beside the settings sidebar.
   width?: 'narrow' | 'form' | 'wide' | 'page';
   actions?: ReactNode;
+  // What closes the page after its actions, such as the license notice.
+  foot?: ReactNode;
   // One child takes the rest of the window's height and scrolls itself.
   fill?: boolean;
   // What heads the page above both the body and its aside, such as a guide's title.
@@ -23,7 +25,7 @@ type Props = {
   children: ReactNode;
 };
 
-export function Screen({ top, lead, align = 'start', width = 'narrow', actions, fill = false, aside, stickyAside = false, asideSize = 'md', onSubmit, children }: Props) {
+export function Screen({ top, lead, align = 'start', width = 'narrow', actions, foot, fill = false, aside, stickyAside = false, asideSize = 'md', onSubmit, children }: Props) {
   const pane = usePane();
   const windowed = useContext(InWindow);
   // A page has one main landmark; beside a list, a screen is one section of it.
@@ -57,6 +59,7 @@ export function Screen({ top, lead, align = 'start', width = 'narrow', actions, 
       ) : (
         <div className={content}>{inner}</div>
       )}
+      {foot && <footer>{foot}</footer>}
     </Root>
   );
 }

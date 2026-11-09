@@ -20,13 +20,12 @@ const RANKING_HELP = {
 export function PulsePage() {
   const pulse = useLoaded(readPulse);
   return (
-    <Screen width="form" top={<Brand />}>
+    <Screen width="form" top={<Brand />} foot={<LegalNotice />}>
       <Intro title={PULSE.title} />
       {pulse.loading}
       {pulse.failure}
       {pulse.data && <Answer answer={pulse.data} />}
       <Divider label="" />
-      <LegalNotice />
     </Screen>
   );
 }

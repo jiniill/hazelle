@@ -1,9 +1,17 @@
+/* Back, status, actions and ⋯ stand level with the title's first line, a band a control high: a long title wraps
+   under that line, never past them. */
 .bar {
   flex-grow: 1;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-4);
+}
+
+.band {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-md);
 }
 
 /* The chevron's own padding would push the title in; pulling the button out lines the glyph up with the page edge. */
@@ -28,7 +36,6 @@
 /* Under the title when both cannot stand at the title's least width, rather than squeezing it a letter a line. */
 .actions {
   margin-left: auto;
-  display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--space-4);
@@ -42,6 +49,21 @@
   font-family: var(--screen-title-font, var(--font-serif));
   font-size: var(--screen-title-size, var(--text-display));
   font-weight: var(--weight-bold);
+}
+
+/* A title that renames is its field, a control high: with no line box round it, it fills the band. */
+.field {
+  display: flex;
+}
+
+/* Its first line centred in the band; two lines at most, the whole in its title attribute. */
+.words {
+  display: -webkit-box;
+  overflow: hidden;
+  padding-top: calc((var(--control-md) - 1lh) / 2);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .subtitle {
@@ -61,6 +83,7 @@
 
 .line {
   min-width: 0;
+  align-items: center;
 }
 
 .line .titles {

@@ -39,6 +39,7 @@ export function SignInScreen({ account, username: known = '', solo = false, noti
           {onLogout && <IconButton icon={LogOut} label="로그아웃" onClick={onLogout} />}
         </>
       }
+      foot={<LegalNotice />}
       onSubmit={(event: FormEvent) => {
         event.preventDefault();
         void attempt(secret);
@@ -79,7 +80,6 @@ export function SignInScreen({ account, username: known = '', solo = false, noti
           {failure}
         </Callout>
       )}
-      <LegalNotice />
     </Screen>
   );
 }
