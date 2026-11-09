@@ -186,10 +186,10 @@ const CALLS: Record<CallType, (call: Call, ...inputs: string[]) => string | unde
   },
   v2SliceArrayVar: (call, start = '', end = '') => JSON.stringify(listIn(call).slice(Number(start) || 0, end === '' || Number.isNaN(Number(end)) ? undefined : Number(end))),
   v2GetIndexOfValueInArrayVar: (call, value = '') => String(listIn(call).map(item).indexOf(value)),
+  // A negative index counts from the end, as Risu's splice does.
   v2RemoveIndexFromArrayVar: (call, at = '') => {
-    const index = place(at);
     const list = listIn(call);
-    if (index !== null) list.splice(index, 1);
+    if (Number.isInteger(Number(at))) list.splice(Number(at), 1);
     keepList(call, list);
   },
   v2MakeDictVar: (call) => void call.put(call.name, '{}'),

@@ -30,11 +30,13 @@ const KEY = 'lua';
 const DEAF = Symbol('no listener');
 const TRIGGER_DEPTH = 10;
 
-// Risu's functions this app lacks: a call records the name in the run's missing list (and the code editor marks it).
-export const UNSUPPORTED = [
-  'setChatRole', 'request', 'generateImage', 'getCharacterImage', 'getCharacterImageMain',
-  'getPersonaImage', 'getPersonaImageMain', 'setName', 'setDescription', 'setCharacterFirstMessage',
-];
+// Risu's functions this app lacks: a call records the name in the run's missing list (and the code editor marks it),
+// and answers what Risu's failing call does: nil, or '' for an image read, which bots concatenate.
+const LACKING: Record<string, '' | undefined> = {
+  setChatRole: undefined, request: undefined, generateImage: undefined, getCharacterImage: '', getCharacterImageMain: '',
+  getPersonaImage: '', getPersonaImageMain: '', setName: undefined, setDescription: undefined, setCharacterFirstMessage: undefined,
+};
+export const UNSUPPORTED = Object.keys(LACKING);
 // Async in Risu, so bots write them with :await(), which a bare nil turns into an error before the bot's own nil check.
 const AWAITED = new Set(['request', 'generateImage', 'getCharacterImageMain', 'getPersonaImageMain']);
 
@@ -49,6 +51,10 @@ type Workset = { engines: Map<string, Promise<Engine>>; codes: Set<string>; held
 const failure = (run: Run, error: unknown): Failure => (run.ranAway ? { runaway: true } : { message: errorMessage(error) });
 const roleOf = (value: unknown): Working['role'] => (value === 'user' ? 'user' : 'char');
 const view = ({ role, data, time }: Working) => ({ role, data, time });
+
+const handler = (event: string) => `on${event[0]!.toUpperCase()}${event.slice(1)}`;
+// A press named for one of these calls its handler, as Risu's risu-trigger="input" calls onInput.
+const PRESSABLE_EVENTS = new Set(['input', 'output', 'start']);
 
 const AX_MODES = new Set(['emotion', 'memory', 'otherAx', 'submodel', 'translate']);
 
@@ -96,7 +102,7 @@ export class Lua {
         for (const script of triggers) {
           if (!listens(script, event)) continue;
           const outer = active;
-          const entry = hookLog(event.kind === 'edit' ? event.stage : event.kind === 'call' ? event.name : event.kind === 'button' ? 'button' : `on${event.kind[0]!.toUpperCase()}${event.kind.slice(1)}`, script.owner, script.name);
+          const entry = hookLog(event.kind === 'edit' ? event.stage : event.kind === 'call' ? event.name : event.kind === 'button' ? 'button' : handler(event.kind), script.owner, script.name);
           const began = performance.now();
           const before = event.kind === 'edit' ? JSON.stringify(value) : undefined;
           const stopped = run.stop;
@@ -128,7 +134,7 @@ export class Lua {
                   handled = entry.handled = true;
                   return;
                 }
-                const name = event.kind === 'call' ? event.name : event.kind === 'button' ? 'onButtonClick' : `on${event.kind[0]!.toUpperCase()}${event.kind.slice(1)}`;
+                const name = event.kind === 'call' ? (PRESSABLE_EVENTS.has(event.name) ? handler(event.name) : event.name) : event.kind === 'button' ? 'onButtonClick' : handler(event.kind);
                 if (event.kind === 'call' && !engine.own.has(name)) return;
                 if (typeof engine.lua.global.get(name) !== 'function') return;
                 handled = entry.handled = true;
@@ -365,7 +371,7 @@ export class Lua {
     const engine: Engine = { loaded: null, log: loaded, lua, own: new Set(), run: null, queue: Promise.resolve(), failed: null };
     this.declare(engine);
     await lua.doString(PRELUDE);
-    const before = new Set(globals(lua));
+    const changed = setSince(lua);
     try {
       const thread = lua.global.newThread();
       const index = lua.global.getTop();
@@ -378,7 +384,7 @@ export class Lua {
     } catch (error) {
       engine.failed = errorMessage(error);
     }
-    engine.own = new Set(globals(lua).filter((name) => !before.has(name)));
+    engine.own = new Set(changed());
     loaded.duration = performance.now() - began;
     engine.loaded = loaded.logs.length ? loaded : null;
     engine.log = null;
@@ -413,9 +419,10 @@ export class Lua {
       return run.host.model(role, messages, run.owner).then((answer) => JSON.stringify(answer));
     };
 
-    set('getChatVar', (run, name: string) => read(run, name));
-    set('setChatVar', (run, name: string, value: unknown) => void write(run, name, value));
-    set('setChatVarChanged', (run, name: string, value: unknown) => (write(run, name, value) ? true : undefined));
+    // Risu names a variable by its key as JS text: 5 is '5', nil is 'null'.
+    set('getChatVar', (run, name: unknown) => read(run, String(name)));
+    set('setChatVar', (run, name: unknown, value: unknown) => void write(run, String(name), value));
+    set('setChatVarChanged', (run, name: unknown, value: unknown) => (write(run, String(name), value) ? true : undefined));
     set('getGlobalVar', (run, name: string) => run.globals.get(name) ?? UNSET);
 
     set('getChatMain', (run, index: number) => JSON.stringify(run.messages.at(index) ? view(run.messages.at(index)!) : null));
@@ -514,10 +521,10 @@ export class Lua {
     bind('logMain', (value: string) => {
       if (engine.log) boundedItem(engine.log, engine.log.logs, clipped(engine.log, value));
     });
-    for (const name of UNSUPPORTED) {
+    for (const [name, answer] of Object.entries(LACKING)) {
       set(name, (run) => {
         run.missing.add(name);
-        return AWAITED.has(name) ? Promise.resolve() : undefined;
+        return AWAITED.has(name) ? Promise.resolve(answer) : answer;
       });
     }
   }
@@ -526,11 +533,15 @@ export class Lua {
 // Closed once what it is running has ended.
 const end = (engine: Promise<Engine>) => void engine.then(({ lua, queue }) => queue.then(() => lua.global.close()));
 
-function globals(lua: LuaEngine): string[] {
-  const names: string[] = [];
-  lua.global.set('__name', (name: unknown) => void (typeof name === 'string' && names.push(name)));
-  lua.doStringSync('for name, value in pairs(_G) do if type(value) == "function" then __name(name) end end __name = nil');
-  return names;
+// The global functions set after this call, under new names or over Lua's and the prelude's (a bot's own next or
+// select is a button's function as any other).
+function setSince(lua: LuaEngine): () => string[] {
+  const report = lua.doStringSync('local before = {} for name, value in pairs(_G) do before[name] = value end return function(found) for name, value in pairs(_G) do if type(value) == "function" and before[name] ~= value then found(name) end end end') as (found: (name: string) => void) => void;
+  return () => {
+    const names: string[] = [];
+    report((name) => void names.push(name));
+    return names;
+  };
 }
 
 export type HookLog = {

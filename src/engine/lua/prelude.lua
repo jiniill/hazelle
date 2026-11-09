@@ -124,9 +124,9 @@ simpleLLM = async(function(id, prompt)
     return json.decode(LLMMain(id, json.encode({ { role = 'user', content = prompt } })):await())
 end)
 
-callListenMain = async(function(type, id, value, meta)
+callListenMain = async(function(stage, id, value, meta)
     -- With nobody listening nothing is answered and the value is never decoded: a request is its whole text.
-    if #listeners[type] == 0 then
+    if #listeners[stage] == 0 then
         return nil
     end
 
@@ -134,10 +134,10 @@ callListenMain = async(function(type, id, value, meta)
     local realMeta = json.decode(meta)
 
     -- A listener that returns nothing leaves the value as it was. Risu passes its nil on, which drops what the
-    -- listeners before it did.
-    for _, func in ipairs(listeners[type]) do
+    -- listeners before it did. On display, as in Risu, so does anything but text: a number, a table, a promise.
+    for _, func in ipairs(listeners[stage]) do
         local edited = func(id, realValue, realMeta)
-        if edited ~= nil then
+        if edited ~= nil and (stage ~= 'editDisplay' or type(edited) == 'string') then
             realValue = edited
         end
     end

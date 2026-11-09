@@ -114,6 +114,12 @@ describe('Lua runs', () => {
     expect(new Map(outcome.writes)).toEqual(new Map([['mood', 'calm'], ['__bag', 'null'], ['seen', 'calm/nil']]));
   });
 
+  it('names a variable by a key that is no text as Risu does: 5 as 5, nil as null', async () => {
+    const outcome = await run(`function onStart(id) setChatVar(id, 5, 'five') setChatVarChanged(id, nil, 'none') setChatVar(id, 'read', getChatVar(id, '5') .. getChatVar(id, 'null')) end`, { kind: 'start' });
+    expect(outcome.errors).toEqual([]);
+    expect(new Map(outcome.writes)).toEqual(new Map([['5', 'five'], ['null', 'none'], ['read', 'fivenone']]));
+  });
+
   it('turns chat writes into edits, removals and additions by the snapshot index', async () => {
     const outcome = await run(
       `function onOutput(id)
@@ -204,6 +210,14 @@ describe('Lua runs', () => {
     expect((await run(code, { kind: 'call', name: 'nothing', id: '' })).handled).toBe(false);
   });
 
+  it("calls a button's function over a name Lua or the prelude had, and a press named for an event its handler", async () => {
+    const code = `function next(id) setChatVar(id, 'page', '2') end
+      function onInput(id) setChatVar(id, 'sent', 'yes') end`;
+    expect((await run(code, { kind: 'call', name: 'next', id: '' })).writes).toEqual([['page', '2']]);
+    expect((await run(code, { kind: 'call', name: 'input', id: '' })).writes).toEqual([['sent', 'yes']]);
+    expect((await run(code, { kind: 'call', name: 'select', id: '' })).handled).toBe(false);
+  });
+
   it('reports CBS its cbs() call ran away with as a runaway, and leaves one the script catches to it', async () => {
     const doubling = "'{{settempvar::x::abcdefghijklmnop}}' .. string.rep('{{settempvar::x::{{gettempvar::x}}{{gettempvar::x}}}}', 22)";
     expect((await run(`function onStart(id) cbs(${doubling}) end`, { kind: 'start' })).errors).toEqual([{ from: OWNER, script: 'main', runaway: true }]);
@@ -215,6 +229,7 @@ describe('Lua runs', () => {
     expect(failed.errors[0]).toMatchObject({ message: expect.stringContaining('main:3:') });
     expect((await run(`function onStart(id) generateImage(id, 'x') setChatVar(id, 'after', '1') end`, { kind: 'start' }))).toMatchObject({ missing: ['generateImage'], writes: [['after', '1']] });
     expect(await run(`onStart = async(function(id) local image = generateImage(id, 'x'):await() setChatVar(id, 'after', tostring(image)) end)`, { kind: 'start' })).toMatchObject({ errors: [], missing: ['generateImage'], writes: [['after', 'nil']] });
+    expect(await run(`onStart = async(function(id) setChatVar(id, 'img', '<img>' .. getCharacterImage(id) .. getPersonaImageMain(id):await()) end)`, { kind: 'start' })).toMatchObject({ errors: [], missing: ['getCharacterImage', 'getPersonaImageMain'], writes: [['img', '<img>']] });
     expect((await run(`syntax error here`, { kind: 'start' })).errors).toHaveLength(1);
     expect((await run(`function onStart(id) while true do end end`, { kind: 'start' })).errors[0]).toMatchObject({ message: expect.stringContaining('timeout') });
     // After an await the loop runs in the promise's continuation: the run still ends, and its engine takes the next.
@@ -344,6 +359,14 @@ describe('Lua display', () => {
     await expect(lua.display('retained', 2, 1)).rejects.toThrow('expired');
   });
 
+  it('passes on only text from one editDisplay listener to the next, as Risu does', async () => {
+    const code = `listenEdit('editDisplay', function(id, value) return 5 end)
+      listenEdit('editDisplay', async(function(id, value) return value end))
+      listenEdit('editDisplay', function(id, value) return value:upper() end)`;
+    await lua.installDisplay('chain', 1, [{ owner: OWNER, kind: 'lua', name: 'main', code }], SNAPSHOT, [{ index: 0, text: 'abc', variables: [] }]);
+    expect(await lua.display('chain', 1, 1)).toMatchObject({ texts: ['ABC'], errors: [] });
+  });
+
   it('says which scripts listen by what their engines registered, a computed name too, not by their source', async () => {
     const scripts = [`-- editDisplay editRequest\nfunction onStart(id) end`, `listenEdit('edit' .. 'Display', function(id, value) return value .. '!' end)`].map((code): Script => ({ owner: OWNER, kind: 'lua', name: 'main', code }));
     await lua.installDisplay('listening', 1, scripts, SNAPSHOT, [{ index: 0, text: 'a', variables: [] }]);
@@ -465,6 +488,14 @@ describe('block triggers', () => {
     expect(outcome).toMatchObject({ errors: [], missing: [], edits: [{ index: 1, text: 'hi Jin' }] });
     expect(Object.fromEntries(outcome.writes)).toMatchObject({ list: '["a","b"]', popped: 'c', joined: 'a+b', dict: '{"k":"v"}', got: 'v', matched: '1', picked: '1' });
     expect(ask).toHaveBeenCalledWith({ kind: 'select', text: '고르기', options: ['하나', '둘'] }, OWNER);
+  });
+
+  it('remove an array item by a negative index from the end, as Risu does', async () => {
+    const outcome = await lua.run(String(owner++), [blocks('start', [
+      { type: 'v2SplitString', source: 'a,b,c', sourceType: 'value', delimiter: ',', delimiterType: 'value', outputVar: 'list', indent: 0 },
+      { type: 'v2RemoveIndexFromArrayVar', var: 'list', index: '-1', indexType: 'value', indent: 0 },
+    ])], SNAPSHOT, { kind: 'start' }, host(), 'event');
+    expect(outcome).toMatchObject({ errors: [], writes: [['list', '["a","b"]']] });
   });
 
   it('hide a chat variable behind a local one, break loops, skip a loop of no turns and run other triggers by name', async () => {
