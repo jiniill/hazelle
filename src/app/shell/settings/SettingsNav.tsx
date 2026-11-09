@@ -2,7 +2,7 @@ import { FileText, FlaskConical, Hand, Layers, Lock, MessageSquare, Network, Pac
 import { useState } from 'react';
 import { useSearch } from '../../common/useSearch';
 import { FEATURE_ICONS } from '../../common/featureIcons';
-import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS, TOOLS } from '../../common/words';
+import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS, TOOLS, LAB } from '../../common/words';
 import { presetOf } from '../../common/reading';
 import { useDisplay } from '../../display';
 import { FEATURE_LABS, FEATURES, type Feature } from '../../../model/features';
@@ -75,7 +75,7 @@ function useHolds(): Record<SettingsPage, string | undefined> {
   // Subscribed for sharedFeatures, which reads the settings from the store.
   useSettings();
   const used = sharedFeatures(store);
-  const state = (feature: Feature) => [FEATURE_LABS[feature] && '실험', onOff(used[feature])].filter(Boolean).join(' · ');
+  const state = (feature: Feature) => [FEATURE_LABS[feature] && LAB, onOff(used[feature])].filter(Boolean).join(' · ');
   return {
     setup: undefined,
     models: `${connections.reduce((sum, connection) => sum + connection.value.starred.length, 0)}개`,

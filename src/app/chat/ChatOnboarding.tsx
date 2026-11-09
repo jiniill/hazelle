@@ -8,6 +8,7 @@ import { ACTS } from '../common/acts';
 import { runaway } from '../common/failure';
 import { useAssetUrl, useSession } from '../session';
 import { Button, Callout, Checkbox, ChoiceGroup, Dialog, Section, Stack, Story, Text, TextField } from '../ui';
+import { LOADING } from '../common/words';
 
 type Answers = ReadonlyMap<string, string>;
 
@@ -110,7 +111,7 @@ function Page({ chatId, chat, html, answers, onChange }: { chatId: string; chat:
   }, [session, chatId, html, tries]);
   useEffect(() => () => session.store.evaluation.forget({ asker: 'onboarding', chat: chatId }), [session, chatId]);
   const url = useAssetUrl([page]);
-  if (page === null) return <Text variant="note">불러오는 중…</Text>;
+  if (page === null) return <Text variant="note">{LOADING}</Text>;
   if (page === 'failed') return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => retry((count) => count + 1) }}>설문을 표시하지 못했어요.</Callout>;
   if ('kind' in page) return <Callout tone="warn">{runaway('설문을 표시하기 전에')}</Callout>;
   return <Story html={resolveAssets(page.html, url)} css={resolveAssets(page.css, url)} buttons="live" bind={{ values: answers, onChange }} />;

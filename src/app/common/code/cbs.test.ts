@@ -31,9 +31,9 @@ describe('cbsLanguage', () => {
       ['{{', '짝이 되는 }}가 없어서 글자 그대로 들어가요.', undefined],
     ]);
     expect(problems('{{#when::a::b}}x{{/when}} {{#when}}x{{/when}} {{#if 1}} {{#whne::1}}')).toEqual([
-      ['{{#when::a::b}}', '알 수 없는 연산자는 빼고, 그 오른쪽 값이 참인지만 봐요.', undefined],
+      ['{{#when::a::b}}', '알 수 없는 연산자라 무시되고 오른쪽 값이 참인지만 확인해요.', undefined],
       ['{{#when}}', '조건식이 없어서 항상 거짓({{:else}}) 쪽 텍스트가 들어가요.', undefined],
-      ['{{#if 1}}', '블록을 닫는 {{/if}} 태그가 없어요.', undefined],
+      ['{{#if 1}}', '블록을 닫는 {{/if}} 명령어가 없어요.', undefined],
       ['whne', 'when의 오타 같아요.', 'when'],
     ]);
     expect(problems('{{original}} {{position::a}} {{ }} {{-}} {{getvar::{{user}}}} {{? 1+1}}', cbsLanguage({ placeholder: 'original' }))).toEqual([]);

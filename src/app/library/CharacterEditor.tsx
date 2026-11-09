@@ -51,6 +51,7 @@ import { Button, Callout, ChoiceGroup, Disclosure, List, ListItem, MenuItem, Nav
 import { useCardTranslation } from './useCardTranslation';
 import { useCharacterActions, useJustMade } from './useCharacterActions';
 import { useNoteDraft } from './useNoteDraft';
+import { addOf } from '../common/acts';
 
 const SWITCHES = { decor: setDecor, botModels: (store: ObjectStore, id: string, on: boolean) => setModels(store, { kind: 'character', id }, on), cardWrites: setCardWrites, keepThoughts: setKeepThoughts };
 type Switched = keyof typeof SWITCHES;
@@ -276,7 +277,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
             onChange={(greetings) => change({ greetings })}
             name={(index) => `첫인사 ${index + 1}`}
             blank=""
-            addLabel="첫인사 추가"
+            addLabel={addOf('첫인사')}
             empty="첫인사가 없어요."
             removed={(index) => `${index + 1}번째 첫인사를 삭제했어요.`}
           >
@@ -340,7 +341,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     toggles: <PackToggles owner={{ kind: 'character', id }} lines={card.toggles} />,
     variables: (
       <>
-        <DefaultVariables variables={text.variables} help="새 채팅을 시작할 때 변수에 설정되는 초기값이에요. 기존 채팅에서도 아직 값이 바뀌지 않은 변수는 이 값을 사용해요." onChange={(variables) => change({ variables })} />
+        <DefaultVariables variables={text.variables} help="채팅에서 값이 정해지지 않은 변수가 이 값을 써요." onChange={(variables) => change({ variables })} />
         <OnboardingEditor onboarding={text.onboarding} onChange={(onboarding) => change({ onboarding })} />
       </>
     ),

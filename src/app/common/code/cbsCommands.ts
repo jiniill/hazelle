@@ -225,7 +225,7 @@ export const COMMANDS: readonly CommandGroup[] = [
     guide: 'literal',
     commands: [
       { names: [], form: '{{#pure}}텍스트{{/pure}}', what: '안쪽 텍스트를 명령어로 처리하지 않고 적은 그대로 넣어요.', example: ['{{#pure}}{{user}}{{/pure}}', '{{user}}'] },
-      { names: [], form: '{{#escape}}텍스트{{/escape}}', what: '안쪽 텍스트를 적은 그대로 넣고, 이후에 실행되는 정규식에서도 명령어로 처리하지 않게 해요. 앞뒤 빈 줄까지 그대로 남기려면 {{#escape::keep}}을 써요.', example: ['{{#escape}}{{user}}{{/escape}}', '{{user}}'] },
+      { names: [], form: '{{#escape}}텍스트{{/escape}}', what: '안쪽 텍스트를 적은 대로 넣고, 뒤이어 실행되는 정규식에서도 명령어로 처리하지 않아요. 앞뒤 빈 줄까지 유지하려면 {{#escape::keep}}을 써요.', example: ['{{#escape}}{{user}}{{/escape}}', '{{user}}'] },
       { names: [], form: '{{#code}}글{{/code}}', what: '줄바꿈과 탭을 삭제하고, \\n이나 \\u0041 같은 이스케이프 표기를 실제 문자로 바꿔요.', example: ['{{#code}}\\u0041{{/code}}', 'A'] },
       { names: ['bo', 'ddecbo', 'doubledisplayescapedcurlybracketopen'], form: '{{bo}}', what: '{{ 기호가 명령어로 인식되지 않게 그대로 넣어요.', example: ['{{bo}}user{{bc}}', '{{user}}'] },
       { names: ['bc', 'ddecbc', 'doubledisplayescapedcurlybracketclose'], form: '{{bc}}', what: '}} 기호가 명령어로 인식되지 않게 그대로 넣어요.' },
@@ -264,7 +264,7 @@ export const COMMANDS: readonly CommandGroup[] = [
       { names: ['asset'], form: '{{asset::에셋 이름}}', what: '캐릭터 이미지나 영상을 보여 주고 줄을 바꿔요. 영상은 소리 없이 반복 재생돼요.' },
       { names: ['video'], form: '{{video::영상 이름}}', what: '캐릭터 영상을 재생 버튼과 함께 보여 줘요. 소리는 사용자가 직접 재생을 눌렀을 때 나와요.' },
       { names: ['videoimg'], form: '{{video-img::영상 이름}}', what: '캐릭터 영상을 소리 없이 반복해서 보여 줘요.' },
-      { names: ['bg'], form: '{{bg::에셋 이름}}', what: '배경 HTML 안에서 캐릭터 이미지를 어둡게 깔린 배경으로 채워요. 메시지 안에서는 아무것도 넣지 않아요.' },
+      { names: ['bg'], form: '{{bg::에셋 이름}}', what: '배경 HTML 안에서 캐릭터 이미지를 어두운 배경으로 깔아요. 메시지 안에서는 작동하지 않아요.' },
       { names: ['raw', 'path'], form: '{{raw::에셋 이름}}', what: '캐릭터 이미지나 영상의 주소예요. HTML 태그 안에 넣을 때 써요.' },
       { names: ['source'], form: '{{source::char}}', what: '캐릭터(char)나 페르소나(user)의 프로필 이미지 주소예요.' },
       { names: ['button'], form: '{{button::글::트리거}}', what: '봇이 만드는 버튼이에요. 누르면 해당 이름의 트리거를 실행해요.' },

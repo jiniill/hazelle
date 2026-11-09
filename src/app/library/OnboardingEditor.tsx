@@ -24,8 +24,8 @@ export function OnboardingEditor({ onboarding, onChange }: { onboarding: Onboard
     if (read || !next.trim()) onChange(read);
   };
   return (
-    <Section title={ONBOARDING} help="새 채팅을 시작할 때 묻는 질문이에요. 답은 그 채팅의 변수로 저장돼요. RisuAI의 onboarding JSON 형식이에요.">
-      <TextField label={ONBOARDING} showLabel={false} kind="key" lines={8} expand={SHORTCUTS.bigEdit.keys} placeholder="비어 있음" value={text} error={unread ? 'JSON 객체로 읽을 수 없어요.' : undefined} onChange={edit} />
+    <Section title={ONBOARDING} help="새 채팅을 시작할 때 질문하고 답을 채팅 변수에 저장해요. RisuAI의 onboarding JSON 형식을 써요.">
+      <TextField label={ONBOARDING} showLabel={false} kind="key" lines={8} expand={SHORTCUTS.bigEdit.keys} placeholder="비어 있음" value={text} error={unread ? '올바른 JSON 객체 형식이 아니에요.' : undefined} onChange={edit} />
     </Section>
   );
 }

@@ -40,7 +40,7 @@ export function RecoveryKeyScreen({ username, recoveryKey, saved: savedBefore, f
     setDownloaded(true);
   }
 
-  const waiting = !downloaded ? '복구 키 파일을 내보내야 시작할 수 있어요.' : !saved ? '안전한 곳에 저장했는지 확인해 주세요.' : null;
+  const waiting = !downloaded ? '복구 키 파일을 내보내야 시작할 수 있어요.' : !saved ? "'안전한 곳에 저장했어요'에 체크해 주세요." : null;
 
   return (
     <Screen

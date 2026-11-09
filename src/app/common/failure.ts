@@ -151,6 +151,7 @@ function describeRoute(failure: RouteFailure | { kind: 'profile-missing'; own: b
 }
 
 // A role's own model as 설정 › 모델 picks it.
+const EMBED_UNCALLED = `${MODEL_ROLES.embed}을 호출하지 못했어요.`;
 export const describeRoleFailure = (role: Role, failure: RouteFailure) => describeRoute(failure, MODEL_ROLES[role], null);
 
 const SECRET = { password: '비밀번호가', recovery: '복구 키가' } as const;
@@ -319,7 +320,7 @@ export function describeTurnFailure(failure: TurnFailure): string {
     case 'unsaved':
       return `응답을 저장하지 못했어요. ${describeFailure(failure.failure)}`;
     case 'busy':
-      return '이 채팅에서 응답을 쓰는 중이라 보내지 않았어요. 응답이 끝난 뒤 다시 보내 주세요.';
+      return '응답을 생성하는 중이라 보내지 않았어요. 응답이 끝난 뒤 다시 보내 주세요.';
     case 'untranslated':
       return failure.failure.kind === 'stopped' ? '번역을 멈춰서 메시지를 보내지 않았어요.' : `메시지를 번역하지 못해서 보내지 않았어요. ${describeTranslateFailure(failure.failure)}`;
     case 'preread':
@@ -340,7 +341,7 @@ function describeAdditionalFailure(failure: AdditionalFailure['failure']): strin
     case 'too-large':
       return `문단 하나가 ${MODEL_ROLES.embed}의 한도보다 길어요. 빈 줄로 더 나눠 주세요.`;
     case 'failed':
-      return failure.receipt?.error ? describeReplyError(failure.receipt.error) : `${MODEL_ROLES.embed}을 호출하지 못했어요.`;
+      return failure.receipt?.error ? describeReplyError(failure.receipt.error) : EMBED_UNCALLED;
   }
 }
 
@@ -464,7 +465,7 @@ export function describeMemoryFailure(failure: MemoryFailure): string {
     case 'unsaved':
       return `기억을 저장하지 못했어요. ${describeFailure(failure.failure)}`;
     case 'embed':
-      return EMBED[failure.reason] ?? (failure.receipt?.error ? describeReplyError(failure.receipt.error) : `${MODEL_ROLES.embed}을 호출하지 못했어요.`);
+      return EMBED[failure.reason] ?? (failure.receipt?.error ? describeReplyError(failure.receipt.error) : EMBED_UNCALLED);
   }
 }
 

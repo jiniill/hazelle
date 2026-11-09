@@ -30,16 +30,16 @@ export const UNKNOWN_PICTURES = `이 모델이 이미지 입력을 지원하는�
 
 export const MAIN_HELP = '프롬프트나 채팅에서 모델을 따로 정하지 않았을 때 쓰는 모델이에요.';
 export const AUX_HELP = '번역이나 장기 기억 정리처럼 대화 밖의 작업에 써요.';
-export const EMBED_HELP = '장기 기억과 플러그인이 비슷한 내용을 찾을 때 써요. 모델을 바꾸면 기록을 다시 준비해요.';
+export const EMBED_HELP = '장기 기억과 추가 설명, 플러그인이 비슷한 내용을 찾을 때 써요. 모델을 바꾸면 임베딩을 다시 만들어요.';
 
 export const BOT_MODELS = '봇의 모델 호출';
 export const BOT_MODELS_HELP = '봇 스크립트가 대화 응답과 별개로 모델을 호출해요. 호출할 때마다 토큰과 비용이 추가로 사용돼요.';
 // Risu's additionalText (runtime/additional).
 export const ADDITIONAL_TEXT = '추가 설명';
-export const ADDITIONAL_TEXT_HELP = `빈 줄로 나눈 문단 중 대화 첫 부분과 가장 가까운 ${ADDITIONAL_MOST}개를 ${MODEL_ROLES.embed}로 찾아 설명 뒤에 넣어요.`;
+export const ADDITIONAL_TEXT_HELP = `빈 줄로 나눈 문단 중 대화 초반과 가장 관련 있는 ${ADDITIONAL_MOST}개를 ${MODEL_ROLES.embed}로 찾아 설명 뒤에 넣어요.`;
 export const CARD_WRITES = '스크립트의 카드 수정';
-export const CARD_WRITES_HELP = '봇 스크립트나 플러그인이 이 캐릭터의 카드(배경 HTML, 설명, 첫 메시지 등)를 바꿔서 저장해요. 바뀐 카드는 이 캐릭터의 모든 채팅에 적용돼요.';
-export const CARD_WRITE_ASK_HELP = '허용하면 이 캐릭터의 카드가 바뀌고 모든 채팅에 적용돼요. 나중에 캐릭터 편집에서 다시 바꿀 수 있어요.';
+export const CARD_WRITES_HELP = '봇 스크립트나 플러그인이 이 캐릭터의 카드(배경 HTML, 설명, 첫인사 등)를 바꿔서 저장해요. 바뀐 내용은 이 캐릭터의 모든 채팅에 적용돼요.';
+export const CARD_WRITE_ASK_HELP = '허용하면 바뀐 카드가 이 캐릭터의 모든 채팅에 적용돼요. 나중에 캐릭터 편집에서 권한을 바꿀 수 있어요.';
 export const BOT_STUCK = '봇 스크립트가 끝나지 않아서 멈췄어요';
 
 export const TOOL = '플러그인';
@@ -295,6 +295,10 @@ export const RESET = resetTo('기본값');
 export const UNDO = '되돌리기';
 export const STOP = '멈추기';
 export const LOADING = '불러오는 중…';
+export const EMPTY_VALUE = '비어 있음';
+export const NO_TOGGLES = '토글이 없어요.';
+export const LAB = '실험';
+export const PROMPT_MODELS = '프롬프트별 지정 모델';
 export const SEE_ALL = '모두 보기';
 export const MISSED = '가져오지 못한 항목';
 export const EMPTY_FOLDER = '비어 있는 폴더예요.';

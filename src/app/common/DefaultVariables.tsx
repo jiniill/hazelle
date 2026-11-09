@@ -1,6 +1,7 @@
 import { EntryList } from './EntryList';
 import { DEFAULT_VARIABLES } from './words';
 import { FieldRow, Section, TextField } from '../ui';
+import { addOf } from './acts';
 
 // Keep variable fields single-line and names free of = so Risu name=value export round-trips.
 // A blank name says so once its value is typed, not on a row just added.
@@ -20,7 +21,7 @@ export function DefaultVariables({ variables, help, onChange }: { variables: [st
         onChange={onChange}
         name={(index) => `변수 ${index + 1}`}
         blank={['', ''] as [string, string]}
-        addLabel="변수 추가"
+        addLabel={addOf('변수')}
         empty="변수가 없어요."
         removed={(index) => `${index + 1}번째 변수를 삭제했어요.`}
       >

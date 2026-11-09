@@ -377,7 +377,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
     ) : open === PICTURE ? (
       <PicturePane tags={draft.tags} picture={draft.picture} onTags={(tags) => update(() => ({ tags }))} onPicture={(picture) => update(() => ({ picture }))} />
     ) : open === VARIABLES && draft.variables ? (
-      <DefaultVariables variables={draft.variables} help="이 프롬프트를 쓰는 채팅의 변수 초기값이에요. 캐릭터의 기본 변수에 같은 이름이 있으면 그 값을 써요." onChange={(variables) => update(() => ({ variables }))} />
+      <DefaultVariables variables={draft.variables} help="이 프롬프트를 쓰는 채팅의 변수 초기값이에요. 캐릭터에도 같은 이름의 기본 변수가 있으면 캐릭터 값을 써요." onChange={(variables) => update(() => ({ variables }))} />
     ) : open === TOGGLES ? (
       <TogglePane
         owner={stored.id}

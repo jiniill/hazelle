@@ -7,8 +7,8 @@ import { CAST, COMMAND, inSettings, SCRIPTS } from '../common/words';
 const TAVERN_REGEX = `SillyTavern ${SCRIPTS.regex}`;
 const SILLYTAVERN_REGEX: Record<SillyTavernRegexKind, (count: number) => string> = {
   'regex-placement': (count) => `슬래시 명령·월드 인포·추론에 쓰던 ${TAVERN_REGEX} ${count}개`,
-  'regex-role': (count) => `한쪽 메시지에만 쓰던 ${TAVERN_REGEX} ${count}개(양쪽에 적용돼요)`,
-  'regex-depth': (count) => `깊이 제한이 있는 ${TAVERN_REGEX} ${count}개(모든 깊이에 적용돼요)`,
+  'regex-role': (count) => `한쪽 메시지에만 쓰던 ${TAVERN_REGEX} ${count}개(양쪽에 적용됨)`,
+  'regex-depth': (count) => `깊이 제한이 있는 ${TAVERN_REGEX} ${count}개(모든 깊이에 적용됨)`,
   'regex-trim': (count) => `잘라낼 문자열이 있는 ${TAVERN_REGEX} ${count}개`,
   'regex-escape': (count) => `패턴 속 매크로를 이스케이프하던 ${TAVERN_REGEX} ${count}개`,
 };
@@ -64,10 +64,10 @@ const PRESET_UNSUPPORTED: Record<Exclude<PresetUnsupported['kind'], 'repeated-sl
   'off-item': (count) => `꺼져 있던 블록 ${count}개`,
   'toggle-line': UNSUPPORTED['toggle-line'],
   'preset-text': (count) => `템플릿 밖의 텍스트 ${count}개(Risu에서도 보내지 않던 것)`,
-  macro: (count) => `실행되지 않는 SillyTavern 매크로 ${count}개`,
+  macro: (count) => `지원하지 않는 SillyTavern 매크로 ${count}개`,
   'regex-stage': UNSUPPORTED['regex-stage'],
   ...SILLYTAVERN_REGEX,
-  'prompt-settings': (count) => `프롬프트 조립 설정 ${count}개(헤이젤에는 없음)`,
+  'prompt-settings': (count) => `프롬프트 조립 설정 ${count}개`,
   settings: () => `모델과 생성 설정(${inSettings('models')}에서 정할 수 있음)`,
 };
 

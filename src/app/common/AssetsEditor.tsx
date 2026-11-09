@@ -15,7 +15,7 @@ import { NameDialog } from './NameDialog';
 import { useCopy } from './useCopy';
 import { useSearch } from './useSearch';
 import { useSelection } from './useSelection';
-import { ASSET, CHANGE_IMAGE, REMOVE_FAILED, SAVE_FAILED } from './words';
+import { ASSET, CHANGE_IMAGE, namedObject, REMOVE_FAILED, SAVE_FAILED } from './words';
 
 // What runtime/characters keeps as an asset (engine/import assetType), and as a background (a picture).
 const KEEPS = {
@@ -26,8 +26,8 @@ type Shelf = 'asset' | AssetUse;
 // A character's assets and backgrounds, each with what it holds and the tag that shows one, if any.
 // hint: under the name field of its rename dialog.
 const SHELVES: Record<Shelf, { label: string; keeps: (typeof KEEPS)[keyof typeof KEEPS]; help: string; hint?: string; tag: ((asset: Stored<'asset'>['value']) => string) | null }> = {
-  asset: { label: ASSET, keeps: KEEPS.any, help: '봇이 {{img::이름}}이나 {{video::이름}}으로 불러오는 이미지·영상이에요. 이름이 겹치면 무작위로 표시돼요.', hint: '봇은 이 이름으로 에셋을 찾아요.', tag: ({ type, name }) => `{{${isVideo(type) ? 'video' : 'img'}::${name}}}` },
-  background: { label: '배경', keeps: KEEPS.picture, help: '채팅 뒤에 어둡게 깔리는 배경이에요. 여러 개면 이름이 main인 배경을 써요.', tag: null },
+  asset: { label: ASSET, keeps: KEEPS.any, help: '봇이 {{img::이름}}이나 {{video::이름}}으로 표시하는 이미지·영상이에요.', hint: '{{img::이름}} 같은 명령어에서 이 이름으로 찾아요.', tag: ({ type, name }) => `{{${isVideo(type) ? 'video' : 'img'}::${name}}}` },
+  background: { label: '배경', keeps: KEEPS.picture, help: '채팅 화면 뒤에 깔리는 이미지예요. 여러 개면 이름이 main인 이미지를 써요.', tag: null },
 };
 const SHELF_ORDER: Shelf[] = ['asset', 'background'];
 const useOf = (shelf: Shelf) => (shelf === 'asset' ? undefined : shelf);
@@ -81,7 +81,7 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
     const removed = await removeAssets(store, ids);
     if (!removed.ok) return toast.failed(removed, REMOVE_FAILED);
     const [only] = removed.data;
-    toast.undoable(removed.data.length === 1 ? `'${only!.value.name}' ${label}을 삭제했어요.` : `${label} ${removed.data.length}개를 삭제했어요.`, () => restoreAssets(store, removed.data));
+    toast.undoable(removed.data.length === 1 ? `${namedObject(only!.value.name, label)} 삭제했어요.` : `${label} ${removed.data.length}개를 삭제했어요.`, () => restoreAssets(store, removed.data));
   }
 
   async function replace(id: string, file: File) {
@@ -115,7 +115,7 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
         {shelves && <Tabs label={ASSET} items={SHELF_ORDER.map((value) => ({ value, label: SHELVES[value].label, count: onShelf(value).length }))} value={shelf} onChange={(next) => { selection.clear(); setShelf(next); }} />}
         {unfound.length > 0 && (
           <Callout tone="warn">
-            {`채팅에서 봇이 불렀지만 없는 이름이 ${unfound.length}개 있어요: ${unfound.slice(0, UNFOUND_SHOWN).join(', ')}${unfound.length > UNFOUND_SHOWN ? ` 외 ${unfound.length - UNFOUND_SHOWN}개` : ''}`}
+            {`채팅에서 찾지 못한 에셋 이름이 ${unfound.length}개 있어요: ${unfound.slice(0, UNFOUND_SHOWN).join(', ')}${unfound.length > UNFOUND_SHOWN ? ` 외 ${unfound.length - UNFOUND_SHOWN}개` : ''}`}
           </Callout>
         )}
         <Row kind="toolbar">

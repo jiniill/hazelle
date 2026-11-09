@@ -6,7 +6,7 @@ import { availableFeatures } from '../../runtime/features';
 import { overviewOf, type TaskRun } from '../../runtime/overview';
 import { findStarred, RolePicker } from '../common/RolePicker';
 import { AccountTaskModel, TaskModelRow } from '../common/TaskPrompt';
-import { AUX_HELP, DEFAULT_MODELS_FAILED, EMBED_HELP, FINDINGS, follows, inFeature, inSettings, MAIN_HELP, MODEL_ROLES, NOT_PICKED, NOT_STARRED, opens, PAGES, SCOPE, TASK_MODELS } from '../common/words';
+import { AUX_HELP, DEFAULT_MODELS_FAILED, EMBED_HELP, FINDINGS, follows, inFeature, inSettings, MAIN_HELP, MODEL_ROLES, NOT_PICKED, NOT_STARRED, opens, PAGES, SCOPE, TASK_MODELS, PROMPT_MODELS } from '../common/words';
 import { useCaptured, useConnections, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate, useAddress } from '../shell/router';
 import type { Back, Route } from '../shell/routes';
@@ -27,7 +27,7 @@ function useScope() {
   const chat = under?.kind === 'chat' ? under.id : null;
   const [scope, setScope] = useState<'shared' | 'chat'>('shared');
   const stored = useStored('chat', scope === 'chat' ? chat : null);
-  const pick = chat && <ChoiceGroup label="보는 범위" layout="segmented" options={[{ value: 'shared', label: SCOPE.default }, { value: 'chat', label: HERE }]} value={scope} onChange={setScope} />;
+  const pick = chat && <ChoiceGroup label="범위" layout="segmented" options={[{ value: 'shared', label: SCOPE.default }, { value: 'chat', label: HERE }]} value={scope} onChange={setScope} />;
   return { chat: scope === 'chat' ? (stored?.value ?? null) : null, shared: scope === 'shared' || !stored, pick };
 }
 
@@ -158,7 +158,7 @@ function Pins({ pins }: { pins: Extract<Target, { kind: 'talk' }>['pins'] }) {
   const connections = useConnections();
   return (
     pins.length > 0 && (
-      <List label="프롬프트별 지정 모델" box>
+      <List label={PROMPT_MODELS} box>
         {pins.map(({ prompt, ref }) => (
           <ListItem key={prompt.id} title={prompt.value.name} note={findStarred(ref, connections)?.name ?? NOT_STARRED} onClick={() => navigate({ kind: 'prompt', id: prompt.id, pane: 'model' })} />
         ))}

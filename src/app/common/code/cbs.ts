@@ -104,7 +104,7 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
     const word = normalize(name);
     if (name.startsWith('#')) {
       // A head that names no block opens none, so it is a lone tag.
-      if (isBlockName(normalize(name.slice(1)))) problem(node.at, node.end, 'error', `블록을 닫는 {{/${name.slice(1)}}} 태그가 없어요.`);
+      if (isBlockName(normalize(name.slice(1)))) problem(node.at, node.end, 'error', `블록을 닫는 {{/${name.slice(1)}}} 명령어가 없어요.`);
       else if (!isProse(word)) unknown(name, found, BLOCK_POOL);
     }
     else if (name.startsWith('/')) problem(node.at, node.end, 'error', '열린 블록 없이 닫는 태그예요.');
@@ -136,7 +136,7 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
       if (name === 'when' && whole !== null) {
         const { condition } = whenArgs(blockHead(whole)!.rest);
         if (condition.length === 0) problem(node.head.at, node.head.end, 'warning', '조건식이 없어서 항상 거짓({{:else}}) 쪽 텍스트가 들어가요.');
-        else if (conditionSteps(condition).some(({ op }) => !isOperator(op))) problem(node.head.at, node.head.end, 'warning', '알 수 없는 연산자는 빼고, 그 오른쪽 값이 참인지만 봐요.');
+        else if (conditionSteps(condition).some(({ op }) => !isOperator(op))) problem(node.head.at, node.head.end, 'warning', '알 수 없는 연산자라 무시되고 오른쪽 값이 참인지만 확인해요.');
       }
     }
     // A raw block's body is text, whatever it holds.

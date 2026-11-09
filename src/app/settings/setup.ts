@@ -13,13 +13,13 @@ import {
   describeTranslateFailure,
   describeTurnFailure,
 } from '../common/failure';
-import { FEATURE_NAMES, FEATURES_TITLE, follows, MODEL_PINNED, MODEL_ROLES, NOT_PICKED, NOT_STARRED, onOff, PAGES, promptName, STARRED } from '../common/words';
+import { EMPTY_VALUE, FEATURE_NAMES, FEATURES_TITLE, follows, LAB, MODEL_PINNED, MODEL_ROLES, NOT_PICKED, NOT_STARRED, onOff, PAGES, promptName, SCOPE, STARRED } from '../common/words';
 import type { FlowColumn, FlowEdge, FlowKind, FlowNode } from '../ui';
 
 // 내 구성: the map and what needs fixing, both read off one Overview (runtime/overview).
 
 export const ROLES_TITLE = '역할';
-export const LEGEND: Partial<Record<FlowKind, string>> = { follow: '기본값을 따라감', own: '따로 고름 · 고정', gap: '비어 있음', off: '꺼진 기능' };
+export const LEGEND: Partial<Record<FlowKind, string>> = { follow: '기본 모델 사용', own: '직접 지정', gap: EMPTY_VALUE, off: '꺼진 기능' };
 
 export const nodeOf = {
   connection: (id: string) => `c:${id}`,
@@ -51,7 +51,7 @@ export function taskRuns(task: TaskRun): { route: Route } | { why: string } {
   }
 }
 
-const NO_EMBED = `${MODEL_ROLES.embed}이 없어서 ${FEATURE_NAMES.memory}이 비슷한 기록을 찾아 넣지 않아요.`;
+const NO_EMBED = `${MODEL_ROLES.embed}이 지정되지 않아서 ${FEATURE_NAMES.memory}이 비슷한 기록을 찾아 넣지 않아요.`;
 
 // What fails now, truthfully: each said once, where it starts. A task that follows a 보조 모델 which fails is that
 // role's finding, not its own.
@@ -77,8 +77,8 @@ export function findingsOf({ roles, talk, tasks }: Overview, available: readonly
 
 const SHORT: Record<RouteFailure['kind'], string> = { 'no-model': NOT_PICKED, 'model-gone': NOT_STARRED, 'image-only': '이미지만 만드는 모델' };
 const NEEDS_LOOK = '확인 필요';
-const APART = '캐릭터 따로';
-const LAYERS = { chat: '이 채팅에서 고름', prompt: MODEL_PINNED, settings: undefined };
+const APART = SCOPE.character;
+const LAYERS = { chat: SCOPE.chat, prompt: MODEL_PINNED, settings: undefined };
 
 function roleNode(role: Role, { runs, from }: RolePick): Omit<FlowNode, 'id'> {
   if ('kind' in runs) return { lead: MODEL_ROLES[role], title: SHORT[runs.kind] };
@@ -86,7 +86,7 @@ function roleNode(role: Role, { runs, from }: RolePick): Omit<FlowNode, 'id'> {
 }
 
 function taskNode(task: TaskRun): Omit<FlowNode, 'id' | 'tone'> {
-  const badge = !task.on ? onOff(false) : task.apart ? APART : FEATURE_LABS[task.feature] ? '실험' : undefined;
+  const badge = !task.on ? onOff(false) : task.apart ? APART : FEATURE_LABS[task.feature] ? LAB : undefined;
   const note = task.feature === 'memory' && task.by !== null ? `플러그인 · ${task.by}` : 'route' in task.runs ? (task.own ? entryName(task.runs.route.model) : follows(MODEL_ROLES.aux)) : NEEDS_LOOK;
   return { title: FEATURE_NAMES[task.feature], badge, note };
 }

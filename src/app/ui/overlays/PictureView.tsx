@@ -10,7 +10,7 @@ import styles from './PictureView.module.css';
 import { useFocusTrap, useLayer } from './layers';
 
 // Mod and Shift held are left to the page: Ctrl+Z is undo.
-export const ZOOM_KEYS = { label: '확대 · 축소', keys: [{ key: 'z', mod: false, shift: false }] } as const;
+export const ZOOM_KEYS = { label: '확대/축소', keys: [{ key: 'z', mod: false, shift: false }] } as const;
 
 export type PictureAction = { icon: LucideIcon; label: string; warn?: boolean; keys?: readonly Chord[]; run: () => void };
 

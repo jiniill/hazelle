@@ -10,7 +10,7 @@ import { findStarred, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { newOf } from '../common/acts';
-import { AUX_HELP, DEFAULT_MODELS_FAILED, EMBED_HELP, defaultMark, FEATURE_NAMES, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, NOT_PICKED } from '../common/words';
+import { AUX_HELP, DEFAULT_MODELS_FAILED, EMBED_HELP, defaultMark, FEATURE_NAMES, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, NOT_PICKED, PROMPT_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -81,8 +81,8 @@ export function ModelsScreen({ back }: { back: Back | null }) {
         </List>
       </Section>
       {pinned.length > 0 && (
-        <Section title="프롬프트별 지정 모델" help={`이 프롬프트로 대화하는 채팅은 ${DEFAULTS} 모델 대신 이 모델을 써요.`}>
-          <List label="프롬프트별 지정 모델" box>
+        <Section title={PROMPT_MODELS} help={`이 프롬프트로 대화하는 채팅은 ${DEFAULTS} 모델 대신 이 모델을 써요.`}>
+          <List label={PROMPT_MODELS} box>
             {pinned.map((prompt) => {
               const roles = PINNED_ROLES.flatMap((role) => (prompt.value.models[role] ? [{ role, ref: prompt.value.models[role] }] : []));
               return (

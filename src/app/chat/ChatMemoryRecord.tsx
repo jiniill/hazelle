@@ -11,6 +11,7 @@ import { useToast } from '../toast';
 import { Button, Callout, List, ListItem, PhraseField, Row, Section, SettingGroup, SettingRow, SidePanel, Stack, Switch, Text, TextField, useWide } from '../ui';
 import { recordScene, recordTitle, spanOf, statusWord } from './memory';
 import type { ChatActions } from './useChat';
+import { addOf } from '../common/acts';
 
 const STALE = { changed: '대화 원문이 바뀌었어요.', rendered: '원문이 정리할 때와 달라요.', deleted: '원문 메시지가 삭제됐어요.', records: '기록이 바뀌었어요.' };
 
@@ -126,7 +127,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
             onChange={(lines) => save.change({ lines })}
             name={(index) => `대사 ${index + 1}`}
             blank={{ speaker: '', text: '' }}
-            addLabel="대사 추가"
+            addLabel={addOf('대사')}
             empty="대사가 없어요."
             removed={(index) => `${index + 1}번째 대사를 삭제했어요.`}
           >

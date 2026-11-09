@@ -5,6 +5,7 @@ import { MESSAGE_ROLES, SLOT, textName } from '../common/prompt-words';
 import { count } from '../common/typedNumber';
 import type { OutlineKind } from '../ui';
 import { toggleUses } from './rekey';
+import { EMPTY_VALUE } from '../common/words';
 
 export const ROLES: { value: Role; label: string }[] = (['system', 'user', 'assistant'] as const).map((value) => ({ value, label: MESSAGE_ROLES[value] }));
 
@@ -52,7 +53,7 @@ export const blockKind = (block: Block): OutlineKind => (block.kind === 'text' ?
 export const blockIcon = (block: Block): LucideIcon => (block.kind === 'text' ? TEXT_ICONS[block.role] : SLOT[block.slot].icon);
 
 export function blockMeta(block: Block): string {
-  if (block.kind === 'text') return block.text ? `${count(block.text.length)}자` : '비어 있음';
+  if (block.kind === 'text') return block.text ? `${count(block.text.length)}자` : EMPTY_VALUE;
   if (block.slot === 'chat') return describeRange(block.range).meta;
   if (block.slot === 'recent') return `${block.count}개${block.translations === false ? ' · 원문만' : ''} · ${MESSAGE_ROLES[block.role]}`;
   return 'role' in block ? MESSAGE_ROLES[block.role] : '';

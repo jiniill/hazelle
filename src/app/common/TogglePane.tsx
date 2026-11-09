@@ -11,6 +11,7 @@ import { ToggleList } from './ToggleList';
 import { keyProblem, LINE_WORDS, lineTitle } from './toggleWords';
 import { useSearch } from './useSearch';
 import { Button, Checkbox, ChoiceGroup, Dialog, Empty, Menu, MenuItem, MoreMenu, Row, Section, SettingRow, Switch, TextField } from '../ui';
+import { NO_TOGGLES } from './words';
 
 type Props = {
   // The prompt's, character's or module's id (common/ToggleList).
@@ -166,7 +167,7 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, 
     >
       {search.field && <Row kind="toolbar">{search.field}</Row>}
       {lines.length === 0 || search.none ? (
-        <Empty variant="section" action={search.none ? undefined : create}>{search.none ?? '토글이 없어요.'}</Empty>
+        <Empty variant="section" action={search.none ? undefined : create}>{search.none ?? NO_TOGGLES}</Empty>
       ) : search.words ? (
         search.found.map(row)
       ) : (

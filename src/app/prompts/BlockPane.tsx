@@ -12,6 +12,7 @@ import { Button, ChoiceGroup, Divider, Empty, Hint, MarkupArea, Menu, MenuHeadin
 import { blockTitle, describeRange, firstLine, MARKS, RANGES, rangeKey, ROLES, type CacheMark } from './blocks';
 import { CommandMenu } from './CommandMenu';
 import { RECENT_MAX, type Snippet } from './edits';
+import { NO_TOGGLES } from '../common/words';
 
 
 type Props = {
@@ -103,7 +104,7 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
                   )}
                 >
                   <MenuHeading>토글 선택</MenuHeading>
-                  {toggles.length === 0 && <Empty variant="menu">토글이 없어요.</Empty>}
+                  {toggles.length === 0 && <Empty variant="menu">{NO_TOGGLES}</Empty>}
                   {toggles.map((toggle) => (
                     <MenuItem
                       key={toggle.key}

@@ -6,14 +6,14 @@ import { ToggleFlip } from '../common/ToggleChoice';
 import { ToggleList } from '../common/ToggleList';
 import { useAutosave } from '../common/useAutosave';
 import { useSearch } from '../common/useSearch';
-import { onOff, PAGES, RESET, scopeTag } from '../common/words';
+import { onOff, PAGES, RESET, scopeTag, EMPTY_VALUE } from '../common/words';
 import { useSettings, useStore } from '../session';
 import { Button, Empty, IconButton, Row, Section, SettingRow, SidePanel, Tabs, TextField } from '../ui';
 import { shownRows, toggleSaveKey, type ToggleRow, type ToggleSection } from './toggles';
 import type { OpenChat } from './useChat';
 
 const defaultOf = (toggle: Toggle) =>
-  `기본값: ${toggle.kind === 'check' ? onOff(toggle.default === '1') : toggle.kind === 'choice' ? (toggle.options[Number(toggle.default)] ?? toggle.default) : toggle.default || '비어 있음'}`;
+  `기본값: ${toggle.kind === 'check' ? onOff(toggle.default === '1') : toggle.kind === 'choice' ? (toggle.options[Number(toggle.default)] ?? toggle.default) : toggle.default || EMPTY_VALUE}`;
 
 const FROM: Record<ToggleSection['from'], string> = { prompt: '프롬프트', card: '캐릭터', module: PAGES.modules };
 
