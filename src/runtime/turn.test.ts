@@ -187,6 +187,21 @@ describe('a new chat', () => {
     }));
 });
 
+it('refuses a send while another turn holds its chat, saving and sending nothing, and says so', () =>
+  server.withSession(async (session) => {
+    await answerable(session);
+    const chat = crypto.randomUUID();
+    await server.hold(session.store, chat);
+    await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+    const log = stubRelay(inTurn([saying('안녕')]));
+    const holding = session.talk.run({ chat, said: null, reply: { id: crypto.randomUUID(), message: null, replaces: null, continues: null } }, (signal) => new Promise<{ kind: 'stopped' }>((done) => signal.addEventListener('abort', () => done({ kind: 'stopped' }))));
+    const said = vi.fn();
+    expect(await takeTurn(session, chat, { kind: 'send', text: 'Hi' }, null, {}, said)).toEqual({ kind: 'busy' });
+    expect([log, said.mock.calls, session.store.children('entry', chat)]).toEqual([[], [], []]);
+    session.talk.stop(chat);
+    await holding;
+  }));
+
 describe('이어 쓰기', () => {
   it('continues on its own a reply cut at its length or left without its end, once, never a stop, a failure or an empty reply', () => {
     const cut = (over: Partial<Receipt>): Pick<Written, 'text' | 'receipt'> => ({

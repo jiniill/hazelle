@@ -13,6 +13,9 @@ export function anchorOf(messages: readonly { id: string; role: string }[], repl
   return messages[at - 1]!.role === 'user' ? messages[at - 1]!.id : reply;
 }
 
+// The pill names what it does; the reply still being written is its live dot, not its words.
+export const followPill = (away: boolean, streaming: boolean, unread: boolean) => (!away ? null : unread && !streaming ? '새 응답' : '맨 아래로');
+
 // stay pins the reply-start anchor and ignores story growth. Raise the pill only after a view of unread text,
 // or immediately on reader scroll, until explicit follow.
 export function useFollow(count: number, streaming: boolean, anchor: string | null, stay: boolean) {
@@ -120,7 +123,7 @@ export function useFollow(count: number, streaming: boolean, anchor: string | nu
 
   const onScroll = () => settle(true);
 
-  const pill = !away ? null : streaming ? '생성 중' : unread ? '새 응답' : '맨 아래로';
+  const pill = followPill(away, streaming, unread);
 
   return { scrollRef, onScroll, follow, beforeTurn, seekTo, seek, pill, away };
 }

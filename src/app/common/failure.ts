@@ -315,6 +315,8 @@ export function describeTurnFailure(failure: TurnFailure): string {
       return `보낸 메시지를 저장하지 못해서 응답 생성을 멈췄어요. ${describeFailure(failure.failure)}`;
     case 'unsaved':
       return `응답을 저장하지 못했어요. ${describeFailure(failure.failure)}`;
+    case 'busy':
+      return '이 채팅에서 응답을 쓰는 중이라 보내지 않았어요. 응답이 끝난 뒤 다시 보내 주세요.';
     case 'untranslated':
       return failure.failure.kind === 'stopped' ? '번역을 멈춰서 메시지를 보내지 않았어요.' : `메시지를 번역하지 못해서 보내지 않았어요. ${describeTranslateFailure(failure.failure)}`;
     case 'preread':

@@ -1,7 +1,7 @@
-import { act, Fragment, type ReactNode } from 'react';
+import { act, Fragment, isValidElement, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { pictureSizes } from '../../engine/illustrate';
-import { shown, type Message } from '../../model/chat';
+import { shown, type Message, type Receipt } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
 import { withTurn, type Shown, type Turn } from '../../runtime/talk';
 import { probeRoot } from '../ui/probe';
@@ -98,6 +98,35 @@ it('marks the split with the origin as it is named now, its kept name once the o
     await act(() => root.render(<ChatLog chat={frame(messages, item)} />));
     expect(split().label).toBe("삭제된 채팅 '그때 이름'에서 분기됨");
     expect(labels()).toEqual(['분기 지도', '원본 연결 끊기']);
+  } finally {
+    await act(() => root.unmount());
+  }
+});
+
+// Every name a message's row gives its controls: labels, and words a button holds.
+const names = (node: unknown): string[] => {
+  if (Array.isArray(node)) return node.flatMap(names);
+  if (isValidElement(node)) return Object.entries(node.props as Record<string, unknown>).flatMap(([key, value]) => (key === 'label' || key === 'children') && typeof value === 'string' ? [value] : names(value));
+  if (node && typeof node === 'object' && 'label' in node && typeof node.label === 'string') return [node.label];
+  return [];
+};
+
+it('names each act on a reply once: 다시 시도 on a failed one, and → apart from ⟳ on the last version', async () => {
+  const failed = { state: 'failed', error: { kind: 'offline' } } as Receipt;
+  const version = (id: string, receipt: Receipt | null) => ({ id, seed: id, text: receipt ? '' : id, at: 1, receipt, edited: false });
+  const messages: Shown[] = [
+    { id: 'u1', role: 'user', at: 1, selected: 0, live: null, versions: [version('u1', null)] },
+    { id: 'a1', role: 'assistant', at: 1, selected: 1, live: null, versions: [version('v1', null), version('v2', null)] },
+    { id: 'u2', role: 'user', at: 1, selected: 0, live: null, versions: [version('u2', null)] },
+    { id: 'a2', role: 'assistant', at: 1, selected: 0, live: null, versions: [version('v3', failed)] },
+  ];
+  const row = (id: string) => rendered.mock.calls.map(([props]) => props as { id: string; tools: ReactNode; after: ReactNode; children: ReactNode }).findLast((props) => props.id === id)!;
+  const named = (id: string) => [row(id).tools, row(id).after, row(id).children].flatMap(names);
+  const root = probeRoot();
+  try {
+    await act(() => root.render(<ChatLog chat={{ ...frame(messages), busy: false }} />));
+    expect(named('a2').filter((name) => name === '다시 시도')).toHaveLength(1);
+    expect(named('a1')).toEqual(expect.arrayContaining(['다시 생성', '새 버전']));
   } finally {
     await act(() => root.unmount());
   }

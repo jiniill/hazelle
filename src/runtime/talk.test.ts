@@ -405,7 +405,7 @@ describe('Talk', () => {
       expect(session.talk.snapshot(a)?.chat).toBe(a);
       expect(session.talk.snapshot(b)?.chat).toBe(b);
       expect([...session.talk.writing()]).toEqual([a, b]);
-      expect(await session.talk.run(turn(a), held)).toBeNull();
+      expect(await session.talk.run(turn(a), held)).toEqual({ kind: 'busy' });
       session.talk.stop(a);
       expect(await first).toEqual({ kind: 'stopped' });
       expect(session.talk.snapshot(a)).toBeNull();

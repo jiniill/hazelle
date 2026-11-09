@@ -220,7 +220,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   function report(failure: TurnFailure | null, target?: Target, skip: Skip = {}) {
     if (!failure) return;
     if (isBlocked(failure)) return setStopped(true);
-    autoDiagnose({ event: 'turn-failed', detail: failure.kind, chat: { id: chatId, read: () => autoChat(session, chatId, null, session.memory.snapshot(), { turn: turnFacts(failure) }) } });
+    if (failure.kind !== 'busy') autoDiagnose({ event: 'turn-failed', detail: failure.kind, chat: { id: chatId, read: () => autoChat(session, chatId, null, session.memory.snapshot(), { turn: turnFacts(failure) }) } });
     const skipped = target && skippedStep(failure, skip);
     if (skipped) return setSkippable({ ...skipped, target });
     const kept = failure.kind === 'unsaved' ? failure.reply : null;
@@ -321,7 +321,8 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   // Read the live turn, not this render's busy value; '' requests 응답 받기 as a typed send does.
   async function sendForTool(chat: string, text: string) {
     if (talk.snapshot(chat)) return 'busy';
-    return (text ? await say(text) : await asked(chat, { kind: 'answer' })) ? 'failed' : null;
+    const failure = text ? await say(text) : await asked(chat, { kind: 'answer' });
+    return failure?.kind === 'busy' ? 'busy' : failure ? 'failed' : null;
   }
   // The row as drawn, on the version shown and not under an edit.
   function renderedForTool(at: ScreenAt): Hazelle.Rendered | null {

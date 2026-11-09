@@ -33,7 +33,7 @@ describe('Translator', () => {
       await writer.write(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Hello, traveler."}}]}\n\n'));
       await vi.waitFor(() => expect(session.talk.snapshot(chat)?.text).toBe('Hello, traveler.'));
       expect(log).toHaveLength(1);
-      expect(await takeTurn(session, chat, { kind: 'answer' })).toBeNull();
+      expect(await takeTurn(session, chat, { kind: 'answer' })).toEqual({ kind: 'busy' });
       leave();
       lease.release();
       screen.mockClear();

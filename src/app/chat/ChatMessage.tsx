@@ -6,7 +6,7 @@ import { firstLine, handEdited, shown, translationOutdated, type Message } from 
 import { placeMark, translatedMarks, withoutMarks } from '../../model/illustration';
 import type { Stored } from '../../model/kinds';
 import { runs } from '../../runtime/illustrate';
-import { ACTS } from '../common/acts';
+import { ACTS, newOf } from '../common/acts';
 import { MASCOT_PICTURES } from '../common/mascots';
 import { BOOKMARK } from '../common/words';
 import { describeFailedReply, describeTranslateFailure } from '../common/failure';
@@ -237,7 +237,8 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const greeting = opening || version.greeting !== undefined;
   // Only then would 다시 생성 use notes again (runtime/agents preAgents).
   const noted = !mine && !greeting && message.versions.some(({ receipt }) => receipt?.agents?.some(({ stage }) => stage === 'pre'));
-  const nextLabel = message.selected === count - 1 && !greeting ? '다시 생성' : '다음';
+  // → past the last version asks for a new one, as ⟳ does; a name of its own keeps the two apart.
+  const nextLabel = message.selected === count - 1 && !greeting ? newOf('버전') : '다음';
   const [back, forward] = SHORTCUTS.swipe.keys;
   const switcher = !mine && count > 1 && editing === null && (
     <Switcher
@@ -325,7 +326,6 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       {/* Keep desktop switcher with floating tools; phones lack room. Place it after the transient remark so version changes cannot move it under the pointer (user, 2026-10-23). */}
       {wide && switcher}
       {!mine && !greeting && !failed && !busy && <IconButton icon={ACTS.regenerate.icon} size="sm" label={ACTS.regenerate.label} onClick={() => actions.regenerate(message)} />}
-      {!mine && failed && !busy && <IconButton icon={ACTS.retry.icon} size="sm" label={ACTS.retry.label} onClick={() => actions.retry(message)} />}
       {translateTool}
       {!failed && <IconButton ref={editButton} icon={SquarePen} size="sm" label="수정" onClick={() => actions.edit(message, selected?.part ?? null)} />}
       {!empty && <IconButton icon={ACTS.copy.icon} size="sm" label={ACTS.copy.label} onClick={() => actions.copy(text)} />}
