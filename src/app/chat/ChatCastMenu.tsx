@@ -1,3 +1,4 @@
+import { toggle } from '../../connectors/values';
 import { CAST_MAX } from '../../model/chat';
 import { characterTexts } from '../../model/library';
 import { aliased } from '../common/alias';
@@ -29,7 +30,7 @@ function CastChoices({ cast, character, onChange }: Choices) {
   const { field, found, none } = useSearch(offered, '캐릭터 검색', ({ character }) => characterTexts(character));
   const gone = cast.filter((id) => !offered.some((each) => each.id === id));
   const full = cast.length >= CAST_MAX;
-  const flip = (id: string) => onChange(cast.includes(id) ? cast.filter((each) => each !== id) : [...cast, id]);
+  const flip = (id: string) => onChange(toggle(cast, id));
   return (
     <>
       {field}

@@ -7,6 +7,8 @@ export function modalities(value: unknown): Modality[] | null {
   return Array.isArray(value) ? value.flatMap((item) => MODALITIES[String(item)] ?? []) : null;
 }
 
+export const text = (value: unknown) => (typeof value === 'string' ? value : '');
+
 export function flag(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
 }
@@ -48,6 +50,8 @@ export function jsonObject(text: string): Record<string, unknown> | null {
 export function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
+
+export const toggle = <T>(items: readonly T[], item: T): T[] => (items.includes(item) ? items.filter((each) => each !== item) : [...items, item]);
 
 type Entry = Record<string, unknown> & { id: string };
 

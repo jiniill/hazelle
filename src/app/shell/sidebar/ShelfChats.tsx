@@ -1,5 +1,6 @@
 import { ChevronLeft, FolderInput, FolderPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { toggle } from '../../../connectors/values';
 import { chatFolderOf, type ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
 import type { Shelf } from '../../../model/library';
@@ -29,7 +30,6 @@ const OPEN_GROUPS = 'risu-alpha:open-chat-groups';
 
 // A branch (여기서 분기) or a copy hangs under the chat it came from.
 const CHAT: Copied<ChatSummary> = { id: (item) => item.id, origin: (item) => item.chat.origin?.id, folder: chatFolderOf };
-const toggled = (list: readonly string[], id: string) => (list.includes(id) ? list.filter((each) => each !== id) : [...list, id]);
 
 type Props = {
   page: boolean;
@@ -96,8 +96,8 @@ export function ShelfChats({ page, shelf }: Props) {
   }, [words, found, index, opened, grouped, unfolded, flat]);
 
   const listed = useMemo(() => rows.flatMap((row) => ('chat' in row ? [row.chat.id] : [])), [rows]);
-  const toggleFolder = (folder: string) => setOpenFolders(toggled(openFolders, folder));
-  const toggleGroup = (chat: string) => setOpenGroups(toggled(openGroups, chat));
+  const toggleFolder = (folder: string) => setOpenFolders(toggle(openFolders, folder));
+  const toggleGroup = (chat: string) => setOpenGroups(toggle(openGroups, chat));
 
   const chatRow = (item: ChatSummary) => {
     const preview = item.preview ?? '미리보기 없음';

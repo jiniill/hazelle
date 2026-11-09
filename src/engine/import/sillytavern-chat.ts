@@ -1,5 +1,5 @@
-import { count, isRecord, jsonObject, list } from '../../connectors/values';
-import { add, counted, record, text, type Json, type Tally } from './convert';
+import { count, isRecord, jsonObject, list, text } from '../../connectors/values';
+import { add, counted, record, variableText, type Json, type Tally } from './convert';
 import type { RisuChats } from './risu-character';
 import { MOVE_UNSUPPORTED_KINDS, type MoveUnsupportedKind, type RisuMessage, type Said } from './types';
 
@@ -42,7 +42,7 @@ export function sillyTavernChat(file: string, title: string): RisuChats | null {
     });
     return { role, ...first!, versions: { later, selected } };
   });
-  const variables = Object.entries(record(record(header.chat_metadata).variables)).map(([name, value]): [string, string] => [name, typeof value === 'string' ? value : JSON.stringify(value)]);
+  const variables = Object.entries(record(record(header.chat_metadata).variables)).map(([name, value]): [string, string] => [name, variableText(value)]);
   const note = text(record(header.chat_metadata).note_prompt);
   return {
     chats: [{ title, note: note.trim() ? note : null, persona: null, greeting: (opening && count(opening.swipe_id)) ?? 0, variables, inlays: [], messages: line, lore: [], loreFolders: [], memory: [], folder: null }],

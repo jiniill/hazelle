@@ -1,7 +1,7 @@
 import { fromBase64, toBase64 } from '../../base64';
 import { isRecord } from '../../connectors/values';
 import { UNSET } from '../script-api';
-import { assetsOf, assetUrl, backdrop, findAsset, isVideo, type BotAsset } from '../assets';
+import { assetUrl, backdrop, findAsset, isVideo, type BotAsset } from '../assets';
 import { seeded } from '../random';
 import { escapeCbs } from './escape';
 import type { CbsContext } from './evaluate';
@@ -162,7 +162,7 @@ export const BACKGROUND = 'background';
 // Resolve assets only for display; prompts keep tags literal. Missing assets draw nothing and enter context.unfound.
 const assetTag = (render: (url: string, asset: BotAsset) => string): Run => ([name], { context, random }) => {
   if (context.stage !== 'display') return null;
-  const asset = findAsset(assetsOf(context.assets), name!, random);
+  const asset = findAsset(context.assets, name!, random);
   if (!asset) context.unfound?.add(name!);
   return asset ? render(assetUrl(asset.id), asset) : '';
 };
@@ -188,7 +188,7 @@ define('source', 1, ([name], { context: { stage, faces } }) => {
   const face = name!.toLowerCase();
   return (face === 'char' ? faces.char : face === 'user' ? faces.user : null) ?? '';
 });
-define('assetlist', 0, (_, { context: { card, assets } }) => (card ? serialize(assetsOf(assets).filter((asset) => asset.module === undefined).map(({ name }) => name)) : ''));
+define('assetlist', 0, (_, { context: { card, assets } }) => (card ? serialize(assets.filter((asset) => asset.module === undefined).map(({ name }) => name)) : ''));
 // The asset prompt it lists from is counted at import and not brought (convert.ts), so it lists nothing.
 define('chardisplayasset', 0, (_, { context: { card } }) => (card ? '[]' : null));
 define('moduleenabled', 0, ([namespace], { context }) => bool(context.modules.some((on) => on === namespace)));

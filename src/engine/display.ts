@@ -30,6 +30,8 @@ export class DisplayPass {
   private readonly boxStyles: string[][];
   // The CBS the display runs outside any message: the backgroundHTML's and a <risu-style>'s.
   private readonly cbs: (text: string) => string;
+  // A <risu-style>'s CSS as its CBS reads it, by that CSS: everything the read takes is fixed for the pass.
+  private readonly styles = new Map<string, string>();
   private ownStop: Runaway | null = null;
 
   constructor(scope: ChatScope, take: ReadonlySet<number>, lua?: LuaDisplay) {
@@ -41,8 +43,7 @@ export class DisplayPass {
     // Read with the variables as the last message left them, as Risu reads it with the chat's current ones, and passed
     // through the display scripts as Risu passes it: bots fill placeholders in their CSS ({border}, <<PCFont>>) there.
     // A <risu-style>'s CSS is read the same way, outside any message, as Risu reads it when it draws one.
-    const context = contexts(scope, 'display', null, '', rendered.unfound);
-    this.cbs = (text) => evaluate(text, context({ seed: BACKGROUND }, rendered.variables));
+    this.cbs = outside(scope, rendered, BACKGROUND);
     // CCv3's background asset, the one named main or else the first, which Risu keeps but never draws; drawn as {{bg}}
     // draws its picture.
     const backgrounds = assetsOf(scope.assets, 'background');
@@ -98,13 +99,17 @@ export class DisplayPass {
   // A <risu-style> whose CBS runs away is left empty, and the display says it stopped.
   private stripStyles(text: string, blocks: string[]): string {
     return stripStyles(text, blocks, (css) => {
+      let read = this.styles.get(css);
+      if (read !== undefined) return read;
       try {
-        return unescapeCbs(this.cbs(css));
+        read = unescapeCbs(this.cbs(css));
       } catch (error) {
         if (!(error instanceof Runaway)) throw error;
         this.ownStop ??= error;
-        return '';
+        read = '';
       }
+      this.styles.set(css, read);
+      return read;
     });
   }
 
@@ -114,13 +119,19 @@ export class DisplayPass {
   }
 }
 
+// CBS read outside any message, which writes no variable.
+function outside(scope: ChatScope, rendered: ReturnType<typeof renderChat>, seed: string) {
+  const context = contexts(scope, 'display', null, '', rendered.unfound)({ seed }, rendered.variables);
+  return (text: string) => evaluate(text, context);
+}
+
 // A card's 시작 전 설문 page (Risu's onboarding html) as Risu reads it before a chat begins: its CBS read with the chat's
 // start, as a background's is outside any message, its styles taken out for the page's own sheet. Drawn as HTML without
 // markdown, as a background is.
 export function onboardingPage(scope: ChatScope, html: string): { html: string; css: string } | RanAway {
   try {
-    const rendered = renderChat('display', scope);
-    const cbs = (text: string) => unescapeCbs(evaluate(text, contexts(scope, 'display', null, '', rendered.unfound)({ seed: 'onboarding' }, rendered.variables)));
+    const read = outside(scope, renderChat('display', scope), 'onboarding');
+    const cbs = (text: string) => unescapeCbs(read(text));
     const blocks: string[] = [];
     const page = stripStyles(cbs(html), blocks, cbs);
     return { html: page, css: blocks.join('\n') };

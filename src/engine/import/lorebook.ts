@@ -1,5 +1,5 @@
-import { isRecord, jsonObject } from '../../connectors/values';
-import { bookLorebook, countTags, finite, record, strings, text, type Json, type Tally } from './convert';
+import { isRecord, jsonObject, text } from '../../connectors/values';
+import { bookLorebook, countTags, finite, record, strings, type Json, type Tally } from './convert';
 import { moduleSource, readModule } from './hazelle';
 import type { LoreEntry } from './types';
 

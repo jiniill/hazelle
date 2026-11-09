@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { toggle } from '../../../connectors/values';
 import type { ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
 import type { Shelf } from '../../../model/library';
@@ -60,7 +61,7 @@ export function LibrarySidebar({ page, collapsed, onCollapse }: Props) {
       query={query}
       onQuery={setQuery}
       openFolders={openFolders}
-      onToggleFolder={(id) => setOpenFolders(openFolders.includes(id) ? openFolders.filter((open) => open !== id) : [...openFolders, id])}
+      onToggleFolder={(id) => setOpenFolders(toggle(openFolders, id))}
     />
   );
   return (

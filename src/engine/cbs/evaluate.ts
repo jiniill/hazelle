@@ -45,6 +45,7 @@ export type CbsContext = {
   clock: { now: number; timeZone: string };
   // The language a translation prompt translates into, as the English name the model reads; null outside one.
   language: string | null;
+  // The ones the asset tags find (engine/assets assetsOf), never a background.
   assets: readonly BotAsset[];
   // The names the display's asset tags found no picture for, added as they are met; null outside a display.
   unfound: Set<string> | null;

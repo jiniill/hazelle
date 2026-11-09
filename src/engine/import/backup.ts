@@ -1,8 +1,8 @@
 import { errorMessage } from '../../error-message';
-import { isRecord, jsonObject, list } from '../../connectors/values';
+import { isRecord, jsonObject, list, text } from '../../connectors/values';
 import { SIGNATURE } from '../assets';
 import { imageType } from './card';
-import { add, counted, record, text, type Json, type Tally } from './convert';
+import { add, counted, record, type Json, type Tally } from './convert';
 import { readModule } from './hazelle';
 import { expansionLimit, gunzip, TooLarge } from './inflate';
 import { readMsgpack } from './msgpack';
