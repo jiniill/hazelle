@@ -117,6 +117,25 @@ const rowOf = (row: Row) => ({
 });
 const unescapeCss = (text: string) => text.replace(/\\([0-9a-f]{1,6})\s?|\\(.)/gi, (_, hex?: string, char?: string) => (hex ? String.fromCodePoint(parseInt(hex, 16)) : char!));
 
+const API_VERSION = '3.0';
+// Why Hazelle has nothing for a Risu name it does not map, said by the error a call throws.
+const ABSENT: Record<string, string> = {
+  addTTSPreprocessor: 'Hazelle has no text-to-speech',
+  addTTSPostprocessor: 'Hazelle has no text-to-speech',
+  registerMCP: 'Hazelle registers no tools for the chat model at run time',
+  unregisterMCP: 'Hazelle registers no tools for the chat model at run time',
+  getFetchLogs: 'Hazelle shows no plugin the app\'s own requests',
+  saveSecretHeader: 'Hazelle has no write-only secret store',
+  loadPlugins: 'a plugin does not reload plugins in Hazelle',
+  createMutationObserver: 'Hazelle has no live page to watch; getRootDocument reads a copy',
+  getColorScheme: 'a plugin is not told the app\'s colors in Hazelle',
+  getTextTheme: 'a plugin is not told the app\'s colors in Hazelle',
+  changeColorScheme: 'the app\'s colors are the user\'s display settings in Hazelle',
+  setColorScheme: 'the app\'s colors are the user\'s display settings in Hazelle',
+  changeTextTheme: 'the app\'s colors are the user\'s display settings in Hazelle',
+  setCustomTextTheme: 'the app\'s colors are the user\'s display settings in Hazelle',
+};
+
 // Run as an async function body for top-level await and private declarations (Risu apiV3/factory.ts).
 // Keep the trailing newline so a closing line comment cannot swallow the brace.
 export const risuScript = (code: string) => `(async () => {${code}\n})()`;
@@ -128,7 +147,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   const tell = (name: string) => { if (told.has(name)) return; told.add(name); frame.missing(name); };
   const refuse = (name: string): never => {
     tell(name);
-    throw new Error(`Risu API '${name}' is not available in Hazelle`);
+    throw new Error(`Risu API '${name}' is not available in Hazelle${Object.hasOwn(ABSENT, name) ? `: ${ABSENT[name]}` : ''}`);
   };
   const buttons = new Map<string, { label: string; run: Callback }>();
   const messageActions = new Map<string, { label: string; run: MessageAction }>();
@@ -223,7 +242,11 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   const setArgument = (key: string, value: string | number) => api.setSetting(key, value);
   const getCharacter = async () => { const current = await opened(); return current && characterOf(current); };
   const mapped: Scope = {
-    getRuntimeInfo: async () => ({ apiVersion: '3.0', platform: 'hazelle', saveMethod: 'account' }),
+    apiVersion: API_VERSION,
+    apiVersionCompatibleWith: [API_VERSION],
+    getRuntimeInfo: async () => ({ apiVersion: API_VERSION, platform: 'hazelle', saveMethod: 'account' }),
+    // Risu's repair of its character order, which here is the app's own and never out of step with the characters.
+    checkCharOrder: async () => {},
     showContainer: async () => frame.show(),
     hideContainer: async () => frame.hide(),
     registerButton: async (arg: { name: string; id?: string }, callback: Callback) => {
@@ -341,7 +364,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       throw new Error(answer.reason === 'busy' ? 'A chat is already in progress' : `Risu API 'sendChat' failed in Hazelle: ${answer.reason}`);
     },
     runLLMModel: async ({ messages, mode, staticModel }: { messages: { role: string; content: unknown }[]; mode: string; staticModel?: string }) => {
-      if (staticModel !== undefined) return { type: 'fail', result: 'staticModel is not available in Hazelle' };
+      // A RisuAI model id, which nothing here may match to a connection by its name.
+      if (staticModel !== undefined) return { type: 'fail', result: 'staticModel names a RisuAI model; Hazelle sends to the chat\'s own models only' };
       if (!messages.every((message) => MODEL_ROLES.has(message.role) && typeof message.content === 'string')) return { type: 'fail', result: 'only system, user and assistant text messages are sent' };
       const chat = await frame.chat();
       if (!chat) return { type: 'fail', result: 'no chat is open' };

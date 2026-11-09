@@ -158,6 +158,14 @@ describe('the Risu adapter', () => {
     expect((Risuai as Record<string, unknown>).then).toBeUndefined();
     expect(fake.missing).toEqual(['readInlay', 'addProvider', 'addRisuReplacer:beforeTranslate']);
     expect(await Risuai.getRuntimeInfo!()).toEqual({ apiVersion: '3.0', platform: 'hazelle', saveMethod: 'account' });
+    expect([Risuai.apiVersion, Risuai.apiVersionCompatibleWith]).toEqual(['3.0', ['3.0']]);
+    await expect(Risuai.checkCharOrder!()).resolves.toBeUndefined();
+  });
+
+  it('says why a name with nothing in Hazelle fails, and why staticModel does', async () => {
+    const { Risuai } = install(fakeApi());
+    await expect(Risuai.addTTSPreprocessor!((() => {}) as never)).rejects.toThrow("Risu API 'addTTSPreprocessor' is not available in Hazelle: Hazelle has no text-to-speech");
+    expect(await Risuai.runLLMModel!({ messages: [], mode: 'model', staticModel: 'gemini-2.5-pro' } as never)).toEqual({ type: 'fail', result: 'staticModel names a RisuAI model; Hazelle sends to the chat\'s own models only' });
   });
 
   it('finds in getRootDocument the chat screen\'s rows, greeting at -1, a body by chatId as CSS.escape writes it or by index, and the bot\'s sheet', async () => {
