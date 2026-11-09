@@ -81,7 +81,7 @@ const FOLDER_COLUMNS: TableColumn[] = [
   { label: '포함된 항목', track: 'fill', keep: true },
 ];
 
-// A module stands in the first place it is on, in the order packs apply (항상, prompt, character, persona); its 쓰는 곳
+// A module stands in the first of its places in the sections' order (항상, prompt, character, persona), which is not pack order; its 쓰는 곳
 // still names every place.
 const SECTIONS: { place: Place; title: string }[] = [
   { place: 'always', title: `${ALWAYS} 켠 모듈` },
