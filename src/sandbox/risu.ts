@@ -148,6 +148,10 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     tell(name);
     throw new Error(`Risu API '${name}' is not available in Hazelle${ABSENT.has(name) ? `: ${ABSENT.get(name)}` : ''}`);
   };
+  // Risu's character holds every chat of it. Hazelle offers a plugin no chat list, and a partial one would let a plugin
+  // that prunes by it (RisuPot's orphan cleanup) delete what it does not see; the open chat is getChatFromIndex's. So
+  // chats reads undefined, told to 점검 when read, and is not enumerable, so no copy or write handed back carries it.
+  const chatless = <T extends object>(value: T) => Object.defineProperty(value, 'chats', { get: () => { tell('character.chats'); return undefined; } });
   const buttons = new Map<string, { label: string; run: Callback }>();
   const messageActions = new Map<string, { label: string; run: MessageAction }>();
   // Where each chatId handed out was, as read: a picture often lands after the user moved to another chat, whose messages
@@ -204,7 +208,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     const card = chat && await chat.card();
     return chat && { chat, card, characterIndex: card ? await characterAt(card.id) : -1, chatIndex: chatNumber(chat.id) };
   };
-  const characterOf = async (current: NonNullable<Awaited<ReturnType<typeof opened>>>) => current.card && character(current.card, await current.chat.lorebook());
+  const characterOf = async (current: NonNullable<Awaited<ReturnType<typeof opened>>>) => current.card && chatless(character(current.card, await current.chat.lorebook()));
   const at = async (characterIndex: number, chatIndex: number) => {
     const current = await opened();
     return current && current.characterIndex === characterIndex && current.chatIndex === chatIndex ? current.chat : null;
@@ -343,7 +347,9 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     }),
     getDatabase: async (keys: string[] | 'all' = 'all') => {
       for (const key of keys === 'all' ? [] : keys) if (!Object.hasOwn(DATABASE, key)) tell(`getDatabase:${key}`);
-      return database(keys === 'all' ? Object.keys(DATABASE) : keys);
+      const built = await database(keys === 'all' ? Object.keys(DATABASE) : keys);
+      (built.characters as object[] | undefined)?.forEach(chatless);
+      return built;
     },
     setDatabase: setDatabase('setDatabase'),
     // Risu's Lite leaves the plugin list as it is, whatever it is handed.
@@ -543,7 +549,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   api.on('reply', async (chat, reply) => {
     if (!listeners.size) return;
     const card = await chat.card();
-    const arg = { char: card && character(card, await chat.lorebook()), chat: await read(chat), characterIndex: card ? await characterAt(card.id) : -1, chatIndex: chatNumber(chat.id), messageIndex: reply.index };
+    const arg = { char: card && chatless(character(card, await chat.lorebook())), chat: await read(chat), characterIndex: card ? await characterAt(card.id) : -1, chatIndex: chatNumber(chat.id), messageIndex: reply.index };
     for (const listener of [...listeners]) await listener(arg);
   });
 
