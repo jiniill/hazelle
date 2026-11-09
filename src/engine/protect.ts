@@ -1,12 +1,13 @@
 // 보호 패턴 (design §6.3): spans of a translation's source the model never sees, each sent as a token and put back
 // in the answer.
 
+import { fenceBlocks } from './fence';
+
 export type ProtectInvalid = { kind: 'protect-invalid'; pattern: string };
 
 // Protect code/comments/styles/scripts/media and bracketed asset tokens (translate-instructions).
 // Never mask whole HTML blocks: status content must remain translatable; pinned boxes are already excluded.
 const BUILT_IN: readonly RegExp[] = [
-  /^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[ \t]*$|(?![\s\S]))/gmu,
   /<!--[\s\S]*?-->/gu,
   /<(style|script)\b[^>]*>[\s\S]*?<\/\1\s*>/giu,
   /<\/?(?:img|audio|video|source|iframe|sprite)\b[^>]*>/giu,
@@ -31,13 +32,23 @@ export function protectRules(sources: readonly string[]): RegExp[] | ProtectInva
   return rules;
 }
 
+function fenceSpans(text: string): { start: number; end: number }[] {
+  const lines = text.split('\n');
+  const starts: number[] = [];
+  let at = 0;
+  for (const line of lines) {
+    starts.push(at);
+    at += line.length + 1;
+  }
+  return fenceBlocks(lines).map(([from, to]) => ({ start: starts[from]!, end: starts[to - 1]! + lines[to - 1]!.length }));
+}
+
 const token = (n: number) => `⟦${n}⟧`;
 
 // Matches resolve by position: the earliest start wins, the longer of two at one start, and a match reaching into a
 // span already taken is dropped. Tokens count from 1 in the order of the text.
 export function protect(text: string, rules: readonly RegExp[]): { masked: string; spans: string[] } {
-  const found = [...BUILT_IN, ...rules]
-    .flatMap((rule) => [...text.matchAll(rule)].filter((match) => match[0] !== '').map((match) => ({ start: match.index, end: match.index + match[0].length })))
+  const found = [...fenceSpans(text), ...[...BUILT_IN, ...rules].flatMap((rule) => [...text.matchAll(rule)].filter((match) => match[0] !== '').map((match) => ({ start: match.index, end: match.index + match[0].length })))]
     .sort((a, b) => a.start - b.start || b.end - a.end);
   const spans: string[] = [];
   let masked = '';

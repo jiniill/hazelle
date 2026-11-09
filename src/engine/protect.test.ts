@@ -10,6 +10,11 @@ describe('protect', () => {
     expect(restore(masked, spans)).toEqual({ text, missing: 0 });
   });
 
+  it('ends a code block where markdown does: at a longer run of its own mark, not at the other mark', () => {
+    const text = '````\n~~~\n```\n`````\nafter';
+    expect(protect(text, []).spans).toEqual(['````\n~~~\n```\n`````']);
+  });
+
   it('keeps a bot’s bracketed asset tokens out, whatever their brackets, and leaves plain brackets alone', () => {
     const text = 'He turned [ 🖼 | Indoor | looking away shyly ] and {{img::cat}} fell silent [[asset_name]] <sprite=happy_blush> [not a token] {ok}';
     const { masked, spans } = protect(text, []);

@@ -1,17 +1,29 @@
 import { isParagraph, paragraphsOf, withoutMarks } from '../../model/illustration';
+import { fenceBlocks } from '../../engine/fence';
 import { ORIGINAL_MARK } from '../ui';
 
 // Never pair by paragraph count alone: translation may merge/split/add/drop.
 // Show each original exactly once under its best alignment, or the preceding translation when omitted.
 // Keep picture marks after the paired blocks, separated by blank lines.
+// A fenced code block stays whole and shows once, as translated: a line put inside it, or a mark after its fence, ends
+// it or opens another.
 export function withOriginal(drawn: string, original: string): string {
   const lines = drawn.split('\n');
-  const paragraph = (line: string) => isParagraph(withoutMarks(line));
-  const under = aligned(lines.filter(paragraph).map((line) => withoutMarks(line).trim()), paragraphsOf(original));
+  const fenced = fencedLines(lines);
+  const paragraph = (line: string, at: number) => !fenced[at] && isParagraph(withoutMarks(line));
+  const originalLines = original.split('\n');
+  const originalFenced = fencedLines(originalLines);
+  const under = aligned(lines.filter(paragraph).map((line) => withoutMarks(line).trim()), paragraphsOf(originalLines.filter((_, at) => !originalFenced[at]).join('\n')));
   const shown = (originals: string[]) => originals.map((each) => `\n${each}${ORIGINAL_MARK}\n`);
   let seen = 0;
-  return [...shown(under[0]!), ...lines.flatMap((line) => (paragraph(line) ? [line, ...shown(under[++seen]!)] : [line]))].join('\n');
+  return [...shown(under[0]!), ...lines.flatMap((line, at) => (paragraph(line, at) ? [line, ...shown(under[++seen]!)] : [line]))].join('\n');
 }
+
+const fencedLines = (lines: string[]): boolean[] => {
+  const inside = lines.map(() => false);
+  for (const [from, to] of fenceBlocks(lines)) inside.fill(true, from, to);
+  return inside;
+};
 
 // Each step takes [translated, original] paragraphs and costs its own beyond how far they are off: a paragraph left
 // alone is rarer than two merged, which are rarer than a pair, and each more paragraph merged costs as one more merge.

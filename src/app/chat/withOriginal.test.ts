@@ -69,3 +69,10 @@ it('pairs a paragraph with the four lines its translation broke it into', () => 
   const pairs = [[0], [], [], [], [1], [2], [3]].map((indices, index) => [translated[index]!, ...indices.map(under)].join('\n'));
   expect(withOriginal(translated.join('\n'), original.join('\n'))).toBe(pairs.join('\n'));
 });
+
+it('keeps a fenced code block whole, shown once, and pairs the prose around it', () => {
+  const block = ['```', 'A', '```'];
+  const translated = [...block, '', '나', '', '~~~js', 'C', '~~~'];
+  const original = [...block, '', 'B', '', '~~~js', 'C', '~~~'];
+  expect(withOriginal(translated.join('\n'), original.join('\n'))).toBe([...block, '', '나', `\nB${O}\n`, '', '~~~js', 'C', '~~~'].join('\n'));
+});
