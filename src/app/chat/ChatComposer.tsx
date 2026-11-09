@@ -13,7 +13,7 @@ import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES } from '../common/words';
 import { STALE } from './memory';
 import type { PromptDoor } from '../common/TaskPrompt';
 import { navigate } from '../shell/router';
-import { keysOf, SHORTCUTS, typing, useShortcut } from '../shortcuts';
+import { SHORTCUTS, typing, useSendKeys, useShortcut } from '../shortcuts';
 import { useDisplay } from '../display';
 import { useRemembering, useSettings, useTools } from '../session';
 import { imports, useImport } from '../common/importing';
@@ -109,7 +109,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
   const indexing = chat.features.memory && chat.id !== null ? remembering.indexing.get(chat.id) : undefined;
   const { enterSends } = useDisplay().display;
   const { cacheNoteHidden } = useSettings();
-  const sendKeys = keysOf('send', enterSends);
+  const sendKeys = useSendKeys();
   const typed = draft.text.trim() !== '' || attachments.draft.length > 0;
   const unseen = chat.sendNotes.unseen + (attachments.sees === false ? attachments.draft.filter(({ kind }) => kind === 'picture').length : 0);
   const { drop } = useImport();

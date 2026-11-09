@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './ChipButton.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   label: string;
@@ -19,7 +20,7 @@ type Props = {
 };
 
 export function ChipButton({ label, title, leading, variant = 'chip', opens = 'down', tone = 'plain', phone = 'full', popup, expanded, ref, onClick }: Props) {
-  const classes = [styles.chip, variant !== 'chip' && styles[variant], tone === 'warn' && styles.warn, phone === 'icon' && styles.phoneIcon].filter(Boolean).join(' ');
+  const classes = classNames(styles.chip, variant !== 'chip' && styles[variant], tone === 'warn' && styles.warn, phone === 'icon' && styles.phoneIcon);
   return (
     <button ref={ref} type="button" className={classes} title={title} aria-label={`${title} · ${label}`} aria-haspopup={popup} aria-expanded={expanded} onClick={onClick}>
       {leading}

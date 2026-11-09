@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { Ref } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './IconButton.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   icon: LucideIcon | string;
@@ -29,7 +30,7 @@ export function IconButton({ icon, label, title = label, onClick, pressed, curre
     <button
       ref={ref}
       type="button"
-      className={[styles.button, size !== 'md' && styles[size], framed && styles.framed].filter(Boolean).join(' ')}
+      className={classNames(styles.button, size !== 'md' && styles[size], framed && styles.framed)}
       aria-label={count > 0 ? `${label}, ${count}개` : label}
       title={title}
       aria-pressed={pressed}

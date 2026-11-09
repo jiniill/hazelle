@@ -220,8 +220,17 @@ export function groundRules(rules: Iterable<object>) {
   }
 }
 
-let base: CSSStyleSheet | null = null;
-export const botSheets = (shadow: ShadowRoot) => shadow.adoptedStyleSheets.filter((sheet) => sheet !== base);
+// Made on first use, not on import, and shared by every root that adopts it.
+function sheetOnce(css: string) {
+  let sheet: CSSStyleSheet | undefined;
+  return () => {
+    if (!sheet) (sheet = new CSSStyleSheet()).replaceSync(css);
+    return sheet;
+  };
+}
+const baseSheet = sheetOnce(shadowCss);
+const backdropSheet = sheetOnce(backdropCss);
+export const botSheets = (shadow: ShadowRoot) => shadow.adoptedStyleSheets.filter((sheet) => sheet !== baseSheet());
 
 const BREAKS = /^(?:P|DIV|LI|TR|BLOCKQUOTE|PRE|H[1-6]|SECTION|ARTICLE|HEADER|FOOTER|UL|OL|TABLE|DETAILS|SUMMARY)$/;
 // Use inert DOMPurify parsing, not raw DOMParser strings (Trusted Types).
@@ -548,22 +557,21 @@ export function formFields(entries: Iterable<[string, FormDataEntryValue]>): Rec
 const isControl = (element: Element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
   element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement;
 
-// A control shows the answer it holds when drawn, as Risu fills it, and is the reader's from then on.
-function fill(shadow: ShadowRoot, values: ReadonlyMap<string, string>) {
-  for (const element of shadow.querySelectorAll(BOUND)) {
-    const value = values.get(element.getAttribute(VAR_NAME)!);
-    if (!isControl(element) || value === undefined) continue;
-    if (element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio')) element.checked = value === (element.getAttribute(VAR_VALUE) ?? (element.type === 'checkbox' ? '1' : element.value));
-    else element.value = value;
-  }
-}
+const isToggle = (element: Element): element is HTMLInputElement => element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio');
 
-// Risu's x-risu-selected, which a page's .selected reads once the prefix is taken off (cleanCss).
-function markBound(shadow: ShadowRoot, values: ReadonlyMap<string, string>) {
+// What choosing a bound toggle or a pressable sets: its own value, else a checkbox's 1, a radio's value or nothing.
+const boundValue = (element: Element) => element.getAttribute(VAR_VALUE) ?? (element instanceof HTMLInputElement ? (element.type === 'checkbox' ? '1' : element.value) : '');
+
+// A control shows the answer it holds when drawn, as Risu fills it, and is the reader's from then on. Any other bound
+// element is Risu's x-risu-selected, which a page's .selected reads once the prefix is taken off (cleanCss).
+function showBound(shadow: ShadowRoot, values: ReadonlyMap<string, string>, drawn: boolean) {
   for (const element of shadow.querySelectorAll(BOUND)) {
-    if (isControl(element)) continue;
     const value = values.get(element.getAttribute(VAR_NAME)!);
-    element.classList.toggle('selected', value !== undefined && value === (element.getAttribute(VAR_VALUE) ?? ''));
+    if (!isControl(element)) element.classList.toggle('selected', value !== undefined && value === boundValue(element));
+    else if (drawn && value !== undefined) {
+      if (isToggle(element)) element.checked = value === boundValue(element);
+      else element.value = value;
+    }
   }
 }
 
@@ -604,12 +612,12 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
     for (const [index, mark] of marks.entries()) placeInlay(fragment, mark, inlayName(index));
     morph(root(), fragment);
     for (const picture of root().querySelectorAll<HTMLImageElement>(`[${PICTURE}] > img`)) markWide(picture);
-    if (bind) fill(root(), bind.values);
+    if (bind) showBound(root(), bind.values, true);
   }, [html, cursor, pictures, veil, veilTaps, whole, placed, math, code]);
 
   // After every draw too, which takes back what the last marked.
   useLayoutEffect(() => {
-    if (bind) markBound(root(), bind.values);
+    if (bind) showBound(root(), bind.values, false);
   });
 
   const bound = bind?.onChange;
@@ -620,17 +628,15 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
       const target = (event.target as Element).closest(BOUND);
       if (!target || isControl(target)) return;
       event.preventDefault();
-      bound(target.getAttribute(VAR_NAME)!, target.getAttribute(VAR_VALUE) ?? '');
+      bound(target.getAttribute(VAR_NAME)!, boundValue(target));
     };
     const change = (event: Event) => {
       const target = event.target as Element;
       if (!isControl(target) || !target.hasAttribute(VAR_NAME)) return;
-      const value = target.getAttribute(VAR_VALUE);
       const name = target.getAttribute(VAR_NAME)!;
-      if (target instanceof HTMLInputElement && target.type === 'checkbox') bound(name, target.checked ? (value ?? '1') : '0');
-      else if (target instanceof HTMLInputElement && target.type === 'radio') {
-        if (target.checked) bound(name, value ?? target.value);
-      } else bound(name, target.value);
+      if (!isToggle(target)) bound(name, target.value);
+      else if (target.checked) bound(name, boundValue(target));
+      else if (target.type === 'checkbox') bound(name, '0');
     };
     shadow.addEventListener('click', press);
     shadow.addEventListener('input', change);
@@ -655,8 +661,7 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   }, [html, cursor, pictures, veil, veilTaps, term, placed, math, code]);
 
   useLayoutEffect(() => {
-    if (!base) (base = new CSSStyleSheet()).replaceSync(shadowCss);
-    root().adoptedStyleSheets = css ? [base, sheetFor(css, veil !== null)] : [base];
+    root().adoptedStyleSheets = css ? [baseSheet(), sheetFor(css, veil !== null)] : [baseSheet()];
   }, [css, veil]);
 
   useEffect(() => {
@@ -803,8 +808,6 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   );
 }
 
-let backdropSheet: CSSStyleSheet | null = null;
-
 // A bot's background (Risu's backgroundHTML), drawn as Risu draws it: sanitized as a message is, without markdown or
 // the story's look, and with none of the bot's CSS, whose rules Risu scopes to its messages. It stands behind the
 // story, where nothing can be pressed: what 이미지 가리기 covers is left out rather than offered.
@@ -813,8 +816,7 @@ export function StoryBackdrop({ html }: { html: string }) {
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const root = host.current!.shadowRoot ?? host.current!.attachShadow({ mode: 'open' });
-    if (!backdropSheet) (backdropSheet = new CSSStyleSheet()).replaceSync(backdropCss);
-    root.adoptedStyleSheets = [backdropSheet];
+    root.adoptedStyleSheets = [backdropSheet()];
     const fragment = sanitize(html, false, veil);
     for (const control of fragment.querySelectorAll(`[${VEILED}], [${COVER}]`)) control.remove();
     morph(root, fragment);

@@ -6,6 +6,7 @@ import { Tag } from '../foundation/Tag';
 import { Menu, type MenuOpener } from '../overlays/Menu';
 import { useDragOrder } from './dragOrder';
 import styles from './Outline.module.css';
+import { classNames } from '../foundation/classNames';
 
 // The rail's sections, each drawn in its own color (tokens.css --color-kind-*).
 export type OutlineKind = 'text' | 'char' | 'lore' | 'chat' | 'note';
@@ -110,7 +111,7 @@ export function Outline({ label, help, start, end, stops, current, onPick, onOpe
   const lastStop = stops.at(-1);
 
   return (
-    <div className={[styles.outline, reorder === 'buttons' && styles.buttons, drill && styles.drill].filter(Boolean).join(' ')} ref={list}>
+    <div className={classNames(styles.outline, reorder === 'buttons' && styles.buttons, drill && styles.drill)} ref={list}>
       <span id={helpId} className={styles.help}>
         {help}
       </span>
@@ -122,7 +123,7 @@ export function Outline({ label, help, start, end, stops, current, onPick, onOpe
         {stops.map((stop, index) => {
           const above = stops[index - 1];
           const turn = above !== undefined && above.kind !== stop.kind;
-          const classes = [styles.stop, turn && styles.turn, above?.cache && styles.cutAbove, index === 0 && styles.first, order.from === index && styles.dragged].filter(Boolean).join(' ');
+          const classes = classNames(styles.stop, turn && styles.turn, above?.cache && styles.cutAbove, index === 0 && styles.first, order.from === index && styles.dragged);
           return (
             <div key={stop.id} role="listitem" className={classes} onDragOver={(event) => order.over(event, index)}>
               <span className={`${styles.segment} ${styles[above?.kind ?? stop.kind]}`} aria-hidden />

@@ -1,5 +1,6 @@
 import { Hint, type Help } from '../overlays/Hint';
 import styles from './Ranking.module.css';
+import { classNames } from '../foundation/classNames';
 
 // rank null is an unranked trailing pool. share scales to the largest row; move.label replaces move.text for speech.
 export type Ranked = {
@@ -19,7 +20,7 @@ export function Ranking({ label, items }: { label: string; items: Ranked[] }) {
   return (
     <ol className={styles.ranking} aria-label={label}>
       {items.map((item) => (
-        <li key={item.key} className={[styles.row, item.rank === null ? '' : PLACES[item.rank]].filter(Boolean).join(' ')}>
+        <li key={item.key} className={classNames(styles.row, item.rank === null ? '' : PLACES[item.rank])}>
           <span className={styles.standing}>
             <span className={styles.place}>{item.rank ?? '–'}</span>
             {item.move && (

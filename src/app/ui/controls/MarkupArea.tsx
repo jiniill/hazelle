@@ -7,6 +7,7 @@ import { markup, type Piece } from './markup';
 import styles from './MarkupArea.module.css';
 import { useBigEdit } from './useBigEdit';
 import { tagWeights } from './weights';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   label: string;
@@ -26,7 +27,7 @@ type Props = {
 
 const LINE = { body: null, heading: styles.heading, rule: styles.rule } as const;
 const MARK = { tag: styles.cbs, separator: styles.cbs, argument: styles.cbs, comment: styles.comment, slot: styles.slot, angle: styles.angle } as const;
-const pieceClass = (piece: Piece) => [LINE[piece.line], piece.mark && MARK[piece.mark]].filter(Boolean).join(' ') || undefined;
+const pieceClass = (piece: Piece) => classNames(LINE[piece.line], piece.mark && MARK[piece.mark]) || undefined;
 
 // Steps of about two braces up, and one or two brackets down.
 function weightClass(weight: number | null): string | undefined {

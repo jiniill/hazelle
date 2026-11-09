@@ -3,6 +3,8 @@ import { Tag } from '../foundation/Tag';
 import { pathOf, type FlowEdge, type FlowKind } from './flow';
 import styles from './FlowMap.module.css';
 import { tokenPx } from '../foundation/tokenPx';
+import { classNames } from '../foundation/classNames';
+import { useNarrowerThan } from '../foundation/useNarrowerThan';
 
 // lead: what the node stands for, over its title (a role over its model); note: what it holds or runs on.
 export type FlowNode = { id: string; title: string; lead?: string; note?: string; badge?: string; tone?: 'plain' | 'warn' | 'off' };
@@ -20,7 +22,6 @@ type Props = {
   legend: Partial<Record<FlowKind, string>>;
 };
 
-const classes = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(' ');
 const LINES: Record<FlowKind, string> = { follow: styles.follow!, own: styles.own!, gap: styles.gap!, off: styles.off! };
 const TONES = { plain: undefined, warn: styles.warn, off: styles.muted };
 
@@ -59,24 +60,11 @@ function useCurves(edges: readonly FlowEdge[], drawn: boolean) {
   return { map, place, curves };
 }
 
-// Below --flow-stack the columns stack and each node names where its lines go instead.
-function useStacked() {
-  const root = useRef<HTMLDivElement>(null);
-  const [stacked, setStacked] = useState(false);
-  useLayoutEffect(() => {
-    const frame = root.current;
-    if (!frame) return;
-    const watch = new ResizeObserver(() => setStacked(frame.clientWidth < tokenPx('--flow-stack')));
-    watch.observe(frame);
-    return () => watch.disconnect();
-  }, []);
-  return { root, stacked };
-}
-
 // Columns of nodes joined left to right by lines, each line's kind its own look; a node pressed lights the path
 // through it and opens its detail, pressed again closes it.
 export function FlowMap({ label, columns, edges, picked, onPick, detail, legend }: Props) {
-  const { root, stacked } = useStacked();
+  // Below --flow-stack the columns stack and each node names where its lines go instead.
+  const [root, stacked] = useNarrowerThan<HTMLDivElement>('--flow-stack');
   const { map, place, curves } = useCurves(edges, !stacked);
   const lit = picked ? pathOf(edges, picked) : null;
   const titles = new Map(columns.flatMap(({ nodes }) => nodes.map(({ id, title, lead }) => [id, lead ?? title])));
@@ -102,7 +90,7 @@ export function FlowMap({ label, columns, edges, picked, onPick, detail, legend 
       key={id}
       ref={place(id)}
       type="button"
-      className={classes(styles.node, TONES[tone], lit && (lit.has(id) ? styles.lit : styles.dim), id === picked && styles.picked)}
+      className={classNames(styles.node, TONES[tone], lit && (lit.has(id) ? styles.lit : styles.dim), id === picked && styles.picked)}
       aria-pressed={id === picked}
       onClick={() => onPick(id === picked ? null : id)}
     >
@@ -118,12 +106,12 @@ export function FlowMap({ label, columns, edges, picked, onPick, detail, legend 
 
   return (
     <div ref={root} className={styles.frame} role="group" aria-label={label}>
-      <div ref={map} className={classes(styles.map, stacked && styles.stacked)}>
+      <div ref={map} className={classNames(styles.map, stacked && styles.stacked)}>
         {!stacked && (
           <svg className={styles.lines} aria-hidden="true">
             {curves.map(({ edge, d, x, y }) => (
               <Fragment key={`${edge.from}>${edge.to}`}>
-                <path className={classes(styles.line, LINES[edge.kind], lit && (lit.has(edge.from) && lit.has(edge.to) ? styles.lit : styles.dim))} d={d} />
+                <path className={classNames(styles.line, LINES[edge.kind], lit && (lit.has(edge.from) && lit.has(edge.to) ? styles.lit : styles.dim))} d={d} />
                 {edge.label && (
                   <text className={styles.label} x={x - tokenPx('--flow-label-inset')} y={y - tokenPx('--flow-label-inset')} textAnchor="end">
                     {edge.label}
@@ -150,7 +138,7 @@ export function FlowMap({ label, columns, edges, picked, onPick, detail, legend 
         {(Object.entries(legend) as [FlowKind, string][]).map(([kind, words]) => (
           <li key={kind}>
             <svg className={styles.swatch} aria-hidden="true">
-              <line className={classes(styles.line, LINES[kind])} x1="0" y1="50%" x2="100%" y2="50%" />
+              <line className={classNames(styles.line, LINES[kind])} x1="0" y1="50%" x2="100%" y2="50%" />
             </svg>
             {words}
           </li>

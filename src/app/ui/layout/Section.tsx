@@ -4,6 +4,7 @@ import { useSeekRow } from '../foundation/seek';
 import { Tag } from '../foundation/Tag';
 import { Hint, type Help } from '../overlays/Hint';
 import styles from './Section.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   title: string;
@@ -28,7 +29,7 @@ export function Section({ title, anchor, level = 2, note, help, tag, action, see
   const Heading = level === 2 ? 'h2' : 'h3';
   const noted = note && <span className={styles.note}>{note}</span>;
   return (
-    <section className={[styles.section, styles[`level${level}`], group && styles.group].filter(Boolean).join(' ')}>
+    <section className={classNames(styles.section, styles[`level${level}`], group && styles.group)}>
       <div ref={head} id={anchor} className={styles.head}>
         <span className={styles.name}>
           <Heading className={styles.title}>{title}</Heading>

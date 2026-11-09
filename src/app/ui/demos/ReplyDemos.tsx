@@ -1,7 +1,8 @@
 import { ChevronDown } from 'lucide-react';
 import { Icon } from '../foundation/Icon';
 import type { Way } from './Demo';
-import { appears, Feed, join, Line, Message, PARAGRAPHS, pressed, top, Unfold, when } from './DemoParts';
+import { appears, Feed, Line, Message, PARAGRAPHS, pressed, top, Unfold, when } from './DemoParts';
+import { classNames } from '../foundation/classNames';
 import styles from './ReplyDemos.module.css';
 
 const ASKED = <Message lines={[90, 55]} mine />;
@@ -23,8 +24,8 @@ export function UsageDemo() {
       <Feed motion={top}>
         {ASKED}
         <Message lines={[94, 62]} typing={0.04}>
-          <span className={join(styles.usage, appears)} style={when(0.32)}>
-            <span className={join(styles.usageLine, pressed)} style={when(PRESSED)}>
+          <span className={classNames(styles.usage, appears)} style={when(0.32)}>
+            <span className={classNames(styles.usageLine, pressed)} style={when(PRESSED)}>
               <span className={styles.lead}>{USAGE.lead}</span>
               {USAGE.parts.join(' · ')}
               <span className={styles.flips}>
@@ -55,7 +56,7 @@ export function ThoughtsDemo() {
       <Feed motion={top}>
         {ASKED}
         <Message lines={[]}>
-          <span className={join(styles.thought, appears)} style={when(0.06)}>
+          <span className={classNames(styles.thought, appears)} style={when(0.06)}>
             <span className={styles.tag}>&lt;Thoughts&gt;</span>
             <Line width={92} typing={0.1} />
             <Line width={70} typing={0.18} />
@@ -83,7 +84,7 @@ export function BotStyleDemo({ way }: { way: Way }) {
       <Feed motion={top}>
         <Message lines={[94, 82]}>
           {way === 0 ? (
-            <span className={join(styles.panel, appears)} style={when(0.24)}>
+            <span className={classNames(styles.panel, appears)} style={when(0.24)}>
               <span className={styles.badge}>STATUS</span>
               {STATUS.map(({ name, value }) => (
                 <span key={name} className={styles.stat}>
@@ -102,7 +103,7 @@ export function BotStyleDemo({ way }: { way: Way }) {
               </span>
             </span>
           ) : (
-            <span className={join(styles.plain, appears)} style={when(0.24)}>
+            <span className={classNames(styles.plain, appears)} style={when(0.24)}>
               <span>STATUS</span>
               {STATUS.map(({ name, value }) => (
                 <span key={name}>

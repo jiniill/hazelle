@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { createContext, useContext, type ReactNode, type Ref } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './Button.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -27,7 +28,7 @@ type Props = {
 
 export function Button({ variant = 'primary', size = 'lg', type = 'button', icon, label, busy = false, disabled = false, popup, expanded, ref, onClick, children }: Props) {
   const slot = useContext(ButtonSlot);
-  const classes = [styles.button, styles[variant], styles[slot ?? size], busy && styles.busy].filter(Boolean).join(' ');
+  const classes = classNames(styles.button, styles[variant], styles[slot ?? size], busy && styles.busy);
   return (
     <button
       ref={ref}

@@ -1,4 +1,5 @@
 import styles from './Facts.module.css';
+import { classNames } from '../foundation/classNames';
 
 // notes: smaller lines under the value.
 export type FactItem = { label: string; value: string; notes?: string[]; tone?: 'muted' | 'warn' };
@@ -7,7 +8,7 @@ export type FactItem = { label: string; value: string; notes?: string[]; tone?: 
 // phone. figures: a row of counts on a page, the value leading.
 export function Facts({ items, variant = 'plain' }: { items: FactItem[]; variant?: 'plain' | 'tiles' | 'row' | 'figures' }) {
   return (
-    <dl className={[styles.facts, variant !== 'plain' && styles[variant]].filter(Boolean).join(' ')}>
+    <dl className={classNames(styles.facts, variant !== 'plain' && styles[variant])}>
       {items.map((item) => (
         <div key={item.label} className={item.tone ? `${styles.item} ${styles[item.tone]}` : styles.item}>
           <dt className={styles.label}>{item.label}</dt>

@@ -2,13 +2,14 @@ import { ArrowDown, ArrowRight, Moon, Sun } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import type { Way } from './Demo';
-import { appears, join, Line, type Lines, PARAGRAPHS, Unfold, when } from './DemoParts';
+import { appears, Line, type Lines, PARAGRAPHS, Unfold, when } from './DemoParts';
+import { classNames } from '../foundation/classNames';
 import styles from './FlowDemos.module.css';
 
 // A piece of a prompt or a lorebook; added ones are the accent.
 function Part({ added = false, motion, at, children }: { added?: boolean; motion?: string | false; at?: number; children: ReactNode }) {
   return (
-    <span className={join(styles.part, added && styles.added, motion)} style={when(at)}>
+    <span className={classNames(styles.part, added && styles.added, motion)} style={when(at)}>
       {children}
     </span>
   );
@@ -34,15 +35,15 @@ export function PromptCacheDemo() {
   return (
     <span className={styles.flow}>
       {REQUESTS.map(({ which, step, spent, at, cached }) => (
-        <span key={which} className={join(styles.request, appears)} style={when(at, { '--spent': `${spent}%` })}>
+        <span key={which} className={classNames(styles.request, appears)} style={when(at, { '--spent': `${spent}%` })}>
           <span className={styles.which}>{which}</span>
           <span className={styles.bar}>
-            <span className={join(styles.prefix, cached && styles.cached)}>앞부분 · {step}</span>
+            <span className={classNames(styles.prefix, cached && styles.cached)}>앞부분 · {step}</span>
             <span className={styles.rest}>새 말</span>
           </span>
           <span className={styles.which}>비용</span>
           <span className={styles.cost}>
-            <span className={join(styles.spent, cached && styles.saved)} />
+            <span className={classNames(styles.spent, cached && styles.saved)} />
           </span>
         </span>
       ))}
@@ -67,18 +68,18 @@ export function ReverseDemo({ way }: { way: Way }) {
       {VERSIONS.map(({ label, text, look }, at) => (
         <span key={label} className={styles.lane}>
           <span className={styles.which}>{label}</span>
-          <span className={join(styles.said, look, at === way && styles.marked)} style={when(PICKED)}>
+          <span className={classNames(styles.said, look, at === way && styles.marked)} style={when(PICKED)}>
             {text}
           </span>
         </span>
       ))}
-      <span className={join(styles.lane, styles.sent, appears)} style={when(SENT)}>
+      <span className={classNames(styles.lane, styles.sent, appears)} style={when(SENT)}>
         <span className={styles.which}>
           <Icon icon={ArrowDown} size="sm" />
         </span>
         <span />
         <span className={styles.which}>모델</span>
-        <span className={join(styles.said, VERSIONS[way].look, styles.marked)}>{VERSIONS[way].text}</span>
+        <span className={classNames(styles.said, VERSIONS[way].look, styles.marked)}>{VERSIONS[way].text}</span>
       </span>
     </span>
   );
@@ -92,9 +93,9 @@ const MATCHED = 0.22;
 export function LorebookDemo() {
   return (
     <span className={styles.lore}>
-      <span className={join(styles.asked, appears)} style={when(0.04)}>
+      <span className={classNames(styles.asked, appears)} style={when(0.04)}>
         오늘 밤{' '}
-        <span className={join(styles.keyword, styles.marked)} style={when(MATCHED)}>
+        <span className={classNames(styles.keyword, styles.marked)} style={when(MATCHED)}>
           {KEYWORD}
         </span>
         에 가 볼까?
@@ -133,10 +134,10 @@ export function MemoryDemo() {
     <span className={styles.memory}>
       <span className={styles.which}>보내는 내용</span>
       <span className={styles.swap}>
-        <span className={join(styles.which, styles.gone)} style={when(SUMMED)}>
+        <span className={classNames(styles.which, styles.gone)} style={when(SUMMED)}>
           오래된 대화
         </span>
-        <span className={join(styles.which, appears)} style={when(SUMMED)}>
+        <span className={classNames(styles.which, appears)} style={when(SUMMED)}>
           기록
         </span>
       </span>
