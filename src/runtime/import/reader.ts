@@ -4,7 +4,7 @@ import { readBackup } from '../../engine/import/backup';
 import { unpackZip } from '../../engine/import/archive';
 import { importCard, importRisum } from '../../engine/import/card';
 import { importPreset, isPresetFile, presetJson, type PresetResult } from '../../engine/import/preset';
-import { risuChatFile } from '../../engine/import/risu-character';
+import { risuChatFile, risuChatHtml } from '../../engine/import/risu-character';
 import { originalParts, risumParts, type Part } from '../../engine/import/original';
 import { fileSource } from '../../engine/import/source';
 import { readChatFile } from '../chat-file';
@@ -15,6 +15,8 @@ import { MESSAGE_BYTES, MESSAGE_PAGE, type AssetRead, type CardData, type Method
 // Its other failures go as details, which the app's DETAIL_FAILURE words.
 const presetReply = (read: PresetResult): Replies['card'] =>
   read.ok ? { ok: true, preset: { prompt: read.prompt, regex: read.regex, unsupported: read.unsupported } } : { ok: false, failure: read.failure.kind === 'unreadable' ? { kind: 'unreadable', detail: read.failure.detail } : { kind: 'unreadable', detail: read.failure.kind } };
+
+const chatsReply = ({ chats, missed }: NonNullable<ReturnType<typeof risuChatFile>>): Replies['card'] => ({ ok: true, risuChats: chats, missed });
 
 // A JSON read by its shape, as a file of chats or a preset; null for any other, which importCard then reads as a card,
 // parsing it again.
@@ -29,7 +31,7 @@ function shapedJson(bytes: Uint8Array<ArrayBuffer>): Replies['card'] | null {
   if (read.ok) return { ok: true, chat: read.file };
   if (read.error === 'other-version') return { ok: false, failure: { kind: 'unreadable', detail: read.error } };
   const risu = risuChatFile(json);
-  if (risu) return { ok: true, risuChats: risu.chats, missed: risu.missed };
+  if (risu) return chatsReply(risu);
   const preset = presetJson(json);
   return preset && presetReply(preset);
 }
@@ -68,6 +70,10 @@ export class ImportReader {
         if (tool) return readToolFile(bytes);
         this.opened = async () => originalParts(bytes);
         if (isPresetFile(request.file.name)) return presetReply(await importPreset(request.file.name, bytes));
+        if (request.file.name.toLowerCase().endsWith('.html')) {
+          const risu = risuChatHtml(new TextDecoder().decode(bytes));
+          return risu ? chatsReply(risu) : { ok: false, failure: { kind: 'unreadable', detail: 'not-risu-chat' } };
+        }
         const shaped = request.file.name.toLowerCase().endsWith('.json') ? shapedJson(bytes) : null;
         if (shaped) return shaped;
         const result = importCard(request.file.name, bytes, request.asModule);

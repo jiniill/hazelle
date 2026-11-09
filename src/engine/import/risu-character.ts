@@ -1,3 +1,4 @@
+import { decodeHTML } from 'entities';
 import { splitThoughts } from '../../connectors/thoughts';
 import { isRecord, list } from '../../connectors/values';
 import { inlayIds } from '../assets';
@@ -90,12 +91,35 @@ export function risuCharacter(char: Json, chats: (Json | null)[], folder: string
   };
 }
 
+type RisuChats = { chats: RisuChat[]; missed: MoveUnsupported[] };
+
 // Risu's export of one chat (risuChat) or of a character's every chat (risuAllChats); null for any other JSON. Risu
 // reads data as a list or as one chat at either version, and so does this.
-export function risuChatFile(json: unknown): { chats: RisuChat[]; missed: MoveUnsupported[] } | null {
+export function risuChatFile(json: unknown): RisuChats | null {
   if (!isRecord(json) || (json.type !== 'risuChat' && json.type !== 'risuAllChats') || (json.ver !== 1 && json.ver !== 2)) return null;
+  return risuChats(Array.isArray(json.data) ? json.data : [json.data]);
+}
+
+// The first .idat element, as Risu's querySelector finds it: Risu writes it with < and > as entities, so it holds no tag.
+const IDAT = /<div class="idat">([^<]*)<\/div>/;
+
+// Risu's "Export as HTML": the chat as JSON in a hidden .idat element, which Risu reads back as the element's text, every
+// entity decoded as a browser decodes it. null for a page that holds no chat.
+export function risuChatHtml(html: string): RisuChats | null {
+  const found = IDAT.exec(html);
+  if (!found) return null;
+  let chat: unknown;
+  try {
+    chat = JSON.parse(decodeHTML(found[1]!));
+  } catch {
+    return null;
+  }
+  return isRecord(chat) && Array.isArray(chat.message) ? risuChats([chat]) : null;
+}
+
+function risuChats(data: unknown[]): RisuChats {
   const missed: Tally<MoveUnsupportedKind> = new Map();
-  const chats = (Array.isArray(json.data) ? json.data : [json.data]).filter(isRecord).map((chat) => risuChat(chat, text(chat.note), -1, missed, []));
+  const chats = data.filter(isRecord).map((chat) => risuChat(chat, text(chat.note), -1, missed, []));
   // A file of chats brings none of their pictures.
   add(missed, 'inlay', chats.reduce((sum, chat) => sum + chat.inlays.length, 0));
   return { chats, missed: counted(MOVE_UNSUPPORTED_KINDS, missed) };

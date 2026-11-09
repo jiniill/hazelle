@@ -144,6 +144,16 @@ describe('ImportReader', () => {
     expect(await read({ spec: 'chara_card_v3', spec_version: '3.0', data: { name: 'Card' } })).toMatchObject({ ok: true, card: { card: { name: 'Card' } } });
   });
 
+  it("reads Risu's HTML export of a chat from its hidden JSON, entities decoded as Risu's browser decodes them, and refuses another page", async () => {
+    const reader = new ImportReader();
+    const read = (html: string) => ask(reader, { kind: 'card', file: new File([html], 'Mira_chat.html'), asModule: false });
+    const chat = { name: '등대', note: '', localLore: [], message: [{ role: 'char', data: '<b>Tom &amp; Jerry</b>&nbsp;끝', time: 2 }] };
+    const idat = JSON.stringify(chat).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const page = `<html><body><div class="container"><div class="chat"><h2>Mira</h2><div>안녕</div></div></div><div class="idat">${idat}</div></body></html>`;
+    expect(await read(page)).toMatchObject({ ok: true, risuChats: [{ title: '등대', messages: [{ role: 'assistant', text: '<b>Tom & Jerry</b> 끝' }] }] });
+    expect(await read('<html><body>log</body></html>')).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'not-risu-chat' } });
+  });
+
   it('transfers fresh buffers so repeated asset and picture reads cannot detach the CHARX archive', async () => {
     const second = new Uint8Array([...PNG, 3]);
     const archive = zipSync({
