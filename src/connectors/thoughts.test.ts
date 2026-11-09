@@ -8,7 +8,7 @@ function read(answer: string, finished = true) {
     const parts = { text: '', reasoning: '' };
     const scanner = thoughts(
       (phase, chunk) => (parts[phase] += chunk),
-      (chars) => (parts.reasoning = parts.reasoning.slice(0, parts.reasoning.length - chars)),
+      (phase, chars) => (parts[phase] = parts[phase].slice(0, parts[phase].length - chars)),
     );
     for (let at = 0; at < answer.length; at += size) scanner.push('text', answer.slice(at, at + size));
     scanner.end(finished);
@@ -27,8 +27,10 @@ describe('thoughts', () => {
     expect(read('<THOUGHTS kind="a">하나</Thoughts><antthinking>둘</ANTTHINKING>◁think▷셋◁/think▷답')).toEqual({ text: '답', reasoning: '하나\n\n둘\n\n셋' });
   });
 
-  it('keeps a closer with no block open, and a near-miss opener, as text', () => {
-    expect(read('a</think> <thinker> <think')).toEqual({ text: 'a</think> <thinker> <think', reasoning: '' });
+  it('reads the text before a closer no block opened as reasoning, and a later stray closer and a near-miss opener as text', () => {
+    expect(read('\n추론\n</THINK>\n\n답 <thinker> <think')).toEqual({ text: '답 <thinker> <think', reasoning: '추론' });
+    expect(read('a◁/think▷b')).toEqual({ text: 'b', reasoning: 'a' });
+    expect(read('<think>a</think>b</think>')).toEqual({ text: 'b</think>', reasoning: 'a' });
   });
 
   it('gives a block left open back as text when the answer finished, and keeps it as reasoning when cut', () => {

@@ -15,7 +15,8 @@ const tools = [{ name: 'run_test', description: 'Runs the file.', parameters: { 
 async function decode(text: string, media = 'text/event-stream') {
   const parts: [Phase, string][] = [];
   const outcome = await decodeStream(route, model, new Response(text, { headers: { 'content-type': media } }), new AbortController().signal, (phase, chunk) => parts.push([phase, chunk]));
-  return { outcome, reasoning: parts.filter(([phase]) => phase === 'reasoning').map(([, chunk]) => chunk).join('') };
+  const joined = (of: Phase) => parts.filter(([phase]) => phase === of).map(([, chunk]) => chunk).join('');
+  return { outcome, text: joined('text'), reasoning: joined('reasoning') };
 }
 
 const sse = (...events: unknown[]) => `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`;
@@ -55,5 +56,34 @@ describe('chat-completions tools', () => {
     const { outcome } = await decode(JSON.stringify(reply), 'application/json');
     expect(outcome).toMatchObject({ state: 'done', finishReason: 'tool_calls', calls: [{ id: 'call_0', name: 'run_test', arguments: '{}' }] });
     expect(outcome.calls[0]).not.toHaveProperty('echo');
+  });
+
+  it('echoes OpenRouter’s reasoning details on the call, each streamed block joined until it is signed', async () => {
+    const { outcome } = await decode(sse(
+      delta({ reasoning: '생각', reasoning_details: [{ type: 'reasoning.text', text: '생각', format: 'anthropic-claude-v1', index: 0 }] }),
+      delta({ reasoning: '했다', reasoning_details: [{ type: 'reasoning.text', text: '했다', signature: 'sig', index: 0 }] }),
+      delta({ reasoning_details: [{ type: 'reasoning.encrypted', data: 'x' }, { type: 'reasoning.encrypted', data: 'y' }] }),
+      delta({ tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'run_test', arguments: '{}' } }] }, 'tool_calls'),
+    ));
+    const details = [{ type: 'reasoning.text', text: '생각했다', format: 'anthropic-claude-v1', index: 0, signature: 'sig' }, { type: 'reasoning.encrypted', data: 'x' }, { type: 'reasoning.encrypted', data: 'y' }];
+    expect(outcome.calls[0]!.echo).toEqual({ reasoning: '생각했다', reasoning_details: details });
+    const body = JSON.parse(prepareChat(route, { model, messages: [{ role: 'user', content: '돌려 줘' }, { role: 'assistant', content: '', calls: outcome.calls }], settings: {}, tools }).request.body!);
+    expect(body.messages[1]).toMatchObject({ reasoning: '생각했다', reasoning_details: details });
+  });
+});
+
+describe('chat-completions replies', () => {
+  it('reads Mistral’s content chunks, streamed and whole, with thinking as reasoning', async () => {
+    const thinking = { type: 'thinking', thinking: [{ type: 'text', text: '짧게' }] };
+    expect(await decode(sse(delta({ content: [thinking] }), delta({ content: [{ ...thinking, thinking: [{ type: 'text', text: ' 답하자' }] }, { type: 'text', text: '안' }] }), delta({ content: '녕' }, 'stop')))).toMatchObject({ text: '안녕', reasoning: '짧게 답하자' });
+    const whole = { id: 'r1', choices: [{ index: 0, message: { role: 'assistant', content: [thinking, { type: 'text', text: '안녕' }] }, finish_reason: 'stop' }] };
+    expect(await decode(JSON.stringify(whole), 'application/json')).toMatchObject({ outcome: { state: 'done' }, text: '안녕', reasoning: '짧게' });
+  });
+
+  it('fails a reply that is only a refusal with its sentence, streamed and whole', async () => {
+    const failed = { state: 'failed', error: { kind: 'provider', detail: '도울 수 없어요' } };
+    expect((await decode(sse(delta({ content: null, refusal: '도울 수 ' }), delta({ refusal: '없어요' }, 'stop')))).outcome).toMatchObject(failed);
+    const whole = { id: 'r1', choices: [{ index: 0, message: { role: 'assistant', content: null, refusal: '도울 수 없어요' }, finish_reason: 'stop' }] };
+    expect((await decode(JSON.stringify(whole), 'application/json')).outcome).toMatchObject(failed);
   });
 });

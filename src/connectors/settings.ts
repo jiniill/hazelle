@@ -1,4 +1,5 @@
 import { replyLimit, type Model } from './types';
+import { count, isRecord } from './values';
 
 export const NUMBERS = ['maxOutput', 'temperature', 'topP', 'topK', 'frequencyPenalty', 'presencePenalty', 'repetitionPenalty', 'minP', 'seed'] as const;
 export type NumberSetting = (typeof NUMBERS)[number];
@@ -105,6 +106,21 @@ export function effortLevels(values: unknown): { levels: string[]; none: boolean
   if (!Array.isArray(values)) return null;
   const named = values.filter((value): value is string => typeof value === 'string' && value !== '');
   return { levels: named.filter((level) => level !== 'none'), none: named.includes('none') };
+}
+
+// reasoning_options as models.dev and Friendli list them: each control the model takes, so one not listed is refused.
+// An empty list states none of them, which is unknown.
+export function reasoningOptions(options: unknown): ReasoningTakes | null {
+  if (!Array.isArray(options) || options.length === 0) return null;
+  const option = (type: string) => options.find((raw): raw is Record<string, unknown> => isRecord(raw) && raw.type === type);
+  const effort = effortLevels(option('effort')?.values);
+  const budget = option('budget_tokens');
+  return {
+    off: option('toggle') !== undefined || effort?.none === true,
+    levels: effort?.levels ?? [],
+    budget: budget ? { min: count(budget.min), max: count(budget.max) } : false,
+    adaptive: null,
+  };
 }
 
 // Intersect protocol capacity with catalog support; an undescribed model control stays unknown.

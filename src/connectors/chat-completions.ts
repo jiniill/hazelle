@@ -72,7 +72,7 @@ function wireMessages(messages: ChatMessage[], cache: Cache | undefined, mark: C
     const built = wired(message, cache, mark);
     if (message.calls?.length) {
       const echo = message.calls[0]!.echo;
-      return [{ ...built, ...(message.content === '' && { content: null }), tool_calls: message.calls.map(wireCall), ...(isRecord(echo) && Object.fromEntries(REASONING.flatMap((field) => (typeof echo[field] === 'string' ? [[field, echo[field]]] : [])))) }];
+      return [{ ...built, ...(message.content === '' && { content: null }), tool_calls: message.calls.map(wireCall), ...(isRecord(echo) && Object.fromEntries(ECHOED.flatMap((field) => (echo[field] === undefined ? [] : [[field, echo[field]]])))) }];
     }
     if (!message.results?.length) return [built];
     const results = message.results.map(({ id, text }) => ({ role: 'tool', tool_call_id: id, content: text }));
@@ -92,22 +92,67 @@ function effort(reasoning: Reasoning | undefined) {
 // reasoning_content (DeepSeek and others), reasoning (OpenRouter) and reasoning_text (Copilot's Claude and Gemini)
 // are the spellings of reasoning text in a delta or a message; a provider sends one of them.
 const REASONING = ['reasoning_content', 'reasoning', 'reasoning_text'];
+// OpenRouter's reasoning_details: the signed and encrypted blocks a model's tool loop needs back unchanged, beside the
+// text in reasoning (openrouter.ai/docs/use-cases/reasoning-tokens).
+const DETAILS = 'reasoning_details';
+const ECHOED = [...REASONING, DETAILS];
 
 // The reply's reasoning so far, under the field it came in. DeepSeek refuses a tool loop whose assistant turn lost its
 // reasoning_content, so the first call echoes it back. It is shared by reference: reasoning read after that call
 // lands in its echo too.
-const reasoned = new WeakMap<StreamFacts, Record<string, string>>();
+const reasoned = new WeakMap<StreamFacts, Record<string, unknown>>();
 
-function reason(part: Record<string, unknown>, facts: StreamFacts, append: (phase: Phase, text: string) => void) {
+function keptOf(facts: StreamFacts) {
+  const kept = reasoned.get(facts) ?? {};
+  reasoned.set(facts, kept);
+  const first = facts.calls[0];
+  if (first) first.echo ??= kept;
+  return kept;
+}
+
+// A stream sends a block's text in pieces under one type, so a piece joins the unsigned text or summary block before
+// it; a signature closes its block, and an encrypted block is never joined.
+function detail(details: Record<string, unknown>[], piece: Record<string, unknown>) {
+  const last = details.at(-1);
+  const field = piece.type === 'reasoning.text' ? 'text' : piece.type === 'reasoning.summary' ? 'summary' : null;
+  if (!last || field === null || last.type !== piece.type || last.signature) return void details.push({ ...piece });
+  if (typeof piece[field] === 'string') last[field] = (typeof last[field] === 'string' ? last[field] : '') + piece[field];
+  if (piece.signature) last.signature = piece.signature;
+}
+
+// whole: a reply's message, whose details are its blocks as they stand.
+function reason(part: Record<string, unknown>, facts: StreamFacts, append: (phase: Phase, text: string) => void, whole = false) {
+  const pieces = list(part[DETAILS]).filter(isRecord);
+  if (pieces.length) {
+    const kept = keptOf(facts);
+    const details = (kept[DETAILS] ??= []) as Record<string, unknown>[];
+    if (whole) details.push(...pieces);
+    else for (const piece of pieces) detail(details, piece);
+  }
   const field = REASONING.find((name) => typeof part[name] === 'string' && part[name]);
   if (field === undefined) return;
   const text = part[field] as string;
   append('reasoning', text);
-  const kept = reasoned.get(facts) ?? {};
-  kept[field] = (kept[field] ?? '') + text;
-  reasoned.set(facts, kept);
-  const first = facts.calls[0];
-  if (first) first.echo ??= kept;
+  const kept = keptOf(facts);
+  kept[field] = (typeof kept[field] === 'string' ? kept[field] : '') + text;
+}
+
+// Mistral's content may be a list of chunks: text, and thinking whose own text is a list of text chunks
+// (docs.mistral.ai/capabilities/reasoning; mistral-common ThinkChunk names it a string).
+function content(value: unknown, append: (phase: Phase, text: string) => void) {
+  if (typeof value === 'string') return append('text', value);
+  for (const chunk of list(value)) {
+    if (!isRecord(chunk)) continue;
+    if (chunk.type === 'text' && typeof chunk.text === 'string') append('text', chunk.text);
+    if (chunk.type !== 'thinking') continue;
+    if (typeof chunk.thinking === 'string') append('reasoning', chunk.thinking);
+    for (const part of list(chunk.thinking)) if (isRecord(part) && part.type === 'text' && typeof part.text === 'string') append('reasoning', part.text);
+  }
+}
+
+// OpenAI's refusal: the model's sentence in place of the reply, in a field of its own.
+function refuse(part: Record<string, unknown>, facts: StreamFacts) {
+  if (typeof part.refusal === 'string' && part.refusal) facts.refusal = (facts.refusal ?? '') + part.refusal;
 }
 
 // A streamed part names its call by index; one without an index is read as a whole call of its own.
@@ -208,7 +253,8 @@ export const chatCompletions: Codec = {
       if (!isRecord(choice)) continue;
       const delta = isRecord(choice.delta) ? choice.delta : {};
       reason(delta, facts, append);
-      if (typeof delta.content === 'string') append('text', delta.content);
+      refuse(delta, facts);
+      content(delta.content, append);
       for (const part of list(delta.tool_calls)) readCall(part, facts);
       if (typeof choice.finish_reason === 'string') facts.finishReason = choice.finish_reason;
     }
@@ -230,8 +276,9 @@ export const chatCompletions: Codec = {
     const [choice] = payload.choices;
     if (isRecord(choice)) {
       const message = isRecord(choice.message) ? choice.message : {};
-      reason(message, facts, append);
-      if (typeof message.content === 'string') append('text', message.content);
+      reason(message, facts, append, true);
+      refuse(message, facts);
+      content(message.content, append);
       list(message.tool_calls).forEach((part, position) => readCall(part, facts, position));
       if (typeof choice.finish_reason === 'string') facts.finishReason = choice.finish_reason;
     }

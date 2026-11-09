@@ -1,4 +1,5 @@
 import type { ModelsDevList, Rates } from './models-dev';
+import { reasoningOptions } from './settings';
 import type { Cost, DiscountRates, Model, Usage } from './types';
 
 // A price the provider's own model list states, in USD per million tokens; none without both its input and output rate.
@@ -14,7 +15,7 @@ export function joinModelsDev(models: Model[], list: ModelsDevList | null): Mode
   return models.map((model) => {
     const listed = exact.get(model.id) ?? folded.get(model.id.toLowerCase());
     if (!listed) return model;
-    return { ...model, input: model.input ?? listed.input, output: model.output ?? listed.output, tools: model.tools ?? listed.tools, ...(!model.price && listed.price && { price: listed.price }) };
+    return { ...model, input: model.input ?? listed.input, output: model.output ?? listed.output, tools: model.tools ?? listed.tools, takes: { ...model.takes, reasoning: model.takes.reasoning ?? reasoningOptions(listed.reasoning) }, ...(!model.price && listed.price && { price: listed.price }) };
   });
 }
 

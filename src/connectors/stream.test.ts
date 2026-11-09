@@ -59,6 +59,11 @@ describe('chat completions stream', () => {
     expect(await decode(openRouter, body(stream), undefined, undefined, { keep: true })).toMatchObject({ text: '<think>짧게</think>\n안녕.', reasoning: '' });
   });
 
+  it('fails a reply whose only text was reasoning before a lone closer, as one that said nothing', async () => {
+    const stream = sse(chunk({ content: '생각만 ' }), chunk({ content: '했어</think>\n' }), chunk({}, 'stop'), '[DONE]');
+    expect(await decode(openRouter, body(stream), undefined, undefined, { takeBack: () => {} })).toMatchObject({ outcome: { state: 'failed', error: null }, reasoning: '생각만 했어' });
+  });
+
   it('reads reasoning, text, usage and OpenRouter cost, and skips keep-alive comments', async () => {
     const stream =
       ': OPENROUTER PROCESSING\n\n' +

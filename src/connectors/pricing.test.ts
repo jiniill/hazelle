@@ -29,7 +29,7 @@ describe('priceCost', () => {
 });
 
 describe('joinModelsDev', () => {
-  const listed = (price: Rates | null): ListedModel => ({ price, input: ['text', 'image'], output: ['text'], tools: true });
+  const listed = (price: Rates | null): ListedModel => ({ price, input: ['text', 'image'], output: ['text'], tools: true, reasoning: [{ type: 'toggle' }, { type: 'budget_tokens', min: 0, max: 24576 }] });
 
   it('keeps a price the model list states, matches exactly and then ignoring case, and never by likeness', () => {
     const stated = { ...bareModel('deepseek-ai/DeepSeek-V4'), price: statedPrice(1, 2, null, null) };
@@ -39,13 +39,14 @@ describe('joinModelsDev', () => {
     expect(joinModelsDev([bareModel('gpt-5.4')], { fetchedAt: null, models: {} })[0]!.price).toBeUndefined();
   });
 
-  it('fills inputs, outputs and tool support the model list leaves unknown, keeps those it states, and leaves a model models.dev does not know unknown', () => {
+  it('fills inputs, outputs, tool support and reasoning controls the model list leaves unknown, keeps those it states, and leaves a model models.dev does not know unknown', () => {
     const list = { fetchedAt: 7, models: { 'gemini-2.5-flash': listed(null), 'gpt-5.4': listed(opus) } };
-    const joined = joinModelsDev([bareModel('gemini-2.5-flash'), { ...bareModel('gpt-5.4'), input: ['text'], tools: false }, bareModel('gemini-9')], list);
-    expect(joined.map(({ input, output, price, tools }) => ({ input, output, price, tools }))).toEqual([
-      { input: ['text', 'image'], output: ['text'], price: undefined, tools: true },
-      { input: ['text'], output: ['text'], price: { ...opus }, tools: false },
-      { input: null, output: null, price: undefined, tools: null },
+    const effort = { off: true, levels: ['low'], budget: null, adaptive: null };
+    const joined = joinModelsDev([bareModel('gemini-2.5-flash'), { ...bareModel('gpt-5.4'), input: ['text'], tools: false, takes: { settings: null, reasoning: effort } }, bareModel('gemini-9')], list);
+    expect(joined.map(({ input, output, price, tools, takes }) => ({ input, output, price, tools, reasoning: takes.reasoning }))).toEqual([
+      { input: ['text', 'image'], output: ['text'], price: undefined, tools: true, reasoning: { off: true, levels: [], budget: { min: 0, max: 24576 }, adaptive: null } },
+      { input: ['text'], output: ['text'], price: { ...opus }, tools: false, reasoning: effort },
+      { input: null, output: null, price: undefined, tools: null, reasoning: null },
     ]);
   });
 });

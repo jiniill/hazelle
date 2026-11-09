@@ -1,21 +1,13 @@
 import { bareModel } from './chat-completions';
-import { effortLevels, type ReasoningTakes } from './settings';
+import { reasoningOptions } from './settings';
 import type { ConnectionType, Model } from './types';
 import { count, flag, isRecord, modalities, modelEntries } from './values';
 
 // Friendli turns reasoning off with chat_template_kwargs.enable_thinking, not the reasoning_effort "none" this format
-// sends, so no model here offers off.
-function reasoningTakes(options: unknown): ReasoningTakes | null {
-  if (!Array.isArray(options)) return null;
-  const option = (type: string) => options.find((raw): raw is Record<string, unknown> => isRecord(raw) && raw.type === type);
-  const budget = option('budget_tokens');
-  return {
-    off: false,
-    levels: effortLevels(option('effort')?.values)?.levels ?? [],
-    // Its min is -1, meaning no limit, which is no lower bound.
-    budget: budget ? { min: null, max: count(budget.max) } : false,
-    adaptive: null,
-  };
+// sends, so no model here offers off. Its budget's min is -1, meaning no limit, which reads as no lower bound.
+function reasoningTakes(options: unknown) {
+  const takes = reasoningOptions(options);
+  return takes && { ...takes, off: false };
 }
 
 export const friendli: ConnectionType = {

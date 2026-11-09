@@ -389,6 +389,11 @@ describe('chat requests', () => {
     expect(JSON.parse(prepareChat(anthropic, { model: shared, messages, settings: { maxOutput: 4000 } }).request.body!)).toMatchObject({ max_tokens: 4000 });
   });
 
+  it('sends Mistral a system message after the conversation began as a user one, and a leading one in place', () => {
+    const body = JSON.parse(prepareChat(connection('mistral'), { model: model(), messages: [...messages, { role: 'assistant', content: '안녕!' }, { role: 'system', content: '기억' }, { role: 'user', content: '응' }], settings: {} }).request.body!);
+    expect(body.messages).toEqual([messages[0], messages[1], { role: 'assistant', content: '안녕!' }, { role: 'user', content: 'System:기억' }, { role: 'user', content: '응' }]);
+  });
+
   it('asks both formats for the whole reply when streaming is off, with no stream options', () => {
     const generic = connection('generic', { baseUrl: 'https://api.example.com/v1', protocol: 'chat-completions' });
     const anthropic = connection('anthropic');

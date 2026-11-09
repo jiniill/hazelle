@@ -11,7 +11,7 @@ beforeAll(async () => {
 });
 afterAll(() => t.dispose());
 
-it('stores the listed providers models.dev prices, inputs and outputs and tool support, pricing only what it can price whole, on the first ask', async () => {
+it('stores the listed providers models.dev prices, inputs and outputs, tool support and reasoning controls, pricing only what it can price whole, on the first ask', async () => {
   const { cookie } = await t.signUp('jin');
   const read = async (list: string) => (await (await t.get(`models-dev?provider=${list}`, cookie)).json()) as ModelsDevList;
 
@@ -25,15 +25,16 @@ it('stores the listed providers models.dev prices, inputs and outputs and tool s
       input: ['text', 'image', 'file'],
       output: ['text'],
       tools: true,
+      reasoning: [{ type: 'effort', values: ['none', 'low', 'medium', 'high', 'xhigh'] }],
     },
-    'claude-opus-4.7': { price: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25, tiers: [] }, input: ['text', 'image', 'file'], output: ['text'], tools: true },
+    'claude-opus-4.7': { price: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25, tiers: [] }, input: ['text', 'image', 'file'], output: ['text'], tools: true, reasoning: [{ type: 'effort', values: ['low', 'medium', 'high', 'xhigh', 'max'] }] },
   });
   // A tier by anything but context size, and a model without a cost, cost 알 수 없음; a word the app has no name for is dropped.
-  expect((await read('deepinfra')).models['by-time']).toEqual({ price: null, input: ['text', 'file'], output: ['text'], tools: true });
+  expect((await read('deepinfra')).models['by-time']).toEqual({ price: null, input: ['text', 'file'], output: ['text'], tools: true, reasoning: [{ type: 'toggle' }, { type: 'effort', values: ['low', 'medium', 'high', 'xhigh'] }] });
   expect((await read('groq')).models).toEqual({
-    'whisper-large-v3': { price: null, input: ['audio'], output: ['text'], tools: false },
-    'priced-only': { price: { input: 1, output: 2, cacheRead: null, cacheWrite: null, tiers: [] }, input: null, output: null, tools: null },
-    'embed-text': { price: { input: 0.15, output: 0, cacheRead: null, cacheWrite: null, tiers: [] }, input: ['text'], output: ['embedding'], tools: null },
+    'whisper-large-v3': { price: null, input: ['audio'], output: ['text'], tools: false, reasoning: null },
+    'priced-only': { price: { input: 1, output: 2, cacheRead: null, cacheWrite: null, tiers: [] }, input: null, output: null, tools: null, reasoning: null },
+    'embed-text': { price: { input: 0.15, output: 0, cacheRead: null, cacheWrite: null, tiers: [] }, input: ['text'], output: ['embedding'], tools: null, reasoning: null },
   });
   expect((await t.get('models-dev?provider=poe', cookie)).status).toBe(400);
   expect(await t.env.db.prepare("SELECT name FROM models_dev WHERE list = 'github-copilot' AND model = 'gpt-5.4'").first('name')).toBe('GPT-5.4');

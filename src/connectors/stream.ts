@@ -28,7 +28,7 @@ export type Outcome = {
 
 // keep applies only to character replies, never translations (user, 2026-10-04).
 // Only Talk consumes takeBack; other tasks still receive the returned content as text.
-export type InlineThoughts = { keep?: boolean; takeBack?: (chars: number) => void };
+export type InlineThoughts = { keep?: boolean; takeBack?: (phase: Phase, chars: number) => void };
 
 // Streaming and whole JSON replies must share facts/end rules; batched means a discount-batch result.
 export async function decodeStream({ type, codec }: Route, model: Model, response: Response, signal: AbortSignal, onText: (phase: Phase, text: string) => void, inline: InlineThoughts = {}, batched = false): Promise<Outcome> {
@@ -47,7 +47,12 @@ export async function decodeStream({ type, codec }: Route, model: Model, respons
       if (media !== 'application/json') throw new Error('repeated');
     }
   };
-  const scanner = inline.keep ? null : thoughts(told, inline.takeBack ?? (() => {}));
+  // The scanner takes text back only whole: all the reply said before a lone closer.
+  const takeBack = (phase: Phase, chars: number) => {
+    if (phase === 'text') said = false;
+    inline.takeBack?.(phase, chars);
+  };
+  const scanner = inline.keep ? null : thoughts(told, takeBack);
   const append = (phase: Phase, text: string) => text && (scanner ? scanner.push(phase, text) : told(phase, text));
 
   const unit = costUnit(type);
