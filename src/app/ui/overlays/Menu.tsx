@@ -7,7 +7,7 @@ import { ButtonSlot } from '../controls/Button';
 import { Icon } from '../foundation/Icon';
 import { faceStyle, type FontId } from '../foundation/fonts';
 import { hasFinePointer } from '../foundation/media';
-import { keepOnScreen, menuEdge, room, useLayer } from './layers';
+import { keepOnScreen, menuEdge, openingField, room, useLayer } from './layers';
 import styles from './Menu.module.css';
 
 export type MenuOpener = { ref: RefObject<HTMLButtonElement | null>; popup: 'menu' | 'dialog'; expanded: boolean; onClick: () => void };
@@ -53,9 +53,6 @@ type Props = {
   children: ReactNode;
 };
 
-// A search would raise a phone's keyboard over the list it filters; a field that is only typed in still takes the focus.
-export const openingStop = (fine: boolean) => `${fine ? 'input' : 'input:not([type="search"])'}, textarea, [role^="menuitem"], button`;
-
 const CloseMenu = createContext(() => {});
 
 // Only one menu branch stays open: preserve ancestors, close unrelated menus.
@@ -82,7 +79,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   useEffect(() => () => menu.set(CLOSED), [menu]);
 
   useEffect(() => {
-    if (open) panel.current?.querySelector<HTMLElement>(openingStop(hasFinePointer()))?.focus();
+    if (open) panel.current?.querySelector<HTMLElement>(`${openingField(hasFinePointer())}, [role^="menuitem"], button`)?.focus();
   }, [open]);
 
   const holders = useContext(Holders);

@@ -1,5 +1,5 @@
 import { Globe, Lock } from 'lucide-react';
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { CATEGORIES, MAX_POST_LENGTH, MAX_TITLE_LENGTH, type Category, type Post } from '../../contracts/board';
 import { addPostPicture, editPost, readPost, writePost } from '../../runtime/board';
 import { stateFacts } from '../../runtime/diagnostic-state';
@@ -148,12 +148,7 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
       return null;
     });
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    // Enter in 제목, a one-line field, submits the form by itself; it moves on to 내용 instead, so only 올리기 posts.
-    const fields = [...event.currentTarget.elements];
-    const at = fields.findIndex((field) => field === document.activeElement && (field as HTMLInputElement).type === 'text');
-    if (at >= 0) return (fields[at + 1] as HTMLElement).focus();
+  function post() {
     if (!ready || category === null) return;
     const picked = category;
     gate(() => void send(picked));
@@ -163,9 +158,9 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
     <Screen
       width="form"
       top={<NavBar title={editing ? '글 수정' : BOARD.write} {...backBar(back)} />}
-      onSubmit={submit}
       actions={
-        <Button type="submit" busy={busy} disabled={!ready}>
+        // Not a form: Enter in 제목 would post it.
+        <Button busy={busy} disabled={!ready} onClick={post}>
           {editing ? '저장' : '올리기'}
         </Button>
       }

@@ -41,9 +41,11 @@ type Props = {
   aside?: (text: string) => CodeAside;
   // A text area's files pasted with no text.
   onFiles?: (files: File[]) => void;
+  // Takes the caret as it appears, as CommentBox's does.
+  focus?: boolean;
 };
 
-export function TextField({ label, showLabel = true, kind = 'text', value, onChange, placeholder, hint, count, help, error, lines, readOnly, action, expand, language, aside, onFiles }: Props) {
+export function TextField({ label, showLabel = true, kind = 'text', value, onChange, placeholder, hint, count, help, error, lines, readOnly, action, expand, language, aside, onFiles, focus = false }: Props) {
   const id = useId();
   const noteId = `${id}-note`;
   const note = error ?? hint;
@@ -59,7 +61,7 @@ export function TextField({ label, showLabel = true, kind = 'text', value, onCha
   const big = useBigEdit(expand, label, (copy) =>
     language ? <CodeField label={label} value={value} onChange={onChange} language={language} prose={kind !== 'key'} area={copy.area} caret={copy.caret} asides={aside && [aside(value)]} /> : <textarea ref={copy.area} className={`${look} ${styles.big}`} aria-label={label} data-autofocus {...typed} {...shared} />,
   count);
-  const own = { id, 'aria-label': showLabel ? undefined : label, 'aria-describedby': note ? noteId : undefined, ...shared };
+  const own = { id, 'aria-label': showLabel ? undefined : label, 'aria-describedby': note ? noteId : undefined, autoFocus: focus, ...shared };
   return (
     <>
       <div className={styles.field} {...big.wrap}>

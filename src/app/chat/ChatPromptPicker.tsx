@@ -1,5 +1,5 @@
 import { FileText } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Stored } from '../../model/kinds';
 import { chatPrompt, isDefaultPrompt, ofSort, type PromptChoice } from '../../runtime/prompts';
 import { useSearch } from '../common/useSearch';
@@ -10,7 +10,7 @@ import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse'
 import { defaultMark, DELETED_PROMPT, follows, promptName } from '../common/words';
 import { useCaptured, useSettings, usePrompts } from '../session';
 import { useToast } from '../toast';
-import { Button, ChipButton, Dialog, Empty, hasFinePointer, Icon, List, ListItem, Row } from '../ui';
+import { Button, ChipButton, Dialog, Empty, Icon, List, ListItem, Row } from '../ui';
 import type { ChatSettingsActions } from './useChatSettings';
 
 const NO_PROMPT = '유틸리티 봇처럼';
@@ -44,9 +44,6 @@ export function PromptDialog({ prompt, plain, out, onChoose, onKeepOut, onEdit, 
   const settings = useSettings();
   const toast = useToast();
   const field = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (hasFinePointer()) field.current?.focus();
-  }, []);
   const fallback = useCaptured((store) => chatPrompt(store, {}), []);
   const grouped = useMemo(() => groupPrompts(prompts), [prompts]);
   const own = !out && prompt.own && prompt.kind === 'prompt' ? prompt.prompt.id : null;

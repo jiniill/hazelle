@@ -120,15 +120,9 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
 
 // onSkip: a first visit's way into the app without a key; the key is never the only way on.
 function KeyForm({ typed, onType, refused, privacy, onSkip, onEnter }: { typed: Typed; onType: (typed: Typed) => void; refused: string | null; privacy: string; onSkip?: () => void; onEnter: (type: ConnectionType, secret: string) => void }) {
-  const form = useRef<HTMLFormElement>(null);
   const secret = typed.key.trim();
   const known = detect(secret);
   const type = known?.kind === 'key' ? known.type : typeOf(typed.picked);
-
-  // Back from a refused key, which is what to fix.
-  useEffect(() => {
-    if (refused) form.current?.querySelector('input')?.focus();
-  }, [refused]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -136,10 +130,10 @@ function KeyForm({ typed, onType, refused, privacy, onSkip, onEnter }: { typed: 
   }
 
   return (
-    <form ref={form} onSubmit={submit}>
+    <form onSubmit={submit}>
       <Stack>
         <ChoiceGroup label="제공자" options={OFFERED.map(({ id, name }) => ({ value: id, label: name }))} value={OFFERED.some(({ id }) => id === type.id) ? type.id : null} empty={type.label} onChange={(picked) => onType({ ...typed, picked })} />
-        <TextField label={`${type.label} API 키`} kind="key" value={typed.key} onChange={(key) => onType({ ...typed, key })} placeholder={type.keyForm?.placeholder} help={privacy} />
+        <TextField label={`${type.label} API 키`} kind="key" value={typed.key} onChange={(key) => onType({ ...typed, key })} placeholder={type.keyForm?.placeholder} help={privacy} focus={refused !== null} />
         {refused && <Callout tone="warn" alert>{refused}</Callout>}
         <Row kind="actions">
           <Button type="submit" disabled={!secret}>모델 선택</Button>
