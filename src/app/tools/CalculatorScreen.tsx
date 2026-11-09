@@ -8,11 +8,13 @@ import { money } from '../common/money';
 import { cost } from '../common/receipt';
 import { count, readWhole } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
+import { useSession } from '../session';
 import { useSearch } from '../common/useSearch';
 import { ACTS } from '../common/acts';
 import { TOOL_PAGES } from '../common/words';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
+import { toolDesk } from './desk';
 import { Button, Disclosure, Empty, Facts, List, ListItem, NavBar, NumberInput, Panel, Screen, SettingGroup, SettingRow } from '../ui';
 
 // Prices differ by provider, so one model is a row per list, never merged by name as 헤이젤 나우 does.
@@ -40,19 +42,20 @@ const HELPS: Record<Count, string> = {
   cacheWrite: '입력 중 캐시에 쓴 토큰이에요.',
 };
 
+const useDesk = toolDesk<{ picked: Row | null; texts: Record<Count, string> }>({ picked: null, texts: BLANK });
+
 // An empty field counts none.
 const tokensOf = (text: string) => (text.trim() === '' ? 0 : readWhole(text));
 
 export function CalculatorScreen({ back }: { back: Back | null }) {
   const table = useLoaded(readPriceTable);
   const rows = useMemo(() => (table.data ? rowsOf(table.data) : []), [table.data]);
-  const [picked, setPicked] = useState<Row | null>(null);
-  const [texts, setTexts] = useState(BLANK);
+  const [{ picked, texts }, change] = useDesk(useSession());
   const query = useState('');
   const search = useSearch(rows, '모델 검색', (row) => [row.name, row.model, row.provider], { onEnter: pick, query });
 
   function pick(row: Row) {
-    setPicked(row);
+    change({ picked: row });
     query[1]('');
   }
 
@@ -63,7 +66,7 @@ export function CalculatorScreen({ back }: { back: Back | null }) {
       label={LABELS[key]}
       help={HELPS[key]}
       error={counts[key] === null ? readWhole.error : undefined}
-      control={<NumberInput label={LABELS[key]} value={texts[key]} unit="토큰" placeholder="0" invalid={counts[key] === null} onChange={(text) => setTexts({ ...texts, [key]: text })} />}
+      control={<NumberInput label={LABELS[key]} value={texts[key]} unit="토큰" placeholder="0" invalid={counts[key] === null} onChange={(text) => change({ texts: { ...texts, [key]: text } })} />}
     />
   );
 

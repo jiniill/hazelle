@@ -19,13 +19,16 @@ export function useOpenRows() {
   return { isOpen: (id: string) => opened.has(id), setOpen, ...useRowEdits(setOpen) };
 }
 
-// setOpen: how a row opens and closes.
+// setOpen: how a row opens and closes. added: the row the add just made, whose first field takes the focus, which
+// brings it into view.
 export function useRowEdits(setOpen: (id: string, on: boolean) => void) {
   const toast = useToast();
+  const [added, setAdded] = useState<string | null>(null);
 
   // The row opens as added, before the store holds it.
   async function add(noun: string, task: (id: string) => Promise<ApiResult<unknown>>) {
     const id = crypto.randomUUID();
+    setAdded(id);
     setOpen(id, true);
     const saved = await task(id);
     if (!saved.ok) toast.failed(saved, `${withParticle(noun, '을/를')} 추가하지 못했어요.`);
@@ -41,7 +44,7 @@ export function useRowEdits(setOpen: (id: string, on: boolean) => void) {
     toast.undoable(`'${name}' ${withParticle(noun, '을/를')} 삭제했어요.`, () => restore(done.data));
   }
 
-  return { add, remove };
+  return { added, add, remove };
 }
 
 export type RowEdits = ReturnType<typeof useRowEdits>;

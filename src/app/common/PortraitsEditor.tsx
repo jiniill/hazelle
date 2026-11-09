@@ -172,7 +172,7 @@ function PortraitFields({ owner, index, portrait, onRemove }: { owner: string; i
           addLabel={addOf('의상')}
           removed={(at) => `${at + 1}번째 의상을 삭제했어요.`}
         >
-          {({ value: outfit, index: at, set, remove }) => (
+          {({ value: outfit, index: at, added, set, remove }) => (
             <Section
               title={at === 0 ? '의상 (기본)' : '의상'}
               level={3}
@@ -180,7 +180,7 @@ function PortraitFields({ owner, index, portrait, onRemove }: { owner: string; i
               action={remove}
             >
               <Stack gap="related">
-                <TextField label="의상 이름" showLabel={false} placeholder="의상 이름" value={outfit.name} onChange={(next) => set({ ...outfit, name: next })} />
+                <TextField label="의상 이름" showLabel={false} placeholder="의상 이름" focus={added} value={outfit.name} onChange={(next) => set({ ...outfit, name: next })} />
                 {tags(`의상 ${outfit.name}`, outfit.tags, (next) => set({ ...outfit, tags: next }))}
               </Stack>
             </Section>

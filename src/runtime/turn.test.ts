@@ -165,7 +165,11 @@ describe('a new chat', () => {
       await server.hold(session.store, chat);
       const greetings = projectGreetings(luna.greetings, [crypto.randomUUID(), crypto.randomUUID()], 0)!;
       const saved = startChat(store, chat, { title: null, character: character.ok ? character.data.id : null, models: {} }, greetings);
-      expect(await takeTurn(session, chat, { kind: 'send', text: '안녕' }, { greeting: greetings.choices[0]!.id, saved })).toBeNull();
+      // Said only once the message is written, so the composer's copy of it is let go no sooner.
+      const said: string[][] = [];
+      const onSaid = () => said.push(store.children('entry', chat).flatMap(({ value }) => (value.type === 'message' && value.text === '안녕' ? [value.text] : [])));
+      expect(await takeTurn(session, chat, { kind: 'send', text: '안녕' }, { greeting: greetings.choices[0]!.id, saved }, {}, onSaid)).toBeNull();
+      expect(said).toEqual([['안녕']]);
       expect(await saved).toBeNull();
       expect(store.children('entry', chat).map(({ value }) => value.type).sort()).toEqual(['message', 'message', 'message', 'select', 'version']);
     }));

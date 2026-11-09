@@ -19,8 +19,10 @@ it('outlives the session it was handed to, which a restore ends', async () => {
 
 it('puts a failed send back before what was typed since', () => {
   const drafts = new Drafts();
+  drafts.set('chat', '보낸 말');
+  const taken = drafts.take('chat');
   drafts.set('chat', '그동안 쓴 말');
-  drafts.putBack('chat', '보낸 말');
+  drafts.putBack('chat', taken);
   expect(drafts.text('chat')).toBe('보낸 말\n그동안 쓴 말');
 });
 

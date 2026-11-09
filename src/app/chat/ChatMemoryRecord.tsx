@@ -129,9 +129,9 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
             addLabel="대사 추가"
             removed={(index) => `${index + 1}번째 대사를 삭제했어요.`}
           >
-            {({ value, name, set, remove }) => (
+            {({ value, name, added, set, remove }) => (
               <Stack gap="related">
-                <TextField label={`${name} · 화자`} value={value.speaker} onChange={(speaker) => set({ ...value, speaker })} action={remove} />
+                <TextField label={`${name} · 화자`} focus={added} value={value.speaker} onChange={(speaker) => set({ ...value, speaker })} action={remove} />
                 <TextField label={name} lines={2} value={value.text} onChange={(said) => set({ ...value, text: said })} />
               </Stack>
             )}

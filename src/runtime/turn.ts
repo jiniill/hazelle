@@ -132,7 +132,8 @@ function shownReceived({ store }: Pick<Session, 'store'>, chat: string, received
 // Follow its saved greeting selection while the turn remains visible on the new chat.
 export type Starting = { greeting: string | null; saved: Promise<ApiFailure | null> };
 
-export function takeTurn(session: Session, chat: string, target: Target, start: Starting | null = null, skip: Skip = {}): Promise<TurnFailure | null> {
+// onSaid: the user's message is saved (Talk.run).
+export function takeTurn(session: Session, chat: string, target: Target, start: Starting | null = null, skip: Skip = {}, onSaid?: () => void): Promise<TurnFailure | null> {
   const ids = { said: crypto.randomUUID(), reply: crypto.randomUUID() };
   const again = (answer: boolean) => gatheredTurn(session, chat, answer ? { kind: 'answer' } : target, ids);
   if (start) {
@@ -144,7 +145,7 @@ export function takeTurn(session: Session, chat: string, target: Target, start: 
       // The chat was just saved and a new chat's target names no message, so it is there.
       const turn = (await gatheredTurn(session, chat, target, ids))!;
       return 'kind' in turn ? turn : prepare(session, chat, turn, signal, again, preparing, skip);
-    }));
+    }, onSaid));
   }
   const lease = session.store.retainChat(chat);
   const send = (): Promise<TurnFailure | null> => {
@@ -158,7 +159,7 @@ export function takeTurn(session: Session, chat: string, target: Target, start: 
       const turn = await gatheredTurn(session, chat, target, ids);
       if (turn === null) return { kind: 'gone' };
       return 'kind' in turn ? turn : prepare(session, chat, turn, signal, again, preparing, skip);
-    }));
+    }, onSaid));
   };
   const sending = lease.ready.then((failure): Promise<TurnFailure | null> => failure ? Promise.resolve({ kind: 'unpulled', failure }) : send());
   return sending.finally(lease.release);

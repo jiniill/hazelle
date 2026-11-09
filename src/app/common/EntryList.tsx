@@ -1,9 +1,10 @@
-import { Fragment, useRef, type ReactNode } from 'react';
+import { Fragment, useRef, useState, type ReactNode } from 'react';
 import { useOwnUndo } from '../toast';
 import { Button, IconButton } from '../ui';
 import { ACTS } from './acts';
 
-type Entry<T> = { value: T; index: number; name: string; set: (value: T) => void; remove: ReactNode };
+// added: the entry the add button just made, whose first field takes the focus, which brings it into view.
+type Entry<T> = { value: T; index: number; name: string; added: boolean; set: (value: T) => void; remove: ReactNode };
 
 type Props<T> = {
   entries: T[];
@@ -28,7 +29,14 @@ export function EntryList<T>({ entries, onChange, name, blank, addLabel, removed
     onChange(entries.filter((_, at) => at !== index));
     undoable(removed(index), () => latest.current.onChange(latest.current.entries.toSpliced(index, 0, gone)));
   }
-  const add = { label: addLabel, onClick: () => onChange([...entries, blank]) };
+  const [added, setAdded] = useState<number | null>(null);
+  const add = {
+    label: addLabel,
+    onClick: () => {
+      setAdded(entries.length);
+      onChange([...entries, blank]);
+    },
+  };
   return (
     <>
       {head?.(add)}
@@ -38,6 +46,7 @@ export function EntryList<T>({ entries, onChange, name, blank, addLabel, removed
             value,
             index,
             name: name(index),
+            added: index === added,
             set: (next) => onChange(entries.map((old, at) => (at === index ? next : old))),
             remove: <IconButton icon={ACTS.remove.icon} label={`${name(index)} ${ACTS.remove.label}`} size="sm" onClick={() => remove(index)} />,
           })}
