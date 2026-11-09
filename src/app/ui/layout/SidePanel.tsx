@@ -42,8 +42,10 @@ export function SidePanel({ title, subtitle, nav, page, actions, expandable = fa
     },
     takesBack: true,
   });
-  // Covering, its head's back is a step of its own: the browser's back leaves the open part, not the panel.
-  useLayer(covers && nav?.onBack !== undefined, { outside: () => false, close: () => nav?.onBack?.(), takesBack: true, step: nav?.title });
+  // Covering, its head's back is a step of its own: the browser's back leaves the open part, not the panel. Named by
+  // where it goes, which differs between one level and the next where a title may not (a character's part and a script
+  // in it share the character's name).
+  useLayer(covers && nav?.onBack !== undefined, { outside: () => false, close: () => nav?.onBack?.(), takesBack: true, step: nav?.backLabel });
   // Covering, it holds the focus from itself; beside, the page keeps it.
   const trap = useFocusTrap(panel, covers);
   useLayoutEffect(() => {

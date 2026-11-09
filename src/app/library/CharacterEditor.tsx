@@ -23,12 +23,12 @@ import { AssetsEditor } from '../common/AssetsEditor';
 import { DefaultVariables } from '../common/DefaultVariables';
 import { EntryList } from '../common/EntryList';
 import { LoreEditor } from '../common/LoreEditor';
-import { scriptHolds } from '../common/pack';
+import { howMany, scriptHolds } from '../common/pack';
 import { featureHolds, FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
 import { ModuleSwitches } from '../common/ModuleSwitches';
 import { PackToggles } from '../common/PackToggles';
-import { ScriptsEditor } from '../common/ScriptsEditor';
+import { ScriptsEditor, scriptList } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import type { Frame } from '../common/frame';
 import { readPicturePercent } from '../common/picturePercent';
@@ -47,7 +47,7 @@ import { navigate } from '../shell/router';
 import { characterPage, HOME, type CharacterPart } from '../shell/routes';
 import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
-import { Button, Callout, ChoiceGroup, Disclosure, List, ListItem, MenuItem, NavGroup, NavRow, NumberInput, Portrait, Row, Section, SettingGroup, SettingRow, Story, Switch, Tag, Text, TextField, useWide, type Help } from '../ui';
+import { Button, Callout, ChoiceGroup, Disclosure, List, ListItem, MenuItem, NavGroup, NavRow, NumberInput, Portrait, Row, Section, SettingGroup, SettingRow, Story, Switch, Tag, Text, TextField, useWide, type EditorLayout, type Help } from '../ui';
 import { useCardTranslation } from './useCardTranslation';
 import { useCharacterActions, useJustMade } from './useCharacterActions';
 import { useNoteDraft } from './useNoteDraft';
@@ -85,7 +85,7 @@ const READINGS: { value: Reading; label: string }[] = [
 type Props = {
   shelf: CharacterShelf<ChatSummary>;
   // The caller decides, since a side panel is narrow on any screen.
-  layout: 'split' | 'drill';
+  layout: EditorLayout;
   part: CharacterPart | null;
   onPart: (part: CharacterPart | null) => void;
   // The script open in 스크립트.
@@ -377,15 +377,15 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     ),
   };
   const holds: Partial<Record<CharacterPart, string>> = {
-    greetings: `${text.greetings.length}개`,
-    lore: `${lore.length}개`,
-    modules: `${modules.filter((module) => always.includes(module.id) || ownModules.includes(module.id)).length}개 켜짐`,
+    greetings: howMany(text.greetings.length),
+    lore: howMany(lore.length),
+    modules: howMany(modules.filter((module) => always.includes(module.id) || ownModules.includes(module.id)).length, '개 켜짐'),
     features: featureHolds(store, { kind: 'character' }, character.features),
     scripts: scriptHolds(card) || undefined,
-    toggles: `${card.toggles.filter(isToggle).length}개`,
-    variables: `${text.variables.length}개`,
-    assets: `${assets.length}개`,
-    illustration: likeness ? `${likeness.value.portraits.length}명` : undefined,
+    toggles: howMany(card.toggles.filter(isToggle).length),
+    variables: howMany(text.variables.length),
+    assets: howMany(assets.length),
+    illustration: howMany(likeness?.value.portraits.length ?? 0, '명'),
   };
   // A part with nothing to show is left out: 모듈 lists the account's modules, and there may be none.
   const groups = GROUPS.map((group) => group.filter((each) => each !== 'modules' || modules.length > 0));
@@ -414,6 +414,8 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     ));
     return frame({ head: { title, subtitle, status: state, menu }, side, body: <>{pages[open]}{shareDialog}</>, open });
   }
+  // A script open stands alone, and the head's back leaves it for the list of scripts.
+  if (part === 'scripts' && scriptList(card, script)) return frame({ head: { title, onBack: () => onScript(null), backLabel: SCRIPTS.list, status: state }, body: pages.scripts, open: script! });
   if (part && partBack) {
     const toList = (
       <Row kind="actions">

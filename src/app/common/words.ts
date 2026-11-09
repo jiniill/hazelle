@@ -233,7 +233,7 @@ export const DEFAULT_VARIABLES = '기본 변수';
 // A card's onboarding: questions a new chat asks, whose answers it starts from.
 export const ONBOARDING = '시작 전 설문';
 
-export const SCRIPTS = { part: '스크립트', regex: '정규식', triggers: '트리거' };
+export const SCRIPTS = { part: '스크립트', list: '스크립트 목록', regex: '정규식', triggers: '트리거' };
 export const STAGES: Record<RegexScript['stage'], string> = { input: '입력', output: '응답', process: '요청', display: '화면', translation: '번역' };
 // One without a name, by its place in its list: the same in the editor and in 상태창 지정.
 export const scriptName = (name: string, list: 'regex' | 'triggers', place: number) => name.trim() || `${SCRIPTS[list]} ${place + 1}`;

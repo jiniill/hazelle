@@ -55,50 +55,8 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
   return (
     <Stack gap="section">
       <Stack gap="related">
-        <Text variant="note">
-          {where}
-        </Text>
-        <TitleField
-          ref={nameRef}
-          label="블록 이름"
-          value={block.name ?? ''}
-          placeholder={placeholder}
-          blank={block.kind === 'slot' ? '비워 두면 자동 입력 이름으로 표시돼요.' : '비워 두면 첫 줄이 이름으로 표시돼요.'}
-          onChange={(name) => onChange({ ...block, name: name || null })}
-        />
-        <Row kind="toolbar">
-          {'role' in block && <ChoiceGroup<Role> label="전송 역할" showLabel layout="fit" options={ROLES} value={block.role} onChange={(role) => onRole(block, role)} />}
-          {block.kind === 'text' && block.mark && (
-            <>
-              <Tag tone="accent">{MARKS[block.mark].label}</Tag>
-              <Hint label={MARKS[block.mark].label}>{`캐릭터 카드에 ${withParticle(`'${MARKS[block.mark].card}'`, '이/가')} 있으면 그 내용으로 대체되고, 이 텍스트는 카드의 {{original}} 자리에 들어가요.`}</Hint>
-            </>
-          )}
-          {block.kind === 'text' && (
-            <Menu
-              label="조건 삽입"
-              place="below-end"
-              trigger={(opener) => (
-                <Button variant="ghost" size="sm" icon={GitBranch} {...opener}>
-                  조건 삽입
-                </Button>
-              )}
-            >
-              <MenuHeading>토글 선택</MenuHeading>
-              {toggles.length === 0 && <Empty variant="menu">토글이 없어요.</Empty>}
-              {toggles.map((toggle) => (
-                <MenuItem
-                  key={toggle.key}
-                  label={toggle.label}
-                  sub={`${toggle.key} · ${toggle.kind === 'check' ? '켬 · 끔' : toggle.kind === 'choice' ? toggle.options.join(' · ') : '입력한 값'}`}
-                  onClick={() => onCondition(toggle)}
-                />
-              ))}
-              <Divider variant="menu" />
-              <MenuItem icon={ACTS.create.icon} label={newOf('토글')} onClick={onNewToggle} />
-            </Menu>
-          )}
-          {block.kind === 'text' && <CommandMenu sort={sort} onInsert={onInsert} />}
+        <Row kind="spread">
+          <Text variant="note">{where}</Text>
           <MoreMenu of={`'${title}'`}>
             {block.kind === 'text' && sort === 'conversation' && (
               <>
@@ -115,6 +73,53 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
             <MenuItem icon={X} tone="warn" label="빼기" onClick={onRemove} />
           </MoreMenu>
         </Row>
+        <TitleField
+          ref={nameRef}
+          label="블록 이름"
+          value={block.name ?? ''}
+          placeholder={placeholder}
+          blank={block.kind === 'slot' ? '비워 두면 자동 입력 이름으로 표시돼요.' : '비워 두면 첫 줄이 이름으로 표시돼요.'}
+          onChange={(name) => onChange({ ...block, name: name || null })}
+        />
+        {'role' in block && (
+          <Row kind="toolbar">
+            <ChoiceGroup<Role> label="전송 역할" showLabel layout="fit" options={ROLES} value={block.role} onChange={(role) => onRole(block, role)} />
+            {block.kind === 'text' && block.mark && (
+              <>
+                <Tag tone="accent">{MARKS[block.mark].label}</Tag>
+                <Hint label={MARKS[block.mark].label}>{`캐릭터 카드에 ${withParticle(`'${MARKS[block.mark].card}'`, '이/가')} 있으면 그 내용으로 대체되고, 이 텍스트는 카드의 {{original}} 자리에 들어가요.`}</Hint>
+              </>
+            )}
+            {/* One group, so a narrow pane wraps the two inserts together. */}
+            {block.kind === 'text' && (
+              <Row kind="actions">
+                <Menu
+                  label="조건 삽입"
+                  place="below-end"
+                  trigger={(opener) => (
+                    <Button variant="ghost" size="sm" icon={GitBranch} {...opener}>
+                      조건 삽입
+                    </Button>
+                  )}
+                >
+                  <MenuHeading>토글 선택</MenuHeading>
+                  {toggles.length === 0 && <Empty variant="menu">토글이 없어요.</Empty>}
+                  {toggles.map((toggle) => (
+                    <MenuItem
+                      key={toggle.key}
+                      label={toggle.label}
+                      sub={`${toggle.key} · ${toggle.kind === 'check' ? '켬 · 끔' : toggle.kind === 'choice' ? toggle.options.join(' · ') : '입력한 값'}`}
+                      onClick={() => onCondition(toggle)}
+                    />
+                  ))}
+                  <Divider variant="menu" />
+                  <MenuItem icon={ACTS.create.icon} label={newOf('토글')} onClick={onNewToggle} />
+                </Menu>
+                <CommandMenu sort={sort} onInsert={onInsert} />
+              </Row>
+            )}
+          </Row>
+        )}
       </Stack>
       {block.kind === 'slot' && <Text>{SLOT[block.slot].line}</Text>}
       {block.kind === 'text' && (
