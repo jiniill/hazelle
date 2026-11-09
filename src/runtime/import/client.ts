@@ -82,7 +82,7 @@ export class ImportWorker {
   }
 
   private assets(reads: AssetRead[]): Imported['assets'] {
-    return reads.map(({ name, handle }) => ({ name, read: () => this.ask({ kind: 'asset', handle }) }));
+    return reads.map(({ handle, ...asset }) => ({ ...asset, read: () => this.ask({ kind: 'asset', handle }) }));
   }
 
   private module<M extends ModuleData>({ assets, ...module }: M): Omit<M, 'assets'> & Pick<ImportedModule, 'assets'> {

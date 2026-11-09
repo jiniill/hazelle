@@ -148,7 +148,7 @@ export class ImportReader {
   }
 
   private reads(assets: Imported['assets']): AssetRead[] {
-    return assets.map(({ name, read }) => ({ name, handle: this.read(read) }));
+    return assets.map(({ read, ...asset }) => ({ ...asset, handle: this.read(read) }));
   }
 
   private read(read: Imported['assets'][number]['read']): number {

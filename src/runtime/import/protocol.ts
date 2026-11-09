@@ -4,7 +4,7 @@ import type { ImportedTool } from '../../engine/import/tool';
 import type { BackupCatalog, BackupFailure, BundledModule, Imported, ImportedModule, ImportedPersona, ImportFailure, MoveUnsupported, Picture, RisuCharacter, RisuChat, RisuMessage, RisuPersona, RisuPreset } from '../../engine/import/types';
 import type { ChatFile } from '../chat-file';
 
-export type AssetRead = { name: string; handle: number };
+export type AssetRead = Omit<Imported['assets'][number], 'read'> & { handle: number };
 export type PartRead = { path: string; handle: number };
 export type ModuleData = Omit<ImportedModule, 'assets'> & { assets: AssetRead[] };
 export type CardData = Omit<Imported, 'avatar' | 'assets' | 'bundled'> & { avatar: number | null; assets: AssetRead[]; bundled: (ModuleData & Pick<BundledModule, 'likeness'>)[] };
