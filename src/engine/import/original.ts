@@ -46,8 +46,10 @@ export async function joinOriginal(parts: ReadonlyMap<string, Uint8Array<ArrayBu
   const whole = parts.get(WHOLE);
   if (whole) return whole;
   const card = parts.get(PNG_CARD);
-  if (card) {
-    let png = withText(parts.get(PNG_IMAGE)!, 'ccv3', text.decode(card));
+  // Without its image, which the server may have refused to keep, it is no PNG and reads as nothing.
+  const image = parts.get(PNG_IMAGE);
+  if (card && image) {
+    let png = withText(image, 'ccv3', text.decode(card));
     for (const [path, bytes] of under(parts, PNG_ASSET)) png = withText(png, `chara-ext-asset_:${path}`, toBase64(bytes));
     return png;
   }
@@ -61,6 +63,20 @@ export async function joinOriginal(parts: ReadonlyMap<string, Uint8Array<ArrayBu
   for (const [path, bytes] of under(parts, ZIP)) await zip.add(path, bytes);
   await zip.end();
   return concat(written);
+}
+
+// What a parser reads of a file to learn what it holds; png-image is the PNG's own chunks. Every other piece is a
+// picture or a sound, read only when it is stored (engine/import/card resolver), so a read again for what a newer
+// parser adds joins a stand-in for each (standIn) and fetches only the pieces it keeps.
+const FRAME = new Set([WHOLE, PNG_IMAGE, PNG_CARD, RISUM_MODULE, `${ZIP}card.json`, `${ZIP}module.risum`]);
+export const isFrame = (path: string) => FRAME.has(path);
+
+const STAND_IN = 'hazelle-original-piece:';
+export const standIn = (path: string) => utf8.encode(STAND_IN + path);
+// The piece a read answered with its stand-in; null for bytes the file holds.
+export function stoodFor(bytes: Uint8Array): string | null {
+  const read = text.decode(bytes.subarray(0, STAND_IN.length));
+  return read === STAND_IN ? text.decode(bytes.subarray(STAND_IN.length)) : null;
 }
 
 const under = (parts: ReadonlyMap<string, Uint8Array<ArrayBuffer>>, prefix: string) =>

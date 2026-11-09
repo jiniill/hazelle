@@ -2,7 +2,7 @@ import { strToU8, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { importCard, importRisum } from './card';
 import { concat } from './inflate';
-import { joinOriginal, originalParts, risumParts } from './original';
+import { isFrame, joinOriginal, originalParts, risumParts, standIn, stoodFor } from './original';
 import { withText } from './png';
 import { risumBlock, risumHead, RISUM_END } from './risum';
 import type { FileSource } from './source';
@@ -78,5 +78,17 @@ describe('joinOriginal', () => {
   it('keeps any other file whole', async () => {
     const file = own(strToU8(JSON.stringify(card)));
     expect(await joinOriginal(await kept(originalParts(file)))).toEqual(file);
+  });
+
+  it('reads the same with a stand-in for every piece but its frame, each picture answering its piece', async () => {
+    const zip = own(zipSync({ 'card.json': strToU8(JSON.stringify(card)), 'assets/other/smile.png': picture }));
+    const file = concat([picture, zip]);
+    const parts = await kept(originalParts(file));
+    const stood = new Map([...parts].map(([path, bytes]) => [path, isFrame(path) ? bytes : standIn(path)]));
+    const again = await read(await importCard('bot.charx', await joinOriginal(stood)));
+    const first = await read(await importCard('bot.charx', file));
+    expect({ ...again, avatar: null, report: null, assets: null }).toEqual({ ...first, avatar: null, report: null, assets: null });
+    expect(again.assets.map(([name, bytes]) => [name, stoodFor(bytes as Uint8Array)])).toEqual([['smile', 'zip/assets/other/smile.png']]);
+    expect(stoodFor(picture)).toBeNull();
   });
 });
