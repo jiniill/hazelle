@@ -76,7 +76,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const hasRaw = version.raw !== undefined && version.raw !== version.text;
   const [rawShown, setRawShown] = useState(false);
   const raw = hasRaw && rawShown;
-  const text = seenText(original, version, translatingText, flipped, shownTranslation);
+  const text = useMemo(() => seenText(original, version, translatingText, flipped, shownTranslation), [original, version, translatingText, flipped, shownTranslation]);
   const pending = !translatingText && (awaited || translatingText === '');
   const reveal = useReveal(version.id, text, live && !message.whole);
   const places = picturePlaces(drawing, pictures, version.text);

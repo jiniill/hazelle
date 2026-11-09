@@ -196,6 +196,8 @@ describe('Translator', () => {
       session.translator.translate(chat, reply, translationInput(session, chat, opened, messages(), { kind: 'message', index: 1 }));
       await vi.waitFor(() => expect(shown(messages()[1]!).translation?.text).toBe('안녕, 여행자.'));
       expect(translationShown(session.store, opened)('안녕, 여행자.')).toBe('안녕, 나그네.');
+      await session.store.update('character', character, (current) => ({ ...current, card: { ...current.card, regex: [script('display', '손님')] } }));
+      expect(translationShown(session.store, opened)).toBe(translationShown(session.store, { ...opened }));
     }));
 
   it('lets a version be translated again after a translation that threw', () =>

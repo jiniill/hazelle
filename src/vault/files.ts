@@ -1,6 +1,6 @@
 import { encodeText, withFormat } from './aead';
 import { fromBase64, toBase64 } from '../base64';
-import { hex } from '../hex';
+import { sha256Hex } from '../hex';
 
 // The key lives only in sealed object bodies.
 export type FileRef = { id: string; key: string };
@@ -21,9 +21,7 @@ export async function sealFile(bytes: Uint8Array<ArrayBuffer>): Promise<{ ref: F
   return { ref: { id: await fileId(body), key: toBase64(raw) }, body };
 }
 
-export async function fileId(body: Uint8Array<ArrayBuffer>): Promise<string> {
-  return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', body)));
-}
+export const fileId = (body: Uint8Array<ArrayBuffer>) => sha256Hex(body);
 
 // null means the body cannot be read: an unknown format, or a body that is not the file the key was made from.
 export async function openFile(ref: FileRef, body: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer> | null> {
