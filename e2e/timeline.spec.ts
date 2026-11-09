@@ -84,6 +84,7 @@ class FakeServer {
     const json = () => JSON.parse(body!.toString()) as Record<string, unknown>;
     const stored = { 'x-account-bytes': String([...this.rows.values()].reduce((sum, row) => sum + (row.body?.length ?? 0), 0)) };
     if (path === 'session' && method === 'GET') return { status: 200, json: this.account ? { session: this.facts(), vault: this.account.vault } : { session: null, door: { kind: 'open' } } };
+    if (path === 'signup/check' && method === 'POST') return { status: 204 };
     if (path === 'signup' && method === 'POST') {
       const { accountId, username, passwordWrap, recoveryWrap } = json() as Record<string, string>;
       this.account = { accountId: accountId!, username: username!, vault: { passwordWrap: passwordWrap!, recoveryWrap: recoveryWrap! } };
