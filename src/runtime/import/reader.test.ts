@@ -131,7 +131,7 @@ describe('ImportReader', () => {
     expect(await ask(reader, { kind: 'messages', index: 0, from: 4 })).toEqual({ messages: [{ role: 'user', text: 'tail', at: 5 }], next: 5 });
   });
 
-  it('reads a JSON file of chats, this app\'s own or Risu\'s in either form, and any other JSON as a card', async () => {
+  it('reads a JSON file of chats, this app\'s own or Risu\'s in either form, a Risu preset, and any other JSON as a card', async () => {
     const reader = new ImportReader();
     const read = (value: unknown) => ask(reader, { kind: 'card', file: new File([json(value)], 'file.json'), asModule: false });
     const chat = { name: '등대', message: [{ role: 'user', data: '안녕', time: 1 }, { role: 'char', data: '반가워 {{inlay::a}}', time: 2 }] };
@@ -139,6 +139,8 @@ describe('ImportReader', () => {
     expect(await read({ type: 'risuAllChats', ver: 1, data: [chat, { ...chat, name: '둘째', fmIndex: 1 }] })).toMatchObject({ ok: true, risuChats: [{ title: '등대' }, { title: '둘째', greeting: 2 }] });
     const rows = [{ id: 'c', kind: 'chat', parent: null, rev: 1, value: { title: null, character: null, models: {} } }, { id: 'e', kind: 'entry', parent: 'c', rev: 2, value: { type: 'message', role: 'user', at: 1, text: '안녕', receipt: null } }];
     expect(await read({ format: 'hazelle-chat', version: 3, character: null, rows, pictures: {} })).toMatchObject({ ok: true, chat: { chat: { id: 'c' }, entries: [{ id: 'e' }], memory: null } });
+    expect(await read({ name: '핑퐁', mainPrompt: '', promptTemplate: [{ type: 'plain', text: 'hi', role: 'system' }] })).toMatchObject({ ok: true, preset: { prompt: { name: '핑퐁', blocks: [{ kind: 'text', text: 'hi' }] } } });
+    expect(await read({ name: '옛날', mainPrompt: 'old' })).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'no-template' } });
     expect(await read({ spec: 'chara_card_v3', spec_version: '3.0', data: { name: 'Card' } })).toMatchObject({ ok: true, card: { card: { name: 'Card' } } });
   });
 
@@ -197,9 +199,10 @@ it('reads a .risum from slices of the file, never the whole of it', async () => 
   expect(whole).not.toHaveBeenCalled();
 });
 
-it('reads a .risup as a preset, whatever the case of its extension, and a cut .risupreset as unreadable', async () => {
+it('reads a .risup as a preset, whatever the case of its extension, a cut .risupreset as unreadable, and a .preset as JSON', async () => {
   const reader = new ImportReader();
   const bytes = fromBase64(starter.slice(starter.indexOf(',') + 1));
   expect(await ask(reader, { kind: 'card', file: new File([bytes], 'starter.RISUP'), asModule: false })).toMatchObject({ ok: true, preset: { prompt: { name: '🏓 핑퐁 간소화' } } });
   expect(await ask(reader, { kind: 'card', file: new File([bytes.subarray(0, 100)], 'cut.risupreset'), asModule: false })).toEqual({ ok: false, failure: { kind: 'unreadable' } });
+  expect(await ask(reader, { kind: 'card', file: new File([json({ name: 'p', promptTemplate: [] })], 'p.preset'), asModule: false })).toMatchObject({ ok: true, preset: { prompt: { name: 'p' } } });
 });

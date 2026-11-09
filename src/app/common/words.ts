@@ -227,7 +227,7 @@ export const deletedChat = (name: string) => `삭제된 채팅 '${name}'`;
 export const DEFAULT_VARIABLES = '기본 변수';
 
 export const SCRIPTS = { part: '스크립트', regex: '정규식', triggers: '트리거' };
-export const STAGES: Record<RegexScript['stage'], string> = { input: '입력', output: '응답', process: '요청', display: '화면' };
+export const STAGES: Record<RegexScript['stage'], string> = { input: '입력', output: '응답', process: '요청', display: '화면', translation: '번역' };
 // One without a name, by its place in its list: the same in the editor and in 상태창 지정.
 export const scriptName = (name: string, list: 'regex' | 'triggers', place: number) => name.trim() || `${SCRIPTS[list]} ${place + 1}`;
 

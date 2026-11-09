@@ -156,6 +156,30 @@ describe('Translator', () => {
       expect(JSON.parse(log[1]!.sent.body!).messages.at(-1)).toEqual({ role: 'user', content: 'Hello, traveler.' });
     }));
 
+  it('runs the character’s translation-stage scripts over a reply’s translation, as it comes and as it is saved', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const character = crypto.randomUUID();
+      await createCharacter(session.store, 'Mira', character);
+      const script = (stage: 'translation' | 'display', replace: string) => ({ id: stage, name: '', find: '여행자', replace, stage, flags: null });
+      await session.store.update('character', character, (current) => ({ ...current, card: { ...current.card, regex: [script('display', '손님'), script('translation', '나그네')] } }));
+      const chat = crypto.randomUUID();
+      await server.hold(session.store, chat);
+      const opened = { title: null, character, models: {} };
+      await startChat(session.store, chat, opened, null);
+      await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'Hi' });
+      stubRelay(inTurn([saying('Hello, traveler.'), saying('안녕, 여행자.')]));
+      await takeTurn(session, chat, { kind: 'answer' });
+      const messages = () => fold(session.store.children('entry', chat));
+      const reply = shown(messages()[1]!);
+      const live = new Set<string>();
+      const unsubscribe = session.translator.subscribe(() => live.add(session.translator.snapshot().live.get(reply.id) ?? ''));
+      session.translator.translate(chat, reply, translationInput(session, chat, opened, messages(), { kind: 'message', index: 1 }));
+      await vi.waitFor(() => expect(shown(messages()[1]!).translation?.text).toBe('안녕, 나그네.'));
+      unsubscribe();
+      expect([...live].filter((text) => text.includes('여행자'))).toEqual([]);
+    }));
+
   it('lets a version be translated again after a translation that threw', () =>
     server.withSession(async (session) => {
       await answerable(session);

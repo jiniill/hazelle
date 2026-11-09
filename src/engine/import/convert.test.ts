@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { withoutStyles } from './convert';
+import { bookLorebook, chatLorebook, DEFAULT_ORDER, withoutStyles } from './convert';
 
 it('strips what the style and comment regex strips, in one pass over openers left open', () => {
   const pieces = ['<style>', '<style a="b">', '<STYLE', '</style>', '</style >', '</Style\n>', '<!--', '-->', '->', '<b>', 'x', '<styles>'];
@@ -11,4 +11,9 @@ it('strips what the style and comment regex strips, in one pass over openers lef
   }
   const open = '<style<!--'.repeat(100_000);
   expect(withoutStyles(open)).toBe(open);
+});
+
+it('reads a null insertion order as 0, where Risu sorts it, and a missing one as a new entry’s', () => {
+  expect(chatLorebook([{ key: 'a', insertorder: null }, { key: 'b' }]).lore.map(({ insertionOrder }) => insertionOrder)).toEqual([0, DEFAULT_ORDER]);
+  expect(bookLorebook([{ keys: ['a'], insertion_order: null }]).lore.map(({ insertionOrder }) => insertionOrder)).toEqual([0]);
 });
