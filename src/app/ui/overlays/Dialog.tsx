@@ -6,7 +6,6 @@ import { IconButton } from '../controls/IconButton';
 import { Kbd } from '../foundation/Kbd';
 import { keyCaps, type Chord } from '../foundation/keys';
 import { Row } from '../layout/Row';
-import { Stack } from '../layout/Stack';
 import { Switcher } from '../story/StoryMessage';
 import styles from './Dialog.module.css';
 import { useFocusTrap, useLayer } from './layers';
@@ -15,14 +14,15 @@ import { stepByKey, stepping, useSwipe, type Pages } from './pages';
 type Props = {
   title: string;
   note?: string;
-  onClose: () => void;
+  // Absent while it cannot close (a file being read or saved): no ×, and Esc, a press outside and a back leave it.
+  onClose?: () => void;
   onSubmit?: () => void;
   actions?: ReactNode;
   actionsLayout?: 'full' | 'row';
   // wide: a picker of many, at a fixed height so a search does not resize it, and a sheet from the bottom on a phone.
   // full: nearly the whole screen, all of a phone's; a text edited big (useBigEdit), its body a column to fill.
   size?: 'normal' | 'wide' | 'full';
-  // Above and below the scrolling body, always in view.
+  // Above and below the scrolling body, always in view, as the actions are.
   toolbar?: ReactNode;
   footer?: ReactNode;
   // Stepped by the head's switcher, ← → and a sideways swipe, the dialog showing one of them at a time.
@@ -38,13 +38,11 @@ export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout 
   const trap = useFocusTrap(box);
   const paged = stepping(pages);
   const swipe = useSwipe(paged);
-  const body = actions ? (
-    <Stack gap={actionsLayout === 'full' ? 'related' : 'group'}>
-      {children}
-      <ButtonSlot value="md">{actionsLayout === 'full' ? actions : <Row kind="actions">{actions}</Row>}</ButtonSlot>
-    </Stack>
-  ) : (
-    children
+  const body = (
+    <>
+      <div className={styles.body}>{children}</div>
+      {actions && <ButtonSlot value="md">{actionsLayout === 'full' ? actions : <Row kind="actions">{actions}</Row>}</ButtonSlot>}
+    </>
   );
   // A dialog opened from a button in a head does not take that head's button size. On the body, so no stacking context
   // of where it was opened from (the sticky sidebar's) holds it under the page beside it.
@@ -61,24 +59,24 @@ export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout 
               next={{ label: '다음', onClick: () => paged.onStep(1) }}
             />
           )}
-          <IconButton icon={X} label="닫기" size="sm" onClick={onClose} />
+          {onClose && <IconButton icon={X} label="닫기" size="sm" onClick={onClose} />}
         </div>
         {note && <p className={styles.note}>{note}</p>}
         {toolbar}
-        <div className={styles.body}>
-          {onSubmit ? (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                onSubmit();
-              }}
-            >
-              {body}
-            </form>
-          ) : (
-            body
-          )}
-        </div>
+        {onSubmit ? (
+          // The submit button among the actions stays in the form, which draws no box of its own.
+          <form
+            className={styles.form}
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSubmit();
+            }}
+          >
+            {body}
+          </form>
+        ) : (
+          body
+        )}
         {footer && <div className={styles.footer}><ButtonSlot value="md">{footer}</ButtonSlot></div>}
       </div>
     </div>

@@ -39,6 +39,11 @@
   overflow-y: auto;
 }
 
+/* The body and the actions under it stand in the dialog's column, the actions pinned as the footer is. */
+.form {
+  display: contents;
+}
+
 .wide {
   width: var(--dialog-width-wide);
   height: min(var(--dialog-height-wide), 100%);

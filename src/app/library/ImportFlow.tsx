@@ -458,10 +458,11 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       {linking && <LinkDialog start={linking} onBring={(link, text) => void bringLink(link, text)} onClose={() => setLinking(null)} />}
       {moving && <MoveFlow files={moving.files} aside={moving.aside} onClose={() => setMoving(null)} />}
       {state && (
-        <Dialog title={title} onClose={() => {
-          if (state.kind === 'downloading') download.current?.abort();
-          else if (state.kind === 'preview' || state.kind === 'done') setState(null);
-        }} actions={actions}>
+        <Dialog
+          title={title}
+          onClose={state.kind === 'reading' || state.kind === 'saving' ? undefined : () => (state.kind === 'downloading' ? download.current?.abort() : setState(null))}
+          actions={actions}
+        >
           {state.kind === 'preview' ? (
             <List label="가져올 파일" box>
               {ready.map((row, index) => <PreviewRow key={index} row={row} many={ready.length > 1} onChange={(next) => change(row, next)} />)}
