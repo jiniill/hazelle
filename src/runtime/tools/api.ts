@@ -2,6 +2,7 @@ import type { HttpRequest } from '../../contracts/http';
 import { isRecord } from '../../connectors/values';
 import { RELAY_HEADER } from '../../contracts/http';
 import { Runaway } from '../../engine/cbs/evaluate';
+import { SIGNATURE } from '../../engine/assets';
 import { DEFAULT_ORDER } from '../../engine/import/convert';
 import { fieldValue, TOOL_ACTION_CHARS, TOOL_ACTIONS } from '../../engine/import/tool';
 import type { ToolEvent, ModelMessage, Question } from '../../engine/script-api';
@@ -312,6 +313,13 @@ export class ToolApi {
         }
         if (method === 'chat.card') return cardOf(live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
         if (method === 'chat.lorebook') return lorebookOf(context.chat, live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
+        if (method === 'chat.inlay' && typeof first === 'string') {
+          const inlay = context.scope.inlays.find(({ name, type }) => name === first && type !== SIGNATURE);
+          if (!inlay) return null;
+          const read = await this.session.files.read(this.session.store.get('inlay', inlay.id)!.value.file, { signal: context.signal });
+          if (!read.ok) throw new Error(read.error);
+          return { type: inlay.type, bytes: read.data };
+        }
         if (method === 'chat.setup') {
           const { store } = this.session;
           const chat = live(store.get('chat', context.chat))!.value;

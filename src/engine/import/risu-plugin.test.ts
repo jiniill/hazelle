@@ -52,8 +52,8 @@ describe('the Risu scan', () => {
   });
 
   it('lists unmapped and declined names and replacer kinds once each', () => {
-    expect(scanRisu("risuai.readInlay(); risuai.readInlay(); Risuai.addProvider(); risuai.addRisuReplacer('beforeTranslate', f); risuai.addRisuReplacer('beforeRequest', f);")).toEqual({
-      verdict: 'partial', missing: ['readInlay', 'addProvider', 'addRisuReplacer:beforeTranslate'], hosts: [],
+    expect(scanRisu("risuai.loadPlugins(); risuai.loadPlugins(); Risuai.addProvider(); risuai.addRisuReplacer('beforeTranslate', f); risuai.addRisuReplacer('beforeRequest', f);")).toEqual({
+      verdict: 'partial', missing: ['loadPlugins', 'addProvider', 'addRisuReplacer:beforeTranslate'], hosts: [],
     });
   });
 
@@ -69,8 +69,8 @@ describe('the Risu scan', () => {
   });
 
   it('still lists the unmapped Risu names an aliased plugin reaches as properties', () => {
-    expect(scanRisu("const api = globalThis.risuai; api.getChatFromIndex(0, 0); api?.readInlay(); api.addRisuReplacer('beforeTranslate', f); storage.getItem('x');")).toEqual({
-      verdict: 'unread', missing: ['readInlay', 'addRisuReplacer:beforeTranslate'], hosts: [],
+    expect(scanRisu("const api = globalThis.risuai; api.getChatFromIndex(0, 0); api?.loadPlugins(); api.addRisuReplacer('beforeTranslate', f); storage.getItem('x');")).toEqual({
+      verdict: 'unread', missing: ['loadPlugins', 'addRisuReplacer:beforeTranslate'], hosts: [],
     });
   });
 

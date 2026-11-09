@@ -178,12 +178,12 @@ describe('the Risu adapter', () => {
     const scope = install(fake);
     const { Risuai } = scope;
     for (const name of RISU_MAPPED) expect(Risuai[name], name).toBeDefined();
-    await expect(Risuai.readInlay!()).rejects.toThrow("Risu API 'readInlay' is not available in Hazelle");
-    await expect(Risuai.readInlay!()).rejects.toThrow();
+    await expect(Risuai.setChatPanel!()).rejects.toThrow("Risu API 'setChatPanel' is not available in Hazelle");
+    await expect(Risuai.setChatPanel!()).rejects.toThrow();
     expect(typeof Risuai.addProvider).toBe('undefined');
     await expect(Risuai.addRisuReplacer!('beforeTranslate' as never, (() => []) as never)).rejects.toThrow("'addRisuReplacer:beforeTranslate'");
     expect((Risuai as Record<string, unknown>).then).toBeUndefined();
-    expect(fake.missing).toEqual(['readInlay', 'addProvider', 'addRisuReplacer:beforeTranslate']);
+    expect(fake.missing).toEqual(['setChatPanel', 'addProvider', 'addRisuReplacer:beforeTranslate']);
     expect(await Risuai.getRuntimeInfo!()).toEqual({ apiVersion: '3.0', platform: 'hazelle', saveMethod: 'account' });
     expect([Risuai.apiVersion, Risuai.apiVersionCompatibleWith]).toEqual(['3.0', ['3.0']]);
     await expect(Risuai.checkCharOrder!()).resolves.toBeUndefined();
@@ -234,6 +234,14 @@ describe('the Risu adapter', () => {
     expect(await Risuai.readImage!('abc' as never)).toBeNull();
     await expect(Risuai.readImage!('assets/../abc.png' as never)).rejects.toThrow('readImage path');
     await expect(Risuai.readImage!('..\\abc.png' as never)).rejects.toThrow('readImage path');
+  });
+
+  it('reads an inlay the chat holds as Risu\'s data URL, and none it does not as null', async () => {
+    const fake = fakeApi();
+    Object.assign(fake.chat, { inlay: async (name: string) => (name === 'pic-1' ? { type: 'image/webp', bytes: new Uint8Array([82, 73, 70, 70]) } : null) });
+    const { Risuai } = install(fake);
+    expect(await Risuai.readInlay!('pic-1' as never)).toEqual({ data: 'data:image/webp;base64,UklGRg==', ext: 'webp', name: 'pic-1', type: 'image' });
+    expect(await Risuai.readInlay!('other' as never)).toBeNull();
   });
 
   it('chains afterRequest replacers over the reply and answers runLLMModel in Risu shape', async () => {

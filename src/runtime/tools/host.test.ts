@@ -8,6 +8,8 @@ import type { Host, ToolEvent, ToolReach } from '../../engine/script-api';
 import { toolId } from '../../model/tool';
 import type { Down, Up } from '../../tool-api/protocol';
 import { shown } from '../../model/chat';
+import { SIGNATURE } from '../../engine/assets';
+import { keepAttachments } from '../attachments';
 import { appendScripted, appendUserMessage, editMessage, startChat } from '../chat-log';
 import { setModuleAlways, setModuleDeleted } from '../modules';
 import { ToolLate, ToolStuck } from '../scripts/binding';
@@ -785,6 +787,24 @@ it('reads the chat\'s lorebook by owner, how the chat is set up with its modules
     expect(account.characters).toEqual([{ id: character, name: 'Mira' }]);
     const setup = await api.page!.chat!.setup();
     expect(setup).toEqual({ persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test', regex: [bold] }] });
+  } finally { close(); host.close(); }
+}));
+
+it('reads a picture the chat holds by its inlay name, and no signature or missing one', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const bytes = new Uint8Array([137, 80, 78, 71]);
+  const saved = await session.files.save([bytes, new Uint8Array([1])]);
+  if (!saved.ok) throw new Error(saved.error);
+  await keepAttachments(session.store, f.chat, [{ name: 'pic', type: 'image/png', size: 4, file: saved.data[0]! }, { name: 'sig', type: SIGNATURE, size: 1, file: saved.data[1]! }], []);
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const chat = transport.frames[0]!.api!.page!.chat!;
+    expect(await chat.inlay('pic')).toEqual({ type: 'image/png', bytes });
+    expect(await chat.inlay('sig')).toBeNull();
+    expect(await chat.inlay('none')).toBeNull();
   } finally { close(); host.close(); }
 }));
 

@@ -100,6 +100,9 @@ declare namespace Hazelle {
     tokens(text: string): Promise<number>;
     lore(reserve?: number): Promise<{ role: 'system' | 'user' | 'assistant'; text: string }[]>;
     lorebook(): Promise<LoreEntry[]>;           // every entry the chat's lorebooks hold, as written, in the prompt's order
+    // A picture the chat holds, by the name a message's raw text gives it in {{inlay::name}}: its MIME type and bytes.
+    // null when the chat holds no picture by that name; throws when its file cannot be read.
+    inlay(name: string): Promise<{ type: string; bytes: Uint8Array } | null>;
     // An entry of the chat's own lorebook, taking the place of every one of its name there, as Lua's
     // upsertLocalLoreBook does; lands with the event's outcome.
     writeLore(entry: Omit<LoreEntry, 'owner'>): void;

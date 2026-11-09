@@ -1,3 +1,4 @@
+import { toBase64 } from '../base64';
 import { RISU_DECLINED, RISU_REPLACERS } from '../tool-api/risu-methods';
 import { risuRegex } from '../tool-api/risu-regex';
 
@@ -431,6 +432,14 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       const name = path.startsWith('assets/') ? path.slice('assets/'.length) : path;
       if (name.includes('/') || name.includes('\\')) throw new Error('readImage path cannot contain \'/\' or \'\\\', except the assets/ prefix');
       return name.endsWith('.png') ? api.assets.read(name.slice(0, -'.png'.length)) : null;
+    },
+    // Risu's inlay asset; type is the MIME type's own word (image, video, audio), as Risu's are.
+    readInlay: async (id: string) => {
+      const chat = await frame.chat();
+      const inlay = chat && await chat.inlay(String(id));
+      if (!inlay) return null;
+      const [type, ext] = inlay.type.split('/');
+      return { data: `data:${inlay.type};base64,${toBase64(inlay.bytes)}`, ext, name: id, type };
     },
     nativeFetch: fetchOf,
     // globalFetch defaults JSON requests to POST; rawResponse returns bytes.
