@@ -4,13 +4,15 @@ import { act, type ReactNode } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { SessionFacts } from '../../contracts/accounts';
 import { randomBytes } from '../../vault/aead';
+import { USERNAME_TAKEN } from '../common/failure';
 import { probeRoot } from '../ui/probe';
 import type { Unlocked } from './AccountFlow';
+import type { Stop } from './PasswordScreen';
 
 const seen = vi.hoisted(() => ({
   failure: null as { message: string; onRetry: () => void } | null,
   choice: false,
-  password: null as { mode: string; username: string; password?: string; onBack?: () => void; onSignIn?: () => void; onDone: (username: string, password: string) => Promise<string | null> } | null,
+  password: null as { mode: string; username: string; password?: string; onBack?: () => void; onSignIn?: () => void; onDone: (username: string, password: string) => Promise<Stop | null> } | null,
   recovery: null as { username: string } | null,
   signIn: null as { username?: string; solo?: boolean; onGuest?: () => void } | null,
 }));
@@ -58,6 +60,14 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+// The flow's steps scroll the page to their top.
+const scrolled = vi.fn();
+function flowRoot() {
+  const root = probeRoot();
+  Object.assign(window, { scrollTo: scrolled });
+  return root;
+}
+
 const waitFor = (check: () => void) => vi.waitFor(async () => {
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   check();
@@ -83,7 +93,7 @@ it.each([
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'open' } } });
   const { AccountFlow } = await import('./AccountFlow');
   const children = vi.fn<(account: Unlocked) => ReactNode>(() => null);
-  const root = probeRoot();
+  const root = flowRoot();
   try {
     await act(() => root.render(<AccountFlow>{children}</AccountFlow>));
     await waitFor(() => expect(seen.failure).not.toBeNull());
@@ -105,7 +115,7 @@ it('shows the existing storage failure wording instead of staying on loading whe
   vi.mocked(loadSession).mockRejectedValue(new Error('Storage refused'));
   const { describeFailure } = await import('../common/failure');
   const { AccountFlow } = await import('./AccountFlow');
-  const root = probeRoot();
+  const root = flowRoot();
   try {
     await act(() => root.render(<AccountFlow>{() => null}</AccountFlow>));
     expect(seen.failure?.message).toBe(describeFailure({ ok: false, error: 'browser-storage' }));
@@ -127,7 +137,7 @@ it('stops before remembering a guest vault when its head write fails, shows the 
   const { describeFailure } = await import('../common/failure');
   const { AccountFlow } = await import('./AccountFlow');
   const children = vi.fn<(account: Unlocked) => ReactNode>(() => null);
-  const root = probeRoot();
+  const root = flowRoot();
   try {
     await act(() => root.render(<AccountFlow>{children}</AccountFlow>));
     await waitFor(() => expect(seen.failure).not.toBeNull());
@@ -160,7 +170,7 @@ it('stops landing when guest content cannot be read and asks the guest-data ques
   const { describeFailure } = await import('../common/failure');
   const { AccountFlow } = await import('./AccountFlow');
   const children = vi.fn(() => null);
-  const root = probeRoot();
+  const root = flowRoot();
   try {
     await act(() => root.render(<AccountFlow>{children}</AccountFlow>));
     await waitFor(() => expect(seen.failure).not.toBeNull());
@@ -183,7 +193,7 @@ it("asks a one-person installation's first visitor for a password alone, and nam
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'setup' } } });
   const { AccountFlow } = await import('./AccountFlow');
   const children = vi.fn(() => null);
-  const root = probeRoot();
+  const root = flowRoot();
   try {
     await act(() => root.render(<AccountFlow>{children}</AccountFlow>));
     await waitFor(() => expect(seen.password).not.toBeNull());
@@ -200,7 +210,7 @@ it("signs in to a one-person installation's account by its password alone, with 
   const { loadSession } = await import('../../runtime/account');
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'solo', username: 'jin' } } });
   const { AccountFlow } = await import('./AccountFlow');
-  const root = probeRoot();
+  const root = flowRoot();
   try {
     await act(() => root.render(<AccountFlow>{() => null}</AccountFlow>));
     await waitFor(() => expect(seen.signIn).toMatchObject({ username: 'jin', solo: true, onGuest: undefined }));
@@ -209,21 +219,24 @@ it("signs in to a one-person installation's account by its password alone, with 
   }
 });
 
-it("holds a step for each screen in from the guest, which back takes back, and asks for the username at 다음, keeping the password", async () => {
+it("holds a step for each screen in from the guest, at its top, which back takes back, and asks for the username at 다음 (on its field, or again after a lost connection), keeping the password", async () => {
   const { loadSession, checkUsername } = await import('../../runtime/account');
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'open' } } });
   vi.mocked(checkUsername).mockResolvedValueOnce({ ok: false, error: 'username-taken', status: 409 }).mockResolvedValueOnce({ ok: false, error: 'offline' }).mockResolvedValue({ ok: true, data: undefined });
   const { AccountFlow } = await import('./AccountFlow');
   const children = vi.fn<(account: Unlocked) => ReactNode>(() => null);
-  const root = probeRoot();
+  const root = flowRoot();
   try {
     await act(() => root.render(<AccountFlow>{children}</AccountFlow>));
     await waitFor(() => expect(children).toHaveBeenCalled());
     expect(held.steps).toBeNull();
+    scrolled.mockClear();
     await act(() => children.mock.lastCall![0].guest!.onSignup());
     expect(held.steps!.count()).toBe(1);
+    expect(scrolled).toHaveBeenCalledWith(0, 0);
     const typed = 'correct horse battery';
-    for (let i = 0; i < 2; i++) expect(await act(() => seen.password!.onDone('jin', typed))).not.toBeNull();
+    expect(await act(() => seen.password!.onDone('jin', typed))).toEqual({ username: USERNAME_TAKEN });
+    expect(await act(() => seen.password!.onDone('jin', typed))).toEqual({ retry: expect.any(String) });
     expect(seen.recovery).toBeNull();
     await act(async () => { await seen.password!.onDone('jin', typed); });
     await waitFor(() => expect(seen.recovery).toMatchObject({ username: 'jin' }));

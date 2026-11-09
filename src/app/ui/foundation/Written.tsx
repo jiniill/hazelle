@@ -45,6 +45,8 @@ export function Written({ text }: { text: string }) {
   return <div className={styles.written}>{render(md.parse(text, {}))}</div>;
 }
 
+const plain = (child: Token) => (child.type === 'text' || child.type === 'code_inline' ? child.content : child.type === 'softbreak' || child.type === 'hardbreak' ? ' ' : '');
+
 export function plainText(text: string): string {
-  return md.parse(text, {}).filter((token) => token.type === 'inline').map((token) => token.children!.filter((child) => child.type === 'text' || child.type === 'code_inline').map((child) => child.content).join('')).join(' ');
+  return md.parse(text, {}).filter((token) => token.type === 'inline').map((token) => token.children!.map(plain).join('')).join(' ');
 }

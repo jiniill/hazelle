@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { PULSE_FLOORS, PULSE_ROLES, type PulseAnswer, type PulseBoard, type PulseOrder, type PulseRanking, type PulseRole } from '../../contracts/pulse';
 import { readPulse, readPulseWeek } from '../../runtime/pulse';
-import { LegalNotice } from '../common/LegalNotice';
+import { PublicScreen } from '../common/PublicScreen';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
 import { PULSE } from '../common/words';
-import { Bars, Brand, ChoiceGroup, Disclosure, Divider, Empty, Facts, Intro, Screen, Ranking, Section, SettingRow, Switch, Tabs } from '../ui';
+import { Bars, ChoiceGroup, Disclosure, Divider, Empty, Facts, Intro, Ranking, Section, SettingRow, Switch, Tabs } from '../ui';
 import { belowNames, clockText, hourDetail, hourText, PULSE_ROLE_NAMES, rankRows, REST, weekText } from './board';
 
 const SPLIT = '제공자별로 보기';
@@ -20,13 +20,13 @@ const RANKING_HELP = {
 export function PulsePage() {
   const pulse = useLoaded(readPulse);
   return (
-    <Screen width="form" top={<Brand />} foot={<LegalNotice />}>
+    <PublicScreen width="form" here={PULSE.path}>
       <Intro title={PULSE.title} />
       {pulse.loading}
       {pulse.failure}
       {pulse.data && <Answer answer={pulse.data} />}
       <Divider label="" />
-    </Screen>
+    </PublicScreen>
   );
 }
 

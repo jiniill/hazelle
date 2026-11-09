@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { ChangeSignal } from '../../change-signal';
 import { AccountFacts, changePassword, checkUsername, credentialFor, passwordCredentialFor, guestFacts, loadSession, logIn, logOut, prepareGuestSignup, signUpGuest, uploadGuest, type GuestSignup, type SignedIn } from '../../runtime/account';
 import type { SessionFacts } from '../../contracts/accounts';
-import { holdAccount } from '../../runtime/api';
+import { holdAccount, type ApiFailure } from '../../runtime/api';
 import { cachedAccounts, forgetVault } from '../../runtime/device-cache';
 import { guestAccount } from '../../runtime/guest-store';
 import type { GuestTransferStep } from '../../runtime/guest-transfer';
@@ -11,14 +11,14 @@ import { lockVault, recallGuest, recallVault, rememberVault } from '../../vault/
 import { DatabaseBlocked } from '../../vault/database';
 import { canonicalUsername, openVault, wrapWithPassword, type Credential, type VaultKey } from '../../vault/keys';
 import { clearDownloads } from '../common/download';
-import { describeFailure, wrongSecret } from '../common/failure';
+import { describeFailure, USERNAME_TAKEN, wrongSecret } from '../common/failure';
 import { readPersisted } from '../common/usePersisted';
 import type { Account } from '../session';
 import { holdBack } from '../shell/router';
 import { Brand, Progress, Screen } from '../ui';
 import { GuestDataScreen } from './GuestDataScreen';
 import { MovingScreen, type Moved } from './MovingScreen';
-import { PasswordScreen } from './PasswordScreen';
+import { PasswordScreen, type Stop } from './PasswordScreen';
 import { RecoveryKeyScreen } from './RecoveryKeyScreen';
 import { SignInScreen } from './SignInScreen';
 import { UnreachableScreen } from './UnreachableScreen';
@@ -50,7 +50,12 @@ const GUEST_NAME = '손님';
 // Setup username becomes the first persona/{{user}} even though solo login hides it.
 // Use a person-like name, never an ownership placeholder.
 const OWNER = '사용자';
-const TAKEN = '이미 쓰고 있는 아이디예요. 다른 아이디를 입력해 주세요.';
+
+// 다음's check of the name: a name refused is said on its field, and a lost connection offers 다시 시도.
+function refusedName(failure: ApiFailure): Stop {
+  if (failure.error === 'username-taken' || failure.error === 'bad-username') return { username: describeFailure(failure, { 'username-taken': USERNAME_TAKEN }) };
+  return failure.error === 'offline' ? { retry: describeFailure(failure) } : describeFailure(failure);
+}
 
 // Remember last account to avoid presenting a lapsed session as an empty guest/lost data.
 // Explicit guest choice stores empty; older browsers infer from device cache. Storage failure loses only the hint.
@@ -117,6 +122,11 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
   const trail = useRef<State[]>([]);
   const [trailed] = useState(() => new ChangeSignal());
   const stepping = state.kind === 'login' || state.kind === 'signup';
+  // Each step opens at its top, not at the scroll of the page it came from (a guest's home).
+  const screen = state.kind === 'signup' ? state.step : stepping && state.kind;
+  useLayoutEffect(() => {
+    if (screen) window.scrollTo(0, 0);
+  }, [screen]);
 
   // Keep the page-held account through lock/loading/outages, rejecting cookie-account mismatches until rechecked.
   // A confirmed different cookie account closes old state. Unlocked responses update facts; guests hold no server account.
@@ -276,7 +286,7 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
             const username = setup ? OWNER : canonicalUsername(typed);
             if (!setup) {
               const free = await checkUsername(username);
-              if (!free.ok) return describeFailure(free, { 'username-taken': TAKEN });
+              if (!free.ok) return refusedName(free);
             }
             const prepared = await prepareGuestSignup(username, await passwordCredentialFor(username, password));
             step({ kind: 'signup', step: 'recovery', draft: prepared, failure: null, setup }, { ...state, draft: prepared, password });
