@@ -2,7 +2,7 @@ import { splitThoughts } from '../../connectors/thoughts';
 import { isRecord, list } from '../../connectors/values';
 import { inlayIds } from '../assets';
 import { assemble, imageType, type Resolve } from './card';
-import { add, chatLorebook, convert, counted, finite, record, text, type Json, type Tally } from './convert';
+import { add, chatLorebook, convert, counted, finite, localCopies, record, text, type Json, type Tally } from './convert';
 import { MOVE_UNSUPPORTED_KINDS, type MoveUnsupported, type MoveUnsupportedKind, type Picture, type RisuCharacter, type RisuChat, type RisuSummary } from './types';
 
 export type Read = () => Promise<Uint8Array<ArrayBuffer>>;
@@ -72,7 +72,7 @@ export function risuCharacter(char: Json, chats: (Json | null)[], folder: string
     for (const id of list(chat.modules)) if (typeof id === 'string') modules.add(id);
     // Risu moves the old post-history text into the open chat's note when the character is next opened.
     const note = index === page && text(char.postHistoryInstructions) ? `${text(chat.note)}\n${text(char.postHistoryInstructions)}`.trim() : text(chat.note);
-    return [risuChat(chat, note, fmIndex, missed, folders)];
+    return [risuChat(chat, note, fmIndex, missed, list(char.globalLore), folders)];
   });
   if (char.escapeOutput === true) add(missed, 'escape-output');
   const note = text(char.translatorNote);
@@ -95,13 +95,14 @@ export function risuCharacter(char: Json, chats: (Json | null)[], folder: string
 export function risuChatFile(json: unknown): { chats: RisuChat[]; missed: MoveUnsupported[] } | null {
   if (!isRecord(json) || (json.type !== 'risuChat' && json.type !== 'risuAllChats') || (json.ver !== 1 && json.ver !== 2)) return null;
   const missed: Tally<MoveUnsupportedKind> = new Map();
-  const chats = (Array.isArray(json.data) ? json.data : [json.data]).filter(isRecord).map((chat) => risuChat(chat, text(chat.note), -1, missed));
+  const chats = (Array.isArray(json.data) ? json.data : [json.data]).filter(isRecord).map((chat) => risuChat(chat, text(chat.note), -1, missed, []));
   // A file of chats brings none of their pictures.
   add(missed, 'inlay', chats.reduce((sum, chat) => sum + chat.inlays.length, 0));
   return { chats, missed: counted(MOVE_UNSUPPORTED_KINDS, missed) };
 }
 
-function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveUnsupportedKind>, folders: ReadonlyMap<string, number> = new Map()): RisuChat {
+// globalLore: its character's, which the chat's own entries may name (localCopies); none for a file of chats.
+function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveUnsupportedKind>, globalLore: unknown[], folders: ReadonlyMap<string, number> = new Map()): RisuChat {
   const messages = list(chat.message).filter(isRecord);
   let at = finite(chat.lastDate) ?? 0;
   // 'allBefore' leaves it and every message before it out of the prompt.
@@ -125,7 +126,7 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
       key.startsWith('$') && value !== undefined ? [[key.slice(1), typeof value === 'string' ? value : JSON.stringify(value)]] : [],
     ),
     inlays: inlayIds(messageTexts(messages)),
-    ...chatLorebook(list(chat.localLore)),
+    ...chatLorebook(localCopies(list(chat.localLore), globalLore, missed)),
     memory: memory.summaries,
     folder: folders.get(text(chat.folderId)) ?? null,
     messages: messages.map((message) => {

@@ -15,6 +15,7 @@ import { providerFit, type TokenSnapshot } from './token-calibration';
 import type { Assembled, PromptInput } from '../engine/pipeline';
 import type { EvaluatedPrompt } from './evaluation-core';
 import type { ChatScope } from '../engine/render';
+import type { RegexScript } from '../engine/import/types';
 import { shown, type Chat, type Message } from '../model/chat';
 import { live } from '../model/library';
 import { chatModel, type RouteFailure } from './assignment';
@@ -192,7 +193,7 @@ export type ModuleContribution = {
   lore: (NonNullable<Assembled['lore']>[number] & { parts: { index: number; tokens: number }[] })[];
   silent: NonNullable<Assembled['silent']>;
   invalidKeys: { entry: string; name: string; keys: string[] }[];
-  regex: Record<'input' | 'output' | 'process' | 'display', number>;
+  regex: Record<RegexScript['stage'], number>;
   triggers: { lua: number; blocks: number };
   toggles: Toggle[];
   tools: { name: string }[];
@@ -211,7 +212,7 @@ export function moduleContributions({ store }: Reader, chat: Chat, preview: Asse
   ];
   const tools = toolsOf(store, chat);
   return packs.map((pack) => {
-    const regex = { input: 0, output: 0, process: 0, display: 0 };
+    const regex: ModuleContribution['regex'] = { input: 0, output: 0, process: 0, display: 0, translation: 0 };
     for (const script of pack.pack.regex) if (!script.off) regex[script.stage]++;
     const triggers = { lua: 0, blocks: 0 };
     for (const trigger of triggersOf([pack])) triggers[trigger.kind]++;

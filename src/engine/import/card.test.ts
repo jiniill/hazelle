@@ -126,6 +126,21 @@ describe('importCard', () => {
     expect(await Promise.all(ok(importCard('Mira.png', file)).assets.map(async ({ name, read }) => [name, await read()]))).toEqual([['wave', picture]]);
   });
 
+  it('reads raw base64 in a v2 additionalAssets uri, and the PNG itself for a ccdefault: x-risu-asset, as Risu does', async () => {
+    const picture = png(tEXt('Title', 'wave'));
+    const assets = async (card: unknown) => Promise.all(ok(importCard('Mira.png', png(tEXt('chara', cardText(card))))).assets.map(async ({ name, read }) => [name, await read()]));
+    expect(await assets(v2({ extensions: { risuai: { additionalAssets: [['wave', base64(picture), 'png']] } } }))).toEqual([['wave', picture]]);
+    expect(await assets(v3({ assets: [{ type: 'x-risu-asset', uri: 'ccdefault:', name: 'self', ext: 'png' }] }))).toEqual([['self', png()]]);
+  });
+
+  it('reads a PNG card of no spec as Risu’s PNG path does: a spec_version 2.0 one by its data, a v1 one missing its fields', () => {
+    const offSpec = ok(importCard('Mira.png', png(tEXt('chara', cardText({ spec_version: '2.0', data: { name: 'Mira', description: 'd', first_mes: 'hi', alternate_greetings: ['yo'] } })))));
+    expect([offSpec.card.name, offSpec.card.greetings, offSpec.report.spec]).toEqual(['Mira', ['hi', 'yo'], 'v2']);
+    const bare = ok(importCard('Mira.png', png(tEXt('chara', cardText({ char_name: 'Old', personality: 'shy' })))));
+    expect([bare.card.name, bare.card.description, bare.card.greetings, bare.card.personality]).toEqual(['Old', '', [], 'shy']);
+    expect(importCard('card.json', own(strToU8(JSON.stringify({ name: 'Mira' }))))).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'not a character card' } });
+  });
+
   it('reads a zip appended to a JPEG and keeps the JPEG as the avatar', () => {
     const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1, 0xff, 0xd9]);
     const imported = ok(importCard('Mira.jpeg', concat([jpeg, zipSync({ 'card.json': strToU8(JSON.stringify(v3({ name: 'Jay' }))) })])));
@@ -219,7 +234,10 @@ describe('importCard', () => {
       },
     });
     const imported = charx({ 'card.json': strToU8(JSON.stringify(card)), 'module.risum': Uint8Array.from(atob(RISU_MODULE.join('')), (char) => char.charCodeAt(0)) });
-    expect(imported.card.regex).toEqual([{ id: 'regex-0', name: '상태창 숨김', find: '<status>[\\s\\S]*?</status>', replace: '', stage: 'display', flags: 'gi' }]);
+    expect(imported.card.regex).toEqual([
+      { id: 'regex-0', name: '상태창 숨김', find: '<status>[\\s\\S]*?</status>', replace: '', stage: 'display', flags: 'gi' },
+      { id: 'regex-1', name: 'translate', find: 'a', replace: 'b', stage: 'translation', flags: null },
+    ]);
     expect(imported.card.loreSettings).toEqual({ scanDepth: 7, tokenBudget: 900, recursive: false, fullWordMatching: true });
     expect(imported.loreFolders).toEqual(['장소']);
     expect(imported.lore).toMatchObject([
@@ -227,7 +245,7 @@ describe('importCard', () => {
       { name: 'Dragon', keys: ['dragon'], content: '@@end\n<user> met a dragon.', folder: null },
     ]);
     expect(imported.card.triggers.map(({ kind }) => kind).sort()).toEqual(['blocks', 'lua']);
-    expect(counts(imported)).toEqual({ 'regex-stage': 1 });
+    expect(counts(imported)).toEqual({});
   });
 
   it('reads a module file as a module, with its pictures by the names its assets list gives them', async () => {
@@ -359,10 +377,7 @@ describe('importCard', () => {
               { effect: [{ type: 'triggerlua', code: ' ' }] },
               { effect: [{ type: 'v2Header' }, { type: 'v2EndIndent' }] },
             ],
-            customScripts: [
-              { comment: 't', in: 'a', out: 'b', type: 'edittrans' },
-              { comment: 'off', in: 'a', out: 'b', type: 'disabled' },
-            ],
+            customScripts: [{ comment: 't', in: 'a', out: 'b', type: 'editanything' }],
           },
         },
         character_book: { entries: [{ keys: ['k'], content: '@@disable_ui_prompt x\n@@depth 1\nbody {{bgm::a}}', enabled: true, insertion_order: 1 }] },
@@ -385,7 +400,6 @@ describe('importCard', () => {
       { kind: 'disable-ui-prompt', count: 1 },
       { kind: 'cbs-tag', count: 3 },
       { kind: 'regex-stage', count: 1 },
-      { kind: 'regex-off', count: 1 },
       { kind: 'toggle-line', count: 1 },
       { kind: 'onboarding', count: 1 },
     ]);

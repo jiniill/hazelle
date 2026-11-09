@@ -45,8 +45,11 @@ export type Listed = { id: string; off?: true };
 // Keep unsupported conditions/effects as opaque source so future support needs no reimport.
 export type Trigger = Listed & ({ kind: 'lua'; name: string; code: string } | { kind: 'blocks'; name: string; on: string; conditions: BlockCondition[]; effects: BlockEffect[] });
 
-// flags: the custom flag string, <…> meta blocks included; null runs the default `g`.
-export type RegexScript = Listed & { name: string; find: string; replace: string; stage: 'input' | 'output' | 'process' | 'display'; flags: string | null };
+// flags: the custom flag string, <…> meta blocks included; null runs the default `g`. translation: Risu's edittrans, over
+// a message's translation (runtime/translate).
+export type RegexScript = Listed & { name: string; find: string; replace: string; stage: 'input' | 'output' | 'process' | 'display' | 'translation'; flags: string | null };
+// The stage of a script whose stage is unknown: a new one's, and one switched off in Risu, which keeps none.
+export const NEW_STAGE: RegexScript['stage'] = 'display';
 
 export type LoreEntry = {
   name: string;
@@ -123,7 +126,6 @@ export const UNSUPPORTED_KINDS = [
   'disable-ui-prompt',
   'cbs-tag',
   'regex-stage',
-  'regex-off',
   'module',
   'toggle-line',
   'mcp',
@@ -207,6 +209,8 @@ export const MOVE_UNSUPPORTED_KINDS = [
   'escape-output',
   'lore-depth',
   'chat-toggles',
+  'lore-copy',
+  'lore-unfound',
 ] as const;
 export type MoveUnsupportedKind = (typeof MOVE_UNSUPPORTED_KINDS)[number];
 export type MoveUnsupported = { kind: MoveUnsupportedKind; count: number };

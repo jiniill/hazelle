@@ -44,7 +44,7 @@ type Plan = { source: string; place: number; order: number; flags: string; dynam
 const CBS_TAG = /\{\{|\{#|<(?:user|char|bot)>/i;
 
 export class Scripts {
-  private readonly plans: Record<RegexScript['stage'], Plan[]> = { input: [], output: [], process: [], display: [] };
+  private readonly plans: Record<RegexScript['stage'], Plan[]> = { input: [], output: [], process: [], display: [], translation: [] };
   private readonly repeat: (pattern: RegExp, index: number, dynamic: boolean) => string | null;
 
   // Scripts are in source order (spec §c); <order N> reorders them here. History is raw, oldest first. An off script

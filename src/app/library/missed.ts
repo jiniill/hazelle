@@ -23,7 +23,6 @@ const UNSUPPORTED: Record<UnsupportedKind, (count: number) => string> = {
   'disable-ui-prompt': (count) => `@@disable_ui_prompt ${count}곳`,
   'cbs-tag': (count) => `지원하지 않는 ${COMMAND} ${count}개`,
   'regex-stage': (count) => `지원하지 않는 단계의 정규식 ${count}개`,
-  'regex-off': (count) => `Risu에서 꺼 둔 정규식 ${count}개`,
   module: () => '읽지 못한 모듈',
   'toggle-line': (count) => `읽지 못한 토글 줄 ${count}개(토글에서 수정할 수 있음)`,
   mcp: () => 'MCP 서버 연결',
@@ -42,6 +41,8 @@ const MOVE_UNSUPPORTED: Record<MoveUnsupportedKind, (count: number) => string> =
   'escape-output': () => `출력 이스케이프(응답 속 ${COMMAND}도 실행됨)`,
   'lore-depth': () => 'Risu에서 바꾼 로어북 검색 깊이(헤이젤은 5로 고정)',
   'chat-toggles': (count) => `채팅별 토글 값이 있는 채팅 ${count}개`,
+  'lore-copy': (count) => `이 채팅에서만 켠 로어북 ${count}개(채팅 로어북에 사본으로 들어옴)`,
+  'lore-unfound': (count) => `이 채팅에서만 켠 로어북 ${count}개(캐릭터 로어북에서 찾지 못함)`,
 };
 
 export const missedLines = (unsupported: Unsupported): string[] => unsupported.map((item) => UNSUPPORTED[item.kind](item.count));
@@ -54,7 +55,6 @@ const PRESET_UNSUPPORTED: Record<Exclude<PresetUnsupported['kind'], 'repeated-sl
   'unread-item': (count) => `읽지 못한 블록 ${count}개`,
   'toggle-line': UNSUPPORTED['toggle-line'],
   'preset-text': (count) => `템플릿 밖의 텍스트 ${count}개(Risu에서도 보내지 않던 것)`,
-  'regex-off': UNSUPPORTED['regex-off'],
   'regex-stage': UNSUPPORTED['regex-stage'],
   variables: (count) => `${DEFAULT_VARIABLES} ${count}개`,
   'prompt-settings': (count) => `Risu 프롬프트 설정 ${count}개(헤이젤에는 없음)`,

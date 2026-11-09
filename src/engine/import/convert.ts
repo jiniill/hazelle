@@ -3,7 +3,7 @@ import { isUnsupportedTag } from '../cbs/tags';
 import { args, parseDecorators } from '../lorebook/decorators';
 import { readToggles, writeToggles } from './toggles';
 import { blockConditions, blockEffects, conditionSources, effectSources } from './blocks';
-import type { Card, ImportedModule, ImportReport, LoreEntry, Pack, RegexScript, Trigger, UnsupportedKind } from './types';
+import { NEW_STAGE, type Card, type ImportedModule, type ImportReport, type LoreEntry, type Pack, type RegexScript, type Trigger, type UnsupportedKind } from './types';
 
 export type Json = Record<string, unknown>;
 type Entry = Omit<LoreEntry, 'name' | 'folder'>;
@@ -39,9 +39,11 @@ const STAGES = new Map<unknown, RegexScript['stage']>([
   ['editoutput', 'output'],
   ['editprocess', 'process'],
   ['editdisplay', 'display'],
+  ['edittrans', 'translation'],
 ]);
 const ROLES = ['system', 'user', 'assistant'];
-// Risu's order for a new entry. CCv3 requires insertion_order, so only a malformed file goes without one.
+// Risu's order for a new entry. CCv3 requires insertion_order, so only a malformed file goes without one. A null one
+// Risu sorts as 0 (lorebook.svelte.ts:276, 613-629).
 export const DEFAULT_ORDER = 100;
 
 export const text = (value: unknown) => (typeof value === 'string' ? value : '');
@@ -52,7 +54,7 @@ export const strings = (value: unknown) => list(value).filter((item): item is st
 const keys = (value: unknown) => strings(value).filter((key) => key.trim() !== '');
 // Risu's own lore joins keys into one string, split here as Risu splits it.
 const split = (value: unknown) => args(text(value));
-const order = (value: unknown) => finite(value) ?? DEFAULT_ORDER;
+const order = (value: unknown) => (value === null ? 0 : (finite(value) ?? DEFAULT_ORDER));
 
 // module: a charx's module.risum. Its regex and triggers replace the card's, and its lorebook, when it has one,
 // replaces the character_book entries; lore settings stay the card's (characterCards.ts:148-158 at ca1345fc).
@@ -68,12 +70,13 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
 
   const listed = spec === 'v3' ? list(data.assets) : [];
   const icon = pickIcon(listed);
-  // Risu's own assets: CCv3's x-risu-asset, and v2's additionalAssets as [name, uri, extension]. Emotions, voices and
-  // other asset types are not read.
+  // Risu's own assets: CCv3's x-risu-asset, and v2's additionalAssets as [name, uri, extension], whose uri when it is no
+  // asset chunk holds the picture itself in base64 (characterCards.ts:830-839). Emotions, voices and other asset types
+  // are not read.
   const assets =
     spec === 'v3'
       ? listed.filter((asset): asset is Json => isRecord(asset) && asset.type === 'x-risu-asset').map((asset) => ({ name: text(asset.name), uri: text(asset.uri) }))
-      : list(risu.additionalAssets).filter(Array.isArray).map(([name, uri]) => ({ name: text(name), uri: text(uri) }));
+      : list(risu.additionalAssets).filter(Array.isArray).map(([name, uri]) => ({ name: text(name), uri: /^(?:__asset:|data:)/.test(text(uri)) ? text(uri) : `data:;base64,${text(uri)}` }));
   for (const asset of listed) {
     if (asset === icon) continue;
     const type = isRecord(asset) ? asset.type : undefined;
@@ -300,11 +303,19 @@ export function convertModule(raw: Json, tally: Tally): ConvertedModule {
   };
 }
 
-// Tavern v1, including the char_* names of older exports that Risu's JSON check accepts.
+// Tavern v1's fields that Risu's JSON check requires, each beside the char_* name of older exports it also accepts.
+const TAVERN = [['name', 'char_name'], ['description', 'char_persona'], ['first_mes', 'char_greeting']] as const;
+
+// A PNG's card as Risu's PNG path reads one of no spec it knows (convertOffSpecCards, characterCards.ts:652-711):
+// {spec_version: '2.0', data} by its data, and a Tavern v1 card whatever required field it lacks, read as empty.
+export function offSpec(raw: unknown): unknown {
+  if (!isRecord(raw) || SPECS.has(raw.spec)) return raw;
+  if (raw.spec_version === '2.0' && isRecord(raw.data)) return { ...raw, spec: 'chara_card_v2' };
+  return { ...raw, ...Object.fromEntries(TAVERN.flatMap(([field, old]) => (typeof (raw[field] ?? raw[old]) === 'string' ? [] : [[field, '']]))) };
+}
+
 function tavern(raw: Json): Json | null {
-  const name = raw.name ?? raw.char_name;
-  const description = raw.description ?? raw.char_persona;
-  const greeting = raw.first_mes ?? raw.char_greeting;
+  const [name, description, greeting] = TAVERN.map(([field, old]) => raw[field] ?? raw[old]);
   if (typeof name !== 'string' || typeof description !== 'string' || typeof greeting !== 'string') return null;
   return {
     name,
@@ -336,16 +347,17 @@ function variables(value: unknown): [string, string][] {
     });
 }
 
-// Switching a script off in Risu replaces its stage with 'disabled' (RegexData.svelte), so its stage is lost and it
-// cannot come in as off; it is counted, as is a script on a stage risu-alpha does not run (edittrans).
-export function regexScripts<K>(scripts: unknown[], tally: Tally<K | 'regex-off' | 'regex-stage'>): Unstamped<RegexScript>[] {
+// Switching a script off in Risu replaces its stage with 'disabled' (RegexData.svelte), so it comes in off at a new
+// script's stage, which the user picks again on turning it on. A script on a stage Risu has not is counted.
+export function regexScripts<K>(scripts: unknown[], tally: Tally<K | 'regex-stage'>): Unstamped<RegexScript>[] {
   return scripts.filter(isRecord).flatMap((script) => {
-    const stage = STAGES.get(script.type);
+    const off = script.type === 'disabled';
+    const stage = off ? NEW_STAGE : STAGES.get(script.type);
     if (!stage) {
-      add(tally, script.type === 'disabled' ? 'regex-off' : 'regex-stage');
+      add(tally, 'regex-stage');
       return [];
     }
-    return [{ name: text(script.comment), find: text(script.in), replace: text(script.out), stage, flags: (script.ableFlag === true && text(script.flag)) || null }];
+    return [{ name: text(script.comment), find: text(script.in), replace: text(script.out), stage, flags: (script.ableFlag === true && text(script.flag)) || null, ...(off && { off: true as const }) }];
   });
 }
 
@@ -374,6 +386,19 @@ export const bookLorebook = (entries: unknown[]) => lorebook(entries, BOOK_LORE)
 // A Risu chat's own lorebook (localLore), and an entry a bot writes to it. Never migrated: Risu's open-time migration
 // (characterFormatUpdate) runs over globalLore only, and these entries carry no bookVersion.
 export const chatLorebook = (entries: unknown[]) => lorebook(entries, risuLore(false));
+
+// Risu's 채팅에서만 켜기 (LoreBookData.svelte activateLocally): a localLore entry of mode 'child' naming one of the
+// character's globalLore entries by id, which Risu reads as that entry, on in this chat (lorebook.svelte.ts:290-302).
+// It comes in as a copy of the entry as globalLore reads it, counted, as is one whose entry the character lacks.
+export function localCopies<K>(entries: unknown[], character: unknown[], tally: Tally<K | 'lore-copy' | 'lore-unfound'>): unknown[] {
+  const parents = new Map(character.filter(isRecord).map((raw) => [raw.id, raw]));
+  return entries.flatMap((raw) => {
+    if (!isRecord(raw) || raw.mode !== 'child') return [raw];
+    const parent = typeof raw.id === 'string' ? parents.get(raw.id) : undefined;
+    add(tally, parent ? 'lore-copy' : 'lore-unfound');
+    return parent ? [{ ...raw, mode: 'normal', comment: parent.comment, content: risuLore(true).entry(parent).content }] : [];
+  });
+}
 
 // Native module and backup lore share bookVersion: only version 1's activationPercent and old tag syntax migrate.
 const risuLore = (migrates: boolean): LoreSource => ({

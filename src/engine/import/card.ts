@@ -1,5 +1,5 @@
 import { errorMessage } from '../../error-message';
-import { add, cardSource, convert, convertModule, counted, extensionOf, lorebookSource, record, text, type Converted, type ConvertedModule, type Json, type Tally } from './convert';
+import { add, cardSource, convert, convertModule, counted, extensionOf, lorebookSource, offSpec, record, text, type Converted, type ConvertedModule, type Json, type Tally } from './convert';
 import { readLorebook } from './lorebook';
 import { METADATA_BYTES } from './inflate';
 import { hazelleSource, printOf, readHazelle, readModule, type ConvertedBundle } from './hazelle';
@@ -57,8 +57,8 @@ function fromPng(bytes: Uint8Array<ArrayBuffer>): ImportResult {
   if (!png.card) return png.persona === null ? fail('unreadable', 'the PNG holds no card') : readPersona(png.persona, png.image);
   if (png.card.startsWith('rcc||')) return fail('encrypted');
   const tally: Tally = new Map();
-  const converted = convert(JSON.parse(utf8.decode(fromBase64(png.card))), null, tally);
-  return converted ? done('png', converted, { bytes: png.image, type: 'image/png' }, { chunks: png.assets }, tally, NOT_OWN) : fail('unreadable', 'not a character card');
+  const converted = convert(offSpec(JSON.parse(utf8.decode(fromBase64(png.card)))), null, tally);
+  return converted ? done('png', converted, { bytes: png.image, type: 'image/png' }, { chunks: png.assets, image: png.image }, tally, NOT_OWN) : fail('unreadable', 'not a character card');
 }
 
 function readCharx(bytes: Uint8Array<ArrayBuffer>, tally: Tally): { zip: Zip; raw: unknown; converted: Converted } | ImportResult {
@@ -80,7 +80,7 @@ function fromCharx(bytes: Uint8Array<ArrayBuffer>): ImportResult {
   const { zip, raw, converted } = charx;
   const extensions = record(record(record(raw).data).extensions);
   const { read, own, bundled } = readHazelle(extensions.hazelle, text(record(extensions.risuai).toggles), converted, tally);
-  return done('charx', read, avatar(read.icon, zip.prefix, zip, tally), { zip }, tally, { own, bundled });
+  return done('charx', read, avatar(read.icon, zip.prefix, zip, tally), { zip, image: zip.prefix }, tally, { own, bundled });
 }
 
 // Read as Risu reads it back: as a character, then convertCharacterToModule, where the creator notes are the module's
@@ -151,7 +151,8 @@ function moduleOf(raw: Json, tally: Tally): ConvertedModule | null {
   return null;
 }
 
-type Holders = { zip?: Zip; chunks?: Map<string, string> };
+// image: the file's own, which ccdefault: names (avatar).
+type Holders = { zip?: Zip; chunks?: Map<string, string>; image?: Uint8Array<ArrayBuffer> };
 type Owned = { own: Imported['own']; bundled: ConvertedBundle[] };
 const NOT_OWN: Owned = { own: null, bundled: [] };
 
@@ -184,14 +185,15 @@ export function assemble(format: ImportReport['format'], converted: Converted, r
 }
 
 // An asset's bytes as Risu finds them: __asset:N a PNG chunk, embeded:// (Risu's spelling) a file in the charx,
-// data: inline. null for a uri none of them is, such as a web address.
-function reader(uri: string, { zip, chunks }: Holders): (() => Uint8Array<ArrayBuffer> | null) | null {
+// data: inline, ccdefault: the file's own image. null for a uri none of them is, such as a web address.
+function reader(uri: string, { zip, chunks, image }: Holders): (() => Uint8Array<ArrayBuffer> | null) | null {
   if (uri.startsWith('__asset:') && chunks) {
     const chunk = chunks.get(uri.slice('__asset:'.length));
     return () => (chunk === undefined ? null : decode(chunk));
   }
   if (uri.startsWith('embeded://') && zip) return () => zip.read(uri.slice('embeded://'.length));
   if (uri.startsWith('data:')) return () => dataUri(uri);
+  if (uri === 'ccdefault:' && image?.length) return () => image;
   return null;
 }
 

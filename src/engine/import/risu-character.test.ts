@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { risuChatFile } from './risu-character';
+import { risuCharacter, risuChatFile } from './risu-character';
 
 it('counts a chat whose own toggle values Risu reads over the account, with or without its local-toggle switch on', () => {
   const chat = (over: Record<string, unknown>) => ({ message: [], ...over });
@@ -41,4 +41,17 @@ it("reads each of Risu's memory formats into summaries ending where Risu stopped
     [{ text: 'v3', through: 0 }],
   ]);
   expect(file.missed).toEqual([{ kind: 'memory', count: 2 }]);
+});
+
+it('brings an entry Risu switched on for one chat as a constant copy of the character’s, as its lorebook reads, and counts each', () => {
+  const child = (id: string) => ({ mode: 'child', id, key: '', comment: '', content: '', alwaysActive: true, insertorder: 100, secondkey: '', selective: false });
+  const chat = { message: [{ role: 'user', data: 'hi' }], localLore: [child('castle'), child('gone'), { key: 'k', comment: 'Own', content: 'mine' }] };
+  const globalLore = [{ id: 'castle', key: 'castle', comment: 'Castle', content: '<char> rules', mode: 'normal', insertorder: 5 }];
+  const moved = risuCharacter({ chaId: 'c', name: 'Mira', globalLore }, [chat], null, () => null);
+  expect(moved.chats[0]!.lore).toMatchObject([
+    { name: 'Castle', keys: [], content: '{{char}} rules', constant: true, insertionOrder: 100 },
+    { name: 'Own', keys: ['k'], content: 'mine', constant: false },
+  ]);
+  expect(moved.missed).toEqual([{ kind: 'lore-copy', count: 1 }, { kind: 'lore-unfound', count: 1 }]);
+  expect(risuChatFile({ type: 'risuChat', ver: 2, data: chat })!.missed).toEqual([{ kind: 'lore-unfound', count: 2 }]);
 });

@@ -10,7 +10,7 @@ import { readToggles, writeToggles } from './toggles';
 import type { RegexScript } from './types';
 
 // What a preset holds that the prompt does not take, in the order the summary lists it.
-const UNSUPPORTED = ['jailbreak', 'cot', 'chatml', 'cache-narrowed', 'unread-item', 'repeated-slot', 'toggle-line', 'preset-text', 'regex-off', 'regex-stage', 'variables', 'prompt-settings', 'settings'] as const;
+const UNSUPPORTED = ['jailbreak', 'cot', 'chatml', 'cache-narrowed', 'unread-item', 'repeated-slot', 'toggle-line', 'preset-text', 'regex-stage', 'variables', 'prompt-settings', 'settings'] as const;
 export type PresetUnsupportedKind = (typeof UNSUPPORTED)[number];
 type Counted = Exclude<PresetUnsupportedKind, 'repeated-slot'>;
 // A repeated slot is listed once per slot, so the summary can name it.
@@ -28,8 +28,14 @@ const ROLES = new Map<unknown, Role>([
   ['user', 'user'],
   ['bot', 'assistant'],
 ]);
+// Risu's other spellings of bot, read as bot when it loads a preset (normalizePromptRole, normalizeCacheRole,
+// database.svelte.ts:2551-2595).
+const BOT = new Set<unknown>(['assistant', 'char']);
+const knownRole = (value: unknown) => ROLES.has(value) || BOT.has(value);
+// A role Risu does not know is system, the bucket's.
+const roleOf = (value: unknown): Role => ROLES.get(BOT.has(value) ? 'bot' : value) ?? 'system';
+// Any other type2, none included, is a normal block (process/index.svelte.ts:747-765).
 const MARKS = new Map<unknown, TextBlock['mark']>([
-  ['normal', null],
   ['main', 'main'],
   ['globalNote', 'globalNote'],
 ]);
@@ -53,11 +59,17 @@ const fail = (kind: PresetFailure['kind']): PresetResult => ({ ok: false, failur
 const presetKey = async (usage: 'encrypt' | 'decrypt') => crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', new TextEncoder().encode('risupreset')), 'AES-GCM', false, [usage]);
 const SEAL = { name: 'AES-GCM', iv: new Uint8Array(12) };
 
-// Dispatch by extension: .risup is RPack over gzip, .risupreset gzip alone (compat spec, out-of-scope formats).
-// MessagePack {type: 'preset', preset} holds AES-GCM-encrypted MessagePack in preset (pres in v0).
-// The fixed-string key hash and zero IV are format obfuscation, not protection.
+// Dispatch by extension (isPresetFile). MessagePack {type: 'preset', preset} holds AES-GCM-encrypted MessagePack in
+// preset (pres in v0). The fixed-string key hash and zero IV are format obfuscation, not protection.
 export async function importPreset(fileName: string, bytes: Uint8Array): Promise<PresetResult> {
   if (!isPresetFile(fileName)) return fail('unreadable');
+  if (fileName.toLowerCase().endsWith('.preset')) {
+    try {
+      return convertPreset(JSON.parse(new TextDecoder().decode(bytes)));
+    } catch {
+      return fail('unreadable');
+    }
+  }
   const packed = fileName.toLowerCase().endsWith('.risup');
   let outer: unknown;
   try {
@@ -137,8 +149,15 @@ function templateItem(block: Block, authorNote: string): Json | null {
   return { type, innerFormat: block.wrapper ?? undefined, role2: ROLES_OUT.get(block.role), name, ...(type === 'authornote' && { defaultText: authorNote }) };
 }
 
-export const PRESET_EXTENSIONS = ['.risup', '.risupreset'];
-export const isPresetFile = (fileName: string) => PRESET_EXTENSIONS.some((extension) => fileName.toLowerCase().endsWith(extension));
+// The files Risu's importPreset takes: .risup is RPack over gzip, .risupreset gzip alone, .preset and .json JSON (compat
+// spec, out-of-scope formats). A .json is a preset only by its shape (presetJson): cards and modules share the extension.
+export const PRESET_EXTENSIONS = ['.risup', '.risupreset', '.preset', '.json'];
+export const isPresetFile = (fileName: string) => PRESET_EXTENSIONS.some((extension) => extension !== '.json' && fileName.toLowerCase().endsWith(extension));
+
+// A preset as JSON, as Risu's downloadPreset writes it by default (_preset.json); null for JSON of another shape. Every
+// preset Risu holds has mainPrompt, a legacy one included, which convertPreset refuses as no-template.
+export const presetJson = (json: unknown): PresetResult | null =>
+  isRecord(json) && (Array.isArray(json.promptTemplate) || typeof json.mainPrompt === 'string') ? convertPreset(json) : null;
 
 // A Risu preset object, as a .risup holds it and as a backup's botPresets lists it.
 export function convertPreset(preset: unknown): PresetResult {
@@ -159,11 +178,11 @@ function convert(preset: Json, template: unknown[]): PresetRead {
       count('unread-item');
       continue;
     }
-    // Risu's cache item marks the last `depth` messages before it, of one role or of all; 여기까지 캐시 on the block
-    // before it marks the one message before it, which is Risu's depth 1 over all roles. One at the top marks nothing
-    // in Risu either.
+    // Risu's cache item marks the last `depth` messages before it, of one role or of all, a role it does not know being
+    // all (normalizeCacheRole); 여기까지 캐시 on the block before it marks the one message before it, which is Risu's
+    // depth 1 over all roles. One at the top marks nothing in Risu either.
     if (item.type === 'cache') {
-      if (!(item.depth === 1 && item.role === 'all')) count('cache-narrowed');
+      if (!(item.depth === 1 && !knownRole(item.role))) count('cache-narrowed');
       const before = blocks.at(-1);
       if (before) blocks[blocks.length - 1] = { ...before, cache: true };
       continue;
@@ -220,20 +239,16 @@ function block(item: Json): Block | Counted {
   const skipped = SKIPPED.get(item.type);
   if (skipped) return skipped;
   const named = { id: crypto.randomUUID(), name: text(item.name) || null };
-  const role = ROLES.get(item.role);
   const wrapped = WRAPPED.get(item.type);
   if (wrapped) {
     // The role on these is an optional override of the bucket's, which is system (compat spec, Template assembly).
     // Never `role`: most real presets carry a stale one here that Risu ignores (export spec, Finding: role2), and
     // reading it sends the description as a turn.
-    const placedAs = item.role2 === undefined ? 'system' : ROLES.get(item.role2);
-    return placedAs ? { ...named, kind: 'slot', slot: wrapped, role: placedAs, wrapper: text(item.innerFormat) || null } : 'unread-item';
+    return { ...named, kind: 'slot', slot: wrapped, role: roleOf(item.role2), wrapper: text(item.innerFormat) || null };
   }
   switch (item.type) {
-    case 'plain': {
-      const mark = MARKS.get(item.type2);
-      return role && mark !== undefined && typeof item.text === 'string' ? { ...named, kind: 'text', role, text: item.text, mark } : 'unread-item';
-    }
+    case 'plain':
+      return typeof item.text === 'string' ? { ...named, kind: 'text', role: roleOf(item.role), text: item.text, mark: MARKS.get(item.type2) ?? null } : 'unread-item';
     case 'lorebook':
     case 'postEverything':
       return { ...named, kind: 'slot', slot: item.type };
