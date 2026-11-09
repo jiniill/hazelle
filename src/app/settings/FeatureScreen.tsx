@@ -16,6 +16,7 @@ import { DetailFold } from '../common/DetailFold';
 import { IllustrateRows } from '../common/IllustrateRows';
 import { Missing } from '../common/Missing';
 import { AccountTaskModel, TaskPromptMenu, type PromptDoor } from '../common/TaskPrompt';
+import { taskRuns } from '../common/taskRuns';
 import { TranslateRows } from '../common/TranslateRows';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { useTypedNumber } from '../common/typed';
@@ -133,7 +134,7 @@ function MascotDefaults() {
   const writer = mascotWriterOf(store, SHARED_CHAT);
   return (
     <SettingGroup label={FEATURE_NAMES.mascot}>
-      <AccountTaskModel task="mascot" help="응답마다 모델을 한 번 더 호출해요." runs={'kind' in writer ? { why: describeMascotFailure(writer) } : writer} />
+      <AccountTaskModel task="mascot" help="응답마다 모델을 한 번 더 호출해요." runs={taskRuns(writer, describeMascotFailure)} />
       <SettingRow
         label="마스코트 프롬프트"
         control={
@@ -187,7 +188,7 @@ function PrereadDefaults() {
         </Callout>
       )}
       <SettingGroup label={PRE_READ}>
-        <AccountTaskModel task="preread" runs={'kind' in writer ? { why: describePrereadFailure(writer) } : writer} />
+        <AccountTaskModel task="preread" runs={taskRuns(writer, describePrereadFailure)} />
       </SettingGroup>
       <DetailFold
         set={set}

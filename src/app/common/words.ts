@@ -216,7 +216,7 @@ export const NOT_STARRED = '추가한 모델에 없음';
 export const STARRED = '추가한 모델';
 // 내 구성's list of what fails now.
 export const FINDINGS = '고칠 곳';
-// A role no layer picks.
+// A role no layer picks, or a 모델 설정 that sets nothing.
 export const NOT_PICKED = '지정 안 함';
 
 export const noStarred = (then: string) => `추가한 모델이 없어요. ${inSettings('connections')}에서 모델을 추가하면 여기서 ${then}.`;

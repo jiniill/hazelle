@@ -1,5 +1,5 @@
-import type { ModelRef, Role } from '../../connectors/assignment';
-import { entryKey, entryName } from '../../connectors/types';
+import { refOf, type ModelRef, type Role } from '../../connectors/assignment';
+import { entryName } from '../../connectors/types';
 import { FEATURE_LABS, type Feature } from '../../model/features';
 import type { Stored } from '../../model/kinds';
 import type { Route, RouteFailure, RolePick } from '../../runtime/assignment';
@@ -13,6 +13,7 @@ import {
   describeTranslateFailure,
   describeTurnFailure,
 } from '../common/failure';
+import { taskRuns, type TaskRuns } from '../common/taskRuns';
 import { EMPTY_VALUE, FEATURE_NAMES, FEATURES_TITLE, follows, LAB, MODEL_PINNED, MODEL_ROLES, NOT_PICKED, NOT_STARRED, onOff, PAGES, promptName, SCOPE, STARRED } from '../common/words';
 import type { FlowColumn, FlowEdge, FlowKind, FlowNode } from '../ui';
 
@@ -21,33 +22,32 @@ import type { FlowColumn, FlowEdge, FlowKind, FlowNode } from '../ui';
 export const ROLES_TITLE = '역할';
 export const LEGEND: Partial<Record<FlowKind, string>> = { follow: '기본 모델 사용', own: '직접 지정', gap: EMPTY_VALUE, off: '꺼진 기능' };
 
-export const nodeOf = {
+const nodeOf = {
   connection: (id: string) => `c:${id}`,
   model: (ref: ModelRef) => `m:${ref.connection}/${ref.model}`,
   role: (role: Role) => `r:${role}`,
   feature: (feature: Feature | 'talk') => `f:${feature}`,
 };
-const routeNode = (route: Route) => nodeOf.model({ connection: route.connection.id, model: entryKey(route.model) });
+const routeNode = (route: Route) => nodeOf.model(refOf(route.connection.id, route.model));
 
 export type Finding = { node: string; title: string; why: string };
 // What a node stands for, which its detail opens.
 export type Target = { kind: 'connection'; connection: Stored<'connection'> } | { kind: 'model'; ref: ModelRef; name: string } | { kind: 'role'; role: Role } | { kind: 'talk'; pins: Overview['talk']['pins'] } | { kind: 'task'; task: TaskRun };
 
-const said = <F>(runs: Runs<F>, describe: (failure: F) => string): { route: Route } | { why: string } => ('route' in runs ? runs : { why: describe(runs.failure) });
+const writerOf = <F>(runs: Runs<F>): { route: Route } | F => ('route' in runs ? runs : runs.failure);
 
-// What a task runs on, or why it cannot in its own feature's words: what a task's model row says under it.
-export function taskRuns(task: TaskRun): { route: Route } | { why: string } {
+export function saidOf(task: TaskRun): TaskRuns {
   switch (task.feature) {
     case 'translate':
-      return said(task.runs, describeTranslateFailure);
+      return taskRuns(writerOf(task.runs), describeTranslateFailure);
     case 'illustrate':
-      return said(task.runs, describeIllustrateFailure);
+      return taskRuns(writerOf(task.runs), describeIllustrateFailure);
     case 'memory':
-      return said(task.runs, describeMemoryFailure);
+      return taskRuns(writerOf(task.runs), describeMemoryFailure);
     case 'mascot':
-      return said(task.runs, describeMascotFailure);
+      return taskRuns(writerOf(task.runs), describeMascotFailure);
     case 'preread':
-      return said(task.runs, describePrereadFailure);
+      return taskRuns(writerOf(task.runs), describePrereadFailure);
   }
 }
 
@@ -64,7 +64,7 @@ export function findingsOf({ roles, talk, tasks }: Overview, available: readonly
   for (const task of tasks) {
     if (!available.includes(task.feature) || !task.on || (task.feature === 'memory' && task.by !== null)) continue;
     const at = { node: nodeOf.feature(task.feature), title: FEATURE_NAMES[task.feature] };
-    const runs = taskRuns(task);
+    const runs = saidOf(task);
     if ('why' in runs && (task.own !== undefined || !('kind' in roles.aux.runs))) found.push({ ...at, why: runs.why });
     if (task.feature === 'illustrate' && 'kind' in task.draws) found.push({ ...at, why: describeIllustrateFailure(task.draws) });
     if (task.feature === 'memory' && 'kind' in roles.embed.runs) {
@@ -98,9 +98,10 @@ export function mapOf(overview: Overview, connections: readonly Stored<'connecti
   const tasks = overview.tasks.filter(({ feature }) => available.includes(feature));
   const tone = (id: string, on = true): FlowNode['tone'] => (findings.some(({ node }) => node === id) ? 'warn' : on ? 'plain' : 'off');
   const role = (each: Role): FlowNode => ({ id: nodeOf.role(each), ...roleNode(each, roles[each]), tone: tone(nodeOf.role(each)) });
+  const starred = connections.flatMap((connection) => connection.value.starred.map((model) => ({ ref: refOf(connection.id, model), model, connection })));
   const columns: FlowColumn[] = [
     { title: PAGES.connections, nodes: connections.map(({ id, value }) => ({ id: nodeOf.connection(id), title: value.label, note: `모델 ${value.starred.length}개` })) },
-    { title: STARRED, nodes: connections.flatMap(({ id, value }) => value.starred.map((model) => ({ id: nodeOf.model({ connection: id, model: entryKey(model) }), title: entryName(model), note: value.label }))) },
+    { title: STARRED, nodes: starred.map(({ ref, model, connection }) => ({ id: nodeOf.model(ref), title: entryName(model), note: connection.value.label })) },
     { title: ROLES_TITLE, nodes: [role('main'), role('aux'), role('embed')] },
     {
       title: FEATURES_TITLE,
@@ -111,7 +112,7 @@ export function mapOf(overview: Overview, connections: readonly Stored<'connecti
     },
   ];
 
-  const edges: FlowEdge[] = connections.flatMap(({ id, value }) => value.starred.map((model) => ({ from: nodeOf.connection(id), to: nodeOf.model({ connection: id, model: entryKey(model) }), kind: 'follow' as const })));
+  const edges: FlowEdge[] = starred.map(({ ref, connection }) => ({ from: nodeOf.connection(connection.id), to: nodeOf.model(ref), kind: 'follow' }));
   for (const each of ['main', 'aux', 'embed'] as const) {
     const { runs, from } = roles[each];
     if (!('kind' in runs)) edges.push({ from: routeNode(runs), to: nodeOf.role(each), kind: from?.layer === 'settings' || from?.role !== each ? 'follow' : 'own', label: from?.layer === 'prompt' ? MODEL_PINNED : undefined });
@@ -129,10 +130,7 @@ export function mapOf(overview: Overview, connections: readonly Stored<'connecti
   }
   const targets = new Map<string, Target>([
     ...connections.map((connection) => [nodeOf.connection(connection.id), { kind: 'connection', connection }] as const),
-    ...connections.flatMap(({ id, value }) => value.starred.map((model) => {
-      const ref = { connection: id, model: entryKey(model) };
-      return [nodeOf.model(ref), { kind: 'model', ref, name: entryName(model) }] as const;
-    })),
+    ...starred.map(({ ref, model }) => [nodeOf.model(ref), { kind: 'model', ref, name: entryName(model) }] as const),
     ...(['main', 'aux', 'embed'] as const).map((each) => [nodeOf.role(each), { kind: 'role', role: each }] as const),
     [nodeOf.feature('talk'), { kind: 'talk', pins: talk.pins }] as const,
     ...tasks.map((task) => [nodeOf.feature(task.feature), { kind: 'task', task }] as const),

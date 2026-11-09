@@ -4,7 +4,7 @@ import type { Modality, Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
 import type { ProfileChoice } from '../../runtime/profiles';
 import { count } from './typedNumber';
-import { DISCOUNT, MODEL_SETTINGS, PDF_SEND, RETRY_COUNT, SCOPE, UNKNOWN, UNSET } from './words';
+import { DISCOUNT, MODEL_SETTINGS, NOT_PICKED, PDF_SEND, RETRY_COUNT, SCOPE, UNKNOWN, UNSET } from './words';
 
 export const MODALITY: Record<Modality, string> = { text: '텍스트', image: '이미지', audio: '오디오', video: '영상', file: '파일', embedding: '임베딩' };
 
@@ -60,13 +60,12 @@ const isField = (setting: Change['setting']): setting is Field => setting in NUM
 const settingLabel = (setting: Change['setting']) => (isField(setting) ? NUMBER[setting].label : NAMED[setting]);
 
 // The screens never say 묶음.
-const NO_VALUES = '지정 안 함';
-// Where no label beside it already says 모델 설정; under one, plain 없음 and NO_VALUES.
+// Where no label beside it already says 모델 설정; under one, plain 없음 and NOT_PICKED.
 export const NO_PROFILE = `${MODEL_SETTINGS} 없음`;
 export const NO_PROFILE_VALUES = UNSET;
 
 // What a 모델 설정 sets, in the order the editor shows them.
-export function valuesLine(settings: ModelSettings, unset: string = NO_VALUES): string {
+export function valuesLine(settings: ModelSettings, unset: string = NOT_PICKED): string {
   const { reasoning, reasoningSummary, stop, systemAsUser, streaming, cache, verbosity, serviceTier, discount, pdf, retries, extra } = settings;
   const number = (field: Field) => {
     const value = settings[field];

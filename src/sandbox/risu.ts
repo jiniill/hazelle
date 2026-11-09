@@ -1,5 +1,5 @@
 import { toBase64 } from '../base64';
-import { RISU_DECLINED, RISU_REPLACERS } from '../tool-api/risu-methods';
+import { RISU_ABSENT, RISU_DECLINED, RISU_REPLACERS } from '../tool-api/risu-methods';
 import { risuRegex } from '../tool-api/risu-regex';
 
 // Risu v3 shapes stay in this adapter over `api`, never in tool-api/protocol.ts (research/risu-plugin-adapter-plan.md §3).
@@ -123,17 +123,6 @@ const rowOf = (row: Row) => ({
 const unescapeCss = (text: string) => text.replace(/\\([0-9a-f]{1,6})\s?|\\(.)/gi, (_, hex?: string, char?: string) => (hex ? String.fromCodePoint(parseInt(hex, 16)) : char!));
 
 const API_VERSION = '3.0';
-// Why Hazelle has nothing for a Risu name it does not map, said by the error a call throws.
-const ABSENT = new Map(Object.entries({
-  'Hazelle has no text-to-speech': ['addTTSPreprocessor', 'addTTSPostprocessor'],
-  'Hazelle registers no tools for the chat model at run time': ['registerMCP', 'unregisterMCP'],
-  'Hazelle shows no plugin the app\'s own requests': ['getFetchLogs'],
-  'Hazelle has no write-only secret store': ['saveSecretHeader'],
-  'a plugin does not reload plugins in Hazelle': ['loadPlugins'],
-  'Hazelle has no live page to watch; getRootDocument reads a copy': ['createMutationObserver'],
-  'a plugin is not told the app\'s colors in Hazelle': ['getColorScheme', 'getTextTheme'],
-  'the app\'s colors are the user\'s display settings in Hazelle': ['changeColorScheme', 'setColorScheme', 'changeTextTheme', 'setCustomTextTheme'],
-}).flatMap(([reason, names]) => names.map((name) => [name, reason])));
 
 // Run as an async function body for top-level await and private declarations (Risu apiV3/factory.ts).
 // Keep the trailing newline so a closing line comment cannot swallow the brace.
@@ -146,7 +135,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   const tell = (name: string) => { if (told.has(name)) return; told.add(name); frame.missing(name); };
   const refuse = (name: string): never => {
     tell(name);
-    throw new Error(`Risu API '${name}' is not available in Hazelle${ABSENT.has(name) ? `: ${ABSENT.get(name)}` : ''}`);
+    throw new Error(`Risu API '${name}' is not available in Hazelle${RISU_ABSENT.has(name) ? `: ${RISU_ABSENT.get(name)}` : ''}`);
   };
   // Risu's character holds every chat of it. Hazelle offers a plugin no chat list, and a partial one would let a plugin
   // that prunes by it (RisuPot's orphan cleanup) delete what it does not see; the open chat is getChatFromIndex's. So
