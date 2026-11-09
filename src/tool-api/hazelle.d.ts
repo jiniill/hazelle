@@ -4,7 +4,9 @@ declare namespace Hazelle {
   type Role = 'user' | 'char';
   // index excludes the greeting and is zero-based, as in Lua. id stays stable across versions.
   // text is prompt-rendered; raw is pre-script/CBS text, matching Risu chat data.
-  interface Message { index: number; id: string; version: string; role: Role; text: string; raw: string; time: number }
+  // translation: the version's own, as 번역 shows it, null when it has none; sent: the message went out translated, so
+  // its text is the user's own words and raw the translation sent.
+  interface Message { index: number; id: string; version: string; role: Role; text: string; raw: string; time: number; translation: { text: string; sent: boolean } | null }
   type At = { index: number; id: string; version: string };
   interface ModelMessage { role: 'system' | 'user' | 'assistant'; content: string }
   // Retaining message on a replacement request message preserves its pictures.

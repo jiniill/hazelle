@@ -308,8 +308,12 @@ export class ToolApi {
         if (method === 'chat.messages') {
           const state = await this.state(frame, context);
           const greeting = context.scope.greeting === null ? 0 : 1;
-          const messages: Message[] = context.scope.messages.slice(greeting).map((message, index) => ({ index, id: message.message, version: message.id, role: message.role === 'user' ? 'user' : 'char', text: state.texts[index + greeting]!, raw: message.text, time: message.time ?? 0 }));
-          const tail = changedTail(frame.messages, messages, (a, b) => a.id === b.id && a.version === b.version && a.role === b.role && a.text === b.text && a.raw === b.raw && a.time === b.time);
+          const translations = new Map(this.session.store.foldedChat(context.chat).messages.flatMap(({ versions }) => versions.flatMap(({ id, translation }) => (translation ? [[id, { text: translation.text, sent: translation.sentIn !== undefined }] as const] : []))));
+          const messages: Message[] = context.scope.messages.slice(greeting).map((message, index) => ({
+            index, id: message.message, version: message.id, role: message.role === 'user' ? 'user' : 'char', text: state.texts[index + greeting]!, raw: message.text, time: message.time ?? 0, translation: translations.get(message.id) ?? null,
+          }));
+          const tail = changedTail(frame.messages, messages, (a, b) => a.id === b.id && a.version === b.version && a.role === b.role && a.text === b.text && a.raw === b.raw && a.time === b.time
+            && a.translation?.text === b.translation?.text && a.translation?.sent === b.translation?.sent);
           frame.messages = messages;
           return tail;
         }

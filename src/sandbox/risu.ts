@@ -245,6 +245,12 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   const local = storage('local:');
   const getArgument = async (key: string) => (await api.settings())[key];
   const setArgument = (key: string, value: string | number) => api.setSetting(key, value);
+  // Risu's translation cache, from each text translated to its translation, over the open chat's translations only, where
+  // Risu's spans every chat.
+  const translated = async () => {
+    const chat = await frame.chat();
+    return chat ? (await chat.messages()).flatMap(({ text, raw, translation }) => (translation ? [translation.sent ? { key: translation.text, value: raw } : { key: text, value: translation.text }] : [])) : [];
+  };
   // Risu's database as getDatabase builds it, of the keys asked that it builds.
   const database = async (keys: string[]) => {
     const chat = await frame.chat();
@@ -433,6 +439,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       if (name.includes('/') || name.includes('\\')) throw new Error('readImage path cannot contain \'/\' or \'\\\', except the assets/ prefix');
       return name.endsWith('.png') ? api.assets.read(name.slice(0, -'.png'.length)) : null;
     },
+    getTranslationCache: async (key: string) => (await translated()).find((entry) => entry.key === key)?.value ?? null,
+    searchTranslationCache: async (partial: string) => (await translated()).filter(({ key }) => key.includes(partial)),
     // Read after the chat's last message, its setvar setting nothing as Risu's runVar left off does: an option that asks
     // for another reading fails it.
     parseRisuChat: async (text: string, { messageIndex = -1, runVar, processRegex, role, cbsConditions }: { messageIndex?: number; runVar?: boolean; processRegex?: boolean; role?: string; cbsConditions?: object } = {}) => {

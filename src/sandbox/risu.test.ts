@@ -17,8 +17,8 @@ function fakeApi({ open = true } = {}) {
   const lore: Omit<Hazelle.LoreEntry, 'owner'>[] = [];
   const variables: [string, string][] = [];
   const messages: Hazelle.Message[] = [
-    { index: 0, id: 'm0', version: 'v0', role: 'user', text: 'hello', raw: 'hello', time: 1 },
-    { index: 1, id: 'm1', version: 'v1', role: 'char', text: 'hi there', raw: '<b>hi there</b>', time: 2 },
+    { index: 0, id: 'm0', version: 'v0', role: 'user', text: 'hello', raw: 'hello', time: 1, translation: { text: '안녕', sent: true } },
+    { index: 1, id: 'm1', version: 'v1', role: 'char', text: 'hi there', raw: '<b>hi there</b>', time: 2, translation: { text: '반가워', sent: false } },
   ];
   const card: Hazelle.Card = {
     id: 'character-1', name: 'Mira', description: 'A sailor', personality: 'calm', scenario: 'harbor', greeting: null, creatorNotes: '', tags: ['sea'],
@@ -234,6 +234,14 @@ describe('the Risu adapter', () => {
     expect(await Risuai.readImage!('abc' as never)).toBeNull();
     await expect(Risuai.readImage!('assets/../abc.png' as never)).rejects.toThrow('readImage path');
     await expect(Risuai.readImage!('..\\abc.png' as never)).rejects.toThrow('readImage path');
+  });
+
+  it('answers the translation cache from the open chat\'s translations, a message sent translated from the user\'s own words', async () => {
+    const { Risuai } = install(fakeApi());
+    expect(await Risuai.getTranslationCache!('hi there' as never)).toBe('반가워');
+    expect(await Risuai.getTranslationCache!('hello' as never)).toBeNull();
+    expect(await Risuai.searchTranslationCache!('' as never)).toEqual([{ key: '안녕', value: 'hello' }, { key: 'hi there', value: '반가워' }]);
+    expect(await Risuai.searchTranslationCache!('there' as never)).toEqual([{ key: 'hi there', value: '반가워' }]);
   });
 
   it('reads a text\'s CBS after the chat, and fails an option that asks for another reading', async () => {

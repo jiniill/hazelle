@@ -10,7 +10,7 @@ import type { Down, Up } from '../../tool-api/protocol';
 import { shown } from '../../model/chat';
 import { SIGNATURE } from '../../engine/assets';
 import { keepAttachments } from '../attachments';
-import { appendScripted, appendUserMessage, editMessage, startChat } from '../chat-log';
+import { appendScripted, appendTranslation, appendUserMessage, editMessage, startChat } from '../chat-log';
 import { setModuleAlways, setModuleDeleted } from '../modules';
 import { ToolLate, ToolStuck } from '../scripts/binding';
 import type { Session } from '../session';
@@ -161,6 +161,20 @@ it('runs a draft as no installed plugin, keeping its storage and settings writes
     expect(await trial({ kind: 'input', item: 'tidy', text: '' })).toEqual([null]);
     expect(stored()).toEqual(before);
   } finally { host.close(); Reflect.deleteProperty(globalThis, 'hazelle'); }
+}));
+
+it('reads a version\'s translation with its message', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const said = shown(session.store.foldedChat(f.chat).messages[0]!);
+  await appendTranslation(session.store, f.chat, said.id, { text: '안녕', receipt: null, at: 1 }, crypto.randomUUID());
+  let read: Hazelle.Message[] = [];
+  const transport = inProcessTools((api) => { api.on('prompt', async (chat) => { read = await chat.messages(); return null; }); });
+  const host = connect(transport.open);
+  try {
+    const context = f.context();
+    await host.run(f.chat, f.tool(), context.scope, { kind: 'prompt', turn: { memory: false } }, context.host);
+    expect(read).toEqual([expect.objectContaining({ text: 'hello', translation: { text: '안녕', sent: false } })]);
+  } finally { host.close(); }
 }));
 
 it('reads the greeting apart from the messages, which count from after it', () => withTools(async (session, connect) => {
