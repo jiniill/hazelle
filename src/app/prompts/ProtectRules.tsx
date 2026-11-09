@@ -23,7 +23,7 @@ export function ProtectRules({ task, rules, onChange }: Props) {
     <Disclosure label={count ? `보호 패턴 · ${count}개` : '보호 패턴'} open={open} onOpen={setOpen} menu={<Hint label="보호 패턴">{`${HELP[task]} ${ALWAYS}`}</Hint>}>
       <Stack gap="related">
         <EntryList entries={rows} onChange={change} name={(index) => `패턴 ${index + 1}`} blank="" addLabel="패턴 추가" removed={(index) => `${index + 1}번째 패턴을 삭제했어요.`}>
-          {({ value, name, set, remove }) => <TextField label={name} kind="key" value={value} onChange={set} error={value && !compileRule(value) ? '정규식 형식이 올바르지 않아요. 수정할 때까지 저장되지 않아요.' : undefined} action={remove} />}
+          {({ value, name, added, set, remove }) => <TextField label={name} kind="key" focus={added} value={value} onChange={set} error={value && !compileRule(value) ? '정규식 형식이 올바르지 않아요. 수정할 때까지 저장되지 않아요.' : undefined} action={remove} />}
         </EntryList>
       </Stack>
     </Disclosure>
