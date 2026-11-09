@@ -139,10 +139,12 @@ export const openingStop = (box: ParentNode, fine: boolean) =>
 
 // A box itself marked data-autofocus opens on itself: a panel to read, whose first field would raise a phone's keyboard.
 export function useFocusTrap(box: RefObject<HTMLElement | null>, active = true) {
+  const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const element = box.current;
     if (!active || !element) return;
-    const opener = document.activeElement as HTMLElement | null;
+    // Kept across a run again over the same box (StrictMode's), which finds the focus already inside.
+    if (!element.contains(document.activeElement)) opener.current = document.activeElement as HTMLElement | null;
     const aim = () => (element.hasAttribute('data-autofocus') ? element : openingStop(element, hasFinePointer()))?.focus();
     aim();
     // The control the focus was last in going away or turning disabled (a step changed in place) drops the focus to
@@ -160,7 +162,7 @@ export function useFocusTrap(box: RefObject<HTMLElement | null>, active = true) 
       element.removeEventListener('focusin', hold);
       watch.disconnect();
       // Given back unless it went on elsewhere, such as to a control pressed outside a covering panel.
-      if (document.activeElement === document.body) opener?.focus();
+      if (document.activeElement === document.body) opener.current?.focus();
     };
   }, [box, active]);
   return (event: ReactKeyboardEvent) => {

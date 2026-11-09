@@ -1,4 +1,4 @@
-import { act, useRef } from 'react';
+import { act, StrictMode, useRef } from 'react';
 import { expect, it, vi } from 'vitest';
 import { probeRoot } from '../probe';
 import { backLayers, openingField, openingStop, useFocusTrap, useLayer } from './layers';
@@ -68,7 +68,7 @@ it('lets a back leave a step while Esc goes to the layer under it, and keeps a l
   }
 });
 
-it('opens a trap by the opening rule, takes the focus back in when its control goes but not after a press on its text, and gives it back only from the body', async () => {
+it('opens a trap by the opening rule, takes the focus back in when its control goes but not after a press on its text, and gives it back only from the body, to what held it before', async () => {
   const root = probeRoot();
   let watched = () => {};
   vi.stubGlobal(
@@ -133,6 +133,11 @@ it('opens a trap by the opening rule, takes the focus back in when its control g
     await act(async () => root.render(<Probe open />));
     drop();
     await act(async () => root.render(<Probe open={false} />));
+    expect(at()).toBe('opener');
+    // Run twice as it opens (StrictMode): the second run finds the focus inside and keeps the opener.
+    await act(async () => root.render(<StrictMode><Probe open /></StrictMode>));
+    drop();
+    await act(async () => root.render(<StrictMode><Probe open={false} /></StrictMode>));
     expect(at()).toBe('opener');
     await act(async () => root.unmount());
   } finally {
