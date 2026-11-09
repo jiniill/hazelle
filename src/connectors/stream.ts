@@ -27,7 +27,7 @@ export type Outcome = {
 };
 
 // keep applies only to character replies, never translations (user, 2026-10-04).
-// Only Talk consumes takeBack; other tasks still receive the returned content as text.
+// takeBack: every runtime task's (runtime/generate TextSink), so each keeps only the answer as its text.
 export type InlineThoughts = { keep?: boolean; takeBack?: (phase: Phase, chars: number) => void };
 
 // Streaming and whole JSON replies must share facts/end rules; batched means a discount-batch result.

@@ -98,8 +98,9 @@ export const upstream = (status: number, body: unknown) => Response.json(body, {
 
 export const inTurn = (answers: (Response | null)[]): Relay => () => answers.shift() ?? null;
 
-export const saying = (text: string) =>
-  new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: text }, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n`, { headers: { [RELAY_HEADER]: 'upstream' } });
+// Each text one chunk of the stream, the last ending it.
+export const saying = (...texts: string[]) =>
+  new Response(`${texts.map((content, at) => `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: at === texts.length - 1 ? 'stop' : null }] })}\n\n`).join('')}data: [DONE]\n\n`, { headers: { [RELAY_HEADER]: 'upstream' } });
 
 // The bytes of a picture as far as the import reads one: a PNG's signature.
 export const png = () => new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, ...randomBytes(16)]);

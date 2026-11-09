@@ -4,7 +4,7 @@ import { fold, shown, type Receipt } from '../model/chat';
 import { chatModel } from './assignment';
 import { appendUserMessage, startChat } from './chat-log';
 import { Calibration } from '../engine/token-calibration';
-import { generate } from './generate';
+import { gather, generate } from './generate';
 import { newCall, pageCall } from './streams';
 import { tokenLimits } from './chat-context';
 import { FIRST_PROFILE_ID, setProfileSettings } from './profiles';
@@ -142,7 +142,7 @@ it.each(['translation', 'memory', 'illustration', 'likeness', 'script'] as const
   const messages = [{ role: 'user' as const, content: 'oversized '.repeat(500) }];
   const pick = vi.spyOn(session.credentials.pool, 'pick');
   const log = stubRelay(() => measuredReply(100));
-  const answer = await generate({ credentials: session.credentials, log: session.log, connection: route.connection.value, model: route.model, settings: { maxOutput: 16 }, retries: 0, messages, call, signal: signal(), onText: () => {} });
+  const answer = await generate({ credentials: session.credentials, log: session.log, connection: route.connection.value, model: route.model, settings: { maxOutput: 16 }, retries: 0, messages, call, signal: signal(), onText: gather() });
   expect(answer.error).toEqual({ kind: 'refused', code: 'context-fit' });
   expect(answer.calibration.fit?.allowance).toBeLessThan(184);
   expect(answer.calibration.measurement).toMatchObject({ kind: 'measured', key: expect.stringContaining(requestClass) });
@@ -155,7 +155,7 @@ it('surfaces an auxiliary snapshot failure and records a provider refusal withou
   const { chat, route } = await ready(session);
   if ('kind' in route) throw new Error(route.kind);
   const log = stubRelay(() => upstream(400, { error: { code: 'context_length_exceeded', message: 'maximum context length exceeded' } }));
-  const ask = async () => generate({ credentials: session.credentials, log: session.log, connection: route.connection.value, model: route.model, settings: { maxOutput: 16 }, retries: 0, messages: [{ role: 'user', content: 'hello' }], call: await pageCall(session, route, 'script', chat), signal: signal(), onText: () => {} });
+  const ask = async () => generate({ credentials: session.credentials, log: session.log, connection: route.connection.value, model: route.model, settings: { maxOutput: 16 }, retries: 0, messages: [{ role: 'user', content: 'hello' }], call: await pageCall(session, route, 'script', chat), signal: signal(), onText: gather() });
   vi.spyOn(session.usage, 'read').mockResolvedValueOnce({ ok: false, error: 'unreadable' });
   expect((await ask()).error).toEqual({ kind: 'app', code: 'unreadable' });
   expect(log).toHaveLength(0);
@@ -190,7 +190,7 @@ it('keeps an auxiliary preflight cancellation a stopped cut and reports an unres
   const stopped = new AbortController();
   stopped.abort();
   const call = await pageCall(session, route, 'script', chat);
-  const answer = await generate({ credentials: session.credentials, log: session.log, connection: route.connection.value, model: route.model, settings: { maxOutput: 16 }, retries: 0, messages: [{ role: 'user', content: 'hello' }], call, signal: stopped.signal, onText: () => {} });
+  const answer = await generate({ credentials: session.credentials, log: session.log, connection: route.connection.value, model: route.model, settings: { maxOutput: 16 }, retries: 0, messages: [{ role: 'user', content: 'hello' }], call, signal: stopped.signal, onText: gather() });
   expect(answer).toMatchObject({ state: 'cut', cut: 'stopped', error: null });
   expect(log).toHaveLength(0);
   const gone = { ...route, connection: { ...route.connection, value: { ...route.connection.value, type: 'missing-provider' } } };

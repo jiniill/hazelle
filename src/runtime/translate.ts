@@ -107,7 +107,7 @@ async function translateWith(
     messages: assembled.messages,
     call: await newCall({ store, tokens }, route, spans.length ? { ...target, for: { ...target.for, spans } } : target),
     signal,
-    onText: text.add,
+    onText: text,
   });
   return translated(callOf(route), answer, text.value(), spans, language);
 }
@@ -118,7 +118,7 @@ export async function resumeTranslation(deps: Pick<Deps, 'store' | 'credentials'
   const purpose = stream.value.for;
   const spans = 'spans' in purpose ? (purpose.spans ?? []) : [];
   const text = gather((live) => onText(restore(live, spans).text));
-  const answer = await resume(deps, stream, signal, text.add);
+  const answer = await resume(deps, stream, signal, text);
   return translated(stream.value.call, answer, text.value(), spans, null);
 }
 

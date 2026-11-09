@@ -28,7 +28,10 @@ export async function toolLoop<T extends Sent | { kind: string }>({ tools, round
   const rounds: Round<R>[] = [];
   while (!signal.aborted) {
     const text = gather();
-    const sent = await send(exchange.slice(), offered, (phase, chunk) => (text.add(phase, chunk), onText(phase, chunk)));
+    const sent = await send(exchange.slice(), offered, {
+      text: (phase, chunk) => (text.text(phase, chunk), onText.text(phase, chunk)),
+      takeBack: (phase, chars) => (text.takeBack(phase, chars), onText.takeBack(phase, chars)),
+    });
     if (!('answer' in sent)) return sent as Exclude<T, Sent>;
     const round: Round<R> = { ...(sent as R), text: text.value(), results: [] };
     rounds.push(round);

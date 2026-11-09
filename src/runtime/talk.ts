@@ -5,8 +5,7 @@ import type { InputMeasurement, TokenFit, CallCalibration } from '../model/token
 import { ChangeSignal } from '../change-signal';
 import type { Cues } from './cues';
 import type { ModelSettings } from '../connectors/settings';
-import type { InlineThoughts } from '../connectors/stream';
-import type { Phase, ToolCall, ToolResult } from '../connectors/types';
+import type { ToolCall, ToolResult } from '../connectors/types';
 import type { Assembled } from '../engine/pipeline';
 import type { Settle } from './preread';
 import type { CacheDiagnosis, CacheForecast, CacheText } from '../model/cache';
@@ -22,7 +21,7 @@ import { refuseTools, routeFields } from './connections';
 import { TOOL_ROUNDS, toolLoop, type Tool } from './tool-loop';
 import type { Costs } from './cost';
 import type { Credentials } from './credential';
-import { gather, generate, receiptOf, resume, unsettled, type GenerateInput, type Reply } from './generate';
+import { gather, generate, receiptOf, resume, unsettled, type GenerateInput, type Reply, type TextSink } from './generate';
 import { stopStream } from './relay';
 import type { RequestLog } from './request-log';
 import type { ObjectStore } from './store';
@@ -307,7 +306,7 @@ export class Talk {
         held.calling = call.id;
         this.change(held, { ...held.turn, reading: { at: Date.now(), text: held.turn.text.length, reasoning: held.turn.reasoning.length } });
         // A batched reply answers whole and later, so no round could follow a call: a turn that offers tools goes unbatched.
-        const replying = generate({ credentials: this.credentials, log: this.log, ...routeFields(this.store, route, settings), messages: [...prompt.messages, ...exchange], ...(tools && { tools }), call, signal: abort.signal, onText, inline: this.inline(held), ...(!tools && { batching }) });
+        const replying = generate({ credentials: this.credentials, log: this.log, ...routeFields(this.store, route, settings), messages: [...prompt.messages, ...exchange], ...(tools && { tools }), call, signal: abort.signal, onText, keep: this.keeps(held), ...(!tools && { batching }) });
         const sent = await sending;
         if (sent && !sent.ok) {
           held.cancel.abort();
@@ -384,7 +383,7 @@ export class Talk {
     try {
       await this.store.pinned(async () => {
         if (await lease.ready) return;
-        const answer = await resume({ store: this.store, credentials: this.credentials, log: this.log }, stream, held.abort.signal, this.writer(held), this.inline(held), { retrying: this.retrying(held), cancel: held.cancel.signal });
+        const answer = await resume({ store: this.store, credentials: this.credentials, log: this.log }, stream, held.abort.signal, this.writer(held), this.keeps(held), { retrying: this.retrying(held), cancel: held.cancel.signal });
         // Not Date.now(): the call may have ended long before this page read it, and the cache timer counts back from at.
         const at = stream.value.at + answer.totalMs;
         // A round that called tools ends here: the page that would have run them is gone.
@@ -402,18 +401,20 @@ export class Talk {
 
   // started: the reply's text begins here, so its first chunk cues; never for one picked up mid-way (resume), a
   // continuation, whose text starts as the one it continues, or one shown whole.
-  private writer(held: Held, started = false) {
-    return (phase: Phase, chunk: string) => {
-      if (started && phase === 'text' && held.turn.text === '' && !held.turn.whole) this.cues.emit('reply-started');
-      this.change(held, { ...held.turn, [phase]: held.turn[phase] + chunk });
+  private writer(held: Held, started = false): TextSink {
+    return {
+      text: (phase, chunk) => {
+        if (started && phase === 'text' && held.turn.text === '' && !held.turn.whole) this.cues.emit('reply-started');
+        this.change(held, { ...held.turn, [phase]: held.turn[phase] + chunk });
+      },
+      takeBack: (phase, chars) => this.change(held, { ...held.turn, [phase]: held.turn[phase].slice(0, held.turn[phase].length - chars) }),
     };
   }
 
   // A chat without a character has no 추론을 본문에 표시, and strips.
-  private inline(held: Held): InlineThoughts {
+  private keeps(held: Held): boolean {
     const character = this.store.get('chat', held.turn.chat)?.value.character;
-    const keep = character ? this.store.get('character', character)?.value.keepThoughts === true : false;
-    return { keep, takeBack: (phase, chars) => this.change(held, { ...held.turn, [phase]: held.turn[phase].slice(0, held.turn[phase].length - chars) }) };
+    return character ? this.store.get('character', character)?.value.keepThoughts === true : false;
   }
 
   // tools: the calls the last call made and what answered them (asked), and toolsRefused.
@@ -431,7 +432,7 @@ export async function pageAnswer(session: Pick<Session, 'store' | 'tokens' | 'cr
   const text = gather();
   const call = await pageCall(session, route, requestClass, chat);
   call.retrying = retrying;
-  const answer = await generate({ credentials, log, ...routeFields(store, route, settings), messages, call, signal, onText: text.add }).finally(() => endCall(store, call.id));
+  const answer = await generate({ credentials, log, ...routeFields(store, route, settings), messages, call, signal, onText: text }).finally(() => endCall(store, call.id));
   if (answer.cut === 'stopped') return { kind: 'stopped' };
   const receipt = unsettled(receiptOf(callOf(route), answer));
   return answer.state === 'done' ? { text: text.value(), receipt } : { kind: 'failed', receipt };

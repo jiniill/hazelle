@@ -26,7 +26,7 @@ export async function draftTranslatorNote({ store, credentials, log, tokens }: P
     messages,
     call: await newCall({ store, tokens }, route, target),
     signal,
-    onText: text.add,
+    onText: text,
   }).finally(() => endCall(store, target.id));
   if (answer.cut === 'stopped') return { ok: false, failure: { kind: 'stopped' } };
   const receipt = receiptOf(callOf(route), answer);

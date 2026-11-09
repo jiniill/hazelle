@@ -137,7 +137,7 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
     const reports = steps.map((step, at) => `${asked.moments[at]!.moment}:\n${step.report}`);
     return [...reports, ...(steps.length < asked.moments.length ? ['The run stopped there; the later moments did not run.'] : [])].join('\n\n');
   };
-  const looped = await toolLoop({ tools: testing ? [{ def: RUN_TEST, run: runTest(testing) }] : [], rounds: CALLS, signal, onText: gather(onText).add }, async (exchange, tools, text) => {
+  const looped = await toolLoop({ tools: testing ? [{ def: RUN_TEST, run: runTest(testing) }] : [], rounds: CALLS, signal, onText: gather(onText) }, async (exchange, tools, text) => {
     const call = await pageCall({ store, tokens }, route, 'script', null);
     try {
       const answer = await generate({

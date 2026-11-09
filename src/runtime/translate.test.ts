@@ -156,6 +156,27 @@ describe('Translator', () => {
       expect(JSON.parse(log[1]!.sent.body!).messages.at(-1)).toEqual({ role: 'user', content: 'Hello, traveler.' });
     }));
 
+  it('keeps only the answer of a translation whose model reasoned before a lone </think>, live and saved', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const chat = crypto.randomUUID();
+      await server.hold(session.store, chat);
+      const opened = { title: null, character: null, models: {} };
+      await startChat(session.store, chat, opened, null);
+      await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'Hi' });
+      stubRelay(inTurn([saying('Hello.'), saying('Translate it plainly. ', '</think>안녕.')]));
+      await takeTurn(session, chat, { kind: 'answer' });
+      const messages = () => fold(session.store.children('entry', chat));
+      const reply = shown(messages()[1]!);
+      const live: string[] = [];
+      const unsubscribe = session.translator.subscribe(() => live.push(session.translator.snapshot().live.get(reply.id) ?? ''));
+      session.translator.translate(chat, reply, translationInput(session, chat, opened, messages(), { kind: 'message', index: 1 }));
+      await vi.waitFor(() => expect(shown(messages()[1]!).translation?.text).toBe('안녕.'));
+      unsubscribe();
+      expect(live).toContain('Translate it plainly. ');
+      expect(live.filter(Boolean).at(-1)).toBe('안녕.');
+    }));
+
   it('keeps a reply’s translation as the model wrote it, and shows it through the character’s translation-stage scripts', () =>
     server.withSession(async (session) => {
       await answerable(session);
