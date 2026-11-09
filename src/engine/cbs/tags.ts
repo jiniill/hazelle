@@ -7,7 +7,7 @@ import { escapeCbs } from './escape';
 import type { CbsContext } from './evaluate';
 import type { HistoryMessage } from '../history';
 import type { LoreEntry } from '../import/types';
-import { calc } from './math';
+import { calc, leadingNumber } from './math';
 import { calendarDate, clockTime, duration, formatTime } from './time';
 
 export type Env = {
@@ -101,13 +101,16 @@ export function json(text: string): unknown {
   }
 }
 // An array argument: a JSON array, or items separated by `§`. An unset variable is an empty array, where Risu's
-// holds one item, `null`.
-export function items(text: string): string[] {
+// holds one item, `null`. The array tags keep what it carries; items gives each as text.
+function values(text: string): unknown[] {
   if (text === '') return [];
   const value = json(text);
   if (value === null) return [];
-  return Array.isArray(value) ? value.map(asText) : text.split('§');
+  return Array.isArray(value) ? value : text.split('§');
 }
+export const items = (text: string) => values(text).map(asText);
+// As JS's join, which Risu's is: a null item joins as nothing.
+const joined = (array: string, separator: string) => values(array).map((value) => (value === null ? '' : asText(value))).join(separator);
 export function dict(text: string): Record<string, unknown> {
   const value = json(text);
   return isRecord(value) ? value : {};
@@ -233,7 +236,7 @@ function asNumber(text: string): number {
 }
 const variableNumber = (context: CbsContext) => (token: string) => {
   const value = token.startsWith('$') ? readVar(context, token.slice(1)) : readGlobal(context, token.slice(1));
-  return value === 'null' ? null : asNumber(value);
+  return value === 'null' ? null : leadingNumber(value);
 };
 define('calc', 1, ([expression], { context }) => {
   const value = calc(expression!, variableNumber(context));
@@ -270,9 +273,10 @@ function choose(args: string[], next: () => number): string | null {
 // Bound each tag's allocation/loop count, not the whole text; oversized arguments leave the tag literal.
 const MOST = 10_000;
 function roll(notation: string, next: () => number): string | null {
-  const [, count, sides] = /^(?:(\d*)d)?(\d+)$/i.exec(notation.trim()) ?? [];
+  // A count or sides left out is 1 or 6, as in Risu: `2d` is 2d6.
+  const [, count, sides] = /^(?:(\d*)d)?(\d*)$/i.exec(notation.trim()) ?? [];
   const dice = count ? Number(count) : 1;
-  const faces = Number(sides);
+  const faces = sides ? Number(sides) : 6;
   if (!Number.isSafeInteger(faces) || faces < 1 || dice > MOST) return null;
   let total = 0;
   for (let i = 0; i < dice; i++) total += Math.floor(next() * faces) + 1;
@@ -282,8 +286,10 @@ function roll(notation: string, next: () => number): string | null {
 const pickRolls = (context: CbsContext) => seeded(context.pickSeed);
 define('random', 0, (args, { random }) => choose(args, random));
 define('pick', 0, (args, { context }) => choose(args, pickRolls(context)));
-define('randint', 2, ([low, high], { random }) => {
-  const [min, max] = [Math.ceil(Number(low)), Math.floor(Number(high))];
+// Bounds in either order; Risu's reversed bounds give a range of its own.
+define('randint', 2, ([a, b], { random }) => {
+  const [x, y] = [Number(a), Number(b)];
+  const [min, max] = [Math.ceil(Math.min(x, y)), Math.floor(Math.max(x, y))];
   return min <= max ? String(min + Math.floor(random() * (max - min + 1))) : null;
 });
 define('dice', 1, ([notation], { random }) => roll(notation!, random));
@@ -292,9 +298,12 @@ define('roll', 0, ([notation = '1d6'], { random }) => roll(notation, random));
 define('rollp rollpick', 0, ([notation = '1d6'], { context }) => roll(notation, pickRolls(context)));
 define('hash', 1, ([text]) => String(1_000_000 + Math.floor(seeded(text!)() * 9_000_000)));
 
-// A timestamp argument is in seconds, as documented.
-const formatAt = ([format, timestamp]: string[], { now, timeZone }: CbsContext['clock']) =>
-  formatTime(format!, timestamp === undefined ? now : Number(timestamp) * 1000, timeZone);
+// A timestamp argument is in seconds, as documented. One that is empty or no number is now, as in Risu, so
+// {{time:HH:mm}}, read as the format HH and the timestamp mm, is the hour.
+const formatAt = ([format, timestamp = '']: string[], { now, timeZone }: CbsContext['clock']) => {
+  const seconds = Number(timestamp);
+  return formatTime(format!, timestamp.trim() && !Number.isNaN(seconds) ? seconds * 1000 : now, timeZone);
+};
 define('time', 0, (args, { context: { clock } }) => (args.length ? formatAt(args, clock) : clockTime(clock.now, clock.timeZone)));
 define('date datetimeformat', 0, (args, { context: { clock } }) => (args.length ? formatAt(args, clock) : calendarDate(clock.now, clock.timeZone)));
 define('unixtime', 0, (_, { context }) => String(Math.floor(context.clock.now / 1000)));
@@ -361,8 +370,8 @@ define('isfirstmsg isfirstmessage', 0, (_, { context }) => bool(context.greeting
 
 define('replace', 3, ([text, find, replacement]) => text!.replaceAll(find!, replacement!));
 define('split', 2, ([text, separator]) => serialize(text!.split(separator!)));
-define('join', 2, ([array, separator]) => items(array!).join(separator));
-define('spread', 1, ([array]) => items(array!).join('::'));
+define('join', 2, ([array, separator]) => joined(array!, separator!));
+define('spread', 1, ([array]) => joined(array!, '::'));
 define('trim', 1, ([text]) => text!.trim());
 define('length', 1, ([text]) => String([...text!].length));
 define('lower', 1, ([text]) => text!.toLowerCase());
@@ -407,8 +416,10 @@ define('makedict dict object o d makeobject', 0, (args) =>
 );
 define('arraylength', 1, ([array]) => String(items(array!).length));
 define('arrayelement', 2, ([array, index]) => items(array!).at(Number(index)) ?? UNSET);
+// An array answers its index too, as in Risu.
 define('dictelement objectelement', 2, ([object, key]) => {
-  const value = dict(object!)[key!];
+  const container = json(object!);
+  const value = isRecord(container) || Array.isArray(container) ? (container as Record<string, unknown>)[key!] : undefined;
   return value === undefined ? UNSET : asText(value);
 });
 define('element ele', 1, ([root, ...path]) => {
@@ -422,17 +433,19 @@ define('objectassert dictassert', 3, ([object, key, value]) => {
   const current = dict(object!);
   return serialize(Object.hasOwn(current, key!) ? current : { ...current, [key!]: value });
 });
+// Only an index past the end is set, as in Risu, and the gap before it is null.
 define('arrayassert', 3, ([array, index, value]) => {
-  const current = items(array!);
+  const current = values(array!);
   const at = Number(index);
-  if (!Number.isSafeInteger(at) || at < 0 || at >= MOST) return null;
-  return serialize(Array.from({ length: Math.max(current.length, at + 1) }, (_, n) => current[n] ?? (n === at ? value : '')));
+  if (!Number.isSafeInteger(at) || at < current.length) return serialize(current);
+  if (at >= MOST) return null;
+  return serialize(Array.from({ length: at + 1 }, (_, n) => (n === at ? value : (current[n] ?? null))));
 });
-define('arrayshift', 1, ([array]) => serialize(items(array!).slice(1)));
-define('arraypop', 1, ([array]) => serialize(items(array!).slice(0, -1)));
-define('arraypush', 2, ([array, ...values]) => serialize([...items(array!), ...values]));
+define('arrayshift', 1, ([array]) => serialize(values(array!).slice(1)));
+define('arraypop', 1, ([array]) => serialize(values(array!).slice(0, -1)));
+define('arraypush', 2, ([array, value]) => serialize([...values(array!), value]));
 define('arraysplice', 3, ([array, start, count, ...insert]) => {
-  const current = items(array!);
+  const current = values(array!);
   current.splice(Number(start), Number(count), ...insert);
   return serialize(current);
 });
@@ -445,11 +458,12 @@ define('range', 1, ([bounds]) => {
   if (count > MOST) return null;
   return serialize(count > 0 ? Array.from({ length: count }, (_, n) => String(start + n * step)) : []);
 });
-// Items compare as their text, as every array tag reads them, so 1 and "1" are one item; Risu's keeps both.
+// Items compare as their text, so 1 and "1" are one item, the first kept; Risu's keeps both.
 define('filter', 1, ([array, mode]) => {
-  const all = items(array!);
+  const all = values(array!);
   const kept = mode === 'unique' ? all : all.filter((item) => item !== '');
-  return serialize(mode === 'nonempty' ? kept : [...new Set(kept)]);
+  const seen = new Set<string>();
+  return serialize(mode === 'nonempty' ? kept : kept.filter((item) => !seen.has(asText(item)) && seen.add(asText(item))));
 });
 
 define('br newline', 0, () => '\n');

@@ -18,9 +18,12 @@ describe('calc', () => {
     expect(['0=0', '1=2', '1≠2', '2≤2', '3≥4'].map((expression) => calc(expression, none))).toEqual([1, 0, 1, 1, 0]);
   });
 
-  it('reads $ and @ tokens through its reader, and gives null for an expression it cannot read', () => {
+  it('reads $ and @ tokens through its reader', () => {
     expect(calc('$hp + @toggle_x', (token) => (token === '$hp' ? 10 : 1))).toBe(11);
-    expect(['2 + abc', '(1', '1)'].map((expression) => calc(expression, none))).toEqual([null, null, null]);
+  });
+
+  it("reads text it cannot place as Risu does: a word's leading number or 0, unbalanced parentheses, single & and |", () => {
+    expect(['2 + abc', 'abc==1', '1,000+1', '1e3+1', '(1+2', '1+2)', '1 & 1', '1|0', '0&1'].map((expression) => calc(expression, none))).toEqual([2, 0, 2, 1001, 3, 3, 1, 1, 0]);
   });
 
   it("reads a missing operand and `null`, an unset variable's text, as 0", () => {
