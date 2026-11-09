@@ -476,6 +476,7 @@
   --markup-page-min: 320px;
   --markup-field-min: 72px;
   --outline-width: 340px;
+  --outline-least-width: 260px;
   --outline-row: 38px;
   --outline-node: 24px;
   --outline-node-chat: 26px;

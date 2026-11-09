@@ -87,9 +87,22 @@
   color: var(--color-text-faint);
 }
 
+.read .row {
+  align-items: start;
+}
+
+.read .cell,
+.read .lead {
+  white-space: normal;
+}
+
 @container (max-width: 560px) {
   .row {
     grid-template-columns: var(--table-narrow);
+  }
+
+  .read .row {
+    grid-template-columns: var(--table-wide);
   }
 
   .open {

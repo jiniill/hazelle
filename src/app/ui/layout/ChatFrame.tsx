@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref, type RefObject } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { faceStyle, FONTS, type FontId } from '../foundation/fonts';
-import { usePanelsBeside } from '../foundation/media';
+import { usePanelsBeside, useShortWide } from '../foundation/media';
 import { useReadingRail } from '../story/readingRail';
 import styles from './ChatFrame.module.css';
 
@@ -70,6 +70,8 @@ type Props = {
 export function ChatFrame({ back, title, actions, children, above, footer, dockRef, panel, beside, peek, backdrop, edge, reading, hideHeader, stage, side, portrait, pictures, compact, scrollRef, onScroll }: Props) {
   const scope = readingScope(reading);
   const pairs = usePanelsBeside();
+  // A phone on its side leaves the story too little height to keep the header over it.
+  const hides = useShortWide() || hideHeader;
   const [shown, setShown] = useState(true);
   const lastTop = useRef(0);
   const columnRef = useRef<HTMLElement>(null);
@@ -159,7 +161,7 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
         }
       >
         {backdrop && <div className={styles.backdrop}>{backdrop}</div>}
-        <div className={`${styles.top} ${shown || !hideHeader ? styles.shown : ''}`}>
+        <div className={`${styles.top} ${shown || !hides ? styles.shown : ''}`}>
           <header className={styles.header}>
             {back && <IconButton icon={ChevronLeft} label={back.label} onClick={back.onClick} />}
             <div className={styles.title}>{title}</div>

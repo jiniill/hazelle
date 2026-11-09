@@ -17,7 +17,9 @@ export type TableRow = { key: string; cells: (ReactNode | null)[]; summary?: Rea
 
 const TRACKS = { name: 'minmax(0, 2fr)', fill: 'minmax(0, 1fr)', figure: 'var(--table-figure-width)', button: 'var(--control-md)' };
 
-export function Table({ label, columns, rows }: { label: string; columns: TableColumn[]; rows: TableRow[] }) {
+// compare: each cell cut to its line, read at a glance. read: words read whole, such as a guide's, wrapping; its
+// columns all keep, and keep their shares when narrow.
+export function Table({ label, columns, rows, variant = 'compare' }: { label: string; columns: TableColumn[]; rows: TableRow[]; variant?: 'compare' | 'read' }) {
   const tracks = {
     '--table-wide': columns.map((column) => TRACKS[column.track]).join(' '),
     '--table-narrow': columns.filter((column, index) => index === 0 || column.keep).map((_, index) => (index === 0 ? 'minmax(0, 1fr)' : 'auto')).join(' '),
@@ -25,7 +27,7 @@ export function Table({ label, columns, rows }: { label: string; columns: TableC
   const cell = (column: TableColumn, index: number) =>
     [column.track === 'button' ? styles.control : styles.cell, column.track === 'figure' && styles.figure, index > 0 && !column.keep && styles.drop].filter(Boolean).join(' ');
   return (
-    <div className={styles.table} style={tracks}>
+    <div className={variant === 'read' ? `${styles.table} ${styles.read}` : styles.table} style={tracks}>
       {/* Hidden from the reader: each cell says its own column's name, which a row read as one button would lose. */}
       <div className={`${styles.row} ${styles.head}`} aria-hidden>
         {columns.map((column, index) => (

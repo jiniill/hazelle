@@ -195,19 +195,12 @@
   border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-muted);
-  opacity: 0;
   transition: opacity var(--duration-fast);
 }
 
 .plus svg {
   width: var(--outline-glyph-sm);
   height: var(--outline-glyph-sm);
-}
-
-.gap:hover .plus,
-.plus:focus-visible,
-.plus[aria-expanded='true'] {
-  opacity: 1;
 }
 
 .row {
@@ -217,10 +210,6 @@
   position: relative;
   border-radius: var(--radius-sm);
   background: var(--row-bg);
-}
-
-.row:hover {
-  --row-bg: var(--color-surface-hover);
 }
 
 .row[aria-current='true'] {
@@ -356,17 +345,46 @@
   right: var(--space-4);
   display: flex;
   translate: 0 -50%;
-  opacity: 0;
 }
 
-.row:hover .tools,
+/* Unseen, they take no press, which a finger would land blind. A finger adds at the end (맨 끝에 추가) and moves
+   blocks with 순서 변경; the open block has 빼기 and 여기까지 캐시. */
+.plus,
+.tools {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.plus:focus-visible,
+.plus[aria-expanded='true'],
 .tools:focus-within {
   opacity: 1;
+  pointer-events: auto;
 }
 
-.row:hover .meta,
 .row:has(.tools:focus-within) .meta {
   visibility: hidden;
+}
+
+/* A touch keeps :hover on whatever was tapped last, so only a pointer that hovers reveals them. */
+@media (hover: hover) {
+  .plus,
+  .tools {
+    pointer-events: auto;
+  }
+
+  .gap:hover .plus,
+  .row:hover .tools {
+    opacity: 1;
+  }
+
+  .row:hover:not([aria-current='true']) {
+    --row-bg: var(--color-surface-hover);
+  }
+
+  .row:hover .meta {
+    visibility: hidden;
+  }
 }
 
 .buttons .button {

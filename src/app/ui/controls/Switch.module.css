@@ -1,5 +1,6 @@
+/* ::before is the knob. Its reach takes a near miss from the row's button under it (List's rows that open a page). */
 .switch {
-  position: relative;
+  composes: reach from '../foundation/hover.module.css';
   flex: none;
   width: calc(var(--control-mark) * 2);
   height: var(--control-mark);
@@ -54,13 +55,4 @@
 
 .switch:disabled::before {
   background: var(--color-text-faint);
-}
-
-/* ::before is the knob. Positioned, so it takes a near miss from the row's button under it (List's rows that open a page). */
-@media (pointer: coarse) {
-  .switch::after {
-    position: absolute;
-    inset: calc(-1 * var(--hit-outset) - var(--border-thin));
-    content: '';
-  }
 }

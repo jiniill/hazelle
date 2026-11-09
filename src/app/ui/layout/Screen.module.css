@@ -82,10 +82,12 @@
   gap: var(--space-24);
 }
 
-@container (min-width: 880px) {
+/* From a 설정 window's width (its page about 760 px), the aside at most two fifths of it, so a sticky aside such as
+   디스플레이's 미리보기 stands beside its body there rather than above it and out of view. */
+@container (min-width: 720px) {
   .columns {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--screen-aside-width);
+    grid-template-columns: minmax(0, 1fr) min(var(--screen-aside-width), 40%);
     column-gap: var(--space-32);
     align-items: start;
   }

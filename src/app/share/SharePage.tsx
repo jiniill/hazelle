@@ -63,6 +63,7 @@ export function SharePage({ id, shareKey }: { id: string; shareKey: string | nul
         </>
       }
       width="narrow"
+      foot={<LegalNotice />}
     >
       {view.kind === 'loading' && <Text variant="note">{LOADING}</Text>}
       {view.kind === 'failed' && <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => setAttempt((held) => held + 1) }}>{view.failure}</Callout>}
@@ -102,7 +103,6 @@ export function SharePage({ id, shareKey }: { id: string; shareKey: string | nul
         />
       )}
       <Divider label="" />
-      <LegalNotice />
     </Screen>
   );
 }
