@@ -78,7 +78,7 @@ export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onRes
       onClose={onClose}
     >
       {all.length === 0 ? (
-        <Empty variant="section">{card ? '이 채팅의 프롬프트와 캐릭터 카드에는 토글이 없어요.' : '이 채팅의 프롬프트에는 토글이 없어요.'}</Empty>
+        <Empty variant="section">{card ? '이 채팅의 프롬프트와 캐릭터에는 토글이 없어요.' : '이 채팅의 프롬프트에는 토글이 없어요.'}</Empty>
       ) : (
         <>
           {search.field && (
