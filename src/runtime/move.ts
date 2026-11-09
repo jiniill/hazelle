@@ -258,12 +258,14 @@ export const risuMatch = (store: ObjectStore, name: string): string | null =>
 // the chat: the caller holds it, from before reading what it has to after the write.
 type Holder = { kind: 'asset' | 'inlay'; parent: string };
 
-// Only the names the holder does not have yet, so the same pictures given twice add nothing; unsupported as in
-// runtime/characters ImportedCharacter, so a name it had is neither kept nor counted.
+// Only the names the holder does not have yet, among the asset's own use (an emotion image may share a plain asset's
+// name), so the same pictures given twice add nothing; unsupported as in runtime/characters ImportedCharacter, so a name
+// it had is neither kept nor counted.
+const named = ({ name, use }: Pick<Asset, 'name' | 'use'>) => `${use ?? ''}/${name}`;
 export async function fillPictures(store: ObjectStore, files: Files, { kind, parent }: Holder, assets: Imported['assets'], progress: Progress = () => {}, signal?: AbortSignal): Promise<ApiResult<{ kept: Asset[]; unsupported: Unsupported }>> {
   if (!store.get(kind === 'asset' ? 'character' : 'chat', parent)) return { ok: false, error: 'gone' };
-  const had = new Set(store.children(kind, parent).map(({ value }) => value.name));
-  const saved = await saveAssets(files, assets.filter(({ name }) => !had.has(name)), progress, kind === 'inlay' ? inlayType : undefined, signal);
+  const had = new Set(store.children(kind, parent).map(({ value }) => named(value)));
+  const saved = await saveAssets(files, assets.filter((asset) => !had.has(named(asset))), progress, kind === 'inlay' ? inlayType : undefined, signal);
   if (!saved.ok) return saved;
   const added = await store.batch(saved.data.kept.map((value): Write => ({ type: 'create', kind, id: crypto.randomUUID(), parent, value })), undefined, { unheld: kind === 'inlay', signal });
   return added.ok ? saved : added;

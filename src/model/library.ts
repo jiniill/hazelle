@@ -3,6 +3,7 @@ export type PackOwner = { kind: 'character' | 'module'; id: string };
 export type LoreOwner = { kind: PackOwner['kind'] | 'chat'; id: string };
 import type { FileRef } from '../vault/files';
 import { grouped } from './fields';
+import type { AssetUse } from '../engine/assets';
 import type { Card, LoreEntry, Pack } from '../engine/import/types';
 import type { Translation, TranslateSwitches } from './chat';
 import type { FeatureSwitches } from './features';
@@ -120,8 +121,9 @@ export type Lore = Omit<LoreEntry, 'folder'> & { folder: string | null };
 // thumb: a small copy that syncs with the objects, so lists need no file fetch.
 export type Avatar = { type: string; size: number; thumb: string; file: FileRef };
 
-// Kind `asset`, whose parent is the character or module (design §6.4). type is what the bytes are, read from them.
-export type Asset = { name: string; type: string; size: number; file: FileRef };
+// Kind `asset`, whose parent is the character or module (design §6.4). type is what the bytes are, read from them. use:
+// only a character's, for one of its emotion images or backgrounds.
+export type Asset = { name: string; type: string; size: number; file: FileRef; use?: AssetUse };
 
 // Kind `original`, one piece of the file a character, module or prompt was imported from, kept for a later parser to
 // read again (engine/import/original). name: the file's name, which says how it is read; path: the piece's place in it.
@@ -130,7 +132,7 @@ export type Original = { name: string; path: string; size: number; file: FileRef
 // Kind `inlay`, a chat's own picture, which its messages name by name ({{inlay::name}}). attached: the user put it in
 // the composer, so it goes to a model that sees pictures; absent, it came with a chat brought from Risu and goes only
 // where the chat's movedPictures is on.
-export type Inlay = Asset & { attached?: true };
+export type Inlay = Omit<Asset, 'use'> & { attached?: true };
 
 // Kind `textfile`, a text file the user put in the composer, which its message names by name ({{textfile::name}}) and
 // which goes to the model with that message (engine/pipeline). title: the file's own name.

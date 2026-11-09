@@ -1,4 +1,5 @@
 import { count, flag, isRecord, list } from '../../connectors/values';
+import type { AssetUse } from '../assets';
 import { isUnsupportedTag } from '../cbs/tags';
 import { args, parseDecorators } from '../lorebook/decorators';
 import { readToggles, writeToggles } from './toggles';
@@ -27,7 +28,7 @@ export type Converted = {
   loreFolders: string[];
   spec: ImportReport['spec'];
   icon: string | null;
-  assets: { name: string; uri: string }[];
+  assets: { name: string; uri: string; use?: AssetUse }[];
 };
 
 const SPECS = new Map<unknown, ImportReport['spec']>([
@@ -42,6 +43,8 @@ const STAGES = new Map<unknown, RegexScript['stage']>([
   ['edittrans', 'translation'],
 ]);
 const ROLES = ['system', 'user', 'assistant'];
+// CCv3's asset types this app keeps, by the use each is kept for.
+const USES = new Map<unknown, AssetUse | undefined>([['x-risu-asset', undefined], ['emotion', 'emotion'], ['background', 'background']]);
 // Risu's order for a new entry. CCv3 requires insertion_order, so only a malformed file goes without one. A null one
 // Risu sorts as 0 (lorebook.svelte.ts:276, 613-629).
 export const DEFAULT_ORDER = 100;
@@ -70,28 +73,28 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
 
   const listed = spec === 'v3' ? list(data.assets) : [];
   const icon = pickIcon(listed);
-  // Risu's own assets: CCv3's x-risu-asset, and v2's additionalAssets as [name, uri, extension], whose uri when it is no
-  // asset chunk holds the picture itself in base64 (characterCards.ts:830-839). Emotions, voices and other asset types
-  // are not read.
+  // Risu's own assets: CCv3's x-risu-asset, emotion and background, and v2's additionalAssets and emotions as [name, uri],
+  // whose uri when it is no asset chunk holds the picture itself in base64 (characterCards.ts:794-839). Voices and other
+  // asset types are not read.
+  const v2 = (raw: unknown, use?: AssetUse) =>
+    list(raw).filter(Array.isArray).map(([name, uri]) => ({ name: text(name), uri: /^(?:__asset:|data:)/.test(text(uri)) ? text(uri) : `data:;base64,${text(uri)}`, ...(use && { use }) }));
+  const kept = (asset: unknown): asset is Json => isRecord(asset) && USES.has(asset.type);
   const assets =
     spec === 'v3'
-      ? listed.filter((asset): asset is Json => isRecord(asset) && asset.type === 'x-risu-asset').map((asset) => ({ name: text(asset.name), uri: text(asset.uri) }))
-      : list(risu.additionalAssets).filter(Array.isArray).map(([name, uri]) => ({ name: text(name), uri: /^(?:__asset:|data:)/.test(text(uri)) ? text(uri) : `data:;base64,${text(uri)}` }));
-  for (const asset of listed) {
-    if (asset === icon) continue;
-    const type = isRecord(asset) ? asset.type : undefined;
-    if (type === 'x-risu-asset') continue;
-    add(tally, type === 'icon' ? 'extra-icon' : type === 'emotion' ? 'emotion' : type === 'background' ? 'background' : 'other-asset');
-  }
-  if (spec === 'v2') {
-    add(tally, 'emotion', list(risu.emotions).length);
-    add(tally, 'voice', Object.keys(record(risu.vits)).length);
-  }
+      ? listed.filter(kept).map((asset) => {
+          const use = USES.get(asset.type);
+          return { name: text(asset.name), uri: text(asset.uri), ...(use && { use }) };
+        })
+      : [...v2(risu.additionalAssets), ...v2(risu.emotions, 'emotion')];
+  for (const asset of listed) if (asset !== icon && !kept(asset)) add(tally, isRecord(asset) && asset.type === 'icon' ? 'extra-icon' : 'other-asset');
+  if (spec === 'v2') add(tally, 'voice', Object.keys(record(risu.vits)).length);
   const pack = packOf({ regex: module ? module.regex : risu.customScripts, trigger: module ? module.trigger : risu.triggerscript, background: risu.backgroundHTML, toggles: risu.toggles }, tally);
   if (text(risu.additionalText).trim()) add(tally, 'additional-text');
   if (risu.prebuiltAssetCommand === true) add(tally, 'prebuilt-asset-command');
   if (risu.largePortrait === true) add(tally, 'large-portrait');
-  // Risu's inlay mode and its instruction text (newGenData) act only while this is on.
+  // Risu's inlay mode and its instruction text (newGenData) act only while this is on. Its emotion sprite is picked by a
+  // model call after each reply (index.svelte.ts:1991-2165), which no task here makes: the emotion images come, the
+  // sprite does not.
   if (risu.viewScreen === 'emotion' || risu.viewScreen === 'imggen') add(tally, 'view-screen');
   if (text(record(extensions.depth_prompt).prompt).trim()) add(tally, 'depth-prompt');
   if (record(risu.onboarding).enabled === true) add(tally, 'onboarding');

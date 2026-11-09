@@ -1,14 +1,14 @@
 import { unsupportedCount } from '../../engine/import/types';
 import { ImageUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { findAsset, isVideo } from '../../engine/assets';
+import { findAsset, isVideo, type AssetUse } from '../../engine/assets';
 import { extensionOf } from '../../engine/import/convert';
 import type { Stored } from '../../model/kinds';
 import { addAssets, removeAssets, renameAsset, replaceAsset, restoreAssets } from '../../runtime/characters';
 import { useAssetUrl, useChildren, useFiles, useStore, useUnfoundAssets } from '../session';
 import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
-import { Button, Callout, CardGrid, DropOverlay, Empty, FaceCard, FileButton, MenuItem, MoreMenu, pickFiles, PictureView, Row, Section, Stack, useFileDrop, type Pages, type PictureAction } from '../ui';
+import { Button, Callout, CardGrid, DropOverlay, Empty, FaceCard, FileButton, MenuItem, MoreMenu, pickFiles, PictureView, Row, Section, Stack, Tabs, useFileDrop, type Pages, type PictureAction } from '../ui';
 import { ACTS, addOf } from './acts';
 import { clickDownload, fileNamed } from './download';
 import { NameDialog } from './NameDialog';
@@ -17,19 +17,35 @@ import { useSearch } from './useSearch';
 import { useSelection } from './useSelection';
 import { ASSET, CHANGE_IMAGE, REMOVE_FAILED, SAVE_FAILED } from './words';
 
-// What runtime/characters keeps as an asset (engine/import assetType).
-const ACCEPT = 'image/*,video/mp4,video/webm';
-const NOT_KEPT = '이미지나 영상(MP4, WebM) 파일이 아니거나 용량이 너무 커요.';
+// What runtime/characters keeps as an asset (engine/import assetType), and as an emotion image or background (a picture).
+const KEEPS = {
+  any: { accept: 'image/*,video/mp4,video/webm', refused: '이미지나 영상(MP4, WebM) 파일이 아니거나 용량이 너무 커요.' },
+  picture: { accept: 'image/*', refused: '이미지 파일이 아니거나 용량이 너무 커요.' },
+};
+type Shelf = 'asset' | AssetUse;
+// A character's assets, emotion images and backgrounds, each with what it holds and the tag that shows one, if any.
+const SHELVES: Record<Shelf, { label: string; keeps: (typeof KEEPS)[keyof typeof KEEPS]; help: string; tag: ((asset: Stored<'asset'>['value']) => string) | null }> = {
+  asset: { label: ASSET, keeps: KEEPS.any, help: '봇이 {{img::이름}}이나 {{video::이름}}으로 불러오는 이미지·영상이에요. 이름이 겹치면 무작위로 표시돼요.', tag: ({ type, name }) => `{{${isVideo(type) ? 'video' : 'img'}::${name}}}` },
+  emotion: { label: '감정', keeps: KEEPS.picture, help: '봇이 {{emotion::이름}}으로 불러오는 감정 이미지예요. 이름이 정확히 같아야 표시돼요.', tag: ({ name }) => `{{emotion::${name}}}` },
+  background: { label: '배경', keeps: KEEPS.picture, help: '채팅 뒤에 어둡게 깔리는 배경이에요. 여러 개면 이름이 main인 배경을 써요.', tag: null },
+};
+const SHELF_ORDER: Shelf[] = ['asset', 'emotion', 'background'];
+const useOf = (shelf: Shelf) => (shelf === 'asset' ? undefined : shelf);
 // By name, never by the store's order, which moves an asset to the end on each rename or new picture.
 const byName = new Intl.Collator('ko', { numeric: true }).compare;
 const UNFOUND_SHOWN = 10;
 
-export function AssetsEditor({ owner }: { owner: string }) {
+// shelves: a character's, whose emotion images and backgrounds stand apart from its assets; a module holds assets only.
+export function AssetsEditor({ owner, shelves = false }: { owner: string; shelves?: boolean }) {
   const store = useStore();
   const files = useFiles();
   const toast = useToast();
   const stored = useChildren('asset', owner);
-  const assets = useMemo(() => stored.toSorted((a, b) => byName(a.value.name, b.value.name)), [stored]);
+  const [shelf, setShelf] = useState<Shelf>('asset');
+  const use = useOf(shelf);
+  const { keeps, help, tag } = SHELVES[shelf];
+  const onShelf = (each: Shelf) => stored.filter(({ value }) => value.use === useOf(each));
+  const assets = useMemo(() => onShelf(shelf).toSorted((a, b) => byName(a.value.name, b.value.name)), [stored, shelf]);
   const [adding, setAdding] = useState(false);
   const [naming, setNaming] = useState<Stored<'asset'> | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
@@ -40,9 +56,10 @@ export function AssetsEditor({ owner }: { owner: string }) {
   // A newly resolvable fuzzy match also clears the missing name.
   const asked = useUnfoundAssets(owner);
   const unfound = useMemo(() => {
+    if (use) return [];
     const named = assets.map(({ id, value }) => ({ id, name: value.name }));
     return [...asked].filter((name) => !findAsset(named, name, Math.random));
-  }, [asked, assets]);
+  }, [asked, assets, use]);
   const search = useSearch(assets, `${ASSET} 검색`, ({ value }) => [value.name]);
   const named = (asset: Stored<'asset'>) => asset.value.name.toLowerCase();
   const shared = new Map<string, number>();
@@ -51,11 +68,11 @@ export function AssetsEditor({ owner }: { owner: string }) {
   async function add(picked: File[]) {
     if (!picked.length) return;
     setAdding(true);
-    const added = await addAssets(store, files, owner, picked);
+    const added = await addAssets(store, files, owner, picked, use);
     setAdding(false);
     if (!added.ok) return toast.failed(added, `${ASSET}을 추가하지 못했어요.`);
     const refused = unsupportedCount(added.data.unsupported);
-    if (refused) toast.error(`${refused}개는 추가하지 못했어요.`, { detail: NOT_KEPT });
+    if (refused) toast.error(`${refused}개는 추가하지 못했어요.`, { detail: keeps.refused });
   }
 
   const dragging = useFileDrop((dropped) => void add(dropped), 'screen');
@@ -70,7 +87,7 @@ export function AssetsEditor({ owner }: { owner: string }) {
   async function replace(id: string, file: File) {
     const replaced = await replaceAsset(store, files, id, new Uint8Array(await file.arrayBuffer()));
     if (replaced.ok) return;
-    if (replaced.error === 'picture-unreadable' || replaced.error === 'picture-refused') toast.error('바꾸지 못했어요.', { detail: NOT_KEPT });
+    if (replaced.error === 'picture-unreadable' || replaced.error === 'picture-refused') toast.error('바꾸지 못했어요.', { detail: keeps.refused });
     else toast.failed(replaced, '바꾸지 못했어요.');
   }
 
@@ -80,9 +97,9 @@ export function AssetsEditor({ owner }: { owner: string }) {
   }
 
   const actionsOf = (asset: Stored<'asset'>): PictureAction[] => [
-    { icon: ACTS.copy.icon, ...SHORTCUTS.assetTag, run: () => copy(`{{${isVideo(asset.value.type) ? 'video' : 'img'}::${asset.value.name}}}`) },
+    ...(tag ? [{ icon: ACTS.copy.icon, ...SHORTCUTS.assetTag, run: () => copy(tag(asset.value)) }] : []),
     { icon: ACTS.rename.icon, ...SHORTCUTS.assetRename, run: () => setNaming(asset) },
-    { icon: ImageUp, label: isVideo(asset.value.type) ? '영상 바꾸기' : CHANGE_IMAGE, run: () => pickFiles(ACCEPT, false, ([file]) => void replace(asset.id, file!)) },
+    { icon: ImageUp, label: isVideo(asset.value.type) ? '영상 바꾸기' : CHANGE_IMAGE, run: () => pickFiles(keeps.accept, false, ([file]) => void replace(asset.id, file!)) },
     { icon: ACTS.remove.icon, ...SHORTCUTS.assetRemove, warn: true, run: () => { setViewing(null); void remove([asset.id]); } },
   ];
 
@@ -93,8 +110,9 @@ export function AssetsEditor({ owner }: { owner: string }) {
   const at = search.found.findIndex(({ id }) => id === viewing);
   const pages = at < 0 ? undefined : { at, count: search.found.length, onStep: (by: -1 | 1) => setViewing(search.found[(at + by + search.found.length) % search.found.length]!.id) };
   return (
-    <Section title={ASSET} note={`${assets.length}개`} help="봇이 {{img::이름}}이나 {{video::이름}}으로 불러오는 이미지·영상이에요. 이름이 겹치면 무작위로 표시돼요.">
+    <Section title={ASSET} note={`${stored.length}개`} help={help}>
       <Stack gap="related">
+        {shelves && <Tabs label={ASSET} items={SHELF_ORDER.map((value) => ({ value, label: SHELVES[value].label, count: onShelf(value).length }))} value={shelf} onChange={(next) => { selection.clear(); setShelf(next); }} />}
         {unfound.length > 0 && (
           <Callout tone="warn">
             {`채팅에서 봇이 불렀지만 없는 이름이 ${unfound.length}개 있어요: ${unfound.slice(0, UNFOUND_SHOWN).join(', ')}${unfound.length > UNFOUND_SHOWN ? ` 외 ${unfound.length - UNFOUND_SHOWN}개` : ''}`}
@@ -103,8 +121,8 @@ export function AssetsEditor({ owner }: { owner: string }) {
         <Row kind="toolbar">
           {search.field}
           {assets.length > 0 && selection.button(ACTS.remove.icon, '선택 삭제')}
-          <FileButton accept={ACCEPT} multiple size="sm" icon={ACTS.create.icon} busy={adding} onFiles={(dropped) => void add(dropped)}>
-            {addOf(ASSET)}
+          <FileButton accept={keeps.accept} multiple size="sm" icon={ACTS.create.icon} busy={adding} onFiles={(dropped) => void add(dropped)}>
+            {addOf(SHELVES[shelf].label)}
           </FileButton>
         </Row>
         {search.found.length > 0 ? (
@@ -115,7 +133,7 @@ export function AssetsEditor({ owner }: { owner: string }) {
             }}
           </CardGrid>
         ) : (
-          <Empty variant="section">{search.none ?? `${ASSET}이 없어요.`}</Empty>
+          <Empty variant="section">{search.none ?? `${SHELVES[shelf].label}이 없어요.`}</Empty>
         )}
         {picked &&
           selection.bar(
@@ -125,7 +143,7 @@ export function AssetsEditor({ owner }: { owner: string }) {
             </Button>,
           )}
       </Stack>
-      {dragging && <DropOverlay>여기에 놓으면 에셋으로 추가돼요</DropOverlay>}
+      {dragging && <DropOverlay>{`여기에 놓으면 ${SHELVES[shelf].label}으로 추가돼요`}</DropOverlay>}
       {viewed && <AssetPreview asset={viewed} actions={actionsOf(viewed)} pages={pages} onClose={() => setViewing(null)} />}
       {naming && <NameDialog title={`${ASSET} ${ACTS.rename.label}`} value={naming.value.name} hint="봇은 이 이름으로 에셋을 찾아요." onSave={(name) => rename(naming, name)} onClose={() => setNaming(null)} />}
     </Section>

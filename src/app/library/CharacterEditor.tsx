@@ -350,7 +350,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
         </EntryList>
       </Section>
     ),
-    assets: <AssetsEditor owner={id} />,
+    assets: <AssetsEditor owner={id} shelves />,
     illustration: <PortraitsEditor owner={id} />,
     display: (
       <Section title={PARTS.display.label}>

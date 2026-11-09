@@ -1,6 +1,6 @@
 import { hex } from '../hex';
 import { describe, expect, it } from 'vitest';
-import { resolveAssets } from './assets';
+import { backdrop, resolveAssets } from './assets';
 import { evaluate } from './cbs/evaluate';
 import { display, DisplayPass, storyHtml, stripStyles } from './display';
 import type { HistoryMessage } from './history';
@@ -184,6 +184,23 @@ describe('asset tags', () => {
   it('tell the names no asset answers, a near one aside, from messages and backgroundHTML', () => {
     const shown = display({ ...withAssets, messages: [message('a1', 'assistant', '{{img::smiel.png}}{{img::night_forest}}')], packs: [{ ...withAssets.packs[0]!, background: '{{raw::backdrop}}' }] });
     expect(shown.unfound).toEqual(['night_forest', 'backdrop']);
+  });
+
+  const happy = '44444444-4444-4444-8444-444444444444';
+  const night = '55555555-5555-4555-8555-555555555555';
+  const kept: ChatScope = { ...withAssets, assets: [...withAssets.assets, { id: happy, name: 'Surprised', type: 'image/png', use: 'emotion' }, { id: night, name: 'wave', type: 'image/png', use: 'background' }] };
+
+  it('show an emotion image by its exact name only, list the emotion names apart, and keep both out of the asset tags', () => {
+    const shown = (text: string, stage: 'display' | 'prompt') => evaluate(text, contexts(kept, stage, null, '', null)({ seed: 's' }, new Map()));
+    expect(shown('{{emotion::surprised}}|{{emotion::surprise}}|{{img::surprised}}|{{raw::wave}}', 'display')).toBe(`<img src="asset:${happy}"/>|||asset:${wave}`);
+    expect(shown('{{emotion::surprised}} {{emotionlist}} {{assetlist}}', 'prompt')).toBe('{{emotion::surprised}} ["Surprised"] ["Smile.png","wave","clip"]');
+  });
+
+  it('draw {{bg}} in the backgroundHTML only, over the character’s background asset, and nothing for it in a message', () => {
+    const shown = display({ ...kept, messages: [message('a1', 'assistant', 'a{{bg::wave}}b')], packs: [{ ...withAssets.packs[0]!, background: '<div>{{bg::wave}}</div>' }] });
+    expect(shown.background).toBe(`${backdrop(`asset:${night}`)}\n<div>${backdrop(`asset:${wave}`)}</div>`);
+    expect(shown.texts[0]).toBe('ab');
+    expect(display(withAssets).background).toBe('');
   });
 
   it('take the picture’s URL once the chat has it, and nothing before', () => {

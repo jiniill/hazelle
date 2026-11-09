@@ -196,9 +196,9 @@ const resolver = (holders: Holders, tally: Tally): Resolve => (uri) => {
 };
 
 const located = (assets: Converted['assets'], resolve: Resolve): Imported['assets'] =>
-  assets.flatMap(({ name, uri }) => {
+  assets.flatMap(({ name, uri, use }) => {
     const read = resolve(uri);
-    return read ? [{ name, read }] : [];
+    return read ? [{ name, read, ...(use && { use }) }] : [];
   });
 
 // The report is counted after the assets are resolved, so the resolver's counts are in it.
@@ -329,11 +329,12 @@ export function assetType(bytes: Uint8Array): string | null {
 const utf8Out = new TextEncoder();
 
 // Inverse of fromCharx: avatar first, then character assets, then bundled modules. Use positional picture paths,
-// not untrusted names, and fingerprint the re-read output rather than the input.
+// not untrusted names, and fingerprint the re-read output rather than the input. An emotion image or background goes
+// as CCv3's asset of that type, which Risu reads as its own.
 export function writeCharx(bot: Bot): { files: { path: string; bytes: Uint8Array<ArrayBuffer> }[]; pictures: string[] } {
   const source = hazelleSource(bot);
   const icon = bot.avatar === null ? [] : [{ type: 'icon', name: 'main', ext: extensionOf(bot.avatar), uri: `embeded://assets/icon/image/main.${extensionOf(bot.avatar)}` }];
-  const assets = [...icon, ...source.assets.map(({ name, type }, place) => ({ type: 'x-risu-asset', name, ext: extensionOf(type), uri: `embeded://assets/other/image/${place}.${extensionOf(type)}` }))];
+  const assets = [...icon, ...source.assets.map(({ name, type, use }, place) => ({ type: use ?? 'x-risu-asset', name, ext: extensionOf(type), uri: `embeded://assets/${use ?? 'other'}/image/${place}.${extensionOf(type)}` }))];
   const module = writeRisum({ name: bot.card.name, description: '', regex: source.regex, trigger: source.triggers, lorebook: lorebookSource(source.lore, source.loreFolders) });
   const plain = utf8Out.encode(JSON.stringify(cardSource(bot.card, assets, {}, source.lua)));
   const read = convert(JSON.parse(utf8.decode(plain)), readRisumModule(module)!, new Map())!;
