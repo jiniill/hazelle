@@ -137,11 +137,9 @@
   color: var(--color-text-faint);
 }
 
-.tall .preview {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+.tallPreview {
+  composes: preview;
+  composes: twoLines from '../foundation/a11y.module.css';
 }
 
 .clip {

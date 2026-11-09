@@ -96,7 +96,7 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 | --- | --- | --- | --- |
 | foundation | — | `tokens.css`, `global.css` | Every raw value; element defaults, a bare button among them, and reduced motion |
 | foundation | — | `motion.module.css` | Every animation: fade, rise, drop, fade away, spin, pulse, blink, waiting dots, sway |
-| foundation | — | `a11y.module.css` | Screen-reader-only labels; one-line ellipsis |
+| foundation | — | `a11y.module.css` | Screen-reader-only labels; one-line ellipsis; two lines at most (`twoLines`) |
 | foundation | — | `type.module.css` | Shared text looks: a note (sm; a class named `note` is this one), a detail line (xs; a class named `detail` or `sub`), a row's title, an error line, a field's label |
 | foundation | — | `surface.module.css` | Shared surfaces: a box of rows and the line between them, glass over the story, the floating ground of a menu, a dialog or a bubble, a field's frame, a field and its compact size, a fraction bar's track and fill, where a dragged thing would land, an accent dot, a count of what waits behind a button |
 | foundation | — | `hover.module.css` | How a control answers the pointer: a fill (`fill`) or brighter words (`ink`) where a pointer hovers, kept while what it opens is open (`fillOpen`, `inkOpen`), the easing of a colour change (`eased`), and under a finger a press area of a control's height each way, the drawing unchanged (`reach`) |

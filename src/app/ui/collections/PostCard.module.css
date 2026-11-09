@@ -74,11 +74,8 @@
 
 .excerpt {
   composes: note from '../foundation/type.module.css';
+  composes: twoLines from '../foundation/a11y.module.css';
   margin: 0;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
   overflow-wrap: anywhere;
 }
 

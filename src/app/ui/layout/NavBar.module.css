@@ -58,12 +58,8 @@
 
 /* Its first line centred in the band; two lines at most, the whole in its title attribute. */
 .words {
-  display: -webkit-box;
-  overflow: hidden;
+  composes: twoLines from '../foundation/a11y.module.css';
   padding-top: calc((var(--control-md) - 1lh) / 2);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
 }
 
 .subtitle {

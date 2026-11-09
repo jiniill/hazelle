@@ -36,17 +36,13 @@
 }
 
 .sample {
-  display: -webkit-box;
+  composes: twoLines from '../foundation/a11y.module.css';
   min-height: var(--swatch-min-height);
   padding: var(--space-12) var(--space-16);
-  overflow: hidden;
   border-bottom: var(--border-thin) solid var(--color-divider);
   font-family: var(--prose-font);
   font-size: var(--swatch-size);
   line-height: var(--leading-normal);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
   background: var(--color-bg);
   color: var(--color-text);
 }

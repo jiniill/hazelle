@@ -32,7 +32,7 @@ export function Item({ density, scheme, leading, title, meta, preview, trailing,
   const classes = [styles.item, styles[density], styles[scheme], line && styles.line, onClick && styles.pressable, branch && styles.branch, tone !== 'plain' && styles[tone]].filter(Boolean).join(' ');
   const clip = density === 'regular';
   const titleClass = [styles.title, density === 'regular' && styles.rowTitle, density === 'tall' && styles.tallTitle, clip && styles.clip].filter(Boolean).join(' ');
-  const previewClass = density === 'compact' ? styles.sub : clip ? `${styles.preview} ${styles.clip}` : styles.preview;
+  const previewClass = density === 'compact' ? styles.sub : clip ? `${styles.preview} ${styles.clip}` : density === 'tall' ? styles.tallPreview : styles.preview;
   // meta and preview are drawn even when empty: an empty time still keeps its gap beside the title.
   const text = (
     <span className={styles.text}>

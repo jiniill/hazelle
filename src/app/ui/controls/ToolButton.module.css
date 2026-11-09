@@ -1,6 +1,6 @@
 .tool {
   composes: note from '../foundation/type.module.css';
-  composes: fillOpen inkOpen from '../foundation/hover.module.css';
+  composes: fillOpen inkOpen reach from '../foundation/hover.module.css';
   display: flex;
   flex-shrink: 0;
   align-items: center;
