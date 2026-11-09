@@ -3,7 +3,7 @@ import { splitThoughts } from '../../connectors/thoughts';
 import { isRecord, list } from '../../connectors/values';
 import { inlayIds } from '../assets';
 import { assemble, imageType, type Resolve } from './card';
-import { add, chatLorebook, convert, counted, finite, localCopies, record, text, type Json, type Tally } from './convert';
+import { add, chatLorebook, convert, counted, finite, localCopies, record, text, variableText, type Json, type Tally } from './convert';
 import { MOVE_UNSUPPORTED_KINDS, type MoveUnsupported, type MoveUnsupportedKind, type Picture, type RisuCharacter, type RisuChat, type RisuSummary } from './types';
 
 export type Read = () => Promise<Uint8Array<ArrayBuffer>>;
@@ -147,7 +147,7 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
     persona: text(chat.bindedPersona) || null,
     greeting: Math.max((finite(chat.fmIndex) ?? fmIndex) + 1, 0),
     variables: Object.entries(record(chat.scriptstate)).flatMap(([key, value]): [string, string][] =>
-      key.startsWith('$') && value !== undefined ? [[key.slice(1), typeof value === 'string' ? value : JSON.stringify(value)]] : [],
+      key.startsWith('$') && value !== undefined ? [[key.slice(1), variableText(value)]] : [],
     ),
     inlays: inlayIds(messageTexts(messages)),
     ...chatLorebook(localCopies(list(chat.localLore), globalLore, missed)),

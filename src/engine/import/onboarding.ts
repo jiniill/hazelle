@@ -1,4 +1,4 @@
-import { isRecord, list } from '../../connectors/values';
+import { isRecord, list, toggle } from '../../connectors/values';
 
 // A card's 시작 전 설문 (Risu's extensions.risuai.onboarding), kept in Risu's own shape so a card exported again carries
 // it as it came. Each answer is a chat variable a new chat starts from.
@@ -60,6 +60,7 @@ export function activeOnboarding(onboarding: Onboarding | undefined): Onboarding
 }
 
 export const optionValue = ({ label, value }: OnboardingQuestion['options'][number]) => (value !== '' ? value : label);
+export const optionLabel = (option: OnboardingQuestion['options'][number]) => option.label || optionValue(option);
 
 // A multiple choice's answer is a JSON array, as CBS's array tags read one.
 export function picked(answer: string | undefined): string[] {
@@ -73,10 +74,7 @@ export function picked(answer: string | undefined): string[] {
   return [answer];
 }
 
-export function toggled(answer: string | undefined, value: string): string {
-  const values = picked(answer);
-  return JSON.stringify(values.includes(value) ? values.filter((each) => each !== value) : [...values, value]);
-}
+export const toggled = (answer: string | undefined, value: string) => JSON.stringify(toggle(picked(answer), value));
 
 export const answered = ({ type, varName }: OnboardingQuestion, answers: ReadonlyMap<string, string>) =>
   type === 'multiple' ? picked(answers.get(varName)).length > 0 : (answers.get(varName) ?? '').trim() !== '';

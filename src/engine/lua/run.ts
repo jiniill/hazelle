@@ -55,6 +55,9 @@ const view = ({ role, data, time }: Working) => ({ role, data, time });
 const handler = (event: string) => `on${event[0]!.toUpperCase()}${event.slice(1)}`;
 // A press named for one of these calls its handler, as Risu's risu-trigger="input" calls onInput.
 const PRESSABLE_EVENTS = new Set(['input', 'output', 'start']);
+// The Lua function an event calls.
+const hookName = (event: Exclude<Event, { kind: 'edit' }>) =>
+  event.kind === 'call' ? (PRESSABLE_EVENTS.has(event.name) ? handler(event.name) : event.name) : event.kind === 'button' ? 'onButtonClick' : event.kind === 'form' ? 'onFormSubmit' : handler(event.kind);
 // The events Risu's runTrigger walks, where a trigger's conditions and later effects count. Any other reaches a Lua
 // trigger's own code alone, whatever its conditions.
 const STEPPED = new Set<Event['kind']>(['start', 'input', 'output', 'call']);
@@ -105,7 +108,7 @@ export class Lua {
         for (const script of triggers) {
           if (!listens(script, event)) continue;
           const outer = active;
-          const entry = hookLog(event.kind === 'edit' ? event.stage : event.kind === 'call' ? event.name : event.kind === 'button' || event.kind === 'form' ? event.kind : handler(event.kind), script.owner, script.name);
+          const entry = hookLog(event.kind === 'edit' ? event.stage : event.kind === 'call' ? event.name : event.kind === 'button' || event.kind === 'form' ? event.kind : hookName(event), script.owner, script.name);
           const began = performance.now();
           const before = event.kind === 'edit' ? JSON.stringify(value) : undefined;
           const stopped = run.stop;
@@ -128,7 +131,7 @@ export class Lua {
                   handled = entry.handled = true;
                   return;
                 }
-                const name = event.kind === 'call' ? (PRESSABLE_EVENTS.has(event.name) ? handler(event.name) : event.name) : event.kind === 'button' ? 'onButtonClick' : event.kind === 'form' ? 'onFormSubmit' : handler(event.kind);
+                const name = hookName(event);
                 if (event.kind === 'call' && !engine.own.has(name)) return;
                 if (typeof engine.lua.global.get(name) !== 'function') return;
                 handled = entry.handled = true;

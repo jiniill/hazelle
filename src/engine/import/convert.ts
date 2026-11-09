@@ -46,6 +46,8 @@ const USES = new Map<unknown, AssetUse | undefined>([['x-risu-asset', undefined]
 export const DEFAULT_ORDER = 100;
 
 export const text = (value: unknown) => (typeof value === 'string' ? value : '');
+// A chat variable kept as any JSON value, as the text a variable holds.
+export const variableText = (value: unknown) => (typeof value === 'string' ? value : JSON.stringify(value));
 export const record = (value: unknown): Json => (isRecord(value) ? value : {});
 export const finite = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 export const strings = (value: unknown) => list(value).filter((item): item is string => typeof item === 'string');

@@ -49,6 +49,8 @@ export function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+export const toggle = <T>(items: readonly T[], item: T): T[] => (items.includes(item) ? items.filter((each) => each !== item) : [...items, item]);
+
 type Entry = Record<string, unknown> & { id: string };
 
 // null when the payload is not a model list at all, which is not the same as an empty one.

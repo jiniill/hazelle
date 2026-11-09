@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { resolveAssets } from '../../engine/assets';
-import { answered, optionValue, picked, toggled, type Onboarding, type OnboardingQuestion } from '../../engine/import/onboarding';
+import { answered, optionLabel, optionValue, picked, toggled, type Onboarding, type OnboardingQuestion } from '../../engine/import/onboarding';
 import type { Chat, Writes } from '../../model/chat';
 import { onboardingPage } from '../../runtime/chat-context';
 import type { OnboardingPage } from '../../runtime/evaluation-core';
@@ -72,7 +72,7 @@ function Question({ question, answers, onChange }: { question: OnboardingQuestio
     ) : type === 'multiple' ? (
       <Stack gap="related">
         {options.map((option, index) => (
-          <Checkbox key={index} label={option.label || optionValue(option)} checked={picked(answer).includes(optionValue(option))} onChange={() => onChange(varName, toggled(answer, optionValue(option)))} />
+          <Checkbox key={index} label={optionLabel(option)} checked={picked(answer).includes(optionValue(option))} onChange={() => onChange(varName, toggled(answer, optionValue(option)))} />
         ))}
       </Stack>
     ) : (
@@ -80,7 +80,7 @@ function Question({ question, answers, onChange }: { question: OnboardingQuestio
       <ChoiceGroup
         layout="list"
         label={label}
-        options={options.map((option, index) => ({ value: String(index), label: option.label || optionValue(option) }))}
+        options={options.map((option, index) => ({ value: String(index), label: optionLabel(option) }))}
         value={answer === undefined ? null : String(options.findIndex((option) => optionValue(option) === answer))}
         onChange={(index) => onChange(varName, optionValue(options[Number(index)]!))}
       />

@@ -35,14 +35,10 @@ const ROLES = new Map<unknown, Role>([
 // Risu's other spellings of bot, read as bot when it loads a preset (normalizePromptRole, normalizeCacheRole,
 // database.svelte.ts:2551-2595).
 const BOT = new Set<unknown>(['assistant', 'char']);
-const knownRole = (value: unknown) => ROLES.has(value) || BOT.has(value);
 // A role Risu does not know is system, the bucket's.
 const roleOf = (value: unknown): Role => ROLES.get(BOT.has(value) ? 'bot' : value) ?? 'system';
 // Any other type2, none included, is a normal block (process/index.svelte.ts:747-765).
-const MARKS = new Map<unknown, TextBlock['mark']>([
-  ['main', 'main'],
-  ['globalNote', 'globalNote'],
-]);
+const markOf = (value: unknown): TextBlock['mark'] => (value === 'main' || value === 'globalNote' ? value : null);
 const WRAPPED = new Map<unknown, 'description' | 'persona' | 'authorNote' | 'memory'>([
   ['description', 'description'],
   ['persona', 'persona'],
@@ -187,7 +183,7 @@ function convert(preset: Json, template: unknown[]): PresetRead {
     // all (normalizeCacheRole); 여기까지 캐시 on the block before it marks the one message before it, which is Risu's
     // depth 1 over all roles. One at the top marks nothing in Risu either.
     if (item.type === 'cache') {
-      if (!(item.depth === 1 && !knownRole(item.role))) count('cache-narrowed');
+      if (!(item.depth === 1 && !(ROLES.has(item.role) || BOT.has(item.role)))) count('cache-narrowed');
       const before = blocks.at(-1);
       if (before) blocks[blocks.length - 1] = { ...before, cache: true };
       continue;
@@ -256,7 +252,7 @@ function block(item: Json): Block | PresetCounted {
   }
   switch (item.type) {
     case 'plain':
-      return typeof item.text === 'string' ? { ...named, kind: 'text', role: roleOf(item.role), text: item.text, mark: MARKS.get(item.type2) ?? null } : 'unread-item';
+      return typeof item.text === 'string' ? { ...named, kind: 'text', role: roleOf(item.role), text: item.text, mark: markOf(item.type2) } : 'unread-item';
     case 'lorebook':
     case 'postEverything':
       return { ...named, kind: 'slot', slot: item.type };

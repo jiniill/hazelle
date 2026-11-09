@@ -9,7 +9,7 @@ import type { LoreEntries, LoreScan } from './lorebook/activate';
 import { progressed } from './progress';
 import { Scripts, type Box } from './regex/scripts';
 import type { TextFile } from '../model/library';
-import { placeInlays, placeTextFiles } from './assets';
+import { assetsOf, placeInlays, placeTextFiles } from './assets';
 
 export type Stage = 'display' | 'prompt';
 
@@ -89,7 +89,7 @@ export function contexts(scope: Omit<ChatScope, 'toggles' | 'cast'> & { toggles:
     screen: stage === 'display' ? screen : null,
     clock,
     language,
-    assets,
+    assets: assetsOf(assets),
     unfound,
     // Each text of a request collects its own (pipeline lay).
     problems: null,
