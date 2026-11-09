@@ -351,7 +351,7 @@ describe('readBackup', () => {
       ['sleeper', 'Fav'],
       ['mira', null],
     ]);
-    expect(characters[0]!.chats).toEqual([{ title: 'Nap', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [], folder: null, messages: [{ role: 'user', text: 'wake', at: 5 }] }]);
+    expect(characters[0]!.chats).toEqual([{ title: 'Nap', note: null, persona: null, greeting: 0, variables: [], inlays: [], lore: [], loreFolders: [], memory: [], folder: null, staged: true, messages: [{ role: 'user', text: 'wake', at: 5 }] }]);
     expect(backup.catalog.unsupported).toEqual([
       { kind: 'group-chat', count: 1 },
       { kind: 'cold-missing', count: 1 },
@@ -391,6 +391,7 @@ describe('readBackup', () => {
         loreFolders: [],
         memory: [],
         folder: 1,
+        staged: true,
       },
       {
         title: 'Cold',
@@ -405,6 +406,7 @@ describe('readBackup', () => {
         loreFolders: ['Places'],
         memory: [],
         folder: null,
+        staged: true,
       },
     ]);
     expect(card.chatFolders).toEqual(['이름 없는 폴더', '데일리']);

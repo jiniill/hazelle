@@ -39,6 +39,8 @@ const MOVE_UNSUPPORTED: Record<MoveUnsupportedKind, (count: number) => string> =
   'chat-toggles': (count) => `채팅별 토글 값이 있는 채팅 ${count}개`,
   'lore-copy': (count) => `이 채팅에서만 켠 로어북 ${count}개(채팅 로어북에 사본으로 들어옴)`,
   'lore-unfound': (count) => `이 채팅에서만 켠 로어북 ${count}개(캐릭터 로어북에서 찾지 못함)`,
+  'system-message': (count) => `시스템 메시지 ${count}개(봇 메시지로 들어옴)`,
+  attachment: (count) => `메시지에 첨부한 파일 ${count}개`,
 };
 
 export const missedLines = (unsupported: Unsupported): string[] => unsupported.map((item) => UNSUPPORTED[item.kind](item.count));
@@ -49,10 +51,13 @@ const PRESET_UNSUPPORTED: Record<Exclude<PresetUnsupported['kind'], 'repeated-sl
   chatml: (count) => `ChatML 블록 ${count}개`,
   'cache-narrowed': (count) => `바꿔서 가져온 캐시 지점 ${count}개(메시지 하나에 두는 지점으로)`,
   'unread-item': (count) => `읽지 못한 블록 ${count}개`,
+  'off-item': (count) => `꺼져 있던 블록 ${count}개`,
   'toggle-line': UNSUPPORTED['toggle-line'],
   'preset-text': (count) => `템플릿 밖의 텍스트 ${count}개(Risu에서도 보내지 않던 것)`,
+  macro: (count) => `실행되지 않는 SillyTavern 매크로 ${count}개`,
   'regex-stage': UNSUPPORTED['regex-stage'],
-  'prompt-settings': (count) => `Risu 프롬프트 설정 ${count}개(헤이젤에는 없음)`,
+  'sillytavern-regex': (count) => `SillyTavern 정규식 ${count}개`,
+  'prompt-settings': (count) => `프롬프트 조립 설정 ${count}개(헤이젤에는 없음)`,
   settings: () => `모델과 생성 설정(${inSettings('models')}에서 정할 수 있음)`,
 };
 

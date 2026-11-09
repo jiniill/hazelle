@@ -18,7 +18,7 @@ it('preserves original indexes, blank choices, duplicate text, ids and translati
     const choices = projectGreetings(texts, ids, selected, () => translation)!;
     const preview = greetingPreview(choices, 0)!;
     const saved = startingGreetings(choices);
-    const messages = fold(entries(chatWrites('chat', chat, saved, []).entries));
+    const messages = fold(entries(chatWrites('chat', chat, saved, null).entries));
     expect(preview.versions.map(({ greeting }) => greeting)).toEqual([0, 1, 2, 3, 4]);
     if (texts[selected] === '') {
       expect(saved).toBeNull();
@@ -39,14 +39,14 @@ it('preserves original indexes, blank choices, duplicate text, ids and translati
 
 it('saves only the greetings that say something, each under its card index', () => {
   const saved = startingGreetings(projectGreetings(['', 'a', '', 'b'], ['g0', 'g1', 'g2', 'g3'], 3))!;
-  const message = fold(entries(chatWrites('chat', chat, saved, []).entries))[0]!;
+  const message = fold(entries(chatWrites('chat', chat, saved, null).entries))[0]!;
   expect(message.versions.map(({ text, greeting }) => [text, greeting])).toEqual([['a', 1], ['b', 3]]);
   expect(shown(message).id).toBe('g3');
 });
 
 it('keeps greeting identity through user and script edits instead of matching their new text', async () => {
   const choices = projectGreetings(['', 'same', 'same'], ['g0', 'g1', 'g2'], 2)!;
-  const held = entries(chatWrites('chat', chat, choices, []).entries);
+  const held = entries(chatWrites('chat', chat, choices, null).entries);
   const store = {
     create: async (_kind: string, value: Entry) => {
       held.push({ id: crypto.randomUUID(), kind: 'entry', parent: 'chat', rev: held.length + 1, value });

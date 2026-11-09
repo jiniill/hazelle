@@ -181,10 +181,11 @@ export type ImportResult = { ok: true; card: Imported } | { ok: true; module: Im
 
 export type Picture = { bytes: Uint8Array<ArrayBuffer>; type: string };
 
-// Text as Risu stored it, already past the bot's input and output scripts.
-// reasoning: what Risu kept inside the text as <Thoughts> blocks, taken out of it. bookmark: Risu's on the message, with
-// its name if it had one.
-export type RisuMessage = { role: 'user' | 'assistant'; text: string; at: number; reasoning?: string; bookmark?: { name?: string } };
+// reasoning: what Risu kept inside the text as <Thoughts> blocks, taken out of it, or SillyTavern's own.
+export type Said = { text: string; at: number; reasoning?: string };
+// Said: its first version. versions: those after it, and which of all is shown (SillyTavern's swipes); Risu keeps one.
+// bookmark: Risu's on the message, with its name if it had one.
+export type RisuMessage = Said & { role: 'user' | 'assistant'; versions?: { later: Said[]; selected: number }; bookmark?: { name?: string } };
 // One of Risu's memory summaries, with the last message it covers (an index into its chat's messages).
 export type RisuSummary = { text: string; through: number };
 export type RisuChat = {
@@ -206,6 +207,8 @@ export type RisuChat = {
   memory: RisuSummary[];
   // Indexes its character's chatFolders; null in none, or in a chat file, which holds no folders.
   folder: number | null;
+  // Whether its texts are past the bot's input and output scripts, as Risu stores them; SillyTavern ran none of them.
+  staged: boolean;
 };
 export const MOVE_UNSUPPORTED_KINDS = [
   'group-chat',
@@ -219,6 +222,8 @@ export const MOVE_UNSUPPORTED_KINDS = [
   'chat-toggles',
   'lore-copy',
   'lore-unfound',
+  'system-message',
+  'attachment',
 ] as const;
 export type MoveUnsupportedKind = (typeof MOVE_UNSUPPORTED_KINDS)[number];
 export type MoveUnsupported = { kind: MoveUnsupportedKind; count: number };

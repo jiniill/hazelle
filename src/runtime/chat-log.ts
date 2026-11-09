@@ -1,5 +1,5 @@
 import type { Cost } from '../connectors/types';
-import type { RisuMessage } from '../engine/import/types';
+import type { RisuChat } from '../engine/import/types';
 import { memoryThrough } from '../engine/memory';
 import { VARIABLE_LIMITS } from '../engine/render';
 import { CAST_MAX, foldTree, shown, standing, translationOutdated, type AgentRun, type Bookmark, type Chat, type Entry, type Message, type Receipt, type Translation, type Version, type Writes } from '../model/chat';
@@ -31,26 +31,38 @@ import { chatPlace, costRow, receiptRow } from './usage';
 // Batch greetings (including selection) before the root so no greeting-less chat is exposed. The first user
 // message later continues that selection. Keep the pre-save id: it seeds greeting selection and rollp tags.
 export async function startChat(store: ObjectStore, id: string, chat: Chat, greetings: Greetings | null): Promise<ApiFailure | null> {
-  const { entries, root } = chatWrites(id, withPersona(store, chat), greetings, []);
+  const { entries, root } = chatWrites(id, withPersona(store, chat), greetings, null);
   const saved = await store.batch([...entries, root]);
   return saved.ok ? null : saved;
 }
 
-// A new chat's writes: its greetings, then the messages it already holds (a chat brought from Risu), in the order they
+// A new chat's writes: its greetings, then the messages it already holds (a chat brought from Risu or SillyTavern), in the order they
 // fold, and its root, which is written with or after them.
-// said: the ids messages got, in their order.
-export function chatWrites(id: string, chat: Chat, greetings: Greetings | null, messages: RisuMessage[]): { entries: Write[]; root: Write; said: string[] } {
+// said: the ids messages got, in their order. The next message follows the version shown.
+export function chatWrites(id: string, chat: Chat, greetings: Greetings | null, brought: Pick<RisuChat, 'messages' | 'staged'> | null): { entries: Write[]; root: Write; said: string[] } {
+  const messages = brought?.messages ?? [];
   // A moved chat's greeting takes its first message's time, so it does not read as newer than what follows it.
   const entries = greetings ? greetingWrites(id, greetings, messages[0]?.at ?? Date.now()) : [];
   let follows = greetings ? greetings.choices[greetings.selected]!.id : null;
   const bookmarks: Bookmark[] = [];
   const said: string[] = [];
-  for (const { role, text, at, reasoning, bookmark } of messages) {
+  const staged = brought?.staged && { staged: true as const };
+  const write = (entry: string, value: Entry) => entries.push({ type: 'create', kind: 'entry', id: entry, parent: id, value });
+  for (const { role, text, at, reasoning, versions, bookmark } of messages) {
     const message = crypto.randomUUID();
     said.push(message);
-    entries.push({ type: 'create', kind: 'entry', id: message, parent: id, value: { type: 'message', role, at, text, receipt: null, follows, staged: true, ...(reasoning && { reasoning }) } });
+    write(message, { type: 'message', role, at, text, receipt: null, follows, ...staged, ...(reasoning && { reasoning }) });
+    const ids = [message];
+    for (const later of versions?.later ?? []) {
+      const version = crypto.randomUUID();
+      ids.push(version);
+      write(version, { type: 'version', message, replaces: null, edit: false, at: later.at, text: later.text, receipt: null, ...staged, ...(later.reasoning && { reasoning: later.reasoning }) });
+    }
+    // Adding a version selects it.
+    const picked = versions?.selected ?? 0;
+    if (picked !== ids.length - 1) write(crypto.randomUUID(), { type: 'select', message, version: ids[picked]!, at });
     if (bookmark) bookmarks.push({ message, ...bookmark });
-    follows = message;
+    follows = ids[picked]!;
   }
   return { entries, root: { type: 'create', kind: 'chat', id, parent: null, value: withBookmarks(chat, bookmarks) }, said };
 }

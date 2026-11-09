@@ -154,6 +154,16 @@ describe('ImportReader', () => {
     expect(await read('<html><body>log</body></html>')).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'not-risu-chat' } });
   });
 
+  it("reads SillyTavern's .jsonl chat and its preset JSON, each named by its file", async () => {
+    const reader = new ImportReader();
+    const read = (text: string, name: string) => ask(reader, { kind: 'card', file: new File([text], name), asModule: false });
+    const chat = [{ user_name: 'unused', character_name: 'unused', chat_metadata: {} }, { name: '나', is_user: true, send_date: 1, mes: '안녕' }].map((line) => JSON.stringify(line)).join('\n');
+    expect(await read(chat, '루나 - 첫날.jsonl')).toMatchObject({ ok: true, risuChats: [{ title: '루나 - 첫날', messages: [{ role: 'user', text: '안녕' }] }] });
+    expect(await read('{}', 'x.jsonl')).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'not-sillytavern-chat' } });
+    const preset = { prompts: [{ identifier: 'main', system_prompt: true, content: 'hi' }], prompt_order: [{ character_id: 100001, order: [{ identifier: 'main', enabled: true }] }] };
+    expect(await read(JSON.stringify(preset), '담백.json')).toMatchObject({ ok: true, preset: { prompt: { name: '담백', blocks: [{ kind: 'text', text: 'hi', mark: 'main' }] } } });
+  });
+
   it('transfers fresh buffers so repeated asset and picture reads cannot detach the CHARX archive', async () => {
     const second = new Uint8Array([...PNG, 3]);
     const archive = zipSync({

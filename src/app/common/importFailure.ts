@@ -15,8 +15,10 @@ const FAILURE: Record<ImportFailure['kind'], string> = {
 const DETAIL_FAILURE: Record<string, string> = {
   'other-version': '이전 버전에서 만든 채팅 파일이라 가져올 수 없어요.',
   'not-risu-chat': 'Risu에서 HTML로 내보낸 채팅 파일이 아니에요.',
+  'not-sillytavern-chat': 'SillyTavern 채팅 파일(.jsonl)이 아니에요.',
   'not-preset': 'Risu 파일이지만 프리셋 파일이 아니에요.',
   'decrypt-failed': '프리셋을 열지 못했어요. 파일이 깨졌을 수 있어요.',
+  'sillytavern-order': '프롬프트 순서가 없는 SillyTavern 프리셋이에요.',
   'no-template': '프롬프트 템플릿을 쓰지 않는 프리셋은 가져올 수 없어요. Risu에서 템플릿을 켜고 다시 내보내 주세요.',
   'tool-too-large': '플러그인 파일 용량이 너무 커요.',
   'tool-encoding': 'UTF-8 형식의 텍스트 파일이 아니에요.',

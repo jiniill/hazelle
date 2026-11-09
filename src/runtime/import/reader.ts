@@ -5,6 +5,7 @@ import { unpackZip } from '../../engine/import/archive';
 import { importCard, importRisum } from '../../engine/import/card';
 import { importPreset, isPresetFile, presetJson, type PresetResult } from '../../engine/import/preset';
 import { risuChatFile, risuChatHtml } from '../../engine/import/risu-character';
+import { SILLYTAVERN_CHAT, sillyTavernChat } from '../../engine/import/sillytavern-chat';
 import { originalParts, risumParts, type Part } from '../../engine/import/original';
 import { fileSource } from '../../engine/import/source';
 import { readChatFile } from '../chat-file';
@@ -16,11 +17,14 @@ import { MESSAGE_BYTES, MESSAGE_PAGE, type AssetRead, type CardData, type Method
 const presetReply = (read: PresetResult): Replies['card'] =>
   read.ok ? { ok: true, preset: { prompt: read.prompt, regex: read.regex, unsupported: read.unsupported } } : { ok: false, failure: read.failure.kind === 'unreadable' ? { kind: 'unreadable', detail: read.failure.detail } : { kind: 'unreadable', detail: read.failure.kind } };
 
+// A file's name without its extension, which SillyTavern names a chat and a preset by.
+const stem = (name: string) => name.slice(0, name.lastIndexOf('.'));
+
 const chatsReply = ({ chats, missed }: NonNullable<ReturnType<typeof risuChatFile>>): Replies['card'] => ({ ok: true, risuChats: chats, missed });
 
 // A JSON read by its shape, as a file of chats or a preset; null for any other, which importCard then reads as a card,
 // parsing it again.
-function shapedJson(bytes: Uint8Array<ArrayBuffer>): Replies['card'] | null {
+function shapedJson(bytes: Uint8Array<ArrayBuffer>, name: string): Replies['card'] | null {
   let json: unknown;
   try {
     json = JSON.parse(new TextDecoder().decode(bytes));
@@ -32,7 +36,7 @@ function shapedJson(bytes: Uint8Array<ArrayBuffer>): Replies['card'] | null {
   if (read.error === 'other-version') return { ok: false, failure: { kind: 'unreadable', detail: read.error } };
   const risu = risuChatFile(json);
   if (risu) return chatsReply(risu);
-  const preset = presetJson(json);
+  const preset = presetJson(json, stem(name));
   return preset && presetReply(preset);
 }
 
@@ -74,7 +78,11 @@ export class ImportReader {
           const risu = risuChatHtml(new TextDecoder().decode(bytes));
           return risu ? chatsReply(risu) : { ok: false, failure: { kind: 'unreadable', detail: 'not-risu-chat' } };
         }
-        const shaped = request.file.name.toLowerCase().endsWith('.json') ? shapedJson(bytes) : null;
+        if (request.file.name.toLowerCase().endsWith(SILLYTAVERN_CHAT)) {
+          const chats = sillyTavernChat(new TextDecoder().decode(bytes), stem(request.file.name));
+          return chats ? chatsReply(chats) : { ok: false, failure: { kind: 'unreadable', detail: 'not-sillytavern-chat' } };
+        }
+        const shaped = request.file.name.toLowerCase().endsWith('.json') ? shapedJson(bytes, request.file.name) : null;
         if (shaped) return shaped;
         const result = await importCard(request.file.name, bytes, request.asModule, request.password);
         if (!result.ok) return result;
@@ -113,7 +121,7 @@ export class ImportReader {
         let next = request.from;
         while (next < source.length && messages.length < MESSAGE_PAGE) {
           const message = source[next]!;
-          const size = 64 + 2 * (message.text.length + (message.reasoning?.length ?? 0));
+          const size = [message, ...(message.versions?.later ?? [])].reduce((sum, said) => sum + 64 + 2 * (said.text.length + (said.reasoning?.length ?? 0)), 0);
           // A single oversized message must still advance, as the object writer's own size check decides its fate.
           if (messages.length && bytes + size > MESSAGE_BYTES) break;
           messages.push(message);
