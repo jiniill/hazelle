@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { expect, it, vi } from 'vitest';
 import { probeRoot } from '../probe';
-import { backLayers, useLayer } from './layers';
+import { backLayers, openingField, openingStop, useLayer } from './layers';
 
 it('counts only a layer that takes back, and closes the newest as Esc does', async () => {
   const root = probeRoot();
@@ -23,4 +23,14 @@ it('counts only a layer that takes back, and closes the newest as Esc does', asy
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it('opens on a marked control, else a place to type before the head\'s ×, and on a search only under a mouse', () => {
+  const box = (found: Record<string, string>) => ({ querySelector: (selector: string) => found[selector] ?? null }) as unknown as ParentNode;
+  const field = openingField(true);
+  expect(openingStop(box({ '[data-autofocus]': 'editor', [field]: 'name', button: '×' }), true)).toBe('editor');
+  expect(openingStop(box({ [field]: 'name', button: '×' }), true)).toBe('name');
+  expect(openingStop(box({ button: '×' }), true)).toBe('×');
+  expect(openingStop(box({ [field]: 'search', button: '×' }), false)).toBe('×');
+  expect(openingField(false)).toContain('[type="search"]');
 });

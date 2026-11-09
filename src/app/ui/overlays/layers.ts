@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react';
 import { ChangeSignal } from '../../../change-signal';
 import { isComposing } from '../foundation/keys';
+import { hasFinePointer } from '../foundation/media';
 
 type Layer = {
   outside: (target: Node) => boolean;
@@ -120,11 +121,17 @@ export function useAnchored(open: boolean, popover: RefObject<HTMLElement | null
 
 export const TAB_STOPS = 'a[href], button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
+// A place to type comes before the buttons, the head's × first among them; but under a finger not a search, whose
+// keyboard would cover what it searches.
+export const openingField = (fine: boolean) => `input:not(:disabled, [type="checkbox"]${fine ? '' : ', [type="search"]'}), textarea:not(:disabled)`;
+
+export const openingStop = (box: ParentNode, fine: boolean) =>
+  box.querySelector<HTMLElement>('[data-autofocus]') ?? box.querySelector<HTMLElement>(openingField(fine)) ?? box.querySelector<HTMLElement>('button');
+
 export function useFocusTrap(box: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
-    const first = box.current?.querySelector<HTMLElement>('[data-autofocus]') ?? box.current?.querySelector<HTMLElement>('input, textarea, button');
-    first?.focus();
+    if (box.current) openingStop(box.current, hasFinePointer())?.focus();
     return () => opener?.focus();
   }, [box]);
   return (event: ReactKeyboardEvent) => {

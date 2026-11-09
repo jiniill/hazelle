@@ -87,7 +87,10 @@ export function FlowMap({ label, columns, edges, picked, onPick, detail, legend 
       .join(', ');
   const shown = useRef<HTMLDivElement>(null);
   // The detail opens past the map's foot or under a node far down: it is brought into view each time a node is picked.
-  useLayoutEffect(() => shown.current?.scrollIntoView({ block: 'nearest' }), [picked]);
+  // A block body: scrollIntoView returns a promise in Chromium, which React would call as the cleanup.
+  useLayoutEffect(() => {
+    shown.current?.scrollIntoView({ block: 'nearest' });
+  }, [picked]);
   const opened = picked !== null && detail && (
     <div ref={shown} className={styles.detail}>
       {detail}
