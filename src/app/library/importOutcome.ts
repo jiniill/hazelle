@@ -1,5 +1,5 @@
 import type { RisuScan, ToolManifest } from '../../tool-api/manifest';
-import { RISU_DECLINED, risuNever } from '../../tool-api/risu-methods';
+import { risuNever } from '../../tool-api/risu-methods';
 import type { ToolImport } from '../../runtime/tools/store';
 import type { PresetRead } from '../../engine/import/preset';
 import type { Imported, ImportedModule, ImportedPersona, Unsupported } from '../../engine/import/types';
@@ -15,7 +15,7 @@ import { aliased } from '../common/alias';
 import { describeFailure } from '../common/failure';
 import { packHolds } from '../common/pack';
 import { describeUnused } from '../common/unused';
-import { ALWAYS, DEFAULT_VARIABLES, inSettings, moduleName, NO_CHARACTER, promptName, RISU_PLUGIN, SAVE_FAILED, SCRIPTS, toolVersion, UNREADABLE_FILE } from '../common/words';
+import { ALWAYS, DEFAULT_VARIABLES, inSettings, moduleName, NO_CHARACTER, PAGES, promptName, RISU_PLUGIN, SAVE_FAILED, SCRIPTS, toolVersion, UNREADABLE_FILE } from '../common/words';
 import { cardMissed, missedLines, presetMissed, unkeptMissed } from './missed';
 
 // Never retain asset readers/source bytes in previews or outcomes: closures would keep entire archives alive.
@@ -137,21 +137,36 @@ const placedLine = (page: 'modules' | 'plugins', { at, failure }: Placement): Li
 export const toolOutcome = (file: string, title: string, saved: ToolImport, placement: Placement): ImportOutcome =>
   ({ kind: 'plugin', file, id: saved.id, title, lines: saved.previous ? [] : [placedLine('plugins', placement)], missed: [] });
 
-// Keyed by every name in RISU_DECLINED.
-export const DECLINED_WORDS: Record<string, string> = {
+// Keyed by every name risuNever answers.
+const DISPLAY_READ = `${PAGES.display} 설정 읽기`;
+const DISPLAY_CHANGE = `${PAGES.display} 설정 바꾸기`;
+export const NEVER_WORDS: Record<string, string> = {
   'getRootDocument:page': '앱 화면 직접 바꾸기',
   'character.chats': '캐릭터의 채팅 목록 읽기',
-  addProvider: '모델 제공자 추가',
-  registerBodyIntercepter: '모델 요청 내용 변경',
-  unregisterBodyIntercepter: '모델 요청 내용 변경',
-  addPluginChannelListener: '다른 플러그인과 주고받기',
-  postPluginChannelMessage: '다른 플러그인과 주고받기',
+  addProvider: '모델 제공자 추가하기',
+  registerBodyIntercepter: '모델 요청 내용 바꾸기',
+  unregisterBodyIntercepter: '모델 요청 내용 바꾸기',
+  addPluginChannelListener: '다른 플러그인과 신호 주고받기',
+  postPluginChannelMessage: '다른 플러그인과 신호 주고받기',
+  addTTSPreprocessor: '음성 읽기 다듬기',
+  addTTSPostprocessor: '음성 읽기 다듬기',
+  registerMCP: '모델에 도구 연결하기',
+  unregisterMCP: '모델에 도구 연결하기',
+  getFetchLogs: '앱의 요청 기록 읽기',
+  saveSecretHeader: '요청용 비밀 값 저장하기',
+  loadPlugins: '플러그인 새로고침',
+  createMutationObserver: '앱 화면 변화 감지하기',
+  getColorScheme: DISPLAY_READ,
+  getTextTheme: DISPLAY_READ,
+  changeColorScheme: DISPLAY_CHANGE,
+  setColorScheme: DISPLAY_CHANGE,
+  changeTextTheme: DISPLAY_CHANGE,
+  setCustomTextTheme: DISPLAY_CHANGE,
 };
 
 // Names not mapped yet stay as the plugin writes them: the set is open (any upstream name), so no wording covers it.
-// RISU_ABSENT's names have no words either and stay as written.
 function risuVerdict({ verdict, missing }: RisuScan): Line {
-  const never = [...new Set(missing.filter(risuNever).map((name) => (RISU_DECLINED.has(name) ? DECLINED_WORDS[name]! : name)))];
+  const never = [...new Set(missing.filter(risuNever).map((name) => NEVER_WORDS[name]!))];
   const later = missing.filter((name) => !risuNever(name));
   const listed = [never.length > 0 && `앞으로도 지원하지 않아요: ${never.join(', ')}.`, later.length > 0 && `아직 지원하지 않아요: ${later.join(', ')}.`].filter(Boolean).join(' ');
   switch (verdict) {
