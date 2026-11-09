@@ -63,6 +63,12 @@ it('accepts a prompt whose toggles hold layout and unread lines, and refuses a t
   expect(isValue('prompt', { ...prompt, toggles: [{ kind: 'unread' }] })).toBe(false);
 });
 
+it("reads a conversation prompt's default variables as absent or a list of pairs", () => {
+  const prompt = { name: 'p', blocks: [], authorNote: '', models: {}, toggles: [] };
+  expect(isValue('prompt', { ...prompt, variables: [['hp', '10']] })).toBe(true);
+  expect(isValue('prompt', { ...prompt, variables: 'hp=10' })).toBe(false);
+});
+
 it("reads a chat's bookmarks and cast as absent or well formed, and refuses a malformed list", () => {
   const chat = { title: null, character: null, models: {} };
   expect(isValue('chat', chat)).toBe(true);

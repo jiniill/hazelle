@@ -15,6 +15,8 @@ const SCRIPT_STAGE = { input: '입력', output: '출력', greeting: '첫 메시�
 
 export function writerName(writer: VariableWriter): string {
   switch (writer.kind) {
+    case 'prompt':
+      return '프롬프트 기본값';
     case 'card':
       return '캐릭터 기본값';
     case 'chat':

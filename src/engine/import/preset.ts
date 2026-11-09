@@ -2,7 +2,7 @@ import { gzipSync } from 'fflate';
 import { isRecord, list } from '../../connectors/values';
 import type { Block, ChatRange, ConversationPrompt, Role, SLOTS, SlotKind, TextBlock } from '../../model/prompt';
 import { args } from '../lorebook/decorators';
-import { add, counted, record, regexScripts, stampIds, text, type Json, type Tally } from './convert';
+import { add, counted, readVariables, record, regexScripts, stampIds, text, writeVariables, type Json, type Tally } from './convert';
 import { expansionLimit, gunzip, TooLarge } from './inflate';
 import { readMsgpack, writeMsgpack } from './msgpack';
 import { pack, unpack } from './risum';
@@ -10,7 +10,7 @@ import { readToggles, writeToggles } from './toggles';
 import type { RegexScript } from './types';
 
 // What a preset holds that the prompt does not take, in the order the summary lists it.
-const UNSUPPORTED = ['jailbreak', 'cot', 'chatml', 'cache-narrowed', 'unread-item', 'repeated-slot', 'toggle-line', 'preset-text', 'regex-stage', 'variables', 'prompt-settings', 'settings'] as const;
+const UNSUPPORTED = ['jailbreak', 'cot', 'chatml', 'cache-narrowed', 'unread-item', 'repeated-slot', 'toggle-line', 'preset-text', 'regex-stage', 'prompt-settings', 'settings'] as const;
 export type PresetUnsupportedKind = (typeof UNSUPPORTED)[number];
 type Counted = Exclude<PresetUnsupportedKind, 'repeated-slot'>;
 // A repeated slot is listed once per slot, so the summary can name it.
@@ -128,7 +128,7 @@ function botPreset(prompt: ConversationPrompt, namespaces: readonly string[]): {
   }
   const integration = [...new Set([...(prompt.companions ?? []), ...namespaces])].join(',');
   return {
-    preset: { ...Object.fromEntries(KEPT_IN_RISU.map((field) => [field, null])), name: prompt.name, promptTemplate, customPromptTemplateToggle: writeToggles(prompt.toggles), moduleIntergration: integration },
+    preset: { ...Object.fromEntries(KEPT_IN_RISU.map((field) => [field, null])), name: prompt.name, promptTemplate, customPromptTemplateToggle: writeToggles(prompt.toggles), templateDefaultVariables: writeVariables(prompt.variables ?? []), moduleIntergration: integration },
     tools,
   };
 }
@@ -209,16 +209,16 @@ function convert(preset: Json, template: unknown[]): PresetRead {
   // through a jailbreak item, counted above.
   count('preset-text', [preset.mainPrompt, preset.jailbreak, preset.globalNote].filter((value) => text(value).trim()).length);
   const { regex } = stampIds({ regex: regexScripts(list(preset.regex), counts), triggers: [] });
-  // They default chat variables (getvar), not toggles, which are globals with no default (compat spec §d).
-  count('variables', text(preset.templateDefaultVariables).split(/\r?\n/).filter((line) => line.trim()).length);
   count('prompt-settings', promptSettings(record(preset.promptSettings), template));
   // Model and generation settings belong to each model's settings; every preset has them.
   count('settings');
 
   const companions = args(text(preset.moduleIntergration));
+  // They default chat variables (getvar), not toggles, which are globals with no default (compat spec §d).
+  const variables = readVariables(preset.templateDefaultVariables);
   // Preset model names are not this account's connections, so the prompt's model layer starts empty.
   return {
-    prompt: { name: text(preset.name), blocks, toggles, authorNote, models: {}, imported: 'risu-preset', ...(companions.length > 0 && { companions }) },
+    prompt: { name: text(preset.name), blocks, toggles, authorNote, models: {}, imported: 'risu-preset', ...(companions.length > 0 && { companions }), ...(variables.length > 0 && { variables }) },
     regex,
     unsupported: UNSUPPORTED.flatMap((kind): PresetUnsupported[] => (kind === 'repeated-slot' ? [...repeated].map(([slot, amount]) => ({ kind, slot, count: amount })) : counted([kind], counts))),
   };

@@ -7,12 +7,13 @@ import { blockSource } from './blocks';
 import { renameToggle, toggleUses } from './rekey';
 
 // authorNote: null for a sort of prompt that has none.
-export type Draft = Pick<Prompt, 'name' | 'blocks' | 'toggles'> & { authorNote: string | null; tags?: PictureTags; picture?: PictureSettings; protect?: string[]; place?: AgentPlace };
+export type Draft = Pick<Prompt, 'name' | 'blocks' | 'toggles'> & { authorNote: string | null; variables?: [string, string][]; tags?: PictureTags; picture?: PictureSettings; protect?: string[]; place?: AgentPlace };
 export const draftOf = (prompt: Prompt): Draft => ({
   name: prompt.name,
   blocks: prompt.blocks,
   toggles: prompt.toggles,
   authorNote: prompt.task === undefined ? prompt.authorNote : null,
+  variables: prompt.task === undefined ? (prompt.variables ?? []) : undefined,
   tags: prompt.task === 'illustrate' ? prompt.tags : undefined,
   picture: prompt.task === 'illustrate' ? prompt.picture : undefined,
   protect: prompt.task === 'translate' || prompt.task === 'agent' ? prompt.protect : undefined,

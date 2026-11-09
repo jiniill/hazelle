@@ -9,7 +9,7 @@ import { PROMPT_SORTS, type PromptSort } from '../../model/prompt';
 
 const ACCOUNT_SECTIONS = ['notices'] as const;
 export type AccountSection = (typeof ACCOUNT_SECTIONS)[number];
-const PROMPT_PANES = ['toggles', 'model', 'picture'] as const;
+const PROMPT_PANES = ['toggles', 'model', 'picture', 'variables'] as const;
 export type PromptPane = (typeof PROMPT_PANES)[number];
 
 // These paths are what a reload, a bookmark and the browser's back button land on, so an existing one never changes.
@@ -30,7 +30,7 @@ export type Route =
   // '' when there was none.
   | { kind: 'connect-direct'; address: string }
   | { kind: 'connection'; id: string }
-  // pane: the prompt editor's pane that is open, which a door to a prompt's 토글, 모델 or 이미지 names; null, a block.
+  // pane: the prompt editor's pane that is open, which a door to a prompt's 토글, 모델, 이미지 or 기본 변수 names; null, a block.
   // place on a list of things that folders hold: a folder's id, or null for the top.
   | { kind: 'prompts'; place: string | null; sort: PromptSort | null }
   | { kind: 'prompt'; id: string; pane: PromptPane | null }
