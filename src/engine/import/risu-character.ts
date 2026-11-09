@@ -153,7 +153,6 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
     ...chatLorebook(localCopies(list(chat.localLore), globalLore, missed)),
     memory: memory.summaries,
     folder: folders.get(text(chat.folderId)) ?? null,
-    staged: true,
     messages: messages.map((message) => {
       at = finite(message.time) ?? at;
       // Risu keeps a reply's reasoning inside its text as <Thoughts> blocks, and takes them out again before it draws or

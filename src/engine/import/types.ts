@@ -213,8 +213,6 @@ export type RisuChat = {
   memory: RisuSummary[];
   // Indexes its character's chatFolders; null in none, or in a chat file, which holds no folders.
   folder: number | null;
-  // Whether its texts are past the bot's input and output scripts, as Risu stores them; SillyTavern ran none of them.
-  staged: boolean;
 };
 export const MOVE_UNSUPPORTED_KINDS = [
   'group-chat',

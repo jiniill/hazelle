@@ -45,7 +45,7 @@ export function sillyTavernChat(file: string, title: string): RisuChats | null {
   const variables = Object.entries(record(record(header.chat_metadata).variables)).map(([name, value]): [string, string] => [name, typeof value === 'string' ? value : JSON.stringify(value)]);
   const note = text(record(header.chat_metadata).note_prompt);
   return {
-    chats: [{ title, note: note.trim() ? note : null, persona: null, greeting: (opening && count(opening.swipe_id)) ?? 0, variables, inlays: [], messages: line, lore: [], loreFolders: [], memory: [], folder: null, staged: false }],
+    chats: [{ title, note: note.trim() ? note : null, persona: null, greeting: (opening && count(opening.swipe_id)) ?? 0, variables, inlays: [], messages: line, lore: [], loreFolders: [], memory: [], folder: null }],
     missed: counted(MOVE_UNSUPPORTED_KINDS, missed),
   };
 }

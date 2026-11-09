@@ -20,7 +20,7 @@ it("reads SillyTavern's chat file into a chat: its greeting by its swipe, swipes
   );
   const read = sillyTavernChat(`${file}\n`, '루나 - 2024-7-12@01h31m37s')!;
   const [chat] = read.chats;
-  expect(chat).toMatchObject({ title: '루나 - 2024-7-12@01h31m37s', note: '비가 와요', greeting: 1, variables: [['hp', '7'], ['mood', '맑음']], staged: false });
+  expect(chat).toMatchObject({ title: '루나 - 2024-7-12@01h31m37s', note: '비가 와요', greeting: 1, variables: [['hp', '7'], ['mood', '맑음']] });
   expect(chat!.messages).toEqual([
     { role: 'user', text: '안녕', at: new Date(2023, 5, 19, 14, 20).getTime() },
     {

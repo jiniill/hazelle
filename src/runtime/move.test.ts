@@ -44,7 +44,6 @@ const luna: RisuCharacter = {
       loreFolders: [],
       memory: [],
       folder: null,
-      staged: true,
       messages: [
         { role: 'user', text: '안녕', at: 1 },
         { role: 'assistant', text: '반가워 [HP 7]', at: 2 },
@@ -319,17 +318,17 @@ describe('importRisuChats', () => {
     expect(store.children('lore', imported.data[0]!).map(({ value }) => value)).toEqual([{ ...entry, folder: folder!.id }]);
   });
 
-  it("writes a SillyTavern chat's swipes as versions, unstaged, the shown one selected and followed", async () => {
+  it("writes a SillyTavern chat's swipes as versions, the shown one selected and followed", async () => {
     const { store } = await server.account();
     const messages = [
       { role: 'assistant' as const, text: '하나', at: 1, versions: { later: [{ text: '둘', at: 2, reasoning: '고민' }, { text: '셋', at: 3 }], selected: 1 } },
       { role: 'user' as const, text: '좋아', at: 4 },
     ];
-    const imported = await importRisuChats(store, null, [{ ...luna.chats[0]!, staged: false, messages }]);
+    const imported = await importRisuChats(store, null, [{ ...luna.chats[0]!, messages }]);
     if (!imported.ok) throw new Error(imported.error);
     await server.hold(store, imported.data[0]!);
     const [reply, next] = fold(store.children('entry', imported.data[0]!));
-    expect(reply!.versions.map(({ text, reasoning, staged }) => [text, reasoning, staged])).toEqual([['하나', undefined, undefined], ['둘', '고민', undefined], ['셋', undefined, undefined]]);
+    expect(reply!.versions.map(({ text, reasoning, staged }) => [text, reasoning, staged])).toEqual([['하나', undefined, true], ['둘', '고민', true], ['셋', undefined, true]]);
     expect([shown(reply!).text, shown(next!).text]).toEqual(['둘', '좋아']);
     const follows = store.children('entry', imported.data[0]!).find(({ value }) => value.type === 'message' && value.text === '좋아')!.value;
     expect(follows).toMatchObject({ follows: reply!.versions[1]!.id });

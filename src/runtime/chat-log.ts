@@ -38,25 +38,25 @@ export async function startChat(store: ObjectStore, id: string, chat: Chat, gree
 
 // A new chat's writes: its greetings, then the messages it already holds (a chat brought from Risu or SillyTavern), in the order they
 // fold, and its root, which is written with or after them.
-// said: the ids messages got, in their order. The next message follows the version shown.
-export function chatWrites(id: string, chat: Chat, greetings: Greetings | null, brought: Pick<RisuChat, 'messages' | 'staged'> | null): { entries: Write[]; root: Write; said: string[] } {
+// said: the ids messages got, in their order. The next message follows the version shown. A brought text is staged:
+// Risu and SillyTavern both store a message past the bot's input and output scripts.
+export function chatWrites(id: string, chat: Chat, greetings: Greetings | null, brought: Pick<RisuChat, 'messages'> | null): { entries: Write[]; root: Write; said: string[] } {
   const messages = brought?.messages ?? [];
   // A moved chat's greeting takes its first message's time, so it does not read as newer than what follows it.
   const entries = greetings ? greetingWrites(id, greetings, messages[0]?.at ?? Date.now()) : [];
   let follows = greetings ? greetings.choices[greetings.selected]!.id : null;
   const bookmarks: Bookmark[] = [];
   const said: string[] = [];
-  const staged = brought?.staged && { staged: true as const };
   const write = (entry: string, value: Entry) => entries.push({ type: 'create', kind: 'entry', id: entry, parent: id, value });
   for (const { role, text, at, reasoning, versions, bookmark } of messages) {
     const message = crypto.randomUUID();
     said.push(message);
-    write(message, { type: 'message', role, at, text, receipt: null, follows, ...staged, ...(reasoning && { reasoning }) });
+    write(message, { type: 'message', role, at, text, receipt: null, follows, staged: true, ...(reasoning && { reasoning }) });
     const ids = [message];
     for (const later of versions?.later ?? []) {
       const version = crypto.randomUUID();
       ids.push(version);
-      write(version, { type: 'version', message, replaces: null, edit: false, at: later.at, text: later.text, receipt: null, ...staged, ...(later.reasoning && { reasoning: later.reasoning }) });
+      write(version, { type: 'version', message, replaces: null, edit: false, at: later.at, text: later.text, receipt: null, staged: true, ...(later.reasoning && { reasoning: later.reasoning }) });
     }
     // Adding a version selects it.
     const picked = versions?.selected ?? 0;
