@@ -82,7 +82,7 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
       note: [chat.count === null ? null : `${chat.count}개`, chat.at === null ? null : ago(chat.at)].filter((part) => part !== null).join(' · '),
       preview: chat.preview ?? undefined,
       control: (
-        <MoreMenu of="채팅">
+        <MoreMenu of={`'${chat.title}'`}>
           <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setNaming(chat)} />
           <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void edits.duplicate(chat)} />
           {chat.chat.origin && <MenuItem label={FORGET_ORIGIN} onClick={() => edits.forgetOrigin(chat.id)} />}

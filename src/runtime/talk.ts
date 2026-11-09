@@ -64,7 +64,8 @@ export type TurnTools = { tools: Tool[]; writes: Writes };
 
 // unsent: the user's message was not saved, so its reply was stopped. unsaved: the reply was written
 // but not saved; saveAgain(reply) tries it again. reply null: a restore ended the turn, and nothing is kept to save.
-export type TalkFailure = RouteFailure | { kind: 'unsent'; failure: ApiFailure } | { kind: 'unsaved'; reply: string | null; failure: ApiFailure };
+// busy: another turn holds the chat, so this one never began.
+export type TalkFailure = RouteFailure | { kind: 'unsent'; failure: ApiFailure } | { kind: 'unsaved'; reply: string | null; failure: ApiFailure } | { kind: 'busy' };
 
 const saidMessages = new WeakMap<Said, Shown>();
 const rested = new WeakMap<Message, Shown>();
@@ -245,7 +246,7 @@ export class Talk {
   // Publish the turn before prepare so input shows immediately. Prepare may save/translate/build; stop must abort it.
   // Preparation failures end unsent. onSaid: the user's message is saved, by prepare (a bot's Lua) or after it.
   async run<F extends { kind: string }>({ chat, said, reply: asked }: Omit<Turn, 'text' | 'reasoning'>, prepare: Prepare<F>, onSaid?: () => void): Promise<TalkFailure | F | null> {
-    if (this.turns.has(chat)) return null;
+    if (this.turns.has(chat)) return { kind: 'busy' };
     const lease = this.store.retainChat(chat);
     const held = this.seat(chat, said, asked);
     try {

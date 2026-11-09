@@ -87,7 +87,7 @@ export async function receiveReply(session: Session, chat: string, reply: Writte
     // An onOutput edit is a version of its own, which is not continued, as 이어 쓰기 is not offered on it.
     if (last?.id === replyMessage(reply) && shown(last).id === reply.id) {
       const failure = await takeTurn(session, chat, { kind: 'continue', message: last.id, version: reply.id });
-      if (!failure) return;
+      if (!failure || failure.kind === 'busy') return;
     }
   }
   // 멈추기 is pressed by someone watching the reply.
