@@ -117,6 +117,14 @@ describe('what a request carries', () => {
     expect(body(generic, bare, { reasoning: { kind: 'off' } })).toMatchObject({ reasoning_effort: 'none' });
   });
 
+  it('leaves out the reasoning summary where the format has no field for it or the model takes no reasoning', () => {
+    expect(fit(modelSettings(generic, bare)!, { reasoningSummary: true }).changes).toEqual([{ setting: 'reasoningSummary', change: 'left-out' }]);
+    const responses = connection('generic', { baseUrl: 'https://api.example.com/v1', protocol: 'responses' });
+    const plain: Model = { ...bare, takes: { settings: ['temperature'], reasoning: null } };
+    expect(fit(modelSettings(responses, plain)!, { reasoningSummary: true }).changes).toEqual([{ setting: 'reasoningSummary', change: 'left-out' }]);
+    expect(fit(modelSettings(responses, bare)!, { reasoningSummary: true }).changes).toEqual([]);
+  });
+
   it('asks a gateway for a reasoning budget in its own field', () => {
     expect(body(connection('openrouter'), bare, { reasoning: { kind: 'budget', tokens: 2000 } })).toMatchObject({ reasoning: { max_tokens: 2000 } });
   });

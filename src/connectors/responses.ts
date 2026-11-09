@@ -1,14 +1,14 @@
 import { chatCompletions, dataUrl, openAiEmbeds, promptCacheKey } from './chat-completions';
 import { failedTerminal } from './errors';
-import type { Reasoning } from './settings';
+import type { ModelSettings } from './settings';
 import { carriesPictures, type ChatMessage, type Codec, type Phase, type StreamFacts } from './types';
 import { count, isRecord, list } from './values';
 
-// OpenAI's Responses API. 'none' turns reasoning off on the models that allow it.
-function reasoningField(reasoning: Reasoning | undefined) {
-  if (reasoning?.kind === 'level') return { reasoning: { effort: reasoning.level } };
-  if (reasoning?.kind === 'off') return { reasoning: { effort: 'none' } };
-  return {};
+// OpenAI's Responses API. 'none' turns reasoning off on the models that allow it. A summary comes back only when asked.
+function reasoningField({ reasoning, reasoningSummary }: ModelSettings) {
+  const effort = reasoning?.kind === 'level' ? reasoning.level : reasoning?.kind === 'off' ? 'none' : undefined;
+  if (effort === undefined && !reasoningSummary) return {};
+  return { reasoning: { ...(effort !== undefined && { effort }), ...(reasoningSummary && { summary: 'auto' }) } };
 }
 
 // A reply that stopped early says why in incomplete_details; a finished one has only its status.
@@ -73,7 +73,7 @@ export const responses: Codec = {
   // It has no stop sequences, penalties, top_k or seed. max_output_tokens below 16 is refused.
   carries: {
     numbers: { maxOutput: { min: 16, max: null }, temperature: { min: 0, max: 2 }, topP: { min: 0, max: 1 } },
-    reasoning: { off: true, levels: ['minimal', 'low', 'medium', 'high', 'xhigh'], least: null, budget: null, adaptive: false },
+    reasoning: { off: true, levels: ['minimal', 'low', 'medium', 'high', 'xhigh'], least: null, budget: null, adaptive: false, summary: true },
     stop: false,
     verbosity: true,
     serviceTier: false,
@@ -94,7 +94,7 @@ export const responses: Codec = {
       ...(settings.maxOutput === undefined ? {} : { max_output_tokens: settings.maxOutput }),
       ...(settings.temperature === undefined ? {} : { temperature: settings.temperature }),
       ...(settings.topP === undefined ? {} : { top_p: settings.topP }),
-      ...reasoningField(settings.reasoning),
+      ...reasoningField(settings),
       ...(settings.verbosity === undefined ? {} : { text: { verbosity: settings.verbosity } }),
       ...(settings.cache ? promptCacheKey(model, messages) : {}),
       // The reply is kept in the chat here, not on the provider's side.

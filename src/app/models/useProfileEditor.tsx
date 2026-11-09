@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { modelSettings } from '../../connectors/registry';
-import { fit, SERVICE_TIERS, VERBOSITY, WHOLE, type Change, type ModelSettings, type PdfKeep, type Reasoning, type SettingsSchema } from '../../connectors/settings';
+import { fit, SERVICE_TIERS, VERBOSITY, WHOLE, type Accepts, type Change, type ModelSettings, type PdfKeep, type Reasoning, type SettingsSchema } from '../../connectors/settings';
 import { entryName, replyLimit, type Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
 import { profileUsers, renameProfile, setProfileSettings, withSettings, type ProfileUser } from '../../runtime/profiles';
@@ -181,6 +181,20 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     );
   }
 
+  // Shown only where a model on this 설정 may take it, or while it is set, so a stored one is never hidden.
+  const offered = (value: unknown, accepts: (schema: SettingsSchema) => Accepts) => Boolean(value) || callable.some((user) => accepts(user.schema) !== false);
+
+  const summaryRow = offered(shown.reasoningSummary, (schema) => schema.reasoning.summary) && (
+    <SettingRow
+      key="reasoningSummary"
+      label={PROFILE_ROWS.summary}
+      help="모델이 추론 과정을 요약해서 보내 줘요. OpenAI는 조직 인증을 받지 않은 계정의 요청을 거부할 수 있어요."
+      changed={shown.reasoningSummary !== undefined}
+      note={noteFor('reasoningSummary')}
+      control={<Switch label={PROFILE_ROWS.summary} checked={shown.reasoningSummary === true} onChange={(on) => set({ reasoningSummary: on ? true : undefined })} />}
+    />
+  );
+
   const cacheRow = (
     <SettingRow
       key="cache"
@@ -200,8 +214,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     />
   );
 
-  // Shown only where a model on this 설정 has a discount lane, or while it is set, so a stored one is never hidden.
-  const discountRow = (shown.discount || callable.some((user) => user.schema.discount !== false)) && (
+  const discountRow = offered(shown.discount, (schema) => schema.discount) && (
     <SettingRow
       key="discount"
       label={DISCOUNT}
@@ -212,10 +225,9 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
     />
   );
 
-  // Shown only where a model on this 설정 may take it, or while it is set, so a stored one is never hidden.
   function pdfRow(): ReactNode {
     const pdf = shown.pdf;
-    if (!pdf && !callable.some((user) => user.schema.pdf !== false)) return null;
+    if (!offered(pdf, (schema) => schema.pdf)) return null;
     const draft = typedText(drafts.recent, readRecent, pdf?.keep === 'recent' ? pdf.recent : undefined, (recent) => (recent === undefined ? '' : String(recent)));
     const recent = pdf?.keep === 'recent' ? readRecent(draft) : undefined;
     const pick = (keep: PdfKeep | 'off') => {
@@ -317,6 +329,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
         <SettingGroup label={PROFILE_ROWS.frequent}>
           {MAIN.map(numberRow)}
           {reasoningRow()}
+          {summaryRow}
           {cacheRow}
           {discountRow}
           {pdfRow()}

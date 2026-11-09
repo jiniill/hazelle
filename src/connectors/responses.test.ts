@@ -82,6 +82,13 @@ describe('responses request', () => {
     ]);
   });
 
+  it('asks for the reasoning summary only when the switch is on, beside the effort or alone', () => {
+    const sent = (settings: ModelSettings) => JSON.parse(prepareChat(route, { model, messages, settings }).request.body!).reasoning as unknown;
+    expect(sent({ reasoningSummary: true, reasoning: { kind: 'level', level: 'high' } })).toEqual({ effort: 'high', summary: 'auto' });
+    expect(sent({ reasoningSummary: true })).toEqual({ summary: 'auto' });
+    expect(sent({})).toBeUndefined();
+  });
+
   it('asks for the whole reply when streaming is off', () => {
     expect(JSON.parse(prepareChat(route, { model, messages, settings: { streaming: false, reasoning: { kind: 'off' } } }).request.body!)).toMatchObject({ reasoning: { effort: 'none' }, stream: false });
   });
