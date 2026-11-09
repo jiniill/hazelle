@@ -323,7 +323,7 @@ test('a new account imports a card, chats through the fake provider and finds th
     await page.getByRole('complementary', { name: '캐릭터 바로가기' }).getByRole('button', { name: /^Mira/ }).first().click();
     await page.getByRole('complementary', { name: '캐릭터 목록' }).getByRole('button', { name: /^Mira/ }).first().click();
     await page.getByRole('navigation', { name: '개요' }).getByRole('button', { name: '캐릭터', exact: true }).click();
-    await page.getByRole('textbox', { name: '설명' }).click();
+    await page.getByRole('textbox', { name: '설명', exact: true }).click();
     await page.keyboard.press('Control+Shift+X');
     await expect(page.locator('.cm-scroller')).toHaveCSS('display', 'flex');
     expect(violations).toEqual([]);
