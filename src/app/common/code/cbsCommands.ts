@@ -225,7 +225,7 @@ export const COMMANDS: readonly CommandGroup[] = [
     guide: 'literal',
     commands: [
       { names: [], form: '{{#pure}}텍스트{{/pure}}', what: '안쪽 텍스트를 명령어로 처리하지 않고 적은 그대로 넣어요.', example: ['{{#pure}}{{user}}{{/pure}}', '{{user}}'] },
-      { names: [], form: '{{#escape}}텍스트{{/escape}}', what: '안쪽 텍스트를 적은 그대로 넣고, 이후에 실행되는 정규식에서도 명령어로 처리하지 않게 해요. 앞뒤 빈 줄까지 그대로 남기려면 #puredisplay를 써요.', example: ['{{#escape}}{{user}}{{/escape}}', '{{user}}'] },
+      { names: [], form: '{{#escape}}텍스트{{/escape}}', what: '안쪽 텍스트를 적은 그대로 넣고, 이후에 실행되는 정규식에서도 명령어로 처리하지 않게 해요. 앞뒤 빈 줄까지 그대로 남기려면 {{#escape::keep}}을 써요.', example: ['{{#escape}}{{user}}{{/escape}}', '{{user}}'] },
       { names: [], form: '{{#code}}글{{/code}}', what: '줄바꿈과 탭을 삭제하고, \\n이나 \\u0041 같은 이스케이프 표기를 실제 문자로 바꿔요.', example: ['{{#code}}\\u0041{{/code}}', 'A'] },
       { names: ['bo', 'ddecbo', 'doubledisplayescapedcurlybracketopen'], form: '{{bo}}', what: '{{ 기호가 명령어로 인식되지 않게 그대로 넣어요.', example: ['{{bo}}user{{bc}}', '{{user}}'] },
       { names: ['bc', 'ddecbc', 'doubledisplayescapedcurlybracketclose'], form: '{{bc}}', what: '}} 기호가 명령어로 인식되지 않게 그대로 넣어요.' },
