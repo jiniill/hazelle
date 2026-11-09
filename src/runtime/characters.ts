@@ -1,5 +1,5 @@
 import { assetType, blankCard, imageType } from '../engine/import/card';
-import { isVideo } from '../engine/assets';
+import { isVideo, type AssetUse } from '../engine/assets';
 import { add, counted, type Tally } from '../engine/import/convert';
 import { UNSUPPORTED_KINDS, type Card, type Imported, type Pack, type Picture, type Unsupported } from '../engine/import/types';
 import type { Translation, TranslateSwitches } from '../model/chat';
@@ -45,14 +45,17 @@ export async function addCharacter(store: ObjectStore, character: Character, { a
 // Both import entrances use faceless for thumbnail failures and refused uploads, not absent source pictures.
 export type ImportedCharacter = { id: string; unsupported: Unsupported; faceless: boolean };
 
+// An emotion image or a background is drawn as a picture only (an <img>, a CSS background), as Risu draws it.
+const typeFor = (use: AssetUse | undefined, typeOf: (bytes: Uint8Array) => string | null) => (use ? imageType : typeOf);
+
 // typeOf null skips a file; inlays allow pictures/signatures only.
 export async function saveAssets(files: Files, assets: Imported['assets'], progress: Progress, typeOf: (bytes: Uint8Array) => string | null = assetType, signal?: AbortSignal): Promise<ApiResult<{ kept: Asset[]; unsupported: Unsupported }>> {
   const tally: Tally = new Map();
-  const saved = await saveEach(files, assets, ({ name }, bytes) => {
-    const type = bytes && typeOf(bytes);
+  const saved = await saveEach(files, assets, ({ name, use }, bytes) => {
+    const type = bytes && typeFor(use, typeOf)(bytes);
     if (!bytes) add(tally, 'missing-asset');
     else if (!type) add(tally, 'unsupported-file');
-    return type ? { name, type } : null;
+    return type ? { name, type, ...(use && { use }) } : null;
   }, (done) => progress({ kind: 'assets', done, total: assets.length }), signal);
   if (!saved.ok) return saved;
   const kept = saved.data.flatMap(({ value, size, file }): Asset[] => {
@@ -88,9 +91,10 @@ export async function setAvatar(store: ObjectStore, files: Files, id: string, by
   return held ? store.update('avatar', held.id, () => saved.data) : store.create('avatar', saved.data, { parent: id });
 }
 
-// owner: the character or module the files join, each named by its file's name without the extension.
-export async function addAssets(store: ObjectStore, files: Files, owner: string, picked: Pick<File, 'name' | 'arrayBuffer'>[]): Promise<ApiResult<{ added: number; unsupported: Unsupported }>> {
-  const assets = picked.map((file) => ({ name: file.name.replace(/\.[^.]+$/, '') || file.name, read: async () => new Uint8Array(await file.arrayBuffer()) }));
+// owner: the character or module the files join, each named by its file's name without the extension; use: a
+// character's emotion images or backgrounds.
+export async function addAssets(store: ObjectStore, files: Files, owner: string, picked: Pick<File, 'name' | 'arrayBuffer'>[], use?: AssetUse): Promise<ApiResult<{ added: number; unsupported: Unsupported }>> {
+  const assets = picked.map((file) => ({ name: file.name.replace(/\.[^.]+$/, '') || file.name, read: async () => new Uint8Array(await file.arrayBuffer()), ...(use && { use }) }));
   const saved = await saveAssets(files, assets, () => {});
   if (!saved.ok) return saved;
   const { kept, unsupported } = saved.data;
@@ -103,7 +107,7 @@ export async function addAssets(store: ObjectStore, files: Files, owner: string,
 
 // The name stays, so what the bot's text shows by it becomes the new file. The old file stays held, as for setAvatar.
 export async function replaceAsset(store: ObjectStore, files: Files, id: string, bytes: Uint8Array<ArrayBuffer>): Promise<ApiResult<Stored<'asset'>>> {
-  const type = assetType(bytes);
+  const type = typeFor(store.get('asset', id)?.value.use, assetType)(bytes);
   if (!type) return { ok: false, error: 'picture-unreadable' };
   const saved = await files.save([bytes]);
   if (!saved.ok) return saved;

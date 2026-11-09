@@ -1,3 +1,4 @@
+import type { AssetUse } from '../assets';
 import type { PresetFailure, PresetResult } from './preset';
 import type { BlockCondition, BlockEffect } from './blocks';
 import type { Character } from '../../model/library';
@@ -74,7 +75,7 @@ export type Imported = {
   loreFolders: string[];
   avatar: { bytes: Uint8Array<ArrayBuffer>; type: string } | null;
   // The bot's own pictures, read one at a time when they are stored; read answers null for one the file lacks.
-  assets: { name: string; read: () => Promise<Uint8Array<ArrayBuffer> | null> }[];
+  assets: { name: string; read: () => Promise<Uint8Array<ArrayBuffer> | null>; use?: AssetUse }[];
   report: ImportReport;
   // What a Hazelle charx carries beyond Risu's fields (engine/import/hazelle); null for any other file. A moved Risu
   // character's own 번역가의 노트, which no card carries, rides here too (engine/import/risu-character).
@@ -92,7 +93,7 @@ export type BundledModule = ImportedModule & { likeness: Profiles | null };
 
 // A character as the charx writer takes it (engine/import/card writeCharx), and a module as the .risum writer does
 // (engine/import/hazelle moduleSource): pictures by their type, the bytes fetched later in the same order.
-type Typed = { name: string; type: string };
+type Typed = { name: string; type: string; use?: AssetUse };
 // risu: the id the module goes by in files, its Risu id or else its id here.
 export type TypedModule = Omit<BundledModule, 'assets' | 'unsupported' | 'risu'> & { risu: string; assets: Typed[] };
 export type Bot = {
@@ -109,8 +110,6 @@ export type Bot = {
 // are stored (runtime/characters saveAssets), the rest by the parsers.
 export const UNSUPPORTED_KINDS = [
   'extra-icon',
-  'emotion',
-  'background',
   'voice',
   'other-asset',
   'missing-asset',

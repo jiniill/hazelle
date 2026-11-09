@@ -1,14 +1,15 @@
 import MarkdownIt, { type StateCore, type StateInline, type Token } from 'markdown-it';
-import { OWN_MARKUP } from './assets';
+import { assetsOf, assetUrl, backdrop, OWN_MARKUP } from './assets';
 import { unescapeCbs } from './cbs/escape';
 import { evaluate, Runaway } from './cbs/evaluate';
+import { BACKGROUND } from './cbs/tags';
 import type { Box } from './regex/scripts';
 import { contexts, renderChat, type ChatScope, type LuaDisplay, type Missed } from './render';
 
 // Extract styles from texts, status boxes and pack backgroundHTML into chat-wide css, as Risu does.
 // drawn indexes pack regex per message; boxes are the extracted 상태창 지정 output. unfound includes background assets.
-// background: the packs' backgroundHTML past CBS and the display regex, its styles taken out, which Risu draws behind
-// the chat; '' when only styles stand there.
+// background: the character's background asset, then the packs' backgroundHTML past CBS and the display regex, its
+// styles taken out, which Risu draws behind the chat; '' when only styles stand there.
 // pass means Lua editDisplay has pending messages; stopped records a Runaway, with runaway backgroundHTML omitted.
 export type Display = { texts: string[]; css: string; background: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
 
@@ -40,8 +41,12 @@ export class DisplayPass {
     // through the display scripts as Risu passes it: bots fill placeholders in their CSS ({border}, <<PCFont>>) there.
     // A <risu-style>'s CSS is read the same way, outside any message, as Risu reads it when it draws one.
     const context = contexts(scope, 'display', null, '', rendered.unfound);
-    this.cbs = (text) => evaluate(text, context({ seed: 'background' }, rendered.variables));
-    const background: string[] = [];
+    this.cbs = (text) => evaluate(text, context({ seed: BACKGROUND }, rendered.variables));
+    // CCv3's background asset, the one named main or else the first, which Risu keeps but never draws; drawn as {{bg}}
+    // draws its picture.
+    const backgrounds = assetsOf(scope.assets, 'background');
+    const main = backgrounds.find((asset) => asset.name === 'main') ?? backgrounds[0];
+    const background = main ? [backdrop(assetUrl(main.id))] : [];
     for (const pack of scope.packs) {
       if (!pack.background) continue;
       try {

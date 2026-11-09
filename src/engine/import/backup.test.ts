@@ -82,6 +82,8 @@ const mira = {
     ['map', 'assets/map.png', 'png'],
     ['gone', 'assets/gone.png', 'png'],
   ],
+  emotionImages: [['joy', 'assets/map.png']],
+  ccAssets: [{ type: 'background', uri: 'assets/map.png', name: 'night', ext: 'png' }],
   modules: ['m1'],
   chatFolders: [{ id: 'f', folded: false }, { id: 'g', name: ' 데일리 ', color: 3, folded: true }, { id: 'f', name: 'again', folded: false }],
   chatPage: 0,
@@ -256,7 +258,7 @@ describe('readBackup', () => {
     expect(result.backup.catalog.pictures).toBe(2);
     const card = await result.backup.character(result.backup.catalog.characters[0]!.key);
     expect(await card.avatar()).toEqual({ bytes: PNG, type: 'image/png' });
-    expect(card.assets.map(({ name }) => name)).toEqual(['map']);
+    expect(card.assets.map(({ name, use }) => [name, use])).toEqual([['night', 'background'], ['map', undefined], ['joy', 'emotion']]);
   });
 
   it("carries the lorebook budget the user set, and not Risu's own default", async () => {
@@ -344,7 +346,7 @@ describe('readBackup', () => {
     const characters = await Promise.all(backup.catalog.characters.map(({ key }) => backup.character(key)));
     expect(backup.catalog.characters).toEqual([
       { key: 2, id: 'sleeper', name: 'Sleeper', chatCount: 1, assetCount: 0, inlayCount: 0, lastTalk: 5 },
-      { key: 1, id: 'mira', name: 'Mira', chatCount: 2, assetCount: 1, inlayCount: 1, lastTalk: 1000 },
+      { key: 1, id: 'mira', name: 'Mira', chatCount: 2, assetCount: 3, inlayCount: 1, lastTalk: 1000 },
     ]);
     expect(characters.map(({ id, folder }) => [id, folder])).toEqual([
       ['sleeper', 'Fav'],
@@ -364,7 +366,7 @@ describe('readBackup', () => {
     });
     expect(card.lore[0]!.content).toBe('@@probability 40\n{{user}} sees\n@@depth 0');
     expect(await card.avatar()).toEqual({ bytes: PNG, type: 'image/png' });
-    expect(card.assets.map(({ name }) => name)).toEqual(['map']);
+    expect(card.assets.map(({ name, use }) => [name, use])).toEqual([['night', 'background'], ['map', undefined], ['joy', 'emotion']]);
     expect(await card.assets[0]!.read()).toEqual(PNG);
   });
 

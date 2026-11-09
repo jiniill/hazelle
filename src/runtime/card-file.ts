@@ -34,7 +34,7 @@ function owned(store: ObjectStore, owner: string, folders: LoreFolder[]) {
   const pictures = store.children('asset', owner).map(({ value }) => value);
   return {
     ...lorebookOf(store, owner, folders),
-    assets: pictures.map(({ name, type }) => ({ name, type })),
+    assets: pictures.map(({ name, type, use }) => ({ name, type, ...(use && { use }) })),
     files: pictures.map(({ file }) => file),
     likeness: profilesOf(store, owner),
   };

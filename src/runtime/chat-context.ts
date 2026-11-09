@@ -154,7 +154,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
     model: 'kind' in route ? null : botModel(route, sentSettings(store, route)),
     axModel: 'kind' in aux ? null : aux.model.id,
     clock: { now: Date.now(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
-    assets: owners.flatMap(({ id: owner, module }) => store.children('asset', owner).map(({ id, value }) => ({ id, name: value.name, type: value.type, ...(module && { module: module.namespace }) }))),
+    assets: owners.flatMap(({ id: owner, module }) => store.children('asset', owner).map(({ id, value }) => ({ id, name: value.name, type: value.type, ...(module && { module: module.namespace }), ...(value.use && { use: value.use }) }))),
     // Held only while the chat is loaded; a chat not saved yet has none.
     inlays: loaded ? store.children('inlay', id).map(({ id, value }) => ({ id, name: value.name, type: value.type, ...(value.attached && { attached: true as const }) })) : [],
     textfiles: loaded ? store.children('textfile', id).map(({ value }) => value) : [],

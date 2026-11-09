@@ -1,8 +1,17 @@
 import { nearest } from './edit-distance';
 
+// A character's picture kept apart from the ones its text names by {{img}} and the like, as Risu keeps them: an emotion
+// image ({{emotion}}, {{emotionlist}}; CCv3's emotion asset) or a background (CCv3's background asset).
+export type AssetUse = 'emotion' | 'background';
+
 // A bot's own picture or video (design §6.4). module: the namespace of the module it came with, null for a module that has none;
-// absent for the character's own.
-export type BotAsset = { id: string; name: string; type: string; module?: string | null };
+// absent for the character's own. use: absent for the assets the asset tags find, the only kind a module holds.
+export type BotAsset = { id: string; name: string; type: string; module?: string | null; use?: AssetUse };
+
+export const assetsOf = <A extends { use?: AssetUse }>(assets: readonly A[], use?: AssetUse) => assets.filter((asset) => asset.use === use);
+
+// Risu's {{bg}} markup: the picture covering what holds it, under an 80% black veil.
+export const backdrop = (url: string) => `<div style="width:100%;height:100%;background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)),url(${url}); background-size: cover;"></div>`;
 
 export const isVideo = (type: string) => type.startsWith('video/');
 
