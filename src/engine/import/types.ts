@@ -120,6 +120,7 @@ export type Bot = {
 // are stored (runtime/characters saveAssets), the rest by the parsers.
 export const UNSUPPORTED_KINDS = [
   'extra-icon',
+  'emotion',
   'voice',
   'other-asset',
   'missing-asset',

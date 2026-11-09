@@ -77,7 +77,7 @@ describe('importCard', () => {
     expect(await importCard('jin_export.png', png(tEXt('persona', cardText({ name: '진' }))))).toEqual({ ok: false, failure: { kind: 'unreadable', detail: 'persona-incomplete' } });
   });
 
-  it('takes the icon named main from a charx, and keeps its emotion images and backgrounds apart from its assets', async () => {
+  it('takes the icon named main from a charx, counts its emotion images, and keeps its backgrounds apart from its assets', async () => {
     const main = png(tEXt('Title', 'main'));
     const imported = await charx({
       'card.json': strToU8(
@@ -98,9 +98,9 @@ describe('importCard', () => {
       'assets/background/image/night.png': png(tEXt('Title', 'night')),
     });
     expect(imported.avatar).toEqual({ bytes: main, type: 'image/png' });
-    expect(counts(imported)).toEqual({ 'extra-icon': 1 });
-    expect(imported.assets.map(({ name, use }) => [name, use])).toEqual([['smile', 'emotion'], ['night', 'background']]);
-    expect(await imported.assets[1]!.read()).toEqual(png(tEXt('Title', 'night')));
+    expect(counts(imported)).toEqual({ 'extra-icon': 1, emotion: 1 });
+    expect(imported.assets.map(({ name, use }) => [name, use])).toEqual([['night', 'background']]);
+    expect(await imported.assets[0]!.read()).toEqual(png(tEXt('Title', 'night')));
   });
 
   it('reads a charx’s x-risu-asset files when asked, and counts the ones no file holds', async () => {
@@ -126,11 +126,10 @@ describe('importCard', () => {
     expect(counts(imported)).toEqual({ 'missing-asset': 1 });
   });
 
-  it('reads a PNG’s v2 additionalAssets and emotions from its asset chunks', async () => {
+  it('reads a PNG’s v2 additionalAssets from its asset chunks', async () => {
     const picture = png(tEXt('Title', 'wave'));
-    const smile = png(tEXt('Title', 'smile'));
-    const file = png(tEXt('chara', cardText(v2({ extensions: { risuai: { additionalAssets: [['wave', '__asset:0', 'png']], emotions: [['smile', '__asset:1']] } } }))), tEXt('chara-ext-asset_:0', base64(picture)), tEXt('chara-ext-asset_:1', base64(smile)));
-    expect(await Promise.all(ok(await importCard('Mira.png', file)).assets.map(async ({ name, read, use }) => [name, await read(), use]))).toEqual([['wave', picture, undefined], ['smile', smile, 'emotion']]);
+    const file = png(tEXt('chara', cardText(v2({ extensions: { risuai: { additionalAssets: [['wave', '__asset:0', 'png']] } } }))), tEXt('chara-ext-asset_:0', base64(picture)));
+    expect(await Promise.all(ok(await importCard('Mira.png', file)).assets.map(async ({ name, read }) => [name, await read()]))).toEqual([['wave', picture]]);
   });
 
   it('reads raw base64 in a v2 additionalAssets uri, and the PNG itself for a ccdefault: x-risu-asset, as Risu does', async () => {
@@ -397,12 +396,13 @@ describe('importCard', () => {
       { kind: 'blocks', id: 'trigger-1', name: 'set', on: 'manual', conditions: [], effects: [{ kind: 'set', name: '', operator: null, value: { kind: 'text', text: '' } }] },
     ]);
     expect(imported.report.unsupported).toEqual([
+      { kind: 'emotion', count: 1 },
       { kind: 'prebuilt-asset-command', count: 1 },
       { kind: 'large-portrait', count: 1 },
       { kind: 'view-screen', count: 1 },
       { kind: 'depth-prompt', count: 1 },
       { kind: 'disable-ui-prompt', count: 1 },
-      { kind: 'cbs-tag', count: 2 },
+      { kind: 'cbs-tag', count: 3 },
       { kind: 'regex-stage', count: 1 },
       { kind: 'toggle-line', count: 1 },
     ]);
@@ -436,19 +436,18 @@ describe('importCard', () => {
     expect(risuai(bot([module([lua()])])).lowLevelAccess).toBe(true);
   });
 
-  it('writes emotion images and backgrounds as CCv3’s assets of their type, and reads them back as they were', async () => {
+  it('writes backgrounds as CCv3’s background assets, and reads them back as they were', async () => {
     const bot: Bot = {
       card: blankCard('루나'), lore: [], loreFolders: [], avatar: null, own: { character: {}, likeness: null }, bundled: [],
-      assets: [{ name: 'wave', type: 'image/png' }, { name: 'smile', type: 'image/webp', use: 'emotion' }, { name: 'night', type: 'image/jpeg', use: 'background' }],
+      assets: [{ name: 'wave', type: 'image/png' }, { name: 'night', type: 'image/jpeg', use: 'background' }],
     };
     const { files, pictures } = writeCharx(bot);
     expect(JSON.parse(new TextDecoder().decode(files[0]!.bytes)).data.assets).toEqual([
       { type: 'x-risu-asset', name: 'wave', ext: 'png', uri: 'embeded://assets/other/image/0.png' },
-      { type: 'emotion', name: 'smile', ext: 'webp', uri: 'embeded://assets/emotion/image/1.webp' },
-      { type: 'background', name: 'night', ext: 'jpg', uri: 'embeded://assets/background/image/2.jpg' },
+      { type: 'background', name: 'night', ext: 'jpg', uri: 'embeded://assets/background/image/1.jpg' },
     ]);
     const read = await charx({ ...Object.fromEntries(files.map(({ path, bytes }) => [path, bytes])), ...Object.fromEntries(pictures.map((path) => [path, png()])) });
-    expect(read.assets.map(({ name, use }) => [name, use])).toEqual([['wave', undefined], ['smile', 'emotion'], ['night', 'background']]);
+    expect(read.assets.map(({ name, use }) => [name, use])).toEqual([['wave', undefined], ['night', 'background']]);
     expect(counts(read)).toEqual({});
   });
 

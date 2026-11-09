@@ -6,6 +6,7 @@ import { CAST, COMMAND, inSettings } from '../common/words';
 
 const UNSUPPORTED: Record<UnsupportedKind, (count: number) => string> = {
   'extra-icon': (count) => `추가 아이콘 ${count}개`,
+  emotion: (count) => `감정 표현 ${count}개`,
   voice: (count) => `음성 ${count}개`,
   'other-asset': (count) => `그 밖의 에셋 ${count}개`,
   'missing-asset': (count) => `파일에 없는 에셋 ${count}개`,

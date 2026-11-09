@@ -122,7 +122,7 @@ export type Lore = Omit<LoreEntry, 'folder'> & { folder: string | null };
 export type Avatar = { type: string; size: number; thumb: string; file: FileRef };
 
 // Kind `asset`, whose parent is the character or module (design §6.4). type is what the bytes are, read from them. use:
-// only a character's, for one of its emotion images or backgrounds.
+// only a character's, for one of its backgrounds.
 export type Asset = { name: string; type: string; size: number; file: FileRef; use?: AssetUse };
 
 // Kind `original`, one piece of the file a character, module or prompt was imported from, kept for a later parser to

@@ -192,14 +192,13 @@ describe('asset tags', () => {
     expect(shown.unfound).toEqual(['night_forest', 'backdrop']);
   });
 
-  const happy = '44444444-4444-4444-8444-444444444444';
   const night = '55555555-5555-4555-8555-555555555555';
-  const kept: ChatScope = { ...withAssets, assets: [...withAssets.assets, { id: happy, name: 'Surprised', type: 'image/png', use: 'emotion' }, { id: night, name: 'wave', type: 'image/png', use: 'background' }] };
+  const kept: ChatScope = { ...withAssets, assets: [...withAssets.assets, { id: night, name: 'wave', type: 'image/png', use: 'background' }] };
 
-  it('show an emotion image by its exact name only, list the emotion names apart, and keep both out of the asset tags', () => {
+  it('keep a background out of the asset tags and {{assetlist}}', () => {
     const shown = (text: string, stage: 'display' | 'prompt') => evaluate(text, contexts(kept, stage, null, '', null)({ seed: 's' }, new Map()));
-    expect(shown('{{emotion::surprised}}|{{emotion::surprise}}|{{img::surprised}}|{{raw::wave}}', 'display')).toBe(`<img src="asset:${happy}"/>|||asset:${wave}`);
-    expect(shown('{{emotion::surprised}} {{emotionlist}} {{assetlist}}', 'prompt')).toBe('{{emotion::surprised}} ["Surprised"] ["Smile.png","wave","clip"]');
+    expect(shown('{{raw::wave}}', 'display')).toBe(`asset:${wave}`);
+    expect(shown('{{assetlist}}', 'prompt')).toBe('["Smile.png","wave","clip"]');
   });
 
   it('draw {{bg}} in the backgroundHTML only, over the character’s background asset, and nothing for it in a message', () => {

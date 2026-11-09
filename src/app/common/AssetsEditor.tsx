@@ -17,25 +17,24 @@ import { useSearch } from './useSearch';
 import { useSelection } from './useSelection';
 import { ASSET, CHANGE_IMAGE, REMOVE_FAILED, SAVE_FAILED } from './words';
 
-// What runtime/characters keeps as an asset (engine/import assetType), and as an emotion image or background (a picture).
+// What runtime/characters keeps as an asset (engine/import assetType), and as a background (a picture).
 const KEEPS = {
   any: { accept: 'image/*,video/mp4,video/webm', refused: '이미지나 영상(MP4, WebM) 파일이 아니거나 용량이 너무 커요.' },
   picture: { accept: 'image/*', refused: '이미지 파일이 아니거나 용량이 너무 커요.' },
 };
 type Shelf = 'asset' | AssetUse;
-// A character's assets, emotion images and backgrounds, each with what it holds and the tag that shows one, if any.
+// A character's assets and backgrounds, each with what it holds and the tag that shows one, if any.
 const SHELVES: Record<Shelf, { label: string; keeps: (typeof KEEPS)[keyof typeof KEEPS]; help: string; tag: ((asset: Stored<'asset'>['value']) => string) | null }> = {
   asset: { label: ASSET, keeps: KEEPS.any, help: '봇이 {{img::이름}}이나 {{video::이름}}으로 불러오는 이미지·영상이에요. 이름이 겹치면 무작위로 표시돼요.', tag: ({ type, name }) => `{{${isVideo(type) ? 'video' : 'img'}::${name}}}` },
-  emotion: { label: '감정', keeps: KEEPS.picture, help: '봇이 {{emotion::이름}}으로 불러오는 감정 이미지예요. 이름이 정확히 같아야 표시돼요.', tag: ({ name }) => `{{emotion::${name}}}` },
   background: { label: '배경', keeps: KEEPS.picture, help: '채팅 뒤에 어둡게 깔리는 배경이에요. 여러 개면 이름이 main인 배경을 써요.', tag: null },
 };
-const SHELF_ORDER: Shelf[] = ['asset', 'emotion', 'background'];
+const SHELF_ORDER: Shelf[] = ['asset', 'background'];
 const useOf = (shelf: Shelf) => (shelf === 'asset' ? undefined : shelf);
 // By name, never by the store's order, which moves an asset to the end on each rename or new picture.
 const byName = new Intl.Collator('ko', { numeric: true }).compare;
 const UNFOUND_SHOWN = 10;
 
-// shelves: a character's, whose emotion images and backgrounds stand apart from its assets; a module holds assets only.
+// shelves: a character's, whose backgrounds stand apart from its assets; a module holds assets only.
 export function AssetsEditor({ owner, shelves = false }: { owner: string; shelves?: boolean }) {
   const store = useStore();
   const files = useFiles();

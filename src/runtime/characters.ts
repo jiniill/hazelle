@@ -45,7 +45,7 @@ export async function addCharacter(store: ObjectStore, character: Character, { a
 // Both import entrances use faceless for thumbnail failures and refused uploads, not absent source pictures.
 export type ImportedCharacter = { id: string; unsupported: Unsupported; faceless: boolean };
 
-// An emotion image or a background is drawn as a picture only (an <img>, a CSS background), as Risu draws it.
+// A background is drawn as a picture only (a CSS background), as Risu draws it.
 const typeFor = (use: AssetUse | undefined, typeOf: (bytes: Uint8Array) => string | null) => (use ? imageType : typeOf);
 
 // typeOf null skips a file; inlays allow pictures/signatures only.
@@ -92,7 +92,7 @@ export async function setAvatar(store: ObjectStore, files: Files, id: string, by
 }
 
 // owner: the character or module the files join, each named by its file's name without the extension; use: a
-// character's emotion images or backgrounds.
+// character's backgrounds.
 export async function addAssets(store: ObjectStore, files: Files, owner: string, picked: Pick<File, 'name' | 'arrayBuffer'>[], use?: AssetUse): Promise<ApiResult<{ added: number; unsupported: Unsupported }>> {
   const assets = picked.map((file) => ({ name: file.name.replace(/\.[^.]+$/, '') || file.name, read: async () => new Uint8Array(await file.arrayBuffer()), ...(use && { use }) }));
   const saved = await saveAssets(files, assets, () => {});

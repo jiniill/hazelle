@@ -1,7 +1,7 @@
 import { fromBase64, toBase64 } from '../../base64';
 import { isRecord } from '../../connectors/values';
 import { UNSET } from '../script-api';
-import { assetsOf, assetUrl, backdrop, findAsset, isVideo, type AssetUse, type BotAsset } from '../assets';
+import { assetsOf, assetUrl, backdrop, findAsset, isVideo, type BotAsset } from '../assets';
 import { seeded } from '../random';
 import { escapeCbs } from './escape';
 import type { CbsContext } from './evaluate';
@@ -52,8 +52,10 @@ export const tagNames = () => [...HANDLERS.keys()];
 const UNSUPPORTED = new Set([
   // Marked X in risu-compat-spec §d, with their aliases in src/ts/cbs.ts at ca1345fc. The internal-only `__`
   // is left out, since normalizing empties its name.
+  'emotionlist',
   'audio',
   'bgm',
+  'emotion',
   'assetprompt',
   // risu-alpha prompts have no jailbreak.
   'jb',
@@ -175,21 +177,12 @@ define('bg', 1, (args, env) => {
   const { stage, source } = env.context;
   return stage === 'display' && !('seed' in source && source.seed === BACKGROUND) ? '' : drawBackdrop(args, env);
 });
-// Among the character's emotion images only, by the name in any case, the last of a name: no near match.
-define('emotion', 1, ([name], { context }) => {
-  if (context.stage !== 'display') return null;
-  const wanted = name!.toLowerCase();
-  const image = assetsOf(context.assets, 'emotion').findLast((asset) => asset.name.toLowerCase() === wanted);
-  return image ? `<img src="${assetUrl(image.id)}"/>` : '';
-});
 define('source', 1, ([name], { context: { stage, faces } }) => {
   if (stage !== 'display') return null;
   const face = name!.toLowerCase();
   return (face === 'char' ? faces.char : face === 'user' ? faces.user : null) ?? '';
 });
-const ownNames = (assets: readonly BotAsset[], use?: AssetUse) => serialize(assetsOf(assets, use).filter((asset) => asset.module === undefined).map(({ name }) => name));
-define('assetlist', 0, (_, { context: { card, assets } }) => (card ? ownNames(assets) : ''));
-define('emotionlist', 0, (_, { context: { card, assets } }) => (card ? ownNames(assets, 'emotion') : ''));
+define('assetlist', 0, (_, { context: { card, assets } }) => (card ? serialize(assetsOf(assets).filter((asset) => asset.module === undefined).map(({ name }) => name)) : ''));
 // The asset prompt it lists from is counted at import and not brought (convert.ts), so it lists nothing.
 define('chardisplayasset', 0, (_, { context: { card } }) => (card ? '[]' : null));
 define('moduleenabled', 1, ([namespace], { context }) => (context.modules.includes(namespace!) ? '1' : '0'));

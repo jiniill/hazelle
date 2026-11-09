@@ -197,7 +197,7 @@ const SHAPES = {
     folder: orNull(str),
   }),
   avatar: shape({ type: str, size: num, thumb: str, file: shape({ id: str, key: str }) }),
-  asset: (value) => picture(value) && isRecord(value) && (value.use === undefined || value.use === 'emotion' || value.use === 'background'),
+  asset: (value) => picture(value) && isRecord(value) && (value.use === undefined || value.use === 'background'),
   original: shape({ ...all(str, 'name', 'path'), size: num, file: shape({ id: str, key: str }) }),
   likeness: shape({ portraits: listOf(shape({ ...all(str, 'name', 'look', 'artist', 'source'), aliases: listOf(str), outfits: listOf(shape(all(str, 'name', 'tags'))) })), at: num, receipt: orNull(isRecord) }),
   share: shape({ share: str, key: str }),
