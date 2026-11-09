@@ -768,10 +768,12 @@ it('writes a tool\'s own settings field and refuses a value the field cannot hol
   } finally { host.close(); }
 }));
 
-it('reads the chat\'s lorebook by owner, how the chat is set up, and the account\'s personas and characters', () => withTools(async (session, connect) => {
+it('reads the chat\'s lorebook by owner, how the chat is set up with its modules\' scripts that are on, and the account\'s personas and characters', () => withTools(async (session, connect) => {
   const f = await fixture(session, undefined, 'Hello.');
   const character = session.store.get('chat', f.chat)!.value.character!;
   await upsertChatLore(session.store, f.chat, { name: 'Gate', keys: ['gate'], secondaryKeys: [], content: 'The gate is shut.', enabled: true, constant: false, selective: false, useRegex: false, caseSensitive: false, insertionOrder: 0, priority: null, position: null });
+  const bold = { name: 'bold', find: '\\*(.+?)\\*', replace: '<b>$1</b>', stage: 'display', flags: null } as const;
+  await session.store.update('module', f.module, (module) => ({ ...module, regex: [{ id: 'r1', ...bold }, { id: 'r2', ...bold, name: 'off', off: true }] }));
   const transport = inProcessTools(() => {});
   const host = connect(transport.open);
   const close = host.page(f.module, page(f.chat));
@@ -782,7 +784,7 @@ it('reads the chat\'s lorebook by owner, how the chat is set up, and the account
     const account = await api.account();
     expect(account.characters).toEqual([{ id: character, name: 'Mira' }]);
     const setup = await api.page!.chat!.setup();
-    expect(setup).toEqual({ persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test' }] });
+    expect(setup).toEqual({ persona: account.personas.find(({ current }) => current)?.id ?? null, limits: { context: null, reply: null }, modules: [{ id: f.module, name: 'test', regex: [bold] }] });
   } finally { close(); host.close(); }
 }));
 

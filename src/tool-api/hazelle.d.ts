@@ -39,11 +39,16 @@ declare namespace Hazelle {
   // A lorebook entry as written, before any activation. on: whether it is switched on. owner: whose lorebook holds it,
   // with that one's id: the chat's character, one of its 등장인물, the chat itself, or a module on in it.
   interface LoreEntry { name: string; keys: string[]; text: string; always: boolean; on: boolean; owner: { kind: 'character' | 'cast' | 'chat' | 'module'; id: string } }
-  // The account's personas (current: the one chats start with) and characters, read only; no chat of theirs is offered.
-  interface Account { personas: { id: string; name: string; description: string; current: boolean }[]; characters: { id: string; name: string }[] }
+  // The account's personas (current: the one chats start with; picture: its thumbnail as a data URL, null when it has
+  // none) and characters, read only; no chat of theirs is offered.
+  interface Account { personas: { id: string; name: string; description: string; picture: string | null; current: boolean }[]; characters: { id: string; name: string }[] }
+  // A regex script as written. flags: the custom flag string, <…> meta blocks included; null runs the default g.
+  // translation: over a message's translation.
+  interface Script { name: string; find: string; replace: string; stage: 'input' | 'output' | 'process' | 'display' | 'translation'; flags: string | null }
   // persona: the id of the persona this chat speaks as, null when it is gone. limits: the chat model's context and reply
-  // lengths in tokens, null where unknown or no model is set. modules: those on in the chat, in pack order.
-  interface Setup { persona: string | null; limits: { context: number | null; reply: number | null }; modules: { id: string; name: string }[] }
+  // lengths in tokens, null where unknown or no model is set. modules: those on in the chat, in pack order, a
+  // conversation prompt's own included, each with its regex scripts that are on, in its order.
+  interface Setup { persona: string | null; limits: { context: number | null; reply: number | null }; modules: { id: string; name: string; regex: Script[] }[] }
 
   interface ChatState {                         // this tool's own per-chat variables, replayed with the story
     get<T extends Json = Json>(key: string): Promise<T | undefined>;

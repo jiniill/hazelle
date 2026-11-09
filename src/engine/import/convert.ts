@@ -3,6 +3,7 @@ import { isUnsupportedTag } from '../cbs/tags';
 import { args, parseDecorators } from '../lorebook/decorators';
 import { readToggles, writeToggles } from './toggles';
 import { blockConditions, blockEffects, conditionSources, effectSources } from './blocks';
+import { RISU_SCRIPT_TYPES } from '../../tool-api/risu-regex';
 import { NEW_STAGE, type Card, type ImportedModule, type ImportReport, type LoreEntry, type Pack, type RegexScript, type Trigger, type UnsupportedKind } from './types';
 
 export type Json = Record<string, unknown>;
@@ -34,13 +35,7 @@ const SPECS = new Map<unknown, ImportReport['spec']>([
   ['chara_card_v2', 'v2'],
   ['chara_card_v3', 'v3'],
 ]);
-const STAGES = new Map<unknown, RegexScript['stage']>([
-  ['editinput', 'input'],
-  ['editoutput', 'output'],
-  ['editprocess', 'process'],
-  ['editdisplay', 'display'],
-  ['edittrans', 'translation'],
-]);
+const STAGES = new Map<unknown, RegexScript['stage']>(Object.entries(RISU_SCRIPT_TYPES).map(([stage, type]) => [type, stage as RegexScript['stage']]));
 const ROLES = ['system', 'user', 'assistant'];
 // Risu's order for a new entry. CCv3 requires insertion_order, so only a malformed file goes without one. A null one
 // Risu sorts as 0 (lorebook.svelte.ts:276, 613-629).
@@ -166,10 +161,6 @@ function packOf(raw: { regex: unknown; trigger: unknown; background: unknown; to
 
 // Writers invert these readers. Charx puts scripts/lore in module.risum and the rest in card.json
 // (Risu exportCharacterCard, ca1345fc); native bookVersion 2 prevents lore migration on reimport.
-export const regexSource = ({ name, find, replace, stage, flags }: Unstamped<RegexScript>): Json => ({
-  comment: name, in: find, out: replace, type: [...STAGES].find(([, each]) => each === stage)![0], ableFlag: flags !== null, flag: flags ?? '',
-});
-
 // Risu's editor starts a Lua trigger at 'start'; Risu runs it at every event whatever its type.
 export const triggerSource = (trigger: Unstamped<Trigger>): Json =>
   trigger.kind === 'lua'

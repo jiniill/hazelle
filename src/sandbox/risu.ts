@@ -1,4 +1,5 @@
 import { RISU_DECLINED, RISU_REPLACERS } from '../tool-api/risu-methods';
+import { risuRegex } from '../tool-api/risu-regex';
 
 // Risu v3 shapes stay in this adapter over `api`, never in tool-api/protocol.ts (research/risu-plugin-adapter-plan.md §3).
 // Unmapped calls throw; declined methods read as undefined for typeof guards. Both report to 점검.
@@ -62,7 +63,7 @@ const persona = async (read: Reads) => {
 const DATABASE: Record<string, (read: Reads) => Promise<unknown>> = {
   username: async (read) => (await persona(read))?.name,
   personaPrompt: async (read) => (await persona(read))?.description,
-  personas: async (read) => (await read.account()).personas.map(({ id, name, description }) => ({ id, name, personaPrompt: description })),
+  personas: async (read) => (await read.account()).personas.map(({ id, name, description, picture }) => ({ id, name, personaPrompt: description, icon: picture ?? '' })),
   selectedPersona: async (read) => {
     const selected = await persona(read);
     return selected && (await read.account()).personas.indexOf(selected);
@@ -73,9 +74,14 @@ const DATABASE: Record<string, (read: Reads) => Promise<unknown>> = {
   modules: async (read) => {
     const setup = await read.setup();
     const lorebook = setup ? await read.lorebook() : [];
-    return setup?.modules.map(({ id, name }) => ({ id, name, lorebook: lorebook.filter(({ owner }) => owner.kind === 'module' && owner.id === id).map(loreEntry) }));
+    return setup?.modules.map(({ id, name, regex }) => ({ id, name, lorebook: lorebook.filter(({ owner }) => owner.kind === 'module' && owner.id === id).map(loreEntry), regex: regex.map(risuRegex) }));
   },
   enabledModules: async (read) => (await read.setup())?.modules.map(({ id }) => id),
+  // Every module on in the chat is in enabledModules, a conversation prompt's own included, which leaves Risu's list of
+  // modules a preset turns on besides them empty.
+  moduleIntergration: async (read) => ((await read.setup()) ? '' : undefined),
+  // Risu's getDatabase never answers it (allowedDbKeys); a preset's regex is a module here, in modules.
+  presetRegex: async () => undefined,
 };
 const once = <T>(read: () => Promise<T>) => {
   let held: Promise<T> | undefined;

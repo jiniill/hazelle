@@ -279,7 +279,7 @@ export class ToolApi {
         const { store } = this.session;
         const current = accountSettings(store).persona;
         return {
-          personas: store.list('persona').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.name, description: each.value.description, current: each.id === current }] : []),
+          personas: store.list('persona').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.name, description: each.value.description, picture: each.value.picture, current: each.id === current }] : []),
           characters: store.list('character').flatMap((each) => live(each) ? [{ id: each.id, name: each.value.card.name }] : []),
         } satisfies Hazelle.Account;
       }
@@ -311,7 +311,7 @@ export class ToolApi {
           return {
             persona: persona.kind === 'persona' ? persona.persona.id : null,
             limits: limitsOf(store, chat),
-            modules: packsOf(store, chat).flatMap(({ id, module }) => module ? [{ id, name: store.get('module', id)!.value.name }] : []),
+            modules: packsOf(store, chat).flatMap(({ id, pack, module }) => module ? [{ id, name: store.get('module', id)!.value.name, regex: pack.regex.flatMap(({ name, find, replace, stage, flags, off }) => off ? [] : [{ name, find, replace, stage, flags }]) }] : []),
           } satisfies Hazelle.Setup;
         }
         if (method === 'chat.greeting') return context.scope.greeting === null ? null : (await this.state(frame, context)).texts[0]!;

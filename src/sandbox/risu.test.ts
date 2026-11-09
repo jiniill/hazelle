@@ -29,10 +29,10 @@ function fakeApi({ open = true } = {}) {
     { name: 'Ships', keys: ['ship'], text: 'Many ships.', always: false, on: false, owner: { kind: 'module', id: 'module-1' } },
   ];
   const account: Hazelle.Account = {
-    personas: [{ id: 'p0', name: 'Jin', description: 'A reader', current: true }, { id: 'p1', name: 'Rook', description: 'A sailor too', current: false }],
+    personas: [{ id: 'p0', name: 'Jin', description: 'A reader', picture: null, current: true }, { id: 'p1', name: 'Rook', description: 'A sailor too', picture: 'data:image/webp;base64,UklG', current: false }],
     characters: [{ id: 'character-1', name: 'Mira' }],
   };
-  const setup: Hazelle.Setup = { persona: 'p1', limits: { context: 8000, reply: null }, modules: [{ id: 'module-1', name: 'Harbor' }] };
+  const setup: Hazelle.Setup = { persona: 'p1', limits: { context: 8000, reply: null }, modules: [{ id: 'module-1', name: 'Harbor', regex: [{ name: 'bold', find: '\\*(.+?)\\*', replace: '<b>$1</b>', stage: 'display', flags: null }] }] };
   const settings: Hazelle.Settings = { image_base: 'none' };
   const model = vi.fn<Hazelle.Chat['model']>(async () => ({ ok: true, text: 'made' }));
   const send = vi.fn<Hazelle.Chat['send']>(async () => ({ ok: true }));
@@ -269,19 +269,23 @@ describe('the Risu adapter', () => {
     expect(await fake.fire('showing', fake.chat, [{ at: null, text: 'kept' }])).toEqual(['KEPT']);
   });
 
-  it('builds the database keys asked for, and tells one it does not build', async () => {
+  it('builds the database keys asked for, leaves out one Risu never answers, and tells one it does not build', async () => {
     const fake = fakeApi();
     const { Risuai } = install(fake);
-    expect(await Risuai.getDatabase!(['personas', 'selectedPersona', 'presetRegex'] as never)).toEqual({
-      personas: [{ id: 'p0', name: 'Jin', personaPrompt: 'A reader' }, { id: 'p1', name: 'Rook', personaPrompt: 'A sailor too' }], selectedPersona: 1,
+    expect(await Risuai.getDatabase!(['personas', 'selectedPersona', 'presetRegex', 'temperature'] as never)).toEqual({
+      personas: [{ id: 'p0', name: 'Jin', personaPrompt: 'A reader', icon: '' }, { id: 'p1', name: 'Rook', personaPrompt: 'A sailor too', icon: 'data:image/webp;base64,UklG' }], selectedPersona: 1,
     });
-    expect(fake.missing).toEqual(['getDatabase:presetRegex']);
+    expect(fake.missing).toEqual(['getDatabase:temperature']);
     expect(await Risuai.getDatabase!()).toEqual({
       username: 'Rook', personaPrompt: 'A sailor too', personas: expect.any(Array), selectedPersona: 1, characters: [{ chaId: 'character-1', type: 'character', name: 'Mira' }],
-      maxContext: 8000, modules: [{ id: 'module-1', name: 'Harbor', lorebook: [{ comment: 'Ships', key: 'ship', content: 'Many ships.', alwaysActive: false, disabled: true }] }], enabledModules: ['module-1'],
+      maxContext: 8000, enabledModules: ['module-1'], moduleIntergration: '',
+      modules: [{
+        id: 'module-1', name: 'Harbor', lorebook: [{ comment: 'Ships', key: 'ship', content: 'Many ships.', alwaysActive: false, disabled: true }],
+        regex: [{ comment: 'bold', in: '\\*(.+?)\\*', out: '<b>$1</b>', type: 'editdisplay', ableFlag: false, flag: '' }],
+      }],
     });
     const closed = install(fakeApi({ open: false })).Risuai;
-    expect(await closed.getDatabase!(['selectedPersona', 'maxContext', 'modules'] as never)).toEqual({ selectedPersona: 0 });
+    expect(await closed.getDatabase!(['selectedPersona', 'maxContext', 'modules', 'moduleIntergration'] as never)).toEqual({ selectedPersona: 0 });
   });
 
   it('reads the open chat\'s lorebook entries in Risu shape and its character by the current index only', async () => {
