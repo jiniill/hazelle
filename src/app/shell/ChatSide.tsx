@@ -22,10 +22,10 @@ const panel =
   );
 
 // Each editor is keyed by its id and saves as it unmounts, so going back to the list or closing the panel saves what
-// was typed. A prompt opened at a block is keyed by the block too, so another block asked for opens there.
+// was typed.
 export function ChatSide(props: SideAt) {
   const { open } = props;
-  if (open.kind === 'character') return <CharacterSide {...props} open={open} />;
+  if (open.kind === 'character') return <CharacterSide key={open.id} {...props} open={open} />;
   if (open.kind === 'module') return <ModuleSide {...props} open={open} />;
   return <PromptSide {...props} open={open} />;
 }
@@ -33,7 +33,9 @@ export function ChatSide(props: SideAt) {
 function CharacterSide({ open, onOpen, onClose }: Props<'character'>) {
   // The chat is gone from the page with its character, so the character is there while this is.
   const shelf = useCharacter(open.id)!;
-  return <CharacterEditor key={open.id} shelf={shelf} layout="drill" part={open.part} onPart={(part) => onOpen({ ...open, part, fromToggles: undefined })} partBack={open.fromToggles && { label: '채팅 토글', onBack: () => onOpen({ kind: 'toggles' }) }} frame={panel('캐릭터', onClose)} />;
+  // The panel's own: a chat's panels name no script.
+  const [script, setScript] = useState<string | null>(null);
+  return <CharacterEditor shelf={shelf} layout="drill" part={open.part} onPart={(part) => onOpen({ ...open, part, fromToggles: undefined })} script={script} onScript={setScript} partBack={open.fromToggles && { label: '채팅 토글', onBack: () => onOpen({ kind: 'toggles' }) }} frame={panel('캐릭터', onClose)} />;
 }
 
 // A module deleted elsewhere while open goes back to the 토글 panel, which no longer lists it.
@@ -62,12 +64,11 @@ function PromptSide({ open, inUse, onOpen, onClose }: Props<'prompts'>) {
   if (!stored) return <PromptList onPick={(id) => onOpen({ kind: 'prompts', id, pane: null })} inUse={inUse ?? undefined} place={place} onGo={setPlace} frame={panel('프롬프트', onClose)} />;
   return (
     <PromptEditor
-      key={`${stored.id}:${open.block ?? ''}`}
+      key={stored.id}
       stored={stored}
       layout="drill"
-      pane={open.pane}
-      block={open.block}
-      onPane={(pane) => onOpen({ ...open, pane, fromToggles: undefined })}
+      at={open}
+      onAt={(at) => onOpen({ kind: 'prompts', id: stored.id, ...at })}
       paneBack={open.fromToggles && { label: '채팅 토글', onBack: () => onOpen({ kind: 'toggles' }) }}
       backLabel="프롬프트 목록"
       onBack={toList}

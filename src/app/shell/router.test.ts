@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChangeSignal } from '../../change-signal';
 import { HOSTED } from '../../contracts/installation';
 import { markSelfHost } from '../../runtime/installation';
-import { closeLayer, holdBack, navigate } from './router';
+import { closeLayer, holdBack, navigate, openPart } from './router';
 import { href, type Route } from './routes';
 
 afterEach(() => {
@@ -24,6 +24,19 @@ it("opens every way into a self-host's 게시판 on hazelle.app and leaves the p
 });
 
 const popstate = new Set<() => void>();
+
+it('steps into a part on a phone, which back takes back, and swaps parts in place beside the list', () => {
+  const page = browser();
+  const list: Route = { kind: 'edit', character: '6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b' };
+  navigate(list);
+  openPart({ ...list, part: 'profile' }, false);
+  page.back();
+  expect(page.url()).toBe(href(list));
+  openPart({ ...list, part: 'profile' }, true);
+  openPart({ ...list, part: 'lore' }, true);
+  page.back();
+  expect(page.url()).toBe('/');
+});
 
 // A session history as a browser keeps it: a traversal waits for land(), as history.go does.
 function browser(state: unknown = null, start = '/') {

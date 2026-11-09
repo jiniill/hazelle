@@ -30,7 +30,6 @@ import { ModuleSwitches } from '../common/ModuleSwitches';
 import { PackToggles } from '../common/PackToggles';
 import { ScriptsEditor } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
-import type { CharacterPart } from '../common/characterPart';
 import type { Frame } from '../common/frame';
 import { readPicturePercent } from '../common/picturePercent';
 import { FaceChange } from '../common/FaceChange';
@@ -45,7 +44,7 @@ import { OnboardingEditor } from './OnboardingEditor';
 import { ShareDialog } from './ShareDialog';
 import { useCharacter, useChildren, useFiles, useModules, useSettings, useStore, useStored } from '../session';
 import { navigate } from '../shell/router';
-import { characterPage, HOME } from '../shell/routes';
+import { characterPage, HOME, type CharacterPart } from '../shell/routes';
 import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
 import { Button, Callout, ChoiceGroup, Disclosure, List, ListItem, MenuItem, NavGroup, NavRow, NumberInput, Portrait, Row, Section, SettingGroup, SettingRow, Story, Switch, Tag, Text, TextField, useWide, type Help } from '../ui';
@@ -89,6 +88,9 @@ type Props = {
   layout: 'split' | 'drill';
   part: CharacterPart | null;
   onPart: (part: CharacterPart | null) => void;
+  // The script open in 스크립트.
+  script: string | null;
+  onScript: (script: string | null) => void;
   // Where the part goes back to when it was opened from outside the editor; the list is a link under its head.
   partBack?: { label: string; onBack: () => void };
   frame: Frame;
@@ -96,7 +98,7 @@ type Props = {
 
 // Unmount flushes edits; moving between parts must keep the editor mounted.
 // Show current stored shelf under queued patches, writing only changed fields.
-export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }: Props) {
+export function CharacterEditor({ shelf, layout, part, onPart, script, onScript, partBack, frame }: Props) {
   const { id, character, face } = shelf;
   const { card, origin } = character;
   const trial = useTrial({ kind: 'character', id }, card.variables);
@@ -333,7 +335,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
         <AgentSwitches owner={{ kind: 'character' }} own={character.agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'character', id }, agent, on)} />
       </>
     ),
-    scripts: <ScriptsEditor owner={{ kind: 'character', id }} pack={card} drill={!split} status={character.statusScripts} variables={card.variables} />,
+    scripts: <ScriptsEditor owner={{ kind: 'character', id }} pack={card} drill={!split} open={script} onOpen={onScript} status={character.statusScripts} variables={card.variables} />,
     toggles: <PackToggles owner={{ kind: 'character', id }} lines={card.toggles} />,
     variables: (
       <>

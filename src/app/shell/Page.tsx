@@ -118,7 +118,7 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
       case 'prompts':
         return <PromptsScreen place={at.place} sort={at.sort} back={sideBack(at)} />;
       case 'prompt':
-        return <ItemPage at={at} back={back(at)}>{(stored) => <PromptScreen key={stored.id} stored={stored} pane={at.pane} back={back(at)} />}</ItemPage>;
+        return <ItemPage at={at} back={back(at)}>{(stored) => <PromptScreen key={stored.id} stored={stored} at={at} back={back(at)} />}</ItemPage>;
       case 'personas':
         return <PersonaList place={at.place} back={sideBack(at)} />;
       case 'persona':
@@ -126,7 +126,7 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
       case 'modules':
         return <ModulesScreen place={at.place} back={sideBack(at)} />;
       case 'module':
-        return <ItemPage at={at} back={back(at)}>{(stored) => <ModulePage key={stored.id} stored={stored} pane={at.pane} back={back(at)} />}</ItemPage>;
+        return <ItemPage at={at} back={back(at)}>{(stored) => <ModulePage key={stored.id} stored={stored} at={at} back={back(at)} />}</ItemPage>;
       case 'plugins':
         return <PluginsScreen back={sideBack(at)} />;
       case 'plugin':
@@ -239,7 +239,7 @@ function CharacterPage({ at, wide, back }: { at: At<'shelf' | 'edit'>; wide: boo
     </Screen>
   );
   if (!shelf) return missing(absentItem('character', stored), wide);
-  return <CharacterEditScreen key={shelf.id} shelf={shelf} back={back} />;
+  return <CharacterEditScreen key={shelf.id} shelf={shelf} at={at.kind === 'edit' ? at : {}} back={back} />;
 }
 
 function ChatPage({ at, wide, onPaired }: { at: At<'new-chat' | 'chat'>; wide: boolean; onPaired: (paired: boolean) => void }) {
@@ -289,12 +289,12 @@ function ItemPage<K extends 'prompt' | 'persona' | 'module' | 'profile'>({ at, b
 }
 
 // A plugin's page was a module's until 플러그인 had a page of its own, so an old link to one lands on its new place.
-function ModulePage({ stored, pane, back }: { stored: Stored<'module'>; pane: 'toggles' | null; back: Back }) {
+function ModulePage({ stored, at, back }: { stored: Stored<'module'>; at: At<'module'>; back: Back }) {
   const plugin = useTool(stored.id) !== null;
   useLayoutEffect(() => {
     if (plugin) navigate({ kind: 'plugin', id: stored.id }, { replace: true });
   }, [plugin, stored.id]);
-  return plugin ? null : <ModuleScreen stored={stored} pane={pane} back={back} />;
+  return plugin ? null : <ModuleScreen stored={stored} at={at} back={back} />;
 }
 
 function DraftPage({ id, back }: { id: string; back: Back }) {

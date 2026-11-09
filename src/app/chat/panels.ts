@@ -1,9 +1,8 @@
 import type { Card } from '../../engine/import/types';
 import type { From } from '../../engine/pipeline';
 import type { Block } from '../../model/prompt';
-import type { CharacterPart } from '../common/characterPart';
 import type { PromptDoor } from '../common/TaskPrompt';
-import type { PromptPane } from '../shell/routes';
+import type { CharacterPart, PromptPane } from '../shell/routes';
 import type { ToggleSection } from './toggles';
 
 // fromToggles routes editor back to chat toggles; modules open beside chat only through that route.

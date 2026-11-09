@@ -11,6 +11,8 @@ const ACCOUNT_SECTIONS = ['notices'] as const;
 export type AccountSection = (typeof ACCOUNT_SECTIONS)[number];
 const PROMPT_PANES = ['toggles', 'model', 'picture', 'variables'] as const;
 export type PromptPane = (typeof PROMPT_PANES)[number];
+const CHARACTER_PARTS = ['profile', 'character', 'greetings', 'instructions', 'lore', 'modules', 'features', 'scripts', 'toggles', 'variables', 'assets', 'illustration', 'display'] as const;
+export type CharacterPart = (typeof CHARACTER_PARTS)[number];
 
 // These paths are what a reload, a bookmark and the browser's back button land on, so an existing one never changes.
 export type Route =
@@ -18,7 +20,8 @@ export type Route =
   | { kind: 'gallery'; place: string | null }
   // character null is 캐릭터 없이.
   | { kind: 'shelf'; character: string | null }
-  | { kind: 'edit'; character: string }
+  // part: the part of the character's editor that is open, none for its list of parts; script: the script open in 스크립트.
+  | { kind: 'edit'; character: string; part?: CharacterPart; script?: string }
   | { kind: 'new-chat'; character: string | null }
   // find: opened from 채팅 검색, at the message holding the term, the chat's own search seeded with it.
   | { kind: 'chat'; id: string; find?: { term: string; at: string } }
@@ -31,13 +34,14 @@ export type Route =
   | { kind: 'connect-direct'; address: string }
   | { kind: 'connection'; id: string }
   // pane: the prompt editor's pane that is open, which a door to a prompt's 토글, 모델, 이미지 or 기본 변수 names; null, a block.
+  // block: the block open in its place, none for the list of blocks.
   // place on a list of things that folders hold: a folder's id, or null for the top.
   | { kind: 'prompts'; place: string | null; sort: PromptSort | null }
-  | { kind: 'prompt'; id: string; pane: PromptPane | null }
+  | { kind: 'prompt'; id: string; pane: PromptPane | null; block?: string }
   | { kind: 'personas'; place: string | null }
   | { kind: 'persona'; id: string }
   | { kind: 'modules'; place: string | null }
-  | { kind: 'module'; id: string; pane: 'toggles' | null }
+  | { kind: 'module'; id: string; pane: 'toggles' | null; script?: string }
   // A plugin is stored as a module that holds a tool; id is that module's.
   | { kind: 'plugins' }
   | { kind: 'plugin'; id: string }
@@ -122,7 +126,11 @@ export function parseRoute(at: string): Route {
     if (!ID.test(id)) return HOME;
     if (sub === undefined) return { kind: 'shelf', character: id };
     // The character's page before its editor took that place.
-    if (sub === 'edit' || sub === 'about') return { kind: 'edit', character: id };
+    if (sub === 'edit' || sub === 'about') {
+      const part = CHARACTER_PARTS.find((each) => each === params.get('part'));
+      const script = params.get('script');
+      return part ? { kind: 'edit', character: id, part, ...(part === 'scripts' && script && { script }) } : { kind: 'edit', character: id };
+    }
     if (sub === 'new') return { kind: 'new-chat', character: id };
     return HOME;
   }
@@ -147,8 +155,9 @@ export function parseRoute(at: string): Route {
   if (top === 'prompts') {
     if (id === undefined) return { kind: 'prompts', place: placeOf(params), sort: PROMPT_SORTS.find((each) => each === params.get('sort')) ?? null };
     if (!ID.test(id) || sub !== undefined) return HOME;
-    const pane = params.get('pane');
-    return { kind: 'prompt', id, pane: PROMPT_PANES.find((each) => each === pane) ?? null };
+    const pane = PROMPT_PANES.find((each) => each === params.get('pane')) ?? null;
+    const block = params.get('block');
+    return { kind: 'prompt', id, pane, ...(pane === null && block && { block }) };
   }
   if (top === 'personas' && sub === undefined) {
     if (id === undefined) return { kind: 'personas', place: placeOf(params) };
@@ -159,7 +168,10 @@ export function parseRoute(at: string): Route {
     if (!ID.test(id)) return HOME;
     // A plugin's page before 플러그인 had a page of its own.
     if (sub === 'page') return { kind: 'plugin-page', id };
-    return sub === undefined ? { kind: 'module', id, pane: params.get('pane') === 'toggles' ? 'toggles' : null } : HOME;
+    if (sub !== undefined) return HOME;
+    if (params.get('pane') === 'toggles') return { kind: 'module', id, pane: 'toggles' };
+    const script = params.get('script');
+    return { kind: 'module', id, pane: null, ...(script && { script }) };
   }
   if (top === 'plugins') {
     if (id === undefined) return { kind: 'plugins' };
@@ -218,6 +230,11 @@ export function parseRoute(at: string): Route {
   return HOME;
 }
 
+const query = (values: Record<string, string | undefined>) => {
+  const given = new URLSearchParams(Object.entries(values).filter((entry): entry is [string, string] => entry[1] !== undefined));
+  return given.size > 0 ? `?${given}` : '';
+};
+
 // A malformed escape (a stray %) names no model.
 function decoded(segments: string[]): string | null {
   try {
@@ -236,7 +253,7 @@ export function href(route: Route): string {
     case 'shelf':
       return `/characters/${route.character ?? NONE}`;
     case 'edit':
-      return `/characters/${route.character}/edit`;
+      return `/characters/${route.character}/edit${query({ part: route.part, script: route.script })}`;
     case 'new-chat':
       return route.character === null ? '/chats/new' : `/characters/${route.character}/new`;
     case 'chat':
@@ -256,7 +273,7 @@ export function href(route: Route): string {
     case 'prompts':
       return route.sort ? `${placed('/prompts', route.place)}${route.place ? '&' : '?'}sort=${route.sort}` : placed('/prompts', route.place);
     case 'prompt':
-      return `/prompts/${route.id}${route.pane ? `?pane=${route.pane}` : ''}`;
+      return `/prompts/${route.id}${query({ pane: route.pane ?? undefined, block: route.block })}`;
     case 'personas':
       return placed('/personas', route.place);
     case 'persona':
@@ -264,7 +281,7 @@ export function href(route: Route): string {
     case 'modules':
       return placed('/modules', route.place);
     case 'module':
-      return `/modules/${route.id}${route.pane ? `?pane=${route.pane}` : ''}`;
+      return `/modules/${route.id}${query({ pane: route.pane ?? undefined, script: route.script })}`;
     case 'plugins':
       return '/plugins';
     case 'plugin':

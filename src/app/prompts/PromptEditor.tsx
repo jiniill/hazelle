@@ -80,15 +80,16 @@ const CACHE_WORDS = { set: '여기까지 캐시', auto: '자동 캐시' } as con
 const UNDO = { did: '되돌렸어요', failed: '되돌리지 못했어요' };
 const REDO = { did: '다시 실행했어요', failed: '다시 실행하지 못했어요' };
 
+export type PromptAt = { pane: PromptPane | null; block?: string };
+
 type Props = {
   stored: Stored<'prompt'>;
   // The caller decides, since a side panel is narrow on any screen.
   layout: 'split' | 'drill';
-  // The pane open in place of a block, drilled into: a page keeps it in its address, a panel in its own state.
-  pane: PromptPane | null;
-  onPane: (pane: PromptPane | null) => void;
-  // The block it opens at, drilled into; read once, as it mounts.
-  block?: string;
+  // The pane or the block open, drilled into, or neither: the list of blocks. A page keeps it in its address, a panel in
+  // its own state.
+  at: PromptAt;
+  onAt: (at: PromptAt) => void;
   // Where the 토글 pane goes back to when it was opened from outside the editor; the outline is a link under its head.
   paneBack?: { label: string; onBack: () => void };
   backLabel: string;
@@ -100,7 +101,7 @@ type Props = {
 };
 
 // Its state is one prompt's, so a caller keys it by id; unmounting it saves.
-export function PromptEditor({ stored, layout, pane, onPane, block: openAt, paneBack, backLabel, onBack, onOpen, onErased, frame }: Props) {
+export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt, paneBack, backLabel, onBack, onOpen, onErased, frame }: Props) {
   const store = useStore();
   const toast = useToast();
   const removal = useRemoval();
@@ -130,16 +131,16 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
   // Only a conversation prompt and an agent pick models; another task's model is its feature's (runtime/assignment taskModel).
   const picksModel = sort === 'conversation' || sort === 'agent';
   const firstText = () => latest.current.blocks.find(isText)?.id ?? (picksModel ? MODEL : TOGGLES);
-  // A block only: the pane open in its place is the pane prop's.
-  const [picked, setPicked] = useState(openAt);
-  const [drilled, setDrilled] = useState(openAt !== undefined);
   const [reordering, setReordering] = useState(false);
   const [addingToggle, setAddingToggle] = useState(false);
   const [exporting, setExporting] = useState(false);
   // 이미지 is an illustration prompt's only, 기본 변수 a conversation prompt's, and 모델 a prompt's that picks one; an
   // address naming one on another opens as if it named none.
   const shownPane = (pane === PICTURE && sort !== 'illustrate') || (pane === VARIABLES && sort !== 'conversation') || (pane === MODEL && !picksModel) ? null : pane;
-  const open = shownPane ?? (picked !== undefined && draft.blocks.some((block) => block.id === picked) ? picked : firstText());
+  // A block it does not hold opens as if none were named, as a pane it does not have does.
+  const picked = named !== undefined && draft.blocks.some((block) => block.id === named) ? named : undefined;
+  const drilled = shownPane !== null || picked !== undefined;
+  const open = shownPane ?? picked ?? firstText();
   const index = draft.blocks.findIndex((block) => block.id === open);
   const block = draft.blocks[index];
 
@@ -161,16 +162,8 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
   };
   useLayoutEffect(applySelect);
 
-  const pick = (id: string) => {
-    if (!split) setDrilled(true);
-    if (id === MODEL || id === PICTURE || id === TOGGLES || id === VARIABLES) return onPane(id);
-    setPicked(id);
-    if (pane) onPane(null);
-  };
-  const leavePage = () => {
-    setDrilled(false);
-    if (pane) onPane(null);
-  };
+  const pick = (id: string) => onAt(id === MODEL || id === PICTURE || id === TOGGLES || id === VARIABLES ? { pane: id } : { pane: null, block: id });
+  const leavePage = () => onAt({ pane: null });
 
   // Every structural edit is a step on this one stack; a toast's 되돌리기 undoes its own step, and leaves with the
   // editor, whose stack it is.
@@ -217,7 +210,8 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
     const next = latest.current.blocks[at + 1] ?? latest.current.blocks[at - 1];
     const step = perform(removeBlock(gone, at));
     if (!step) return;
-    if (open === id && next) setPicked(next.id);
+    // The block on show gives way to its neighbour; a phone's list shows none.
+    if (open === id && next && (split || drilled)) pick(next.id);
     undoable(`'${blockTitle(gone).title}' 블록을 뺐어요.`, () => undo(step));
   };
   const mark = (target: TextBlock, value: TextBlock['mark']) => {
@@ -429,7 +423,7 @@ export function PromptEditor({ stored, layout, pane, onPane, block: openAt, pane
     );
 
   const status = save.words;
-  if (!split && (drilled || shownPane !== null)) {
+  if (!split && drilled) {
     const title = open === MODEL ? '모델' : open === PICTURE ? '이미지' : open === TOGGLES ? '토글' : open === VARIABLES ? DEFAULT_VARIABLES : block ? blockTitle(block).title : '';
     if (open === TOGGLES && paneBack) {
       const toOutline = (

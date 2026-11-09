@@ -14,7 +14,11 @@ const EXAMPLES = {
     { kind: 'shelf', character: CHARACTER },
     { kind: 'shelf', character: null },
   ],
-  edit: [{ kind: 'edit', character: CHARACTER }],
+  edit: [
+    { kind: 'edit', character: CHARACTER },
+    { kind: 'edit', character: CHARACTER, part: 'profile' },
+    { kind: 'edit', character: CHARACTER, part: 'scripts', script: 'regex-0' },
+  ],
   'new-chat': [
     { kind: 'new-chat', character: CHARACTER },
     { kind: 'new-chat', character: null },
@@ -40,6 +44,7 @@ const EXAMPLES = {
     { kind: 'prompt', id: CHAT, pane: 'toggles' },
     { kind: 'prompt', id: CHAT, pane: 'model' },
     { kind: 'prompt', id: CHAT, pane: 'picture' },
+    { kind: 'prompt', id: CHAT, pane: null, block: 'main & a+b?#' },
   ],
   personas: [{ kind: 'personas', place: null }, { kind: 'personas', place: CHAT }],
   persona: [{ kind: 'persona', id: CHAT }],
@@ -47,6 +52,7 @@ const EXAMPLES = {
   module: [
     { kind: 'module', id: CHAT, pane: null },
     { kind: 'module', id: CHAT, pane: 'toggles' },
+    { kind: 'module', id: CHAT, pane: null, script: 'trigger-0' },
   ],
   plugins: [{ kind: 'plugins' }],
   plugin: [{ kind: 'plugin', id: CHAT }],
@@ -104,6 +110,16 @@ describe('routes', () => {
     expect(parseRoute(`/models/${CHAT}/anthropic%2Fclaude-opus-5.5`)).toEqual(model);
     expect(href(model)).toBe(`/models/${CHAT}/anthropic/claude-opus-5.5`);
     expect(parseRoute(`/modules/${CHAT}/page`)).toEqual({ kind: 'plugin-page', id: CHAT });
+    expect(href({ kind: 'prompt', id: CHAT, pane: 'toggles' })).toBe(`/prompts/${CHAT}?pane=toggles`);
+    expect(href({ kind: 'module', id: CHAT, pane: 'toggles' })).toBe(`/modules/${CHAT}?pane=toggles`);
+  });
+
+  it('opens a part, a block or a script only where it can stand, as it does a pane', () => {
+    expect(parseRoute(`/characters/${CHARACTER}/edit?part=nope&script=regex-0`)).toEqual({ kind: 'edit', character: CHARACTER });
+    expect(parseRoute(`/characters/${CHARACTER}/edit?part=lore&script=regex-0`)).toEqual({ kind: 'edit', character: CHARACTER, part: 'lore' });
+    expect(parseRoute(`/prompts/${CHAT}?pane=nope`)).toEqual({ kind: 'prompt', id: CHAT, pane: null });
+    expect(parseRoute(`/prompts/${CHAT}?pane=toggles&block=main`)).toEqual({ kind: 'prompt', id: CHAT, pane: 'toggles' });
+    expect(parseRoute(`/modules/${CHAT}?pane=toggles&script=regex-0`)).toEqual({ kind: 'module', id: CHAT, pane: 'toggles' });
   });
 
   it.each(['/nope', '/characters/', '/characters/abc', '/characters/none/about', `/characters/${CHARACTER}/other`, '/chats', `/chats/${CHAT}/x`, '/connections/', '/connections/new/nope', '/prompts/abc', `/prompts/${CHAT}/x`, `/connections/abc/model`, `/connections/${CHAT}/model`, '/personas/abc', `/personas/${CHAT}/x`, '/modules/abc', `/modules/${CHAT}/x`, '/plugins/abc', `/plugins/${CHAT}/x`, '/plugins/drafts', '/plugins/drafts/abc', '/plugins/new/x', '/models/abc', `/models/abc/x`, `/models/${CHAT}/%E0%A4%A`, '/settings/x', '/settings/chat/nope', '/settings/chat/memory/x', '/settings/memory/x', '/account/sent', '/board/0', '/board/01', '/board/abc', '/board/12/x', '/board/write/x'])(
