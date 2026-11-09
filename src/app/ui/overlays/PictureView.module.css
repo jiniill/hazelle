@@ -21,8 +21,10 @@
   container-type: size;
 }
 
-/* Zoomed it may pass the room, and the room scrolls; margin keeps a smaller one centred. */
+/* Zoomed it may pass the room, and the room scrolls; margin keeps a smaller one centred. Not
+   justify-content, which centres a wider one past the start edge, where no scroll reaches. */
 .zoomed {
+  justify-content: flex-start;
   overflow: auto;
 }
 

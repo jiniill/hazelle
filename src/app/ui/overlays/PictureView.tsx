@@ -33,12 +33,10 @@ type Size = { src: string; width: number; height: number };
 export function PictureView({ src, label, video = false, title, note, actions = [], pages, onClose }: Props) {
   const view = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
-  // Only its empty boxes are the backdrop: the picture and every bar sit inside them. Never matched by a class
-  // selector, which a composed module class breaks.
-  useLayer(true, { outside: (target) => target === view.current || target === stage.current, close: onClose, takesBack: true });
+  // Its backdrop closes it on a tap (onClick below), not on the press that may begin a swipe or a pan.
+  useLayer(true, { outside: () => false, close: onClose, takesBack: true });
   const trap = useFocusTrap(view);
   const paged = stepping(pages);
-  const swipe = useSwipe(paged);
   const veil = useVeil();
   // Opened by a press of its own, so each picture it shows, a version stepped to as well, stays uncovered after.
   useEffect(() => {
@@ -48,10 +46,13 @@ export function PictureView({ src, label, video = false, title, note, actions = 
   const measured = size?.src === src ? size : null;
   const [zoomed, setZoomed] = useState(false);
   const toggle = () => setZoomed(!zoomed);
+  // Zoomed, a sideways stroke pans the picture, so neither it nor ← → steps.
+  const turned = zoomed ? undefined : paged;
+  const swipe = useSwipe(turned);
   const keyed = [{ keys: ZOOM_KEYS.keys, run: toggle }, ...actions.flatMap(({ keys, run }) => (keys ? [{ keys, run }] : []))];
   const keys = (event: KeyboardEvent) => {
     trap(event);
-    stepByKey(paged, event);
+    stepByKey(turned, event);
     const hit = event.defaultPrevented ? undefined : keyed.find((action) => pressed(event, action.keys));
     if (!hit) return;
     event.preventDefault();
@@ -61,8 +62,9 @@ export function PictureView({ src, label, video = false, title, note, actions = 
   const shape = measured ? styles.image : `${styles.image} ${styles.waiting}`;
   const ratio = measured ? ({ '--ratio': measured.width / measured.height, '--own-width': `${measured.width}px` } as CSSProperties) : undefined;
   return createPortal(
-    // Stop portal bubbling into the source message. Backdrop pointerdown closes; suppress mousedown afterward
-    // so it cannot move restored focus back onto the page.
+    // Stop portal bubbling into the source message. Only its empty boxes are the backdrop: the picture and every bar
+    // sit inside them, never matched by a class selector, which a composed module class breaks. A press on it keeps the
+    // focus in the view.
     <div
       ref={view}
       className={styles.view}
@@ -72,7 +74,10 @@ export function PictureView({ src, label, video = false, title, note, actions = 
       onKeyDown={keys}
       {...swipe}
       onPointerDown={(event) => event.preventDefault()}
-      onClick={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (event.target === view.current || event.target === stage.current) onClose();
+      }}
     >
       <div className={styles.top}>
         {(title || facts) && (
