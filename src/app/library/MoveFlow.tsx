@@ -181,7 +181,7 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
       return step ? { label: STEP[kind], done: step.done, total: step.total } : { label: STEP[kind] };
     }) : [];
     return (
-      <Dialog title={phase.kind === 'reading' ? '백업 읽는 중' : '가져오는 중'} note={note} onClose={() => {}}>
+      <Dialog title={phase.kind === 'reading' ? '백업 읽는 중' : '가져오는 중'} note={note}>
         <Progress hero steps={[{ label: READING, finished: phase.kind === 'running' }, ...stages]} />
       </Dialog>
     );

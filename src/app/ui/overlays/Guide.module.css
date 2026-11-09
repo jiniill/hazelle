@@ -47,7 +47,8 @@
   flex-shrink: 0;
 }
 
-.docked {
+/* No target, or no clear spot by it (Guide.tsx coachSpot). */
+.bubble[data-docked] {
   top: auto;
   right: var(--menu-edge);
   bottom: var(--menu-edge);

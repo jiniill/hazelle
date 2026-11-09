@@ -8,6 +8,11 @@
   background: var(--color-sidebar);
 }
 
+/* Covering, it takes the focus itself as the place Tab starts from, not as a control. */
+.panel:focus-visible {
+  outline: none;
+}
+
 .expanded {
   position: absolute;
   inset: 0;

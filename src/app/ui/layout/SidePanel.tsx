@@ -2,7 +2,7 @@ import { Maximize2, Minimize2, X } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { usePanelCovers } from '../foundation/media';
-import { useLayer } from '../overlays/layers';
+import { useFocusTrap, useLayer } from '../overlays/layers';
 import { NavBar, type NavBarProps } from './NavBar';
 import styles from './SidePanel.module.css';
 
@@ -42,11 +42,15 @@ export function SidePanel({ title, subtitle, nav, page, actions, expandable = fa
     },
     takesBack: true,
   });
+  // Covering, its head's back is a step of its own: the browser's back leaves the open part, not the panel.
+  useLayer(covers && nav?.onBack !== undefined, { outside: () => false, close: () => nav?.onBack?.(), takesBack: true, step: nav?.title });
+  // Covering, it holds the focus from itself; beside, the page keeps it.
+  const trap = useFocusTrap(panel, covers);
   useLayoutEffect(() => {
     body.current?.scrollTo({ top: 0 });
   }, [page]);
   return (
-    <aside ref={panel} className={wide ? `${styles.panel} ${styles.expanded}` : styles.panel} aria-label={title} data-side-panel>
+    <aside ref={panel} className={wide ? `${styles.panel} ${styles.expanded}` : styles.panel} aria-label={title} data-side-panel tabIndex={covers ? -1 : undefined} data-autofocus={covers || undefined} onKeyDown={trap}>
       <div className={styles.head}>
         {nav ? (
           <NavBar {...nav} line />

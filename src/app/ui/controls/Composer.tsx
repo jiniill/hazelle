@@ -1,4 +1,4 @@
-import { useId, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { createContext, useId, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './Composer.module.css';
 import { pasteFiles } from './pasteFiles';
@@ -19,6 +19,9 @@ type Props = {
   attachments?: ReactNode;
   onFiles?: (files: File[]) => void;
 };
+
+// Read by SendButton, which gives the focus back to it.
+export const ComposerField = createContext<RefObject<HTMLTextAreaElement | null>>({ current: null });
 
 export function Composer({ value, onChange, onKeyDown, placeholder, tools, actions, inputRef, compact, readOnly, enterKeyHint, attachments, onFiles }: Props) {
   const id = useId();
@@ -47,7 +50,9 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, actio
         <div className={styles.tools}>
           <div className={styles.bar}>
             <div className={styles.toolRow}>{tools}</div>
-            <div className={styles.actions}>{actions}</div>
+            <div className={styles.actions}>
+              <ComposerField.Provider value={inputRef}>{actions}</ComposerField.Provider>
+            </div>
           </div>
         </div>
       </div>
