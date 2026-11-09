@@ -6,8 +6,7 @@
 }
 
 .button {
-  composes: inkOpen from '../foundation/hover.module.css';
-  position: relative;
+  composes: inkOpen reach from '../foundation/hover.module.css';
   display: flex;
   align-items: center;
   justify-content: center;
@@ -15,14 +14,6 @@
   height: var(--control-mark);
   border-radius: var(--radius-full);
   color: var(--color-text-faint);
-}
-
-@media (pointer: coarse) {
-  .button::after {
-    position: absolute;
-    inset: calc(-1 * var(--hit-outset));
-    content: '';
-  }
 }
 
 .bubble {
