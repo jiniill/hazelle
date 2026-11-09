@@ -1,11 +1,12 @@
 import { calc } from '../cbs/math';
 import { dict, json, truthy } from '../cbs/tags';
 import type { CallType, Comparison, Operand } from '../import/blocks';
+import type { Unstamped } from '../import/convert';
 import { UNSET, type ModelMessage, type ScriptUnit } from '../script-api';
 import { ranked } from './similar';
 import { add, cbs as evaluated, read, write, type Acting, type Working } from './state';
 
-export type Blocks = Omit<Extract<ScriptUnit, { kind: 'blocks' }>, 'id' | 'off'>;
+export type Unit = Unstamped<ScriptUnit>;
 const numbers = (left: string, right: string) => !Number.isNaN(Number(left)) && !Number.isNaN(Number(right));
 const same = (left: string, right: string) => (numbers(left, right) ? Number(left) === Number(right) : left === right);
 const holds = (list: string, item: string) => {
@@ -232,8 +233,9 @@ const CALLS: Record<CallType, (call: Call, ...inputs: string[]) => string | unde
 };
 
 // Missing effects are no-ops recorded in run.missing. Evaluate operands/conditions at execution time.
-// call dispatches triggers by name, regardless of their event.
-export async function runBlocks(trigger: Blocks, run: Acting, call: (name: string) => Promise<void>): Promise<void> {
+// call dispatches triggers by name, regardless of their event; lua calls a code's handler for the event. A Lua
+// trigger's own code runs once its conditions pass, before its later effects, as Risu's first effect.
+export async function runBlocks(trigger: Unit, run: Acting, call: (name: string) => Promise<void>, lua: (code: string) => Promise<void>): Promise<void> {
   const cbs = (value: string) => evaluated(run, value);
   let locals: { name: string; indent: number; value: string }[] = [];
   const local = (name: string) => locals.findLast((each) => each.name === name);
@@ -254,6 +256,7 @@ export async function runBlocks(trigger: Blocks, run: Acting, call: (name: strin
       if (condition.kind === 'compare' && !compare(condition.comparison, value, cbs(condition.value))) return;
     }
   }
+  if (trigger.kind === 'lua') await lua(trigger.code);
   const effects = trigger.effects;
   // Each running loop's turns so far and how many it takes, by its place.
   const loops = new Map<number, { turn: number; turns: number }>();
@@ -349,6 +352,7 @@ export async function runBlocks(trigger: Blocks, run: Acting, call: (name: strin
       case 'extract': put(effect.input, fill(effect.result, new RegExp(effect.regex, effect.flags).exec(cbs(effect.value)))); break;
       case 'trigger': await call(operand(effect.name)); break;
       case 'reload': run.reload = true; break;
+      case 'lua': await lua(effect.code); break;
       case 'call': {
         const inputs = effect.inputs.map(operand);
         const answer = await CALLS[effect.type]({ run, get, put, name: effect.name && cbs(effect.name), option: effect.option }, ...inputs);

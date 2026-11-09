@@ -146,15 +146,19 @@ export function stampIds<R extends object, T extends object>(pack: { regex: read
 export function readTriggers(raw: unknown): Unstamped<Trigger>[] {
   const triggers: Unstamped<Trigger>[] = [];
   for (const trigger of list(raw).map(record)) {
-    const name = text(trigger.comment);
-    const effects = list(trigger.effect).map(record);
-    const code = effects[0]?.type === 'triggerlua' ? text(effects[0].code) : null;
-    if (code === null) {
-      if (effects.some((effect) => !INERT.has(effect.type))) triggers.push({ kind: 'blocks', name, on: text(trigger.type), conditions: blockConditions(trigger.conditions), effects: blockEffects(trigger.effect) });
-    } else if (code.trim()) triggers.push({ kind: 'lua', name, code });
+    const steps = { name: text(trigger.comment), on: text(trigger.type), conditions: blockConditions(trigger.conditions) };
+    const effects = list(trigger.effect);
+    const first = record(effects[0]);
+    const acts = (from: number) => effects.slice(from).some((effect) => !INERT.has(record(effect).type));
+    if (first.type !== 'triggerlua') {
+      if (acts(0)) triggers.push({ kind: 'blocks', ...steps, effects: blockEffects(effects) });
+    } else if (text(first.code).trim() || acts(1)) triggers.push({ kind: 'lua', ...steps, code: text(first.code), effects: blockEffects(effects.slice(1)) });
   }
   return triggers;
 }
+
+// Every Lua code a trigger runs: a Lua trigger's own, then its effects' in their order.
+export const luaCodes = (trigger: Unstamped<Trigger>) => [...(trigger.kind === 'lua' ? [trigger.code] : []), ...trigger.effects.flatMap((effect) => (effect.kind === 'lua' ? [effect.code] : []))];
 
 function packOf(raw: { regex: unknown; trigger: unknown; background: unknown; toggles: unknown }, tally: Tally): Pack {
   const triggers = readTriggers(raw.trigger);
@@ -170,11 +174,12 @@ export const regexSource = ({ name, find, replace, stage, flags }: Unstamped<Reg
   comment: name, in: find, out: replace, type: [...STAGES].find(([, each]) => each === stage)![0], ableFlag: flags !== null, flag: flags ?? '',
 });
 
-// Risu's editor starts a Lua trigger at 'start'; Risu runs it at every event whatever its type.
-export const triggerSource = (trigger: Unstamped<Trigger>): Json =>
-  trigger.kind === 'lua'
-    ? { comment: trigger.name, type: 'start', conditions: [], effect: [{ type: 'triggerlua', code: trigger.code }] }
-    : { comment: trigger.name, type: trigger.on, conditions: conditionSources(trigger.conditions), effect: effectSources(trigger.effects) };
+export const triggerSource = (trigger: Unstamped<Trigger>): Json => ({
+  comment: trigger.name,
+  type: trigger.on,
+  conditions: conditionSources(trigger.conditions),
+  effect: [...(trigger.kind === 'lua' ? [{ type: 'triggerlua', code: trigger.code }] : []), ...effectSources(trigger.effects)],
+});
 
 const folderKey = (folder: number) => `folder-${folder}`;
 

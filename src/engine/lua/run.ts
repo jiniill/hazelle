@@ -3,9 +3,9 @@ import { jsonObject } from '../../connectors/values';
 import { hex } from '../../hex';
 import type { PackOwner } from '../../model/library';
 import { LuaFactory, type LuaEngine } from 'wasmoon';
-import { runBlocks, type Blocks } from './blocks';
+import { runBlocks, type Unit } from './blocks';
 import { ranked } from './similar';
-import { chatLorebook } from '../import/convert';
+import { chatLorebook, luaCodes } from '../import/convert';
 import { asRisuLore } from '../cbs/tags';
 import JSON_LUA from './json.lua?raw';
 import PRELUDE from './prelude.lua?raw';
@@ -55,6 +55,9 @@ const view = ({ role, data, time }: Working) => ({ role, data, time });
 const handler = (event: string) => `on${event[0]!.toUpperCase()}${event.slice(1)}`;
 // A press named for one of these calls its handler, as Risu's risu-trigger="input" calls onInput.
 const PRESSABLE_EVENTS = new Set(['input', 'output', 'start']);
+// The events Risu's runTrigger walks, where a trigger's conditions and later effects count. Any other reaches a Lua
+// trigger's own code alone, whatever its conditions.
+const STEPPED = new Set<Event['kind']>(['start', 'input', 'output', 'call']);
 
 const AX_MODES = new Set(['emotion', 'memory', 'otherAx', 'submodel', 'translate']);
 
@@ -81,10 +84,10 @@ export class Lua {
     return new Lua(factory, sliceMs);
   }
 
-  // The triggers in the packs' order, as Risu walks them: each Lua one called for the event, each block one run when
-  // the event is its own.
-  async run(owner: string, triggers: (Script | Blocks)[], snapshot: Snapshot, event: Event, host: Host, lane: RunLane, signal?: AbortSignal): Promise<Outcome & { trace: HookTrace }> {
-    const workset = this.hold(owner, lane, triggers.filter((trigger): trigger is Script => trigger.kind === 'lua'));
+  // The triggers in the packs' order, as Risu walks them: each Lua one called for every event, each block one run when
+  // the event is its own, and either one's conditions and later effects at start, input, output and calls.
+  async run(owner: string, triggers: Unit[], snapshot: Snapshot, event: Event, host: Host, lane: RunLane, signal?: AbortSignal): Promise<Outcome & { trace: HookTrace }> {
+    const workset = this.hold(owner, lane, triggers.flatMap(luaCodes));
     try {
       const trace: HookTrace = { entries: [], omitted: 0 };
       let active: HookLog | null = null;
@@ -93,7 +96,7 @@ export class Lua {
       let value = event.kind === 'edit' ? event.value : undefined;
       let handled = false;
       // depth: how many run trigger effects led here; Risu stops at ten, and a deeper one here is the bot's error.
-      const failed = (script: Script | Blocks, error: Failure) => {
+      const failed = (script: Unit, error: Failure) => {
         const item = { from: script.owner, script: script.name || (script.kind === 'blocks' ? script.on : 'Lua'), ...error };
         errors.push(item);
         if (active) boundedItem(active, active.errors, clippedError(active, item));
@@ -108,19 +111,10 @@ export class Lua {
           const stopped = run.stop;
           active = entry;
           run.owner = script.owner;
-          try {
-            if (script.kind === 'blocks') {
-              handled = entry.handled = true;
-              // The triggers it runs speak for their own packs, and the rest of this one for its own.
-              const call = async (name: string) => {
-                if (depth >= TRIGGER_DEPTH) throw new Error(`triggers ran each other more than ${TRIGGER_DEPTH} deep`);
-                await fire({ kind: 'call', name, id: run.triggerId }, depth + 1);
-                run.owner = script.owner;
-              };
-              await runBlocks(script, run as Acting, call).catch((error: unknown) => failed(script, failure(run, error)));
-              continue;
-            }
-            const engine = await this.engine(workset, script);
+          // The handler for the event in code's engine.
+          const lua = async (code: string) => {
+            if (!code.trim()) return;
+            const engine = await this.engine(workset, { kind: 'lua', name: script.name, code, owner: script.owner });
             await this.exclusive(engine, async () => {
               if (engine.loaded) { keepTrace(trace, engine.loaded); engine.loaded = null; }
               if (engine.failed !== null) return void failed(script, { message: engine.failed });
@@ -146,6 +140,20 @@ export class Lua {
                 engine.log = null;
               }
             });
+          };
+          try {
+            if (script.kind === 'lua' && !STEPPED.has(event.kind)) {
+              await lua(script.code);
+              continue;
+            }
+            if (script.kind === 'blocks' || script.effects.length) handled = entry.handled = true;
+            // The triggers it runs speak for their own packs, and the rest of this one for its own.
+            const call = async (name: string) => {
+              if (depth >= TRIGGER_DEPTH) throw new Error(`triggers ran each other more than ${TRIGGER_DEPTH} deep`);
+              await fire({ kind: 'call', name, id: run.triggerId }, depth + 1);
+              run.owner = script.owner;
+            };
+            await runBlocks(script, run as Acting, call, lua).catch((error: unknown) => failed(script, failure(run, error)));
           } finally {
             entry.duration = performance.now() - began;
             entry.stopped = !stopped && run.stop;
@@ -209,7 +217,7 @@ export class Lua {
         else session.variables.set(name, previous);
       }
     }
-    const workset = this.hold(owner, 'display', scripts);
+    const workset = this.hold(owner, 'display', scripts.map(({ code }) => code));
     try {
       const errors: ScriptError[] = [];
       const trace: HookTrace = { entries: [], omitted: 0 };
@@ -288,10 +296,10 @@ export class Lua {
     return next;
   }
 
-  private hold(owner: string, lane: Lane, scripts: Script[]): Workset {
+  private hold(owner: string, lane: Lane, codes: string[]): Workset {
     const key = JSON.stringify([owner, lane]);
     const workset = this.worksets.get(key) ?? { engines: new Map(), codes: new Set(), held: 0, retired: false };
-    workset.codes = new Set(scripts.map(({ code }) => code));
+    workset.codes = new Set(codes);
     workset.held++;
     this.worksets.delete(key);
     this.worksets.set(key, workset);

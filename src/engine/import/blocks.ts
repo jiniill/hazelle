@@ -99,6 +99,8 @@ export type BlockEffect =
   | { kind: 'extract'; regex: string; flags: string; value: string; input: string; result: string }
   | { kind: 'trigger'; name: Operand }
   | { kind: 'reload' }
+  // Risu's triggerlua: its code's handler for the event, in an engine of its own.
+  | { kind: 'lua'; code: string }
   // name: the variable an array or dictionary effect changes. option: the one field an effect reads as it is.
   | { kind: 'call'; type: CallType; inputs: Operand[]; name: string; output: string; option: string }
   | { kind: 'opaque'; type: string; raw: unknown };
@@ -176,6 +178,7 @@ export function blockEffects(values: unknown): BlockEffect[] {
       case 'runtrigger': return { kind: 'trigger', name: operand(effect, 'value') };
       case 'v2RunTrigger': return { kind: 'trigger', name: operand(effect, 'target') };
       case 'v2UpdateGUI': case 'v2UpdateChatAt': return { kind: 'reload' };
+      case 'triggerlua': return { kind: 'lua', code: text(effect.code) };
       default: {
         const call = SAME[type] ?? (Object.hasOwn(CALLS, type) ? (type as CallType) : null);
         if (call === null) return { kind: 'opaque', type, raw: raw[index] };
@@ -258,6 +261,7 @@ export function effectSources(effects: BlockEffect[]): unknown[] {
       case 'extract': source = { type: 'extractRegex', regex: effect.regex, flags: effect.flags, value: effect.value, inputVar: effect.input, result: effect.result }; break;
       case 'trigger': source = { type: 'v2RunTrigger', ...operandSource('target', effect.name) }; break;
       case 'reload': source = { type: 'v2UpdateGUI' }; break;
+      case 'lua': source = { type: 'triggerlua', code: effect.code }; break;
       case 'call': {
         const option = OPTIONS[effect.type];
         const inputs = CALLS[effect.type].map((field: string, place) => operandSource(field, effect.inputs[place]!));

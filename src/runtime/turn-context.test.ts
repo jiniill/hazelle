@@ -15,6 +15,7 @@ import { setTranslate } from './characters';
 import { addLore } from './lore';
 import { afterEnter, gatherTurn, moduleContributions, previewRequest, wouldSend } from './turn-context';
 import { answerable, testServer } from './testing';
+import { PLAIN_LUA } from '../engine/import/types';
 
 const server = testServer();
 
@@ -57,7 +58,7 @@ it('prepares the preview without credentials for every chat connector, with the 
 it('lists only the post-Enter work selected by the real translation, tool and retrieval facts, and no script hook', () => server.withSession(async (session) => {
   await answerable(session);
   const card = blankCard('bot');
-  card.triggers = [{ id: 'live', kind: 'lua', name: 'live', code: 'function onStart(id) end' }, { id: 'off', kind: 'lua', name: 'off', code: 'x()', off: true }];
+  card.triggers = [{ id: 'live', kind: 'lua', ...PLAIN_LUA, name: 'live', code: 'function onStart(id) end' }, { id: 'off', kind: 'lua', ...PLAIN_LUA, name: 'off', code: 'x()', off: true }];
   const character = await session.store.create('character', { card, folder: null, loreFolders: [] });
   if (!character.ok) throw new Error(character.error);
   const chat = crypto.randomUUID();
@@ -86,7 +87,7 @@ it('lists only the post-Enter work selected by the real translation, tool and re
 it('attributes preview lore to its pack and keeps pack order, attachment sites and enabled contributions', () => server.withSession(async (session) => {
   const { store } = session;
   const toggle = { kind: 'check' as const, key: 'enabled', label: 'enabled', default: '1' as const };
-  const module = await store.create('module', { name: 'module', description: '', namespace: null, loreFolders: [], toggles: [toggle], regex: [{ id: 'r', name: '', stage: 'input', find: 'x', replace: 'y', flags: null }], triggers: [{ id: 't', kind: 'lua', name: '', code: 'function onInput(id) end' }, { id: 'off', kind: 'lua', name: '', code: 'x()', off: true }] });
+  const module = await store.create('module', { name: 'module', description: '', namespace: null, loreFolders: [], toggles: [toggle], regex: [{ id: 'r', name: '', stage: 'input', find: 'x', replace: 'y', flags: null }], triggers: [{ id: 't', kind: 'lua', ...PLAIN_LUA, name: '', code: 'function onInput(id) end' }, { id: 'off', kind: 'lua', ...PLAIN_LUA, name: '', code: 'x()', off: true }] });
   if (!module.ok) throw new Error(module.error);
   const character = await store.create('character', { card: blankCard('bot'), folder: null, loreFolders: [], modules: [module.data.id] });
   if (!character.ok) throw new Error(character.error);

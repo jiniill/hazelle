@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Pack } from '../../engine/import/types';
+import { PLAIN_LUA, type Pack } from '../../engine/import/types';
 import type { ToggleLine } from '../../model/prompt';
 import { packHolds, packParts, scriptHolds } from './pack';
 
@@ -11,7 +11,7 @@ describe('what a pack holds', () => {
     const pack: Pack = {
       ...EMPTY,
       triggers: [
-        { kind: 'lua', id: 'trigger-0', name: '', code: '' },
+        { kind: 'lua', ...PLAIN_LUA, id: 'trigger-0', name: '', code: '' },
         { kind: 'blocks', id: 'trigger-1', name: '', on: 'start', conditions: [], effects: [] },
       ],
       toggles: [check('storm'), check('weather')],
@@ -27,7 +27,7 @@ describe('what a pack holds', () => {
   });
 
   it('gives each part as a count the contents line is written from', () => {
-    const pack: Pack = { regex: [], triggers: [{ kind: 'lua', id: 'trigger-0', name: '', code: '' }], toggles: [check('storm'), { kind: 'unread', text: '=' }, check('weather')], background: '<style></style>' };
+    const pack: Pack = { regex: [], triggers: [{ kind: 'lua', ...PLAIN_LUA, id: 'trigger-0', name: '', code: '' }], toggles: [check('storm'), { kind: 'unread', text: '=' }, check('weather')], background: '<style></style>' };
     expect(packParts(pack, 6, 2)).toEqual({ lore: 6, regex: 0, triggers: 1, toggles: 2, assets: 2, style: true });
     expect(packParts(EMPTY, 0, 0)).toEqual({ lore: 0, regex: 0, triggers: 0, toggles: 0, assets: 0, style: false });
   });

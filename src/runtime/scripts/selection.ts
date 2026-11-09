@@ -8,9 +8,10 @@ import type { ObjectStore } from '../store';
 import { toolsOf } from '../tools/store';
 
 // Keep pack/trigger order and literal block-trigger names for button dispatch.
-// Skip disabled/empty Lua so they cannot create engines or falsely mark a chat scripted.
+// Skip disabled/empty Lua so they cannot create engines or falsely mark a chat scripted; one with later effects runs
+// them.
 export const triggersOf = (packs: ReturnType<typeof packsOf>): ScriptUnit[] => packs.flatMap(({ id, pack, module }) =>
-  pack.triggers.filter((trigger) => !trigger.off && (trigger.kind !== 'lua' || trigger.code.trim())).map((trigger) => ({
+  pack.triggers.filter((trigger) => !trigger.off && (trigger.kind !== 'lua' || trigger.code.trim() || trigger.effects.length)).map((trigger) => ({
     ...trigger, ...(trigger.kind === 'lua' && { name: trigger.name || 'Lua' }), owner: { kind: module ? 'module' as const : 'character' as const, id },
   })),
 );
@@ -20,7 +21,8 @@ export const atOf = (scope: ChatScope, message: string): Hazelle.At | null => {
   return index === -1 ? null : { index: index - (scope.greeting === null ? 0 : 1), id: message, version: scope.messages[index]!.id };
 };
 
-export const scriptsOf = (packs: ReturnType<typeof packsOf>) => triggersOf(packs).filter((trigger): trigger is Extract<ScriptUnit, { kind: 'lua' }> => trigger.kind === 'lua');
+// The Lua triggers whose own code runs, which alone hear edits and the display.
+export const scriptsOf = (packs: ReturnType<typeof packsOf>) => triggersOf(packs).filter((trigger): trigger is Extract<ScriptUnit, { kind: 'lua' }> => trigger.kind === 'lua' && trigger.code.trim() !== '');
 
 export function unitFor(store: ObjectStore, chat: string, module: string): ToolUnit | null {
   const stored = live(store.get('chat', chat));

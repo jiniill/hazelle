@@ -5,7 +5,7 @@ import { setModuleAlways } from './modules';
 import { noOutcome, type Binding } from './scripts/binding';
 import { importTool } from './tools/store';
 import { describe, expect, it, vi } from 'vitest';
-import type { Card } from '../engine/import/types';
+import { PLAIN_LUA, type Card } from '../engine/import/types';
 import { fold, shown, type Receipt } from '../model/chat';
 import { setDefaultModel, taskModel } from './assignment';
 import { setTranslate } from './characters';
@@ -332,7 +332,7 @@ it('runs tool prompts after Lua, regathers tool edits, and places both sets of w
     const tool = await importTool(session.store, session.files, source.tool);
     if (!tool.ok) throw new Error(tool.error);
     await setModuleAlways(session.store, tool.data.id, true);
-    const character = await session.store.create('character', { card: { ...luna, triggers: [{ kind: 'lua', id: 'onStart', name: '', code: 'function onStart(id) setChatVar(id, "phase", "lua") end' }] }, folder: null, loreFolders: [] });
+    const character = await session.store.create('character', { card: { ...luna, triggers: [{ kind: 'lua', ...PLAIN_LUA, id: 'onStart', name: '', code: 'function onStart(id) setChatVar(id, "phase", "lua") end' }] }, folder: null, loreFolders: [] });
     if (!character.ok) throw new Error(character.error);
     const chat = crypto.randomUUID();
     await server.hold(session.store, chat);

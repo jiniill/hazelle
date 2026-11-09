@@ -11,6 +11,7 @@ import { evaluateChat, packsOf, togglesOf } from './chat-context';
 import { accountSettings } from './account-settings';
 import { likenessId } from '../model/likeness';
 import { takeTurn } from './turn';
+import { PLAIN_LUA } from '../engine/import/types';
 
 const server = testServer();
 
@@ -26,7 +27,7 @@ describe('modules', () => {
       if (!character.ok) throw new Error(character.error);
       const pack = {
         regex: [{ id: 'regex-0', name: 'after', find: 'LAMP', replace: 'STAR', stage: 'display' as const, flags: null }],
-        triggers: [{ kind: 'lua' as const, id: 'trigger-0', name: 'main', code: `listenEdit('editOutput', function(id, value) return value .. ' (module)' end)` }],
+        triggers: [{ kind: 'lua' as const, ...PLAIN_LUA, id: 'trigger-0', name: 'main', code: `listenEdit('editOutput', function(id, value) return value .. ' (module)' end)` }],
         background: '<style>.bell { color: red }</style>',
         toggles: [{ key: 'ring', label: 'Ring', kind: 'check' as const, default: '0' as const }],
       };

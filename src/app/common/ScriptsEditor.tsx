@@ -244,6 +244,7 @@ function LuaItem(props: ItemProps & { trigger: Lua; language: CodeLanguage; tria
     <Item {...props} title={name} tag={tag}>
       <TextField label="이름" value={shown.name} onChange={(value) => save.change({ name: value })} />
       <TextField label="코드" kind="key" lines={20} expand={SHORTCUTS.bigEdit.keys} language={language} aside={trial({ ...trigger, owner })} value={code} onChange={onDraft} />
+      {(shown.conditions.length > 0 || shown.effects.length > 0) && <Steps trigger={shown} />}
       <Row kind="actions">
         <Button variant="primary" size="sm" disabled={!pending} onClick={() => void apply()}>
           적용
@@ -261,8 +262,13 @@ function BlocksItem(props: ItemProps & { trigger: Blocks }) {
   const actions = useScriptActions(props, 'triggers', trigger, name, (task) => task());
   return (
     <Item {...props} title={name} tag={trigger.off ? OFF : null} note={ON[trigger.on] ?? trigger.on}>
-      <Text variant="note">{`조건 ${trigger.conditions.length}개 · 효과 ${trigger.effects.length}개`}</Text>
+      <Steps trigger={trigger} />
       {actions(undefined)}
     </Item>
   );
+}
+
+// Kept as imported and written back on export; this screen does not edit them.
+function Steps({ trigger }: { trigger: Trigger }) {
+  return <Text variant="note">{`조건 ${trigger.conditions.length}개 · 효과 ${trigger.effects.length}개`}</Text>;
 }

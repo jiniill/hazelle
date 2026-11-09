@@ -5,7 +5,7 @@ import { blockConditions, blockEffects } from '../engine/import/blocks';
 import { blankCard, importCard, importRisum } from '../engine/import/card';
 import { readRisum, readRisumModule } from '../engine/import/risum';
 import { fileSource } from '../engine/import/source';
-import type { Card, LoreEntry } from '../engine/import/types';
+import { PLAIN_LUA, type Card, type LoreEntry } from '../engine/import/types';
 import { likenessId } from '../model/likeness';
 import { setService } from './admin';
 import { readTool } from '../engine/import/tool';
@@ -75,7 +75,7 @@ describe('a character file', () => {
         { id: 'regex-1', name: '꺼 둔 것', find: 'a', replace: 'b', stage: 'output', flags: null, off: true },
       ],
       triggers: [
-        { id: 'trigger-0', kind: 'lua', name: 'main', code: 'function onOutput() end' },
+        { id: 'trigger-0', kind: 'lua', ...PLAIN_LUA, name: 'main', code: 'function onOutput() end' },
         {
           id: 'trigger-1',
           kind: 'blocks',
@@ -96,7 +96,7 @@ describe('a character file', () => {
             { type: 'v2Unknown', anything: [1], indent: 0 },
           ]),
         },
-        { id: 'trigger-2', kind: 'lua', name: 'spare', code: 'return 1', off: true },
+        { id: 'trigger-2', kind: 'lua', ...PLAIN_LUA, name: 'spare', code: 'return 1', off: true },
       ],
     };
     const lore = [entry('등대', { folder: 1 }), entry('꺼진', { enabled: false }), entry('앞', { priority: 3, position: 'before_char', keys: ['a, b', 'c'] }), entry('바다', { folder: 0, constant: true })];
@@ -172,7 +172,7 @@ describe('a module file', () => {
       name: '전화', description: '폰 화면', namespace: 'phone', risu: null, unsupported: [],
       pack: {
         regex: [{ id: 'regex-0', name: '화면', find: 'x', replace: 'y', stage: 'display', flags: null }, { id: 'regex-1', name: '꺼 둔 것', find: 'a', replace: 'b', stage: 'output', flags: null, off: true }],
-        triggers: [{ id: 'trigger-0', kind: 'lua', name: 'main', code: 'function onOutput() end' }, { id: 'trigger-1', kind: 'lua', name: 'spare', code: 'return 1', off: true }],
+        triggers: [{ id: 'trigger-0', kind: 'lua', ...PLAIN_LUA, name: 'main', code: 'function onOutput() end' }, { id: 'trigger-1', kind: 'lua', ...PLAIN_LUA, name: 'spare', code: 'return 1', off: true }],
         background: '<style>.phone {}</style>',
         toggles: [{ key: 'ring', label: '벨', kind: 'check', default: '0' }],
       },

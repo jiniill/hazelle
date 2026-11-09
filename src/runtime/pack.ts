@@ -1,4 +1,4 @@
-import { NEW_STAGE, type Listed, type Pack, type RegexScript, type Trigger } from '../engine/import/types';
+import { NEW_STAGE, PLAIN_LUA, type Listed, type Pack, type RegexScript, type Trigger } from '../engine/import/types';
 import { without } from '../model/fields';
 import type { PackOwner } from '../model/library';
 import type { ToggleLine } from '../model/prompt';
@@ -47,7 +47,7 @@ export const addRegex = (store: ObjectStore, owner: PackOwner, id: string) =>
   updatePack(store, owner, ({ regex }) => ({ regex: holds(regex, id) ? regex : [...regex, { id, name: '', find: '', replace: '', stage: NEW_STAGE, flags: null }] }));
 
 export const addLua = (store: ObjectStore, owner: PackOwner, id: string) =>
-  updatePack(store, owner, ({ triggers }) => ({ triggers: holds(triggers, id) ? triggers : [...triggers, { kind: 'lua', id, name: '', code: '' }] }));
+  updatePack(store, owner, ({ triggers }) => ({ triggers: holds(triggers, id) ? triggers : [...triggers, { kind: 'lua', id, name: '', code: '', ...PLAIN_LUA }] }));
 
 export const editRegex = (store: ObjectStore, owner: PackOwner, id: string, patch: Partial<Omit<RegexScript, 'id' | 'off'>>) =>
   updatePack(store, owner, ({ regex }) => {
