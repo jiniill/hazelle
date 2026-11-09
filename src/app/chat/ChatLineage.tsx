@@ -50,9 +50,14 @@ function stemsOf(root: Member, current: string): { root: Stem; members: Map<stri
   return { root: stem(root), members };
 }
 
-export function ChatLineage({ current, shelf, onClose }: Props) {
+export function useFamily(current: string, shelf: CharacterShelf<ChatSummary> | null): Member {
   const { none } = useLibrary();
   const { chats } = shelf ?? none;
+  return useMemo(() => family(chats, current), [chats, current]);
+}
+
+export function ChatLineage({ current, shelf, onClose }: Props) {
+  const tree = useFamily(current, shelf);
   const edits = useChatEdits();
   const wide = useWide();
   const [naming, setNaming] = useState<ChatSummary | null>(null);
@@ -61,7 +66,6 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
   const [views, chooseView] = usePersisted('risu-alpha:lineage-view', parseViews, {});
   const view = views[mode] ?? DEFAULT_VIEW[mode];
   const [preview, setPreview] = usePersisted('risu-alpha:lineage-preview', (stored) => stored === 'true', true, String);
-  const tree = useMemo(() => family(chats, current), [chats, current]);
   const count = useMemo(() => countChats(tree), [tree]);
   const { root, members } = useMemo(() => stemsOf(tree, current), [tree, current]);
   // Beside the story the map stays open in the chat it opens; covering it, the chat takes its place.

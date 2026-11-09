@@ -1,20 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { matches } from '../../common/search';
-import { FEATURE_NAMES, PAGES } from '../../common/words';
+import { FEATURE_NAMES, PAGES, PICTURE_PLACE, TOOL_PAGES, TOOLS } from '../../common/words';
 import { FEATURES } from '../../../model/features';
 import { EMPTY_SETTINGS } from '../../../model/settings';
 import type { SettingsPage } from '../routes';
+import { TOOL_PLACES } from '../tools/ToolsNav';
 import { hitsOf, hitTexts, subpages } from './terms';
 
 const PLACES = [
   ...(['models', 'connections', 'chat', 'labs', 'prompts', 'personas', 'modules', 'plugins', 'display', 'controls', 'sounds', 'account', 'admin'] satisfies SettingsPage[]).map((page) => ({ page, label: PAGES[page] })),
   ...FEATURES.map((page) => ({ page, label: FEATURE_NAMES[page] })),
 ].map((place) => ({ ...place, route: { kind: 'settings' } as const }));
-const hits = hitsOf(PLACES, subpages({ ...EMPTY_SETTINGS, profile: 'main' }, [{ id: 'main' }]));
+const TOOLS_SOUGHT = TOOL_PLACES.map((place) => ({ ...place, where: TOOLS }));
+const hits = hitsOf([...PLACES, ...TOOLS_SOUGHT], subpages({ ...EMPTY_SETTINGS, profile: 'main' }, [{ id: 'main' }]));
 const search = (words: string) => hits.filter((hit) => matches(words, ...hitTexts(hit)));
 
 const SHOWN = Object.values(
-  import.meta.glob<string>(['/src/app/{settings,models,connections,admin}/*.tsx', '/src/app/common/{TranslateRows,IllustrateRows,MemoryFields,ReadingRows,RetriesRow}.tsx', '!**/*.test.tsx'], { query: '?raw', import: 'default', eager: true }),
+  import.meta.glob<string>(['/src/app/{settings,models,connections,admin,tools}/*.tsx', '/src/app/common/{TranslateRows,IllustrateRows,MemoryFields,ReadingRows,RetriesRow}.tsx', '!**/*.test.tsx'], { query: '?raw', import: 'default', eager: true }),
 );
 // The element's own label or title, past attributes before it; an inner control's own label is not it.
 const LITERAL = /<(?:SettingRow|CountRow|TaskModelRow|Section|Panel)\s+(?:\w+=(?:\{[^}]*\}|"[^"]*")\s+)*(?:label|title)="([^"]+)"/g;
@@ -36,6 +38,16 @@ describe('설정 검색', () => {
 
   it('shows the real label for a hidden word', () => {
     for (const [word, label] of [['캐싱', '캐시'], ['폰트', '글꼴'], ['다크', '테마'], ['메모리', '장기 기억'], ['temperature', '온도'], ['최대 토큰', '응답 최대 길이'], ['API 키', 'API 연결']] as const) expect(search(word).map(({ term }) => term), word).toEqual([label]);
+  });
+
+  it('opens the pages of 도구, named by the window that holds them', () => {
+    expect(search('계산기').map(({ term, where, to }) => [term, where, to])).toEqual([[TOOL_PAGES.calculator, TOOLS, { kind: 'calculator' }]]);
+    expect(search(TOOL_PAGES.translator).find(({ term }) => term === TOOL_PAGES.translator)).toMatchObject({ where: TOOLS, to: { kind: 'translator' } });
+    expect(search('원문').find(({ where }) => where === TOOL_PAGES.translator)?.to).toEqual({ kind: 'translator' });
+  });
+
+  it('finds 이미지 위치 by 삽화 위치, on each page that shows it', () => {
+    expect(search('삽화 위치').map(({ term, where }) => [term, where])).toEqual(expect.arrayContaining([[PICTURE_PLACE, FEATURE_NAMES.illustrate], [PICTURE_PLACE, PAGES.display]]));
   });
 
   it('opens the default 모델 설정 from one of its rows, and 모델 when there is none', () => {

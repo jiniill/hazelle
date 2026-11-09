@@ -22,10 +22,14 @@ const PLACES = OFFERED.map(({ id, name }) => {
 
 const BEATS_COUNTED = { example: 'read', trial: 'door' } as const;
 
+// What is typed into the key form, held by the page: the form is gone while a key is tried and comes back as it was.
+type Typed = { picked: string; key: string };
+
 // doors: a first visit, counted and with the live trial; null: START_AGAIN.
 export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: () => void } | null }) {
   const { heading, line, example, keys, trial, features, move, finish } = START_PAGE;
   const [step, setStep] = useState(0);
+  const [typed, setTyped] = useState<Typed>({ picked: OFFERED[0].id, key: '' });
   const [entered, setEntered] = useState<{ type: ConnectionType; secret: string } | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
   const [talking, setTalking] = useState(false);
@@ -96,7 +100,7 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
                 />
               </Suspense>
             ) : (
-              <KeyForm refused={refused} privacy={doors ? trial.privacy : START_AGAIN.privacy} onSkip={doors ? enter : undefined} onEnter={(type, secret) => { if (doors) countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
+              <KeyForm typed={typed} onType={setTyped} refused={refused} privacy={doors ? trial.privacy : START_AGAIN.privacy} onSkip={doors ? enter : undefined} onEnter={(type, secret) => { if (doors) countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
             )}
           </PanelBody>
         </Indoors>
@@ -115,12 +119,16 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
 }
 
 // onSkip: a first visit's way into the app without a key; the key is never the only way on.
-function KeyForm({ refused, privacy, onSkip, onEnter }: { refused: string | null; privacy: string; onSkip?: () => void; onEnter: (type: ConnectionType, secret: string) => void }) {
-  const [picked, setPicked] = useState<string>(OFFERED[0].id);
-  const [key, setKey] = useState('');
-  const secret = key.trim();
+function KeyForm({ typed, onType, refused, privacy, onSkip, onEnter }: { typed: Typed; onType: (typed: Typed) => void; refused: string | null; privacy: string; onSkip?: () => void; onEnter: (type: ConnectionType, secret: string) => void }) {
+  const form = useRef<HTMLFormElement>(null);
+  const secret = typed.key.trim();
   const known = detect(secret);
-  const type = known?.kind === 'key' ? known.type : typeOf(picked);
+  const type = known?.kind === 'key' ? known.type : typeOf(typed.picked);
+
+  // Back from a refused key, which is what to fix.
+  useEffect(() => {
+    if (refused) form.current?.querySelector('input')?.focus();
+  }, [refused]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -128,10 +136,10 @@ function KeyForm({ refused, privacy, onSkip, onEnter }: { refused: string | null
   }
 
   return (
-    <form onSubmit={submit}>
+    <form ref={form} onSubmit={submit}>
       <Stack>
-        <ChoiceGroup label="제공자" options={OFFERED.map(({ id, name }) => ({ value: id, label: name }))} value={OFFERED.some(({ id }) => id === type.id) ? type.id : null} empty={type.label} onChange={setPicked} />
-        <TextField label={`${type.label} API 키`} kind="key" value={key} onChange={setKey} placeholder={type.keyForm?.placeholder} help={privacy} />
+        <ChoiceGroup label="제공자" options={OFFERED.map(({ id, name }) => ({ value: id, label: name }))} value={OFFERED.some(({ id }) => id === type.id) ? type.id : null} empty={type.label} onChange={(picked) => onType({ ...typed, picked })} />
+        <TextField label={`${type.label} API 키`} kind="key" value={typed.key} onChange={(key) => onType({ ...typed, key })} placeholder={type.keyForm?.placeholder} help={privacy} />
         {refused && <Callout tone="warn" alert>{refused}</Callout>}
         <Row kind="actions">
           <Button type="submit" disabled={!secret}>모델 선택</Button>
