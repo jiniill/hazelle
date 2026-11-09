@@ -282,6 +282,6 @@ pre:has(> [data-copy]) {
   cursor: not-allowed !important;
 }
 
-:host([data-buttons='live']) :is(button, [risu-btn], [risu-trigger]) {
+:host([data-buttons='live']) :is(button, [risu-btn], [risu-trigger], [risu-change-var-name]) {
   cursor: pointer;
 }

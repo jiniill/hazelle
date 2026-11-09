@@ -2,7 +2,7 @@ import { hex } from '../hex';
 import { describe, expect, it } from 'vitest';
 import { resolveAssets } from './assets';
 import { evaluate } from './cbs/evaluate';
-import { display, DisplayPass, storyHtml, stripStyles } from './display';
+import { display, DisplayPass, onboardingPage, storyHtml, stripStyles } from './display';
 import type { HistoryMessage } from './history';
 import { blankCard } from './import/card';
 import type { Card } from './import/types';
@@ -66,6 +66,12 @@ describe('display', () => {
     const { background, css } = display({ ...scope, packs: [{ ...card, background: '<style>.a{}</style><div style="color: red">{{getvar::hp}}</div>' }, module] });
     expect(background).toBe('<div style="color: red">7</div>\n\n<p>two</p>');
     expect(css.split('\n')[0]).toBe('.a{}');
+  });
+
+  it('reads a new chat’s 시작 전 설문 page with what the chat starts from, its styles apart, and says when its CBS runs away', () => {
+    const start = { ...scope, messages: [], variables: [['lang', 'ko']] as [string, string][] };
+    expect(onboardingPage(start, '<style>.selected{color:{{getvar::lang}}}</style><div risu-change-var-name="lang">{{char}} {{getvar::lang}}</div>')).toEqual({ html: '<div risu-change-var-name="lang">Luna ko</div>', css: '.selected{color:ko}' });
+    expect(onboardingPage(start, '{{settempvar::x::ab}}' + '{{settempvar::x::{{gettempvar::x}}{{gettempvar::x}}}}'.repeat(24))).toEqual({ kind: 'runaway' });
   });
 
   it('reads a <risu-style> a message holds with the chat’s last variables', () => {

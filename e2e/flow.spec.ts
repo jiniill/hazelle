@@ -199,7 +199,7 @@ test('a new account imports a card, chats through the fake provider and finds th
     expect(cover!.y + cover!.height).toBeLessThanOrEqual(message!.y + message!.height);
     await expect(greeting.locator('#outside')).toHaveCount(0);
     await expect(greeting.locator('#marked')).not.toHaveAttribute('data-picture');
-    await expect(greeting.locator('form')).toHaveCount(0);
+    await expect(greeting.locator('form')).not.toHaveAttribute('action');
     await expect(greeting.locator('#field')).toHaveCount(1);
     await expect(greeting.locator('#out')).toHaveAttribute('rel', 'noopener noreferrer');
     await expect(greeting.locator('#js')).not.toHaveAttribute('href', /./);
@@ -207,6 +207,10 @@ test('a new account imports a card, chats through the fake provider and finds th
     await expect(greeting.locator('mark')).toHaveText('"hello"');
     await greeting.getByRole('button', { name: '누르기', exact: true }).click();
     await expect(page.getByText('아무 동작도 연결되지 않은 버튼이에요.', { exact: true })).toBeVisible();
+    // A form submitted posts nothing: its submit is cancelled before the CSP's form-action would refuse it.
+    const at = page.url();
+    await greeting.locator('#field').press('Enter');
+    expect(page.url()).toBe(at);
     expect(await page.evaluate('window.ran')).toBeUndefined();
     expect(violations).toEqual([]);
   });

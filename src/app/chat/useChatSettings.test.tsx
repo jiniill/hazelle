@@ -86,3 +86,21 @@ it('changes the current persona only after the saved chat accepts its persona', 
     await act(() => root.unmount());
   }
 });
+
+it('starts a new chat from its 시작 전 설문 answers, the last given in place of the earlier', async () => {
+  let settings: ReturnType<typeof useChatSettings>;
+  function Probe() {
+    settings = useChatSettings(null, null, 'owner');
+    return null;
+  }
+  const root = probeRoot();
+  try {
+    await act(() => root.render(<Probe />));
+    await act(async () => settings!.actions.startWith([['lang', 'en']]));
+    await act(async () => settings!.actions.startWith([['lang', 'ko'], ['mode', 'easy']]));
+    expect(settings!.chat.variables).toEqual([['lang', 'ko'], ['mode', 'easy']]);
+    expect(store.update).not.toHaveBeenCalled();
+  } finally {
+    await act(() => root.unmount());
+  }
+});

@@ -6,7 +6,7 @@ import type { RegexScript } from '../engine/import/types';
 import type { AgentInput, assembleAgent, assembleIllustration, assembleMascot, assembleMemory, assemblePreread, assembleTranslation, IllustrationInput, MascotInput, MemoryTaskInput, PrereadInput, PromptInput, RanAway, TranslationInput } from '../engine/pipeline';
 import type { ChatScope, VariableInspection } from '../engine/render';
 import type { ApiFailure } from './api';
-import type { ChatTexts, Counted, DisplayEvaluation, EvaluatedPrompt, EvaluationDown, EvaluationInput, EvaluationJob, EvaluationResult, EvaluationUp, LuaResult, ToolState, TrialRead } from './evaluation-core';
+import type { ChatTexts, Counted, DisplayEvaluation, EvaluatedPrompt, EvaluationDown, EvaluationInput, EvaluationJob, EvaluationResult, EvaluationUp, LuaResult, OnboardingPage, ToolState, TrialRead } from './evaluation-core';
 import { autoDiagnose } from './auto-diagnosis';
 import { noteProblem } from './diagnostics';
 import { changedTail, sameHistory } from './history-delta';
@@ -71,6 +71,7 @@ const GATES = {
   tool: 'press',
   export: 'press',
   trial: 'press',
+  onboarding: 'press',
 } as const satisfies Record<EvaluationAsker, 'display' | 'passive' | 'press'>;
 type Asker = keyof typeof GATES;
 // One job per caller/chat lane: replacement cancels the prior job. Retain history for changed-tail transport.
@@ -156,6 +157,11 @@ export class Evaluation {
   // A draft read after the chat (시험해 보기), on a lane of its own so it never stops 점검's.
   text(lane: Lane<'trial'>, scope: ChatScope, text: string, language: string | null, signal?: AbortSignal): Promise<TrialRead | RanAway> {
     return this.run(keyOf(lane), lane, scope, { kind: 'text', text, language }, signal) as Promise<TrialRead | RanAway>;
+  }
+
+  // A new chat's 시작 전 설문 page, read with the chat's start.
+  onboarding(lane: Lane<'onboarding'>, scope: ChatScope, html: string, signal?: AbortSignal): Promise<OnboardingPage> {
+    return this.run(keyOf(lane), lane, scope, { kind: 'onboarding', html }, signal) as Promise<OnboardingPage>;
   }
 
   // A translation's, and a bot's lorebook read, may run beside others of the same chat: each has a lane of its own,

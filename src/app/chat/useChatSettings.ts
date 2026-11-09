@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
-import type { Chat } from '../../model/chat';
+import type { Chat, Writes } from '../../model/chat';
 import type { Feature } from '../../model/features';
 import { setAgentAt, withAgent } from '../../runtime/agents';
 import type { ApiFailure, ApiResult } from '../../runtime/api';
@@ -47,6 +47,9 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
     return own.ok ? setCurrentPersona(store, persona) : own;
   }
 
+  // A new chat's 시작 전 설문 answers, which its first save starts it from.
+  const startWith = (variables: Writes) => setUnsaved((current) => ({ ...current, variables }));
+
   function changeCast(ids: string[]) {
     toast.settled(change((current) => withCast(current, chat.character, ids), (id) => setCast(store, id, ids)));
   }
@@ -65,6 +68,7 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
       choosePersona,
       pinPersona: (persona: string | null) => pinPersona(store, chat.character!, persona),
       setCast: changeCast,
+      startWith,
       setFeature: (feature: Feature, value: boolean | null) => change((current) => withFeature(current, feature, value), (id) => setFeatureAt(store, { kind: 'chat', id }, feature, value)),
       setAgent: (agent: string, on: boolean) => change((current) => withAgent(current, agent, on), (id) => setAgentAt(store, { kind: 'chat', id }, agent, on)),
     },

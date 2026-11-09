@@ -1,16 +1,18 @@
 import { FEATURE_ICONS } from '../common/featureIcons';
 import { toolMenu } from './toolMenu';
-import { BookKey, BookOpen, Bookmark, FolderInput, GitGraph, Keyboard, Package, PlaneTakeoff, ScanSearch, Search, SlidersHorizontal, SquarePen, ToggleRight, UsersRound } from 'lucide-react';
+import { BookKey, BookOpen, Bookmark, ClipboardList, FolderInput, GitGraph, Keyboard, Package, PlaneTakeoff, ScanSearch, Search, SlidersHorizontal, SquarePen, ToggleRight, UsersRound } from 'lucide-react';
 import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
+import type { Writes } from '../../model/chat';
 import { pinnedBy } from '../../runtime/assignment';
-import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, promptName } from '../common/words';
+import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, ONBOARDING, promptName } from '../common/words';
 import { useRemembering, useSession, useToolFrames } from '../session';
 import { navigate } from '../shell/router';
 import { runShortcut } from '../shortcuts';
 import { Avatar, ChatTitle, Divider, Menu, MenuItem, MoreMenu, ToolButton, useMenuHandle, useMenuOpener, useWide } from '../ui';
 import { ChatCastMenu } from './ChatCastMenu';
+import { ChatOnboarding } from './ChatOnboarding';
 import { MOVE_TO_FOLDER } from '../common/folders/FolderParts';
 import { ChatNameDialog } from './ChatEdits';
 import { ChatFolderMenu, useChatFolders } from './ChatFolderMenu';
@@ -81,6 +83,7 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
         {item && <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => actions.openDialog('rename')} />}
         {item && <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={actions.duplicate} />}
         {fileable && <MenuItem icon={FolderInput} label={MOVE_TO_FOLDER} onClick={openFolders.onClick} />}
+        {chat.onboarding && <MenuItem icon={ClipboardList} label={ONBOARDING} onClick={() => actions.openDialog('onboarding')} />}
         <MenuItem icon={UsersRound} label={CAST} sub={cast.length ? `${cast.length}명` : undefined} onClick={openCast.onClick} />
         {item && !chat.displayPending && <MenuItem icon={ACTS.export.icon} label={EXPORT} onClick={() => actions.openDialog('export')} />}
         <Divider variant="menu" />
@@ -127,6 +130,13 @@ export function ChatDialogs({ chat }: { chat: OpenChat }) {
   );
   if (dialog === 'prompt') return <PromptDialog prompt={chat.prompt} plain={chat.card === null} out={chat.promptOut && chat.card === null} onChoose={actions.setPrompt} onKeepOut={actions.keepPromptOut} onEdit={(id) => actions.side({ kind: 'prompts', id, pane: null })} onClose={actions.closeDialog} />;
   if (dialog === 'reading') return <ReadingDialog onClose={actions.closeDialog} />;
+  if (dialog === 'onboarding' && chat.onboarding) {
+    const done = (answers: Writes) => {
+      actions.startWith(answers);
+      actions.closeDialog();
+    };
+    return <ChatOnboarding chatId={chat.chatId} chat={chat.place} onboarding={chat.onboarding} name={chat.card!.name} onDone={done} onClose={actions.closeDialog} />;
+  }
   if (dialog === 'export' && item) return <ChatExport item={item} messages={chat.messages} view={chat.view} placed={chat.placed} pictures={chat.pictures} flipped={chat.flipped} busy={chat.busy} bot={chat.decor.bot} characterName={chat.card?.name ?? null} names={chat.names} replyLanguage={chat.translate.replyLanguage} onTranslate={chat.features.translate ? actions.translate : undefined} onClose={actions.closeDialog} />;
   if (dialog === 'rename' && item) {
     return <ChatNameDialog title={item.title} origin={item.chat.origin !== undefined} onSave={actions.rename} onClose={actions.closeDialog} />;

@@ -229,6 +229,7 @@ function cardJson(char: Json): Json {
           largePortrait: char.largePortrait,
           viewScreen: char.viewScreen,
           toggles: char.customModuleToggle,
+          onboarding: char.onboarding,
         },
         depth_prompt: char.depth_prompt,
       },

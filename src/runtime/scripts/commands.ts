@@ -86,11 +86,11 @@ export class ScriptCommands {
   // A press on a bot's button, whose writes stay with the last message whichever version it shows. waits: an earlier
   // run holds the chat (an onOutput's model call can take a minute). The same button pressed again before its waiting
   // press begins joins it: a toggle pressed twice would otherwise land as no change. answered false: no script answered.
-  press(chat: string, button: { trigger: string; id: string } | { data: string }): { waits: boolean; answered: Promise<boolean> } {
+  press(chat: string, button: { trigger: string; id: string } | { data: string } | { form: string; fields: Record<string, string | string[]> }): { waits: boolean; answered: Promise<boolean> } {
     const key = `${chat}\n${JSON.stringify(button)}`;
     const joined = this.waiting.get(key);
     if (joined) return { waits: true, answered: joined };
-    const event: Event = 'trigger' in button ? { kind: 'call', name: button.trigger, id: button.id } : { kind: 'button', data: button.data };
+    const event: Event = 'trigger' in button ? { kind: 'call', name: button.trigger, id: button.id } : 'form' in button ? { kind: 'form', name: button.form, fields: button.fields } : { kind: 'button', data: button.data };
     const waits = this.schedule.busy(chat);
     const begun = () => { if (this.waiting.get(key) === answered) this.waiting.delete(key); };
     const answered: Promise<boolean> = this.execution.now(chat, event, onLast, begun).then((handled) => handled ?? false).finally(begun);

@@ -3,6 +3,7 @@ import type { BlockCondition, BlockEffect } from './blocks';
 import type { Character } from '../../model/library';
 import type { Likeness } from '../../model/likeness';
 import type { ToggleLine, ToggleValues } from '../../model/prompt';
+import type { Onboarding } from './onboarding';
 
 export type Card = {
   name: string;
@@ -25,6 +26,8 @@ export type Card = {
   bias: [string, number][];
   // Each setting stands alone, as in CCv3; null leaves it to the global default.
   loreSettings: { scanDepth: number | null; tokenBudget: number | null; recursive: boolean | null; fullWordMatching: boolean | null };
+  // 시작 전 설문, absent when the card has none.
+  onboarding?: Onboarding;
 } & Pack;
 
 // Its lorebook and assets are stored objects of their own, under whichever holds it. A chat reads its packs as one list,
@@ -129,7 +132,6 @@ export const UNSUPPORTED_KINDS = [
   'toggle-line',
   'mcp',
   'cjs',
-  'onboarding',
   'hazelle',
 ] as const;
 export type UnsupportedKind = (typeof UNSUPPORTED_KINDS)[number];

@@ -262,6 +262,10 @@ export async function chatNow(session: { store: ObjectStore; read: ReadModels },
 export const evaluateChat = async (reader: { store: Reader['store'] & Pick<ObjectStore, 'evaluation'> }, id: string, chat: Chat, messages: Message[], screen: ChatScope['screen'] = null, signal?: AbortSignal): Promise<Display> =>
   (await reader.store.evaluation.display({ asker: 'headless', chat: id }, { ...scopeOf(reader, id, chat, messages), screen }, pinned(reader, chat), signal)).display;
 
+// A new chat's 시작 전 설문 page, read with what the chat starts from, before it holds any message.
+export const onboardingPage = (reader: { store: Reader['store'] & Pick<ObjectStore, 'evaluation'> }, id: string, chat: Chat, html: string, signal?: AbortSignal) =>
+  reader.store.evaluation.onboarding({ asker: 'onboarding', chat: id }, scopeOf(reader, id, chat, []), html, signal);
+
 // Regex indices must match engine/render. Namespace module script ids as <module>:<script>:
 // imports reuse regex-0… ids within each pack.
 const statusMark = (module: string | null, script: string) => (module === null ? script : `${module}:${script}`);

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { entryName } from '../../connectors/types';
 import { resolveAssets, withAttachments } from '../../engine/assets';
 import { holdsPersona, unused } from '../../engine/pipeline';
+import { activeOnboarding } from '../../engine/import/onboarding';
 import { calls, keepsPromptOut, shown, type ChatItem, type ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
 import { autoDiagnose } from '../../runtime/auto-diagnosis';
@@ -151,7 +152,9 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const story = useStorySteps(messages, scroll.scrollRef, seekTo, follow);
   const memory = useChatMemory(id);
   const sendNotes = useSendNotes(chatId, unsaved, chat, messages, memory, draft.text, busy || displayPending === true);
-  const [dialog, setDialog] = useState<'rename' | 'reading' | 'persona' | 'prompt' | 'export' | null>(null);
+  // Ruled 2026-11-09: asked as a new chat opens and never after its first save, when it has begun from the answers.
+  const onboarding = useMemo(() => (item === null ? activeOnboarding(card?.onboarding) : null), [item === null, card?.onboarding]);
+  const [dialog, setDialog] = useState<'rename' | 'reading' | 'persona' | 'prompt' | 'export' | 'onboarding' | null>(() => (onboarding ? 'onboarding' : null));
   const modelMenu = useMenuHandle();
   const castMenu = useMenuHandle();
   const pairs = usePanelsBeside();
@@ -402,6 +405,8 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   return joinParts(status, translation, illustration, remark, attaching, {
     displayPending, displayError, retryDisplay, stuck,
     id,
+    // The id a new chat will be saved under.
+    chatId,
     item,
     shelf,
     card,
@@ -451,6 +456,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     bookmarked,
     usageShown,
     dialog,
+    onboarding,
     modelMenu,
     castMenu,
     draft,

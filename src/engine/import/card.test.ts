@@ -400,7 +400,6 @@ describe('importCard', () => {
       { kind: 'cbs-tag', count: 3 },
       { kind: 'regex-stage', count: 1 },
       { kind: 'toggle-line', count: 1 },
-      { kind: 'onboarding', count: 1 },
     ]);
   });
 

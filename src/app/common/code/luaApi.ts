@@ -79,6 +79,7 @@ export const LUA_EVENTS: readonly LuaFunction[] = [
   fn('onStart(id)', '메시지를 보낼 때마다 모델에 요청하기 직전에 실행돼요. false를 반환하면 요청을 보내지 않아요.'),
   fn('onOutput(id)', '응답을 받은 뒤 실행돼요.'),
   fn('onButtonClick(id, 데이터)', '봇이 만든 버튼을 누르면 실행돼요.'),
+  fn('onFormSubmit(id, 이름, 데이터)', '봇이 만든 양식을 제출하면 실행돼요. 데이터는 입력값을 담은 JSON이에요.'),
 ];
 
 // Set for the prelude's own use, never written by a bot: completion leaves them out.

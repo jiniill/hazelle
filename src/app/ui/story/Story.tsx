@@ -14,9 +14,14 @@ import styles from './Story.module.css';
 import shadowCss from './Story.shadow.css?inline';
 import backdropCss from './StoryBackdrop.shadow.css?inline';
 
-// One of the bot's buttons, as its HTML names it: risu-trigger names a function of its script, risu-btn carries data to it.
+// One of the bot's buttons, as its HTML names it: risu-trigger names a function of its script, risu-btn carries data to it,
+// and a submit of a <form risu-form> carries its fields, a name given more than once as a list, to onFormSubmit.
 // id: the trigger's element's risu-id, which {{triggerid}} reads; '' when it has none.
-export type BotButton = { trigger: string; id: string } | { data: string };
+export type BotButton = { trigger: string; id: string } | { data: string } | { form: string; fields: Record<string, string | string[]> };
+
+// 시작 전 설문's page (Risu's onboarding html): an element naming a variable sets it when pressed, a control as it
+// changes. values: the answers so far, which mark the element holding a variable's value selected for the page's CSS.
+type Bind = { values: ReadonlyMap<string, string>; onChange: (name: string, value: string) => void };
 
 type Inlay = { mark: string | null; node: ReactNode };
 
@@ -38,9 +43,14 @@ type Props = {
   illustrations?: Inlay[];
   // The element storySelection reads.
   ref?: Ref<HTMLDivElement>;
+  bind?: Bind;
 };
 
 const NAMED = '[risu-trigger], [risu-btn]';
+// Read only where a Story is given bind; in a message they set nothing.
+const VAR_NAME = 'risu-change-var-name';
+const VAR_VALUE = 'risu-change-var-value';
+const BOUND = `[${VAR_NAME}]`;
 // Named in Story.shadow.css.
 const PICTURE = 'data-picture';
 // Opened by a tap, and kept open (pictures); opened while the pointer is over it.
@@ -76,16 +86,17 @@ const TAG = /<[a-z][^>]*(?:>|$)/gi;
 const STYLE_ATTRIBUTE = /(\s)style(?=\s*=)/gi;
 const SET_ASIDE = 'data-style';
 export const setStylesAside = (html: string) => html.replace(TAG, (tag) => tag.replace(STYLE_ATTRIBUTE, `$1${SET_ASIDE}`));
-// No forms (page CSP has no form-action restriction) or popover/command (top layer escapes containment).
+// A form never leaves the page: it keeps no address (DOMPurify keeps no formaction either), every submit is cancelled
+// (Story, StoryBackdrop) and the page's CSP says form-action 'none'. No popover/command (top layer escapes containment).
 // Allow MathML semantics/annotation so DOMPurify does not unwrap TeX beside rendered formulas.
 // Add blob: to URL parsing; sanitize later restricts to app-owned sources and web links.
 // The kit's own marks are forbidden: one a bot wrote would stand where the code below reads what it set itself.
 const CONFIG = {
   RETURN_DOM_FRAGMENT: true as const,
   ADD_TAGS: ['semantics', 'annotation'],
-  FORBID_TAGS: ['form', 'style'],
-  FORBID_ATTR: ['style', 'popover', 'popovertarget', 'popovertargetaction', 'command', 'commandfor', PICTURE, OPEN, HOVER, WIDE, VEILED, COVER, COPY],
-  ADD_ATTR: ['risu-btn', 'risu-trigger', 'risu-id', 'risu-mark'],
+  FORBID_TAGS: ['style'],
+  FORBID_ATTR: ['style', 'action', 'popover', 'popovertarget', 'popovertargetaction', 'command', 'commandfor', PICTURE, OPEN, HOVER, WIDE, VEILED, COVER, COPY],
+  ADD_ATTR: ['risu-btn', 'risu-trigger', 'risu-id', 'risu-mark', 'risu-form', VAR_NAME, VAR_VALUE],
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|blob):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 };
 const VOID = new Set(['BR', 'HR', 'IMG', 'INPUT', 'WBR']);
@@ -404,6 +415,8 @@ function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFra
       element.removeAttribute('poster');
     }
   }
+  // A script reads a form's fields as text: a file picked would reach it as nothing, so none is offered.
+  for (const input of fragment.querySelectorAll('input[type=file i]')) input.remove();
   for (const missing of fragment.querySelectorAll(`[${INLAY_MISSING}]`)) missing.textContent = '옮기지 못한 이미지';
   for (const missing of fragment.querySelectorAll(`[${TEXTFILE}]:empty`)) missing.textContent = '찾을 수 없는 파일';
   for (const summary of fragment.querySelectorAll(`[${THOUGHTS}] > summary`)) summary.textContent = '추론';
@@ -521,11 +534,44 @@ function fit(at: ChildNode, node: ChildNode) {
   }
 }
 
+// As Risu reads a submit's FormData, the submitter's field among them: a name given again is a list. File inputs are
+// taken out when drawn, so each value is text. A Map first, so a field named __proto__ is a field.
+export function formFields(entries: Iterable<[string, FormDataEntryValue]>): Record<string, string | string[]> {
+  const fields = new Map<string, string | string[]>();
+  for (const [name, value] of entries) {
+    const held = fields.get(name);
+    fields.set(name, held === undefined ? (value as string) : [...(Array.isArray(held) ? held : [held]), value as string]);
+  }
+  return Object.fromEntries(fields);
+}
+
+const isControl = (element: Element): element is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
+  element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement;
+
+// A control shows the answer it holds when drawn, as Risu fills it, and is the reader's from then on.
+function fill(shadow: ShadowRoot, values: ReadonlyMap<string, string>) {
+  for (const element of shadow.querySelectorAll(BOUND)) {
+    const value = values.get(element.getAttribute(VAR_NAME)!);
+    if (!isControl(element) || value === undefined) continue;
+    if (element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio')) element.checked = value === (element.getAttribute(VAR_VALUE) ?? (element.type === 'checkbox' ? '1' : element.value));
+    else element.value = value;
+  }
+}
+
+// Risu's x-risu-selected, which a page's .selected reads once the prefix is taken off (cleanCss).
+function markBound(shadow: ShadowRoot, values: ReadonlyMap<string, string>) {
+  for (const element of shadow.querySelectorAll(BOUND)) {
+    if (isControl(element)) continue;
+    const value = values.get(element.getAttribute(VAR_NAME)!);
+    element.classList.toggle('selected', value !== undefined && value === (element.getAttribute(VAR_VALUE) ?? ''));
+  }
+}
+
 // Given by a box sized by its story's words (StoryMessage's bubble), named in Story.shadow.css.
 export const FitsWordsContext = createContext(false);
 
 // A message's text, drawn in a shadow root so a bot's HTML and CSS can never restyle or cover the app.
-export function Story({ html, css = '', cursor = false, tone = 'plain', buttons = 'inert', onPress, term = '', whole = false, inlays = [], illustrations = [], ref }: Props) {
+export function Story({ html, css = '', cursor = false, tone = 'plain', buttons = 'inert', onPress, term = '', whole = false, inlays = [], illustrations = [], ref, bind }: Props) {
   const room = useMarginRoom();
   const beside = illustrations.length > 0 && room;
   // Beside, each picture's slot stands empty where its mark is, which MarginPictures levels the picture with.
@@ -558,7 +604,43 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
     for (const [index, mark] of marks.entries()) placeInlay(fragment, mark, inlayName(index));
     morph(root(), fragment);
     for (const picture of root().querySelectorAll<HTMLImageElement>(`[${PICTURE}] > img`)) markWide(picture);
+    if (bind) fill(root(), bind.values);
   }, [html, cursor, pictures, veil, veilTaps, whole, placed, math, code]);
+
+  // After every draw too, which takes back what the last marked.
+  useLayoutEffect(() => {
+    if (bind) markBound(root(), bind.values);
+  });
+
+  const bound = bind?.onChange;
+  useEffect(() => {
+    if (!bound) return;
+    const shadow = root();
+    const press = (event: Event) => {
+      const target = (event.target as Element).closest(BOUND);
+      if (!target || isControl(target)) return;
+      event.preventDefault();
+      bound(target.getAttribute(VAR_NAME)!, target.getAttribute(VAR_VALUE) ?? '');
+    };
+    const change = (event: Event) => {
+      const target = event.target as Element;
+      if (!isControl(target) || !target.hasAttribute(VAR_NAME)) return;
+      const value = target.getAttribute(VAR_VALUE);
+      const name = target.getAttribute(VAR_NAME)!;
+      if (target instanceof HTMLInputElement && target.type === 'checkbox') bound(name, target.checked ? (value ?? '1') : '0');
+      else if (target instanceof HTMLInputElement && target.type === 'radio') {
+        if (target.checked) bound(name, value ?? target.value);
+      } else bound(name, target.value);
+    };
+    shadow.addEventListener('click', press);
+    shadow.addEventListener('input', change);
+    shadow.addEventListener('change', change);
+    return () => {
+      shadow.removeEventListener('click', press);
+      shadow.removeEventListener('input', change);
+      shadow.removeEventListener('change', change);
+    };
+  }, [bound]);
 
   // After the text is drawn, so the ranges lie over the nodes it now holds. Without the API, nothing is lit.
   useEffect(() => {
@@ -662,16 +744,28 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
       }
       // The nearest element that names what to run: a plain button inside one is that one's press.
       const named = (event.target as Element).closest(NAMED);
-      if (!named && !(event.target as Element).closest('button')) return;
+      const button = (event.target as Element).closest('button');
+      if (!named && !button) return;
+      // Its form's submit, which the form answers.
+      if (!named && button!.type === 'submit' && button!.form) return;
       // An element with both is its trigger, as in Risu.
       const trigger = named?.getAttribute('risu-trigger') ?? null;
       onPress?.(trigger !== null ? { trigger, id: named!.getAttribute('risu-id') ?? '' } : named ? { data: named.getAttribute('risu-btn')! } : null);
     };
+    // Every submit is cancelled, so a form without risu-form is a plain button's press.
+    const submit = (event: Event) => {
+      event.preventDefault();
+      const form = event.target as HTMLFormElement;
+      const name = form.getAttribute('risu-form');
+      onPress?.(name ? { form: name, fields: formFields(new FormData(form, (event as SubmitEvent).submitter)) } : null);
+    };
     shadow.addEventListener('click', press);
+    shadow.addEventListener('submit', submit);
     shadow.addEventListener('pointermove', enter);
     shadow.addEventListener('pointerout', leave);
     return () => {
       shadow.removeEventListener('click', press);
+      shadow.removeEventListener('submit', submit);
       shadow.removeEventListener('pointermove', enter);
       shadow.removeEventListener('pointerout', leave);
     };
@@ -725,5 +819,11 @@ export function StoryBackdrop({ html }: { html: string }) {
     for (const control of fragment.querySelectorAll(`[${VEILED}], [${COVER}]`)) control.remove();
     morph(root, fragment);
   }, [html, veil]);
+  useEffect(() => {
+    const root = host.current!.shadowRoot!;
+    const cancel = (event: Event) => event.preventDefault();
+    root.addEventListener('submit', cancel);
+    return () => root.removeEventListener('submit', cancel);
+  }, []);
   return <div ref={host} className={styles.backdrop} aria-hidden />;
 }

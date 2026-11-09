@@ -40,6 +40,7 @@ import { ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copy
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
+import { OnboardingEditor } from './OnboardingEditor';
 import { ShareDialog } from './ShareDialog';
 import { useCharacter, useChildren, useFiles, useModules, useSettings, useStore, useStored } from '../session';
 import { navigate } from '../shell/router';
@@ -331,24 +332,27 @@ export function CharacterEditor({ shelf, layout, part, onPart, partBack, frame }
     scripts: <ScriptsEditor owner={{ kind: 'character', id }} pack={card} drill={!split} status={character.statusScripts} variables={card.variables} />,
     toggles: <PackToggles owner={{ kind: 'character', id }} lines={card.toggles} />,
     variables: (
-      <Section title={DEFAULT_VARIABLES} help="새 채팅을 시작할 때 변수에 설정되는 초기값이에요. 기존 채팅에서도 아직 값이 바뀌지 않은 변수는 이 값을 사용해요.">
-        <EntryList
-          entries={text.variables}
-          onChange={(variables) => change({ variables })}
-          name={(index) => `변수 ${index + 1}`}
-          blank={['', ''] as [string, string]}
-          addLabel="변수 추가"
-          removed={(index) => `${index + 1}번째 변수를 삭제했어요.`}
-        >
-          {({ value: [name, value], index, name: label, set, remove }) => (
-            <FieldRow
-              name={<TextField label={`${label} 이름`} showLabel={false} placeholder="이름" kind="key" value={name} onChange={(next) => set([next, value])} error={variableError(text.variables, index)} />}
-              value={<TextField label={`${label} 값`} showLabel={false} placeholder="값" kind="key" value={value} onChange={(next) => set([name, next])} />}
-              action={remove}
-            />
-          )}
-        </EntryList>
-      </Section>
+      <>
+        <Section title={DEFAULT_VARIABLES} help="새 채팅을 시작할 때 변수에 설정되는 초기값이에요. 기존 채팅에서도 아직 값이 바뀌지 않은 변수는 이 값을 사용해요.">
+          <EntryList
+            entries={text.variables}
+            onChange={(variables) => change({ variables })}
+            name={(index) => `변수 ${index + 1}`}
+            blank={['', ''] as [string, string]}
+            addLabel="변수 추가"
+            removed={(index) => `${index + 1}번째 변수를 삭제했어요.`}
+          >
+            {({ value: [name, value], index, name: label, set, remove }) => (
+              <FieldRow
+                name={<TextField label={`${label} 이름`} showLabel={false} placeholder="이름" kind="key" value={name} onChange={(next) => set([next, value])} error={variableError(text.variables, index)} />}
+                value={<TextField label={`${label} 값`} showLabel={false} placeholder="값" kind="key" value={value} onChange={(next) => set([name, next])} />}
+                action={remove}
+              />
+            )}
+          </EntryList>
+        </Section>
+        <OnboardingEditor onboarding={text.onboarding} onChange={(onboarding) => change({ onboarding })} />
+      </>
     ),
     assets: <AssetsEditor owner={id} />,
     illustration: <PortraitsEditor owner={id} />,
