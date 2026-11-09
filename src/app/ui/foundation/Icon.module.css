@@ -12,3 +12,8 @@
   width: var(--icon-md);
   height: var(--icon-md);
 }
+
+.check {
+  display: flex;
+  color: var(--color-accent);
+}

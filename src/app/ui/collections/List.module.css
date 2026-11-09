@@ -11,11 +11,6 @@
   overflow: hidden;
 }
 
-/* Rows fill the box, which clips to its corners: a ring outside a row would be cut. */
-.box :focus-visible {
-  outline-offset: calc(-1 * var(--focus-ring-width));
-}
-
 .item {
   composes: ruled from '../foundation/surface.module.css';
 }

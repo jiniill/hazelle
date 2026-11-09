@@ -93,7 +93,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
         dockRef={useToastFloor()}
         panel={
           panel?.kind === 'toggles' ? (
-            <ChatToggles card={chat.card} toggles={chat.toggles} toggleOwner={chat.toggleOwner} onFlip={actions.flip} onWrite={actions.writeToggle} onReset={actions.resetToggles} onEdit={(section) => actions.side(toggleEditor(section))} onClose={actions.closePanel} />
+            <ChatToggles card={chat.card} toggles={chat.toggles} toggleOwner={chat.toggleOwner} onFlip={actions.flip} onWrite={actions.writeToggle} onReset={actions.resetToggles} onPreset={actions.pickPreset} sectionNow={actions.sectionNow} onEdit={(section) => actions.side(toggleEditor(section))} onClose={actions.closePanel} />
           ) : panel?.kind === 'info' ? (
             <ChatInfo id={id} shelf={shelf} messages={chat.messages} infoPick={chat.infoPick} tab={panel.tab} onTab={actions.switchInfoTab} onPick={actions.pickInfo} onRecord={chat.features.memory ? actions.memory : undefined} onEdit={actions.side} onCache={() => actions.openInspect('cache')} onClose={actions.closePanel} />
           ) : panel?.kind === 'memory' ? (

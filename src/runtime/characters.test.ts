@@ -9,7 +9,7 @@ import { likenessId } from '../model/likeness';
 import { randomBytes } from '../vault/aead';
 import { sealFile } from '../vault/files';
 import { api, holdAccount } from './api';
-import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, setPinnedTogglesSpread, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggle, setTranslate, translateSwitches } from './characters';
+import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, setPinnedTogglesSpread, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggleValues, setTranslate, translateSwitches } from './characters';
 import { markDeleted, purgeExpired, purgeNow } from './removal';
 import { createFolder } from './folders';
 import { appendUserMessage, removeChat, restoreChat, startChat } from './chat-log';
@@ -342,14 +342,14 @@ describe('purgeExpired', () => {
   });
 });
 
-describe('setToggle', () => {
+describe('setToggleValues', () => {
   it('keeps values per character and for 캐릭터 없이, and resetToggles drops a character’s', async () => {
     const { store } = await server.account();
     const added = await addCharacter(store, bare('루나'), none, () => {});
     const id = added.ok ? added.data : '';
-    await setToggle(store, id, 'sims', '1');
-    await setToggle(store, id, 'mode', '2');
-    await setToggle(store, null, 'sims', '0');
+    await setToggleValues(store, id, { sims: '1' });
+    await setToggleValues(store, id, { mode: '2' });
+    await setToggleValues(store, null, { sims: '0' });
     expect([store.get('character', id)?.value.toggles, accountSettings(store).toggles]).toEqual([{ sims: '1', mode: '2' }, { sims: '0' }]);
     await resetToggles(store, id);
     expect(store.get('character', id)?.value.toggles).toBeUndefined();

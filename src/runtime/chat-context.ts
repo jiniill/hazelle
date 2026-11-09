@@ -10,7 +10,7 @@ import type { ChatScope } from '../engine/render';
 import type { TranslationRequest } from '../engine/translate';
 import { keepsPromptOut, shown, type Chat, type Message } from '../model/chat';
 import { live } from '../model/library';
-import type { Toggle, ToggleLine } from '../model/prompt';
+import type { Toggle, ToggleLine, TogglePreset } from '../model/prompt';
 import { without } from '../model/fields';
 import type { Seen, Settings } from '../model/settings';
 import { chatToggles, toggleValue } from '../model/toggles';
@@ -169,19 +169,20 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
 }
 
 // Keep source layouts separate so one source's group lines cannot capture another's toggles.
-export type ToggleSource = { from: 'prompt' | 'card' | 'module'; id: string; name: string; lines: ToggleLine[] };
+export type ToggleSource = { from: 'prompt' | 'card' | 'module'; id: string; name: string; lines: ToggleLine[]; presets: TogglePreset[] };
 export type ChatToggleSet = { declared: Toggle[]; sources: ToggleSource[]; value: (key: string) => string | null };
 
 export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoice, packs: ReturnType<typeof packsOf>): ChatToggleSet {
   const character = chat.character === null ? null : (store.get('character', chat.character)?.value ?? null);
   const sources: ToggleSource[] = [
-    ...(prompt.kind === 'prompt' ? [{ from: 'prompt' as const, id: prompt.prompt.id, name: prompt.prompt.value.name, lines: prompt.prompt.value.toggles }] : []),
+    ...(prompt.kind === 'prompt' ? [{ from: 'prompt' as const, id: prompt.prompt.id, name: prompt.prompt.value.name, lines: prompt.prompt.value.toggles, presets: prompt.prompt.value.togglePresets ?? [] }] : []),
     // packsOf holds only a character or module that is there.
     ...packs.map(({ id, pack, module }) => ({
       from: module ? ('module' as const) : ('card' as const),
       id,
       name: module ? store.get('module', id)!.value.name : character!.card.name,
       lines: pack.toggles,
+      presets: pack.togglePresets ?? [],
     })),
   ];
   const declared = chatToggles(sources.flatMap(({ lines }) => lines));

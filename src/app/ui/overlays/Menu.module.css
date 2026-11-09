@@ -97,11 +97,6 @@
   }
 }
 
-.check {
-  display: flex;
-  color: var(--color-accent);
-}
-
 .heading {
   composes: detail from '../foundation/type.module.css';
   padding: var(--space-8) var(--space-8) var(--space-2);

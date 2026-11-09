@@ -185,6 +185,12 @@
   color: var(--color-text);
 }
 
+/* A list's row fills its line, between the rules that part the rows and inside a box that clips to its corners:
+   a ring outside it would cross a rule or be cut. */
+.list:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
 .tab {
   composes: ink from '../foundation/hover.module.css';
   color: var(--color-text-muted);

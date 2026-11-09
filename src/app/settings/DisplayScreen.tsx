@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { storyHtml } from '../../engine/display';
 import { setUsageShown } from '../../runtime/chat-context';
@@ -11,7 +11,7 @@ import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRo
 import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
 import { reader } from '../common/typedNumber';
-import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, SAVE_FAILED } from '../common/words';
+import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, PRESET, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useSettings, useStore } from '../session';
 import { backBar } from '../shell/router';
@@ -49,10 +49,10 @@ export function DisplayScreen({ back }: { back: Back | null }) {
     const preset = naming?.preset;
     setNaming(null);
     if (preset) return toast.settled(editLook(store, preset.id, { name: typed.trim() || preset.name }), '이름을 바꾸지 못했어요.');
-    toast.settled(addLook(store, { id: crypto.randomUUID(), name: typed.trim() || `내 프리셋 ${own.presets.length + 1}`, look: lookOf(reading, display) }), SAVE_FAILED);
+    toast.settled(addLook(store, { id: crypto.randomUUID(), name: typed.trim() || PRESET.named(own.presets.length), look: lookOf(reading, display) }), SAVE_FAILED);
   }
 
-  const remove = ({ id, name }: Preset) => removal({ name: () => name, noun: '프리셋', task: () => removeLook(store, id), restore: (removed) => restoreLook(store, removed) });
+  const remove = ({ id, name }: Preset) => removal({ name: () => name, noun: PRESET.noun, task: () => removeLook(store, id), restore: (removed) => restoreLook(store, removed) });
 
   const move = (from: number, to: number) => toast.settled(moveLook(store, own.presets[from]!.id, own.presets[to]!.id), '옮기지 못했어요.');
 
@@ -60,7 +60,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
   const menu = (preset: Preset, index: number) => (
     <>
       <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setNaming({ preset })} />
-      {preset !== current && <MenuItem icon={Save} label="현재 설정으로 덮어쓰기" onClick={() => toast.settled(editLook(store, preset.id, { look: lookOf(reading, display) }), SAVE_FAILED)} />}
+      {preset !== current && <MenuItem icon={ACTS.overwrite.icon} label={ACTS.overwrite.label} onClick={() => toast.settled(editLook(store, preset.id, { look: lookOf(reading, display) }), SAVE_FAILED)} />}
       {index > 0 && <MenuItem icon={ArrowLeft} label="앞으로 옮기기" onClick={() => move(index, index - 1)} />}
       {index < own.presets.length - 1 && <MenuItem icon={ArrowRight} label="뒤로 옮기기" onClick={() => move(index, index + 1)} />}
       <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => void remove(preset)} />
@@ -114,8 +114,8 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       </Section>
       {naming && (
         <NameDialog
-          title={naming.preset ? '프리셋 이름 바꾸기' : '프리셋으로 저장'}
-          value={naming.preset?.name ?? `내 프리셋 ${own.presets.length + 1}`}
+          title={naming.preset ? PRESET.rename : PRESET.save}
+          value={naming.preset?.name ?? PRESET.named(own.presets.length)}
           onSave={name}
           onClose={() => setNaming(null)}
         />

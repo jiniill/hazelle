@@ -17,7 +17,7 @@ import type { ToolEvent } from '../../engine/script-api';
 import { calls, fold, shown } from '../../model/chat';
 import { Usage } from '../usage';
 import { modelUsage } from '../../model/usage';
-import { setToggle } from '../characters';
+import { setToggleValues } from '../characters';
 import { appendUserMessage, selectVersion, startChat, type Written } from '../chat-log';
 import { EvaluationFailed, EvaluationStuck } from '../evaluation';
 import { projectGreetings } from '../greetings';
@@ -365,7 +365,7 @@ describe("the display with the bot's Lua", () => {
       const leave = screen.subscribe(() => {});
       screen.setInputs(opening, { width: 1200, height: 800 });
       await expect.poll(() => screen.snapshot().display.texts).toEqual(['어서 와. <0>']);
-      await setToggle(session.store, opening.chat.character, 'hard', '1');
+      await setToggleValues(session.store, opening.chat.character, { hard: '1' });
       await expect.poll(() => screen.snapshot().display.texts).toEqual(['어서 와. <1>']);
       leave();
     }));

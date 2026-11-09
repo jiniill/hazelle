@@ -5,9 +5,11 @@ import { holdsPersona, unused } from '../../engine/pipeline';
 import { activeOnboarding } from '../../engine/import/onboarding';
 import { calls, keepsPromptOut, shown, type ChatItem, type ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
+import type { TogglePreset, ToggleValues } from '../../model/prompt';
 import { autoDiagnose } from '../../runtime/auto-diagnosis';
+import type { ApiResult } from '../../runtime/api';
 import { autoChat, turnFacts } from '../../runtime/diagnostic-state';
-import { resetToggles, setToggle } from '../../runtime/characters';
+import { resetToggles, setToggleValues } from '../../runtime/characters';
 import { chatTranslate, featuresOf } from '../../runtime/features';
 import { replyMessage, restoreRaw } from '../../runtime/chat-log';
 import { keepAttachments } from '../../runtime/attachments';
@@ -40,7 +42,7 @@ import { displayed } from './exportLog';
 import { useDraft } from './useDraft';
 import { useToolInput } from './useToolInput';
 import { budgetCut, pickStarted } from './infoReply';
-import { toggleRows, toggleSaveKey } from './toggles';
+import { presetValues, sectionValues, toggleRows, toggleSaveKey, type ToggleSection } from './toggles';
 import { anchorOf, useFollow } from './useFollow';
 import { useStorySteps } from './useStorySteps';
 import { useChatSearch, type SearchSeed } from './useChatSearch';
@@ -376,17 +378,31 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   }
 
   // A value is the character's, in every chat of it, or shared by every 캐릭터 없이 chat.
-  const writeToggle = (key: string, value: string) => setToggle(store, chat.character, key, value);
+  const writeToggle = (key: string, value: string) => setToggleValues(store, chat.character, { [key]: value });
 
   function flip(key: string, value: string) {
     toast.settled(writeToggle(key, value));
   }
 
+  // A typed value still waiting would land over a reset or a preset, and be missed by a preset saved now.
+  const settleTyped = () => Promise.all(toggles.sections.flatMap(({ rows }) => rows.flatMap(({ toggle }) => (toggle.kind === 'text' ? [saves.flush(toggleSaveKey(chat.character, toggle.key))] : []))));
+
   async function reset() {
-    // A typed value still waiting would land over the reset.
-    await Promise.all(toggles.sections.flatMap(({ rows }) => rows.flatMap(({ toggle }) => (toggle.kind === 'text' ? [saves.flush(toggleSaveKey(chat.character, toggle.key))] : []))));
+    await settleTyped();
     toast.settled(resetToggles(store, chat.character));
     toast.show(`토글 ${toggles.changed}개를 기본값으로 되돌렸어요.`);
+  }
+
+  async function pickPreset(section: ToggleSection, preset: TogglePreset) {
+    await settleTyped();
+    toast.settled(setToggleValues(store, chat.character, presetValues(section, preset)));
+  }
+
+  // Read again once typed values are stored, not from the rows this render holds.
+  async function sectionNow(id: string): Promise<ApiResult<ToggleValues>> {
+    await settleTyped();
+    const section = toggleRows(togglesOf(store, chat, prompt, packsOf(store, chat))).sections.find((each) => each.id === id);
+    return section ? { ok: true, data: sectionValues(section) } : { ok: false, error: 'gone' };
   }
 
   // Scripts/tools require a saved chat, including actions on an unsaved greeting.
@@ -509,6 +525,8 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       flip,
       writeToggle,
       resetToggles: reset,
+      pickPreset: (section: ToggleSection, preset: TogglePreset) => void pickPreset(section, preset),
+      sectionNow,
       rename,
       drop,
       duplicate,

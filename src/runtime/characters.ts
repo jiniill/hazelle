@@ -222,10 +222,10 @@ export function setKeepThoughts(store: ObjectStore, id: string, keep: boolean): 
   return store.update('character', id, (current) => (keep ? { ...current, keepThoughts: true } : without(current, 'keepThoughts')));
 }
 
-// A toggle's value for a character's chats, or with character null for 캐릭터 없이's.
-export function setToggle(store: ObjectStore, character: string | null, key: string, value: string): Promise<ApiResult<Stored<'character'> | Stored<'settings'>>> {
-  if (character === null) return changeSettings(store, (current) => ({ ...current, toggles: { ...current.toggles, [key]: value } }));
-  return store.update('character', character, (current) => ({ ...current, toggles: { ...current.toggles, [key]: value } }));
+// Toggle values for a character's chats, or with character null for 캐릭터 없이's, over the ones held.
+export function setToggleValues(store: ObjectStore, character: string | null, values: ToggleValues): Promise<ApiResult<Stored<'character'> | Stored<'settings'>>> {
+  if (character === null) return changeSettings(store, (current) => ({ ...current, toggles: { ...current.toggles, ...values } }));
+  return store.update('character', character, (current) => ({ ...current, toggles: { ...current.toggles, ...values } }));
 }
 
 // Seed the pre-existing displayed order once so shipping manual order does not move the rail.

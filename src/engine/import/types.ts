@@ -3,7 +3,7 @@ import type { PresetFailure, PresetResult } from './preset';
 import type { BlockCondition, BlockEffect } from './blocks';
 import type { Character } from '../../model/library';
 import type { Likeness } from '../../model/likeness';
-import type { ToggleLine, ToggleValues } from '../../model/prompt';
+import type { ToggleLine, TogglePreset, ToggleValues } from '../../model/prompt';
 import type { Onboarding } from './onboarding';
 
 export type Card = {
@@ -43,6 +43,7 @@ export type Pack = {
   // Risu's backgroundHTML, absent when there is none: its <style> joins the chat's CSS, the rest is drawn behind the chat (design §6.4).
   background?: string;
   toggles: ToggleLine[];
+  togglePresets?: TogglePreset[];
 };
 
 // id: opaque, and unique within its pack only (import/convert stampIds). off keeps a script in its place but stops it.
