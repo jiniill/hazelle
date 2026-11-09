@@ -18,6 +18,7 @@ import { answerable, stubRelay, testServer } from '../testing';
 import { RELAY_HEADER } from '../../contracts/http';
 import { setModels, setNetwork } from '../pack';
 import { blankCard } from '../../engine/import/card';
+import { chatNow } from '../chat-context';
 import { projectGreetings } from '../greetings';
 import { upsertChatLore } from '../lore';
 import { inProcessRisu, inProcessTools } from '../testing/tool-transport';
@@ -175,6 +176,30 @@ it('reads a version\'s translation with its message', () => withTools(async (ses
     await host.run(f.chat, f.tool(), context.scope, { kind: 'prompt', turn: { memory: false } }, context.host);
     expect(read).toEqual([expect.objectContaining({ text: 'hello', translation: { text: '안녕', sent: false } })]);
   } finally { host.close(); }
+}));
+
+it('keeps a draft\'s chat open for its run, so it reads the chat\'s log after the studio\'s read of it let go', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  const chat = crypto.randomUUID();
+  const writing = session.store.retainChat(chat, { created: true });
+  await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+  await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'hello' });
+  writing.release();
+  const scope = (await chatNow(session, chat, new AbortController().signal))!;
+  await vi.waitFor(() => expect(session.store.scopeState(chat)).toBe('unloaded'));
+  const code = ['//@api 1', '//@name draft', '//@author jin', '', 'hazelle.on("prompt", async (chat) => (await chat.messages()).map(({ text }) => text).join());'].join('\n');
+  const read = readTool(new TextEncoder().encode(code));
+  if (!read.ok) throw new Error('fixture');
+  const transport = inProcessTools((api, text) => {
+    Object.defineProperty(globalThis, 'hazelle', { value: api, configurable: true });
+    return (0, eval)(text) as void;
+  });
+  const host = connect(transport.open);
+  try {
+    const ran = await host.trial(chat, { code, tool: { manifest: read.tool.manifest, settings: {} } }, new AbortController().signal, (run) => run(scope, { kind: 'prompt', turn: { memory: false } }, f.context().host));
+    expect(ran).toMatchObject({ outcome: { value: 'hello' } });
+    expect(session.store.scopeState(chat)).toBe('unloaded');
+  } finally { host.close(); Reflect.deleteProperty(globalThis, 'hazelle'); }
 }));
 
 it('reads the greeting apart from the messages, which count from after it', () => withTools(async (session, connect) => {
