@@ -25,7 +25,8 @@ export const RISU_MAPPED: ReadonlySet<string> = new Set([
 // addRisuReplacer kinds the adapter runs; another kind is missing as `addRisuReplacer:<kind>`.
 export const RISU_REPLACERS: ReadonlySet<string> = new Set(['beforeRequest', 'afterRequest']);
 // Permanently declined names return undefined, distinct from not-yet-mapped names (design §6.10).
-// getRootDocument:page means app DOM outside rendered messages.
+// getRootDocument:page means app DOM outside rendered messages; character.chats a character's chats, read from any
+// character a plugin is handed.
 export const RISU_DECLINED: ReadonlySet<string> = new Set([
-  'getRootDocument:page', 'addProvider', 'registerBodyIntercepter', 'unregisterBodyIntercepter', 'addPluginChannelListener', 'postPluginChannelMessage',
+  'getRootDocument:page', 'character.chats', 'addProvider', 'registerBodyIntercepter', 'unregisterBodyIntercepter', 'addPluginChannelListener', 'postPluginChannelMessage',
 ]);

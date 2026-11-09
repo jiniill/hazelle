@@ -135,6 +135,7 @@ export const toolOutcome = (file: string, title: string, saved: ToolImport, plac
 // Keyed by every name in RISU_DECLINED.
 export const DECLINED_WORDS: Record<string, string> = {
   'getRootDocument:page': '앱 화면 직접 바꾸기',
+  'character.chats': '캐릭터의 채팅 목록 읽기',
   addProvider: '모델 제공자 추가',
   registerBodyIntercepter: '모델 요청 내용 변경',
   unregisterBodyIntercepter: '모델 요청 내용 변경',

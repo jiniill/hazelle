@@ -117,6 +117,21 @@ describe('the Risu adapter', () => {
     await expect(Risuai.setCharacterToIndex!(1 as never, held as never)).rejects.toThrow('reaches only the open chat\'s character');
   });
 
+  it('hands out characters without their chats, told to 점검 when read, and takes them back as they were read', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const db = await Risuai.getDatabase!() as { characters: Record<string, unknown>[] };
+    const held = await Risuai.getCharacter!() as Record<string, unknown>;
+    expect(fake.missing).toEqual([]);
+    await Risuai.setDatabase!(structuredClone(db) as never);
+    await Risuai.setCharacter!({ ...held } as never);
+    expect(fake.editCard).not.toHaveBeenCalled();
+    expect(fake.missing).toEqual([]);
+    expect(Array.isArray(db.characters[0]!.chats)).toBe(false);
+    expect(held.chats).toBeUndefined();
+    expect(fake.missing).toEqual(['character.chats']);
+  });
+
   it('takes back the database as getDatabase read it, and fails a key that changed, told to 점검', async () => {
     const fake = fakeApi();
     const { Risuai } = install(fake);
