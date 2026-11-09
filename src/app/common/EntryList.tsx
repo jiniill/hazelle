@@ -1,6 +1,6 @@
 import { Fragment, useRef, useState, type ReactNode } from 'react';
 import { useOwnUndo } from '../toast';
-import { Button, IconButton } from '../ui';
+import { Button, Empty, IconButton, Row } from '../ui';
 import { ACTS } from './acts';
 
 // added: the entry the add button just made, whose first field takes the focus, which brings it into view.
@@ -12,6 +12,8 @@ type Props<T> = {
   name: (index: number) => string;
   blank: T;
   addLabel: string;
+  // What an empty list says, with the add under it as its first step.
+  empty?: string;
   // The caller words it, so the particle after the noun is right.
   removed: (index: number) => string;
   // A row before the entries that holds the add, in place of the button after them, such as a setting's row in a group.
@@ -20,7 +22,7 @@ type Props<T> = {
 };
 
 // Undo inserts into the current list at its old position, clamped to the end if the list shrank.
-export function EntryList<T>({ entries, onChange, name, blank, addLabel, removed, head, children }: Props<T>) {
+export function EntryList<T>({ entries, onChange, name, blank, addLabel, empty, removed, head, children }: Props<T>) {
   const undoable = useOwnUndo();
   const latest = useRef({ entries, onChange });
   latest.current = { entries, onChange };
@@ -37,6 +39,11 @@ export function EntryList<T>({ entries, onChange, name, blank, addLabel, removed
       onChange([...entries, blank]);
     },
   };
+  const button = (
+    <Button variant="secondary" size="sm" icon={ACTS.create.icon} onClick={add.onClick}>
+      {addLabel}
+    </Button>
+  );
   return (
     <>
       {head?.(add)}
@@ -52,11 +59,8 @@ export function EntryList<T>({ entries, onChange, name, blank, addLabel, removed
           })}
         </Fragment>
       ))}
-      {!head && (
-        <Button variant="secondary" size="sm" icon={ACTS.create.icon} onClick={add.onClick}>
-          {addLabel}
-        </Button>
-      )}
+      {/* In a row, so the column the list stands in does not stretch the button to its width. */}
+      {!head && (entries.length === 0 && empty ? <Empty variant="section" action={button}>{empty}</Empty> : <Row kind="actions">{button}</Row>)}
     </>
   );
 }

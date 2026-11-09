@@ -14,7 +14,7 @@ import { BIN, EMPTY_FOLDER, MODEL_SETTINGS, PAGES } from '../../common/words';
 import { useBin } from '../../session';
 import { backBar, navigate } from '../../shell/router';
 import { BIN_PLACE, type Back } from '../../shell/routes';
-import { Avatar, Button, CardGrid, ChoiceGroup, Empty, IconCard, List, NavBar, Row, Screen, Section, Text } from '../../ui';
+import { Avatar, Button, CardGrid, ChoiceGroup, Empty, Hint, IconCard, List, NavBar, Row, Screen, Section } from '../../ui';
 import { ShelfFace, shelfName } from '../shelf';
 import { binnedCharacter, binnedChat, binnedModule, binnedPersona, binnedProfile, binnedPrompt, useCharacterActions, type Binned } from '../useCharacterActions';
 import { aliased } from '../../common/alias';
@@ -113,13 +113,16 @@ export function GalleryScreen({ place, back, lead }: { place: string | null; bac
         {moving.button}
       </Row>
       <FolderPath kind="character" path={at.path} onGo={go} onName={naming.name} dropInto={dropInto} trail={binned ? { key: BIN_PLACE, name: BIN, onClick: () => go(BIN_PLACE) } : undefined}>
-        {!binned && inBin > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => go(BIN_PLACE)}>
-            {`${BIN} ${inBin}`}
-          </Button>
+        {binned ? (
+          <Hint label={BIN}>{`${BIN}에 있는 항목은 ${KEEP_DAYS}일이 지나면 영구 삭제돼요.`}</Hint>
+        ) : (
+          inBin > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => go(BIN_PLACE)}>
+              {`${BIN} ${inBin}`}
+            </Button>
+          )
         )}
       </FolderPath>
-      {binned && <Text variant="note">{`${BIN}에 있는 항목은 ${KEEP_DAYS}일이 지나면 영구 삭제돼요.`}</Text>}
       {folderCards.length + shown.length > 0 && (
         <CardGrid label="캐릭터" keys={[...(door ? ['tutorial'] : []), ...folderCards.map(({ id }) => id), ...shown.map(({ id }) => id)]}>
           {(slot) => {

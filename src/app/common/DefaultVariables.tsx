@@ -21,6 +21,7 @@ export function DefaultVariables({ variables, help, onChange }: { variables: [st
         name={(index) => `변수 ${index + 1}`}
         blank={['', ''] as [string, string]}
         addLabel="변수 추가"
+        empty="변수가 없어요."
         removed={(index) => `${index + 1}번째 변수를 삭제했어요.`}
       >
         {({ value: [name, value], index, name: label, added, set, remove }) => (

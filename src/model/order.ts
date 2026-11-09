@@ -30,6 +30,22 @@ export function toFront(order: readonly string[], ids: readonly string[]): strin
   return [...ids, ...order.filter((id) => !moved.has(id))];
 }
 
+// ids back where they stood in before, each ahead of the id that followed it there; the rest keep their order. One
+// without a place in before goes out, as it was; one whose follower has gone, to the end.
+export function putBack(order: readonly string[], before: readonly string[], ids: readonly string[]): string[] {
+  const moving = new Set(ids);
+  const rest = order.filter((id) => !moving.has(id));
+  let next: string | null = null;
+  const ahead = new Map<string | null, string[]>();
+  for (const id of before.toReversed()) {
+    if (moving.has(id)) ahead.set(next, [id, ...(ahead.get(next) ?? [])]);
+    else next = id;
+  }
+  const kept = new Set(rest);
+  const lost = [...ahead].flatMap(([follower, moved]) => (follower !== null && !kept.has(follower) ? moved : []));
+  return [...rest.flatMap((id) => [...(ahead.get(id) ?? []), id]), ...lost, ...(ahead.get(null) ?? [])];
+}
+
 export function placeBefore(ids: readonly string[], id: string, before: string | null): string[] {
   const rest = ids.filter((each) => each !== id);
   rest.splice(before === null ? rest.length : rest.indexOf(before), 0, id);

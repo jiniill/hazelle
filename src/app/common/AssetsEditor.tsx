@@ -24,8 +24,9 @@ const KEEPS = {
 };
 type Shelf = 'asset' | AssetUse;
 // A character's assets and backgrounds, each with what it holds and the tag that shows one, if any.
-const SHELVES: Record<Shelf, { label: string; keeps: (typeof KEEPS)[keyof typeof KEEPS]; help: string; tag: ((asset: Stored<'asset'>['value']) => string) | null }> = {
-  asset: { label: ASSET, keeps: KEEPS.any, help: '봇이 {{img::이름}}이나 {{video::이름}}으로 불러오는 이미지·영상이에요. 이름이 겹치면 무작위로 표시돼요.', tag: ({ type, name }) => `{{${isVideo(type) ? 'video' : 'img'}::${name}}}` },
+// hint: under the name field of its rename dialog.
+const SHELVES: Record<Shelf, { label: string; keeps: (typeof KEEPS)[keyof typeof KEEPS]; help: string; hint?: string; tag: ((asset: Stored<'asset'>['value']) => string) | null }> = {
+  asset: { label: ASSET, keeps: KEEPS.any, help: '봇이 {{img::이름}}이나 {{video::이름}}으로 불러오는 이미지·영상이에요. 이름이 겹치면 무작위로 표시돼요.', hint: '봇은 이 이름으로 에셋을 찾아요.', tag: ({ type, name }) => `{{${isVideo(type) ? 'video' : 'img'}::${name}}}` },
   background: { label: '배경', keeps: KEEPS.picture, help: '채팅 뒤에 어둡게 깔리는 배경이에요. 여러 개면 이름이 main인 배경을 써요.', tag: null },
 };
 const SHELF_ORDER: Shelf[] = ['asset', 'background'];
@@ -42,7 +43,7 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
   const stored = useChildren('asset', owner);
   const [shelf, setShelf] = useState<Shelf>('asset');
   const use = useOf(shelf);
-  const { keeps, help, tag } = SHELVES[shelf];
+  const { label, keeps, help, hint, tag } = SHELVES[shelf];
   const onShelf = (each: Shelf) => stored.filter(({ value }) => value.use === useOf(each));
   const assets = useMemo(() => onShelf(shelf).toSorted((a, b) => byName(a.value.name, b.value.name)), [stored, shelf]);
   const [adding, setAdding] = useState(false);
@@ -59,7 +60,7 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
     const named = assets.map(({ id, value }) => ({ id, name: value.name }));
     return [...asked].filter((name) => !findAsset(named, name, Math.random));
   }, [asked, assets, use]);
-  const search = useSearch(assets, `${ASSET} 검색`, ({ value }) => [value.name]);
+  const search = useSearch(assets, `${label} 검색`, ({ value }) => [value.name]);
   const named = (asset: Stored<'asset'>) => asset.value.name.toLowerCase();
   const shared = new Map<string, number>();
   for (const asset of assets) shared.set(named(asset), (shared.get(named(asset)) ?? 0) + 1);
@@ -69,7 +70,7 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
     setAdding(true);
     const added = await addAssets(store, files, owner, picked, use);
     setAdding(false);
-    if (!added.ok) return toast.failed(added, `${ASSET}을 추가하지 못했어요.`);
+    if (!added.ok) return toast.failed(added, `${label}을 추가하지 못했어요.`);
     const refused = unsupportedCount(added.data.unsupported);
     if (refused) toast.error(`${refused}개는 추가하지 못했어요.`, { detail: keeps.refused });
   }
@@ -80,7 +81,7 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
     const removed = await removeAssets(store, ids);
     if (!removed.ok) return toast.failed(removed, REMOVE_FAILED);
     const [only] = removed.data;
-    toast.undoable(removed.data.length === 1 ? `'${only!.value.name}' ${ASSET}을 삭제했어요.` : `${ASSET} ${removed.data.length}개를 삭제했어요.`, () => restoreAssets(store, removed.data));
+    toast.undoable(removed.data.length === 1 ? `'${only!.value.name}' ${label}을 삭제했어요.` : `${label} ${removed.data.length}개를 삭제했어요.`, () => restoreAssets(store, removed.data));
   }
 
   async function replace(id: string, file: File) {
@@ -109,7 +110,7 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
   const at = search.found.findIndex(({ id }) => id === viewing);
   const pages = at < 0 ? undefined : { at, count: search.found.length, onStep: (by: -1 | 1) => setViewing(search.found[(at + by + search.found.length) % search.found.length]!.id) };
   return (
-    <Section title={ASSET} note={`${stored.length}개`} help={help}>
+    <Section title={ASSET} note={shelves ? undefined : `${stored.length}개`} help={help}>
       <Stack gap="related">
         {shelves && <Tabs label={ASSET} items={SHELF_ORDER.map((value) => ({ value, label: SHELVES[value].label, count: onShelf(value).length }))} value={shelf} onChange={(next) => { selection.clear(); setShelf(next); }} />}
         {unfound.length > 0 && (
@@ -121,30 +122,30 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
           {search.field}
           {assets.length > 0 && selection.button(ACTS.remove.icon, '선택 삭제')}
           <FileButton accept={keeps.accept} multiple size="sm" icon={ACTS.create.icon} busy={adding} onFiles={(dropped) => void add(dropped)}>
-            {addOf(SHELVES[shelf].label)}
+            {addOf(label)}
           </FileButton>
         </Row>
         {search.found.length > 0 ? (
-          <CardGrid label={ASSET} variant="face" keys={search.found.map(({ id }) => id)}>
+          <CardGrid label={label} variant="face" keys={search.found.map(({ id }) => id)}>
             {(index) => {
               const asset = search.found[index]!;
               return <AssetCard key={asset.id} asset={asset} shared={shared.get(named(asset))!} picked={picked && picked.has(asset.id)} onPress={() => press(asset.id)} actions={actionsOf(asset)} />;
             }}
           </CardGrid>
         ) : (
-          <Empty variant="section">{search.none ?? `${SHELVES[shelf].label}이 없어요.`}</Empty>
+          <Empty variant="section">{search.none ?? `${label}이 없어요.`}</Empty>
         )}
         {picked &&
           selection.bar(
-            { counted: (count) => `${count}개`, ask: '삭제할 에셋을 선택해 주세요', every: search.found.map(({ id }) => id) },
+            { counted: (count) => `${count}개`, ask: `삭제할 ${label}을 선택해 주세요`, every: search.found.map(({ id }) => id) },
             <Button variant="danger" size="sm" disabled={picked.size === 0} onClick={() => { selection.clear(); void remove([...picked]); }}>
               {ACTS.remove.label}
             </Button>,
           )}
       </Stack>
-      {dragging && <DropOverlay>{`여기에 놓으면 ${SHELVES[shelf].label}으로 추가돼요`}</DropOverlay>}
+      {dragging && <DropOverlay>{`여기에 놓으면 ${label}으로 추가돼요`}</DropOverlay>}
       {viewed && <AssetPreview asset={viewed} actions={actionsOf(viewed)} pages={pages} onClose={() => setViewing(null)} />}
-      {naming && <NameDialog title={`${ASSET} ${ACTS.rename.label}`} value={naming.value.name} hint="봇은 이 이름으로 에셋을 찾아요." onSave={(name) => rename(naming, name)} onClose={() => setNaming(null)} />}
+      {naming && <NameDialog title={`${label} ${ACTS.rename.label}`} value={naming.value.name} hint={hint} onSave={(name) => rename(naming, name)} onClose={() => setNaming(null)} />}
     </Section>
   );
 }

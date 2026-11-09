@@ -83,6 +83,15 @@ it('says how much of a Risu plugin works before it is saved, wording declined na
 });
 
 it('says a file of chats goes to a character, or in 캐릭터 없이', () => {
-  expect([chatPreview('a.json', 1, [], 'Mira'), chatPreview('a.json', 1, [], null), chatPreview('a.json', 1, [], undefined)].map((each) => each.placed?.text)).toEqual(['Mira에 넣어요.', '캐릭터 없이 넣어요.', undefined]);
-  expect(chatOutcome('a.json', ['c'], null, []).lines[0]?.text).toBe('캐릭터 없이 넣었어요.');
+  expect([chatPreview('a.json', [null], [], 'Mira'), chatPreview('a.json', [null], [], null), chatPreview('a.json', [null], [], undefined)].map((each) => each.placed?.text)).toEqual(['Mira에 넣어요.', '캐릭터 없이 넣어요.', undefined]);
+  expect(chatOutcome('a.json', 'a.json', ['c', 'd'], null, []).lines[0]?.text).toBe('채팅 2개를 캐릭터 없이 넣었어요.');
+});
+
+it("names a file of one titled chat by that title, any other by the file's name", () => {
+  expect([[' 밤의 숲 '], [null], [' '], ['밤', '숲']].map((titles) => chatPreview('a.json', titles, [], null)).map(({ title, holds }) => [title, holds])).toEqual([
+    ['밤의 숲', '채팅 1개'],
+    ['a.json', '채팅 1개'],
+    ['a.json', '채팅 1개'],
+    ['a.json', '채팅 2개'],
+  ]);
 });

@@ -1,5 +1,5 @@
 import { FOLDER_DEPTH, kindOf, type FolderSet } from '../../../model/folders';
-import { createFolder, folderRemoval, moveInto, removeFolder, renameFolder, restoreFolder } from '../../../runtime/folders';
+import { createFolder, filingOf, folderRemoval, moveBack, moveInto, removeFolder, renameFolder, restoreFolder } from '../../../runtime/folders';
 import { useStore } from '../../session';
 import { useToast } from '../../toast';
 import type { NamedFolder } from './FolderParts';
@@ -34,8 +34,9 @@ export function useFolderActions(set: FolderSet) {
 
   // to: a folder, or null for out of every folder. shown: how many the user moved, where ids carry more along.
   function move(ids: string[], to: { id: string; name: string } | null, shown = ids.length) {
-    toast.settled(moveInto(store, kind, ids, to?.id ?? null));
-    toast.show(to ? `${filedObject(kind, shown)} '${to.name}' 폴더로 옮겼어요.` : `${filedObject(kind, shown)} 폴더에서 뺐어요.`);
+    const [filing, folder] = [filingOf(store, kind, ids), to?.id ?? null];
+    toast.settled(moveInto(store, kind, ids, folder));
+    toast.undoable(to ? `${filedObject(kind, shown)} '${to.name}' 폴더로 옮겼어요.` : `${filedObject(kind, shown)} 폴더에서 뺐어요.`, () => moveBack(store, filing, folder));
   }
 
   return { deepest: FOLDER_DEPTH, create, rename, remove, move };
