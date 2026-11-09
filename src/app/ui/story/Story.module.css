@@ -10,6 +10,12 @@
   container-type: inline-size;
 }
 
+/* A bot's background fills the layer it stands in, as Risu's fills its chat, and its vw widths read that layer's. */
+.backdrop {
+  height: 100%;
+  container-type: size;
+}
+
 .faded {
   opacity: var(--prose-faded-opacity);
 }

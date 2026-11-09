@@ -9,7 +9,7 @@ import { useToastFloor } from '../toast';
 import { useDisplay } from '../display';
 import { useAssetUrl } from '../session';
 import { day } from '../common/time';
-import { aimedAtPanel, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, usePanelsBeside, useWide } from '../ui';
+import { aimedAtPanel, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, StoryBackdrop, usePanelsBeside, useWide } from '../ui';
 import { ChatAutopilot } from './ChatAutopilot';
 import { ChatBookmarks } from './ChatBookmarks';
 import { ChatInspect } from './ChatInspect';
@@ -140,6 +140,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
             {chat.peeking && <ChatStatusPeek status={chat.status} held={chat.held} decor={chat.decor} onHold={actions.hold} onPress={actions.press} onUnmark={(script) => actions.markStatus(script, false)} />}
           </SidePeeks>
         }
+        backdrop={chat.backdrop && <StoryBackdrop html={chat.backdrop} />}
         reading={reading}
         hideHeader={display.hideHeader}
         stage={chat.stage && !display.inlineIllustrations}

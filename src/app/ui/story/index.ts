@@ -1,4 +1,4 @@
-export { ORIGINAL_MARK, READER_RESIZED, Story, storySelection, storyText, type BotButton } from './Story';
+export { ORIGINAL_MARK, READER_RESIZED, Story, StoryBackdrop, storySelection, storyText, type BotButton } from './Story';
 export { Failure, Marker, StoryMessage, Switcher, TimePinContext, Usage, useTimePin, Waiting, type UsagePart } from './StoryMessage';
 export { ReadingPreview, type PreviewRow } from './ReadingPreview';
 export { MascotRemark } from './MascotRemark';

@@ -7,8 +7,10 @@ import { contexts, renderChat, type ChatScope, type LuaDisplay, type Missed } fr
 
 // Extract styles from texts, status boxes and pack backgroundHTML into chat-wide css, as Risu does.
 // drawn indexes pack regex per message; boxes are the extracted 상태창 지정 output. unfound includes background assets.
+// background: the packs' backgroundHTML past CBS and the display regex, its styles taken out, which Risu draws behind
+// the chat; '' when only styles stand there.
 // pass means Lua editDisplay has pending messages; stopped records a Runaway, with runaway backgroundHTML omitted.
-export type Display = { texts: string[]; css: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
+export type Display = { texts: string[]; css: string; background: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
 
 export type DisplayWork = { items: Missed[]; staged: string[]; start: [string, string][] };
 export type DisplayPatch = { rows: { index: number; text: string; drawn: number[]; boxes: Box[] }[]; css: string; pass: boolean; unfound: string[]; stopped: Runaway | null };
@@ -21,10 +23,12 @@ export class DisplayPass {
   private readonly rendered: ReturnType<typeof renderChat>;
   private readonly byVersion: Map<string, number>;
   private readonly missing: Set<string>;
-  private readonly background: string[] = [];
+  private readonly backgroundStyles: string[] = [];
   private readonly textStyles: string[][];
   private readonly boxStyles: string[][];
-  private backgroundStop: Runaway | null = null;
+  // The CBS the display runs outside any message: the backgroundHTML's and a <risu-style>'s.
+  private readonly cbs: (text: string) => string;
+  private ownStop: Runaway | null = null;
 
   constructor(scope: ChatScope, take: ReadonlySet<number>, lua?: LuaDisplay) {
     const rendered = renderChat('display', scope, take, lua);
@@ -34,21 +38,25 @@ export class DisplayPass {
     this.work = rendered.missed.length ? { items: rendered.missed, staged: rendered.staged, start: rendered.start } : null;
     // Read with the variables as the last message left them, as Risu reads it with the chat's current ones, and passed
     // through the display scripts as Risu passes it: bots fill placeholders in their CSS ({border}, <<PCFont>>) there.
-    const cbs = (text: string) => evaluate(text, contexts(scope, 'display', null, '', rendered.unfound)({ seed: 'background' }, rendered.variables));
-    for (const { background } of scope.packs) {
-      if (!background) continue;
+    // A <risu-style>'s CSS is read the same way, outside any message, as Risu reads it when it draws one.
+    const context = contexts(scope, 'display', null, '', rendered.unfound);
+    this.cbs = (text) => evaluate(text, context({ seed: 'background' }, rendered.variables));
+    const background: string[] = [];
+    for (const pack of scope.packs) {
+      if (!pack.background) continue;
       try {
-        stripStyles(unescapeCbs(rendered.scripts.apply('display', background, { index: -1, cbs }).text), this.background);
+        background.push(this.stripStyles(unescapeCbs(rendered.scripts.apply('display', pack.background, { index: -1, cbs: this.cbs }).text), this.backgroundStyles));
       } catch (error) {
         if (!(error instanceof Runaway)) throw error;
-        this.backgroundStop ??= error;
+        this.ownStop ??= error;
       }
     }
     this.textStyles = rendered.texts.map(() => []);
     this.boxStyles = rendered.boxes.map(() => []);
-    const texts = rendered.texts.map((text, index) => stripStyles(text, this.textStyles[index]!));
-    const boxes = rendered.boxes.map((rows, index) => rows.map((box) => ({ ...box, html: stripStyles(box.html, this.boxStyles[index]!) })));
-    this.value = { texts, boxes, drawn: rendered.drawn, css: this.css(), pass: this.missing.size > 0, unfound: [...rendered.unfound!], stopped: rendered.stopped ?? this.backgroundStop };
+    const texts = rendered.texts.map((text, index) => this.stripStyles(text, this.textStyles[index]!));
+    const boxes = rendered.boxes.map((rows, index) => rows.map((box) => ({ ...box, html: this.stripStyles(box.html, this.boxStyles[index]!) })));
+    // Joined as Risu joins the character's to the modules'.
+    this.value = { texts, boxes, drawn: rendered.drawn, css: this.css(), background: background.join('\n').trim(), pass: this.missing.size > 0, unfound: [...rendered.unfound!], stopped: rendered.stopped ?? this.ownStop };
   }
 
   patch(items: { version: string; text: string }[]): DisplayPatch {
@@ -61,7 +69,7 @@ export class DisplayPass {
       else this.rendered.failures.display.delete(index);
       this.textStyles[index] = [];
       this.boxStyles[index] = [];
-      const row = { index, text: stripStyles(next.text, this.textStyles[index]!), drawn: next.drawn, boxes: next.boxes.map((box) => ({ ...box, html: stripStyles(box.html, this.boxStyles[index]!) })) };
+      const row = { index, text: this.stripStyles(next.text, this.textStyles[index]!), drawn: next.drawn, boxes: next.boxes.map((box) => ({ ...box, html: this.stripStyles(box.html, this.boxStyles[index]!) })) };
       rows.push(row);
       this.value.texts[index] = row.text;
       this.value.drawn[index] = row.drawn;
@@ -73,7 +81,7 @@ export class DisplayPass {
     for (const errors of [this.rendered.failures.input, this.rendered.failures.display]) for (const [index, error] of errors) {
       if (index < first) { first = index; stopped = error; }
     }
-    const patch = { rows, css: this.css(), pass: this.missing.size > 0, unfound: [...this.rendered.unfound!], stopped: stopped ?? this.backgroundStop };
+    const patch = { rows, css: this.css(), pass: this.missing.size > 0, unfound: [...this.rendered.unfound!], stopped: stopped ?? this.ownStop };
     this.value.css = patch.css;
     this.value.unfound = patch.unfound;
     this.value.pass = patch.pass;
@@ -81,21 +89,42 @@ export class DisplayPass {
     return patch;
   }
 
+  // A <risu-style> whose CBS runs away is left empty, and the display says it stopped.
+  private stripStyles(text: string, blocks: string[]): string {
+    return stripStyles(text, blocks, (css) => {
+      try {
+        return unescapeCbs(this.cbs(css));
+      } catch (error) {
+        if (!(error instanceof Runaway)) throw error;
+        this.ownStop ??= error;
+        return '';
+      }
+    });
+  }
+
   private css(): string {
     // Styles cascade in the original order: backgrounds, every text, then every taken box, not text/box pairs.
-    return [...new Set([...this.background, ...this.textStyles.flat(), ...this.boxStyles.flat()].map((block) => block.trim()))].join('\n');
+    return [...new Set([...this.backgroundStyles, ...this.textStyles.flat(), ...this.boxStyles.flat()].map((block) => block.trim()))].join('\n');
   }
 }
 
 // <risu-style> is a style in Risu's own stored form, the hex of its CSS's UTF-8, which a bot's script may write itself.
-// Hex that does not read leaves no style, as in Risu.
-const fromHex = (hex: string): string =>
-  /[^0-9a-f]/i.test(hex) || hex.length % 2 ? '' : new TextDecoder().decode(Uint8Array.from(hex.match(/../g) ?? [], (byte) => parseInt(byte, 16)));
+// Read as Risu's Buffer reads hex: pair by pair as parseInt reads each, up to the first pair that reads as no number,
+// an odd last digit dropped. Its CSS then gets a CBS pass of its own, as in Risu.
+function fromHex(hex: string): string {
+  const bytes: number[] = [];
+  for (let at = 0; at + 1 < hex.length; at += 2) {
+    const byte = parseInt(hex.slice(at, at + 2), 16);
+    if (Number.isNaN(byte)) break;
+    bytes.push(byte);
+  }
+  return new TextDecoder().decode(Uint8Array.from(bytes));
+}
 
 // A <style> left open runs to the end of its text, as a browser reads it; bots' backgroundHTML often ends that way.
 // One pass, taking what /<style\b[^>]*>([\s\S]*?)(?:<\/style\s*>|$)/gi takes: that regex rescans to the end for each
 // opener with no > after it, and no opener after that one has a > either.
-export function stripStyles(text: string, blocks: string[]): string {
+export function stripStyles(text: string, blocks: string[], cbs: (css: string) => string): string {
   const opener = /<(risu-)?style\b/gi;
   const closers = { plain: /<\/style\s*>/gi, hex: /<\/risu-style\s*>/gi };
   let kept = '';
@@ -107,7 +136,7 @@ export function stripStyles(text: string, blocks: string[]): string {
     closer.lastIndex = open + 1;
     const end = closer.exec(text);
     const body = text.slice(open + 1, end ? end.index : text.length);
-    blocks.push(found[1] ? fromHex(body) : body);
+    blocks.push(found[1] ? cbs(fromHex(body)) : body);
     kept += text.slice(from, found.index);
     from = opener.lastIndex = end ? closer.lastIndex : text.length;
   }

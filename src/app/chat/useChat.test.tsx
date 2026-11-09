@@ -30,7 +30,7 @@ vi.mock('../../runtime/turn-context', async (original) => ({ ...(await original<
 const facts = new AccountFacts({ suspended: false, state: 'active', storage: { bytes: 0, bytesCap: null, fileBytes: 0, fileBytesCap: null }, unreadNotices: 0, unreadBoard: 0 });
 const account = { admin: false, localProviders: [], facts, guest: null, onLock() {}, onLogout: async () => null };
 const chat: Chat = { title: null, character: null, models: {} };
-const VIEW: Display = { texts: [], css: '', drawn: [[0]], boxes: [], pass: false, unfound: [], stopped: null };
+const VIEW: Display = { texts: [], css: '', background: '', drawn: [[0]], boxes: [], pass: false, unfound: [], stopped: null };
 const TRANSLATING = { awaited: new Set(), live: new Map(), failed: new Map() };
 const DRAWINGS = new Map();
 const quiet = { snapshot: () => DRAWINGS, subscribe: () => () => true };

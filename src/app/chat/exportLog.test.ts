@@ -19,6 +19,7 @@ const messages = [
 const view: Display = {
   texts: ['Hello', '반가워', 'broken', '', 'writing'],
   css: `.x { background: url(asset:${picture}) }`,
+  background: '',
   drawn: [[], [], [], [], []],
   boxes: [[{ script: 0, html: '<b>HP 7</b>', at: 'bottom' }], [], [], [], []],
   pass: false,
