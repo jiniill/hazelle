@@ -43,15 +43,13 @@
 }
 
 .node {
+  composes: frame from '../foundation/surface.module.css';
   composes: fill from '../foundation/hover.module.css';
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
   padding: var(--space-8) var(--space-12);
-  border: var(--border-thin) solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
   text-align: start;
   transition:
     background-color var(--duration-fast) var(--ease-enter),

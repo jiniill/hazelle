@@ -5,6 +5,7 @@ import { Icon } from '../foundation/Icon';
 import { cardDrag, useCardDrop } from './cardDrag';
 import { FolderMark } from './FolderMark';
 import styles from './Table.module.css';
+import { classNames } from '../foundation/classNames';
 
 // track: the column's kind. name: the row's own column, wider than the rest; figure: a count or a size, set right;
 // button: a row's ⋯.
@@ -25,7 +26,7 @@ export function Table({ label, columns, rows, variant = 'compare' }: { label: st
     '--table-narrow': columns.filter((column, index) => index === 0 || column.keep).map((_, index) => (index === 0 ? 'minmax(0, 1fr)' : 'auto')).join(' '),
   } as CSSProperties;
   const cell = (column: TableColumn, index: number) =>
-    [column.track === 'button' ? styles.control : styles.cell, column.track === 'figure' && styles.figure, index > 0 && !column.keep && styles.drop].filter(Boolean).join(' ');
+    classNames(column.track === 'button' ? styles.control : styles.cell, column.track === 'figure' && styles.figure, index > 0 && !column.keep && styles.drop);
   return (
     <div className={variant === 'read' ? `${styles.table} ${styles.read}` : styles.table} style={tracks}>
       {/* Hidden from the reader: each cell says its own column's name, which a row read as one button would lose. */}
@@ -72,7 +73,7 @@ function Line({ row, children }: { row: TableRow; children: ReactNode }) {
   return (
     <li {...(row.drag === undefined ? {} : cardDrag(row.drag))} {...drop.props}>
       {row.onClick ? (
-        <button type="button" className={[styles.row, styles.open, drop.over && styles.dropping].filter(Boolean).join(' ')} aria-current={row.current || undefined} aria-pressed={row.selected} onClick={row.onClick}>
+        <button type="button" className={classNames(styles.row, styles.open, drop.over && styles.dropping)} aria-current={row.current || undefined} aria-pressed={row.selected} onClick={row.onClick}>
           {children}
         </button>
       ) : (

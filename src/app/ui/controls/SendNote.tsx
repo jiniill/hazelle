@@ -2,13 +2,14 @@ import { Timer, TriangleAlert } from 'lucide-react';
 import { Icon } from '../foundation/Icon';
 import { Hint } from '../overlays/Hint';
 import styles from './SendNote.module.css';
+import { classNames } from '../foundation/classNames';
 
 // onClick: the note opens where its reason is told at length, so it is a button and keeps no ⓘ of its own.
 // spareLabel: the words already say the label, so it shows only where they fold.
 type Props = { label: string; title: string; warning?: { words: string; why: string }; spareLabel?: boolean; onClick?: () => void };
 
 export function SendNote({ label, title, warning, spareLabel, onClick }: Props) {
-  const className = [styles.sendNote, warning && styles.warn, onClick && styles.press].filter(Boolean).join(' ');
+  const className = classNames(styles.sendNote, warning && styles.warn, onClick && styles.press);
   const body = (
     <>
       <Icon icon={warning ? TriangleAlert : Timer} size="sm" />

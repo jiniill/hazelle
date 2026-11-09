@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './Sketch.module.css';
+import { classNames } from '../foundation/classNames';
 
 // Decorative mock content only (aria-hidden); nearby tour copy carries meaning, never real user content.
 export function Sketch({ badge, children }: { badge?: number; children: ReactNode }) {
@@ -15,7 +16,7 @@ export function Sketch({ badge, children }: { badge?: number; children: ReactNod
 
 // indent: a 답글 under its comment. accent: the row the page is about.
 function SketchRow({ indent = false, accent = false, children }: { indent?: boolean; accent?: boolean; children: ReactNode }) {
-  return <div className={[styles.row, indent && styles.indent, accent && styles.accent].filter(Boolean).join(' ')}>{children}</div>;
+  return <div className={classNames(styles.row, indent && styles.indent, accent && styles.accent)}>{children}</div>;
 }
 
 function SketchLine({ width }: { width: 'short' | 'medium' | 'long' }) {

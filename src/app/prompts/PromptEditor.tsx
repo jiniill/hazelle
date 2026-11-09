@@ -67,6 +67,8 @@ const MODEL = 'model' satisfies PromptPane;
 const TOGGLES = 'toggles' satisfies PromptPane;
 const PICTURE = 'picture' satisfies PromptPane;
 const VARIABLES = 'variables' satisfies PromptPane;
+const PANE_TITLES: Record<PromptPane, string> = { model: '모델', picture: '이미지', toggles: '토글', variables: DEFAULT_VARIABLES };
+const isPane = (id: string): id is PromptPane => Object.hasOwn(PANE_TITLES, id);
 const SORT_WORDS = {
   conversation: { default: '기본 프롬프트', makeDefault: '새 채팅을 시작할 때 이 프롬프트를 써요' },
   translate: { default: '기본 번역 프롬프트', makeDefault: '번역 프롬프트를 따로 선택하지 않은 채팅에 써요' },
@@ -137,9 +139,9 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const [reordering, setReordering] = useState(false);
   const [addingToggle, setAddingToggle] = useState(false);
   const [exporting, setExporting] = useState(false);
-  // 이미지 is an illustration prompt's only, 기본 변수 a conversation prompt's, and 모델 a prompt's that picks one; an
-  // address naming one on another opens as if it named none.
-  const shownPane = (pane === PICTURE && sort !== 'illustrate') || (pane === VARIABLES && sort !== 'conversation') || (pane === MODEL && !picksModel) ? null : pane;
+  // 이미지 is an illustration prompt's only, 기본 변수 a conversation prompt's (its draft alone holds them), and 모델 a
+  // prompt's that picks one; an address naming one on another opens as if it named none.
+  const shownPane = (pane === PICTURE && sort !== 'illustrate') || (pane === VARIABLES && !draft.variables) || (pane === MODEL && !picksModel) ? null : pane;
   // A block it does not hold opens as if none were named, as a pane it does not have does.
   const picked = named !== undefined && draft.blocks.some((block) => block.id === named) ? named : undefined;
   const drilled = shownPane !== null || picked !== undefined;
@@ -165,7 +167,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   };
   useLayoutEffect(applySelect);
 
-  const pick = (id: string) => onAt(id === MODEL || id === PICTURE || id === TOGGLES || id === VARIABLES ? { pane: id } : { pane: null, block: id });
+  const pick = (id: string) => onAt(isPane(id) ? { pane: id } : { pane: null, block: id });
   const leavePage = () => onAt({ pane: null });
 
   // Every structural edit is a step on this one stack; a toast's 되돌리기 undoes its own step, and leaves with the
@@ -310,10 +312,10 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const outline = (
     <>
       <Stack gap="related">
-        {modelMeta !== null && <NavRow icon={Cpu} label="모델" meta={modelMeta} current={split && open === MODEL} onClick={() => pick(MODEL)} />}
-        {sort === 'illustrate' && <NavRow icon={ImageIcon} label="이미지" meta={draft.tags || Object.values(draft.picture ?? {}).some((value) => value !== undefined) ? '직접 지정' : '기본값'} current={split && open === PICTURE} onClick={() => pick(PICTURE)} />}
-        <NavRow icon={SlidersHorizontal} label="토글" meta={howMany(draft.toggles.filter(isToggle).length)} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
-        {draft.variables && <NavRow icon={Variable} label={DEFAULT_VARIABLES} meta={howMany(draft.variables.length)} current={split && open === VARIABLES} onClick={() => pick(VARIABLES)} />}
+        {modelMeta !== null && <NavRow icon={Cpu} label={PANE_TITLES.model} meta={modelMeta} current={split && open === MODEL} onClick={() => pick(MODEL)} />}
+        {sort === 'illustrate' && <NavRow icon={ImageIcon} label={PANE_TITLES.picture} meta={draft.tags || Object.values(draft.picture ?? {}).some((value) => value !== undefined) ? '직접 지정' : '기본값'} current={split && open === PICTURE} onClick={() => pick(PICTURE)} />}
+        <NavRow icon={SlidersHorizontal} label={PANE_TITLES.toggles} meta={howMany(draft.toggles.filter(isToggle).length)} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
+        {draft.variables && <NavRow icon={Variable} label={PANE_TITLES.variables} meta={howMany(draft.variables.length)} current={split && open === VARIABLES} onClick={() => pick(VARIABLES)} />}
       </Stack>
       <Section
         title="전송 순서"
@@ -428,7 +430,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
 
   const status = save.words;
   if (!split && drilled) {
-    const title = open === MODEL ? '모델' : open === PICTURE ? '이미지' : open === TOGGLES ? '토글' : open === VARIABLES ? DEFAULT_VARIABLES : block ? blockTitle(block).title : '';
+    const title = isPane(open) ? PANE_TITLES[open] : block ? blockTitle(block).title : '';
     if (open === TOGGLES && paneBack) {
       const toOutline = (
         <Row kind="actions">

@@ -2,7 +2,8 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import type { Way } from './Demo';
-import { Composer, dock, Feed, Header, join, Line, Message, top, when, type Lines } from './DemoParts';
+import { Composer, dock, Feed, Header, Line, Message, top, when, type Lines } from './DemoParts';
+import { classNames } from '../foundation/classNames';
 import styles from './ScrollDemos.module.css';
 
 const STORY: Lines[] = [[96, 88, 70], [80], [94, 90, 86, 60], [90, 50], [92, 84, 76], [70]];
@@ -14,7 +15,7 @@ const Scrollbar = () => <span className={styles.scrollbar} />;
 // Shown from at for span (shares of the round), then gone.
 function Lit({ look, at, span, children }: { look: string; at: number; span: number; children?: ReactNode }) {
   return (
-    <span className={join(look, styles.lit)} style={when(at, { '--for': span })}>
+    <span className={classNames(look, styles.lit)} style={when(at, { '--for': span })}>
       {children}
     </span>
   );
@@ -25,7 +26,7 @@ export function HideHeaderDemo({ way }: { way: Way }) {
   return (
     <span className={styles.readsDown}>
       <Feed motion={styles.underHeader}>{story}</Feed>
-      <Header motion={join(top, way === 0 && styles.hides)} />
+      <Header motion={classNames(top, way === 0 && styles.hides)} />
       <Scrollbar />
     </span>
   );
@@ -37,11 +38,11 @@ export function FoldComposerDemo({ way }: { way: Way }) {
   const folds = way === 0 && styles.foldsAway;
   return (
     <span className={styles.readsUp}>
-      <Feed motion={join(styles.aboveComposer, styles.readsOlder)}>{story}</Feed>
-      <Composer motion={join(dock, styles.whole, way === 0 && styles.folds)}>
+      <Feed motion={classNames(styles.aboveComposer, styles.readsOlder)}>{story}</Feed>
+      <Composer motion={classNames(dock, styles.whole, way === 0 && styles.folds)}>
         <Line width={72} />
         <Line width={44} motion={folds} />
-        <span className={join(styles.tools, folds)}>
+        <span className={classNames(styles.tools, folds)}>
           {[0, 1, 2].map((tool) => (
             <Line key={tool} width={10} />
           ))}
@@ -56,7 +57,7 @@ export function FoldComposerDemo({ way }: { way: Way }) {
 export function ReplyScrollDemo({ way }: { way: Way }) {
   return (
     <span className={styles.replying}>
-      <Feed motion={join(styles.aboveComposer, styles.unwritten, way === 0 && styles.follows)}>
+      <Feed motion={classNames(styles.aboveComposer, styles.unwritten, way === 0 && styles.follows)}>
         <Message lines={[96, 88, 70]} />
         <Message lines={[90, 55]} mine />
         <Message lines={[94, 86, 90, 78, 92, 84, 60]} typing={0.05} />
@@ -92,7 +93,7 @@ const MESSAGES = 11;
 function Stops({ jumps, rings }: { jumps: readonly Jump[]; rings: ReadonlyMap<number, number> }) {
   return (
     <Jumps jumps={jumps}>
-      <Feed motion={join(top, styles.gutter)}>
+      <Feed motion={classNames(top, styles.gutter)}>
         {Array.from({ length: MESSAGES }, (_, at) => {
           const ring = rings.get(at);
           return (

@@ -5,6 +5,7 @@ import { FolderMark } from './FolderMark';
 import { Item } from './Item';
 import { RowControl } from './RowControl';
 import styles from './CardList.module.css';
+import { classNames } from '../foundation/classNames';
 
 const Folded = createContext(false);
 
@@ -53,7 +54,7 @@ export function CardItem({ folder = false, title, badge, tags = [], description,
       </>
     ) : undefined;
   return (
-    <li className={[folded ? undefined : styles.card, folder && styles.folder, drop.over && styles.dropping].filter(Boolean).join(' ') || undefined} {...(drag === undefined ? {} : cardDrag(drag))} {...drop.props}>
+    <li className={classNames(folded ? undefined : styles.card, folder && styles.folder, drop.over && styles.dropping) || undefined} {...(drag === undefined ? {} : cardDrag(drag))} {...drop.props}>
       <RowControl control={control}>
         <Item density="regular" scheme="list" leading={folder && <FolderMark size="md" />} title={title} meta={meta} preview={[description, note].filter(Boolean).join(' · ') || undefined} current={current} pressed={selected} onClick={onClick} />
       </RowControl>

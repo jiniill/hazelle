@@ -12,6 +12,7 @@ import { CODE_ROLES } from './codeRoles';
 import type { Caret, CodeDoc, CodeLanguage, CodeSpan } from './codeLanguage';
 import styles from './CodeEditor.module.css';
 import { markup, type Piece } from './markup';
+import { classNames } from '../foundation/classNames';
 
 // prose: text with code in it (a prompt, a character's description), set in the text's own type.
 export type CodeEditorProps = { label: string; value: string; onChange: (value: string) => void; language: CodeLanguage; prose?: boolean; caret?: (handle: Caret | null) => void };
@@ -34,7 +35,7 @@ function spanned(read: (text: string) => CodeSpan[], prose: boolean) {
     const ranges = [];
     let at = 0;
     for (const piece of markup(text, spans)) {
-      const name = [LINE[piece.line], piece.mark && MARK[piece.mark]].filter(Boolean).join(' ');
+      const name = classNames(LINE[piece.line], piece.mark && MARK[piece.mark]);
       if (name) ranges.push(decoration(name).range(at, at + piece.text.length));
       at += piece.text.length;
     }

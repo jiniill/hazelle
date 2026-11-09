@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { Ref } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './ToolButton.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   icon: LucideIcon;
@@ -25,7 +26,7 @@ export function ToolButton({ icon, label, detail, mark, busy = false, phone = 'f
     <button
       ref={ref}
       type="button"
-      className={[styles.tool, phone === 'icon' && styles.phoneIcon, wide === 'icon' && styles.wideIcon].filter(Boolean).join(' ')}
+      className={classNames(styles.tool, phone === 'icon' && styles.phoneIcon, wide === 'icon' && styles.wideIcon)}
       title={label}
       aria-label={detail ? `${label}, ${detail}` : label}
       aria-haspopup={popup}

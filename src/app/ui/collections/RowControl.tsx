@@ -2,6 +2,7 @@ import type { MouseEvent, ReactNode } from 'react';
 import { MenuSlot, useMenuSlot } from '../overlays/MoreMenu';
 import { cardDrag, useCardDrop } from './cardDrag';
 import styles from './RowControl.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   // Beside the row's button, outside it, since a button holds no control: a ⋯, or a fold of what hangs under the row.
@@ -23,7 +24,7 @@ export function RowControl({ control, corner = false, drag, onDropCard, onContex
   const drop = useCardDrop(onDropCard);
   const slot = useMenuSlot();
   if (!control && drag === undefined && !onDropCard && !onContextMenu) return children;
-  const classes = [corner ? styles.corner : styles.beside, drop.over && styles.dropping].filter(Boolean).join(' ');
+  const classes = classNames(corner ? styles.corner : styles.beside, drop.over && styles.dropping);
   return (
     <div className={classes} {...(drag !== undefined && cardDrag(drag))} {...drop.props} onContextMenu={onContextMenu ?? slot.onContextMenu}>
       {children}

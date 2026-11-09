@@ -2,6 +2,7 @@ import { useContext, type FormEvent, type ReactNode } from 'react';
 import { usePane } from './ListDetail';
 import { InWindow } from './Shell';
 import styles from './Screen.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   top?: ReactNode;
@@ -30,12 +31,13 @@ export function Screen({ top, lead, align = 'start', width = 'narrow', actions, 
   const windowed = useContext(InWindow);
   // A page has one main landmark; beside a list, a screen is one section of it.
   const Root = pane ? 'section' : 'main';
+  const beside = Boolean(aside);
   const content = align === 'center' ? `${styles.content} ${styles.center}` : styles.content;
   const body = <div className={styles.body}>{children}</div>;
   const inner = (
     <>
       {lead}
-      {aside ? (
+      {beside ? (
         // A container query measures an ancestor, never the element it styles: the frame is what the columns measure.
         <div className={styles.frame}>
           <div className={styles.columns}>
@@ -50,7 +52,7 @@ export function Screen({ top, lead, align = 'start', width = 'narrow', actions, 
     </>
   );
   return (
-    <Root className={[styles.screen, pane && styles.pane, fill && styles.fill, align === 'center' && styles.centered, width !== 'narrow' && styles[width], aside && styles.split, aside && asideSize === 'sm' && styles.asideSm, windowed && styles.windowed].filter(Boolean).join(' ')}>
+    <Root className={classNames(styles.screen, pane && styles.pane, fill && styles.fill, align === 'center' && styles.centered, width !== 'narrow' && styles[width], beside && styles.split, beside && asideSize === 'sm' && styles.asideSm, windowed && styles.windowed)}>
       {top && <header className={styles.top}>{top}</header>}
       {onSubmit ? (
         <form className={content} onSubmit={onSubmit} noValidate>

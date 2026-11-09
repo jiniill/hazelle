@@ -1,6 +1,5 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { pressed, type Chord } from '../foundation/keys';
-import { hasFinePointer } from '../foundation/media';
 import { NO_AUTOFILL } from '../foundation/noAutofill';
 import styles from './CommentBox.module.css';
 import { useAutosize } from './useAutosize';
@@ -16,8 +15,8 @@ type Props = {
   actions: ReactNode;
   // Takes the caret when it opens, as a 답글 or an edit does.
   focus?: boolean;
-  // The composer's send keys, under a pointer only: a finger's keyboard keeps Enter for the line. run is null while
-  // the box cannot be sent.
+  // The composer's send keys, as the caller resolves them for the pointer in use. run is null while the box cannot be
+  // sent.
   send?: { keys: readonly Chord[]; run: (() => void) | null };
 };
 
@@ -27,7 +26,7 @@ export function CommentBox({ label, value, onChange, placeholder, hint, error, a
   useAutosize(area, value);
   const note = error ?? hint;
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!send || !hasFinePointer() || !pressed(event, send.keys)) return;
+    if (!send || !pressed(event, send.keys)) return;
     event.preventDefault();
     send.run?.();
   };

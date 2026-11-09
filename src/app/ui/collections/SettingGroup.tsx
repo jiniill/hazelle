@@ -4,6 +4,7 @@ import { useSeekRow } from '../foundation/seek';
 import { Hint, type Help } from '../overlays/Hint';
 import { FolderMark } from './FolderMark';
 import styles from './SettingGroup.module.css';
+import { classNames } from '../foundation/classNames';
 
 // A row in a group is one of its ruled rows; a row outside one stands bare among fields with no inset of its own.
 const Grouped = createContext(false);
@@ -44,7 +45,7 @@ export function SettingRow({ label, folder = false, sentence, changed = false, h
   const switchId = useId();
   const self = useSeekRow<HTMLDivElement>(label);
   const grouped = useContext(Grouped);
-  const className = [styles.row, grouped ? styles.ruled : styles.panel, wide && styles.wide, folder && styles.opens].filter(Boolean).join(' ');
+  const className = classNames(styles.row, grouped ? styles.ruled : styles.panel, wide && styles.wide, folder && styles.opens);
   return (
     <div ref={self} className={className} role="group" aria-labelledby={sentence ? undefined : id} aria-label={sentence ? label : undefined}>
       <div className={styles.words}>

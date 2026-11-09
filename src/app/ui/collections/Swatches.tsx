@@ -7,6 +7,7 @@ import type { Reading } from '../layout/ChatFrame';
 import { MoreMenu } from '../overlays/MoreMenu';
 import { useDragOrder } from './dragOrder';
 import styles from './Swatches.module.css';
+import { classNames } from '../foundation/classNames';
 
 // menu: MenuItems for the look, under a ⋯ by its name.
 export type Swatch = Scheme & { name: string; font: Reading['font']; size: number; pressed: boolean; onPick: () => void; menu?: ReactNode };
@@ -19,7 +20,7 @@ export function Swatches({ label, sample, items, onMove }: { label: string; samp
       {items.map(({ name, theme, bg, ink, accent, dialogue, font, size, pressed, onPick, menu }, index) => (
         <div
           key={index}
-          className={[styles.card, order.from === index && styles.dragged, order.at === index && styles.before, index === items.length - 1 && order.at === items.length && styles.after].filter(Boolean).join(' ')}
+          className={classNames(styles.card, order.from === index && styles.dragged, order.at === index && styles.before, index === items.length - 1 && order.at === items.length && styles.after)}
           onDragOver={(event) => order.over(event, index)}
         >
           <button type="button" className={styles.pick} aria-pressed={pressed} onClick={onPick} draggable={onMove !== undefined} onDragStart={(event) => order.start(event, index, name)} onDragEnd={order.end}>

@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import styles from './Item.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   density: 'chip' | 'compact' | 'regular' | 'tall';
@@ -29,9 +30,9 @@ type Props = {
 export function Item({ density, scheme, leading, title, meta, preview, trailing, trailingWraps = false, current, pressed, expanded, role, checked, tone = 'plain', disabled, onClick }: Props) {
   const branch = expanded !== undefined;
   const line = density === 'tall' && meta === undefined && preview === undefined;
-  const classes = [styles.item, styles[density], styles[scheme], line && styles.line, onClick && styles.pressable, branch && styles.branch, tone !== 'plain' && styles[tone]].filter(Boolean).join(' ');
+  const classes = classNames(styles.item, styles[density], styles[scheme], line && styles.line, onClick && styles.pressable, branch && styles.branch, tone !== 'plain' && styles[tone]);
   const clip = density === 'regular';
-  const titleClass = [styles.title, density === 'regular' && styles.rowTitle, density === 'tall' && styles.tallTitle, clip && styles.clip].filter(Boolean).join(' ');
+  const titleClass = classNames(styles.title, density === 'regular' && styles.rowTitle, density === 'tall' && styles.tallTitle, clip && styles.clip);
   const previewClass = density === 'compact' ? styles.sub : clip ? `${styles.preview} ${styles.clip}` : density === 'tall' ? styles.tallPreview : styles.preview;
   // meta and preview are drawn even when empty: an empty time still keeps its gap beside the title.
   const text = (

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Tag } from '../foundation/Tag';
 import { RowControl } from './RowControl';
 import styles from './LineageCard.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   title: string;
@@ -23,7 +24,7 @@ type Props = {
 const FRAMES = { plain: '', copy: styles.copy, ghost: styles.ghost };
 
 export function LineageCard({ title, note, tag, preview, variant = 'plain', current = false, tone = 'plain', control, onClick }: Props) {
-  const classes = [styles.card, FRAMES[variant], current && styles.current].filter(Boolean).join(' ');
+  const classes = classNames(styles.card, FRAMES[variant], current && styles.current);
   const content = (
     <>
       <span className={styles.title}>

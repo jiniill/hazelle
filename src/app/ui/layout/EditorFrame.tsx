@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import styles from './EditorFrame.module.css';
-import { tokenPx } from '../foundation/tokenPx';
+import { useNarrowerThan } from '../foundation/useNarrowerThan';
 
 // split: the outline beside the open part; drill: the outline, or one part of it with a back to it.
 export type EditorLayout = 'split' | 'drill';
@@ -8,17 +8,8 @@ export type EditorLayout = 'split' | 'drill';
 // Decided by the room the editor is given (beside the sidebar and its chat list, or a whole phone), not the screen's
 // width. Nothing renders before the first measure, so no editor mounts in the other layout.
 export function EditorRoom({ children }: { children: (layout: EditorLayout) => ReactNode }) {
-  const room = useRef<HTMLDivElement>(null);
-  const [layout, setLayout] = useState<EditorLayout>();
-  useLayoutEffect(() => {
-    const element = room.current!;
-    const measure = () => setLayout(element.clientWidth >= tokenPx('--editor-split', element) ? 'split' : 'drill');
-    measure();
-    const watch = new ResizeObserver(measure);
-    watch.observe(element);
-    return () => watch.disconnect();
-  }, []);
-  return <div ref={room}>{layout && children(layout)}</div>;
+  const [room, narrower] = useNarrowerThan<HTMLDivElement>('--editor-split');
+  return <div ref={room}>{narrower !== undefined && children(narrower ? 'drill' : 'split')}</div>;
 }
 
 type Props = {

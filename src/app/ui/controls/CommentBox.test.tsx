@@ -14,9 +14,7 @@ function areaIn(node: ReactNode): Area | null {
 
 const press = (key: string, ctrlKey = false) => ({ key, code: key, shiftKey: false, ctrlKey, metaKey: false, altKey: false, nativeEvent: { isComposing: false, keyCode: 0 }, preventDefault: vi.fn() });
 
-it('sends on its keys under a pointer, keeps them while it cannot send, and leaves them to a finger', () => {
-  const fine = { matches: true };
-  vi.stubGlobal('matchMedia', () => ({ get matches() { return fine.matches; }, addEventListener() {}, removeEventListener() {} }));
+it('sends on the keys it is given and keeps them while it cannot send', () => {
   const root = probeRoot();
   const run = vi.fn();
   const shown: Record<string, Area | null> = {};
@@ -35,11 +33,6 @@ it('sends on its keys under a pointer, keeps them while it cannot send, and leav
   const held = press('Enter', true);
   shown.closed!.onKeyDown(held);
   expect(held.preventDefault).toHaveBeenCalled();
-  fine.matches = false;
-  const touched = press('Enter', true);
-  shown.ready!.onKeyDown(touched);
   expect(run).toHaveBeenCalledOnce();
-  expect(touched.preventDefault).not.toHaveBeenCalled();
   act(() => root.unmount());
-  vi.unstubAllGlobals();
 });

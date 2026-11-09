@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { Icon } from '../foundation/Icon';
 import styles from './ActionCard.module.css';
+import { classNames } from '../foundation/classNames';
 
 type Props = {
   tone?: 'plain' | 'accent';
@@ -13,7 +14,7 @@ type Props = {
 
 export function ActionCard({ tone = 'plain', size = 'md', icon, title, description, onClick }: Props) {
   return (
-    <button type="button" className={[styles.card, tone === 'accent' && styles.accent, size === 'sm' && styles.sm].filter(Boolean).join(' ')} onClick={onClick}>
+    <button type="button" className={classNames(styles.card, tone === 'accent' && styles.accent, size === 'sm' && styles.sm)} onClick={onClick}>
       <span className={styles.icon}>
         <Icon icon={icon} />
       </span>

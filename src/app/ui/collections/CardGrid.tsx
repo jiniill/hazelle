@@ -10,6 +10,7 @@ import { Tag } from '../foundation/Tag';
 import { useVeil } from '../foundation/veil';
 import { MenuSlot, useMenuSlot } from '../overlays/MoreMenu';
 import styles from './CardGrid.module.css';
+import { classNames } from '../foundation/classNames';
 
 const STEPS: Record<string, (columns: number) => number> = { ArrowLeft: () => -1, ArrowRight: () => 1, ArrowUp: (columns) => -columns, ArrowDown: (columns) => columns };
 
@@ -81,7 +82,7 @@ type CardProps = {
 const placing = { before: styles.placeBefore, after: styles.placeAfter };
 
 type Handle = NonNullable<ReturnType<typeof useOrderHandle>>;
-const boxClass = (side: 'before' | 'after' | null, handle: Handle | null) => [styles.cardBox, side && placing[side], handle?.held && styles.held].filter(Boolean).join(' ');
+const boxClass = (side: 'before' | 'after' | null, handle: Handle | null) => classNames(styles.cardBox, side && placing[side], handle?.held && styles.held);
 
 function OrderHandle({ handle }: { handle: Handle }) {
   return (
@@ -100,7 +101,7 @@ export function FaceCard({ image, video = false, name, note, selected, current =
       <button
         ref={ref}
         type="button"
-        className={[styles.card, selected && styles.selected, current && styles.current].filter(Boolean).join(' ')}
+        className={classNames(styles.card, selected && styles.selected, current && styles.current)}
         aria-pressed={selected ?? undefined}
         aria-current={current || undefined}
         aria-haspopup={popup}

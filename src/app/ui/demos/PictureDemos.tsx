@@ -2,7 +2,8 @@ import { Eye, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import type { Way } from './Demo';
-import { appears, Feed, Figure, join, Line, Message, Picture, pressed, top, Unfold, when, type Lines } from './DemoParts';
+import { appears, Feed, Figure, Line, Message, Picture, pressed, top, Unfold, when, type Lines } from './DemoParts';
+import { classNames } from '../foundation/classNames';
 import styles from './PictureDemos.module.css';
 
 // A story's text, line by line.
@@ -19,7 +20,7 @@ function Prose({ lines }: { lines: Lines }) {
 // A reply's two paragraphs in a wide window's story column, and what stands where the first ends.
 function Column({ motion, children }: { motion?: string | false; children?: ReactNode }) {
   return (
-    <span className={join(styles.column, motion)}>
+    <span className={classNames(styles.column, motion)}>
       <Prose lines={[94, 88, 52]} />
       <span className={styles.paragraphEnd}>{children}</span>
       <Prose lines={[92, 80, 66]} />
@@ -37,7 +38,7 @@ export function HidePicturesDemo({ way }: { way: Way }) {
             <Picture ratio={2.2} motion={styles.full} />
             {way === 0 && (
               <span className={styles.veil}>
-                <span className={join(styles.open, pressed)} style={when(0.4)}>
+                <span className={classNames(styles.open, pressed)} style={when(0.4)}>
                   이미지 보기
                 </span>
               </span>
@@ -77,7 +78,7 @@ export function InlineIllustrationsDemo({ way }: { way: Way }) {
   ) : (
     <span>
       <Column motion={styles.leftOfSide}>
-        <Picture ratio={1.2} motion={join(styles.margin, appears)} at={0.34} />
+        <Picture ratio={1.2} motion={classNames(styles.margin, appears)} at={0.34} />
       </Column>
     </span>
   );
@@ -88,8 +89,8 @@ export function PictureSideDemo({ way }: { way: Way }) {
   return (
     <span>
       <Column motion={way === 0 ? styles.leftOfSide : styles.rightOfSide} />
-      <span className={join(styles.side, way === 0 ? styles.right : styles.left)}>
-        <Picture ratio={0.8} motion={join(styles.full, way === 0 ? styles.fromRight : styles.fromLeft)}>
+      <span className={classNames(styles.side, way === 0 ? styles.right : styles.left)}>
+        <Picture ratio={0.8} motion={classNames(styles.full, way === 0 ? styles.fromRight : styles.fromLeft)}>
           <Figure motion={styles.close} />
         </Picture>
       </span>
@@ -102,7 +103,7 @@ export function PortraitDemo() {
   return (
     <span>
       <Column motion={styles.besidePortrait} />
-      <Picture ratio={0.7} motion={join(styles.portrait, styles.grows)}>
+      <Picture ratio={0.7} motion={classNames(styles.portrait, styles.grows)}>
         <Figure motion={styles.closest} />
       </Picture>
     </span>
@@ -115,10 +116,10 @@ export function FoldLongDemo({ way }: { way: Way }) {
   const long = <Picture ratio={0.5} motion={styles.tall} />;
   return (
     <span>
-      <Feed motion={join(top, way === 1 && styles.readsOn)}>
+      <Feed motion={classNames(top, way === 1 && styles.readsOn)}>
         <Message lines={[92, 70]}>
           {way === 0 ? (
-            <span className={join(styles.tapped, pressed)} style={when(0.5)}>
+            <span className={classNames(styles.tapped, pressed)} style={when(0.5)}>
               <span className={styles.folded}>{long}</span>
             </span>
           ) : (
@@ -143,7 +144,7 @@ export function AutoIllustrateDemo() {
               <span className={styles.making}>
                 <Icon icon={Sparkles} size="sm" />
               </span>
-              <Picture ratio={2.6} motion={join(styles.full, styles.made)} />
+              <Picture ratio={2.6} motion={classNames(styles.full, styles.made)} />
             </span>
           </Unfold>
         </Message>
@@ -156,9 +157,9 @@ export function AutoIllustrateDemo() {
 export function PovDemo({ way }: { way: Way }) {
   return (
     <span className={styles.shown}>
-      <Picture ratio={1.9} motion={join(styles.scene, appears)} at={0.04}>
+      <Picture ratio={1.9} motion={classNames(styles.scene, appears)} at={0.04}>
         {way === 1 && <Figure persona motion={appears} at={0.2} />}
-        <Figure motion={join(way === 0 && styles.seen, appears)} at={0.2} />
+        <Figure motion={classNames(way === 0 && styles.seen, appears)} at={0.2} />
       </Picture>
       <span className={styles.legend}>
         {way === 0 ? <Icon icon={Eye} size="sm" /> : <span className={styles.persona} />}
@@ -186,7 +187,7 @@ export function ComicDemo({ way }: { way: Way }) {
           </Panel>
         </span>
       ) : (
-        <Picture ratio={1.3} motion={join(styles.single, appears)} at={0.06}>
+        <Picture ratio={1.3} motion={classNames(styles.single, appears)} at={0.06}>
           <Figure />
           <Figure />
         </Picture>
@@ -198,7 +199,7 @@ export function ComicDemo({ way }: { way: Way }) {
 // talks: a speech bubble over it.
 function Panel({ at, ratio, talks = false, children }: { at: number; ratio: number; talks?: boolean; children: ReactNode }) {
   return (
-    <span className={join(styles.panel, appears)} style={when(at)}>
+    <span className={classNames(styles.panel, appears)} style={when(at)}>
       <Picture ratio={ratio} motion={styles.full}>
         {children}
       </Picture>

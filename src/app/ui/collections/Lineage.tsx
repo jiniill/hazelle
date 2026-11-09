@@ -3,6 +3,7 @@ import { LineageCard } from './LineageCard';
 import { placeRows, placeStems, type Metrics, type PlacedPill, type PlacedStem, type RowMetrics, type Sprout, type Stem } from './stems';
 import styles from './Lineage.module.css';
 import { tokenPx } from '../foundation/tokenPx';
+import { classNames } from '../foundation/classNames';
 
 // What a stem's head says, from its owner; where it stands in the family, the map adds.
 export type LineageHead = { title: string; note?: string; preview?: string; control?: ReactNode; onClick?: () => void };
@@ -25,7 +26,6 @@ const marks = () => ({ cap: tokenPx('--lineage-cap') / 2, tick: tokenPx('--linea
 
 const tagOf = (via: Sprout | null) => (via === null ? '원본' : via.kind === 'copy' ? '사본' : via.at === null ? '분기' : `${via.at}번째에서`);
 const frameOf = (stem: Stem, via: Sprout | null) => (stem.ghost ? 'ghost' : via?.kind === 'copy' ? 'copy' : 'plain');
-const classes = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
 
 // The map opens on the reader's own stem, which may stand past the panel's edge.
 function useOwn() {
@@ -56,7 +56,7 @@ const pillLabel = ({ kind, at, sprouts }: PlacedPill['pill']) => `${kind === 'br
 function Pill({ placed, start = false, onPill }: { placed: PlacedPill; start?: boolean; onPill: (parent: Stem) => void }) {
   const { pill, parent, x, y, onPath } = placed;
   const label = pillLabel(pill);
-  const props = { className: classes(styles.pill, PILLS[pill.kind], onPath && styles.lit, start && styles.start), style: { left: x, top: y }, title: label, 'aria-label': label };
+  const props = { className: classNames(styles.pill, PILLS[pill.kind], onPath && styles.lit, start && styles.start), style: { left: x, top: y }, title: label, 'aria-label': label };
   // A ghost's pills have nothing to open.
   if (parent.ghost) {
     return (
@@ -73,7 +73,7 @@ function Pill({ placed, start = false, onPill }: { placed: PlacedPill; start?: b
 }
 
 function Cap({ x, y, r, onPath, current }: { x: number; y: number; r: number; onPath: boolean; current: boolean }) {
-  return <circle className={classes(styles.cap, onPath && styles.onPath, current && styles.current)} cx={x} cy={y} r={r} />;
+  return <circle className={classNames(styles.cap, onPath && styles.onPath, current && styles.current)} cx={x} cy={y} r={r} />;
 }
 
 function Legend() {
@@ -138,13 +138,13 @@ export function Lineage({ root, label, head, preview, onPill }: Props) {
     <div className={styles.frame}>
       <div className={styles.view}>
         <div ref={scroll} className={styles.canvas} onScroll={check}>
-          <div className={classes(styles.map, preview && styles.withPreview)} style={{ width, height }}>
+          <div className={classNames(styles.map, preview && styles.withPreview)} style={{ width, height }}>
             <svg className={styles.lines} width={width} height={height} aria-hidden>
               {stems.map((placed) => {
                 const { stem, x, from, to, onPath } = placed;
                 return (
                   <g key={stem.key}>
-                    <line className={classes(styles.stem, stem.ghost ? styles.ghost : onPath && styles.onPath)} x1={x} y1={from} x2={x} y2={to} />
+                    <line className={classNames(styles.stem, stem.ghost ? styles.ghost : onPath && styles.onPath)} x1={x} y1={from} x2={x} y2={to} />
                     {ticks(placed, draw.tickMin).map((y) => (
                       <line key={y} className={styles.tick} x1={x - draw.tick} y1={y} x2={x + draw.tick} y2={y} />
                     ))}
@@ -153,7 +153,7 @@ export function Lineage({ root, label, head, preview, onPill }: Props) {
                 );
               })}
               {sprouts.map(({ sprout, pill, child, onPath }) => (
-                <path key={child.stem.key} className={classes(styles.link, onPath && styles.onPath, sprout.kind === 'copy' && styles.dashed)} d={across(pill.x, pill.y, child.x, child.top)} />
+                <path key={child.stem.key} className={classNames(styles.link, onPath && styles.onPath, sprout.kind === 'copy' && styles.dashed)} d={across(pill.x, pill.y, child.x, child.top)} />
               ))}
             </svg>
             <ul className={styles.heads} aria-label={label}>
@@ -165,7 +165,7 @@ export function Lineage({ root, label, head, preview, onPill }: Props) {
               ({ stem, x, to, onPath }) =>
                 !stem.ghost &&
                 !counted.has(stem.key) && (
-                  <span key={stem.key} className={classes(styles.count, onPath && styles.lit)} style={{ left: x, top: to }} aria-hidden>
+                  <span key={stem.key} className={classNames(styles.count, onPath && styles.lit)} style={{ left: x, top: to }} aria-hidden>
                     {stem.length}
                   </span>
                 ),
@@ -190,16 +190,16 @@ export function LineageList({ root, label, head, preview, onPill }: Props) {
   return (
     <div className={styles.frame}>
       <div className={styles.rows}>
-        <div className={classes(styles.map, preview && styles.withPreview)} style={{ height }}>
+        <div className={classNames(styles.map, preview && styles.withPreview)} style={{ height }}>
           <svg className={styles.lines} width={width} height={height} aria-hidden>
             {rows.map(({ stem, x, y, to, onPath }) => (
               <g key={stem.key}>
-                {to > y && <line className={classes(styles.stem, stem.ghost ? styles.ghost : onPath && styles.onPath)} x1={x} y1={y} x2={x} y2={to} />}
+                {to > y && <line className={classNames(styles.stem, stem.ghost ? styles.ghost : onPath && styles.onPath)} x1={x} y1={y} x2={x} y2={to} />}
                 <Cap x={x} y={y} r={draw.cap} onPath={onPath} current={stem.current === true} />
               </g>
             ))}
             {links.map(({ sprout, pill, child, onPath }) => (
-              <path key={child.stem.key} className={classes(styles.link, onPath && styles.onPath, sprout.kind === 'copy' && styles.dashed)} d={down(pill.x, pill.y, child.x, child.y)} />
+              <path key={child.stem.key} className={classNames(styles.link, onPath && styles.onPath, sprout.kind === 'copy' && styles.dashed)} d={down(pill.x, pill.y, child.x, child.y)} />
             ))}
           </svg>
           <ul className={styles.heads} aria-label={label}>

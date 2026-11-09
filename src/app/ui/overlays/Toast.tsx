@@ -6,6 +6,7 @@ import { Avatar } from '../foundation/Avatar';
 import { Icon } from '../foundation/Icon';
 import { formatKeys, type Chord } from '../foundation/keys';
 import styles from './Toast.module.css';
+import { classNames } from '../foundation/classNames';
 
 export type ToastAction = { label: string; onClick: () => void; keys?: readonly Chord[] };
 
@@ -39,7 +40,7 @@ export function Toast({ message, detail, tone, action, times = 1, from, onKeep, 
   const again = times > 1 && <span className={styles.times}>×{times}</span>;
   return (
     <div
-      className={[styles.toast, paused && styles.paused, open && styles.kept].filter(Boolean).join(' ')}
+      className={classNames(styles.toast, paused && styles.paused, open && styles.kept)}
       role={warn ? 'alert' : 'status'}
       style={{ '--life': `${life}ms` } as CSSProperties}
     >
