@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { blankCard } from '../engine/import/card';
+import { PLAIN_LUA } from '../engine/import/types';
 import { memoryId } from '../model/memory';
 import { startChat } from './chat-log';
 import { testServer } from './testing';
@@ -39,9 +40,9 @@ describe('upgradeValue', () => {
 
   it("gives a character's and a module's scripts ids by place, and turns 상태창 지정's places into those ids", () => {
     const script = (name: string) => ({ name, find: name, replace: '', stage: 'display', flags: null });
-    const card = { name: '루나', regex: [script('a'), script('b')], triggers: [{ kind: 'lua', name: 'main', code: 'x()' }] };
+    const card = { name: '루나', regex: [script('a'), script('b')], triggers: [{ kind: 'lua', ...PLAIN_LUA, name: 'main', code: 'x()' }] };
     expect(upgradeValue('character', { card, statusScripts: [1, 5] })).toEqual({
-      card: { ...card, regex: [{ ...script('a'), id: 'regex-0' }, { ...script('b'), id: 'regex-1' }], triggers: [{ kind: 'lua', name: 'main', code: 'x()', id: 'trigger-0' }] },
+      card: { ...card, regex: [{ ...script('a'), id: 'regex-0' }, { ...script('b'), id: 'regex-1' }], triggers: [{ kind: 'lua', ...PLAIN_LUA, name: 'main', code: 'x()', id: 'trigger-0' }] },
       statusScripts: ['regex-1'],
     });
     expect(upgradeValue('character', { card, greetingTranslations: [] })).toMatchObject({ translations: [], card: { regex: [{ id: 'regex-0' }, { id: 'regex-1' }] } });
@@ -74,6 +75,15 @@ describe('upgradeValue', () => {
     expect(upgradeValue('character', { card: { regex: [], triggers: [trigger] } })).toEqual({ card: { regex: [], triggers: [{ ...trigger, effects }] } });
     expect(upgradeValue('module', { regex: [], triggers: [trigger] })).toEqual({ regex: [], triggers: [{ ...trigger, effects }] });
     expect(upgradeValue('module', { regex: [], triggers: [{ ...trigger, effects: [trigger.effects[1]] }] })).toBeNull();
+  });
+
+  it("reads a Lua trigger kept as its code alone as Risu's new one, and a block trigger's opaque later Lua as Lua", () => {
+    const bare = { id: 'trigger-0', kind: 'lua', name: 'main', code: 'x()' };
+    const later = { id: 'trigger-1', kind: 'blocks', name: 'go', on: 'output', conditions: [], effects: [{ kind: 'opaque', type: 'triggerlua', raw: { type: 'triggerlua', code: 'y()', indent: 0 } }] };
+    const read = [{ ...bare, on: 'start', conditions: [], effects: [] }, { ...later, effects: [{ kind: 'lua', code: 'y()' }] }];
+    expect(upgradeValue('character', { card: { regex: [], triggers: [bare, later] } })).toEqual({ card: { regex: [], triggers: read } });
+    expect(upgradeValue('module', { regex: [], triggers: [bare, later] })).toEqual({ regex: [], triggers: read });
+    expect(upgradeValue('module', { regex: [], triggers: read })).toBeNull();
   });
 
   it("reads a character's and a module's toggles kept as Risu's text into lines on the backup's reader, an unread line kept", () => {

@@ -1,16 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 import { LuaFactory } from 'wasmoon';
 import { blockConditions, blockEffects } from '../import/blocks';
-import type { Blocks } from './blocks';
-import { Lua, type Script } from './run';
+import type { Unit } from './blocks';
+import { Lua } from './run';
 import type { Event, Host } from '../script-api';
 import { host, OWNER, SNAPSHOT } from './fixture';
 import type { Snapshot } from './state';
+import { PLAIN_LUA } from '../import/types';
+
+type LuaUnit = Extract<Unit, { kind: 'lua' }>;
 
 const lua = await Lua.create({ sliceMs: 300 });
 let owner = 0;
-const run = (code: string, event: Event, over: Partial<Host> = {}, snapshot = SNAPSHOT) => lua.run(String(owner++), [{ owner: OWNER, kind: 'lua', name: 'main', code }], snapshot, event, host(over), 'event');
-const blocks = (on: string, effects: unknown[], conditions: unknown[] = []): Blocks => ({ owner: OWNER, kind: 'blocks', name: 'blocks', on, conditions: blockConditions(conditions), effects: blockEffects(effects) });
+const run = (code: string, event: Event, over: Partial<Host> = {}, snapshot = SNAPSHOT) => lua.run(String(owner++), [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code }], snapshot, event, host(over), 'event');
+const blocks = (on: string, effects: unknown[], conditions: unknown[] = []): Unit => ({ owner: OWNER, kind: 'blocks', name: 'blocks', on, conditions: blockConditions(conditions), effects: blockEffects(effects) });
 
 describe('Lua runs', () => {
   it('ends a cancelled yielding loop without another host call', async () => {
@@ -19,7 +22,7 @@ describe('Lua runs', () => {
       if (tokens.mock.calls.length === 3) controller.abort(new Error('Lua run cancelled'));
       return 1;
     });
-    const outcome = await lua.run(String(owner++), [{ owner: OWNER, kind: 'lua', name: 'loop', code: 'onStart = async(function(id) while true do getTokens(id, "x"):await() end end)' }], SNAPSHOT, { kind: 'start' }, host({ tokens }), 'preview', controller.signal);
+    const outcome = await lua.run(String(owner++), [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'loop', code: 'onStart = async(function(id) while true do getTokens(id, "x"):await() end end)' }], SNAPSHOT, { kind: 'start' }, host({ tokens }), 'preview', controller.signal);
     expect(outcome.errors).toEqual([expect.objectContaining({ script: 'loop', message: expect.stringContaining('Lua run cancelled') })]);
     expect(tokens).toHaveBeenCalledTimes(3);
   });
@@ -27,7 +30,7 @@ describe('Lua runs', () => {
   it('pins complete nine-script worksets across stretches and lanes, then evicts idle worksets as a whole', async () => {
     const machine = await Lua.create();
     const starts = vi.spyOn(LuaFactory.prototype, 'createEngine');
-    const scripts: Script[] = Array.from({ length: 9 }, (_, index) => ({ owner: OWNER, kind: 'lua', name: String(index), code: `
+    const scripts: LuaUnit[] = Array.from({ length: 9 }, (_, index) => ({ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: String(index), code: `
       local counter = 0
       function onStart(id) counter = counter + 1; setChatVar(id, 's${index}', counter) end
       listenEdit('editDisplay', function(id, value) counter = counter + 1; return value .. ':' .. counter end)
@@ -60,9 +63,9 @@ describe('Lua runs', () => {
     let reached!: () => void;
     let answer!: (value: string | null) => void;
     const asked = new Promise<void>((resolve) => { reached = resolve; });
-    const scripts: Script[] = [
-      { owner: OWNER, kind: 'lua', name: 'wait', code: "onStart = async(function(id) alertInput(id, 'wait'):await() end)" },
-      { owner: OWNER, kind: 'lua', name: 'later', code: "function onStart(id) setChatVar(id, 'later', 'done') end" },
+    const scripts: LuaUnit[] = [
+      { owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'wait', code: "onStart = async(function(id) alertInput(id, 'wait'):await() end)" },
+      { owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'later', code: "function onStart(id) setChatVar(id, 'later', 'done') end" },
     ];
     try {
       const old = machine.run('owner', scripts, SNAPSHOT, { kind: 'start' }, host({ ask: () => new Promise((resolve) => { answer = resolve; reached(); }) }), 'event');
@@ -233,7 +236,7 @@ describe('Lua runs', () => {
     expect((await run(`syntax error here`, { kind: 'start' })).errors).toHaveLength(1);
     expect((await run(`function onStart(id) while true do end end`, { kind: 'start' })).errors[0]).toMatchObject({ message: expect.stringContaining('timeout') });
     // After an await the loop runs in the promise's continuation: the run still ends, and its engine takes the next.
-    const awaited: Script[] = [{ owner: OWNER, kind: 'lua', name: 'main', code: `onStart = async(function(id) getTokens(id, 'x'):await() while true do end end) function onOutput(id) setChatVar(id, 'after', 'ran') end` }];
+    const awaited: LuaUnit[] = [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code: `onStart = async(function(id) getTokens(id, 'x'):await() while true do end end) function onOutput(id) setChatVar(id, 'after', 'ran') end` }];
     expect((await lua.run('awaited', awaited, SNAPSHOT, { kind: 'start' }, host(), 'event')).errors[0]).toMatchObject({ message: expect.stringContaining('timeout') });
     expect(await lua.run('awaited', awaited, SNAPSHOT, { kind: 'output' }, host(), 'event')).toMatchObject({ errors: [], writes: [['after', 'ran']] });
   });
@@ -267,7 +270,7 @@ describe('Lua runs', () => {
       local books = getLoreBooks(id, 'Gate')
       setChatVar(id, 'gate', #books .. '|' .. books[1].content .. '|' .. books[2].content)
     end`;
-    const outcome = await lua.run(chat, [{ owner: OWNER, kind: 'lua', name: 'main', code }], snapshot, { kind: 'start' }, host(), 'event');
+    const outcome = await lua.run(chat, [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code }], snapshot, { kind: 'start' }, host(), 'event');
     expect(outcome.errors).toEqual([]);
     expect(new Map(outcome.writes)).toEqual(new Map([['gate', '2|new 10|hp 10']]));
     const entry = { secondaryKeys: [], enabled: true, constant: false, selective: false, useRegex: false, caseSensitive: false, insertionOrder: 100, priority: null, position: null, folder: null };
@@ -278,7 +281,7 @@ describe('Lua runs', () => {
   });
 
   it("keeps a preview's Lua globals apart from the events' of the same owner, both ways", async () => {
-    const scripts: Script[] = [{ owner: OWNER, kind: 'lua', name: 'main', code: `seen = seen or 'unset'
+    const scripts: LuaUnit[] = [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code: `seen = seen or 'unset'
 function onStart(id) setChatVar(id, 'seen', seen) seen = getChatVar(id, 'set') end` }];
     const start = async (lane: 'event' | 'preview', set: string) => (await lua.run('lanes', scripts, { ...SNAPSHOT, variables: [['set', set]] }, { kind: 'start' }, host(), lane)).writes;
     expect(await start('event', 'from event')).toEqual([['seen', 'unset']]);
@@ -308,7 +311,7 @@ function onStart(id) setChatVar(id, 'seen', seen) seen = getChatVar(id, 'set') e
 });
 
 it('keeps initialization log output once with the first hook of that engine', async () => {
-  const scripts: Script[] = [{ owner: OWNER, kind: 'lua', name: 'initial', code: `log('loaded')
+  const scripts: LuaUnit[] = [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'initial', code: `log('loaded')
 function onStart(id) log('started') end` }];
   const first = await lua.run('initial-log', scripts, SNAPSHOT, { kind: 'start' }, host(), 'event');
   expect(first.trace.entries.map(({ stage, logs }) => [stage, logs])).toEqual([['load', ['"loaded"']], ['onStart', ['"started"']]]);
@@ -319,7 +322,7 @@ function onStart(id) log('started') end` }];
 describe('Lua display', () => {
   it('answers a refused call Risu declares async with a promise, for :await() to read as nil', async () => {
     const code = `listenEdit('editDisplay', function(id, value) return value .. ':' .. (getTokens(id, 'x') == nil and 'nil' or 'promise') .. ':' .. (alertNormal(id, 'x') == nil and 'nil' or 'promise') end)`;
-    await lua.installDisplay('refused', 1, [{ owner: OWNER, kind: 'lua', name: 'main', code }], SNAPSHOT, [{ index: 0, text: 'a', variables: [] }]);
+    await lua.installDisplay('refused', 1, [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code }], SNAPSHOT, [{ index: 0, text: 'a', variables: [] }]);
     expect((await lua.display('refused', 1, 1)).texts).toEqual(['a:promise:nil']);
   });
 
@@ -332,7 +335,7 @@ describe('Lua display', () => {
         setChatVar(id, 'hp', 'changed')
         return value .. ':' .. meta.index .. ':' .. hp .. ':' .. getChat(id, 0).data
       end)`;
-    await lua.installDisplay('display', 1, [{ owner: OWNER, kind: 'lua', name: 'main', code }], SNAPSHOT, [
+    await lua.installDisplay('display', 1, [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code }], SNAPSHOT, [
       { index: 0, text: 'a', variables: [] },
       { index: 1, text: 'b', variables: [['hp', '4']] },
     ]);
@@ -342,7 +345,7 @@ describe('Lua display', () => {
   });
 
   it('retains full-chat reads while walking newest-first variable deltas and replacing a revision', async () => {
-    const scripts: Script[] = [{ owner: OWNER, kind: 'lua', name: 'state', code: "listenEdit('editDisplay', function(id, value) return value .. ':' .. getChatVar(id, 'hp') .. ':' .. getChatVar(id, 'x') .. ':' .. getChatLength(id) end)" }];
+    const scripts: LuaUnit[] = [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'state', code: "listenEdit('editDisplay', function(id, value) return value .. ':' .. getChatVar(id, 'hp') .. ':' .. getChatVar(id, 'x') .. ':' .. getChatLength(id) end)" }];
     const items = [
       { index: 0, text: 'a', variables: [['hp', '1']] as [string, string][] },
       { index: 1, text: 'b', variables: [['x', 'a']] as [string, string][] },
@@ -363,12 +366,12 @@ describe('Lua display', () => {
     const code = `listenEdit('editDisplay', function(id, value) return 5 end)
       listenEdit('editDisplay', async(function(id, value) return value end))
       listenEdit('editDisplay', function(id, value) return value:upper() end)`;
-    await lua.installDisplay('chain', 1, [{ owner: OWNER, kind: 'lua', name: 'main', code }], SNAPSHOT, [{ index: 0, text: 'abc', variables: [] }]);
+    await lua.installDisplay('chain', 1, [{ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code }], SNAPSHOT, [{ index: 0, text: 'abc', variables: [] }]);
     expect(await lua.display('chain', 1, 1)).toMatchObject({ texts: ['ABC'], errors: [] });
   });
 
   it('says which scripts listen by what their engines registered, a computed name too, not by their source', async () => {
-    const scripts = [`-- editDisplay editRequest\nfunction onStart(id) end`, `listenEdit('edit' .. 'Display', function(id, value) return value .. '!' end)`].map((code): Script => ({ owner: OWNER, kind: 'lua', name: 'main', code }));
+    const scripts = [`-- editDisplay editRequest\nfunction onStart(id) end`, `listenEdit('edit' .. 'Display', function(id, value) return value .. '!' end)`].map((code): LuaUnit => ({ owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code }));
     await lua.installDisplay('listening', 1, scripts, SNAPSHOT, [{ index: 0, text: 'a', variables: [] }]);
     expect(await lua.display('listening', 1, 1)).toMatchObject({ texts: ['a!'], listening: [false, true] });
     const request = [{ role: 'user', content: 'a' }];
@@ -393,15 +396,37 @@ describe('block triggers', () => {
 
   it('run on their own event when their conditions pass, in one run with the Lua around them', async () => {
     const bonus = blocks('start', [{ type: 'setvar', operator: '+=', var: 'hp', value: '5' }], [{ type: 'var', var: 'hp', operator: '>=', value: '{{getvar::hp}}' }]);
-    const seen: Script = { owner: OWNER, kind: 'lua', name: 'main', code: `function onStart(id) setChatVar(id, 'seen', getChatVar(id, 'hp')) end` };
+    const seen: LuaUnit = { owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code: `function onStart(id) setChatVar(id, 'seen', getChatVar(id, 'hp')) end` };
     const refused = blocks('start', [{ type: 'setvar', operator: '=', var: 'hp', value: '0' }], [{ type: 'var', var: 'hp', operator: 'null' }]);
     const triggers = [bonus, seen, refused, blocks('output', [{ type: 'setvar', operator: '=', var: 'late', value: '1' }])];
     expect(await lua.run(String(owner++), triggers, SNAPSHOT, { kind: 'start' }, host(), 'event')).toMatchObject({ errors: [], writes: [['hp', '15'], ['seen', '15']] });
   });
 
+  it("gate a Lua trigger's code and then its later effects by its conditions, which a press and an edit pass by", async () => {
+    const gated = (hp: string): LuaUnit => ({
+      owner: OWNER, kind: 'lua', name: 'main', on: 'start',
+      code: `function onStart(id) setChatVar(id, 'ran', getChatVar(id, 'seen')) end
+        function onButtonClick(id, data) setChatVar(id, 'pressed', data) end
+        listenEdit('editInput', function(id, value) return value .. '!' end)`,
+      conditions: blockConditions([{ type: 'var', var: 'hp', operator: '=', value: hp }]),
+      effects: blockEffects([{ type: 'setvar', operator: '=', var: 'seen', value: '1' }, { type: 'triggerlua', code: `function onStart(id) setChatVar(id, 'later', getChatVar(id, 'seen')) end` }]),
+    });
+    const at = async (trigger: LuaUnit, event: Event) => lua.run(String(owner++), [trigger], SNAPSHOT, event, host(), 'event');
+    expect((await at(gated('10'), { kind: 'start' })).writes).toEqual([['ran', 'null'], ['seen', '1'], ['later', '1']]);
+    expect((await at(gated('0'), { kind: 'start' })).writes).toEqual([]);
+    expect((await at(gated('0'), { kind: 'button', data: 'x' })).writes).toEqual([['pressed', 'x']]);
+    expect((await at(gated('0'), { kind: 'edit', stage: 'editInput', value: 'hi', meta: {} })).value).toBe('hi!');
+  });
+
+  it('run a block trigger’s later Lua on its own event only', async () => {
+    const later = blocks('output', [{ type: 'triggerlua', code: `function onOutput(id) setChatVar(id, 'out', '1') end function onStart(id) setChatVar(id, 'start', '1') end` }]);
+    expect((await lua.run(String(owner++), [later], SNAPSHOT, { kind: 'output' }, host(), 'event')).writes).toEqual([['out', '1']]);
+    expect((await lua.run(String(owner++), [later], SNAPSHOT, { kind: 'start' }, host(), 'event')).writes).toEqual([]);
+  });
+
   it("read the pressed element's risu-id as {{triggerid}} in the run the press calls, and in no other", async () => {
     const pressed = blocks('manual', [{ type: 'setvar', operator: '=', var: 'door', value: '[{{triggerid}}]' }]);
-    const script: Script = { owner: OWNER, kind: 'lua', name: 'main', code: `function blocks(id) setChatVar(id, 'lua', cbs('[{{triggerid}}]')) end` };
+    const script: LuaUnit = { owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'main', code: `function blocks(id) setChatVar(id, 'lua', cbs('[{{triggerid}}]')) end` };
     const press = async (id: string) => (await lua.run(String(owner++), [pressed, script], SNAPSHOT, { kind: 'call', name: 'blocks', id }, host(), 'event')).writes;
     expect(await press('north')).toEqual([['door', '[north]'], ['lua', '[north]']]);
     expect(await press('')).toEqual([['door', '[null]'], ['lua', '[null]']]);
@@ -532,8 +557,8 @@ it('passes the owner of each Lua and block script through its host calls', async
   const say = vi.fn();
   const ask = vi.fn(async () => null);
   const outcome = await lua.run('owners', [
-    { owner: OWNER, kind: 'lua', name: 'card', code: 'onStart = async(function(id) LLM(id, {{role="user", content="card"}}) end)' },
-    { owner: module, kind: 'lua', name: 'module', code: 'onStart = async(function(id) LLM(id, {{role="user", content="module"}}); alertNormal(id, "module") end)' },
+    { owner: OWNER, kind: 'lua', ...PLAIN_LUA, name: 'card', code: 'onStart = async(function(id) LLM(id, {{role="user", content="card"}}) end)' },
+    { owner: module, kind: 'lua', ...PLAIN_LUA, name: 'module', code: 'onStart = async(function(id) LLM(id, {{role="user", content="module"}}); alertNormal(id, "module") end)' },
     { ...blocks('start', [{ type: 'showAlert', alertType: 'input', value: 'ask', inputVar: 'answer' }]), owner: module },
   ], SNAPSHOT, { kind: 'start' }, host({ model, say, ask }), 'event');
   expect(outcome.errors).toEqual([]);

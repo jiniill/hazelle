@@ -11,7 +11,7 @@ import type { LuaRunner } from './binding';
 import { describe, expect, it, vi } from 'vitest';
 import type { ToggleLine } from '../../model/prompt';
 import { fetchApi } from '../api';
-import type { Trigger } from '../../engine/import/types';
+import { PLAIN_LUA, type Trigger } from '../../engine/import/types';
 import { Lua } from '../../engine/lua/run';
 import type { ToolEvent } from '../../engine/script-api';
 import { calls, fold, shown } from '../../model/chat';
@@ -37,7 +37,7 @@ const server = testServer();
 
 async function chatWith(session: Session, script: string | Trigger[], toggles: ToggleLine[] = []) {
   await answerable(session);
-  const triggers: Trigger[] = typeof script === 'string' ? [{ kind: 'lua', id: 'trigger-0', name: 'main', code: script }] : script;
+  const triggers: Trigger[] = typeof script === 'string' ? [{ kind: 'lua', ...PLAIN_LUA, id: 'trigger-0', name: 'main', code: script }] : script;
   const card = { ...blankCard('루나'), greetings: ['어서 와.'], description: 'turn {{getvar::turn}}', triggers, toggles };
   const character = await session.store.create('character', { card, folder: null, loreFolders: [] });
   if (!character.ok) throw new Error(character.error);
@@ -52,7 +52,7 @@ async function chatWith(session: Session, script: string | Trigger[], toggles: T
 
 describe('triggersOf', () => {
   it('leaves out a trigger turned off and a Lua one with no code', () => {
-    const lua = (id: string, code: string, off?: true): Trigger => ({ kind: 'lua', id, name: id, code, ...(off && { off }) });
+    const lua = (id: string, code: string, off?: true): Trigger => ({ kind: 'lua', ...PLAIN_LUA, id, name: id, code, ...(off && { off }) });
     expect(triggersOf([{ id: 'c', module: null, pack: { regex: [], triggers: [lua('a', 'x()'), lua('b', ' \n'), lua('c', 'y()', true)], toggles: [] } }]).map(({ id }) => id)).toEqual(['a']);
   });
 });
@@ -429,8 +429,8 @@ describe("the display with the bot's Lua", () => {
 
       display.mockClear();
       const mixed = await open([
-        { kind: 'lua', id: 'trigger-0', name: 'named', code: `-- editDisplay\nfunction onInput(id) end` },
-        { kind: 'lua', id: 'trigger-1', name: 'listening', code: `listenEdit('editDisplay', function(id, value) return value .. '?' end)` },
+        { kind: 'lua', ...PLAIN_LUA, id: 'trigger-0', name: 'named', code: `-- editDisplay\nfunction onInput(id) end` },
+        { kind: 'lua', ...PLAIN_LUA, id: 'trigger-1', name: 'listening', code: `listenEdit('editDisplay', function(id, value) return value .. '?' end)` },
       ]);
       await expect.poll(mixed.texts).toEqual(['어서 와.?']);
       mixed.again();
@@ -833,7 +833,7 @@ describe('tool events through Scripts', () => {
     });
     await server.withSession(async (session) => {
       const f = await toolChat(session);
-      const lua = await importModule(session.store, session.files, { name: 'lua', description: '', namespace: null, risu: null, pack: { regex: [], toggles: [], triggers: [{ kind: 'lua', id: 'lua', name: 'edit', code: "listenEdit('editOutput', function(id, value) return value .. ' [lua]' end)" }] }, lore: [], loreFolders: [], assets: [], unsupported: [] }, () => {});
+      const lua = await importModule(session.store, session.files, { name: 'lua', description: '', namespace: null, risu: null, pack: { regex: [], toggles: [], triggers: [{ kind: 'lua', ...PLAIN_LUA, id: 'lua', name: 'edit', code: "listenEdit('editOutput', function(id, value) return value .. ' [lua]' end)" }] }, lore: [], loreFolders: [], assets: [], unsupported: [] }, () => {});
       if (!lua.ok) throw new Error(lua.error);
       await setModuleAlways(session.store, lua.data.id, true);
       stubRelay(() => saying('reply'));
@@ -983,7 +983,7 @@ describe('tool events through Scripts', () => {
 
   it('asks module Lua on its own behalf even with no character, and remembers it in another chat', () => server.withSession(async (session) => {
     await answerable(session);
-    const added = await importModule(session.store, session.files, { name: 'module', description: '', namespace: null, risu: null, pack: { regex: [], toggles: [], triggers: [{ kind: 'lua', id: 'lua', name: 'model', code: 'askModel = async(function(id) LLM(id, {{role="user", content="summarize"}}) end)' }] }, lore: [], loreFolders: [], assets: [], unsupported: [] }, () => {});
+    const added = await importModule(session.store, session.files, { name: 'module', description: '', namespace: null, risu: null, pack: { regex: [], toggles: [], triggers: [{ kind: 'lua', ...PLAIN_LUA, id: 'lua', name: 'model', code: 'askModel = async(function(id) LLM(id, {{role="user", content="summarize"}}) end)' }] }, lore: [], loreFolders: [], assets: [], unsupported: [] }, () => {});
     if (!added.ok) throw new Error(added.error);
     await setModuleAlways(session.store, added.data.id, true);
     const log = stubRelay(() => saying('summary'));
@@ -1007,7 +1007,7 @@ describe('tool events through Scripts', () => {
 
 it('keeps bounded per-chat hook logs with Lua output and writes, notifies readers, and forgets unloaded scopes', () => server.withSession(async (session) => {
   const card = blankCard('logger');
-  card.triggers = [{ id: 'log', kind: 'lua', name: 'logger', code: `function onButtonClick(id, data)
+  card.triggers = [{ id: 'log', kind: 'lua', ...PLAIN_LUA, name: 'logger', code: `function onButtonClick(id, data)
     log({ message = data })
     setChatVar(id, 'last', data)
     request(id, 'unsupported')
@@ -1050,6 +1050,7 @@ describe('a trial of one trigger', () => {
       const scope = (await chatNow(session, chat, new AbortController().signal))!;
       const draft = {
         kind: 'lua' as const,
+        ...PLAIN_LUA,
         id: 'trigger-0',
         name: 'main',
         owner: { kind: 'character' as const, id: session.store.get('chat', chat)!.value.character! },

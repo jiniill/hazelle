@@ -5,7 +5,7 @@ import { moduleSource } from './hazelle';
 import { concat, METADATA_BYTES } from './inflate';
 import { fileSource } from './source';
 import { readRisum, readRisumModule, risumBlock, risumHead, RISUM_END, unpack, writeRisum } from './risum';
-import type { Bot, ImportResult, Imported, Trigger, TypedModule } from './types';
+import { PLAIN_LUA, type Bot, type ImportResult, type Imported, type Trigger, type TypedModule } from './types';
 import { crc32 } from './zip';
 
 function chunk(type: string, data: Uint8Array): Uint8Array<ArrayBuffer> {
@@ -272,7 +272,7 @@ describe('importCard', () => {
       risu: 'risu-id',
       pack: {
         regex: [{ id: 'regex-0', name: 'screen', find: 'a', replace: 'b', stage: 'display', flags: null }],
-        triggers: [{ kind: 'lua', id: 'trigger-0', name: 'tap', code: 'function tap() end' }],
+        triggers: [{ kind: 'lua', ...PLAIN_LUA, on: 'manual', id: 'trigger-0', name: 'tap', code: 'function tap() end' }],
         background: '<style>.phone { color: red }</style>',
         toggles: [{ key: 'ring', label: 'Ring', kind: 'check', default: '0' }],
       },
@@ -386,7 +386,7 @@ describe('importCard', () => {
     expect(imported.card.description).toBe('{{emotion::x}} {{getvar::y}} {{ JB_Toggled }}');
     expect(imported.avatar).toBeNull();
     expect(imported.card.triggers).toEqual([
-      { kind: 'lua', id: 'trigger-0', name: 'hp', code: 'setChatVar("hp", "1")' },
+      { kind: 'lua', ...PLAIN_LUA, id: 'trigger-0', name: 'hp', code: 'setChatVar("hp", "1")' },
       { kind: 'blocks', id: 'trigger-1', name: 'set', on: 'manual', conditions: [], effects: [{ kind: 'set', name: '', operator: null, value: { kind: 'text', text: '' } }] },
     ]);
     expect(imported.report.unsupported).toEqual([
@@ -420,7 +420,7 @@ describe('importCard', () => {
   });
 
   it('writes lowLevelAccess exactly when Risu’s own list holds a Lua trigger, for a module and for a charx', () => {
-    const lua = (off?: true) => ({ id: 'trigger-0', kind: 'lua' as const, name: 'main', code: 'return 1', ...(off && { off }) });
+    const lua = (off?: true) => ({ id: 'trigger-0', kind: 'lua' as const, ...PLAIN_LUA, name: 'main', code: 'return 1', ...(off && { off }) });
     const module = (triggers: Trigger[]): TypedModule => ({
       risu: 'm', name: '전화', description: '', namespace: null, likeness: null, lore: [], loreFolders: [], assets: [], pack: { regex: [], triggers, toggles: [] },
     });

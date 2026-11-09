@@ -41,9 +41,14 @@ export type Pack = {
 // id: opaque, and unique within its pack only (import/convert stampIds). off keeps a script in its place but stops it.
 export type Listed = { id: string; off?: true };
 
-// name is Risu's comment; Lua runs at every event and has no `on`. Blocks execute canonical operations only.
-// Keep unsupported conditions/effects as opaque source so future support needs no reimport.
-export type Trigger = Listed & ({ kind: 'lua'; name: string; code: string } | { kind: 'blocks'; name: string; on: string; conditions: BlockCondition[]; effects: BlockEffect[] });
+// name is Risu's comment, on its type. A Lua trigger is one whose first effect is Lua, held apart as its code: it runs
+// at every event whatever its on, its conditions and later effects at start, input, output and calls only. Blocks
+// execute canonical operations only. Keep unsupported conditions/effects as opaque source so future support needs no
+// reimport.
+type Steps = { name: string; on: string; conditions: BlockCondition[]; effects: BlockEffect[] };
+export type Trigger = Listed & Steps & ({ kind: 'lua'; code: string } | { kind: 'blocks' });
+// A Lua trigger's steps when it holds nothing but its code. Risu's editor starts one at 'start'.
+export const PLAIN_LUA: Omit<Steps, 'name'> = { on: 'start', conditions: [], effects: [] };
 
 // flags: the custom flag string, <…> meta blocks included; null runs the default `g`. translation: Risu's edittrans, over
 // a message's translation (runtime/translate).

@@ -2,7 +2,7 @@ import { gzipSync, strToU8 } from 'fflate';
 import { describe, expect, it, vi } from 'vitest';
 import { backupInlays, readBackup } from './backup';
 import { moduleSource } from './hazelle';
-import type { RisuBackup } from './types';
+import { PLAIN_LUA, type RisuBackup } from './types';
 
 const u32 = (value: number, little: boolean) => {
   const out = new Uint8Array(4);
@@ -360,7 +360,7 @@ describe('readBackup', () => {
       greetings: ['hi', 'hello', 'yo'],
       postHistoryInstructions: 'stay in character',
       regex: [{ id: 'regex-0', name: 'r', find: 'a', replace: 'b', stage: 'output', flags: null }],
-      triggers: [{ kind: 'lua', id: 'trigger-0', name: 'lua', code: 'print(1)' }],
+      triggers: [{ kind: 'lua', ...PLAIN_LUA, id: 'trigger-0', name: 'lua', code: 'print(1)' }],
     });
     expect(card.lore[0]!.content).toBe('@@probability 40\n{{user}} sees\n@@depth 0');
     expect(await card.avatar()).toEqual({ bytes: PNG, type: 'image/png' });
@@ -432,11 +432,11 @@ describe('readBackup', () => {
       '@@probability 40\n{{char}} {{user}}\n@@depth 0',
     ]);
     expect(character.card.regex[0]!.name).toBe('r');
-    expect(character.card.triggers).toEqual([{ kind: 'lua', id: 'trigger-0', name: 'lua', code: 'print(1)' }]);
+    expect(character.card.triggers).toEqual([{ kind: 'lua', ...PLAIN_LUA, id: 'trigger-0', name: 'lua', code: 'print(1)' }]);
   });
 
   it('reads back the hazelle key of a .risum this app wrote that Risu then kept in its backup', async () => {
-    const off = { id: 'trigger-0', kind: 'lua' as const, name: 'main', code: 'return 1', off: true as const };
+    const off = { id: 'trigger-0', kind: 'lua' as const, ...PLAIN_LUA, name: 'main', code: 'return 1', off: true as const };
     const source = moduleSource({ risu: 'm', name: '전화', description: '', namespace: null, likeness: null, lore: [], loreFolders: [], assets: [], pack: { regex: [], triggers: [off], toggles: [] } });
     const result = await readBackup([bin([['database.risudat', database({ characters: [], modules: [source] })]])]);
     if (!result.ok) throw new Error(result.failure.kind);

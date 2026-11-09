@@ -4,6 +4,7 @@ import { isRecord } from '../connectors/values';
 import { reparsed, type BlockEffect } from '../engine/import/blocks';
 import { stampIds } from '../engine/import/convert';
 import { readToggles } from '../engine/import/toggles';
+import { PLAIN_LUA } from '../engine/import/types';
 import { without } from '../model/fields';
 import { KINDS, isValue, type Kind, type Stored } from '../model/kinds';
 import { firstTurns } from '../model/turns';
@@ -52,17 +53,23 @@ function upgradeConnection(value: Record<string, unknown>) {
   return { ...rest, accounts: [{ id: ACCOUNT, secret, ...(typeof account === 'string' && { name: account }) }], turns: pool ? firstTurns(GROUP, ACCOUNT) : null };
 }
 
-// Each in turn, so a character stored before several upgrades takes them all. statusIds reads the ids cardScriptIds
+// A character's pack is its card.
+const onCard = (step: (pack: Record<string, unknown>) => Record<string, unknown> | null) => (value: Record<string, unknown>) => {
+  const card = isRecord(value.card) ? step(value.card) : null;
+  return card && { ...value, card };
+};
+
+// Each in turn, so a character stored before several upgrades takes them all. statusIds reads the ids scriptIds
 // gives.
 function upgradeCharacter(value: Record<string, unknown>) {
   let upgraded: Record<string, unknown> | null = null;
-  for (const step of [dropTranslate, translationsByText, cardScriptIds, statusIds, dropKeepStatus, cardEffects, cardToggles, dropPictureHeight]) upgraded = step(upgraded ?? value) ?? upgraded;
+  for (const step of [dropTranslate, translationsByText, onCard(scriptIds), statusIds, dropKeepStatus, onCard(luaSteps), onCard(effectsRead), onCard(togglesRead), dropPictureHeight]) upgraded = step(upgraded ?? value) ?? upgraded;
   return upgraded;
 }
 
 function upgradeModule(value: Record<string, unknown>) {
   let upgraded: Record<string, unknown> | null = null;
-  for (const step of [scriptIds, effectsRead, togglesRead]) upgraded = step(upgraded ?? value) ?? upgraded;
+  for (const step of [scriptIds, luaSteps, effectsRead, togglesRead]) upgraded = step(upgraded ?? value) ?? upgraded;
   return upgraded;
 }
 
@@ -88,17 +95,12 @@ function scriptIds(pack: Record<string, unknown>) {
   return same ? null : { ...pack, ...stamped };
 }
 
-function cardScriptIds(value: Record<string, unknown>) {
-  const card = isRecord(value.card) ? scriptIds(value.card) : null;
-  return card && { ...value, card };
-}
-
 // A block effect this app did not run was stored opaque with its source, which is read again once the app runs it.
 function effectsRead(pack: Record<string, unknown>) {
   if (!Array.isArray(pack.triggers)) return null;
   let changed = false;
   const triggers = pack.triggers.map((trigger: unknown) => {
-    if (!isRecord(trigger) || trigger.kind !== 'blocks' || !Array.isArray(trigger.effects)) return trigger;
+    if (!isRecord(trigger) || !Array.isArray(trigger.effects)) return trigger;
     const effects = reparsed(trigger.effects as BlockEffect[]);
     if (!effects) return trigger;
     changed = true;
@@ -107,19 +109,16 @@ function effectsRead(pack: Record<string, unknown>) {
   return changed ? { ...pack, triggers } : null;
 }
 
-function cardEffects(value: Record<string, unknown>) {
-  const card = isRecord(value.card) ? effectsRead(value.card) : null;
-  return card && { ...value, card };
+// Until 2026-11-09 a Lua trigger kept only its code: its type, conditions and later effects were lost at import.
+function luaSteps(pack: Record<string, unknown>) {
+  const bare = (trigger: unknown) => isRecord(trigger) && trigger.kind === 'lua' && !('effects' in trigger);
+  if (!Array.isArray(pack.triggers) || !pack.triggers.some(bare)) return null;
+  return { ...pack, triggers: pack.triggers.map((trigger: unknown) => (bare(trigger) ? { ...(trigger as Record<string, unknown>), ...PLAIN_LUA } : trigger)) };
 }
 
 // Until 2026-10-15 a pack kept its toggles as Risu's text, read on every use.
 function togglesRead(pack: Record<string, unknown>) {
   return typeof pack.toggles === 'string' ? { ...pack, toggles: readToggles(pack.toggles) } : null;
-}
-
-function cardToggles(value: Record<string, unknown>) {
-  const card = isRecord(value.card) ? togglesRead(value.card) : null;
-  return card && { ...value, card };
 }
 
 // Until 2026-10-08 상태창 지정 named display scripts by their place in card.regex. A tab still on that build may add a

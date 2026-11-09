@@ -1,7 +1,7 @@
 import { count, isRecord, list } from '../../connectors/values';
 import type { Portrait, PortraitSource } from '../../model/likeness';
 import { fingerprint } from '../memory';
-import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource, nativeHolds, readTriggers, record, regexScripts, regexSource, stampIds, strings, text, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';
+import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource, luaCodes, nativeHolds, readTriggers, record, regexScripts, regexSource, stampIds, strings, text, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';
 import { readToggles, writeToggles } from './toggles';
 import type { Bot, BundledModule, CharacterOwn, HazelleOwn, LoreEntry, Profiles, RegexScript, Trigger, TypedModule } from './types';
 
@@ -35,8 +35,8 @@ function partition<T, S>(entries: T[], place: (entry: T) => Placed, kept: (entry
 }
 
 // A pack's lists as this app holds them, split into what Risu's own lists hold and what only the extension keeps: the
-// scripts turned off, and the lore entries the native lorebook cannot hold whole. lua: whether Risu's list holds a Lua
-// trigger, which Risu runs only with lowLevelAccess.
+// scripts turned off, and the lore entries the native lorebook cannot hold whole. lua: whether Risu's list holds Lua,
+// which Risu runs only with lowLevelAccess.
 function setApart(regex: RegexScript[], triggers: Trigger[], lore: LoreEntry[]) {
   const scripts = partition(regex, (script) => (script.off ? 'own' : 'risu'), regexSource);
   const run = partition(triggers, (trigger) => (trigger.off ? 'own' : 'risu'), triggerSource);
@@ -45,7 +45,7 @@ function setApart(regex: RegexScript[], triggers: Trigger[], lore: LoreEntry[]) 
     regex: scripts.risu.map(regexSource),
     triggers: run.risu.map(triggerSource),
     lore: book.risu,
-    lua: run.risu.some((trigger) => trigger.kind === 'lua'),
+    lua: run.risu.some((trigger) => luaCodes(trigger).length > 0),
     kept: { off: { regex: scripts.kept, triggers: run.kept }, lore: book.kept },
   };
 }
