@@ -323,6 +323,17 @@ describe('assemble', () => {
     expect(sent.at(-1)).toEqual({ role: 'system', content: 'Last word' });
   });
 
+  it('puts @@reverse_depth 0 after the last chat message, ahead of the global note, and @@depth 0 in 최종 삽입', () => {
+    const blocks: Prompt['blocks'] = [
+      { id: 'chat', name: null, kind: 'slot', slot: 'chat', range: { from: 0, to: null } },
+      { id: 'note', name: null, kind: 'text', role: 'system', mark: 'globalNote', text: 'GLOBAL' },
+      { id: 'end', name: null, kind: 'slot', slot: 'postEverything' },
+    ];
+    const entries = [lore('lore', '@@reverse_depth 0\nLORE'), lore('end', '@@depth 0\nEND')];
+    const sent = build({ card: card({ postHistoryInstructions: '' }), prompt: { ...starter, blocks }, lore: entries, greeting: null, messages: [message('u1', 'user', 'U')] });
+    expect(sent.map(({ role, content }) => [role, content])).toEqual([['user', 'U'], ['system', 'LORE'], ['system', 'GLOBAL'], ['system', 'END']]);
+  });
+
   it('tells, and gives loadLoreBooks, no @@inject_at entry whose target the prompt has no block for', () => {
     const blocks = starter.blocks.filter((block) => block.kind !== 'text' || block.mark !== 'globalNote');
     const entries = [lore('kind', '@@inject_at main\nStay kind.'), lore('note', '@@inject_at globalNote\nBe brief.')];

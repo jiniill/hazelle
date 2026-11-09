@@ -14,6 +14,8 @@ export type Placement =
   | { kind: 'description'; side: 'before' | 'after' }
   // Counted from the end of the chat: 0 is after the last message.
   | { kind: 'depth'; depth: number; role: Role }
+  // 최종 삽입: @@end and @@depth 0.
+  | { kind: 'end'; role: Role }
   | { kind: 'position'; name: string }
   | { kind: 'inject'; target: string; operation: Operation };
 
@@ -42,7 +44,7 @@ export type LoreEntries = { id: string; value: Omit<LoreEntry, 'folder'> }[];
 export type LoreTurn = {
   // Exclude the greeting from key scans. Risu chatLength is history.length + 1 regardless of greeting presence.
   history: HistoryMessage[];
-  // The chat's greeting as an index into Card.greetings, which @@is_greeting counts from 1.
+  // The chat's greeting as an index into Card.greetings, which @@is_greeting counts by: 0 is first_mes.
   greeting: number | null;
   // Entries with an after-match decorator that went into an earlier prompt of this chat, as the previous
   // Activation.afterMatch left them.
@@ -73,6 +75,7 @@ type Where =
   | { kind: 'lorebook' }
   | { kind: 'description'; side: 'before' | 'after' }
   | { kind: 'depth'; depth: number; reverse: boolean }
+  | { kind: 'end' }
   | { kind: 'position'; name: string }
   | { kind: 'inject'; target: string };
 
@@ -157,26 +160,29 @@ function activate(shelf: (Book | string)[], books: Book[], { scanDepth, recursiv
     if (rules.afterMatch === 'dont' && afterMatch.has(id)) return { kind: 'closed', cause: 'after-match' };
     if (chatLength < rules.onlyAfter) return { kind: 'closed', cause: 'only-after', from: rules.onlyAfter };
     if (chatLength % rules.onlyEvery !== 0) return { kind: 'closed', cause: 'only-every', every: rules.onlyEvery };
-    if (rules.greeting !== null && (greeting === null || greeting + 1 !== rules.greeting)) return { kind: 'closed', cause: 'greeting' };
+    if (rules.greeting !== null && greeting !== rules.greeting) return { kind: 'closed', cause: 'greeting' };
     return null;
   };
   const matched: { book: Book; why: Why }[] = [];
   const active: Book[] = [];
   const fates = new Map<string, Fate>();
-  let waiting = books.filter((book) => closed(book) === null).map((book) => ({ book, evidence: new Map<Matcher, Source>() }));
-  let frontier: Scanned[] = [];
+  let waiting = books.filter((book) => closed(book) === null).map((book) => ({ book, evidence: new Map<Matcher, Source>(), read: 0 }));
+  // The bodies of the recursive entries that fired, in the order they fired. An entry reads each from the next one
+  // scanned, in the same pass, as Risu's do: an @@exclude_keys later in the lorebook stops on it at once.
+  const recursed: Scanned[] = [];
   let first = true;
-  // Scan prior passes' activated text. Each entry fires at most once and retains its roll across passes.
+  // Each entry fires at most once and retains its roll across passes.
   for (;;) {
     const waited = waiting;
-    const now: Book[] = [];
+    const read = recursed.length;
     waiting = [];
     for (const pending of waited) {
       progressed();
       const { book, evidence } = pending;
       const why = triggered(book, afterMatch, () => {
         if (first) consume(book.matchers, evidence, window(history, book.rules.scanDepth ?? scanDepth));
-        if (book.rules.searchRecursion) consume(book.matchers, evidence, frontier);
+        if (book.rules.searchRecursion) consume(book.matchers, evidence, recursed.slice(pending.read));
+        pending.read = recursed.length;
         return evidence;
       });
       if (!why) {
@@ -184,13 +190,12 @@ function activate(shelf: (Book | string)[], books: Book[], { scanDepth, recursiv
         continue;
       }
       matched.push({ book, why });
-      if (seeded(`${seed}:${book.id}`)() * 100 < book.rules.probability) now.push(book);
-      else fates.set(book.id, { kind: 'dropped', cause: 'probability' });
+      if (seeded(`${seed}:${book.id}`)() * 100 < book.rules.probability) {
+        active.push(book);
+        if (book.rules.recursive ?? recursive) recursed.push(book.scanned);
+      } else fates.set(book.id, { kind: 'dropped', cause: 'probability' });
     }
-    active.push(...now);
-    const bodies = now.filter(({ rules }) => rules.recursive ?? recursive).map(({ scanned }) => scanned);
-    if (bodies.length === 0) break;
-    frontier = bodies;
+    if (recursed.length === read) break;
     first = false;
   }
 
@@ -229,7 +234,7 @@ function activate(shelf: (Book | string)[], books: Book[], { scanDepth, recursiv
   const final = stays.reverse();
   for (const { id } of final) fates.set(id, { kind: 'placed', tokens: tokens.get(id)! });
 
-  const ranked = final.map((book, index) => ({ book, rank: depthRank(book.rules, index) }));
+  const ranked = final.map((book, index) => ({ book, rank: tieRank(book, index) }));
   const placed = [...ranked.filter(({ rank }) => rank.length === 0), ...ranked.filter(({ rank }) => rank.length > 0).sort((a, b) => compare(a.rank, b.rank))];
   const unmatched = new Set(waiting.map(({ book }) => book));
   const silent = shelf.flatMap((entry): Silent[] => {
@@ -320,11 +325,11 @@ function apply(rules: Rules, { name, value }: DecoratorLine): boolean {
     case 'reverse_depth': {
       const depth = integer(value, 0);
       if (depth === null) return false;
-      rules.where = { kind: 'depth', depth, reverse: name === 'reverse_depth' };
+      rules.where = depth === 0 && name === 'depth' ? { kind: 'end' } : { kind: 'depth', depth, reverse: name === 'reverse_depth' };
       return true;
     }
     case 'end':
-      rules.where = { kind: 'depth', depth: 0, reverse: false };
+      rules.where = { kind: 'end' };
       return true;
     case 'role':
       if (!ROLES.includes(value)) return false;
@@ -357,7 +362,7 @@ function apply(rules: Rules, { name, value }: DecoratorLine): boolean {
     case 'activate_only_after':
     case 'activate_only_every':
     case 'is_greeting': {
-      const number = integer(value, name === 'scan_depth' || name === 'activate_only_after' ? 0 : 1);
+      const number = integer(value, name === 'activate_only_every' ? 1 : 0);
       if (number === null) return false;
       if (name === 'scan_depth') rules.scanDepth = number;
       else if (name === 'activate_only_after') rules.onlyAfter = number;
@@ -441,7 +446,7 @@ function consume(matchers: Matcher[], evidence: Evidence, sources: Scanned[]) {
 }
 
 function find(query: Query, evidence: Evidence): { key: string; source: Source } | null {
-  // Key order outranks source age: a higher-priority key can first match in a later frontier.
+  // Key order outranks source age: a higher-priority key can first match in a body that fired later.
   for (const { key, match } of query) {
     const source = evidence.get(match);
     if (source) return { key, source };
@@ -467,6 +472,8 @@ function placement({ where, role, operation }: Rules): Placement {
       return { kind: 'lorebook', role };
     case 'depth':
       return { kind: 'depth', depth: where.depth, role };
+    case 'end':
+      return { kind: 'end', role };
     case 'inject':
       return { kind: 'inject', target: where.target, operation };
     default:
@@ -474,12 +481,20 @@ function placement({ where, role, operation }: Rules): Placement {
   }
 }
 
-// Preserve Risu ties (§e steps 7/14): at depth >0 reverse @@depth, then keep @@reverse_depth order.
-// At 0 put reverse-depth first, then depth in order with assistant entries last; elsewhere return empty.
-function depthRank({ where, role }: Rules, index: number): number[] {
-  if (where.kind !== 'depth') return [];
-  if (where.depth > 0) return where.reverse ? [where.depth, 1, index] : [where.depth, 0, -index];
-  return [0, where.reverse ? 0 : role === 'assistant' ? 2 : 1, index];
+// Preserve Risu ties within one place (§e steps 7/14), from the final order: before the description, entries of one
+// insertion order in the order they fired; at a depth reverse @@depth, then keep @@reverse_depth order; at the end
+// keep the order with assistant entries last. The leading number keeps places apart; elsewhere return empty.
+function tieRank({ value, rules: { where, role } }: Book, index: number): number[] {
+  switch (where.kind) {
+    case 'description':
+      return where.side === 'before' ? [0, value.insertionOrder, -index] : [];
+    case 'depth':
+      return where.reverse ? [1, where.depth, 1, index] : [1, where.depth, 0, -index];
+    case 'end':
+      return [2, role === 'assistant' ? 1 : 0, index];
+    default:
+      return [];
+  }
 }
 
 const compare = (a: number[], b: number[]) => a.reduce((result, value, i) => result || value - b[i]!, 0);

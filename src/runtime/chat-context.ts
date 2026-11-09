@@ -29,27 +29,21 @@ import type { TranslateInput } from './translate';
 
 type Reader = { store: Pick<ObjectStore, 'get' | 'children' | 'scopeState'> };
 
-// Pack order: character, global modules, prompt modules, character modules, persona modules; first occurrence wins.
+// Pack order: prompt modules, character, global modules, character modules, persona modules; first occurrence wins.
+// A preset's regex is a prompt module, which Risu runs before the character's (ruled 2026-11-09).
 // Missing/binned modules are off; module null identifies the character pack (design §6.5).
 export function packsOf(store: Reader['store'], chat: Pick<Chat, 'character' | 'prompt' | 'persona'>): { id: string; pack: Pack; module: { namespace: string | null } | null }[] {
   const character = chat.character === null ? null : store.get('character', chat.character);
   const prompt = chatPrompt(store, chat);
   const persona = chatPersona(store, chat);
-  const modules = [
-    ...new Set([
-      ...(accountSettings(store).modules ?? []),
-      ...(prompt.kind === 'prompt' ? (prompt.prompt.value.modules ?? []) : []),
-      ...(character?.value.modules ?? []),
-      ...(persona.kind === 'persona' ? (persona.persona.value.modules ?? []) : []),
-    ]),
-  ];
-  return [
-    ...(character ? [{ id: character.id, pack: character.value.card, module: null }] : []),
-    ...modules.flatMap((id) => {
+  const prompted = new Set(prompt.kind === 'prompt' ? (prompt.prompt.value.modules ?? []) : []);
+  const rest = new Set([...(accountSettings(store).modules ?? []), ...(character?.value.modules ?? []), ...(persona.kind === 'persona' ? (persona.persona.value.modules ?? []) : [])].filter((id) => !prompted.has(id)));
+  const on = (ids: Set<string>) =>
+    [...ids].flatMap((id) => {
       const module = store.get('module', id)?.value;
       return module && module.deleted === undefined ? [{ id, pack: module, module: { namespace: module.namespace } }] : [];
-    }),
-  ];
+    });
+  return [...on(prompted), ...(character ? [{ id: character.id, pack: character.value.card, module: null }] : []), ...on(rest)];
 }
 
 // 재귀 검색 is off by default, where Risu's is on (ruled 2026-10-24): chained entries flood a chat with unrelated lore.

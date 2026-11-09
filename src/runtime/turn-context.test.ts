@@ -103,9 +103,9 @@ it('attributes preview lore to its pack and keeps pack order, attachment sites a
   const chat = { title: null, character: character.data.id, models: {} };
   const preview: Assembled = { messages: [{ role: 'system', content: 'entry' }], parts: [{ from: { kind: 'depth', id: lore, name: 'entry', depth: 1 }, tokens: 7 }], invalidKeys: [{ entry: lore, name: 'entry', key: '/(/' }, { entry: lore, name: 'entry', key: '/unclosed' }], lore: [{ id: lore, name: 'entry', why: { kind: 'constant' }, fate: { kind: 'placed', tokens: 7 } }], silent: [{ id: own, name: 'own', why: { kind: 'unmatched' } }, { id: quiet, name: 'quiet', why: { kind: 'closed', cause: 'disabled' } }], loreBudget: 0, memory: null, memoryShape: null, dropped: 0, problems: { found: [], omitted: 0 }, unseen: 0 };
   const contributions = moduleContributions(session, chat, preview);
-  expect(contributions.map(({ id }) => id)).toEqual([character.data.id, module.data.id]);
-  expect(contributions[0]).toMatchObject({ kind: 'character', attached: [{ kind: 'character', id: character.data.id, own: true }], lore: [], invalidKeys: [] });
-  expect(contributions.map(({ silent }) => silent.map(({ id }) => id))).toEqual([[own], [quiet]]);
-  expect(contributions[1]).toMatchObject({ attached: [{ kind: 'settings', id: SETTINGS_ID, own: false }, { kind: 'prompt', id: settings.prompt, own: false }, { kind: 'character', id: character.data.id, own: false }, { kind: 'persona', id: settings.persona, own: false }], regex: { input: 1, output: 0, process: 0, display: 0 }, triggers: { lua: 1, blocks: 0 }, toggles: [toggle], lore: [{ id: lore, parts: [{ index: 0, tokens: 7 }] }], invalidKeys: [{ entry: lore, name: 'entry', keys: ['/(/', '/unclosed'] }] });
+  expect(contributions.map(({ id }) => id)).toEqual([module.data.id, character.data.id]);
+  expect(contributions[1]).toMatchObject({ kind: 'character', attached: [{ kind: 'character', id: character.data.id, own: true }], lore: [], invalidKeys: [] });
+  expect(contributions.map(({ silent }) => silent.map(({ id }) => id))).toEqual([[quiet], [own]]);
+  expect(contributions[0]).toMatchObject({ attached: [{ kind: 'settings', id: SETTINGS_ID, own: false }, { kind: 'prompt', id: settings.prompt, own: false }, { kind: 'character', id: character.data.id, own: false }, { kind: 'persona', id: settings.persona, own: false }], regex: { input: 1, output: 0, process: 0, display: 0 }, triggers: { lua: 1, blocks: 0 }, toggles: [toggle], lore: [{ id: lore, parts: [{ index: 0, tokens: 7 }] }], invalidKeys: [{ entry: lore, name: 'entry', keys: ['/(/', '/unclosed'] }] });
   expect(inspectToggles(store, chat)).toContainEqual({ declaration: toggle, value: '1', sources: [{ from: 'module', id: module.data.id, name: 'module', lines: [toggle] }] });
 }));
