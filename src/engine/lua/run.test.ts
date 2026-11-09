@@ -99,22 +99,25 @@ describe('Lua runs', () => {
     expect(new Map(outcome.writes)).toEqual(new Map([['hp', '7'], ['unset', 'null'], ['__bag', '["key","map"]'], ['seen', 'map1']]));
   });
 
-  it("unsets on a nil write, which then reads as the card's default or null", async () => {
+  it("unsets on a nil write, which then reads as the card's default, the prompt's, or null", async () => {
     const card = { variables: [['mood', 'calm']] } as unknown as Snapshot['scope']['card'];
+    const prompt = { variables: [['mood', 'tense'], ['day', '1']] } as unknown as Snapshot['scope']['prompt'];
     const outcome = await run(
       `function onOutput(id)
         setChatVar(id, 'mood', 'angry')
         setChatVar(id, 'mood', nil)
+        setChatVar(id, 'day', '2')
+        setChatVar(id, 'day', nil)
         setState(id, 'bag', { 'key' })
         setChatVar(id, '__bag', nil)
         setChatVar(id, 'seen', getChatVar(id, 'mood') .. '/' .. tostring(getState(id, 'bag')))
       end`,
       { kind: 'output' },
       {},
-      { ...SNAPSHOT, scope: { ...SNAPSHOT.scope, card } },
+      { ...SNAPSHOT, scope: { ...SNAPSHOT.scope, card, prompt } },
     );
     expect(outcome.errors).toEqual([]);
-    expect(new Map(outcome.writes)).toEqual(new Map([['mood', 'calm'], ['__bag', 'null'], ['seen', 'calm/nil']]));
+    expect(new Map(outcome.writes)).toEqual(new Map([['mood', 'calm'], ['day', '1'], ['__bag', 'null'], ['seen', 'calm/nil']]));
   });
 
   it('names a variable by a key that is no text as Risu does: 5 as 5, nil as null', async () => {

@@ -105,6 +105,10 @@ export function contexts(scope: Omit<ChatScope, 'toggles' | 'cast'> & { toggles:
 // staged is post-input/output text for Lua; wrote holds that stage's CBS writes; missed lists stale Lua editDisplay passes.
 // unfound includes finish's missing assets, null outside display. A runaway stage keeps its input with literal tags;
 // stopped is null when none ran away.
+// The card's defaults over the prompt's, as Risu reads its preset's templateDefaultVariables after the card's; a later
+// pair of one name wins.
+export const defaultVariables = (scope: Pick<ChatScope, 'prompt' | 'card'>): [string, string][] => [...(scope.prompt?.variables ?? []), ...(scope.card?.variables ?? [])];
+
 export function renderChat(
   stage: Stage,
   scope: ChatScope,
@@ -115,8 +119,7 @@ export function renderChat(
   const unfound = stage === 'display' ? new Set<string>() : null;
   const context = contexts(scope, stage, null, '', unfound);
   const scripts = new Scripts(scope.packs.flatMap(({ regex }) => regex), scope.messages);
-  // The card's defaults over the prompt's, as Risu reads its preset's templateDefaultVariables after the card's.
-  const start: [string, string][] = [...(scope.prompt?.variables ?? []), ...(scope.card?.variables ?? []), ...scope.variables];
+  const start: [string, string][] = [...defaultVariables(scope), ...scope.variables];
   const variables = trace ? new Traced(trace) : new Logged();
   if (lua) variables.changed = new Set();
   // Through set, so the stamp tells one start from another; then cleared, since a pass begins from start.
