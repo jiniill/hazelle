@@ -6,20 +6,20 @@ import { ACTS } from './acts';
 // added: the entry the add button just made, whose first field takes the focus, which brings it into view.
 type Entry<T> = { value: T; index: number; name: string; added: boolean; set: (value: T) => void; remove: ReactNode };
 
-type Props<T> = {
+type Props<T> = Place & {
   entries: T[];
   onChange: (entries: T[]) => void;
   name: (index: number) => string;
   blank: T;
   addLabel: string;
-  // What an empty list says, with the add under it as its first step.
-  empty?: string;
   // The caller words it, so the particle after the noun is right.
   removed: (index: number) => string;
-  // A row before the entries that holds the add, in place of the button after them, such as a setting's row in a group.
-  head?: (add: { label: string; onClick: () => void }) => ReactNode;
   children: (entry: Entry<T>) => ReactNode;
 };
+
+// Where the add stands: in a row before the entries (head), such as a setting's row in a group, or after them, and
+// then an empty list says empty with the add under it as its first step.
+type Place = { head: (add: { label: string; onClick: () => void }) => ReactNode; empty?: never } | { head?: never; empty: string };
 
 // Undo inserts into the current list at its old position, clamped to the end if the list shrank.
 export function EntryList<T>({ entries, onChange, name, blank, addLabel, empty, removed, head, children }: Props<T>) {
@@ -60,7 +60,7 @@ export function EntryList<T>({ entries, onChange, name, blank, addLabel, empty, 
         </Fragment>
       ))}
       {/* In a row, so the column the list stands in does not stretch the button to its width. */}
-      {!head && (entries.length === 0 && empty ? <Empty variant="section" action={button}>{empty}</Empty> : <Row kind="actions">{button}</Row>)}
+      {!head && (entries.length === 0 ? <Empty variant="section" action={button}>{empty}</Empty> : <Row kind="actions">{button}</Row>)}
     </>
   );
 }

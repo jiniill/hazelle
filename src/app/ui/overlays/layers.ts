@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboard
 import { ChangeSignal } from '../../../change-signal';
 import { isComposing } from '../foundation/keys';
 import { hasFinePointer } from '../foundation/media';
+import { tokenPx } from '../foundation/tokenPx';
 
 type Layer = {
   outside: (target: Node) => boolean;
@@ -91,7 +92,7 @@ export function room(element: HTMLElement) {
   return { left, top, right, bottom };
 }
 
-export const menuEdge = (element: HTMLElement) => parseFloat(getComputedStyle(element).getPropertyValue('--menu-edge'));
+export const menuEdge = (element: HTMLElement) => tokenPx('--menu-edge', element);
 
 export function keepOnScreen(element: HTMLElement) {
   // Measured unshifted: --nudge inherits, so a popover inside another would otherwise start from the outer one's shift.

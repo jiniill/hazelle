@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
 import { ACTS } from './common/acts';
 import { ASSET, COMMAND, UNDO } from './common/words';
+import { useDisplay } from './display';
 import { ZOOM_KEYS, pressed, STEP_KEYS, type Chord } from './ui';
 
 type Shortcut = { label: string; keys: readonly Chord[] };
@@ -55,6 +56,8 @@ type Name = keyof typeof SHORTCUTS;
 // Enter로 보내기 off (설정 › 조작): Enter only breaks the line, and Ctrl+Enter sends.
 const ENTER_OFF: Partial<Record<Name, readonly Chord[]>> = { send: [{ key: 'Enter', mod: true }], newline: [{ key: 'Enter' }] };
 export const keysOf = (name: Name, enterSends: boolean) => (enterSends ? undefined : ENTER_OFF[name]) ?? SHORTCUTS[name].keys;
+// A box beside the composer that sends (a comment, an ask of the studio) takes its keys.
+export const useSendKeys = () => keysOf('send', useDisplay().display.enterSends);
 
 // Where each shortcut works, in the order 단축키 lists them.
 export const SHORTCUT_GROUPS: readonly { title: string; note?: string; names: readonly Name[] }[] = [

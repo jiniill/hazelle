@@ -3,6 +3,7 @@ import { TAB_STOPS } from '../overlays/layers';
 import { RowMemoryContext, type RowMemory } from './row-memory';
 import { RowSizes } from './viewport-size';
 import styles from './Viewport.module.css';
+import { tokenPx } from '../foundation/tokenPx';
 
 type Props = {
   keys: readonly string[];
@@ -126,7 +127,7 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
       setView({ top: frame.scrollTop - offset, height: frameHeight(frame) });
     };
     update.current = read;
-    setEstimate(parseFloat(getComputedStyle(element).getPropertyValue('--viewport-estimate')));
+    setEstimate(tokenPx('--viewport-estimate', element));
     const observer = new ResizeObserver(() => {
       if (width !== element.clientWidth) {
         const offset = offsetIn(element, frame);

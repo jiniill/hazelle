@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type Ref
 import { rowAt, viewLines } from '../collections/Viewport';
 import { useAwake } from './awake';
 import styles from './Scrubber.module.css';
+import { tokenPx } from '../foundation/tokenPx';
 
 type Props = {
   scrollRef: RefObject<HTMLElement | null>;
@@ -78,7 +79,7 @@ export function Scrubber({ scrollRef, keys, stops, label, onSeek }: Props) {
   function seek(event: PointerEvent<HTMLDivElement>) {
     const held = grip.current!;
     const { box } = held;
-    const thumb = parseFloat(getComputedStyle(track.current!).getPropertyValue('--scrubber-thumb'));
+    const thumb = tokenPx('--scrubber-thumb', track.current!);
     const span = box.height - thumb;
     const coarse = span / last < FINE;
     if (coarse && !held.fine && held.stop >= 0 && box.left - event.clientX > PULL) held.fine = { y: event.clientY, stop: held.stop };

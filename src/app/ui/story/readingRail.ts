@@ -1,4 +1,5 @@
 import { useLayoutEffect, type RefObject } from 'react';
+import { tokenPx } from '../foundation/tokenPx';
 
 // Named in StoryMessage.module.css, as data-reading.
 export const MESSAGE = 'data-story-message';
@@ -17,9 +18,8 @@ export function useReadingRail(scrollRef: RefObject<HTMLElement | null>, footerR
     let frame = 0;
     const place = () => {
       frame = 0;
-      const style = getComputedStyle(scroll);
-      const gap = parseFloat(style.getPropertyValue('--space-16'));
-      const top = scroll.getBoundingClientRect().top + parseFloat(style.getPropertyValue('--header-height'));
+      const gap = tokenPx('--space-16', scroll);
+      const top = scroll.getBoundingClientRect().top + tokenPx('--header-height', scroll);
       const bottom = footer.getBoundingClientRect().top;
       const middle = (top + bottom) / 2;
       let reading: HTMLElement | null = null;

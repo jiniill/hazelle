@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProper
 import { LineageCard } from './LineageCard';
 import { placeRows, placeStems, type Metrics, type PlacedPill, type PlacedStem, type RowMetrics, type Sprout, type Stem } from './stems';
 import styles from './Lineage.module.css';
+import { tokenPx } from '../foundation/tokenPx';
 
 // What a stem's head says, from its owner; where it stands in the family, the map adds.
 export type LineageHead = { title: string; note?: string; preview?: string; control?: ReactNode; onClick?: () => void };
@@ -17,11 +18,10 @@ type Props = {
 };
 
 // The sizes the lines are drawn with are the stylesheet's: the SVG and the placement take numbers.
-const px = (name: string) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
-const headHeight = (preview: boolean) => px(preview ? '--lineage-head-preview' : '--lineage-head');
-const mapMetrics = (preview: boolean): Metrics => ({ unit: px('--lineage-unit'), min: px('--lineage-line-min'), max: px('--lineage-line-max'), head: { width: px('--lineage-head-width'), height: headHeight(preview) }, gap: px('--lineage-gap'), drop: px('--lineage-drop'), pill: px('--lineage-pill-step'), endDrop: px('--lineage-end-drop') });
-const rowMetrics = (preview: boolean): RowMetrics => ({ head: headHeight(preview), gap: px('--lineage-row-gap'), lane: px('--lineage-lane'), end: px('--lineage-gutter-end') });
-const marks = () => ({ cap: px('--lineage-cap') / 2, tick: px('--lineage-tick') / 2, tickMin: px('--lineage-tick-min') });
+const headHeight = (preview: boolean) => tokenPx(preview ? '--lineage-head-preview' : '--lineage-head');
+const mapMetrics = (preview: boolean): Metrics => ({ unit: tokenPx('--lineage-unit'), min: tokenPx('--lineage-line-min'), max: tokenPx('--lineage-line-max'), head: { width: tokenPx('--lineage-head-width'), height: headHeight(preview) }, gap: tokenPx('--lineage-gap'), drop: tokenPx('--lineage-drop'), pill: tokenPx('--lineage-pill-step'), endDrop: tokenPx('--lineage-end-drop') });
+const rowMetrics = (preview: boolean): RowMetrics => ({ head: headHeight(preview), gap: tokenPx('--lineage-row-gap'), lane: tokenPx('--lineage-lane'), end: tokenPx('--lineage-gutter-end') });
+const marks = () => ({ cap: tokenPx('--lineage-cap') / 2, tick: tokenPx('--lineage-tick') / 2, tickMin: tokenPx('--lineage-tick-min') });
 
 const tagOf = (via: Sprout | null) => (via === null ? '원본' : via.kind === 'copy' ? '사본' : via.at === null ? '분기' : `${via.at}번째에서`);
 const frameOf = (stem: Stem, via: Sprout | null) => (stem.ghost ? 'ghost' : via?.kind === 'copy' ? 'copy' : 'plain');

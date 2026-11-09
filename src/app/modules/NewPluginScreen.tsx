@@ -17,6 +17,7 @@ import { Button, Callout, CommentBox, Link, NavBar, Row, Screen, Section, Stack 
 import { isPlace, PLACES, StudioPlaces } from './StudioPlaces';
 import { TestRuns, testRunner } from './StudioTest';
 import { askHint, useAskEstimate } from './useAskEstimate';
+import { useSendKeys } from '../shortcuts';
 
 type Run = { kind: 'idle' } | { kind: 'running'; length: number; runs: TestRun[] } | { kind: 'failed'; message: string; runs: TestRun[] };
 
@@ -34,6 +35,7 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
   const route = sharedModel(store, 'main', picked);
   const ready = !('kind' in route);
   const running = run.kind === 'running';
+  const sendKeys = useSendKeys();
   const estimate = useAskEstimate(session, ready && ask.trim() ? { body: null, ask, model: picked } : null);
 
   async function make() {
@@ -74,6 +76,7 @@ export function NewPluginScreen({ place, back }: { place: string | null; back: B
           <Stack gap="related">
             <CommentBox
               label="만들 플러그인"
+              send={{ keys: sendKeys, run: running || !ready || !ask.trim() ? null : () => void make() }}
               value={ask}
               onChange={setAsk}
               placeholder="예: 응답마다 글자 수를 배지로 달아 줘"

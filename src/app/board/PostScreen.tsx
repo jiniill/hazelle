@@ -31,9 +31,8 @@ import { count, readCount } from '../common/typedNumber';
 import { useAttempt } from '../common/useAttempt';
 import { useLoaded } from '../common/useLoaded';
 import { BOARD, REMOVE_FAILED } from '../common/words';
-import { useDisplay } from '../display';
 import { useAccount } from '../session';
-import { keysOf } from '../shortcuts';
+import { useSendKeys } from '../shortcuts';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
@@ -391,7 +390,7 @@ function CommentComposer({ label, placeholder, initial = '', confirm, focus = fa
   const [text, setText] = useState(initial);
   const { busy, failure, run } = useAttempt();
   const { length, over, hint, error } = counted(text, MAX_COMMENT_LENGTH);
-  const sendKeys = keysOf('send', useDisplay().display.enterSends);
+  const sendKeys = useSendKeys();
   const ready = length > 0 && !over && text.trim() !== initial.trim();
   const submit = () =>
     gate(() =>

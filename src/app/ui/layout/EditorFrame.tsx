@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import styles from './EditorFrame.module.css';
+import { tokenPx } from '../foundation/tokenPx';
 
 // split: the outline beside the open part; drill: the outline, or one part of it with a back to it.
 export type EditorLayout = 'split' | 'drill';
@@ -11,7 +12,7 @@ export function EditorRoom({ children }: { children: (layout: EditorLayout) => R
   const [layout, setLayout] = useState<EditorLayout>();
   useLayoutEffect(() => {
     const element = room.current!;
-    const measure = () => setLayout(element.clientWidth >= parseFloat(getComputedStyle(element).getPropertyValue('--editor-split')) ? 'split' : 'drill');
+    const measure = () => setLayout(element.clientWidth >= tokenPx('--editor-split', element) ? 'split' : 'drill');
     measure();
     const watch = new ResizeObserver(measure);
     watch.observe(element);

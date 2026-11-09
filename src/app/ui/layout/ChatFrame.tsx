@@ -5,6 +5,7 @@ import { faceStyle, FONTS, type FontId } from '../foundation/fonts';
 import { usePanelsBeside, useShortWide } from '../foundation/media';
 import { useReadingRail } from '../story/readingRail';
 import styles from './ChatFrame.module.css';
+import { tokenPx } from '../foundation/tokenPx';
 
 type Spacing = 'narrow' | 'normal' | 'wide' | 'widest';
 
@@ -15,7 +16,7 @@ export type Reading = { font: FontId; size: number; leading: Spacing; width: Spa
 // outside the chat.
 export const readingDefault = (): Reading => ({
   font: 'serif',
-  size: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--prose-size')),
+  size: tokenPx('--prose-size'),
   leading: 'normal',
   width: 'normal',
   reply: 'follow',
@@ -117,9 +118,8 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
       // Center story + stage when space allows; otherwise preserve the minimum lead and room for the gap/SidePeek tab.
       // Cap stage width at story width and keep left/right layouts symmetric.
       const style = getComputedStyle(content);
-      const px = (name: string) => parseFloat(style.getPropertyValue(name));
-      const least = px('--read-stage-least');
-      const stage = Math.max(0, Math.min(content.offsetWidth, element.clientWidth - content.offsetWidth - least - px('--space-16') - px('--peek-tab-width')));
+      const least = tokenPx('--read-stage-least', content);
+      const stage = Math.max(0, Math.min(content.offsetWidth, element.clientWidth - content.offsetWidth - least - tokenPx('--space-16', content) - tokenPx('--peek-tab-width', content)));
       const lead = Math.max(least, (element.clientWidth - content.offsetWidth - stage) / 2);
       setRoom({ stage, lead, text: content.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), page: element.clientWidth, story: content.offsetWidth });
     };

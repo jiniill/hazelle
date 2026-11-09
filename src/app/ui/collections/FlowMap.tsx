@@ -2,6 +2,7 @@ import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'rea
 import { Tag } from '../foundation/Tag';
 import { pathOf, type FlowEdge, type FlowKind } from './flow';
 import styles from './FlowMap.module.css';
+import { tokenPx } from '../foundation/tokenPx';
 
 // lead: what the node stands for, over its title (a role over its model); note: what it holds or runs on.
 export type FlowNode = { id: string; title: string; lead?: string; note?: string; badge?: string; tone?: 'plain' | 'warn' | 'off' };
@@ -19,7 +20,6 @@ type Props = {
   legend: Partial<Record<FlowKind, string>>;
 };
 
-const px = (name: string) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
 const classes = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(' ');
 const LINES: Record<FlowKind, string> = { follow: styles.follow!, own: styles.own!, gap: styles.gap!, off: styles.off! };
 const TONES = { plain: undefined, warn: styles.warn, off: styles.muted };
@@ -66,7 +66,7 @@ function useStacked() {
   useLayoutEffect(() => {
     const frame = root.current;
     if (!frame) return;
-    const watch = new ResizeObserver(() => setStacked(frame.clientWidth < px('--flow-stack')));
+    const watch = new ResizeObserver(() => setStacked(frame.clientWidth < tokenPx('--flow-stack')));
     watch.observe(frame);
     return () => watch.disconnect();
   }, []);
@@ -125,7 +125,7 @@ export function FlowMap({ label, columns, edges, picked, onPick, detail, legend 
               <Fragment key={`${edge.from}>${edge.to}`}>
                 <path className={classes(styles.line, LINES[edge.kind], lit && (lit.has(edge.from) && lit.has(edge.to) ? styles.lit : styles.dim))} d={d} />
                 {edge.label && (
-                  <text className={styles.label} x={x - px('--flow-label-inset')} y={y - px('--flow-label-inset')} textAnchor="end">
+                  <text className={styles.label} x={x - tokenPx('--flow-label-inset')} y={y - tokenPx('--flow-label-inset')} textAnchor="end">
                     {edge.label}
                   </text>
                 )}

@@ -31,6 +31,7 @@ import { ApplyDialog } from './ApplyDialog';
 import { draftTitle, lineRange, USE_TAGS } from './studio';
 import { askHint, useAskEstimate } from './useAskEstimate';
 import { TestPane, TestRuns, testRunner, type TestSetup } from './StudioTest';
+import { useSendKeys } from '../shortcuts';
 
 function askFoot(store: ObjectStore, ask: Pick<DraftAsk, 'model' | 'cost'>): string {
   const route = routeOf(store, ask.model);
@@ -131,6 +132,7 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
   const abort = useRef<AbortController | null>(null);
   useEffect(() => () => abort.current?.abort(), []);
   const running = run.kind === 'running';
+  const sendKeys = useSendKeys();
   const estimate = useAskEstimate(session, ask.trim() ? { body: draft.body, ask, model: picked, earlier: draft.asks.slice(-EARLIER) } : null);
 
   const pending = run.kind === 'answered' ? run.pending : null;
@@ -202,6 +204,7 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
       )}
       <CommentBox
         label="수정할 내용"
+        send={{ keys: sendKeys, run: running || !ask.trim() || pending !== null ? null : () => void send(ask.trim()) }}
         value={ask}
         onChange={setAsk}
         placeholder="수정할 내용을 입력해 주세요"

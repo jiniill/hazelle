@@ -6,7 +6,7 @@ import { isToggle } from '../../model/prompt';
 import { copyModule, editModule, setModuleAlways, setModuleDeleted } from '../../runtime/modules';
 import { ACTS } from '../common/acts';
 import { aliased } from '../common/alias';
-import { holdsLine } from '../common/pack';
+import { holdsLine, howMany } from '../common/pack';
 import { AssetsEditor } from '../common/AssetsEditor';
 import { LoreEditor } from '../common/LoreEditor';
 import { PackToggles } from '../common/PackToggles';
@@ -168,7 +168,7 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
       <ModelsConsent module={stored} />
       <UsedBy id={id} />
       <List box places label="토글">
-        <ListItem title="토글" note={`${value.toggles.filter(isToggle).length}개`} onClick={() => navigate({ kind: 'module', id, pane: 'toggles' })} />
+        <ListItem title="토글" note={howMany(value.toggles.filter(isToggle).length)} onClick={() => navigate({ kind: 'module', id, pane: 'toggles' })} />
       </List>
       <LoreEditor owner={{ kind: 'module', id }} folders={value.loreFolders} />
       {scripts}

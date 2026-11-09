@@ -277,6 +277,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
             name={(index) => `첫인사 ${index + 1}`}
             blank=""
             addLabel="첫인사 추가"
+            empty="첫인사가 없어요."
             removed={(index) => `${index + 1}번째 첫인사를 삭제했어요.`}
           >
             {({ value, name, added, set, remove }) => <CountedField label={name} lines={6} focus={added} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={value} onChange={set} action={remove} />}

@@ -127,6 +127,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
             name={(index) => `대사 ${index + 1}`}
             blank={{ speaker: '', text: '' }}
             addLabel="대사 추가"
+            empty="대사가 없어요."
             removed={(index) => `${index + 1}번째 대사를 삭제했어요.`}
           >
             {({ value, name, added, set, remove }) => (
