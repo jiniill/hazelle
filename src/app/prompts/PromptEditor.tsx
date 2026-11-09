@@ -4,7 +4,7 @@ import { holdsPersona } from '../../engine/pipeline';
 import type { Stored } from '../../model/kinds';
 import { live } from '../../model/library';
 import { labOn } from '../../model/settings';
-import { isToggle, slotsOf, sortOf, type Block, type PromptSort, type TextBlock, type Toggle, type WrappedSlot } from '../../model/prompt';
+import { isToggle, slotsOf, sortOf, type Block, type ConversationPrompt, type PromptSort, type TextBlock, type Toggle, type WrappedSlot } from '../../model/prompt';
 import type { ApiResult } from '../../runtime/api';
 import { setAgentModel, setPromptModel } from '../../runtime/assignment';
 import { setAgentAt } from '../../runtime/agents';
@@ -79,6 +79,7 @@ const HELP = '위아래 화살표로 이동, Alt+화살표로 순서 변경, Ent
 const CACHE_WORDS = { set: '여기까지 캐시', auto: '자동 캐시' } as const;
 const UNDO = { did: '되돌렸어요', failed: '되돌리지 못했어요' };
 const REDO = { did: '다시 실행했어요', failed: '다시 실행하지 못했어요' };
+const IMPORTED_FROM: Record<NonNullable<ConversationPrompt['imported']>, string> = { 'risu-preset': 'Risu 프리셋에서 가져옴', 'sillytavern-preset': 'SillyTavern 프리셋에서 가져옴' };
 
 export type PromptAt = { pane: PromptPane | null; block?: string };
 
@@ -438,7 +439,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
     return frame({ head: { title, onBack: leavePage, backLabel: '전송 순서', status }, body: page, open });
   }
 
-  const origin = stored.value.task === undefined && stored.value.imported === 'risu-preset' ? 'Risu 프리셋에서 가져옴' : stored.value.origin ? copyOf(promptName(stored.value.origin.name)) : null;
+  const origin = stored.value.task === undefined && stored.value.imported ? IMPORTED_FROM[stored.value.imported] : stored.value.origin ? copyOf(promptName(stored.value.origin.name)) : null;
   const facts = [sort === 'conversation' && promptUseWords(uses), ofSort(stored, 'agent') && STAGE_NAMES[stored.value.stage], origin].filter(Boolean).join(' · ');
   const subtitle = (isDefault || facts) && (
     <>

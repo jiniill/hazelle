@@ -91,7 +91,7 @@ export function risuCharacter(char: Json, chats: (Json | null)[], folder: string
   };
 }
 
-type RisuChats = { chats: RisuChat[]; missed: MoveUnsupported[] };
+export type RisuChats = { chats: RisuChat[]; missed: MoveUnsupported[] };
 
 // Risu's export of one chat (risuChat) or of a character's every chat (risuAllChats); null for any other JSON. Risu
 // reads data as a list or as one chat at either version, and so does this.
@@ -153,6 +153,7 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
     ...chatLorebook(localCopies(list(chat.localLore), globalLore, missed)),
     memory: memory.summaries,
     folder: folders.get(text(chat.folderId)) ?? null,
+    staged: true,
     messages: messages.map((message) => {
       at = finite(message.time) ?? at;
       // Risu keeps a reply's reasoning inside its text as <Thoughts> blocks, and takes them out again before it draws or

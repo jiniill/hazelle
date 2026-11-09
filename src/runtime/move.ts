@@ -223,14 +223,14 @@ export async function importRisuChats(store: ObjectStore, character: string | nu
 // A chat Risu bound to no persona, or to one not brought, holds the current persona, as a chat saved here would. Its
 // lorebook goes before its messages, whose last write a move counts its progress by. folders: the ids its character's
 // chat folders are written under, in RisuCharacter.chatFolders order.
-function chatOf(id: string, character: string | null, card: Card | null, { title, note, persona, greeting, variables, messages, lore, loreFolders, memory: remembered, folder }: RisuChat, personaIds: ReadonlyMap<string, string>, current: string | undefined, memory: MemorySettings, folders: readonly string[]): { entries: Write[]; root: Write } {
+function chatOf(id: string, character: string | null, card: Card | null, { title, note, persona, greeting, variables, messages, lore, loreFolders, memory: remembered, folder, staged }: RisuChat, personaIds: ReadonlyMap<string, string>, current: string | undefined, memory: MemorySettings, folders: readonly string[]): { entries: Write[]; root: Write } {
   // The chat opens on the greeting Risu showed; a blank one shown leaves the chat without one, as Risu showed none.
   // One past the card's greetings opens on its last, as Risu shows it; projectGreetings would take the first.
   const greetings = card && startingGreetings(projectGreetings(card.greetings, card.greetings.map(() => crypto.randomUUID()), Math.min(greeting, Math.max(card.greetings.length - 1, 0))));
   const own = (persona === null ? undefined : personaIds.get(persona)) ?? current;
   const { folders: grouped, writes } = importedLore(id, lore, loreFolders);
   const chat: Chat = { title: title.trim() || null, character, models: {}, memory: remembered.length ? { ...memory, on: true } : memory, ...(note !== null && { note }), ...(own && { persona: own }), ...(variables.length > 0 && { variables }), ...(grouped.length > 0 && { loreFolders: grouped }), ...(folder !== null && { folder: folders[folder]! }) };
-  const { entries, root, said } = chatWrites(id, chat, greetings, messages);
+  const { entries, root, said } = chatWrites(id, chat, greetings, { messages, staged });
   const recorded: Write[] = remembered.length ? [{ type: 'create', kind: 'memory', id: memoryId(id), parent: id, value: risuRecords(remembered, messages, said) }] : [];
   return { entries: [...writes, ...entries, ...recorded], root };
 }

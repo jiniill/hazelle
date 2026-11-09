@@ -7,18 +7,21 @@ import { expansionLimit, gunzip, TooLarge } from './inflate';
 import { readMsgpack, writeMsgpack } from './msgpack';
 import { pack, unpack } from './risum';
 import { seal, unseal } from './risu-seal';
+import { isSillyTavernPreset, sillyTavernPreset } from './sillytavern-preset';
 import { readToggles, writeToggles } from './toggles';
 import type { RegexScript } from './types';
 
 // What a preset holds that the prompt does not take, in the order the summary lists it.
-const UNSUPPORTED = ['jailbreak', 'cot', 'chatml', 'cache-narrowed', 'unread-item', 'repeated-slot', 'toggle-line', 'preset-text', 'regex-stage', 'prompt-settings', 'settings'] as const;
+// off-item, macro and sillytavern-regex are SillyTavern's (engine/import/sillytavern-preset).
+const UNSUPPORTED = ['jailbreak', 'cot', 'chatml', 'cache-narrowed', 'unread-item', 'off-item', 'repeated-slot', 'toggle-line', 'preset-text', 'macro', 'regex-stage', 'sillytavern-regex', 'prompt-settings', 'settings'] as const;
 export type PresetUnsupportedKind = (typeof UNSUPPORTED)[number];
-type Counted = Exclude<PresetUnsupportedKind, 'repeated-slot'>;
+export type PresetCounted = Exclude<PresetUnsupportedKind, 'repeated-slot'>;
 // A repeated slot is listed once per slot, so the summary can name it.
-export type PresetUnsupported = { kind: Counted; count: number } | { kind: 'repeated-slot'; slot: SlotKind; count: number };
+export type PresetUnsupported = { kind: PresetCounted; count: number } | { kind: 'repeated-slot'; slot: SlotKind; count: number };
 
-// unreadable: not RPack'd gzip'd MessagePack. not-preset: a Risu container of another type. decrypt-failed:
-// the preset inside does not open. no-template: a legacy preset, which risu-alpha does not assemble.
+// unreadable: not RPack'd gzip'd MessagePack, or SillyTavern's with no global prompt order (detail sillytavern-order).
+// not-preset: a Risu container of another type. decrypt-failed: the preset inside does not open. no-template: a legacy
+// preset, which risu-alpha does not assemble.
 export type PresetFailure = { kind: 'unreadable' | 'not-preset' | 'decrypt-failed' | 'no-template'; detail?: string };
 // regex: the preset's scripts, which a prompt cannot hold; saving puts them in a module on for the prompt.
 export type PresetRead = { prompt: ConversationPrompt; regex: RegexScript[]; unsupported: PresetUnsupported[] };
@@ -46,7 +49,7 @@ const WRAPPED = new Map<unknown, 'description' | 'persona' | 'authorNote' | 'mem
   ['authornote', 'authorNote'],
   ['memory', 'memory'],
 ]);
-const SKIPPED = new Map<unknown, Counted>([
+const SKIPPED = new Map<unknown, PresetCounted>([
   ['jailbreak', 'jailbreak'],
   ['cot', 'cot'],
   ['chatML', 'chatml'],
@@ -150,10 +153,16 @@ function templateItem(block: Block, authorNote: string): Json | null {
 export const PRESET_EXTENSIONS = ['.risup', '.risupreset', '.preset', '.json'];
 export const isPresetFile = (fileName: string) => PRESET_EXTENSIONS.some((extension) => extension !== '.json' && fileName.toLowerCase().endsWith(extension));
 
-// A preset as JSON, as Risu's downloadPreset writes it by default (_preset.json); null for JSON of another shape. Every
-// preset Risu holds has mainPrompt, a legacy one included, which convertPreset refuses as no-template.
-export const presetJson = (json: unknown): PresetResult | null =>
-  isRecord(json) && (Array.isArray(json.promptTemplate) || typeof json.mainPrompt === 'string') ? convertPreset(json) : null;
+// A preset as JSON, as Risu's downloadPreset writes it by default (_preset.json), or SillyTavern's chat-completion preset,
+// which name, its file's, names; null for JSON of another shape. Every preset Risu holds has mainPrompt, a legacy one
+// included, which convertPreset refuses as no-template.
+export function presetJson(json: unknown, name: string): PresetResult | null {
+  if (!isRecord(json)) return null;
+  if (Array.isArray(json.promptTemplate) || typeof json.mainPrompt === 'string') return convertPreset(json);
+  if (!isSillyTavernPreset(json)) return null;
+  const read = sillyTavernPreset(json, name);
+  return read ? { ok: true, prompt: read.prompt, regex: [], unsupported: listed(read.counts, new Map()) } : { ok: false, failure: { kind: 'unreadable', detail: 'sillytavern-order' } };
+}
 
 // A Risu preset object, as a .risup holds it and as a backup's botPresets lists it.
 export function convertPreset(preset: unknown): PresetResult {
@@ -163,8 +172,8 @@ export function convertPreset(preset: unknown): PresetResult {
 }
 
 function convert(preset: Json, template: unknown[]): PresetRead {
-  const counts: Tally<Counted> = new Map();
-  const count = (kind: Counted, amount = 1) => add(counts, kind, amount);
+  const counts: Tally<PresetCounted> = new Map();
+  const count = (kind: PresetCounted, amount = 1) => add(counts, kind, amount);
   const repeated: Tally<SlotKind> = new Map();
   const blocks: Block[] = [];
   const placed = new Set<SlotKind>();
@@ -216,9 +225,12 @@ function convert(preset: Json, template: unknown[]): PresetRead {
   return {
     prompt: { name: text(preset.name), blocks, toggles, authorNote, models: {}, imported: 'risu-preset', ...(companions.length > 0 && { companions }), ...(variables.length > 0 && { variables }) },
     regex,
-    unsupported: UNSUPPORTED.flatMap((kind): PresetUnsupported[] => (kind === 'repeated-slot' ? [...repeated].map(([slot, amount]) => ({ kind, slot, count: amount })) : counted([kind], counts))),
+    unsupported: listed(counts, repeated),
   };
 }
+
+const listed = (counts: Tally<PresetCounted>, repeated: Tally<SlotKind>) =>
+  UNSUPPORTED.flatMap((kind): PresetUnsupported[] => (kind === 'repeated-slot' ? [...repeated].map(([slot, amount]) => ({ kind, slot, count: amount })) : counted([kind], counts)));
 
 // Count unsupported PromptSettings only off-default (Risu storage/database.svelte.ts:438-449).
 // Exclude unread assistantPrefill, and trimStartNewChat/customChainOfThought: this app sends neither marker nor CoT instruction.
@@ -231,7 +243,7 @@ function promptSettings(settings: Json, template: unknown[]): number {
 
 // One template item (compat spec §e, Template assembly). Fields a type does not use, such as a persona
 // item's range, are ignored.
-function block(item: Json): Block | Counted {
+function block(item: Json): Block | PresetCounted {
   const skipped = SKIPPED.get(item.type);
   if (skipped) return skipped;
   const named = { id: crypto.randomUUID(), name: text(item.name) || null };

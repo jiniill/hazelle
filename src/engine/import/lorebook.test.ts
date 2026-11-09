@@ -21,4 +21,19 @@ describe('lorebook file', () => {
     expect(readLorebookText(JSON.stringify(novel))?.lore).toMatchObject([{ name: 'Gate', keys: ['gate'], content: 'A gate.', insertionOrder: 400 }]);
     expect(readLorebookText('{"name": "card", "data": {}}')).toBeNull();
   });
+
+  it("reads SillyTavern's world info with what its character-book export carries: off, place, depth, logic, chance", () => {
+    const world = {
+      entries: {
+        0: { uid: 0, key: ['gate', '/ga?te/i'], keysecondary: ['night'], comment: 'Gate', content: 'A gate.', constant: false, selective: true, selectiveLogic: 3, order: 7, position: 1, disable: true, caseSensitive: true, matchWholeWords: false },
+        1: { uid: 1, key: ['sea'], keysecondary: [], comment: 'Sea', content: 'The sea.', constant: true, selective: true, selectiveLogic: 0, order: 100, position: 4, depth: 2, role: 1, useProbability: true, probability: 40 },
+        2: { uid: 2, key: ['note'], comment: 'Note', content: 'A note.', order: 100, position: 2 },
+      },
+    };
+    expect(readLorebookText(JSON.stringify(world))?.lore).toEqual([
+      entry('Gate', { keys: ['gate', '/ga?te/i'], secondaryKeys: ['night'], content: '@@match_partial_word\n@@additional_keys night\nA gate.', enabled: false, useRegex: true, caseSensitive: true, insertionOrder: 7, position: 'after_char' }),
+      entry('Sea', { keys: ['sea'], content: '@@depth 2\n@@role user\n@@probability 40\nThe sea.', constant: true, selective: true, useRegex: true }),
+      entry('Note', { keys: ['note'], content: 'A note.', useRegex: true }),
+    ]);
+  });
 });
