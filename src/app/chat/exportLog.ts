@@ -7,7 +7,6 @@ import type { Shown } from '../../runtime/talk';
 import type { OpenChat } from './useChat';
 import { inlaid, type LogRow } from '../ui';
 import { shownHtml, speaker } from './ChatMessage';
-import { seenText } from './search';
 
 export type LogText = 'translation' | 'original' | 'both';
 // from, to: message numbers, from 1, both included.
@@ -41,7 +40,7 @@ export function displayed(view: Display, index: number, bot: boolean) {
   return { stories: aroundBoxes(view.boxes[index]!, text.trim() ? [shownHtml(text, decor)] : [], decor), css: bot ? resolveAssets(view.css, decor.url) : '' };
 }
 
-export function logDraft(messages: Shown[], view: Display, { placed, pictures: drawn }: Illustrated, flipped: ReadonlySet<string>, bot: boolean, names: OpenChat['names'], { hideMe, text, from, to }: LogChoices): LogDraft {
+export function logDraft(messages: Shown[], view: Display, { placed, pictures: drawn }: Illustrated, flipped: ReadonlySet<string>, shownTranslation: (text: string) => string, bot: boolean, names: OpenChat['names'], { hideMe, text, from, to }: LogChoices): LogDraft {
   const decor = { bot, url: pictureRef };
   const rows: LogRow[] = [];
   for (let index = from - 1; index < Math.min(to, messages.length); index++) {
@@ -49,10 +48,9 @@ export function logDraft(messages: Shown[], view: Display, { placed, pictures: d
     const version = shown(message);
     if (unlogged(message)) continue;
     const original = view.texts[index]!;
-    const translation = version.translation?.text ?? null;
     const own = { text: original, original: true };
-    const other = translation === null ? own : { text: translation, original: false };
-    const said = (text === 'original' ? [own] : text === 'both' ? [...new Set([own, other])] : [seenText(original, version, null, flipped.has(version.id)) === original ? own : other]).filter((each) => each.text.trim());
+    const other = version.translation ? { text: shownTranslation(version.translation.text), original: false } : own;
+    const said = (text === 'original' ? [own] : text === 'both' ? [...new Set([own, other])] : [flipped.has(version.id) ? own : other]).filter((each) => each.text.trim());
     const places = byParagraph(drawn.get(version.id) ?? [], version.text);
     const story = ({ text, original }: (typeof said)[number], at: number) => {
       if (!places.size || at > 0) return shownHtml(text, decor);

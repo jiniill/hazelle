@@ -5,7 +5,7 @@ import { appendUserMessage, startChat } from './chat-log';
 import { answerable, inTurn, saying, stubRelay, testServer } from './testing';
 import { createCharacter, setOwnTranslate, setTranslate, setTranslatorNote } from './characters';
 import { setDefaultModel } from './assignment';
-import { setToolNote, translate, translatorOf, translateOnTool, translateText, type Translating } from './translate';
+import { setToolNote, translate, translatorOf, translateOnTool, translateText, translationShown, type Translating } from './translate';
 import { takeTurn } from './turn';
 import { SHARED_CHAT } from './features';
 import { translationInput } from './chat-context';
@@ -156,7 +156,7 @@ describe('Translator', () => {
       expect(JSON.parse(log[1]!.sent.body!).messages.at(-1)).toEqual({ role: 'user', content: 'Hello, traveler.' });
     }));
 
-  it('runs the character’s translation-stage scripts over a reply’s translation, as it comes and as it is saved', () =>
+  it('keeps a reply’s translation as the model wrote it, and shows it through the character’s translation-stage scripts', () =>
     server.withSession(async (session) => {
       await answerable(session);
       const character = crypto.randomUUID();
@@ -172,12 +172,9 @@ describe('Translator', () => {
       await takeTurn(session, chat, { kind: 'answer' });
       const messages = () => fold(session.store.children('entry', chat));
       const reply = shown(messages()[1]!);
-      const live = new Set<string>();
-      const unsubscribe = session.translator.subscribe(() => live.add(session.translator.snapshot().live.get(reply.id) ?? ''));
       session.translator.translate(chat, reply, translationInput(session, chat, opened, messages(), { kind: 'message', index: 1 }));
-      await vi.waitFor(() => expect(shown(messages()[1]!).translation?.text).toBe('안녕, 나그네.'));
-      unsubscribe();
-      expect([...live].filter((text) => text.includes('여행자'))).toEqual([]);
+      await vi.waitFor(() => expect(shown(messages()[1]!).translation?.text).toBe('안녕, 여행자.'));
+      expect(translationShown(session.store, opened)('안녕, 여행자.')).toBe('안녕, 나그네.');
     }));
 
   it('lets a version be translated again after a translation that threw', () =>

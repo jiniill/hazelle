@@ -3,7 +3,7 @@ import { shown, type Chat, type TranslateSwitches } from '../../model/chat';
 import { setOwnTranslate, setTranslate, type TranslateSetup } from '../../runtime/characters';
 import { translationInput } from '../../runtime/chat-context';
 import type { Shown } from '../../runtime/talk';
-import { translatorOf, type TranslatorFailure } from '../../runtime/translate';
+import { translationShown, translatorOf, type TranslatorFailure } from '../../runtime/translate';
 import { languageLabel } from '../common/languages';
 import { useCaptured, useSession, useTranslating } from '../session';
 import { useToast } from '../toast';
@@ -16,6 +16,7 @@ export function useChatTranslation(chatId: string, chat: Chat, messages: Shown[]
   const toast = useToast();
   const translating = useTranslating();
   const translation = useCaptured((store) => translatorOf(store, chat), [chat]);
+  const shownTranslation = useCaptured((store) => translationShown(store, chat), [chat]);
   const sendLanguage = languageLabel(translate.inputLanguage);
   const [flipped, setFlipped] = useState<ReadonlySet<string>>(new Set());
   const last = messages.at(-1);
@@ -57,7 +58,7 @@ export function useChatTranslation(chatId: string, chat: Chat, messages: Shown[]
   }
 
   return {
-    translation, sendLanguage, translating, flipped, awaited,
+    translation, shownTranslation, sendLanguage, translating, flipped, awaited,
     actions: {
       translate: translateMessage,
       flipTranslation,

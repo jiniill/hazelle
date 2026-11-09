@@ -15,8 +15,18 @@ describe('finder', () => {
 
 it('reads a version as its translation, the translation streaming in, or the original once flipped', () => {
   const version = { translation: { text: '번역' } } as Version;
-  expect(seenText('원문', version, null, false)).toBe('번역');
-  expect(seenText('원문', version, '번역 중', false)).toBe('번역 중');
-  expect(seenText('원문', version, '번역 중', true)).toBe('원문');
-  expect(seenText('원문', {} as Version, null, false)).toBe('원문');
+  const plain = (text: string) => text;
+  expect(seenText('원문', version, null, false, plain)).toBe('번역');
+  expect(seenText('원문', version, '번역 중', false, plain)).toBe('번역 중');
+  expect(seenText('원문', version, '번역 중', true, plain)).toBe('원문');
+  expect(seenText('원문', {} as Version, null, false, plain)).toBe('원문');
+});
+
+it('shows a translation, stored or streaming, through the translation scripts, and the original without them', () => {
+  const version = { translation: { text: '번역' } } as Version;
+  const edited = (text: string) => `[${text}]`;
+  expect(seenText('원문', version, null, false, edited)).toBe('[번역]');
+  expect(seenText('원문', version, '번역 중', false, edited)).toBe('[번역 중]');
+  expect(seenText('원문', version, null, true, edited)).toBe('원문');
+  expect(seenText('원문', {} as Version, '', false, edited)).toBe('원문');
 });

@@ -32,7 +32,7 @@ const TEXTS: { value: LogText; label: string }[] = [{ value: 'translation', labe
 type Drawing = { key: string; title: string; sub: string | null; css: string; rows: LogRow[]; missing: number };
 type Prepared = { html: string; size: string; missing: number; rules: number };
 
-type Props = Pick<OpenChat, 'messages' | 'view' | 'placed' | 'pictures' | 'flipped' | 'busy'> & {
+type Props = Pick<OpenChat, 'messages' | 'view' | 'placed' | 'pictures' | 'flipped' | 'shownTranslation' | 'busy'> & {
   item: ChatItem;
   bot: boolean;
   characterName: string | null;
@@ -44,7 +44,7 @@ type Props = Pick<OpenChat, 'messages' | 'view' | 'placed' | 'pictures' | 'flipp
   onClose: () => void;
 };
 
-export function ChatExport({ item, messages, view, placed, pictures, flipped, busy, bot, characterName, names, replyLanguage, onTranslate, onClose }: Props) {
+export function ChatExport({ item, messages, view, placed, pictures, flipped, shownTranslation, busy, bot, characterName, names, replyLanguage, onTranslate, onClose }: Props) {
   const store = useStore();
   const files = useFiles();
   const toast = useToast();
@@ -97,7 +97,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, bu
     setDrawing(null);
     if (form !== 'log' || waiting) return;
     let live = true;
-    const draft = logDraft(messages, view, { placed, pictures }, flipped, bot, names, choices);
+    const draft = logDraft(messages, view, { placed, pictures }, flipped, shownTranslation, bot, names, choices);
     const read = choices.pictures ? assetDataUrls(store, files, draft.pictures.values()) : Promise.resolve({ urls: new Map<string, string>(), missing: draft.pictures.size });
     void read.then(({ urls, missing }) => {
       if (live) setDrawing({ key: crypto.randomUUID(), title: item.title, sub: characterName, ...resolveLog(draft, (kind, id) => urls.get(pictureRef(kind, id))), missing });
@@ -105,7 +105,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, bu
     return () => {
       live = false;
     };
-  }, [form, choices, messages, view, placed, pictures, flipped, waiting]);
+  }, [form, choices, messages, view, placed, pictures, flipped, shownTranslation, waiting]);
 
   async function saveFile() {
     if (form === 'file') {

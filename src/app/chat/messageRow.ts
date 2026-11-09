@@ -39,7 +39,8 @@ export function messageRow(chat: OpenChat, index: number) {
       awaited: chat.awaited(version),
       flipped: chat.flipped.has(version),
       showOriginal: chat.translate.original,
-    }, { untranslated: Object.is }),
+      shownTranslation: chat.shownTranslation,
+    }, { untranslated: Object.is, shownTranslation: Object.is }),
     illustration: rowPart({
       // text with its 삽화's marks as the display left them, null for none (runtime/read-model ChatScreen).
       placed: chat.placed.get(index) ?? null,
