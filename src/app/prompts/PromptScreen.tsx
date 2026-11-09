@@ -1,18 +1,18 @@
 import type { Stored } from '../../model/kinds';
 import { framePage } from '../common/frame';
-import { navigate } from '../shell/router';
-import type { Back, PromptPane } from '../shell/routes';
+import { navigate, openPart } from '../shell/router';
+import type { Back } from '../shell/routes';
 import { useWide } from '../ui';
-import { PromptEditor } from './PromptEditor';
+import { PromptEditor, type PromptAt } from './PromptEditor';
 
-export function PromptScreen({ stored, pane, back }: { stored: Stored<'prompt'>; pane: PromptPane | null; back: Back }) {
+export function PromptScreen({ stored, at, back }: { stored: Stored<'prompt'>; at: PromptAt; back: Back }) {
   const wide = useWide();
   return (
     <PromptEditor
       stored={stored}
       layout={wide ? 'split' : 'drill'}
-      pane={pane}
-      onPane={(next) => navigate({ kind: 'prompt', id: stored.id, pane: next }, { replace: true })}
+      at={at}
+      onAt={(next) => openPart({ kind: 'prompt', id: stored.id, ...next }, wide)}
       backLabel={back.label}
       onBack={() => navigate(back.to)}
       onOpen={(id) => navigate({ kind: 'prompt', id, pane: null })}

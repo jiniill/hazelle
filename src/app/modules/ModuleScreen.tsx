@@ -15,7 +15,7 @@ import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
 import { ALWAYS, BIN_KEEPS, COPY_SAID, copyName, moduleName, PAGES, promptName, SAVE_FAILED } from '../common/words';
 import { useChildren, useSettings, useStore, useStored } from '../session';
-import { backBar, navigate } from '../shell/router';
+import { backBar, navigate, openPart } from '../shell/router';
 import { characterPage, type Back } from '../shell/routes';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
@@ -116,7 +116,7 @@ export function UsedBy({ id }: { id: string }) {
   ));
 }
 
-export function ModuleScreen({ stored, pane, back }: { stored: Stored<'module'>; pane: 'toggles' | null; back: Back }) {
+export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: Stored<'module'>; at: { pane: 'toggles' | null; script?: string }; back: Back }) {
   const wide = useWide();
   const [exporting, setExporting] = useState(false);
   const { id, value } = stored;
@@ -161,7 +161,7 @@ export function ModuleScreen({ stored, pane, back }: { stored: Stored<'module'>;
         <ListItem title="토글" note={`${value.toggles.filter(isToggle).length}개`} onClick={() => navigate({ kind: 'module', id, pane: 'toggles' })} />
       </List>
       <LoreEditor owner={{ kind: 'module', id }} folders={value.loreFolders} />
-      <ScriptsEditor owner={{ kind: 'module', id }} pack={value} drill={!wide} />
+      <ScriptsEditor owner={{ kind: 'module', id }} pack={value} drill={!wide} open={script ?? null} onOpen={(next) => openPart({ kind: 'module', id, pane: null, ...(next && { script: next }) }, wide)} />
       <AssetsEditor owner={id} />
       {describes && <PortraitsEditor owner={id} />}
       {exporting && <ModuleExport id={id} name={name} onClose={() => setExporting(false)} />}

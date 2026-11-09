@@ -123,6 +123,10 @@ export function navigate(route: Route, { replace = false } = {}) {
   queueMicrotask(settle);
 }
 
+// What an editor opens from its own list: beside the list it takes the entry's place, as 설정's sidebar does; drilled
+// into on a phone it is a step of its own, which back takes back.
+export const openPart = (route: Route, beside: boolean) => navigate(route, { replace: beside });
+
 // 설정 or 도구's ×, Esc and shortcut: back to the page under it.
 export function closeLayer() {
   const { under } = parseAddress(address());

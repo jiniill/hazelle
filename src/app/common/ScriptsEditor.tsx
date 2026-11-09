@@ -15,7 +15,7 @@ import { useTrial } from './code/Trial';
 import type { Defaults } from './code/variables';
 import { ACTS, addOf } from './acts';
 import { choices } from './reading';
-import { OpenRow, RowFoot, useOpenRows, type OpenRows } from './OpenRows';
+import { OpenRow, RowFoot, useRowEdits, type RowEdits } from './OpenRows';
 import { useAutosave } from './useAutosave';
 import { useSearch } from './useSearch';
 import { COMMAND, SAVE_FAILED, scriptName, SCRIPTS, STAGES } from './words';
@@ -29,16 +29,17 @@ const ON: Record<string, string> = { start: '채팅 시작', input: STAGES.input
 const OFF = '꺼짐';
 const ADDED: Record<ScriptList, string> = { regex: SCRIPTS.regex, triggers: 'Lua' };
 
-// drill isolates an open script; status uses character card.regex ids; variables feeds editor completion.
-export function ScriptsEditor({ owner, pack, drill, status = [], variables }: { owner: PackOwner; pack: Pack; drill: boolean; status?: readonly string[]; variables?: Defaults }) {
+// open: the one script open, which the caller holds; drill isolates it. status uses character card.regex ids; variables
+// feeds editor completion.
+export function ScriptsEditor({ owner, pack, drill, open, onOpen, status = [], variables }: { owner: PackOwner; pack: Pack; drill: boolean; open: string | null; onOpen: (id: string | null) => void; status?: readonly string[]; variables?: Defaults }) {
   const store = useStore();
   const { scriptPreview } = useSession();
   const trial = useTrial(owner, variables);
   const lua = useMemo(() => luaLanguage((code) => scriptPreview.check(code), trial.variables), [scriptPreview, trial.variables]);
   const replacement = useMemo(() => cbsLanguage({ variables: trial.variables, placeholder: 'data' }), [trial.variables]);
-  const rows = useOpenRows();
-  // One at a time, so the open script is the only one.
-  const open = rows.opened.values().next().value ?? null;
+  // A deleted script shows closed, since the open id then names none; closing it would land after the delete, when the
+  // user may have left the page.
+  const rows = useRowEdits((id, on) => on && onOpen(id));
   // Lua code typed and not applied yet, by script; it goes when the editor does.
   const [drafts, setDrafts] = useState<ReadonlyMap<string, string>>(() => new Map());
   const add = (list: ScriptList) => rows.add(ADDED[list], (id) => (list === 'regex' ? addRegex : addLua)(store, owner, id));
@@ -55,7 +56,7 @@ export function ScriptsEditor({ owner, pack, drill, status = [], variables }: { 
 
   const item = (list: ScriptList, id: string, page: boolean) => {
     const place = pack[list].findIndex((script) => script.id === id);
-    const shared = { owner, pack, place, page, open: page || rows.isOpen(id), onOpen: (on: boolean) => rows.setOpen(id, on), drop: rows.remove };
+    const shared = { owner, pack, place, page, open: page || open === id, onOpen: (on: boolean) => onOpen(on ? id : null), drop: rows.remove };
     if (list === 'regex') return <RegexItem key={id} {...shared} script={pack.regex[place]!} status={status.includes(id)} searched={search.words !== ''} language={replacement} />;
     const trigger = pack.triggers[place]!;
     return trigger.kind === 'lua' ? <LuaItem key={id} {...shared} trigger={trigger} language={lua} trial={trial.lua} draft={drafts.get(id) ?? null} onDraft={(code) => draft(id, code)} onApplied={(code) => applied(id, code)} /> : <BlocksItem key={id} {...shared} trigger={trigger} />;
@@ -71,7 +72,7 @@ export function ScriptsEditor({ owner, pack, drill, status = [], variables }: { 
     return (
       <Stack gap="related">
         <Row kind="toolbar">
-          <Button variant="ghost" size="sm" icon={ChevronLeft} onClick={() => rows.setOpen(open, false)}>
+          <Button variant="ghost" size="sm" icon={ChevronLeft} onClick={() => onOpen(null)}>
             {`${SCRIPTS.part} 목록`}
           </Button>
         </Row>
@@ -130,7 +131,7 @@ export function ScriptsEditor({ owner, pack, drill, status = [], variables }: { 
   );
 }
 
-type ItemProps = { owner: PackOwner; pack: Pack; place: number; page: boolean; open: boolean; onOpen: (open: boolean) => void; drop: OpenRows['remove'] };
+type ItemProps = { owner: PackOwner; pack: Pack; place: number; page: boolean; open: boolean; onOpen: (open: boolean) => void; drop: RowEdits['remove'] };
 
 function Item({ page, open, onOpen, title, tag, note, children }: Pick<ItemProps, 'page' | 'open' | 'onOpen'> & { title: string; tag: string | null; note?: string; children: ReactNode }) {
   if (page)

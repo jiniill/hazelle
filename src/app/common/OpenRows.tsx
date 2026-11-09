@@ -5,17 +5,23 @@ import { Button, ListItem, Row, Stack, Tag, Text } from '../ui';
 import { withParticle } from './particles';
 import { REMOVE_FAILED } from './words';
 
-// Script editors open one row; lore opens several for side-by-side reading/copying (user ruling, not a kit limit).
-export function useOpenRows(several = false) {
-  const toast = useToast();
+// Lore opens several for side-by-side reading/copying (user ruling, not a kit limit); a script editor's one open row is
+// its caller's.
+export function useOpenRows() {
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
   const setOpen = (id: string, on: boolean) =>
     setOpened((now) => {
-      const next = new Set(several ? now : []);
+      const next = new Set(now);
       if (on) next.add(id);
       else next.delete(id);
       return next;
     });
+  return { isOpen: (id: string) => opened.has(id), setOpen, ...useRowEdits(setOpen) };
+}
+
+// setOpen: how a row opens and closes.
+export function useRowEdits(setOpen: (id: string, on: boolean) => void) {
+  const toast = useToast();
 
   // The row opens as added, before the store holds it.
   async function add(noun: string, task: (id: string) => Promise<ApiResult<unknown>>) {
@@ -35,9 +41,10 @@ export function useOpenRows(several = false) {
     toast.undoable(`'${name}' ${withParticle(noun, '을/를')} 삭제했어요.`, () => restore(done.data));
   }
 
-  return { opened, isOpen: (id: string) => opened.has(id), setOpen, add, remove };
+  return { add, remove };
 }
 
+export type RowEdits = ReturnType<typeof useRowEdits>;
 export type OpenRows = ReturnType<typeof useOpenRows>;
 
 export function OpenRow({ title, note, tag, open, onOpen, children }: { title: string; note?: string; tag: string | null; open: boolean; onOpen: (open: boolean) => void; children: ReactNode }) {

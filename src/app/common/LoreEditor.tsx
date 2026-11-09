@@ -154,7 +154,7 @@ export function LoreEditor({ owner, folders, variables }: { owner: LoreOwner; fo
   const language = useMemo(() => cbsLanguage({ variables: trial.variables }), [trial.variables]);
   const entries = useChildren('lore', owner.id);
   const groups = useMemo(() => loreGroups(entries, folders), [entries, folders]);
-  const openRows = useOpenRows(true);
+  const openRows = useOpenRows();
   const folderActions = useLoreFolders(owner);
   const naming = useNaming(folderActions);
   const add = (folder: string | null) => openRows.add(ENTRY, (id) => addLore(store, owner.id, folder, id));
