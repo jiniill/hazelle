@@ -11,7 +11,7 @@ const preset = {
   new_chat_prompt: '[Start a new Chat]',
   new_example_chat_prompt: '[Example Chat]',
   assistant_prefill: '나:',
-  extensions: { regex_scripts: [{ scriptName: 'x' }] },
+  extensions: { regex_scripts: [{ scriptName: 'x', findRegex: '/a/g', replaceString: 'b', placement: [2], promptOnly: true }] },
   prompts: [
     prompt('main', { system_prompt: true, content: '{{char}}로 답해요. {{trim}}' }),
     prompt('jailbreak', { system_prompt: true, content: '', forbid_overrides: true }),
@@ -55,13 +55,14 @@ it("reads SillyTavern's chat-completion preset in its global order, in-chat prom
     ['last', 'system', null],
     // forbid_overrides keeps the card's post-history instructions out, so the empty prompt sends nothing.
   ]);
-  expect(read.regex).toEqual([]);
+  // Its scripts go to the module made with the prompt, as a Risu preset's do.
+  expect(read.regex).toEqual([{ id: 'sillytavern-0', name: 'x', find: 'a', replace: 'b', stage: 'process', flags: 'g' }]);
   expect(read.unsupported).toEqual([
     { kind: 'unread-item', count: 1 },
     { kind: 'off-item', count: 3 },
     // {{trim}} without its text, the write and the name this app does not know.
     { kind: 'macro', count: 3 },
-    { kind: 'sillytavern-regex', count: 1 },
+    { kind: 'regex-role', count: 1 },
     { kind: 'prompt-settings', count: 1 },
     { kind: 'settings', count: 1 },
   ]);

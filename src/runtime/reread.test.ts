@@ -93,13 +93,35 @@ describe('rereadOriginals', () => {
     const assets = store.children('asset', id).map(({ value }) => [value.name, value.use, value.size]).sort();
     expect(assets).toEqual([['night', 'background', backdrop.length], ['smile', undefined, smile.length]]);
     expect(store.get('character', untouched.data.id)!.value.card).toEqual(asOld(read.card.card));
-    expect(accountSettings(store).reread).toBe(1);
+    expect(accountSettings(store).reread).toBe(2);
 
     const marked = await changeSettings(store, (settings) => ({ ...settings, reread: 0 }));
     if (!marked.ok) throw new Error(marked.error);
     expect(await rereadOriginals(store, files, new AbortController().signal)).toEqual({ ok: true, data: { edited: 1 } });
     expect(store.get('character', id)!.rev).toBe(character.rev);
     expect(store.children('asset', id)).toHaveLength(2);
+  });
+
+  it("adds a card's SillyTavern regex scripts after the character's own, once", async () => {
+    vi.stubGlobal('Worker', workers);
+    const { store, files } = await server.account();
+    const scripts = [{ scriptName: 'hide', findRegex: '/<x>/g', replaceString: '', placement: [2], markdownOnly: true }, { scriptName: 'off', findRegex: 'y', placement: [1], disabled: true }];
+    const file = strToU8(JSON.stringify({ spec: 'chara_card_v2', spec_version: '2.0', data: { name: 'Mira', description: 'd', first_mes: 'hi', extensions: { regex_scripts: scripts } } })) as Uint8Array<ArrayBuffer>;
+    const read = await importCard('mira.json', file);
+    if (!read.ok || !('card' in read)) throw new Error('not a card');
+    const mine = { id: 'mine', name: 'mine', find: 'a', replace: 'b', stage: 'output' as const, flags: null };
+    const made = await importCharacter(store, files, { ...read.card, card: { ...read.card.card, regex: [mine] } }, null, () => {});
+    if (!made.ok) throw new Error(made.error);
+    await kept(store, files, made.data.id, 'mira.json', file);
+
+    expect(await rereadOriginals(store, files, new AbortController().signal)).toEqual({ ok: true, data: { edited: 0 } });
+    const character = store.get('character', made.data.id)!;
+    expect(character.value.card.regex.map(({ name, stage, off }) => [name, stage, off])).toEqual([['mine', 'output', undefined], ['hide', 'display', undefined], ['off', 'input', true]]);
+
+    const marked = await changeSettings(store, (settings) => ({ ...settings, reread: 1 }));
+    if (!marked.ok) throw new Error(marked.error);
+    expect(await rereadOriginals(store, files, new AbortController().signal)).toEqual({ ok: true, data: { edited: 0 } });
+    expect(store.get('character', made.data.id)!.rev).toBe(character.rev);
   });
 
   it("gives an imported preset's prompt the default variables it had none of", async () => {

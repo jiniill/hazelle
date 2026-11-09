@@ -6,7 +6,7 @@ import { readToggles, writeToggles } from './toggles';
 import { blockConditions, blockEffects, conditionSources, effectSources } from './blocks';
 import { readOnboarding } from './onboarding';
 import { RISU_SCRIPT_TYPES } from '../../tool-api/risu-regex';
-import { NEW_STAGE, type Card, type ImportedModule, type ImportReport, type LoreEntry, type Pack, type RegexScript, type Trigger, type UnsupportedKind } from './types';
+import { NEW_STAGE, type Card, type ImportedModule, type ImportReport, type LoreEntry, type Pack, type RegexScript, type SillyTavernRegexKind, type Trigger, type UnsupportedKind } from './types';
 
 export type Json = Record<string, unknown>;
 type Entry = Omit<LoreEntry, 'name' | 'folder'>;
@@ -89,7 +89,12 @@ export function convert(raw: unknown, module: Json | null, tally: Tally, nativeL
     add(tally, 'emotion', list(risu.emotions).length);
     add(tally, 'voice', Object.keys(record(risu.vits)).length);
   }
-  const pack = packOf({ regex: module ? module.regex : risu.customScripts, trigger: module ? module.trigger : risu.triggerscript, background: risu.backgroundHTML, toggles: risu.toggles }, tally);
+  // Risu's scripts, then SillyTavern's, which Risu never runs: a card that has both was made to run in each app with its
+  // own, so SillyTavern's then come in off.
+  const own = regexScripts(list(module ? module.regex : risu.customScripts), tally);
+  const sillyTavern = sillyTavernRegex(list(extensions.regex_scripts), tally);
+  const regex = [...own, ...(own.length ? sillyTavern.map((script) => ({ ...script, off: true as const })) : sillyTavern)];
+  const pack = packOf({ regex, trigger: module ? module.trigger : risu.triggerscript, background: risu.backgroundHTML, toggles: risu.toggles }, tally);
   if (risu.prebuiltAssetCommand === true) add(tally, 'prebuilt-asset-command');
   if (risu.largePortrait === true) add(tally, 'large-portrait');
   // Risu's inlay mode and its instruction text (newGenData) act only while this is on.
@@ -163,12 +168,12 @@ export function readTriggers(raw: unknown): Unstamped<Trigger>[] {
 // Every Lua code a trigger runs: a Lua trigger's own, then its effects' in their order.
 export const luaCodes = (trigger: Unstamped<Trigger>) => [...(trigger.kind === 'lua' ? [trigger.code] : []), ...trigger.effects.flatMap((effect) => (effect.kind === 'lua' ? [effect.code] : []))];
 
-function packOf(raw: { regex: unknown; trigger: unknown; background: unknown; toggles: unknown }, tally: Tally): Pack {
+function packOf(raw: { regex: Unstamped<RegexScript>[]; trigger: unknown; background: unknown; toggles: unknown }, tally: Tally): Pack {
   const triggers = readTriggers(raw.trigger);
   const background = text(raw.background);
   const toggles = readToggles(text(raw.toggles));
   add(tally, 'toggle-line', toggles.filter((line) => line.kind === 'unread').length);
-  return { ...stampIds({ regex: regexScripts(list(raw.regex), tally), triggers }), ...(background.trim() ? { background } : {}), toggles };
+  return { ...stampIds({ regex: raw.regex, triggers }), ...(background.trim() ? { background } : {}), toggles };
 }
 
 // Writers invert these readers. Charx puts scripts/lore in module.risum and the rest in card.json
@@ -267,7 +272,7 @@ export type ConvertedModule = Omit<ImportedModule, 'assets' | 'unsupported'> & {
 // A Risu module as RisuModule holds it (src/ts/process/modules.ts), without its pictures. Its lowLevelAccess is not
 // kept: what its scripts may do is the user's answer, as for a card (design §6.8).
 export function convertModule(raw: Json, tally: Tally): ConvertedModule {
-  const pack = packOf({ regex: raw.regex, trigger: raw.trigger, background: raw.backgroundEmbedding, toggles: raw.customModuleToggle }, tally);
+  const pack = packOf({ regex: regexScripts(list(raw.regex), tally), trigger: raw.trigger, background: raw.backgroundEmbedding, toggles: raw.customModuleToggle }, tally);
   const { lore, loreFolders } = nativeLorebook(list(raw.lorebook));
   countTags([...pack.regex.flatMap((script) => [script.find, script.replace]), pack.background ?? '', ...lore.map((entry) => entry.content)], tally);
   // Neither runs here (design §6.10: a module reaches no network; Risu itself never reads cjs), so neither is kept.
@@ -345,6 +350,56 @@ export function regexScripts<K>(scripts: unknown[], tally: Tally<K | 'regex-stag
     return [{ name: text(script.comment), find: text(script.in), replace: text(script.out), stage, flags: (script.ableFlag === true && text(script.flag)) || null, ...(off && { off: true as const }) }];
   });
 }
+
+// SillyTavern's placements of the user's message and the model's, the two this app has stages for, and its
+// substituteRegex values that run macros in the pattern, as written or with their values escaped. list: what its
+// scripts' ids start with in a read, by which the re-read (runtime/reread) tells them from the Risu scripts beside
+// them; a stored script's id is opaque.
+const SILLYTAVERN = { user: 1, ai: 2, raw: 1, escaped: 2, list: 'sillytavern-' } as const;
+
+// SillyTavern's regex scripts, a card's data.extensions.regex_scripts or a preset's extensions.regex_scripts, in their
+// order. Neither markdownOnly nor promptOnly rewrites the stored message in SillyTavern; here its input and output
+// stages apply to it each time it is shown or sent (design §5 row 19). markdownOnly is the display stage, promptOnly the
+// process stage; a script with both is one of each. A disabled script comes in off; one with no placement this app has
+// comes in off at a new script's stage, as one switched off in Risu does.
+export function sillyTavernRegex<K>(scripts: unknown[], tally: Tally<K | SillyTavernRegexKind>): RegexScript[] {
+  const read = scripts.filter(isRecord).flatMap((script) => {
+    const placement = list(script.placement);
+    const user = placement.includes(SILLYTAVERN.user);
+    const ai = placement.includes(SILLYTAVERN.ai);
+    if (placement.some((place) => place !== SILLYTAVERN.user && place !== SILLYTAVERN.ai)) add(tally, 'regex-placement');
+    const shown = script.markdownOnly === true;
+    const sent = script.promptOnly === true;
+    const stored = !shown && !sent;
+    const runs: [RegexScript['stage'], boolean][] = stored ? [['input', user], ['output', ai]] : [['display', shown && (user || ai)], ['process', sent && (user || ai)]];
+    const stages = runs.flatMap(([stage, on]) => (on ? [stage] : []));
+    // The display and process stages run over both sides' messages.
+    if (!stored && user !== ai) add(tally, 'regex-role');
+    // SillyTavern limits by depth only where it shows or sends a message, and ignores a minimum under -1 or a maximum under 0.
+    const min = finite(script.minDepth);
+    const max = finite(script.maxDepth);
+    if (!stored && ((min !== null && min > 0) || (max !== null && max >= 0))) add(tally, 'regex-depth');
+    if (strings(script.trimStrings).some((trim) => trim !== '')) add(tally, 'regex-trim');
+    const substitute = script.substituteRegex === SILLYTAVERN.raw || script.substituteRegex === SILLYTAVERN.escaped;
+    if (script.substituteRegex === SILLYTAVERN.escaped) add(tally, 'regex-escape');
+    // '/pattern/flags', or a plain pattern with no flags, which replaces its first match only.
+    const source = text(script.findRegex);
+    const [, find = source, letters = ''] = /^\/([\s\S]+)\/([a-z]*)$/i.exec(source) ?? [];
+    // SillyTavern fills {{match}} and $0 with the whole match and $N and $<name> with groups, and writes every other $
+    // as itself, where a replacement here also reads $&, $`, $' and $$.
+    const replace = text(script.replaceString).replace(/\{\{match\}\}|\$0(?!\d)|\$(?!\d|<)/gi, (token) => (token === '$' ? '$$' : '$&'));
+    // Risu's newline after a replacement ending in '>' is not SillyTavern's.
+    const actions = [...(substitute ? ['cbs'] : []), ...(replace.endsWith('>') ? ['no_end_nl'] : [])];
+    // No letters would read as Risu's default g; d changes no match.
+    const flags = (letters || 'd') + (actions.length ? `<${actions.join(',')}>` : '');
+    const off = script.disabled === true || stages.length === 0;
+    const base = { name: text(script.scriptName), find, replace, flags, ...(off && { off: true as const }) };
+    return (stages.length ? stages : [NEW_STAGE]).map((stage) => ({ ...base, stage }));
+  });
+  return read.map((script, place) => ({ ...script, id: `${SILLYTAVERN.list}${place}` }));
+}
+
+export const readFromSillyTavern = ({ id }: RegexScript) => id.startsWith(SILLYTAVERN.list);
 
 type LoreSource = { folderId(raw: Json): string; name(raw: Json): string; entry(raw: Json): Entry };
 

@@ -9,11 +9,11 @@ import { pack, unpack } from './risum';
 import { seal, unseal } from './risu-seal';
 import { isSillyTavernPreset, sillyTavernPreset } from './sillytavern-preset';
 import { readToggles, writeToggles } from './toggles';
-import type { RegexScript } from './types';
+import { SILLYTAVERN_REGEX_KINDS, type RegexScript } from './types';
 
 // What a preset holds that the prompt does not take, in the order the summary lists it.
-// off-item, macro and sillytavern-regex are SillyTavern's (engine/import/sillytavern-preset).
-const UNSUPPORTED = ['jailbreak', 'cot', 'chatml', 'cache-narrowed', 'unread-item', 'off-item', 'repeated-slot', 'toggle-line', 'preset-text', 'macro', 'regex-stage', 'sillytavern-regex', 'prompt-settings', 'settings'] as const;
+// off-item and macro are SillyTavern's (engine/import/sillytavern-preset), and so are SILLYTAVERN_REGEX_KINDS.
+const UNSUPPORTED = ['jailbreak', 'cot', 'chatml', 'cache-narrowed', 'unread-item', 'off-item', 'repeated-slot', 'toggle-line', 'preset-text', 'macro', 'regex-stage', ...SILLYTAVERN_REGEX_KINDS, 'prompt-settings', 'settings'] as const;
 export type PresetUnsupportedKind = (typeof UNSUPPORTED)[number];
 export type PresetCounted = Exclude<PresetUnsupportedKind, 'repeated-slot'>;
 // A repeated slot is listed once per slot, so the summary can name it.
@@ -161,7 +161,7 @@ export function presetJson(json: unknown, name: string): PresetResult | null {
   if (Array.isArray(json.promptTemplate) || typeof json.mainPrompt === 'string') return convertPreset(json);
   if (!isSillyTavernPreset(json)) return null;
   const read = sillyTavernPreset(json, name);
-  return read ? { ok: true, prompt: read.prompt, regex: [], unsupported: listed(read.counts, new Map()) } : { ok: false, failure: { kind: 'unreadable', detail: 'sillytavern-order' } };
+  return read ? { ok: true, prompt: read.prompt, regex: read.regex, unsupported: listed(read.counts, new Map()) } : { ok: false, failure: { kind: 'unreadable', detail: 'sillytavern-order' } };
 }
 
 // A Risu preset object, as a .risup holds it and as a backup's botPresets lists it.
