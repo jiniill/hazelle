@@ -1,3 +1,5 @@
+import type { BoardSettings, Status } from './board';
+
 export const MAX_REPORT_LENGTH = 4000;
 export const MAX_NOTICE_LENGTH = 2000;
 
@@ -102,7 +104,52 @@ export type Report = {
   postTitle: string | null;
   commentText: string | null;
 };
-export type LogRow = { id: number; at: number; action: string; target: string; detail: unknown };
+type Named = { username: string };
+// error: a stored code, which an older build may have written in words this one does not know.
+type RestoreEnd = Named & { operation: number; undoes: number | null; error: string | null };
+type HiddenDetail = { reason: string; days: number | null };
+// Each action the operator's log names now, and the detail its row carries (server/operator.ts logged).
+export type LogDetails = {
+  suspend: Named;
+  lift: Named;
+  'delete-account': Named;
+  'set-caps': Named & { bytesCap: OwnCap; fileBytesCap: OwnCap };
+  'set-service': Pick<Service, 'signupCap' | 'accountBytesCap' | 'accountFileBytesCap'>;
+  'set-board': BoardSettings;
+  'set-backup-folder': { folder: string | null };
+  // null: to every account.
+  'send-notice': Named | null;
+  'resolve-report': null;
+  'block-file': null;
+  'unblock-file': null;
+  'hold-share': null;
+  'release-share': null;
+  'block-share': { version: number };
+  'restore-begun': Named & { operation: number; post: number | null; at: number | null; undoes: number | null };
+  'restore-done': RestoreEnd;
+  'restore-cancelled': RestoreEnd;
+  'restore-failed': RestoreEnd;
+  'post-status': { status: Status; version: string | null };
+  'post-hide': HiddenDetail;
+  'post-show': null;
+  'post-lock': null;
+  'post-unlock': null;
+  'post-delete': { title: string };
+  'comment-hide': HiddenDetail;
+  'comment-show': null;
+  'comment-delete': { post: number };
+  'guest-block': null;
+};
+export type LogAction = keyof LogDetails;
+// Rows only older builds wrote, kept KEEP_YEARS like the rest; migration 0034 rewrote the ones today's shapes can hold.
+type OlderDetails = {
+  // A notice that answered an account's report, before the board (migration 0015).
+  'send-notice': Named & { report: number };
+  // 헤이젤 나우's switch for counting guests, gone with them (migration 0027).
+  'set-pulse': { guests: boolean };
+};
+type Rows<T> = { [A in keyof T]: { id: number; at: number; action: A; target: string; detail: T[A] } }[keyof T];
+export type LogRow = Rows<LogDetails> | Rows<OlderDetails>;
 export type Visits = { days: VisitDay[]; cohorts: VisitCohorts };
 // A share in any state: its versions, the manifest's file id of each.
 export type ShareVersion = { version: number; manifest: string; createdAt: number };

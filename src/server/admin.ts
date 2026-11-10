@@ -1,7 +1,6 @@
 import type { Notice } from '../contracts/accounts';
 import type { BoardSettings } from '../contracts/board';
 import { Hono, type Context } from 'hono';
-import { createMiddleware } from 'hono/factory';
 import { KEEP_YEARS, MAX_NOTICE_LENGTH, type AccountState, type AdminAccount, type BackupFolder, type LogRow, type Report, type RestoreAction, type Service, type ShareVersion, type UsagePage, type Visits } from '../contracts/admin';
 import type { Paged } from '../contracts/http';
 import { savedFolder } from './backup/backups';
@@ -9,6 +8,7 @@ import { SHARE_ID } from '../contracts/shares';
 import { blockFiles, fileBlocks } from './files';
 import { forgetCut, serveShareFile } from './shares';
 import type { Db, SqlValue, Statement } from './db/service-db';
+import { act, logged, operator } from './operator';
 import { DAY_MS, fail, ID, isCount, isPositive, readObject, type AppEnv, type Services } from './http';
 import { answerAction, answerBegin, incarnationOf, leaveAccount, refuseLeft, restoreFrom, restorePoints, restoresOf, store } from './lifecycle';
 import { requireSession } from './session';
@@ -17,8 +17,6 @@ import { readCohorts } from './pulse';
 import { forgetDiagnoses, readDiagnoses } from './diagnoses';
 import { readVisits } from './visits';
 
-// Reports are plaintext rows no byte cap counts, so one account's unresolved ones are bounded (board.ts).
-export const MAX_OPEN_REPORTS = 20;
 const PAGE_ROWS = 100;
 const KEEP_MS = KEEP_YEARS * 365 * DAY_MS;
 
@@ -57,8 +55,6 @@ export const notices = new Hono<AppEnv>()
     return c.body(null, 204);
   });
 
-export const operator = createMiddleware<AppEnv>(async (c, next) => (c.get('account').admin ? next() : fail(c, 403, 'not-admin')));
-
 export const admin = new Hono<AppEnv>();
 
 admin.use(requireSession);
@@ -67,19 +63,9 @@ admin.use(operator);
 admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db), cohorts: await readCohorts(c.env.db) } satisfies Visits));
 admin.get('/diagnoses', async (c) => c.json({ rows: await readDiagnoses(c.env.db) }));
 
-// Atomically log then act, gated on target existence; deletion would make later target lookup impossible.
-// values bind detail parameters from ?4 onward.
-function logged(db: Db, action: string, id: string, detail = 'NULL', ...values: SqlValue[]) {
-  return db.prepare(`INSERT INTO admin_log (at, action, target, detail) SELECT ?1, ?2, id, ${detail} FROM accounts WHERE id = ?3`).bind(Date.now(), action, id, ...values);
-}
-
-const USERNAME = `json_object('username', username)`;
-
-// The last statement is the action, and answers the row it wrote.
-export async function act(c: Context<AppEnv>, ...statements: Statement[]) {
-  const done = await c.env.db.batch(statements);
-  return done.at(-1)!.results.length ? c.body(null, 204) : fail(c, 404, 'not-found');
-}
+// The accounts row a log row or a notice names, by ?2.
+const ACCOUNT = 'accounts WHERE id = ?2';
+const suspension = (db: Db, suspended: boolean, id: string) => logged(db, Date.now(), suspended ? 'suspend' : 'lift', { from: ACCOUNT, detail: { username: 'username' } }, id);
 
 const noticeText = (value: unknown) => {
   const text = typeof value === 'string' ? value.trim() : '';
@@ -88,24 +74,18 @@ const noticeText = (value: unknown) => {
 // The text of a notice sent with an act: null for none, blank among them; undefined for one too long to send.
 const optionalText = (value: unknown) => (value === undefined || (typeof value === 'string' && !value.trim()) ? null : (noticeText(value) ?? undefined));
 
-// Whom a notice is to: a FROM clause naming one accounts row by ?1, or null for every account.
-type Target = { from: string; key: string };
-const toAccount = (id: string): Target => ({ from: 'accounts WHERE accounts.id = ?1', key: id });
-
 // The only writer of notices: its log row, then the notice, each written only if its account is there.
-function noticed(db: Db, text: string, to: Target | null): Statement[] {
+function noticed(db: Db, text: string, to: string | null): Statement[] {
   const now = Date.now();
-  if (!to) {
+  if (to === null) {
     return [
-      db.prepare(`INSERT INTO admin_log (at, action, target) VALUES (?, 'send-notice', 'everyone')`).bind(now),
+      logged(db, now, 'send-notice', { target: 'everyone', detail: null }),
       db.prepare('INSERT INTO notices (text, created_at) VALUES (?, ?) RETURNING id').bind(text, now),
     ];
   }
   return [
-    db
-      .prepare(`INSERT INTO admin_log (at, action, target, detail) SELECT ?2, 'send-notice', accounts.id, json_object('username', accounts.username) FROM ${to.from}`)
-      .bind(to.key, now),
-    db.prepare(`INSERT INTO notices (incarnation, text, created_at) SELECT accounts.incarnation, ?3, ?2 FROM ${to.from} RETURNING id`).bind(to.key, now, text),
+    logged(db, now, 'send-notice', { from: ACCOUNT, detail: { username: 'username' } }, to),
+    db.prepare(`INSERT INTO notices (incarnation, text, created_at) SELECT incarnation, ?3, ?1 FROM ${ACCOUNT} RETURNING id`).bind(now, to, text),
   ];
 }
 
@@ -235,7 +215,7 @@ admin.post('/notices', async (c) => {
   const to = body?.to;
   const text = noticeText(body?.text);
   if (!text || !(to === null || (typeof to === 'string' && ID.test(to)))) return fail(c, 400, 'bad-input');
-  return act(c, ...noticed(c.env.db, text, to === null ? null : toAccount(to)));
+  return act(c, ...noticed(c.env.db, text, to));
 });
 
 // reason: a notice to the account, sent with the change. A suspension cannot go without one: the terms promise every
@@ -249,8 +229,8 @@ admin.put('/accounts/:id/suspended', async (c) => {
   const db = c.env.db;
   return act(
     c,
-    logged(db, suspended ? 'suspend' : 'lift', id, USERNAME),
-    ...(reason === null ? [] : noticed(db, reason, toAccount(id))),
+    suspension(db, suspended, id),
+    ...(reason === null ? [] : noticed(db, reason, id)),
     db.prepare('UPDATE accounts SET suspended_at = ? WHERE id = ? RETURNING id').bind(suspended ? Date.now() : null, id),
   );
 });
@@ -266,7 +246,7 @@ admin.put('/accounts/:id/caps', async (c) => {
   const own = (cap: number | null | 'default') => [cap === 'default' ? 0 : 1, cap === 'default' ? null : cap];
   return act(
     c,
-    logged(db, 'set-caps', id, `json_object('username', username, 'bytesCap', json(?4), 'fileBytesCap', json(?5))`, JSON.stringify(bytesCap), JSON.stringify(fileBytesCap)),
+    logged(db, Date.now(), 'set-caps', { from: ACCOUNT, detail: { username: 'username', bytesCap: 'json(?3)', fileBytesCap: 'json(?4)' } }, id, JSON.stringify(bytesCap), JSON.stringify(fileBytesCap)),
     db.prepare('UPDATE accounts SET own_bytes_cap = ?2, bytes_cap = ?3, own_file_bytes_cap = ?4, file_bytes_cap = ?5 WHERE id = ?1 RETURNING id').bind(id, ...own(bytesCap), ...own(fileBytesCap)),
   );
 });
@@ -311,7 +291,7 @@ admin.put('/board', async (c) => {
   if (typeof body?.guests !== 'boolean') return fail(c, 400, 'bad-input');
   await c.env.db.batch([
     c.env.db.prepare('UPDATE service SET board_guests = ?').bind(Number(body.guests)),
-    c.env.db.prepare("INSERT INTO admin_log (at, action, target, detail) VALUES (?, 'set-board', 'service', ?)").bind(Date.now(), JSON.stringify({ guests: body.guests })),
+    logged(c.env.db, Date.now(), 'set-board', { target: 'service', detail: { guests: body.guests } }),
   ]);
   return c.body(null, 204);
 });
@@ -342,7 +322,7 @@ admin.put('/backup-folder', async (c) => {
   if (!checked.ok) return fail(c, 400, checked.error);
   const db = c.env.db;
   await db.batch([
-    db.prepare("INSERT INTO admin_log (at, action, target, detail) VALUES (?, 'set-backup-folder', 'service', ?)").bind(Date.now(), JSON.stringify({ folder: checked.folder })),
+    logged(db, Date.now(), 'set-backup-folder', { target: 'service', detail: { folder: checked.folder } }),
     db.prepare('UPDATE service SET backup_folder = ?').bind(checked.folder),
   ]);
   c.executionCtx.waitUntil(c.env.backups.tick(c.env, Date.now()));
@@ -360,7 +340,7 @@ admin.put('/service', async (c) => {
   if (!isCount(signupCap) || !cap(accountBytesCap) || !cap(accountFileBytesCap)) return fail(c, 400, 'bad-input');
   const db = c.env.db;
   await db.batch([
-    db.prepare(`INSERT INTO admin_log (at, action, target, detail) VALUES (?, 'set-service', 'service', ?)`).bind(Date.now(), JSON.stringify({ signupCap, accountBytesCap, accountFileBytesCap })),
+    logged(db, Date.now(), 'set-service', { target: 'service', detail: { signupCap, accountBytesCap, accountFileBytesCap } }),
     db.prepare('UPDATE service SET signup_cap = ?, account_bytes_cap = ?, account_file_bytes_cap = ?').bind(signupCap, accountBytesCap, accountFileBytesCap),
   ]);
   return c.body(null, 204);
@@ -419,7 +399,7 @@ admin.post('/reports/:id/resolve', async (c) => {
   const now = Date.now();
   return act(
     c,
-    db.prepare(`INSERT INTO admin_log (at, action, target) SELECT ?2, 'resolve-report', id FROM reports WHERE id = ?1 AND resolved_at IS NULL`).bind(id, now),
+    logged(db, now, 'resolve-report', { from: 'reports WHERE id = ?2 AND resolved_at IS NULL', detail: null }, id),
     db.prepare('UPDATE reports SET resolved_at = ?2 WHERE id = ?1 AND resolved_at IS NULL RETURNING id').bind(id, now),
   );
 });
@@ -444,7 +424,7 @@ admin.post('/shares/:id/hold', async (c) => {
   const now = Date.now();
   return act(
     c,
-    db.prepare(`INSERT INTO admin_log (at, action, target) SELECT ?2, 'hold-share', id FROM shares WHERE id = ?1 AND held_at IS NULL AND removed_at IS NULL`).bind(id, now),
+    logged(db, now, 'hold-share', { from: 'shares WHERE id = ?2 AND held_at IS NULL AND removed_at IS NULL', detail: null }, id),
     db.prepare('UPDATE shares SET held_at = ?2 WHERE id = ?1 AND held_at IS NULL AND removed_at IS NULL RETURNING id').bind(id, now),
   );
 });
@@ -458,7 +438,7 @@ admin.post('/shares/:id/release', async (c) => {
   const now = Date.now();
   return act(
     c,
-    db.prepare(`INSERT INTO admin_log (at, action, target) SELECT ?2, 'release-share', id FROM shares WHERE id = ?1 AND removed_at IS NULL`).bind(id, now),
+    logged(db, now, 'release-share', { from: 'shares WHERE id = ?2 AND removed_at IS NULL', detail: null }, id),
     resolveShareReports(db, id, now),
     db.prepare('UPDATE shares SET held_at = NULL, held_report = NULL, reviewed_at = ?2 WHERE id = ?1 AND removed_at IS NULL RETURNING id').bind(id, now),
   );
@@ -482,10 +462,10 @@ admin.post('/shares/:id/block', async (c) => {
   const now = Date.now();
   return act(
     c,
-    db.prepare(`INSERT INTO admin_log (at, action, target, detail) SELECT ?2, 'block-share', id, json_object('version', ?3) FROM shares WHERE id = ?1 AND removed_at IS NULL`).bind(id, now, version),
+    logged(db, now, 'block-share', { from: 'shares WHERE id = ?2 AND removed_at IS NULL', detail: { version: '?3' } }, id, version),
     ...blockFiles(db, now, 'SELECT file AS id FROM share_files WHERE share = ?2 AND version = ?3', id, version),
-    ...noticed(db, notice, toAccount(owner)),
-    ...(suspend ? [logged(db, 'suspend', owner, USERNAME), db.prepare('UPDATE accounts SET suspended_at = ? WHERE id = ? AND suspended_at IS NULL').bind(now, owner)] : []),
+    ...noticed(db, notice, owner),
+    ...(suspend ? [suspension(db, true, owner), db.prepare('UPDATE accounts SET suspended_at = ? WHERE id = ? AND suspended_at IS NULL').bind(now, owner)] : []),
     resolveShareReports(db, id, now),
     db.prepare('UPDATE shares SET removed_at = ?2, reviewed_at = ?2 WHERE id = ?1 AND removed_at IS NULL RETURNING id').bind(id, now),
   );
@@ -496,5 +476,5 @@ const resolveShareReports = (db: Db, share: string, at: number) => db.prepare('U
 admin.get('/log', async (c) => {
   const listed = await page<Omit<LogRow, 'detail'> & { detail: string | null }>(c, 'SELECT id, at, action, target, detail FROM admin_log');
   if (!listed) return fail(c, 400, 'bad-input');
-  return c.json({ log: listed.rows.map((row) => ({ ...row, detail: row.detail === null ? null : (JSON.parse(row.detail) as unknown) })), next: listed.next } satisfies Paged<'log', LogRow>);
+  return c.json({ log: listed.rows.map((row) => ({ ...row, detail: row.detail === null ? null : JSON.parse(row.detail) }) as LogRow), next: listed.next } satisfies Paged<'log', LogRow>);
 });
