@@ -1,7 +1,7 @@
 import { isRecord } from '../connectors/values';
 import type { Expression, MascotId } from '../model/mascot';
 import type { MascotPrompt } from '../model/prompt';
-import { answerJson } from './answer-json';
+import { answerJson, ONE_OBJECT } from './answer-json';
 
 // Keep mascot-specific voice/faces/answer shape in the engine-owned sheet, not editable prompts,
 // so existing user prompts work when mascots change.
@@ -62,7 +62,7 @@ export function mascotSheet(mascot: MascotId, said: readonly string[]): string {
     ...Object.entries(faces).map(([face, when]) => `- ${face}: ${when}`),
     ...(said.length ? ['', 'Your last lines in this chat, oldest first. Do not repeat their wording:', ...said.map((line) => `- ${line}`)] : []),
     '',
-    'Answer with only one JSON object, with no code fence and nothing before or after it, in this shape:',
+    ONE_OBJECT,
     '{"expression": "<one face from the list>", "line": "<one or two sentences, at most 80 characters>"}',
   ].join('\n');
 }

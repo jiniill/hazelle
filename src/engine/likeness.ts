@@ -2,7 +2,7 @@ import type { ChatMessage, InputPicture } from '../connectors/types';
 import { isRecord, jsonObject } from '../connectors/values';
 import type { BuiltSource, Outfit, Portrait } from '../model/likeness';
 import type { PicturePrompt } from './import/picture-prompt';
-import { answerJson } from './answer-json';
+import { answerJson, isText, ONE_OBJECT } from './answer-json';
 
 // The material below, the answer format and parseLikeness are one contract, as the scene's are (engine/illustrate).
 
@@ -94,7 +94,7 @@ export function likenessRequest(input: LikenessInput): ChatMessage[] {
     'aliases: other names the story calls them by, such as a nickname or the name in another script.',
     'Leave out artist, quality and year tags.',
     `source: where their look came from, one of ${sources.map((source) => `"${source}" (${SOURCES[source]})`).join(', ')}.`,
-    'Answer with only one JSON object, with no code fence and nothing before or after it, in this shape:',
+    ONE_OBJECT,
     `{"characters": [{"name": "<as the story names them>", "aliases": ["<another name>"], "look": "<tags>", "outfits": [{"name": "<a short name>", "tags": "<tags>"}], "source": ${sources.map((source) => `"${source}"`).join(' | ')}}]}`,
   ].join('\n');
   const material = [
@@ -113,8 +113,6 @@ export function likenessRequest(input: LikenessInput): ChatMessage[] {
 // unreadable: no JSON object. fields: a field missing or of the wrong type, more characters than asked for, or a source
 // the build did not have.
 export type LikenessInvalid = 'unreadable' | 'fields';
-
-const isText = (value: unknown): value is string => typeof value === 'string';
 
 function outfit(value: unknown): Outfit | null {
   return isRecord(value) && isText(value.name) && isText(value.tags) ? { name: value.name.trim(), tags: value.tags.trim() } : null;

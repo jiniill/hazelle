@@ -2,6 +2,7 @@ import { isRecord } from '../connectors/values';
 import type { Change, Chapter, Fact, Line, Memory, MemoryRecord, Source, Thread, Written } from '../model/memory';
 import type { MemoryPrompt } from '../model/prompt';
 import { args } from './lorebook/decorators';
+import { isText, ONE_OBJECT } from './answer-json';
 
 // covered messages leave chat slots; missing counts those with no sent memory (stale/over/forgotten/unreachable slot).
 // slot reports prompt reachability independently of content. by null selects built-in sent records/chapters;
@@ -491,7 +492,7 @@ const EMPTY_LIST = 'A list with nothing in it is written [], never null.';
 // The app's own sentence after a memory prompt, not a prompt's: the parser below depends on every word of it.
 export const memoryFormat = (count: number, target: number) =>
   [
-    'Answer with one JSON object and nothing else: {"records": [...]}.',
+    `${ONE_OBJECT} {"records": [...]}`,
     `The records are about ${target} tokens long in all, so a scene keeps its detail: who did what, what was agreed, what was said.`,
     `The records cover the numbered messages in order, without gaps: each record's "to" is the number of its last message, and the last record's "to" is ${count}. Start a new record only at a scene break.`,
     `Every record has every field: "to" (a number); "when" and "where" (text, or null when the messages do not say); "who" (a list of the names of those present, one spelling per person); "what" (what happened); "lines" (a list of key lines, each {"speaker": who says the line in the text, not always the author of the message, "text": the line copied word for word from the messages}); "outcome" (text); "state" (a list of only the facts this record changes, each {"about": name, "field": what it is, "value": its new value, or null when the fact no longer holds, such as a healed injury, an item given away or a place left}; one value per field, so merge duplicates of the same about and field into one); "opens" (a list of new unresolved promises, foreshadowing or events, each as text); "closes" (a list of the labels of the open threads it resolves, such as ["T-1a2b3c4d"]). ${EMPTY_LIST}`,
@@ -502,7 +503,7 @@ export const memoryFormat = (count: number, target: number) =>
 export const chapterFormat = (count: number, target: number, merged: boolean) => {
   const read = merged ? 'chapters' : 'messages';
   return [
-    'Answer with one JSON object and nothing else: {"chapter": {...}}.',
+    `${ONE_OBJECT} {"chapter": {...}}`,
     `The chapter is one summary of all ${count} numbered ${merged ? 'earlier chapters, each already a summary of many messages' : 'messages'}, about ${target} tokens long. Write no state and no threads, whatever the instructions above ask.`,
     `It has every field: "when" and "where" (text, or null when the ${read} do not say); "who" (a list of the names of those present); "what" (what happened); "lines" (a list of key lines, each {"speaker": name, "text": the line copied word for word from the ${read}}); "outcome" (text). ${EMPTY_LIST}`,
   ].join('\n');
@@ -517,7 +518,6 @@ type Field = 'when' | 'where' | 'who' | 'what' | 'lines' | 'outcome' | 'to' | 's
 // forward inside the span; short: records that stop before the span's last message.
 export type Invalid = 'unreadable' | 'shape' | 'order' | 'short' | Field;
 
-const isText = (value: unknown): value is string => typeof value === 'string';
 const textOrNull = (value: unknown): value is string | null => value === null || isText(value);
 const textsOf = (value: unknown): value is string[] => Array.isArray(value) && value.every(isText);
 const flat = (text: string) => text.replace(/\s+/g, ' ').trim();

@@ -4,7 +4,7 @@ import type { Figure, Scene, Shape } from '../model/illustration';
 import type { Outfit, Portrait } from '../model/likeness';
 import { nameKey, namesOf } from './likeness';
 import type { IllustratePrompt, PictureSize, PictureTags } from '../model/prompt';
-import { answerJson } from './answer-json';
+import { answerJson, isText, ONE_OBJECT } from './answer-json';
 
 // The scene format below, the parser and the request builder are one contract: a field the prompt asks for is read
 // here, and one read here is asked for there.
@@ -14,7 +14,7 @@ const INSTRUCTIONS = [
   'The picture is drawn by an anime image model that reads Danbooru tags: write every description as short English Danbooru tags separated by commas, never as sentences.',
   'Who may appear: the characters described, and the user’s character. Put in only those present at that moment.',
   'Take each one’s look from their description, and their clothes as the story has them at that moment.',
-  'Answer with only one JSON object, with no code fence and nothing before or after it, in this shape:',
+  ONE_OBJECT,
   '{"after": <the number of the paragraph the picture follows>, "shape": "portrait" | "landscape" | "square", "setting": "<the count tags first (1girl, 1boy, 2girls…, or no humans), then place, time of day and lighting>", "framing": "<shot and angle tags, such as cowboy shot, from side>", "characters": [{"name": "<as the story names them>", "look": "<girl or boy first, then age, hair, eyes and body>", "outfit": "<clothes and accessories>", "action": "<pose, action and expression>", "x": <where they stand, 0 at the left to 1 at the right>, "y": <0 at the top to 1 at the bottom>}]}',
   'Shape: portrait for one or two people seen close, landscape for a wide view or several people, square otherwise.',
   'characters is empty for a picture with no one in it.',
@@ -144,7 +144,6 @@ export const numbered = (paragraphs: readonly string[]) => paragraphs.map((parag
 export type SceneInvalid = 'unreadable' | 'fields' | 'paragraph';
 
 const SHAPES: readonly Shape[] = ['portrait', 'landscape', 'square'];
-const isText = (value: unknown): value is string => typeof value === 'string';
 const isPlace = (value: unknown): value is number => typeof value === 'number' && value >= 0 && value <= 1;
 
 function figure(value: unknown): Figure | null {
