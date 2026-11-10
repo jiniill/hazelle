@@ -5,10 +5,11 @@ import { addProfile, modelProfile, removeProfile, restoreProfile, setDefaultProf
 import { ACTS, addOf } from '../common/acts';
 import { useSearch } from '../common/useSearch';
 import { saveWords } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SAVE_FAILED, SET_DEFAULT } from '../common/words';
+import { BIN_KEEPS, cannotRemove, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SAVE_FAILED, SET_DEFAULT } from '../common/words';
 import { useConnections, useProfiles, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
+import { useMaking } from '../common/useMaking';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { Button, Empty, List, ListItem, Menu, MenuHeading, MenuItem, NavBar, Screen, Section, Tag } from '../ui';
@@ -22,6 +23,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
   const store = useStore();
   const toast = useToast();
   const removal = useRemoval();
+  const making = useMaking();
   const settings = useSettings();
   const connections = useConnections();
   // modelProfile reads the store directly; profile edits must still refresh the attach-menu labels.
@@ -39,15 +41,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
   const others = connections.map((connection) => ({ connection, models: connection.value.starred.filter((model) => !using.has(`${connection.id}/${entryKey(model)}`)) })).filter((group) => group.models.length > 0);
   const attach = (connection: string, model: string) => toast.settled(setModelProfile(store, connection, model, id), SAVE_FAILED);
 
-  async function copy() {
-    if (!(await flush())) return;
-    const copied = crypto.randomUUID();
-    const making = addProfile(store, { name: copyName(name), settings: shown }, copied);
-    navigate({ kind: 'profile', id: copied });
-    const made = await making;
-    if (!made.ok) return toast.failed(made, COPY_SAID.failed);
-    toast.show(COPY_SAID.made);
-  }
+  const copy = () => making.copy({ flush, name: () => name, make: (copied, made) => addProfile(store, { name: copied, settings: shown }, made), open: (made) => navigate({ kind: 'profile', id: made }) });
 
   async function clearAll() {
     const previous = await clear();

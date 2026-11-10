@@ -10,7 +10,7 @@ import { findStarred, ROLE_ROWS, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { newOf } from '../common/acts';
-import { DEFAULT_MODELS_FAILED, defaultMark, FEATURE_NAMES, follows, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS } from '../common/words';
+import { DEFAULT_MODELS_FAILED, defaultMark, makeFailed, FEATURE_NAMES, follows, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -34,7 +34,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
     void setDefaultModel(store, role, ref).then((result) => {
       if (!result.ok) toast.failed(result, DEFAULT_MODELS_FAILED);
     });
-  const makeDefault = () => toast.settled(addDefaultProfile(store), `${MODEL_SETTINGS}을 만들지 못했어요.`);
+  const makeDefault = () => toast.settled(addDefaultProfile(store), makeFailed('profile'));
   const models = connections.flatMap((connection) => connection.value.starred.map((model) => ({ connection, model, choice: modelProfile(store, model) })));
   const cardOf = (ref: ModelRef | undefined) => {
     const found = ref && models.find(({ connection, model }) => sameModelRef(refOf(connection.id, model), ref));

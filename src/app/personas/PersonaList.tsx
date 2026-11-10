@@ -3,12 +3,12 @@ import { ACTS, importOf, newOf } from '../common/acts';
 import { useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
 import { useImport } from '../common/importing';
+import { useMaking } from '../common/useMaking';
 import { PersonaGrid, usePersonaPlaces } from '../common/PersonaGrid';
 import { PAGES, THINGS } from '../common/words';
 import { useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
-import { useToast } from '../toast';
 import { Button, NavBar, Row, Screen } from '../ui';
 
 const go = (place: string | null) => navigate({ kind: 'personas', place });
@@ -16,7 +16,7 @@ const go = (place: string | null) => navigate({ kind: 'personas', place });
 // Picking here opens a persona to edit; it changes no chat and not the current persona. place: the folder it stands in.
 export function PersonaList({ place, back }: { place: string | null; back: Back | null }) {
   const store = useStore();
-  const toast = useToast();
+  const making = useMaking();
   const settings = useSettings();
   const places = usePersonaPlaces();
   const folderActions = useFolderActions('persona');
@@ -25,11 +25,7 @@ export function PersonaList({ place, back }: { place: string | null; back: Back 
   const { pickPersonas } = useImport();
   const here = place !== null && places.index.byFolder.has(place) ? place : null;
 
-  function add() {
-    const id = crypto.randomUUID();
-    toast.settled(addPersona(store, { name: newOf(THINGS.persona.noun), description: '', picture: null, ...(here !== null && { folder: here }) }, id), '페르소나를 만들지 못했어요.');
-    navigate({ kind: 'persona', id });
-  }
+  const add = () => making.create('persona', (id) => addPersona(store, { name: newOf(THINGS.persona.noun), description: '', picture: null, ...(here !== null && { folder: here }) }, id), (id) => navigate({ kind: 'persona', id }));
 
   const actions = (
     <>

@@ -6,6 +6,7 @@ import { ofSort } from '../../runtime/prompts';
 import { ACTS, importOf, newOf } from '../common/acts';
 import { useImport } from '../common/importing';
 import { counted, holdsLine, packParts, type PackParts } from '../common/pack';
+import { useMaking } from '../common/useMaking';
 import { useSearch } from '../common/useSearch';
 import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/filing';
 import { FolderPath, useMoving, useNaming } from '../common/folders/FolderParts';
@@ -14,7 +15,6 @@ import { ALWAYS, EMPTY_FOLDER, moduleName, PAGES, SCRIPTS, THINGS } from '../com
 import { useChildrenOf, useLibrary, useModulesAndPlugins, usePersonas, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
-import { useToast } from '../toast';
 import { Button, Empty, Icon, NavBar, Row, Screen, Section, Table, Tag, type TableColumn, type TableRow } from '../ui';
 
 // The table's columns and each module's contents line both come from these parts, so the two always agree.
@@ -98,7 +98,7 @@ const go = (place: string | null) => navigate({ kind: 'modules', place });
 // place: the folder it stands in.
 export function ModulesScreen({ place, back }: { place: string | null; back: Back | null }) {
   const store = useStore();
-  const toast = useToast();
+  const making = useMaking();
   const { pick } = useImport();
   const { modules } = useModulesAndPlugins();
   const use = useModuleUse();
@@ -110,11 +110,7 @@ export function ModulesScreen({ place, back }: { place: string | null; back: Bac
   const moving = useMoving('module', index, (id) => modules.find((module) => module.id === id)?.value.folder ?? null);
   const shown = at.placed(search.found);
   const parts = useModuleParts(shown);
-  function add() {
-    const id = crypto.randomUUID();
-    toast.settled(createModule(store, newOf(THINGS.module.noun), id, at.here?.folder.id ?? null), '모듈을 만들지 못했어요.');
-    navigate({ kind: 'module', id, pane: null });
-  }
+  const add = () => making.create('module', (id) => createModule(store, newOf(THINGS.module.noun), id, at.here?.folder.id ?? null), (id) => navigate({ kind: 'module', id, pane: null }));
   const adding = (
     <Button variant="secondary" icon={ACTS.create.icon} onClick={add}>
       {newOf(THINGS.module.noun)}

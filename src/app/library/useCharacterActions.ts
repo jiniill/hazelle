@@ -12,6 +12,7 @@ import { runExport } from '../common/exporting';
 import { BIN_KEEPS, COPY_SAID, copyName, moduleName, namedObject, promptName, RISU_CHAT_FILE, risuLeftOut, THINGS, TOOL } from '../common/words';
 import { useFiles, useStore } from '../session';
 import { navigate } from '../shell/router';
+import { useMaking } from '../common/useMaking';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import type { Editing } from './editing';
@@ -40,13 +41,16 @@ const made = new Set<string>();
 
 export function useNewCharacter() {
   const store = useStore();
-  const toast = useToast();
-  return () => {
-    const id = crypto.randomUUID();
-    made.add(id);
-    toast.settled(createCharacter(store, newOf(THINGS.character.noun), id), '캐릭터를 만들지 못했어요.');
-    navigate({ kind: 'edit', character: id, part: 'profile' });
-  };
+  const making = useMaking();
+  return () =>
+    making.create(
+      'character',
+      (id) => {
+        made.add(id);
+        return createCharacter(store, newOf(THINGS.character.noun), id);
+      },
+      (id) => navigate({ kind: 'edit', character: id, part: 'profile' }),
+    );
 }
 
 export function useJustMade(id: string) {

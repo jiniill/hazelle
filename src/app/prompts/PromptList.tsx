@@ -7,6 +7,7 @@ import type { AgentStart } from '../../engine/agent';
 import { ACTS } from '../common/acts';
 import type { Frame } from '../common/frame';
 import { TASK_NAMES } from '../common/prompt-words';
+import { useMaking } from '../common/useMaking';
 import { useSearch } from '../common/useSearch';
 import { usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
@@ -61,6 +62,7 @@ type Props = {
 export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame, sort = null }: Props) {
   const store = useStore();
   const toast = useToast();
+  const making = useMaking();
   const prompts = usePrompts();
   const grouped = useMemo(() => groupPrompts(prompts), [prompts]);
   const settings = useSettings();
@@ -99,10 +101,8 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   }
 
   function add(sort: Exclude<PromptSort, 'agent'>) {
-    const id = crypto.randomUUID();
     const folder = sort === 'conversation' ? at.here?.folder.id : undefined;
-    toast.settled(addPrompt(store, NEW_NAME[sort], sort, id, folder), '프롬프트를 만들지 못했어요.');
-    onPick(id);
+    making.create('prompt', (id) => addPrompt(store, NEW_NAME[sort], sort, id, folder), onPick);
   }
 
   const byName = (a: Stored<'prompt'>, b: Stored<'prompt'>) => Number(isDefaultPrompt(settings, b)) - Number(isDefaultPrompt(settings, a)) || byPromptName(a, b);

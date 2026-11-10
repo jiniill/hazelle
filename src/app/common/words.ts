@@ -137,6 +137,7 @@ export const THINGS: Record<Removable, { noun: string; unit: string }> = {
   persona: { noun: PAGES.personas, unit: '개' },
   profile: { noun: MODEL_SETTINGS, unit: '개' },
 };
+export const makeFailed = (kind: Removable) => `${withParticle(THINGS[kind].noun, '을/를')} 만들지 못했어요.`;
 
 // Always name message direction: operator → account, account → operator, or operator sending.
 export const NOTICES = { from: '운영자가 보낸 알림', received: '신고', send: '알림 보내기' };
