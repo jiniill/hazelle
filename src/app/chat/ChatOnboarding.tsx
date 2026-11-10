@@ -3,9 +3,8 @@ import { resolveAssets } from '../../engine/assets';
 import { answered, optionLabel, optionValue, picked, toggled, type Onboarding, type OnboardingQuestion } from '../../engine/import/onboarding';
 import type { Chat, Writes } from '../../model/chat';
 import { onboardingPage } from '../../runtime/chat-context';
-import type { OnboardingPage } from '../../runtime/evaluation-core';
-import { ACTS } from '../common/acts';
 import { runaway } from '../common/failure';
+import { useLoad } from '../common/useLoaded';
 import { useAssetUrl, useSession } from '../session';
 import { Button, Callout, Checkbox, ChoiceGroup, Dialog, Section, Stack, Story, Text, TextField } from '../ui';
 import { LOADING } from '../common/words';
@@ -97,22 +96,12 @@ function Question({ question, answers, onChange }: { question: OnboardingQuestio
 
 function Page({ chatId, chat, html, answers, onChange }: { chatId: string; chat: Chat; html: string; answers: Answers; onChange: (variable: string, value: string) => void }) {
   const session = useSession();
-  const [page, setPage] = useState<OnboardingPage | 'failed' | null>(null);
-  const [tries, retry] = useState(0);
   // Read once as the dialog opens: an answer changes the variables it reads, which would draw the page anew under the reader.
-  useEffect(() => {
-    const stop = new AbortController();
-    setPage(null);
-    onboardingPage(session, chatId, chat, html, stop.signal).then(
-      (read) => !stop.signal.aborted && setPage(read),
-      () => !stop.signal.aborted && setPage('failed'),
-    );
-    return () => stop.abort();
-  }, [session, chatId, html, tries]);
+  const read = useLoad((signal) => onboardingPage(session, chatId, chat, html, signal), [session, chatId, html], { describe: () => '설문을 표시하지 못했어요.' });
   useEffect(() => () => session.store.evaluation.forget({ asker: 'onboarding', chat: chatId }), [session, chatId]);
+  const page = read.data;
   const url = useAssetUrl([page]);
-  if (page === null) return <Text variant="note">{LOADING}</Text>;
-  if (page === 'failed') return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => retry((count) => count + 1) }}>설문을 표시하지 못했어요.</Callout>;
+  if (page === undefined) return read.failure ?? <Text variant="note">{LOADING}</Text>;
   if ('kind' in page) return <Callout tone="warn">{runaway('설문을 표시하기 전에')}</Callout>;
   return <Story html={resolveAssets(page.html, url)} css={resolveAssets(page.css, url)} buttons="live" bind={{ values: answers, onChange }} />;
 }
