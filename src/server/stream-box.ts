@@ -1,5 +1,6 @@
 import { RELAY_HEADER, RELAY_SOURCE, STREAM_FRAMES, STREAM_HEADER, type ServerError } from '../contracts/http';
 import { HELLO, HEAD, DATA, END, PING, PING_MS, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
+import { fromBase64 } from '../base64';
 import { errorMessage } from '../error-message';
 import { DAY_MS, isRecord } from './http';
 import type { RelayAllowance } from './limits';
@@ -73,14 +74,6 @@ function concat(parts: Uint8Array[], size: number): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-function fromBase64(text: string): Uint8Array<ArrayBuffer> | null {
-  try {
-    return Uint8Array.from(atob(text), (char) => char.charCodeAt(0));
-  } catch {
-    return null;
-  }
-}
-
 const json = (status: number, error: ServerError) => Response.json({ error }, { status });
 
 // Of the relay's own refusals, only an address it could not reach is worth a try sent again.
@@ -138,11 +131,10 @@ export class StreamBox {
     this.starts++;
     let ran = false;
     try {
-      const theirs = typeof key === 'string' ? fromBase64(key) : null;
       const pair = (await crypto.subtle.generateKey(P256, false, ['deriveBits'])) as { publicKey: Key; privateKey: Key };
       let sealing: Key;
       try {
-        const public_ = await crypto.subtle.importKey('raw', theirs ?? new Uint8Array(), P256, false, []);
+        const public_ = await crypto.subtle.importKey('raw', typeof key === 'string' ? fromBase64(key) : new Uint8Array(), P256, false, []);
         const bits = await crypto.subtle.deriveBits({ name: 'ECDH', public: public_ }, pair.privateKey, 256);
         const hkdf = await crypto.subtle.importKey('raw', bits, 'HKDF', false, ['deriveKey']);
         sealing = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: encode(id), info: encode('risu-alpha stream') }, hkdf, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);

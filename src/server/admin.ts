@@ -9,7 +9,7 @@ import { blockFiles, fileBlocks } from './files';
 import { forgetCut, serveShareFile } from './shares';
 import type { Db, SqlValue, Statement } from './db/service-db';
 import { act, logged, operator } from './operator';
-import { DAY_MS, fail, ID, isCount, isPositive, readObject, type AppEnv, type Services } from './http';
+import { DAY_MS, fail, ID, isCount, isPositive, limitOf, readObject, type AppEnv, type Services } from './http';
 import { answerAction, answerBegin, incarnationOf, leaveAccount, refuseLeft, restoreFrom, restorePoints, restoresOf, store } from './lifecycle';
 import { requireSession } from './session';
 import { tellUnread, VISIBLE } from './unread';
@@ -17,7 +17,6 @@ import { readCohorts } from './pulse';
 import { forgetDiagnoses, readDiagnoses } from './diagnoses';
 import { readVisits } from './visits';
 
-const PAGE_ROWS = 100;
 const KEEP_MS = KEEP_YEARS * 365 * DAY_MS;
 
 // Also the rows of cut links whose reports were resolved or forgotten since (shares.ts forgetCut).
@@ -357,12 +356,6 @@ async function page<T extends { id: number }>(c: Context<AppEnv>, select: string
     .bind(after === undefined ? null : Number(after), limit, ...values)
     .all<T>();
   return { rows: results, next: results.length === limit ? String(results.at(-1)!.id) : null };
-}
-
-export function limitOf(c: Context<AppEnv>) {
-  const limit = c.req.query('limit');
-  if (limit === undefined) return PAGE_ROWS;
-  return /^[1-9]\d{0,2}$/.test(limit) && Number(limit) <= PAGE_ROWS ? Number(limit) : null;
 }
 
 // Read current share state, not report-time state; reviewed holds/blocks do not auto-hold again.

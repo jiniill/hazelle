@@ -74,3 +74,11 @@ export async function readObject(c: Context): Promise<Record<string, unknown> | 
   const body: unknown = await c.req.json().catch(() => null);
   return isRecord(body) ? body : null;
 }
+
+// A list's page size: PAGE_ROWS unless the query asks for fewer; null for one it may not ask for.
+export const PAGE_ROWS = 100;
+export function limitOf(c: Context) {
+  const limit = c.req.query('limit');
+  if (limit === undefined) return PAGE_ROWS;
+  return /^[1-9]\d{0,2}$/.test(limit) && Number(limit) <= PAGE_ROWS ? Number(limit) : null;
+}
