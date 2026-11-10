@@ -13,6 +13,7 @@
 /* Reset page scale to pane values. --box-inset must be a length, not initial, or Item max() becomes invalid. */
 .dialog {
   composes: floating from '../foundation/surface.module.css';
+  composes: settleIn from '../foundation/motion.module.css';
   --box-inset: 0px;
   --section-title: initial;
   --section-gap: initial;

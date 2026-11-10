@@ -2,7 +2,7 @@
   composes: frame from '../foundation/surface.module.css';
   display: flex;
   flex-direction: column;
-  transition: border-color var(--duration-fast);
+  transition: border-color var(--motion-respond);
 }
 
 /* The ring a field takes, drawn round the whole box with its buttons, not round the text alone. */

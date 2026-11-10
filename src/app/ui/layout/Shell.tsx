@@ -1,4 +1,5 @@
 import { createContext, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useLeaves } from '../foundation/leave';
 import { useFocusTrap, useLayer } from '../overlays/layers';
 import styles from './Shell.module.css';
 
@@ -48,7 +49,7 @@ export function LayerWindow({ label, side, onClose, children }: Layer) {
   useLayer(true, { outside: (target) => target === scrim.current, close: onClose });
   const trap = useFocusTrap(box);
   return (
-    <div ref={scrim} className={styles.scrim}>
+    <div ref={useLeaves(scrim)} className={styles.scrim}>
       <div ref={box} role="dialog" aria-modal="true" aria-label={label} className={styles.window} onKeyDown={trap}>
         {side}
         <div className={`${styles.main} ${styles.start}`}>

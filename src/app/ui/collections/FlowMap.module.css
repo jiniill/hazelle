@@ -52,12 +52,12 @@
   padding: var(--space-8) var(--space-12);
   text-align: start;
   transition:
-    background-color var(--duration-fast) var(--ease-enter),
-    border-color var(--duration-fast) var(--ease-enter),
-    opacity var(--duration-fast) var(--ease-enter);
+    background-color var(--motion-respond),
+    border-color var(--motion-respond),
+    opacity var(--motion-respond);
 }
 
-.node:hover:not(:disabled) {
+.node:is(:hover, :active):not(:disabled) {
   border-color: var(--color-border-strong);
 }
 
@@ -78,7 +78,7 @@
 }
 
 .picked,
-.picked:hover:not(:disabled) {
+.picked:is(:hover, :active):not(:disabled) {
   border-color: var(--color-accent-border);
   background: var(--color-accent-bg);
 }
@@ -118,7 +118,7 @@
   fill: none;
   stroke-width: var(--border-medium);
   stroke-linecap: round;
-  transition: opacity var(--duration-fast) var(--ease-enter);
+  transition: opacity var(--motion-respond);
 }
 
 .follow {

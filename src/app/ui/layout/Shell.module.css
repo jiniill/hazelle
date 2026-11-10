@@ -32,6 +32,7 @@
 
 .window {
   composes: floating from '../foundation/surface.module.css';
+  composes: settleIn from '../foundation/motion.module.css';
   /* Read by Sidebar.module.css; the titles by NavBar, TitleField, ItemSection and Sidebar. */
   --sidebar-width: var(--window-side-width);
   --sidebar-height: 100%;

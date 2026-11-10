@@ -1,6 +1,8 @@
 import { Maximize2, Minimize2, X } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
+import { classNames } from '../foundation/classNames';
+import { useLeaves } from '../foundation/leave';
 import { usePanelCovers } from '../foundation/media';
 import { useFocusTrap, useLayer } from '../overlays/layers';
 import { NavBar, type NavBarProps } from './NavBar';
@@ -27,6 +29,7 @@ export function SidePanel({ title, subtitle, nav, page, actions, expandable = fa
   }, [onExpand, wide]);
   const body = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
+  const leaving = useLeaves(panel);
   const latest = useRef(onClose);
   latest.current = onClose;
   useLayer(covers, {
@@ -52,7 +55,7 @@ export function SidePanel({ title, subtitle, nav, page, actions, expandable = fa
     body.current?.scrollTo({ top: 0 });
   }, [page]);
   return (
-    <aside ref={panel} className={wide ? `${styles.panel} ${styles.expanded}` : styles.panel} aria-label={title} data-side-panel tabIndex={covers ? -1 : undefined} data-autofocus={covers || undefined} onKeyDown={trap}>
+    <aside ref={covers ? leaving : panel} className={classNames(styles.panel, wide && styles.expanded, covers ? styles.covers : styles.beside)} aria-label={title} data-side-panel tabIndex={covers ? -1 : undefined} data-autofocus={covers || undefined} onKeyDown={trap}>
       <div className={styles.head}>
         {nav ? (
           <NavBar {...nav} line />

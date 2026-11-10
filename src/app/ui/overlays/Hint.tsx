@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, ButtonSlot } from '../controls/Button';
 import { Icon } from '../foundation/Icon';
+import { useLeaves } from '../foundation/leave';
 import { useHover } from '../foundation/media';
 import { Demo, type DemoSpec } from '../demos/Demo';
 import { useAnchored, useLayer } from './layers';
@@ -24,6 +25,7 @@ export function Hint({ label, children }: { label: string; children: Help }) {
   const timer = useRef(0);
   const box = useRef<HTMLSpanElement>(null);
   const bubble = useRef<HTMLDivElement>(null);
+  const leaving = useLeaves(bubble);
   const door = useRef<HTMLButtonElement>(null);
   const closeMenu = useMenuClose();
   const id = useId();
@@ -91,7 +93,7 @@ export function Hint({ label, children }: { label: string; children: Help }) {
       {state !== 'closed' &&
         createPortal(
           <div
-            ref={bubble}
+            ref={leaving}
             id={id}
             role="note"
             className={demo ? `${styles.bubble} ${styles.withDemo}` : styles.bubble}

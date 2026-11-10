@@ -10,7 +10,7 @@
   background: var(--color-surface-raised);
   appearance: none;
   cursor: pointer;
-  transition: background var(--duration-fast);
+  transition: background var(--motion-respond);
 }
 
 .switch::before {
@@ -21,7 +21,7 @@
   border-radius: var(--radius-full);
   background: var(--color-text-muted);
   content: '';
-  transition: inset-inline-start var(--duration-fast);
+  transition: inset-inline-start var(--motion-respond);
 }
 
 .labeled {

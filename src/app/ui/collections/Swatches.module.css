@@ -11,7 +11,7 @@
   overflow: hidden;
 }
 
-.card:has(> .pick:hover) {
+.card:has(> .pick:is(:hover, :active)) {
   background: var(--color-surface-hover);
 }
 

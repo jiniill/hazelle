@@ -8,7 +8,7 @@
   border: var(--border-thin) solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  transition: border-color var(--duration-fast);
+  transition: border-color var(--motion-respond);
 }
 
 /* Focus anywhere inside, the text or a tool's menu, keeps it whole. The fold changes only heights, the text's and the
@@ -32,8 +32,8 @@
   overflow: auto;
   /* Restore scrolling only after the unfolding height can hold the text. */
   transition:
-    height var(--duration-slow) var(--ease-enter),
-    overflow var(--duration-slow) step-end allow-discrete;
+    height var(--motion-move),
+    overflow var(--duration-spring) step-end allow-discrete;
   padding: 0 var(--space-8) 0 0;
   border: 0;
   outline: none;
@@ -51,21 +51,18 @@
 .compact:not(:focus-within) .input {
   height: var(--one-line);
   overflow: hidden;
-  transition-timing-function: var(--ease-enter), step-start;
+  transition:
+    height var(--motion-move),
+    overflow var(--duration-spring) step-start allow-discrete;
 }
 
 .fold {
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows var(--duration-slow) var(--ease-enter);
+  composes: fold from '../foundation/motion.module.css';
 }
 
 /* The row folds to nothing only around a box without padding: the bar's space above it folds inside. */
 .tools {
-  min-height: 0;
-  overflow: visible;
-  /* Unclipping before the row finishes growing makes the bar overflow the page below the footer. */
-  transition: overflow var(--duration-slow) step-end allow-discrete;
+  composes: foldBody from '../foundation/motion.module.css';
 }
 
 .compact:not(:focus-within) .fold {
@@ -81,14 +78,14 @@
   visibility: hidden;
   opacity: 0;
   transition:
-    opacity var(--duration-fast),
-    visibility var(--duration-fast);
+    opacity var(--motion-respond),
+    visibility var(--motion-respond);
 }
 
 .bar {
   transition:
-    opacity var(--duration-fast) var(--duration-fast),
-    visibility var(--duration-fast) var(--duration-fast);
+    opacity var(--motion-respond) var(--duration-fast),
+    visibility var(--motion-respond) var(--duration-fast);
   display: flex;
   align-items: flex-end;
   gap: var(--space-8);

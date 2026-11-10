@@ -94,13 +94,14 @@ function Hero({ steps, title, note }: { steps: ProgressStep[]; title?: string; n
   );
 }
 
-type Props = { steps: ProgressStep[]; hero?: boolean; title?: string; note?: string };
+// late: a wait that may be over at once, shown only once it has lasted (motion lateIn).
+type Props = { steps: ProgressStep[]; hero?: boolean; late?: boolean; title?: string; note?: string };
 
-export function Progress({ steps, hero = false, title, note }: Props) {
+export function Progress({ steps, hero = false, late = false, title, note }: Props) {
   if (hero) return <Hero steps={steps} title={title} note={note} />;
   const whole = sum(steps);
   return (
-    <div className={styles.progress}>
+    <div className={late ? `${styles.progress} ${motion.lateIn}` : styles.progress}>
       {counted(steps).length > 1 && <Bar label="전체" done={whole.done} total={whole.total} />}
       {steps.map((step) => <Bar key={step.label} {...step} />)}
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLeaves } from '../foundation/leave';
 import { useHover } from '../foundation/media';
 import { useAnchored, useLayer } from '../overlays/layers';
 import styles from './MascotRemark.module.css';
@@ -24,6 +25,7 @@ export function MascotRemark({ face, picture, name, line, fresh, onSeen }: Props
   const timer = useRef(0);
   const mark = useRef<HTMLButtonElement>(null);
   const card = useRef<HTMLDivElement>(null);
+  const leaving = useLeaves(card);
   const id = useId();
 
   const show = () => {
@@ -72,7 +74,7 @@ export function MascotRemark({ face, picture, name, line, fresh, onSeen }: Props
       </button>
       {open &&
         createPortal(
-          <div ref={card} id={id} role="note" className={styles.card}>
+          <div ref={leaving} id={id} role="note" className={styles.card}>
             <div className={styles.words}>
               <span className={styles.name}>{name}</span>
               <p className={styles.line}>{line}</p>

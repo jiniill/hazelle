@@ -7,7 +7,7 @@
   touch-action: none;
   cursor: grab;
   user-select: none;
-  transition: opacity var(--duration-slow) var(--ease-enter);
+  transition: opacity var(--motion-move);
 }
 
 .awake,

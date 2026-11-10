@@ -2,6 +2,8 @@ import DOMPurify from 'dompurify';
 import { createContext, useContext, useEffect, useLayoutEffect, useReducer, useRef, type ReactNode, type Ref } from 'react';
 import { useRowState } from '../collections/row-memory';
 import { scrollbarKind } from '../foundation/scrollbar';
+import { MEDIA, mediaQuery } from '../foundation/media';
+import { tokenMotion, tokenMs } from '../foundation/tokenPx';
 import { useQuoteShape } from '../foundation/quotes';
 import { useVeil, type Veil } from '../foundation/veil';
 import { inlaid } from './inlay';
@@ -491,8 +493,6 @@ export function storySelection(story: HTMLElement): { pieces: string[]; end: Sel
 // A picture removed before it loaded has no line left to mark.
 const mark = (picture: HTMLImageElement) => picture.parentElement?.toggleAttribute(WIDE, picture.naturalWidth > picture.naturalHeight);
 const markLoaded = (event: Event) => mark(event.target as HTMLImageElement);
-// The build writes a token's 250ms as .25s.
-const milliseconds = (time: string) => parseFloat(time) * (time.trim().endsWith('ms') ? 1 : 1000);
 // A picture's line easing open or shut (Story's reshape), so a turn midway takes over from it.
 const running = new WeakMap<Element, Animation>();
 
@@ -675,9 +675,7 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
       change();
       const to = height();
       if (from === to) return;
-      const tokens = getComputedStyle(host.current!);
-      const duration = tokens.getPropertyValue(matchMedia('(prefers-reduced-motion: reduce)').matches ? '--duration-instant' : '--duration-slow');
-      const animation = line.animate({ maxHeight: [from, to] }, { duration: milliseconds(duration), easing: tokens.getPropertyValue('--ease-enter') });
+      const animation = line.animate({ maxHeight: [from, to] }, mediaQuery(MEDIA.reducedMotion).read() ? { duration: tokenMs('--duration-instant') } : tokenMotion('--motion-move', host.current!));
       running.set(line, animation);
       host.current!.dispatchEvent(new Event(READER_RESIZED, { bubbles: true }));
     };

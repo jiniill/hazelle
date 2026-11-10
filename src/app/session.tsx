@@ -110,22 +110,45 @@ export function useChats() {
   return useSyncExternalStore(read.chats.subscribe, read.chats.snapshot);
 }
 
-export function useChatModel(id: string | null) {
-  const { read, store } = useSession();
-  const exists = id !== null && live(store.get('chat', id)) !== null;
+// Holds a chat open while it is there. reports: a failure to open is this holder's to diagnose. there: whether it is.
+// retry: opens it again.
+function useChatLease(id: string | null, reports: boolean) {
+  const { store } = useSession();
+  const there = id !== null && live(store.get('chat', id)) !== null;
   const [attempt, retry] = useReducer((value: number) => value + 1, 0);
   useEffect(() => {
-    if (id === null || !exists) return;
+    if (id === null || !there) return;
     const lease = store.retainChat(id);
-    void lease.ready.then((failure) => {
+    if (reports) void lease.ready.then((failure) => {
       // A lease released before its chat opened ends it stopped, which is leaving the chat, not a failure.
       if (failure && !isHalted(failure)) autoDiagnose({ event: 'chat-unopened', detail: openFailure(failure.error) });
     });
-    return lease.release;
-  }, [store, id, attempt, exists]);
+    // Released once the commit's effects have all run: a chat that passes from one holder to another in one commit
+    // (useChatOpening to the chat's page) is never without one, which would unload it.
+    return () => queueMicrotask(lease.release);
+  }, [store, id, attempt, there, reports]);
+  return { there, retry };
+}
+
+export function useChatModel(id: string | null) {
+  const { read } = useSession();
+  const { retry } = useChatLease(id, true);
   const value = useRead(id === null ? null : read.chat(id), snapshotNull);
   const { state, error } = useRead(id === null ? null : read.scope(id), snapshotUnloaded);
   return { model: value, state, error, retry };
+}
+
+// Whether the chat is still opening, neither loaded nor failed, held open from here meanwhile: for what stays on
+// screen until it has (Layout.tsx). A failure is its page's to report, which opens it once more. Read as the one
+// flag, so its reader draws again only when the answer changes.
+export function useChatOpening(id: string | null) {
+  const { read } = useSession();
+  const { there } = useChatLease(id, false);
+  const scope = id === null ? null : read.scope(id);
+  return useSyncExternalStore(scope?.subscribe ?? subscribeNothing, () => {
+    const state = there ? scope!.snapshot().state : null;
+    return state === 'unloaded' || state === 'loading';
+  });
 }
 
 export function useChatSummary(id: string | null) {

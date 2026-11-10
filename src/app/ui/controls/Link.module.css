@@ -9,6 +9,6 @@
   text-underline-offset: var(--space-2);
 }
 
-.link:hover {
+.link:is(:hover, :active) {
   color: var(--color-accent-hover);
 }

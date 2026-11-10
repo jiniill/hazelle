@@ -31,7 +31,7 @@
   background: var(--color-accent);
   transform: scaleX(var(--progress));
   transform-origin: left;
-  transition: transform var(--duration-fast) var(--ease-enter);
+  transition: transform var(--motion-respond);
 }
 
 .full {
@@ -63,7 +63,7 @@
 }
 
 .mark rect {
-  transition: y var(--duration-fast) var(--ease-enter), height var(--duration-fast) var(--ease-enter);
+  transition: y var(--motion-respond), height var(--motion-respond);
 }
 
 .dim {

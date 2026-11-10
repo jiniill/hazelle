@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Button, ButtonSlot } from '../controls/Button';
 import { IconButton } from '../controls/IconButton';
 import { pressed, titled, type Chord } from '../foundation/keys';
+import { useLeaves } from '../foundation/leave';
 import { useVeil } from '../foundation/veil';
 import styles from './PictureView.module.css';
 import { useFocusTrap, useLayer } from './layers';
@@ -32,6 +33,7 @@ type Size = { src: string; width: number; height: number };
 
 export function PictureView({ src, label, video = false, title, note, actions = [], pages, onClose }: Props) {
   const view = useRef<HTMLDivElement>(null);
+  const leaving = useLeaves(view);
   const stage = useRef<HTMLDivElement>(null);
   // Its backdrop closes it on a tap (onClick below), not on the press that may begin a swipe or a pan.
   useLayer(true, { outside: () => false, close: onClose, takesBack: true });
@@ -66,7 +68,7 @@ export function PictureView({ src, label, video = false, title, note, actions = 
     // sit inside them, never matched by a class selector, which a composed module class breaks. A press on it keeps the
     // focus in the view.
     <div
-      ref={view}
+      ref={leaving}
       className={styles.view}
       role="dialog"
       aria-modal="true"

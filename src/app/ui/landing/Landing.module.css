@@ -466,7 +466,7 @@
     color: var(--scene-text);
     font-size: var(--text-sm);
     cursor: pointer;
-    transition: background var(--duration-fast) var(--ease-enter), border-color var(--duration-fast) var(--ease-enter);
+    transition: background var(--motion-respond), border-color var(--motion-respond);
   }
 
   .choice:hover {
@@ -536,7 +536,7 @@
     box-shadow: var(--landing-tag-shadow);
     transform-origin: 0 50%;
     will-change: transform;
-    transition: box-shadow var(--duration-slow) var(--ease-enter);
+    transition: box-shadow var(--motion-move);
   }
 
   .placeLink:hover .placeTag,

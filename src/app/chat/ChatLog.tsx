@@ -23,7 +23,7 @@ export function ChatLog({ chat }: { chat: OpenChat }) {
   // The origin's name as it is now; the one kept at branch time only once the origin is gone.
   const originChat = useChatSummary(item?.chat.origin?.id ?? null);
   const origin = item?.chat.origin;
-  if (chat.displayPending) return chat.displayError === undefined ? <Progress steps={[{ label: '채팅을 불러오는 중' }]} /> : (
+  if (chat.displayPending) return chat.displayError === undefined ? <Progress late steps={[{ label: '채팅을 불러오는 중' }]} /> : (
     <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: chat.retryDisplay }}>채팅을 화면에 표시하지 못했어요.</Callout>
   );
   return <>

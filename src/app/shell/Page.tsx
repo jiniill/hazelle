@@ -273,7 +273,7 @@ function ChatPage({ at, wide, onPaired }: { at: At<'new-chat' | 'chat'>; wide: b
           {describeFailure(chatModel.error!)}
         </Callout>
       ) : (
-        <Progress steps={[{ label: '채팅을 불러오는 중' }]} />
+        <Progress late steps={[{ label: '채팅을 불러오는 중' }]} />
       )}
     </Screen>
   );

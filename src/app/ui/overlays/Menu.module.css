@@ -5,7 +5,7 @@
 
 .menu {
   composes: floating from '../foundation/surface.module.css';
-  composes: dropIn from '../foundation/motion.module.css';
+  composes: growIn from '../foundation/motion.module.css';
   position: absolute;
   z-index: var(--layer-menu);
   display: flex;
@@ -60,6 +60,7 @@
 /* Opened by a right-click: Menu sets the pointer's spot on the screen. On the screen as a hint is (useAnchored), it
    stands above the panel or dialog it was opened from. */
 .point {
+  transform-origin: top left;
   position: fixed;
   z-index: var(--layer-hint);
   top: var(--point-top);
@@ -67,21 +68,25 @@
 }
 
 .below-start {
+  transform-origin: top left;
   top: calc(100% + var(--space-8));
   left: 0;
 }
 
 .below-end {
+  transform-origin: top right;
   top: calc(100% + var(--space-8));
   right: 0;
 }
 
 .above-start {
+  transform-origin: bottom left;
   bottom: calc(100% + var(--space-12));
   left: 0;
 }
 
 .above-end {
+  transform-origin: bottom right;
   bottom: calc(100% + var(--space-12));
   right: 0;
 }

@@ -12,17 +12,23 @@ import type { Turn } from '../runtime/talk';
 import * as display from '../runtime/chat-context';
 import { randomBytes } from '../vault/aead';
 import { AssetUrls } from '../runtime/assets';
-import { SessionProvider, useAssetUrl, useChatDisplay, useReplying } from './session';
+import { SessionProvider, type Account, useAssetUrl, useChatDisplay, useChatModel, useChatOpening, useReplying } from './session';
 import { probeRoot } from './ui/probe';
 
 const facts = new AccountFacts({ suspended: false, state: 'active', storage: { bytes: 0, bytesCap: null, fileBytes: 0, fileBytesCap: null }, unreadNotices: 0, unreadBoard: 0 });
+const account: Account = { admin: false, localProviders: [], facts, guest: null, onLock() {}, onLogout: async () => null };
 
-it('C: composer and panel re-renders skip display, while streaming recomputes without replacing unchanged rows', async () => {
+// A store over a server that holds nothing and takes every write.
+function openStore() {
   let rev = 0;
   const request: typeof api = async <T,>(method: string): Promise<ApiResult<T>> => ({ ok: true, data: (method === 'GET'
     ? { timeline: 't', changes: [], cursor: 0, more: false, limits: { items: 100, bytes: 1_000_000, body: 100_000 } }
     : { revs: [++rev], timeline: 't' }) as T });
-  const store = await ObjectStore.open('test', randomBytes(32), serverBackend(request));
+  return ObjectStore.open('test', randomBytes(32), serverBackend(request));
+}
+
+it('C: composer and panel re-renders skip display, while streaming recomputes without replacing unchanged rows', async () => {
+  const store = await openStore();
   const lease = store.retainChat('chat');
   await lease.ready;
   const chat: Chat = { title: null, character: null, models: {} };
@@ -44,7 +50,7 @@ it('C: composer and panel re-renders skip display, while streaming recomputes wi
     return null;
   }
   const root = probeRoot();
-  const render = (composer: string, panel: boolean) => root.render(<SessionProvider session={session} account={{ admin: false, localProviders: [], facts, guest: null, onLock() {}, onLogout: async () => null }}><Probe composer={composer} panel={panel} /></SessionProvider>);
+  const render = (composer: string, panel: boolean) => root.render(<SessionProvider session={session} account={account}><Probe composer={composer} panel={panel} /></SessionProvider>);
   const displayed = vi.spyOn(display, 'evaluateChat');
   try {
     await act(() => render('', false));
@@ -94,7 +100,7 @@ it('hands a chat its turn\'s reply, and renders it once for all the chunks of it
     for (const listener of listeners) listener();
   });
   try {
-    await act(() => root.render(<SessionProvider session={session} account={{ admin: false, localProviders: [], facts, guest: null, onLock() {}, onLogout: async () => null }}><Probe /></SessionProvider>));
+    await act(() => root.render(<SessionProvider session={session} account={account}><Probe /></SessionProvider>));
     expect(replying).toBeNull();
     const reply = { id: 'reply', message: null, replaces: null, continues: null };
     await tell({ chat: 'chat', said: null, reply, text: 'one', reasoning: '' });
@@ -129,7 +135,7 @@ function mountedPictures() {
   return {
     shown, revoke, read,
     render: (rows: [string, string][]) => act(() => root.render(
-      <SessionProvider session={session} account={{ admin: false, localProviders: [], facts, guest: null, onLock() {}, onLogout: async () => null }}>
+      <SessionProvider session={session} account={account}>
         {rows.map(([row, picture]) => <Row key={row} row={row} picture={picture} />)}
       </SessionProvider>,
     )),
@@ -178,5 +184,36 @@ it('shares a picture until its last row leaves, holding replacement owners befor
     expect(pictures.revoke).toHaveBeenCalledExactlyOnceWith(shared);
   } finally {
     await pictures.close();
+  }
+});
+
+it('a chat passes from the hold that opened it to its page without being unloaded between', async () => {
+  const store = await openStore();
+  await store.create('chat', { title: null, character: null, models: {} } satisfies Chat, { id: 'chat' });
+  const read = new ReadModels(store);
+  const session = { store, read } as unknown as Session;
+  const states: string[] = [];
+  const unsubscribe = store.subscribe(() => states.push(store.scopeState('chat')));
+  let opening = false;
+  let state = '';
+  const Held = () => { opening = useChatOpening('chat'); return null; };
+  const Shown = () => { state = useChatModel('chat').state; return null; };
+  const root = probeRoot();
+  const render = (shown: boolean) => root.render(<SessionProvider session={session} account={account}>{shown ? <Shown /> : <Held />}</SessionProvider>);
+  try {
+    act(() => render(false));
+    expect(opening).toBe(true);
+    await act(async () => {});
+    expect(opening).toBe(false);
+    states.length = 0;
+    await act(() => render(true));
+    expect(state).toBe('loaded');
+    expect(states).not.toContain('unloaded');
+    expect(states).not.toContain('loading');
+  } finally {
+    await act(() => root.unmount());
+    unsubscribe();
+    read.close();
+    vi.unstubAllGlobals();
   }
 });

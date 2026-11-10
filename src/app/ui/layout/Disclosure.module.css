@@ -1,7 +1,6 @@
 .disclosure {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
 }
 
 .head {
@@ -40,7 +39,7 @@
 
 .chevron {
   display: flex;
-  transition: transform var(--duration-fast);
+  transition: transform var(--motion-respond);
 }
 
 /* One line high, so the chevron stands level with the first line of a question that wraps. */
@@ -54,13 +53,34 @@
   transform: rotate(90deg);
 }
 
+.fold {
+  composes: fold from '../foundation/motion.module.css';
+}
+
+.fold[hidden] {
+  display: none;
+}
+
+.folded {
+  composes: folded from '../foundation/motion.module.css';
+}
+
 .body {
   composes: note from '../foundation/type.module.css';
+  composes: foldBody from '../foundation/motion.module.css';
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+  padding-top: var(--space-8);
 }
 
-.body[hidden] {
-  display: none;
+/* Where an unfolding starts. One that stood open when made has none, and is simply there. */
+@starting-style {
+  .unfolds:not(.folded) {
+    grid-template-rows: 0fr;
+  }
+
+  .unfolds:not(.folded) > .body {
+    overflow: hidden;
+  }
 }

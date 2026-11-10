@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { usePersisted } from '../common/usePersisted';
 import { useDisplay } from '../display';
 import { keysOf, Quiet, SHORTCUT_GROUPS, SHORTCUTS, useShortcut } from '../shortcuts';
-import { backLayers, Dialog, LayerWindow, Section, Shell, Shortcuts, Stack, Text, useWide } from '../ui';
+import { useChatOpening } from '../session';
+import { backLayers, Dialog, LayerWindow, Section, Shell, Shortcuts, Stack, Text, useLingering, useWide } from '../ui';
 import { Page } from './Page';
-import { closeLayer, HeldRoute, holdBack, navigate, useAddress } from './router';
-import { HOME, settingsPage, sidebarPage, toolsPage } from './routes';
+import { closeLayer, holdBack, navigate, ShownRoute, useAddress } from './router';
+import { HOME, settingsPage, sidebarPage, toolsPage, type Route } from './routes';
 import { SETTINGS, TOOLS } from '../common/words';
 import { settingsEntry, SettingsSidebar } from './settings/SettingsNav';
 import { ToolsSidebar } from './tools/ToolsNav';
@@ -14,7 +15,10 @@ import { LibrarySidebar } from './sidebar/LibrarySidebar';
 const COLLAPSED = 'risu-alpha:sidebar-collapsed';
 
 export function Layout() {
-  const { route, under } = useAddress();
+  const asked = useAddress();
+  // What is on screen stays while the chat asked for opens: one that opens soon follows it with no loading screen
+  // between. The sidebar beside it reads the route asked for, and marks that chat at once.
+  const { route, under } = useLingering(asked, useChatOpening(asked.route.kind === 'chat' ? asked.route.id : null));
   const wide = useWide();
   useEffect(() => holdBack(backLayers), []);
   const [collapsed, setCollapsed] = usePersisted(COLLAPSED, (stored) => stored === '1', false, (folded) => (folded ? '1' : '0'));
@@ -43,29 +47,31 @@ export function Layout() {
   useShortcut('pictures', () => changeDisplay({ hidePictures: !display.hidePictures }), fallback);
 
   const listed = listing && <ShortcutList enterSends={display.enterSends} onClose={() => setListing(false)} />;
+  // The route a page is given is the one everything in it reads.
+  const drawn = (at: Route) => <ShownRoute.Provider value={at}><Page route={at} onPaired={setPaired} /></ShownRoute.Provider>;
   const page = (
     <>
-      <Page route={route} onPaired={setPaired} />
+      {drawn(route)}
       {listed}
     </>
   );
 
   const sidebar = (asPage: boolean) => <LibrarySidebar page={asPage} collapsed={folded} onCollapse={fold} />;
-  if (!wide) return settings !== null || tools !== null || !sidebarPage(route) ? page : sidebar(true);
+  if (!wide) return settings !== null || tools !== null || !sidebarPage(route) ? page : <ShownRoute.Provider value={route}>{sidebar(true)}</ShownRoute.Provider>;
   const layer = settings !== null ? { label: SETTINGS, side: <SettingsSidebar current={settings} onClose={closeLayer} /> } : tools !== null ? { label: TOOLS, side: <ToolsSidebar current={tools} onClose={closeLayer} /> } : null;
   const held = layer !== null;
   const outside = under ?? HOME;
   // The page a layer is opened from keeps its place in the tree, so it stays as it was behind the window.
   return (
     <>
-      <HeldRoute.Provider value={held ? outside : null}>
+      <ShownRoute.Provider value={held ? outside : null}>
         <Quiet.Provider value={held}>
           <Shell side={sidebar(false)} held={held}>
-            <Page route={held ? outside : route} onPaired={setPaired} />
+            {drawn(held ? outside : route)}
             {!held && listed}
           </Shell>
         </Quiet.Provider>
-      </HeldRoute.Provider>
+      </ShownRoute.Provider>
       {layer && (
         <LayerWindow label={layer.label} side={layer.side} onClose={closeLayer}>
           {page}

@@ -1,11 +1,19 @@
 .panel {
-  composes: fadeIn from '../foundation/motion.module.css';
   width: var(--panel-width);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   border-left: var(--border-thin) solid var(--color-divider);
   background: var(--color-sidebar);
+}
+
+/* Beside the page it takes its room at once, so it only fades in; covering, it comes from its edge and goes back. */
+.beside {
+  composes: fadeIn from '../foundation/motion.module.css';
+}
+
+.covers {
+  composes: slideIn from '../foundation/motion.module.css';
 }
 
 /* Covering, it takes the focus itself as the place Tab starts from, not as a control. */

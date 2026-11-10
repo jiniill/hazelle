@@ -14,27 +14,38 @@
 }
 
 .item {
-  composes: riseIn from '../foundation/motion.module.css';
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  transform: translateY(calc(var(--toward) * var(--index) * var(--toast-peek))) scale(calc(1 - var(--index) * var(--toast-shrink)));
+  translate: 0 calc(var(--toward) * var(--index) * var(--toast-peek));
+  scale: calc(1 - var(--index) * var(--toast-shrink));
   z-index: calc(var(--count) - var(--index));
   transform-origin: bottom center;
   transition:
-    transform var(--duration-slow) var(--ease-enter),
-    filter var(--duration-slow) var(--ease-enter);
+    translate var(--motion-move),
+    scale var(--motion-move),
+    filter var(--motion-move);
 }
 
 .open .item {
-  transform: translateY(calc(var(--toward) * (var(--lift) + var(--index) * var(--space-8))));
+  translate: 0 calc(var(--toward) * (var(--lift) + var(--index) * var(--space-8)));
+  scale: none;
+}
+
+/* A notice comes from the edge its stack stands at. */
+.rises {
+  composes: riseIn from '../foundation/motion.module.css';
+}
+
+.drops {
+  composes: dropIn from '../foundation/motion.module.css';
 }
 
 /* A finger's moves are the notice's own (Swiped); a long notice's words take their vertical ones back (Toast). */
 .swiped {
   touch-action: none;
-  transition: translate var(--duration-fast) var(--ease-enter);
+  transition: translate var(--motion-respond);
 }
 
 .sliding {

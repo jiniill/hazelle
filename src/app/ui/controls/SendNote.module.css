@@ -13,11 +13,11 @@
   color: var(--color-warn-text);
 }
 
-.press:hover {
+.press:is(:hover, :active) {
   color: var(--color-text-muted);
 }
 
-.warn.press:hover {
+.warn.press:is(:hover, :active) {
   color: var(--color-warn-text);
   text-decoration: underline;
 }

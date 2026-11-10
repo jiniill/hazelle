@@ -24,7 +24,7 @@
   font-weight: var(--weight-medium);
 }
 
-.button:hover {
+.button:is(:hover, :active) {
   background: var(--color-glass-press);
 }
 
