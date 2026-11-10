@@ -21,14 +21,13 @@ import { refuseTools, routeFields } from './connections';
 import { TOOL_ROUNDS, toolLoop, type Tool } from './tool-loop';
 import type { Costs } from './cost';
 import type { Credentials } from './credential';
-import { gather, generate, receiptOf, resume, unsettled, type GenerateInput, type Reply, type TextSink } from './generate';
+import { generate, receiptOf, resume, type Reply, type TextSink } from './generate';
 import { stopStream } from './relay';
 import type { RequestLog } from './request-log';
 import type { ObjectStore } from './store';
 import { accountSettings } from './account-settings';
 import type { ChatLease } from './chat-scope';
-import { callOf, endCall, newCall, pageCall, type PageClass } from './streams';
-import type { Session } from './session';
+import { callOf, endCall, newCall } from './streams';
 
 // A continuation's text and reasoning start as those it continues. before:
 // what the bot's Lua wrote before the reply was made (model/chat Entry).
@@ -428,17 +427,4 @@ export class Talk {
     const receipt: Receipt = preread ? { ...made, preread: preread(made) } : made;
     return { id: reply.id, message: reply.message, replaces: reply.replaces, ...(reply.follows !== undefined && { follows: reply.follows }), at, text: turn.text, receipt, seed: reply.continues?.seed, ...(reply.before && { before: reply.before }), ...(turn.reasoning && { reasoning: turn.reasoning }) };
   }
-}
-
-// Auxiliary calls use detached transport without markers: another device must not rerun their task and bill twice.
-// Caller owns parsing and completion (illustration/likeness/mascot).
-export async function pageAnswer(session: Pick<Session, 'store' | 'tokens' | 'credentials' | 'log'>, { route, settings }: { route: Route; settings: ModelSettings }, requestClass: Exclude<PageClass, 'script'>, chat: string | null, messages: GenerateInput['messages'], signal: AbortSignal, retrying?: () => void): Promise<{ kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { text: string; receipt: Receipt }> {
-  const { store, credentials, log } = session;
-  const text = gather();
-  const call = await pageCall(session, route, requestClass, chat);
-  call.retrying = retrying;
-  const answer = await generate({ credentials, log, ...routeFields(store, route, settings), messages, call, signal, onText: text }).finally(() => endCall(store, call.id));
-  if (answer.cut === 'stopped') return { kind: 'stopped' };
-  const receipt = unsettled(receiptOf(callOf(route), answer));
-  return answer.state === 'done' ? { text: text.value(), receipt } : { kind: 'failed', receipt };
 }

@@ -16,7 +16,7 @@ import { prereadPrompt } from './prompts';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
 import { accountSettings, changeSettings } from './account-settings';
-import { pageAnswer } from './talk';
+import { pageAnswer } from './streams';
 import { tokenProjection } from './token-calibration';
 import { chatPlace, keepRow } from './usage';
 

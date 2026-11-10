@@ -70,6 +70,8 @@ export type GenerateInput = {
   batching?: { waiting: () => void; cancel: AbortSignal };
 };
 
+export type Caller = { store: ObjectStore; credentials: Credentials; log: RequestLog };
+
 export async function generate({ credentials, log, connection, model, settings, retries, messages, tools, call, signal, onText, keep, batching }: GenerateInput): Promise<Reply> {
   const at = Date.now();
   const started = performance.now();
@@ -326,7 +328,7 @@ export function cacheViewOf(connection: Connection, model: Starred, settings: Mo
 // live rest; or a batch, asked about again. Its request is gone, its time to first text unknown, and its duration the
 // server's, or for a batch the time until this page read its answer. turn: a reply's reader (Talk), told of each try
 // sent again (StreamCall retrying), and whose 멈추기 cancels a batch (GenerateInput batching).
-export async function resume({ store, credentials, log }: { store: ObjectStore; credentials: Credentials; log: RequestLog }, { id, parent, value }: Stored<'stream'>, signal: AbortSignal, onText: TextSink, keep?: boolean, turn?: { retrying: () => void; cancel: AbortSignal }): Promise<Reply> {
+export async function resume({ store, credentials, log }: Caller, { id, parent, value }: Stored<'stream'>, signal: AbortSignal, onText: TextSink, keep?: boolean, turn?: { retrying: () => void; cancel: AbortSignal }): Promise<Reply> {
   let took = 0;
   let tries: number | null = null;
   let protocol = '';
@@ -381,7 +383,7 @@ export function receiptOf(call: Stream['call'], answer: Reply): Receipt {
 }
 
 // A task's call (a memory record's, a 삽화 scene's) is never settled later, so its receipt keeps no pending cost.
-export const unsettled = (receipt: Receipt): Receipt => (receipt.cost === 'pending' ? { ...receipt, cost: null } : receipt);
+export const unsettled = (receipt: Receipt): Receipt & { cost: Exclude<Receipt['cost'], 'pending'> } => ({ ...receipt, cost: receipt.cost === 'pending' ? null : receipt.cost });
 
 // Field by field, never the error itself: whatever a network error gains must not reach saved chats.
 export function receiptError(error: NonNullable<Reply['error']>): ReceiptError {

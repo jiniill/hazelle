@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Connection } from '../connectors/types';
-import { addFirstProfile, addProfile, FIRST_PROFILE_ID, modelProfile, profileUsers, removeProfile, setModelProfile, setProfileSettings } from './profiles';
+import { addFirstProfile, addProfile, FIRST_PROFILE_ID, modelProfile, profileUsers, removeProfile, setModelProfile, setProfileSettings, writerOf } from './profiles';
 import { testConnection, testModel as model, testServer } from './testing';
 
 const server = testServer();
@@ -25,6 +25,15 @@ describe('설정 묶음', () => {
     expect(await removeProfile(store, FIRST_PROFILE_ID)).toEqual({ ok: false, error: 'default' });
     await setModelProfile(store, id, 'm', FIRST_PROFILE_ID);
     expect(starred()).not.toHaveProperty('profile');
+  });
+
+  it('writes with a route’s 묶음, and stops on a missing one, saying whether it was the model’s own', async () => {
+    const { store } = await server.account();
+    const created = await store.create('connection', openRouter);
+    const connection = created.ok ? created.data : null!;
+    await addFirstProfile(store);
+    expect(writerOf(store, { connection, model })).toEqual({ route: { connection, model }, settings: {} });
+    expect(writerOf(store, { connection, model: { ...model, profile: 'gone' } })).toEqual({ kind: 'profile-missing', own: true });
   });
 
   it('merges each change into what is stored, so another device’s change to another field survives', async () => {

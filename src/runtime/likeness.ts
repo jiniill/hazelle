@@ -17,7 +17,7 @@ import { shownPicture } from './picture';
 import { taskWriter } from './profiles';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
-import { pageAnswer } from './talk';
+import { pageAnswer } from './streams';
 import { keepRow } from './usage';
 import { fromBase64 } from '../base64';
 

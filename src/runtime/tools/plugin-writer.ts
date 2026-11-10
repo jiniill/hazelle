@@ -9,13 +9,12 @@ import api from '../../tool-api/hazelle.d.ts?raw';
 import guide from '../../tool-api/README.md?raw';
 import type { ApiFailure } from '../api';
 import { sharedModel, type RouteFailure } from '../assignment';
-import { routeFields } from '../connections';
 import type { Credentials } from '../credential';
-import { gather, generate, receiptOf, unsettled } from '../generate';
-import { modelProfile } from '../profiles';
+import { gather } from '../generate';
+import { writerOf } from '../profiles';
 import type { RequestLog } from '../request-log';
 import type { ObjectStore } from '../store';
-import { callOf, endCall, pageCall } from '../streams';
+import { pageCall, taskCall } from '../streams';
 import type { Tokens } from '../token-calibration';
 import type { ToolTrial } from '../scripts/preview';
 import { toolLoop, type ToolArgs } from '../tool-loop';
@@ -118,11 +117,11 @@ function readTest(read: ToolArgs): { code: string; moments: TestMoment[]; messag
 // With a runner, the model may test its file before answering: each of its calls is one model call, each run_test one
 // trial, within RUNS and CALLS. The stop signal reaches the model call and the trial alike.
 export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, onText: (text: string) => void, runner: PluginRunner | null = null, onRun: (run: TestRun) => void = () => {}): Promise<PluginAsked> {
-  const { store, credentials, log, tokens } = deps;
+  const { store, tokens } = deps;
   const route = sharedModel(store, 'main', input.model);
   if ('kind' in route) return { ok: false, failure: route };
-  const profile = modelProfile(store, route.model);
-  if (profile.kind === 'missing') return { ok: false, failure: { kind: 'profile-missing', own: profile.own } };
+  const writer = writerOf(store, route);
+  if ('kind' in writer) return { ok: false, failure: writer };
   const testing = runner && route.model.tools !== false ? runner : null;
   const messages = pluginAskMessages(REFERENCE, input.body, input.ask, input.earlier, testing ? RUNS : 0);
   const runs: TestRun[] = [];
@@ -139,30 +138,16 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
   };
   const looped = await toolLoop({ tools: testing ? [{ def: RUN_TEST, run: runTest(testing) }] : [], rounds: CALLS, signal, onText: gather(onText) }, async (exchange, tools, text) => {
     const call = await pageCall({ store, tokens }, route, 'script', null);
-    try {
-      const answer = await generate({
-        credentials,
-        log,
-        ...routeFields(store, route, profile.profile.value.settings),
-        messages: [...messages, ...exchange],
-        ...(tools && { tools }),
-        call,
-        signal,
-        onText: text,
-      });
-      const receipt = unsettled(receiptOf(callOf(route), answer));
-      const saved = await keepRow(store, receipt, Date.now(), { chat: null, character: null });
-      return saved.ok ? { answer, receipt } : { kind: 'unsaved' as const, failure: saved };
-    } finally {
-      endCall(store, call.id);
-    }
+    const { answer, receipt } = await taskCall(deps, writer, { messages: [...messages, ...exchange], ...(tools && { tools }), call, signal, onText: text });
+    const saved = await keepRow(store, receipt, Date.now(), { chat: null, character: null });
+    return saved.ok ? { answer, receipt } : { kind: 'unsaved' as const, failure: saved };
   });
   if (looped.kind === 'unsaved') return { ok: false, failure: looped };
   if (looped.kind === 'stopped') return { ok: false, failure: { kind: 'stopped' } };
   if (looped.kind === 'exhausted') return { ok: false, failure: { kind: 'too-many-calls' } };
   const last = looped.rounds.at(-1)!;
   if (looped.kind === 'failed' || (!last.answer.calls.length && !last.text.trim())) return { ok: false, failure: { kind: 'failed', receipt: last.receipt } };
-  const cost = sumCosts(looped.rounds.map(({ receipt }) => (receipt.cost === 'pending' ? null : receipt.cost)));
+  const cost = sumCosts(looped.rounds.map(({ receipt }) => receipt.cost));
   return { ok: true, answer: readPluginAnswer(last.text), model: refOf(route.connection.id, route.model), cost, runs };
 }
 
@@ -171,12 +156,12 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
 export async function askEstimate(deps: Pick<Deps, 'store'>, input: Input): Promise<Cost | null> {
   const route = sharedModel(deps.store, 'main', input.model);
   if ('kind' in route || !route.model.price) return null;
-  const profile = modelProfile(deps.store, route.model);
-  if (profile.kind === 'missing') return null;
+  const writer = writerOf(deps.store, route);
+  if ('kind' in writer) return null;
   const messages = pluginAskMessages(REFERENCE, input.body, input.ask, input.earlier);
   const counts = await deps.store.evaluation.count([...messages.map(({ content }) => content), ...(input.body === null ? [] : [input.body])]).catch(() => null);
   if (!Array.isArray(counts)) return null;
   const fileTokens = input.body === null ? 1024 : counts.pop()!;
-  const outputTokens = Math.min(fileTokens, profile.profile.value.settings.maxOutput ?? Infinity);
+  const outputTokens = Math.min(fileTokens, writer.settings.maxOutput ?? Infinity);
   return priceCost(route.model.price, { inputTokens: counts.reduce((sum, count) => sum + count, 0), outputTokens, cachedInputTokens: null, cacheWriteInputTokens: null, reasoningTokens: null }, costUnit(resolveConnection(route.connection.value)?.type ?? null));
 }

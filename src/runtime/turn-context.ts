@@ -26,7 +26,7 @@ import { cacheViewOf } from './generate';
 import { redacted, type SentRequest } from './request-log';
 import { memoryFill } from './memory-read';
 import { chatPersona, type PersonaSource } from './personas';
-import { modelProfile } from './profiles';
+import { writerOf } from './profiles';
 import { lastAdditional } from './additional';
 import type { Session } from './session';
 import type { Ask, Turn } from './talk';
@@ -61,8 +61,8 @@ function sendable({ store }: Reader, scope: ChatScope, chat: Chat): PromptInput[
 export function blocked(reader: Reader, chat: Chat): Blocked | null {
   const route = chatModel(reader.store, chat, 'main');
   if ('kind' in route) return route;
-  const profile = modelProfile(reader.store, route.model);
-  if (profile.kind === 'missing') return { kind: 'profile-missing', own: profile.own };
+  const writer = writerOf(reader.store, route);
+  if ('kind' in writer) return writer;
   const scope = sendable(reader, scopeOf(reader, null, chat, []), chat);
   return 'kind' in scope ? scope : null;
 }
@@ -77,9 +77,9 @@ export function gatherTurn(session: Pick<Session, 'store' | 'read'>, chat: strin
   if (!value) return null;
   const route = chatModel(session.store, value, 'main');
   if ('kind' in route) return route;
-  const profile = modelProfile(session.store, route.model);
-  if (profile.kind === 'missing') return { kind: 'profile-missing', own: profile.own };
-  const { settings } = profile.profile.value;
+  const writer = writerOf(session.store, route);
+  if ('kind' in writer) return writer;
+  const { settings } = writer;
 
   const messages = unsaved ? unsaved.messages : session.read.chat(chat).snapshot()!.messages;
   const message = 'message' in target ? target.message : null;

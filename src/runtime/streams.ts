@@ -5,11 +5,14 @@ import type { RequestClass } from '../model/token-calibration';
 import { measureInput } from './token-calibration';
 import { live } from '../model/library';
 import type { Stored } from '../model/kinds';
+import type { Receipt } from '../model/chat';
 import type { Stream } from '../model/stream';
 import { streamKey } from '../vault/streams';
 import type { Route } from './assignment';
 import { chatMemory } from './memory-read';
-import type { GenerateInput } from './generate';
+import { gather, generate, receiptOf, unsettled, type Caller, type GenerateInput } from './generate';
+import { routeFields } from './connections';
+import type { Writer } from './profiles';
 import { detachedReplies, dropStream } from './relay';
 import type { ObjectStore } from './store';
 
@@ -39,6 +42,27 @@ export type PageClass = 'script' | 'illustration' | 'likeness' | 'mascot' | 'pre
 export async function pageCall(session: Pick<Session, 'store' | 'tokens'>, route: Route, requestClass: PageClass, chat: string | null): Promise<GenerateInput['call']> {
   const key = await streamKey();
   return { id: crypto.randomUUID(), key: key.private, public: key.public, logged: { chat, purpose: requestClass, call: callOf(route) }, ...calibrate(session, route, requestClass, chat), ...(requestClass === 'script' && chat !== null && { bot: chat }) };
+}
+
+// A call no marker keeps (pageCall, or newCall for no chat): no pick-up ever ends it, so however it went, it is ended
+// here.
+export const generateOnce = ({ store, credentials, log }: Caller, { route, settings }: Writer, asked: Pick<GenerateInput, 'messages' | 'tools' | 'call' | 'signal' | 'onText'>) =>
+  generate({ credentials, log, ...routeFields(store, route, settings), ...asked }).finally(() => endCall(store, asked.call.id));
+
+export async function taskCall(caller: Caller, writer: Writer, asked: Parameters<typeof generateOnce>[2]) {
+  const answer = await generateOnce(caller, writer, asked);
+  return { answer, receipt: unsettled(receiptOf(callOf(writer.route), answer)) };
+}
+
+// Auxiliary calls use detached transport without markers: another device must not rerun their task and bill twice.
+// Caller owns parsing and completion (illustration/likeness/mascot).
+export async function pageAnswer(session: Caller & Pick<Session, 'tokens'>, writer: Writer, requestClass: Exclude<PageClass, 'script'>, chat: string | null, messages: GenerateInput['messages'], signal: AbortSignal, retrying?: () => void): Promise<{ kind: 'stopped' } | { kind: 'failed'; receipt: Receipt } | { text: string; receipt: Receipt }> {
+  const text = gather();
+  const call = await pageCall(session, writer.route, requestClass, chat);
+  call.retrying = retrying;
+  const { answer, receipt } = await taskCall(session, writer, { messages, call, signal, onText: text });
+  if (answer.cut === 'stopped') return { kind: 'stopped' };
+  return answer.state === 'done' ? { text: text.value(), receipt } : { kind: 'failed', receipt };
 }
 
 // Auxiliary prompts stay caller-owned: no splitting, trimming, or shrink-and-retry after a provider refusal.

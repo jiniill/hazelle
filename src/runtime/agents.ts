@@ -18,7 +18,7 @@ import { chatPrompt, ofSort, type StoredPrompt } from './prompts';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
 import { accountSettings, changeSettings } from './account-settings';
-import { pageAnswer } from './talk';
+import { pageAnswer } from './streams';
 import type { Preparing } from './turn-steps';
 import { chatPlace, keepRow } from './usage';
 

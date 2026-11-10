@@ -21,13 +21,13 @@ import { pinned, scopeOf } from './chat-context';
 import { chatPersona } from './personas';
 import { evaluatingTask } from './evaluation';
 import type { ReplyError } from './generate';
+import { pageAnswer } from './streams';
 import { taskWriter } from './profiles';
 import { illustrationPrompt } from './prompts';
 import { callLabel } from './pulse';
 import { relayBytes, relayJson } from './relay';
 import type { Session } from './session';
 import type { ObjectStore } from './store';
-import { pageAnswer } from './talk';
 import { chatPlace, receiptRow } from './usage';
 
 // One scene call per message/run, then sequential image calls. Owns illustration writes, including tool pictures,
