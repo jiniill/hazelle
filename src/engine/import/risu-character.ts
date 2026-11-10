@@ -1,6 +1,7 @@
 import { decodeHTML } from 'entities';
 import { splitThoughts } from '../../connectors/thoughts';
-import { isRecord, list, text } from '../../connectors/values';
+import { list, text } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { inlayIds } from '../assets';
 import { assemble, imageType, type Resolve } from './card';
 import { add, chatLorebook, convert, counted, finite, localCopies, record, variableText, type Json, type Tally } from './convert';

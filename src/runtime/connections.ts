@@ -2,7 +2,7 @@ import { fitsRole } from '../connectors/assignment';
 import { RETRIES } from '../connectors/registry';
 import type { ModelSettings } from '../connectors/settings';
 import { entriesOf, entryKey, ownOf, seesPictures, snapshotOf, type Account, type Connection, type ConnectionType, type Model, type Starred, type Turns } from '../connectors/types';
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import type { Stored } from '../model/kinds';
 import { without } from '../model/fields';
 import { firstTurns, groupOf, putBack, removeAccount as withoutAccount, signedIn } from '../model/turns';

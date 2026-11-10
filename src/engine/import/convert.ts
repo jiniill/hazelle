@@ -1,4 +1,5 @@
-import { count, flag, isRecord, list, text } from '../../connectors/values';
+import { count, flag, list, text } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { mainOf, type AssetUse } from '../assets';
 import { isUnsupportedTag } from '../cbs/tags';
 import { parseDecorators } from '../lorebook/decorators';

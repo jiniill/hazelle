@@ -2,7 +2,8 @@ import { unzipSync } from 'fflate';
 import { bareModel } from './chat-completions';
 import { CONNECTOR_MODELS } from './models-dev';
 import { ConnectorError, type ConnectionType, type Costs, type Meter, type Model, type PictureRequest } from './types';
-import { count, isRecord } from './values';
+import { count } from './values';
+import { isRecord } from '../record';
 
 const drawing = (id: string, name: string): Model => ({ ...bareModel(id), name, input: ['text'], output: ['image'] });
 

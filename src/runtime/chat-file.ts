@@ -1,4 +1,4 @@
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import { entryOrder } from '../model/chat';
 import type { Kind, Stored } from '../model/kinds';
 import { memoryId } from '../model/memory';

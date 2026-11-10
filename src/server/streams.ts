@@ -2,7 +2,8 @@ import { Hono, type Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { RETRY_MOST, type Retry, type StreamStart } from '../contracts/streams';
 import { admitCall } from './calls';
-import { fail, ID, isRecord, type AppEnv } from './http';
+import { fail, ID, type AppEnv } from './http';
+import { isRecord } from '../record';
 import { botCalls, canCall, requireSession } from './session';
 
 const whole = (value: unknown, least: number, most: number) => Number.isInteger(value) && (value as number) >= least && (value as number) <= most;

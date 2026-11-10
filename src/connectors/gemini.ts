@@ -3,7 +3,8 @@ import type { Reasoning } from './settings';
 import { bareModel, embedUsage } from './chat-completions';
 import type { ChatMessage, Codec, EmbedPurpose, InputPicture, Model, Phase, StreamFacts, Terminal, ToolCall, ToolResult } from './types';
 import { packPdf, pdfData } from './gemini-pdf';
-import { count, isRecord, jsonObject, list, vector } from './values';
+import { count, jsonObject, list, vector } from './values';
+import { isRecord } from '../record';
 
 // The Gemini API (generateContent), checked against ai.google.dev/api on 2026-10-04.
 

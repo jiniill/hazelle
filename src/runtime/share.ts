@@ -1,6 +1,6 @@
 import { FILE_ID } from '../contracts/files';
 import { COVER_LENGTH, type ShareCover } from '../contracts/shares';
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import { imageType } from '../engine/import/card';
 import type { Card } from '../engine/import/types';
 import type { Stored } from '../model/kinds';

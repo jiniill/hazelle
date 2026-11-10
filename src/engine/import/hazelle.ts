@@ -1,4 +1,5 @@
-import { count, isRecord, list, text } from '../../connectors/values';
+import { count, list, text } from '../../connectors/values';
+import { isRecord } from '../../record';
 import type { Portrait, PortraitSource } from '../../model/likeness';
 import { fingerprint } from '../memory';
 import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource, luaCodes, nativeHolds, readTriggers, record, regexScripts, stampIds, strings, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';

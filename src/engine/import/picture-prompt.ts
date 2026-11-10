@@ -1,5 +1,6 @@
 import { Unzlib } from 'fflate';
-import { isRecord, jsonObject } from '../../connectors/values';
+import { jsonObject } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { concat } from './inflate';
 import { isText } from '../answer-json';
 

@@ -2,7 +2,8 @@ import { closeSync, fsyncSync, openSync, readFileSync, renameSync, writeSync } f
 import { join } from 'node:path';
 import { RETENTION_MS } from '../db/account-db';
 import { fsyncPath, makeDirs } from '../db/durable';
-import { DAY_MS, isRecord } from '../http';
+import { DAY_MS } from '../http';
+import { isRecord } from '../../record';
 
 // Keep departures.json outside the rewound service DB so disaster restore re-deletes departed accounts.
 // Copier/restore scripts must move it beside generations. Synchronous reads/writes serialize this process's updates.

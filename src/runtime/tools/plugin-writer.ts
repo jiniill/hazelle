@@ -1,7 +1,7 @@
 import { costUnit, resolveConnection } from '../../connectors/registry';
 import { priceCost, sumCosts } from '../../connectors/pricing';
 import type { Cost, ToolDef } from '../../connectors/types';
-import { isRecord } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { refOf, type ModelRef } from '../../connectors/assignment';
 import { pluginAskMessages, readPluginAnswer, type PluginAnswer } from '../../engine/plugin-writer';
 import type { Receipt } from '../../model/chat';

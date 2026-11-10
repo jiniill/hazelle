@@ -1,6 +1,6 @@
 import { RELAY_HEADER, RELAY_METHODS, RELAY_SOURCE, type HttpRequest, type RelayError } from '../contracts/http';
 import { HOP_BY_HOP } from './hop-by-hop';
-import { isRecord } from './http';
+import { isRecord } from '../record';
 import { PolicyRefusal } from './ssrf';
 import type { RelayAllowance } from './limits';
 

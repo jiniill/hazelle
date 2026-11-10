@@ -1,5 +1,6 @@
 import { replyLimit, type Model } from './types';
-import { count, isRecord } from './values';
+import { count } from './values';
+import { isRecord } from '../record';
 
 export const NUMBERS = ['maxOutput', 'temperature', 'topP', 'topK', 'frequencyPenalty', 'presencePenalty', 'repetitionPenalty', 'minP', 'seed'] as const;
 export type NumberSetting = (typeof NUMBERS)[number];

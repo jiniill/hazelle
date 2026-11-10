@@ -1,7 +1,8 @@
 import { failedTerminal } from './errors';
 import type { Cache, Reasoning } from './settings';
 import { carriesPictures, ConnectorError, replyLimit, type ChatMessage, type Codec, type InputPicture, type Modality, type StreamFacts, type ToolCall, type ToolResult } from './types';
-import { count, isRecord, jsonObject, list, modelEntries, nameOf } from './values';
+import { count, jsonObject, list, modelEntries, nameOf } from './values';
+import { isRecord } from '../record';
 
 export const VERSION = { 'anthropic-version': '2023-06-01' };
 

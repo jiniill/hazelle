@@ -1,7 +1,8 @@
 import { Hono, type Context } from 'hono';
 import { MODELS_DEV_LISTS, MODELS_DEV_MODALITIES, type ListedModality, type ListedModel, type ModelsDevList, type PriceTable, type PriceTier, type Rates } from '../connectors/models-dev';
 import type { Db } from './db/service-db';
-import { countVisit, fail, HOUR_MS, isRecord, MINUTE_MS, type AppEnv } from './http';
+import { countVisit, fail, HOUR_MS, MINUTE_MS, type AppEnv } from './http';
+import { isRecord } from '../record';
 import type { Upstream } from './relay';
 
 const SOURCE = 'https://models.dev/api.json';

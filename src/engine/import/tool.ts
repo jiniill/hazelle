@@ -1,4 +1,4 @@
-import { isRecord } from '../../connectors/values';
+import { isRecord } from '../../record';
 import type { Json, Settings, ToolField, ToolFunction, ToolManifest, ToolUse } from '../../tool-api/manifest';
 import type { ToolIdentity } from '../../model/tool';
 import type { ImportFailure } from './types';

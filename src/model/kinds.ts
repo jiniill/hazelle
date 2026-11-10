@@ -12,6 +12,7 @@ import type { Persona } from './persona';
 import type { Profile } from './profile';
 import type { Share } from './share';
 import type { Prompt } from './prompt';
+import { isRecord } from '../record';
 import { SETTINGS_ID, type Settings } from './settings';
 import type { Tool, ToolChatData, ToolData, ToolDraft, ToolFile } from './tool';
 import type { Stream } from './stream';
@@ -111,8 +112,6 @@ type Check = (value: unknown) => boolean;
 const str: Check = (value) => typeof value === 'string';
 const num: Check = (value) => typeof value === 'number';
 const bool: Check = (value) => typeof value === 'boolean';
-// connectors/values isRecord, which the model may not import (eslint/boundaries.js).
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const orNull = (check: Check): Check => (value) => value === null || check(value);
 const listOf = (check: Check): Check => (value) => Array.isArray(value) && value.every(check);
 const shape = (fields: Record<string, Check>): Check => (value) => isRecord(value) && Object.entries(fields).every(([key, check]) => check(value[key]));

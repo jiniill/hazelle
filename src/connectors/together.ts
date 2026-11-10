@@ -1,6 +1,7 @@
 import { bareModel } from './chat-completions';
 import type { ConnectionType } from './types';
-import { count, isRecord, nameOf } from './values';
+import { count, nameOf } from './values';
+import { isRecord } from '../record';
 
 export const together: ConnectionType = {
   browser: {},

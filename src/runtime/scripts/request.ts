@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../../connectors/types';
-import { isRecord } from '../../connectors/values';
+import { isRecord } from '../../record';
 import type { Assembled } from '../../engine/pipeline';
 import type { Event, Outcome } from '../../engine/script-api';
 

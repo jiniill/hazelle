@@ -1,5 +1,5 @@
 import type { HttpRequest } from '../../contracts/http';
-import { isRecord } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { RELAY_HEADER } from '../../contracts/http';
 import { Runaway } from '../../engine/cbs/evaluate';
 import { SIGNATURE } from '../../engine/assets';

@@ -5,6 +5,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AccountState } from '../contracts/admin';
 import { VISITOR_HEADER, type ServerError } from '../contracts/http';
 import type { PulseLabel } from '../contracts/pulse';
+import { isRecord } from '../record';
 import type { Refused } from './account-store';
 import type { Backups } from './backup/backups';
 import type { Stores } from './db/account-db';
@@ -67,8 +68,6 @@ export const sha256Hex = (data: string | Uint8Array) => createHash('sha256').upd
 
 export const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 export const isPositive = (value: unknown): value is number => isCount(value) && value > 0;
-
-export const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export async function readObject(c: Context): Promise<Record<string, unknown> | null> {
   const body: unknown = await c.req.json().catch(() => null);

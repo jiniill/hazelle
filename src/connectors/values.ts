@@ -1,3 +1,4 @@
+import { isRecord } from '../record';
 import type { Modality } from './types';
 
 // OpenRouter names an embedding model's output embeddings.
@@ -11,10 +12,6 @@ export const text = (value: unknown) => (typeof value === 'string' ? value : '')
 
 export function flag(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function count(value: unknown): number | null {

@@ -1,4 +1,4 @@
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import type { Expression, MascotId } from '../model/mascot';
 import type { MascotPrompt } from '../model/prompt';
 import { answerJson, ONE_OBJECT } from './answer-json';

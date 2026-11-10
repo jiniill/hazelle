@@ -27,7 +27,8 @@ import {
 } from '../contracts/board';
 import { ACCOUNT_HEADER } from '../contracts/http';
 import type { SqlValue } from './db/service-db';
-import { DAY_MS, fail, isPositive, isRecord, limitOf, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
+import { DAY_MS, fail, isPositive, limitOf, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
+import { isRecord } from '../record';
 import { boardDailyLimit } from './limits';
 import { act, logged, operator } from './operator';
 import { requireSession } from './session';

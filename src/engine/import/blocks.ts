@@ -1,4 +1,5 @@
-import { isRecord, list } from '../../connectors/values';
+import { list } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { text } from '../lua/state';
 
 export type Operand = { kind: 'text'; text: string } | { kind: 'variable'; name: string };

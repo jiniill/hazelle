@@ -1,5 +1,5 @@
 import type { Model, PictureRequest } from '../connectors/types';
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import type { Figure, Scene, Shape } from '../model/illustration';
 import type { Outfit, Portrait } from '../model/likeness';
 import { nameKey, namesOf } from './likeness';

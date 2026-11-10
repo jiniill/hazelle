@@ -1,6 +1,6 @@
 import type { ZipEntry } from '../engine/import/zip-format';
 import { strFromU8, strToU8 } from 'fflate';
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import { KINDS, parentKinds, type Kind, type Stored } from '../model/kinds';
 import { ORDER_ID } from '../model/order';
 import { SETTINGS_ID } from '../model/settings';

@@ -1,5 +1,5 @@
 import { fromBase64, toBase64 } from '../../base64';
-import { isRecord } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { UNSET } from '../script-api';
 import { assetUrl, backdrop, findAsset, isVideo, type BotAsset } from '../assets';
 import { seeded } from '../random';

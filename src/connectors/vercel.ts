@@ -3,7 +3,8 @@ import { effortLevels, type ReasoningTakes } from './settings';
 import { statedPrice } from './pricing';
 import type { Rates } from './models-dev';
 import type { ConnectionType, Modality } from './types';
-import { amount, count, decimal, isRecord, modelEntries, nameOf, perMillion } from './values';
+import { amount, count, decimal, modelEntries, nameOf, perMillion } from './values';
+import { isRecord } from '../record';
 
 const API = 'https://ai-gateway.vercel.sh/v1';
 

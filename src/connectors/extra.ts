@@ -1,4 +1,4 @@
-import { isRecord } from './values';
+import { isRecord } from '../record';
 
 // 추가 파라미터: the user's own request body fields, stored as typed and read here at send time, so a broken line is
 // kept for fixing and only left out of the request. Two forms, picked by the first character: a JSON object, or

@@ -1,7 +1,8 @@
 import { bareModel } from './chat-completions';
 import { statedPrice } from './pricing';
 import type { ConnectionType, Model } from './types';
-import { amount, count, isRecord, list, modelEntries } from './values';
+import { amount, count, list, modelEntries } from './values';
+import { isRecord } from '../record';
 
 // Public list includes non-chat models; only chat tags qualify. Curated tags make missing reasoning false.
 export const deepinfra: ConnectionType = {

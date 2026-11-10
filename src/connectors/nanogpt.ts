@@ -1,5 +1,6 @@
 import type { ConnectionType, Meter } from './types';
-import { count, decimal, isRecord } from './values';
+import { count, decimal } from './values';
+import { isRecord } from '../record';
 
 const QUOTAS = [['dailyInputTokens', '오늘 입력 토큰'], ['weeklyInputTokens', '이번 주 입력 토큰']] as const;
 

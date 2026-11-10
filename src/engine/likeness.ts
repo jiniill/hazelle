@@ -1,5 +1,6 @@
 import type { ChatMessage, InputPicture } from '../connectors/types';
-import { isRecord, jsonObject } from '../connectors/values';
+import { jsonObject } from '../connectors/values';
+import { isRecord } from '../record';
 import type { BuiltSource, Outfit, Portrait } from '../model/likeness';
 import type { PicturePrompt } from './import/picture-prompt';
 import { answerJson, isText, ONE_OBJECT } from './answer-json';

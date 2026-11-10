@@ -5,7 +5,7 @@ import type { CallCalibration, InputMeasurement, TokenFit } from '../model/token
 import { BOT_HEADER, RELAY_HEADER, RELAY_SOURCE, STREAM_FRAMES, STREAM_HEADER } from '../contracts/http';
 import { HEAD, DATA, END, PING, PING_MS, WAIT, askedWait, retryWait, type Retry, type StreamStart } from '../contracts/streams';
 import { providerCode, providerMessage } from '../connectors/errors';
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import type { ConnectionType } from '../connectors/types';
 import type { HttpRequest } from '../contracts/http';
 import type { GuestStep } from '../contracts/admin';

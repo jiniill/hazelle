@@ -2,7 +2,8 @@ import { fromBase64, toBase64 } from '../base64';
 import { bareModel, embedUsage } from './chat-completions';
 import { embedContent } from './gemini';
 import { ConnectorError, type ConnectionType, type Endpoint } from './types';
-import { count, isRecord, jsonObject, vector } from './values';
+import { count, jsonObject, vector } from './values';
+import { isRecord } from '../record';
 
 // Service-account JWT buys a one-hour token. Gemini calls require the project at the global location;
 // model listing requires project-free v1beta1 (live-verified 2026-10-13).

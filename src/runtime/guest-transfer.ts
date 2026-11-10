@@ -1,4 +1,4 @@
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import { BATCH_LIMITS, type SealedChange, type SealedWrite } from '../contracts/objects';
 import { isValue, KINDS, type Kind } from '../model/kinds';
 import { ORDER_ID, toFront, type Order } from '../model/order';

@@ -1,5 +1,5 @@
 import { ChangeSignal } from '../../change-signal';
-import { isRecord } from '../../connectors/values';
+import { isRecord } from '../../record';
 import type { HookLog, HookTrace } from '../../engine/lua/run';
 import type { Outcome } from '../../engine/script-api';
 import { live, type PackOwner } from '../../model/library';

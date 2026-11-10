@@ -1,6 +1,6 @@
 import type { SignIn } from './types';
 import type { HttpRequest } from '../contracts/http';
-import { isRecord } from './values';
+import { isRecord } from '../record';
 
 // RFC 8628, read as GitHub sends it. The code's lifetime and the polling interval are in seconds.
 export type DeviceCode = { deviceCode: string; userCode: string; verificationUri: string; expiresIn: number; interval: number };

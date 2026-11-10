@@ -1,6 +1,6 @@
 import { errorMessage } from '../../error-message';
 import { ChangeSignal } from '../../change-signal';
-import { isRecord } from '../../connectors/values';
+import { isRecord } from '../../record';
 import type { ToolEvent, ToolReach } from '../../engine/script-api';
 import type { ChatScope } from '../../engine/render';
 import type { Chat } from '../../model/chat';

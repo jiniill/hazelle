@@ -9,7 +9,8 @@ import { COVER_LENGTH, MAX_SHARE_FILES, MAX_SHARE_LINK, SHARE_CONSENT, SHARE_ID,
 import { ROW_BYTES } from './caps';
 import type { Db, SqlValue, Statement } from './db/service-db';
 import { fileKey } from './files/bucket';
-import { countVisit, fail, isRecord, readObject, refused as refuseStore, RETRY_SECONDS, visitorOf, type AppEnv } from './http';
+import { countVisit, fail, readObject, refused as refuseStore, RETRY_SECONDS, visitorOf, type AppEnv } from './http';
+import { isRecord } from '../record';
 import { tokenBucket } from './limits';
 import { canWrite, currentAccount, requireSession } from './session';
 

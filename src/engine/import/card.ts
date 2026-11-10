@@ -12,7 +12,8 @@ import { writeToggles } from './toggles';
 import { openZip, type Zip } from './zip';
 import { fromBase64 } from '../../base64';
 import { sha256Hex } from '../../hex';
-import { isRecord, text } from '../../connectors/values';
+import { text } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { unseal } from './risu-seal';
 
 const utf8 = new TextDecoder();

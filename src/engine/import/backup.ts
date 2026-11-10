@@ -1,5 +1,6 @@
 import { errorMessage } from '../../error-message';
-import { isRecord, jsonObject, list, text } from '../../connectors/values';
+import { jsonObject, list, text } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { SIGNATURE } from '../assets';
 import { imageType } from './card';
 import { add, counted, record, type Json, type Tally } from './convert';

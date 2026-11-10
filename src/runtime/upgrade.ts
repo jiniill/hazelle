@@ -1,6 +1,6 @@
 import { unavailableCalibration } from '../model/token-calibration';
 import { CONNECTION_TYPES } from '../connectors/registry';
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import { reparsed, type BlockEffect } from '../engine/import/blocks';
 import { stampIds } from '../engine/import/convert';
 import { readToggles } from '../engine/import/toggles';

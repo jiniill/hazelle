@@ -2,7 +2,8 @@ import { chatCompletions, dataUrl, openAiEmbeds, promptCacheKey } from './chat-c
 import { failedTerminal } from './errors';
 import type { ModelSettings } from './settings';
 import { carriesPictures, type ChatMessage, type Codec, type Phase, type StreamFacts } from './types';
-import { count, isRecord, list } from './values';
+import { count, list } from './values';
+import { isRecord } from '../record';
 
 // OpenAI's Responses API. 'none' turns reasoning off on the models that allow it. A summary comes back only when asked.
 function reasoningField({ reasoning, reasoningSummary }: ModelSettings) {

@@ -1,4 +1,4 @@
-import { isRecord } from '../../connectors/values';
+import { isRecord } from '../../record';
 import { METADATA_BYTES, TooLarge } from './inflate';
 import type { FileSource } from './source';
 

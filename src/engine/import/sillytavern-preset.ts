@@ -1,4 +1,5 @@
-import { count, isRecord, list, text } from '../../connectors/values';
+import { count, list, text } from '../../connectors/values';
+import { isRecord } from '../../record';
 import type { Block, ConversationPrompt, Role, TextBlock } from '../../model/prompt';
 import { isProse, separatorOf } from '../cbs/evaluate';
 import { handlerFor, normalize } from '../cbs/tags';

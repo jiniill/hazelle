@@ -2,7 +2,8 @@ import { failedTerminal } from './errors';
 import type { Cache, NumberSetting, Reasoning, Setting } from './settings';
 import { ephemeral, wireMessage } from './anthropic-messages';
 import { carriesPictures, type CacheMark, type ChatMessage, type Codec, type Embeds, type InputPicture, type Model, type Phase, type StreamFacts, type ToolCall, type ToolDef, type Usage } from './types';
-import { count, isRecord, list, modelEntries, vector } from './values';
+import { count, list, modelEntries, vector } from './values';
+import { isRecord } from '../record';
 
 // max_tokens, not max_completion_tokens: compatible servers take it.
 // OpenRouter/Vercel supported_parameters use these same field names.

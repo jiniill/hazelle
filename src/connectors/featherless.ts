@@ -1,6 +1,7 @@
 import { bareModel } from './chat-completions';
 import type { ConnectionType, Model } from './types';
-import { count, flag, isRecord, modelEntries } from './values';
+import { count, flag, modelEntries } from './values';
+import { isRecord } from '../record';
 
 // Public list includes non-chat models. Missing feature flags stay unknown;
 // context_length is the model limit, not the Basic/Premium 32K plan cap.

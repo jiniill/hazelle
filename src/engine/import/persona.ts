@@ -1,5 +1,6 @@
 import { fromBase64, toBase64 } from '../../base64';
-import { isRecord, text } from '../../connectors/values';
+import { text } from '../../connectors/values';
+import { isRecord } from '../../record';
 import type { Persona } from '../../model/persona';
 import { withText } from './png';
 import type { ImportResult } from './types';

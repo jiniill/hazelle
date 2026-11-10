@@ -1,5 +1,5 @@
 import type { Terminal } from './types';
-import { isRecord } from './values';
+import { isRecord } from '../record';
 
 // Decoded error strings and message fields are already presentation text, never JSON-quoted.
 // Unknown shapes have no message; each transport keeps its own fallback policy.

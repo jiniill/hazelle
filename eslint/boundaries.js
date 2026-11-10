@@ -2,7 +2,7 @@ import path from 'node:path';
 
 // Assign modules to their longest matching repo-relative area; tests inherit their subject's area.
 // Allow imports/types/tests edges explicitly; unknown areas fail lint until assigned.
-const RUNTIME_IMPORTS = ['toolApi', 'changeSignal', 'base64', 'hex', 'errorMessage', 'contracts', 'model', 'engine', 'connectors', 'modelsDev', 'vault'];
+const RUNTIME_IMPORTS = ['toolApi', 'changeSignal', 'base64', 'hex', 'errorMessage', 'record', 'contracts', 'model', 'engine', 'connectors', 'modelsDev', 'vault'];
 const BELOW_APP = ['runtime', ...RUNTIME_IMPORTS];
 const FEATURES = ['account', 'admin', 'library', 'chat', 'connections', 'models', 'prompts', 'personas', 'modules', 'settings', 'share', 'pulse', 'guide', 'start', 'tools', 'board', 'search'];
 const FEATURE = {
@@ -16,29 +16,31 @@ const AREAS = {
   base64: { paths: ['src/base64'], why: 'one base64 codec for the vault, the connectors, the engine, the server and the sandbox; it imports nothing, so none of them learns of another layer through it.' },
   hex: { paths: ['src/hex'], why: 'one lowercase hex writer for the ids and names the runtime, the vault, the engine and the server derive from bytes; it imports nothing, so none of them learns of another layer through it.' },
   errorMessage: { paths: ['src/error-message'], why: 'one way to say what was thrown for the runtime, the engine, the connectors, the server and the sandbox; it imports nothing, so none of them learns of another layer through it.' },
+  record: { paths: ['src/record'], why: 'one test of a plain object for the connectors, the engine, the model, the runtime and the server; it imports nothing, so none of them learns of another layer through it.' },
   contracts: { paths: ['src/contracts'], why: 'wire values shared by the server and client import no other layer.' },
   connectors: {
     paths: ['src/connectors'],
-    imports: ['base64', 'contracts', 'errorMessage', 'modelsDev', 'destination'],
+    imports: ['base64', 'record', 'contracts', 'errorMessage', 'modelsDev', 'destination'],
     why: 'connectors are the provider contract the engine and the model build on, so they import no other layer but the wire contracts (the relayed request they build), and touch no DOM, network or storage so their golden tests run in node.',
   },
   modelsDev: { paths: ['src/connectors/models-dev'], why: 'which models.dev list a connection type reads, the words it uses for inputs and outputs, and its shape, is data and types only, shared by the connectors and the server.' },
   destination: { paths: ['src/connectors/destination'], why: 'how an address is matched against the operator\'s local providers is shared by 직접 연결 and the server\'s outbound policy, so it imports nothing.' },
   engine: {
     paths: ['src/engine'],
-    imports: ['base64', 'hex', 'contracts', 'errorMessage', 'connectors', 'toolApi'],
+    imports: ['base64', 'hex', 'record', 'contracts', 'errorMessage', 'connectors', 'toolApi'],
     types: ['model'],
     why: 'the engine stays free of UI, network, storage and server code so its golden tests run in node, and takes only types from the model; the wire contracts and the tool contract import no application code, so their values keep the engine node-pure.',
   },
   model: {
     paths: ['src/model'],
+    imports: ['record'],
     types: ['toolApi', 'connectors', 'engine', 'vault'],
-    why: 'the model is pure domain, saved values and what is computed from them with no I/O, and takes only types from connectors, the engine and the vault (a stored file\'s reference).',
+    why: 'the model is pure domain, saved values and what is computed from them with no I/O, and takes only types from connectors, the engine and the vault (a stored file\'s reference); the plain-object test imports nothing.',
   },
   vault: { paths: ['src/vault'], imports: ['base64', 'hex'], why: 'the vault is crypto and device storage only; it never reaches the network.' },
   server: {
     paths: ['src/server'],
-    imports: ['contracts', 'base64', 'hex', 'errorMessage', 'modelsDev', 'destination'],
+    imports: ['contracts', 'base64', 'hex', 'record', 'errorMessage', 'modelsDev', 'destination'],
     why: 'the server knows nothing about the client or providers, but their wire contracts, which models.dev lists to keep (connectors/models-dev), how a local provider\'s address is matched (connectors/destination), the base64 codec a stream\'s key arrives in, the hex writer its file ids and session tokens share with the client and the one way to say what was thrown.',
   },
   runtime: {

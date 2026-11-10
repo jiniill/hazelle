@@ -1,6 +1,7 @@
 import { streamError } from './errors';
 import type { BatchAnswer, Batches, ConnectionType } from './types';
-import { isRecord, jsonObject, list } from './values';
+import { jsonObject, list } from './values';
+import { isRecord } from '../record';
 
 // Inline batch operation; match state suffixes because guide/reference use JOB_STATE_/BATCH_STATE_
 // (ai.google.dev/api/batch-api, 2026-10-12).

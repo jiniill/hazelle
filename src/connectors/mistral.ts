@@ -1,6 +1,7 @@
 import { bareModel } from './chat-completions';
 import type { ConnectionType, Model } from './types';
-import { count, flag, isRecord, modelEntries } from './values';
+import { count, flag, modelEntries } from './values';
+import { isRecord } from '../record';
 
 export const mistral: ConnectionType = {
   browser: {},

@@ -1,7 +1,8 @@
 import { bareModel } from './chat-completions';
 import { effortLevels } from './settings';
 import type { ConnectionType, Model } from './types';
-import { count, isRecord, modalities, modelEntries, nameOf } from './values';
+import { count, modalities, modelEntries, nameOf } from './values';
+import { isRecord } from '../record';
 
 export const deepseek: ConnectionType = {
   browser: {},

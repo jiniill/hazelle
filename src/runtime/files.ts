@@ -1,4 +1,4 @@
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import { FILE_ID, MAX_FILE_IDS, type MissingFiles } from '../contracts/files';
 import type { ServerError } from '../contracts/http';
 import { FILE_KINDS } from '../model/kinds';

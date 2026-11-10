@@ -1,4 +1,5 @@
-import { isRecord, list, text, toggle } from '../../connectors/values';
+import { list, text, toggle } from '../../connectors/values';
+import { isRecord } from '../../record';
 
 // A card's 시작 전 설문 (Risu's extensions.risuai.onboarding), kept in Risu's own shape so a card exported again carries
 // it as it came. Each answer is a chat variable a new chat starts from.

@@ -1,6 +1,6 @@
 import { ACCOUNT_HEADER, RELAY_HEADER, ACCOUNT_USAGE_HEADERS, PULSE_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, BUILD_HEADER, type ServerError } from '../contracts/http';
 import { pulseHeader, type PulseLabel } from '../contracts/pulse';
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 
 export type ApiFailure = { ok: false; error: string; retryAfter?: number; status?: number };
 export type ApiResult<T> = { ok: true; data: T } | ApiFailure;

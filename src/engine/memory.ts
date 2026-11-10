@@ -1,4 +1,4 @@
-import { isRecord } from '../connectors/values';
+import { isRecord } from '../record';
 import type { Change, Chapter, Fact, Line, Memory, MemoryRecord, Source, Thread, Written } from '../model/memory';
 import type { MemoryPrompt } from '../model/prompt';
 import { args } from './lorebook/decorators';

@@ -2,7 +2,8 @@ import { RELAY_HEADER, RELAY_SOURCE, STREAM_FRAMES, STREAM_HEADER, type ServerEr
 import { HELLO, HEAD, DATA, END, PING, PING_MS, WAIT, askedWait, retryWait, type Retry } from '../contracts/streams';
 import { fromBase64 } from '../base64';
 import { errorMessage } from '../error-message';
-import { DAY_MS, isRecord } from './http';
+import { DAY_MS } from './http';
+import { isRecord } from '../record';
 import type { RelayAllowance } from './limits';
 import { forward, RelayTrafficLimit, type Upstream } from './relay';
 

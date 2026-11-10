@@ -2,7 +2,7 @@ import type { AccountState } from '../contracts/admin';
 import { FEED_PAGE_BODY_BYTES, feedPageRows, type FeedQuery, type SealedChange, type SealedWrite } from '../contracts/objects';
 import { ROW_BYTES, SHARED_BYTES } from './caps';
 import type { Db, SqlValue } from './db/service-db';
-import { isRecord } from './http';
+import { isRecord } from '../record';
 // The rules of one account's store over its database file (db/account-db.ts); nothing here touches a file directly.
 
 export type Life = { state: AccountState | 'gone'; timeline: string | null; operation: number | null };

@@ -2,7 +2,8 @@ import { bareModel, listedSettings } from './chat-completions';
 import { effortLevels, type ReasoningTakes } from './settings';
 import { statedPrice } from './pricing';
 import type { ConnectionType, Meter, MeterReset, Model } from './types';
-import { amount, count, isRecord, modalities, modelEntries, perMillion } from './values';
+import { amount, count, modalities, modelEntries, perMillion } from './values';
+import { isRecord } from '../record';
 
 // mandatory: reasoning cannot be turned off. supports_max_tokens: a token budget can be asked for.
 function reasoningTakes(raw: Record<string, unknown>): ReasoningTakes {

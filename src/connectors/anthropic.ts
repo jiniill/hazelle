@@ -1,7 +1,8 @@
 import { VERSION } from './anthropic-messages';
 import { errorValue } from './errors';
 import type { BatchAnswer, Batches, ConnectionType } from './types';
-import { isRecord, jsonObject } from './values';
+import { jsonObject } from './values';
+import { isRecord } from '../record';
 
 // Message Batches results are JSONL at the batch's results URL (platform.claude.com batch guide, 2026-10-12).
 const batches: Batches = {
