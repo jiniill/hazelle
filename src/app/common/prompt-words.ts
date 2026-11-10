@@ -53,3 +53,9 @@ export const MESSAGE_ROLES: Record<Role, string> = { system: '시스템', user: 
 export const textName = (role: Role) => `${MESSAGE_ROLES[role]} 메시지`;
 
 export const TASK_NAMES: Record<Exclude<PromptSort, 'conversation'>, string> = { translate: FEATURE_NAMES.translate, memory: '기억', illustrate: FEATURE_NAMES.illustrate, mascot: FEATURE_NAMES.mascot, preread: FEATURE_NAMES.preread, agent: FEATURE_NAMES.agents };
+
+const named = (sort: Exclude<PromptSort, 'conversation' | 'agent'>) => `${TASK_NAMES[sort]} 프롬프트`;
+// One prompt of a sort as 기본 and 새 call it: a conversation prompt is plain 프롬프트, an agent its own noun.
+export const SORT_PROMPT: Record<PromptSort, string> = { conversation: '프롬프트', translate: named('translate'), memory: named('memory'), illustrate: named('illustrate'), mascot: named('mascot'), preread: named('preread'), agent: TASK_NAMES.agent };
+
+export const defaultPrompt = (sort: PromptSort) => `기본 ${SORT_PROMPT[sort]}`;

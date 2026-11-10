@@ -6,12 +6,12 @@ import { addAgent, addPrompt, isDefaultPrompt, ofSort } from '../../runtime/prom
 import type { AgentStart } from '../../engine/agent';
 import { ACTS } from '../common/acts';
 import type { Frame } from '../common/frame';
-import { TASK_NAMES } from '../common/prompt-words';
+import { SORT_PROMPT, TASK_NAMES } from '../common/prompt-words';
 import { useMaking } from '../common/useMaking';
 import { useSearch } from '../common/useSearch';
 import { usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
-import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_PINNED, MODEL_ROLES, PAGES, PRE_READ, promptName, STAGE_NAMES } from '../common/words';
+import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_PINNED, MODEL_ROLES, PAGES, promptName, STAGE_NAMES } from '../common/words';
 import { Button, CardItem, CardList, ChoiceGroup, Columns, Disclosure, Empty, FoldButton, Hint, Menu, MenuItem, PickCard, Row, Stack, Tabs } from '../ui';
 import { useImport } from '../common/importing';
 import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse';
@@ -20,7 +20,7 @@ import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/
 import { FolderMenu, FolderPath, named, useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
 
-const NEW_NAME = { conversation: '새 프롬프트', translate: '새 번역 프롬프트', memory: '새 기억 프롬프트', illustrate: '새 삽화 프롬프트', mascot: '새 마스코트 프롬프트', preread: `새 ${PRE_READ} 프롬프트`, agent: `새 ${AGENTS}` } satisfies Record<PromptSort, string>;
+const newName = (sort: PromptSort) => `새 ${SORT_PROMPT[sort]}`;
 // What a new agent starts from (user ruling, 2026-10-21): the two built-ins, or one empty of either stage.
 const AGENT_STARTS: { start: AgentStart; name: string; sub: string }[] = [
   { start: 'scene', name: '기본 장면 메모', sub: `${STAGE_NAMES.pre} · 응답을 생성하기 전에 필요한 설정과 대화 흐름을 정리해요.` },
@@ -28,14 +28,15 @@ const AGENT_STARTS: { start: AgentStart; name: string; sub: string }[] = [
   { start: 'pre', name: `새 ${STAGE_NAMES.pre} ${AGENTS}`, sub: '내용이 비어 있는 새 에이전트를 만들어요.' },
   { start: 'post', name: `새 ${STAGE_NAMES.post} ${AGENTS}`, sub: '내용이 비어 있는 새 에이전트를 만들어요.' },
 ];
+const task = (sort: keyof typeof TASK_NAMES, hint: string) => ({ sort, label: TASK_NAMES[sort], hint, none: `${SORT_PROMPT[sort]}가 없어요.` });
 const SORTS: { sort: PromptSort; label: string; hint?: string; none: string }[] = [
   { sort: 'conversation', label: '대화', none: '대화 프롬프트가 없어요.' },
-  { sort: 'translate', label: '번역', hint: '받은 응답과 보낼 메시지를 번역할 때 쓰는 프롬프트예요.', none: '번역 프롬프트가 없어요.' },
-  { sort: 'memory', label: '기억', hint: '지난 대화를 장기 기억으로 정리할 때 쓰는 프롬프트예요.', none: '기억 프롬프트가 없어요.' },
-  { sort: 'illustrate', label: '삽화', hint: '메시지에 넣을 삽화의 장면을 정할 때 쓰는 프롬프트예요.', none: '삽화 프롬프트가 없어요.' },
-  { sort: 'mascot', label: '마스코트', hint: '응답마다 마스코트가 한마디 할 때 쓰는 프롬프트예요.', none: '마스코트 프롬프트가 없어요.' },
-  { sort: 'preread', label: PRE_READ, hint: `응답을 생성하기 전에 ${MODEL_ROLES.aux}이 긴 내용을 요약할 때 쓰는 프롬프트예요.`, none: `${PRE_READ} 프롬프트가 없어요.` },
-  { sort: 'agent', label: AGENTS, hint: '응답 생성 전에 맥락을 정리하거나 생성된 응답을 다듬는 에이전트예요.', none: `${AGENTS}가 없어요.` },
+  task('translate', '받은 응답과 보낼 메시지를 번역할 때 쓰는 프롬프트예요.'),
+  task('memory', '지난 대화를 장기 기억으로 정리할 때 쓰는 프롬프트예요.'),
+  task('illustrate', '메시지에 넣을 삽화의 장면을 정할 때 쓰는 프롬프트예요.'),
+  task('mascot', '응답마다 마스코트가 한마디 할 때 쓰는 프롬프트예요.'),
+  task('preread', `응답을 생성하기 전에 ${MODEL_ROLES.aux}이 긴 내용을 요약할 때 쓰는 프롬프트예요.`),
+  task('agent', '응답 생성 전에 맥락을 정리하거나 생성된 응답을 다듬는 에이전트예요.'),
 ];
 type Order = 'name' | 'recent';
 
@@ -102,7 +103,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
 
   function add(sort: Exclude<PromptSort, 'agent'>) {
     const folder = sort === 'conversation' ? at.here?.folder.id : undefined;
-    making.create('prompt', (id) => addPrompt(store, NEW_NAME[sort], sort, id, folder), onPick);
+    making.create('prompt', (id) => addPrompt(store, newName(sort), sort, id, folder), onPick);
   }
 
   const byName = (a: Stored<'prompt'>, b: Stored<'prompt'>) => Number(isDefaultPrompt(settings, b)) - Number(isDefaultPrompt(settings, a)) || byPromptName(a, b);
@@ -160,14 +161,14 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
 
   const adding =
     shown === 'agent' ? (
-      <Menu label={NEW_NAME.agent} place="below-end" trigger={(opener) => <Button variant="secondary" icon={ACTS.create.icon} {...opener}>{NEW_NAME.agent}</Button>}>
+      <Menu label={newName('agent')} place="below-end" trigger={(opener) => <Button variant="secondary" icon={ACTS.create.icon} {...opener}>{newName('agent')}</Button>}>
         {AGENT_STARTS.map(({ start, name, sub }) => (
           <MenuItem key={start} label={name} sub={sub} onClick={() => addFrom(start, name)} />
         ))}
       </Menu>
     ) : (
       <Button variant="secondary" icon={ACTS.create.icon} onClick={() => add(shown)}>
-        {NEW_NAME[shown]}
+        {newName(shown)}
       </Button>
     );
   const actions = (

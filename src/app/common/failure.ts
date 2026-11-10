@@ -1,3 +1,5 @@
+import type { PromptSort } from '../../model/prompt';
+import type { Receipt } from '../../model/chat';
 import type { PluginAsked } from '../../runtime/tools/plugin-writer';
 import { USERNAME_LENGTH, USERNAME_MARKS } from '../../contracts/accounts';
 import { COMMENTS_PER_DAY, MAX_POST_PICTURES, NICKNAME_LENGTH, PICTURES_PER_DAY, POSTS_PER_DAY } from '../../contracts/board';
@@ -12,6 +14,7 @@ import type { LikenessFailure } from '../../runtime/likeness';
 import type { MascotFailure } from '../../runtime/mascot';
 import type { MemoryFailure } from '../../runtime/memory';
 import type { PrereadFailure } from '../../runtime/preread';
+import type { writerOf } from '../../runtime/profiles';
 import type { EmbedFailure } from '../../runtime/retrieval';
 import type { AgentFailed } from '../../runtime/agents';
 import type { AdditionalFailure } from '../../runtime/additional';
@@ -24,6 +27,7 @@ import type { TurnFailure } from '../../runtime/turn';
 import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
+import { SORT_PROMPT, defaultPrompt } from './prompt-words';
 import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
@@ -134,10 +138,12 @@ const TOKENIZER = `토큰 수를 계산하지 못했어요. ${RELOAD_RETRY}`;
 const EMPTY_REPLY = '모델이 내용이 비어 있는 응답을 보냈어요.';
 const GONE_MESSAGE = '삭제된 메시지예요.';
 
+type Unrouted = RouteFailure | Extract<ReturnType<typeof writerOf>, { kind: 'profile-missing' }>;
+
 // model ends in 모델: 이 and 은 are its particles.
 // prompt: the task prompt that may name its own model; null when only 설정 › 모델 chooses it.
 // place: where the task's own model is picked, beside 설정 › 모델's roles it falls back to.
-function describeRoute(failure: RouteFailure | { kind: 'profile-missing'; own: boolean }, model: string, place: string | null): string {
+function describeRoute(failure: Unrouted, model: string, place: string | null): string {
   const where = place === null ? `${inSettings('models')}에서` : `${place} 또는 ${inSettings('models')}에서`;
   switch (failure.kind) {
     case 'no-model':
@@ -287,6 +293,33 @@ export function describeKeyFailure(failure: KeyFailure): string {
 export const RUNAWAY_FIX = '캐릭터나 로어북, 프롬프트, 메시지 안에서 서로를 끝없이 호출하는 명령어가 있어요. 해당 명령어를 수정해 주세요.';
 export const runaway = (before: string) => `명령어 실행 결과가 너무 길어서 ${before} 멈췄어요. ${RUNAWAY_FIX}`;
 
+const noDefault = (sort: PromptSort) => `${defaultPrompt(sort)}가 없어요. ${inSettings('prompts')}에서 ${SORT_PROMPT[sort]} 하나를 기본으로 지정해 주세요.`;
+
+// The kinds every task that runs a prompt on a model shares; a task's own kinds are said before these.
+type TaskFailure = Unrouted | { kind: 'prompt-missing' } | { kind: 'tokenizer' } | { kind: 'runaway' } | { kind: 'failed'; receipt: Receipt };
+// model, place: as describeRoute takes them. before: the step a runaway stopped ahead of.
+type Task = { model: string; place: string; sort: PromptSort; before: string };
+
+function describeTask(failure: TaskFailure, { model, place, sort, before }: Task): string {
+  switch (failure.kind) {
+    case 'no-model':
+    case 'model-gone':
+    case 'image-only':
+    case 'profile-missing':
+      return describeRoute(failure, model, place);
+    case 'prompt-missing':
+      return noDefault(sort);
+    case 'tokenizer':
+      return TOKENIZER;
+    case 'runaway':
+      return runaway(before);
+    case 'failed':
+      return describeFailedReply(failure.receipt.error);
+  }
+}
+
+const featureTask = (feature: keyof typeof TASK_MODELS, before: string): Task => ({ model: TASK_MODELS[feature], place: inFeature(feature), sort: feature, before });
+
 export function describeTurnFailure(failure: TurnFailure): string {
   switch (failure.kind) {
     case 'no-model':
@@ -296,7 +329,7 @@ export function describeTurnFailure(failure: TurnFailure): string {
     case 'image-only':
       return '선택한 모델은 이미지만 만들 수 있어요. 모델 버튼에서 다른 모델을 선택해 주세요.';
     case 'prompt-missing':
-      return failure.own ? '이 채팅에서 쓰던 프롬프트가 삭제됐어요. 다른 프롬프트를 선택해 주세요.' : `기본 프롬프트가 없어요. ${inSettings('prompts')}에서 프롬프트 하나를 기본으로 지정해 주세요.`;
+      return failure.own ? '이 채팅에서 쓰던 프롬프트가 삭제됐어요. 다른 프롬프트를 선택해 주세요.' : noDefault('conversation');
     case 'persona-missing':
       return {
         chat: '이 채팅에서 쓰던 페르소나가 삭제됐어요. 다른 페르소나를 선택해 주세요.',
@@ -349,50 +382,25 @@ function describeAdditionalFailure(failure: AdditionalFailure['failure']): strin
 // The failed agent's own words, without its name, which the caller says.
 export function describeAgentFailure({ name, failure }: AgentFailed): string {
   switch (failure.kind) {
-    case 'no-model':
-    case 'model-gone':
-    case 'image-only':
-    case 'profile-missing':
-      return describeRoute(failure, `${name} 모델`, `${name} 프롬프트`);
-    case 'tokenizer':
-      return TOKENIZER;
-    case 'runaway':
-      return runaway('호출하기 전에');
     case 'protect-invalid':
       return `보호 패턴을 읽을 수 없어요: ${failure.pattern}`;
-    case 'failed':
-      return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
     case 'lost':
       return `보호된 구간 ${failure.count}곳이 누락되어 다듬은 응답을 적용하지 않았어요.`;
     case 'unsaved':
       return describeFailure(failure.failure);
   }
+  return describeTask(failure, { model: `${name} 모델`, place: `${name} 프롬프트`, sort: 'agent', before: '호출하기 전에' });
 }
 
 export function describePrereadFailure(failure: Exclude<PrereadFailure, { kind: 'stopped' }>): string {
-  switch (failure.kind) {
-    case 'no-model':
-    case 'model-gone':
-    case 'image-only':
-    case 'profile-missing':
-      return describeRoute(failure, TASK_MODELS.preread, inFeature('preread'));
-    case 'prompt-missing':
-      return `기본 ${PRE_READ} 프롬프트가 없어요. ${inSettings('prompts')}에서 ${PRE_READ} 프롬프트 하나를 기본으로 지정해 주세요.`;
-    case 'tokenizer':
-      return TOKENIZER;
-    case 'runaway':
-      return runaway('줄이기 전에');
-    case 'failed':
-      return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
-    case 'unsaved':
-      return describeFailure(failure.failure);
-  }
+  if (failure.kind === 'unsaved') return describeFailure(failure.failure);
+  return describeTask(failure, featureTask('preread', '줄이기 전에'));
 }
 
 export function describeAskFailure(failure: Exclude<Extract<PluginAsked, { ok: false }>['failure'], { kind: 'stopped' }>): string {
   switch (failure.kind) {
     case 'failed':
-      return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
+      return describeFailedReply(failure.receipt.error);
     case 'unsaved':
       return `사용량을 저장하지 못해 답을 버렸어요. ${describeFailure(failure.failure)}`;
     case 'too-many-calls':
@@ -405,16 +413,10 @@ export function describeAskFailure(failure: Exclude<Extract<PluginAsked, { ok: f
 export function describeTranslateFailure(failure: Exclude<TranslateFailure, { kind: 'stopped' }> | TranslatorFailure): string {
   switch (failure.kind) {
     case 'prompt-missing':
-      return failure.own ? '선택한 번역 프롬프트가 삭제됐어요. 채팅의 번역 메뉴에서 다른 프롬프트를 선택해 주세요.' : `기본 번역 프롬프트가 없어요. ${inSettings('prompts')}에서 번역 프롬프트 하나를 기본으로 지정해 주세요.`;
-    case 'runaway':
-      return runaway('번역하기 전에');
+      if (failure.own) return '선택한 번역 프롬프트가 삭제됐어요. 채팅의 번역 메뉴에서 다른 프롬프트를 선택해 주세요.';
+      break;
     case 'tokenizer':
       return '토큰 수를 계산하지 못했어요. 새로고침한 뒤 다시 번역해 주세요.';
-    case 'no-model':
-    case 'model-gone':
-    case 'image-only':
-    case 'profile-missing':
-      return describeRoute(failure, TASK_MODELS.translate, inFeature('translate'));
     case 'failed':
       return failure.receipt.error ? describeReplyError(failure.receipt.error) : '모델이 내용이 비어 있는 번역 결과를 보냈어요.';
     case 'unsaved':
@@ -424,6 +426,7 @@ export function describeTranslateFailure(failure: Exclude<TranslateFailure, { ki
     case 'protect-invalid':
       return `번역 프롬프트의 보호 패턴을 읽을 수 없어요: ${failure.pattern}`;
   }
+  return describeTask(failure, featureTask('translate', '번역하기 전에'));
 }
 
 const UNREADABLE = '모델 응답의 형식이 맞지 않아요.';
@@ -448,19 +451,6 @@ const MEMORY_INVALID: Record<Extract<MemoryFailure, { kind: 'invalid' }>['reason
 
 export function describeMemoryFailure(failure: MemoryFailure): string {
   switch (failure.kind) {
-    case 'no-model':
-    case 'model-gone':
-    case 'image-only':
-    case 'profile-missing':
-      return describeRoute(failure, TASK_MODELS.memory, inFeature('memory'));
-    case 'prompt-missing':
-      return `기본 기억 프롬프트가 없어요. ${inSettings('prompts')}에서 기억 프롬프트 하나를 기본으로 지정해 주세요.`;
-    case 'runaway':
-      return runaway('기억을 정리하기 전에');
-    case 'tokenizer':
-      return TOKENIZER;
-    case 'failed':
-      return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
     case 'invalid':
       return MEMORY_INVALID[failure.reason];
     case 'unsaved':
@@ -468,6 +458,7 @@ export function describeMemoryFailure(failure: MemoryFailure): string {
     case 'embed':
       return describeEmbedFailure(failure, `기록이 ${MODEL_ROLES.embed}의 한도보다 길어요.`);
   }
+  return describeTask(failure, featureTask('memory', '기억을 정리하기 전에'));
 }
 
 const SCENE_INVALID = { unreadable: UNREADABLE, fields: '모델 응답에 빠진 항목이 있어요.', paragraph: '모델이 메시지에 없는 문단 번호를 선택했어요.' } as const;
@@ -482,19 +473,9 @@ const COSTS: Record<Costs, string> = {
 
 export function describeIllustrateFailure(failure: IllustrateFailure): string {
   switch (failure.kind) {
-    case 'no-model':
-    case 'model-gone':
-    case 'image-only':
-    case 'profile-missing':
-      return describeRoute(failure, TASK_MODELS.illustrate, inFeature('illustrate'));
     case 'prompt-missing':
-      return failure.own ? '선택한 삽화 프롬프트가 삭제됐어요. 채팅의 삽화 메뉴에서 다른 프롬프트를 선택해 주세요.' : `기본 삽화 프롬프트가 없어요. ${inSettings('prompts')}에서 삽화 프롬프트 하나를 기본으로 지정해 주세요.`;
-    case 'tokenizer':
-      return TOKENIZER;
-    case 'runaway':
-      return runaway('장면을 정하기 전에');
-    case 'failed':
-      return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
+      if (failure.own) return '선택한 삽화 프롬프트가 삭제됐어요. 채팅의 삽화 메뉴에서 다른 프롬프트를 선택해 주세요.';
+      break;
     case 'invalid':
       return SCENE_INVALID[failure.reason];
     case 'no-image-model':
@@ -516,6 +497,7 @@ export function describeIllustrateFailure(failure: IllustrateFailure): string {
     case 'unsaved':
       return `삽화를 저장하지 못했어요. ${describeFailure(failure.failure)}`;
   }
+  return describeTask(failure, featureTask('illustrate', '장면을 정하기 전에'));
 }
 
 // The profiles are written by the 장면 모델, so its failures read as the scene's.
@@ -536,19 +518,6 @@ const REMARK_INVALID = { unreadable: UNREADABLE, line: '모델이 대사를 쓰�
 
 export function describeMascotFailure(failure: MascotFailure): string {
   switch (failure.kind) {
-    case 'no-model':
-    case 'model-gone':
-    case 'image-only':
-    case 'profile-missing':
-      return describeRoute(failure, TASK_MODELS.mascot, inFeature('mascot'));
-    case 'prompt-missing':
-      return `기본 마스코트 프롬프트가 없어요. ${inSettings('prompts')}에서 마스코트 프롬프트 하나를 기본으로 지정해 주세요.`;
-    case 'tokenizer':
-      return TOKENIZER;
-    case 'runaway':
-      return runaway('대사를 쓰기 전에');
-    case 'failed':
-      return failure.receipt.error ? describeReplyError(failure.receipt.error) : EMPTY_REPLY;
     case 'invalid':
       return REMARK_INVALID[failure.reason];
     case 'gone':
@@ -556,4 +525,5 @@ export function describeMascotFailure(failure: MascotFailure): string {
     case 'unsaved':
       return `대사를 저장하지 못했어요. ${describeFailure(failure.failure)}`;
   }
+  return describeTask(failure, featureTask('mascot', '대사를 쓰기 전에'));
 }

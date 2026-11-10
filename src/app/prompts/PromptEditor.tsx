@@ -15,10 +15,10 @@ import { howMany } from '../common/pack';
 import { DefaultVariables } from '../common/DefaultVariables';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { ModuleSwitches } from '../common/ModuleSwitches';
-import { NO_PERSONA_SLOT, SLOT } from '../common/prompt-words';
+import { defaultPrompt, NO_PERSONA_SLOT, SLOT } from '../common/prompt-words';
 import type { Frame } from '../common/frame';
 import { useAutosave } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, copyOf, DEFAULT_VARIABLES, ORIGINAL_GONE, PRE_READ, promptName, SEE_ORIGINAL, SET_DEFAULT, STAGE_NAMES, THINGS } from '../common/words';
+import { BIN_KEEPS, cannotRemove, copyOf, DEFAULT_VARIABLES, ORIGINAL_GONE, promptName, SEE_ORIGINAL, SET_DEFAULT, STAGE_NAMES, THINGS } from '../common/words';
 import { useConnections, useSettings, useStore, useStored } from '../session';
 import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
@@ -70,14 +70,14 @@ const PICTURE = 'picture' satisfies PromptPane;
 const VARIABLES = 'variables' satisfies PromptPane;
 const PANE_TITLES: Record<PromptPane, string> = { model: '모델', picture: '이미지', toggles: '토글', variables: DEFAULT_VARIABLES };
 const isPane = (id: string): id is PromptPane => Object.hasOwn(PANE_TITLES, id);
-const SORT_WORDS = {
-  conversation: { default: '기본 프롬프트', makeDefault: '새 채팅을 시작할 때 이 프롬프트를 써요' },
-  translate: { default: '기본 번역 프롬프트', makeDefault: '번역 프롬프트를 따로 선택하지 않은 채팅에 써요' },
-  memory: { default: '기본 기억 프롬프트', makeDefault: '장기 기억을 이 프롬프트로 정리해요' },
-  illustrate: { default: '기본 삽화 프롬프트', makeDefault: '삽화 프롬프트를 따로 선택하지 않은 채팅에 써요' },
-  mascot: { default: '기본 마스코트 프롬프트', makeDefault: '마스코트가 이 프롬프트로 대사를 써요' },
-  preread: { default: `기본 ${PRE_READ} 프롬프트`, makeDefault: '긴 내용을 미리 요약할 때 이 프롬프트를 써요' },
-} satisfies Record<Exclude<PromptSort, 'agent'>, { default: string; makeDefault: string }>;
+const MAKES_DEFAULT = {
+  conversation: '새 채팅을 시작할 때 이 프롬프트를 써요',
+  translate: '번역 프롬프트를 따로 선택하지 않은 채팅에 써요',
+  memory: '장기 기억을 이 프롬프트로 정리해요',
+  illustrate: '삽화 프롬프트를 따로 선택하지 않은 채팅에 써요',
+  mascot: '마스코트가 이 프롬프트로 대사를 써요',
+  preread: '긴 내용을 미리 요약할 때 이 프롬프트를 써요',
+} satisfies Record<Exclude<PromptSort, 'agent'>, string>;
 const HELP = '위아래 화살표로 이동, Alt+화살표로 순서 변경, Enter로 편집, Delete로 빼기';
 
 const CACHE_WORDS = { set: '여기까지 캐시', auto: '자동 캐시' } as const;
@@ -122,7 +122,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const save = useAutosave<PromptPatch>(`prompt:${stored.id}`, (patch) => editPrompt(store, stored.id, patch));
   const sort = sortOf(stored.value);
   // An agent has no default: the chats whose lists hold it run it (runtime/agents).
-  const words = sort === 'agent' ? null : SORT_WORDS[sort];
+  const words = sort === 'agent' ? null : { default: defaultPrompt(sort), makeDefault: MAKES_DEFAULT[sort] };
 
   // The stored prompt under what waits to be saved, so another device's edit to a field nothing here changed shows.
   const draft: Draft = { ...draftOf(stored.value), ...save.unsaved };
