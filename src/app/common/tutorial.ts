@@ -15,7 +15,7 @@ export type Facts = { route: Route; connection: string | null; added: boolean };
 
 // Completion reads state, never clicks, so already-done steps skip and resume correctly.
 // at locates the control for resumption; above prevents the note from covering following content.
-export type Step = { mark: Mark; label: string; text: string; done: (facts: Facts) => boolean; at: (facts: Facts) => Route; go?: { label: string; route: Route }; above?: boolean };
+type Step = { mark: Mark; label: string; text: string; done: (facts: Facts) => boolean; at: (facts: Facts) => Route; go?: { label: string; route: Route }; above?: boolean };
 export type Tutorial = { id: string; title: string; description: string; steps: Step[]; finish: { title: string; text: string } };
 
 const ADD: Route = { kind: 'add-connection' };

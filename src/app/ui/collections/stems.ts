@@ -7,7 +7,7 @@ export type Stem = { key: string; length: number; current?: boolean; ghost?: boo
 export type Sprout = { kind: 'branch' | 'copy'; at: number | null; stem: Stem };
 
 // The mark the sprouts of one stem leave from: the unit they split at, a copy's, or a split whose unit is not known.
-export type Pill = ({ kind: 'branch'; at: number } | { kind: 'copy' | 'unplaced'; at: null }) & { sprouts: Sprout[] };
+type Pill = ({ kind: 'branch'; at: number } | { kind: 'copy' | 'unplaced'; at: null }) & { sprouts: Sprout[] };
 // parent: the stem it stands on; onPath: a sprout under it leads to the current stem.
 export type PlacedPill = { pill: Pill; parent: Stem; x: number; y: number; onPath: boolean };
 
@@ -18,7 +18,7 @@ export type Metrics = { unit: number; min: number; max: number; head: { width: n
 // x: the line's; top: the head's; from and to: the line's ends; via: the sprout it hangs from; onPath: on the way from
 // the root to the current stem.
 export type PlacedStem = { stem: Stem; lane: number; x: number; top: number; from: number; to: number; via: Sprout | null; onPath: boolean };
-export type PlacedSprout = { sprout: Sprout; pill: PlacedPill; child: PlacedStem; onPath: boolean };
+type PlacedSprout = { sprout: Sprout; pill: PlacedPill; child: PlacedStem; onPath: boolean };
 export type Placement = { width: number; height: number; stems: PlacedStem[]; pills: PlacedPill[]; sprouts: PlacedSprout[] };
 
 type Held = { from: number; to: number };
@@ -89,8 +89,8 @@ export type RowMetrics = { head: number; gap: number; lane: number; end: number 
 
 // index: its place in family order; x and y: its node's; to: where its lane's line ends, at the last of its sprouts'
 // pills, or at its node when it has none.
-export type PlacedRow = { stem: Stem; lane: number; index: number; top: number; x: number; y: number; to: number; via: Sprout | null; onPath: boolean };
-export type PlacedLink = { sprout: Sprout; pill: PlacedPill; parent: PlacedRow; child: PlacedRow; onPath: boolean };
+type PlacedRow = { stem: Stem; lane: number; index: number; top: number; x: number; y: number; to: number; via: Sprout | null; onPath: boolean };
+type PlacedLink = { sprout: Sprout; pill: PlacedPill; parent: PlacedRow; child: PlacedRow; onPath: boolean };
 export type RowPlacement = { width: number; height: number; rows: PlacedRow[]; pills: PlacedPill[]; links: PlacedLink[] };
 
 // Rows in family order: a stem, then each of its sprouts' subtrees in pill order. A lane per depth, so the rows between

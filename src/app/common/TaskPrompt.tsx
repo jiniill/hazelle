@@ -41,7 +41,7 @@ const TASKS = {
 } as const;
 
 // The prompt a task's switches run, by name; a deleted or absent one is named as such, never as another prompt.
-export function chosenPrompt(store: Reader, task: keyof typeof TASKS, chosen: string | undefined) {
+function chosenPrompt(store: Reader, task: keyof typeof TASKS, chosen: string | undefined) {
   const choice = TASKS[task].choose(store, chosen);
   const missing = `${defaultPrompt(task)} 없음`;
   return { choice, missing, label: choice.kind === 'prompt' ? choice.prompt.value.name : choice.own ? DELETED_PROMPT : missing };

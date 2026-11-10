@@ -3,7 +3,7 @@ import styles from './NightScene.module.css';
 import { about, ANYWHERE, painterOn, parseColor, parseFade, parseGradients, parseShadows, roundGlow, scaling, share, shift, skewingX, times, turning, type Affine, type Box, type Fade, type Gradient } from './paint';
 import { scrollRange, type Pace } from './walkStops';
 
-export type Screen = { w: number; h: number };
+type Screen = { w: number; h: number };
 // Where the walk has a layer at a tuned share of the scroll: x and y in CSS pixels, scale about its transform-origin.
 export type Walked = { scale?: number; x?: number; y?: number; opacity?: number };
 export type Walk = (share: number, screen: Screen) => Walked;

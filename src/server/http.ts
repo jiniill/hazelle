@@ -75,7 +75,7 @@ export async function readObject(c: Context): Promise<Record<string, unknown> | 
 }
 
 // A list's page size: PAGE_ROWS unless the query asks for fewer; null for one it may not ask for.
-export const PAGE_ROWS = 100;
+const PAGE_ROWS = 100;
 export function limitOf(c: Context) {
   const limit = c.req.query('limit');
   if (limit === undefined) return PAGE_ROWS;

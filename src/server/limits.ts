@@ -14,7 +14,7 @@ export type RelayAllowance = { visit(url: URL): boolean; take(bytes: number): bo
 export type RelayBudget = { account(id: string): RelayAllowance };
 export const RELAY_DAILY = { bytes: 4_000_000_000, hosts: 30 };
 // Calls an account holds open at once: a detached reply while its call runs, a relayed call until its answer ends.
-export const LIVE_CALLS = 32;
+const LIVE_CALLS = 32;
 
 // Enforcement only: never expose, log or persist these counters or destination fingerprints. A new UTC day (or
 // process) forgets them. Handles read the current day even when a detached call crosses midnight.

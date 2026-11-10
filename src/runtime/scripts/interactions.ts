@@ -30,7 +30,7 @@ type Note =
   | { kind: 'answer-unsaved'; failure: ApiFailure }
   | { kind: 'runaway' }
   | { kind: 'input-stop' };
-export type ScriptNote = { id: number; chat: string; from: PackOwner | null } & Note;
+type ScriptNote = { id: number; chat: string; from: PackOwner | null } & Note;
 // Save model consent on its spender, card-write consent on the character, plugin uses on the module.
 // Dismissal saves nothing. Plugin cards combine unanswered uses; hosts are Risu literal hosts, empty for Hazelle tools.
 export type ScriptQuestion = { id: number; chat: string; from: PackOwner; question: Question | { kind: 'model' } | { kind: 'card' } | { kind: 'plugin'; grants: Grant[]; hosts: string[] } };

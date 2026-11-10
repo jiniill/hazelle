@@ -6,7 +6,7 @@ import { PAGE_BUILD } from '../installation';
 import type { LogEntry } from '../models/request-log';
 
 // Across the account's chats; each chat's own bound is RequestLog's.
-export const DEVICE_LOG_ENTRIES = 200;
+const DEVICE_LOG_ENTRIES = 200;
 
 const address = (chat: string, call: string) => ({ id: call, kind: 'request-log', parent: chat });
 

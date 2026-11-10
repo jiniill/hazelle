@@ -10,10 +10,10 @@ export type PoolFailure = { kind: 'pool'; group: string };
 
 export type PickResult = { ok: true; account: Account } | { ok: false; failure: PoolFailure };
 
-export type Allowance = 'available' | 'spent' | 'unknown';
+type Allowance = 'available' | 'spent' | 'unknown';
 
 // No figure at all (an unlimited plan, an organization's pool) leaves the allowance available.
-export function allowance(result: MetersResult): Allowance {
+function allowance(result: MetersResult): Allowance {
   if (result.meters.some((meter) => meter.kind === 'left' && meter.amount <= 0)) return 'spent';
   return result.failures.length ? 'unknown' : 'available';
 }

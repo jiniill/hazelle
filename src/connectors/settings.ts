@@ -2,7 +2,7 @@ import { replyLimit, type Model } from './types';
 import { count } from './values';
 import { isRecord } from '../record';
 
-export const NUMBERS = ['maxOutput', 'temperature', 'topP', 'topK', 'frequencyPenalty', 'presencePenalty', 'repetitionPenalty', 'minP', 'seed'] as const;
+const NUMBERS = ['maxOutput', 'temperature', 'topP', 'topK', 'frequencyPenalty', 'presencePenalty', 'repetitionPenalty', 'minP', 'seed'] as const;
 export type NumberSetting = (typeof NUMBERS)[number];
 export type Setting = NumberSetting | 'stop' | 'reasoning' | 'verbosity' | 'serviceTier';
 
@@ -47,7 +47,7 @@ export type Verbosity = (typeof VERBOSITY)[number];
 export const SERVICE_TIERS = ['auto', 'standard_only'] as const;
 export type ServiceTier = (typeof SERVICE_TIERS)[number];
 
-export type Bounds = { min: number | null; max: number | null };
+type Bounds = { min: number | null; max: number | null };
 
 // Absent catalog settings are unsupported; a null list/control is unknown, not unsupported.
 export type Takes = { settings: Setting[] | null; reasoning: ReasoningTakes | null };
@@ -70,7 +70,7 @@ export type Carries = {
 
 // Unknown remains settable/sendable and is shown as unknown; reject only known false.
 export type Accepts = boolean | null;
-export type Rule = Bounds & { accepted: Accepts; whole: boolean };
+type Rule = Bounds & { accepted: Accepts; whole: boolean };
 
 // context is the catalog's context length, which the prompt's own limit never goes past.
 export type SettingsSchema = {

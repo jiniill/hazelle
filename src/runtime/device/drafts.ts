@@ -6,9 +6,9 @@ import { DeviceDrafts } from './device-drafts';
 
 // Save picture files on attachment; revoke preview URLs only on release. saved resolves to the settled inlay/failure state.
 export type PictureState = { kind: 'saving' } | { kind: 'saved'; value: Inlay } | { kind: 'failed'; failure: ApiFailure | 'refused' };
-export type DraftPicture = { kind: 'picture'; name: string; url: string; state: PictureState; saved: Promise<Exclude<PictureState, { kind: 'saving' }>> };
+type DraftPicture = { kind: 'picture'; name: string; url: string; state: PictureState; saved: Promise<Exclude<PictureState, { kind: 'saving' }>> };
 // A text file put in the composer (runtime/files/attachments addDraftFile), whole in page memory until its row is written.
-export type DraftFile = { kind: 'file'; value: TextFile };
+type DraftFile = { kind: 'file'; value: TextFile };
 export type DraftAttachment = DraftPicture | DraftFile;
 const NONE: readonly DraftAttachment[] = [];
 const attachmentName =(attachment: DraftAttachment) => (attachment.kind === 'picture' ? attachment.name : attachment.value.name);

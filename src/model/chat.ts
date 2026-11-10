@@ -193,7 +193,7 @@ export type Writes = [string, string][];
 // Apply byHand after message.after in every reader (runtime/chat/chat-context, engine/render).
 // User-edited agent memories override generated ones. retouched blocks repolish that would undo edits (user, 2026-10-22).
 export type Version = { id: string; seed: string; text: string; receipt: Receipt | null; edited: boolean; at: number; translation?: Translation; staged?: true; before?: Writes; after?: Writes; byHand?: Writes; calls?: BotCall[]; reasoning?: string; greeting?: number; earlier?: string[]; raw?: string; memories?: Record<string, string>; retouched?: true };
-export type BotCall = { receipt: Receipt; at: number };
+type BotCall = { receipt: Receipt; at: number };
 // after: the writes that stay with the message (Entry vars), set after its shown version's own.
 export type Message = { id: string; role: 'user' | 'assistant'; at: number; versions: Version[]; selected: number; after?: Writes };
 

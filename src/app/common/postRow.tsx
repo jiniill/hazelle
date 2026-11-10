@@ -29,7 +29,7 @@ const STATUS_LOOK: Record<Exclude<Status, 'open'>, { tone: 'plain' | 'accent' | 
 // The mark of a status wherever it is named, 열림 too (a post the operator opened again).
 export const statusIcon = (status: Status): LucideIcon => (status === 'open' ? CircleDot : STATUS_LOOK[status].icon);
 
-export const statusWord = ({ status, version }: Pick<PostRow, 'status' | 'version'>) =>
+const statusWord = ({ status, version }: Pick<PostRow, 'status' | 'version'>) =>
   status === 'done' && version ? `${BOARD.statuses.done} · ${version}` : BOARD.statuses[status];
 
 const CategoryTag = ({ category }: { category: Category }) => (

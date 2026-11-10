@@ -4,7 +4,7 @@ import type { HttpRequest } from '../contracts/http';
 import { list } from './values';
 import { isRecord } from '../record';
 
-export type WireText = { segments: { role: string; text: string }[]; messages: number; pictures: number };
+type WireText = { segments: { role: string; text: string }[]; messages: number; pictures: number };
 export type PreparedChat = { request: HttpRequest; wire: WireText; identity: string; pdf: boolean };
 
 export function prepareChat(route: Route, asked: ChatRequest): PreparedChat {

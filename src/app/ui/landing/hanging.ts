@@ -20,7 +20,7 @@ export type Hanging = { angle: number; speed: number; tag: number; tagSpeed: num
 export const hangingFrom = (period: number, seed: number): Hanging => ({ angle: 0, speed: 0, tag: 0, tagSpeed: 0, turns: (2 * Math.PI) / period, seed });
 
 // A breeze that never repeats within a visit: three slow waves out of step, shifted by the lantern's own seed.
-export const breezeAt = (time: number, seed: number) => BREEZE * (Math.sin(time * 0.7 + seed) + 0.6 * Math.sin(time * 1.9 + seed * 2) + 0.3 * Math.sin(time * 0.31 + seed * 3));
+const breezeAt = (time: number, seed: number) => BREEZE * (Math.sin(time * 0.7 + seed) + 0.6 * Math.sin(time * 1.9 + seed * 2) + 0.3 * Math.sin(time * 0.31 + seed * 3));
 
 // Angles in degrees. A pendulum on its rope; the tag on its cords answers the lantern's speed, so it trails behind.
 export function swing(hung: Hanging, step: number, force: number) {

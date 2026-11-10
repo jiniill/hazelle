@@ -191,7 +191,7 @@ export function parseScenes(text: string, paragraphs: number, count: number): { 
 
 // NovelAI's Normal and Large presets. normal stays inside Opus's free band (one picture of at most 1024×1024 pixels);
 // every large picture costs Anlas, which the connector's free check reports from the pixel count.
-export const SIZES = {
+const SIZES = {
   normal: {
     portrait: { width: 832, height: 1216 },
     landscape: { width: 1216, height: 832 },

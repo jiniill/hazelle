@@ -45,7 +45,7 @@ export type PromptInput = {
 };
 
 // seen is model vision support; moved opts imported inlays into input (Chat.movedPictures).
-export type PictureSend = { seen: boolean; moved: boolean };
+type PictureSend = { seen: boolean; moved: boolean };
 
 // through indexes the last covered scope.messages entry; −1 means none (tool-owned memory, design §6.10).
 export type MemoryFill = ({ kind: 'built-in' } & MemoryInput) | { kind: 'tool'; name: string; text: string; through: number };
@@ -793,7 +793,7 @@ export const holdsPersona = (blocks: Block[]) =>
   blocks.some((block) => (block.kind === 'text' ? PERSONA_TAG.test(block.text) : block.slot === 'persona' || ('wrapper' in block && block.wrapper !== null && PERSONA_TAG.test(block.wrapper))));
 
 export type TokenSource = From | { kind: 'description' | 'persona' | 'memory' | 'chat' | 'lorebook' };
-export type TokenGroup = { source: TokenSource; tokens: number; count: number };
+type TokenGroup = { source: TokenSource; tokens: number; count: number };
 export type TokenGroups = { groups: TokenGroup[]; total: number; fit: TokenFit; estimate: TokenEstimate; dropped: number };
 
 export function tokenGroups(prompt: Pick<Assembled, 'parts' | 'dropped'>, snapshot: Pick<TokenGroups, 'fit' | 'estimate'>): TokenGroups {

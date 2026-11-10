@@ -185,7 +185,7 @@ export function afterEnter({ store }: Reader, chat: string, turn: TurnContext): 
   return result;
 }
 
-export type PackAttachment = { kind: 'settings' | 'prompt' | 'character' | 'persona'; id: string; own: boolean };
+type PackAttachment = { kind: 'settings' | 'prompt' | 'character' | 'persona'; id: string; own: boolean };
 export type ModuleContribution = {
   id: string;
   kind: 'character' | 'module';

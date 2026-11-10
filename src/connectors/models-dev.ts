@@ -57,5 +57,5 @@ export type ListedModel = { price: Rates | null; input: ListedModality[] | null;
 export type ModelsDevList = { fetchedAt: number | null; models: Record<string, ListedModel> };
 
 // GET /api/models-dev/table: every list's models, 도구 › 비용 계산기's table. name: null where models.dev gives none.
-export type TableModel = { list: string; model: string; name: string | null; price: Rates | null };
+type TableModel = { list: string; model: string; name: string | null; price: Rates | null };
 export type PriceTable = { fetchedAt: number | null; models: TableModel[] };

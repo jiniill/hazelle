@@ -1,4 +1,4 @@
-import { ArrowUp, type LucideIcon } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
 import { classNames } from '../foundation/classNames';
@@ -66,15 +66,6 @@ export function Composer({ motion, at, note, sent, children }: Moves & { note?: 
       <span className={classNames(styles.send, sent !== undefined && styles.pressed)} style={when(sent)}>
         <Icon icon={ArrowUp} size="sm" />
       </span>
-    </span>
-  );
-}
-
-// A round button with a glyph; wide holds it as a pill.
-export function Glyph({ icon, wide = false, motion, at }: Moves & { icon: LucideIcon; wide?: boolean }) {
-  return (
-    <span className={classNames(styles.glyph, wide && styles.wide, motion)} style={when(at)}>
-      <Icon icon={icon} size="sm" />
     </span>
   );
 }

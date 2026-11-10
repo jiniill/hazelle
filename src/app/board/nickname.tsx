@@ -17,7 +17,7 @@ const known = new Map<string, string>();
 const BAD = describeFailure({ ok: false, error: 'bad-nickname' });
 const TAKEN = describeFailure({ ok: false, error: 'nickname-taken' });
 
-export function NicknameDialog({ current, onSet, onClose }: { current: string | null; onSet: (name: string) => void; onClose: () => void }) {
+function NicknameDialog({ current, onSet, onClose }: { current: string | null; onSet: (name: string) => void; onClose: () => void }) {
   const { username } = useSession();
   const [name, setName] = useState(current ?? '');
   const [taken, setTaken] = useState<string | null>(null);

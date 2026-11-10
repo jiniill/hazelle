@@ -3,7 +3,7 @@ import { tokenPx } from '../foundation/tokenPx';
 
 // Named in StoryMessage.module.css, as data-reading.
 export const MESSAGE = 'data-story-message';
-export const READING = 'data-reading';
+const READING = 'data-reading';
 export const RAIL = 'data-rail';
 // Not one view: a message a little taller than the screen kept a rail up nearly all the time (user, 2026-10-14).
 const LONG = 2;

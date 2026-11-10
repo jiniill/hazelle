@@ -9,7 +9,7 @@ type Role = 'system' | 'user' | 'assistant';
 
 export type Operation = { kind: 'append' } | { kind: 'prepend' } | { kind: 'replace'; find: string };
 
-export type Placement =
+type Placement =
   | { kind: 'lorebook'; role: Role }
   | { kind: 'description'; side: 'before' | 'after' }
   // Counted from the end of the chat: 0 is after the last message.
@@ -19,12 +19,12 @@ export type Placement =
   | { kind: 'position'; name: string }
   | { kind: 'inject'; target: string; operation: Operation };
 
-export type KeyMatch = { query: 'primary' | 'secondary' | 'additional'; key: string; source: Source };
+type KeyMatch = { query: 'primary' | 'secondary' | 'additional'; key: string; source: Source };
 
-export type Why = { kind: 'constant' } | { kind: 'decorator'; name: 'activate' | 'keep_activate_after_match' } | { kind: 'keys'; matched: KeyMatch[] };
+type Why = { kind: 'constant' } | { kind: 'decorator'; name: 'activate' | 'keep_activate_after_match' } | { kind: 'keys'; matched: KeyMatch[] };
 
 // tokens: the cost of the entry's own body, before any merge.
-export type Fate =
+type Fate =
   | { kind: 'placed'; tokens: number }
   | { kind: 'merged'; into: string; tokens: number }
   | { kind: 'dropped'; cause: 'probability' }

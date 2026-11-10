@@ -4,7 +4,7 @@ import { transaction } from './transaction';
 // Keep the existing route SQL contract over node:sqlite: bound prepare/first/all/run and atomic batch.
 
 export type SqlValue = string | number | bigint | null | Uint8Array;
-export type Row = Record<string, unknown>;
+type Row = Record<string, unknown>;
 export type Result<T = Row> = { results: T[]; meta: { changes: number } };
 
 export type Statement = {

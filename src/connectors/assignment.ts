@@ -4,7 +4,7 @@ import { entryKey, type Model, type Modality, type Starred } from './types';
 // Task prompts own their model choice and otherwise use auxiliary.
 export type Role = 'main' | 'aux' | 'embed';
 
-export const ROLES: Record<Role, { needs: Modality; fallsBackTo: Role | null }> = {
+const ROLES: Record<Role, { needs: Modality; fallsBackTo: Role | null }> = {
   main: { needs: 'text', fallsBackTo: null },
   aux: { needs: 'text', fallsBackTo: 'main' },
   embed: { needs: 'embedding', fallsBackTo: null },

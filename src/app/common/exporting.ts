@@ -10,7 +10,7 @@ type Said = { message: string; detail?: string };
 // The toasts, or what stands for them where a failure is said in place.
 type Say = Pick<Toasts, 'error' | 'failed'>;
 
-export const FILE_UNSAVED: Said = { message: '파일을 저장하지 못했어요.', detail: '저장 공간을 확인한 뒤 다시 시도해 주세요.' };
+const FILE_UNSAVED: Said = { message: '파일을 저장하지 못했어요.', detail: '저장 공간을 확인한 뒤 다시 시도해 주세요.' };
 const SAID: Record<string, Said> = { 'export-write': FILE_UNSAVED, unreadable: { message: '내보내지 못했어요.', detail: '열리지 않는 이미지가 있어요.' } };
 
 // Call directly from the press so the save picker retains activation. show clears busy state with null on exit.

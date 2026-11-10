@@ -141,7 +141,7 @@ export type Meter =
 export type MeterUnit = 'usd' | 'credit' | 'requests' | 'tokens' | 'concurrency' | 'percent';
 export type MeterReset = 'daily' | 'weekly' | 'monthly' | { at: number };
 
-export type MeterRequest = { request(secret: string): HttpRequest; parse(payload: unknown): Meter[] | null; plan?(payload: unknown): string | null };
+type MeterRequest = { request(secret: string): HttpRequest; parse(payload: unknown): Meter[] | null; plan?(payload: unknown): string | null };
 
 export type Phase = 'text' | 'reasoning';
 

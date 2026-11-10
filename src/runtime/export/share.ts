@@ -95,7 +95,7 @@ async function readSharedFile(source: ShareSource, ref: FileRef): Promise<ApiRes
 }
 
 // What the page shows of a version before anything is taken: the card's name, creator field and notes, and its face.
-export type Preview = { name: string; creator: string; notes: string; avatar: Blob | null };
+type Preview = { name: string; creator: string; notes: string; avatar: Blob | null };
 export type Opened = { content: CharxContent; preview: Preview };
 
 // A key that is not the link's, or a manifest it did not seal, answers 'unreadable'.

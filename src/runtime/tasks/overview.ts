@@ -17,7 +17,7 @@ import { translatorOf, type TranslatorFailure } from './translate';
 // resolver its feature runs on, so this page and the runtime cannot disagree.
 
 type Failures = { translate: TranslatorFailure; illustrate: IllustrateFailure; memory: MemoryFailure; mascot: MascotFailure; preread: Exclude<PrereadFailure, { kind: 'stopped' }> };
-export type Task = keyof Failures;
+type Task = keyof Failures;
 // draws: the image model 삽화 draws with; by: the plugin that keeps the memory, which runs on no model of the chat's.
 type Extra = { illustrate: { draws: ReturnType<typeof imageRoute> }; memory: { by: string | null } };
 // own: the feature's own model, undefined while it follows 보조 모델. apart: a character's own switches decide it.

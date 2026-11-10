@@ -54,7 +54,7 @@ type WrappedFields = Named & { kind: 'slot'; role: Role; wrapper: string | null 
 export type RecentSlot = WrappedFields & { slot: 'recent'; count: number; translations?: false };
 export type WrappedSlot = (WrappedFields & { slot: Exclude<Wrapped, 'recent'> }) | RecentSlot;
 export type ChatSlot = Named & { kind: 'slot'; slot: 'chat'; range: ChatRange };
-export type PlainSlot = Named & { kind: 'slot'; slot: Exclude<SlotKind, Wrapped | 'chat'> };
+type PlainSlot = Named & { kind: 'slot'; slot: Exclude<SlotKind, Wrapped | 'chat'> };
 export type Block = TextBlock | WrappedSlot | ChatSlot | PlainSlot;
 
 // CBS requires string values: checks use '0'/'1', choices use the option index, text stays verbatim.

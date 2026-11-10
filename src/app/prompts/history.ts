@@ -9,7 +9,7 @@ import { placedOnce, rekey, withMark, type Draft } from './edits';
 
 // A toast's 되돌리기 undoes a step out of turn, so what a step puts back may no longer fit: the slot it held is taken, or
 // its key is another toggle's.
-export type Refused = { refused: string };
+type Refused = { refused: string };
 
 // Both apply to the draft as it is then and change only what the edit changed, so text typed in between survives either
 // way. Typing is not a step: a text field keeps the browser's own undo.

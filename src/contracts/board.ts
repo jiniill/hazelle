@@ -96,7 +96,7 @@ export type Post = PostRow & {
 
 export type Compose = { title: string; text: string; category: Category; visibility: Visibility; diagnostics: string | null };
 
-export type ActivityKind = 'comment' | 'reply' | 'status';
+type ActivityKind = 'comment' | 'reply' | 'status';
 export type Activity = { id: number; kind: ActivityKind; postId: number; title: string; by: Author; at: number; commentId: number | null; status: Status | null };
 
 // The cursor of a 'top' list is `${votes}:${id}` of the last row shown, since votes order it; a 'new' list cursors on id.

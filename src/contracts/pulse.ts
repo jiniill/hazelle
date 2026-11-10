@@ -58,7 +58,7 @@ export type PulseRankings = Record<PulseRole, PulseRanking>;
 export type PulsePlace = Pick<PulseRow, 'key' | 'type'>;
 export type PulseOrder = { merged: PulsePlace[]; split: PulsePlace[] };
 // null if the earlier period failed PULSE_FLOORS.board: never compare against an unpublished list. Live-board 대화 is non-null.
-export type PulseBefore = Record<PulseRole, PulseOrder | null>;
+type PulseBefore = Record<PulseRole, PulseOrder | null>;
 
 // hours: the last 24 whole hours, oldest first, each hour's calls per role (rounded); at is the hour's start.
 // people: who shared in the last 7 days, today in KST and the 6 days before. before: 대화 the 24 hours before, the

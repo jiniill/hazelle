@@ -10,7 +10,7 @@ import styles from './Demo.module.css';
 
 // way 0 is the first of `ways` (켜면, or a choice's first option); a demo without ways plays way 0 only.
 export type Way = 0 | 1;
-export type DemoDrawing = ComponentType<{ way: Way }>;
+type DemoDrawing = ComponentType<{ way: Way }>;
 
 const DRAWINGS = {
   hideHeader: HideHeaderDemo,
@@ -41,7 +41,7 @@ const DRAWINGS = {
   memory: MemoryDemo,
 } satisfies Record<string, DemoDrawing>;
 
-export type DemoName = keyof typeof DRAWINGS;
+type DemoName = keyof typeof DRAWINGS;
 
 // Without ways, a demo plays only what turning its setting on adds; with them it alternates both, the current one marked.
 // on: a switch's two ways. labels: a choice of two, `now` the one chosen.

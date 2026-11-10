@@ -23,7 +23,7 @@ import type { Sending } from '../chat/turn-context';
 
 // Preview applies staged edits/adds and chat-local lore replacement as a real ScriptEffects save would.
 // Caller places variable writes at their correct stages.
-export function applied(chat: string, scope: ChatScope, { edits, removed, added, lore }: ScriptOutcome): ChatScope {
+function applied(chat: string, scope: ChatScope, { edits, removed, added, lore }: ScriptOutcome): ChatScope {
   if (!edits.length && !removed.length && !added.length && !lore.length) return scope;
   const greeting = scope.greeting === null ? 0 : 1;
   const edited = new Map(edits.map((edit) => [edit.index + greeting, edit]));

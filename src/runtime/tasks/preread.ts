@@ -60,7 +60,7 @@ export type PrereadFailure =
   | { kind: 'failed'; receipt: Receipt }
   | { kind: 'unsaved'; failure: ApiFailure };
 
-export type Preread = NonNullable<Receipt['preread']>;
+type Preread = NonNullable<Receipt['preread']>;
 // The reply's receipt makes it whole: what the brief saved is counted in the reply's own tokens, as its usage and its
 // o200k measurement show them, since o200k overcounts some languages (Korean on Gemini by about a fifth).
 export type Settle = (reply: Receipt) => Preread;

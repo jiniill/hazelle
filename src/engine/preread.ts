@@ -36,11 +36,11 @@ export function prereadTaskPrompt(): PrereadPrompt {
   };
 }
 
-export type PrereadPart = keyof PrereadParts;
+type PrereadPart = keyof PrereadParts;
 
 // null: never shortened, the app's own instruction at the end. The memory slot and found records count as system: they
 // are a summary already.
-export function partOf(from: From): PrereadPart | null {
+function partOf(from: From): PrereadPart | null {
   switch (from.kind) {
     case 'block':
       return from.slot === 'chat' ? 'chat' : 'system';

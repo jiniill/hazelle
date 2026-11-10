@@ -206,7 +206,7 @@ function calculatorPage(html: string, table: PriceTable | null): string {
 
 // A share link's page: the app's page, whose embed carries the sharer's opt-in cover as text, or the app's own words
 // when there is none. Never a picture, not even the app's: an embed of a share shows text only.
-export function sharePage(html: string, cover: ShareCover | null): string {
+function sharePage(html: string, cover: ShareCover | null): string {
   const page = html.replace(/\s*<meta property="og:image[^>]*>/g, '').replace(/<meta name="twitter:card" content="[^"]*"/, '<meta name="twitter:card" content="summary"');
   return cover ? worded(page, cover.creator ? `${cover.name} · ${cover.creator}` : cover.name, cover.line) : page;
 }

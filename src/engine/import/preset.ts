@@ -15,7 +15,7 @@ import { SILLYTAVERN_REGEX_KINDS, type RegexScript } from './types';
 // What a preset holds that the prompt does not take, in the order the summary lists it.
 // off-item and macro are SillyTavern's (engine/import/sillytavern-preset), and so are SILLYTAVERN_REGEX_KINDS.
 const UNSUPPORTED = ['jailbreak', 'cot', 'chatml', 'cache-narrowed', 'unread-item', 'off-item', 'repeated-slot', 'toggle-line', 'preset-text', 'macro', 'regex-stage', ...SILLYTAVERN_REGEX_KINDS, 'prompt-settings', 'settings'] as const;
-export type PresetUnsupportedKind = (typeof UNSUPPORTED)[number];
+type PresetUnsupportedKind = (typeof UNSUPPORTED)[number];
 export type PresetCounted = Exclude<PresetUnsupportedKind, 'repeated-slot'>;
 // A repeated slot is listed once per slot, so the summary can name it.
 export type PresetUnsupported = { kind: PresetCounted; count: number } | { kind: 'repeated-slot'; slot: SlotKind; count: number };

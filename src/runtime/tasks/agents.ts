@@ -81,7 +81,7 @@ export function setAgentAt(store: ObjectStore, owner: AgentOwner, id: string, on
 
 // An agent's memory as the messages before a reply leave it: the user's own at the nearest version that has one, else
 // what the nearest call kept. '' for none yet.
-export function memoryOf(messages: readonly Message[], agent: string): string {
+function memoryOf(messages: readonly Message[], agent: string): string {
   for (let at = messages.length - 1; at >= 0; at--) {
     const version = shown(messages[at]!);
     const own = version.memories?.[agent];
@@ -93,7 +93,7 @@ export function memoryOf(messages: readonly Message[], agent: string): string {
 }
 
 // failed: the call failed, or answered nothing. lost: a post agent's answer dropped tokens of its 보호 패턴.
-export type AgentFailure =
+type AgentFailure =
   | RouteFailure
   | { kind: 'profile-missing'; own: boolean }
   | { kind: 'tokenizer' }

@@ -11,7 +11,7 @@ export type Tool = { def: ToolDef; run: (args: ToolArgs, before: string) => Prom
 // followed by exchange. tools is absent when none are offered. A result without an answer ends the loop as it is.
 export type Send<T> = (exchange: ChatMessage[], tools: ToolDef[] | undefined, onText: GenerateInput['onText']) => Promise<T>;
 type Sent = { answer: Reply };
-export type Round<R> = R & { text: string; results: ToolResult[] };
+type Round<R> = R & { text: string; results: ToolResult[] };
 // answered: the last round called nothing. failed: its call failed. exhausted: it still called on the last round allowed.
 export type Looped<R> = { kind: 'answered' | 'stopped' | 'failed' | 'exhausted'; rounds: Round<R>[] };
 

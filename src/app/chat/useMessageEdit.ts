@@ -9,7 +9,7 @@ import { useToast } from '../toast';
 // A part: the lines of the side the message shows, edited where they stand; shown is where they are drawn.
 export type PartAt = Part & { side: 'text' | 'translation'; shown: Part };
 // caret: where the edit box starts its caret, its end when absent.
-export type EditPart = PartAt & { value: string; caret?: number };
+type EditPart = PartAt & { value: string; caret?: number };
 export type Editing = { id: string; text: string; translation: string | null; part?: EditPart };
 // A key typed over a selected part, before: the drawn text ahead of the selection in its paragraph.
 export type Typed = { before: string; key: string };

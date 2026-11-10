@@ -305,7 +305,7 @@ export type VariableWriter =
   | { kind: 'script'; version: string; message: string; index: number; phase: 'before' | 'after' }
   | { kind: 'hand'; version: string; message: string; index: number }
   | { kind: 'cbs'; version: string; message: string; index: number; stage: 'input' | 'output' | 'greeting' | 'staged' };
-export type VariableWrite = { writer: VariableWriter; value: string; truncated: boolean };
+type VariableWrite = { writer: VariableWriter; value: string; truncated: boolean };
 export type InspectedVariable = { name: string; nameTruncated: boolean; last: VariableWrite; history: VariableWrite[]; omitted: number };
 export type VariableInspection = { variables: InspectedVariable[]; omitted: number; stopped: boolean };
 

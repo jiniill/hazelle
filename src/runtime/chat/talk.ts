@@ -59,7 +59,7 @@ export type Shown = Message & { live: string | null; whole?: true; batch?: true;
 // Receipt keeps forecast, pre-agent calls and preread savings measured from the reply itself.
 export type Ask = { diagnose?: (prompt: Assembled, wire: CacheText) => Promise<CacheDiagnosis | null>; calibration?: Pick<CallCalibration, 'fit' | 'retries'>; refit?: (refusal: ContextRefusal, measurement: InputMeasurement) => Promise<{ prompt: Assembled; fit: TokenFit; retries: CallCalibration['retries'] } | null>; route: Route; settings: ModelSettings; prompt: Assembled; said: Said | null; before?: Writes; forecast?: CacheForecast; preread?: Settle; agents?: AgentRun[]; tools?: TurnTools };
 // The plugins' //@tool tools the model is offered (ScriptTurns.calling); writes: what their calls wrote to the chat's state.
-export type TurnTools = { tools: Tool[]; writes: Writes };
+type TurnTools = { tools: Tool[]; writes: Writes };
 
 // unsent: the user's message was not saved, so its reply was stopped. unsaved: the reply was written
 // but not saved; saveAgain(reply) tries it again. reply null: a restore ended the turn, and nothing is kept to save.

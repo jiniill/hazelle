@@ -110,23 +110,6 @@
     color: var(--color-on-accent);
   }
 
-  .glyph {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--control-mark);
-    height: var(--control-mark);
-    border: var(--border-thin) solid var(--color-border);
-    border-radius: var(--radius-full);
-    background: var(--color-surface-raised);
-    color: var(--color-text-muted);
-  }
-
-  .wide {
-    width: fit-content;
-    padding-inline: var(--space-12);
-  }
-
   /* A sun over a hill; figures stand on the hill. */
   .picture {
     position: relative;

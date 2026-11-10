@@ -79,7 +79,7 @@ export type Module = Pack & Mark & {
 // of the screen's height; widest the width no such picture is drawn wider than, in percent of the text's width.
 export type Pictures = { fold?: false; peek?: number; widest?: number };
 export const PICTURE_PERCENT = { min: 10, max: 100 };
-export type TextTranslation = { source: string; language: string; translation: Translation };
+type TextTranslation = { source: string; language: string; translation: Translation };
 export type LoreFolder = { id: string; name: string };
 
 const DAY = 24 * 60 * 60 * 1000;

@@ -128,7 +128,7 @@ const WITHIN_LIMIT = `(?2 IS NOT NULL OR (SELECT COUNT(*) FROM restores WHERE in
 const TIMELY = `?3 BETWEEN ?5 - ${OLDEST_MS} AND ?5 - ${NEWEST_MS}`;
 // An undo rewinds the account's latest finished restore to its checkpoint while the checkpoint is pinned
 // (backup/snapshots.ts): for RETENTION_MS after the restore ended.
-export const undoable = (operation: string, now: string) =>
+const undoable = (operation: string, now: string) =>
   `${operation} = (SELECT id FROM restores WHERE incarnation = accounts.incarnation AND phase = 'done' AND verified = 1 ORDER BY id DESC LIMIT 1)
    AND (SELECT ended_at FROM restores WHERE id = ${operation}) > ${now} - ${RETENTION_MS}`;
 

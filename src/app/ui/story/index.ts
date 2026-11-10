@@ -10,4 +10,4 @@ export { SceneBoard } from './SceneBoard';
 export { SelectionButton, type SelectionEnd } from './SelectionButton';
 export { inlaid } from './inlay';
 export { LogExport, type LogRow } from './LogExport';
-export { snapshotPage, type Snapshot } from './snapshot';
+export { snapshotPage } from './snapshot';

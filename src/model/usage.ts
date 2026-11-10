@@ -79,7 +79,7 @@ export function connectionUsage(calls: Counted[], connection: string, now: numbe
 }
 
 export type UsageGroup<K> = { key: K; usage: ModelUsage };
-export type ModelGroup = UsageGroup<string> & Pick<UsageCall['call'], 'connection' | 'model' | 'modelName' | 'source'>;
+type ModelGroup = UsageGroup<string> & Pick<UsageCall['call'], 'connection' | 'model' | 'modelName' | 'source'>;
 export type ReportWindow = Exclude<UsageWindow, 'hour'> | 'all';
 // A chat or character no longer kept counts under one group of its own, not one per id.
 export const GONE = 'gone';
