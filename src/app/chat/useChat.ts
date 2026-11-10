@@ -1,15 +1,12 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { entryName } from '../../connectors/types';
 import { resolveAssets, withAttachments } from '../../engine/assets';
 import { holdsPersona, unused } from '../../engine/pipeline';
 import { activeOnboarding } from '../../engine/import/onboarding';
 import { calls, keepsPromptOut, shown, type ChatItem, type ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
-import type { TogglePreset, ToggleValues } from '../../model/prompt';
 import { autoDiagnose } from '../../runtime/auto-diagnosis';
-import type { ApiResult } from '../../runtime/api';
 import { autoChat, turnFacts } from '../../runtime/diagnostic-state';
-import { resetToggles, setToggleValues } from '../../runtime/characters';
 import { chatTranslate, featuresOf } from '../../runtime/features';
 import { replyMessage, restoreRaw } from '../../runtime/chat-log';
 import { keepAttachments } from '../../runtime/attachments';
@@ -32,17 +29,16 @@ import { NO_PERSONA_SLOT } from '../common/prompt-words';
 import { describeUnused } from '../common/unused';
 import { useCopy } from '../common/useCopy';
 import { LORE_BUDGET_LABEL } from '../common/words';
-import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSaves, useSession, useToolFrames, useReplying } from '../session';
+import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSession, useToolFrames, useReplying } from '../session';
 import { useToast } from '../toast';
 import { useChatEdits } from './ChatEdits';
-import { storyText, useMenuHandle, usePanelsBeside, useTimePin, useViewport, type BotButton, type Reading } from '../ui';
-import { inspectShown, NO_PANELS, opened, takeCarried, type InfoTab, type InspectTab, type Panel, type Panels } from './panels';
+import { storyText, useMenuHandle, useTimePin, useViewport, type BotButton, type Reading } from '../ui';
 import { useSendNotes } from './useSendNotes';
 import { displayed } from './exportLog';
 import { useDraft } from './useDraft';
 import { useToolInput } from './useToolInput';
-import { budgetCut, pickStarted } from './infoReply';
-import { presetValues, sectionValues, toggleRows, toggleSaveKey, type ToggleSection } from './toggles';
+import { budgetCut } from './infoReply';
+import { toggleRows } from './toggles';
 import { anchorOf, useFollow } from './useFollow';
 import { useStorySteps } from './useStorySteps';
 import { useChatSearch, type SearchSeed } from './useChatSearch';
@@ -56,6 +52,8 @@ import { useChatPolishing } from './useChatPolishing';
 import { useChatTranslation } from './useChatTranslation';
 import { useChatAttachments } from './useChatAttachments';
 import { useChatSettings } from './useChatSettings';
+import { useChatPanels } from './useChatPanels';
+import { useChatToggles } from './useChatToggles';
 import { joinParts } from './joinParts';
 
 // The chats told this session that a reply's lorebook entries went past the 로어북 최대 분량: each is told once.
@@ -71,7 +69,6 @@ export type ChatActions = OpenChat['actions'];
 export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterShelf<ChatSummary> | null, reply: Reading['reply'], seed: SearchSeed | null) {
   const session = useSession();
   const { store, talk, drafts } = session;
-  const saves = useSaves();
   const replying = useReplying(chatId);
   const toast = useToast();
   const edits = useChatEdits();
@@ -156,35 +153,15 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const sendNotes = useSendNotes(chatId, unsaved, chat, messages, memory, draft.text, busy || displayPending === true);
   // Ruled 2026-11-09: asked as a new chat opens and never after its first save, when it has begun from the answers.
   const onboarding = useMemo(() => (item === null ? activeOnboarding(card?.onboarding) : null), [item === null, card?.onboarding]);
-  const [dialog, setDialog] = useState<'rename' | 'reading' | 'persona' | 'prompt' | 'export' | 'onboarding' | null>(() => (onboarding ? 'onboarding' : null));
   const modelMenu = useMenuHandle();
   const castMenu = useMenuHandle();
-  const pairs = usePanelsBeside();
-  const [panels, setPanels] = useState<Panels>(NO_PANELS);
-  const { panel } = panels;
-  useLayoutEffect(() => {
-    const carried = takeCarried(chatId);
-    if (carried) setPanels(opened(NO_PANELS, carried, pairs));
-  }, []);
-  // null follows the latest.
-  const [infoPick, setInfoPick] = useState<string | null>(null);
-  const open = (next: Panel) => setPanels((current) => opened(current, next, pairs));
-  const openInfo = (reply: string, tab: InfoTab) => {
-    setInfoPick(reply);
-    open({ kind: 'info', tab });
-  };
-  const askingTool = id === null ? undefined : tools.find(({ module }) => {
-    const frame = frames.get(module);
-    return frame?.asking && frame.chat === id;
-  })?.module;
-  useEffect(() => { if (askingTool) setPanels((current) => opened(current, { kind: 'tool', module: askingTool }, pairs)); }, [askingTool, pairs]);
-  const flipPanel = (next: Panel, same: (current: Panel) => boolean) => setPanels((current) => (current.panel && same(current.panel) ? { ...current, panel: null } : opened(current, next, pairs)));
-  const flipKind = (kind: 'bookmarks' | 'lineage' | 'lore' | 'autopilot' | 'toggles') => flipPanel({ kind }, (current) => current.kind === kind);
+  const { actions: panelActions, openInfo, flipTool, ...panels } = useChatPanels(chatId, id, tools, onboarding !== null, features.memory, messages, replyTarget);
   const timePin = useTimePin();
   const [branching, setBranching] = useState(false);
   const { found, search, actions: searchActions } = useChatSearch(messages, texts, translation.translating, translation.flipped, translation.shownTranslation, seekTo, seed);
   const { bookmarked, actions: bookmarkActions } = useChatBookmarks(id, chat.bookmarks, messages, busy, searchActions.find);
   const { actions: statusActions, ...status } = useChatStatus(chat, shelf?.character ?? null, view, messages);
+  const { actions: toggleActions } = useChatToggles(chat, prompt, toggles);
   const { editing, actions: editActions } = useMessageEdit(id, messages, (message) => ask({ kind: 'regenerate', message: message.id }), translationActions.carryFlip);
   const sending = useRef(false);
   // After a pre-network refusal, derive the current blocker so fixes anywhere clear the composer warning.
@@ -197,9 +174,6 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   useEffect(() => {
     if (id) session.memory.check(id);
   }, [id, features.memory]);
-  useEffect(() => {
-    if (!features.memory) setPanels((current) => (current.panel?.kind === 'memory' ? { ...current, panel: null } : current));
-  }, [features.memory]);
 
   // Only a reply this page asked for has what it sent (runtime/request-log), so it is told the moment that reply lands.
   const lastReply = messages.findLast((message) => message.role === 'assistant');
@@ -214,10 +188,6 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       action: { label: '정보 보기', onClick: () => openInfo(lastReply.id, 'lore') },
     });
   }, [lastCall]);
-
-  useEffect(() => {
-    if (replyTarget && panel?.kind === 'info') setInfoPick(pickStarted(messages, replyTarget));
-  }, [replyTarget]);
 
   function report(failure: TurnFailure | null, target?: Target, skip: Skip = {}) {
     if (!failure) return;
@@ -377,34 +347,6 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     if (item) void edits.duplicate(item);
   }
 
-  // A value is the character's, in every chat of it, or shared by every 캐릭터 없이 chat.
-  const writeToggle = (key: string, value: string) => setToggleValues(store, chat.character, { [key]: value });
-
-  function flip(key: string, value: string) {
-    toast.settled(writeToggle(key, value));
-  }
-
-  // A typed value still waiting would land over a reset or a preset, and be missed by a preset saved now.
-  const settleTyped = () => Promise.all(toggles.sections.flatMap(({ rows }) => rows.flatMap(({ toggle }) => (toggle.kind === 'text' ? [saves.flush(toggleSaveKey(chat.character, toggle.key))] : []))));
-
-  async function reset() {
-    await settleTyped();
-    toast.settled(resetToggles(store, chat.character));
-    toast.show(`토글 ${toggles.changed}개를 기본값으로 되돌렸어요.`);
-  }
-
-  async function pickPreset(section: ToggleSection, preset: TogglePreset) {
-    await settleTyped();
-    toast.settled(setToggleValues(store, chat.character, presetValues(section, preset)));
-  }
-
-  // Read again once typed values are stored, not from the rows this render holds.
-  async function sectionNow(id: string): Promise<ApiResult<ToggleValues>> {
-    await settleTyped();
-    const section = toggleRows(togglesOf(store, chat, prompt, packsOf(store, chat))).sections.find((each) => each.id === id);
-    return section ? { ok: true, data: sectionValues(section) } : { ok: false, error: 'gone' };
-  }
-
   // Scripts/tools require a saved chat, including actions on an unsaved greeting.
   async function saved() {
     const unstarted = id === null && await starting().saved;
@@ -419,10 +361,10 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   function rename(name: string) {
     if (!id) return;
     edits.rename(id, name);
-    setDialog(null);
+    panelActions.closeDialog();
   }
 
-  return joinParts(status, translation, illustration, remark, attaching, {
+  return joinParts(status, translation, illustration, remark, attaching, panels, {
     displayPending, displayError, retryDisplay, stuck,
     id,
     // The id a new chat will be saved under.
@@ -448,7 +390,6 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     view,
     decor,
     backdrop,
-    infoPick,
     features,
     agents,
     translate,
@@ -470,12 +411,9 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     editing,
     timePin: timePin.value,
     branching,
-    panel,
-    inspect: inspectShown(panels, pairs),
     tools,
     bookmarked,
     usageShown,
-    dialog,
     onboarding,
     modelMenu,
     castMenu,
@@ -483,7 +421,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     scroll,
     keys: story.keys,
     stops: story.stops,
-    actions: joinParts(story.actions, searchActions, statusActions, editActions, translationActions, illustrationActions, remarkActions, bookmarkActions, settingActions, attachActions, {
+    actions: joinParts(story.actions, searchActions, statusActions, editActions, translationActions, illustrationActions, remarkActions, bookmarkActions, settingActions, attachActions, panelActions, toggleActions, {
       send: () => void send(),
       sendSkipping: () => skippable && sendSkipping(skippable),
       say,
@@ -500,33 +438,12 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       copy,
       press: (button: BotButton | null) => void press(button),
       branch,
-      bookmarks: () => flipKind('bookmarks'),
-      lineage: () => flipKind('lineage'),
-      lore: () => flipKind('lore'),
-      autopilot: () => flipKind('autopilot'),
       follow,
-      info: (reply: string) => openInfo(reply, panel?.kind === 'info' ? panel.tab : 'reply'),
-      pickInfo: setInfoPick,
-      switchInfoTab: (tab: InfoTab) => setPanels((current) => (current.panel?.kind === 'info' ? { ...current, panel: { kind: 'info', tab } } : current)),
-      flipToggles: () => flipKind('toggles'),
-      memory: (record: string | null) => open({ kind: 'memory', record }),
-      openInspect: (tab: InspectTab) => open({ kind: 'inspect', tab }),
-      switchInspectTab: (tab: InspectTab) => setPanels((current) => current.inspect ? { ...current, inspect: { kind: 'inspect', tab } } : current),
-      closeInspect: () => setPanels((current) => ({ ...current, inspect: null })),
-      tool: (module: string) => void saved().then((ok) => ok && flipPanel({ kind: 'tool', module }, (current) => current.kind === 'tool' && current.module === module)),
+      tool: (module: string) => void saved().then((ok) => ok && flipTool(module)),
       toolMenu: (module: string, item: string) => runTool(module, (chat) => session.scriptCommands.menu(chat, module, item)),
       toolAction: (module: string, item: string, message: string) => runTool(module, (chat) => session.scriptCommands.action(chat, module, item, message)),
       toolInput: (module: string, item: string) => void toolInput.run(module, item),
       stopToolInput: toolInput.stop,
-      side: (panel: Panel) => open(panel),
-      closePanel: () => setPanels((current) => ({ ...current, panel: null })),
-      openDialog: (which: NonNullable<typeof dialog>) => setDialog(which),
-      closeDialog: () => setDialog(null),
-      flip,
-      writeToggle,
-      resetToggles: reset,
-      pickPreset: (section: ToggleSection, preset: TogglePreset) => void pickPreset(section, preset),
-      sectionNow,
       rename,
       drop,
       duplicate,
