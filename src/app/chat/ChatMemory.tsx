@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import type { Chat, ChatItem } from '../../model/chat';
 import { emptyMemory, type Fact, type MemorySettings, type Thread } from '../../model/memory';
 import { embedModel } from '../../runtime/assignment';
@@ -13,6 +13,7 @@ import { AccountTaskModel } from '../common/TaskPrompt';
 import { taskRuns } from '../common/taskRuns';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
+import { useLoad } from '../common/useLoaded';
 import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag } from '../common/words';
 import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
@@ -23,24 +24,6 @@ import { factGroups, memoryRows, MessagePositions } from './memory';
 import type { OpenChat } from './useChat';
 
 const NO_MEMORY = emptyMemory();
-
-// While a reply streams the last answer stands, since every chunk changes the messages.
-function useView(id: string, busy: boolean, inputs: unknown[]): MemoryView | null {
-  const session = useSession();
-  const [view, setView] = useState<MemoryView | null>(null);
-  useEffect(() => {
-    if (busy) return;
-    let live = true;
-    void memoryView(session, id).then(
-      (view) => live && setView(view),
-      () => live && setView(null),
-    );
-    return () => {
-      live = false;
-    };
-  }, [id, busy, ...inputs]);
-  return view;
-}
 
 // 장기 기억 (design §6.2). Without memoryView's answer nothing is said about what is sent: no status, no tokens, no missing
 // slot.
@@ -68,7 +51,9 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   // A tool holding the slot leaves these records as they are, readable, until the slot is theirs again (design §6.10).
   const { setup, owner, embeds } = useCaptured((store) => ({ setup: memorySetup(store, own), owner: memoryOwner(store, own), embeds: !('kind' in embedModel(store)) }), [own]);
   const holder = owner?.kind === 'tool' ? owner.unit : null;
-  const view = useView(id, busy, [memory, own, messages, settings, prompts]);
+  // While a reply streams the last answer stands, since every chunk changes the messages.
+  const loaded = useLoad(() => memoryView(session, id), [id, memory, own, messages, settings, prompts], { describe: () => '기억 상태를 계산하지 못했어요.', skip: busy, keep: true });
+  const view = loaded.data ?? null;
   const [rebuilding, setRebuilding] = useState(false);
   const [resets, setResets] = useState(0);
   const save = useAutosave<MemorySettings>(`chat-memory:${id}`, (patch) => {
@@ -78,7 +63,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   });
 
   const opened = record === null ? undefined : [...memory.records, ...memory.chapters].find((each) => each.id === record);
-  if (opened) return renderRecord({ chat: id, item: opened, memory, view, positions });
+  if (opened) return renderRecord({ chat: id, item: opened, memory, view, failure: loaded.failure, positions });
 
   async function revert() {
     if (!(await save.flush())) return;
@@ -136,6 +121,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
         </Row>
       )}
       {!owner && <Text variant="note">이 채팅은 장기 기억을 쓰지 않아요.</Text>}
+      {loaded.failure}
       {owner && view && !view.slot && (
         <Callout tone="warn" action={onEditPrompt ? { label: '프롬프트 열기', onClick: onEditPrompt } : undefined}>
           프롬프트에 장기 기억 블록이 없어서 기억을 보내지 않아요.

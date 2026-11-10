@@ -8,7 +8,7 @@ export type ToggleRow = { toggle: Toggle; value: string; changed: boolean };
 // A text toggle's typed value waits under this key (common/useAutosave) before it is stored.
 export const toggleSaveKey = (owner: string | null, key: string) => `toggle:${owner ?? ''}:${key}`;
 export type ToggleSection = Pick<ToggleSource, 'from' | 'id' | 'name' | 'presets'> & { rows: ToggleRow[]; items: Laid<ToggleRow>[] };
-type ToggleRows = { sections: ToggleSection[]; changed: number };
+export type ToggleRows = { sections: ToggleSection[]; changed: number };
 
 // A key declared again by a later source shows once, in the source that declares it (model/toggles chatToggles keeps
 // the very line, so it is matched by identity). A source with no toggle of its own is left out.

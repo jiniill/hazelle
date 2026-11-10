@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { VARIABLE_LIMITS, type InspectedVariable, type VariableInspection } from '../../engine/render';
+import { useMemo, useState, useSyncExternalStore } from 'react';
+import { VARIABLE_LIMITS, type InspectedVariable } from '../../engine/render';
 import { shown } from '../../model/chat';
 import { inspectToggles } from '../../runtime/chat-context';
 import { setVariableByHand } from '../../runtime/chat-log';
 import type { Sending } from '../../runtime/turn-context';
 import { writerName } from '../common/code/variables';
 import { shownValue } from '../common/HookDetail';
+import { useLoad } from '../common/useLoaded';
 import { useSearch } from '../common/useSearch';
 import { UNKNOWN } from '../common/words';
 import { useSession } from '../session';
@@ -46,28 +47,18 @@ export function Variables({ chat, sending, busy }: { chat: string; sending: Send
   const { store, read } = useSession();
   const model = read.chat(chat);
   const last = useSyncExternalStore(model.subscribe, model.snapshot)?.messages.at(-1);
-  const [inspected, setInspected] = useState<VariableInspection | null | undefined>(undefined);
+  const loaded = useLoad((signal) => store.evaluation.variables({ asker: 'view', chat }, sending!.turn.scope, '', signal), [chat, sending], { describe: () => '변수를 읽지 못했어요.', skip: !sending || busy, keep: true });
+  const inspected = loaded.data;
   const [open, setOpen] = useState<string | null>(null);
-  useEffect(() => {
-    if (!sending || busy) return;
-    const controller = new AbortController();
-    store.evaluation.variables({ asker: 'view', chat }, sending.turn.scope, '', controller.signal).then(
-      (result) => !controller.signal.aborted && setInspected(result),
-      () => !controller.signal.aborted && setInspected(null),
-    );
-    return () => controller.abort();
-  }, [chat, sending, busy]);
   const toggles = useMemo(() => (sending ? inspectToggles(store, sending.turn.chat) : []), [sending]);
   const variables = inspected?.variables ?? [];
   const search = useSearch(variables, '변수 검색', ({ name, last }) => [name, last.value]);
   return (
     <Stack gap="section">
       <Section title="변수" help="직접 수정한 변수 값은 마지막 메시지를 다시 생성하면 사라져요.">
-        {inspected === undefined ? (
-          <Text variant="note">변수를 불러오는 중…</Text>
-        ) : inspected === null ? (
-          <Empty variant="section">변수를 읽지 못했어요.</Empty>
-        ) : variables.length === 0 ? (
+        {loaded.loading && <Text variant="note">변수를 불러오는 중…</Text>}
+        {loaded.failure}
+        {inspected && (variables.length === 0 ? (
           <Empty variant="section">이 채팅에는 변수가 없어요.</Empty>
         ) : (
           <Stack gap="related">
@@ -100,7 +91,7 @@ export function Variables({ chat, sending, busy }: { chat: string; sending: Send
             )}
             {inspected.omitted > 0 && <Text variant="note">{`변수 ${inspected.omitted}개는 너무 많아서 보여 주지 않아요.`}</Text>}
           </Stack>
-        )}
+        ))}
       </Section>
       {toggles.length > 0 && (
         <Section title="토글" help="봇이 toggle_이라는 이름으로 읽는 값이에요.">

@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
 import { tokenGroups, type From, type TokenSource } from '../../engine/pipeline';
 import type { Rehearsal } from '../../runtime/scripts/preview';
 import { afterEnter, previewRequest, type AfterEnter, type Sending } from '../../runtime/turn-context';
 import { describeTurnFailure, runaway } from '../common/failure';
 import { MESSAGE_ROLES, SLOT } from '../common/prompt-words';
 import { tokens } from '../common/receipt';
+import { useLoad } from '../common/useLoaded';
 import { COUNTING, PRE_READ } from '../common/words';
 import { useSession } from '../session';
-import { Callout, CodeBlock, Disclosure, Empty, Facts, Gauge, List, ListItem, Section, Stack, Text } from '../ui';
+import { Callout, CodeBlock, Disclosure, Facts, Gauge, List, ListItem, Section, Stack, Text } from '../ui';
 import { partName, RequestView } from './ChatSent';
 import { HookList, STAGES } from './InspectScripts';
 import type { Side } from './panels';
@@ -61,26 +61,12 @@ const UNBUILT = '이 연결 방식은 요청 본문을 미리 만들어 볼 수 
 // Mounted only while the 요청 tab shows and no reply is being written (ChatInspect), so a send never waits on one.
 function Rehearsed({ chat, sending, editor, onEdit }: { chat: string; sending: Sending; editor: (from: From) => Side | null; onEdit: (side: Side) => void }) {
   const { scriptPreview } = useSession();
-  const [rehearsal, setRehearsal] = useState<Rehearsal | null | 'failed' | undefined>(undefined);
-  useEffect(() => {
-    setRehearsal(undefined);
-    const controller = new AbortController();
-    scriptPreview.rehearse(chat, sending, controller.signal).then(
-      (result) => !controller.signal.aborted && setRehearsal(result),
-      () => !controller.signal.aborted && setRehearsal('failed'),
-    );
-    return () => controller.abort();
-  }, [chat, sending]);
+  const loaded = useLoad((signal) => scriptPreview.rehearse(chat, sending, signal), [chat, sending], { describe: () => '스크립트를 미리 실행하지 못했어요.' });
+  const rehearsal = loaded.data;
   if (rehearsal === null) return null;
   return (
     <Section title="스크립트 실행 예상" help="보내기 전에 실행되는 봇 스크립트를 미리 실행해 본 결과예요.">
-      {rehearsal === undefined ? (
-        <Text variant="note">{COUNTING}</Text>
-      ) : rehearsal === 'failed' ? (
-        <Empty variant="section">스크립트를 미리 실행하지 못했어요.</Empty>
-      ) : (
-        <RehearsalView rehearsal={rehearsal} sending={sending} editor={editor} onEdit={onEdit} />
-      )}
+      {rehearsal === undefined ? loaded.failure ?? <Text variant="note">{COUNTING}</Text> : <RehearsalView rehearsal={rehearsal} sending={sending} editor={editor} onEdit={onEdit} />}
     </Section>
   );
 }

@@ -13,11 +13,12 @@ import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
 import { sizeText } from '../common/size';
 import { useCopyHtml } from '../common/useCopy';
+import { useLoad } from '../common/useLoaded';
 import { ARCA_LOG, CHAT_FILE, EXPORT, RISU_CHAT_FILE, RISU_LOSES, risuLeftOut, STOP } from '../common/words';
 import { useDisplay } from '../display';
 import { useFiles, useStore } from '../session';
 import { useToast } from '../toast';
-import { Button, Callout, ChoiceGroup, Dialog, Hint, LogExport, NumberInput, Progress, Row, SettingRow, snapshotPage, Stack, Switch, Text, type LogRow } from '../ui';
+import { Button, Callout, ChoiceGroup, Dialog, Hint, LogExport, NumberInput, Progress, Row, SettingRow, snapshotPage, Stack, Switch, Text } from '../ui';
 import { logDraft, resolveLog, untranslated, type LogChoices, type LogText } from './exportLog';
 import type { OpenChat } from './useChat';
 
@@ -29,8 +30,8 @@ const FORMS = [{ value: 'log', label: ARCA_LOG }, { value: 'file', label: CHAT_F
 type Form = (typeof FORMS)[number]['value'];
 const TEXTS: { value: LogText; label: string }[] = [{ value: 'translation', label: '번역' }, { value: 'original', label: '원문' }, { value: 'both', label: '둘 다' }];
 
-type Drawing = { key: string; title: string; sub: string | null; css: string; rows: LogRow[]; missing: number };
-type Prepared = { html: string; size: string; missing: number; rules: number };
+// key: the drawing it was drawn from, so a change of choices sets it aside.
+type Prepared = { key: string; html: string; size: string; missing: number; rules: number };
 
 type Props = Pick<OpenChat, 'messages' | 'view' | 'placed' | 'pictures' | 'flipped' | 'shownTranslation' | 'busy'> & {
   item: ChatItem;
@@ -53,8 +54,6 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, sh
   const [form, setForm] = useState<Form>('log');
   const [choices, setChoices] = useState<LogChoices>(() => ({ pictures: !display.hidePictures, hideMe: false, text: 'translation', from: messages.length > SHORT ? messages.length - LATEST + 1 : 1, to: messages.length }));
   const [range, setRange] = useState({ from: String(choices.from), to: String(choices.to) });
-  const [drawing, setDrawing] = useState<Drawing | null>(null);
-  const [prepared, setPrepared] = useState<Prepared | null>(null);
   const waiting = busy ? '응답 중' : view.pass ? '채팅을 불러오는 중' : null;
   const translated = messages.some((message) => message.versions.some((version) => version.translation));
   const change = (next: Partial<LogChoices>) => setChoices({ ...choices, ...next });
@@ -92,20 +91,18 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, sh
     }
   }
 
-  useEffect(() => {
-    setPrepared(null);
-    setDrawing(null);
-    if (form !== 'log' || waiting) return;
-    let live = true;
-    const draft = logDraft(messages, view, { placed, pictures }, flipped, shownTranslation, bot, names, choices);
-    const read = choices.pictures ? assetDataUrls(store, files, draft.pictures.values()) : Promise.resolve({ urls: new Map<string, string>(), missing: draft.pictures.size });
-    void read.then(({ urls, missing }) => {
-      if (live) setDrawing({ key: crypto.randomUUID(), title: item.title, sub: characterName, ...resolveLog(draft, (kind, id) => urls.get(pictureRef(kind, id))), missing });
-    });
-    return () => {
-      live = false;
-    };
-  }, [form, choices, messages, view, placed, pictures, flipped, shownTranslation, waiting]);
+  const loaded = useLoad(
+    async () => {
+      const draft = logDraft(messages, view, { placed, pictures }, flipped, shownTranslation, bot, names, choices);
+      const { urls, missing } = choices.pictures ? await assetDataUrls(store, files, draft.pictures.values()) : { urls: new Map<string, string>(), missing: draft.pictures.size };
+      return { key: crypto.randomUUID(), title: item.title, sub: characterName, ...resolveLog(draft, (kind, id) => urls.get(pictureRef(kind, id))), missing };
+    },
+    [form, choices, messages, view, placed, pictures, flipped, shownTranslation, waiting],
+    { describe: () => '내보낼 기록을 준비하지 못했어요.', skip: form !== 'log' || waiting !== null },
+  );
+  const drawing = loaded.data;
+  const [drawn, setDrawn] = useState<Prepared | null>(null);
+  const prepared = drawn && drawn.key === drawing?.key ? drawn : null;
 
   async function saveFile() {
     if (form === 'file') {
@@ -200,12 +197,12 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, sh
                 )}
               </>
             ) : (
-              <Progress steps={[{ label: '준비하는 중' }]} />
+              (loaded.failure ?? <Progress steps={[{ label: '준비하는 중' }]} />)
             )}
           </>
         )}
       </Stack>
-      {drawing && (
+      {drawing && !prepared && (
         <LogExport
           key={drawing.key}
           title={drawing.title}
@@ -213,10 +210,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, sh
           css={drawing.css}
           rows={drawing.rows}
           reading={reading}
-          onDrawn={({ html, rules }) => {
-            setPrepared({ html, size: sizeText(new Blob([html]).size), rules, missing: drawing.missing });
-            setDrawing(null);
-          }}
+          onDrawn={({ html, rules }) => setDrawn({ key: drawing.key, html, size: sizeText(new Blob([html]).size), rules, missing: drawing.missing })}
         />
       )}
     </Dialog>

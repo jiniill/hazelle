@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import type { ApiResult } from '../../runtime/api';
+import type { ApiFailure, ApiResult } from '../../runtime/api';
 import type { Page } from '../../runtime/pages';
 import { Button, Callout, Empty, List, PostFeed, Text } from '../ui';
 import { ACTS } from './acts';
@@ -7,28 +7,49 @@ import { describeFailure } from './failure';
 import { count } from './typedNumber';
 import { LOADING, SEE_ALL } from './words';
 
-// A failed reload keeps what was shown. A change in deps asks again as reload does.
-export function useLoaded<T>(load: (signal: AbortSignal) => Promise<ApiResult<T>>, deps: unknown[] = []) {
-  const [data, setData] = useState<T | null>(null);
+// The one load protocol: asked on mount, on a change in deps and on reload, an older ask's answer dropped (its signal
+// aborted), nothing asked while skip. keep: what was shown stays while the next answer comes and after a failed one;
+// without it each ask starts from nothing. describe: what a thrown error says, by the loader's own failure types.
+export function useLoad<T>(load: (signal: AbortSignal) => Promise<T>, deps: unknown[], { describe, skip = false, keep = false }: { describe: (error: unknown) => string; skip?: boolean; keep?: boolean }) {
+  const [data, setData] = useState<T>();
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    if (!keep) setData(undefined);
+    if (skip) return;
     const abort = new AbortController();
     setFailure(null);
-    void load(abort.signal).then((answer) => {
-      if (abort.signal.aborted) return;
-      setFailure(answer.ok ? null : describeFailure(answer));
-      if (answer.ok) setData(answer.data);
-    });
+    load(abort.signal).then(
+      (value) => !abort.signal.aborted && setData(value),
+      (error: unknown) => !abort.signal.aborted && setFailure(describe(error)),
+    );
     return () => abort.abort();
-  }, [attempt, ...deps]);
+  }, [attempt, skip, ...deps]);
   const reload = () => setAttempt((count) => count + 1);
   return {
     data,
-    loading: data === null && failure === null && LOADING_NOTE,
-    failure: failure && <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: reload }}>{failure}</Callout>,
+    loading: data === undefined && failure === null,
+    failure: failure === null ? null : <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: reload }}>{failure}</Callout>,
     reload,
-    refresh: <Refresh onClick={reload} />,
+  };
+}
+
+export function useLoaded<T>(load: (signal: AbortSignal) => Promise<ApiResult<T>>, deps: unknown[] = []) {
+  const loaded = useLoad(
+    async (signal) => {
+      const answer = await load(signal);
+      if (answer.ok) return answer.data;
+      throw answer;
+    },
+    deps,
+    { describe: (failure) => describeFailure(failure as ApiFailure), keep: true },
+  );
+  return {
+    data: loaded.data ?? null,
+    loading: loaded.loading && LOADING_NOTE,
+    failure: loaded.failure,
+    reload: loaded.reload,
+    refresh: <Refresh onClick={loaded.reload} />,
   };
 }
 

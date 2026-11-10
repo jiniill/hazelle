@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { isChapter } from '../../engine/memory';
 import type { Chapter, Memory, MemoryRecord } from '../../model/memory';
 import type { MemoryView } from '../../runtime/memory-view';
@@ -19,13 +20,14 @@ type Props = {
   chat: string;
   item: MemoryRecord | Chapter;
   memory: Memory;
-  // null while the panel's view is being worked out.
+  // null while the panel's view is being worked out, or when it could not be, which failure says.
   view: MemoryView | null;
+  failure: ReactNode;
   positions: ReadonlyMap<string, number>;
   actions: ChatActions;
 };
 
-export function ChatMemoryRecord({ chat, item, memory, view, positions, actions }: Props) {
+export function ChatMemoryRecord({ chat, item, memory, view, failure, positions, actions }: Props) {
   const session = useSession();
   const { store } = session;
   const toast = useToast();
@@ -82,6 +84,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, positions, actions 
       page={item.id}
       onClose={actions.closePanel}
     >
+      {failure}
       {stale && !item.forgotten && (
         <Callout tone="warn" action={stale === 'deleted' ? undefined : { label: '원문에서 다시 만들기', onClick: rebuild }}>
           {[STALE[stale], status === 'stale' ? dropped : status === 'sent' || status === 'recall-over' ? kept : ''].join(' ').trim()}
