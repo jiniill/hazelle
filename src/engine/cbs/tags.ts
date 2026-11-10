@@ -6,7 +6,7 @@ import { seeded } from '../random';
 import { escapeCbs } from './escape';
 import type { CbsContext } from './evaluate';
 import type { HistoryMessage } from '../history';
-import type { LoreEntry } from '../import/types';
+import { risuLore } from '../../tool-api/risu-lore';
 import { calc, leadingNumber } from './math';
 import { calendarDate, clockTime, duration, formatTime } from './time';
 
@@ -138,20 +138,8 @@ const promptText = (field: 'main' | 'globalNote' | 'authorNote'): Run => (_, { c
 define('mainprompt systemprompt', 0, promptText('main'));
 define('globalnote systemnote ujb', 0, promptText('globalNote'));
 define('authornote', 0, promptText('authorNote'));
-// An entry in Risu's own lore fields, which bots read back from {{lorebook}} and Lua's getLoreBooks.
-export const asRisuLore = (entry: Pick<LoreEntry, 'name' | 'keys' | 'secondaryKeys' | 'insertionOrder' | 'constant' | 'selective' | 'useRegex'>, content: string) => ({
-  key: entry.keys.join(', '),
-  secondkey: entry.secondaryKeys.join(', '),
-  comment: entry.name,
-  content,
-  insertorder: entry.insertionOrder,
-  alwaysActive: entry.constant,
-  selective: entry.selective,
-  useRegex: entry.useRegex,
-  mode: 'normal',
-});
 // Each entry a JSON string, raw, as Risu lists them.
-define('lorebook worldinfo', 0, (_, { context }) => serialize(context.lore.map((entry) => JSON.stringify(asRisuLore(entry, entry.content)))));
+define('lorebook worldinfo', 0, (_, { context }) => serialize(context.lore.map((entry) => JSON.stringify(risuLore(entry, ', ')))));
 
 // Risu's markup, which the display dims until a bot's buttons can run (design §6.4).
 define('button', 2, ([label, trigger]) => `<button class="button-default" risu-trigger="${trigger}">${label}</button>`);
