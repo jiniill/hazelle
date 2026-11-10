@@ -8,6 +8,7 @@ import { fileKey } from './files/bucket';
 import { takeBackFiles } from './files/claims';
 import { hex } from '../hex';
 import { fail, isCount, readObject, refused, RETRY_SECONDS, type AppEnv } from './http';
+import { logged } from './operator';
 import { canWrite, requireSession } from './session';
 
 // File copies are incarnation-scoped, never shared between accounts. Live accounts' files are removed only by sweeps,
@@ -207,7 +208,7 @@ export const fileBlocks = new Hono<AppEnv>().put('/files/:id/blocked', async (c)
     blocked
       ? blockFiles(db, at, 'SELECT ?2 AS id', id)
       : [
-          db.prepare(`INSERT INTO admin_log (at, action, target) SELECT ?1, 'unblock-file', id FROM file_blocks WHERE id = ?2`).bind(at, id),
+          logged(db, at, 'unblock-file', { from: 'file_blocks WHERE id = ?2', detail: null }, id),
           db.prepare('DELETE FROM file_blocks WHERE id = ?').bind(id),
         ],
   );
@@ -218,7 +219,7 @@ export const fileBlocks = new Hono<AppEnv>().put('/files/:id/blocked', async (c)
 // is logged.
 export function blockFiles(db: Db, at: number, ids: string, ...values: SqlValue[]): Statement[] {
   return [
-    db.prepare(`INSERT INTO admin_log (at, action, target) SELECT DISTINCT ?1, 'block-file', id FROM (${ids}) WHERE id NOT IN (SELECT id FROM file_blocks)`).bind(at, ...values),
+    logged(db, at, 'block-file', { from: `(SELECT DISTINCT id FROM (${ids})) WHERE id NOT IN (SELECT id FROM file_blocks)`, detail: null }, ...values),
     db.prepare(`INSERT INTO file_blocks (id, blocked_at) SELECT DISTINCT id, ?1 FROM (${ids}) WHERE true ON CONFLICT DO NOTHING`).bind(at, ...values),
   ];
 }

@@ -4,6 +4,7 @@ import type { Life, Unavailable } from './account-store';
 import { landing, RETENTION_MS } from './db/account-db';
 import type { Db } from './db/service-db';
 import { DAY_MS, fail, isCount, isPositive, MINUTE_MS, refused, type AppEnv, type Services } from './http';
+import { logged } from './operator';
 import { removePictures } from './reconcile';
 import { takeBackFiles } from './files/claims';
 
@@ -73,9 +74,7 @@ async function leave(
       .bind(accountId, incarnation),
     ...(operator
       ? [
-          db
-            .prepare("INSERT INTO admin_log (at, action, target, detail) SELECT ?, 'delete-account', id, json_object('username', username) FROM accounts WHERE incarnation = ? AND changes() = 1")
-            .bind(Date.now(), incarnation),
+          logged(db, Date.now(), 'delete-account', { from: 'accounts WHERE incarnation = ?2 AND changes() = 1', detail: { username: 'username' } }, incarnation),
         ]
       : []),
   ]);
@@ -156,13 +155,16 @@ export async function beginRestore(env: Services, accountId: string, post: numbe
          WHERE id = ? AND state = 'active' AND changes() = 1`,
       )
       .bind(accountId),
-    db
-      .prepare(
-        `INSERT INTO admin_log (at, action, target, detail)
-         SELECT ?1, 'restore-begun', id, json_object('username', username, 'operation', operation, 'post', ?2, 'at', ?3, 'undoes', ?4)
-         FROM accounts WHERE id = ?5 AND state = 'restoring' AND changes() = 1`,
-      )
-      .bind(now, post, at, undoes, accountId),
+    logged(
+      db,
+      now,
+      'restore-begun',
+      { from: "accounts WHERE id = ?5 AND state = 'restoring' AND changes() = 1", detail: { username: 'username', operation: 'operation', post: '?2', at: '?3', undoes: '?4' } },
+      post,
+      at,
+      undoes,
+      accountId,
+    ),
   ]));
   const id = inserted!.results[0]?.id;
   if (id !== undefined) return { begun: id };
@@ -322,13 +324,17 @@ async function release(env: Services, operation: Operation, to: 'cancelled' | 'f
 }
 
 // Written once per operation: gated on the account's release, which only the run that won the terminal phase makes.
-function terminalLog(db: Db, action: string, operation: Operation, error: RestoreError | null) {
-  return db
-    .prepare(
-      `INSERT INTO admin_log (at, action, target, detail)
-       SELECT ?, ?, id, json_object('username', username, 'operation', ?, 'undoes', ?, 'error', ?) FROM accounts WHERE incarnation = ? AND changes() = 1`,
-    )
-    .bind(Date.now(), action, operation.id, operation.undoes, error, operation.incarnation);
+function terminalLog(db: Db, action: 'restore-done' | 'restore-cancelled' | 'restore-failed', operation: Operation, error: RestoreError | null) {
+  return logged(
+    db,
+    Date.now(),
+    action,
+    { from: 'accounts WHERE incarnation = ?5 AND changes() = 1', detail: { username: 'username', operation: '?2', undoes: '?3', error: '?4' } },
+    operation.id,
+    operation.undoes,
+    error,
+    operation.incarnation,
+  );
 }
 
 function readOperation(db: Db, id: number) {

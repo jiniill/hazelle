@@ -26,10 +26,11 @@ import {
   type PostRow,
 } from '../contracts/board';
 import { ACCOUNT_HEADER } from '../contracts/http';
-import { act, limitOf, MAX_OPEN_REPORTS, operator } from './admin';
+import { limitOf } from './admin';
 import type { SqlValue } from './db/service-db';
 import { DAY_MS, fail, isPositive, isRecord, readObject, sha256Hex, visitorOf, type Account, type AppEnv } from './http';
 import { boardDailyLimit } from './limits';
+import { act, logged, operator } from './operator';
 import { requireSession } from './session';
 import { activity, hidden, OPERATOR, tellUnread } from './unread';
 
@@ -67,6 +68,8 @@ const readerOf = (c: Context<AppEnv>): Reader & { guest: boolean } => {
 const owns = (alias: string, identity = '?1') => `(${alias}.account_id = ${identity} OR (${alias}.account_id IS NULL AND ${alias}.guest_secret_hash = ${identity}))`;
 
 const MAX_VERSION_LENGTH = 40;
+// Reports are plaintext rows no byte cap counts, so one account's unresolved ones are bounded.
+const MAX_OPEN_REPORTS = 20;
 const ROW_ID = /^[1-9]\d{0,15}$/;
 
 const oneOf = <T extends string>(list: readonly T[], value: unknown): value is T => typeof value === 'string' && (list as readonly string[]).includes(value);
@@ -266,7 +269,7 @@ board.delete('/posts/:id', async (c) => {
   const own = `p.id = ?2 AND p.deleted = 0 AND (?3 OR ${owns('p')}) AND ${readable(account)}`;
   const bound = [account.id, id, account.admin ? 1 : 0];
   const done = await db.batch([
-    ...(account.admin ? [db.prepare(`INSERT INTO admin_log (at, action, target, detail) SELECT ?2, 'post-delete', id, json_object('title', title) FROM posts WHERE id = ?1 AND deleted = 0`).bind(id, Date.now())] : []),
+    ...(account.admin ? [logged(db, Date.now(), 'post-delete', { from: 'posts WHERE id = ?2 AND deleted = 0', detail: { title: 'title' } }, id)] : []),
     db.prepare(`DELETE FROM post_pictures WHERE post_id = ?2 AND EXISTS (SELECT 1 FROM posts p WHERE ${own})`).bind(...bound),
     db.prepare(`UPDATE posts AS p SET text = NULL, diagnostics = NULL, deleted = 1 WHERE ${own} AND EXISTS (SELECT 1 FROM comments WHERE post_id = p.id) RETURNING id`).bind(...bound),
     db.prepare(`DELETE FROM posts AS p WHERE ${own} AND NOT EXISTS (SELECT 1 FROM comments WHERE post_id = p.id) RETURNING id`).bind(...bound),
@@ -410,7 +413,7 @@ board.delete('/comments/:id', async (c) => {
   if (post === null) return fail(c, 404, 'not-found');
   const own = [id, account.admin ? 1 : 0, account.id];
   const done = await db.batch([
-    ...(account.admin ? [db.prepare(`INSERT INTO admin_log (at, action, target, detail) SELECT ?2, 'comment-delete', id, json_object('post', post_id) FROM comments WHERE id = ?1 AND deleted = 0`).bind(id, Date.now())] : []),
+    ...(account.admin ? [logged(db, Date.now(), 'comment-delete', { from: 'comments WHERE id = ?2 AND deleted = 0', detail: { post: 'post_id' } }, id)] : []),
     db.prepare(`UPDATE comments AS c SET text = NULL, deleted = 1 WHERE c.id = ?1 AND c.deleted = 0 AND (?2 OR ${owns('c', '?3')}) AND EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = c.id) RETURNING id`).bind(...own),
     db.prepare(`DELETE FROM comments AS c WHERE c.id = ?1 AND c.deleted = 0 AND (?2 OR ${owns('c', '?3')}) AND NOT EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = c.id) RETURNING id`).bind(...own),
     db.prepare('DELETE FROM comments AS c WHERE c.post_id = ? AND c.deleted = 1 AND NOT EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = c.id)').bind(post),
@@ -482,7 +485,7 @@ board.post('/seen', async (c) => {
   return c.body(null, 204);
 });
 
-// The operator's moves, each in one batch with its admin_log row, written only if its target is there (admin.ts act).
+// The operator's moves, each in one batch with its admin_log row, written only if its target is there (operator.ts act).
 
 board.put('/posts/:id/status', operator, async (c) => {
   const id = idOf(c);
@@ -492,11 +495,12 @@ board.put('/posts/:id/status', operator, async (c) => {
   const named = version === null || (status === 'done' && typeof version === 'string' && version.trim() !== '' && version.length <= MAX_VERSION_LENGTH);
   if (id === null || !oneOf(STATUSES, status) || !named) return fail(c, 400, 'bad-input');
   const db = c.env.db;
-  const values = [id, Date.now(), status, version === null ? null : version.trim()];
+  const now = Date.now();
+  const trimmed = version === null ? null : version.trim();
   return act(
     c,
-    db.prepare(`INSERT INTO admin_log (at, action, target, detail) SELECT ?2, 'post-status', id, json_object('status', ?3, 'version', ?4) FROM posts WHERE id = ?1 AND category != 'news'`).bind(...values),
-    db.prepare("UPDATE posts SET status = ?3, version = ?4, status_at = ?2 WHERE id = ?1 AND category != 'news' RETURNING id").bind(...values),
+    logged(db, now, 'post-status', { from: "posts WHERE id = ?2 AND category != 'news'", detail: { status: '?3', version: '?4' } }, id, status, trimmed),
+    db.prepare("UPDATE posts SET status = ?3, version = ?4, status_at = ?2 WHERE id = ?1 AND category != 'news' RETURNING id").bind(id, now, status, trimmed),
   );
 });
 
@@ -519,7 +523,7 @@ const hide = (table: 'posts' | 'comments', kind: 'post' | 'comment') => async (c
   if (shown === null) {
     return act(
       c,
-      db.prepare(`INSERT INTO admin_log (at, action, target) SELECT ?2, '${kind}-show', id FROM ${table} WHERE id = ?1`).bind(id, now),
+      logged(db, now, `${kind}-show`, { from: `${table} WHERE id = ?2`, detail: null }, id),
       db.prepare(`UPDATE ${table} SET hidden_reason = NULL, hidden_until = NULL WHERE id = ? RETURNING id`).bind(id),
     );
   }
@@ -527,7 +531,7 @@ const hide = (table: 'posts' | 'comments', kind: 'post' | 'comment') => async (c
   const told = `'"' || p.title || '" ${table === 'posts' ? '글을' : '글에 쓴 댓글을'} 가렸어요. 이유: ' || ?3 || '.' || CASE WHEN ?4 IS NULL THEN '' ELSE ' ' || CAST(?4 AS INTEGER) || '일 뒤에 다시 보여요.' END`;
   return act(
     c,
-    db.prepare(`INSERT INTO admin_log (at, action, target, detail) SELECT ?2, '${kind}-hide', id, json_object('reason', ?3, 'days', ?4) FROM ${table} WHERE id = ?1`).bind(id, now, shown.reason, shown.days),
+    logged(db, now, `${kind}-hide`, { from: `${table} WHERE id = ?2`, detail: { reason: '?3', days: '?4' } }, id, shown.reason, shown.days),
     db
       .prepare(
         `INSERT INTO notices (incarnation, text, created_at) SELECT a.incarnation, ${told}, ?2 FROM ${table} t JOIN posts p ON p.id = ${table === 'posts' ? 't.id' : 't.post_id'}
@@ -548,7 +552,7 @@ board.put('/posts/:id/locked', operator, async (c) => {
   const db = c.env.db;
   return act(
     c,
-    db.prepare(`INSERT INTO admin_log (at, action, target) SELECT ?2, ?3, id FROM posts WHERE id = ?1`).bind(id, Date.now(), locked ? 'post-lock' : 'post-unlock'),
+    logged(db, Date.now(), locked ? 'post-lock' : 'post-unlock', { from: 'posts WHERE id = ?2', detail: null }, id),
     db.prepare('UPDATE posts SET locked = ?2 WHERE id = ?1 RETURNING id').bind(id, locked ? 1 : 0),
   );
 });
@@ -569,7 +573,7 @@ const blockGuest = (table: 'posts' | 'comments') => async (c: Context<AppEnv>) =
   const db = c.env.db;
   const now = Date.now();
   return act(c,
-    db.prepare(`INSERT INTO admin_log (at, action, target) SELECT ?2, 'guest-block', id FROM ${table} WHERE id = ?1 AND guest_secret_hash IS NOT NULL`).bind(id, now),
+    logged(db, now, 'guest-block', { from: `${table} WHERE id = ?2 AND guest_secret_hash IS NOT NULL`, detail: null }, id),
     db.prepare(`INSERT INTO board_guest_address_blocks (address_hash, until) SELECT guest_address_hash, ?2 FROM ${table} WHERE id = ?1 AND guest_address_hash IS NOT NULL ON CONFLICT (address_hash) DO UPDATE SET until = excluded.until`).bind(id, now + DAY_MS),
     db.prepare(`INSERT INTO board_guest_blocks (secret_hash) SELECT guest_secret_hash FROM ${table} WHERE id = ? AND guest_secret_hash IS NOT NULL ON CONFLICT (secret_hash) DO UPDATE SET secret_hash = excluded.secret_hash RETURNING secret_hash`).bind(id),
   );

@@ -1,4 +1,4 @@
-import type { LogRow } from '../../contracts/admin';
+import type { LogRow, OwnCap } from '../../contracts/admin';
 import { readLog } from '../../runtime/admin';
 import { sizeText } from '../common/size';
 import { ago, moment } from '../common/time';
@@ -8,13 +8,14 @@ import { ListItem, Panel } from '../ui';
 import { restoreError } from '../common/RestoresDialog';
 import { HEAD_ROWS, PagedList, SeeAll, usePages } from '../common/useLoaded';
 
-// The actions server/admin and server/board log. One they do not list shows as the server wrote it.
-const ACTIONS: Record<string, string> = {
+const ACTIONS: Record<LogRow['action'], string> = {
   suspend: '정지',
   lift: '정지 해제',
   'delete-account': '계정 삭제',
   'set-service': '서비스 설정',
   'set-board': '게시판 설정',
+  'set-backup-folder': '백업 폴더 설정',
+  'set-pulse': '헤이젤 나우 설정',
   'guest-block': '손님 글쓰기 차단',
   'set-caps': '저장 한도',
   'resolve-report': '신고 확인',
@@ -39,33 +40,54 @@ const ACTIONS: Record<string, string> = {
   'comment-delete': '댓글 삭제',
 };
 
-const capWords = (cap: unknown) => (typeof cap === 'number' ? sizeText(cap) : cap === 'default' ? '기본값' : '없음');
+const capWords = (cap: OwnCap) => (typeof cap === 'number' ? sizeText(cap) : cap === 'default' ? '기본값' : '없음');
+const held = ({ reason, days }: { reason: string; days: number | null }) => `${reason}${days === null ? '' : ` · ${days}일`}`;
 
-function detailOf({ action, detail }: LogRow): string | undefined {
-  if (action === 'send-notice' && detail === null) return '모두에게';
-  if (detail === null) return undefined;
-  const values = detail as Record<string, unknown>;
-  // Rows from before the 게시판 (migration 0015) answered a report; they live a year.
-  if (action === 'send-notice' && typeof values.report === 'number') return `${String(values.username)} · 알림 ${values.report}에 답변`;
-  if (action === 'post-status' && typeof values.status === 'string') return `${BOARD.statuses[values.status as keyof typeof BOARD.statuses] ?? values.status}${typeof values.version === 'string' ? ` · ${values.version}` : ''}`;
-  if ((action === 'post-hide' || action === 'comment-hide') && typeof values.reason === 'string') return `${values.reason}${typeof values.days === 'number' ? ` · ${values.days}일` : ''}`;
-  if (action === 'post-delete' && typeof values.title === 'string') return values.title;
-  if (action === 'comment-delete' && typeof values.post === 'number') return `글 ${values.post}`;
-  if (action === 'set-board' && typeof values.guests === 'boolean') return `손님 글쓰기 ${values.guests ? '열기' : '닫기'}`;
-  if (action === 'set-caps') return `${String(values.username)} · 텍스트 한도 ${capWords(values.bytesCap)} · 이미지 한도 ${capWords(values.fileBytesCap)}`;
-  if (action === 'restore-begun') return `${String(values.username)} · ${typeof values.at === 'number' ? `${moment(values.at)} 시점으로` : '복원 전으로 되돌리기'}`;
-  if (action === 'restore-failed' && typeof values.error === 'string') return `${String(values.username)} · ${restoreError(values.error)}`;
-  if (typeof values.username === 'string') return values.username;
-  if (action === 'set-service' && typeof values.signupCap === 'number') {
-    return `가입 정원 ${values.signupCap}명 · 계정당 텍스트 한도 ${capWords(values.accountBytesCap)} · 계정당 이미지 한도 ${capWords(values.accountFileBytesCap)}`;
+function detailOf(row: LogRow): string | undefined {
+  switch (row.action) {
+    case 'send-notice':
+      if (row.detail === null) return '모두에게';
+      // Rows from before the 게시판 (migration 0015) answered a report; they live a year.
+      return 'report' in row.detail ? `${row.detail.username} · 알림 ${row.detail.report}에 답변` : row.detail.username;
+    case 'post-status':
+      return `${BOARD.statuses[row.detail.status]}${row.detail.version === null ? '' : ` · ${row.detail.version}`}`;
+    case 'post-hide':
+    case 'comment-hide':
+      return held(row.detail);
+    case 'post-delete':
+      return row.detail.title;
+    case 'comment-delete':
+      return `글 ${row.detail.post}`;
+    case 'set-board':
+      return `손님 글쓰기 ${row.detail.guests ? '열기' : '닫기'}`;
+    case 'set-caps':
+      return `${row.detail.username} · 텍스트 한도 ${capWords(row.detail.bytesCap)} · 이미지 한도 ${capWords(row.detail.fileBytesCap)}`;
+    case 'restore-begun':
+      return `${row.detail.username} · ${row.detail.at === null ? '복원 전으로 되돌리기' : `${moment(row.detail.at)} 시점으로`}`;
+    case 'restore-failed':
+      return row.detail.error === null ? row.detail.username : `${row.detail.username} · ${restoreError(row.detail.error)}`;
+    case 'restore-done':
+    case 'restore-cancelled':
+    case 'suspend':
+    case 'lift':
+    case 'delete-account':
+      return row.detail.username;
+    case 'set-service':
+      return `가입 정원 ${row.detail.signupCap}명 · 계정당 텍스트 한도 ${capWords(row.detail.accountBytesCap)} · 계정당 이미지 한도 ${capWords(row.detail.accountFileBytesCap)}`;
+    case 'set-backup-folder':
+    case 'set-pulse':
+    case 'block-share':
+      return JSON.stringify(row.detail);
+    // The rest carry no detail.
+    default:
+      return undefined;
   }
-  return JSON.stringify(detail);
 }
 
 // Print target only when it adds identity: account username is already in detail; service/everyone repeats the action.
 function codeOf({ target, detail }: LogRow): string | undefined {
   if (target === 'service' || target === 'everyone') return undefined;
-  return typeof (detail as Record<string, unknown> | null)?.username === 'string' ? undefined : target;
+  return detail !== null && 'username' in detail ? undefined : target;
 }
 
 // head: the newest few, which 운영 shows.
@@ -74,7 +96,7 @@ export function LogSection({ head }: { head: boolean }) {
   return (
     <Panel title="기록" action={head && !pages.whole ? <SeeAll onClick={() => navigate({ kind: 'admin-list', list: 'log' })} /> : undefined}>
       <PagedList pages={pages} head={head} label="기록" empty="아직 기록이 없어요.">
-        {(row) => <ListItem key={row.id} title={ACTIONS[row.action] ?? row.action} code={codeOf(row)} description={detailOf(row)} note={ago(row.at)} />}
+        {(row) => <ListItem key={row.id} title={ACTIONS[row.action]} code={codeOf(row)} description={detailOf(row)} note={ago(row.at)} />}
       </PagedList>
     </Panel>
   );
