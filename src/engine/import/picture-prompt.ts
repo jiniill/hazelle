@@ -1,6 +1,7 @@
 import { Unzlib } from 'fflate';
 import { isRecord, jsonObject } from '../../connectors/values';
 import { concat } from './inflate';
+import { isText } from '../answer-json';
 
 // Read NovelAI prompt JSON only from PNG Comment (tEXt/zTXt) or WebP EXIF UserComment/ImageDescription.
 // UserComment requires ASCII\0\0\0; other generators' plain text and XMP are not prompts.
@@ -109,8 +110,6 @@ function exifTexts(chunk: Uint8Array): string[] {
   entries(data.getUint32(4, little), 0);
   return found;
 }
-
-const isText = (value: unknown): value is string => typeof value === 'string';
 
 function promptOf(text: string): PicturePrompt | null {
   const value = jsonObject(text.replace(/\0+$/, ''));
