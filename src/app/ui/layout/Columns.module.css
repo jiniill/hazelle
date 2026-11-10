@@ -1,8 +1,9 @@
 .columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--column-min)), 1fr));
-  /* Cards in one line share its height, so no one stands out; their contents stay at the top. */
-  gap: var(--space-16);
+  /* Cards in one line share its height, so no one stands out; their contents stay at the top. PickCards joins its
+     cards on a phone by --columns-gap. */
+  gap: var(--columns-gap, var(--space-16));
 }
 
 .small {

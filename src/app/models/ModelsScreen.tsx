@@ -15,7 +15,7 @@ import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
-import { Beside, Button, Callout, Columns, Divider, Empty, List, ListItem, Menu, MenuItem, NavBar, Row, Screen, Section } from '../ui';
+import { Beside, Button, Callout, Divider, Empty, List, ListItem, Menu, MenuItem, NavBar, PickCards, Row, Screen, Section } from '../ui';
 
 // The bottom rung of every chat's settings: what a prompt, a character or a chat does not set reads from here.
 const DEFAULTS = SCOPE.default;
@@ -119,11 +119,11 @@ export function ModelsScreen({ back }: { back: Back | null }) {
   return (
     <Screen width="page" top={<NavBar title={PAGES.models} {...backBar(back)} actions={adding} />}>
       <Section title={DEFAULTS}>
-        <Columns>
+        <PickCards>
           <RoleCard role="main" {...ROLE_ROWS.main} own={main} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
           <RoleCard role="aux" {...ROLE_ROWS.aux} own={settings.models.aux} connections={connections} onPick={(ref) => pickModel('aux', ref)} {...cardOf(settings.models.aux)} />
           <RoleCard role="embed" {...ROLE_ROWS.embed} own={settings.models.embed} connections={connections} onPick={(ref) => pickModel('embed', ref)} />
-        </Columns>
+        </PickCards>
         {main && !findStarred(main, connections) && <Callout tone="warn">{`${MODEL_ROLES.main}로 정한 모델이 ${STARRED}에 없어요.`}</Callout>}
       </Section>
       <Beside side={side}>

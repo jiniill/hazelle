@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { Icon } from '../foundation/Icon';
 import { Hint, type Help } from '../overlays/Hint';
 import styles from './PickCard.module.css';
@@ -17,6 +17,11 @@ type Props = {
   ref?: Ref<HTMLButtonElement>;
   onClick: () => void;
 };
+
+// Picks that lead a page together: side by side as tiles, and on a phone one box of rows.
+export function PickCards({ children }: { children: ReactNode }) {
+  return <div className={styles.picks}>{children}</div>;
+}
 
 export function PickCard({ label, value, note, help, tone = 'plain', popup, expanded, ref, onClick }: Props) {
   // The ⓘ is a button of its own, so it stands over the card's corner, not inside the card's button.

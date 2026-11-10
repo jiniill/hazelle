@@ -12,7 +12,7 @@ import { useSearch } from '../common/useSearch';
 import { usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_PINNED, MODEL_ROLES, PAGES, promptName, STAGE_NAMES } from '../common/words';
-import { Button, CardItem, CardList, ChoiceGroup, Columns, Disclosure, Empty, FoldButton, Hint, Menu, MenuItem, PickCard, Row, Stack, Tabs } from '../ui';
+import { Button, CardItem, CardList, ChoiceGroup, Disclosure, Empty, FoldButton, Hint, Menu, MenuItem, PickCard, PickCards, Row, Stack, Tabs } from '../ui';
 import { useImport } from '../common/importing';
 import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse';
 import { byLastUse, byPromptName, groupPrompts, promptFolder as folderOf } from '../common/promptCopies';
@@ -148,12 +148,12 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   const defaultPicks = !defaults ? [] : sorts.filter(({ sort }) => sort !== 'agent').map(({ sort, label }) => ({ sort, label, prompt: prompts.find((each) => ofSort(each, sort) && isDefaultPrompt(settings, each)) }));
   const defaultCards = defaults && (
     <Disclosure label={defaultsSummary(defaultPicks)}>
-      <Columns>
+      <PickCards>
         {defaultPicks.map(({ sort, label, prompt }) => {
           if (!prompt) return <PickCard key={sort} label={label} value="없음" tone="warn" onClick={() => setShown(sort)} />;
           return <PickCard key={sort} label={label} value={promptName(prompt.value.name)} note={usage(prompt)} onClick={() => onPick(prompt.id)} />;
         })}
-      </Columns>
+      </PickCards>
     </Disclosure>
   );
 

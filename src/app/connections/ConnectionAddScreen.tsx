@@ -11,7 +11,7 @@ import { MARKS } from '../common/tutorial';
 import { useAccount, useConnections, useSession } from '../session';
 import { backBar, navigate, useRoute } from '../shell/router';
 import type { Back } from '../shell/routes';
-import { Button, Callout, Empty, GuideMark, List, ListItem, NavBar, Screen, SearchField, Section, Stack, Text } from '../ui';
+import { Button, Callout, Disclosure, Empty, GuideMark, List, ListItem, NavBar, Screen, SearchField, Section, Stack, Text } from '../ui';
 import { connect, directConnection } from './connect';
 
 const GROUPS: Record<ConnectionType['group'], string> = {
@@ -58,12 +58,36 @@ export function ConnectionAddScreen({ back }: { back: Back }) {
   const shown = search.kind === 'types' ? search.types : search.kind === 'key' ? [search.type] : [];
   const connected = (type: ConnectionType) => connections.filter((entry) => resolveConnection(entry.value)?.type === type).length;
   const connectKey = (type: ConnectionType, secret: string) => run((signal) => connect(session, providerConnection(type, secret), signal));
-  // A major type stays in its group too, so it is found in either place. A narrowed list has no 주요.
-  const sections: [string, readonly ConnectionType[]][] = [
-    ['주요', query.trim() ? [] : shown.filter((type) => type.major)],
-    ...(Object.keys(GROUPS) as ConnectionType['group'][]).map((group): [string, readonly ConnectionType[]] => [GROUPS[group], shown.filter((type) => type.group === group)]),
-  ];
+  // A major type stays in its group too, so it is found in either place. A narrowed list has no 주요, and shows its
+  // groups open; otherwise they wait folded under 주요, open from the start when the type shown beside is in them.
+  const narrowed = query.trim() !== '';
+  const groups = (Object.keys(GROUPS) as ConnectionType['group'][]).map((group): [string, readonly ConnectionType[]] => [GROUPS[group], shown.filter((type) => type.group === group)]);
+  const sections: [string, readonly ConnectionType[]][] = narrowed ? groups : [['주요', shown.filter((type) => type.major)]];
   const firstShown = sections.find(([, types]) => types.length)?.[0];
+  const [allOpen, setAllOpen] = useState(route.kind === 'connect' && !route.type.major);
+
+  const section = ([title, types]: [string, readonly ConnectionType[]]) =>
+    types.length ? (
+      <GuideMark key={title} name={title === firstShown ? MARKS.connectType : null}>
+        <Section title={title}>
+          <List label={title} places>
+            {types.map((type) => {
+              const count = connected(type);
+              return (
+                <ListItem
+                  key={type.id}
+                  title={type.label}
+                  description={type.description}
+                  tags={[type.signIn ? `${type.signIn.site} 로그인` : (type.keyForm?.label ?? 'API 키'), ...(count ? [`연결 ${count}개`] : []), ...(guest && !type.browser ? [NEEDS_ACCOUNT] : [])]}
+                  current={route.kind === 'connect' && route.type === type}
+                  onClick={() => navigate({ kind: 'connect', type })}
+                />
+              );
+            })}
+          </List>
+        </Section>
+      </GuideMark>
+    ) : null;
 
   return (
     <Screen top={<NavBar title={newOf('연결')} {...backBar(back)} />}>
@@ -83,7 +107,7 @@ export function ConnectionAddScreen({ back }: { back: Back }) {
           {failure}
         </Callout>
       )}
-      {!query.trim() && local.length > 0 && (
+      {!narrowed && local.length > 0 && (
         <Section title="이 컴퓨터의 모델 서버">
           <List label="이 컴퓨터의 모델 서버" places>
             {local.map(({ address, connection, models }) => {
@@ -101,28 +125,11 @@ export function ConnectionAddScreen({ back }: { back: Back }) {
           </List>
         </Section>
       )}
-      {sections.map(([title, types]) =>
-        types.length ? (
-          <GuideMark key={title} name={title === firstShown ? MARKS.connectType : null}>
-            <Section title={title}>
-              <List label={title} places>
-                {types.map((type) => {
-                  const count = connected(type);
-                  return (
-                    <ListItem
-                      key={type.id}
-                      title={type.label}
-                      description={type.description}
-                      tags={[type.signIn ? `${type.signIn.site} 로그인` : (type.keyForm?.label ?? 'API 키'), ...(count ? [`연결 ${count}개`] : []), ...(guest && !type.browser ? [NEEDS_ACCOUNT] : [])]}
-                      current={route.kind === 'connect' && route.type === type}
-                      onClick={() => navigate({ kind: 'connect', type })}
-                    />
-                  );
-                })}
-              </List>
-            </Section>
-          </GuideMark>
-        ) : null,
+      {sections.map(section)}
+      {!narrowed && (
+        <Disclosure label={`모든 제공자 ${shown.length}개`} open={allOpen} onOpen={setAllOpen}>
+          <Stack gap="section">{groups.map(section)}</Stack>
+        </Disclosure>
       )}
       <Section title="목록에 없는 제공자">
         <List label={DIRECT_CONNECTION} places>

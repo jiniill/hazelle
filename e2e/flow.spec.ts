@@ -282,6 +282,7 @@ test('a new account imports a card, chats through the fake provider and finds th
         : { limit: 4, used_cost: 0 } });
     });
     await page.goto('/connections/new');
+    await page.getByRole('button', { name: /^모든 제공자/ }).click();
     await page.getByRole('button', { name: /^Featherless/ }).click();
     await page.getByLabel('API 키', { exact: true }).fill('catalog-fixture-key');
     await page.getByRole('button', { name: '모델 선택', exact: true }).click();

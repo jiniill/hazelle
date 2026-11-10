@@ -1,3 +1,7 @@
+.picks {
+  composes: columns tile from '../layout/Columns.module.css';
+}
+
 .pick {
   position: relative;
   flex-grow: 1;
@@ -55,4 +59,65 @@
   position: absolute;
   top: var(--space-4);
   right: var(--space-4);
+}
+
+/* On a phone the cards stand one under another, so each is a row: what it is at the start, what is chosen at the end,
+   where that comes from under it, and the ⓘ level with the row; PickCards joins them into one box parted by rules. */
+@media (max-width: 599px) {
+  .card {
+    flex-flow: row wrap;
+    align-items: center;
+    column-gap: var(--space-12);
+    row-gap: 0;
+  }
+
+  .label {
+    flex-shrink: 0;
+    color: var(--color-text);
+    font-size: var(--text-md);
+  }
+
+  .line {
+    flex: 1 1 0;
+    justify-content: flex-end;
+  }
+
+  .value {
+    font-size: var(--text-md);
+  }
+
+  .detail {
+    flex-basis: 100%;
+    text-align: right;
+  }
+
+  .helped .card {
+    padding-right: calc(var(--space-16) + var(--control-mark));
+  }
+
+  .helped .label {
+    padding-right: 0;
+  }
+
+  .help {
+    top: 50%;
+    translate: 0 -50%;
+  }
+
+  /* A card may stand in a menu's anchor, so each child of the group is taken, not each .pick. */
+  .picks {
+    --columns-gap: 0;
+  }
+
+  .picks > :not(:first-child) .card {
+    border-top: var(--border-thin) solid var(--color-divider);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  .picks > :not(:last-child) .card {
+    border-bottom-width: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
 }

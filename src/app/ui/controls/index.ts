@@ -16,7 +16,7 @@ export { Link } from './Link';
 export { MarkupArea, typeInto } from './MarkupArea';
 export { NumberInput } from './NumberInput';
 export { PhraseField } from './PhraseField';
-export { PickCard } from './PickCard';
+export { PickCard, PickCards } from './PickCard';
 export { Pill } from './Pill';
 export { SearchField } from './SearchField';
 export { SendButton } from './SendButton';
