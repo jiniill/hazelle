@@ -1,4 +1,3 @@
-import { ChangeSignal } from '../change-signal';
 import type { InputPicture } from '../connectors/types';
 import { artistTags, picturePrompt } from '../engine/import/picture-prompt';
 import { artistOf, importedPortraits, likenessRequest, parseLikeness, rebuiltPortraits, sample, SAMPLE_MOST, SHOWN_MOST, sourcesOf, type LikenessInvalid } from '../engine/likeness';
@@ -16,6 +15,7 @@ import { PERMANENT } from './files';
 import { shownPicture } from './picture';
 import { taskWriter } from './profiles';
 import type { Session } from './session';
+import { KeyedSnapshot } from './snapshot';
 import type { ObjectStore } from './store';
 import { pageAnswer } from './streams';
 import { keepRow } from './usage';
@@ -102,24 +102,15 @@ export const restoreLikeness = (store: ObjectStore, before: Stored<'likeness'>) 
 // One build per pack at a time: a draw that needs a pack being built waits for that build.
 export class Likenesses {
   private closed = false;
-  private state: LikenessRuns = new Map();
+  private readonly state = new KeyedSnapshot<LikenessRun>();
   private readonly building = new Map<string, Promise<void>>();
   private readonly closing = new AbortController();
-  private readonly changes = new ChangeSignal();
 
   constructor(private readonly deps: Deps) {}
 
-  readonly subscribe = this.changes.subscribe;
+  readonly subscribe = this.state.subscribe;
 
-  readonly snapshot = () => this.state;
-
-  private change(owner: string, run: LikenessRun | null) {
-    const next = new Map(this.state);
-    if (run) next.set(owner, run);
-    else next.delete(owner);
-    this.state = next;
-    this.changes.notify();
-  }
+  readonly snapshot = this.state.snapshot;
 
   // Build missing profiles first in pack → cast → persona order; failures omit that owner, never the picture.
   async portraits(chat: Chat, signal: AbortSignal): Promise<Portrait[]> {
@@ -152,12 +143,12 @@ export class Likenesses {
   private start(owner: string, chat: Chat, signal: AbortSignal): Promise<void> {
     const running = this.building.get(owner);
     if (running || this.closed) return running ?? Promise.resolve();
-    this.change(owner, { stage: 'building' });
+    this.state.put(owner, { stage: 'building' });
     const run = this.build(owner, chat, AbortSignal.any([signal, this.closing.signal]))
       .then(
-        (outcome) => this.change(owner, outcome === null || outcome.kind === 'stopped' ? null : { stage: 'failed', failure: outcome }),
+        (outcome) => this.state.put(owner, outcome === null || outcome.kind === 'stopped' ? null : { stage: 'failed', failure: outcome }),
         (error: unknown) => {
-          this.change(owner, null);
+          this.state.put(owner, null);
           throw error;
         },
       )

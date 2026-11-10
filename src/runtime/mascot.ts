@@ -1,4 +1,3 @@
-import { ChangeSignal } from '../change-signal';
 import { refOf } from '../connectors/assignment';
 import { parseRemark, type RemarkInvalid } from '../engine/mascot';
 import type { RanAway } from '../engine/pipeline';
@@ -13,6 +12,7 @@ import { evaluatingTask } from './evaluation';
 import { taskWriter } from './profiles';
 import { mascotPrompt } from './prompts';
 import type { Session } from './session';
+import { KeyedSnapshot } from './snapshot';
 import type { ObjectStore } from './store';
 import { pageAnswer } from './streams';
 import { chatPlace, receiptRow } from './usage';
@@ -33,7 +33,8 @@ export type MascotFailure =
   | { kind: 'unsaved'; failure: ApiFailure };
 
 // By version: failure null while its line is written, else why the last try wrote none, kept for the session.
-export type Commenting = ReadonlyMap<string, { chat: string; message: string; failure: MascotFailure | null }>;
+type Comment = { chat: string; message: string; failure: MascotFailure | null };
+export type Commenting = ReadonlyMap<string, Comment>;
 
 type Stopped = { kind: 'stopped' };
 type Deps = Pick<Session, 'tokens' | 'store' | 'credentials' | 'log'>;
@@ -53,36 +54,27 @@ export const mascotWriterOf = (store: Pick<ObjectStore, 'get'>, chat: Chat) => t
 // Several versions are written at once, each going on when its chat is left. A failure is never tried again on its own.
 export class Commentator {
   private closed = false;
-  private state: Commenting = new Map();
+  private readonly state = new KeyedSnapshot<Comment>();
   private readonly aborts = new Map<string, AbortController>();
-  private readonly changes = new ChangeSignal();
 
   constructor(private readonly deps: Deps) {}
 
-  readonly subscribe = this.changes.subscribe;
+  readonly subscribe = this.state.subscribe;
 
-  readonly snapshot = () => this.state;
-
-  private change(version: string, entry: { chat: string; message: string; failure: MascotFailure | null } | null) {
-    const next = new Map(this.state);
-    if (entry) next.set(version, entry);
-    else next.delete(version);
-    this.state = next;
-    this.changes.notify();
-  }
+  readonly snapshot = this.state.snapshot;
 
   comment(chat: string, message: string, version: string) {
     if (this.closed || this.aborts.has(version)) return;
     const abort = new AbortController();
     this.aborts.set(version, abort);
-    this.change(version, { chat, message, failure: null });
+    this.state.put(version, { chat, message, failure: null });
     const lease = this.deps.store.retainChat(chat);
     void lease.ready
       .then(async (failure) => (failure ? { kind: 'unsaved' as const, failure } : this.run(chat, message, version, abort.signal)))
       .then(
-        (outcome) => this.change(version, outcome && outcome.kind !== 'stopped' ? { chat, message, failure: outcome } : null),
+        (outcome) => this.state.put(version, outcome && outcome.kind !== 'stopped' ? { chat, message, failure: outcome } : null),
         (error: unknown) => {
-          this.change(version, null);
+          this.state.put(version, null);
           throw error;
         },
       )

@@ -1,4 +1,3 @@
-import { ChangeSignal } from '../change-signal';
 import { agentNotes, keepsMemory, parseAgentAnswer } from '../engine/agent';
 import type { RanAway } from '../engine/pipeline';
 import { restore, type ProtectInvalid } from '../engine/protect';
@@ -16,6 +15,7 @@ import { switched } from './modules';
 import { taskWriter } from './profiles';
 import { chatPrompt, ofSort, type StoredPrompt } from './prompts';
 import type { Session } from './session';
+import { KeyedSnapshot } from './snapshot';
 import type { ObjectStore } from './store';
 import { accountSettings, changeSettings } from './account-settings';
 import { pageAnswer } from './streams';
@@ -174,39 +174,30 @@ export type Polishing = ReadonlyMap<string, Polish>;
 // and calls completed before failure (design §6.16; user, 2026-10-21).
 export class Polisher {
   private closed = false;
-  private state: Polishing = new Map();
+  private readonly state = new KeyedSnapshot<Polish>();
   private readonly aborts = new Set<AbortController>();
-  private readonly changes = new ChangeSignal();
 
   constructor(private readonly deps: Deps) {}
 
-  readonly subscribe = this.changes.subscribe;
+  readonly subscribe = this.state.subscribe;
 
-  readonly snapshot = () => this.state;
-
-  private change(version: string, entry: Polish | null) {
-    const next = new Map(this.state);
-    if (entry) next.set(version, entry);
-    else next.delete(version);
-    this.state = next;
-    this.changes.notify();
-  }
+  readonly snapshot = this.state.snapshot;
 
   // reply: the version Talk saved, which the bot's onOutput may have edited since, or the one shown for 다시 다듬기.
   // Resolves once the edit is saved or nothing is, so what reads the reply after (응답 번역, 삽화, 마스코트) reads the
   // edited one. Its chat must stay loaded until this returns (session).
   async polish(chat: string, message: string, reply: string): Promise<void> {
-    if (this.closed || this.state.get(reply)?.step) return;
+    if (this.closed || this.state.snapshot().get(reply)?.step) return;
     const { store } = this.deps;
     const stored = live(store.get('chat', chat));
     if (!stored || agentsOf(store, stored.value).post.length === 0) return;
     const abort = new AbortController();
     this.aborts.add(abort);
     try {
-      const failure = await this.run(chat, stored.value, message, reply, abort.signal, (step) => this.change(reply, { chat, message, step }));
-      this.change(reply, failure ? { chat, message, failure } : null);
+      const failure = await this.run(chat, stored.value, message, reply, abort.signal, (step) => this.state.put(reply, { chat, message, step }));
+      this.state.put(reply, failure ? { chat, message, failure } : null);
     } catch (error) {
-      this.change(reply, null);
+      this.state.put(reply, null);
       throw error;
     } finally {
       this.aborts.delete(abort);

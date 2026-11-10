@@ -1,7 +1,6 @@
 import { autoDiagnose } from './auto-diagnosis';
 import { autoChat } from './diagnostic-state';
 import { entryName } from '../connectors/types';
-import { ChangeSignal } from '../change-signal';
 import { chatMemory, memoryOwner, memorySetup, sourcesOf, storedMemory, memoryWriter, type Tools } from './memory-read';
 import { chatSent, type ChatSent } from './memory-view';
 import { MemorySchedule, type MemoryCheck } from './memory-schedule';
@@ -18,6 +17,7 @@ import { evaluationFailure, EvaluationRefused } from './evaluation';
 import type { RouteFailure } from './assignment';
 import { gather, generate, receiptOf, resume, unsettled, type Reply } from './generate';
 import type { Session } from './session';
+import { Snapshot } from './snapshot';
 import { without } from '../model/fields';
 import type { ObjectStore } from './store';
 import { callOf, endCall, newCall, type CallTarget } from './streams';
@@ -264,8 +264,7 @@ type Outcome = 'done' | 'moved' | 'stopped' | MemoryFailure;
 // never block or cancel sends.
 export class Rememberer {
   private closed = false;
-  private state: Remembering = { running: new Map(), failed: new Map(), chapterFailed: new Map(), indexing: new Map(), indexFailed: new Map() };
-  private readonly changes = new ChangeSignal();
+  private readonly state = new Snapshot<Remembering>({ running: new Map(), failed: new Map(), chapterFailed: new Map(), indexing: new Map(), indexFailed: new Map() });
   private readonly schedule = new MemorySchedule();
   // The records of chapters that failed this session, by chat, left out of the next chapter until 다시 시도, so a chapter
   // that keeps failing is not paid for on every check.
@@ -287,9 +286,9 @@ export class Rememberer {
     });
   }
 
-  readonly subscribe = this.changes.subscribe;
+  readonly subscribe = this.state.subscribe;
 
-  readonly snapshot = () => this.state;
+  readonly snapshot = this.state.snapshot;
 
   // Opening a chat tries a failed index pass again; a failed summary waits for 다시 시도.
   check(chat: string) {
@@ -335,7 +334,8 @@ export class Rememberer {
   }
 
   private change(chat: string, change: { running?: { model: string; left: number } | null; failed?: MemoryFailure | null; chapterFailed?: MemoryFailure | null; indexing?: { done: number; total: number } | null; indexFailed?: MemoryFailure | null }) {
-    const next = { running: new Map(this.state.running), failed: new Map(this.state.failed), chapterFailed: new Map(this.state.chapterFailed), indexing: new Map(this.state.indexing), indexFailed: new Map(this.state.indexFailed) };
+    const now = this.state.snapshot();
+    const next = { running: new Map(now.running), failed: new Map(now.failed), chapterFailed: new Map(now.chapterFailed), indexing: new Map(now.indexing), indexFailed: new Map(now.indexFailed) };
     if (change.running === null) next.running.delete(chat);
     else if (change.running) next.running.set(chat, change.running);
     if (change.failed === null) next.failed.delete(chat);
@@ -346,15 +346,14 @@ export class Rememberer {
     else if (change.indexing !== undefined) next.indexing.set(chat, change.indexing);
     if (change.indexFailed === null) next.indexFailed.delete(chat);
     else if (change.indexFailed) next.indexFailed.set(chat, change.indexFailed);
-    this.state = next;
-    this.changes.notify();
+    this.state.set(next);
     for (const failure of [change.failed, change.chapterFailed, change.indexFailed]) {
-      if (failure) autoDiagnose({ event: 'memory-failed', detail: failure.kind, chat: { id: chat, read: () => autoChat(this.session, chat, null, this.state) } });
+      if (failure) autoDiagnose({ event: 'memory-failed', detail: failure.kind, chat: { id: chat, read: () => autoChat(this.session, chat, null, this.state.snapshot()) } });
     }
   }
 
   private start(chat: string, check: MemoryCheck) {
-    if (this.closed || this.state.failed.has(chat) || (check === 'stale' && this.session.store.scopeState(chat) !== 'loaded')) return;
+    if (this.closed || this.state.snapshot().failed.has(chat) || (check === 'stale' && this.session.store.scopeState(chat) !== 'loaded')) return;
     if (this.schedule.queue(chat, check)) return;
     const stored = live(this.session.store.get('chat', chat));
     // A chat whose memory slot a tool holds keeps its records as they are, unsummarized, until the slot is the built-in
@@ -401,7 +400,7 @@ export class Rememberer {
   // here stops nothing else, and waits for the next chat open or 다시 시도.
   private async index(chat: string) {
     const missing = unembedded(this.session.store, chat);
-    if (!missing || (!missing.records.length && !missing.stale) || this.state.indexFailed.has(chat)) return;
+    if (!missing || (!missing.records.length && !missing.stale) || this.state.snapshot().indexFailed.has(chat)) return;
     const total = missing.records.length;
     this.change(chat, { indexing: { done: 0, total } });
     const control = new AbortController();

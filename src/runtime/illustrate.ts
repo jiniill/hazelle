@@ -1,4 +1,3 @@
-import { ChangeSignal } from '../change-signal';
 import { refOf, sameModelRef, type ModelRef } from '../connectors/assignment';
 import { resolveConnection } from '../connectors/registry';
 import { ConnectorError, type Costs, type Draws, type Picture, type PictureRequest } from '../connectors/types';
@@ -27,6 +26,7 @@ import { illustrationPrompt } from './prompts';
 import { callLabel } from './pulse';
 import { relayBytes, relayJson } from './relay';
 import type { Session } from './session';
+import { KeyedSnapshot } from './snapshot';
 import type { ObjectStore } from './store';
 import { chatPlace, receiptRow } from './usage';
 
@@ -129,26 +129,21 @@ export function imageRoute(store: Pick<ObjectStore, 'list'>, ref: ModelRef | und
 // tried again on its own.
 export class Illustrator {
   private closed = false;
-  private state: Illustrating = new Map();
+  private readonly state = new KeyedSnapshot<Drawing>();
   private readonly aborts = new Map<string, AbortController>();
-  private readonly changes = new ChangeSignal();
 
   constructor(private readonly deps: Deps) {}
 
-  readonly subscribe = this.changes.subscribe;
+  readonly subscribe = this.state.subscribe;
 
-  readonly snapshot = () => this.state;
+  readonly snapshot = this.state.snapshot;
 
   private change(message: string, drawing: Drawing | null) {
-    const next = new Map(this.state);
-    if (drawing && (drawing.writing || drawing.failure || drawing.sketches.length)) next.set(message, drawing);
-    else next.delete(message);
-    this.state = next;
-    this.changes.notify();
+    this.state.put(message, drawing && (drawing.writing || drawing.failure || drawing.sketches.length) ? drawing : null);
   }
 
   private update(message: string, change: (drawing: Drawing) => Drawing) {
-    const drawing = this.state.get(message);
+    const drawing = this.state.snapshot().get(message);
     if (drawing) this.change(message, change(drawing));
   }
 
@@ -162,7 +157,7 @@ export class Illustrator {
     if (this.closed || this.aborts.has(message)) return;
     const abort = new AbortController();
     this.aborts.set(message, abort);
-    const previous = this.state.get(message);
+    const previous = this.state.snapshot().get(message);
     const kept = scene && previous?.version === version ? previous.sketches.filter((each) => each.scene !== scene) : [];
     this.change(message, { chat, version, writing: !scene, failure: null, sketches: [...kept, ...(scene ? [{ scene, failure: null }] : [])] });
     const lease = this.deps.store.retainChat(chat);
@@ -191,7 +186,7 @@ export class Illustrator {
 
   // 닫기 on a failure: the run's, or one scene's. A run under way has none to close.
   dismiss(message: string, scene: Scene | null = null) {
-    const drawing = this.state.get(message);
+    const drawing = this.state.snapshot().get(message);
     if (!drawing || runs(drawing)) return;
     if (scene) this.sketch(message, scene, 'drawn');
     else this.change(message, { ...drawing, failure: null });
