@@ -1,5 +1,4 @@
 import type { Tokens } from './token-calibration';
-import { ChangeSignal } from '../change-signal';
 import type { RanAway } from '../engine/pipeline';
 import { toolPrompt } from '../engine/translate';
 import type { ChatScope } from '../engine/render';
@@ -22,6 +21,7 @@ import type { Costs } from './cost';
 import type { Credentials } from './credential';
 import type { RequestLog } from './request-log';
 import { gather, generate, receiptOf, resume, unsettled, type Reply } from './generate';
+import { Snapshot } from './snapshot';
 import { callOf, endCall, newCall, type CallTarget } from './streams';
 import { writerOf } from './profiles';
 import { translationPrompt } from './prompts';
@@ -188,9 +188,8 @@ export type Translating = { awaited: ReadonlySet<string>; live: ReadonlyMap<stri
 // Unlike replies, several run at once, one per version, and each goes on when its chat is left.
 export class Translator {
   private closed = false;
-  private state: Translating = { awaited: new Set(), live: new Map(), failed: new Map() };
+  private readonly state = new Snapshot<Translating>({ awaited: new Set(), live: new Map(), failed: new Map() });
   private readonly aborts = new Map<string, AbortController>();
-  private readonly changes = new ChangeSignal();
 
   constructor(
     private readonly store: ObjectStore,
@@ -203,9 +202,9 @@ export class Translator {
     private readonly cues: Cues,
   ) {}
 
-  readonly subscribe = this.changes.subscribe;
+  readonly subscribe = this.state.subscribe;
 
-  readonly snapshot = () => this.state;
+  readonly snapshot = this.state.snapshot;
 
   // A reply saved with 응답 번역 on is awaited from its save, before its turn ends, until its translation starts or
   // translateReceived passes it over and the returned settle is called.
@@ -213,19 +212,19 @@ export class Translator {
     const stored = this.store.get('chat', chat)?.value;
     if (this.closed || reply.receipt.state === 'failed' || !reply.text.trim() || !stored || !chatTranslate(this.store, stored).replies) return () => {};
     this.change(reply.id, { awaited: true });
-    return () => { if (this.state.awaited.has(reply.id)) this.change(reply.id, { awaited: false }); };
+    return () => { if (this.state.snapshot().awaited.has(reply.id)) this.change(reply.id, { awaited: false }); };
   }
 
   private change(version: string, change: { awaited?: boolean; live?: string | null; failed?: TranslatorFailure | null }) {
-    const next = { awaited: new Set(this.state.awaited), live: new Map(this.state.live), failed: new Map(this.state.failed) };
+    const now = this.state.snapshot();
+    const next = { awaited: new Set(now.awaited), live: new Map(now.live), failed: new Map(now.failed) };
     if (change.awaited) next.awaited.add(version);
     else if (change.awaited === false) next.awaited.delete(version);
     if (change.live === null) next.live.delete(version);
     else if (change.live !== undefined) next.live.set(version, change.live);
     if (change.failed === null) next.failed.delete(version);
     else if (change.failed) next.failed.set(version, change.failed);
-    this.state = next;
-    this.changes.notify();
+    this.state.set(next);
   }
 
   // Unsaved chats keep greeting translations on the character. closed prevents follow-up calls after lock.

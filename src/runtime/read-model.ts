@@ -21,21 +21,9 @@ import { withTurn, type Shown, type Talk, type Turn } from './talk';
 import { evaluateChat } from './chat-context';
 import { storedMemory } from './memory-read';
 import { SCOPED } from './object-cache';
+import { Snapshot } from './snapshot';
 import { summaryId, type ChatModel } from './summary';
 import type { ToolMenu, Tools } from './tools/facade';
-
-// Held until set: a snapshot that is a fresh value on every read would make React re-render forever.
-class Snapshot<T> {
-  private readonly changes = new ChangeSignal();
-  constructor(private value: T) {}
-  readonly snapshot = () => this.value;
-  readonly subscribe = this.changes.subscribe;
-  set(value: T) {
-    if (value === this.value) return;
-    this.value = value;
-    this.changes.notify();
-  }
-}
 
 // byCharacter includes deleted characters, but none being purged.
 export type Library = {
