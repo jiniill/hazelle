@@ -7,7 +7,7 @@ import { navigate } from '../shell/router';
 import { useToast } from '../toast';
 import { Button, Empty, Section, SettingGroup, SettingRow, Switch, Text } from '../ui';
 import { useLab } from './labs';
-import { AGENTS, promptName, SAVE_FAILED, SCOPE, STAGE_NAMES, THINGS } from './words';
+import { AGENTS, LAYERS, promptName, SAVE_FAILED, STAGE_NAMES } from './words';
 
 type Owner = { kind: 'settings' } | FeatureLayer;
 
@@ -18,7 +18,6 @@ const WORKS: Record<Owner['kind'], string> = {
   chat: '켜 둔 에이전트는 이 채팅에서만 실행돼요.',
 };
 const STACKS = '다른 곳에서 켠 에이전트도 함께 실행돼요. 후처리 에이전트는 켠 순서대로 이어서 응답을 다듬어요.';
-const FROM = { settings: SCOPE.default, prompt: THINGS.prompt.noun, character: THINGS.character.noun } as const;
 
 // own: the owner's list as stored; onChange turns one on or off there. Lists stack (design §6.16): one a farther layer
 // holds shows as on there, and is turned off only there.
@@ -31,7 +30,7 @@ export function AgentSwitches({ owner, own, onChange }: { owner: Owner; own: str
   const agents = usePrompts().filter((prompt) => ofSort(prompt, 'agent'));
   const lab = useLab('agents');
   if (!lab) return null;
-  const held = owner.kind === 'settings' ? new Map<string, keyof typeof FROM>() : inheritedAgents(store, owner);
+  const held = owner.kind === 'settings' ? new Map<string, keyof typeof LAYERS>() : inheritedAgents(store, owner);
 
   async function change(agent: string, on: boolean) {
     const saved = await onChange(agent, on);
@@ -54,7 +53,7 @@ export function AgentSwitches({ owner, own, onChange }: { owner: Owner; own: str
               key={id}
               label={promptName(value.name)}
               sub={STAGE_NAMES[value.stage]}
-              control={from ? <Text variant="note">{`${FROM[from]}에서 켜짐`}</Text> : <Switch label={promptName(value.name)} checked={own.includes(id)} onChange={(on) => void change(id, on)} />}
+              control={from ? <Text variant="note">{`${LAYERS[from]}에서 켜짐`}</Text> : <Switch label={promptName(value.name)} checked={own.includes(id)} onChange={(on) => void change(id, on)} />}
             />
           );
         })}

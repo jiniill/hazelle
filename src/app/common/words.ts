@@ -182,6 +182,8 @@ export const opens = (place: string) => `${place} 열기`;
 export const EVERY_CHAT = '모든 채팅에 적용돼요.';
 export const SCOPE = { default: '공용', chat: '이 채팅만', character: '이 캐릭터만' } as const;
 export const scopeTag = (scope: keyof typeof SCOPE) => ({ label: SCOPE[scope], tone: scope === 'default' ? 'plain' : 'accent' }) as const;
+// The layers above a chat that its features and agents come down through, by the name a screen gives each.
+export const LAYERS = { settings: SCOPE.default, prompt: THINGS.prompt.noun, character: THINGS.character.noun } as const;
 
 export const FEATURES_TITLE = '기능';
 // A switch's state in a line of facts.
