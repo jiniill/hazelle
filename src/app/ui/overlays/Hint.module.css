@@ -18,7 +18,7 @@
 
 .bubble {
   composes: floating from '../foundation/surface.module.css';
-  composes: dropIn from '../foundation/motion.module.css';
+  composes: growIn from '../foundation/motion.module.css';
   composes: note from '../foundation/type.module.css';
   position: fixed;
   top: calc(var(--anchor-below) + var(--space-8));
@@ -33,6 +33,7 @@
   text-align: start;
   white-space: normal;
   translate: var(--nudge, 0) 0;
+  transform-origin: top left;
 }
 
 /* Text under a demo keeps to the demo's width. */
@@ -50,6 +51,7 @@
 }
 
 .bubble[data-flipped] {
+  transform-origin: bottom left;
   top: auto;
   bottom: calc(var(--anchor-above) + var(--space-8));
 }

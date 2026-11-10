@@ -14,9 +14,9 @@
   border: var(--border-thin) solid var(--color-border);
   color: var(--color-text-muted);
   transition:
-    border-color var(--duration-fast),
-    background-color var(--duration-fast),
-    color var(--duration-fast);
+    border-color var(--motion-respond),
+    background-color var(--motion-respond),
+    color var(--motion-respond);
 }
 
 .buttons .choice {

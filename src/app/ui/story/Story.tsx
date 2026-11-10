@@ -676,8 +676,8 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
       const to = height();
       if (from === to) return;
       const tokens = getComputedStyle(host.current!);
-      const duration = tokens.getPropertyValue(matchMedia('(prefers-reduced-motion: reduce)').matches ? '--duration-instant' : '--duration-slow');
-      const animation = line.animate({ maxHeight: [from, to] }, { duration: milliseconds(duration), easing: tokens.getPropertyValue('--ease-enter') });
+      const duration = tokens.getPropertyValue(matchMedia('(prefers-reduced-motion: reduce)').matches ? '--duration-instant' : '--duration-spring');
+      const animation = line.animate({ maxHeight: [from, to] }, { duration: milliseconds(duration), easing: tokens.getPropertyValue('--ease-spring') });
       running.set(line, animation);
       host.current!.dispatchEvent(new Event(READER_RESIZED, { bubbles: true }));
     };

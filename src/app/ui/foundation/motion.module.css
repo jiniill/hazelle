@@ -3,19 +3,63 @@
 
 @layer looks {
   .fadeIn {
-    animation: fade var(--duration-fast) var(--ease-enter);
+    animation: fade var(--motion-enter);
   }
 
+  /* An entrance comes from the side its box opened from: up from below it, down from above, in from the end edge.
+     The transform is free for these: a box's own place and size are in `translate` and `scale`. */
   .riseIn {
-    animation: rise var(--duration-fast) var(--ease-enter);
-  }
-
-  .riseInSlow {
-    animation: rise var(--duration-slow) var(--ease-enter);
+    animation: rise var(--motion-enter);
   }
 
   .dropIn {
-    animation: drop var(--duration-fast) var(--ease-enter);
+    animation: drop var(--motion-enter);
+  }
+
+  .slideIn {
+    animation: slide-in var(--motion-enter);
+  }
+
+  /* The scale is free for this: a floating box's place is in `translate`, and whoever measures one reads it at rest
+     (layers.ts restBox). */
+  .growIn {
+    --grow-from: var(--motion-small);
+    animation: grow var(--motion-enter);
+  }
+
+  /* A wide box, a dialog or a window. */
+  .settleIn {
+    composes: growIn;
+    --grow-from: var(--motion-near);
+  }
+
+  /* After every entrance, so what leaves (leave.ts) goes the way it came instead; its parts start none of theirs
+     over, but the one it was only the ground of. */
+  [data-leaving] * {
+    animation: none;
+  }
+
+  .fadeIn[data-leaving] {
+    animation: fadeOut var(--motion-leave) forwards;
+  }
+
+  .riseIn[data-leaving],
+  [data-leaving] > .riseIn {
+    animation: sink var(--motion-leave) forwards;
+  }
+
+  .dropIn[data-leaving],
+  [data-leaving] > .dropIn {
+    animation: lift var(--motion-leave) forwards;
+  }
+
+  .slideIn[data-leaving] {
+    animation: slide-out var(--motion-leave) forwards;
+  }
+
+  .growIn[data-leaving],
+  [data-leaving] > .growIn {
+    animation: shrink var(--motion-leave) forwards;
   }
 
   /* Its duration is the user's: the class that composes it sets animation-duration. */
@@ -74,21 +118,69 @@
 
   @keyframes fade {
     from {
-      opacity: 0;
+      opacity: var(--motion-faint);
     }
   }
 
   @keyframes rise {
     from {
-      opacity: 0;
-      transform: translateY(4px);
+      opacity: var(--motion-faint);
+      transform: translateY(var(--motion-shift));
     }
   }
 
   @keyframes drop {
     from {
+      opacity: var(--motion-faint);
+      transform: translateY(calc(-1 * var(--motion-shift)));
+    }
+  }
+
+  @keyframes sink {
+    to {
       opacity: 0;
-      transform: translateY(-4px);
+      transform: translateY(var(--motion-shift));
+    }
+  }
+
+  @keyframes lift {
+    to {
+      opacity: 0;
+      transform: translateY(calc(-1 * var(--motion-shift)));
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: var(--motion-faint);
+      transform: translateX(var(--motion-slide));
+    }
+  }
+
+  @keyframes slide-out {
+    to {
+      opacity: 0;
+      transform: translateX(var(--motion-slide));
+    }
+  }
+
+  @keyframes grow {
+    from {
+      opacity: var(--motion-faint);
+      scale: var(--grow-from);
+    }
+  }
+
+  @keyframes fadeOut {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes shrink {
+    to {
+      opacity: 0;
+      scale: var(--grow-from);
     }
   }
 

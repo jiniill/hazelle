@@ -19,7 +19,7 @@
 .chevron {
   display: flex;
   color: var(--color-text-muted);
-  transition: transform var(--duration-fast);
+  transition: transform var(--motion-respond);
 }
 
 .toggle[aria-expanded='true'] .chevron {

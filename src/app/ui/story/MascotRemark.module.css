@@ -41,7 +41,7 @@
 
 .card {
   composes: floating from '../foundation/surface.module.css';
-  composes: riseIn from '../foundation/motion.module.css';
+  composes: growIn from '../foundation/motion.module.css';
   position: fixed;
   bottom: calc(var(--anchor-above) + var(--space-8));
   left: var(--anchor-left);
@@ -54,9 +54,11 @@
   padding: var(--space-12);
   border-radius: var(--radius-lg);
   translate: var(--nudge, 0) 0;
+  transform-origin: bottom left;
 }
 
 .card[data-flipped] {
+  transform-origin: top left;
   top: calc(var(--anchor-below) + var(--space-8));
   bottom: auto;
 }

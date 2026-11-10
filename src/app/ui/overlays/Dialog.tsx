@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { ButtonSlot } from '../controls/Button';
 import { IconButton } from '../controls/IconButton';
 import { Kbd } from '../foundation/Kbd';
+import { useLeaves } from '../foundation/leave';
 import { keyCaps, type Chord } from '../foundation/keys';
 import { Row } from '../layout/Row';
 import { Switcher } from '../story/StoryMessage';
@@ -48,7 +49,7 @@ export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout 
   // of where it was opened from (the sticky sidebar's) holds it under the page beside it.
   return createPortal(
     <ButtonSlot value={null}>
-    <div ref={scrim} className={size === 'normal' ? styles.scrim : `${styles.scrim} ${size === 'wide' ? styles.sheet : styles.bare}`}>
+    <div ref={useLeaves(scrim)} className={size === 'normal' ? styles.scrim : `${styles.scrim} ${size === 'wide' ? styles.sheet : styles.bare}`}>
       <div ref={box} className={size === 'normal' ? styles.dialog : `${styles.dialog} ${styles[size]}`} role="dialog" aria-modal="true" aria-label={title} onKeyDown={(event) => { trap(event); stepByKey(paged, event); }} {...swipe}>
         <div className={styles.head}>
           <h2 className={styles.title}>{title}</h2>

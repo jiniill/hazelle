@@ -11,7 +11,7 @@
   font-family: var(--screen-title-font, var(--font-serif));
   font-size: var(--text-xl);
   font-weight: var(--weight-bold);
-  transition: border-color var(--duration-fast);
+  transition: border-color var(--motion-respond);
 }
 
 .page {

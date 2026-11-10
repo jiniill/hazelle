@@ -32,7 +32,13 @@ export default {
     'function-disallowed-list': ['rgb', 'rgba', 'hsl', 'hsla'],
     // Timings are matched as text, not in TOKEN_PROPERTIES: the plugin's shorthand expansion misses a time written
     // first (`1s spin`) or listed after a var (`opacity 120ms, color var(--duration-fast)`).
-    'declaration-property-value-disallowed-list': { '/^(transition|animation)/': ['/(^|[\\s,(])-?[\\d.]+m?s\\b/'] },
+    // A transition names a role (--motion-*), which holds its time and curve together: no --duration-* paired with a
+    // curve by hand or left to the browser's curve. One stays before step-* or linear, and as a delay.
+    'declaration-property-value-disallowed-list': {
+      '/^(transition|animation)/': ['/(^|[\\s,(])-?[\\d.]+m?s\\b/'],
+      '/^transition$/': ['/(^|,)\\s*[a-z-]+\\s+var\\(--duration-(?!instant)[a-z]+\\)(?!\\s+(step-|linear))/'],
+      '/^transition-(duration|timing-function)$/': ['/var\\(--(duration|ease)-(?!instant)/'],
+    },
     'scale-unlimited/declaration-strict-value': [
       TOKEN_PROPERTIES,
       {

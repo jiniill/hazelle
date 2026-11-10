@@ -21,9 +21,9 @@
   overflow: hidden;
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  transition-property: width, margin-left;
-  transition-duration: var(--duration-slow);
-  transition-timing-function: var(--ease-enter);
+  transition:
+    width var(--motion-move),
+    margin-left var(--motion-move);
 }
 
 /* A touch screen keeps :hover on whatever was tapped last. */

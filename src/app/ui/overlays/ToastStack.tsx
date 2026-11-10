@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type Key, type PointerEvent, type ReactNode, type RefObject } from 'react';
+import { leaves, useLeaves } from '../foundation/leave';
 import { useWide } from '../foundation/media';
 import styles from './ToastStack.module.css';
 
@@ -19,6 +20,8 @@ type Props = {
 
 export function ToastStack({ items, waiting, held: open, onHold: hold, floor }: Props) {
   const holding = useHold(open, hold);
+  // The stack goes with its last notice, and leaves with it.
+  const leaving = useLeaves(holding.ref);
   // Away from where the stack stands: down from the bottom on a wide screen, up past the header on a phone.
   const away = useWide() ? 1 : -1;
   useFloor(holding.ref, floor, items.length > 0);
@@ -63,11 +66,13 @@ export function ToastStack({ items, waiting, held: open, onHold: hold, floor }: 
       className={open ? `${styles.stack} ${styles.open}` : styles.stack}
       style={{ '--front': `${front}px`, '--front-width': `${sizes.get(items[0]!.key)?.width ?? 0}px`, '--total': `${total}px`, '--count': items.length } as CSSProperties}
       {...holding}
+      ref={leaving}
     >
       {items.map(({ key, toast, onClose }, index) => (
         <div
           key={key}
-          className={index > 0 && !open ? `${styles.item} ${styles.behind}` : styles.item}
+          ref={leaves}
+          className={`${styles.item} ${away === 1 ? styles.rises : styles.drops}${index > 0 && !open ? ` ${styles.behind}` : ''}`}
           style={{ '--index': index, '--lift': `${lifts[index]}px` } as CSSProperties}
           inert={index > 0 && !open}
         >
@@ -85,7 +90,9 @@ export function ToastStack({ items, waiting, held: open, onHold: hold, floor }: 
 function useFloor(stack: RefObject<HTMLDivElement | null>, floor: HTMLElement | null, shown: boolean) {
   useLayoutEffect(() => {
     const element = stack.current;
-    if (!element || !floor) return;
+    if (!element) return;
+    // Not in the cleanup: the stack keeps its place while it leaves.
+    if (!floor) return void element.style.removeProperty('--rise');
     // Suspense hides the chat, composer and all, while the next screen loads: then the stack stands at the bottom.
     const measure = () => {
       const { top, height } = floor.getBoundingClientRect();
@@ -98,7 +105,6 @@ function useFloor(stack: RefObject<HTMLDivElement | null>, floor: HTMLElement | 
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', measure);
-      element.style.removeProperty('--rise');
     };
   }, [stack, floor, shown]);
 }

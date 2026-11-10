@@ -6,8 +6,9 @@ import { Item } from '../collections/Item';
 import { ButtonSlot } from '../controls/Button';
 import { CheckMark, Icon } from '../foundation/Icon';
 import { faceStyle, type FontId } from '../foundation/fonts';
+import { useLeaves } from '../foundation/leave';
 import { hasFinePointer } from '../foundation/media';
-import { keepOnScreen, menuEdge, openingField, room, useLayer } from './layers';
+import { keepOnScreen, menuEdge, openingField, restBox, room, useLayer } from './layers';
 import styles from './Menu.module.css';
 
 export type MenuOpener = { ref: RefObject<HTMLButtonElement | null>; popup: 'menu' | 'dialog'; expanded: boolean; onClick: () => void };
@@ -67,6 +68,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   const opener = useMenuOpener(menu);
   const anchor = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
+  const leaving = useLeaves(panel);
 
   const close = (refocus: boolean) => {
     menu.set(CLOSED);
@@ -85,7 +87,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   const holders = useContext(Holders);
   const hide = useMemo(() => () => menu.set(CLOSED), [menu]);
   const held = useMemo(() => [...holders, hide], [holders, hide]);
-  // Before paint, so two menus are never drawn at once.
+  // Before paint, so two menus never stand open at once; the one closed may still be leaving.
   useLayoutEffect(() => {
     if (!open) return;
     for (const other of shown.filter((each) => !holders.includes(each))) other();
@@ -115,7 +117,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
       return;
     }
     keepOnScreen(panel.current);
-    const box = panel.current.getBoundingClientRect();
+    const box = restBox(panel.current);
     const edge = menuEdge(panel.current);
     const { top, bottom } = room(panel.current);
     panel.current.style.setProperty('--room', `${side.startsWith('above') ? box.bottom - top - edge : bottom - box.top - edge}px`);
@@ -124,7 +126,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   // At the pointer it stands on the screen, not in its anchor's column: a list narrower than the menu would clip it.
   const body = (
     <div
-      ref={panel}
+      ref={leaving}
       className={`${styles.menu} ${at ? styles.point : styles[side]} ${styles[size]} ${kind === 'dialog' ? styles.dialog : ''}`}
       role={kind}
       aria-label={label}

@@ -56,7 +56,7 @@
   right: var(--space-8);
   border-radius: var(--radius-full);
   background: var(--color-surface-raised);
-  transition: opacity var(--duration-fast);
+  transition: opacity var(--motion-respond);
 }
 
 /* A touch screen keeps :hover on whatever was tapped last, so there the ⋯ stays shown. */

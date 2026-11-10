@@ -600,7 +600,27 @@
   /* One round of an ⓘ's demo; its steps are shares of it. */
   --duration-demo: 4.6s;
   --ease-enter: ease-out;
+  --ease-swift: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-loop: ease-in-out;
+  /* A spring without bounce, sampled: it starts from rest and settles, as a thing with weight does. */
+  --ease-spring: linear(0, 0.082 5%, 0.243 10%, 0.413 15%, 0.562 20%, 0.773 30%, 0.89 40%, 0.949 50%, 0.977 60%, 0.99 70%, 0.995 80%, 1);
+  --duration-spring: 300ms;
+  /* Roles: a transition names one, so its time and curve are never paired by hand (stylelint). respond: a control
+     answering, in color or opacity, which it takes at once under the pointer and eases only as the pointer leaves
+     (hover.module.css). enter: a thing arriving. move: a thing changing place or size; both on the one spring, so
+     everything that moves moves alike. leave: a thing going, sooner than it came. */
+  --motion-respond: var(--duration-fast) var(--ease-swift);
+  --motion-enter: var(--duration-spring) var(--ease-spring);
+  --motion-move: var(--motion-enter);
+  --motion-leave: var(--duration-fast) ease-in;
+  /* How small a floating box starts and ends, at its origin, the corner nearest what opened it: a wide one, a dialog
+     or a window, travels as far by less. */
+  --motion-small: 0.96;
+  --motion-near: 0.98;
+  --motion-shift: 4px;
+  --motion-slide: 24px;
+  /* Where an entrance starts, not from nothing: its first frame already shows the thing, so a press is answered at once. */
+  --motion-faint: 0.5;
 
   /* Keep toast above menus/panels/tutorials/dialogs so failures remain actionable; only file drop is higher. */
   /* The first visitor's night walk (ui/landing). Fixed in both themes: it is a place, not a surface. */

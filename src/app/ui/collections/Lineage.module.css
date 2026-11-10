@@ -133,8 +133,8 @@
   white-space: nowrap;
   transform: translate(-50%, -50%);
   transition:
-    border-color var(--duration-fast),
-    background var(--duration-fast);
+    border-color var(--motion-respond),
+    background var(--motion-respond);
 }
 
 .pill:is(button):hover,

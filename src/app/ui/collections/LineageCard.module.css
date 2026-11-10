@@ -13,8 +13,8 @@
   box-shadow: var(--shadow-card);
   text-align: start;
   transition:
-    border-color var(--duration-fast),
-    background var(--duration-fast);
+    border-color var(--motion-respond),
+    background var(--motion-respond);
 }
 
 .card:is(button):hover {

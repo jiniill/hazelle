@@ -92,12 +92,24 @@ export function room(element: HTMLElement) {
   return { left, top, right, bottom };
 }
 
+// A floating box where it rests: while it grows in (motion.module.css growIn) it is drawn smaller, about its origin.
+export function restBox(element: HTMLElement) {
+  const box = element.getBoundingClientRect();
+  const style = getComputedStyle(element);
+  const scale = parseFloat(style.scale);
+  if (!(scale < 1)) return box;
+  const [x, y] = style.transformOrigin.split(' ').map(parseFloat) as [number, number];
+  const left = box.left - x * (1 - scale);
+  const top = box.top - y * (1 - scale);
+  return { left, top, right: left + box.width / scale, bottom: top + box.height / scale };
+}
+
 export const menuEdge = (element: HTMLElement) => tokenPx('--menu-edge', element);
 
 export function keepOnScreen(element: HTMLElement) {
   // Measured unshifted: --nudge inherits, so a popover inside another would otherwise start from the outer one's shift.
   element.style.setProperty('--nudge', '0px');
-  const box = element.getBoundingClientRect();
+  const box = restBox(element);
   const edge = menuEdge(element);
   const { left, right } = room(element);
   const shift = box.left < left + edge ? left + edge - box.left : box.right > right - edge ? right - edge - box.right : 0;
@@ -123,7 +135,7 @@ export function useAnchored(open: boolean, popover: RefObject<HTMLElement | null
     const frame = anchor.current!.closest('[aria-modal="true"]')?.getBoundingClientRect();
     const top = Math.max(0, frame?.top ?? 0);
     const bottom = Math.min(window.innerHeight, frame?.bottom ?? Infinity);
-    const box = element.getBoundingClientRect();
+    const box = restBox(element);
     const above = at.top - top;
     const below = bottom - at.bottom;
     if (box.top >= at.bottom ? box.bottom > bottom && above > below : box.top < top && below > above) element.dataset.flipped = '';

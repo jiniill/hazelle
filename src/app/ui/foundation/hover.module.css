@@ -5,8 +5,8 @@
   /* A class that composes these and transitions more writes the whole list. */
   .eased {
     transition:
-      background-color var(--duration-fast) var(--ease-enter),
-      color var(--duration-fast) var(--ease-enter);
+      background-color var(--motion-respond),
+      color var(--motion-respond);
   }
 
   .fill {
@@ -47,10 +47,12 @@
 @media (hover: hover) {
   .fill:hover:not(:disabled) {
     background: var(--color-surface-hover);
+    transition-duration: var(--duration-instant);
   }
 
   .ink:hover:not(:disabled) {
     color: var(--color-text);
+    transition-duration: var(--duration-instant);
   }
 }
 

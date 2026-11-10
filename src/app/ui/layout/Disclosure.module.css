@@ -1,7 +1,6 @@
 .disclosure {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
 }
 
 .head {
@@ -40,7 +39,7 @@
 
 .chevron {
   display: flex;
-  transition: transform var(--duration-fast);
+  transition: transform var(--motion-respond);
 }
 
 /* One line high, so the chevron stands level with the first line of a question that wraps. */
@@ -54,13 +53,44 @@
   transform: rotate(90deg);
 }
 
+/* A grid row, the one height that eases to its content's. */
+.fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--motion-move);
+}
+
+.fold[hidden] {
+  display: none;
+}
+
+.unfolded {
+  grid-template-rows: 1fr;
+}
+
 .body {
   composes: note from '../foundation/type.module.css';
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+  min-height: 0;
+  padding-top: var(--space-8);
+  overflow: hidden;
 }
 
-.body[hidden] {
-  display: none;
+/* Unfolded it clips nothing, so a menu or a focus ring inside reaches past it; only once the unfolding is over. */
+.unfolded > .body {
+  overflow: visible;
+  transition: overflow var(--duration-spring) step-end allow-discrete;
+}
+
+/* Where an unfolding starts. One that stood open when made has none, and is simply there. */
+@starting-style {
+  .unfolds.unfolded {
+    grid-template-rows: 0fr;
+  }
+
+  .unfolds.unfolded > .body {
+    overflow: hidden;
+  }
 }

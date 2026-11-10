@@ -7,9 +7,9 @@
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
   transition:
-    border-color var(--duration-fast),
-    background-color var(--duration-fast),
-    color var(--duration-fast);
+    border-color var(--motion-respond),
+    background-color var(--motion-respond),
+    color var(--motion-respond);
 }
 
 .vote:hover {
