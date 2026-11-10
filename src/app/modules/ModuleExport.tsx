@@ -1,7 +1,7 @@
 import { exportModule } from '../../runtime/export/card-file';
 import { fileNamed } from '../common/download';
 import { FileExport } from '../common/FileExport';
-import { moduleName } from '../common/words';
+import { moduleName, THINGS } from '../common/words';
 import { useFiles, useStore } from '../session';
 
 const LEFT =
@@ -10,7 +10,7 @@ const LEFT =
 export function ModuleExport({ id, name, onClose }: { id: string; name: string; onClose: () => void }) {
   const store = useStore();
   const files = useFiles();
-  const file = fileNamed(name, moduleName(''), 'risum');
+  const file = fileNamed(name, THINGS.module.noun, 'risum');
 
   return (
     <FileExport
