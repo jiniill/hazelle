@@ -2,7 +2,7 @@ import type { LogRow, OwnCap } from '../../contracts/admin';
 import { readLog } from '../../runtime/admin';
 import { sizeText } from '../common/size';
 import { ago, moment } from '../common/time';
-import { BOARD, NOTICES } from '../common/words';
+import { BOARD, NOTICES, onOff } from '../common/words';
 import { navigate } from '../shell/router';
 import { ListItem, Panel } from '../ui';
 import { restoreError } from '../common/RestoresDialog';
@@ -75,9 +75,11 @@ function detailOf(row: LogRow): string | undefined {
     case 'set-service':
       return `가입 정원 ${row.detail.signupCap}명 · 계정당 텍스트 한도 ${capWords(row.detail.accountBytesCap)} · 계정당 이미지 한도 ${capWords(row.detail.accountFileBytesCap)}`;
     case 'set-backup-folder':
+      return row.detail.folder ?? '폴더 없음';
     case 'set-pulse':
+      return `손님 집계 ${onOff(row.detail.guests)}`;
     case 'block-share':
-      return JSON.stringify(row.detail);
+      return `버전 ${row.detail.version}`;
     // The rest carry no detail.
     default:
       return undefined;
