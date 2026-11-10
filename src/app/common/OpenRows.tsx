@@ -3,7 +3,7 @@ import type { ApiResult } from '../../runtime/api';
 import { useToast } from '../toast';
 import { Button, ListItem, openingFocus, Row, Stack, Tag, Text } from '../ui';
 import { withParticle } from './particles';
-import { REMOVE_FAILED } from './words';
+import { useRemoval, type Removal } from './useRemoval';
 
 // Lore opens several for side-by-side reading/copying (user ruling, not a kit limit); a script editor's one open row is
 // its caller's.
@@ -23,6 +23,7 @@ export function useOpenRows() {
 // the focus in its first field, which brings it into view.
 export function useRowEdits(setOpen: (id: string, on: boolean) => void) {
   const toast = useToast();
+  const removal = useRemoval();
   const [added, setAdded] = useState<string | null>(null);
   const opening = (id: string) => (id === added ? openingFocus : undefined);
 
@@ -35,14 +36,9 @@ export function useRowEdits(setOpen: (id: string, on: boolean) => void) {
     if (!saved.ok) toast.failed(saved, `${withParticle(noun, '을/를')} 추가하지 못했어요.`);
   }
 
-  // removing: through the row's save queue, so a save still waiting never writes after the delete; null when a change
-  // waiting in it could not be stored, so the delete did not run.
-  async function remove<R>({ id, noun, name }: { id: string; noun: string; name: string }, removing: Promise<ApiResult<R> | null>, restore: (removed: R) => Promise<ApiResult<unknown>>) {
-    const done = await removing;
-    if (!done) return;
-    if (!done.ok) return toast.failed(done, REMOVE_FAILED);
-    setOpen(id, false);
-    toast.undoable(`'${name}' ${withParticle(noun, '을/를')} 삭제했어요.`, () => restore(done.data));
+  // queue: the row's save queue, so a save still waiting never writes after the delete.
+  async function remove<R>({ id, name, ...removing }: Pick<Removal<R>, 'noun' | 'task' | 'queue' | 'restore'> & { id: string; name: string }) {
+    if (await removal({ ...removing, name: () => name })) setOpen(id, false);
   }
 
   return { opening, add, remove };

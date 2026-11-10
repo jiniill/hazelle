@@ -6,11 +6,11 @@ import { namedObject, REMOVE_FAILED } from './words';
 
 // name: read from what was deleted, which the queue (useAutosave's remove) saved its pending edits to first. then:
 // leaving the deleted thing, before its 되돌리기 shows. detail: under the 되돌리기, such as BIN_KEEPS.
-type Removal<T> = {
+export type Removal<T> = {
   name: (removed: T) => string;
   noun: string;
   task: () => Promise<ApiResult<T>>;
-  queue?: <R extends { ok: boolean }>(task: () => Promise<R>) => Promise<R | null>;
+  queue?: (task: () => Promise<ApiResult<T>>) => Promise<ApiResult<T> | null>;
   restore: (removed: T) => ReturnType<Parameters<Toasts['undoable']>[1]>;
   then?: () => void;
   detail?: string;

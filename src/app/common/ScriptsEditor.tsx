@@ -156,7 +156,7 @@ function useScriptActions({ owner, pack, drop }: ItemProps, list: ScriptList, sc
       <SettingGroup label="켬">
         <SettingRow label="켬" control={<Switch label="켬" checked={!script.off} onChange={(on) => toast.settled(setScriptOff(store, owner, list, script.id, !on), SAVE_FAILED)} />} />
       </SettingGroup>
-      <RowFoot noun={SCRIPTS[list]} words={words} onRemove={() => void drop({ id: script.id, noun: SCRIPTS[list], name }, remove(() => removeScript(store, owner, list, script.id)), (removed) => restoreScript(store, owner, removed))}>
+      <RowFoot noun={SCRIPTS[list]} words={words} onRemove={() => void drop({ id: script.id, noun: SCRIPTS[list], name, task: () => removeScript(store, owner, list, script.id), queue: remove, restore: (removed) => restoreScript(store, owner, removed) })}>
         {move(-1, ChevronUp, '위로')}
         {move(1, ChevronDown, '아래로')}
       </RowFoot>

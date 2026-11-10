@@ -11,6 +11,7 @@ import { EntryList } from './EntryList';
 import { describeLikenessFailure } from './failure';
 import { filled, typedText } from './typed';
 import { useAutosave } from './useAutosave';
+import { useRemoval } from './useRemoval';
 import { portraitName, REMOVE_FAILED } from './words';
 
 const SOURCES: Record<PortraitSource, string> = { metadata: '이미지 메타데이터', vision: '이미지 분석', text: '캐릭터 설명', user: '직접 입력' };
@@ -24,6 +25,7 @@ export function PortraitsEditor({ owner }: { owner: string }) {
   const store = useStore();
   const saves = useSaves();
   const toast = useToast();
+  const removal = useRemoval();
   const stored = useStored('likeness', likenessId(owner));
   const run = useLikenessRuns().get(owner);
   const likenesses = useLikenesses();
@@ -67,12 +69,17 @@ export function PortraitsEditor({ owner }: { owner: string }) {
     toast.undoable(`인물 ${read.portraits.length}명을 가져왔어요.`, () => (before ? restoreLikeness(store, before) : removeLikeness(store, owner)), replaced ? `이름이 같은 ${replaced}명은 바꿨어요.` : undefined);
   }
 
-  async function remove(index: number, name: string) {
-    await settle();
-    const removed = await removePortrait(store, owner, { index, name });
-    if (!removed.ok) return toast.failed(removed, REMOVE_FAILED);
-    toast.undoable(`'${portraitName(name)}' 프로필을 삭제했어요.`, () => restoreLikeness(store, removed.data));
-  }
+  const remove = (index: number, name: string) =>
+    removal({
+      name: () => portraitName(name),
+      noun: '프로필',
+      task: () => removePortrait(store, owner, { index, name }),
+      queue: async (task) => {
+        await settle();
+        return task();
+      },
+      restore: (removed) => restoreLikeness(store, removed),
+    });
 
   return (
     <Stack gap="section">
