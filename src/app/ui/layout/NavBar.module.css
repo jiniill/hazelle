@@ -46,8 +46,8 @@
   word-break: keep-all;
   overflow-wrap: anywhere;
   /* Read from Shell.module.css: in a layer's window, titles stand in the sans face, smaller. */
-  font-family: var(--screen-title-font, var(--font-serif));
-  font-size: var(--screen-title-size, var(--text-display));
+  font-family: var(--screen-title-font);
+  font-size: var(--screen-title-size);
   font-weight: var(--weight-bold);
 }
 

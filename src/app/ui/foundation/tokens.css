@@ -284,6 +284,8 @@
   --font-sans: 'IBM Plex Sans KR', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', 'IBM Plex Sans KR', monospace;
   --font-brand: 'NanumSquareRound', var(--font-sans);
+  /* A screen's title; the settings window (Shell.module.css) sets its own. */
+  --screen-title-font: var(--font-serif);
   --font-nanum-myeongjo: 'Nanum Myeongjo', var(--font-serif);
   --font-noto-serif: 'Noto Serif KR', var(--font-serif);
   --font-hahmlet: 'Hahmlet', var(--font-serif);
@@ -307,6 +309,7 @@
   --text-lg: 16px;
   --text-xl: 20px;
   --text-display: 30px;
+  --screen-title-size: var(--text-display);
   --text-hero: 64px;
   /* iOS zooms the page when a field under 16px takes focus. A viewport scale limit would stop it and pinch zoom with it. */
   --text-entry-min: 0px;

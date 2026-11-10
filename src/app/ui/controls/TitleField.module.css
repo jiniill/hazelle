@@ -8,14 +8,14 @@
   background: transparent;
   color: var(--color-text);
   height: var(--control-md);
-  font-family: var(--screen-title-font, var(--font-serif));
+  font-family: var(--screen-title-font);
   font-size: var(--text-xl);
   font-weight: var(--weight-bold);
   transition: border-color var(--motion-respond);
 }
 
 .page {
-  font-size: var(--screen-title-size, var(--text-display));
+  font-size: var(--screen-title-size);
 }
 
 .line {

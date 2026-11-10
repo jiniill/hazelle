@@ -32,7 +32,7 @@ export function Section({ title, anchor, level = 2, note, help, tag, action, see
     <section className={classNames(styles.section, styles[`level${level}`], group && styles.group)}>
       <div ref={head} id={anchor} className={styles.head}>
         <span className={styles.name}>
-          <Heading className={styles.title}>{title}</Heading>
+          <Heading className={level === 2 ? styles.title2 : group ? styles.groupTitle3 : styles.title3}>{title}</Heading>
           {tag && (
             <span className={styles.tag}>
               <Tag tone={tag.tone}>{tag.label}</Tag>

@@ -33,7 +33,7 @@ function declarations(rule) {
 }
 
 // error composes note, so its font-size is note's.
-const textLooks = looksIn('type.module.css', ['note', 'detail', 'title', 'fieldLabel', 'error']);
+const textLooks = looksIn('type.module.css', ['note', 'detail', 'title', 'titleLg', 'fieldLabel', 'error']);
 textLooks.set('error', { ...textLooks.get('note'), ...textLooks.get('error') });
 const track = looksIn('surface.module.css', ['track']).get('track');
 const grounds = looksIn('surface.module.css', ['glass', 'floating']);

@@ -25,6 +25,12 @@
     font-weight: var(--weight-semibold);
   }
 
+  .titleLg {
+    color: var(--color-text);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+  }
+
   .fieldLabel {
     color: var(--color-text);
     font-size: var(--text-md);

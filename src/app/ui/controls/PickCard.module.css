@@ -34,9 +34,7 @@
 
 .value {
   composes: ellipsis from '../foundation/a11y.module.css';
-  color: var(--color-text);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
+  composes: titleLg from '../foundation/type.module.css';
 }
 
 .warn {

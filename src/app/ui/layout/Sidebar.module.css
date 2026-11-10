@@ -31,7 +31,7 @@
 }
 
 .title {
-  font-family: var(--screen-title-font, var(--font-serif));
+  font-family: var(--screen-title-font);
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
 }

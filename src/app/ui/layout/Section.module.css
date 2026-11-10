@@ -20,17 +20,16 @@
   gap: var(--space-12);
 }
 
-.level2 .title {
-  color: var(--color-text);
+.title2 {
+  composes: titleLg from '../foundation/type.module.css';
   font-size: var(--section-title, var(--text-lg));
-  font-weight: var(--weight-semibold);
 }
 
 .level3 {
   gap: var(--space-8);
 }
 
-.level3 .title {
+.title3 {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -54,10 +53,8 @@
   border-bottom: var(--border-thin) solid var(--color-divider);
 }
 
-.group.level3 > .head .title {
-  color: var(--color-text);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
+.groupTitle3 {
+  composes: titleLg from '../foundation/type.module.css';
 }
 
 .note {
