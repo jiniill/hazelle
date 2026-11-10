@@ -2,7 +2,7 @@ import { isRecord } from '../connectors/values';
 import type { Change, Chapter, Fact, Line, Memory, MemoryRecord, Source, Thread, Written } from '../model/memory';
 import type { MemoryPrompt } from '../model/prompt';
 import { args } from './lorebook/decorators';
-import { isText, ONE_OBJECT } from './answer-json';
+import { answerJson, isText, ONE_OBJECT } from './answer-json';
 
 // covered messages leave chat slots; missing counts those with no sent memory (stale/over/forgotten/unreachable slot).
 // slot reports prompt reachability independently of content. by null selects built-in sent records/chapters;
@@ -543,8 +543,9 @@ function linesSaid(lines: Line[], source: string): Line[] {
 // messages' texts as the prompt rendered them) exactly and every field present, with the key lines its own messages
 // say (linesSaid).
 export function parseRecords(answer: string, span: string[]): { ok: true; records: Drafted[] } | { ok: false; reason: Invalid } {
-  const parsed = jsonOf(answer);
-  if (parsed === undefined) return { ok: false, reason: 'unreadable' };
+  const read = answerJson(answer);
+  if (!read.ok) return { ok: false, reason: 'unreadable' };
+  const parsed = read.value;
   if (!isRecord(parsed) || !Array.isArray(parsed.records) || !parsed.records.length) return { ok: false, reason: 'shape' };
   const records: Drafted[] = [];
   let from = 0;
@@ -561,20 +562,13 @@ export function parseRecords(answer: string, span: string[]): { ok: true; record
 
 // A chapter job's answer, by the same rules over its whole span, with no state or threads.
 export function parseChapter(answer: string, span: string[]): { ok: true; chapter: Scene } | { ok: false; reason: Invalid } {
-  const parsed = jsonOf(answer);
-  if (parsed === undefined) return { ok: false, reason: 'unreadable' };
+  const read = answerJson(answer);
+  if (!read.ok) return { ok: false, reason: 'unreadable' };
+  const parsed = read.value;
   if (!isRecord(parsed) || !isRecord(parsed.chapter)) return { ok: false, reason: 'shape' };
   const chapter = sceneOf(parsed.chapter);
   if (typeof chapter === 'string') return { ok: false, reason: chapter };
   return { ok: true, chapter: { ...chapter, lines: linesSaid(chapter.lines, span.join('\n')) } };
-}
-
-function jsonOf(answer: string): unknown {
-  try {
-    return JSON.parse(answer.slice(answer.indexOf('{'), answer.lastIndexOf('}') + 1));
-  } catch {
-    return undefined;
-  }
 }
 
 function sceneOf(item: Record<string, unknown>): Scene | Field {
