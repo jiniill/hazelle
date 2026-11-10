@@ -9,9 +9,10 @@ import { exportRisuChats } from '../../runtime/risu-export';
 import { newOf } from '../common/acts';
 import { fileNamed } from '../common/download';
 import { runExport } from '../common/exporting';
-import { BIN_KEEPS, COPY_SAID, copyName, MODEL_SETTINGS, moduleName, namedObject, promptName, RISU_CHAT_FILE, risuLeftOut, TOOL } from '../common/words';
+import { BIN_KEEPS, COPY_SAID, copyName, moduleName, namedObject, promptName, RISU_CHAT_FILE, risuLeftOut, THINGS, TOOL } from '../common/words';
 import { useFiles, useStore } from '../session';
 import { navigate } from '../shell/router';
+import { useMaking } from '../common/useMaking';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import type { Editing } from './editing';
@@ -22,15 +23,14 @@ type Shelf = CharacterShelf<ChatSummary>;
 export type CharacterActions = ReturnType<typeof useCharacterActions>;
 // what is all that 영구 삭제 takes, as the object of 영구 삭제해요.
 export type Binned = { kind: Removable; id: string; name: string; what: string };
-const NOUN: Record<Removable, string> = { character: '캐릭터', chat: '채팅', module: '모듈', prompt: '프롬프트', persona: '페르소나', profile: MODEL_SETTINGS };
-const one = (kind: Exclude<Removable, 'character' | 'chat'>, id: string, name: string): Binned => ({ kind, id, name, what: namedObject(name, NOUN[kind]) });
+const one = (kind: Exclude<Removable, 'character' | 'chat'>, id: string, name: string): Binned => ({ kind, id, name, what: namedObject(name, THINGS[kind].noun) });
 
 export const binnedCharacter = (shelf: Shelf): Binned => {
   const name = shelf.character.card.name;
   return { kind: 'character', id: shelf.id, name, what: namedObject(name, withChats(shelf)) };
 };
 
-export const binnedChat = ({ id, title }: ChatSummary): Binned => ({ kind: 'chat', id, name: title, what: namedObject(title, NOUN.chat) });
+export const binnedChat = ({ id, title }: ChatSummary): Binned => ({ kind: 'chat', id, name: title, what: namedObject(title, THINGS.chat.noun) });
 export const binnedModule = ({ id, value }: Stored<'module'>): Binned => one('module', id, moduleName(value.name));
 export const binnedPrompt = ({ id, value }: Stored<'prompt'>): Binned => one('prompt', id, promptName(value.name));
 export const binnedPersona = ({ id, value }: Stored<'persona'>): Binned => one('persona', id, value.name);
@@ -41,13 +41,16 @@ const made = new Set<string>();
 
 export function useNewCharacter() {
   const store = useStore();
-  const toast = useToast();
-  return () => {
-    const id = crypto.randomUUID();
-    made.add(id);
-    toast.settled(createCharacter(store, newOf('캐릭터'), id), '캐릭터를 만들지 못했어요.');
-    navigate({ kind: 'edit', character: id, part: 'profile' });
-  };
+  const making = useMaking();
+  return () =>
+    making.create(
+      'character',
+      (id) => {
+        made.add(id);
+        return createCharacter(store, newOf(THINGS.character.noun), id);
+      },
+      (id) => navigate({ kind: 'edit', character: id, part: 'profile' }),
+    );
 }
 
 export function useJustMade(id: string) {
@@ -79,17 +82,17 @@ export function useCharacterActions(editing?: Editing) {
   function exportFile({ id, character }: Shelf) {
     runExport(
       toast,
-      fileNamed(character.card.name, '캐릭터', 'charx'),
+      fileNamed(character.card.name, THINGS.character.noun, 'charx'),
       (output, progress) => exportCharacter(store, files, id, output, progress),
       (label) => setBusy(label === null ? null : { id, label }),
-      ({ tools }) => toast.show(`'${character.card.name}' 캐릭터를 내보냈어요.`, tools ? { detail: `${TOOL} ${tools}개는 빼고 내보냈어요.` } : undefined),
+      ({ tools }) => toast.show(`${namedObject(character.card.name, THINGS.character.noun)} 내보냈어요.`, tools ? { detail: `${TOOL} ${tools}개는 빼고 내보냈어요.` } : undefined),
     );
   }
 
   function exportChats({ id, character }: Shelf) {
     runExport(
       toast,
-      fileNamed(`${character.card.name}_all_chats`, '채팅', 'json'),
+      fileNamed(`${character.card.name}_all_chats`, THINGS.chat.noun, 'json'),
       (output, progress) => exportRisuChats({ store }, id, output, progress),
       (label) => setBusy(label === null ? null : { id, label }),
       (left) => toast.show(`'${character.card.name}'의 ${RISU_CHAT_FILE}을 내보냈어요.`, risuLeftOut(left) ? { detail: risuLeftOut(left) } : undefined),
@@ -101,14 +104,14 @@ export function useCharacterActions(editing?: Editing) {
 
   function restore({ kind, id, name }: Binned) {
     toast.settled(markDeleted(store, kind, id, null));
-    toast.show(`${namedObject(name, NOUN[kind])} 복원했어요.`);
+    toast.show(`${namedObject(name, THINGS[kind].noun)} 복원했어요.`);
   }
 
   async function purge({ kind, id, name }: Binned) {
     setBusy({ id, label: '삭제 중' });
     const removed = await purgeNow(store, files, kind, id, (done, total) => setBusy({ id, label: `삭제 중 · ${done} / ${total}` }));
     setBusy(null);
-    if (removed.ok) toast.show(`${namedObject(name, NOUN[kind])} 영구 삭제했어요.`);
+    if (removed.ok) toast.show(`${namedObject(name, THINGS[kind].noun)} 영구 삭제했어요.`);
     else toast.failed(removed, '일부 항목을 삭제하지 못했어요.');
   }
 

@@ -13,10 +13,11 @@ import { PackToggles } from '../common/PackToggles';
 import { scriptsPage } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
-import { ALWAYS, BIN_KEEPS, COPY_SAID, copyName, moduleName, PAGES, promptName, SAVE_FAILED } from '../common/words';
+import { ALWAYS, BIN_KEEPS, moduleName, PAGES, promptName, SAVE_FAILED } from '../common/words';
 import { useChildren, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate, openPart } from '../shell/router';
 import { characterPage, type Back } from '../shell/routes';
+import { useMaking } from '../common/useMaking';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { Avatar, Empty, List, ListItem, MenuItem, NavBar, Screen, Section, SettingGroup, SettingRow, Switch, Text, TextField, useWide } from '../ui';
@@ -124,17 +125,10 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
   // A module of scripts alone describes no one, so it offers no 삽화 profiles.
   const describes = useChildren('lore', id).length + useChildren('asset', id).length > 0 || useStored('likeness', likenessId(id)) !== null;
   const store = useStore();
-  const toast = useToast();
+  const making = useMaking();
 
-  async function copy(flush: () => Promise<boolean>) {
-    if (!(await flush())) return;
-    const made = crypto.randomUUID();
-    const copying = copyModule(store, id, copyName(moduleName(name)), made);
-    navigate({ kind: 'module', id: made, pane: null });
-    const copied = await copying;
-    if (!copied.ok) return toast.failed(copied, COPY_SAID.failed);
-    toast.show(COPY_SAID.made);
-  }
+  const copy = (flush: () => Promise<boolean>) =>
+    making.copy({ flush, name: () => moduleName(name), make: (copied, made) => copyModule(store, id, copied, made), open: (made) => navigate({ kind: 'module', id: made, pane: null }) });
 
   const { name, top, describing } = useModuleEditor(stored, 'modules', back, (flush) => (
     <>

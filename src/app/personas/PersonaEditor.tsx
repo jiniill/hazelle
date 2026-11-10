@@ -15,9 +15,10 @@ import { PersonaPickDialog } from '../common/PersonaPickDialog';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName } from '../common/words';
+import { BIN_KEEPS, cannotRemove, THINGS } from '../common/words';
 import { navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
+import { useMaking } from '../common/useMaking';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { Avatar, Facts, MenuItem } from '../ui';
@@ -28,6 +29,7 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
   const store = useStore();
   const toast = useToast();
   const removal = useRemoval();
+  const making = useMaking();
   const settings = useSettings();
   const library = useLibrary();
   const { id } = stored;
@@ -49,17 +51,9 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
   }
 
   const remove = () =>
-    removal({ name: ({ value }) => value.name, noun: '페르소나', task: () => removePersona(store, id), queue: autosave.remove, restore: () => restorePersona(store, id), then: () => navigate({ kind: 'personas', place: null }), detail: BIN_KEEPS });
+    removal({ name: ({ value }) => value.name, noun: THINGS.persona.noun, task: () => removePersona(store, id), queue: autosave.remove, restore: () => restorePersona(store, id), then: () => navigate({ kind: 'personas', place: null }), detail: BIN_KEEPS });
 
-  async function copy() {
-    if (!(await autosave.flush())) return;
-    const made = crypto.randomUUID();
-    const copying = copyPersona(store, id, copyName(held.name), made);
-    navigate({ kind: 'persona', id: made });
-    const copied = await copying;
-    if (!copied.ok) return toast.failed(copied, COPY_SAID.failed);
-    toast.show(COPY_SAID.made);
-  }
+  const copy = () => making.copy({ flush: autosave.flush, name: () => held.name, make: (name, made) => copyPersona(store, id, name, made), open: (made) => navigate({ kind: 'persona', id: made }) });
 
   const makeCurrent = () => toast.settled(setCurrentPersona(store, id), '현재 페르소나로 지정하지 못했어요.');
 
@@ -91,7 +85,7 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
     </>
   );
   const menu = {
-    of: '페르소나',
+    of: THINGS.persona.noun,
     items: (
       <>
         <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void copy()} />

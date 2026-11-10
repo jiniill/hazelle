@@ -36,7 +36,7 @@ import { FaceChange } from '../common/FaceChange';
 import { useTypedNumber } from '../common/typed';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STOP, TRANSLATOR_NOTE } from '../common/words';
+import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STOP, THINGS, TRANSLATOR_NOTE } from '../common/words';
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
@@ -395,7 +395,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
   const subtitle = [card.creator && `제작자 ${card.creator}`, origin && copyOf(origin.name)].filter(Boolean).join(' · ') || undefined;
   const working = busy?.id === id ? busy.label : null;
   const menu = {
-    of: '캐릭터',
+    of: THINGS.character.noun,
     items: (
       <>
         {origin && <MenuItem label={SEE_ORIGINAL} sub={original ? undefined : ORIGINAL_GONE} disabled={!original} onClick={() => navigate(characterPage(origin.id, wide))} />}

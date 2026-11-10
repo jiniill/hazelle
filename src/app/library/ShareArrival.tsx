@@ -3,7 +3,7 @@ import { openVersion, sharedFile } from '../../runtime/share';
 import { countReceived, readShareState } from '../../runtime/share-link';
 import { describeFailure } from '../common/failure';
 import { fileNamed } from '../common/download';
-import { SHARE } from '../common/words';
+import { SHARE, THINGS } from '../common/words';
 import { navigate } from '../shell/router';
 import { HOME } from '../shell/routes';
 import { useImport } from '../common/importing';
@@ -33,7 +33,7 @@ export function ShareArrival({ id }: { id: string }) {
       const source = { id, operator: false };
       const opened = await openVersion(source, state.data.manifest, key);
       if (!opened.ok) return setFailure(opened.error === 'unreadable' ? '링크를 열 수 없어요.' : describeFailure(opened));
-      const file = await sharedFile(source, opened.data.content, fileNamed(opened.data.preview.name, '캐릭터', 'charx'), setStep);
+      const file = await sharedFile(source, opened.data.content, fileNamed(opened.data.preview.name, THINGS.character.noun, 'charx'), setStep);
       if (!file.ok) return setFailure(describeFailure(file));
       navigate(HOME, { replace: true });
       if (await bring(file.data)) void countReceived(id);

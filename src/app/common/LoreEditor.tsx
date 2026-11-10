@@ -257,7 +257,7 @@ function EntryRow({ stored, folders, language, trial, rows }: RowProps) {
   const save = useAutosave<Lore>(entryKey(stored.id), (patch) => editLore(store, stored.id, patch));
   const shown: Lore = { ...stored.value, ...save.unsaved };
   const name = loreName(shown.name);
-  const remove = () => void rows.remove({ id: stored.id, noun: ENTRY, name }, save.remove(() => removeLore(store, stored.id)), (removed) => restoreLore(store, removed));
+  const remove = () => void rows.remove({ id: stored.id, noun: ENTRY, name, task: () => removeLore(store, stored.id), queue: save.remove, restore: (removed) => restoreLore(store, removed) });
   return (
     <OpenRow title={name} tag={when(shown)} open={rows.isOpen(stored.id)} onOpen={(on) => rows.setOpen(stored.id, on)} opening={rows.opening(stored.id)}>
       <EntryFields shown={shown} folders={folders} language={language} trial={trial} change={save.change} />

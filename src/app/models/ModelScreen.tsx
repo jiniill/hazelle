@@ -12,7 +12,7 @@ import { illustrationPrompt } from '../../runtime/prompts';
 import { LedgerWait, useLedger } from '../common/useLedger';
 import type { SaveStatus } from '../common/saveQueue';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
-import { defaultMark, MODEL_ROLES, MODEL_SETTINGS, PICTURE_INPUT } from '../common/words';
+import { defaultMark, makeFailed, MODEL_ROLES, MODEL_SETTINGS, PICTURE_INPUT } from '../common/words';
 import { spent } from '../common/usage';
 import { ago } from '../common/time';
 import { useConnections, useProfiles, useSettings, useSession } from '../session';
@@ -109,7 +109,7 @@ function ChatModelScreen({ connection, model, back }: Props) {
   // The new 설정 shows in place: the page stays this model's, and its rows edit the 설정 just made.
   async function own() {
     const made = await ownProfile(store, model, current?.value.settings ?? {});
-    if (!made.ok) return toast.failed(made, `${MODEL_SETTINGS}을 만들지 못했어요.`);
+    if (!made.ok) return toast.failed(made, makeFailed('profile'));
     const saved = await setModelProfile(store, connection.id, entryKey(model), made.data);
     if (!saved.ok) toast.failed(saved, '바꾸지 못했어요.');
   }

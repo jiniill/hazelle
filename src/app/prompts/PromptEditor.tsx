@@ -18,10 +18,11 @@ import { ModuleSwitches } from '../common/ModuleSwitches';
 import { NO_PERSONA_SLOT, SLOT } from '../common/prompt-words';
 import type { Frame } from '../common/frame';
 import { useAutosave } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, copyOf, DEFAULT_VARIABLES, ORIGINAL_GONE, PRE_READ, promptName, SEE_ORIGINAL, SET_DEFAULT, STAGE_NAMES } from '../common/words';
+import { BIN_KEEPS, cannotRemove, copyOf, DEFAULT_VARIABLES, ORIGINAL_GONE, PRE_READ, promptName, SEE_ORIGINAL, SET_DEFAULT, STAGE_NAMES, THINGS } from '../common/words';
 import { useConnections, useSettings, useStore, useStored } from '../session';
 import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
+import { useMaking } from '../common/useMaking';
 import { useRemoval } from '../common/useRemoval';
 import { useOwnUndo, useToast } from '../toast';
 import { Button, Callout, Divider, MenuHeading, MenuItem, NavRow, Outline, Row, Section, Stack, Tag, typeInto, useHover, type EditorLayout, type NavBarProps, type OutlineStop } from '../ui';
@@ -109,6 +110,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const store = useStore();
   const toast = useToast();
   const removal = useRemoval();
+  const making = useMaking();
   const settings = useSettings();
   // 에이전트 노트 is offered only while the 실험실 switch is on, as everything of an experiment.
   const agentsLab = labOn(settings, 'agents');
@@ -249,15 +251,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const modelSaved = (saving: Promise<ApiResult<unknown>>) => toast.settled(saving, '모델을 바꾸지 못했어요.');
 
   const isDefault = isDefaultPrompt(settings, stored);
-  const copy = async () => {
-    if (!(await save.flush())) return;
-    const made = crypto.randomUUID();
-    const copying = copyPrompt(store, stored.id, copyName(promptName(latest.current.name)), made);
-    onOpen(made);
-    const copied = await copying;
-    if (!copied.ok) return toast.failed(copied, COPY_SAID.failed);
-    toast.show(COPY_SAID.made);
-  };
+  const copy = () => making.copy({ flush: save.flush, name: () => promptName(latest.current.name), make: (name, made) => copyPrompt(store, stored.id, name, made), open: onOpen });
   const resetBlocks = async () => {
     if (!(await save.flush())) return;
     const { blocks, toggles } = latest.current;
@@ -270,7 +264,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
     if (!saved.ok) toast.failed(saved, '기본으로 지정하지 못했어요.');
   };
   const erase = () =>
-    removal({ name: ({ value }) => promptName(value.name), noun: '프롬프트', task: () => removePrompt(store, stored.id), queue: save.remove, restore: () => restorePrompt(store, stored.id), then: onErased, detail: BIN_KEEPS });
+    removal({ name: ({ value }) => promptName(value.name), noun: THINGS.prompt.noun, task: () => removePrompt(store, stored.id), queue: save.remove, restore: () => restorePrompt(store, stored.id), then: onErased, detail: BIN_KEEPS });
 
   const cacheAt = (id: string) => {
     const target = latest.current.blocks.find((each) => each.id === id);
@@ -453,13 +447,13 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   );
   const head: NavBarProps = {
     title: draft.name,
-    rename: { label: '프롬프트 이름', placeholder: promptName(draft.name), onChange: (name) => update(() => ({ name })) },
+    rename: { label: `${THINGS.prompt.noun} 이름`, placeholder: promptName(draft.name), onChange: (name) => update(() => ({ name })) },
     subtitle,
     onBack,
     backLabel,
     status,
     menu: {
-      of: '프롬프트',
+      of: THINGS.prompt.noun,
       items: (
         <>
           {stored.value.origin && <MenuItem label={SEE_ORIGINAL} sub={original ? undefined : ORIGINAL_GONE} disabled={!original} onClick={() => onOpen(stored.value.origin!.id)} />}
