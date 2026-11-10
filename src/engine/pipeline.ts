@@ -6,7 +6,7 @@ import { inlayIds, SIGNATURE, textFileNames } from './assets';
 import type { ChatMessage } from '../connectors/types';
 import type { Memory, Written } from '../model/memory';
 import type { MascotId } from '../model/mascot';
-import type { AgentPrompt, Block, IllustratePrompt, MascotPrompt, MemoryPrompt, PrereadPrompt, RecentSlot, Role, SlotKind, TextBlock, TranslatePrompt, WrappedSlot } from '../model/prompt';
+import type { AgentPrompt, Block, IllustratePrompt, MascotPrompt, MemoryPrompt, PrereadPrompt, PromptSort, RecentSlot, Role, SLOTS, SlotKind, TextBlock, TranslatePrompt, WrappedSlot } from '../model/prompt';
 import { unescapeCbs } from './cbs/escape';
 import { evaluate, Runaway, type CbsContext, type CbsProblem, type CbsTrace } from './cbs/evaluate';
 import type { HistoryMessage } from './history';
@@ -240,14 +240,28 @@ function placedLore(scope: ChatScope, seed: string, countTokens: (text: string) 
   });
 }
 
-type Filling =
-  | { sort: 'conversation'; note: string; memory: string; tools: PromptInput['tools']; notes: string; additional: string[] }
-  | { sort: 'translate'; note: string; recent: (block: RecentSlot) => string; source: string }
-  | { sort: 'illustrate'; note: string; recent: (block: RecentSlot) => string; source: string }
-  | { sort: 'mascot'; recent: (block: RecentSlot) => string; source: string; sheet: string }
-  | { sort: 'preread'; source: string }
-  | { sort: 'agent'; recent: (block: RecentSlot) => string; source: string; memory: string }
-  | { sort: 'memory'; memory: string; span: string };
+// What each slot is filled with. description: the card's additionalText paragraphs found for this send, which join
+// its description. chat takes none: its range is left open.
+type Content = {
+  tool: PromptInput['tools'];
+  description: string[];
+  persona: ChatScope['persona'];
+  lorebook: Lore[];
+  authorNote: string;
+  postEverything: Lore[];
+  note: string;
+  illustrateNote: string;
+  recent: (block: RecentSlot) => string;
+  source: string;
+  agentNotes: string;
+  agentMemory: string;
+  mascot: string;
+  memory: string;
+  span: string;
+};
+type SlotsOfSort<S extends PromptSort> = { [K in SlotKind]: S extends (typeof SLOTS)[K]['sorts'][number] ? K : never }[SlotKind];
+// A sort's assembler gives content for exactly the slots SLOTS gives the sort; a slot given none sends nothing.
+type Fill<S extends PromptSort> = Pick<Content, Exclude<SlotsOfSort<S>, 'chat'>>;
 
 const loreMessage = ({ entry }: Laid, { id, role, body }: Lore): ChatMessage => ({ role, content: entry(id, body) });
 const loreFrom = (laid: Laid, { id }: Lore, slot: 'lorebook' | 'postEverything') => ({ kind: 'lore', id, name: laid.named(id), slot }) as const;
@@ -257,8 +271,9 @@ const filled = (parts: Sent[]) => parts.filter(({ message }) => message.content 
 
 // A prompt's blocks in order, with its chat slots left open and every other block rendered once. memory: whether a
 // 장기 기억 slot reaches the request, its 감싸는 텍스트 keeping {{slot}} once rendered, whether or not memory holds anything.
-function templateOf(blocks: Block[], laid: Laid, persona: ChatScope['persona'], filling: Filling): { parts: Part[]; memory: boolean } {
+function templateOf<S extends PromptSort>(blocks: Block[], laid: Laid, fill: Fill<S>): { parts: Part[]; memory: boolean } {
   const { card, cast, render, sides, injections } = laid;
+  const given: Partial<Content> = fill;
   const parts: Part[] = [];
   let memory = false;
   const out = (...sent: Sent[]) => parts.push(...filled(sent));
@@ -280,66 +295,67 @@ function templateOf(blocks: Block[], laid: Laid, persona: ChatScope['persona'], 
       switch (block.slot) {
         // Each character's text is evaluated as its own {{char}}, so the model never reads two characters as one.
         case 'description':
-          verbatim(
-            block,
-            [
-              render(joined([...sides.before, ...describe(card, filling.sort === 'conversation' ? filling.additional : [])]), `${block.id}:own`),
-              ...cast.map(({ id, card: own }) => {
-                const text = joined(describe(own, []));
-                return text && render(`[{{char}}]\n${text}`, `${block.id}:${id}`, id);
-              }),
-              render(joined(sides.after), `${block.id}:after`),
-            ]
-              .filter((part) => part)
-              .join('\n\n'),
-          );
+          if (given.description !== undefined)
+            verbatim(
+              block,
+              [
+                render(joined([...sides.before, ...describe(card, given.description)]), `${block.id}:own`),
+                ...cast.map(({ id, card: own }) => {
+                  const text = joined(describe(own, []));
+                  return text && render(`[{{char}}]\n${text}`, `${block.id}:${id}`, id);
+                }),
+                render(joined(sides.after), `${block.id}:after`),
+              ]
+                .filter((part) => part)
+                .join('\n\n'),
+            );
           break;
         case 'persona':
-          wrapped(block, persona?.description ?? '');
+          if (given.persona !== undefined) wrapped(block, given.persona?.description ?? '');
           break;
         case 'authorNote':
-          if (filling.sort === 'conversation') wrapped(block, filling.note);
+          if (given.authorNote !== undefined) wrapped(block, given.authorNote);
           break;
         case 'lorebook':
-          out(...throughSlot(laid, laid.lorebook, 'lorebook'));
+          if (given.lorebook !== undefined) out(...throughSlot(laid, given.lorebook, 'lorebook'));
           break;
         // 최종 삽입: where it stands, or at the very end when the prompt has none (assemble).
         case 'postEverything':
-          out(...throughSlot(laid, laid.last, 'postEverything'));
+          if (given.postEverything !== undefined) out(...throughSlot(laid, given.postEverything, 'postEverything'));
           break;
         case 'chat':
           parts.push({ range: block.range, from: blockFrom(block) });
           break;
         case 'note':
-          if (filling.sort === 'translate') wrapped(block, filling.note);
+          if (given.note !== undefined) wrapped(block, given.note);
           break;
         case 'illustrateNote':
-          if (filling.sort === 'illustrate') wrapped(block, filling.note);
+          if (given.illustrateNote !== undefined) wrapped(block, given.illustrateNote);
           break;
         case 'recent':
-          if (filling.sort === 'translate' || filling.sort === 'illustrate' || filling.sort === 'mascot' || filling.sort === 'agent') verbatim(block, filling.recent(block));
+          if (given.recent !== undefined) verbatim(block, given.recent(block));
           break;
         case 'source':
-          if (filling.sort === 'translate' || filling.sort === 'illustrate' || filling.sort === 'mascot' || filling.sort === 'preread' || filling.sort === 'agent') verbatim(block, filling.source);
+          if (given.source !== undefined) verbatim(block, given.source);
           break;
         case 'memory':
-          if (filling.sort === 'conversation' || filling.sort === 'memory') memory = verbatim(block, filling.memory);
+          if (given.memory !== undefined) memory = verbatim(block, given.memory);
           break;
         case 'tool':
-          if (filling.sort === 'conversation') verbatim(block, joined(filling.tools.map(({ text }) => text)), toolFrom(filling.tools));
+          if (given.tool !== undefined) verbatim(block, joined(given.tool.map(({ text }) => text)), toolFrom(given.tool));
           break;
         case 'span':
-          if (filling.sort === 'memory') verbatim(block, filling.span);
+          if (given.span !== undefined) verbatim(block, given.span);
           break;
         case 'mascot':
-          if (filling.sort === 'mascot') verbatim(block, filling.sheet);
+          if (given.mascot !== undefined) verbatim(block, given.mascot);
           break;
         // A model wrote the notes, so they are never evaluated as CBS.
         case 'agentNotes':
-          if (filling.sort === 'conversation') verbatim(block, filling.notes);
+          if (given.agentNotes !== undefined) verbatim(block, given.agentNotes);
           break;
         case 'agentMemory':
-          if (filling.sort === 'agent') verbatim(block, filling.memory);
+          if (given.agentMemory !== undefined) verbatim(block, given.agentMemory);
           break;
       }
     if (block.cache) parts.push({ cache: true });
@@ -380,7 +396,16 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
   const recalled = built && standing(built.memory, read!, memoryBudget(built.budget, budget), tokens);
   const told = memory?.kind === 'tool' ? memory : null;
 
-  const { parts: template, memory: slot } = templateOf(blocks, laid, scope.persona, { sort: 'conversation', note: prompt ? authorNote(scope.note, prompt) : (scope.note ?? ''), memory: told?.text ?? recalled?.text ?? '', tools, notes, additional });
+  const { parts: template, memory: slot } = templateOf<'conversation'>(blocks, laid, {
+    tool: tools,
+    description: additional,
+    persona: scope.persona,
+    lorebook: laid.lorebook,
+    authorNote: prompt ? authorNote(scope.note, prompt) : (scope.note ?? ''),
+    postEverything: laid.last,
+    agentNotes: notes,
+    memory: told?.text ?? recalled?.text ?? '',
+  });
   // Retrieval rides only where memory does, before the latest user message so it follows the last cache point.
   const found = built && slot ? retrieval(built.memory, built.found, recalled!, read!, retrievalRoom(memoryBudget(built.budget, budget)), tokens) : null;
   // A tool's text stands for its messages only where it reaches the request: without it there, none leave.
@@ -494,18 +519,23 @@ function translation({ scope, take, prompt, translations, notes, request, langua
   const { masked: source, spans } = protect(request.kind === 'message' ? texts[request.index]! : request.text, rules);
   const history = request.kind === 'message' ? scope.messages.slice(0, request.index + 1) : [...scope.messages, { id: seed, message: seed, seed, role: 'user' as const, text: request.text, time: null }];
   const laid = lay(scope, prompt.blocks, history, variables, seed, remembered(countTokens), language);
-  const { parts } = templateOf(prompt.blocks, laid, scope.persona, { sort: 'translate', note: notes, recent: recentOf(scope, texts, before, translations), source });
-  const sent = parts.find((part): part is Sent => 'message' in part && part.from.kind === 'block' && part.from.slot === 'source');
-  if (!sent) return { source, messages: taskMessages(parts), spans: [] };
-  if (spans.length) parts.splice(parts.indexOf(sent), 0, { message: { role: 'system', content: keepTokens(spans.length) }, from: sent.from });
-  return { source, messages: taskMessages(parts), spans };
+  const { parts } = templateOf<'translate'>(prompt.blocks, laid, { description: [], persona: scope.persona, lorebook: laid.lorebook, note: notes, recent: recentOf(scope, texts, before, translations), source });
+  const kept = keptSpans(parts, spans, keepTokens(spans.length, 'the source kept out of the translation', 'translate, drop, change or add'));
+  return { source, messages: taskMessages(parts), spans: kept };
 }
 
-const keepTokens = (count: number) =>
-  `Tokens like ⟦1⟧ stand for parts of the source kept out of the translation; it holds ${count}, ⟦1⟧ to ⟦${count}⟧. Keep every token exactly as written, in its place; never translate, drop, change or add one.`;
+// kept: what the source's tokens stand for; never: what the task must not do to one.
+const keepTokens = (count: number, kept: string, never: string) =>
+  `Tokens like ⟦1⟧ stand for parts of ${kept}; it holds ${count}, ⟦1⟧ to ⟦${count}⟧. Keep every token exactly as written, in its place; never ${never} one.`;
 
-const keepEditTokens = (count: number) =>
-  `Tokens like ⟦1⟧ stand for parts of the reply kept out of the edit; it holds ${count}, ⟦1⟧ to ⟦${count}⟧. Keep every token exactly as written, in its place; never drop, change or add one.`;
+// The token rule goes right before the source slot's message. A prompt that sends no source sends no tokens, so the
+// answer brings none back.
+function keptSpans(parts: Part[], spans: string[], rule: string): string[] {
+  const sent = parts.find((part): part is Sent => 'message' in part && part.from.kind === 'block' && part.from.slot === 'source');
+  if (!sent) return [];
+  if (spans.length) parts.splice(parts.indexOf(sent), 0, { message: { role: 'system', content: rule }, from: sent.from });
+  return spans;
+}
 
 // 이전 메시지: the messages before the one at before, as displayed, each with its translation unless the slot holds none.
 const recentOf = (scope: ChatScope, texts: string[], before: number, translations: (string | null)[]) => ({ count, translations: withTranslations }: RecentSlot) => {
@@ -550,7 +580,7 @@ export const assembleIllustration = (input: IllustrationInput): { messages: Chat
 function illustration({ scope, take, prompt, index, paragraphs, count, portraits, note, last, pov, comic, seed, countTokens }: IllustrationInput): { messages: ChatMessage[] } {
   const { texts, variables } = renderChat('display', scope, take);
   const laid = lay(scope, prompt.blocks, scope.messages.slice(0, index + 1), variables, seed, remembered(countTokens), null);
-  const { parts } = templateOf(prompt.blocks, laid, scope.persona, { sort: 'illustrate', note, recent: recentOf(scope, texts, index, []), source: numbered(paragraphs) });
+  const { parts } = templateOf<'illustrate'>(prompt.blocks, laid, { description: [], persona: scope.persona, lorebook: laid.lorebook, illustrateNote: note, recent: recentOf(scope, texts, index, []), source: numbered(paragraphs) });
   const asked = [
     ...(portraits.length ? [profileNames(portraits)] : []),
     ...(last ? [lastScene(last)] : []),
@@ -581,7 +611,7 @@ export const assembleMascot = (input: MascotInput): { messages: ChatMessage[] } 
 function remark({ scope, take, prompt, index, mascot, said, seed, countTokens }: MascotInput): { messages: ChatMessage[] } {
   const { texts, variables } = renderChat('display', scope, take);
   const laid = lay(scope, prompt.blocks, scope.messages.slice(0, index + 1), variables, seed, remembered(countTokens), null);
-  const { parts } = templateOf(prompt.blocks, laid, scope.persona, { sort: 'mascot', recent: recentOf(scope, texts, index, []), source: texts[index]!, sheet: mascotSheet(mascot, said) });
+  const { parts } = templateOf<'mascot'>(prompt.blocks, laid, { recent: recentOf(scope, texts, index, []), source: texts[index]!, mascot: mascotSheet(mascot, said) });
   return { messages: taskMessages(parts) };
 }
 
@@ -602,7 +632,7 @@ function preread({ scope, prompt, material, seed, countTokens }: PrereadInput): 
   const { variables, stopped } = renderChat('prompt', scope);
   if (stopped) throw stopped;
   const laid = lay(scope, prompt.blocks, scope.messages, variables, seed, remembered(countTokens), null);
-  return { messages: taskMessages(templateOf(prompt.blocks, laid, scope.persona, { sort: 'preread', source: material }).parts) };
+  return { messages: taskMessages(templateOf<'preread'>(prompt.blocks, laid, { source: material }).parts) };
 }
 
 export type AgentInput = {
@@ -632,11 +662,10 @@ function agent({ scope, prompt, index, text, memory, seed, countTokens }: AgentI
   if (stopped) throw stopped;
   const { masked: source, spans } = rewrites ? protect(text, rules) : { masked: text ?? texts[index] ?? '', spans: [] };
   const laid = lay(scope, prompt.blocks, scope.messages.slice(0, index + 1), variables, seed, remembered(countTokens), null);
-  const { parts } = templateOf(prompt.blocks, laid, scope.persona, { sort: 'agent', recent: recentOf(scope, texts, index, []), source, memory: keepsMemory(prompt) ? memorySheet(memory) : '' });
-  const sent = parts.find((part): part is Sent => 'message' in part && part.from.kind === 'block' && part.from.slot === 'source');
-  if (sent && spans.length) parts.splice(parts.indexOf(sent), 0, { message: { role: 'system', content: keepEditTokens(spans.length) }, from: sent.from });
+  const { parts } = templateOf<'agent'>(prompt.blocks, laid, { description: [], persona: scope.persona, lorebook: laid.lorebook, recent: recentOf(scope, texts, index, []), source, agentMemory: keepsMemory(prompt) ? memorySheet(memory) : '' });
+  const kept = keptSpans(parts, spans, keepTokens(spans.length, 'the reply kept out of the edit', 'drop, change or add'));
   const out = taskSent(parts);
-  return { messages: out.map(({ message }) => message), parts: out.map(({ message, from }) => ({ from, tokens: countTokens(message.content) })), spans: sent ? spans : [] };
+  return { messages: out.map(({ message }) => message), parts: out.map(({ message, from }) => ({ from, tokens: countTokens(message.content) })), spans: kept };
 }
 
 export type MemoryTaskInput = {
@@ -670,7 +699,7 @@ function memoryTask({ scope, prompt, memory, before, budget, span: { from, to },
   const merged = chapter?.merged ?? null;
   const shown = spanText(merged ? merged.map((text) => ({ speaker: 'Chapter', text })) : span.map((text, offset) => ({ speaker: speakers[from + offset]!, text: text.trim() })));
   const held = chapter ? chapterBefore(before) : memoryBefore(memory, before, stateLimit(budget), countTokens);
-  const { parts } = templateOf(prompt.blocks, laid, scope.persona, { sort: 'memory', memory: held, span: shown });
+  const { parts } = templateOf<'memory'>(prompt.blocks, laid, { description: [], persona: scope.persona, lorebook: laid.lorebook, memory: held, span: shown });
   const messages = taskMessages(parts);
   const format = chapter ? chapterFormat(merged?.length ?? to - from, chapter.target, merged !== null) : memoryFormat(to - from, recordsTarget(span.reduce((sum, text) => sum + countTokens(text), 0), budget));
   return { messages: [...messages, { role: 'user', content: format }], span };
