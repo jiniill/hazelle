@@ -14,13 +14,15 @@ export function EditorRoom({ children }: { children: (layout: EditorLayout) => R
 
 type Props = {
   top: ReactNode;
+  // What picks the part shown, in a row of its own under the header.
+  tabs?: ReactNode;
   side: ReactNode;
   // The page scrolls back to its top when this changes, such as when another part is opened.
   page?: string;
   children: ReactNode;
 };
 
-export function EditorFrame({ top, side, page, children }: Props) {
+export function EditorFrame({ top, tabs, side, page, children }: Props) {
   const main = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     main.current?.scrollTo({ top: 0 });
@@ -28,6 +30,7 @@ export function EditorFrame({ top, side, page, children }: Props) {
   return (
     <main className={styles.frame}>
       <header className={styles.top}>{top}</header>
+      {tabs && <div className={styles.tabs}>{tabs}</div>}
       <div className={styles.body}>
         <nav className={styles.side} aria-label="개요">
           {side}

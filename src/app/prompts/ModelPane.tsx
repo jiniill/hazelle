@@ -10,6 +10,7 @@ const AUX = follows(MODEL_ROLES.aux);
 
 const nameOf = (ref: ModelRef, connections: readonly Stored<'connection'>[]) => findStarred(ref, connections)?.name ?? NOT_STARRED;
 
+// The models a prompt picks, in a line of its list.
 export function modelWords(models: Assignment, connections: readonly Stored<'connection'>[]): string {
   const main = models.main ? nameOf(models.main, connections) : DEFAULTS;
   return models.aux ? `${main} · ${MODEL_ROLES.aux} 별도 지정` : main;

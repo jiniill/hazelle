@@ -441,6 +441,7 @@
   --tile-wide-min-width: 280px;
   --panel-min-width: 420px;
   --table-figure-width: 72px;
+  --table-control-width: 72px;
   --portrait-width: 200px;
   --mascot-card-width: 360px;
   --mascot-portrait-width: 132px;
@@ -482,22 +483,19 @@
   --markup-max-width: 680px;
   --markup-page-min: 320px;
   --markup-field-min: 72px;
-  --outline-width: 340px;
+  --outline-width: 380px;
   --outline-least-width: 260px;
   --outline-row: 38px;
   --outline-node: 24px;
   --outline-node-chat: 26px;
   --outline-number: 24px;
-  --outline-meta: 70px;
+  --outline-meta: 120px;
   --outline-cap: 10px;
   --outline-cap-row: 24px;
   --outline-glyph: 13px;
   --outline-glyph-sm: 10px;
   --outline-plus: 18px;
-  --outline-dot: 9px;
-  --outline-gap: 4px;
-  --outline-gap-kind: 14px;
-  --outline-gap-cut: 20px;
+  --outline-gap-cut: 16px;
   /* 분기 지도: a message's length of stem, the stem's bounds and width; a head card (two fit a panel's width), its height
      and its height with a preview line; the map's lanes' gap and the drop from a pill to the head under it; a pill's
      height, the least room between two on one stem, and how far under a stem's end one hangs; the end cap; the ticks

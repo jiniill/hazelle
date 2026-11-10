@@ -37,8 +37,15 @@
   composes: item pressable from './Item.module.css';
 }
 
-.dropping {
-  composes: dropping from '../foundation/surface.module.css';
+/* A row's control stands beside it, outside its button; every row and the head keep that room, so the columns of a
+   row without one stay under the head's. */
+.held {
+  --control-room: var(--table-control-width);
+}
+
+.held .head,
+.held .alone {
+  max-width: calc(100% - var(--control-room) - var(--space-4));
 }
 
 .cell {
@@ -68,18 +75,47 @@
   composes: ellipsis from '../foundation/a11y.module.css';
 }
 
-.marked {
+.named {
   min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--space-8);
+}
+
+.marked {
+  composes: named;
   color: var(--color-text-muted);
+}
+
+/* Rows folded under another keep their width, so their columns stay in line: the first cell alone hangs from the
+   guide line, which the cells' own padding lets run on from row to row. */
+.under {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.under .row {
+  padding-block: 0;
+}
+
+.under .row > * {
+  padding-block: var(--space-8);
+}
+
+.hung {
+  composes: guide from './FolderRow.module.css';
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  margin-left: calc(var(--space-24) * var(--depth) - var(--space-16));
 }
 
 .summary {
   composes: detail from '../foundation/type.module.css';
   /* Wraps: narrow, it is the only place the row's other columns show. */
   display: none;
+  white-space: normal;
   color: var(--color-text-faint);
 }
 

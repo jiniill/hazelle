@@ -1,4 +1,4 @@
-/* The row's button and the control beside it, outside the button (CardItem, ListItem, FolderRow, ItemRow). */
+/* The row's button and the control beside it, outside the button (ListItem, FolderRow, ItemRow, Table). */
 .beside {
   min-width: 0;
   display: flex;
@@ -25,9 +25,13 @@
   inset-inline-end: var(--space-4);
 }
 
-/* --control-inset: what a box of rows (List box) keeps between the control and its edge. */
+/* --control-inset: what a box of rows (List box) keeps between the control and its edge. --control-room: the width
+   a table keeps for it on every row, the control at its end. */
 .control {
   flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  min-width: var(--control-room, 0);
   padding-inline-end: var(--control-inset, 0);
 }
 

@@ -3,7 +3,7 @@ import { autoCachePoints } from '../../engine/cache-points';
 import type { Block, ChatRange, Role, TextBlock } from '../../model/prompt';
 import { MESSAGE_ROLES, SLOT, textName } from '../common/prompt-words';
 import { count } from '../common/typedNumber';
-import type { OutlineKind } from '../ui';
+import type { Marked, OutlineKind } from '../ui';
 import { toggleUses } from './rekey';
 import { EMPTY_VALUE } from '../common/words';
 
@@ -52,11 +52,14 @@ export function blockTitle(block: Block): { title: string; dim: boolean } {
 export const blockKind = (block: Block): OutlineKind => (block.kind === 'text' ? 'text' : SLOT[block.slot].kind);
 export const blockIcon = (block: Block): LucideIcon => (block.kind === 'text' ? TEXT_ICONS[block.role] : SLOT[block.slot].icon);
 
+// 시스템 is what nearly every block is sent as, so a row says its role only when it is another.
+const roleNote = (role: Role) => (role === 'system' ? [] : [MESSAGE_ROLES[role]]);
+
 export function blockMeta(block: Block): string {
-  if (block.kind === 'text') return block.text ? `${count(block.text.length)}자` : EMPTY_VALUE;
+  if (block.kind === 'text') return [...roleNote(block.role), block.text ? `${count(block.text.length)}자` : EMPTY_VALUE].join(' · ');
   if (block.slot === 'chat') return describeRange(block.range).meta;
-  if (block.slot === 'recent') return `${block.count}개${block.translations === false ? ' · 원문만' : ''} · ${MESSAGE_ROLES[block.role]}`;
-  return 'role' in block ? MESSAGE_ROLES[block.role] : '';
+  if (block.slot === 'recent') return [`${block.count}개`, ...(block.translations === false ? ['원문만'] : []), ...roleNote(block.role)].join(' · ');
+  return 'role' in block ? (roleNote(block.role)[0] ?? '') : '';
 }
 
 export const blockSource = (block: Block): string => (block.kind === 'text' ? block.text : 'wrapper' in block ? (block.wrapper ?? '') : '');
@@ -66,6 +69,35 @@ export const hasConditions = (block: Block) => toggleUses(blockSource(block)).le
 export const isText = (block: Block): block is TextBlock => block.kind === 'text';
 
 export type CacheMark = 'set' | 'auto';
+export const CACHE_WORDS: Record<CacheMark, string> = { set: '여기까지 캐시', auto: '자동 캐시' };
+
+// How much of a block's text stands before the first place found and after it: a line or two of its row.
+const LEAD = 24;
+const TAIL = 120;
+
+// Where a block holds what is looked for. name: its place in the outline and its name, lit where the name holds it.
+// snippet: the text around the first place in its text. first: that place, to select. count: the places in its text.
+export type BlockHit = { name: Marked; snippet: Marked | null; first: [number, number] | null; count: number };
+
+export function blockHit(block: Block, index: number, words: string): BlockHit {
+  const term = words.toLowerCase();
+  const order = `${index + 1}. `;
+  const { title } = blockTitle(block);
+  const named = title.toLowerCase().indexOf(term);
+  const name = named < 0 ? order + title : { text: order + title, from: order.length + named, to: order.length + named + term.length };
+  const text = block.kind === 'text' ? block.text : '';
+  const lower = text.toLowerCase();
+  const at = lower.indexOf(term);
+  if (at < 0) return { name, snippet: null, first: null, count: 0 };
+  let count = 0;
+  for (let next = at; next >= 0; next = lower.indexOf(term, next + term.length)) count++;
+  const start = at > LEAD ? at - LEAD : 0;
+  const lead = start ? '…' : '';
+  const from = lead.length + at - start;
+  // A line break is a space in a row's one or two lines; the places keep their offsets.
+  const shown = lead + text.slice(start, at + term.length + TAIL).replace(/\s/g, ' ');
+  return { name, snippet: { text: shown, from, to: from + term.length }, first: [at, at + term.length], count };
+}
 
 // The cache point after each block: its own, or one the engine sets itself.
 export function cacheMarks(blocks: readonly Block[]): Map<string, CacheMark> {

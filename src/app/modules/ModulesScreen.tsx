@@ -9,7 +9,7 @@ import { counted, holdsLine, packParts, type PackParts } from '../common/pack';
 import { useMaking } from '../common/useMaking';
 import { useSearch } from '../common/useSearch';
 import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/filing';
-import { FolderPath, useMoving, useNaming } from '../common/folders/FolderParts';
+import { FOLDER_COLUMNS, FolderPath, useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
 import { ALWAYS, EMPTY_FOLDER, moduleName, PAGES, SCRIPTS, THINGS } from '../common/words';
 import { useChildrenOf, useLibrary, useModulesAndPlugins, usePersonas, usePrompts, useSettings, useStore } from '../session';
@@ -76,11 +76,6 @@ const COLUMNS: TableColumn[] = [
   { label: '스타일', track: 'figure' },
   { label: '사용처', track: 'fill', keep: true },
 ];
-const FOLDER_COLUMNS: TableColumn[] = [
-  { label: '폴더', track: 'name' },
-  { label: '포함된 항목', track: 'fill', keep: true },
-];
-
 // A module stands in the first of its places in the sections' order (항상, prompt, character, persona), which is not pack order; its 쓰는 곳
 // still names every place.
 const SECTIONS: { place: Place; title: string }[] = [

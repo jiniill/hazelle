@@ -33,6 +33,15 @@
   min-width: 0;
 }
 
+/* The menu of the others stands right after the title's words; where a field cannot be sized by its words, after
+   the field. */
+@supports (field-sizing: content) {
+  .switched {
+    --title-width: auto;
+    --title-sizing: content;
+  }
+}
+
 /* Under the title when both cannot stand at the title's least width, rather than squeezing it a letter a line. */
 .actions {
   margin-left: auto;

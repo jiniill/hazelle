@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Bookmark, ChevronRight, Plus, X, type LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bookmark, ChevronRight, GitBranch, GripVertical, Plus, X, type LucideIcon } from 'lucide-react';
 import { useId, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { Icon } from '../foundation/Icon';
@@ -39,11 +39,13 @@ type Props = {
   onMove: (from: number, to: number) => void;
   insert: (index: number) => ReactNode;
   onCache: (id: string) => void;
-  reorder?: 'drag' | 'buttons';
+  // hover: a row's tools and the + between rows show under a pointer that hovers, and a row is dragged by its place.
+  // shown: they stand open for a finger, arrows in the drag's place.
+  tools?: 'hover' | 'shown';
   drill?: boolean;
 };
 
-export function Outline({ label, help, start, end, stops, current, onPick, onOpen, onRemove, onMove, insert, onCache, reorder = 'drag', drill = false }: Props) {
+export function Outline({ label, help, start, end, stops, current, onPick, onOpen, onRemove, onMove, insert, onCache, tools = 'hover', drill = false }: Props) {
   const list = useRef<HTMLDivElement>(null);
   const helpId = useId();
   const refocus = useRef<string | null>(null);
@@ -109,9 +111,10 @@ export function Outline({ label, help, start, end, stops, current, onPick, onOpe
       </span>
     );
   const lastStop = stops.at(-1);
+  const hovered = tools === 'hover';
 
   return (
-    <div className={classNames(styles.outline, reorder === 'buttons' && styles.buttons, drill && styles.drill)} ref={list}>
+    <div className={classNames(styles.outline, !hovered && styles.shown, drill && styles.drill)} ref={list}>
       <span id={helpId} className={styles.help}>
         {help}
       </span>
@@ -122,8 +125,7 @@ export function Outline({ label, help, start, end, stops, current, onPick, onOpe
       <div role="list" aria-label={label} className={lastStop?.cache ? `${styles.stops} ${styles.cutEnd}` : styles.stops} onDragOver={order.allow} onDrop={order.drop}>
         {stops.map((stop, index) => {
           const above = stops[index - 1];
-          const turn = above !== undefined && above.kind !== stop.kind;
-          const classes = classNames(styles.stop, turn && styles.turn, above?.cache && styles.cutAbove, index === 0 && styles.first, order.from === index && styles.dragged);
+          const classes = classNames(styles.stop, above?.cache && styles.cutAbove, index === 0 && styles.first, order.from === index && styles.dragged);
           return (
             <div key={stop.id} role="listitem" className={classes} onDragOver={(event) => order.over(event, index)}>
               <span className={`${styles.segment} ${styles[above?.kind ?? stop.kind]}`} aria-hidden />
@@ -131,14 +133,14 @@ export function Outline({ label, help, start, end, stops, current, onPick, onOpe
               <div className={styles.gap}>
                 {cut(above)}
                 {order.at === index && <span className={styles.drop} />}
-                {reorder === 'drag' && plus(index, `${index + 1}번째 자리에 추가`)}
+                {plus(index, `${index + 1}번째 자리에 추가`)}
               </div>
               <div className={styles.row} aria-current={stop.id === current || undefined}>
                 <button
                   type="button"
                   className={styles.button}
                   data-stop={stop.id}
-                  draggable={reorder === 'drag'}
+                  draggable={hovered}
                   aria-label={stop.label}
                   aria-describedby={helpId}
                   aria-current={stop.id === current || undefined}
@@ -148,37 +150,45 @@ export function Outline({ label, help, start, end, stops, current, onPick, onOpe
                   onDragEnd={order.end}
                 >
                   <span className={styles.number}>{index + 1}</span>
+                  {hovered && (
+                    <span className={styles.grip}>
+                      <Icon icon={GripVertical} size="sm" />
+                    </span>
+                  )}
                   <span className={`${styles.node} ${styles[stop.kind]}`}>
                     <stop.icon className={styles.glyph} aria-hidden />
-                    {stop.flagged && <span className={styles.dot} title="토글 조건 있음" />}
                   </span>
                   <span className={styles.title}>
                     <span className={stop.dim ? `${styles.name} ${styles.dim}` : styles.name}>{stop.title}</span>
+                    {stop.flagged && (
+                      <span className={styles.flag} title="토글 조건 있음">
+                        <Icon icon={GitBranch} size="sm" />
+                      </span>
+                    )}
                     {stop.badge && <Tag tone="accent">{stop.badge}</Tag>}
                   </span>
-                  {reorder === 'drag' && <span className={styles.meta}>{stop.note}</span>}
-                  {drill && reorder === 'drag' && <Icon icon={ChevronRight} size="sm" />}
+                  {hovered && <span className={styles.meta}>{stop.note}</span>}
+                  {drill && hovered && <Icon icon={ChevronRight} size="sm" />}
                 </button>
-                {reorder === 'drag' ? (
-                  <span className={styles.tools}>
-                    {stop.cache !== 'auto' && (
-                      <IconButton
-                        icon={Bookmark}
-                        size="sm"
-                        label={`'${stop.title}'까지 캐시`}
-                        title={stop.cache ? '캐시 지점 해제' : '여기까지 캐시'}
-                        pressed={stop.cache === 'set'}
-                        onClick={() => onCache(stop.id)}
-                      />
-                    )}
-                    <IconButton icon={X} size="sm" label={`'${stop.title}' 빼기`} title="빼기" onClick={() => onRemove(stop.id)} />
-                  </span>
-                ) : (
-                  <span className={styles.arrows}>
-                    <IconButton icon={ArrowUp} size="sm" label={`'${stop.title}' 위로`} disabled={index === 0} onClick={() => move(index, index - 1)} />
-                    <IconButton icon={ArrowDown} size="sm" label={`'${stop.title}' 아래로`} disabled={index === stops.length - 1} onClick={() => move(index, index + 1)} />
-                  </span>
-                )}
+                <span className={styles.tools}>
+                  {!hovered && (
+                    <>
+                      <IconButton icon={ArrowUp} size="sm" label={`'${stop.title}' 위로`} disabled={index === 0} onClick={() => move(index, index - 1)} />
+                      <IconButton icon={ArrowDown} size="sm" label={`'${stop.title}' 아래로`} disabled={index === stops.length - 1} onClick={() => move(index, index + 1)} />
+                    </>
+                  )}
+                  {hovered && stop.cache !== 'auto' && (
+                    <IconButton
+                      icon={Bookmark}
+                      size="sm"
+                      label={`'${stop.title}'까지 캐시`}
+                      title={stop.cache ? '캐시 지점 해제' : '여기까지 캐시'}
+                      pressed={stop.cache === 'set'}
+                      onClick={() => onCache(stop.id)}
+                    />
+                  )}
+                  <IconButton icon={X} size="sm" label={`'${stop.title}' 빼기`} title="빼기" onClick={() => onRemove(stop.id)} />
+                </span>
               </div>
             </div>
           );
@@ -186,19 +196,13 @@ export function Outline({ label, help, start, end, stops, current, onPick, onOpe
         <div className={styles.tail}>
           {cut(lastStop)}
           {order.at === stops.length && <span className={styles.drop} />}
+          {plus(stops.length, '맨 끝에 추가')}
         </div>
       </div>
       <div className={styles.cap} aria-hidden>
         <span className={`${styles.end} ${styles.closed}`} />
         <span className={styles.capLabel}>{end}</span>
       </div>
-      {reorder === 'drag' &&
-        addMenu(stops.length, (opener) => (
-          <button type="button" className={styles.append} ref={opener.ref} aria-haspopup="menu" aria-expanded={opener.expanded} onClick={opener.onClick}>
-            <Icon icon={Plus} size="sm" />
-            <span>맨 끝에 추가</span>
-          </button>
-        ))}
     </div>
   );
 }

@@ -13,7 +13,9 @@ export function PromptScreen({ stored, at, back }: { stored: Stored<'prompt'>; a
           stored={stored}
           layout={layout}
           at={at}
-          onAt={(next) => openPart({ kind: 'prompt', id: stored.id, ...next }, layout === 'split')}
+          // Drilled, only going into a block or out of one is a step back can undo; a tab, or the block beside this one,
+          // takes the place of what was open.
+          onAt={(next) => openPart({ kind: 'prompt', id: stored.id, ...next }, layout === 'split' || (next.block === undefined) === (at.block === undefined))}
           backLabel={back.label}
           onBack={() => navigate(back.to)}
           onOpen={(id) => navigate({ kind: 'prompt', id, pane: null })}

@@ -24,17 +24,3 @@
 .detail {
   padding: 0 var(--space-8) var(--space-8);
 }
-
-.folded {
-  composes: guide from './FolderRow.module.css';
-  margin-block: 0 var(--space-4);
-  list-style: none;
-}
-
-.folder {
-  background: var(--color-folder-bg);
-}
-
-.dropping {
-  composes: dropping from '../foundation/surface.module.css';
-}

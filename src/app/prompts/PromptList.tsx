@@ -1,24 +1,28 @@
 import { useMemo, useState } from 'react';
 import type { Stored } from '../../model/kinds';
-import { pinsModels, type PromptSort } from '../../model/prompt';
+import { isToggle, sortOf, type Prompt, type PromptSort } from '../../model/prompt';
 import { availableFeatures } from '../../runtime/tasks/features';
 import { addAgent, addPrompt, isDefaultPrompt, ofSort } from '../../runtime/library/prompts';
 import type { AgentStart } from '../../engine/agent';
 import { ACTS, newOf } from '../common/acts';
 import type { Frame } from '../common/frame';
-import { SORT_PROMPT, TASK_NAMES } from '../common/prompt-words';
+import { defaultPrompt, SORT_PROMPT, TASK_NAMES } from '../common/prompt-words';
 import { useMaking } from '../common/useMaking';
 import { useSearch } from '../common/useSearch';
-import { usePrompts, useSettings, useStore } from '../session';
+import { counted } from '../common/pack';
+import { useConnections, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
-import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_PINNED, MODEL_ROLES, PAGES, promptName, STAGE_NAMES } from '../common/words';
-import { Button, CardItem, CardList, ChoiceGroup, Disclosure, Empty, FoldButton, Hint, Menu, MenuItem, PickCard, PickCards, Row, Stack, Tabs } from '../ui';
+import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_ROLES, PAGES, promptName, STAGE_NAMES, THINGS } from '../common/words';
+import { Button, Callout, ChoiceGroup, Empty, FoldButton, Hint, Menu, MenuItem, Row, Stack, Table, Tabs, useMenuHandle, type TableColumn, type TableRow } from '../ui';
 import { useImport } from '../common/importing';
 import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse';
 import { byLastUse, byPromptName, groupPrompts, promptFolder as folderOf } from '../common/promptCopies';
 import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/filing';
-import { FolderMenu, FolderPath, named, useMoving, useNaming } from '../common/folders/FolderParts';
+import { FOLDER_COLUMNS, FolderMenu, FolderPath, named, useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
+import { agentModelWords, modelWords } from './ModelPane';
+import { PresetExport } from './PresetExport';
+import { PromptMenu } from './PromptMenu';
 
 const newName = (sort: PromptSort) => newOf(SORT_PROMPT[sort]);
 // What a new agent starts from (user ruling, 2026-10-21): the two built-ins, or one empty of either stage.
@@ -40,14 +44,16 @@ const SORTS: { sort: PromptSort; label: string; hint?: string; none: string }[] 
 ];
 type Order = 'name' | 'recent';
 
-// Closed, this line alone tells a missing default, which the turn stops on.
-export function defaultsSummary(picks: readonly { label: string; prompt?: unknown }[]): string {
-  const missing = picks.filter(({ prompt }) => !prompt).map(({ label }) => label);
-  const held = picks.filter(({ prompt }) => prompt).map(({ label }) => label);
-  return ['기본 프롬프트', held.length ? `${held.join(', ')}${missing.length ? ' 있음' : ''}` : '', missing.length ? `${missing.join(', ')} 없음` : ''].filter(Boolean).join(' · ');
-}
+const NAME: TableColumn = { label: '이름', track: 'name' };
+const MODEL: TableColumn = { label: '모델', track: 'fill' };
+const HOLDS: TableColumn = { label: '구성', track: 'fill' };
+const columnsOf = (sort: PromptSort): TableColumn[] =>
+  sort === 'conversation' ? [NAME, MODEL, HOLDS, { label: '쓰는 곳', track: 'fill' }] : sort === 'agent' ? [NAME, MODEL, HOLDS, { label: '단계', track: 'fill' }] : [NAME, HOLDS];
+const FOUND_COLUMNS: TableColumn[] = [NAME, { label: '종류', track: 'fill' }, { label: '쓰는 곳', track: 'fill' }];
 
-// Default cards lead each sort but only their own pages change the default.
+export const promptHolds = ({ blocks, toggles }: Pick<Prompt, 'blocks' | 'toggles'>) => counted([['블록', blocks.length], ['토글', toggles.filter(isToggle).length]]).join(' · ');
+
+// Defaults lead each sort but only a prompt's own menu changes the default.
 // place applies to the conversation folder tree only.
 type Props = {
   onPick: (id: string) => void;
@@ -67,6 +73,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   const prompts = usePrompts();
   const grouped = useMemo(() => groupPrompts(prompts), [prompts]);
   const settings = useSettings();
+  const connections = useConnections();
   // An experiment's prompts show only while its 실험실 switch is on.
   const sorts = useMemo(() => {
     const available = availableFeatures(settings);
@@ -91,11 +98,25 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
     return prompt ? folderOf(prompt) : null;
   };
   const moving = useMoving('prompt', index, filedAt, { off: !filing, carry });
+  // One menu for every card: a right-click says which prompt it is of.
+  const menu = useMenuHandle();
+  const [asked, setAsked] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
+  const askedPrompt = prompts.find((each) => each.id === asked);
+  const exported = prompts.find((each) => each.id === exporting);
+  const menuOf = (prompt: Stored<'prompt'>) => ({ handle: menu, onOpen: () => setAsked(prompt.id) });
 
   const badge = (prompt: Stored<'prompt'>) => defaultMark(isDefaultPrompt(settings, prompt), prompt.value.name);
-  const tags = (prompt: Stored<'prompt'>) => [...(ofSort(prompt, 'conversation') && pinsModels(prompt.value) ? [MODEL_PINNED] : []), ...(prompt.id === inUse ? ['사용 중'] : [])];
+  const tags = (prompt: Stored<'prompt'>) => (prompt.id === inUse ? ['사용 중'] : []);
   // Only conversation prompts are used by chats; a translation prompt is chosen by a character's 번역.
-  const usage = (prompt: Stored<'prompt'>) => (ofSort(prompt, 'conversation') ? promptUseWords(uses.get(prompt.id) ?? EMPTY_USE) : ofSort(prompt, 'agent') ? STAGE_NAMES[prompt.value.stage] : undefined);
+  const usage = (prompt: Stored<'prompt'>) => (ofSort(prompt, 'conversation') ? promptUseWords(uses.get(prompt.id) ?? EMPTY_USE) : undefined);
+  // What columnsOf names after the name, for the prompt's sort.
+  const facts = (prompt: Stored<'prompt'>): (string | null)[] => {
+    const holds = promptHolds(prompt.value) || null;
+    if (ofSort(prompt, 'conversation')) return [modelWords(prompt.value.models, connections), holds, usage(prompt) ?? null];
+    if (ofSort(prompt, 'agent')) return [agentModelWords(prompt.value.model, connections), holds, STAGE_NAMES[prompt.value.stage]];
+    return [holds];
+  };
 
   function addFrom(start: AgentStart, name: string) {
     void addAgent(store, start, name).then((added) => (added.ok ? onPick(added.data.id) : toast.failed(added, '에이전트를 만들지 못했어요.')));
@@ -111,51 +132,45 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   const top = (filing ? at.placed(conversations) : grouped.top.filter((prompt) => ofSort(prompt, shown))).sort(recentFirst ? byLastUse(uses, grouped.copies) : byName);
   const current = sorts.find(({ sort }) => sort === shown)!;
 
-  const row = (prompt: Stored<'prompt'>, nested = false) => {
+  const row = (prompt: Stored<'prompt'>, nested = false): TableRow => {
     const copies = grouped.copies.get(prompt.id) ?? [];
     const expanded = open.has(prompt.id);
     const flip = () => setOpen((current) => new Set(current.has(prompt.id) ? [...current].filter((id) => id !== prompt.id) : [...current, prompt.id]));
     const picking = moving.picked !== null && !nested;
-    return (
-      <CardItem
-        key={prompt.id}
-        title={promptName(prompt.value.name)}
-        badge={badge(prompt)}
-        tags={tags(prompt)}
-        note={usage(prompt)}
-        selected={picking ? moving.picked!.has(prompt.id) : undefined}
-        drag={moving.dropInto && !nested ? prompt.id : undefined}
-        onClick={() => (picking ? moving.toggle(prompt.id) : onPick(prompt.id))}
-        control={copies.length > 0 && <FoldButton open={expanded} onToggle={flip} noun="사본" count={copies.length} />}
-      >
-        {expanded && copies.map((copy) => row(copy, true))}
-      </CardItem>
-    );
+    const cells = facts(prompt);
+    return {
+      key: prompt.id,
+      cells: [promptName(prompt.value.name), ...cells],
+      summary: cells.filter(Boolean).join(' · '),
+      badge: badge(prompt),
+      tags: tags(prompt),
+      selected: picking ? moving.picked!.has(prompt.id) : undefined,
+      drag: moving.dropInto && !nested ? prompt.id : undefined,
+      onClick: () => (picking ? moving.toggle(prompt.id) : onPick(prompt.id)),
+      menu: picking ? undefined : menuOf(prompt),
+      control: copies.length > 0 && <FoldButton open={expanded} onToggle={flip} noun="사본" count={copies.length} brief />,
+      under: expanded ? copies.map((copy) => row(copy, true)) : undefined,
+    };
   };
 
-  const folderRows = filing ? at.folders.map((folder) => (
-    <CardItem
-      key={folder.id}
-      folder
-      title={folder.value.name}
-      note={folderNote('prompt', index.byFolder.get(folder.id)!)}
-      onClick={() => onGo(folder.id)}
-      onDropCard={moving.dropInto?.(folder.id)}
-      control={<FolderMenu actions={folderActions} folder={named(folder)} depth={at.path.length + 1} onName={naming.name} />}
-    />
-  )) : [];
+  const folderRows: TableRow[] = filing
+    ? at.folders.map((folder) => ({
+        key: folder.id,
+        folder: true,
+        cells: [folder.value.name, folderNote('prompt', index.byFolder.get(folder.id)!)],
+        onClick: () => onGo(folder.id),
+        onDropCard: moving.dropInto?.(folder.id),
+        control: <FolderMenu actions={folderActions} folder={named(folder)} depth={at.path.length + 1} onName={naming.name} />,
+      }))
+    : [];
 
-  const defaultPicks = !defaults ? [] : sorts.filter(({ sort }) => sort !== 'agent').map(({ sort, label }) => ({ sort, label, prompt: prompts.find((each) => ofSort(each, sort) && isDefaultPrompt(settings, each)) }));
-  const defaultCards = defaults && (
-    <Disclosure label={defaultsSummary(defaultPicks)}>
-      <PickCards>
-        {defaultPicks.map(({ sort, label, prompt }) => {
-          if (!prompt) return <PickCard key={sort} label={label} value="없음" tone="warn" onClick={() => setShown(sort)} />;
-          return <PickCard key={sort} label={label} value={promptName(prompt.value.name)} note={usage(prompt)} onClick={() => onPick(prompt.id)} />;
-        })}
-      </PickCards>
-    </Disclosure>
-  );
+  // A turn stops on a sort whose default is gone, so the list says which.
+  const missing = defaults ? sorts.filter(({ sort }) => sort !== 'agent' && !prompts.some((each) => ofSort(each, sort) && isDefaultPrompt(settings, each))) : [];
+  const warnings = missing.map(({ sort, label }) => (
+    <Callout key={sort} tone="warn" action={sort === shown ? undefined : { label: `${label} 프롬프트 보기`, onClick: () => setShown(sort) }}>
+      {`${defaultPrompt(sort)}가 없어요.`}
+    </Callout>
+  ));
 
   const search = useSearch(listed, '프롬프트 검색', (prompt) => [promptName(prompt.value.name)]);
 
@@ -195,7 +210,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   const body = (
     <>
       <Stack gap="related">
-        {defaultCards}
+        {warnings}
         {(search.field || sortChoice) && (
           <Row kind="toolbar">
             {search.field}
@@ -222,10 +237,10 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
               </FolderPath>
             )}
             {folderRows.length + top.length > 0 ? (
-              <CardList label={`${current.label} 프롬프트`}>
-                {folderRows}
-                {top.map((prompt) => row(prompt))}
-              </CardList>
+              <>
+                {folderRows.length > 0 && <Table label="폴더" columns={FOLDER_COLUMNS} rows={folderRows} />}
+                {top.length > 0 && <Table label={`${current.label} 프롬프트`} columns={columnsOf(shown)} rows={top.map((prompt) => row(prompt))} />}
+              </>
             ) : at.here && filing ? (
               <Empty>{EMPTY_FOLDER}</Empty>
             ) : (
@@ -235,24 +250,24 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
             )}
           </>,
           (found) => (
-            <CardList label="검색 결과">
-              {found.toSorted(byPromptName).map((prompt) => (
-                <CardItem
-                  key={prompt.id}
-                  title={promptName(prompt.value.name)}
-                  badge={badge(prompt)}
-                  tags={[...(prompt.value.task ? [TASK_NAMES[prompt.value.task]] : []), ...tags(prompt)]}
-                  note={[whereIs(index, folderOf(prompt)), usage(prompt)].filter(Boolean).join(' · ') || undefined}
-                  onClick={() => onPick(prompt.id)}
-                />
-              ))}
-            </CardList>
+            <Table
+              label="검색 결과"
+              columns={FOUND_COLUMNS}
+              rows={found.toSorted(byPromptName).map((prompt) => {
+                const cells = [SORTS.find(({ sort }) => sort === sortOf(prompt.value))!.label, [whereIs(index, folderOf(prompt)), usage(prompt)].filter(Boolean).join(' · ') || null];
+                return { key: prompt.id, cells: [promptName(prompt.value.name), ...cells], summary: cells.filter(Boolean).join(' · '), badge: badge(prompt), tags: tags(prompt), onClick: () => onPick(prompt.id), menu: menuOf(prompt) };
+              })}
+            />
           ),
           'body',
         )}
       </Stack>
       {moving.bar}
       {naming.dialog}
+      <Menu handle={menu} label={`${THINGS.prompt.noun} 메뉴`} trigger={() => null}>
+        {askedPrompt && <PromptMenu stored={askedPrompt} onOpen={onPick} onExport={() => setExporting(askedPrompt.id)} />}
+      </Menu>
+      {exported && ofSort(exported, 'conversation') && <PresetExport prompt={exported.value} onClose={() => setExporting(null)} />}
     </>
   );
   return frame({ head: { title: PAGES.prompts, actions }, body });

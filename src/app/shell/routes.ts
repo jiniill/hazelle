@@ -9,7 +9,7 @@ import { PROMPT_SORTS, type PromptSort } from '../../model/prompt';
 
 const ACCOUNT_SECTIONS = ['notices'] as const;
 export type AccountSection = (typeof ACCOUNT_SECTIONS)[number];
-const PROMPT_PANES = ['toggles', 'model', 'picture', 'variables'] as const;
+const PROMPT_PANES = ['read', 'toggles', 'model', 'picture', 'variables', 'modules', 'features'] as const;
 export type PromptPane = (typeof PROMPT_PANES)[number];
 const CHARACTER_PARTS = ['profile', 'character', 'greetings', 'instructions', 'lore', 'modules', 'features', 'scripts', 'toggles', 'variables', 'assets', 'illustration', 'display'] as const;
 export type CharacterPart = (typeof CHARACTER_PARTS)[number];
@@ -33,7 +33,7 @@ export type Route =
   // '' when there was none.
   | { kind: 'connect-direct'; address: string }
   | { kind: 'connection'; id: string }
-  // pane: the prompt editor's pane that is open, which a door to a prompt's 토글, 모델, 이미지 or 기본 변수 names; null, a block.
+  // pane: the prompt editor's tab that is open, which a door to a prompt's 토글, 모델, 이미지 or 기본 변수 names; null, its blocks.
   // block: the block open in its place, none for the list of blocks.
   // place on a list of things that folders hold: a folder's id, or null for the top.
   | { kind: 'prompts'; place: string | null; sort: PromptSort | null }

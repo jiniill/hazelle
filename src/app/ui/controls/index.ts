@@ -13,7 +13,7 @@ export { FileButton, pickFiles } from './FileButton';
 export { FoldButton } from './FoldButton';
 export { IconButton } from './IconButton';
 export { Link } from './Link';
-export { MarkupArea, typeInto } from './MarkupArea';
+export { MarkupArea, MarkupText, revealIn, typeInto } from './MarkupArea';
 export { NumberInput } from './NumberInput';
 export { PhraseField } from './PhraseField';
 export { PickCard, PickCards } from './PickCard';

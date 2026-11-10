@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, GitBranch, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, GitBranch, X } from 'lucide-react';
 import { useMemo, type Ref } from 'react';
 import { ACTS, addOf, newOf } from '../common/acts';
 import { cbsLanguage } from '../common/code/cbs';
@@ -8,8 +8,8 @@ import { withParticle } from '../common/particles';
 import { SLOT } from '../common/prompt-words';
 import { SHORTCUTS } from '../shortcuts';
 import type { Block, ChatRange, ChatSlot, PromptSort, RecentSlot, Role, TextBlock, Toggle, WrappedSlot } from '../../model/prompt';
-import { Button, ChoiceGroup, Divider, Empty, Hint, MarkupArea, Menu, MenuHeading, MenuItem, MoreMenu, Row, Section, SettingRow, Stack, Stepper, Switch, Tag, Text, TitleField } from '../ui';
-import { blockTitle, describeRange, firstLine, MARKS, RANGES, rangeKey, ROLES, type CacheMark } from './blocks';
+import { Button, ChoiceGroup, Divider, Empty, Hint, IconButton, MarkupArea, Menu, MenuHeading, MenuItem, MoreMenu, Row, Section, SettingRow, Stack, Stepper, Switch, Tag, Text, TitleField } from '../ui';
+import { blockTitle, CACHE_WORDS, describeRange, firstLine, MARKS, RANGES, rangeKey, ROLES, type CacheMark } from './blocks';
 import { CommandMenu } from './CommandMenu';
 import { RECENT_MAX, type Snippet } from './edits';
 import { NO_TOGGLES } from '../common/words';
@@ -36,6 +36,8 @@ type Props = {
   cache: CacheMark | undefined;
   onCache: () => void;
   onMove: (to: number) => void;
+  // To the block before or after, where no outline stands beside this one.
+  onStep?: (to: number) => void;
   onRemove: () => void;
   onCondition: (toggle: Toggle) => void;
   onInsert: (snippet: Snippet) => void;
@@ -46,34 +48,17 @@ type Props = {
 
 const CACHE_HELP = '이 블록까지 캐시로 저장해 다음 요청에서 요금을 아껴요.';
 
-export function BlockPane({ block, sort, index, count, toggles, authorNote, onChange, onRole, onRange, onCount, onTranslations, onWrapper, onAuthorNote, onMark, cache, onCache, onMove, onRemove, onCondition, onInsert, onNewToggle, textRef, nameRef }: Props) {
+export function BlockPane({ block, sort, index, count, toggles, authorNote, onChange, onRole, onRange, onCount, onTranslations, onWrapper, onAuthorNote, onMark, cache, onCache, onMove, onStep, onRemove, onCondition, onInsert, onNewToggle, textRef, nameRef }: Props) {
   const trial = useTrial(null);
   const cbs = useMemo(() => cbsLanguage({ variables: trial.variables }), [trial.variables]);
   const { title } = blockTitle(block);
-  const where = `${index + 1}번째 · ${block.kind === 'text' ? '직접 입력' : `자동 입력 · ${SLOT[block.slot].name}`}`;
   const placeholder = block.kind === 'slot' ? SLOT[block.slot].name : firstLine(block.text) || '이름 붙이기';
+
+  const role = 'role' in block && <ChoiceGroup<Role> label="전송 역할" showLabel layout="fit" options={ROLES} value={block.role} onChange={(next) => onRole(block, next)} />;
 
   return (
     <Stack gap="section">
       <Stack gap="related">
-        <Row kind="spread">
-          <Text variant="note">{where}</Text>
-          <MoreMenu of={`'${title}'`}>
-            {block.kind === 'text' && sort === 'conversation' && (
-              <>
-                <MenuHeading>카드 내용으로 대체</MenuHeading>
-                <MenuItem label="대체하지 않음" description="캐릭터 카드와 상관없이 이 텍스트를 보내요" checked={block.mark === null} onClick={() => onMark(block, null)} />
-                {(['main', 'globalNote'] as const).map((mark) => (
-                  <MenuItem key={mark} label={MARKS[mark].label} description={MARKS[mark].hint} checked={block.mark === mark} onClick={() => onMark(block, mark)} />
-                ))}
-                <Divider variant="menu" />
-              </>
-            )}
-            {index > 0 && <MenuItem icon={ArrowUp} label="위로 옮기기" onClick={() => onMove(index - 1)} />}
-            {index < count - 1 && <MenuItem icon={ArrowDown} label="아래로 옮기기" onClick={() => onMove(index + 1)} />}
-            <MenuItem icon={X} tone="warn" label="빼기" onClick={onRemove} />
-          </MoreMenu>
-        </Row>
         <TitleField
           ref={nameRef}
           label="블록 이름"
@@ -81,18 +66,55 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
           placeholder={placeholder}
           blank={block.kind === 'slot' ? '비워 두면 자동 입력 이름으로 표시돼요.' : '비워 두면 첫 줄이 이름으로 표시돼요.'}
           onChange={(name) => onChange({ ...block, name: name || null })}
+          actions={
+            <>
+              {onStep && (
+                <>
+                  <IconButton icon={ChevronUp} size="sm" label="이전 블록" disabled={index === 0} onClick={() => onStep(index - 1)} />
+                  <IconButton icon={ChevronDown} size="sm" label="다음 블록" disabled={index === count - 1} onClick={() => onStep(index + 1)} />
+                </>
+              )}
+              <MoreMenu of={`'${title}'`}>
+                {block.kind === 'text' && sort === 'conversation' && (
+                  <>
+                    <MenuHeading>카드 내용으로 대체</MenuHeading>
+                    <MenuItem label="대체하지 않음" description="캐릭터 카드와 상관없이 이 텍스트를 보내요" checked={block.mark === null} onClick={() => onMark(block, null)} />
+                    {(['main', 'globalNote'] as const).map((mark) => (
+                      <MenuItem key={mark} label={MARKS[mark].label} description={MARKS[mark].hint} checked={block.mark === mark} onClick={() => onMark(block, mark)} />
+                    ))}
+                    <Divider variant="menu" />
+                  </>
+                )}
+                {index > 0 && <MenuItem icon={ArrowUp} label="위로 옮기기" onClick={() => onMove(index - 1)} />}
+                {index < count - 1 && <MenuItem icon={ArrowDown} label="아래로 옮기기" onClick={() => onMove(index + 1)} />}
+                <MenuItem icon={X} tone="warn" label="빼기" onClick={onRemove} />
+              </MoreMenu>
+            </>
+          }
         />
-        {'role' in block && (
-          <Row kind="toolbar">
-            <ChoiceGroup<Role> label="전송 역할" showLabel layout="fit" options={ROLES} value={block.role} onChange={(role) => onRole(block, role)} />
-            {block.kind === 'text' && block.mark && (
-              <>
-                <Tag tone="accent">{MARKS[block.mark].label}</Tag>
-                <Hint label={MARKS[block.mark].label}>{`캐릭터 카드에 ${withParticle(`'${MARKS[block.mark].card}'`, '이/가')} 있으면 그 내용으로 대체되고, 이 텍스트는 카드의 {{original}} 자리에 들어가요.`}</Hint>
-              </>
-            )}
-            {/* One group, so a narrow pane wraps the two inserts together. */}
-            {block.kind === 'text' && (
+        {block.kind === 'slot' && role}
+      </Stack>
+      {block.kind === 'slot' && <Text>{SLOT[block.slot].line}</Text>}
+      {block.kind === 'text' && (
+        <CountedMarkup
+          ref={textRef}
+          label="내용"
+          language={cbs}
+          expand={SHORTCUTS.bigEdit.keys}
+          aside={trial.cbs}
+          value={block.text}
+          placeholder={block.mark === 'globalNote' ? `비워 두면 카드에 '대화 뒤 지시문'이 있을 때만 보내요.` : '모델에게 보낼 내용'}
+          onChange={(text) => onChange({ ...block, text })}
+          tools={
+            <Row kind="toolbar">
+              {role}
+              {block.mark && (
+                <Row kind="tags">
+                  <Tag tone="accent">{MARKS[block.mark].label}</Tag>
+                  <Hint label={MARKS[block.mark].label}>{`캐릭터 카드에 ${withParticle(`'${MARKS[block.mark].card}'`, '이/가')} 있으면 그 내용으로 대체되고, 이 텍스트는 카드의 {{original}} 자리에 들어가요.`}</Hint>
+                </Row>
+              )}
+              {/* One group, so a narrow pane wraps the two inserts together. */}
               <Row kind="actions">
                 <Menu
                   label="조건 삽입"
@@ -118,21 +140,18 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
                 </Menu>
                 <CommandMenu sort={sort} onInsert={onInsert} />
               </Row>
-            )}
-          </Row>
-        )}
-      </Stack>
-      {block.kind === 'slot' && <Text>{SLOT[block.slot].line}</Text>}
-      {block.kind === 'text' && (
-        <CountedMarkup
-          ref={textRef}
-          label="내용"
-          language={cbs}
-          expand={SHORTCUTS.bigEdit.keys}
-          aside={trial.cbs}
-          value={block.text}
-          placeholder={block.mark === 'globalNote' ? `비워 두면 카드에 '대화 뒤 지시문'이 있을 때만 보내요.` : '모델에게 보낼 내용'}
-          onChange={(text) => onChange({ ...block, text })}
+            </Row>
+          }
+          foot={
+            cache === 'auto' ? (
+              <Text variant="note">{CACHE_WORDS.auto}</Text>
+            ) : (
+              <Row kind="actions">
+                <Switch label={CACHE_WORDS.set} variant="labeled" checked={cache === 'set'} onChange={onCache} />
+                <Hint label={CACHE_WORDS.set}>{CACHE_HELP}</Hint>
+              </Row>
+            )
+          }
         />
       )}
       {block.kind === 'slot' && block.slot === 'chat' && <RangeChoice block={block} onRange={(range) => onRange(block, range)} />}
@@ -178,11 +197,13 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
             <MarkupArea label="감싸는 텍스트" variant="field" language={cbs} value={block.wrapper} onChange={(wrapper) => onChange({ ...block, wrapper })} />
           </Section>
         ))}
-      <SettingRow
-        label="여기까지 캐시"
-        help={cache === 'auto' ? undefined : CACHE_HELP}
-        control={cache === 'auto' ? <Text variant="note">자동</Text> : <Switch label="여기까지 캐시" checked={cache === 'set'} onChange={onCache} />}
-      />
+      {block.kind === 'slot' && (
+        <SettingRow
+          label={CACHE_WORDS.set}
+          help={cache === 'auto' ? undefined : CACHE_HELP}
+          control={cache === 'auto' ? <Text variant="note">자동</Text> : <Switch label={CACHE_WORDS.set} checked={cache === 'set'} onChange={onCache} />}
+        />
+      )}
     </Stack>
   );
 }

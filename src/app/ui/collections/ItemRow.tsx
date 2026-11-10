@@ -1,8 +1,6 @@
 import type { MouseEvent, ReactNode } from 'react';
-import type { MenuHandle } from '../overlays/Menu';
-import { openAtPointer } from '../overlays/MoreMenu';
 import { Item } from './Item';
-import { RowControl } from './RowControl';
+import { RowControl, type RowMenu } from './RowControl';
 import styles from './ItemRow.module.css';
 
 type Props = {
@@ -18,8 +16,7 @@ type Props = {
   control?: ReactNode;
   // The row can be dragged onto a folder row, carrying this key.
   drag?: string;
-  // Right-click opens it at the pointer; onOpen tells the one menu many rows share which row asked.
-  menu?: { handle: MenuHandle; onOpen: () => void };
+  menu?: RowMenu;
   // A dragged row's key, let go over this one.
   onDropCard?: (key: string) => void;
   // event: its modifier keys pick several (Ctrl, Shift) where the list offers it.
@@ -28,7 +25,7 @@ type Props = {
 
 export function ItemRow({ avatar, title, time, typing, preview, current = false, selected, control, drag, menu, onDropCard, onClick }: Props) {
   return (
-    <RowControl control={control} drag={drag} onDropCard={onDropCard} onContextMenu={menu && ((event) => openAtPointer(menu.handle, event) && menu.onOpen())}>
+    <RowControl control={control} drag={drag} onDropCard={onDropCard} menu={menu}>
       <Item
         density="regular"
         scheme="side"

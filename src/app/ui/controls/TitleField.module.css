@@ -1,5 +1,8 @@
+/* --title-width, --title-sizing: a head that sets something right after the title (NavBar's others) has the field
+   as wide as its words. */
 .field {
-  width: 100%;
+  width: var(--title-width, 100%);
+  field-sizing: var(--title-sizing, fixed);
   max-width: var(--pane-max-width);
   margin-left: calc(var(--space-8) * -1);
   padding: 0 var(--space-8);
@@ -12,6 +15,25 @@
   font-size: var(--text-xl);
   font-weight: var(--weight-bold);
   transition: border-color var(--motion-respond);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.head .field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
 }
 
 .page {

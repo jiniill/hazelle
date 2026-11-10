@@ -1,33 +1,30 @@
-import { Cpu, ImageIcon, SlidersHorizontal, Variable } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { holdsPersona } from '../../engine/pipeline';
 import type { Stored } from '../../model/kinds';
-import { live } from '../../model/library';
 import { labOn } from '../../model/settings';
-import { isToggle, slotsOf, sortOf, type Block, type ConversationPrompt, type PromptSort, type TextBlock, type Toggle, type WrappedSlot } from '../../model/prompt';
+import { isToggle, slotsOf, sortOf, type Block, type ConversationPrompt, type TextBlock, type Toggle, type WrappedSlot } from '../../model/prompt';
 import type { ApiResult } from '../../runtime/api';
 import { setAgentModel, setPromptModel } from '../../runtime/models/assignment';
 import { setAgentAt } from '../../runtime/tasks/agents';
 import { setFeatureAt } from '../../runtime/tasks/features';
-import { copyPrompt, editPrompt, isDefaultPrompt, ofSort, removePrompt, resetPromptBlocks, restorePrompt, setDefaultPrompt, type PromptPatch } from '../../runtime/library/prompts';
-import { ACTS } from '../common/acts';
-import { howMany } from '../common/pack';
+import { editPrompt, isDefaultPrompt, ofSort, type PromptPatch } from '../../runtime/library/prompts';
+import { ACTS, addOf } from '../common/acts';
 import { DefaultVariables } from '../common/DefaultVariables';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { ModuleSwitches } from '../common/ModuleSwitches';
 import { defaultPrompt, NO_PERSONA_SLOT, SLOT } from '../common/prompt-words';
 import type { Frame } from '../common/frame';
 import { useAutosave } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, copyOf, DEFAULT_VARIABLES, ORIGINAL_GONE, promptName, SEE_ORIGINAL, SET_DEFAULT, STAGE_NAMES, THINGS } from '../common/words';
-import { useConnections, useSettings, useStore, useStored } from '../session';
+import { byPromptName } from '../common/promptCopies';
+import { useSearch } from '../common/useSearch';
+import { copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, PAGES, promptName, STAGE_NAMES, THINGS } from '../common/words';
+import { useConnections, useModules, usePrompts, useSettings, useStore } from '../session';
 import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
-import { useMaking } from '../common/useMaking';
-import { useRemoval } from '../common/useRemoval';
 import { useOwnUndo, useToast } from '../toast';
-import { Button, Callout, Divider, MenuHeading, MenuItem, NavRow, Outline, Row, Section, Stack, Tag, typeInto, useHover, type EditorLayout, type NavBarProps, type OutlineStop } from '../ui';
+import { Button, Callout, Divider, FoundRow, Icon, List, Menu, MenuHeading, MenuItem, Outline, revealIn, Section, Stack, Tabs, Tag, Text, typeInto, useHover, type EditorLayout, type NavBarProps, type OutlineStop } from '../ui';
 import { BlockPane } from './BlockPane';
-import { blockIcon, blockKind, blockMeta, blockTitle, cacheMarks, hasConditions, isText, MARKS, rangeKey, TEXTS } from './blocks';
+import { blockHit, blockIcon, blockKind, blockMeta, blockTitle, CACHE_WORDS, cacheMarks, hasConditions, isText, MARKS, rangeKey, TEXTS } from './blocks';
 import { conditionSnippet, countUses, draftOf, newBlock, placedOnce, withMark, type Draft, type NewBlock, type Snippet } from './edits';
 import {
   addBlock,
@@ -52,10 +49,12 @@ import {
   type Step,
   type Turned,
 } from './history';
-import { AgentModelPane, agentModelWords, ModelPane, modelWords } from './ModelPane';
+import { AgentModelPane, ModelPane } from './ModelPane';
 import { chatWarning } from './ranges';
 import { PicturePane } from './PicturePane';
 import { PresetExport } from './PresetExport';
+import { PromptMenu } from './PromptMenu';
+import { PromptRead } from './PromptRead';
 import { ProtectRules } from './ProtectRules';
 import { AgentPlace } from './AgentPlace';
 import { AgentSwitches } from '../common/AgentSwitches';
@@ -68,19 +67,18 @@ const MODEL = 'model' satisfies PromptPane;
 const TOGGLES = 'toggles' satisfies PromptPane;
 const PICTURE = 'picture' satisfies PromptPane;
 const VARIABLES = 'variables' satisfies PromptPane;
-const PANE_TITLES: Record<PromptPane, string> = { model: '모델', picture: '이미지', toggles: '토글', variables: DEFAULT_VARIABLES };
+const MODULES = 'modules' satisfies PromptPane;
+const FEATURES = 'features' satisfies PromptPane;
+const READ = 'read' satisfies PromptPane;
+const PANE_TITLES: Record<PromptPane, string> = { read: '전체 읽기', model: '모델', picture: '이미지', toggles: '토글', variables: DEFAULT_VARIABLES, modules: PAGES.modules, features: FEATURES_TITLE };
 const isPane = (id: string): id is PromptPane => Object.hasOwn(PANE_TITLES, id);
-const MAKES_DEFAULT = {
-  conversation: '새 채팅을 시작할 때 이 프롬프트를 써요',
-  translate: '번역 프롬프트를 따로 선택하지 않은 채팅에 써요',
-  memory: '장기 기억을 이 프롬프트로 정리해요',
-  illustrate: '삽화 프롬프트를 따로 선택하지 않은 채팅에 써요',
-  mascot: '마스코트가 이 프롬프트로 대사를 써요',
-  preread: '긴 내용을 미리 요약할 때 이 프롬프트를 써요',
-} satisfies Record<Exclude<PromptSort, 'agent'>, string>;
+// The tabs after 블록, in their order.
+const PANES: PromptPane[] = [READ, MODEL, PICTURE, TOGGLES, VARIABLES, MODULES, FEATURES];
+// The tab of the blocks, which an address names by naming no pane.
+const BLOCKS = 'blocks';
 const HELP = '위아래 화살표로 이동, Alt+화살표로 순서 변경, Enter로 편집, Delete로 빼기';
+const ADD_BLOCK = addOf('블록');
 
-const CACHE_WORDS = { set: '여기까지 캐시', auto: '자동 캐시' } as const;
 const UNDO = { did: '되돌렸어요', failed: '되돌리지 못했어요' };
 const REDO = { did: '다시 실행했어요', failed: '다시 실행하지 못했어요' };
 const IMPORTED_FROM: Record<NonNullable<ConversationPrompt['imported']>, string> = { 'risu-preset': 'Risu 프리셋에서 가져옴', 'sillytavern-preset': 'SillyTavern 프리셋에서 가져옴' };
@@ -91,11 +89,11 @@ type Props = {
   stored: Stored<'prompt'>;
   // The caller decides, since a side panel is narrow on any screen.
   layout: EditorLayout;
-  // The pane or the block open, drilled into, or neither: the list of blocks. A page keeps it in its address, a panel in
-  // its own state.
+  // The tab or the block open, or neither: the list of blocks. A page keeps it in its address, a panel in its own
+  // state.
   at: PromptAt;
   onAt: (at: PromptAt) => void;
-  // Where the 토글 pane goes back to when it was opened from outside the editor; the outline is a link under its head.
+  // Where the 토글 tab goes back to when it was opened from outside the editor.
   paneBack?: { label: string; onBack: () => void };
   backLabel: string;
   onBack: () => void;
@@ -109,20 +107,16 @@ type Props = {
 export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt, paneBack, backLabel, onBack, onOpen, onErased, frame }: Props) {
   const store = useStore();
   const toast = useToast();
-  const removal = useRemoval();
-  const making = useMaking();
   const settings = useSettings();
   // 에이전트 노트 is offered only while the 실험실 switch is on, as everything of an experiment.
   const agentsLab = labOn(settings, 'agents');
   const connections = useConnections();
+  const prompts = usePrompts();
   const uses = usePromptUse().get(stored.id) ?? EMPTY_USE;
-  const original = live(useStored('prompt', stored.value.origin?.id ?? null));
   const split = layout === 'split';
   const hover = useHover();
   const save = useAutosave<PromptPatch>(`prompt:${stored.id}`, (patch) => editPrompt(store, stored.id, patch));
   const sort = sortOf(stored.value);
-  // An agent has no default: the chats whose lists hold it run it (runtime/tasks/agents).
-  const words = sort === 'agent' ? null : { default: defaultPrompt(sort), makeDefault: MAKES_DEFAULT[sort] };
 
   // The stored prompt under what waits to be saved, so another device's edit to a field nothing here changed shows.
   const draft: Draft = { ...draftOf(stored.value), ...save.unsaved };
@@ -138,23 +132,29 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   // Only a conversation prompt and an agent pick models; another task's model is its feature's (runtime/models/assignment taskModel).
   const picksModel = sort === 'conversation' || sort === 'agent';
   const firstText = () => latest.current.blocks.find(isText)?.id ?? (picksModel ? MODEL : TOGGLES);
-  const [reordering, setReordering] = useState(false);
+  const modules = useModules();
+  const [editing, setEditing] = useState(false);
   const [addingToggle, setAddingToggle] = useState(false);
   const [exporting, setExporting] = useState(false);
-  // 이미지 is an illustration prompt's only, 기본 변수 a conversation prompt's (its draft alone holds them), and 모델 a
-  // prompt's that picks one; an address naming one on another opens as if it named none.
-  const shownPane = (pane === PICTURE && sort !== 'illustrate') || (pane === VARIABLES && !draft.variables) || (pane === MODEL && !picksModel) ? null : pane;
+  // 이미지 is an illustration prompt's only, 기본 변수, 모듈 and 기능 a conversation prompt's (its draft alone holds the
+  // variables; 모듈 only while there is one to switch), and 모델 a prompt's that picks one; an address naming one on
+  // another opens as if it named none.
+  const has: Record<PromptPane, boolean> = { read: true, model: picksModel, picture: sort === 'illustrate', toggles: true, variables: draft.variables !== undefined, modules: sort === 'conversation' && modules.length > 0, features: sort === 'conversation' };
+  const panes = PANES.filter((each) => has[each]);
+  const shownPane = pane !== null && panes.includes(pane) ? pane : null;
   // A block it does not hold opens as if none were named, as a pane it does not have does.
   const picked = named !== undefined && draft.blocks.some((block) => block.id === named) ? named : undefined;
-  const drilled = shownPane !== null || picked !== undefined;
   const open = shownPane ?? picked ?? firstText();
   const index = draft.blocks.findIndex((block) => block.id === open);
   const block = draft.blocks[index];
+  // The block 블록 goes back to from another tab.
+  const lastBlock = useRef(block?.id);
+  if (block) lastBlock.current = block.id;
 
   const textRef = useRef<HTMLTextAreaElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   // A selection to set once the text it falls in is on the page: after 조건 삽입 or 명령어 삽입, or Enter from the outline.
-  const select = useRef<[number, number] | 'name' | 'text' | null>(null);
+  const select = useRef<[number, number] | { show: [number, number] } | 'name' | 'text' | null>(null);
   const applySelect = () => {
     const want = select.current;
     select.current = null;
@@ -164,6 +164,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
       nameRef.current?.focus();
       return;
     }
+    if (typeof want === 'object' && 'show' in want) return revealIn(area, want.show);
     area.focus();
     if (Array.isArray(want)) area.setSelectionRange(...want);
   };
@@ -171,6 +172,14 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
 
   const pick = (id: string) => onAt(isPane(id) ? { pane: id } : { pane: null, block: id });
   const leavePage = () => onAt({ pane: null });
+  // Beside the outline 블록 opens a block, the last one open; drilled, the outline itself.
+  const pickTab = (tab: PromptPane | typeof BLOCKS) => {
+    if (tab !== BLOCKS) return pick(tab);
+    if (!split) return leavePage();
+    const blocks = latest.current.blocks;
+    const back = blocks.find((each) => each.id === lastBlock.current) ?? blocks.find(isText) ?? blocks[0];
+    if (back) pick(back.id);
+  };
 
   // Every structural edit is a step on this one stack; a toast's 되돌리기 undoes its own step, and leaves with the
   // editor, whose stack it is.
@@ -218,7 +227,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
     const step = perform(removeBlock(gone, at));
     if (!step) return;
     // The block on show gives way to its neighbour; a phone's list shows none.
-    if (open === id && next && (split || drilled)) pick(next.id);
+    if (open === id && next && (split || picked !== undefined)) pick(next.id);
     undoable(`'${blockTitle(gone).title}' 블록을 뺐어요.`, () => undo(step));
   };
   const mark = (target: TextBlock, value: TextBlock['mark']) => {
@@ -251,21 +260,6 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const modelSaved = (saving: Promise<ApiResult<unknown>>) => toast.settled(saving, '모델을 바꾸지 못했어요.');
 
   const isDefault = isDefaultPrompt(settings, stored);
-  const copy = () => making.copy({ flush: save.flush, name: () => promptName(latest.current.name), make: (name, made) => copyPrompt(store, stored.id, name, made), open: onOpen });
-  const resetBlocks = async () => {
-    if (!(await save.flush())) return;
-    const { blocks, toggles } = latest.current;
-    const reset = await resetPromptBlocks(store, stored.id);
-    if (!reset.ok) return toast.failed(reset, '기본 블록으로 되돌리지 못했어요.');
-    toast.undoable('기본 블록으로 되돌렸어요.', () => editPrompt(store, stored.id, { blocks, toggles }));
-  };
-  const makeDefault = async () => {
-    const saved = await setDefaultPrompt(store, stored.id);
-    if (!saved.ok) toast.failed(saved, '기본으로 지정하지 못했어요.');
-  };
-  const erase = () =>
-    removal({ name: ({ value }) => promptName(value.name), noun: THINGS.prompt.noun, task: () => removePrompt(store, stored.id), queue: save.remove, restore: () => restorePrompt(store, stored.id), then: onErased, detail: BIN_KEEPS });
-
   const cacheAt = (id: string) => {
     const target = latest.current.blocks.find((each) => each.id === id);
     if (target) perform(setCache(target, !target.cache));
@@ -300,53 +294,95 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
     </>
   );
 
-  const modelMeta = ofSort(stored, 'conversation') ? modelWords(stored.value.models, connections) : ofSort(stored, 'agent') ? agentModelWords(stored.value.model, connections) : null;
+  // A block found opens with the first place in its text selected and in view, or its name where only that holds it.
+  const openFound = (found: Block) => {
+    const { first } = blockHit(found, 0, search.words);
+    select.current = first ? { show: first } : 'name';
+    if (split && found.id === open) applySelect();
+    else pick(found.id);
+  };
+  const search = useSearch(draft.blocks, '블록 검색', (each) => [blockTitle(each).title, each.kind === 'text' ? each.text : ''], { onEnter: openFound });
+  const found = (blocks: readonly Block[]) => {
+    const hits = blocks.map((each) => ({ block: each, hit: blockHit(each, draft.blocks.indexOf(each), search.words) }));
+    return (
+      <>
+        <Text variant="note">{`블록 ${hits.length}개 · ${hits.reduce((sum, { hit }) => sum + hit.count, 0)}곳`}</Text>
+        <List label="검색 결과">
+          {hits.map(({ block: each, hit }) => (
+            <FoundRow key={each.id} face={<Icon icon={blockIcon(each)} />} path={[hit.name]} snippet={hit.snippet} note={hit.count ? `${hit.count}곳` : '이름'} onClick={() => openFound(each)} />
+          ))}
+        </List>
+      </>
+    );
+  };
+
   const warning = sort === 'conversation' ? chatWarning(draft.blocks) : null;
   const noPersona = sort === 'conversation' && !holdsPersona(draft.blocks);
+  const addPersona = () => insert(draft.blocks.findIndex((each) => each.kind === 'slot' && each.slot === 'description') + 1, { slot: 'persona' });
   const outline = (
     <>
-      <Stack gap="related">
-        {modelMeta !== null && <NavRow icon={Cpu} label={PANE_TITLES.model} note={modelMeta} current={split && open === MODEL} onClick={() => pick(MODEL)} />}
-        {sort === 'illustrate' && <NavRow icon={ImageIcon} label={PANE_TITLES.picture} note={draft.tags || Object.values(draft.picture ?? {}).some((value) => value !== undefined) ? '직접 지정' : '기본값'} current={split && open === PICTURE} onClick={() => pick(PICTURE)} />}
-        <NavRow icon={SlidersHorizontal} label={PANE_TITLES.toggles} note={howMany(draft.toggles.filter(isToggle).length)} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
-        {draft.variables && <NavRow icon={Variable} label={PANE_TITLES.variables} note={howMany(draft.variables.length)} current={split && open === VARIABLES} onClick={() => pick(VARIABLES)} />}
-      </Stack>
       <Section
         title="전송 순서"
         level={3}
         note={`${draft.blocks.length}개`}
+        help={hover ? HELP : undefined}
         action={
-          // The rows' own tools show only under a pointer that hovers; drilled, a press on a row opens its block.
-          !(split && hover) && (
-            <Button variant="link" onClick={() => setReordering(!reordering)}>
-              {reordering ? '완료' : '순서 변경'}
-            </Button>
-          )
+          <>
+            {/* The rows' own tools show only under a pointer that hovers; drilled, a press on a row opens its block. What a
+                search found is not the outline, so nothing there is edited. */}
+            {!(split && hover) && !search.words && (
+              <Button variant="link" onClick={() => setEditing(!editing)}>
+                {editing ? '완료' : '편집'}
+              </Button>
+            )}
+            <Menu
+              label={ADD_BLOCK}
+              size="lg"
+              place="below-end"
+              trigger={(opener) => (
+                <Button variant="ghost" icon={ACTS.create.icon} {...opener}>
+                  {ADD_BLOCK}
+                </Button>
+              )}
+            >
+              {addMenu(split && block ? index + 1 : draft.blocks.length)}
+            </Menu>
+          </>
         }
       >
-        {warning && <Callout tone="warn">{warning}</Callout>}
-        {noPersona && <Callout tone="warn">{NO_PERSONA_SLOT}</Callout>}
-        <Outline
-          label="전송 순서"
-          help={HELP}
-          start="맨 처음"
-          end="응답 직전"
-          stops={stops}
-          current={split ? open : null}
-          onPick={pick}
-          onOpen={(id) => {
-            select.current = draft.blocks.find((each) => each.id === id)?.kind === 'text' ? 'text' : 'name';
-            // The block already open renders nothing new, so nothing would take the focus after it.
-            if (split && id === open) applySelect();
-            else pick(id);
-          }}
-          onRemove={remove}
-          onMove={move}
-          insert={addMenu}
-          onCache={cacheAt}
-          reorder={reordering ? 'buttons' : 'drag'}
-          drill={!split}
-        />
+        {search.field}
+        {search.shown(
+          <>
+            {warning && <Callout tone="warn">{warning}</Callout>}
+            {noPersona && (
+              <Callout tone="warn" action={{ label: addOf(SLOT.persona.name), onClick: addPersona }}>
+                {NO_PERSONA_SLOT}
+              </Callout>
+            )}
+            <Outline
+              label="전송 순서"
+              help={HELP}
+              start="맨 처음"
+              end="응답 직전"
+              stops={stops}
+              current={split ? open : null}
+              onPick={pick}
+              onOpen={(id) => {
+                select.current = draft.blocks.find((each) => each.id === id)?.kind === 'text' ? 'text' : 'name';
+                // The block already open renders nothing new, so nothing would take the focus after it.
+                if (split && id === open) applySelect();
+                else pick(id);
+              }}
+              onRemove={remove}
+              onMove={move}
+              insert={addMenu}
+              onCache={cacheAt}
+              tools={editing ? 'shown' : 'hover'}
+              drill={!split}
+            />
+          </>,
+          found,
+        )}
       </Section>
       {sort === 'translate' && <ProtectRules task="translate" rules={draft.protect ?? []} onChange={(protect) => update(() => ({ protect }))} />}
       {ofSort(stored, 'agent') && stored.value.stage === 'post' && (
@@ -355,18 +391,26 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
           {draft.place === undefined && <ProtectRules task="agent" rules={draft.protect ?? []} onChange={(protect) => update(() => ({ protect }))} />}
         </>
       )}
-      {ofSort(stored, 'conversation') && (
-        <>
-          <ModuleSwitches owner={{ kind: 'prompt', prompt: stored }} own={stored.value.modules ?? []} />
-          <FeatureSwitches owner={{ kind: 'prompt' }} own={stored.value.features} onChange={(feature, value) => setFeatureAt(store, { kind: 'prompt', id: stored.id }, feature, value)} />
-          <AgentSwitches owner={{ kind: 'prompt' }} own={stored.value.agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'prompt', id: stored.id }, agent, on)} />
-        </>
-      )}
     </>
   );
 
+  const toggleCount = draft.toggles.filter(isToggle).length;
+  const tabs = (
+    <Tabs
+      label={`${THINGS.prompt.noun} 항목`}
+      items={[
+        { value: BLOCKS, label: '블록', count: draft.blocks.length },
+        ...panes.map((each) => ({ value: each, label: PANE_TITLES[each], count: (each === TOGGLES ? toggleCount : each === VARIABLES ? draft.variables!.length : 0) || undefined })),
+      ]}
+      value={split ? (isPane(open) ? open : BLOCKS) : (shownPane ?? BLOCKS)}
+      onChange={pickTab}
+    />
+  );
+
   const page: ReactNode =
-    open === MODEL && ofSort(stored, 'conversation') ? (
+    open === READ ? (
+      <PromptRead blocks={draft.blocks} marks={marks} onOpen={pick} />
+    ) : open === MODEL && ofSort(stored, 'conversation') ? (
       <ModelPane models={stored.value.models} defaults={settings.models} connections={connections} onPick={(role, ref) => modelSaved(setPromptModel(store, stored.id, role, ref))} />
     ) : open === MODEL && ofSort(stored, 'agent') ? (
       <AgentModelPane own={stored.value.model} connections={connections} onPick={(ref) => modelSaved(setAgentModel(store, stored.id, ref))} />
@@ -374,6 +418,13 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
       <PicturePane tags={draft.tags} picture={draft.picture} onTags={(tags) => update(() => ({ tags }))} onPicture={(picture) => update(() => ({ picture }))} />
     ) : open === VARIABLES && draft.variables ? (
       <DefaultVariables variables={draft.variables} help="이 프롬프트를 쓰는 채팅의 변수 초기값이에요. 캐릭터에도 같은 이름의 기본 변수가 있으면 캐릭터 값을 써요." onChange={(variables) => update(() => ({ variables }))} />
+    ) : open === MODULES && ofSort(stored, 'conversation') ? (
+      <ModuleSwitches owner={{ kind: 'prompt', prompt: stored }} own={stored.value.modules ?? []} />
+    ) : open === FEATURES && ofSort(stored, 'conversation') ? (
+      <Stack gap="section">
+        <FeatureSwitches owner={{ kind: 'prompt' }} own={stored.value.features} onChange={(feature, value) => setFeatureAt(store, { kind: 'prompt', id: stored.id }, feature, value)} />
+        <AgentSwitches owner={{ kind: 'prompt' }} own={stored.value.agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'prompt', id: stored.id }, agent, on)} />
+      </Stack>
     ) : open === TOGGLES ? (
       <TogglePane
         owner={stored.id}
@@ -409,6 +460,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
           cache={marks.get(block.id)}
           onCache={() => cacheAt(block.id)}
           onMove={(to) => move(index, to)}
+          onStep={split ? undefined : (to) => pick(draft.blocks[to]!.id)}
           onRemove={() => remove(block.id)}
           onCondition={(toggle) => typeSnippet((selected) => conditionSnippet(toggle, selected))}
           onInsert={(snippet) => typeSnippet(() => snippet)}
@@ -423,51 +475,32 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
     );
 
   const status = save.words;
-  if (!split && drilled) {
-    const title = isPane(open) ? PANE_TITLES[open] : block ? blockTitle(block).title : '';
-    if (open === TOGGLES && paneBack) {
-      const toOutline = (
-        <Row kind="actions">
-          <Button variant="link" size="xs" onClick={leavePage}>
-            프롬프트 열기
-          </Button>
-        </Row>
-      );
-      return frame({ head: { title, onBack: paneBack.onBack, backLabel: paneBack.label, status }, body: <>{toOutline}{page}</>, open });
-    }
-    return frame({ head: { title, onBack: leavePage, backLabel: '전송 순서', status }, body: page, open });
-  }
+  // Drilled, a block is a page of its own under the prompt's name; its place and its name stand in the page.
+  if (!split && shownPane === null && picked !== undefined) return frame({ head: { title: promptName(draft.name), onBack: leavePage, backLabel: '전송 순서', status }, body: page, open });
 
   const origin = stored.value.task === undefined && stored.value.imported ? IMPORTED_FROM[stored.value.imported] : stored.value.origin ? copyOf(promptName(stored.value.origin.name)) : null;
   const facts = [sort === 'conversation' && promptUseWords(uses), ofSort(stored, 'agent') && STAGE_NAMES[stored.value.stage], origin].filter(Boolean).join(' · ');
   const subtitle = (isDefault || facts) && (
     <>
-      {isDefault && <Tag tone="accent">{words?.default}</Tag>} {facts}
+      {isDefault && sort !== 'agent' && <Tag tone="accent">{defaultPrompt(sort)}</Tag>} {facts}
     </>
   );
+  // The prompts this one stands among in its list: its own sort's.
+  const siblings = prompts.filter((each) => ofSort(each, sort)).toSorted(byPromptName);
   const head: NavBarProps = {
     title: draft.name,
     rename: { label: `${THINGS.prompt.noun} 이름`, placeholder: promptName(draft.name), onChange: (name) => update(() => ({ name })) },
     description: subtitle,
-    onBack,
-    backLabel,
+    ...(shownPane === TOGGLES && paneBack ? { onBack: paneBack.onBack, backLabel: paneBack.label } : { onBack, backLabel }),
+    others: siblings.length > 1 ? { label: `다른 ${THINGS.prompt.noun}`, items: siblings.map((each) => <MenuItem key={each.id} label={promptName(each.value.name)} checked={each.id === stored.id} onClick={() => each.id !== stored.id && onOpen(each.id)} />) } : undefined,
     status,
     menu: {
       of: THINGS.prompt.noun,
-      items: (
-        <>
-          {stored.value.origin && <MenuItem label={SEE_ORIGINAL} description={original ? undefined : ORIGINAL_GONE} disabled={!original} onClick={() => onOpen(stored.value.origin!.id)} />}
-          <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void copy()} />
-          {ofSort(stored, 'conversation') && <MenuItem icon={ACTS.export.icon} label={ACTS.export.label} onClick={() => setExporting(true)} />}
-          {words && !isDefault && <MenuItem label={SET_DEFAULT} description={words.makeDefault} onClick={() => void makeDefault()} />}
-          {sort !== 'conversation' && <MenuItem label="기본 블록으로 되돌리기" description="블록 구성을 기본값으로 되돌려요. 프롬프트 이름과 모델 설정은 유지돼요." onClick={() => void resetBlocks()} />}
-          <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} description={isDefault ? cannotRemove(words!.default) : undefined} tone="warn" disabled={isDefault} onClick={() => void erase()} />
-        </>
-      ),
+      items: <PromptMenu stored={stored} onOpen={onOpen} onErased={onErased} onExport={() => setExporting(true)} />,
     },
   };
 
   const exportDialog = exporting && ofSort(stored, 'conversation') && <PresetExport prompt={{ ...stored.value, ...save.unsaved }} onClose={() => setExporting(false)} />;
-  if (split) return frame({ head, side: outline, body: <>{page}{exportDialog}</>, open });
-  return frame({ head, body: <Stack gap="section">{outline}{exportDialog}</Stack>, open });
+  if (split) return frame({ head, tabs, side: outline, body: <>{page}{exportDialog}</>, open });
+  return frame({ head, tabs, body: <>{shownPane === null ? <Stack gap="section">{outline}</Stack> : page}{exportDialog}</>, open: shownPane ?? BLOCKS });
 }

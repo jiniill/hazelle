@@ -14,9 +14,10 @@ type Props<K extends SideAt['open']['kind']> = Omit<SideAt, 'open'> & { open: Ex
 const panel =
   (title: string, onClose: () => void) =>
   // The head is one line at the chat header's height, so a list's actions stand at the top of its body.
-  ({ head: { actions, ...head }, body, open: page }: { head: NavBarProps; body: ReactNode; open?: string }) => (
+  ({ head: { actions, ...head }, body, tabs, open: page }: { head: NavBarProps; body: ReactNode; tabs?: ReactNode; open?: string }) => (
     <SidePanel title={title} nav={head} page={page} expandable onClose={onClose}>
       {actions}
+      {tabs}
       {body}
     </SidePanel>
   );

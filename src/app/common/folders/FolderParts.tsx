@@ -1,7 +1,7 @@
 import { ArrowDownToLine, ArrowUpToLine, FolderInput, FolderPlus, SquareCheck, FolderTree as SubfolderIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { kindOf, pathName, pathOf, withInside, type Filed, type FolderContents, type FolderIndex, type FolderSet, type FolderTree } from '../../../model/folders';
-import { Button, Divider, FolderCard, IconButton, Menu, MenuItem, MoreMenu, PathBar, Row, useWide } from '../../ui';
+import { Button, Divider, FolderCard, IconButton, Menu, MenuItem, MoreMenu, PathBar, Row, useWide, type TableColumn } from '../../ui';
 import { ACTS, newOf } from '../acts';
 import { NameDialog } from '../NameDialog';
 import { useSelection } from '../useSelection';
@@ -26,6 +26,12 @@ export function OrderItems({ order }: { order: Ordering }) {
 }
 
 // A folder as the naming dialog and its ⋯ see it.
+// A table of folders, over the table of what is filed beside them.
+export const FOLDER_COLUMNS: TableColumn[] = [
+  { label: '폴더', track: 'name' },
+  { label: '포함된 항목', track: 'fill', keep: true },
+];
+
 export type NamedFolder = { id: string; name: string };
 export const named = (folder: FolderTree): NamedFolder => ({ id: folder.id, name: folder.value.name });
 

@@ -8,6 +8,43 @@
   background: var(--color-sidebar);
 }
 
+/* The text in a frame of its own: a bar of what is done to it, the text, and a foot of its count and one control. */
+.box {
+  composes: frame from '../foundation/surface.module.css';
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-8) var(--space-8) var(--space-12);
+  border-bottom: var(--border-thin) solid var(--color-divider);
+}
+
+.acts {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.text {
+  padding: var(--space-16);
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-12);
+  min-height: var(--control-md);
+  padding: var(--space-4) var(--space-16);
+  border-top: var(--border-thin) solid var(--color-divider);
+}
+
+.foot .count {
+  margin-top: 0;
+}
+
 .frame {
   position: relative;
   max-width: var(--markup-max-width);
@@ -32,7 +69,8 @@
 
 /* Every line of type below is shared by the layer and the textarea; keep them one rule. */
 .layer,
-.input {
+.input,
+.read {
   margin: 0;
   padding: 0;
   border: none;
@@ -48,8 +86,17 @@
 
 .layer {
   min-height: var(--markup-page-min);
+}
+
+.layer,
+.read {
   color: var(--color-markup-body);
 }
+
+.read {
+  max-width: var(--markup-max-width);
+}
+
 
 .field .layer {
   min-height: var(--markup-field-min);
