@@ -12,7 +12,7 @@ import type { OriginalFile } from '../../runtime/import/originals';
 import type { ObjectStore } from '../../runtime/store/store';
 import { sameTool } from '../../runtime/tools/store';
 import { aliased } from '../common/alias';
-import { BIN, moduleName, namedObject, promptName, THINGS, TOOL } from '../common/words';
+import { BIN, moduleName, namedObject, opens, promptName, THINGS, TOOL } from '../common/words';
 import type { Route } from '../shell/routes';
 import { characterOutcome, characterPreview, chatOutcome, chatPreview, failureOf, moduleOutcome, modulePreview, personaOutcome, personaPreview, placement, promptOutcome, promptPreview, toolOutcome, toolPreview, unsaved, withOriginal, type ImportKind, type ImportOutcome, type Line, type Preview } from './importOutcome';
 import { chatMissed, missedLines, moveMissed } from './missed';
@@ -78,7 +78,7 @@ export const IMPORTERS: Record<ImportKind, Importer> = {
       return saved.ok ? chatOutcome(file, title, saved.data, nameOf(sink.store, character), []) : notSaved(file, saved);
     },
   }),
-  module: importer({ icon: Package, opens: { label: `${THINGS.module.noun} 보기`, route: (id) => ({ kind: 'module', id, pane: null }) } }, {
+  module: importer({ icon: Package, opens: { label: opens(THINGS.module.noun), route: (id) => ({ kind: 'module', id, pane: null }) } }, {
     of: (parsed) => ('module' in parsed ? parsed.module : null),
     preview: (module, { store, place }) => {
       const olds = module.namespace === null ? [] : sameNamespace(store, module.namespace).map(({ value }) => moduleName(value.name));
@@ -94,7 +94,7 @@ export const IMPORTERS: Record<ImportKind, Importer> = {
       return withOriginal(moduleOutcome(file, title, id, unsupported, placement(place, placed), pairing, replacing), kept);
     },
   }),
-  plugin: importer({ icon: Puzzle, opens: { label: `${TOOL} 보기`, route: (id) => ({ kind: 'plugin', id }) } }, {
+  plugin: importer({ icon: Puzzle, opens: { label: opens(TOOL), route: (id) => ({ kind: 'plugin', id }) } }, {
     of: (parsed) => ('tool' in parsed ? parsed.tool : null),
     preview: (tool, { store, place }) => {
       const previous = sameTool(store, tool.manifest);
@@ -109,7 +109,7 @@ export const IMPORTERS: Record<ImportKind, Importer> = {
       return toolOutcome(file, title, saved.data.saved, placement(place, saved.data.placed));
     },
   }),
-  prompt: importer({ icon: FileText, opens: { label: `${THINGS.prompt.noun} 보기`, route: (id) => ({ kind: 'prompt', id, pane: null }) } }, {
+  prompt: importer({ icon: FileText, opens: { label: opens(THINGS.prompt.noun), route: (id) => ({ kind: 'prompt', id, pane: null }) } }, {
     of: (parsed) => ('preset' in parsed ? parsed.preset : null),
     preview: (preset) => ({ preview: promptPreview(preset), choice: null }),
     save: async (preset, { sink, file, title, original, step, offer }) => {
@@ -120,7 +120,7 @@ export const IMPORTERS: Record<ImportKind, Importer> = {
       return withOriginal(promptOutcome(file, title, id, paired.map((each) => moduleName(sink.store.get('module', each)!.value.name)), waiting), kept);
     },
   }),
-  persona: importer({ icon: UserRound, opens: { label: `${THINGS.persona.noun} 보기`, route: (id) => ({ kind: 'persona', id }) } }, {
+  persona: importer({ icon: UserRound, opens: { label: opens(THINGS.persona.noun), route: (id) => ({ kind: 'persona', id }) } }, {
     of: (parsed) => ('persona' in parsed ? parsed.persona : null),
     preview: (persona) => ({ preview: personaPreview(persona), choice: null }),
     save: async (persona, { sink, file, title, offer }) => {

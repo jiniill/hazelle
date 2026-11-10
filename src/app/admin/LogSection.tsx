@@ -2,7 +2,7 @@ import type { LogRow, OwnCap } from '../../contracts/admin';
 import { readLog } from '../../runtime/service/admin';
 import { sizeText } from '../common/size';
 import { ago, moment } from '../common/time';
-import { BOARD, NOTICES, onOff } from '../common/words';
+import { BOARD, NOTICES, onOff, PULSE } from '../common/words';
 import { navigate } from '../shell/router';
 import { ListItem, Panel } from '../ui';
 import { restoreError } from '../common/RestoresDialog';
@@ -15,7 +15,7 @@ const ACTIONS: Record<LogRow['action'], string> = {
   'set-service': '서비스 설정',
   'set-board': '게시판 설정',
   'set-backup-folder': '백업 폴더 설정',
-  'set-pulse': '헤이젤 나우 설정',
+  'set-pulse': `${PULSE.title} 설정`,
   'guest-block': '손님 글쓰기 차단',
   'set-caps': '저장 한도',
   'resolve-report': '신고 확인',

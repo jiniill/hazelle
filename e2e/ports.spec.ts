@@ -57,7 +57,7 @@ test('the HypaPlus port summarizes chunks, holds the memory slot, recalls after 
   await test.step('import the port as a module and make its chunks small', async () => {
     await page.goto('/plugins');
     const report = await importFile(page, '플러그인 가져오기', HYPAPLUS);
-    await report.getByRole('button', { name: '플러그인 보기', exact: true }).click();
+    await report.getByRole('button', { name: '플러그인 열기', exact: true }).click();
     await expect(page.getByRole('switch', { name: '항상 켜기', exact: true })).toBeChecked();
     await expect(page.getByRole('switch', { name: '장기 기억 맡기기', exact: true })).not.toBeChecked();
     const settings = [['청크 크기', '2'], ['자동 요약 기준', '3'], ['최근 노드 수', '1']] as const;

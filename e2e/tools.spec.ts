@@ -23,7 +23,7 @@ const CARD = {
 async function importPlugin(page: Page, name: string) {
   await page.goto('/plugins');
   const report = await importFile(page, '플러그인 가져오기', fixture(name));
-  await report.getByRole('button', { name: '플러그인 보기', exact: true }).click();
+  await report.getByRole('button', { name: '플러그인 열기', exact: true }).click();
   // Importing from 설정 › 플러그인 places the new plugin in 항상 without a second activation write.
   await expect(page.getByRole('switch', { name: '항상 켜기', exact: true })).toBeChecked();
 }

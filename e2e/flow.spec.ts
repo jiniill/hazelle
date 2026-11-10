@@ -238,7 +238,7 @@ test('a new account imports a card, chats through the fake provider and finds th
     const chooser = page.waitForEvent('filechooser');
     await pickBot(page);
     await (await chooser).setFiles(MODULE);
-    await (await confirmImport(page)).getByRole('button', { name: '모듈 보기', exact: true }).click();
+    await (await confirmImport(page)).getByRole('button', { name: '모듈 열기', exact: true }).click();
     // The switch shows on at once and the write lands behind it; a full navigation before it lands would lose it.
     const landed = page.waitForResponse((response) => response.url().includes('/api/objects/batch') && response.request().method() === 'POST');
     await page.getByRole('switch', { name: '항상 켜기', exact: true }).click();

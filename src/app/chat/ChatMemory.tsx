@@ -52,7 +52,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   const { setup, owner, embeds } = useCaptured((store) => ({ setup: memorySetup(store, own), owner: memoryOwner(store, own), embeds: !('kind' in embedModel(store)) }), [own]);
   const holder = owner?.kind === 'tool' ? owner.unit : null;
   // While a reply streams the last answer stands, since every chunk changes the messages.
-  const loaded = useLoad(() => memoryView(session, id), [id, memory, own, messages, settings, prompts], { describe: () => '기억 상태를 계산하지 못했어요.', skip: busy, keep: true });
+  const loaded = useLoad(() => memoryView(session, id), [id, memory, own, messages, settings, prompts], { describe: () => '보낼 기억을 계산하지 못했어요.', skip: busy, keep: true });
   const view = loaded.data ?? null;
   const [rebuilding, setRebuilding] = useState(false);
   const [resets, setResets] = useState(0);

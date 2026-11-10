@@ -235,7 +235,8 @@ export const FINDINGS = '고칠 곳';
 // A role no layer picks, or a 모델 설정 that sets nothing.
 export const NOT_PICKED = '지정 안 함';
 
-export const noStarred = (then: string) => `추가한 모델이 없어요. ${inSettings('connections')}에서 모델을 추가하면 여기서 ${then}.`;
+export const NO_STARRED = '추가한 모델이 없어요.';
+export const noStarred = (then: string) => `${NO_STARRED} ${inSettings('connections')}에서 모델을 추가하면 여기서 ${then}.`;
 
 export const CAST = '등장인물';
 

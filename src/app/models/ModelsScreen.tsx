@@ -10,7 +10,7 @@ import { findStarred, ROLE_ROWS, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { ACTS, addOf, newOf } from '../common/acts';
-import { DEFAULT_MODELS_FAILED, defaultMark, makeFailed, FEATURE_NAMES, follows, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS } from '../common/words';
+import { DEFAULT_MODELS_FAILED, defaultMark, makeFailed, FEATURE_NAMES, follows, MODEL_ROLES, MODEL_SETTINGS, NO_STARRED, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -151,7 +151,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
               })}
             </List>
           ) : (
-            <Empty variant="section" action={adding}>{noStarred('설정할 수 있어요')}</Empty>
+            <Empty variant="section" action={adding}>{NO_STARRED}</Empty>
           )}
         </Section>
       </Beside>

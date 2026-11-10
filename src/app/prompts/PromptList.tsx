@@ -4,7 +4,7 @@ import { pinsModels, type PromptSort } from '../../model/prompt';
 import { availableFeatures } from '../../runtime/tasks/features';
 import { addAgent, addPrompt, isDefaultPrompt, ofSort } from '../../runtime/library/prompts';
 import type { AgentStart } from '../../engine/agent';
-import { ACTS } from '../common/acts';
+import { ACTS, newOf } from '../common/acts';
 import type { Frame } from '../common/frame';
 import { SORT_PROMPT, TASK_NAMES } from '../common/prompt-words';
 import { useMaking } from '../common/useMaking';
@@ -20,7 +20,7 @@ import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/
 import { FolderMenu, FolderPath, named, useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
 
-const newName = (sort: PromptSort) => `새 ${SORT_PROMPT[sort]}`;
+const newName = (sort: PromptSort) => newOf(SORT_PROMPT[sort]);
 // What a new agent starts from (user ruling, 2026-10-21): the two built-ins, or one empty of either stage.
 const AGENT_STARTS: { start: AgentStart; name: string; description: string }[] = [
   { start: 'scene', name: '기본 장면 메모', description: `${STAGE_NAMES.pre} · 응답을 생성하기 전에 필요한 설정과 대화 흐름을 정리해요.` },

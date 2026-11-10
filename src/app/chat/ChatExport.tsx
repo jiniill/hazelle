@@ -98,7 +98,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, sh
       return { key: crypto.randomUUID(), title: item.title, description: characterName, ...resolveLog(draft, (kind, id) => urls.get(pictureRef(kind, id))), missing };
     },
     [form, choices, messages, view, placed, pictures, flipped, shownTranslation, waiting],
-    { describe: () => '내보낼 기록을 준비하지 못했어요.', skip: form !== 'log' || waiting !== null },
+    { describe: () => '내보낼 내용을 준비하지 못했어요.', skip: form !== 'log' || waiting !== null },
   );
   const drawing = loaded.data;
   const [drawn, setDrawn] = useState<Prepared | null>(null);
