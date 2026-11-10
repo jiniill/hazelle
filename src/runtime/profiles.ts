@@ -30,13 +30,18 @@ export function modelProfile(store: Pick<ObjectStore, 'get'>, model: Starred): P
   return profile ? { kind: 'profile', profile, own } : { kind: 'missing', own };
 }
 
-// A task's own model (runtime/assignment taskModel), else the chat's 보조, with its 설정 묶음: what a 삽화 scene, a
-// pack's profiles and a mascot's line are written by.
-export function taskWriter(store: Pick<ObjectStore, 'get'>, chat: Chat, own: ModelRef | undefined): { route: Route; settings: ModelSettings } | RouteFailure | { kind: 'profile-missing'; own: boolean } {
-  const route = taskModel(store, chat, own);
-  if ('kind' in route) return route;
+export type Writer = { route: Route; settings: ModelSettings };
+
+export function writerOf(store: Pick<ObjectStore, 'get'>, route: Route): Writer | { kind: 'profile-missing'; own: boolean } {
   const profile = modelProfile(store, route.model);
   return profile.kind === 'missing' ? { kind: 'profile-missing', own: profile.own } : { route, settings: profile.profile.value.settings };
+}
+
+// A task's own model (runtime/assignment taskModel), else the chat's 보조, with its 설정 묶음: what a 삽화 scene, a
+// pack's profiles and a mascot's line are written by.
+export function taskWriter(store: Pick<ObjectStore, 'get'>, chat: Chat, own: ModelRef | undefined): ReturnType<typeof writerOf> | RouteFailure {
+  const route = taskModel(store, chat, own);
+  return 'kind' in route ? route : writerOf(store, route);
 }
 
 // A model that only draws uses no 묶음, whatever it names.

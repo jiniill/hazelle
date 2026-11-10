@@ -2,13 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { fold, shown, type Chat, type Message } from '../model/chat';
 import { textTranslation } from '../model/library';
 import { appendUserMessage, startChat } from './chat-log';
-import { answerable, inTurn, saying, stubRelay, testServer } from './testing';
-import { createCharacter, setOwnTranslate, setTranslate, setTranslatorNote } from './characters';
+import { RELAY_HEADER } from '../contracts/http';
+import { answerable, inTurn, saying, stubRelay, testConnection, testModel, testServer } from './testing';
+import { createCharacter, setOwnTranslate, setTranslate, setTranslatorNote, translateSwitches } from './characters';
 import { setDefaultModel } from './assignment';
 import { setToolNote, translate, translatorOf, translateOnTool, translateText, translationShown, type Translating } from './translate';
 import { takeTurn } from './turn';
 import { SHARED_CHAT } from './features';
 import { translationInput } from './chat-context';
+import { draftTranslatorNote } from './translator-note';
+import type { Session } from './session';
 
 const server = testServer();
 
@@ -324,5 +327,32 @@ describe('Translator', () => {
       await vi.waitFor(() => expect(session.store.list('stream').map(({ value }) => value.for)).toEqual([{ kind: 'translation', version: 'v', spans: ['<img src="a.png">'] }]));
       session.translator.close();
       await stream.writable.close();
+    }));
+});
+
+describe('a translation no chat keeps', () => {
+  // Vercel books a reply's cost after it, by the id its stream carries.
+  async function costBookedLater(session: Session) {
+    const created = await session.store.create('connection', { ...testConnection, type: 'vercel', label: 'Vercel', accounts: [{ id: 'key', secret: 'vck_x' }] });
+    await setDefaultModel(session.store, 'main', { connection: created.ok ? created.data.id : '', model: testModel.id });
+    stubRelay(() => new Response(`data: ${JSON.stringify({ id: 'gen_1', choices: [{ delta: { content: '안녕' }, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n`, { headers: { [RELAY_HEADER]: 'upstream' } }));
+  }
+
+  it('keeps no pending cost, which no chat would settle, for a 번역가의 노트 draft, a character’s text or a new chat’s greeting', () =>
+    server.withSession(async (session) => {
+      await costBookedLater(session);
+      const character = crypto.randomUUID();
+      await createCharacter(session.store, 'Mira', character);
+      const opened = { title: null, character, models: {} };
+      const signal = new AbortController().signal;
+      expect(await draftTranslatorNote(session, character, signal)).toEqual({ ok: true, text: '안녕' });
+      expect(await translateText(session, opened, 'Hi', 'Korean', signal, () => {})).toMatchObject({ ok: true, translation: { receipt: { replyId: 'gen_1', cost: null } } });
+      const greeting = { id: 'g', seed: 'g', text: 'Hello', receipt: null, edited: false, at: 0 };
+      const chat = crypto.randomUUID();
+      await session.translator.translate(chat, greeting, translationInput(session, chat, opened, [{ id: 'g', role: 'assistant', at: 0, selected: 0, versions: [greeting] }], { kind: 'message', index: 0 }));
+      const language = translateSwitches(session.store, character).replyLanguage;
+      expect(textTranslation(session.store.get('character', character)!.value, 'Hello', language)?.receipt).toMatchObject({ replyId: 'gen_1', cost: null });
+      const ledger = await session.usage.read(signal);
+      expect(ledger.ok && ledger.data.map(({ call }) => call.cost)).toEqual([null, null, null]);
     }));
 });

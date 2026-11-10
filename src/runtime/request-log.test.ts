@@ -3,7 +3,7 @@ import type { Receipt } from '../model/chat';
 import { chatModel } from './assignment';
 import { appendUserMessage, startChat } from './chat-log';
 import { redacted, REQUEST_LOG_LIMITS, type LogEntry } from './request-log';
-import { pageAnswer } from './talk';
+import { pageAnswer } from './streams';
 import { answerable, saying, stubRelay, testConnection, testLog, testServer } from './testing';
 import { takeTurn } from './turn';
 

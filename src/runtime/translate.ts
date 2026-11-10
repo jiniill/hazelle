@@ -21,9 +21,9 @@ import { routeFields } from './connections';
 import type { Costs } from './cost';
 import type { Credentials } from './credential';
 import type { RequestLog } from './request-log';
-import { gather, generate, receiptOf, resume, type Reply } from './generate';
+import { gather, generate, receiptOf, resume, unsettled, type Reply } from './generate';
 import { callOf, endCall, newCall, type CallTarget } from './streams';
-import { modelProfile } from './profiles';
+import { writerOf } from './profiles';
 import { translationPrompt } from './prompts';
 import type { ObjectStore } from './store';
 import { accountSettings, changeSettings } from './account-settings';
@@ -70,10 +70,15 @@ function translateLoose(session: Deps, chat: Chat, text: string, language: strin
   const input: TranslateInput = { chat, scope: { ...scopeOf(session, null, chat, []), persona: null, card: null }, take: new Set(), translations: [], request: { kind: 'input', text }, language, lane: null };
   const target: TranslationTarget = { id: crypto.randomUUID(), chat: null, result: crypto.randomUUID(), for: { kind: 'input', typed: text, language } };
   return run(input, target).then(async (made) => {
-    if (made.ok) await keepRow(session.store, made.translation.receipt!, made.translation.at, { chat: null, character: chat.character });
-    return made;
+    if (!made.ok) return made;
+    const translation = loose(made.translation);
+    await keepRow(session.store, translation.receipt, translation.at, { chat: null, character: chat.character });
+    return { ...made, translation };
   }).finally(() => endCall(session.store, target.id));
 }
+
+// A translation kept outside any chat: no Costs settles its receipt.
+const loose = (translation: Translation) => ({ ...translation, receipt: unsettled(translation.receipt!) });
 
 // What a translation goes out with: a chat's (translatorOf, translatorNotes) or 번역기's (toolTranslatorOf).
 export type TranslateWith = { prompt: TranslatePrompt; route: Route; notes: string };
@@ -94,8 +99,8 @@ async function translateWith(
   signal: AbortSignal,
   onText: (text: string) => void,
 ): Promise<Translated> {
-  const profile = modelProfile(store, route.model);
-  if (profile.kind === 'missing') return { ok: false, failure: { kind: 'profile-missing', own: profile.own } };
+  const writer = writerOf(store, route);
+  if ('kind' in writer) return { ok: false, failure: writer };
   const assembled = await evaluatingTask(store.evaluation.translation(lane, { scope, take, prompt, translations, notes, request, language, seed: crypto.randomUUID() }, signal));
   if ('kind' in assembled) return { ok: false, failure: assembled };
   const { spans } = assembled;
@@ -103,7 +108,7 @@ async function translateWith(
   const answer = await generate({
     credentials,
     log,
-    ...routeFields(store, route, profile.profile.value.settings),
+    ...routeFields(store, route, writer.settings),
     messages: assembled.messages,
     call: await newCall({ store, tokens }, route, spans.length ? { ...target, for: { ...target.for, spans } } : target),
     signal,
@@ -228,14 +233,14 @@ export class Translator {
   translate(chat: string, { id: version, text: original }: Version, input: TranslateInput): Promise<void> {
     if (this.closed || this.aborts.has(version)) return Promise.resolve();
     const target: TranslationTarget = { id: crypto.randomUUID(), chat: this.store.get('chat', chat) ? chat : null, result: crypto.randomUUID(), for: { kind: 'translation', version } };
-    return this.run(chat, version, target, (signal, onText) => translate({ store: this.store, credentials: this.credentials, log: this.log, tokens: this.tokens }, input, target, signal, onText), (made) =>
-      this.store.get('chat', chat)
-        ? appendTranslation(this.store, chat, version, made.translation, target.result)
-        : setTextTranslation(this.store, input.chat.character!, original, made.language!, made.translation).then(async (saved) => {
-          if (saved.ok) await keepRow(this.store, made.translation.receipt!, made.translation.at, { chat: null, character: input.chat.character });
-          return saved;
-        }),
-    );
+    return this.run(chat, version, target, (signal, onText) => translate({ store: this.store, credentials: this.credentials, log: this.log, tokens: this.tokens }, input, target, signal, onText), (made) => {
+      if (this.store.get('chat', chat)) return appendTranslation(this.store, chat, version, made.translation, target.result);
+      const translation = loose(made.translation);
+      return setTextTranslation(this.store, input.chat.character!, original, made.language!, translation).then(async (saved) => {
+        if (saved.ok) await keepRow(this.store, translation.receipt, translation.at, { chat: null, character: input.chat.character });
+        return saved;
+      });
+    });
   }
 
   resume(stream: Stored<'stream'>, version: string) {
