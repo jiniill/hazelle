@@ -121,6 +121,22 @@ describe('object store', () => {
     lease.release();
   });
 
+  it("ends the store when a chat's own pull hears the server dropped its timeline", async () => {
+    const { accountId, vaultKey, store } = await server.account();
+    const id = crypto.randomUUID();
+    expect((await store.batch([root(id), message(id, 1)], undefined, { unheld: true })).ok).toBe(true);
+    const backend = serverBackend(api);
+    const device = await ObjectStore.open(accountId, vaultKey, { ...backend, feed: (query, signal) => (query.parent ? Promise.resolve({ ok: false, error: 'cache-reset' as const }) : backend.feed(query, signal)) });
+    expect(await device.pull()).toBeNull();
+    const rewound = vi.fn();
+    device.subscribeRewound(rewound);
+    const lease = device.retainChat(id, { summarize: false });
+    expect(await lease.ready).toEqual({ ok: false, error: 'timeline-changed' });
+    expect(rewound).toHaveBeenCalledWith(0);
+    lease.release();
+    device.close();
+  });
+
   it('rewrites a summary its chat outgrew while the others were built', async () => {
     const { store } = await server.account();
     const [a, b] = [crypto.randomUUID(), crypto.randomUUID()];
