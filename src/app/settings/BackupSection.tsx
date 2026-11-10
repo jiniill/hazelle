@@ -1,7 +1,8 @@
 import { History } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { SELF_RESTORES_PER_DAY } from '../../contracts/admin';
-import { exportBackup, readBackup, restoreBackup, type Backup, type BackupStep } from '../../runtime/backup';
+import { exportBackup, readBackup, restoreBackup, type Backup } from '../../runtime/backup/backup';
+import type { BackupStep } from '../../runtime/backup/backup-core';
 import { ACTS, importOf } from '../common/acts';
 import { runExport } from '../common/exporting';
 import { RELOAD_RETRY } from '../common/failure';
@@ -24,7 +25,7 @@ const today = () => new Date().toLocaleDateString('sv-SE');
 
 type Direction = 'save' | 'load';
 type Steps = Partial<Record<BackupStep['kind'], BackupStep>>;
-// In each job's order (runtime/backup-core): a save counts, then writes the objects while reading the pictures, then the
+// In each job's order (runtime/backup/backup-core): a save counts, then writes the objects while reading the pictures, then the
 // browser finishes the file (Chrome copies and scans a picked file); a load reads the file, uploads
 // the pictures, writes the objects, then their summaries. The first and last stages have no count of their own.
 const STAGES: Record<Direction, { first: string; kinds: { kind: BackupStep['kind']; label: string }[]; last?: string }> = {

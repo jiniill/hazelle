@@ -22,16 +22,16 @@ export const AUTO_BROWSER_MESSAGES = [
   { message: 'Importing a module script failed.', cause: 'module-import' },
   { message: 'Importing a module script is canceled.', cause: 'module-import' },
 ] as const satisfies readonly { message: string; cause: AutoErrorCause }[];
-// Why a held chat did not open (runtime/store): its own failures and the server's two; any other code is 'other'.
+// Why a held chat did not open (runtime/store/store): its own failures and the server's two; any other code is 'other'.
 export const AUTO_OPEN_FAILURES = ['offline', 'server-error', 'unreadable', 'bot-stuck', 'evaluation-unavailable', 'codec-unavailable'] as const;
 const FAILURES = ['unsent', 'unsaved', 'too-long', 'runaway', 'tokenizer', 'unstarted', 'unpulled', 'gone', 'untranslated', 'additional', 'preread', 'agent', 'no-model', 'model-gone', 'image-only', 'prompt-missing', 'profile-missing', 'failed', 'invalid', 'embed'] as const;
-// Why messages leave a request and are in no memory sent: the first that holds names the warning (runtime/memory-view).
+// Why messages leave a request and are in no memory sent: the first that holds names the warning (runtime/tasks/memory-view).
 const GAP_CAUSES = ['working', 'failed', 'tool', 'off', 'no-slot', 'stale', 'over', 'forgotten', 'unrecorded', 'no-room', 'unknown'] as const;
 export type GapCause = (typeof GAP_CAUSES)[number];
 // The first cause a cache break proves, or the break's own kind without one.
 const CACHE_CAUSES = ['tag', 'lore', 'moved', 'edited', 'memory', 'model', 'account', 'reasoning', 'far', 'changed', 'added', 'removed'] as const;
 export type CacheCauseWord = (typeof CACHE_CAUSES)[number];
-// Who asks the evaluation worker for a job, and the kinds of job it runs: runtime/evaluation holds its lanes and its
+// Who asks the evaluation worker for a job, and the kinds of job it runs: runtime/evaluation/evaluation holds its lanes and its
 // jobs to these, so a word neither list has cannot be reported.
 const EVALUATION_ASKERS = ['projection', 'screen', 'headless', 'forecast', 'cache-diagnosis', 'memory', 'view', 'auto-translation', 'auto-illustration', 'mascot', 'polish', 'agent', 'send', 'translation', 'illustration', 'lore', 'tool', 'export', 'trial', 'onboarding'] as const;
 export type EvaluationAsker = (typeof EVALUATION_ASKERS)[number];

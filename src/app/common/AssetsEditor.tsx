@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { findAsset, isVideo, type AssetUse } from '../../engine/assets';
 import { extensionOf } from '../../engine/import/convert';
 import type { Stored } from '../../model/kinds';
-import { addAssets, removeAssets, renameAsset, replaceAsset, restoreAssets } from '../../runtime/characters';
+import { addAssets, removeAssets, renameAsset, replaceAsset, restoreAssets } from '../../runtime/library/characters';
 import { useAssetUrl, useChildren, useFiles, useStore, useUnfoundAssets } from '../session';
 import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
@@ -17,7 +17,7 @@ import { useSearch } from './useSearch';
 import { useSelection } from './useSelection';
 import { ASSET, CHANGE_IMAGE, namedObject, REMOVE_FAILED, SAVE_FAILED } from './words';
 
-// What runtime/characters keeps as an asset (engine/import assetType), and as a background (a picture).
+// What runtime/library/characters keeps as an asset (engine/import assetType), and as a background (a picture).
 const KEEPS = {
   any: { accept: 'image/*,video/mp4,video/webm', refused: '이미지나 영상(MP4, WebM) 파일이 아니거나 용량이 너무 커요.' },
   picture: { accept: 'image/*', refused: '이미지 파일이 아니거나 용량이 너무 커요.' },

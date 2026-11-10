@@ -27,7 +27,7 @@ export const stretchPassword: Stretch = async (password, salt) =>
   new Uint8Array(await argon2id({ password, salt, ...KDF, hashLength: 32, outputType: 'binary' }));
 
 // NFC because the same Korean text can arrive composed or decomposed, depending on the OS and IME.
-// stretch: the page passes runtime/password's worker; on the page Argon2 froze a slow phone for over a second.
+// stretch: the page passes runtime/account/password's worker; on the page Argon2 froze a slow phone for over a second.
 export async function passwordCredential(username: string, password: string, stretch: Stretch): Promise<Credential> {
   const salt = new Uint8Array(await crypto.subtle.digest('SHA-256', encodeText(`risu-alpha/password-salt/v1/${username}`)));
   return derive('password', await stretch(password.normalize('NFC'), salt));

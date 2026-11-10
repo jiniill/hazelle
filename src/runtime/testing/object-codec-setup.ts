@@ -1,6 +1,6 @@
-import { Evaluator, type EvaluationDown, type EvaluationUp } from '../evaluation-core';
-import { codeObjects, type CodecDown, type CodecJob, type CodecResult, type CodecUp } from '../object-codec-core';
-import type { StretchDown, StretchUp } from '../password';
+import { Evaluator, type EvaluationDown, type EvaluationUp } from '../evaluation/evaluation-core';
+import { codeObjects, type CodecDown, type CodecJob, type CodecResult, type CodecUp } from '../store/object-codec-core';
+import type { StretchDown, StretchUp } from '../account/password';
 import { stretchPassword } from '../../vault/keys';
 
 // Plain Node has no browser Worker. The object codec's and the password's real transports talk to this in-process one; a test scripts

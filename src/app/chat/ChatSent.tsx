@@ -6,7 +6,7 @@ import { isChapter } from '../../engine/memory';
 import type { Chapter, Memory, MemoryRecord } from '../../model/memory';
 import type { Role } from '../../model/prompt';
 import type { HttpRequest } from '../../contracts/http';
-import type { LogEntry } from '../../runtime/request-log';
+import type { LogEntry } from '../../runtime/models/request-log';
 import { MESSAGE_ROLES, SLOT, textName } from '../common/prompt-words';
 import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, List, ListItem, Row, Section, Stack, Text } from '../ui';
 import { loreBudgetEditor, type Side } from './panels';
@@ -47,7 +47,7 @@ export function partName(from: From, role: Role): string {
   }
 }
 
-// Redacted where it was recorded (runtime/request-log redacted), so nothing is redacted here.
+// Redacted where it was recorded (runtime/models/request-log redacted), so nothing is redacted here.
 export function SentRequest({ entry, receipt }: { entry: LogEntry | null; receipt: Receipt }) {
   if (!entry) {
     return (

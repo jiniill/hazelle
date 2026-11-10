@@ -1,5 +1,5 @@
 import { toolId } from '../model/tool';
-import { autoDiagnose, openFailure } from '../runtime/auto-diagnosis';
+import { autoDiagnose, openFailure } from '../runtime/diagnostics/auto-diagnosis';
 import type { ToolFrames, ToolMenu } from '../runtime/tools/facade';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { PictureUrl } from '../engine/assets';
@@ -8,22 +8,22 @@ import { nest, type FolderSet } from '../model/folders';
 import { binned, live } from '../model/library';
 import type { Kind, Stored } from '../model/kinds';
 import type { ToolManifest } from '../tool-api/manifest';
-import type { AccountFacts, Standing } from '../runtime/account';
+import type { AccountFacts, Standing } from '../runtime/account/account';
 import type { Memory } from '../model/memory';
-import type { Files } from '../runtime/files';
-import type { Illustrating } from '../runtime/illustrate';
-import type { Commenting } from '../runtime/mascot';
-import type { Polishing } from '../runtime/agents';
-import type { Likenesses, LikenessRuns } from '../runtime/likeness';
-import type { Remembering } from '../runtime/memory';
-import { modulesOf } from '../runtime/modules';
+import type { Files } from '../runtime/files/files';
+import type { Illustrating } from '../runtime/tasks/illustrate';
+import type { Commenting } from '../runtime/tasks/mascot';
+import type { Polishing } from '../runtime/tasks/agents';
+import type { Likenesses, LikenessRuns } from '../runtime/tasks/likeness';
+import type { Remembering } from '../runtime/tasks/memory';
+import { modulesOf } from '../runtime/library/modules';
 import { draftsOf } from '../runtime/tools/drafts';
 import type { Session } from '../runtime/session';
-import { CapturedRead, type ChatScopeRead, type Opening } from '../runtime/read-model';
+import { CapturedRead, type ChatScopeRead, type Opening } from '../runtime/store/read-model';
 import type { ScriptsState } from '../runtime/scripts/interactions';
-import { isHalted, type ObjectStore } from '../runtime/store';
-import type { Turn } from '../runtime/talk';
-import type { Translating } from '../runtime/translate';
+import { isHalted, type ObjectStore } from '../runtime/store/store';
+import type { Turn } from '../runtime/chat/talk';
+import type { Translating } from '../runtime/tasks/translate';
 import { Saves } from './common/saveQueue';
 
 // admin/localProviders come from session opening; facts track later server answers.
@@ -87,7 +87,7 @@ export function useStanding(): Standing {
 }
 export const useLikenesses = (): Likenesses => useSession().likenesses;
 
-// What this session's open chats of the character asked for by name and found no picture for (runtime/assets).
+// What this session's open chats of the character asked for by name and found no picture for (runtime/files/assets).
 export function useUnfoundAssets(character: string): ReadonlySet<string> {
   const { unfound } = useSession();
   return useSyncExternalStore(unfound.subscribe, () => unfound.of(character));
@@ -197,7 +197,7 @@ export function useFolders(set: Exclude<FolderSet, 'character'>) {
 export const usePrompts = () => useLive('prompt');
 export const usePersonas = () => useLive('persona');
 export const useProfiles = () => useLive('profile');
-// A deleted one is not among them (runtime/modules modulesOf).
+// A deleted one is not among them (runtime/library/modules modulesOf).
 export function useModules() {
   const store = useStore();
   const all = useKind('module');

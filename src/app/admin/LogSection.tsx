@@ -1,5 +1,5 @@
 import type { LogRow, OwnCap } from '../../contracts/admin';
-import { readLog } from '../../runtime/admin';
+import { readLog } from '../../runtime/service/admin';
 import { sizeText } from '../common/size';
 import { ago, moment } from '../common/time';
 import { BOARD, NOTICES, onOff } from '../common/words';

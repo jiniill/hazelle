@@ -1,7 +1,7 @@
 import { FileText } from 'lucide-react';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Stored } from '../../model/kinds';
-import { chatPrompt, isDefaultPrompt, ofSort, type PromptChoice } from '../../runtime/prompts';
+import { chatPrompt, isDefaultPrompt, ofSort, type PromptChoice } from '../../runtime/library/prompts';
 import { useSearch } from '../common/useSearch';
 import { byLastUse, byPromptName, groupPrompts, promptFolder } from '../common/promptCopies';
 import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/filing';

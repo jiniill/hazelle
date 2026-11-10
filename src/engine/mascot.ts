@@ -11,7 +11,7 @@ const INSTRUCTIONS = [
   'React to what just happened: a feeling, a guess, a tease.',
 ].join('\n');
 
-// The account's default 마스코트 prompt, added once (runtime/prompts).
+// The account's default 마스코트 prompt, added once (runtime/library/prompts).
 export function commentatorPrompt(): MascotPrompt {
   const named = (name: string | null = null) => ({ id: crypto.randomUUID(), name });
   return {

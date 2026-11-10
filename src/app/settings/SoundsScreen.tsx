@@ -1,4 +1,4 @@
-import type { Cue } from '../../runtime/cues';
+import type { Cue } from '../../runtime/chat/cues';
 import { DetailFold } from '../common/DetailFold';
 import { choices } from '../common/reading';
 import { CHIMES, playSound } from '../common/sounds';

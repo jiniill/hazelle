@@ -1,6 +1,6 @@
 import { UserX } from 'lucide-react';
 import { useState } from 'react';
-import { credentialFor, deleteAccount } from '../../runtime/account';
+import { credentialFor, deleteAccount } from '../../runtime/account/account';
 import { describeFailure, wrongSecret } from '../common/failure';
 import { useCredential } from '../common/useCredential';
 import { useAttempt } from '../common/useAttempt';

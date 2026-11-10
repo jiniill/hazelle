@@ -42,7 +42,7 @@ export function messageRow(chat: OpenChat, index: number) {
       shownTranslation: chat.shownTranslation,
     }, { untranslated: Object.is, shownTranslation: Object.is }),
     illustration: rowPart({
-      // text with its 삽화's marks as the display left them, null for none (runtime/read-model ChatScreen).
+      // text with its 삽화's marks as the display left them, null for none (runtime/store/read-model ChatScreen).
       placed: chat.placed.get(index) ?? null,
       // The shown version's pictures, oldest first, and its 삽화 run, if any.
       pictures: chat.pictures.get(version) ?? NO_PICTURES,
@@ -62,7 +62,7 @@ export function messageRow(chat: OpenChat, index: number) {
     }, { badges: sameItems(Object.is), toolActions: Object.is }),
     status: rowPart({ hosted: chat.hosted(index), offered: chat.offered(index) }, { hosted: sameItems(sameFields), offered: sameItems(sameFields) }),
     agents: rowPart({
-      // The post agent rewriting the reply shown now (runtime/agents Polisher), null while none is.
+      // The post agent rewriting the reply shown now (runtime/tasks/agents Polisher), null while none is.
       polishing: chat.polishing.get(message.id) ?? null,
       // Whether the chat runs agents of each stage now: 다시 다듬기 and 노트 새로 만들어 다시 생성 are offered by them.
       agents: chat.agents,

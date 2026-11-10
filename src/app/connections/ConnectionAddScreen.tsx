@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { resolveConnection, searchTypes } from '../../connectors/registry';
 import type { Connection, ConnectionType } from '../../connectors/types';
-import { providerConnection } from '../../runtime/connections';
+import { providerConnection } from '../../runtime/models/connections';
 import { count as counted } from '../common/typedNumber';
 import { newOf } from '../common/acts';
 import { noResults } from '../common/search';

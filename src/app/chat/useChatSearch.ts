@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { shown } from '../../model/chat';
-import type { Shown } from '../../runtime/talk';
-import type { Translating } from '../../runtime/translate';
+import type { Shown } from '../../runtime/chat/talk';
+import type { Translating } from '../../runtime/tasks/translate';
 import { useFocusReturn, type Seek } from '../ui';
 import { finder, seenText } from './search';
 

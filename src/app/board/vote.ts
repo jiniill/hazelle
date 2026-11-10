@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { PostRow } from '../../contracts/board';
-import { votePost } from '../../runtime/board';
+import { votePost } from '../../runtime/service/board';
 import { useToast } from '../toast';
 
 type Shown = { voted: boolean; votes: number };

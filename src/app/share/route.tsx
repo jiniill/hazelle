@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { readShareLink } from '../../runtime/share-link';
+import { readShareLink } from '../../runtime/export/share-link';
 import { ScreenLoad } from '../common/ScreenLoad';
 import { pendingFor } from '../common/sharePending';
 

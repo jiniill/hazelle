@@ -4,7 +4,7 @@ import type { Snapshot } from '../../../engine/lua/state';
 import type { Host } from '../../../engine/script-api';
 import type { ChatScope } from '../../../engine/render';
 import { runEvent, type ScriptOutcome } from './event';
-import { applyTail } from '../../history-delta';
+import { applyTail } from '../../evaluation/history-delta';
 import type { Down, Up } from './client';
 
 const scope = self as unknown as { postMessage(message: Up): void };

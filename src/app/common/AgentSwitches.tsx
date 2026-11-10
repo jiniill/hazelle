@@ -1,7 +1,7 @@
-import { inheritedAgents } from '../../runtime/agents';
+import { inheritedAgents } from '../../runtime/tasks/agents';
 import type { ApiFailure } from '../../runtime/api';
-import type { FeatureLayer } from '../../runtime/features';
-import { ofSort } from '../../runtime/prompts';
+import type { FeatureLayer } from '../../runtime/tasks/features';
+import { ofSort } from '../../runtime/library/prompts';
 import { useLibrary, usePrompts, useSettings, useStore } from '../session';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';

@@ -4,7 +4,7 @@ import { PersonaPickDialog } from '../common/PersonaPickDialog';
 import { navigate } from '../shell/router';
 import { useToast } from '../toast';
 import { Avatar, Button, Checkbox, ChipButton, Hint, Row } from '../ui';
-import type { PersonaChoice } from '../../runtime/personas';
+import type { PersonaChoice } from '../../runtime/library/personas';
 import type { RowTool } from './ChatToolRow';
 import type { ChatSettingsActions } from './useChatSettings';
 

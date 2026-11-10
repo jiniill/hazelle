@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { ApiFailure, ApiResult } from '../../runtime/api';
-import type { Page } from '../../runtime/pages';
+import type { Page } from '../../runtime/service/pages';
 import { Button, Callout, Empty, List, PostFeed, Text } from '../ui';
 import { ACTS } from './acts';
 import { describeFailure } from './failure';

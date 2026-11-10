@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Polishing, PolishStep } from '../../runtime/agents';
+import type { Polishing, PolishStep } from '../../runtime/tasks/agents';
 import { describeAgentFailure } from '../common/failure';
 import { withParticle } from '../common/particles';
 import { usePolishing } from '../session';

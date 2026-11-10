@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { pictureRef } from '../../engine/assets';
 import type { ChatItem } from '../../model/chat';
-import { assetDataUrls } from '../../runtime/assets';
-import { chatFile } from '../../runtime/chat-file';
-import { exportRisuChat } from '../../runtime/risu-export';
-import type { Shown } from '../../runtime/talk';
-import type { TranslatorFailure } from '../../runtime/translate';
+import { assetDataUrls } from '../../runtime/files/assets';
+import { chatFile } from '../../runtime/export/chat-file';
+import { exportRisuChat } from '../../runtime/export/risu-export';
+import type { Shown } from '../../runtime/chat/talk';
+import type { TranslatorFailure } from '../../runtime/tasks/translate';
 import { ACTS } from '../common/acts';
 import { download, fileNamed } from '../common/download';
 import { describeTranslateFailure } from '../common/failure';

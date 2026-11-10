@@ -3,7 +3,7 @@ import type { PresetRead } from '../../engine/import/preset';
 import type { ImportedTool } from '../../engine/import/tool';
 import type { BackupResult, Imported, ImportedModule, ImportResult, RisuCharacter, RisuChat } from '../../engine/import/types';
 import { ImportReadError, ImportStuck, type AssetRead, type ChatsRead, type Down, type Method, type ModuleData, type Replies, type Request, type Up } from './protocol';
-import type { OriginalFile } from '../originals';
+import type { OriginalFile } from './originals';
 import { PendingRequests } from '../pending-requests';
 import { Heartbeat, moduleWorker } from '../worker';
 import workerUrl from './worker?worker&url';

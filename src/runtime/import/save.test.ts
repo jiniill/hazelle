@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { blankCard } from '../../engine/import/card';
 import type { ImportedModule } from '../../engine/import/types';
-import type { ChatFile } from '../chat-file';
+import type { ChatFile } from '../export/chat-file';
 import { accountSettings } from '../account-settings';
-import { modulesOf } from '../modules';
+import { modulesOf } from '../library/modules';
 import { testServer } from '../testing';
 import { ImportReadError } from './protocol';
 import { chatDestination, placeOn, saveModule } from './save';

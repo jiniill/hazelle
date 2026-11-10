@@ -1,11 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { ChangeSignal } from '../../change-signal';
-import { AccountFacts, changePassword, checkUsername, credentialFor, passwordCredentialFor, guestFacts, loadSession, logIn, logOut, prepareGuestSignup, signUpGuest, uploadGuest, type GuestSignup, type SignedIn } from '../../runtime/account';
+import { AccountFacts, changePassword, checkUsername, credentialFor, passwordCredentialFor, guestFacts, loadSession, logIn, logOut, prepareGuestSignup, signUpGuest, uploadGuest, type GuestSignup, type SignedIn } from '../../runtime/account/account';
 import type { SessionFacts } from '../../contracts/accounts';
 import { holdAccount, type ApiFailure } from '../../runtime/api';
-import { cachedAccounts, forgetVault } from '../../runtime/device-cache';
-import { guestAccount } from '../../runtime/guest-store';
-import type { GuestTransferStep } from '../../runtime/guest-transfer';
+import { cachedAccounts, forgetVault } from '../../runtime/device/device-cache';
+import { guestAccount } from '../../runtime/account/guest-store';
+import type { GuestTransferStep } from '../../runtime/account/guest-transfer';
 import { selfHost } from '../../runtime/installation';
 import { lockVault, recallGuest, recallVault, rememberVault } from '../../vault/device';
 import { DatabaseBlocked } from '../../vault/database';
@@ -85,7 +85,7 @@ export type FirstDoors = { onOpen: () => void; onSignIn: () => void };
 
 // Imported when an account opens, not at the top: the transfer brings the store, which a first visit's page must not
 // wait for.
-const guestTransfer = () => import('../../runtime/guest-transfer');
+const guestTransfer = () => import('../../runtime/account/guest-transfer');
 
 // Signed out, the page opens as this browser's guest (design F1), unless it came from leaving an account or this
 // browser has opened one before; guest: the person picked 손님으로 쓰기.

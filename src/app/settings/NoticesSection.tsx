@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Notice } from '../../contracts/accounts';
-import { markNoticesSeen, readNotices } from '../../runtime/account';
+import { markNoticesSeen, readNotices } from '../../runtime/account/account';
 import { ago } from '../common/time';
 import { HEAD_ROWS, PagedList, SeeAll, usePages } from '../common/useLoaded';
 import { NOTICES } from '../common/words';

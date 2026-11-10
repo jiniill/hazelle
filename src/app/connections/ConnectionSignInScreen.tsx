@@ -1,7 +1,7 @@
 import { ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import type { ConnectionType, SignIn } from '../../connectors/types';
-import { providerConnection } from '../../runtime/connections';
+import { providerConnection } from '../../runtime/models/connections';
 import { ACTS } from '../common/acts';
 import { MARKS } from '../common/tutorial';
 import { useSession } from '../session';

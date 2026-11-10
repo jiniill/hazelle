@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { shortStreak } from '../../engine/cache-history';
 import type { CacheBreak, CacheForecast, CacheRecurrence } from '../../model/cache';
-import type { Route } from '../../runtime/assignment';
-import { modelProfile } from '../../runtime/profiles';
+import type { Route } from '../../runtime/models/assignment';
+import { modelProfile } from '../../runtime/models/profiles';
 import { tokens } from '../common/receipt';
 import { MODEL_SETTINGS } from '../common/words';
 import { useCaptured } from '../session';

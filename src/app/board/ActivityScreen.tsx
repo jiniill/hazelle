@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { markActivitySeen, readActivity } from '../../runtime/board';
+import { markActivitySeen, readActivity } from '../../runtime/service/board';
 import { ago } from '../common/time';
 import { PagedList, usePages } from '../common/useLoaded';
 import { BOARD } from '../common/words';

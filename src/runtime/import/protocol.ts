@@ -2,7 +2,7 @@ import type { Unpacked } from '../../engine/import/archive';
 import type { PresetRead } from '../../engine/import/preset';
 import type { ImportedTool } from '../../engine/import/tool';
 import type { BackupCatalog, BackupFailure, BundledModule, Imported, ImportedModule, ImportedPersona, ImportFailure, MoveUnsupported, Picture, RisuCharacter, RisuChat, RisuMessage, RisuPersona, RisuPreset } from '../../engine/import/types';
-import type { ChatFile } from '../chat-file';
+import type { ChatFile } from '../export/chat-file';
 
 export type AssetRead = Omit<Imported['assets'][number], 'read'> & { handle: number };
 export type PartRead = { path: string; handle: number };

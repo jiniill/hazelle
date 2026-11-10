@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { pictureSizes } from '../../engine/illustrate';
 import { shown, type Message, type Receipt } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
-import { withTurn, type Shown, type Turn } from '../../runtime/talk';
+import { withTurn, type Shown, type Turn } from '../../runtime/chat/talk';
 import { probeRoot } from '../ui/probe';
 import { ChatLog } from './ChatLog';
 import { rowPart } from './rowPart';

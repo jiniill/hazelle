@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import type { ChatScope } from '../../../engine/render';
 import type { Snapshot } from '../../../engine/lua/state';
 import type { Host } from '../../../engine/script-api';
-import { applyTail } from '../../history-delta';
+import { applyTail } from '../../evaluation/history-delta';
 import { LuaWorker, type Down, type Up } from './client';
 import { luaStanding } from './snapshot';
 

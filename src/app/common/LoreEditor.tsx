@@ -5,10 +5,10 @@ import { lorebookFile, readLorebookText } from '../../engine/import/lorebook';
 import type { Stored } from '../../model/kinds';
 import type { Lore, LoreFolder, LoreOwner } from '../../model/library';
 import { loreGroups } from '../../model/lore';
-import { lorebookOf } from '../../runtime/card-file';
-import { sharedLoreScan } from '../../runtime/chat-context';
-import { addLore, addLoreFolder, editLore, loreFolderRemoval, removeLore, removeLoreFolder, renameLoreFolder, importLore, restoreLore, restoreLoreFolder, setCharacterLoreScan, undoLoreImport } from '../../runtime/lore';
-import type { ObjectStore } from '../../runtime/store';
+import { lorebookOf } from '../../runtime/export/card-file';
+import { sharedLoreScan } from '../../runtime/chat/chat-context';
+import { addLore, addLoreFolder, editLore, loreFolderRemoval, removeLore, removeLoreFolder, renameLoreFolder, importLore, restoreLore, restoreLoreFolder, setCharacterLoreScan, undoLoreImport } from '../../runtime/library/lore';
+import type { ObjectStore } from '../../runtime/store/store';
 import { useChildren, useSaves, useSettings, useStore, useStored } from '../session';
 import { SHORTCUTS } from '../shortcuts';
 import { useToast } from '../toast';
@@ -46,7 +46,7 @@ const readOwnCount = reader((draft) => (draft.trim() === '' ? undefined : readCo
 
 type Scan = Card['loreSettings'];
 
-// A character's own scan settings, each over the account's in 설정 › 채팅 (runtime/chat-context loreScanOf).
+// A character's own scan settings, each over the account's in 설정 › 채팅 (runtime/chat/chat-context loreScanOf).
 function LoreScanFold({ id }: { id: string }) {
   const store = useStore();
   // Subscribed for sharedLoreScan, which reads the account's from the store.

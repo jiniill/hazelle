@@ -1,6 +1,6 @@
 import { GENERIC } from '../../connectors/registry';
 import type { Connection, Protocol } from '../../connectors/types';
-import { addConnection, newAccount } from '../../runtime/connections';
+import { addConnection, newAccount } from '../../runtime/models/connections';
 import type { Session } from '../../runtime/session';
 import { describeKeyFailure } from '../common/failure';
 import { navigate } from '../shell/router';

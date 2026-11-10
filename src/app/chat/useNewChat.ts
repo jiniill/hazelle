@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chat, ChatSummary } from '../../model/chat';
 import { textTranslation, type CharacterShelf } from '../../model/library';
-import { startChat } from '../../runtime/chat-log';
-import { draftKey } from '../../runtime/drafts';
-import { greetingPreview, projectGreetings, startingGreetings } from '../../runtime/greetings';
-import type { Shown } from '../../runtime/talk';
-import type { Starting } from '../../runtime/turn';
-import type { Unsaved } from '../../runtime/turn-context';
+import { startChat } from '../../runtime/chat/chat-log';
+import { draftKey } from '../../runtime/device/drafts';
+import { greetingPreview, projectGreetings, startingGreetings } from '../../runtime/chat/greetings';
+import type { Shown } from '../../runtime/chat/talk';
+import type { Starting } from '../../runtime/chat/turn';
+import type { Unsaved } from '../../runtime/chat/turn-context';
 import { useSession } from '../session';
 import { navigate } from '../shell/router';
 

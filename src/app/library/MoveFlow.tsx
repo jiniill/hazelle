@@ -6,7 +6,7 @@ import type { BackupCatalog, BackupFailure, RisuBackup } from '../../engine/impo
 import type { Unused } from '../../engine/pipeline';
 import { ImportWorker } from '../../runtime/import/client';
 import { ImportReadError, ImportStuck } from '../../runtime/import/protocol';
-import { broughtFromRisu, fillInlays, modulesFromRisu, moveFromRisu, sortRisuFiles, type FilledInlays, type Moved, type MoveStep } from '../../runtime/move';
+import { broughtFromRisu, fillInlays, modulesFromRisu, moveFromRisu, sortRisuFiles, type FilledInlays, type Moved, type MoveStep } from '../../runtime/import/move';
 import { ACTS } from '../common/acts';
 import { aliased } from '../common/alias';
 import { describeFailure } from '../common/failure';
@@ -34,7 +34,7 @@ const PRESET_FAILURE: Record<PresetFailure['kind'], string> = {
   'not-preset': '프리셋 아님',
 };
 
-// In the move's order (runtime/move). The character steps interleave, so each kind reached keeps its own line.
+// In the move's order (runtime/import/move). The character steps interleave, so each kind reached keeps its own line.
 const STEP: Record<MoveStep['kind'], string> = { personas: THINGS.persona.noun, modules: THINGS.module.noun, prompts: THINGS.prompt.noun, characters: THINGS.character.noun, chats: THINGS.chat.noun, pictures: '이미지' };
 const READING = '백업 읽기';
 type Steps = Partial<Record<MoveStep['kind'], MoveStep>>;

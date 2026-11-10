@@ -15,7 +15,7 @@ export type Part = Sent | ChatPart | CachePart;
 export type ProviderFit = { allowance: number | null; route: WireRoute; model: Model; settings: ModelSettings };
 
 // What a picture is budgeted at, whatever its size: Anthropic's ~1.15 megapixels over 750, the dearest of the codecs, which
-// runtime/picture never sends past.
+// runtime/files/picture never sends past.
 export const PICTURE_TOKENS = 1600;
 const pictureTokens = (message: ChatMessage) => (message.inlays?.length ?? 0) * PICTURE_TOKENS;
 export const messageTokens = (countTokens: (text: string) => number, message: ChatMessage) => countTokens(message.content) + pictureTokens(message);

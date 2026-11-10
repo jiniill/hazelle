@@ -20,7 +20,7 @@ export type PrereadSettings = { parts: PrereadParts; recent: number; batch: numb
 // look keys are app/common/reading savedPresets fields, not arbitrary CSS properties.
 export type SavedLook = { id: string; name: string; look: Record<string, string | number> };
 
-// Shared defaults are resolved by runtime/chat-context, runtime/characters and runtime/memory;
+// Shared defaults are resolved by runtime/chat/chat-context, runtime/library/characters and runtime/tasks/memory;
 // character-owned translation and illustration settings replace their shared settings.
 // What this person has been shown, so no device of theirs shows it again.
 export type Seen = { tutorials?: string[]; welcome?: true; tour?: string; opened?: string };
@@ -60,12 +60,12 @@ export type Settings = {
   toolLanguage?: string;
   importNotice?: true;
   ledger?: 'filled' | { after: string };
-  // How many of runtime/reread's steps every import original kept here has had; absent, none.
+  // How many of runtime/import/reread's steps every import original kept here has had; absent, none.
   reread?: number;
   looks?: SavedLook[];
   // How many model calls one reply may make while its model calls plugin tools, absent for TOOL_ROUNDS.
   toolRounds?: number;
-  // The shared 실패하면 다시 보내기, absent for RETRIES; a connection or a 설정 묶음 overrides it (runtime/connections retriesOf).
+  // The shared 실패하면 다시 보내기, absent for RETRIES; a connection or a 설정 묶음 overrides it (runtime/models/connections retriesOf).
   retries?: number;
   loreBudget?: number;
   loreDepth?: number;
@@ -73,9 +73,9 @@ export type Settings = {
   loreFullWord?: boolean;
   labs?: string[];
   features?: FeatureSwitches;
-  // 에이전트 in every chat, the first of the stacked lists (runtime/agents agentsOf).
+  // 에이전트 in every chat, the first of the stacked lists (runtime/tasks/agents agentsOf).
   agents?: string[];
-  // Its fields absent read through runtime/preread prereadSetup.
+  // Its fields absent read through runtime/tasks/preread prereadSetup.
   preread?: Partial<PrereadSettings>;
   answerInstruction?: string;
   usageShown?: true;

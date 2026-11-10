@@ -16,7 +16,7 @@ export default defineConfig({
   // name, or list it there.
   build: { assetsInlineLimit: 0, outDir: 'dist/client', rollupOptions: { tsconfig: false, input: { main: 'index.html', sandbox: 'sandbox.html' } } },
   // Workers are module workers (runtime/worker moduleWorker), so a worker's dynamic import stays its own chunk: the
-  // evaluation worker starts small and loads the tokenizer apart (runtime/tokenizer).
+  // evaluation worker starts small and loads the tokenizer apart (runtime/evaluation/tokenizer).
   worker: { format: 'es', plugins: () => [tokenTable()], rollupOptions: { tsconfig: false } },
   assetsInclude: ['**/*.risup'],
 });

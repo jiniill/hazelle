@@ -1,8 +1,8 @@
 import { retrievalRoom } from '../../engine/retrieval';
 import type { MemorySettings } from '../../model/memory';
-import { SHARED_CHAT } from '../../runtime/features';
-import { defaultMemory, memoryWriter } from '../../runtime/memory-read';
-import { setDefaultMemory } from '../../runtime/memory';
+import { SHARED_CHAT } from '../../runtime/tasks/features';
+import { defaultMemory, memoryWriter } from '../../runtime/tasks/memory-read';
+import { setDefaultMemory } from '../../runtime/tasks/memory';
 import { describeMemoryFailure } from '../common/failure';
 import { MemoryFields, MemorySplit } from '../common/MemoryFields';
 import { AccountTaskModel } from '../common/TaskPrompt';

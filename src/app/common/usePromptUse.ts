@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { chatPrompt } from '../../runtime/prompts';
+import { chatPrompt } from '../../runtime/library/prompts';
 import { useChats, usePrompts, useSettings, useStore } from '../session';
 import { ago } from './time';
 

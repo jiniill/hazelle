@@ -6,7 +6,7 @@ import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS, TOOLS, LAB } fro
 import { presetOf } from '../../common/reading';
 import { useDisplay } from '../../display';
 import { FEATURE_LABS, FEATURES, type Feature } from '../../../model/features';
-import { availableFeatures, sharedFeatures } from '../../../runtime/features';
+import { availableFeatures, sharedFeatures } from '../../../runtime/tasks/features';
 import { useAccount, useConnections, useModulesAndPlugins, usePersonas, useProfiles, usePrompts, useSession, useSettings, useStore } from '../../session';
 import { Empty, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen, seekRow } from '../../ui';
 import { navigate } from '../router';

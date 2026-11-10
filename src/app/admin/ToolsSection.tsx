@@ -1,6 +1,6 @@
 import { FileX, Link2Off, Send } from 'lucide-react';
 import { useState } from 'react';
-import { sendNotice } from '../../runtime/admin';
+import { sendNotice } from '../../runtime/service/admin';
 import { TextDialog } from '../common/TextDialog';
 import { NOTICES } from '../common/words';
 import { useToast } from '../toast';

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import type { Receipt } from '../../model/chat';
-import type { AgentFailed } from '../../runtime/agents';
+import type { AgentFailed } from '../../runtime/tasks/agents';
 import { describeAgentFailure, describeAskFailure, describeFailure, describeIllustrateFailure, describeMascotFailure, describeMemoryFailure, describePrereadFailure, describeTranslateFailure, describeTurnFailure } from './failure';
 
 const failed = { error: null } as Receipt;

@@ -31,7 +31,7 @@ export type Attached = Placed & { paragraph: number; width: number; height: numb
 // Told apart by tool, which no drawn picture holds.
 export type Illustration = Drawn | Attached;
 
-// Character.ownIllustrate replaces shared switches; runtime/characters illustrateSwitches resolves absent fields.
+// Character.ownIllustrate replaces shared switches; runtime/library/characters illustrateSwitches resolves absent fields.
 // auto defaults off because pictures cost credit; spend bypasses consent for pictures not known to be free.
 // model is the 이미지 모델, which draws; sceneModel the 장면 모델, which writes the scenes, absent for the chat's 보조 모델.
 export type IllustrateSwitches = { auto?: boolean; spend?: boolean; prompt?: string; model?: ModelRef; sceneModel?: ModelRef; ladder?: Rung[]; pov?: boolean; comic?: boolean };

@@ -1,5 +1,5 @@
 import type { ToolEvent } from '../engine/script-api';
-import { serverBackend } from './backend';
+import { serverBackend } from './store/backend';
 import type { createTools } from './tools/host';
 import type { Binding } from './scripts/binding';
 import { toolId, type ToolUnit } from '../model/tool';
@@ -15,13 +15,13 @@ export { sessionCookie, signupBody, testApp } from '../server/testing';
 import { randomBytes } from '../vault/aead';
 import type { VaultKey } from '../vault/keys';
 import { api, holdAccount } from './api';
-import { setDefaultModel } from './assignment';
+import { setDefaultModel } from './models/assignment';
 import { runEvent } from './scripts/lua/event';
-import { Files } from './files';
-import { RequestLog, type Logged } from './request-log';
+import { Files } from './files/files';
+import { RequestLog, type Logged } from './models/request-log';
 import { openSession, type Session } from './session';
-import { ObjectStore } from './store';
-import type { DeviceCache } from './object-cache';
+import { ObjectStore } from './store/store';
+import type { DeviceCache } from './store/object-cache';
 
 // The bot scripts run in the test's own thread: node has no Worker to load them into. Made before withSession stubs
 // window, which the VM's loader would read as a browser.

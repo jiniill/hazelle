@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { moduleContributions, type ModuleContribution, type Sending } from '../../runtime/turn-context';
+import { moduleContributions, type ModuleContribution, type Sending } from '../../runtime/chat/turn-context';
 import { tokens } from '../common/receipt';
 import { useSearch } from '../common/useSearch';
 import { moduleName } from '../common/words';

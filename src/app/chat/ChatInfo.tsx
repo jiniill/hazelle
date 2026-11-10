@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { calls, handEdited, shown, type AgentRun, type Receipt, type Version } from '../../model/chat';
-import { setAgentMemory } from '../../runtime/chat-log';
-import type { LogEntry } from '../../runtime/request-log';
+import { setAgentMemory } from '../../runtime/chat/chat-log';
+import type { LogEntry } from '../../runtime/models/request-log';
 import { describeReplyError } from '../common/failure';
 import { ago } from '../common/time';
 import { useChatMemory, useSession, useStore } from '../session';
@@ -175,7 +175,7 @@ function PrereadCall({ preread: { material, brief, receipt, reused, saved } }: {
   );
 }
 
-// Agent info exposes editable memory for following turns (runtime/agents memoryOf).
+// Agent info exposes editable memory for following turns (runtime/tasks/agents memoryOf).
 // Wire text belongs to the page request log; post-agent raw response is that agent's rewritten reply.
 function AgentCall({ chat, version, run: { agent, name, stage, receipt, note, memory, reused } }: { chat: string; version: Version; run: AgentRun }) {
   const store = useStore();

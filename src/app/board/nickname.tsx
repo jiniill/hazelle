@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { NICKNAME_LENGTH, validNickname } from '../../contracts/board';
-import { readNickname, setNickname } from '../../runtime/board';
+import { readNickname, setNickname } from '../../runtime/service/board';
 import { describeFailure } from '../common/failure';
 import { AuthorLine } from '../common/postRow';
 import { useAttempt } from '../common/useAttempt';

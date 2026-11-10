@@ -1,7 +1,7 @@
 import type { ChatSummary } from '../../model/chat';
 import { allWritten, type ApiResult } from '../../runtime/api';
-import { forgetOrigin as forgetChatOrigin, removeChat, renameChat, restoreChat } from '../../runtime/chat-log';
-import { branchFrom, duplicateChat } from '../../runtime/message-acts';
+import { forgetOrigin as forgetChatOrigin, removeChat, renameChat, restoreChat } from '../../runtime/chat/chat-log';
+import { branchFrom, duplicateChat } from '../../runtime/chat/message-acts';
 import { NameDialog } from '../common/NameDialog';
 import { BIN_KEEPS, COPY_SAID, copyName } from '../common/words';
 import { useSession } from '../session';

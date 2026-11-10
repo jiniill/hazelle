@@ -3,7 +3,7 @@ import { MODELS_DEV_LISTS, type PriceTable, type Rates } from '../../connectors/
 import { inUnit, priceCost } from '../../connectors/pricing';
 import { CONNECTION_TYPES, costUnit } from '../../connectors/registry';
 import type { Cost } from '../../connectors/types';
-import { readPriceTable } from '../../runtime/prices';
+import { readPriceTable } from '../../runtime/models/prices';
 import { money } from '../common/money';
 import { cost } from '../common/receipt';
 import { count, readWhole } from '../common/typedNumber';

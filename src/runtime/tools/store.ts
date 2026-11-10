@@ -1,7 +1,7 @@
 import { CLAIM_SETTLE_MS } from '../../contracts/files';
 import type { Chat } from '../../model/chat';
 import type { ToolUnit } from '../../model/tool';
-import { packsOf } from '../chat-context';
+import { packsOf } from '../chat/chat-context';
 import { assetType } from '../../engine/import/card';
 import { fieldValue, type ImportedTool } from '../../engine/import/tool';
 import { sha256Hex, sha256Id } from '../../hex';
@@ -10,12 +10,12 @@ import { live } from '../../model/library';
 import { badgesOf, toolId, type Badges, type Tool } from '../../model/tool';
 import type { Json, Settings, ToolManifest } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
-import type { BackupOutput } from '../backup-zip';
-import { writeWhole } from '../export-file';
-import type { Files } from '../files';
+import type { BackupOutput } from '../export/backup-zip';
+import { writeWhole } from '../export/export-file';
+import type { Files } from '../files/files';
 import type { Session } from '../session';
-import type { ObjectStore } from '../store';
-import type { Write } from '../object-writes';
+import type { ObjectStore } from '../store/store';
+import type { Write } from '../store/object-writes';
 
 export type ToolImport = { id: string; previous: Tool | null };
 // Bound inline tooldata/toolchat values by the maximum sealed BATCH_LIMITS.body.

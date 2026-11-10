@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { expect, it, vi } from 'vitest';
 import type { ApiResult } from '../../runtime/api';
-import type { Page } from '../../runtime/pages';
+import type { Page } from '../../runtime/service/pages';
 import { probeRoot } from '../ui/probe';
 import { useLoad, usePages } from './useLoaded';
 

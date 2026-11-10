@@ -52,9 +52,9 @@ export function hearServedBuild(listener: ((build: string) => void) | null) {
   if (listener && served !== null) listener(served);
 }
 
-// Every request to this app's server leaves through here (api, and runtime/relay's raw ones).
+// Every request to this app's server leaves through here (api, and runtime/models/relay's raw ones).
 // pulse: a provider call's label, which marks the account active too and so settles an owed seen.
-// anonymous: says nothing of the account, neither the cookie nor the header, and hears nothing of it (runtime/auto-diagnosis).
+// anonymous: says nothing of the account, neither the cookie nor the header, and hears nothing of it (runtime/diagnostics/auto-diagnosis).
 export async function fetchApi(path: string, { pulse, anonymous, ...init }: Omit<RequestInit, 'headers'> & { headers?: Record<string, string>; pulse?: PulseLabel; anonymous?: true } = {}): Promise<Response> {
   const sent = generation;
   const label = sharing && !anonymous ? (pulse ?? (seenOwed ? ({ kind: 'seen' } as const) : null)) : null;

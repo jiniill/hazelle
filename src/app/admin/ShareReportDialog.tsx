@@ -1,9 +1,9 @@
 import { Ban, Check, Eye, Play } from 'lucide-react';
 import { useState } from 'react';
 import type { Report } from '../../contracts/admin';
-import { blockShare, readShareVersions, releaseShare, resolveReport } from '../../runtime/admin';
+import { blockShare, readShareVersions, releaseShare, resolveReport } from '../../runtime/service/admin';
 import type { ApiResult } from '../../runtime/api';
-import { openVersion, type Opened } from '../../runtime/share';
+import { openVersion, type Opened } from '../../runtime/export/share';
 import { describeFailure } from '../common/failure';
 import { SharePreview } from '../common/SharePreview';
 import { TextDialog } from '../common/TextDialog';

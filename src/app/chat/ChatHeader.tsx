@@ -5,7 +5,7 @@ import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
 import type { Writes } from '../../model/chat';
-import { pinnedBy } from '../../runtime/assignment';
+import { pinnedBy } from '../../runtime/models/assignment';
 import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, ONBOARDING, promptName } from '../common/words';
 import { useRemembering, useSession, useToolFrames } from '../session';
 import { navigate } from '../shell/router';

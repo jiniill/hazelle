@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
-import type { Shown } from '../../runtime/talk';
+import type { Shown } from '../../runtime/chat/talk';
 import type { ToolMenu } from '../../runtime/tools/facade';
 import { useToolFrames } from '../session';
 import { usePanelsBeside } from '../ui';

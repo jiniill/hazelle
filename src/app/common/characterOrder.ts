@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { indexFolders } from '../../model/folders';
 import { arrange, arrangeFolders, ORDER_ID, placeBefore } from '../../model/order';
-import { setOrder } from '../../runtime/characters';
-import type { Library } from '../../runtime/read-model';
+import { setOrder } from '../../runtime/library/characters';
+import type { Library } from '../../runtime/store/read-model';
 import { useLibrary, useStore, useStored } from '../session';
 import { useToast } from '../toast';
 import { usePersisted } from './usePersisted';

@@ -5,10 +5,10 @@ import { ILLUSTRATE_NOTE, ILLUSTRATE_NOTE_UNSENT, scopeTag } from '../common/wor
 import { useCaptured } from '../session';
 import { Divider, Menu, Section, Stack, Text, TextField, ToolButton } from '../ui';
 import type { RowTool } from './ChatToolRow';
-import type { IllustrateSetup } from '../../runtime/characters';
+import type { IllustrateSetup } from '../../runtime/library/characters';
 import type { PromptDoor } from '../common/TaskPrompt';
-import { sendsIllustrateNote, type sceneWriterOf } from '../../runtime/illustrate';
-import { illustrationPrompt } from '../../runtime/prompts';
+import { sendsIllustrateNote, type sceneWriterOf } from '../../runtime/tasks/illustrate';
+import { illustrationPrompt } from '../../runtime/library/prompts';
 import type { ChatSettingsActions } from './useChatSettings';
 import type { IllustrationActions } from './useChatIllustrations';
 import { useChatNote } from './useChatNote';

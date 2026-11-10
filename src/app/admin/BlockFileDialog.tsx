@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FILE_ID } from '../../contracts/files';
-import { setFileBlocked } from '../../runtime/admin';
+import { setFileBlocked } from '../../runtime/service/admin';
 import { describeFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { useToast } from '../toast';

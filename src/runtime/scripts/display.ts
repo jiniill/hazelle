@@ -4,16 +4,16 @@ import type { DisplayBatch, Displayed, Script } from '../../engine/lua/run';
 import type { Snapshot } from '../../engine/lua/state';
 import type { ChatScope, Missed } from '../../engine/render';
 import type { Chat, Message } from '../../model/chat';
-import type { UnfoundAssets } from '../assets';
-import { EvaluationStopped, EvaluationStuck } from '../evaluation';
+import type { UnfoundAssets } from '../files/assets';
+import { EvaluationStopped, EvaluationStuck } from '../evaluation/evaluation';
 
 import { luaSnapshot, luaStanding } from './lua/snapshot';
 import { scriptsOf } from './selection';
 import type { ScriptExecution } from './execution';
 import type { ScriptEffects } from './effects';
 import type { ToolUnit } from '../../model/tool';
-import type { ObjectStore } from '../store';
-import { packsOf, pinned, scopeOf } from '../chat-context';
+import type { ObjectStore } from '../store/store';
+import { packsOf, pinned, scopeOf } from '../chat/chat-context';
 
 // tools: those that may answer showing, run over each stretch after the Lua (ScriptExecution.showing).
 type Pass = { revision: number; generation: number; scripts: Script[]; tools: ToolUnit[]; scope: ChatScope; snapshot: Snapshot; items: Missed[]; remaining: number; installed: boolean; view: Display; signal?: AbortSignal };

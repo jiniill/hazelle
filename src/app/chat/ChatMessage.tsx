@@ -5,7 +5,7 @@ import { storyHtml } from '../../engine/display';
 import { firstLine, handEdited, shown, translationOutdated, type Message } from '../../model/chat';
 import { placeMark, translatedMarks, withoutMarks } from '../../model/illustration';
 import type { Stored } from '../../model/kinds';
-import { runs } from '../../runtime/illustrate';
+import { runs } from '../../runtime/tasks/illustrate';
 import { ACTS, newOf } from '../common/acts';
 import { MASCOT_PICTURES } from '../common/mascots';
 import { BOOKMARK } from '../common/words';
@@ -17,8 +17,8 @@ import { useTokens } from '../common/useTokens';
 import { useFocusReturn } from '../ui';
 import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolWaiting } from '../common/words';
-import type { Reading } from '../../runtime/talk';
-import type { Preparing } from '../../runtime/turn-steps';
+import type { Reading } from '../../runtime/chat/talk';
+import type { Preparing } from '../../runtime/chat/turn-steps';
 import { useAssetUrl } from '../session';
 import { SHORTCUTS } from '../shortcuts';
 import { MASCOTS } from '../../model/mascot';
@@ -235,7 +235,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const count = message.versions.length;
   // No call writes a greeting: its versions go round.
   const greeting = opening || version.greeting !== undefined;
-  // Only then would 다시 생성 use notes again (runtime/agents preAgents).
+  // Only then would 다시 생성 use notes again (runtime/tasks/agents preAgents).
   const noted = !mine && !greeting && message.versions.some(({ receipt }) => receipt?.agents?.some(({ stage }) => stage === 'pre'));
   // → past the last version asks for a new one, as ⟳ does; a name of its own keeps the two apart.
   const nextLabel = message.selected === count - 1 && !greeting ? newOf('버전') : '다음';

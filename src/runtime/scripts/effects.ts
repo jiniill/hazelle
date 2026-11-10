@@ -3,12 +3,12 @@ import type { Outcome } from '../../engine/script-api';
 import { shown } from '../../model/chat';
 import type { PackOwner } from '../../model/library';
 import { allWritten } from '../api';
-import { appendScripted } from '../chat-log';
-import { upsertChatLore } from '../lore';
+import { appendScripted } from '../chat/chat-log';
+import { upsertChatLore } from '../library/lore';
 import type { ScriptOutcome } from './lua/event';
-import type { ReadModels } from '../read-model';
+import type { ReadModels } from '../store/read-model';
 import type { ScriptInteractions } from './interactions';
-import type { ObjectStore } from '../store';
+import type { ObjectStore } from '../store/store';
 import { saveToolChat } from '../tools/store';
 
 export type Anchor = { version: string; stays?: true };

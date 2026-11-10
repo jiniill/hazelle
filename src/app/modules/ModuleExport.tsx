@@ -1,4 +1,4 @@
-import { exportModule } from '../../runtime/card-file';
+import { exportModule } from '../../runtime/export/card-file';
 import { fileNamed } from '../common/download';
 import { FileExport } from '../common/FileExport';
 import { moduleName } from '../common/words';

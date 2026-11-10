@@ -11,7 +11,7 @@ export const paragraphs = (text: string) => [...new Set(text.split('\n\n').filte
 // Risu asks with the chat's first four messages past the greeting, never its latest, so from the fifth on every send
 // finds the same paragraphs and the description stays cacheable.
 const ASKED = 4;
-// Risu's own embedding model reads only the head of a long question; this head fits EMBED_TOKENS (runtime/embed) at
+// Risu's own embedding model reads only the head of a long question; this head fits EMBED_TOKENS (runtime/models/embed) at
 // two tokens a character.
 const QUERY_MOST = 4000;
 export function additionalQuery(scope: Pick<ChatScope, 'messages' | 'persona' | 'card' | 'greeting'>): string {

@@ -1,9 +1,9 @@
 import type { Chat } from '../../model/chat';
 import type { TogglePreset, ToggleValues } from '../../model/prompt';
 import type { ApiResult } from '../../runtime/api';
-import { resetToggles, setToggleValues } from '../../runtime/characters';
-import { packsOf, togglesOf } from '../../runtime/chat-context';
-import type { PromptChoice } from '../../runtime/prompts';
+import { resetToggles, setToggleValues } from '../../runtime/library/characters';
+import { packsOf, togglesOf } from '../../runtime/chat/chat-context';
+import type { PromptChoice } from '../../runtime/library/prompts';
 import { useSaves, useSession } from '../session';
 import { useToast } from '../toast';
 import { presetValues, sectionValues, toggleRows, toggleSaveKey, type ToggleRows, type ToggleSection } from './toggles';

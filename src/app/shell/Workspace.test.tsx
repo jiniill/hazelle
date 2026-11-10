@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vitest';
-import { AccountFacts } from '../../runtime/account';
+import { AccountFacts } from '../../runtime/account/account';
 import { randomBytes } from '../../vault/aead';
 import { Workspace } from './Workspace';
 

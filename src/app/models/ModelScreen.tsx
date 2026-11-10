@@ -5,10 +5,10 @@ import { entriesOf, entryKey, entryName, type Starred } from '../../connectors/t
 import type { Stored } from '../../model/kinds';
 import { modelUsage } from '../../model/usage';
 import { refOf, rolesOf } from '../../connectors/assignment';
-import { imageOnly } from '../../runtime/assignment';
-import { renameModel, retriesOf, setModelPictures } from '../../runtime/connections';
-import { modelProfile, ownProfile, profileUsers, setModelProfile } from '../../runtime/profiles';
-import { illustrationPrompt } from '../../runtime/prompts';
+import { imageOnly } from '../../runtime/models/assignment';
+import { renameModel, retriesOf, setModelPictures } from '../../runtime/models/connections';
+import { modelProfile, ownProfile, profileUsers, setModelProfile } from '../../runtime/models/profiles';
+import { illustrationPrompt } from '../../runtime/library/prompts';
 import { LedgerWait, useLedger } from '../common/useLedger';
 import type { SaveStatus } from '../common/saveQueue';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
@@ -28,7 +28,7 @@ type Props = { connection: Stored<'connection'>; model: Starred; back: Back };
 
 export const ModelScreen = (props: Props) => (imageOnly(props.model) ? <ImageModelScreen {...props} /> : <ChatModelScreen {...props} />);
 
-// A blank clears the entry's own name, so the list's name shows again (a ruling; runtime/connections renameModel).
+// A blank clears the entry's own name, so the list's name shows again (a ruling; runtime/models/connections renameModel).
 function useRename(connection: Stored<'connection'>, model: Starred) {
   const { store } = useSession();
   const key = entryKey(model);

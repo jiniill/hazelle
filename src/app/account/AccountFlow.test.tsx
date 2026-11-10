@@ -36,14 +36,14 @@ vi.mock('../shell/router', () => ({
   },
 }));
 vi.mock('../common/download', () => ({ clearDownloads: vi.fn(async () => {}) }));
-vi.mock('../../runtime/account', async (original) => ({
-  ...await original<typeof import('../../runtime/account')>(),
+vi.mock('../../runtime/account/account', async (original) => ({
+  ...await original<typeof import('../../runtime/account/account')>(),
   loadSession: vi.fn(),
   checkUsername: vi.fn(),
   uploadGuest: vi.fn(),
 }));
-vi.mock('../../runtime/guest-transfer', async (original) => ({
-  ...await original<typeof import('../../runtime/guest-transfer')>(),
+vi.mock('../../runtime/account/guest-transfer', async (original) => ({
+  ...await original<typeof import('../../runtime/account/guest-transfer')>(),
   guestWithContent: vi.fn(async () => ({ ok: true, data: null })),
 }));
 
@@ -89,7 +89,7 @@ it.each([
     };
     req.onsuccess = () => resolve(req.result);
   });
-  const { loadSession } = await import('../../runtime/account');
+  const { loadSession } = await import('../../runtime/account/account');
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'open' } } });
   const { AccountFlow } = await import('./AccountFlow');
   const children = vi.fn<(account: Unlocked) => ReactNode>(() => null);
@@ -111,7 +111,7 @@ it.each([
 });
 
 it('shows the existing storage failure wording instead of staying on loading when startup rejects', async () => {
-  const { loadSession } = await import('../../runtime/account');
+  const { loadSession } = await import('../../runtime/account/account');
   vi.mocked(loadSession).mockRejectedValue(new Error('Storage refused'));
   const { describeFailure } = await import('../common/failure');
   const { AccountFlow } = await import('./AccountFlow');
@@ -125,7 +125,7 @@ it('shows the existing storage failure wording instead of staying on loading whe
 });
 
 it('stops before remembering a guest vault when its head write fails, shows the failure, and retries', async () => {
-  const { loadSession } = await import('../../runtime/account');
+  const { loadSession } = await import('../../runtime/account/account');
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'open' } } });
   const device = await import('../../vault/device');
   const remember = vi.spyOn(device, 'rememberVault');
@@ -163,9 +163,9 @@ it('stops landing when guest content cannot be read and asks the guest-data ques
   const device = await import('../../vault/device');
   await device.rememberVault(session.accountId, vaultKey);
   const remember = vi.spyOn(device, 'rememberVault');
-  const { loadSession, uploadGuest } = await import('../../runtime/account');
+  const { loadSession, uploadGuest } = await import('../../runtime/account/account');
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session, vault: { passwordWrap: '', recoveryWrap: '' } } });
-  const { guestWithContent } = await import('../../runtime/guest-transfer');
+  const { guestWithContent } = await import('../../runtime/account/guest-transfer');
   vi.mocked(guestWithContent).mockResolvedValueOnce({ ok: false, error: 'browser-storage' }).mockResolvedValueOnce({ ok: true, data: { accountId: crypto.randomUUID(), vaultKey } });
   const { describeFailure } = await import('../common/failure');
   const { AccountFlow } = await import('./AccountFlow');
@@ -189,7 +189,7 @@ it('stops landing when guest content cannot be read and asks the guest-data ques
 });
 
 it("asks a one-person installation's first visitor for a password alone, and names the account itself", async () => {
-  const { loadSession } = await import('../../runtime/account');
+  const { loadSession } = await import('../../runtime/account/account');
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'setup' } } });
   const { AccountFlow } = await import('./AccountFlow');
   const children = vi.fn(() => null);
@@ -207,7 +207,7 @@ it("asks a one-person installation's first visitor for a password alone, and nam
 });
 
 it("signs in to a one-person installation's account by its password alone, with no guest to fall back to", async () => {
-  const { loadSession } = await import('../../runtime/account');
+  const { loadSession } = await import('../../runtime/account/account');
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'solo', username: 'jin' } } });
   const { AccountFlow } = await import('./AccountFlow');
   const root = flowRoot();
@@ -220,7 +220,7 @@ it("signs in to a one-person installation's account by its password alone, with 
 });
 
 it("holds a step for each screen in from the guest, at its top, which back takes back, and asks for the username at 다음 (on its field, or again after a lost connection), keeping the password", async () => {
-  const { loadSession, checkUsername } = await import('../../runtime/account');
+  const { loadSession, checkUsername } = await import('../../runtime/account/account');
   vi.mocked(loadSession).mockResolvedValue({ ok: true, data: { session: null, door: { kind: 'open' } } });
   vi.mocked(checkUsername).mockResolvedValueOnce({ ok: false, error: 'username-taken', status: 409 }).mockResolvedValueOnce({ ok: false, error: 'offline' }).mockResolvedValue({ ok: true, data: undefined });
   const { AccountFlow } = await import('./AccountFlow');

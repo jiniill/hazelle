@@ -1,6 +1,6 @@
 import { live, type PackOwner } from '../../model/library';
 import { toolId } from '../../model/tool';
-import type { ObjectStore } from '../../runtime/store';
+import type { ObjectStore } from '../../runtime/store/store';
 import { aliased } from './alias';
 import type { Asker } from './words';
 

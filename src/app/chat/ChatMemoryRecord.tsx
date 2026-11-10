@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { isChapter } from '../../engine/memory';
 import type { Chapter, Memory, MemoryRecord } from '../../model/memory';
-import type { MemoryView } from '../../runtime/memory-view';
-import { editRecord, forgetRecord, pinRecord, recallRecord, restoreRecord, type RecordPatch } from '../../runtime/memory';
+import type { MemoryView } from '../../runtime/tasks/memory-view';
+import { editRecord, forgetRecord, pinRecord, recallRecord, restoreRecord, type RecordPatch } from '../../runtime/tasks/memory';
 import { EntryList } from '../common/EntryList';
 import { ago } from '../common/time';
 import { useAutosave } from '../common/useAutosave';

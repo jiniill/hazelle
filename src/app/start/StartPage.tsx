@@ -2,7 +2,7 @@ import { Fragment, lazy, Suspense, useEffect, useRef, useState, type FormEvent }
 import { CONNECTION_TYPES, detect } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
 import { OPEN_APP, START_AGAIN, START_PAGE } from '../../contracts/start';
-import { countFirstPage } from '../../runtime/first-page';
+import { countFirstPage } from '../../runtime/service/first-page';
 import { LegalNotice } from '../common/LegalNotice';
 import { Beat, Brand, Button, Callout, ChoiceGroup, ExampleTalk, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps, Upcoming, WalkOnHint } from '../ui';
 import { EXAMPLE, type ExampleLine, type ExampleStrand } from './example';

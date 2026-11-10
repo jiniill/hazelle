@@ -277,7 +277,7 @@ board.delete('/posts/:id', async (c) => {
   return done.slice(-2).some(({ results }) => results.length) ? c.body(null, 204) : fail(c, 404, 'not-found');
 });
 
-// What the browser draws (runtime/picture postedPicture); nothing else is stored, whatever the request calls it.
+// What the browser draws (runtime/files/picture postedPicture); nothing else is stored, whatever the request calls it.
 function pictureType(bytes: Uint8Array) {
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
   const ascii = (start: number, end: number) => String.fromCharCode(...bytes.subarray(start, end));

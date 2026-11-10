@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { From } from '../../engine/pipeline';
-import type { Sending } from '../../runtime/turn-context';
+import type { Sending } from '../../runtime/chat/turn-context';
 import { describeTurnFailure } from '../common/failure';
 import { useSession } from '../session';
 import { Empty, SidePanel, Tabs, Text } from '../ui';

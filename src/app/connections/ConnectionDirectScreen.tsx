@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { addressProblem, detect } from '../../connectors/registry';
 import type { Connection, Protocol } from '../../connectors/types';
-import { providerConnection } from '../../runtime/connections';
+import { providerConnection } from '../../runtime/models/connections';
 import { HTTPS_ONLY } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { MARKS } from '../common/tutorial';

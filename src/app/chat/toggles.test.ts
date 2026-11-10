@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readToggles } from '../../engine/import/toggles';
 import type { ToggleLine, ToggleValues } from '../../model/prompt';
 import { chatToggles, toggleValue } from '../../model/toggles';
-import type { ToggleSource } from '../../runtime/chat-context';
+import type { ToggleSource } from '../../runtime/chat/chat-context';
 import type { Laid } from '../common/toggleLayout';
 import { currentPreset, presetValues, sectionValues, shownRows, toggleRows, type ToggleRow } from './toggles';
 

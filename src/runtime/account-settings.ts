@@ -1,5 +1,5 @@
 import { EMPTY_SETTINGS, SETTINGS_ID, type Settings } from '../model/settings';
-import type { ObjectStore } from './store';
+import type { ObjectStore } from './store/store';
 
 // Its own leaf, not a store method or export: readers take a bare Pick<ObjectStore, 'get'>, and a value import of
 // store.ts from them closes a cycle (imports.test.ts). Empty until the first settings write, and again after a restore

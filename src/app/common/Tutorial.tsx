@@ -1,6 +1,6 @@
 import { Check, GraduationCap, PartyPopper } from 'lucide-react';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { markSeen } from '../../runtime/chat-context';
+import { markSeen } from '../../runtime/chat/chat-context';
 import { useConnections, useReplied, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import { Button, Cheer, Coach, Dialog, guideShown, Intro, List, ListItem, Row, Stack, Tag, Text, useGuideTarget } from '../ui';

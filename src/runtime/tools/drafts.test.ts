@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { identity, readTool, toolSource } from '../../engine/import/tool';
 import { toolId } from '../../model/tool';
-import { setModuleDeleted } from '../modules';
+import { setModuleDeleted } from '../library/modules';
 import { testServer } from '../testing';
 import { addDraftAsk, applyDraft, applyPreview, blankDraft, createDraft, deleteDraft, DRAFT_BYTES, draftOfTool, draftsOf, draftState, importFile, installedDiffers, saveDraft, undoFileImport } from './drafts';
 import { importTool } from './store';

@@ -29,7 +29,7 @@ export function OrderItems({ order }: { order: Ordering }) {
 export type NamedFolder = { id: string; name: string };
 export const named = (folder: FolderTree): NamedFolder => ({ id: folder.id, name: folder.value.name });
 
-// What writes one owner's folders: the library's (useFolderActions) or an owner's lorebook folders (runtime/lore).
+// What writes one owner's folders: the library's (useFolderActions) or an owner's lorebook folders (runtime/library/lore).
 // deepest: the deepest level a folder stands at, 1 where folders hold no folders. remove: false when it is already gone.
 export type FolderActions = {
   deepest: number;

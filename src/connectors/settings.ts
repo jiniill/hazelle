@@ -31,7 +31,7 @@ export type ModelSettings = { [S in NumberSetting]?: number } & {
   discount?: true;
   // PDF로 보내기: sending() packs the earlier conversation through its codec's pack (Gemini: connectors/gemini-pdf).
   pdf?: Pdf;
-  // Profile retry override (runtime/connections retriesOf); never send it to the provider.
+  // Profile retry override (runtime/models/connections retriesOf); never send it to the provider.
   retries?: number;
   // 추가 파라미터 as the user typed it; connectors/extra reads it when sending.
   extra?: string;

@@ -2,7 +2,7 @@ import type { Rates } from '../../connectors/models-dev';
 import { priceCost } from '../../connectors/pricing';
 import type { Cost } from '../../connectors/types';
 import { shown, type Message } from '../../model/chat';
-import type { TurnFailure } from '../../runtime/turn';
+import type { TurnFailure } from '../../runtime/chat/turn';
 import { describeFailedReply, describeTurnFailure } from '../common/failure';
 
 export const parseMessages = (text: string) => text.split('\n').map((line) => line.trim()).filter(Boolean);

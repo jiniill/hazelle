@@ -1,4 +1,4 @@
-import { readPosts } from '../../runtime/board';
+import { readPosts } from '../../runtime/service/board';
 import { PostItem } from '../common/postRow';
 import { HEAD_ROWS, PagedList, SeeAll, usePages } from '../common/useLoaded';
 import { navigate } from '../shell/router';

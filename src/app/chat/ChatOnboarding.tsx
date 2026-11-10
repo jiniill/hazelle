@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { resolveAssets } from '../../engine/assets';
 import { answered, optionLabel, optionValue, picked, toggled, type Onboarding, type OnboardingQuestion } from '../../engine/import/onboarding';
 import type { Chat, Writes } from '../../model/chat';
-import { onboardingPage } from '../../runtime/chat-context';
+import { onboardingPage } from '../../runtime/chat/chat-context';
 import { runaway } from '../common/failure';
 import { useLoad } from '../common/useLoaded';
 import { useAssetUrl, useSession } from '../session';

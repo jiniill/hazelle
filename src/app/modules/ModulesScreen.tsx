@@ -1,8 +1,8 @@
 import { Check } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Stored } from '../../model/kinds';
-import { createModule, type ModulePlace } from '../../runtime/modules';
-import { ofSort } from '../../runtime/prompts';
+import { createModule, type ModulePlace } from '../../runtime/library/modules';
+import { ofSort } from '../../runtime/library/prompts';
 import { ACTS, importOf, newOf } from '../common/acts';
 import { useImport } from '../common/importing';
 import { counted, holdsLine, packParts, type PackParts } from '../common/pack';

@@ -1,5 +1,5 @@
 import type { LabId } from '../../model/settings';
-import { switchLab } from '../../runtime/prompts';
+import { switchLab } from '../../runtime/library/prompts';
 import { LABS } from '../common/labs';
 import { BOARD, PAGES } from '../common/words';
 import { useSettings, useStore } from '../session';

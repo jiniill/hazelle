@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Chat } from '../../model/chat';
 import { readableTexts, textTranslation, type Character } from '../../model/library';
-import { setTextTranslation, translateSwitches } from '../../runtime/characters';
-import { translateText, translatorOf, type TranslatorFailure } from '../../runtime/translate';
+import { setTextTranslation, translateSwitches } from '../../runtime/library/characters';
+import { translateText, translatorOf, type TranslatorFailure } from '../../runtime/tasks/translate';
 import { describeTranslateFailure } from '../common/failure';
 import { useConnections, usePrompts, useSession } from '../session';
 import { useToast } from '../toast';

@@ -1,12 +1,12 @@
-import { importModule, setModuleAlways } from '../modules';
+import { importModule, setModuleAlways } from '../library/modules';
 import { importTool, toolBadges, toolChatData } from '../tools/store';
-import { editShown } from '../message-acts';
+import { editShown } from '../chat/message-acts';
 import { readTool } from '../../engine/import/tool';
 import type { ToolUnit } from '../../model/tool';
 import { toolVar } from '../../tool-api/manifest';
 import { noOutcome, type Binding } from './binding';
 import type { ScriptOutcome } from './lua/event';
-import { gatherTurn, wouldSend } from '../turn-context';
+import { gatherTurn, wouldSend } from '../chat/turn-context';
 import type { LuaRunner } from './binding';
 import { describe, expect, it, vi } from 'vitest';
 import type { ToggleLine } from '../../model/prompt';
@@ -15,23 +15,23 @@ import { PLAIN_LUA, type Trigger } from '../../engine/import/types';
 import { Lua } from '../../engine/lua/run';
 import type { ToolEvent } from '../../engine/script-api';
 import { calls, fold, shown } from '../../model/chat';
-import { Usage } from '../usage';
+import { Usage } from '../models/usage';
 import { modelUsage } from '../../model/usage';
-import { setToggleValues } from '../characters';
-import { appendUserMessage, selectVersion, startChat, type Written } from '../chat-log';
-import { EvaluationFailed, EvaluationStuck } from '../evaluation';
-import { projectGreetings } from '../greetings';
+import { setToggleValues } from '../library/characters';
+import { appendUserMessage, selectVersion, startChat, type Written } from '../chat/chat-log';
+import { EvaluationFailed, EvaluationStuck } from '../evaluation/evaluation';
+import { projectGreetings } from '../chat/greetings';
 
 import { openSession, type Session } from '../session';
 import { answerable, inTurn, saying, stubPage, stubRelay, testServer, upstream } from '../testing';
 import { RELAY_HEADER } from '../../contracts/http';
 import { blankCard } from '../../engine/import/card';
-import { chatNow, evaluateChat } from '../chat-context';
+import { chatNow, evaluateChat } from '../chat/chat-context';
 import { NOT_REHEARSED } from './preview';
 import { SCRIPT_LOG_LIMITS } from './journal';
 import { triggersOf } from './selection';
-import type { TurnContext } from '../turn-context';
-import { takeTurn } from '../turn';
+import type { TurnContext } from '../chat/turn-context';
+import { takeTurn } from '../chat/turn';
 
 const server = testServer();
 

@@ -1,8 +1,8 @@
-import { logOutOthers } from '../../runtime/account';
+import { logOutOthers } from '../../runtime/account/account';
 import { START_AGAIN } from '../../contracts/start';
 import { BUILT_VERSION, readRelease, selfHost } from '../../runtime/installation';
-import { setDiagnosisSharing, sharesDiagnosis } from '../../runtime/auto-diagnosis';
-import { setPulseSharing, sharesPulse } from '../../runtime/pulse';
+import { setDiagnosisSharing, sharesDiagnosis } from '../../runtime/diagnostics/auto-diagnosis';
+import { setPulseSharing, sharesPulse } from '../../runtime/service/pulse';
 import { sizeText } from '../common/size';
 import { count } from '../common/typedNumber';
 import { GuestNotice } from '../common/GuestNotice';

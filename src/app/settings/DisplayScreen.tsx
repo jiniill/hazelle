@@ -1,8 +1,8 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { storyHtml } from '../../engine/display';
-import { setUsageShown } from '../../runtime/chat-context';
-import { addLook, editLook, moveLook, removeLook, restoreLook } from '../../runtime/looks';
+import { setUsageShown } from '../../runtime/chat/chat-context';
+import { addLook, editLook, moveLook, removeLook, restoreLook } from '../../runtime/library/looks';
 import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ACTS } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';

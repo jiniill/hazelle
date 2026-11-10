@@ -2,7 +2,7 @@ import type { FolderTree } from './folders';
 
 // Apart from settings, which every chat's display reads: a move here leaves no chat to redisplay or summarize again.
 export const ORDER_ID = '00000000-0000-4000-8000-000000000010';
-// Absent only until the first open after it shipped writes it (runtime/characters seedOrder).
+// Absent only until the first open after it shipped writes it (runtime/library/characters seedOrder).
 export type Order = { ids: string[] };
 
 // Unknown ids sort by name before ordered ids, not by chat activity.

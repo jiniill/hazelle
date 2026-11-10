@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { costUnit, resolveConnection } from '../../connectors/registry';
 import { fold, handEdited, shown, type Message } from '../../model/chat';
-import { copyVersion } from '../../runtime/message-acts';
+import { copyVersion } from '../../runtime/chat/message-acts';
 import type { Session } from '../../runtime/session';
-import { autoContinue } from '../../runtime/turn';
+import { autoContinue } from '../../runtime/chat/turn';
 import { describeFailure, describeTurnFailure } from '../common/failure';
 import { useSession } from '../session';
 import { estimateRun, parseMessages, runMessages, stepOf, type Estimate, type RunEnd, type Step } from './autopilot';

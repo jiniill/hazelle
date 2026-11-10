@@ -2,9 +2,9 @@ import { expect, it, vi } from 'vitest';
 import api from '../../tool-api/hazelle.d.ts?raw';
 import guide from '../../tool-api/README.md?raw';
 import { refOf } from '../../connectors/assignment';
-import { sharedModel } from '../assignment';
+import { sharedModel } from '../models/assignment';
 import { answerable, saying, stubRelay, testServer, upstream } from '../testing';
-import { Usage } from '../usage';
+import { Usage } from '../models/usage';
 import { askEstimate, askPlugin, type TestMessage, type TestMoment } from './plugin-writer';
 
 const server = testServer();

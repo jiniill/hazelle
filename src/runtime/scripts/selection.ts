@@ -2,9 +2,9 @@ import type { ChatScope } from '../../engine/render';
 import type { ScriptUnit } from '../../engine/script-api';
 import { live } from '../../model/library';
 import type { ToolUnit } from '../../model/tool';
-import { packsOf, scopeOf } from '../chat-context';
-import type { ReadModels } from '../read-model';
-import type { ObjectStore } from '../store';
+import { packsOf, scopeOf } from '../chat/chat-context';
+import type { ReadModels } from '../store/read-model';
+import type { ObjectStore } from '../store/store';
 import { toolsOf } from '../tools/store';
 
 // Keep pack/trigger order and literal block-trigger names for button dispatch.

@@ -145,7 +145,7 @@ export type Unstamped<S> = S extends unknown ? Omit<S, 'id'> : never;
 type Stamped<S> = S & { id: string };
 
 // A script without an id, just read or stored before scripts had ids, takes its place in its list as its id. Derived,
-// never random: every device, and every read of an old backup, gives one script the same id (runtime/upgrade).
+// never random: every device, and every read of an old backup, gives one script the same id (runtime/store/upgrade).
 export function stampIds<R extends object, T extends object>(pack: { regex: readonly R[]; triggers: readonly T[] }): { regex: Stamped<R>[]; triggers: Stamped<T>[] } {
   const stamp = <S extends object>(scripts: readonly S[], list: string) =>
     scripts.map((script, place) => (isRecord(script) && typeof script.id !== 'string' ? { ...script, id: `${list}-${place}` } : script) as Stamped<S>);
@@ -337,7 +337,7 @@ export function regexScripts<K>(scripts: unknown[], tally: Tally<K | 'regex-stag
 
 // SillyTavern's placements of the user's message and the model's, the two this app has stages for, and its
 // substituteRegex values that run macros in the pattern, as written or with their values escaped. list: what its
-// scripts' ids start with in a read, by which the re-read (runtime/reread) tells them from the Risu scripts beside
+// scripts' ids start with in a read, by which the re-read (runtime/import/reread) tells them from the Risu scripts beside
 // them; a stored script's id is opaque.
 const SILLYTAVERN = { user: 1, ai: 2, raw: 1, escaped: 2, list: 'sillytavern-' } as const;
 

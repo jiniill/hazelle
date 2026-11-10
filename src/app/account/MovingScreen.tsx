@@ -1,4 +1,4 @@
-import type { GuestTransferStep } from '../../runtime/guest-transfer';
+import type { GuestTransferStep } from '../../runtime/account/guest-transfer';
 import { Brand, Progress, Screen, Text, type ProgressStep } from '../ui';
 
 export type Moved = { title: string; steps: Partial<Record<GuestTransferStep['kind'], GuestTransferStep>> };

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { readServiceUsage, type ServiceUsage } from '../../runtime/admin';
+import { readServiceUsage, type ServiceUsage } from '../../runtime/service/admin';
 import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
 import { sizeText } from '../common/size';

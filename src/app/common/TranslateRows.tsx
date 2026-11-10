@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { TranslateSwitches } from '../../model/chat';
-import type { TranslateSetup } from '../../runtime/characters';
-import type { translatorOf } from '../../runtime/translate';
+import type { TranslateSetup } from '../../runtime/library/characters';
+import type { translatorOf } from '../../runtime/tasks/translate';
 import { SettingGroup, SettingRow, Switch } from '../ui';
 import { DetailFold } from './DetailFold';
 import { describeTranslateFailure } from './failure';

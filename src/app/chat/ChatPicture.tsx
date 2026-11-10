@@ -4,7 +4,7 @@ import { useAssetUrl } from '../session';
 import { parseScene, sceneText, sentText, type PictureSizes, type SceneInvalid } from '../../engine/illustrate';
 import { shown } from '../../model/chat';
 import { paragraphsOf, type Scene } from '../../model/illustration';
-import type { Shown } from '../../runtime/talk';
+import type { Shown } from '../../runtime/chat/talk';
 import { ACTS } from '../common/acts';
 import { moduleName } from '../common/words';
 import { describeIllustrateFailure } from '../common/failure';

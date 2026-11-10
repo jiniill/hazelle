@@ -56,7 +56,7 @@ export async function readVisits(db: Db, now = Date.now()): Promise<VisitDay[]> 
   });
 }
 
-// A guest's steps (runtime/relay.ts) never pass this server otherwise: its id is a person of the step's day and, for a
+// A guest's steps (runtime/models/relay.ts) never pass this server otherwise: its id is a person of the step's day and, for a
 // reply at signup, of 손님 출신 (migrations/0029). The id is the client's to make, so an address names GUESTS_PER_ADDRESS a day.
 export const visits = new Hono<AppEnv>().post('/guest', async (c) => {
   const body = await readObject(c);

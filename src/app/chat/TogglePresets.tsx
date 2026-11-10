@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { TogglePreset, ToggleValues } from '../../model/prompt';
 import type { ApiResult } from '../../runtime/api';
-import { addTogglePreset, editTogglePreset, removeTogglePreset, restoreTogglePreset } from '../../runtime/toggle-presets';
+import { addTogglePreset, editTogglePreset, removeTogglePreset, restoreTogglePreset } from '../../runtime/library/toggle-presets';
 import { ACTS } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
 import { useRemoval } from '../common/useRemoval';

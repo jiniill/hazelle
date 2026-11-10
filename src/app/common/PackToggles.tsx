@@ -3,7 +3,7 @@ import { moved } from '../../model/fields';
 import type { PackOwner } from '../../model/library';
 import type { ToggleLine } from '../../model/prompt';
 import { rekeyed } from '../../model/toggles';
-import { setToggles } from '../../runtime/pack';
+import { setToggles } from '../../runtime/library/pack';
 import { useStore } from '../session';
 import { TogglePane } from './TogglePane';
 import { useAutosave } from './useAutosave';

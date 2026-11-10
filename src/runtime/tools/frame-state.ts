@@ -4,7 +4,7 @@ import type { Tool } from '../../model/tool';
 import type { Json } from '../../tool-api/manifest';
 import type { EventName, Message } from '../../tool-api/protocol';
 import type { FileRef } from '../../vault/files';
-import type { ToolState } from '../evaluation-core';
+import type { ToolState } from '../evaluation/evaluation-core';
 import type { ScriptOutcome } from '../scripts/lua/event';
 import type { Heartbeat } from '../worker';
 import type { MenuItem, ToolPage, ToolSlot } from './facade';

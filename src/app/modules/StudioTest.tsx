@@ -1,10 +1,10 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
 import { sumCosts } from '../../connectors/pricing';
-import { sharedModel } from '../../runtime/assignment';
+import { sharedModel } from '../../runtime/models/assignment';
 import type { ToolDraft } from '../../model/tool';
 import { splitTool } from '../../engine/import/tool';
-import { chatNow } from '../../runtime/chat-context';
+import { chatNow } from '../../runtime/chat/chat-context';
 import type { ChatScope } from '../../engine/render';
 import type { ToolTrial } from '../../runtime/scripts/preview';
 import type { Session } from '../../runtime/session';

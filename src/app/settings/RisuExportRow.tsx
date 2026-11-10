@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { exportEveryCharacter } from '../../runtime/risu-export';
+import { exportEveryCharacter } from '../../runtime/export/risu-export';
 import { ACTS } from '../common/acts';
 import { runExport } from '../common/exporting';
 import { RISU_CHAT_FILE, RISU_LOSES, risuLeftOut, STOP, TOOL } from '../common/words';

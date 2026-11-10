@@ -3,7 +3,7 @@ import type { Display } from '../../engine/display';
 import { shown } from '../../model/chat';
 import { byParagraph, placeMark, translatedMarks, withoutMarks } from '../../model/illustration';
 import type { Stored } from '../../model/kinds';
-import type { Shown } from '../../runtime/talk';
+import type { Shown } from '../../runtime/chat/talk';
 import type { OpenChat } from './useChat';
 import { inlaid, type LogRow } from '../ui';
 import { shownHtml, speaker } from './ChatMessage';

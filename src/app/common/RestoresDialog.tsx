@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { BEFORE_ARMED, RETENTION_DAYS, SELF_RESTORES_PER_DAY, type Restore, type RestoreAction, type RestoreError, type RestorePhase, type RestorePoint, type RestoreRun } from '../../contracts/admin';
 import type { ServerError } from '../../contracts/http';
 import type { ApiResult } from '../../runtime/api';
-import { beginRestore, continueRestore, readPoints, readRestores } from '../../runtime/restores';
+import { beginRestore, continueRestore, readPoints, readRestores } from '../../runtime/account/restores';
 import { ago, moment } from './time';
 import { RESTORE_SPAN } from './words';
 import { useAttempt } from './useAttempt';

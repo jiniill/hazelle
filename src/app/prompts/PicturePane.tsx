@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Draws } from '../../connectors/types';
 import { PICTURE_DEFAULTS } from '../../engine/illustrate';
 import type { PictureSettings, PictureSize, PictureTags } from '../../model/prompt';
-import { drawingModels } from '../../runtime/illustrate';
+import { drawingModels } from '../../runtime/tasks/illustrate';
 import { typedText } from '../common/typed';
 import { readTyped } from '../common/typedNumber';
 import { ORIGINAL, RESET, UNSET } from '../common/words';

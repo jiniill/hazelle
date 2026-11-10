@@ -13,14 +13,14 @@ export type FeedAnswer = { limits: BatchLimits; timeline: string; until?: number
 export type BatchAnswer = { revs: number[]; timeline: string };
 
 // A feed page stops at its row count or its body budget, always admitting its first row (server/account-store,
-// runtime/guest-store). A metadata row is a hundred bytes, so a backup's walk over a whole account takes few round trips.
+// runtime/account/guest-store). A metadata row is a hundred bytes, so a backup's walk over a whole account takes few round trips.
 export const FEED_PAGE_BODY_BYTES = 4_000_000;
 export const feedPageRows = ({ metadata }: Pick<FeedQuery, 'metadata'>) => (metadata ? 10_000 : 500);
 
 export const KIND = /^[a-z][a-z-]{0,31}$/;
 const utf8 = new TextEncoder();
 
-// What both stores refuse of a batch whose writes are well formed (server/objects, runtime/guest-store).
+// What both stores refuse of a batch whose writes are well formed (server/objects, runtime/account/guest-store).
 export function refusedWrites(writes: SealedWrite[]): 'bad-input' | 'too-large' | null {
   if (writes.length > BATCH_LIMITS.items) return 'too-large';
   if (!writes.length || new Set(writes.map(({ id }) => id)).size < writes.length || !writes.every(validWrite)) return 'bad-input';

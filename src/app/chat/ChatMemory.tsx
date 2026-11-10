@@ -1,10 +1,10 @@
 import { useState, type ComponentProps, type ReactNode } from 'react';
 import type { Chat, ChatItem } from '../../model/chat';
 import { emptyMemory, type Fact, type MemorySettings, type Thread } from '../../model/memory';
-import { embedModel } from '../../runtime/assignment';
-import { memoryOwner, memorySetup, memoryWriter } from '../../runtime/memory-read';
-import { memoryView, type MemoryView } from '../../runtime/memory-view';
-import { removeFact, removeThread, setChatMemory, setFact, setThread } from '../../runtime/memory';
+import { embedModel } from '../../runtime/models/assignment';
+import { memoryOwner, memorySetup, memoryWriter } from '../../runtime/tasks/memory-read';
+import { memoryView, type MemoryView } from '../../runtime/tasks/memory-view';
+import { removeFact, removeThread, setChatMemory, setFact, setThread } from '../../runtime/tasks/memory';
 import { ACTS, addOf } from '../common/acts';
 import { describeMemoryFailure } from '../common/failure';
 import { MemoryFields, MemorySplit, settingsOf } from '../common/MemoryFields';
@@ -191,7 +191,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   );
 }
 
-// Without a 장기 기억 slot no summary runs on its own (runtime/memory), so none is told as next. found is left out: what an
+// Without a 장기 기억 slot no summary runs on its own (runtime/tasks/memory), so none is told as next. found is left out: what an
 // embedding model adds is known only once a request is made.
 function MemoryFill({ view }: { view: MemoryView }) {
   const { used, budget, waiting, recent } = view.tokens;

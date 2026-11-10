@@ -5,7 +5,7 @@ import { guidePage } from './guide/GuidePage';
 import { legalPage } from './common/LegalPage';
 import { applyStoredScheme } from './common/reading';
 import { ScreenLoad, screenChunk } from './common/ScreenLoad';
-import { watchProblems } from '../runtime/diagnostics';
+import { watchProblems } from '../runtime/diagnostics/diagnostics';
 import { markSelfHost } from '../runtime/installation';
 import { START_AGAIN } from '../contracts/start';
 import { pulsePage } from './pulse/route';

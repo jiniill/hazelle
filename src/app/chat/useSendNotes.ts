@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CacheDiagnosis, CachePrescription, CacheRecurrence, Forecast } from '../../model/cache';
-import { cacheRecurrence, diagnoseCache, needsDiagnosis, replyCalls } from '../../runtime/cache-diagnosis';
-import { priceCachePrescriptions } from '../../runtime/cache-prescriptions';
+import { cacheRecurrence, diagnoseCache, needsDiagnosis, replyCalls } from '../../runtime/diagnostics/cache-diagnosis';
+import { priceCachePrescriptions } from '../../runtime/diagnostics/cache-prescriptions';
 import type { Chat } from '../../model/chat';
 import type { Memory } from '../../model/memory';
-import type { Route } from '../../runtime/assignment';
-import { breakCost, forecast, lastCache, prior } from '../../runtime/cache';
-import { autoDiagnose } from '../../runtime/auto-diagnosis';
-import { autoChat, cacheCause, cacheFacts } from '../../runtime/diagnostic-state';
-import { leaving, leavingCauses } from '../../runtime/memory-view';
-import type { Shown } from '../../runtime/talk';
-import type { SentRequest } from '../../runtime/request-log';
-import { cacheSend, forecastSend, previewRequest, type Sending, type Unsendable, type Unsaved } from '../../runtime/turn-context';
+import type { Route } from '../../runtime/models/assignment';
+import { breakCost, forecast, lastCache, prior } from '../../runtime/diagnostics/cache';
+import { autoDiagnose } from '../../runtime/diagnostics/auto-diagnosis';
+import { autoChat, cacheCause, cacheFacts } from '../../runtime/diagnostics/diagnostic-state';
+import { leaving, leavingCauses } from '../../runtime/tasks/memory-view';
+import type { Shown } from '../../runtime/chat/talk';
+import type { SentRequest } from '../../runtime/models/request-log';
+import { cacheSend, forecastSend, previewRequest, type Sending, type Unsendable, type Unsaved } from '../../runtime/chat/turn-context';
 import { useLab } from '../common/labs';
 import { useSession } from '../session';
 

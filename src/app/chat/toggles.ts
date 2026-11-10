@@ -1,6 +1,6 @@
 import type { Toggle, ToggleLine, TogglePreset, ToggleValues } from '../../model/prompt';
 import { toggleTree } from '../../model/toggles';
-import type { ChatToggleSet, ToggleSource } from '../../runtime/chat-context';
+import type { ChatToggleSet, ToggleSource } from '../../runtime/chat/chat-context';
 import { laidOut, type Laid } from '../common/toggleLayout';
 
 export type ToggleRow = { toggle: Toggle; value: string; changed: boolean };

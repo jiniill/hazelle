@@ -1,4 +1,4 @@
-import { readService } from '../../runtime/admin';
+import { readService } from '../../runtime/service/admin';
 import { useLoaded } from '../common/useLoaded';
 import { NOTICES } from '../common/words';
 import { backBar } from '../shell/router';

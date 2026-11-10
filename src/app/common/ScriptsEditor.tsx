@@ -3,7 +3,7 @@ import { Fragment, useEffect, useMemo, useState, type FragmentInstance, type Rea
 import type { Pack, RegexScript, Trigger } from '../../engine/import/types';
 import { checkScript, type ScriptCheck } from '../../engine/regex/scripts';
 import type { ApiResult } from '../../runtime/api';
-import { addLua, addRegex, editRegex, editTrigger, moveScript, neighbour, removeScript, restoreScript, sampleScript, setScriptOff, type RemovedScript, type ScriptList } from '../../runtime/pack';
+import { addLua, addRegex, editRegex, editTrigger, moveScript, neighbour, removeScript, restoreScript, sampleScript, setScriptOff, type RemovedScript, type ScriptList } from '../../runtime/library/pack';
 import type { PackOwner } from '../../model/library';
 import { useSession, useStore } from '../session';
 import { SHORTCUTS } from '../shortcuts';

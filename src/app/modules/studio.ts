@@ -2,7 +2,7 @@ import type { ChatScope } from '../../engine/render';
 import type { ToolEvent } from '../../engine/script-api';
 import type { ToolIdentity } from '../../model/tool';
 import { atOf } from '../../runtime/scripts/selection';
-import { argsOf } from '../../runtime/tool-loop';
+import { argsOf } from '../../runtime/models/tool-loop';
 import type { DraftState } from '../../runtime/tools/drafts';
 import type { ToolManifest, ToolUse } from '../../tool-api/manifest';
 import { NETWORK } from '../common/words';

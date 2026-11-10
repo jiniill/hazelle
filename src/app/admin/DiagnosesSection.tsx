@@ -1,5 +1,5 @@
 import { AUTO_KEEP_DAYS, type AutoErrorCause, type AutoEvent, type AutoRow } from '../../contracts/auto-diagnosis';
-import { readDiagnoses } from '../../runtime/admin';
+import { readDiagnoses } from '../../runtime/service/admin';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
 import { Disclosure, Empty, Panel, Stack, TextField } from '../ui';

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { DeviceCode } from '../../connectors/device-code';
 import type { SignIn } from '../../connectors/types';
-import { accountName, awaitApproval, requestCode } from '../../runtime/sign-in';
+import { accountName, awaitApproval, requestCode } from '../../runtime/account/sign-in';
 import { describeSignInFailure } from '../common/failure';
 import { useToast } from '../toast';
 

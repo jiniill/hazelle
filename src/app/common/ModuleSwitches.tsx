@@ -1,7 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import type { Stored } from '../../model/kinds';
-import { setModuleAt, type ModulePlace } from '../../runtime/modules';
+import { setModuleAt, type ModulePlace } from '../../runtime/library/modules';
 import { useModules, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { IconButton, Section, SettingGroup, SettingRow, Switch, Text } from '../ui';

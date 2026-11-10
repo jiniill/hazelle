@@ -1,5 +1,5 @@
 import { PACKED_EXTENSION, UNPACKED_EXTENSIONS } from '../../engine/import/extensions';
-import { detachedReplies, relay, type RelayFailure } from '../relay';
+import { detachedReplies, relay, type RelayFailure } from '../models/relay';
 
 const REALM_PAGE = /\brealm\.risuai\.net\/\S*?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
 const PROTON_LINK = /\bhttps:\/\/drive\.proton\.me\/urls\/[\w-]+#\S+/i;

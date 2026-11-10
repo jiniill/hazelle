@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MAX_REPORT_LENGTH } from '../../contracts/admin';
-import { openVersion, type Opened } from '../../runtime/share';
-import { countReceived, readShareState, reportShare, shareLink } from '../../runtime/share-link';
+import { openVersion, type Opened } from '../../runtime/export/share';
+import { countReceived, readShareState, reportShare, shareLink } from '../../runtime/export/share-link';
 import { describeFailure } from '../common/failure';
 import { PublicScreen } from '../common/PublicScreen';
 import { SharePreview } from '../common/SharePreview';

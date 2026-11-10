@@ -1,7 +1,7 @@
 import { PICTURE_PERCENT } from '../../model/library';
 import type { SavedLook } from '../../model/settings';
 import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, isDarkScheme, QUOTE_SHAPE, readingDefault, THEME, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme } from '../ui';
-import type { Cue } from '../../runtime/cues';
+import type { Cue } from '../../runtime/chat/cues';
 import { CHIMES, type Chime } from './sounds';
 import { readPersisted } from './usePersisted';
 

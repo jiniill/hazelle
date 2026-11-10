@@ -1,4 +1,4 @@
-import type { Route } from '../../runtime/assignment';
+import type { Route } from '../../runtime/models/assignment';
 
 // What a task runs on, or why it cannot in its own feature's words: what its model row says under it.
 export type TaskRuns = { route: Route } | { why: string };

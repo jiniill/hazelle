@@ -4,10 +4,10 @@ import type { HistoryMessage } from '../../engine/history';
 import type { HookTrace, SyntaxProblem } from '../../engine/lua/run';
 import type { ChatScope } from '../../engine/render';
 import type { Event, Question, ScriptUnit, ToolEvent, ToolReach } from '../../engine/script-api';
-import { answerInstructionOf, packsOf } from '../chat-context';
-import type { EvaluatedPrompt } from '../evaluation-core';
+import { answerInstructionOf, packsOf } from '../chat/chat-context';
+import type { EvaluatedPrompt } from '../evaluation/evaluation-core';
 import type { ScriptOutcome } from './lua/event';
-import { memoryOver } from '../memory-read';
+import { memoryOver } from '../tasks/memory-read';
 import { noOutcome, ToolStopped, until, type LuaRunner } from './binding';
 import type { ScriptReach } from './reach';
 import { requestAnswer, requestEvent, sentOf } from './request';
@@ -17,9 +17,9 @@ import type { ScriptTurns } from './turns';
 import type { DraftTrial } from '../tools/drafts';
 import type { TrialWrite } from '../tools/frame-state';
 import type { ToolRunner } from '../tools/host';
-import type { ObjectStore } from '../store';
-import { providerFit } from '../token-calibration';
-import type { Sending } from '../turn-context';
+import type { ObjectStore } from '../store/store';
+import { providerFit } from '../models/token-calibration';
+import type { Sending } from '../chat/turn-context';
 
 // Preview applies staged edits/adds and chat-local lore replacement as a real ScriptEffects save would.
 // Caller places variable writes at their correct stages.

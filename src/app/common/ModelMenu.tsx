@@ -2,8 +2,8 @@ import { Layers, Pin } from 'lucide-react';
 import { refOf, sameModelRef, type ModelRef } from '../../connectors/assignment';
 import { recentModels } from '../../model/chat';
 import { entryName, entryOf, entryTerms } from '../../connectors/types';
-import type { Route, RouteFailure } from '../../runtime/assignment';
-import { modelProfile } from '../../runtime/profiles';
+import type { Route, RouteFailure } from '../../runtime/models/assignment';
+import { modelProfile } from '../../runtime/models/profiles';
 import { byConnection, starredModels } from './RolePicker';
 import { profileLine } from './settingWords';
 import { useSearch } from './useSearch';
@@ -21,7 +21,7 @@ type Props = {
 const RECENT = 3;
 
 // Added models only, recent ones first. It never lists providers. pin: the prompt whose own model the chat talks on
-// (runtime/assignment pinnedBy), marked on the button and opened from the menu's head.
+// (runtime/models/assignment pinnedBy), marked on the button and opened from the menu's head.
 export function ModelMenu({ route, pin, onPick, handle }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure; pin?: { name: string; open: () => void } | null }) {
   const current = 'kind' in route ? null : refOf(route.connection.id, route.model);
   const label = 'kind' in route ? '모델 선택' : entryName(route.model);

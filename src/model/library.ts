@@ -17,7 +17,7 @@ import type { ToggleValues } from './prompt';
 // card's nickname (부르는 이름), which CCv3 puts in {{char}}'s place.
 export type Character = Mark & {
   card: Card;
-  // When the user last made, brought in or edited it (runtime/characters stamps it), which 최근 ranks with its chats'
+  // When the user last made, brought in or edited it (runtime/library/characters stamps it), which 최근 ranks with its chats'
   // times; absent on a character untouched since before it was kept.
   changed?: number;
   alias?: string;
@@ -55,9 +55,9 @@ export type Character = Mark & {
   risu?: string;
   // The modules on in its chats, in the order they were turned on (design §6.5). One that is gone reads as off.
   modules?: string[];
-  // 기능 in its chats, over its chats' prompt's (runtime/features).
+  // 기능 in its chats, over its chats' prompt's (runtime/tasks/features).
   features?: FeatureSwitches;
-  // 에이전트 in its chats, stacked after its chats' prompt's (runtime/agents agentsOf).
+  // 에이전트 in its chats, stacked after its chats' prompt's (runtime/tasks/agents agentsOf).
   agents?: string[];
 };
 
@@ -85,7 +85,7 @@ export type LoreFolder = { id: string; name: string };
 const DAY = 24 * 60 * 60 * 1000;
 
 // Binned objects stay recoverable for KEEP_DELETED; characters own their chats, and binned modules are inactive.
-// purging makes removal irreversible; purgeExpired resumes interrupted purges (runtime/characters).
+// purging makes removal irreversible; purgeExpired resumes interrupted purges (runtime/library/characters).
 export const REMOVABLE = ['character', 'module', 'chat', 'prompt', 'persona', 'profile'] as const;
 export type Removable = (typeof REMOVABLE)[number];
 export type Mark = { deleted?: number; purging?: true };

@@ -1,8 +1,8 @@
 import type { ModelRef } from '../../connectors/assignment';
 import { entryName } from '../../connectors/types';
-import { accountTaskModel, setAccountTaskModel, type AccountTask } from '../../runtime/assignment';
-import { ofSort, translationPrompt, illustrationPrompt, mascotPrompt, prereadPrompt } from '../../runtime/prompts';
-import type { ObjectStore } from '../../runtime/store';
+import { accountTaskModel, setAccountTaskModel, type AccountTask } from '../../runtime/models/assignment';
+import { ofSort, translationPrompt, illustrationPrompt, mascotPrompt, prereadPrompt } from '../../runtime/library/prompts';
+import type { ObjectStore } from '../../runtime/store/store';
 import type { PromptPane } from '../shell/routes';
 import { byPromptName } from './promptCopies';
 import type { TaskRuns } from './taskRuns';

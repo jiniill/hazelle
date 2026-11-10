@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ApiFailure } from '../runtime/api';
-import { noteProblem } from '../runtime/diagnostics';
+import { noteProblem } from '../runtime/diagnostics/diagnostics';
 import { describeFailure } from './common/failure';
 import { REPORT_FAILURE, UNDO } from './common/words';
 import { SHORTCUTS, typing, useShortcut } from './shortcuts';

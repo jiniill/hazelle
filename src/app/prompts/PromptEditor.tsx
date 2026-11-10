@@ -6,10 +6,10 @@ import { live } from '../../model/library';
 import { labOn } from '../../model/settings';
 import { isToggle, slotsOf, sortOf, type Block, type ConversationPrompt, type PromptSort, type TextBlock, type Toggle, type WrappedSlot } from '../../model/prompt';
 import type { ApiResult } from '../../runtime/api';
-import { setAgentModel, setPromptModel } from '../../runtime/assignment';
-import { setAgentAt } from '../../runtime/agents';
-import { setFeatureAt } from '../../runtime/features';
-import { copyPrompt, editPrompt, isDefaultPrompt, ofSort, removePrompt, resetPromptBlocks, restorePrompt, setDefaultPrompt, type PromptPatch } from '../../runtime/prompts';
+import { setAgentModel, setPromptModel } from '../../runtime/models/assignment';
+import { setAgentAt } from '../../runtime/tasks/agents';
+import { setFeatureAt } from '../../runtime/tasks/features';
+import { copyPrompt, editPrompt, isDefaultPrompt, ofSort, removePrompt, resetPromptBlocks, restorePrompt, setDefaultPrompt, type PromptPatch } from '../../runtime/library/prompts';
 import { ACTS } from '../common/acts';
 import { howMany } from '../common/pack';
 import { DefaultVariables } from '../common/DefaultVariables';
@@ -121,7 +121,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const hover = useHover();
   const save = useAutosave<PromptPatch>(`prompt:${stored.id}`, (patch) => editPrompt(store, stored.id, patch));
   const sort = sortOf(stored.value);
-  // An agent has no default: the chats whose lists hold it run it (runtime/agents).
+  // An agent has no default: the chats whose lists hold it run it (runtime/tasks/agents).
   const words = sort === 'agent' ? null : { default: defaultPrompt(sort), makeDefault: MAKES_DEFAULT[sort] };
 
   // The stored prompt under what waits to be saved, so another device's edit to a field nothing here changed shows.
@@ -135,7 +135,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
     save.change(patch);
   };
 
-  // Only a conversation prompt and an agent pick models; another task's model is its feature's (runtime/assignment taskModel).
+  // Only a conversation prompt and an agent pick models; another task's model is its feature's (runtime/models/assignment taskModel).
   const picksModel = sort === 'conversation' || sort === 'agent';
   const firstText = () => latest.current.blocks.find(isText)?.id ?? (picksModel ? MODEL : TOGGLES);
   const [reordering, setReordering] = useState(false);

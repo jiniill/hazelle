@@ -2,7 +2,7 @@ import { Ban, HardDrive, History, LockOpen, Send } from 'lucide-react';
 import { Fragment, useState, type ReactNode } from 'react';
 import type { AccountState, AdminAccount, OwnCap } from '../../contracts/admin';
 import type { ApiResult } from '../../runtime/api';
-import { liftSuspension, removeAccount, sendNotice, suspend } from '../../runtime/admin';
+import { liftSuspension, removeAccount, sendNotice, suspend } from '../../runtime/service/admin';
 import { ACTS } from '../common/acts';
 import { sizeText } from '../common/size';
 import { monthDay } from '../common/time';

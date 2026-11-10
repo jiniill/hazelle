@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ToolDraft } from '../../model/tool';
 import { applyDraft, applyPreview, installedDiffers } from '../../runtime/tools/drafts';
-import { setModuleAt } from '../../runtime/modules';
+import { setModuleAt } from '../../runtime/library/modules';
 import { undoToolImport } from '../../runtime/tools/store';
 import { describeImportFailure } from '../common/importFailure';
 import { TOOL, toolVersion } from '../common/words';

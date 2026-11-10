@@ -68,7 +68,7 @@ export type Activation = {
   afterMatch: string[];
 };
 
-// A chat's scan settings as they apply, none left open: the card's own over the account's (runtime/chat-context loreScanOf).
+// A chat's scan settings as they apply, none left open: the card's own over the account's (runtime/chat/chat-context loreScanOf).
 export type LoreScan = { [K in keyof Card['loreSettings']]: NonNullable<Card['loreSettings'][K]> };
 
 type Where =

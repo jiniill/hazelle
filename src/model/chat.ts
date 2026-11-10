@@ -42,9 +42,9 @@ export type Chat = Mark & {
   bookmarks?: Bookmark[];
   // 채팅 로어북's folders, which only group its lorebook on screen.
   loreFolders?: LoreFolder[];
-  // 기능, over its character's (runtime/features).
+  // 기능, over its character's (runtime/tasks/features).
   features?: FeatureSwitches;
-  // 에이전트, stacked after its character's (runtime/agents agentsOf).
+  // 에이전트, stacked after its character's (runtime/tasks/agents agentsOf).
   agents?: string[];
   // Opt imported inlays into model input; locally attached pictures already qualify (model/library Inlay).
   movedPictures?: true;
@@ -61,10 +61,10 @@ export type Bookmark = { message: string; name?: string };
 
 export const CAST_MAX = 5;
 
-// The raw request is never stored in the account; only the device that sent it keeps it (runtime/device-log).
+// The raw request is never stored in the account; only the device that sent it keeps it (runtime/device/device-log).
 export type Receipt = {
   calibration?: CallCalibration;
-  // Stable across edits, branches and continuations; also identifies the ledger row (runtime/usage ledgerId).
+  // Stable across edits, branches and continuations; also identifies the ledger row (runtime/models/usage ledgerId).
   id: string;
   connection: string;
   // Serving account; absent on older receipts and calls resumed after reload.
@@ -90,7 +90,7 @@ export type Receipt = {
   // How long the call's cache points keep what they cache, measured from its start; null when it sent none, or its
   // request was not this page's.
   cache: Cache | null;
-  // Compared with the last call (runtime/cache); absent when its request was unknown.
+  // Compared with the last call (runtime/diagnostics/cache); absent when its request was unknown.
   forecast?: CacheForecast;
   // The lane actually served and priced by the provider, not merely requested (design §6.7).
   discount?: 'tier' | 'batch';
@@ -99,7 +99,7 @@ export type Receipt = {
   // material/brief are o200k counts; saved uses the send-time chat price (savedCost), null if unknown.
   // reused was paid by an earlier reply. Excluded from calls(): it wrote no reply text.
   preread?: { material: number; brief: number; receipt: Receipt; reused?: true; saved: Cost | null };
-  // Pre agents in stack order, then post agents in run order. Excluded from calls(): runtime/agents logs them.
+  // Pre agents in stack order, then post agents in run order. Excluded from calls(): runtime/tasks/agents logs them.
   agents?: AgentRun[];
   // Snapshot of the continued reply's receipt; nesting preserves every replaced call and its cost. A reply whose model
   // called plugin tools continues the call that made the calls.
@@ -149,7 +149,7 @@ export type Translation = {
   sentIn?: string;
 };
 
-// Character.ownTranslate overrides the shared settings; only runtime/characters translateSwitches resolves defaults.
+// Character.ownTranslate overrides the shared settings; only runtime/library/characters translateSwitches resolves defaults.
 // replies applies to the latest reply; reverse sends translations instead of text; original pairs original paragraphs.
 // Language values are English names consumed by the prompt. model: 번역 모델, absent for the chat's 보조 모델.
 export type TranslateSwitches = { replies: boolean; input: boolean; reverse?: boolean; original?: boolean; replyLanguage?: string; inputLanguage?: string; prompt?: string; model?: ModelRef };
@@ -190,7 +190,7 @@ export type Entry =
 export type Writes = [string, string][];
 
 // earlier keeps pre-edit ids oldest first, never retry/continuation ids.
-// Apply byHand after message.after in every reader (runtime/chat-context, engine/render).
+// Apply byHand after message.after in every reader (runtime/chat/chat-context, engine/render).
 // User-edited agent memories override generated ones. retouched blocks repolish that would undo edits (user, 2026-10-22).
 export type Version = { id: string; seed: string; text: string; receipt: Receipt | null; edited: boolean; at: number; translation?: Translation; staged?: true; before?: Writes; after?: Writes; byHand?: Writes; calls?: BotCall[]; reasoning?: string; greeting?: number; earlier?: string[]; raw?: string; memories?: Record<string, string>; retouched?: true };
 export type BotCall = { receipt: Receipt; at: number };
@@ -556,7 +556,7 @@ export const standing = (messages: readonly Message[]): Map<string, string> =>
 // Agent polish is saved as an edit but retains raw; neither it nor a later user retouch counts as user-authored here.
 export const handEdited = (version: Version) => version.edited && version.raw === undefined;
 
-// An edit that changed the text and left the translation keeps the translation's time (runtime/chat-log editMessage).
+// An edit that changed the text and left the translation keeps the translation's time (runtime/chat/chat-log editMessage).
 export const translationOutdated = (version: Version) => version.edited && version.translation !== undefined && version.translation.at < version.at;
 
 export const calls = (receipt: Receipt): Receipt[] => [...(receipt.continues ? calls(receipt.continues) : []), receipt];

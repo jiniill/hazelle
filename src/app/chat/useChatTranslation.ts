@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import { shown, type Chat, type TranslateSwitches } from '../../model/chat';
-import { setOwnTranslate, setTranslate, type TranslateSetup } from '../../runtime/characters';
-import { translationInput } from '../../runtime/chat-context';
-import type { Shown } from '../../runtime/talk';
-import { translationShown, translatorOf, type TranslatorFailure } from '../../runtime/translate';
+import { setOwnTranslate, setTranslate, type TranslateSetup } from '../../runtime/library/characters';
+import { translationInput } from '../../runtime/chat/chat-context';
+import type { Shown } from '../../runtime/chat/talk';
+import { translationShown, translatorOf, type TranslatorFailure } from '../../runtime/tasks/translate';
 import { languageLabel } from '../common/languages';
 import { useCaptured, useSession, useTranslating } from '../session';
 import { useToast } from '../toast';

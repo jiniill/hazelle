@@ -1,10 +1,10 @@
 import { act } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { Chat } from '../../model/chat';
-import { translateSwitches } from '../../runtime/characters';
-import type { Drawing } from '../../runtime/illustrate';
-import { pickVersion } from '../../runtime/message-acts';
-import type { Shown } from '../../runtime/talk';
+import { translateSwitches } from '../../runtime/library/characters';
+import type { Drawing } from '../../runtime/tasks/illustrate';
+import { pickVersion } from '../../runtime/chat/message-acts';
+import type { Shown } from '../../runtime/chat/talk';
 import { probeRoot } from '../ui/probe';
 import { useChatBookmarks } from './useChatBookmarks';
 import { useChatIllustrations } from './useChatIllustrations';
@@ -24,8 +24,8 @@ vi.mock('../session', () => ({
   useTranslating: () => translating,
 }));
 vi.mock('../toast', () => ({ useToast: () => toast }));
-vi.mock('../../runtime/message-acts', () => ({ pickVersion: vi.fn(async () => ({ ok: true })) }));
-vi.mock('../../runtime/translate', () => ({ translatorOf: () => ({ ok: false, failure: { kind: 'prompt-missing', own: false } }), translationShown: () => (text: string) => text }));
+vi.mock('../../runtime/chat/message-acts', () => ({ pickVersion: vi.fn(async () => ({ ok: true })) }));
+vi.mock('../../runtime/tasks/translate', () => ({ translatorOf: () => ({ ok: false, failure: { kind: 'prompt-missing', own: false } }), translationShown: () => (text: string) => text }));
 
 afterEach(() => {
   vi.unstubAllGlobals();

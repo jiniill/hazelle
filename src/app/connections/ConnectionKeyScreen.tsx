@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { ConnectionType } from '../../connectors/types';
-import { providerConnection } from '../../runtime/connections';
+import { providerConnection } from '../../runtime/models/connections';
 import { useAttempt } from '../common/useAttempt';
 import { MARKS } from '../common/tutorial';
 import { useSession } from '../session';

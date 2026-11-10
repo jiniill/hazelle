@@ -1,7 +1,7 @@
 import { TOGGLE_GLOBAL } from '../../engine/cbs/tags';
 import { isWrapped, SLOTS, type AgentPlace, type Block, type PictureSettings, type PictureTags, type Prompt, type Role, type SlotKind, type TextBlock, type Toggle } from '../../model/prompt';
 import { rekeyed } from '../../model/toggles';
-import type { PromptPatch } from '../../runtime/prompts';
+import type { PromptPatch } from '../../runtime/library/prompts';
 import type { Command } from '../common/code/cbsCommands';
 import { blockSource } from './blocks';
 import { renameToggle, toggleUses } from './rekey';

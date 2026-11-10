@@ -2,7 +2,7 @@ import { readExtra, type ExtraProblem } from '../../connectors/extra';
 import type { Cache, Change, ModelSettings, NumberSetting, PdfKeep, ServiceTier, Verbosity } from '../../connectors/settings';
 import type { Modality, Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
-import type { ProfileChoice } from '../../runtime/profiles';
+import type { ProfileChoice } from '../../runtime/models/profiles';
 import { count } from './typedNumber';
 import { DISCOUNT, MODEL_SETTINGS, NOT_PICKED, PDF_SEND, RETRY_COUNT, SCOPE, UNKNOWN, UNSET } from './words';
 

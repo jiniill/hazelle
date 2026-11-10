@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { AdminAccount, OwnCap } from '../../contracts/admin';
-import { setCaps } from '../../runtime/admin';
+import { setCaps } from '../../runtime/service/admin';
 import { describeFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { Button, Callout, ChoiceGroup, Dialog, NumberInput } from '../ui';

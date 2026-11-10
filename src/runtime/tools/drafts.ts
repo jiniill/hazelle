@@ -5,8 +5,8 @@ import { live } from '../../model/library';
 import { toolId, type DraftAsk, type Tool, type ToolDraft, type ToolIdentity } from '../../model/tool';
 import type { ToolManifest, ToolUse } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
-import type { Files } from '../files';
-import type { ObjectStore } from '../store';
+import type { Files } from '../files/files';
+import type { ObjectStore } from '../store/store';
 import { importTool, sameTool, TOOL_ROW_BYTES, toolSettings, undoToolImport, type ToolImport } from './store';
 
 export const DRAFT_BYTES: number = TOOL_ROW_BYTES;

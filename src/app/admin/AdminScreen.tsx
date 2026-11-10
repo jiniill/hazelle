@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BackupWarning } from '../../contracts/admin';
-import { readService, readBoardSettings, setBoardGuests } from '../../runtime/admin';
+import { readService, readBoardSettings, setBoardGuests } from '../../runtime/service/admin';
 import { selfHost } from '../../runtime/installation';
 import { useAttempt } from '../common/useAttempt';
 import { describeFailure } from '../common/failure';

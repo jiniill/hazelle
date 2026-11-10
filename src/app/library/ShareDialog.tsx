@@ -1,9 +1,9 @@
 import { Link2, Unlink } from 'lucide-react';
 import { useState } from 'react';
 import { SHARE_CONSENT } from '../../contracts/shares';
-import { publishShare, setShareCover } from '../../runtime/share';
+import { publishShare, setShareCover } from '../../runtime/export/share';
 import type { SharedLink } from '../../contracts/shares';
-import { agreeToShare, cutShare, readShares, shareLink } from '../../runtime/share-link';
+import { agreeToShare, cutShare, readShares, shareLink } from '../../runtime/export/share-link';
 import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
 import { count } from '../common/typedNumber';

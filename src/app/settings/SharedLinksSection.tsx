@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { live } from '../../model/library';
-import { cutShare, readShares } from '../../runtime/share-link';
+import { cutShare, readShares } from '../../runtime/export/share-link';
 import { ago } from '../common/time';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';

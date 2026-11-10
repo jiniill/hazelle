@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { readPortraitFile, writePortraitFile } from '../../engine/likeness';
 import { likenessId, PORTRAITS_MOST, type Portrait, type PortraitSource } from '../../model/likeness';
-import { addPortrait, editPortrait, importPortraits, removeLikeness, removePortrait, restoreLikeness } from '../../runtime/likeness';
+import { addPortrait, editPortrait, importPortraits, removeLikeness, removePortrait, restoreLikeness } from '../../runtime/tasks/likeness';
 import { useLikenessRuns, useLikenesses, useSaves, useStore, useStored } from '../session';
 import { useToast } from '../toast';
 import { Button, Callout, Empty, FileButton, IconButton, MarkupArea, MenuItem, MoreMenu, PhraseField, Row, Section, Stack, TextField } from '../ui';

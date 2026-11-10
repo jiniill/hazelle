@@ -1,11 +1,11 @@
 import { refOf, rolesOf, sameModelRef, type ModelRef, type Role } from '../../connectors/assignment';
 import { entryKey, entryName, entryTerms } from '../../connectors/types';
 import { pinsModels } from '../../model/prompt';
-import { imageOnly, setDefaultModel } from '../../runtime/assignment';
-import { overviewOf } from '../../runtime/overview';
-import { availableFeatures } from '../../runtime/features';
-import { ofSort, type StoredPrompt } from '../../runtime/prompts';
-import { addDefaultProfile, modelProfile, profileUsers } from '../../runtime/profiles';
+import { imageOnly, setDefaultModel } from '../../runtime/models/assignment';
+import { overviewOf } from '../../runtime/tasks/overview';
+import { availableFeatures } from '../../runtime/tasks/features';
+import { ofSort, type StoredPrompt } from '../../runtime/library/prompts';
+import { addDefaultProfile, modelProfile, profileUsers } from '../../runtime/models/profiles';
 import { findStarred, ROLE_ROWS, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';

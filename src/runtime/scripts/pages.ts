@@ -1,15 +1,15 @@
 import type { ChatScope } from '../../engine/render';
 import type { ToolReach } from '../../engine/script-api';
 import { live, type PackOwner } from '../../model/library';
-import { editCharacter } from '../characters';
+import { editCharacter } from '../library/characters';
 import type { ScriptOutcome } from './lua/event';
-import type { ReadModels } from '../read-model';
+import type { ReadModels } from '../store/read-model';
 import { onLast, type ScriptEffects } from './effects';
 import type { ScriptInteractions } from './interactions';
 import type { ScriptReach } from './reach';
 import type { ScriptSchedule } from './schedule';
 import { scopeFor, unitFor } from './selection';
-import type { ObjectStore } from '../store';
+import type { ObjectStore } from '../store/store';
 
 // send: the screen's own send, null once sent or why not. rendered: a message version as the screen's display gives it
 // now (at null: the greeting).

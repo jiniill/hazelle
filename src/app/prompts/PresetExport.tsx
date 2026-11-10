@@ -1,5 +1,5 @@
 import type { ConversationPrompt } from '../../model/prompt';
-import { exportPreset } from '../../runtime/prompts';
+import { exportPreset } from '../../runtime/library/prompts';
 import { fileNamed } from '../common/download';
 import { FileExport } from '../common/FileExport';
 import { SLOT } from '../common/prompt-words';

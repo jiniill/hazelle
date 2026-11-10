@@ -1,7 +1,7 @@
 import { Pin } from 'lucide-react';
 import { useState } from 'react';
 import type { Toggle } from '../../model/prompt';
-import { pinToggle } from '../../runtime/characters';
+import { pinToggle } from '../../runtime/library/characters';
 import { ToggleFlip } from '../common/ToggleChoice';
 import { ToggleList } from '../common/ToggleList';
 import { useAutosave } from '../common/useAutosave';

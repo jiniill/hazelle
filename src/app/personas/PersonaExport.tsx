@@ -1,5 +1,5 @@
 import type { Persona } from '../../model/persona';
-import { exportPersona } from '../../runtime/personas';
+import { exportPersona } from '../../runtime/library/personas';
 import { fileNamed } from '../common/download';
 import { FileExport } from '../common/FileExport';
 import { THINGS } from '../common/words';

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { shown } from '../../model/chat';
-import { deleteMessage, deleteMessages, editShown, undeleteMessage, undeleteMessages } from '../../runtime/message-acts';
-import type { Shown } from '../../runtime/talk';
+import { deleteMessage, deleteMessages, editShown, undeleteMessage, undeleteMessages } from '../../runtime/chat/message-acts';
+import type { Shown } from '../../runtime/chat/talk';
 import { linesOf, typeAt, withPart, type Part } from './editPart';
 import { useSession } from '../session';
 import { useToast } from '../toast';

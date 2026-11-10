@@ -1,9 +1,9 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import { VARIABLE_LIMITS, type InspectedVariable } from '../../engine/render';
 import { shown } from '../../model/chat';
-import { inspectToggles } from '../../runtime/chat-context';
-import { setVariableByHand } from '../../runtime/chat-log';
-import type { Sending } from '../../runtime/turn-context';
+import { inspectToggles } from '../../runtime/chat/chat-context';
+import { setVariableByHand } from '../../runtime/chat/chat-log';
+import type { Sending } from '../../runtime/chat/turn-context';
 import { writerName } from '../common/code/variables';
 import { shownValue } from '../common/HookDetail';
 import { useLoad } from '../common/useLoaded';

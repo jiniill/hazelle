@@ -5,12 +5,12 @@ import type { Outcome, Question } from '../../engine/script-api';
 import { live, type PackOwner } from '../../model/library';
 import { toolId } from '../../model/tool';
 import type { ApiFailure, ApiResult } from '../api';
-import { EvaluationStuck } from '../evaluation';
+import { EvaluationStuck } from '../evaluation/evaluation';
 import { LuaStuck } from './lua/client';
-import { setCardWrites } from '../characters';
-import { GRANTS, setGrants, setModels, type Grant } from '../pack';
+import { setCardWrites } from '../library/characters';
+import { GRANTS, setGrants, setModels, type Grant } from '../library/pack';
 import { ToolLate, ToolStopped, ToolStuck, until } from './binding';
-import type { ObjectStore } from '../store';
+import type { ObjectStore } from '../store/store';
 import { toolsOf, ToolRate, TOOL_NOTICES_PER_MINUTE } from '../tools/store';
 
 // said is script-authored text; other variants are app notices. late/stuck/held describe tool gates.

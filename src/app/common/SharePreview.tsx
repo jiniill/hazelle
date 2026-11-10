@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import type { Opened, ShareSource } from '../../runtime/share';
-import { writeShared } from '../../runtime/share';
+import type { Opened, ShareSource } from '../../runtime/export/share';
+import { writeShared } from '../../runtime/export/share';
 import { Button, Intro, Portrait, Row, Stack, Text } from '../ui';
 import { ACTS } from './acts';
 import { fileNamed } from './download';

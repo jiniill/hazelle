@@ -1,7 +1,7 @@
 import { Check, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import type { Report } from '../../contracts/admin';
-import { readReports, resolveReport } from '../../runtime/admin';
+import { readReports, resolveReport } from '../../runtime/service/admin';
 import { describeFailure } from '../common/failure';
 import { ago } from '../common/time';
 import { useAttempt } from '../common/useAttempt';

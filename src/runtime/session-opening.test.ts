@@ -1,10 +1,10 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { serverBackend } from './backend';
+import { serverBackend } from './store/backend';
 import { randomBytes } from '../vault/aead';
-import type { CodecJob } from './object-codec-core';
+import type { CodecJob } from './store/object-codec-core';
 import type { api, ApiResult } from './api';
 import { openSession } from './session';
-import { ObjectStore, type PullProgress } from './store';
+import { ObjectStore, type PullProgress } from './store/store';
 import { CodecWorker } from './testing/object-codec-setup';
 
 afterEach(() => vi.unstubAllGlobals());

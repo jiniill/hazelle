@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Service } from '../../contracts/admin';
-import { setService } from '../../runtime/admin';
+import { setService } from '../../runtime/service/admin';
 import { selfHost } from '../../runtime/installation';
 import { describeFailure } from '../common/failure';
 import { sizeText } from '../common/size';

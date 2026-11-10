@@ -5,9 +5,9 @@ import { modelSettings, resolveConnection, RETRIES } from '../../connectors/regi
 import { refOf } from '../../connectors/assignment';
 import { entriesOf, entryKey, entryName, entryTerms, type Model, type Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
-import { catalogKey, type CatalogResult } from '../../runtime/catalog';
-import { addCopy, addModel, putModelBack, refreshStarred, removeConnection, removeModel, renameConnection, restoreConnection, setRetries } from '../../runtime/connections';
-import { modelProfile } from '../../runtime/profiles';
+import { catalogKey, type CatalogResult } from '../../runtime/models/catalog';
+import { addCopy, addModel, putModelBack, refreshStarred, removeConnection, removeModel, renameConnection, restoreConnection, setRetries } from '../../runtime/models/connections';
+import { modelProfile } from '../../runtime/models/profiles';
 import { ACTS, addOf } from '../common/acts';
 import { describeCatalogFailure } from '../common/failure';
 import { DetailFold } from '../common/DetailFold';

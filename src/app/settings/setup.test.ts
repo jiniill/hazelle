@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
-import type { Route, RolePick } from '../../runtime/assignment';
-import type { Overview, TaskRun } from '../../runtime/overview';
+import type { Route, RolePick } from '../../runtime/models/assignment';
+import type { Overview, TaskRun } from '../../runtime/tasks/overview';
 import { findingsOf, mapOf } from './setup';
 
 const connection = { id: 'c', value: { label: 'C', starred: [{ id: 'm', name: 'M' }] } } as never;

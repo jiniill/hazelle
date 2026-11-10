@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BackupCopyFailure, BackupFolder } from '../../contracts/admin';
-import { setBackupFolder } from '../../runtime/admin';
+import { setBackupFolder } from '../../runtime/service/admin';
 import { describeFailure } from '../common/failure';
 import { REPOSITORY } from '../common/legal';
 import { moment } from '../common/time';

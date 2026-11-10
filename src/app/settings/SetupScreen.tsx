@@ -1,9 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Role } from '../../connectors/assignment';
-import { setDefaultModel } from '../../runtime/assignment';
-import { setIllustrate, setTranslate } from '../../runtime/characters';
-import { availableFeatures } from '../../runtime/features';
-import { overviewOf, type TaskRun } from '../../runtime/overview';
+import { setDefaultModel } from '../../runtime/models/assignment';
+import { setIllustrate, setTranslate } from '../../runtime/library/characters';
+import { availableFeatures } from '../../runtime/tasks/features';
+import { overviewOf, type TaskRun } from '../../runtime/tasks/overview';
 import { findStarred, ROLE_ROWS, RolePicker } from '../common/RolePicker';
 import { AccountTaskModel, TaskModelRow } from '../common/TaskPrompt';
 import { DEFAULT_MODELS_FAILED, FINDINGS, inFeature, inSettings, MODEL_ROLES, NOT_STARRED, opens, PAGES, SCOPE, TASK_MODELS, PROMPT_MODELS } from '../common/words';

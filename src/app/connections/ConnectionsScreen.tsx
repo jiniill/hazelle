@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { resolveConnection } from '../../connectors/registry';
 import type { Connection } from '../../connectors/types';
-import { accountName } from '../../runtime/pool';
+import { accountName } from '../../runtime/models/pool';
 import { useConnections, useSession, useUnreadable } from '../session';
 import { LeftGauge } from './ConnectionMeters';
 import { backBar, navigate, useRoute } from '../shell/router';

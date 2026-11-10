@@ -1,5 +1,5 @@
 import type { Assembled } from '../../engine/pipeline';
-import type { Shown } from '../../runtime/talk';
+import type { Shown } from '../../runtime/chat/talk';
 
 export const infoReply = (replies: Shown[], picked: string | null) => replies.find((message) => message.id === picked) ?? replies.at(-1);
 

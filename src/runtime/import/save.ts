@@ -4,14 +4,14 @@ import type { Imported, ImportedModule, ImportedPersona, Unsupported } from '../
 import { live } from '../../model/library';
 import type { Stored } from '../../model/kinds';
 import { allWritten, type ApiResult } from '../api';
-import { importCardFile } from '../card-file';
-import { setDeleted, type ImportedCharacter, type Progress } from '../characters';
-import type { Files } from '../files';
-import { importModule, pairWithPrompts, replaceModules, sameNamespace, setModuleAt, setModuleDeleted, type ModulePlace } from '../modules';
-import { keepOriginal, type OriginalFile } from '../originals';
-import { addRisuPersona, removePersona } from '../personas';
-import { ofSort, removePrompt, savePreset, type StoredPrompt } from '../prompts';
-import type { ObjectStore } from '../store';
+import { importCardFile } from '../export/card-file';
+import { setDeleted, type ImportedCharacter, type Progress } from '../library/characters';
+import type { Files } from '../files/files';
+import { importModule, pairWithPrompts, replaceModules, sameNamespace, setModuleAt, setModuleDeleted, type ModulePlace } from '../library/modules';
+import { keepOriginal, type OriginalFile } from './originals';
+import { addRisuPersona, removePersona } from '../library/personas';
+import { ofSort, removePrompt, savePreset, type StoredPrompt } from '../library/prompts';
+import type { ObjectStore } from '../store/store';
 import { importFile, undoFileImport, type FileImport } from '../tools/drafts';
 import { ImportReadError, type ChatsRead } from './protocol';
 
@@ -19,7 +19,7 @@ type Sink = { store: ObjectStore; files: Files };
 // 되돌리기 for what one file brought: it goes to 휴지통. Its closure holds ids, never the parsed file, which would stay
 // alive with it.
 export type Undo = () => Promise<ApiResult<unknown>>;
-// The file it came from, kept beside what it made (runtime/originals); null where the file would not read again. The
+// The file it came from, kept beside what it made (runtime/import/originals); null where the file would not read again. The
 // import stands either way.
 export type Kept = ApiResult<{ unkept: number }> | null;
 // Asked after what it made is saved.

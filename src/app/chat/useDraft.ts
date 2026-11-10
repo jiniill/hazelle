@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { draftKey } from '../../runtime/drafts';
+import { draftKey } from '../../runtime/device/drafts';
 import { useSession } from '../session';
 
 // key: where the chat's unsent text is kept now, a new chat's under its character until it is saved.

@@ -1,4 +1,4 @@
-import { readPosts, type ListAsk } from '../../runtime/board';
+import { readPosts, type ListAsk } from '../../runtime/service/board';
 import { PostItem } from '../common/postRow';
 import { PagedList, usePages } from '../common/useLoaded';
 import { useNicknameGate } from './nickname';

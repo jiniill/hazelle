@@ -1,0 +1,121 @@
+import { MAX_DIAGNOSTICS_LENGTH } from '../../contracts/board';
+import { autoDiagnose, errorFacts, type AutoOrigin } from './auto-diagnosis';
+import { errorText } from '../evaluation/error-text';
+import type { EvaluationDown, EvaluationUp } from '../evaluation/evaluation-core';
+import type { Facts } from './diagnostic-state';
+import { moduleWorker } from '../worker';
+import workerUrl from '../evaluation/evaluation-worker?worker&url';
+
+// Tab-only: never persisted across reloads. A problem's text is an error's own words, which can quote what it failed on,
+// so the report is always shown before it is sent (board/WriteScreen).
+type Problem = { at: number; text: string };
+
+const KEPT = 20;
+const PROBE_MS = 30_000;
+const LINE = 500;
+const problems: Problem[] = [];
+
+// The same problem said again in a row, as a failure repeats on each try, stays one line.
+export function noteProblem(text: string, at = Date.now()) {
+  if (problems[problems.length - 1]?.text === text) return;
+  problems.push({ at, text });
+  if (problems.length > KEPT) problems.shift();
+}
+
+export const recentProblems = (): readonly Problem[] => problems;
+
+export function watchProblems() {
+  // Without an object thrown there is nothing to say: a browser's own note, or a script of another origin.
+  const thrown = (error: unknown, origin: AutoOrigin) => {
+    if (typeof error !== 'object' || error === null) return;
+    const facts = errorFacts(error);
+    // Where it went off, for a press: the positions name no input, as the words before them can.
+    if (facts.frames) noteProblem(`코드 위치 · ${facts.frames}`);
+    autoDiagnose({ event: 'app-error', origin, ...facts });
+  };
+  addEventListener('error', (event) => {
+    noteProblem(`오류 · ${event.error === undefined || event.error === null ? event.message : errorText(event.error)}`);
+    thrown(event.error, 'error');
+  });
+  addEventListener('unhandledrejection', (event) => {
+    noteProblem(`처리되지 않은 오류 · ${errorText(event.reason)}`);
+    thrown(event.reason, 'rejection');
+  });
+}
+
+// A worker of its own, so a failed import the app's worker has cached is tried again, as a reload would.
+function probeTokenizer(): Promise<string> {
+  return new Promise((resolve) => {
+    let worker: Worker;
+    try {
+      worker = moduleWorker(workerUrl);
+    } catch (error) {
+      return resolve(`워커를 만들지 못했어요 · ${errorText(error)}`);
+    }
+    const done = (text: string) => {
+      clearTimeout(timer);
+      worker.terminate();
+      resolve(text);
+    };
+    const timer = setTimeout(() => done(`${PROBE_MS / 1000}초 동안 응답이 없었어요`), PROBE_MS);
+    worker.onmessage = ({ data }: MessageEvent<EvaluationUp>) => {
+      if ('probed' in data) done(data.probed);
+    };
+    worker.onerror = (event) => done(`워커 오류 · ${event.message || '내용 없음'}`);
+    worker.onmessageerror = () => done('워커의 응답을 읽지 못했어요');
+    worker.postMessage({ probe: true } satisfies EvaluationDown);
+  });
+}
+
+type Device = { userAgent: string; language: string; screen: string; cores: number | null; memory: number | null; standalone: boolean; online: boolean };
+
+function device(): Device {
+  const nav = navigator as Navigator & { deviceMemory?: number; standalone?: boolean };
+  return {
+    userAgent: nav.userAgent,
+    language: nav.language,
+    screen: `${screen.width}×${screen.height} @${devicePixelRatio} · 창 ${innerWidth}×${innerHeight}`,
+    cores: nav.hardwareConcurrency || null,
+    memory: nav.deviceMemory ?? null,
+    standalone: matchMedia('(display-mode: standalone)').matches || nav.standalone === true,
+    online: nav.onLine,
+  };
+}
+
+const UNKNOWN = '알 수 없음';
+
+type Report = { version: string | null; now: number; device: Device; tokenizer: string; state: Facts; problems: readonly Problem[] };
+
+// The oldest problems go first when it would not fit a post, and the report says how many went.
+export function reportText({ problems, ...report }: Report): string {
+  for (let cut = 0; ; cut++) {
+    const text = reportLines(report, problems.slice(cut), cut).join('\n');
+    // Here and not at the send, so the field shows exactly what goes.
+    if (text.length <= MAX_DIAGNOSTICS_LENGTH || cut === problems.length) return text.slice(0, MAX_DIAGNOSTICS_LENGTH);
+  }
+}
+
+function reportLines({ version, now, device, tokenizer, state }: Omit<Report, 'problems'>, problems: readonly Problem[], cut: number): string[] {
+  return [
+    '헤이젤 진단 정보',
+    `시각: ${new Date(now).toISOString()}`,
+    `버전: ${version ?? UNKNOWN}`,
+    `브라우저: ${device.userAgent}`,
+    `언어: ${device.language}`,
+    `화면: ${device.screen}`,
+    `코어: ${device.cores ?? UNKNOWN} · 메모리: ${device.memory === null ? UNKNOWN : `${device.memory}GB`}`,
+    `홈 화면 앱: ${device.standalone ? '예' : '아니요'} · 온라인: ${device.online ? '예' : '아니요'}`,
+    `토크나이저: ${tokenizer}`,
+    `앱 상태: ${JSON.stringify(state, null, 1)}`,
+    '최근 오류:',
+    ...(cut > 0 ? [`- 오래된 오류 ${cut}줄 생략`] : []),
+    ...(problems.length === 0 && cut === 0 ? ['- 없음'] : problems.map(({ at, text }) => `- ${new Date(at).toISOString()} ${text.slice(0, LINE)}`)),
+  ];
+}
+
+// state: a read of the app, as diagnostic-state makes it. It comes in from the caller since evaluation imports this file
+// for noteProblem and the state's reads import evaluation.
+export async function diagnosticReport(version: string | null, state: Promise<Facts>): Promise<string> {
+  const [tokenizer, facts] = await Promise.all([probeTokenizer(), state]);
+  return reportText({ version, now: Date.now(), device: device(), tokenizer, state: facts, problems });
+}

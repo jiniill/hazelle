@@ -17,7 +17,7 @@ export type Card = {
   greetings: string[];
   exampleDialogue: string;
   // Risu's additionalText: paragraphs, split at blank lines, that a send finds by embedding and sends after the
-  // description (runtime/additional).
+  // description (runtime/chat/additional).
   additionalText: string;
   systemPrompt: string;
   postHistoryInstructions: string;
@@ -58,7 +58,7 @@ export type Trigger = Listed & Steps & ({ kind: 'lua'; code: string } | { kind: 
 // A Lua trigger's steps when it holds nothing but its code. Risu's editor starts one at 'start'.
 export const PLAIN_LUA: Omit<Steps, 'name'> = { on: 'start', conditions: [], effects: [] };
 
-// translation: Risu's edittrans, over a message's translation (runtime/translate).
+// translation: Risu's edittrans, over a message's translation (runtime/tasks/translate).
 export type RegexScript = Listed & Hazelle.Script;
 // The stage of a script whose stage is unknown: a new one's, and one switched off in Risu, which keeps none.
 export const NEW_STAGE: RegexScript['stage'] = 'display';
@@ -123,7 +123,7 @@ export const SILLYTAVERN_REGEX_KINDS = ['regex-placement', 'regex-role', 'regex-
 export type SillyTavernRegexKind = (typeof SILLYTAVERN_REGEX_KINDS)[number];
 
 // The asset kinds say why a listed asset was not kept. 'refused-picture' and 'refused-video' are counted where assets
-// are stored (runtime/characters saveAssets), the rest by the parsers.
+// are stored (runtime/library/characters saveAssets), the rest by the parsers.
 export const UNSUPPORTED_KINDS = [
   'extra-icon',
   'emotion',

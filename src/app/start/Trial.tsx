@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import type { ConnectionType, Model } from '../../connectors/types';
-import { countFirstPage } from '../../runtime/first-page';
+import { countFirstPage } from '../../runtime/service/first-page';
 import type { Session } from '../../runtime/session';
-import { connectTrial, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels, type TrialCharacter } from '../../runtime/trial';
+import { connectTrial, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels, type TrialCharacter } from '../../runtime/account/trial';
 import { describeCatalogFailure, describeFailure, describeKeyFailure, describeTurnFailure } from '../common/failure';
 import { href } from '../shell/routes';
 import { ARIN_PICTURE, Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, TextField } from '../ui';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Shown } from '../../runtime/talk';
+import type { Shown } from '../../runtime/chat/talk';
 import { budgetCut, infoReply, pickStarted } from './infoReply';
 
 const message = (id: string, role: 'user' | 'assistant'): Shown => ({ id, role, at: 0, versions: [], selected: 0, live: null });

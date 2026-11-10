@@ -168,7 +168,7 @@ function risuChat(chat: Json, note: string, fmIndex: number, missed: Tally<MoveU
 // Risu's memory as summaries, and whether any of it stays behind. Risu reads only the format of the chat's current
 // algorithm, so the newest one a chat holds is taken and an older one beside it stays behind.
 // Each summary ends at a message: Risu leaves every message up to there out of the prompt (hypav3.ts startIdx,
-// supaMemory.ts), which is what runtime/move's records, each covering on from the one before, keep.
+// supaMemory.ts), which is what runtime/import/move's records, each covering on from the one before, keep.
 function risuMemory(chat: Json, messages: Json[]): { summaries: RisuSummary[]; left: boolean } {
   const places = new Map(messages.flatMap((message, index): [string, number][] => (typeof message.chatId === 'string' ? [[message.chatId, index]] : [])));
   // hypaV3 summaries and hypaV2 main chunks name the messages they read; one naming a message the chat no longer has is

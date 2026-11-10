@@ -7,7 +7,7 @@ import { useNewChat } from './useNewChat';
 let projected: () => void = () => {};
 const session = { store: { projections: { evaluate: () => new Promise<void>((resolve) => (projected = resolve)) } }, drafts: { move: vi.fn() } };
 vi.mock('../session', () => ({ useSession: () => session }));
-vi.mock('../../runtime/chat-log', () => ({ startChat: async () => null }));
+vi.mock('../../runtime/chat/chat-log', () => ({ startChat: async () => null }));
 vi.mock('../shell/router', () => ({ navigate: vi.fn() }));
 
 afterEach(() => {

@@ -1,5 +1,5 @@
 import { FOLDER_DEPTH, kindOf, type FolderSet } from '../../../model/folders';
-import { createFolder, filingOf, folderRemoval, moveBack, moveInto, removeFolder, renameFolder, restoreFolder } from '../../../runtime/folders';
+import { createFolder, filingOf, folderRemoval, moveBack, moveInto, removeFolder, renameFolder, restoreFolder } from '../../../runtime/library/folders';
 import { useStore } from '../../session';
 import { useToast } from '../../toast';
 import type { NamedFolder } from './FolderParts';

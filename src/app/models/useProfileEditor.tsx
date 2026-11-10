@@ -3,7 +3,7 @@ import { modelSettings } from '../../connectors/registry';
 import { fit, SERVICE_TIERS, VERBOSITY, WHOLE, type Accepts, type Change, type ModelSettings, type PdfKeep, type Reasoning, type SettingsSchema } from '../../connectors/settings';
 import { entryName, replyLimit, type Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
-import { profileUsers, renameProfile, setProfileSettings, withSettings, type ProfileUser } from '../../runtime/profiles';
+import { profileUsers, renameProfile, setProfileSettings, withSettings, type ProfileUser } from '../../runtime/models/profiles';
 import { choices } from '../common/reading';
 import { DetailFold } from '../common/DetailFold';
 import { RetriesRow } from '../common/RetriesRow';

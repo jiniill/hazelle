@@ -1,11 +1,11 @@
 import type { Event, ToolEvent } from '../../engine/script-api';
 import { live } from '../../model/library';
-import type { ReadModels } from '../read-model';
+import type { ReadModels } from '../store/read-model';
 import { onLast } from './effects';
 import type { ScriptExecution } from './execution';
 import type { ScriptSchedule } from './schedule';
 import { atOf, scopeFor, unitFor } from './selection';
-import type { ObjectStore } from '../store';
+import type { ObjectStore } from '../store/store';
 import type { Tools } from '../tools/facade';
 import { toolsOf } from '../tools/store';
 
@@ -55,13 +55,13 @@ export class ScriptCommands {
     }).then(() => answer);
   }
 
-  // Where message stands in the chat now; null once it is gone. For runtime/message-acts, which reads a deleted message
+  // Where message stands in the chat now; null once it is gone. For runtime/chat/message-acts, which reads a deleted message
   // before its deletion.
   at(chat: string, message: string): Hazelle.At | null {
     return live(this.session.store.get('chat', chat)) && atOf(scopeFor(this.session, chat), message);
   }
 
-  // The user's own change to a message, once saved (runtime/message-acts). What the tools write answering it is the
+  // The user's own change to a message, once saved (runtime/chat/message-acts). What the tools write answering it is the
   // user's act, not a version's: it stays with the last message, so 다시 생성 does not undo it.
   changed(chat: string, change: Hazelle.Change) {
     this.toTools(chat, { kind: 'change', change });

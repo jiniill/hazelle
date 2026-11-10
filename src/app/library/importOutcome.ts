@@ -6,10 +6,10 @@ import type { Imported, ImportedModule, ImportedPersona, Unsupported } from '../
 import { isToggle } from '../../model/prompt';
 import type { Tool } from '../../model/tool';
 import { unused } from '../../engine/pipeline';
-import type { ImportedCharacter } from '../../runtime/characters';
+import type { ImportedCharacter } from '../../runtime/library/characters';
 import type { ApiFailure, ApiResult } from '../../runtime/api';
 import type { Kept } from '../../runtime/import/save';
-import type { ModulePlace } from '../../runtime/modules';
+import type { ModulePlace } from '../../runtime/library/modules';
 import type { Stored } from '../../model/kinds';
 import { aliased } from '../common/alias';
 import { describeFailure } from '../common/failure';

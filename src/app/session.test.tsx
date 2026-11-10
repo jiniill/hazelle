@@ -1,17 +1,17 @@
 import { act } from 'react';
-import { serverBackend } from '../runtime/backend';
+import { serverBackend } from '../runtime/store/backend';
 import { expect, it, vi } from 'vitest';
 import type { ChatScope } from '../engine/render';
 import type { Chat } from '../model/chat';
-import { AccountFacts } from '../runtime/account';
+import { AccountFacts } from '../runtime/account/account';
 import type { ApiResult, api } from '../runtime/api';
-import { plainDisplay, ReadModels, type Opening, type ScreenChat } from '../runtime/read-model';
+import { plainDisplay, ReadModels, type Opening, type ScreenChat } from '../runtime/store/read-model';
 import type { Session } from '../runtime/session';
-import { ObjectStore } from '../runtime/store';
-import type { Turn } from '../runtime/talk';
-import * as display from '../runtime/chat-context';
+import { ObjectStore } from '../runtime/store/store';
+import type { Turn } from '../runtime/chat/talk';
+import * as display from '../runtime/chat/chat-context';
 import { randomBytes } from '../vault/aead';
-import { AssetUrls } from '../runtime/assets';
+import { AssetUrls } from '../runtime/files/assets';
 import { SessionProvider, type Account, useAssetUrl, useChatDisplay, useChatModel, useChatOpening, useReplying } from './session';
 import { probeRoot } from './ui/probe';
 

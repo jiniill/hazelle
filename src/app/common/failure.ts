@@ -7,23 +7,23 @@ import type { Role } from '../../connectors/assignment';
 import type { Costs } from '../../connectors/types';
 import type { RelayError, ServerError } from '../../contracts/http';
 import type { ApiFailure } from '../../runtime/api';
-import type { RouteFailure } from '../../runtime/assignment';
-import type { CatalogFailure } from '../../runtime/catalog';
-import type { IllustrateFailure } from '../../runtime/illustrate';
-import type { LikenessFailure } from '../../runtime/likeness';
-import type { MascotFailure } from '../../runtime/mascot';
-import type { MemoryFailure } from '../../runtime/memory';
-import type { PrereadFailure } from '../../runtime/preread';
-import type { writerOf } from '../../runtime/profiles';
-import type { EmbedFailure } from '../../runtime/retrieval';
-import type { AgentFailed } from '../../runtime/agents';
-import type { AdditionalFailure } from '../../runtime/additional';
-import type { KeyFailure } from '../../runtime/connections';
-import type { ReplyError } from '../../runtime/generate';
-import type { MetersFailure } from '../../runtime/meters';
-import type { SignInFailure } from '../../runtime/sign-in';
-import type { TranslateFailure, TranslatorFailure } from '../../runtime/translate';
-import type { TurnFailure } from '../../runtime/turn';
+import type { RouteFailure } from '../../runtime/models/assignment';
+import type { CatalogFailure } from '../../runtime/models/catalog';
+import type { IllustrateFailure } from '../../runtime/tasks/illustrate';
+import type { LikenessFailure } from '../../runtime/tasks/likeness';
+import type { MascotFailure } from '../../runtime/tasks/mascot';
+import type { MemoryFailure } from '../../runtime/tasks/memory';
+import type { PrereadFailure } from '../../runtime/tasks/preread';
+import type { writerOf } from '../../runtime/models/profiles';
+import type { EmbedFailure } from '../../runtime/tasks/retrieval';
+import type { AgentFailed } from '../../runtime/tasks/agents';
+import type { AdditionalFailure } from '../../runtime/chat/additional';
+import type { KeyFailure } from '../../runtime/models/connections';
+import type { ReplyError } from '../../runtime/models/generate';
+import type { MetersFailure } from '../../runtime/models/meters';
+import type { SignInFailure } from '../../runtime/account/sign-in';
+import type { TranslateFailure, TranslatorFailure } from '../../runtime/tasks/translate';
+import type { TurnFailure } from '../../runtime/chat/turn';
 import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
@@ -36,7 +36,7 @@ export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 // words in MESSAGES; its remaining keys are codes the runtime makes itself.
 type OnFallback =
   // Only a broken or outdated client sends these; not-found otherwise answers an operator's page, or a file read that
-  // runtime/assets handles.
+  // runtime/files/assets handles.
   | 'bad-body'
   | 'bad-content-type'
   | 'bad-id'
@@ -116,7 +116,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'codec-unavailable': `데이터를 처리하지 못했어요. ${RELOAD_RETRY}`,
   gone: '다른 기기나 탭에서 삭제된 항목이라 바꿀 수 없어요.',
   'too-large': '용량이 너무 커서 저장할 수 없어요.',
-  // A guest's store (runtime/guest-store).
+  // A guest's store (runtime/account/guest-store).
   'browser-full': `브라우저 저장 공간이 꽉 찼어요. ${BIN}에서 영구 삭제하거나 계정을 만들면 공간이 생겨요.`,
   'browser-storage': `이 브라우저의 저장소를 열지 못했어요. ${RELOAD_RETRY}`,
   'browser-storage-blocked': '다른 탭에서 열어 둔 헤이젤을 닫고 다시 시도해 주세요.',

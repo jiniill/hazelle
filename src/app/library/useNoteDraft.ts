@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { draftTranslatorNote } from '../../runtime/translator-note';
+import { draftTranslatorNote } from '../../runtime/tasks/translator-note';
 import { describeTranslateFailure } from '../common/failure';
 import { useSession } from '../session';
 import { useToast } from '../toast';
 
-// flush first: the draft reads the notes as stored (runtime/translator-note). One stopped by leaving the screen writes
+// flush first: the draft reads the notes as stored (runtime/tasks/translator-note). One stopped by leaving the screen writes
 // nothing.
 export function useNoteDraft(id: string, flush: () => Promise<boolean>, append: (lines: string) => void) {
   const session = useSession();

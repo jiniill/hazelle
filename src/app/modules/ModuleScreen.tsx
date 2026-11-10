@@ -3,7 +3,7 @@ import { ModelsConsent } from './PluginSection';
 import type { Stored } from '../../model/kinds';
 import { likenessId } from '../../model/likeness';
 import { isToggle } from '../../model/prompt';
-import { copyModule, editModule, setModuleAlways, setModuleDeleted } from '../../runtime/modules';
+import { copyModule, editModule, setModuleAlways, setModuleDeleted } from '../../runtime/library/modules';
 import { ACTS } from '../common/acts';
 import { aliased } from '../common/alias';
 import { holdsLine, howMany } from '../common/pack';

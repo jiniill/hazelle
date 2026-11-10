@@ -1,4 +1,4 @@
-import { setCacheNoteHidden } from '../../runtime/chat-context';
+import { setCacheNoteHidden } from '../../runtime/chat/chat-context';
 import { useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { SettingRow, Switch } from '../ui';

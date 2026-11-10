@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
 import { addDraftAsk, blankDraft, createDraft, draftIdentity } from '../../runtime/tools/drafts';
 import { askPlugin, type PluginAsked, type TestRun } from '../../runtime/tools/plugin-writer';
-import { sharedModel } from '../../runtime/assignment';
+import { sharedModel } from '../../runtime/models/assignment';
 import { newOf } from '../common/acts';
 import { describeAskFailure } from '../common/failure';
 import { PLUGIN_GUIDE } from '../common/legal';

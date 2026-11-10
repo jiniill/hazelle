@@ -5,24 +5,24 @@ import { holdsPersona, unused } from '../../engine/pipeline';
 import { activeOnboarding } from '../../engine/import/onboarding';
 import { calls, keepsPromptOut, shown, type ChatItem, type ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
-import { autoDiagnose } from '../../runtime/auto-diagnosis';
-import { autoChat, turnFacts } from '../../runtime/diagnostic-state';
-import { chatTranslate, featuresOf } from '../../runtime/features';
-import { replyMessage, restoreRaw } from '../../runtime/chat-log';
-import { keepAttachments } from '../../runtime/attachments';
-import { pickVersion } from '../../runtime/message-acts';
+import { autoDiagnose } from '../../runtime/diagnostics/auto-diagnosis';
+import { autoChat, turnFacts } from '../../runtime/diagnostics/diagnostic-state';
+import { chatTranslate, featuresOf } from '../../runtime/tasks/features';
+import { replyMessage, restoreRaw } from '../../runtime/chat/chat-log';
+import { keepAttachments } from '../../runtime/files/attachments';
+import { pickVersion } from '../../runtime/chat/message-acts';
 import { badgesByVersion, toolActions, toolComposer } from './toolMenu';
 import type { ScreenAt } from '../../runtime/scripts/pages';
 import { triggersOf } from '../../runtime/scripts/selection';
-import { greetingOf } from '../../runtime/greetings';
-import type { Shown } from '../../runtime/talk';
-import { blocked, isBlocked, type Target } from '../../runtime/turn-context';
-import { packsOf, togglesOf, usageShownOf } from '../../runtime/chat-context';
-import { polishAgain, takeTurn, type TurnFailure } from '../../runtime/turn';
-import { skippedStep, type Skip, type StepFailure } from '../../runtime/turn-steps';
-import { agentsOf } from '../../runtime/agents';
-import type { PersonaChoice } from '../../runtime/personas';
-import type { PromptChoice } from '../../runtime/prompts';
+import { greetingOf } from '../../runtime/chat/greetings';
+import type { Shown } from '../../runtime/chat/talk';
+import { blocked, isBlocked, type Target } from '../../runtime/chat/turn-context';
+import { packsOf, togglesOf, usageShownOf } from '../../runtime/chat/chat-context';
+import { polishAgain, takeTurn, type TurnFailure } from '../../runtime/chat/turn';
+import { skippedStep, type Skip, type StepFailure } from '../../runtime/chat/turn-steps';
+import { agentsOf } from '../../runtime/tasks/agents';
+import type { PersonaChoice } from '../../runtime/library/personas';
+import type { PromptChoice } from '../../runtime/library/prompts';
 import { ACTS } from '../common/acts';
 import { describeTurnFailure } from '../common/failure';
 import { NO_PERSONA_SLOT } from '../common/prompt-words';
@@ -175,7 +175,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     if (id) session.memory.check(id);
   }, [id, features.memory]);
 
-  // Only a reply this page asked for has what it sent (runtime/request-log), so it is told the moment that reply lands.
+  // Only a reply this page asked for has what it sent (runtime/models/request-log), so it is told the moment that reply lands.
   const lastReply = messages.findLast((message) => message.role === 'assistant');
   const lastCall = lastReply && shown(lastReply).receipt?.id;
   useEffect(() => {

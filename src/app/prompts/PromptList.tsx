@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { Stored } from '../../model/kinds';
 import { pinsModels, type PromptSort } from '../../model/prompt';
-import { availableFeatures } from '../../runtime/features';
-import { addAgent, addPrompt, isDefaultPrompt, ofSort } from '../../runtime/prompts';
+import { availableFeatures } from '../../runtime/tasks/features';
+import { addAgent, addPrompt, isDefaultPrompt, ofSort } from '../../runtime/library/prompts';
 import type { AgentStart } from '../../engine/agent';
 import { ACTS } from '../common/acts';
 import type { Frame } from '../common/frame';

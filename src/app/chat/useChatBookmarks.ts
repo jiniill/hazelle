@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Chat } from '../../model/chat';
-import { nameBookmark, setBookmark } from '../../runtime/chat-log';
-import { pickVersion } from '../../runtime/message-acts';
-import type { Shown } from '../../runtime/talk';
+import { nameBookmark, setBookmark } from '../../runtime/chat/chat-log';
+import { pickVersion } from '../../runtime/chat/message-acts';
+import type { Shown } from '../../runtime/chat/talk';
 import { BOOKMARK } from '../common/words';
 import { useSession } from '../session';
 import { useToast } from '../toast';

@@ -6,10 +6,10 @@ import type { Writes } from '../../model/chat';
 import { live } from '../../model/library';
 import type { ToolUnit } from '../../model/tool';
 import type { ApiFailure } from '../api';
-import { packsOf, scopeOf } from '../chat-context';
-import { appendScripted, appendUserMessage, type Written } from '../chat-log';
-import { memoryOwner } from '../memory-read';
-import type { ReadModels } from '../read-model';
+import { packsOf, scopeOf } from '../chat/chat-context';
+import { appendScripted, appendUserMessage, type Written } from '../chat/chat-log';
+import { memoryOwner } from '../tasks/memory-read';
+import type { ReadModels } from '../store/read-model';
 import { noOutcome, ToolLate } from './binding';
 import type { Anchor } from './effects';
 import type { ScriptExecution } from './execution';
@@ -19,14 +19,14 @@ import { requestAnswer, requestEvent, sentBack, sentOf, toolRequest } from './re
 import type { ScriptSchedule } from './schedule';
 import { scriptsOf, triggersOf } from './selection';
 import { startStages } from './start';
-import type { ObjectStore } from '../store';
-import type { Tool, ToolArgs } from '../tool-loop';
+import type { ObjectStore } from '../store/store';
+import type { Tool, ToolArgs } from '../models/tool-loop';
 import { toolsOf } from '../tools/store';
-import type { Blocked, TurnContext } from '../turn-context';
+import type { Blocked, TurnContext } from '../chat/turn-context';
 
 export type Halted = { kind: 'halted' };
 // turn: as it goes on. Its said is null once the user's message was saved here; a failure after that is kept
-// (runtime/turn TurnFailure).
+// (runtime/chat/turn TurnFailure).
 export type Started = { turn: TurnContext } | Halted | ((Blocked | { kind: 'gone' } | { kind: 'unsent'; failure: ApiFailure }) & { kept?: true });
 
 // A tool's last prompt answer in this session: its slot text, and its memory with the id it stands through.

@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readTool } from '../../engine/import/tool';
 import { toolId } from '../../model/tool';
-import { setModuleDeleted } from '../modules';
-import { purgeNow } from '../removal';
+import { setModuleDeleted } from '../library/modules';
+import { purgeNow } from '../library/removal';
 import { exportBackup, readBackup, restoreBackup } from '../testing/backup';
 import { testServer } from '../testing';
 import { deleteToolData, exportTool, importTool, readToolAsset, saveToolAsset, saveToolChat, setToolData, setToolSettings, toolBadges, toolChatData, toolChatKeys, toolData, toolDataId, toolKeys, TOOL_CHAT_BYTES, TOOL_DATA_BYTES, TOOL_KEY_CHARS, TOOL_ROW_BYTES, TOOL_VALUE_BYTES, ToolStorage, undoToolImport } from './store';
 import { CLAIM_SETTLE_MS } from '../../contracts/files';
-import type { Files } from '../files';
+import type { Files } from '../files/files';
 
 const server = testServer();
-// The sweep a removal for good starts is runtime/files' to test.
+// The sweep a removal for good starts is runtime/files/files' to test.
 const unswept = { sweep: async () => {} } as unknown as Files;
 const source = (version = '1.0', uses = '') => {
   const result = readTool(new TextEncoder().encode(`//@api 1\n//@name notes\n//@author jin\n//@version ${version}\n${uses}//@setting {"key":"title","type":"text","label":"제목","default":"메모"}\nhazelle.on('message', () => {});`));

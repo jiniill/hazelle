@@ -35,7 +35,7 @@ const TOOL_INSTRUCTIONS = [
   '- Output only the translation, with no title, note or explanation.',
 ].join('\n');
 
-// The account's default translation prompt, added once (runtime/prompts).
+// The account's default translation prompt, added once (runtime/library/prompts).
 export function translatorPrompt(): TranslatePrompt {
   const named = (name: string | null = null) => ({ id: crypto.randomUUID(), name });
   return {

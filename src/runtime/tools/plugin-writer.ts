@@ -8,17 +8,17 @@ import type { Receipt } from '../../model/chat';
 import api from '../../tool-api/hazelle.d.ts?raw';
 import guide from '../../tool-api/README.md?raw';
 import type { ApiFailure } from '../api';
-import { sharedModel, type RouteFailure } from '../assignment';
-import type { Credentials } from '../credential';
-import { gather } from '../generate';
-import { writerOf } from '../profiles';
-import type { RequestLog } from '../request-log';
-import type { ObjectStore } from '../store';
-import { pageCall, taskCall } from '../streams';
-import type { Tokens } from '../token-calibration';
+import { sharedModel, type RouteFailure } from '../models/assignment';
+import type { Credentials } from '../models/credential';
+import { gather } from '../models/generate';
+import { writerOf } from '../models/profiles';
+import type { RequestLog } from '../models/request-log';
+import type { ObjectStore } from '../store/store';
+import { pageCall, taskCall } from '../models/streams';
+import type { Tokens } from '../models/token-calibration';
 import type { ToolTrial } from '../scripts/preview';
-import { toolLoop, type ToolArgs } from '../tool-loop';
-import { keepRow } from '../usage';
+import { toolLoop, type ToolArgs } from '../models/tool-loop';
+import { keepRow } from '../models/usage';
 
 type Deps = { store: ObjectStore; credentials: Credentials; log: RequestLog; tokens: Tokens };
 // earlier: the draft's last asks, oldest first.

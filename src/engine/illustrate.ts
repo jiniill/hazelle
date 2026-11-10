@@ -20,7 +20,7 @@ const INSTRUCTIONS = [
   'characters is empty for a picture with no one in it.',
 ].join('\n');
 
-// The account's default 삽화 prompt, added once (runtime/prompts).
+// The account's default 삽화 prompt, added once (runtime/library/prompts).
 export function illustratorPrompt(): IllustratePrompt {
   const named = (name: string | null = null) => ({ id: crypto.randomUUID(), name });
   return {
@@ -59,7 +59,7 @@ export const profileNames = (portraits: readonly Told[]) =>
     }),
   ].join('\n');
 
-// A picture of the chat drawn before the scene call, and how many messages before the one drawn (runtime/illustrate
+// A picture of the chat drawn before the scene call, and how many messages before the one drawn (runtime/tasks/illustrate
 // drawnBefore).
 export type Earlier = { scene: Scene; ago: number };
 

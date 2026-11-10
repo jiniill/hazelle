@@ -1,5 +1,5 @@
 import { fileStem } from '../../engine/file-name';
-import type { BackupOutput } from '../../runtime/backup';
+import type { BackupOutput } from '../../runtime/export/backup-zip';
 
 const TEMPORARY = 'risu-alpha-backup-downloads';
 // Page-held Web Lock protects active spools across tabs; reclaim only unlocked files after a page dies.

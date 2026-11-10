@@ -1,7 +1,7 @@
 import { refOf } from '../../connectors/assignment';
 import { entryKey, entryName, entryTerms } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
-import { addProfile, modelProfile, removeProfile, restoreProfile, setDefaultProfile, setModelProfile, setProfileSettings, type ProfileUser } from '../../runtime/profiles';
+import { addProfile, modelProfile, removeProfile, restoreProfile, setDefaultProfile, setModelProfile, setProfileSettings, type ProfileUser } from '../../runtime/models/profiles';
 import { ACTS, addOf } from '../common/acts';
 import { useSearch } from '../common/useSearch';
 import { saveWords } from '../common/useAutosave';

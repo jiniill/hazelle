@@ -613,7 +613,7 @@ const INSTRUCTIONS = [
   'Be brief: minor detail may fade, but names, relationships, promises and who knows what must never be lost.',
 ].join('\n');
 
-// The account's default memory prompt, added once (runtime/prompts).
+// The account's default memory prompt, added once (runtime/library/prompts).
 export function memoryTaskPrompt(): MemoryPrompt {
   const named = (name: string | null = null) => ({ id: crypto.randomUUID(), name });
   return {

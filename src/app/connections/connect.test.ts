@@ -4,7 +4,7 @@ import type { Session } from '../../runtime/session';
 import { navigate } from '../shell/router';
 import { connect } from './connect';
 
-vi.mock('../../runtime/connections', () => ({ addConnection: async () => ({ ok: true, id: 'made' }) }));
+vi.mock('../../runtime/models/connections', () => ({ addConnection: async () => ({ ok: true, id: 'made' }) }));
 vi.mock('../shell/router', () => ({ navigate: vi.fn() }));
 
 it('opens the new connection only while the screen that made it is there', async () => {

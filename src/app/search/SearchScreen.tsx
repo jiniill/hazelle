@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactN
 import { chatFolderOf, type ChatSummary } from '../../model/chat';
 import type { Shelf } from '../../model/library';
 import { foldTerm } from '../../model/search';
-import { liveChats, results, type Found } from '../../runtime/chat-search';
+import { liveChats, results, type Found } from '../../runtime/chat/chat-search';
 import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
 import { noResults } from '../common/search';

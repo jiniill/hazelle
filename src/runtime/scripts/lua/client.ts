@@ -4,7 +4,7 @@ import type { DisplayBatch, DisplayItem, RunLane, Script, SyntaxProblem } from '
 import type { LuaMessage, Snapshot } from '../../../engine/lua/state';
 import type { ChatBasis, ChatScope } from '../../../engine/render';
 import type { ScriptOutcome } from './event';
-import { changedTail, sameHistory, type Tail } from '../../history-delta';
+import { changedTail, sameHistory, type Tail } from '../../evaluation/history-delta';
 import { PendingRequests } from '../../pending-requests';
 import { Heartbeat, moduleWorker } from '../../worker';
 import workerUrl from './worker?worker&url';

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { previewLine, shown, type ChatItem } from '../../model/chat';
-import { versionTree } from '../../runtime/chat-log';
+import { versionTree } from '../../runtime/chat/chat-log';
 import { ACTS } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
 import { BOOKMARK } from '../common/words';

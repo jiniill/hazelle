@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { resolveConnection } from '../connectors/registry';
 import type { Connection } from '../connectors/types';
 import { firstTurns } from '../model/turns';
-import { appendUserMessage, startChat } from './chat-log';
+import { appendUserMessage, startChat } from './chat/chat-log';
 import { fetchApi } from './api';
-import { editPersona } from './personas';
-import { autoDiagnose, setDiagnosisSharing } from './auto-diagnosis';
-import { setPulseSharing } from './pulse';
+import { editPersona } from './library/personas';
+import { autoDiagnose, setDiagnosisSharing } from './diagnostics/auto-diagnosis';
+import { setPulseSharing } from './service/pulse';
 import { stubPage, stubRelay, testServer, upstream } from './testing';
 
 const server = testServer();

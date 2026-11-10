@@ -39,7 +39,7 @@ export type PromptInput = {
   memory: MemoryFill | null;
   // Pre-agent notes (engine/agent agentNotes).
   notes?: string;
-  // The card's additionalText paragraphs found for this send, nearest first (runtime/additional).
+  // The card's additionalText paragraphs found for this send, nearest first (runtime/chat/additional).
   additional?: string[];
   pictures: PictureSend;
 };
@@ -561,7 +561,7 @@ export type IllustrationInput = {
   index: number;
   paragraphs: string[];
   count: number;
-  // The portraits the pictures are drawn with (runtime/likeness).
+  // The portraits the pictures are drawn with (runtime/tasks/likeness).
   portraits: Told[];
   // The chat's 삽화 노트, '' for none.
   note: string;
@@ -644,7 +644,7 @@ export type AgentInput = {
   // A post agent's: the reply as the agent before it left it, the stored text for the first. Absent for a pre agent,
   // whose source is the message as sent. Only one that rewrites the reply gets it masked by its 보호 패턴.
   text?: string;
-  // The agent's memory as it stands (runtime/agents memoryOf), '' for none yet.
+  // The agent's memory as it stands (runtime/tasks/agents memoryOf), '' for none yet.
   memory: string;
   seed: string;
   countTokens: (text: string) => number;

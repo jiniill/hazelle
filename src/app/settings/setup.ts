@@ -2,8 +2,8 @@ import { refOf, type ModelRef, type Role } from '../../connectors/assignment';
 import { entryName } from '../../connectors/types';
 import { FEATURE_LABS, type Feature } from '../../model/features';
 import type { Stored } from '../../model/kinds';
-import type { Route, RouteFailure, RolePick } from '../../runtime/assignment';
-import type { Overview, TaskRun } from '../../runtime/overview';
+import type { Route, RouteFailure, RolePick } from '../../runtime/models/assignment';
+import type { Overview, TaskRun } from '../../runtime/tasks/overview';
 import {
   describeIllustrateFailure,
   describeMascotFailure,
@@ -17,7 +17,7 @@ import { taskRuns, type TaskRuns } from '../common/taskRuns';
 import { EMPTY_VALUE, FEATURE_NAMES, FEATURES_TITLE, follows, LAB, MODEL_PINNED, MODEL_ROLES, NOT_PICKED, NOT_STARRED, onOff, PAGES, promptName, SCOPE, STARRED } from '../common/words';
 import type { FlowColumn, FlowEdge, FlowKind, FlowNode } from '../ui';
 
-// 내 구성: the map and what needs fixing, both read off one Overview (runtime/overview).
+// 내 구성: the map and what needs fixing, both read off one Overview (runtime/tasks/overview).
 
 export const ROLES_TITLE = '역할';
 export const LEGEND: Partial<Record<FlowKind, string>> = { follow: '기본 모델 사용', own: '직접 지정', gap: EMPTY_VALUE, off: '꺼진 기능' };

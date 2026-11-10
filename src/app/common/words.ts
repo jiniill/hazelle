@@ -1,4 +1,4 @@
-import type { LeftOut } from '../../runtime/risu-export';
+import type { LeftOut } from '../../runtime/export/risu-export';
 import type { Role } from '../../connectors/assignment';
 import type { RegexScript } from '../../engine/import/types';
 import type { Feature } from '../../model/features';
@@ -34,7 +34,7 @@ export const EMBED_HELP = '장기 기억과 추가 설명, 플러그인이 비�
 
 export const BOT_MODELS = '봇의 모델 호출';
 export const BOT_MODELS_HELP = '봇 스크립트가 대화 응답과 별개로 모델을 호출해요. 호출할 때마다 토큰과 비용이 추가로 사용돼요.';
-// Risu's additionalText (runtime/additional).
+// Risu's additionalText (runtime/chat/additional).
 export const ADDITIONAL_TEXT = '추가 설명';
 export const ADDITIONAL_TEXT_HELP = `빈 줄로 나눈 문단 중 대화 초반과 가장 관련 있는 ${ADDITIONAL_MOST}개를 ${MODEL_ROLES.embed}로 찾아 설명 뒤에 넣어요.`;
 export const CARD_WRITES = '스크립트의 카드 수정';
@@ -191,7 +191,7 @@ export const onOff = (on: boolean) => (on ? '켬' : '끔');
 // 디스플레이's section for how a chat's own lines show, and its row for where pictures stand (the 삽화 page's door to it).
 export const CHAT_LOOK = '채팅 화면';
 export const PICTURE_PLACE = '이미지 위치';
-// 토큰 절약 (runtime/preread), a 실험실 experiment whose name may still change: every screen names it through this.
+// 토큰 절약 (runtime/tasks/preread), a 실험실 experiment whose name may still change: every screen names it through this.
 export const PRE_READ = '토큰 절약';
 export const PRE_READ_HELP = `${MODEL_ROLES.aux}이 긴 내용을 요약해 ${MODEL_ROLES.main}의 입력 토큰을 아껴요. 요약에서 빠진 내용은 반영되지 않을 수 있어요. pdf-pod 플러그인에서 가져온 아이디어예요.`;
 export const PRE_READ_PARTS: Record<keyof PrereadParts, string> = { chat: '대화', system: '시스템 프롬프트', lore: '로어북' };

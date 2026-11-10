@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { resolveConnection } from '../../connectors/registry';
 import type { Account, Connection, Meter, MeterReset, MeterUnit } from '../../connectors/types';
-import type { MetersResult } from '../../runtime/meters';
-import { metersKey } from '../../runtime/pool';
+import type { MetersResult } from '../../runtime/models/meters';
+import { metersKey } from '../../runtime/models/pool';
 import { pace, verdict } from '../../model/pace';
 import { ACTS } from '../common/acts';
 import { describeMetersFailure } from '../common/failure';
@@ -55,7 +55,7 @@ export function MeterGauge({ meter, turn = null, waiting = false, labeled = true
   return <Gauge label={label} {...left} mark={paced.even / 100} status={status} tone={tone} note={note} />;
 }
 
-// An account's meters as the pool holds them (runtime/pool), so the pick reads what is shown. null while they load.
+// An account's meters as the pool holds them (runtime/models/pool), so the pick reads what is shown. null while they load.
 export function useMeters(connection: Connection, account: Account): { result: MetersResult | null; retry: () => void } {
   const { credentials } = useSession();
   const [result, setResult] = useState<MetersResult | null>(null);

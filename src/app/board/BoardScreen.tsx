@@ -11,7 +11,7 @@ import { useAccount, useStanding } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, ChoiceGroup, IconButton, Menu, MenuItem, NavBar, NavGroup, NavRow, NoticeBar, Row, Screen, Tabs, useSplit } from '../ui';
-import { readPosts } from '../../runtime/board';
+import { readPosts } from '../../runtime/service/board';
 import { useNicknameGate, useOwnNickname } from './nickname';
 import { PostList } from './parts';
 

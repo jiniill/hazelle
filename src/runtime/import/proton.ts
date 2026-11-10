@@ -18,7 +18,7 @@ import {
 } from '@protontech/drive-sdk';
 import { PACKED_EXTENSION, UNPACKED_EXTENSIONS } from '../../engine/import/extensions';
 import { BUILT_VERSION } from '../installation';
-import { relayRaw, type RelayFailure } from '../relay';
+import { relayRaw, type RelayFailure } from '../models/relay';
 import type { LinkAnswer, LinkFailure, Progress } from './link';
 
 // The SDK's terms ask for this exact form and forbid passing as a Proton client.

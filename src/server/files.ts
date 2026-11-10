@@ -116,7 +116,7 @@ async function publish(c: Context<AppEnv>, id: string) {
 }
 
 // The ids of every file the account holds, stored or only reserved, a page at a time after the last one given: what its
-// sweep weighs against the objects naming files (runtime/files).
+// sweep weighs against the objects naming files (runtime/files/files).
 files.get('/', async (c) => {
   const after = c.req.query('after') ?? '';
   if (after && !FILE_ID.test(after)) return fail(c, 400, 'bad-input');

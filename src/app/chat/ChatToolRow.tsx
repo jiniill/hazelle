@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { Fragment, useState, type ReactNode } from 'react';
-import { hideTool, setToolOrder } from '../../runtime/characters';
+import { hideTool, setToolOrder } from '../../runtime/library/characters';
 import { useSettings, useStore } from '../session';
 import { CheckList, MenuBack, MoreMenu, Section, useMenuClose } from '../ui';
 import { inToolOrder } from './toolMenu';

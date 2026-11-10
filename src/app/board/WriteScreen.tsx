@@ -1,10 +1,10 @@
 import { Globe, Lock } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { CATEGORIES, MAX_POST_LENGTH, MAX_TITLE_LENGTH, type Category, type Post } from '../../contracts/board';
-import { addPostPicture, editPost, readPost, writePost } from '../../runtime/board';
-import { stateFacts } from '../../runtime/diagnostic-state';
-import { lastPlace } from '../../runtime/auto-diagnosis';
-import { diagnosticReport } from '../../runtime/diagnostics';
+import { addPostPicture, editPost, readPost, writePost } from '../../runtime/service/board';
+import { stateFacts } from '../../runtime/diagnostics/diagnostic-state';
+import { lastPlace } from '../../runtime/diagnostics/auto-diagnosis';
+import { diagnosticReport } from '../../runtime/diagnostics/diagnostics';
 import { describeFailure } from '../common/failure';
 import { BUILT_VERSION } from '../../runtime/installation';
 import { useAttempt } from '../common/useAttempt';
@@ -56,7 +56,7 @@ const REACH_CARDS: { value: Reach; label: string; sub: string; mark: ReactNode }
   { value: 'operator', label: BOARD.operatorOnly, sub: '운영자와 나만 읽어요. 오류 제보에 좋아요', mark: <Tag icon={Lock} /> },
 ];
 
-// A post read for its edit; only its title, text and category change (runtime/board editPost).
+// A post read for its edit; only its title, text and category change (runtime/service/board editPost).
 export function EditScreen({ id, back }: { id: number; back: Back }) {
   const loaded = useLoaded(() => readPost(id), [id]);
   if (!loaded.data) return (

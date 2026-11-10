@@ -9,7 +9,7 @@ import { dayHash } from './visits';
 const ROWS_PER_DAY = 20_000;
 const SHOWN = 200;
 
-// No session is read here (runtime/auto-diagnosis sends none): a row names no account, and accounts-only is the
+// No session is read here (runtime/diagnostics/auto-diagnosis sends none): a row names no account, and accounts-only is the
 // client's rule, as for the pulse labels.
 export const diagnoses = new Hono<AppEnv>().post('/', async (c) => {
   const visitor = visitorOf(c);

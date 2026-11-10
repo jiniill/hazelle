@@ -1,4 +1,4 @@
-import type { Progress } from '../../runtime/characters';
+import type { Progress } from '../../runtime/library/characters';
 import type { ProgressStep } from '../ui';
 
 // One reading of a character import's step, for a Progress row (ImportFlow) and for a card's busy words (a copy).

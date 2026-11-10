@@ -1,6 +1,6 @@
 import { byParagraph, type Scene } from '../../model/illustration';
 import type { Stored } from '../../model/kinds';
-import type { Drawing, IllustrateFailure } from '../../runtime/illustrate';
+import type { Drawing, IllustrateFailure } from '../../runtime/tasks/illustrate';
 
 // What a place of a message holds: a scene being drawn or failed comes before its pictures. A run that failed with no
 // scene has no paragraph and goes at the message end. pictures: the place's, oldest first.

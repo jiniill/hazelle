@@ -1,7 +1,7 @@
 import { expect, test, type BrowserContext, type Page, type Route } from '@playwright/test';
 import { build, type Rollup } from 'vite';
 import { fileURLToPath } from 'node:url';
-import { UNFED } from '../src/runtime/object-cache';
+import { UNFED } from '../src/runtime/store/object-cache';
 import { GENERATION_STEPS } from '../src/runtime/testing/cache';
 import { CARD, confirmImport, pickBot, settingsPage, signUpAsGuest } from './helpers';
 
@@ -190,7 +190,7 @@ test('the browser cache keeps the generation rules MemoryCache keeps, on real In
   await served(page.context());
   await page.goto('/');
   const source = (path: string) => JSON.stringify(fileURLToPath(new URL(path, import.meta.url)));
-  const entry = `import { deviceCache } from ${source('../src/runtime/device-cache.ts')}; import { generationSteps } from ${source('../src/runtime/testing/cache.ts')}; Object.assign(window, { steps: () => generationSteps(deviceCache('contract')) });`;
+  const entry = `import { deviceCache } from ${source('../src/runtime/device/device-cache.ts')}; import { generationSteps } from ${source('../src/runtime/testing/cache.ts')}; Object.assign(window, { steps: () => generationSteps(deviceCache('contract')) });`;
   const bundled = (await build({
     configFile: false,
     logLevel: 'silent',

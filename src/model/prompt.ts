@@ -95,14 +95,14 @@ export type ConversationPrompt = {
   companions?: string[];
   // Chat variables' defaults in its chats, under the card's (Risu's templateDefaultVariables).
   variables?: [string, string][];
-  // 기능 in its chats, over the 공용 ones (runtime/features).
+  // 기능 in its chats, over the 공용 ones (runtime/tasks/features).
   features?: FeatureSwitches;
-  // 에이전트 in its chats, stacked after 공용's (runtime/agents agentsOf).
+  // 에이전트 in its chats, stacked after 공용's (runtime/tasks/agents agentsOf).
   agents?: string[];
 };
 
-// No task prompt but an agent's picks a model: its feature's settings do (runtime/assignment taskModel; stored ones
-// moved there by runtime/upgrade moveTaskModels). Text blocks have no card-replacement marks.
+// No task prompt but an agent's picks a model: its feature's settings do (runtime/models/assignment taskModel; stored ones
+// moved there by runtime/store/upgrade moveTaskModels). Text blocks have no card-replacement marks.
 // protect regex sources use gu and join engine/protect spans passed through unchanged.
 export type TranslatePrompt = {
   task: 'translate';

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { RETRIES } from '../../connectors/registry';
 import { RETRY_MOST } from '../../contracts/streams';
-import { setDefaultModel } from '../../runtime/assignment';
-import { ANSWER_INSTRUCTION, answerInstructionOf, LORE_SCAN, setAnswerInstruction, setSharedLoreScan, setToolRounds, sharedLoreScan } from '../../runtime/chat-context';
-import { TOOL_ROUNDS } from '../../runtime/tool-loop';
-import { setSharedRetries } from '../../runtime/connections';
+import { setDefaultModel } from '../../runtime/models/assignment';
+import { ANSWER_INSTRUCTION, answerInstructionOf, LORE_SCAN, setAnswerInstruction, setSharedLoreScan, setToolRounds, sharedLoreScan } from '../../runtime/chat/chat-context';
+import { TOOL_ROUNDS } from '../../runtime/models/tool-loop';
+import { setSharedRetries } from '../../runtime/models/connections';
 import { ROLE_ROWS, RolePicker } from '../common/RolePicker';
 import { filled, typedText, useTypedNumber } from '../common/typed';
 import { count, readCount } from '../common/typedNumber';

@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { importCard } from '../../engine/import/card';
 import { convertPreset } from '../../engine/import/preset';
 import { readTool } from '../../engine/import/tool';
-import type { ObjectStore } from '../../runtime/store';
+import type { ObjectStore } from '../../runtime/store/store';
 import { readingOf, type Parsed } from './importers';
 
 it('reads each parsed file as its own kind, and a card as a character', async () => {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SHARE_ID } from '../../contracts/shares';
-import { holdShare, releaseShare } from '../../runtime/admin';
+import { holdShare, releaseShare } from '../../runtime/service/admin';
 import { describeFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { useToast } from '../toast';

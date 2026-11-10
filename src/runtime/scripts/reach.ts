@@ -5,22 +5,22 @@ import type { HttpRequest } from '../../contracts/http';
 import type { ChatScope } from '../../engine/render';
 import type { EmbedResult, FetchResult, Host, ModelMessage, ModelRefusal, ModelResult, ToolReach } from '../../engine/script-api';
 import { live, type PackOwner } from '../../model/library';
-import { chatModel, embedModel, sharedModel } from '../assignment';
-import { setBackground } from '../characters';
-import { keepCall } from '../chat-log';
-import type { Costs } from '../cost';
-import type { Credentials } from '../credential';
-import { countTexts, embedTexts } from '../embed';
-import { gather, receiptOf } from '../generate';
-import { writerOf, type Writer } from '../profiles';
-import { relayRaw } from '../relay';
-import type { ReadModels } from '../read-model';
-import type { RequestLog } from '../request-log';
+import { chatModel, embedModel, sharedModel } from '../models/assignment';
+import { setBackground } from '../library/characters';
+import { keepCall } from '../chat/chat-log';
+import type { Costs } from '../models/cost';
+import type { Credentials } from '../models/credential';
+import { countTexts, embedTexts } from '../models/embed';
+import { gather, receiptOf } from '../models/generate';
+import { writerOf, type Writer } from '../models/profiles';
+import { relayRaw } from '../models/relay';
+import type { ReadModels } from '../store/read-model';
+import type { RequestLog } from '../models/request-log';
 import type { ScriptInteractions } from './interactions';
-import type { ObjectStore } from '../store';
-import { callOf, generateOnce, pageCall, taskCall } from '../streams';
-import type { Tokens } from '../token-calibration';
-import { keepRow } from '../usage';
+import type { ObjectStore } from '../store/store';
+import { callOf, generateOnce, pageCall, taskCall } from '../models/streams';
+import type { Tokens } from '../models/token-calibration';
+import { keepRow } from '../models/usage';
 
 export class ScriptReach {
   constructor(

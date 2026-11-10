@@ -1,6 +1,6 @@
 import { GUESTS_PER_ADDRESS, VISITORS_PER_ADDRESS, type VisitCohorts } from '../../contracts/admin';
 import { PULSE_FLOORS } from '../../contracts/pulse';
-import { readVisits } from '../../runtime/admin';
+import { readVisits } from '../../runtime/service/admin';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
 import { Empty, Panel, Table, type TableColumn } from '../ui';

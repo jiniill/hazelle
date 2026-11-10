@@ -16,7 +16,7 @@ import {
   setPostLocked,
   setPostStatus,
   writeComment,
-} from '../../runtime/board';
+} from '../../runtime/service/board';
 import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
 import { tourOf } from '../common/release';

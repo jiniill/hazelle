@@ -1,4 +1,4 @@
-import { readAccounts, readAdminAccount } from '../../runtime/admin';
+import { readAccounts, readAdminAccount } from '../../runtime/service/admin';
 import { HEAD_ROWS, usePages } from '../common/useLoaded';
 import { useToast } from '../toast';
 

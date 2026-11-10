@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ConnectionType } from '../../connectors/types';
-import { changeKey } from '../../runtime/connections';
+import { changeKey } from '../../runtime/models/connections';
 import { describeKeyFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { useSession } from '../session';

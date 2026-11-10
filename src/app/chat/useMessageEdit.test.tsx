@@ -1,11 +1,11 @@
 import { act } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
-import type { Shown } from '../../runtime/talk';
-import { editShown } from '../../runtime/message-acts';
+import type { Shown } from '../../runtime/chat/talk';
+import { editShown } from '../../runtime/chat/message-acts';
 import { probeRoot } from '../ui/probe';
 import { useMessageEdit } from './useMessageEdit';
 
-vi.mock('../../runtime/message-acts', () => ({ editShown: vi.fn(async () => ({ ok: true })) }));
+vi.mock('../../runtime/chat/message-acts', () => ({ editShown: vi.fn(async () => ({ ok: true })) }));
 vi.mock('../session', () => ({ useSession: () => ({}) }));
 vi.mock('../toast', () => ({ useToast: () => ({ failed: vi.fn(), settled: vi.fn(), undoable: vi.fn() }) }));
 

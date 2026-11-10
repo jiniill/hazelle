@@ -1,5 +1,5 @@
 import { FEATURE_ICONS } from '../common/featureIcons';
-import { sendsNotes, type translatorOf } from '../../runtime/translate';
+import { sendsNotes, type translatorOf } from '../../runtime/tasks/translate';
 import { PerCharacter, type PromptDoor } from '../common/TaskPrompt';
 import { TranslateRows } from '../common/TranslateRows';
 import { inFeature, NOTE_UNSENT, opens, scopeTag, TRANSLATOR_NOTE } from '../common/words';
@@ -7,7 +7,7 @@ import { useSettings } from '../session';
 import { navigate } from '../shell/router';
 import { Button, Menu, Section, SettingRow, Stack, ToolButton } from '../ui';
 import type { RowTool } from './ChatToolRow';
-import type { TranslateSetup } from '../../runtime/characters';
+import type { TranslateSetup } from '../../runtime/library/characters';
 import type { TranslationActions } from './useChatTranslation';
 
 type Translator = ReturnType<typeof translatorOf>;

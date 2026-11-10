@@ -8,7 +8,7 @@ import { risuChatFile, risuChatHtml } from '../../engine/import/risu-character';
 import { SILLYTAVERN_CHAT, sillyTavernChat } from '../../engine/import/sillytavern-chat';
 import { originalParts, risumParts, type Part } from '../../engine/import/original';
 import { fileSource } from '../../engine/import/source';
-import { readChatFile } from '../chat-file';
+import { readChatFile } from '../export/chat-file';
 import type { Imported, ImportedModule, Picture, RisuBackup, RisuChat } from '../../engine/import/types';
 import { MESSAGE_BYTES, MESSAGE_PAGE, type AssetRead, type CardData, type Method, type ModuleData, type PartRead, type Replies, type Request } from './protocol';
 

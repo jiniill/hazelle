@@ -1,6 +1,6 @@
 import { act, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
-import type { Sending } from '../../runtime/turn-context';
+import type { Sending } from '../../runtime/chat/turn-context';
 import { probeRoot } from '../ui/probe';
 import { Variables } from './InspectVariables';
 
@@ -10,7 +10,7 @@ const model = { subscribe: () => () => {}, snapshot: () => null };
 const session = { store: { evaluation: { variables } }, read: { chat: () => model } };
 vi.mock('../session', () => ({ useSession: () => session }));
 vi.mock('../toast', () => ({ useToast: () => ({}) }));
-vi.mock('../../runtime/chat-context', () => ({ inspectToggles: () => [] }));
+vi.mock('../../runtime/chat/chat-context', () => ({ inspectToggles: () => [] }));
 vi.mock('../common/useSearch', () => ({ useSearch: <T,>(found: T[]) => ({ field: null, none: null, found }) }));
 vi.mock('../ui', async (original) => ({
   ...(await original<typeof import('../ui')>()),

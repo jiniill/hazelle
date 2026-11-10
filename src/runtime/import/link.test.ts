@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { RELAY_HEADER } from '../../contracts/http';
-import { directTransport, holdTransport, accountTransport } from '../relay';
+import { directTransport, holdTransport, accountTransport } from '../models/relay';
 import { downloadLink, fileName, readLink } from './link';
 
 const ID = '39e4509e-82f1-4709-ad0a-665e6666a025';

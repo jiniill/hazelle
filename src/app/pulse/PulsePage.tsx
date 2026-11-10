@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PULSE_FLOORS, PULSE_ROLES, type PulseAnswer, type PulseBoard, type PulseOrder, type PulseRanking, type PulseRole } from '../../contracts/pulse';
-import { readPulse, readPulseWeek } from '../../runtime/pulse';
+import { readPulse, readPulseWeek } from '../../runtime/service/pulse';
 import { PublicScreen } from '../common/PublicScreen';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';

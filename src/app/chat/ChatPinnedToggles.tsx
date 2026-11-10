@@ -1,5 +1,5 @@
 import { ListChecks, ToggleLeft, ToggleRight } from 'lucide-react';
-import { setPinnedTogglesSpread } from '../../runtime/characters';
+import { setPinnedTogglesSpread } from '../../runtime/library/characters';
 import { ToggleFlip, type FlippedToggle } from '../common/ToggleChoice';
 import { useSettings, useStore } from '../session';
 import { ChoiceGroup, Menu, MenuItem, SettingRow, Stack, ToolButton } from '../ui';

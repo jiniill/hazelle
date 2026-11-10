@@ -1,8 +1,8 @@
 import { ImagePlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { MAX_POST_PICTURES, type Post } from '../../contracts/board';
-import { addPostPicture, deletePostPicture, readPostPicture } from '../../runtime/board';
-import { postedPicture } from '../../runtime/picture';
+import { addPostPicture, deletePostPicture, readPostPicture } from '../../runtime/service/board';
+import { postedPicture } from '../../runtime/files/picture';
 import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';

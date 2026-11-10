@@ -1,4 +1,4 @@
-import { addPersona } from '../../runtime/personas';
+import { addPersona } from '../../runtime/library/personas';
 import { ACTS, importOf, newOf } from '../common/acts';
 import { useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';

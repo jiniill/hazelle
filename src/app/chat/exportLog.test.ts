@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { Display } from '../../engine/display';
 import type { Receipt, Version } from '../../model/chat';
-import type { Shown } from '../../runtime/talk';
+import type { Shown } from '../../runtime/chat/talk';
 import { placeMark } from '../../model/illustration';
 import type { Stored } from '../../model/kinds';
 import { displayed, logDraft, resolveLog, untranslated, type LogText } from './exportLog';

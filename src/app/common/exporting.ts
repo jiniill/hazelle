@@ -1,6 +1,6 @@
 import type { ApiResult } from '../../runtime/api';
-import type { BackupOutput } from '../../runtime/backup';
-import type { ExportStep } from '../../runtime/card-file';
+import type { BackupOutput } from '../../runtime/export/backup-zip';
+import type { ExportStep } from '../../runtime/export/card-file';
 import type { Toasts } from '../toast';
 import { downloadOutput } from './download';
 import { SAVING_FILE } from './words';

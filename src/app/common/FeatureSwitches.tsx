@@ -1,7 +1,7 @@
 import type { Feature, FeatureSwitches as Switches } from '../../model/features';
 import type { ApiFailure } from '../../runtime/api';
-import { availableFeatures, above, inherited, type FeatureLayer } from '../../runtime/features';
-import type { ObjectStore } from '../../runtime/store';
+import { availableFeatures, above, inherited, type FeatureLayer } from '../../runtime/tasks/features';
+import type { ObjectStore } from '../../runtime/store/store';
 import { accountSettings } from '../../runtime/account-settings';
 import { useLibrary, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
