@@ -16,8 +16,9 @@ function subscribe(listener: () => void) {
 
 const address = () => location.pathname + location.search + location.hash;
 
-// The page held behind a layer's window keeps reading the route it was opened on.
-export const HeldRoute = createContext<Route | null>(null);
+// What draws a route reads that one, not the address's: the page held behind a layer's window keeps the route it was
+// opened on, and what stays on screen while the chat asked for opens keeps its own (Layout.tsx).
+export const ShownRoute = createContext<Route | null>(null);
 
 export function useAddress(): Address {
   const at = useSyncExternalStore(subscribe, address);
@@ -25,9 +26,9 @@ export function useAddress(): Address {
 }
 
 export function useRoute(): Route {
-  const held = useContext(HeldRoute);
+  const shown = useContext(ShownRoute);
   const { route } = useAddress();
-  return held ?? route;
+  return shown ?? route;
 }
 
 // An open overlay holds one same-URL entry of its own, so a back that closes the newest writes no history. An entry's

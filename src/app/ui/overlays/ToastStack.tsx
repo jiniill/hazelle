@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type Key, type PointerEvent, type ReactNode, type RefObject } from 'react';
+import { classNames } from '../foundation/classNames';
 import { leaves, useLeaves } from '../foundation/leave';
 import { useWide } from '../foundation/media';
 import styles from './ToastStack.module.css';
@@ -72,7 +73,7 @@ export function ToastStack({ items, waiting, held: open, onHold: hold, floor }: 
         <div
           key={key}
           ref={leaves}
-          className={`${styles.item} ${away === 1 ? styles.rises : styles.drops}${index > 0 && !open ? ` ${styles.behind}` : ''}`}
+          className={classNames(styles.item, away === 1 ? styles.rises : styles.drops, index > 0 && !open && styles.behind)}
           style={{ '--index': index, '--lift': `${lifts[index]}px` } as CSSProperties}
           inert={index > 0 && !open}
         >

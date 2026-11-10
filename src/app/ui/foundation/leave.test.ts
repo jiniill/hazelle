@@ -1,12 +1,12 @@
 import { expect, it, vi } from 'vitest';
 import { leaves } from './leave';
 
-const part = (scrollTop = 0) => ({ scrollTop, removeAttribute: vi.fn() });
+const part = (scrollTop = 0) => ({ scrollTop, removeAttribute: vi.fn(), getAnimations: (): { finished: Promise<unknown> }[] => [] });
 
 function leaving({ connected, parentConnected = true, finish = Promise.resolve() }: { connected: boolean; parentConnected?: boolean; finish?: Promise<unknown> }) {
   const inner = part(7);
   const parent = { isConnected: parentConnected, appendChild: vi.fn(() => ((element.scrollTop = 0), (inner.scrollTop = 0))) };
-  const element = Object.assign(part(40), { parentNode: parent, isConnected: connected, querySelectorAll: () => [inner], dataset: {} as DOMStringMap, getAnimations: () => [{ finished: finish }], remove: vi.fn(), inert: false, ariaHidden: null as string | null });
+  const element = Object.assign(part(40), { parentNode: parent, isConnected: connected, querySelectorAll: () => [inner], children: [inner], dataset: {} as DOMStringMap, getAnimations: () => [{ finished: finish }], remove: vi.fn(), inert: false });
   return { element, inner, parent, left: leaves(element as unknown as HTMLElement) };
 }
 

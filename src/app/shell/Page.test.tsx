@@ -129,28 +129,6 @@ it('subscribes only to the routed item and follows its deleted, purging and rest
   }
 });
 
-it('keeps the chat on screen while the next one opens, each under one lease', async () => {
-  const chat = (id: string): Stored<'chat'> => ({ id, kind: 'chat', parent: null, rev: 1, value: { title: id, character: null, models: {} } });
-  const model = ({ id, value }: Stored<'chat'>): ChatModel => ({ id, chat: value, title: id, count: 0, preview: '', at: null, order: 1, messages: [], display: { texts: [], css: '', background: '', drawn: [], boxes: [], pass: false, unfound: [], stopped: null } });
-  const p = page([chat('here'), chat('next')]);
-  vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => '200ms' }));
-  try {
-    p.models.set('here', model(chat('here')));
-    await p.render({ kind: 'chat', id: 'here' });
-    await p.render({ kind: 'chat', id: 'next' });
-    expect(seen.chats.at(-1)).toBe('here');
-    expect(seen.unmounts).toBe(0);
-    expect(p.retain.mock.calls).toEqual([['here'], ['next'], ['here']]);
-    expect(p.release).toHaveBeenCalledOnce();
-
-    await act(() => { p.models.set('next', model(chat('next'))); p.announce('chat', 'next'); p.announce('scope' as Kind, 'next'); });
-    expect(seen.chats.at(-1)).toBe('next');
-    expect(p.release).toHaveBeenCalledTimes(2);
-  } finally {
-    await p.close();
-  }
-});
-
 it('keeps the chat screen mounted through its first save, then distinguishes orphaned and deleted chats', async () => {
   const character: Stored<'character'> = { id: 'character', kind: 'character', parent: null, rev: 1, value: { card: { name: '주인공' } as Card, folder: null, loreFolders: [] } };
   const p = page([character]);

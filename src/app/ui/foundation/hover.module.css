@@ -1,4 +1,4 @@
-/* How a control answers the pointer, and how far from it a finger may press. A component takes a look by composing its class and never redeclares it. */
+/* How a control answers the pointer and a press, and how far from it a finger may press. A component takes a look by composing its class and never redeclares it. */
 @layer reset, looks;
 
 @layer looks {
@@ -47,19 +47,30 @@
 @media (hover: hover) {
   .fill:hover:not(:disabled) {
     background: var(--color-surface-hover);
-    transition-duration: var(--duration-instant);
   }
 
   .ink:hover:not(:disabled) {
     color: var(--color-text);
+  }
+
+  /* The answer comes at once and only its going eases, for a component's own hover too: it composes eased. Not under
+     a finger, where the hover stays after a tap and the press would go as abruptly as it came. */
+  .eased:hover:not(:disabled) {
     transition-duration: var(--duration-instant);
   }
 }
 
+/* A press answers as the pointer does, and under a finger, which has no hover, it is all that says the press was felt. */
+.fill:active:not(:disabled),
 .fillOpen[aria-expanded='true'] {
   background: var(--color-surface-hover);
 }
 
+.ink:active:not(:disabled),
 .inkOpen[aria-expanded='true'] {
   color: var(--color-text);
+}
+
+.eased:active:not(:disabled) {
+  transition-duration: var(--duration-instant);
 }

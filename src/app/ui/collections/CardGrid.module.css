@@ -106,12 +106,12 @@
   color: var(--color-accent);
 }
 
-.card:hover .picture {
+.card:is(:hover, :active) .picture {
   outline: var(--border-thin) solid var(--color-border-strong);
 }
 
 .selected .picture,
-.selected:hover .picture {
+.selected:is(:hover, :active) .picture {
   outline: var(--focus-ring-width) solid var(--color-accent);
   outline-offset: var(--focus-ring-offset);
 }
@@ -132,7 +132,7 @@
 }
 
 .current .picture,
-.current:hover .picture {
+.current:is(:hover, :active) .picture {
   outline: var(--focus-ring-width) solid var(--color-accent);
   outline-offset: var(--focus-ring-offset);
 }
@@ -244,8 +244,8 @@
   background: var(--color-folder-bg);
 }
 
-.card:hover .tab,
-.card:hover .body {
+.card:is(:hover, :active) .tab,
+.card:is(:hover, :active) .body {
   background: var(--color-folder-bg-hover);
 }
 

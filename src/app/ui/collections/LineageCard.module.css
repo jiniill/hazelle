@@ -1,5 +1,6 @@
 /* A stem's head in the 분기 지도: as tall as --lineage-head, which the placement (stems.ts) reads too. */
 .card {
+  composes: eased from '../foundation/hover.module.css';
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -17,7 +18,7 @@
     background var(--motion-respond);
 }
 
-.card:is(button):hover {
+.card:is(button):is(:hover, :active) {
   border-color: var(--color-border-strong);
   background: var(--color-surface-hover);
 }
@@ -33,7 +34,7 @@
 }
 
 .current,
-.current:is(button):hover {
+.current:is(button):is(:hover, :active) {
   border-color: var(--color-accent-border);
   background: var(--color-accent-bg);
   box-shadow: var(--lineage-ring);

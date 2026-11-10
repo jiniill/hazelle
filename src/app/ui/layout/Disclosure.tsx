@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import { useContext, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { classNames } from '../foundation/classNames';
 import { Icon } from '../foundation/Icon';
+import { afterMotion } from '../foundation/leave';
 import { OpenFold, useSeeking } from '../foundation/seek';
 import styles from './Disclosure.module.css';
 
@@ -24,7 +25,7 @@ export function Disclosure({ label, variant = 'line', menu, open: held, onOpen, 
   useLayoutEffect(() => {
     if (open || stand !== 'live') return;
     let folding = true;
-    void Promise.allSettled(fold.current!.getAnimations().map((animation) => animation.finished)).then(() => folding && setStand('shut'));
+    void afterMotion(fold.current!).then(() => folding && setStand('shut'));
     return () => {
       folding = false;
     };
@@ -47,7 +48,7 @@ export function Disclosure({ label, variant = 'line', menu, open: held, onOpen, 
         {variant === 'line' && <span className={styles.rule} aria-hidden />}
         {menu}
       </div>
-      <div ref={fold} id={id} className={classNames(styles.fold, open && styles.unfolded, stand === 'live' && styles.unfolds)} hidden={shut} inert={!open}>
+      <div ref={fold} id={id} className={classNames(styles.fold, !open && styles.folded, stand === 'live' && styles.unfolds)} hidden={shut} inert={!open}>
         <div className={styles.body}>{(!shut || seeking) && <OpenFold value={openAll}>{children}</OpenFold>}</div>
       </div>
     </div>

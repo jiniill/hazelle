@@ -266,6 +266,7 @@
 
 .count {
   composes: detail from '../foundation/type.module.css';
+  composes: eased from '../foundation/hover.module.css';
   min-width: var(--space-32);
   line-height: var(--leading-none);
   font-variant-numeric: tabular-nums;
@@ -273,7 +274,7 @@
   border-radius: var(--radius-sm);
 }
 
-.count:hover:enabled {
+.count:is(:hover, :active):enabled {
   background: var(--color-surface);
   color: var(--color-text);
 }

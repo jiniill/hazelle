@@ -33,38 +33,34 @@
     --grow-from: var(--motion-near);
   }
 
+  /* A height that folds: a grid row easing between its content's height and none, around a body that clips while it
+     is folded. Unfolded the body clips nothing, so a menu or a focus ring inside reaches past it, but only once the
+     row has grown: unclipping sooner lets what it holds spill over what follows. Folded by `folded` on the row, or
+     by a component's own rule that sets the same. */
+  .fold {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--motion-move);
+  }
+
+  .foldBody {
+    min-height: 0;
+    overflow: visible;
+    transition: overflow var(--duration-spring) step-end allow-discrete;
+  }
+
+  .folded {
+    grid-template-rows: 0fr;
+  }
+
+  .folded > .foldBody {
+    overflow: hidden;
+    transition-timing-function: step-start;
+  }
+
   /* A sign of waiting, hidden until the wait has lasted, unlike an entrance: a short wait shows nothing. */
   .lateIn {
     animation: late var(--motion-respond) var(--duration-wait) backwards;
-  }
-
-  /* After every entrance, so what leaves (leave.ts) goes the way it came instead; its parts start none of theirs
-     over, but the one it was only the ground of. */
-  [data-leaving] * {
-    animation: none;
-  }
-
-  .fadeIn[data-leaving] {
-    animation: fadeOut var(--motion-leave) forwards;
-  }
-
-  .riseIn[data-leaving],
-  [data-leaving] > .riseIn {
-    animation: sink var(--motion-leave) forwards;
-  }
-
-  .dropIn[data-leaving],
-  [data-leaving] > .dropIn {
-    animation: lift var(--motion-leave) forwards;
-  }
-
-  .slideIn[data-leaving] {
-    animation: slide-out var(--motion-leave) forwards;
-  }
-
-  .growIn[data-leaving],
-  [data-leaving] > .growIn {
-    animation: shrink var(--motion-leave) forwards;
   }
 
   /* Its duration is the user's: the class that composes it sets animation-duration. */
@@ -119,6 +115,35 @@
 
   .twinkle {
     animation: twinkle var(--duration-ripple) var(--ease-loop) infinite;
+  }
+
+  /* After every animation above, so what leaves (leave.ts) goes the way it came instead; put back on the page, its
+     parts start none of theirs over, but the one it was only the ground of. */
+  [data-leaving] * {
+    animation: none;
+  }
+
+  .fadeIn[data-leaving] {
+    animation: fadeOut var(--motion-leave) forwards;
+  }
+
+  .riseIn[data-leaving],
+  [data-leaving] > .riseIn {
+    animation: sink var(--motion-leave) forwards;
+  }
+
+  .dropIn[data-leaving],
+  [data-leaving] > .dropIn {
+    animation: lift var(--motion-leave) forwards;
+  }
+
+  .slideIn[data-leaving] {
+    animation: slide-out var(--motion-leave) forwards;
+  }
+
+  .growIn[data-leaving],
+  [data-leaving] > .growIn {
+    animation: shrink var(--motion-leave) forwards;
   }
 
   @keyframes fade {

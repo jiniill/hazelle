@@ -57,7 +57,7 @@
     opacity var(--motion-respond);
 }
 
-.node:hover:not(:disabled) {
+.node:is(:hover, :active):not(:disabled) {
   border-color: var(--color-border-strong);
 }
 
@@ -78,7 +78,7 @@
 }
 
 .picked,
-.picked:hover:not(:disabled) {
+.picked:is(:hover, :active):not(:disabled) {
   border-color: var(--color-accent-border);
   background: var(--color-accent-bg);
 }

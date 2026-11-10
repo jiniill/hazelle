@@ -117,6 +117,7 @@
 
 /* Centred on its point on the stem. */
 .pill {
+  composes: eased from '../foundation/hover.module.css';
   position: absolute;
   z-index: var(--layer-raised);
   display: inline-flex;
@@ -137,8 +138,7 @@
     background var(--motion-respond);
 }
 
-.pill:is(button):hover,
-.pill:is(button):focus-visible {
+.pill:is(button):is(:hover, :active, :focus-visible) {
   border-color: var(--color-text-muted);
   background: var(--color-surface-raised);
 }

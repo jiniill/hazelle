@@ -41,7 +41,7 @@
   color: var(--color-on-accent);
 }
 
-.primary:hover:not(:disabled) {
+.primary:is(:hover, :active):not(:disabled) {
   background: var(--color-accent-hover);
 }
 
@@ -60,7 +60,7 @@
   color: var(--color-warn);
 }
 
-.danger:hover:not(:disabled) {
+.danger:is(:hover, :active):not(:disabled) {
   background: var(--color-warn-bg);
 }
 
@@ -81,8 +81,8 @@
   border-radius: 0;
 }
 
-/* Over fill's hover (three classes): a link this small takes no fill. */
-.link.xs:hover:not(:disabled) {
+/* Over fill's hover and press (three classes): a link this small takes no fill. */
+.link.xs:is(:hover, :active):not(:disabled) {
   background: transparent;
 }
 

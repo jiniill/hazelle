@@ -57,17 +57,12 @@
 }
 
 .fold {
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows var(--motion-move);
+  composes: fold from '../foundation/motion.module.css';
 }
 
 /* The row folds to nothing only around a box without padding: the bar's space above it folds inside. */
 .tools {
-  min-height: 0;
-  overflow: visible;
-  /* Unclipping before the row finishes growing makes the bar overflow the page below the footer. */
-  transition: overflow var(--duration-spring) step-end allow-discrete;
+  composes: foldBody from '../foundation/motion.module.css';
 }
 
 .compact:not(:focus-within) .fold {

@@ -584,7 +584,6 @@
 
   --duration-instant: 0.01ms;
   --duration-fast: 120ms;
-  --duration-slow: 250ms;
   --duration-intent: 200ms;
   /* How long a wait goes unshown (motion.module.css lateIn, useLingering.ts): a shorter one passes with nothing between. */
   --duration-wait: 200ms;
@@ -619,8 +618,8 @@
      or a window, travels as far by less. */
   --motion-small: 0.96;
   --motion-near: 0.98;
-  --motion-shift: 4px;
-  --motion-slide: 24px;
+  --motion-shift: var(--space-4);
+  --motion-slide: var(--space-24);
   /* Where an entrance starts, not from nothing: its first frame already shows the thing, so a press is answered at once. */
   --motion-faint: 0.5;
 

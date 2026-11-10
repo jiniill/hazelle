@@ -53,44 +53,34 @@
   transform: rotate(90deg);
 }
 
-/* A grid row, the one height that eases to its content's. */
 .fold {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows var(--motion-move);
+  composes: fold from '../foundation/motion.module.css';
 }
 
 .fold[hidden] {
   display: none;
 }
 
-.unfolded {
-  grid-template-rows: 1fr;
+.folded {
+  composes: folded from '../foundation/motion.module.css';
 }
 
 .body {
   composes: note from '../foundation/type.module.css';
+  composes: foldBody from '../foundation/motion.module.css';
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  min-height: 0;
   padding-top: var(--space-8);
-  overflow: hidden;
-}
-
-/* Unfolded it clips nothing, so a menu or a focus ring inside reaches past it; only once the unfolding is over. */
-.unfolded > .body {
-  overflow: visible;
-  transition: overflow var(--duration-spring) step-end allow-discrete;
 }
 
 /* Where an unfolding starts. One that stood open when made has none, and is simply there. */
 @starting-style {
-  .unfolds.unfolded {
+  .unfolds:not(.folded) {
     grid-template-rows: 0fr;
   }
 
-  .unfolds.unfolded > .body {
+  .unfolds:not(.folded) > .body {
     overflow: hidden;
   }
 }

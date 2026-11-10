@@ -8,6 +8,7 @@
 }
 
 .step {
+  composes: eased from '../foundation/hover.module.css';
   width: 100%;
   display: flex;
   flex-wrap: wrap;
@@ -22,9 +23,12 @@
   font-size: var(--text-xs);
   text-align: start;
   cursor: pointer;
+  transition:
+    border-color var(--motion-respond),
+    background-color var(--motion-respond);
 }
 
-.step:hover {
+.step:is(:hover, :active) {
   border-color: var(--color-border);
   background: var(--color-surface-hover);
 }

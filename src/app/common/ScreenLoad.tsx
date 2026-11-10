@@ -47,7 +47,7 @@ export class ScreenLoad extends Component<{ at?: string; children: ReactNode }, 
       </Screen>
     );
     return (
-      <Suspense fallback={<Screen align="center"><Progress steps={[{ label: '화면을 불러오는 중' }]} /></Screen>}>
+      <Suspense fallback={<Screen align="center"><Progress late steps={[{ label: '화면을 불러오는 중' }]} /></Screen>}>
         {this.props.children}
       </Suspense>
     );

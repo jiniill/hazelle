@@ -15,10 +15,11 @@
 }
 
 .titleButton {
+  composes: eased from '../foundation/hover.module.css';
   text-align: left;
 }
 
-.titleButton:hover {
+.titleButton:is(:hover, :active) {
   background: var(--color-surface);
 }
 

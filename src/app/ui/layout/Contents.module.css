@@ -56,9 +56,9 @@
   border-left: var(--border-thick) solid transparent;
 }
 
-/* Over ink's hover (three classes), so the section in view stays gold under the pointer. */
+/* Over ink's hover and press (three classes), so the section in view stays gold under either. */
 .link[aria-current],
-.link[aria-current]:hover:not(:disabled) {
+.link[aria-current]:is(:hover, :active):not(:disabled) {
   border-left-color: var(--color-accent);
   color: var(--color-accent);
   font-weight: var(--weight-semibold);

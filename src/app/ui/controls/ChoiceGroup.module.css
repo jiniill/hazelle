@@ -11,6 +11,7 @@
 }
 
 .choice {
+  composes: eased from '../foundation/hover.module.css';
   border: var(--border-thin) solid var(--color-border);
   color: var(--color-text-muted);
   transition:
@@ -50,7 +51,7 @@
   text-align: start;
 }
 
-.card:hover:not([aria-pressed='true']) {
+.card:is(:hover, :active):not([aria-pressed='true']) {
   border-color: var(--color-border-strong);
 }
 
