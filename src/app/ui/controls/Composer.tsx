@@ -27,7 +27,15 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, actio
   const id = useId();
   useAutosize(inputRef, value);
   return (
-    <div className={`${styles.composer} ${compact ? styles.compact : ''}`}>
+    <div
+      className={`${styles.composer} ${compact ? styles.compact : ''}`}
+      // A press on the box's own edge, around the text, is a press on the text: folded, it opens.
+      onMouseDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        event.preventDefault();
+        inputRef.current!.focus();
+      }}
+    >
       <label className={styles.label} htmlFor={id}>
         메시지
       </label>
