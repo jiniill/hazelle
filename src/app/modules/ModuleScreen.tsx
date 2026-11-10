@@ -112,7 +112,7 @@ export function UsedBy({ id }: { id: string }) {
   ];
   return usedBy.map(({ title, items, none }) => (
     <Section key={title} title={title}>
-      {items.length > 0 ? <List label={title}>{items}</List> : <Empty variant="section">{none}</Empty>}
+      {items.length > 0 ? <List label={title} places>{items}</List> : <Empty variant="section">{none}</Empty>}
     </Section>
   ));
 }

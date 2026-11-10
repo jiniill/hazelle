@@ -1,4 +1,6 @@
+import { ChevronRight } from 'lucide-react';
 import { createContext, useContext, type ReactNode } from 'react';
+import { Icon } from '../foundation/Icon';
 import { Tag } from '../foundation/Tag';
 import { cardDrag, useCardDrop } from './cardDrag';
 import { FolderMark } from './FolderMark';
@@ -8,11 +10,13 @@ import styles from './CardList.module.css';
 import { classNames } from '../foundation/classNames';
 
 const Folded = createContext(false);
+const Places = createContext(false);
 
-export function CardList({ label, children }: { label: string; children: ReactNode }) {
+// places: each card opens a page or the pane beside it, and a › says so.
+export function CardList({ label, places = false, children }: { label: string; places?: boolean; children: ReactNode }) {
   return (
     <ul className={styles.list} aria-label={label}>
-      {children}
+      <Places value={places}>{children}</Places>
     </ul>
   );
 }
@@ -43,6 +47,8 @@ type Props = {
 
 export function CardItem({ folder = false, title, badge, tags = [], description, note, control, detail, current, onClick, children, selected, drag, onDropCard }: Props) {
   const folded = useContext(Folded);
+  // Not while picking, when a press picks; nor on a folder, which is not opened as a page.
+  const opens = useContext(Places) && selected === undefined && !folder;
   const drop = useCardDrop(onDropCard);
   const meta =
     badge || tags.length > 0 ? (
@@ -54,9 +60,9 @@ export function CardItem({ folder = false, title, badge, tags = [], description,
       </>
     ) : undefined;
   return (
-    <li className={classNames(folded ? undefined : styles.card, folder && styles.folder, drop.over && styles.dropping) || undefined} {...(drag === undefined ? {} : cardDrag(drag))} {...drop.props}>
+    <li className={classNames(folded ? undefined : styles.card, folder && styles.folder, current && styles.current, drop.over && styles.dropping) || undefined} {...(drag === undefined ? {} : cardDrag(drag))} {...drop.props}>
       <RowControl control={control}>
-        <Item density="regular" scheme="list" leading={folder && <FolderMark size="md" />} title={title} meta={meta} preview={[description, note].filter(Boolean).join(' · ') || undefined} current={current} pressed={selected} onClick={onClick} />
+        <Item density="regular" scheme="list" leading={folder && <FolderMark size="md" />} title={title} meta={meta} preview={[description, note].filter(Boolean).join(' · ') || undefined} trailing={opens && <Icon icon={ChevronRight} />} current={current} pressed={selected} onClick={onClick} />
       </RowControl>
       {detail && <div className={styles.detail}>{detail}</div>}
       {children && (

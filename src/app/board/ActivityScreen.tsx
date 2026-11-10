@@ -16,7 +16,7 @@ export function ActivityScreen({ back }: { back: Back }) {
   }, [newest]);
   return (
     <Screen width="form" top={<NavBar title={BOARD.activity} {...backBar(back)} />}>
-      <PagedList pages={pages} head={false} label={BOARD.activity} empty="알림이 없어요.">
+      <PagedList pages={pages} head={false} label={BOARD.activity} empty="알림이 없어요." places>
         {(activity) => <ListItem key={activity.id} leading={activityFace(activity)} title={activityLine(activity)} description={activity.title} note={ago(activity.at)} onClick={() => navigate({ kind: 'post', id: activity.postId })} />}
       </PagedList>
     </Screen>

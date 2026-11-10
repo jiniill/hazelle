@@ -147,7 +147,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
       {(!holder || memory.records.length > 0) && <Section level={3} title="기록" note={`${rows.filter((each) => !each.forgotten).length}개`}>
         {view?.crowded && <Callout tone="warn">고정한 기록이 한도를 다 채워서 나머지 기록은 보내지 않아요.</Callout>}
         {memory.records.length ? (
-          <List label="기록">
+          <List label="기록" places>
             {rows.map((each) => (
               <MemoryRow key={each.id} item={each} view={view} positions={positions} onOpen={() => onRecord(each.id)} />
             ))}

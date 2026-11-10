@@ -117,7 +117,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
         }
       >
         {users.length > 0 ? (
-          <List label={USERS}>
+          <List label={USERS} places>
             {users.map((user) => (
               <ListItem
                 key={`${user.connection.id}/${entryKey(user.model)}`}

@@ -5,11 +5,19 @@
   list-style: none;
 }
 
-/* The button's fill sits inside the card's edge, as a Table row's does in its box. */
+/* The button's fill sits inside the card's edge, as a Table row's does in its box. The one open beside the list
+   takes the accent, as the sidebar's current place does. */
 .card {
   composes: box from '../foundation/surface.module.css';
+  --current-fill: var(--color-accent-bg);
+  --current-mark: var(--color-accent);
+
   min-width: 0;
   padding: var(--space-4);
+}
+
+.current {
+  border-color: var(--color-accent-border);
 }
 
 /* On the line of the button's words, inside its padding. */

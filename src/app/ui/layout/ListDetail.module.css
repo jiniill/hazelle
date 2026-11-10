@@ -1,6 +1,6 @@
 .split {
   display: flex;
-  height: 100dvh;
+  height: var(--split-height, 100dvh);
 }
 
 .listPane {
@@ -14,17 +14,4 @@
   flex-grow: 1;
   min-width: 0;
   overflow-y: auto;
-}
-
-.stack {
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-.stack .listPane,
-.stack .detailPane {
-  width: auto;
-  flex-shrink: 0;
-  overflow-y: visible;
-  border-right: none;
 }

@@ -73,11 +73,11 @@ export function useMeters(connection: Connection, account: Account): { result: M
   return { result, retry: () => setAttempt((held) => held + 1) };
 }
 
-export function ConnectionMeters({ connection, level }: { connection: Connection; level: 2 | 3 }) {
+export function ConnectionMeters({ connection }: { connection: Connection }) {
   const type = resolveConnection(connection)?.type;
   if (!type?.meters && !type?.usagePage) return null;
   return (
-    <Panel title="사용량과 한도" level={level}>
+    <Panel title="사용량과 한도">
       {type.meters && <Figures connection={connection} account={connection.accounts[0]!} />}
       {type.usagePage && <Link href={type.usagePage}>사용량 페이지</Link>}
     </Panel>

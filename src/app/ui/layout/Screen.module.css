@@ -82,7 +82,7 @@
   gap: var(--space-24);
 }
 
-/* From a 설정 window's width (its page about 760 px), the aside at most two fifths of it, so a sticky aside such as
+/* From a 설정 window's width (its page about 900 px on a 1280 px screen), the aside at most two fifths of it, so a sticky aside such as
    디스플레이's 미리보기 stands beside its body there rather than above it and out of view. */
 @container (min-width: 720px) {
   .columns {

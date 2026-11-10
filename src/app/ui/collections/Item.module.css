@@ -173,7 +173,8 @@
   color: var(--color-text);
 }
 
-.side[aria-current] > svg:first-child {
+.side[aria-current] > svg:first-child,
+.item[aria-current] > svg:last-child {
   color: var(--current-mark, currentColor);
 }
 

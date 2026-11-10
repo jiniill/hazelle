@@ -404,10 +404,12 @@
   --toast-words-most: 50vh;
   --screen-offset-top: 10vh;
   --sidebar-width: 272px;
-  /* 설정 and 도구 on a wide screen: a window over the page they were opened from, and its smaller desktop scale. */
-  --window-width: 1040px;
-  --window-height: 760px;
-  --window-margin: 32px;
+  /* 설정 and 도구 on a wide screen: a window over the page they were opened from, and its smaller desktop scale. It
+     takes the screen less a margin that grows with it, up to its own most; its sidebar and body float apart. */
+  --window-width: 1440px;
+  --window-height: 1000px;
+  --window-margin: clamp(24px, 3vw, 48px);
+  --window-gap: 10px;
   --window-radius: 14px;
   --window-side-width: 216px;
   --window-control-md: 36px;
@@ -417,7 +419,8 @@
   --rail-width: 72px;
   --panel-width: 400px;
   --tool-frame-min-height: 16rem;
-  --list-pane-width: 400px;
+  /* A share of the room a list and its picked item split, so the item keeps a phone's width in the narrowest window. */
+  --list-pane-width: clamp(260px, 32%, 360px);
   --pane-max-width: 560px;
   --form-max-width: 688px;
   --screen-aside-width: 400px;

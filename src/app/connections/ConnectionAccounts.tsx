@@ -22,7 +22,7 @@ import { useDeviceSignIn } from './useDeviceSignIn';
 const HELP =
   '현재 그룹에서 한도가 남은 첫 계정으로 요청을 보내요. 한도를 다 썼을 때 초과 사용 여부는 GitHub 설정을 따라요.';
 
-export function ConnectionAccounts({ id, connection, signIn, level }: { id: string; connection: Connection & { turns: Turns }; signIn: SignIn; level: 2 | 3 }) {
+export function ConnectionAccounts({ id, connection, signIn }: { id: string; connection: Connection & { turns: Turns }; signIn: SignIn }) {
   const { store } = useSession();
   const toast = useToast();
   const [signing, setSigning] = useState<{ for: Account | null } | null>(null);
@@ -44,7 +44,6 @@ export function ConnectionAccounts({ id, connection, signIn, level }: { id: stri
   return (
     <Panel
       title="계정"
-      level={level}
       help={HELP}
       action={
         <Button variant="secondary" icon={ACTS.create.icon} onClick={() => setSigning({ for: null })}>

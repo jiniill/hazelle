@@ -23,7 +23,7 @@ import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
-import { Button, Callout, ChoiceGroup, Columns, Empty, GuideMark, IconButton, ItemSection, List, ListItem, MenuItem, NavBar, Panel, Row, Screen, Stack, Text, usePane } from '../ui';
+import { Button, Callout, ChoiceGroup, Columns, Empty, GuideMark, IconButton, List, ListItem, MenuItem, NavBar, Panel, Row, Screen, Stack, Text } from '../ui';
 import { ConnectionAccounts } from './ConnectionAccounts';
 import { ConnectionKeyDialog } from './ConnectionKeyDialog';
 import { ConnectionMeters } from './ConnectionMeters';
@@ -59,8 +59,6 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
   const [adding, setAdding] = useState(false);
   const [copying, setCopying] = useState<Model | null>(null);
   const [keying, setKeying] = useState(false);
-  // Under API 연결's cards the connection is a part of that page, not a page of its own.
-  const stacked = usePane() === 'stack';
   const naming = useAutosave<{ label: string }>(`connection:${id}`, ({ label }) => renameConnection(store, id, label!.trim()));
   const label = naming.unsaved.label ?? connection.label;
   const rename = { label: '연결 이름', placeholder: label, onChange: (next: string) => naming.change({ label: next }) };
@@ -181,25 +179,11 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
       </>
     ),
   };
-  const level = stacked ? 3 : 2;
-  const dialog = (
-    <>
-      {keying && resolved && <ConnectionKeyDialog id={id} type={resolved.type} onClose={() => setKeying(false)} />}
-      {copying && <NameDialog title={addOf(copying.name)} value={`${copying.name} ${entriesOf(connection, copying.id).length + 1}`} hint="이미 추가한 모델이에요. 이름과 모델 설정을 따로 두고 하나 더 추가해요." onSave={(label) => copy(copying, label)} onClose={() => setCopying(null)} />}
-      {adding && <NameDialog title={BY_ID} field="모델 ID" value="" hint="목록에 없는 새 모델도 제공자가 쓰는 ID로 추가할 수 있어요." onSave={addById} onClose={() => setAdding(false)} />}
-    </>
-  );
-
-  const body = (
-    <>
+  return (
+    <Screen width="page" top={<NavBar title={label} rename={rename} description={who} status={naming.words} {...backBar(back)} menu={menu} />}>
       <Columns min="panel">
-        <Stack gap="section">
-          {pool ? <ConnectionAccounts id={id} connection={pool.connection} signIn={pool.signIn} level={level} /> : <ConnectionMeters connection={connection} level={level} />}
-          <ConnectionSent connection={id} level={level} />
-        </Stack>
         <Panel
           title="모델"
-          level={level}
           action={
             resolved?.codec && (
               <Button variant="secondary" icon={ACTS.create.icon} onClick={() => setAdding(true)}>
@@ -231,6 +215,10 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
             catalog?.ok && <Empty variant="section">{search.none ?? (filter !== 'all' ? '조건에 맞는 모델이 없어요.' : '모델이 없어요.')}</Empty>
           )}
         </Panel>
+        <Stack gap="section">
+          {pool ? <ConnectionAccounts id={id} connection={pool.connection} signIn={pool.signIn} /> : <ConnectionMeters connection={connection} />}
+          <ConnectionSent connection={id} />
+        </Stack>
       </Columns>
       <DetailFold set={connection.retries === undefined ? 0 : 1}>
         <RetriesRow
@@ -239,20 +227,9 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
           onChange={(retries) => toast.settled(setRetries(store, id, retries))}
         />
       </DetailFold>
-    </>
-  );
-
-  return stacked ? (
-    <Screen width="page">
-      <ItemSection title={label} rename={rename} note={who} menu={menu}>
-        {body}
-      </ItemSection>
-      {dialog}
-    </Screen>
-  ) : (
-    <Screen width="page" top={<NavBar title={label} rename={rename} description={who} status={naming.words} {...backBar(back)} menu={menu} />}>
-      {body}
-      {dialog}
+      {keying && resolved && <ConnectionKeyDialog id={id} type={resolved.type} onClose={() => setKeying(false)} />}
+      {copying && <NameDialog title={addOf(copying.name)} value={`${copying.name} ${entriesOf(connection, copying.id).length + 1}`} hint="이미 추가한 모델이에요. 이름과 모델 설정을 따로 두고 하나 더 추가해요." onSave={(label) => copy(copying, label)} onClose={() => setCopying(null)} />}
+      {adding && <NameDialog title={BY_ID} field="모델 ID" value="" hint="목록에 없는 새 모델도 제공자가 쓰는 ID로 추가할 수 있어요." onSave={addById} onClose={() => setAdding(false)} />}
     </Screen>
   );
 }

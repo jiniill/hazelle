@@ -8,7 +8,8 @@
   flex-direction: column;
   gap: var(--space-12);
   padding: var(--space-16) var(--space-12) var(--space-12);
-  border-right: var(--border-thin) solid var(--color-divider);
+  /* A layer's window (Shell.module.css) floats its sidebar apart from the body, with no rule between them. */
+  border-right: var(--sidebar-rule, var(--border-thin) solid var(--color-divider));
   background: var(--color-sidebar);
 }
 

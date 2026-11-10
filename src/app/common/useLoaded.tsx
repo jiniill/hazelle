@@ -123,7 +123,7 @@ export function SeeAll({ total, open = false, onClick }: { total?: number; open?
 
 // A paged list's body. head: the few a page shows beside its door to the rest, so it pages no further.
 // feed: rows that are cards of their own (PostCard), not a box of rows.
-export function PagedList<T>({ pages, head, label, empty, feed = false, children }: { pages: ReturnType<typeof usePages<T>>; head: boolean; label: string; empty: string; feed?: boolean; children: (row: T) => ReactNode }) {
+export function PagedList<T>({ pages, head, label, empty, feed = false, places = false, children }: { pages: ReturnType<typeof usePages<T>>; head: boolean; label: string; empty: string; feed?: boolean; places?: boolean; children: (row: T) => ReactNode }) {
   const { rows } = pages;
   return (
     <>
@@ -134,7 +134,7 @@ export function PagedList<T>({ pages, head, label, empty, feed = false, children
         (feed ? (
           <PostFeed label={label}>{rows.map(children)}</PostFeed>
         ) : (
-          <List label={label} box>
+          <List label={label} box places={places}>
             {rows.map(children)}
           </List>
         ))}

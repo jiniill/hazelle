@@ -44,7 +44,7 @@ export function ConnectionsScreen({ back }: { back: Back | null }) {
       {search.none ? (
         <Empty>{search.none}</Empty>
       ) : connections.length > 0 ? (
-        <CardList label={PAGES.connections}>
+        <CardList label={PAGES.connections} places>
           {search.found.map((connection) => (
             <CardItem
               key={connection.id}

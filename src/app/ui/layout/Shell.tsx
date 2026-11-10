@@ -51,8 +51,8 @@ export function LayerWindow({ label, side, onClose, children }: Layer) {
   return (
     <div ref={useLeaves(scrim)} className={styles.scrim}>
       <div ref={box} role="dialog" aria-modal="true" aria-label={label} className={styles.window} onKeyDown={trap}>
-        {side}
-        <div className={`${styles.main} ${styles.start}`}>
+        <div className={`${styles.pane} ${styles.side}`}>{side}</div>
+        <div className={`${styles.pane} ${styles.main} ${styles.start}`}>
           <InWindow.Provider value>{children}</InWindow.Provider>
         </div>
       </div>

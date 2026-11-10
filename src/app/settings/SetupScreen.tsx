@@ -152,7 +152,7 @@ function Pins({ pins }: { pins: Extract<Target, { kind: 'talk' }>['pins'] }) {
   const connections = useConnections();
   return (
     pins.length > 0 && (
-      <List label={PROMPT_MODELS} box>
+      <List label={PROMPT_MODELS} box places>
         {pins.map(({ prompt, ref }) => (
           <ListItem key={prompt.id} title={prompt.value.name} note={findStarred(ref, connections)?.name ?? NOT_STARRED} onClick={() => navigate({ kind: 'prompt', id: prompt.id, pane: 'model' })} />
         ))}

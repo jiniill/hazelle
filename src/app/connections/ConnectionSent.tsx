@@ -12,13 +12,13 @@ const tile = (label: string, usage: ModelUsage) =>
     ? { label, value: `응답 ${count(usage.calls)}회`, notes: [`입력 ${tally(usage.input, usage.calls)}`, `출력 ${tally(usage.output, usage.calls)}`] }
     : { label, value: '없음', tone: 'muted' as const };
 
-export function ConnectionSent({ connection, level }: { connection: string; level: 2 | 3 }) {
+export function ConnectionSent({ connection }: { connection: string }) {
   const { view, retry } = useLedger();
   const usage = useMemo(() => (view.kind === 'read' ? connectionUsage(view.calls, connection, Date.now()) : null), [view, connection]);
   const used = usage && WINDOWS.some(([window]) => usage[window].calls) ? usage : null;
 
   return (
-    <Panel title="사용 내역" level={level}>
+    <Panel title="사용 내역">
       {view.kind !== 'read' ? (
         <LedgerWait view={view} retry={retry} failed="사용 내역을 불러오지 못했어요." />
       ) : used ? (

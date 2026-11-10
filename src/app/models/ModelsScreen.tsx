@@ -9,13 +9,13 @@ import { addDefaultProfile, modelProfile, profileUsers } from '../../runtime/mod
 import { findStarred, ROLE_ROWS, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
-import { newOf } from '../common/acts';
+import { ACTS, addOf, newOf } from '../common/acts';
 import { DEFAULT_MODELS_FAILED, defaultMark, makeFailed, FEATURE_NAMES, follows, MODEL_ROLES, MODEL_SETTINGS, noStarred, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
-import { Beside, Callout, Columns, Empty, List, ListItem, NavBar, Row, Screen, Section } from '../ui';
+import { Beside, Button, Callout, Columns, Divider, Empty, List, ListItem, Menu, MenuItem, NavBar, Row, Screen, Section } from '../ui';
 
 // The bottom rung of every chat's settings: what a prompt, a character or a chat does not set reads from here.
 const DEFAULTS = SCOPE.default;
@@ -52,7 +52,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
   const side = (
     <>
       <Section title="기능별 모델">
-        <List label="기능별 모델" box>
+        <List label="기능별 모델" box places>
           {tasks.map(({ feature, own }) => (
             <ListItem key={feature} title={FEATURE_NAMES[feature]} note={own ? nameOf(own) : follows(MODEL_ROLES.aux)} onClick={() => navigate({ kind: 'feature', feature })} />
           ))}
@@ -64,7 +64,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
             {`기본 ${MODEL_SETTINGS}이 없어요.`}
           </Callout>
         )}
-        <List label={MODEL_SETTINGS} box>
+        <List label={MODEL_SETTINGS} box places>
           {sorted.map((profile) => {
             const used = profileUsers(connections, settings.profile, profile.id).length;
             return (
@@ -82,7 +82,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
       </Section>
       {pinned.length > 0 && (
         <Section title={PROMPT_MODELS} help={`이 프롬프트로 대화하는 채팅은 ${DEFAULTS} 모델 대신 이 모델을 써요.`}>
-          <List label={PROMPT_MODELS} box>
+          <List label={PROMPT_MODELS} box places>
             {pinned.map((prompt) => {
               const roles = PINNED_ROLES.flatMap((role) => (prompt.value.models[role] ? [{ role, ref: prompt.value.models[role] }] : []));
               return (
@@ -101,8 +101,23 @@ export function ModelsScreen({ back }: { back: Back | null }) {
     </>
   );
 
+  // Models are added on their connection's page; with none yet, adding one starts with a connection.
+  const adding = connections.length ? (
+    <Menu label={addOf('모델')} place="below-end" trigger={(opener) => <Button variant="secondary" icon={ACTS.create.icon} {...opener}>{addOf('모델')}</Button>}>
+      {connections.map((connection) => (
+        <MenuItem key={connection.id} label={connection.value.label} onClick={() => navigate({ kind: 'connection', id: connection.id })} />
+      ))}
+      <Divider variant="menu" />
+      <MenuItem icon={ACTS.create.icon} label={newOf('연결')} onClick={() => navigate({ kind: 'add-connection' })} />
+    </Menu>
+  ) : (
+    <Button variant="secondary" icon={ACTS.create.icon} onClick={() => navigate({ kind: 'add-connection' })}>
+      {addOf('모델')}
+    </Button>
+  );
+
   return (
-    <Screen width="page" top={<NavBar title={PAGES.models} {...backBar(back)} />}>
+    <Screen width="page" top={<NavBar title={PAGES.models} {...backBar(back)} actions={adding} />}>
       <Section title={DEFAULTS}>
         <Columns>
           <RoleCard role="main" {...ROLE_ROWS.main} own={main} connections={connections} onPick={(ref) => ref && pickModel('main', ref)} {...cardOf(main)} />
@@ -117,7 +132,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
           {search.none ? (
             <Empty variant="section">{search.none}</Empty>
           ) : models.length > 0 ? (
-            <List label={STARRED} box>
+            <List label={STARRED} box places>
               {search.found.map(({ connection, model, choice }) => {
                 const ref = refOf(connection.id, model);
                 // List only distinguishing roles/nondefault profile; neighbouring profile list already shows values.
@@ -136,7 +151,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
               })}
             </List>
           ) : (
-            <Empty variant="section">{noStarred('설정할 수 있어요')}</Empty>
+            <Empty variant="section" action={adding}>{noStarred('설정할 수 있어요')}</Empty>
           )}
         </Section>
       </Beside>

@@ -147,7 +147,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, failure, positions,
       <TextField label="결과" lines={3} value={shown.outcome} onChange={(outcome) => save.change({ outcome })} />
       {chapter && (
         <Section level={3} title="기록" note={`${chapter.records.length}개`}>
-          <List label="기록">
+          <List label="기록" places>
             {chapter.records.flatMap(({ id }) => memory.records.find((record) => record.id === id) ?? []).map((record) => (
               <MemoryRow key={record.id} item={record} view={view} positions={positions} onOpen={() => actions.memory(record.id)} />
             ))}

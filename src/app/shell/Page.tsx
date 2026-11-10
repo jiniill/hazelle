@@ -13,7 +13,7 @@ import { NO_CHARACTER } from '../common/words';
 import { ShareArrival } from '../library/ShareArrival';
 import { ShelfFace, shelfName } from '../library/shelf';
 import { useAccount, useCharacter, useChatModel, useChatSummary, useConnections, useSession, useSettings, useStored, useTool } from '../session';
-import { Button, Callout, Empty, Intro, ListDetail, NavBar, Progress, Screen, useSplit, useWide } from '../ui';
+import { Button, Callout, Empty, Intro, ListDetail, NavBar, Progress, Screen, useWide } from '../ui';
 import { backBar, closeLayer, navigate } from './router';
 import { backTo, HOME, href, listOf, up, type Back, type Below, type Route } from './routes';
 import { SettingsList, settingsEntry } from './settings/SettingsNav';
@@ -73,15 +73,11 @@ type ItemKind = 'character' | 'prompt' | 'persona' | 'module' | 'profile';
 const absentItem = <K extends ItemKind>(kind: K, stored: Stored<K> | null): K | `deleted-${K}` =>
   stored && isBinned(stored.value) ? `deleted-${kind}` : kind;
 
-// API 연결 stacks the picked connection under its list. Every other item 설정 lists opens as a page of its own.
-const VARIANTS = { connections: 'stack', 'add-connection': 'list' } as const;
-
 // The chat, character or connection a route names is looked up here, so each screen is given what it
 // shows, and Missing stands in when that is not there.
 export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boolean) => void }) {
   const { guest } = useAccount();
   const wide = useWide();
-  const split = useSplit();
   const back = (at: Below) => backTo(up(at), wide);
   // On wide screens the sidebar beside the library's pages, or 설정's, is their way back.
   const sideBack = (at: Below) => (wide ? null : back(at));
@@ -197,10 +193,10 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
   const list = listOf(route);
   if (!list) return <ScreenLoad at={at}>{screen(route)}</ScreenLoad>;
   const detail = route.kind === list.kind ? null : screen(route);
-  const variant = VARIANTS[list.kind];
   const pane = detail ?? (list.kind === 'connections' ? <Landing /> : <Empty variant="pane">연결할 제공자를 선택해 주세요.</Empty>);
   // One boundary for the pair, so a first visit shows one loader, and one inside for the detail alone.
-  if (split) return <ScreenLoad at={at}><ListDetail variant={variant} list={screen(list)} detail={<ScreenLoad at={at}>{pane}</ScreenLoad>} /></ScreenLoad>;
+  // Wide, 설정 is a window, and its list and the item picked from it stand side by side.
+  if (wide) return <ScreenLoad at={at}><ListDetail list={screen(list)} detail={<ScreenLoad at={at}>{pane}</ScreenLoad>} /></ScreenLoad>;
   return <ScreenLoad at={at}>{detail ?? screen(list)}</ScreenLoad>;
 }
 

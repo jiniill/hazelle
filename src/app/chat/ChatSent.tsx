@@ -300,7 +300,7 @@ export function SentMemory({ entry, memory, onRecord }: { entry: LogEntry | null
 function SentRecords({ title, ids, records, onRecord }: { title: string; ids: string[]; records: ReadonlyMap<string, MemoryRecord | Chapter>; onRecord: (record: string) => void }) {
   return (
     <Section level={3} title={title} note={`${ids.length}개`}>
-      <List label={title}>
+      <List label={title} places>
         {ids.map((id) => {
           const record = records.get(id);
           return record ? (

@@ -70,8 +70,9 @@ export function coachSpot(at: Box, note: Size, screen: Size, edge: number, above
 }
 
 // What a note leaves in view: the page's head and every control but the one it points at, where they show (not
-// scrolled out of their box, nor under a window).
-const KEPT = `header, ${TAB_STOPS}`;
+// scrolled out of their box, nor under a window). A disabled button too: it is what the step presses once filled in,
+// and its turning on moves nothing, so the note is not placed again.
+const KEPT = `header, button, ${TAB_STOPS}`;
 
 function covering(target: HTMLElement, note: HTMLElement) {
   const kept = [...document.querySelectorAll<HTMLElement>(KEPT)]

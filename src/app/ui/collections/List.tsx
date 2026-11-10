@@ -14,8 +14,8 @@ const Windowed = createContext(false);
 const Places = createContext(false);
 
 // box: the rows in one box, as SettingGroup's are, for a list on a page or a short list a screen leads with. places:
-// rows that go to another page (설정's pages, a character's parts, the kinds of connection), each with a ›; a list of
-// the user's own things opens them beside it and takes none.
+// rows that open a page, the pane beside or a side panel, each with a ›, whatever they hold; rows that act where
+// they stand take none.
 export function List(props: { label: string; box?: boolean; places?: boolean; children: ReactNode } | { label: string; keys: readonly string[]; box?: boolean; children: (index: number) => ReactNode }) {
   if ('keys' in props) {
     const rows = (
