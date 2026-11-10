@@ -6,7 +6,7 @@ import { LuaFactory, type LuaEngine } from 'wasmoon';
 import { runBlocks, type Unit } from './blocks';
 import { ranked } from './similar';
 import { chatLorebook, luaCodes } from '../import/convert';
-import { asRisuLore } from '../cbs/tags';
+import { risuLore } from '../../tool-api/risu-lore';
 import JSON_LUA from './json.lua?raw';
 import PRELUDE from './prelude.lua?raw';
 import { add, cbs, read, text, working, write, type Acting, type Run, type Snapshot, type Working } from './state';
@@ -485,7 +485,7 @@ export class Lua {
       const own = written ? [written] : named.filter(({ parent }) => parent === run.chat).map(({ value }) => value);
       return JSON.stringify(
         [...own, ...named.filter(({ parent }) => parent !== run.chat).map(({ value }) => value)]
-          .map((value) => asRisuLore(value, cbs(run, value.content))),
+          .map((value) => risuLore({ ...value, content: cbs(run, value.content) }, ', ')),
       );
     });
     // Preserve Risu's omitted-option defaults: order 100, no keys, off.

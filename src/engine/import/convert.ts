@@ -1,11 +1,12 @@
 import { count, flag, isRecord, list, text } from '../../connectors/values';
 import { mainOf, type AssetUse } from '../assets';
 import { isUnsupportedTag } from '../cbs/tags';
-import { args, parseDecorators } from '../lorebook/decorators';
+import { parseDecorators } from '../lorebook/decorators';
 import { readToggles, writeToggles } from './toggles';
 import { blockConditions, blockEffects, conditionSources, effectSources } from './blocks';
 import { readOnboarding } from './onboarding';
 import { RISU_SCRIPT_TYPES } from '../../tool-api/risu-regex';
+import { readRisuLore, readRisuLoreBase, risuKeys, risuLore } from '../../tool-api/risu-lore';
 import { NEW_STAGE, type Card, type ImportedModule, type ImportReport, type LoreEntry, type Pack, type RegexScript, type SillyTavernRegexKind, type Trigger, type UnsupportedKind } from './types';
 
 export type Json = Record<string, unknown>;
@@ -52,8 +53,6 @@ export const finite = (value: unknown) => (typeof value === 'number' && Number.i
 export const strings = (value: unknown) => list(value).filter((item): item is string => typeof item === 'string');
 // CCv3 key arrays stay intact; only blank keys are dropped.
 const keys = (value: unknown) => strings(value).filter((key) => key.trim() !== '');
-// Risu's own lore joins keys into one string, split here as Risu splits it.
-const split = (value: unknown) => args(text(value));
 const order = (value: unknown) => (value === null ? 0 : (finite(value) ?? DEFAULT_ORDER));
 
 // module: a charx's module.risum. Its regex and triggers replace the card's, and its lorebook, when it has one,
@@ -195,25 +194,14 @@ export function lorebookSource(lore: LoreEntry[], folders: string[]): Json[] {
   return [
     ...folders.map((name, folder) => book({ key: folderKey(folder), secondkey: '', comment: name, mode: 'folder' })),
     ...lore.map((entry) =>
-      book({
-        key: entry.keys.join(','),
-        secondkey: entry.secondaryKeys.join(','),
-        comment: entry.name,
-        content: entry.content,
-        insertorder: entry.insertionOrder,
-        alwaysActive: entry.constant,
-        selective: entry.selective,
-        useRegex: entry.useRegex,
-        extentions: { risu_case_sensitive: entry.caseSensitive },
-        ...(entry.folder !== null && { folder: folderKey(entry.folder) }),
-      }),
+      book({ ...risuLore(entry, ','), extentions: { risu_case_sensitive: entry.caseSensitive }, ...(entry.folder !== null && { folder: folderKey(entry.folder) }) }),
     ),
   ];
 }
 
 // Whether nativeLorebook gives this entry back whole.
 export const nativeHolds = (entry: LoreEntry) =>
-  entry.enabled && entry.priority === null && entry.position === null && [entry.keys, entry.secondaryKeys].every((keys) => split(keys.join(',')).join('\0') === keys.join('\0'));
+  entry.enabled && entry.priority === null && entry.position === null && [entry.keys, entry.secondaryKeys].every((keys) => risuKeys(keys.join(',')).join('\0') === keys.join('\0'));
 
 // assets: the card's icon and x-risu-asset entries. The scripts and lorebook are not in it: they go in module.risum.
 // lowLevelAccess: the ruling is that a bot whose Lua triggers Risu runs is written with it on (Risu checks it before a
@@ -413,14 +401,14 @@ function lorebook(raws: unknown[], source: LoreSource): { lore: LoreEntry[]; lor
   return { lore, loreFolders };
 }
 
-const nativeLorebook = (entries: unknown[]) => lorebook(entries, risuLore(true));
+const nativeLorebook = (entries: unknown[]) => lorebook(entries, risuSource(true));
 
 // A CCv3 character_book's entries, in a card or a file of their own.
 export const bookLorebook = (entries: unknown[]) => lorebook(entries, BOOK_LORE);
 
 // A Risu chat's own lorebook (localLore), and an entry a bot writes to it. Never migrated: Risu's open-time migration
 // (characterFormatUpdate) runs over globalLore only, and these entries carry no bookVersion.
-export const chatLorebook = (entries: unknown[]) => lorebook(entries, risuLore(false));
+export const chatLorebook = (entries: unknown[]) => lorebook(entries, risuSource(false));
 
 // Risu's 채팅에서만 켜기 (LoreBookData.svelte activateLocally): a localLore entry of mode 'child' naming one of the
 // character's globalLore entries by id, which Risu reads as that entry, on in this chat (lorebook.svelte.ts:290-302).
@@ -431,28 +419,31 @@ export function localCopies<K>(entries: unknown[], character: unknown[], tally: 
     if (!isRecord(raw) || raw.mode !== 'child') return [raw];
     const parent = typeof raw.id === 'string' ? parents.get(raw.id) : undefined;
     add(tally, parent ? 'lore-copy' : 'lore-unfound');
-    return parent ? [{ ...raw, mode: 'normal', comment: parent.comment, content: risuLore(true).entry(parent).content }] : [];
+    return parent ? [{ ...raw, mode: 'normal', comment: parent.comment, content: risuSource(true).entry(parent).content }] : [];
   });
 }
 
 // Native module and backup lore share bookVersion: only version 1's activationPercent and old tag syntax migrate.
-const risuLore = (migrates: boolean): LoreSource => ({
+const risuSource = (migrates: boolean): LoreSource => ({
   folderId: (raw) => text(raw.key),
-  name: (raw) => text(raw.comment),
-  entry: (raw) => ({
-    keys: split(raw.key),
-    secondaryKeys: split(raw.secondkey),
-    content: !migrates || (typeof raw.bookVersion === 'number' && raw.bookVersion >= 2) ? text(raw.content) : migrate(text(raw.content), raw.activationPercent),
-    // Risu's own lore has no enabled flag.
-    enabled: true,
-    constant: raw.alwaysActive === true,
-    selective: raw.selective === true,
-    useRegex: raw.useRegex === true,
-    caseSensitive: record(raw.extentions).risu_case_sensitive === true,
-    insertionOrder: order(raw.insertorder),
-    priority: null,
-    position: null,
-  }),
+  name: (raw) => readRisuLoreBase(raw, text).name,
+  entry: (raw) => {
+    const { keys, secondaryKeys, content, constant, selective, useRegex } = readRisuLore(raw, text);
+    return {
+      keys,
+      secondaryKeys,
+      content: !migrates || (typeof raw.bookVersion === 'number' && raw.bookVersion >= 2) ? content : migrate(content, raw.activationPercent),
+      // Risu's own lore has no enabled flag.
+      enabled: true,
+      constant,
+      selective,
+      useRegex,
+      caseSensitive: record(raw.extentions).risu_case_sensitive === true,
+      insertionOrder: order(raw.insertorder),
+      priority: null,
+      position: null,
+    };
+  },
 });
 
 const BOOK_LORE: LoreSource = {

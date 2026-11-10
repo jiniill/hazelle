@@ -1,6 +1,7 @@
 import { toBase64 } from '../base64';
 import { RISU_ABSENT, RISU_DECLINED, RISU_REPLACERS } from '../tool-api/risu-methods';
 import { risuRegex } from '../tool-api/risu-regex';
+import { readRisuLoreBase, risuLoreBase } from '../tool-api/risu-lore';
 
 // Risu v3 shapes stay in this adapter over `api`, never in tool-api/protocol.ts (research/risu-plugin-adapter-plan.md §3).
 // Unmapped calls throw; declined methods read as undefined for typeof guards. Both report to 점검.
@@ -20,7 +21,7 @@ const chatNumber = (id: string) => {
   return hash >>> 1;
 };
 
-const loreEntry = (entry: Hazelle.LoreEntry) => ({ comment: entry.name, key: entry.keys.join(', '), content: entry.text, alwaysActive: entry.always, disabled: !entry.on });
+const loreEntry = (entry: Hazelle.LoreEntry) => ({ ...risuLoreBase({ name: entry.name, keys: entry.keys, content: entry.text, constant: entry.always }, ', '), disabled: !entry.on });
 
 const character = (card: Hazelle.Card, lorebook: Hazelle.LoreEntry[]) => ({
   chaId: card.id, type: 'character', name: card.name, desc: card.description, personality: card.personality, scenario: card.scenario,
@@ -38,10 +39,10 @@ const chatOf = (id: string, messages: Hazelle.Message[], lorebook: Hazelle.LoreE
   localLore: lorebook.filter(({ owner }) => owner.kind === 'chat').map(loreEntry),
 });
 // Risu's lore has no enabled flag; loreEntry's disabled is the only one a plugin meets.
-const fromLore = (entry: Record<string, unknown>): Omit<Hazelle.LoreEntry, 'owner'> => ({
-  name: String(entry.comment ?? ''), keys: String(entry.key ?? '').split(',').map((key) => key.trim()).filter(Boolean),
-  text: String(entry.content ?? ''), always: entry.alwaysActive === true, on: entry.disabled !== true,
-});
+function fromLore(entry: Record<string, unknown>): Omit<Hazelle.LoreEntry, 'owner'> {
+  const { name, keys, content, constant } = readRisuLoreBase(entry, (value) => String(value ?? ''));
+  return { name, keys, text: content, always: constant, on: entry.disabled !== true };
+}
 const sameLore = (a: Omit<Hazelle.LoreEntry, 'owner'>, b: Omit<Hazelle.LoreEntry, 'owner'>) =>
   a.text === b.text && a.always === b.always && a.on === b.on && a.keys.join('\n') === b.keys.join('\n');
 // The keys of a chat setChatToIndex writes; any other is told to 점검.
