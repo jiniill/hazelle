@@ -207,6 +207,12 @@ describe('fold', () => {
     expect(shown(fold(entries)[0]!).receipt!.cost).toEqual({ unit: 'usd', amount: 0.01, source: 'reported' });
   });
 
+  it('keeps a known cost when another device books a failed lookup after it', () => {
+    const known = { unit: 'usd' as const, amount: 0.01, source: 'reported' as const };
+    const entries = [bot('b1', '답', { cost: 'pending', replyId: 'gen_1' }), entry('k1', { type: 'cost', replyId: 'gen_1', cost: known, at: 0 }), entry('k2', { type: 'cost', replyId: 'gen_1', cost: null, at: 1 })];
+    expect(shown(fold(entries)[0]!).receipt!.cost).toEqual(known);
+  });
+
   it('settles the pending cost of a cut call a continued version carries, and keeps both calls', () => {
     const cut = receipt({ state: 'cut', cut: 'length', cost: 'pending', replyId: 'gen_1' });
     const entries = [

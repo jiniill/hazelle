@@ -20,12 +20,16 @@ export type Ledger =
 export type Counted = UsageCall & Pick<Extract<Ledger, { type: 'call' }>, 'chat' | 'character'>;
 
 // A known booked cost wins over an unknown one when devices both look it up.
+export function book(booked: Map<string, Cost | null>, call: string, cost: Cost | null) {
+  if (!booked.get(call)) booked.set(call, cost);
+}
+
 export function counted(rows: Iterable<Ledger>): Counted[] {
   const calls = new Map<string, Counted>();
   const booked = new Map<string, Cost | null>();
   for (const row of rows) {
     if (row.type === 'call') calls.set(row.call.id, { at: row.at, call: row.call, chat: row.chat, character: row.character });
-    else if (row.type === 'cost' && !booked.get(row.call)) booked.set(row.call, row.cost);
+    else if (row.type === 'cost') book(booked, row.call, row.cost);
   }
   return [...calls.values()].map((one) => (one.call.cost === 'pending' && booked.has(one.call.id) ? { ...one, call: { ...one.call, cost: booked.get(one.call.id)! } } : one));
 }

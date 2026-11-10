@@ -9,7 +9,7 @@ import type { LoreFolder, Mark } from './library';
 import type { MemorySettings } from './memory';
 import type { AgentStage } from './prompt';
 import type { Card } from '../engine/import/types';
-import type { UsageCall } from './usage';
+import { book, type UsageCall } from './usage';
 
 export type Chat = Mark & {
   // null uses chatTitle's first-message or branch name.
@@ -270,7 +270,7 @@ function replay(entries: Stored<'entry'>[]): { messages: Message[]; deleted: Set
       continue;
     }
     if (entry.type === 'cost') {
-      costs.set(entry.replyId, entry.cost);
+      book(costs, entry.replyId, entry.cost);
       continue;
     }
     if (entry.type === 'translation') {
