@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { standing, type Chat, type Message } from '../../model/chat';
 import type { Drawn, IllustrateSwitches, Scene } from '../../model/illustration';
 import type { Stored } from '../../model/kinds';
@@ -10,6 +10,7 @@ import { illustrationPrompt } from '../../runtime/prompts';
 import { describeIllustrateFailure } from '../common/failure';
 import { useCaptured, useChildren, useIllustrating, useSession } from '../session';
 import { useToast } from '../toast';
+import { useToldFailures } from './useToldFailures';
 
 // The failures a toast already said: each is said once, though the chat is left and opened again, and once for all the
 // scenes of a run it failed together.
@@ -50,16 +51,12 @@ export function useChatIllustrations(chatId: string, id: string | null, chat: Ch
   const stage = illustrate.auto || illustrations.length > 0 || [...illustrating.values()].some((drawing) => drawing.chat === chatId);
   const [reshaping, setReshaping] = useState<Reshaping | null>(null);
 
-  useEffect(() => {
-    for (const drawing of illustrating.values()) {
-      if (drawing.chat !== chatId) continue;
-      for (const failure of [drawing.failure, ...drawing.sketches.map((sketch) => sketch.failure)]) {
-        if (!failure || told.has(failure)) continue;
-        told.add(failure);
-        toast.error(describeIllustrateFailure(failure));
-      }
-    }
-  }, [illustrating]);
+  useToldFailures(illustrating, chatId, {
+    told,
+    failures: (drawing) => [drawing.failure, ...drawing.sketches.map((sketch) => sketch.failure)],
+    key: (failure) => failure,
+    describe: describeIllustrateFailure,
+  });
 
   function setIllustrateSwitches(change: Partial<IllustrateSwitches>) {
     toast.settled(setIllustrate(store, character, change));

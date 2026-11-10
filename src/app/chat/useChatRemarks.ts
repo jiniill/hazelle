@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Stored } from '../../model/kinds';
 import { describeMascotFailure } from '../common/failure';
 import { useChildren, useCommenting } from '../session';
-import { useToast } from '../toast';
+import { useToldFailures } from './useToldFailures';
 
 // Toast once per chat/session: repeated garnish failures must not cover the composer on every turn.
 const told = new Set<string>();
@@ -22,19 +22,12 @@ function remarksByVersion(remarks: Stored<'remark'>[]): ReadonlyMap<string, Stor
 }
 
 export function useChatRemarks(chatId: string, id: string | null) {
-  const toast = useToast();
   const stored = useChildren('remark', id);
   const remarks = useMemo(() => remarksByVersion(stored), [stored]);
   const commenting = useCommenting();
   const [, setSeen] = useState(0);
 
-  useEffect(() => {
-    for (const entry of commenting.values()) {
-      if (entry.chat !== chatId || !entry.failure || told.has(chatId)) continue;
-      told.add(chatId);
-      toast.error(describeMascotFailure(entry.failure));
-    }
-  }, [commenting]);
+  useToldFailures(commenting, chatId, { told, failures: (entry) => [entry.failure], key: () => chatId, describe: describeMascotFailure });
 
   return {
     remarks,
