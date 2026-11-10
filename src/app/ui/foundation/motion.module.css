@@ -33,6 +33,11 @@
     --grow-from: var(--motion-near);
   }
 
+  /* A sign of waiting, hidden until the wait has lasted, unlike an entrance: a short wait shows nothing. */
+  .lateIn {
+    animation: late var(--motion-respond) var(--duration-wait) backwards;
+  }
+
   /* After every entrance, so what leaves (leave.ts) goes the way it came instead; its parts start none of theirs
      over, but the one it was only the ground of. */
   [data-leaving] * {
@@ -168,6 +173,12 @@
     from {
       opacity: var(--motion-faint);
       scale: var(--grow-from);
+    }
+  }
+
+  @keyframes late {
+    from {
+      opacity: 0;
     }
   }
 

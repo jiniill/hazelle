@@ -586,6 +586,8 @@
   --duration-fast: 120ms;
   --duration-slow: 250ms;
   --duration-intent: 200ms;
+  /* How long a wait goes unshown (motion.module.css lateIn, useLingering.ts): a shorter one passes with nothing between. */
+  --duration-wait: 200ms;
   --duration-spin: 800ms;
   --duration-blink: 1s;
   --duration-pulse: 1.1s;

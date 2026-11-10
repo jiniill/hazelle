@@ -121,11 +121,14 @@ export function useChatModel(id: string | null) {
       // A lease released before its chat opened ends it stopped, which is leaving the chat, not a failure.
       if (failure && !isHalted(failure)) autoDiagnose({ event: 'chat-unopened', detail: openFailure(failure.error) });
     });
-    return lease.release;
+    // Released once the commit's effects have all run: a chat that passes from one holder to another in one commit
+    // (Page.tsx, the chat that stays) is never without one, which would unload it.
+    return () => queueMicrotask(lease.release);
   }, [store, id, attempt, exists]);
   const value = useRead(id === null ? null : read.chat(id), snapshotNull);
   const { state, error } = useRead(id === null ? null : read.scope(id), snapshotUnloaded);
-  return { model: value, state, error, retry };
+  // opening: a chat that is there and has neither loaded nor failed, before its lease is taken too.
+  return { model: value, state, error, retry, opening: exists && (state === 'unloaded' || state === 'loading') };
 }
 
 export function useChatSummary(id: string | null) {

@@ -11,6 +11,7 @@ export { formatKeys, isComposing, pressed, pressedKey, titled, type Chord } from
 export { hasFinePointer, isDarkScheme, isInstalled, useCoarsePointer, useDarkScheme, useHover, usePanelsBeside, useSplit, useViewport, useWide } from './media';
 export { markScrollbars } from './scrollbar';
 export { seekRow } from './seek';
+export { useLingering } from './useLingering';
 export { Tag } from './Tag';
 export { Text } from './Text';
 export { Written } from './Written';

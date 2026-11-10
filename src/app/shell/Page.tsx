@@ -13,7 +13,7 @@ import { NO_CHARACTER } from '../common/words';
 import { ShareArrival } from '../library/ShareArrival';
 import { ShelfFace, shelfName } from '../library/shelf';
 import { useAccount, useCharacter, useChatModel, useChatSummary, useConnections, useSession, useSettings, useStored, useTool } from '../session';
-import { Button, Callout, Empty, Intro, ListDetail, NavBar, Progress, Screen, useSplit, useWide } from '../ui';
+import { Button, Callout, Empty, Intro, ListDetail, NavBar, Progress, Screen, useLingering, useSplit, useWide } from '../ui';
 import { backBar, closeLayer, navigate } from './router';
 import { backTo, HOME, href, listOf, up, type Back, type Below, type Route } from './routes';
 import { SettingsList, settingsEntry } from './settings/SettingsNav';
@@ -242,10 +242,15 @@ function CharacterPage({ at, wide, back }: { at: At<'shelf' | 'edit'>; wide: boo
   return <CharacterEditScreen key={shelf.id} shelf={shelf} at={at.kind === 'edit' ? at : {}} back={back} />;
 }
 
-function ChatPage({ at, wide, onPaired }: { at: At<'new-chat' | 'chat'>; wide: boolean; onPaired: (paired: boolean) => void }) {
+function ChatPage({ at: asked, wide, onPaired }: { at: At<'new-chat' | 'chat'>; wide: boolean; onPaired: (paired: boolean) => void }) {
+  // The chat on screen stays while the next one opens, under a lease of its own: one that opens soon follows it with
+  // no loading screen between.
+  const next = useChatModel(asked.kind === 'chat' ? asked.id : null);
+  const at = useLingering(asked, next.opening);
+  const last = useChatModel(at === asked || at.kind !== 'chat' ? null : at.id);
+  const chatModel = at === asked ? next : last;
   const stored = useStored('chat', at.kind === 'chat' ? at.id : null);
   const summary = useChatSummary(at.kind === 'chat' ? at.id : null);
-  const chatModel = useChatModel(at.kind === 'chat' ? at.id : null);
   const character = at.kind === 'new-chat' ? at.character : stored?.value.character;
   const shelf = useCharacter(character ?? null);
   const characterStored = useStored('character', character ?? null);
