@@ -8,7 +8,7 @@ import { feedQuery, type Backend } from './backend';
 import { ConnectionWait } from './connection-wait';
 import { StoreChanges } from './store-changes';
 import { CodecAborted, CodecUnavailable, ObjectCodec } from './object-codec';
-import { SCOPED, UNFED, WALKED, type CacheState, type DeviceCache } from './object-cache';
+import { SCOPED, UNFED, WALKED, type CachedScope, type CacheState, type DeviceCache } from './object-cache';
 import { ObjectCacheSession } from './object-cache-session';
 import { Evaluation, EvaluationFailed, EvaluationStopped, EvaluationStuck } from './evaluation';
 import { ChatProjections } from './summary';
@@ -105,7 +105,7 @@ export class ObjectStore {
       },
       fail: (chat, signal, error) => {
         const scope = this.scopes.get(chat);
-        return scope?.abort.signal === signal ? this.failScope(chat, scope, error) : this.codecFailure(error);
+        return scope?.abort.signal === signal ? this.failScope(chat, scope, this.codecFailure(error)) : this.codecFailure(error);
       },
       failure: (error) => this.codecFailure(error),
       halted: () => this.halted(),
@@ -312,8 +312,7 @@ export class ObjectStore {
   }
 
   // A held chat that could not be opened or evaluated: its screen says so and offers 다시 시도 (useChatModel).
-  private failScope(chat: string, scope: Scope, error: unknown): ApiFailure {
-    const failure = this.codecFailure(error);
+  private failScope(chat: string, scope: Scope, failure: ApiFailure): ApiFailure {
     if (this.scopes.get(chat) === scope && !this.closing.signal.aborted) {
       scope.state = 'failed';
       scope.error = failure;
@@ -341,7 +340,7 @@ export class ObjectStore {
       void (held.opening ?? Promise.resolve(null)).then((failure) => { if (!failure && this.scopes.get(chat) === held) this.projections.summarizeChat(chat); });
     }
     if (held.state !== 'loaded' && !held.opening) {
-      const opening = this.openChat(chat, held, summarize).catch((error: unknown) => this.failScope(chat, held, error)).finally(() => { if (held.opening === opening) held.opening = null; });
+      const opening = this.openChat(chat, held, summarize).catch((error: unknown) => this.failScope(chat, held, this.codecFailure(error))).finally(() => { if (held.opening === opening) held.opening = null; });
       held.opening = opening;
     }
     const ready = held.opening ?? (held.loading ? Promise.resolve(null) : this.projections.evaluate(chat).then(() => null, (error: unknown) => this.codecFailure(error)));
@@ -368,12 +367,7 @@ export class ObjectStore {
       for (const [index, row] of rows.entries()) {
         await this.apply(row, () => opened(index), true, signal);
         if (signal.aborted) return this.halted();
-        if (row.body && this.objects.get(row.id)?.value === undefined) {
-          scope.state = 'failed';
-          scope.error = { ok: false, error: 'unreadable' };
-          this.scopeChanged(chat);
-          return scope.error;
-        }
+        if (this.unopened(row)) return this.failScope(chat, scope, { ok: false, error: 'unreadable' });
       }
       if (signal.aborted) return this.halted();
       if (saved.state.complete && !saved.changes.some((row) => row.omitted)) {
@@ -393,6 +387,13 @@ export class ObjectStore {
   // store closing, the caller's own stop and a released lease.
   private halted(): ApiFailure {
     return { ok: false, error: this.rewound !== null ? 'timeline-changed' : 'stopped' };
+  }
+
+  // Every feed and batch answer's failure: cache-reset says the server dropped this store's timeline, which ends it.
+  private serverFailure(failure: ApiFailure): ApiFailure {
+    if (failure.error !== 'cache-reset') return failure;
+    this.rewind(true);
+    return this.halted();
   }
 
   private codecFailure(error: unknown): ApiFailure {
@@ -482,25 +483,9 @@ export class ObjectStore {
     const stop = AbortSignal.any([this.closing.signal, ...(signal ? [signal] : [])]);
     let cursor = since;
     if (!cursor) {
-      await this.cachedObjects.settled;
-      const saved = await this.cachedObjects.read(parent);
-      if (stop.aborted) return this.halted();
-      if (saved) {
-        // An omitted row is the feed's, past the cursor, and read from the server below.
-        const rows = saved.changes.filter((row) => row.kind === kind && row.body);
-        const opened = this.opener(rows, true, stop, true);
-        for (const [index, row] of rows.entries()) {
-          let value: unknown;
-          try {
-            value = await opened(index);
-          } catch (error) {
-            return this.codecFailure(error);
-          }
-          if (stop.aborted) return this.halted();
-          visit({ id: row.id, kind: row.kind, parent: row.parent, rev: row.rev }, upgradeValue(row.kind, value) ?? value);
-        }
-        cursor = saved.state.cursor;
-      }
+      const cached = await this.savedRows(parent, kind, visit, stop, false);
+      if (!cached.ok) return cached;
+      if (cached.data) cursor = cached.data.state.cursor;
     }
     return this.pages({ parent, kind }, cursor, visit, pin, signal, (changes, at, more) => this.cacheWrite(changes, { chat: parent, cursor: at, complete: !more }));
   }
@@ -524,11 +509,7 @@ export class ObjectStore {
     while (more) {
       const result = await this.backend.feed(feedQuery({ since: cursor, timeline: pin.timeline, excluded: FILL_EXCLUDED }), stop);
       if (stop.aborted) return this.halted();
-      if (!result.ok) {
-        if (result.error !== 'cache-reset') return result;
-        this.rewind(true);
-        return this.halted();
-      }
+      if (!result.ok) return this.serverFailure(result);
       ({ cursor, more } = result.data);
       const ends = !more || Date.now() - saved >= FILL_SAVE_MS;
       // A scope's state says its rows are whole up to its cursor, true of every chat the pass has gone past.
@@ -554,21 +535,9 @@ export class ObjectStore {
       if (value === undefined) unreadable = true;
       else entries.push({ ...row, kind: 'entry', value: value as Values['entry'] });
     };
-    await this.cachedObjects.settled;
-    const saved = await this.cachedObjects.read(chat);
-    if (stop.aborted) return this.halted();
-    const rows = saved?.changes.filter((row) => row.kind === 'entry' && row.body) ?? [];
-    const opened = this.codec.opener(rows, stop, { accept: () => true });
-    for (const [index, row] of rows.entries()) {
-      let value: unknown;
-      try {
-        value = await opened(index);
-      } catch (error) {
-        return this.codecFailure(error);
-      }
-      if (stop.aborted) return this.halted();
-      keep(row, upgradeValue(row.kind, value) ?? value);
-    }
+    const cached = await this.savedRows(chat, 'entry', keep, stop, true);
+    if (!cached.ok) return cached;
+    const saved = cached.data;
     if (!saved || !saved.state.complete || saved.state.cursor < this.entryHead(chat)) {
       const read = await this.pages({ parent: chat }, saved?.state.cursor ?? 0, keep, pin, signal, (changes, at, more) => this.cacheWrite(changes, { chat, cursor: at, complete: !more }), true);
       if (!read.ok) return read;
@@ -577,7 +546,32 @@ export class ObjectStore {
     return unreadable ? { ok: false, error: 'unreadable' } : { ok: true, data: entries };
   }
 
+  // A parent's saved rows of one kind, visited as pages visits the feed's; answers the saved scope.
+  private async savedRows(parent: string, kind: Kind, visit: (row: ObjectRow, value: unknown) => void, stop: AbortSignal, lenient: boolean): Promise<ApiResult<CachedScope | null>> {
+    await this.cachedObjects.settled;
+    const saved = await this.cachedObjects.read(parent);
+    if (stop.aborted) return this.halted();
+    // An omitted row is the feed's, past the cursor, and read from the server after.
+    const rows = saved?.changes.filter((row) => row.kind === kind && row.body) ?? [];
+    const opened = this.walkOpener(rows, stop, lenient);
+    for (const [index, row] of rows.entries()) {
+      let value: unknown;
+      try {
+        value = await opened(index);
+      } catch (error) {
+        return this.codecFailure(error);
+      }
+      if (stop.aborted) return this.halted();
+      visit({ id: row.id, kind: row.kind, parent: row.parent, rev: row.rev }, upgradeValue(row.kind, value) ?? value);
+    }
+    return { ok: true, data: saved };
+  }
+
   // lenient: an object that will not open is visited as undefined, where a strict walk throws.
+  private walkOpener(rows: SealedChange[], stop: AbortSignal, lenient: boolean) {
+    return lenient ? this.codec.opener(rows, stop, { accept: () => true }) : this.opener(rows, true, stop, true);
+  }
+
   private async pages(options: { parent?: string; kind?: Kind; metadata?: boolean }, since: number, visit: (row: ObjectRow, value: unknown) => void | Promise<void>, pin: Pin, signal?: AbortSignal, paged?: (changes: SealedChange[], cursor: number, more: boolean) => void, lenient = false): Promise<ApiResult<number>> {
     const stop = AbortSignal.any([this.closing.signal, ...(signal ? [signal] : [])]);
     let cursor = since;
@@ -586,13 +580,9 @@ export class ObjectStore {
       if (stop.aborted) return this.halted();
       const result = await this.backend.feed(feedQuery({ since: cursor, timeline: pin.timeline, parent: options.parent ?? null, kind: options.kind ?? null, metadata: options.metadata ?? false }), stop);
       if (stop.aborted) return this.halted();
-      if (!result.ok) {
-        if (result.error !== 'cache-reset') return result;
-        this.rewind(true);
-        return this.halted();
-      }
+      if (!result.ok) return this.serverFailure(result);
       this.limits = result.data.limits;
-      const opened = lenient ? this.codec.opener(result.data.changes, stop, { accept: () => true }) : this.opener(result.data.changes, true, stop, true);
+      const opened = this.walkOpener(result.data.changes, stop, lenient);
       for (const [index, { body, omitted, ...row }] of result.data.changes.entries()) {
         if (stop.aborted) return this.halted();
         if (body === null) continue;
@@ -808,16 +798,13 @@ export class ObjectStore {
           const answer = await this.backend.batch(timeline, writes, files, stop);
           // Only the store ending drops an answer: a caller's stop that arrives after the write landed keeps it held.
           if (this.closing.signal.aborted) return this.halted();
-          if (!answer.ok) {
-            if (answer.error !== 'cache-reset') return answer;
-            this.rewind(true);
-            return this.halted();
-          }
+          if (!answer.ok) return this.serverFailure(answer);
           let index = 0;
           for (const ready of resolved) {
             if (!ready.pending) continue;
             const { id, kind, parent, value } = ready.pending;
             const rev = answer.data.revs[index++]!;
+            this.recordRevision({ id, kind, parent, rev }, true);
             if (value === undefined) this.drop(id, rev, { kind, id, parent });
             else {
               ready.held = { id, kind, parent, value, rev };
@@ -865,11 +852,7 @@ export class ObjectStore {
       next = null;
       const result = await answer;
       if (stop.aborted) return this.halted();
-      if (!result.ok) {
-        if (result.error !== 'cache-reset') return result;
-        this.rewind(true);
-        return this.halted();
-      }
+      if (!result.ok) return this.serverFailure(result);
       // Sent with none, this is a bootstrap from 0 after a reset, and its answer names the timeline to hold. The server
       // refuses a request whose timeline is not its own, so no other answer can name another.
       if (sent === null) this.adopt(result.data.timeline);
@@ -929,17 +912,13 @@ export class ObjectStore {
       const query = feedQuery({ since: scope.cursor, known: this.cacheKnown(scope.cursor), parent: chat, timeline: this.timeline! });
       const result = await this.reaching(() => this.backend.feed(query, signal), signal);
       if (signal.aborted) return this.halted();
-      if (!result.ok) {
-        if (result.error !== 'cache-reset') return result;
-        this.rewind(true);
-        return this.halted();
-      }
+      if (!result.ok) return this.serverFailure(result);
       this.limits = result.data.limits;
       const opened = this.opener(result.data.changes, true, signal);
       for (const [index, change] of result.data.changes.entries()) {
         if (signal.aborted) return this.halted();
         await this.apply(change, () => opened(index), true, signal);
-        if (change.body && SCOPED.has(change.kind) && this.objects.get(change.id)?.value === undefined) return { ok: false, error: 'unreadable' };
+        if (this.unopened(change)) return { ok: false, error: 'unreadable' };
       }
       if (signal.aborted) return this.halted();
       scope.cursor = result.data.cursor;
@@ -947,6 +926,11 @@ export class ObjectStore {
       this.cacheWrite(result.data.changes, { chat, cursor: scope.cursor, complete: scope.state === 'loaded' || !more });
     }
     return null;
+  }
+
+  // A chat's row that came with a body yet holds no value once applied: the chat cannot be shown whole.
+  private unopened({ id, kind, body }: SealedChange): boolean {
+    return !!body && SCOPED.has(kind) && this.objects.get(id)?.value === undefined;
   }
 
   private opener(rows: SealedChange[], scoped: boolean, signal: AbortSignal, strict = false) {
@@ -957,11 +941,7 @@ export class ObjectStore {
 
   private async apply({ id, kind, parent, rev, body, omitted }: SealedChange, opened: () => Promise<unknown>, scoped: boolean, signal: AbortSignal) {
     if (signal?.aborted || this.closing.signal.aborted) return;
-    this.recordRevision({ id, kind, parent, rev });
-    if (scoped && kind === 'entry' && parent) {
-      const scope = this.scopes.get(parent)!;
-      scope.head = Math.max(scope.head, rev);
-    }
+    this.recordRevision({ id, kind, parent, rev }, scoped);
     if (omitted || (UNFED.has(kind) && !scoped)) {
       if (!parent || this.scopeState(parent) !== 'loaded') this.changes.add({ id, kind, parent });
       // This device's own writes come back here too, and are already held.
@@ -977,12 +957,8 @@ export class ObjectStore {
     this.hold({ id, kind, parent, rev, value: upgraded ?? value });
   }
 
+  // Their callers record the revision first (recordRevision).
   private hold(object: Held) {
-    this.recordRevision(object);
-    if (object.kind === 'entry' && object.parent) {
-      const scope = this.scopes.get(object.parent);
-      if (scope) scope.head = Math.max(scope.head, object.rev);
-    }
     if (this.closing.signal.aborted || this.objects.stale(object.id, object.rev)) return;
     if (WALKED.has(object.kind)) return this.changes.add({ kind: object.kind, id: object.id, parent: object.parent });
     // A chat's entries and memory stay in memory only while the chat is held.
@@ -996,11 +972,6 @@ export class ObjectStore {
   }
 
   private drop(id: string, rev: number, change: StoreChange) {
-    this.recordRevision({ ...change, rev });
-    if (change.kind === 'entry' && change.parent) {
-      const scope = this.scopes.get(change.parent);
-      if (scope) scope.head = Math.max(scope.head, rev);
-    }
     if (this.objects.stale(id, rev)) return;
     const previous = this.objects.get(id);
     if (change.kind === 'entry' && change.parent) this.scopes.get(change.parent)?.fold.changed(id);
@@ -1008,9 +979,15 @@ export class ObjectStore {
     this.objects.drop(id, rev);
   }
 
-  private recordRevision(change: StoreChange & { rev: number }) {
+  // own: read from its chat's scope or written here. A held chat's head is how far its own rows were read, so the feed
+  // naming an entry does not move it.
+  private recordRevision(change: StoreChange & { rev: number }, own: boolean) {
     this.known = Math.max(this.known, change.rev);
     this.objects.recordRevision(change);
+    if (own && change.kind === 'entry' && change.parent) {
+      const scope = this.scopes.get(change.parent);
+      if (scope) scope.head = Math.max(scope.head, change.rev);
+    }
   }
 
   private scopeChanged(chat: string) {
