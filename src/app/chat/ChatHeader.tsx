@@ -32,7 +32,7 @@ export function ChatHeading({ chat }: { chat: OpenChat }) {
   return (
     <ChatTitle
       name={card?.name ?? NO_CHARACTER}
-      sub={item?.title ?? '새 채팅'}
+      description={item?.title ?? '새 채팅'}
       face={shelf && card && <Avatar face={card.name} image={shelf.face} size="sm" />}
       expanded={shelf ? open : undefined}
       onClick={shelf ? () => (open ? actions.closePanel() : actions.side({ kind: 'character', id: shelf.id, part: null })) : undefined}
@@ -86,20 +86,20 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
         {item && <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={actions.duplicate} />}
         {fileable && <MenuItem icon={FolderInput} label={MOVE_TO_FOLDER} onClick={openFolders.onClick} />}
         {chat.onboarding && <MenuItem icon={ClipboardList} label={ONBOARDING} onClick={() => actions.openDialog('onboarding')} />}
-        <MenuItem icon={UsersRound} label={CAST} sub={cast.length ? `${cast.length}명` : undefined} onClick={openCast.onClick} />
+        <MenuItem icon={UsersRound} label={CAST} description={cast.length ? `${cast.length}명` : undefined} onClick={openCast.onClick} />
         {item && !chat.displayPending && <MenuItem icon={ACTS.export.icon} label={EXPORT} onClick={() => actions.openDialog('export')} />}
         <Divider variant="menu" />
         <MenuItem icon={Search} label="검색" onClick={actions.openSearch} />
         {item && !chat.displayPending && <MenuItem icon={Bookmark} label={BOOKMARK} onClick={actions.bookmarks} />}
         {item && <LineageItem current={item.id} shelf={shelf} onClick={actions.lineage} />}
-        {item && features.memory && <MenuItem icon={FEATURE_ICONS.memory} label={FEATURE_NAMES.memory} sub={failed ? '정리 실패' : indexing ? `검색 준비 ${indexing.done}/${indexing.total}` : undefined} onClick={toggleMemory} />}
+        {item && features.memory && <MenuItem icon={FEATURE_ICONS.memory} label={FEATURE_NAMES.memory} description={failed ? '정리 실패' : indexing ? `검색 준비 ${indexing.done}/${indexing.total}` : undefined} onClick={toggleMemory} />}
         <MenuItem icon={ToggleRight} label={FEATURES_TITLE} onClick={openFeatures.onClick} />
         {item && <MenuItem icon={BookKey} label={CHAT_LORE} onClick={actions.lore} />}
         <MenuItem icon={ScanSearch} label="점검" onClick={() => actions.openInspect('request')} />
         {item && <MenuItem icon={PlaneTakeoff} label="오토파일럿" onClick={actions.autopilot} />}
         {tools.length > 0 && <>
           <Divider variant="menu" />
-          {tools.map((tool) => <MenuItem key={`${tool.module}:${tool.kind === 'page' ? 'page' : `menu:${tool.item}`}`} icon={Package} label={tool.label} sub={tool.name} checked={tool.kind === 'page' ? panel?.kind === 'tool' && panel.module === tool.module : undefined} onClick={() => tool.kind === 'page' ? actions.tool(tool.module) : actions.toolMenu(tool.module, tool.item)} />)}
+          {tools.map((tool) => <MenuItem key={`${tool.module}:${tool.kind === 'page' ? 'page' : `menu:${tool.item}`}`} icon={Package} label={tool.label} description={tool.name} checked={tool.kind === 'page' ? panel?.kind === 'tool' && panel.module === tool.module : undefined} onClick={() => tool.kind === 'page' ? actions.tool(tool.module) : actions.toolMenu(tool.module, tool.item)} />)}
         </>}
         <Divider variant="menu" />
         <MenuItem icon={BookOpen} label="읽기 설정" onClick={() => actions.openDialog('reading')} />

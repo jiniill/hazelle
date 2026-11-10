@@ -36,7 +36,7 @@ export function TranslateRows({ translate, translation, card, note, opens, onCha
       <SettingRow
         label="내 메시지 번역"
         sentence={<IntoLanguage before="내 메시지를" after="번역해서 보내기" label="내 메시지 번역 언어" value={translate.inputLanguage} opens={opens} onPick={(inputLanguage) => onChange({ inputLanguage })} />}
-        sub={translate.reverse ? '반전 모드에서는 원문으로 보내요' : undefined}
+        description={translate.reverse ? '반전 모드에서는 원문으로 보내요' : undefined}
         control={<Switch label="내 메시지 번역" checked={translate.input} disabled={translate.reverse} onChange={(input) => onChange({ input })} />}
       />
       <TaskModelRow

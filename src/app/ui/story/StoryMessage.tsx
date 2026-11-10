@@ -155,7 +155,7 @@ export function Switcher({ count, prev, next, pick, axis = 'across' }: SwitcherP
           )}
         >
           {pick.versions.map((line, index) => (
-            <MenuItem key={index} label={`${index + 1}`} sub={line} checked={index === pick.selected} onClick={() => pick.onPick(index)} />
+            <MenuItem key={index} label={`${index + 1}`} description={line} checked={index === pick.selected} onClick={() => pick.onPick(index)} />
           ))}
         </Menu>
       ) : (

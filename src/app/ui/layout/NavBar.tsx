@@ -12,17 +12,17 @@ type Back = { backLabel: string; onBack: () => void; close?: boolean } | { backL
 export type NavBarProps = {
   title: string;
   rename?: { label: string; placeholder: string; blank?: string; onChange: (title: string) => void };
-  subtitle?: ReactNode;
+  description?: ReactNode;
   // What the page's thing is, behind an ⓘ by the title.
   help?: Help;
   status?: string;
   actions?: ReactNode;
   menu?: { of: string; items: ReactNode };
-  // Side-panel heads must align with chat header height; truncate title/subtitle to one line each (user, 2026-10-12).
+  // Side-panel heads must align with chat header height; truncate title/description to one line each (user, 2026-10-12).
   line?: boolean;
 } & Back;
 
-export function NavBar({ title, rename, subtitle, help, status, backLabel, onBack, close = false, actions, menu, line = false }: NavBarProps) {
+export function NavBar({ title, rename, description, help, status, backLabel, onBack, close = false, actions, menu, line = false }: NavBarProps) {
   const pane = usePane();
   const heading = rename ? `${styles.title} ${styles.field}` : line ? styles.title : `${styles.title} ${styles.words}`;
   return (
@@ -37,7 +37,7 @@ export function NavBar({ title, rename, subtitle, help, status, backLabel, onBac
           <h1 className={heading} title={rename ? undefined : title}>{rename ? <TitleField label={rename.label} value={title} placeholder={rename.placeholder} blank={rename.blank} onChange={rename.onChange} place={line ? 'line' : 'page'} /> : title}</h1>
           {help && <Hint label={title}>{help}</Hint>}
         </span>
-        {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
+        {description && <div className={styles.subtitle}>{description}</div>}
       </div>
       {status !== undefined && (
         <span className={`${styles.band} ${styles.status}`} role="status">

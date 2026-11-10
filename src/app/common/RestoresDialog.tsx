@@ -75,10 +75,10 @@ function useUnderWay(whose: string | null, busy: boolean): RestoreRun | null {
   return run;
 }
 
-const ACTIONS: Record<RestoreAction, { label: string; sub: string }> = {
-  resume: { label: '이어서 하기', sub: '멈춘 단계부터 이어서 진행해요' },
-  cancel: { label: '취소', sub: '계정을 복원하기 전 상태로 다시 열어요' },
-  finalize: { label: '마무리 확인', sub: '계정이 다시 열렸는지 확인해요' },
+const ACTIONS: Record<RestoreAction, { label: string; description: string }> = {
+  resume: { label: '이어서 하기', description: '멈춘 단계부터 이어서 진행해요' },
+  cancel: { label: '취소', description: '계정을 복원하기 전 상태로 다시 열어요' },
+  finalize: { label: '마무리 확인', description: '계정이 다시 열렸는지 확인해요' },
 };
 
 function described(restore: Restore): string {
@@ -192,9 +192,9 @@ export function RestoresDialog({ operated, onClose, onActed }: { operated: Opera
                       (restore.actions.length > 0 || undoable) && (
                         <MoreMenu of="복원">
                           {restore.actions.map((action) => (
-                            <MenuItem key={action} icon={action === 'cancel' ? X : Play} label={ACTIONS[action].label} sub={ACTIONS[action].sub} onClick={() => act(restore, action)} />
+                            <MenuItem key={action} icon={action === 'cancel' ? X : Play} label={ACTIONS[action].label} description={ACTIONS[action].description} onClick={() => act(restore, action)} />
                           ))}
-                          {undoable && <MenuItem icon={Undo2} label="복원 전으로 되돌리기" sub="복원 시점 이후에 저장한 내용은 모두 사라져요" tone="warn" onClick={() => setAsking({ kind: 'undo', restore })} />}
+                          {undoable && <MenuItem icon={Undo2} label="복원 전으로 되돌리기" description="복원 시점 이후에 저장한 내용은 모두 사라져요" tone="warn" onClick={() => setAsking({ kind: 'undo', restore })} />}
                         </MoreMenu>
                       )
                     }

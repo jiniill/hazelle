@@ -118,13 +118,13 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
         search.none ? (
           <Empty variant="side">{search.none}</Empty>
         ) : (
-          search.found.map((hit) => <NavRow key={`${hit.where}/${hit.term}`} icon={hit.place.icon} label={hit.term} meta={hit.where} onClick={() => search.open(hit)} />)
+          search.found.map((hit) => <NavRow key={`${hit.where}/${hit.term}`} icon={hit.place.icon} label={hit.term} note={hit.where} onClick={() => search.open(hit)} />)
         )
       ) : (
         groups.map(({ title, places }) => (
           <NavGroup key={title ?? places[0]!.page} title={title}>
             {places.map((place) => (
-              <NavRow key={place.page} icon={place.icon} label={place.label} meta={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route, { replace: true })} />
+              <NavRow key={place.page} icon={place.icon} label={place.label} note={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route, { replace: true })} />
             ))}
           </NavGroup>
         ))

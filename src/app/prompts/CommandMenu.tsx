@@ -46,8 +46,8 @@ function Commands({ sort, onInsert, onGuide }: { sort: PromptSort; onInsert: (co
   const all = groups.flatMap((group) => group.commands);
   const often = all.filter((command) => command.uses?.[sort]);
   const search = useSearch(all, `${COMMAND} 검색`, (command) => [command.form, ...command.names, command.what]);
-  const item = (command: Command, sub = describe(command), key = command.form) => <MenuItem key={key} label={command.form} sub={sub} onClick={() => onInsert(command)} />;
-  const guideItem = (id: GuideId, sub?: string) => <MenuItem key={`guide:${id}`} icon={BookOpen} label={`${GUIDES[id].title} 사용법`} sub={sub} onClick={() => onGuide(id)} />;
+  const item = (command: Command, sub = describe(command), key = command.form) => <MenuItem key={key} label={command.form} description={sub} onClick={() => onInsert(command)} />;
+  const guideItem = (id: GuideId, sub?: string) => <MenuItem key={`guide:${id}`} icon={BookOpen} label={`${GUIDES[id].title} 사용법`} description={sub} onClick={() => onGuide(id)} />;
 
   return (
     <>

@@ -62,9 +62,9 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
             {block.kind === 'text' && sort === 'conversation' && (
               <>
                 <MenuHeading>카드 내용으로 대체</MenuHeading>
-                <MenuItem label="대체하지 않음" sub="캐릭터 카드와 상관없이 이 텍스트를 보내요" checked={block.mark === null} onClick={() => onMark(block, null)} />
+                <MenuItem label="대체하지 않음" description="캐릭터 카드와 상관없이 이 텍스트를 보내요" checked={block.mark === null} onClick={() => onMark(block, null)} />
                 {(['main', 'globalNote'] as const).map((mark) => (
-                  <MenuItem key={mark} label={MARKS[mark].label} sub={MARKS[mark].hint} checked={block.mark === mark} onClick={() => onMark(block, mark)} />
+                  <MenuItem key={mark} label={MARKS[mark].label} description={MARKS[mark].hint} checked={block.mark === mark} onClick={() => onMark(block, mark)} />
                 ))}
                 <Divider variant="menu" />
               </>
@@ -109,7 +109,7 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
                     <MenuItem
                       key={toggle.key}
                       label={toggle.label}
-                      sub={`${toggle.key} · ${toggle.kind === 'check' ? '켬 · 끔' : toggle.kind === 'choice' ? toggle.options.join(' · ') : '입력한 값'}`}
+                      description={`${toggle.key} · ${toggle.kind === 'check' ? '켬 · 끔' : toggle.kind === 'choice' ? toggle.options.join(' · ') : '입력한 값'}`}
                       onClick={() => onCondition(toggle)}
                     />
                   ))}

@@ -175,7 +175,7 @@ function placeAt(panel: HTMLElement, at: { x: number; y: number }) {
 
 type ItemProps = {
   label: string;
-  sub?: string;
+  description?: string;
   // face: the label drawn in that font.
   face?: FontId;
   icon?: LucideIcon;
@@ -190,7 +190,7 @@ type ItemProps = {
 
 // The menu closes before onClick runs, so a dialog it opens takes the button that opened the menu as the place to
 // give the focus back to.
-export function MenuItem({ label, sub, face, icon, avatar, tag, checked, multiple, tone, disabled, onClick }: ItemProps) {
+export function MenuItem({ label, description, face, icon, avatar, tag, checked, multiple, tone, disabled, onClick }: ItemProps) {
   const close = useContext(CloseMenu);
   return (
     <Item
@@ -203,7 +203,7 @@ export function MenuItem({ label, sub, face, icon, avatar, tag, checked, multipl
       leading={avatar ?? (icon && <Icon icon={icon} size="sm" />)}
       title={face === undefined ? label : <span className={styles.face} style={faceStyle(face)}>{label}</span>}
       meta={tag}
-      preview={sub}
+      preview={description}
       trailing={checked && <CheckMark />}
       onClick={() => {
         close();

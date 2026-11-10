@@ -40,7 +40,7 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
       />
       <SettingRow
         label="이미지 모델"
-        sub={routes.length ? undefined : '이미지를 만들 모델이 없어요'}
+        description={routes.length ? undefined : '이미지를 만들 모델이 없어요'}
         control={
           routes.length ? (
             <ImageModelMenu routes={routes} illustrate={illustrate} card={card} opens={opens} onPick={onChange} />
@@ -141,7 +141,7 @@ function PictureLadder({ ladder, onChange }: { ladder: Rung[]; onChange: (ladder
         <SettingRow
           label="삽화 수"
           help="응답이 길면 삽화를 여러 장 생성해요. 글자 수는 태그를 제외하고 계산해요."
-          sub={ladder.length ? undefined : '응답마다 1장'}
+          description={ladder.length ? undefined : '응답마다 1장'}
           control={
             <Button variant="ghost" size="sm" icon={ACTS.create.icon} onClick={add.onClick}>
               {add.label}
@@ -182,12 +182,12 @@ function ImageModelMenu({ routes, illustrate, card, opens, onPick }: Pick<Props,
       trigger={(opener) => <ChipButton variant="field" opens={opens} label={'kind' in choice ? NOT_STARRED : entryName(choice.model)} title="이미지 모델" tone={'kind' in choice ? 'warn' : 'plain'} {...opener} />}
     >
       <MenuHeading>{appliesTo(card, illustrate.own)}</MenuHeading>
-      <MenuItem label={follows('첫 이미지 모델')} sub={entryName(routes[0]!.model)} checked={!own} onClick={() => onPick({ model: undefined })} />
+      <MenuItem label={follows('첫 이미지 모델')} description={entryName(routes[0]!.model)} checked={!own} onClick={() => onPick({ model: undefined })} />
       {routes.map(({ connection, model }) => (
         <MenuItem
           key={`${connection.id}/${entryKey(model)}`}
           label={entryName(model)}
-          sub={connection.value.label}
+          description={connection.value.label}
           checked={!!own && sameModelRef(own, refOf(connection.id, model))}
           onClick={() => onPick({ model: refOf(connection.id, model) })}
         />

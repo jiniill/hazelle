@@ -28,9 +28,9 @@ function ChatAttach(props: Props) {
 function AttachItems({ sees, moved, onAttach, onMoved }: Props) {
   return (
     <>
-      <MenuItem icon={ImagePlus} label="이미지 추가" sub={sees === false ? NO_PICTURES : sees === null ? UNKNOWN_PICTURES : undefined} disabled={sees === false} onClick={() => pickFiles(PICTURES, true, onAttach)} />
+      <MenuItem icon={ImagePlus} label="이미지 추가" description={sees === false ? NO_PICTURES : sees === null ? UNKNOWN_PICTURES : undefined} disabled={sees === false} onClick={() => pickFiles(PICTURES, true, onAttach)} />
       <MenuItem icon={FilePlus} label="텍스트 파일 추가" onClick={() => pickFiles('', true, onAttach)} />
-      {moved !== null && <MenuItem label={MOVED} sub="Risu에서 가져온 이미지예요. 보낼 때마다 토큰이 들어요." checked={moved} multiple onClick={() => onMoved(!moved)} />}
+      {moved !== null && <MenuItem label={MOVED} description="Risu에서 가져온 이미지예요. 보낼 때마다 토큰이 들어요." checked={moved} multiple onClick={() => onMoved(!moved)} />}
     </>
   );
 }

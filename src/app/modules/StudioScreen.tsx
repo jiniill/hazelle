@@ -80,7 +80,7 @@ export function StudioScreen({ stored, back }: { stored: Stored<'tooldraft'>; ba
       top={
         <NavBar
           title={title}
-          subtitle={draft.identity.version ? toolVersion(draft.identity.version) : undefined}
+          description={draft.identity.version ? toolVersion(draft.identity.version) : undefined}
           status={autosave.words}
           {...backBar(back)}
           actions={

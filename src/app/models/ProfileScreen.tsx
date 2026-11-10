@@ -68,7 +68,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
         <NavBar
           title={name}
           rename={{ label: `${MODEL_SETTINGS} 이름`, placeholder: name, onChange: rename }}
-          subtitle={
+          description={
             <>
               {MODEL_SETTINGS} {mark && <Tag tone="accent">{mark}</Tag>}
             </>
@@ -83,12 +83,12 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
                 {!isDefault && (
                   <MenuItem
                     label={SET_DEFAULT}
-                    sub={`${MODEL_SETTINGS}을 따로 지정하지 않은 모델에 이 설정이 적용돼요`}
+                    description={`${MODEL_SETTINGS}을 따로 지정하지 않은 모델에 이 설정이 적용돼요`}
                     onClick={() => toast.settled(setDefaultProfile(store, id), '기본으로 지정하지 못했어요.')}
                   />
                 )}
                 <MenuItem label={resetTo(ORIGINAL)} disabled={Object.keys(shown).length === 0} onClick={() => void clearAll()} />
-                <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} sub={isDefault ? cannotRemove(`기본 ${MODEL_SETTINGS}`) : undefined} tone="warn" disabled={isDefault} onClick={() => void remove()} />
+                <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} description={isDefault ? cannotRemove(`기본 ${MODEL_SETTINGS}`) : undefined} tone="warn" disabled={isDefault} onClick={() => void remove()} />
               </>
             ),
           }}
@@ -148,7 +148,7 @@ function AddChoices({ groups, now, onPick }: { groups: Group[]; now: (model: Gro
     const found = search.found.filter((choice) => choice.connection === connection);
     return found.length === 0 ? [] : [
       <MenuHeading key={connection.id}>{connection.value.label}</MenuHeading>,
-      ...found.map(({ model }) => <MenuItem key={`${connection.id}/${entryKey(model)}`} label={entryName(model)} sub={`현재: ${now(model)}`} onClick={() => onPick(connection.id, entryKey(model))} />),
+      ...found.map(({ model }) => <MenuItem key={`${connection.id}/${entryKey(model)}`} label={entryName(model)} description={`현재: ${now(model)}`} onClick={() => onPick(connection.id, entryKey(model))} />),
     ];
   });
   return (

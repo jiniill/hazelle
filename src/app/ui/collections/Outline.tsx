@@ -17,7 +17,7 @@ export type OutlineStop = {
   icon: LucideIcon;
   title: string;
   dim?: boolean;
-  meta?: string;
+  note?: string;
   badge?: string;
   flagged?: boolean;
   // A cache point after the stop, drawn as a dashed line under it: one set on it, or one the app sets itself.
@@ -156,7 +156,7 @@ export function Outline({ label, help, start, end, stops, current, onPick, onOpe
                     <span className={stop.dim ? `${styles.name} ${styles.dim}` : styles.name}>{stop.title}</span>
                     {stop.badge && <Tag tone="accent">{stop.badge}</Tag>}
                   </span>
-                  {reorder === 'drag' && <span className={styles.meta}>{stop.meta}</span>}
+                  {reorder === 'drag' && <span className={styles.meta}>{stop.note}</span>}
                   {drill && reorder === 'drag' && <Icon icon={ChevronRight} size="sm" />}
                 </button>
                 {reorder === 'drag' ? (

@@ -64,7 +64,7 @@ export function TaskPromptMenu({ task, chosen, heading, opens, onPick, onEdit }:
       trigger={(opener) => <ChipButton variant="field" opens={opens} label={label} title={SORT_PROMPT[task]} tone={choice.kind === 'missing' ? 'warn' : 'plain'} {...opener} />}
     >
       <MenuHeading>{heading}</MenuHeading>
-      {switches && <MenuItem label={follows(defaultPrompt(task))} sub={fallback?.value.name ?? missing} checked={chosen === undefined} onClick={() => onPick(undefined)} />}
+      {switches && <MenuItem label={follows(defaultPrompt(task))} description={fallback?.value.name ?? missing} checked={chosen === undefined} onClick={() => onPick(undefined)} />}
       {prompts.map((item) => {
         const mark = defaultMark(item.id === settings[setting], item.value.name);
         return <MenuItem key={item.id} label={item.value.name} tag={mark && <Tag tone="accent">{mark}</Tag>} checked={item.id === chosen} onClick={() => onPick(item.id)} />;
@@ -80,8 +80,8 @@ export function TaskPromptMenu({ task, chosen, heading, opens, onPick, onEdit }:
 // follows 보조 모델 or fails.
 export function TaskModelRow({ label, help, own, runs, onPick }: { label: string; help?: string; own: ModelRef | undefined; runs: TaskRuns; onPick: (ref: ModelRef | null) => void }) {
   const connections = useConnections();
-  const sub = 'why' in runs ? runs.why : own ? undefined : entryName(runs.route.model);
-  return <RolePicker role="aux" label={label} help={help} own={own} follow={follows(MODEL_ROLES.aux)} sub={sub} connections={connections} onPick={onPick} />;
+  const description = 'why' in runs ? runs.why : own ? undefined : entryName(runs.route.model);
+  return <RolePicker role="aux" label={label} help={help} own={own} follow={follows(MODEL_ROLES.aux)} description={description} connections={connections} onPick={onPick} />;
 }
 
 // 장기 기억's, 마스코트's and 토큰 절약's model, 공용's alone as their prompts are: a pick here holds for every chat.

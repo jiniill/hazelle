@@ -10,7 +10,7 @@ import styles from './SidePanel.module.css';
 
 // page resets scroll; expandable preserves the underlying page, and onExpand says whether the panel stands expanded
 // over it (never where it covers the page); fill delegates scrolling to its child.
-type Props = { title: string; subtitle?: string; nav?: NavBarProps; page?: string; actions?: ReactNode; expandable?: boolean; onExpand?: (expanded: boolean) => void; fill?: boolean; onClose: () => void; children: ReactNode };
+type Props = { title: string; description?: string; nav?: NavBarProps; page?: string; actions?: ReactNode; expandable?: boolean; onExpand?: (expanded: boolean) => void; fill?: boolean; onClose: () => void; children: ReactNode };
 
 // A key aimed at a side panel or a dialog rather than the page under it: focus in one or, with focus nowhere, the pointer
 // over a panel.
@@ -19,7 +19,7 @@ export function aimedAtPanel({ target }: KeyboardEvent): boolean {
 }
 
 // Overlay panels close on outside/Esc; beside panels leave Esc to page actions such as stop reply (user, 2026-10-02).
-export function SidePanel({ title, subtitle, nav, page, actions, expandable = false, onExpand, fill = false, onClose, children }: Props) {
+export function SidePanel({ title, description, nav, page, actions, expandable = false, onExpand, fill = false, onClose, children }: Props) {
   const covers = usePanelCovers();
   const [expanded, setExpanded] = useState(false);
   const widens = expandable && !covers;
@@ -62,7 +62,7 @@ export function SidePanel({ title, subtitle, nav, page, actions, expandable = fa
         ) : (
           <div className={styles.titles}>
             <h2 className={styles.title}>{title}</h2>
-            {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
+            {description && <p className={styles.subtitle}>{description}</p>}
           </div>
         )}
         {actions}

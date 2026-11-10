@@ -94,7 +94,7 @@ export function PortraitsEditor({ owner }: { owner: string }) {
             </Button>
             {stored && !building && (
               <MoreMenu of="삽화 프로필">
-                <MenuItem icon={ACTS.remove.icon} label={`모두 ${ACTS.remove.label}`} sub="다음에 삽화를 그릴 때 새로 만들어져요" tone="warn" onClick={() => void removeAll()} />
+                <MenuItem icon={ACTS.remove.icon} label={`모두 ${ACTS.remove.label}`} description="다음에 삽화를 그릴 때 새로 만들어져요" tone="warn" onClick={() => void removeAll()} />
               </MoreMenu>
             )}
           </>

@@ -125,7 +125,7 @@ export function TestPane({ draft, setup, onSetup, reveal, onFix }: { draft: Tool
   return (
     <Stack gap="related">
       <ChoiceGroup label="채팅" layout="menu" options={chats.map(({ id, title }) => ({ value: id, label: title }))} value={chosen.id} onChange={(chat) => onSetup({ ...setup, chat })} />
-      <ChoiceGroup label="실행 시점" layout="menu" options={picks.map(({ value, label, sub }) => ({ value, label, sub }))} value={picked.value} onChange={setPick} />
+      <ChoiceGroup label="실행 시점" layout="menu" options={picks.map(({ value, label, sub }) => ({ value, label, description: sub }))} value={picked.value} onChange={setPick} />
       {picked.text && <TextField label={picked.value === 'sending' ? '보낼 메시지' : picked.sub === 'tool' ? '인자(JSON)' : '입력창 내용'} value={text} onChange={setText} />}
       {read.trial.tool.manifest.uses.includes('model') && (
         <>

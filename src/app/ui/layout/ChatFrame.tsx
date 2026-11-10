@@ -193,18 +193,18 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
   );
 }
 
-// name: the character's, with its face; sub: the chat's name under them. Two targets: the face and name open the
+// name: the character's, with its face; description: the chat's name under them. Two targets: the face and name open the
 // character (onClick, expanded), and the chat's name renames it (onRename).
 type TitleProps = {
   name: string;
-  sub?: string;
+  description?: string;
   face?: ReactNode;
   expanded?: boolean;
   onClick?: () => void;
   onRename?: () => void;
 };
 
-export function ChatTitle({ name, sub, face, expanded, onClick, onRename }: TitleProps) {
+export function ChatTitle({ name, description, face, expanded, onClick, onRename }: TitleProps) {
   const who = (
     <>
       {face}
@@ -222,7 +222,7 @@ export function ChatTitle({ name, sub, face, expanded, onClick, onRename }: Titl
       ) : (
         <span className={styles.who}>{who}</span>
       )}
-      {sub && (onRename ? <button type="button" className={`${under} ${styles.press}`} onClick={onRename}>{sub}</button> : <span className={under}>{sub}</span>)}
+      {description && (onRename ? <button type="button" className={`${under} ${styles.press}`} onClick={onRename}>{description}</button> : <span className={under}>{description}</span>)}
     </h1>
   );
 }

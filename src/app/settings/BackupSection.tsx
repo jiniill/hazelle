@@ -131,7 +131,7 @@ export function BackupSection() {
         <SettingRow
           label="이전 시점으로 복원"
           help={`${RESTORE_SPAN}의 기록으로 돌아가요. 하루에 ${SELF_RESTORES_PER_DAY}번까지 할 수 있어요.`}
-          sub={guest ? ACCOUNT_ONLY : undefined}
+          description={guest ? ACCOUNT_ONLY : undefined}
           control={
             <Button variant="secondary" size="sm" icon={History} disabled={Boolean(guest)} onClick={() => setRestoring(true)}>
               복원

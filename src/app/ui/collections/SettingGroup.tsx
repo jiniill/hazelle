@@ -26,7 +26,7 @@ type RowProps = {
   changed?: boolean;
   // What the reader who does not know it needs, behind an ⓘ. A label it only restates is left out.
   help?: Help;
-  sub?: ReactNode;
+  description?: ReactNode;
   // Text the row's value holds, a line each, cut to the row's width.
   preview?: readonly string[];
   control: ReactNode;
@@ -40,7 +40,7 @@ type RowProps = {
   note?: string;
 };
 
-export function SettingRow({ label, folder = false, sentence, changed = false, help, sub, preview, control, action, wide = false, menu, error, note }: RowProps) {
+export function SettingRow({ label, folder = false, sentence, changed = false, help, description, preview, control, action, wide = false, menu, error, note }: RowProps) {
   const id = useId();
   const switchId = useId();
   const self = useSeekRow<HTMLDivElement>(label);
@@ -70,7 +70,7 @@ export function SettingRow({ label, folder = false, sentence, changed = false, h
           {help && <Hint label={label}>{help}</Hint>}
           {action}
         </span>
-        {sub && <span className={styles.facts}>{sub}</span>}
+        {description && <span className={styles.facts}>{description}</span>}
         {preview?.map((line, at) => (
           <span key={at} className={styles.preview}>
             {line}

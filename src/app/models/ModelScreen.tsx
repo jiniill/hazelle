@@ -51,7 +51,7 @@ function ImageModelScreen({ connection, model, back }: Props) {
   return (
     <Screen
       width="form"
-      top={<NavBar title={naming.title} rename={naming.rename} subtitle={connection.value.label} status={saveWords(naming.status)} {...backBar(back)} />}
+      top={<NavBar title={naming.title} rename={naming.rename} description={connection.value.label} status={saveWords(naming.status)} {...backBar(back)} />}
       aside={
         <SettingGroup label="이미지 설정">
           <SettingRow
@@ -141,7 +141,7 @@ function ChatModelScreen({ connection, model, back }: Props) {
         <NavBar
           title={naming.title}
           rename={naming.rename}
-          subtitle={
+          description={
             <>
               {connection.value.label}{' '}
               {roles.map((role) => (

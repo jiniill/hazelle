@@ -93,7 +93,7 @@ export function useProfileEditor(stored: Stored<'profile'>, { model, retries }: 
         key={field}
         label={label}
         help={help}
-        sub={value === undefined && known !== undefined ? (unset ?? UNSET) : undefined}
+        description={value === undefined && known !== undefined ? (unset ?? UNSET) : undefined}
         changed={value !== undefined}
         error={typed && !typed.ok ? typed.error : undefined}
         note={noteFor(field)}

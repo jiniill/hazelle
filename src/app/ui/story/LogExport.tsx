@@ -11,7 +11,7 @@ import { Speech } from './StoryMessage';
 // stories: what the message draws, in order: its boxes and its text, each as the chat draws it.
 export type LogRow = { key: string; name: string; mine: boolean; stories: string[] };
 
-type Props = { title: string; sub: string | null; css: string; reading: Reading; rows: LogRow[]; onDrawn: (snapshot: Snapshot) => void };
+type Props = { title: string; description: string | null; css: string; reading: Reading; rows: LogRow[]; onDrawn: (snapshot: Snapshot) => void };
 
 // Lay out offscreen, never display:none, so snapshot has computed styles/decoded pictures.
 // Use reading width with no controls and all pictures expanded.
@@ -21,7 +21,7 @@ export function LogExport(props: Props) {
   return math ? <Drawn {...props} /> : null;
 }
 
-function Drawn({ title, sub, css, reading, rows, onDrawn }: Props) {
+function Drawn({ title, description, css, reading, rows, onDrawn }: Props) {
   const article = useRef<HTMLElement>(null);
   const references = useRef<HTMLDivElement>(null);
   const drawn = useRef(onDrawn);
@@ -48,7 +48,7 @@ function Drawn({ title, sub, css, reading, rows, onDrawn }: Props) {
         <article ref={article} className={`${styles.log} ${scope.className}`} style={scope.style}>
           <header className={styles.heading}>
             <h1 className={styles.title}>{title}</h1>
-            {sub && <p className={styles.sub}>{sub}</p>}
+            {description && <p className={styles.sub}>{description}</p>}
           </header>
           {rows.map(({ key, name, mine, stories }) => {
             return (

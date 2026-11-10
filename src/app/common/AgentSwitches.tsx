@@ -52,7 +52,7 @@ export function AgentSwitches({ owner, own, onChange }: { owner: Owner; own: str
             <SettingRow
               key={id}
               label={promptName(value.name)}
-              sub={STAGE_NAMES[value.stage]}
+              description={STAGE_NAMES[value.stage]}
               control={from ? <Text variant="note">{`${LAYERS[from]}에서 켜짐`}</Text> : <Switch label={promptName(value.name)} checked={own.includes(id)} onChange={(on) => void change(id, on)} />}
             />
           );

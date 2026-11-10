@@ -47,13 +47,13 @@ function keepDraft(key: string, draft: Draft | null) {
 const CATEGORY_CARDS = CATEGORIES.map((value) => ({
   value,
   label: BOARD.categories[value],
-  sub: CATEGORY_LOOK[value].sub,
+  description: CATEGORY_LOOK[value].description,
   mark: <Tag hue={CATEGORY_LOOK[value].hue} icon={CATEGORY_LOOK[value].icon} />,
 }));
 type Reach = 'public' | 'operator';
-const REACH_CARDS: { value: Reach; label: string; sub: string; mark: ReactNode }[] = [
-  { value: 'public', label: '모두에게', sub: '누구나 읽을 수 있어요', mark: <Tag icon={Globe} /> },
-  { value: 'operator', label: BOARD.operatorOnly, sub: '운영자와 나만 읽어요. 오류 제보에 좋아요', mark: <Tag icon={Lock} /> },
+const REACH_CARDS: { value: Reach; label: string; description: string; mark: ReactNode }[] = [
+  { value: 'public', label: '모두에게', description: '누구나 읽을 수 있어요', mark: <Tag icon={Globe} /> },
+  { value: 'operator', label: BOARD.operatorOnly, description: '운영자와 나만 읽어요. 오류 제보에 좋아요', mark: <Tag icon={Lock} /> },
 ];
 
 // A post read for its edit; only its title, text and category change (runtime/service/board editPost).

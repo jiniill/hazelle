@@ -77,7 +77,7 @@ function NoteRow({ note, translation, onEdit }: { note: string | undefined; tran
     <SettingRow
       label={TRANSLATOR_NOTE}
       help={{ text: '전역 노트는 모든 번역에 들어가고, 캐릭터 노트는 이 캐릭터를 번역할 때만 들어가요.', open: { label: opens(inFeature('translate')), onClick: () => navigate({ kind: 'feature', feature: 'translate' }) } }}
-      sub={preview.length ? undefined : '없음'}
+      description={preview.length ? undefined : '없음'}
       preview={preview}
       error={unsent ? NOTE_UNSENT : undefined}
       control={

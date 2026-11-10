@@ -35,7 +35,7 @@ export function ModelMenu({ route, pin, onPick, handle }: Pick<Props, 'onPick' |
     >
       {pin && (
         <>
-          <MenuItem tone="muted" label={pin.name} sub="이 프롬프트가 지정한 모델이에요. 여기서 바꾸면 이 채팅에만 적용돼요." tag={<Tag>{MODEL_PINNED}</Tag>} onClick={pin.open} />
+          <MenuItem tone="muted" label={pin.name} description="이 프롬프트가 지정한 모델이에요. 여기서 바꾸면 이 채팅에만 적용돼요." tag={<Tag>{MODEL_PINNED}</Tag>} onClick={pin.open} />
           <Divider variant="menu" />
         </>
       )}
@@ -54,7 +54,7 @@ function ProfileItem({ current }: { current: ModelRef }) {
   const model = connection && entryOf(connection.value, current.model);
   const choice = useCaptured((store) => (model ? modelProfile(store, model) : null), [model]);
   if (!model || !choice) return null;
-  return <MenuItem tone="muted" label={MODEL_SETTINGS} sub={choice.kind === 'profile' ? profileLine(choice, settings.profile) : '없음'} onClick={() => navigate({ kind: 'model', ...current })} />;
+  return <MenuItem tone="muted" label={MODEL_SETTINGS} description={choice.kind === 'profile' ? profileLine(choice, settings.profile) : '없음'} onClick={() => navigate({ kind: 'model', ...current })} />;
 }
 
 // Mounted only while the menu is open, so each opening starts with an empty search.
@@ -71,7 +71,7 @@ function ModelChoices({ current, onPick }: Pick<Props, 'current' | 'onPick'>) {
 
   // Recent models and search results mix connections, so each names its own; the rest sit under connection headings.
   const item = (choice: (typeof starred)[number], sub?: string) => (
-    <MenuItem key={`${choice.ref.connection}/${choice.ref.model}`} label={choice.name} sub={sub} checked={!!current && sameModelRef(choice.ref, current)} onClick={() => onPick(choice.ref)} />
+    <MenuItem key={`${choice.ref.connection}/${choice.ref.model}`} label={choice.name} description={sub} checked={!!current && sameModelRef(choice.ref, current)} onClick={() => onPick(choice.ref)} />
   );
 
   if (starred.length === 0) return <Empty variant="menu">{noStarred('선택할 수 있어요')}</Empty>;

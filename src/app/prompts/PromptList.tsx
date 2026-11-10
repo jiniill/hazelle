@@ -22,11 +22,11 @@ import { useFolderActions } from '../common/folders/useFolderActions';
 
 const newName = (sort: PromptSort) => `새 ${SORT_PROMPT[sort]}`;
 // What a new agent starts from (user ruling, 2026-10-21): the two built-ins, or one empty of either stage.
-const AGENT_STARTS: { start: AgentStart; name: string; sub: string }[] = [
-  { start: 'scene', name: '기본 장면 메모', sub: `${STAGE_NAMES.pre} · 응답을 생성하기 전에 필요한 설정과 대화 흐름을 정리해요.` },
-  { start: 'polish', name: '기본 문장 다듬기', sub: `${STAGE_NAMES.post} · 생성된 응답에서 불필요한 표현을 다듬어요.` },
-  { start: 'pre', name: `새 ${STAGE_NAMES.pre} ${AGENTS}`, sub: '내용이 비어 있는 새 에이전트를 만들어요.' },
-  { start: 'post', name: `새 ${STAGE_NAMES.post} ${AGENTS}`, sub: '내용이 비어 있는 새 에이전트를 만들어요.' },
+const AGENT_STARTS: { start: AgentStart; name: string; description: string }[] = [
+  { start: 'scene', name: '기본 장면 메모', description: `${STAGE_NAMES.pre} · 응답을 생성하기 전에 필요한 설정과 대화 흐름을 정리해요.` },
+  { start: 'polish', name: '기본 문장 다듬기', description: `${STAGE_NAMES.post} · 생성된 응답에서 불필요한 표현을 다듬어요.` },
+  { start: 'pre', name: `새 ${STAGE_NAMES.pre} ${AGENTS}`, description: '내용이 비어 있는 새 에이전트를 만들어요.' },
+  { start: 'post', name: `새 ${STAGE_NAMES.post} ${AGENTS}`, description: '내용이 비어 있는 새 에이전트를 만들어요.' },
 ];
 const task = (sort: keyof typeof TASK_NAMES, hint: string) => ({ sort, label: TASK_NAMES[sort], hint, none: `${SORT_PROMPT[sort]}가 없어요.` });
 const SORTS: { sort: PromptSort; label: string; hint?: string; none: string }[] = [
@@ -162,8 +162,8 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   const adding =
     shown === 'agent' ? (
       <Menu label={newName('agent')} place="below-end" trigger={(opener) => <Button variant="secondary" icon={ACTS.create.icon} {...opener}>{newName('agent')}</Button>}>
-        {AGENT_STARTS.map(({ start, name, sub }) => (
-          <MenuItem key={start} label={name} sub={sub} onClick={() => addFrom(start, name)} />
+        {AGENT_STARTS.map(({ start, name, description }) => (
+          <MenuItem key={start} label={name} description={description} onClick={() => addFrom(start, name)} />
         ))}
       </Menu>
     ) : (

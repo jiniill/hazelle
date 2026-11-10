@@ -162,7 +162,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
           <TourCard
             icon={Sparkles}
             title={tour.title}
-            sub={`${count(tour.pages.length)}장으로 둘러봐요`}
+            description={`${count(tour.pages.length)}장으로 둘러봐요`}
             action={
               <Button variant="secondary" size="sm" onClick={() => setAsking({ kind: 'tour' })}>
                 {TOUR.see}

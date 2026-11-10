@@ -279,22 +279,22 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
     const flagged = hasConditions(each);
     const cache = marks.get(each.id);
     const words = [`${at + 1}. ${title}`, badge, meta, flagged && '토글 조건 있음', cache && CACHE_WORDS[cache]].filter(Boolean).join(', ');
-    return { id: each.id, kind: blockKind(each), icon: blockIcon(each), title, dim, meta, badge, flagged, cache, label: words };
+    return { id: each.id, kind: blockKind(each), icon: blockIcon(each), title, dim, note: meta, badge, flagged, cache, label: words };
   });
   const addMenu = (at: number) => (
     <>
       <MenuHeading>직접 입력</MenuHeading>
       {TEXTS.map((text) => (
-        <MenuItem key={text.role} label={text.name} sub={text.hint} onClick={() => insert(at, { text: text.role })} />
+        <MenuItem key={text.role} label={text.name} description={text.hint} onClick={() => insert(at, { text: text.role })} />
       ))}
       <Divider variant="menu" />
       <MenuHeading>자동 입력</MenuHeading>
       {slotsOf(sort).filter((slot) => slot !== 'agentNotes' || agentsLab).map((slot) => {
         const there = placedOnce(draft.blocks, slot);
         return there ? (
-          <MenuItem key={slot} tone="muted" label={SLOT[slot].name} sub="추가된 블록으로 이동" onClick={() => pick(there.id)} />
+          <MenuItem key={slot} tone="muted" label={SLOT[slot].name} description="추가된 블록으로 이동" onClick={() => pick(there.id)} />
         ) : (
-          <MenuItem key={slot} label={SLOT[slot].name} sub={SLOT[slot].hint} onClick={() => insert(at, { slot })} />
+          <MenuItem key={slot} label={SLOT[slot].name} description={SLOT[slot].hint} onClick={() => insert(at, { slot })} />
         );
       })}
     </>
@@ -306,10 +306,10 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const outline = (
     <>
       <Stack gap="related">
-        {modelMeta !== null && <NavRow icon={Cpu} label={PANE_TITLES.model} meta={modelMeta} current={split && open === MODEL} onClick={() => pick(MODEL)} />}
-        {sort === 'illustrate' && <NavRow icon={ImageIcon} label={PANE_TITLES.picture} meta={draft.tags || Object.values(draft.picture ?? {}).some((value) => value !== undefined) ? '직접 지정' : '기본값'} current={split && open === PICTURE} onClick={() => pick(PICTURE)} />}
-        <NavRow icon={SlidersHorizontal} label={PANE_TITLES.toggles} meta={howMany(draft.toggles.filter(isToggle).length)} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
-        {draft.variables && <NavRow icon={Variable} label={PANE_TITLES.variables} meta={howMany(draft.variables.length)} current={split && open === VARIABLES} onClick={() => pick(VARIABLES)} />}
+        {modelMeta !== null && <NavRow icon={Cpu} label={PANE_TITLES.model} note={modelMeta} current={split && open === MODEL} onClick={() => pick(MODEL)} />}
+        {sort === 'illustrate' && <NavRow icon={ImageIcon} label={PANE_TITLES.picture} note={draft.tags || Object.values(draft.picture ?? {}).some((value) => value !== undefined) ? '직접 지정' : '기본값'} current={split && open === PICTURE} onClick={() => pick(PICTURE)} />}
+        <NavRow icon={SlidersHorizontal} label={PANE_TITLES.toggles} note={howMany(draft.toggles.filter(isToggle).length)} current={split && open === TOGGLES} onClick={() => pick(TOGGLES)} />
+        {draft.variables && <NavRow icon={Variable} label={PANE_TITLES.variables} note={howMany(draft.variables.length)} current={split && open === VARIABLES} onClick={() => pick(VARIABLES)} />}
       </Stack>
       <Section
         title="전송 순서"
@@ -448,7 +448,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const head: NavBarProps = {
     title: draft.name,
     rename: { label: `${THINGS.prompt.noun} 이름`, placeholder: promptName(draft.name), onChange: (name) => update(() => ({ name })) },
-    subtitle,
+    description: subtitle,
     onBack,
     backLabel,
     status,
@@ -456,12 +456,12 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
       of: THINGS.prompt.noun,
       items: (
         <>
-          {stored.value.origin && <MenuItem label={SEE_ORIGINAL} sub={original ? undefined : ORIGINAL_GONE} disabled={!original} onClick={() => onOpen(stored.value.origin!.id)} />}
+          {stored.value.origin && <MenuItem label={SEE_ORIGINAL} description={original ? undefined : ORIGINAL_GONE} disabled={!original} onClick={() => onOpen(stored.value.origin!.id)} />}
           <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void copy()} />
           {ofSort(stored, 'conversation') && <MenuItem icon={ACTS.export.icon} label={ACTS.export.label} onClick={() => setExporting(true)} />}
-          {words && !isDefault && <MenuItem label={SET_DEFAULT} sub={words.makeDefault} onClick={() => void makeDefault()} />}
-          {sort !== 'conversation' && <MenuItem label="기본 블록으로 되돌리기" sub="블록 구성을 기본값으로 되돌려요. 프롬프트 이름과 모델 설정은 유지돼요." onClick={() => void resetBlocks()} />}
-          <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} sub={isDefault ? cannotRemove(words!.default) : undefined} tone="warn" disabled={isDefault} onClick={() => void erase()} />
+          {words && !isDefault && <MenuItem label={SET_DEFAULT} description={words.makeDefault} onClick={() => void makeDefault()} />}
+          {sort !== 'conversation' && <MenuItem label="기본 블록으로 되돌리기" description="블록 구성을 기본값으로 되돌려요. 프롬프트 이름과 모델 설정은 유지돼요." onClick={() => void resetBlocks()} />}
+          <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} description={isDefault ? cannotRemove(words!.default) : undefined} tone="warn" disabled={isDefault} onClick={() => void erase()} />
         </>
       ),
     },

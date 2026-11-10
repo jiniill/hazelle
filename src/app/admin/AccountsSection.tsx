@@ -107,7 +107,7 @@ export function AccountsSection({ loaded, total, onActed, children }: { loaded: 
                 monthDay(account.createdAt),
                 <MoreMenu of={account.username}>
                   {account.state === 'leaving' ? (
-                    <MenuItem icon={ACTS.remove.icon} label="탈퇴 마무리" sub="중단된 탈퇴 처리를 끝내요" tone="warn" onClick={() => setRemoving(account)} />
+                    <MenuItem icon={ACTS.remove.icon} label="탈퇴 마무리" description="중단된 탈퇴 처리를 끝내요" tone="warn" onClick={() => setRemoving(account)} />
                   ) : (
                     <>
                       <MenuItem icon={HardDrive} label="저장 한도" onClick={() => setCapping(account)} />
@@ -117,7 +117,7 @@ export function AccountsSection({ loaded, total, onActed, children }: { loaded: 
                         (account.suspended ? (
                           <MenuItem icon={LockOpen} label="정지 해제" onClick={() => void act(account.accountId, liftSuspension(account.accountId), `${account.username} 계정의 정지를 해제하지 못했어요.`)} />
                         ) : (
-                          <MenuItem icon={Ban} label="정지" sub="읽기와 백업, 알림 확인, 탈퇴만 할 수 있어요" onClick={() => setWriting({ account, suspend: true })} />
+                          <MenuItem icon={Ban} label="정지" description="읽기와 백업, 알림 확인, 탈퇴만 할 수 있어요" onClick={() => setWriting({ account, suspend: true })} />
                         ))}
                       {others && account.state === 'active' && <MenuItem icon={ACTS.remove.icon} label="계정 삭제" tone="warn" onClick={() => setRemoving(account)} />}
                     </>

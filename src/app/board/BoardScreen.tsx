@@ -128,7 +128,7 @@ function BoardAside({ operator }: { operator: boolean }) {
         }
       >
         <NavRow icon={FileText} label={BOARD.mine} onClick={() => navigate({ kind: 'board-mine' })} />
-        <NavRow icon={Bell} label={BOARD.activity} meta={unreadBoard ? count(unreadBoard) : undefined} onClick={() => navigate({ kind: 'board-activity' })} />
+        <NavRow icon={Bell} label={BOARD.activity} note={unreadBoard ? count(unreadBoard) : undefined} onClick={() => navigate({ kind: 'board-activity' })} />
         {admin ? (
           <NavRow icon={Inbox} label={operator ? BOARD.title : BOARD.operatorOnly} onClick={() => navigate({ kind: 'board', operator: !operator })} />
         ) : (

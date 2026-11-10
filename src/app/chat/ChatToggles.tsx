@@ -52,7 +52,7 @@ export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onRes
       key={toggle.key}
       label={toggle.label}
       changed={changed}
-      sub={changed ? defaultOf(toggle) : undefined}
+      description={changed ? defaultOf(toggle) : undefined}
       wide={toggle.kind === 'text'}
       action={toggle.kind !== 'text' && <IconButton icon={Pin} size="sm" label="입력창에 고정" pressed={pinned.has(toggle.key)} onClick={() => void pinToggle(store, toggle.key, !pinned.has(toggle.key))} />}
       control={
@@ -67,11 +67,11 @@ export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onRes
   return (
     <SidePanel
       title="토글"
-      subtitle={all.length > 0 ? (card ? `${card.name}의 모든 채팅에 적용` : '캐릭터 없이 대화하는 모든 채팅에 적용') : undefined}
+      description={all.length > 0 ? (card ? `${card.name}의 모든 채팅에 적용` : '캐릭터 없이 대화하는 모든 채팅에 적용') : undefined}
       actions={
         toggles.changed > 0 && (
           <MoreMenu of="토글">
-            <MenuItem label={RESET} sub={`변경 ${toggles.changed}개`} onClick={onReset} />
+            <MenuItem label={RESET} description={`변경 ${toggles.changed}개`} onClick={onReset} />
           </MoreMenu>
         )
       }

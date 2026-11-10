@@ -95,7 +95,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, sh
     async () => {
       const draft = logDraft(messages, view, { placed, pictures }, flipped, shownTranslation, bot, names, choices);
       const { urls, missing } = choices.pictures ? await assetDataUrls(store, files, draft.pictures.values()) : { urls: new Map<string, string>(), missing: draft.pictures.size };
-      return { key: crypto.randomUUID(), title: item.title, sub: characterName, ...resolveLog(draft, (kind, id) => urls.get(pictureRef(kind, id))), missing };
+      return { key: crypto.randomUUID(), title: item.title, description: characterName, ...resolveLog(draft, (kind, id) => urls.get(pictureRef(kind, id))), missing };
     },
     [form, choices, messages, view, placed, pictures, flipped, shownTranslation, waiting],
     { describe: () => '내보낼 기록을 준비하지 못했어요.', skip: form !== 'log' || waiting !== null },
@@ -206,7 +206,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, sh
         <LogExport
           key={drawing.key}
           title={drawing.title}
-          sub={drawing.sub}
+          description={drawing.description}
           css={drawing.css}
           rows={drawing.rows}
           reading={reading}

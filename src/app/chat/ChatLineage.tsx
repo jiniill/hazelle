@@ -102,7 +102,7 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
   return (
     <SidePanel
       title={LINEAGE}
-      subtitle={`채팅 ${count}개`}
+      description={`채팅 ${count}개`}
       expandable
       onExpand={setExpanded}
       fill

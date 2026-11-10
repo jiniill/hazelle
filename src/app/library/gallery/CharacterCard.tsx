@@ -76,7 +76,7 @@ export function CharacterActionItems({ shelf, actions, disabled, onRemoved }: { 
       <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} disabled={disabled} onClick={() => void actions.copy(shelf)} />
       <MenuItem icon={ACTS.export.icon} label={ACTS.export.label} disabled={disabled} onClick={() => actions.exportFile(shelf)} />
       <MenuItem icon={ACTS.export.icon} label={exportOf(RISU_CHAT_FILE)} disabled={disabled} onClick={() => actions.exportChats(shelf)} />
-      {!selfHost() && <MenuItem icon={Link2} label={SHARE.act} sub={guest ? ACCOUNT_ONLY : undefined} disabled={disabled || Boolean(guest)} onClick={() => actions.share(shelf)} />}
+      {!selfHost() && <MenuItem icon={Link2} label={SHARE.act} description={guest ? ACCOUNT_ONLY : undefined} disabled={disabled || Boolean(guest)} onClick={() => actions.share(shelf)} />}
       <MenuItem
         icon={ACTS.remove.icon}
         label={ACTS.remove.label}

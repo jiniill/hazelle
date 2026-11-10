@@ -44,6 +44,8 @@ and only this folder styles elements.**
     `selected`: one of a pick of several, absent while not picking. `expanded`: a row open in place.
   - `description`: what a thing holds, under its name. `note`: quiet words by it, by a title, at a row's end (where
     it is used, when, how much) or under a figure (`notes` for several). `detail`: a node under a row, such as a gauge.
+    No component takes `sub`, `subtitle` or `meta`: words under a name are its `description`, quiet words at a row's
+    end its `note` (`Item`'s `meta` slot, filled only inside the kit, holds a row's tags, count or time).
     `lines`: a text area's height in lines.
   - `aside`: a column beside the main one, a screen's or a code pane's. `help`: the ⓘ's explanation, and its `demo`. `hint`: a
     field's line under it.

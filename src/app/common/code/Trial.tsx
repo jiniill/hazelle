@@ -181,7 +181,7 @@ function shownStep(text: string, { at, end, headEnd, depth, result, kept, erased
 const EVENTS = { onInput: { kind: 'input' }, onStart: { kind: 'start' }, onOutput: { kind: 'output' } } as const satisfies Record<string, Event>;
 type TrialEvent = keyof typeof EVENTS;
 const isTrialEvent = (name: string): name is TrialEvent => Object.hasOwn(EVENTS, name);
-const EVENT_OPTIONS = LUA_EVENTS.flatMap(({ name, text }) => (isTrialEvent(name) ? [{ value: name, label: name, sub: text }] : []));
+const EVENT_OPTIONS = LUA_EVENTS.flatMap(({ name, text }) => (isTrialEvent(name) ? [{ value: name, label: name, description: text }] : []));
 
 type Ran = { code: string; event: TrialEvent; trial: Trial | 'failed' };
 

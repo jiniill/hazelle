@@ -398,7 +398,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     of: THINGS.character.noun,
     items: (
       <>
-        {origin && <MenuItem label={SEE_ORIGINAL} sub={original ? undefined : ORIGINAL_GONE} disabled={!original} onClick={() => navigate(characterPage(origin.id, wide))} />}
+        {origin && <MenuItem label={SEE_ORIGINAL} description={original ? undefined : ORIGINAL_GONE} disabled={!original} onClick={() => navigate(characterPage(origin.id, wide))} />}
         <CharacterActionItems shelf={shelf} actions={actions} disabled={busy !== null} onRemoved={() => navigate(HOME)} />
       </>
     ),
@@ -411,11 +411,11 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     const side = groups.map((group) => (
       <NavGroup key={group[0]}>
         {group.map((each) => (
-          <NavRow key={each} icon={PARTS[each].icon} label={PARTS[each].label} meta={holds[each]} current={each === open} onClick={() => onPart(each)} />
+          <NavRow key={each} icon={PARTS[each].icon} label={PARTS[each].label} note={holds[each]} current={each === open} onClick={() => onPart(each)} />
         ))}
       </NavGroup>
     ));
-    return frame({ head: { title, subtitle, status: state, menu }, side, body: <>{pages[open]}{shareDialog}</>, open });
+    return frame({ head: { title, description: subtitle, status: state, menu }, side, body: <>{pages[open]}{shareDialog}</>, open });
   }
   if (part === 'scripts' && scripts.back) return frame({ head: { title, ...scripts.back, status: state }, body: scripts.body, open: script! });
   if (part && partBack) {
@@ -443,5 +443,5 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
       ))}
     </>
   );
-  return frame({ head: { title, subtitle, status: state, menu }, body: <>{list}{shareDialog}</>, open: LIST });
+  return frame({ head: { title, description: subtitle, status: state, menu }, body: <>{list}{shareDialog}</>, open: LIST });
 }

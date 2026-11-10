@@ -250,7 +250,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
       {dialog}
     </Screen>
   ) : (
-    <Screen width="page" top={<NavBar title={label} rename={rename} subtitle={who} status={naming.words} {...backBar(back)} menu={menu} />}>
+    <Screen width="page" top={<NavBar title={label} rename={rename} description={who} status={naming.words} {...backBar(back)} menu={menu} />}>
       {body}
       {dialog}
     </Screen>

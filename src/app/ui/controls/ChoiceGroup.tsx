@@ -11,7 +11,7 @@ const STRIP = { options: 4, letters: 14 };
 type Props<T extends string> = {
   label: string;
   showLabel?: boolean;
-  options: { value: T; label: string; sub?: string; mark?: ReactNode; tag?: string }[];
+  options: { value: T; label: string; description?: string; mark?: ReactNode; tag?: string }[];
   value: T | null;
   // fit and menu: the chip's words while value is none of the options.
   empty?: string;
@@ -29,7 +29,7 @@ export function ChoiceGroup<T extends string>({ label, showLabel = false, option
     return (
       <Menu label={label} place={opens === 'up' ? 'above-end' : 'below-end'} trigger={(opener) => <ChipButton variant={layout === 'menu' ? 'value' : 'field'} label={options.find((option) => option.value === value)?.label ?? empty ?? value ?? ''} title={label} {...opener} />}>
         {options.map((option) => (
-          <MenuItem key={option.value} label={option.label} sub={option.sub} checked={option.value === value} onClick={() => onChange(option.value)} />
+          <MenuItem key={option.value} label={option.label} description={option.description} checked={option.value === value} onClick={() => onChange(option.value)} />
         ))}
       </Menu>
     );
@@ -42,8 +42,8 @@ export function ChoiceGroup<T extends string>({ label, showLabel = false, option
           <Item key={option.value} density="chip" scheme="tab" leading={option.mark} title={option.label} pressed={option.value === value} onClick={() => onChange(option.value)} />
         ) : (
           <button key={option.value} type="button" className={layout === 'list' ? `${styles.choice} ${styles.option}` : layout === 'cards' ? `${styles.choice} ${styles.card}` : styles.choice} aria-pressed={option.value === value}
-            // A card is named by its label alone; its sub describes it.
-            {...(layout === 'cards' && { 'aria-labelledby': `${id}-${option.value}`, 'aria-describedby': option.sub ? `${id}-${option.value}-sub` : undefined })}
+            // A card is named by its label alone; its description describes it.
+            {...(layout === 'cards' && { 'aria-labelledby': `${id}-${option.value}`, 'aria-describedby': option.description ? `${id}-${option.value}-sub` : undefined })}
             onClick={() => onChange(option.value)}
           >
             {layout === 'cards' ? (
@@ -52,9 +52,9 @@ export function ChoiceGroup<T extends string>({ label, showLabel = false, option
                 <span id={`${id}-${option.value}`} className={styles.cardLabel}>
                   {option.label}
                 </span>
-                {option.sub && (
+                {option.description && (
                   <span id={`${id}-${option.value}-sub`} className={styles.sub}>
-                    {option.sub}
+                    {option.description}
                   </span>
                 )}
               </>
@@ -63,7 +63,7 @@ export function ChoiceGroup<T extends string>({ label, showLabel = false, option
                 <span className={styles.dot} aria-hidden />
                 <span className={styles.text}>
                   <span>{option.label}</span>
-                  {option.sub && <span className={styles.sub}>{option.sub}</span>}
+                  {option.description && <span className={styles.sub}>{option.description}</span>}
                 </span>
               </>
             ) : (

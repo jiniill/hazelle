@@ -11,11 +11,11 @@ import { BOARD } from './words';
 export const authorName = (author: Author) => (author.operator ? OPERATOR_NAME : author.left ? BOARD.left : (author.name ?? BOARD.unnamed));
 
 // A post's 분류 reads by its tint and icon wherever it shows: the feed, the post, the write page's cards.
-export const CATEGORY_LOOK: Record<Category, { hue: 1 | 2 | 3 | 4 | 5; icon: LucideIcon; sub: string }> = {
-  bug: { hue: 4, icon: Bug, sub: '오류나 비정상적인 동작을 제보해요' },
-  idea: { hue: 1, icon: Lightbulb, sub: '필요한 기능이나 개선할 점을 제안해요' },
-  question: { hue: 2, icon: CircleHelp, sub: '사용 방법을 질문해요' },
-  news: { hue: 5, icon: Megaphone, sub: '업데이트 내역과 공지사항' },
+export const CATEGORY_LOOK: Record<Category, { hue: 1 | 2 | 3 | 4 | 5; icon: LucideIcon; description: string }> = {
+  bug: { hue: 4, icon: Bug, description: '오류나 비정상적인 동작을 제보해요' },
+  idea: { hue: 1, icon: Lightbulb, description: '필요한 기능이나 개선할 점을 제안해요' },
+  question: { hue: 2, icon: CircleHelp, description: '사용 방법을 질문해요' },
+  news: { hue: 5, icon: Megaphone, description: '업데이트 내역과 공지사항' },
 };
 
 // An open post carries no status mark: every post starts open.

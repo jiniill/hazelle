@@ -146,7 +146,7 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
   }
 
   return (
-    <SidePanel title="응답 정보" subtitle={version ? ago(version.at) : undefined} actions={replies.length > 1 && stepper} onClose={onClose}>
+    <SidePanel title="응답 정보" description={version ? ago(version.at) : undefined} actions={replies.length > 1 && stepper} onClose={onClose}>
       {body}
     </SidePanel>
   );

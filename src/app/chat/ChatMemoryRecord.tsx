@@ -81,7 +81,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, failure, positions,
   return (
     <SidePanel
       title="장기 기억"
-      nav={{ title: noun, subtitle: span.words, backLabel: holder ? CHAPTER : '장기 기억', onBack: back, status: save.words }}
+      nav={{ title: noun, description: span.words, backLabel: holder ? CHAPTER : '장기 기억', onBack: back, status: save.words }}
       page={item.id}
       onClose={actions.closePanel}
     >

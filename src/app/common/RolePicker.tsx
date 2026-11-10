@@ -46,7 +46,7 @@ type Props = {
   role: Role;
   label?: string;
   help?: string;
-  sub?: string;
+  description?: string;
   own: ModelRef | undefined;
   // Name the inherited role, never a concrete model: chat/prompt overrides can choose a different one.
   // Null means the picker cannot be left unset.
@@ -55,13 +55,13 @@ type Props = {
   onPick: (ref: ModelRef | null) => void;
 };
 
-export function RolePicker({ role, label = MODEL_ROLES[role], help, sub, own, follow, connections, onPick }: Props) {
+export function RolePicker({ role, label = MODEL_ROLES[role], help, description, own, follow, connections, onPick }: Props) {
   const current = own ? modelName(own, connections) : (follow ?? NOT_PICKED);
   return (
     <SettingRow
       label={label}
       help={help}
-      sub={sub}
+      description={description}
       control={
         <Menu place="below-end" label={label} trigger={(opener) => <ChipButton variant="field" label={current} title={label} {...opener} />}>
           <RoleChoices role={role} own={own} follow={follow} connections={connections} onPick={onPick} />
@@ -73,7 +73,7 @@ export function RolePicker({ role, label = MODEL_ROLES[role], help, sub, own, fo
 
 // values: what the chosen model's 모델 설정 sets, under its connection; open: the door to that model's page, the
 // menu's first item, so the values are read on the card and reached in one press.
-type CardProps = Omit<Props, 'label' | 'sub'> & { values?: string; open?: () => void };
+type CardProps = Omit<Props, 'label' | 'description'> & { values?: string; open?: () => void };
 
 export function RoleCard({ role, help, own, follow, connections, onPick, values, open }: CardProps) {
   const label = MODEL_ROLES[role];
@@ -106,7 +106,7 @@ function RoleChoices({ role, own, follow, connections, onPick, open }: CardProps
     <>
       {open && <MenuItem tone="muted" label={`${MODEL_SETTINGS} 열기`} onClick={open} />}
       {follow && <MenuItem label={follow} checked={!own} onClick={() => onPick(null)} />}
-      {own && !findStarred(own, connections) && <MenuItem label={NOT_STARRED} sub={own.model} checked onClick={() => undefined} />}
+      {own && !findStarred(own, connections) && <MenuItem label={NOT_STARRED} description={own.model} checked onClick={() => undefined} />}
       {starred.length === 0 ? (
         <Empty variant="menu">{noStarred('선택할 수 있어요')}</Empty>
       ) : (

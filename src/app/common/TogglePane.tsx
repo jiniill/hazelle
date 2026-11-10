@@ -75,13 +75,13 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, 
           label={line.kind === 'caption' || line.kind === 'unread' ? '내용 수정' : ACTS.rename.label}
           onClick={() => setEditing({ at, field: line.kind === 'unread' ? 'line' : 'label' })}
         />
-        {isToggle(line) && <MenuItem label="키 변경" sub={uses ? '조건에 쓴 키도 함께 바뀌어요' : undefined} onClick={() => setEditing({ at, field: 'key' })} />}
+        {isToggle(line) && <MenuItem label="키 변경" description={uses ? '조건에 쓴 키도 함께 바뀌어요' : undefined} onClick={() => setEditing({ at, field: 'key' })} />}
         {moves?.up && <MenuItem icon={ArrowUp} label="위로 옮기기" onClick={() => onMove(line, moves.up!)} />}
         {moves?.down && <MenuItem icon={ArrowDown} label="아래로 옮기기" onClick={() => onMove(line, moves.down!)} />}
         <MenuItem
           icon={ACTS.remove.icon}
           label={ACTS.remove.label}
-          sub={group && group.members.length > 0 ? '안의 토글은 남아요' : undefined}
+          description={group && group.members.length > 0 ? '안의 토글은 남아요' : undefined}
           tone="warn"
           onClick={() => onRemove(group ? groupLines(group) : [{ line, at }])}
         />
@@ -93,7 +93,7 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, 
     <SettingRow
       key={isToggle(line) ? line.key : `unread${at}`}
       label={isToggle(line) ? line.label : LINE_WORDS.unread}
-      sub={isToggle(line) ? undefined : line.text}
+      description={isToggle(line) ? undefined : line.text}
       wide={line.kind === 'text'}
       control={control(line, at)}
       menu={menu({ line, at })}
