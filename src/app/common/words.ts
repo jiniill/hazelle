@@ -4,7 +4,7 @@ import type { RegexScript } from '../../engine/import/types';
 import type { Feature } from '../../model/features';
 import type { PrereadParts } from '../../model/settings';
 import type { AgentStage } from '../../model/prompt';
-import { KEEP_DAYS } from '../../model/library';
+import { KEEP_DAYS, type Removable } from '../../model/library';
 import { FIRST_PROFILE_NAME } from '../../model/profile';
 import { ADDITIONAL_MOST } from '../../engine/additional';
 import { PULSE_PAGE } from '../../contracts/pulse';
@@ -127,6 +127,16 @@ export const DEFAULT_MODELS = '기본 모델';
 export const DEFAULT_MODELS_FAILED = `${DEFAULT_MODELS}을 바꾸지 못했어요.`;
 
 export const MODEL_SETTINGS = '모델 설정';
+
+// A kind of the user's own things: what it is called and what it is counted in.
+export const THINGS: Record<Removable, { noun: string; unit: string }> = {
+  character: { noun: '캐릭터', unit: '명' },
+  chat: { noun: '채팅', unit: '개' },
+  prompt: { noun: PAGES.prompts, unit: '개' },
+  module: { noun: PAGES.modules, unit: '개' },
+  persona: { noun: PAGES.personas, unit: '개' },
+  profile: { noun: MODEL_SETTINGS, unit: '개' },
+};
 
 // Always name message direction: operator → account, account → operator, or operator sending.
 export const NOTICES = { from: '운영자가 보낸 알림', received: '신고', send: '알림 보내기' };

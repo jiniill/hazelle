@@ -1,5 +1,5 @@
 // A particle pair: the first form after a final consonant, the second after a vowel. 으로/로 also takes 로 after ㄹ.
-type Pair = '이/가' | '을/를' | '은/는' | '과/와' | '으로/로' | '이라서/라서';
+type Pair = '이/가' | '을/를' | '은/는' | '과/와' | '으로/로' | '이라서/라서' | '이에요/예요';
 
 // Multi-digit trailing zero reads as a unit (십/백/천/만), with a non-ㄹ final consonant like 영.
 const DIGIT_FINALS = [21, 8, 0, 16, 0, 0, 1, 8, 8, 0];

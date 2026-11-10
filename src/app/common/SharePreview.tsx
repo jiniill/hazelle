@@ -7,7 +7,7 @@ import { fileNamed } from './download';
 import { runExport } from './exporting';
 import { describeFailure } from './failure';
 import { count } from './typedNumber';
-import { SHARE } from './words';
+import { SHARE, THINGS } from './words';
 
 // Use the same charx export on public/operator previews; onDownloaded fires only after the whole file is written.
 type Props = { source: ShareSource; opened: Opened; first?: ReactNode; received?: number; onDownloaded?: () => void; failed: (failure: string) => void };
@@ -26,7 +26,7 @@ export function SharePreview({ source, opened, first, received, onDownloaded, fa
   const download = () =>
     runExport(
       { error: (message, extra) => failed([message, extra?.detail].filter(Boolean).join(' ')), failed: (failure) => failed(describeFailure(failure)) },
-      fileNamed(preview.name, '캐릭터', 'charx'),
+      fileNamed(preview.name, THINGS.character.noun, 'charx'),
       (output, progress) => writeShared(source, opened.content, output, progress),
       setBusy,
       () => onDownloaded?.(),

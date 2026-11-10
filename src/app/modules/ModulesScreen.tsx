@@ -10,7 +10,7 @@ import { useSearch } from '../common/useSearch';
 import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/filing';
 import { FolderPath, useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
-import { ALWAYS, EMPTY_FOLDER, moduleName, PAGES, SCRIPTS } from '../common/words';
+import { ALWAYS, EMPTY_FOLDER, moduleName, PAGES, SCRIPTS, THINGS } from '../common/words';
 import { useChildrenOf, useLibrary, useModulesAndPlugins, usePersonas, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -55,7 +55,7 @@ export function useModuleUse() {
   };
   const cell = (id: string) => {
     const on = use(id);
-    const used = counted([['프롬프트', on.prompt], ['캐릭터', on.character], ['페르소나', on.persona]]).join(' · ');
+    const used = counted([[THINGS.prompt.noun, on.prompt], [THINGS.character.noun, on.character], [THINGS.persona.noun, on.persona]]).join(' · ');
     return (
       <>
         {on.always && <Tag>{ALWAYS}</Tag>}
@@ -84,10 +84,10 @@ const FOLDER_COLUMNS: TableColumn[] = [
 // A module stands in the first of its places in the sections' order (항상, prompt, character, persona), which is not pack order; its 쓰는 곳
 // still names every place.
 const SECTIONS: { place: Place; title: string }[] = [
-  { place: 'always', title: `${ALWAYS} 켠 모듈` },
-  { place: 'prompt', title: '프롬프트 모듈' },
-  { place: 'character', title: '캐릭터 모듈' },
-  { place: 'persona', title: '페르소나 모듈' },
+  { place: 'always', title: `${ALWAYS} 켠 ${THINGS.module.noun}` },
+  { place: 'prompt', title: `${THINGS.prompt.noun} ${THINGS.module.noun}` },
+  { place: 'character', title: `${THINGS.character.noun} ${THINGS.module.noun}` },
+  { place: 'persona', title: `${THINGS.persona.noun} ${THINGS.module.noun}` },
   { place: 'none', title: '사용 안 함' },
 ];
 
@@ -112,18 +112,18 @@ export function ModulesScreen({ place, back }: { place: string | null; back: Bac
   const parts = useModuleParts(shown);
   function add() {
     const id = crypto.randomUUID();
-    toast.settled(createModule(store, newOf('모듈'), id, at.here?.folder.id ?? null), '모듈을 만들지 못했어요.');
+    toast.settled(createModule(store, newOf(THINGS.module.noun), id, at.here?.folder.id ?? null), '모듈을 만들지 못했어요.');
     navigate({ kind: 'module', id, pane: null });
   }
   const adding = (
     <Button variant="secondary" icon={ACTS.create.icon} onClick={add}>
-      {newOf('모듈')}
+      {newOf(THINGS.module.noun)}
     </Button>
   );
   const actions = (
     <>
       <Button variant="secondary" icon={ACTS.import.icon} onClick={pick}>
-        {importOf('모듈')}
+        {importOf(THINGS.module.noun)}
       </Button>
       {adding}
     </>

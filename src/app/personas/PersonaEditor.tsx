@@ -15,7 +15,7 @@ import { PersonaPickDialog } from '../common/PersonaPickDialog';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName } from '../common/words';
+import { BIN_KEEPS, cannotRemove, COPY_SAID, copyName, THINGS } from '../common/words';
 import { navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useRemoval } from '../common/useRemoval';
@@ -49,7 +49,7 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
   }
 
   const remove = () =>
-    removal({ name: ({ value }) => value.name, noun: '페르소나', task: () => removePersona(store, id), queue: autosave.remove, restore: () => restorePersona(store, id), then: () => navigate({ kind: 'personas', place: null }), detail: BIN_KEEPS });
+    removal({ name: ({ value }) => value.name, noun: THINGS.persona.noun, task: () => removePersona(store, id), queue: autosave.remove, restore: () => restorePersona(store, id), then: () => navigate({ kind: 'personas', place: null }), detail: BIN_KEEPS });
 
   async function copy() {
     if (!(await autosave.flush())) return;
@@ -91,7 +91,7 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
     </>
   );
   const menu = {
-    of: '페르소나',
+    of: THINGS.persona.noun,
     items: (
       <>
         <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void copy()} />

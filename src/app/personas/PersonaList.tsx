@@ -4,7 +4,7 @@ import { useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
 import { useImport } from '../common/importing';
 import { PersonaGrid, usePersonaPlaces } from '../common/PersonaGrid';
-import { PAGES } from '../common/words';
+import { PAGES, THINGS } from '../common/words';
 import { useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -27,17 +27,17 @@ export function PersonaList({ place, back }: { place: string | null; back: Back 
 
   function add() {
     const id = crypto.randomUUID();
-    toast.settled(addPersona(store, { name: '새 페르소나', description: '', picture: null, ...(here !== null && { folder: here }) }, id), '페르소나를 만들지 못했어요.');
+    toast.settled(addPersona(store, { name: newOf(THINGS.persona.noun), description: '', picture: null, ...(here !== null && { folder: here }) }, id), '페르소나를 만들지 못했어요.');
     navigate({ kind: 'persona', id });
   }
 
   const actions = (
     <>
       <Button variant="secondary" icon={ACTS.import.icon} onClick={pickPersonas}>
-        {importOf('페르소나')}
+        {importOf(THINGS.persona.noun)}
       </Button>
       <Button variant="secondary" icon={ACTS.create.icon} onClick={add}>
-        {newOf('페르소나')}
+        {newOf(THINGS.persona.noun)}
       </Button>
     </>
   );

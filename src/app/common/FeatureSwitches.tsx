@@ -6,7 +6,7 @@ import { accountSettings } from '../../runtime/account-settings';
 import { useLibrary, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { ChoiceGroup, Section, SettingGroup, SettingRow } from '../ui';
-import { FEATURE_NAMES, FEATURES_TITLE, follows, onOff, SAVE_FAILED, SCOPE, scopeTag } from './words';
+import { FEATURE_NAMES, FEATURES_TITLE, follows, onOff, SAVE_FAILED, SCOPE, scopeTag, THINGS } from './words';
 
 type Choice = 'default' | 'on' | 'off';
 
@@ -17,7 +17,7 @@ const WORKS: Record<FeatureLayer['kind'], string> = {
 };
 
 // Not 공용 for every layer: a character's follows the prompt, a chat's its character.
-const ABOVE: Record<ReturnType<typeof above>, string> = { settings: SCOPE.default, prompt: '프롬프트', character: '캐릭터' };
+const ABOVE: Record<ReturnType<typeof above>, string> = { settings: SCOPE.default, prompt: THINGS.prompt.noun, character: THINGS.character.noun };
 const followsAbove = (owner: FeatureLayer) => follows(ABOVE[above(owner)]);
 
 // A layer's line in a list of parts: what it follows while it sets nothing shown, else what it sets, 번역 끔 · 삽화 켬.

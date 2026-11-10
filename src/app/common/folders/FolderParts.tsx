@@ -6,7 +6,8 @@ import { ACTS, newOf } from '../acts';
 import { NameDialog } from '../NameDialog';
 import { useSelection } from '../useSelection';
 import { withParticle } from '../particles';
-import { filedCount, filedNoun, folderNote } from './filing';
+import { THINGS } from '../words';
+import { filedCount, folderNote } from './filing';
 import { useFolderActions } from './useFolderActions';
 
 // What a card dragged onto a folder does; to: the folder's id, null for out of every folder.
@@ -78,7 +79,7 @@ export function FolderPath({ kind, path, onGo, onName, dropInto, trail, children
   // Where nothing is made, the top alone is only the title again.
   if (!onName && !here && !trail && !children) return null;
   const parts = [
-    { key: 'top', name: filedNoun(kind), onClick: () => onGo(null), onDropCard: dropInto?.(null) },
+    { key: 'top', name: THINGS[kind].noun, onClick: () => onGo(null), onDropCard: dropInto?.(null) },
     ...path.map((folder) => ({ key: folder.id, name: folder.value.name, onClick: () => onGo(folder.id), onDropCard: dropInto?.(folder.id) })),
     ...(trail ? [trail] : []),
   ];
@@ -179,7 +180,7 @@ export function useMoving<T>(set: FolderSet, index: FolderIndex<T>, folderOf: (i
   const foldered = index.folders.length > 0;
   // Beside a delete, the move shows once a folder exists; alone, it stays disabled and the bar says why.
   const bar = !off && selection.bar(
-    { counted: (count) => filedCount(kind, count), ask: `${remove ? '' : '옮길 '}${withParticle(filedNoun(kind), '을/를')} 선택해 주세요`, why: remove || foldered ? undefined : NO_FOLDER },
+    { counted: (count) => filedCount(kind, count), ask: `${remove ? '' : '옮길 '}${withParticle(THINGS[kind].noun, '을/를')} 선택해 주세요`, why: remove || foldered ? undefined : NO_FOLDER },
     <>
       {(!remove || foldered) && (
         <Menu

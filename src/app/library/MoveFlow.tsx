@@ -13,7 +13,7 @@ import { describeFailure } from '../common/failure';
 import { sizeText } from '../common/size';
 import { describeUnused } from '../common/unused';
 import { count as countText } from '../common/typedNumber';
-import { LORE_BUDGET_LABEL, MISSED, moduleName, UNREADABLE_FILE } from '../common/words';
+import { LORE_BUDGET_LABEL, MISSED, moduleName, THINGS, UNREADABLE_FILE } from '../common/words';
 import { useFiles, useStanding, useStore } from '../session';
 import { Button, Callout, Checkbox, Dialog, Outcome, Progress, Section, Stack, Text, type ProgressStep } from '../ui';
 import { unsaved } from './importOutcome';
@@ -35,7 +35,7 @@ const PRESET_FAILURE: Record<PresetFailure['kind'], string> = {
 };
 
 // In the move's order (runtime/move). The character steps interleave, so each kind reached keeps its own line.
-const STEP: Record<MoveStep['kind'], string> = { personas: '페르소나', modules: '모듈', prompts: '프롬프트', characters: '캐릭터', chats: '채팅', pictures: '이미지' };
+const STEP: Record<MoveStep['kind'], string> = { personas: THINGS.persona.noun, modules: THINGS.module.noun, prompts: THINGS.prompt.noun, characters: THINGS.character.noun, chats: THINGS.chat.noun, pictures: '이미지' };
 const READING = '백업 읽기';
 type Steps = Partial<Record<MoveStep['kind'], MoveStep>>;
 
@@ -238,22 +238,22 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
         <Text variant="note">{pictures > 0 ? `이미지 ${pictures}개(${sizeText(pictureBytes)})가 들어 있어요.` : '이미지가 들어 있지 않아요. 이미지를 뺀 백업 파일이라면 전체 백업 파일을 함께 넣어 주세요.'}</Text>
         {room !== null && pictureBytes > room && <Callout tone="warn">{`남은 이미지 저장 공간은 ${sizeText(room)}예요. 용량을 넘는 이미지는 빼고 가져와요.`}</Callout>}
         <Picks
-          title="캐릭터"
+          title={THINGS.character.noun}
           rows={catalog.characters.map((character) => ({ label: character.name, note: have.characters.has(character.id) ? '이미 있음' : `채팅 ${character.chatCount}개` }))}
           can={can.characters}
           ticks={ticks.characters}
           onChange={(next) => tick('characters', next)}
         />
-        <Picks title="페르소나" rows={catalog.personas.map((persona) => ({ label: aliased(persona.name, persona.alias) }))} can={can.personas} ticks={ticks.personas} onChange={(next) => tick('personas', next)} />
+        <Picks title={THINGS.persona.noun} rows={catalog.personas.map((persona) => ({ label: aliased(persona.name, persona.alias) }))} can={can.personas} ticks={ticks.personas} onChange={(next) => tick('personas', next)} />
         <Picks
-          title="프롬프트"
+          title={THINGS.prompt.noun}
           rows={catalog.presets.map((preset) => ({ label: preset.name, note: preset.failure === null ? undefined : PRESET_FAILURE[preset.failure] }))}
           can={can.presets}
           ticks={ticks.presets}
           onChange={(next) => tick('presets', next)}
         />
         <Picks
-          title="모듈"
+          title={THINGS.module.noun}
           rows={catalog.modules.map((module) => ({ label: moduleName(module.name), note: hasModule(have, module.risu) ? '이미 있음' : undefined }))}
           can={can.modules}
           ticks={ticks.modules}

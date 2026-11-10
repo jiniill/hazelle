@@ -22,7 +22,7 @@ import { ACTS } from '../common/acts';
 import { IMPORT_ACCEPT, ImportContext } from '../common/importing';
 import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import { useSearch } from '../common/useSearch';
-import { BIN, MISSED, moduleName, namedObject, NO_CHARACTER, promptName, TOOL, UNREADABLE_FILE, WRONG_PASSWORD } from '../common/words';
+import { BIN, MISSED, moduleName, namedObject, NO_CHARACTER, promptName, THINGS, TOOL, UNREADABLE_FILE, WRONG_PASSWORD } from '../common/words';
 import { useFiles, useLibrary, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import type { Route } from '../shell/routes';
@@ -37,10 +37,10 @@ import { stepOf } from './saving';
 const WONT_COME = '가져올 수 없는 항목';
 const OPENS: { kind: Exclude<ImportOutcome['kind'], 'character'>; icon: LucideIcon; label: string; route: (id: string) => Route }[] = [
   { kind: 'chat', icon: MessageSquare, label: '열기', route: (id) => ({ kind: 'chat', id }) },
-  { kind: 'module', icon: Package, label: '모듈 보기', route: (id) => ({ kind: 'module', id, pane: null }) },
-  { kind: 'plugin', icon: Puzzle, label: '플러그인 보기', route: (id) => ({ kind: 'plugin', id }) },
-  { kind: 'prompt', icon: FileText, label: '프롬프트 보기', route: (id) => ({ kind: 'prompt', id, pane: null }) },
-  { kind: 'persona', icon: UserRound, label: '페르소나 보기', route: (id) => ({ kind: 'persona', id }) },
+  { kind: 'module', icon: Package, label: `${THINGS.module.noun} 보기`, route: (id) => ({ kind: 'module', id, pane: null }) },
+  { kind: 'plugin', icon: Puzzle, label: `${TOOL} 보기`, route: (id) => ({ kind: 'plugin', id }) },
+  { kind: 'prompt', icon: FileText, label: `${THINGS.prompt.noun} 보기`, route: (id) => ({ kind: 'prompt', id, pane: null }) },
+  { kind: 'persona', icon: UserRound, label: `${THINGS.persona.noun} 보기`, route: (id) => ({ kind: 'persona', id }) },
 ];
 
 // fill targets a moved character's pictures; replace selects old module versions. For chat destinations,
@@ -240,14 +240,14 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         const saved = await savePrompt(sink, parsed.preset, original, step);
         if (!saved.ok) return notSaved(file.name, saved);
         const { id, paired, waiting, kept, undo } = saved.data;
-        offer(offered(promptName(parsed.preset.prompt.name), '프롬프트', undo));
+        offer(offered(promptName(parsed.preset.prompt.name), THINGS.prompt.noun, undo));
         return withOriginal(promptOutcome(file.name, title, id, paired.map((each) => moduleName(store.get('module', each)!.value.name)), waiting), kept);
       }
       if ('module' in parsed) {
         const saved = await saveModule(sink, parsed.module, choice?.kind === 'replace' && choice.on, place, original, step);
         if (!saved.ok) return notSaved(file.name, saved);
         const { id, unsupported, placed, replaced, paired, kept, undo } = saved.data;
-        offer(offered(moduleName(parsed.module.name), '모듈', undo));
+        offer(offered(moduleName(parsed.module.name), THINGS.module.noun, undo));
         const replacing = replaced && { names: replaced.olds.map(({ value }) => moduleName(value.name)), places: replaced.places.ok ? replaced.places.data : 0, failure: failureOf(replaced.places) };
         const pairing = { prompts: paired.ok ? paired.data.map((prompt) => promptName(prompt.value.name)) : [], failure: failureOf(paired) };
         return withOriginal(moduleOutcome(file.name, title, id, unsupported, placement(place, placed), pairing, replacing), kept);
@@ -255,7 +255,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       if ('persona' in parsed) {
         const saved = await savePersona(store, parsed.persona);
         if (!saved.ok) return notSaved(file.name, saved);
-        offer(offered(aliased(parsed.persona.name, parsed.persona.alias), '페르소나', saved.data.undo));
+        offer(offered(aliased(parsed.persona.name, parsed.persona.alias), THINGS.persona.noun, saved.data.undo));
         return personaOutcome(file.name, title, saved.data.saved);
       }
       if (choice?.kind === 'fill' && choice.on) {
@@ -266,7 +266,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       }
       const saved = await saveCharacter(sink, parsed.card, original, step);
       if (!saved.ok) return notSaved(file.name, saved);
-      offer(offered(parsed.card.card.name, '캐릭터', saved.data.undo));
+      offer(offered(parsed.card.card.name, THINGS.character.noun, saved.data.undo));
       return withOriginal(characterOutcome(file.name, title, saved.data.saved), saved.data.kept);
     });
     return typeof saved === 'string' ? failed(file.name, saved) : saved;
@@ -489,18 +489,12 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   );
 }
 
-const KINDS: Record<ImportKind, { word: string; face?: LucideIcon }> = {
-  character: { word: '캐릭터' },
-  persona: { word: '페르소나' },
-  module: { word: '모듈', face: Package },
-  plugin: { word: TOOL, face: Puzzle },
-  prompt: { word: '프롬프트', face: FileText },
-  chat: { word: '채팅', face: MessageSquare },
-};
+const FACES: Partial<Record<ImportKind, LucideIcon>> = { module: Package, plugin: Puzzle, prompt: FileText, chat: MessageSquare };
 
 // Under the row: its warnings and lines first, then what asks a choice, then what does not come in.
 function ImportRow({ kind, title, holds, lines, missed, missedTitle, note, control, choice }: { kind: ImportKind; title: string; holds?: string; lines: Line[]; missed: string[]; missedTitle: string; note?: string | null; control?: ReactNode; choice?: ReactNode }) {
-  const { word, face } = KINDS[kind];
+  const word = kind === 'plugin' ? TOOL : THINGS[kind].noun;
+  const face = FACES[kind];
   const detail = (lines.length > 0 || choice || missed.length > 0 || note) && (
     <Stack gap="related">
       {lines.map((line, index) => line.failed ? <Callout key={index} tone="warn">{line.text}{line.help && <Hint label={line.help.label}>{line.help.text}</Hint>}</Callout> : <Text key={index} variant="note">{line.text}</Text>)}

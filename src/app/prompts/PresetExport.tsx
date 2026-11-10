@@ -3,7 +3,7 @@ import { exportPreset } from '../../runtime/prompts';
 import { fileNamed } from '../common/download';
 import { FileExport } from '../common/FileExport';
 import { SLOT } from '../common/prompt-words';
-import { promptName } from '../common/words';
+import { promptName, THINGS } from '../common/words';
 import { useStore } from '../session';
 
 // Export spec §3 "Lost" and ruling 9: the prompt's models stay here, Risu keeps its own model settings, and top_p is the
@@ -13,7 +13,7 @@ const LEFT = `Risu 프리셋 가져오기로 열거나 창에 끌어다 놓아 �
 export function PresetExport({ prompt, onClose }: { prompt: ConversationPrompt; onClose: () => void }) {
   const store = useStore();
   const name = promptName(prompt.name);
-  const file = fileNamed(name, '프롬프트', 'risup');
+  const file = fileNamed(name, THINGS.prompt.noun, 'risup');
 
   return (
     <FileExport
