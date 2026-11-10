@@ -6,6 +6,7 @@ import { editRecord, forgetRecord, pinRecord, recallRecord, restoreRecord, type 
 import { EntryList } from '../common/EntryList';
 import { ago } from '../common/time';
 import { useAutosave } from '../common/useAutosave';
+import { withParticle } from '../common/particles';
 import { CHAPTER, REMOVE_FAILED, SAVE_FAILED } from '../common/words';
 import { useSession } from '../session';
 import { useToast } from '../toast';
@@ -68,7 +69,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, failure, positions,
     if (!done) return;
     if (!done.ok) return toast.failed(done, REMOVE_FAILED);
     back();
-    toast.undoable(`${noun}${chapter ? '를' : '을'} 삭제했어요.`, () => restoreRecord(store, chat, done.data));
+    toast.undoable(`${withParticle(noun, '을/를')} 삭제했어요.`, () => restoreRecord(store, chat, done.data));
   }
 
   const text = (field: 'when' | 'where', label: string) => (
@@ -95,7 +96,7 @@ export function ChatMemoryRecord({ chat, item, memory, view, failure, positions,
       {holder && view?.records.get(holder.id) === 'sent' && (status === 'sent' || status === 'recall-over') && <Text variant="note">{`${CHAPTER}와 함께 보내요.`}</Text>}
       {item.forgotten && (
         <Callout tone="warn" action={{ label: '원문에서 다시 만들기', onClick: rebuild }}>
-          {`삭제한 ${noun}${chapter ? '예요' : '이에요'}.`}
+          {`삭제한 ${withParticle(noun, '이에요/예요')}.`}
         </Callout>
       )}
       <Row kind="actions">
