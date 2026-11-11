@@ -45,7 +45,7 @@ const frame = (messages: OpenChat['messages'], item: OpenChat['item'] = null) =>
   remarks: new Map(), polishing: new Map(), badges: new Map([['old', ['badge']]]), messageTools,
   hosted: (index: number) => index === 0 ? [{ id: 'status', script: 0, html: status, at: 'top', message: 0 }] : [],
   offered: () => [{ id: 'status', name: 'Status', marked: true }],
-  bookmarked, busy: true, branching: false, editing: null, timePin: null, scroll: { seek: null }, modelMenu,
+  bookmarked, states: [], busy: true, branching: false, editing: null, timePin: null, scroll: { seek: null }, modelMenu,
   actions: { watch: () => () => {}, copy: () => {}, lineage },
 }) as unknown as OpenChat;
 

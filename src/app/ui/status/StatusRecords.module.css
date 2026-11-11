@@ -60,6 +60,7 @@
 }
 
 .tag {
+  position: relative;
   padding: var(--space-2) var(--space-8);
   border: var(--border-thin) solid var(--status-line);
   border-radius: var(--status-chip-radius);
@@ -95,6 +96,7 @@
 
 .table th,
 .table td {
+  position: relative;
   padding: var(--space-4) var(--space-12) var(--space-4) 0;
   font-weight: var(--weight-regular);
   text-align: left;

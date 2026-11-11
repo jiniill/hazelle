@@ -48,6 +48,7 @@ import { useNewChat } from './useNewChat';
 import { useChatBookmarks } from './useChatBookmarks';
 import { useChatIllustrations } from './useChatIllustrations';
 import { useChatRemarks } from './useChatRemarks';
+import { useChatState } from './useChatState';
 import { useChatPolishing } from './useChatPolishing';
 import { useChatTranslation } from './useChatTranslation';
 import { useChatAttachments } from './useChatAttachments';
@@ -130,6 +131,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const messageTools = useMemo(() => toolActions(tools, session.tools.actions), [tools, frames]);
   const composerTools = useMemo(() => toolComposer(tools), [tools]);
   const busy = replying !== null;
+  const { actions: stateActions, states } = useChatState(chatId, id, chat, messages, busy);
   const last = messages.at(-1);
   const answerable = id !== null && last !== undefined;
   // A cost still 확인 중 after a reload is looked up again wherever the usage line shows it, as ChatInfo does for its own.
@@ -418,15 +420,18 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     modelMenu,
     castMenu,
     draft,
+    states,
     scroll,
     keys: story.keys,
     stops: story.stops,
-    actions: joinParts(story.actions, searchActions, statusActions, editActions, translationActions, illustrationActions, remarkActions, bookmarkActions, settingActions, attachActions, panelActions, toggleActions, {
+    actions: joinParts(story.actions, searchActions, statusActions, editActions, translationActions, illustrationActions, remarkActions, stateActions, bookmarkActions, settingActions, attachActions, panelActions, toggleActions, {
       send: () => void send(),
       sendSkipping: () => skippable && sendSkipping(skippable),
       say,
       retryRegex,
       stop: () => talk.stop(chatId),
+      // A choice of the state's goes into the composer, after what is already written there.
+      choose: (text: string) => draft.set(draft.text.trim() ? `${draft.text}\n${text}` : text),
       regenerate: (message: Shown) => ask({ kind: 'regenerate', message: message.id }),
       regenerateFresh: (message: Shown) => ask({ kind: 'regenerate', message: message.id }, { notes: true }),
       polishAgain: (message: Shown) => void (id && polishAgain(session, id, message.id, shown(message).id)),

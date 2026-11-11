@@ -1,15 +1,17 @@
-import { StatusFrameContext, UNSET } from './frame';
+import { StatusFrameContext, StatusMemberContext, UNSET } from './frame';
 import { shortOf, type ShownField, type ShownRecord } from './shown';
 import { StatusField } from './StatusField';
+import { StatusPress } from './StatusPress';
 import styles from './StatusRecords.module.css';
 
-type Props = { name: string; look: 'cards' | 'rows' | 'table'; columns: { id: string; name: string }[]; members: ShownRecord[] };
+type Props = { id: string; name: string; look: 'cards' | 'rows' | 'table'; columns: { id: string; name: string }[]; members: ShownRecord[] };
 
 const isTag = (field: ShownField) => field.kind === 'stage' && !field.scale && field.value !== '';
 
 // A 묶음's records: a card each (a face, the name, its stages as tags, then its fields), a line each, or a table whose
 // columns are the fields.
-export function StatusRecords({ name, look, columns, members }: Props) {
+export function StatusRecords({ id, name, look, columns, members }: Props) {
+  const of = (member: ShownRecord) => ({ group: id, id: member.id });
   if (look === 'table') {
     return (
       <table className={styles.table}>
@@ -26,18 +28,21 @@ export function StatusRecords({ name, look, columns, members }: Props) {
         </thead>
         <tbody>
           {members.map((member) => (
-            <tr key={member.id}>
-              <th scope="row">{member.name}</th>
-              {columns.map((column) => {
-                const field = member.fields.find(({ id }) => id === column.id);
-                return (
-                  <td key={column.id}>
-                    {(field && shortOf(field)) || UNSET}
-                    {field?.delta && <span className={field.delta.down ? styles.down : styles.up}> {field.delta.text}</span>}
-                  </td>
-                );
-              })}
-            </tr>
+            <StatusMemberContext.Provider key={member.id} value={of(member)}>
+              <tr>
+                <th scope="row">{member.name}</th>
+                {columns.map((column) => {
+                  const field = member.fields.find((each) => each.id === column.id);
+                  return (
+                    <td key={column.id}>
+                      {(field && shortOf(field)) || UNSET}
+                      {field?.delta && <span className={field.delta.down ? styles.down : styles.up}> {field.delta.text}</span>}
+                      {field && <StatusPress id={field.id} name={field.name} />}
+                    </td>
+                  );
+                })}
+              </tr>
+            </StatusMemberContext.Provider>
           ))}
         </tbody>
       </table>
@@ -50,12 +55,14 @@ export function StatusRecords({ name, look, columns, members }: Props) {
         <StatusFrameContext.Provider value="line">
           <ul className={styles.rows}>
             {members.map((member) => (
-              <li key={member.id}>
-                <span className={styles.rowName}>{member.name}</span>
-                {member.fields.map((field) => (
-                  <StatusField key={field.id} field={field} />
-                ))}
-              </li>
+              <StatusMemberContext.Provider key={member.id} value={of(member)}>
+                <li>
+                  <span className={styles.rowName}>{member.name}</span>
+                  {member.fields.map((field) => (
+                    <StatusField key={field.id} field={field} />
+                  ))}
+                </li>
+              </StatusMemberContext.Provider>
             ))}
           </ul>
         </StatusFrameContext.Provider>
@@ -68,24 +75,27 @@ export function StatusRecords({ name, look, columns, members }: Props) {
       <StatusFrameContext.Provider value="card">
         <ul className={styles.cards}>
           {members.map((member) => (
-            <li key={member.id} className={styles.card}>
-              <div className={styles.head}>
-                <span className={styles.face} aria-hidden>
-                  {[...member.name][0]}
-                </span>
-                <span className={styles.memberName}>{member.name}</span>
-                {member.fields.filter(isTag).map((field) => (
-                  <span key={field.id} className={styles.tag} title={field.name}>
-                    {shortOf(field)}
+            <StatusMemberContext.Provider key={member.id} value={of(member)}>
+              <li className={styles.card}>
+                <div className={styles.head}>
+                  <span className={styles.face} aria-hidden>
+                    {[...member.name][0]}
                   </span>
-                ))}
-              </div>
-              {member.fields
-                .filter((field) => !isTag(field))
-                .map((field) => (
-                  <StatusField key={field.id} field={{ ...field, main: false }} />
-                ))}
-            </li>
+                  <span className={styles.memberName}>{member.name}</span>
+                  {member.fields.filter(isTag).map((field) => (
+                    <span key={field.id} className={styles.tag} title={field.name}>
+                      {shortOf(field)}
+                      <StatusPress id={field.id} name={field.name} />
+                    </span>
+                  ))}
+                </div>
+                {member.fields
+                  .filter((field) => !isTag(field))
+                  .map((field) => (
+                    <StatusField key={field.id} field={{ ...field, main: false }} />
+                  ))}
+              </li>
+            </StatusMemberContext.Provider>
           ))}
         </ul>
       </StatusFrameContext.Provider>

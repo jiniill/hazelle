@@ -53,6 +53,8 @@ type Props = {
   backdrop?: ReactNode;
   // Stands in the story's right gutter, from under the header down to the composer, at the gutter's foot.
   edge?: ReactNode;
+  // Stays at the story's top while it scrolls, under the header while that shows: a 상태창 pinned there.
+  pinned?: ReactNode;
   reading: Reading;
   hideHeader: boolean;
   // Reserve stage space before the first illustration lands, not after it shifts the text.
@@ -68,7 +70,7 @@ type Props = {
   onScroll: () => void;
 };
 
-export function ChatFrame({ back, title, actions, children, above, footer, dockRef, panel, beside, peek, backdrop, edge, reading, hideHeader, stage, side, portrait, pictures, compact, scrollRef, onScroll }: Props) {
+export function ChatFrame({ back, title, actions, children, above, footer, dockRef, panel, beside, peek, backdrop, edge, pinned, reading, hideHeader, stage, side, portrait, pictures, compact, scrollRef, onScroll }: Props) {
   const scope = readingScope(reading);
   const pairs = usePanelsBeside();
   // A phone on its side leaves the story too little height to keep the header over it.
@@ -77,6 +79,8 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
   const lastTop = useRef(0);
   const columnRef = useRef<HTMLElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
+  const pinnedRef = useRef<HTMLDivElement>(null);
+  const pins = !!pinned;
   // Reserve the fully expanded composer height so folding cannot shift the story/scroll position.
   // Skip transitions only, not animations such as spinners.
   const [space, setSpace] = useState(0);
@@ -109,6 +113,21 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
       element.removeEventListener('transitioncancel', measure);
     };
   }, []);
+
+  // A message sought stops under what is pinned, not behind it.
+  useLayoutEffect(() => {
+    const column = columnRef.current!;
+    const element = pinnedRef.current;
+    if (!element) return;
+    const measure = () => column.style.setProperty('--pinned-height', `${element.offsetHeight}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      column.style.removeProperty('--pinned-height');
+    };
+  }, [pins]);
 
   useLayoutEffect(() => {
     const element = scrollRef.current!;
@@ -170,6 +189,11 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
         </div>
         <div className={styles.scroll} ref={scrollRef} onScroll={scrolled}>
           <div ref={contentRef} className={styles.content}>
+            {pins && (
+              <div ref={pinnedRef} className={styles.pinned}>
+                {pinned}
+              </div>
+            )}
             <MarginRoom.Provider value={staged && stage && side}>{children}</MarginRoom.Provider>
           </div>
         </div>

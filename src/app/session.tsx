@@ -13,6 +13,7 @@ import type { Memory } from '../model/memory';
 import type { Files } from '../runtime/files/files';
 import type { Illustrating } from '../runtime/tasks/illustrate';
 import type { Commenting } from '../runtime/tasks/mascot';
+import type { StatusWriting } from '../runtime/tasks/status';
 import type { Polishing } from '../runtime/tasks/agents';
 import type { Likenesses, LikenessRuns } from '../runtime/tasks/likeness';
 import type { Remembering } from '../runtime/tasks/memory';
@@ -332,6 +333,11 @@ export function useChatMemory(id: string | null): Memory | null {
 export function useIllustrating(): Illustrating {
   const { illustrator } = useSession();
   return useSyncExternalStore(illustrator.subscribe, illustrator.snapshot);
+}
+
+export function useStatusWriting(): StatusWriting {
+  const { statusWriter } = useSession();
+  return useSyncExternalStore(statusWriter.subscribe, statusWriter.snapshot);
 }
 
 export function useCommenting(): Commenting {

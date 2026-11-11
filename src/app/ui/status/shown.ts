@@ -26,6 +26,11 @@ export type ShownField = Common &
 
 export type ShownRecord = Named & { fields: ShownField[] };
 
+// Where a value stands: a field of the definition, or of one record of a 묶음.
+export type ShownPlace = { field: string; member?: { group: string; id: string } };
+// Values that are edited by hand: label names the press on a field, by the field's name.
+export type StatusEdit = { label: (name: string) => string; onEdit: (place: ShownPlace) => void };
+
 export type ShownBlock =
   | { block: 'field'; field: ShownField }
   | { block: 'head'; id: string; items: (Named & { value: string })[] }

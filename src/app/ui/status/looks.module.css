@@ -10,6 +10,17 @@
   text-align: left;
 }
 
+/* The press over a value edited by hand: it covers the box the value is drawn in and shows itself under the pointer. */
+.press {
+  position: absolute;
+  inset: calc(-1 * var(--space-2)) calc(-1 * var(--space-4));
+  border-radius: var(--status-chip-radius);
+}
+
+.press:hover {
+  outline: var(--border-thin) solid var(--status-accent);
+}
+
 /* What the latest reply moved a number by: up in the accent, down warm. */
 .up,
 .down {

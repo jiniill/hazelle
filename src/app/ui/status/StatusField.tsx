@@ -5,6 +5,7 @@ import { StatusFrameContext, UNSET } from './frame';
 import { shortOf, type ShownField, type StatusDelta } from './shown';
 import styles from './StatusField.module.css';
 import { StatusMeter } from './StatusMeter';
+import { StatusPress } from './StatusPress';
 
 function Delta({ delta }: { delta: StatusDelta | undefined }) {
   return delta ? <span className={delta.down ? styles.down : styles.up}>{delta.text}</span> : null;
@@ -56,9 +57,11 @@ function Scale({ field }: { field: ShownField & { kind: 'stage' } }) {
 const figureOf = (field: ShownField & { kind: 'gauge' }) => (field.value === '' ? UNSET : `${field.value} / ${field.max}`);
 
 // One field of a 상태 view in its 틀: its name, its value as its kind draws it, and what the latest reply moved it by.
-// A 대표 field stands large over its meter, whatever the 틀; in a line's room every kind is a few words.
-export function StatusField({ field }: { field: ShownField }) {
+// A 대표 field stands large over its meter, whatever the 틀; in a line's room every kind is a few words. fixed: drawn
+// as a field without being one (a count), so never pressed.
+export function StatusField({ field, fixed = false }: { field: ShownField; fixed?: boolean }) {
   const frame = useContext(StatusFrameContext);
+  const press = fixed ? null : <StatusPress id={field.id} name={field.name} />;
   const gauge = field.kind === 'gauge' ? field : null;
   if (frame === 'line') {
     return (
@@ -67,6 +70,7 @@ export function StatusField({ field }: { field: ShownField }) {
         {gauge && gauge.value !== '' && <StatusMeter name={field.name} look={gauge.look === 'segments' ? 'segments' : 'bar'} share={gauge.share} zero={gauge.zero} steps={gauge.steps} tone={field.tone} size="sm" text={figureOf(gauge)} />}
         <span className={styles.short}>{field.kind === 'list' ? `${field.items.length}개` : <Words value={shortOf(field)} />}</span>
         <Delta delta={field.delta} />
+        {press}
       </span>
     );
   }
@@ -81,6 +85,7 @@ export function StatusField({ field }: { field: ShownField }) {
         </span>
         {gauge && gauge.look !== 'ring' && <StatusMeter name={field.name} look={gauge.look} share={gauge.share} zero={gauge.zero} steps={gauge.steps} tone={field.tone} size="lg" text={figureOf(gauge)} />}
         {field.kind === 'stage' && field.scale && <Scale field={field} />}
+        {press}
       </div>
     );
   }
@@ -137,6 +142,7 @@ export function StatusField({ field }: { field: ShownField }) {
         <Delta delta={field.delta} />
       </div>
       {under}
+      {press}
     </div>
   );
 }

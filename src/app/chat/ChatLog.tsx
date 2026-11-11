@@ -8,6 +8,7 @@ import { navigate } from '../shell/router';
 import { Callout, Divider, Empty, Progress, Text, TimePinContext, Viewport } from '../ui';
 import { useChatEdits } from './ChatEdits';
 import { ChatMessage } from './ChatMessage';
+import { ChatState } from './ChatState';
 import { messageRow } from './messageRow';
 import type { OpenChat } from './useChat';
 
@@ -57,5 +58,6 @@ export function ChatLog({ chat }: { chat: OpenChat }) {
         />}
       </Fragment>;
     }}</Viewport></TimePinContext>}
+    {chat.states.length > 0 && <ChatState chat={chat} pinned={false} />}
   </>;
 }

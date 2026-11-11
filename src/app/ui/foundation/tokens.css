@@ -348,6 +348,8 @@
   --scrubber-idle-opacity: 0.35;
   /* A picture line's defaults (Story.shadow.css); a character's own replace them (ChatFrame's pictures). */
   --story-picture-peek: 40vh;
+  /* What a pinned 상태창 takes of the story's height at most, scrolling inside itself past it. */
+  --story-pinned-most: 45dvh;
   --story-picture-widest: 100%;
   --scene-board-max-height: 40vh;
   --story-picture-wide: 100%;
