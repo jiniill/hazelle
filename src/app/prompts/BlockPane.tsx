@@ -12,7 +12,7 @@ import { Button, ChoiceGroup, Divider, Empty, Hint, IconButton, MarkupArea, Menu
 import { blockTitle, CACHE_WORDS, describeRange, firstLine, MARKS, RANGES, rangeKey, ROLES, type CacheMark } from './blocks';
 import { CommandMenu } from './CommandMenu';
 import { RECENT_MAX, type Snippet } from './edits';
-import { NO_TOGGLES } from '../common/words';
+import { MOVE, NO_TOGGLES } from '../common/words';
 
 
 type Props = {
@@ -85,8 +85,8 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
                     <Divider variant="menu" />
                   </>
                 )}
-                {index > 0 && <MenuItem icon={ArrowUp} label="위로 옮기기" onClick={() => onMove(index - 1)} />}
-                {index < count - 1 && <MenuItem icon={ArrowDown} label="아래로 옮기기" onClick={() => onMove(index + 1)} />}
+                {index > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => onMove(index - 1)} />}
+                {index < count - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => onMove(index + 1)} />}
                 <MenuItem icon={X} tone="warn" label="빼기" onClick={onRemove} />
               </MoreMenu>
             </>

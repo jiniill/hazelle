@@ -17,7 +17,7 @@ import type { Frame } from '../common/frame';
 import { useAutosave } from '../common/useAutosave';
 import { byPromptName } from '../common/promptCopies';
 import { useSearch } from '../common/useSearch';
-import { copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, PAGES, promptName, STAGE_NAMES, THINGS } from '../common/words';
+import { copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, PAGES, promptName, STAGE_NAMES, STATUS, THINGS } from '../common/words';
 import { useConnections, useModules, usePrompts, useSettings, useStore } from '../session';
 import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
@@ -58,6 +58,7 @@ import { PromptRead } from './PromptRead';
 import { ProtectRules } from './ProtectRules';
 import { AgentPlace } from './AgentPlace';
 import { AgentSwitches } from '../common/AgentSwitches';
+import { StatusPane } from '../common/StatusPane';
 import { TogglePane } from '../common/TogglePane';
 import { withParticle } from '../common/particles';
 import { lineTitle } from '../common/toggleWords';
@@ -65,15 +66,16 @@ import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse'
 
 const MODEL = 'model' satisfies PromptPane;
 const TOGGLES = 'toggles' satisfies PromptPane;
+const STATE = 'status' satisfies PromptPane;
 const PICTURE = 'picture' satisfies PromptPane;
 const VARIABLES = 'variables' satisfies PromptPane;
 const MODULES = 'modules' satisfies PromptPane;
 const FEATURES = 'features' satisfies PromptPane;
 const READ = 'read' satisfies PromptPane;
-const PANE_TITLES: Record<PromptPane, string> = { read: '전체 읽기', model: '모델', picture: '이미지', toggles: '토글', variables: DEFAULT_VARIABLES, modules: PAGES.modules, features: FEATURES_TITLE };
+const PANE_TITLES: Record<PromptPane, string> = { read: '전체 읽기', model: '모델', picture: '이미지', toggles: '토글', status: STATUS, variables: DEFAULT_VARIABLES, modules: PAGES.modules, features: FEATURES_TITLE };
 const isPane = (id: string): id is PromptPane => Object.hasOwn(PANE_TITLES, id);
 // The tabs after 블록, in their order.
-const PANES: PromptPane[] = [READ, MODEL, PICTURE, TOGGLES, VARIABLES, MODULES, FEATURES];
+const PANES: PromptPane[] = [READ, MODEL, PICTURE, TOGGLES, STATE, VARIABLES, MODULES, FEATURES];
 // The tab of the blocks, which an address names by naming no pane.
 const BLOCKS = 'blocks';
 const HELP = '위아래 화살표로 이동, Alt+화살표로 순서 변경, Enter로 편집, Delete로 빼기';
@@ -138,9 +140,9 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const [addingToggle, setAddingToggle] = useState(false);
   const [exporting, setExporting] = useState(false);
   // 이미지 is an illustration prompt's only, 기본 변수, 모듈 and 기능 a conversation prompt's (its draft alone holds the
-  // variables; 모듈 only while there is one to switch), and 모델 a prompt's that picks one; an address naming one on
+  // variables; 모듈 only while there is one to switch; 상태 only with its 실험실 switch on), and 모델 a prompt's that picks one; an address naming one on
   // another opens as if it named none.
-  const has: Record<PromptPane, boolean> = { read: true, model: picksModel, picture: sort === 'illustrate', toggles: true, variables: draft.variables !== undefined, modules: sort === 'conversation' && modules.length > 0, features: sort === 'conversation' };
+  const has: Record<PromptPane, boolean> = { read: true, model: picksModel, picture: sort === 'illustrate', toggles: true, status: sort === 'conversation' && statusLab, variables: draft.variables !== undefined, modules: sort === 'conversation' && modules.length > 0, features: sort === 'conversation' };
   const panes = PANES.filter((each) => has[each]);
   const shownPane = pane !== null && panes.includes(pane) ? pane : null;
   // A block it does not hold opens as if none were named, as a pane it does not have does.
@@ -426,6 +428,8 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
         <FeatureSwitches owner={{ kind: 'prompt' }} own={stored.value.features} onChange={(feature, value) => setFeatureAt(store, { kind: 'prompt', id: stored.id }, feature, value)} />
         <AgentSwitches owner={{ kind: 'prompt' }} own={stored.value.agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'prompt', id: stored.id }, agent, on)} />
       </Stack>
+    ) : open === STATE && ofSort(stored, 'conversation') ? (
+      <StatusPane owner={{ kind: 'prompt', id: stored.id }} definition={stored.value.status} />
     ) : open === TOGGLES ? (
       <TogglePane
         owner={stored.id}

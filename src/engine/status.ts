@@ -117,7 +117,11 @@ const REMOVE = /\s*\(remove\)$/iu;
 // A number, then at most its ceiling ("84/120") and a unit: any other digit after it makes the line unreadable.
 const NUMBER = /^([+-]?\d[\d,]*(?:\.\d+)?)(?:\s*\/\s*\d[\d,.]*)?\D*$/u;
 
+// How a block's name finds what it means. Two names that match in one place are one to the parser, which only ever
+// reaches the first: nameTaken is how an editor refuses the second.
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+export const nameTaken = (among: readonly { id: string; name: string }[], name: string, self?: string) => among.some((each) => each.id !== self && same(each.name, name));
+
 const equal = (a: StatusValue | undefined, b: StatusValue) => JSON.stringify(a) === JSON.stringify(b);
 
 // undefined: the text is not a value this field takes. A change field's number is its amount, which has no range and

@@ -1,0 +1,86 @@
+import type { StatusField, StatusWriter } from '../../model/status';
+import type { DraftProblem, FieldDraft, FieldKind } from './statusDraft';
+
+// The words of the 상태 definition editor (design §6.1 part 1), all placeholders until the copy batch.
+export const STATUS_KIND: Record<FieldKind, { label: string; description: string }> = {
+  gauge: { label: '게이지', description: '범위가 있는 숫자예요. 호감도나 HP처럼요.' },
+  number: { label: '숫자', description: '범위가 없는 숫자예요. 소지금이나 레벨처럼요.' },
+  text: { label: '글', description: '한 줄 글이에요. 장소나 속마음처럼요.' },
+  stage: { label: '단계', description: '정해 둔 것 중 하나예요. 기분이나 관계처럼요.' },
+  list: { label: '목록', description: '여러 항목이에요. 소지품이나 할 일처럼요.' },
+};
+export const STATUS_KINDS = Object.keys(STATUS_KIND) as FieldKind[];
+
+export const STATUS_TONE: { value: FieldDraft['tone']; label: string }[] = [
+  { value: '', label: '기본' },
+  { value: 'warm', label: '따뜻한 색' },
+  { value: 'cool', label: '차가운 색' },
+  { value: 'fresh', label: '싱그러운 색' },
+];
+
+export const STATUS_WRITER: Record<StatusWriter, { label: string; description: string }> = {
+  after: { label: '응답 뒤에', description: '응답이 저장된 뒤 보조 모델이 따로 써요.' },
+  with: { label: '응답과 함께', description: '대화 모델이 응답 끝에 함께 써요.' },
+};
+
+export const STATUS_PROBLEM: Record<DraftProblem, string> = {
+  name: '이름을 입력해 주세요.',
+  range: '최소는 최대보다 작은 숫자여야 해요.',
+  start: '시작 값이 이 필드에 맞지 않아요.',
+  labels: '단계를 둘 이상 적어 주세요.',
+};
+
+export const STATUS_WORDS = {
+  field: '필드',
+  group: '묶음',
+  log: '기록',
+  preview: '미리 보기',
+  basics: '기본',
+  name: '이름',
+  writer: '쓰는 방식',
+  types: '유형',
+  blank: '빈 상태',
+  none: '상태가 없어요.',
+  noFields: '필드가 없어요.',
+  remove: '상태 삭제',
+  removeAsk: '이 상태를 삭제할까요?',
+  removeNote: '정의만 사라지고, 채팅에 기록된 값은 남아요. 같은 정의를 다시 만들어도 이어지지 않아요.',
+  min: '최소',
+  max: '최대',
+  start: '시작 값',
+  startNone: '없음',
+  unit: '단위',
+  change: '변한 만큼 받기',
+  changeNote: '모델이 새 값 대신 +3, -2처럼 변한 양을 적어요.',
+  main: '대표',
+  mainNote: '크게 보이고, 상태창을 접어도 남아요.',
+  tone: '색',
+  labels: '단계',
+  checked: '체크 목록',
+  checkedNote: '항목마다 끝냈는지 표시해요.',
+  open: '새 기록 받기',
+  openNote: '모델이 이야기에 나온 것을 더하고 뺄 수 있어요.',
+  members: '처음부터 있는 기록',
+  view: '보기',
+  frame: '틀',
+  mood: '분위기',
+  noViews: '보기가 없어요. 없으면 전부를 카드 하나에 보여 줘요.',
+  noGroups: '묶음이 없어요.',
+  noLogs: '기록이 없어요.',
+  blankNote: '필드부터 직접 만들어요.',
+  sample: '예시',
+} as const;
+
+const range = (field: Extract<StatusField, { kind: 'gauge' }>) => `${field.min}~${field.max}`;
+
+// A field as one line under its name: its kind, then what it is set up with.
+export function fieldSummary(field: StatusField): string {
+  const parts: (string | false | undefined)[] = [STATUS_KIND[field.kind].label];
+  if (field.kind === 'gauge') parts.push(range(field));
+  if (field.kind === 'stage') parts.push(field.labels.join(' · '));
+  if ((field.kind === 'gauge' || field.kind === 'number' || field.kind === 'text' || field.kind === 'stage') && field.start !== undefined && field.start !== '') parts.push(`${STATUS_WORDS.start} ${field.start}`);
+  if (field.kind === 'gauge' || field.kind === 'number') parts.push(field.unit, field.change && STATUS_WORDS.change);
+  if (field.kind === 'list') parts.push(field.checked && STATUS_WORDS.checked);
+  parts.push(field.main && STATUS_WORDS.main);
+  return parts.filter(Boolean).join(' · ');
+}

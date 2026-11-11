@@ -2,7 +2,7 @@ import { setModels } from '../../runtime/library/pack';
 import { setAgentAt } from '../../runtime/tasks/agents';
 import { setFeatureAt } from '../../runtime/tasks/features';
 import type { ObjectStore } from '../../runtime/store/store';
-import { BookOpen, Braces, Eye, IdCard, Images, Languages, MessageSquareQuote, Package, Palette, ScrollText, SlidersHorizontal, Sparkles, Square, ToggleRight, UserRound, Variable, type LucideIcon } from 'lucide-react';
+import { BookOpen, Braces, Eye, Gauge, IdCard, Images, Languages, MessageSquareQuote, Package, Palette, ScrollText, SlidersHorizontal, Sparkles, Square, ToggleRight, UserRound, Variable, type LucideIcon } from 'lucide-react';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { storyHtml } from '../../engine/display';
 import { unused } from '../../engine/pipeline';
@@ -27,7 +27,9 @@ import { howMany, scriptHolds } from '../common/pack';
 import { featureHolds, FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
 import { ModuleSwitches } from '../common/ModuleSwitches';
+import { useLab } from '../common/labs';
 import { PackToggles } from '../common/PackToggles';
+import { StatusPane } from '../common/StatusPane';
 import { scriptsPage } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import type { Frame } from '../common/frame';
@@ -36,7 +38,7 @@ import { FaceChange } from '../common/FaceChange';
 import { useTypedNumber } from '../common/typed';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STOP, THINGS, TRANSLATOR_NOTE } from '../common/words';
+import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STATUS, STOP, THINGS, TRANSLATOR_NOTE } from '../common/words';
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
@@ -66,6 +68,7 @@ const PARTS: Record<CharacterPart, { label: string; icon: LucideIcon }> = {
   features: { label: FEATURES_TITLE, icon: ToggleRight },
   scripts: { label: SCRIPTS.part, icon: Braces },
   toggles: { label: '토글', icon: SlidersHorizontal },
+  status: { label: STATUS, icon: Gauge },
   variables: { label: DEFAULT_VARIABLES, icon: Variable },
   assets: { label: ASSET, icon: Images },
   illustration: { label: '삽화', icon: Palette },
@@ -73,7 +76,7 @@ const PARTS: Record<CharacterPart, { label: string; icon: LucideIcon }> = {
 };
 const GROUPS: CharacterPart[][] = [
   ['profile', 'character', 'greetings'],
-  ['instructions', 'lore', 'modules', 'features', 'scripts', 'toggles', 'variables'],
+  ['instructions', 'lore', 'modules', 'features', 'scripts', 'toggles', 'status', 'variables'],
   ['assets', 'illustration', 'display'],
 ];
 const LIST = '캐릭터 항목';
@@ -115,6 +118,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
   const likeness = useStored('likeness', likenessId(id));
   const modules = useModules();
   const always = useSettings().modules ?? [];
+  const statusLab = useLab('status');
   const ownModules = character.modules ?? [];
   const textSave = useAutosave<CharacterText>(`character:${id}`, (patch) => editCharacter(store, id, patch));
   const { status, unsaved, change } = textSave;
@@ -340,6 +344,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     ),
     scripts: scripts.body,
     toggles: <PackToggles owner={{ kind: 'character', id }} lines={card.toggles} />,
+    status: <StatusPane owner={{ kind: 'character', id }} definition={card.status} />,
     variables: (
       <>
         <DefaultVariables variables={text.variables} help="채팅에서 값이 정해지지 않은 변수가 이 값을 써요." onChange={(variables) => change({ variables })} />
@@ -386,12 +391,14 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     features: featureHolds(store, { kind: 'character' }, character.features),
     scripts: scriptHolds(card) || undefined,
     toggles: howMany(card.toggles.filter(isToggle).length),
+    status: card.status?.name,
     variables: howMany(text.variables.length),
     assets: howMany(assets.length),
     illustration: howMany(likeness?.value.portraits.length ?? 0, '명'),
   };
-  // A part with nothing to show is left out: 모듈 lists the account's modules, and there may be none.
-  const groups = GROUPS.map((group) => group.filter((each) => each !== 'modules' || modules.length > 0));
+  // A part with nothing to show is left out: 모듈 lists the account's modules, and there may be none; 상태 is its
+  // 실험실 switch's.
+  const groups = GROUPS.map((group) => group.filter((each) => (each !== 'modules' || modules.length > 0) && (each !== 'status' || statusLab)));
   const subtitle = [card.creator && `제작자 ${card.creator}`, origin && copyOf(origin.name)].filter(Boolean).join(' · ') || undefined;
   const working = busy?.id === id ? busy.label : null;
   const menu = {

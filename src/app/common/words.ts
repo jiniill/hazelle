@@ -206,6 +206,8 @@ export const STAGE_NAMES: Record<AgentStage, string> = { pre: '전처리', post:
 export const agentsWaiting = ({ running, retrying, total }: { running: readonly string[]; retrying: readonly string[]; total: number }) => `${withParticle((retrying.length ? retrying : running).join(', '), '이/가')} ${retrying.length ? RESENDING : '먼저 읽고 있어요'}${total > 1 ? ` · ${total - running.length}/${total} 끝남` : '.'}`;
 export const polishingNow = ({ name, at, total, retrying }: { name: string; at: number; total: number; retrying?: true }) => `${withParticle(name, '이/가')} ${retrying ? RESENDING : '응답을 다듬고 있어요'}${total > 1 ? ` · ${at}/${total}` : '.'}`;
 export const toolWaiting = (name: string) => `${withParticle(name, '이/가')} 보낼 내용을 준비하는 중`;
+// A row moved one place among its list's rows, from its ⋯.
+export const MOVE = { up: '위로 옮기기', down: '아래로 옮기기' };
 export const STATUS = '상태';
 // Placeholders until the copy batch, as every word of 상태 is.
 export const STATUS_REWRITE = '상태 다시 쓰기';
