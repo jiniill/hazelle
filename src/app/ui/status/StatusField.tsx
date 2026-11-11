@@ -88,18 +88,20 @@ export function StatusField({ field }: { field: ShownField }) {
   let under: ReactNode = null;
   let kind: string | undefined = styles[field.kind];
   if (gauge) {
-    const meter = <StatusMeter name={field.name} look={frame === 'diary' && gauge.look === 'bar' ? 'segments' : gauge.look} share={gauge.share} zero={gauge.zero} steps={gauge.steps} tone={field.tone} size={frame === 'hud' ? 'lg' : 'md'} text={figureOf(gauge)} />;
+    const meter = <StatusMeter name={field.name} look={frame === 'diary' && gauge.look === 'bar' ? 'segments' : gauge.look} share={gauge.share} zero={gauge.zero} steps={gauge.steps} tone={field.tone} size={frame === 'hud' ? 'lg' : 'md'} text={figureOf(gauge)} figure={gauge.value} />;
+    // A ring holds its value inside, so only what it is out of stands beside it.
+    const ring = gauge.look === 'ring';
     const figure = (
       <span className={styles.amount}>
-        <Words value={gauge.value} />
-        {gauge.value !== '' && gauge.look !== 'ring' && <span className={styles.of}> / {gauge.max}</span>}
+        {!ring && <Words value={gauge.value} />}
+        {gauge.value !== '' && <span className={styles.of}> / {gauge.max}</span>}
       </span>
     );
-    const inline = frame === 'card' || gauge.look === 'ring' || gauge.look === 'hearts' || gauge.look === 'stars';
+    const inline = frame === 'card' || ring || gauge.look === 'hearts' || gauge.look === 'stars';
     value = inline ? (
       <>
         {meter}
-        {gauge.look !== 'ring' && figure}
+        {figure}
       </>
     ) : (
       figure

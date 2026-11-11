@@ -4,15 +4,15 @@ import { classNames } from '../foundation/classNames';
 import type { MeterLook, StatusTone } from './shown';
 import styles from './StatusMeter.module.css';
 
-type Props = { name: string; look: MeterLook; share: number; zero?: number; steps: number; tone?: StatusTone; size?: 'sm' | 'md' | 'lg'; text?: string };
+type Props = { name: string; look: MeterLook; share: number; zero?: number; steps: number; tone?: StatusTone; size?: 'sm' | 'md' | 'lg'; text?: string; figure?: string };
 
 const MARKS = 5;
 const fraction = (value: number) => Math.max(0, Math.min(1, value));
 const cells = (count: number, filled: number) => Array.from({ length: count }, (_, at) => at < filled);
 
 // A gauge's drawing alone: a bar (from where 0 stands, in a range across it), cells, a ring round its figure, or
-// hearts or stars. Read aloud as a meter, by its share.
-export function StatusMeter({ name, look, share, zero, steps, tone = 'accent', size = 'md', text }: Props) {
+// hearts or stars. Read aloud as a meter, by its share and as text; figure is the few characters a ring has room for.
+export function StatusMeter({ name, look, share, zero, steps, tone = 'accent', size = 'md', text, figure }: Props) {
   const at = fraction(share);
   const meter = { role: 'meter', 'aria-label': name, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(at * 100), ...(text && { 'aria-valuetext': text }) } as const;
   if (look === 'segments') {
@@ -41,7 +41,7 @@ export function StatusMeter({ name, look, share, zero, steps, tone = 'accent', s
           <circle className={styles.ringTrack} cx="18" cy="18" r="15.5" pathLength={100} />
           <circle className={styles.ringFill} cx="18" cy="18" r="15.5" pathLength={100} strokeDasharray={`${at * 100} 100`} />
         </svg>
-        {text && <span className={styles.ringText}>{text}</span>}
+        {figure && <span className={styles.ringText}>{figure}</span>}
       </span>
     );
   }

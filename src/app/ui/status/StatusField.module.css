@@ -212,7 +212,7 @@
 
 .hud.text,
 .hud.stage {
-  background: var(--status-track);
+  background: var(--status-inset);
 }
 
 .hud.text .row,
