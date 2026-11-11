@@ -305,7 +305,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         pickChats: open,
         pickPrompts: () => open(undefined, PRESET_EXTENSIONS.join(',')),
         pickPersonas: () => open(undefined, '.png'),
-        pickLink: () => asked(() => setLinking({ text: '', password: null })),
+        pickLink: (text) => asked(() => setLinking({ text, password: null })),
         move: () => asked(() => setAsking(true)),
         bring: (file) => new Promise((done) => asked(() => void take([file], undefined, false).then((results) => done(results.some((result) => result.kind === 'character'))))),
         drop,

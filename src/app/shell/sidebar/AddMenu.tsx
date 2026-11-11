@@ -13,7 +13,7 @@ export function AddMenu({ trigger }: Pick<ComponentProps<typeof Menu>, 'trigger'
   return (
     <Menu label={ACTS.create.label} trigger={trigger}>
       <MenuItem icon={ACTS.import.icon} label={importOf('봇')} onClick={pick} />
-      <MenuItem icon={Link} label="링크로 가져오기" onClick={pickLink} />
+      <MenuItem icon={Link} label="링크로 가져오기" onClick={() => pickLink('')} />
       <MenuItem icon={UserRoundPlus} label={newOf('캐릭터')} onClick={create} />
       <MenuItem icon={PackageOpen} label="Risu에서 이사" onClick={move} />
       <MenuItem icon={ACTS.newChat.icon} label={`${NO_CHARACTER} ${ACTS.newChat.label}`} onClick={() => navigate({ kind: 'new-chat', character: null })} />

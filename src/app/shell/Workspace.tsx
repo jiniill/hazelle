@@ -20,6 +20,7 @@ import { playSound, unlockSound } from '../common/sounds';
 import { DisplayProvider, useDisplay } from '../display';
 import { BIN, BOARD, inSettings, NOTICES } from '../common/words';
 import { ImportProvider } from '../library/ImportFlow';
+import { PasteReader } from './PasteReader';
 import { SessionProvider, useHeldLeave, useSaves, useSession, useSettings, useStore } from '../session';
 import { notePlace } from '../../runtime/diagnostics/auto-diagnosis';
 import { ToastProvider, useToast, type Standing } from '../toast';
@@ -276,6 +277,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
             <News />
             <BotNotes />
             <ImportProvider>
+              <PasteReader />
               <Layout />
             </ImportProvider>
           </TutorialProvider>

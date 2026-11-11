@@ -73,7 +73,7 @@ export const SHORTCUT_GROUPS: readonly { title: string; note?: string; names: re
 
 const TEXT_INPUTS = new Set(['text', 'search', 'password']);
 // Ctrl+Z in a text field is the browser's own undo of what was typed there, which no shortcut takes.
-export function typing(event?: KeyboardEvent): boolean {
+export function typing(event?: Event): boolean {
   const target = event?.target;
   return target instanceof HTMLTextAreaElement || (target instanceof HTMLInputElement && TEXT_INPUTS.has(target.type)) || (target instanceof HTMLElement && target.isContentEditable);
 }

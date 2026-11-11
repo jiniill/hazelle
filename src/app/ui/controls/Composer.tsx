@@ -52,7 +52,7 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, actio
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
-        onPaste={onFiles && ((event) => pasteFiles(event, onFiles))}
+        onPaste={onFiles && ((event) => pasteFiles(event.nativeEvent, onFiles))}
       />
       <div className={styles.fold}>
         <div className={styles.tools}>
