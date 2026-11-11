@@ -17,7 +17,7 @@ import {
   type PulseRow,
   type PulseWeek,
 } from '../contracts/pulse';
-import type { VisitCohorts } from '../contracts/admin';
+import { PULSE_DAYS_SHOWN, type PulseDay, type VisitCohorts } from '../contracts/admin';
 import type { Db } from './db/service-db';
 import { DAY_MS, fail, HOUR_MS, type AppEnv } from './http';
 
@@ -197,7 +197,7 @@ async function keptWeek(db: Db, week: number): Promise<Period | null> {
   return { people, roles: new Map(roles.results.map((row) => [row.role, row.people])), models: models.results, below: below.results };
 }
 
-// Serialize closes per DB: each transaction keeps 7-day ranks, Sunday totals and removes unreachable days.
+// Serialize closes per DB: each transaction keeps the day's totals, 7-day ranks, Sunday totals and removes unreachable days.
 // Concurrent pre-read cursors could otherwise recount a window after its oldest day was deleted
 // and publish below-floor models in a closed week.
 const closing = new WeakMap<Db, Promise<void>>();
@@ -219,6 +219,16 @@ async function closePastDays(db: Db, now: number) {
     const week = weekOf(day);
     const sunday = weekOf(day + DAY_MS) !== week;
     await db.batch([
+      // WHERE true: SQLite parses ON CONFLICT after a SELECT only past a WHERE.
+      db
+        .prepare(
+          `INSERT INTO pulse_day (day, people, repliers, replies)
+           SELECT ?1, IIF(people >= ?3, people, NULL), IIF(repliers >= ?3, repliers, NULL), IIF(repliers >= ?3, replies, NULL)
+           FROM (SELECT (SELECT COUNT(*) FROM pulse_seen WHERE day = ?1) AS people, COUNT(DISTINCT account) AS repliers, SUM(replies) AS replies
+                 FROM pulse_replies WHERE hour >= ?1 AND hour < ?2)
+           WHERE true ON CONFLICT DO NOTHING`,
+        )
+        .bind(day, day + DAY_MS, PULSE_FLOORS.row),
       ...(counted
         ? [
             db.prepare('INSERT INTO pulse_day_places (day, places) VALUES (?, ?) ON CONFLICT DO NOTHING').bind(day, JSON.stringify(byRole((role) => places(rankPeriod(counted)[role])))),
@@ -363,6 +373,11 @@ async function pastWeek(db: Db, from: number): Promise<PulseWeek | null> {
 export async function forgetPulse(db: Db, now = Date.now()) {
   await closeDays(db, now);
   await db.batch(['pulse_hours', 'pulse_replies'].map((table) => db.prepare(`DELETE FROM ${table} WHERE hour < ?`).bind(hourOf(now) - HOURS_KEPT_MS)));
+}
+
+export async function readPulseDays(db: Db): Promise<PulseDay[]> {
+  const { results } = await db.prepare('SELECT day, people, repliers, replies FROM pulse_day ORDER BY day DESC LIMIT ?').bind(PULSE_DAYS_SHOWN).all<PulseDay>();
+  return results.reverse();
 }
 
 const WEEK_CACHE_SECONDS = 24 * 60 * 60;

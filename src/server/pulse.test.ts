@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { PULSE_HEADER, VISITOR_HEADER } from '../contracts/http';
 import { pulseHeader, type PulseAnswer, type PulseRole, type PulseWeek } from '../contracts/pulse';
 import { dailyDistinct } from './limits';
-import { forgetPulse, readCohorts } from './pulse';
+import { forgetPulse, readCohorts, readPulseDays } from './pulse';
 import { replyKey, testApp } from './testing';
 import { readVisits } from './visits';
 
@@ -271,6 +271,25 @@ it('closes a past week into the totals that passed the floors, the names under t
     merged: [{ key: 'p', model: 'P' }, { key: 'q', model: 'Q' }],
     split: [{ key: 'p', model: 'P', type: 'openrouter' }, { key: 'q', model: 'Q', type: 'openrouter' }],
   });
+});
+
+it("keeps each closed day's accounts seen, accounts replied to and their replies past its lists, none under the floor", async () => {
+  const cookies = await people(7);
+  await seen(cookies);
+  for (const cookie of cookies.slice(0, 5)) await call(cookie, 'chat', 'direct', 'tune');
+  await call(cookies[0]!, 'chat', 'direct', 'tune');
+  await call(cookies[6]!, 'aux', 'direct', 'tune');
+  at(NOON + DAY);
+  await seen(cookies.slice(0, 5));
+  for (const cookie of cookies.slice(0, 2)) await call(cookie, 'chat', 'direct', 'tune');
+  const day = WEEK_FROM + 2 * DAY;
+  await forgetPulse(t.env.db, NOON + 9 * DAY);
+  expect(await readPulseDays(t.env.db)).toEqual([
+    { day, people: 7, repliers: 5, replies: 6 },
+    { day: day + DAY, people: 5, repliers: null, replies: null },
+    ...Array.from({ length: 7 }, (_, index) => ({ day: day + (index + 2) * DAY, people: null, repliers: null, replies: null })),
+  ]);
+  for (const table of ['pulse_seen', 'pulse_replies']) expect(await t.env.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first('n')).toBe(0);
 });
 
 it("names a merged row in the spelling most people used, not most provider uses", async () => {
