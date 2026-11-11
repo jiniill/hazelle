@@ -74,3 +74,35 @@ export function withoutView(definition: StatusDefinition, id: string): StatusDef
   const views = (definition.views ?? []).filter((each) => each.id !== id);
   return views.length ? { ...definition, views } : without(definition, 'views');
 }
+
+// A list of blocks inside a view: the view's own (no step), or the one each step enters from the list before it, a
+// section's or one tab's of the block at an index.
+export type BlockStep = { at: number; tab?: string };
+export type BlockPath = readonly BlockStep[];
+
+const inner = (block: StatusBlock | undefined, tab?: string) => (block?.kind === 'section' ? block.blocks : block?.kind === 'tabs' ? block.tabs.find(({ id }) => id === tab)?.blocks : undefined);
+
+export const blocksAt = (blocks: readonly StatusBlock[], path: BlockPath): readonly StatusBlock[] => path.reduce((list, { at, tab }) => inner(list[at], tab) ?? [], blocks);
+
+export function withBlocksAt(blocks: readonly StatusBlock[], [step, ...rest]: BlockPath, change: (list: readonly StatusBlock[]) => StatusBlock[]): StatusBlock[] {
+  if (!step) return change(blocks);
+  return blocks.map((block, at) => {
+    if (at !== step.at) return block;
+    if (block.kind === 'section') return { ...block, blocks: withBlocksAt(block.blocks, rest, change) };
+    if (block.kind === 'tabs') return { ...block, tabs: block.tabs.map((tab) => (tab.id === step.tab ? { ...tab, blocks: withBlocksAt(tab.blocks, rest, change) } : tab)) };
+    return block;
+  });
+}
+
+// What a view's blocks name, however deep: its editor offers what they do not.
+export function blockNames(blocks: readonly StatusBlock[], names = { fields: new Set<string>(), groups: new Set<string>(), logs: new Set<string>() }) {
+  for (const block of blocks) {
+    if (block.kind === 'head' || block.kind === 'radar') for (const field of block.fields) names.fields.add(field);
+    else if (block.kind === 'field' || block.kind === 'choices') names.fields.add(block.field);
+    else if (block.kind === 'records') names.groups.add(block.group);
+    else if (block.kind === 'log') names.logs.add(block.log);
+    else if (block.kind === 'section') blockNames(block.blocks, names);
+    else for (const tab of block.tabs) blockNames(tab.blocks, names);
+  }
+  return names;
+}

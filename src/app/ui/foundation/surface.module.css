@@ -95,4 +95,15 @@
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
   }
+
+  /* A box that scrolls says so: a shadow under the edge past which more lies. Each end's cover scrolls with what the
+     box holds (local) and hides its shadow while that end is in view. --scroll-cue-ground is the box's own ground. */
+  .scrollCue {
+    background:
+      linear-gradient(var(--scroll-cue-ground) 30%, transparent) 0 0 / 100% var(--scroll-cue-cover) no-repeat local,
+      linear-gradient(transparent, var(--scroll-cue-ground) 70%) 0 100% / 100% var(--scroll-cue-cover) no-repeat local,
+      radial-gradient(farthest-side at 50% 0, var(--color-scroll-cue), transparent) 0 0 / 100% var(--scroll-cue) no-repeat,
+      radial-gradient(farthest-side at 50% 100%, var(--color-scroll-cue), transparent) 0 100% / 100% var(--scroll-cue) no-repeat,
+      var(--scroll-cue-ground);
+  }
 }

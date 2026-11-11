@@ -1,4 +1,4 @@
-import type { StatusField, StatusWriter } from '../../model/status';
+import type { StatusBlock, StatusDefinition, StatusField, StatusWriter } from '../../model/status';
 import type { DraftProblem, FieldDraft, FieldKind } from './statusDraft';
 
 // The words of the 상태 definition editor (design §6.1 part 1), all placeholders until the copy batch.
@@ -73,7 +73,50 @@ export const STATUS_WORDS = {
   noLogs: '기록이 없어요.',
   blankNote: '필드부터 직접 만들어요.',
   sample: '예시',
+  block: '블록',
+  noBlocks: '블록이 없어요.',
+  inside: '안에 추가',
+  look: '모양',
+  lookAuto: '틀에 맞춤',
+  all: '전체 보기',
+  allNote: '끄면 최근 응답에서 늘어난 줄만 보여요.',
+  shows: '보여 줄 필드',
+  radarNote: '게이지를 셋 이상 선택해 주세요.',
+  tabNames: '탭 이름',
+  gone: '없는 항목',
 } as const;
+
+type FieldLook = NonNullable<Extract<StatusBlock, { kind: 'field' }>['look']>;
+type RecordsLook = NonNullable<Extract<StatusBlock, { kind: 'records' }>['look']>;
+export const STATUS_LOOK: Record<FieldLook, string> = { bar: '막대', segments: '칸', ring: '고리', hearts: '하트', stars: '별', thought: '속마음', scale: '눈금' };
+// The looks a field's kind takes; a number and a list have the 틀's alone.
+export const FIELD_LOOKS: Partial<Record<FieldKind, FieldLook[]>> = { gauge: ['bar', 'segments', 'ring', 'hearts', 'stars'], text: ['thought'], stage: ['scale'] };
+export const STATUS_RECORDS_LOOK: Record<RecordsLook, string> = { cards: '카드', rows: '줄', table: '표' };
+export const STATUS_BLOCK: Record<Exclude<StatusBlock['kind'], 'field' | 'records' | 'log'> | 'tab', string> = { head: '머리줄', radar: '레이더', choices: '선택지', section: '구역', tabs: '탭 묶음', tab: '탭' };
+
+// A block as a row of its view's list: what it shows, then its kind and how.
+export function blockWords(definition: StatusDefinition, block: StatusBlock): { title: string; description: string } {
+  const field = (id: string) => definition.fields.find((each) => each.id === id)?.name ?? STATUS_WORDS.gone;
+  const how = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' · ');
+  switch (block.kind) {
+    case 'field':
+      return { title: field(block.field), description: how(STATUS_WORDS.field, block.look && STATUS_LOOK[block.look]) };
+    case 'head':
+    case 'radar':
+      return { title: STATUS_BLOCK[block.kind], description: block.fields.map(field).join(' · ') };
+    case 'choices':
+      return { title: STATUS_BLOCK.choices, description: field(block.field) };
+    case 'records':
+      return { title: definition.groups.find(({ id }) => id === block.group)?.name ?? STATUS_WORDS.gone, description: how(STATUS_WORDS.group, block.look && STATUS_RECORDS_LOOK[block.look]) };
+    case 'log':
+      return { title: definition.logs.find(({ id }) => id === block.log)?.name ?? STATUS_WORDS.gone, description: how(STATUS_WORDS.log, block.all && STATUS_WORDS.all) };
+    case 'section':
+      return { title: block.name, description: STATUS_BLOCK.section };
+    case 'tabs':
+      return { title: STATUS_BLOCK.tabs, description: block.tabs.map(({ name }) => name).join(' · ') };
+  }
+}
+
 
 const range = (field: Extract<StatusField, { kind: 'gauge' }>) => `${field.min}~${field.max}`;
 

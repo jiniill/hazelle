@@ -155,7 +155,7 @@ export function StatusPanel({ name, frame, mood, theme, blocks, head, edit, onMe
         <StatusFrameContext.Provider value={frame}>
           <StatusEditContext.Provider value={edit}>
             <StatusOpenContext.Provider value={onMember}>
-              <div className={styles.blocks}>{frame === 'line' ? <Inline blocks={blocks} /> : <Blocks blocks={blocks} onChoice={onChoice} />}</div>
+              <div className={classNames(styles.blocks, head && styles.held)}>{frame === 'line' ? <Inline blocks={blocks} /> : <Blocks blocks={blocks} onChoice={onChoice} />}</div>
             </StatusOpenContext.Provider>
           </StatusEditContext.Provider>
         </StatusFrameContext.Provider>

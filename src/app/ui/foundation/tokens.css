@@ -580,9 +580,9 @@
   --menu-edge: var(--space-16);
   --menu-max-height: 70vh;
   --menu-inner-max-height: 45vh;
-  /* A scrolling menu's shadow at an edge with more past it, and the cover that hides it at an end. */
-  --menu-cue: var(--space-12);
-  --menu-cue-cover: var(--space-24);
+  /* A scrolling box's shadow at an edge with more past it, and the cover that hides it at an end (surface scrollCue). */
+  --scroll-cue: var(--space-12);
+  --scroll-cue-cover: var(--space-24);
   --chip-max-width: 240px;
   --field-choice-width: 220px;
   --chip-max-width-narrow: 132px;

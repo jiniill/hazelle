@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { StatusBlock, StatusDefinition, StatusField } from './status';
-import { fieldsOf, withFields, withGroup, withLog, withoutGroup, withoutLog, withoutView, withView } from './statusEdit';
+import type { StatusDefinition, StatusField } from './status';
+import { blockNames, blocksAt, withBlocksAt, fieldsOf, withFields, withGroup, withLog, withoutGroup, withoutLog, withoutView, withView } from './statusEdit';
 import { STATUS_TYPES } from './statusTypes';
 
 const text = (id: string, name = id): StatusField => ({ id, name, kind: 'text' });
@@ -63,19 +63,32 @@ describe('a definition under its editor', () => {
   });
 });
 
-describe('유형', () => {
-  const named = (blocks: readonly StatusBlock[], out: { fields: string[]; groups: string[]; logs: string[] }) => {
-    for (const block of blocks) {
-      if (block.kind === 'head' || block.kind === 'radar') out.fields.push(...block.fields);
-      else if (block.kind === 'field' || block.kind === 'choices') out.fields.push(block.field);
-      else if (block.kind === 'records') out.groups.push(block.group);
-      else if (block.kind === 'log') out.logs.push(block.log);
-      else if (block.kind === 'section') named(block.blocks, out);
-      else for (const tab of block.tabs) named(tab.blocks, out);
-    }
-    return out;
-  };
+describe("a view's blocks", () => {
+  const blocks = viewed.views![0]!.blocks;
+  const tab = [{ at: 2, tab: 't' }];
 
+  it('reads the list a path enters, a section or one tab, and none where the path leads nowhere', () => {
+    expect(blocksAt(blocks, [])).toBe(blocks);
+    expect(blocksAt(blocks, [{ at: 1 }])).toEqual([{ kind: 'field', field: 'mood' }]);
+    expect(blocksAt(blocks, tab).map(({ kind }) => kind)).toEqual(['records', 'log']);
+    expect(blocksAt(blocks, [{ at: 0 }])).toEqual([]);
+    expect(blocksAt(blocks, [{ at: 2, tab: 'gone' }])).toEqual([]);
+  });
+
+  it('changes only the list a path enters', () => {
+    const next = withBlocksAt(blocks, tab, (list) => [...list].reverse());
+    expect(blocksAt(next, tab).map(({ kind }) => kind)).toEqual(['log', 'records']);
+    expect(next.slice(0, 2)).toEqual(blocks.slice(0, 2));
+    expect(withBlocksAt(blocks, [], (list) => list.slice(1))).toEqual(blocks.slice(1));
+  });
+
+  it('names everything the blocks show, however deep', () => {
+    const { fields, groups, logs } = blockNames(blocks);
+    expect([[...fields], [...groups], [...logs]]).toEqual([['place', 'mood'], ['party'], ['events']]);
+  });
+});
+
+describe('유형', () => {
   it.each(STATUS_TYPES)('$name names only what it declares, each name once in its place, every start one its field takes', ({ definition }) => {
     const lists = [definition.fields, ...definition.groups.map(({ fields }) => fields), ...definition.logs.map(({ fields }) => fields)];
     for (const fields of lists) expect(new Set(fields.map(({ name }) => name.trim().toLowerCase())).size).toBe(fields.length);
@@ -84,10 +97,10 @@ describe('유형', () => {
       if (field.kind === 'stage' && field.start !== undefined) expect(field.labels, field.name).toContain(field.start);
     }
     for (const view of definition.views ?? []) {
-      const { fields, groups, logs } = named(view.blocks, { fields: [], groups: [], logs: [] });
-      expect(definition.fields.map(({ id }) => id)).toEqual(expect.arrayContaining(fields));
-      expect(definition.groups.map(({ id }) => id)).toEqual(expect.arrayContaining(groups));
-      expect(definition.logs.map(({ id }) => id)).toEqual(expect.arrayContaining(logs));
+      const { fields, groups, logs } = blockNames(view.blocks);
+      expect(definition.fields.map(({ id }) => id)).toEqual(expect.arrayContaining([...fields]));
+      expect(definition.groups.map(({ id }) => id)).toEqual(expect.arrayContaining([...groups]));
+      expect(definition.logs.map(({ id }) => id)).toEqual(expect.arrayContaining([...logs]));
     }
   });
 });
