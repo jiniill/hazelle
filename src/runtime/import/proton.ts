@@ -35,32 +35,44 @@ function startCrypto() {
   cryptoReady = true;
 }
 
-type Named = { uid: string; type: NodeType; name: { ok: true; value: string } | { ok: false } };
+type Named = { uid: string; type: NodeType; name: { ok: true; value: string } | { ok: false }; activeRevision?: { claimedSize?: number } };
 const nameOf = ({ name }: Named) => (name.ok ? name.value : null);
 
 // A link's password and share keys stay in this page: the relay carries the handshake's proof and the encrypted blocks only.
 export async function downloadProton(url: string, password: string | undefined, signal: AbortSignal, progress: Progress): Promise<LinkAnswer> {
+  // The listing's, then each later take of a folder's files: the user stops one apart from the other.
+  let line = signal;
   let relayFailure: RelayFailure | null = null;
   const send = async (request: ProtonDriveHTTPClientJsonRequest | ProtonDriveHTTPClientBlobRequest) => {
     request.headers.set('x-pm-appversion', APP_VERSION);
     const json = 'json' in request && request.json !== undefined ? JSON.stringify(request.json) : null;
     const answer = await relayRaw(
       { url: request.url, method: request.method === 'POST' ? 'POST' : 'GET', headers: Object.fromEntries(request.headers), body: json },
-      AbortSignal.any([signal, AbortSignal.timeout(request.timeoutMs), ...(request.signal ? [request.signal] : [])]),
+      AbortSignal.any([line, AbortSignal.timeout(request.timeoutMs), ...(request.signal ? [request.signal] : [])]),
     );
     if (answer instanceof Response) return answer;
     relayFailure = answer;
     throw new Error(answer.kind);
   };
   const refusal = (error: unknown): LinkFailure => {
-    if (signal.aborted) return { kind: 'cancelled' };
+    if (line.aborted) return { kind: 'cancelled' };
     if (relayFailure) return { kind: 'relay', failure: relayFailure };
     if (error instanceof ValidationError) return { kind: 'missing' };
     if (error instanceof DecryptionError || error instanceof IntegrityError) return { kind: 'damaged' };
     return { kind: error instanceof ConnectionError ? 'lost' : 'refused' };
   };
 
-  try {
+  const attempt = async (next: AbortSignal, work: () => Promise<LinkAnswer>): Promise<LinkAnswer> => {
+    line = next;
+    relayFailure = null;
+    try {
+      return await work();
+    } catch (error) {
+      return { ok: false, failure: error === WRONG ? { kind: 'wrong-password' } : refusal(error) };
+    }
+  };
+
+  return attempt(signal, async () => {
     startCrypto();
     const client = new ProtonDriveClient({
       httpClient: { fetchJson: send, fetchBlob: send },
@@ -90,9 +102,8 @@ export async function downloadProton(url: string, password: string | undefined, 
     const root = (await link.getRootNode()) as Named;
     const nodes: Named[] = root.type === NodeType.Folder ? [] : [root];
     if (root.type === NodeType.Folder) {
-      for await (const child of link.iterateFolderChildren(root.uid, undefined, signal)) nodes.push(child as Named);
+      for await (const child of link.iterateFolderChildren(root.uid, undefined, line)) nodes.push(child as Named);
     }
-    const files: File[] = [];
     const skipped: string[] = [];
     const wanted = nodes.filter((node) => {
       const name = nameOf(node);
@@ -100,22 +111,28 @@ export async function downloadProton(url: string, password: string | undefined, 
       if (node.type === NodeType.File) skipped.push(name ?? '?');
       return false;
     });
-    const downloaders = await Promise.all(wanted.map((node) => link.getFileDownloader(node.uid, signal)));
-    const claimed = downloaders.map((downloader) => downloader.getClaimedSizeInBytes());
-    const total = claimed.every((size) => size !== undefined) ? claimed.reduce<number>((all, size) => all + size!, 0) : undefined;
-    let before = 0;
-    for (const [index, downloader] of downloaders.entries()) {
-      const parts: Uint8Array<ArrayBuffer>[] = [];
-      const taken = before;
-      const stream = new WritableStream<Uint8Array<ArrayBuffer>>({ write: (part) => void parts.push(part) });
-      await downloader.downloadToStream(stream, (done) => progress(taken + done, total)).completion();
-      files.push(new File(parts, nameOf(wanted[index]!)!));
-      before += files.at(-1)!.size;
-    }
-    return { ok: true, files, skipped };
-  } catch (error) {
-    return { ok: false, failure: error === WRONG ? { kind: 'wrong-password' } : refusal(error) };
-  }
+    const fetch = async (chosen: readonly Named[], progress: Progress) => {
+      const files: File[] = [];
+      const downloaders = await Promise.all(chosen.map((node) => link.getFileDownloader(node.uid, line)));
+      const claimed = downloaders.map((downloader) => downloader.getClaimedSizeInBytes());
+      const total = claimed.every((size) => size !== undefined) ? claimed.reduce<number>((all, size) => all + size!, 0) : undefined;
+      let before = 0;
+      for (const [index, downloader] of downloaders.entries()) {
+        const parts: Uint8Array<ArrayBuffer>[] = [];
+        const taken = before;
+        const stream = new WritableStream<Uint8Array<ArrayBuffer>>({ write: (part) => void parts.push(part) });
+        await downloader.downloadToStream(stream, (done) => progress(taken + done, total)).completion();
+        files.push(new File(parts, nameOf(chosen[index]!)!));
+        before += files.at(-1)!.size;
+      }
+      return files;
+    };
+    if (wanted.length < 2) return { ok: true, files: await fetch(wanted, progress), skipped };
+    // The listing told what was skipped, so the files taken after it do not tell it again.
+    const take = (chosen: readonly number[], next: AbortSignal, progress: Progress) =>
+      attempt(next, async () => ({ ok: true, files: await fetch(chosen.map((at) => wanted[at]!), progress), skipped: [] }));
+    return { ok: true, folder: { files: wanted.map((node) => ({ name: nameOf(node)!, size: node.activeRevision?.claimedSize })), skipped, take } };
+  });
 }
 
 const WRONG = new Error('wrong password');

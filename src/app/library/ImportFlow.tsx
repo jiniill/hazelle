@@ -8,7 +8,7 @@ import type { UnpackFailure } from '../../engine/import/archive';
 import type { ImportFailure } from '../../engine/import/types';
 import { PACKED_EXTENSION } from '../../engine/import/extensions';
 import { ImportWorker } from '../../runtime/import/client';
-import type { BotLink } from '../../runtime/import/link';
+import { downloadLink, type LinkAnswer, type LinkFolder, type Progress as DownloadProgress } from '../../runtime/import/link';
 import { ImportReadError, ImportStuck } from '../../runtime/import/protocol';
 import { placeOn, type ImportPage } from '../../runtime/import/save';
 import type { ModulePlace } from '../../runtime/library/modules';
@@ -25,7 +25,7 @@ import type { Route } from '../shell/routes';
 import { Avatar, Button, Callout, Checkbox, ChipButton, ChoiceGroup, ConfirmDialog, Dialog, DropOverlay, Empty, Hint, List, ListItem, Menu, MenuItem, Outcome, pickFiles, Progress, Stack, Text, TextField, useFileDrop, type ProgressStep } from '../ui';
 import { quoted, type ImportKind, type Line, type Preview } from './importOutcome';
 import { failed, IMPORTERS, readingOf, type Choice, type Offer, type Parsed, type Result, type Target } from './importers';
-import { bringLink, LinkDialog, type LinkStart } from './LinkImport';
+import { bringLink, FolderChoice, LinkDialog, type LinkStart } from './LinkImport';
 import { MoveDialog } from './MoveDialog';
 import { MoveFlow } from './MoveFlow';
 import { stepOf } from './saving';
@@ -39,6 +39,7 @@ type Locked = { file: File; locked: 'asked' | 'wrong' };
 type Row = { file: File; failure: string } | Locked | Read;
 type State =
   | { kind: 'downloading'; step: ProgressStep }
+  | { kind: 'choosing'; folder: LinkFolder; ticked: boolean[] }
   | { kind: 'reading'; file: string }
   | { kind: 'preview'; rows: Row[]; place: ModulePlace | null }
   | { kind: 'saving'; file: string; steps: ProgressStep[] }
@@ -182,16 +183,19 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     return { files, rows };
   }
 
-  async function fromLink(link: BotLink, text: string) {
+  // fetch: the link's download, or a folder's chosen files'.
+  async function fromLink(fetch: (signal: AbortSignal, progress: DownloadProgress) => Promise<LinkAnswer>, text: string) {
     setLinking(null);
     const line = new AbortController();
     download.current = line;
-    const brought = await bringLink(link, text, line.signal, (step) => setState({ kind: 'downloading', step }));
+    const brought = await bringLink((progress) => fetch(line.signal, progress), text, (step) => setState({ kind: 'downloading', step }));
     download.current = null;
     if (!mounted.current) return;
     switch (brought.kind) {
       case 'files':
         return void take(brought.files, undefined, true, brought.skipped.length > 0 ? [{ file: new File([], LINK), failure: skippedLine(brought.skipped) }] : []);
+      case 'folder':
+        return setState({ kind: 'choosing', folder: brought.folder, ticked: brought.folder.files.map(() => true) });
       case 'cancelled':
         return setState(null);
       case 'locked':
@@ -203,7 +207,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   }
 
   async function take(picked: File[], target: Target, shown = true, aside: Row[] = []): Promise<Result[]> {
-    if (picked.length === 0 || (state !== null && state.kind !== 'done') || moving) return [];
+    // A folder's choice hands its files on from its own press, while it still stands.
+    if (picked.length === 0 || (state !== null && state.kind !== 'done' && state.kind !== 'choosing') || moving) return [];
     const { files, rows: unread } = await unpacked(picked);
     const rows = [...aside, ...unread];
     if (!mounted.current) return [];
@@ -284,8 +289,10 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const ready = rows.filter((row): row is Read => 'preview' in row);
   const locked = rows.some((row) => 'locked' in row);
   const ticked = ready.filter((row) => row.ticked);
+  const chosen = state?.kind === 'choosing' ? state.ticked.flatMap((on, at) => (on ? [at] : [])) : [];
   const title =
     state?.kind === 'downloading' ? '봇 받는 중'
+    : state?.kind === 'choosing' ? '받을 봇을 골라요'
     : state?.kind === 'reading' ? '파일 읽는 중'
     : state?.kind === 'saving' ? '가져오는 중'
     : state?.kind === 'preview' ? (ready.length > 0 || locked ? '가져올까요?' : '가져오지 못했어요')
@@ -296,6 +303,11 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         {ready.length > 1 ? `가져오기 ${ticked.length}개` : '가져오기'}
       </Button>
     ) : undefined)
+    : state?.kind === 'choosing' ? (
+      <Button disabled={chosen.length === 0} onClick={() => void fromLink((signal, progress) => state.folder.take(chosen, signal, progress), '')}>
+        {`받기 ${chosen.length}개`}
+      </Button>
+    )
     : opens.length > 0 ? <>{opens}</> : undefined;
   const change = (row: Read, next: Partial<Read>) => state?.kind === 'preview' && setState({ ...state, rows: state.rows.map((each) => (each === row ? { ...row, ...next } : each)) });
   return (
@@ -337,7 +349,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
           onClose={() => setAsking(false)}
         />
       )}
-      {linking && <LinkDialog start={linking} onBring={(link, text) => void fromLink(link, text)} onClose={() => setLinking(null)} />}
+      {linking && <LinkDialog start={linking} onBring={(link, text) => void fromLink((signal, progress) => downloadLink(link, signal, progress), text)} onClose={() => setLinking(null)} />}
       {moving && <MoveFlow files={moving.files} aside={moving.aside} onClose={() => setMoving(null)} />}
       {state && (
         <Dialog
@@ -357,6 +369,11 @@ export function ImportProvider({ children }: { children: ReactNode }) {
                 result.kind === 'failed' ? <FailedRow key={index} file={result.file} failure={result.failure} /> : <DoneRow key={index} result={result} />,
               )}
             </List>
+          ) : state.kind === 'choosing' ? (
+            <Stack>
+              <FolderChoice folder={state.folder} ticked={state.ticked} onTick={(ticked) => setState({ ...state, ticked })} />
+              {state.folder.skipped.length > 0 && <Text variant="note">{skippedLine(state.folder.skipped)}</Text>}
+            </Stack>
           ) : state.kind === 'downloading' ? (
             <Progress steps={[state.step]} />
           ) : (

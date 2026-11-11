@@ -16,9 +16,16 @@ export type LinkFailure =
   | { kind: 'wrong-password' }
   | { kind: 'missing' | 'refused' | 'not-a-file' | 'guest-blocked' | 'needs-account' | 'no-bot-file' | 'damaged' | 'lost' }
   | { kind: 'relay'; failure: RelayFailure };
-// skipped: files the link held that the import does not read.
-export type LinkAnswer = { ok: true; files: File[]; skipped: string[] } | { ok: false; failure: LinkFailure };
 export type Progress = (done: number, total: number | undefined) => void;
+// A folder of more than one bot file, listed before any is downloaded: size where its owner's app recorded one, and take
+// downloads the files chosen, by their place here.
+export type LinkFolder = {
+  files: readonly { name: string; size: number | undefined }[];
+  skipped: string[];
+  take: (chosen: readonly number[], signal: AbortSignal, progress: Progress) => Promise<LinkAnswer>;
+};
+// skipped: files the link held that the import does not read.
+export type LinkAnswer = { ok: true; files: File[]; skipped: string[] } | { ok: true; folder: LinkFolder } | { ok: false; failure: LinkFailure };
 
 export function readLink(text: string): BotLink | null {
   const realm = REALM_PAGE.exec(text)?.[1];
@@ -32,7 +39,7 @@ export function readLink(text: string): BotLink | null {
 export async function downloadLink(link: BotLink, signal: AbortSignal, progress: Progress): Promise<LinkAnswer> {
   try {
     const answer = await download(link, signal, progress);
-    return answer.ok && answer.files.length === 0 ? { ok: false, failure: { kind: 'no-bot-file' } } : answer;
+    return answer.ok && 'files' in answer && answer.files.length === 0 ? { ok: false, failure: { kind: 'no-bot-file' } } : answer;
   } catch {
     return { ok: false, failure: { kind: signal.aborted ? 'cancelled' : 'lost' } };
   }

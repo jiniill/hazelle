@@ -24,7 +24,7 @@ it('names a Realm file by what Realm sends and reports its progress', async () =
   vi.stubGlobal('fetch', vi.fn(async () => new Response(new Uint8Array(4), { headers: { 'content-type': 'application/charx', 'content-length': '4' } })));
   const progress = vi.fn();
   const answer = await downloadLink(realm, signal, progress);
-  expect(answer.ok && [answer.files[0]!.name, answer.files[0]!.size]).toEqual(['realm.charx', 4]);
+  expect(answer.ok && 'files' in answer && [answer.files[0]!.name, answer.files[0]!.size]).toEqual(['realm.charx', 4]);
   expect(progress).toHaveBeenLastCalledWith(4, 4);
   expect(vi.mocked(fetch).mock.calls[0]![1]!.headers).toEqual({ 'x-risu-api-version': '4' });
 });
@@ -42,7 +42,7 @@ it('follows a redirect through the relay and names the file from where it landed
   const answers = [refused({ error: 'upstream-redirect', status: 302, location: '/real/bot.charx' }), relayed(new Uint8Array(3))];
   vi.stubGlobal('fetch', vi.fn(async () => answers.shift()));
   const answer = await downloadLink(direct, signal, () => {});
-  expect(answer.ok && [answer.files[0]!.name, answer.files[0]!.size]).toEqual(['bot.charx', 3]);
+  expect(answer.ok && 'files' in answer && [answer.files[0]!.name, answer.files[0]!.size]).toEqual(['bot.charx', 3]);
   expect(JSON.parse(vi.mocked(fetch).mock.calls[1]![1]!.body as string).url).toBe('https://files.example/real/bot.charx');
 });
 
