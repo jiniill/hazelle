@@ -13,6 +13,7 @@ import { live } from '../../model/library';
 import type { Toggle, ToggleLine, TogglePreset } from '../../model/prompt';
 import { without } from '../../model/fields';
 import type { Seen, Settings } from '../../model/settings';
+import { chatStatus, type StatusDefinition } from '../../model/status';
 import { chatToggles, toggleValue } from '../../model/toggles';
 import { chatModel, type Route } from '../models/assignment';
 import { chatTranslate } from '../tasks/features';
@@ -171,6 +172,10 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
 // Keep source layouts separate so one source's group lines cannot capture another's toggles.
 export type ToggleSource = { from: 'prompt' | 'card' | 'module'; id: string; name: string; lines: ToggleLine[]; presets: TogglePreset[] };
 export type ChatToggleSet = { declared: Toggle[]; sources: ToggleSource[]; value: (key: string) => string | null };
+
+// The chat's state definitions (design §6.1): its prompt's, then its packs' in their order, as its toggles are read.
+export const statusOf = (prompt: PromptChoice, packs: ReturnType<typeof packsOf>): StatusDefinition[] =>
+  chatStatus([prompt.kind === 'prompt' ? prompt.prompt.value.status : undefined, ...packs.map(({ pack }) => pack.status)]);
 
 export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoice, packs: ReturnType<typeof packsOf>): ChatToggleSet {
   const character = chat.character === null ? null : (store.get('character', chat.character)?.value ?? null);

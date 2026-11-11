@@ -143,6 +143,7 @@ const ENTRIES = {
   call: shape({ version: str, receipt: isRecord, at: num }),
   follow: shape({ message: str, follows: str, at: num }),
   agentMemory: shape({ version: str, agent: str, memory: str, at: num }),
+  status: (value) => shape({ version: str, changes: listOf(shape({ definition: str, kind: str })), at: num })(value) && isRecord(value) && (value.byHand === true || shape({ of: listOf(str), receipt: orNull(isRecord) })(value)),
 } satisfies Record<Entry['type'], Check>;
 
 const picture = shape({ name: str, type: str, size: num, file: shape({ id: str, key: str }) });
@@ -151,9 +152,14 @@ const mark = shape({ label: str });
 const unread = shape({ text: str });
 const toggleLine: Check = (value) =>
   isRecord(value) && (value.kind === 'groupEnd' || (value.kind === 'divider' || value.kind === 'caption' || value.kind === 'group' ? mark : value.kind === 'unread' ? unread : toggle)(value));
+const named = { id: str, name: str };
+const statusFields = listOf(shape({ ...named, kind: str }));
+const status: Check = (value) =>
+  value === undefined ||
+  shape({ ...named, writer: (writer) => writer === 'after' || writer === 'with', fields: statusFields, groups: listOf(shape({ ...named, fields: statusFields, members: listOf(shape(named)) })), logs: listOf(shape({ ...named, fields: statusFields })) })(value);
 const prompt = shape({ name: str, blocks: listOf(shape({ id: str, kind: str })), toggles: listOf(toggleLine) });
 const optStr: Check = (value) => value === undefined || str(value);
-const conversation = shape({ task: (value) => value === undefined, authorNote: str, models: isRecord, folder: optStr, variables: (value) => value === undefined || listOf(Array.isArray)(value) });
+const conversation = shape({ task: (value) => value === undefined, authorNote: str, models: isRecord, folder: optStr, variables: (value) => value === undefined || listOf(Array.isArray)(value), status });
 const task = shape({ task: (value) => value === 'translate' || value === 'memory' || value === 'illustrate' || value === 'mascot' || value === 'preread' || value === 'agent', model: (value) => value === undefined || isRecord(value) });
 
 const BASE64 = /^(?=.)(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
@@ -164,6 +170,7 @@ const SHAPES = {
       ...all(str, 'name', 'description', 'personality', 'scenario', 'exampleDialogue', 'additionalText', 'systemPrompt', 'postHistoryInstructions'),
       ...all(str, 'creatorNotes', 'creator', 'version'),
       toggles: listOf(toggleLine),
+      status,
       nickname: orNull(str),
       greetings: listOf(str),
       tags: listOf(str),
@@ -177,7 +184,7 @@ const SHAPES = {
     folder: orNull(str),
     loreFolders: listOf(shape({ id: str, name: str })),
   }),
-  module: shape({ name: str, description: str, namespace: orNull(str), folder: optStr, regex: listOf(shape({ id: str })), triggers: listOf(shape({ id: str, kind: str, name: str })), toggles: listOf(toggleLine), loreFolders: listOf(shape({ id: str, name: str })) }),
+  module: shape({ name: str, description: str, namespace: orNull(str), folder: optStr, regex: listOf(shape({ id: str })), triggers: listOf(shape({ id: str, kind: str, name: str })), toggles: listOf(toggleLine), status, loreFolders: listOf(shape({ id: str, name: str })) }),
   tool: shape({ manifest: shape({ api: (value) => value === 1, ...all(str, 'name', 'author', 'displayName', 'version', 'description'), uses: listOf((value) => value === 'model' || value === 'embed' || value === 'memory' || value === 'network'), page: orNull(shape({ label: str })), menu: listOf(shape({ id: str, label: str })), settings: listOf(shape({ key: str, type: str, label: str })) }), file: shape({ id: str, key: str }), size: num, settings: isRecord }),
   tooldraft: shape({ identity: shape(all(str, 'name', 'author', 'displayName', 'version', 'description')), body: str, module: orNull(str), applied: orNull(str), asks: listOf(shape({ ask: str, note: str, model: shape(all(str, 'connection', 'model')), cost: orNull(isRecord), at: num })), at: num }),
   tooldata: shape({ key: str, value: (value) => value !== undefined }),

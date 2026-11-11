@@ -8,6 +8,7 @@ import type { Stored, StoreRead } from './kinds';
 import type { LoreFolder, Mark } from './library';
 import type { MemorySettings } from './memory';
 import type { AgentStage } from './prompt';
+import type { StatusChange, StatusPlace } from './status';
 import type { Card } from '../engine/import/types';
 import { book, type UsageCall } from './usage';
 
@@ -184,7 +185,15 @@ export type Entry =
   // it. It follows the version as vars does.
   | { type: 'call'; version: string; receipt: Receipt; at: number }
   // An agent's memory as the user set it at this version, over what the agent's call left there (Version memories).
-  | { type: 'agentMemory'; version: string; agent: string; memory: string; at: number };
+  | { type: 'agentMemory'; version: string; agent: string; memory: string; at: number }
+  // What a version's reply changed in the chat's state (design §6.1), or what the user changed there by hand. It
+  // follows the version through its edits, as vars does, and not through a retry or a continuation.
+  | ({ type: 'status'; version: string } & (StatusWrite | { changes: StatusChange[]; at: number; byHand: true }));
+
+// One write of a version's state by a model. of: the definitions it was asked for. unread: the fields whose line could
+// not be read. missed: its answer held no block that could be read, so it changed nothing and nothing is guessed.
+// receipt: its own call's; null when the reply's model wrote it at the reply's end.
+export type StatusWrite = { of: string[]; changes: StatusChange[]; receipt: Receipt | null; at: number; unread?: StatusPlace[]; missed?: true };
 
 // Variable writes in the order made; a later one of a name wins.
 export type Writes = [string, string][];
@@ -192,7 +201,9 @@ export type Writes = [string, string][];
 // earlier keeps pre-edit ids oldest first, never retry/continuation ids.
 // Apply byHand after message.after in every reader (runtime/chat/chat-context, engine/render).
 // User-edited agent memories override generated ones. retouched blocks repolish that would undo edits (user, 2026-10-22).
-export type Version = { id: string; seed: string; text: string; receipt: Receipt | null; edited: boolean; at: number; translation?: Translation; staged?: true; before?: Writes; after?: Writes; byHand?: Writes; calls?: BotCall[]; reasoning?: string; greeting?: number; earlier?: string[]; raw?: string; memories?: Record<string, string>; retouched?: true };
+// status: the writes that stand, a later one in place of an earlier one's part for the definitions it names.
+// statusByHand adds up and is replayed after them (statusChanges is the one reader).
+export type Version = { id: string; seed: string; text: string; receipt: Receipt | null; edited: boolean; at: number; translation?: Translation; staged?: true; before?: Writes; after?: Writes; byHand?: Writes; calls?: BotCall[]; reasoning?: string; greeting?: number; earlier?: string[]; raw?: string; memories?: Record<string, string>; retouched?: true; status?: StatusWrite[]; statusByHand?: StatusChange[] };
 type BotCall = { receipt: Receipt; at: number };
 // after: the writes that stay with the message (Entry vars), set after its shown version's own.
 export type Message = { id: string; role: 'user' | 'assistant'; at: number; versions: Version[]; selected: number; after?: Writes };
@@ -213,6 +224,17 @@ const versionOf = (id: string, entry: Extract<Entry, { type: 'message' | 'versio
 });
 
 type Order = { rev: number; pending?: number };
+
+// The writes left standing once the definitions in of are written again.
+function besides(writes: readonly StatusWrite[], of: readonly string[]): StatusWrite[] {
+  return writes.flatMap((write) => {
+    const left = write.of.filter((id) => !of.includes(id));
+    if (left.length === write.of.length) return [write];
+    if (!left.length) return [];
+    const kept = <T extends { definition: string }>(list: T[]) => list.filter(({ definition }) => left.includes(definition));
+    return [{ ...write, of: left, changes: kept(write.changes), ...(write.unread && { unread: kept(write.unread) }) }];
+  });
+}
 
 // Skip references not yet seen in replay, even if they arrive later. places preserves historical ids;
 // founded tracks slot creation order, never replacement order.
@@ -269,6 +291,16 @@ function replay(entries: Stored<'entry'>[]): { messages: Message[]; deleted: Set
       if (version) version.memories = { ...version.memories, [entry.agent]: entry.memory };
       continue;
     }
+    if (entry.type === 'status') {
+      const version = edits.get(entry.version);
+      if (!version) continue;
+      if ('byHand' in entry) version.statusByHand = [...(version.statusByHand ?? []), ...entry.changes];
+      else {
+        const { of, changes, receipt, at, unread, missed } = entry;
+        version.status = [...besides(version.status ?? [], of), { of, changes, receipt, at, ...(unread && { unread }), ...(missed && { missed }) }];
+      }
+      continue;
+    }
     if (entry.type === 'cost') {
       book(costs, entry.replyId, entry.cost);
       continue;
@@ -291,6 +323,8 @@ function replay(entries: Stored<'entry'>[]): { messages: Message[]; deleted: Set
         if (edited.calls) version.calls = edited.calls;
         if (edited.reasoning) version.reasoning = edited.reasoning;
         if (edited.memories) version.memories = edited.memories;
+        if (edited.status) version.status = edited.status;
+        if (edited.statusByHand) version.statusByHand = edited.statusByHand;
         if (edited.raw !== undefined && entry.raw === undefined) {
           version.raw = edited.raw;
           if (entry.text !== edited.raw) version.retouched = true;
@@ -328,8 +362,10 @@ function replay(entries: Stored<'entry'>[]): { messages: Message[]; deleted: Set
         const receipt = version.receipt && settled(version.receipt);
         const translated = version.translation?.receipt && settled(version.translation.receipt);
         const made = version.calls?.map((call) => ({ ...call, receipt: settled(call.receipt) }));
-        if (receipt === version.receipt && translated === version.translation?.receipt && !made?.some((call, index) => call.receipt !== version.calls![index]!.receipt)) return version;
-        return { ...version, receipt, ...(version.translation && { translation: { ...version.translation, receipt: translated ?? null } }), ...(made && { calls: made }) };
+        const written = version.status?.map((write) => (write.receipt ? { ...write, receipt: settled(write.receipt) } : write));
+        const same = <T extends { receipt: Receipt | null }>(now: T[] | undefined, was: T[] | undefined) => !now?.some((each, index) => each.receipt !== was![index]!.receipt);
+        if (receipt === version.receipt && translated === version.translation?.receipt && same(made, version.calls) && same(written, version.status)) return version;
+        return { ...version, receipt, ...(version.translation && { translation: { ...version.translation, receipt: translated ?? null } }), ...(made && { calls: made }), ...(written && { status: written }) };
       }),
     })) };
 }
@@ -549,6 +585,14 @@ export const foldTree = (entries: Stored<'entry'>[]) => folded(entries).tree();
 
 export const shown = (message: Message): Version => message.versions[message.selected]!;
 
+// What the shown versions changed in the chat's state, in order: each one's writes, then what the user changed there.
+// The state after them is model/status statusAfter's.
+export const statusChanges = (messages: readonly Message[]): StatusChange[] =>
+  messages.flatMap((message) => {
+    const { status = [], statusByHand = [] } = shown(message);
+    return [...status.flatMap(({ changes }) => changes), ...statusByHand];
+  });
+
 // Resolve historical ids to current versions so attached data (e.g. illustrations) follows edits.
 export const standing = (messages: readonly Message[]): Map<string, string> =>
   new Map(messages.flatMap(({ versions }) => versions.flatMap(({ id, earlier = [] }) => [...earlier, id].map((each): [string, string] => [each, id]))));
@@ -640,6 +684,7 @@ export function loggedCalls(entries: Iterable<Entry>): { calls: UsageCall[]; boo
       keep(entry.receipt, entry.at);
       if (entry.translation) keep(entry.translation.receipt, entry.translation.at);
     } else if (entry.type === 'translation' || entry.type === 'call') keep(entry.receipt, entry.at);
+    else if (entry.type === 'status' && !('byHand' in entry)) keep(entry.receipt, entry.at);
     else if (entry.type === 'cost') booked.push(entry);
   }
   return { calls: [...kept.values()], booked: booked.flatMap(({ replyId, cost }) => (replies.get(replyId) ?? []).map((call) => ({ call, cost }))) };

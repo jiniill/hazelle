@@ -118,3 +118,19 @@ it('accepts an account-level tool draft with typed ask history, and refuses inco
   expect(isValue('tooldraft', { ...draft, identity: { ...identity, version: undefined } })).toBe(false);
   expect(isValue('tooldraft', { ...draft, asks: [{ ...draft.asks[0], model: { connection: 'c' } }] })).toBe(false);
 });
+
+it('reads a state definition as absent or well formed on a prompt and a module, and a state entry by who made it', () => {
+  const definition = { id: 'd', name: '기본', writer: 'after', fields: [{ id: 'f', name: 'HP', kind: 'gauge', min: 0, max: 100 }], groups: [{ id: 'g', name: '인물', fields: [], members: [{ id: 'm', name: '서하' }] }], logs: [] };
+  const prompt = { name: '기본', blocks: [], toggles: [], authorNote: '', models: {} };
+  const module = { name: '종', description: '', namespace: null, regex: [], triggers: [], toggles: [], loreFolders: [] };
+  expect(isValue('prompt', prompt)).toBe(true);
+  expect(isValue('prompt', { ...prompt, status: definition })).toBe(true);
+  expect(isValue('prompt', { ...prompt, status: { ...definition, writer: 'both' } })).toBe(false);
+  expect(isValue('module', { ...module, status: definition })).toBe(true);
+  expect(isValue('module', { ...module, status: { ...definition, groups: [{ id: 'g', name: '인물', fields: [] }] } })).toBe(false);
+  const entry = { type: 'status', version: 'v', changes: [{ definition: 'd', kind: 'set', field: 'f', value: 3 }], at: 1 };
+  expect(isValue('entry', { ...entry, byHand: true })).toBe(true);
+  expect(isValue('entry', { ...entry, of: ['d'], receipt: null })).toBe(true);
+  expect(isValue('entry', entry)).toBe(false);
+  expect(isValue('entry', { ...entry, changes: [{ kind: 'set' }], byHand: true })).toBe(false);
+});

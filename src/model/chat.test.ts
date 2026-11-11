@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { calls, ChatFold, chatTitle, fold, foldTree, previewLine, recentIn, recentModels, shown, standing, type Entry, type Message, type Receipt } from './chat';
+import { calls, ChatFold, chatTitle, fold, foldTree, previewLine, recentIn, recentModels, shown, standing, statusChanges, type Entry, type Message, type Receipt } from './chat';
+import type { StatusChange } from './status';
 import type { Stored } from './kinds';
 
 let rev = 0;
@@ -226,6 +227,34 @@ describe('fold', () => {
       ['cut', { unit: 'usd', amount: 0.01, source: 'reported' }],
       ['done', null],
     ]);
+  });
+});
+
+describe("fold with a version's state changes", () => {
+  it('keeps them through an edit with the cost of their call booked, a later write in place of an earlier one for the definitions it names, the ones made by hand after the writes, and none on a retry', () => {
+    const set = (definition: string, value: number): StatusChange => ({ definition, kind: 'set', field: 'hp', value });
+    const paid = receipt({ cost: 'pending', replyId: 'r' });
+    const booked = { unit: 'usd' as const, amount: 0.5, source: 'reported' as const };
+    const unread = [{ definition: 'b', field: 'mp' }];
+    const entries = [
+      entry('b1', { type: 'message', role: 'assistant', at: rev, text: '하나', receipt: receipt() }),
+      entry('s1', { type: 'status', version: 'b1', of: ['a', 'b'], changes: [set('a', 1), set('b', 2)], receipt: null, at: rev, unread }),
+      entry('h1', { type: 'status', version: 'b1', changes: [set('a', 9)], at: rev, byHand: true }),
+      entry('e1', { type: 'version', message: 'b1', replaces: 'b1', edit: true, at: rev, text: '고침', receipt: receipt() }),
+      entry('s2', { type: 'status', version: 'b1', of: ['a'], changes: [set('a', 3)], receipt: paid, at: rev }),
+      entry('c1', { type: 'cost', replyId: 'r', cost: booked, at: rev }),
+    ];
+    const [message] = fold(entries);
+    expect(shown(message!)).toMatchObject({
+      id: 'e1',
+      status: [{ of: ['b'], changes: [set('b', 2)], unread, receipt: null }, { of: ['a'], changes: [set('a', 3)], receipt: { ...paid, cost: booked } }],
+      statusByHand: [set('a', 9)],
+    });
+    expect(statusChanges([message!])).toEqual([set('b', 2), set('a', 3), set('a', 9)]);
+    const missed = entry('s3', { type: 'status', version: 'e1', of: ['a', 'b'], changes: [], receipt: null, at: rev, missed: true });
+    expect(shown(fold([...entries, missed])[0]!).status).toMatchObject([{ of: ['a', 'b'], changes: [], missed: true }]);
+    const retried = shown(fold([...entries, version('r1', 'b1', '다시', 'e1')])[0]!);
+    expect([retried.status, retried.statusByHand]).toEqual([undefined, undefined]);
   });
 });
 

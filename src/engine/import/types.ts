@@ -4,6 +4,7 @@ import type { BlockCondition, BlockEffect } from './blocks';
 import type { Character } from '../../model/library';
 import type { Likeness } from '../../model/likeness';
 import type { ToggleLine, TogglePreset, ToggleValues } from '../../model/prompt';
+import type { StatusDefinition } from '../../model/status';
 import type { Onboarding } from './onboarding';
 
 export type Card = {
@@ -44,6 +45,8 @@ export type Pack = {
   background?: string;
   toggles: ToggleLine[];
   togglePresets?: TogglePreset[];
+  // What it declares the state of its chats to hold (design §6.1), absent when it declares none.
+  status?: StatusDefinition;
 };
 
 // id: opaque, and unique within its pack only (import/convert stampIds). off keeps a script in its place but stops it.

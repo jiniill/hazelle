@@ -9,6 +9,7 @@ import type { Illustration } from '../../model/illustration';
 import type { Remark } from '../../model/mascot';
 import { live, type Asset, type Lore, type TextFile } from '../../model/library';
 import { memoryId, type Memory, type Source } from '../../model/memory';
+import type { StatusChange } from '../../model/status';
 import { badgesOf } from '../../model/tool';
 import type { ApiFailure, ApiResult } from '../api';
 import { routeOf } from '../models/assignment';
@@ -266,9 +267,16 @@ function copied(id: string, { role, at, versions, selected, after }: Message, fo
   for (const version of versions) if (version.after) entries.push([crypto.randomUUID(), { type: 'vars', version: made.get(version.id)!, set: version.after, at: version.at }]);
   for (const version of versions) if (version.byHand) entries.push([crypto.randomUUID(), { type: 'vars', version: made.get(version.id)!, set: version.byHand, at: version.at, byHand: true }]);
   for (const version of versions) for (const [agent, memory] of Object.entries(version.memories ?? {})) entries.push([crypto.randomUUID(), { type: 'agentMemory', version: made.get(version.id)!, agent, memory, at: version.at }]);
+  for (const version of versions) for (const entry of statusEntries(version, made.get(version.id)!)) entries.push([crypto.randomUUID(), entry]);
   if (after) entries.push([crypto.randomUUID(), { type: 'vars', version: made.get(versions[selected]!.id)!, set: after, at, stays: true }]);
   return { entries, versions: made };
 }
+
+// A version's state changes said again under another id (Entry status), so a branch and a copy have their own.
+const statusEntries = ({ status = [], statusByHand, at }: Version, version: string): Entry[] => [
+  ...status.map((write): Entry => ({ type: 'status', version, ...write })),
+  ...(statusByHand ? [{ type: 'status', version, changes: statusByHand, at, byHand: true } satisfies Entry] : []),
+];
 
 // Keep this serializer in sync with Version fields. Deliberately omit Lua calls: usage belongs where they ran.
 const held = ({ text, receipt, seed, translation, staged, before, reasoning, greeting, raw }: Version) => ({ text, receipt, seed, ...(translation && { translation }), ...(staged && { staged }), ...(before && { before }), ...(reasoning && { reasoning }), ...(greeting !== undefined && { greeting }), ...(raw !== undefined && { raw }) });
@@ -289,6 +297,7 @@ export function copyShown(store: ObjectStore, chat: string, message: Message) {
   return store.batch([
     entryRow(chat, { type: 'version', message: message.id, replaces: null, edit: current.edited, at: current.at, ...held(current) }, id),
     ...(current.after ? [entryRow(chat, { type: 'vars', version: id, set: current.after, at: current.at })] : []),
+    ...statusEntries(current, id).map((entry) => entryRow(chat, entry)),
     ...shownRows('illustration'),
     ...shownRows('remark'),
   ]);
@@ -433,6 +442,9 @@ export async function setVariableByHand(store: ObjectStore, chat: string, versio
   if (name.length > VARIABLE_LIMITS.name || value.length > VARIABLE_LIMITS.value) return { ok: false, error: 'too-long' } as const;
   return append(store, chat, { type: 'vars', version, set: [[name, value]], at: Date.now(), byHand: true });
 }
+
+// A state value the user set where it stood, on the version whose state was shown (Entry status).
+export const setStatusByHand = (store: ObjectStore, chat: string, version: string, change: StatusChange) => append(store, chat, { type: 'status', version, changes: [change], at: Date.now(), byHand: true });
 
 export const appendCost = (store: ObjectStore, chat: string, { id, replyId }: Receipt, cost: Cost | null) => append(store, chat, { type: 'cost', replyId: replyId!, cost, at: Date.now() }, undefined, [costRow(id, cost)]);
 
