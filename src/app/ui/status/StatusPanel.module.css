@@ -10,6 +10,16 @@
   line-height: var(--leading-normal);
 }
 
+/* Inside a screen that frames it: the screen's whole ground, with no edge of its own. */
+.bare {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  gap: var(--space-16);
+  border: 0;
+  border-radius: 0;
+}
+
 .blocks {
   display: flex;
   flex-direction: column;

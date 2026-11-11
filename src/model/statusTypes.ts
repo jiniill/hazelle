@@ -211,6 +211,34 @@ export const STATUS_TYPES: StatusType[] = [
       ],
     },
   },
+  {
+    id: 'phone',
+    name: '휴대폰',
+    description: '메신저와 연락처, SNS',
+    definition: {
+      name: '휴대폰',
+      writer: 'after',
+      fields: [],
+      groups: [
+        {
+          id: 'people',
+          name: '연락처',
+          open: true,
+          members: [],
+          fields: [meter('love', '호감도', 30, { tone: 'warm' }), text('tie', '관계'), text('note', '메모')],
+        },
+      ],
+      logs: [
+        { id: 'messages', name: '메시지', fields: [text('with', '상대'), { id: 'way', name: '방향', kind: 'stage', labels: ['받음', '보냄'] }, text('text', '내용'), text('time', '시간')] },
+        { id: 'posts', name: 'SNS', fields: [text('who', '글쓴이'), text('time', '시간'), text('text', '내용')] },
+      ],
+      views: [
+        { id: 'messenger', name: '메신저', frame: 'card', mood: 'hazelle', app: 'messages', blocks: [{ kind: 'chat', log: 'messages', by: 'with', mine: { field: 'way', is: '보냄' }, reply: '{{name}}에게 메시지를 보낸다: ' }] },
+        { id: 'contacts', name: '연락처', frame: 'card', mood: 'hazelle', app: 'contacts', blocks: [{ kind: 'records', group: 'people', look: 'rows' }] },
+        { id: 'sns', name: 'SNS', frame: 'card', mood: 'hazelle', app: 'feed', blocks: [{ kind: 'log', log: 'posts', all: true, look: 'feed' }] },
+      ],
+    },
+  },
 ];
 
 // A definition started from a 유형, under an id of its own.

@@ -23,7 +23,8 @@ it.each(STATUS_TYPES)("lists $name's fields, 묶음 and 기록 by name and previ
   const definition = fromType(type, 'made');
   const html = shown(definition);
   for (const { name } of [...definition.fields, ...definition.groups, ...definition.logs, ...definition.groups.flatMap(({ fields }) => fields), ...definition.logs.flatMap(({ fields }) => fields)]) expect(html).toContain(name);
-  for (const { name } of definition.views!) expect(html).toMatch(new RegExp(`<section[^>]*aria-label="${name}"[^>]*data-mood`));
+  // A view that is an app stands on the 휴대폰's home; the others are drawn as a 상태창 each.
+  for (const { name, app } of definition.views!) expect(html).toMatch(new RegExp(app ? `<span class="[^"]*label[^"]*">${name}</span>` : `<section[^>]*aria-label="${name}"[^>]*data-mood`));
 });
 
 it("lists a view's blocks in order, a tab's set in under it, each saying what it shows and how", () => {

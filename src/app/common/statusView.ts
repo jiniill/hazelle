@@ -1,5 +1,5 @@
 import type { StatusBlock, StatusDefinition, StatusField, StatusMember, StatusOf, StatusPlace, StatusStep, StatusValue, StatusValues, StatusView } from '../../model/status';
-import { STATUS_FRAME, STATUS_MOOD, type ShownBlock, type ShownField, type ShownRecord, type StatusDelta, type StatusFrame, type StatusMood } from '../ui';
+import { STATUS_APP, STATUS_FRAME, STATUS_MOOD, type ShownBlock, type ShownField, type ShownRecord, type ShownThread, type StatusApp, type StatusDelta, type StatusFrame, type StatusMood } from '../ui';
 
 // 상태's views as the kit draws them (design §6.1 part 4): the one place a definition and a state become what is shown,
 // for the panel, 상세 and whatever shows the state later.
@@ -65,6 +65,27 @@ function words(field: StatusField, value: StatusValue | undefined): string {
   return typeof value === 'number' ? withUnit(figure(value), field.kind === 'gauge' || field.kind === 'number' ? field.unit : undefined) : value;
 }
 
+// How many of a 기록's rows stood before the latest reply: the rest are what it added. All of them where there is no
+// latest reply to tell them from.
+const told = (before: StatusOf | undefined, log: string, all: readonly StatusValues[]) => (before ? (before.logs[log]?.length ?? 0) : all.length);
+
+type Chat = Extract<StatusBlock, { kind: 'chat' }>;
+// Where a conversation's name stands in what answering it puts into the composer.
+const REPLY_NAME = '{{name}}';
+const sentByReader = ({ mine }: Chat, row: StatusValues) => mine !== undefined && row[mine.field] === mine.is;
+
+// The rows the latest reply added to what the blocks show, the reader's own messages left out: what is new on an app.
+function freshIn(blocks: readonly StatusBlock[], now: StatusOf, before: StatusOf | undefined): number {
+  return blocks.reduce((sum, block) => {
+    if (block.kind === 'section') return sum + freshIn(block.blocks, now, before);
+    if (block.kind === 'tabs') return sum + block.tabs.reduce((inner, tab) => inner + freshIn(tab.blocks, now, before), 0);
+    if (block.kind !== 'log' && block.kind !== 'chat') return sum;
+    const all = now.logs[block.log] ?? [];
+    const added = all.slice(told(before, block.log, all));
+    return sum + (block.kind === 'chat' ? added.filter((row) => !sentByReader(block, row)) : added).length;
+  }, 0);
+}
+
 const found = <T>(items: (T | undefined)[]): T[] => items.filter((item): item is T => item !== undefined);
 
 function shownBlocks(definition: StatusDefinition, blocks: readonly StatusBlock[], now: StatusOf, before: StatusOf | undefined, path: string): ShownBlock[] {
@@ -101,10 +122,37 @@ function shownBlocks(definition: StatusDefinition, blocks: readonly StatusBlock[
       case 'log': {
         const log = definition.logs.find((each) => each.id === block.log);
         const all = log ? (now.logs[log.id] ?? []) : [];
-        // The latest reply's rows are those past what stood before it.
-        const rows = block.all || !before ? all : all.slice(before.logs[log?.id ?? '']?.length ?? 0);
+        const rows = (block.all || !before ? all : all.slice(told(before, block.log, all))).map((row) => (log?.fields ?? []).map((field) => words(field, row[field.id])));
         if (!log || !rows.length) return [];
-        return [{ block: 'log', id: log.id, name: log.name, columns: log.fields.map(({ id: field, name }) => ({ id: field, name })), rows: rows.map((row) => log.fields.map((field) => words(field, row[field.id]))) }];
+        if (block.look !== 'feed') return [{ block: 'log', id: log.id, name: log.name, columns: log.fields.map(({ id: field, name }) => ({ id: field, name })), rows }];
+        // Newest first; a 기록 of one field has no body under who wrote it.
+        return [{ block: 'feed', id: log.id, name: log.name, posts: rows.map((cells) => ({ lead: cells[0] ?? '', meta: cells.slice(1, -1).filter(Boolean), body: cells.length > 1 ? cells.at(-1)! : '' })).reverse() }];
+      }
+      case 'chat': {
+        const log = definition.logs.find((each) => each.id === block.log);
+        const by = log?.fields.find((each) => each.id === block.by);
+        const all = log ? (now.logs[log.id] ?? []) : [];
+        if (!log || !by) return [];
+        const from = log.fields.find((each) => each.id === block.from);
+        // What a message says is the first field that names nothing else; the rest stand under it.
+        const said = log.fields.filter((each) => each !== by && each !== from && each.id !== block.mine?.field);
+        const since = told(before, block.log, all);
+        const threads = new Map<string, ShownThread>();
+        all.forEach((row, index) => {
+          const name = words(by, row[by.id]).trim();
+          const [text, ...meta] = said.map((field) => words(field, row[field.id]));
+          if (!name || !text) return;
+          const key = name.toLowerCase();
+          const thread = threads.get(key) ?? { id: key, name, fresh: 0, messages: [], ...(block.reply !== undefined && { reply: block.reply.replaceAll(REPLY_NAME, name) }) };
+          // The one that spoke last stands last.
+          threads.delete(key);
+          threads.set(key, thread);
+          const mine = sentByReader(block, row);
+          const sender = from ? words(from, row[from.id]).trim() : '';
+          thread.messages.push({ text, meta: meta.filter(Boolean), ...(mine && { mine }), ...(!mine && sender && sender.toLowerCase() !== key && { from: sender }) });
+          if (index >= since && !mine) thread.fresh += 1;
+        });
+        return threads.size ? [{ block: 'chat', id, name: log.name, threads: [...threads.values()].reverse() }] : [];
       }
       case 'choices': {
         const field = fieldOf(block.field);
@@ -184,4 +232,11 @@ export function shownView(definition: StatusDefinition, view: StatusView, now: S
     mood: Object.hasOwn(STATUS_MOOD, view.mood) ? view.mood : 'hazelle',
     blocks: shownBlocks(definition, view.blocks, now, before, ''),
   };
+}
+
+// A view that is an app of the 휴대폰: its screen, the picture it stands under (one this build does not know is
+// drawn as a note), and how much the latest reply added to it.
+export type ShownApp = ShownView & { icon: StatusApp; fresh: number };
+export function shownApp(definition: StatusDefinition, view: StatusView, now: StatusOf, before?: StatusOf): ShownApp {
+  return { ...shownView(definition, view, now, before), icon: view.app && Object.hasOwn(STATUS_APP, view.app) ? view.app : 'notes', fresh: freshIn(view.blocks, now, before) };
 }
