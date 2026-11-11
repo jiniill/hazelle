@@ -5,8 +5,11 @@ import { blockConditions, blockEffects } from '../../engine/import/blocks';
 import { blankCard, importCard, importRisum } from '../../engine/import/card';
 import { readRisum, readRisumModule } from '../../engine/import/risum';
 import { fileSource } from '../../engine/import/source';
+import { readStatus } from '../../engine/import/status';
 import { PLAIN_LUA, type Card, type LoreEntry } from '../../engine/import/types';
 import { likenessId } from '../../model/likeness';
+import type { StatusDefinition } from '../../model/status';
+import { fromType, STATUS_TYPES } from '../../model/statusTypes';
 import { setService } from '../service/admin';
 import { readTool } from '../../engine/import/tool';
 import { toolId } from '../../model/tool';
@@ -206,5 +209,67 @@ describe('a module file', () => {
     const brought = await importModule(other.store, other.files, read.module, () => {});
     const before = await heldModule(store, files, id);
     expect(await heldModule(other.store, other.files, brought.ok ? brought.data.id : '')).toEqual(before);
+  });
+});
+
+describe('a 상태 definition', () => {
+  // The phone 유형, its 묶음 following the folder at a place among its owner's, as a file names it.
+  const phone = (id: string, folder: number): StatusDefinition => {
+    const definition = fromType(STATUS_TYPES.find((type) => type.id === 'phone')!, id);
+    return { ...definition, groups: definition.groups.map((group) => ({ ...group, follows: { folder: `${folder}` } })) };
+  };
+  // A definition with the folder each 묶음 follows by name, as ids are made anew wherever a file is read.
+  const named = ({ status, loreFolders }: { status?: StatusDefinition; loreFolders: { id: string; name: string }[] }) =>
+    status && { ...status, groups: status.groups.map((group) => ({ ...group, follows: loreFolders.find(({ id }) => id === group.follows?.folder)?.name })) };
+
+  it('reads back from a file as every 유형 makes it', () => {
+    for (const type of STATUS_TYPES) expect(readStatus(JSON.parse(JSON.stringify(fromType(type, 'made')))), type.id).toEqual(fromType(type, 'made'));
+  });
+
+  it('goes with its character and the character’s module through a charx, each 묶음 still following its folder', async () => {
+    const { store, files } = await server.operator();
+    await setService({ signupCap: 2, accountBytesCap: null, accountFileBytesCap: null });
+    const made = await importCharacter(store, files, { card: { ...blankCard('루나'), status: phone('mine', 1) }, lore: [entry('도윤', { folder: 1 })], loreFolders: ['마을', '사람'], assets: [], own: null }, null, () => {});
+    const id = made.ok ? made.data.id : '';
+    const module = await importModule(store, files, {
+      name: '전화', description: '', namespace: null, risu: null, unsupported: [], pack: { regex: [], triggers: [], toggles: [], status: phone('theirs', 0) }, lore: [entry('하린', { folder: 0 })], loreFolders: ['친구'], assets: [],
+    }, () => {});
+    const moduleId = module.ok ? module.data.id : '';
+    await setCharacterModule(store, id, moduleId, true);
+    const before = [named({ status: store.get('character', id)!.value.card.status, loreFolders: store.get('character', id)!.value.loreFolders }), named(store.get('module', moduleId)!.value)];
+    expect(before.map((status) => status?.groups.map(({ follows }) => follows))).toEqual([['사람'], ['친구']]);
+
+    const chunks: Uint8Array<ArrayBuffer>[] = [];
+    const output = { write: async (chunk: Uint8Array<ArrayBuffer>) => void chunks.push(chunk), close: async () => {}, abort: async () => {} };
+    expect(await exportCharacter(store, files, id, output, () => {})).toMatchObject({ ok: true });
+    const read = await importCard('루나.charx', new Uint8Array(await new Blob(chunks).arrayBuffer()));
+    if (!read.ok || !('card' in read)) throw new Error('not a card');
+    expect(read.card.report.unsupported).toEqual([]);
+
+    const other = await server.account('other');
+    const brought = await importCardFile(other.store, other.files, read.card, () => {});
+    const copy = other.store.get('character', brought.ok ? brought.data.id : '')!.value;
+    expect([named({ status: copy.card.status, loreFolders: copy.loreFolders }), named(other.store.get('module', copy.modules![0]!)!.value)]).toEqual(before);
+    expect(copy.card.status!.groups[0]!.follows!.folder).not.toBe(store.get('character', id)!.value.card.status!.groups[0]!.follows!.folder);
+  });
+
+  it('goes with its module through a .risum', async () => {
+    const { store, files } = await server.operator();
+    await setService({ signupCap: 2, accountBytesCap: null, accountFileBytesCap: null });
+    const made = await importModule(store, files, {
+      name: '전화', description: '', namespace: null, risu: null, unsupported: [], pack: { regex: [], triggers: [], toggles: [], status: phone('theirs', 1) }, lore: [entry('하린', { folder: 1 })], loreFolders: ['기기', '친구'], assets: [],
+    }, () => {});
+    const id = made.ok ? made.data.id : '';
+    const chunks: Uint8Array<ArrayBuffer>[] = [];
+    const output = { write: async (chunk: Uint8Array<ArrayBuffer>) => void chunks.push(chunk), close: async () => {}, abort: async () => {} };
+    expect(await exportModule(store, files, id, output, () => {})).toMatchObject({ ok: true });
+    const read = await importRisum(fileSource(new File(chunks, '전화.risum')));
+    if (!read.ok) throw new Error('not a module');
+    expect(read.module.unsupported).toEqual([]);
+    const other = await server.account('other');
+    const brought = await importModule(other.store, other.files, read.module, () => {});
+    const before = named(store.get('module', id)!.value);
+    expect(before?.groups.map(({ follows }) => follows)).toEqual(['친구']);
+    expect(named(other.store.get('module', brought.ok ? brought.data.id : '')!.value)).toEqual(before);
   });
 });

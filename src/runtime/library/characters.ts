@@ -1,6 +1,7 @@
 import { assetType, blankCard, imageType } from '../../engine/import/card';
 import { isVideo, type AssetUse } from '../../engine/assets';
 import { add, counted, type Tally } from '../../engine/import/convert';
+import { unfiled } from '../../engine/import/status';
 import { UNSUPPORTED_KINDS, type Card, type Imported, type Pack, type Picture, type Unsupported } from '../../engine/import/types';
 import type { Translation, TranslateSwitches } from '../../model/chat';
 import type { IllustrateSwitches, Rung } from '../../model/illustration';
@@ -154,7 +155,7 @@ export async function importCharacter(
   const { kept, unsupported } = stored.data;
   const folders = loreFolders.map((name) => ({ id: crypto.randomUUID(), name }));
   const entries = lore.map((entry) => ({ ...entry, folder: entry.folder === null ? null : folders[entry.folder]!.id }));
-  const character: Character = { card, folder: brought?.folder ?? null, loreFolders: folders, ...own?.character, ...(brought && { risu: brought.risu }), ...(modules.length > 0 && { modules }), ...(brought && Object.keys(brought.toggles).length > 0 && { toggles: brought.toggles }) };
+  const character: Character = { card: unfiled(card, folders.map(({ id }) => id)), folder: brought?.folder ?? null, loreFolders: folders, ...own?.character, ...(brought && { risu: brought.risu }), ...(modules.length > 0 && { modules }), ...(brought && Object.keys(brought.toggles).length > 0 && { toggles: brought.toggles }) };
   const likeness = own?.likeness ? { ...own.likeness, receipt: null } : null;
   const added = await addCharacter(store, character, { avatar, assets: kept, lore: entries, likeness }, progress, brought && { id: brought.id, chats: brought.chats });
   return added.ok ? { ok: true, data: { id: added.data, unsupported, faceless: picture !== null && avatar === null } } : added;
