@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { downloadLink, readLink, type BotLink, type LinkFailure } from '../../runtime/import/link';
+import { readLink, type BotLink, type LinkAnswer, type LinkFailure, type LinkFolder, type Progress } from '../../runtime/import/link';
 import { ACTS } from '../common/acts';
 import { describeReplyError } from '../common/failure';
+import { sizeText } from '../common/size';
 import { UNREADABLE_FILE, WRONG_PASSWORD } from '../common/words';
-import { Button, Dialog, Stack, TextField, type ProgressStep } from '../ui';
+import { Button, Checkbox, Dialog, List, ListItem, Stack, TextField, type ProgressStep } from '../ui';
 
 // password: why a Proton link asks for its owner's password.
 export type LinkStart = { text: string; password: 'asked' | 'wrong' | null };
 // locked: the link asks for its password, again where one was wrong.
-type Brought = { kind: 'files'; files: File[]; skipped: string[] } | { kind: 'locked'; start: LinkStart } | { kind: 'failed'; failure: string } | { kind: 'cancelled' };
+type Brought = { kind: 'files'; files: File[]; skipped: string[] } | { kind: 'folder'; folder: LinkFolder } | { kind: 'locked'; start: LinkStart } | { kind: 'failed'; failure: string } | { kind: 'cancelled' };
 
 const linkFailure = (failure: Exclude<LinkFailure, { kind: 'cancelled' | 'needs-password' | 'wrong-password' }>) => {
   switch (failure.kind) {
@@ -24,19 +25,20 @@ const linkFailure = (failure: Exclude<LinkFailure, { kind: 'cancelled' | 'needs-
   }
 };
 
-// text: the link as typed, which a password retry opens the dialog with again.
-export async function bringLink(link: BotLink, text: string, signal: AbortSignal, show: (step: ProgressStep) => void): Promise<Brought> {
+// download: the link's, or a folder's chosen files'. text: the link as typed, which a password retry opens the dialog
+// with again.
+export async function bringLink(download: (progress: Progress) => Promise<LinkAnswer>, text: string, show: (step: ProgressStep) => void): Promise<Brought> {
   const megabytes = (bytes: number) => Math.round(bytes / 1e6);
   const step = (done: number, total?: number): ProgressStep => ({ label: '다운로드 (MB)', done, ...(total !== undefined && { total }) });
   show(step(0));
   let last = 0;
   // Each step shown is a state that renders every useImport screen: once per megabyte, not once per network chunk.
-  const answer = await downloadLink(link, signal, (done, total) => {
+  const answer = await download((done, total) => {
     if (megabytes(done) === last) return;
     last = megabytes(done);
     show(step(last, total === undefined ? undefined : megabytes(total)));
   });
-  if (answer.ok) return { kind: 'files', files: answer.files, skipped: answer.skipped };
+  if (answer.ok) return 'folder' in answer ? { kind: 'folder', folder: answer.folder } : { kind: 'files', files: answer.files, skipped: answer.skipped };
   const { failure } = answer;
   if (failure.kind === 'cancelled') return { kind: 'cancelled' };
   if (failure.kind === 'needs-password' || failure.kind === 'wrong-password') return { kind: 'locked', start: { text, password: failure.kind === 'needs-password' ? 'asked' : 'wrong' } };
@@ -76,5 +78,21 @@ export function LinkDialog({ start, onBring, onClose }: { start: LinkStart; onBr
         )}
       </Stack>
     </Dialog>
+  );
+}
+
+// ticked: one per file of the folder, whether it is downloaded.
+export function FolderChoice({ folder, ticked, onTick }: { folder: LinkFolder; ticked: readonly boolean[]; onTick: (ticked: boolean[]) => void }) {
+  return (
+    <List label="받을 파일" box>
+      {folder.files.map(({ name, size }, at) => (
+        <ListItem
+          key={at}
+          title={name}
+          description={size === undefined ? undefined : sizeText(size)}
+          control={<Checkbox label={`${name} 받기`} hideLabel checked={ticked[at]!} onChange={(on) => onTick(ticked.map((each, index) => (index === at ? on : each)))} />}
+        />
+      ))}
+    </List>
   );
 }
