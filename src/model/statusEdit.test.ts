@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { StatusDefinition, StatusField } from './status';
-import { blockNames, blocksAt, withBlocksAt, fieldsOf, withFields, withGroup, withLog, withoutGroup, withoutLog, withoutView, withView } from './statusEdit';
+import { blockNames, blockPlaces, blocksAt, movedBlock, withBlocksAt, fieldsOf, withFields, withGroup, withLog, withoutGroup, withoutLog, withoutView, withView } from './statusEdit';
 import { STATUS_TYPES } from './statusTypes';
 
 const text = (id: string, name = id): StatusField => ({ id, name, kind: 'text' });
@@ -86,6 +86,29 @@ describe("a view's blocks", () => {
     expect(blocksAt(next, tab).map(({ kind }) => kind)).toEqual(['log', 'records']);
     expect(next.slice(0, 2)).toEqual(blocks.slice(0, 2));
     expect(withBlocksAt(blocks, [], (list) => list.slice(1))).toEqual(blocks.slice(1));
+  });
+
+  it('offers a block every other list of its view, and a section none of its own', () => {
+    const nested = withBlocksAt(blocks, [{ at: 1 }], (list) => [...list, { kind: 'section', name: '속', blocks: [] }]);
+    expect(blockPlaces(blocks, [], 0)).toEqual([[{ at: 1 }], tab]);
+    expect(blockPlaces(blocks, [{ at: 1 }], 0)).toEqual([[], tab]);
+    expect(blockPlaces(blocks, tab, 1)).toEqual([[], [{ at: 1 }]]);
+    // The outer section goes into neither itself nor the one inside it; the inner one goes anywhere but where it is.
+    expect(blockPlaces(nested, [], 1)).toEqual([tab]);
+    expect(blockPlaces(nested, [{ at: 1 }], 1)).toEqual([[], tab]);
+    expect(blockPlaces([{ kind: 'field', field: 'mood' }], [], 0)).toEqual([]);
+  });
+
+  it('moves a block to the end of another list, into a section, out of a tab, and a section with what it holds', () => {
+    const into = movedBlock(blocks, [], 0, [{ at: 1 }]);
+    expect(into.map(({ kind }) => kind)).toEqual(['section', 'tabs']);
+    expect(blocksAt(into, [{ at: 0 }]).map(({ kind }) => kind)).toEqual(['field', 'head']);
+    const out = movedBlock(blocks, tab, 0, []);
+    expect(out.map(({ kind }) => kind)).toEqual(['head', 'section', 'tabs', 'records']);
+    expect(blocksAt(out, tab).map(({ kind }) => kind)).toEqual(['log']);
+    const whole = movedBlock(blocks, [], 1, tab);
+    expect(blocksAt(whole, [{ at: 1, tab: 't' }]).at(-1)).toEqual(blocks[1]);
+    expect(movedBlock(blocks, [], 9, tab)).toEqual(blocks);
   });
 
   it('names everything the blocks show, however deep', () => {

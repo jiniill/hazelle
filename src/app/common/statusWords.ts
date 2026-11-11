@@ -76,6 +76,8 @@ export const STATUS_WORDS = {
   block: '블록',
   noBlocks: '블록이 없어요.',
   inside: '안에 추가',
+  moveTo: '다른 곳으로 옮기기',
+  moveToNote: '고른 곳의 맨 아래로 옮겨요.',
   look: '모양',
   lookAuto: '틀에 맞춤',
   all: '전체 보기',

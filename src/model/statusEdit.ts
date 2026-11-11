@@ -94,6 +94,30 @@ export function withBlocksAt(blocks: readonly StatusBlock[], [step, ...rest]: Bl
   });
 }
 
+// Every list of blocks in a view: its own first, then each section's and each tab's, however deep.
+const blockLists = (blocks: readonly StatusBlock[], path: BlockPath = []): BlockPath[] => [
+  path,
+  ...blocks.flatMap((block, at) => {
+    if (block.kind === 'section') return blockLists(block.blocks, [...path, { at }]);
+    if (block.kind === 'tabs') return block.tabs.flatMap((tab) => blockLists(tab.blocks, [...path, { at, tab: tab.id }]));
+    return [];
+  }),
+];
+
+const leads = (path: BlockPath, to: BlockPath) => path.every((step, depth) => step.at === to[depth]?.at && step.tab === to[depth]?.tab);
+
+// The other lists the block at a place can go to: not the one it stands in, nor its own or one inside it.
+export const blockPlaces = (blocks: readonly StatusBlock[], from: BlockPath, at: number): BlockPath[] =>
+  blockLists(blocks).filter((list) => !leads(from, list) || (list.length > from.length && list[from.length]!.at !== at));
+
+// The block at a place, moved to the end of another list of its view (one of blockPlaces). Both paths are as they
+// stand before the move: it joins there first, which shifts no place, and then leaves where it stood.
+export function movedBlock(blocks: readonly StatusBlock[], from: BlockPath, at: number, to: BlockPath): StatusBlock[] {
+  const block = blocksAt(blocks, from)[at];
+  if (!block) return [...blocks];
+  return withBlocksAt(withBlocksAt(blocks, to, (list) => [...list, block]), from, (list) => list.filter((_, each) => each !== at));
+}
+
 // What a view's blocks name, however deep: its editor offers what they do not.
 export function blockNames(blocks: readonly StatusBlock[], names = { fields: new Set<string>(), groups: new Set<string>(), logs: new Set<string>() }) {
   for (const block of blocks) {

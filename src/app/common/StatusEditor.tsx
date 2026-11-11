@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { nameTaken, rostered, type RosterEntry } from '../../engine/status';
 import { moved, without } from '../../model/fields';
 import type { LoreFolder } from '../../model/library';
@@ -7,7 +7,7 @@ import { statusViews, type StatusApp, type StatusDefinition, type StatusField, t
 import { fieldsOf, withFields, withGroup, withLog, withoutGroup, withoutLog, withoutView, withView, type FieldList } from '../../model/statusEdit';
 import { blankStatus, fromType, STATUS_TYPES } from '../../model/statusTypes';
 import { useDisplay } from '../display';
-import { useToast } from '../toast';
+import { useOwnUndo, useToast } from '../toast';
 import { ACTS, addOf } from './acts';
 import { NameDialog } from './NameDialog';
 import { StatusBlocks } from './StatusBlocks';
@@ -17,9 +17,12 @@ import { sampleState } from './statusSample';
 import { shownApp, shownView } from './statusView';
 import { fieldSummary, STATUS_KIND, STATUS_KINDS, STATUS_PROBLEM, STATUS_WORDS, STATUS_WRITER } from './statusWords';
 import { Button, ChoiceGroup, ConfirmDialog, Empty, List, ListItem, Menu, MenuItem, MoreMenu, PhraseField, Section, SettingGroup, SettingRow, Stack, STATUS_APP, STATUS_FRAME, STATUS_MOOD, StatusPanel, StatusPhone, Switch, Text, TextField } from '../ui';
-import { MOVE, STATUS, statusTaken, PHONE } from './words';
+import { MOVE, namedObject, STATUS, statusTaken, PHONE } from './words';
 
 type Change = (next: StatusDefinition) => void;
+// The definition without something it held, named with its kind's word: gone at once, with a way back.
+type Remove = (next: StatusDefinition, name: string, noun: string) => void;
+type Editing = { definition: StatusDefinition; onChange: Change; onRemove: Remove };
 // The lorebook of the pack that declares the definition; a prompt has none.
 type Lore = { folders: readonly LoreFolder[]; entries: readonly RosterEntry[] };
 type Props = {
@@ -55,7 +58,7 @@ function Start({ onStart }: { onStart: Change }) {
 }
 
 // One list of fields: the definition's own, a 묶음's or a 기록's. A row opens its form.
-function Fields({ definition, list, onChange }: { definition: StatusDefinition; list: FieldList; onChange: Change }) {
+function Fields({ definition, list, onChange, onRemove }: Editing & { list: FieldList }) {
   const [editing, setEditing] = useState<{ kind: FieldKind; field?: StatusField } | null>(null);
   const fields = fieldsOf(definition, list);
   const write = (next: StatusField[]) => onChange(withFields(definition, list, next));
@@ -73,7 +76,7 @@ function Fields({ definition, list, onChange }: { definition: StatusDefinition; 
                 <MoreMenu of={`'${field.name}'`}>
                   {at > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => write(moved(fields, at, at - 1))} />}
                   {at < fields.length - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => write(moved(fields, at, at + 1))} />}
-                  <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => write(fields.filter(({ id }) => id !== field.id))} />
+                  <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onRemove(withFields(definition, list, fields.filter(({ id }) => id !== field.id)), field.name, STATUS_WORDS.field)} />
                 </MoreMenu>
               }
             />
@@ -125,13 +128,14 @@ function useNaming() {
 }
 
 // 묶음 or 기록: a titled part each, renamed and removed from its ⋯, with what only its kind has above its fields.
-function Parts({ definition, of, onChange, children }: { definition: StatusDefinition; of: 'group' | 'log'; onChange: Change; children?: (id: string) => ReactNode }) {
+function Parts({ definition, of, onChange, onRemove, children }: Editing & { of: 'group' | 'log'; children?: (id: string) => ReactNode }) {
   const naming = useNaming();
   const [key, word, none, add, remove] = of === 'group' ? (['groups', STATUS_WORDS.group, STATUS_WORDS.noGroups, withGroup, withoutGroup] as const) : (['logs', STATUS_WORDS.log, STATUS_WORDS.noLogs, withLog, withoutLog] as const);
   const parts = definition[key];
   // Both stand under one kind of heading in a writer's block, so neither takes the other's name.
   const among = [...definition.groups, ...definition.logs];
   const rename = (id: string, name: string) => onChange({ ...definition, [key]: parts.map((each) => (each.id === id ? { ...each, name } : each)) });
+  const move = (from: number, to: number) => onChange({ ...definition, [key]: moved(parts, from, to) });
   return (
     <Section
       title={word}
@@ -142,7 +146,7 @@ function Parts({ definition, of, onChange, children }: { definition: StatusDefin
       }
     >
       {parts.length === 0 && <Empty variant="section">{none}</Empty>}
-      {parts.map(({ id, name }) => (
+      {parts.map(({ id, name }, at) => (
         <Section
           key={id}
           level={3}
@@ -150,12 +154,14 @@ function Parts({ definition, of, onChange, children }: { definition: StatusDefin
           action={
             <MoreMenu of={`'${name}'`}>
               <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => naming.ask({ title: ACTS.rename.label, value: name, among, self: id, onSave: (next) => rename(id, next) })} />
-              <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onChange(remove(definition, id))} />
+              {at > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => move(at, at - 1)} />}
+              {at < parts.length - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => move(at, at + 1)} />}
+              <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onRemove(remove(definition, id), name, word)} />
             </MoreMenu>
           }
         >
           {children?.(id)}
-          <Fields definition={definition} list={{ of, id }} onChange={onChange} />
+          <Fields definition={definition} list={{ of, id }} onChange={onChange} onRemove={onRemove} />
         </Section>
       ))}
       {naming.dialog}
@@ -196,7 +202,7 @@ function Members({ definition, id, folders, onChange }: { definition: StatusDefi
   );
 }
 
-function Views({ definition, onChange }: { definition: StatusDefinition; onChange: Change }) {
+function Views({ definition, onChange, onRemove }: Editing) {
   const naming = useNaming();
   const views = definition.views ?? [];
   const change = (id: string, to: (view: StatusView) => StatusView) => onChange({ ...definition, views: views.map((each) => (each.id === id ? to(each) : each)) });
@@ -211,7 +217,7 @@ function Views({ definition, onChange }: { definition: StatusDefinition; onChang
       }
     >
       {views.length === 0 && <Empty variant="section">{STATUS_WORDS.noViews}</Empty>}
-      {views.map((view) => {
+      {views.map((view, at) => {
         const { id, name, frame, mood, app } = view;
         return (
           <Section
@@ -221,7 +227,9 @@ function Views({ definition, onChange }: { definition: StatusDefinition; onChang
             action={
               <MoreMenu of={`'${name}'`}>
                 <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => naming.ask({ title: ACTS.rename.label, value: name, among: views, self: id, onSave: (next) => write(id, { name: next }) })} />
-                <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onChange(withoutView(definition, id))} />
+                {at > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => onChange({ ...definition, views: moved(views, at, at - 1) })} />}
+                {at < views.length - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => onChange({ ...definition, views: moved(views, at, at + 1) })} />}
+                <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onRemove(withoutView(definition, id), name, STATUS_WORDS.view)} />
               </MoreMenu>
             }
           >
@@ -234,7 +242,12 @@ function Views({ definition, onChange }: { definition: StatusDefinition; onChang
                 control={<ChoiceGroup<StatusApp | ''> label={STATUS_WORDS.app} layout="fit" options={[{ value: '', label: STATUS_WORDS.appNone }, ...options(STATUS_APP)]} value={app ?? ''} onChange={(next) => change(id, (each) => ({ ...without(each, 'app'), ...(next && { app: next }) }))} />}
               />
             </SettingGroup>
-            <StatusBlocks definition={definition} view={view} onChange={(blocks) => write(id, { blocks })} />
+            <StatusBlocks
+              definition={definition}
+              view={view}
+              onChange={(blocks) => write(id, { blocks })}
+              onRemove={(blocks, block) => onRemove({ ...definition, views: views.map((each) => (each.id === id ? { ...each, blocks } : each)) }, block, STATUS_WORDS.block)}
+            />
           </Section>
         );
       })}
@@ -276,9 +289,33 @@ function Preview({ definition }: { definition: StatusDefinition }) {
 }
 
 // 상태 정의 (design §6.1 part 1): one editor wherever a definition is declared, a card, a module or a prompt.
-export function StatusEditor({ definition, onChange, onType, lore }: Props) {
+export function StatusEditor({ definition, onChange: save, onType: type, lore }: Props) {
   const [removing, setRemoving] = useState(false);
+  const undoable = useOwnUndo();
+  // The 되돌리기 of the latest removal, which puts the definition back as it stood: any change after it takes the
+  // offer away, so it never undoes more than the removal.
+  const offered = useRef<(() => void) | null>(null);
+  const settle = () => {
+    offered.current?.();
+    offered.current = null;
+  };
+  const onChange: Props['onChange'] = (next) => {
+    settle();
+    save(next);
+  };
+  const onType: Props['onType'] = (next, valid) => {
+    settle();
+    type(next, valid);
+  };
   if (!definition) return <Start onStart={onChange} />;
+  const onRemove: Remove = (next, name, noun) => {
+    onChange(next);
+    offered.current = undoable(`${namedObject(name, noun)} 삭제했어요.`, () => {
+      offered.current = null;
+      save(definition);
+    });
+  };
+  const editing = { definition, onChange, onRemove };
   const unnamed = !definition.name.trim();
   return (
     <Stack gap="section">
@@ -300,13 +337,13 @@ export function StatusEditor({ definition, onChange, onType, lore }: Props) {
         </SettingGroup>
       </Section>
       <Section title={STATUS_WORDS.field}>
-        <Fields definition={definition} list={{ of: 'definition' }} onChange={onChange} />
+        <Fields {...editing} list={{ of: 'definition' }} />
       </Section>
-      <Parts definition={definition} of="group" onChange={onChange}>
+      <Parts {...editing} of="group">
         {(id) => <Members definition={definition} id={id} folders={lore?.folders} onChange={onChange} />}
       </Parts>
-      <Parts definition={definition} of="log" onChange={onChange} />
-      <Views definition={definition} onChange={onChange} />
+      <Parts {...editing} of="log" />
+      <Views {...editing} />
       <Preview definition={lore ? rostered(definition, lore.entries) : definition} />
       {removing && (
         <ConfirmDialog title={STATUS_WORDS.removeAsk} confirm={ACTS.remove.label} icon={ACTS.remove.icon} onConfirm={() => {
