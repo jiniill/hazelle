@@ -1,7 +1,7 @@
 import { setLook } from '../../runtime/library/characters';
 import { presetOf } from '../common/reading';
 import { HidePicturesRow, presetChoices, ReadingRows, ReplyRow } from '../common/ReadingRows';
-import { PRESET_GONE, PRESET_GONE_CHIP, RESET, SAVE_FAILED } from '../common/words';
+import { PRESET, PRESET_GONE, PRESET_GONE_CHIP, RESET, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useStore } from '../session';
 import { useToast } from '../toast';
@@ -43,12 +43,12 @@ function PresetRow({ character }: { character: Held }) {
   return (
     <>
       <SettingRow
-        label="프리셋"
+        label={PRESET.noun}
         error={gone ? PRESET_GONE : undefined}
         control={
           <ChoiceGroup
             layout="fit"
-            label="프리셋"
+            label={PRESET.noun}
             options={presetChoices(all)}
             value={held ? (gone ? null : character!.look!) : (current?.id ?? null)}
             empty={gone ? PRESET_GONE_CHIP : '직접 설정'}
@@ -59,7 +59,7 @@ function PresetRow({ character }: { character: Held }) {
       {character && (
         <SettingRow
           label="이 캐릭터에 고정"
-          help="켜면 이 캐릭터의 채팅에서만 이 프리셋의 색과 글꼴을 써요. 직접 설정한 상태에서는 켤 수 없어요."
+          help="프리셋을 선택해 켜면 그 색과 글꼴을 이 캐릭터의 채팅에만 적용해요."
           control={<Switch label="이 캐릭터에 고정" checked={held} disabled={!held && !current} onChange={(on) => hold(on ? current!.id : null)} />}
         />
       )}

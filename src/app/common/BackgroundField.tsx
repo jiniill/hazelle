@@ -19,7 +19,7 @@ export function BackgroundField({ owner, html, language }: { owner: PackOwner; h
       language={language}
       value={save.unsaved.html ?? html ?? ''}
       onChange={(next) => save.change({ html: next })}
-      help="<style>은 채팅의 메시지에만 적용되고, 나머지 HTML은 채팅 화면 뒤에 그려져요."
+      help="<style>은 채팅 메시지에만 적용되고, 나머지 HTML은 채팅 화면 뒤에 표시돼요."
     />
   );
 }

@@ -3,6 +3,7 @@ import { PULSE_FLOORS } from '../../contracts/pulse';
 import { readVisits } from '../../runtime/service/admin';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
+import { PULSE } from '../common/words';
 import { Bars, Empty, Panel, Table, type TableColumn } from '../ui';
 import { seoulDate, seoulMonthDay } from './seoul';
 
@@ -31,16 +32,17 @@ const FIRST_PAGE_COLUMNS: TableColumn[] = [
   { label: '앱 입장', track: 'figure' },
 ];
 const FIRST_PAGE_HELP = '첫 페이지를 연 사람이 어디까지 갔는지 집계해요. 같은 날 같은 IP 주소는 단계마다 한 번만 세요.';
-const COHORTS_HELP = `가입 주별로 각 주에 앱을 연 사람 수만 집계해요. 계정은 저장하지 않아요. ${PULSE_FLOORS.row}명 미만이면 숫자를 남기지 않고, 집계 참여를 끈 계정은 제외해요.`;
+const COHORTS_HELP = `가입 주별로 각 주에 앱을 연 사람 수만 집계해요. 계정은 저장하지 않아요. ${PULSE_FLOORS.row}명 미만이면 숫자를 남기지 않고, ${PULSE.sharing}를 끈 계정은 제외해요.`;
 const UNDER_FLOOR = `${PULSE_FLOORS.row}명 미만`;
 const figure = (value: number | null) => (value === null ? UNDER_FLOOR : count(value));
+const people = (value: number | null) => (value === null ? UNDER_FLOOR : `${count(value)}명`);
 const PEOPLE = '일간 사용자';
 const REPLIES = '일간 응답';
 const DAILY_NOTE = `최근 ${PULSE_DAYS_SHOWN}일 · 한국 시간`;
-const EXCLUDED = `손님과 집계 참여를 끈 계정은 제외하고, ${PULSE_FLOORS.row}명 미만이면 숫자를 남기지 않아요.`;
+const EXCLUDED = `손님과 ${PULSE.sharing}를 끈 계정은 제외해요.`;
 const DAILY_HELP = {
-  people: `그날 앱을 연 계정과 그중 대화 응답을 받은 계정이에요. ${EXCLUDED}`,
-  replies: `그날 계정이 받은 대화 응답이에요. ${EXCLUDED}`,
+  people: `앱을 연 사용자와 그중 대화 응답을 받은 사용자를 집계해요. 각각 ${PULSE_FLOORS.row}명 미만이면 숫자를 남기지 않고, ${EXCLUDED}`,
+  replies: `대화 밖의 호출은 빼고 대화 응답 수만 집계해요. 응답 받은 사용자가 ${PULSE_FLOORS.row}명 미만이면 숫자를 남기지 않고, ${EXCLUDED}`,
 };
 
 function Cohorts({ weeks, rows }: VisitCohorts) {
@@ -71,10 +73,10 @@ export function VisitsSection() {
       <Panel title={PEOPLE} note={DAILY_NOTE} help={DAILY_HELP.people} action={loaded.refresh}>
         {loaded.loading}
         {loaded.failure}
-        {loaded.data && <Daily label={PEOPLE} days={loaded.data.pulse} measure={(day) => [day.people, `사용자 ${figure(day.people)} · 응답 받은 계정 ${figure(day.repliers)}`]} />}
+        {loaded.data && <Daily label={PEOPLE} days={loaded.data.pulse} measure={(day) => [day.people, `사용자 ${people(day.people)} · 응답 받은 사용자 ${people(day.repliers)}`]} />}
       </Panel>
       <Panel title={REPLIES} note={DAILY_NOTE} help={DAILY_HELP.replies}>
-        {loaded.data && <Daily label={REPLIES} days={loaded.data.pulse} measure={(day) => [day.replies, day.replies === null ? `응답 받은 계정 ${UNDER_FLOOR}` : `응답 ${count(day.replies)}`]} />}
+        {loaded.data && <Daily label={REPLIES} days={loaded.data.pulse} measure={(day) => [day.replies, day.replies === null ? `응답 받은 사용자 ${UNDER_FLOOR}` : `응답 ${count(day.replies)}번`]} />}
       </Panel>
       <Panel title="방문자 통계" note="최근 14일 · 한국 시간" help={HELP}>
         {loaded.data && <Table label="방문자 통계" columns={COLUMNS} rows={loaded.data.days.map((day) => ({

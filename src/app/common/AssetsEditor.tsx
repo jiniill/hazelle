@@ -15,6 +15,7 @@ import { NameDialog } from './NameDialog';
 import { useCopy } from './useCopy';
 import { useSearch } from './useSearch';
 import { useSelection } from './useSelection';
+import { withParticle } from './particles';
 import { ASSET, CHANGE_IMAGE, namedObject, REMOVE_FAILED, SAVE_FAILED } from './words';
 
 // What runtime/library/characters keeps as an asset (engine/import assetType), and as a background (a picture).
@@ -48,16 +49,16 @@ export function useAssetFiles(owner: string, shelf: Shelf) {
     setAdding(true);
     const added = await addAssets(store, files, owner, picked, useOf(shelf));
     setAdding(false);
-    if (!added.ok) return toast.failed(added, `${label}을 추가하지 못했어요.`);
+    if (!added.ok) return toast.failed(added, `${withParticle(label, '을/를')} 추가하지 못했어요.`);
     const refused = unsupportedCount(added.data.unsupported);
-    if (refused) toast.error(`${refused}개는 추가하지 못했어요.`, { detail: keeps.refused });
+    if (refused) toast.error(added.data.added > 0 ? `${refused}개는 추가하지 못했어요.` : `${withParticle(label, '을/를')} 추가하지 못했어요.`, { detail: keeps.refused });
   }
 
   async function replace(id: string, file: File) {
     const replaced = await replaceAsset(store, files, id, new Uint8Array(await file.arrayBuffer()));
     if (replaced.ok) return;
-    if (replaced.error === 'picture-unreadable' || replaced.error === 'picture-refused') toast.error('바꾸지 못했어요.', { detail: keeps.refused });
-    else toast.failed(replaced, '바꾸지 못했어요.');
+    if (replaced.error === 'picture-unreadable' || replaced.error === 'picture-refused') toast.error(`${withParticle(label, '을/를')} 바꾸지 못했어요.`, { detail: keeps.refused });
+    else toast.failed(replaced, `${withParticle(label, '을/를')} 바꾸지 못했어요.`);
   }
 
   return { accept: keeps.accept, adding, add, replace };

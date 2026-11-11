@@ -7,13 +7,13 @@ import { addOf, ACTS } from '../common/acts';
 import { useAssetFiles } from '../common/AssetsEditor';
 import { backdropShades, choices } from '../common/reading';
 import { presetChoices } from '../common/ReadingRows';
-import { CHANGE_IMAGE, PRESET_GONE, PRESET_GONE_CHIP, SAVE_FAILED } from '../common/words';
+import { CHANGE_IMAGE, follows, PAGES, PRESET_GONE, PRESET_GONE_CHIP, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useAssetUrl, useChildren, useStore } from '../session';
 import { useToast } from '../toast';
 import { Avatar, ChoiceGroup, FileButton, Row, SettingGroup, SettingRow, SHADE, Switch } from '../ui';
 
-const LABEL = '분위기';
+const LABEL = '디스플레이와 배경';
 // 디스플레이's choice for none: the device's look.
 const DEVICE = '';
 
@@ -32,14 +32,14 @@ export function CharacterLook({ id, character }: { id: string; character: Charac
   return (
     <SettingGroup label={LABEL}>
       <SettingRow
-        label="디스플레이"
-        help="이 캐릭터의 채팅에서만 이 프리셋의 색과 글꼴을 써요. 글자 크기와 간격은 기기 설정을 따라요."
+        label={PAGES.display}
+        help="선택한 프리셋의 색과 글꼴을 이 캐릭터의 채팅에만 적용해요."
         error={gone ? PRESET_GONE : undefined}
         control={
           <ChoiceGroup
             layout="fit"
-            label="디스플레이"
-            options={[{ value: DEVICE, label: '기기 설정 따르기' }, ...presetChoices([...presets, ...own.presets])]}
+            label={PAGES.display}
+            options={[{ value: DEVICE, label: follows('기기 설정') }, ...presetChoices([...presets, ...own.presets])]}
             value={gone ? null : (character.look ?? DEVICE)}
             empty={PRESET_GONE_CHIP}
             onChange={(look) => save(setLook(store, id, look === DEVICE ? null : look))}
@@ -48,7 +48,7 @@ export function CharacterLook({ id, character }: { id: string; character: Charac
       />
       <SettingRow
         label="배경 이미지"
-        help="채팅 화면 뒤에 깔리는 이미지예요. 여기서 올린 이미지는 에셋의 배경에도 들어가요."
+        help="에셋의 '배경'에 저장돼요."
         control={
           <Row kind="actions">
             <Avatar face={ImageIcon} image={background && url('asset', background.id)} />
@@ -69,7 +69,7 @@ export function CharacterLook({ id, character }: { id: string; character: Charac
         <>
           <SettingRow
             label="배경 가림"
-            help="이미지 위에 채팅 배경색을 덮어요. 진할수록 글자가 잘 보여요."
+            help="글자가 잘 보이도록 이미지 위에 채팅 배경색을 덮어요."
             control={<ChoiceGroup layout="segmented" label="배경 가림" options={choices(SHADE)} value={shades.veil} onChange={(veil) => save(setBackdrop(store, id, { veil }))} />}
           />
           <SettingRow
