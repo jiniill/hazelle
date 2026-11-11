@@ -76,3 +76,11 @@ it('lays a press over each value that is edited by hand, a record\'s too, and no
   const folded = { title: '기본', open: false, onOpen: () => {}, labels: { open: '펼치기', close: '접기' }, summary: [hp] };
   expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" theme="dark" blocks={blocks} edit={edit} head={folded} />))).toEqual([]);
 });
+
+it('makes a record\'s name a button only where records open a page of their own', () => {
+  const cast = (look: 'cards' | 'rows' | 'table'): ShownBlock => ({ block: 'records', id: 'cast', name: '인물', look, columns: [], members: [{ id: 'seoha', name: '서하', fields: [] }] });
+  const blocks = [cast('cards'), cast('rows'), cast('table')];
+  const names = (html: string) => html.match(/<button type="button" class="[^"]*open[^"]*">서하<\/button>/g) ?? [];
+  expect(names(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" theme="dark" blocks={blocks} onMember={() => {}} />))).toHaveLength(3);
+  expect(names(draw('card', blocks))).toHaveLength(0);
+});

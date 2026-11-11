@@ -1,12 +1,11 @@
-import { Layers, ListRestart, Pin } from 'lucide-react';
+import { Layers, ListRestart, PanelRight, Pin } from 'lucide-react';
 import { useState } from 'react';
-import { statusAt } from '../../model/status';
 import { describeStatusFailure } from '../common/failure';
 import { shownMain, shownView } from '../common/statusView';
-import { STATUS_FOLD, STATUS_MISSED, STATUS_NEXT_VIEW, STATUS_PIN, STATUS_REWRITE, STATUS_WRITING, statusEdit } from '../common/words';
+import { STATUS_DETAIL, STATUS_FOLD, STATUS_MISSED, STATUS_NEXT_VIEW, STATUS_PIN, STATUS_REWRITE, STATUS_WRITING, statusEdit } from '../common/words';
 import { useDisplay } from '../display';
 import { IconButton, Stack, StatusPanel, type ShownPlace, type Theme } from '../ui';
-import { StateEdit } from './StateEdit';
+import { StateEditAt } from './StateEdit';
 import type { OpenChat } from './useChat';
 import type { ChatStateOf, StateMark } from './useChatState';
 
@@ -16,18 +15,17 @@ type Acts = {
   onRewrite?: Actions['rewriteState'];
   onEdit?: Actions['editState'];
   onChoice: Actions['choose'];
+  onDetail: Actions['stateDetail'];
 };
 
 const noteOf = (mark: StateMark) => (mark?.kind === 'writing' ? { text: STATUS_WRITING } : mark ? { text: mark.failure ? `${STATUS_MISSED} · ${describeStatusFailure(mark.failure)}` : STATUS_MISSED, warn: true } : undefined);
 
 type Shown = { theme: Theme; folded: boolean; onFold: (folded: boolean) => void; pinned: boolean; onPin: (pinned: boolean) => void };
 
-function StatePanel({ state, theme, folded, onFold, pinned, onPin, onRewrite, onEdit, onChoice }: { state: ChatStateOf } & Shown & Acts) {
+function StatePanel({ state, theme, folded, onFold, pinned, onPin, onRewrite, onEdit, onChoice, onDetail }: { state: ChatStateOf } & Shown & Acts) {
   const { definition, views, now, before, mark } = state;
   const [picked, setPicked] = useState(0);
   const [editing, setEditing] = useState<ShownPlace | null>(null);
-  // Nothing once the field or its record is gone while its editor stood open.
-  const edited = editing && statusAt(definition, now, editing);
   const at = picked % views.length;
   const view = shownView(definition, views[at]!, now, before);
   return (
@@ -51,23 +49,13 @@ function StatePanel({ state, theme, folded, onFold, pinned, onPin, onRewrite, on
             <>
               {views.length > 1 && <IconButton icon={Layers} size="sm" label={STATUS_NEXT_VIEW} onClick={() => setPicked(at + 1)} />}
               {onRewrite && <IconButton icon={ListRestart} size="sm" label={STATUS_REWRITE} disabled={mark?.kind === 'writing'} onClick={onRewrite} />}
+              <IconButton icon={PanelRight} size="sm" label={STATUS_DETAIL} onClick={onDetail} />
               <IconButton icon={Pin} size="sm" label={STATUS_PIN} pressed={pinned} onClick={() => onPin(!pinned)} />
             </>
           ),
         }}
       />
-      {onEdit && editing && edited && (
-        <StateEdit
-          field={edited.field}
-          value={edited.values[edited.field.id]}
-          of={edited.member?.name}
-          onClose={() => setEditing(null)}
-          onSave={(value) => {
-            onEdit({ definition: definition.id, kind: 'set', ...editing, value });
-            setEditing(null);
-          }}
-        />
-      )}
+      {onEdit && editing && <StateEditAt state={state} place={editing} onEdit={onEdit} onClose={() => setEditing(null)} />}
     </>
   );
 }
@@ -84,7 +72,7 @@ export function ChatState({ chat, pinned }: { chat: Pick<OpenChat, 'states' | 'i
   return (
     <Stack gap="group">
       {chat.states.map((state) => (
-        <StatePanel key={state.definition.id} state={state} {...shown} onRewrite={live ? actions.rewriteState : undefined} onEdit={live ? actions.editState : undefined} onChoice={actions.choose} />
+        <StatePanel key={state.definition.id} state={state} {...shown} onRewrite={live ? actions.rewriteState : undefined} onEdit={live ? actions.editState : undefined} onChoice={actions.choose} onDetail={actions.stateDetail} />
       ))}
     </Stack>
   );

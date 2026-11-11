@@ -3,8 +3,8 @@ import { useContext, useState, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { classNames } from '../foundation/classNames';
 import { schemeAttributes, type Theme } from '../foundation/theme';
-import { StatusEditContext, StatusFrameContext } from './frame';
-import type { ShownBlock, ShownField, StatusEdit, StatusFrame, StatusMood } from './shown';
+import { StatusEditContext, StatusFrameContext, StatusOpenContext } from './frame';
+import type { ShownBlock, ShownField, ShownPlace, StatusEdit, StatusFrame, StatusMood } from './shown';
 import { StatusField } from './StatusField';
 import { StatusLog } from './StatusLog';
 import styles from './StatusPanel.module.css';
@@ -120,7 +120,7 @@ function Blocks({ blocks, onChoice }: { blocks: ShownBlock[] } & Act) {
 // A panel that folds: its title, a note beside it (warn: what went wrong with the latest reply's state), the caller's
 // buttons, and the fold. Folded, summary stands in the view's place: a few fields on one line.
 type Head = { title: string; note?: { text: string; warn?: boolean }; actions?: ReactNode; open: boolean; onOpen: (open: boolean) => void; labels: { open: string; close: string }; summary: ShownField[] };
-type Props = { name: string; frame: StatusFrame; mood: StatusMood; theme: Theme; blocks: ShownBlock[]; head?: Head; edit?: StatusEdit } & Act;
+type Props = { name: string; frame: StatusFrame; mood: StatusMood; theme: Theme; blocks: ShownBlock[]; head?: Head; edit?: StatusEdit; onMember?: (member: NonNullable<ShownPlace['member']>) => void } & Act;
 
 // The theme a fixed 분위기 stands in, so the kit's own controls inside the panel read on its ground.
 const MOOD_THEME: Partial<Record<StatusMood, Theme>> = { paper: 'light', rose: 'light', neon: 'dark', forest: 'dark', terminal: 'dark' };
@@ -128,8 +128,9 @@ const MOOD_THEME: Partial<Record<StatusMood, Theme>> = { paper: 'light', rose: '
 // A 상태 view drawn: its 분위기 gives the colours, face and corners, its 틀 lays the blocks out, and each block draws
 // the values it was handed. theme is the reader's, which 헤이젤 keeps with the colour picks set back to its own; 내 색
 // takes the page's as they are. onChoice: a choice pressed; without it the choices stand disabled. edit: a value
-// pressed is handed over to be edited by hand; without it values are only shown.
-export function StatusPanel({ name, frame, mood, theme, blocks, head, edit, onChoice }: Props) {
+// pressed is handed over to be edited by hand; without it values are only shown. onMember: a record's name pressed
+// opens that record.
+export function StatusPanel({ name, frame, mood, theme, blocks, head, edit, onMember, onChoice }: Props) {
   const pinned = mood === 'own' ? {} : schemeAttributes({ theme: MOOD_THEME[mood] ?? theme, bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' });
   const open = head?.open ?? true;
   return (
@@ -153,7 +154,9 @@ export function StatusPanel({ name, frame, mood, theme, blocks, head, edit, onCh
       {open && (
         <StatusFrameContext.Provider value={frame}>
           <StatusEditContext.Provider value={edit}>
-            <div className={styles.blocks}>{frame === 'line' ? <Inline blocks={blocks} /> : <Blocks blocks={blocks} onChoice={onChoice} />}</div>
+            <StatusOpenContext.Provider value={onMember}>
+              <div className={styles.blocks}>{frame === 'line' ? <Inline blocks={blocks} /> : <Blocks blocks={blocks} onChoice={onChoice} />}</div>
+            </StatusOpenContext.Provider>
           </StatusEditContext.Provider>
         </StatusFrameContext.Provider>
       )}

@@ -34,7 +34,7 @@ export function useChatPanels(chatId: string, id: string | null, tools: ToolMenu
   })?.module;
   useEffect(() => { if (askingTool) setPanels((current) => opened(current, { kind: 'tool', module: askingTool }, pairs)); }, [askingTool, pairs]);
   const flipPanel = (next: Panel, same: (current: Panel) => boolean) => setPanels((current) => (current.panel && same(current.panel) ? { ...current, panel: null } : opened(current, next, pairs)));
-  const flipKind = (kind: 'bookmarks' | 'lineage' | 'lore' | 'autopilot' | 'toggles') => flipPanel({ kind }, (current) => current.kind === kind);
+  const flipKind = (kind: 'bookmarks' | 'lineage' | 'lore' | 'autopilot' | 'toggles' | 'state') => flipPanel({ kind }, (current) => current.kind === kind);
 
   useEffect(() => {
     if (replyTarget && panel?.kind === 'info') setInfoPick(pickStarted(messages, replyTarget));
@@ -52,6 +52,7 @@ export function useChatPanels(chatId: string, id: string | null, tools: ToolMenu
       lineage: () => flipKind('lineage'),
       lore: () => flipKind('lore'),
       autopilot: () => flipKind('autopilot'),
+      stateDetail: () => flipKind('state'),
       info: (reply: string) => openInfo(reply, panel?.kind === 'info' ? panel.tab : 'reply'),
       pickInfo: setInfoPick,
       switchInfoTab: (tab: InfoTab) => setPanels((current) => (current.panel?.kind === 'info' ? { ...current, panel: { kind: 'info', tab } } : current)),

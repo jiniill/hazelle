@@ -587,11 +587,13 @@ export const shown = (message: Message): Version => message.versions[message.sel
 
 // What the shown versions changed in the chat's state, in order: each one's writes, then what the user changed there.
 // The state after them is model/status statusAfter's.
-export const statusChanges = (messages: readonly Message[]): StatusChange[] =>
-  messages.flatMap((message) => {
+export const statusSteps = (messages: readonly Message[]): { key: string; changes: StatusChange[] }[] =>
+  messages.map((message) => {
     const { status = [], statusByHand = [] } = shown(message);
-    return [...status.flatMap(({ changes }) => changes), ...statusByHand];
+    return { key: message.id, changes: [...status.flatMap(({ changes }) => changes), ...statusByHand] };
   });
+
+export const statusChanges = (messages: readonly Message[]): StatusChange[] => statusSteps(messages).flatMap(({ changes }) => changes);
 
 // Resolve historical ids to current versions so attached data (e.g. illustrations) follows edits.
 export const standing = (messages: readonly Message[]): Map<string, string> =>

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import type { StatusField, StatusValue } from '../../model/status';
+import { statusAt, type StatusChange, type StatusField, type StatusValue } from '../../model/status';
 import { STATUS_DONE, STATUS_RANGE } from '../common/words';
-import { Button, Checkbox, ChoiceGroup, Dialog, NumberInput, PhraseField, SettingRow, Stack, Text, TextField } from '../ui';
+import { Button, Checkbox, ChoiceGroup, Dialog, NumberInput, PhraseField, SettingRow, Stack, Text, TextField, type ShownPlace } from '../ui';
 import { draftOf, draftValue, itemDone, itemsOf, type StateDraft } from './stateEdit';
+import type { ChatStateOf } from './useChatState';
 
 type Props = {
   field: StatusField;
@@ -47,7 +48,7 @@ function Control({ field, draft, onChange }: { field: StatusField; draft: StateD
 }
 
 // A value edited by hand (design §6.1 By hand): the control its kind takes, saved as a change over the writer's.
-export function StateEdit({ field, value, of, onSave, onClose }: Props) {
+function StateEdit({ field, value, of, onSave, onClose }: Props) {
   const [draft, setDraft] = useState(() => draftOf(field, value));
   const next = draftValue(field, draft);
   return (
@@ -65,5 +66,23 @@ export function StateEdit({ field, value, of, onSave, onClose }: Props) {
     >
       <Control field={field} draft={draft} onChange={setDraft} />
     </Dialog>
+  );
+}
+
+// The editor of one place of a definition's state. Nothing once the field or its record is gone while it stood open.
+export function StateEditAt({ state, place, onEdit, onClose }: { state: ChatStateOf; place: ShownPlace; onEdit: (change: StatusChange) => void; onClose: () => void }) {
+  const at = statusAt(state.definition, state.now, place);
+  if (!at) return null;
+  return (
+    <StateEdit
+      field={at.field}
+      value={at.values[at.field.id]}
+      of={at.member?.name}
+      onClose={onClose}
+      onSave={(value) => {
+        onEdit({ definition: state.definition.id, kind: 'set', ...place, value });
+        onClose();
+      }}
+    />
   );
 }

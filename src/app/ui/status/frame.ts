@@ -8,5 +8,8 @@ export const StatusFrameContext = createContext<StatusFrame>('card');
 export const StatusEditContext = createContext<StatusEdit | undefined>(undefined);
 export const StatusMemberContext = createContext<ShownPlace['member']>(undefined);
 
+// Present under a panel whose records open a page of their own: a record's name is then pressed.
+export const StatusOpenContext = createContext<((member: NonNullable<ShownPlace['member']>) => void) | undefined>(undefined);
+
 // What stands where a value is not set yet.
 export const UNSET = '—';
