@@ -8,12 +8,12 @@ import type { LoreScan } from '../../engine/lorebook/activate';
 import type { Box } from '../../engine/regex/scripts';
 import type { ChatScope } from '../../engine/render';
 import type { TranslationRequest } from '../../engine/translate';
-import { keepsPromptOut, shown, type Chat, type Message } from '../../model/chat';
+import { keepsPromptOut, shown, statusChanges, type Chat, type Message } from '../../model/chat';
 import { live } from '../../model/library';
 import type { Toggle, ToggleLine, TogglePreset } from '../../model/prompt';
 import { without } from '../../model/fields';
 import type { Seen, Settings } from '../../model/settings';
-import { chatStatus, type StatusDefinition } from '../../model/status';
+import { chatStatus, statusAfter, type StatusDefinition } from '../../model/status';
 import { chatToggles, toggleValue } from '../../model/toggles';
 import { chatModel, type Route } from '../models/assignment';
 import { chatTranslate } from '../tasks/features';
@@ -126,6 +126,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
   const route = chatModel(store, chat, 'main');
   const aux = chatModel(store, chat, 'aux');
   const toggles = togglesOf(store, chat, prompt, packs);
+  const definitions = statusOf(prompt, packs);
   const loaded = id !== null && store.scopeState(id) === 'loaded';
   return {
     card,
@@ -150,6 +151,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
       return { id: version.id, message: message.id, seed: version.seed, role: message.role, text: version.text, time: version.at, ...(version.staged && { staged: true }), ...(version.before && { before: version.before }), ...(after.length > 0 && { after }), ...(version.byHand && { byHand: version.byHand }) };
     }),
     variables: chat.variables ?? [],
+    status: { definitions, state: statusAfter(definitions, statusChanges(messages)) },
     greeting: card && greetingOf(messages),
     toggles: new Map(toggles.declared.map(({ key }) => [key, toggles.value(key)])),
     model: 'kind' in route ? null : botModel(route, sentSettings(store, route)),

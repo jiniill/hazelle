@@ -30,6 +30,7 @@ const scope: ChatScope = {
   loreFolders: {},
   loreScan: { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false },
   messages: [message('a1', 'assistant', 'BOX'), message('a2', 'assistant', 'The lamp. [HP 7]')],
+  status: { definitions: [], state: {} },
   greeting: null,
   toggles: new Map(),
   model: null,

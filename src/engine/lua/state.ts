@@ -14,7 +14,7 @@ export type Snapshot = {
   messages: LuaMessage[];
   variables: [string, string][];
   globals: [string, string][];
-  scope: Omit<ChatScope, 'toggles' | 'packs' | 'pending' | 'cast'>;
+  scope: Omit<ChatScope, 'toggles' | 'packs' | 'pending' | 'cast' | 'status'>;
   character: { name: string; description: string; firstMessage: string };
   persona: { name: string; description: string };
   note: string;

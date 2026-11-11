@@ -1,4 +1,4 @@
-import { ArrowDownToLine, BookOpen, Bot, Brain, History, IdCard, Languages, MessageSquare, MessagesSquare, NotebookPen, PenLine, ScrollText, Smile, UserRound, type LucideIcon } from 'lucide-react';
+import { ArrowDownToLine, BookOpen, Bot, Brain, Gauge, History, IdCard, Languages, MessageSquare, MessagesSquare, NotebookPen, PenLine, ScrollText, Smile, UserRound, type LucideIcon } from 'lucide-react';
 import type { PromptSort, Role, SlotKind } from '../../model/prompt';
 import type { OutlineKind } from '../ui';
 import { FEATURE_NAMES, ILLUSTRATE_NOTE, inFeature, TOOL, TRANSLATOR_NOTE } from './words';
@@ -43,6 +43,7 @@ export const SLOT = {
   source: { name: '원문', hint: '번역할 텍스트', line: '번역할 원문 텍스트가 여기에 들어가요.', kind: 'chat', icon: Languages },
   mascot: { name: FEATURE_NAMES.mascot, hint: '마스코트의 말투와 표정', line: '마스코트의 말투와 표정, 최근 대사, 응답 형식이 여기에 들어가요.', kind: 'char', icon: Smile },
   agentNotes: { name: '에이전트 노트', hint: '전처리 에이전트가 이번 답을 위해 남긴 노트', line: '전처리 에이전트의 노트가 여기에 들어가요.', kind: 'note', icon: Bot },
+  status: { name: '상태', hint: '이 채팅의 현재 상태', line: '이 채팅의 현재 상태와, 응답과 함께 쓰는 상태의 작성 형식이 여기에 들어가요.', kind: 'note', icon: Gauge },
   agentMemory: { name: '에이전트 기억', hint: '이 에이전트가 채팅마다 이어 적는 기억', line: '이 에이전트의 이전 기억과 기억을 갱신하는 형식이 여기에 들어가요.', kind: 'note', icon: Brain },
 } satisfies Record<SlotKind, { name: string; hint: string; line: string; kind: OutlineKind; icon: LucideIcon }>;
 

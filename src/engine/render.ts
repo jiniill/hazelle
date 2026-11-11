@@ -9,6 +9,7 @@ import type { LoreEntries, LoreScan } from './lorebook/activate';
 import { progressed } from './progress';
 import { Scripts, type Box } from './regex/scripts';
 import type { TextFile } from '../model/library';
+import type { StatusDefinition, StatusState } from '../model/status';
 import { assetsOf, placeInlays, placeTextFiles } from './assets';
 
 export type Stage = 'display' | 'prompt';
@@ -37,6 +38,8 @@ export type ChatScope = {
   messages: HistoryMessage[];
   // The chat's own starting variables, over the card's defaults.
   variables: [string, string][];
+  // What the chat's prompt and packs declare its state to hold, and the state after the messages (design §6.1).
+  status: { definitions: StatusDefinition[]; state: StatusState };
   // The variables the bot's Lua wrote for the reply being made, which stand after the last message.
   pending?: [string, string][];
   greeting: CbsContext['greeting'];
@@ -71,7 +74,7 @@ export const authorNote = (note: string | null, prompt: ConversationPrompt) => n
 const marked = (prompt: ConversationPrompt, mark: 'main' | 'globalNote') => prompt.blocks.find((block): block is TextBlock => block.kind === 'text' && block.mark === mark)?.text ?? '';
 
 // toggles: the bot's Lua reads them from its globals as they stand mid-run.
-export function contexts(scope: Omit<ChatScope, 'toggles' | 'cast'> & { toggles: Pick<ChatScope['toggles'], 'get'> }, stage: Stage, language: string | null, triggerId: string, unfound: CbsContext['unfound']): (source: CbsContext['source'], variables: Map<string, string>) => CbsContext {
+export function contexts(scope: Omit<ChatScope, 'toggles' | 'cast' | 'status'> & { toggles: Pick<ChatScope['toggles'], 'get'> }, stage: Stage, language: string | null, triggerId: string, unfound: CbsContext['unfound']): (source: CbsContext['source'], variables: Map<string, string>) => CbsContext {
   const { card, persona, prompt, note, messages, greeting, toggles, model, axModel, clock, assets, modules, faces, screen, pick } = scope;
   const fixed = {
     stage,

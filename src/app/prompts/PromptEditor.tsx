@@ -283,7 +283,8 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
       ))}
       <Divider variant="menu" />
       <MenuHeading>자동 입력</MenuHeading>
-      {slotsOf(sort).filter((slot) => slot !== 'agentNotes' || agentsLab).map((slot) => {
+      {/* 상태 is not offered until the feature that fills it is there (design §6.1; roadmap/status-panels step 5). */}
+      {slotsOf(sort).filter((slot) => slot !== 'status' && (slot !== 'agentNotes' || agentsLab)).map((slot) => {
         const there = placedOnce(draft.blocks, slot);
         return there ? (
           <MenuItem key={slot} tone="muted" label={SLOT[slot].name} description="추가된 블록으로 이동" onClick={() => pick(there.id)} />

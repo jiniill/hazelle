@@ -55,6 +55,7 @@ function partOf(from: From): PrereadPart | null {
     case 'answer':
     case 'preread':
     case 'agents':
+    case 'status':
       return null;
   }
 }

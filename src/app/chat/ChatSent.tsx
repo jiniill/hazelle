@@ -44,6 +44,8 @@ export function partName(from: From, role: Role): string {
       return PRE_READ;
     case 'agents':
       return SLOT.agentNotes.name;
+    case 'status':
+      return SLOT.status.name;
   }
 }
 

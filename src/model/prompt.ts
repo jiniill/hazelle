@@ -26,6 +26,9 @@ export const SLOTS = {
   source: { wrapped: true, role: 'user', repeats: false, sorts: ['translate', 'illustrate', 'mascot', 'preread', 'agent'] },
   // 에이전트 노트: the pre agents' notes for the reply (design §6.16); a prompt without it gets them after the chat.
   agentNotes: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation'] },
+  // 상태: the chat's state as it stands and, for definitions written with the reply, what to write (engine/status
+  // statusSent, design §6.1); a prompt without it gets them after the chat.
+  status: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation'] },
   // An agent's own memory as it last left it, with the answer shape that keeps it (engine/agent memorySheet).
   agentMemory: { wrapped: true, role: 'system', repeats: false, sorts: ['agent'] },
   // The mascot's own sheet, which the engine writes (engine/mascot): its voice, faces, last lines and answer shape.

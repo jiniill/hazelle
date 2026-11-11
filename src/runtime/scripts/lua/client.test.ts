@@ -64,7 +64,7 @@ it('sends event history tails in order across edits, truncation, chat switches a
   });
   const runner = new LuaWorker();
   const host: Host = { say() {}, ask: async () => null, model: async () => ({ success: true, result: '' }), embed: async () => ({ ok: false, reason: 'no-model' }), tokens: async () => 0, lore: async () => [], background: async () => false };
-  const scope: ChatScope = { ...snapshot.scope, cast: [], packs: [], toggles: new Map() };
+  const scope: ChatScope = { ...snapshot.scope, cast: [], packs: [], toggles: new Map(), status: { definitions: [], state: {} } };
   const changed = { ...scope, messages: [scope.messages[0]!, { ...scope.messages[1]!, text: 'edited', after: [['turn', '2']] as [string, string][] }] };
   const shorter = { ...changed, messages: changed.messages.slice(0, 1) };
   const other = { ...scope, messages: [{ ...scope.messages[0]!, id: 'other' }] };
@@ -91,7 +91,7 @@ it('keeps each pending host until completion and ignores old replies after a cra
   const runner = new LuaWorker();
   const host: Host = { say: vi.fn(), ask: async () => null, model: async () => ({ success: true, result: '' }), embed: async () => ({ ok: false, reason: 'no-model' }), tokens: async () => 0, lore: async () => [], background: async () => false };
   const other = { ...host, say: vi.fn() };
-  const scope: ChatScope = { ...snapshot.scope, cast: [], packs: [], toggles: new Map() };
+  const scope: ChatScope = { ...snapshot.scope, cast: [], packs: [], toggles: new Map(), status: { definitions: [], state: {} } };
   try {
     const first = runner.run('first', [], scope, { kind: 'start' }, host, 'event');
     const second = runner.run('second', [], scope, { kind: 'start' }, other, 'event');
@@ -116,5 +116,5 @@ it('keeps each pending host until completion and ignores old replies after a cra
 });
 
 it("names a chat's missing persona 'User', as Risu does", () => {
-  expect(luaStanding({ ...snapshot.scope, toggles: new Map(), packs: [], cast: [] }).persona.name).toBe('User');
+  expect(luaStanding({ ...snapshot.scope, toggles: new Map(), packs: [], cast: [], status: { definitions: [], state: {} } }).persona.name).toBe('User');
 });
