@@ -3,7 +3,7 @@ import type { CacheComparison, CacheDiagnosis } from '../../model/cache';
 import { Runaway } from '../../engine/cbs/evaluate';
 import type { DisplayPatch } from '../../engine/display';
 import type { RegexScript } from '../../engine/import/types';
-import type { AgentInput, assembleAgent, assembleIllustration, assembleMascot, assembleMemory, assemblePreread, assembleTranslation, IllustrationInput, MascotInput, MemoryTaskInput, PrereadInput, PromptInput, RanAway, TranslationInput } from '../../engine/pipeline';
+import type { AgentInput, assembleAgent, assembleIllustration, assembleMascot, assembleMemory, assemblePreread, assembleStatus, assembleTranslation, IllustrationInput, MascotInput, MemoryTaskInput, PrereadInput, PromptInput, RanAway, StatusInput, TranslationInput } from '../../engine/pipeline';
 import type { ChatScope, VariableInspection } from '../../engine/render';
 import type { ApiFailure } from '../api';
 import type { ChatTexts, Counted, DisplayEvaluation, EvaluatedPrompt, EvaluationDown, EvaluationInput, EvaluationJob, EvaluationResult, EvaluationUp, LuaResult, OnboardingPage, ToolState, TrialRead } from './evaluation-core';
@@ -61,6 +61,9 @@ const GATES = {
   'auto-translation': 'passive',
   'auto-illustration': 'passive',
   mascot: 'passive',
+  // 상태 written after a reply, on its own as the mascot's line is; 상태 다시 쓰기 is the user's press.
+  status: 'passive',
+  rewrite: 'press',
   // A post agent's, which runs on its own after a reply; a pre agent's runs within the send.
   polish: 'passive',
   agent: 'press',
@@ -180,6 +183,12 @@ export class Evaluation {
   illustration(lane: Lane<'illustration' | 'auto-illustration'>, input: Omit<IllustrationInput, 'countTokens'>, signal?: AbortSignal): Promise<Counted<ReturnType<typeof assembleIllustration>>> {
     const { scope, ...rest } = input;
     return this.once(lane.asker, lane, scope, { kind: 'illustration', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleIllustration>>>;
+  }
+
+  // Each its own lane, as a mascot's.
+  status(lane: Lane<'status' | 'rewrite'>, input: Omit<StatusInput, 'countTokens'>, signal?: AbortSignal): Promise<Counted<ReturnType<typeof assembleStatus>>> {
+    const { scope, ...rest } = input;
+    return this.once(lane.asker, lane, scope, { kind: 'status', input: rest }, signal) as Promise<Counted<ReturnType<typeof assembleStatus>>>;
   }
 
   // Each its own lane, as an illustration's.

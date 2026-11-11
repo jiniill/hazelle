@@ -6,9 +6,10 @@ import { illustrateSwitches, setIllustrate, setTranslate, setTranslatorNote, tra
 import { SHARED_CHAT, availableFeatures, setFeatureAt, sharedFeatures } from '../../runtime/tasks/features';
 import { setAgentAt } from '../../runtime/tasks/agents';
 import { briefsWithChatModel, briefWriterOf, PREREAD_STARTS, prereadSetup, setPreread } from '../../runtime/tasks/preread';
-import { describeMascotFailure, describePrereadFailure } from '../common/failure';
+import { describeMascotFailure, describePrereadFailure, describeStatusFailure } from '../common/failure';
 import { sceneWriterOf } from '../../runtime/tasks/illustrate';
 import { mascotWriterOf } from '../../runtime/tasks/mascot';
+import { statusWriterOf } from '../../runtime/tasks/status';
 import { setDefaultPrompt } from '../../runtime/library/prompts';
 import { sendsNotes, translatorOf } from '../../runtime/tasks/translate';
 import { AgentSwitches } from '../common/AgentSwitches';
@@ -252,7 +253,27 @@ function AgentDefaults() {
   return <AgentSwitches owner={{ kind: 'settings' }} own={useSettings().agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'settings' }, agent, on)} />;
 }
 
-// 상태 has no setting of its own yet: its model and prompt arrive with its writer (roadmap/status-panels step 5).
-const StatusDefaults = () => null;
+// The writer's prompt is the account's default alone, as the mascot's: the definitions are each chat's own.
+function StatusDefaults() {
+  const store = useStore();
+  const toast = useToast();
+  const settings = useSettings();
+  // chosenPrompt and statusWriterOf read these.
+  usePrompts();
+  useConnections();
+  useProfiles();
+  const writer = statusWriterOf(store, SHARED_CHAT);
+  return (
+    <SettingGroup label={FEATURE_NAMES.status}>
+      <AccountTaskModel task="status" help="응답 뒤에 쓰는 상태가 있는 채팅에서 응답마다 모델을 한 번 더 호출해요." runs={taskRuns(writer, describeStatusFailure)} />
+      <SettingRow
+        label="상태 프롬프트"
+        control={
+          <TaskPromptMenu task="status" chosen={settings.statusPrompt} heading={EVERY_CHAT} opens="down" onPick={(prompt) => toast.settled(setDefaultPrompt(store, prompt!))} onEdit={editPrompt('status')} />
+        }
+      />
+    </SettingGroup>
+  );
+}
 
 const DEFAULTS: Record<Feature, ComponentType> = { translate: TranslateDefaults, illustrate: IllustrateDefaults, memory: MemoryDefaults, mascot: MascotDefaults, preread: PrereadDefaults, agents: AgentDefaults, status: StatusDefaults };

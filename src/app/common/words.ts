@@ -210,7 +210,7 @@ export const STATUS = '상태';
 export const STATUS_HELP = '봇이나 프롬프트가 정해 둔 상태(호감도, 장소 등)를 응답마다 기록해요. 만드는 중인 기능이라 아직 일부만 동작해요.';
 export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS, status: STATUS };
 // A feature's own model row; an agent's model is its prompt's.
-export const TASK_MODELS = { translate: '번역 모델', illustrate: '장면 모델', memory: '기억 모델', mascot: '대사 모델', preread: `${PRE_READ} 모델` } as const satisfies Partial<Record<Feature, string>>;
+export const TASK_MODELS = { translate: '번역 모델', illustrate: '장면 모델', memory: '기억 모델', mascot: '대사 모델', preread: `${PRE_READ} 모델`, status: `${STATUS} 모델` } as const satisfies Partial<Record<Feature, string>>;
 
 // An unset choice takes its value from somewhere else, and names it: 기본 모델 사용, 보조 모델 사용.
 export const follows = (source: string) => `${source} 사용`;

@@ -22,7 +22,7 @@ const TERMS: Record<Page, string[]> = {
   mascot: [TASK_MODELS.mascot, '마스코트 프롬프트'],
   preread: [TASK_MODELS.preread, '요약할 대상', '원문으로 유지할 최근 대화', '한 번에 요약할 분량', '추론 최소화', `${PRE_READ} 프롬프트`],
   agents: Object.values(STAGE_NAMES),
-  status: [],
+  status: [TASK_MODELS.status, '상태 프롬프트'],
   labs: ['실험 중인 기능', ...LABS.map(({ name }) => name)],
   prompts: ['기본 프롬프트', 'Risu 프리셋 가져오기', '새 프롬프트'],
   personas: [newOf('페르소나'), importOf('페르소나'), '삽화 프로필'],

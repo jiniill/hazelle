@@ -6,7 +6,8 @@ import { inlayIds, SIGNATURE, textFileNames } from './assets';
 import type { ChatMessage } from '../connectors/types';
 import type { Memory, Written } from '../model/memory';
 import type { MascotId } from '../model/mascot';
-import type { AgentPrompt, Block, IllustratePrompt, MascotPrompt, MemoryPrompt, PrereadPrompt, PromptSort, RecentSlot, Role, SLOTS, SlotKind, TextBlock, TranslatePrompt, WrappedSlot } from '../model/prompt';
+import type { AgentPrompt, Block, IllustratePrompt, MascotPrompt, MemoryPrompt, PrereadPrompt, PromptSort, RecentSlot, Role, SLOTS, SlotKind, StatusPrompt, TextBlock, TranslatePrompt, WrappedSlot } from '../model/prompt';
+import type { StatusState } from '../model/status';
 import { unescapeCbs } from './cbs/escape';
 import { evaluate, Runaway, type CbsContext, type CbsProblem, type CbsTrace } from './cbs/evaluate';
 import type { HistoryMessage } from './history';
@@ -403,7 +404,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
   const read = built && { shown: built.shown, roles: scope.messages.map(({ role }) => role), speakers: speakersOf(scope), texts: chat.texts };
   const recalled = built && standing(built.memory, read!, memoryBudget(built.budget, budget), tokens);
   const told = memory?.kind === 'tool' ? memory : null;
-  const status = statusSent(scope.status.definitions, scope.status.state, 'with');
+  const status = statusSent(scope.status.definitions, scope.status.state, scope.status.definitions.filter(({ writer }) => writer === 'with'));
 
   const { parts: template, memory: slot } = templateOf<'conversation'>(blocks, laid, {
     tool: tools,
@@ -623,6 +624,31 @@ function remark({ scope, take, prompt, index, mascot, said, seed, countTokens }:
   const { texts, variables } = renderChat('display', scope, take);
   const laid = lay(scope, prompt.blocks, scope.messages.slice(0, index + 1), variables, seed, remembered(countTokens), null);
   const { parts } = templateOf<'mascot'>(prompt.blocks, laid, { recent: recentOf(scope, texts, index, []), source: texts[index]!, mascot: mascotSheet(mascot, said) });
+  return { messages: taskMessages(parts) };
+}
+
+export type StatusInput = {
+  // The chat's, its messages as shown, up to the reply.
+  scope: ChatScope;
+  prompt: StatusPrompt;
+  // The reply's place in scope.messages.
+  index: number;
+  // The state its writer is told, the one before the reply's own changes, and the definitions it is asked for.
+  state: StatusState;
+  asked: readonly string[];
+  seed: string;
+  countTokens: (text: string) => number;
+};
+
+// Like a 마스코트 task, a 상태 task holds no chat; its source is the reply as the conversation model would be sent it.
+export const assembleStatus = (input: StatusInput): { messages: ChatMessage[] } | RanAway => stoppable(() => statusTask(input));
+
+function statusTask({ scope, prompt, index, state, asked, seed, countTokens }: StatusInput): { messages: ChatMessage[] } {
+  const chat = renderChat('prompt', scope);
+  if (chat.stopped) throw chat.stopped;
+  const laid = lay(scope, prompt.blocks, scope.messages.slice(0, index + 1), chat.variables, seed, remembered(countTokens), null);
+  const sheet = statusSent(scope.status.definitions, state, scope.status.definitions.filter(({ id }) => asked.includes(id)));
+  const { parts } = templateOf<'status'>(prompt.blocks, laid, { recent: recentOf(scope, chat.texts, index, []), source: chat.texts[index]!, status: sheet });
   return { messages: taskMessages(parts) };
 }
 

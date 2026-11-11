@@ -1,7 +1,7 @@
 import type { ModelRef } from '../../connectors/assignment';
 import { entryName } from '../../connectors/types';
 import { accountTaskModel, setAccountTaskModel, type AccountTask } from '../../runtime/models/assignment';
-import { ofSort, translationPrompt, illustrationPrompt, mascotPrompt, prereadPrompt } from '../../runtime/library/prompts';
+import { ofSort, translationPrompt, illustrationPrompt, mascotPrompt, prereadPrompt, statusPrompt } from '../../runtime/library/prompts';
 import type { ObjectStore } from '../../runtime/store/store';
 import type { PromptPane } from '../shell/routes';
 import { byPromptName } from './promptCopies';
@@ -38,6 +38,7 @@ const TASKS = {
   illustrate: { setting: 'illustratePrompt', choose: illustrationPrompt, pane: 'picture', switches: true },
   mascot: { setting: 'mascotPrompt', choose: mascotPrompt, pane: null, switches: false },
   preread: { setting: 'prereadPrompt', choose: prereadPrompt, pane: null, switches: false },
+  status: { setting: 'statusPrompt', choose: statusPrompt, pane: null, switches: false },
 } as const;
 
 // The prompt a task's switches run, by name; a deleted or absent one is named as such, never as another prompt.

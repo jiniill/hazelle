@@ -63,7 +63,7 @@ export function taskModel(store: Pick<ObjectStore, 'get'>, chat: Chat, own: Mode
 }
 
 // 공용's alone, as these tasks' prompts are (runtime/library/prompts memoryPrompt).
-const ACCOUNT_TASKS = { memory: 'memoryModel', mascot: 'mascotModel', preread: 'prereadModel' } as const satisfies Record<string, keyof Settings>;
+const ACCOUNT_TASKS = { memory: 'memoryModel', mascot: 'mascotModel', preread: 'prereadModel', status: 'statusModel' } as const satisfies Record<string, keyof Settings>;
 export type AccountTask = keyof typeof ACCOUNT_TASKS;
 
 export const accountTaskModel = (store: Pick<ObjectStore, 'get'>, task: AccountTask): ModelRef | undefined => accountSettings(store)[ACCOUNT_TASKS[task]];

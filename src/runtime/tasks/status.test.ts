@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { blankCard } from '../../engine/import/card';
 import { fold, shown, statusChanges, type Receipt } from '../../model/chat';
 import type { StatusDefinition } from '../../model/status';
@@ -78,4 +78,49 @@ describe('withTurn', () => {
     expect(shown(withTurn([], { ...turn, status: true }, 'c')[0]!).text).toBe('반가워요.');
     expect(shown(withTurn([], turn, 'c')[0]!).text).toBe(turn.text);
   });
+});
+
+describe('StatusWriter', () => {
+  const after = { ...definition, writer: 'after' as const };
+
+  it('writes what a saved reply changed with a call of its own, told the state before it, and writes it again on 상태 다시 쓰기 with the text left as it is', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const { id } = await chatOf(session, after);
+      const log = stubRelay(inTurn([saying('그녀가 등대로 갔다.'), saying('<status>\nHP: 7\n장소: 등대\n</status>'), saying('<status>\nHP: 6\n</status>')]));
+      expect(await takeTurn(session, id, { kind: 'answer' })).toBeNull();
+      // The reply's save, the evaluation and the call run in turn.
+      await vi.waitFor(() => {
+        expect(shown(messages(session, id)[1]!).status).toHaveLength(1);
+        expect(session.statusWriter.snapshot().size).toBe(0);
+      }, { timeout: 5000 });
+      const reply = messages(session, id)[1]!;
+      const [write] = shown(reply).status!;
+      expect(shown(reply).text).toBe('그녀가 등대로 갔다.');
+      expect(write).toMatchObject({ of: ['d'], changes: [set('hp', 7), set('place', '등대')], receipt: { state: 'done' } });
+      // The conversation is told the state and asked for nothing; the writer reads the reply and is asked.
+      expect(log[0]!.sent.body).toContain('The status as it stands');
+      expect(log[0]!.sent.body).not.toContain('Write what this turn changed');
+      expect(log[1]!.sent.body).toContain('그녀가 등대로 갔다.');
+      expect(log[1]!.sent.body).toContain('HP: 5');
+      expect(log[1]!.sent.body).toContain('Write what this turn changed');
+      const ledger = await session.usage.read(new AbortController().signal);
+      expect(ledger.ok && ledger.data.some(({ call }) => call.id === write!.receipt!.id)).toBe(true);
+
+      session.statusWriter.write(id, reply.id, shown(reply).id, true);
+      await vi.waitFor(() => expect(statusChanges(messages(session, id))).toEqual([set('hp', 6)]), { timeout: 5000 });
+      expect(log[2]!.sent.body).toContain('HP: 5');
+      expect(log[2]!.sent.body).not.toContain('HP: 7');
+      expect(shown(messages(session, id)[1]!).text).toBe('그녀가 등대로 갔다.');
+    }));
+
+  it('keeps an answer with no block as missed, with its receipt, and says why for the session', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      const { id } = await chatOf(session, after);
+      stubRelay(inTurn([saying('네.'), saying('바뀐 것이 없어요.')]));
+      await takeTurn(session, id, { kind: 'answer' });
+      await vi.waitFor(() => expect([...session.statusWriter.snapshot().values()].map(({ failure }) => failure?.kind)).toEqual(['invalid']), { timeout: 5000 });
+      expect(shown(messages(session, id)[1]!).status).toMatchObject([{ of: ['d'], changes: [], missed: true, receipt: { state: 'done' } }]);
+    }));
 });

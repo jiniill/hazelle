@@ -7,6 +7,7 @@ import type { Overview, TaskRun } from '../../runtime/tasks/overview';
 import {
   describeIllustrateFailure,
   describeMascotFailure,
+  describeStatusFailure,
   describeMemoryFailure,
   describePrereadFailure,
   describeRoleFailure,
@@ -46,6 +47,8 @@ export function saidOf(task: TaskRun): TaskRuns {
       return taskRuns(task.runs, describeMascotFailure);
     case 'preread':
       return taskRuns(task.runs, describePrereadFailure);
+    case 'status':
+      return taskRuns(task.runs, describeStatusFailure);
   }
 }
 

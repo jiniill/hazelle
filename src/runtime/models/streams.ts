@@ -35,7 +35,7 @@ export async function newCall({ store, tokens }: Pick<Session, 'store' | 'tokens
   return call;
 }
 
-export type PageClass = 'script' | 'illustration' | 'likeness' | 'mascot' | 'preread' | 'agent';
+export type PageClass = 'script' | 'illustration' | 'likeness' | 'mascot' | 'preread' | 'agent' | 'status';
 
 // A call no marker keeps, which only this page reads: a bot's Lua asking a model in the middle of a run, which a
 // reload has no use for (bot: its chat, where the server limits these), or a task's through pageAnswer.

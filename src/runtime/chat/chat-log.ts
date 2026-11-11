@@ -444,6 +444,10 @@ export async function setVariableByHand(store: ObjectStore, chat: string, versio
   return append(store, chat, { type: 'vars', version, set: [[name, value]], at: Date.now(), byHand: true });
 }
 
+// A model's write of a version's state, with its call's ledger row (Entry status).
+export const appendStatus = (store: ObjectStore, chat: string, version: string, write: StatusWrite) =>
+  append(store, chat, { type: 'status', version, ...write }, undefined, write.receipt ? [receiptRow(write.receipt, write.at, chatPlace(store, chat))] : []);
+
 // A state value the user set where it stood, on the version whose state was shown (Entry status).
 export const setStatusByHand = (store: ObjectStore, chat: string, version: string, change: StatusChange) => append(store, chat, { type: 'status', version, changes: [change], at: Date.now(), byHand: true });
 
