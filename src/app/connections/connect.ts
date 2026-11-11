@@ -14,7 +14,7 @@ export async function connect(session: Session, connection: Connection, signal: 
 }
 
 // A key whose type its form told, pasted into 새 연결's search or anywhere in the app.
-export const keyOf = (type: ConnectionType) => `${type.label} 키예요`;
+export const keyOf = (type: ConnectionType) => `${type.label} 키`;
 export const CONNECT_KEY = '이 키로 연결하고 모델 선택';
 
 export const directConnection = (label: string, baseUrl: string, protocol: Protocol, secret: string): Connection => ({

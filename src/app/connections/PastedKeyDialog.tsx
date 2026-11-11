@@ -24,7 +24,7 @@ export function PastedKeyDialog({ type, secret, onClose }: { type: ConnectionTyp
       }}
       onClose={onClose}
     >
-      이미 {held.value.label} 연결에 있는 키예요.
+      '{held.value.label}' 연결에 있는 키예요.
     </ConfirmDialog>
   );
   return (
