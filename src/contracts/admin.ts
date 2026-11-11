@@ -12,6 +12,10 @@ export type FirstPageStep = (typeof FIRST_PAGE_STEPS)[number];
 export type VisitDay = { day: number; visitors: number; opened: number; connected: number; guests: number; accounts: number; converted: number } & Record<FirstPageStep, number>;
 // weeks: the closed weeks shown, oldest first. people lines up with weeks; null is under PULSE_FLOORS.row.
 export type VisitCohorts = { weeks: number[]; rows: { cohort: number; signed: number; people: (number | null)[] }[] };
+// A closed day's accounts seen, accounts replied to and their 대화 replies (server/pulse.ts). null is under
+// PULSE_FLOORS.row: people alone, repliers and replies together.
+export type PulseDay = { day: number; people: number | null; repliers: number | null; replies: number | null };
+export const PULSE_DAYS_SHOWN = 90;
 // The guest ids one address may add to a day's 손님 응답 (server/limits.ts), a forged count's bound.
 export const GUESTS_PER_ADDRESS = 8;
 // The browsers one address may add to a day's 방문자 (server/visits.ts).
@@ -150,7 +154,8 @@ type OlderDetails = {
 };
 type Rows<T> = { [A in keyof T]: { id: number; at: number; action: A; target: string; detail: T[A] } }[keyof T];
 export type LogRow = Rows<LogDetails> | Rows<OlderDetails>;
-export type Visits = { days: VisitDay[]; cohorts: VisitCohorts };
+// pulse: the last PULSE_DAYS_SHOWN closed days kept, oldest first.
+export type Visits = { days: VisitDay[]; cohorts: VisitCohorts; pulse: PulseDay[] };
 // A share in any state: its versions, the manifest's file id of each.
 export type ShareVersion = { version: number; manifest: string; createdAt: number };
 
