@@ -1,6 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react';
 import type { GapCause } from '../../contracts/auto-diagnosis';
 import { refOf } from '../../connectors/assignment';
+import { importable } from '../../engine/import/extensions';
 import { toolId } from '../../model/tool';
 import type { DraftAttachment } from '../../runtime/device/drafts';
 import { leavingCauses } from '../../runtime/tasks/memory-view';
@@ -16,7 +17,7 @@ import { navigate } from '../shell/router';
 import { SHORTCUTS, typing, useSendKeys, useShortcut } from '../shortcuts';
 import { useDisplay } from '../display';
 import { useRemembering, useSettings, useTools } from '../session';
-import { imports, useImport } from '../common/importing';
+import { useImport } from '../common/importing';
 import { Attachments, type Attached, Callout, Composer, DropOverlay, Hint, pressed, pressedKey, SendButton, SendNote, titled, useFileDrop, useMenuOpener } from '../ui';
 import { ChatAsk } from './ChatAsk';
 import { attachTool } from './ChatAttach';
@@ -116,7 +117,7 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
   // A chat takes pictures and text files dropped on it; a file the app imports (a card, a module, a plugin's .js) goes
   // to the import, as it does on every other screen.
   const dragging = useFileDrop((files) => {
-    const imported = files.filter((file) => !file.type.startsWith('image/') && imports(file.name));
+    const imported = files.filter((file) => !file.type.startsWith('image/') && importable(file.name));
     const attached = files.filter((file) => !imported.includes(file));
     if (attached.length) actions.attach(attached);
     if (imported.length) drop(imported);

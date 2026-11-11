@@ -16,14 +16,13 @@ import {
   type ProtonDriveHTTPClientBlobRequest,
   type ProtonDriveHTTPClientJsonRequest,
 } from '@protontech/drive-sdk';
-import { PACKED_EXTENSION, UNPACKED_EXTENSIONS } from '../../engine/import/extensions';
+import { importable } from '../../engine/import/extensions';
 import { BUILT_VERSION } from '../installation';
 import { relayRaw, type RelayFailure } from '../models/relay';
 import type { LinkAnswer, LinkFailure, Progress } from './link';
 
 // The SDK's terms ask for this exact form and forbid passing as a Proton client.
 const APP_VERSION = `external-drive-hazelle@${BUILT_VERSION?.replace(/^v/, '') ?? '0.0.0'}-stable`;
-const importable = (name: string) => [...UNPACKED_EXTENSIONS, PACKED_EXTENSION].some((extension) => name.toLowerCase().endsWith(extension));
 
 // In this page, not the package's worker pool: its workers are built from a plain URL, which this app's Trusted Types
 // policy refuses, and the package exports no way to build them otherwise.
@@ -37,6 +36,8 @@ function startCrypto() {
 
 type Named = { uid: string; type: NodeType; name: { ok: true; value: string } | { ok: false }; activeRevision?: { claimedSize?: number } };
 const nameOf = ({ name }: Named) => (name.ok ? name.value : null);
+// path: from the link's root, which tells apart files of one name in different folders.
+type Found = { node: Named; path: string };
 
 // A link's password and share keys stay in this page: the relay carries the handshake's proof and the encrypted blocks only.
 export async function downloadProton(url: string, password: string | undefined, signal: AbortSignal, progress: Progress): Promise<LinkAnswer> {
@@ -100,15 +101,21 @@ export async function downloadProton(url: string, password: string | undefined, 
       throw error;
     });
     const root = (await link.getRootNode()) as Named;
-    const nodes: Named[] = root.type === NodeType.Folder ? [] : [root];
-    if (root.type === NodeType.Folder) {
-      for await (const child of link.iterateFolderChildren(root.uid, undefined, line)) nodes.push(child as Named);
-    }
+    const found: Found[] = root.type === NodeType.Folder ? [] : [{ node: root, path: nameOf(root) ?? '?' }];
+    const walk = async (folder: string, above: string) => {
+      for await (const child of link.iterateFolderChildren(folder, undefined, line)) {
+        const node = child as Named;
+        const path = `${above}${nameOf(node) ?? '?'}`;
+        if (node.type === NodeType.Folder) await walk(node.uid, `${path}/`);
+        else found.push({ node, path });
+      }
+    };
+    if (root.type === NodeType.Folder) await walk(root.uid, '');
     const skipped: string[] = [];
-    const wanted = nodes.filter((node) => {
+    const wanted = found.filter(({ node, path }) => {
       const name = nameOf(node);
       if (node.type === NodeType.File && name && importable(name)) return true;
-      if (node.type === NodeType.File) skipped.push(name ?? '?');
+      if (node.type === NodeType.File) skipped.push(path);
       return false;
     });
     const fetch = async (chosen: readonly Named[], progress: Progress) => {
@@ -127,11 +134,11 @@ export async function downloadProton(url: string, password: string | undefined, 
       }
       return files;
     };
-    if (wanted.length < 2) return { ok: true, files: await fetch(wanted, progress), skipped };
+    if (wanted.length < 2) return { ok: true, files: await fetch(wanted.map(({ node }) => node), progress), skipped };
     // The listing told what was skipped, so the files taken after it do not tell it again.
     const take = (chosen: readonly number[], next: AbortSignal, progress: Progress) =>
-      attempt(next, async () => ({ ok: true, files: await fetch(chosen.map((at) => wanted[at]!), progress), skipped: [] }));
-    return { ok: true, folder: { files: wanted.map((node) => ({ name: nameOf(node)!, size: node.activeRevision?.claimedSize })), skipped, take } };
+      attempt(next, async () => ({ ok: true, files: await fetch(chosen.map((at) => wanted[at]!.node), progress), skipped: [] }));
+    return { ok: true, folder: { files: wanted.map(({ node, path }) => ({ name: path, size: node.activeRevision?.claimedSize })), skipped, take } };
   });
 }
 

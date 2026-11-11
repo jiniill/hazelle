@@ -1,4 +1,4 @@
-import { PACKED_EXTENSION, UNPACKED_EXTENSIONS } from '../../engine/import/extensions';
+import { importable, PACKED_EXTENSION } from '../../engine/import/extensions';
 import { detachedReplies, relay, type RelayFailure } from '../models/relay';
 
 const REALM_PAGE = /\brealm\.risuai\.net\/\S*?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
@@ -9,16 +9,16 @@ const REALM_FILES: Record<string, string> = { 'image/png': 'realm.png', 'applica
 const MOST_REDIRECTS = 5;
 
 // password: the one its owner set on a Proton link, which the link's address does not hold.
-export type BotLink = { kind: 'realm'; id: string } | { kind: 'proton'; url: string; password?: string } | { kind: 'direct'; url: string };
+export type ImportLink = { kind: 'realm'; id: string } | { kind: 'proton'; url: string; password?: string } | { kind: 'direct'; url: string };
 export type LinkFailure =
   | { kind: 'cancelled' }
   | { kind: 'needs-password' }
   | { kind: 'wrong-password' }
-  | { kind: 'missing' | 'refused' | 'not-a-file' | 'guest-blocked' | 'needs-account' | 'no-bot-file' | 'damaged' | 'lost' }
+  | { kind: 'missing' | 'refused' | 'not-a-file' | 'guest-blocked' | 'needs-account' | 'no-file' | 'damaged' | 'lost' }
   | { kind: 'relay'; failure: RelayFailure };
 export type Progress = (done: number, total: number | undefined) => void;
-// A folder of more than one bot file, listed before any is downloaded: size where its owner's app recorded one, and take
-// downloads the files chosen, by their place here.
+// A folder of more than one importable file, listed before any is downloaded: name as its path from the link's root,
+// size where its owner's app recorded one, and take downloads the files chosen, by their place here.
 export type LinkFolder = {
   files: readonly { name: string; size: number | undefined }[];
   skipped: string[];
@@ -27,7 +27,7 @@ export type LinkFolder = {
 // skipped: files the link held that the import does not read.
 export type LinkAnswer = { ok: true; files: File[]; skipped: string[] } | { ok: true; folder: LinkFolder } | { ok: false; failure: LinkFailure };
 
-export function readLink(text: string): BotLink | null {
+export function readLink(text: string): ImportLink | null {
   const realm = REALM_PAGE.exec(text)?.[1];
   if (realm) return { kind: 'realm', id: realm.toLowerCase() };
   const proton = PROTON_LINK.exec(text)?.[0];
@@ -36,16 +36,16 @@ export function readLink(text: string): BotLink | null {
   return url && URL.canParse(url) ? { kind: 'direct', url } : null;
 }
 
-export async function downloadLink(link: BotLink, signal: AbortSignal, progress: Progress): Promise<LinkAnswer> {
+export async function downloadLink(link: ImportLink, signal: AbortSignal, progress: Progress): Promise<LinkAnswer> {
   try {
     const answer = await download(link, signal, progress);
-    return answer.ok && 'files' in answer && answer.files.length === 0 ? { ok: false, failure: { kind: 'no-bot-file' } } : answer;
+    return answer.ok && 'files' in answer && answer.files.length === 0 ? { ok: false, failure: { kind: 'no-file' } } : answer;
   } catch {
     return { ok: false, failure: { kind: signal.aborted ? 'cancelled' : 'lost' } };
   }
 }
 
-async function download(link: BotLink, signal: AbortSignal, progress: Progress): Promise<LinkAnswer> {
+async function download(link: ImportLink, signal: AbortSignal, progress: Progress): Promise<LinkAnswer> {
   switch (link.kind) {
     case 'realm':
       return downloadRealm(link.id, signal, progress);
@@ -135,8 +135,7 @@ function addressName(url: string) {
 // The import goes by extension, and a download link often names no file: the first bytes say which one it can be.
 export function fileName(url: string, disposition: string | null, head: Uint8Array | undefined): string {
   const name = (dispositionName(disposition) ?? addressName(url)).replace(/^.*[\\/]/, '') || 'link';
-  const lower = name.toLowerCase();
-  if ([...UNPACKED_EXTENSIONS, PACKED_EXTENSION].some((extension) => lower.endsWith(extension))) return name;
+  if (importable(name)) return name;
   if (head?.[0] === 0x89 && head[1] === 0x50) return `${name}.png`;
   if (head?.[0] === 0x50 && head[1] === 0x4b) return `${name}${PACKED_EXTENSION}`;
   if (head?.[0] === 0x7b) return `${name}.json`;

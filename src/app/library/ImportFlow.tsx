@@ -6,7 +6,7 @@ import { allWritten } from '../../runtime/api';
 import { markImportNoticed } from '../../runtime/chat/chat-context';
 import type { UnpackFailure } from '../../engine/import/archive';
 import type { ImportFailure } from '../../engine/import/types';
-import { PACKED_EXTENSION } from '../../engine/import/extensions';
+import { IMPORT_ACCEPT, PACKED_EXTENSION } from '../../engine/import/extensions';
 import { ImportWorker } from '../../runtime/import/client';
 import { downloadLink, type LinkAnswer, type LinkFolder, type Progress as DownloadProgress } from '../../runtime/import/link';
 import { ImportReadError, ImportStuck } from '../../runtime/import/protocol';
@@ -15,7 +15,7 @@ import type { ModulePlace } from '../../runtime/library/modules';
 import { aliased } from '../common/alias';
 import { describeImportFailure } from '../common/importFailure';
 import { ACTS } from '../common/acts';
-import { IMPORT_ACCEPT, ImportContext } from '../common/importing';
+import { ImportContext } from '../common/importing';
 import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import { useSearch } from '../common/useSearch';
 import { BIN, MISSED, NO_CHARACTER, THINGS, TOOL, UNREADABLE_FILE, WRONG_PASSWORD } from '../common/words';
@@ -25,7 +25,7 @@ import type { Route } from '../shell/routes';
 import { Avatar, Button, Callout, Checkbox, ChipButton, ChoiceGroup, ConfirmDialog, Dialog, DropOverlay, Empty, Hint, List, ListItem, Menu, MenuItem, Outcome, pickFiles, Progress, Stack, Text, TextField, useFileDrop, type ProgressStep } from '../ui';
 import { quoted, type ImportKind, type Line, type Preview } from './importOutcome';
 import { failed, IMPORTERS, readingOf, type Choice, type Offer, type Parsed, type Result, type Target } from './importers';
-import { bringLink, FolderChoice, LinkDialog, type LinkStart } from './LinkImport';
+import { bringLink, firstTicks, FolderChoice, LinkDialog, type LinkStart } from './LinkImport';
 import { MoveDialog } from './MoveDialog';
 import { MoveFlow } from './MoveFlow';
 import { stepOf } from './saving';
@@ -195,7 +195,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       case 'files':
         return void take(brought.files, undefined, true, brought.skipped.length > 0 ? [{ file: new File([], LINK), failure: skippedLine(brought.skipped) }] : []);
       case 'folder':
-        return setState({ kind: 'choosing', folder: brought.folder, ticked: brought.folder.files.map(() => true) });
+        return setState({ kind: 'choosing', folder: brought.folder, ticked: firstTicks(brought.folder) });
       case 'cancelled':
         return setState(null);
       case 'locked':
@@ -291,7 +291,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const ticked = ready.filter((row) => row.ticked);
   const chosen = state?.kind === 'choosing' ? state.ticked.flatMap((on, at) => (on ? [at] : [])) : [];
   const title =
-    state?.kind === 'downloading' ? '봇 받는 중'
+    state?.kind === 'downloading' ? '파일 받는 중'
     : state?.kind === 'choosing' ? '받을 파일을 골라요'
     : state?.kind === 'reading' ? '파일 읽는 중'
     : state?.kind === 'saving' ? '가져오는 중'

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { detect } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
+import { importable } from '../../engine/import/extensions';
 import { readLink } from '../../runtime/import/link';
-import { imports, useImport } from '../common/importing';
+import { useImport } from '../common/importing';
 import { PastedKeyDialog } from '../connections/PastedKeyDialog';
 import { typing } from '../shortcuts';
 import { pasteFiles } from '../ui';
@@ -31,7 +32,7 @@ export function PasteReader() {
       if (event.defaultPrevented || typing(event)) return;
       const { drop, pickLink } = latest.current;
       const files = (picked: File[]) => {
-        const read = picked.filter((file) => imports(file.name));
+        const read = picked.filter((file) => importable(file.name));
         if (read.length) drop(read);
       };
       if (pasteFiles(event, files)) return;
