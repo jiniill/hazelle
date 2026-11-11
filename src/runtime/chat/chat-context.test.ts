@@ -3,7 +3,9 @@ import { fold, type Chat } from '../../model/chat';
 import { bareModel } from '../../connectors/chat-completions';
 import type { Starred } from '../../connectors/types';
 import { blankCard } from '../../engine/import/card';
-import { budgetOf, evaluateChat, scopeOf, setSharedLoreScan, tokenLimits } from './chat-context';
+import type { StatusDefinition } from '../../model/status';
+import { budgetOf, evaluateChat, packsOf, scopeOf, setSharedLoreScan, statusOf, tokenLimits } from './chat-context';
+import { chatPrompt } from '../library/prompts';
 import { appendUserMessage, startChat } from './chat-log';
 import { addLore, setCharacterLoreScan } from '../library/lore';
 import { testServer } from '../testing';
@@ -57,6 +59,22 @@ describe('scopeOf', () => {
     expect(scan()).toMatchObject({ tokenBudget: 70_000, recursive: true });
     await setSharedLoreScan(store, 'scanDepth', 8);
     expect(scopeOf({ store }, null, { title: null, character: null, models: {} }, []).loreScan).toMatchObject({ scanDepth: 8, recursive: false });
+  });
+});
+
+describe('statusOf', () => {
+  it("reads the prompt's definition, then the card's, then the modules', a second one of an id declaring nothing", async () => {
+    const { store } = await server.account();
+    const definition = (id: string, name: string): StatusDefinition => ({ id, name, writer: 'after', fields: [], groups: [], logs: [] });
+    const module = await store.create('module', { name: '종', description: '', namespace: null, regex: [], triggers: [], toggles: [], loreFolders: [], status: definition('module', '모듈') });
+    if (!module.ok) throw new Error(module.error);
+    const character = await store.create('character', { card: { ...blankCard('루나'), status: definition('card', '카드') }, folder: null, loreFolders: [], modules: [module.data.id] });
+    if (!character.ok) throw new Error(character.error);
+    const prompt = await store.create('prompt', { name: '기본', blocks: [], toggles: [], authorNote: '', models: {}, status: definition('card', '프롬프트') });
+    if (!prompt.ok) throw new Error(prompt.error);
+    const chat: Chat = { title: null, character: character.data.id, models: {}, prompt: prompt.data.id };
+    expect(statusOf(chatPrompt(store, chat), packsOf(store, chat)).map(({ id, name }) => [id, name])).toEqual([['card', '프롬프트'], ['module', '모듈']]);
+    expect(statusOf(chatPrompt(store, { ...chat, prompt: undefined }), packsOf(store, chat)).map(({ name }) => name)).toEqual(['카드', '모듈']);
   });
 });
 

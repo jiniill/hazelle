@@ -40,6 +40,13 @@ export type StatusChange =
   | (In & { kind: 'leave'; group: string; member: string })
   | (In & { kind: 'row'; log: string; values: StatusValues });
 
+// A chat's definitions in the order its prompt and packs declare them. A second one of an id (a copy attached beside
+// its original) declares nothing, as a second toggle of a key does not (model/toggles chatToggles).
+export function chatStatus(declared: readonly (StatusDefinition | undefined)[]): StatusDefinition[] {
+  const ids = new Set<string>();
+  return declared.flatMap((each) => (each && !ids.has(each.id) && ids.add(each.id) ? [each] : []));
+}
+
 // A kept value read against the field as it stands now: undefined once it no longer fits the kind, and a gauge's held
 // to its range, so narrowing a range loses no value.
 function held(field: StatusField, value: StatusValue): StatusValue | undefined {

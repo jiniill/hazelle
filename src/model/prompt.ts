@@ -1,6 +1,7 @@
 import type { Assignment, ModelRef } from '../connectors/assignment';
 import type { Mark } from './library';
 import type { FeatureSwitches } from './features';
+import type { StatusDefinition } from './status';
 
 export type Role = 'system' | 'user' | 'assistant';
 
@@ -99,6 +100,8 @@ export type ConversationPrompt = {
   features?: FeatureSwitches;
   // 에이전트 in its chats, stacked after 공용's (runtime/tasks/agents agentsOf).
   agents?: string[];
+  // What it declares the state of its chats to hold, ahead of the packs' (design §6.1).
+  status?: StatusDefinition;
 };
 
 // No task prompt but an agent's picks a model: its feature's settings do (runtime/models/assignment taskModel; stored ones

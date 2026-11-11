@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { calls, fold, foldTree, shown, translationOutdated, type Chat, type Message, type Receipt, type Version } from '../../model/chat';
+import { calls, fold, foldTree, shown, statusChanges, translationOutdated, type Chat, type Message, type Receipt, type Version } from '../../model/chat';
 import { cachePrintId } from '../../model/cache';
+import type { StatusChange } from '../../model/status';
 import { memoryId, type MemoryRecord } from '../../model/memory';
 import { chatPrint } from '../diagnostics/cache';
 import { chatFile, readChatFile } from '../export/chat-file';
-import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, copyChat, copyShown, editMessage, forgetOrigin, importChat, nameBookmark, removeMessage, replyMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setVariableByHand, startChat, withOwn } from './chat-log';
+import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, copyChat, copyShown, editMessage, forgetOrigin, importChat, nameBookmark, removeMessage, replyMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setStatusByHand, setVariableByHand, startChat, withOwn } from './chat-log';
 import { setChatModel, withMainModel } from '../models/assignment';
 import type { Files } from '../files/files';
 import { summaryId } from '../store/summary';
@@ -80,6 +81,32 @@ describe('removeMessages', () => {
     expect(texts()).toEqual(['말 0', '말 1']);
     await restoreMessages(store, chat, said.slice(2));
     expect(texts()).toEqual(['말 0', '말 1', '말 2', '말 3', '말 4']);
+  });
+});
+
+describe("a version's state changes", () => {
+  it("go with it to a branch and to a copy of the version shown, the one made by hand after the writer's", async () => {
+    const { store } = await server.account();
+    const chat = crypto.randomUUID();
+    await server.hold(store, chat);
+    await startChat(store, chat, { title: null, character: null, models: {} }, null);
+    const said = crypto.randomUUID();
+    await appendUserMessage(store, chat, { id: said, text: '안녕', follows: null });
+    const set = (value: number): StatusChange => ({ definition: 'd', kind: 'set', field: 'hp', value });
+    expect(await setStatusByHand(store, chat, said, set(2))).toMatchObject({ ok: true });
+    expect(await store.create('entry', { type: 'status', version: said, of: ['d'], changes: [set(1)], receipt: null, at: 1 }, { parent: chat })).toMatchObject({ ok: true });
+    const changes = (id: string) => statusChanges(fold(store.children('entry', id)));
+    expect(changes(chat)).toEqual([set(1), set(2)]);
+
+    const branched = await copyChat(store, chat, { kind: 'branch', at: said });
+    if (!branched.ok) throw new Error(branched.error);
+    await server.hold(store, branched.data.id);
+    expect(changes(branched.data.id)).toEqual([set(1), set(2)]);
+
+    expect(await copyShown(store, chat, fold(store.children('entry', chat))[0]!)).toMatchObject({ ok: true });
+    const [copy] = fold(store.children('entry', chat));
+    expect(copy!.selected).toBe(1);
+    expect(statusChanges([copy!])).toEqual([set(1), set(2)]);
   });
 });
 

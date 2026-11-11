@@ -59,6 +59,19 @@ describe('loggedCalls', () => {
   });
 });
 
+describe('loggedCalls of a state write', () => {
+  it('keeps its call, the call of one written again too, and none for a change made by hand', () => {
+    const [first, again] = [receipt(), receipt()];
+    const made = loggedCalls([
+      { type: 'status', version: 'm1', of: ['d'], changes: [], receipt: first, at: 1 },
+      { type: 'status', version: 'm1', of: ['d'], changes: [], receipt: again, at: 2 },
+      { type: 'status', version: 'm1', of: ['d'], changes: [], receipt: null, at: 3 },
+      { type: 'status', version: 'm1', changes: [], at: 4, byHand: true },
+    ]);
+    expect(made.calls.map(({ at, call }) => [call.id, at])).toEqual([[first.id, 1], [again.id, 2]]);
+  });
+});
+
 describe('modelUsage', () => {
   it('sums costs separately by unit, marking only the unit with a price-list cost as estimated', () => {
     const made = calls(
