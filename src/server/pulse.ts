@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { CONNECTOR_MODELS, MODELS_DEV_LISTS } from '../connectors/models-dev';
 import {
+  DIRECT_TYPE,
   PULSE_FLOORS,
   PULSE_ROLES,
   type PulseAnswer,
@@ -58,10 +59,21 @@ function named(name: string): Named {
   return { key: spelling.toLowerCase().replace(/[\s_-]+/g, ' '), name: spelling };
 }
 
+const LIST_ORDER = Object.values(MODELS_DEV_LISTS).map((entry) => entry!.list);
+
+// A direct connection names no provider, so any list confirms its id: a listed id is public, whoever serves it.
+// Lists spell one id differently; the first in MODELS_DEV_LISTS decides, so a row's name never depends on row order.
+async function nameInAnyList(db: Db, model: string): Promise<string | null | undefined> {
+  for (const names of BUILT_IN.values()) if (names.has(model)) return names.get(model);
+  const { results } = await db.prepare('SELECT list, name FROM models_dev WHERE model = ? AND name IS NOT NULL').bind(model).all<{ list: string; name: string }>();
+  const names = new Map(results.map((row) => [row.list, row.name]));
+  return LIST_ORDER.map((list) => names.get(list)).find(Boolean);
+}
+
 export async function confirmedModel(db: Db, type: string, model: string): Promise<Named> {
   const listed = BUILT_IN.get(type);
   const list = MODELS_DEV_LISTS[type]?.list;
-  const name = listed ? listed.get(model) : list ? await db.prepare('SELECT name FROM models_dev WHERE list = ? AND model = ?').bind(list, model).first<string>('name') : null;
+  const name = type === DIRECT_TYPE ? await nameInAnyList(db, model) : listed ? listed.get(model) : list ? await db.prepare('SELECT name FROM models_dev WHERE list = ? AND model = ?').bind(list, model).first<string>('name') : null;
   return name ? named(name) : OTHER;
 }
 

@@ -142,9 +142,9 @@ it('shows the board from 10 people in the last 7 days and a row from 5 people on
   expect((await board())?.people).toBe(10);
 
   for (const cookie of cookies.slice(0, 4)) await call(cookie, 'image', 'novelai', 'nai-diffusion-5-full');
-  for (const cookie of cookies.slice(0, 5)) await call(cookie, 'image', 'direct', 'nai-diffusion-5-full');
+  for (const cookie of cookies.slice(0, 5)) await call(cookie, 'image', 'direct', 'private-tune');
   at(NOON + 10 * 60 * 1000);
-  // Four on NovelAI's V5 stay in memory alone; the five through a generic connection make 기타, never its name.
+  // Four on NovelAI's V5 stay in memory alone; the five on an id no list holds make 기타, never its name.
   expect((await board())?.ranking.image).toEqual({
     merged: [{ key: '', model: null, share: 1, people: 5 }],
     split: [{ key: '', model: null, type: 'direct', share: 1, people: 5 }],
@@ -155,6 +155,15 @@ it('shows the board from 10 people in the last 7 days and a row from 5 people on
     { key: 'novelai diffusion v5 full', model: 'NovelAI Diffusion V5 Full', share: 1, people: 5 },
     { key: '', model: null, share: 1, people: 5 },
   ]);
+});
+
+it("names a direct connection's model from any list, the first list's spelling deciding, and merges it with the same model", async () => {
+  await t.env.db.prepare("INSERT INTO models_dev (list, model, name) VALUES ('nano-gpt', 'anthropic/claude-opus-4.7', 'Claude 4.7 Opus'), ('openrouter', 'anthropic/claude-opus-4.7', 'Claude Opus 4.7'), ('anthropic', 'claude-opus-4-7', 'Claude Opus 4.7')").run();
+  const cookies = await people(10);
+  await seen(cookies);
+  for (const cookie of cookies.slice(0, 3)) await call(cookie, 'aux', 'direct', 'anthropic/claude-opus-4.7');
+  for (const cookie of cookies.slice(3, 5)) await call(cookie, 'aux', 'anthropic', 'claude-opus-4-7');
+  expect((await board())!.ranking.aux.merged).toEqual([{ key: 'claude opus 4.7', model: 'Claude Opus 4.7', share: 1, people: 5 }]);
 });
 
 it('merges one model across lists by its name and ranks 대화 by the last 24 hours of replies', async () => {

@@ -57,7 +57,7 @@ function moveOf(rank: number, was: number | undefined): Ranked['move'] {
 export const REST = '순위 밖 모델';
 const REST_HELP = `사용자가 ${PULSE_FLOORS.row}명 미만인 모델을 묶은 항목이에요.`;
 
-const OTHERS_HELP = `확인되지 않는 모델은 개인 모델 이름이 드러나지 않도록 ${OTHERS}로 묶어 표시하며, ${DIRECT_CONNECTION}로 쓴 모델도 여기에 해당해요.`;
+const OTHERS_HELP = `확인되지 않는 모델은 개인 모델 이름이 드러나지 않도록 ${OTHERS}로 묶어 표시해요.`;
 
 // before: null where the earlier period was not counted whole, which marks no row at all. earlier: a past week's
 // ranking, whose people are that week's.

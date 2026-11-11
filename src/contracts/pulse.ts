@@ -7,7 +7,7 @@ export const PULSE_PAGE = { path: '/now', title: '헤이젤 나우' } as const;
 export const PULSE_ROLES = ['chat', 'aux', 'image', 'embedding'] as const;
 export type PulseRole = (typeof PULSE_ROLES)[number];
 
-// Generic connections report 직접 연결 and 기타 models, never their addresses.
+// Generic connections report 직접 연결, never their addresses.
 export const DIRECT_TYPE = 'direct';
 
 // seen: the page-load mark, which counts the account active and nothing else. A call names its role, its connection
