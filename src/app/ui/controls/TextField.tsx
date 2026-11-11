@@ -77,7 +77,7 @@ export function TextField({ label, showLabel = true, kind = 'text', value, onCha
           {big.button}
         </div>}
         {lines ? (
-          <textarea className={`${look} ${styles.area}`} rows={lines} {...typed} {...own} onPaste={onFiles && ((event) => pasteFiles(event, onFiles))} />
+          <textarea className={`${look} ${styles.area}`} rows={lines} {...typed} {...own} onPaste={onFiles && ((event) => pasteFiles(event.nativeEvent, onFiles))} />
         ) : (
           <input className={look} type={type} {...typed} {...own} />
         )}

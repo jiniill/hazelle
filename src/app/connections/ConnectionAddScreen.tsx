@@ -12,7 +12,7 @@ import { useAccount, useConnections, useSession } from '../session';
 import { backBar, navigate, useRoute } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, Callout, Disclosure, Empty, GuideMark, List, ListItem, NavBar, Screen, SearchField, Section, Stack, Text } from '../ui';
-import { connect, directConnection } from './connect';
+import { connect, CONNECT_KEY, directConnection, keyOf } from './connect';
 
 const GROUPS: Record<ConnectionType['group'], string> = {
   gateway: '통합 API 게이트웨이',
@@ -94,9 +94,9 @@ export function ConnectionAddScreen({ back }: { back: Back }) {
       <SearchField label="이름 검색, 또는 키·주소 붙여 넣기" value={query} onChange={setQuery} />
       {search.kind === 'key' && (
         <Stack gap="related">
-          <Callout tone="success">{search.type.label} 키예요.</Callout>
+          <Callout tone="success">{keyOf(search.type)}</Callout>
           <Button busy={busy} onClick={() => void connectKey(search.type, search.secret)}>
-            이 키로 연결하고 모델 선택
+            {CONNECT_KEY}
           </Button>
         </Stack>
       )}

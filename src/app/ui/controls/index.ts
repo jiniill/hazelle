@@ -15,6 +15,7 @@ export { IconButton } from './IconButton';
 export { Link } from './Link';
 export { MarkupArea, MarkupText, revealIn, typeInto } from './MarkupArea';
 export { NumberInput } from './NumberInput';
+export { pasteFiles } from './pasteFiles';
 export { PhraseField } from './PhraseField';
 export { PickCard, PickCards } from './PickCard';
 export { Pill } from './Pill';
