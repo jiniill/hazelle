@@ -76,12 +76,13 @@ export function TaskPromptMenu({ task, chosen, heading, opens, onPick, onEdit }:
   );
 }
 
-// A task's own model, else 보조 모델. runs: what the task runs on now, or why it cannot; said under the row while it
-// follows 보조 모델 or fails.
+// A task's own model, else 보조 모델. runs: what the task runs on now, said under the row while it follows 보조 모델, or
+// why it cannot, said as the row's error.
 export function TaskModelRow({ label, help, own, runs, onPick }: { label: string; help?: string; own: ModelRef | undefined; runs: TaskRuns; onPick: (ref: ModelRef | null) => void }) {
   const connections = useConnections();
-  const description = 'why' in runs ? runs.why : own ? undefined : entryName(runs.route.model);
-  return <RolePicker role="aux" label={label} help={help} own={own} follow={follows(MODEL_ROLES.aux)} description={description} connections={connections} onPick={onPick} />;
+  const fails = 'why' in runs;
+  const description = fails || own ? undefined : entryName(runs.route.model);
+  return <RolePicker role="aux" label={label} help={help} own={own} follow={follows(MODEL_ROLES.aux)} description={description} error={fails ? runs.why : undefined} connections={connections} onPick={onPick} />;
 }
 
 // 장기 기억's, 마스코트's and 토큰 절약's model, 공용's alone as their prompts are: a pick here holds for every chat.

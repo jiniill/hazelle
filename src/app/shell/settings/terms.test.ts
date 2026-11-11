@@ -41,13 +41,13 @@ describe('설정 검색', () => {
   });
 
   it('opens the pages of 도구, named by the window that holds them', () => {
-    expect(search('계산기').map(({ term, where, to }) => [term, where, to])).toEqual([[TOOL_PAGES.calculator, TOOLS, { kind: 'calculator' }]]);
-    expect(search(TOOL_PAGES.translator).find(({ term }) => term === TOOL_PAGES.translator)).toMatchObject({ where: TOOLS, to: { kind: 'translator' } });
-    expect(search('원문').find(({ where }) => where === TOOL_PAGES.translator)?.to).toEqual({ kind: 'translator' });
+    expect(search('계산기').map(({ term, where, to }) => [term, where, to])).toEqual([[TOOL_PAGES.calculator, [TOOLS], { kind: 'calculator' }]]);
+    expect(search(TOOL_PAGES.translator).find(({ term }) => term === TOOL_PAGES.translator)).toMatchObject({ where: [TOOLS], to: { kind: 'translator' } });
+    expect(search('원문').find(({ where }) => where[0] === TOOL_PAGES.translator)?.to).toEqual({ kind: 'translator' });
   });
 
   it('finds 이미지 위치 by 삽화 위치, on each page that shows it', () => {
-    expect(search('삽화 위치').map(({ term, where }) => [term, where])).toEqual(expect.arrayContaining([[PICTURE_PLACE, FEATURE_NAMES.illustrate], [PICTURE_PLACE, PAGES.display]]));
+    expect(search('삽화 위치').map(({ term, where }) => [term, where])).toEqual(expect.arrayContaining([[PICTURE_PLACE, [FEATURE_NAMES.illustrate]], [PICTURE_PLACE, [PAGES.display]]]));
   });
 
   it('opens the default 모델 설정 from one of its rows, and 모델 when there is none', () => {
@@ -59,7 +59,12 @@ describe('설정 검색', () => {
   it('seeks the row a hit names, and nothing on a hit that names the page itself', () => {
     expect(search('스트리밍')[0]?.seek).toBe('스트리밍');
     expect(search('캐싱')[0]?.seek).toBe('캐시');
-    expect(hits.find(({ term, where }) => term === '디스플레이' && where === undefined)?.seek).toBeUndefined();
+    expect(hits.find(({ term, where }) => term === '디스플레이' && where.length === 0)?.seek).toBeUndefined();
+  });
+
+  it('leads with the page a search names, before the rows that hold the words', () => {
+    expect(search('모델')[0]).toMatchObject({ term: PAGES.models, where: [] });
+    expect(search('새 연결')[0]).toMatchObject({ where: [PAGES.connections], to: { kind: 'add-connection' } });
   });
 
   it('keys each row of a result list apart', () => {

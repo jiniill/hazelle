@@ -21,6 +21,8 @@ it('says where each role was picked, which task follows 보조 모델 and which 
     expect(read().roles.aux).toMatchObject({ runs: { model: { id: 'm' } }, from: { layer: 'settings', role: 'main' } });
     expect(read().roles.embed).toEqual({ runs: { kind: 'no-model' }, from: null });
     expect(read().talk.pins.map(({ prompt, ref }) => [prompt.value.name, ref.model])).toEqual([['고정', 'pin']]);
+    const used = (overview: ReturnType<typeof read>) => overview.used.map(({ model }) => model).sort();
+    expect(used(read())).toEqual(['m', 'pin']);
 
     await setDefaultModel(store, 'aux', ref('aux'));
     await setAccountTaskModel(store, 'mascot', ref('pin'));
@@ -28,9 +30,11 @@ it('says where each role was picked, which task follows 보조 모델 and which 
     expect(read().roles.aux.from).toEqual({ layer: 'settings', role: 'aux' });
     expect(tasks.translate).toEqual({ own: undefined, runs: 'aux' });
     expect(tasks.mascot).toEqual({ own: 'pin', runs: 'pin' });
+    expect(used(read())).toEqual(['aux', 'm', 'pin']);
 
     const created = await store.create('chat', { title: null, character: null, prompt: pinning.ok ? pinning.data.id : '', models: {} });
     const chat = overviewOf(store, created.ok ? created.data.value : null);
     expect(chat.roles.main).toMatchObject({ runs: { model: { id: 'pin' } }, from: { layer: 'prompt', role: 'main' } });
     expect(chat.talk.pins).toEqual([]);
+    expect(used(chat)).toEqual(['aux', 'pin']);
   }));

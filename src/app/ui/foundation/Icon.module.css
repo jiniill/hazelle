@@ -17,3 +17,8 @@
   display: flex;
   color: var(--color-accent);
 }
+
+.error {
+  display: flex;
+  color: var(--color-warn);
+}

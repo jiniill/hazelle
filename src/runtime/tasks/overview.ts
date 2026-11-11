@@ -1,4 +1,4 @@
-import type { ModelRef, Role } from '../../connectors/assignment';
+import { refOf, sameModelRef, type ModelRef, type Role } from '../../connectors/assignment';
 import type { Chat } from '../../model/chat';
 import { live } from '../../model/library';
 import { pinsModels } from '../../model/prompt';
@@ -28,6 +28,9 @@ export type Overview = {
   // 대화: the chat's prompt; pins, in 공용, the other conversation prompts that talk on a 대화 모델 of their own.
   talk: { prompt: PromptChoice; pins: { prompt: StoredPrompt<'conversation'>; ref: ModelRef }[] };
   tasks: TaskRun[];
+  // Every added model this setup reaches: the roles' and the tasks' as they resolve, 삽화's image model and, in 공용, each
+  // prompt's own (a conversation prompt's 대화 and 보조 모델, an agent's). Nothing here picks a model outside it.
+  used: ModelRef[];
 };
 
 // chat: null for 공용.
@@ -40,18 +43,21 @@ export function overviewOf(store: ObjectStore, chat: Chat | null): Overview {
   const memory = memoryOwner(store, place);
   const prompt = chatPrompt(store, place);
   const mine = prompt.kind === 'prompt' ? prompt.prompt.id : null;
-  const pins = chat
-    ? []
-    : store.list('prompt').flatMap((each) => (live(each) && each.id !== mine && ofSort(each, 'conversation') && pinsModels(each.value) && each.value.models.main ? [{ prompt: each, ref: each.value.models.main }] : []));
-  return {
-    roles: { main: chatRole(store, place, 'main'), aux: chatRole(store, place, 'aux'), embed: embedRole(store) },
-    talk: { prompt, pins },
-    tasks: [
-      { feature: 'translate', on: on.translate, own: translate.model, apart: translate.own, runs: translator.ok ? { route: translator.route } : translator.failure },
-      { feature: 'illustrate', on: on.illustrate, own: illustrate.sceneModel, apart: illustrate.own, runs: sceneWriterOf(store, place), draws: imageRoute(store, illustrate.model) },
-      { feature: 'memory', on: memory !== null, own: accountTaskModel(store, 'memory'), apart: false, runs: memoryWriter(store, place), by: memory?.kind === 'tool' ? memory.unit.tool.manifest.displayName : null },
-      { feature: 'mascot', on: on.mascot, own: accountTaskModel(store, 'mascot'), apart: false, runs: mascotWriterOf(store, place) },
-      { feature: 'preread', on: on.preread, own: accountTaskModel(store, 'preread'), apart: false, runs: briefWriterOf(store, place) },
-    ],
-  };
+  const prompts = chat ? [] : store.list('prompt').filter(live);
+  const pins = prompts.flatMap((each) => (each.id !== mine && ofSort(each, 'conversation') && pinsModels(each.value) && each.value.models.main ? [{ prompt: each, ref: each.value.models.main }] : []));
+  const roles = { main: chatRole(store, place, 'main'), aux: chatRole(store, place, 'aux'), embed: embedRole(store) };
+  const tasks: TaskRun[] = [
+    { feature: 'translate', on: on.translate, own: translate.model, apart: translate.own, runs: translator.ok ? { route: translator.route } : translator.failure },
+    { feature: 'illustrate', on: on.illustrate, own: illustrate.sceneModel, apart: illustrate.own, runs: sceneWriterOf(store, place), draws: imageRoute(store, illustrate.model) },
+    { feature: 'memory', on: memory !== null, own: accountTaskModel(store, 'memory'), apart: false, runs: memoryWriter(store, place), by: memory?.kind === 'tool' ? memory.unit.tool.manifest.displayName : null },
+    { feature: 'mascot', on: on.mascot, own: accountTaskModel(store, 'mascot'), apart: false, runs: mascotWriterOf(store, place) },
+    { feature: 'preread', on: on.preread, own: accountTaskModel(store, 'preread'), apart: false, runs: briefWriterOf(store, place) },
+  ];
+  const reached = [
+    ...Object.values(roles).map(({ runs }) => runs),
+    ...tasks.flatMap((task) => ['route' in task.runs ? task.runs.route : task.runs, ...(task.feature === 'illustrate' ? [task.draws] : [])]),
+  ].flatMap((runs) => ('connection' in runs ? [refOf(runs.connection.id, runs.model)] : []));
+  const picked = prompts.flatMap((each) => (ofSort(each, 'conversation') ? Object.values(each.value.models) : ofSort(each, 'agent') && each.value.model ? [each.value.model] : []));
+  const used = [...reached, ...picked].filter((ref, at, all) => all.findIndex((each) => sameModelRef(each, ref)) === at);
+  return { roles, talk: { prompt, pins }, tasks, used };
 }

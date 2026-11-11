@@ -1,4 +1,4 @@
-import { refOf, type ModelRef, type Role } from '../../connectors/assignment';
+import { refOf, sameModelRef, type ModelRef, type Role } from '../../connectors/assignment';
 import { entryName } from '../../connectors/types';
 import { FEATURE_LABS, type Feature } from '../../model/features';
 import type { Stored } from '../../model/kinds';
@@ -14,7 +14,7 @@ import {
   describeTurnFailure,
 } from '../common/failure';
 import { taskRuns, type TaskRuns } from '../common/taskRuns';
-import { EMPTY_VALUE, FEATURE_NAMES, FEATURES_TITLE, follows, LAB, MODEL_PINNED, MODEL_ROLES, NOT_PICKED, NOT_STARRED, onOff, PAGES, promptName, SCOPE, STARRED } from '../common/words';
+import { EMPTY_VALUE, FEATURE_NAMES, FEATURES_TITLE, follows, IDLE_MODELS, LAB, MODEL_PINNED, MODEL_ROLES, NOT_PICKED, NOT_STARRED, onOff, PAGES, promptName, SCOPE, STARRED } from '../common/words';
 import type { FlowColumn, FlowEdge, FlowKind, FlowNode } from '../ui';
 
 // 내 구성: the map and what needs fixing, both read off one Overview (runtime/tasks/overview).
@@ -49,6 +49,28 @@ export function saidOf(task: TaskRun): TaskRuns {
   }
 }
 
+// Why a task cannot run now: on the model that writes for it, and 삽화 on the one that draws.
+function whyNot(task: TaskRun) {
+  const runs = saidOf(task);
+  return { writes: 'why' in runs ? runs.why : undefined, draws: task.feature === 'illustrate' && 'kind' in task.draws ? describeIllustrateFailure(task.draws) : undefined };
+}
+// 장기 기억 kept by a plugin runs on no model of the chat's.
+const running = (task: TaskRun, available: readonly Feature[]) => available.includes(task.feature) && task.on && !(task.feature === 'memory' && task.by !== null);
+const promptWhy = ({ prompt }: Overview['talk']) => (prompt.kind === 'missing' ? describeTurnFailure({ kind: 'prompt-missing', own: prompt.own }) : undefined);
+
+// 대화 and each feature that is on and cannot run now, with why, whatever the cause: what a list of them marks beside 켬.
+export function failingOf({ roles, talk, tasks }: Overview, available: readonly Feature[]): Partial<Record<Feature | 'chat', string>> {
+  const failing: Partial<Record<Feature | 'chat', string>> = {};
+  const chat = 'kind' in roles.main.runs ? describeRoleFailure('main', roles.main.runs) : promptWhy(talk);
+  if (chat) failing.chat = chat;
+  for (const task of tasks) {
+    const { writes, draws } = whyNot(task);
+    const why = writes ?? draws;
+    if (running(task, available) && why) failing[task.feature] = why;
+  }
+  return failing;
+}
+
 const NO_EMBED = `${MODEL_ROLES.embed}이 지정되지 않아서 ${FEATURE_NAMES.memory}이 비슷한 기록을 찾아 넣지 않아요.`;
 
 // What fails now, truthfully: each said once, where it starts. A task that follows a 보조 모델 which fails is that
@@ -58,13 +80,14 @@ export function findingsOf({ roles, talk, tasks }: Overview, available: readonly
   const role = (each: Role, runs: RouteFailure) => found.push({ node: nodeOf.role(each), title: MODEL_ROLES[each], why: describeRoleFailure(each, runs) });
   if ('kind' in roles.main.runs) role('main', roles.main.runs);
   if ('kind' in roles.aux.runs && roles.aux.from?.role === 'aux') role('aux', roles.aux.runs);
-  if (talk.prompt.kind === 'missing') found.push({ node: nodeOf.feature('talk'), title: PAGES.chat, why: describeTurnFailure({ kind: 'prompt-missing', own: talk.prompt.own }) });
+  const prompt = promptWhy(talk);
+  if (prompt) found.push({ node: nodeOf.feature('talk'), title: PAGES.chat, why: prompt });
   for (const task of tasks) {
-    if (!available.includes(task.feature) || !task.on || (task.feature === 'memory' && task.by !== null)) continue;
+    if (!running(task, available)) continue;
     const at = { node: nodeOf.feature(task.feature), title: FEATURE_NAMES[task.feature] };
-    const runs = saidOf(task);
-    if ('why' in runs && (task.own !== undefined || !('kind' in roles.aux.runs))) found.push({ ...at, why: runs.why });
-    if (task.feature === 'illustrate' && 'kind' in task.draws) found.push({ ...at, why: describeIllustrateFailure(task.draws) });
+    const { writes, draws } = whyNot(task);
+    if (writes && (task.own !== undefined || !('kind' in roles.aux.runs))) found.push({ ...at, why: writes });
+    if (draws) found.push({ ...at, why: draws });
     if (task.feature === 'memory' && 'kind' in roles.embed.runs) {
       const runs = roles.embed.runs;
       found.push({ node: nodeOf.role('embed'), title: MODEL_ROLES.embed, why: runs.kind === 'no-model' ? NO_EMBED : describeRoleFailure('embed', runs) });
@@ -99,7 +122,7 @@ export function mapOf(overview: Overview, connections: readonly Stored<'connecti
   const starred = connections.flatMap((connection) => connection.value.starred.map((model) => ({ ref: refOf(connection.id, model), model, connection })));
   const columns: FlowColumn[] = [
     { title: PAGES.connections, nodes: connections.map(({ id, value }) => ({ id: nodeOf.connection(id), title: value.label, note: `모델 ${value.starred.length}개` })) },
-    { title: STARRED, nodes: starred.map(({ ref, model, connection }) => ({ id: nodeOf.model(ref), title: entryName(model), note: connection.value.label })) },
+    { title: STARRED, idle: IDLE_MODELS, nodes: starred.map(({ ref, model, connection }) => ({ id: nodeOf.model(ref), title: entryName(model), note: connection.value.label, tone: tone(nodeOf.model(ref), overview.used.some((each) => sameModelRef(each, ref))) })) },
     { title: ROLES_TITLE, nodes: [role('main'), role('aux'), role('embed')] },
     {
       title: FEATURES_TITLE,

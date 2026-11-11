@@ -1,7 +1,7 @@
 import { ACTS, importOf, newOf } from '../../common/acts';
 import { LABS } from '../../common/labs';
 import { NUMBER, PROFILE_LABELS, PROFILE_ROWS } from '../../common/settingWords';
-import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE, PROMPT_MODELS } from '../../common/words';
+import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, IDLE_MODELS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE, PROMPT_MODELS } from '../../common/words';
 import type { Settings } from '../../../model/settings';
 import { BIN_PLACE, type Route, type SettingsPage, type ToolsPage } from '../routes';
 import { ROLES_TITLE } from '../../settings/setup';
@@ -13,7 +13,7 @@ import { ROLES_TITLE } from '../../settings/setup';
 type Page = SettingsPage | ToolsPage;
 const TERMS: Record<Page, string[]> = {
   setup: [FINDINGS, ROLES_TITLE, STARRED, FEATURES_TITLE],
-  models: [DEFAULT_MODELS, SCOPE.default, MODEL_ROLES.main, MODEL_ROLES.aux, MODEL_ROLES.embed, STARRED, MODEL_SETTINGS, '기능별 모델', PROMPT_MODELS, '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT],
+  models: [DEFAULT_MODELS, SCOPE.default, MODEL_ROLES.main, MODEL_ROLES.aux, MODEL_ROLES.embed, STARRED, IDLE_MODELS, MODEL_SETTINGS, '기능별 모델', PROMPT_MODELS, '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT],
   connections: ['모델', '계정', '계정 추가', '그룹', '전환일', '사용량과 한도', RETRY_COUNT, '사용 내역', '연결 이름', '키 변경', '모델 ID로 추가'],
   chat: [...Object.values(CHAT_DETAIL), MODEL_ROLES.main, RETRY_COUNT, '모델 도구 호출 횟수', ANSWER_INSTRUCTION_LABEL, ...Object.values(LORE_SCAN_WORDS).map(({ label }) => label)],
   translate: ['응답 번역', '응답 번역 언어', '내 메시지 번역', '내 메시지 번역 언어', '원문 함께 보기', '반전 모드', TRANSLATOR_NOTE, '번역 프롬프트', TASK_MODELS.translate],
@@ -62,17 +62,20 @@ export const subpages = (settings: Settings, profiles: readonly { id: string }[]
   };
 };
 
-// where: the page that holds the term, unless the term is that page's own label.
+// where: what holds the term, from the outside in: its page, unless the term is that page's own label.
 // seek: the row or section it names on the page it opens; a page's own label names none.
-export type Hit<Place> = { term: string; place: Place; where: string | undefined; to: Route; seek: string | undefined };
+export type Hit<Place> = { term: string; place: Place; where: readonly string[]; to: Route; seek: string | undefined };
 
 // A place's where: names the place, as Subpage's does, when it is not in 설정, as 도구's pages are not.
-export const hitsOf = <Place extends { page: Page; label: string; route: Route; where?: string }>(places: readonly Place[], subs: ReturnType<typeof subpages>): Hit<Place>[] =>
-  places.flatMap((place) => [
-    ...[place.label, ...TERMS[place.page]].map((term) => ({ term, place, where: term === place.label ? place.where : place.label, to: place.route, seek: term === place.label ? undefined : term })),
+// The pages come before the rows on them, so a page found by its own name leads the results.
+export function hitsOf<Place extends { page: Page; label: string; route: Route; where?: string }>(places: readonly Place[], subs: ReturnType<typeof subpages>): Hit<Place>[] {
+  const hits = places.flatMap((place): Hit<Place>[] => [
+    ...[place.label, ...TERMS[place.page]].map((term) => ({ term, place, where: term !== place.label ? [place.label] : place.where ? [place.where] : [], to: place.route, seek: term === place.label ? undefined : term })),
     ...(subs[place.page] ?? []).flatMap((sub) =>
-      [sub.label, ...sub.terms].map((term) => ({ term, place, where: term === sub.label ? (sub.where ?? place.label) : `${place.label} › ${sub.label}`, to: sub.route, seek: term === sub.label ? undefined : term })),
+      [sub.label, ...sub.terms].map((term) => ({ term, place, where: term === sub.label ? [sub.where ?? place.label] : [place.label, sub.label], to: sub.route, seek: term === sub.label ? undefined : term })),
     ),
   ]);
+  return [...hits.filter(({ seek }) => seek === undefined), ...hits.filter(({ seek }) => seek !== undefined)];
+}
 
 export const hitTexts = ({ term }: { term: string }) => [term, ...(HIDDEN[term] ?? [])];

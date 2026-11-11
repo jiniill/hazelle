@@ -12,18 +12,19 @@ import { mascotWriterOf } from '../../runtime/tasks/mascot';
 import { setDefaultPrompt } from '../../runtime/library/prompts';
 import { sendsNotes, translatorOf } from '../../runtime/tasks/translate';
 import { AgentSwitches } from '../common/AgentSwitches';
+import { aliased } from '../common/alias';
 import { DetailFold } from '../common/DetailFold';
 import { IllustrateRows } from '../common/IllustrateRows';
 import { Missing } from '../common/Missing';
-import { AccountTaskModel, TaskPromptMenu, type PromptDoor } from '../common/TaskPrompt';
+import { AccountTaskModel, appliesTo, TaskPromptMenu, type PromptDoor } from '../common/TaskPrompt';
 import { taskRuns } from '../common/taskRuns';
 import { TranslateRows } from '../common/TranslateRows';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { useTypedNumber } from '../common/typed';
 import { readWhole } from '../common/typedNumber';
 import { AGENTS_HELP, EVERY_CHAT, FEATURE_NAMES, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PICTURE_PLACE, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED, TASK_MODELS } from '../common/words';
-import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
-import { backBar, navigate } from '../shell/router';
+import { useConnections, useProfiles, usePrompts, useSettings, useStore, useStored } from '../session';
+import { backBar, navigate, useAddress } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useToast } from '../toast';
 import { Button, Callout, NavBar, NumberInput, Screen, seekRow, SettingGroup, SettingRow, Switch } from '../ui';
@@ -39,6 +40,19 @@ function FeatureSwitch({ feature }: { feature: Feature }) {
   return <Switch variant="labeled" label="채팅에서 쓰기" checked={sharedFeatures(store)[feature]} onChange={(on) => toast.settled(setFeatureAt(store, { kind: 'settings' }, feature, on), SAVE_FAILED)} />;
 }
 
+// Over a chat whose character keeps 번역 or 삽화 of its own (캐릭터별 설정), this page's values do not reach that chat:
+// said here, since a change made for it would seem to do nothing.
+const APART = { translate: translateSwitches, illustrate: illustrateSwitches };
+function Apart({ feature }: { feature: keyof typeof APART }) {
+  const store = useStore();
+  const { under } = useAddress();
+  const chat = useStored('chat', under?.kind === 'chat' ? under.id : null);
+  // A new chat is not stored until its first send; its address names its character.
+  const character = useStored('character', under?.kind === 'new-chat' ? under.character : (chat?.value.character ?? null));
+  if (!character || !APART[feature](store, character.id).own) return null;
+  return <Callout tone="tip">{`${aliased(character.value.card.name, character.value.alias)}의 채팅은 캐릭터별 설정을 따라요. 이 화면의 설정은 ${appliesTo(null, false)}`}</Callout>;
+}
+
 // What the feature is, for the two whose name does not say it.
 const HEAD_HELP: Partial<Record<Feature, string>> = { preread: PRE_READ_HELP, agents: AGENTS_HELP };
 
@@ -52,6 +66,7 @@ export function FeatureScreen({ feature, back }: { feature: Feature; back: Back 
   if (!available) return <Missing what="feature" back={back} />;
   return (
     <Screen width="form" top={<NavBar title={name} help={HEAD_HELP[feature]} {...backBar(back)} actions={<FeatureSwitch feature={feature} />} />}>
+      {feature in APART && <Apart feature={feature as keyof typeof APART} />}
       <Defaults />
     </Screen>
   );

@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import { createContext, useContext, type ReactNode } from 'react';
-import { CheckMark, Icon } from '../foundation/Icon';
+import { CheckMark, ErrorMark, Icon } from '../foundation/Icon';
 import { useSeekRow } from '../foundation/seek';
 import { Tag } from '../foundation/Tag';
 import { FolderMark } from './FolderMark';
@@ -48,6 +48,8 @@ type ItemProps = {
   tags?: string[];
   // Quiet words at the row's end: where it is used (an unused thing says nothing), when, how much.
   note?: string;
+  // Why the row's thing cannot run now: a mark before its note.
+  error?: string;
   trailing?: ReactNode;
   // With onClick the whole row is one button, so trailing must not hold a control then.
   onClick?: () => void;
@@ -63,7 +65,7 @@ type ItemProps = {
   tone?: 'plain' | 'muted';
 };
 
-export function ListItem({ leading, folder = false, title, badge, code, description, tags = [], note, trailing, onClick, control, detail, children, selected, current, expanded, tone }: ItemProps) {
+export function ListItem({ leading, folder = false, title, badge, code, description, tags = [], note, error, trailing, onClick, control, detail, children, selected, current, expanded, tone }: ItemProps) {
   const windowed = useContext(Windowed);
   const places = useContext(Places);
   const self = useSeekRow<HTMLLIElement>(title);
@@ -95,8 +97,9 @@ export function ListItem({ leading, folder = false, title, badge, code, descript
       meta={meta}
       preview={description}
       trailing={
-        (note || end) && (
+        (note || error || end) && (
           <span className={styles.end}>
+            {error && <ErrorMark why={error} />}
             {note && <span className={styles.note}>{note}</span>}
             {end}
           </span>

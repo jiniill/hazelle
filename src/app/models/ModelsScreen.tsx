@@ -10,7 +10,7 @@ import { findStarred, ROLE_ROWS, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { ACTS, addOf, newOf } from '../common/acts';
-import { DEFAULT_MODELS_FAILED, defaultMark, makeFailed, FEATURE_NAMES, follows, MODEL_ROLES, MODEL_SETTINGS, NO_STARRED, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS } from '../common/words';
+import { DEFAULT_MODELS_FAILED, defaultMark, makeFailed, FEATURE_NAMES, follows, IDLE_MODELS, MODEL_ROLES, MODEL_SETTINGS, NO_STARRED, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -46,7 +46,9 @@ export function ModelsScreen({ back }: { back: Back | null }) {
   const defaultProfile = profiles.find((profile) => profile.id === settings.profile);
   const pinned = prompts.filter((prompt): prompt is StoredPrompt<'conversation'> => ofSort(prompt, 'conversation') && pinsModels(prompt.value));
   const available = availableFeatures(settings);
-  const tasks = overviewOf(store, null).tasks.filter(({ feature }) => available.includes(feature));
+  const overview = overviewOf(store, null);
+  const tasks = overview.tasks.filter(({ feature }) => available.includes(feature));
+  const used = ({ connection, model }: (typeof models)[number]) => overview.used.some((each) => sameModelRef(each, refOf(connection.id, model)));
   const nameOf = (ref: ModelRef) => findStarred(ref, connections)?.name ?? NOT_STARRED;
 
   const side = (
@@ -116,6 +118,26 @@ export function ModelsScreen({ back }: { back: Back | null }) {
     </Button>
   );
 
+  const row = ({ connection, model, choice }: (typeof models)[number]) => {
+    const ref = refOf(connection.id, model);
+    // List only distinguishing roles/nondefault profile; neighbouring profile list already shows values.
+    // Image-only models have no profile.
+    const apart = imageOnly(model) ? '이미지 모델' : choice.kind !== 'profile' ? NO_PROFILE : choice.profile.id === settings.profile ? undefined : choice.profile.value.name;
+    return (
+      <ListItem
+        key={`${connection.id}/${entryKey(model)}`}
+        title={entryName(model)}
+        tags={rolesOf(settings.models, ref).map((role) => ROLE_TAGS[role])}
+        description={connection.value.label}
+        note={apart}
+        onClick={() => navigate({ kind: 'model', ...ref })}
+      />
+    );
+  };
+  // The models 공용 runs something on stand first; the rest under their own title.
+  const inUse = search.found.filter(used);
+  const idle = search.found.filter((each) => !used(each));
+
   return (
     <Screen width="page" top={<NavBar title={PAGES.models} {...backBar(back)} actions={adding} />}>
       <Section title={DEFAULTS}>
@@ -132,24 +154,20 @@ export function ModelsScreen({ back }: { back: Back | null }) {
           {search.none ? (
             <Empty variant="section">{search.none}</Empty>
           ) : models.length > 0 ? (
-            <List label={STARRED} box places>
-              {search.found.map(({ connection, model, choice }) => {
-                const ref = refOf(connection.id, model);
-                // List only distinguishing roles/nondefault profile; neighbouring profile list already shows values.
-                // Image-only models have no profile.
-                const apart = imageOnly(model) ? '이미지 모델' : choice.kind !== 'profile' ? NO_PROFILE : choice.profile.id === settings.profile ? undefined : choice.profile.value.name;
-                return (
-                  <ListItem
-                    key={`${connection.id}/${entryKey(model)}`}
-                    title={entryName(model)}
-                    tags={rolesOf(settings.models, ref).map((role) => ROLE_TAGS[role])}
-                    description={connection.value.label}
-                    note={apart}
-                    onClick={() => navigate({ kind: 'model', ...ref })}
-                  />
-                );
-              })}
-            </List>
+            <>
+              {inUse.length > 0 && (
+                <List label={STARRED} box places>
+                  {inUse.map(row)}
+                </List>
+              )}
+              {idle.length > 0 && (
+                <Section title={IDLE_MODELS} level={3} note={`${idle.length}개`}>
+                  <List label={IDLE_MODELS} box places>
+                    {idle.map(row)}
+                  </List>
+                </Section>
+              )}
+            </>
           ) : (
             <Empty variant="section" action={adding}>{NO_STARRED}</Empty>
           )}

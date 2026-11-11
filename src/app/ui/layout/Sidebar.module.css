@@ -54,6 +54,11 @@
   overflow-y: auto;
 }
 
+/* A row keeps its height when the list is longer than its room: with a least height of its own it would shrink to that under words that wrap. */
+.list > * {
+  flex-shrink: 0;
+}
+
 .page .list {
   overflow-y: visible;
 }

@@ -10,7 +10,7 @@ type Props = {
   // Where it stands, from the outside in, such as a chat's character and its title.
   path: readonly Marked[];
   snippet: Marked | null;
-  note: string;
+  note?: string;
   onClick: () => void;
 };
 

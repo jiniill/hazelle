@@ -40,7 +40,7 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
       />
       <SettingRow
         label="이미지 모델"
-        description={routes.length ? undefined : '이미지를 만들 모델이 없어요'}
+        error={routes.length ? undefined : '이미지를 만들 모델이 없어요'}
         control={
           routes.length ? (
             <ImageModelMenu routes={routes} illustrate={illustrate} card={card} opens={opens} onPick={onChange} />

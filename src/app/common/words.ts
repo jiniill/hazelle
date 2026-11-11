@@ -230,6 +230,8 @@ export const cannotRemove = (because: string) => `${withParticle(because, '이�
 
 export const NOT_STARRED = '추가한 모델에 없음';
 export const STARRED = '추가한 모델';
+// Added models that 공용, or the chat looked at, runs nothing on (runtime/tasks/overview `used`).
+export const IDLE_MODELS = '안 쓰는 모델';
 // 내 구성's list of what fails now.
 export const FINDINGS = '고칠 곳';
 // A role no layer picks, or a 모델 설정 that sets nothing.

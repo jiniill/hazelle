@@ -1,5 +1,6 @@
 import { FileText, FlaskConical, Hand, Layers, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
+import { litIn } from '../../common/search';
 import { useSearch } from '../../common/useSearch';
 import { FEATURE_ICONS } from '../../common/featureIcons';
 import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS, TOOLS, LAB } from '../../common/words';
@@ -7,8 +8,10 @@ import { presetOf } from '../../common/reading';
 import { useDisplay } from '../../display';
 import { FEATURE_LABS, FEATURES, type Feature } from '../../../model/features';
 import { availableFeatures, sharedFeatures } from '../../../runtime/tasks/features';
-import { useAccount, useConnections, useModulesAndPlugins, usePersonas, useProfiles, usePrompts, useSession, useSettings, useStore } from '../../session';
-import { Empty, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen, seekRow } from '../../ui';
+import { overviewOf } from '../../../runtime/tasks/overview';
+import { useAccount, useCaptured, useConnections, useModulesAndPlugins, usePersonas, useProfiles, usePrompts, useSession, useSettings, useStore } from '../../session';
+import { Empty, FoundRow, Icon, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen, seekRow } from '../../ui';
+import { failingOf } from '../../settings/setup';
 import { navigate } from '../router';
 import type { Route, SettingsPage, ToolsPage } from '../routes';
 import { TOOL_PLACES } from '../tools/ToolsNav';
@@ -59,8 +62,14 @@ const TOOLS_SOUGHT: Sought[] = TOOL_PLACES.map((place) => ({ ...place, where: TO
 
 function useSettingsNav() {
   const { admin } = useAccount();
-  const groups: Group[] = [SETUP, AI, doing(availableFeatures(useSettings())), HAVE, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
-  return { groups, holds: useHolds(), search: useSettingsSearch([...groups.flatMap(({ places }): Sought[] => places), ...TOOLS_SOUGHT]) };
+  const available = availableFeatures(useSettings());
+  const groups: Group[] = [SETUP, AI, doing(available), HAVE, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
+  // 대화 and the features that are on in 공용 and cannot run now, each marked in its row with why.
+  const fails: Partial<Record<SettingsPage, string>> = failingOf(
+    useCaptured((store) => overviewOf(store, null), []),
+    available,
+  );
+  return { groups, holds: useHolds(), fails, search: useSettingsSearch([...groups.flatMap(({ places }): Sought[] => places), ...TOOLS_SOUGHT]) };
 }
 
 // What each page holds, at its row's end in the sidebar and the phone list: a feature, whether chats use it.
@@ -107,24 +116,35 @@ function useSettingsSearch(places: Sought[]) {
   return { ...useSearch(hits, '설정 검색', hitTexts, { query, onEnter: open }), open };
 }
 
+// Each hit as where it stands, the words typed lit in the label they were found in.
+function Hits({ search }: { search: ReturnType<typeof useSettingsSearch> }) {
+  return (
+    <List label="설정 검색 결과">
+      {search.found.map((hit) => (
+        <FoundRow key={`${hit.where}/${hit.term}`} face={<Icon icon={hit.place.icon} size="sm" />} path={[...hit.where, litIn(hit.term, search.words)]} snippet={null} onClick={() => search.open(hit)} />
+      ))}
+    </List>
+  );
+}
+
 // Where the library's 설정 lands: 모델 where the sidebar lists them all (design §2), the list on phones.
 export const settingsEntry = (wide: boolean): Route => (wide ? { kind: 'models' } : { kind: 'settings' });
 
 export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 'list'; onClose: () => void }) {
-  const { groups, holds, search } = useSettingsNav();
+  const { groups, holds, fails, search } = useSettingsNav();
   return (
     <LayerSidebar title={SETTINGS} onClose={onClose} search={search.field} seek={search.words ? undefined : current}>
       {search.words ? (
         search.none ? (
           <Empty variant="side">{search.none}</Empty>
         ) : (
-          search.found.map((hit) => <NavRow key={`${hit.where}/${hit.term}`} icon={hit.place.icon} label={hit.term} note={hit.where} onClick={() => search.open(hit)} />)
+          <Hits search={search} />
         )
       ) : (
         groups.map(({ title, places }) => (
           <NavGroup key={title ?? places[0]!.page} title={title}>
             {places.map((place) => (
-              <NavRow key={place.page} icon={place.icon} label={place.label} note={holds[place.page]} current={place.page === current} onClick={() => navigate(place.route, { replace: true })} />
+              <NavRow key={place.page} icon={place.icon} label={place.label} note={holds[place.page]} error={fails[place.page]} current={place.page === current} onClick={() => navigate(place.route, { replace: true })} />
             ))}
           </NavGroup>
         ))
@@ -134,7 +154,7 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
 }
 
 export function SettingsList({ onClose }: { onClose: () => void }) {
-  const { groups, holds, search } = useSettingsNav();
+  const { groups, holds, fails, search } = useSettingsNav();
   return (
     <Screen top={<NavBar title={SETTINGS} close backLabel={`${SETTINGS} 닫기`} onBack={onClose} />}>
       {search.field}
@@ -142,18 +162,14 @@ export function SettingsList({ onClose }: { onClose: () => void }) {
         search.none ? (
           <Empty variant="section">{search.none}</Empty>
         ) : (
-          <List places label="설정 검색 결과">
-            {search.found.map((hit) => (
-              <ListItem key={`${hit.where}/${hit.term}`} title={hit.term} note={hit.where} onClick={() => search.open(hit)} />
-            ))}
-          </List>
+          <Hits search={search} />
         )
       ) : (
         groups.map(({ title, places }) => (
           <NavGroup key={title ?? places[0]!.page} title={title}>
             <List places label={title ?? SETTINGS}>
               {places.map((place) => (
-                <ListItem key={place.page} title={place.label} note={holds[place.page]} onClick={() => navigate(place.route)} />
+                <ListItem key={place.page} title={place.label} note={holds[place.page]} error={fails[place.page]} onClick={() => navigate(place.route)} />
               ))}
             </List>
           </NavGroup>

@@ -1,14 +1,16 @@
-import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Tag } from '../foundation/Tag';
 import { pathOf, type FlowEdge, type FlowKind } from './flow';
 import styles from './FlowMap.module.css';
 import { tokenPx } from '../foundation/tokenPx';
 import { classNames } from '../foundation/classNames';
 import { useNarrowerThan } from '../foundation/useNarrowerThan';
+import { Disclosure } from '../layout/Disclosure';
 
 // lead: what the node stands for, over its title (a role over its model); note: what it holds or runs on.
 export type FlowNode = { id: string; title: string; lead?: string; note?: string; badge?: string; tone?: 'plain' | 'warn' | 'off' };
-export type FlowColumn = { title: string; nodes: FlowNode[] };
+// idle: the words for the column's `off` nodes, which then fold away at its foot under their count.
+export type FlowColumn = { title: string; nodes: FlowNode[]; idle?: string };
 
 type Props = {
   label: string;
@@ -49,8 +51,9 @@ function useCurves(edges: readonly FlowEdge[], drawn: boolean) {
       );
     };
     draw();
+    // The columns too: one that unfolds under a taller one moves its nodes and leaves the map's size as it was.
     const watch = new ResizeObserver(draw);
-    watch.observe(frame);
+    for (const each of [frame, ...frame.children]) watch.observe(each);
     return () => watch.disconnect();
   }, [edges, drawn]);
   const place = (id: string) => (element: HTMLElement | null) => {
@@ -65,7 +68,15 @@ function useCurves(edges: readonly FlowEdge[], drawn: boolean) {
 export function FlowMap({ label, columns, edges, picked, onPick, detail, legend }: Props) {
   // Below --flow-stack the columns stack and each node names where its lines go instead.
   const [root, stacked] = useNarrowerThan<HTMLDivElement>('--flow-stack');
-  const { map, place, curves } = useCurves(edges, !stacked);
+  const [unfolded, setUnfolded] = useState(false);
+  const parts = useMemo(() => columns.map((column) => ({ column, split: column.idle ? ([column.nodes.filter(({ tone }) => tone !== 'off'), column.nodes.filter(({ tone }) => tone === 'off')] as const) : ([column.nodes, []] as const) })), [columns]);
+  // No line is drawn to a node folded away, from the press that folds it.
+  const drawn = useMemo(() => {
+    if (unfolded) return edges;
+    const folded = new Set(parts.flatMap(({ split }) => split[1].map(({ id }) => id)));
+    return edges.filter(({ to }) => !folded.has(to));
+  }, [edges, parts, unfolded]);
+  const { map, place, curves } = useCurves(drawn, !stacked);
   const lit = picked ? pathOf(edges, picked) : null;
   const titles = new Map(columns.flatMap(({ nodes }) => nodes.map(({ id, title, lead }) => [id, lead ?? title])));
   const onward = (id: string) =>
@@ -104,6 +115,13 @@ export function FlowMap({ label, columns, edges, picked, onPick, detail, legend 
     </button>
   );
 
+  const placed = (each: FlowNode) => (
+    <Fragment key={each.id}>
+      {node(each)}
+      {stacked && each.id === picked && opened}
+    </Fragment>
+  );
+
   return (
     <div ref={root} className={styles.frame} role="group" aria-label={label}>
       <div ref={map} className={classNames(styles.map, stacked && styles.stacked)}>
@@ -121,15 +139,15 @@ export function FlowMap({ label, columns, edges, picked, onPick, detail, legend 
             ))}
           </svg>
         )}
-        {columns.map((column) => (
+        {parts.map(({ column, split: [standing, idle] }) => (
           <section key={column.title} className={styles.column} aria-label={column.title}>
             <h4 className={styles.columnTitle}>{column.title}</h4>
-            {column.nodes.map((each) => (
-              <Fragment key={each.id}>
-                {node(each)}
-                {stacked && each.id === picked && opened}
-              </Fragment>
-            ))}
+            {standing.map(placed)}
+            {idle.length > 0 && (
+              <Disclosure label={`${column.idle} ${idle.length}개`} open={unfolded} onOpen={setUnfolded}>
+                {idle.map(placed)}
+              </Disclosure>
+            )}
           </section>
         ))}
       </div>
