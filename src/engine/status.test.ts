@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { StatusChange, StatusDefinition, StatusState } from '../model/status';
-import { nameTaken, parseStatus, statusAsk, statusSent, statusText } from './status';
+import { nameTaken, parseStatus, rostered, statusAsk, statusSent, statusText } from './status';
 
 const main: StatusDefinition = {
   id: 'main',
@@ -135,4 +135,16 @@ test('a name another of its place has is taken as the parser would match it, and
   expect(nameTaken(fields, ' 장소 a ')).toBe(true);
   expect(nameTaken(fields, '장소 A', 'place')).toBe(false);
   expect(nameTaken(fields, '날씨')).toBe(false);
+});
+
+test('a 묶음 that follows a lorebook folder has a record per entry there after its own, by the entry id, and none for a name it has or a blank', () => {
+  const group = { id: 'cast', name: '인물', fields: [], members: [{ id: 'm', name: '미라' }] };
+  const following: StatusDefinition = { id: 'd', name: '관계', writer: 'after', fields: [], groups: [{ ...group, follows: { folder: 'npc' } }, { ...group, id: 'rest' }], logs: [] };
+  const entry = (id: string, name: string, folder: string | null) => ({ id, value: { name, folder } });
+  const lore = [entry('a', '도윤', 'npc'), entry('b', ' 미라 ', 'npc'), entry('c', '', 'npc'), entry('d', '세계관', null), entry('e', '하린', 'npc')];
+  const [cast, rest] = rostered(following, lore).groups;
+  expect(cast!.members).toEqual([{ id: 'm', name: '미라' }, { id: 'a', name: '도윤' }, { id: 'e', name: '하린' }]);
+  expect(rest!.members).toEqual(group.members);
+  const plain = { ...following, groups: [group] };
+  expect(rostered(plain, lore)).toBe(plain);
 });

@@ -1,3 +1,5 @@
+import { without } from './fields';
+
 // 상태 (design §6.1): what a pack or a prompt declares a chat's state to hold, and the changes a reply made to it.
 // Ids are made once and never reused: every value is kept by id, so a rename keeps it.
 type Named = { id: string; name: string };
@@ -22,7 +24,9 @@ export type StatusField = Named &
   );
 
 // 묶음: records that share fields, each field's start being every member's. open: the writer adds and removes members.
-export type StatusGroup = Named & { fields: StatusField[]; members: Named[]; open?: true };
+// follows: a folder of the lorebook of the pack that declares it, by id, whose entries are records too, so an NPC added
+// there has its record; a chat reads them in where it reads its definitions (engine/status rostered).
+export type StatusGroup = Named & { fields: StatusField[]; members: Named[]; open?: true; follows?: { folder: string } };
 // 기록: rows that accumulate, a turn adding to them. A row has no start.
 export type StatusLog = Named & { fields: StatusField[] };
 // after: a model of its own once the reply is saved. with: the conversation model, at its reply's end.
@@ -49,6 +53,17 @@ export type StatusBlock =
   | { kind: 'section'; name: string; blocks: StatusBlock[] }
   | { kind: 'tabs'; tabs: (Named & { blocks: StatusBlock[] })[] };
 export type StatusView = Named & { frame: StatusFrame; mood: StatusMood; blocks: StatusBlock[] };
+
+// 상태창 as the reader left it in a character's chats: folded, pinned at the story's top, and the view picked for a
+// definition, both by id. Absent is open, after the latest reply, in the definition's first view.
+export type StateShown = { folded?: true; pinned?: true; views?: Record<string, string> };
+export type StateShow = { folded: boolean } | { pinned: boolean } | { view: { definition: string; view: string } };
+
+export function stateShownWith(shown: StateShown, change: StateShow): StateShown {
+  if ('view' in change) return { ...shown, views: { ...shown.views, [change.view.definition]: change.view.view } };
+  const [key, on] = 'folded' in change ? (['folded', change.folded] as const) : (['pinned', change.pinned] as const);
+  return on ? { ...shown, [key]: true } : without(shown, key);
+}
 
 export type StatusValues = Record<string, StatusValue>;
 export type StatusMember = Named & { values: StatusValues };

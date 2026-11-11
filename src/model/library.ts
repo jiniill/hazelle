@@ -9,6 +9,7 @@ import type { Translation, TranslateSwitches } from './chat';
 import type { FeatureSwitches } from './features';
 import type { IllustrateSwitches } from './illustration';
 import type { Stored } from './kinds';
+import type { StateShown } from './status';
 import type { ToggleValues } from './prompt';
 
 // loreFolders only group its lorebook on screen.
@@ -41,6 +42,8 @@ export type Character = Mark & {
   // per character, not per script. Absent: not asked yet, and the first write asks.
   cardWrites?: boolean;
   pictures?: Pictures;
+  // 상태창 (design §6.1) in its chats as the reader left it.
+  stateShown?: StateShown;
   // 상태창 지정: the display scripts, by id in card.regex, whose boxes are the character's status window, shown once
   // for the latest message instead of in every one. An id that names no script marks nothing, so a deleted script's
   // 되돌리기 brings its mark back.

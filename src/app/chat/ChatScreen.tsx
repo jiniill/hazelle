@@ -145,7 +145,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
           </SidePeeks>
         }
         backdrop={chat.backdrop && <StoryBackdrop html={chat.backdrop} />}
-        pinned={display.statusPinned && chat.states.length > 0 && <ChatState chat={chat} pinned />}
+        pinned={chat.stateShown.pinned && chat.states.length > 0 && <ChatState chat={chat} pinned />}
         reading={reading}
         hideHeader={display.hideHeader}
         stage={chat.stage && !display.inlineIllustrations}

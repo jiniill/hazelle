@@ -9,6 +9,7 @@ import { readableTexts, type Asset, type Avatar, type Character, type Lore, type
 import { likenessId, type Likeness } from '../../model/likeness';
 import type { ToggleValues } from '../../model/prompt';
 import { ORDER_ID, putBack, rearrange, toFront } from '../../model/order';
+import { stateShownWith, type StateShow } from '../../model/status';
 import type { ApiResult } from '../api';
 import { saveEach, type Files } from '../files/files';
 import { thumbnail } from '../files/picture';
@@ -198,6 +199,10 @@ export function setPictures(store: ObjectStore, id: string, patch: Partial<Pictu
 export function setDecor(store: ObjectStore, id: string, decor: boolean): Promise<ApiResult<Stored<'character'>>> {
   return store.update('character', id, (current) => ({ ...current, decor }));
 }
+
+// 상태창 folded, pinned or switched to another view in one of its chats holds in all of them.
+export const showState = (store: ObjectStore, id: string, change: StateShow): Promise<ApiResult<Stored<'character'>>> =>
+  store.update('character', id, (current) => ({ ...current, stateShown: stateShownWith(current.stateShown ?? {}, change) }));
 
 export function setStatusScript(store: ObjectStore, id: string, script: string, on: boolean): Promise<ApiResult<Stored<'character'>>> {
   return store.update('character', id, (current) => {

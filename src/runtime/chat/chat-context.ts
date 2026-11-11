@@ -6,6 +6,7 @@ import type { Display } from '../../engine/display';
 import type { Card, Pack } from '../../engine/import/types';
 import type { LoreScan } from '../../engine/lorebook/activate';
 import type { Box } from '../../engine/regex/scripts';
+import { rostered } from '../../engine/status';
 import type { ChatScope } from '../../engine/render';
 import type { TranslationRequest } from '../../engine/translate';
 import { keepsPromptOut, shown, statusChanges, type Chat, type Message } from '../../model/chat';
@@ -176,9 +177,12 @@ export type ToggleSource = { from: 'prompt' | 'card' | 'module'; id: string; nam
 export type ChatToggleSet = { declared: Toggle[]; sources: ToggleSource[]; value: (key: string) => string | null };
 
 // The chat's state definitions (design §6.1): its prompt's, then its packs' in their order, as its toggles are read.
-// None while 상태 is off there, or its 실험실 switch: nothing is then told, asked, written or shown.
+// None while 상태 is off there, or its 실험실 switch: nothing is then told, asked, written or shown. A pack's is read
+// with the rosters that follow its lorebook filled in.
 export const statusOf = (store: Reader['store'], chat: Chat, prompt: PromptChoice = chatPrompt(store, chat), packs: ReturnType<typeof packsOf> = packsOf(store, chat)): StatusDefinition[] =>
-  featuresOf(store, chat).status ? chatStatus([prompt.kind === 'prompt' ? prompt.prompt.value.status : undefined, ...packs.map(({ pack }) => pack.status)]) : [];
+  featuresOf(store, chat).status
+    ? chatStatus([prompt.kind === 'prompt' ? prompt.prompt.value.status : undefined, ...packs.map(({ id, pack }) => pack.status && rostered(pack.status, store.children('lore', id)))])
+    : [];
 
 export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoice, packs: ReturnType<typeof packsOf>): ChatToggleSet {
   const character = chat.character === null ? null : (store.get('character', chat.character)?.value ?? null);

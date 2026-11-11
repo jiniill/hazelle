@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { shown, statusChanges, type Chat, type Message } from '../../model/chat';
-import { statusAfter, statusViews, type StatusChange, type StatusDefinition, type StatusOf, type StatusView } from '../../model/status';
+import { stateShownWith, statusAfter, statusViews, type StateShow, type StateShown, type StatusChange, type StatusDefinition, type StatusOf, type StatusView } from '../../model/status';
 import { statusOf } from '../../runtime/chat/chat-context';
 import { setStatusByHand } from '../../runtime/chat/chat-log';
+import { showState } from '../../runtime/library/characters';
 import type { StatusFailure, StatusWriting } from '../../runtime/tasks/status';
 import { describeStatusFailure } from '../common/failure';
-import { useCaptured, useSession, useStatusWriting } from '../session';
+import { useCaptured, useSession, useStatusWriting, useStored } from '../session';
 import { useToast } from '../toast';
 import { useToldFailures } from './useToldFailures';
 
@@ -16,6 +17,8 @@ export type StateMark = { kind: 'writing' } | { kind: 'missed'; failure: StatusF
 // One definition as the chat shows it: its state now, and as it stood before the latest reply (the same while there
 // is no latest reply, so nothing reads as just moved).
 export type ChatStateOf = { definition: StatusDefinition; views: StatusView[]; now: StatusOf; before: StatusOf; mark: StateMark };
+
+const UNSET: StateShown = {};
 
 // Told once per version: a failed write stays marked on the panel.
 const told = new Set<string>();
@@ -47,6 +50,11 @@ export function useChatState(chatId: string, id: string | null, chat: Chat, mess
   const definitions = useCaptured((captured) => statusOf(captured, chat), [chat]);
   const last = messages.at(-1);
   const reply = replyOf(last);
+  // How the 상태창 stand is the character's. A chat with no character has nowhere to keep it: there it holds while
+  // the chat is open.
+  const character = useStored('character', chat.character)?.value;
+  const [loose, setLoose] = useState<StateShown>({});
+  const stateShown = chat.character === null ? loose : (character?.stateShown ?? UNSET);
 
   useToldFailures(writing, chatId, { told, failures: (entry) => [entry.failure], key: (_: StatusFailure, entry) => `${entry.chat}:${entry.message}`, describe: describeStatusFailure });
 
@@ -54,7 +62,13 @@ export function useChatState(chatId: string, id: string | null, chat: Chat, mess
 
   return {
     states,
+    stateShown,
     actions: {
+      // Folded, pinned, or shown in another view.
+      showState: (change: StateShow) => {
+        if (chat.character === null) setLoose((current) => stateShownWith(current, change));
+        else void toast.settled(showState(store, chat.character, change));
+      },
       // 상태 다시 쓰기: the latest reply's state asked again, its text left as it is.
       rewriteState: () => {
         if (id && reply) statusWriter.write(id, reply.id, shown(reply).id, true);

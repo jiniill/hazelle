@@ -1,7 +1,8 @@
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { nameTaken } from '../../engine/status';
+import { nameTaken, rostered, type RosterEntry } from '../../engine/status';
 import { moved, without } from '../../model/fields';
+import type { LoreFolder } from '../../model/library';
 import { statusViews, type StatusDefinition, type StatusField, type StatusFrame, type StatusMood, type StatusView, type StatusWriter } from '../../model/status';
 import { fieldsOf, withFields, withGroup, withLog, withoutGroup, withoutLog, withoutView, withView, type FieldList } from '../../model/statusEdit';
 import { blankStatus, fromType, STATUS_TYPES } from '../../model/statusTypes';
@@ -18,12 +19,15 @@ import { Button, ChoiceGroup, ConfirmDialog, Empty, List, ListItem, Menu, MenuIt
 import { MOVE, STATUS, statusTaken } from './words';
 
 type Change = (next: StatusDefinition) => void;
+// The lorebook of the pack that declares the definition; a prompt has none.
+type Lore = { folders: readonly LoreFolder[]; entries: readonly RosterEntry[] };
 type Props = {
   definition: StatusDefinition | undefined;
   // undefined: the definition removed.
   onChange: (next: StatusDefinition | undefined) => void;
   // Its name as it is typed; unnamed, it is kept on screen and not saved.
   onType: (next: StatusDefinition, valid: boolean) => void;
+  lore?: Lore;
 };
 
 const BLANK = 'blank';
@@ -159,7 +163,7 @@ function Parts({ definition, of, onChange, children }: { definition: StatusDefin
 }
 
 // What only a 묶음 has: whether its writer adds records, and the ones it starts with. A record keeps its id by its name.
-function Members({ definition, id, onChange }: { definition: StatusDefinition; id: string; onChange: Change }) {
+function Members({ definition, id, folders, onChange }: { definition: StatusDefinition; id: string; folders?: readonly LoreFolder[]; onChange: Change }) {
   const group = definition.groups.find((each) => each.id === id)!;
   const write = (next: typeof group) => onChange({ ...definition, groups: definition.groups.map((each) => (each.id === id ? next : each)) });
   const named = (names: string[]) =>
@@ -171,6 +175,22 @@ function Members({ definition, id, onChange }: { definition: StatusDefinition; i
     <SettingGroup label={group.name}>
       <SettingRow label={STATUS_WORDS.open} help={STATUS_WORDS.openNote} control={<Switch label={STATUS_WORDS.open} checked={group.open === true} onChange={(on) => write(on ? { ...group, open: true } : without(group, 'open'))} />} />
       <SettingRow label={STATUS_WORDS.members} wide control={<PhraseField label={STATUS_WORDS.members} phrases={group.members.map(({ name }) => name)} onChange={(names) => write({ ...group, members: named(names) })} />} />
+      {folders && (
+        <SettingRow
+          label={STATUS_WORDS.follow}
+          help={STATUS_WORDS.followNote}
+          control={
+            <ChoiceGroup
+              label={STATUS_WORDS.follow}
+              layout="menu"
+              options={[{ value: '', label: STATUS_WORDS.followNone }, ...folders.map(({ id: folder, name }) => ({ value: folder, label: name }))]}
+              value={group.follows?.folder ?? ''}
+              empty={STATUS_WORDS.followGone}
+              onChange={(folder) => write(folder ? { ...group, follows: { folder } } : without(group, 'follows'))}
+            />
+          }
+        />
+      )}
     </SettingGroup>
   );
 }
@@ -232,7 +252,7 @@ function Preview({ definition }: { definition: StatusDefinition }) {
 }
 
 // 상태 정의 (design §6.1 part 1): one editor wherever a definition is declared, a card, a module or a prompt.
-export function StatusEditor({ definition, onChange, onType }: Props) {
+export function StatusEditor({ definition, onChange, onType, lore }: Props) {
   const [removing, setRemoving] = useState(false);
   if (!definition) return <Start onStart={onChange} />;
   const unnamed = !definition.name.trim();
@@ -259,11 +279,11 @@ export function StatusEditor({ definition, onChange, onType }: Props) {
         <Fields definition={definition} list={{ of: 'definition' }} onChange={onChange} />
       </Section>
       <Parts definition={definition} of="group" onChange={onChange}>
-        {(id) => <Members definition={definition} id={id} onChange={onChange} />}
+        {(id) => <Members definition={definition} id={id} folders={lore?.folders} onChange={onChange} />}
       </Parts>
       <Parts definition={definition} of="log" onChange={onChange} />
       <Views definition={definition} onChange={onChange} />
-      <Preview definition={definition} />
+      <Preview definition={lore ? rostered(definition, lore.entries) : definition} />
       {removing && (
         <ConfirmDialog title={STATUS_WORDS.removeAsk} confirm={ACTS.remove.label} icon={ACTS.remove.icon} onConfirm={() => {
             setRemoving(false);

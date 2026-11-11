@@ -150,7 +150,7 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
   if (pane === 'status' && statusLab)
     return (
       <Screen width="form" top={<NavBar title={moduleName(name)} {...backBar(back)} />}>
-        <StatusPane owner={{ kind: 'module', id }} definition={value.status} />
+        <StatusPane owner={{ kind: 'module', id }} definition={value.status} folders={value.loreFolders} />
       </Screen>
     );
 

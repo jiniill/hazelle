@@ -350,6 +350,9 @@
   --story-picture-peek: 40vh;
   /* What a pinned 상태창 takes of the story's height at most, scrolling inside itself past it. */
   --story-pinned-most: 45dvh;
+  /* The blocks of a 상태창 with a head, scrolling inside themselves past it: a pinned one's share less its head and
+     padding, so one pinned alone scrolls in one place. */
+  --status-blocks-most: calc(var(--story-pinned-most) - var(--control-chip) - var(--space-32) - var(--space-16));
   --story-picture-widest: 100%;
   --scene-board-max-height: 40vh;
   --story-picture-wide: 100%;
