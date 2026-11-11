@@ -126,6 +126,10 @@ function shownBlocks(definition: StatusDefinition, blocks: readonly StatusBlock[
   });
 }
 
+// The 대표 fields of a definition, which a folded panel keeps.
+export const shownMain = (definition: StatusDefinition, now: StatusOf, before?: StatusOf): ShownField[] =>
+  definition.fields.filter(({ main }) => main).map((field) => shownField(field, now.values, before?.values));
+
 // A view of a definition over its state. A block that names what is no longer declared, or has nothing to show (a 묶음
 // with no record, a 기록 the latest reply added no row to), is left out; a 틀 or a 분위기 this build does not know
 // is drawn as a card in the app's colours.

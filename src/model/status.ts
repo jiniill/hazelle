@@ -115,6 +115,16 @@ const starts = (fields: readonly StatusField[]): StatusValues => heldAll(fields,
 // What a number that was never set moves from.
 const floor = (field: StatusField) => (field.kind === 'gauge' ? field.min : 0);
 
+// The field a place names as the definition declares it now, with the values it stands among. undefined once the
+// field, its 묶음 or its record is gone.
+export function statusAt(definition: StatusDefinition, of: StatusOf, { field: named, member }: Pick<StatusPlace, 'field' | 'member'>): { field: StatusField; values: StatusValues; member?: StatusMember } | undefined {
+  const record = member && of.groups[member.group]?.find(({ id }) => id === member.id);
+  const fields = member ? definition.groups.find(({ id }) => id === member.group)?.fields : definition.fields;
+  const field = fields?.find(({ id }) => id === named);
+  if (!field || (member && !record)) return undefined;
+  return { field, values: (record ?? of).values, ...(record && { member: record }) };
+}
+
 // The state after the changes, in order, over each definition's starts. A change naming what is no longer declared, or
 // holding a value its field no longer takes, changes nothing: no stored change is ever rewritten for a definition's edit.
 export function statusAfter(definitions: readonly StatusDefinition[], changes: Iterable<StatusChange>): StatusState {
@@ -146,10 +156,9 @@ export function statusAfter(definitions: readonly StatusDefinition[], changes: I
       else if (!members.some(({ id }) => id === change.member.id)) members.push({ ...change.member, values: starts(group.fields) });
       continue;
     }
-    const group = change.member && definition.groups.find(({ id }) => id === change.member!.group);
-    const values = change.member ? of.groups[change.member.group]?.find(({ id }) => id === change.member!.id)?.values : of.values;
-    const field = (group ? group.fields : change.member ? [] : definition.fields).find(({ id }) => id === change.field);
-    if (!field || !values) continue;
+    const at = statusAt(definition, of, change);
+    if (!at) continue;
+    const { field, values } = at;
     const now = values[field.id];
     const next = change.kind === 'set' ? held(field, change.value) : field.kind === 'gauge' || field.kind === 'number' ? held(field, (typeof now === 'number' ? now : floor(field)) + change.by) : undefined;
     if (next !== undefined) values[field.id] = next;

@@ -8,6 +8,7 @@ import { navigate } from '../shell/router';
 import { Callout, Divider, Empty, Progress, Text, TimePinContext, Viewport } from '../ui';
 import { useChatEdits } from './ChatEdits';
 import { ChatMessage } from './ChatMessage';
+import { ChatState } from './ChatState';
 import { messageRow } from './messageRow';
 import type { OpenChat } from './useChat';
 
@@ -57,5 +58,11 @@ export function ChatLog({ chat }: { chat: OpenChat }) {
         />}
       </Fragment>;
     }}</Viewport></TimePinContext>}
+    {chat.states.length > 0 && <ChatState
+      states={chat.states}
+      onRewrite={chat.id && !chat.busy ? actions.rewriteState : undefined}
+      onEdit={chat.id && !chat.busy ? actions.editState : undefined}
+      onChoice={actions.choose}
+    />}
   </>;
 }

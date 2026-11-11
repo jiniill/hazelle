@@ -50,3 +50,29 @@ it('draws records as cards, rows or a table, a 기록 as rows, and choices as bu
   expect(draw('card', choices, () => {})).not.toContain('disabled');
   expect(draw('card', choices)).not.toContain('1,240 G');
 });
+
+it('folds to its 대표 fields on one line under a head that keeps the note and the fold, the caller\'s buttons only while open', () => {
+  const head = (open: boolean) => ({ title: '기본', note: { text: '이번 턴 갱신 안 됨', warn: true }, actions: <button type="button">다시</button>, open, onOpen: () => {}, labels: { open: '펼치기', close: '접기' }, summary: [hp] });
+  const drawn = (open: boolean) => renderToStaticMarkup(<StatusPanel name="기본" frame="hud" mood="neon" theme="light" blocks={fields(gold)} head={head(open)} />);
+  expect(drawn(true)).toMatch(/<h3[^>]*>기본<\/h3>.*이번 턴 갱신 안 됨.*다시.*aria-label="접기".*1,240 G/);
+  expect(drawn(true)).toContain('aria-expanded="true"');
+  const folded = drawn(false);
+  expect(folded).toMatch(/HP<\/span>.*aria-valuenow="70".*이번 턴 갱신 안 됨.*aria-label="펼치기"/);
+  expect(folded).not.toContain('1,240 G');
+  expect(folded).not.toContain('다시');
+  // A fixed 분위기 stands in its own theme, whatever the reader's.
+  expect(folded).toContain('data-theme="dark"');
+});
+
+it('lays a press over each value that is edited by hand, a record\'s too, and none over a count or a folded line', () => {
+  const edit = { label: (name: string) => `${name} 수정`, onEdit: () => {} };
+  const mood: ShownField = { id: 'mood', name: '기분', kind: 'stage', value: '들뜸', labels: ['들뜸', '심통'] };
+  const cast = (look: 'cards' | 'table'): ShownBlock => ({ block: 'records', id: 'cast', name: '인물', look, columns: [{ id: 'mood', name: '기분' }], members: [{ id: 'seoha', name: '서하', fields: [mood] }] });
+  const blocks: ShownBlock[] = [{ block: 'head', id: 'h', items: [{ id: 'place', name: '장소', value: '옥상' }] }, ...fields(hp), cast('cards'), cast('table')];
+  const presses = (html: string) => [...html.matchAll(/aria-label="([^"]+) 수정"/g)].map(([, name]) => name);
+  expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" theme="dark" blocks={blocks} edit={edit} />))).toEqual(['장소', 'HP', '기분', '기분']);
+  expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="line" mood="paper" theme="dark" blocks={blocks} edit={edit} />))).toEqual(['장소', 'HP']);
+  expect(presses(draw('card', blocks))).toEqual([]);
+  const folded = { title: '기본', open: false, onOpen: () => {}, labels: { open: '펼치기', close: '접기' }, summary: [hp] };
+  expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" theme="dark" blocks={blocks} edit={edit} head={folded} />))).toEqual([]);
+});
