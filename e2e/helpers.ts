@@ -253,6 +253,28 @@ export async function enter(page: Page, password = E2E_PASSWORD): Promise<boolea
   return true;
 }
 
+// The fake provider's model in each of the roles: connected first on an installation enter() has just set up, which
+// has no connection yet.
+export async function assignFake(page: Page, fresh: boolean, roles: readonly string[]) {
+  if (fresh) {
+    await page.goto('/connections/new');
+    await page.getByRole('button', { name: /^직접 연결/ }).click();
+    await page.getByLabel('주소', { exact: true }).fill(FAKE_ADDRESS);
+    await page.getByRole('button', { name: 'OpenAI 호환', exact: true }).click();
+    await page.getByRole('button', { name: '모델 선택', exact: true }).click();
+    await page.getByRole('button', { name: `${FAKE_MODEL} 추가`, exact: true }).click();
+    await settingsPage(page, '모델');
+  } else await page.goto('/models');
+  for (const role of roles) {
+    const picker = page.getByRole('button', { name: new RegExp(`^${role} · `) });
+    if ((await picker.innerText()).includes(FAKE_MODEL)) continue;
+    await picker.click();
+    const saved = saving(page);
+    await page.getByRole('menuitemradio', { name: new RegExp(`^${FAKE_MODEL}`) }).first().click();
+    await saved;
+  }
+}
+
 // 봇 가져오기 sits in the rail's + menu on wide screens.
 export async function pickBot(page: Page) {
   await page.getByRole('button', { name: '추가', exact: true }).click();

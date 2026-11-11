@@ -19,7 +19,7 @@ export function StatusChat({ name, threads, onReply }: Props) {
     return (
       <section className={styles.chat} aria-label={open.name}>
         <div className={styles.bar}>
-          <IconButton icon={ChevronLeft} size="sm" label={name} onClick={() => setPicked(null)} />
+          <IconButton icon={ChevronLeft} size="sm" label={`${name} 목록`} onClick={() => setPicked(null)} />
           <h4 className={styles.with}>{open.name}</h4>
         </div>
         <ol className={styles.messages}>
