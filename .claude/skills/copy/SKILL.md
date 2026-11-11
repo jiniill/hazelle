@@ -12,7 +12,7 @@ Every word a user reads (labels, buttons, notices, errors, empty states, ⓘ hel
 Read-only, from the repo root, flags before `-p`:
 
 ```
-agy --mode plan --model gemini-4-argon-high --settings '{"permissions":{"allow":["command(git)"]}}' -p "<brief>"
+agy --mode plan --model gemini-4-carbon-high --settings '{"permissions":{"allow":["command(git)"]}}' -p "<brief>"
 ```
 
 `--mode plan` keeps it from editing. Print mode cannot ask for a permission, so without the `--settings` allow-rule its first `git diff` or `git log` is denied and it exits with "no output produced"; `command(git)` is the one syntax that works (`command(git *)` and `command(git:*)` do not), and it covers a plain `git …` only: say in the brief to run one git command at a time, since `git log … && echo …` or a pipe is denied too. Tell it to answer in full in the one response: left to itself it may close with "확인하겠습니다" and nothing else. Afterwards `git status` must show nothing new; if it does, discard what agy wrote. Brief it with the goal, the readers and where to look, never with a Claude draft of the wording: it copies a draft.
