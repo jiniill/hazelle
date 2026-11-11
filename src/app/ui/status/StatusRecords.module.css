@@ -59,6 +59,20 @@
   overflow-wrap: anywhere;
 }
 
+/* A record's name that opens its page. */
+.open {
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--status-line);
+  text-underline-offset: var(--space-4);
+  transition: color var(--motion-respond);
+}
+
+.open:hover {
+  color: var(--status-accent);
+}
+
 .tag {
   position: relative;
   padding: var(--space-2) var(--space-8);

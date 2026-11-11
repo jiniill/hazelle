@@ -19,6 +19,7 @@ import { ChatDialogs, ChatHeaderActions, ChatHeading } from './ChatHeader';
 import { ChatInfo } from './ChatInfo';
 import { ChatLog } from './ChatLog';
 import { ChatState } from './ChatState';
+import { ChatStateDetail } from './ChatStateDetail';
 import { ChatMemory } from './ChatMemory';
 import { ChatMemoryRecord } from './ChatMemoryRecord';
 import { ChatSearch } from './ChatSearch';
@@ -115,6 +116,8 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
             id && <ChatLineage current={id} shelf={shelf} onClose={actions.closePanel} />
           ) : panel?.kind === 'autopilot' ? (
             <ChatAutopilot autopilot={autopilot} busy={busy} onClose={actions.closePanel} />
+          ) : panel?.kind === 'state' ? (
+            <ChatStateDetail chat={chat} onClose={actions.closePanel} />
           ) : panel?.kind === 'lore' ? (
             id && (
               <Suspense fallback={null}>

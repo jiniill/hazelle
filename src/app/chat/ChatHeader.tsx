@@ -1,12 +1,12 @@
 import { FEATURE_ICONS } from '../common/featureIcons';
 import { toolMenu } from './toolMenu';
-import { BookKey, BookOpen, Bookmark, ClipboardList, FolderInput, GitGraph, Keyboard, Package, PlaneTakeoff, ScanSearch, Search, SlidersHorizontal, SquarePen, ToggleRight, UsersRound } from 'lucide-react';
+import { BookKey, BookOpen, Bookmark, ClipboardList, FolderInput, GitGraph, Keyboard, Package, PanelRight, PlaneTakeoff, ScanSearch, Search, SlidersHorizontal, SquarePen, ToggleRight, UsersRound } from 'lucide-react';
 import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
 import type { Writes } from '../../model/chat';
 import { pinnedBy } from '../../runtime/models/assignment';
-import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, ONBOARDING, promptName } from '../common/words';
+import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, ONBOARDING, promptName, STATUS_DETAIL } from '../common/words';
 import { useRemembering, useSession, useToolFrames } from '../session';
 import { navigate } from '../shell/router';
 import { runShortcut } from '../shortcuts';
@@ -95,6 +95,7 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
         {item && features.memory && <MenuItem icon={FEATURE_ICONS.memory} label={FEATURE_NAMES.memory} description={failed ? '정리 실패' : indexing ? `검색 준비 ${indexing.done}/${indexing.total}` : undefined} onClick={toggleMemory} />}
         <MenuItem icon={ToggleRight} label={FEATURES_TITLE} onClick={openFeatures.onClick} />
         {item && <MenuItem icon={BookKey} label={CHAT_LORE} onClick={actions.lore} />}
+        {chat.states.length > 0 && <MenuItem icon={PanelRight} label={STATUS_DETAIL} onClick={actions.stateDetail} />}
         <MenuItem icon={ScanSearch} label="점검" onClick={() => actions.openInspect('request')} />
         {item && <MenuItem icon={PlaneTakeoff} label="오토파일럿" onClick={actions.autopilot} />}
         {tools.length > 0 && <>

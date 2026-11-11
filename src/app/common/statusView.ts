@@ -1,4 +1,4 @@
-import type { StatusBlock, StatusDefinition, StatusField, StatusMember, StatusOf, StatusValue, StatusValues, StatusView } from '../../model/status';
+import type { StatusBlock, StatusDefinition, StatusField, StatusMember, StatusOf, StatusPlace, StatusStep, StatusValue, StatusValues, StatusView } from '../../model/status';
 import { STATUS_FRAME, STATUS_MOOD, type ShownBlock, type ShownField, type ShownRecord, type StatusDelta, type StatusFrame, type StatusMood } from '../ui';
 
 // 상태's views as the kit draws them (design §6.1 part 4): the one place a definition and a state become what is shown,
@@ -129,6 +129,49 @@ function shownBlocks(definition: StatusDefinition, blocks: readonly StatusBlock[
 // The 대표 fields of a definition, which a folded panel keeps.
 export const shownMain = (definition: StatusDefinition, now: StatusOf, before?: StatusOf): ShownField[] =>
   definition.fields.filter(({ main }) => main).map((field) => shownField(field, now.values, before?.values));
+
+// The whole state of a definition, whatever its views show (상세): every field, each 묶음 a line a record, each 기록
+// with all its rows.
+export const shownWhole = (definition: StatusDefinition, now: StatusOf, before?: StatusOf): ShownBlock[] =>
+  shownBlocks(
+    definition,
+    [
+      ...definition.fields.map(({ id }): StatusBlock => ({ kind: 'field', field: id })),
+      ...definition.groups.map(({ id }): StatusBlock => ({ kind: 'records', group: id, look: 'rows' })),
+      ...definition.logs.map(({ id }): StatusBlock => ({ kind: 'log', log: id, all: true })),
+    ],
+    now,
+    before,
+    'whole.',
+  );
+
+type At = Partial<Pick<StatusPlace, 'field' | 'member'>>;
+const fieldsAt = (definition: StatusDefinition, { member }: At) => (member ? definition.groups.find(({ id }) => id === member.group)?.fields : definition.fields);
+
+// One record as its card, or one field alone (a record's inside its record's card): a page of its own in 상세. Nothing
+// once it is gone.
+export function shownAt(definition: StatusDefinition, now: StatusOf, before: StatusOf | undefined, { field, member }: At): ShownBlock[] {
+  if (!member) {
+    const own = definition.fields.find(({ id }) => id === field);
+    return own ? [{ block: 'field', field: { ...shownField(own, now.values, before?.values), main: true } }] : [];
+  }
+  return shownBlocks(definition, [{ kind: 'records', group: member.group, look: 'cards' }], now, before, 'at.').map((block) =>
+    block.block === 'records' ? { ...block, members: block.members.filter(({ id }) => id === member.id).map((each) => ({ ...each, fields: each.fields.filter(({ id }) => field === undefined || id === field) })) } : block,
+  ).filter((block) => block.block !== 'records' || block.members.length > 0);
+}
+
+// A place's course as words, oldest first: each value it took, with what a number moved by from the one before. key
+// null is where it started.
+export type ShownStep = { key: string | null; value: string; delta?: StatusDelta };
+export function shownCourse(definition: StatusDefinition, steps: readonly StatusStep<string>[], place: At): ShownStep[] {
+  const field = fieldsAt(definition, place)?.find(({ id }) => id === place.field);
+  if (!field) return [];
+  return steps.map(({ key, value }, index) => {
+    const was = steps[index - 1]?.value;
+    const delta = typeof value === 'number' && typeof was === 'number' ? { text: signed(value - was), down: value < was } : undefined;
+    return { key, value: words(field, value), ...(delta && { delta }) };
+  });
+}
 
 // A view of a definition over its state. A block that names what is no longer declared, or has nothing to show (a 묶음
 // with no record, a 기록 the latest reply added no row to), is left out; a 틀 or a 분위기 this build does not know

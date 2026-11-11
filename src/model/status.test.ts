@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { statusAfter, statusViews, type StatusChange, type StatusDefinition, type StatusView } from './status';
+import { statusAfter, statusCourse, statusViews, type StatusChange, type StatusDefinition, type StatusView } from './status';
 
 const definition: StatusDefinition = {
   id: 'd',
@@ -97,4 +97,18 @@ test('a definition with no view of its own is shown whole in one: its fields, th
   ]);
   const own: StatusView = { id: 'v', name: '한 줄', frame: 'line', mood: 'paper', blocks: [{ kind: 'field', field: 'love' }] };
   expect(statusViews({ ...definition, views: [own] })).toEqual([own]);
+});
+
+test('a course is where a place started and each step after which it stood differently, a record only while it is there', () => {
+  const steps = [
+    { key: 'a', changes: [{ ...at, kind: 'move', field: 'love', by: 5 }] as StatusChange[] },
+    { key: 'b', changes: [] },
+    { key: 'c', changes: [{ ...at, kind: 'set', field: 'gold', value: 3 }] as StatusChange[] },
+    { key: 'd', changes: [{ ...at, kind: 'set', field: 'love', value: 55 }, { ...at, kind: 'join', group: 'cast', member: { id: 'jun', name: '준' } }] as StatusChange[] },
+    { key: 'e', changes: [{ ...at, kind: 'move', field: 'love', by: -9, member: { group: 'cast', id: 'jun' } }, { ...at, kind: 'move', field: 'love', by: -5 }] as StatusChange[] },
+    { key: 'f', changes: [{ ...at, kind: 'leave', group: 'cast', member: 'jun' }] as StatusChange[] },
+  ];
+  expect(statusCourse([definition], steps, { ...at, field: 'love' })).toEqual([{ key: null, value: 50 }, { key: 'a', value: 55 }, { key: 'e', value: 50 }]);
+  expect(statusCourse([definition], steps, { ...at, field: 'love', member: { group: 'cast', id: 'jun' } })).toEqual([{ key: null, value: undefined }, { key: 'd', value: 0 }, { key: 'e', value: -9 }, { key: 'f', value: undefined }]);
+  expect(statusCourse([definition], steps, { definition: 'gone', field: 'love' })).toEqual([]);
 });

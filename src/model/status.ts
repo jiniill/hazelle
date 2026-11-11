@@ -125,10 +125,9 @@ export function statusAt(definition: StatusDefinition, of: StatusOf, { field: na
   return { field, values: (record ?? of).values, ...(record && { member: record }) };
 }
 
-// The state after the changes, in order, over each definition's starts. A change naming what is no longer declared, or
-// holding a value its field no longer takes, changes nothing: no stored change is ever rewritten for a definition's edit.
-export function statusAfter(definitions: readonly StatusDefinition[], changes: Iterable<StatusChange>): StatusState {
-  const state: StatusState = Object.fromEntries(
+// Each definition's state before any change: its starts, its declared records, no rows.
+const started = (definitions: readonly StatusDefinition[]): StatusState =>
+  Object.fromEntries(
     definitions.map(({ id, fields, groups, logs }) => [
       id,
       {
@@ -138,6 +137,10 @@ export function statusAfter(definitions: readonly StatusDefinition[], changes: I
       },
     ]),
   );
+
+// The changes, in order, made on the state. A change naming what is no longer declared, or holding a value its field
+// no longer takes, changes nothing: no stored change is ever rewritten for a definition's edit.
+function apply(definitions: readonly StatusDefinition[], state: StatusState, changes: Iterable<StatusChange>): void {
   for (const change of changes) {
     const definition = definitions.find(({ id }) => id === change.definition);
     const of = state[change.definition];
@@ -163,5 +166,35 @@ export function statusAfter(definitions: readonly StatusDefinition[], changes: I
     const next = change.kind === 'set' ? held(field, change.value) : field.kind === 'gauge' || field.kind === 'number' ? held(field, (typeof now === 'number' ? now : floor(field)) + change.by) : undefined;
     if (next !== undefined) values[field.id] = next;
   }
+}
+
+// The state after the changes, in order, over each definition's starts.
+export function statusAfter(definitions: readonly StatusDefinition[], changes: Iterable<StatusChange>): StatusState {
+  const state = started(definitions);
+  apply(definitions, state, changes);
   return state;
+}
+
+// A place's value along steps of changes, oldest first (a chat's shown versions): where it started (key null), then
+// each step after which it stood differently. value is undefined where nothing is set, or the place's record is not
+// there (not joined yet, or gone).
+export type StatusStep<K> = { key: K | null; value: StatusValue | undefined };
+export function statusCourse<K>(definitions: readonly StatusDefinition[], steps: Iterable<{ key: K; changes: readonly StatusChange[] }>, place: StatusPlace): StatusStep<K>[] {
+  const definition = definitions.find(({ id }) => id === place.definition);
+  if (!definition) return [];
+  const state = started(definitions);
+  const read = () => {
+    const at = statusAt(definition, state[definition.id]!, place);
+    return at?.values[at.field.id];
+  };
+  const same = (a: StatusValue | undefined, b: StatusValue | undefined) => a === b || (Array.isArray(a) && Array.isArray(b) && JSON.stringify(a) === JSON.stringify(b));
+  const course: StatusStep<K>[] = [{ key: null, value: read() }];
+  for (const { key, changes } of steps) {
+    if (!changes.length) continue;
+    apply(definitions, state, changes);
+    const value = read();
+    // A list is rewritten whole by each write, so read() hands back a new one: it is kept as it stood.
+    if (!same(course.at(-1)!.value, value)) course.push({ key, value: Array.isArray(value) ? [...value] : value });
+  }
+  return course;
 }

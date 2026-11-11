@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import { statusAfter, type StatusChange, type StatusDefinition, type StatusView } from '../../model/status';
-import { shownView } from './statusView';
+import { statusAfter, statusCourse, type StatusChange, type StatusDefinition, type StatusView } from '../../model/status';
+import { shownAt, shownCourse, shownView, shownWhole } from './statusView';
 
 const definition: StatusDefinition = {
   id: 'd',
@@ -81,4 +81,29 @@ test('a 틀 or a 분위기 this build does not know is drawn as a card in the ap
   const odd = { ...view([]), frame: 'board', mood: 'ocean' } as unknown as StatusView;
   expect(shownView(definition, odd, now)).toMatchObject({ frame: 'card', mood: 'hazelle' });
   expect(shownView(definition, view([]), now)).toMatchObject({ frame: 'hud', mood: 'neon' });
+});
+
+test('the whole state is every field, each 묶음 a line a record and every row of each 기록, whatever the views show', () => {
+  const whole = shownWhole(definition, now, before);
+  expect(whole.map((block) => (block.block === 'field' ? block.field.id : block.block))).toEqual(['date', 'hp', 'karma', 'gold', 'mood', 'todo', 'next', 'note', 'records', 'log']);
+  expect(whole.at(-2)).toMatchObject({ look: 'rows', members: [{ id: 'seoha' }] });
+  expect(whole.at(-1)).toMatchObject({ rows: [['달리기', '9'], ['방패 막기', '17']] });
+});
+
+test('a page of 상세 is one record as its card or one field alone, and nothing once it is gone', () => {
+  const seoha = { group: 'cast', id: 'seoha' };
+  expect(shownAt(definition, now, before, { field: 'gold' })).toEqual([{ block: 'field', field: { id: 'gold', name: '소지금', main: true, kind: 'number', value: '1,440 G', delta: { text: '+200', down: false } } }]);
+  expect(shownAt(definition, now, before, { member: seoha })).toMatchObject([{ block: 'records', look: 'cards', members: [{ id: 'seoha', fields: [{ id: 'love', value: '75' }] }] }]);
+  expect(shownAt(definition, now, before, { member: seoha, field: 'none' })).toMatchObject([{ members: [{ id: 'seoha', fields: [] }] }]);
+  expect(shownAt(definition, now, before, { member: { group: 'cast', id: 'gone' } })).toEqual([]);
+  expect(shownAt(definition, now, before, { field: 'gone' })).toEqual([]);
+});
+
+test('a course is written as words, a number with what it moved by from the step before', () => {
+  const steps = [{ key: 'a', changes: earlier }, { key: 'b', changes: latest }, { key: 'c', changes: [{ ...at, kind: 'move', field: 'gold', by: -40 }] as StatusChange[] }];
+  const course = (place: { field: string; member?: { group: string; id: string } }) => shownCourse(definition, statusCourse([definition], steps, { ...at, ...place }), place);
+  expect(course({ field: 'gold' })).toEqual([{ key: null, value: '1,240 G' }, { key: 'b', value: '1,440 G', delta: { text: '+200', down: false } }, { key: 'c', value: '1,400 G', delta: { text: '-40', down: true } }]);
+  expect(course({ field: 'love', member: { group: 'cast', id: 'seoha' } })).toEqual([{ key: null, value: '72' }, { key: 'b', value: '75', delta: { text: '+3', down: false } }]);
+  expect(course({ field: 'next' })).toEqual([{ key: null, value: '' }, { key: 'b', value: '같이 하교한다' }]);
+  expect(course({ field: 'gone' })).toEqual([]);
 });
