@@ -131,6 +131,28 @@ Moving the hosted machine's existing archives, as root on it:
    `snapshots/hazelle-files/...` and the generation's `copied`. Then run the restore drill (`scripts/machine-restore.sh
    drill`, as `scripts/destroy.sh` does) to prove the text restores from the backup bucket alone.
 
+## Post pictures
+
+The pictures in posts written outside the app (the arca.live posts in the private docs, `posts/`) are served from the
+public R2 bucket `hazelle-img` at `https://img.hazelle.app/<key>`, the bucket's custom domain. Its `r2.dev` address is
+off and nothing lists a prefix, so a picture opens only by its whole address. Like the other buckets it is outside
+Terraform: a posted address has to outlive the machine and `scripts/destroy.sh`. R2 serves a custom domain only
+through Cloudflare's proxy, so unlike the apex (Edge) Korean visitors on KT reach it through LAX; a picture is cached
+there for a year.
+
+It was made with the Cloudflare API: `POST accounts/<account id>/r2/buckets` with `{"name":"hazelle-img"}`, then `POST
+accounts/<account id>/r2/buckets/hazelle-img/domains/custom` with `{"domain":"img.hazelle.app","zoneId":"<zone
+id>","enabled":true,"minTLS":"1.2"}`, which also adds the proxied DNS record. The address answers 403 for the minute
+or two the domain's certificate takes.
+
+A post's pictures go under `posts/<tag>/` and are never replaced under the same name, since the year-long cache keeps
+the old bytes:
+
+```
+wrangler r2 object put hazelle-img/posts/<tag>/<file>.png --file <file>.png --content-type image/png \
+  --cache-control "public, max-age=31536000, immutable" --remote
+```
+
 ## Edge
 
 Korean visitors on KT reach a proxied record through Cloudflare's LAX location (measured 2026-10-11: health 1.5 s median,
