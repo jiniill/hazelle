@@ -83,6 +83,9 @@ export function statusSent(definitions: readonly StatusDefinition[], state: Stat
 }
 
 const BLOCK = /<status>([\s\S]*?)(<\/status>|$)/giu;
+// A reply's text with no block in it, one still being written included: what is shown of a reply while it streams.
+export const withoutStatus = (text: string) => text.replace(BLOCK, '').trimEnd();
+
 const HEADING = /^(#{1,3})\s*(.*)$/u;
 const ITEM = /^[-*]\s+(.*)$/u;
 const DONE = /^\[([ xX])\]\s*(.*)$/u;

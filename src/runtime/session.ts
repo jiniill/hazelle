@@ -17,6 +17,7 @@ import { Files } from './files/files';
 import { Illustrator } from './tasks/illustrate';
 import { Likenesses } from './tasks/likeness';
 import { Commentator } from './tasks/mascot';
+import { cutStatus } from './tasks/status';
 import { Polisher } from './tasks/agents';
 import type { Briefs } from './tasks/preread';
 import type { Additions } from './chat/additional';
@@ -186,7 +187,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     log,
     costs,
     tokens,
-    (chat, reply) => scriptTurns.ending(chat, reply),
+    (chat, reply) => scriptTurns.ending(chat, cutStatus(store, chat, reply)),
     // Keep the chat leased past Talk: onOutput can edit the reply, and continuations/translations must read that result.
     (chat, reply) => {
       const lease = store.retainChat(chat);
