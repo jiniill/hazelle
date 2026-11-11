@@ -22,7 +22,7 @@ const KEEPS = {
   any: { accept: 'image/*,video/mp4,video/webm', refused: '이미지나 영상(MP4, WebM) 파일이 아니거나 용량이 너무 커요.' },
   picture: { accept: 'image/*', refused: '이미지 파일이 아니거나 용량이 너무 커요.' },
 };
-type Shelf = 'asset' | AssetUse;
+export type Shelf = 'asset' | AssetUse;
 // A character's assets and backgrounds, each with what it holds and the tag that shows one, if any.
 // hint: under the name field of its rename dialog.
 const SHELVES: Record<Shelf, { label: string; keeps: (typeof KEEPS)[keyof typeof KEEPS]; help: string; hint?: string; tag: ((asset: Stored<'asset'>['value']) => string) | null }> = {
@@ -35,10 +35,37 @@ const useOf = (shelf: Shelf) => (shelf === 'asset' ? undefined : shelf);
 const byName = new Intl.Collator('ko', { numeric: true }).compare;
 const UNFOUND_SHOWN = 10;
 
+// Adding to a shelf and replacing one of its pictures, which 에셋 and 표시's 배경 이미지 share.
+export function useAssetFiles(owner: string, shelf: Shelf) {
+  const store = useStore();
+  const files = useFiles();
+  const toast = useToast();
+  const { label, keeps } = SHELVES[shelf];
+  const [adding, setAdding] = useState(false);
+
+  async function add(picked: File[]) {
+    if (!picked.length) return;
+    setAdding(true);
+    const added = await addAssets(store, files, owner, picked, useOf(shelf));
+    setAdding(false);
+    if (!added.ok) return toast.failed(added, `${label}을 추가하지 못했어요.`);
+    const refused = unsupportedCount(added.data.unsupported);
+    if (refused) toast.error(`${refused}개는 추가하지 못했어요.`, { detail: keeps.refused });
+  }
+
+  async function replace(id: string, file: File) {
+    const replaced = await replaceAsset(store, files, id, new Uint8Array(await file.arrayBuffer()));
+    if (replaced.ok) return;
+    if (replaced.error === 'picture-unreadable' || replaced.error === 'picture-refused') toast.error('바꾸지 못했어요.', { detail: keeps.refused });
+    else toast.failed(replaced, '바꾸지 못했어요.');
+  }
+
+  return { accept: keeps.accept, adding, add, replace };
+}
+
 // shelves: a character's, whose backgrounds stand apart from its assets; a module holds assets only.
 export function AssetsEditor({ owner, shelves = false }: { owner: string; shelves?: boolean }) {
   const store = useStore();
-  const files = useFiles();
   const toast = useToast();
   const stored = useChildren('asset', owner);
   const [shelf, setShelf] = useState<Shelf>('asset');
@@ -46,7 +73,7 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
   const { label, keeps, help, hint, tag } = SHELVES[shelf];
   const onShelf = (each: Shelf) => stored.filter(({ value }) => value.use === useOf(each));
   const assets = useMemo(() => onShelf(shelf).toSorted((a, b) => byName(a.value.name, b.value.name)), [stored, shelf]);
-  const [adding, setAdding] = useState(false);
+  const { adding, add, replace } = useAssetFiles(owner, shelf);
   const [naming, setNaming] = useState<Stored<'asset'> | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const selection = useSelection();
@@ -65,16 +92,6 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
   const shared = new Map<string, number>();
   for (const asset of assets) shared.set(named(asset), (shared.get(named(asset)) ?? 0) + 1);
 
-  async function add(picked: File[]) {
-    if (!picked.length) return;
-    setAdding(true);
-    const added = await addAssets(store, files, owner, picked, use);
-    setAdding(false);
-    if (!added.ok) return toast.failed(added, `${label}을 추가하지 못했어요.`);
-    const refused = unsupportedCount(added.data.unsupported);
-    if (refused) toast.error(`${refused}개는 추가하지 못했어요.`, { detail: keeps.refused });
-  }
-
   const dragging = useFileDrop((dropped) => void add(dropped), 'screen');
 
   async function remove(ids: readonly string[]) {
@@ -82,13 +99,6 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
     if (!removed.ok) return toast.failed(removed, REMOVE_FAILED);
     const [only] = removed.data;
     toast.undoable(removed.data.length === 1 ? `${namedObject(only!.value.name, label)} 삭제했어요.` : `${label} ${removed.data.length}개를 삭제했어요.`, () => restoreAssets(store, removed.data));
-  }
-
-  async function replace(id: string, file: File) {
-    const replaced = await replaceAsset(store, files, id, new Uint8Array(await file.arrayBuffer()));
-    if (replaced.ok) return;
-    if (replaced.error === 'picture-unreadable' || replaced.error === 'picture-refused') toast.error('바꾸지 못했어요.', { detail: keeps.refused });
-    else toast.failed(replaced, '바꾸지 못했어요.');
   }
 
   function rename(asset: Stored<'asset'>, name: string) {

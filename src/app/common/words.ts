@@ -107,6 +107,11 @@ export const COMMAND = '명령어';
 export const ASSET = '에셋';
 
 export const CHANGE_IMAGE = '이미지 바꾸기';
+// Risu's backgroundHTML: a character's or a module's, past CBS and the display regex, drawn behind its chats (design §6.4).
+export const BACKGROUND_HTML = '배경 HTML';
+// A pick that names a preset no longer there (시스템 따라 바꾸기's slots, a character's 디스플레이).
+export const PRESET_GONE = '이 프리셋을 찾을 수 없어요. 다른 프리셋을 선택해 주세요.';
+export const PRESET_GONE_CHIP = '삭제된 프리셋';
 export const UNREADABLE_IMAGE = '이 이미지는 열 수 없어요.';
 export const UNREADABLE_FILE = '파일을 읽지 못했어요.';
 export const WRONG_PASSWORD = '비밀번호가 맞지 않아요.';

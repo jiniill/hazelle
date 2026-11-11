@@ -104,6 +104,11 @@ export const restoreScript = (store: ObjectStore, owner: PackOwner, { list, scri
   updateList(store, owner, list, (scripts) => (holds(scripts, script.id) ? scripts : scripts.toSpliced(Math.min(at, scripts.length), 0, script as (typeof scripts)[number])));
 
 // The whole list, as the prompt's is written (runtime/library/prompts editPrompt): its lines have no ids to merge by.
+// A blank one leaves the pack without a background, as an import of one without does.
+export const setBackground = (store: ObjectStore, { kind, id }: PackOwner, html: string): Promise<ApiResult<unknown>> =>
+  kind === 'character' ? store.update('character', id, (current) => ({ ...current, card: withBackground(current.card, html) })) : store.update('module', id, (current) => withBackground(current, html));
+const withBackground = <P extends Pack>(pack: P, html: string): P => (html.trim() ? { ...pack, background: html } : without(pack, 'background'));
+
 export const setToggles = (store: ObjectStore, owner: PackOwner, toggles: ToggleLine[]) => updatePack(store, owner, () => ({ toggles }));
 
 export const changePackPresets = (store: ObjectStore, owner: PackOwner, change: (presets: TogglePreset[]) => TogglePreset[]) =>

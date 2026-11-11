@@ -1,5 +1,5 @@
 import MarkdownIt, { type StateCore, type StateInline, type Token } from 'markdown-it';
-import { assetsOf, assetUrl, backdrop, mainOf, OWN_MARKUP } from './assets';
+import { assetsOf, assetUrl, mainOf, OWN_MARKUP } from './assets';
 import { unescapeCbs } from './cbs/escape';
 import { evaluate, Runaway } from './cbs/evaluate';
 import { BACKGROUND } from './cbs/tags';
@@ -9,10 +9,11 @@ import { contexts, renderChat, type ChatScope, type LuaDisplay, type Missed } fr
 
 // Extract styles from texts, status boxes and pack backgroundHTML into chat-wide css, as Risu does.
 // drawn indexes pack regex per message; boxes are the extracted 상태창 지정 output. unfound includes background assets.
-// background: the character's background asset (Hazelle's own; Risu never draws it), then the packs' backgroundHTML
-// past CBS and the display regex, its styles taken out, which Risu draws behind the chat; '' when only styles stand there.
+// picture: the character's background asset, which Risu keeps but never draws, for the app to draw under background;
+// null when it has none. background: the packs' backgroundHTML past CBS and the display regex, its styles taken out,
+// which Risu draws behind the chat; '' when only styles stand there.
 // pass means Lua editDisplay has pending messages; stopped records a Runaway, with runaway backgroundHTML omitted.
-export type Display = { texts: string[]; css: string; background: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
+export type Display = { texts: string[]; css: string; picture: string | null; background: string; drawn: number[][]; boxes: Box[][]; pass: boolean; unfound: string[]; stopped: Runaway | null };
 
 export type DisplayWork = { items: Missed[]; staged: string[]; start: [string, string][] };
 export type DisplayPatch = { rows: { index: number; text: string; drawn: number[]; boxes: Box[] }[]; css: string; pass: boolean; unfound: string[]; stopped: Runaway | null };
@@ -44,10 +45,8 @@ export class DisplayPass {
     // through the display scripts as Risu passes it: bots fill placeholders in their CSS ({border}, <<PCFont>>) there.
     // A <risu-style>'s CSS is read the same way, outside any message, as Risu reads it when it draws one.
     this.cbs = outside(scope, rendered, BACKGROUND);
-    // CCv3's background asset, the one named main or else the first, which Risu keeps but never draws; drawn as {{bg}}
-    // draws its picture.
     const main = mainOf(assetsOf(scope.assets, 'background'));
-    const background = main ? [backdrop(assetUrl(main.id))] : [];
+    const background: string[] = [];
     for (const pack of scope.packs) {
       if (!pack.background) continue;
       try {
@@ -62,7 +61,7 @@ export class DisplayPass {
     const texts = rendered.texts.map((text, index) => this.stripStyles(text, this.textStyles[index]!));
     const boxes = rendered.boxes.map((rows, index) => rows.map((box) => ({ ...box, html: this.stripStyles(box.html, this.boxStyles[index]!) })));
     // Joined as Risu joins the character's to the modules'.
-    this.value = { texts, boxes, drawn: rendered.drawn, css: this.css(), background: background.join('\n').trim(), pass: this.missing.size > 0, unfound: [...rendered.unfound!], stopped: rendered.stopped ?? this.ownStop };
+    this.value = { texts, boxes, drawn: rendered.drawn, css: this.css(), picture: main ? assetUrl(main.id) : null, background: background.join('\n').trim(), pass: this.missing.size > 0, unfound: [...rendered.unfound!], stopped: rendered.stopped ?? this.ownStop };
   }
 
   patch(items: { version: string; text: string }[]): DisplayPatch {

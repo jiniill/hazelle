@@ -42,6 +42,10 @@ export type Character = Mark & {
   // per character, not per script. Absent: not asked yet, and the first write asks.
   cardWrites?: boolean;
   pictures?: Pictures;
+  // 디스플레이 (design §6.4): the preset, a built-in's fixed id or an own one's saved id, whose colors and 글꼴 its chats'
+  // column wears. Absent: the device's look; an id no preset has any more applies nothing.
+  look?: string;
+  backdrop?: Backdrop;
   // 상태창 (design §6.1) in its chats as the reader left it.
   stateShown?: StateShown;
   // 상태창 지정: the display scripts, by id in card.regex, whose boxes are the character's status window, shown once
@@ -82,6 +86,9 @@ export type Module = Pack & Mark & {
 // of the screen's height; widest the width no such picture is drawn wider than, in percent of the text's width.
 export type Pictures = { fold?: false; peek?: number; widest?: number };
 export const PICTURE_PERCENT = { min: 10, max: 100 };
+// How its background picture is drawn (design §6.4). off keeps the picture but draws none; veil and blur name a step
+// (app/ui Shade), read by name, absent its default.
+export type Backdrop = { off?: true; veil?: string; blur?: string };
 type TextTranslation = { source: string; language: string; translation: Translation };
 export type LoreFolder = { id: string; name: string };
 

@@ -9,7 +9,7 @@ import { likenessId } from '../../model/likeness';
 import { randomBytes } from '../../vault/aead';
 import { sealFile } from '../../vault/files';
 import { api, holdAccount } from '../api';
-import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, setPinnedTogglesSpread, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setOwnTranslate, setPictures, setTextTranslation, setToggleValues, setTranslate, translateSwitches } from './characters';
+import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, setPinnedTogglesSpread, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setBackdrop, setLook, setOwnTranslate, setPictures, setTextTranslation, setToggleValues, setTranslate, translateSwitches } from './characters';
 import { markDeleted, purgeExpired, purgeNow } from './removal';
 import { createFolder } from './folders';
 import { appendUserMessage, removeChat, restoreChat, startChat } from '../chat/chat-log';
@@ -427,6 +427,22 @@ describe('setPictures', () => {
     expect(store.get('character', id)?.value.pictures).toEqual({ peek: 30, fold: false, widest: 90 });
     await setPictures(store, id, { peek: undefined, fold: undefined, widest: undefined });
     expect(store.get('character', id)?.value).not.toHaveProperty('pictures');
+  });
+});
+
+describe('setBackdrop and setLook', () => {
+  it('keep a background picture off and its shades, and a preset, and leave nothing stored once set back', async () => {
+    const { store } = await server.account();
+    const added = await addCharacter(store, bare('루나'), none, () => {});
+    const id = added.ok ? added.data : '';
+    await setBackdrop(store, id, { off: true, veil: 'low' });
+    await setBackdrop(store, id, { blur: 'mid' });
+    await setLook(store, id, 'sea');
+    expect(store.get('character', id)?.value).toMatchObject({ backdrop: { off: true, veil: 'low', blur: 'mid' }, look: 'sea' });
+    await setBackdrop(store, id, { off: undefined, veil: undefined, blur: undefined });
+    await setLook(store, id, null);
+    expect(store.get('character', id)?.value).not.toHaveProperty('backdrop');
+    expect(store.get('character', id)?.value).not.toHaveProperty('look');
   });
 });
 

@@ -110,12 +110,15 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     if (displayError === undefined || displayPending) return;
     toast.error('채팅을 화면에 표시하지 못했어요.', { detail: displayError instanceof Error ? displayError.message : undefined, action: { label: ACTS.retry.label, onClick: retryDisplay } });
   }, [displayError]);
-  const { texts, css, background } = view;
+  const { texts, css, picture, background } = view;
   const bot = shelf?.character.decor !== false;
-  const url = useAssetUrl([bot, css, background]);
+  const pictured = picture !== null && shelf?.character.backdrop?.off !== true;
+  const url = useAssetUrl([bot, css, background, pictured]);
   const decor = useMemo(() => ({ bot, css: bot ? resolveAssets(css, url) : '', buttons: scripted ? ('live' as const) : ('inert' as const) }), [bot, css, url, scripted]);
   // Apart from decor, which every message reads: a background that changes draws no message again.
   const backdrop = useMemo(() => (bot ? resolveAssets(background, url) : ''), [bot, background, url]);
+  // The character's background picture is its own, not the bot's markup, so 봇 스타일 leaves it; null while it loads.
+  const backdropPicture = pictured ? resolveAssets(picture, url) || null : null;
   const names = {
     character: card && { name: card.nickname || card.name, image: shelf!.face },
     me: persona.kind === 'persona' ? { name: persona.persona.value.name, image: persona.persona.value.picture } : null,
@@ -392,6 +395,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     view,
     decor,
     backdrop,
+    backdropPicture,
     features,
     agents,
     translate,

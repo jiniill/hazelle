@@ -6,10 +6,11 @@ import { navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useShortcut } from '../shortcuts';
 import { useToastFloor } from '../toast';
-import { useDisplay } from '../display';
+import { useDisplay, useWorn } from '../display';
+import { backdropShades } from '../common/reading';
 import { useAssetUrl } from '../session';
 import { day } from '../common/time';
-import { aimedAtPanel, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, StoryBackdrop, usePanelsBeside, useWide } from '../ui';
+import { aimedAtPanel, BackdropPicture, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, StoryBackdrop, usePanelsBeside, useWide } from '../ui';
 import { ChatAutopilot } from './ChatAutopilot';
 import { ChatBookmarks } from './ChatBookmarks';
 import { ChatInspect } from './ChatInspect';
@@ -55,6 +56,8 @@ type Props = {
 export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired }: Props) {
   const { reading, display } = useDisplay();
   const chat = useChat(chatId, item, shelf, reading.reply, find);
+  const worn = useWorn(shelf?.character.look);
+  const picture = display.hidePictures ? null : chat.backdropPicture;
   const { id, busy, panel, scroll, prompt, actions } = chat;
   const autopilot = useAutopilot(chat);
   const wide = useWide();
@@ -147,9 +150,17 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
             {chat.peeking && <ChatStatusPeek status={chat.status} held={chat.held} decor={chat.decor} onHold={actions.hold} onPress={actions.press} onUnmark={(script) => actions.markStatus(script, false)} />}
           </SidePeeks>
         }
-        backdrop={chat.backdrop && <StoryBackdrop html={chat.backdrop} />}
+        backdrop={
+          (picture || chat.backdrop) && (
+            <>
+              {picture && <BackdropPicture src={picture} {...backdropShades(shelf?.character.backdrop)} />}
+              {chat.backdrop && <StoryBackdrop html={chat.backdrop} />}
+            </>
+          )
+        }
         pinned={chat.stateShown.pinned && chat.states.length > 0 && <ChatState chat={chat} pinned />}
-        reading={reading}
+        reading={worn.reading}
+        scheme={worn.scheme}
         hideHeader={display.hideHeader}
         stage={chat.stage && !display.inlineIllustrations}
         side={display.pictureSide}

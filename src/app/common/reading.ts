@@ -1,6 +1,6 @@
-import { PICTURE_PERCENT } from '../../model/library';
+import { PICTURE_PERCENT, type Backdrop } from '../../model/library';
 import type { SavedLook } from '../../model/settings';
-import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, isDarkScheme, QUOTE_SHAPE, readingDefault, THEME, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme } from '../ui';
+import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, isDarkScheme, QUOTE_SHAPE, readingDefault, SHADE, THEME, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme } from '../ui';
 import type { Cue } from '../../runtime/chat/cues';
 import { CHIMES, type Chime } from './sounds';
 import { readPersisted } from './usePersisted';
@@ -165,3 +165,12 @@ function parseLook(look: SavedLook['look']): Look | null {
   };
   return LOOK_KEYS.every((key) => read[key] !== undefined) ? (read as Look) : null;
 }
+
+// A character's 배경 가림 and 배경 흐림 (design §6.4), by name; unset, or a name this version does not know, is the look
+// backgrounds had before: Risu's veil, unblurred.
+export const backdropShades = (backdrop: Backdrop | undefined) => ({ veil: known(SHADE, backdrop?.veil, 'high'), blur: known(SHADE, backdrop?.blur, 'none') });
+
+// What a character's chats wear (design §6.4): its preset's colors and 글꼴 over the device's look, its size and spacing
+// left the device's; the device's own, with no scheme of its own, for no preset or for one that is gone.
+export const wornLook = (preset: Preset | undefined, reading: Reading, theme: Theme) =>
+  preset ? { scheme: preset.look, theme: preset.look.theme, reading: { ...reading, font: preset.look.font } } : { scheme: undefined, theme, reading };

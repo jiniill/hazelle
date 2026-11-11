@@ -256,7 +256,9 @@
   --color-pick-dialogue-lime: var(--palette-lime-200);
 }
 
-:root {
+/* Mixed from the scheme's colors, so they are mixed again on an element drawn in another scheme (schemeAttributes). */
+:root,
+[data-theme] {
   --color-accent-bg: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
   /* The accent as words on that tint; light takes it a step darker, so words of body size clear 4.5:1. */
   --color-accent-text: var(--color-accent);
@@ -278,7 +280,9 @@
   --color-folder-bg: color-mix(in srgb, var(--color-text-muted) 18%, var(--color-surface));
   --color-folder-bg-hover: color-mix(in srgb, var(--color-text-muted) 26%, var(--color-surface));
   --color-folder-slot: color-mix(in srgb, var(--color-text-muted) 8%, var(--color-surface));
+}
 
+:root {
   --font-serif: 'Gowun Batang', serif;
   --font-story: 'Gowun Batang Story', var(--font-serif);
   --font-sans: 'IBM Plex Sans KR', system-ui, sans-serif;
@@ -566,6 +570,14 @@
   --lineage-glow: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 45%, transparent));
   --lineage-ring: 0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent), var(--shadow-card);
   --lineage-mark: 10px;
+  /* A character's background in its chat (BackdropPicture): 배경 가림, a share of the scheme's background over it, high
+     as Risu's {{bg}} veil; 배경 흐림. */
+  --backdrop-veil-low: 35%;
+  --backdrop-veil-mid: 60%;
+  --backdrop-veil-high: 80%;
+  --backdrop-blur-low: 3px;
+  --backdrop-blur-mid: 8px;
+  --backdrop-blur-high: 16px;
   --editor-max-width: 760px;
   /* The least room an editor splits in (EditorRoom): the outline at its least beside an open part whose page, inside
      its padding, is a phone's 358px. EditorFrame.test.ts checks it against both. */
@@ -799,6 +811,7 @@
   --landing-finish-ink: #fff8ea;
   --landing-finish-shadow: 0 1px 2px #2a124066, 0 0 36px #2a1240a6;
   --layer-behind: -1;
+  --layer-ground: -2;
   --layer-raised: 2;
   --layer-window: 10;
   --layer-menu: 20;

@@ -1,28 +1,20 @@
 import { useDisplay } from '../display';
 import { ChoiceGroup, FontPicker, SettingRow, Stepper, Switch } from '../ui';
-import { choices, presetOf, REPLY, SIZE, SPACING, type Preset } from './reading';
+import { choices, REPLY, SIZE, SPACING, type Preset } from './reading';
 
 export const presetChoices = (presets: Preset[]) => presets.map(({ id, name }) => ({ value: id, label: name }));
 
-export function PresetRow() {
-  const { reading, display, presets, own, pick } = useDisplay();
-  const all = [...presets, ...own.presets];
-  return (
-    <SettingRow
-      label="프리셋"
-      control={<ChoiceGroup layout="fit" label="프리셋" options={presetChoices(all)} value={presetOf(all, reading, display)?.id ?? null} empty="직접 설정" onChange={(id) => pick(all.find((preset) => preset.id === id)!)} />}
-    />
-  );
-}
-
-export function ReadingRows() {
+// fontHeld: a character's preset sets the 글꼴 here, so its row is left out.
+export function ReadingRows({ fontHeld = false }: { fontHeld?: boolean }) {
   const { reading, changeReading } = useDisplay();
   return (
     <>
-      <SettingRow
-        label="글꼴"
-        control={<FontPicker label="글꼴" value={reading.font} onChange={(font) => changeReading({ font })} />}
-      />
+      {!fontHeld && (
+        <SettingRow
+          label="글꼴"
+          control={<FontPicker label="글꼴" value={reading.font} onChange={(font) => changeReading({ font })} />}
+        />
+      )}
       <SettingRow
         label="글자 크기"
         control={<Stepper label="글자 크기" less="글자 작게" more="글자 크게" value={reading.size} min={SIZE.min} max={SIZE.max} onChange={(size) => changeReading({ size })} />}

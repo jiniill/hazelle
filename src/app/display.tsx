@@ -1,5 +1,5 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
-import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, parseReading, parseStoredDisplay, presetOf, presets, READING, savedPresets, systemMode, type Display, type Follow, type Preset } from './common/reading';
+import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, wornLook, parseReading, parseStoredDisplay, presetOf, presets, READING, savedPresets, systemMode, type Display, type Follow, type Preset } from './common/reading';
 import { usePersisted } from './common/usePersisted';
 import { useSettings } from './session';
 import { applyScheme, QuoteShapeContext, readingDefault, useCoarsePointer, useDarkScheme, VeilContext, type Reading, type Theme } from './ui';
@@ -10,6 +10,8 @@ type DisplayControl = {
   display: Display & { enterSends: boolean };
   presets: Preset[];
   own: { presets: Preset[]; unread: number };
+  // A preset by id, built-in or own; undefined for none or one that is gone.
+  find: (id: string | undefined) => Preset | undefined;
   changeReading: (change: Partial<Reading>) => void;
   changeDisplay: (change: Partial<Display>) => void;
   // While following the system, a pick becomes the current mode's preset.
@@ -35,7 +37,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const { theme, bg, ink, accent, dialogue, follow } = display;
   useLayoutEffect(() => applyScheme({ theme, bg, ink, accent, dialogue }), [theme, bg, ink, accent, dialogue]);
   const veil = useMemo(() => (display.hidePictures ? { revealed: new Set<string>() } : null), [display.hidePictures]);
-  const find = (id: string) => [...list, ...own.presets].find((preset) => preset.id === id);
+  const find = (id: string | undefined) => (id === undefined ? undefined : [...list, ...own.presets].find((preset) => preset.id === id));
   const wear = ({ look: { theme, bg, ink, accent, dialogue, ...look } }: Preset, follow: Follow | null) => {
     setReading({ ...reading, ...look });
     setDisplay({ ...display, theme, bg, ink, accent, dialogue, follow });
@@ -57,6 +59,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     display: { ...display, enterSends: effectiveEnterSends(display.enterSendsChoice, coarsePointer) },
     presets: list,
     own,
+    find,
     changeReading: (change) => setReading({ ...reading, ...change }),
     changeDisplay: (change) => setDisplay({ ...display, ...change }),
     pick,
@@ -81,4 +84,10 @@ export function useDisplay(): DisplayControl {
   const control = useContext(DisplayContext);
   if (!control) throw new Error('display hook outside DisplayProvider');
   return control;
+}
+
+// What the chats of a character holding the preset look wear.
+export function useWorn(look: string | undefined) {
+  const { reading, display, find } = useDisplay();
+  return wornLook(find(look), reading, display.theme);
 }

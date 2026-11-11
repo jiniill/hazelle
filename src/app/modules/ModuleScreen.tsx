@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ModelsConsent } from './PluginSection';
 import type { Stored } from '../../model/kinds';
 import { likenessId } from '../../model/likeness';
@@ -8,6 +8,8 @@ import { ACTS } from '../common/acts';
 import { aliased } from '../common/alias';
 import { holdsLine, howMany } from '../common/pack';
 import { AssetsEditor } from '../common/AssetsEditor';
+import { BackgroundField } from '../common/BackgroundField';
+import { cbsLanguage } from '../common/code/cbs';
 import { LoreEditor } from '../common/LoreEditor';
 import { useLab } from '../common/labs';
 import { PackToggles } from '../common/PackToggles';
@@ -129,6 +131,7 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
   const describes = useChildren('lore', id).length + useChildren('asset', id).length > 0 || useStored('likeness', likenessId(id)) !== null;
   const store = useStore();
   const making = useMaking();
+  const language = useMemo(() => cbsLanguage(), []);
 
   const copy = (flush: () => Promise<boolean>) =>
     making.copy({ flush, name: () => moduleName(name), make: (copied, made) => copyModule(store, id, copied, made), open: (made) => navigate({ kind: 'module', id: made, pane: null }) });
@@ -176,6 +179,7 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
       </List>
       <LoreEditor owner={{ kind: 'module', id }} folders={value.loreFolders} />
       {scripts.body}
+      <BackgroundField owner={{ kind: 'module', id }} html={value.background} language={language} />
       <AssetsEditor owner={id} />
       {describes && <PortraitsEditor owner={id} />}
       {exporting && <ModuleExport id={id} name={name} onClose={() => setExporting(false)} />}

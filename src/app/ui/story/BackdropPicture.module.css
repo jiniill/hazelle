@@ -1,0 +1,48 @@
+.picture {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  --backdrop-veil: 0%;
+  --backdrop-blur: 0px;
+}
+
+/* A blurred edge would fade into what is under it, so the picture reaches past the frame by twice its blur. */
+.image {
+  position: absolute;
+  inset: calc(-2 * var(--backdrop-blur));
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  filter: blur(var(--backdrop-blur));
+}
+
+.picture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: color-mix(in srgb, var(--color-bg) var(--backdrop-veil), transparent);
+}
+
+.veilLow {
+  --backdrop-veil: var(--backdrop-veil-low);
+}
+
+.veilMid {
+  --backdrop-veil: var(--backdrop-veil-mid);
+}
+
+.veilHigh {
+  --backdrop-veil: var(--backdrop-veil-high);
+}
+
+.blurLow {
+  --backdrop-blur: var(--backdrop-blur-low);
+}
+
+.blurMid {
+  --backdrop-blur: var(--backdrop-blur-mid);
+}
+
+.blurHigh {
+  --backdrop-blur: var(--backdrop-blur-high);
+}

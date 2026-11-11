@@ -202,9 +202,10 @@ describe('asset tags', () => {
     expect(shown('{{assetlist}}', 'prompt')).toBe('["Smile.png","wave","clip"]');
   });
 
-  it('draw {{bg}} in the backgroundHTML only, over the character’s background asset, and nothing for it in a message', () => {
+  it('draw {{bg}} in the backgroundHTML only, the character’s background asset apart as its picture, and nothing for it in a message', () => {
     const shown = display({ ...kept, messages: [message('a1', 'assistant', 'a{{bg::wave}}b')], packs: [{ ...withAssets.packs[0]!, background: '<div>{{bg::wave}}</div>' }] });
-    expect(shown.background).toBe(`${backdrop(`asset:${night}`)}\n<div>${backdrop(`asset:${wave}`)}</div>`);
+    expect(shown.picture).toBe(`asset:${night}`);
+    expect(shown.background).toBe(`<div>${backdrop(`asset:${wave}`)}</div>`);
     expect(shown.texts[0]).toBe('ab');
     expect(display(withAssets).background).toBe('');
   });
