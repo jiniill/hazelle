@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { readLink, type BotLink, type LinkAnswer, type LinkFailure, type LinkFolder, type Progress } from '../../runtime/import/link';
+import { readLink, type ImportLink, type LinkAnswer, type LinkFailure, type LinkFolder, type Progress } from '../../runtime/import/link';
 import { ACTS } from '../common/acts';
 import { describeReplyError } from '../common/failure';
 import { sizeText } from '../common/size';
@@ -13,12 +13,12 @@ type Brought = { kind: 'files'; files: File[]; skipped: string[] } | { kind: 'fo
 
 const linkFailure = (failure: Exclude<LinkFailure, { kind: 'cancelled' | 'needs-password' | 'wrong-password' }>) => {
   switch (failure.kind) {
-    case 'missing': return '봇을 찾지 못했어요. 삭제됐거나 비공개일 수 있어요.';
+    case 'missing': return '파일을 찾지 못했어요. 삭제됐거나 비공개일 수 있어요.';
     case 'refused': return '사이트에서 다운로드를 거절했어요. 잠시 뒤 다시 시도해 주세요.';
     case 'not-a-file': return '웹 페이지가 열리는 링크예요. 파일을 바로 받는 링크를 넣어 주세요.';
     case 'guest-blocked': return '이 사이트는 손님 모드에서 바로 가져올 수 없어요. 파일을 직접 받아서 넣어 주세요.';
     case 'needs-account': return 'Proton 링크는 손님 모드에서 가져올 수 없어요. 파일을 직접 받아서 넣어 주세요.';
-    case 'no-bot-file': return '가져올 수 있는 파일이 없어요.';
+    case 'no-file': return '가져올 수 있는 파일이 없어요.';
     case 'damaged': return `${UNREADABLE_FILE} 링크가 잘렸거나 파일이 손상됐을 수 있어요.`;
     case 'lost': return '다운로드가 끊겼어요. 인터넷 연결을 확인해 주세요.';
     case 'relay': return describeReplyError(failure.failure);
@@ -45,7 +45,7 @@ export async function bringLink(download: (progress: Progress) => Promise<LinkAn
   return { kind: 'failed', failure: linkFailure(failure) };
 }
 
-export function LinkDialog({ start, onBring, onClose }: { start: LinkStart; onBring: (link: BotLink, text: string) => void; onClose: () => void }) {
+export function LinkDialog({ start, onBring, onClose }: { start: LinkStart; onBring: (link: ImportLink, text: string) => void; onClose: () => void }) {
   const [text, setText] = useState(start.text);
   const [password, setPassword] = useState('');
   const link = readLink(text);
@@ -59,7 +59,7 @@ export function LinkDialog({ start, onBring, onClose }: { start: LinkStart; onBr
     >
       <Stack>
         <TextField
-          label="봇 링크"
+          label="링크"
           value={text}
           onChange={setText}
           placeholder="https://realm.risuai.net/character/..."
@@ -79,6 +79,12 @@ export function LinkDialog({ start, onBring, onClose }: { start: LinkStart; onBr
       </Stack>
     </Dialog>
   );
+}
+
+// A subfolder is often its owner's archive of old versions, so the files at the top come ticked where there are any.
+export function firstTicks({ files }: LinkFolder) {
+  const top = files.map(({ name }) => !name.includes('/'));
+  return top.some(Boolean) ? top : top.map(() => true);
 }
 
 // ticked: one per file of the folder, whether it is downloaded.
