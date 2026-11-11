@@ -292,7 +292,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const chosen = state?.kind === 'choosing' ? state.ticked.flatMap((on, at) => (on ? [at] : [])) : [];
   const title =
     state?.kind === 'downloading' ? '봇 받는 중'
-    : state?.kind === 'choosing' ? '받을 봇을 골라요'
+    : state?.kind === 'choosing' ? '받을 파일을 골라요'
     : state?.kind === 'reading' ? '파일 읽는 중'
     : state?.kind === 'saving' ? '가져오는 중'
     : state?.kind === 'preview' ? (ready.length > 0 || locked ? '가져올까요?' : '가져오지 못했어요')
