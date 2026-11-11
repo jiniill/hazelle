@@ -29,6 +29,7 @@ async function send(page: Page) {
 test('a 상태 from a 유형 is written after each reply, kept with it, and its apps stand on the 휴대폰', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   let written = RELATION;
+  let phoneBot = '';
   const sent = await fakeProvider((request) => (statusCall(request) ? [written] : ['The gate opens.']));
 
   await test.step('assign the fake model as 대화 and 보조', async () => assignFake(page, await enter(page), ['대화 모델', '보조 모델']));
@@ -57,7 +58,7 @@ test('a 상태 from a 유형 is written after each reply, kept with it, and its 
 
   await test.step('messages a reply brought stand in the 휴대폰, and answering one goes into the composer', async () => {
     written = PHONE;
-    await characterWith(page, /^휴대폰/);
+    phoneBot = await characterWith(page, /^휴대폰/);
     const opener = page.getByRole('button', { name: /^휴대폰/ });
     await expect(opener).toHaveText('휴대폰');
     await send(page);
@@ -70,6 +71,24 @@ test('a 상태 from a 유형 is written after each reply, kept with it, and its 
     await expect(phone.getByText('고마워요!')).toBeVisible();
     await phone.getByRole('button', { name: '답하기' }).click();
     await expect(page.getByLabel('메시지', { exact: true })).toHaveValue('도윤에게 메시지를 보낸다: ');
+  });
+
+  await test.step('a 묶음 removed in the editor is gone at once, and its 되돌리기 puts it back as it stood', async () => {
+    await page.goto(`/characters/${phoneBot}/edit?part=status`);
+    // The 묶음 and the view that shows it share the name.
+    const named = page.getByRole('heading', { name: '연락처', exact: true });
+    await expect(named).toHaveCount(2);
+    const removed = saving(page);
+    await page.getByRole('button', { name: "'연락처' 메뉴" }).first().click();
+    await page.getByRole('menuitem', { name: '삭제' }).click();
+    await removed;
+    await expect(named).toHaveCount(1);
+    const back = saving(page);
+    await page.getByRole('button', { name: '되돌리기' }).click();
+    await back;
+    await page.reload();
+    await expect(named).toHaveCount(2);
+    await expect(page.getByRole('list', { name: '블록' }).getByRole('button', { name: /^연락처/ })).toBeVisible();
   });
 
   await test.step('switch it off again, since the specs after this one share the account', async () => {
