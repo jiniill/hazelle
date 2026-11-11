@@ -6,10 +6,11 @@ import { ACTS, addOf } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
 import { shownAt, shownCourse, shownWhole } from '../common/statusView';
 import { day } from '../common/time';
-import { STATUS_COURSE, STATUS_DETAIL, STATUS_NONE, STATUS_START, STATUS_LEAVE_NOTE, statusEdit, statusLeave, statusOpen, statusTaken } from '../common/words';
+import { LOREBOOK, STATUS_COURSE, STATUS_DETAIL, STATUS_NONE, STATUS_START, STATUS_LEAVE_NOTE, statusEdit, statusLeave, statusOpen, statusTaken } from '../common/words';
 import { useDisplay } from '../display';
+import { useStored } from '../session';
 import { useToast } from '../toast';
-import { Button, ConfirmDialog, Empty, List, ListItem, MenuItem, Row, Section, SidePanel, Stack, StatusPanel, useWide, type ShownPlace } from '../ui';
+import { Button, ConfirmDialog, Empty, List, ListItem, MarkupText, MenuItem, Row, Section, SidePanel, Stack, StatusPanel, useWide, type ShownPlace } from '../ui';
 import { StateEditAt } from './StateEdit';
 import type { OpenChat } from './useChat';
 import type { ChatStateOf } from './useChatState';
@@ -57,6 +58,18 @@ function Join({ states, definition, group, onJoin, onClose }: { states: ChatStat
         onClose();
       }}
     />
+  );
+}
+
+// The lorebook entry a record stands for: one that came from a folder its 묶음 follows is under the entry's id.
+function RecordLore({ id }: { id: string }) {
+  const entry = useStored('lore', id);
+  return (
+    entry && (
+      <Section title={LOREBOOK} level={3}>
+        <MarkupText text={entry.value.content} />
+      </Section>
+    )
   );
 }
 
@@ -139,6 +152,7 @@ export function ChatStateDetail({ chat, onClose }: Props) {
           edit={field === undefined ? { label: statusOpen, onEdit: (place) => setPage({ definition: definition.id, ...place }) } : live ? { label: statusEdit, onEdit: () => setEditing(true) } : undefined}
         />
         {field !== undefined && <Course state={state} place={{ field, ...(member && { member }) }} messages={messages} onShow={show} />}
+        {field === undefined && member && <RecordLore id={member.id} />}
       </Stack>
       {leaving && leaves && (
         <ConfirmDialog

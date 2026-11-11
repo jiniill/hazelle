@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { statusAfter, statusCourse, statusViews, type StatusChange, type StatusDefinition, type StatusView } from './status';
+import { stateShownWith, statusAfter, statusCourse, statusViews, type StatusChange, type StatusDefinition, type StatusView } from './status';
 
 const definition: StatusDefinition = {
   id: 'd',
@@ -111,4 +111,11 @@ test('a course is where a place started and each step after which it stood diffe
   expect(statusCourse([definition], steps, { ...at, field: 'love' })).toEqual([{ key: null, value: 50 }, { key: 'a', value: 55 }, { key: 'e', value: 50 }]);
   expect(statusCourse([definition], steps, { ...at, field: 'love', member: { group: 'cast', id: 'jun' } })).toEqual([{ key: null, value: undefined }, { key: 'd', value: 0 }, { key: 'e', value: -9 }, { key: 'f', value: undefined }]);
   expect(statusCourse([definition], steps, { definition: 'gone', field: 'love' })).toEqual([]);
+});
+
+test('a 상태창 folded or pinned says so, unfolded or unpinned says nothing, and a view is picked per definition', () => {
+  const shown = stateShownWith(stateShownWith(stateShownWith({}, { folded: true }), { pinned: true }), { view: { definition: 'd', view: 'hud' } });
+  expect(shown).toEqual({ folded: true, pinned: true, views: { d: 'hud' } });
+  expect(stateShownWith(stateShownWith(shown, { folded: false }), { view: { definition: 'e', view: 'card' } })).toEqual({ pinned: true, views: { d: 'hud', e: 'card' } });
+  expect(stateShownWith({ pinned: true }, { pinned: false })).toEqual({});
 });

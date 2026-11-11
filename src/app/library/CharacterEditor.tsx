@@ -344,7 +344,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     ),
     scripts: scripts.body,
     toggles: <PackToggles owner={{ kind: 'character', id }} lines={card.toggles} />,
-    status: <StatusPane owner={{ kind: 'character', id }} definition={card.status} />,
+    status: <StatusPane owner={{ kind: 'character', id }} definition={card.status} folders={character.loreFolders} />,
     variables: (
       <>
         <DefaultVariables variables={text.variables} help="채팅에서 값이 정해지지 않은 변수가 이 값을 써요." onChange={(variables) => change({ variables })} />

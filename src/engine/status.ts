@@ -122,6 +122,21 @@ const NUMBER = /^([+-]?\d[\d,]*(?:\.\d+)?)(?:\s*\/\s*\d[\d,.]*)?\D*$/u;
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 export const nameTaken = (among: readonly { id: string; name: string }[], name: string, self?: string) => among.some((each) => each.id !== self && same(each.name, name));
 
+// A stored lorebook entry as a roster reads it.
+export type RosterEntry = { id: string; value: { name: string; folder: string | null } };
+
+// The definition as a chat holds it: a 묶음 that follows a lorebook folder has a record for each entry there, after
+// the ones it names, under the entry's id and name. An entry with no name, or with one a record before it has, is no
+// record: a writer finds a record by its name.
+export function rostered(definition: StatusDefinition, lore: readonly RosterEntry[]): StatusDefinition {
+  if (!definition.groups.some(({ follows }) => follows)) return definition;
+  const groups = definition.groups.map((group) => {
+    const followed = group.follows ? lore.filter(({ value }) => value.folder === group.follows!.folder) : [];
+    return { ...group, members: followed.reduce((members, { id, value: { name } }) => (!name.trim() || nameTaken(members, name) ? members : [...members, { id, name: name.trim() }]), group.members) };
+  });
+  return { ...definition, groups };
+}
+
 const equal = (a: StatusValue | undefined, b: StatusValue) => JSON.stringify(a) === JSON.stringify(b);
 
 // undefined: the text is not a value this field takes. A change field's number is its amount, which has no range and

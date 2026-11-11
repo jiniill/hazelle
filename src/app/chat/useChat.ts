@@ -131,7 +131,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   const messageTools = useMemo(() => toolActions(tools, session.tools.actions), [tools, frames]);
   const composerTools = useMemo(() => toolComposer(tools), [tools]);
   const busy = replying !== null;
-  const { actions: stateActions, states } = useChatState(chatId, id, chat, messages, busy);
+  const { actions: stateActions, states, stateShown } = useChatState(chatId, id, chat, messages, busy);
   const last = messages.at(-1);
   const answerable = id !== null && last !== undefined;
   // A cost still 확인 중 after a reload is looked up again wherever the usage line shows it, as ChatInfo does for its own.
@@ -421,6 +421,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     castMenu,
     draft,
     states,
+    stateShown,
     scroll,
     keys: story.keys,
     stops: story.stops,

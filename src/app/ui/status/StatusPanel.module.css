@@ -146,6 +146,15 @@
   padding-top: var(--space-8);
 }
 
+/* In a chat an open panel holds to a share of the screen, so the reply it follows stays in sight. */
+.headed > .blocks {
+  max-height: var(--status-blocks-most);
+  /* The ring's room, given back, so a value pressed at the edge keeps its whole ring. */
+  margin: calc(-1 * var(--focus-ring-reach));
+  padding: var(--focus-ring-reach);
+  overflow-y: auto;
+}
+
 .folded {
   padding: var(--space-4) var(--space-8) var(--space-4) var(--space-16);
 }
