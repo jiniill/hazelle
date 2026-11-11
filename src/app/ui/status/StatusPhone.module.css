@@ -1,9 +1,11 @@
-/* The body: a bezel around a screen that takes the room it is given, and the bar under it. */
+/* The body: a bezel around a screen that takes the room it is given up to a phone's width, and the bar under it. */
 .phone {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  min-width: 0;
+  align-self: center;
+  width: 100%;
+  max-width: var(--status-phone-most);
   min-height: var(--status-phone-least);
   border: var(--status-phone-bezel) solid var(--status-line);
   border-radius: var(--status-phone-radius);
