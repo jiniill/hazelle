@@ -26,6 +26,7 @@ export const SAMPLE: ChatScope = {
     ['날씨', '비'],
     ['가방', '["나침반","지도"]'],
   ],
+  status: { definitions: [], state: {} },
   greeting: null,
   toggles: new Map([['존댓말', '1']]),
   model: null,

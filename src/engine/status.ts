@@ -1,4 +1,4 @@
-import type { StatusChange, StatusDefinition, StatusField, StatusGroup, StatusItem, StatusLog, StatusMember, StatusPlace, StatusState, StatusValue, StatusValues } from '../model/status';
+import type { StatusChange, StatusDefinition, StatusField, StatusGroup, StatusItem, StatusLog, StatusMember, StatusPlace, StatusState, StatusValue, StatusValues, StatusWriter } from '../model/status';
 
 // The layout statusText writes, statusAsk describes and parseStatus reads is one contract (design §6.1): a "# name"
 // line per definition, "## name" per group or log, "### name" per record, "name: value" per field, "- item" per list
@@ -73,6 +73,13 @@ export function statusAsk(definitions: readonly StatusDefinition[]): string {
       ...definition.logs.flatMap((log) => [`## ${log.name} (a log)`, ...rules(log.fields)]),
     ]),
   ].join('\n');
+}
+
+// What a writer is sent: the whole state, then the ask for the definitions it writes. Empty when nothing is declared.
+export function statusSent(definitions: readonly StatusDefinition[], state: StatusState, writer: StatusWriter): string {
+  if (!definitions.length) return '';
+  const asked = definitions.filter((each) => each.writer === writer);
+  return [`The status as it stands:\n${statusText(definitions, state)}`, ...(asked.length ? [statusAsk(asked)] : [])].join('\n\n');
 }
 
 const BLOCK = /<status>([\s\S]*?)(<\/status>|$)/giu;

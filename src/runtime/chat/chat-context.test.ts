@@ -6,7 +6,7 @@ import { blankCard } from '../../engine/import/card';
 import type { StatusDefinition } from '../../model/status';
 import { budgetOf, evaluateChat, packsOf, scopeOf, setSharedLoreScan, statusOf, tokenLimits } from './chat-context';
 import { chatPrompt } from '../library/prompts';
-import { appendUserMessage, startChat } from './chat-log';
+import { appendUserMessage, setStatusByHand, startChat } from './chat-log';
 import { addLore, setCharacterLoreScan } from '../library/lore';
 import { testServer } from '../testing';
 
@@ -59,6 +59,24 @@ describe('scopeOf', () => {
     expect(scan()).toMatchObject({ tokenBudget: 70_000, recursive: true });
     await setSharedLoreScan(store, 'scanDepth', 8);
     expect(scopeOf({ store }, null, { title: null, character: null, models: {} }, []).loreScan).toMatchObject({ scanDepth: 8, recursive: false });
+  });
+});
+
+describe("scopeOf with a state declared", () => {
+  it('holds the definitions and the state the messages leave', async () => {
+    const { store } = await server.account();
+    const definition: StatusDefinition = { id: 'd', name: '기본', writer: 'after', fields: [{ id: 'hp', name: 'HP', kind: 'gauge', min: 0, max: 10, start: 5 }], groups: [], logs: [] };
+    const character = await store.create('character', { card: { ...blankCard('루나'), status: definition }, folder: null, loreFolders: [], modules: [] });
+    if (!character.ok) throw new Error(character.error);
+    const id = crypto.randomUUID();
+    await server.hold(store, id);
+    const chat: Chat = { title: null, character: character.data.id, models: {} };
+    await startChat(store, id, chat, null);
+    const said = crypto.randomUUID();
+    await appendUserMessage(store, id, { id: said, text: '안녕' });
+    expect(scopeOf({ store }, id, chat, fold(store.children('entry', id))).status).toEqual({ definitions: [definition], state: { d: { values: { hp: 5 }, groups: {}, logs: {} } } });
+    await setStatusByHand(store, id, said, { definition: 'd', kind: 'move', field: 'hp', by: 3 });
+    expect(scopeOf({ store }, id, chat, fold(store.children('entry', id))).status.state).toEqual({ d: { values: { hp: 8 }, groups: {}, logs: {} } });
   });
 });
 

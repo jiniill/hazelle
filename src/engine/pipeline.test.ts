@@ -5,6 +5,7 @@ import { bareModel } from '../connectors/chat-completions';
 import type { ChatMessage } from '../connectors/types';
 import type { Memory, MemoryRecord } from '../model/memory';
 import type { Block, Prompt } from '../model/prompt';
+import type { StatusDefinition } from '../model/status';
 import type { HistoryMessage } from './history';
 import { blankCard } from './import/card';
 import type { Card, LoreEntry, RegexScript } from './import/types';
@@ -98,6 +99,7 @@ const scope = ({ card: own = card(), ...over }: Partial<PromptInput['scope']> = 
   screen: null,
   pick: 'luna:chat',
   variables: [],
+  status: { definitions: [], state: {} },
   ...over,
 });
 
@@ -113,6 +115,27 @@ const input = (over: Partial<PromptInput['scope']> = {}): PromptInput => ({ scop
 const build = (over: Partial<PromptInput['scope']> = {}) => sentOf(assemble(input(over)));
 
 describe('assemble', () => {
+  it("puts the chat's state in its slot with the ask for what the reply writes, after the chat when the prompt has no slot, and sends nothing when none is declared", () => {
+    const definition: StatusDefinition = { id: 'd', name: '기본', writer: 'with', fields: [{ id: 'hp', name: 'HP', kind: 'gauge', min: 0, max: 10 }], groups: [], logs: [] };
+    const status = { definitions: [definition], state: { d: { values: { hp: 7 }, groups: {}, logs: {} } } };
+    const told = 'The status as it stands:\n# 기본\nHP: 7';
+    const ask = '- HP: a number from 0 to 10';
+
+    const after = assembledOf(assemble(input({ status })));
+    const part = after.parts.findIndex(({ from }) => from.kind === 'status');
+    expect(after.parts.slice(part + 1).map(({ from }) => from.kind)).toEqual([]);
+    const sent = after.messages.find(({ content }) => typeof content === 'string' && content.startsWith(told))!;
+    expect(sent).toMatchObject({ role: 'system' });
+    expect(sent.content).toContain(ask);
+
+    const slot: Block = { id: 'state', name: null, kind: 'slot', slot: 'status', role: 'system', wrapper: '[state]\n{{slot}}' };
+    const placed = assembledOf(assemble(input({ prompt: { ...starter, blocks: [slot, ...starter.blocks] }, status: { ...status, definitions: [{ ...definition, writer: 'after' }] } })));
+    expect(placed.messages[0]!.content).toBe(`[state]\n${told}`);
+    expect(placed.parts.some(({ from }) => from.kind === 'status')).toBe(false);
+
+    expect(build().some(({ content }) => typeof content === 'string' && content.includes('The status as it stands'))).toBe(false);
+  });
+
   it('keeps lazy CBS evidence for the renders a part sends verbatim and preserves it only through an unchanged rewrite', () => {
     const built = assembledOf(assemble(input()));
     const part = built.parts[0]!;

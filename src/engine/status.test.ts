@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { StatusChange, StatusDefinition, StatusState } from '../model/status';
-import { parseStatus, statusAsk, statusText } from './status';
+import { parseStatus, statusAsk, statusSent, statusText } from './status';
 
 const main: StatusDefinition = {
   id: 'main',
@@ -120,4 +120,12 @@ test('the ask names every field with what it takes', () => {
   expect(ask).toContain('- 기분: one of: 들뜸, 심통');
   expect(ask).toContain('## 인물 (a group that takes new records)');
   expect(ask).toContain('## 사건 (a log)');
+});
+
+test('a writer is sent the whole state and the ask for its own definitions only, and nothing when none is declared', () => {
+  const sent = statusSent(definitions, state, 'after');
+  expect(sent.startsWith(`The status as it stands:\n${statusText(definitions, state)}\n\n`)).toBe(true);
+  expect(sent.endsWith(statusAsk([phone]))).toBe(true);
+  expect(statusSent([phone], state, 'with')).toBe(`The status as it stands:\n${statusText([phone], state)}`);
+  expect(statusSent([], state, 'with')).toBe('');
 });

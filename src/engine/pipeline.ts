@@ -20,6 +20,7 @@ import { mascotSheet } from './mascot';
 import type { TranslationRequest } from './translate';
 import { protect, protectRules, type ProtectInvalid } from './protect';
 import { keepsMemory, memorySheet } from './agent';
+import { statusSent } from './status';
 
 export type PromptInput = {
   tools: { module: string; name: string; text: string }[];
@@ -86,7 +87,9 @@ export type From =
   // 토큰 절약's brief, in place of the parts it shortened (engine/preread).
   | { kind: 'preread' }
   // The pre agents' notes, after the chat, in a prompt with no 에이전트 노트 slot.
-  | { kind: 'agents' };
+  | { kind: 'agents' }
+  // The chat's state, after the chat, in a prompt with no 상태 slot.
+  | { kind: 'status' };
 
 export type Assembled = {
   messages: ChatMessage[];
@@ -254,6 +257,7 @@ type Content = {
   recent: (block: RecentSlot) => string;
   source: string;
   agentNotes: string;
+  status: string;
   agentMemory: string;
   mascot: string;
   memory: string;
@@ -354,6 +358,10 @@ function templateOf<S extends PromptSort>(blocks: Block[], laid: Laid, fill: Fil
         case 'agentNotes':
           if (given.agentNotes !== undefined) verbatim(block, given.agentNotes);
           break;
+        // A model wrote the values, so they are never evaluated as CBS either.
+        case 'status':
+          if (given.status !== undefined) verbatim(block, given.status);
+          break;
         case 'agentMemory':
           if (given.agentMemory !== undefined) verbatim(block, given.agentMemory);
           break;
@@ -395,6 +403,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
   const read = built && { shown: built.shown, roles: scope.messages.map(({ role }) => role), speakers: speakersOf(scope), texts: chat.texts };
   const recalled = built && standing(built.memory, read!, memoryBudget(built.budget, budget), tokens);
   const told = memory?.kind === 'tool' ? memory : null;
+  const status = statusSent(scope.status.definitions, scope.status.state, 'with');
 
   const { parts: template, memory: slot } = templateOf<'conversation'>(blocks, laid, {
     tool: tools,
@@ -404,6 +413,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
     authorNote: prompt ? authorNote(scope.note, prompt) : (scope.note ?? ''),
     postEverything: laid.last,
     agentNotes: notes,
+    status,
     memory: told?.text ?? recalled?.text ?? '',
   });
   // Retrieval rides only where memory does, before the latest user message so it follows the last cache point.
@@ -416,6 +426,7 @@ function conversation({ scope, seed, countTokens, budget, fit, continuing, answe
   if (!blocks.some((block) => block.kind === 'slot' && block.slot === 'postEverything')) out(...throughSlot(laid, laid.last, 'postEverything'));
   if (!hasToolSlot && toolText.trim()) out({ message: { role: 'system', content: toolText }, from: toolFrom(tools) });
   if (!blocks.some((block) => block.kind === 'slot' && block.slot === 'agentNotes') && notes.trim()) out({ message: { role: 'system', content: notes.trim() }, from: { kind: 'agents' } });
+  if (!blocks.some((block) => block.kind === 'slot' && block.slot === 'status') && status) out({ message: { role: 'system', content: status }, from: { kind: 'status' } });
   if (continuing) out({ message: { role: 'user', content: CONTINUE }, from: { kind: 'continue' } });
   else if (scope.messages.at(-1)?.role === 'assistant') out({ message: { role: 'user', content: answerInstruction }, from: { kind: 'answer' } });
 
