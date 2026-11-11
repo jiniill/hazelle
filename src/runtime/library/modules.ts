@@ -1,3 +1,4 @@
+import { unfiled } from '../../engine/import/status';
 import type { ImportedModule, Profiles, Unsupported } from '../../engine/import/types';
 import { likenessId } from '../../model/likeness';
 import type { Stored } from '../../model/kinds';
@@ -21,7 +22,7 @@ export async function importModule(store: ObjectStore, files: Files, imported: I
   const id = brought?.id ?? crypto.randomUUID();
   const { folders, writes: lore } = importedLore(id, imported.lore, imported.loreFolders);
   const { name, description, namespace } = imported;
-  const module: Module = { ...imported.pack, name, description, namespace, loreFolders: folders, ...(brought && { risu: brought.risu }) };
+  const module: Module = { ...unfiled(imported.pack, folders.map(({ id }) => id)), name, description, namespace, loreFolders: folders, ...(brought && { risu: brought.risu }) };
   const writes: Write[] = [
     { type: 'create', kind: 'module', id, parent: null, value: module },
     ...stored.data.kept.map((asset): Write => ({ type: 'create', kind: 'asset', id: crypto.randomUUID(), parent: id, value: asset })),

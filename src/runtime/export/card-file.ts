@@ -1,6 +1,7 @@
 import { writeCharx } from '../../engine/import/card';
 import { moduleSource } from '../../engine/import/hazelle';
 import { risumBlock, risumHead, RISUM_END } from '../../engine/import/risum';
+import { filed } from '../../engine/import/status';
 import { type Bot, type Imported, type LoreEntry, mergeUnsupported, type Profiles, type TypedModule, type Unsupported } from '../../engine/import/types';
 import { zipWriter } from '../../engine/import/zip';
 import { live, type LoreFolder, type Module } from '../../model/library';
@@ -40,12 +41,14 @@ function owned(store: ObjectStore, owner: string, folders: LoreFolder[]) {
   };
 }
 
-const moduleOf = (store: ObjectStore, id: string, { risu, name, description, namespace, loreFolders, regex, triggers, background, toggles }: Module): TypedModule & { files: FileRef[] } => ({
+const folderIds = (folders: LoreFolder[]) => folders.map(({ id }) => id);
+
+const moduleOf = (store: ObjectStore, id: string, { risu, name, description, namespace, loreFolders, regex, triggers, background, toggles, status }: Module): TypedModule & { files: FileRef[] } => ({
   risu: risu ?? id,
   name,
   description,
   namespace,
-  pack: { regex, triggers, ...(background !== undefined && { background }), toggles },
+  pack: filed({ regex, triggers, ...(background !== undefined && { background }), toggles, ...(status && { status }) }, folderIds(loreFolders)),
   ...owned(store, id, loreFolders),
 });
 
@@ -75,7 +78,7 @@ export function charxContent(store: ObjectStore, id: string): ApiResult<CharxCon
   const avatar = store.children('avatar', id)[0]?.value ?? null;
   const { translatorNote, keepThoughts, statusScripts, translations } = character;
   const bot: Bot = {
-    card: character.card,
+    card: filed(character.card, folderIds(character.loreFolders)),
     lore: own.lore,
     loreFolders: own.loreFolders,
     avatar: avatar?.type ?? null,

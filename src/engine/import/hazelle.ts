@@ -4,6 +4,7 @@ import type { Portrait, PortraitSource } from '../../model/likeness';
 import { fingerprint } from '../memory';
 import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource, luaCodes, nativeHolds, readTriggers, record, regexScripts, stampIds, strings, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';
 import { risuRegex } from '../../tool-api/risu-regex';
+import { readStatus } from './status';
 import { readToggles, writeToggles } from './toggles';
 import type { Bot, BundledModule, CharacterOwn, HazelleOwn, LoreEntry, Profiles, RegexScript, Trigger, TypedModule } from './types';
 
@@ -101,6 +102,7 @@ export function hazelleSource(bot: Bot) {
         ...(translations && translations.length > 0 && { translations: translations.map(({ source, language, translation }) => ({ source, language, text: translation.text, at: translation.at })) }),
       },
       likeness: bot.own.likeness,
+      ...(bot.card.status && { status: bot.card.status }),
       ...apart.kept,
       modules: bot.bundled.map(({ risu, name, description, namespace, pack, likeness, ...module }) => ({
         id: risu,
@@ -109,6 +111,7 @@ export function hazelleSource(bot: Bot) {
         namespace,
         toggles: writeToggles(pack.toggles),
         ...(pack.background !== undefined && { background: pack.background }),
+        ...(pack.status && { status: pack.status }),
         likeness,
         regex: pack.regex.length,
         triggers: pack.triggers.length,
@@ -207,6 +210,12 @@ function unstamped<S extends { id: string }>(script: S): Unstamped<S> {
   return rest as Unstamped<S>;
 }
 
+// A pack's 상태 definition, which only this app's files hold, as the pack takes it.
+function declared(raw: unknown) {
+  const status = readStatus(raw);
+  return status && { status };
+}
+
 // raw: the card's extensions.hazelle, absent from any file but this app's own charx. toggles: as printOf takes them.
 export function readHazelle(raw: unknown, toggles: string, read: Converted, tally: Tally): { read: Converted; own: HazelleOwn | null; bundled: ConvertedBundle[] } {
   if (raw === undefined) return { read, own: null, bundled: [] };
@@ -237,7 +246,7 @@ export function readHazelle(raw: unknown, toggles: string, read: Converted, tall
     return { pack: stampIds({ regex: regex[index]!, triggers: triggers[index]! }), lore: entries, loreFolders: own, assets: assets[index]! };
   };
   const character = part(0);
-  const card = { ...read.card, ...character.pack };
+  const card = { ...read.card, ...character.pack, ...declared(source.status) };
   return {
     read: { ...read, card, lore: character.lore, loreFolders: character.loreFolders, assets: character.assets },
     own: { character: characterOwn(record(source.character), card.regex), likeness: profiles(source.likeness) },
@@ -249,7 +258,7 @@ export function readHazelle(raw: unknown, toggles: string, read: Converted, tall
         description: text(module.description),
         namespace: text(module.namespace) || null,
         risu: text(module.id) || null,
-        pack: { ...pack, ...(background && { background }), toggles: readToggles(text(module.toggles)) },
+        pack: { ...pack, ...(background && { background }), toggles: readToggles(text(module.toggles)), ...declared(module.status) },
         ...owned,
         unsupported: [],
         likeness: profiles(module.likeness),
@@ -280,7 +289,7 @@ export function moduleSource({ risu, name, description, namespace, pack, lore, l
     hideIcon: false,
     ...(apart.lua && { lowLevelAccess: true }),
   };
-  return { ...source, hazelle: { version: VERSION, ...apart.kept, print: modulePrint(convertModule(source, new Map())) } };
+  return { ...source, hazelle: { version: VERSION, ...apart.kept, ...(pack.status && { status: pack.status }), print: modulePrint(convertModule(source, new Map())) } };
 }
 
 // A module file's JSON as convertModule reads it, with what its hazelle key keeps put back when the print matches.
@@ -293,5 +302,5 @@ export function readModule(raw: Json, tally: Tally): ConvertedModule {
     return read;
   }
   const back = putBack({ regex: read.pack.regex, triggers: read.pack.triggers, lore: read.lore }, source, tally);
-  return { ...read, pack: { ...read.pack, ...stampIds(back) }, lore: back.lore };
+  return { ...read, pack: { ...read.pack, ...stampIds(back), ...declared(source.status) }, lore: back.lore };
 }
