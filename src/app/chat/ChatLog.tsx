@@ -58,11 +58,6 @@ export function ChatLog({ chat }: { chat: OpenChat }) {
         />}
       </Fragment>;
     }}</Viewport></TimePinContext>}
-    {chat.states.length > 0 && <ChatState
-      states={chat.states}
-      onRewrite={chat.id && !chat.busy ? actions.rewriteState : undefined}
-      onEdit={chat.id && !chat.busy ? actions.editState : undefined}
-      onChoice={actions.choose}
-    />}
+    {chat.states.length > 0 && <ChatState chat={chat} pinned={false} />}
   </>;
 }

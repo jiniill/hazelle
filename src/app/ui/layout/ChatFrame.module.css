@@ -169,7 +169,7 @@
   overflow-y: auto;
   /* Viewport owns anchoring; excluding only its rows still lets the browser anchor to the surrounding content. */
   overflow-anchor: none;
-  scroll-padding-top: var(--header-height);
+  scroll-padding-top: calc(var(--header-height) + var(--pinned-height, 0px));
   scroll-padding-bottom: var(--footer-space);
 }
 
@@ -184,6 +184,22 @@
   flex-direction: column;
   gap: var(--space-24);
   padding: calc(var(--header-height) + var(--space-24)) var(--read-gutter) calc(var(--footer-space) + var(--story-pill-room) + var(--space-8));
+}
+
+/* What stays at the story's top while it scrolls: under the header while that shows, at the top once it hides. It
+   comes before the spring that sets a short story at the foot, and scrolls inside itself past its share of the height. */
+.pinned {
+  position: sticky;
+  top: var(--space-8);
+  z-index: var(--layer-raised);
+  order: -1;
+  max-height: var(--story-pinned-most);
+  overflow-y: auto;
+  transition: top var(--motion-move);
+}
+
+.shown ~ .scroll .pinned {
+  top: calc(var(--header-height) + var(--space-8));
 }
 
 /* Resolve right-gutter offsets in the same scroller-width box as .content, not the narrower story column. */

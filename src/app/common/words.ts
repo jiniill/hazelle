@@ -213,6 +213,7 @@ export const STATUS_WRITING = '쓰는 중…';
 export const STATUS_MISSED = '이번 턴 갱신 안 됨';
 export const STATUS_FOLD = { open: '상태창 펼치기', close: '상태창 접기' };
 export const STATUS_NEXT_VIEW = '다른 보기';
+export const STATUS_PIN = '위에 고정';
 export const statusEdit = (name: string) => `${name} 수정`;
 export const STATUS_RANGE = (min: number, max: number) => `${min}에서 ${max} 사이로 적어 주세요.`;
 export const STATUS_DONE = '끝낸 것';
