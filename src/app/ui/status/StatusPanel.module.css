@@ -147,7 +147,9 @@
 }
 
 /* In a chat an open panel holds to a share of the screen, so the reply it follows stays in sight. */
-.headed > .blocks {
+.held {
+  composes: scrollCue from '../foundation/surface.module.css';
+  --scroll-cue-ground: var(--status-panel);
   max-height: var(--status-blocks-most);
   /* The ring's room, given back, so a value pressed at the edge keeps its whole ring. */
   margin: calc(-1 * var(--focus-ring-reach));

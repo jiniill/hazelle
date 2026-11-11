@@ -10,6 +10,7 @@ import { useDisplay } from '../display';
 import { useToast } from '../toast';
 import { ACTS, addOf } from './acts';
 import { NameDialog } from './NameDialog';
+import { StatusBlocks } from './StatusBlocks';
 import type { FieldKind } from './statusDraft';
 import { StatusFieldDialog } from './StatusFieldDialog';
 import { sampleState } from './statusSample';
@@ -209,24 +210,28 @@ function Views({ definition, onChange }: { definition: StatusDefinition; onChang
       }
     >
       {views.length === 0 && <Empty variant="section">{STATUS_WORDS.noViews}</Empty>}
-      {views.map(({ id, name, frame, mood }) => (
-        <Section
-          key={id}
-          level={3}
-          title={name}
-          action={
-            <MoreMenu of={`'${name}'`}>
-              <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => naming.ask({ title: ACTS.rename.label, value: name, among: views, self: id, onSave: (next) => write(id, { name: next }) })} />
-              <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onChange(withoutView(definition, id))} />
-            </MoreMenu>
-          }
-        >
-          <SettingGroup label={name}>
-            <SettingRow label={STATUS_WORDS.frame} control={<ChoiceGroup<StatusFrame> label={STATUS_WORDS.frame} layout="fit" options={options(STATUS_FRAME)} value={frame} onChange={(next) => write(id, { frame: next })} />} />
-            <SettingRow label={STATUS_WORDS.mood} control={<ChoiceGroup<StatusMood> label={STATUS_WORDS.mood} layout="fit" options={options(STATUS_MOOD)} value={mood} onChange={(next) => write(id, { mood: next })} />} />
-          </SettingGroup>
-        </Section>
-      ))}
+      {views.map((view) => {
+        const { id, name, frame, mood } = view;
+        return (
+          <Section
+            key={id}
+            level={3}
+            title={name}
+            action={
+              <MoreMenu of={`'${name}'`}>
+                <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => naming.ask({ title: ACTS.rename.label, value: name, among: views, self: id, onSave: (next) => write(id, { name: next }) })} />
+                <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onChange(withoutView(definition, id))} />
+              </MoreMenu>
+            }
+          >
+            <SettingGroup label={name}>
+              <SettingRow label={STATUS_WORDS.frame} control={<ChoiceGroup<StatusFrame> label={STATUS_WORDS.frame} layout="fit" options={options(STATUS_FRAME)} value={frame} onChange={(next) => write(id, { frame: next })} />} />
+              <SettingRow label={STATUS_WORDS.mood} control={<ChoiceGroup<StatusMood> label={STATUS_WORDS.mood} layout="fit" options={options(STATUS_MOOD)} value={mood} onChange={(next) => write(id, { mood: next })} />} />
+            </SettingGroup>
+            <StatusBlocks definition={definition} view={view} onChange={(blocks) => write(id, { blocks })} />
+          </Section>
+        );
+      })}
       {naming.dialog}
     </Section>
   );

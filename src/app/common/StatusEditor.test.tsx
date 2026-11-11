@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it, vi } from 'vitest';
 import { blankStatus, fromType, STATUS_TYPES } from '../../model/statusTypes';
 import { StatusEditor } from './StatusEditor';
-import { STATUS_PROBLEM, STATUS_WORDS } from './statusWords';
+import { STATUS_BLOCK, STATUS_PROBLEM, STATUS_WORDS } from './statusWords';
 
 // Static markup opens no menu and no ⓘ: what they hold is left out.
 vi.mock('../ui/overlays/Menu', async (original) => ({ ...(await original<typeof import('../ui/overlays/Menu')>()), Menu: () => null }));
@@ -24,6 +24,14 @@ it.each(STATUS_TYPES)("lists $name's fields, 묶음 and 기록 by name and previ
   const html = shown(definition);
   for (const { name } of [...definition.fields, ...definition.groups, ...definition.logs, ...definition.groups.flatMap(({ fields }) => fields), ...definition.logs.flatMap(({ fields }) => fields)]) expect(html).toContain(name);
   for (const { name } of definition.views!) expect(html).toMatch(new RegExp(`<section[^>]*aria-label="${name}"[^>]*data-mood`));
+});
+
+it("lists a view's blocks in order, a tab's set in under it, each saying what it shows and how", () => {
+  const html = shown(fromType(STATUS_TYPES.find(({ id }) => id === 'rpg')!, 'made'));
+  const order = [STATUS_BLOCK.head, 'HP', 'MP', STATUS_BLOCK.tabs, '지금', '퀘스트', '동료', '전투 기록'].map((word) => html.indexOf(`>${word}<`, html.indexOf(STATUS_WORDS.frame)));
+  expect(order).toEqual([...order].sort((a, b) => a - b));
+  expect(order[0]).toBeGreaterThan(-1);
+  expect(html).toContain(`${STATUS_WORDS.log} · ${STATUS_WORDS.all}`);
 });
 
 it('says a definition needs a name, and shows a blank one whole with nothing to list', () => {
