@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { statusSteps } from '../../model/chat';
+import { nameTaken } from '../../engine/status';
 import { statusCourse } from '../../model/status';
 import { ACTS, addOf } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
@@ -44,7 +45,7 @@ function Join({ states, definition, group, onJoin, onClose }: { states: ChatStat
   const state = states.find((each) => each.definition.id === definition);
   const declared = state?.definition.groups.find(({ id }) => id === group);
   if (!state || !declared) return null;
-  const taken = (name: string) => (state.now.groups[group] ?? []).some((member) => member.name.trim() === name);
+  const taken = (name: string) => nameTaken(state.now.groups[group] ?? [], name);
   return (
     <NameDialog
       title={addOf(declared.name)}

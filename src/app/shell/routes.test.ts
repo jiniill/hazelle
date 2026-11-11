@@ -42,6 +42,7 @@ const EXAMPLES = {
   prompt: [
     { kind: 'prompt', id: CHAT, pane: null },
     { kind: 'prompt', id: CHAT, pane: 'toggles' },
+    { kind: 'prompt', id: CHAT, pane: 'status' },
     { kind: 'prompt', id: CHAT, pane: 'model' },
     { kind: 'prompt', id: CHAT, pane: 'picture' },
     { kind: 'prompt', id: CHAT, pane: null, block: 'main & a+b?#' },
@@ -52,6 +53,7 @@ const EXAMPLES = {
   module: [
     { kind: 'module', id: CHAT, pane: null },
     { kind: 'module', id: CHAT, pane: 'toggles' },
+    { kind: 'module', id: CHAT, pane: 'status' },
     { kind: 'module', id: CHAT, pane: null, script: 'trigger-0' },
   ],
   plugins: [{ kind: 'plugins' }],

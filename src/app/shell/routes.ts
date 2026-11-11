@@ -9,9 +9,11 @@ import { PROMPT_SORTS, type PromptSort } from '../../model/prompt';
 
 const ACCOUNT_SECTIONS = ['notices'] as const;
 export type AccountSection = (typeof ACCOUNT_SECTIONS)[number];
-const PROMPT_PANES = ['read', 'toggles', 'model', 'picture', 'variables', 'modules', 'features'] as const;
+const PROMPT_PANES = ['read', 'toggles', 'status', 'model', 'picture', 'variables', 'modules', 'features'] as const;
 export type PromptPane = (typeof PROMPT_PANES)[number];
-const CHARACTER_PARTS = ['profile', 'character', 'greetings', 'instructions', 'lore', 'modules', 'features', 'scripts', 'toggles', 'variables', 'assets', 'illustration', 'display'] as const;
+const CHARACTER_PARTS = ['profile', 'character', 'greetings', 'instructions', 'lore', 'modules', 'features', 'scripts', 'toggles', 'status', 'variables', 'assets', 'illustration', 'display'] as const;
+const MODULE_PANES = ['toggles', 'status'] as const;
+export type ModulePane = (typeof MODULE_PANES)[number];
 export type CharacterPart = (typeof CHARACTER_PARTS)[number];
 
 // These paths are what a reload, a bookmark and the browser's back button land on, so an existing one never changes.
@@ -41,7 +43,7 @@ export type Route =
   | { kind: 'personas'; place: string | null }
   | { kind: 'persona'; id: string }
   | { kind: 'modules'; place: string | null }
-  | { kind: 'module'; id: string; pane: 'toggles' | null; script?: string }
+  | { kind: 'module'; id: string; pane: ModulePane | null; script?: string }
   // A plugin is stored as a module that holds a tool; id is that module's.
   | { kind: 'plugins' }
   | { kind: 'plugin'; id: string }
@@ -169,7 +171,8 @@ export function parseRoute(at: string): Route {
     // A plugin's page before 플러그인 had a page of its own.
     if (sub === 'page') return { kind: 'plugin-page', id };
     if (sub !== undefined) return HOME;
-    if (params.get('pane') === 'toggles') return { kind: 'module', id, pane: 'toggles' };
+    const pane = MODULE_PANES.find((each) => each === params.get('pane'));
+    if (pane) return { kind: 'module', id, pane };
     const script = params.get('script');
     return { kind: 'module', id, pane: null, ...(script && { script }) };
   }

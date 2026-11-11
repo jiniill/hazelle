@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { StatusChange, StatusDefinition, StatusState } from '../model/status';
-import { parseStatus, statusAsk, statusSent, statusText } from './status';
+import { nameTaken, parseStatus, statusAsk, statusSent, statusText } from './status';
 
 const main: StatusDefinition = {
   id: 'main',
@@ -128,4 +128,11 @@ test('a writer is sent the whole state and the ask for its own definitions only,
   expect(sent.endsWith(statusAsk([phone]))).toBe(true);
   expect(statusSent([phone], state, [])).toBe(`The status as it stands:\n${statusText([phone], state)}`);
   expect(statusSent([], state, [])).toBe('');
+});
+
+test('a name another of its place has is taken as the parser would match it, and not by the one that holds it', () => {
+  const fields = [{ id: 'place', name: '장소 A' }, { id: 'mood', name: '기분' }];
+  expect(nameTaken(fields, ' 장소 a ')).toBe(true);
+  expect(nameTaken(fields, '장소 A', 'place')).toBe(false);
+  expect(nameTaken(fields, '날씨')).toBe(false);
 });

@@ -9,14 +9,16 @@ import { aliased } from '../common/alias';
 import { holdsLine, howMany } from '../common/pack';
 import { AssetsEditor } from '../common/AssetsEditor';
 import { LoreEditor } from '../common/LoreEditor';
+import { useLab } from '../common/labs';
 import { PackToggles } from '../common/PackToggles';
+import { StatusPane } from '../common/StatusPane';
 import { scriptsPage } from '../common/ScriptsEditor';
 import { PortraitsEditor } from '../common/PortraitsEditor';
 import { useAutosave } from '../common/useAutosave';
-import { ALWAYS, BIN_KEEPS, moduleName, PAGES, promptName, SAVE_FAILED } from '../common/words';
+import { ALWAYS, BIN_KEEPS, moduleName, PAGES, promptName, SAVE_FAILED, STATUS } from '../common/words';
 import { useChildren, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate, openPart } from '../shell/router';
-import { characterPage, type Back } from '../shell/routes';
+import { characterPage, type Back, type ModulePane } from '../shell/routes';
 import { useMaking } from '../common/useMaking';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
@@ -117,7 +119,8 @@ export function UsedBy({ id }: { id: string }) {
   ));
 }
 
-export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: Stored<'module'>; at: { pane: 'toggles' | null; script?: string }; back: Back }) {
+export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: Stored<'module'>; at: { pane: ModulePane | null; script?: string }; back: Back }) {
+  const statusLab = useLab('status');
   const wide = useWide();
   const [exporting, setExporting] = useState(false);
   const { id, value } = stored;
@@ -144,6 +147,13 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
       </Screen>
     );
 
+  if (pane === 'status' && statusLab)
+    return (
+      <Screen width="form" top={<NavBar title={moduleName(name)} {...backBar(back)} />}>
+        <StatusPane owner={{ kind: 'module', id }} definition={value.status} />
+      </Screen>
+    );
+
   const openScript = (next: string | null) => openPart({ kind: 'module', id, pane: null, ...(next && { script: next }) }, wide);
   const scripts = scriptsPage({ owner: { kind: 'module', id }, pack: value, drill: !wide, open: script ?? null, onOpen: openScript });
   if (scripts.back)
@@ -162,6 +172,7 @@ export function ModuleScreen({ stored, at: { pane, script }, back }: { stored: S
       <UsedBy id={id} />
       <List box places label="토글">
         <ListItem title="토글" note={howMany(value.toggles.filter(isToggle).length)} onClick={() => navigate({ kind: 'module', id, pane: 'toggles' })} />
+        {statusLab && <ListItem title={STATUS} note={value.status?.name} onClick={() => navigate({ kind: 'module', id, pane: 'status' })} />}
       </List>
       <LoreEditor owner={{ kind: 'module', id }} folders={value.loreFolders} />
       {scripts.body}
