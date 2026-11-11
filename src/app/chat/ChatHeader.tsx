@@ -138,7 +138,7 @@ export function ChatDialogs({ chat }: { chat: OpenChat }) {
     />
   );
   if (dialog === 'prompt') return <PromptDialog prompt={chat.prompt} plain={chat.card === null} out={chat.promptOut && chat.card === null} onChoose={actions.setPrompt} onKeepOut={actions.keepPromptOut} onEdit={(id) => actions.side({ kind: 'prompts', id, pane: null })} onClose={actions.closeDialog} />;
-  if (dialog === 'reading') return <ReadingDialog onClose={actions.closeDialog} />;
+  if (dialog === 'reading') return <ReadingDialog character={chat.shelf && { id: chat.shelf.id, look: chat.shelf.character.look }} onClose={actions.closeDialog} />;
   if (dialog === 'onboarding' && chat.onboarding) {
     const done = (answers: Writes) => {
       actions.startWith(answers);

@@ -6,7 +6,7 @@ import { UNSUPPORTED_KINDS, type Card, type Imported, type Pack, type Picture, t
 import type { Translation, TranslateSwitches } from '../../model/chat';
 import type { IllustrateSwitches, Rung } from '../../model/illustration';
 import type { Stored, Values } from '../../model/kinds';
-import { readableTexts, type Asset, type Avatar, type Character, type Lore, type Pictures } from '../../model/library';
+import { readableTexts, type Asset, type Avatar, type Backdrop, type Character, type Lore, type Pictures } from '../../model/library';
 import { likenessId, type Likeness } from '../../model/likeness';
 import type { ToggleValues } from '../../model/prompt';
 import { ORDER_ID, putBack, rearrange, toFront } from '../../model/order';
@@ -189,13 +189,19 @@ export function editCharacter(store: ObjectStore, id: string, { alias, ...card }
   return store.update('character', id, (current) => ({ ...current, ...(alias === undefined ? {} : { alias }), card: { ...current.card, ...card }, changed: Date.now() }));
 }
 
-// Only the fields given; undefined removes one, back to its default.
-export function setPictures(store: ObjectStore, id: string, patch: Partial<Pictures>): Promise<ApiResult<Stored<'character'>>> {
-  return store.update('character', id, (current) => {
-    const pictures = Object.fromEntries(Object.entries({ ...current.pictures, ...patch }).filter(([, value]) => value !== undefined));
-    return Object.keys(pictures).length ? { ...current, pictures } : without(current, 'pictures');
-  });
+// Only the fields given; undefined removes one, back to its default, and a record left empty goes.
+function patched<K extends 'pictures' | 'backdrop'>(current: Character, field: K, patch: Partial<NonNullable<Character[K]>>): Character {
+  const merged = Object.fromEntries(Object.entries({ ...current[field], ...patch }).filter(([, value]) => value !== undefined));
+  return Object.keys(merged).length ? { ...current, [field]: merged } : without(current, field);
 }
+
+export const setPictures = (store: ObjectStore, id: string, patch: Partial<Pictures>): Promise<ApiResult<Stored<'character'>>> => store.update('character', id, (current) => patched(current, 'pictures', patch));
+
+export const setBackdrop = (store: ObjectStore, id: string, patch: Partial<Backdrop>): Promise<ApiResult<Stored<'character'>>> => store.update('character', id, (current) => patched(current, 'backdrop', patch));
+
+// null: back to the device's look.
+export const setLook = (store: ObjectStore, id: string, look: string | null): Promise<ApiResult<Stored<'character'>>> =>
+  store.update('character', id, (current) => (look === null ? without(current, 'look') : { ...current, look }));
 
 export function setDecor(store: ObjectStore, id: string, decor: boolean): Promise<ApiResult<Stored<'character'>>> {
   return store.update('character', id, (current) => ({ ...current, decor }));
@@ -214,14 +220,6 @@ export function setStatusScript(store: ObjectStore, id: string, script: string, 
 
 export function setCardWrites(store: ObjectStore, id: string, cardWrites: boolean): Promise<ApiResult<Stored<'character'>>> {
   return store.update('character', id, (current) => (current.deleted === undefined ? { ...current, cardWrites } : null));
-}
-
-// A blank one leaves the card without a background, as an import of a card without one does.
-export function setBackground(store: ObjectStore, id: string, html: string): Promise<ApiResult<Stored<'character'>>> {
-  return store.update('character', id, (current) => {
-    if (current.deleted !== undefined) return null;
-    return { ...current, card: html.trim() ? { ...current.card, background: html } : without(current.card, 'background') };
-  });
 }
 
 export function setKeepThoughts(store: ObjectStore, id: string, keep: boolean): Promise<ApiResult<Stored<'character'>>> {

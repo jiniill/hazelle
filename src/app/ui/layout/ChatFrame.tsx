@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref, type RefObject } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { faceStyle, FONTS, type FontId } from '../foundation/fonts';
+import { schemeAttributes, type Scheme } from '../foundation/theme';
 import { usePanelsBeside, useShortWide } from '../foundation/media';
 import { useReadingRail } from '../story/readingRail';
 import styles from './ChatFrame.module.css';
@@ -56,6 +57,8 @@ type Props = {
   // Stays at the story's top while it scrolls, under the header while that shows: a 상태창 pinned there.
   pinned?: ReactNode;
   reading: Reading;
+  // A look of the column's own, header, story, composer and backdrop, over the document's; the panels keep the page's.
+  scheme?: Scheme;
   hideHeader: boolean;
   // Reserve stage space before the first illustration lands, not after it shifts the text.
   stage: boolean;
@@ -70,7 +73,7 @@ type Props = {
   onScroll: () => void;
 };
 
-export function ChatFrame({ back, title, actions, children, above, footer, dockRef, panel, beside, peek, backdrop, edge, pinned, reading, hideHeader, stage, side, portrait, pictures, compact, scrollRef, onScroll }: Props) {
+export function ChatFrame({ back, title, actions, children, above, footer, dockRef, panel, beside, peek, backdrop, edge, pinned, reading, scheme, hideHeader, stage, side, portrait, pictures, compact, scrollRef, onScroll }: Props) {
   const scope = readingScope(reading);
   const pairs = usePanelsBeside();
   // A phone on its side leaves the story too little height to keep the header over it.
@@ -179,6 +182,7 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
     <div className={styles.frame}>
       <main
         ref={columnRef}
+        {...(scheme && schemeAttributes(scheme))}
         className={`${styles.column} ${scope.className} ${staged ? styles.staged : ''} ${backdrop ? styles.backdropped : ''}`}
         style={
           {

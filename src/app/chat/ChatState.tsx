@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { describeStatusFailure } from '../common/failure';
 import { shownApp, shownMain, shownView } from '../common/statusView';
 import { PHONE, phoneFresh, STATUS_DETAIL, STATUS_FOLD, STATUS_MISSED, STATUS_NEXT_VIEW, STATUS_PIN, STATUS_REWRITE, STATUS_WRITING, statusEdit } from '../common/words';
-import { useDisplay } from '../display';
+import { useWorn } from '../display';
 import { Button, IconButton, Row, Stack, StatusPanel, type ShownPlace, type Theme } from '../ui';
 import { StateEditAt } from './StateEdit';
 import type { OpenChat } from './useChat';
@@ -64,8 +64,8 @@ function StatePanel({ state, theme, shown, onShow, onRewrite, onEdit, onChoice, 
 // place this one stands in. Folding, the place and the view are the reader's for the chat's character (StateShown), one
 // fold and one place for every panel. A definition whose views are all apps has no panel; where the chat has apps,
 // the 휴대폰 is opened from under the panels, which says how much the latest reply added to it.
-export function ChatState({ chat, pinned }: { chat: Pick<OpenChat, 'states' | 'stateShown' | 'id' | 'busy' | 'actions'>; pinned: boolean }) {
-  const { display } = useDisplay();
+export function ChatState({ chat, pinned }: { chat: Pick<OpenChat, 'states' | 'stateShown' | 'id' | 'busy' | 'actions' | 'shelf'>; pinned: boolean }) {
+  const { theme } = useWorn(chat.shelf?.character.look);
   if ((chat.stateShown.pinned === true) !== pinned) return null;
   const { actions } = chat;
   const live = chat.id !== null && !chat.busy;
@@ -74,7 +74,7 @@ export function ChatState({ chat, pinned }: { chat: Pick<OpenChat, 'states' | 's
   return (
     <Stack gap="group">
       {chat.states.filter(({ views }) => views.length > 0).map((state) => (
-        <StatePanel key={state.definition.id} state={state} theme={display.theme} shown={chat.stateShown} onShow={actions.showState} onRewrite={live ? actions.rewriteState : undefined} onEdit={live ? actions.editState : undefined} onChoice={actions.choose} onDetail={actions.stateDetail} />
+        <StatePanel key={state.definition.id} state={state} theme={theme} shown={chat.stateShown} onShow={actions.showState} onRewrite={live ? actions.rewriteState : undefined} onEdit={live ? actions.editState : undefined} onChoice={actions.choose} onDetail={actions.stateDetail} />
       ))}
       {apps.length > 0 && (
         <Row kind="actions">

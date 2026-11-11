@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLAIN_LUA, type RegexScript } from '../../engine/import/types';
-import { addLua, editRegex, moveScript, removeScript, restoreScript, setScriptOff } from './pack';
+import { addLua, editRegex, moveScript, removeScript, restoreScript, setBackground, setScriptOff } from './pack';
 import type { PackOwner } from '../../model/library';
 import type { ObjectStore } from '../store/store';
 import { testServer } from '../testing';
@@ -68,5 +68,19 @@ describe('pack scripts', () => {
     if (!created.ok) throw new Error(created.error);
     await addLua(store, { kind: 'module', id: created.data.id }, 'lua');
     expect(store.get('module', created.data.id)!.value).toMatchObject({ triggers: [{ kind: 'lua', ...PLAIN_LUA, id: 'lua', name: '', code: '' }] });
+  });
+
+  it("keeps a character's background in its card and a module's at its top level, a blank one leaving none", async () => {
+    const { store } = await server.account();
+    const owner = await character(store);
+    const created = await store.create('module', { name: 'Bell', description: '', namespace: null, regex: [], triggers: [], toggles: [], loreFolders: [] });
+    if (!created.ok) throw new Error(created.error);
+    const module = { kind: 'module', id: created.data.id } as const;
+    await setBackground(store, owner, '<style>.a{}</style>');
+    await setBackground(store, module, '<div>bell</div>');
+    expect(store.get('character', owner.id)!.value.card.background).toBe('<style>.a{}</style>');
+    expect(store.get('module', module.id)!.value.background).toBe('<div>bell</div>');
+    await setBackground(store, module, '  \n');
+    expect(store.get('module', module.id)!.value).not.toHaveProperty('background');
   });
 });

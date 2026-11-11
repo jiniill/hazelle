@@ -6,7 +6,7 @@ import type { ChatScope } from '../../engine/render';
 import type { EmbedResult, FetchResult, Host, ModelMessage, ModelRefusal, ModelResult, ToolReach } from '../../engine/script-api';
 import { live, type PackOwner } from '../../model/library';
 import { chatModel, embedModel, sharedModel } from '../models/assignment';
-import { setBackground } from '../library/characters';
+import { setBackground } from '../library/pack';
 import { keepCall } from '../chat/chat-log';
 import type { Costs } from '../models/cost';
 import type { Credentials } from '../models/credential';
@@ -109,7 +109,7 @@ export class ScriptReach {
     const character = live(store.get('chat', chat))?.value.character ?? null;
     if (character === null || signal?.aborted || !(await this.interactions.mayRewrite(chat, character, from, deadline, signal))) return false;
     if (signal?.aborted) return false;
-    return (await setBackground(store, character, html)).ok;
+    return (await setBackground(store, { kind: 'character', id: character }, html)).ok;
   }
 
   // A tool's own call out (design §6.10), under its module's one answer, counted against the chat's bot calls as a model

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Reading } from '../ui';
-import { DISPLAY_DEFAULT, effectiveEnterSends, lookOf, parseDisplay, parseReading, presetOf, presets, savedPresets } from './reading';
+import { backdropShades, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, parseDisplay, parseReading, presetOf, presets, savedPresets, wornLook } from './reading';
 
 const FALLBACK: Reading = { font: 'serif', size: 17, leading: 'normal', width: 'normal', reply: 'follow' };
 
@@ -75,5 +75,22 @@ describe('saved presets', () => {
     const before: Record<string, string | number> = { ...look };
     delete before.dialogue;
     expect(savedPresets([{ id: 'a', name: '밤', look: before }]).presets[0]?.look).toEqual(look);
+  });
+});
+
+describe("a character's background shades", () => {
+  it('reads a known step and takes the look backgrounds had before for one unset or unknown', () => {
+    expect(backdropShades({ veil: 'low', blur: 'mid' })).toEqual({ veil: 'low', blur: 'mid' });
+    expect(backdropShades({ veil: 'thick' })).toEqual({ veil: 'high', blur: 'none' });
+    expect(backdropShades(undefined)).toEqual({ veil: 'high', blur: 'none' });
+  });
+});
+
+describe("a character's look", () => {
+  it("wears its preset's colors and 글꼴 over the device's size and spacing, and the device's own for none", () => {
+    const study = presets(FALLBACK).find(({ id }) => id === 'study')!;
+    const device: Reading = { ...FALLBACK, font: 'sans', size: 20, width: 'wide' };
+    expect(wornLook(study, device, 'dark')).toEqual({ scheme: study.look, theme: 'light', reading: { ...device, font: 'serif' } });
+    expect(wornLook(undefined, device, 'dark')).toEqual({ scheme: undefined, theme: 'dark', reading: device });
   });
 });

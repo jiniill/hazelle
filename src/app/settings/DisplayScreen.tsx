@@ -11,7 +11,7 @@ import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRo
 import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
 import { reader } from '../common/typedNumber';
-import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, PRESET, SAVE_FAILED } from '../common/words';
+import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, PRESET, PRESET_GONE, PRESET_GONE_CHIP, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useSettings, useStore } from '../session';
 import { backBar } from '../shell/router';
@@ -105,8 +105,8 @@ export function DisplayScreen({ back }: { back: Back | null }) {
                 <SettingRow
                   key={mode}
                   label={MODES[mode]}
-                  error={missing(mode) ? '이 프리셋을 찾을 수 없어요. 다른 프리셋을 선택해 주세요.' : undefined}
-                  control={<ChoiceGroup layout="fit" label={MODES[mode]} options={presetChoices(all)} value={missing(mode) ? null : display.follow![mode]} empty="삭제된 프리셋" onChange={(picked) => assign(mode, all.find((preset) => preset.id === picked)!)} />}
+                  error={missing(mode) ? PRESET_GONE : undefined}
+                  control={<ChoiceGroup layout="fit" label={MODES[mode]} options={presetChoices(all)} value={missing(mode) ? null : display.follow![mode]} empty={PRESET_GONE_CHIP} onChange={(picked) => assign(mode, all.find((preset) => preset.id === picked)!)} />}
                 />
               ))}
           </SettingGroup>

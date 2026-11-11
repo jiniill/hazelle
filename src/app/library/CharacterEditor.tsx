@@ -20,6 +20,7 @@ import { CountedField } from '../common/CountedFields';
 import { describeTranslateFailure } from '../common/failure';
 import { describeUnused } from '../common/unused';
 import { AssetsEditor } from '../common/AssetsEditor';
+import { BackgroundField } from '../common/BackgroundField';
 import { DefaultVariables } from '../common/DefaultVariables';
 import { EntryList } from '../common/EntryList';
 import { LoreEditor } from '../common/LoreEditor';
@@ -42,6 +43,7 @@ import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HE
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
+import { CharacterLook } from './CharacterLook';
 import { OnboardingEditor } from './OnboardingEditor';
 import { ShareDialog } from './ShareDialog';
 import { useCharacter, useChildren, useFiles, useModules, useSettings, useStore, useStored } from '../session';
@@ -355,6 +357,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     illustration: <PortraitsEditor owner={id} />,
     display: (
       <Section title={PARTS.display.label}>
+        <CharacterLook id={id} character={character} />
         <SettingGroup label={PARTS.display.label}>
           <SettingRow label="봇 스타일" help={{ text: '봇이 만든 상태창과 스타일, 버튼을 화면에 보여 줘요.', demo: { name: 'botStyle', ways: { on: decor } } }} control={<Switch label="봇 스타일" checked={decor} onChange={(on) => flip('decor', on)} />} />
           {decor && (
@@ -373,6 +376,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
           {/* An always-on module's script can ask too, so an answer given shows here whatever the character's own packs hold. */}
           {(scripted || character.cardWrites !== undefined) && <SettingRow label={CARD_WRITES} help={CARD_WRITES_HELP} control={<Switch label={CARD_WRITES} checked={cardWrites} onChange={(on) => flip('cardWrites', on)} />} />}
         </SettingGroup>
+        {decor && <BackgroundField owner={{ kind: 'character', id }} html={card.background} language={cbs} />}
         {decor && (
           <Disclosure label="이미지 크기">
             <SettingGroup label="이미지 크기">
