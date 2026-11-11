@@ -1,15 +1,16 @@
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, CornerDownRight } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { nameTaken } from '../../engine/status';
 import { moved, without } from '../../model/fields';
 import type { StatusBlock, StatusDefinition, StatusView } from '../../model/status';
-import { blockNames, blocksAt, withBlocksAt, type BlockPath } from '../../model/statusEdit';
+import { blockNames, blockPlaces, blocksAt, movedBlock, withBlocksAt, type BlockPath } from '../../model/statusEdit';
 import { ACTS, addOf } from './acts';
 import { blockWords, FIELD_LOOKS, STATUS_BLOCK, STATUS_LOG_LOOK, STATUS_LOOK, STATUS_RECORDS_LOOK, STATUS_WORDS } from './statusWords';
 import { Button, Checkbox, ChoiceGroup, Dialog, Empty, List, ListItem, MenuItem, MoreMenu, PhraseField, SettingGroup, SettingRow, Stack, Switch, TextField } from '../ui';
 import { MOVE, statusEdit } from './words';
 
-type Props = { definition: StatusDefinition; view: StatusView; onChange: (blocks: StatusBlock[]) => void };
+// onRemove: the blocks without one, named as its row is.
+type Props = { definition: StatusDefinition; view: StatusView; onChange: (blocks: StatusBlock[]) => void; onRemove: (blocks: StatusBlock[], name: string) => void };
 
 const AUTO = '';
 const looks = <L extends string>(names: Record<L, string>, among: readonly L[]) => [{ value: AUTO as L | typeof AUTO, label: STATUS_WORDS.lookAuto }, ...among.map((value) => ({ value, label: names[value] }))];
@@ -136,11 +137,19 @@ function additions(definition: StatusDefinition, view: StatusView): { title: str
 
 // A view's blocks (design §6.1 part 4) as rows in the order they are drawn, a section's and each tab's set in under
 // it. A row opens what its block can be set to; its ⋯ moves it within its list, removes it, or adds inside it.
-export function StatusBlocks({ definition, view, onChange }: Props) {
+export function StatusBlocks({ definition, view, onChange, onRemove }: Props) {
   const [adding, setAdding] = useState<BlockPath | null>(null);
   const [editing, setEditing] = useState<{ path: BlockPath; at: number } | null>(null);
+  const [moving, setMoving] = useState<{ path: BlockPath; at: number } | null>(null);
   const change = (path: BlockPath, to: (list: readonly StatusBlock[]) => StatusBlock[]) => onChange(withBlocksAt(view.blocks, path, to));
   const inside = (path: BlockPath) => <MenuItem icon={ACTS.create.icon} label={STATUS_WORDS.inside} onClick={() => setAdding(path)} />;
+  const places = ({ path, at }: { path: BlockPath; at: number }) => blockPlaces(view.blocks, path, at);
+  // A list by the names that lead to it: the view's, then each section's and tab's on the way.
+  const placeName = (list: BlockPath) =>
+    [view.name, ...list.map((step, depth) => {
+      const block = blocksAt(view.blocks, list.slice(0, depth))[step.at];
+      return block?.kind === 'section' ? block.name : block?.kind === 'tabs' ? (block.tabs.find(({ id }) => id === step.tab)?.name ?? STATUS_WORDS.gone) : STATUS_WORDS.gone;
+    })].join(' › ');
 
   const rows = (path: BlockPath): ReactNode => {
     const list = blocksAt(view.blocks, path);
@@ -157,7 +166,8 @@ export function StatusBlocks({ definition, view, onChange }: Props) {
               {block.kind === 'section' && inside([...path, { at }])}
               {at > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => change(path, (blocks) => moved(blocks, at, at - 1))} />}
               {at < list.length - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => change(path, (blocks) => moved(blocks, at, at + 1))} />}
-              <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => change(path, (blocks) => blocks.filter((_, each) => each !== at))} />
+              {places({ path, at }).length > 0 && <MenuItem icon={CornerDownRight} label={STATUS_WORDS.moveTo} onClick={() => setMoving({ path, at })} />}
+              <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onRemove(withBlocksAt(view.blocks, path, (blocks) => blocks.filter((_, each) => each !== at)), title)} />
             </MoreMenu>
           }
         >
@@ -194,6 +204,22 @@ export function StatusBlocks({ definition, view, onChange }: Props) {
                   setAdding(null);
                   // What arranges others is set up as it is added: which fields, what name.
                   if (block.kind !== 'field' && block.kind !== 'records' && block.kind !== 'log') setEditing({ path: adding, at: end });
+                }}
+              />
+            ))}
+          </List>
+        </Dialog>
+      )}
+      {moving && (
+        <Dialog title={STATUS_WORDS.moveTo} note={STATUS_WORDS.moveToNote} onClose={() => setMoving(null)}>
+          <List box label={STATUS_WORDS.moveTo}>
+            {places(moving).map((list, at) => (
+              <ListItem
+                key={at}
+                title={placeName(list)}
+                onClick={() => {
+                  onChange(movedBlock(view.blocks, moving.path, moving.at, list));
+                  setMoving(null);
                 }}
               />
             ))}
