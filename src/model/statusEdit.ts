@@ -34,7 +34,7 @@ const goneFrom = (definition: StatusDefinition, what: 'field' | 'group' | 'log',
       if (what === 'field' && (block.kind === 'head' || block.kind === 'radar')) return { ...block, fields: block.fields.filter((each) => each !== id) };
       if (what === 'field') return (block.kind === 'field' || block.kind === 'choices') && block.field === id ? undefined : block;
       if (what === 'group') return block.kind === 'records' && block.group === id ? undefined : block;
-      return block.kind === 'log' && block.log === id ? undefined : block;
+      return (block.kind === 'log' || block.kind === 'chat') && block.log === id ? undefined : block;
     }),
   }));
 
@@ -100,7 +100,7 @@ export function blockNames(blocks: readonly StatusBlock[], names = { fields: new
     if (block.kind === 'head' || block.kind === 'radar') for (const field of block.fields) names.fields.add(field);
     else if (block.kind === 'field' || block.kind === 'choices') names.fields.add(block.field);
     else if (block.kind === 'records') names.groups.add(block.group);
-    else if (block.kind === 'log') names.logs.add(block.log);
+    else if (block.kind === 'log' || block.kind === 'chat') names.logs.add(block.log);
     else if (block.kind === 'section') blockNames(block.blocks, names);
     else for (const tab of block.tabs) blockNames(tab.blocks, names);
   }

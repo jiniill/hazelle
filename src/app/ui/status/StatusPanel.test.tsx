@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vitest';
 import type { ShownBlock, ShownField, StatusFrame } from './shown';
 import { StatusPanel } from './StatusPanel';
+import { StatusPhone } from './StatusPhone';
 
 const hp: ShownField = { id: 'hp', name: 'HP', kind: 'gauge', look: 'bar', share: 0.7, steps: 10, value: '84', max: '120', delta: { text: '-16', down: true } };
 const gold: ShownField = { id: 'gold', name: '소지금', kind: 'number', value: '1,240 G' };
@@ -83,4 +84,30 @@ it('makes a record\'s name a button only where records open a page of their own'
   const names = (html: string) => html.match(/<button type="button" class="[^"]*open[^"]*">서하<\/button>/g) ?? [];
   expect(names(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" theme="dark" blocks={blocks} onMember={() => {}} />))).toHaveLength(3);
   expect(names(draw('card', blocks))).toHaveLength(0);
+});
+
+it('draws a 기록 of messages as its conversations, each with the last thing said and how many are new, and a feed as posts', () => {
+  const html = draw('card', [
+    { block: 'chat', id: 'c', name: '메시지', threads: [{ id: '도윤', name: '도윤', fresh: 2, messages: [{ text: '어디야?', meta: [] }, { text: '빨리 와', meta: [] }] }] },
+    { block: 'feed', id: 'f', name: 'SNS', posts: [{ lead: '하린', meta: ['방금'], body: '오늘의 약초' }] },
+  ]);
+  expect(html).toMatch(/<button[^>]*>.*도윤.*빨리 와.*aria-label="새 메시지 2개".*<\/button>/);
+  expect(html).not.toContain('어디야?');
+  expect(html).toMatch(/하린.*방금.*<p[^>]*>오늘의 약초<\/p>/);
+});
+
+it("lists a 휴대폰's apps on its home, each saying what is new, and shows an open app's screen in the home's place", () => {
+  const apps = [{ id: 'm', name: '메신저', icon: 'messages' as const, fresh: 3 }, { id: 'c', name: '연락처', icon: 'contacts' as const, fresh: 0 }];
+  const home = renderToStaticMarkup(<StatusPhone name="휴대폰" theme="dark" apps={apps} onOpen={() => {}} />);
+  expect(home).toMatch(/aria-label="새 소식 3개".*메신저.*연락처/);
+  expect(home.match(/aria-label="새 소식/g)).toHaveLength(1);
+  expect(home).toMatch(/aria-label="홈" disabled=""/);
+  const open = renderToStaticMarkup(
+    <StatusPhone name="휴대폰" theme="dark" apps={apps} onOpen={() => {}} onHome={() => {}}>
+      <StatusPanel bare name="메신저" frame="card" mood="rose" theme="dark" blocks={[]} />
+    </StatusPhone>,
+  );
+  expect(open).not.toContain('연락처');
+  expect(open).toMatch(/<section[^>]*aria-label="메신저"[^>]*data-mood="rose"/);
+  expect(open).not.toMatch(/aria-label="홈" disabled/);
 });

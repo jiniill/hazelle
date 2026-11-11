@@ -62,7 +62,7 @@ function Join({ states, definition, group, onJoin, onClose }: { states: ChatStat
 }
 
 // The lorebook entry a record stands for: one that came from a folder its 묶음 follows is under the entry's id.
-function RecordLore({ id }: { id: string }) {
+export function RecordLore({ id }: { id: string }) {
   const entry = useStored('lore', id);
   return (
     entry && (

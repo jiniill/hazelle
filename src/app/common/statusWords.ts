@@ -84,6 +84,18 @@ export const STATUS_WORDS = {
   radarNote: '게이지를 셋 이상 선택해 주세요.',
   tabNames: '탭 이름',
   gone: '없는 항목',
+  app: '휴대폰 앱',
+  appNone: '상태창에 표시',
+  appNote: '휴대폰 앱으로 두면 상태창 대신 채팅의 휴대폰에 나와요.',
+  chatBy: '대화 상대',
+  chatByNote: '이 필드의 값이 같은 줄끼리 한 대화가 돼요.',
+  chatFrom: '보낸 사람',
+  chatFromNote: '여럿이 있는 대화에서 말풍선 위에 이름으로 보여요.',
+  chatMine: '내가 보낸 메시지',
+  chatMineNote: '이 단계인 줄은 내가 보낸 메시지로 반대편에 그려요.',
+  chatNone: '없음',
+  chatReply: '답할 때 넣을 말',
+  chatReplyNote: '대화에서 답하기를 누르면 입력창에 들어가요. {{name}}은 대화 이름으로 바뀌어요.',
 } as const;
 
 type FieldLook = NonNullable<Extract<StatusBlock, { kind: 'field' }>['look']>;
@@ -92,11 +104,13 @@ export const STATUS_LOOK: Record<FieldLook, string> = { bar: '막대', segments:
 // The looks a field's kind takes; a number and a list have the 틀's alone.
 export const FIELD_LOOKS: Partial<Record<FieldKind, FieldLook[]>> = { gauge: ['bar', 'segments', 'ring', 'hearts', 'stars'], text: ['thought'], stage: ['scale'] };
 export const STATUS_RECORDS_LOOK: Record<RecordsLook, string> = { cards: '카드', rows: '줄', table: '표' };
-export const STATUS_BLOCK: Record<Exclude<StatusBlock['kind'], 'field' | 'records' | 'log'> | 'tab', string> = { head: '머리줄', radar: '레이더', choices: '선택지', section: '구역', tabs: '탭 묶음', tab: '탭' };
+export const STATUS_LOG_LOOK: Record<NonNullable<Extract<StatusBlock, { kind: 'log' }>['look']>, string> = { feed: '피드' };
+export const STATUS_BLOCK: Record<Exclude<StatusBlock['kind'], 'field' | 'records' | 'log'> | 'tab', string> = { head: '머리줄', radar: '레이더', choices: '선택지', chat: '대화', section: '구역', tabs: '탭 묶음', tab: '탭' };
 
 // A block as a row of its view's list: what it shows, then its kind and how.
 export function blockWords(definition: StatusDefinition, block: StatusBlock): { title: string; description: string } {
   const field = (id: string) => definition.fields.find((each) => each.id === id)?.name ?? STATUS_WORDS.gone;
+  const log = (id: string) => definition.logs.find((each) => each.id === id);
   const how = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' · ');
   switch (block.kind) {
     case 'field':
@@ -109,7 +123,9 @@ export function blockWords(definition: StatusDefinition, block: StatusBlock): { 
     case 'records':
       return { title: definition.groups.find(({ id }) => id === block.group)?.name ?? STATUS_WORDS.gone, description: how(STATUS_WORDS.group, block.look && STATUS_RECORDS_LOOK[block.look]) };
     case 'log':
-      return { title: definition.logs.find(({ id }) => id === block.log)?.name ?? STATUS_WORDS.gone, description: how(STATUS_WORDS.log, block.all && STATUS_WORDS.all) };
+      return { title: log(block.log)?.name ?? STATUS_WORDS.gone, description: how(STATUS_WORDS.log, block.look && STATUS_LOG_LOOK[block.look], block.all && STATUS_WORDS.all) };
+    case 'chat':
+      return { title: log(block.log)?.name ?? STATUS_WORDS.gone, description: how(STATUS_BLOCK.chat, log(block.log)?.fields.find(({ id }) => id === block.by)?.name ?? STATUS_WORDS.gone) };
     case 'section':
       return { title: block.name, description: STATUS_BLOCK.section };
     case 'tabs':

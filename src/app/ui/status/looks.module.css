@@ -37,3 +37,34 @@
 .down {
   color: var(--status-warm);
 }
+
+/* Who a record or a conversation is, where there is no picture: the first letter of the name on the accent. */
+.face {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--status-face);
+  height: var(--status-face);
+  border-radius: var(--radius-full);
+  background: var(--status-accent);
+  color: var(--status-on-accent);
+  font-family: var(--status-title-font);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+/* How many the latest reply added: a conversation's new messages, an app's new rows. */
+.count {
+  flex-shrink: 0;
+  min-width: var(--status-mark);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--status-warm);
+  color: var(--status-panel);
+  font-size: var(--text-mark);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--status-mark);
+  text-align: center;
+}

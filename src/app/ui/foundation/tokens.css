@@ -403,6 +403,15 @@
   --status-mark: 16px;
   --status-radar: 208px;
   --status-cell: 120px;
+  /* 휴대폰: an app's tile and its cell on the home, the body's corners, bezel and least height, the bar under the
+     screen, and the most of a line a message's bubble takes. */
+  --status-app: 56px;
+  --status-app-cell: 72px;
+  --status-phone-radius: 28px;
+  --status-phone-bezel: 3px;
+  --status-phone-least: 360px;
+  --status-phone-bar: 96px;
+  --status-bubble-most: 82%;
   --sketch-height: 168px;
   --cheer-height: 184px;
   --cheer-badge: 76px;

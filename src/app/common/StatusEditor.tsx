@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { nameTaken, rostered, type RosterEntry } from '../../engine/status';
 import { moved, without } from '../../model/fields';
 import type { LoreFolder } from '../../model/library';
-import { statusViews, type StatusDefinition, type StatusField, type StatusFrame, type StatusMood, type StatusView, type StatusWriter } from '../../model/status';
+import { statusViews, type StatusApp, type StatusDefinition, type StatusField, type StatusFrame, type StatusMood, type StatusView, type StatusWriter } from '../../model/status';
 import { fieldsOf, withFields, withGroup, withLog, withoutGroup, withoutLog, withoutView, withView, type FieldList } from '../../model/statusEdit';
 import { blankStatus, fromType, STATUS_TYPES } from '../../model/statusTypes';
 import { useDisplay } from '../display';
@@ -14,10 +14,10 @@ import { StatusBlocks } from './StatusBlocks';
 import type { FieldKind } from './statusDraft';
 import { StatusFieldDialog } from './StatusFieldDialog';
 import { sampleState } from './statusSample';
-import { shownView } from './statusView';
+import { shownApp, shownView } from './statusView';
 import { fieldSummary, STATUS_KIND, STATUS_KINDS, STATUS_PROBLEM, STATUS_WORDS, STATUS_WRITER } from './statusWords';
-import { Button, ChoiceGroup, ConfirmDialog, Empty, List, ListItem, Menu, MenuItem, MoreMenu, PhraseField, Section, SettingGroup, SettingRow, Stack, STATUS_FRAME, STATUS_MOOD, StatusPanel, Switch, Text, TextField } from '../ui';
-import { MOVE, STATUS, statusTaken } from './words';
+import { Button, ChoiceGroup, ConfirmDialog, Empty, List, ListItem, Menu, MenuItem, MoreMenu, PhraseField, Section, SettingGroup, SettingRow, Stack, STATUS_APP, STATUS_FRAME, STATUS_MOOD, StatusPanel, StatusPhone, Switch, Text, TextField } from '../ui';
+import { MOVE, STATUS, statusTaken, PHONE } from './words';
 
 type Change = (next: StatusDefinition) => void;
 // The lorebook of the pack that declares the definition; a prompt has none.
@@ -199,7 +199,8 @@ function Members({ definition, id, folders, onChange }: { definition: StatusDefi
 function Views({ definition, onChange }: { definition: StatusDefinition; onChange: Change }) {
   const naming = useNaming();
   const views = definition.views ?? [];
-  const write = (id: string, patch: Partial<StatusView>) => onChange({ ...definition, views: views.map((each) => (each.id === id ? { ...each, ...patch } : each)) });
+  const change = (id: string, to: (view: StatusView) => StatusView) => onChange({ ...definition, views: views.map((each) => (each.id === id ? to(each) : each)) });
+  const write = (id: string, patch: Partial<StatusView>) => change(id, (view) => ({ ...view, ...patch }));
   return (
     <Section
       title={STATUS_WORDS.view}
@@ -211,7 +212,7 @@ function Views({ definition, onChange }: { definition: StatusDefinition; onChang
     >
       {views.length === 0 && <Empty variant="section">{STATUS_WORDS.noViews}</Empty>}
       {views.map((view) => {
-        const { id, name, frame, mood } = view;
+        const { id, name, frame, mood, app } = view;
         return (
           <Section
             key={id}
@@ -227,6 +228,11 @@ function Views({ definition, onChange }: { definition: StatusDefinition; onChang
             <SettingGroup label={name}>
               <SettingRow label={STATUS_WORDS.frame} control={<ChoiceGroup<StatusFrame> label={STATUS_WORDS.frame} layout="fit" options={options(STATUS_FRAME)} value={frame} onChange={(next) => write(id, { frame: next })} />} />
               <SettingRow label={STATUS_WORDS.mood} control={<ChoiceGroup<StatusMood> label={STATUS_WORDS.mood} layout="fit" options={options(STATUS_MOOD)} value={mood} onChange={(next) => write(id, { mood: next })} />} />
+              <SettingRow
+                label={STATUS_WORDS.app}
+                help={STATUS_WORDS.appNote}
+                control={<ChoiceGroup<StatusApp | ''> label={STATUS_WORDS.app} layout="fit" options={[{ value: '', label: STATUS_WORDS.appNone }, ...options(STATUS_APP)]} value={app ?? ''} onChange={(next) => change(id, (each) => ({ ...without(each, 'app'), ...(next && { app: next }) }))} />}
+              />
             </SettingGroup>
             <StatusBlocks definition={definition} view={view} onChange={(blocks) => write(id, { blocks })} />
           </Section>
@@ -237,13 +243,18 @@ function Views({ definition, onChange }: { definition: StatusDefinition; onChang
   );
 }
 
-// Each view as a chat would draw it, over values standing in for a chat's (sampleState).
+// Each view as a chat would draw it, over values standing in for a chat's (sampleState): a 상태창 each, and the ones
+// that are apps on one 휴대폰, the app picked there open.
 function Preview({ definition }: { definition: StatusDefinition }) {
   const { display } = useDisplay();
+  const [picked, setPicked] = useState<string | null>(null);
   const sample = sampleState(definition);
+  const views = statusViews(definition);
+  const apps = views.filter(({ app }) => app).map((each) => shownApp(definition, each, sample));
+  const open = apps.find(({ id }) => id === picked);
   return (
     <Section title={STATUS_WORDS.preview}>
-      {statusViews(definition).map((each) => {
+      {views.filter(({ app }) => !app).map((each) => {
         const view = shownView(definition, each, sample);
         return (
           <Stack key={view.id} gap="related">
@@ -252,6 +263,14 @@ function Preview({ definition }: { definition: StatusDefinition }) {
           </Stack>
         );
       })}
+      {apps.length > 0 && (
+        <Stack gap="related">
+          <Text variant="note">{PHONE}</Text>
+          <StatusPhone name={PHONE} theme={display.theme} apps={apps} onOpen={setPicked} onHome={open ? () => setPicked(null) : undefined}>
+            {open ? <StatusPanel bare name={open.name} frame={open.frame} mood={open.mood} theme={display.theme} blocks={open.blocks} /> : null}
+          </StatusPhone>
+        </Stack>
+      )}
     </Section>
   );
 }

@@ -217,6 +217,8 @@ export const STATUS_FOLD = { open: '상태창 펼치기', close: '상태창 접�
 export const STATUS_NEXT_VIEW = '다른 보기';
 export const STATUS_PIN = '위에 고정';
 export const STATUS_DETAIL = '상태 상세';
+export const PHONE = '휴대폰';
+export const phoneFresh = (count: number) => `새 소식 ${count}`;
 export const STATUS_COURSE = '변화';
 export const STATUS_START = '시작';
 export const STATUS_NONE = '이 채팅에는 상태가 없어요.';

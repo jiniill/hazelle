@@ -15,8 +15,8 @@ import { useToldFailures } from './useToldFailures';
 export type StateMark = { kind: 'writing' } | { kind: 'missed'; failure: StatusFailure | null } | null;
 
 // One definition as the chat shows it: its state now, and as it stood before the latest reply (the same while there
-// is no latest reply, so nothing reads as just moved).
-export type ChatStateOf = { definition: StatusDefinition; views: StatusView[]; now: StatusOf; before: StatusOf; mark: StateMark };
+// is no latest reply, so nothing reads as just moved). views are its 상태창's, apps the ones on the 휴대폰.
+export type ChatStateOf = { definition: StatusDefinition; views: StatusView[]; apps: StatusView[]; now: StatusOf; before: StatusOf; mark: StateMark };
 
 const UNSET: StateShown = {};
 
@@ -37,7 +37,8 @@ export function chatStates(definitions: readonly StatusDefinition[], messages: r
   return definitions.map((definition) => {
     const write = reply && (shown(reply).status ?? []).findLast(({ of }) => of.includes(definition.id));
     const mark: StateMark = !reply || busy ? null : job && !job.failure ? { kind: 'writing' } : !write || write.missed ? { kind: 'missed', failure: job?.failure ?? null } : null;
-    return { definition, views: statusViews(definition), now: now[definition.id]!, before: before[definition.id]!, mark };
+    const views = statusViews(definition);
+    return { definition, views: views.filter(({ app }) => !app), apps: views.filter(({ app }) => app), now: now[definition.id]!, before: before[definition.id]!, mark };
   });
 }
 

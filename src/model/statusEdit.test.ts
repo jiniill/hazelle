@@ -55,6 +55,12 @@ describe('a definition under its editor', () => {
     expect(less.views![0]!.blocks.at(-1)).toEqual({ kind: 'tabs', tabs: [{ id: 't', name: '동료', blocks: [] }] });
   });
 
+  it('counts a 기록 shown as conversations among what a view shows, and takes it out with its 기록', () => {
+    const chat = { kind: 'chat', log: 'events', by: 'what' } as const;
+    expect([...blockNames([chat]).logs]).toEqual(['events']);
+    expect(withoutLog({ ...viewed, views: [{ ...viewed.views![0]!, blocks: [chat] }] }, 'events').views![0]!.blocks).toEqual([]);
+  });
+
   it('makes a first view that shows everything, and declares none again once its last view is removed', () => {
     const made = withView(plain, 'v1', '카드');
     expect(made.views).toEqual([{ id: 'v1', name: '카드', frame: 'card', mood: 'hazelle', blocks: [{ kind: 'field', field: 'place' }, { kind: 'field', field: 'mood' }, { kind: 'records', group: 'party' }, { kind: 'log', log: 'events' }] }]);

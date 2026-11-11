@@ -37,18 +37,7 @@
 }
 
 .face {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: var(--status-face);
-  height: var(--status-face);
-  border-radius: var(--radius-full);
-  background: var(--status-accent);
-  color: var(--status-on-accent);
-  font-family: var(--status-title-font);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
+  composes: face from './looks.module.css';
 }
 
 .memberName {

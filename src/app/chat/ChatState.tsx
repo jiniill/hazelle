@@ -1,10 +1,10 @@
-import { Layers, ListRestart, PanelRight, Pin } from 'lucide-react';
+import { Layers, ListRestart, PanelRight, Pin, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import { describeStatusFailure } from '../common/failure';
-import { shownMain, shownView } from '../common/statusView';
-import { STATUS_DETAIL, STATUS_FOLD, STATUS_MISSED, STATUS_NEXT_VIEW, STATUS_PIN, STATUS_REWRITE, STATUS_WRITING, statusEdit } from '../common/words';
+import { shownApp, shownMain, shownView } from '../common/statusView';
+import { PHONE, phoneFresh, STATUS_DETAIL, STATUS_FOLD, STATUS_MISSED, STATUS_NEXT_VIEW, STATUS_PIN, STATUS_REWRITE, STATUS_WRITING, statusEdit } from '../common/words';
 import { useDisplay } from '../display';
-import { IconButton, Stack, StatusPanel, type ShownPlace, type Theme } from '../ui';
+import { Button, IconButton, Row, Stack, StatusPanel, type ShownPlace, type Theme } from '../ui';
 import { StateEditAt } from './StateEdit';
 import type { OpenChat } from './useChat';
 import type { StateShown } from '../../model/status';
@@ -62,17 +62,27 @@ function StatePanel({ state, theme, shown, onShow, onRewrite, onEdit, onChoice, 
 // 상태창 (design §6.1): the chat's state, a panel a definition, each in the view picked for it. It has two places,
 // pinned at the story's top or after the latest reply, and draws only in the one the reader picked: pinned says which
 // place this one stands in. Folding, the place and the view are the reader's for the chat's character (StateShown), one
-// fold and one place for every panel.
+// fold and one place for every panel. A definition whose views are all apps has no panel; where the chat has apps,
+// the 휴대폰 is opened from under the panels, which says how much the latest reply added to it.
 export function ChatState({ chat, pinned }: { chat: Pick<OpenChat, 'states' | 'stateShown' | 'id' | 'busy' | 'actions'>; pinned: boolean }) {
   const { display } = useDisplay();
   if ((chat.stateShown.pinned === true) !== pinned) return null;
   const { actions } = chat;
   const live = chat.id !== null && !chat.busy;
+  const apps = chat.states.flatMap(({ definition, apps, now, before }) => apps.map((view) => shownApp(definition, view, now, before)));
+  const fresh = apps.reduce((sum, app) => sum + app.fresh, 0);
   return (
     <Stack gap="group">
-      {chat.states.map((state) => (
+      {chat.states.filter(({ views }) => views.length > 0).map((state) => (
         <StatePanel key={state.definition.id} state={state} theme={display.theme} shown={chat.stateShown} onShow={actions.showState} onRewrite={live ? actions.rewriteState : undefined} onEdit={live ? actions.editState : undefined} onChoice={actions.choose} onDetail={actions.stateDetail} />
       ))}
+      {apps.length > 0 && (
+        <Row kind="actions">
+          <Button variant="secondary" size="sm" icon={Smartphone} onClick={actions.phone}>
+            {fresh ? `${PHONE} · ${phoneFresh(fresh)}` : PHONE}
+          </Button>
+        </Row>
+      )}
     </Stack>
   );
 }

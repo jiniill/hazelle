@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { statusAfter, statusCourse, type StatusChange, type StatusDefinition, type StatusView } from '../../model/status';
-import { shownAt, shownCourse, shownView, shownWhole } from './statusView';
+import { fromType, STATUS_TYPES } from '../../model/statusTypes';
+import { shownApp, shownAt, shownCourse, shownView, shownWhole } from './statusView';
 
 const definition: StatusDefinition = {
   id: 'd',
@@ -106,4 +107,33 @@ test('a course is written as words, a number with what it moved by from the step
   expect(course({ field: 'love', member: { group: 'cast', id: 'seoha' } })).toEqual([{ key: null, value: '72' }, { key: 'b', value: '75', delta: { text: '+3', down: false } }]);
   expect(course({ field: 'next' })).toEqual([{ key: null, value: '' }, { key: 'b', value: '같이 하교한다' }]);
   expect(course({ field: 'gone' })).toEqual([]);
+});
+
+test("a 기록 shown as chat is its conversations, the last to speak first, the reader's own told apart and what the latest reply added counted", () => {
+  const phone = fromType(STATUS_TYPES.find(({ id }) => id === 'phone')!, 'p');
+  const row = (log: string, values: Record<string, string>): StatusChange => ({ definition: 'p', kind: 'row', log, values });
+  const old = [row('messages', { with: '도윤', way: '받음', text: '어디야?', time: '오후 3:10' }), row('messages', { with: '하린', way: '받음', text: '약초 구했어' })];
+  const added = [row('messages', { with: '도윤', way: '보냄', text: '가는 중' }), row('messages', { with: '도윤', way: '받음', text: '빨리 와' }), row('posts', { who: '하린', time: '방금', text: '오늘의 약초' })];
+  const was = statusAfter([phone], old).p!;
+  const is = statusAfter([phone], [...old, ...added]).p!;
+  const [messenger, , sns] = phone.views!;
+  const app = shownApp(phone, messenger!, is, was);
+  expect(app).toMatchObject({ icon: 'messages', fresh: 1 });
+  expect(app.blocks).toEqual([
+    {
+      block: 'chat',
+      id: '0',
+      name: '메시지',
+      threads: [
+        { id: '도윤', name: '도윤', fresh: 1, reply: '도윤에게 메시지를 보낸다: ', messages: [{ text: '어디야?', meta: ['오후 3:10'] }, { text: '가는 중', meta: [], mine: true }, { text: '빨리 와', meta: [] }] },
+        { id: '하린', name: '하린', fresh: 0, reply: '하린에게 메시지를 보낸다: ', messages: [{ text: '약초 구했어', meta: [] }] },
+      ],
+    },
+  ]);
+  expect(shownApp(phone, sns!, is, was)).toMatchObject({ icon: 'feed', fresh: 1, blocks: [{ block: 'feed', name: 'SNS', posts: [{ lead: '하린', meta: ['방금'], body: '오늘의 약초' }] }] });
+  // With no latest reply to tell them from, nothing is new.
+  expect(shownApp(phone, messenger!, is).fresh).toBe(0);
+  // Who sent it stands over a message where it is not the conversation's own name, and is no part of what it says.
+  const named = shownView(phone, { ...messenger!, blocks: [{ kind: 'chat', log: 'messages', by: 'with', from: 'time' }] }, is).blocks[0];
+  expect(named).toMatchObject({ threads: [{ messages: [{ text: '받음', meta: ['어디야?'], from: '오후 3:10' }, {}, {}] }, {}] });
 });

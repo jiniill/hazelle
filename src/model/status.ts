@@ -41,18 +41,26 @@ export type StatusMood = 'hazelle' | 'own' | 'paper' | 'neon' | 'forest' | 'rose
 export type StatusGaugeLook = 'bar' | 'segments' | 'ring' | 'hearts' | 'stars';
 // A block naming what is no longer declared shows nothing, as a stale change changes nothing. look: a gauge's, a text
 // drawn as a thought, or a 단계 drawn on the scale of its labels; absent, or one its field's kind does not take, the 틀
-// decides. radar: three gauges or more as one shape. all: every row of the 기록, absent the latest reply's. choices: a
-// list whose items go into the composer when pressed.
+// decides. radar: three gauges or more as one shape. all: every row of the 기록, absent the latest reply's. feed: each
+// row a post, its first field who wrote it and its last what it says. choices: a list whose items go into the composer
+// when pressed.
+// chat: a 기록's rows as conversations, all of them. by: the field naming the conversation a row is of. from: the
+// field naming who sent it, where a conversation has several. mine: the 단계 field and its label that mark a row the
+// reader sent. reply: what goes into the composer to answer one, {{name}} standing for the conversation's name.
 export type StatusBlock =
   | { kind: 'head'; fields: string[] }
   | { kind: 'field'; field: string; look?: StatusGaugeLook | 'thought' | 'scale' }
   | { kind: 'radar'; fields: string[] }
   | { kind: 'records'; group: string; look?: 'cards' | 'rows' | 'table' }
-  | { kind: 'log'; log: string; all?: true }
+  | { kind: 'log'; log: string; all?: true; look?: 'feed' }
+  | { kind: 'chat'; log: string; by: string; from?: string; mine?: { field: string; is: string }; reply?: string }
   | { kind: 'choices'; field: string }
   | { kind: 'section'; name: string; blocks: StatusBlock[] }
   | { kind: 'tabs'; tabs: (Named & { blocks: StatusBlock[] })[] };
-export type StatusView = Named & { frame: StatusFrame; mood: StatusMood; blocks: StatusBlock[] };
+// The picture an app stands under on the 휴대폰's home.
+export type StatusApp = 'messages' | 'contacts' | 'feed' | 'notes' | 'calendar' | 'map' | 'bag' | 'tasks' | 'money' | 'stats';
+// app: the view is an app of the chat's 휴대폰 and no view of its 상태창.
+export type StatusView = Named & { frame: StatusFrame; mood: StatusMood; blocks: StatusBlock[]; app?: StatusApp };
 
 // 상태창 as the reader left it in a character's chats: folded, pinned at the story's top, and the view picked for a
 // definition, both by id. Absent is open, after the latest reply, in the definition's first view.

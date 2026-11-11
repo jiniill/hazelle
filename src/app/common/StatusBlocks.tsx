@@ -1,11 +1,11 @@
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { nameTaken } from '../../engine/status';
-import { moved } from '../../model/fields';
+import { moved, without } from '../../model/fields';
 import type { StatusBlock, StatusDefinition, StatusView } from '../../model/status';
 import { blockNames, blocksAt, withBlocksAt, type BlockPath } from '../../model/statusEdit';
 import { ACTS, addOf } from './acts';
-import { blockWords, FIELD_LOOKS, STATUS_BLOCK, STATUS_LOOK, STATUS_RECORDS_LOOK, STATUS_WORDS } from './statusWords';
+import { blockWords, FIELD_LOOKS, STATUS_BLOCK, STATUS_LOG_LOOK, STATUS_LOOK, STATUS_RECORDS_LOOK, STATUS_WORDS } from './statusWords';
 import { Button, Checkbox, ChoiceGroup, Dialog, Empty, List, ListItem, MenuItem, MoreMenu, PhraseField, SettingGroup, SettingRow, Stack, Switch, TextField } from '../ui';
 import { MOVE, statusEdit } from './words';
 
@@ -36,7 +36,42 @@ function settings(definition: StatusDefinition, block: StatusBlock, set: (next: 
     case 'records':
       return <SettingGroup label={STATUS_WORDS.look}>{row(STATUS_WORDS.look, <ChoiceGroup label={STATUS_WORDS.look} layout="fit" options={looks(STATUS_RECORDS_LOOK, ['cards', 'rows', 'table'])} value={block.look ?? AUTO} onChange={(look) => set({ kind: 'records', group: block.group, ...(look && { look }) })} />)}</SettingGroup>;
     case 'log':
-      return <SettingGroup label={STATUS_WORDS.all}>{row(STATUS_WORDS.all, <Switch label={STATUS_WORDS.all} checked={block.all === true} onChange={(all) => set({ kind: 'log', log: block.log, ...(all && { all }) })} />, STATUS_WORDS.allNote)}</SettingGroup>;
+      return (
+        <SettingGroup label={STATUS_WORDS.look}>
+          {row(STATUS_WORDS.look, <ChoiceGroup label={STATUS_WORDS.look} layout="fit" options={looks(STATUS_LOG_LOOK, ['feed'])} value={block.look ?? AUTO} onChange={(look) => set({ ...without(block, 'look'), ...(look && { look }) })} />)}
+          {row(STATUS_WORDS.all, <Switch label={STATUS_WORDS.all} checked={block.all === true} onChange={(all) => set({ ...without(block, 'all'), ...(all && { all }) })} />, STATUS_WORDS.allNote)}
+        </SettingGroup>
+      );
+    case 'chat': {
+      const fields = definition.logs.find(({ id }) => id === block.log)?.fields ?? [];
+      const named = fields.map(({ id, name }) => ({ value: id, label: name }));
+      // Each label of each 단계 field: a row standing at one is the reader's own.
+      const marks = fields.flatMap((field) => (field.kind === 'stage' ? field.labels.map((is) => ({ field: field.id, is, label: `${field.name}: ${is}` })) : []));
+      const none = { value: AUTO, label: STATUS_WORDS.chatNone };
+      return (
+        <>
+          <SettingGroup label={STATUS_BLOCK.chat}>
+            {row(STATUS_WORDS.chatBy, <ChoiceGroup label={STATUS_WORDS.chatBy} layout="fit" options={named} value={block.by} onChange={(by) => set({ ...block, by })} />, STATUS_WORDS.chatByNote)}
+            {row(STATUS_WORDS.chatFrom, <ChoiceGroup label={STATUS_WORDS.chatFrom} layout="fit" options={[none, ...named]} value={block.from ?? AUTO} onChange={(from) => set({ ...without(block, 'from'), ...(from && { from }) })} />, STATUS_WORDS.chatFromNote)}
+            {row(
+              STATUS_WORDS.chatMine,
+              <ChoiceGroup
+                label={STATUS_WORDS.chatMine}
+                layout="fit"
+                options={[none, ...marks.map(({ label }, at) => ({ value: `${at}`, label }))]}
+                value={block.mine ? `${marks.findIndex(({ field, is }) => field === block.mine!.field && is === block.mine!.is)}` : AUTO}
+                onChange={(at) => {
+                  const mark = at === AUTO ? undefined : marks[Number(at)];
+                  set({ ...without(block, 'mine'), ...(mark && { mine: { field: mark.field, is: mark.is } }) });
+                }}
+              />,
+              STATUS_WORDS.chatMineNote,
+            )}
+          </SettingGroup>
+          <TextField label={STATUS_WORDS.chatReply} help={STATUS_WORDS.chatReplyNote} value={block.reply ?? ''} onChange={(reply) => set({ ...without(block, 'reply'), ...(reply && { reply }) })} />
+        </>
+      );
+    }
     case 'head':
       return among(definition.fields, block.fields, (fields) => set({ ...block, fields }));
     case 'radar':
@@ -88,6 +123,8 @@ function additions(definition: StatusDefinition, view: StatusView): { title: str
     ...definition.fields.filter(({ id }) => !shown.fields.has(id)).map(({ id }) => ({ kind: 'field' as const, field: id })),
     ...definition.groups.filter(({ id }) => !shown.groups.has(id)).map(({ id }) => ({ kind: 'records' as const, group: id })),
     ...definition.logs.filter(({ id }) => !shown.logs.has(id)).map(({ id }) => ({ kind: 'log' as const, log: id })),
+    // A conversation needs who it is with and what was said.
+    ...definition.logs.filter(({ fields }) => fields.length > 1).map(({ id, fields }) => ({ kind: 'chat' as const, log: id, by: fields[0]!.id })),
     ...(definition.fields.length ? [{ kind: 'head' as const, fields: [] }] : []),
     ...(gauges.length >= 3 ? [{ kind: 'radar' as const, fields: gauges.map(({ id }) => id) }] : []),
     ...(list ? [{ kind: 'choices' as const, field: list.id }] : []),
