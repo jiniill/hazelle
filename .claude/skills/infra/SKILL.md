@@ -24,7 +24,6 @@ Every command below needs the keys in the shell. Load them first in each Bash ca
 - `hazelle-backup`: off-site backup generations; the copier (`deploy/rclone-backup.sh`) is its only writer.
 - `hazelle-files`: the app's pictures; the app is its only writer.
 - `hazelle-tfstate`: Terraform state and the tfvars copy.
-- `hazelle-img`: the pictures of posts written outside the app, public at `img.hazelle.app`; written by hand with wrangler (README "Post pictures").
 
 Never write into the first two by hand; a test object goes under a name of its own and is deleted at once.
 
