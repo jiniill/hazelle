@@ -22,7 +22,7 @@ import { TranslateRows } from '../common/TranslateRows';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { useTypedNumber } from '../common/typed';
 import { readWhole } from '../common/typedNumber';
-import { AGENTS_HELP, EVERY_CHAT, FEATURE_NAMES, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PICTURE_PLACE, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED, TASK_MODELS } from '../common/words';
+import { AGENTS_HELP, STATUS_HELP, EVERY_CHAT, FEATURE_NAMES, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PICTURE_PLACE, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED, TASK_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate, useAddress } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -54,7 +54,7 @@ function Apart({ feature }: { feature: keyof typeof APART }) {
 }
 
 // What the feature is, for the two whose name does not say it.
-const HEAD_HELP: Partial<Record<Feature, string>> = { preread: PRE_READ_HELP, agents: AGENTS_HELP };
+const HEAD_HELP: Partial<Record<Feature, string>> = { preread: PRE_READ_HELP, agents: AGENTS_HELP, status: STATUS_HELP };
 
 // Without a prompt to open, the list opens on the feature's own sort.
 const editPrompt = (sort: PromptSort) => (door: PromptDoor) => navigate(door ? { kind: 'prompt', ...door } : { kind: 'prompts', place: null, sort });
@@ -252,4 +252,7 @@ function AgentDefaults() {
   return <AgentSwitches owner={{ kind: 'settings' }} own={useSettings().agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'settings' }, agent, on)} />;
 }
 
-const DEFAULTS: Record<Feature, ComponentType> = { translate: TranslateDefaults, illustrate: IllustrateDefaults, memory: MemoryDefaults, mascot: MascotDefaults, preread: PrereadDefaults, agents: AgentDefaults };
+// 상태 has no setting of its own yet: its model and prompt arrive with its writer (roadmap/status-panels step 5).
+const StatusDefaults = () => null;
+
+const DEFAULTS: Record<Feature, ComponentType> = { translate: TranslateDefaults, illustrate: IllustrateDefaults, memory: MemoryDefaults, mascot: MascotDefaults, preread: PrereadDefaults, agents: AgentDefaults, status: StatusDefaults };

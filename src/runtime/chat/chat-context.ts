@@ -16,7 +16,7 @@ import type { Seen, Settings } from '../../model/settings';
 import { chatStatus, statusAfter, type StatusDefinition } from '../../model/status';
 import { chatToggles, toggleValue } from '../../model/toggles';
 import { chatModel, type Route } from '../models/assignment';
-import { chatTranslate } from '../tasks/features';
+import { chatTranslate, featuresOf } from '../tasks/features';
 import { greetingOf } from './greetings';
 import { chatPersona } from '../library/personas';
 import { modelProfile } from '../models/profiles';
@@ -126,7 +126,8 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
   const route = chatModel(store, chat, 'main');
   const aux = chatModel(store, chat, 'aux');
   const toggles = togglesOf(store, chat, prompt, packs);
-  const definitions = statusOf(prompt, packs);
+  // 상태 off, or its 실험실 switch: the chat declares nothing, so nothing is told, asked or shown.
+  const definitions = featuresOf(store, chat).status ? statusOf(prompt, packs) : [];
   const loaded = id !== null && store.scopeState(id) === 'loaded';
   return {
     card,

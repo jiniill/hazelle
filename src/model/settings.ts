@@ -9,7 +9,7 @@ import type { ToggleValues } from './prompt';
 export const SETTINGS_ID = '00000000-0000-4000-8000-000000000000';
 export const EMPTY_SETTINGS: Settings = { models: {} };
 
-export type LabId = 'preread' | 'agents' | 'cacheguard';
+export type LabId = 'preread' | 'agents' | 'cacheguard' | 'status';
 export const labOn = (settings: Pick<Settings, 'labs'>, id: LabId) => settings.labs?.includes(id) ?? false;
 
 export type PrereadParts = { chat: boolean; system: boolean; lore: boolean };
