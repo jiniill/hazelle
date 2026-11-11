@@ -14,7 +14,7 @@ import { describeIllustrateFailure } from './failure';
 import { readTyped } from './typedNumber';
 import { appliesTo, TaskModelRow, TaskPromptMenu, type PromptDoor } from './TaskPrompt';
 import { taskRuns } from './taskRuns';
-import { follows, NOT_STARRED, TASK_MODELS } from './words';
+import { follows, NO_IMAGE_MODEL, NOT_STARRED, TASK_MODELS } from './words';
 
 type Props = {
   illustrate: IllustrateSetup;
@@ -40,7 +40,7 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
       />
       <SettingRow
         label="이미지 모델"
-        error={routes.length ? undefined : '이미지를 만들 모델이 없어요'}
+        error={routes.length ? undefined : NO_IMAGE_MODEL}
         control={
           routes.length ? (
             <ImageModelMenu routes={routes} illustrate={illustrate} card={card} opens={opens} onPick={onChange} />

@@ -5,7 +5,7 @@ import type { PictureSettings, PictureSize, PictureTags } from '../../model/prom
 import { drawingModels } from '../../runtime/tasks/illustrate';
 import { typedText } from '../common/typed';
 import { readTyped } from '../common/typedNumber';
-import { ORIGINAL, RESET, UNSET } from '../common/words';
+import { NO_IMAGE_MODEL, ORIGINAL, RESET, UNSET } from '../common/words';
 import { useConnections } from '../session';
 import { Button, ChipButton, MarkupArea, Menu, MenuHeading, MenuItem, NumberInput, Section, SettingGroup, SettingRow, Stack } from '../ui';
 
@@ -118,7 +118,7 @@ function SamplerMenu({ draws, chosen, onPick }: { draws: Draws | undefined; chos
   const label = chosen === undefined ? UNSET : (samplers.find(({ id }) => id === chosen)?.label ?? chosen);
   return (
     <Menu place="below-end" label="샘플러" trigger={(opener) => <ChipButton variant="field" opens="down" label={label} title="샘플러" {...opener} />}>
-      {!draws && <MenuHeading>이미지를 만들 모델이 없어요</MenuHeading>}
+      {!draws && <MenuHeading>{NO_IMAGE_MODEL}</MenuHeading>}
       <MenuItem label={UNSET} checked={chosen === undefined} onClick={() => onPick(undefined)} />
       {samplers.map(({ id, label: name }) => (
         <MenuItem key={id} label={name} checked={chosen === id} onClick={() => onPick(id)} />

@@ -11,7 +11,7 @@ import { useSearch } from '../common/useSearch';
 import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/filing';
 import { FOLDER_COLUMNS, FolderPath, useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
-import { ALWAYS, EMPTY_FOLDER, moduleName, PAGES, SCRIPTS, THINGS } from '../common/words';
+import { ALWAYS, EMPTY_FOLDER, moduleName, PAGES, SCRIPTS, THINGS, USED_IN } from '../common/words';
 import { useChildrenOf, useLibrary, useModulesAndPlugins, usePersonas, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -74,7 +74,7 @@ const COLUMNS: TableColumn[] = [
   { label: SCRIPTS.triggers, track: 'figure' },
   { label: '토글', track: 'figure' },
   { label: '스타일', track: 'figure' },
-  { label: '사용처', track: 'fill', keep: true },
+  { label: USED_IN, track: 'fill', keep: true },
 ];
 // A module stands in the first of its places in the sections' order (항상, prompt, character, persona), which is not pack order; its 쓰는 곳
 // still names every place.

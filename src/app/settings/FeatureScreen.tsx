@@ -50,7 +50,7 @@ function Apart({ feature }: { feature: keyof typeof APART }) {
   // A new chat is not stored until its first send; its address names its character.
   const character = useStored('character', under?.kind === 'new-chat' ? under.character : (chat?.value.character ?? null));
   if (!character || !APART[feature](store, character.id).own) return null;
-  return <Callout tone="tip">{`${aliased(character.value.card.name, character.value.alias)}의 채팅은 캐릭터별 설정을 따라요. 이 화면의 설정은 ${appliesTo(null, false)}`}</Callout>;
+  return <Callout tone="tip">{`${aliased(character.value.card.name, character.value.alias)}의 채팅은 캐릭터별 설정을 써요. 이 화면은 ${appliesTo(null, false)}`}</Callout>;
 }
 
 // What the feature is, for the two whose name does not say it.

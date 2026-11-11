@@ -12,7 +12,7 @@ import { useSearch } from '../common/useSearch';
 import { counted } from '../common/pack';
 import { useConnections, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
-import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_ROLES, PAGES, promptName, STAGE_NAMES, THINGS } from '../common/words';
+import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_ROLES, PAGES, promptName, STAGE_NAMES, THINGS, USED_IN } from '../common/words';
 import { Button, Callout, ChoiceGroup, Empty, FoldButton, Hint, Menu, MenuItem, Row, Stack, Table, Tabs, useMenuHandle, type TableColumn, type TableRow } from '../ui';
 import { useImport } from '../common/importing';
 import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse';
@@ -48,8 +48,8 @@ const NAME: TableColumn = { label: '이름', track: 'name' };
 const MODEL: TableColumn = { label: '모델', track: 'fill' };
 const HOLDS: TableColumn = { label: '구성', track: 'fill' };
 const columnsOf = (sort: PromptSort): TableColumn[] =>
-  sort === 'conversation' ? [NAME, MODEL, HOLDS, { label: '쓰는 곳', track: 'fill' }] : sort === 'agent' ? [NAME, MODEL, HOLDS, { label: '단계', track: 'fill' }] : [NAME, HOLDS];
-const FOUND_COLUMNS: TableColumn[] = [NAME, { label: '종류', track: 'fill' }, { label: '쓰는 곳', track: 'fill' }];
+  sort === 'conversation' ? [NAME, MODEL, HOLDS, { label: USED_IN, track: 'fill' }] : sort === 'agent' ? [NAME, MODEL, HOLDS, { label: '단계', track: 'fill' }] : [NAME, HOLDS];
+const FOUND_COLUMNS: TableColumn[] = [NAME, { label: '종류', track: 'fill' }, { label: USED_IN, track: 'fill' }];
 
 export const promptHolds = ({ blocks, toggles }: Pick<Prompt, 'blocks' | 'toggles'>) => counted([['블록', blocks.length], ['토글', toggles.filter(isToggle).length]]).join(' · ');
 
@@ -239,7 +239,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
             {folderRows.length + top.length > 0 ? (
               <>
                 {folderRows.length > 0 && <Table label="폴더" columns={FOLDER_COLUMNS} rows={folderRows} />}
-                {top.length > 0 && <Table label={`${current.label} 프롬프트`} columns={columnsOf(shown)} rows={top.map((prompt) => row(prompt))} />}
+                {top.length > 0 && <Table label={SORT_PROMPT[shown]} columns={columnsOf(shown)} rows={top.map((prompt) => row(prompt))} />}
               </>
             ) : at.here && filing ? (
               <Empty>{EMPTY_FOLDER}</Empty>

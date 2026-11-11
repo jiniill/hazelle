@@ -332,7 +332,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
                 search found is not the outline, so nothing there is edited. */}
             {!(split && hover) && !search.words && (
               <Button variant="link" onClick={() => setEditing(!editing)}>
-                {editing ? '완료' : '편집'}
+                {editing ? '완료' : '순서 편집'}
               </Button>
             )}
             <Menu

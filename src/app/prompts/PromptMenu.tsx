@@ -14,9 +14,9 @@ import { MenuItem } from '../ui';
 
 const MAKES_DEFAULT = {
   conversation: '새 채팅을 시작할 때 이 프롬프트를 써요',
-  translate: '번역 프롬프트를 따로 선택하지 않은 채팅에 써요',
+  translate: '번역 프롬프트를 선택하지 않은 채팅에 써요',
   memory: '장기 기억을 이 프롬프트로 정리해요',
-  illustrate: '삽화 프롬프트를 따로 선택하지 않은 채팅에 써요',
+  illustrate: '삽화 프롬프트를 선택하지 않은 채팅에 써요',
   mascot: '마스코트가 이 프롬프트로 대사를 써요',
   preread: '긴 내용을 미리 요약할 때 이 프롬프트를 써요',
 } satisfies Record<Exclude<PromptSort, 'agent'>, string>;
@@ -68,7 +68,7 @@ export function PromptMenu({ stored, onOpen, onErased, onExport }: Props) {
       <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void copy()} />
       {sort === 'conversation' && <MenuItem icon={ACTS.export.icon} label={ACTS.export.label} onClick={onExport} />}
       {words && !isDefault && <MenuItem label={SET_DEFAULT} description={words.makeDefault} onClick={() => void makeDefault()} />}
-      {sort !== 'conversation' && <MenuItem label="기본 블록으로 되돌리기" description="블록 구성을 기본값으로 되돌려요. 프롬프트 이름과 모델 설정은 유지돼요." onClick={() => void resetBlocks()} />}
+      {sort !== 'conversation' && <MenuItem label="기본 블록으로 되돌리기" onClick={() => void resetBlocks()} />}
       <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} description={isDefault ? cannotRemove(words!.default) : undefined} tone="warn" disabled={isDefault} onClick={() => void erase()} />
     </>
   );

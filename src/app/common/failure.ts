@@ -28,7 +28,7 @@ import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
 import { SORT_PROMPT, defaultPrompt } from './prompt-words';
-import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE } from './words';
+import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -479,7 +479,7 @@ export function describeIllustrateFailure(failure: IllustrateFailure): string {
     case 'invalid':
       return SCENE_INVALID[failure.reason];
     case 'no-image-model':
-      return `연결된 이미지 모델이 없어요. ${inSettings('connections')}에서 NovelAI를 연결해 주세요.`;
+      return `${NO_IMAGE_MODEL} ${inSettings('connections')}에서 NovelAI를 연결해 주세요.`;
     case 'image-model-gone':
       return '선택한 이미지 모델이 추가한 모델에 없어요. 채팅의 삽화 메뉴에서 다시 선택해 주세요.';
     case 'undrawn':

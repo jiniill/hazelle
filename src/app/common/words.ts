@@ -236,6 +236,9 @@ export const IDLE_MODELS = '안 쓰는 모델';
 export const FINDINGS = '고칠 곳';
 // A role no layer picks, or a 모델 설정 that sets nothing.
 export const NOT_PICKED = '지정 안 함';
+export const NO_IMAGE_MODEL = '연결된 이미지 모델이 없어요.';
+// A table's column of where a thing is used.
+export const USED_IN = '사용처';
 
 export const NO_STARRED = '추가한 모델이 없어요.';
 export const noStarred = (then: string) => `${NO_STARRED} ${inSettings('connections')}에서 모델을 추가하면 여기서 ${then}.`;

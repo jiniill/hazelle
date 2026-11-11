@@ -133,7 +133,7 @@ export function Outline({ label, help, start, end, stops, current, onPick, onOpe
               <div className={styles.gap}>
                 {cut(above)}
                 {order.at === index && <span className={styles.drop} />}
-                {plus(index, `${index + 1}번째 자리에 추가`)}
+                {plus(index, `${index + 1}번째에 추가`)}
               </div>
               <div className={styles.row} aria-current={stop.id === current || undefined}>
                 <button
