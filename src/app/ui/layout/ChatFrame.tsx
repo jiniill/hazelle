@@ -114,20 +114,35 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
     };
   }, []);
 
-  // A message sought stops under what is pinned, not behind it.
+  // What is pinned stands in the story's flow at its top, so the story is moved by as much as it grew or shrank: what
+  // is being read stays where it is, and the header takes it for no move of the reader's. Its height is also what a
+  // message sought stops under.
   useLayoutEffect(() => {
     const column = columnRef.current!;
+    const scroll = scrollRef.current!;
     const element = pinnedRef.current;
     if (!element) return;
-    const measure = () => column.style.setProperty('--pinned-height', `${element.offsetHeight}px`);
+    let height = 0;
+    const move = (by: number) => {
+      if (!by) return;
+      scroll.scrollTop += by;
+      lastTop.current = scroll.scrollTop;
+    };
+    const measure = () => {
+      const next = element.offsetHeight;
+      move(next - height);
+      height = next;
+      column.style.setProperty('--pinned-height', `${next}px`);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => {
       observer.disconnect();
+      move(-height);
       column.style.removeProperty('--pinned-height');
     };
-  }, [pins]);
+  }, [pins, scrollRef]);
 
   useLayoutEffect(() => {
     const element = scrollRef.current!;

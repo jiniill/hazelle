@@ -33,10 +33,12 @@ export function viewLines(frame: HTMLElement) {
   return { top: box.top + padding.top, bottom: box.bottom - padding.bottom };
 }
 
-// auto, the scroller's default, is no padding.
+// auto, the scroller's default, is no padding. --scroll-covered-top is what stays stuck at the scroller's top, under
+// what floats over it: scroll padding cannot hold it, since the browser would then scroll to bring the stuck thing's
+// own controls out from under it when one takes the focus.
 function scrollPadding(frame: HTMLElement) {
   const style = getComputedStyle(frame);
-  return { top: parseFloat(style.scrollPaddingTop) || 0, bottom: parseFloat(style.scrollPaddingBottom) || 0 };
+  return { top: (parseFloat(style.scrollPaddingTop) || 0) + (parseFloat(style.getPropertyValue('--scroll-covered-top')) || 0), bottom: parseFloat(style.scrollPaddingBottom) || 0 };
 }
 
 // The mounted row across y (client px), or the first below it where y falls between rows; above and below are how far

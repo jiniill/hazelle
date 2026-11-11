@@ -169,7 +169,9 @@
   overflow-y: auto;
   /* Viewport owns anchoring; excluding only its rows still lets the browser anchor to the surrounding content. */
   overflow-anchor: none;
-  scroll-padding-top: calc(var(--header-height) + var(--pinned-height, 0px));
+  scroll-padding-top: var(--header-height);
+  /* What is pinned covers the story's top too: Viewport lands a message it seeks under it. */
+  --scroll-covered-top: var(--pinned-height, 0px);
   scroll-padding-bottom: var(--footer-space);
 }
 
@@ -187,19 +189,23 @@
 }
 
 /* What stays at the story's top while it scrolls: under the header while that shows, at the top once it hides. It
-   comes before the spring that sets a short story at the foot, and scrolls inside itself past its share of the height. */
+   comes before the spring that sets a short story at the foot, and scrolls inside itself past its share of the height.
+   It stands over the messages' feet, which are raised, and under an open menu; the page's ground fills the gap over
+   it, so no line of the story passes between it and the header. */
 .pinned {
   position: sticky;
-  top: var(--space-8);
-  z-index: var(--layer-raised);
+  top: 0;
+  z-index: var(--layer-window);
   order: -1;
   max-height: var(--story-pinned-most);
+  padding-top: var(--space-8);
   overflow-y: auto;
+  background: var(--color-bg);
   transition: top var(--motion-move);
 }
 
 .shown ~ .scroll .pinned {
-  top: calc(var(--header-height) + var(--space-8));
+  top: var(--header-height);
 }
 
 /* Resolve right-gutter offsets in the same scroller-width box as .content, not the narrower story column. */
