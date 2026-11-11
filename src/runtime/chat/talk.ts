@@ -7,7 +7,9 @@ import type { Cues } from './cues';
 import type { ModelSettings } from '../../connectors/settings';
 import type { ToolCall, ToolResult } from '../../connectors/types';
 import type { Assembled } from '../../engine/pipeline';
+import { withoutStatus } from '../../engine/status';
 import type { Settle } from '../tasks/preread';
+import { cutsStatus } from '../tasks/status';
 import type { CacheDiagnosis, CacheForecast, CacheText } from '../../model/cache';
 import { calls, type AgentRun, type Message, type Receipt, type Writes } from '../../model/chat';
 import { without } from '../../model/fields';
@@ -47,6 +49,8 @@ export type Turn = {
   stopping?: true;
   preparing?: Preparing;
   reading?: Reading;
+  // The reply ends with a state block that is cut at its save (runtime/tasks/status), so it is shown without it.
+  status?: true;
 };
 // The call the reply is read from: when it was asked (a receipt's totalMs counts from there), and how much text and
 // reasoning came before it, a continuation's, which its own output does not count.
@@ -88,7 +92,7 @@ export function withTurn(messages: Message[], turn: Turn | null, chat: string): 
     }
     out.push(message);
   }
-  const version = { id: reply.id, seed: reply.continues?.seed ?? reply.id, text: turn.text, receipt: null, edited: false, at: now, ...(reply.before && { before: reply.before }), ...(turn.reasoning && { reasoning: turn.reasoning }) };
+  const version = { id: reply.id, seed: reply.continues?.seed ?? reply.id, text: turn.status ? withoutStatus(turn.text) : turn.text, receipt: null, edited: false, at: now, ...(reply.before && { before: reply.before }), ...(turn.reasoning && { reasoning: turn.reasoning }) };
   const live = { live: reply.id, ...(turn.whole && { whole: true as const }), ...(turn.batch && { batch: true as const }), ...(turn.retrying && { retrying: true as const }), ...(turn.stopping && { stopping: true as const }), ...(turn.preparing && { preparing: turn.preparing }), ...(turn.reading && { reading: turn.reading }) };
   // A reply saved while its turn is held stays live until the turn ends, so nothing between its save and Talk's end
   // shows it settled (Translator.expect).
@@ -406,6 +410,8 @@ export class Talk {
   // started: the reply's text begins here, so its first chunk cues; never for one picked up mid-way (resume), a
   // continuation, whose text starts as the one it continues, or one shown whole.
   private writer(held: Held, started = false): TextSink {
+    // Read here and not when the turn is seated: a new chat is stored only once its first send is prepared.
+    if (cutsStatus(this.store, held.turn.chat)) this.change(held, { ...held.turn, status: true });
     return {
       text: (phase, chunk) => {
         if (started && phase === 'text' && held.turn.text === '' && !held.turn.whole) this.cues.emit('reply-started');

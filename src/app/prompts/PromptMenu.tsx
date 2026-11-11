@@ -19,6 +19,7 @@ const MAKES_DEFAULT = {
   illustrate: '삽화 프롬프트를 선택하지 않은 채팅에 써요',
   mascot: '마스코트가 이 프롬프트로 대사를 써요',
   preread: '긴 내용을 미리 요약할 때 이 프롬프트를 써요',
+  status: '응답 뒤에 상태를 기록할 때 이 프롬프트를 써요',
 } satisfies Record<Exclude<PromptSort, 'agent'>, string>;
 
 type Props = {

@@ -2,7 +2,7 @@ import type { Cost } from '../../connectors/types';
 import type { RisuChat } from '../../engine/import/types';
 import { memoryThrough } from '../../engine/memory';
 import { VARIABLE_LIMITS } from '../../engine/render';
-import { CAST_MAX, foldTree, shown, standing, translationOutdated, type AgentRun, type Bookmark, type Chat, type Entry, type Message, type Receipt, type Translation, type Version, type Writes } from '../../model/chat';
+import { CAST_MAX, foldTree, shown, standing, translationOutdated, type StatusWrite, type AgentRun, type Bookmark, type Chat, type Entry, type Message, type Receipt, type Translation, type Version, type Writes } from '../../model/chat';
 import { cachePrintId } from '../../model/cache';
 import { isChatFolderOf } from '../../model/folders';
 import type { Illustration } from '../../model/illustration';
@@ -381,18 +381,19 @@ export const appendUserMessage = (store: ObjectStore, chat: string, { id, text, 
 
 // at is the reply's own, never the time of the save, so saving it again (Talk.saveAgain) sends the same entry, and a
 // first try that landed unanswered is found as it is.
-export type Written = { id: string; message: string | null; replaces: string | null; follows?: string | null; at: number; text: string; receipt: Receipt; seed?: string; before?: Writes; reasoning?: string };
+// status: what the reply's own block changed in the chat's state, cut from its text (runtime/tasks/status cutStatus).
+export type Written = { id: string; message: string | null; replaces: string | null; follows?: string | null; at: number; text: string; receipt: Receipt; seed?: string; before?: Writes; reasoning?: string; status?: StatusWrite };
 // message null: a new message, whose id is the reply's own.
 export const replyMessage = ({ id, message }: Pick<Written, 'id' | 'message'>) => message ?? id;
 
-export function appendReply(store: ObjectStore, chat: string, { id, message, replaces, follows, at, text, receipt, seed, before, reasoning }: Written) {
+export function appendReply(store: ObjectStore, chat: string, { id, message, replaces, follows, at, text, receipt, seed, before, reasoning, status }: Written) {
   const held = { at, text, receipt, ...(before && { before }), ...(reasoning && { reasoning }) };
   // A continued reply's receipt carries the one it continued, whose row its own save wrote; the rounds that called
   // plugin tools below it were saved by no reply of their own, so their rows go with this one.
   const rounds = [receipt];
   for (let below = receipt.continues; below?.tools; below = below.continues) rounds.push(below);
   const place = chatPlace(store, chat);
-  return append(store, chat, message === null ? { type: 'message', role: 'assistant', ...(follows !== undefined && { follows }), ...held } : { type: 'version', message, replaces, edit: false, ...held, ...(seed && { seed }) }, id, rounds.map((round) => receiptRow(round, at, place)));
+  return append(store, chat, message === null ? { type: 'message', role: 'assistant', ...(follows !== undefined && { follows }), ...held } : { type: 'version', message, replaces, edit: false, ...held, ...(seed && { seed }) }, id, [...rounds.map((round) => receiptRow(round, at, place)), ...(status ? [entryRow(chat, { type: 'status', version: id, ...status })] : [])]);
 }
 
 // Edits keep old text's variable writes; adds chain from follows. vars attach after a version,
@@ -442,6 +443,10 @@ export async function setVariableByHand(store: ObjectStore, chat: string, versio
   if (name.length > VARIABLE_LIMITS.name || value.length > VARIABLE_LIMITS.value) return { ok: false, error: 'too-long' } as const;
   return append(store, chat, { type: 'vars', version, set: [[name, value]], at: Date.now(), byHand: true });
 }
+
+// A model's write of a version's state, with its call's ledger row (Entry status).
+export const appendStatus = (store: ObjectStore, chat: string, version: string, write: StatusWrite) =>
+  append(store, chat, { type: 'status', version, ...write }, undefined, write.receipt ? [receiptRow(write.receipt, write.at, chatPlace(store, chat))] : []);
 
 // A state value the user set where it stood, on the version whose state was shown (Entry status).
 export const setStatusByHand = (store: ObjectStore, chat: string, version: string, change: StatusChange) => append(store, chat, { type: 'status', version, changes: [change], at: Date.now(), byHand: true });

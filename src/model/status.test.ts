@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { statusAfter, type StatusChange, type StatusDefinition } from './status';
+import { statusAfter, statusViews, type StatusChange, type StatusDefinition, type StatusView } from './status';
 
 const definition: StatusDefinition = {
   id: 'd',
@@ -75,4 +75,26 @@ test('a change the definition no longer takes changes nothing', () => {
     { ...at, kind: 'row', log: 'events', values: { what: 3, other: 'x' } },
   );
   expect(state).toEqual(after());
+});
+
+test('a definition with no view of its own is shown whole in one: its fields, then each 묶음 and each 기록', () => {
+  expect(statusViews(definition)).toEqual<StatusView[]>([
+    {
+      id: 'd',
+      name: '기본',
+      frame: 'card',
+      mood: 'hazelle',
+      blocks: [
+        { kind: 'field', field: 'love' },
+        { kind: 'field', field: 'gold' },
+        { kind: 'field', field: 'mood' },
+        { kind: 'field', field: 'bag' },
+        { kind: 'records', group: 'cast' },
+        { kind: 'records', group: 'class' },
+        { kind: 'log', log: 'events' },
+      ],
+    },
+  ]);
+  const own: StatusView = { id: 'v', name: '한 줄', frame: 'line', mood: 'paper', blocks: [{ kind: 'field', field: 'love' }] };
+  expect(statusViews({ ...definition, views: [own] })).toEqual([own]);
 });

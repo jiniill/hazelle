@@ -12,6 +12,7 @@ import type { CatalogFailure } from '../../runtime/models/catalog';
 import type { IllustrateFailure } from '../../runtime/tasks/illustrate';
 import type { LikenessFailure } from '../../runtime/tasks/likeness';
 import type { MascotFailure } from '../../runtime/tasks/mascot';
+import type { StatusFailure } from '../../runtime/tasks/status';
 import type { MemoryFailure } from '../../runtime/tasks/memory';
 import type { PrereadFailure } from '../../runtime/tasks/preread';
 import type { writerOf } from '../../runtime/models/profiles';
@@ -512,6 +513,18 @@ export function describeLikenessFailure(failure: LikenessFailure): string {
     default:
       return describeIllustrateFailure(failure);
   }
+}
+
+export function describeStatusFailure(failure: StatusFailure): string {
+  switch (failure.kind) {
+    case 'invalid':
+      return UNREADABLE;
+    case 'gone':
+      return GONE_MESSAGE;
+    case 'unsaved':
+      return `상태를 저장하지 못했어요. ${describeFailure(failure.failure)}`;
+  }
+  return describeTask(failure, featureTask('status', '상태를 쓰기 전에'));
 }
 
 const REMARK_INVALID = { unreadable: UNREADABLE, line: '모델이 대사를 쓰지 않았어요.' } as const;

@@ -41,6 +41,7 @@ const SORTS: { sort: PromptSort; label: string; hint?: string; none: string }[] 
   task('mascot', '응답마다 마스코트가 한마디 할 때 쓰는 프롬프트예요.'),
   task('preread', `응답을 생성하기 전에 ${MODEL_ROLES.aux}이 긴 내용을 요약할 때 쓰는 프롬프트예요.`),
   task('agent', '응답 생성 전에 맥락을 정리하거나 생성된 응답을 다듬는 에이전트예요.'),
+  task('status', '응답이 끝난 뒤 그 응답으로 바뀐 상태를 기록할 때 쓰는 프롬프트예요.'),
 ];
 type Order = 'name' | 'recent';
 

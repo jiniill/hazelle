@@ -123,9 +123,9 @@ test('the ask names every field with what it takes', () => {
 });
 
 test('a writer is sent the whole state and the ask for its own definitions only, and nothing when none is declared', () => {
-  const sent = statusSent(definitions, state, 'after');
+  const sent = statusSent(definitions, state, [phone]);
   expect(sent.startsWith(`The status as it stands:\n${statusText(definitions, state)}\n\n`)).toBe(true);
   expect(sent.endsWith(statusAsk([phone]))).toBe(true);
-  expect(statusSent([phone], state, 'with')).toBe(`The status as it stands:\n${statusText([phone], state)}`);
-  expect(statusSent([], state, 'with')).toBe('');
+  expect(statusSent([phone], state, [])).toBe(`The status as it stands:\n${statusText([phone], state)}`);
+  expect(statusSent([], state, [])).toBe('');
 });

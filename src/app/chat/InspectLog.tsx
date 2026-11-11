@@ -22,6 +22,7 @@ const PURPOSES: Record<CallPurpose, string> = {
   mascot: FEATURE_NAMES.mascot,
   preread: FEATURE_NAMES.preread,
   agent: FEATURE_NAMES.agents,
+  status: FEATURE_NAMES.status,
   embedding: ROLE_TAGS.embed,
 };
 

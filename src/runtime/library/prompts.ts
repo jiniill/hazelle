@@ -3,6 +3,7 @@ import { illustratorPrompt } from '../../engine/illustrate';
 import { commentatorPrompt } from '../../engine/mascot';
 import { memoryTaskPrompt } from '../../engine/memory';
 import { prereadTaskPrompt } from '../../engine/preread';
+import { statusWriterPrompt } from '../../engine/status';
 import { agentPrompt, builtInAgent, type AgentStart } from '../../engine/agent';
 import { translatorPrompt } from '../../engine/translate';
 import type { Chat } from '../../model/chat';
@@ -31,11 +32,12 @@ export const MEMORY_PROMPT_ID = '00000000-0000-4000-8000-000000000005';
 export const ILLUSTRATOR_ID = '00000000-0000-4000-8000-000000000006';
 export const COMMENTATOR_ID = '00000000-0000-4000-8000-000000000007';
 export const PREREADER_ID = '00000000-0000-4000-8000-000000000008';
+export const STATUS_WRITER_ID = '00000000-0000-4000-8000-000000000009';
 
 // Each task's built-in prompt, which a new prompt of its sort starts from while the account's default is gone. An agent
 // has no default: a chat runs every agent its lists hold (runtime/tasks/agents), each made by addAgent.
 type Defaulted = Exclude<PromptSort, 'agent'>;
-const BUILT_IN = { translate: translatorPrompt, memory: memoryTaskPrompt, illustrate: illustratorPrompt, mascot: commentatorPrompt, preread: prereadTaskPrompt } satisfies { [S in Exclude<Defaulted, 'conversation'>]: () => PromptOf<S> };
+const BUILT_IN = { translate: translatorPrompt, memory: memoryTaskPrompt, illustrate: illustratorPrompt, mascot: commentatorPrompt, preread: prereadTaskPrompt, status: statusWriterPrompt } satisfies { [S in Exclude<Defaulted, 'conversation'>]: () => PromptOf<S> };
 
 const DEFAULTS = {
   conversation: { setting: 'prompt', id: STARTER_ID, make: starter },
@@ -45,6 +47,7 @@ const DEFAULTS = {
   mascot: { setting: 'mascotPrompt', id: COMMENTATOR_ID, make: () => Promise.resolve(BUILT_IN.mascot()) },
   // Added once its 실험실 switch is on (addDefaults), so an account that never turns it on holds none.
   preread: { setting: 'prereadPrompt', id: PREREADER_ID, make: () => Promise.resolve(BUILT_IN.preread()), lab: 'preread' },
+  status: { setting: 'statusPrompt', id: STATUS_WRITER_ID, make: () => Promise.resolve(BUILT_IN.status()), lab: 'status' },
 } as const satisfies { [S in Defaulted]: { setting: keyof Settings; id: string; make: () => Promise<PromptOf<S> | null>; lab?: LabId } };
 
 export const DEFAULT_PROMPT_IDS: readonly string[] = Object.values(DEFAULTS).map(({ id }) => id);
@@ -76,6 +79,9 @@ export const mascotPrompt = (store: Pick<ObjectStore, 'get'>) => choose(store, '
 
 // The account's only, as the mascot's: 토큰 절약's values are 공용's alone.
 export const prereadPrompt = (store: Pick<ObjectStore, 'get'>) => choose(store, 'preread', undefined);
+
+// The account's only, as the mascot's: the definitions are the chat's, the writer's prompt 공용's alone.
+export const statusPrompt = (store: Pick<ObjectStore, 'get'>) => choose(store, 'status', undefined);
 
 // Place memory last before chat to preserve the fixed cache prefix; tools after chat avoid per-turn invalidation.
 // Keep card-replacement text blocks/notes empty but present. Task prompts clone the default or built-in.

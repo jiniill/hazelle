@@ -16,7 +16,7 @@ import type { Seen, Settings } from '../../model/settings';
 import { chatStatus, statusAfter, type StatusDefinition } from '../../model/status';
 import { chatToggles, toggleValue } from '../../model/toggles';
 import { chatModel, type Route } from '../models/assignment';
-import { chatTranslate } from '../tasks/features';
+import { chatTranslate, featuresOf } from '../tasks/features';
 import { greetingOf } from './greetings';
 import { chatPersona } from '../library/personas';
 import { modelProfile } from '../models/profiles';
@@ -126,7 +126,7 @@ export function scopeOf({ store }: Reader, id: string | null, chat: Chat, messag
   const route = chatModel(store, chat, 'main');
   const aux = chatModel(store, chat, 'aux');
   const toggles = togglesOf(store, chat, prompt, packs);
-  const definitions = statusOf(prompt, packs);
+  const definitions = statusOf(store, chat, prompt, packs);
   const loaded = id !== null && store.scopeState(id) === 'loaded';
   return {
     card,
@@ -176,8 +176,9 @@ export type ToggleSource = { from: 'prompt' | 'card' | 'module'; id: string; nam
 export type ChatToggleSet = { declared: Toggle[]; sources: ToggleSource[]; value: (key: string) => string | null };
 
 // The chat's state definitions (design §6.1): its prompt's, then its packs' in their order, as its toggles are read.
-export const statusOf = (prompt: PromptChoice, packs: ReturnType<typeof packsOf>): StatusDefinition[] =>
-  chatStatus([prompt.kind === 'prompt' ? prompt.prompt.value.status : undefined, ...packs.map(({ pack }) => pack.status)]);
+// None while 상태 is off there, or its 실험실 switch: nothing is then told, asked, written or shown.
+export const statusOf = (store: Reader['store'], chat: Chat, prompt: PromptChoice = chatPrompt(store, chat), packs: ReturnType<typeof packsOf> = packsOf(store, chat)): StatusDefinition[] =>
+  featuresOf(store, chat).status ? chatStatus([prompt.kind === 'prompt' ? prompt.prompt.value.status : undefined, ...packs.map(({ pack }) => pack.status)]) : [];
 
 export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoice, packs: ReturnType<typeof packsOf>): ChatToggleSet {
   const character = chat.character === null ? null : (store.get('character', chat.character)?.value ?? null);

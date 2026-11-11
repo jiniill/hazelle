@@ -128,6 +128,9 @@ it('reads a state definition as absent or well formed on a prompt and a module, 
   expect(isValue('prompt', { ...prompt, status: { ...definition, writer: 'both' } })).toBe(false);
   expect(isValue('module', { ...module, status: definition })).toBe(true);
   expect(isValue('module', { ...module, status: { ...definition, groups: [{ id: 'g', name: '인물', fields: [] }] } })).toBe(false);
+  const view = { id: 'v', name: '기본', frame: 'card', mood: 'hazelle' };
+  expect(isValue('module', { ...module, status: { ...definition, views: [{ ...view, blocks: [{ kind: 'field', field: 'f' }] }] } })).toBe(true);
+  expect(isValue('module', { ...module, status: { ...definition, views: [view] } })).toBe(false);
   const entry = { type: 'status', version: 'v', changes: [{ definition: 'd', kind: 'set', field: 'f', value: 3 }], at: 1 };
   expect(isValue('entry', { ...entry, byHand: true })).toBe(true);
   expect(isValue('entry', { ...entry, of: ['d'], receipt: null })).toBe(true);

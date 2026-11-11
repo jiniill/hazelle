@@ -5,4 +5,5 @@ export * from './foundation';
 export * from './landing';
 export * from './layout';
 export * from './overlays';
+export * from './status';
 export * from './story';

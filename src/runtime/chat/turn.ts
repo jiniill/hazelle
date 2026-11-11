@@ -98,6 +98,7 @@ export async function receiveReply(session: Session, chat: string, reply: Writte
   if (!received) return;
   if (chatIllustrate(session.store, received.chat).auto) session.illustrator.draw(chat, received.message, received.version, { auto: true });
   if (featuresOf(session.store, received.chat).mascot) session.commentator.comment(chat, received.message, received.version);
+  session.statusWriter.write(chat, received.message, received.version);
 }
 
 async function polished(session: Session, chat: string, message: string, version: string) {

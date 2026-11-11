@@ -43,7 +43,7 @@ export const SLOT = {
   source: { name: '원문', hint: '번역할 텍스트', line: '번역할 원문 텍스트가 여기에 들어가요.', kind: 'chat', icon: Languages },
   mascot: { name: FEATURE_NAMES.mascot, hint: '마스코트의 말투와 표정', line: '마스코트의 말투와 표정, 최근 대사, 응답 형식이 여기에 들어가요.', kind: 'char', icon: Smile },
   agentNotes: { name: '에이전트 노트', hint: '전처리 에이전트가 이번 답을 위해 남긴 노트', line: '전처리 에이전트의 노트가 여기에 들어가요.', kind: 'note', icon: Bot },
-  status: { name: '상태', hint: '이 채팅의 현재 상태', line: '이 채팅의 현재 상태와, 응답과 함께 쓰는 상태의 작성 형식이 여기에 들어가요.', kind: 'note', icon: Gauge },
+  status: { name: FEATURE_NAMES.status, hint: '이 채팅의 현재 상태', line: '이 채팅의 현재 상태와, 응답과 함께 쓰는 상태의 작성 형식이 여기에 들어가요.', kind: 'note', icon: Gauge },
   agentMemory: { name: '에이전트 기억', hint: '이 에이전트가 채팅마다 이어 적는 기억', line: '이 에이전트의 이전 기억과 기억을 갱신하는 형식이 여기에 들어가요.', kind: 'note', icon: Brain },
 } satisfies Record<SlotKind, { name: string; hint: string; line: string; kind: OutlineKind; icon: LucideIcon }>;
 
@@ -53,10 +53,10 @@ export const MESSAGE_ROLES: Record<Role, string> = { system: '시스템', user: 
 
 export const textName = (role: Role) => `${MESSAGE_ROLES[role]} 메시지`;
 
-export const TASK_NAMES: Record<Exclude<PromptSort, 'conversation'>, string> = { translate: FEATURE_NAMES.translate, memory: '기억', illustrate: FEATURE_NAMES.illustrate, mascot: FEATURE_NAMES.mascot, preread: FEATURE_NAMES.preread, agent: FEATURE_NAMES.agents };
+export const TASK_NAMES: Record<Exclude<PromptSort, 'conversation'>, string> = { translate: FEATURE_NAMES.translate, memory: '기억', illustrate: FEATURE_NAMES.illustrate, mascot: FEATURE_NAMES.mascot, preread: FEATURE_NAMES.preread, agent: FEATURE_NAMES.agents, status: FEATURE_NAMES.status };
 
 const named = (sort: Exclude<PromptSort, 'conversation' | 'agent'>) => `${TASK_NAMES[sort]} 프롬프트`;
 // One prompt of a sort as 기본 and 새 call it: a conversation prompt is plain 프롬프트, an agent its own noun.
-export const SORT_PROMPT: Record<PromptSort, string> = { conversation: '프롬프트', translate: named('translate'), memory: named('memory'), illustrate: named('illustrate'), mascot: named('mascot'), preread: named('preread'), agent: TASK_NAMES.agent };
+export const SORT_PROMPT: Record<PromptSort, string> = { conversation: '프롬프트', translate: named('translate'), memory: named('memory'), illustrate: named('illustrate'), mascot: named('mascot'), preread: named('preread'), agent: TASK_NAMES.agent, status: named('status') };
 
 export const defaultPrompt = (sort: PromptSort) => `기본 ${SORT_PROMPT[sort]}`;

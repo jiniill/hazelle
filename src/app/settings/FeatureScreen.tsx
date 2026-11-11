@@ -6,9 +6,10 @@ import { illustrateSwitches, setIllustrate, setTranslate, setTranslatorNote, tra
 import { SHARED_CHAT, availableFeatures, setFeatureAt, sharedFeatures } from '../../runtime/tasks/features';
 import { setAgentAt } from '../../runtime/tasks/agents';
 import { briefsWithChatModel, briefWriterOf, PREREAD_STARTS, prereadSetup, setPreread } from '../../runtime/tasks/preread';
-import { describeMascotFailure, describePrereadFailure } from '../common/failure';
+import { describeMascotFailure, describePrereadFailure, describeStatusFailure } from '../common/failure';
 import { sceneWriterOf } from '../../runtime/tasks/illustrate';
 import { mascotWriterOf } from '../../runtime/tasks/mascot';
+import { statusWriterOf } from '../../runtime/tasks/status';
 import { setDefaultPrompt } from '../../runtime/library/prompts';
 import { sendsNotes, translatorOf } from '../../runtime/tasks/translate';
 import { AgentSwitches } from '../common/AgentSwitches';
@@ -22,7 +23,7 @@ import { TranslateRows } from '../common/TranslateRows';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { useTypedNumber } from '../common/typed';
 import { readWhole } from '../common/typedNumber';
-import { AGENTS_HELP, EVERY_CHAT, FEATURE_NAMES, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PICTURE_PLACE, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED, TASK_MODELS } from '../common/words';
+import { AGENTS_HELP, STATUS_HELP, EVERY_CHAT, FEATURE_NAMES, MODEL_ROLES, MODEL_SETTINGS, NOTE_UNSENT, noteLines, PICTURE_PLACE, PRE_READ, PRE_READ_HELP, PRE_READ_PARTS, SAVE_FAILED, TASK_MODELS } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore, useStored } from '../session';
 import { backBar, navigate, useAddress } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -54,7 +55,7 @@ function Apart({ feature }: { feature: keyof typeof APART }) {
 }
 
 // What the feature is, for the two whose name does not say it.
-const HEAD_HELP: Partial<Record<Feature, string>> = { preread: PRE_READ_HELP, agents: AGENTS_HELP };
+const HEAD_HELP: Partial<Record<Feature, string>> = { preread: PRE_READ_HELP, agents: AGENTS_HELP, status: STATUS_HELP };
 
 // Without a prompt to open, the list opens on the feature's own sort.
 const editPrompt = (sort: PromptSort) => (door: PromptDoor) => navigate(door ? { kind: 'prompt', ...door } : { kind: 'prompts', place: null, sort });
@@ -252,4 +253,27 @@ function AgentDefaults() {
   return <AgentSwitches owner={{ kind: 'settings' }} own={useSettings().agents ?? []} onChange={(agent, on) => setAgentAt(store, { kind: 'settings' }, agent, on)} />;
 }
 
-const DEFAULTS: Record<Feature, ComponentType> = { translate: TranslateDefaults, illustrate: IllustrateDefaults, memory: MemoryDefaults, mascot: MascotDefaults, preread: PrereadDefaults, agents: AgentDefaults };
+// The writer's prompt is the account's default alone, as the mascot's: the definitions are each chat's own.
+function StatusDefaults() {
+  const store = useStore();
+  const toast = useToast();
+  const settings = useSettings();
+  // chosenPrompt and statusWriterOf read these.
+  usePrompts();
+  useConnections();
+  useProfiles();
+  const writer = statusWriterOf(store, SHARED_CHAT);
+  return (
+    <SettingGroup label={FEATURE_NAMES.status}>
+      <AccountTaskModel task="status" help="응답 뒤에 쓰는 상태가 있는 채팅에서 응답마다 모델을 한 번 더 호출해요." runs={taskRuns(writer, describeStatusFailure)} />
+      <SettingRow
+        label="상태 프롬프트"
+        control={
+          <TaskPromptMenu task="status" chosen={settings.statusPrompt} heading={EVERY_CHAT} opens="down" onPick={(prompt) => toast.settled(setDefaultPrompt(store, prompt!))} onEdit={editPrompt('status')} />
+        }
+      />
+    </SettingGroup>
+  );
+}
+
+const DEFAULTS: Record<Feature, ComponentType> = { translate: TranslateDefaults, illustrate: IllustrateDefaults, memory: MemoryDefaults, mascot: MascotDefaults, preread: PrereadDefaults, agents: AgentDefaults, status: StatusDefaults };

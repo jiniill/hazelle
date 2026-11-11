@@ -206,9 +206,11 @@ export const STAGE_NAMES: Record<AgentStage, string> = { pre: '전처리', post:
 export const agentsWaiting = ({ running, retrying, total }: { running: readonly string[]; retrying: readonly string[]; total: number }) => `${withParticle((retrying.length ? retrying : running).join(', '), '이/가')} ${retrying.length ? RESENDING : '먼저 읽고 있어요'}${total > 1 ? ` · ${total - running.length}/${total} 끝남` : '.'}`;
 export const polishingNow = ({ name, at, total, retrying }: { name: string; at: number; total: number; retrying?: true }) => `${withParticle(name, '이/가')} ${retrying ? RESENDING : '응답을 다듬고 있어요'}${total > 1 ? ` · ${at}/${total}` : '.'}`;
 export const toolWaiting = (name: string) => `${withParticle(name, '이/가')} 보낼 내용을 준비하는 중`;
-export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS };
+export const STATUS = '상태';
+export const STATUS_HELP = '봇이나 프롬프트가 정해 둔 상태(호감도, 장소 등)를 응답마다 기록해요. 만드는 중인 기능이라 아직 일부만 동작해요.';
+export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS, status: STATUS };
 // A feature's own model row; an agent's model is its prompt's.
-export const TASK_MODELS = { translate: '번역 모델', illustrate: '장면 모델', memory: '기억 모델', mascot: '대사 모델', preread: `${PRE_READ} 모델` } as const satisfies Partial<Record<Feature, string>>;
+export const TASK_MODELS = { translate: '번역 모델', illustrate: '장면 모델', memory: '기억 모델', mascot: '대사 모델', preread: `${PRE_READ} 모델`, status: `${STATUS} 모델` } as const satisfies Partial<Record<Feature, string>>;
 
 // An unset choice takes its value from somewhere else, and names it: 기본 모델 사용, 보조 모델 사용.
 export const follows = (source: string) => `${source} 사용`;

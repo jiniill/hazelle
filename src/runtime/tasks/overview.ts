@@ -11,12 +11,13 @@ import { memoryOwner, memoryWriter } from './memory-read';
 import { briefWriterOf, type PrereadFailure } from './preread';
 import { chatPrompt, ofSort, type PromptChoice, type StoredPrompt } from '../library/prompts';
 import type { ObjectStore } from '../store/store';
+import { statusWriterOf, type StatusFailure } from './status';
 import { translatorOf, type TranslatorFailure } from './translate';
 
 // 내 구성: what runs on what in one chat, or in 공용 as a new chat with no character reads it. Each model comes from the
 // resolver its feature runs on, so this page and the runtime cannot disagree.
 
-type Failures = { translate: TranslatorFailure; illustrate: IllustrateFailure; memory: MemoryFailure; mascot: MascotFailure; preread: Exclude<PrereadFailure, { kind: 'stopped' }> };
+type Failures = { translate: TranslatorFailure; illustrate: IllustrateFailure; memory: MemoryFailure; mascot: MascotFailure; preread: Exclude<PrereadFailure, { kind: 'stopped' }>; status: StatusFailure };
 type Task = keyof Failures;
 // draws: the image model 삽화 draws with; by: the plugin that keeps the memory, which runs on no model of the chat's.
 type Extra = { illustrate: { draws: ReturnType<typeof imageRoute> }; memory: { by: string | null } };
@@ -52,6 +53,7 @@ export function overviewOf(store: ObjectStore, chat: Chat | null): Overview {
     { feature: 'memory', on: memory !== null, own: accountTaskModel(store, 'memory'), apart: false, runs: memoryWriter(store, place), by: memory?.kind === 'tool' ? memory.unit.tool.manifest.displayName : null },
     { feature: 'mascot', on: on.mascot, own: accountTaskModel(store, 'mascot'), apart: false, runs: mascotWriterOf(store, place) },
     { feature: 'preread', on: on.preread, own: accountTaskModel(store, 'preread'), apart: false, runs: briefWriterOf(store, place) },
+    { feature: 'status', on: on.status, own: accountTaskModel(store, 'status'), apart: false, runs: statusWriterOf(store, place) },
   ];
   const reached = [
     ...Object.values(roles).map(({ runs }) => runs),

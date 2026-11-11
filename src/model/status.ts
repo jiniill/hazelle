@@ -5,9 +5,14 @@ type Named = { id: string; name: string };
 export type StatusItem = { text: string; done?: true };
 export type StatusValue = number | string | StatusItem[];
 
-// change: the writer gives the amount the number moved by, never its new value.
-type Numeric = { start?: number; change?: true };
+// A colour by its role in the view's 분위기, which gives it a value: a field's colour then reads in every 분위기.
+export type StatusTone = 'accent' | 'warm' | 'cool' | 'fresh';
+// main (대표): drawn large, and what a collapsed panel keeps.
+type Drawn = { main?: true; tone?: StatusTone };
+// change: the writer gives the amount the number moved by, never its new value. unit: drawn after the number.
+type Numeric = { start?: number; change?: true; unit?: string };
 export type StatusField = Named &
+  Drawn &
   (
     | ({ kind: 'gauge'; min: number; max: number } & Numeric)
     | ({ kind: 'number' } & Numeric)
@@ -22,7 +27,28 @@ export type StatusGroup = Named & { fields: StatusField[]; members: Named[]; ope
 export type StatusLog = Named & { fields: StatusField[] };
 // after: a model of its own once the reply is saved. with: the conversation model, at its reply's end.
 export type StatusWriter = 'after' | 'with';
-export type StatusDefinition = Named & { writer: StatusWriter; fields: StatusField[]; groups: StatusGroup[]; logs: StatusLog[] };
+export type StatusDefinition = Named & { writer: StatusWriter; fields: StatusField[]; groups: StatusGroup[]; logs: StatusLog[]; views?: StatusView[] };
+
+// 보기 (design §6.1 part 4): a view arranges blocks that show the definition's fields, 묶음 and 기록 by id, in a 틀
+// (how they are laid out) and a 분위기 (colours, type and corners). hazelle is the app's own colours in the reader's
+// theme; own, the colours the reader picked for the app.
+export type StatusFrame = 'card' | 'hud' | 'diary' | 'line';
+export type StatusMood = 'hazelle' | 'own' | 'paper' | 'neon' | 'forest' | 'rose' | 'terminal';
+export type StatusGaugeLook = 'bar' | 'segments' | 'ring' | 'hearts' | 'stars';
+// A block naming what is no longer declared shows nothing, as a stale change changes nothing. look: a gauge's, a text
+// drawn as a thought, or a 단계 drawn on the scale of its labels; absent, or one its field's kind does not take, the 틀
+// decides. radar: three gauges or more as one shape. all: every row of the 기록, absent the latest reply's. choices: a
+// list whose items go into the composer when pressed.
+export type StatusBlock =
+  | { kind: 'head'; fields: string[] }
+  | { kind: 'field'; field: string; look?: StatusGaugeLook | 'thought' | 'scale' }
+  | { kind: 'radar'; fields: string[] }
+  | { kind: 'records'; group: string; look?: 'cards' | 'rows' | 'table' }
+  | { kind: 'log'; log: string; all?: true }
+  | { kind: 'choices'; field: string }
+  | { kind: 'section'; name: string; blocks: StatusBlock[] }
+  | { kind: 'tabs'; tabs: (Named & { blocks: StatusBlock[] })[] };
+export type StatusView = Named & { frame: StatusFrame; mood: StatusMood; blocks: StatusBlock[] };
 
 export type StatusValues = Record<string, StatusValue>;
 export type StatusMember = Named & { values: StatusValues };
@@ -45,6 +71,17 @@ export type StatusChange =
 export function chatStatus(declared: readonly (StatusDefinition | undefined)[]): StatusDefinition[] {
   const ids = new Set<string>();
   return declared.flatMap((each) => (each && !ids.has(each.id) && ids.add(each.id) ? [each] : []));
+}
+
+// A definition's views; one that declares none is shown whole in one: its fields, then each 묶음 and each 기록.
+export function statusViews(definition: StatusDefinition): StatusView[] {
+  if (definition.views?.length) return definition.views;
+  const blocks: StatusBlock[] = [
+    ...definition.fields.map(({ id }) => ({ kind: 'field' as const, field: id })),
+    ...definition.groups.map(({ id }) => ({ kind: 'records' as const, group: id })),
+    ...definition.logs.map(({ id }) => ({ kind: 'log' as const, log: id })),
+  ];
+  return [{ id: definition.id, name: definition.name, frame: 'card', mood: 'hazelle', blocks }];
 }
 
 // A kept value read against the field as it stands now: undefined once it no longer fits the kind, and a gauge's held

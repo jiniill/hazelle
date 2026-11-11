@@ -1,0 +1,55 @@
+.radar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8) var(--space-16);
+  min-width: 0;
+}
+
+.shape {
+  flex-shrink: 0;
+  width: var(--status-radar);
+  max-width: 100%;
+}
+
+.web {
+  fill: none;
+  stroke: var(--status-line);
+  stroke-width: var(--border-thin);
+}
+
+.area {
+  fill: color-mix(in srgb, var(--status-accent) 25%, transparent);
+  stroke: var(--status-accent);
+  stroke-linejoin: round;
+  stroke-width: var(--border-thick);
+}
+
+.axis {
+  fill: var(--status-muted);
+  font-size: var(--text-xs);
+}
+
+.figures {
+  display: grid;
+  flex: 1 1 var(--status-cell);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-16);
+  margin: 0;
+}
+
+.figures div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.figures dt {
+  color: var(--status-muted);
+}
+
+.figures dd {
+  margin: 0;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}

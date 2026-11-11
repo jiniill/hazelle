@@ -5,7 +5,7 @@ import type { StatusDefinition } from './status';
 
 export type Role = 'system' | 'user' | 'assistant';
 
-export const PROMPT_SORTS = ['conversation', 'translate', 'memory', 'illustrate', 'mascot', 'preread', 'agent'] as const;
+export const PROMPT_SORTS = ['conversation', 'translate', 'memory', 'illustrate', 'mascot', 'preread', 'agent', 'status'] as const;
 export type PromptSort = (typeof PROMPT_SORTS)[number];
 
 // wrapped slots interpolate {{slot}} and start with their declared role (app/prompts/edits newBlock).
@@ -20,15 +20,16 @@ export const SLOTS = {
   chat: { wrapped: false, repeats: true, sorts: ['conversation'] },
   note: { wrapped: true, role: 'system', repeats: false, sorts: ['translate'] },
   illustrateNote: { wrapped: true, role: 'system', repeats: false, sorts: ['illustrate'] },
-  recent: { wrapped: true, role: 'system', repeats: false, sorts: ['translate', 'illustrate', 'mascot', 'agent'] },
+  recent: { wrapped: true, role: 'system', repeats: false, sorts: ['translate', 'illustrate', 'mascot', 'agent', 'status'] },
   // source is task-specific: numbered paragraphs, displayed mascot reply, preread material,
-  // or the answered message (pre-agent) / saved reply (post-agent).
-  source: { wrapped: true, role: 'user', repeats: false, sorts: ['translate', 'illustrate', 'mascot', 'preread', 'agent'] },
+  // the answered message (pre-agent) / saved reply (post-agent), or the reply whose state is written.
+  source: { wrapped: true, role: 'user', repeats: false, sorts: ['translate', 'illustrate', 'mascot', 'preread', 'agent', 'status'] },
   // 에이전트 노트: the pre agents' notes for the reply (design §6.16); a prompt without it gets them after the chat.
   agentNotes: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation'] },
-  // 상태: the chat's state as it stands and, for definitions written with the reply, what to write (engine/status
-  // statusSent, design §6.1); a prompt without it gets them after the chat.
-  status: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation'] },
+  // 상태: the chat's state as it stands and what its writer is to write (engine/status statusSent, design §6.1): in a
+  // conversation, for the definitions written with the reply, a prompt without the slot getting them after the chat;
+  // in a 상태 task, for the definitions written after it.
+  status: { wrapped: true, role: 'system', repeats: false, sorts: ['conversation', 'status'] },
   // An agent's own memory as it last left it, with the answer shape that keeps it (engine/agent memorySheet).
   agentMemory: { wrapped: true, role: 'system', repeats: false, sorts: ['agent'] },
   // The mascot's own sheet, which the engine writes (engine/mascot): its voice, faces, last lines and answer shape.
@@ -179,8 +180,17 @@ export type AgentPrompt = {
   origin?: { id: string; name: string };
 };
 
-export type Prompt = (ConversationPrompt | TranslatePrompt | MemoryPrompt | IllustratePrompt | MascotPrompt | PrereadPrompt | AgentPrompt) & Mark;
-export type PromptOf<S extends PromptSort> = { conversation: ConversationPrompt; translate: TranslatePrompt; memory: MemoryPrompt; illustrate: IllustratePrompt; mascot: MascotPrompt; preread: PrereadPrompt; agent: AgentPrompt }[S];
+// 상태 쓰기: reads a saved reply and writes what it changed in the chat's state (design §6.1).
+export type StatusPrompt = {
+  task: 'status';
+  name: string;
+  blocks: Block[];
+  toggles: ToggleLine[];
+  origin?: { id: string; name: string };
+};
+
+export type Prompt = (ConversationPrompt | TranslatePrompt | MemoryPrompt | IllustratePrompt | MascotPrompt | PrereadPrompt | AgentPrompt | StatusPrompt) & Mark;
+export type PromptOf<S extends PromptSort> = { conversation: ConversationPrompt; translate: TranslatePrompt; memory: MemoryPrompt; illustrate: IllustratePrompt; mascot: MascotPrompt; preread: PrereadPrompt; agent: AgentPrompt; status: StatusPrompt }[S];
 
 export const sortOf = (prompt: Prompt): PromptSort => prompt.task ?? 'conversation';
 

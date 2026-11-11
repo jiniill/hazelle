@@ -19,7 +19,7 @@ describe('features', () => {
       const chat = () => store.get('chat', created.data.id)!.value;
       const at = { settings: { kind: 'settings' }, prompt: { kind: 'prompt', id: prompt.data.id }, character: { kind: 'character', id: character.data.id }, chat: { kind: 'chat', id: created.data.id } } as const;
 
-      expect(featuresOf(store, chat())).toEqual({ translate: true, illustrate: true, memory: true, mascot: false, preread: false, agents: false });
+      expect(featuresOf(store, chat())).toEqual({ translate: true, illustrate: true, memory: true, mascot: false, preread: false, agents: false, status: false });
       await setFeatureAt(store, at.character, 'mascot', true);
       expect(featuresOf(store, chat()).mascot).toBe(true);
       await setFeatureAt(store, at.character, 'mascot', null);

@@ -17,6 +17,7 @@ import { Files } from './files/files';
 import { Illustrator } from './tasks/illustrate';
 import { Likenesses } from './tasks/likeness';
 import { Commentator } from './tasks/mascot';
+import { cutStatus, StatusWriter } from './tasks/status';
 import { Polisher } from './tasks/agents';
 import type { Briefs } from './tasks/preread';
 import type { Additions } from './chat/additional';
@@ -76,6 +77,7 @@ export type Session = {
   illustrator: Illustrator;
   likenesses: Likenesses;
   commentator: Commentator;
+  statusWriter: StatusWriter;
   polisher: Polisher;
   briefs: Briefs;
   additions: Additions;
@@ -164,6 +166,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   const likenesses = new Likenesses({ tokens, store, credentials, log, files, catalogs });
   const illustrator = new Illustrator({ tokens, store, credentials, log, files, likenesses });
   const commentator = new Commentator({ tokens, store, credentials, log });
+  const statusWriter = new StatusWriter({ tokens, store, credentials, log, costs });
   const polisher = new Polisher({ tokens, store, credentials, log });
   const briefs: Briefs = new Map();
   const additions: Additions = new Map();
@@ -186,7 +189,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     log,
     costs,
     tokens,
-    (chat, reply) => scriptTurns.ending(chat, reply),
+    (chat, reply) => scriptTurns.ending(chat, cutStatus(store, chat, reply)),
     // Keep the chat leased past Talk: onOutput can edit the reply, and continuations/translations must read that result.
     (chat, reply) => {
       const lease = store.retainChat(chat);
@@ -261,6 +264,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     illustrator.close();
     likenesses.close();
     commentator.close();
+    statusWriter.close();
     polisher.close();
     costs.close();
     usage.close();
@@ -270,7 +274,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     assets.close();
     store.close();
   };
-  const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, polisher, briefs, additions, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, finder, close, startBackground };
+  const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, statusWriter, polisher, briefs, additions, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, finder, close, startBackground };
   return { ok: true, data: session };
 }
 

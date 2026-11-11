@@ -1,0 +1,146 @@
+/* The colour a meter fills in: its field's, by role in the panel's 분위기. */
+.accent {
+  --meter: var(--status-accent);
+}
+
+.warm {
+  --meter: var(--status-warm);
+}
+
+.cool {
+  --meter: var(--status-cool);
+}
+
+.fresh {
+  --meter: var(--status-fresh);
+}
+
+.bar {
+  position: relative;
+  display: block;
+  /* It takes what its line leaves, in a row or a column: a basis would be its height in a column. */
+  width: 100%;
+  min-width: var(--space-32);
+  height: var(--status-bar);
+  overflow: hidden;
+  border-radius: var(--status-chip-radius);
+  background: var(--status-track);
+}
+
+.bar.sm {
+  flex-shrink: 0;
+  width: var(--control-md);
+  height: var(--bar-height);
+}
+
+.bar.lg,
+.cells.lg {
+  height: var(--status-bar-thick);
+}
+
+.fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--from) * 100%);
+  width: calc(var(--span) * 100%);
+  background: var(--meter);
+}
+
+/* Where 0 stands in a range across it. */
+.zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--from) * 100%);
+  width: var(--border-thin);
+  background: var(--status-muted);
+}
+
+.cells {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(var(--steps), minmax(0, 1fr));
+  gap: var(--space-4);
+  min-width: var(--space-32);
+  height: var(--bar-height-thick);
+}
+
+.cells.sm {
+  flex-shrink: 0;
+  width: var(--control-md);
+  gap: var(--space-2);
+  height: var(--bar-height);
+}
+
+.on,
+.off {
+  border-radius: var(--status-chip-radius);
+}
+
+.on {
+  background: var(--meter);
+}
+
+.off {
+  background: var(--status-track);
+}
+
+.marks {
+  display: inline-flex;
+  gap: var(--space-2);
+  color: var(--meter);
+}
+
+.markOn,
+.markOff {
+  width: var(--status-mark);
+  height: var(--status-mark);
+  stroke-width: var(--icon-stroke);
+}
+
+.markOn {
+  fill: var(--meter);
+}
+
+.markOff {
+  color: var(--status-track);
+  fill: var(--status-track);
+}
+
+.ring {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--status-ring);
+  height: var(--status-ring);
+}
+
+.ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.ringTrack,
+.ringFill {
+  fill: none;
+  stroke-width: var(--status-ring-stroke);
+}
+
+.ringTrack {
+  stroke: var(--status-track);
+}
+
+.ringFill {
+  stroke: var(--meter);
+  stroke-linecap: round;
+}
+
+.ringText {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}

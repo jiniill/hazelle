@@ -32,6 +32,7 @@ export const PULSE_ROLE: Record<CallPurpose, PulseRole> = {
   mascot: 'aux',
   preread: 'aux',
   agent: 'aux',
+  status: 'aux',
   embedding: 'embedding',
 };
 

@@ -108,8 +108,9 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const store = useStore();
   const toast = useToast();
   const settings = useSettings();
-  // 에이전트 노트 is offered only while the 실험실 switch is on, as everything of an experiment.
+  // 에이전트 노트 and 상태 are offered only while their 실험실 switch is on, as everything of an experiment.
   const agentsLab = labOn(settings, 'agents');
+  const statusLab = labOn(settings, 'status');
   const connections = useConnections();
   const prompts = usePrompts();
   const uses = usePromptUse().get(stored.id) ?? EMPTY_USE;
@@ -283,8 +284,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
       ))}
       <Divider variant="menu" />
       <MenuHeading>자동 입력</MenuHeading>
-      {/* 상태 is not offered until the feature that fills it is there (design §6.1; roadmap/status-panels step 5). */}
-      {slotsOf(sort).filter((slot) => slot !== 'status' && (slot !== 'agentNotes' || agentsLab)).map((slot) => {
+      {slotsOf(sort).filter((slot) => (slot !== 'agentNotes' || agentsLab) && (slot !== 'status' || statusLab)).map((slot) => {
         const there = placedOnce(draft.blocks, slot);
         return there ? (
           <MenuItem key={slot} tone="muted" label={SLOT[slot].name} description="추가된 블록으로 이동" onClick={() => pick(there.id)} />
