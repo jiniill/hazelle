@@ -156,7 +156,7 @@ const named = { id: str, name: str };
 const statusFields = listOf(shape({ ...named, kind: str }));
 const status: Check = (value) =>
   value === undefined ||
-  shape({ ...named, writer: (writer) => writer === 'after' || writer === 'with', fields: statusFields, groups: listOf(shape({ ...named, fields: statusFields, members: listOf(shape(named)) })), logs: listOf(shape({ ...named, fields: statusFields })) })(value);
+  shape({ ...named, writer: (writer) => writer === 'after' || writer === 'with', fields: statusFields, groups: listOf(shape({ ...named, fields: statusFields, members: listOf(shape(named)) })), logs: listOf(shape({ ...named, fields: statusFields })), views: (views) => views === undefined || listOf(shape({ ...named, frame: str, mood: str, blocks: listOf(shape({ kind: str })) }))(views) })(value);
 const prompt = shape({ name: str, blocks: listOf(shape({ id: str, kind: str })), toggles: listOf(toggleLine) });
 const optStr: Check = (value) => value === undefined || str(value);
 const conversation = shape({ task: (value) => value === undefined, authorNote: str, models: isRecord, folder: optStr, variables: (value) => value === undefined || listOf(Array.isArray)(value), status });

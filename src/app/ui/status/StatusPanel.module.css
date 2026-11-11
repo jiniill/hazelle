@@ -1,0 +1,135 @@
+.panel {
+  min-width: 0;
+  padding: var(--space-16);
+  border: var(--border-thin) solid var(--status-line);
+  border-radius: var(--status-radius);
+  background: var(--status-panel);
+  color: var(--status-text);
+  font-family: var(--status-font);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.blocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+/* 게임 HUD: two cells to a line; a block takes the whole line unless it is set in a half. */
+.hud .blocks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.hud .blocks > * {
+  grid-column: 1 / -1;
+}
+
+.hud .blocks > .half {
+  grid-column: auto;
+  min-width: 0;
+}
+
+/* 일기장: a page, with more room at its sides. */
+.diary {
+  padding: var(--space-16) var(--space-24);
+}
+
+.diary .blocks {
+  gap: var(--space-8);
+}
+
+/* 한 줄: every value on one line that wraps where it runs out of room. */
+.line {
+  padding: var(--space-8) var(--space-16);
+}
+
+.line .blocks {
+  flex-flow: row wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-16);
+}
+
+/* A view's head: the first value leads, the rest follow it quietly. */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4) var(--space-12);
+  padding-bottom: var(--space-8);
+  border-bottom: var(--border-thin) solid var(--status-line);
+  color: var(--status-muted);
+  font-size: var(--text-xs);
+}
+
+.head > :first-child {
+  color: var(--status-text);
+  font-family: var(--status-title-font);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.diary .head {
+  justify-content: space-between;
+  border-bottom-width: var(--border-thick);
+  border-bottom-color: var(--status-text);
+}
+
+.title {
+  composes: title from './looks.module.css';
+}
+
+.section,
+.choices,
+.tabbed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  border-bottom: var(--border-thin) solid var(--status-line);
+}
+
+.tab {
+  flex-shrink: 0;
+  min-height: var(--control-md);
+  padding: 0 var(--space-16);
+  border-bottom: var(--border-thick) solid transparent;
+  color: var(--status-muted);
+  white-space: nowrap;
+  transition: color var(--motion-respond);
+}
+
+.tab:hover,
+.tab[aria-pressed='true'] {
+  color: var(--status-text);
+}
+
+.tab[aria-pressed='true'] {
+  border-bottom-color: var(--status-accent);
+  font-weight: var(--weight-bold);
+}
+
+.choice {
+  min-height: var(--control-md);
+  padding: var(--space-8) var(--space-16);
+  border: var(--border-thin) solid var(--status-line);
+  border-radius: var(--status-radius);
+  background: var(--status-inset);
+  color: var(--status-text);
+  text-align: left;
+  overflow-wrap: anywhere;
+  transition: border-color var(--motion-respond);
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--status-accent);
+}

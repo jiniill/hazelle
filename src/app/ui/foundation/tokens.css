@@ -386,6 +386,18 @@
   --bar-height: 4px;
   --rank-place: 32px;
   --bar-height-thick: 8px;
+  /* 상태 (ui/status): a field's name column, a record's face, a 대표 figure, a ring gauge and its stroke, the bars of a
+     HUD and of segments, a radar's box, and a record card's least width. */
+  --status-label: 92px;
+  --status-face: 40px;
+  --status-figure: 40px;
+  --status-ring: 56px;
+  --status-ring-stroke: 3.5;
+  --status-bar: 6px;
+  --status-bar-thick: 10px;
+  --status-mark: 16px;
+  --status-radar: 176px;
+  --status-cell: 120px;
   --sketch-height: 168px;
   --cheer-height: 184px;
   --cheer-badge: 76px;
@@ -968,6 +980,118 @@
   --color-accent: var(--color-pick-accent);
   --color-accent-hover: color-mix(in oklab, var(--palette-black) 20%, var(--color-pick-accent));
   --color-on-accent: color-mix(in oklab, var(--color-pick-accent) 5%, var(--palette-white));
+}
+
+/* 상태's 분위기 (ui/status): a panel's colours, face and corners. hazelle and own take the app's, hazelle with the picks
+   set back to the theme's own on its element; the others are fixed in both themes, as a bot's own panel is. warm, cool
+   and fresh are the colours a field may take beside the accent; a number that fell is warm. */
+[data-mood='hazelle'],
+[data-mood='own'] {
+  --status-panel: var(--color-surface);
+  --status-inset: var(--color-surface-hover);
+  --status-line: var(--color-border-strong);
+  --status-text: var(--color-text);
+  --status-muted: var(--color-text-muted);
+  --status-accent: var(--color-accent);
+  --status-on-accent: var(--color-on-accent);
+  --status-track: var(--color-surface-raised);
+  --status-warm: var(--color-warn);
+  --status-cool: var(--color-rank-down);
+  --status-fresh: var(--color-success);
+  --status-font: var(--font-sans);
+  --status-title-font: var(--font-sans);
+  --status-radius: var(--radius-md);
+  --status-chip-radius: var(--radius-md);
+}
+
+[data-mood='paper'] {
+  --status-panel: #fffdf8;
+  --status-inset: #f7f1e7;
+  --status-line: #bab1a4;
+  --status-text: #3a342d;
+  --status-muted: #6b6257;
+  --status-accent: #8a5d0f;
+  --status-on-accent: #fffdf8;
+  --status-track: #e7e1d7;
+  --status-warm: #b0461f;
+  --status-cool: #2f6ca0;
+  --status-fresh: #2b7350;
+  --status-font: var(--font-serif);
+  --status-title-font: var(--font-serif);
+  --status-radius: var(--radius-xs);
+  --status-chip-radius: var(--radius-xs);
+}
+
+[data-mood='neon'] {
+  --status-panel: #0c131c;
+  --status-inset: #121d2a;
+  --status-line: #1f4a6b;
+  --status-text: #e2edf7;
+  --status-muted: #8fb1cc;
+  --status-accent: #7cc4f2;
+  --status-on-accent: #0c131c;
+  --status-track: #182838;
+  --status-warm: #f0a07a;
+  --status-cool: #b9a8f0;
+  --status-fresh: #8fd1b0;
+  --status-font: var(--font-sans);
+  --status-title-font: var(--font-sans);
+  --status-radius: 2px;
+  --status-chip-radius: 2px;
+}
+
+[data-mood='forest'] {
+  --status-panel: #0f1a15;
+  --status-inset: #16241d;
+  --status-line: #2f4a3d;
+  --status-text: #dff1e7;
+  --status-muted: #9bbfad;
+  --status-accent: #8fd1b0;
+  --status-on-accent: #0f1a15;
+  --status-track: #22302a;
+  --status-warm: #f0a07a;
+  --status-cool: #9fb0d6;
+  --status-fresh: #e6b35c;
+  --status-font: var(--font-gowun-dodum);
+  --status-title-font: var(--font-gowun-dodum);
+  --status-radius: 14px;
+  --status-chip-radius: var(--radius-md);
+}
+
+[data-mood='rose'] {
+  --status-panel: #fbeef3;
+  --status-inset: #fff8fb;
+  --status-line: #e3b3c6;
+  --status-text: #4a2233;
+  --status-muted: #7d4f62;
+  --status-accent: #b0466f;
+  --status-on-accent: #fff8fb;
+  --status-track: #f1d5e0;
+  --status-warm: #b0461f;
+  --status-cool: #2f6ca0;
+  --status-fresh: #2b7350;
+  --status-font: var(--font-gowun-dodum);
+  --status-title-font: var(--font-serif);
+  --status-radius: 18px;
+  --status-chip-radius: var(--radius-md);
+}
+
+[data-mood='terminal'] {
+  --status-panel: #0c0d0f;
+  --status-inset: #12160e;
+  --status-line: #3a4a2c;
+  --status-text: #c9dfa6;
+  --status-muted: #8fa37a;
+  --status-accent: #c9dfa6;
+  --status-on-accent: #0c0d0f;
+  --status-track: #1b2416;
+  --status-warm: #f0a07a;
+  --status-cool: #9fb0d6;
+  --status-fresh: #e6b35c;
+  --status-font: var(--font-mono);
+  --status-title-font: var(--font-mono);
+  --status-radius: 0;
+  --status-chip-radius: 0;
 }
 
 /* A screen taller than wide: the walk runs straight down the middle, and the moon stands aside from the words. */
