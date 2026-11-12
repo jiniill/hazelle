@@ -99,6 +99,8 @@ export const REMOVE_FAILED = '삭제하지 못했어요.';
 export const CHANGE_FAILED = '바꾸지 못했어요.';
 export const APPLY_FAILED = '적용하지 못했어요.';
 export const UNDO_FAILED = '되돌리지 못했어요.';
+// Goes to what a notice or a row points at; not the 보기 a status panel is drawn in (statusWords).
+export const SEE = '보기';
 // A field left without what it needs.
 export const FIELD_ERRORS = { name: '이름을 입력해 주세요.', number: '숫자를 입력해 주세요.' };
 export const COUNTING = '계산하는 중…';

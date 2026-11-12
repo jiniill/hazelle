@@ -277,7 +277,7 @@ export class Translator {
           // The live text goes once the store holds the translation, so the original never shows in between.
           this.change(version, { live: null, failed: null });
           endCall(this.store, id);
-          if (saved.ok) this.cues.emit('translated');
+          if (saved.ok) this.cues.emit('translated', chat);
           // The device that saved it counts its cost.
           if (saved.ok && this.store.get('chat', chat)) this.costs.settle(chat, made.translation.receipt!);
         },

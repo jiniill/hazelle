@@ -18,13 +18,14 @@ import { TutorialProvider, useTutorials } from '../common/Tutorial';
 import { count } from '../common/typedNumber';
 import { playSound, unlockSound } from '../common/sounds';
 import { DisplayProvider, useDisplay } from '../display';
-import { BIN, BOARD, inSettings, NOTICES, LOADING_TITLE, OPEN_STEPS } from '../common/words';
+import { BIN, BOARD, inSettings, NOTICES, LOADING_TITLE, OPEN_STEPS, SEE } from '../common/words';
 import { ImportProvider } from '../library/ImportFlow';
 import { PasteReader } from './PasteReader';
 import { SessionProvider, useHeldLeave, useSaves, useSession, useSettings, useStore } from '../session';
 import { notePlace } from '../../runtime/diagnostics/auto-diagnosis';
 import { ToastProvider, useToast, type Standing } from '../toast';
 import { Brand, Progress, Screen, Text } from '../ui';
+import { Arrivals } from './Arrivals';
 import { BotNotes } from './BotNotes';
 import { Layout } from './Layout';
 import { navigate, useRoute } from './router';
@@ -72,7 +73,7 @@ function Unread({ facts, kind }: { facts: AccountFacts; kind: UnreadKind }) {
   const said = useRef(0);
   useEffect(() => {
     const { says, to } = UNREAD[kind];
-    if (unread > said.current) toast.show(says(unread), { action: { label: '보기', onClick: () => navigate(to) } });
+    if (unread > said.current) toast.show(says(unread), { action: { label: SEE, onClick: () => navigate(to) } });
     said.current = unread;
   }, [unread]);
   return null;
@@ -100,8 +101,8 @@ function Chimes() {
   const ringing = chimes && Object.values(chimeSounds).some((chime) => chime !== 'off');
   useEffect(() => {
     if (!chimes) return;
-    return cues.subscribe((cue) => {
-      const chime = chimeSounds[cue];
+    return cues.subscribe((moment) => {
+      const chime = moment === 'reply-failed' ? 'off' : chimeSounds[moment];
       if (chime !== 'off') void playSound(chime);
     });
   }, [cues, chimes, chimeSounds]);
@@ -273,6 +274,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
           <ReplyHold />
           <LeaveHold />
           <Chimes />
+          <Arrivals />
           <TutorialProvider>
             <News />
             <BotNotes />

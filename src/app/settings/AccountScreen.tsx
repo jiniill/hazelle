@@ -13,7 +13,7 @@ import { useToast } from '../toast';
 import { LegalNotice } from '../common/LegalNotice';
 import { INSTALL_GUIDE } from '../common/legal';
 import { useLoaded } from '../common/useLoaded';
-import { AUTO_DIAGNOSIS, BIN, BOARD, PAGES, PULSE, UNKNOWN, CHANGE_FAILED } from '../common/words';
+import { AUTO_DIAGNOSIS, BIN, BOARD, PAGES, PULSE, UNKNOWN, CHANGE_FAILED, SEE } from '../common/words';
 import { Avatar, Button, Columns, FaceRow, Gauge, Link, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
 import { BackupSection } from './BackupSection';
 import { Diagnostics } from './Diagnostics';
@@ -142,7 +142,7 @@ function BoardRows() {
   return (
     <Panel title={BOARD.title}>
       <SettingGroup label={BOARD.title}>
-        {open(BOARD.mine, undefined, () => navigate({ kind: 'board-mine' }), '보기')}
+        {open(BOARD.mine, undefined, () => navigate({ kind: 'board-mine' }), SEE)}
         {open(BOARD.toOperator, '운영자만 읽을 수 있는 글로 보내요.', () => navigate({ kind: 'board-write', operator: true }), '쓰기')}
       </SettingGroup>
     </Panel>

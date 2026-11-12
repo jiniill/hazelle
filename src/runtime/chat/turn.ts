@@ -79,7 +79,10 @@ const idle = (talk: Session['talk'], chat: string) =>
 // Never translate both: a continuation's save hook owns its final version. A competing turn can block continuation,
 // leaving the cut untranslated until another action.
 export async function receiveReply(session: Session, chat: string, reply: Written) {
-  if (reply.receipt.state === 'failed') return;
+  if (reply.receipt.state === 'failed') {
+    session.cues.emit('reply-failed', chat);
+    return;
+  }
   if (autoContinue(reply)) {
     // The reply's own turn still holds its chat in Talk when its save calls the hook.
     await idle(session.talk, chat);
@@ -91,7 +94,7 @@ export async function receiveReply(session: Session, chat: string, reply: Writte
     }
   }
   // 멈추기 is pressed by someone watching the reply.
-  if (reply.receipt.cut !== 'stopped') session.cues.emit('reply-received');
+  if (reply.receipt.cut !== 'stopped') session.cues.emit('reply-received', chat);
   const message = replyMessage(reply);
   await polished(session, chat, message, reply.id);
   const received = shownReceived(session, chat, message);

@@ -414,7 +414,7 @@ export class Talk {
     if (cutsStatus(this.store, held.turn.chat)) this.change(held, { ...held.turn, status: true });
     return {
       text: (phase, chunk) => {
-        if (started && phase === 'text' && held.turn.text === '' && !held.turn.whole) this.cues.emit('reply-started');
+        if (started && phase === 'text' && held.turn.text === '' && !held.turn.whole) this.cues.emit('reply-started', held.turn.chat);
         this.change(held, { ...held.turn, [phase]: held.turn[phase] + chunk });
       },
       takeBack: (phase, chars) => this.change(held, { ...held.turn, [phase]: held.turn[phase].slice(0, held.turn[phase].length - chars) }),

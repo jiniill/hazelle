@@ -243,6 +243,18 @@ describe('이어 쓰기', () => {
       expect(reply().versions).toHaveLength(1);
       expect(shown(reply())).toMatchObject({ text: '옛날 옛적에 끝.', receipt: { state: 'done', continues: failed.receipt } });
     }));
+
+  it('tells a reply that ended failed and one received, each with its chat, and nothing of the cut one it continued', () =>
+    server.withSession(async (session) => {
+      const heard: string[] = [];
+      session.cues.subscribe((moment, chat) => {
+        if (moment !== 'reply-started') heard.push(`${moment} ${chat}`);
+      });
+      const { chat, reply } = await cutReply(session, [upstream(400, { error: { message: 'bad' } }), saying(' 끝.')]);
+      await vi.waitFor(() => expect(heard).toEqual([`reply-failed ${chat}`]));
+      await takeTurn(session, chat, { kind: 'retry', message: reply().id, version: shown(reply()).id });
+      await vi.waitFor(() => expect(heard).toEqual([`reply-failed ${chat}`, `reply-received ${chat}`]));
+    }));
 });
 
 describe('반전 모드', () => {
