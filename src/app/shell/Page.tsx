@@ -9,7 +9,7 @@ import { GuestLine } from '../common/GuestNotice';
 import { Missing, type Absent } from '../common/Missing';
 import { ScreenLoad } from '../common/ScreenLoad';
 import { findStarred } from '../common/RolePicker';
-import { NO_CHARACTER } from '../common/words';
+import { NO_CHARACTER, CHAT_LOADING } from '../common/words';
 import { ShareArrival } from '../library/ShareArrival';
 import { ShelfFace, shelfName } from '../library/shelf';
 import { useAccount, useCharacter, useChatModel, useChatSummary, useConnections, useSession, useSettings, useStored, useTool } from '../session';
@@ -269,7 +269,7 @@ function ChatPage({ at, wide, onPaired }: { at: At<'new-chat' | 'chat'>; wide: b
           {describeFailure(chatModel.error!)}
         </Callout>
       ) : (
-        <Progress late steps={[{ label: '채팅을 불러오는 중' }]} />
+        <Progress late steps={[{ label: CHAT_LOADING }]} />
       )}
     </Screen>
   );

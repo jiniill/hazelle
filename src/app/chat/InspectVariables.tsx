@@ -8,7 +8,7 @@ import { writerName } from '../common/code/variables';
 import { shownValue } from '../common/HookDetail';
 import { useLoad } from '../common/useLoaded';
 import { useSearch } from '../common/useSearch';
-import { UNKNOWN } from '../common/words';
+import { UNKNOWN, searchOf } from '../common/words';
 import { useSession } from '../session';
 import { useToast } from '../toast';
 import { Button, Empty, List, ListItem, Row, Section, Stack, Text, TextField } from '../ui';
@@ -52,7 +52,7 @@ export function Variables({ chat, sending, busy }: { chat: string; sending: Send
   const [open, setOpen] = useState<string | null>(null);
   const toggles = useMemo(() => (sending ? inspectToggles(store, sending.turn.chat) : []), [sending]);
   const variables = inspected?.variables ?? [];
-  const search = useSearch(variables, '변수 검색', ({ name, last }) => [name, last.value]);
+  const search = useSearch(variables, searchOf('변수'), ({ name, last }) => [name, last.value]);
   return (
     <Stack gap="section">
       <Section title="변수" help="직접 수정한 변수 값은 마지막 메시지를 다시 생성하면 사라져요.">

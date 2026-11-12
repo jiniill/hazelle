@@ -6,6 +6,7 @@ import { useCredential } from '../common/useCredential';
 import { LegalNotice } from '../common/LegalNotice';
 import { useAttempt } from '../common/useAttempt';
 import { Brand, Button, Callout, FileButton, IconButton, Intro, Screen, Stack, Text, TextField } from '../ui';
+import { OPEN_STEPS } from '../common/words';
 
 type Props = {
   // The account whose vault is locked on this device, or null when signed out.
@@ -27,7 +28,7 @@ export function SignInScreen({ account, username: known = '', solo = false, noti
   const { busy, failure, run, setFailure } = useAttempt();
   const credential = useCredential(setFailure);
   const { method, secret, recovery } = credential;
-  const verb = account ? '잠금 해제' : '로그인';
+  const verb = account ? OPEN_STEPS.unlock : '로그인';
 
   const attempt = (text: string) => run(() => onSubmit(account ?? username, method, text));
 

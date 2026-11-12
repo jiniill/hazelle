@@ -13,6 +13,8 @@ import { LOADING } from '../common/words';
 import { useSession } from '../session';
 import { Callout, Empty, Gauge, Link, Panel, Stack, Text } from '../ui';
 
+// The provider's own usage page, and a read that got some meters and not others.
+export const USAGE = { page: '사용량 페이지', partial: '사용량 일부를 불러오지 못했어요.' };
 const RESETS: Record<Exclude<MeterReset, { at: number }>, string> = { daily: '매일 초기화', weekly: '매주 초기화', monthly: '매달 초기화' };
 const reset = (resets: MeterReset) => (typeof resets === 'string' ? RESETS[resets] : `${monthDay(resets.at)} 초기화`);
 
@@ -79,7 +81,7 @@ export function ConnectionMeters({ connection }: { connection: Connection }) {
   return (
     <Panel title="사용량과 한도">
       {type.meters && <Figures connection={connection} account={connection.accounts[0]!} />}
-      {type.usagePage && <Link href={type.usagePage}>사용량 페이지</Link>}
+      {type.usagePage && <Link href={type.usagePage}>{USAGE.page}</Link>}
     </Panel>
   );
 }
@@ -99,7 +101,7 @@ function Figures({ connection, account }: { connection: Connection; account: Acc
           <MeterGauge key={`${meter.kind}:${meter.label}`} meter={meter} />
         ))}
       </Stack>
-      {failure && <Callout tone="warn" action={retry}>사용량 일부를 불러오지 못했어요.</Callout>}
+      {failure && <Callout tone="warn" action={retry}>{USAGE.partial}</Callout>}
     </>
   );
 }

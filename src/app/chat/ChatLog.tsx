@@ -2,7 +2,7 @@ import { GitBranch } from 'lucide-react';
 import { Fragment, useLayoutEffect, useMemo, useRef } from 'react';
 import { ACTS } from '../common/acts';
 import { day } from '../common/time';
-import { deletedChat, FORGET_ORIGIN, LINEAGE, SEE_ORIGINAL } from '../common/words';
+import { deletedChat, FORGET_ORIGIN, LINEAGE, SEE_ORIGINAL, CHAT_LOADING, CHAT_SHOW_FAILED } from '../common/words';
 import { useChatSummary } from '../session';
 import { navigate } from '../shell/router';
 import { Callout, Divider, Empty, Progress, Text, TimePinContext, Viewport } from '../ui';
@@ -24,8 +24,8 @@ export function ChatLog({ chat }: { chat: OpenChat }) {
   // The origin's name as it is now; the one kept at branch time only once the origin is gone.
   const originChat = useChatSummary(item?.chat.origin?.id ?? null);
   const origin = item?.chat.origin;
-  if (chat.displayPending) return chat.displayError === undefined ? <Progress late steps={[{ label: '채팅을 불러오는 중' }]} /> : (
-    <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: chat.retryDisplay }}>채팅을 화면에 표시하지 못했어요.</Callout>
+  if (chat.displayPending) return chat.displayError === undefined ? <Progress late steps={[{ label: CHAT_LOADING }]} /> : (
+    <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: chat.retryDisplay }}>{CHAT_SHOW_FAILED}</Callout>
   );
   return <>
     {notUsed && <Text variant="note" align="center">{notUsed}</Text>}

@@ -10,6 +10,8 @@ import { THINGS } from '../words';
 import { filedCount, folderNote } from './filing';
 import { useFolderActions } from './useFolderActions';
 
+const newFolderIn = (parent: string | undefined) => (parent === undefined ? newOf('폴더') : `'${parent}' 안에 ${newOf('폴더')}`);
+
 // What a card dragged onto a folder does; to: the folder's id, null for out of every folder.
 export type Drop = (to: string | null) => (key: string) => void;
 
@@ -57,7 +59,7 @@ export function useNaming({ create, rename }: FolderActions) {
   };
   const dialog = naming && (
     <NameDialog
-      title={naming.id ? '폴더 이름 바꾸기' : naming.parent ? `'${naming.parent.name}' 안에 새 폴더` : '새 폴더'}
+      title={naming.id ? '폴더 이름 바꾸기' : newFolderIn(naming.parent?.name)}
       value={naming.name}
       onSave={(name) => save({ ...naming, name })}
       onClose={() => setNaming(null)}
@@ -93,7 +95,7 @@ export function FolderPath({ kind, path, onGo, onName, dropInto, trail, children
     <Row kind="toolbar">
       <PathBar label="폴더 경로" parts={parts} />
       {onName && !trail && path.length < actions.deepest && (
-        <IconButton icon={FolderPlus} label={here ? `'${here.value.name}' 안에 새 폴더` : '새 폴더'} size="sm" onClick={() => onName({ id: null, name: '', parent: here && named(here) })} />
+        <IconButton icon={FolderPlus} label={newFolderIn(here?.value.name)} size="sm" onClick={() => onName({ id: null, name: '', parent: here && named(here) })} />
       )}
       {onName && !trail && here && <FolderMenu actions={actions} folder={named(here)} depth={path.length} onName={onName} onRemoved={() => onGo(path.at(-2)?.id ?? null)} />}
       {children}

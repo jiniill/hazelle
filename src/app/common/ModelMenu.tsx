@@ -7,7 +7,7 @@ import { modelProfile } from '../../runtime/models/profiles';
 import { byConnection, starredModels } from './RolePicker';
 import { profileLine } from './settingWords';
 import { useSearch } from './useSearch';
-import { MODEL_PINNED, MODEL_SETTINGS, noStarred } from './words';
+import { MODEL_PINNED, MODEL_SETTINGS, noStarred, SEARCH_RESULTS, searchOf, STARRED, PICK_MODEL } from './words';
 import { useCaptured, useSummaries, useConnections, useSettings } from '../session';
 import { navigate } from '../shell/router';
 import { ChipButton, Divider, Empty, Icon, Menu, MenuHeading, MenuItem, Tag, type MenuHandle } from '../ui';
@@ -24,7 +24,7 @@ const RECENT = 3;
 // (runtime/models/assignment pinnedBy), marked on the button and opened from the menu's head.
 export function ModelMenu({ route, pin, onPick, handle }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure; pin?: { name: string; open: () => void } | null }) {
   const current = 'kind' in route ? null : refOf(route.connection.id, route.model);
-  const label = 'kind' in route ? '모델 선택' : entryName(route.model);
+  const label = 'kind' in route ? PICK_MODEL : entryName(route.model);
   return (
     <Menu
       handle={handle}
@@ -67,7 +67,7 @@ function ModelChoices({ current, onPick }: Pick<Props, 'current' | 'onPick'>) {
     RECENT,
   ).flatMap((ref) => starred.filter((choice) => sameModelRef(choice.ref, ref)));
   const rest = starred.filter((choice) => !recent.includes(choice));
-  const search = useSearch(starred, '추가한 모델 검색', (choice) => [...entryTerms(choice.model), choice.source]);
+  const search = useSearch(starred, searchOf(STARRED), (choice) => [...entryTerms(choice.model), choice.source]);
 
   // Recent models and search results mix connections, so each names its own; the rest sit under connection headings.
   const item = (choice: (typeof starred)[number], sub?: string) => (
@@ -83,7 +83,7 @@ function ModelChoices({ current, onPick }: Pick<Props, 'current' | 'onPick'>) {
           <Empty variant="menu">{search.none}</Empty>
         ) : (
           <>
-            <MenuHeading>검색 결과</MenuHeading>
+            <MenuHeading>{SEARCH_RESULTS}</MenuHeading>
             {search.found.map((choice) => item(choice, choice.source))}
           </>
         )

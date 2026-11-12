@@ -6,7 +6,7 @@ import { personaFaces, personaTexts, type PersonaFace } from './alias';
 import { placeIn, useFolderIndex, whereIs } from './folders/filing';
 import { FolderPath, FolderTile, type Drop, type Naming } from './folders/FolderParts';
 import { useSearch, type SearchOptions } from './useSearch';
-import { EMPTY_FOLDER } from './words';
+import { EMPTY_FOLDER, searchOf, THINGS } from './words';
 
 const folderOf = ({ persona }: PersonaFace) => persona.value.folder ?? null;
 
@@ -16,7 +16,7 @@ export function usePersonaPlaces(options?: SearchOptions<PersonaFace>) {
   const personas = usePersonas();
   const faces = useMemo(() => personaFaces(personas), [personas]);
   const index = useFolderIndex('persona', faces, folderOf);
-  const search = useSearch(faces, '페르소나 검색', personaTexts, options);
+  const search = useSearch(faces, searchOf(THINGS.persona.noun), personaTexts, options);
   return { index, search, byId: (id: string) => personas.find((persona) => persona.id === id) };
 }
 

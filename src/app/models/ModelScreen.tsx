@@ -12,7 +12,7 @@ import { illustrationPrompt } from '../../runtime/library/prompts';
 import { LedgerWait, useLedger } from '../common/useLedger';
 import type { SaveStatus } from '../common/saveQueue';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
-import { defaultMark, makeFailed, MODEL_ROLES, MODEL_SETTINGS, PICTURE_INPUT } from '../common/words';
+import { defaultMark, makeFailed, MODEL_ROLES, MODEL_SETTINGS, PICTURE_INPUT, CHANGE_FAILED, USAGE_FAILED, opens } from '../common/words';
 import { spent } from '../common/usage';
 import { ago } from '../common/time';
 import { useConnections, useProfiles, useSettings, useSession } from '../session';
@@ -76,7 +76,7 @@ function ImageModelScreen({ connection, model, back }: Props) {
         />
         <Row kind="actions">
           <Button variant="secondary" size="sm" onClick={() => navigate({ kind: 'connection', id: connection.id })}>
-            연결 열기
+            {opens('연결')}
           </Button>
         </Row>
       </Section>
@@ -103,7 +103,7 @@ function ChatModelScreen({ connection, model, back }: Props) {
 
   async function choose(id: string) {
     const saved = await setModelProfile(store, connection.id, entryKey(model), id);
-    if (!saved.ok) toast.failed(saved, '바꾸지 못했어요.');
+    if (!saved.ok) toast.failed(saved, CHANGE_FAILED);
   }
 
   // The new 설정 shows in place: the page stays this model's, and its rows edit the 설정 just made.
@@ -111,7 +111,7 @@ function ChatModelScreen({ connection, model, back }: Props) {
     const made = await ownProfile(store, model, current?.value.settings ?? {});
     if (!made.ok) return toast.failed(made, makeFailed('profile'));
     const saved = await setModelProfile(store, connection.id, entryKey(model), made.data);
-    if (!saved.ok) toast.failed(saved, '바꾸지 못했어요.');
+    if (!saved.ok) toast.failed(saved, CHANGE_FAILED);
   }
 
   const sent = current && (schema ? changeWords(fit(schema, current.value.settings).changes) : NOT_CALLABLE);
@@ -157,7 +157,7 @@ function ChatModelScreen({ connection, model, back }: Props) {
             of: '모델',
             items: (
               <>
-                <MenuItem label="연결 열기" onClick={() => navigate({ kind: 'connection', id: connection.id })} />
+                <MenuItem label={opens('연결')} onClick={() => navigate({ kind: 'connection', id: connection.id })} />
                 <MenuItem label="사용량 열기" onClick={() => navigate({ kind: 'usage' })} />
               </>
             ),
@@ -188,14 +188,14 @@ function ChatModelScreen({ connection, model, back }: Props) {
           <SettingRow
             label={PICTURE_INPUT}
             help="켜면 메시지에 넣은 이미지를 이 모델에게 보내요."
-            control={<Switch label={PICTURE_INPUT} checked={model.pictures === true} onChange={(on) => toast.settled(setModelPictures(store, connection.id, entryKey(model), on), '바꾸지 못했어요.')} />}
+            control={<Switch label={PICTURE_INPUT} checked={model.pictures === true} onChange={(on) => toast.settled(setModelPictures(store, connection.id, entryKey(model), on), CHANGE_FAILED)} />}
           />
         )}
       </Section>
 
       <Section title="사용량" note={copies > 1 ? `같은 모델 ${copies}개 합계` : undefined}>
         {ledger.view.kind !== 'read' ? (
-          <LedgerWait view={ledger.view} retry={ledger.retry} failed="사용량을 불러오지 못했어요." />
+          <LedgerWait view={ledger.view} retry={ledger.retry} failed={USAGE_FAILED} />
         ) : usage && usage.last !== null ? (
           <Facts
             variant="row"

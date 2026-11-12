@@ -18,7 +18,7 @@ import { TutorialProvider, useTutorials } from '../common/Tutorial';
 import { count } from '../common/typedNumber';
 import { playSound, unlockSound } from '../common/sounds';
 import { DisplayProvider, useDisplay } from '../display';
-import { BIN, BOARD, inSettings, NOTICES } from '../common/words';
+import { BIN, BOARD, inSettings, NOTICES, LOADING_TITLE, OPEN_STEPS } from '../common/words';
 import { ImportProvider } from '../library/ImportFlow';
 import { PasteReader } from './PasteReader';
 import { SessionProvider, useHeldLeave, useSaves, useSession, useSettings, useStore } from '../session';
@@ -256,7 +256,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
   if (failure) return <UnreachableScreen message={failure} onRetry={() => setAttempt((held) => held + 1)} />;
   if (!session) return (
     <Screen top={<Brand />} align="center">
-      <Progress hero title="불러오는 중" note={FIRST_LOAD} steps={[{ label: '계정 확인', finished: true }, { label: '잠금 해제', finished: true }, { label: '내용 받기', done: progress.objects, total: progress.total }, { label: '화면 준비' }]} />
+      <Progress hero title={LOADING_TITLE} note={FIRST_LOAD} steps={[{ label: OPEN_STEPS.account, finished: true }, { label: OPEN_STEPS.unlock, finished: true }, { label: '내용 받기', done: progress.objects, total: progress.total }, { label: '화면 준비' }]} />
       {progress.waiting && <Text variant="note" align="center">{RECONNECTING.message} · {RECONNECTING.detail}</Text>}
     </Screen>
   );

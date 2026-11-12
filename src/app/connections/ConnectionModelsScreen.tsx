@@ -16,7 +16,7 @@ import { useSearch } from '../common/useSearch';
 import { RetriesRow } from '../common/RetriesRow';
 import { followsRetries, NO_PROFILE_VALUES, profileLine } from '../common/settingWords';
 import { useAutosave } from '../common/useAutosave';
-import { MODEL_SETTINGS } from '../common/words';
+import { MODEL_SETTINGS, searchOf } from '../common/words';
 import { MARKS } from '../common/tutorial';
 import { useSession, useSettings } from '../session';
 import { backBar, navigate } from '../shell/router';
@@ -82,7 +82,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
   const rows = useMemo(() => [...entries.map((model) => ({ model, added: true })), ...(catalog?.ok ? catalog.models.map((model: Starred) => ({ model, added: false })) : [])], [catalog, entries]);
 
   const known = rows.some(({ model }) => tags(model).length > 0);
-  const search = useSearch(rows, '모델 검색', ({ model }) => entryTerms(model));
+  const search = useSearch(rows, searchOf('모델'), ({ model }) => entryTerms(model));
   // With no tags known the filter is hidden, so one picked before cannot keep hiding models.
   const shown = search.found.filter(({ model }) => filter === 'all' || !known || FILTERS[filter].test(model));
   const entriesShown = shown.flatMap(({ model, added }) => (added ? [model] : []));

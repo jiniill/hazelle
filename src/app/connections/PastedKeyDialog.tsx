@@ -6,6 +6,7 @@ import { useConnections, useSession } from '../session';
 import { navigate } from '../shell/router';
 import { Callout, ConfirmDialog } from '../ui';
 import { connect, CONNECT_KEY, keyOf } from './connect';
+import { opens } from '../common/words';
 
 // A key pasted outside any field. One already saved opens its connection rather than making a second.
 export function PastedKeyDialog({ type, secret, onClose }: { type: ConnectionType; secret: string; onClose: () => void }) {
@@ -16,7 +17,7 @@ export function PastedKeyDialog({ type, secret, onClose }: { type: ConnectionTyp
   if (held) return (
     <ConfirmDialog
       title={keyOf(type)}
-      confirm="연결 열기"
+      confirm={opens('연결')}
       icon={Plug}
       onConfirm={() => {
         onClose();

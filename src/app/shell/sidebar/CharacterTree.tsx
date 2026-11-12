@@ -7,7 +7,7 @@ import { ACTS } from '../../common/acts';
 import { useSearch } from '../../common/useSearch';
 import { ago } from '../../common/time';
 import { GuestLine } from '../../common/GuestNotice';
-import { CHAT_SEARCH } from '../../common/words';
+import { CHAT_SEARCH, searchOf, THINGS } from '../../common/words';
 import { TUTORIAL, useTutorials } from '../../common/Tutorial';
 import { Welcome } from '../../library/HomeScreen';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
@@ -30,7 +30,7 @@ export function CharacterTree({ typing, onEnter, query, onQuery, openFolders, on
   const [sort] = useCharacterSort();
   const { characters, none, folders, byFolder, loose } = useSortedLibrary(sort);
   const empty = characters.length === 0 && none.chats.length === 0;
-  const search = useSearch(characters, '캐릭터 검색', ({ character }) => characterTexts(character), { query: [query, onQuery] });
+  const search = useSearch(characters, searchOf(THINGS.character.noun), ({ character }) => characterTexts(character), { query: [query, onQuery] });
   const { words } = search;
   const opened = useMemo(() => new Set(openFolders), [openFolders]);
   const tutorials = useTutorials();

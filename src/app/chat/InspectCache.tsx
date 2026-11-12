@@ -9,13 +9,13 @@ import type { Sending } from '../../runtime/chat/turn-context';
 import { cacheShare, cost, tokens } from '../common/receipt';
 import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ago } from '../common/time';
-import { CACHE_GUARD, COUNTING, MODEL_SETTINGS, opens, UNKNOWN } from '../common/words';
+import { CACHE_GUARD, COUNTING, MODEL_SETTINGS, opens, UNKNOWN, CACHE_BROKEN, CACHE_READ } from '../common/words';
 import { useLab } from '../common/labs';
 import { useCaptured, useSession } from '../session';
 import { navigate } from '../shell/router';
 import { Button, Callout, Disclosure, Empty, Facts, List, ListItem, Row, Section, SettingGroup, Stack, Text } from '../ui';
 import { BrokenPartView, breakCauses, breakKind, diagnosed, Prescriptions, RecurrenceNote, ShortfallNote } from './CacheDiagnosis';
-import { BROKEN, nextWarning, profileName, why } from './ChatCache';
+import { nextWarning, profileName, why } from './ChatCache';
 import { partName } from './ChatSent';
 import { useSendTimeNote } from './InspectRequest';
 import type { Side } from './panels';
@@ -79,7 +79,7 @@ function PastReply({ at, receipt, entry, open, onToggle }: { at: number; receipt
     <ListItem
       title={receipt.modelName}
       badge={share === null ? undefined : `${share}% 읽음`}
-      description={broken ? [`${BROKEN}: ${why(broken, null)}`, breakCauses(entry?.diagnosis, broken)].filter(Boolean).join(' ') : undefined}
+      description={broken ? [`${CACHE_BROKEN}: ${why(broken, null)}`, breakCauses(entry?.diagnosis, broken)].filter(Boolean).join(' ') : undefined}
       tags={share === null ? [`읽은 양 ${UNKNOWN}`] : undefined}
       note={ago(at)}
       {...(parts.length > 0 && { expanded: open, onClick: onToggle })}
@@ -99,7 +99,7 @@ function PastReply({ at, receipt, entry, open, onToggle }: { at: number; receipt
   );
 }
 
-const STATES: Record<ForecastPart['state'], string> = { read: '캐시에서 읽음', write: '캐시에 새로 저장', tail: '캐시 안 함' };
+const STATES: Record<ForecastPart['state'], string> = { read: CACHE_READ, write: '캐시에 새로 저장', tail: '캐시 안 함' };
 type CacheRow = { name: string; tokens: number; count: number; at: number } & Pick<ForecastPart, 'from' | 'state' | 'change' | 'point'>;
 
 // Neighbours of one part, alike in how the cache takes them, read as one row; a point ends its row. A changed part is

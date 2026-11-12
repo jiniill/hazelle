@@ -3,7 +3,7 @@ import { readLink, type ImportLink, type LinkAnswer, type LinkFailure, type Link
 import { ACTS } from '../common/acts';
 import { describeReplyError } from '../common/failure';
 import { sizeText } from '../common/size';
-import { UNREADABLE_FILE, WRONG_PASSWORD } from '../common/words';
+import { UNREADABLE_FILE, WRONG_PASSWORD, IMPORTING, LINK_IMPORT } from '../common/words';
 import { Button, Checkbox, Dialog, List, ListItem, Stack, TextField, type ProgressStep } from '../ui';
 
 // password: why a Proton link asks for its owner's password.
@@ -18,7 +18,7 @@ const linkFailure = (failure: Exclude<LinkFailure, { kind: 'cancelled' | 'needs-
     case 'not-a-file': return '웹 페이지가 열리는 링크예요. 파일을 바로 받는 링크를 넣어 주세요.';
     case 'guest-blocked': return '이 사이트는 손님 모드에서 바로 가져올 수 없어요. 파일을 직접 받아서 넣어 주세요.';
     case 'needs-account': return 'Proton 링크는 손님 모드에서 가져올 수 없어요. 파일을 직접 받아서 넣어 주세요.';
-    case 'no-file': return '가져올 수 있는 파일이 없어요.';
+    case 'no-file': return IMPORTING.empty;
     case 'damaged': return `${UNREADABLE_FILE} 링크가 잘렸거나 파일이 손상됐을 수 있어요.`;
     case 'lost': return '다운로드가 끊겼어요. 인터넷 연결을 확인해 주세요.';
     case 'relay': return describeReplyError(failure.failure);
@@ -53,7 +53,7 @@ export function LinkDialog({ start, onBring, onClose }: { start: LinkStart; onBr
   const ready = link !== null && (!asking || password !== '');
   return (
     <Dialog
-      title="링크로 가져오기"
+      title={LINK_IMPORT}
       onClose={onClose}
       actions={<Button disabled={!ready} onClick={() => link && onBring(asking ? { ...link, password } : link, text)}>{ACTS.import.label}</Button>}
     >

@@ -7,7 +7,7 @@ import { byLastUse, byPromptName, groupPrompts, promptFolder } from '../common/p
 import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/filing';
 import { FolderPath } from '../common/folders/FolderParts';
 import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse';
-import { defaultMark, DELETED_PROMPT, follows, promptName } from '../common/words';
+import { defaultMark, DELETED_PROMPT, follows, promptName, searchOf, THINGS } from '../common/words';
 import { useCaptured, useSettings, usePrompts } from '../session';
 import { useToast } from '../toast';
 import { Button, ChipButton, Dialog, Empty, Icon, List, ListItem, Row } from '../ui';
@@ -47,7 +47,7 @@ export function PromptDialog({ prompt, plain, out, onChoose, onKeepOut, onEdit, 
   const fallback = useCaptured((store) => chatPrompt(store, {}), []);
   const grouped = useMemo(() => groupPrompts(prompts), [prompts]);
   const own = !out && prompt.own && prompt.kind === 'prompt' ? prompt.prompt.id : null;
-  const search = useSearch(prompts.toSorted(byPromptName), '프롬프트 검색', (item) => [promptName(item.value.name)], { ref: field, onEnter: (first) => choose(first.id) });
+  const search = useSearch(prompts.toSorted(byPromptName), searchOf(THINGS.prompt.noun), (item) => [promptName(item.value.name)], { ref: field, onEnter: (first) => choose(first.id) });
   const index = useFolderIndex('prompt', grouped.top, promptFolder);
   const [place, setPlace] = useState(() => (own !== null && prompt.kind === 'prompt' ? promptFolder(prompt.prompt) : null));
   const at = placeIn(index, place, search.words !== '');

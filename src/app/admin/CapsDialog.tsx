@@ -5,6 +5,7 @@ import { describeFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { Button, Callout, ChoiceGroup, Dialog, NumberInput } from '../ui';
 import { CAP_ERROR, capText, typedCap } from './bytes';
+import { ACTIONS } from './actions';
 
 type Choice = 'default' | 'none' | 'own';
 type Draft = { choice: Choice; text: string };
@@ -54,7 +55,7 @@ export function CapsDialog({ account, onClose, onSaved }: { account: AdminAccoun
 
   return (
     <Dialog
-      title={`${account.username} 저장 한도`}
+      title={`${account.username} ${ACTIONS['set-caps']}`}
       onClose={onClose}
       onSubmit={() => valid && void save()}
       actionsLayout="full"

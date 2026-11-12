@@ -8,12 +8,13 @@ import type { TrialRead } from '../../../runtime/evaluation/evaluation-core';
 import type { Trial } from '../../../runtime/scripts/preview';
 import { useChats, useSession } from '../../session';
 import { Button, Callout, ChoiceGroup, CodeBlock, Facts, Stack, StepList, Text, type CodeAside, type StepRow } from '../../ui';
-import { runaway } from '../failure';
+import { LORE_RUNAWAY } from '../failure';
 import { HookDetail } from '../HookDetail';
+import { KEPT_TAGS } from './cbs';
 import { LUA_EVENTS } from './luaApi';
 import { SAMPLE, SAMPLE_LANGUAGE, SAMPLE_NOTE } from './sample';
 import { chatVariable, writerName, type ChatVariables, type Defaults, type Variables } from './variables';
-import { COUNTING } from '../words';
+import { COUNTING, TRIAL } from '../words';
 
 const LABEL = '테스트';
 // The lane name the sample runs on, which no chat id takes.
@@ -129,11 +130,11 @@ function CbsTrial({ text, trial, reveal }: { text: string; trial: TrialChat; rev
     <Stack gap="related">
       <TrialChats owner={trial.owner} chat={chat} onChange={trial.choose} />
       {scope === 'failed' ? (
-        <Text variant="note">채팅을 열지 못했어요.</Text>
+        <Text variant="note">{TRIAL.noChat}</Text>
       ) : shown === undefined ? (
         <Text variant="note">{COUNTING}</Text>
       ) : shown.result === 'failed' ? (
-        <Text variant="note">결과를 만들지 못했어요.</Text>
+        <Text variant="note">{TRIAL.failed}</Text>
       ) : shown.result === null ? (
         <CbsResult result={null} />
       ) : (
@@ -160,13 +161,11 @@ function CbsSteps({ text, read: { steps, omitted }, variables, reveal, stale }: 
   );
 }
 
-const KEPT = { unknown: '알 수 없는 명령어라 입력한 그대로 남아요.', unsupported: '헤이젤에서 지원하지 않는 명령어라 입력한 그대로 남아요.', args: '인자가 부족하거나 형식이 맞지 않아 입력한 그대로 남아요.' } as const;
-
 // A {{getvar}} says where the chat's value came from: a draft read after the chat writes no variable.
 function shownStep(text: string, { at, end, headEnd, depth, result, kept, erased, held, condition, variable }: CbsStep, variables: Variables): StepRow {
   const source = text.slice(at, headEnd ?? end);
   // Not a warning for args: a wrapper's {{slot}} stays as written on purpose.
-  if (kept) return { source, result, depth, note: KEPT[kept], ...(kept !== 'args' && { tone: 'warn' as const }) };
+  if (kept) return { source, result, depth, note: KEPT_TAGS[kept], ...(kept !== 'args' && { tone: 'warn' as const }) };
   if (erased) return { source, result, depth, note: '앞의 텍스트를 삭제해요.' };
   if (variable !== undefined) {
     const found = chatVariable(variables, variable);
@@ -211,12 +210,12 @@ function LuaTrial({ unit, trial }: { unit: LuaUnit; trial: TrialChat }) {
   return (
     <Stack gap="related">
       <TrialChats owner={trial.owner} chat={chat} onChange={reset(trial.choose)} />
-      <ChoiceGroup label="실행 시점" layout="menu" options={EVENT_OPTIONS} value={event} onChange={reset(setEvent)} />
+      <ChoiceGroup label={TRIAL.when} layout="menu" options={EVENT_OPTIONS} value={event} onChange={reset(setEvent)} />
       {scope === 'failed' ? (
-        <Text variant="note">채팅을 열지 못했어요.</Text>
+        <Text variant="note">{TRIAL.noChat}</Text>
       ) : (
         <Button disabled={scope === null || ran === 'running'} onClick={() => scope && run(scope)}>
-          {ran === 'running' ? '실행하는 중…' : '테스트 실행'}
+          {ran === 'running' ? TRIAL.running : TRIAL.run}
         </Button>
       )}
       {ran !== null && ran !== 'running' && <LuaRan ran={ran} stale={ran.code !== unit.code} />}
@@ -224,11 +223,10 @@ function LuaTrial({ unit, trial }: { unit: LuaUnit; trial: TrialChat }) {
   );
 }
 
-function LuaRan({ ran: { event, trial }, stale }: { ran: Ran; stale: boolean }) {
-  if (trial === 'failed') return <Callout tone="warn">테스트 실행하지 못했어요.</Callout>;
-  const { outcome, said, asked, calls, loreRanAway } = trial;
+// What a run did, then what it was kept from doing; own: a caller's further rows of what it did.
+export function trialFacts({ outcome, said, asked, calls }: Trial, own: { label: string; value: string }[] = []) {
   const count = (label: string, length: number, unit = '개') => (length ? [{ label, value: `${length}${unit}` }] : []);
-  const facts = [
+  return [
     ...(outcome.stop ? [{ label: '보내기', value: '중단됨' }] : []),
     ...(said.length ? [{ label: '알림 표시', value: said.map(({ text }) => text).join(' · ') }] : []),
     ...count('질문 표시', asked.length),
@@ -236,21 +234,29 @@ function LuaRan({ ran: { event, trial }, stale }: { ran: Ran; stale: boolean }) 
     ...count('메시지 수정', outcome.edits.length),
     ...count('메시지 삭제', outcome.removed.length),
     ...count('채팅 로어북 항목', outcome.lore.length),
+    ...own,
     ...count('생략된 모델 호출', calls.model, '번'),
     ...count('생략된 임베딩 생성', calls.embed, '번'),
     ...count('생략된 배경 변경', calls.background, '번'),
+    ...count('생략된 네트워크 요청', calls.fetch, '번'),
   ];
+}
+
+function LuaRan({ ran: { event, trial }, stale }: { ran: Ran; stale: boolean }) {
+  if (trial === 'failed') return <Callout tone="warn">테스트 실행하지 못했어요.</Callout>;
+  const { outcome, loreRanAway } = trial;
+  const facts = trialFacts(trial);
   const traced = outcome.trace?.entries ?? [];
   return (
     <Stack gap="related">
-      {stale && <Text variant="note">코드가 바뀌었어요. 다시 실행하면 지금 코드로 테스트해요.</Text>}
+      {stale && <Text variant="note">{TRIAL.stale}</Text>}
       {!outcome.handled && <Text variant="note">{`이 코드에는 ${event} 함수가 없어요.`}</Text>}
-      {loreRanAway && <Callout tone="warn">{runaway('로어북을 스크립트에 넘기기 전에')}</Callout>}
+      {loreRanAway && <Callout tone="warn">{LORE_RUNAWAY}</Callout>}
       {facts.length > 0 && <Facts items={facts} />}
       {traced.map((entry, index) => (
         <HookDetail key={index} entry={entry} />
       ))}
-      {outcome.handled && facts.length === 0 && traced.every((entry) => !entry.writes.length && !entry.logs.length && !entry.errors.length) && <Text variant="note">변경되는 내용이 없어요.</Text>}
+      {outcome.handled && facts.length === 0 && traced.every((entry) => !entry.writes.length && !entry.logs.length && !entry.errors.length) && <Text variant="note">{TRIAL.unchanged}</Text>}
     </Stack>
   );
 }

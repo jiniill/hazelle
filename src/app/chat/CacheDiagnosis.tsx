@@ -6,7 +6,7 @@ import { cacheShortfall, shortfallPlace } from '../../runtime/diagnostics/cache-
 import { applyCacheEdit } from '../../runtime/diagnostics/cache-prescriptions';
 import type { LogEntry } from '../../runtime/models/request-log';
 import { cost, tokens } from '../common/receipt';
-import { loreName } from '../common/words';
+import { loreName, APPLY_FAILED, CACHE_READ } from '../common/words';
 import { useStore } from '../session';
 import { useToast } from '../toast';
 import { useState, type ReactNode } from 'react';
@@ -169,7 +169,7 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
   if (!prescriptions?.length) return null;
   async function apply(prescription: CachePrescription) {
     const done = await applyCacheEdit(store, prescription.edit);
-    if (!done.ok) return toast.failed(done, '적용하지 못했어요.');
+    if (!done.ok) return toast.failed(done, APPLY_FAILED);
     toast.undoable('적용했어요.', () => applyCacheEdit(store, done.data), titleOf(prescription));
   }
   const ranked = prescriptions
@@ -182,7 +182,7 @@ export function Prescriptions({ prescriptions, cost: now }: { prescriptions: Cac
           <ListItem
             key={index}
             title={titleOf(prescription)}
-            note={`캐시에서 읽음 ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
+            note={`${CACHE_READ} ${tokens(prescription.before.read)} → ${tokens(prescription.after.read)}`}
             tags={less ? [`${cost(less)} 절약`] : []}
             expanded={open === index}
             onClick={() => setOpen(open === index ? null : index)}

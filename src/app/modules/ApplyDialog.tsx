@@ -4,7 +4,7 @@ import { applyDraft, applyPreview, installedDiffers } from '../../runtime/tools/
 import { setModuleAt } from '../../runtime/library/modules';
 import { undoToolImport } from '../../runtime/tools/store';
 import { describeImportFailure } from '../common/importFailure';
-import { TOOL, toolVersion } from '../common/words';
+import { TOOL, toolVersion, APPLY_FAILED, ALWAYS, NOT_USED } from '../common/words';
 import { useFiles, useStore } from '../session';
 import { useToast } from '../toast';
 import { Button, Callout, ChoiceGroup, Dialog, Facts, Row, SettingGroup, SettingRow, Tag } from '../ui';
@@ -28,7 +28,7 @@ export function ApplyDialog({ id, draft, onClose }: { id: string; draft: ToolDra
     setBusy(true);
     const applied = await applyDraft(store, files, id);
     setBusy(false);
-    if (!applied.ok) return toast.failed(applied, '적용하지 못했어요.');
+    if (!applied.ok) return toast.failed(applied, APPLY_FAILED);
     onClose();
     const { id: module, previous } = applied.data;
     const name = preview.ok ? preview.manifest.displayName : TOOL;
@@ -71,7 +71,7 @@ export function ApplyDialog({ id, draft, onClose }: { id: string; draft: ToolDra
           <SettingRow
             label="사용처"
             help="항상 켜 두면 모든 채팅에 적용돼요. 나중에 플러그인 화면에서 바꿀 수 있어요."
-            control={<ChoiceGroup label="사용처" layout="segmented" options={[{ value: 'always', label: '항상' }, { value: 'none', label: '사용 안 함' }]} value={where} onChange={setWhere} />}
+            control={<ChoiceGroup label="사용처" layout="segmented" options={[{ value: 'always', label: ALWAYS }, { value: 'none', label: NOT_USED }]} value={where} onChange={setWhere} />}
           />
         </SettingGroup>
       )}

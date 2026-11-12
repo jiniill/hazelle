@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { moduleContributions, type ModuleContribution, type Sending } from '../../runtime/chat/turn-context';
 import { tokens } from '../common/receipt';
 import { useSearch } from '../common/useSearch';
-import { moduleName } from '../common/words';
+import { moduleName, searchOf } from '../common/words';
 import { useCaptured } from '../session';
 import { Disclosure, Empty, Facts, List, ListItem, Stack, Text } from '../ui';
 
@@ -102,7 +102,7 @@ function ModuleDetail({ module }: { module: ModuleContribution }) {
 }
 
 function SilentLore({ module }: { module: ModuleContribution }) {
-  const search = useSearch(module.silent, '비활성 항목 검색', ({ name, why }) => [name, silentReason(why)]);
+  const search = useSearch(module.silent, searchOf('비활성 항목'), ({ name, why }) => [name, silentReason(why)]);
   return (
     <Stack gap="related">
       {search.field}

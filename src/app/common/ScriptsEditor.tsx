@@ -18,7 +18,7 @@ import { choices } from './reading';
 import { OpenRow, RowFoot, useRowEdits, type RowEdits } from './OpenRows';
 import { useAutosave } from './useAutosave';
 import { useSearch } from './useSearch';
-import { COMMAND, SAVE_FAILED, scriptName, SCRIPTS, STAGES } from './words';
+import { COMMAND, SAVE_FAILED, scriptName, SCRIPTS, STAGES, TRIAL } from './words';
 
 type Lua = Extract<Trigger, { kind: 'lua' }>;
 type Blocks = Extract<Trigger, { kind: 'blocks' }>;
@@ -196,7 +196,7 @@ function RegexItem(props: ItemProps & { script: RegexScript; status: boolean; se
       <Disclosure label="테스트">
         <Stack gap="related">
           <TextField label="예시 텍스트" lines={3} value={sample} onChange={setSample} />
-          <TextField label="결과" kind="key" lines={3} readOnly help={`${COMMAND}는 채팅에서 실제 값으로 바뀌어요.`} value={sample && (tried ?? '')} onChange={() => {}} error={sample && tried === null ? '결과를 만들지 못했어요.' : undefined} />
+          <TextField label="결과" kind="key" lines={3} readOnly help={`${COMMAND}는 채팅에서 실제 값으로 바뀌어요.`} value={sample && (tried ?? '')} onChange={() => {}} error={sample && tried === null ? TRIAL.failed : undefined} />
         </Stack>
       </Disclosure>
       {actions(save.words)}

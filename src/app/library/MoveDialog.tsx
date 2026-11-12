@@ -3,6 +3,7 @@ import { ACTS, importOf } from '../common/acts';
 import { useCopy } from '../common/useCopy';
 import { Button, Dialog, Disclosure, FileButton, Row, Section, Stack, Text } from '../ui';
 import { INLAY_BOOKMARK, INLAY_EXPORT } from './inlayExport';
+import { MOVE_IN, READ_BACKUP } from '../common/words';
 
 // Risu에서 이사: says which Risu files to get and takes them, the text's, for an account user the full backup that holds
 // the pictures (design F7), and the export of the pictures inside messages. That export alone fills the chats already
@@ -14,11 +15,11 @@ export function MoveDialog({ onRead, onClose }: { onRead: (files: File[]) => voi
   const [inlays, setInlays] = useState<File | null>(null);
   return (
     <Dialog
-      title="Risu에서 이사"
+      title={MOVE_IN}
       onClose={onClose}
       actions={
         <Button disabled={text === null && inlays === null} onClick={() => onRead(text ? [text, pictures, inlays].filter((file) => file !== null) : [inlays!])}>
-          {text === null && inlays !== null ? '메시지 이미지 채우기' : '백업 읽기'}
+          {text === null && inlays !== null ? '메시지 이미지 채우기' : READ_BACKUP}
         </Button>
       }
     >

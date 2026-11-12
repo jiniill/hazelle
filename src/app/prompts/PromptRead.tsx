@@ -6,6 +6,8 @@ import type { Block } from '../../model/prompt';
 import { Icon, List, ListItem, MarkupText } from '../ui';
 import { blockIcon, blockMeta, blockTitle, CACHE_WORDS, MARKS, type CacheMark } from './blocks';
 
+export const READ_TITLE = '전체 읽기';
+
 type Props = {
   blocks: readonly Block[];
   marks: ReadonlyMap<string, CacheMark>;
@@ -17,7 +19,7 @@ export function PromptRead({ blocks, marks, onOpen }: Props) {
   const trial = useTrial(null);
   const cbs = useMemo(() => cbsLanguage({ variables: trial.variables }), [trial.variables]);
   return (
-    <List label="전체 읽기" places>
+    <List label={READ_TITLE} places>
       {blocks.map((block, index) => {
         const cache = marks.get(block.id);
         return (

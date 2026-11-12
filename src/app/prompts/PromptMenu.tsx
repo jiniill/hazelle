@@ -7,7 +7,7 @@ import { defaultPrompt } from '../common/prompt-words';
 import { useAutosave } from '../common/useAutosave';
 import { useMaking } from '../common/useMaking';
 import { useRemoval } from '../common/useRemoval';
-import { BIN_KEEPS, cannotRemove, ORIGINAL_GONE, promptName, SEE_ORIGINAL, SET_DEFAULT, THINGS } from '../common/words';
+import { BIN_KEEPS, cannotRemove, ORIGINAL_GONE, promptName, SEE_ORIGINAL, SET_DEFAULT, THINGS, SET_DEFAULT_FAILED } from '../common/words';
 import { useSettings, useStore, useStored } from '../session';
 import { useToast } from '../toast';
 import { MenuItem } from '../ui';
@@ -58,7 +58,7 @@ export function PromptMenu({ stored, onOpen, onErased, onExport }: Props) {
   };
   const makeDefault = async () => {
     const saved = await setDefaultPrompt(store, stored.id);
-    if (!saved.ok) toast.failed(saved, '기본으로 지정하지 못했어요.');
+    if (!saved.ok) toast.failed(saved, SET_DEFAULT_FAILED);
   };
   const erase = () =>
     removal({ name: ({ value }) => promptName(value.name), noun: THINGS.prompt.noun, task: () => removePrompt(store, stored.id), queue: save.remove, restore: () => restorePrompt(store, stored.id), then: onErased, detail: BIN_KEEPS });

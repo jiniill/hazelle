@@ -15,9 +15,11 @@ import { errorMessage } from '../../error-message';
 import { describeImportFailure } from '../common/importFailure';
 import { ModelMenu } from '../common/ModelMenu';
 import { cost } from '../common/receipt';
+import { trialFacts } from '../common/code/Trial';
+import { MODULE_MODELS, TRIAL, OUTGOING } from '../common/words';
 import { useChats, useSession } from '../session';
 import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, Row, SettingRow, Stack, Switch, Text, TextField } from '../ui';
-import { fixAsk, lineRange, testEvent, testPicks, type TestPick } from './studio';
+import { fixAsk, lineRange, SEE_IN_CODE, testEvent, testPicks, type TestPick } from './studio';
 
 const REFUSED: Record<Extract<TrialWrite, { kind: 'refused' }>['call'], string> = { 'assets.save': '파일 저장', 'chat.picture': '이미지 넣기', 'chat.send': '메시지 보내기', 'chat.card.edit': '캐릭터 카드 수정' };
 
@@ -39,7 +41,7 @@ async function runTest(session: Session, draft: DraftFile, chat: string, moments
   };
   try {
     const scope = await chatNow(session, chat, signal);
-    if (!scope) return [{ failed: '채팅을 열지 못했어요.', line: null, code: false }];
+    if (!scope) return [{ failed: TRIAL.noChat, line: null, code: false }];
     const events = moments.map(({ moment, text }) => (at: ChatScope) => testEvent(moment, at, text, read.trial.tool.manifest));
     const tried = await session.scriptPreview.tool(chat, scope, read.trial, messages, events, setup.calling ? { model: setup.model } : null, signal);
     const missing = (at: number) => (moments[at]!.moment.startsWith('tool:') ? '인자가 JSON 객체가 아니에요.' : '이 채팅에는 테스트할 메시지가 없어요.');
@@ -125,17 +127,17 @@ export function TestPane({ draft, setup, onSetup, reveal, onFix }: { draft: Tool
   return (
     <Stack gap="related">
       <ChoiceGroup label="채팅" layout="menu" options={chats.map(({ id, title }) => ({ value: id, label: title }))} value={chosen.id} onChange={(chat) => onSetup({ ...setup, chat })} />
-      <ChoiceGroup label="실행 시점" layout="menu" options={picks.map(({ value, label, sub }) => ({ value, label, description: sub }))} value={picked.value} onChange={setPick} />
-      {picked.text && <TextField label={picked.value === 'sending' ? '보낼 메시지' : picked.sub === 'tool' ? '인자(JSON)' : '입력창 내용'} value={text} onChange={setText} />}
+      <ChoiceGroup label={TRIAL.when} layout="menu" options={picks.map(({ value, label, sub }) => ({ value, label, description: sub }))} value={picked.value} onChange={setPick} />
+      {picked.text && <TextField label={picked.value === 'sending' ? OUTGOING : picked.sub === 'tool' ? '인자(JSON)' : '입력창 내용'} value={text} onChange={setText} />}
       {read.trial.tool.manifest.uses.includes('model') && (
         <>
-          <SettingRow label="모델 호출" help="플러그인의 모델 호출은 모두 선택한 모델로 보내요. 기본값은 보조 모델이에요." control={<Switch label="모델 호출" checked={setup.calling} onChange={(calling) => onSetup({ ...setup, calling })} />} />
+          <SettingRow label={MODULE_MODELS} help="플러그인의 모델 호출은 모두 선택한 모델로 보내요. 기본값은 보조 모델이에요." control={<Switch label={MODULE_MODELS} checked={setup.calling} onChange={(calling) => onSetup({ ...setup, calling })} />} />
           {setup.calling && <SettingRow label="모델" control={<ModelMenu route={sharedModel(session.store, 'aux', setup.model)} onPick={(model) => onSetup({ ...setup, model })} />} />}
         </>
       )}
       <Text variant="note">{setup.calling ? '채팅과 저장소는 바뀌지 않아요. 모델은 실제로 호출해서 비용이 들어요.' : '채팅과 저장소는 바뀌지 않고, 모델 호출과 네트워크 요청은 하지 않아요.'}</Text>
       <Button disabled={ran === 'running'} onClick={() => void run(chosen.id, picked)}>
-        {ran === 'running' ? '실행하는 중…' : '테스트 실행'}
+        {ran === 'running' ? TRIAL.running : TRIAL.run}
       </Button>
       {ran !== null && ran !== 'running' && (
         <TestResult
@@ -160,39 +162,31 @@ function TestResult({ ran: { pick, result }, stale, onLine, onFix }: ResultProps
         <Callout tone="warn">{failed}</Callout>
         {!stale && (code || line !== null) && (
           <Row kind="actions">
-            {line !== null && <Button variant="secondary" size="sm" onClick={() => onLine(line)}>코드에서 보기</Button>}
+            {line !== null && <Button variant="secondary" size="sm" onClick={() => onLine(line)}>{SEE_IN_CODE}</Button>}
             {code && <Button variant="primary" size="sm" onClick={() => onFix(failed, line)}>AI로 수정</Button>}
           </Row>
         )}
       </Stack>
     );
   }
-  const { outcome, said, asked, calls, writes, called } = result;
+  const { outcome, writes, called } = result;
   const answer = answerText(outcome.value);
   const listed = (label: string, items: string[]) => (items.length ? [{ label, value: items.join(' · ') }] : []);
-  const count = (label: string, length: number, unit = '개') => (length ? [{ label, value: `${length}${unit}` }] : []);
+  const count = (label: string, length: number) => (length ? [{ label, value: `${length}개` }] : []);
   const total = sumCosts(called);
   const kept = (kind: 'storage' | 'setting') => writes.flatMap((write) => (write.kind === kind ? [write.key] : []));
-  const facts = [
-    ...listed('알림 표시', said.map(({ text }) => text)),
-    ...count('질문 표시', asked.length),
+  const facts = trialFacts(result, [
     ...count('채팅 상태', outcome.writes.length),
     ...count('채팅 데이터', outcome.tool?.data.length ?? 0),
     ...listed('배지', (outcome.tool?.badges ?? []).flatMap(({ text }) => (text === null ? [] : [text]))),
-    ...count('메시지 수정', outcome.edits.length),
-    ...count('메시지 추가', outcome.added.length),
-    ...count('채팅 로어북 항목', outcome.lore.length),
     ...listed('저장소', kept('storage')),
     ...listed('설정', kept('setting')),
+    ...(called.length ? [{ label: MODULE_MODELS, value: [`${called.length}번`, total && cost(total)].filter(Boolean).join(' · ') }] : []),
     ...listed('생략된 동작', writes.flatMap((write) => (write.kind === 'refused' ? [REFUSED[write.call]] : []))),
-    ...(called.length ? [{ label: '모델 호출', value: [`${called.length}번`, total && cost(total)].filter(Boolean).join(' · ') }] : []),
-    ...count('생략된 모델 호출', calls.model, '번'),
-    ...count('생략된 임베딩 생성', calls.embed, '번'),
-    ...count('생략된 네트워크 요청', calls.fetch, '번'),
-  ];
+  ]);
   return (
     <Stack gap="related">
-      {stale && <Text variant="note">코드가 바뀌었어요. 다시 실행하면 지금 코드로 테스트해요.</Text>}
+      {stale && <Text variant="note">{TRIAL.stale}</Text>}
       {answer.map(({ label, text }) => (
         <Fragment key={label}>
           <Text variant="note">{label}</Text>
@@ -200,7 +194,7 @@ function TestResult({ ran: { pick, result }, stale, onLine, onFix }: ResultProps
         </Fragment>
       ))}
       {facts.length > 0 && <Facts items={facts} />}
-      {answer.length === 0 && facts.length === 0 && <Text variant="note">변경되는 내용이 없어요.</Text>}
+      {answer.length === 0 && facts.length === 0 && <Text variant="note">{TRIAL.unchanged}</Text>}
     </Stack>
   );
 }

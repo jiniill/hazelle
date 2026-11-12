@@ -1,10 +1,11 @@
 import { ACTS, importOf, newOf } from '../../common/acts';
 import { LABS } from '../../common/labs';
 import { NUMBER, PROFILE_LABELS, PROFILE_ROWS } from '../../common/settingWords';
-import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, IDLE_MODELS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE, PROMPT_MODELS } from '../../common/words';
+import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, IDLE_MODELS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, IMAGE_MODEL, COST_ESTIMATE, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE, PROMPT_MODELS } from '../../common/words';
 import type { Settings } from '../../../model/settings';
 import { BIN_PLACE, type Route, type SettingsPage, type ToolsPage } from '../routes';
 import { ROLES_TITLE } from '../../settings/setup';
+import { TRANSLATE_SWITCHES } from '../../common/TranslateRows';
 
 // 설정 검색's index: the section titles and setting labels each page shows, beside its own label; 도구's pages too.
 // terms.test.ts fails on a literal label a page shows and this does not hold; a label given as a constant is only held by
@@ -16,8 +17,8 @@ const TERMS: Record<Page, string[]> = {
   models: [DEFAULT_MODELS, SCOPE.default, MODEL_ROLES.main, MODEL_ROLES.aux, MODEL_ROLES.embed, STARRED, IDLE_MODELS, MODEL_SETTINGS, '기능별 모델', PROMPT_MODELS, '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT],
   connections: ['모델', '계정', '계정 추가', '그룹', '전환일', '사용량과 한도', RETRY_COUNT, '사용 내역', '연결 이름', '키 변경', '모델 ID로 추가'],
   chat: [...Object.values(CHAT_DETAIL), MODEL_ROLES.main, RETRY_COUNT, '모델 도구 호출 횟수', ANSWER_INSTRUCTION_LABEL, ...Object.values(LORE_SCAN_WORDS).map(({ label }) => label)],
-  translate: ['응답 번역', '응답 번역 언어', '내 메시지 번역', '내 메시지 번역 언어', '원문 함께 보기', '반전 모드', TRANSLATOR_NOTE, '번역 프롬프트', TASK_MODELS.translate],
-  illustrate: ['자동 삽화', '이미지 모델', '페르소나 시점', '만화 형식', '유료 생성 시 확인 생략', '삽화 프롬프트', TASK_MODELS.illustrate, '삽화 수', PICTURE_PLACE],
+  translate: [TRANSLATE_SWITCHES.replies, '응답 번역 언어', TRANSLATE_SWITCHES.input, '내 메시지 번역 언어', '원문 함께 보기', TRANSLATE_SWITCHES.reverse, TRANSLATOR_NOTE, '번역 프롬프트', TASK_MODELS.translate],
+  illustrate: ['자동 삽화', IMAGE_MODEL, '페르소나 시점', '만화 형식', '유료 생성 시 확인 생략', '삽화 프롬프트', TASK_MODELS.illustrate, '삽화 수', PICTURE_PLACE],
   memory: ['새 채팅에서 켜기', TASK_MODELS.memory, '기록 최대 분량', '임베딩 모델로 찾는 기록', '원문으로 보낼 최근 대화', '한 번에 정리할 분량'],
   mascot: [TASK_MODELS.mascot, '마스코트 프롬프트'],
   preread: [TASK_MODELS.preread, '요약할 대상', '원문으로 유지할 최근 대화', '한 번에 요약할 분량', '추론 최소화', `${PRE_READ} 프롬프트`],
@@ -33,7 +34,7 @@ const TERMS: Record<Page, string[]> = {
   sounds: ['알림음', '세부 설정', '응답이 시작될 때', '응답이 도착했을 때', '번역이 끝났을 때'],
   account: ['저장 공간', PAGES.usage, '잠그기', '로그아웃', '다른 기기에서 로그아웃', '백업', '전체 백업', ACTS.export.label, 'Risu로 옮길 파일', importOf('백업'), '이전 시점으로 복원', SHARE.list, NOTICES.from, BOARD.title, BOARD.mine, BOARD.toOperator, '새 소식', '앱 정보', '버전', PULSE.sharing, AUTO_DIAGNOSIS.label, '문제 진단', '탈퇴', '계정 삭제'],
   translator: ['원문', '번역 결과', '번역할 언어', MODEL_ROLES.aux, TRANSLATOR_NOTE],
-  calculator: ['모델', '토큰', '가격', '예상 비용'],
+  calculator: ['모델', '토큰', '가격', COST_ESTIMATE],
   admin: ['서비스', '가입 정원', '계정당 텍스트 한도', '계정당 이미지 한도', '백업 폴더', '관리 도구', `모두에게 ${NOTICES.send}`, '링크 보류', '파일 차단', '계정', '게시판', '손님 글쓰기', '기록', NOTICES.received, '운영자에게만 온 글', '자동 진단', '방문자 통계', '가입 주별 재방문'],
 };
 

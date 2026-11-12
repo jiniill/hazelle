@@ -15,7 +15,7 @@ import { readTyped } from '../common/typedNumber';
 import { useSession } from '../session';
 import { useToast } from '../toast';
 import { Button, Callout, ChipButton, CodeCard, Link, List, ListItem, Menu, MenuItem, MoreMenu, NumberInput, Panel, Row, Section, Stack, Text, useMenuClose } from '../ui';
-import { MeterGauge, useMeters } from './ConnectionMeters';
+import { MeterGauge, USAGE, useMeters } from './ConnectionMeters';
 import { useDeviceSignIn } from './useDeviceSignIn';
 
 // Who serves a reply: the current group's first account with allowance left (runtime/models/pool).
@@ -104,7 +104,7 @@ export function ConnectionAccounts({ id, connection, signIn }: { id: string; con
             {addOf('그룹')}
           </Button>
           <DayMenu day={connection.turns.day} change={turns} />
-          {usagePage && <Link href={usagePage}>사용량 페이지</Link>}
+          {usagePage && <Link href={usagePage}>{USAGE.page}</Link>}
         </Row>
       </Stack>
       {renaming && (
@@ -135,7 +135,7 @@ function MeterLines({ result, turn, waiting }: { result: MetersResult; turn: { s
 function meterProblem(result: MetersResult): string | undefined {
   const [failure] = result.failures;
   if (!result.meters.length) return failure ? describeMetersFailure(failure) : '한도 정보 없음';
-  return failure ? '사용량 일부를 불러오지 못했어요.' : undefined;
+  return failure ? USAGE.partial : undefined;
 }
 
 type RowProps = {

@@ -13,7 +13,7 @@ import { describeFailure } from '../common/failure';
 import { sizeText } from '../common/size';
 import { describeUnused } from '../common/unused';
 import { count as countText } from '../common/typedNumber';
-import { LORE_BUDGET_LABEL, MISSED, moduleName, THINGS, UNREADABLE_FILE } from '../common/words';
+import { LORE_BUDGET_LABEL, MISSED, moduleName, THINGS, UNREADABLE_FILE, IMPORTING, READ_BACKUP } from '../common/words';
 import { useFiles, useStanding, useStore } from '../session';
 import { Button, Callout, Checkbox, Dialog, Outcome, Progress, Section, Stack, Text, type ProgressStep } from '../ui';
 import { unsaved } from './importOutcome';
@@ -36,7 +36,6 @@ const PRESET_FAILURE: Record<PresetFailure['kind'], string> = {
 
 // In the move's order (runtime/import/move). The character steps interleave, so each kind reached keeps its own line.
 const STEP: Record<MoveStep['kind'], string> = { personas: THINGS.persona.noun, modules: THINGS.module.noun, prompts: THINGS.prompt.noun, characters: THINGS.character.noun, chats: THINGS.chat.noun, pictures: '이미지' };
-const READING = '백업 읽기';
 type Steps = Partial<Record<MoveStep['kind'], MoveStep>>;
 
 type Phase =
@@ -181,15 +180,15 @@ export function MoveFlow({ files: dropped, aside, onClose }: { files: File[]; as
       return step ? { label: STEP[kind], done: step.done, total: step.total } : { label: STEP[kind] };
     }) : [];
     return (
-      <Dialog title={phase.kind === 'reading' ? '백업 읽는 중' : '가져오는 중'} note={note}>
-        <Progress hero steps={[{ label: READING, finished: phase.kind === 'running' }, ...stages]} />
+      <Dialog title={phase.kind === 'reading' ? '백업 읽는 중' : IMPORTING.busy} note={note}>
+        <Progress hero steps={[{ label: READ_BACKUP, finished: phase.kind === 'running' }, ...stages]} />
       </Dialog>
     );
   }
   if (phase.kind === 'failed') {
     return (
       <Dialog
-        title="가져오지 못했어요"
+        title={IMPORTING.failed}
         note={note}
         onClose={onClose}
         actions={

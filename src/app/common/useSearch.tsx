@@ -1,6 +1,7 @@
 import { useState, type ReactNode, type Ref } from 'react';
 import { Empty, SearchField } from '../ui';
-import { matches, noResults, SEARCH_FROM } from './search';
+import { matches, SEARCH_FROM } from './search';
+import { noResults } from './words';
 
 // Enter picks only a nonempty search's first result; otherwise it could select an item inside a hidden folder.
 // Parent-owned query may outlive the list; ref lets callers focus on open.

@@ -11,7 +11,7 @@ import { useLoaded } from '../common/useLoaded';
 import { useSession } from '../session';
 import { useSearch } from '../common/useSearch';
 import { ACTS } from '../common/acts';
-import { TOOL_PAGES } from '../common/words';
+import { TOOL_PAGES, SEARCH_RESULTS, searchOf, COST_ESTIMATE } from '../common/words';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { toolDesk } from './desk';
@@ -52,7 +52,7 @@ export function CalculatorScreen({ back }: { back: Back | null }) {
   const rows = useMemo(() => (table.data ? rowsOf(table.data) : []), [table.data]);
   const [{ picked, texts }, change] = useDesk(useSession());
   const query = useState('');
-  const search = useSearch(rows, '모델 검색', (row) => [row.name, row.model, row.provider], { onEnter: pick, query });
+  const search = useSearch(rows, searchOf('모델'), (row) => [row.name, row.model, row.provider], { onEnter: pick, query });
 
   function pick(row: Row) {
     change({ picked: row });
@@ -93,7 +93,7 @@ export function CalculatorScreen({ back }: { back: Back | null }) {
         {search.field}
         {search.shown(
           picked ? <List label="선택한 모델" box>{row(picked)}</List> : rows.length > 0 && <Empty variant="section">모델을 검색해 선택해요.</Empty>,
-          (found) => <List label="검색 결과" keys={found.map(({ key }) => key)} box>{(index) => row(found[index]!)}</List>,
+          (found) => <List label={SEARCH_RESULTS} keys={found.map(({ key }) => key)} box>{(index) => row(found[index]!)}</List>,
         )}
       </Panel>
       <Panel title="토큰">
@@ -109,15 +109,15 @@ export function CalculatorScreen({ back }: { back: Back | null }) {
 
 function Result({ row, counts }: { row: Row; counts: Record<Count, number | null> }) {
   const { price, unit } = row;
-  if (!price) return <Facts variant="figures" items={[{ label: '예상 비용', value: cost(null), notes: ['models.dev에 이 모델의 가격이 없어요.'], tone: 'muted' }]} />;
+  if (!price) return <Facts variant="figures" items={[{ label: COST_ESTIMATE, value: cost(null), notes: ['models.dev에 이 모델의 가격이 없어요.'], tone: 'muted' }]} />;
   const { input, output, cacheRead, cacheWrite } = counts;
   const typed = input !== null && output !== null && cacheRead !== null && cacheWrite !== null;
   const worked = typed ? priceCost(price, { inputTokens: input, outputTokens: output, cachedInputTokens: cacheRead, cacheWriteInputTokens: cacheWrite, reasoningTokens: null }, unit) : null;
   const estimate = !typed
-    ? { label: '예상 비용', value: '-', tone: 'muted' as const }
+    ? { label: COST_ESTIMATE, value: '-', tone: 'muted' as const }
     : worked
-      ? { label: '예상 비용', value: cost(worked) }
-      : { label: '예상 비용', value: '-', notes: ['캐시 토큰이 입력보다 많아요.'], tone: 'warn' as const };
+      ? { label: COST_ESTIMATE, value: cost(worked) }
+      : { label: COST_ESTIMATE, value: '-', notes: ['캐시 토큰이 입력보다 많아요.'], tone: 'warn' as const };
   // A cache rate the table leaves out is billed as plain input (priceCost).
   const rate = (label: string, pick: (rates: Omit<Rates, 'tiers'>) => number | null) => {
     const base = pick(price);

@@ -20,7 +20,7 @@ import { ModelMenu } from '../common/ModelMenu';
 import { FileExport } from '../common/FileExport';
 import { cost } from '../common/receipt';
 import { useAutosave } from '../common/useAutosave';
-import { SAVE_FAILED, STOP, TOOL, toolVersion } from '../common/words';
+import { SAVE_FAILED, STOP, TOOL, toolVersion, GENERATING } from '../common/words';
 import { useChats, useConnections, useSession, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -28,10 +28,11 @@ import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { Button, Callout, CodeField, CommentBox, Empty, Exchange, Facts, MenuItem, NavBar, Row, Screen, Section, Stack, Tag, TextDiff, TextField, type CodeAside } from '../ui';
 import { ApplyDialog } from './ApplyDialog';
-import { draftTitle, lineRange, USE_TAGS } from './studio';
+import { draftTitle, lineRange, USE_TAGS, SEE_IN_CODE } from './studio';
 import { askHint, useAskEstimate } from './useAskEstimate';
 import { TestPane, TestRuns, testRunner, type TestSetup } from './StudioTest';
 import { useSendKeys } from '../shortcuts';
+import { OPENS } from './PluginExport';
 
 function askFoot(store: ObjectStore, ask: Pick<DraftAsk, 'model' | 'cost'>): string {
   const route = routeOf(store, ask.model);
@@ -186,7 +187,7 @@ function AiPane({ id, draft, flush, fix, setup }: { id: string; draft: ToolDraft
         <Exchange key={each.at} ask={each.ask} answer={each.note} foot={askFoot(store, each)} />
       ))}
       {run.kind === 'running' && (
-        <Exchange ask={run.ask} answer="생성 중…">
+        <Exchange ask={run.ask} answer={GENERATING}>
           <TestRuns runs={run.runs} />
         </Exchange>
       )}
@@ -279,7 +280,7 @@ function InfoPane({ draft, onIdentity, reveal }: { draft: ToolDraft; onIdentity:
           </Section>
         </>
       ) : (
-        <Callout tone="warn" action={{ label: '코드에서 보기', onClick: () => reveal(lineRange(draft.body, draft.body.split('\n').findIndex((each) => each.trim() === preview.failure.line) + 1)) }}>
+        <Callout tone="warn" action={{ label: SEE_IN_CODE, onClick: () => reveal(lineRange(draft.body, draft.body.split('\n').findIndex((each) => each.trim() === preview.failure.line) + 1)) }}>
           {describeImportFailure(preview.failure)}
         </Callout>
       )}
@@ -293,7 +294,7 @@ function DraftExport({ name, text, onClose }: { name: string; text: string; onCl
     <FileExport
       format={`헤이젤 ${TOOL}`}
       file={file}
-      help="플러그인 가져오기로 열 수 있어요."
+      help={OPENS.hazelle}
       blocked={null}
       write={(output) => writeWhole(output, new TextEncoder().encode(text))}
       done={() => ({ message: `'${name}' 초안을 내보냈어요.` })}

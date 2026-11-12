@@ -8,7 +8,7 @@ import type { Stored } from '../../model/kinds';
 import { runs } from '../../runtime/tasks/illustrate';
 import { ACTS, newOf } from '../common/acts';
 import { MASCOT_PICTURES } from '../common/mascots';
-import { BOOKMARK } from '../common/words';
+import { BOOKMARK, TURN_FAILED, REPLY_INFO, RETRANSLATE } from '../common/words';
 import { describeFailedReply, describeTranslateFailure } from '../common/failure';
 import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
@@ -157,7 +157,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
         {/* Text that came before the failure (a connection lost midway, a continuation that failed) is saved, and stays shown. */}
         {!empty && <Story html={shownHtml(original, decor)} css={decor.css} buttons={decor.buttons} onPress={actions.press} />}
         <Failure
-          title="응답 실패"
+          title={TURN_FAILED}
           actions={
             <>
               <Button size="sm" disabled={busy} onClick={() => actions.retry(message)}>
@@ -212,7 +212,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
     if (flipped) actions.flipTranslation(message);
     void actions.translate(message);
   };
-  const again = { label: '다시 번역', disabled: translatingText !== null, onClick: translateHere };
+  const again = { label: RETRANSLATE, disabled: translatingText !== null, onClick: translateHere };
   const translationMark =
     pending ? (
       <Marker reason="translation" label="번역 기다리는 중" />
@@ -228,7 +228,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   ) : (
     canTranslate && !empty && !failed && <IconButton icon={Languages} size="sm" label="번역" disabled={translatingText !== null} onClick={translateHere} />
   );
-  const translateAgain = canTranslate && translation && !sentTranslated && <MenuItem label="다시 번역" disabled={translatingText !== null} onClick={translateHere} />;
+  const translateAgain = canTranslate && translation && !sentTranslated && <MenuItem label={RETRANSLATE} disabled={translatingText !== null} onClick={translateHere} />;
   // The language it went out in, not the setting now.
   const mark = !translation || editing !== null ? undefined : sentTranslated ? `${withParticle(languageLabel(translation.sentIn!), '으로/로')} 보냄` : flipped ? '원문' : '번역';
 
@@ -341,7 +341,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
           {hasRaw && <MenuItem label="다듬기 전 응답 보기" checked={rawShown} multiple onClick={() => setRawShown(!rawShown)} />}
           {agents.post && !mine && !greeting && !empty && !polishing && !version.retouched && <MenuItem label="다시 다듬기" disabled={busy} onClick={() => actions.polishAgain(message)} />}
           {agents.pre && noted && <MenuItem label="노트부터 다시 생성" disabled={busy} onClick={() => actions.regenerateFresh(message)} />}
-          {!mine && <MenuItem label="응답 정보" onClick={() => actions.info(message.id)} />}
+          {!mine && <MenuItem label={REPLY_INFO} onClick={() => actions.info(message.id)} />}
           {offered.length > 0 && <MenuHeading>상태창으로 지정</MenuHeading>}
           {offered.map((script) => (
             <MenuItem key={script.id} label={script.name} checked={script.marked} multiple onClick={() => actions.markStatus(script, !script.marked)} />
@@ -352,7 +352,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
           ])}
         </MoreMenu>
       ) : (
-        !mine && <IconButton icon={Info} size="sm" label="응답 정보" onClick={() => actions.info(message.id)} />
+        !mine && <IconButton icon={Info} size="sm" label={REPLY_INFO} onClick={() => actions.info(message.id)} />
       )}
       <Divider variant="tools" />
       {last ? (

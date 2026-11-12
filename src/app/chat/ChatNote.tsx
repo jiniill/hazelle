@@ -1,11 +1,12 @@
 import { PenLine } from 'lucide-react';
 import { CountedField } from '../common/CountedFields';
-import { follows } from '../common/words';
+import { follows, ONLY_THIS_CHAT, IN_USE, DEFAULT_NOTE, EMPTY_VALUE } from '../common/words';
 import { Button, Menu, Row, Stack, Text, ToolButton, useMenuClose } from '../ui';
 import type { PromptChoice } from '../../runtime/library/prompts';
 import type { RowTool } from './ChatToolRow';
 import type { ChatSettingsActions } from './useChatSettings';
 import { useChatNote } from './useChatNote';
+import { SLOT } from '../common/prompt-words';
 
 type Props = { id: string | null; note: string | undefined; prompt: PromptChoice; onSave: ChatSettingsActions['setNote'] };
 
@@ -19,7 +20,7 @@ function ChatNote(props: Props) {
       kind="dialog"
       size="form"
       place="above-start"
-      label="작가의 노트"
+      label={SLOT.authorNote.name}
       trigger={(opener) => (
         <ToolButton
           icon={PenLine}
@@ -45,20 +46,20 @@ function NoteEditor({ id, note, prompt, onSave }: Props) {
       ? '이 채팅 전용 노트'
       : '노트 없음'
     : fallback === null
-      ? '프롬프트가 없어 기본 노트를 확인할 수 없음'
+      ? `프롬프트가 없어 ${DEFAULT_NOTE}를 확인할 수 없음`
       : fallback
-        ? '기본 노트 사용 중'
-        : '프롬프트의 기본 노트: 비어 있음';
+        ? `${DEFAULT_NOTE} ${IN_USE}`
+        : `프롬프트의 ${DEFAULT_NOTE}: ${EMPTY_VALUE}`;
 
   return (
     <Stack gap="related">
       <CountedField
-        label="작가의 노트"
+        label={SLOT.authorNote.name}
         lines={5}
         value={text}
         onChange={change}
         placeholder="예: 이번 장면은 짧게 끝내요."
-        help="지금 이 채팅에만 적용돼요."
+        help={ONLY_THIS_CHAT}
         action={
           <Text variant="note">
             {status}
@@ -76,7 +77,7 @@ function NoteEditor({ id, note, prompt, onSave }: Props) {
         )}
         {own && (
           <Button variant="ghost" size="sm" onClick={follow}>
-            {follows('기본 노트')}
+            {follows(DEFAULT_NOTE)}
           </Button>
         )}
         <Button variant="secondary" size="sm" onClick={close}>

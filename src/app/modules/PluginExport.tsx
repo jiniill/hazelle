@@ -6,7 +6,7 @@ import { moduleName, RISU_PLUGIN, TOOL } from '../common/words';
 import { useFiles, useStore } from '../session';
 
 const LEFT = '헤이젤에서 바꾼 설정값과 플러그인이 저장한 데이터는 빠져요.';
-const OPENS = { risu: 'RisuAI 설정 › 플러그인에서 가져올 수 있어요.', hazelle: '플러그인 가져오기로 열 수 있어요.' };
+export const OPENS = { risu: 'RisuAI 설정 › 플러그인에서 가져올 수 있어요.', hazelle: '플러그인 가져오기로 열 수 있어요.' };
 
 export function PluginExport({ id, name, manifest, onClose }: { id: string; name: string; manifest: ToolManifest; onClose: () => void }) {
   const store = useStore();

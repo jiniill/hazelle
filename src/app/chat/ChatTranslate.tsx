@@ -1,7 +1,7 @@
 import { FEATURE_ICONS } from '../common/featureIcons';
 import { sendsNotes, type translatorOf } from '../../runtime/tasks/translate';
 import { PerCharacter, type PromptDoor } from '../common/TaskPrompt';
-import { TranslateRows } from '../common/TranslateRows';
+import { TRANSLATE_SWITCHES, TranslateRows } from '../common/TranslateRows';
 import { inFeature, NOTE_UNSENT, opens, scopeTag, TRANSLATOR_NOTE } from '../common/words';
 import { useSettings } from '../session';
 import { navigate } from '../shell/router';
@@ -22,7 +22,7 @@ type Props = {
   onEditCharacter: (() => void) | undefined;
 };
 
-const translateOn = (translate: Props['translate']) => [translate.replies && '응답 번역', translate.input && '내 메시지 번역', translate.reverse && '반전 모드'].filter(Boolean).join(', ');
+const translateOn = (translate: Props['translate']) => [translate.replies && TRANSLATE_SWITCHES.replies, translate.input && TRANSLATE_SWITCHES.input, translate.reverse && TRANSLATE_SWITCHES.reverse].filter(Boolean).join(', ');
 
 export const translateTool = (props: Props): RowTool => ({ key: 'translate', label: '번역', icon: FEATURE_ICONS.translate, live: translateOn(props.translate) !== '', node: <ChatTranslate {...props} />, open: <TranslateForm {...props} /> });
 

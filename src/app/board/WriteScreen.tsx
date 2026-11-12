@@ -12,7 +12,7 @@ import { CATEGORY_LOOK } from '../common/postRow';
 import { counted } from '../common/TextDialog';
 import { readPersisted } from '../common/usePersisted';
 import { useLoaded } from '../common/useLoaded';
-import { BOARD, DIAGNOSIS_NOTE } from '../common/words';
+import { BOARD, DIAGNOSIS_NOTE, DIAGNOSIS } from '../common/words';
 import { useAccount, useSession, useStanding } from '../session';
 import { useToast } from '../toast';
 import { backBar, navigate } from '../shell/router';
@@ -187,9 +187,9 @@ export function WriteScreen({ editing, operator, category: preset, back }: { edi
       {picturing && <DraftPictures pictures={pictures} />}
       {!editing && operatorOnly && (
         <Stack gap="related">
-          <Checkbox label="진단 정보 함께 보내기" checked={withReport} onChange={setWithReport} />
+          <Checkbox label={`${DIAGNOSIS} 함께 보내기`} checked={withReport} onChange={setWithReport} />
           <Text variant="note">{DIAGNOSIS_NOTE}</Text>
-          {attaching && (report === null ? <Text variant="note">진단 정보를 불러오는 중이에요.</Text> : <TextField label="진단 정보" lines={8} value={report} onChange={() => {}} readOnly />)}
+          {attaching && (report === null ? <Text variant="note">{`${DIAGNOSIS}를 불러오는 중이에요.`}</Text> : <TextField label={DIAGNOSIS} lines={8} value={report} onChange={() => {}} readOnly />)}
         </Stack>
       )}
       {failure && (

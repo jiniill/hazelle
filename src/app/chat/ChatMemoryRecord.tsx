@@ -7,7 +7,7 @@ import { EntryList } from '../common/EntryList';
 import { ago } from '../common/time';
 import { useAutosave } from '../common/useAutosave';
 import { withParticle } from '../common/particles';
-import { CHAPTER, REMOVE_FAILED, SAVE_FAILED } from '../common/words';
+import { CHAPTER, REMOVE_FAILED, SAVE_FAILED, FEATURE_NAMES } from '../common/words';
 import { useSession } from '../session';
 import { useToast } from '../toast';
 import { Button, Callout, List, ListItem, PhraseField, Row, Section, SettingGroup, SettingRow, SidePanel, Stack, Switch, Text, TextField, useWide } from '../ui';
@@ -80,8 +80,8 @@ export function ChatMemoryRecord({ chat, item, memory, view, failure, positions,
 
   return (
     <SidePanel
-      title="장기 기억"
-      nav={{ title: noun, description: span.words, backLabel: holder ? CHAPTER : '장기 기억', onBack: back, status: save.words }}
+      title={FEATURE_NAMES.memory}
+      nav={{ title: noun, description: span.words, backLabel: holder ? CHAPTER : FEATURE_NAMES.memory, onBack: back, status: save.words }}
       page={item.id}
       onClose={actions.closePanel}
     >

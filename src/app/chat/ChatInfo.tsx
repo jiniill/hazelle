@@ -11,7 +11,7 @@ import { ShortfallNote } from './CacheDiagnosis';
 import { SentLore, SentMemory, SentRequest, SentResponse } from './ChatSent';
 import { money } from '../common/money';
 import { cost, finish, seconds, speed, streaming, tokens } from '../common/receipt';
-import { DISCOUNT, PDF_SEND, PRE_READ, SAVE_FAILED, STAGE_NAMES, UNKNOWN } from '../common/words';
+import { DISCOUNT, PDF_SEND, PRE_READ, SAVE_FAILED, STAGE_NAMES, UNKNOWN, GENERATING, RESPONSE_RAW, REPLY_INFO, CACHE_READ } from '../common/words';
 import { infoReply } from './infoReply';
 import type { InfoTab, Side } from './panels';
 import type { OpenChat } from './useChat';
@@ -21,7 +21,7 @@ const TABS: { value: InfoTab; label: string }[] = [
   { value: 'lore', label: '로어북' },
   { value: 'memory', label: '기억' },
   { value: 'request', label: '요청 원문' },
-  { value: 'response', label: '응답 원문' },
+  { value: 'response', label: RESPONSE_RAW },
 ];
 
 const outcomeFacts = (receipt: Receipt) => [
@@ -74,8 +74,8 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
   const stepper = (
     <Switcher
       count={`${at + 1} / ${replies.length}`}
-      prev={{ label: '이전 응답 정보', disabled: at <= 0, onClick: () => onPick(replies[at - 1]!.id) }}
-      next={{ label: '다음 응답 정보', disabled: at >= replies.length - 1, onClick: () => onPick(replies[at + 1]!.id) }}
+      prev={{ label: `이전 ${REPLY_INFO}`, disabled: at <= 0, onClick: () => onPick(replies[at - 1]!.id) }}
+      next={{ label: `다음 ${REPLY_INFO}`, disabled: at >= replies.length - 1, onClick: () => onPick(replies[at + 1]!.id) }}
     />
   );
 
@@ -92,7 +92,7 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
   else if (live) {
     body = (
       <>
-        <Text variant="note">생성 중…</Text>
+        <Text variant="note">{GENERATING}</Text>
         {thought}
       </>
     );
@@ -112,7 +112,7 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
     const entry = chat ? log.entry(chat, receipt.id) : null;
     body = (
       <>
-        <Tabs label="응답 정보" items={TABS.filter((each) => each.value !== 'memory' || onRecord)} value={tab} onChange={onTab} />
+        <Tabs label={REPLY_INFO} items={TABS.filter((each) => each.value !== 'memory' || onRecord)} value={tab} onChange={onTab} />
         {earlier.length > 0 && tab !== 'reply' && <Text variant="note">마지막으로 이어 쓴 요청의 정보예요.</Text>}
         {tab === 'reply' && (
           <>
@@ -146,7 +146,7 @@ export function ChatInfo({ id: chat, shelf, messages, infoPick, tab: picked, onT
   }
 
   return (
-    <SidePanel title="응답 정보" description={version ? ago(version.at) : undefined} actions={replies.length > 1 && stepper} onClose={onClose}>
+    <SidePanel title={REPLY_INFO} description={version ? ago(version.at) : undefined} actions={replies.length > 1 && stepper} onClose={onClose}>
       {body}
     </SidePanel>
   );
@@ -197,7 +197,7 @@ function AgentCall({ chat, version, run: { agent, name, stage, receipt, note, me
       <Disclosure label="요청 원문">
         <SentRequest entry={entry} receipt={receipt} />
       </Disclosure>
-      <Disclosure label="응답 원문">
+      <Disclosure label={RESPONSE_RAW}>
         <SentResponse entry={entry} />
       </Disclosure>
       {kept !== undefined && (
@@ -257,7 +257,7 @@ function Call({ receipt, entry, onCache }: { receipt: Receipt; entry: LogEntry |
                     { label: '출력', value: tokens(usage.outputTokens), mark: 'outline' },
                   ]
                 : [
-                    { label: '캐시에서 읽음', value: tokens(cached), mark: 'accent' },
+                    { label: CACHE_READ, value: tokens(cached), mark: 'accent' },
                     { label: '새 입력', value: tokens(fresh), mark: 'plain' },
                     { label: '출력', value: tokens(usage.outputTokens), mark: 'outline' },
                   ]

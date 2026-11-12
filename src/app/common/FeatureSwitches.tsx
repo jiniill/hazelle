@@ -6,14 +6,14 @@ import { accountSettings } from '../../runtime/account-settings';
 import { useLibrary, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { ChoiceGroup, Section, SettingGroup, SettingRow } from '../ui';
-import { FEATURE_NAMES, FEATURES_TITLE, follows, LAYERS, onOff, SAVE_FAILED, scopeTag } from './words';
+import { FEATURE_NAMES, FEATURES_TITLE, follows, LAYERS, onOff, SAVE_FAILED, scopeTag, ONLY_THIS_CHAT } from './words';
 
 type Choice = 'default' | 'on' | 'off';
 
 const WORKS: Record<FeatureLayer['kind'], string> = {
   prompt: '이 프롬프트를 쓰는 채팅에 적용돼요.',
   character: '이 캐릭터의 모든 채팅에 적용돼요.',
-  chat: '지금 이 채팅에만 적용돼요.',
+  chat: ONLY_THIS_CHAT,
 };
 
 // Not 공용 for every layer: a character's follows the prompt, a chat's its character.

@@ -5,6 +5,7 @@ import { describeFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { useToast } from '../toast';
 import { Button, Callout, Dialog, TextField } from '../ui';
+import { ACTIONS } from './actions';
 
 // 보류 by a share's id, for what the operator learns without a report; 보류 풀기 marks the share reviewed.
 export function HoldShareDialog({ onClose, onActed }: { onClose: () => void; onActed: () => void }) {
@@ -26,7 +27,7 @@ export function HoldShareDialog({ onClose, onActed }: { onClose: () => void; onA
 
   return (
     <Dialog
-      title="링크 보류"
+      title={ACTIONS['hold-share']}
       onClose={onClose}
       actions={<>
         <Button variant="danger" busy={busy} disabled={!valid} onClick={() => void act(true)}>보류</Button>

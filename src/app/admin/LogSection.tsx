@@ -2,43 +2,12 @@ import type { LogRow, OwnCap } from '../../contracts/admin';
 import { readLog } from '../../runtime/service/admin';
 import { sizeText } from '../common/size';
 import { ago, moment } from '../common/time';
-import { BOARD, NOTICES, onOff, PULSE } from '../common/words';
+import { BOARD, onOff } from '../common/words';
+import { ACTIONS } from './actions';
 import { navigate } from '../shell/router';
 import { ListItem, Panel } from '../ui';
 import { restoreError } from '../common/RestoresDialog';
 import { HEAD_ROWS, PagedList, SeeAll, usePages } from '../common/useLoaded';
-
-const ACTIONS: Record<LogRow['action'], string> = {
-  suspend: '정지',
-  lift: '정지 해제',
-  'delete-account': '계정 삭제',
-  'set-service': '서비스 설정',
-  'set-board': '게시판 설정',
-  'set-backup-folder': '백업 폴더 설정',
-  'set-pulse': `${PULSE.title} 설정`,
-  'guest-block': '손님 글쓰기 차단',
-  'set-caps': '저장 한도',
-  'resolve-report': '신고 확인',
-  'send-notice': NOTICES.send,
-  'block-file': '파일 차단',
-  'unblock-file': '파일 차단 해제',
-  'hold-share': '링크 보류',
-  'release-share': '링크 보류 해제',
-  'block-share': '링크 차단',
-  'restore-begun': '복원 시작',
-  'restore-done': '복원 완료',
-  'restore-cancelled': '복원 취소',
-  'restore-failed': '복원 실패',
-  'post-status': '글 상태 변경',
-  'post-hide': '글 가림',
-  'post-show': '글 가림 해제',
-  'post-lock': '글 잠금',
-  'post-unlock': '글 잠금 해제',
-  'post-delete': '글 삭제',
-  'comment-hide': '댓글 가림',
-  'comment-show': '댓글 가림 해제',
-  'comment-delete': '댓글 삭제',
-};
 
 const capWords = (cap: OwnCap) => (typeof cap === 'number' ? sizeText(cap) : cap === 'default' ? '기본값' : '없음');
 const held = ({ reason, days }: { reason: string; days: number | null }) => `${reason}${days === null ? '' : ` · ${days}일`}`;

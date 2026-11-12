@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { ApiFailure } from '../runtime/api';
 import { noteProblem } from '../runtime/diagnostics/diagnostics';
 import { describeFailure } from './common/failure';
-import { REPORT_FAILURE, UNDO } from './common/words';
+import { REPORT_FAILURE, UNDO, UNDO_FAILED } from './common/words';
 import { SHORTCUTS, typing, useShortcut } from './shortcuts';
 import { Toast, ToastStack, type ToastAction } from './ui';
 
@@ -91,7 +91,7 @@ export function ToastProvider({ standing, onReport, children }: { standing: Stan
       error: (message, extra) => void add(message, 'warn', extra),
       failed,
       settled,
-      undoable: (message, undo, detail) => add(message, 'plain', { detail, action: { label: UNDO, onClick: () => { const undone = undo(); if (undone) settled(undone, '되돌리지 못했어요.'); } } }, true),
+      undoable: (message, undo, detail) => add(message, 'plain', { detail, action: { label: UNDO, onClick: () => { const undone = undo(); if (undone) settled(undone, UNDO_FAILED); } } }, true),
       said: (from, text, tone) => void add(text, tone, { from }),
     };
   }, []);

@@ -12,6 +12,7 @@ import { useAttempt } from '../common/useAttempt';
 import { Button, Callout, Checkbox, Dialog, Stack, Text } from '../ui';
 import { NOTICE_TEXT } from './notice';
 import { shareTags } from './shareTags';
+import { ACTIONS } from './actions';
 
 type ShareReport = Report & { share: string; shareVersion: number; link: string };
 
@@ -49,7 +50,7 @@ export function ShareReportDialog({ report, onClose, onActed }: { report: ShareR
     return (
       <TextDialog
         {...NOTICE_TEXT}
-        title="링크 차단"
+        title={ACTIONS['block-share']}
         note={`버전 ${report.shareVersion}`}
         label="공유한 사람에게 보낼 알림"
         placeholder="예: 미성년자로 보이는 캐릭터의 성적인 이미지가 있어 링크를 내렸어요."

@@ -10,7 +10,7 @@ import { CHARACTER_SORTS, useCharacterSort, useReorder, useSortedLibrary } from 
 import { TASK_NAMES } from '../../common/prompt-words';
 import { useSearch } from '../../common/useSearch';
 import { TUTORIAL, useTutorials } from '../../common/Tutorial';
-import { BIN, EMPTY_FOLDER, MODEL_SETTINGS, PAGES } from '../../common/words';
+import { BIN, EMPTY_FOLDER, MODEL_SETTINGS, PAGES, searchOf, THINGS } from '../../common/words';
 import { useBin } from '../../session';
 import { backBar, navigate } from '../../shell/router';
 import { BIN_PLACE, type Back } from '../../shell/routes';
@@ -71,7 +71,7 @@ export function GalleryScreen({ place, back, lead }: { place: string | null; bac
         ...rows(MODEL_SETTINGS, bin.profiles, binnedProfile, () => undefined),
       ]
     : [];
-  const search = useSearch<Entry>([...candidates, ...binEntries], binned ? `${BIN} 검색` : '캐릭터 검색', (entry) => (isBinEntry(entry) ? entry.texts : characterTexts(entry.character)));
+  const search = useSearch<Entry>([...candidates, ...binEntries], binned ? searchOf(BIN) : searchOf(THINGS.character.noun), (entry) => (isBinEntry(entry) ? entry.texts : characterTexts(entry.character)));
   // One folder's own characters, and every folder's while searching.
   const at = placeIn(library, binned ? null : place, binned || search.words !== '');
   const found = search.found.filter((entry): entry is CharacterShelf<ChatSummary> => !isBinEntry(entry));

@@ -4,6 +4,7 @@ import { ACTS } from '../../common/acts';
 import { ListItem, MenuItem, MoreMenu } from '../../ui';
 import { timeLeft } from '../shelf';
 import type { Binned, CharacterActions } from '../useCharacterActions';
+import { PURGE } from '../../common/words';
 
 type Props = {
   item: Binned;
@@ -37,7 +38,7 @@ export function BinnedItems({ item, actions, onPurge }: Pick<Props, 'item' | 'ac
   return (
     <>
       <MenuItem icon={ACTS.restore.icon} label={ACTS.restore.label} onClick={() => actions.restore(item)} />
-      <MenuItem icon={ACTS.remove.icon} label="영구 삭제" tone="warn" onClick={onPurge} />
+      <MenuItem icon={ACTS.remove.icon} label={PURGE} tone="warn" onClick={onPurge} />
     </>
   );
 }

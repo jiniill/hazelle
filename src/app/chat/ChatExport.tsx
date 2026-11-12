@@ -14,7 +14,7 @@ import { withParticle } from '../common/particles';
 import { sizeText } from '../common/size';
 import { useCopyHtml } from '../common/useCopy';
 import { useLoad } from '../common/useLoaded';
-import { ARCA_LOG, CHAT_FILE, EXPORT, RISU_CHAT_FILE, RISU_LOSES, risuLeftOut, STOP } from '../common/words';
+import { ARCA_LOG, CHAT_FILE, EXPORT, RISU_CHAT_FILE, RISU_LOSES, risuLeftOut, STOP, CHAT_LOADING } from '../common/words';
 import { useDisplay } from '../display';
 import { useFiles, useStore } from '../session';
 import { useToast } from '../toast';
@@ -54,7 +54,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, sh
   const [form, setForm] = useState<Form>('log');
   const [choices, setChoices] = useState<LogChoices>(() => ({ pictures: !display.hidePictures, hideMe: false, text: 'translation', from: messages.length > SHORT ? messages.length - LATEST + 1 : 1, to: messages.length }));
   const [range, setRange] = useState({ from: String(choices.from), to: String(choices.to) });
-  const waiting = busy ? '응답 중' : view.pass ? '채팅을 불러오는 중' : null;
+  const waiting = busy ? '응답 중' : view.pass ? CHAT_LOADING : null;
   const translated = messages.some((message) => message.versions.some((version) => version.translation));
   const change = (next: Partial<LogChoices>) => setChoices({ ...choices, ...next });
   const missing = choices.text === 'original' || waiting ? [] : untranslated(messages, view, choices);

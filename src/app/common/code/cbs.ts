@@ -7,6 +7,9 @@ import { particleOf, withParticle } from '../particles';
 import { COMMANDS, type Command } from './cbsCommands';
 import { variableDoc, variableItems, type Variables } from './variables';
 
+// Why a tag stays as written, in the editor's marks and the trial's steps.
+export const KEPT_TAGS = { unknown: '알 수 없는 명령어라 입력한 그대로 남아요.', unsupported: '헤이젤에서 지원하지 않는 명령어라 입력한 그대로 남아요.', args: '인자가 부족하거나 형식이 맞지 않아 입력한 그대로 남아요.' } as const;
+
 // Text one field puts in before CBS runs: a card's instructions take {{original}} (pipeline.ts), a regex's
 // replacement {{data}} (regex/scripts.ts). Both replace only the exact spelling.
 type CbsPlaceholder = 'original' | 'data';
@@ -114,7 +117,7 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
       const exact = `{{${placeholder}}}`;
       if (text.slice(node.at, node.end) !== exact) problem(node.at, node.end, 'warning', `${exact} 그대로 적어야 바뀌어요.`, { label: `${exact}${particleOf(placeholder, '으로/로')} 바꾸기`, insert: exact });
     } else if (known(name)) return;
-    else if (isUnsupportedTag(word)) problem(node.at, node.end, 'warning', '헤이젤에서 지원하지 않는 명령어라 입력한 그대로 남아요.');
+    else if (isUnsupportedTag(word)) problem(node.at, node.end, 'warning', KEPT_TAGS.unsupported);
     else if (!isProse(word)) unknown(name, found, TAG_POOL);
   };
 
@@ -123,7 +126,7 @@ function read(text: string, placeholder: CbsPlaceholder | undefined): Reading {
     const at = name.startsWith('#') ? nameAt + 1 : nameAt;
     const to = nameAt + name.length;
     if (near) problem(at, to, 'warning', `${near}의 오타 같아요.`, { label: `${withParticle(near, '으로/로')} 바꾸기`, insert: near });
-    else problem(at, to, 'warning', '알 수 없는 명령어라 입력한 그대로 남아요.');
+    else problem(at, to, 'warning', KEPT_TAGS.unknown);
   };
 
   const blockOf = (node: Block) => {

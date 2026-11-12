@@ -3,7 +3,7 @@ import { ACTS, importOf, newOf } from '../common/acts';
 import { useImport } from '../common/importing';
 import { ago } from '../common/time';
 import { useSearch } from '../common/useSearch';
-import { moduleName, PAGES, TOOL, toolVersion } from '../common/words';
+import { moduleName, PAGES, TOOL, toolVersion, searchOf } from '../common/words';
 import { useModulesAndPlugins, usePluginDrafts } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -48,7 +48,7 @@ export function PluginsScreen({ back }: { back: Back | null }) {
   const { pick } = useImport();
   const { plugins } = useModulesAndPlugins();
   const use = useModuleUse();
-  const search = useSearch(plugins, '플러그인 검색', ({ module }) => [moduleName(module.value.name)]);
+  const search = useSearch(plugins, searchOf(TOOL), ({ module }) => [moduleName(module.value.name)]);
   const importing = (
     <Button variant="secondary" icon={ACTS.import.icon} onClick={pick}>
       {importOf(PAGES.plugins)}

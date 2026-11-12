@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { litIn } from '../../common/search';
 import { useSearch } from '../../common/useSearch';
 import { FEATURE_ICONS } from '../../common/featureIcons';
-import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS, TOOLS, LAB } from '../../common/words';
+import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS, TOOLS, LAB, SEARCH_RESULTS, searchOf } from '../../common/words';
 import { presetOf } from '../../common/reading';
 import { useDisplay } from '../../display';
 import { FEATURE_LABS, FEATURES, type Feature } from '../../../model/features';
@@ -113,13 +113,13 @@ function useSettingsSearch(places: Sought[]) {
     navigate(hit.to);
     if (hit.seek) seekRow(hit.seek);
   };
-  return { ...useSearch(hits, '설정 검색', hitTexts, { query, onEnter: open }), open };
+  return { ...useSearch(hits, searchOf(SETTINGS), hitTexts, { query, onEnter: open }), open };
 }
 
 // Each hit as where it stands, the words typed lit in the label they were found in.
 function Hits({ search }: { search: ReturnType<typeof useSettingsSearch> }) {
   return (
-    <List label="설정 검색 결과">
+    <List label={`${SETTINGS} ${SEARCH_RESULTS}`}>
       {search.found.map((hit) => (
         <FoundRow key={`${hit.where}/${hit.term}`} face={<Icon icon={hit.place.icon} size="sm" />} path={[...hit.where, litIn(hit.term, search.words)]} snippet={null} onClick={() => search.open(hit)} />
       ))}

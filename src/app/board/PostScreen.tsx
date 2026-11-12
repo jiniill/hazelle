@@ -30,7 +30,7 @@ import { ago, moment } from '../common/time';
 import { count, readCount } from '../common/typedNumber';
 import { useAttempt } from '../common/useAttempt';
 import { useLoaded } from '../common/useLoaded';
-import { BOARD, REMOVE_FAILED } from '../common/words';
+import { BOARD, REMOVE_FAILED, CHANGE_FAILED, DIAGNOSIS } from '../common/words';
 import { useAccount } from '../session';
 import { useSendKeys } from '../shortcuts';
 import { backBar, navigate } from '../shell/router';
@@ -136,7 +136,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
             key="lock"
             icon={post.locked ? LockOpen : Lock}
             label={post.locked ? '댓글 열기' : '댓글 닫기'}
-            onClick={() => act(() => setPostLocked(post.id, !post.locked), '바꾸지 못했어요.')}
+            onClick={() => act(() => setPostLocked(post.id, !post.locked), CHANGE_FAILED)}
           />,
           ...(post.visibility === 'operator' && post.account
             ? [<MenuItem key="restore" icon={History} label="이 글로 복원" onClick={() => setAsking({ kind: 'restore', account: post.account! })} />]
@@ -172,7 +172,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
         )}
         {live ? <Written text={post.text!} /> : <Text variant="note">삭제된 글이에요.</Text>}
         <PostPictures post={post} reload={reload} />
-        {admin && post.diagnostics !== null && <TextField label="진단 정보" lines={8} value={post.diagnostics} onChange={() => {}} readOnly />}
+        {admin && post.diagnostics !== null && <TextField label={DIAGNOSIS} lines={8} value={post.diagnostics} onChange={() => {}} readOnly />}
         {live && post.visibility === 'public' && (
           <Row kind="center">
             {guest ? <PostStat icon={ThumbsUp} label={BOARD.vote} count={count(vote.votes)} /> : <VoteButton label={vote.voted ? `${voteLabel}, 추천함` : voteLabel} word={BOARD.vote} count={count(vote.votes)} pressed={vote.voted} onClick={vote.onFlip} />}

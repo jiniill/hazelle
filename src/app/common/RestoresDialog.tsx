@@ -5,7 +5,7 @@ import type { ServerError } from '../../contracts/http';
 import type { ApiResult } from '../../runtime/api';
 import { beginRestore, continueRestore, readPoints, readRestores } from '../../runtime/account/restores';
 import { ago, moment } from './time';
-import { RESTORE_SPAN } from './words';
+import { RESTORE_SPAN, RESTORES } from './words';
 import { useAttempt } from './useAttempt';
 import { useLoaded } from './useLoaded';
 import { useToast } from '../toast';
@@ -173,12 +173,12 @@ export function RestoresDialog({ operated, onClose, onActed }: { operated: Opera
             )}
           </Section>
         )}
-        <Section level={3} title="복원 기록" help={begins ? undefined : "복원은 해당 계정이 작성한 '운영자에게만' 글에서 시작할 수 있어요."}>
+        <Section level={3} title={RESTORES} help={begins ? undefined : "복원은 해당 계정이 작성한 '운영자에게만' 글에서 시작할 수 있어요."}>
           {restores.loading}
           {restores.failure}
           {restores.data && restores.data.length === 0 && <Empty variant="section">아직 복원한 기록이 없어요.</Empty>}
           {restores.data && restores.data.length > 0 && (
-            <List label="복원 기록">
+            <List label={RESTORES}>
               {restores.data.map((restore) => {
                 const undoable = restore.canUndo && begins;
                 return (

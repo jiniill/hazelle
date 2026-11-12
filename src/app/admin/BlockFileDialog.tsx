@@ -5,6 +5,7 @@ import { describeFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { useToast } from '../toast';
 import { Button, Callout, Dialog, TextField } from '../ui';
+import { ACTIONS } from './actions';
 
 // A block refuses the file to every account; its body stays, so lifting the block brings it back.
 export function BlockFileDialog({ onClose, onActed }: { onClose: () => void; onActed: () => void }) {
@@ -25,7 +26,7 @@ export function BlockFileDialog({ onClose, onActed }: { onClose: () => void; onA
 
   return (
     <Dialog
-      title="파일 차단"
+      title={ACTIONS['block-file']}
       onClose={onClose}
       actions={<>
         <Button variant="danger" busy={busy} disabled={!valid} onClick={() => void block(true)}>차단</Button>

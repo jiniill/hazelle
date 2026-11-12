@@ -18,7 +18,7 @@ import { ACTS } from '../common/acts';
 import { ImportContext } from '../common/importing';
 import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import { useSearch } from '../common/useSearch';
-import { BIN, MISSED, NO_CHARACTER, THINGS, TOOL, UNREADABLE_FILE, WRONG_PASSWORD } from '../common/words';
+import { BIN, MISSED, NO_CHARACTER, THINGS, TOOL, UNREADABLE_FILE, WRONG_PASSWORD, searchOf, IMPORTING } from '../common/words';
 import { useFiles, useLibrary, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import type { Route } from '../shell/routes';
@@ -176,7 +176,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       else if (!opened.ok) rows.push({ file, failure: UNPACK_FAILURE[opened.failure] });
       else {
         files.push(...opened.files);
-        if (opened.files.length === 0) rows.push({ file, failure: '가져올 수 있는 파일이 없어요.' });
+        if (opened.files.length === 0) rows.push({ file, failure: IMPORTING.empty });
         else if (opened.skipped.length > 0) rows.push({ file, failure: skippedLine(opened.skipped) });
       }
     }
@@ -294,9 +294,9 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     state?.kind === 'downloading' ? '파일 받는 중'
     : state?.kind === 'choosing' ? '받을 파일을 골라요'
     : state?.kind === 'reading' ? '파일 읽는 중'
-    : state?.kind === 'saving' ? '가져오는 중'
-    : state?.kind === 'preview' ? (ready.length > 0 || locked ? '가져올까요?' : '가져오지 못했어요')
-    : results.some((result) => result.kind !== 'failed') ? '가져왔어요' : '가져오지 못했어요';
+    : state?.kind === 'saving' ? IMPORTING.busy
+    : state?.kind === 'preview' ? (ready.length > 0 || locked ? '가져올까요?' : IMPORTING.failed)
+    : results.some((result) => result.kind !== 'failed') ? '가져왔어요' : IMPORTING.failed;
   const actions =
     state?.kind === 'preview' ? (ready.length > 0 ? (
       <Button disabled={ticked.length === 0} onClick={() => void run(ticked, state.place)}>
@@ -482,7 +482,7 @@ function ChoiceField({ choice, onChange }: { choice: Choice; onChange: (choice: 
 
 function CharacterChoice({ picked, onPick }: { picked: string | null; onPick: (id: string | null) => void }) {
   const { characters } = useLibrary();
-  const search = useSearch(characters, '캐릭터 검색', ({ character }) => characterTexts(character));
+  const search = useSearch(characters, searchOf(THINGS.character.noun), ({ character }) => characterTexts(character));
   const chosen = characters.find(({ id }) => id === picked)?.character;
   const name = chosen ? aliased(chosen.card.name, chosen.alias) : NO_CHARACTER;
   return (

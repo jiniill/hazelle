@@ -27,7 +27,7 @@ import { typedText, useTypedNumber } from './typed';
 import { count, readCount, readOptional, reader } from './typedNumber';
 import { useAutosave } from './useAutosave';
 import { useSearch } from './useSearch';
-import { follows, LORE_SCAN_WORDS, loreName, SAVE_FAILED, SCOPE } from './words';
+import { follows, LORE_SCAN_WORDS, loreName, SAVE_FAILED, SCOPE, searchOf, LOREBOOK, FIELD_ERRORS, SECONDARY_KEYS } from './words';
 
 type Position = Lore['position'];
 const POSITIONS: { value: NonNullable<Position> | 'lorebook'; label: string }[] = [
@@ -35,7 +35,6 @@ const POSITIONS: { value: NonNullable<Position> | 'lorebook'; label: string }[] 
   { value: 'before_char', label: `${SLOT.description.name} 앞` },
   { value: 'after_char', label: `${SLOT.description.name} 뒤` },
 ];
-const NUMBER_ERROR = '숫자를 입력해 주세요.';
 const NO_FOLDER = '폴더 없음';
 const ENTRY = '항목';
 const KEYS_SHOWN = 3;
@@ -180,7 +179,7 @@ export function LoreEditor({ owner, folders, variables }: { owner: LoreOwner; fo
 
   const rows = (list: readonly Stored<'lore'>[]) => list.map((entry) => <EntryRow key={entry.id} stored={entry} folders={folders} language={language} trial={trial.cbs} rows={openRows} />);
   const [loose, ...grouped] = groups;
-  const search = useSearch(entries, '로어북 검색', ({ value }) => [loreName(value.name), ...value.keys]);
+  const search = useSearch(entries, searchOf(LOREBOOK), ({ value }) => [loreName(value.name), ...value.keys]);
   const listed = entries.length === 0 && folders.length === 0 ? (
     <Empty variant="section">항목이 없어요.</Empty>
   ) : (
@@ -303,9 +302,9 @@ function EntryFields({ shown, folders, language, trial, change }: FieldsProps) {
       <TextField label="이름" value={shown.name} onChange={(name) => change({ name })} />
       <SettingGroup label="키워드">
         <SettingRow label="키워드" help="최근 대화에 이 중 하나라도 나오면 내용이 프롬프트에 들어가요." wide control={<PhraseField label="키워드" phrases={shown.keys} onChange={(keys) => change({ keys })} />} />
-        {toggle('selective', '보조 키워드 사용', '키워드 하나와 보조 키워드 하나가 함께 나와야 프롬프트에 들어가요.')}
+        {toggle('selective', `${SECONDARY_KEYS} 사용`, `키워드 하나와 ${SECONDARY_KEYS} 하나가 함께 나와야 프롬프트에 들어가요.`)}
         {shown.selective && (
-          <SettingRow label="보조 키워드" wide control={<PhraseField label="보조 키워드" phrases={shown.secondaryKeys} onChange={(secondaryKeys) => change({ secondaryKeys })} />} />
+          <SettingRow label={SECONDARY_KEYS} wide control={<PhraseField label={SECONDARY_KEYS} phrases={shown.secondaryKeys} onChange={(secondaryKeys) => change({ secondaryKeys })} />} />
         )}
         {toggle('useRegex', '정규식 사용', '키워드를 /패턴/ 또는 /패턴/플래그 형식의 정규식으로 인식해요.')}
         {toggle('caseSensitive', '대소문자 구분')}
@@ -317,14 +316,14 @@ function EntryFields({ shown, folders, language, trial, change }: FieldsProps) {
         <SettingRow
           label="순서"
           help="숫자가 클수록 프롬프트 뒤쪽에 들어가요."
-          error={orderValid ? undefined : NUMBER_ERROR}
+          error={orderValid ? undefined : FIELD_ERRORS.number}
           control={<NumberInput label="순서" value={order} invalid={!orderValid} onChange={changeOrder} />}
         />
         <SettingRow
           label="우선순위"
           help="로어북 최대 분량을 넘으면 숫자가 큰 항목부터 먼저 넣어요."
           changed={shown.priority !== null}
-          error={priorityValid ? undefined : NUMBER_ERROR}
+          error={priorityValid ? undefined : FIELD_ERRORS.number}
           control={<NumberInput label="우선순위" value={priority} placeholder="순서와 같음" invalid={!priorityValid} onChange={changePriority} />}
         />
         <SettingRow

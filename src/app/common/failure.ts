@@ -29,7 +29,7 @@ import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
 import { SORT_PROMPT, defaultPrompt } from './prompt-words';
-import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE } from './words';
+import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -100,7 +100,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'too-many-posts': `글은 하루에 ${count(POSTS_PER_DAY)}개까지 쓸 수 있어요.`,
   'too-many-comments': `댓글은 하루에 ${count(COMMENTS_PER_DAY)}개까지 쓸 수 있어요.`,
   'too-many-pictures': `사진은 글 하나에 ${count(MAX_POST_PICTURES)}장, 하루에 ${count(PICTURES_PER_DAY)}장까지 올릴 수 있어요.`,
-  'bad-picture': '이 사진은 올릴 수 없어요.',
+  'bad-picture': BAD_PICTURE,
   'too-many-visits': '요청을 너무 자주 보냈어요. 잠시 뒤에 다시 시도해 주세요.',
   'too-many-shares': `링크는 ${count(SHARE_LIMITS.links)}개까지 만들 수 있어요. 안 쓰는 링크를 끊고 다시 시도해 주세요.`,
   'too-many-versions': `링크 하나에 새 버전은 ${count(SHARE_LIMITS.versions)}번까지 올릴 수 있어요. 링크를 끊고 새로 공유해 주세요.`,
@@ -293,6 +293,7 @@ export function describeKeyFailure(failure: KeyFailure): string {
 
 export const RUNAWAY_FIX = '캐릭터나 로어북, 프롬프트, 메시지 안에서 서로를 끝없이 호출하는 명령어가 있어요. 해당 명령어를 수정해 주세요.';
 export const runaway = (before: string) => `명령어 실행 결과가 너무 길어서 ${before} 멈췄어요. ${RUNAWAY_FIX}`;
+export const LORE_RUNAWAY = runaway('로어북을 스크립트에 넘기기 전에');
 
 const noDefault = (sort: PromptSort) => `${defaultPrompt(sort)}가 없어요. ${inSettings('prompts')}에서 ${SORT_PROMPT[sort]} 하나를 기본으로 지정해 주세요.`;
 

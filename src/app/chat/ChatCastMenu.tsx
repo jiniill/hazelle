@@ -3,7 +3,7 @@ import { CAST_MAX } from '../../model/chat';
 import { characterTexts } from '../../model/library';
 import { aliased } from '../common/alias';
 import { useSearch } from '../common/useSearch';
-import { CAST } from '../common/words';
+import { CAST, searchOf, THINGS, deletedOf } from '../common/words';
 import { useLibrary } from '../session';
 import { Avatar, Empty, Menu, MenuHeading, MenuItem, type MenuHandle } from '../ui';
 type Choices = { cast: string[]; character: string | null; onChange: (ids: string[]) => void };
@@ -27,7 +27,7 @@ export function ChatCastMenu({ handle, ...choices }: Choices & { handle: MenuHan
 function CastChoices({ cast, character, onChange }: Choices) {
   const { characters } = useLibrary();
   const offered = characters.filter(({ id }) => id !== character);
-  const { field, found, none } = useSearch(offered, '캐릭터 검색', ({ character }) => characterTexts(character));
+  const { field, found, none } = useSearch(offered, searchOf(THINGS.character.noun), ({ character }) => characterTexts(character));
   const gone = cast.filter((id) => !offered.some((each) => each.id === id));
   const full = cast.length >= CAST_MAX;
   const flip = (id: string) => onChange(toggle(cast, id));
@@ -48,7 +48,7 @@ function CastChoices({ cast, character, onChange }: Choices) {
         />
       ))}
       {gone.map((id) => (
-        <MenuItem key={id} label="삭제된 캐릭터" tone="muted" checked multiple onClick={() => flip(id)} />
+        <MenuItem key={id} label={deletedOf(THINGS.character.noun)} tone="muted" checked multiple onClick={() => flip(id)} />
       ))}
     </>
   );

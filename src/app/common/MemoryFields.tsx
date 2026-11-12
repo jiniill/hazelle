@@ -3,7 +3,7 @@ import type { MemorySettings } from '../../model/memory';
 import { DetailFold } from './DetailFold';
 import { typedText } from './typed';
 import { readCount } from './typedNumber';
-import { MODEL_ROLES } from './words';
+import { MODEL_ROLES, FEATURE_NAMES } from './words';
 import { Breakdown, NumberInput, SettingGroup, SettingRow, Switch } from '../ui';
 
 type Count = 'budget' | 'window' | 'batch';
@@ -72,8 +72,8 @@ export function MemoryFields({ value, onChange, label = '사용', rows: more, ch
       set={0}
       above={
         <>
-          <SettingGroup label="장기 기억">
-            <SettingRow label={label} help={MEMORY_HELP} control={<Switch label="장기 기억" checked={value.on} onChange={(on) => onChange({ on })} />} />
+          <SettingGroup label={FEATURE_NAMES.memory}>
+            <SettingRow label={label} help={MEMORY_HELP} control={<Switch label={FEATURE_NAMES.memory} checked={value.on} onChange={(on) => onChange({ on })} />} />
             {more}
           </SettingGroup>
           {children}

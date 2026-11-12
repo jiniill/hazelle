@@ -3,7 +3,7 @@ import type { CallPurpose, LogEntry } from '../../runtime/models/request-log';
 import { describeReplyError } from '../common/failure';
 import { cacheShare, finish, seconds, tokens } from '../common/receipt';
 import { ago } from '../common/time';
-import { FEATURE_NAMES, ROLE_TAGS, SCRIPTS, STAGE_NAMES, TOOL, UNKNOWN } from '../common/words';
+import { FEATURE_NAMES, ROLE_TAGS, SCRIPTS, STAGE_NAMES, TOOL, UNKNOWN, INPUT_TRANSLATION, RESPONSE_RAW } from '../common/words';
 import { useSession } from '../session';
 import { Button, Callout, Empty, List, ListItem, Section, Stack, Text } from '../ui';
 import { SentRequest, SentResponse } from './ChatSent';
@@ -13,7 +13,7 @@ const PAGE = 20;
 const PURPOSES: Record<CallPurpose, string> = {
   reply: '응답',
   translation: FEATURE_NAMES.translate,
-  input: '입력 번역',
+  input: INPUT_TRANSLATION,
   note: '번역가의 노트',
   memory: FEATURE_NAMES.memory,
   script: `${SCRIPTS.part}·${TOOL}`,
@@ -82,7 +82,7 @@ function Row({ entry, open, onToggle }: { entry: LogEntry; open: boolean; onTogg
           <Stack gap="related">
             {receipt.state === 'failed' && receipt.error && <Callout tone="warn">{describeReplyError(receipt.error)}</Callout>}
             <SentRequest entry={entry} receipt={receipt} />
-            <Section level={3} title="응답 원문">
+            <Section level={3} title={RESPONSE_RAW}>
               <SentResponse entry={entry} />
             </Section>
           </Stack>

@@ -14,7 +14,7 @@ import { describeIllustrateFailure } from './failure';
 import { readTyped } from './typedNumber';
 import { appliesTo, TaskModelRow, TaskPromptMenu, type PromptDoor } from './TaskPrompt';
 import { taskRuns } from './taskRuns';
-import { follows, NO_IMAGE_MODEL, NOT_STARRED, TASK_MODELS } from './words';
+import { follows, NO_IMAGE_MODEL, NOT_STARRED, TASK_MODELS, IMAGE_MODEL } from './words';
 
 type Props = {
   illustrate: IllustrateSetup;
@@ -39,7 +39,7 @@ export function IllustrateRows({ illustrate, sceneWriter, card, opens, onChange,
         control={<Switch label="자동 삽화" checked={illustrate.auto} onChange={(auto) => onChange({ auto })} />}
       />
       <SettingRow
-        label="이미지 모델"
+        label={IMAGE_MODEL}
         error={routes.length ? undefined : NO_IMAGE_MODEL}
         control={
           routes.length ? (
@@ -178,11 +178,11 @@ function ImageModelMenu({ routes, illustrate, card, opens, onPick }: Pick<Props,
   return (
     <Menu
       place={opens === 'up' ? 'above-end' : 'below-end'}
-      label="이미지 모델"
-      trigger={(opener) => <ChipButton variant="field" opens={opens} label={'kind' in choice ? NOT_STARRED : entryName(choice.model)} title="이미지 모델" tone={'kind' in choice ? 'warn' : 'plain'} {...opener} />}
+      label={IMAGE_MODEL}
+      trigger={(opener) => <ChipButton variant="field" opens={opens} label={'kind' in choice ? NOT_STARRED : entryName(choice.model)} title={IMAGE_MODEL} tone={'kind' in choice ? 'warn' : 'plain'} {...opener} />}
     >
       <MenuHeading>{appliesTo(card, illustrate.own)}</MenuHeading>
-      <MenuItem label={follows('첫 이미지 모델')} description={entryName(routes[0]!.model)} checked={!own} onClick={() => onPick({ model: undefined })} />
+      <MenuItem label={follows(`첫 ${IMAGE_MODEL}`)} description={entryName(routes[0]!.model)} checked={!own} onClick={() => onPick({ model: undefined })} />
       {routes.map(({ connection, model }) => (
         <MenuItem
           key={`${connection.id}/${entryKey(model)}`}

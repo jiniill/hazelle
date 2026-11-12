@@ -2,7 +2,7 @@ import { BookOpen, Braces } from 'lucide-react';
 import { Fragment, useState } from 'react';
 import type { PromptSort } from '../../model/prompt';
 import { useSearch } from '../common/useSearch';
-import { COMMAND } from '../common/words';
+import { COMMAND, SEARCH_RESULTS } from '../common/words';
 import { Button, Dialog, Empty, MarkupArea, Menu, MenuHeading, MenuItem, Row, Stack, Text } from '../ui';
 import { cbsLanguage } from '../common/code/cbs';
 import { COMMANDS, type Command, type GuideId } from '../common/code/cbsCommands';
@@ -55,7 +55,7 @@ function Commands({ sort, onInsert, onGuide }: { sort: PromptSort; onInsert: (co
       {search.words ? (
         search.none === null ? (
           <>
-            <MenuHeading>검색 결과</MenuHeading>
+            <MenuHeading>{SEARCH_RESULTS}</MenuHeading>
             {search.found.map((command) => item(command))}
           </>
         ) : (

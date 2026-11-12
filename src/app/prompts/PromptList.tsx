@@ -12,7 +12,7 @@ import { useSearch } from '../common/useSearch';
 import { counted } from '../common/pack';
 import { useConnections, usePrompts, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
-import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_ROLES, PAGES, promptName, STAGE_NAMES, THINGS, USED_IN } from '../common/words';
+import { AGENTS, defaultMark, EMPTY_FOLDER, MODEL_ROLES, PAGES, promptName, STAGE_NAMES, THINGS, USED_IN, SEARCH_RESULTS, searchOf, IN_USE } from '../common/words';
 import { Button, Callout, ChoiceGroup, Empty, FoldButton, Hint, Menu, MenuItem, Row, Stack, Table, Tabs, useMenuHandle, type TableColumn, type TableRow } from '../ui';
 import { useImport } from '../common/importing';
 import { EMPTY_USE, promptUseWords, usePromptUse } from '../common/usePromptUse';
@@ -108,7 +108,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
   const menuOf = (prompt: Stored<'prompt'>) => ({ handle: menu, onOpen: () => setAsked(prompt.id) });
 
   const badge = (prompt: Stored<'prompt'>) => defaultMark(isDefaultPrompt(settings, prompt), prompt.value.name);
-  const tags = (prompt: Stored<'prompt'>) => (prompt.id === inUse ? ['사용 중'] : []);
+  const tags = (prompt: Stored<'prompt'>) => (prompt.id === inUse ? [IN_USE] : []);
   // Only conversation prompts are used by chats; a translation prompt is chosen by a character's 번역.
   const usage = (prompt: Stored<'prompt'>) => (ofSort(prompt, 'conversation') ? promptUseWords(uses.get(prompt.id) ?? EMPTY_USE) : undefined);
   // What columnsOf names after the name, for the prompt's sort.
@@ -173,7 +173,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
     </Callout>
   ));
 
-  const search = useSearch(listed, '프롬프트 검색', (prompt) => [promptName(prompt.value.name)]);
+  const search = useSearch(listed, searchOf(THINGS.prompt.noun), (prompt) => [promptName(prompt.value.name)]);
 
   const adding =
     shown === 'agent' ? (
@@ -252,7 +252,7 @@ export function PromptList({ onPick, inUse, defaults = false, place, onGo, frame
           </>,
           (found) => (
             <Table
-              label="검색 결과"
+              label={SEARCH_RESULTS}
               columns={FOUND_COLUMNS}
               rows={found.toSorted(byPromptName).map((prompt) => {
                 const cells = [SORTS.find(({ sort }) => sort === sortOf(prompt.value))!.label, [whereIs(index, folderOf(prompt)), usage(prompt)].filter(Boolean).join(' · ') || null];

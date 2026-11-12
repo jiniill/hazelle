@@ -6,6 +6,7 @@ import { countFirstPage } from '../../runtime/service/first-page';
 import { LegalNotice } from '../common/LegalNotice';
 import { Beat, Brand, Button, Callout, ChoiceGroup, ExampleTalk, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps, Upcoming, WalkOnHint } from '../ui';
 import { EXAMPLE, type ExampleLine, type ExampleStrand } from './example';
+import { PICK_MODEL, LOADING_TITLE } from '../common/words';
 
 const Trial = lazy(() => import('./Trial').then(({ Trial }) => ({ default: Trial })));
 
@@ -86,7 +87,7 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
           <TrialSteps steps={trial.steps} at={step} />
           <PanelBody>
             {entered ? (
-              <Suspense fallback={<Progress title="불러오는 중" steps={[{ label: '연결 준비' }]} />}>
+              <Suspense fallback={<Progress title={LOADING_TITLE} steps={[{ label: '연결 준비' }]} />}>
                 <Trial
                   type={entered.type}
                   secret={entered.secret}
@@ -136,7 +137,7 @@ function KeyForm({ typed, onType, refused, privacy, onSkip, onEnter }: { typed: 
         <TextField label={`${type.label} API 키`} kind="key" value={typed.key} onChange={(key) => onType({ ...typed, key })} placeholder={type.keyForm?.placeholder} help={privacy} focus={refused !== null} />
         {refused && <Callout tone="warn" alert>{refused}</Callout>}
         <Row kind="actions">
-          <Button type="submit" disabled={!secret}>모델 선택</Button>
+          <Button type="submit" disabled={!secret}>{PICK_MODEL}</Button>
           {onSkip && <Button variant="ghost" onClick={onSkip}>{START_PAGE.trial.skip}</Button>}
         </Row>
         <WalkOnHint>{START_PAGE.trial.walkOn}</WalkOnHint>

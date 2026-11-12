@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TextField } from '../ui';
 import { filled, typedText } from './typed';
+import { FIELD_ERRORS } from './words';
 
 type Identity = { name: string; alias: string };
 
@@ -16,7 +17,7 @@ export function useIdentityFields({ name, alias, nameHelp, aliasExample, focus, 
         focus={focus && 'select'}
         value={shown}
         help={nameHelp}
-        error={shown.trim() ? undefined : '이름을 입력해 주세요.'}
+        error={shown.trim() ? undefined : FIELD_ERRORS.name}
         onChange={(value) => {
           setTyped(value);
           onChange({ name: value }, !!value.trim());

@@ -1,5 +1,5 @@
 import { cost, tokens } from '../common/receipt';
-import { COUNTING, STOP } from '../common/words';
+import { COUNTING, STOP, COST_ESTIMATE, OUTGOING } from '../common/words';
 import { Button, Callout, Progress, Row, Section, SidePanel, Stack, Text, TextField } from '../ui';
 import type { RunEnd } from './autopilot';
 import type { Autopilot, Outlook } from './useAutopilot';
@@ -11,7 +11,7 @@ type Props = { autopilot: Autopilot; busy: boolean; onClose: () => void };
 export function ChatAutopilot({ autopilot: { text, messages, outlook, running, end, write, start, stop }, busy, onClose }: Props) {
   return (
     <SidePanel title="오토파일럿" onClose={onClose}>
-      <TextField label="보낼 메시지" lines={8} value={text} onChange={write} readOnly={running !== null} hint="한 줄에 메시지 하나씩 보내요." help={HOW} />
+      <TextField label={OUTGOING} lines={8} value={text} onChange={write} readOnly={running !== null} hint="한 줄에 메시지 하나씩 보내요." help={HOW} />
       {running ? (
         <Stack gap="related">
           <Progress steps={[{ label: '보내는 중', done: running.at + 1, total: running.total }]} />
@@ -22,7 +22,7 @@ export function ChatAutopilot({ autopilot: { text, messages, outlook, running, e
         </Stack>
       ) : (
         <>
-          <Section title="예상 비용" help={basis(outlook)}>
+          <Section title={COST_ESTIMATE} help={basis(outlook)}>
             {outlook.kind === 'unsendable' ? <Callout tone="warn">{outlook.why}</Callout> : <Text>{`메시지 ${messages.length}개 · ${costLine(outlook)}`}</Text>}
           </Section>
           <Row kind="actions">

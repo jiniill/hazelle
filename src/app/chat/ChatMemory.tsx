@@ -14,7 +14,7 @@ import { taskRuns } from '../common/taskRuns';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
 import { useLoad } from '../common/useLoaded';
-import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag } from '../common/words';
+import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag, FEATURE_NAMES, ONLY_THIS_CHAT, UNDO_FAILED } from '../common/words';
 import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
@@ -67,7 +67,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
 
   async function revert() {
     if (!(await save.flush())) return;
-    toast.settled(setChatMemory(store, id, null), '되돌리지 못했어요.');
+    toast.settled(setChatMemory(store, id, null), UNDO_FAILED);
     setResets((count) => count + 1);
   }
 
@@ -79,13 +79,13 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   const rows = memoryRows(memory);
   const retry = { label: ACTS.retry.label, onClick: () => session.memory.retry(id) };
   const more = (
-    <MoreMenu of="장기 기억">
+    <MoreMenu of={FEATURE_NAMES.memory}>
       <MenuItem label="원문에서 전부 다시 만들기" onClick={() => setRebuilding(true)} />
     </MoreMenu>
   );
 
   return (
-    <SidePanel title="장기 기억" actions={holder ? undefined : more} onClose={onClose}>
+    <SidePanel title={FEATURE_NAMES.memory} actions={holder ? undefined : more} onClose={onClose}>
       {holder && (
         <Row kind="spread">
           <Text>{`${holder.tool.manifest.displayName} 플러그인이 장기 기억을 관리하고 있어요.`}</Text>
@@ -161,7 +161,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
         level={3}
         title="설정"
         tag={scopeTag(setup.own ? 'chat' : 'default')}
-        help={{ text: '여기서 바꾸면 지금 이 채팅에만 적용돼요.', open: { label: opens(inFeature('memory')), onClick: () => navigate({ kind: 'feature', feature: 'memory' }) } }}
+        help={{ text: `여기서 바꾸면 ${ONLY_THIS_CHAT}`, open: { label: opens(inFeature('memory')), onClick: () => navigate({ kind: 'feature', feature: 'memory' }) } }}
         action={
           setup.own && (
             <Button variant="link" onClick={() => void revert()}>

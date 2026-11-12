@@ -4,7 +4,7 @@ import type { CacheBreak, CacheForecast, CacheRecurrence } from '../../model/cac
 import type { Route } from '../../runtime/models/assignment';
 import { modelProfile } from '../../runtime/models/profiles';
 import { tokens } from '../common/receipt';
-import { MODEL_SETTINGS } from '../common/words';
+import { MODEL_SETTINGS, CACHE_BROKEN } from '../common/words';
 import { useCaptured } from '../session';
 import { SendNote } from '../ui';
 import { breakCauses, SHORT } from './CacheDiagnosis';
@@ -13,7 +13,6 @@ import type { CacheNotes } from './useSendNotes';
 
 const TITLE = '캐시 남은 시간';
 const PREFIX_TITLE = '캐시';
-export const BROKEN = '캐시 깨짐';
 
 // profile: the 모델 설정 the send goes out with, which 'off' names; null for an earlier request, whose 모델 설정 is not kept.
 export function why(broken: CacheBreak, profile: string | null): string {
@@ -74,7 +73,7 @@ export function useNow(until: number | null) {
 // a run of provider shortfalls on its connection.
 export function nextWarning(next: NonNullable<CacheNotes['next']>, recurrence: CacheRecurrence, profile: string | null): { words: string; why: string } | undefined {
   const { against } = next.forecast;
-  if (against?.broken) return { words: BROKEN, why: [why(against.broken, profile), breakCauses(next.diagnosis, against.broken), reads(against)].filter(Boolean).join(' ') };
+  if (against?.broken) return { words: CACHE_BROKEN, why: [why(against.broken, profile), breakCauses(next.diagnosis, against.broken), reads(against)].filter(Boolean).join(' ') };
   const streak = shortStreak(recurrence, next.route.connection.id);
   return streak === null ? undefined : { words: SHORT, why: `이 연결은 최근 ${streak}번 연속으로 캐시를 예상보다 적게 읽었어요.` };
 }

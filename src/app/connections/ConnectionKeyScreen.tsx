@@ -9,6 +9,7 @@ import type { Back } from '../shell/routes';
 import { Button, Callout, GuideMark, Intro, NavBar, Screen } from '../ui';
 import { connect } from './connect';
 import { KeyField } from './KeyField';
+import { PICK_MODEL } from '../common/words';
 
 export function ConnectionKeyScreen({ type, back }: { type: ConnectionType; back: Back }) {
   const session = useSession();
@@ -28,7 +29,7 @@ export function ConnectionKeyScreen({ type, back }: { type: ConnectionType; back
       onSubmit={submit}
       actions={
         <Button type="submit" busy={busy} disabled={!secret}>
-          모델 선택
+          {PICK_MODEL}
         </Button>
       }
     >

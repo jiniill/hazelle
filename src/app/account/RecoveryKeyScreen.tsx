@@ -5,6 +5,7 @@ import { Button, Callout, Checkbox, CodeCard, IconButton, Intro, Link, Screen, S
 import { download } from '../common/download';
 import { PRIVACY, TERMS } from '../common/legal';
 import { selfHost } from '../../runtime/installation';
+import { RECOVERY_KEY } from '../common/words';
 
 const FILENAME = 'hazelle-recovery.txt';
 
@@ -73,14 +74,14 @@ export function RecoveryKeyScreen({ username, recoveryKey, saved: savedBefore, f
       }
     >
       <Steps current={2} total={2} />
-      <Intro title="복구 키 저장">비밀번호를 잊어버렸을 때 필요해요.</Intro>
+      <Intro title={`${RECOVERY_KEY} 저장`}>비밀번호를 잊어버렸을 때 필요해요.</Intro>
       <Callout tone="warn">비밀번호와 복구 키를 모두 잃어버리면 누구도 데이터를 복원할 수 없어요.</Callout>
-      <CodeCard label="복구 키" code={recoveryKey} />
+      <CodeCard label={RECOVERY_KEY} code={recoveryKey} />
       {downloaded ? (
         <Callout tone="success">내보냈어요 · {FILENAME}</Callout>
       ) : (
         <Button variant="secondary" icon={ACTS.export.icon} onClick={save}>
-          {exportOf('복구 키 파일')}
+          {exportOf(`${RECOVERY_KEY} 파일`)}
         </Button>
       )}
       <Checkbox label="안전한 곳에 저장했어요" checked={saved} onChange={setSaved} />

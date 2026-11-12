@@ -2,15 +2,16 @@ import { useMemo, useState } from 'react';
 import { GONE, usageReport, type ModelUsage, type ReportWindow, type UsageGroup } from '../../model/usage';
 import { count } from '../common/typedNumber';
 import { spent, tally } from '../common/usage';
-import { NO_CHARACTER, PAGES } from '../common/words';
+import { NO_CHARACTER, PAGES, deletedOf, THINGS, SPANS, USAGE_FAILED } from '../common/words';
 import { LedgerWait, useLedger } from '../common/useLedger';
 import { SeeAll } from '../common/useLoaded';
 import { useChats, useLibrary, useSummaries } from '../session';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Bars, Empty, Facts, NavBar, Screen, Section, Shares, Tabs } from '../ui';
+import { ACTS } from '../common/acts';
 
-const WINDOWS: [ReportWindow, string][] = [['today', '오늘'], ['week', '이번 주'], ['month', '이번 달'], ['all', '전체']];
+const WINDOWS: ReportWindow[] = ['today', 'week', 'month', 'all'];
 const CHATS_SHOWN = 10;
 
 const day = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
@@ -34,17 +35,17 @@ export function UsageScreen({ back }: { back: Back | null }) {
   const titles = useMemo(() => new Map(summaries.map(({ parent, value }) => [parent, value.title])), [summaries]);
   const kept = useMemo(() => new Set(keptChats.map(({ id }) => id)), [keptChats]);
   const report = useMemo(() => view.kind === 'read' ? usageReport(view.calls, window, Date.now(), { chat: (id) => kept.has(id), character: (id) => library.byCharacter.has(id) }) : null, [view, window, kept, library]);
-  const characterName = (id: string | null) => (id === null ? NO_CHARACTER : id === GONE ? '삭제된 캐릭터' : library.byCharacter.get(id)!.character.card.name);
-  const chatName = (id: string | null) => (id === null ? '채팅 밖' : id === GONE ? '삭제된 채팅' : titles.get(id) ?? '새 채팅');
+  const characterName = (id: string | null) => (id === null ? NO_CHARACTER : id === GONE ? deletedOf(THINGS.character.noun) : library.byCharacter.get(id)!.character.card.name);
+  const chatName = (id: string | null) => (id === null ? '채팅 밖' : id === GONE ? deletedOf(THINGS.chat.noun) : titles.get(id) ?? ACTS.newChat.label);
   const total = report?.total;
   const chats = report?.chats ?? [];
 
   return (
     <Screen width="form" top={<NavBar title={PAGES.usage} {...backBar(back)} />}>
-      <Tabs label="기간" items={WINDOWS.map(([value, label]) => ({ value, label }))} value={window} onChange={setWindow} />
+      <Tabs label="기간" items={WINDOWS.map((value) => ({ value, label: SPANS[value] }))} value={window} onChange={setWindow} />
       <Section title="합계">
         {view.kind !== 'read' ? (
-          <LedgerWait view={view} retry={retry} failed="사용량을 불러오지 못했어요." />
+          <LedgerWait view={view} retry={retry} failed={USAGE_FAILED} />
         ) : total?.calls ? (
           <Facts
             variant="tiles"

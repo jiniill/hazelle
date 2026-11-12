@@ -1,6 +1,6 @@
 import { isToggle, type Block, type ChatRange, type ChatSlot, type RecentSlot, type Role, type TextBlock, type Toggle, type ToggleLine, type ToggleMark, type UnreadLine, type WrappedSlot } from '../../model/prompt';
 import type { PromptPatch } from '../../runtime/library/prompts';
-import { blockTitle, MARKS } from './blocks';
+import { blockTitle, MARKS, TRANSLATIONS } from './blocks';
 import { moved } from '../../model/fields';
 import { keyInUse, type LineAt, type LineMove, type ShownLine } from '../../model/toggles';
 import { SLOT } from '../common/prompt-words';
@@ -128,7 +128,7 @@ export function setTranslations(block: RecentSlot, on: boolean): Step {
       else next.translations = false;
       return next;
     });
-  return { label: titled(block, on ? '번역 포함' : '번역 제외'), block: block.id, undo: to(!on), redo: to(on) };
+  return { label: titled(block, TRANSLATIONS[on ? 'on' : 'off']), block: block.id, undo: to(!on), redo: to(on) };
 }
 
 export function setCache(block: Block, on: boolean): Step {

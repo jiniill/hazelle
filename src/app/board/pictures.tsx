@@ -6,11 +6,10 @@ import { postedPicture } from '../../runtime/files/picture';
 import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
-import { PICTURE_NOTE } from '../common/words';
+import { PICTURE_NOTE, BAD_PICTURE } from '../common/words';
 import { useAccount, useStanding } from '../session';
 import { Attachments, type Attached, Callout, ConfirmDialog, FileButton, Row, Stack, Text } from '../ui';
 
-const UNREADABLE = '이 사진은 올릴 수 없어요.';
 const label = (index: number) => `사진 ${index + 1}`;
 const shown = (key: string, url: string, index: number): Attached => ({ key, url, label: label(index), kind: 'picture', state: 'saved' });
 
@@ -26,7 +25,7 @@ export function useDraftPictures() {
   const add = async (files: File[]) => {
     const drawn = await Promise.all(files.slice(0, MAX_POST_PICTURES - items.length).map(postedPicture));
     const fit = drawn.flatMap((picture) => (picture ? [{ key: crypto.randomUUID(), url: URL.createObjectURL(new Blob([picture.bytes], { type: picture.type })), bytes: picture.bytes }] : []));
-    setFailure(fit.length < drawn.length ? UNREADABLE : null);
+    setFailure(fit.length < drawn.length ? BAD_PICTURE : null);
     setItems((now) => [...now, ...fit]);
   };
   const remove = (key: string) => {
@@ -101,7 +100,7 @@ export function PostPictures({ post, reload }: { post: Post; reload: () => void 
     run(async () => {
       for (const file of files.slice(0, MAX_POST_PICTURES - post.pictures.length)) {
         const picture = await postedPicture(file);
-        if (!picture) return UNREADABLE;
+        if (!picture) return BAD_PICTURE;
         const added = await addPostPicture(post.id, picture.bytes);
         if (!added.ok) return describeFailure(added);
       }

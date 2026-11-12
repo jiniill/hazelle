@@ -14,7 +14,7 @@ import { budgetCut } from './infoReply';
 import { navigate } from '../shell/router';
 import { recordScene, recordTitle } from './memory';
 import { tokens } from '../common/receipt';
-import { ANSWER_INSTRUCTION_LABEL, CHAPTER, COMMAND, inSettings, LORE_BUDGET_LABEL, loreName, opens, PRE_READ } from '../common/words';
+import { ANSWER_INSTRUCTION_LABEL, CHAPTER, COMMAND, inSettings, LORE_BUDGET_LABEL, loreName, opens, PRE_READ, SECONDARY_KEYS } from '../common/words';
 
 type Lore = NonNullable<Assembled['lore']>[number];
 
@@ -224,7 +224,7 @@ function RequestBody({ request, unbuilt }: { request: Pick<HttpRequest, 'url' | 
   );
 }
 
-const QUERY = { primary: '키워드', secondary: '보조 키워드', additional: '추가 키워드' } as const;
+const QUERY = { primary: '키워드', secondary: SECONDARY_KEYS, additional: '추가 키워드' } as const;
 
 function why({ why }: Lore, names: Map<string, string>): string {
   switch (why.kind) {

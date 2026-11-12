@@ -5,7 +5,7 @@ import { addProfile, modelProfile, removeProfile, restoreProfile, setDefaultProf
 import { ACTS, addOf } from '../common/acts';
 import { useSearch } from '../common/useSearch';
 import { saveWords } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SAVE_FAILED, SET_DEFAULT } from '../common/words';
+import { BIN_KEEPS, cannotRemove, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SAVE_FAILED, SET_DEFAULT, searchOf, SET_DEFAULT_FAILED } from '../common/words';
 import { useConnections, useProfiles, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -84,7 +84,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
                   <MenuItem
                     label={SET_DEFAULT}
                     description={`${MODEL_SETTINGS}을 따로 지정하지 않은 모델에 이 설정이 적용돼요`}
-                    onClick={() => toast.settled(setDefaultProfile(store, id), '기본으로 지정하지 못했어요.')}
+                    onClick={() => toast.settled(setDefaultProfile(store, id), SET_DEFAULT_FAILED)}
                   />
                 )}
                 <MenuItem label={resetTo(ORIGINAL)} disabled={Object.keys(shown).length === 0} onClick={() => void clearAll()} />
@@ -143,7 +143,7 @@ type Group = { connection: Stored<'connection'>; models: ProfileUser['model'][] 
 // Mounted only while the menu is open, so each opening starts with an empty search.
 function AddChoices({ groups, now, onPick }: { groups: Group[]; now: (model: Group['models'][number]) => string; onPick: (connection: string, model: string) => void }) {
   const choices = groups.flatMap(({ connection, models }) => models.map((model) => ({ connection, model })));
-  const search = useSearch(choices, '모델 검색', ({ connection, model }) => [...entryTerms(model), connection.value.label]);
+  const search = useSearch(choices, searchOf('모델'), ({ connection, model }) => [...entryTerms(model), connection.value.label]);
   const shown = groups.flatMap(({ connection }) => {
     const found = search.found.filter((choice) => choice.connection === connection);
     return found.length === 0 ? [] : [

@@ -7,7 +7,7 @@ import { ChoiceGroup, NumberInput, SettingRow, Switch, TextField } from '../ui';
 import { typedText } from './typed';
 import { readTyped } from './typedNumber';
 import { useAutosave } from './useAutosave';
-import { TOOL_FIELD_CHANGED } from './words';
+import { TOOL_FIELD_CHANGED, FIELD_ERRORS } from './words';
 
 const readNumber = (text: string) => {
   const typed = readTyped(text, false);
@@ -29,7 +29,7 @@ export function ToolSetting({ module, field, value: stored }: SettingProps) {
       setTyped(text);
       const number = readNumber(text);
       save.change({ value: number ?? text }, number !== null);
-    }} />, invalid ? '숫자를 입력해 주세요.' : undefined);
+    }} />, invalid ? FIELD_ERRORS.number : undefined);
   }
   const error = changedType ? TOOL_FIELD_CHANGED : undefined;
   if (field.type === 'text') return row(<TextField label={field.label} showLabel={false} value={value === undefined ? '' : String(value)} onChange={(value) => save.change({ value })} />, error, true);

@@ -6,7 +6,7 @@ import { ToggleFlip } from '../common/ToggleChoice';
 import { ToggleList } from '../common/ToggleList';
 import { useAutosave } from '../common/useAutosave';
 import { useSearch } from '../common/useSearch';
-import { onOff, PAGES, RESET, EMPTY_VALUE } from '../common/words';
+import { onOff, PAGES, RESET, EMPTY_VALUE, searchOf } from '../common/words';
 import { useSettings, useStore } from '../session';
 import { ChoiceGroup, Empty, IconButton, MenuItem, MoreMenu, Section, SettingRow, SidePanel, Stack, TextField } from '../ui';
 import { TogglePresets } from './TogglePresets';
@@ -35,7 +35,7 @@ export function ChatToggles({ card, toggles, toggleOwner, onFlip, onWrite, onRes
   const all = toggles.sections.flatMap((section) => section.rows);
   const changedKeys = () => new Set(all.filter((row) => row.changed).map((row) => row.toggle.key));
   const [first, setFirst] = useState(changedKeys);
-  const search = useSearch(all, '토글 검색', (row) => [row.toggle.label]);
+  const search = useSearch(all, searchOf('토글'), (row) => [row.toggle.label]);
   const found = new Set(search.found);
   const laying = filter === 'all' && !search.words;
   const visible = toggles.sections

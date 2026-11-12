@@ -7,7 +7,7 @@ import type { Shelf } from '../../../model/library';
 import { openCharacter } from '../../chat/characterBeside';
 import { ChatNameDialog, useChatEdits } from '../../chat/ChatEdits';
 import { ChatFolderMenu, useChatFolders } from '../../chat/ChatFolderMenu';
-import { ACTS } from '../../common/acts';
+import { ACTS, newOf } from '../../common/acts';
 import { groupCopies, latestFirst, type Copied } from '../../common/copies';
 import { FolderMenu, MOVE_TO_FOLDER, named, useMoving, useNaming } from '../../common/folders/FolderParts';
 import { useFolderIndex, whereIs } from '../../common/folders/filing';
@@ -143,7 +143,7 @@ export function ShelfChats({ page, shelf }: Props) {
               {ACTS.newChat.label}
             </Button>
             {moving.button}
-            <IconButton icon={FolderPlus} label="새 폴더" size="sm" onClick={() => naming.name({ id: null, name: '' })} />
+            <IconButton icon={FolderPlus} label={newOf('폴더')} size="sm" onClick={() => naming.name({ id: null, name: '' })} />
             <IconButton icon={ACTS.import.icon} label={IMPORT_CHATS} size="sm" onClick={() => pickChats(shelf.id)} />
           </Row>
           {field}

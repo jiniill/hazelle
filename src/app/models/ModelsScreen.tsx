@@ -10,7 +10,7 @@ import { findStarred, ROLE_ROWS, RoleCard } from '../common/RolePicker';
 import { defaultFirst, NO_PROFILE, NO_PROFILE_VALUES, profileLine, valuesLine } from '../common/settingWords';
 import { useSearch } from '../common/useSearch';
 import { ACTS, addOf, newOf } from '../common/acts';
-import { DEFAULT_MODELS_FAILED, defaultMark, makeFailed, FEATURE_NAMES, follows, IDLE_MODELS, MODEL_ROLES, MODEL_SETTINGS, NO_STARRED, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS } from '../common/words';
+import { DEFAULT_MODELS_FAILED, defaultMark, makeFailed, FEATURE_NAMES, follows, IDLE_MODELS, MODEL_ROLES, MODEL_SETTINGS, NO_STARRED, NOT_STARRED, PAGES, ROLE_TAGS, SCOPE, STARRED, PROMPT_MODELS, IMAGE_MODEL } from '../common/words';
 import { useConnections, useProfiles, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -122,7 +122,7 @@ export function ModelsScreen({ back }: { back: Back | null }) {
     const ref = refOf(connection.id, model);
     // List only distinguishing roles/nondefault profile; neighbouring profile list already shows values.
     // Image-only models have no profile.
-    const apart = imageOnly(model) ? '이미지 모델' : choice.kind !== 'profile' ? NO_PROFILE : choice.profile.id === settings.profile ? undefined : choice.profile.value.name;
+    const apart = imageOnly(model) ? IMAGE_MODEL : choice.kind !== 'profile' ? NO_PROFILE : choice.profile.id === settings.profile ? undefined : choice.profile.value.name;
     return (
       <ListItem
         key={`${connection.id}/${entryKey(model)}`}

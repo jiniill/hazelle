@@ -1,5 +1,6 @@
 import type { StatusBlock, StatusDefinition, StatusField, StatusWriter } from '../../model/status';
 import type { DraftProblem, FieldDraft, FieldKind } from './statusDraft';
+import { FIELD_ERRORS } from './words';
 
 // The words of the 상태 definition editor (design §6.1 part 1), all placeholders until the copy batch.
 export const STATUS_KIND: Record<FieldKind, { label: string; description: string }> = {
@@ -24,7 +25,7 @@ export const STATUS_WRITER: Record<StatusWriter, { label: string; description: s
 };
 
 export const STATUS_PROBLEM: Record<DraftProblem, string> = {
-  name: '이름을 입력해 주세요.',
+  name: FIELD_ERRORS.name,
   range: '최소는 최대보다 작은 숫자여야 해요.',
   start: '시작 값이 이 필드에 맞지 않아요.',
   labels: '단계를 둘 이상 적어 주세요.',

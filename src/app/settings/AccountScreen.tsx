@@ -13,7 +13,7 @@ import { useToast } from '../toast';
 import { LegalNotice } from '../common/LegalNotice';
 import { INSTALL_GUIDE } from '../common/legal';
 import { useLoaded } from '../common/useLoaded';
-import { AUTO_DIAGNOSIS, BIN, BOARD, PAGES, PULSE, UNKNOWN } from '../common/words';
+import { AUTO_DIAGNOSIS, BIN, BOARD, PAGES, PULSE, UNKNOWN, CHANGE_FAILED } from '../common/words';
 import { Avatar, Button, Columns, FaceRow, Gauge, Link, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
 import { BackupSection } from './BackupSection';
 import { Diagnostics } from './Diagnostics';
@@ -174,7 +174,7 @@ function AppInfo() {
   const settings = useSettings();
   const sharing = sharesPulse(settings);
   const diagnosing = sharesDiagnosis(settings);
-  const flip = (set: typeof setPulseSharing) => (on: boolean) => toast.settled(set(store, on), '바꾸지 못했어요.');
+  const flip = (set: typeof setPulseSharing) => (on: boolean) => toast.settled(set(store, on), CHANGE_FAILED);
   return (
     <Panel title="앱 정보">
       <SettingGroup label="앱 정보">

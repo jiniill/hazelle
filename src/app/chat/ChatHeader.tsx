@@ -6,7 +6,7 @@ import { FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
 import type { Writes } from '../../model/chat';
 import { pinnedBy } from '../../runtime/models/assignment';
-import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, ONBOARDING, promptName, PHONE, STATUS_DETAIL } from '../common/words';
+import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, ONBOARDING, promptName, PHONE, STATUS_DETAIL, READING_SETTINGS } from '../common/words';
 import { useRemembering, useSession, useToolFrames } from '../session';
 import { navigate } from '../shell/router';
 import { runShortcut } from '../shortcuts';
@@ -32,7 +32,7 @@ export function ChatHeading({ chat }: { chat: OpenChat }) {
   return (
     <ChatTitle
       name={card?.name ?? NO_CHARACTER}
-      description={item?.title ?? '새 채팅'}
+      description={item?.title ?? ACTS.newChat.label}
       face={shelf && card && <Avatar face={card.name} image={shelf.face} size="sm" />}
       expanded={shelf ? open : undefined}
       onClick={shelf ? () => (open ? actions.closePanel() : actions.side({ kind: 'character', id: shelf.id, part: null })) : undefined}
@@ -104,7 +104,7 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
           {tools.map((tool) => <MenuItem key={`${tool.module}:${tool.kind === 'page' ? 'page' : `menu:${tool.item}`}`} icon={Package} label={tool.label} description={tool.name} checked={tool.kind === 'page' ? panel?.kind === 'tool' && panel.module === tool.module : undefined} onClick={() => tool.kind === 'page' ? actions.tool(tool.module) : actions.toolMenu(tool.module, tool.item)} />)}
         </>}
         <Divider variant="menu" />
-        <MenuItem icon={BookOpen} label="읽기 설정" onClick={() => actions.openDialog('reading')} />
+        <MenuItem icon={BookOpen} label={READING_SETTINGS} onClick={() => actions.openDialog('reading')} />
         <MenuItem icon={Keyboard} label="단축키" onClick={() => runShortcut('shortcutList')} />
         {item && (
           <>

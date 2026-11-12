@@ -11,7 +11,7 @@ import { useSearch } from '../common/useSearch';
 import { folderNote, placeIn, useFolderIndex, whereIs } from '../common/folders/filing';
 import { FOLDER_COLUMNS, FolderPath, useMoving, useNaming } from '../common/folders/FolderParts';
 import { useFolderActions } from '../common/folders/useFolderActions';
-import { ALWAYS, EMPTY_FOLDER, moduleName, PAGES, SCRIPTS, THINGS, USED_IN } from '../common/words';
+import { ALWAYS, EMPTY_FOLDER, moduleName, PAGES, SCRIPTS, THINGS, USED_IN, searchOf, NOT_USED } from '../common/words';
 import { useChildrenOf, useLibrary, useModulesAndPlugins, usePersonas, usePrompts, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -83,7 +83,7 @@ const SECTIONS: { place: Place; title: string }[] = [
   { place: 'prompt', title: `${THINGS.prompt.noun} ${THINGS.module.noun}` },
   { place: 'character', title: `${THINGS.character.noun} ${THINGS.module.noun}` },
   { place: 'persona', title: `${THINGS.persona.noun} ${THINGS.module.noun}` },
-  { place: 'none', title: '사용 안 함' },
+  { place: 'none', title: NOT_USED },
 ];
 
 const figure = (count: number) => (count > 0 ? count : null);
@@ -97,7 +97,7 @@ export function ModulesScreen({ place, back }: { place: string | null; back: Bac
   const { pick } = useImport();
   const { modules } = useModulesAndPlugins();
   const use = useModuleUse();
-  const search = useSearch(modules, '모듈 검색', ({ value }) => [moduleName(value.name)]);
+  const search = useSearch(modules, searchOf(THINGS.module.noun), ({ value }) => [moduleName(value.name)]);
   const index = useFolderIndex('module', modules, folderOf);
   const at = placeIn(index, place, search.words !== '');
   const folderActions = useFolderActions('module');

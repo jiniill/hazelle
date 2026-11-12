@@ -4,17 +4,18 @@ import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
 import { Disclosure, Empty, Panel, Stack, TextField } from '../ui';
 import { seoulMonthDay } from './seoul';
+import { TURN_FAILED, FEATURE_NAMES, MEMORY_GAP, CACHE_BROKEN } from '../common/words';
 
 const EVENTS: Record<AutoEvent, string> = {
   'app-error': '앱 오류',
   'worker-trouble': '워커 오류',
   'evaluation-stuck': '봇 스크립트 멈춤',
-  'turn-failed': '응답 실패',
-  'memory-failed': '장기 기억 실패',
-  'memory-gap': '기억에 없음',
-  'memory-gap-ended': '기억에 없음 사라짐',
+  'turn-failed': TURN_FAILED,
+  'memory-failed': `${FEATURE_NAMES.memory} 실패`,
+  'memory-gap': MEMORY_GAP,
+  'memory-gap-ended': `${MEMORY_GAP} 사라짐`,
   'chat-unopened': '채팅 열기 실패',
-  'cache-broken': '캐시 깨짐',
+  'cache-broken': CACHE_BROKEN,
 };
 const HELP = '문제별로 그날 겪은 사람 수와 횟수를 보여 줘요. 사람은 날마다 새로 세요.';
 

@@ -8,7 +8,7 @@ import { sizeText } from '../common/size';
 import { monthDay } from '../common/time';
 import { count } from '../common/typedNumber';
 import { SeeAll } from '../common/useLoaded';
-import { NOTICES, UNKNOWN } from '../common/words';
+import { NOTICES, UNKNOWN, RESTORES } from '../common/words';
 import { RestoresDialog } from '../common/RestoresDialog';
 import { TextDialog } from '../common/TextDialog';
 import { useSession } from '../session';
@@ -18,6 +18,7 @@ import { ConfirmDialog, Empty, MenuItem, MoreMenu, Panel, Table, Tag, type Table
 import { CapsDialog } from './CapsDialog';
 import { NOTICE_TEXT } from './notice';
 import type { useAccounts } from './useAccounts';
+import { ACTIONS } from './actions';
 
 const STATES: Record<AccountState, string | null> = { active: null, restoring: '복원 중', leaving: '탈퇴 중' };
 
@@ -110,16 +111,16 @@ export function AccountsSection({ loaded, total, onActed, children }: { loaded: 
                     <MenuItem icon={ACTS.remove.icon} label="탈퇴 마무리" description="중단된 탈퇴 처리를 끝내요" tone="warn" onClick={() => setRemoving(account)} />
                   ) : (
                     <>
-                      <MenuItem icon={HardDrive} label="저장 한도" onClick={() => setCapping(account)} />
-                      <MenuItem icon={History} label="복원 기록" onClick={() => setRestoring(account)} />
+                      <MenuItem icon={HardDrive} label={ACTIONS['set-caps']} onClick={() => setCapping(account)} />
+                      <MenuItem icon={History} label={RESTORES} onClick={() => setRestoring(account)} />
                       {others && <MenuItem icon={Send} label={NOTICES.send} onClick={() => setWriting({ account, suspend: false })} />}
                       {others &&
                         (account.suspended ? (
-                          <MenuItem icon={LockOpen} label="정지 해제" onClick={() => void act(account.accountId, liftSuspension(account.accountId), `${account.username} 계정의 정지를 해제하지 못했어요.`)} />
+                          <MenuItem icon={LockOpen} label={ACTIONS.lift} onClick={() => void act(account.accountId, liftSuspension(account.accountId), `${account.username} 계정의 정지를 해제하지 못했어요.`)} />
                         ) : (
-                          <MenuItem icon={Ban} label="정지" description="읽기와 백업, 알림 확인, 탈퇴만 할 수 있어요" onClick={() => setWriting({ account, suspend: true })} />
+                          <MenuItem icon={Ban} label={ACTIONS.suspend} description="읽기와 백업, 알림 확인, 탈퇴만 할 수 있어요" onClick={() => setWriting({ account, suspend: true })} />
                         ))}
-                      {others && account.state === 'active' && <MenuItem icon={ACTS.remove.icon} label="계정 삭제" tone="warn" onClick={() => setRemoving(account)} />}
+                      {others && account.state === 'active' && <MenuItem icon={ACTS.remove.icon} label={ACTIONS['delete-account']} tone="warn" onClick={() => setRemoving(account)} />}
                     </>
                   )}
                 </MoreMenu>,
@@ -147,7 +148,7 @@ export function AccountsSection({ loaded, total, onActed, children }: { loaded: 
             title={`${writing.account.username} 계정을 정지할까요?`}
             label="정지 이유"
             placeholder="이 내용은 알림으로 전달돼요."
-            confirm={{ label: '정지', icon: Ban }}
+            confirm={{ label: ACTIONS.suspend, icon: Ban }}
             send={(reason) => suspend(writing.account.accountId, reason)}
             onDone={() => {
               setWriting(null);

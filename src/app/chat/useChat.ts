@@ -28,7 +28,7 @@ import { describeTurnFailure } from '../common/failure';
 import { NO_PERSONA_SLOT } from '../common/prompt-words';
 import { describeUnused } from '../common/unused';
 import { useCopy } from '../common/useCopy';
-import { LORE_BUDGET_LABEL } from '../common/words';
+import { LORE_BUDGET_LABEL, CHAT_SHOW_FAILED } from '../common/words';
 import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSession, useToolFrames, useReplying } from '../session';
 import { useToast } from '../toast';
 import { useChatEdits } from './ChatEdits';
@@ -108,7 +108,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   // A display that fails after one was shown leaves that one up; one that never showed says so in the log (ChatLog).
   useEffect(() => {
     if (displayError === undefined || displayPending) return;
-    toast.error('채팅을 화면에 표시하지 못했어요.', { detail: displayError instanceof Error ? displayError.message : undefined, action: { label: ACTS.retry.label, onClick: retryDisplay } });
+    toast.error(CHAT_SHOW_FAILED, { detail: displayError instanceof Error ? displayError.message : undefined, action: { label: ACTS.retry.label, onClick: retryDisplay } });
   }, [displayError]);
   const { texts, css, picture, background } = view;
   const bot = shelf?.character.decor !== false;

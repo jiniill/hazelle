@@ -22,6 +22,7 @@ import { PasswordScreen, type Stop } from './PasswordScreen';
 import { RecoveryKeyScreen } from './RecoveryKeyScreen';
 import { SignInScreen } from './SignInScreen';
 import { UnreachableScreen } from './UnreachableScreen';
+import { LOADING_TITLE, OPEN_STEPS } from '../common/words';
 
 type State =
   | { kind: 'loading' }
@@ -224,7 +225,7 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
     case 'loading':
       return (
         <Screen top={<Brand />} align="center">
-          <Progress hero title="불러오는 중" steps={[{ label: '계정 확인' }]} />
+          <Progress hero title={LOADING_TITLE} steps={[{ label: OPEN_STEPS.account }]} />
         </Screen>
       );
     case 'unreachable':

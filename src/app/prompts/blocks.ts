@@ -5,7 +5,7 @@ import { MESSAGE_ROLES, SLOT, textName } from '../common/prompt-words';
 import { count } from '../common/typedNumber';
 import type { Marked, OutlineKind } from '../ui';
 import { toggleUses } from './rekey';
-import { EMPTY_VALUE } from '../common/words';
+import { EMPTY_VALUE, CARD_INSTRUCTIONS } from '../common/words';
 
 export const ROLES: { value: Role; label: string }[] = (['system', 'user', 'assistant'] as const).map((value) => ({ value, label: MESSAGE_ROLES[value] }));
 
@@ -15,9 +15,11 @@ export const TEXTS: { role: Role; name: string; hint: string }[] = [
   { role: 'assistant', name: textName('assistant'), hint: '모델 응답의 시작 부분을 미리 지정할 때 써요' },
 ];
 
+export const TRANSLATIONS = { on: '번역 포함', off: '번역 제외' };
+
 export const MARKS = {
-  main: { label: '본문', hint: `카드의 '시스템 프롬프트'로 대체돼요`, card: '시스템 프롬프트' },
-  globalNote: { label: '글로벌 노트', hint: `카드의 '대화 뒤 지시문'으로 대체돼요`, card: '대화 뒤 지시문' },
+  main: { label: '본문', hint: `카드의 '${CARD_INSTRUCTIONS.systemPrompt}'로 대체돼요`, card: CARD_INSTRUCTIONS.systemPrompt },
+  globalNote: { label: '글로벌 노트', hint: `카드의 '${CARD_INSTRUCTIONS.postHistoryInstructions}'으로 대체돼요`, card: CARD_INSTRUCTIONS.postHistoryInstructions },
 } as const;
 
 const TEXT_ICONS: Record<Role, LucideIcon> = { system: Text, user: User, assistant: Sparkle };

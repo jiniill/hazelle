@@ -4,8 +4,9 @@ import { count } from '../common/typedNumber';
 import { tally } from '../common/usage';
 import { LedgerWait, useLedger } from '../common/useLedger';
 import { Empty, Facts, Panel } from '../ui';
+import { SPANS } from '../common/words';
 
-const WINDOWS = [['hour', '지난 1시간'], ['today', '오늘'], ['week', '이번 주']] as const;
+const WINDOWS = ['hour', 'today', 'week'] as const;
 
 const tile = (label: string, usage: ModelUsage) =>
   usage.calls
@@ -15,14 +16,14 @@ const tile = (label: string, usage: ModelUsage) =>
 export function ConnectionSent({ connection }: { connection: string }) {
   const { view, retry } = useLedger();
   const usage = useMemo(() => (view.kind === 'read' ? connectionUsage(view.calls, connection, Date.now()) : null), [view, connection]);
-  const used = usage && WINDOWS.some(([window]) => usage[window].calls) ? usage : null;
+  const used = usage && WINDOWS.some((window) => usage[window].calls) ? usage : null;
 
   return (
     <Panel title="사용 내역">
       {view.kind !== 'read' ? (
         <LedgerWait view={view} retry={retry} failed="사용 내역을 불러오지 못했어요." />
       ) : used ? (
-        <Facts variant="figures" items={WINDOWS.map(([window, label]) => tile(label, used[window]))} />
+        <Facts variant="figures" items={WINDOWS.map((window) => tile(SPANS[window], used[window]))} />
       ) : (
         <Empty variant="section">이번 주에 이 연결로 받은 응답이 없어요.</Empty>
       )}

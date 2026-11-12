@@ -1,4 +1,5 @@
-export const count = (value: number) => value.toLocaleString('ko-KR');
+
+import { FIELD_ERRORS } from './words';export const count = (value: number) => value.toLocaleString('ko-KR');
 
 export type Typed = { ok: true; value: number } | { ok: false; error: string };
 
@@ -6,7 +7,7 @@ export type Typed = { ok: true; value: number } | { ok: false; error: string };
 // the row says so.
 export function readTyped(draft: string, whole: boolean): Typed {
   const value = Number(draft);
-  if (draft.trim() === '' || !Number.isFinite(value)) return { ok: false, error: '숫자를 입력해 주세요.' };
+  if (draft.trim() === '' || !Number.isFinite(value)) return { ok: false, error: FIELD_ERRORS.number };
   if (whole && !Number.isSafeInteger(value)) return { ok: false, error: '정수를 입력해 주세요.' };
   return { ok: true, value };
 }

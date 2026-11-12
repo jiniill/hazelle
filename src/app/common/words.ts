@@ -45,6 +45,9 @@ export const BOT_STUCK = '봇 스크립트가 끝나지 않아서 멈췄어요';
 export const TOOL = '플러그인';
 export const RISU_PLUGIN = 'Risu 플러그인';
 export const MODULE_MODELS = '모델 호출';
+export const OUTGOING = '보낼 메시지';
+// A script's or a plugin's 테스트, run on a chat without saving.
+export const TRIAL = { when: '실행 시점', run: '테스트 실행', running: '실행하는 중…', noChat: '채팅을 열지 못했어요.', failed: '결과를 만들지 못했어요.', stale: '코드가 바뀌었어요. 다시 실행하면 지금 코드로 테스트해요.', unchanged: '변경되는 내용이 없어요.' };
 // Who a script's question or switch speaks for; a module that holds a tool is a plugin. Each noun takes 이.
 const ASKER = { character: '봇', module: '모듈', plugin: TOOL };
 export type Asker = keyof typeof ASKER;
@@ -93,7 +96,22 @@ export const AUTO_DIAGNOSIS = { label: '자동 진단 보내기', help: '켜 두
 // A write's failure, before why (toast.failed).
 export const SAVE_FAILED = '저장하지 못했어요.';
 export const REMOVE_FAILED = '삭제하지 못했어요.';
+export const CHANGE_FAILED = '바꾸지 못했어요.';
+export const APPLY_FAILED = '적용하지 못했어요.';
+export const UNDO_FAILED = '되돌리지 못했어요.';
+// A field left without what it needs.
+export const FIELD_ERRORS = { name: '이름을 입력해 주세요.', number: '숫자를 입력해 주세요.' };
 export const COUNTING = '계산하는 중…';
+// The spans a usage count is read over.
+export const SPANS = { hour: '지난 1시간', today: '오늘', week: '이번 주', month: '이번 달', all: '전체' };
+export const COST_ESTIMATE = '예상 비용';
+// Marks a chat shows on trouble, which 운영's 자동 진단 names the same.
+export const TURN_FAILED = '응답 실패';
+export const MEMORY_GAP = '기억에 없음';
+export const CACHE_BROKEN = '캐시 깨짐';
+
+export const RESTORES = '복원 기록';
+export const REPORT_REASON = '신고 이유';
 // One named thing as the object of a sentence: '루나' 캐릭터를.
 export const namedObject = (name: string, noun: string) => `'${name}' ${withParticle(noun, '을/를')}`;
 
@@ -101,6 +119,7 @@ export const namedObject = (name: string, noun: string) => `'${name}' ${withPart
 export const PRESET = { noun: '프리셋', save: '프리셋으로 저장', rename: '프리셋 이름 바꾸기', named: (count: number) => `내 프리셋 ${count + 1}` };
 
 export const BIN = '휴지통';
+export const PURGE = '영구 삭제';
 export const BIN_KEEPS = `${KEEP_DAYS}일 안에 '${BIN}'에서 복원할 수 있어요.`;
 
 export const COMMAND = '명령어';
@@ -113,8 +132,10 @@ export const BACKGROUND_HTML = '배경 HTML';
 export const PRESET_GONE = '선택한 프리셋이 삭제됐어요. 다른 프리셋을 선택해 주세요.';
 export const PRESET_GONE_CHIP = '삭제된 프리셋';
 export const UNREADABLE_IMAGE = '이 이미지는 열 수 없어요.';
+export const BAD_PICTURE = '이 사진은 올릴 수 없어요.';
 export const UNREADABLE_FILE = '파일을 읽지 못했어요.';
 export const WRONG_PASSWORD = '비밀번호가 맞지 않아요.';
+export const RECOVERY_KEY = '복구 키';
 
 export const TRANSLATOR_NOTE = '번역가의 노트';
 export const NOTE_PLACEHOLDER = 'Master -> 주인님\n존댓말은 그대로 유지해 주세요';
@@ -127,11 +148,14 @@ export const PAGES = { setup: '내 구성', models: '모델', connections: 'API 
 
 // Keep always-on module wording consistent: editable only in global settings, read-only marks elsewhere.
 export const ALWAYS = '항상';
+export const NOT_USED = '사용 안 함';
 
 export const DEFAULT_MODELS = '기본 모델';
 export const DEFAULT_MODELS_FAILED = `${DEFAULT_MODELS}을 바꾸지 못했어요.`;
 
 export const MODEL_SETTINGS = '모델 설정';
+// Choosing a model: the chat's chip with none chosen, and a key form's button, which the tutorial names.
+export const PICK_MODEL = '모델 선택';
 
 // A kind of the user's own things: what it is called and what it is counted in.
 export const THINGS: Record<Removable, { noun: string; unit: string }> = {
@@ -149,6 +173,7 @@ export const NOTICES = { from: '운영자가 보낸 알림', received: '신고',
 
 export const REPORT_FAILURE = '오류 제보';
 export const PICTURE_NOTE = '사진은 암호화되지 않고 운영자가 볼 수 있어요. 대화 내용이 찍혔는지 확인하고 올려 주세요.';
+export const DIAGNOSIS = '진단 정보';
 export const DIAGNOSIS_NOTE = '대화 내용과 API 키 없이 설정값, 토큰 수, 모델, 플러그인·모듈 이름, 최근 오류만 들어가요. 오류 메시지에 입력한 내용이 일부 포함될 수 있으니 보내기 전에 확인해 주세요.';
 
 export const BOARD = {
@@ -173,7 +198,11 @@ export const BOARD = {
 
 export const TOOLS = '도구';
 
-export const CHAT_SEARCH = '채팅 검색';
+// A search field's name, the heading over its finds and the line when there are none.
+export const searchOf = (noun: string) => `${noun} 검색`;
+export const SEARCH_RESULTS = '검색 결과';
+export const noResults = (words: string) => `'${words}' ${SEARCH_RESULTS}가 없어요.`;
+export const CHAT_SEARCH = searchOf(THINGS.chat.noun);
 export const TOOL_PAGES = { translator: '번역기', calculator: '비용 계산기' };
 
 export const inSettings = (page: keyof typeof PAGES) => `${SETTINGS} › ${PAGES[page]}`;
@@ -185,6 +214,7 @@ export const opens = (place: string) => `${place} 열기`;
 // screens; user 2026-10-15). default: the shared layer's word, re-ruled 2026-10-16 to 공용, leaving 기본값 a field's
 // starting value only.
 export const EVERY_CHAT = '모든 채팅에 적용돼요.';
+export const ONLY_THIS_CHAT = '지금 이 채팅에만 적용돼요.';
 export const SCOPE = { default: '공용', chat: '이 채팅만', character: '이 캐릭터만' } as const;
 export const scopeTag = (scope: keyof typeof SCOPE) => ({ label: SCOPE[scope], tone: scope === 'default' ? 'plain' : 'accent' }) as const;
 // The layers above a chat that its features and agents come down through, by the name a screen gives each.
@@ -244,13 +274,16 @@ export const follows = (source: string) => `${source} 사용`;
 
 export const moduleName = (name: string) => name.trim() || '이름 없는 모듈';
 export const promptName = (name: string) => name || '이름 없는 프롬프트';
-export const DELETED_PROMPT = '삭제된 프롬프트';
+// What stood where a deleted thing is named.
+export const deletedOf = (noun: string) => `삭제된 ${noun}`;
+export const DELETED_PROMPT = deletedOf(THINGS.prompt.noun);
 export const loreName = (name: string) => name.trim() || '이름 없는 항목';
 export const portraitName = (name: string) => name.trim() || '이름 없는 인물';
 
 export const copyName = (name: string) => `${name} (사본)`;
 export const copyOf = (name: string) => `'${name}'의 사본`;
 export const SEE_ORIGINAL = '원본 보기';
+export const RETRANSLATE = '다시 번역';
 // Making a copy of anything: the busy toast, the failure and the result.
 export const COPY_SAID = { busy: '사본 만드는 중…', failed: '사본을 만들지 못했어요.', made: '사본을 만들었어요.' };
 export const ORIGINAL_GONE = '원본이 삭제됐어요';
@@ -265,7 +298,8 @@ export const IDLE_MODELS = '안 쓰는 모델';
 export const FINDINGS = '고칠 곳';
 // A role no layer picks, or a 모델 설정 that sets nothing.
 export const NOT_PICKED = '지정 안 함';
-export const NO_IMAGE_MODEL = '연결된 이미지 모델이 없어요.';
+export const IMAGE_MODEL = '이미지 모델';
+export const NO_IMAGE_MODEL = `연결된 ${IMAGE_MODEL}이 없어요.`;
 // A table's column of where a thing is used.
 export const USED_IN = '사용처';
 
@@ -278,9 +312,11 @@ export const BOOKMARK = '북마크';
 
 export const LINEAGE = '분기 지도';
 export const FORGET_ORIGIN = '원본 연결 끊기';
-export const deletedChat = (name: string) => `삭제된 채팅 '${name}'`;
+export const deletedChat = (name: string) => `${deletedOf(THINGS.chat.noun)} '${name}'`;
 
 export const DEFAULT_VARIABLES = '기본 변수';
+// A card's own instructions, which stand in for a prompt's 본문 and 글로벌 노트.
+export const CARD_INSTRUCTIONS = { systemPrompt: '시스템 프롬프트', postHistoryInstructions: '대화 뒤 지시문' };
 // A card's onboarding: questions a new chat asks, whose answers it starts from.
 export const ONBOARDING = '시작 전 설문';
 
@@ -296,6 +332,12 @@ export const NO_CHARACTER = '캐릭터 없이';
 export const EXPORT = '내보내기';
 export const CHAT_FILE = '채팅 파일';
 export const IMPORT_CHATS = '채팅 가져오기';
+// The ways in beside a file: a share or hub link, and Risu's whole library.
+export const LINK_IMPORT = '링크로 가져오기';
+export const MOVE_IN = 'Risu에서 이사';
+export const READ_BACKUP = '백업 읽기';
+// An import's state, as a file import and 이사 both title it.
+export const IMPORTING = { busy: '가져오는 중', failed: '가져오지 못했어요', empty: '가져올 수 있는 파일이 없어요.' };
 export const ARCA_LOG = '아카라이브용 HTML';
 // Risu chat files import only through the selected character's chat list, never its card importer.
 export const RISU_CHAT_FILE = 'Risu 채팅 파일';
@@ -325,6 +367,11 @@ export const RETRY_HELP = '응답이 오기 전에 실패하면 이 횟수만큼
 export const LORE_BUDGET_LABEL = '로어북 최대 분량';
 export const LOREBOOK = '로어북';
 export const CHAT_DETAIL = { reply: '응답', lore: LOREBOOK };
+// A reply's own panel and what it shows of the request and the answer.
+export const REPLY_INFO = '응답 정보';
+export const RESPONSE_RAW = '응답 원문';
+export const CACHE_READ = '캐시에서 읽음';
+export const INPUT_TRANSLATION = '입력 번역';
 export const LORE_SCAN_WORDS = {
   tokenBudget: { label: LORE_BUDGET_LABEL, help: '켜 둔 로어북 항목을 요청마다 이만큼까지 넣어요.', unit: '토큰', amount: (count: string) => `${count} 토큰`, is: '이에요' },
   scanDepth: { label: '검색 깊이', help: '최근 메시지 몇 개에서 키워드를 찾을지 정해요.', unit: '개', amount: (count: string) => `${count}개`, is: '예요' },
@@ -347,6 +394,19 @@ export const RESET = resetTo('기본값');
 export const UNDO = '되돌리기';
 export const STOP = '멈추기';
 export const LOADING = '불러오는 중…';
+export const IN_USE = '사용 중';
+export const GENERATING = '생성 중…';
+export const SAVING = '저장 중';
+export const CHAT_LOADING = '채팅을 불러오는 중';
+export const CHAT_SHOW_FAILED = '채팅을 화면에 표시하지 못했어요.';
+export const USAGE_FAILED = '사용량을 불러오지 못했어요.';
+// A loading screen's title, and the first steps of opening an account.
+export const LOADING_TITLE = '불러오는 중';
+export const OPEN_STEPS = { account: '계정 확인', unlock: '잠금 해제' };
+export const READING_SETTINGS = '읽기 설정';
+export const SECONDARY_KEYS = '보조 키워드';
+// A prompt's note for chats that have none of their own.
+export const DEFAULT_NOTE = '기본 노트';
 export const EMPTY_VALUE = '비어 있음';
 export const NO_TOGGLES = '토글이 없어요.';
 export const LAB = '실험';
@@ -355,6 +415,7 @@ export const SEE_ALL = '모두 보기';
 export const MISSED = '가져오지 못한 항목';
 export const EMPTY_FOLDER = '비어 있는 폴더예요.';
 export const SET_DEFAULT = '기본으로 지정';
+export const SET_DEFAULT_FAILED = `${SET_DEFAULT}하지 못했어요.`;
 
 // A share link: the character ⋯ item and its dialog, 설정 › 계정's list, the link's own page and the operator's inbox.
 // held: paused by a report or the operator; removed: blocked by the operator.

@@ -11,7 +11,7 @@ import { ToggleList } from './ToggleList';
 import { keyProblem, LINE_WORDS, lineTitle } from './toggleWords';
 import { useSearch } from './useSearch';
 import { Button, Checkbox, ChoiceGroup, Dialog, Empty, Menu, MenuItem, MoreMenu, Row, Section, SettingRow, Switch, TextField } from '../ui';
-import { MOVE, NO_TOGGLES } from './words';
+import { MOVE, NO_TOGGLES, searchOf, FIELD_ERRORS } from './words';
 
 type Props = {
   // The prompt's, character's or module's id (common/ToggleList).
@@ -48,7 +48,7 @@ const LINE_ONLY = '비워 두면 선만 보여요.';
 export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, onRekey, onRemove, adding, onAdding }: Props) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const toggles = lines.flatMap((line, at) => (isToggle(line) ? [{ line, at }] : []));
-  const search = useSearch(toggles, '토글 검색', ({ line }) => [line.label, line.key]);
+  const search = useSearch(toggles, searchOf('토글'), ({ line }) => [line.label, line.key]);
   const nodes = toggleTree(lines);
   const groups = new Map(nodes.flatMap((node) => ('head' in node ? [[node.head.at, node] as const] : [])));
   const opened = editing && 'at' in editing ? lines[editing.at] : undefined;
@@ -269,7 +269,7 @@ function NewToggleDialog({ lines, onClose, onSave }: { lines: readonly ToggleLin
 
   function submit() {
     const problems = {
-      label: label.trim() ? undefined : '이름을 입력해 주세요.',
+      label: label.trim() ? undefined : FIELD_ERRORS.name,
       key: keyProblem(key.trim(), lines, null) ?? undefined,
       options: kind === 'choice' && choices.length < 2 ? '선택지를 2개 이상 입력해 주세요.' : undefined,
     };

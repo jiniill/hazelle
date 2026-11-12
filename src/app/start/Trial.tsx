@@ -7,6 +7,7 @@ import { describeCatalogFailure, describeFailure, describeKeyFailure, describeTu
 import { href } from '../shell/routes';
 import { ARIN_PICTURE, Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, TextField } from '../ui';
 import { EXAMPLE } from './example';
+import { searchOf } from '../common/words';
 
 type Phase =
   | { kind: 'connecting' }
@@ -83,7 +84,7 @@ function ModelPick({ models, failure, onPick }: { models: Model[]; failure: stri
   const shown = useMemo(() => models.filter((model) => `${model.name} ${model.id}`.toLowerCase().includes(search.trim().toLowerCase())), [models, search]);
   return (
     <Stack>
-      <TextField label="모델 검색" showLabel={false} placeholder={`모델 ${models.length}개 검색`} value={search} onChange={setSearch} />
+      <TextField label={searchOf('모델')} showLabel={false} placeholder={`모델 ${models.length}개 검색`} value={search} onChange={setSearch} />
       {failure && <Callout tone="warn" alert>{failure}</Callout>}
       <List label="모델" box>
         {shown.slice(0, MODELS_SHOWN).map((model) => <ListItem key={model.id} title={model.name} code={model.id} onClick={() => onPick(model)} />)}

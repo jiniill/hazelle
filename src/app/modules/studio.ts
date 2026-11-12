@@ -5,13 +5,14 @@ import { atOf } from '../../runtime/scripts/selection';
 import { argsOf } from '../../runtime/models/tool-loop';
 import type { DraftState } from '../../runtime/tools/drafts';
 import type { ToolManifest, ToolUse } from '../../tool-api/manifest';
-import { NETWORK } from '../common/words';
+import { NETWORK, MODULE_MODELS, FEATURE_NAMES, TRIAL } from '../common/words';
 
 export const draftTitle = (identity: ToolIdentity) => identity.displayName || '이름 없는 플러그인';
 
 export const DRAFT_STATES: Record<Exclude<DraftState, 'applied'>, string> = { unapplied: '적용 안 함', differs: '적용한 버전과 다름' };
 
-export const USE_TAGS: Record<ToolUse, string> = { model: '모델 호출', embed: '임베딩', memory: '장기 기억', network: NETWORK };
+export const SEE_IN_CODE = '코드에서 보기';
+export const USE_TAGS: Record<ToolUse, string> = { model: MODULE_MODELS, embed: '임베딩', memory: FEATURE_NAMES.memory, network: NETWORK };
 
 // What 테스트 can run a draft on: the turn's stages, then each item its header declares. text: the event takes the text
 // typed for it.
@@ -46,7 +47,7 @@ export function testEvent(pick: string, scope: ChatScope, text: string, manifest
 // AI로 수정's ask, shown as sent: the run's error, its moment and its line. line counts in body, as the model is sent it.
 export function fixAsk(failed: string, moment: string, body: string, line: number | null): string {
   const text = line === null ? undefined : body.split('\n')[line - 1];
-  return ['테스트에서 난 오류를 수정해 주세요.', `실행 시점: ${moment}`, `오류: ${failed}`, ...(text === undefined ? [] : [`${line}번째 줄: ${text.trim()}`])].join('\n');
+  return ['테스트에서 난 오류를 수정해 주세요.', `${TRIAL.when}: ${moment}`, `오류: ${failed}`, ...(text === undefined ? [] : [`${line}번째 줄: ${text.trim()}`])].join('\n');
 }
 
 // Where line (counted from 1) stands in text, as a selection; [0, 0] for a line it does not hold.

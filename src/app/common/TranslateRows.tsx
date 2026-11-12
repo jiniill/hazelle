@@ -23,21 +23,24 @@ type Props = {
   children?: ReactNode;
 };
 
+// The switches by their names, which the chat's 번역 button lists when on.
+export const TRANSLATE_SWITCHES = { replies: '응답 번역', input: '내 메시지 번역', reverse: '반전 모드' } satisfies Partial<Record<keyof TranslateSwitches, string>>;
+
 // Shared by chat dialog and global settings; fold uncommon settings and count explicit values.
 export function TranslateRows({ translate, translation, card, note, opens, onChange, onEditPrompt, children }: Props) {
   const set = [translate.original, translate.reverse, translate.prompt !== undefined].filter(Boolean).length;
   const group = (
     <SettingGroup label="번역">
       <SettingRow
-        label="응답 번역"
+        label={TRANSLATE_SWITCHES.replies}
         sentence={<IntoLanguage before="응답을" after="번역해서 보기" label="응답 번역 언어" value={translate.replyLanguage} opens={opens} onPick={(replyLanguage) => onChange({ replyLanguage })} />}
-        control={<Switch label="응답 번역" checked={translate.replies} onChange={(replies) => onChange({ replies })} />}
+        control={<Switch label={TRANSLATE_SWITCHES.replies} checked={translate.replies} onChange={(replies) => onChange({ replies })} />}
       />
       <SettingRow
-        label="내 메시지 번역"
+        label={TRANSLATE_SWITCHES.input}
         sentence={<IntoLanguage before="내 메시지를" after="번역해서 보내기" label="내 메시지 번역 언어" value={translate.inputLanguage} opens={opens} onPick={(inputLanguage) => onChange({ inputLanguage })} />}
-        description={translate.reverse ? '반전 모드에서는 원문으로 보내요' : undefined}
-        control={<Switch label="내 메시지 번역" checked={translate.input} disabled={translate.reverse} onChange={(input) => onChange({ input })} />}
+        description={translate.reverse ? `${TRANSLATE_SWITCHES.reverse}에서는 원문으로 보내요` : undefined}
+        control={<Switch label={TRANSLATE_SWITCHES.input} checked={translate.input} disabled={translate.reverse} onChange={(input) => onChange({ input })} />}
       />
       <TaskModelRow
         label={TASK_MODELS.translate}
@@ -56,9 +59,9 @@ export function TranslateRows({ translate, translation, card, note, opens, onCha
         control={<Switch label="원문 함께 보기" checked={translate.original} onChange={(original) => onChange({ original })} />}
       />
       <SettingRow
-        label="반전 모드"
+        label={TRANSLATE_SWITCHES.reverse}
         help={{ text: '모델에게도 화면에 보이는 내용 그대로 보내요.', demo: { name: 'reverse', ways: { on: translate.reverse } } }}
-        control={<Switch label="반전 모드" checked={translate.reverse} onChange={(reverse) => onChange({ reverse })} />}
+        control={<Switch label={TRANSLATE_SWITCHES.reverse} checked={translate.reverse} onChange={(reverse) => onChange({ reverse })} />}
       />
       {note}
       <SettingRow

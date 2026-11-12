@@ -3,6 +3,7 @@ import { detect } from '../../connectors/registry';
 import type { ConnectionType, KeyParts } from '../../connectors/types';
 import { ACTS, importOf, newOf } from '../common/acts';
 import { Callout, Disclosure, FileButton, Link, Stack, TextField } from '../ui';
+import { KEY_OPTIONAL } from './connect';
 
 // type null: a 직접 연결, which may need no key and takes any.
 export function KeyField({ type, value, onChange }: { type: ConnectionType | null; value: string; onChange: (key: string) => void }) {
@@ -19,7 +20,7 @@ export function KeyField({ type, value, onChange }: { type: ConnectionType | nul
         value={value}
         onChange={onChange}
         help="키는 암호화해서 저장하고, 서버에는 남기지 않아요."
-        hint={type ? undefined : '키가 필요 없으면 비워 둬도 돼요.'}
+        hint={type ? undefined : KEY_OPTIONAL}
         action={
           form && (
             <FileButton accept={form.accept} size="sm" icon={ACTS.import.icon} onFiles={([file]) => void file!.text().then(onChange)}>

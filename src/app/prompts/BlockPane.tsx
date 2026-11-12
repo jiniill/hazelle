@@ -9,10 +9,10 @@ import { SLOT } from '../common/prompt-words';
 import { SHORTCUTS } from '../shortcuts';
 import type { Block, ChatRange, ChatSlot, PromptSort, RecentSlot, Role, TextBlock, Toggle, WrappedSlot } from '../../model/prompt';
 import { Button, ChoiceGroup, Divider, Empty, Hint, IconButton, MarkupArea, Menu, MenuHeading, MenuItem, MoreMenu, Row, Section, SettingRow, Stack, Stepper, Switch, Tag, Text, TitleField } from '../ui';
-import { blockTitle, CACHE_WORDS, describeRange, firstLine, MARKS, RANGES, rangeKey, ROLES, type CacheMark } from './blocks';
+import { blockTitle, CACHE_WORDS, describeRange, firstLine, MARKS, RANGES, rangeKey, ROLES, type CacheMark, TRANSLATIONS } from './blocks';
 import { CommandMenu } from './CommandMenu';
 import { RECENT_MAX, type Snippet } from './edits';
-import { MOVE, NO_TOGGLES } from '../common/words';
+import { MOVE, NO_TOGGLES, CARD_INSTRUCTIONS, DEFAULT_NOTE } from '../common/words';
 
 
 type Props = {
@@ -103,7 +103,7 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
           expand={SHORTCUTS.bigEdit.keys}
           aside={trial.cbs}
           value={block.text}
-          placeholder={block.mark === 'globalNote' ? `비워 두면 카드에 '대화 뒤 지시문'이 있을 때만 보내요.` : '모델에게 보낼 내용'}
+          placeholder={block.mark === 'globalNote' ? `비워 두면 카드에 '${CARD_INSTRUCTIONS.postHistoryInstructions}'이 있을 때만 보내요.` : '모델에게 보낼 내용'}
           onChange={(text) => onChange({ ...block, text })}
           tools={
             <Row kind="toolbar">
@@ -164,16 +164,16 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
           {/* A 삽화 prompt's 이전 메시지 never holds translations (engine/pipeline). */}
           {sort === 'translate' && (
             <SettingRow
-              label="번역 포함"
+              label={TRANSLATIONS.on}
               help="끄면 대화 원문만 보내요."
-              control={<Switch label="번역 포함" checked={block.translations !== false} onChange={(on) => onTranslations(block, on)} />}
+              control={<Switch label={TRANSLATIONS.on} checked={block.translations !== false} onChange={(on) => onTranslations(block, on)} />}
             />
           )}
         </>
       )}
       {block.kind === 'slot' && block.slot === 'authorNote' && authorNote !== null && (
-        <Section title="기본 노트" level={3} help="비워 두면 노트가 없는 채팅에는 아무것도 들어가지 않아요.">
-          <CountedMarkup label="기본 노트" variant="field" language={cbs} expand={SHORTCUTS.bigEdit.keys} aside={trial.cbs} value={authorNote} onChange={onAuthorNote} />
+        <Section title={DEFAULT_NOTE} level={3} help="비워 두면 노트가 없는 채팅에는 아무것도 들어가지 않아요.">
+          <CountedMarkup label={DEFAULT_NOTE} variant="field" language={cbs} expand={SHORTCUTS.bigEdit.keys} aside={trial.cbs} value={authorNote} onChange={onAuthorNote} />
         </Section>
       )}
       {'wrapper' in block &&

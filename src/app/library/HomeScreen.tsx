@@ -8,6 +8,7 @@ import { navigate } from '../shell/router';
 import { ActionCard, Button, Columns, GuideMark, Intro, Row, Screen, Stack } from '../ui';
 import { useImport } from '../common/importing';
 import { useNewCharacter } from './useCharacterActions';
+import { LINK_IMPORT, MOVE_IN } from '../common/words';
 
 export function Welcome() {
   const connections = useConnections();
@@ -34,11 +35,11 @@ export function Welcome() {
               <ActionCard tone="accent" icon={Plug} title={newOf('연결')} description="제공자를 선택하고 API 키를 입력해요" onClick={() => navigate({ kind: 'add-connection' })} />
             </GuideMark>
           )}
-          <ActionCard icon={PackageOpen} title="Risu에서 이사" description="캐릭터와 채팅, 프롬프트를 한 번에 옮겨요" onClick={move} />
+          <ActionCard icon={PackageOpen} title={MOVE_IN} description="캐릭터와 채팅, 프롬프트를 한 번에 옮겨요" onClick={move} />
         </Columns>
         <Columns min={connections.length > 0 ? 'wide' : 'small'}>
           <ActionCard size="sm" icon={ACTS.import.icon} title={importOf('봇')} description="PNG · charx · zip 파일을 끌어다 놓거나 선택해요" onClick={pick} />
-          <ActionCard size="sm" icon={Link} title="링크로 가져오기" description="Realm, Proton, 파일 링크를 붙여 넣어요" onClick={() => pickLink('')} />
+          <ActionCard size="sm" icon={Link} title={LINK_IMPORT} description="Realm, Proton, 파일 링크를 붙여 넣어요" onClick={() => pickLink('')} />
           <ActionCard size="sm" icon={UserRoundPlus} title={newOf('캐릭터')} description="이름과 설명부터 직접 입력해요" onClick={create} />
           {connections.length > 0 && <ActionCard size="sm" icon={Plug} title="연결" description={`연결 ${connections.length}개 · 모델 추가`} onClick={() => navigate({ kind: 'connections' })} />}
         </Columns>

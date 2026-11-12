@@ -10,7 +10,7 @@ import { describeTurnFailure } from '../common/failure';
 import { withParticle } from '../common/particles';
 import { ACTS } from '../common/acts';
 import { count } from '../common/typedNumber';
-import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES } from '../common/words';
+import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES, PICK_MODEL, MEMORY_GAP } from '../common/words';
 import { STALE } from './memory';
 import type { PromptDoor } from '../common/TaskPrompt';
 import { navigate } from '../shell/router';
@@ -45,7 +45,7 @@ const LEAVING: Record<GapCause, { words: string; why: string }> = {
   forgotten: { words: '기록 삭제됨', why: '삭제한 기록의 메시지는 요청에도 기억에도 없어요.' },
   unrecorded: { words: '기록에서 빠짐', why: '이미 정리된 구간 사이에 넣은 메시지는 장기 기억에 들어가지 않아요.' },
   'no-room': { words: '컨텍스트 부족', why: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠지는데, 아직 장기 기억에 없어요.' },
-  unknown: { words: '기억에 없음', why: '오래된 메시지가 요청에서 빠지는데, 장기 기억에도 없어요.' },
+  unknown: { words: MEMORY_GAP, why: '오래된 메시지가 요청에서 빠지는데, 장기 기억에도 없어요.' },
 };
 const UNSEEN = '이미지는 제외하고 텍스트만 보내며, 이미지만 있는 메시지는 보내지 않아요.';
 
@@ -55,9 +55,9 @@ function LeavingNote({ count, causes, onOpen }: { count: number; causes: GapCaus
 
 type Chip = 'model' | 'prompt' | 'persona' | 'profile';
 const FIX = {
-  'no-model': { label: '모델 선택', chip: 'model' },
-  'model-gone': { label: '모델 선택', chip: 'model' },
-  'image-only': { label: '모델 선택', chip: 'model' },
+  'no-model': { label: PICK_MODEL, chip: 'model' },
+  'model-gone': { label: PICK_MODEL, chip: 'model' },
+  'image-only': { label: PICK_MODEL, chip: 'model' },
   'prompt-missing': { label: '프롬프트 선택', chip: 'prompt' },
   'persona-missing': { label: '페르소나 선택', chip: 'persona' },
   'profile-missing': { label: '모델 설정 선택', chip: 'profile' },

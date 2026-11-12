@@ -17,7 +17,7 @@ import type { Frame } from '../common/frame';
 import { useAutosave } from '../common/useAutosave';
 import { byPromptName } from '../common/promptCopies';
 import { useSearch } from '../common/useSearch';
-import { copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, PAGES, promptName, STAGE_NAMES, STATUS, THINGS } from '../common/words';
+import { copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, PAGES, promptName, STAGE_NAMES, STATUS, THINGS, SEARCH_RESULTS, searchOf } from '../common/words';
 import { useConnections, useModules, usePrompts, useSettings, useStore } from '../session';
 import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
@@ -54,7 +54,7 @@ import { chatWarning } from './ranges';
 import { PicturePane } from './PicturePane';
 import { PresetExport } from './PresetExport';
 import { PromptMenu } from './PromptMenu';
-import { PromptRead } from './PromptRead';
+import { PromptRead, READ_TITLE } from './PromptRead';
 import { ProtectRules } from './ProtectRules';
 import { AgentPlace } from './AgentPlace';
 import { AgentSwitches } from '../common/AgentSwitches';
@@ -72,12 +72,13 @@ const VARIABLES = 'variables' satisfies PromptPane;
 const MODULES = 'modules' satisfies PromptPane;
 const FEATURES = 'features' satisfies PromptPane;
 const READ = 'read' satisfies PromptPane;
-const PANE_TITLES: Record<PromptPane, string> = { read: '전체 읽기', model: '모델', picture: '이미지', toggles: '토글', status: STATUS, variables: DEFAULT_VARIABLES, modules: PAGES.modules, features: FEATURES_TITLE };
+const PANE_TITLES: Record<PromptPane, string> = { read: READ_TITLE, model: '모델', picture: '이미지', toggles: '토글', status: STATUS, variables: DEFAULT_VARIABLES, modules: PAGES.modules, features: FEATURES_TITLE };
 const isPane = (id: string): id is PromptPane => Object.hasOwn(PANE_TITLES, id);
 // The tabs after 블록, in their order.
 const PANES: PromptPane[] = [READ, MODEL, PICTURE, TOGGLES, STATE, VARIABLES, MODULES, FEATURES];
 // The tab of the blocks, which an address names by naming no pane.
 const BLOCKS = 'blocks';
+const ORDER = '전송 순서';
 const HELP = '위아래 화살표로 이동, Alt+화살표로 순서 변경, Enter로 편집, Delete로 빼기';
 const ADD_BLOCK = addOf('블록');
 
@@ -304,13 +305,13 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
     if (split && found.id === open) applySelect();
     else pick(found.id);
   };
-  const search = useSearch(draft.blocks, '블록 검색', (each) => [blockTitle(each).title, each.kind === 'text' ? each.text : ''], { onEnter: openFound });
+  const search = useSearch(draft.blocks, searchOf('블록'), (each) => [blockTitle(each).title, each.kind === 'text' ? each.text : ''], { onEnter: openFound });
   const found = (blocks: readonly Block[]) => {
     const hits = blocks.map((each) => ({ block: each, hit: blockHit(each, draft.blocks.indexOf(each), search.words) }));
     return (
       <>
         <Text variant="note">{`블록 ${hits.length}개 · ${hits.reduce((sum, { hit }) => sum + hit.count, 0)}곳`}</Text>
-        <List label="검색 결과">
+        <List label={SEARCH_RESULTS}>
           {hits.map(({ block: each, hit }) => (
             <FoundRow key={each.id} face={<Icon icon={blockIcon(each)} />} path={[hit.name]} snippet={hit.snippet} note={hit.count ? `${hit.count}곳` : '이름'} onClick={() => openFound(each)} />
           ))}
@@ -325,7 +326,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
   const outline = (
     <>
       <Section
-        title="전송 순서"
+        title={ORDER}
         level={3}
         note={`${draft.blocks.length}개`}
         help={hover ? HELP : undefined}
@@ -363,7 +364,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
               </Callout>
             )}
             <Outline
-              label="전송 순서"
+              label={ORDER}
               help={HELP}
               start="맨 처음"
               end="응답 직전"
@@ -481,7 +482,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
 
   const status = save.words;
   // Drilled, a block is a page of its own under the prompt's name; its place and its name stand in the page.
-  if (!split && shownPane === null && picked !== undefined) return frame({ head: { title: promptName(draft.name), onBack: leavePage, backLabel: '전송 순서', status }, body: page, open });
+  if (!split && shownPane === null && picked !== undefined) return frame({ head: { title: promptName(draft.name), onBack: leavePage, backLabel: ORDER, status }, body: page, open });
 
   const origin = stored.value.task === undefined && stored.value.imported ? IMPORTED_FROM[stored.value.imported] : stored.value.origin ? copyOf(promptName(stored.value.origin.name)) : null;
   const facts = [sort === 'conversation' && promptUseWords(uses), ofSort(stored, 'agent') && STAGE_NAMES[stored.value.stage], origin].filter(Boolean).join(' · ');

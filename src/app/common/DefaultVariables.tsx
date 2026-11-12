@@ -1,5 +1,5 @@
 import { EntryList } from './EntryList';
-import { DEFAULT_VARIABLES } from './words';
+import { DEFAULT_VARIABLES, FIELD_ERRORS } from './words';
 import { FieldRow, Section, TextField } from '../ui';
 import { addOf } from './acts';
 
@@ -7,7 +7,7 @@ import { addOf } from './acts';
 // A blank name says so once its value is typed, not on a row just added.
 const variableError = (variables: [string, string][], index: number) => {
   const [name, value] = variables[index]!;
-  if (!name) return value ? '이름을 입력해 주세요.' : undefined;
+  if (!name) return value ? FIELD_ERRORS.name : undefined;
   if (name.includes('=')) return '이름에 =는 쓸 수 없어요.';
   return variables.some(([other], at) => at > index && other === name) ? '아래에 같은 이름이 있어서 이 값은 쓰이지 않아요.' : undefined;
 };

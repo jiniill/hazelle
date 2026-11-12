@@ -5,7 +5,7 @@ import { lastPlace } from '../../runtime/diagnostics/auto-diagnosis';
 import { diagnosticReport } from '../../runtime/diagnostics/diagnostics';
 import { ACTS } from '../common/acts';
 import { BUILT_VERSION } from '../../runtime/installation';
-import { DIAGNOSIS_NOTE } from '../common/words';
+import { DIAGNOSIS_NOTE, DIAGNOSIS } from '../common/words';
 import { useCopy } from '../common/useCopy';
 import { useSession } from '../session';
 import { Button, Row, SettingRow, Stack, TextField } from '../ui';
@@ -33,7 +33,7 @@ export function Diagnostics() {
       />
       {report !== null && (
         <Stack gap="related">
-          <TextField label="진단 정보" lines={10} value={report} onChange={() => {}} readOnly />
+          <TextField label={DIAGNOSIS} lines={10} value={report} onChange={() => {}} readOnly />
           <Row kind="actions">
             <Button variant="secondary" size="sm" icon={ACTS.copy.icon} onClick={() => copy(report)}>
               {ACTS.copy.label}

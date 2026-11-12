@@ -8,7 +8,7 @@ import { backBar, navigate, useRoute } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { ACTS, newOf } from '../common/acts';
 import { useSearch } from '../common/useSearch';
-import { PAGES } from '../common/words';
+import { PAGES, searchOf } from '../common/words';
 import { Button, Callout, CardItem, CardList, Empty, NavBar, Row, Screen } from '../ui';
 
 // The default model is chosen on 설정's 모델 page, not here.
@@ -18,7 +18,7 @@ export function ConnectionsScreen({ back }: { back: Back | null }) {
   const route = useRoute();
   const { credentials } = useSession();
   useSyncExternalStore(credentials.pool.subscribe, credentials.pool.settled);
-  const search = useSearch(connections, '연결 검색', (connection) => [connection.value.label]);
+  const search = useSearch(connections, searchOf('연결'), (connection) => [connection.value.label]);
 
   // A pool names who would serve now and what it has left, from meters already read; nothing is fetched for the list.
   function card(connection: Connection) {

@@ -5,7 +5,7 @@ import { readReports, resolveReport } from '../../runtime/service/admin';
 import { describeFailure } from '../common/failure';
 import { ago } from '../common/time';
 import { useAttempt } from '../common/useAttempt';
-import { NOTICES } from '../common/words';
+import { NOTICES, REPORT_REASON } from '../common/words';
 import { navigate } from '../shell/router';
 import { Button, Callout, Dialog, ListItem, Panel, Section, Stack, Text } from '../ui';
 import { ShareReportDialog } from './ShareReportDialog';
@@ -93,7 +93,7 @@ function BoardReportDialog({ report, onClose, onResolved }: { report: BoardRepor
       }
     >
       <Stack gap="group">
-        <Section level={3} title="신고 이유">
+        <Section level={3} title={REPORT_REASON}>
           <Text variant="prose">{report.text}</Text>
         </Section>
         <Section level={3} title={`신고한 ${what(report)}`}>

@@ -7,7 +7,7 @@ import { ACTS, importOf } from '../common/acts';
 import { runExport } from '../common/exporting';
 import { RELOAD_RETRY } from '../common/failure';
 import { RestoresDialog } from '../common/RestoresDialog';
-import { ACCOUNT_ONLY, RESTORE_SPAN, SAVING_FILE, STOP } from '../common/words';
+import { ACCOUNT_ONLY, RESTORE_SPAN, SAVING_FILE, STOP, READ_BACKUP } from '../common/words';
 import { useToast } from '../toast';
 import { useAccount, useSaves, useSession } from '../session';
 import { Button, Dialog, FileButton, Panel, Progress, SettingGroup, SettingRow, type ProgressStep } from '../ui';
@@ -30,7 +30,7 @@ type Steps = Partial<Record<BackupStep['kind'], BackupStep>>;
 // the pictures, writes the objects, then their summaries. The first and last stages have no count of their own.
 const STAGES: Record<Direction, { first: string; kinds: { kind: BackupStep['kind']; label: string }[]; last?: string }> = {
   save: { first: '집계', kinds: [{ kind: 'objects', label: '내용' }, { kind: 'files', label: '이미지' }], last: SAVING_FILE },
-  load: { first: '백업 읽기', kinds: [{ kind: 'files', label: '이미지' }, { kind: 'objects', label: '내용' }, { kind: 'summaries', label: '요약' }] },
+  load: { first: READ_BACKUP, kinds: [{ kind: 'files', label: '이미지' }, { kind: 'objects', label: '내용' }, { kind: 'summaries', label: '요약' }] },
 };
 const TITLE: Record<Direction, string> = { save: '백업 내보내는 중', load: '백업 가져오는 중' };
 const stages = (direction: Direction, steps: Steps): ProgressStep[] => [

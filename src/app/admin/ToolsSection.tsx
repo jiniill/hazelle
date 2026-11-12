@@ -8,6 +8,7 @@ import { Button, Section, SettingGroup, SettingRow } from '../ui';
 import { BlockFileDialog } from './BlockFileDialog';
 import { HoldShareDialog } from './HoldShareDialog';
 import { NOTICE_TEXT } from './notice';
+import { ACTIONS } from './actions';
 
 type Open = 'notice' | 'share' | 'file' | null;
 
@@ -28,12 +29,12 @@ export function ToolsSection({ onActed }: { onActed: () => void }) {
           control={<Button variant="secondary" size="sm" icon={Send} onClick={() => setOpen('notice')}>보내기</Button>}
         />
         <SettingRow
-          label="링크 보류"
+          label={ACTIONS['hold-share']}
           help="보류한 링크는 운영자가 해제할 때까지 열리지 않아요."
           control={<Button variant="secondary" size="sm" icon={Link2Off} onClick={() => setOpen('share')}>ID 입력</Button>}
         />
         <SettingRow
-          label="파일 차단"
+          label={ACTIONS['block-file']}
           help="차단한 파일은 어떤 계정에서도 올리거나 열 수 없어요."
           control={<Button variant="secondary" size="sm" icon={FileX} onClick={() => setOpen('file')}>ID 입력</Button>}
         />

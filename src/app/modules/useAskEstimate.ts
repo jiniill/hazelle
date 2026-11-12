@@ -3,6 +3,7 @@ import type { Cost } from '../../connectors/types';
 import { askEstimate } from '../../runtime/tools/plugin-writer';
 import { cost } from '../common/receipt';
 import { count } from '../common/typedNumber';
+import { GENERATING } from '../common/words';
 
 type Ask = Parameters<typeof askEstimate>[1];
 
@@ -22,4 +23,4 @@ export function useAskEstimate(deps: Parameters<typeof askEstimate>[0], ask: Ask
 }
 
 // written: the answer's length so far while it is being written, else null.
-export const askHint = (written: number | null, estimate: Cost | null) => (written !== null ? `생성 중… ${count(written)}자` : estimate === null ? undefined : `예상 ${cost(estimate)}`);
+export const askHint = (written: number | null, estimate: Cost | null) => (written !== null ? `${GENERATING} ${count(written)}자` : estimate === null ? undefined : `예상 ${cost(estimate)}`);

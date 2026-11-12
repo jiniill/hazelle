@@ -1,7 +1,7 @@
 import { setLook } from '../../runtime/library/characters';
 import { presetOf } from '../common/reading';
 import { HidePicturesRow, presetChoices, ReadingRows, ReplyRow } from '../common/ReadingRows';
-import { PRESET, PRESET_GONE, PRESET_GONE_CHIP, RESET, SAVE_FAILED } from '../common/words';
+import { PRESET, PRESET_GONE, PRESET_GONE_CHIP, RESET, SAVE_FAILED, READING_SETTINGS } from '../common/words';
 import { useDisplay } from '../display';
 import { useStore } from '../session';
 import { useToast } from '../toast';
@@ -13,7 +13,7 @@ type Held = { id: string; look: string | undefined } | null;
 export function ReadingDialog({ character, onClose }: { character: Held; onClose: () => void }) {
   const { reset, find } = useDisplay();
   return (
-    <Dialog title="읽기 설정" onClose={onClose}>
+    <Dialog title={READING_SETTINGS} onClose={onClose}>
       <Stack gap="related">
         <PresetRow character={character} />
         <HidePicturesRow />

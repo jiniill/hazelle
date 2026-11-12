@@ -1,11 +1,11 @@
 import { tokenGroups, type From, type TokenSource } from '../../engine/pipeline';
 import type { Rehearsal } from '../../runtime/scripts/preview';
 import { afterEnter, previewRequest, type AfterEnter, type Sending } from '../../runtime/chat/turn-context';
-import { describeTurnFailure, runaway } from '../common/failure';
+import { describeTurnFailure, LORE_RUNAWAY } from '../common/failure';
 import { MESSAGE_ROLES, SLOT } from '../common/prompt-words';
 import { tokens } from '../common/receipt';
 import { useLoad } from '../common/useLoaded';
-import { COUNTING, PRE_READ } from '../common/words';
+import { COUNTING, PRE_READ, INPUT_TRANSLATION } from '../common/words';
 import { useSession } from '../session';
 import { Callout, CodeBlock, Disclosure, Facts, Gauge, List, ListItem, Section, Stack, Text } from '../ui';
 import { partName, RequestView } from './ChatSent';
@@ -17,7 +17,7 @@ function later(steps: AfterEnter[]): string[] {
   return steps.map((step) => {
     switch (step.kind) {
       case 'input-translation':
-        return '입력 번역';
+        return INPUT_TRANSLATION;
       case 'tools':
         return '플러그인 실행';
       case 'retrieval':
@@ -84,7 +84,7 @@ function RehearsalView({ rehearsal, sending, editor, onEdit }: { rehearsal: Rehe
   return (
     <Stack gap="related">
       {facts.length > 0 && <Facts items={facts} variant="tiles" />}
-      {loreRanAway && <Callout tone="warn">{runaway('로어북을 스크립트에 넘기기 전에')}</Callout>}
+      {loreRanAway && <Callout tone="warn">{LORE_RUNAWAY}</Callout>}
       {stopped !== null ? (
         <Text variant="note">{`${STAGES[stopped]} 단계에서 멈춰서 요청을 보내지 않아요.`}</Text>
       ) : !changed ? (

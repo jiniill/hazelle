@@ -39,7 +39,7 @@ import { FaceChange } from '../common/FaceChange';
 import { useTypedNumber } from '../common/typed';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STATUS, STOP, THINGS, TRANSLATOR_NOTE } from '../common/words';
+import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STATUS, STOP, THINGS, TRANSLATOR_NOTE, CARD_INSTRUCTIONS, RETRANSLATE } from '../common/words';
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
@@ -176,7 +176,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
           </Button>
         ) : (
           <Button variant="ghost" icon={Languages} disabled={!translation.translator.ok || translation.sources.length === 0} onClick={translation.start}>
-            {translation.missing.length > 0 ? '번역하기' : '다시 번역'}
+            {translation.missing.length > 0 ? '번역하기' : RETRANSLATE}
           </Button>
         ))}
       <ChoiceGroup layout="fit" label="보기" options={READINGS} value={reading} onChange={setReading} />
@@ -296,7 +296,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     instructions: (
       <Section title={PARTS.instructions.label}>
         <CountedField
-          label="시스템 프롬프트"
+          label={CARD_INSTRUCTIONS.systemPrompt}
           lines={6}
           expand={SHORTCUTS.bigEdit.keys}
           language={instructions}
@@ -306,7 +306,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
           help={{ text: '비워 두면 기본 지시문을 써요. {{original}}을 넣으면 그 자리에 기본 지시문이 들어가요.', open: { label: opens(inSettings('prompts')), onClick: () => navigate({ kind: 'prompts', place: null, sort: 'conversation' }) } }}
         />
         <CountedField
-          label="대화 뒤 지시문"
+          label={CARD_INSTRUCTIONS.postHistoryInstructions}
           lines={4}
           expand={SHORTCUTS.bigEdit.keys}
           language={instructions}

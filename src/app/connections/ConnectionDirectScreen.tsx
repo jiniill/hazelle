@@ -5,12 +5,12 @@ import { providerConnection } from '../../runtime/models/connections';
 import { HTTPS_ONLY } from '../common/failure';
 import { useAttempt } from '../common/useAttempt';
 import { MARKS } from '../common/tutorial';
-import { DIRECT_CONNECTION } from '../common/words';
+import { DIRECT_CONNECTION, PICK_MODEL } from '../common/words';
 import { useAccount, useSession } from '../session';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Button, Callout, ChoiceGroup, GuideMark, Intro, NavBar, Screen, Stack, Text, TextField } from '../ui';
-import { connect, directConnection } from './connect';
+import { connect, directConnection, KEY_OPTIONAL } from './connect';
 
 const PROTOCOLS: { value: Protocol; label: string }[] = [
   { value: 'chat-completions', label: 'OpenAI 호환' },
@@ -55,7 +55,7 @@ export function ConnectionDirectScreen({ address: pasted, back }: { address: str
       onSubmit={submit}
       actions={
         <Button type="submit" busy={busy} disabled={!draft}>
-          모델 선택
+          {PICK_MODEL}
         </Button>
       }
     >
@@ -77,7 +77,7 @@ export function ConnectionDirectScreen({ address: pasted, back }: { address: str
               kind="key"
               value={key}
               onChange={setKey}
-              hint={place.kind === 'generic-url' ? '키가 필요 없으면 비워 둬도 돼요.' : undefined}
+              hint={place.kind === 'generic-url' ? KEY_OPTIONAL : undefined}
             />
           )}
         </Stack>
