@@ -184,6 +184,7 @@ export function useReplied() {
   return useMemo(() => summaries.some(({ value }) => value.recent.length > 0), [summaries]);
 }
 export const useShares = () => useKind('share');
+export const usePresence = () => useKind('presence');
 // all is the memo's key only: it is a new array exactly when one changed.
 function useLive<K extends 'prompt' | 'persona' | 'profile'>(kind: K) {
   const all = useKind(kind);

@@ -137,3 +137,10 @@ it('reads a state definition as absent or well formed on a prompt and a module, 
   expect(isValue('entry', entry)).toBe(false);
   expect(isValue('entry', { ...entry, changes: [{ kind: 'set' }], byHand: true })).toBe(false);
 });
+
+it('accepts a month of presence as a whole start minute and its runs in pairs, and refuses any other', () => {
+  expect(isValue('presence', { start: 29_366_880, runs: [540, 3, 600, 1] })).toBe(true);
+  expect(isValue('presence', { start: 29_366_880.5, runs: [540, 3] })).toBe(false);
+  expect(isValue('presence', { start: 29_366_880, runs: [540] })).toBe(false);
+  expect(isValue('presence', { start: 29_366_880, runs: [540, 1.5] })).toBe(false);
+});

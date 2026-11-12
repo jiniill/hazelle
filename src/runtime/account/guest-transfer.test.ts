@@ -17,7 +17,9 @@ import { FIRST_ID } from '../library/personas';
 import { FIRST_PROFILE_ID } from '../models/profiles';
 import { KINDS, type Kind } from '../../model/kinds';
 import { memoryId, vectorsId } from '../../model/memory';
-import { png, sessionCookie, signupBody, stubPage, testApp, testConnection } from '../testing';
+import { png, presenceMemory, sessionCookie, signupBody, stubPage, testApp, testConnection } from '../testing';
+import { minuteOf } from '../../model/presence';
+import { savePresence } from '../presence';
 import { randomBytes } from '../../vault/aead';
 import { lockVault, recallGuest, recallVault, rememberVault } from '../../vault/device';
 import { createVault, openVault, passwordCredential, stretchPassword, recoveryCredential } from '../../vault/keys';
@@ -127,10 +129,11 @@ async function contents() {
   return { ...held, character, chat, message, image, ref };
 }
 
-it('does not ask about a guest that holds only the first open’s defaults', async () => {
+it('does not ask about a guest that holds only the first open’s defaults and the minutes it was open', async () => {
   const { accountId, vaultKey, backend } = await guest();
   const opened = await openSession(accountId, vaultKey, '손님', new AbortController().signal, undefined, { backend });
   if (!opened.ok) throw new Error(opened.error);
+  expect(await savePresence(opened.data.store, presenceMemory(), [minuteOf(Date.now())])).toBe(true);
   opened.data.close();
   expect(await guestWithContent()).toEqual({ ok: true, data: null });
 });

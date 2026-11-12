@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react';
 import { cacheSaving } from '../../connectors/pricing';
 import { costUnit, resolveConnection } from '../../connectors/registry';
+import { presenceReport, type PresenceReport } from '../../model/presence';
 import { GONE, usageReport, type Counted, type ModelUsage, type ReportWindow, type UsageGroup, type UsageReport } from '../../model/usage';
 import { money } from '../common/money';
 import { particleOf } from '../common/particles';
+import { monthDay } from '../common/time';
 import { count } from '../common/typedNumber';
 import { spent, tally } from '../common/usage';
 import { NO_CHARACTER, PAGES, deletedOf, THINGS, SPANS, USAGE_FAILED } from '../common/words';
 import { LedgerWait, useLedger } from '../common/useLedger';
-import { useConnections, useLibrary } from '../session';
+import { useConnections, useLibrary, usePresence } from '../session';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { Breakdown, Columns, DayMap, Facts, HourDial, HourMap, Intro, LinkScope, Moment, NavBar, Ranking, Screen, Section, Stack, Table, Tabs, Text, WeekBars, quartileLevels, type DayCell, type Ranked } from '../ui';
@@ -23,6 +25,7 @@ const hourWord = (hour: number) => (hour < 6 ? `새벽 ${hour || 12}시` : hour 
 const replies = (calls: number) => `응답 ${count(calls)}번`;
 const brief = (usage: ModelUsage) => (usage.costs.length ? `${replies(usage.calls)} · ${spent(usage)}` : replies(usage.calls));
 const percent = (part: number, whole: number) => `${Math.round((part / whole) * 100)}%`;
+const minutesWord = (minutes: number) => `${count(minutes)}분`;
 
 export function UsageScreen({ back }: { back: Back | null }) {
   const library = useLibrary();
@@ -40,6 +43,8 @@ export function UsageScreen({ back }: { back: Back | null }) {
   }, [connections]);
   const [now] = useState(Date.now);
   const report = useMemo(() => (view.kind === 'read' ? usageReport(view.calls, window, now, (id) => library.byCharacter.has(id), saving) : null), [view, window, now, library, saving]);
+  const presence = usePresence();
+  const present = useMemo(() => (report ? presenceReport(presence.map(({ value }) => value), report.days[0]!.key) : null), [presence, report]);
   const characterName = (id: string | null) => (id === null ? NO_CHARACTER : id === GONE ? deletedOf(THINGS.character.noun) : library.byCharacter.get(id)!.character.card.name);
 
   return (
@@ -49,7 +54,7 @@ export function UsageScreen({ back }: { back: Back | null }) {
         <LedgerWait view={view} retry={retry} failed={USAGE_FAILED} />
       ) : (
         <LinkScope>
-          <Hero report={report!} window={window} now={now} characterName={characterName} />
+          <Hero report={report!} present={present!} window={window} now={now} characterName={characterName} />
           {report!.total.calls > 0 && (
             <>
               <Highlights report={report!} />
@@ -59,6 +64,7 @@ export function UsageScreen({ back }: { back: Back | null }) {
                   label="요일과 시간별 응답"
                   hours={HOURS}
                   scale={SCALE}
+                  {...(present!.present > 0 && { note: `접속한 날 평균 ${minutesWord(Math.round(present!.minutes / present!.present))} 머물렀어요` })}
                   rows={report!.hours.map((cells, weekday) => ({
                     label: WEEKDAYS[weekday]![0]!,
                     keys: [`row:${weekday}`],
@@ -99,7 +105,7 @@ export function UsageScreen({ back }: { back: Back | null }) {
   );
 }
 
-function Hero({ report, window, now, characterName }: { report: UsageReport; window: ReportWindow; now: number; characterName: (id: string | null) => string }) {
+function Hero({ report, present, window, now, characterName }: { report: UsageReport; present: PresenceReport; window: ReportWindow; now: number; characterName: (id: string | null) => string }) {
   const { days, active, current, longest, busiest, total } = report;
   const today = new Date(now).setHours(0, 0, 0, 0);
   const shown = days.filter(({ key }) => key <= today);
@@ -110,11 +116,16 @@ function Hero({ report, window, now, characterName }: { report: UsageReport; win
     if (within(key, current)) keys.push('day:current');
     if (within(key, longest)) keys.push('day:longest');
     if (busiest && key === busiest.day.key) keys.push('day:busiest');
-    return { level: key > today ? null : levels[index]!, title: key === today ? '오늘' : DAY.format(key), note: usage.calls ? brief(usage) : '대화하지 않았어요', keys, today: key === today };
+    const minutes = present.days.get(key);
+    if (minutes) keys.push('day:present');
+    const note = [usage.calls ? brief(usage) : '대화하지 않았어요', ...(minutes ? [`${minutesWord(minutes)} 접속`] : [])].join(' · ');
+    return { level: key > today ? null : levels[index]!, title: key === today ? '오늘' : DAY.format(key), note, keys, today: key === today };
   };
   const cells = days.map(cell);
   const years = window === 'all' ? [...new Set(days.map(({ key }) => new Date(key).getFullYear()))] : [];
   const top = report.characters.find(({ key }) => key !== null && key !== GONE);
+  // The page counting now starts the record when nothing is kept yet.
+  const counted = present.first ?? today;
   const span = window === 'month' ? `${new Date(now).getMonth() + 1}월에는` : window === 'year' ? '올해는' : '지금까지';
   return (
     <Stack gap="group">
@@ -147,6 +158,7 @@ function Hero({ report, window, now, characterName }: { report: UsageReport; win
             { label: '대화한 날', value: `${count(active)}일`, links: ['day:lit'] },
             { label: '지금 연속', value: `${count(current?.days ?? 0)}일`, links: ['day:current'] },
             { label: '가장 긴 연속', value: `${count(longest?.days ?? 0)}일`, links: ['day:longest'] },
+            { label: '접속 시간', value: present.minutes < 60 ? minutesWord(present.minutes) : `${count(Math.round(present.minutes / 60))}시간`, notes: counted > days[0]!.key ? [`${monthDay(counted)}부터`] : [], links: ['day:present'] },
           ]}
         />
       )}

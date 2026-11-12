@@ -17,6 +17,7 @@ import { SETTINGS_ID, type Settings } from './settings';
 import type { Tool, ToolChatData, ToolData, ToolDraft, ToolFile } from './tool';
 import type { Stream } from './stream';
 import type { Ledger } from './usage';
+import type { Presence } from './presence';
 
 export type Values = {
   character: Character;
@@ -49,6 +50,7 @@ export type Values = {
   settings: Settings;
   order: Order;
   ledger: Ledger;
+  presence: Presence;
   prompt: Prompt;
   persona: Persona;
   profile: Profile;
@@ -93,6 +95,7 @@ export const KINDS = {
   settings: { parent: null, id: SETTINGS_ID },
   order: { parent: null, id: ORDER_ID },
   ledger: { parent: 'settings', appendOnly: true },
+  presence: { parent: 'settings' },
   prompt: { parent: null },
   persona: { parent: null },
   profile: { parent: null },
@@ -245,6 +248,7 @@ const SHAPES = {
   ledger: (value) => isRecord(value) && ((value.type === 'call' || value.type === 'input-refusal')
     ? shape({ at: num, call: shape({ ...all(str, 'id', 'connection', 'model', 'modelName', 'source'), calibration }), chat: orNull(str), character: orNull(str) })(value)
     : value.type === 'cost' && shape({ call: str, cost: orNull(isRecord), at: num })(value)),
+  presence: shape({ start: Number.isInteger, runs: (value) => listOf(Number.isInteger)(value) && (value as number[]).length % 2 === 0 }),
   prompt: (value) => prompt(value) && (conversation(value) || task(value)),
   persona: shape({ name: str, description: str, picture: orNull(str), folder: optStr }),
   profile: shape({ name: str, settings: isRecord }),

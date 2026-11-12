@@ -15,13 +15,15 @@ type Put = ObjectValue & { type: 'create' | 'restore' };
 export type Write = Put | { type: 'remove'; id: string } | { type: 'rewrite'; id: string };
 export type Pending = { id: string; kind: string; parent: string | null; value: unknown; baseRev: number | null };
 export type Resolved = { pending: Pending | null; held: Held | null };
-// derived: a write the store makes on its own (a summary, a rewrite), which is not counted among the person's dropped writes and
-// not shown before its answer. at: the copy a change applies to, live when sent and what reads show when previewed.
+// derived: a write the store makes on its own (a summary, a rewrite) or the app makes unasked (the minutes present), which is
+// not counted among the person's dropped writes nor asked about on leaving, and not shown before its answer. at: the copy
+// a change applies to, live when sent and what reads show when previewed.
 export type WriteStep = { id: string; resolve: (at: (id: string) => Held | undefined) => ApiResult<Resolved>; derived?: boolean };
 
 type Prepared = { resolved: Resolved[]; writes: SealedWrite[]; files: string[] };
 
 const encoder = new TextEncoder();
+const DERIVED: ReadonlySet<Kind> = new Set(['summary', 'presence']);
 const isPut = (write: Write): write is Put => write.type === 'create' || write.type === 'restore';
 
 export class ObjectWrites {
@@ -44,7 +46,7 @@ export class ObjectWrites {
   }
 
   update<K extends Exclude<Kind, AppendOnly>>(kind: K, id: string, change: (current: Values[K]) => Values[K] | null): WriteStep {
-    return { id, resolve: (at) => {
+    return { id, derived: DERIVED.has(kind), resolve: (at) => {
       const held = at(id);
       if (!held || held.kind !== kind) return { ok: false, error: SCOPED.has(kind) ? 'not-loaded' : 'gone' };
       if (held.value === undefined) return { ok: false, error: 'unreadable' };
@@ -74,7 +76,7 @@ export class ObjectWrites {
   step(write: Write): WriteStep {
     return {
       id: write.id,
-      derived: write.type === 'rewrite' || (isPut(write) && write.kind === 'summary'),
+      derived: write.type === 'rewrite' || (isPut(write) && DERIVED.has(write.kind)),
       resolve: (at) => {
         const held = at(write.id);
         // One gone, not loaded or unreadable by then has nothing to write back, and does not fail the others.

@@ -17,7 +17,9 @@ import type { ObjectStore } from '../store/store';
 import { accountSettings, changeSettings } from '../account-settings';
 import type { Write } from '../store/object-writes';
 import { SUMMARY_WINDOW, summaryId, summaryStale } from '../store/summary';
-import { png, testConnection, testServer } from '../testing';
+import { png, presenceMemory, testConnection, testServer } from '../testing';
+import { minuteOf, presenceReport } from '../../model/presence';
+import { savePresence } from '../presence';
 
 const server = testServer();
 vi.mock('../files/picture', () => ({ thumbnail: async () => 'data:thumb' }));
@@ -344,5 +346,19 @@ describe('backup', () => {
     const before = await held(store);
     expect(await restoreBackup(store, files, backup)).toEqual({ ok: false, error: 'not-new' });
     expect(await held(store)).toEqual(before);
+  });
+
+  it('restores into an account that was only open for a while, keeping its minutes beside the backup’s', async () => {
+    const old = await oldAccount();
+    const minute = minuteOf(Date.now());
+    expect(await savePresence(old.store, presenceMemory(), [minute])).toBe(true);
+    const backup = await read(await exported(old.store, old.files));
+
+    await server.wipe();
+    const { store, files } = await open('someone');
+    expect(await savePresence(store, presenceMemory(), [minute, minute + 1])).toBe(true);
+    expect(await restoreBackup(store, files, backup)).toEqual({ ok: true, data: { skipped: 0 } });
+    expect(store.list('presence')).toHaveLength(2);
+    expect(presenceReport(store.list('presence').map(({ value }) => value), 0).minutes).toBe(2);
   });
 });
