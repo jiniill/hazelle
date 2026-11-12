@@ -118,7 +118,7 @@ export class Commentator {
     const saved = await store.batch([
       ...older.map(({ id }) => ({ type: 'remove' as const, id })),
       { type: 'create', kind: 'remark', id: crypto.randomUUID(), parent: chat, value: remark },
-      receiptRow(receipt, remark.at, chatPlace(store, chat)),
+      receiptRow('mascot', receipt, remark.at, chatPlace(store, chat)),
     ]);
     return saved.ok ? null : { kind: 'unsaved', failure: saved };
   }

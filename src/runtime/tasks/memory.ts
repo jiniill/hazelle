@@ -563,7 +563,7 @@ export class Rememberer {
         if (!applies(memory, fold(store.children('entry', chat)), job)) return null;
         return 'chapter' in parsed ? withChapter(memory, job, job.chapter!, parsed.chapter, span, receipt, first) : committed(memory, job, parsed.records, span, receipt, first);
       });
-      if (saved.ok) await keepRow(store, receipt, Date.now(), chatPlace(store, chat));
+      if (saved.ok) await keepRow(store, 'memory', receipt, Date.now(), chatPlace(store, chat));
       return saved.ok ? 'done' : saved.error === 'gone' ? 'moved' : { kind: 'unsaved', failure: saved };
     })();
     endCall(store, id);

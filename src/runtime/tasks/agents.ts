@@ -121,7 +121,7 @@ async function call(session: Deps, chat: string, stored: Chat, { id, value: prom
   if ('receipt' in answer) session.log.attach(chat, answer.receipt.id, { agent: { name: prompt.name, stage: prompt.stage, sent: { messages: assembled.messages, parts: assembled.parts } } });
   if ('kind' in answer) return answer;
   const { receipt } = answer;
-  await keepRow(store, receipt, Date.now(), chatPlace(store, chat));
+  await keepRow(store, 'agent', receipt, Date.now(), chatPlace(store, chat));
   const parsed = keepsMemory(prompt) ? parseAgentAnswer(answer.text) : { text: answer.text.trim(), memory: null };
   const restored = restore(parsed.text, assembled.spans);
   if (restored.missing) return { kind: 'lost', receipt, count: restored.missing };

@@ -32,7 +32,7 @@ export function upgradeValue(kind: string, value: unknown): Record<string, unkno
   if (kind === 'module') return upgradeModule(value);
   if (kind === 'memory') return upgradeMemory(value);
   if (kind === 'stream' && !('calibration' in value)) return { ...value, calibration: unavailableCalibration('historical') };
-  if (kind === 'ledger' && value.type === 'call' && isRecord(value.call) && !('calibration' in value.call)) return { ...value, call: { ...value.call, calibration: unavailableCalibration('historical') } };
+  if (kind === 'ledger') return upgradeLedger(value);
   return null;
 }
 
@@ -151,6 +151,21 @@ function dropPictureHeight(value: Record<string, unknown>) {
 // Until 2026-11-09 a card dropped Risu's additionalText.
 function additionalText(card: Record<string, unknown>) {
   return typeof card.additionalText !== 'string' ? { ...card, additionalText: '' } : null;
+}
+
+function upgradeLedger(value: Record<string, unknown>) {
+  let upgraded: Record<string, unknown> | null = null;
+  for (const step of [ledgerCalibration, ledgerPurpose]) upgraded = step(upgraded ?? value) ?? upgraded;
+  return upgraded;
+}
+
+function ledgerCalibration(value: Record<string, unknown>) {
+  return value.type === 'call' && isRecord(value.call) && !('calibration' in value.call) ? { ...value, call: { ...value.call, calibration: unavailableCalibration('historical') } } : null;
+}
+
+// Until 2026-11-12 a call's row kept no purpose; a purpose found later is booked in a row of its own (model/usage Ledger).
+function ledgerPurpose(value: Record<string, unknown>) {
+  return (value.type === 'call' || value.type === 'input-refusal') && !('purpose' in value) ? { ...value, purpose: null } : null;
 }
 
 // Until 2026-10-08 a chat's memory held no chapters.

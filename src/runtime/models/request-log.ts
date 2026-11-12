@@ -6,12 +6,9 @@ import type { CacheDiagnosis, CacheForecast, CacheText } from '../../model/cache
 import type { Receipt } from '../../model/chat';
 import type { AgentStage } from '../../model/prompt';
 import type { Stream } from '../../model/stream';
+import type { CallPurpose } from '../../model/usage';
 import type { DeviceLog } from '../device/device-log';
 import type { ObjectStore } from '../store/store';
-import type { PageClass } from './streams';
-
-// As the stream marker (newCall) and pageCall name a call; an embedding is made by neither.
-export type CallPurpose = Stream['for']['kind'] | PageClass | 'embedding';
 
 // Who a call is for. call: its connection and model with their names, as its receipt keeps them.
 export type Logged = { chat: string | null; purpose: CallPurpose; call: Stream['call'] };

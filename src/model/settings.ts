@@ -62,6 +62,8 @@ export type Settings = {
   toolLanguage?: string;
   importNotice?: true;
   ledger?: 'filled' | { after: string };
+  // How far the one fill of the ledger's unknown purposes went (runtime/models/usage fillPurposes); absent, not begun.
+  purposes?: 'filled' | { after: string };
   // How many of runtime/import/reread's steps every import original kept here has had; absent, none.
   reread?: number;
   looks?: SavedLook[];

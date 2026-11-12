@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import type { Entry, Receipt } from '../../model/chat';
+import { usageCall, type Entry, type Receipt } from '../../model/chat';
 import { blankCard } from '../../engine/import/card';
 import { memoryId, type Memory } from '../../model/memory';
 import type { Counted } from '../../model/usage';
@@ -8,7 +8,9 @@ import type { ObjectStore } from '../store/store';
 import { accountSettings, changeSettings } from '../account-settings';
 import type { Write } from '../store/object-writes';
 import { testServer } from '../testing';
-import { Usage } from './usage';
+import { SETTINGS_ID } from '../../model/settings';
+import { unavailableCalibration } from '../../model/token-calibration';
+import { ledgerId, receiptRow, Usage } from './usage';
 
 const server = testServer();
 const receipt = (id = crypto.randomUUID(), over: Partial<Receipt> = {}): Receipt => ({
@@ -19,6 +21,10 @@ const message = (call: Receipt): Entry => ({ type: 'message', role: 'assistant',
 const write = (parent: string, value: Entry, id = crypto.randomUUID()): Write => ({ type: 'create', kind: 'entry', id, parent, value });
 const chat = (id: string, origin?: string): Write => ({ type: 'create', kind: 'chat', id, parent: null, value: { title: null, character: null, models: {}, ...(origin && { origin: { id: origin, name: '', after: '' } }) } });
 const places = (calls: Counted[]) => Object.fromEntries(calls.map(({ call, chat }) => [call.id, chat]));
+const purposes = (calls: Counted[]) => Object.fromEntries(calls.map(({ call, purpose }) => [call.id, purpose]));
+// A call's row saved before rows kept a purpose.
+const unknownRow = (call: Receipt, chat: string | null): Write =>
+  ({ type: 'create', kind: 'ledger', id: ledgerId(call.id), parent: SETTINGS_ID, value: { type: 'call', at: 1, call: { ...usageCall(call, 1).call, calibration: unavailableCalibration('historical') }, chat, character: null, purpose: null } });
 const filled = (store: ObjectStore) => accountSettings(store).ledger;
 
 const account = async () => (await server.account()).store;
@@ -56,6 +62,8 @@ it('fills the ledger once from every call kept before it, a branch’s copy unde
   if (!read.ok) throw new Error(read.error);
   expect(places(read.data)).toEqual({ [first]: original, [continued]: original, [translated]: original, [bot]: original, [summary]: original, [profile]: null, [branched]: branch });
   expect(read.data.find(({ call }) => call.id === profile)!.character).toBe(character.data.id);
+  // A bot's call kept before receipts carried a calibration cannot be told from an embedding.
+  expect(purposes(read.data)).toEqual({ [first]: 'reply', [continued]: 'reply', [translated]: 'translation', [bot]: null, [summary]: 'memory', [profile]: 'likeness', [branched]: 'reply' });
   // The branch booked the cost its original was still waiting for.
   expect(read.data.find(({ call }) => call.id === continued)!.call.cost).toEqual(booked);
 
@@ -107,5 +115,48 @@ it('counts a reply as it is saved, and the cost booked for it after', async () =
   expect((await appendCost(store, id, call, { unit: 'usd', amount: 0.5, source: 'reported' })).ok).toBe(true);
   expect(await usage.read(signal)).toMatchObject({ ok: true, data: [{ call: { cost: { amount: 0.5 } } }] });
   expect(walk).toHaveBeenCalledTimes(2);
+  usage.close();
+});
+
+it('fills the purposes old rows lack from the chats that saved them, reading each such chat once, and leaves a gone chat’s unknown', async () => {
+  const store = await account();
+  const [saved, quiet, gone] = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+  const [reply, summary, profile, lost, known] = [receipt(), receipt(), receipt(), receipt(), receipt()];
+  const record = { id: 'r1', sources: [], print: '', when: null, where: null, who: [], what: '', lines: [], outcome: '', state: [], opens: [], closes: [], receipt: summary, at: 11 };
+  expect((await store.batch([
+    chat(saved), chat(quiet),
+    write(saved, message(reply)),
+    write(quiet, message(known)),
+    { type: 'create', kind: 'memory', id: memoryId(saved), parent: saved, value: { records: [record], chapters: [], state: [], threads: [] } },
+    unknownRow(reply, saved), unknownRow(summary, saved), unknownRow(lost, gone), unknownRow(profile, null),
+    receiptRow('reply', known, 1, { chat: quiet, character: null }),
+  ], undefined, { unheld: true })).ok).toBe(true);
+  const character = await store.create('character', { card: blankCard('루나'), folder: null, loreFolders: [] });
+  if (!character.ok) throw new Error(character.error);
+  expect((await store.create('likeness', { portraits: [], at: 14, receipt: profile }, { parent: character.data.id })).ok).toBe(true);
+  expect((await changeSettings(store, (current) => ({ ...current, ledger: 'filled' }))).ok).toBe(true);
+  const scan = vi.spyOn(store, 'scan');
+
+  const usage = new Usage(store);
+  await usage.fillPurposes();
+  expect([usage.purposing(), accountSettings(store).purposes]).toEqual([null, 'filled']);
+  expect(scan.mock.calls.map(([options]) => options.parent)).toEqual([saved]);
+  const read = await usage.read(new AbortController().signal);
+  if (!read.ok) throw new Error(read.error);
+  expect(purposes(read.data)).toEqual({ [reply.id]: 'reply', [summary.id]: 'memory', [lost.id]: null, [profile.id]: 'likeness', [known.id]: 'reply' });
+  usage.close();
+});
+
+it('goes on from the chat a fill of purposes cut short reached', async () => {
+  const store = await account();
+  const [before, after] = [crypto.randomUUID(), crypto.randomUUID()].sort() as [string, string];
+  const [skipped, made] = [receipt(), receipt()];
+  expect((await store.batch([chat(before), chat(after), write(before, message(skipped)), write(after, message(made)), unknownRow(skipped, before), unknownRow(made, after)], undefined, { unheld: true })).ok).toBe(true);
+  expect((await changeSettings(store, (current) => ({ ...current, ledger: 'filled', purposes: { after: before } }))).ok).toBe(true);
+  const usage = new Usage(store);
+  await usage.fillPurposes();
+  const read = await usage.read(new AbortController().signal);
+  if (!read.ok) throw new Error(read.error);
+  expect(purposes(read.data)).toEqual({ [skipped.id]: null, [made.id]: 'reply' });
   usage.close();
 });

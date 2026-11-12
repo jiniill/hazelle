@@ -229,7 +229,7 @@ it('remaps inventory ids regardless of field names, preserving engine seeds, lit
     { type: 'create', kind: 'cacheprint', id: cachePrintId(source.chat), parent: source.chat, value: { call, connection: connectionId, account: connectionAccount, model: providerModel, messages: [] } },
     { type: 'create', kind: 'likeness', id: likenessId(source.character), parent: source.character, value: { portraits: [], at: 1, receipt: null } },
     { type: 'create', kind: 'summary', id: summaryId(source.chat), parent: source.chat, value: { version: 1, head: 0, chatRev: 0, dependencies: [{ kind: 'character', id: source.character, rev: 1 }], rendered: { now: 1, timeZone: 'UTC' }, character: source.character, title: 'A chat', preview: 'Hello', count: 1, at: 1, order: 1, recent: [] } },
-    { type: 'create', kind: 'ledger', id: ledgerId(call), parent: SETTINGS_ID, value: { type: 'call', at: 1, call: { id: call, connection: connectionId, model: providerModel, modelName: 'Model', source: 'Connection', usage: null, cost: null, calibration: unavailableCalibration('historical') }, chat: source.chat, character: source.character } },
+    { type: 'create', kind: 'ledger', id: ledgerId(call), parent: SETTINGS_ID, value: { type: 'call', at: 1, call: { id: call, connection: connectionId, model: providerModel, modelName: 'Model', source: 'Connection', usage: null, cost: null, calibration: unavailableCalibration('historical') }, chat: source.chat, character: source.character, purpose: 'reply' } },
     { type: 'create', kind: 'module', id: module, parent: null, value: { name: 'Tool', description: '', namespace: null, loreFolders: [], toggles: [], regex: [], triggers: [] } },
   ], undefined, { unheld: true });
   expect((await setToolData(source, module, toolKey, {

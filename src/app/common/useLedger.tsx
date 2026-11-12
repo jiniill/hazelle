@@ -41,6 +41,26 @@ export function useLedger(): { view: LedgerView; retry: () => void } {
   return { view, retry: filled ? () => setAttempt((held) => held + 1) : () => void usage.fill() };
 }
 
+// Whether every call's purpose the account can tell is in the ledger. Until the one fill of the purposes older rows lack
+// has ended, a breakdown by purpose would show part of them as the whole; it starts once the ledger's own fill has.
+export function usePurposes(): boolean {
+  const { usage } = useSession();
+  const { ledger, purposes } = useSettings();
+  const purposing = useSyncExternalStore(usage.subscribe, usage.purposing);
+  const filled = purposes === 'filled';
+  useEffect(() => {
+    if (ledger === 'filled' && !filled && purposing === null) void usage.fillPurposes();
+  }, [usage, ledger, filled, purposing]);
+  return filled;
+}
+
+export function PurposesWait() {
+  const { usage } = useSession();
+  const purposing = useSyncExternalStore(usage.subscribe, usage.purposing);
+  if (purposing === 'failed') return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => void usage.fillPurposes() }}>쓰임을 모두 세지 못했어요.</Callout>;
+  return <Text variant="note">{purposing?.of ? `쓰임을 세는 중… 채팅 ${count(purposing.of)}개 중 ${count(purposing.read)}개` : '쓰임을 세는 중…'}</Text>;
+}
+
 // failed: the screen's own words for a read that failed.
 export function LedgerWait({ view, retry, failed }: { view: Exclude<LedgerView, { kind: 'read' }>; retry: () => void; failed: string }) {
   const { usage } = useSession();

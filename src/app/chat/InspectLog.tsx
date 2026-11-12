@@ -1,5 +1,6 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import type { CallPurpose, LogEntry } from '../../runtime/models/request-log';
+import type { CallPurpose } from '../../model/usage';
+import type { LogEntry } from '../../runtime/models/request-log';
 import { describeReplyError } from '../common/failure';
 import { cacheShare, finish, seconds, tokens } from '../common/receipt';
 import { ago } from '../common/time';

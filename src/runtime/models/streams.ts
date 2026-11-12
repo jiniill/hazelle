@@ -7,6 +7,7 @@ import { live } from '../../model/library';
 import type { Stored } from '../../model/kinds';
 import type { Receipt } from '../../model/chat';
 import type { Stream } from '../../model/stream';
+import type { PageClass } from '../../model/usage';
 import { streamKey } from '../../vault/streams';
 import type { Route } from './assignment';
 import { chatMemory } from '../tasks/memory-read';
@@ -34,8 +35,6 @@ export async function newCall({ store, tokens }: Pick<Session, 'store' | 'tokens
   call.started = !detachedReplies() || chat === null ? undefined : (batch?: string) => void store.create('stream', { ...(batch === undefined ? { key: key.private } : { batch }), call: callOf(route), calibration: call.calibration!, at, result, for: purpose }, { id, parent: chat });
   return call;
 }
-
-export type PageClass = 'script' | 'illustration' | 'likeness' | 'mascot' | 'preread' | 'agent' | 'status';
 
 // A call no marker keeps, which only this page reads: a bot's Lua asking a model in the middle of a run, which a
 // reload has no use for (bot: its chat, where the server limits these), or a task's through pageAnswer.

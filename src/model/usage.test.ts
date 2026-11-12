@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loggedCalls, usageCall, type Entry, type Receipt } from './chat';
-import { connectionUsage, counted, GONE, modelUsage, usageReport, windowStart, type Ledger, type UsageCall } from './usage';
+import { connectionUsage, counted, GONE, modelUsage, usageReport, windowStart, type CallPurpose, type Ledger, type UsageCall } from './usage';
 import type { Stored } from './kinds';
 
 let rev = 0;
@@ -26,7 +26,7 @@ const receipt = (over: Partial<Receipt> = {}): Receipt => ({
 const bot = (id: string, text: string, over?: Partial<Receipt>) =>
   entry(id, { type: 'message', role: 'assistant', at: rev, text, receipt: receipt(over) });
 
-const row = ({ at, call }: UsageCall, chat: string | null = 'chat', character: string | null = null): Ledger => ({ type: 'call', at, call, chat, character });
+const row = ({ at, call }: UsageCall, chat: string | null = 'chat', character: string | null = null, purpose: CallPurpose | null = null): Ledger => ({ type: 'call', at, call, chat, character, purpose });
 const calls = (...made: UsageCall[]) => counted(made.map((one) => row(one)));
 
 describe('counted', () => {
@@ -37,6 +37,12 @@ describe('counted', () => {
     const reported = { unit: 'usd' as const, amount: 0.25, source: 'reported' as const };
     expect(counted([row(pending), row(settled), cost('pending', null), cost('pending', reported), cost('pending', null), cost('settled', reported)]).map(({ call }) => call.cost))
       .toEqual([reported, { unit: 'usd', amount: 0.5, source: 'price-list' }]);
+  });
+
+  it('books a purpose found later onto a call that kept none, never over one it kept', () => {
+    const purpose = (call: string, booked: CallPurpose): Ledger => ({ type: 'purpose', call, purpose: booked, at: 12 });
+    const made = counted([row(usageCall(receipt({ id: 'old' }), 10)), row(usageCall(receipt({ id: 'kept' }), 10), 'chat', null, 'reply'), row(usageCall(receipt({ id: 'lost' }), 11)), purpose('old', 'memory'), purpose('kept', 'script')]);
+    expect(made.map(({ call, purpose }) => [call.id, purpose])).toEqual([['old', 'memory'], ['kept', 'reply'], ['lost', null]]);
   });
 });
 
@@ -56,6 +62,22 @@ describe('loggedCalls', () => {
     ]);
     expect(made.calls.map(({ at, call }) => [call.id, at])).toEqual([[reply.id, 1], [translated.id, 2], [again.id, 3]]);
     expect(made.booked).toEqual([{ call: reply.id, cost: reported }, { call: translated.id, cost: reported }]);
+  });
+
+  it('tells each call’s purpose by the entry and the receipt that keep it', () => {
+    const [cut, reply, brief, agent, sent, later, bot, embedding, state] = Array.from({ length: 9 }, () => receipt()) as [Receipt, Receipt, Receipt, Receipt, Receipt, Receipt, Receipt, Receipt, Receipt];
+    const calibration = { measurement: { kind: 'unavailable' as const, reason: 'preparation' as const }, fit: null, retries: [], eligible: true };
+    const made = loggedCalls([
+      { type: 'message', role: 'user', at: 1, text: 'sent', receipt: null, translation: { text: '보냄', receipt: sent, at: 1, sentIn: 'English' } },
+      { type: 'message', role: 'assistant', at: 2, text: '답', receipt: { ...reply, continues: cut, preread: { material: 1, brief: 1, receipt: brief, saved: null }, agents: [{ agent: 'a', name: 'A', stage: 'pre', receipt: agent }] } },
+      { type: 'translation', version: 'm1', at: 3, text: '번역', receipt: later },
+      { type: 'call', version: 'm1', at: 4, receipt: { ...bot, calibration } },
+      { type: 'call', version: 'm1', at: 5, receipt: embedding },
+      { type: 'status', version: 'm1', of: ['d'], changes: [], receipt: state, at: 6 },
+    ]);
+    expect(Object.fromEntries(made.calls.map(({ call, purpose }) => [call.id, purpose]))).toEqual({
+      [sent.id]: 'input', [cut.id]: 'reply', [reply.id]: 'reply', [brief.id]: 'preread', [agent.id]: 'agent', [later.id]: 'translation', [bot.id]: 'script', [embedding.id]: null, [state.id]: 'status',
+    });
   });
 });
 
@@ -138,6 +160,12 @@ describe('usageReport', () => {
     expect(report.models.map(({ model, modelName, usage }) => [model, modelName, usage.calls])).toEqual([['m1', 'M1', 4], ['m2', 'M2', 1]]);
     expect(report.characters.map(({ key, usage }) => [key, usage.calls])).toEqual([['k1', 2], [GONE, 2], [null, 1]]);
     expect(report.chats).toBe(2);
+  });
+
+  it('counts calls by what they were for, the features’ purposes under their feature, the unknown last', () => {
+    const used = (id: string, purpose: CallPurpose | null) => row(call(id, on(9, 14)), 'chat', null, purpose);
+    const report = usageReport(counted([used('a', null), used('b', null), used('c', null), used('d', 'reply'), used('e', 'translation'), used('f', 'input'), used('g', 'note'), used('h', 'likeness')]), 'month', on(9, 14, 18), () => true, unpriced);
+    expect(report.uses.map(({ key, usage }) => [key, usage.calls])).toEqual([['translate', 3], ['reply', 1], ['illustrate', 1], [null, 3]]);
   });
 
   it('keeps the current run standing through yesterday, finds the longest run in the window and the busiest day’s week', () => {

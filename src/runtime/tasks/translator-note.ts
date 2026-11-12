@@ -20,6 +20,6 @@ export async function draftTranslatorNote(session: Pick<Session, 'store' | 'cred
   const { answer, receipt } = await taskCall(session, writer, { messages, call: await newCall(session, writer.route, target), signal, onText: text });
   if (answer.cut === 'stopped') return { ok: false, failure: { kind: 'stopped' } };
   if (answer.state === 'failed' || !text.value().trim()) return { ok: false, failure: { kind: 'failed', receipt } };
-  await keepRow(store, receipt, Date.now(), { chat: null, character });
+  await keepRow(store, 'note', receipt, Date.now(), { chat: null, character });
   return { ok: true, text: text.value().trim() };
 }

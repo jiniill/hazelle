@@ -16,7 +16,7 @@ import { isRecord } from '../record';
 import { SETTINGS_ID, type Settings } from './settings';
 import type { Tool, ToolChatData, ToolData, ToolDraft, ToolFile } from './tool';
 import type { Stream } from './stream';
-import type { Ledger } from './usage';
+import { isPurpose, type Ledger } from './usage';
 
 export type Values = {
   character: Character;
@@ -243,8 +243,9 @@ const SHAPES = {
   settings: shape({ models: isRecord }),
   order: shape({ ids: listOf(str) }),
   ledger: (value) => isRecord(value) && ((value.type === 'call' || value.type === 'input-refusal')
-    ? shape({ at: num, call: shape({ ...all(str, 'id', 'connection', 'model', 'modelName', 'source'), calibration }), chat: orNull(str), character: orNull(str) })(value)
-    : value.type === 'cost' && shape({ call: str, cost: orNull(isRecord), at: num })(value)),
+    ? shape({ at: num, call: shape({ ...all(str, 'id', 'connection', 'model', 'modelName', 'source'), calibration }), chat: orNull(str), character: orNull(str), purpose: orNull(isPurpose) })(value)
+    : value.type === 'cost' ? shape({ call: str, cost: orNull(isRecord), at: num })(value)
+    : value.type === 'purpose' && shape({ call: str, purpose: isPurpose, at: num })(value)),
   prompt: (value) => prompt(value) && (conversation(value) || task(value)),
   persona: shape({ name: str, description: str, picture: orNull(str), folder: optStr }),
   profile: shape({ name: str, settings: isRecord }),
