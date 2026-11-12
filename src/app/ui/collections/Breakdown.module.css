@@ -29,6 +29,10 @@
   overflow: hidden;
 }
 
+.segment {
+  composes: mark from './link.module.css';
+}
+
 .legend {
   margin: 0;
   display: flex;
@@ -38,6 +42,7 @@
 }
 
 .row {
+  composes: words from './link.module.css';
   display: flex;
   align-items: center;
   gap: var(--space-8);
@@ -70,6 +75,17 @@
 
 .outline {
   border: var(--border-thin) solid var(--color-text-faint);
+}
+
+/* A grey part takes the accent while it is lit, in the bar and by its name. */
+.plain[data-link='lit'],
+[data-link='lit'] > .plain {
+  background: var(--color-accent);
+}
+
+.outline[data-link='lit'],
+[data-link='lit'] > .outline {
+  border-color: var(--color-accent);
 }
 
 .striped {

@@ -1,0 +1,33 @@
+.moment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  min-width: 0;
+  padding: var(--space-16);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.words {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.label {
+  composes: note from '../foundation/type.module.css';
+}
+
+.value {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+}
+
+.note {
+  composes: detail from '../foundation/type.module.css';
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bareModel } from './chat-completions';
 import type { ListedModel, Rates } from './models-dev';
-import { joinModelsDev, priceCost, statedPrice } from './pricing';
+import { cacheSaving, joinModelsDev, priceCost, statedPrice } from './pricing';
 import type { Usage } from './types';
 
 const usage = (input: number, output: number, cached: number | null = null, written: number | null = null): Usage => ({
@@ -25,6 +25,14 @@ describe('priceCost', () => {
     expect(priceCost(tiered, usage(272_001, 1, 1, 1), 'usd')!.amount).toBeCloseTo((271_999 * 5 + 0.5 + 5 + 22.5) / 1e6, 9);
     expect(priceCost(opus, { ...usage(30, 98), outputTokens: null }, 'usd')).toBeNull();
     expect(priceCost(opus, usage(10, 5, 20), 'usd')).toBeNull();
+  });
+});
+
+describe('cacheSaving', () => {
+  it('is the cost with every input token fresh less the cost as sent, a write premium against it', () => {
+    expect(cacheSaving(opus, usage(125, 10, 100, 20), 'usd')!.amount).toBeCloseTo((100 * (4 - 0.2) - 20 * (5 - 4)) / 1e6, 12);
+    expect(cacheSaving(opus, usage(30, 10), 'usd')!.amount).toBe(0);
+    expect(cacheSaving(opus, { ...usage(30, 10), outputTokens: null }, 'usd')).toBeNull();
   });
 });
 

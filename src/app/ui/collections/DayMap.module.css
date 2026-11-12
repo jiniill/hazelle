@@ -1,0 +1,95 @@
+.map {
+  position: relative;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* Scrolls sideways on a phone. Its padding keeps today's outline from being cut, given back by the margin. */
+.strip {
+  overflow-x: auto;
+  margin: calc(-1 * var(--space-4));
+  padding: var(--space-4);
+}
+
+/* The month names and the days share one column per week, which fill the width down to their least and up to their
+   most. */
+.year {
+  --week: minmax(var(--day-cell-min), var(--day-cell-max));
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: fit-content;
+}
+
+.months {
+  display: grid;
+  grid-template-columns: repeat(var(--weeks), var(--week));
+  column-gap: var(--space-2);
+}
+
+.month {
+  composes: detail from '../foundation/type.module.css';
+  justify-self: start;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.month[data-link='lit'] {
+  color: var(--color-text);
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(var(--weeks), var(--week));
+  grid-template-rows: repeat(7, auto);
+  grid-auto-flow: column;
+  gap: var(--space-2);
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-4);
+  max-width: var(--day-month-width);
+}
+
+.weekday {
+  composes: detail from '../foundation/type.module.css';
+  text-align: center;
+}
+
+.day {
+  composes: mark from './link.module.css';
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-xs);
+}
+
+.monthGrid .day {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-normal);
+}
+
+.monthGrid .strong {
+  color: var(--color-on-accent);
+}
+
+.glow {
+  box-shadow: var(--shadow-glow);
+}
+
+.future {
+  border: var(--border-thin) solid var(--color-divider);
+}
+
+.past {
+  composes: lightIn from '../foundation/motion.module.css';
+  composes: ring from './Scale.module.css';
+}

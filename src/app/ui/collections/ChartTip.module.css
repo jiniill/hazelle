@@ -1,0 +1,42 @@
+.tip {
+  composes: floating from '../foundation/surface.module.css';
+  position: absolute;
+  z-index: var(--layer-raised);
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  max-width: var(--hint-width);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* The arrow, a square turned on its corner, its two outer sides on the tip's border. */
+.tip::after {
+  position: absolute;
+  top: 100%;
+  left: clamp(var(--radius-sm), var(--tip-point), calc(100% - var(--radius-sm)));
+  width: var(--tip-arrow);
+  height: var(--tip-arrow);
+  border: solid var(--color-border-strong);
+  border-width: 0 var(--border-thin) var(--border-thin) 0;
+  background: var(--color-surface);
+  content: '';
+  translate: -50% -50%;
+  rotate: 45deg;
+}
+
+.tip[data-below]::after {
+  top: 0;
+  border-width: var(--border-thin) 0 0 var(--border-thin);
+}
+
+.title {
+  color: var(--color-text);
+}
+
+.note {
+  composes: detail from '../foundation/type.module.css';
+}

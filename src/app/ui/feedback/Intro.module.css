@@ -17,3 +17,16 @@
   line-height: var(--leading-relaxed);
   color: var(--color-text-muted);
 }
+
+.story {
+  gap: var(--space-4);
+}
+
+.story .title {
+  font-weight: var(--weight-regular);
+  text-wrap: balance;
+}
+
+.story .lead {
+  font-family: var(--font-serif);
+}

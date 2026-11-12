@@ -96,6 +96,7 @@ describe('modelUsage', () => {
       last: made[0]!.value.at,
       input: { total: 100, unknown: 1 },
       output: { total: 50, unknown: 1 },
+      cache: { read: 0, input: 0 },
       costs: [{ unit: 'usd', amount: 0.75, estimated: true }],
       costUnknown: 0,
     });
@@ -115,33 +116,60 @@ describe('connectionUsage', () => {
 });
 
 describe('usageReport', () => {
-  it('counts by day, model, character and chat, the chats and characters no longer kept together, apart from no chat', () => {
-    const on = (day: number, hour = 12) => new Date(2026, 9, day, hour).getTime();
-    const call = (id: string, at: number, model = 'm1') => ({ at, call: { id, connection: 'c1', model, modelName: model.toUpperCase(), source: 'C1', usage: null, cost: null } });
-    const kept = { chat: (id: string) => id === 'kept', character: (id: string) => id === 'k1' };
+  const on = (month: number, day: number, hour = 12) => new Date(2026, month, day, hour).getTime();
+  const tokens = (input: number, cached: number | null) => ({ inputTokens: input, cachedInputTokens: cached, cacheWriteInputTokens: null, outputTokens: 1, reasoningTokens: null });
+  const call = (id: string, at: number, model = 'm1', usage: UsageCall['call']['usage'] = null) => ({ at, call: { id, connection: 'c1', model, modelName: model.toUpperCase(), source: 'C1', usage, cost: null } });
+  const unpriced = () => null;
+
+  it('lays out the whole month, and counts by model and character, the characters no longer kept together', () => {
     const report = usageReport(counted([
-      row(call('a', on(13)), 'kept', 'k1'),
-      row(call('b', on(14), 'm2'), 'kept', 'k1'),
-      row(call('c', on(14, 9)), 'deleted', 'k1'),
-      row(call('d', on(14, 10)), 'purged', 'gone'),
-      row(call('profile', on(14)), null, 'k2'),
-      row(call('old', on(1)), 'kept', null),
-    ]), 'week', on(14, 18), kept); // a Wednesday
+      row(call('a', on(9, 13)), 'one', 'k1'),
+      row(call('b', on(9, 14), 'm2'), 'one', 'k1'),
+      row(call('c', on(9, 14, 9)), 'two', 'gone-1'),
+      row(call('d', on(9, 14, 10)), 'two', 'gone-2'),
+      row(call('profile', on(9, 14)), null, null),
+      row(call('september', on(8, 30)), 'one', 'k1'),
+    ]), 'month', on(9, 14, 18), (id) => id === 'k1', unpriced);
     expect(report.total.calls).toBe(5);
-    expect(report.periods.map(({ key, usage }) => [key, usage.calls])).toEqual([[on(12, 0), 0], [on(13, 0), 1], [on(14, 0), 4], [on(15, 0), 0], [on(16, 0), 0], [on(17, 0), 0], [on(18, 0), 0]]);
+    expect(report.days).toHaveLength(31);
+    expect(report.days[0]!.key).toBe(on(9, 1, 0));
+    expect(report.days.filter(({ usage }) => usage.calls).map(({ key, usage }) => [key, usage.calls])).toEqual([[on(9, 13, 0), 1], [on(9, 14, 0), 4]]);
+    expect(report.active).toBe(2);
     expect(report.models.map(({ model, modelName, usage }) => [model, modelName, usage.calls])).toEqual([['m1', 'M1', 4], ['m2', 'M2', 1]]);
-    expect(report.characters.map(({ key, usage }) => [key, usage.calls])).toEqual([['k1', 3], [GONE, 2]]);
-    expect(report.chats.map(({ key, usage }) => [key, usage.calls])).toEqual([['kept', 2], [GONE, 2], [null, 1]]);
+    expect(report.characters.map(({ key, usage }) => [key, usage.calls])).toEqual([['k1', 2], [GONE, 2], [null, 1]]);
+    expect(report.chats).toBe(2);
   });
 
-  it('runs over all time a month at a time from the first call’s, an empty month too', () => {
-    const call = (id: string, at: number) => ({ at, call: { id, connection: 'c1', model: 'm1', modelName: 'm1', source: 'C1', usage: null, cost: null } });
-    const report = usageReport(calls(call('august', new Date(2026, 7, 30).getTime()), call('october', new Date(2026, 9, 2).getTime())), 'all', new Date(2026, 9, 7).getTime(), { chat: () => true, character: () => true });
-    expect(report.periods.map(({ key, usage }) => [key, usage.calls])).toEqual([[new Date(2026, 7, 1).getTime(), 1], [new Date(2026, 8, 1).getTime(), 0], [new Date(2026, 9, 1).getTime(), 1]]);
+  it('keeps the current run standing through yesterday, finds the longest run in the window and the busiest day’s week', () => {
+    const made = calls(call('a', on(9, 1)), call('b', on(9, 2)), call('c', on(9, 3)), call('c2', on(9, 3, 20)), call('d', on(9, 12)), call('e', on(9, 13)));
+    const report = usageReport(made, 'month', on(9, 14, 8), () => true, unpriced);
+    expect(report.longest).toEqual({ from: on(9, 1, 0), to: on(9, 3, 0), days: 3 });
+    expect(report.current).toEqual({ from: on(9, 12, 0), to: on(9, 13, 0), days: 2 });
+    expect(usageReport(made, 'month', on(9, 15, 8), () => true, unpriced).current).toBeNull();
+    expect(report.busiest!.day.key).toBe(on(9, 3, 0));
+    // The week runs from Monday 28 September, before the window.
+    expect(report.busiest!.week.map(({ key, usage }) => [key, usage.calls])).toEqual([[on(8, 28, 0), 0], [on(8, 29, 0), 0], [on(8, 30, 0), 0], [on(9, 1, 0), 1], [on(9, 2, 0), 1], [on(9, 3, 0), 2], [on(9, 4, 0), 0]]);
   });
 
-  it('starts the month at its first day’s local midnight', () => {
-    expect(windowStart('month', new Date(2026, 9, 7, 12, 30).getTime())).toBe(new Date(2026, 9, 1).getTime());
+  it('counts hours by weekday, the cache over calls that report it, and the saving per unit with the calls it could not price', () => {
+    const made = calls(call('wed', on(9, 14, 23), 'm1', tokens(100, 80)), call('thu', on(9, 15, 1), 'm1', tokens(50, null)), call('free', on(9, 15, 2), 'm2', tokens(10, 0)));
+    const saving = ({ call: { model } }: { call: { model: string } }) => (model === 'm1' ? { unit: 'usd' as const, amount: 0.5, source: 'price-list' as const } : null);
+    const report = usageReport(made, 'month', on(9, 16), () => true, saving);
+    expect(report.hours[2]![23]).toBe(1);
+    expect(report.hours[3]![1]).toBe(1);
+    expect(report.total.cache).toEqual({ read: 80, input: 110 });
+    expect(report.saved).toEqual([{ unit: 'usd', amount: 1 }]);
+    expect(report.savedUnknown).toBe(1);
+  });
+
+  it('runs over all time from the first call’s year to the end of this one', () => {
+    const report = usageReport(calls(call('old', new Date(2025, 5, 2).getTime())), 'all', on(9, 7), () => true, unpriced);
+    expect(report.days[0]!.key).toBe(new Date(2025, 0, 1).getTime());
+    expect(report.days.at(-1)!.key).toBe(new Date(2026, 11, 31).getTime());
+  });
+
+  it('starts the month and the year at their first day’s local midnight', () => {
+    expect(windowStart('month', on(9, 7, 12))).toBe(on(9, 1, 0));
+    expect(windowStart('year', on(9, 7, 12))).toBe(new Date(2026, 0, 1).getTime());
   });
 });
-

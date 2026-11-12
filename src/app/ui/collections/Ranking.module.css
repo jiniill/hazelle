@@ -90,7 +90,14 @@
 
 .fill {
   composes: fill from '../foundation/surface.module.css';
-  background: var(--color-text-faint);
+  background: var(--rank, var(--color-text-faint));
+}
+
+/* Only the row under the pointer answers; the others stay as they are. */
+@media (hover: hover) {
+  .row:hover .fill {
+    background: var(--color-accent);
+  }
 }
 
 .value {
@@ -102,28 +109,26 @@
 }
 
 .first {
+  --rank: var(--color-rank-1);
+}
+
+.second {
+  --rank: var(--color-rank-2);
+}
+
+.third {
+  --rank: var(--color-rank-3);
+}
+
+.row.first {
   background: var(--color-rank-1-bg);
   border-color: var(--color-rank-1-border);
 }
 
 .first .place,
-.first .fill {
-  background: var(--color-rank-1);
-}
-
-.second .place,
-.second .fill {
-  background: var(--color-rank-2);
-}
-
-.third .place,
-.third .fill {
-  background: var(--color-rank-3);
-}
-
-.first .place,
 .second .place,
 .third .place {
+  background: var(--rank);
   color: var(--color-on-rank);
 }
 
@@ -134,4 +139,108 @@
 .first .value {
   font-size: var(--text-xl);
   color: var(--color-rank-1-text);
+}
+
+/* Faces stand between the place and the name. */
+.faced {
+  grid-template-columns: 0 var(--rank-place) auto minmax(0, 1fr) auto 0;
+}
+
+.face {
+  grid-column: 3;
+  display: flex;
+}
+
+.faced .body {
+  grid-column: 4;
+}
+
+.faced .value {
+  grid-column: 5;
+}
+
+.podiumRanking {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* The first in the middle and taller, the second on its left, the third on its right. */
+.podium {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--space-8);
+}
+
+.stand {
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-16) var(--space-8) var(--space-12);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.stand.first {
+  grid-column: 2;
+  padding-top: var(--space-24);
+  background: linear-gradient(to bottom, var(--color-accent-wash), var(--color-surface));
+}
+
+.stand.second {
+  grid-column: 1;
+}
+
+.stand.third {
+  grid-column: 3;
+}
+
+/* A ring in the rank's colour round the face, parted from it by the card's ground. */
+.ring {
+  position: relative;
+  display: flex;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  outline: var(--border-medium) solid var(--rank);
+  outline-offset: var(--border-thick);
+}
+
+.first .ring {
+  border-radius: var(--radius-lg);
+}
+
+.badge {
+  position: absolute;
+  right: calc(-1 * var(--space-4));
+  bottom: calc(-1 * var(--space-4));
+  display: grid;
+  place-items: center;
+  width: var(--podium-badge);
+  height: var(--podium-badge);
+  border-radius: var(--radius-full);
+  background: var(--rank);
+  box-shadow: 0 0 0 var(--border-thick) var(--color-surface);
+  color: var(--color-on-rank);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.standName {
+  composes: title from '../foundation/type.module.css';
+  composes: ellipsis from '../foundation/a11y.module.css';
+  max-width: 100%;
+}
+
+.standValue {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }

@@ -117,6 +117,19 @@
     animation: twinkle var(--duration-ripple) var(--ease-loop) infinite;
   }
 
+  /* A calendar's day lights from the empty one in date order, once: --order is its share of the way through. Still
+     under reduced motion, where the delay alone would hold it dark. */
+  .lightIn {
+    animation: light-in var(--motion-enter) backwards;
+    animation-delay: calc(var(--order) * var(--duration-light));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lightIn {
+      animation: none;
+    }
+  }
+
   /* After every animation above, so what leaves (leave.ts) goes the way it came instead; put back on the page, its
      parts start none of theirs over, but the one it was only the ground of. */
   [data-leaving] * {
@@ -344,6 +357,13 @@
     50% {
       opacity: 1;
       transform: scale(1);
+    }
+  }
+
+  @keyframes light-in {
+    from {
+      background-color: var(--color-ramp-0);
+      box-shadow: none;
     }
   }
 

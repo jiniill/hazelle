@@ -1,0 +1,9 @@
+/* What a linked highlight (link.tsx) leaves of a mark outside it, at once as the app's hover: a drawn mark, or a row of
+   words, which keeps more so it still reads. What is lit is each component's own. */
+.mark[data-link='dim'] {
+  opacity: var(--link-dim);
+}
+
+.words[data-link='dim'] {
+  opacity: var(--link-dim-words);
+}

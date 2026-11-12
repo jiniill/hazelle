@@ -1,0 +1,53 @@
+.foot {
+  composes: detail from '../foundation/type.module.css';
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-12);
+}
+
+.scale {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.steps {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.step {
+  width: var(--day-cell-min);
+  height: var(--day-cell-min);
+  border-radius: var(--radius-xs);
+}
+
+/* A cell pointed at, or today, ringed in the text colour. Under a finger the hover stays on the cell tapped, as its tip
+   does. */
+.ring:hover,
+.ring[data-today] {
+  outline: var(--border-medium) solid var(--color-text);
+  outline-offset: var(--border-thin);
+}
+
+.l0 {
+  background: var(--color-ramp-0);
+}
+
+.l1 {
+  background: var(--color-ramp-1);
+}
+
+.l2 {
+  background: var(--color-ramp-2);
+}
+
+.l3 {
+  background: var(--color-ramp-3);
+}
+
+.l4 {
+  background: var(--color-ramp-4);
+}

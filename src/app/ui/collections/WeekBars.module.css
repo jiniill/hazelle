@@ -1,0 +1,49 @@
+.week {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.bars,
+.labels {
+  display: grid;
+  grid-template-columns: repeat(7, var(--week-bar));
+  gap: var(--space-4);
+}
+
+.bars {
+  align-items: end;
+  height: var(--week-height);
+}
+
+/* The whole column is pointed at, so a short bar is as easy to reach as a tall one. */
+.column {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.bar {
+  composes: mark from './link.module.css';
+  width: 100%;
+  min-height: var(--space-2);
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  background: var(--color-chart-quiet);
+}
+
+.bar[data-current],
+.bar[data-link='lit'] {
+  background: var(--color-accent);
+}
+
+.bar[data-current] {
+  box-shadow: var(--shadow-glow);
+}
+
+.labels {
+  composes: detail from '../foundation/type.module.css';
+  color: var(--color-text-faint);
+  text-align: center;
+}

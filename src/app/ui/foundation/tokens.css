@@ -158,6 +158,8 @@
   --color-scrim: var(--palette-scrim);
   --color-you-bg: var(--palette-mint-800);
   --color-you-text: var(--palette-mint-100);
+  /* A heat chart's empty slot (DayMap, HourMap), the foot of its ramp to the accent. */
+  --color-ramp-0: var(--color-surface);
 
   /* Gold dialogue stands apart from narration by its hue, so narration keeps its brightness (user, 2026-10-14); only
      무채색 dialogue steps narration and action down (the [data-dialogue='plain'] rule). */
@@ -270,6 +272,18 @@
   --color-success-border: color-mix(in srgb, var(--color-success) 40%, var(--color-bg));
   --color-rank-1-bg: color-mix(in srgb, var(--color-rank-1) 8%, var(--color-bg));
   --color-rank-1-border: color-mix(in srgb, var(--color-rank-1) 40%, var(--color-bg));
+  /* The first place's card on a podium (Ranking), the accent faint over the surface. */
+  --color-accent-wash: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
+  /* A heat chart's ramp, one hue from the empty slot to the accent (levels.ts). */
+  --color-ramp-1: color-mix(in oklab, var(--color-accent) 24%, var(--color-ramp-0));
+  --color-ramp-2: color-mix(in oklab, var(--color-accent) 46%, var(--color-ramp-0));
+  --color-ramp-3: color-mix(in oklab, var(--color-accent) 72%, var(--color-ramp-0));
+  --color-ramp-4: var(--color-accent);
+  /* What stands out on a chart glows softly in the accent: a calendar's busiest days, the busiest day of a week. None
+     in light, where it would smudge. */
+  --shadow-glow: 0 0 6px color-mix(in srgb, var(--color-accent) 55%, transparent);
+  /* A chart's bar that does not stand out, such as the other days of a week (WeekBars). */
+  --color-chart-quiet: color-mix(in srgb, var(--color-text-faint) 55%, transparent);
   --color-selection: color-mix(in srgb, var(--color-accent) 35%, transparent);
   --color-found-term: color-mix(in srgb, var(--color-accent) 30%, transparent);
   --color-diff-before: color-mix(in srgb, var(--color-warn) 40%, transparent);
@@ -426,6 +440,28 @@
   --cheer-piece-height: 14px;
   --chart-height: 120px;
   --chart-bar-max: 40px;
+  /* A heat chart (DayMap, HourMap, HourDial, WeekBars): a year's day cell at its least and most, a month grid's most
+     width; an hour's cell and the weekday column; the dial's box, its rays and the wider rays pointed at, the night's
+     dotted arc and its numerals; a week's bars and their height; what a linked
+     highlight leaves of a mark outside it, and of words; the arrow of a chart's tip. */
+  --day-cell-min: 10px;
+  --day-cell-max: 24px;
+  --day-month-width: 420px;
+  --hour-cell: 14px;
+  --hour-label: 22px;
+  --dial-size: 120px;
+  --dial-ray: 3.4;
+  --dial-hit: 9;
+  --dial-night: 1.5;
+  --dial-dots: 1.5 3;
+  --dial-numeral: 9px;
+  --week-bar: 10px;
+  --week-height: 66px;
+  --link-dim: 0.2;
+  --link-dim-words: 0.38;
+  --tip-arrow: 8px;
+  /* A podium's rank badge on a face's corner (Ranking). */
+  --podium-badge: 20px;
   --screen-narrow: 440px;
   --code-list-height: 18em;
   --code-doc-width: 360px;
@@ -635,6 +671,8 @@
   --duration-pulse: 1.1s;
   --duration-dot: 1.2s;
   --duration-stagger: 150ms;
+  /* How long a calendar takes to light from its first day to its last (motion.module.css lightIn). */
+  --duration-light: 500ms;
   --duration-found: 2.4s;
   --duration-slide: 1.4s;
   --duration-sway: 2.4s;
@@ -861,6 +899,9 @@
   --color-scrim: var(--palette-scrim-soft);
   --color-you-bg: var(--palette-mint-150);
   --color-you-text: var(--palette-mint-900);
+  /* Darker than the page, as the surface is not. */
+  --color-ramp-0: var(--color-surface-raised);
+  --shadow-glow: none;
 
   --color-prose-narration: var(--palette-umber-700);
   --color-prose-dialogue: var(--palette-gold-850);
