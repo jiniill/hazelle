@@ -33,6 +33,9 @@ const PICTURE_ROWS = 12;
 const RESTORE_AHEAD = 4;
 
 export const SEEDED: ReadonlySet<string> = new Set([...DEFAULT_PROMPT_IDS, FIRST_ID, FIRST_PROFILE_ID, SETTINGS_ID, ORDER_ID]);
+// Written by every visit, not made by the person: they never make an account hold something of its own, and a restore
+// keeps them beside the backup's.
+export const VISITS: ReadonlySet<string> = new Set<Kind>(['presence']);
 
 const fileOf = ({ kind, value }: Stored<Kind>): FileRef | null => ('file' in KINDS[kind] ? (value as { file: FileRef }).file : null);
 
@@ -268,7 +271,7 @@ async function restoreOn(
     const present = new Set<string>();
     const failure = await store.scan({ metadata: true }, (row) => {
       signal.throwIfAborted();
-      if (row.kind !== 'summary') present.add(row.id);
+      if (row.kind !== 'summary' && !VISITS.has(row.kind)) present.add(row.id);
     }, pin);
     if (failure) return failure;
     if ([...present].some((id) => !ids.has(id) && !SEEDED.has(id))) return { ok: false, error: 'not-new' };

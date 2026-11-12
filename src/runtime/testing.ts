@@ -22,6 +22,7 @@ import { RequestLog, type Logged } from './models/request-log';
 import { openSession, type Session } from './session';
 import { ObjectStore } from './store/store';
 import type { DeviceCache } from './store/object-cache';
+import type { PresenceMemory } from './presence';
 
 // The bot scripts run in the test's own thread: node has no Worker to load them into. Made before withSession stubs
 // window, which the VM's loader would read as a browser.
@@ -104,6 +105,12 @@ export const saying = (...texts: string[]) =>
 
 // The bytes of a picture as far as the import reads one: a PNG's signature.
 export const png = () => new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, ...randomBytes(16)]);
+
+// One device's memory of the presence object it writes, as localStorage keeps it for every tab.
+export function presenceMemory(): PresenceMemory {
+  let id: string | null = null;
+  return { read: () => id, write: (made) => (id = made) };
+}
 
 // The page as runtime code reads it: its visibility, and events such as resume (runtime/worker).
 export function stubPage(visibilityState: DocumentVisibilityState) {

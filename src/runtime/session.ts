@@ -38,6 +38,7 @@ import { Talk } from './chat/talk';
 import { Translator } from './tasks/translate';
 import { Cues } from './chat/cues';
 import { Usage } from './models/usage';
+import { devicePresence, recordPresence } from './presence';
 import { LuaStuck, LuaWorker } from './scripts/lua/client';
 import { ReadModels } from './store/read-model';
 import { ScriptDisplay } from './scripts/display';
@@ -215,10 +216,12 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     else void resumeSend({ store, credentials, log, streams }, stream, closing.signal);
   });
   let started = false;
+  let stopPresence = () => {};
   const stopSync = keepSynced(store, () => { if (started && !closing.signal.aborted) streams.pickUp(); });
   const startBackground = () => {
     if (started || closing.signal.aborted) return;
     started = true;
+    stopPresence = recordPresence(store, devicePresence(accountId));
     void (async () => {
       if (store.cached) {
         const failure = await store.pull();
@@ -245,6 +248,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     holdPulse(false);
     holdDiagnosis(false);
     stopSync();
+    stopPresence();
     read.close();
     finder.close();
     display.close();

@@ -9,7 +9,7 @@ import { feedQuery, serverBackend, type Backend } from '../store/backend';
 import { api, type ApiFailure, type ApiResult } from '../api';
 import { deviceCache, forgetLog } from '../device/device-cache';
 import { clearGuestStore, guestBackend, guestBoardSecret } from './guest-store';
-import { SEEDED } from '../backup/backup-core';
+import { SEEDED, VISITS } from '../backup/backup-core';
 import { inOrder, transfers } from '../files/files';
 import { toolAssetId, toolChatId, toolDataId, toolFileId } from '../tools/store';
 
@@ -47,7 +47,7 @@ export async function guestWithContent(): Promise<ApiResult<Guest | null>> {
   const held = await inventory(guestBackend(guest.accountId));
   if (!held.ok) return held;
   // Ignore untouched starter defaults when deciding to prompt; guest data stays intact until explicit upload/discard.
-  if (held.data.rows.some(({ id, body }) => body !== null && !SEEDED.has(id))) return { ok: true, data: guest };
+  if (held.data.rows.some(({ id, kind, body }) => body !== null && !SEEDED.has(id) && !VISITS.has(kind))) return { ok: true, data: guest };
   const files = await guestBackend(guest.accountId).heldFiles(null);
   return files.ok ? { ok: true, data: files.data.ids.length ? guest : null } : files;
 }
