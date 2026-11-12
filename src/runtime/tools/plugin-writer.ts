@@ -139,7 +139,7 @@ export async function askPlugin(deps: Deps, input: Input, signal: AbortSignal, o
   const looped = await toolLoop({ tools: testing ? [{ def: RUN_TEST, run: runTest(testing) }] : [], rounds: CALLS, signal, onText: gather(onText) }, async (exchange, tools, text) => {
     const call = await pageCall({ store, tokens }, route, 'script', null);
     const { answer, receipt } = await taskCall(deps, writer, { messages: [...messages, ...exchange], ...(tools && { tools }), call, signal, onText: text });
-    const saved = await keepRow(store, receipt, Date.now(), { chat: null, character: null });
+    const saved = await keepRow(store, 'script', receipt, Date.now(), { chat: null, character: null });
     return saved.ok ? { answer, receipt } : { kind: 'unsaved' as const, failure: saved };
   });
   if (looped.kind === 'unsaved') return { ok: false, failure: looped };

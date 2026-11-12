@@ -10,7 +10,7 @@ import type { MemorySettings } from './memory';
 import type { AgentStage } from './prompt';
 import type { StatusChange, StatusPlace } from './status';
 import type { Card } from '../engine/import/types';
-import { book, type UsageCall } from './usage';
+import { book, type CallPurpose, type LoggedCall, type UsageCall } from './usage';
 
 export type Chat = Mark & {
   // null uses chatTitle's first-message or branch name.
@@ -667,26 +667,39 @@ export type Summary = {
 };
 export type RecentModel = { at: number; ref: ModelRef };
 
+// A message's own translation is what the user typed, when its text is that sent (Translation sentIn).
+export const translationPurpose = ({ sentIn }: Translation): CallPurpose => (sentIn === undefined ? 'translation' : 'input');
+
 export const usageCall = ({ id, connection, model, modelName, source, usage, cost, calibration }: Receipt, at: number): UsageCall => ({ at, call: { id, connection, model, modelName, source, usage, cost, ...(calibration && { calibration }) } });
 
 // Include hidden/deleted versions and replaced translations; shared receipts count once, at their first entry.
-export function loggedCalls(entries: Iterable<Entry>): { calls: UsageCall[]; booked: { call: string; cost: Cost | null }[] } {
-  const kept = new Map<string, UsageCall>();
+// A call entry keeps a bot's model call or an embedding: only a generated receipt carries a calibration, and only since
+// receipts kept one, so one without is not known.
+export function loggedCalls(entries: Iterable<Entry>): { calls: LoggedCall[]; booked: { call: string; cost: Cost | null }[] } {
+  const kept = new Map<string, LoggedCall>();
   const replies = new Map<string, string[]>();
   const booked: { replyId: string; cost: Cost | null }[] = [];
-  const keep = (receipt: Receipt | null | undefined, at: number) => {
+  const keep = (receipt: Receipt | null | undefined, at: number, purpose: CallPurpose | null) => {
     for (const call of receipt ? calls(receipt) : []) {
       if (kept.has(call.id)) continue;
-      kept.set(call.id, usageCall(call, at));
+      kept.set(call.id, { ...usageCall(call, at), purpose });
       if (call.replyId) replies.set(call.replyId, [...(replies.get(call.replyId) ?? []), call.id]);
+    }
+  };
+  const keepReply = (receipt: Receipt | null, at: number) => {
+    keep(receipt, at, 'reply');
+    for (const call of receipt ? calls(receipt) : []) {
+      keep(call.preread?.receipt, at, 'preread');
+      for (const run of call.agents ?? []) keep(run.receipt, at, 'agent');
     }
   };
   for (const entry of entries) {
     if (entry.type === 'message' || entry.type === 'version') {
-      keep(entry.receipt, entry.at);
-      if (entry.translation) keep(entry.translation.receipt, entry.translation.at);
-    } else if (entry.type === 'translation' || entry.type === 'call') keep(entry.receipt, entry.at);
-    else if (entry.type === 'status' && !('byHand' in entry)) keep(entry.receipt, entry.at);
+      keepReply(entry.receipt, entry.at);
+      if (entry.translation) keep(entry.translation.receipt, entry.translation.at, translationPurpose(entry.translation));
+    } else if (entry.type === 'translation') keep(entry.receipt, entry.at, 'translation');
+    else if (entry.type === 'call') keep(entry.receipt, entry.at, entry.receipt.calibration ? 'script' : null);
+    else if (entry.type === 'status' && !('byHand' in entry)) keep(entry.receipt, entry.at, 'status');
     else if (entry.type === 'cost') booked.push(entry);
   }
   return { calls: [...kept.values()], booked: booked.flatMap(({ replyId, cost }) => (replies.get(replyId) ?? []).map((call) => ({ call, cost }))) };

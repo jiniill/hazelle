@@ -72,7 +72,7 @@ function translateLoose(session: Deps, chat: Chat, text: string, language: strin
   return run(input, target).then(async (made) => {
     if (!made.ok) return made;
     const translation = loose(made.translation);
-    await keepRow(session.store, translation.receipt, translation.at, { chat: null, character: chat.character });
+    await keepRow(session.store, 'input', translation.receipt, translation.at, { chat: null, character: chat.character });
     return { ...made, translation };
   }).finally(() => endCall(session.store, target.id));
 }
@@ -236,7 +236,7 @@ export class Translator {
       if (this.store.get('chat', chat)) return appendTranslation(this.store, chat, version, made.translation, target.result);
       const translation = loose(made.translation);
       return setTextTranslation(this.store, input.chat.character!, original, made.language!, translation).then(async (saved) => {
-        if (saved.ok) await keepRow(this.store, translation.receipt, translation.at, { chat: null, character: input.chat.character });
+        if (saved.ok) await keepRow(this.store, 'translation', translation.receipt, translation.at, { chat: null, character: input.chat.character });
         return saved;
       });
     });

@@ -703,7 +703,7 @@ it('walks the ledger from the device cache and past its cursor, and a store open
 
 it('caches the row the server keeps, never the body a once write sent for a row already there', async () => {
   const f = await fixture();
-  const call = (chat: string): Ledger => ({ type: 'call', at: 1, call: { id: 'call', connection: 'c', model: 'm', modelName: 'model', source: 'source', usage: null, cost: null }, chat, character: null });
+  const call = (chat: string): Ledger => ({ type: 'call', at: 1, call: { id: 'call', connection: 'c', model: 'm', modelName: 'model', source: 'source', usage: null, cost: null }, chat, character: null, purpose: 'reply' });
   await f.add('row', 'ledger', SETTINGS_ID, call('original'));
   const chats = async (store: ObjectStore) => {
     const usage = new Usage(store);

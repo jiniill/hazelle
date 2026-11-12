@@ -185,6 +185,16 @@ it('upgrades old encrypted ledger and stream values through the backup/restore r
   batch.mockRestore();
 });
 
+it('gives a call’s row saved before purposes a purpose not known, and leaves a booked row and a current row as they are', () => {
+  const call = { id: crypto.randomUUID(), connection: 'connection', source: 'Source', model: 'm', modelName: 'M', usage: null, cost: null, calibration: { measurement: { kind: 'unavailable', reason: 'historical' }, fit: null, retries: [], eligible: false } };
+  for (const type of ['call', 'input-refusal']) {
+    const old = { type, call, at: 10, chat: null, character: null };
+    expect(upgradeValue('ledger', old)).toEqual({ ...old, purpose: null });
+    expect(upgradeValue('ledger', { ...old, purpose: 'reply' })).toBeNull();
+  }
+  expect(upgradeValue('ledger', { type: 'cost', call: call.id, cost: null, at: 11 })).toBeNull();
+});
+
 it('moves a task prompt’s model into every layer that runs the prompt and has none, then off the prompt, the same when run again', () =>
   server.withSession(async ({ store }) => {
     const ref = (model: string) => ({ connection: 'c', model });

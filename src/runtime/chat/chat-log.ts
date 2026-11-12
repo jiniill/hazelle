@@ -2,7 +2,7 @@ import type { Cost } from '../../connectors/types';
 import type { RisuChat } from '../../engine/import/types';
 import { memoryThrough } from '../../engine/memory';
 import { VARIABLE_LIMITS } from '../../engine/render';
-import { CAST_MAX, foldTree, shown, standing, translationOutdated, type StatusWrite, type AgentRun, type Bookmark, type Chat, type Entry, type Message, type Receipt, type Translation, type Version, type Writes } from '../../model/chat';
+import { CAST_MAX, foldTree, shown, standing, translationOutdated, translationPurpose, type StatusWrite, type AgentRun, type Bookmark, type Chat, type Entry, type Message, type Receipt, type Translation, type Version, type Writes } from '../../model/chat';
 import { cachePrintId } from '../../model/cache';
 import { isChatFolderOf } from '../../model/folders';
 import type { Illustration } from '../../model/illustration';
@@ -370,7 +370,7 @@ const append = (store: ObjectStore, chat: string, entry: Entry, id?: string, row
   rows.length ? store.batch([entryRow(chat, entry, id), ...rows]) : store.create('entry', entry, { id, parent: chat });
 
 const translationRows = (store: ObjectStore, chat: string, translation?: Translation) =>
-  (translation?.receipt ? [receiptRow(translation.receipt, translation.at, chatPlace(store, chat))] : []);
+  (translation?.receipt ? [receiptRow(translationPurpose(translation), translation.receipt, translation.at, chatPlace(store, chat))] : []);
 
 // translation: what the user typed, when text is its translation sent. before: what the bot's Lua wrote as it was
 // sent; follows: the version it continues, absent only on a message from a call begun before follows (model/chat Entry).
@@ -393,7 +393,7 @@ export function appendReply(store: ObjectStore, chat: string, { id, message, rep
   const rounds = [receipt];
   for (let below = receipt.continues; below?.tools; below = below.continues) rounds.push(below);
   const place = chatPlace(store, chat);
-  return append(store, chat, message === null ? { type: 'message', role: 'assistant', ...(follows !== undefined && { follows }), ...held } : { type: 'version', message, replaces, edit: false, ...held, ...(seed && { seed }) }, id, [...rounds.map((round) => receiptRow(round, at, place)), ...(status ? [entryRow(chat, { type: 'status', version: id, ...status })] : [])]);
+  return append(store, chat, message === null ? { type: 'message', role: 'assistant', ...(follows !== undefined && { follows }), ...held } : { type: 'version', message, replaces, edit: false, ...held, ...(seed && { seed }) }, id, [...rounds.map((round) => receiptRow('reply', round, at, place)), ...(status ? [entryRow(chat, { type: 'status', version: id, ...status })] : [])]);
 }
 
 // Edits keep old text's variable writes; adds chain from follows. vars attach after a version,
@@ -429,11 +429,11 @@ export function appendScripted(store: ObjectStore, chat: string, { edits, remove
 }
 
 // A call no reply holds (a script's, retrieval's): on the last message shown, so usage and cost count it.
-export async function keepCall({ store, read, costs }: Pick<Session, 'store' | 'read' | 'costs'>, chat: string, receipt: Receipt) {
+export async function keepCall({ store, read, costs }: Pick<Session, 'store' | 'read' | 'costs'>, chat: string, purpose: 'script' | 'embedding', receipt: Receipt) {
   const last = read.chat(chat).snapshot()?.messages.at(-1);
   if (!last) return;
   const at = Date.now();
-  const saved = await append(store, chat, { type: 'call', version: shown(last).id, receipt, at }, undefined, [receiptRow(receipt, at, chatPlace(store, chat))]);
+  const saved = await append(store, chat, { type: 'call', version: shown(last).id, receipt, at }, undefined, [receiptRow(purpose, receipt, at, chatPlace(store, chat))]);
   if (saved.ok) costs.settle(chat, receipt);
 }
 
@@ -446,7 +446,7 @@ export async function setVariableByHand(store: ObjectStore, chat: string, versio
 
 // A model's write of a version's state, with its call's ledger row (Entry status).
 export const appendStatus = (store: ObjectStore, chat: string, version: string, write: StatusWrite) =>
-  append(store, chat, { type: 'status', version, ...write }, undefined, write.receipt ? [receiptRow(write.receipt, write.at, chatPlace(store, chat))] : []);
+  append(store, chat, { type: 'status', version, ...write }, undefined, write.receipt ? [receiptRow('status', write.receipt, write.at, chatPlace(store, chat))] : []);
 
 // A state value the user set where it stood, on the version whose state was shown (Entry status).
 export const setStatusByHand = (store: ObjectStore, chat: string, version: string, change: StatusChange) => append(store, chat, { type: 'status', version, changes: [change], at: Date.now(), byHand: true });

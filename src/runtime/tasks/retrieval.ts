@@ -46,7 +46,7 @@ export type EmbedFailure = { kind: 'embed'; reason: Extract<Embedded, { ok: fals
 // One call, kept in the chat's log.
 export async function embedKept(session: Reader, route: Route, texts: string[], as: EmbedPurpose, chat: string, signal: AbortSignal, progress?: (count: number) => void) {
   const embedded = await embedTexts({ credentials: session.credentials, log: session.log, count: countTexts(session.store) }, route, texts, as, chat, false, signal, progress);
-  if (embedded.receipt) await keepCall(session, chat, embedded.receipt);
+  if (embedded.receipt) await keepCall(session, chat, 'embedding', embedded.receipt);
   return embedded;
 }
 

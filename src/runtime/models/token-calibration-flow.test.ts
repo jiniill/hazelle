@@ -79,7 +79,7 @@ it('replays late ledger observations, deduplicates a copied call, separates auxi
   if (!first.ok) throw new Error(first.error);
   expect(first.data.fit).toMatchObject({ source: 'chat', bound: 'hard-upper' });
   const mass = first.data.fit.evidence;
-  await session.store.batch([receiptRow(receipt, Date.now(), { chat: 'copied-chat', character: null })]);
+  await session.store.batch([receiptRow('reply', receipt, Date.now(), { chat: 'copied-chat', character: null })]);
   const duplicate = await snapshot();
   expect(duplicate.ok && duplicate.data.fit.evidence).toBeCloseTo(mass, 5);
   const measurement = receipt.calibration!.measurement;
@@ -88,7 +88,7 @@ it('replays late ledger observations, deduplicates a copied call, separates auxi
   if (!translated.ok) throw new Error(translated.error);
   expect(translated.data.fit.source).toBe('prior');
   const auxiliary: Receipt = { ...receipt, id: crypto.randomUUID(), calibration: { ...receipt.calibration!, measurement: { ...measurement, key: translated.data.key, at: measurement.at - 1000 } } };
-  await session.store.batch([receiptRow(auxiliary, Date.now(), { chat, character: null })]);
+  await session.store.batch([receiptRow('translation', auxiliary, Date.now(), { chat, character: null })]);
   const apart = await snapshot();
   expect(apart.ok && apart.data.fit.evidence).toBeCloseTo(mass, 5);
   const learned = await session.tokens.snapshot(route, settings, tokenLimits(route.model, settings), 'translation', chat, signal());
@@ -97,7 +97,7 @@ it('replays late ledger observations, deduplicates a copied call, separates auxi
   const other = await session.tokens.snapshot(otherRoute, settings, tokenLimits(otherRoute.model, settings), 'translation', chat, signal());
   expect(other.ok && other.data.fit.source).toBe('prior');
   const earlier: Receipt = { ...receipt, id: crypto.randomUUID(), calibration: { ...receipt.calibration!, measurement: { ...measurement, fingerprint: 'earlier', at: measurement.at - 500 } } };
-  await session.store.batch([receiptRow(earlier, Date.now(), { chat, character: null })]);
+  await session.store.batch([receiptRow('reply', earlier, Date.now(), { chat, character: null })]);
   const late = await snapshot();
   expect(late.ok && late.data.fit.evidence).toBeGreaterThan(mass);
   vi.spyOn(session.usage, 'read').mockResolvedValueOnce({ ok: false, error: 'unreadable' });

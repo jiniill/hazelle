@@ -82,7 +82,7 @@ export class ScriptReach {
       return refused('flood', 'too many model calls in a minute');
     }
     // Kept in the chat, whose Costs settles a pending cost.
-    await keepCall(this.session, chat, receiptOf(callOf(writer.route), answer));
+    await keepCall(this.session, chat, 'script', receiptOf(callOf(writer.route), answer));
     return answer.state === 'failed' ? refused('failed', answer.error?.kind ?? 'failed') : { success: true, result: text.value() };
   }
 
@@ -95,7 +95,7 @@ export class ScriptReach {
     if ('kind' in writer) return refused('no-model', 'no model is set');
     const text = gather();
     const { answer, receipt } = await taskCall(this.session, writer, { messages, ...(await this.called(writer, null, signal)), onText: text });
-    await keepRow(this.session.store, receipt, Date.now(), { chat: null, character: null });
+    await keepRow(this.session.store, 'script', receipt, Date.now(), { chat: null, character: null });
     return answer.state === 'failed' ? { ...refused('failed', answer.error?.kind ?? 'failed'), cost: receipt.cost } : { result: { success: true, result: text.value() }, cost: receipt.cost };
   }
 
@@ -141,7 +141,7 @@ export class ScriptReach {
       return { ok: false, reason: 'no-model' };
     }
     const { answer, receipt } = await embedTexts({ credentials, log, count: countTexts(store) }, route, texts, as, chat, true, signal ? AbortSignal.any([this.closing, signal]) : this.closing);
-    if (receipt) await keepCall(this.session, chat, receipt);
+    if (receipt) await keepCall(this.session, chat, 'embedding', receipt);
     if (!answer.ok && answer.reason === 'flood') this.interactions.tell(chat, 'flood', { kind: 'flood' }, from);
     return answer;
   }

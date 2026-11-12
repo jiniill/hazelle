@@ -120,7 +120,7 @@ export async function preread(session: Deps, chat: string, stored: Chat, scope: 
   const brief = answer.text.trim();
   if (!brief) return { kind: 'failed', receipt: answer.receipt };
   const { receipt } = answer;
-  await keepRow(store, receipt, Date.now(), chatPlace(store, chat));
+  await keepRow(store, 'preread', receipt, Date.now(), chatPlace(store, chat));
   const counted = await evaluatingTask(store.evaluation.count([brief]));
   if ('kind' in counted) return counted;
   const tokens = counted[0]!;

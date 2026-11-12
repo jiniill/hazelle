@@ -3,9 +3,9 @@ import type { Connection } from '../../connectors/types';
 import { DIRECT_TYPE, type PulseAnswer, type PulseLabel, type PulseRole, type PulseWeek } from '../../contracts/pulse';
 import { without } from '../../model/fields';
 import type { Settings } from '../../model/settings';
+import type { CallPurpose } from '../../model/usage';
 import { api } from '../api';
 import { selfHost } from '../installation';
-import type { CallPurpose } from '../models/request-log';
 import type { ObjectStore } from '../store/store';
 import { changeSettings } from '../account-settings';
 

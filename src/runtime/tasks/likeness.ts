@@ -192,7 +192,7 @@ export class Likenesses {
     const save = async (value: Likeness) => {
       // Over what is there, the user's portraits stay: 다시 만들기, or another device's build met in a conflict.
       const saved = await writeLikeness(store, owner, value, (current) => ({ ...value, portraits: rebuiltPortraits(current.portraits, value.portraits, PORTRAITS_MOST) }));
-      if (saved.ok && value.receipt) await keepRow(store, value.receipt, value.at, { chat: null, character: store.get('character', owner) ? owner : null });
+      if (saved.ok && value.receipt) await keepRow(store, 'likeness', value.receipt, value.at, { chat: null, character: store.get('character', owner) ? owner : null });
       return saved.ok ? null : { kind: 'unsaved' as const, failure: saved };
     };
     const empty = { portraits: [], at: Date.now(), receipt: null };

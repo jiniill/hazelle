@@ -8,8 +8,8 @@ import { particleOf } from '../common/particles';
 import { monthDay } from '../common/time';
 import { count } from '../common/typedNumber';
 import { spent, tally } from '../common/usage';
-import { NO_CHARACTER, PAGES, deletedOf, THINGS, SPANS, USAGE_FAILED } from '../common/words';
-import { LedgerWait, useLedger } from '../common/useLedger';
+import { NO_CHARACTER, PAGES, deletedOf, THINGS, SPANS, UNKNOWN_USE, USAGE_FAILED, USE_NAMES } from '../common/words';
+import { LedgerWait, PurposesWait, useLedger, usePurposes } from '../common/useLedger';
 import { useConnections, useLibrary, usePresence } from '../session';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -85,6 +85,7 @@ export function UsageScreen({ back }: { back: Back | null }) {
                   }))}
                 />
               </Section>
+              <Uses report={report!} />
               <Section title="숫자로">
                 <Facts
                   variant="tiles"
@@ -246,6 +247,27 @@ function Characters({ report, characterName }: { report: UsageReport; characterN
   return (
     <Section title="함께한 캐릭터">
       <Ranking label="캐릭터별 응답" variant="podium" items={items} />
+    </Section>
+  );
+}
+
+function Uses({ report }: { report: UsageReport }) {
+  const filled = usePurposes();
+  const { uses, total } = report;
+  return (
+    <Section title="쓰임">
+      {filled ? (
+        <Breakdown
+          shares={uses.map(({ usage }) => usage.calls / total.calls)}
+          parts={uses.map(({ key, usage }) => ({
+            label: key === null ? UNKNOWN_USE : USE_NAMES[key],
+            value: `${percent(usage.calls, total.calls)} · ${count(usage.calls)}번`,
+            mark: key === 'reply' ? 'accent' : key === null ? 'outline' : 'plain',
+          }))}
+        />
+      ) : (
+        <PurposesWait />
+      )}
     </Section>
   );
 }

@@ -234,9 +234,11 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
       void seedOrder(store, [...library.folders.flatMap(withInside), ...library.characters].map(({ id }) => id));
       void backfillSummaries(store, closing.signal);
       void rereadOriginals(store, files, closing.signal);
-      // A purge before the ledger's fill took a chat's calls would lose them: the trash empties only once it has.
-      void usage.fill(closing.signal).then(() => {
-        if (accountSettings(store).ledger === 'filled') void purgeExpired(store, files, Date.now(), closing.signal);
+      // A purge before the ledger's fills took a chat's calls and their purposes would lose them: the trash empties only
+      // once both have.
+      void usage.fill(closing.signal).then(() => usage.fillPurposes(closing.signal)).then(() => {
+        const { ledger, purposes } = accountSettings(store);
+        if (ledger === 'filled' && purposes === 'filled') void purgeExpired(store, files, Date.now(), closing.signal);
       });
     })();
   };

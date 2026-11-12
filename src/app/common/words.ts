@@ -4,6 +4,7 @@ import type { RegexScript } from '../../engine/import/types';
 import type { Feature } from '../../model/features';
 import type { PrereadParts } from '../../model/settings';
 import type { AgentStage } from '../../model/prompt';
+import type { Use } from '../../model/usage';
 import { KEEP_DAYS, type Removable } from '../../model/library';
 import { FIRST_PROFILE_NAME } from '../../model/profile';
 import { ADDITIONAL_MOST } from '../../engine/additional';
@@ -268,6 +269,9 @@ export const STATUS_RANGE = (min: number, max: number) => `${min}에서 ${max} �
 export const STATUS_DONE = '끝낸 것';
 export const STATUS_HELP = '봇이나 프롬프트가 정해 둔 상태(호감도, 장소 등)를 응답마다 기록해요. 만드는 중인 기능이라 아직 일부만 동작해요.';
 export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS, status: STATUS };
+// What 내 사용량's 쓰임 calls each group of calls (model/usage Use), and the calls whose purpose is not known.
+export const USE_NAMES: Record<Use, string> = { reply: '대화 응답', ...FEATURE_NAMES, script: BOT_MODELS, embedding: ROLE_TAGS.embed };
+export const UNKNOWN_USE = '목적을 모름';
 // A feature's own model row; an agent's model is its prompt's.
 export const TASK_MODELS = { translate: '번역 모델', illustrate: '장면 모델', memory: '기억 모델', mascot: '대사 모델', preread: `${PRE_READ} 모델`, status: `${STATUS} 모델` } as const satisfies Partial<Record<Feature, string>>;
 

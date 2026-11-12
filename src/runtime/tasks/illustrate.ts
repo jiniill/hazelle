@@ -265,7 +265,7 @@ export class Illustrator {
     const illustration: Illustration = { message, version, line: paragraphsOf(text)[scene.paragraph], scene, receipt, model: refOf(route.connection.id, route.model), sent: without(request, 'model'), file, type: drawn.type, size: drawn.bytes.byteLength, at: Date.now() };
     const created = await store.batch([
       { type: 'create', kind: 'illustration', id: crypto.randomUUID(), parent: chat, value: illustration },
-      ...(receipt && log ? [receiptRow(receipt, illustration.at, chatPlace(store, chat))] : []),
+      ...(receipt && log ? [receiptRow('illustration', receipt, illustration.at, chatPlace(store, chat))] : []),
     ]);
     return created.ok ? null : { kind: 'unsaved', failure: created };
   }

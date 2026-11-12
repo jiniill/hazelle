@@ -1,6 +1,8 @@
 import type { Cost } from '../connectors/types';
 import type { Receipt } from './chat';
+import type { Feature } from './features';
 import { grouped } from './fields';
+import type { Stream } from './stream';
 
 type Tally = { total: number; unknown: number };
 // Unknown counts stay separate from known sums; never add costs across units.
@@ -10,14 +12,42 @@ export type ModelUsage = { calls: number; last: number | null; input: Tally; out
 // modelName and source: the names when the call was made, for a model or connection renamed or deleted since.
 export type UsageCall = { at: number; call: Pick<Receipt, 'id' | 'connection' | 'model' | 'modelName' | 'source' | 'usage' | 'cost' | 'calibration'> };
 
-// Append-only per-call ledger outlives chats; delayed costs get separate rows naming the call.
+// A call no stream marker keeps, which only the page that made it reads (runtime/models/streams pageCall).
+export type PageClass = 'script' | 'illustration' | 'likeness' | 'mascot' | 'preread' | 'agent' | 'status';
+// What a call was for: as its stream marker or pageCall names it; an embedding is made by neither.
+export type CallPurpose = Stream['for']['kind'] | PageClass | 'embedding';
+
+// The groups 쓰임 shows: a reply, the feature a call served, a bot's or a plugin's own call, an embedding.
+export type Use = 'reply' | Feature | 'script' | 'embedding';
+const USES: Record<CallPurpose, Use> = {
+  reply: 'reply',
+  translation: 'translate',
+  input: 'translate',
+  note: 'translate',
+  memory: 'memory',
+  script: 'script',
+  illustration: 'illustrate',
+  likeness: 'illustrate',
+  mascot: 'mascot',
+  preread: 'preread',
+  agent: 'agents',
+  status: 'status',
+  embedding: 'embedding',
+};
+export const isPurpose = (value: unknown): value is CallPurpose => typeof value === 'string' && Object.hasOwn(USES, value);
+
+// Append-only per-call ledger outlives chats; delayed costs get separate rows naming the call, and so do purposes found
+// for calls saved before rows kept one (purpose null: not known).
 // chat null identifies non-chat tasks such as the translator or picture profiles.
 export type Ledger =
-  | { type: 'call'; at: number; call: UsageCall['call']; chat: string | null; character: string | null }
-  | { type: 'input-refusal'; at: number; call: UsageCall['call']; chat: string | null; character: string | null }
-  | { type: 'cost'; call: string; cost: Cost | null; at: number };
+  | { type: 'call'; at: number; call: UsageCall['call']; chat: string | null; character: string | null; purpose: CallPurpose | null }
+  | { type: 'input-refusal'; at: number; call: UsageCall['call']; chat: string | null; character: string | null; purpose: CallPurpose | null }
+  | { type: 'cost'; call: string; cost: Cost | null; at: number }
+  | { type: 'purpose'; call: string; purpose: CallPurpose; at: number };
 
-export type Counted = UsageCall & Pick<Extract<Ledger, { type: 'call' }>, 'chat' | 'character'>;
+export type Counted = UsageCall & Pick<Extract<Ledger, { type: 'call' }>, 'chat' | 'character' | 'purpose'>;
+// A call a chat's log or another saved value keeps, with what it was for where that can be told.
+export type LoggedCall = UsageCall & Pick<Counted, 'purpose'>;
 
 // A known booked cost wins over an unknown one when devices both look it up.
 export function book(booked: Map<string, Cost | null>, call: string, cost: Cost | null) {
@@ -27,11 +57,17 @@ export function book(booked: Map<string, Cost | null>, call: string, cost: Cost 
 export function counted(rows: Iterable<Ledger>): Counted[] {
   const calls = new Map<string, Counted>();
   const booked = new Map<string, Cost | null>();
+  const purposes = new Map<string, CallPurpose>();
   for (const row of rows) {
-    if (row.type === 'call') calls.set(row.call.id, { at: row.at, call: row.call, chat: row.chat, character: row.character });
+    if (row.type === 'call') calls.set(row.call.id, { at: row.at, call: row.call, chat: row.chat, character: row.character, purpose: row.purpose });
     else if (row.type === 'cost') book(booked, row.call, row.cost);
+    else if (row.type === 'purpose') purposes.set(row.call, row.purpose);
   }
-  return [...calls.values()].map((one) => (one.call.cost === 'pending' && booked.has(one.call.id) ? { ...one, call: { ...one.call, cost: booked.get(one.call.id)! } } : one));
+  return [...calls.values()].map(({ call, purpose, ...one }) => ({
+    ...one,
+    call: call.cost === 'pending' && booked.has(call.id) ? { ...call, cost: booked.get(call.id)! } : call,
+    purpose: purpose ?? purposes.get(call.id) ?? null,
+  }));
 }
 
 function sum(made: Iterable<UsageCall>): ModelUsage {
@@ -94,7 +130,8 @@ export type Streak = { from: number; to: number; days: number };
 
 // days: every local day of the window's calendar (the whole month, the whole year, every year since the first call's),
 // oldest first, days still to come included. hours: calls by weekday, Monday first, and hour. saved: what the cache
-// saved, per unit, an estimate at today's prices; savedUnknown counts the calls it could not price. Other axes sort busiest first; a null character is no character.
+// saved, per unit, an estimate at today's prices; savedUnknown counts the calls it could not price. Other axes sort busiest
+// first; a null character is no character, a null use a call whose purpose is not known, last.
 export type UsageReport = {
   total: ModelUsage;
   days: UsageGroup<number>[];
@@ -107,6 +144,7 @@ export type UsageReport = {
   savedUnknown: number;
   models: ModelGroup[];
   characters: UsageGroup<string | null>[];
+  uses: UsageGroup<Use | null>[];
   chats: number;
 };
 
@@ -177,6 +215,7 @@ export function usageReport(calls: Counted[], window: ReportWindow, now: number,
       return { ...entry, connection, model, modelName, source };
     }),
     characters: group(shown, ({ character: id }) => (id === null || character(id) ? id : GONE)),
+    uses: group(shown, ({ purpose }) => (purpose === null ? null : USES[purpose])).sort((a, b) => Number(a.key === null) - Number(b.key === null)),
     chats: new Set(shown.flatMap(({ chat }) => (chat === null ? [] : [chat]))).size,
   };
 }
