@@ -182,13 +182,14 @@ function parser(html: boolean) {
   md.disable(['code', 'emphasis']);
   md.inline.ruler.before('escape', 'story_formula', formula);
   md.renderer.rules.formula = (tokens, index) => `<span data-tex>${md.utils.escapeHtml(tokens[index]!.content)}</span>`;
-  // Before text_join, so an escaped \* is still its own token and not read as a mark.
-  md.core.ruler.before('text_join', 'story_lines', lines);
-  md.core.ruler.after('story_lines', 'story_marks', marks);
-  if (html) md.core.ruler.after('story_marks', 'picture_lines', pictureLines);
+  // Before text_join, so an escaped \* is still its own token and not read as a mark. Before story_lines, which splits
+  // at the breaks marks leaves soft.
+  md.core.ruler.before('text_join', 'story_marks', marks);
+  md.core.ruler.after('story_marks', 'story_lines', lines);
+  if (html) md.core.ruler.after('story_lines', 'picture_lines', pictureLines);
   else {
     md.inline.ruler.before('html_inline', 'inlay', inlay);
-    md.core.ruler.after('story_marks', 'inlay_blocks', inlayBlocks);
+    md.core.ruler.after('story_lines', 'inlay_blocks', inlayBlocks);
   }
   return md;
 }
@@ -292,61 +293,82 @@ const APOSTROPHE_BEFORE = /[\p{Script=Latin}\d]/u;
 const APOSTROPHE_AFTER = /[\p{L}\d]/u;
 
 // *Actions* lose their asterisks and **bold** its pairs; “dialogue” and "dialogue", ‘속마음’ and '속마음' keep their
-// quotes, in the marks Risu gives them, so a bot's CSS for them applies. A mark left open runs to the end of its line,
-// which is how a reply looks while it streams. A ' followed by a space or the line's end opens nothing (the users' book).
+// quotes, in the marks Risu gives them, so a bot's CSS for them applies. A mark closed later in its paragraph runs
+// across the line breaks before it, which stay inside one paragraph so the mark stays one element. A mark left open
+// runs to the end of its line, which is how a reply looks while it streams. A ' followed by a space or the line's end
+// opens nothing (the users' book).
 function marks(state: StateCore) {
   for (const token of state.tokens) {
     if (token.type !== 'inline') continue;
-    const out: Token[] = [];
-    const open: Mark[] = [];
-    const tag = (mark: Mark, nesting: 1 | -1) => {
-      const { type, tag } = TAGS[mark];
-      const token = new state.Token(nesting === 1 ? `${type}_open` : `${type}_close`, tag, nesting);
-      if (nesting === 1 && type === 'mark') token.attrSet('risu-mark', QUOTES[mark]!);
-      out.push(token);
-    };
-    const text = (content: string) => content && out.push(Object.assign(new state.Token('text', '', 0), { content }));
-    const close = (from: number) => {
-      const above = open.splice(from);
-      for (const mark of above.toReversed()) tag(mark, -1);
-      return above.slice(1);
-    };
-    for (const child of token.children!) {
-      if (child.type === 'softbreak' || child.type === 'hardbreak') close(0);
-      if (child.type !== 'text') {
-        out.push(child);
+    const { closed } = readMarks(state, token.children!);
+    token.children = readMarks(state, token.children!, closed).out;
+  }
+}
+
+// Without `carried`, breaks cut nothing, and it reads which openings close. Dropping the ones that never close at
+// their line's end changes no other pairing: a later same mark would have closed them.
+function readMarks(state: StateCore, children: Token[], carried?: Set<number>) {
+  const out: Token[] = [];
+  const open: { mark: Mark; origin: number }[] = [];
+  const closed = new Set<number>();
+  let opened = 0;
+  const tag = (mark: Mark, nesting: 1 | -1) => {
+    const { type, tag } = TAGS[mark];
+    const token = new state.Token(nesting === 1 ? `${type}_open` : `${type}_close`, tag, nesting);
+    if (nesting === 1 && type === 'mark') token.attrSet('risu-mark', QUOTES[mark]!);
+    out.push(token);
+  };
+  const text = (content: string) => content && out.push(Object.assign(new state.Token('text', '', 0), { content }));
+  const close = (from: number) => {
+    const above = open.splice(from);
+    for (const { mark } of above.toReversed()) tag(mark, -1);
+    return above;
+  };
+  const reopen = (marks: typeof open) => {
+    for (const entry of marks) {
+      open.push(entry);
+      tag(entry.mark, 1);
+    }
+  };
+  for (const child of children) {
+    if (carried && (child.type === 'softbreak' || child.type === 'hardbreak')) {
+      const cut = open.findIndex(({ origin }) => !carried.has(origin));
+      const kept = cut === -1 ? [] : close(cut).filter(({ origin }) => carried.has(origin));
+      out.push(open.length + kept.length ? new state.Token('hardbreak', 'br', 0) : child);
+      reopen(kept);
+      continue;
+    }
+    if (child.type !== 'text') {
+      out.push(child);
+      continue;
+    }
+    let last = 0;
+    for (const match of child.content.matchAll(MARK)) {
+      const [mark] = match;
+      text(child.content.slice(last, match.index));
+      last = match.index + mark.length;
+      const after = child.content[last] ?? '';
+      if ((mark === "'" || mark === '’') && APOSTROPHE_BEFORE.test(child.content[match.index - 1] ?? '') && APOSTROPHE_AFTER.test(after)) {
+        text(mark);
         continue;
       }
-      let last = 0;
-      for (const match of child.content.matchAll(MARK)) {
-        const [mark] = match;
-        text(child.content.slice(last, match.index));
-        last = match.index + mark.length;
-        const after = child.content[last] ?? '';
-        if ((mark === "'" || mark === '’') && APOSTROPHE_BEFORE.test(child.content[match.index - 1] ?? '') && APOSTROPHE_AFTER.test(after)) {
-          text(mark);
-          continue;
-        }
-        const found = mark === '”' ? '“' : mark === '’' ? '‘' : (mark as Mark);
-        const at = mark === '“' || mark === '‘' ? -1 : open.lastIndexOf(found);
-        if (at === -1 && (mark === '”' || mark === '’' || (mark === "'" && !after.trim()))) {
-          text(mark);
-        } else if (at === -1) {
-          open.push(found);
-          tag(found, 1);
-          if (QUOTES[found]) text(mark);
-        } else {
-          if (QUOTES[found]) text(mark);
-          // Closing a mark that another opened inside of closes that one too, and opens it again after.
-          for (const mark of close(at)) {
-            open.push(mark);
-            tag(mark, 1);
-          }
-        }
+      const found = mark === '”' ? '“' : mark === '’' ? '‘' : (mark as Mark);
+      const at = mark === '“' || mark === '‘' ? -1 : open.findLastIndex((entry) => entry.mark === found);
+      if (at === -1 && (mark === '”' || mark === '’' || (mark === "'" && !after.trim()))) {
+        text(mark);
+      } else if (at === -1) {
+        open.push({ mark: found, origin: opened++ });
+        tag(found, 1);
+        if (QUOTES[found]) text(mark);
+      } else {
+        if (QUOTES[found]) text(mark);
+        closed.add(open[at]!.origin);
+        // Closing a mark that another opened inside of closes that one too, and opens it again after.
+        reopen(close(at).slice(1));
       }
-      text(child.content.slice(last));
     }
-    close(0);
-    token.children = out;
+    text(child.content.slice(last));
   }
+  close(0);
+  return { out, closed };
 }

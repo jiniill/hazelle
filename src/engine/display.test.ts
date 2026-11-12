@@ -228,6 +228,11 @@ describe('storyHtml', () => {
     expect(storyHtml('*a "b* c"', true)).toBe('<p><em>a <mark risu-mark="quote2">&quot;b</mark></em><mark risu-mark="quote2"> c&quot;</mark></p>\n');
   });
 
+  it('runs a mark closed later in its paragraph across its line breaks as one element, cutting one left open at its line’s end', () => {
+    expect(storyHtml('"첫 줄\n둘째 줄" 그리고\n셋째', true)).toBe('<p><mark risu-mark="quote2">&quot;첫 줄<br>\n둘째 줄&quot;</mark> 그리고</p>\n<p>셋째</p>\n');
+    expect(storyHtml('*a "b\nc" d', true)).toBe('<p><em>a <mark risu-mark="quote2">&quot;b</mark></em><br>\n<mark risu-mark="quote2">c&quot;</mark> d</p>\n');
+  });
+
   it('marks 속마음 in single quotes as Risu’s quote1, and leaves an apostrophe and a lone trailing quote as text', () => {
     expect(storyHtml(`"왜?" '신경 쓰이네'라고 생각했다. ‘정말’`, true)).toBe(
       '<p><mark risu-mark="quote2">&quot;왜?&quot;</mark> <mark risu-mark="quote1">\'신경 쓰이네\'</mark>라고 생각했다. <mark risu-mark="quote1">‘정말’</mark></p>\n',
