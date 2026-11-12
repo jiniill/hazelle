@@ -675,6 +675,17 @@ export class ObjectStore {
     }
   }
 
+  // The ids among these writes of objects too large to save, any of which fails its batch whole.
+  async oversized(writes: Write[]): Promise<ApiResult<Set<string>>> {
+    const pinned = await this.pin();
+    if (!pinned.ok) return pinned;
+    try {
+      return { ok: true, data: await this.writes.oversized(writes.map((write) => this.writes.step(write)), this.limits!.body, this.closing.signal) };
+    } catch (error) {
+      return this.codecFailure(error);
+    }
+  }
+
   // Reusing the id makes a create idempotent when its successful response was lost.
   create<K extends Exclude<Kind, Singleton>>(kind: K, value: Values[K], { id = crypto.randomUUID(), parent = null }: { id?: string; parent?: string | null } = {}): Promise<ApiResult<Stored<K>>> {
     return this.writeOne<K>(this.writes.step({ type: 'create', kind, id, parent, value }), SCOPED.has(kind) ? parent : null);
@@ -784,6 +795,9 @@ export class ObjectStore {
     if (!pinned.ok) return pinned;
     const { timeline } = pinned.data;
     const limits = this.limits!;
+    // An item past the body limit fails its whole batch before any request goes, so a batch of many requests leaves no
+    // part written.
+    if ((await this.writes.oversized(steps, limits.body, stop)).size) return { ok: false, error: 'too-large' };
     while (saved.length < steps.length) {
       const start = saved.length;
       // Requests are counted from the back, so the last one is full: an owner, written last, goes with the owned objects

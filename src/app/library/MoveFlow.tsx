@@ -304,6 +304,7 @@ function Summary({ backup, moved }: { backup: BackupCatalog; moved: Moved }) {
       const lines = missedLines(unsupported);
       return lines.length ? [{ title: moduleName(name), note: `모듈 · ${lines.join(' · ')}` }] : [];
     }),
+    ...moved.tooLarge.map(({ kind, name }) => ({ title: kind === 'module' ? moduleName(name) : name, note: `${THINGS[kind].noun} · 용량이 너무 커서 가져오지 못했어요` })),
   ];
   const totals = new Map<Unused['kind'], number>();
   for (const item of moved.characters.flatMap((character) => character.unused)) totals.set(item.kind, (totals.get(item.kind) ?? 0) + item.count);

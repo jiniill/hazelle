@@ -10,7 +10,7 @@ import { filedIn } from '../../model/folders';
 import type { Asset } from '../../model/library';
 import { emptyMemory, memoryId, type Memory, type MemoryRecord, type MemorySettings } from '../../model/memory';
 import { fingerprint } from '../../engine/memory';
-import type { ApiResult } from '../api';
+import type { ApiFailure, ApiResult } from '../api';
 import { createFolder } from '../library/folders';
 import { importCharacter, orderFirst, saveAssets, setToggleValues, type ImportedCharacter, type Progress } from '../library/characters';
 import { setSharedLoreScan } from '../chat/chat-context';
@@ -32,9 +32,12 @@ export type MoveStep = { kind: 'characters' | 'chats' | 'personas' | 'prompts' |
 // faceless also when the picture did not read.
 type MovedCharacter = { id: string; risu: string; name: string; chats: number; unsupported: Unsupported; faceless: boolean; missed: MoveUnsupported[]; unused: Unused[] };
 type MovedModule = { name: string; unsupported: Unsupported };
+// An item with an object past the store's size limit, left out with nothing of its own written; a persona's module
+// written before the persona stays a module.
+type TooLarge = { kind: 'persona' | 'module' | 'prompt' | 'character'; name: string };
 // loreBudget: the 로어북 최대 분량 this move set from Risu's; null when it set none. toggles: how many of Risu's toggle
 // values this move wrote anywhere, onto a character it brought or onto 캐릭터 없이.
-export type Moved = { characters: MovedCharacter[]; personas: number; prompts: number; modules: MovedModule[]; loreBudget: number | null; toggles: number };
+export type Moved = { characters: MovedCharacter[]; personas: number; prompts: number; modules: MovedModule[]; tooLarge: TooLarge[]; loreBudget: number | null; toggles: number };
 
 // Those in 휴지통 too, until they are removed for good.
 export const broughtFromRisu = (store: ObjectStore): Set<string> => new Set(store.list('character').flatMap(({ value }) => (value.risu === undefined ? [] : [value.risu])));
@@ -42,9 +45,10 @@ export const broughtFromRisu = (store: ObjectStore): Set<string> => new Set(stor
 // By Risu id, the deleted ones too, until they are removed for good.
 export const modulesFromRisu = (store: ObjectStore): Map<string, string> => new Map(store.list('module').flatMap(({ id, value }) => (value.risu === undefined ? [] : [[value.risu, id]])));
 
-// Import personas (after their modules) before chats; modules before dependent prompts/characters. Stop on first failure,
-// retaining earlier saves. Write chat entries first, then roots with their character (addCharacter): interrupted entries
-// stay unreachable, so retries can skip completed characters. Later inlays are recoverable through fillInlays.
+// Import personas (after their modules) before chats; modules before dependent prompts/characters. Leave out an item too
+// large to save and go on; stop on any other failure, retaining earlier saves. Write chat entries first, then roots with
+// their character (addCharacter): interrupted entries stay unreachable, so retries can skip completed characters. Later
+// inlays are recoverable through fillInlays.
 // Write a module's 항상 reference before the module: interrupted dangling ids read as off and retry imports it again.
 // Pin every write to the starting timeline; restore stops the move. Without the inlay export, count every inlay as not brought.
 export function moveFromRisu(store: ObjectStore, files: Files, backup: RisuBackup, pick: MovePick, inlays: Inlays | null, progress: (step: MoveStep) => void): Promise<ApiResult<Moved>> {
@@ -56,6 +60,12 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
   const landed = (kind: MoveStep['kind'], done: number, total: number) => progress({ kind, done, total });
   const personaIds = new Map<string, string>();
   const movedModules: MovedModule[] = [];
+  const tooLarge: TooLarge[] = [];
+  const leftOut = (failure: ApiFailure, kind: TooLarge['kind'], name: string) => {
+    if (failure.error !== 'too-large') return false;
+    tooLarge.push({ kind, name });
+    return true;
+  };
   // Only onto an account that has set none: one set here is the user's later choice.
   const loreBudget = accountSettings(store).loreBudget === undefined ? backup.catalog.loreBudget : null;
   if (loreBudget !== null) {
@@ -71,6 +81,7 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
     const set = await setToggleValues(store, null, Object.fromEntries(unset));
     if (!set.ok) return set;
   }
+  let personaCount = 0;
   for (const [done, { key, selected }] of personas.entries()) {
     landed('personas', done, personas.length);
     const persona = await backup.persona(key);
@@ -80,12 +91,19 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
     // backup request releases them (runtime/import reader).
     if (persona.module) {
       const imported = await importModule(store, files, persona.module, () => {});
-      if (!imported.ok) return imported;
+      if (!imported.ok) {
+        if (leftOut(imported, 'persona', persona.name)) continue;
+        return imported;
+      }
       movedModules.push({ name: persona.module.name, unsupported: mergeUnsupported(persona.module.unsupported, imported.data.unsupported) });
       modules.push(imported.data.id);
     }
     const saved = await addRisuPersona(store, persona, picture, modules);
-    if (!saved.ok) return saved;
+    if (!saved.ok) {
+      if (leftOut(saved, 'persona', persona.name)) continue;
+      return saved;
+    }
+    personaCount++;
     if (persona.id !== null) personaIds.set(persona.id, saved.data.id);
     // Risu's choice becomes the current one before the chats below read it: those it bound to no persona used it there.
     if (selected) {
@@ -114,8 +132,11 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
       if (!always.ok) return always;
     }
     const saved = await importModule(store, files, module, uploading, module.risu === null ? undefined : { id, risu: module.risu });
-    if (!saved.ok) return saved;
     picturesDone += module.assets.length;
+    if (!saved.ok) {
+      if (leftOut(saved, 'module', module.name)) continue;
+      return saved;
+    }
     movedModules.push({ name: module.name, unsupported: mergeUnsupported(module.unsupported, saved.data.unsupported) });
     if (module.risu !== null) moduleIds.set(module.risu, saved.data.id);
   }
@@ -124,10 +145,13 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
   let prompts = 0;
   for (const [done, { key }] of presets.entries()) {
     landed('prompts', done, presets.length);
-    const { result } = await backup.preset(key);
+    const { name, result } = await backup.preset(key);
     if (!result.ok) continue;
     const saved = await savePreset(store, result);
-    if (!saved.ok) return saved;
+    if (!saved.ok) {
+      if (leftOut(saved, 'prompt', name)) continue;
+      return saved;
+    }
     prompts++;
   }
   if (presets.length) landed('prompts', presets.length, presets.length);
@@ -154,29 +178,44 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
     // move leaves none without it.
     const folderIds = character.chatFolders.map(() => crypto.randomUUID());
     const folders = character.chatFolders.map((name, index): Write => ({ type: 'create', kind: 'folder', id: folderIds[index]!, parent: null, value: { name, of: 'chat', character: id } }));
-    const chats = sorted.map((chat) => chatOf(crypto.randomUUID(), id, character.card, chat, personaIds, current, memory, folderIds));
+    const made = sorted.map((chat) => ({ chat, ...chatOf(crypto.randomUUID(), id, character.card, chat, personaIds, current, memory, folderIds) }));
+    // A chat with an object too large to save is left out whole, before anything of its character is written.
+    const big = await store.oversized(made.flatMap(({ entries, root }) => [...entries, root]));
+    if (!big.ok) return big;
+    const chats = made.filter(({ entries, root }) => ![...entries, root].some((write) => big.data.has(write.id)));
+    chatsDone += made.length - chats.length;
     const last = new Set(chats.flatMap(({ entries }) => entries.at(-1)?.id ?? []));
     let staged = 0;
     let saved: ImportedCharacter | undefined;
     let inlaysMissed = 0;
+    // Whether its chats' entries are on the server: refused whole by the store, or taken back with a refused character,
+    // none are.
+    let written = false;
     const failure = await saveNewChats(store, chats.map(({ root }) => root.id), chats.flatMap(({ entries }) => entries), {
       written: (write) => {
         if (last.has(write.id)) progress({ kind: 'chats', done: chatsDone + ++staged, total: chatTotal });
       },
       landed: async () => {
+        written = true;
         chatsDone += chats.length;
         const imported = await importCharacter(store, files, character, avatar, uploading, { id, folder: folder?.data ?? null, risu: character.id, toggles: backup.catalog.toggles, chats: [...chats.map(({ root }) => root), ...folders] }, character.modules.flatMap((risu) => moduleIds.get(risu) ?? []));
-        if (!imported.ok) return imported;
+        if (!imported.ok) {
+          if (imported.error !== 'too-large') return imported;
+          const removed = await store.batch(chats.flatMap(({ entries }) => entries.map(({ id: entry }): Write => ({ type: 'remove', id: entry }))), undefined, { unheld: true });
+          if (!removed.ok) return removed;
+          written = false;
+          return imported;
+        }
         saved = imported.data;
         picturesDone += character.assets.length;
         // The chats are still held here, which their inlays, scoped to them, need.
-        for (const [index, { inlays: ids }] of sorted.entries()) {
+        for (const { chat: { inlays: ids }, root } of chats) {
           if (!inlays) {
             inlaysMissed += ids.length;
             continue;
           }
           if (!ids.length) continue;
-          const filled = await fillPictures(store, files, { kind: 'inlay', parent: chats[index]!.root.id }, inlays.assets(ids), uploading);
+          const filled = await fillPictures(store, files, { kind: 'inlay', parent: root.id }, inlays.assets(ids), uploading);
           if (!filled.ok) return filled;
           picturesDone += ids.length;
           inlaysMissed += unsupportedCount(filled.data.unsupported);
@@ -184,17 +223,20 @@ async function move(store: ObjectStore, files: Files, backup: RisuBackup, { char
         return null;
       },
     });
-    if (failure) return failure;
+    if (failure) {
+      if (!written && leftOut(failure, 'character', character.card.name)) continue;
+      return failure;
+    }
     const { unsupported, faceless } = saved!;
-    const missed = counted(MOVE_UNSUPPORTED_KINDS, new Map([...character.missed.map(({ kind, count }) => [kind, count] as const), ['inlay', inlaysMissed]]));
-    moved.push({ id, risu: character.id, name: character.card.name, chats: character.chats.length, unsupported: mergeUnsupported(character.report.unsupported, unsupported), faceless, missed, unused: unused(character.card) });
+    const missed = counted(MOVE_UNSUPPORTED_KINDS, new Map([...character.missed.map(({ kind, count }) => [kind, count] as const), ['inlay', inlaysMissed], ['too-large-chat', made.length - chats.length]]));
+    moved.push({ id, risu: character.id, name: character.card.name, chats: chats.length, unsupported: mergeUnsupported(character.report.unsupported, unsupported), faceless, missed, unused: unused(character.card) });
   }
   if (due.length) landed('characters', due.length, due.length);
   // Risu's order comes along, ahead of what was here. A failed write leaves them first by name (model/order), which is no
   // reason to report the move failed.
   const brings = new Map(moved.map(({ risu, id }) => [risu, id]));
   if (moved.length) await orderFirst(store, characters.flatMap(({ id }) => brings.get(id) ?? []));
-  return { ok: true, data: { characters: moved, personas: personas.length, prompts, modules: movedModules, loreBudget, toggles: moved.length > 0 ? Object.keys(backup.catalog.toggles).length : unset.length } };
+  return { ok: true, data: { characters: moved, personas: personaCount, prompts, modules: movedModules, tooLarge, loreBudget, toggles: moved.length > 0 ? Object.keys(backup.catalog.toggles).length : unset.length } };
 }
 
 const lastTalk = (chat: RisuChat) => chat.messages.at(-1)?.at ?? 0;

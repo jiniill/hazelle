@@ -420,6 +420,25 @@ describe('object store', () => {
     expect(store.children('entry', id).map(({ value }) => value)).toEqual(writes.slice(1).map((write) => 'value' in write && write.value));
     expect(store.get('chat', id)?.rev).toBe(4);
   });
+
+  it('refuses a batch whole when an item past the body limit would go in a later request', async () => {
+    const { accountId, vaultKey } = await server.account();
+    const batches: unknown[] = [];
+    const request = async <T,>(...args: Parameters<typeof api>) => {
+      if (args[1] === 'objects/batch') batches.push(args[2]);
+      return api<T>(...args);
+    };
+    const store = await ObjectStore.open(accountId, vaultKey, serverBackend(request));
+    const id = crypto.randomUUID();
+    await server.hold(store, id);
+    const entry = (text: string): Write => ({ type: 'create', kind: 'entry', id: crypto.randomUUID(), parent: id, value: { type: 'message', role: 'user', at: 1, text, receipt: null } });
+    const noise = (chunks: number) => Array.from({ length: chunks }, () => toBase64(randomBytes(65_535))).join('');
+    const fitting = noise(14);
+    const writes = [...Array.from({ length: 4 }, () => entry(fitting)), entry(noise(19)), root(id)];
+    expect(await store.batch(writes, undefined, { unheld: true })).toEqual({ ok: false, error: 'too-large' });
+    expect(batches).toEqual([]);
+    expect(store.children('entry', id)).toEqual([]);
+  });
 });
 
 describe('writes shown before their answer', () => {

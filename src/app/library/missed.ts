@@ -51,6 +51,7 @@ const MOVE_UNSUPPORTED: Record<MoveUnsupportedKind, (count: number) => string> =
   'lore-unfound': (count) => `이 채팅에서만 켠 로어북 ${count}개(캐릭터 로어북에서 찾지 못함)`,
   'system-message': (count) => `시스템 메시지 ${count}개(봇 메시지로 들어옴)`,
   attachment: (count) => `메시지에 첨부한 파일 ${count}개`,
+  'too-large-chat': (count) => `용량이 너무 커서 가져오지 못한 채팅 ${count}개`,
 };
 
 export const missedLines = (unsupported: Unsupported): string[] => unsupported.map((item) => UNSUPPORTED[item.kind](item.count));

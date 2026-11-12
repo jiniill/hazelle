@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { serverBackend } from '../store/backend';
+import { ObjectStore } from '../store/store';
+import type { SealedWrite } from '../../contracts/objects';
+import { toBase64 } from '../../base64';
 import type { Inlays } from '../../engine/import/backup';
 import { convertPreset } from '../../engine/import/preset';
 import type { Card, ImportedModule, RisuBackup, RisuCharacter, RisuPersona, RisuPreset } from '../../engine/import/types';
@@ -115,7 +118,7 @@ describe('moveFromRisu', () => {
     expect(shown(messages[0]!).greeting).toBe(2);
     expect(risuMatch(store, '루나')).toBe(id);
 
-    expect(await moveFromRisu(store, files, backup, { ...pick, personas: [] }, null, () => {})).toEqual({ ok: true, data: { characters: [], personas: 0, prompts: 0, modules: [], loreBudget: null, toggles: 0 } });
+    expect(await moveFromRisu(store, files, backup, { ...pick, personas: [] }, null, () => {})).toEqual({ ok: true, data: { characters: [], personas: 0, prompts: 0, modules: [], tooLarge: [], loreBudget: null, toggles: 0 } });
     expect(backup.character).toHaveBeenCalledExactlyOnceWith(0);
     expect(store.list('character')).toHaveLength(1);
     expect(broughtFromRisu(store)).toEqual(new Set(['risu-luna']));
@@ -291,6 +294,28 @@ describe('moveFromRisu', () => {
     expect(await moveFromRisu(store, files, backup, backup.catalog, null, () => {})).toMatchObject({ ok: true, data: { prompts: 1 } });
     const ids = new Map(store.list('module').map(({ id, value }) => [value.name, id]));
     expect(store.list('prompt').find(({ value }) => value.name === '짝')!.value).toMatchObject({ modules: [ids.get('Chime'), ids.get('Bell')] });
+  });
+
+  it('leaves out what is too large to save, a chat alone when it is in one, taking back the chats a refused character wrote first', async () => {
+    const { accountId, vaultKey } = await server.account();
+    const sent: SealedWrite[] = [];
+    const request = async <T,>(...args: Parameters<typeof api>) => {
+      if (args[1] === 'objects/batch') sent.push(...(args[2] as { writes: SealedWrite[] }).writes);
+      return api<T>(...args);
+    };
+    const store = await ObjectStore.open(accountId, vaultKey, serverBackend(request));
+    const files = new Files(serverBackend(api), store);
+    const noise = () => Array.from({ length: 19 }, () => toBase64(randomBytes(65_535))).join('');
+    const wide = { ...luna, id: 'risu-wide', card: { ...luna.card, name: '넓은', description: noise() } };
+    const long = { ...luna, id: 'risu-long', card: { ...luna.card, name: '긴' }, chats: [{ ...luna.chats[0]!, title: '큰', messages: [{ role: 'user' as const, text: noise(), at: 3 }] }, luna.chats[0]!] };
+    const backup = source({ characters: [wide, long, luna], modules: [{ ...bell, name: 'Heavy', risu: 'risu-heavy', description: noise(), assets: [] }] });
+    const moved = await moveFromRisu(store, files, backup, backup.catalog, null, () => {});
+    expect(moved).toMatchObject({ ok: true, data: { characters: [{ risu: 'risu-luna', chats: 1, missed: [] }, { risu: 'risu-long', chats: 1, missed: [{ kind: 'too-large-chat', count: 1 }] }], modules: [], tooLarge: [{ kind: 'module', name: 'Heavy' }, { kind: 'character', name: '넓은' }] } });
+    expect(store.list('chat').map(({ value }) => value.title)).toEqual(['등대', '등대']);
+    const last = new Map(sent.map((write) => [write.id, write]));
+    const chats = new Set(store.list('chat').map(({ id }) => id));
+    expect([...last.values()].filter(({ kind, body }) => kind === 'entry' && body !== null).every(({ parent }) => chats.has(parent!))).toBe(true);
+    expect(sent.some(({ kind, body }) => kind === 'entry' && body === null)).toBe(true);
   });
 });
 

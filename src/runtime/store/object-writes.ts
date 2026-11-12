@@ -107,6 +107,25 @@ export class ObjectWrites {
     return !held || kinds.includes(held.kind as Kind);
   }
 
+  // The ids of the items past the body limit. JSON under a fifth of the limit in UTF-16 units always fits (UTF-8 takes
+  // at most 3 bytes a unit, base64 a third more, deflate and the seal a few bytes); only larger values are sealed to tell.
+  async oversized(steps: WriteStep[], limit: number, signal: AbortSignal): Promise<Set<string>> {
+    const large: SealItem[] = [];
+    for (const step of steps) {
+      let ready: ApiResult<Resolved>;
+      try { ready = step.resolve((id) => this.objects.get(id)); } catch { continue; }
+      const pending = ready.ok ? ready.data.pending : null;
+      if (pending && pending.value !== undefined && JSON.stringify(pending.value).length * 5 > limit) large.push(pending);
+    }
+    const ids = new Set<string>();
+    for (let from = 0; from < large.length; from += SEAL_ITEMS) {
+      const window = large.slice(from, from + SEAL_ITEMS);
+      const sealed = await this.codec.seal(window, limit, signal);
+      for (const [index, result] of sealed.entries()) if (codecValue(result) === null) ids.add(window[index]!.id);
+    }
+    return ids;
+  }
+
   async prepare(steps: WriteStep[], { start, end, limits, timeline, signal }: { start: number; end: number; limits: Limits; timeline: string; signal: AbortSignal }): Promise<ApiResult<Prepared>> {
     const resolved: Resolved[] = [];
     const writes: SealedWrite[] = [];

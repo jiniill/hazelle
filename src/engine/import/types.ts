@@ -232,6 +232,7 @@ export const MOVE_UNSUPPORTED_KINDS = [
   'lore-unfound',
   'system-message',
   'attachment',
+  'too-large-chat',
 ] as const;
 export type MoveUnsupportedKind = (typeof MOVE_UNSUPPORTED_KINDS)[number];
 export type MoveUnsupported = { kind: MoveUnsupportedKind; count: number };
