@@ -4,11 +4,10 @@ import { costUnit, resolveConnection } from '../../connectors/registry';
 import { presenceReport, type PresenceReport } from '../../model/presence';
 import { GONE, usageReport, type Counted, type ModelUsage, type ReportWindow, type UsageGroup, type UsageReport } from '../../model/usage';
 import { money } from '../common/money';
-import { particleOf } from '../common/particles';
-import { monthDay } from '../common/time';
+import { day, monthDay } from '../common/time';
 import { count } from '../common/typedNumber';
 import { spent, tally } from '../common/usage';
-import { NO_CHARACTER, PAGES, deletedOf, THINGS, SPANS, UNKNOWN_USE, USAGE_FAILED, USE_NAMES } from '../common/words';
+import { MODULE_MODELS, NO_CHARACTER, PAGES, deletedOf, THINGS, SPANS, UNKNOWN_USE, USE_NAMES } from '../common/words';
 import { LedgerWait, PurposesWait, useLedger, usePurposes } from '../common/useLedger';
 import { useConnections, useLibrary, usePresence } from '../session';
 import { backBar } from '../shell/router';
@@ -16,16 +15,15 @@ import type { Back } from '../shell/routes';
 import { Breakdown, Columns, DayMap, Facts, HourDial, HourMap, Intro, LinkScope, Moment, NavBar, Ranking, Screen, Section, Stack, Table, Tabs, Text, WeekBars, quartileLevels, type DayCell, type Ranked } from '../ui';
 
 const WINDOWS: ReportWindow[] = ['month', 'year', 'all'];
-const DAY = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
 const WEEKDAYS = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
 const HOURS = Array.from({ length: 24 }, (_, hour) => `${hour}시`);
-const SCALE = { low: '적게', high: '많이' };
+const SCALE = { low: '적음', high: '많음' };
 
-const hourWord = (hour: number) => (hour < 6 ? `새벽 ${hour || 12}시` : hour < 12 ? `오전 ${hour}시` : hour < 18 ? `오후 ${hour === 12 ? 12 : hour - 12}시` : hour < 21 ? `저녁 ${hour - 12}시` : `밤 ${hour - 12}시`);
+const hourWord = (hour: number) => (hour < 6 ? (hour ? `새벽 ${hour}시` : '밤 12시') : hour < 12 ? `오전 ${hour}시` : hour < 18 ? `오후 ${hour === 12 ? 12 : hour - 12}시` : hour < 21 ? `저녁 ${hour - 12}시` : `밤 ${hour - 12}시`);
 const replies = (calls: number) => `응답 ${count(calls)}번`;
 const brief = (usage: ModelUsage) => (usage.costs.length ? `${replies(usage.calls)} · ${spent(usage)}` : replies(usage.calls));
 const percent = (part: number, whole: number) => `${Math.round((part / whole) * 100)}%`;
-const minutesWord = (minutes: number) => `${count(minutes)}분`;
+const duration = (minutes: number) => (minutes < 60 ? `${count(minutes)}분` : `${count(Math.floor(minutes / 60))}시간${minutes % 60 ? ` ${minutes % 60}분` : ''}`);
 
 export function UsageScreen({ back }: { back: Back | null }) {
   const library = useLibrary();
@@ -51,20 +49,20 @@ export function UsageScreen({ back }: { back: Back | null }) {
     <Screen width="form" top={<NavBar title={PAGES.usage} {...backBar(back)} />}>
       <Tabs label="기간" items={WINDOWS.map((value) => ({ value, label: SPANS[value] }))} value={window} onChange={setWindow} />
       {view.kind !== 'read' ? (
-        <LedgerWait view={view} retry={retry} failed={USAGE_FAILED} />
+        <LedgerWait view={view} retry={retry} failed={`${PAGES.usage}을 불러오지 못했어요.`} />
       ) : (
         <LinkScope>
           <Hero report={report!} present={present!} window={window} now={now} characterName={characterName} />
           {report!.total.calls > 0 && (
             <>
-              <Highlights report={report!} />
+              <Highlights report={report!} now={now} />
               <Spending report={report!} />
               <Section title="요일과 시간">
                 <HourMap
                   label="요일과 시간별 응답"
                   hours={HOURS}
                   scale={SCALE}
-                  {...(present!.present > 0 && { note: `접속한 날 평균 ${minutesWord(Math.round(present!.minutes / present!.present))} 머물렀어요` })}
+                  {...(present!.present > 0 && { note: `접속한 날에는 평균 ${duration(Math.round(present!.minutes / present!.present))} 머물렀어요` })}
                   rows={report!.hours.map((cells, weekday) => ({
                     label: WEEKDAYS[weekday]![0]!,
                     keys: [`row:${weekday}`],
@@ -77,7 +75,7 @@ export function UsageScreen({ back }: { back: Back | null }) {
               <Section title="모델">
                 <Table
                   label="모델별 사용량"
-                  columns={[{ label: '모델', track: 'name' }, { label: '응답', track: 'figure' }, { label: '캐시 적중', track: 'figure' }, { label: '비용', track: 'figure' }]}
+                  columns={[{ label: '모델', track: 'name' }, { label: '응답', track: 'figure' }, { label: '캐시 적중률', track: 'figure' }, { label: '비용', track: 'figure' }]}
                   rows={report!.models.map(({ key, modelName, source, usage }) => ({
                     key,
                     cells: [`${modelName} · ${source}`, `${count(usage.calls)}번`, usage.cache.input ? percent(usage.cache.read, usage.cache.input) : null, usage.costs.length ? spent(usage) : null],
@@ -86,11 +84,11 @@ export function UsageScreen({ back }: { back: Back | null }) {
                 />
               </Section>
               <Uses report={report!} />
-              <Section title="숫자로">
+              <Section title="요약">
                 <Facts
                   variant="tiles"
                   items={[
-                    { label: '받은 응답', value: `${count(report!.total.calls)}번` },
+                    { label: MODULE_MODELS, value: `${count(report!.total.calls)}번` },
                     { label: '대화한 채팅', value: `${count(report!.chats)}개` },
                     { label: '함께한 캐릭터', value: `${count(report!.characters.filter(({ key }) => key !== null && key !== GONE).length)}명` },
                     { label: '입력 토큰', value: tally(report!.total.input, report!.total.calls) },
@@ -119,8 +117,8 @@ function Hero({ report, present, window, now, characterName }: { report: UsageRe
     if (busiest && key === busiest.day.key) keys.push('day:busiest');
     const minutes = present.days.get(key);
     if (minutes) keys.push('day:present');
-    const note = [usage.calls ? brief(usage) : '대화하지 않았어요', ...(minutes ? [`${minutesWord(minutes)} 접속`] : [])].join(' · ');
-    return { level: key > today ? null : levels[index]!, title: key === today ? '오늘' : DAY.format(key), note, keys, today: key === today };
+    const note = [usage.calls ? brief(usage) : '대화 없음', ...(minutes ? [`${duration(minutes)} 접속`] : [])].join(' · ');
+    return { level: key > today ? null : levels[index]!, title: day(key, now), note, keys, today: key === today };
   };
   const cells = days.map(cell);
   const years = window === 'all' ? [...new Set(days.map(({ key }) => new Date(key).getFullYear()))] : [];
@@ -131,11 +129,11 @@ function Hero({ report, present, window, now, characterName }: { report: UsageRe
   return (
     <Stack gap="group">
       {total.calls ? (
-        <Intro variant="story" title={`${span} ${count(active)}일, 헤이젤에서 이야기했어요.`}>
-          {top && `가장 오래 함께한 건 ${characterName(top.key)}${particleOf(characterName(top.key), '이에요/예요')}.`}
+        <Intro variant="story" title={`${span} 헤이젤에서 ${count(active)}일 동안 이야기했어요.`}>
+          {top && `'${characterName(top.key)}' 캐릭터와 가장 많이 대화했어요.`}
         </Intro>
       ) : (
-        <Intro variant="story" title="이 기간에는 아직 대화하지 않았어요." />
+        <Intro variant="story" title="이 기간에는 대화하지 않았어요." />
       )}
       {window === 'all' ? (
         years.map((year) => {
@@ -159,7 +157,7 @@ function Hero({ report, present, window, now, characterName }: { report: UsageRe
             { label: '대화한 날', value: `${count(active)}일`, links: ['day:lit'] },
             { label: '지금 연속', value: `${count(current?.days ?? 0)}일`, links: ['day:current'] },
             { label: '가장 긴 연속', value: `${count(longest?.days ?? 0)}일`, links: ['day:longest'] },
-            { label: '접속 시간', value: present.minutes < 60 ? minutesWord(present.minutes) : `${count(Math.round(present.minutes / 60))}시간`, notes: counted > days[0]!.key ? [`${monthDay(counted)}부터`] : [], links: ['day:present'] },
+            { label: '접속 시간', value: duration(present.minutes), notes: counted > days[0]!.key ? [`${monthDay(counted)}부터`] : [], links: ['day:present'] },
           ]}
         />
       )}
@@ -167,7 +165,7 @@ function Hero({ report, present, window, now, characterName }: { report: UsageRe
   );
 }
 
-function Highlights({ report }: { report: UsageReport }) {
+function Highlights({ report, now }: { report: UsageReport; now: number }) {
   const { hours, busiest, total, active } = report;
   const byHour = Array.from({ length: 24 }, (_, hour) => hours.reduce((sum, row) => sum + row[hour]!, 0));
   const peakHour = byHour.indexOf(Math.max(...byHour));
@@ -177,14 +175,14 @@ function Highlights({ report }: { report: UsageReport }) {
   const usual = total.calls / active;
   return (
     <Columns min="wide">
-      <Moment label="자주 오는 때" value={<>{WEEKDAYS[peak.weekday]}<br />{hourWord(peak.hour)}</>} note={`밤 9시부터 새벽 2시 전까지 ${percent(night, total.calls)}`} links={[`row:${peak.weekday}`, `dial:${peak.hour}`]}>
+      <Moment label="자주 오는 때" value={<>{WEEKDAYS[peak.weekday]}<br />{hourWord(peak.hour)}</>} note={`밤 9시부터 새벽 2시까지 ${percent(night, total.calls)}`} links={[`row:${peak.weekday}`, `dial:${peak.hour}`]}>
         <HourDial label="시간대별 응답" peak={peakHour} hours={byHour.map((calls, hour) => ({ value: calls, title: hourWord(hour), note: replies(calls), keys: [`dial:${hour}`], links: [`dial:${hour}`, `col:${hour}`] }))} />
       </Moment>
       {busiest && (
-        <Moment label="가장 바빴던 날" value={DAY.format(busiest.day.key)} note={`${replies(busiest.day.usage.calls)} · 평소의 ${(busiest.day.usage.calls / usual).toFixed(1)}배`} links={['day:busiest']}>
+        <Moment label="가장 많이 대화한 날" value={day(busiest.day.key, now)} note={`${replies(busiest.day.usage.calls)} · 평소의 ${(busiest.day.usage.calls / usual).toFixed(1)}배`} links={['day:busiest']}>
           <WeekBars
             label="그 주의 응답"
-            days={busiest.week.map(({ key, usage }, index) => ({ value: usage.calls, label: WEEKDAYS[index]![0]!, title: DAY.format(key), note: replies(usage.calls), keys: [`week:${index}`], links: [`day:${key}`, `week:${index}`], current: key === busiest.day.key }))}
+            days={busiest.week.map(({ key, usage }, index) => ({ value: usage.calls, label: WEEKDAYS[index]![0]!, title: day(key, now), note: replies(usage.calls), keys: [`week:${index}`], links: [`day:${key}`, `week:${index}`], current: key === busiest.day.key }))}
           />
         </Moment>
       )}

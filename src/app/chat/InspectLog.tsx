@@ -4,7 +4,7 @@ import type { LogEntry } from '../../runtime/models/request-log';
 import { describeReplyError } from '../common/failure';
 import { cacheShare, finish, seconds, tokens } from '../common/receipt';
 import { ago } from '../common/time';
-import { FEATURE_NAMES, ROLE_TAGS, SCRIPTS, STAGE_NAMES, TOOL, UNKNOWN, INPUT_TRANSLATION, RESPONSE_RAW } from '../common/words';
+import { FEATURE_NAMES, ROLE_TAGS, STAGE_NAMES, UNKNOWN, USE_NAMES, INPUT_TRANSLATION, RESPONSE_RAW } from '../common/words';
 import { useSession } from '../session';
 import { Button, Callout, Empty, List, ListItem, Section, Stack, Text } from '../ui';
 import { SentRequest, SentResponse } from './ChatSent';
@@ -17,7 +17,7 @@ const PURPOSES: Record<CallPurpose, string> = {
   input: INPUT_TRANSLATION,
   note: '번역가의 노트',
   memory: FEATURE_NAMES.memory,
-  script: `${SCRIPTS.part}·${TOOL}`,
+  script: USE_NAMES.script,
   illustration: FEATURE_NAMES.illustrate,
   likeness: '삽화 프로필',
   mascot: FEATURE_NAMES.mascot,

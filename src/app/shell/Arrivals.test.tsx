@@ -37,8 +37,8 @@ it('says a reply that ended in a chat not open, received or failed, with the way
   expect(toast.show).not.toHaveBeenCalled();
   cues.emit('reply-received', 'away');
   cues.emit('reply-failed', 'away');
-  expect(toast.show).toHaveBeenCalledWith('루나 응답이 도착했어요', { action: expect.objectContaining({ label: '보기' }) });
-  expect(toast.error).toHaveBeenCalledWith('루나 응답이 실패했어요', { action: expect.objectContaining({ label: '보기' }) });
+  expect(toast.show).toHaveBeenCalledWith("'루나' 응답이 도착했어요", { action: expect.objectContaining({ label: '보기' }) });
+  expect(toast.error).toHaveBeenCalledWith("'루나' 응답을 받지 못했어요", { action: expect.objectContaining({ label: '보기' }) });
 
   toast.show.mock.calls[0]![1].action.onClick();
   expect(navigate).toHaveBeenCalledWith({ kind: 'chat', id: 'away' });

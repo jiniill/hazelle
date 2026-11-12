@@ -147,7 +147,7 @@ export const NOTE_UNSENT = `번역 프롬프트에 '${TRANSLATOR_NOTE}' 블록�
 export const ILLUSTRATE_NOTE = '삽화 노트';
 export const ILLUSTRATE_NOTE_UNSENT = `삽화 프롬프트에 '${ILLUSTRATE_NOTE}' 블록을 추가해야 노트가 적용돼요.`;
 
-export const PAGES = { setup: '내 구성', models: '모델', connections: 'API 연결', chat: '대화', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용량', admin: '운영' };
+export const PAGES = { setup: '내 구성', models: '모델', connections: 'API 연결', chat: '대화', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용 기록', admin: '운영' };
 
 // Keep always-on module wording consistent: editable only in global settings, read-only marks elsewhere.
 export const ALWAYS = '항상';
@@ -269,9 +269,6 @@ export const STATUS_RANGE = (min: number, max: number) => `${min}에서 ${max} �
 export const STATUS_DONE = '끝낸 것';
 export const STATUS_HELP = '봇이나 프롬프트가 정해 둔 상태(호감도, 장소 등)를 응답마다 기록해요. 만드는 중인 기능이라 아직 일부만 동작해요.';
 export const FEATURE_NAMES: Record<Feature, string> = { translate: '번역', illustrate: '삽화', memory: '장기 기억', mascot: '마스코트', preread: PRE_READ, agents: AGENTS, status: STATUS };
-// What 내 사용량's 쓰임 calls each group of calls (model/usage Use), and the calls whose purpose is not known.
-export const USE_NAMES: Record<Use, string> = { reply: '대화 응답', ...FEATURE_NAMES, script: BOT_MODELS, embedding: ROLE_TAGS.embed };
-export const UNKNOWN_USE = '목적을 모름';
 // A feature's own model row; an agent's model is its prompt's.
 export const TASK_MODELS = { translate: '번역 모델', illustrate: '장면 모델', memory: '기억 모델', mascot: '대사 모델', preread: `${PRE_READ} 모델`, status: `${STATUS} 모델` } as const satisfies Partial<Record<Feature, string>>;
 
@@ -327,6 +324,9 @@ export const CARD_INSTRUCTIONS = { systemPrompt: '시스템 프롬프트', postH
 export const ONBOARDING = '시작 전 설문';
 
 export const SCRIPTS = { part: '스크립트', list: '스크립트 목록', regex: '정규식', triggers: '트리거' };
+// What 사용 기록's 쓰임 calls each group of calls (model/usage Use), and the calls whose purpose is not known.
+export const USE_NAMES: Record<Use, string> = { reply: '대화 응답', ...FEATURE_NAMES, script: `${SCRIPTS.part}·${TOOL}`, embedding: ROLE_TAGS.embed };
+export const UNKNOWN_USE = '용도를 알 수 없음';
 export const STAGES: Record<RegexScript['stage'], string> = { input: '입력', output: '응답', process: '요청', display: '화면', translation: '번역' };
 // One without a name, by its place in its list: the same in the editor and in 상태창 지정.
 export const scriptName = (name: string, list: 'regex' | 'triggers', place: number) => name.trim() || `${SCRIPTS[list]} ${place + 1}`;

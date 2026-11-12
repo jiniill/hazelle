@@ -5,6 +5,7 @@ import { useSession, useSettings } from '../session';
 import { Callout, Text } from '../ui';
 import { ACTS } from './acts';
 import { count } from './typedNumber';
+import { COUNTING, LOADING } from './words';
 
 type LedgerView = { kind: 'filling' } | { kind: 'fill-failed' } | { kind: 'reading' } | { kind: 'failed' } | { kind: 'read'; calls: Counted[] };
 
@@ -54,11 +55,13 @@ export function usePurposes(): boolean {
   return filled;
 }
 
+const progress = (what: string, { read, of }: { read: number; of: number }) => `${what}계산하는 중 · 채팅 ${count(of)}개 중 ${count(read)}개`;
+
 export function PurposesWait() {
   const { usage } = useSession();
   const purposing = useSyncExternalStore(usage.subscribe, usage.purposing);
-  if (purposing === 'failed') return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => void usage.fillPurposes() }}>쓰임을 모두 세지 못했어요.</Callout>;
-  return <Text variant="note">{purposing?.of ? `쓰임을 세는 중… 채팅 ${count(purposing.of)}개 중 ${count(purposing.read)}개` : '쓰임을 세는 중…'}</Text>;
+  if (purposing === 'failed') return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => void usage.fillPurposes() }}>쓰임별 사용량을 계산하지 못했어요.</Callout>;
+  return <Text variant="note">{purposing?.of ? progress('', purposing) : COUNTING}</Text>;
 }
 
 // failed: the screen's own words for a read that failed.
@@ -66,8 +69,8 @@ export function LedgerWait({ view, retry, failed }: { view: Exclude<LedgerView, 
   const { usage } = useSession();
   const filling = useSyncExternalStore(usage.subscribe, usage.filling);
   if (view.kind === 'fill-failed' || view.kind === 'failed') {
-    return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: retry }}>{view.kind === 'failed' ? failed : '이전 사용량을 모두 불러오지 못했어요.'}</Callout>;
+    return <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: retry }}>{view.kind === 'failed' ? failed : '사용량을 계산하지 못했어요.'}</Callout>;
   }
-  if (view.kind === 'reading') return <Text variant="note">사용량을 확인하는 중…</Text>;
-  return <Text variant="note">{filling && filling !== 'failed' && filling.of ? `지난 사용량을 모으는 중… 채팅 ${count(filling.of)}개 중 ${count(filling.read)}개` : '이전 사용량을 불러오는 중…'}</Text>;
+  if (view.kind === 'reading') return <Text variant="note">{LOADING}</Text>;
+  return <Text variant="note">{filling && filling !== 'failed' && filling.of ? progress('사용량을 ', filling) : `사용량을 ${COUNTING}`}</Text>;
 }

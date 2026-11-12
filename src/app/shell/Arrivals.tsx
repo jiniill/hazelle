@@ -20,8 +20,8 @@ export function Arrivals() {
     const character = stored.value.character === null ? null : live(store.get('character', stored.value.character));
     const name = character ? aliased(character.value.card.name, character.value.alias) : read.summary(chat).snapshot()?.title ?? NO_CHARACTER;
     const action = { label: SEE, onClick: () => navigate({ kind: 'chat', id: chat }) };
-    if (moment === 'reply-received') toast.show(`${name} 응답이 도착했어요`, { action });
-    else toast.error(`${name} 응답이 실패했어요`, { action });
+    if (moment === 'reply-received') toast.show(`'${name}' 응답이 도착했어요`, { action });
+    else toast.error(`'${name}' 응답을 받지 못했어요`, { action });
   }), [cues, open]);
   return null;
 }
