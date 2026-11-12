@@ -1,0 +1,46 @@
+.dial {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--dial-size);
+  height: var(--dial-size);
+}
+
+.drawing {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.night {
+  fill: none;
+  stroke: var(--color-border-strong);
+  stroke-width: var(--dial-night);
+  stroke-dasharray: var(--dial-dots);
+  stroke-linecap: round;
+}
+
+.ray {
+  composes: mark from './link.module.css';
+  stroke: var(--color-accent);
+  stroke-width: var(--dial-ray);
+  stroke-linecap: round;
+  opacity: var(--ray);
+}
+
+.ray[data-link='lit'] {
+  opacity: 1;
+}
+
+.hit {
+  stroke: transparent;
+  stroke-width: var(--dial-hit);
+  pointer-events: stroke;
+}
+
+.numeral {
+  fill: var(--color-text-faint);
+  font-family: var(--font-sans);
+  font-size: var(--dial-numeral);
+  text-anchor: middle;
+  dominant-baseline: central;
+}

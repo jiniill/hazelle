@@ -21,6 +21,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Pointing at it lights what it counts elsewhere on the page. */
+.linked .label {
+  text-decoration: underline dotted var(--color-border-strong);
+  text-underline-offset: var(--space-4);
+}
+
 .tiles {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-8);

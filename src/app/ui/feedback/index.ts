@@ -10,6 +10,7 @@ export { Gauge } from './Gauge';
 export { NoticeBar } from './NoticeBar';
 export { NoticeCard } from './NoticeCard';
 export { Intro } from './Intro';
+export { Moment } from './Moment';
 export { Outcome } from './Outcome';
 export { Progress, type ProgressStep } from './Progress';
 export { Sketch } from './Sketch';

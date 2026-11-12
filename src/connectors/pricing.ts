@@ -34,6 +34,14 @@ export function priceCost(price: Rates, usage: Usage | null, unit: Cost['unit'])
   return { unit, amount: inUnit(dollars, unit), source: 'price-list' };
 }
 
+// What the cache saved a call at this price: its cost with every input token billed fresh, less its cost as sent. A cache
+// write's premium counts against it; a call priceCost cannot price saves nothing it can say.
+export function cacheSaving(price: Rates, usage: Usage | null, unit: Cost['unit']): Cost | null {
+  const sent = priceCost(price, usage, unit);
+  const fresh = usage && priceCost(price, { ...usage, cachedInputTokens: null, cacheWriteInputTokens: null }, unit);
+  return sent && fresh ? { unit, amount: fresh.amount - sent.amount, source: 'price-list' } : null;
+}
+
 export const inUnit = (dollars: number, unit: Cost['unit']) => (unit === 'credit' ? dollars * 100 : dollars);
 
 // A price as a discount lane bills it (ConnectionType discount). A cache rate the list leaves out stays out, so priceCost

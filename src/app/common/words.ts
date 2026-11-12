@@ -103,7 +103,7 @@ export const UNDO_FAILED = '되돌리지 못했어요.';
 export const FIELD_ERRORS = { name: '이름을 입력해 주세요.', number: '숫자를 입력해 주세요.' };
 export const COUNTING = '계산하는 중…';
 // The spans a usage count is read over.
-export const SPANS = { hour: '지난 1시간', today: '오늘', week: '이번 주', month: '이번 달', all: '전체' };
+export const SPANS = { hour: '지난 1시간', today: '오늘', week: '이번 주', month: '이번 달', year: '올해', all: '전체' };
 export const COST_ESTIMATE = '예상 비용';
 // Marks a chat shows on trouble, which 운영's 자동 진단 names the same.
 export const TURN_FAILED = '응답 실패';

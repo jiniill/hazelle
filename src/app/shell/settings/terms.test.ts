@@ -20,8 +20,8 @@ const SHOWN = Object.values(
 );
 // The element's own label or title, past attributes before it; an inner control's own label is not it.
 const LITERAL = /<(?:SettingRow|CountRow|TaskModelRow|Section|Panel)\s+(?:\w+=(?:\{[^}]*\}|"[^"]*")\s+)*(?:label|title)="([^"]+)"/g;
-// Shown, but no one searches by them: the usage page's table heads and sections, 장기 기억's on-switch.
-const NOT_SOUGHT = new Set(['합계', '캐릭터', '채팅', '사용']);
+// Shown, but no one searches by them: the usage page's sections, 장기 기억's on-switch.
+const NOT_SOUGHT = new Set(['비용', '요일과 시간', '함께한 캐릭터', '숫자로', '사용']);
 
 describe('설정 검색', () => {
   it('holds every literal title and row label the settings pages show', () => {
