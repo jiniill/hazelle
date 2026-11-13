@@ -57,7 +57,7 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
   }, []);
 
   return (
-    <div data-theme="dark">
+    <div data-mode="dark">
       <NightScene glow={replied ? 3 : step} talking={talking} inside={inside} />
       <Hero
         title={heading}

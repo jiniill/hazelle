@@ -1,6 +1,6 @@
 import { PICTURE_PERCENT, type Backdrop } from '../../model/library';
 import type { SavedLook } from '../../model/settings';
-import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, QUOTE_SHAPE, SHADE, THEME, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme } from '../ui';
+import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, QUOTE_SHAPE, MODE, SHADE, type Mode, type QuoteShape, type Reading, type Scheme, type StageSide } from '../ui';
 import type { Cue } from '../../runtime/chat/cues';
 import { CHIMES, type Chime } from './sounds';
 import { readPersisted } from './usePersisted';
@@ -47,18 +47,19 @@ export function parseReading(stored: string, fallback: Reading): Reading {
 // Chimes default off and use chimeSounds once enabled (user, 2026-10-26).
 export type Display = Scheme & { chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean };
 
-export type Follow = Record<Theme, string> & { applied: Theme };
+export type Follow = Record<Mode, string> & { applied: Mode };
 
 const PLAIN = { bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' } as const;
 
-export const DISPLAY_DEFAULT: Display = { chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, theme: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false };
+export const DISPLAY_DEFAULT: Display = { chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, mode: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false };
 
 export function parseDisplay(stored: string, fallback: Display): Display {
-  const read = fields<keyof Display | 'enterSends'>(stored);
+  const read = fields<keyof Display | 'enterSends' | 'theme'>(stored);
   return {
     chimes: flag(read.chimes, fallback.chimes),
     chimeSounds: parseChimeSounds(read.chimeSounds, fallback.chimeSounds),
-    theme: known(THEME, read.theme, fallback.theme),
+    // Saved as theme until 2026-11-13, when theme came to mean the app's whole look.
+    mode: known(MODE, read.mode ?? read.theme, fallback.mode),
     bg: known(BG, read.bg, fallback.bg),
     ink: known(INK, read.ink, fallback.ink),
     accent: known(ACCENT, read.accent, fallback.accent),
@@ -90,7 +91,7 @@ function parseChimeSounds(value: unknown, fallback: Display['chimeSounds']): Dis
 function parseFollow(value: unknown): Follow | null {
   if (typeof value !== 'object' || value === null) return null;
   const { light, dark, applied } = value as Partial<Record<keyof Follow, unknown>>;
-  const mode = named(THEME, applied);
+  const mode = named(MODE, applied);
   return typeof light === 'string' && typeof dark === 'string' && mode ? { light, dark, applied: mode } : null;
 }
 
@@ -99,7 +100,7 @@ export const effectiveEnterSends = (choice: Display['enterSendsChoice'], coarseP
 
 export const parseStoredDisplay = (stored: string) => parseDisplay(stored, DISPLAY_DEFAULT);
 
-export const systemMode = (dark: boolean): Theme => (dark ? 'dark' : 'light');
+export const systemMode = (dark: boolean): Mode => (dark ? 'dark' : 'light');
 
 // Apply before first paint without display.tsx's session dependency. Every preset is the account's, so a system-mode
 // switch while closed keeps the last look until that account loads.
@@ -111,9 +112,9 @@ export type Look = Pick<Reading, 'font' | 'size' | 'leading' | 'width'> & Scheme
 // id: what a 시스템 따라 바꾸기 slot and a character's look hold, its saved id.
 export type Preset = { id: string; name: string; look: Look };
 
-export const lookOf = ({ font, size, leading, width }: Reading, { theme, bg, ink, accent, dialogue }: Display): Look => ({ theme, bg, ink, accent, dialogue, font, size, leading, width });
+export const lookOf = ({ font, size, leading, width }: Reading, { mode, bg, ink, accent, dialogue }: Display): Look => ({ mode, bg, ink, accent, dialogue, font, size, leading, width });
 
-const LOOK: Record<keyof Look, true> = { theme: true, bg: true, ink: true, accent: true, dialogue: true, font: true, size: true, leading: true, width: true };
+const LOOK: Record<keyof Look, true> = { mode: true, bg: true, ink: true, accent: true, dialogue: true, font: true, size: true, leading: true, width: true };
 const LOOK_KEYS = Object.keys(LOOK) as (keyof Look)[];
 
 export function presetOf(list: Preset[], reading: Reading, display: Display): Preset | undefined {
@@ -132,7 +133,7 @@ export function savedPresets(looks: SavedLook[] = []): { presets: Preset[]; unre
 
 function parseLook(look: SavedLook['look']): Look | null {
   const read = {
-    theme: named(THEME, look.theme),
+    mode: named(MODE, look.mode),
     bg: named(BG, look.bg),
     ink: named(INK, look.ink),
     accent: named(ACCENT, look.accent),
@@ -152,5 +153,5 @@ export const backdropShades = (backdrop: Backdrop | undefined) => ({ veil: known
 
 // What a character's chats wear (design §6.4): its preset's colors and 글꼴 over the device's look, its size and spacing
 // left the device's; the device's own, with no scheme of its own, for no preset or for one that is gone.
-export const wornLook = (preset: Preset | undefined, reading: Reading, theme: Theme) =>
-  preset ? { scheme: preset.look, theme: preset.look.theme, reading: { ...reading, font: preset.look.font } } : { scheme: undefined, theme, reading };
+export const wornLook = (preset: Preset | undefined, reading: Reading, mode: Mode) =>
+  preset ? { scheme: preset.look, mode: preset.look.mode, reading: { ...reading, font: preset.look.font } } : { scheme: undefined, mode, reading };

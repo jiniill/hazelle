@@ -272,15 +272,15 @@ function Preview({ definition }: { definition: StatusDefinition }) {
         return (
           <Stack key={view.id} gap="related">
             {definition.views && <Text variant="note">{view.name}</Text>}
-            <StatusPanel name={view.name} frame={view.frame} mood={view.mood} theme={display.theme} blocks={view.blocks} />
+            <StatusPanel name={view.name} frame={view.frame} mood={view.mood} mode={display.mode} blocks={view.blocks} />
           </Stack>
         );
       })}
       {apps.length > 0 && (
         <Stack gap="related">
           <Text variant="note">{PHONE}</Text>
-          <StatusPhone name={PHONE} theme={display.theme} apps={apps} onOpen={setPicked} onHome={open ? () => setPicked(null) : undefined}>
-            {open ? <StatusPanel bare name={open.name} frame={open.frame} mood={open.mood} theme={display.theme} blocks={open.blocks} /> : null}
+          <StatusPhone name={PHONE} mode={display.mode} apps={apps} onOpen={setPicked} onHome={open ? () => setPicked(null) : undefined}>
+            {open ? <StatusPanel bare name={open.name} frame={open.frame} mood={open.mood} mode={display.mode} blocks={open.blocks} /> : null}
           </StatusPhone>
         </Stack>
       )}

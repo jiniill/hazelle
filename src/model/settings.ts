@@ -22,16 +22,16 @@ export type SavedLook = { id: string; name: string; look: Record<string, string 
 
 const PLAIN = { bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' };
 // The presets an account starts with, its own to rename, reorder and remove. Their ids are fixed: a character's look
-// and a 시스템 따라 바꾸기 slot may hold them. 기본's size is --prose-size and its font, spacing and theme the device
+// and a 시스템 따라 바꾸기 slot may hold them. 기본's size is --prose-size and its font, spacing and mode the device
 // defaults (ChatFrame readingDefault, DISPLAY_DEFAULT), so 기본값으로 되돌리기 lands on it.
 export const STARTER_PRESETS: SavedLook[] = [
-  { id: 'default', name: '기본', look: { theme: 'dark', ...PLAIN, font: 'serif', size: 17, leading: 'normal', width: 'normal' } },
-  { id: 'study', name: '밝은 서재', look: { theme: 'light', ...PLAIN, font: 'serif', size: 17, leading: 'normal', width: 'normal' } },
-  { id: 'gothic', name: '고딕 간결', look: { theme: 'dark', ...PLAIN, font: 'sans', size: 15, leading: 'narrow', width: 'narrow' } },
-  { id: 'wide', name: '넓게 읽기', look: { theme: 'dark', ...PLAIN, font: 'serif', size: 18, leading: 'wide', width: 'wide' } },
-  { id: 'sea', name: '밤바다', look: { theme: 'dark', ...PLAIN, bg: 'blue', accent: 'blue', dialogue: 'sky', font: 'serif', size: 17, leading: 'normal', width: 'normal' } },
-  { id: 'forest', name: '숲', look: { theme: 'dark', ...PLAIN, bg: 'green', accent: 'green', dialogue: 'lime', font: 'serif', size: 17, leading: 'normal', width: 'normal' } },
-  { id: 'sepia', name: '세피아', look: { theme: 'light', ...PLAIN, bg: 'brown', font: 'serif', size: 17, leading: 'wide', width: 'normal' } },
+  { id: 'default', name: '기본', look: { mode: 'dark', ...PLAIN, font: 'serif', size: 17, leading: 'normal', width: 'normal' } },
+  { id: 'study', name: '밝은 서재', look: { mode: 'light', ...PLAIN, font: 'serif', size: 17, leading: 'normal', width: 'normal' } },
+  { id: 'gothic', name: '고딕 간결', look: { mode: 'dark', ...PLAIN, font: 'sans', size: 15, leading: 'narrow', width: 'narrow' } },
+  { id: 'wide', name: '넓게 읽기', look: { mode: 'dark', ...PLAIN, font: 'serif', size: 18, leading: 'wide', width: 'wide' } },
+  { id: 'sea', name: '밤바다', look: { mode: 'dark', ...PLAIN, bg: 'blue', accent: 'blue', dialogue: 'sky', font: 'serif', size: 17, leading: 'normal', width: 'normal' } },
+  { id: 'forest', name: '숲', look: { mode: 'dark', ...PLAIN, bg: 'green', accent: 'green', dialogue: 'lime', font: 'serif', size: 17, leading: 'normal', width: 'normal' } },
+  { id: 'sepia', name: '세피아', look: { mode: 'light', ...PLAIN, bg: 'brown', font: 'serif', size: 17, leading: 'wide', width: 'normal' } },
 ];
 
 export const presetsOf = (settings: Pick<Settings, 'presets'>) => settings.presets ?? STARTER_PRESETS;

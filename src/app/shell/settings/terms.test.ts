@@ -37,7 +37,7 @@ describe('설정 검색', () => {
   });
 
   it('shows the real label for a hidden word', () => {
-    for (const [word, label] of [['캐싱', '캐시'], ['폰트', '글꼴'], ['다크', '테마'], ['메모리', '장기 기억'], ['temperature', '온도'], ['최대 토큰', '응답 최대 길이'], ['API 키', 'API 연결']] as const) expect(search(word).map(({ term }) => term), word).toEqual([label]);
+    for (const [word, label] of [['캐싱', '캐시'], ['폰트', '글꼴'], ['다크', '모드'], ['메모리', '장기 기억'], ['temperature', '온도'], ['최대 토큰', '응답 최대 길이'], ['API 키', 'API 연결']] as const) expect(search(word).map(({ term }) => term), word).toEqual([label]);
   });
 
   it('opens the pages of 도구, named by the window that holds them', () => {

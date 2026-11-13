@@ -2,10 +2,10 @@ import { expect, it } from 'vitest';
 import tokens from './tokens.css?raw';
 
 const palette = new Map([...tokens.matchAll(/--(palette-[\w-]+): (#[\da-f]{6});/g)].map((match) => [match[1]!, match[2]!]));
-const [, dark, light] = /\n\[data-theme='dark'\] \{([\s\S]*?)\n\}[\s\S]*?\n\[data-theme='light'\] \{([\s\S]*?)\n\}/.exec(tokens)!;
+const [, dark, light] = /\n\[data-mode='dark'\] \{([\s\S]*?)\n\}[\s\S]*?\n\[data-mode='light'\] \{([\s\S]*?)\n\}/.exec(tokens)!;
 
-function color(theme: string, role: string): string {
-  const name = new RegExp(`--color-${role}: var\\(--(palette-[\\w-]+)\\);`).exec(theme)![1]!;
+function color(mode: string, role: string): string {
+  const name = new RegExp(`--color-${role}: var\\(--(palette-[\\w-]+)\\);`).exec(mode)![1]!;
   return palette.get(name)!;
 }
 
@@ -26,8 +26,8 @@ function contrast(a: string, b: string): number {
 
 const FILLS = ['bg', 'sidebar', 'surface', 'surface-hover'];
 
-it.each([['dark', dark!], ['light', light!]])('keeps %s faint text at AA on every row fill but the current one, a rung from muted', (_, theme) => {
-  const faint = color(theme, 'text-faint');
-  for (const fill of FILLS) expect(contrast(faint, color(theme, fill))).toBeGreaterThanOrEqual(4.5);
-  expect(Math.abs(lightness(faint) - lightness(color(theme, 'text-muted')))).toBeGreaterThanOrEqual(4);
+it.each([['dark', dark!], ['light', light!]])('keeps %s faint text at AA on every row fill but the current one, a rung from muted', (_, mode) => {
+  const faint = color(mode, 'text-faint');
+  for (const fill of FILLS) expect(contrast(faint, color(mode, fill))).toBeGreaterThanOrEqual(4.5);
+  expect(Math.abs(lightness(faint) - lightness(color(mode, 'text-muted')))).toBeGreaterThanOrEqual(4);
 });

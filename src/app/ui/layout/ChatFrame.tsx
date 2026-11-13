@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref, type RefObject } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { faceStyle, FONTS, type FontId } from '../foundation/fonts';
-import { schemeAttributes, type Scheme } from '../foundation/theme';
+import { schemeAttributes, type Scheme } from '../foundation/scheme';
 import { usePanelsBeside, useShortWide } from '../foundation/media';
 import { useReadingRail } from '../story/readingRail';
 import styles from './ChatFrame.module.css';

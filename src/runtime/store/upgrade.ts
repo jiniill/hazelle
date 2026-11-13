@@ -34,7 +34,7 @@ export function upgradeValue(kind: string, value: unknown): Record<string, unkno
   if (kind === 'memory') return upgradeMemory(value);
   if (kind === 'stream' && !('calibration' in value)) return { ...value, calibration: unavailableCalibration('historical') };
   if (kind === 'ledger') return upgradeLedger(value);
-  if (kind === 'settings') return presetsHoldAll(value);
+  if (kind === 'settings') return upgradeSettings(value);
   return null;
 }
 
@@ -47,6 +47,11 @@ export function readRow(line: unknown): Stored<Kind> | null {
   return { ...line, id, kind: line.kind as Kind, parent, rev, value };
 }
 
+function upgradeSettings(value: Record<string, unknown>) {
+  const held = presetsHoldAll(value);
+  return presetsNameMode(held ?? value) ?? held;
+}
+
 // Until 2026-11-13 the starter presets were the app's and looks held only the account's own; presets now hold them all.
 // An app from before still writes looks beside presets, so what it adds joins them.
 function presetsHoldAll(value: Record<string, unknown>) {
@@ -54,6 +59,14 @@ function presetsHoldAll(value: Record<string, unknown>) {
   const { looks, ...rest } = value;
   const kept = (Array.isArray(rest.presets) ? rest.presets : STARTER_PRESETS) as { id: unknown }[];
   return { ...rest, presets: [...kept, ...(looks as { id: unknown }[]).filter((look) => !kept.some(({ id }) => id === look.id))] };
+}
+
+// Until 2026-11-13 a look's light or dark was its theme; theme came to mean the app's whole look, and that its mode.
+// An app from before still writes theme.
+function presetsNameMode(value: Record<string, unknown>) {
+  const old = (preset: unknown): preset is { look: Record<string, unknown> } => isRecord(preset) && isRecord(preset.look) && 'theme' in preset.look;
+  if (!Array.isArray(value.presets) || !value.presets.some(old)) return null;
+  return { ...value, presets: value.presets.map((preset: unknown) => (old(preset) ? { ...preset, look: { mode: preset.look.theme, ...without(preset.look, 'theme') } } : preset)) };
 }
 
 // A connection saved before pools held one secret, and the name of who signed in.

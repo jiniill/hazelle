@@ -35,7 +35,7 @@ export type StatusDefinition = Named & { writer: StatusWriter; fields: StatusFie
 
 // 보기 (design §6.1 part 4): a view arranges blocks that show the definition's fields, 묶음 and 기록 by id, in a 틀
 // (how they are laid out) and a 분위기 (colours, type and corners). hazelle is the app's own colours in the reader's
-// theme; own, the colours the reader picked for the app.
+// mode; own, the colours the reader picked for the app.
 export type StatusFrame = 'card' | 'hud' | 'diary' | 'line';
 export type StatusMood = 'hazelle' | 'own' | 'paper' | 'neon' | 'forest' | 'rose' | 'terminal';
 export type StatusGaugeLook = 'bar' | 'segments' | 'ring' | 'hearts' | 'stars';

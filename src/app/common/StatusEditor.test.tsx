@@ -7,7 +7,7 @@ import { STATUS_BLOCK, STATUS_PROBLEM, STATUS_WORDS } from './statusWords';
 // Static markup opens no menu and no ⓘ: what they hold is left out.
 vi.mock('../ui/overlays/Menu', async (original) => ({ ...(await original<typeof import('../ui/overlays/Menu')>()), Menu: () => null }));
 vi.mock('../ui/overlays/Hint', () => ({ Hint: () => null }));
-vi.mock('../display', () => ({ useDisplay: () => ({ display: { theme: 'dark' } }) }));
+vi.mock('../display', () => ({ useDisplay: () => ({ display: { mode: 'dark' } }) }));
 vi.mock('../toast', () => ({ useToast: () => ({ error: () => {} }), useOwnUndo: () => () => () => {} }));
 
 const shown = (definition?: Parameters<typeof StatusEditor>[0]['definition']) => renderToStaticMarkup(<StatusEditor definition={definition} onChange={() => {}} onType={() => {}} />);

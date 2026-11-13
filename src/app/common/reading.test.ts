@@ -21,10 +21,14 @@ describe('stored reading settings', () => {
 });
 
 describe('stored display settings', () => {
-  it('keeps a known theme, color picks and real switches, and starts anything else from the fallback', () => {
-    const chosen = { chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, theme: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSendsChoice: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, userStops: true } as const;
+  it('reads the mode a device saved as its theme', () => {
+    expect(parseDisplay(JSON.stringify({ theme: 'light' }), DISPLAY_DEFAULT).mode).toBe('light');
+  });
+
+  it('keeps a known mode, color picks and real switches, and starts anything else from the fallback', () => {
+    const chosen = { chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, mode: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSendsChoice: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, userStops: true } as const;
     expect(parseDisplay(JSON.stringify(chosen), DISPLAY_DEFAULT)).toEqual(chosen);
-    expect(parseDisplay(JSON.stringify({ chimes: 'yes', chimeSounds: { 'reply-started': 'bell', translated: 3 }, theme: 'sepia', bg: 'teal', accent: 3, quotes: 'bubble', follow: { light: 'study', dark: 3, applied: 'dark' }, hideHeader: 'no', enterSendsChoice: 0, enterSends: 0, hidePictures: 1, pictureWidest: 5, wideFill: 'no', pictureSide: 'top', inlineIllustrations: 'yes', portrait: 'yes' }), DISPLAY_DEFAULT)).toEqual(DISPLAY_DEFAULT);
+    expect(parseDisplay(JSON.stringify({ chimes: 'yes', chimeSounds: { 'reply-started': 'bell', translated: 3 }, mode: 'sepia', bg: 'teal', accent: 3, quotes: 'bubble', follow: { light: 'study', dark: 3, applied: 'dark' }, hideHeader: 'no', enterSendsChoice: 0, enterSends: 0, hidePictures: 1, pictureWidest: 5, wideFill: 'no', pictureSide: 'top', inlineIllustrations: 'yes', portrait: 'yes' }), DISPLAY_DEFAULT)).toEqual(DISPLAY_DEFAULT);
   });
 });
 
@@ -55,7 +59,7 @@ describe('the current preset', () => {
   it('is the one whose every look value matches, whatever 응답이 올 때 and the chrome switches say', () => {
     const list = STARTERS;
     expect(presetOf(list, { ...FALLBACK, reply: 'stay' }, { ...DISPLAY_DEFAULT, hideHeader: false })?.name).toBe('기본');
-    expect(presetOf(list, FALLBACK, { ...DISPLAY_DEFAULT, theme: 'light' })?.name).toBe('밝은 서재');
+    expect(presetOf(list, FALLBACK, { ...DISPLAY_DEFAULT, mode: 'light' })?.name).toBe('밝은 서재');
     expect(presetOf(list, { ...FALLBACK, size: 16 }, DISPLAY_DEFAULT)).toBeUndefined();
     expect(presetOf(list, FALLBACK, { ...DISPLAY_DEFAULT, accent: 'blue' })).toBeUndefined();
   });
@@ -97,7 +101,7 @@ describe("a character's look", () => {
   it("wears its preset's colors and 글꼴 over the device's size and spacing, and the device's own for none", () => {
     const study = STARTERS.find(({ id }) => id === 'study')!;
     const device: Reading = { ...FALLBACK, font: 'sans', size: 20, width: 'wide' };
-    expect(wornLook(study, device, 'dark')).toEqual({ scheme: study.look, theme: 'light', reading: { ...device, font: 'serif' } });
-    expect(wornLook(undefined, device, 'dark')).toEqual({ scheme: undefined, theme: 'dark', reading: device });
+    expect(wornLook(study, device, 'dark')).toEqual({ scheme: study.look, mode: 'light', reading: { ...device, font: 'serif' } });
+    expect(wornLook(undefined, device, 'dark')).toEqual({ scheme: undefined, mode: 'dark', reading: device });
   });
 });

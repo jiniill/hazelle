@@ -4,7 +4,7 @@ import { describeStatusFailure } from '../common/failure';
 import { shownApp, shownMain, shownView } from '../common/statusView';
 import { PHONE, phoneFresh, STATUS_DETAIL, STATUS_FOLD, STATUS_MISSED, STATUS_NEXT_VIEW, STATUS_PIN, STATUS_REWRITE, STATUS_WRITING, statusEdit } from '../common/words';
 import { useWorn } from '../display';
-import { Button, IconButton, Row, Stack, StatusPanel, type ShownPlace, type Theme } from '../ui';
+import { Button, IconButton, Row, Stack, StatusPanel, type Mode, type ShownPlace } from '../ui';
 import { StateEditAt } from './StateEdit';
 import type { OpenChat } from './useChat';
 import type { StateShown } from '../../model/status';
@@ -21,7 +21,7 @@ type Acts = {
 
 const noteOf = (mark: StateMark) => (mark?.kind === 'writing' ? { text: STATUS_WRITING } : mark ? { text: mark.failure ? `${STATUS_MISSED} · ${describeStatusFailure(mark.failure)}` : STATUS_MISSED, warn: true } : undefined);
 
-function StatePanel({ state, theme, shown, onShow, onRewrite, onEdit, onChoice, onDetail }: { state: ChatStateOf; theme: Theme; shown: StateShown; onShow: Actions['showState'] } & Acts) {
+function StatePanel({ state, mode, shown, onShow, onRewrite, onEdit, onChoice, onDetail }: { state: ChatStateOf; mode: Mode; shown: StateShown; onShow: Actions['showState'] } & Acts) {
   const { definition, views, now, before, mark } = state;
   const [editing, setEditing] = useState<ShownPlace | null>(null);
   // A picked view that is gone shows the first, as one never picked does.
@@ -33,7 +33,7 @@ function StatePanel({ state, theme, shown, onShow, onRewrite, onEdit, onChoice, 
         name={definition.name}
         frame={view.frame}
         mood={view.mood}
-        theme={theme}
+        mode={mode}
         blocks={view.blocks}
         onChoice={onChoice}
         edit={onEdit && { label: statusEdit, onEdit: setEditing }}
@@ -65,7 +65,7 @@ function StatePanel({ state, theme, shown, onShow, onRewrite, onEdit, onChoice, 
 // fold and one place for every panel. A definition whose views are all apps has no panel; where the chat has apps,
 // the 휴대폰 is opened from under the panels, which says how much the latest reply added to it.
 export function ChatState({ chat, pinned }: { chat: Pick<OpenChat, 'states' | 'stateShown' | 'id' | 'busy' | 'actions' | 'shelf'>; pinned: boolean }) {
-  const { theme } = useWorn(chat.shelf?.character.look);
+  const { mode } = useWorn(chat.shelf?.character.look);
   if ((chat.stateShown.pinned === true) !== pinned) return null;
   const { actions } = chat;
   const live = chat.id !== null && !chat.busy;
@@ -74,7 +74,7 @@ export function ChatState({ chat, pinned }: { chat: Pick<OpenChat, 'states' | 's
   return (
     <Stack gap="group">
       {chat.states.filter(({ views }) => views.length > 0).map((state) => (
-        <StatePanel key={state.definition.id} state={state} theme={theme} shown={chat.stateShown} onShow={actions.showState} onRewrite={live ? actions.rewriteState : undefined} onEdit={live ? actions.editState : undefined} onChoice={actions.choose} onDetail={actions.stateDetail} />
+        <StatePanel key={state.definition.id} state={state} mode={mode} shown={chat.stateShown} onShow={actions.showState} onRewrite={live ? actions.rewriteState : undefined} onEdit={live ? actions.editState : undefined} onChoice={actions.choose} onDetail={actions.stateDetail} />
       ))}
       {apps.length > 0 && (
         <Row kind="actions">

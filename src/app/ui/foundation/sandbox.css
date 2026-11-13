@@ -1,4 +1,4 @@
-/* A tool page's starting look (design §6.10): the app's fonts, tokens and theme, so a tool that brings no styles of
+/* A tool page's starting look (design §6.10): the app's fonts, tokens and mode, so a tool that brings no styles of
  * its own still looks like Hazelle. Tool styles override any of it. */
 @import './global.css';
 @import './fonts.css';

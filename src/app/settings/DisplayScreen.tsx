@@ -19,7 +19,7 @@ import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
-import { ACCENT, BG, Button, DIALOGUE, QUOTE_SHAPE, ChoiceGroup, ColorDot, Disclosure, INK, MenuItem, NavBar, NumberInput, ReadingPreview, Screen, Section, SettingGroup, SettingRow, Swatches, Switch, THEME, type PreviewRow, type Theme } from '../ui';
+import { ACCENT, BG, Button, DIALOGUE, QUOTE_SHAPE, ChoiceGroup, ColorDot, Disclosure, INK, MenuItem, NavBar, NumberInput, ReadingPreview, Screen, Section, SettingGroup, SettingRow, Swatches, Switch, MODE, type Mode, type PreviewRow } from '../ui';
 
 const SAMPLE: PreviewRow[] = [
   { name: '캐릭터', mine: false, html: storyHtml(`*창밖으로 늦은 오후의 햇살이 기울어 든다.* 그녀는 찻잔을 내려놓고 고개를 들었다. "오늘은 어디까지 읽었어? 지난번엔 중간에 잠들었잖아." '또 잠든 건 아니겠지.'`, true) },
@@ -28,8 +28,8 @@ const SAMPLE: PreviewRow[] = [
 
 const SWATCH_SAMPLE = '그녀는 찻잔을 내려놓고 고개를 들었다.';
 
-const MODES: Record<Theme, string> = { light: '밝은 모드일 때', dark: '어두운 모드일 때' };
-const MODE_KEYS = Object.keys(MODES) as Theme[];
+const SLOTS: Record<Mode, string> = { light: '밝은 모드일 때', dark: '어두운 모드일 때' };
+const SLOT_KEYS = Object.keys(SLOTS) as Mode[];
 
 const colorChoices = <T extends string>(pick: 'bg' | 'ink' | 'accent' | 'dialogue', labels: Record<T, string>) =>
   choices(labels).map((option) => ({ ...option, mark: <ColorDot pick={pick} value={option.value} /> }));
@@ -42,9 +42,9 @@ export function DisplayScreen({ back }: { back: Back | null }) {
   const saved = presetsOf(useSettings());
   const current = presetOf(presets, reading, display);
   const [naming, setNaming] = useState<{ preset: Preset | null } | null>(null);
-  const missing = (mode: Theme) => display.follow !== null && !presets.some((preset) => preset.id === display.follow![mode]);
+  const missing = (mode: Mode) => display.follow !== null && !presets.some((preset) => preset.id === display.follow![mode]);
   // Folded, a slot whose preset is gone would say so to no one.
-  const [detailOpen, setDetailOpen] = useState(() => MODE_KEYS.some(missing));
+  const [detailOpen, setDetailOpen] = useState(() => SLOT_KEYS.some(missing));
 
   function name(typed: string) {
     const preset = naming?.preset;
@@ -103,12 +103,12 @@ export function DisplayScreen({ back }: { back: Back | null }) {
               control={<Switch label="시스템 설정 연동" checked={display.follow !== null} disabled={display.follow === null && presets.length === 0} onChange={followSystem} />}
             />
             {display.follow &&
-              MODE_KEYS.map((mode) => (
+              SLOT_KEYS.map((mode) => (
                 <SettingRow
                   key={mode}
-                  label={MODES[mode]}
+                  label={SLOTS[mode]}
                   error={missing(mode) ? PRESET_GONE : undefined}
-                  control={<ChoiceGroup layout="fit" label={MODES[mode]} options={presetChoices(presets)} value={missing(mode) ? null : display.follow![mode]} empty={PRESET_GONE_CHIP} onChange={(picked) => assign(mode, presets.find((preset) => preset.id === picked)!)} />}
+                  control={<ChoiceGroup layout="fit" label={SLOTS[mode]} options={presetChoices(presets)} value={missing(mode) ? null : display.follow![mode]} empty={PRESET_GONE_CHIP} onChange={(picked) => assign(mode, presets.find((preset) => preset.id === picked)!)} />}
                 />
               ))}
           </SettingGroup>
@@ -124,7 +124,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       )}
       <Section title="색">
         <SettingGroup label="색">
-          <SettingRow label="테마" control={<ChoiceGroup layout="fit" label="테마" options={choices(THEME)} value={display.theme} onChange={(theme) => changeDisplay({ theme })} />} />
+          <SettingRow label="모드" control={<ChoiceGroup layout="fit" label="모드" options={choices(MODE)} value={display.mode} onChange={(mode) => changeDisplay({ mode })} />} />
           <SettingRow
             label="배경"
             help="봇이 직접 꾸민 부분은 기본 배경에 맞춰져 있어서, 다른 배경에선 어색할 수 있어요."

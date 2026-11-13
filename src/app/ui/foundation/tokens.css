@@ -123,7 +123,7 @@
 }
 
 :root,
-[data-theme='dark'] {
+[data-mode='dark'] {
   color-scheme: dark;
 
   /* Surface ladder: page → pane → control → hover → current. Keep each rung visibly above the preceding ground. */
@@ -167,7 +167,7 @@
   --color-prose-narration: var(--palette-sand-200);
   --color-prose-dialogue: var(--palette-gold-200);
   --color-prose-action: var(--palette-lilac-350);
-  /* 속마음 mixes the root's dialogue and narration as its theme and 대사 pick leave them; the quote box tints with the
+  /* 속마음 mixes the root's dialogue and narration as its mode and 대사 pick leave them; the quote box tints with the
      mark's own color, taken where it is used. */
   --color-prose-thought: color-mix(in oklab, var(--color-prose-dialogue) 55%, var(--color-prose-narration));
   --color-prose-quote-bg: color-mix(in oklab, currentColor 9%, transparent);
@@ -194,7 +194,7 @@
   --color-face-5: var(--palette-gold-500);
   --color-face-5-bg: var(--palette-gold-900);
 
-  /* The ground behind the mascot's portrait (story/MascotRemark), light in both themes: the cutouts were drawn on white. */
+  /* The ground behind the mascot's portrait (story/MascotRemark), light in both modes: the cutouts were drawn on white. */
   --color-mascot-ground-top: var(--palette-sand-50);
   --color-mascot-ground-bottom: var(--palette-parchment-200);
 
@@ -260,7 +260,7 @@
 
 /* Mixed from the scheme's colors, so they are mixed again on an element drawn in another scheme (schemeAttributes). */
 :root,
-[data-theme] {
+[data-mode] {
   --color-accent-bg: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
   /* The accent as words on that tint; light takes it a step darker, so words of body size clear 4.5:1. */
   --color-accent-text: var(--color-accent);
@@ -705,7 +705,7 @@
   --motion-faint: 0.5;
 
   /* Keep toast above menus/panels/tutorials/dialogs so failures remain actionable; only file drop is higher. */
-  /* The first visitor's night walk (ui/landing). Fixed in both themes: it is a place, not a surface. */
+  /* The first visitor's night walk (ui/landing). Fixed in both modes: it is a place, not a surface. */
   --scene-sky-top: #060820;
   --scene-text: #f8f2e4;
   --scene-text-soft: #d6d0e4;
@@ -867,7 +867,7 @@
 }
 
 /* Mirror every palette-based color in light mode; derived mixes follow automatically. Never turn bot-authored dark CSS (design F3). */
-[data-theme='light'] {
+[data-mode='light'] {
   color-scheme: light;
 
   /* Panes and what stands on them are lighter than the page, as in dark; under the pointer and current go darker. */
@@ -975,10 +975,10 @@
   --color-pick-dialogue-lime: var(--palette-lime-850);
 }
 
-/* A color pick (foundation/theme.ts applyScheme, schemeAttributes) on the document or on an element drawn in another
-   scheme. base turns nothing, so the theme's own values above stay exact. A picked page derives its rungs by the
+/* A color pick (foundation/scheme.ts applyScheme, schemeAttributes) on the document or on an element drawn in another
+   scheme. base turns nothing, so the mode's own values above stay exact. A picked page derives its rungs by the
    ladder's L* steps above it (the mixes were fitted to ink-900 and paper-150), so every pick keeps ΔL* ≥ 4 in dark and
-   the light theme's own gaps: a new pick keeps its theme's base lightness. */
+   the light mode's own gaps: a new pick keeps its mode's base lightness. */
 [data-bg='base'] { --color-pick-bg: var(--color-pick-bg-base); }
 [data-bg='gray'] { --color-pick-bg: var(--color-pick-bg-gray); }
 [data-bg='blue'] { --color-pick-bg: var(--color-pick-bg-blue); }
@@ -998,7 +998,7 @@
 [data-dialogue='rose'] { --color-pick-dialogue: var(--color-pick-dialogue-rose); }
 [data-dialogue='lime'] { --color-pick-dialogue: var(--color-pick-dialogue-lime); }
 
-[data-theme='dark'][data-bg]:not([data-bg='base']) {
+[data-mode='dark'][data-bg]:not([data-bg='base']) {
   --color-bg: var(--color-pick-bg);
   --color-sidebar: color-mix(in oklab, var(--palette-white) 5.5%, var(--color-pick-bg));
   --color-surface: color-mix(in oklab, var(--palette-white) 10%, var(--color-pick-bg));
@@ -1009,7 +1009,7 @@
   --color-border-strong: color-mix(in oklab, var(--palette-white) 26.5%, var(--color-pick-bg));
 }
 
-[data-theme='light'][data-bg]:not([data-bg='base']) {
+[data-mode='light'][data-bg]:not([data-bg='base']) {
   --color-bg: var(--color-pick-bg);
   --color-sidebar: color-mix(in oklab, var(--palette-white) 53%, var(--color-pick-bg));
   --color-surface: color-mix(in oklab, var(--palette-white) 84%, var(--color-pick-bg));
@@ -1020,7 +1020,7 @@
   --color-border-strong: color-mix(in oklab, var(--palette-black) 20%, var(--color-pick-bg));
 }
 
-/* Dialogue is the 대사 pick's. Muted, faint and the action voice stay the theme's: a softer pick would sink them under
+/* Dialogue is the 대사 pick's. Muted, faint and the action voice stay the mode's: a softer pick would sink them under
    contrast. */
 [data-ink]:not([data-ink='base']) {
   --color-text: var(--color-pick-ink);
@@ -1038,20 +1038,20 @@
   --color-prose-action: var(--color-pick-action-plain);
 }
 
-[data-theme='dark'][data-accent]:not([data-accent='base']) {
+[data-mode='dark'][data-accent]:not([data-accent='base']) {
   --color-accent: var(--color-pick-accent);
   --color-accent-hover: color-mix(in oklab, var(--palette-white) 25%, var(--color-pick-accent));
   --color-on-accent: color-mix(in oklab, var(--color-pick-accent) 15%, var(--palette-black));
 }
 
-[data-theme='light'][data-accent]:not([data-accent='base']) {
+[data-mode='light'][data-accent]:not([data-accent='base']) {
   --color-accent: var(--color-pick-accent);
   --color-accent-hover: color-mix(in oklab, var(--palette-black) 20%, var(--color-pick-accent));
   --color-on-accent: color-mix(in oklab, var(--color-pick-accent) 5%, var(--palette-white));
 }
 
 /* 상태's 분위기 (ui/status): a panel's colours, face and corners. hazelle and own take the app's, hazelle with the picks
-   set back to the theme's own on its element; the others are fixed in both themes, as a bot's own panel is. warm, cool
+   set back to the mode's own on its element; the others are fixed in both modes, as a bot's own panel is. warm, cool
    and fresh are the colours a field may take beside the accent; a number that fell is warm. */
 [data-mood='hazelle'],
 [data-mood='own'] {
@@ -1165,7 +1165,7 @@
 /* A screen taller than wide: the walk runs straight down the middle, and the moon stands aside from the words. */
 @media (max-aspect-ratio: 1/1) {
   :root,
-  [data-theme='dark'] {
+  [data-mode='dark'] {
     --scene-vanish-x: 50%;
     --scene-origin-x: 50%;
     --scene-art-focus: 50%;
@@ -1198,7 +1198,7 @@
 
 @media (max-aspect-ratio: 1/1) and (max-height: 600px) {
   :root,
-  [data-theme='dark'] {
+  [data-mode='dark'] {
     --landing-room-seat: 24svh;
   }
 }

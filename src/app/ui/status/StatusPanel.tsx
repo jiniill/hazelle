@@ -2,7 +2,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useContext, useState, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { classNames } from '../foundation/classNames';
-import { schemeAttributes, type Theme } from '../foundation/theme';
+import { schemeAttributes, type Mode } from '../foundation/scheme';
 import { StatusEditContext, StatusFrameContext, StatusOpenContext } from './frame';
 import type { ShownBlock, ShownField, ShownPlace, StatusEdit, StatusFrame, StatusMood } from './shown';
 import { StatusField } from './StatusField';
@@ -127,24 +127,24 @@ function Blocks({ blocks, onChoice }: { blocks: ShownBlock[] } & Act) {
 // A panel that folds: its title, a note beside it (warn: what went wrong with the latest reply's state), the caller's
 // buttons, and the fold. Folded, summary stands in the view's place: a few fields on one line.
 type Head = { title: string; note?: { text: string; warn?: boolean }; actions?: ReactNode; open: boolean; onOpen: (open: boolean) => void; labels: { open: string; close: string }; summary: ShownField[] };
-type Props = { name: string; frame: StatusFrame; mood: StatusMood; theme: Theme; blocks: ShownBlock[]; head?: Head; bare?: boolean; edit?: StatusEdit; onMember?: (member: NonNullable<ShownPlace['member']>) => void; children?: ReactNode } & Act;
+type Props = { name: string; frame: StatusFrame; mood: StatusMood; mode: Mode; blocks: ShownBlock[]; head?: Head; bare?: boolean; edit?: StatusEdit; onMember?: (member: NonNullable<ShownPlace['member']>) => void; children?: ReactNode } & Act;
 
-// The theme a fixed 분위기 stands in, so the kit's own controls inside the panel read on its ground.
-const MOOD_THEME: Partial<Record<StatusMood, Theme>> = { paper: 'light', rose: 'light', neon: 'dark', forest: 'dark', terminal: 'dark' };
+// The mode a fixed 분위기 stands in, so the kit's own controls inside the panel read on its ground.
+const MOOD_MODE: Partial<Record<StatusMood, Mode>> = { paper: 'light', rose: 'light', neon: 'dark', forest: 'dark', terminal: 'dark' };
 
-// What a 분위기 pins on the element that wears it: theme is the reader's, which 헤이젤 keeps with the colour picks set
+// What a 분위기 pins on the element that wears it: mode is the reader's, which 헤이젤 keeps with the colour picks set
 // back to its own; 내 색 takes the page's as they are.
-export const moodScheme = (mood: StatusMood, theme: Theme) => (mood === 'own' ? {} : schemeAttributes({ theme: MOOD_THEME[mood] ?? theme, bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' }));
+export const moodScheme = (mood: StatusMood, mode: Mode) => (mood === 'own' ? {} : schemeAttributes({ mode: MOOD_MODE[mood] ?? mode, bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' }));
 
 // A 상태 view drawn: its 분위기 gives the colours, face and corners, its 틀 lays the blocks out, and each block draws
 // the values it was handed. onChoice: a choice pressed, or a conversation answered; without it they stand disabled.
 // edit: a value pressed is handed over to be edited by hand; without it values are only shown. onMember: a record's
 // name pressed opens that record. bare: it fills a screen that frames it (a 휴대폰's) and has no edge of its own.
 // children: what stands under the blocks, on the panel's ground.
-export function StatusPanel({ name, frame, mood, theme, blocks, head, bare, edit, onMember, onChoice, children }: Props) {
+export function StatusPanel({ name, frame, mood, mode, blocks, head, bare, edit, onMember, onChoice, children }: Props) {
   const open = head?.open ?? true;
   return (
-    <section className={classNames(styles.panel, frame !== 'card' && open && styles[frame], head && styles.headed, !open && styles.folded, bare && styles.bare)} aria-label={name} data-mood={mood} {...moodScheme(mood, theme)}>
+    <section className={classNames(styles.panel, frame !== 'card' && open && styles[frame], head && styles.headed, !open && styles.folded, bare && styles.bare)} aria-label={name} data-mood={mood} {...moodScheme(mood, mode)}>
       {head && (
         <div className={styles.bar}>
           {open ? (

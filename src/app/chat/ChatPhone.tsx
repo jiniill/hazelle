@@ -21,14 +21,14 @@ export function ChatPhone({ chat, onClose }: { chat: Pick<OpenChat, 'states' | '
   const member = at && open.member;
   const record = at && member ? shownAt(at.state.definition, at.state.now, at.state.before, { member }) : [];
   const name = member && record.length ? at.state.now.groups[member.group]?.find(({ id }) => id === member.id)?.name : undefined;
-  const look = { theme: display.theme, onChoice: chat.actions.choose };
+  const look = { mode: display.mode, onChoice: chat.actions.choose };
   return (
     <SidePanel
       title={PHONE}
       nav={at ? { title: name ?? at.app.name, description: at.state.definition.name, backLabel: name === undefined ? PHONE : at.app.name, onBack: () => setOpen(name === undefined ? null : { app: at.key }) } : undefined}
       onClose={onClose}
     >
-      <StatusPhone name={PHONE} theme={display.theme} apps={apps.map(({ key, app }) => ({ id: key, name: app.name, icon: app.icon, fresh: app.fresh }))} onOpen={(app) => setOpen({ app })} onHome={at ? () => setOpen(null) : undefined}>
+      <StatusPhone name={PHONE} mode={display.mode} apps={apps.map(({ key, app }) => ({ id: key, name: app.name, icon: app.icon, fresh: app.fresh }))} onOpen={(app) => setOpen({ app })} onHome={at ? () => setOpen(null) : undefined}>
         {!at ? null : member && name !== undefined ? (
           <StatusPanel bare name={name} frame="card" mood={at.app.mood} blocks={record} {...look}>
             <RecordLore id={member.id} />

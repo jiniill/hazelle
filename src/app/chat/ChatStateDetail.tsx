@@ -87,7 +87,7 @@ export function ChatStateDetail({ chat, onClose }: Props) {
   const live = chat.id !== null && !chat.busy;
   const state = page && states.find(({ definition }) => definition.id === page.definition);
   const blocks = state && page ? shownAt(state.definition, state.now, state.before, page) : [];
-  const look = { frame: 'card', mood: 'hazelle', theme: display.theme } as const;
+  const look = { frame: 'card', mood: 'hazelle', mode: display.mode } as const;
 
   // A narrow panel covers the story, so it steps aside for the message it points at.
   function show(key: string) {

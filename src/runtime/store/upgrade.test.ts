@@ -102,12 +102,20 @@ describe('upgradeValue', () => {
   });
 
   it("puts an account's own looks after the starter presets, joins what an older app still writes beside them, and leaves a current one alone", () => {
-    const mine = { id: 'mine', name: '내 것', look: { theme: 'dark' } };
+    const mine = { id: 'mine', name: '내 것', look: { mode: 'dark' } };
     expect(upgradeValue('settings', { models: {}, looks: [mine] })).toEqual({ models: {}, presets: [...STARTER_PRESETS, mine] });
     const kept = [STARTER_PRESETS[1]!, mine];
     expect(upgradeValue('settings', { models: {}, presets: kept, looks: [mine, { ...mine, id: 'later' }] })).toEqual({ models: {}, presets: [...kept, { ...mine, id: 'later' }] });
     expect(upgradeValue('settings', { models: {}, presets: [] })).toBeNull();
     expect(upgradeValue('settings', { models: {} })).toBeNull();
+  });
+
+  it("names a saved look's light or dark its mode, as it was its theme, and leaves one that already does alone", () => {
+    const old = { id: 'mine', name: '내 것', look: { theme: 'light', bg: 'blue', size: 17 } };
+    const now = { id: 'mine', name: '내 것', look: { mode: 'light', bg: 'blue', size: 17 } };
+    expect(upgradeValue('settings', { models: {}, presets: [STARTER_PRESETS[0], old] })).toEqual({ models: {}, presets: [STARTER_PRESETS[0], now] });
+    expect(upgradeValue('settings', { models: {}, looks: [old] })).toEqual({ models: {}, presets: [...STARTER_PRESETS, now] });
+    expect(upgradeValue('settings', { models: {}, presets: [now] })).toBeNull();
   });
 
   it('leaves a current character or module alone, so the write-back touches only old ones', () => {

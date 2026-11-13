@@ -3,7 +3,7 @@ import { presetsOf } from '../model/settings';
 import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, wornLook, parseReading, parseStoredDisplay, presetOf, READING, savedPresets, systemMode, type Display, type Follow, type Look, type Preset } from './common/reading';
 import { usePersisted } from './common/usePersisted';
 import { useSettings } from './session';
-import { applyScheme, QuoteShapeContext, readingDefault, useCoarsePointer, useDarkScheme, VeilContext, type Reading, type Theme } from './ui';
+import { applyScheme, QuoteShapeContext, readingDefault, useCoarsePointer, useDarkScheme, VeilContext, type Mode, type Reading } from './ui';
 
 type DisplayControl = {
   reading: Reading;
@@ -20,7 +20,7 @@ type DisplayControl = {
   pick: (preset: Preset) => void;
   reset: () => void;
   followSystem: (on: boolean) => void;
-  assign: (mode: Theme, preset: Preset) => void;
+  assign: (mode: Mode, preset: Preset) => void;
 };
 
 const DisplayContext = createContext<DisplayControl | null>(null);
@@ -33,28 +33,28 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const [display, setDisplay] = usePersisted(DISPLAY, parseStoredDisplay, DISPLAY_DEFAULT);
   const saved = presetsOf(useSettings());
   const { presets, unread } = useMemo(() => savedPresets(saved), [saved]);
-  const mode = systemMode(useDarkScheme());
+  const system = systemMode(useDarkScheme());
   const coarsePointer = useCoarsePointer();
-  const { theme, bg, ink, accent, dialogue, follow } = display;
-  useLayoutEffect(() => applyScheme({ theme, bg, ink, accent, dialogue }), [theme, bg, ink, accent, dialogue]);
+  const { mode, bg, ink, accent, dialogue, follow } = display;
+  useLayoutEffect(() => applyScheme({ mode, bg, ink, accent, dialogue }), [mode, bg, ink, accent, dialogue]);
   const veil = useMemo(() => (display.hidePictures ? { revealed: new Set<string>() } : null), [display.hidePictures]);
   const find = (id: string | undefined) => (id === undefined ? undefined : presets.find((preset) => preset.id === id));
-  const wear = ({ theme, bg, ink, accent, dialogue, ...look }: Look, follow: Follow | null) => {
+  const wear = ({ mode, bg, ink, accent, dialogue, ...look }: Look, follow: Follow | null) => {
     setReading({ ...reading, ...look });
-    setDisplay({ ...display, theme, bg, ink, accent, dialogue, follow });
+    setDisplay({ ...display, mode, bg, ink, accent, dialogue, follow });
   };
-  const due = follow && follow.applied !== mode ? find(follow[mode]) : undefined;
+  const due = follow && follow.applied !== system ? find(follow[system]) : undefined;
   useLayoutEffect(() => {
-    if (due && follow) wear(due.look, { ...follow, applied: mode });
+    if (due && follow) wear(due.look, { ...follow, applied: system });
   }, [due]);
-  const pick = (preset: Preset) => wear(preset.look, follow && { ...follow, [mode]: preset.id, applied: mode });
+  const pick = (preset: Preset) => wear(preset.look, follow && { ...follow, [system]: preset.id, applied: system });
   // Called only while there is a preset: its switch is off without one.
   function followSystem(on: boolean) {
     if (!on) return setDisplay({ ...display, follow: null });
     const current = presetOf(presets, reading, display);
-    const slot = (theme: Theme) => ((current?.look.theme === theme ? current : presets.find(({ look }) => look.theme === theme)) ?? current ?? presets[0]!).id;
-    const next = { light: slot('light'), dark: slot('dark'), applied: mode };
-    wear(find(next[mode])!.look, next);
+    const slot = (of: Mode) => ((current?.look.mode === of ? current : presets.find(({ look }) => look.mode === of)) ?? current ?? presets[0]!).id;
+    const next = { light: slot('light'), dark: slot('dark'), applied: system };
+    wear(find(next[system])!.look, next);
   }
   const control: DisplayControl = {
     reading,
@@ -69,7 +69,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     followSystem,
     assign: (slot, preset) => {
       if (!follow) return;
-      if (slot === mode) pick(preset);
+      if (slot === system) pick(preset);
       else setDisplay({ ...display, follow: { ...follow, [slot]: preset.id } });
     },
   };
@@ -91,5 +91,5 @@ export function useDisplay(): DisplayControl {
 // What the chats of a character holding the preset look wear.
 export function useWorn(look: string | undefined) {
   const { reading, display, find } = useDisplay();
-  return wornLook(find(look), reading, display.theme);
+  return wornLook(find(look), reading, display.mode);
 }

@@ -2,7 +2,7 @@ import { Check } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { faceStyle } from '../foundation/fonts';
 import { Icon } from '../foundation/Icon';
-import { schemeAttributes, type Scheme } from '../foundation/theme';
+import { schemeAttributes, type Scheme } from '../foundation/scheme';
 import type { Reading } from '../layout/ChatFrame';
 import { MoreMenu } from '../overlays/MoreMenu';
 import { useDragOrder } from './dragOrder';
@@ -17,14 +17,14 @@ export function Swatches({ label, sample, items, onMove }: { label: string; samp
   const order = useDragOrder(onMove ?? (() => {}), 'x');
   return (
     <div className={styles.swatches} role="group" aria-label={label} onDragOver={order.allow} onDrop={order.drop}>
-      {items.map(({ name, theme, bg, ink, accent, dialogue, font, size, pressed, onPick, menu }, index) => (
+      {items.map(({ name, mode, bg, ink, accent, dialogue, font, size, pressed, onPick, menu }, index) => (
         <div
           key={index}
           className={classNames(styles.card, order.from === index && styles.dragged, order.at === index && styles.before, index === items.length - 1 && order.at === items.length && styles.after)}
           onDragOver={(event) => order.over(event, index)}
         >
           <button type="button" className={styles.pick} aria-pressed={pressed} onClick={onPick} draggable={onMove !== undefined} onDragStart={(event) => order.start(event, index, name)} onDragEnd={order.end}>
-            <span className={styles.sample} {...schemeAttributes({ theme, bg, ink, accent, dialogue })} style={{ ...faceStyle(font), '--swatch-size': `${size}px` } as CSSProperties} aria-hidden>
+            <span className={styles.sample} {...schemeAttributes({ mode, bg, ink, accent, dialogue })} style={{ ...faceStyle(font), '--swatch-size': `${size}px` } as CSSProperties} aria-hidden>
               {sample}
             </span>
             <span className={styles.meta}>

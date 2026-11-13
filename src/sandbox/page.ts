@@ -33,7 +33,7 @@ addEventListener('message', (event: MessageEvent) => {
   }
   connectApi(port, (code, api) => {
     Object.defineProperty(globalThis, 'hazelle', { value: api });
-    if (api.page?.theme === 'light') document.documentElement.dataset.theme = 'light';
+    if (api.page?.theme === 'light') document.documentElement.dataset.mode = 'light';
     return (0, eval)(sourced(code)) as void | Promise<void>;
   });
 });

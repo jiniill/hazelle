@@ -8,7 +8,7 @@ const hp: ShownField = { id: 'hp', name: 'HP', kind: 'gauge', look: 'bar', share
 const gold: ShownField = { id: 'gold', name: '소지금', kind: 'number', value: '1,240 G' };
 const todo: ShownField = { id: 'todo', name: '할 일', kind: 'list', checked: true, items: [{ text: '장보기', done: true }, { text: '빨래' }] };
 const fields = (...all: ShownField[]): ShownBlock[] => all.map((field) => ({ block: 'field', field }));
-const draw = (frame: StatusFrame, blocks: ShownBlock[], onChoice?: (text: string) => void) => renderToStaticMarkup(<StatusPanel name="기본" frame={frame} mood="paper" theme="dark" blocks={blocks} onChoice={onChoice} />);
+const draw = (frame: StatusFrame, blocks: ShownBlock[], onChoice?: (text: string) => void) => renderToStaticMarkup(<StatusPanel name="기본" frame={frame} mood="paper" mode="dark" blocks={blocks} onChoice={onChoice} />);
 
 it('draws a gauge as a meter read by its share, its figure and what moved it, and an unset value as a dash', () => {
   const html = draw('card', fields(hp, gold, { id: 'place', name: '장소', kind: 'text', value: '' }));
@@ -17,9 +17,9 @@ it('draws a gauge as a meter read by its share, its figure and what moved it, an
   expect(html).toContain('-16');
   expect(html).toContain('1,240 G');
   expect(html).toContain('—');
-  // 헤이젤 keeps the reader's theme with the colour picks set back; the reader's own colours take the page's.
-  expect(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="hazelle" theme="light" blocks={[]} />)).toContain('data-theme="light" data-bg="base"');
-  expect(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="own" theme="light" blocks={[]} />)).not.toContain('data-theme');
+  // 헤이젤 keeps the reader's mode with the colour picks set back; the reader's own colours take the page's.
+  expect(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="hazelle" mode="light" blocks={[]} />)).toContain('data-mode="light" data-bg="base"');
+  expect(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="own" mode="light" blocks={[]} />)).not.toContain('data-mode');
 });
 
 it('gives each 틀 its own drawing of the same fields', () => {
@@ -54,15 +54,15 @@ it('draws records as cards, rows or a table, a 기록 as rows, and choices as bu
 
 it('folds to its 대표 fields on one line under a head that keeps the note and the fold, the caller\'s buttons only while open', () => {
   const head = (open: boolean) => ({ title: '기본', note: { text: '이번 턴 갱신 안 됨', warn: true }, actions: <button type="button">다시</button>, open, onOpen: () => {}, labels: { open: '펼치기', close: '접기' }, summary: [hp] });
-  const drawn = (open: boolean) => renderToStaticMarkup(<StatusPanel name="기본" frame="hud" mood="neon" theme="light" blocks={fields(gold)} head={head(open)} />);
+  const drawn = (open: boolean) => renderToStaticMarkup(<StatusPanel name="기본" frame="hud" mood="neon" mode="light" blocks={fields(gold)} head={head(open)} />);
   expect(drawn(true)).toMatch(/<h3[^>]*>기본<\/h3>.*이번 턴 갱신 안 됨.*다시.*aria-label="접기".*1,240 G/);
   expect(drawn(true)).toContain('aria-expanded="true"');
   const folded = drawn(false);
   expect(folded).toMatch(/HP<\/span>.*aria-valuenow="70".*이번 턴 갱신 안 됨.*aria-label="펼치기"/);
   expect(folded).not.toContain('1,240 G');
   expect(folded).not.toContain('다시');
-  // A fixed 분위기 stands in its own theme, whatever the reader's.
-  expect(folded).toContain('data-theme="dark"');
+  // A fixed 분위기 stands in its own mode, whatever the reader's.
+  expect(folded).toContain('data-mode="dark"');
 });
 
 it('lays a press over each value that is edited by hand, a record\'s too, and none over a count or a folded line', () => {
@@ -71,18 +71,18 @@ it('lays a press over each value that is edited by hand, a record\'s too, and no
   const cast = (look: 'cards' | 'table'): ShownBlock => ({ block: 'records', id: 'cast', name: '인물', look, columns: [{ id: 'mood', name: '기분' }], members: [{ id: 'seoha', name: '서하', fields: [mood] }] });
   const blocks: ShownBlock[] = [{ block: 'head', id: 'h', items: [{ id: 'place', name: '장소', value: '옥상' }] }, ...fields(hp), cast('cards'), cast('table')];
   const presses = (html: string) => [...html.matchAll(/aria-label="([^"]+) 수정"/g)].map(([, name]) => name);
-  expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" theme="dark" blocks={blocks} edit={edit} />))).toEqual(['장소', 'HP', '기분', '기분']);
-  expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="line" mood="paper" theme="dark" blocks={blocks} edit={edit} />))).toEqual(['장소', 'HP']);
+  expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" mode="dark" blocks={blocks} edit={edit} />))).toEqual(['장소', 'HP', '기분', '기분']);
+  expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="line" mood="paper" mode="dark" blocks={blocks} edit={edit} />))).toEqual(['장소', 'HP']);
   expect(presses(draw('card', blocks))).toEqual([]);
   const folded = { title: '기본', open: false, onOpen: () => {}, labels: { open: '펼치기', close: '접기' }, summary: [hp] };
-  expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" theme="dark" blocks={blocks} edit={edit} head={folded} />))).toEqual([]);
+  expect(presses(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" mode="dark" blocks={blocks} edit={edit} head={folded} />))).toEqual([]);
 });
 
 it('makes a record\'s name a button only where records open a page of their own', () => {
   const cast = (look: 'cards' | 'rows' | 'table'): ShownBlock => ({ block: 'records', id: 'cast', name: '인물', look, columns: [], members: [{ id: 'seoha', name: '서하', fields: [] }] });
   const blocks = [cast('cards'), cast('rows'), cast('table')];
   const names = (html: string) => html.match(/<button type="button" class="[^"]*open[^"]*">서하<\/button>/g) ?? [];
-  expect(names(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" theme="dark" blocks={blocks} onMember={() => {}} />))).toHaveLength(3);
+  expect(names(renderToStaticMarkup(<StatusPanel name="기본" frame="card" mood="paper" mode="dark" blocks={blocks} onMember={() => {}} />))).toHaveLength(3);
   expect(names(draw('card', blocks))).toHaveLength(0);
 });
 
@@ -98,13 +98,13 @@ it('draws a 기록 of messages as its conversations, each with the last thing sa
 
 it("lists a 휴대폰's apps on its home, each saying what is new, and shows an open app's screen in the home's place", () => {
   const apps = [{ id: 'm', name: '메신저', icon: 'messages' as const, fresh: 3 }, { id: 'c', name: '연락처', icon: 'contacts' as const, fresh: 0 }];
-  const home = renderToStaticMarkup(<StatusPhone name="휴대폰" theme="dark" apps={apps} onOpen={() => {}} />);
+  const home = renderToStaticMarkup(<StatusPhone name="휴대폰" mode="dark" apps={apps} onOpen={() => {}} />);
   expect(home).toMatch(/aria-label="새 소식 3개".*메신저.*연락처/);
   expect(home.match(/aria-label="새 소식/g)).toHaveLength(1);
   expect(home).toMatch(/aria-label="홈" disabled=""/);
   const open = renderToStaticMarkup(
-    <StatusPhone name="휴대폰" theme="dark" apps={apps} onOpen={() => {}} onHome={() => {}}>
-      <StatusPanel bare name="메신저" frame="card" mood="rose" theme="dark" blocks={[]} />
+    <StatusPhone name="휴대폰" mode="dark" apps={apps} onOpen={() => {}} onHome={() => {}}>
+      <StatusPanel bare name="메신저" frame="card" mood="rose" mode="dark" blocks={[]} />
     </StatusPhone>,
   );
   expect(open).not.toContain('연락처');
