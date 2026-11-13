@@ -272,7 +272,7 @@
 
 /* The composer keeps its own surface; around it the story shows, as it does past the folded one, and the bot's
    background reaches the column's foot. */
-.compact:not(:focus-within),
+.compact,
 .backdropped .footer {
   background-color: transparent;
 }

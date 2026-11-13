@@ -103,7 +103,7 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
     const measure = () => {
       // Follow the fold's measured height before paint, outside React, without rendering every animation frame.
       columnRef.current!.style.setProperty('--footer-height', `${element.offsetHeight}px`);
-      if (element.matches(`.${styles.compact}:not(:focus-within)`)) return;
+      if (element.classList.contains(styles.compact)) return;
       if (element.getAnimations({ subtree: true }).some((animation) => animation instanceof CSSTransition)) return;
       setSpace(element.offsetHeight);
     };

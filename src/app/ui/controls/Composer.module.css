@@ -11,9 +11,8 @@
   transition: border-color var(--motion-respond);
 }
 
-/* Focus anywhere inside, the text or a tool's menu, keeps it whole. The fold changes only heights, the text's and the
-   tools', so it reads as one motion. */
-.compact:not(:focus-within) {
+/* The fold changes only heights, the text's and the tools', so it reads as one motion. */
+.compact {
   cursor: text;
 }
 
@@ -44,11 +43,43 @@
   resize: none;
 }
 
+/* Folded, the draft shows its start on one line, ending in …, over the field, whose one line follows the caret. */
+/* minmax(0, …): the peek's one line would widen an auto column to the whole draft. */
+.field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.input,
+.peek {
+  grid-area: 1 / 1;
+}
+
+.peek {
+  composes: ellipsis from '../foundation/a11y.module.css';
+  visibility: hidden;
+  height: var(--one-line);
+  padding-right: var(--space-8);
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  line-height: var(--leading-relaxed);
+  pointer-events: none;
+}
+
+.compact .peek {
+  visibility: visible;
+}
+
+.compact .input:not(:placeholder-shown) {
+  color: transparent;
+  caret-color: transparent;
+}
+
 .input:focus-visible {
   outline: none;
 }
 
-.compact:not(:focus-within) .input {
+.compact .input {
   height: var(--one-line);
   overflow: hidden;
   transition:
@@ -65,16 +96,16 @@
   composes: foldBody from '../foundation/motion.module.css';
 }
 
-.compact:not(:focus-within) .fold {
+.compact .fold {
   grid-template-rows: 0fr;
 }
 
-.compact:not(:focus-within) .tools {
+.compact .tools {
   overflow: hidden;
   transition-timing-function: step-start;
 }
 
-.compact:not(:focus-within) .bar {
+.compact .bar {
   visibility: hidden;
   opacity: 0;
   transition:

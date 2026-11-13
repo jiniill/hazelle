@@ -31,6 +31,7 @@ import { useEditBeside } from './characterBeside';
 import { toggleEditor, type Panel, type Side } from './panels';
 import { useAutopilot } from './useAutopilot';
 import { useChat } from './useChat';
+import { useComposerFold } from './useComposerFold';
 import type { SearchSeed } from './useChatSearch';
 
 // The lorebook panel brings the lorebook editor and the CBS language with it, so a chat loads them only when it opens.
@@ -61,7 +62,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
   const { id, busy, panel, scroll, prompt, actions } = chat;
   const autopilot = useAutopilot(chat);
   const wide = useWide();
-  const folded = (display.foldComposer && scroll.away) || (!wide && chat.editing !== null);
+  const fold = useComposerFold((display.foldComposer && scroll.away) || (!wide && chat.editing !== null), scroll.scrollRef);
   const url = useAssetUrl([display.portrait, display.hidePictures, shelf?.avatar]);
   // The thumbnail stands in until the full picture is read.
   const portrait = display.portrait && !display.hidePictures && shelf?.avatar ? (url('avatar', shelf.avatar) ?? shelf.face ?? undefined) : undefined;
@@ -95,7 +96,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
         title={chat.search ? <ChatSearch search={chat.search} onSearch={actions.searchFor} onStep={actions.stepSearch} onClose={actions.closeSearch} /> : <ChatHeading chat={chat} />}
         actions={<ChatHeaderActions chat={chat} />}
         above={scroll.pill && <Pill label={scroll.pill} live={busy} onClick={actions.follow} />}
-        footer={<ChatComposer chat={chat} folded={folded} />}
+        footer={<ChatComposer chat={chat} fold={fold} />}
         dockRef={useToastFloor()}
         panel={
           panel?.kind === 'toggles' ? (
@@ -166,7 +167,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
         side={display.pictureSide}
         portrait={portrait}
         pictures={{ ...shelf?.character.pictures, widest: shelf?.character.pictures?.widest ?? display.pictureWidest, wideFill: display.wideFill }}
-        compact={folded}
+        compact={fold.folded}
         scrollRef={scroll.scrollRef}
         onScroll={scroll.onScroll}
       >

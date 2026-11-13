@@ -21,7 +21,7 @@ export function ControlsScreen({ back }: { back: Back | null }) {
           />
           <SettingRow
             label="입력창 접기"
-            help={{ text: '위로 스크롤하면 한 줄로 접고, 맨 아래로 내려가면 다시 펼쳐요.', demo: { name: 'foldComposer', ways: { on: display.foldComposer } } }}
+            help={{ text: '위로 스크롤하면 쓰던 글도 한 줄로 접고, 누르거나 맨 아래로 내려가면 다시 펼쳐요.', demo: { name: 'foldComposer', ways: { on: display.foldComposer } } }}
             control={<Switch label="입력창 접기" checked={display.foldComposer} onChange={(foldComposer) => changeDisplay({ foldComposer })} />}
           />
           <SettingRow
