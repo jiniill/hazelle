@@ -7,7 +7,7 @@ import { addOf, ACTS } from '../common/acts';
 import { useAssetFiles } from '../common/AssetsEditor';
 import { backdropShades, choices } from '../common/reading';
 import { presetChoices } from '../common/ReadingRows';
-import { CHANGE_IMAGE, follows, PAGES, PRESET_GONE, PRESET_GONE_CHIP, SAVE_FAILED } from '../common/words';
+import { CHANGE_IMAGE, follows, PAGES, PRESET_GONE, PRESET_GONE_CHIP, SAVE_FAILED, SETTINGS } from '../common/words';
 import { useDisplay } from '../display';
 import { useAssetUrl, useChildren, useStore } from '../session';
 import { useToast } from '../toast';
@@ -39,7 +39,7 @@ export function CharacterLook({ id, character }: { id: string; character: Charac
           <ChoiceGroup
             layout="fit"
             label={PAGES.display}
-            options={[{ value: DEVICE, label: follows('기기 설정') }, ...presetChoices(presets)]}
+            options={[{ value: DEVICE, label: follows(`${PAGES.display} ${SETTINGS}`) }, ...presetChoices(presets)]}
             value={gone ? null : (character.look ?? DEVICE)}
             empty={PRESET_GONE_CHIP}
             onChange={(look) => save(setLook(store, id, look === DEVICE ? null : look))}

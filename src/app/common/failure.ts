@@ -30,7 +30,7 @@ import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
 import { SORT_PROMPT, defaultPrompt } from './prompt-words';
-import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE } from './words';
+import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -280,7 +280,7 @@ export function describeMetersFailure(failure: MetersFailure): string {
 }
 
 export function describeHostsFailure(failure: HostsFailure): string {
-  if (failure.kind === 'not-hosts') return '제공자 목록을 읽지 못했어요.';
+  if (failure.kind === 'not-hosts') return `${HOST} 목록을 불러오지 못했어요.`;
   return describeReplyError(failure);
 }
 

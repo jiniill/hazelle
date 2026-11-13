@@ -30,12 +30,12 @@ export function ModelHosts({ connection, model, type }: Props) {
   const gone = model.host !== undefined && hosts.data !== undefined && !hosts.data.some((host) => host.id === model.host);
 
   return (
-    <Section title={HOST} help="고르면 이 제공자에게만 보내요. 그 제공자가 받지 않으면 다른 곳으로 넘기지 않고 실패해요.">
+    <Section title={HOST} help="선택한 제공자에게만 요청을 보내고, 응답을 받지 못하면 실패해요.">
       {hosts.failure}
       {hosts.loading && <Text variant="note">{LOADING}</Text>}
       {hosts.data && (
         <List label={HOST} box>
-          <ListItem title="자동" description={`${connection.value.label}에서 골라요`} selected={model.host === undefined} onClick={() => pick(null)} />
+          <ListItem title="자동" description={`${connection.value.label}에서 선택해요`} selected={model.host === undefined} onClick={() => pick(null)} />
           {gone && <ListItem title={model.host!} note="목록에 없음" tone="muted" selected />}
           {hosts.data.map((host) => (
             <ListItem
