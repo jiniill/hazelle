@@ -1,13 +1,11 @@
 .anchor {
-  position: relative;
   display: flex;
 }
 
 .menu {
   composes: floating scrollCue from '../foundation/surface.module.css';
   composes: growIn from '../foundation/motion.module.css';
-  position: absolute;
-  z-index: var(--layer-menu);
+  position: fixed;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -40,48 +38,41 @@
   padding: var(--space-16) var(--space-16);
 }
 
-/* A menu opened inside another: the outer one stops clipping while it is open, and the inner one stays short enough
-   to fit beside it. */
-.menu:has(.menu) {
-  overflow-y: visible;
-}
-
+/* A menu opened inside another stays short enough to fit beside it. */
 .menu .menu {
   max-height: var(--menu-inner-max-height);
 }
 
-/* Opened by a right-click: Menu sets the pointer's spot on the screen. On the screen as a hint is (useAnchored), it
-   stands above the panel or dialog it was opened from. */
+/* Opened by a right-click: Menu sets the pointer's spot on the screen. */
 .point {
   transform-origin: top left;
-  position: fixed;
-  z-index: var(--layer-hint);
   top: var(--point-top);
   left: var(--point-left);
 }
 
+/* Beside its button: Menu sets the button's edges on the screen (anchorTo). */
 .below-start {
   transform-origin: top left;
-  top: calc(100% + var(--space-8));
-  left: 0;
+  top: calc(var(--anchor-below) + var(--space-8));
+  left: var(--anchor-left);
 }
 
 .below-end {
   transform-origin: top right;
-  top: calc(100% + var(--space-8));
-  right: 0;
+  top: calc(var(--anchor-below) + var(--space-8));
+  right: var(--anchor-right);
 }
 
 .above-start {
   transform-origin: bottom left;
-  bottom: calc(100% + var(--space-12));
-  left: 0;
+  bottom: calc(var(--anchor-above) + var(--space-12));
+  left: var(--anchor-left);
 }
 
 .above-end {
   transform-origin: bottom right;
-  bottom: calc(100% + var(--space-12));
-  right: 0;
+  bottom: calc(var(--anchor-above) + var(--space-12));
+  right: var(--anchor-right);
 }
 
 @media (max-width: 959px) {

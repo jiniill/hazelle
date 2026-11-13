@@ -1,6 +1,5 @@
 import { ChevronLeft, type LucideIcon } from 'lucide-react';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
-import { createPortal } from 'react-dom';
 import { ChangeSignal } from '../../../change-signal';
 import { Item } from '../collections/Item';
 import { ButtonSlot } from '../controls/Button';
@@ -8,7 +7,7 @@ import { CheckMark, Icon } from '../foundation/Icon';
 import { faceStyle, type FontId } from '../foundation/fonts';
 import { useLeaves } from '../foundation/leave';
 import { hasFinePointer } from '../foundation/media';
-import { keepOnScreen, menuEdge, openingField, restBox, room, useLayer } from './layers';
+import { anchorTo, keepOnScreen, lift, menuEdge, openingField, restBox, useLayer } from './layers';
 import styles from './Menu.module.css';
 
 export type MenuOpener = { ref: RefObject<HTMLButtonElement | null>; popup: 'menu' | 'dialog'; expanded: boolean; onClick: () => void };
@@ -45,7 +44,7 @@ export function useMenuOpener(handle: MenuHandle): MenuOpener {
 type Props = {
   label: string;
   trigger: (opener: MenuOpener) => ReactNode;
-  // Choose the opposite half of the clipping scroller; fixed direction can squeeze menus under headers/composers.
+  // start and end open toward the roomier half of the screen; a fixed direction can squeeze a menu under a header or composer.
   place?: 'below-start' | 'below-end' | 'above-start' | 'above-end' | 'start' | 'end';
   size?: 'md' | 'lg' | 'form';
   // dialog: a small form opened and closed like a menu, such as the chat's 작가의 노트; useMenuClose closes it.
@@ -102,31 +101,45 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   useLayoutEffect(() => {
     if (open && flips) {
       const { top, bottom } = anchor.current!.getBoundingClientRect();
-      const box = room(anchor.current!);
-      setUpward(top + bottom > box.top + box.bottom);
+      setUpward(top + bottom > window.innerHeight);
     }
   }, [open, flips]);
   const side = flips ? (`${upward ? 'above' : 'below'}-${place}` as const) : place;
 
-  // A menu taller than the room on its side scrolls within that room instead of running off the screen.
+  // Lifted, so no dialog, panel or card it was opened in clips it. Beside its button it follows the button as what holds
+  // it scrolls; a menu taller than the room on its side scrolls within that room instead of running off the screen.
   useLayoutEffect(() => {
-    if (!panel.current) return;
+    const element = panel.current;
+    if (!element) return;
+    lift(element);
     if (at) {
-      placeAt(panel.current, at);
-      keepOnScreen(panel.current);
+      placeAt(element, at);
+      keepOnScreen(element);
       return;
     }
-    keepOnScreen(panel.current);
-    const box = restBox(panel.current);
-    const edge = menuEdge(panel.current);
-    const { top, bottom } = room(panel.current);
-    panel.current.style.setProperty('--room', `${side.startsWith('above') ? box.bottom - top - edge : bottom - box.top - edge}px`);
+    const stand = () => {
+      anchorTo(element, anchor.current!.getBoundingClientRect());
+      keepOnScreen(element);
+      const box = restBox(element);
+      const edge = menuEdge(element);
+      element.style.setProperty('--room', `${side.startsWith('above') ? box.bottom - edge : window.innerHeight - box.top - edge}px`);
+    };
+    stand();
+    const follow = (event: Event) => {
+      if (!element.contains(event.target as Node)) stand();
+    };
+    window.addEventListener('scroll', follow, { capture: true, passive: true });
+    window.addEventListener('resize', stand);
+    return () => {
+      window.removeEventListener('scroll', follow, { capture: true });
+      window.removeEventListener('resize', stand);
+    };
   }, [open, side, at]);
 
-  // At the pointer it stands on the screen, not in its anchor's column: a list narrower than the menu would clip it.
   const body = (
     <div
       ref={leaving}
+      popover="manual"
       className={`${styles.menu} ${at ? styles.point : styles[side]} ${styles[size]} ${kind === 'dialog' ? styles.dialog : ''}`}
       role={kind}
       aria-label={label}
@@ -142,7 +155,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   return (
     <div className={styles.anchor} ref={anchor}>
       {trigger({ ...opener, popup: kind })}
-      {open && (at ? createPortal(body, document.body) : body)}
+      {open && body}
     </div>
   );
 }
@@ -164,9 +177,8 @@ export function moveByKey(panel: HTMLElement, event: KeyboardEvent) {
 // Drops from the pointer, or rises to it where the room below is shorter than the menu and than the room above.
 function placeAt(panel: HTMLElement, at: { x: number; y: number }) {
   const edge = menuEdge(panel);
-  const { top, bottom } = room(panel);
-  const below = bottom - edge - at.y;
-  const above = at.y - top - edge;
+  const below = window.innerHeight - edge - at.y;
+  const above = at.y - edge;
   const upward = panel.offsetHeight > below && above > below;
   panel.style.setProperty('--room', `${upward ? above : below}px`);
   panel.style.setProperty('--point-left', `${at.x}px`);

@@ -11,6 +11,17 @@
     box-sizing: border-box;
   }
 
+  /* Lifted into the top layer (layers.ts lift): the box its component draws, none of the browser's popover look. */
+  [popover] {
+    inset: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: visible;
+    color: inherit;
+    background: none;
+  }
+
   body {
     margin: 0;
     background: var(--color-bg);

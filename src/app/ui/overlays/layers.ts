@@ -74,12 +74,27 @@ export function useLayer(active: boolean, layer: Layer) {
   }, [active, layer.step]);
 }
 
-// Constrain popovers to the nearest clipping box AND the viewport; screen bounds alone cannot prevent column clipping.
+const screen = () => ({ left: 0, top: 0, right: document.documentElement.clientWidth, bottom: window.innerHeight });
+
+// Into the top layer (a popover's): over every box that clips or stacks what holds it, while it stays in the page where
+// it stands, so presses, focus and :focus-within read it as inside its anchor's. Shown once: a run again (StrictMode's)
+// finds it shown.
+export function lift(element: HTMLElement) {
+  if (!element.matches(':popover-open')) element.showPopover();
+}
+
+// A lifted box is fixed on the screen: its CSS stands it on these edges of its anchor.
+export function anchorTo(element: HTMLElement, anchor: DOMRect) {
+  element.style.setProperty('--anchor-left', `${anchor.left}px`);
+  element.style.setProperty('--anchor-right', `${document.documentElement.clientWidth - anchor.right}px`);
+  element.style.setProperty('--anchor-below', `${anchor.bottom}px`);
+  element.style.setProperty('--anchor-above', `${window.innerHeight - anchor.top}px`);
+}
+
+// Constrain a box drawn in place to the nearest clipping box AND the viewport; screen bounds alone cannot prevent
+// column clipping.
 export function room(element: HTMLElement) {
-  let left = 0;
-  let top = 0;
-  let right = document.documentElement.clientWidth;
-  let bottom = window.innerHeight;
+  let { left, top, right, bottom } = screen();
   for (let at = element.parentElement; at; at = at.parentElement) {
     if (getComputedStyle(at).overflowX === 'visible') continue;
     const box = at.getBoundingClientRect();
@@ -111,12 +126,12 @@ export function keepOnScreen(element: HTMLElement) {
   element.style.setProperty('--nudge', '0px');
   const box = restBox(element);
   const edge = menuEdge(element);
-  const { left, right } = room(element);
+  const { left, right } = screen();
   const shift = box.left < left + edge ? left + edge - box.left : box.right > right - edge ? right - edge - box.right : 0;
   element.style.setProperty('--nudge', `${shift}px`);
 }
 
-// Portal fixed popovers to body to escape panel clipping. CSS uses anchor edges and data-flipped on overflow.
+// A peek lifted beside its anchor (lift, anchorTo); its CSS flips it by data-flipped on overflow.
 // Close on any scroll instead of tracking a now-stale anchor.
 export function useAnchored(open: boolean, popover: RefObject<HTMLElement | null>, anchor: RefObject<HTMLElement | null>, close: () => void) {
   const latest = useRef(close);
@@ -125,9 +140,8 @@ export function useAnchored(open: boolean, popover: RefObject<HTMLElement | null
     const element = popover.current;
     const at = anchor.current?.getBoundingClientRect();
     if (!open || !element || !at) return;
-    element.style.setProperty('--anchor-left', `${at.left}px`);
-    element.style.setProperty('--anchor-below', `${at.bottom}px`);
-    element.style.setProperty('--anchor-above', `${window.innerHeight - at.top}px`);
+    lift(element);
+    anchorTo(element, at);
     keepOnScreen(element);
     delete element.dataset.flipped;
     // Inside the modal window it was opened from (a dialog, 설정), not only the screen: past the window's edge it

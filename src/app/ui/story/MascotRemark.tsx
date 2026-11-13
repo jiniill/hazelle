@@ -74,7 +74,7 @@ export function MascotRemark({ face, picture, name, line, fresh, onSeen }: Props
       </button>
       {open &&
         createPortal(
-          <div ref={leaving} id={id} role="note" className={styles.card}>
+          <div ref={leaving} popover="manual" id={id} role="note" className={styles.card}>
             <div className={styles.words}>
               <span className={styles.name}>{name}</span>
               <p className={styles.line}>{line}</p>

@@ -23,8 +23,6 @@
   position: fixed;
   top: calc(var(--anchor-below) + var(--space-8));
   left: var(--anchor-left);
-  /* On the body, so above the dialog that may hold its ⓘ and below the toast. */
-  z-index: var(--layer-hint);
   width: max-content;
   max-width: min(var(--hint-width), calc(100vw - 2 * var(--menu-edge)));
   padding: var(--space-8) var(--space-12);

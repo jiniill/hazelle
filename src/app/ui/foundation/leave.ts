@@ -21,6 +21,8 @@ export function leaves(given: HTMLElement | null) {
       // What opens next may take the same ids.
       for (const part of [element, ...element.querySelectorAll('[id]')]) part.removeAttribute('id');
       parent.appendChild(element);
+      // Put back, it is out of the top layer it was lifted into (layers.ts lift).
+      if (element.popover) element.showPopover();
       for (const { part, top } of scrolled) part.scrollTop = top;
       // Its children's too: a ground leaves with the box on it. No deeper: what else moves in there, a demo or a
       // loop, is not its leaving and may never end.

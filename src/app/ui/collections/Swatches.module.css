@@ -8,7 +8,6 @@
   composes: box from '../foundation/surface.module.css';
   position: relative;
   min-width: 0;
-  overflow: hidden;
 }
 
 .card:has(> .pick:is(:hover, :active)) {
@@ -25,6 +24,9 @@
   flex-direction: column;
   width: 100%;
   padding: 0;
+  /* The pick clips the sample to the card's corners, not the card: the card's ⋯ menu must reach past it. */
+  overflow: hidden;
+  border-radius: inherit;
   color: var(--color-text);
   text-align: left;
 }
@@ -74,7 +76,7 @@
   opacity: 0.4;
 }
 
-/* Where a dragged card would land: a bar on the card's inner edge, since the card clips what overflows it. */
+/* Where a dragged card would land: a bar on the card's inner edge. */
 .before::after,
 .after::after {
   content: '';

@@ -94,6 +94,7 @@ export function Hint({ label, children }: { label: string; children: Help }) {
         createPortal(
           <div
             ref={leaving}
+            popover="manual"
             id={id}
             role="note"
             className={demo ? `${styles.bubble} ${styles.withDemo}` : styles.bubble}

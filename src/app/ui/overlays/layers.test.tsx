@@ -226,7 +226,7 @@ it('opens a trap by the opening rule, takes the focus back in when its control g
   }
 });
 
-it("flips a popover to the other side of its anchor where it would run past the window it was opened in, not only the screen", async () => {
+it("lifts a popover once and flips it to the other side of its anchor where it would run past the window it was opened in, not only the screen", async () => {
   const root = probeRoot();
   vi.stubGlobal('getComputedStyle', () => ({ overflowX: 'visible', getPropertyValue: () => '16' }));
   Object.assign(window, { innerHeight: 900 });
@@ -234,7 +234,9 @@ it("flips a popover to the other side of its anchor where it would run past the 
   const rect = (top: number, bottom: number) => ({ top, bottom, left: 400, right: 640 });
   let box = rect(626, 886);
   let spot = rect(598, 616);
-  const popover = { style: { setProperty() {} }, dataset: {} as DOMStringMap, parentElement: null, getBoundingClientRect: () => box };
+  let shown = false;
+  const showPopover = vi.fn(() => (shown = true));
+  const popover = { style: { setProperty() {} }, dataset: {} as DOMStringMap, parentElement: null, getBoundingClientRect: () => box, matches: () => shown, showPopover };
   const anchor = (frame: ReturnType<typeof rect> | null) => ({ getBoundingClientRect: () => spot, closest: () => frame && { getBoundingClientRect: () => frame } });
   function Probe({ frame }: { frame: ReturnType<typeof rect> | null }) {
     useAnchored(true, useRef(popover as unknown as HTMLElement), useRef(anchor(frame) as unknown as HTMLElement), () => {});
@@ -243,6 +245,7 @@ it("flips a popover to the other side of its anchor where it would run past the 
   try {
     await act(async () => root.render(<Probe key="window" frame={rect(70, 830)} />));
     expect(popover.dataset.flipped).toBe('');
+    expect(showPopover).toHaveBeenCalledTimes(1);
     await act(async () => root.render(<Probe key="page" frame={null} />));
     expect(popover.dataset.flipped).toBeUndefined();
     // Set above its anchor and running off the screen's top: it goes below.

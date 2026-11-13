@@ -3,10 +3,10 @@ import { leaves } from './leave';
 
 const part = (scrollTop = 0) => ({ scrollTop, removeAttribute: vi.fn(), getAnimations: (): { finished: Promise<unknown> }[] => [] });
 
-function leaving({ connected, parentConnected = true, finish = Promise.resolve() }: { connected: boolean; parentConnected?: boolean; finish?: Promise<unknown> }) {
+function leaving({ connected, parentConnected = true, finish = Promise.resolve(), popover = null }: { connected: boolean; parentConnected?: boolean; finish?: Promise<unknown>; popover?: 'manual' | null }) {
   const inner = part(7);
   const parent = { isConnected: parentConnected, appendChild: vi.fn(() => ((element.scrollTop = 0), (inner.scrollTop = 0))) };
-  const element = Object.assign(part(40), { parentNode: parent, isConnected: connected, querySelectorAll: () => [inner], children: [inner], dataset: {} as DOMStringMap, getAnimations: () => [{ finished: finish }], remove: vi.fn(), inert: false });
+  const element = Object.assign(part(40), { parentNode: parent, isConnected: connected, querySelectorAll: () => [inner], children: [inner], dataset: {} as DOMStringMap, getAnimations: () => [{ finished: finish }], remove: vi.fn(), inert: false, popover, showPopover: vi.fn() });
   return { element, inner, parent, left: leaves(element as unknown as HTMLElement) };
 }
 
@@ -44,4 +44,14 @@ it('takes the element away even when its leaving is cancelled', async () => {
   left();
   await settled();
   expect(element.remove).toHaveBeenCalled();
+});
+
+it('lifts a popover back into the top layer once it is put back, and nothing else', async () => {
+  const lifted = leaving({ connected: false, popover: 'manual' });
+  const plain = leaving({ connected: false });
+  lifted.left();
+  plain.left();
+  await settled();
+  expect(lifted.element.showPopover).toHaveBeenCalledOnce();
+  expect(plain.element.showPopover).not.toHaveBeenCalled();
 });
