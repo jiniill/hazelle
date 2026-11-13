@@ -156,7 +156,7 @@
 }
 
 @supports (container-type: scroll-state) {
-  .foot {
+  .follows {
     position: sticky;
     bottom: calc(var(--footer-height) + var(--space-8));
     --above-pill: calc(var(--footer-height) + var(--story-pill-room));
@@ -167,24 +167,24 @@
     z-index: var(--layer-raised);
   }
 
-  .foot:has([aria-expanded='true']) {
+  .follows:has([aria-expanded='true']) {
     z-index: var(--layer-menu);
   }
 
-  .after,
-  .tools {
+  .follows .after,
+  .follows .tools {
     pointer-events: auto;
   }
 
   /* Raise narrow-layout tools above the centered bottom pill. Keep 560px: measured 85px pill and 203px tools collide at 507px (2026-10-15). */
   @container story (max-width: 560px) {
-    .foot {
+    .follows {
       bottom: var(--above-pill);
     }
   }
 
   /* Desktop switcher tools need pill clearance at every width: 378px tools collide with the pill in a 720px story (2026-10-23). */
-  .foot:has(.tools .switcher) {
+  .follows:has(.tools .switcher) {
     bottom: var(--above-pill);
   }
 

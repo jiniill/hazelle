@@ -18,7 +18,9 @@ type Props = {
   more: ReactNode;
   actions: ReactNode;
   inputRef: RefObject<HTMLTextAreaElement | null>;
+  // compact: folded, whatever has the focus; onOpen: a press, a focus or a key in it asks it open.
   compact: boolean;
+  onOpen: () => void;
   readOnly?: boolean;
   enterKeyHint?: 'send' | 'enter';
   // attachments: what the message carries, above its text (Attachments). onFiles: files pasted with no text.
@@ -83,7 +85,7 @@ const SHAPES: Record<Shapes['composer'], Shape> = {
   },
 };
 
-export function Composer({ value, onChange, onKeyDown, placeholder, tools, more, actions, inputRef, compact, readOnly, enterKeyHint, attachments, onFiles }: Props) {
+export function Composer({ value, onChange, onKeyDown, placeholder, tools, more, actions, inputRef, compact, onOpen, readOnly, enterKeyHint, attachments, onFiles }: Props) {
   const id = useId();
   const shape = useShape('composer');
   const { rows, root, lay } = SHAPES[shape];
@@ -92,12 +94,16 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, more,
   return (
     <div
       className={classNames(styles.composer, root, compact && styles.compact)}
-      // A press on the box's own edge, around the text, is a press on the text: folded, it opens.
+      // A press on the box's own edge, around the text, is a press on the text. Folded while it is written in, a press
+      // anywhere opens it with the caret where it was, which a press on the one line shown would move.
       onMouseDown={(event) => {
-        if (event.target !== event.currentTarget) return;
+        const input = inputRef.current!;
+        if (event.target !== event.currentTarget && !(compact && document.activeElement === input)) return;
         event.preventDefault();
-        inputRef.current!.focus();
+        input.focus();
+        onOpen();
       }}
+      onFocus={onOpen}
     >
       <ComposerField.Provider value={inputRef}>
         {lay({
@@ -108,20 +114,28 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, more,
           ),
           attachments,
           input: (
-            <textarea
-              id={id}
-              ref={inputRef}
-              className={styles.input}
-              rows={rows}
-              {...NO_AUTOFILL}
-              value={value}
-              readOnly={readOnly}
-              enterKeyHint={enterKeyHint}
-              placeholder={placeholder}
-              onChange={(event) => onChange(event.target.value)}
-              onKeyDown={onKeyDown}
-              onPaste={onFiles && ((event) => pasteFiles(event.nativeEvent, onFiles))}
-            />
+            <div className={styles.field}>
+              <textarea
+                id={id}
+                ref={inputRef}
+                className={styles.input}
+                rows={rows}
+                {...NO_AUTOFILL}
+                value={value}
+                readOnly={readOnly}
+                enterKeyHint={enterKeyHint}
+                placeholder={placeholder}
+                onChange={(event) => {
+                  onChange(event.target.value);
+                  onOpen();
+                }}
+                onKeyDown={onKeyDown}
+                onPaste={onFiles && ((event) => pasteFiles(event.nativeEvent, onFiles))}
+              />
+              <span className={styles.peek} aria-hidden>
+                {value}
+              </span>
+            </div>
           ),
           tools,
           more,

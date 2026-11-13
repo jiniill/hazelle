@@ -32,6 +32,7 @@ import { translateTool } from './ChatTranslate';
 import { toolIsOn } from './toolMenu';
 import { promptEditor } from './panels';
 import type { OpenChat } from './useChat';
+import type { ComposerFold } from './useComposerFold';
 
 // Shown by what leavingCauses finds: the first cause's words, every cause's sentence.
 const LEAVING: Record<GapCause, { words: string; why: string }> = {
@@ -68,8 +69,8 @@ const attachedItem = (each: DraftAttachment): Attached =>
     ? { kind: 'picture', key: each.name, url: each.url, label: '이미지', state: each.state.kind }
     : { kind: 'file', key: each.value.name, label: each.value.title, detail: `${count(each.value.text.split('\n').length)}줄`, state: 'saved' };
 
-// folded: ChatScreen's, which the frame's footer measures by, so the two never disagree.
-export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean }) {
+// fold: ChatScreen's, which the frame's footer measures by, so the two never disagree.
+export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFold }) {
   const { draft, attachments, messages, last, answerable, busy, problem, skippable, stuck, translate, sendLanguage, modelMenu, shelf, route, actions } = chat;
   // A model whose own 모델 설정 is gone picks another on its page; a missing default is set in 설정 › 모델.
   const profilePage = problem?.kind === 'profile-missing' && problem.own && !('kind' in route) ? { kind: 'model' as const, ...refOf(route.connection.id, route.model) } : { kind: 'models' as const };
@@ -179,7 +180,8 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
       <ChatAsk id={chat.id} onTyped={() => input.current?.focus()} />
       <Composer
         inputRef={input}
-        compact={folded}
+        compact={fold.folded}
+        onOpen={fold.open}
         value={draft.text}
         readOnly={chat.toolInput !== null}
         enterKeyHint={enterSends ? 'send' : 'enter'}
