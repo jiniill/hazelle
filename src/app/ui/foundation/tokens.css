@@ -290,6 +290,8 @@
   --color-folder-bg-hover: color-mix(in srgb, var(--color-text-muted) 26%, var(--color-surface));
   --color-folder-slot: color-mix(in srgb, var(--color-text-muted) 8%, var(--color-surface));
   --color-focus: var(--color-accent);
+  /* The rail's ground: the sidebar's, but in a theme that states one. */
+  --color-rail: var(--color-sidebar);
   /* 속마음 mixes dialogue and narration as the mode and the 대사 pick leave them. */
   --color-prose-thought: color-mix(in oklab, var(--color-prose-dialogue) 55%, var(--color-prose-narration));
   --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);

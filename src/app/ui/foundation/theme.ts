@@ -1,15 +1,17 @@
-import { createContext } from 'react';
+import { createContext, useContext } from 'react';
 import { MODE, type Mode } from './scheme';
 
 // One mode's colours as a theme states them, each #rrggbb. page, text, accent and dialogue stand where a 색 pick's
 // 기본 does, and tokens.css derives the rest from them by the picks' rules; a rung stated here goes over the rule's.
-// line is a divider's and a control's outline both. muted and faint left out stay the mode's.
+// line is a divider's and a control's outline both. rail left out is the sidebar's; muted and faint left out stay the
+// mode's.
 export type Tone = {
   page: string;
   text: string;
   accent: string;
   dialogue: string;
   sidebar?: string;
+  rail?: string;
   surface?: string;
   hover?: string;
   raised?: string;
@@ -18,13 +20,27 @@ export type Tone = {
   faint?: string;
 };
 
+// A region's shape by name: which arrangement the kit component that draws the region takes. The first of each is
+// 기본's. A component maps its region's names to classes with a Record over them, so a name it does not draw does
+// not build.
+export type Shapes = {
+  header: 'plain' | 'topic';
+  rail: 'icons' | 'servers';
+  list: 'cards' | 'channels';
+  composer: 'box' | 'bar';
+  message: 'prose' | 'row';
+};
+
 // tones left out is the app's own colours, as tokens.css has them.
-export type Theme = { id: string; name: string; tones?: Record<Mode, Tone> };
+export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; shapes: Shapes };
 
-export const BASE: Theme = { id: 'base', name: '기본' };
+export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose' } };
 
-// The theme the app wears, for an element drawn in a scheme of its own inside it.
+// The theme the app wears: an element drawn in a scheme of its own inside it names it, and a component reads its
+// region's shape from it. A theme's card provides its own.
 export const ThemeContext = createContext(BASE);
+
+export const useShape = <Region extends keyof Shapes>(region: Region): Shapes[Region] => useContext(ThemeContext).shapes[region];
 
 const OWN: Partial<Record<keyof Tone, string[]>> = {
   page: ['--color-pick-bg-base'],
@@ -37,6 +53,7 @@ const OWN: Partial<Record<keyof Tone, string[]>> = {
 // The rungs a 배경 pick derives again from its own colour, so a theme's hold only while that pick is base.
 const GROUND: Partial<Record<keyof Tone, string[]>> = {
   sidebar: ['--color-sidebar'],
+  rail: ['--color-rail'],
   surface: ['--color-surface'],
   hover: ['--color-surface-hover'],
   raised: ['--color-surface-raised'],

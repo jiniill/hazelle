@@ -2,25 +2,29 @@ import type { LucideIcon } from 'lucide-react';
 import { Fragment, useState, type ReactNode } from 'react';
 import { hideTool, setToolOrder } from '../../runtime/library/characters';
 import { useSettings, useStore } from '../session';
-import { CheckList, MenuBack, MoreMenu, Section, useMenuClose } from '../ui';
-import { inToolOrder } from './toolMenu';
+import { IN_USE } from '../common/words';
+import { CheckList, ComposerTools, MenuBack, NavRow, Section, useMenuClose, useToolRow } from '../ui';
+import { behindMenu, inToolOrder, standing } from './toolMenu';
 
-// live: it acts in this chat. Hiding moves the button only, so ⋯ and its line carry a dot while a hidden one is live; 기능 is what stops a feature.
-// running: its button is the only stop, so it stands on the row while hidden.
+// live: it acts in this chat. Hiding moves the button only, so the menu and its line mark a hidden one that is live; 기능 is what stops a feature.
+// running: its button is the only stop, so it stands by the field while hidden.
 // open: what the panel shows for a hidden one, or what it does at once.
 export type RowTool = { key: string; label: string; icon: LucideIcon; live: boolean; running?: boolean; node: ReactNode; open: ReactNode | (() => void); openLabel?: string };
 
+// row: the composer stands its tools in a row.
 function useRowTools(declared: RowTool[]) {
   const { hiddenTools, toolOrder } = useSettings();
-  return { tools: inToolOrder(declared, toolOrder ?? []), hidden: new Set(hiddenTools) };
+  const row = useToolRow();
+  const tools = inToolOrder(declared, toolOrder ?? []);
+  return { tools, row, hidden: behindMenu(tools, hiddenTools ?? [], row) };
 }
 
-// after: buttons of the row that are not tools to hide.
+// after: buttons by the field that are not tools to hide, which stand with or without a row.
 export function ChatToolRow({ tools: declared, after }: { tools: RowTool[]; after: ReactNode }) {
   const { tools, hidden } = useRowTools(declared);
   return (
     <>
-      {tools.filter((tool) => !hidden.has(tool.key) || tool.running).map((tool) => <Fragment key={tool.key}>{tool.node}</Fragment>)}
+      {standing(tools, hidden).map((tool) => <Fragment key={tool.key}>{tool.node}</Fragment>)}
       {after}
     </>
   );
@@ -30,11 +34,12 @@ export function ChatToolRow({ tools: declared, after }: { tools: RowTool[]; afte
 // foot: what the list shows under its tools.
 export function ChatToolMore({ tools: declared, foot }: { tools: RowTool[]; foot: ReactNode }) {
   const store = useStore();
-  const { tools, hidden } = useRowTools(declared);
+  const { tools, row, hidden } = useRowTools(declared);
   return (
-    <MoreMenu of="입력창 도구" kind="dialog" size="form" place="above-end" dot={tools.some((tool) => hidden.has(tool.key) && tool.live)}>
+    <ComposerTools dot={tools.some((tool) => hidden.has(tool.key) && tool.live)}>
       <Panel
         tools={tools}
+        row={row}
         hidden={hidden}
         foot={foot}
         onHide={(key, hide) => void hideTool(store, key, hide)}
@@ -44,11 +49,11 @@ export function ChatToolMore({ tools: declared, foot }: { tools: RowTool[]; foot
           void setToolOrder(store, keys);
         }}
       />
-    </MoreMenu>
+    </ComposerTools>
   );
 }
 
-function Panel({ tools, hidden, foot, onHide, onMove }: { tools: RowTool[]; hidden: Set<string>; foot: ReactNode; onHide: (key: string, hide: boolean) => void; onMove: (from: number, to: number) => void }) {
+function Panel({ tools, row, hidden, foot, onHide, onMove }: { tools: RowTool[]; row: boolean; hidden: ReadonlySet<string>; foot: ReactNode; onHide: (key: string, hide: boolean) => void; onMove: (from: number, to: number) => void }) {
   const close = useMenuClose();
   const [viewing, setViewing] = useState<string | null>(null);
   const view = tools.find((tool) => tool.key === viewing);
@@ -65,6 +70,14 @@ function Panel({ tools, hidden, foot, onHide, onMove }: { tools: RowTool[]; hidd
     close();
     open();
   };
+  if (!row) {
+    return (
+      <>
+        {tools.map((tool) => <NavRow key={tool.key} icon={tool.icon} label={tool.label} note={tool.live ? IN_USE : undefined} onClick={openOf(tool)} />)}
+        {foot}
+      </>
+    );
+  }
   return (
     <Section level={3} title="입력창에 둘 도구">
       <CheckList

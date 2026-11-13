@@ -77,7 +77,7 @@
   gap: var(--space-8);
   padding: var(--space-16) 0 var(--space-12);
   border-right: var(--border-thin) solid var(--color-divider);
-  background: var(--color-sidebar);
+  background: var(--color-rail);
 }
 
 .mark {
@@ -145,7 +145,28 @@
   right: var(--space-4);
   width: calc(var(--dot) + 2 * var(--border-thick));
   height: calc(var(--dot) + 2 * var(--border-thick));
-  border: var(--border-thick) solid var(--color-sidebar);
+  border: var(--border-thick) solid var(--color-rail);
   border-radius: var(--radius-full);
   background: var(--color-accent);
+}
+
+/* servers (a rail shape): round faces, and the open one squared off with a bar at the rail's edge in the ring's place. */
+.servers .faceButton > :first-child {
+  border-radius: var(--radius-full);
+}
+
+.servers .current > :first-child {
+  outline: none;
+  border-radius: var(--radius-lg);
+}
+
+.servers .current::before {
+  content: '';
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: calc((var(--control-lg) - var(--rail-width)) / 2);
+  width: var(--space-4);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  background: var(--color-text);
 }

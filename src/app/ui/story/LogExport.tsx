@@ -53,7 +53,7 @@ function Drawn({ title, description, css, reading, rows, onDrawn }: Props) {
           {rows.map(({ key, name, mine, stories }) => {
             return (
               <section key={key} className={styles.message}>
-                <Speech name={name} mine={mine}>
+                <Speech name={name} mine={mine} box={mine}>
                   {stories.map((html, index) => <Story key={index} html={html} css={css} whole />)}
                 </Speech>
               </section>

@@ -19,7 +19,7 @@ import { useImport } from '../../common/importing';
 import { ago } from '../../common/time';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
 import { useWritingChats } from '../../session';
-import { Button, Divider, Empty, FoldButton, FolderRow, IconButton, ItemRow, Menu, MenuItem, NavRow, Row, SideTitle, Sidebar, TreeRow, useMenuHandle, Viewport } from '../../ui';
+import { Button, ChatRow, Divider, Empty, FoldButton, FolderRow, IconButton, Menu, MenuItem, NavRow, Row, SideTitle, Sidebar, TreeRow, useMenuHandle, Viewport } from '../../ui';
 import { navigate, useRoute } from '../router';
 import { HOME } from '../routes';
 import { LayerButtons } from './LayerButtons';
@@ -104,12 +104,14 @@ export function ShelfChats({ page, shelf }: Props) {
     const where = words ? whereIs(index, chatFolderOf(item)) : undefined;
     const hung = flat ? 0 : (grouped.copies.get(item.id)?.length ?? 0);
     return (
-      <ItemRow
+      <ChatRow
         key={item.id}
         title={item.title}
         time={item.at === null ? '' : ago(item.at)}
         typing={writing.has(item.id)}
-        preview={where ? `${where} · ${preview}` : preview}
+        preview={preview}
+        sought={Boolean(words)}
+        place={where}
         current={item.id === openChat}
         selected={moving.picked ? moving.picked.has(item.id) : undefined}
         control={hung > 0 && <FoldButton open={unfolded.has(item.id)} onToggle={() => toggleGroup(item.id)} noun="분기·사본" count={hung} brief />}

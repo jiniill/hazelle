@@ -230,6 +230,48 @@
   }
 }
 
+.row .time {
+  opacity: 1;
+}
+
+.row .main {
+  gap: var(--space-4);
+}
+
+/* The foot of a row whose tools float keeps no line for them. */
+.loose {
+  min-height: 0;
+}
+
+/* Given only where a pointer hovers (StoryMessage), so :hover here is never a touch screen's last tap. Half below the
+   foot, over the gap to the next row, so little of the words is covered; stuck over the composer, it stands on the
+   foot's line as the tools of prose do. */
+.float {
+  composes: glass from '../foundation/surface.module.css';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  transform: translateY(50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-respond);
+}
+
+.message:hover .float,
+.message:focus-within .float,
+.float:has([aria-expanded='true']) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@supports (container-type: scroll-state) {
+  @container scroll-state(stuck: bottom) {
+    .float {
+      transform: none;
+    }
+  }
+}
+
 .waiting {
   display: flex;
   align-items: center;

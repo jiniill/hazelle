@@ -1,3 +1,9 @@
 .typing {
   color: var(--color-accent);
 }
+
+/* A compact row's title wraps; a chat's name in the channels shape keeps to its line. */
+.line {
+  composes: ellipsis from '../foundation/a11y.module.css';
+  display: block;
+}

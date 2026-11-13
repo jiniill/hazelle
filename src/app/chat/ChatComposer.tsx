@@ -189,9 +189,9 @@ export function ChatComposer({ chat, folded }: { chat: OpenChat; folded: boolean
         attachments={<Attachments items={attachments.draft.map(attachedItem)} onRemove={actions.detach} />}
         onFiles={actions.attach}
         tools={<ChatToolRow tools={rowTools} after={<ChatPinnedToggles toggles={chat.toggles} onFlip={actions.flip} />} />}
+        more={<ChatToolMore tools={rowTools} foot={<PinnedTogglesLayout toggles={chat.toggles} />} />}
         actions={
           <>
-            <ChatToolMore tools={rowTools} foot={<PinnedTogglesLayout toggles={chat.toggles} />} />
             {!busy && chat.sendNotes.leaving && chat.id !== null && chat.sendNotes.sending && 'turn' in chat.sendNotes.sending ? <LeavingNote count={chat.sendNotes.leaving} causes={leavingCauses(chat.sendNotes.sending.prompt, chat.id, remembering)} onOpen={chat.features.memory ? () => actions.memory(null) : undefined} /> : null}
             {!busy && unseen > 0 && <SendNote label={`이미지 ${unseen}개`} title="전송되지 않는 이미지" warning={{ words: '보내지 않음', why: `${attachments.sees === null ? UNKNOWN_PICTURES : NO_PICTURES} ${UNSEEN}` }} />}
             {indexing && <SendNote label={`기억 검색 준비 ${indexing.done}/${indexing.total}`} title="장기 기억 검색 준비" onClick={() => actions.memory(null)} />}

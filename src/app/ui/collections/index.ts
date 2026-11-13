@@ -17,7 +17,7 @@ export { HourMap, type HourCell } from './HourMap';
 export { HowTo } from './HowTo';
 export { quartileLevels, type Level } from './levels';
 export { LinkScope } from './link';
-export { ItemRow } from './ItemRow';
+export { ChatRow, ItemRow } from './ItemRow';
 export { Lineage, LineageList, type LineageHead } from './Lineage';
 export type { Sprout, Stem } from './stems';
 export { List, ListItem } from './List';

@@ -1,12 +1,12 @@
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { createContext, useContext, useEffect, useRef, type MouseEvent, type ReactNode, type RefObject } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { hasFinePointer } from '../foundation/media';
 import { Menu, useMenuHandle, type MenuHandle } from './Menu';
 
 // Use whole-item actions here. dot marks pending attention; handle supports a second opener;
-// place chooses the roomier story side for message tools.
-export function MoreMenu({ of, dot, handle, kind, size, place = 'below-end', children }: { of: string; dot?: boolean; handle?: MenuHandle; kind?: 'menu' | 'dialog'; size?: 'md' | 'form'; place?: 'below-end' | 'end' | 'above-end'; children: ReactNode }) {
+// place chooses the roomier story side for message tools. sign: its button's, ⋯ unless the menu leads what it is of.
+export function MoreMenu({ of, dot, handle, kind, size, sign = MoreHorizontal, place = 'below-end', children }: { of: string; dot?: boolean; handle?: MenuHandle; kind?: 'menu' | 'dialog'; size?: 'md' | 'form'; sign?: LucideIcon; place?: 'below-end' | 'end' | 'above-end' | 'above-start'; children: ReactNode }) {
   const own = useMenuHandle();
   const menu = handle ?? own;
   const slot = useContext(MenuSlot);
@@ -19,7 +19,7 @@ export function MoreMenu({ of, dot, handle, kind, size, place = 'below-end', chi
   }, [slot, menu]);
   const label = `${of} 메뉴`;
   return (
-    <Menu kind={kind} size={size} place={place} label={label} handle={menu} trigger={(opener) => <IconButton icon={MoreHorizontal} label={label} size="sm" dot={dot} {...opener} />}>
+    <Menu kind={kind} size={size} place={place} label={label} handle={menu} trigger={(opener) => <IconButton icon={sign} label={label} size="sm" dot={dot} {...opener} />}>
       {children}
     </Menu>
   );

@@ -376,6 +376,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       badges={badges}
       after={after}
       tools={tools}
+      stay={editing !== null || Boolean(wide && switcher) || (!opening && Boolean(remark))}
       id={message.id}
       found={found}
       marked={marked}

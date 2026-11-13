@@ -357,9 +357,59 @@
   margin-inline-start: calc(var(--avatar-sm) + var(--space-8));
 }
 
+/* topic (a header shape): one line, the chat's name first. */
+.topic {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.topic .who {
+  padding-block: var(--space-2);
+}
+
+.hash {
+  flex: none;
+  display: flex;
+  color: var(--color-text-faint);
+}
+
+.split {
+  composes: tools from '../foundation/Divider.module.css';
+}
+
+.after {
+  composes: detail from '../foundation/type.module.css';
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--radius-sm);
+  font-weight: var(--weight-regular);
+}
+
 @media (max-width: 959px) {
   .header {
     padding: 0 var(--space-8) 0 var(--space-4);
+  }
+
+  .topic {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .topic .who {
+    padding-block: var(--space-2) 0;
+  }
+
+  .split {
+    display: none;
+  }
+
+  .topic .after {
+    padding-block: 0 var(--space-2);
   }
 
   .content {

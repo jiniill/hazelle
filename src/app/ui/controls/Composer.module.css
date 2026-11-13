@@ -74,7 +74,7 @@
   transition-timing-function: step-start;
 }
 
-.compact:not(:focus-within) .bar {
+.compact:not(:focus-within) .foot {
   visibility: hidden;
   opacity: 0;
   transition:
@@ -82,7 +82,7 @@
     visibility var(--motion-respond);
 }
 
-.bar {
+.foot {
   transition:
     opacity var(--motion-respond) var(--duration-fast),
     visibility var(--motion-respond) var(--duration-fast);
@@ -116,4 +116,41 @@
   .actions > * {
     position: relative;
   }
+}
+
+.bar {
+  padding: var(--space-4) var(--space-8);
+}
+
+.line {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+
+/* The menu's button and the text's first line both sit at the send button's middle. */
+.more {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: var(--control-compact);
+}
+
+.bar .input {
+  flex: 1 1 0;
+  min-width: 0;
+  height: clamp(var(--control-compact), var(--autosize), var(--composer-max-height));
+  padding-block: calc((var(--control-compact) - var(--one-line)) / 2);
+}
+
+.bar.compact:not(:focus-within) .input {
+  height: var(--control-compact);
+}
+
+.bar .toolRow {
+  padding-block: var(--space-4);
+}
+
+.bar .toolRow:empty {
+  display: none;
 }

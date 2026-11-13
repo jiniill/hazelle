@@ -2,7 +2,9 @@ import { PanelLeft, X } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { Brand } from '../foundation/Brand';
+import { classNames } from '../foundation/classNames';
 import { Divider } from '../foundation/Divider';
+import { useShape, type Shapes } from '../foundation/theme';
 import styles from './Sidebar.module.css';
 
 type Props = {
@@ -58,19 +60,41 @@ type RailProps = {
   children: ReactNode;
 };
 
+const RAIL_SHAPE: Record<Shapes['rail'], string | undefined> = { icons: undefined, servers: styles.servers };
+
 // Keep fold last so actions never move; split bottom places into two groups (user, 2026-10-20).
 // Brand mark is not home navigation: use the framed action button (user, 2026-10-12).
+// icons: the actions over the faces. servers: the faces lead, round, the open one marked at the rail's edge, and the
+// actions stand under them, over the places.
 export function Rail({ fold, actions, places, children }: RailProps) {
+  const shape = useShape('rail');
+  const acts = (
+    <>
+      {actions}
+      {fold && <IconButton icon={PanelLeft} label={fold.open ? '사이드바 접기' : '사이드바 펼치기'} framed onClick={fold.onToggle} />}
+    </>
+  );
+  const faces = <div className={styles.railList}>{children}</div>;
   return (
-    <aside className={styles.rail} aria-label="캐릭터 바로가기">
+    <aside className={classNames(styles.rail, RAIL_SHAPE[shape])} aria-label="캐릭터 바로가기">
       <div className={styles.mark}>
         <Brand variant="mark" />
       </div>
-      {actions}
-      {fold && <IconButton icon={PanelLeft} label={fold.open ? '사이드바 접기' : '사이드바 펼치기'} framed onClick={fold.onToggle} />}
-      <Divider variant="rail" />
-      <div className={styles.railList}>{children}</div>
-      <Divider variant="rail" />
+      {shape === 'servers' ? (
+        <>
+          <Divider variant="rail" />
+          {faces}
+          <Divider variant="rail" />
+          {acts}
+        </>
+      ) : (
+        <>
+          {acts}
+          <Divider variant="rail" />
+          {faces}
+          <Divider variant="rail" />
+        </>
+      )}
       <div className={styles.railPlaces}>{places}</div>
     </aside>
   );

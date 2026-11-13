@@ -3,8 +3,10 @@ import { createContext, useContext, useMemo, useRef, useState, type MouseEvent, 
 import { Button } from '../controls/Button';
 import { Facts, type FactItem } from '../collections/Facts';
 import { IconButton } from '../controls/IconButton';
+import { classNames } from '../foundation/classNames';
 import { Icon } from '../foundation/Icon';
 import { Text } from '../foundation/Text';
+import { useShape, type Shapes } from '../foundation/theme';
 import { QuoteShapeContext } from '../foundation/quotes';
 import { useHover } from '../foundation/media';
 import { Menu, MenuItem } from '../overlays/Menu';
@@ -37,6 +39,9 @@ type Props = {
   children: ReactNode;
   after?: ReactNode;
   tools?: ReactNode;
+  // The tools keep their line whatever the shape: they hold what must be seen or answered now, such as an edit's
+  // buttons or the versions to switch between.
+  stay?: boolean;
   // Its key among the rows, which TimePinContext names.
   id: string;
   // Marked for a moment from this timestamp, again with each look; 0 for none. The collection brings the first marked
@@ -48,8 +53,22 @@ type Props = {
   writing?: boolean;
 };
 
-export function StoryMessage({ avatar, name, time, mine, mark, badges = [], children, after, tools, id, found = 0, marked = false, writing = false }: Props) {
+// prose: the words on the ground under a name, mine in a box, the time shown when asked for, the tools on a line of
+// their own under the words. row: mine drawn as any other, the time always by the name, and no line kept for the tools:
+// under a pointer they float over the row's foot, half below it, and show while the row is pointed at or holds the
+// focus. With no pointer to hover, or told to stay, a row's tools keep prose's line.
+const SHAPES: Record<Shapes['message'], { root?: string; boxesMine: boolean; floats: boolean }> = {
+  prose: { boxesMine: true, floats: false },
+  row: { root: styles.row, boxesMine: false, floats: true },
+};
+
+export const toolsFloat = (shape: Shapes['message'], hover: boolean, stay: boolean) => SHAPES[shape].floats && hover && !stay;
+
+export function StoryMessage({ avatar, name, time, mine, mark, badges = [], children, after, tools, stay = false, id, found = 0, marked = false, writing = false }: Props) {
   const hover = useHover();
+  const drawn = useShape('message');
+  const shape = SHAPES[drawn];
+  const floating = toolsFloat(drawn, hover, stay);
   const timePin = useContext(TimePinContext);
   const pinned = timePin?.pinned === id;
   const foundDelay = useMemo(() => `-${Math.max(0, Date.now() - found)}ms`, [found]);
@@ -61,7 +80,7 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
     timePin.pin(id);
   };
   return (
-    <article className={`${styles.message} ${pinned ? styles.pinned : ''} ${revisited.current ? styles.revisited : ''} ${writing ? styles.writing : ''}`} onClick={tap} {...{ [MESSAGE]: '' }}>
+    <article className={classNames(styles.message, shape.root, pinned && styles.pinned, revisited.current && styles.revisited, writing && styles.writing)} onClick={tap} {...{ [MESSAGE]: '' }}>
       {found !== 0 && <span key={found} className={styles.found} style={{ animationDelay: foundDelay }} aria-hidden />}
       {marked && <span className={styles.marked} aria-hidden />}
       <div className={styles.side}>
@@ -78,6 +97,7 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
         <Speech
           name={name}
           mine={mine}
+          box={mine && shape.boxesMine}
           head={
             <>
               {mark && <span className={styles.mark}>{mark}</span>}
@@ -90,17 +110,18 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
           {children}
         </Speech>
         {/* The foot keeps its height while the tools are absent, as while a reply streams, so nothing moves when they come. */}
-        <div className={styles.foot}>
+        <div className={classNames(styles.foot, floating && styles.loose)}>
           <div className={styles.after}>{after}</div>
-          {tools && <div className={styles.tools}>{tools}</div>}
+          {tools && <div className={classNames(styles.tools, floating && styles.float)}>{tools}</div>}
         </div>
       </div>
     </article>
   );
 }
 
-// Who speaks and what they said, as the chat and its exported log (LogExport) both draw it; head: what stands by the name.
-export function Speech({ name, mine, head, children }: { name: string; mine: boolean; head?: ReactNode; children: ReactNode }) {
+// Who speaks and what they said, as the chat and its exported log (LogExport) both draw it; head: what stands by the
+// name. box: the words are set in a box of their own size.
+export function Speech({ name, mine, box, head, children }: { name: string; mine: boolean; box: boolean; head?: ReactNode; children: ReactNode }) {
   return (
     <>
       <div className={styles.head}>
@@ -108,7 +129,7 @@ export function Speech({ name, mine, head, children }: { name: string; mine: boo
         {head}
       </div>
       {/* The bubble is already a box: its dialogue keeps to color, whatever 대사 모양 says. */}
-      {mine ? <div className={styles.bubble}><FitsWordsContext value><QuoteShapeContext value="color">{children}</QuoteShapeContext></FitsWordsContext></div> : children}
+      {box ? <div className={styles.bubble}><FitsWordsContext value><QuoteShapeContext value="color">{children}</QuoteShapeContext></FitsWordsContext></div> : children}
     </>
   );
 }

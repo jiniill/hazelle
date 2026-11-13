@@ -1,9 +1,10 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref, type RefObject } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { faceStyle, FONTS, type FontId } from '../foundation/fonts';
+import { Icon } from '../foundation/Icon';
 import { schemeAttributes, type Scheme } from '../foundation/scheme';
-import { ThemeContext } from '../foundation/theme';
+import { ThemeContext, useShape, type Shapes } from '../foundation/theme';
 import { usePanelsBeside, useShortWide } from '../foundation/media';
 import { useReadingRail } from '../story/readingRail';
 import styles from './ChatFrame.module.css';
@@ -249,25 +250,71 @@ type TitleProps = {
   onRename?: () => void;
 };
 
-export function ChatTitle({ name, description, face, expanded, onClick, onRename }: TitleProps) {
-  const who = (
-    <>
-      {face}
-      <span className={styles.name}>{name}</span>
-      {onClick && <ChevronRight className={styles.chevron} size={16} aria-hidden />}
-    </>
+const titlePart = (className: string, content: ReactNode, onPress: (() => void) | undefined, expanded?: boolean) =>
+  onPress ? (
+    <button type="button" className={`${className} ${styles.press}`} aria-expanded={expanded} onClick={onPress}>
+      {content}
+    </button>
+  ) : (
+    <span className={className}>{content}</span>
   );
+
+const chevronOf = (onClick: TitleProps['onClick']) => onClick && <ChevronRight className={styles.chevron} size={16} aria-hidden />;
+
+function plainTitle({ name, description, face, expanded, onClick, onRename }: TitleProps) {
   const under = face ? `${styles.sub} ${styles.beside}` : styles.sub;
   return (
     <h1 className={styles.heading}>
-      {onClick ? (
-        <button type="button" className={`${styles.who} ${styles.press}`} aria-expanded={expanded} onClick={onClick}>
-          {who}
-        </button>
-      ) : (
-        <span className={styles.who}>{who}</span>
+      {titlePart(
+        styles.who,
+        <>
+          {face}
+          <span className={styles.name}>{name}</span>
+          {chevronOf(onClick)}
+        </>,
+        onClick,
+        expanded,
       )}
-      {description && (onRename ? <button type="button" className={`${under} ${styles.press}`} onClick={onRename}>{description}</button> : <span className={under}>{description}</span>)}
+      {description && titlePart(under, description, onRename)}
     </h1>
   );
+}
+
+// plain: the face and the character's name over the chat's. topic: the chat's name leads after a #, and the
+// character's follows a line, quiet, with no face; on a phone, with no room for both on a line, it goes under. A
+// title with no chat's name has nothing to lead with, and is plain.
+const TITLES: Record<Shapes['header'], (props: TitleProps) => ReactNode> = {
+  plain: plainTitle,
+  topic: (props) => {
+    const { name, description, expanded, onClick, onRename } = props;
+    if (!description) return plainTitle(props);
+    return (
+      <h1 className={`${styles.heading} ${styles.topic}`}>
+        {titlePart(
+          styles.who,
+          <>
+            <span className={styles.hash}>
+              <Icon icon={Hash} size="sm" />
+            </span>
+            <span className={styles.name}>{description}</span>
+          </>,
+          onRename,
+        )}
+        <span className={styles.split} />
+        {titlePart(
+          styles.after,
+          <>
+            <span className={styles.name}>{name}</span>
+            {chevronOf(onClick)}
+          </>,
+          onClick,
+          expanded,
+        )}
+      </h1>
+    );
+  },
+};
+
+export function ChatTitle(props: TitleProps) {
+  return TITLES[useShape('header')](props);
 }

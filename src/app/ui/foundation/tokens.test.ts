@@ -87,7 +87,7 @@ it('names a theme on a scheme element only when it has colours of its own, and g
   expect(themeRules(BASE)).toBe('');
   expect(schemeAttributes(WORN, THEMES.channel)['data-theme']).toBe('channel');
   const tones = { dark: { page: '#101010', text: '#f0f0f0', accent: '#8080ff', dialogue: '#ffffff', sidebar: '#0a0a0a', line: '#303030', muted: '#b0b0b0' }, light: { page: '#ffffff', text: '#101010', accent: '#3030c0', dialogue: '#000000' } };
-  expect(themeRules({ id: 'night', name: '밤', tones })).toBe(
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones })).toBe(
     "[data-theme='night'][data-mode='dark']{--color-pick-bg-base:#101010;--color-pick-ink-base:#f0f0f0;--color-pick-accent-base:#8080ff;--color-pick-dialogue-base:#ffffff;--color-text-muted:#b0b0b0;}" +
       "[data-theme='night'][data-mode='dark'][data-bg='base']{--color-sidebar:#0a0a0a;--color-divider:#303030;--color-border:#303030;}" +
       "[data-theme='night'][data-mode='light']{--color-pick-bg-base:#ffffff;--color-pick-ink-base:#101010;--color-pick-accent-base:#3030c0;--color-pick-dialogue-base:#000000;}",

@@ -55,3 +55,10 @@ export function inToolOrder<T extends { key: string }>(tools: readonly T[], orde
   const rank = (tool: T) => (order.includes(tool.key) ? order.indexOf(tool.key) : order.length);
   return [...tools].sort((a, b) => rank(a) - rank(b));
 }
+
+// The tools behind the composer's menu: the account's hidden ones where its tools stand in a row, every one where
+// there is no row. The account's choice is kept as it is under a composer with no row, neither shown nor written.
+export const behindMenu = (tools: readonly { key: string }[], hiddenTools: readonly string[], row: boolean): ReadonlySet<string> => new Set(row ? hiddenTools : tools.map((tool) => tool.key));
+
+// What stands by the field: a tool not behind the menu, and one behind it while it runs, its button being the only stop.
+export const standing = <T extends { key: string; running?: boolean }>(tools: readonly T[], behind: ReadonlySet<string>) => tools.filter((tool) => !behind.has(tool.key) || tool.running);
