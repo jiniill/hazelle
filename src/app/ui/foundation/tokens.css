@@ -154,7 +154,6 @@
   --color-rank-up: var(--palette-coral-400);
   --color-rank-down: var(--palette-sky-400);
   --color-rank-new: var(--palette-mint-400);
-  --color-focus: var(--color-accent);
   --color-scrim: var(--palette-scrim);
   --color-you-bg: var(--palette-mint-800);
   --color-you-text: var(--palette-mint-100);
@@ -167,9 +166,7 @@
   --color-prose-narration: var(--palette-sand-200);
   --color-prose-dialogue: var(--palette-gold-200);
   --color-prose-action: var(--palette-lilac-350);
-  /* 속마음 mixes the root's dialogue and narration as its mode and 대사 pick leave them; the quote box tints with the
-     mark's own color, taken where it is used. */
-  --color-prose-thought: color-mix(in oklab, var(--color-prose-dialogue) 55%, var(--color-prose-narration));
+  /* The quote box tints with the mark's own color, taken where it is used. */
   --color-prose-quote-bg: color-mix(in oklab, currentColor 9%, transparent);
 
   --color-kind-text: var(--palette-lilac-450);
@@ -222,9 +219,7 @@
   --shadow-popover: 0 12px 32px var(--palette-shadow);
   --color-scroll-cue: var(--palette-shadow);
   --shadow-card: 0 6px 18px var(--palette-shadow);
-  --shadow-cheer: 0 0 0 8px var(--color-accent-bg), 0 14px 36px var(--color-accent-border);
 
-  --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
   /* A segmented choice's trough: a shade over whatever ground it stands on. */
   --color-trough: color-mix(in oklab, var(--palette-black) 26%, transparent);
   /* 시스템 설정 연동's demo draws both modes at once, whichever the app is in. */
@@ -294,6 +289,11 @@
   --color-folder-bg: color-mix(in srgb, var(--color-text-muted) 18%, var(--color-surface));
   --color-folder-bg-hover: color-mix(in srgb, var(--color-text-muted) 26%, var(--color-surface));
   --color-folder-slot: color-mix(in srgb, var(--color-text-muted) 8%, var(--color-surface));
+  --color-focus: var(--color-accent);
+  /* 속마음 mixes dialogue and narration as the mode and the 대사 pick leave them. */
+  --color-prose-thought: color-mix(in oklab, var(--color-prose-dialogue) 55%, var(--color-prose-narration));
+  --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
+  --shadow-cheer: 0 0 0 8px var(--color-accent-bg), 0 14px 36px var(--color-accent-border);
 }
 
 :root {
