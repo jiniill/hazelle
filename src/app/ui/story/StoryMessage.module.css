@@ -76,7 +76,7 @@
 }
 
 .name {
-  color: var(--color-accent);
+  color: var(--color-name);
 }
 
 .me {

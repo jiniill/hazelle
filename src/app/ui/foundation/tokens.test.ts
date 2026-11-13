@@ -82,6 +82,25 @@ it.each(themed)('keeps the %s theme in %s to the faint text rule, on the rungs i
   expect(Math.abs(lightness(faint) - lightness(muted))).toBeGreaterThanOrEqual(4);
 });
 
+it.each(themed)('keeps a name the %s theme states in %s readable on its page', (_, __, tone) => {
+  if (tone.name) expect(contrast(tone.name, tone.page)).toBeGreaterThanOrEqual(4.5);
+});
+
+it('writes a finish as token rules for the element that names the theme, and a stated name for the base 배경 and 강조 only', () => {
+  const tones = { dark: { page: '#101010', text: '#f0f0f0', accent: '#8080ff', dialogue: '#ffffff', name: '#ffcc00' }, light: { page: '#ffffff', text: '#101010', accent: '#3030c0', dialogue: '#000000' } };
+  const plain = themeRules({ ...BASE, id: 'night', name: '밤', tones });
+  expect(plain).toContain("[data-theme='night'][data-mode='dark'][data-bg='base'][data-accent='base']{--color-name:#ffcc00;}");
+  expect(plain).not.toContain('[data-mode]{');
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round' } })).toBe(
+    plain +
+      "[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);--face-radius-sm:var(--radius-full);--face-radius-md:var(--radius-full);--face-radius-rail:var(--radius-full);--face-radius-lg:var(--radius-full);}",
+  );
+});
+
+it('gives a finish of its own only to a theme with tones, the only kind an element names', () => {
+  for (const theme of Object.values<Theme>(THEMES)) expect(Boolean(theme.tones) || JSON.stringify(theme.finish) === JSON.stringify(BASE.finish)).toBe(true);
+});
+
 it('names a theme on a scheme element only when it has colours of its own, and gives its rungs only to the base page', () => {
   expect(schemeAttributes(WORN, BASE)['data-theme']).toBeUndefined();
   expect(themeRules(BASE)).toBe('');

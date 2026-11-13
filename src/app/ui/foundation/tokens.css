@@ -292,6 +292,14 @@
   --color-focus: var(--color-accent);
   /* The rail's ground: the sidebar's, but in a theme that states one. */
   --color-rail: var(--color-sidebar);
+  --color-name: var(--color-accent);
+  /* A theme's finish (theme.ts) turns these on the element that names it, so they are declared again on every element
+     with a scheme of its own, which may name none. */
+  --story-gap: var(--space-24);
+  --face-radius-sm: var(--radius-sm);
+  --face-radius-md: var(--radius-md);
+  --face-radius-rail: var(--radius-md);
+  --face-radius-lg: var(--radius-lg);
   /* 속마음 mixes dialogue and narration as the mode and the 대사 pick leave them. */
   --color-prose-thought: color-mix(in oklab, var(--color-prose-dialogue) 55%, var(--color-prose-narration));
   --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
@@ -381,6 +389,7 @@
   --space-4: 4px;
   --space-8: 8px;
   --space-12: 12px;
+  --story-gap-close: var(--space-12);
   --space-16: 16px;
   --space-24: 24px;
   --space-32: 32px;
