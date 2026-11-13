@@ -25,6 +25,11 @@ export function ControlsScreen({ back }: { back: Back | null }) {
             control={<Switch label="입력창 접기" checked={display.foldComposer} onChange={(foldComposer) => changeDisplay({ foldComposer })} />}
           />
           <SettingRow
+            label="메시지 도구 따라오기"
+            help={{ text: '긴 메시지를 읽는 동안 메시지 도구를 입력창 위에 붙여 둬요.' }}
+            control={<Switch label="메시지 도구 따라오기" checked={display.toolsFollow} onChange={(toolsFollow) => changeDisplay({ toolsFollow })} />}
+          />
+          <SettingRow
             label="빠른 스크롤 막대"
             help={{ text: '오른쪽 막대를 끌면 메시지마다 멈춰요.', demo: { name: 'scrubber' } }}
             control={<Switch label="빠른 스크롤 막대" checked={display.scrubber} onChange={(scrubber) => changeDisplay({ scrubber })} />}
