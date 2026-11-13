@@ -1,10 +1,12 @@
 import { createContext, useContext } from 'react';
+import type { FontId } from './fonts';
 import { MODE, type Mode } from './scheme';
 
 // One mode's colours as a theme states them, each #rrggbb. page, text, accent and dialogue stand where a 색 pick's
 // 기본 does, and tokens.css derives the rest from them by the picks' rules; a rung stated here goes over the rule's.
 // line is a divider's and a control's outline both. rail left out is the sidebar's; muted and faint left out stay the
-// mode's; name, a speaker's in the story, left out is the accent, and is stated for the theme's own page.
+// mode's; name, a speaker's in the story, left out is the accent, and is stated for the theme's own page. pointed is
+// the ground under a message the pointer is on, none when left out.
 export type Tone = {
   page: string;
   text: string;
@@ -19,6 +21,7 @@ export type Tone = {
   muted?: string;
   faint?: string;
   name?: string;
+  pointed?: string;
 };
 
 // A region's shape by name: which arrangement the kit component that draws the region takes. The first of each is
@@ -32,8 +35,14 @@ export type Shapes = {
   message: 'prose' | 'row';
 };
 
-// What a theme sets of the things no reader's setting owns (글꼴, 글자 크기, 줄 간격 and 읽기 폭 are 읽기's), each by name:
-// the values are tokens.css's. The first of each is 기본's and writes no rule. Only a theme with tones is named on its
+export type Spacing = 'narrow' | 'normal' | 'wide' | 'widest';
+
+// 글꼴, 글자 크기, 줄 간격 and 읽기 폭: what 읽기 sets. A theme that states them starts with its own, and the reader's
+// changes while wearing it are kept as that theme's, apart from the ones made in a theme that states none.
+export type Letters = { font: FontId; size: number; leading: Spacing; width: Spacing };
+
+// What a theme sets of the things no reader's setting owns, each by name: the values are tokens.css's. The first of
+// each is 기본's and writes no rule. Only a theme with tones is named on its
 // element (tokens.css mixes a named theme's rungs from its page), so a finish rides on tones: a theme in 기본's
 // colours with a finish of its own needs a name that mixes nothing first.
 export type Finish = {
@@ -41,12 +50,14 @@ export type Finish = {
   rows: 'open' | 'close';
   // The corners of a face Avatar draws.
   faces: 'soft' | 'round';
+  // The scale 줄 간격's four steps stand on.
+  lines: 'open' | 'close';
 };
 
 // tones left out is the app's own colours, as tokens.css has them.
-export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; shapes: Shapes; finish: Finish };
+export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; shapes: Shapes; finish: Finish; letters?: Letters };
 
-export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose' }, finish: { rows: 'open', faces: 'soft' } };
+export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose' }, finish: { rows: 'open', faces: 'soft', lines: 'open' } };
 
 // The theme the app wears: an element drawn in a scheme of its own inside it names it, and a component reads its
 // region's shape from it. A theme's card provides its own.
@@ -70,6 +81,7 @@ const GROUND: Partial<Record<keyof Tone, string[]>> = {
   hover: ['--color-surface-hover'],
   raised: ['--color-surface-raised'],
   line: ['--color-divider', '--color-border'],
+  pointed: ['--color-row-pointed'],
 };
 // A 강조 pick colours the names too, as it does in 기본, and a name is stated against the theme's page, so a theme's
 // holds only while both picks are base.
@@ -78,6 +90,7 @@ const VOICE: Partial<Record<keyof Tone, string[]>> = { name: ['--color-name'] };
 const FINISH: { [Part in keyof Finish]: Record<Finish[Part], string> } = {
   rows: { open: '', close: '--story-gap:var(--story-gap-close);' },
   faces: { soft: '', round: ['sm', 'md', 'rail', 'lg'].map((size) => `--face-radius-${size}:var(--radius-full);`).join('') },
+  lines: { open: '', close: ['narrow', 'normal', 'wide', 'widest'].map((step) => `--prose-leading-${step}:var(--prose-leading-close-${step});`).join('') },
 };
 
 function rule(selector: string, tone: Tone, tokens: Partial<Record<keyof Tone, string[]>>) {

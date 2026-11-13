@@ -234,6 +234,12 @@
   opacity: 1;
 }
 
+@media (hover: hover) {
+  .row:hover {
+    background: var(--color-row-pointed);
+  }
+}
+
 .row .main {
   gap: var(--space-4);
 }

@@ -1,12 +1,15 @@
 import { PICTURE_PERCENT, type Backdrop } from '../../model/library';
 import type { SavedLook } from '../../model/settings';
-import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, QUOTE_SHAPE, MODE, SHADE, THEMES, type Mode, type QuoteShape, type Reading, type Scheme, type StageSide, type ThemeId } from '../ui';
+import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, QUOTE_SHAPE, MODE, SHADE, THEMES, type Letters, type Mode, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme, type ThemeId } from '../ui';
 import type { Cue } from '../../runtime/chat/cues';
 import { CHIMES, type Chime } from './sounds';
 import { readPersisted } from './usePersisted';
 
 // Per device, never in the synced settings, since a phone and a desktop screen differ (user, 2026-09-29).
 export const READING = 'risu-alpha:reading';
+// Where a theme that states letters keeps the reader's changes to them: one record per theme, beside READING, which
+// stays the record of the themes that state none (user, 2026-11-13).
+export const lettersKey = (theme: Theme) => `${READING}:${theme.id}`;
 export const DISPLAY = 'risu-alpha:display';
 
 export const SIZE = { min: 14, max: 21 };
@@ -30,16 +33,19 @@ function fields<K extends string>(stored: string): Partial<Record<K, unknown>> {
 
 // Stored on the device, so another version or a hand may have written it: a field that is not one of the choices
 // starts from fallback's.
-export function parseReading(stored: string, fallback: Reading): Reading {
-  const read = fields<keyof Reading>(stored);
+export function parseLetters(stored: string, fallback: Letters): Letters {
+  const read = fields<keyof Letters>(stored);
   return {
     font: known(FONTS, read.font, fallback.font),
     size: sized(read.size) ?? fallback.size,
     leading: known(SPACING, read.leading, fallback.leading),
     width: known(SPACING, read.width, fallback.width),
-    reply: known(REPLY, read.reply, fallback.reply),
   };
 }
+
+export const parseReading = (stored: string, fallback: Reading): Reading => ({ ...parseLetters(stored, fallback), reply: known(REPLY, fields<keyof Reading>(stored).reply, fallback.reply) });
+
+export const lettersOf = ({ font, size, leading, width }: Letters): Letters => ({ font, size, leading, width });
 
 // Reading chrome (quotes/pictureSide/inlineIllustrations/portrait) never comes from presets.
 // Portrait stage is reserved for chats without illustration (user, 2026-10-16); width cap preserves old default (2026-10-17).
@@ -114,14 +120,14 @@ export function applyStoredScheme() {
 
 // A preset sets the look only, never 응답이 올 때 or the reading chrome. No preset id is stored: the current preset is
 // the one whose every value matches.
-export type Look = Pick<Reading, 'font' | 'size' | 'leading' | 'width'> & Scheme;
+export type Look = Letters & Scheme;
 // id: what a 시스템 따라 바꾸기 slot and a character's look hold, its saved id.
 export type Preset = { id: string; name: string; look: Look };
 
 // The words a look is shown by, on a preset's card and a theme's.
 export const LOOK_SAMPLE = '그녀는 찻잔을 내려놓고 고개를 들었다.';
 
-export const lookOf = ({ font, size, leading, width }: Reading, { mode, bg, ink, accent, dialogue }: Display): Look => ({ mode, bg, ink, accent, dialogue, font, size, leading, width });
+export const lookOf = (letters: Letters, { mode, bg, ink, accent, dialogue }: Display): Look => ({ mode, bg, ink, accent, dialogue, ...lettersOf(letters) });
 
 const LOOK: Record<keyof Look, true> = { mode: true, bg: true, ink: true, accent: true, dialogue: true, font: true, size: true, leading: true, width: true };
 const LOOK_KEYS = Object.keys(LOOK) as (keyof Look)[];

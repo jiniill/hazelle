@@ -22,9 +22,10 @@ and only this folder styles elements.**
   a region differently, the component gives it the one fact it needs under a name of its own (`useToolRow`: the
   composer stands its tools in a row), never the shape.
   A theme's finish (`Finish`) is named picks over what no reader's setting owns (the gap between messages, the
-  corners of a face `Avatar` draws): `themeRules` writes a pick as token rules for the element that names the theme,
-  and the values are `tokens.css`'s. A new pick is a token a module already reads, its second value there, and a name
-  in `FINISH`. 글꼴, 글자 크기, 줄 간격 and 읽기 폭 are 읽기's and no theme writes them.
+  corners of a face `Avatar` draws, the scale 줄 간격's steps stand on): `themeRules` writes a pick as token rules for
+  the element that names the theme, and the values are `tokens.css`'s. A new pick is a token a module already reads,
+  its second value there, and a name in `FINISH`. A theme may also state `letters` (글꼴, 글자 크기, 줄 간격, 읽기 폭):
+  what it is first read in, as choices 읽기 already offers. The app keeps the reader's changes to them per theme.
 - `foundation/global.css` loads tokens and sets element defaults. `main.tsx` imports it once, then loads
   `foundation/fonts.css` after paint; slow or unavailable webfonts leave the system faces usable. A tool page
   (`sandbox.html`) has no application bootstrap, so `foundation/sandbox.css` imports both directly.

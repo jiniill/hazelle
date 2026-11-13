@@ -293,6 +293,7 @@
   /* The rail's ground: the sidebar's, but in a theme that states one. */
   --color-rail: var(--color-sidebar);
   --color-name: var(--color-accent);
+  --color-row-pointed: transparent;
   /* A theme's finish (theme.ts) turns these on the element that names it, so they are declared again on every element
      with a scheme of its own, which may name none. */
   --story-gap: var(--space-24);
@@ -300,6 +301,10 @@
   --face-radius-md: var(--radius-md);
   --face-radius-rail: var(--radius-md);
   --face-radius-lg: var(--radius-lg);
+  --prose-leading-narrow: 1.7;
+  --prose-leading-normal: 1.9;
+  --prose-leading-wide: 2.1;
+  --prose-leading-widest: 2.3;
   /* 속마음 mixes dialogue and narration as the mode and the 대사 pick leave them. */
   --color-prose-thought: color-mix(in oklab, var(--color-prose-dialogue) 55%, var(--color-prose-narration));
   --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
@@ -360,10 +365,10 @@
   --prose-font: var(--font-serif);
   --prose-size: 17px;
   --prose-leading: var(--prose-leading-normal);
-  --prose-leading-narrow: 1.7;
-  --prose-leading-normal: 1.9;
-  --prose-leading-wide: 2.1;
-  --prose-leading-widest: 2.3;
+  --prose-leading-close-narrow: 1.3;
+  --prose-leading-close-normal: 1.45;
+  --prose-leading-close-wide: 1.6;
+  --prose-leading-close-widest: 1.75;
   /* 고딕 reads larger than 명조 at one size, so the story sets it a pixel smaller and a little tighter. */
   --prose-sans-shrink: 1px;
   --prose-sans-tighten: 0.1;

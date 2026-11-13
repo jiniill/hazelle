@@ -1,19 +1,17 @@
 import { ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref, type RefObject } from 'react';
 import { IconButton } from '../controls/IconButton';
-import { faceStyle, FONTS, type FontId } from '../foundation/fonts';
+import { faceStyle, FONTS } from '../foundation/fonts';
 import { Icon } from '../foundation/Icon';
 import { schemeAttributes, type Scheme } from '../foundation/scheme';
-import { ThemeContext, useShape, type Shapes } from '../foundation/theme';
+import { ThemeContext, useShape, type Letters, type Shapes, type Spacing } from '../foundation/theme';
 import { usePanelsBeside, useShortWide } from '../foundation/media';
 import { useReadingRail } from '../story/readingRail';
 import styles from './ChatFrame.module.css';
 import { tokenPx } from '../foundation/tokenPx';
 
-type Spacing = 'narrow' | 'normal' | 'wide' | 'widest';
-
 // How the story reads (읽기 설정). tokens.css holds each look; reply is how the view meets a reply (useFollow).
-export type Reading = { font: FontId; size: number; leading: Spacing; width: Spacing; reply: 'follow' | 'stay' };
+export type Reading = Letters & { reply: 'follow' | 'stay' };
 
 // The look before any reading setting. The size is read from tokens.css, not repeated here, since Story keeps it
 // outside the chat.
