@@ -21,8 +21,13 @@ export function ControlsScreen({ back }: { back: Back | null }) {
           />
           <SettingRow
             label="입력창 접기"
-            help={{ text: '위로 스크롤하면 한 줄로 접고, 맨 아래로 내려가면 다시 펼쳐요.', demo: { name: 'foldComposer', ways: { on: display.foldComposer } } }}
+            help={{ text: '위로 스크롤하면 쓰던 글도 한 줄로 접고, 누르거나 맨 아래로 내려가면 다시 펼쳐요.', demo: { name: 'foldComposer', ways: { on: display.foldComposer } } }}
             control={<Switch label="입력창 접기" checked={display.foldComposer} onChange={(foldComposer) => changeDisplay({ foldComposer })} />}
+          />
+          <SettingRow
+            label="메시지 도구 따라오기"
+            help={{ text: '긴 메시지를 읽는 동안 메시지 도구를 입력창 위에 붙여 둬요.' }}
+            control={<Switch label="메시지 도구 따라오기" checked={display.toolsFollow} onChange={(toolsFollow) => changeDisplay({ toolsFollow })} />}
           />
           <SettingRow
             label="빠른 스크롤 막대"

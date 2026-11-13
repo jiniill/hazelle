@@ -25,6 +25,9 @@ export function useTimePin() {
   return { value, clear: () => setPinned(null) };
 }
 
+// 메시지 도구 따라오기: whether a long message's tools stick above the composer while it is read.
+export const ToolsFollowContext = createContext(true);
+
 type Props = {
   avatar: ReactNode;
   name: string;
@@ -52,6 +55,7 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
   const hover = useHover();
   const timePin = useContext(TimePinContext);
   const pinned = timePin?.pinned === id;
+  const follows = useContext(ToolsFollowContext);
   const foundDelay = useMemo(() => `-${Math.max(0, Date.now() - found)}ms`, [found]);
   const memory = useContext(RowMemoryContext);
   const revisited = useRef(memory?.visited ?? false);
@@ -90,7 +94,7 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
           {children}
         </Speech>
         {/* The foot keeps its height while the tools are absent, as while a reply streams, so nothing moves when they come. */}
-        <div className={styles.foot}>
+        <div className={`${styles.foot} ${follows ? styles.follows : ''}`}>
           <div className={styles.after}>{after}</div>
           {tools && <div className={styles.tools}>{tools}</div>}
         </div>
