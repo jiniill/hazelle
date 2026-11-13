@@ -1,6 +1,7 @@
 import type { Rates } from '../../connectors/models-dev';
 import { inUnit } from '../../connectors/pricing';
 import type { Cost } from '../../connectors/types';
+import { UNKNOWN } from './words';
 
 // Below a dollar, significant digits instead, so a reply that cost $0.0042 does not read as $0.00.
 export function usd(amount: number): string {
@@ -21,4 +22,4 @@ export const money = (unit: 'usd' | 'credit', amount: number) => (unit === 'usd'
 
 // A list rate, per million tokens, in its own unit.
 export const perMillion = (rate: number, unit: Cost['unit']) => money(unit, inUnit(rate, unit));
-export const priceLine = (price: Pick<Rates, 'input' | 'output'> | null, unit: Cost['unit']) => (price ? `입력 ${perMillion(price.input, unit)} · 출력 ${perMillion(price.output, unit)}` : '가격 없음');
+export const priceLine = (price: Pick<Rates, 'input' | 'output'> | null, unit: Cost['unit']) => (price ? `입력 ${perMillion(price.input, unit)} · 출력 ${perMillion(price.output, unit)}` : `가격 ${UNKNOWN}`);

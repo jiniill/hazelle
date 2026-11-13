@@ -78,8 +78,8 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       stickyAside
     >
       <Section
-        title="프리셋"
-        note={unread > 0 ? `읽지 못한 프리셋 ${unread}개` : undefined}
+        title={PRESET.noun}
+        note={unread > 0 ? `읽지 못한 ${PRESET.noun} ${unread}개` : undefined}
         action={
           !current && (
             <Button variant="ghost" onClick={() => setNaming({ preset: null })}>
@@ -88,10 +88,10 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           )
         }
       >
-        <Swatches label="프리셋" sample={LOOK_SAMPLE} items={presets.map((preset, index) => ({ ...swatch(preset), menu: menu(preset, index) }))} onMove={move} />
+        <Swatches label={PRESET.noun} sample={LOOK_SAMPLE} items={presets.map((preset, index) => ({ ...swatch(preset), menu: menu(preset, index) }))} onMove={move} />
         {STARTER_PRESETS.some(({ id }) => !saved.some((look) => look.id === id)) && (
           <Button variant="link" onClick={() => toast.settled(addStarters(store), SAVE_FAILED)}>
-            기본 프리셋 다시 넣기
+            {`기본 ${PRESET.noun} ${ACTS.restore.label}`}
           </Button>
         )}
         <Disclosure label={detailLabel(display.follow ? 1 : 0)} open={detailOpen} onOpen={setDetailOpen}>

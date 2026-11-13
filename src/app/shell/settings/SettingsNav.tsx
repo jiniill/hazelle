@@ -1,4 +1,4 @@
-import { FileText, FlaskConical, Hand, Layers, LayoutTemplate, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
+import { FileText, FlaskConical, Hand, Layers, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { litIn } from '../../common/search';
 import { useSearch } from '../../common/useSearch';
@@ -49,7 +49,6 @@ const HAVE: Group = {
   ],
 };
 const APP: Place[] = [
-  { page: 'theme', label: PAGES.theme, icon: LayoutTemplate, route: { kind: 'theme' } },
   { page: 'display', label: PAGES.display, icon: SunMoon, route: { kind: 'display' } },
   { page: 'controls', label: PAGES.controls, icon: Hand, route: { kind: 'controls' } },
   { page: 'sounds', label: PAGES.sounds, icon: Volume2, route: { kind: 'sounds' } },
