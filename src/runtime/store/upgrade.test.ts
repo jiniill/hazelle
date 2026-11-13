@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { blankCard } from '../../engine/import/card';
 import { PLAIN_LUA } from '../../engine/import/types';
 import { memoryId } from '../../model/memory';
+import { STARTER_PRESETS } from '../../model/settings';
 import { startChat } from '../chat/chat-log';
 import { testServer } from '../testing';
 import { setAccountTaskModel } from '../models/assignment';
@@ -98,6 +99,15 @@ describe('upgradeValue', () => {
 
   it("gives a card from before it kept Risu's additionalText an empty one", () => {
     expect(upgradeValue('character', { folder: null, card: { regex: [], triggers: [] } })).toEqual({ folder: null, card: { regex: [], triggers: [], additionalText: '' } });
+  });
+
+  it("puts an account's own looks after the starter presets, joins what an older app still writes beside them, and leaves a current one alone", () => {
+    const mine = { id: 'mine', name: '내 것', look: { theme: 'dark' } };
+    expect(upgradeValue('settings', { models: {}, looks: [mine] })).toEqual({ models: {}, presets: [...STARTER_PRESETS, mine] });
+    const kept = [STARTER_PRESETS[1]!, mine];
+    expect(upgradeValue('settings', { models: {}, presets: kept, looks: [mine, { ...mine, id: 'later' }] })).toEqual({ models: {}, presets: [...kept, { ...mine, id: 'later' }] });
+    expect(upgradeValue('settings', { models: {}, presets: [] })).toBeNull();
+    expect(upgradeValue('settings', { models: {} })).toBeNull();
   });
 
   it('leaves a current character or module alone, so the write-back touches only old ones', () => {

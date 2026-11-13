@@ -1,5 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
-import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, wornLook, parseReading, parseStoredDisplay, presetOf, presets, READING, savedPresets, systemMode, type Display, type Follow, type Preset } from './common/reading';
+import { presetsOf } from '../model/settings';
+import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, wornLook, parseReading, parseStoredDisplay, presetOf, READING, savedPresets, systemMode, type Display, type Follow, type Look, type Preset } from './common/reading';
 import { usePersisted } from './common/usePersisted';
 import { useSettings } from './session';
 import { applyScheme, QuoteShapeContext, readingDefault, useCoarsePointer, useDarkScheme, VeilContext, type Reading, type Theme } from './ui';
@@ -9,8 +10,9 @@ type DisplayControl = {
   // enterSends is what Enter does now, resolved here; only enterSendsChoice is stored.
   display: Display & { enterSends: boolean };
   presets: Preset[];
-  own: { presets: Preset[]; unread: number };
-  // A preset by id, built-in or own; undefined for none or one that is gone.
+  // Saved presets this version cannot read, left out of presets.
+  unread: number;
+  // A preset by id; undefined for none or one that is gone.
   find: (id: string | undefined) => Preset | undefined;
   changeReading: (change: Partial<Reading>) => void;
   changeDisplay: (change: Partial<Display>) => void;
@@ -27,43 +29,43 @@ const DisplayContext = createContext<DisplayControl | null>(null);
 // and 설정 › 디스플레이 both edit through this.
 export function DisplayProvider({ children }: { children: ReactNode }) {
   const [initial] = useState(readingDefault);
-  const [list] = useState(() => presets(initial));
   const [reading, setReading] = usePersisted(READING, (stored) => parseReading(stored, initial), initial);
   const [display, setDisplay] = usePersisted(DISPLAY, parseStoredDisplay, DISPLAY_DEFAULT);
-  const { looks } = useSettings();
-  const own = useMemo(() => savedPresets(looks), [looks]);
+  const saved = presetsOf(useSettings());
+  const { presets, unread } = useMemo(() => savedPresets(saved), [saved]);
   const mode = systemMode(useDarkScheme());
   const coarsePointer = useCoarsePointer();
   const { theme, bg, ink, accent, dialogue, follow } = display;
   useLayoutEffect(() => applyScheme({ theme, bg, ink, accent, dialogue }), [theme, bg, ink, accent, dialogue]);
   const veil = useMemo(() => (display.hidePictures ? { revealed: new Set<string>() } : null), [display.hidePictures]);
-  const find = (id: string | undefined) => (id === undefined ? undefined : [...list, ...own.presets].find((preset) => preset.id === id));
-  const wear = ({ look: { theme, bg, ink, accent, dialogue, ...look } }: Preset, follow: Follow | null) => {
+  const find = (id: string | undefined) => (id === undefined ? undefined : presets.find((preset) => preset.id === id));
+  const wear = ({ theme, bg, ink, accent, dialogue, ...look }: Look, follow: Follow | null) => {
     setReading({ ...reading, ...look });
     setDisplay({ ...display, theme, bg, ink, accent, dialogue, follow });
   };
   const due = follow && follow.applied !== mode ? find(follow[mode]) : undefined;
   useLayoutEffect(() => {
-    if (due && follow) wear(due, { ...follow, applied: mode });
+    if (due && follow) wear(due.look, { ...follow, applied: mode });
   }, [due]);
-  const pick = (preset: Preset) => wear(preset, follow && { ...follow, [mode]: preset.id, applied: mode });
+  const pick = (preset: Preset) => wear(preset.look, follow && { ...follow, [mode]: preset.id, applied: mode });
+  // Called only while there is a preset: its switch is off without one.
   function followSystem(on: boolean) {
     if (!on) return setDisplay({ ...display, follow: null });
-    const current = presetOf([...list, ...own.presets], reading, display);
-    const slot = (theme: Theme) => (current?.look.theme === theme ? current : list.find(({ look }) => look.theme === theme)!).id;
+    const current = presetOf(presets, reading, display);
+    const slot = (theme: Theme) => ((current?.look.theme === theme ? current : presets.find(({ look }) => look.theme === theme)) ?? current ?? presets[0]!).id;
     const next = { light: slot('light'), dark: slot('dark'), applied: mode };
-    wear(find(next[mode])!, next);
+    wear(find(next[mode])!.look, next);
   }
   const control: DisplayControl = {
     reading,
     display: { ...display, enterSends: effectiveEnterSends(display.enterSendsChoice, coarsePointer) },
-    presets: list,
-    own,
+    presets,
+    unread,
     find,
     changeReading: (change) => setReading({ ...reading, ...change }),
     changeDisplay: (change) => setDisplay({ ...display, ...change }),
     pick,
-    reset: () => pick(list[0]!),
+    reset: () => wear(lookOf(initial, DISPLAY_DEFAULT), follow),
     followSystem,
     assign: (slot, preset) => {
       if (!follow) return;

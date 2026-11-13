@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { STARTER_PRESETS } from '../../model/settings';
 import type { Reading } from '../ui';
-import { backdropShades, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, parseDisplay, parseReading, presetOf, presets, savedPresets, wornLook } from './reading';
+import { backdropShades, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, parseDisplay, parseReading, presetOf, savedPresets, wornLook } from './reading';
 
 const FALLBACK: Reading = { font: 'serif', size: 17, leading: 'normal', width: 'normal', reply: 'follow' };
+const STARTERS = savedPresets(STARTER_PRESETS).presets;
 
 describe('stored reading settings', () => {
   it('keeps the known choices and starts each unknown or out-of-range field from the fallback', () => {
@@ -51,7 +53,7 @@ describe('Enter로 보내기', () => {
 
 describe('the current preset', () => {
   it('is the one whose every look value matches, whatever 응답이 올 때 and the chrome switches say', () => {
-    const list = presets(FALLBACK);
+    const list = STARTERS;
     expect(presetOf(list, { ...FALLBACK, reply: 'stay' }, { ...DISPLAY_DEFAULT, hideHeader: false })?.name).toBe('기본');
     expect(presetOf(list, FALLBACK, { ...DISPLAY_DEFAULT, theme: 'light' })?.name).toBe('밝은 서재');
     expect(presetOf(list, { ...FALLBACK, size: 16 }, DISPLAY_DEFAULT)).toBeUndefined();
@@ -60,6 +62,11 @@ describe('the current preset', () => {
 });
 
 describe('saved presets', () => {
+  it('reads every starter, 기본 being the default look that 기본값으로 되돌리기 wears', () => {
+    expect(STARTERS).toHaveLength(STARTER_PRESETS.length);
+    expect(STARTERS[0]!.look).toEqual(lookOf(FALLBACK, DISPLAY_DEFAULT));
+  });
+
   it('reads each saved look, and counts one with a value this version does not know instead of showing it', () => {
     const look = lookOf(FALLBACK, { ...DISPLAY_DEFAULT, bg: 'green', accent: 'violet' });
     const read = savedPresets([
@@ -88,7 +95,7 @@ describe("a character's background shades", () => {
 
 describe("a character's look", () => {
   it("wears its preset's colors and 글꼴 over the device's size and spacing, and the device's own for none", () => {
-    const study = presets(FALLBACK).find(({ id }) => id === 'study')!;
+    const study = STARTERS.find(({ id }) => id === 'study')!;
     const device: Reading = { ...FALLBACK, font: 'sans', size: 20, width: 'wide' };
     expect(wornLook(study, device, 'dark')).toEqual({ scheme: study.look, theme: 'light', reading: { ...device, font: 'serif' } });
     expect(wornLook(undefined, device, 'dark')).toEqual({ scheme: undefined, theme: 'dark', reading: device });

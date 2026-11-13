@@ -1,10 +1,10 @@
 import { moved } from '../../model/fields';
-import type { SavedLook } from '../../model/settings';
+import { presetsOf, STARTER_PRESETS, type SavedLook } from '../../model/settings';
 import { changeSettings } from '../account-settings';
 import type { ApiResult } from '../api';
 import type { ObjectStore } from '../store/store';
 
-const changeLooks = (store: ObjectStore, change: (looks: SavedLook[]) => SavedLook[]) => changeSettings(store, (current) => ({ ...current, looks: change(current.looks ?? []) }));
+const changeLooks = (store: ObjectStore, change: (looks: SavedLook[]) => SavedLook[]) => changeSettings(store, (current) => ({ ...current, presets: change(presetsOf(current)) }));
 
 export const addLook = (store: ObjectStore, look: SavedLook) => changeLooks(store, (looks) => [...looks, look]);
 
@@ -23,6 +23,9 @@ export async function removeLook(store: ObjectStore, id: string): Promise<ApiRes
   if (!done.ok) return done;
   return removed ? { ok: true, data: removed } : { ok: false, error: 'gone' };
 }
+
+// The starter presets removed from the list, back at its end.
+export const addStarters = (store: ObjectStore) => changeLooks(store, (looks) => [...looks, ...STARTER_PRESETS.filter(({ id }) => !looks.some((look) => look.id === id))]);
 
 export const restoreLook = (store: ObjectStore, { look, at }: RemovedLook) => changeLooks(store, (looks) => looks.toSpliced(at, 0, look));
 

@@ -1,10 +1,12 @@
 import { expect, it } from 'vitest';
 import { accountSettings } from '../account-settings';
-import { addLook, editLook, moveLook, removeLook, restoreLook } from './looks';
+import { STARTER_PRESETS } from '../../model/settings';
+import { addLook, addStarters, editLook, moveLook, removeLook, restoreLook } from './looks';
 import { testServer } from '../testing';
 
 const server = testServer();
-const ids = (store: Parameters<typeof accountSettings>[0]) => accountSettings(store).looks?.map(({ id }) => id);
+const STARTERS = STARTER_PRESETS.map(({ id }) => id);
+const ids = (store: Parameters<typeof accountSettings>[0]) => accountSettings(store).presets?.map(({ id }) => id).filter((id) => !STARTERS.includes(id));
 
 it('puts a removed look back where it was, moves one to where the target was either way, and edits only its own', async () => {
   const { store } = await server.account();
@@ -22,5 +24,14 @@ it('puts a removed look back where it was, moves one to where the target was eit
   expect(ids(store)).toEqual(['c', 'b', 'x', 'a']);
 
   await editLook(store, 'x', { name: '밤' });
-  expect(accountSettings(store).looks?.map(({ name }) => name)).toEqual(['c', 'b', '밤', 'a']);
+  expect(accountSettings(store).presets?.slice(STARTERS.length).map(({ name }) => name)).toEqual(['c', 'b', '밤', 'a']);
+});
+
+it('starts from the starter presets, which are removed like any other and put back at the end, the rest kept', async () => {
+  const { store } = await server.account();
+  await addLook(store, { id: 'mine', name: '내 것', look: { theme: 'dark' } });
+  expect(accountSettings(store).presets?.map(({ id }) => id)).toEqual([...STARTERS, 'mine']);
+  for (const id of ['default', 'sea']) await removeLook(store, id);
+  await addStarters(store);
+  expect(accountSettings(store).presets?.map(({ id }) => id)).toEqual([...STARTERS.filter((id) => id !== 'default' && id !== 'sea'), 'mine', 'default', 'sea']);
 });

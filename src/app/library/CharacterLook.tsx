@@ -21,7 +21,7 @@ const DEVICE = '';
 export function CharacterLook({ id, character }: { id: string; character: Character }) {
   const store = useStore();
   const toast = useToast();
-  const { presets, own, find } = useDisplay();
+  const { presets, find } = useDisplay();
   const gone = character.look !== undefined && find(character.look) === undefined;
   const background = mainOf(useChildren('asset', id).flatMap((asset) => (asset.value.use === 'background' ? [{ ...asset, name: asset.value.name }] : [])));
   const url = useAssetUrl([background]);
@@ -39,7 +39,7 @@ export function CharacterLook({ id, character }: { id: string; character: Charac
           <ChoiceGroup
             layout="fit"
             label={PAGES.display}
-            options={[{ value: DEVICE, label: follows('기기 설정') }, ...presetChoices([...presets, ...own.presets])]}
+            options={[{ value: DEVICE, label: follows('기기 설정') }, ...presetChoices(presets)]}
             value={gone ? null : (character.look ?? DEVICE)}
             empty={PRESET_GONE_CHIP}
             onChange={(look) => save(setLook(store, id, look === DEVICE ? null : look))}

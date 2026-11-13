@@ -34,9 +34,8 @@ export function ReadingDialog({ character, onClose }: { character: Held; onClose
 function PresetRow({ character }: { character: Held }) {
   const store = useStore();
   const toast = useToast();
-  const { reading, display, presets, own, pick, find } = useDisplay();
-  const all = [...presets, ...own.presets];
-  const current = presetOf(all, reading, display);
+  const { reading, display, presets, pick, find } = useDisplay();
+  const current = presetOf(presets, reading, display);
   const held = character?.look !== undefined;
   const gone = held && find(character!.look) === undefined;
   const hold = (look: string | null) => toast.settled(setLook(store, character!.id, look), SAVE_FAILED);
@@ -49,10 +48,10 @@ function PresetRow({ character }: { character: Held }) {
           <ChoiceGroup
             layout="fit"
             label={PRESET.noun}
-            options={presetChoices(all)}
+            options={presetChoices(presets)}
             value={held ? (gone ? null : character!.look!) : (current?.id ?? null)}
             empty={gone ? PRESET_GONE_CHIP : '직접 설정'}
-            onChange={(id) => (held ? hold(id) : pick(all.find((preset) => preset.id === id)!))}
+            onChange={(id) => (held ? hold(id) : pick(presets.find((preset) => preset.id === id)!))}
           />
         }
       />

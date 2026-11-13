@@ -1,6 +1,6 @@
 import { PICTURE_PERCENT, type Backdrop } from '../../model/library';
 import type { SavedLook } from '../../model/settings';
-import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, isDarkScheme, QUOTE_SHAPE, readingDefault, SHADE, THEME, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme } from '../ui';
+import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, QUOTE_SHAPE, SHADE, THEME, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme } from '../ui';
 import type { Cue } from '../../runtime/chat/cues';
 import { CHIMES, type Chime } from './sounds';
 import { readPersisted } from './usePersisted';
@@ -101,35 +101,15 @@ export const parseStoredDisplay = (stored: string) => parseDisplay(stored, DISPL
 
 export const systemMode = (dark: boolean): Theme => (dark ? 'dark' : 'light');
 
-// Apply before first paint without display.tsx's session dependency. A system-mode switch to an account-owned
-// preset while closed keeps the last look until that account loads.
-export function applyStoredScheme() {
-  const { follow, ...display } = readPersisted(DISPLAY, parseStoredDisplay, DISPLAY_DEFAULT);
-  const mode = systemMode(isDarkScheme());
-  const due = follow && follow.applied !== mode ? presets(readingDefault()).find(({ id }) => id === follow[mode]) : undefined;
-  applyScheme(due?.look ?? display);
-}
+// Apply before first paint without display.tsx's session dependency. Every preset is the account's, so a system-mode
+// switch while closed keeps the last look until that account loads.
+export const applyStoredScheme = () => applyScheme(readPersisted(DISPLAY, parseStoredDisplay, DISPLAY_DEFAULT));
 
 // A preset sets the look only, never 응답이 올 때 or the reading chrome. No preset id is stored: the current preset is
 // the one whose every value matches.
 export type Look = Pick<Reading, 'font' | 'size' | 'leading' | 'width'> & Scheme;
-// id: what a 시스템 따라 바꾸기 slot holds; a built-in's is fixed here, an own one's is its saved id.
+// id: what a 시스템 따라 바꾸기 slot and a character's look hold, its saved id.
 export type Preset = { id: string; name: string; look: Look };
-
-// 기본 takes initial's values, so --prose-size in tokens.css stays the one default size. It stays first: 기본값으로
-// 되돌리기 picks the first.
-export function presets(initial: Reading): Preset[] {
-  const { font, size, leading, width } = initial;
-  return [
-    { id: 'default', name: '기본', look: { theme: 'dark', ...PLAIN, font, size, leading, width } },
-    { id: 'study', name: '밝은 서재', look: { theme: 'light', ...PLAIN, font: 'serif', size, leading, width } },
-    { id: 'gothic', name: '고딕 간결', look: { theme: 'dark', ...PLAIN, font: 'sans', size: 15, leading: 'narrow', width: 'narrow' } },
-    { id: 'wide', name: '넓게 읽기', look: { theme: 'dark', ...PLAIN, font: 'serif', size: 18, leading: 'wide', width: 'wide' } },
-    { id: 'sea', name: '밤바다', look: { theme: 'dark', ...PLAIN, bg: 'blue', accent: 'blue', dialogue: 'sky', font, size, leading, width } },
-    { id: 'forest', name: '숲', look: { theme: 'dark', ...PLAIN, bg: 'green', accent: 'green', dialogue: 'lime', font, size, leading, width } },
-    { id: 'sepia', name: '세피아', look: { theme: 'light', ...PLAIN, bg: 'brown', font: 'serif', size, leading: 'wide', width } },
-  ];
-}
 
 export const lookOf = ({ font, size, leading, width }: Reading, { theme, bg, ink, accent, dialogue }: Display): Look => ({ theme, bg, ink, accent, dialogue, font, size, leading, width });
 

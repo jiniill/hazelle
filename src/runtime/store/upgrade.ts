@@ -8,6 +8,7 @@ import { PLAIN_LUA } from '../../engine/import/types';
 import { without } from '../../model/fields';
 import { KINDS, isValue, type Kind, type Stored } from '../../model/kinds';
 import { firstTurns } from '../../model/turns';
+import { STARTER_PRESETS } from '../../model/settings';
 import type { ModelRef } from '../../connectors/assignment';
 import type { TranslateSwitches } from '../../model/chat';
 import type { IllustrateSwitches } from '../../model/illustration';
@@ -33,6 +34,7 @@ export function upgradeValue(kind: string, value: unknown): Record<string, unkno
   if (kind === 'memory') return upgradeMemory(value);
   if (kind === 'stream' && !('calibration' in value)) return { ...value, calibration: unavailableCalibration('historical') };
   if (kind === 'ledger') return upgradeLedger(value);
+  if (kind === 'settings') return presetsHoldAll(value);
   return null;
 }
 
@@ -43,6 +45,15 @@ export function readRow(line: unknown): Stored<Kind> | null {
   const { id, parent, rev } = line;
   if (typeof id !== 'string' || (parent !== null && typeof parent !== 'string') || typeof rev !== 'number' || !Number.isFinite(rev) || !isValue(line.kind as Kind, value)) return null;
   return { ...line, id, kind: line.kind as Kind, parent, rev, value };
+}
+
+// Until 2026-11-13 the starter presets were the app's and looks held only the account's own; presets now hold them all.
+// An app from before still writes looks beside presets, so what it adds joins them.
+function presetsHoldAll(value: Record<string, unknown>) {
+  if (!Array.isArray(value.looks)) return null;
+  const { looks, ...rest } = value;
+  const kept = (Array.isArray(rest.presets) ? rest.presets : STARTER_PRESETS) as { id: unknown }[];
+  return { ...rest, presets: [...kept, ...(looks as { id: unknown }[]).filter((look) => !kept.some(({ id }) => id === look.id))] };
 }
 
 // A connection saved before pools held one secret, and the name of who signed in.

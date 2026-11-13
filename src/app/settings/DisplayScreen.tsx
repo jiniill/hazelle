@@ -2,7 +2,8 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { storyHtml } from '../../engine/display';
 import { setUsageShown } from '../../runtime/chat/chat-context';
-import { addLook, editLook, moveLook, removeLook, restoreLook } from '../../runtime/library/looks';
+import { STARTER_PRESETS, presetsOf } from '../../model/settings';
+import { addLook, addStarters, editLook, moveLook, removeLook, restoreLook } from '../../runtime/library/looks';
 import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ACTS } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
@@ -34,14 +35,14 @@ const colorChoices = <T extends string>(pick: 'bg' | 'ink' | 'accent' | 'dialogu
   choices(labels).map((option) => ({ ...option, mark: <ColorDot pick={pick} value={option.value} /> }));
 
 export function DisplayScreen({ back }: { back: Back | null }) {
-  const { reading, display, presets, own, changeDisplay, pick, followSystem, assign } = useDisplay();
+  const { reading, display, presets, unread, changeDisplay, pick, followSystem, assign } = useDisplay();
   const store = useStore();
   const toast = useToast();
   const removal = useRemoval();
-  const all = [...presets, ...own.presets];
-  const current = presetOf(all, reading, display);
+  const saved = presetsOf(useSettings());
+  const current = presetOf(presets, reading, display);
   const [naming, setNaming] = useState<{ preset: Preset | null } | null>(null);
-  const missing = (mode: Theme) => display.follow !== null && !all.some((preset) => preset.id === display.follow![mode]);
+  const missing = (mode: Theme) => display.follow !== null && !presets.some((preset) => preset.id === display.follow![mode]);
   // Folded, a slot whose preset is gone would say so to no one.
   const [detailOpen, setDetailOpen] = useState(() => MODE_KEYS.some(missing));
 
@@ -49,12 +50,12 @@ export function DisplayScreen({ back }: { back: Back | null }) {
     const preset = naming?.preset;
     setNaming(null);
     if (preset) return toast.settled(editLook(store, preset.id, { name: typed.trim() || preset.name }), '이름을 바꾸지 못했어요.');
-    toast.settled(addLook(store, { id: crypto.randomUUID(), name: typed.trim() || PRESET.named(own.presets.length), look: lookOf(reading, display) }), SAVE_FAILED);
+    toast.settled(addLook(store, { id: crypto.randomUUID(), name: typed.trim() || PRESET.named(presets.length), look: lookOf(reading, display) }), SAVE_FAILED);
   }
 
   const remove = ({ id, name }: Preset) => removal({ name: () => name, noun: PRESET.noun, task: () => removeLook(store, id), restore: (removed) => restoreLook(store, removed) });
 
-  const move = (from: number, to: number) => toast.settled(moveLook(store, own.presets[from]!.id, own.presets[to]!.id), '옮기지 못했어요.');
+  const move = (from: number, to: number) => toast.settled(moveLook(store, presets[from]!.id, presets[to]!.id), '옮기지 못했어요.');
 
   const swatch = (preset: Preset) => ({ name: preset.name, ...preset.look, pressed: preset === current, onPick: () => pick(preset) });
   const menu = (preset: Preset, index: number) => (
@@ -62,7 +63,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setNaming({ preset })} />
       {preset !== current && <MenuItem icon={ACTS.overwrite.icon} label={ACTS.overwrite.label} onClick={() => toast.settled(editLook(store, preset.id, { look: lookOf(reading, display) }), SAVE_FAILED)} />}
       {index > 0 && <MenuItem icon={ArrowLeft} label="앞으로 옮기기" onClick={() => move(index, index - 1)} />}
-      {index < own.presets.length - 1 && <MenuItem icon={ArrowRight} label="뒤로 옮기기" onClick={() => move(index, index + 1)} />}
+      {index < presets.length - 1 && <MenuItem icon={ArrowRight} label="뒤로 옮기기" onClick={() => move(index, index + 1)} />}
       <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => void remove(preset)} />
     </>
   );
@@ -79,6 +80,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
     >
       <Section
         title="프리셋"
+        note={unread > 0 ? `읽지 못한 프리셋 ${unread}개` : undefined}
         action={
           !current && (
             <Button variant="ghost" onClick={() => setNaming({ preset: null })}>
@@ -87,18 +89,18 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           )
         }
       >
-        <Swatches label="프리셋" sample={SWATCH_SAMPLE} items={presets.map(swatch)} />
-        {(own.presets.length > 0 || own.unread > 0) && (
-          <Section title="내 프리셋" level={3} note={own.unread > 0 ? `읽지 못한 프리셋 ${own.unread}개` : undefined}>
-            <Swatches label="내 프리셋" sample={SWATCH_SAMPLE} items={own.presets.map((preset, index) => ({ ...swatch(preset), menu: menu(preset, index) }))} onMove={move} />
-          </Section>
+        <Swatches label="프리셋" sample={SWATCH_SAMPLE} items={presets.map((preset, index) => ({ ...swatch(preset), menu: menu(preset, index) }))} onMove={move} />
+        {STARTER_PRESETS.some(({ id }) => !saved.some((look) => look.id === id)) && (
+          <Button variant="link" onClick={() => toast.settled(addStarters(store), SAVE_FAILED)}>
+            기본 프리셋 다시 넣기
+          </Button>
         )}
         <Disclosure label={detailLabel(display.follow ? 1 : 0)} open={detailOpen} onOpen={setDetailOpen}>
           <SettingGroup label={DETAIL}>
             <SettingRow
               label="시스템 설정 연동"
               help={{ text: '기기의 밝은·어두운 모드에 맞춰 프리셋을 자동으로 전환해요. 직접 변경한 값은 모드가 바뀔 때 프리셋 설정으로 돌아가요.', demo: { name: 'followSystem' } }}
-              control={<Switch label="시스템 설정 연동" checked={display.follow !== null} onChange={followSystem} />}
+              control={<Switch label="시스템 설정 연동" checked={display.follow !== null} disabled={display.follow === null && presets.length === 0} onChange={followSystem} />}
             />
             {display.follow &&
               MODE_KEYS.map((mode) => (
@@ -106,7 +108,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
                   key={mode}
                   label={MODES[mode]}
                   error={missing(mode) ? PRESET_GONE : undefined}
-                  control={<ChoiceGroup layout="fit" label={MODES[mode]} options={presetChoices(all)} value={missing(mode) ? null : display.follow![mode]} empty={PRESET_GONE_CHIP} onChange={(picked) => assign(mode, all.find((preset) => preset.id === picked)!)} />}
+                  control={<ChoiceGroup layout="fit" label={MODES[mode]} options={presetChoices(presets)} value={missing(mode) ? null : display.follow![mode]} empty={PRESET_GONE_CHIP} onChange={(picked) => assign(mode, presets.find((preset) => preset.id === picked)!)} />}
                 />
               ))}
           </SettingGroup>
@@ -115,7 +117,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       {naming && (
         <NameDialog
           title={naming.preset ? PRESET.rename : PRESET.save}
-          value={naming.preset?.name ?? PRESET.named(own.presets.length)}
+          value={naming.preset?.name ?? PRESET.named(presets.length)}
           onSave={name}
           onClose={() => setNaming(null)}
         />
