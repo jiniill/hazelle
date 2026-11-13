@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { modelSettings } from '../../connectors/registry';
+import { modelSettings, resolveConnection } from '../../connectors/registry';
 import { fit } from '../../connectors/settings';
 import { entriesOf, entryKey, entryName, type Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
@@ -22,6 +22,7 @@ import { useToast } from '../toast';
 import { Button, Callout, ChipButton, Divider, Empty, Facts, Menu, MenuItem, NavBar, Row, Screen, Section, SettingGroup, SettingRow, Switch, Tag } from '../ui';
 import { changeWords, defaultFirst, inputs, MODALITY, NOT_CALLABLE } from '../common/settingWords';
 import { useProfileEditor } from './useProfileEditor';
+import { ModelHosts } from './ModelHosts';
 import { count } from '../common/typedNumber';
 
 type Props = { connection: Stored<'connection'>; model: Starred; back: Back };
@@ -100,6 +101,7 @@ function ChatModelScreen({ connection, model, back }: Props) {
   const schema = modelSettings(connection.value, model);
   const sorted = defaultFirst(profiles, settings.profile);
   const roles = rolesOf(settings.models, refOf(connection.id, model));
+  const type = resolveConnection(connection.value)?.type;
 
   async function choose(id: string) {
     const saved = await setModelProfile(store, connection.id, entryKey(model), id);
@@ -192,6 +194,8 @@ function ChatModelScreen({ connection, model, back }: Props) {
           />
         )}
       </Section>
+
+      {type?.hosts && <ModelHosts connection={connection} model={model} type={type} />}
 
       <Section title="사용량" note={copies > 1 ? `같은 모델 ${copies}개 합계` : undefined}>
         {ledger.view.kind !== 'read' ? (

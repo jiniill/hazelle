@@ -3,6 +3,7 @@ import { anthropicMessages } from './anthropic-messages';
 import { bareModel } from './chat-completions';
 import { copilot } from './copilot';
 import copilotModels from './fixtures/copilot-models.json';
+import openRouterEndpoints from './fixtures/openrouter-endpoints.json';
 import openRouterKey from './fixtures/openrouter-key.json';
 import openRouterModels from './fixtures/openrouter-models.json';
 import vercelModels from './fixtures/vercel-models.json';
@@ -293,6 +294,24 @@ describe('catalogs', () => {
     expect(resolveConnection({ type: 'generic', label: '', baseUrl: null, protocol: 'chat-completions', accounts: [{ id: 'key', secret: '' }], turns: null, starred: [] })).toBeNull();
     const newer = { type: 'generic', label: '', baseUrl: 'https://api.example.com/v1', protocol: 'realtime', accounts: [{ id: 'key', secret: '' }], turns: null, starred: [] };
     expect(resolveConnection(newer as unknown as Connection)).toBeNull();
+  });
+});
+
+describe('OpenRouter hosts', () => {
+  const hosts = openRouter.hosts!;
+
+  it('lists who serves a model, a flex row marking the host its tag extends', () => {
+    expect(hosts.request('google/gemini-4-carbon')).toMatchObject({ url: 'https://openrouter.ai/api/v1/models/google/gemini-4-carbon/endpoints', method: 'GET' });
+    const rates = { input: 2, output: 10, cacheRead: expect.closeTo(0.1), cacheWrite: expect.closeTo(0.1875), tiers: [] };
+    expect(hosts.parse(openRouterEndpoints)).toEqual([
+      { id: 'google-vertex/global', name: 'Google', price: rates, discount: false },
+      { id: 'google-ai-studio', name: 'Google AI Studio', price: rates, discount: true },
+    ]);
+  });
+
+  it('sends a picked host alone, and flex where 할인 받기 is on', () => {
+    const body = JSON.parse(prepareChat(connection('openrouter'), { model: { ...model(), host: 'google-ai-studio' }, messages: [{ role: 'user', content: '안녕' }], settings: { discount: true } }).request.body!);
+    expect(body).toMatchObject({ provider: { order: ['google-ai-studio'], allow_fallbacks: false }, service_tier: 'flex' });
   });
 });
 

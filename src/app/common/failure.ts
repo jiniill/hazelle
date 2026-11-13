@@ -22,6 +22,7 @@ import type { AdditionalFailure } from '../../runtime/chat/additional';
 import type { KeyFailure } from '../../runtime/models/connections';
 import type { ReplyError } from '../../runtime/models/generate';
 import type { MetersFailure } from '../../runtime/models/meters';
+import type { HostsFailure } from '../../runtime/models/hosts';
 import type { SignInFailure } from '../../runtime/account/sign-in';
 import type { TranslateFailure, TranslatorFailure } from '../../runtime/tasks/translate';
 import type { TurnFailure } from '../../runtime/chat/turn';
@@ -275,6 +276,11 @@ export function describeCatalogFailure(failure: CatalogFailure): string {
 
 export function describeMetersFailure(failure: MetersFailure): string {
   if (failure.kind === 'not-meters') return '사용량을 읽지 못했어요.';
+  return describeReplyError(failure);
+}
+
+export function describeHostsFailure(failure: HostsFailure): string {
+  if (failure.kind === 'not-hosts') return '제공자 목록을 읽지 못했어요.';
   return describeReplyError(failure);
 }
 

@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { MODELS_DEV_LISTS, type PriceTable, type Rates } from '../../connectors/models-dev';
-import { inUnit, priceCost } from '../../connectors/pricing';
+import { priceCost } from '../../connectors/pricing';
 import { CONNECTION_TYPES, costUnit } from '../../connectors/registry';
 import type { Cost } from '../../connectors/types';
 import { readPriceTable } from '../../runtime/models/prices';
-import { money } from '../common/money';
+import { perMillion, priceLine } from '../common/money';
 import { cost } from '../common/receipt';
 import { count, readWhole } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
@@ -29,8 +29,6 @@ const rowsOf = (table: PriceTable): Row[] =>
       return type ? [{ key: `${list} ${model}`, name: name ?? model, provider: type.label, model, price, unit: costUnit(type) }] : [];
     })
     .sort((a, b) => a.name.localeCompare(b.name, 'ko') || a.provider.localeCompare(b.provider, 'ko'));
-
-const perMillion = (rate: number, unit: Cost['unit']) => money(unit, inUnit(rate, unit));
 
 type Count = 'input' | 'output' | 'cacheRead' | 'cacheWrite';
 const BLANK: Record<Count, string> = { input: '', output: '', cacheRead: '', cacheWrite: '' };
@@ -74,7 +72,7 @@ export function CalculatorScreen({ back }: { back: Back | null }) {
     <ListItem
       title={shown.name}
       description={`${shown.provider} · ${shown.model}`}
-      note={shown.price ? `입력 ${perMillion(shown.price.input, shown.unit)} · 출력 ${perMillion(shown.price.output, shown.unit)}` : '가격 없음'}
+      note={priceLine(shown.price, shown.unit)}
       selected={shown.key === picked?.key}
       onClick={() => pick(shown)}
     />

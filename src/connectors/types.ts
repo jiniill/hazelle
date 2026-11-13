@@ -69,8 +69,10 @@ type Own = {
   label: string;
   // Used only when catalog inputs are unknown (seesPictures).
   pictures: true;
+  // The one Host a gateway is asked to send this entry's calls to (ConnectionType hosts); absent lets it pick.
+  host: string;
 };
-const OWN: (keyof Own)[] = ['profile', 'entry', 'label', 'pictures'];
+const OWN: (keyof Own)[] = ['profile', 'entry', 'label', 'pictures', 'host'];
 export type Starred = Model & Partial<Own>;
 
 export const ownOf = (model: Starred): Partial<Own> => Object.fromEntries(OWN.flatMap((field) => (model[field] === undefined ? [] : [[field, model[field]]])));
@@ -117,7 +119,7 @@ export const replyLimit = ({ contextLength, maxOutput }: Pick<Model, 'contextLen
   maxOutput !== null && contextLength !== null && maxOutput >= contextLength ? null : maxOutput;
 export const seesPictures = (model: Pick<Starred, 'input' | 'pictures'>) => (model.input === null ? model.pictures === true : model.input.includes('image'));
 export const carriesPictures = (message: ChatMessage) => (message.pictures?.length ?? 0) > 0;
-export type ChatRequest = { model: Model; messages: ChatMessage[]; settings: ModelSettings; tools?: ToolDef[] };
+export type ChatRequest = { model: Starred; messages: ChatMessage[]; settings: ModelSettings; tools?: ToolDef[] };
 
 // A missing count stays null. Filling it with 0 would read as a measured zero and shrink totals.
 export type Usage = {
@@ -261,6 +263,8 @@ type TypeHooks = {
   meters?: MeterRequest[];
   // The provider's own usage page, linked beside the figures, or alone where it reports none (Ollama Cloud).
   usagePage?: string;
+  // A gateway's list of who serves a model, and the fields that hold a call to the one an entry picked (Starred host).
+  hosts?: Hosts;
   // A cost the provider books only after the reply, looked up by the reply's id. Until it is booked
   // the lookup answers 404.
   settle?: { request(secret: string, id: string): HttpRequest; parse(payload: unknown): Cost | null };
@@ -291,6 +295,10 @@ export type Discount = {
   // One request per batch; an answer from it qualifies for rates.
   | { lane: 'batch'; batches: Batches }
 );
+// id: what the gateway's fields name. discount: it serves the type's discount lane too. price: its own list price.
+export type Host = { id: string; name: string; price: Rates | null; discount: boolean };
+export type Hosts = { request(model: string): HttpRequest; parse(payload: unknown): Host[] | null; fields(host: string): Record<string, unknown> };
+
 export type DiscountRates = Record<'input' | 'output' | 'cacheRead' | 'cacheWrite', number>;
 
 // Build unauthenticated, then registry withCredential authenticates. submit takes an unstreamed codec request.

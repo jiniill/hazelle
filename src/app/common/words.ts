@@ -27,6 +27,8 @@ export const MODEL_PINNED = '모델 고정';
 
 export const NO_PICTURES = '이 모델은 이미지를 읽을 수 없어요.';
 export const PICTURE_INPUT = '이미지 읽기';
+// Who serves a model behind a gateway (ConnectionType hosts).
+export const HOST = '제공자';
 export const UNKNOWN_PICTURES = `이 모델이 이미지 입력을 지원하는지 확인할 수 없어요. 이미지를 지원하는 모델이라면 모델 설정 화면에서 ${PICTURE_INPUT}를 켜 주세요.`;
 
 export const MAIN_HELP = '프롬프트나 채팅에서 모델을 따로 정하지 않았을 때 쓰는 모델이에요.';
