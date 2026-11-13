@@ -5,7 +5,6 @@ import { setModelHost } from '../../runtime/models/connections';
 import { loadHosts, type HostsFailure } from '../../runtime/models/hosts';
 import { describeHostsFailure } from '../common/failure';
 import { priceLine } from '../common/money';
-import { withParticle } from '../common/particles';
 import { useLoad } from '../common/useLoaded';
 import { CHANGE_FAILED, HOST, LOADING } from '../common/words';
 import { useSession } from '../session';
@@ -36,7 +35,7 @@ export function ModelHosts({ connection, model, type }: Props) {
       {hosts.loading && <Text variant="note">{LOADING}</Text>}
       {hosts.data && (
         <List label={HOST} box>
-          <ListItem title="자동" description={`${withParticle(connection.value.label, '이/가')} 골라요`} selected={model.host === undefined} onClick={() => pick(null)} />
+          <ListItem title="자동" description={`${connection.value.label}에서 골라요`} selected={model.host === undefined} onClick={() => pick(null)} />
           {gone && <ListItem title={model.host!} note="목록에 없음" tone="muted" selected />}
           {hosts.data.map((host) => (
             <ListItem
