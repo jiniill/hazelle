@@ -301,10 +301,10 @@
   --face-radius-md: var(--radius-md);
   --face-radius-rail: var(--radius-md);
   --face-radius-lg: var(--radius-lg);
-  --prose-leading-narrow: 1.7;
-  --prose-leading-normal: 1.9;
-  --prose-leading-wide: 2.1;
-  --prose-leading-widest: 2.3;
+  --reading-leading-narrow: var(--prose-leading-narrow);
+  --reading-leading-normal: var(--prose-leading-normal);
+  --reading-leading-wide: var(--prose-leading-wide);
+  --reading-leading-widest: var(--prose-leading-widest);
   /* 속마음 mixes dialogue and narration as the mode and the 대사 pick leave them. */
   --color-prose-thought: color-mix(in oklab, var(--color-prose-dialogue) 55%, var(--color-prose-narration));
   --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
@@ -365,6 +365,10 @@
   --prose-font: var(--font-serif);
   --prose-size: 17px;
   --prose-leading: var(--prose-leading-normal);
+  --prose-leading-narrow: 1.7;
+  --prose-leading-normal: 1.9;
+  --prose-leading-wide: 2.1;
+  --prose-leading-widest: 2.3;
   --prose-leading-close-narrow: 1.3;
   --prose-leading-close-normal: 1.45;
   --prose-leading-close-wide: 1.6;

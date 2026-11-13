@@ -50,7 +50,7 @@ export type Finish = {
   rows: 'open' | 'close';
   // The corners of a face Avatar draws.
   faces: 'soft' | 'round';
-  // The scale 줄 간격's four steps stand on.
+  // The scale 줄 간격's four steps stand on in a chat; a story drawn outside one keeps the app's.
   lines: 'open' | 'close';
 };
 
@@ -90,7 +90,7 @@ const VOICE: Partial<Record<keyof Tone, string[]>> = { name: ['--color-name'] };
 const FINISH: { [Part in keyof Finish]: Record<Finish[Part], string> } = {
   rows: { open: '', close: '--story-gap:var(--story-gap-close);' },
   faces: { soft: '', round: ['sm', 'md', 'rail', 'lg'].map((size) => `--face-radius-${size}:var(--radius-full);`).join('') },
-  lines: { open: '', close: ['narrow', 'normal', 'wide', 'widest'].map((step) => `--prose-leading-${step}:var(--prose-leading-close-${step});`).join('') },
+  lines: { open: '', close: ['narrow', 'normal', 'wide', 'widest'].map((step) => `--reading-leading-${step}:var(--prose-leading-close-${step});`).join('') },
 };
 
 function rule(selector: string, tone: Tone, tokens: Partial<Record<keyof Tone, string[]>>) {

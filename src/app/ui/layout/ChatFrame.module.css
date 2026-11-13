@@ -85,19 +85,19 @@
 }
 
 .leadingNarrow {
-  --reading-leading: var(--prose-leading-narrow);
+  --reading-leading: var(--reading-leading-narrow);
 }
 
 .leadingNormal {
-  --reading-leading: var(--prose-leading-normal);
+  --reading-leading: var(--reading-leading-normal);
 }
 
 .leadingWide {
-  --reading-leading: var(--prose-leading-wide);
+  --reading-leading: var(--reading-leading-wide);
 }
 
 .leadingWidest {
-  --reading-leading: var(--prose-leading-widest);
+  --reading-leading: var(--reading-leading-widest);
 }
 
 .widthNarrow {

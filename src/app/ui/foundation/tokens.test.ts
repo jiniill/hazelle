@@ -93,7 +93,7 @@ it('writes a finish as token rules for the element that names the theme, and a s
   expect(plain).not.toContain('[data-mode]{');
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close' } })).toBe(
     plain +
-      "[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);--face-radius-sm:var(--radius-full);--face-radius-md:var(--radius-full);--face-radius-rail:var(--radius-full);--face-radius-lg:var(--radius-full);--prose-leading-narrow:var(--prose-leading-close-narrow);--prose-leading-normal:var(--prose-leading-close-normal);--prose-leading-wide:var(--prose-leading-close-wide);--prose-leading-widest:var(--prose-leading-close-widest);}",
+      "[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);--face-radius-sm:var(--radius-full);--face-radius-md:var(--radius-full);--face-radius-rail:var(--radius-full);--face-radius-lg:var(--radius-full);--reading-leading-narrow:var(--prose-leading-close-narrow);--reading-leading-normal:var(--prose-leading-close-normal);--reading-leading-wide:var(--prose-leading-close-wide);--reading-leading-widest:var(--prose-leading-close-widest);}",
   );
 });
 
