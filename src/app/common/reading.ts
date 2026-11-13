@@ -1,6 +1,6 @@
 import { PICTURE_PERCENT, type Backdrop } from '../../model/library';
 import type { SavedLook } from '../../model/settings';
-import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, QUOTE_SHAPE, MODE, SHADE, type Mode, type QuoteShape, type Reading, type Scheme, type StageSide } from '../ui';
+import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, QUOTE_SHAPE, MODE, SHADE, THEMES, type Mode, type QuoteShape, type Reading, type Scheme, type StageSide, type ThemeId } from '../ui';
 import type { Cue } from '../../runtime/chat/cues';
 import { CHIMES, type Chime } from './sounds';
 import { readPersisted } from './usePersisted';
@@ -45,20 +45,22 @@ export function parseReading(stored: string, fallback: Reading): Reading {
 // Portrait stage is reserved for chats without illustration (user, 2026-10-16); width cap preserves old default (2026-10-17).
 // Track last system mode so reload preserves manual edits until the next mode change (user, 2026-10-20).
 // Chimes default off and use chimeSounds once enabled (user, 2026-10-26).
-export type Display = Scheme & { chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean };
+export type Display = Scheme & { theme: ThemeId; chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; userStops: boolean };
 
 export type Follow = Record<Mode, string> & { applied: Mode };
 
 const PLAIN = { bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' } as const;
 
-export const DISPLAY_DEFAULT: Display = { chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, mode: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false };
+export const DISPLAY_DEFAULT: Display = { theme: 'base', chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, mode: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, userStops: false };
 
 export function parseDisplay(stored: string, fallback: Display): Display {
-  const read = fields<keyof Display | 'enterSends' | 'theme'>(stored);
+  const read = fields<keyof Display | 'enterSends'>(stored);
   return {
+    theme: known(THEMES, read.theme, fallback.theme),
     chimes: flag(read.chimes, fallback.chimes),
     chimeSounds: parseChimeSounds(read.chimeSounds, fallback.chimeSounds),
-    // Saved as theme until 2026-11-13, when theme came to mean the app's whole look.
+    // The key theme held the mode until 2026-11-13, when theme came to mean the app's whole look. A display saved
+    // before has no mode, so its theme is read as one; no theme takes a mode's name.
     mode: known(MODE, read.mode ?? read.theme, fallback.mode),
     bg: known(BG, read.bg, fallback.bg),
     ink: known(INK, read.ink, fallback.ink),
@@ -104,13 +106,19 @@ export const systemMode = (dark: boolean): Mode => (dark ? 'dark' : 'light');
 
 // Apply before first paint without display.tsx's session dependency. Every preset is the account's, so a system-mode
 // switch while closed keeps the last look until that account loads.
-export const applyStoredScheme = () => applyScheme(readPersisted(DISPLAY, parseStoredDisplay, DISPLAY_DEFAULT));
+export function applyStoredScheme() {
+  const display = readPersisted(DISPLAY, parseStoredDisplay, DISPLAY_DEFAULT);
+  applyScheme(display, THEMES[display.theme]);
+}
 
 // A preset sets the look only, never 응답이 올 때 or the reading chrome. No preset id is stored: the current preset is
 // the one whose every value matches.
 export type Look = Pick<Reading, 'font' | 'size' | 'leading' | 'width'> & Scheme;
 // id: what a 시스템 따라 바꾸기 slot and a character's look hold, its saved id.
 export type Preset = { id: string; name: string; look: Look };
+
+// The words a look is shown by, on a preset's card and a theme's.
+export const LOOK_SAMPLE = '그녀는 찻잔을 내려놓고 고개를 들었다.';
 
 export const lookOf = ({ font, size, leading, width }: Reading, { mode, bg, ink, accent, dialogue }: Display): Look => ({ mode, bg, ink, accent, dialogue, font, size, leading, width });
 

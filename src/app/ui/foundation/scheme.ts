@@ -1,3 +1,5 @@
+import type { Theme } from './theme';
+
 export type Mode = 'dark' | 'light';
 export type Bg = 'base' | 'gray' | 'blue' | 'green' | 'brown';
 export type Ink = 'base' | 'bright' | 'soft';
@@ -13,9 +15,13 @@ export const DIALOGUE: Record<Dialogue, string> = { base: '기본', plain: '무�
 
 export type Scheme = { mode: Mode; bg: Bg; ink: Ink; accent: Accent; dialogue: Dialogue };
 
-// tokens.css turns its color tokens by these, on the document or on an element drawn in another scheme.
-export const schemeAttributes = ({ mode, bg, ink, accent, dialogue }: Scheme) => ({ 'data-mode': mode, 'data-bg': bg, 'data-ink': ink, 'data-accent': accent, 'data-dialogue': dialogue });
+// tokens.css turns its color tokens by these, on the document or on an element drawn in another scheme. A theme with
+// colours of its own is named beside them, since its rules match only the element that names it with a mode.
+export const schemeAttributes = ({ mode, bg, ink, accent, dialogue }: Scheme, theme: Theme) => ({ 'data-mode': mode, 'data-bg': bg, 'data-ink': ink, 'data-accent': accent, 'data-dialogue': dialogue, 'data-theme': theme.tones && theme.id });
 
-export function applyScheme(scheme: Scheme) {
-  for (const [name, value] of Object.entries(schemeAttributes(scheme))) document.documentElement.setAttribute(name, value);
+export function applyScheme(scheme: Scheme, theme: Theme) {
+  for (const [name, value] of Object.entries(schemeAttributes(scheme, theme))) {
+    if (value === undefined) document.documentElement.removeAttribute(name);
+    else document.documentElement.setAttribute(name, value);
+  }
 }

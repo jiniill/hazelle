@@ -978,7 +978,11 @@
 /* A color pick (foundation/scheme.ts applyScheme, schemeAttributes) on the document or on an element drawn in another
    scheme. base turns nothing, so the mode's own values above stay exact. A picked page derives its rungs by the
    ladder's L* steps above it (the mixes were fitted to ink-900 and paper-150), so every pick keeps ΔL* ≥ 4 in dark and
-   the light mode's own gaps: a new pick keeps its mode's base lightness. */
+   the light mode's own gaps: a new pick keeps its mode's base lightness.
+   A theme (foundation/theme.ts) is what base means under it: its sheet sets the four base options, so these rules run
+   from them on any element that names a theme, and what it states of a rung goes over the rule's while the pick is
+   base. No theme named is the app's own, exact as above. Both sides of each :is() weigh the same, so a build that
+   writes it out as two selectors changes nothing. */
 [data-bg='base'] { --color-pick-bg: var(--color-pick-bg-base); }
 [data-bg='gray'] { --color-pick-bg: var(--color-pick-bg-gray); }
 [data-bg='blue'] { --color-pick-bg: var(--color-pick-bg-blue); }
@@ -998,7 +1002,7 @@
 [data-dialogue='rose'] { --color-pick-dialogue: var(--color-pick-dialogue-rose); }
 [data-dialogue='lime'] { --color-pick-dialogue: var(--color-pick-dialogue-lime); }
 
-[data-mode='dark'][data-bg]:not([data-bg='base']) {
+[data-mode='dark']:is([data-bg]:not([data-bg='base']), [data-theme][data-bg]) {
   --color-bg: var(--color-pick-bg);
   --color-sidebar: color-mix(in oklab, var(--palette-white) 5.5%, var(--color-pick-bg));
   --color-surface: color-mix(in oklab, var(--palette-white) 10%, var(--color-pick-bg));
@@ -1009,7 +1013,7 @@
   --color-border-strong: color-mix(in oklab, var(--palette-white) 26.5%, var(--color-pick-bg));
 }
 
-[data-mode='light'][data-bg]:not([data-bg='base']) {
+[data-mode='light']:is([data-bg]:not([data-bg='base']), [data-theme][data-bg]) {
   --color-bg: var(--color-pick-bg);
   --color-sidebar: color-mix(in oklab, var(--palette-white) 53%, var(--color-pick-bg));
   --color-surface: color-mix(in oklab, var(--palette-white) 84%, var(--color-pick-bg));
@@ -1022,12 +1026,12 @@
 
 /* Dialogue is the 대사 pick's. Muted, faint and the action voice stay the mode's: a softer pick would sink them under
    contrast. */
-[data-ink]:not([data-ink='base']) {
+:is([data-ink]:not([data-ink='base']), [data-theme][data-ink]) {
   --color-text: var(--color-pick-ink);
   --color-prose-narration: color-mix(in oklab, var(--color-pick-ink) var(--prose-narration-share), var(--color-bg));
 }
 
-[data-dialogue]:not([data-dialogue='base']) {
+:is([data-dialogue]:not([data-dialogue='base']), [data-theme][data-dialogue]) {
   --color-prose-dialogue: var(--color-pick-dialogue);
 }
 
@@ -1038,13 +1042,13 @@
   --color-prose-action: var(--color-pick-action-plain);
 }
 
-[data-mode='dark'][data-accent]:not([data-accent='base']) {
+[data-mode='dark']:is([data-accent]:not([data-accent='base']), [data-theme][data-accent]) {
   --color-accent: var(--color-pick-accent);
   --color-accent-hover: color-mix(in oklab, var(--palette-white) 25%, var(--color-pick-accent));
   --color-on-accent: color-mix(in oklab, var(--color-pick-accent) 15%, var(--palette-black));
 }
 
-[data-mode='light'][data-accent]:not([data-accent='base']) {
+[data-mode='light']:is([data-accent]:not([data-accent='base']), [data-theme][data-accent]) {
   --color-accent: var(--color-pick-accent);
   --color-accent-hover: color-mix(in oklab, var(--palette-black) 20%, var(--color-pick-accent));
   --color-on-accent: color-mix(in oklab, var(--color-pick-accent) 5%, var(--palette-white));

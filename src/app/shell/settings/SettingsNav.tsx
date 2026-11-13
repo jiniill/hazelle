@@ -1,4 +1,4 @@
-import { FileText, FlaskConical, Hand, Layers, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
+import { FileText, FlaskConical, Hand, Layers, LayoutTemplate, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { litIn } from '../../common/search';
 import { useSearch } from '../../common/useSearch';
@@ -10,7 +10,7 @@ import { FEATURE_LABS, FEATURES, type Feature } from '../../../model/features';
 import { availableFeatures, sharedFeatures } from '../../../runtime/tasks/features';
 import { overviewOf } from '../../../runtime/tasks/overview';
 import { useAccount, useCaptured, useConnections, useModulesAndPlugins, usePersonas, useProfiles, usePrompts, useSession, useSettings, useStore } from '../../session';
-import { Empty, FoundRow, Icon, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen, seekRow } from '../../ui';
+import { Empty, FoundRow, Icon, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen, seekRow, THEMES } from '../../ui';
 import { failingOf } from '../../settings/setup';
 import { navigate } from '../router';
 import type { Route, SettingsPage, ToolsPage } from '../routes';
@@ -49,6 +49,7 @@ const HAVE: Group = {
   ],
 };
 const APP: Place[] = [
+  { page: 'theme', label: PAGES.theme, icon: LayoutTemplate, route: { kind: 'theme' } },
   { page: 'display', label: PAGES.display, icon: SunMoon, route: { kind: 'display' } },
   { page: 'controls', label: PAGES.controls, icon: Hand, route: { kind: 'controls' } },
   { page: 'sounds', label: PAGES.sounds, icon: Volume2, route: { kind: 'sounds' } },
@@ -95,6 +96,7 @@ function useHolds(): Record<SettingsPage, string | undefined> {
     personas: `${personas.length}개`,
     modules: `${modules.length}개`,
     plugins: `${plugins.length}개`,
+    theme: THEMES[display.theme].name,
     display: presetOf(presets, reading, display)?.name,
     controls: undefined,
     sounds: undefined,

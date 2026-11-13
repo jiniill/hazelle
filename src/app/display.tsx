@@ -3,7 +3,7 @@ import { presetsOf } from '../model/settings';
 import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, wornLook, parseReading, parseStoredDisplay, presetOf, READING, savedPresets, systemMode, type Display, type Follow, type Look, type Preset } from './common/reading';
 import { usePersisted } from './common/usePersisted';
 import { useSettings } from './session';
-import { applyScheme, QuoteShapeContext, readingDefault, useCoarsePointer, useDarkScheme, VeilContext, type Mode, type Reading } from './ui';
+import { applyScheme, QuoteShapeContext, readingDefault, ThemeContext, THEMES, useCoarsePointer, useDarkScheme, VeilContext, type Mode, type Reading } from './ui';
 
 type DisplayControl = {
   reading: Reading;
@@ -36,7 +36,8 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const system = systemMode(useDarkScheme());
   const coarsePointer = useCoarsePointer();
   const { mode, bg, ink, accent, dialogue, follow } = display;
-  useLayoutEffect(() => applyScheme({ mode, bg, ink, accent, dialogue }), [mode, bg, ink, accent, dialogue]);
+  const theme = THEMES[display.theme];
+  useLayoutEffect(() => applyScheme({ mode, bg, ink, accent, dialogue }, theme), [mode, bg, ink, accent, dialogue, theme]);
   const veil = useMemo(() => (display.hidePictures ? { revealed: new Set<string>() } : null), [display.hidePictures]);
   const find = (id: string | undefined) => (id === undefined ? undefined : presets.find((preset) => preset.id === id));
   const wear = ({ mode, bg, ink, accent, dialogue, ...look }: Look, follow: Follow | null) => {
@@ -75,9 +76,11 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   };
   return (
     <DisplayContext value={control}>
-      <VeilContext value={veil}>
-        <QuoteShapeContext value={display.quotes}>{children}</QuoteShapeContext>
-      </VeilContext>
+      <ThemeContext value={theme}>
+        <VeilContext value={veil}>
+          <QuoteShapeContext value={display.quotes}>{children}</QuoteShapeContext>
+        </VeilContext>
+      </ThemeContext>
     </DisplayContext>
   );
 }

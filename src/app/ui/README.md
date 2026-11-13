@@ -11,6 +11,10 @@ and only this folder styles elements.**
   text, dialogue and accent tokens to a color pick. `foundation/scheme.ts` (`applyScheme`) sets the attributes on the
   document, and `schemeAttributes` on an element drawn in another scheme (a preset's swatch). A module
   never reads `--palette-*`.
+- Themes: a theme (`foundation/theme.ts`) is data, one file each in `themes/`, and the one place besides `tokens.css`
+  that states a colour. What it states stands where the picks' base does: `adoptThemes` writes each as rules for the
+  element that names it (`data-theme`, set with the scheme's attributes), and `tokens.css` derives the rest by the
+  picks' rules. `THEMES` lists the ones offered; an element that names none is drawn in the app's own.
 - `foundation/global.css` loads tokens and sets element defaults. `main.tsx` imports it once, then loads
   `foundation/fonts.css` after paint; slow or unavailable webfonts leave the system faces usable. A tool page
   (`sandbox.html`) has no application bootstrap, so `foundation/sandbox.css` imports both directly.

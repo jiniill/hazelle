@@ -16,5 +16,6 @@ export { Tag } from './Tag';
 export { Text } from './Text';
 export { Written } from './Written';
 export { ACCENT, applyScheme, BG, DIALOGUE, INK, MODE, type Mode, type Scheme } from './scheme';
+export { adoptThemes, ThemeContext, type Theme } from './theme';
 export { QUOTE_SHAPE, QuoteShapeContext, type QuoteShape } from './quotes';
 export { VeilContext } from './veil';

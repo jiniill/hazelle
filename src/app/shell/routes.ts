@@ -64,6 +64,7 @@ export type Route =
   | { kind: 'setup' }
   | { kind: 'chat-settings' }
   | { kind: 'feature'; feature: Feature }
+  | { kind: 'theme' }
   | { kind: 'display' }
   | { kind: 'controls' }
   | { kind: 'sounds' }
@@ -205,6 +206,7 @@ export function parseRoute(at: string): Route {
   const feature = FEATURES.find((candidate) => candidate === id);
   if (top === 'settings' && feature && sub === undefined) return { kind: 'feature', feature };
   if (top === 'settings' && id === 'setup' && sub === undefined) return { kind: 'setup' };
+  if (top === 'settings' && id === 'theme' && sub === undefined) return { kind: 'theme' };
   if (top === 'settings' && id === 'display' && sub === undefined) return { kind: 'display' };
   if (top === 'settings' && id === 'controls' && sub === undefined) return { kind: 'controls' };
   if (top === 'settings' && id === 'sounds' && sub === undefined) return { kind: 'sounds' };
@@ -313,6 +315,8 @@ export function href(route: Route): string {
       return '/settings/chat';
     case 'feature':
       return `/settings/${route.feature}`;
+    case 'theme':
+      return '/settings/theme';
     case 'display':
       return '/settings/display';
     case 'controls':
@@ -368,7 +372,7 @@ export function listOf(route: Route): Kind<'connections' | 'add-connection'> | n
 }
 
 // A feature's page is one of 설정's own, named by the feature.
-export type SettingsPage = 'setup' | 'models' | 'connections' | 'chat' | Feature | 'prompts' | 'personas' | 'modules' | 'plugins' | 'display' | 'controls' | 'sounds' | 'labs' | 'account' | 'admin';
+export type SettingsPage = 'setup' | 'models' | 'connections' | 'chat' | Feature | 'prompts' | 'personas' | 'modules' | 'plugins' | 'theme' | 'display' | 'controls' | 'sounds' | 'labs' | 'account' | 'admin';
 
 // 'list' for 설정's own list, or null outside 설정. While it is not null, the settings layer stands in for the library.
 export function settingsPage(route: Route): SettingsPage | 'list' | null {
@@ -393,6 +397,7 @@ export function settingsPage(route: Route): SettingsPage | 'list' | null {
     case 'model':
       return 'models';
     case 'account':
+    case 'theme':
     case 'display':
     case 'controls':
     case 'sounds':
@@ -501,6 +506,7 @@ export function up(route: Below, chatShelf?: string | null): Route {
     case 'models':
     case 'account':
     case 'chat-settings':
+    case 'theme':
     case 'display':
     case 'controls':
     case 'sounds':

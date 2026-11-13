@@ -3,6 +3,7 @@ import { useContext, useState, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { classNames } from '../foundation/classNames';
 import { schemeAttributes, type Mode } from '../foundation/scheme';
+import { BASE } from '../foundation/theme';
 import { StatusEditContext, StatusFrameContext, StatusOpenContext } from './frame';
 import type { ShownBlock, ShownField, ShownPlace, StatusEdit, StatusFrame, StatusMood } from './shown';
 import { StatusField } from './StatusField';
@@ -132,9 +133,9 @@ type Props = { name: string; frame: StatusFrame; mood: StatusMood; mode: Mode; b
 // The mode a fixed 분위기 stands in, so the kit's own controls inside the panel read on its ground.
 const MOOD_MODE: Partial<Record<StatusMood, Mode>> = { paper: 'light', rose: 'light', neon: 'dark', forest: 'dark', terminal: 'dark' };
 
-// What a 분위기 pins on the element that wears it: mode is the reader's, which 헤이젤 keeps with the colour picks set
-// back to its own; 내 색 takes the page's as they are.
-export const moodScheme = (mood: StatusMood, mode: Mode) => (mood === 'own' ? {} : schemeAttributes({ mode: MOOD_MODE[mood] ?? mode, bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' }));
+// What a 분위기 pins on the element that wears it: mode is the reader's, which 헤이젤 keeps with the colour picks and
+// the theme set back to the app's own; 내 색 takes the page's as they are.
+export const moodScheme = (mood: StatusMood, mode: Mode) => (mood === 'own' ? {} : schemeAttributes({ mode: MOOD_MODE[mood] ?? mode, bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' }, BASE));
 
 // A 상태 view drawn: its 분위기 gives the colours, face and corners, its 틀 lays the blocks out, and each block draws
 // the values it was handed. onChoice: a choice pressed, or a conversation answered; without it they stand disabled.

@@ -21,12 +21,17 @@ describe('stored reading settings', () => {
 });
 
 describe('stored display settings', () => {
-  it('reads the mode a device saved as its theme', () => {
-    expect(parseDisplay(JSON.stringify({ theme: 'light' }), DISPLAY_DEFAULT).mode).toBe('light');
+  it('reads the mode a device saved as its theme, and no theme from it', () => {
+    expect(parseDisplay(JSON.stringify({ theme: 'light' }), DISPLAY_DEFAULT)).toMatchObject({ mode: 'light', theme: 'base' });
+  });
+
+  it('reads a theme beside a mode, and starts one it does not know from the fallback', () => {
+    expect(parseDisplay(JSON.stringify({ mode: 'light', theme: 'channel' }), DISPLAY_DEFAULT)).toMatchObject({ mode: 'light', theme: 'channel' });
+    expect(parseDisplay(JSON.stringify({ mode: 'light', theme: 'toString' }), DISPLAY_DEFAULT).theme).toBe('base');
   });
 
   it('keeps a known mode, color picks and real switches, and starts anything else from the fallback', () => {
-    const chosen = { chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, mode: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSendsChoice: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, userStops: true } as const;
+    const chosen = { theme: 'channel', chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, mode: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSendsChoice: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, userStops: true } as const;
     expect(parseDisplay(JSON.stringify(chosen), DISPLAY_DEFAULT)).toEqual(chosen);
     expect(parseDisplay(JSON.stringify({ chimes: 'yes', chimeSounds: { 'reply-started': 'bell', translated: 3 }, mode: 'sepia', bg: 'teal', accent: 3, quotes: 'bubble', follow: { light: 'study', dark: 3, applied: 'dark' }, hideHeader: 'no', enterSendsChoice: 0, enterSends: 0, hidePictures: 1, pictureWidest: 5, wideFill: 'no', pictureSide: 'top', inlineIllustrations: 'yes', portrait: 'yes' }), DISPLAY_DEFAULT)).toEqual(DISPLAY_DEFAULT);
   });

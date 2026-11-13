@@ -53,6 +53,11 @@ export default defineConfig([
     rules: { 'no-restricted-imports': ['error', { patterns: [CSS_IMPORT], paths: [ACT_ICONS] }], 'no-restricted-syntax': ['error', HEX_COLOR, STYLE_PROPS, RETIRED_COPY] },
   },
   {
+    // A theme's definition states its own colours (user, 2026-11-13), and tokens.test.ts checks them as written.
+    files: ['src/app/ui/themes/**', 'src/app/ui/foundation/tokens.test.ts'],
+    rules: { 'no-restricted-syntax': ['error', RETIRED_COPY] },
+  },
+  {
     files: ['src/app/common/acts.ts'],
     rules: { 'no-restricted-imports': ['error', { patterns: [CSS_IMPORT] }] },
   },

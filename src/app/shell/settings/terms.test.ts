@@ -8,7 +8,7 @@ import { TOOL_PLACES } from '../tools/ToolsNav';
 import { hitsOf, hitTexts, subpages } from './terms';
 
 const PLACES = [
-  ...(['models', 'connections', 'chat', 'labs', 'prompts', 'personas', 'modules', 'plugins', 'display', 'controls', 'sounds', 'account', 'admin'] satisfies SettingsPage[]).map((page) => ({ page, label: PAGES[page] })),
+  ...(['models', 'connections', 'chat', 'labs', 'prompts', 'personas', 'modules', 'plugins', 'theme', 'display', 'controls', 'sounds', 'account', 'admin'] satisfies SettingsPage[]).map((page) => ({ page, label: PAGES[page] })),
   ...FEATURES.map((page) => ({ page, label: FEATURE_NAMES[page] })),
 ].map((place) => ({ ...place, route: { kind: 'settings' } as const }));
 const TOOLS_SOUGHT = TOOL_PLACES.map((place) => ({ ...place, where: TOOLS }));

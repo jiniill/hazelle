@@ -10,7 +10,7 @@ import { markSelfHost } from '../runtime/installation';
 import { START_AGAIN } from '../contracts/start';
 import { pulsePage } from './pulse/route';
 import { sharePage } from './share/route';
-import { markScrollbars } from './ui';
+import { adoptThemes, markScrollbars, THEMES } from './ui';
 import './ui/foundation/global.css';
 
 const StartPage = lazy(() => import('./start/StartPage').then(({ StartPage }) => ({ default: StartPage })));
@@ -21,6 +21,7 @@ if (!root) throw new Error('index.html has no #root element');
 
 markSelfHost(document.documentElement.hasAttribute('data-self-host'));
 watchProblems();
+adoptThemes(Object.values(THEMES));
 applyStoredScheme();
 markScrollbars();
 

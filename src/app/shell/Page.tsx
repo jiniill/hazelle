@@ -49,6 +49,7 @@ const AccountScreen = lazy(() => import('../settings/AccountScreen').then(({ Acc
 const FeatureScreen = lazy(() => import('../settings/FeatureScreen').then(({ FeatureScreen }) => ({ default: FeatureScreen })));
 const SetupScreen = lazy(() => import('../settings/SetupScreen').then(({ SetupScreen }) => ({ default: SetupScreen })));
 const ChatSettingsScreen = lazy(() => import('../settings/ChatSettingsScreen').then(({ ChatSettingsScreen }) => ({ default: ChatSettingsScreen })));
+const ThemeScreen = lazy(() => import('../settings/ThemeScreen').then(({ ThemeScreen }) => ({ default: ThemeScreen })));
 const DisplayScreen = lazy(() => import('../settings/DisplayScreen').then(({ DisplayScreen }) => ({ default: DisplayScreen })));
 const ControlsScreen = lazy(() => import('../settings/ControlsScreen').then(({ ControlsScreen }) => ({ default: ControlsScreen })));
 const SoundsScreen = lazy(() => import('../settings/SoundsScreen').then(({ SoundsScreen }) => ({ default: SoundsScreen })));
@@ -152,6 +153,8 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
         return <ChatSettingsScreen back={sideBack(at)} />;
       case 'feature':
         return <FeatureScreen key={at.feature} feature={at.feature} back={sideBack(at)} />;
+      case 'theme':
+        return <ThemeScreen back={sideBack(at)} />;
       case 'display':
         return <DisplayScreen back={sideBack(at)} />;
       case 'controls':

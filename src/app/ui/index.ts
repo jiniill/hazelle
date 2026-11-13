@@ -7,3 +7,4 @@ export * from './layout';
 export * from './overlays';
 export * from './status';
 export * from './story';
+export * from './themes';

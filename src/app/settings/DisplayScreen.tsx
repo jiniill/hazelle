@@ -9,7 +9,7 @@ import { ACTS } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
 import { readPicturePercent } from '../common/picturePercent';
 import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRows';
-import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
+import { choices, LOOK_SAMPLE, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
 import { reader } from '../common/typedNumber';
 import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, PRESET, PRESET_GONE, PRESET_GONE_CHIP, SAVE_FAILED } from '../common/words';
@@ -26,7 +26,6 @@ const SAMPLE: PreviewRow[] = [
   { name: '나', mine: true, html: storyHtml('"이번엔 끝까지 읽었어. 결말이 좀 의외던데."', false) },
 ];
 
-const SWATCH_SAMPLE = '그녀는 찻잔을 내려놓고 고개를 들었다.';
 
 const SLOTS: Record<Mode, string> = { light: '밝은 모드일 때', dark: '어두운 모드일 때' };
 const SLOT_KEYS = Object.keys(SLOTS) as Mode[];
@@ -89,7 +88,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           )
         }
       >
-        <Swatches label="프리셋" sample={SWATCH_SAMPLE} items={presets.map((preset, index) => ({ ...swatch(preset), menu: menu(preset, index) }))} onMove={move} />
+        <Swatches label="프리셋" sample={LOOK_SAMPLE} items={presets.map((preset, index) => ({ ...swatch(preset), menu: menu(preset, index) }))} onMove={move} />
         {STARTER_PRESETS.some(({ id }) => !saved.some((look) => look.id === id)) && (
           <Button variant="link" onClick={() => toast.settled(addStarters(store), SAVE_FAILED)}>
             기본 프리셋 다시 넣기

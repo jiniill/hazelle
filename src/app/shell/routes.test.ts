@@ -86,6 +86,7 @@ const EXAMPLES = {
   setup: [{ kind: 'setup' }],
   'chat-settings': [{ kind: 'chat-settings' }],
   feature: FEATURES.map((feature) => ({ kind: 'feature', feature })),
+  theme: [{ kind: 'theme' }],
   display: [{ kind: 'display' }],
   controls: [{ kind: 'controls' }],
   sounds: [{ kind: 'sounds' }],

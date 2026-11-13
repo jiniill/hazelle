@@ -147,7 +147,7 @@ export const NOTE_UNSENT = `번역 프롬프트에 '${TRANSLATOR_NOTE}' 블록�
 export const ILLUSTRATE_NOTE = '삽화 노트';
 export const ILLUSTRATE_NOTE_UNSENT = `삽화 프롬프트에 '${ILLUSTRATE_NOTE}' 블록을 추가해야 노트가 적용돼요.`;
 
-export const PAGES = { setup: '내 구성', models: '모델', connections: 'API 연결', chat: '대화', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용 기록', admin: '운영' };
+export const PAGES = { setup: '내 구성', models: '모델', connections: 'API 연결', chat: '대화', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', theme: '테마', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용 기록', admin: '운영' };
 
 // Keep always-on module wording consistent: editable only in global settings, read-only marks elsewhere.
 export const ALWAYS = '항상';
