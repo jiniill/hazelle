@@ -220,7 +220,7 @@ export function sentRequest(route: Route, sent: ChatRequest): HttpRequest {
   // Only a catalog's own no; most say nothing, and those are sent.
   if (sent.tools && sent.model.tools === false) throw new ConnectorError('tools-unsupported');
   const codec = codecRequest(route, sent);
-  // Last, over the codec's, the discount lane's and the output limit's fields: the user's own field wins.
+  // Last, over the codec's, the discount lane's, the host's and the output limit's fields: the user's own field wins.
   const built = sent.settings.extra && codec.body ? { ...codec, body: withExtra(codec.body, readExtra(sent.settings.extra).fields) } : codec;
   return pictures && route.type?.pictureHeaders ? { ...built, headers: { ...built.headers, ...route.type.pictureHeaders } } : built;
 }
@@ -229,9 +229,11 @@ function codecRequest(route: Route, sent: ChatRequest): HttpRequest {
   const { reasoning, discount } = sent.settings;
   const lane = discount ? route.type?.discount : undefined;
   const tier = lane?.lane === 'tier' ? lane : null;
+  const host = sent.model.host;
   const fields = {
     ...(reasoning?.kind === 'budget' && !route.codec.carries.reasoning.budget && route.type?.reasoningBudget ? route.type.reasoningBudget(reasoning.tokens) : {}),
     ...tier?.fields,
+    ...(host && route.type?.hosts?.fields(host)),
   };
   const mark = cacheWay(route, sent.model)?.mark ?? null;
   const built = route.codec.chat(route.endpoint, sent, fields, mark);

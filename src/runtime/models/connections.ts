@@ -132,6 +132,10 @@ export const renameModel = (store: ObjectStore, id: string, key: string, label: 
 export const setModelPictures = (store: ObjectStore, id: string, key: string, on: boolean) =>
   store.update('connection', id, (current) => ({ ...current, starred: current.starred.map((model) => (entryKey(model) !== key ? model : on ? { ...model, pictures: true as const } : without(model, 'pictures'))) }));
 
+// null lets the gateway pick again.
+export const setModelHost = (store: ObjectStore, id: string, key: string, host: string | null) =>
+  store.update('connection', id, (current) => ({ ...current, starred: current.starred.map((model) => (entryKey(model) !== key ? model : host ? { ...model, host } : without(model, 'host'))) }));
+
 // Key order aside, so a snapshot written in another order is not taken for a change.
 const sameValue = (a: unknown, b: unknown) => {
   const sorted = (value: unknown) => JSON.stringify(value, (_, field: unknown) => (isRecord(field) ? Object.fromEntries(Object.entries(field).sort(([x], [y]) => (x < y ? -1 : 1))) : field));

@@ -4,7 +4,7 @@ import type { Connection } from '../../connectors/types';
 import openRouterKey from '../../connectors/fixtures/openrouter-key.json';
 import openRouterModels from '../../connectors/fixtures/openrouter-models.json';
 import { accountSettings } from '../account-settings';
-import { addConnection, addCopy, addModel, changeKey, providerConnection, putModelBack, refreshStarred, removeModel, renameModel, retriesOf, routeFields, setSharedRetries } from './connections';
+import { addConnection, addCopy, addModel, changeKey, providerConnection, putModelBack, refreshStarred, removeModel, renameModel, retriesOf, routeFields, setModelHost, setSharedRetries } from './connections';
 import type { Stored } from '../../model/kinds';
 import { bareModel } from '../../connectors/chat-completions';
 import type { Model } from '../../connectors/types';
@@ -115,6 +115,20 @@ describe('renameModel', () => {
       expect(label()).toBe(testModel.name);
       await renameModel(store, id, testModel.id, '');
       expect(label()).toBeUndefined();
+    }));
+});
+
+describe('setModelHost', () => {
+  it('keeps the picked host through a catalog refresh, and clearing it lets the gateway pick again', () =>
+    server.withSession(async ({ store }) => {
+      const saved = await store.create('connection', { ...openRouter, starred: [testModel] });
+      const id = saved.ok ? saved.data.id : '';
+      const host = () => store.get('connection', id)!.value.starred[0]!.host;
+      expect((await setModelHost(store, id, testModel.id, 'google-ai-studio')).ok).toBe(true);
+      await refreshStarred(store, id, [{ ...testModel, name: 'M 2' }]);
+      expect(host()).toBe('google-ai-studio');
+      await setModelHost(store, id, testModel.id, null);
+      expect(host()).toBeUndefined();
     }));
 });
 

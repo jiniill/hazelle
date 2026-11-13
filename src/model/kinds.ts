@@ -240,7 +240,7 @@ const SHAPES = {
     protocol: orNull(str),
     accounts: listOf(shape({ id: str, secret: str })),
     turns: orNull(shape({ day: num, groups: listOf(shape({ id: str, name: str, accounts: listOf(str) })), anchor: shape({ group: str, cycle: num }) })),
-    starred: listOf(shape({ id: str, name: str, entry: optStr, label: optStr, pictures: (value) => value === undefined || value === true })),
+    starred: listOf(shape({ id: str, name: str, entry: optStr, label: optStr, pictures: (value) => value === undefined || value === true, host: optStr })),
     retries: (value) => value === undefined || num(value),
   }),
   settings: shape({ models: isRecord }),

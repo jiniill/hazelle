@@ -1,7 +1,7 @@
 import { bareModel, listedSettings } from './chat-completions';
 import { effortLevels, type ReasoningTakes } from './settings';
 import { statedPrice } from './pricing';
-import type { ConnectionType, Meter, MeterReset, Model } from './types';
+import type { ConnectionType, Host, Meter, MeterReset, Model } from './types';
 import { amount, count, modalities, modelEntries, perMillion } from './values';
 import { isRecord } from '../record';
 
@@ -67,6 +67,26 @@ export function openRouterModels(payload: unknown): Model[] | null {
   );
 }
 
+// A tier row (service_tier flex or priority) is not a host of its own: the request's service_tier opts into it, so a
+// flex row marks the host its tag extends.
+export function openRouterHosts(payload: unknown): Host[] | null {
+  if (!isRecord(payload) || !isRecord(payload.data) || !Array.isArray(payload.data.endpoints)) return null;
+  const rows = payload.data.endpoints.filter(isRecord).filter((row) => typeof row.tag === 'string');
+  const flex = rows.filter((row) => row.service_tier === 'flex').map((row) => row.tag as string);
+  return rows
+    .filter((row) => typeof row.service_tier !== 'string')
+    .map((row) => {
+      const id = row.tag as string;
+      const pricing = isRecord(row.pricing) ? row.pricing : {};
+      return {
+        id,
+        name: typeof row.provider_name === 'string' ? row.provider_name : id,
+        price: statedPrice(perMillion(pricing.prompt), perMillion(pricing.completion), perMillion(pricing.input_cache_read), perMillion(pricing.input_cache_write)) ?? null,
+        discount: flex.some((tag) => tag.startsWith(`${id}/`)),
+      };
+    });
+}
+
 export const openRouter: ConnectionType = {
   browser: {},
   id: 'openrouter',
@@ -87,6 +107,25 @@ export const openRouter: ConnectionType = {
 
   // OpenRouter reports what the call cost, in US dollars, with the final usage.
   cost: ({ facts }) => (typeof facts.rawUsage.cost === 'number' && Number.isFinite(facts.rawUsage.cost) ? { unit: 'usd', amount: facts.rawUsage.cost, source: 'reported' } : null),
+
+  // service_tier flex goes to a flex row of a provider the account allows, the picked host's when there is one, which
+  // is refused where that host has none; the reply names the tier that served it, and its cost is the one reported.
+  // Asked of a model whose flex row was out of reach, it was served at the standard tier (live, 2026-11-13).
+  discount: {
+    lane: 'tier',
+    fields: { service_tier: 'flex' },
+    served: 'flex',
+    busy: () => false,
+    accepted: null,
+    rates: { input: 0.5, output: 0.5, cacheRead: 0.5, cacheWrite: 0.5 },
+  },
+
+  // Without allow_fallbacks the router sends a call the picked host cannot take to another.
+  hosts: {
+    request: (model) => ({ url: `https://openrouter.ai/api/v1/models/${model}/endpoints`, method: 'GET', headers: {}, body: null }),
+    parse: openRouterHosts,
+    fields: (host) => ({ provider: { order: [host], allow_fallbacks: false } }),
+  },
 
   meters: [{
     request: (secret) => ({ url: 'https://openrouter.ai/api/v1/key', method: 'GET', headers: { authorization: `Bearer ${secret}` }, body: null }),
