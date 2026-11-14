@@ -3,6 +3,7 @@ import type { Theme } from '../foundation/theme';
 export const discord: Theme = {
   id: 'discord',
   name: '디스코드',
+  mode: 'dark',
   shapes: { header: 'topic', rail: 'servers', list: 'channels', composer: 'bar', message: 'row', day: 'rule' },
   finish: { rows: 'close', faces: 'round', lines: 'close', speakers: 'large', corners: 'tight', dock: 'inset' },
   letters: { font: 'sans', size: 15, leading: 'normal', width: 'full' },

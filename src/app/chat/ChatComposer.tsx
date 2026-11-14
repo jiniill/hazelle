@@ -10,7 +10,7 @@ import { describeTurnFailure } from '../common/failure';
 import { withParticle } from '../common/particles';
 import { ACTS } from '../common/acts';
 import { count } from '../common/typedNumber';
-import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES, PICK_MODEL, MEMORY_GAP, MEMORY_WORKING } from '../common/words';
+import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES, PICK_MODEL, MEMORY_GAP, MEMORY_WORKING, MESSAGE_FIELD } from '../common/words';
 import { STALE } from './memory';
 import type { PromptDoor } from '../common/TaskPrompt';
 import { navigate } from '../shell/router';
@@ -189,7 +189,7 @@ export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFol
         enterKeyHint={enterSends ? 'send' : 'enter'}
         onChange={draft.set}
         onKeyDown={onKey}
-        placeholder={translate.input ? `${withParticle(sendLanguage, '으로/로')} 번역해서 보내요` : '메시지'}
+        placeholder={translate.input ? `${withParticle(sendLanguage, '으로/로')} 번역해서 보내요` : MESSAGE_FIELD}
         attachments={<Attachments items={attachments.draft.map(attachedItem)} onRemove={actions.detach} />}
         onFiles={actions.attach}
         tools={<ChatToolRow tools={rowTools} after={<ChatPinnedToggles toggles={chat.toggles} onFlip={actions.flip} />} />}

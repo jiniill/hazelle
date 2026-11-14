@@ -2,7 +2,7 @@
   position: sticky;
   top: 0;
   width: var(--sidebar-width);
-  height: var(--sidebar-height, 100dvh);
+  height: var(--frame-height, 100dvh);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -71,7 +71,7 @@
   /* Sticky rail creates a stacking context; raise the rail itself to menu level or its menus fall under the next panel. */
   z-index: var(--layer-menu);
   width: var(--rail-width);
-  height: 100dvh;
+  height: var(--frame-height, 100dvh);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;

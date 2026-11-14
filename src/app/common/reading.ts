@@ -52,13 +52,13 @@ export const lettersOf = ({ font, size, leading, width }: Letters): Letters => (
 // Portrait stage is reserved for chats without illustration (user, 2026-10-16); width cap preserves old default (2026-10-17).
 // Track last system mode so reload preserves manual edits until the next mode change (user, 2026-10-20).
 // Chimes default off and use chimeSounds once enabled (user, 2026-10-26).
-export type Display = Scheme & { theme: ThemeId; chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; toolsFollow: boolean; splitReplies: boolean; userStops: boolean };
+export type Display = Scheme & { theme: ThemeId; chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; toolsFollow: boolean; splitReplies: boolean; userStops: boolean; modes: Partial<Record<ThemeId, Mode>> };
 
 export type Follow = Record<Mode, string> & { applied: Mode };
 
 const PLAIN = { bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' } as const;
 
-export const DISPLAY_DEFAULT: Display = { theme: 'base', chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, mode: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, toolsFollow: true, splitReplies: true, userStops: false };
+export const DISPLAY_DEFAULT: Display = { theme: 'base', chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, mode: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, toolsFollow: true, splitReplies: true, userStops: false, modes: {} };
 
 export function parseDisplay(stored: string, fallback: Display): Display {
   const read = fields<keyof Display | 'enterSends'>(stored);
@@ -91,8 +91,21 @@ export function parseDisplay(stored: string, fallback: Display): Display {
     toolsFollow: flag(read.toolsFollow, fallback.toolsFollow),
     splitReplies: flag(read.splitReplies, fallback.splitReplies),
     userStops: flag(read.userStops, fallback.userStops),
+    modes: parseModes(read.modes),
   };
 }
+
+function parseModes(value: unknown): Display['modes'] {
+  const read = (typeof value === 'object' && value !== null ? value : {}) as Record<string, unknown>;
+  return Object.fromEntries((Object.keys(THEMES) as ThemeId[]).flatMap((id) => (named(MODE, read[id]) ? [[id, read[id]]] : [])));
+}
+
+// The mode a theme is worn in: the worn one's is the display's, another's the one it was left in, else the one it
+// states, else the reader's now. A display saved before modes has none left, so its worn theme keeps its mode.
+export const modeIn = ({ theme, mode, modes }: Display, id: ThemeId): Mode => (id === theme ? mode : (modes[id] ?? THEMES[id].mode ?? mode));
+
+// Changing the theme leaves the mode with the one taken off and takes the next one's.
+export const wearing = (display: Display, theme: ThemeId): Pick<Display, 'theme' | 'mode' | 'modes'> => ({ theme, mode: modeIn(display, theme), modes: { ...display.modes, [display.theme]: display.mode } });
 
 function parseChimeSounds(value: unknown, fallback: Display['chimeSounds']): Display['chimeSounds'] {
   const read = (typeof value === 'object' && value !== null ? value : {}) as Partial<Record<Cue, unknown>>;
@@ -127,10 +140,11 @@ export type Look = Letters & Scheme;
 // id: what a 시스템 따라 바꾸기 slot and a character's look hold, its saved id.
 export type Preset = { id: string; name: string; look: Look };
 
-// The words a look is shown by, on a preset's card and a theme's.
-export const LOOK_SAMPLE = '그녀는 찻잔을 내려놓고 고개를 들었다.';
 
 export const lookOf = (letters: Letters, { mode, bg, ink, accent, dialogue }: Display): Look => ({ mode, bg, ink, accent, dialogue, ...lettersOf(letters) });
+
+// 초기화's: a theme's first letters with no colour picked, in the mode the theme states; 기본 states none and takes the default's.
+export const firstLook = (letters: Letters, theme: ThemeId): Look => lookOf(letters, { ...DISPLAY_DEFAULT, mode: THEMES[theme].mode ?? DISPLAY_DEFAULT.mode });
 
 const LOOK: Record<keyof Look, true> = { mode: true, bg: true, ink: true, accent: true, dialogue: true, font: true, size: true, leading: true, width: true };
 const LOOK_KEYS = Object.keys(LOOK) as (keyof Look)[];

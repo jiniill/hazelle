@@ -89,7 +89,9 @@ const PARTS = ['side', 'room'] as const;
 type Parts = { [Name in (typeof PARTS)[number]]?: Partial<Record<Mode, Part>> };
 
 // tones left out is the app's own colours, as tokens.css has them. A part is by the page's mode, and rides on tones.
-export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; shapes: Shapes; finish: Finish; letters?: Letters } & Parts;
+// mode: the one the theme is first worn in; the reader's change while wearing it is kept as the theme's, as its
+// letters are. Left out, the theme is worn in the mode the reader was in.
+export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; mode?: Mode; shapes: Shapes; finish: Finish; letters?: Letters } & Parts;
 
 export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose', day: 'rule' }, finish: { rows: 'open', faces: 'soft', lines: 'open', speakers: 'small', corners: 'soft', dock: 'inset' } };
 

@@ -10,7 +10,7 @@ type Count = 'budget' | 'window' | 'batch';
 
 // One name per part, for its row in the split and its setting; the settings keep the split's order, oldest first.
 const COUNTS: Record<Count, { label: string; unit: string; help?: string }> = {
-  budget: { label: '기록', unit: '토큰', help: `정리한 기록을 요청할 때마다 최대 이만큼 넣어요. ${MODEL_ROLES.embed}로 찾아서 넣는 기록은 이 한도 밖에서 최대 1/5까지 더 들어가요.` },
+  budget: { label: '기록', unit: '토큰', help: `메시지를 보낼 때마다 최대 이만큼 넣어요. ${MODEL_ROLES.embed}로 찾은 기록은 이 한도와 별개로 최대 1/5까지 더 들어가요.` },
   batch: { label: '정리 대기 중인 대화', unit: '토큰', help: '오래된 대화가 이만큼 쌓이면 기록으로 정리해요.' },
   window: { label: '원문으로 보낼 최근 대화', unit: '토큰' },
 };
@@ -29,7 +29,7 @@ export function MemorySplit({ total, whole, records, found, waiting, recent }: {
     { ...waiting, label: COUNTS.batch.label, mark: 'striped' as const },
     { ...recent, label: COUNTS.window.label, mark: 'plain' as const },
   ];
-  return <Breakdown total={total === undefined ? undefined : { label: '요청마다 보내는 기록과 대화', value: total }} shares={parts.map((part) => part.tokens / whole)} parts={parts.map(({ label, value, mark }) => ({ label, value, mark }))} />;
+  return <Breakdown total={total === undefined ? undefined : { label: '매번 보내는 기록과 대화', value: total }} shares={parts.map((part) => part.tokens / whole)} parts={parts.map(({ label, value, mark }) => ({ label, value, mark }))} />;
 }
 
 const MEMORY_HELP = { text: '오래된 대화를 기록으로 정리해서 모델에게 보내요.', demo: { name: 'memory' } } as const;

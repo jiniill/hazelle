@@ -4,6 +4,19 @@
   gap: var(--space-16);
 }
 
+/* A picture needs more room than a line of words to be read, and takes the shape of the screen it is of. */
+.pictured {
+  --picture-ratio: var(--swatch-picture-ratio);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--swatch-picture-min-width)), 1fr));
+}
+
+@media (max-width: 959px) {
+  .pictured {
+    --picture-ratio: var(--swatch-picture-ratio-narrow);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--swatch-picture-min-width-narrow)), 1fr));
+  }
+}
+
 .card {
   composes: box from '../foundation/surface.module.css';
   position: relative;
@@ -29,6 +42,49 @@
   border-radius: inherit;
   color: var(--color-text);
   text-align: left;
+}
+
+/* The pick of a card with a picture is its name's line, pressed anywhere on the card. */
+.over::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* A frame drawn small: its parts take the picture's height for the viewport's, and stand in a stack of their own. */
+.picture {
+  position: relative;
+  aspect-ratio: var(--picture-ratio);
+  overflow: hidden;
+  isolation: isolate;
+  border-bottom: var(--border-thin) solid var(--color-divider);
+  border-radius: inherit;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Laid out at the frame's own size and scaled down: a transform, which every engine draws alike and no part's
+   measuring sees. */
+.small {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% / var(--swatch-picture-scale));
+  height: calc(100% / var(--swatch-picture-scale));
+  display: flex;
+  transform: scale(var(--swatch-picture-scale));
+  transform-origin: top left;
+  --frame-height: 100%;
+  /* What the window and the screen the card stands in set for their own boxes and side, as a dialog sets them back. */
+  --sidebar-rule: initial;
+  --box-line: initial;
+}
+
+.small > :last-child {
+  flex-grow: 1;
+  min-width: 0;
 }
 
 .menu {

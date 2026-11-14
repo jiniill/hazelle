@@ -1,7 +1,7 @@
 .frame {
   position: relative;
   display: flex;
-  height: 100dvh;
+  height: var(--frame-height, 100dvh);
 }
 
 .column {
