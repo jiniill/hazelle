@@ -40,7 +40,7 @@ import { FaceChange } from '../common/FaceChange';
 import { useTypedNumber } from '../common/typed';
 import { mergeStatus, saveWords, useAutosave } from '../common/useAutosave';
 import { useIdentityFields } from '../common/useIdentityFields';
-import { ADDITIONAL_TEXT, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STATUS, STOP, THINGS, TRANSLATOR_NOTE, CARD_INSTRUCTIONS, RETRANSLATE } from '../common/words';
+import { ADDITIONAL_TEXT, LOREBOOK, ADDITIONAL_TEXT_HELP, ASSET, BOT_MODELS, BOT_MODELS_HELP, CARD_WRITES, CARD_WRITES_HELP, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, inFeature, inSettings, NOTE_PLACEHOLDER, opens, ORIGINAL_GONE, PAGES, SAVE_FAILED, SCRIPTS, SEE_ORIGINAL, STATUS, STOP, THINGS, TRANSLATOR_NOTE, CARD_INSTRUCTIONS, RETRANSLATE } from '../common/words';
 import { useDisplay } from '../display';
 import { editing } from './editing';
 import { CharacterActionItems } from './gallery/CharacterCard';
@@ -279,7 +279,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     greetings: (
       <Section title={PARTS.greetings.label} help="새 채팅을 시작할 때 이 중에서 선택할 수 있어요." action={readingSwitch}>
         {translatorMissing}
-        {!translated && text.greetings.length > 1 && numbered > 0 && <Callout tone="tip">{`로어북 항목 ${numbered}개가 첫인사 번호로 켜져요. 순서를 바꾸면 그 번호가 가리키는 첫인사가 달라져요.`}</Callout>}
+        {!translated && text.greetings.length > 1 && numbered > 0 && <Callout tone="tip">{`첫인사 번호로 활성화되는 ${LOREBOOK} 항목 ${numbered}개는 순서를 바꾸면 새 채팅에서 연결되는 첫인사가 달라져요.`}</Callout>}
         {translated ? (
           card.greetings.map((greeting, index) => translatedField(`첫인사 ${index + 1}`, greeting, 6))
         ) : (
