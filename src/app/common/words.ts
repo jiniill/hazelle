@@ -114,6 +114,7 @@ export const COST_ESTIMATE = '예상 비용';
 // Marks a chat shows on trouble, which 운영's 자동 진단 names the same.
 export const TURN_FAILED = '응답 실패';
 export const MEMORY_GAP = '기억에 없음';
+export const MEMORY_WORKING = '기억 정리 중';
 export const CACHE_BROKEN = '캐시 깨짐';
 
 export const RESTORES = '복원 기록';

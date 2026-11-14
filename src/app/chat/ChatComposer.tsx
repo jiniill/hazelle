@@ -10,7 +10,7 @@ import { describeTurnFailure } from '../common/failure';
 import { withParticle } from '../common/particles';
 import { ACTS } from '../common/acts';
 import { count } from '../common/typedNumber';
-import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES, PICK_MODEL, MEMORY_GAP } from '../common/words';
+import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES, PICK_MODEL, MEMORY_GAP, MEMORY_WORKING } from '../common/words';
 import { STALE } from './memory';
 import type { PromptDoor } from '../common/TaskPrompt';
 import { navigate } from '../shell/router';
@@ -37,7 +37,7 @@ import type { ComposerFold } from './useComposerFold';
 
 // Shown by what leavingCauses finds: the first cause's words, every cause's sentence.
 const LEAVING: Record<GapCause, { words: string; why: string }> = {
-  working: { words: '기억 정리 중', why: '장기 기억을 정리하는 중이에요.' },
+  working: { words: MEMORY_WORKING, why: '장기 기억을 정리하는 중이에요.' },
   failed: { words: '기억 정리 실패', why: '장기 기억 정리가 실패해서 멈췄어요. 눌러서 다시 시도할 수 있어요.' },
   tool: { words: '플러그인 응답 전', why: '장기 기억을 맡은 플러그인이 아직 응답하지 않아서 보내기 전에는 정확한 수를 알 수 없어요.' },
   off: { words: '장기 기억 꺼짐', why: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠지는데, 장기 기억이 꺼져 있어요.' },

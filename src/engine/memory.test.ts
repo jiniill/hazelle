@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Chapter, Memory, MemoryRecord } from '../model/memory';
-import { chapterFormat, fingerprint, memoryBefore, memoryBudget, memoryFormat, nextChapters, nextMerge, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, standing, windowStart, type ChatRead, memoryShape } from './memory';
+import { chapterFormat, fingerprint, memoryBefore, memoryBudget, memoryFormat, nextChapters, nextMerge, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, standing, untilSpan, windowStart, type ChatRead, memoryShape } from './memory';
 
 const span = ['Luna: "I will  wait\nfor you until spring."', 'jin leaves the lighthouse.', 'Spring comes. Luna lights the lamp.'];
 const record = (to: number, lines: { speaker: string; text: string }[] = []) => ({
@@ -97,6 +97,13 @@ describe('the window and the next span', () => {
     const tokens = [300, 300, 300, 300, 300, 300, 500, 200];
     expect(rawParts(tokens, 2, 600)).toEqual({ end: 6, waiting: 1200, recent: 700 });
     expect(rawParts(tokens, 7, 600)).toEqual({ end: 7, waiting: 0, recent: 200 });
+  });
+
+  it('counts what a short chat still has to fill of the window before any of it waits', () => {
+    const settings = { window: 24_000, batch: 12_000 };
+    expect(untilSpan({ waiting: 0, recent: 19 }, settings)).toBe(35_981);
+    expect(untilSpan({ waiting: 8000, recent: 24_100 }, settings)).toBe(4000);
+    expect(untilSpan({ waiting: 13_000, recent: 24_000 }, settings)).toBe(0);
   });
 
   it('shrinks a memory budget past half of what the model can take, for that request only', () => {

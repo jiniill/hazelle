@@ -450,6 +450,10 @@ export function rawParts(tokens: number[], covered: number, window: number): { e
   return { end, waiting: summed(tokens.slice(covered, end)), recent: summed(tokens.slice(end)) };
 }
 
+// New raw tokens before nextSpan plans a span with nothing dropped: the window fills first, and only what leaves it waits.
+export const untilSpan = ({ waiting, recent }: { waiting: number; recent: number }, { window, batch }: { window: number; batch: number }) =>
+  Math.max(0, window - recent) + Math.max(0, batch - waiting);
+
 // Summarize uncovered pre-window text once it reaches batch, or earlier if the next request drops it.
 // Take whole messages (at least one), the last never. Null means no job.
 // A request that cannot hold the window drops messages inside it, and those must reach memory too (model/memory's

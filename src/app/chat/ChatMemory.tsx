@@ -1,4 +1,5 @@
 import { useState, type ComponentProps, type ReactNode } from 'react';
+import { untilSpan } from '../../engine/memory';
 import type { Chat, ChatItem } from '../../model/chat';
 import { emptyMemory, type Fact, type MemorySettings, type Thread } from '../../model/memory';
 import { embedModel } from '../../runtime/models/assignment';
@@ -14,7 +15,7 @@ import { taskRuns } from '../common/taskRuns';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
 import { useLoad } from '../common/useLoaded';
-import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag, FEATURE_NAMES, ONLY_THIS_CHAT, UNDO_FAILED } from '../common/words';
+import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag, FEATURE_NAMES, ONLY_THIS_CHAT, UNDO_FAILED, MEMORY_WORKING } from '../common/words';
 import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
@@ -93,7 +94,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
         </Row>
       )}
       {writing ? (
-        <Text variant="note">{`기억 요약 중 · ${writing.model} · 남은 호출 ${writing.left}개`}</Text>
+        <Text variant="note">{`${MEMORY_WORKING} · ${writing.model} · 남은 호출 ${writing.left}개`}</Text>
       ) : (
         failure && (
           <Callout tone="warn" action={retry}>
@@ -196,11 +197,14 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
 function MemoryFill({ view }: { view: MemoryView }) {
   const { used, budget, waiting, recent } = view.tokens;
   const { batch, window } = view.setup;
-  const left = batch - waiting;
+  const left = untilSpan(view.tokens, view.setup);
+  const now = used + waiting + recent;
+  const most = budget + batch + window;
   return (
     <Stack gap="related">
       <MemorySplit
-        whole={Math.max(budget + batch + window, used + waiting + recent)}
+        total={view.slot ? `약 ${tokens(now)} / ${tokens(most)} 토큰` : undefined}
+        whole={Math.max(most, now)}
         records={{ tokens: used, value: `약 ${tokens(used)} / ${tokens(budget)} 토큰` }}
         waiting={{ tokens: waiting, value: `약 ${tokens(waiting)} / ${tokens(batch)} 토큰` }}
         recent={{ tokens: recent, value: `약 ${tokens(recent)} 토큰` }}

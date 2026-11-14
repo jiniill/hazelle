@@ -118,8 +118,8 @@ export function ChatMemoryRecord({ chat, item, memory, view, failure, positions,
         {record && (
           <SettingRow
             label="원문 메시지 보내기"
-            help="요약본 대신 원문 메시지를 보내요."
-            note={status === 'recall-over' ? '원문이 한도를 초과해서 요약본을 보내요.' : undefined}
+            help="기록 대신 원문 메시지를 보내요."
+            note={status === 'recall-over' ? '원문이 한도를 초과해서 기록을 보내요.' : undefined}
             control={<Switch label="원문 메시지 보내기" checked={record.recalled === true} onChange={recall} />}
           />
         )}

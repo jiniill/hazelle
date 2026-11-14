@@ -30,7 +30,7 @@ export function MemoryDefaults() {
       {/* Off, a request fills no memory slot, so this split is not what it sends. */}
       {value.on && (
         <MemorySplit
-          total={{ label: '요청마다 보내는 기록과 대화', value: `최대 ${amount(sum)}` }}
+          total={`최대 ${amount(sum)}`}
           whole={sum}
           records={{ tokens: value.budget, value: `최대 ${amount(value.budget)}` }}
           found={{ tokens: found, value: `최대 ${amount(found)}` }}
