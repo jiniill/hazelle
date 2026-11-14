@@ -115,7 +115,8 @@ const GROUND: Partial<Record<keyof Tone, string[]>> = {
   bubble: ['--color-bubble'],
 };
 // A 강조 pick colours the names too, as it does in 기본, and a name is stated against the theme's page, so a theme's
-// holds only while both picks are base.
+// holds only while both picks are base. A part's holds under a 강조 pick as well: a pick's colours are made for the
+// mode's page, and a part's ground is not it.
 const VOICE: Partial<Record<keyof Tone, string[]>> = { name: ['--color-name'] };
 // 대사's 무채색 pick sets the action voice with it, so a theme's holds only while that pick is base.
 const SPOKEN: Partial<Record<keyof Tone, string[]>> = { action: ['--color-prose-action'] };
@@ -136,9 +137,9 @@ function rule(selector: string, tone: Tone, tokens: Partial<Record<keyof Tone, s
   return declared.length > 0 ? `${selector}{${declared.join('')}}` : '';
 }
 
-function toneRules(name: string, mode: Mode, tone: Tone) {
+function toneRules(name: string, mode: Mode, tone: Tone, part = false) {
   const worn = `[data-theme='${name}'][data-mode='${mode}']`;
-  return rule(worn, tone, OWN) + rule(`${worn}[data-bg='base']`, tone, GROUND) + rule(`${worn}[data-bg='base'][data-accent='base']`, tone, VOICE) + rule(`${worn}[data-accent='base']`, tone, ACCENTED) + rule(`${worn}[data-dialogue='base']`, tone, SPOKEN);
+  return rule(worn, tone, OWN) + rule(`${worn}[data-bg='base']`, tone, GROUND) + rule(`${worn}[data-bg='base']${part ? '' : "[data-accent='base']"}`, tone, VOICE) + rule(`${worn}[data-accent='base']`, tone, ACCENTED) + rule(`${worn}[data-dialogue='base']`, tone, SPOKEN);
 }
 
 // A part is named apart from its theme, by the page's mode: under the theme's own name the theme's colours for the
@@ -154,7 +155,7 @@ export function themeRules(theme: Theme): string {
   const picked = (Object.keys(FINISH) as (keyof Finish)[]).map((part) => (FINISH[part] as Record<string, string>)[finish[part]]).join('');
   const modes = Object.keys(MODE) as Mode[];
   const parts = PARTS.flatMap((part) => modes.flatMap((page) => (theme[part]?.[page] ? [{ name: partName(id, part, page), ...theme[part][page] }] : [])));
-  const colours = [...modes.map((mode) => toneRules(id, mode, tones[mode])), ...parts.map(({ name, mode, tone }) => toneRules(name, mode, { ...tone, sidebar: tone.page }))];
+  const colours = [...modes.map((mode) => toneRules(id, mode, tones[mode])), ...parts.map(({ name, mode, tone }) => toneRules(name, mode, { ...tone, sidebar: tone.page }, true))];
   return colours.join('') + (picked ? [id, ...parts.map(({ name }) => name)].map((name) => `[data-theme='${name}'][data-mode]{${picked}}`).join('') : '');
 }
 
