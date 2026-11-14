@@ -441,8 +441,6 @@
   --control-mark: 20px;
   --control-xs: 28px;
   --control-chip: 34px;
-  --control-md: 44px;
-  --control-lg: 50px;
   --control-xl: 64px;
   --icon-sm: 16px;
   --icon-md: 22px;
@@ -518,7 +516,6 @@
   --toast-shrink: 0.05;
   --toast-words-most: 50vh;
   --screen-offset-top: 10vh;
-  --sidebar-width: 272px;
   /* 설정 and 도구 on a wide screen: a window over the page they were opened from, and its smaller desktop scale. It
      takes the screen less a margin that grows with it, up to its own most; its sidebar and body float apart. */
   --window-width: 1440px;
@@ -684,7 +681,7 @@
   --peek-tab-width: 27px;
   --swatch-min-height: 84px;
   /* A card's picture of the app: a window's shape beside the sidebar, a phone's where there is none. */
-  --swatch-picture-zoom: 0.4;
+  --swatch-picture-scale: 0.36;
   --swatch-picture-ratio: 16 / 10;
   --swatch-picture-min-width: 300px;
   --swatch-picture-ratio-narrow: 9 / 16;
@@ -919,6 +916,16 @@
   --layer-dialog: 40;
   --layer-toast: 45;
   --layer-drop: 50;
+}
+
+/* The app's frame at its own scale. A layer's window and a screen in it state these again for theirs
+   (Shell.module.css, Screen.module.css), so a picture of the frame drawn inside one (Swatches) names itself here and
+   has the app's. */
+:root,
+[data-app-frame] {
+  --sidebar-width: 272px;
+  --control-md: 44px;
+  --control-lg: 50px;
 }
 
 @media (pointer: coarse) {

@@ -1,9 +1,8 @@
-import { LayoutGrid, MessagesSquare, Search, Settings, Wrench } from 'lucide-react';
 import type { ChatSummary } from '../../../model/chat';
 import type { Shelf } from '../../../model/library';
 import { ACTS } from '../../common/acts';
+import { PLACES } from '../../common/places';
 import { ShelfFace, shelfName } from '../../library/shelf';
-import { BOARD, CHAT_SEARCH, SETTINGS, TOOLS } from '../../common/words';
 import { SHORTCUTS } from '../../shortcuts';
 import { useStanding } from '../../session';
 import { FaceButton, IconButton, Rail, titled, Viewport } from '../../ui';
@@ -32,16 +31,16 @@ export function SidebarRail({ shelves, current, home, search, board, typing, onE
       fold={fold}
       actions={
         <>
-          <IconButton icon={LayoutGrid} label="캐릭터 둘러보기" framed current={home} onClick={() => navigate(HOME)} />
-          <IconButton icon={Search} label={CHAT_SEARCH} title={titled(CHAT_SEARCH, SHORTCUTS.search.keys)} framed current={search} onClick={() => navigate({ kind: 'search', query: '' })} />
+          <IconButton {...PLACES.gallery} framed current={home} onClick={() => navigate(HOME)} />
+          <IconButton {...PLACES.search} title={titled(PLACES.search.label, SHORTCUTS.search.keys)} framed current={search} onClick={() => navigate({ kind: 'search', query: '' })} />
           <AddMenu trigger={(opener) => <IconButton icon={ACTS.create.icon} label={ACTS.create.label} framed {...opener} />} />
         </>
       }
       places={
         <>
-          <IconButton icon={MessagesSquare} label={BOARD.title} framed current={board} count={unreadBoard} onClick={() => navigate({ kind: 'board', operator: false })} />
-          <IconButton icon={Wrench} label={TOOLS} framed onClick={() => navigate(toolsEntry(true))} />
-          <IconButton icon={Settings} label={SETTINGS} framed onClick={() => navigate(settingsEntry(true))} />
+          <IconButton {...PLACES.board} framed current={board} count={unreadBoard} onClick={() => navigate({ kind: 'board', operator: false })} />
+          <IconButton {...PLACES.tools} framed onClick={() => navigate(toolsEntry(true))} />
+          <IconButton {...PLACES.settings} framed onClick={() => navigate(settingsEntry(true))} />
         </>
       }
     >

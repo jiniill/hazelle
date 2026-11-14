@@ -140,8 +140,6 @@ export type Look = Letters & Scheme;
 // id: what a 시스템 따라 바꾸기 slot and a character's look hold, its saved id.
 export type Preset = { id: string; name: string; look: Look };
 
-// The words a look is shown by, on a preset's card and a theme's.
-export const LOOK_SAMPLE = '그녀는 찻잔을 내려놓고 고개를 들었다.';
 
 export const lookOf = (letters: Letters, { mode, bg, ink, accent, dialogue }: Display): Look => ({ mode, bg, ink, accent, dialogue, ...lettersOf(letters) });
 

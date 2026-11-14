@@ -1,5 +1,4 @@
-import { MessagesSquare, Settings, Wrench } from 'lucide-react';
-import { BOARD, SETTINGS, TOOLS } from '../../common/words';
+import { PLACES } from '../../common/places';
 import { useStanding } from '../../session';
 import { IconButton, Row } from '../../ui';
 import { navigate } from '../router';
@@ -11,9 +10,9 @@ export function LayerButtons() {
   const { unreadBoard } = useStanding();
   return (
     <Row kind="toolbar">
-      <IconButton icon={MessagesSquare} label={BOARD.title} size="sm" count={unreadBoard} onClick={() => navigate({ kind: 'board', operator: false })} />
-      <IconButton icon={Wrench} label={TOOLS} size="sm" onClick={() => navigate(toolsEntry(false))} />
-      <IconButton icon={Settings} label={SETTINGS} size="sm" onClick={() => navigate(settingsEntry(false))} />
+      <IconButton {...PLACES.board} size="sm" count={unreadBoard} onClick={() => navigate({ kind: 'board', operator: false })} />
+      <IconButton {...PLACES.tools} size="sm" onClick={() => navigate(toolsEntry(false))} />
+      <IconButton {...PLACES.settings} size="sm" onClick={() => navigate(settingsEntry(false))} />
     </Row>
   );
 }

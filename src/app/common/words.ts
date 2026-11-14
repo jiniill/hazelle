@@ -211,6 +211,8 @@ export const searchOf = (noun: string) => `${noun} 검색`;
 export const SEARCH_RESULTS = '검색 결과';
 export const noResults = (words: string) => `'${words}' ${SEARCH_RESULTS}가 없어요.`;
 export const CHAT_SEARCH = searchOf(THINGS.chat.noun);
+// The composer's field.
+export const MESSAGE_FIELD = '메시지';
 export const TOOL_PAGES = { translator: '번역기', calculator: '비용 계산기' };
 
 export const inSettings = (page: keyof typeof PAGES) => `${SETTINGS} › ${PAGES[page]}`;

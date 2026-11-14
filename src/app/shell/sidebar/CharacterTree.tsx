@@ -1,4 +1,3 @@
-import { LayoutGrid, Search } from 'lucide-react';
 import { useMemo } from 'react';
 import type { ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
@@ -7,7 +6,8 @@ import { ACTS } from '../../common/acts';
 import { useSearch } from '../../common/useSearch';
 import { ago } from '../../common/time';
 import { GuestLine } from '../../common/GuestNotice';
-import { CHAT_SEARCH, searchOf, THINGS } from '../../common/words';
+import { PLACES } from '../../common/places';
+import { searchOf, THINGS } from '../../common/words';
 import { TUTORIAL, useTutorials } from '../../common/Tutorial';
 import { Welcome } from '../../library/HomeScreen';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
@@ -78,11 +78,11 @@ export function CharacterTree({ typing, onEnter, query, onQuery, openFolders, on
                 </Button>
               )}
             />
-            <Button variant="secondary" size="sm" icon={LayoutGrid} onClick={() => navigate({ kind: 'gallery', place: null })}>
-              캐릭터 둘러보기
+            <Button variant="secondary" size="sm" icon={PLACES.gallery.icon} onClick={() => navigate({ kind: 'gallery', place: null })}>
+              {PLACES.gallery.label}
             </Button>
-            <Button variant="secondary" size="sm" icon={Search} onClick={() => navigate({ kind: 'search', query: '' })}>
-              {CHAT_SEARCH}
+            <Button variant="secondary" size="sm" icon={PLACES.search.icon} onClick={() => navigate({ kind: 'search', query: '' })}>
+              {PLACES.search.label}
             </Button>
           </Row>
           {search.field}

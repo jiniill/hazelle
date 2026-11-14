@@ -16,7 +16,8 @@ import { classNames } from '../foundation/classNames';
 export type Swatch = Scheme & { name: string; font: Reading['font']; size: number; pressed: boolean; onPick: () => void; menu?: ReactNode; theme?: Theme; picture?: ReactNode };
 
 // Render each swatch in its own scheme/font, independent of app appearance. onMove uses the final card index.
-export function Swatches({ label, sample, items, onMove }: { label: string; sample: string; items: Swatch[]; onMove?: (from: number, to: number) => void }) {
+// sample: the words a card with no picture shows.
+export function Swatches({ label, sample, items, onMove }: { label: string; sample?: string; items: Swatch[]; onMove?: (from: number, to: number) => void }) {
   const order = useDragOrder(onMove ?? (() => {}), 'x');
   const worn = useContext(ThemeContext);
   const pictured = items.some(({ picture }) => picture !== undefined);
@@ -32,7 +33,7 @@ export function Swatches({ label, sample, items, onMove }: { label: string; samp
             <div className={styles.picture} {...schemeAttributes({ mode, bg, ink, accent, dialogue }, theme)} inert aria-hidden>
               <ThemeContext value={theme}>
                 <SchemeContext value={{ mode, bg, ink, accent, dialogue }}>
-                  <div className={styles.small}>{picture}</div>
+                  <div className={styles.small} data-app-frame>{picture}</div>
                 </SchemeContext>
               </ThemeContext>
             </div>

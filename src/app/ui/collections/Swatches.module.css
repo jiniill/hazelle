@@ -65,12 +65,21 @@
   color: var(--color-text);
 }
 
+/* Laid out at the frame's own size and scaled down: a transform, which every engine draws alike and no part's
+   measuring sees. */
 .small {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: calc(100% / var(--swatch-picture-scale));
+  height: calc(100% / var(--swatch-picture-scale));
   display: flex;
-  zoom: var(--swatch-picture-zoom);
+  transform: scale(var(--swatch-picture-scale));
+  transform-origin: top left;
   --frame-height: 100%;
+  /* What the window and the screen the card stands in set for their own boxes and side, as a dialog sets them back. */
+  --sidebar-rule: initial;
+  --box-line: initial;
 }
 
 .small > :last-child {

@@ -1,17 +1,11 @@
-import { MessagesSquare, Search, Settings } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
-import { storyHtml } from '../../engine/display';
 import { ACTS } from '../common/acts';
-import { BOARD, CHAT_SEARCH, SETTINGS } from '../common/words';
+import { LOOK_CHAT } from '../common/lookSample';
+import { PLACES } from '../common/places';
+import { MESSAGE_FIELD } from '../common/words';
 import { Avatar, Button, ChatFrame, ChatRow, ChatTitle, Composer, FaceButton, IconButton, Rail, SendButton, Sidebar, Story, StoryMessage, useWide, type Reading } from '../ui';
 
-const FACES = ['미라', '설', '하루'];
-const CHATS = ['비 오는 오후', '도서관에서', '첫 만남', '늦은 저녁'];
-const ROWS = [
-  { name: FACES[0]!, mine: false, time: '오후 3:12', html: storyHtml('*창밖으로 늦은 오후의 햇살이 기울어 든다.* 그녀는 찻잔을 내려놓고 고개를 들었다.\n\n"오늘은 어디까지 읽었어?"', true) },
-  { name: '나', mine: true, time: '오후 3:13', html: storyHtml('"이번엔 끝까지 읽었어."', false) },
-  { name: FACES[0]!, mine: false, time: '오후 3:13', html: storyHtml('"결말은 마음에 들었고?"\n\n그녀가 웃으며 책을 덮었다.', true) },
-];
+const { character, faces, chats, rows } = LOOK_CHAT;
 const nothing = () => {};
 
 // The frame's own parts with a made-up chat in them, for a theme's card: whatever draws the app draws its picture,
@@ -39,18 +33,20 @@ export function ThemeSample({ reading }: { reading: Reading }) {
           <Rail
             actions={
               <>
-                <IconButton icon={Search} label={CHAT_SEARCH} framed onClick={nothing} />
-                <IconButton icon={ACTS.create.icon} label={ACTS.create.label} framed onClick={nothing} />
+                <IconButton {...PLACES.gallery} framed onClick={nothing} />
+                <IconButton {...PLACES.search} framed onClick={nothing} />
+                <IconButton {...ACTS.create} framed onClick={nothing} />
               </>
             }
             places={
               <>
-                <IconButton icon={MessagesSquare} label={BOARD.title} framed onClick={nothing} />
-                <IconButton icon={Settings} label={SETTINGS} framed onClick={nothing} />
+                <IconButton {...PLACES.board} framed onClick={nothing} />
+                <IconButton {...PLACES.tools} framed onClick={nothing} />
+                <IconButton {...PLACES.settings} framed onClick={nothing} />
               </>
             }
           >
-            {FACES.map((face, index) => (
+            {faces.map((face, index) => (
               <FaceButton key={face} label={face} current={index === 0} onClick={nothing}>
                 <Avatar size="rail" face={face} />
               </FaceButton>
@@ -63,17 +59,17 @@ export function ThemeSample({ reading }: { reading: Reading }) {
               </Button>
             }
           >
-            {CHATS.map((title, index) => (
-              <ChatRow key={title} title={title} time="" typing={false} preview={FACES[0]!} sought={false} face={<Avatar face={FACES[0]!} />} current={index === 0} onClick={nothing} />
+            {chats.map((title, index) => (
+              <ChatRow key={title} title={title} time="" typing={false} preview={character} sought={false} face={<Avatar face={character} />} current={index === 0} onClick={nothing} />
             ))}
           </Sidebar>
         </>
       )}
       <ChatFrame
-        title={<ChatTitle name={FACES[0]!} description={CHATS[0]} face={<Avatar size="sm" face={FACES[0]!} />} />}
+        title={<ChatTitle name={character} description={chats[0]} face={<Avatar size="sm" face={character} />} />}
         actions={null}
         above={null}
-        footer={<Composer value="" onChange={nothing} onKeyDown={nothing} placeholder="메시지" tools={null} more={null} actions={<SendButton streaming={false} disabled={false} title="" onClick={nothing} />} inputRef={input} compact={false} onOpen={nothing} />}
+        footer={<Composer value="" onChange={nothing} onKeyDown={nothing} placeholder={MESSAGE_FIELD} tools={null} more={null} actions={<SendButton streaming={false} disabled={false} title="" onClick={nothing} />} inputRef={input} compact={false} onOpen={nothing} />}
         dockRef={dock}
         scrollRef={scroll}
         onScroll={nothing}
@@ -83,8 +79,8 @@ export function ThemeSample({ reading }: { reading: Reading }) {
         side="right"
         compact={false}
       >
-        {ROWS.map(({ name, mine, time, html }, index) => (
-          <StoryMessage key={index} avatar={<Avatar size="story" face={name} tone={mine ? 'you' : 'plain'} />} name={name} time={time} mine={mine} id={String(index)}>
+        {rows.map(({ name, mine, html }, index) => (
+          <StoryMessage key={index} avatar={<Avatar size="story" face={name} tone={mine ? 'you' : 'plain'} />} name={name} time="" mine={mine} id={String(index)}>
             <Story html={html} />
           </StoryMessage>
         ))}

@@ -1,4 +1,4 @@
-import { LOOK_SAMPLE, modeIn, wearing } from '../common/reading';
+import { modeIn, wearing } from '../common/reading';
 import { PAGES } from '../common/words';
 import { useDisplay } from '../display';
 import { backBar } from '../shell/router';
@@ -13,7 +13,7 @@ export function ThemeScreen({ back }: { back: Back | null }) {
   const items = (Object.keys(THEMES) as ThemeId[]).map((id) => ({ name: THEMES[id].name, theme: THEMES[id], mode: modeIn(display, id), bg, ink, accent, dialogue, font: lettersIn(id).font, size: lettersIn(id).size, picture: <ThemeSample reading={{ ...lettersIn(id), reply: 'stay' }} />, pressed: id === display.theme, onPick: () => changeDisplay(wearing(display, id)) }));
   return (
     <Screen width="page" top={<NavBar title={PAGES.theme} {...backBar(back)} />}>
-      <Swatches label={PAGES.theme} sample={LOOK_SAMPLE} items={items} />
+      <Swatches label={PAGES.theme} items={items} />
       {splits && (
         <Section title={THEMES[display.theme].name}>
           <SettingGroup label={THEMES[display.theme].name}>

@@ -1,6 +1,5 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
-import { storyHtml } from '../../engine/display';
 import { setUsageShown } from '../../runtime/chat/chat-context';
 import { STARTER_PRESETS, presetsOf } from '../../model/settings';
 import { addLook, addStarters, editLook, moveLook, removeLook, restoreLook } from '../../runtime/library/looks';
@@ -9,7 +8,8 @@ import { ACTS } from '../common/acts';
 import { NameDialog } from '../common/NameDialog';
 import { readPicturePercent } from '../common/picturePercent';
 import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRows';
-import { choices, LOOK_SAMPLE, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
+import { LOOK_CHAT, LOOK_SAMPLE } from '../common/lookSample';
+import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
 import { reader } from '../common/typedNumber';
 import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, PRESET, PRESET_GONE, PRESET_GONE_CHIP, SAVE_FAILED } from '../common/words';
@@ -19,13 +19,7 @@ import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
-import { ACCENT, BG, Button, DIALOGUE, QUOTE_SHAPE, ChoiceGroup, ColorDot, Disclosure, INK, MenuItem, NavBar, NumberInput, ReadingPreview, Screen, Section, SettingGroup, SettingRow, Swatches, Switch, MODE, type Mode, type PreviewRow } from '../ui';
-
-const SAMPLE: PreviewRow[] = [
-  { name: '캐릭터', mine: false, html: storyHtml(`*창밖으로 늦은 오후의 햇살이 기울어 든다.* 그녀는 찻잔을 내려놓고 고개를 들었다. "오늘은 어디까지 읽었어? 지난번엔 중간에 잠들었잖아." '또 잠든 건 아니겠지.'`, true) },
-  { name: '나', mine: true, html: storyHtml('"이번엔 끝까지 읽었어. 결말이 좀 의외던데."', false) },
-];
-
+import { ACCENT, BG, Button, DIALOGUE, QUOTE_SHAPE, ChoiceGroup, ColorDot, Disclosure, INK, MenuItem, NavBar, NumberInput, ReadingPreview, Screen, Section, SettingGroup, SettingRow, Swatches, Switch, MODE, type Mode } from '../ui';
 
 const SLOTS: Record<Mode, string> = { light: '밝은 모드일 때', dark: '어두운 모드일 때' };
 const SLOT_KEYS = Object.keys(SLOTS) as Mode[];
@@ -72,7 +66,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       top={<NavBar title={PAGES.display} {...backBar(back)} />}
       aside={
         <Section title="미리보기">
-          <ReadingPreview label="미리보기" reading={reading} rows={SAMPLE} />
+          <ReadingPreview label="미리보기" reading={reading} rows={LOOK_CHAT.rows} />
         </Section>
       }
       stickyAside
