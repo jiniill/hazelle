@@ -304,6 +304,13 @@
   min-width: 0;
 }
 
+/* On a narrow story the time beside the words leaves a bubble little room, so its line reaches across. */
+@container story (max-width: 560px) {
+  .line {
+    max-width: 100%;
+  }
+}
+
 .own .line {
   flex-direction: row-reverse;
   align-self: flex-end;

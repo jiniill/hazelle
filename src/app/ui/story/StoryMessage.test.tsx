@@ -13,7 +13,7 @@ test('the tools follow the reader unless 메시지 도구 따라오기 is off', 
   expect(renderToStaticMarkup(<ToolsFollowContext value={false}>{message}</ToolsFollowContext>)).not.toContain(styles.follows);
 });
 
-test('a bubble message sets its words a bubble a block, or in one box where told, with the time after them; prose keeps the time by the name and boxes mine alone', () => {
+test('a bubble message sets its words a bubble a block, or in one box where told, with the time after them, but one told to be plain; prose keeps the time by the name and boxes mine alone', () => {
   const message = (mine: boolean) => <StoryMessage avatar={null} name="미라" time="오후 9:39" mine={mine} id="m">본문</StoryMessage>;
   const bubble = (node: React.ReactNode) => renderToStaticMarkup(<ThemeContext value={THEMES.bubble}>{node}</ThemeContext>);
   const each = bubble(message(false));
@@ -21,6 +21,8 @@ test('a bubble message sets its words a bubble a block, or in one box where told
   expect(each).toContain(styles.fit);
   expect(each).not.toContain(styles.box);
   expect(bubble(<BubblesContext value={false}>{message(false)}</BubblesContext>)).toContain(styles.box);
+  const edited = bubble(<StoryMessage avatar={null} name="미라" time="오후 9:39" mine={false} plain id="m">본문</StoryMessage>);
+  for (const name of [styles.fit, styles.line]) expect(edited).not.toContain(name);
   const mine = renderToStaticMarkup(message(true));
   expect(mine.indexOf('오후 9:39')).toBeLessThan(mine.indexOf('본문'));
   expect(mine).toContain(styles.box);

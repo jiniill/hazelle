@@ -45,6 +45,8 @@ type Props = {
   // The tools keep their line whatever the shape: they hold what must be seen or answered now, such as an edit's
   // buttons or the versions to switch between.
   stay?: boolean;
+  // The words stand on the ground at the message's width whatever the shape, as while they are edited.
+  plain?: boolean;
   // Its key among the rows, which TimePinContext names.
   id: string;
   // Marked for a moment from this timestamp, again with each look; 0 for none. The collection brings the first marked
@@ -73,9 +75,12 @@ const SHAPES: Record<Shapes['message'], Shape> = {
 // Whether a bubble message's reply is a bubble a block, or one bubble whole.
 export const BubblesContext = createContext(true);
 
+// Whether the message shape drawn can set a reply a bubble a block: where it cannot, the choice changes nothing.
+export const useSplitsReplies = () => SHAPES[useShape('message')].words(false, true) === 'each';
+
 export const toolsFloat = (shape: Shapes['message'], hover: boolean, stay: boolean) => SHAPES[shape].floats && hover && !stay;
 
-export function StoryMessage({ avatar, name, time, mine, mark, badges = [], children, after, tools, stay = false, id, found = 0, marked = false, writing = false }: Props) {
+export function StoryMessage({ avatar, name, time, mine, mark, badges = [], children, after, tools, stay = false, plain = false, id, found = 0, marked = false, writing = false }: Props) {
   const hover = useHover();
   const drawn = useShape('message');
   const shape = SHAPES[drawn];
@@ -84,7 +89,8 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
   const pinned = timePin?.pinned === id;
   const follows = useContext(ToolsFollowContext);
   const each = useContext(BubblesContext);
-  const stamp = <span className={shape.stamps ? styles.stamp : styles.time}>{time}</span>;
+  const stamps = shape.stamps && !plain;
+  const stamp = <span className={stamps ? styles.stamp : styles.time}>{time}</span>;
   const foundDelay = useMemo(() => `-${Math.max(0, Date.now() - found)}ms`, [found]);
   const memory = useContext(RowMemoryContext);
   const revisited = useRef(memory?.visited ?? false);
@@ -111,14 +117,14 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
         <Speech
           name={name}
           mine={mine}
-          words={shape.words(mine, each)}
-          beside={shape.stamps && stamp}
+          words={plain ? 'ground' : shape.words(mine, each)}
+          beside={stamps && stamp}
           head={
             <>
               {mark && <span className={styles.mark}>{mark}</span>}
               {badges.slice(0, BADGES_SHOWN).map((badge, index) => <span key={index} className={styles.badge}>{badge}</span>)}
               {badges.length > BADGES_SHOWN && <span className={styles.badge} title={badges.slice(BADGES_SHOWN).join(' · ')}>{`+${badges.length - BADGES_SHOWN}`}</span>}
-              {!shape.stamps && stamp}
+              {!stamps && stamp}
             </>
           }
         >
