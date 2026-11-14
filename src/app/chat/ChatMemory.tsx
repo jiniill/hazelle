@@ -94,7 +94,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
         </Row>
       )}
       {writing ? (
-        <Text variant="note">{`${MEMORY_WORKING} · ${writing.model} · 남은 호출 ${writing.left}개`}</Text>
+        <Text variant="note">{`${MEMORY_WORKING} · ${writing.model} · ${writing.left}번 남음`}</Text>
       ) : (
         failure && (
           <Callout tone="warn" action={retry}>

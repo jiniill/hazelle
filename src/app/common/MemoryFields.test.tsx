@@ -11,9 +11,9 @@ const part = (tokens: number) => ({ tokens, value: `${tokens}` });
 
 it('names the total only when one is given', () => {
   const split = (total?: string) => renderToStaticMarkup(<MemorySplit total={total} whole={61_000} records={part(1_000)} waiting={part(12_000)} recent={part(24_000)} />);
-  expect(split('약 37,000 / 61,000 토큰')).toContain('요청마다 보내는 기록과 대화');
+  expect(split('약 37,000 / 61,000 토큰')).toContain('매번 보내는 기록과 대화');
   expect(split('약 37,000 / 61,000 토큰')).toContain('약 37,000 / 61,000 토큰');
-  expect(split()).not.toContain('요청마다 보내는 기록과 대화');
+  expect(split()).not.toContain('매번 보내는 기록과 대화');
 });
 
 it('names each setting as its part of the split, in the order of the split', () => {

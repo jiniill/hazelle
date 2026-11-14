@@ -444,7 +444,7 @@ const UNREADABLE = '모델 응답의 형식이 맞지 않아요.';
 const wrongField = (label: string) => `모델 응답의 '${label}' 항목이 빠졌거나 형식이 맞지 않아요.`;
 const MEMORY_INVALID: Record<Extract<MemoryFailure, { kind: 'invalid' }>['reason'], string> = {
   unreadable: UNREADABLE,
-  shape: '모델 응답에 기록이 없어요.',
+  shape: '모델이 기록을 보내지 않았어요.',
   order: '모델 응답의 기록 범위가 메시지 순서와 맞지 않아요.',
   short: '모델이 마지막 메시지까지 정리하지 않았어요.',
   when: wrongField('시점'),
