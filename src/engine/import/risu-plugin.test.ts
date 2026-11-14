@@ -76,5 +76,7 @@ describe('the Risu scan', () => {
 
   it('lists each literal host once, leaving out a host a template finishes', () => {
     expect(scanRisu("fetch('https://API.example.com/v1'); fetch(`http://api.example.com/${path}`); load('https://cdn.example.org/a.png'); fetch(`https://bedrock.${region}.aws.com`);").hosts).toEqual(['api.example.com', 'cdn.example.org']);
+    expect(scanRisu('const icon = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>`; load("https://www.w3.org/Icons/w3c_home.png");').hosts).toEqual(['www.w3.org']);
+    expect(scanRisu('const icon = `<svg xmlns="http://www.w3.org/2000/svg"></svg>`;').hosts).toEqual([]);
   });
 });

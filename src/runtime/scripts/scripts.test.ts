@@ -13,12 +13,15 @@ import type { ToggleLine } from '../../model/prompt';
 import { fetchApi } from '../api';
 import { PLAIN_LUA, type Trigger } from '../../engine/import/types';
 import { Lua } from '../../engine/lua/run';
-import type { ToolEvent } from '../../engine/script-api';
+import type { ModelResult, ToolEvent } from '../../engine/script-api';
+import { bareModel } from '../../connectors/chat-completions';
+import { addModel, removeModel } from '../models/connections';
+import { setModels, setModuleModel } from '../library/pack';
 import { calls, fold, shown } from '../../model/chat';
 import { Usage } from '../models/usage';
 import { modelUsage } from '../../model/usage';
 import { setToggleValues } from '../library/characters';
-import { appendUserMessage, selectVersion, startChat, type Written } from '../chat/chat-log';
+import { appendScripted, appendUserMessage, selectVersion, startChat, type Written } from '../chat/chat-log';
 import { EvaluationFailed, EvaluationStuck } from '../evaluation/evaluation';
 import { projectGreetings } from '../chat/greetings';
 
@@ -661,6 +664,34 @@ describe('tool events through Scripts', () => {
     }, binding);
   });
 
+  it('keeps the reply of a turn whose sent message a tool page removed while it ran', async () => {
+    let cut = async () => {};
+    await server.withSession(async (session) => {
+      const f = await toolChat(session);
+      cut = async () => { await appendScripted(session.store, f.chat, { edits: [], removed: [f.messages()[0]!.id], added: [], vars: null }); };
+      stubRelay(() => saying('reply'));
+      expect(await takeTurn(session, f.chat, { kind: 'send', text: 'hello' })).toBeNull();
+      await expect.poll(() => f.messages().map((message) => shown(message).text)).toEqual(['reply']);
+      await takeTurn(session, f.chat, { kind: 'send', text: 'again' });
+      await expect.poll(() => f.messages().map((message) => shown(message).text)).toEqual(['reply', 'again', 'reply']);
+    }, { run: async (_chat, _units, _scope, event) => { if (event.kind === 'requesting') { const once = cut; cut = async () => {}; await once(); } return noOutcome(); }, close: () => {} });
+  });
+
+  it.each([false, true])('removes the message a delayed reply handler removed only while its reply is the latest: %s', async (advance) => {
+    let finish!: (outcome: ScriptOutcome) => void;
+    const binding: Binding<ToolUnit> = { run: async (_chat, _units, _scope, event) => event.kind === 'reply' ? new Promise((resolve) => { finish = resolve; }) : noOutcome(), close: () => {} };
+    await server.withSession(async (session) => {
+      const f = await toolChat(session);
+      stubRelay(() => saying('reply'));
+      await takeTurn(session, f.chat, { kind: 'send', text: 'hello' });
+      await expect.poll(() => finish).toBeDefined();
+      if (advance) await appendUserMessage(session.store, f.chat, { id: crypto.randomUUID(), text: 'newer' });
+      finish({ ...noOutcome(), removed: [0] });
+      await expect.poll(() => (advance ? session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'stale-reply') : f.messages()).length).toBe(1);
+      expect(f.messages().map((message) => shown(message).text)).toEqual(advance ? ['hello', 'reply', 'newer'] : ['reply']);
+    }, binding);
+  });
+
   it('runs a change after the pending reply on the tool lane, keeps its data and badges, and never holds a send behind an action', async () => {
     const heard: string[] = [];
     let finishReply!: (outcome: ScriptOutcome) => void;
@@ -811,6 +842,37 @@ describe('tool events through Scripts', () => {
     }, binding);
   });
 
+  it("runs a module's 보조 calls on its own model and its 대화 calls on the chat's, and refuses rather than fall back once its own is gone", async () => {
+    const answers: ModelResult[] = [];
+    const binding: Binding<ToolUnit> = { run: async (_chat, unit, _scope, _event, host) => {
+      for (const role of ['aux', 'main'] as const) answers.push(await host.model(role, [{ role: 'user', content: 'x' }], { kind: 'module', id: unit.module }));
+      return noOutcome();
+    }, close: () => {} };
+    await server.withSession(async (session) => {
+      const f = await toolChat(session);
+      const connection = session.store.list('connection')[0]!.id;
+      const key = await addModel(session.store, connection, { ...bareModel('own'), name: 'Own' });
+      if (!key.ok) throw new Error('fixture');
+      await setModels(session.store, { kind: 'module', id: f.module }, true);
+      await setModuleModel(session.store, f.module, { connection, model: key.data });
+      const log = stubRelay(() => saying('ok'));
+      const called = () => log.map(({ sent }) => (JSON.parse(sent.body!) as { model: string }).model);
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      expect(called()).toEqual(['own', 'm']);
+
+      await removeModel(session.store, connection, key.data);
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      expect(answers.slice(2)).toMatchObject([{ success: false, reason: 'no-model' }, { success: true }]);
+      expect(called()).toEqual(['own', 'm', 'm']);
+      expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'no-model')).toMatchObject([{ role: 'aux', own: true }]);
+
+      await setModuleModel(session.store, f.module, null);
+      expect(session.store.get('module', f.module)!.value).not.toHaveProperty('model');
+      await session.scriptCommands.menu(f.chat, f.module, 'now');
+      expect(called().slice(3)).toEqual(['m', 'm']);
+    }, binding);
+  });
+
   it('forgets forecast text when a tool leaves or a chat unloads', async () => {
     const binding: Binding<ToolUnit> = { run: async () => ({ ...noOutcome(), value: 'cached' }), close: () => {} };
     await server.withSession(async (session) => {
@@ -921,6 +983,39 @@ describe('tool events through Scripts', () => {
         stop.abort();
         expect((await stopped).messages).toEqual(prompt.messages);
       } finally { vi.useRealTimers(); for (const resolve of late) resolve([]); }
+    }, { run, close: () => {} });
+  });
+
+  it('hands each tool of a turn the variables the bot Lua wrote in it', async () => {
+    const seen: Record<string, object> = {};
+    let read: (chat: string, scope: Parameters<Binding<ToolUnit>['run']>[2]) => Promise<object> = async () => ({});
+    await server.withSession(async (session) => {
+      read = (chat, scope) => session.store.evaluation.state({ asker: 'tool', chat, tool: 'notes' }, scope, '');
+      const { chat } = await chatWith(session, `function onInput(id) setChatVar(id, 'door', 'open') end
+        function onStart(id) setChatVar(id, 'bell', 'rung') end`);
+      await notesTool(session);
+      const log = stubRelay(() => saying('응'));
+      expect(await takeTurn(session, chat, { kind: 'send', text: '안녕' })).toBeNull();
+      await expect.poll(() => log.length).toBe(1);
+      expect(seen).toMatchObject({ sending: { variables: [['door', 'open']] }, requesting: { variables: [['door', 'open'], ['bell', 'rung']] } });
+    }, { run: async (chat, _unit, scope, event) => {
+      if (event.kind === 'sending' || event.kind === 'requesting') seen[event.kind] = await read(chat, scope);
+      return noOutcome();
+    }, close: () => {} });
+  });
+
+  it('logs a tool as having changed the request only when its answer differs from what it was handed', async () => {
+    const answers = [(messages: Hazelle.RequestMessage[]) => messages, (messages: Hazelle.RequestMessage[]) => messages.map((message) => ({ ...message, content: `${message.content}, noted` }))];
+    const run = vi.fn<Binding<ToolUnit>['run']>(async (_chat, _unit, _scope, event) => event.kind !== 'requesting' ? noOutcome() : { ...noOutcome(), value: answers.shift()!(event.messages) });
+    await server.withSession(async (session) => {
+      const f = await toolChat(session);
+      await appendUserMessage(session.store, f.chat, { id: crypto.randomUUID(), text: 'hello' });
+      await session.store.projections.evaluate(f.chat);
+      const turn = gatherTurn(session, f.chat, { kind: 'answer' });
+      if (!turn || 'kind' in turn) throw new Error('fixture');
+      const prompt = { messages: [{ role: 'user' as const, content: 'hello' }], parts: [{ from: { kind: 'script' as const }, tokens: 1, origin: 'message' }] };
+      for (let at = 0; at < 2; at++) await session.scriptTurns.requesting(f.chat, turn, prompt, new AbortController().signal, () => {});
+      expect(session.scriptJournal.log(f.chat).entries.filter(({ stage }) => stage === 'requesting').map(({ changed }) => changed)).toEqual([false, true]);
     }, { run, close: () => {} });
   });
 

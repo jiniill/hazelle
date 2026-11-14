@@ -4,14 +4,14 @@ export type EventName = keyof Hazelle.Events;
 export type ChatHeader = Pick<Hazelle.Chat, 'id' | 'character' | 'persona' | 'length'>;
 export type Message = Hazelle.Message;
 // data undefined deletes; badges use message indices with null to clear.
-// lore replaces chat-owned entries by name; variables writes shared bot variables, not tool state.
+// lore replaces chat-owned entries by name; variables writes shared bot variables, not tool state, undefined unsetting one.
 export type ToolOutcome = {
-  value?: Hazelle.PromptAnswer | Hazelle.RequestMessage[] | string[]; writes: [string, Json | undefined][]; edits: { index: number; text: string }[]; added: { role: 'user' | 'char'; text: string }[];
+  value?: Hazelle.PromptAnswer | Hazelle.RequestMessage[] | string[]; writes: [string, Json | undefined][]; edits: { index: number; text: string }[]; removed: number[]; added: { role: 'user' | 'char'; text: string }[];
   data: [string, Json | undefined][]; badges: { index: number; text: string | null }[]; lore: Omit<Hazelle.LoreEntry, 'owner'>[];
-  variables: [string, string][];
+  variables: [string, string | undefined][];
 };
 export type Method =
-  | 'chat.messages' | 'chat.greeting' | 'chat.card' | 'chat.state.get' | 'chat.variables.get' | 'chat.data.get' | 'chat.data.keys' | 'chat.lorebook' | 'chat.inlay' | 'chat.cbs' | 'chat.setup' | 'chat.picture' | 'chat.send' | 'chat.rendered' | 'chat.card.edit' | 'model' | 'embed' | 'fetch' | 'ask' | 'say' | 'tokens' | 'lore'
+  | 'chat.messages' | 'chat.greeting' | 'chat.card' | 'chat.state.get' | 'chat.variables.get' | 'chat.variables.entries' | 'chat.data.get' | 'chat.data.keys' | 'chat.lorebook' | 'chat.inlay' | 'chat.cbs' | 'chat.setup' | 'chat.picture' | 'chat.send' | 'chat.rendered' | 'chat.card.edit' | 'model' | 'embed' | 'fetch' | 'ask' | 'say' | 'tokens' | 'lore'
   | 'storage.get' | 'storage.set' | 'storage.delete' | 'storage.keys' | 'assets.save' | 'assets.read' | 'settings' | 'settings.set' | 'account' | 'post' | 'page.close' | 'frame.chat' | 'frame.show' | 'frame.hide' | 'frame.menu' | 'frame.actions' | 'frame.missing';
 export type Role = 'background' | 'page' | 'frame';
 export type Down =

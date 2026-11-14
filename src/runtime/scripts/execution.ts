@@ -22,6 +22,8 @@ import { toolsOf } from '../tools/store';
 type Units = { lua: ScriptUnit[]; event: Event } | { tool: ToolUnit; event: ToolEvent };
 
 const ownerOf = (units: Units): PackOwner | null => 'tool' in units ? { kind: 'module', id: units.tool.module } : null;
+// What an event hands a tool to rewrite, in the shape of its answer; an event that hands nothing is answered an addition.
+const handed = (event: ToolEvent) => 'text' in event ? event.text : event.kind === 'requesting' ? event.messages : event.kind === 'showing' ? event.shown.map(({ text }) => text) : undefined;
 
 // A tool's answer in a stage a turn or a display waits on (prompt, sending, replying, showing); one that misses it is cut
 // off and the turn goes on. requesting has none (Chained.turn).
@@ -141,7 +143,7 @@ export class ScriptExecution {
       const outcome = await until(running, signal);
       this.journal.report(chat, outcome, from);
       // A showing runs once per stretch shown; kept here, it would push the turns' entries out of the log's bound.
-      if ('tool' in units && (event.kind !== 'showing' || outcome.errors.length || outcome.missing.length)) this.journal.keepLog(chat, [{ stage: event.kind, pack: from, script: units.tool.tool.manifest.displayName, at, duration: performance.now() - began, logs: [], writes: outcome.writes, errors: outcome.errors, missing: outcome.missing, stopped: outcome.stop, changed: outcome.value !== undefined, handled: outcome.handled, truncated: false }]);
+      if ('tool' in units && (event.kind !== 'showing' || outcome.errors.length || outcome.missing.length)) this.journal.keepLog(chat, [{ stage: event.kind, pack: from, script: units.tool.tool.manifest.displayName, at, duration: performance.now() - began, logs: [], writes: outcome.writes, errors: outcome.errors, missing: outcome.missing, stopped: outcome.stop, changed: outcome.value !== undefined && JSON.stringify(outcome.value) !== JSON.stringify(handed(units.event)), handled: outcome.handled, truncated: false }]);
       return outcome;
     } catch (error) {
       this.journal.report(chat, error, from);

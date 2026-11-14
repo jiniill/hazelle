@@ -5,8 +5,9 @@ import { Runaway } from '../../engine/cbs/evaluate';
 import { SIGNATURE } from '../../engine/assets';
 import { DEFAULT_ORDER } from '../../engine/import/convert';
 import { fieldValue, TOOL_ACTION_CHARS, TOOL_ACTIONS } from '../../engine/import/tool';
-import type { ToolEvent, ModelMessage, Question } from '../../engine/script-api';
-import type { ChatScope } from '../../engine/render';
+import { UNSET, type ToolEvent, type ModelMessage, type Question } from '../../engine/script-api';
+import { defaultVariables, type ChatScope } from '../../engine/render';
+import { unsetValue } from '../../engine/cbs/tags';
 import { live } from '../../model/library';
 import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
@@ -63,6 +64,8 @@ function isRequest(value: unknown): value is Omit<HttpRequest, 'url'> {
   return isRecord(value) && (value.method === 'GET' || value.method === 'POST') && isRecord(value.headers) && Object.values(value.headers).every((each) => typeof each === 'string')
     && (value.body === null || (value.method === 'POST' && typeof value.body === 'string'));
 }
+// A name that reads as unset is not held, as a tool's own state is not (decodeState).
+const held = (variables: [string, string][]) => new Map(variables.filter(([, value]) => value !== UNSET));
 const isPairs = (value: unknown) => Array.isArray(value) && value.every((pair) => Array.isArray(pair) && pair.length === 2 && typeof pair[0] === 'string' && (pair[1] === undefined || isJson(pair[1])));
 const isText = (value: unknown) => value === undefined || value === null || typeof value === 'string';
 function isAnswer(value: unknown): value is Hazelle.PromptAnswer | undefined {
@@ -88,11 +91,12 @@ const answers = (event: ToolEvent['kind'] | undefined, value: unknown) => {
 function isOutcome(value: unknown, event: ToolEvent['kind'] | undefined): value is ToolOutcome {
   return isRecord(value) && answers(event, value.value) && isPairs(value.writes) && isPairs(value.data)
     && Array.isArray(value.edits) && value.edits.every((edit) => isRecord(edit) && Number.isInteger(edit.index) && typeof edit.text === 'string')
+    && Array.isArray(value.removed) && value.removed.every((index) => Number.isInteger(index))
     && Array.isArray(value.added) && value.added.every((item) => isRecord(item) && (item.role === 'user' || item.role === 'char') && typeof item.text === 'string')
     && Array.isArray(value.badges) && value.badges.every((badge) => isRecord(badge) && Number.isInteger(badge.index) && (badge.text === null || typeof badge.text === 'string'))
     && Array.isArray(value.lore) && value.lore.every((entry) => isRecord(entry) && typeof entry.name === 'string' && Array.isArray(entry.keys) && entry.keys.every((key) => typeof key === 'string')
       && typeof entry.text === 'string' && typeof entry.always === 'boolean' && typeof entry.on === 'boolean')
-    && Array.isArray(value.variables) && value.variables.every((pair) => Array.isArray(pair) && pair.length === 2 && typeof pair[0] === 'string' && !pair[0].startsWith(TOOL_VARIABLES) && typeof pair[1] === 'string');
+    && Array.isArray(value.variables) && value.variables.every((pair) => Array.isArray(pair) && pair.length === 2 && typeof pair[0] === 'string' && !pair[0].startsWith(TOOL_VARIABLES) && (pair[1] === undefined || typeof pair[1] === 'string'));
 }
 // A test run's calls that would write outside its outcome: storage and settings change its own copy, the rest are
 // refused, each listed. null: the call runs as in any run, which reads what the run's own module holds: nothing.
@@ -339,7 +343,8 @@ export class ToolApi {
         }
         if (method === 'chat.greeting') return context.scope.greeting === null ? null : (await this.state(frame, context)).texts[0]!;
         if (method === 'chat.state.get' && typeof first === 'string') return decodeState(new Map((await this.state(frame, context)).variables).get(toolVar(entry.tool.manifest, first)));
-        if (method === 'chat.variables.get' && typeof first === 'string' && !first.startsWith(TOOL_VARIABLES)) return new Map((await this.state(frame, context)).variables).get(first);
+        if (method === 'chat.variables.get' && typeof first === 'string' && !first.startsWith(TOOL_VARIABLES)) return held((await this.state(frame, context)).variables).get(first);
+        if (method === 'chat.variables.entries') return [...held((await this.state(frame, context)).variables)].filter(([name]) => !name.startsWith(TOOL_VARIABLES));
         if (method === 'chat.data.get' && typeof first === 'string') return toolChatData(this.session.store, entry.module, context.chat, first);
         if (method === 'chat.data.keys') return toolChatKeys(this.session.store, entry.module, context.chat);
         if (method === 'embed' && Array.isArray(first) && first.every((text) => typeof text === 'string') && (second === null || second === 'query' || second === 'document')) {
@@ -409,14 +414,23 @@ export class ToolApi {
   async convert(frame: Frame, context: Context, value: unknown): Promise<ScriptOutcome> {
     if (!isOutcome(value, context.event)) throw new Error('Invalid tool outcome');
     const greeting = context.scope.greeting === null ? 0 : 1;
-    const edits = value.edits.filter(({ index }) => index >= 0 && index < context.scope.messages.length - greeting);
-    const state = edits.length ? await this.state(frame, context) : null;
+    const within = ({ index }: { index: number }) => index >= 0 && index < context.scope.messages.length - greeting;
+    const edits = value.edits.filter(within);
+    const variables = new Map(value.variables);
+    const state = edits.length || [...variables.values()].includes(undefined) ? await this.state(frame, context) : null;
+    // An unset is written as what an unset name reads as (engine/lua/state write), and not at all over a name that
+    // reads so already: a tool that unsets one each turn adds nothing to the chat.
+    const written = [...variables].flatMap(([name, text]): [string, string][] => {
+      if (text !== undefined) return [[name, text]];
+      const unset = unsetValue(defaultVariables(context.scope), name);
+      return (new Map(state!.variables).get(name) ?? UNSET) === unset ? [] : [[name, unset]];
+    });
     const data = [...new Map(value.data)];
     const badges = [...new Map(value.badges.map(({ index, text }) => [index, text]))].map(([index, text]) => ({ index, text }));
     // A page's write takes its share of the write rate before it is converted (pageWrite).
     if (context.event && (data.length || badges.length || value.lore.length)) this.storage.take(frame.entry.module);
-    const story = context.event && STORY_LOCKED.has(context.event) ? { edits: [], added: [] } : { edits: edits.map((edit) => ({ ...edit, wrote: state!.wrote[edit.index + greeting]! })), added: value.added.map((item) => ({ ...item, before: null })) };
-    return { ...noOutcome(), value: value.value, handled: true, writes: [...[...new Map(value.writes)].map(([key, json]): [string, string] => [toolVar(frame.entry.tool.manifest, key), encodeState(json)]), ...new Map(value.variables)], ...story, lore: value.lore.map(chatLore), tool: { data, badges } };
+    const story = context.event && STORY_LOCKED.has(context.event) ? { edits: [], added: [] } : { edits: edits.map((edit) => ({ ...edit, wrote: state!.wrote[edit.index + greeting]! })), removed: value.removed.filter((index) => within({ index })), added: value.added.map((item) => ({ ...item, before: null })) };
+    return { ...noOutcome(), value: value.value, handled: true, writes: [...[...new Map(value.writes)].map(([key, json]): [string, string] => [toolVar(frame.entry.tool.manifest, key), encodeState(json)]), ...written], ...story, lore: value.lore.map(chatLore), tool: { data, badges } };
   }
 
   async pageWrite(frame: Frame, value: unknown) {

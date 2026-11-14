@@ -1,6 +1,8 @@
 import { expect, it } from 'vitest';
 import { setAccountTaskModel, setDefaultModel, setPromptModel } from '../models/assignment';
 import { overviewOf } from './overview';
+import { createModule } from '../library/modules';
+import { setModuleModel } from '../library/pack';
 import { addPrompt, setDefaultPrompt } from '../library/prompts';
 import { answerable, testServer } from '../testing';
 
@@ -31,6 +33,10 @@ it('says where each role was picked, which task follows 보조 모델 and which 
     expect(tasks.translate).toEqual({ own: undefined, runs: 'aux' });
     expect(tasks.mascot).toEqual({ own: 'pin', runs: 'pin' });
     expect(used(read())).toEqual(['aux', 'm', 'pin']);
+    const module = await createModule(store, '모듈', crypto.randomUUID(), null);
+    await store.update('connection', connection!.id, (current) => ({ ...current, starred: [...current.starred, { ...current.starred[0]!, id: 'module', name: 'module' }] }));
+    await setModuleModel(store, module.ok ? module.data.id : '', ref('module'));
+    expect(used(read())).toEqual(['aux', 'm', 'module', 'pin']);
 
     const created = await store.create('chat', { title: null, character: null, prompt: pinning.ok ? pinning.data.id : '', models: {} });
     const chat = overviewOf(store, created.ok ? created.data.value : null);

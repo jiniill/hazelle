@@ -4,13 +4,13 @@ import type { ChatHeader, Down, EventName, Message, Method, Port, ToolOutcome, U
 
 type Load = Extract<Down, { kind: 'load' }>;
 type Buffer = {
-  writes: Map<string, Json | undefined>; edits: Map<number, string>; added: ToolOutcome['added']; data: Map<string, Json | undefined>; badges: Map<number, string | null>;
-  lore: Map<string, ToolOutcome['lore'][number]>; variables: Map<string, string>;
+  writes: Map<string, Json | undefined>; edits: Map<number, string>; removed: Set<number>; added: ToolOutcome['added']; data: Map<string, Json | undefined>; badges: Map<number, string | null>;
+  lore: Map<string, ToolOutcome['lore'][number]>; variables: Map<string, string | undefined>;
 };
-const buffer = (): Buffer => ({ writes: new Map(), edits: new Map(), added: [], data: new Map(), badges: new Map(), lore: new Map(), variables: new Map() });
-const empty = (pending: Buffer) => !pending.writes.size && !pending.edits.size && !pending.added.length && !pending.data.size && !pending.badges.size && !pending.lore.size && !pending.variables.size;
+const buffer = (): Buffer => ({ writes: new Map(), edits: new Map(), removed: new Set(), added: [], data: new Map(), badges: new Map(), lore: new Map(), variables: new Map() });
+const empty = (pending: Buffer) => !pending.writes.size && !pending.edits.size && !pending.removed.size && !pending.added.length && !pending.data.size && !pending.badges.size && !pending.lore.size && !pending.variables.size;
 const outcome = (pending: Buffer, value?: ToolOutcome['value']): ToolOutcome => ({
-  value, writes: [...pending.writes], edits: [...pending.edits].map(([index, text]) => ({ index, text })), added: pending.added,
+  value, writes: [...pending.writes], edits: [...pending.edits].map(([index, text]) => ({ index, text })), removed: [...pending.removed], added: pending.added,
   data: [...pending.data], badges: [...pending.badges].map(([index, text]) => ({ index, text })), lore: [...pending.lore.values()], variables: [...pending.variables],
 });
 // An event about the user's own change must not rewrite the story under them, nor one inside a turn or a showing.
@@ -77,6 +77,11 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       if (event === undefined && pageSent?.[layer].has(key)) return pageSent[layer].get(key) as T | undefined;
       return call<T | undefined>(method, [key], event);
     };
+    const variable = (name: string, value: string | undefined) => {
+      if (name.startsWith(TOOL_VARIABLES)) throw new Error(`A chat variable named ${TOOL_VARIABLES}… is a tool's own state`);
+      pending().variables.set(name, value);
+      changed();
+    };
     return {
       ...header,
       messages: async (from, to) => {
@@ -93,11 +98,15 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       },
       variables: {
         get: (name) => overlaid<string>('variables', 'chat.variables.get', name),
-        set: (name, value) => {
-          if (name.startsWith(TOOL_VARIABLES)) throw new Error(`A chat variable named ${TOOL_VARIABLES}… is a tool's own state`);
-          pending().variables.set(name, String(value));
-          changed();
+        entries: async () => {
+          const held = new Map(await call<[string, string][]>('chat.variables.entries', [], event));
+          for (const layer of [...(event === undefined && pageSent ? [pageSent.variables] : []), current().variables]) {
+            for (const [name, value] of layer) if (value === undefined) held.delete(name); else held.set(name, value);
+          }
+          return [...held];
         },
+        set: (name, value) => { variable(name, String(value)); },
+        delete: (name) => { variable(name, undefined); },
       },
       data: {
         get: <T extends Json>(key: string) => overlaid<T>('data', 'chat.data.get', key),
@@ -116,6 +125,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       },
       edit: (index, text) => { story(); pending().edits.set(index, text); changed(); },
       add: (role, text) => { story(); pending().added.push({ role, text }); changed(); },
+      remove: (index) => { story(); pending().removed.add(index); changed(); },
       writeLore: ({ name, keys, text, always, on }) => { pending().lore.set(name, { name, keys: [...keys], text, always, on }); changed(); },
       model: (role, messages) => call('model', [role, messages], event),
       embed: (texts, as) => call('embed', [texts, as ?? null], event),

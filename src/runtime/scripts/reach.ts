@@ -5,7 +5,7 @@ import type { HttpRequest } from '../../contracts/http';
 import type { ChatScope } from '../../engine/render';
 import type { EmbedResult, FetchResult, Host, ModelMessage, ModelRefusal, ModelResult, ToolReach } from '../../engine/script-api';
 import { live, type PackOwner } from '../../model/library';
-import { chatModel, embedModel, sharedModel } from '../models/assignment';
+import { chatModel, embedModel, sharedModel, taskModel } from '../models/assignment';
 import { setBackground } from '../library/pack';
 import { keepCall } from '../chat/chat-log';
 import type { Costs } from '../models/cost';
@@ -69,10 +69,12 @@ export class ScriptReach {
     if (!(await this.interactions.allowed(chat, from, deadline, signal))) return refused('not-allowed', 'the user has not allowed this script to call models');
     if (signal?.aborted || !live(store.get(from.kind, from.id))) return refused('failed', 'stopped');
 
-    const route = chatModel(store, stored.value, role);
+    // A module's own model serves its 보조 calls alone: a call for the 대화 모델 is one for the chat's.
+    const own = role === 'aux' && from.kind === 'module' ? store.get('module', from.id)!.value.model : undefined;
+    const route = own ? taskModel(store, stored.value, own) : chatModel(store, stored.value, role);
     const writer = 'kind' in route ? route : writerOf(store, route);
     if ('kind' in writer) {
-      this.interactions.tell(chat, `no-model:${role}`, { kind: 'no-model', role }, from);
+      this.interactions.tell(chat, `no-model:${role}`, { kind: 'no-model', role, ...(own && { own: true }) }, from);
       return refused('no-model', 'no model is set');
     }
     const text = gather();

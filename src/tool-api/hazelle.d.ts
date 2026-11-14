@@ -64,7 +64,9 @@ declare namespace Hazelle {
   // Text only; replayed with the story as ChatState is. A name under tool: is a tool's own state and throws.
   interface ChatVariables {
     get(name: string): Promise<string | undefined>;
+    entries(): Promise<[name: string, value: string][]>;   // every variable the chat holds, tools' own state left out
     set(name: string, value: string): void;     // lands with the event's outcome; from a page, after the latest message
+    delete(name: string): void;                 // unsets it, as a script's nil write does: it reads its default again, or as not held
   }
   // This tool's data for this chat: synced, goes with the chat and its branches, not versioned. Vectors keep best as
   // base64 float32 or int8, not JSON numbers. A message id it holds that the chat no longer has is stale: a branch made
@@ -88,6 +90,7 @@ declare namespace Hazelle {
     readonly data: ChatData;
     edit(index: number, text: string): void;    // a new version, as Lua's setChat; throws in change and branch
     add(role: Role, text: string): void;        // as Lua's addChat; throws in change and branch
+    remove(index: number): void;                // as Lua's removeChat; throws in change and branch
     model(role: 'main' | 'aux', messages: ModelMessage[]): Promise<ModelAnswer>;   // needs //@uses model
     // needs //@uses embed. as: what the texts are for, which retrieval-tuned models embed differently.
     embed(texts: string[], as?: 'query' | 'document'): Promise<EmbedAnswer>;

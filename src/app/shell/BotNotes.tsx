@@ -37,7 +37,7 @@ export function BotNotes() {
           toast.error('봇 명령어가 텍스트를 너무 많이 만들어서 멈췄어요', { detail: RUNAWAY_FIX });
           break;
         case 'no-model':
-          toast.error(`호출할 ${MODEL_ROLES[note.role]}이 없어요`, { detail: from?.name });
+          toast.error(note.own ? `선택한 ${MODEL_ROLES[note.role]}을 쓸 수 없어요` : `호출할 ${MODEL_ROLES[note.role]}이 없어요`, { detail: from?.name });
           break;
         case 'late':
           toast.show(TOOL_LATE, { detail: from?.name });

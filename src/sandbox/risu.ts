@@ -33,11 +33,13 @@ const character = (card: Hazelle.Card, lorebook: Hazelle.LoreEntry[]) => ({
 const CARD_FIELDS = { name: 'name', desc: 'description', personality: 'personality', scenario: 'scenario', firstMessage: 'greeting', creatorNotes: 'creatorNotes', tags: 'tags' } as const;
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-// localLore: the chat's own lorebook, which setChatToIndex writes back.
-const chatOf = (id: string, messages: Hazelle.Message[], lorebook: Hazelle.LoreEntry[]) => ({
+// localLore: the chat's own lorebook. scriptstate: its variables, under Risu's $ names.
+const chatOf = (id: string, messages: Hazelle.Message[], lorebook: Hazelle.LoreEntry[], variables: [string, string][]) => ({
   id, message: messages.map((message) => ({ role: message.role, data: message.raw, time: message.time, chatId: message.id })),
   localLore: lorebook.filter(({ owner }) => owner.kind === 'chat').map(loreEntry),
+  scriptstate: Object.fromEntries(variables.map(([name, value]) => [`$${name}`, value])),
 });
+type RisuChat = ReturnType<typeof chatOf>;
 // Risu's lore has no enabled flag; loreEntry's disabled is the only one a plugin meets.
 function fromLore(entry: Record<string, unknown>): Omit<Hazelle.LoreEntry, 'owner'> {
   const { name, keys, content, constant } = readRisuLoreBase(entry, (value) => String(value ?? ''));
@@ -45,8 +47,15 @@ function fromLore(entry: Record<string, unknown>): Omit<Hazelle.LoreEntry, 'owne
 }
 const sameLore = (a: Omit<Hazelle.LoreEntry, 'owner'>, b: Omit<Hazelle.LoreEntry, 'owner'>) =>
   a.text === b.text && a.always === b.always && a.on === b.on && a.keys.join('\n') === b.keys.join('\n');
-// The keys of a chat setChatToIndex writes; any other is told to 점검.
+// The keys of a chat a write takes.
 const CHAT_KEYS = new Set(['id', 'message', 'localLore', 'scriptstate']);
+// Risu's other fields of a chat (upstream Chat, read 2026-11-14), which Hazelle does not take: each told to 점검 when
+// written. A key that is neither is the plugin's own, kept with the chat and its branches as Risu keeps it (CHAT_OWN).
+const CHAT_UNTAKEN = new Set([
+  'note', 'name', 'sdData', 'supaMemoryData', 'hypaV2Data', 'lastMemory', 'suggestMessages', 'isStreaming', 'activeStreamingDisplayOptimizationMode', 'modules',
+  'bindedPersona', 'fmIndex', 'hypaV3Data', 'folderId', 'lastDate', 'bookmarks', 'bookmarkNames', 'useLocallySetGlobalVariables', 'GLGlobalVariables', 'onboardingDone',
+]);
+const CHAT_OWN = 'risu:chat';
 
 const MODEL_ROLES = new Set(['system', 'user', 'assistant']);
 // A Response with one of these statuses throws when given a body.
@@ -138,20 +147,43 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     tell(name);
     throw new Error(`Risu API '${name}' is not available in Hazelle${RISU_ABSENT.has(name) ? `: ${RISU_ABSENT.get(name)}` : ''}`);
   };
-  // Risu's character holds every chat of it. Hazelle offers a plugin no chat list, and a partial one would let a plugin
-  // that prunes by it (RisuPot's orphan cleanup) delete what it does not see; the open chat is getChatFromIndex's. So
-  // chats reads undefined, told to 점검 when read, and is not enumerable, so no copy or write handed back carries it.
+  // Risu's character holds every chat of it. Hazelle offers a plugin no chat list, and a partial one in the database's
+  // characters would let a plugin that prunes by it (RisuPot's orphan cleanup) delete what it does not see. So there
+  // chats reads undefined, told to 점검 when read, and is not enumerable, so no copy handed back carries it; only the
+  // open chat's character holds a chat, that one (characterOf).
   const chatless = <T extends object>(value: T) => Object.defineProperty(value, 'chats', { get: () => { tell('character.chats'); return undefined; } });
+  // The chat of a turn stage while its handlers run, by chat id since one frame serves every chat: Risu's calls then
+  // read the turn, with what the bot's scripts wrote in it, and what they write lands with it. A chat's stages run one
+  // at a time (the story lock), so one never nests in another. showing is never one: nothing it does is saved.
+  const staged = new Map<string, Hazelle.Chat>();
+  const during = async <T>(chat: Hazelle.Chat, run: () => Promise<T>) => {
+    staged.set(chat.id, chat);
+    try { return await run(); } finally { staged.delete(chat.id); }
+  };
+  // saved: the frame's own chat, where the story is written at once as Risu writes it; a turn's chat refuses it.
+  const both = async () => {
+    const saved = await frame.chat();
+    return saved && { saved, chat: staged.get(saved.id) ?? saved };
+  };
+  const current = async () => (await both())?.chat ?? null;
   const buttons = new Map<string, { label: string; run: Callback }>();
   const messageActions = new Map<string, { label: string; run: MessageAction }>();
   // Where each chatId handed out was, as read: a picture often lands after the user moved to another chat, whose messages
   // the frame's chat then reads instead.
   const places = new Map<string, { chat: Hazelle.Chat; at: Hazelle.At }>();
   const place = (chat: Hazelle.Chat, { index, id, version }: Hazelle.At) => places.set(id, { chat, at: { index, id, version } });
-  const read = async (chat: Hazelle.Chat) => {
+  // What each scriptstate handed out held, by name, and each chat and its message list, by message id: a write is
+  // compared with what the plugin read, so a variable the bot's scripts changed since is not written back, and only a
+  // message the plugin was handed can be one it removed.
+  const handed = new WeakMap<object, Map<string, string>>();
+  const read = async (chat: Hazelle.Chat, lorebook?: Hazelle.LoreEntry[]) => {
     const messages = await chat.messages();
     for (const message of messages) place(chat, message);
-    return chatOf(chat.id, messages, await chat.lorebook());
+    const risu = { ...await chat.data.get<Record<string, Hazelle.Json>>(CHAT_OWN), ...chatOf(chat.id, messages, lorebook ?? await chat.lorebook(), await chat.variables.entries()) };
+    handed.set(risu.scriptstate, new Map(Object.entries(risu.scriptstate)));
+    const texts = new Map(messages.map(({ id, raw }) => [id, raw]));
+    for (const holder of [risu, risu.message]) handed.set(holder, texts);
+    return risu;
   };
   // Merge Risu button places into one deduplicated menu; splitting would strand side-menu-only actions.
   const listedButtons = () => {
@@ -169,7 +201,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   const kept = (row: Row) => { sheet = row.drawn.css; return row; };
   // The open chat's messages as Risu's rows, the greeting first; null with no chat open.
   const rows = async (): Promise<Row[] | null> => {
-    const chat = await frame.chat();
+    const chat = await current();
     if (!chat) return null;
     const messages = await chat.messages();
     const [greeting, ...drawn] = await Promise.all([chat.rendered(null), ...messages.map(({ index, id, version }) => chat.rendered({ index, id, version }))]);
@@ -178,7 +210,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     return all;
   };
   const rowAt = async (by: 'id' | 'index', key: string): Promise<Row | null> => {
-    const chat = await frame.chat();
+    const chat = await current();
     if (!chat) return null;
     if (by === 'index' && key === '-1') {
       const greeting = await chat.rendered(null);
@@ -189,19 +221,96 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     const drawn = message && await chat.rendered({ index: message.index, id: message.id, version: message.version });
     return drawn ? kept({ index: message.index, id: message.id, drawn }) : null;
   };
+  // A member of Risu's SafeDocument or SafeElement that these answers lack reaches into the app's page: it reads
+  // undefined, as a declined method does, told to 점검, so a plugin that stops there is not silent.
+  const paged = <T extends object>(found: T): T => new Proxy(found, {
+    get: (target, name, receiver) => {
+      if (typeof name === 'string' && name !== 'then' && !(name in target)) tell('getRootDocument:page');
+      return Reflect.get(target, name, receiver) as unknown;
+    },
+  });
   // Risu does not await a button or setting; holding the tool's lane for a whole screen would stall its other events.
   const press = (run: Callback | undefined) => { if (run) void Promise.resolve().then(run).catch((error: unknown) => console.error(error)); };
 
   const characterAt = async (id: string) => (await api.account()).characters.findIndex((each) => each.id === id);
   const opened = async () => {
-    const chat = await frame.chat();
-    const card = chat && await chat.card();
-    return chat && { chat, card, characterIndex: card ? await characterAt(card.id) : -1, chatIndex: chatNumber(chat.id) };
+    const open = await both();
+    const card = open && await open.chat.card();
+    return open && { ...open, card, characterIndex: card ? await characterAt(card.id) : -1, chatIndex: chatNumber(open.chat.id) };
   };
-  const characterOf = async (current: NonNullable<Awaited<ReturnType<typeof opened>>>) => current.card && chatless(character(current.card, await current.chat.lorebook()));
+  type Opened = NonNullable<Awaited<ReturnType<typeof opened>>>;
+  // Risu's character of a chat. chats holds that chat alone, which chatPage answers and takes too: it is
+  // getCurrentChatIndex's number as in Risu, a hash far past the list's end, and a list that long would hang a plugin
+  // that walks it. The character's other chats are not offered (design §6.10).
+  const characterOf = async (chat: Hazelle.Chat, card: Hazelle.Card) => {
+    const lorebook = await chat.lorebook();
+    const chats = [await read(chat, lorebook)];
+    const chatPage = chatNumber(chat.id);
+    Object.setPrototypeOf(chats, Object.create(Array.prototype, { [chatPage]: { get: () => chats[0], set: (next: RisuChat) => { chats[0] = next; } } }) as object);
+    return { ...character(card, lorebook), chatPage, chats };
+  };
   const at = async (characterIndex: number, chatIndex: number) => {
-    const current = await opened();
-    return current && current.characterIndex === characterIndex && current.chatIndex === chatIndex ? current.chat : null;
+    const open = await opened();
+    return open && open.characterIndex === characterIndex && open.chatIndex === chatIndex ? open : null;
+  };
+  // A Risu chat written back onto the open one. Omitted localLore entries stay (the native upsert replaces by name),
+  // told to 점검. A variable left out of the scriptstate handed out is unset; left out of another object, a copy or
+  // one the plugin made, it may be one the bot's scripts wrote since, so it stays, told.
+  const writeChat = async (name: string, path: string, { chat, saved }: Opened, value: { message: { role: string; data: string; chatId?: string }[]; localLore?: Record<string, unknown>[]; scriptstate?: Record<string, unknown> }) => {
+    const messages = await saved.messages();
+    // A message is removed only when the plugin was handed it and left its chatId out, those it kept leading the list in
+    // their order: one that landed since it read the chat is none of its to remove, and a list with no such record, a
+    // copy or one the plugin made, is read in place, where a shorter one is refused.
+    const texts = handed.get(value) ?? handed.get(value.message);
+    const ids = new Set(value.message.map(({ chatId }) => chatId));
+    const gone = new Set([...texts?.keys() ?? []].filter((id) => !ids.has(id)));
+    const kept = [...texts?.keys() ?? []].filter((id) => ids.has(id));
+    if (gone.size ? !kept.every((id, at) => value.message[at]!.chatId === id) : !texts && value.message.length < messages.length) throw new Error(`Risu API '${name}' cannot remove messages it cannot tell apart in Hazelle`);
+    // The plugin's own keys: those of the chat it was handed are all it holds; another object's join what is held.
+    const own: Record<string, Hazelle.Json> = {};
+    for (const [key, held] of Object.entries(value)) {
+      if (CHAT_KEYS.has(key)) continue;
+      const json = CHAT_UNTAKEN.has(key) || held === undefined ? undefined : JSON.stringify(held);
+      if (json === undefined) tell(`${name}:${path}${key}`);
+      else own[key] = JSON.parse(json) as Hazelle.Json;
+    }
+    const stored = await chat.data.get<Record<string, Hazelle.Json>>(CHAT_OWN) ?? {};
+    const next = handed.has(value) ? own : { ...stored, ...own };
+    if (JSON.stringify(next) !== JSON.stringify(stored)) chat.data.set(CHAT_OWN, next);
+    for (const id of gone) texts!.delete(id);
+    for (const message of messages) if (gone.has(message.id)) saved.remove(message.index);
+    const places = messages.filter(({ id }) => !gone.has(id));
+    value.message.forEach((message, at) => {
+      const held = places[at];
+      if (!held) saved.add(message.role === 'user' ? 'user' : 'char', message.data);
+      else if (message.data !== held.raw) saved.edit(held.index, message.data);
+    });
+    if (value.scriptstate) {
+      const read = handed.get(value.scriptstate);
+      const before = read ?? new Map((await chat.variables.entries()).map(([key, held]) => [`$${key}`, held]));
+      for (const [key, held] of Object.entries(value.scriptstate)) {
+        if (!key.startsWith('$') || held === undefined) { tell(`${name}:${path}scriptstate.${key}`); continue; }
+        const text = typeof held === 'string' ? held : JSON.stringify(held);
+        if (text === before.get(key)) continue;
+        chat.variables.set(key.slice(1), text);
+        before.set(key, text);
+      }
+      const gone = [...before.keys()].filter((key) => !Object.hasOwn(value.scriptstate!, key));
+      if (!read && gone.length) tell(`${name}:${path}scriptstate.remove`);
+      for (const key of read ? gone : []) {
+        chat.variables.delete(key.slice(1));
+        read!.delete(key);
+      }
+    }
+    if (!value.localLore) return;
+    const lore = new Map((await chat.lorebook()).filter(({ owner }) => owner.kind === 'chat').map((entry) => [entry.name, entry]));
+    const written = value.localLore.map(fromLore);
+    const names = new Set(written.map(({ name }) => name));
+    if ([...lore.keys()].some((name) => !names.has(name))) tell(`${name}:${path}localLore.remove`);
+    for (const entry of written) {
+      const held = lore.get(entry.name);
+      if (!held || !sameLore(held, entry)) chat.writeLore(entry);
+    }
   };
   const storage = (prefix: string) => {
     const keys = async () => (await api.storage.keys()).filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length));
@@ -223,7 +332,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     const method = (init.method ?? 'GET').toUpperCase();
     if (method !== 'GET' && method !== 'POST') throw new TypeError(`Failed to fetch: Hazelle sends GET and POST only, not ${method}`);
     if (init.body != null && (method === 'GET' || typeof init.body !== 'string')) throw new TypeError('Failed to fetch: Hazelle sends a text body, with POST only');
-    const chat = await frame.chat();
+    const chat = await current();
     if (!chat) throw new TypeError('Failed to fetch: no chat is open');
     const answer = await chat.fetch(String(url), { method, headers: Object.fromEntries(new Headers(init.headers)), ...(typeof init.body === 'string' && { body: init.body }), ...(init.signal && { signal: init.signal }) });
     if (!answer.ok) throw new TypeError(`Failed to fetch: ${answer.reason}${answer.code ? ` (${answer.code})` : ''}`);
@@ -236,12 +345,12 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   // Risu's translation cache, from each text translated to its translation, over the open chat's translations only, where
   // Risu's spans every chat.
   const translated = async () => {
-    const chat = await frame.chat();
+    const chat = await current();
     return chat ? (await chat.messages()).flatMap(({ text, raw, translation }) => (translation ? [translation.sent ? { key: translation.text, value: raw } : { key: text, value: translation.text }] : [])) : [];
   };
   // Risu's database as getDatabase builds it, of the keys asked that it builds.
   const database = async (keys: string[]) => {
-    const chat = await frame.chat();
+    const chat = await current();
     const reads: Reads = { account: once(() => api.account()), setup: once(async () => chat && chat.setup()), lorebook: once(async () => chat ? chat.lorebook() : []) };
     const built: Record<string, unknown> = {};
     for (const key of keys.filter((each) => Object.hasOwn(DATABASE, each))) {
@@ -250,23 +359,26 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     }
     return built;
   };
-  const getCharacter = async () => { const current = await opened(); return current && characterOf(current); };
+  const getCharacter = async () => { const open = await opened(); return open && open.card && characterOf(open.chat, open.card); };
   // Only the keys that changed from what getCharacter reads are written, as Risu's dbWrite asks before a write: under the
-  // card's one answer, a refusal skipping it.
+  // card's one answer, a refusal skipping it. Its chat is written as setChatToIndex writes one.
   const setCharacter = (name: string) => async (characterIndex: number | null, value: Record<string, unknown>) => {
-    const current = await opened();
-    if (!current?.card) throw new Error(`Risu API '${name}' found no character in the open chat`);
-    if (characterIndex !== null && characterIndex !== current.characterIndex) throw new Error(`Risu API '${name}' reaches only the open chat's character in Hazelle`);
-    const held: Record<string, unknown> = character(current.card, await current.chat.lorebook());
+    const open = await opened();
+    if (!open?.card) throw new Error(`Risu API '${name}' found no character in the open chat`);
+    if (characterIndex !== null && characterIndex !== open.characterIndex) throw new Error(`Risu API '${name}' reaches only the open chat's character in Hazelle`);
+    const held: Record<string, unknown> = { ...character(open.card, await open.chat.lorebook()), chatPage: open.chatIndex };
+    const { chats, ...fields } = value as { chats?: Parameters<typeof writeChat>[3][] };
     const edit: Record<string, unknown> = {};
-    for (const [key, written] of Object.entries(value)) {
+    for (const [key, written] of Object.entries(fields)) {
       if (same(written, held[key])) continue;
       if (Object.hasOwn(CARD_FIELDS, key)) edit[CARD_FIELDS[key as keyof typeof CARD_FIELDS]] = written;
       else tell(`${name}:${key}`);
     }
-    if (!Object.keys(edit).length) return;
-    const answer = await current.chat.editCard(edit);
-    if (!answer.ok && answer.reason !== 'not-allowed') throw new Error(`Risu API '${name}' failed in Hazelle: ${answer.reason}`);
+    if (Object.keys(edit).length) {
+      const answer = await open.chat.editCard(edit);
+      if (!answer.ok && answer.reason !== 'not-allowed') throw new Error(`Risu API '${name}' failed in Hazelle: ${answer.reason}`);
+    }
+    if (chats?.[0]) await writeChat(name, 'chats.', open, chats[0]);
   };
   // Nothing of Risu's database is written here: one handed back as getDatabase read it is left as it is, and a key that
   // changed fails the write, each told to 점검.
@@ -285,6 +397,9 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     showContainer: async () => frame.show(),
     hideContainer: async () => frame.hide(),
     registerButton: async (arg: { name: string; id?: string }, callback: Callback) => {
+      // As Risu throws: a button with no name (the label passed in the object's place) is one the app's menu refuses,
+      // and every other button of the plugin with it.
+      if (typeof arg?.name !== 'string' || !arg.name.trim()) throw new Error('name must be a non-empty string');
       const id = arg.id ?? crypto.randomUUID();
       buttons.set(id, { label: arg.name, run: callback });
       frame.menu(listedButtons());
@@ -310,29 +425,29 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     unwarpSafeArray: async (array: ReturnType<typeof safeArray>) => array[ITEMS],
     // Read-only, and only the chat screen and its messages: the rest of the page (body, to put a box of its own on the
     // app) is declined (design §6.10) and found nowhere.
-    getRootDocument: async () => ({
+    getRootDocument: async () => paged({
       querySelector: async (selector: string) => {
         const wanted = selector.trim();
         if (wanted === SCREEN) {
           const all = await rows();
-          return all && { getInnerHTML: async () => all.map(rowHtml).join(''), getOuterHTML: async () => `<div class="default-chat-screen">${all.map(rowHtml).join('')}</div>` };
+          return all && paged({ getInnerHTML: async () => all.map(rowHtml).join(''), getOuterHTML: async () => `<div class="default-chat-screen">${all.map(rowHtml).join('')}</div>` });
         }
         if (ROWS.test(wanted)) {
           const first = (await rows())?.[0];
-          return first ? rowOf(first) : null;
+          return first ? paged(rowOf(first)) : null;
         }
         const body = BODY.exec(wanted);
         const one = body ?? ONE_ROW.exec(wanted);
         if (!one) { tell('getRootDocument:page'); return null; }
         const row = await rowAt(one[1] as 'id' | 'index', unescapeCss(one[2]!));
-        return row && (body ? bodyOf(row.drawn) : rowOf(row));
+        return row && paged(body ? bodyOf(row.drawn) : rowOf(row));
       },
       querySelectorAll: async (selector: string) => {
         const wanted = selector.trim();
-        if (ROWS.test(wanted)) return safeArray((await rows())?.map(rowOf) ?? []);
+        if (ROWS.test(wanted)) return safeArray((await rows())?.map((row) => paged(rowOf(row))) ?? []);
         if (LINKS.test(wanted)) return safeArray([]);
         if (!STYLES.test(wanted) && !SHEETS.test(wanted)) { tell('getRootDocument:page'); return safeArray([]); }
-        return safeArray(sheet === null ? [] : [{ getOuterHTML: async () => `<style>${sheet}</style>`, textContent: async () => sheet }]);
+        return safeArray(sheet === null ? [] : [paged({ getOuterHTML: async () => `<style>${sheet}</style>`, textContent: async () => sheet })]);
       },
     }),
     getDatabase: async (keys: string[] | 'all' = 'all') => {
@@ -345,7 +460,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     // Risu's Lite leaves the plugin list as it is, whatever it is handed.
     setDatabaseLite: async (value: Record<string, unknown>) => setDatabase('setDatabaseLite')(Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'plugins'))),
     getCurrentLorebookEntries: async () => {
-      const chat = await frame.chat();
+      const chat = await current();
       return chat ? (await chat.lorebook()).map(loreEntry) : [];
     },
     requestPluginPermission: async () => true,
@@ -355,44 +470,23 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     setChar: async (value: Record<string, unknown>) => setCharacter('setChar')(null, value),
     setCharacterToIndex: setCharacter('setCharacterToIndex'),
     getCharacterFromIndex: async (characterIndex: number) => {
-      const current = await opened();
-      return current && current.characterIndex === characterIndex ? characterOf(current) : null;
+      const open = await opened();
+      return open && open.card && open.characterIndex === characterIndex ? characterOf(open.chat, open.card) : null;
     },
     getCurrentCharacterIndex: async () => (await opened())?.characterIndex ?? -1,
     getCurrentChatIndex: async () => (await opened())?.chatIndex ?? -1,
     getChatFromIndex: async (characterIndex: number, chatIndex: number) => {
-      const chat = await at(characterIndex, chatIndex);
-      return chat && read(chat);
+      const open = await at(characterIndex, chatIndex);
+      return open && read(open.chat);
     },
-    // Omitted localLore entries stay: native upsert replaces by name, never removes.
-    // Write only supplied scriptstate $ variables; getChatFromIndex omits them, so spread updates preserve the rest.
-    setChatToIndex: async (characterIndex: number, chatIndex: number, value: { message: { role: string; data: string }[]; localLore?: Record<string, unknown>[]; scriptstate?: Record<string, unknown> }) => {
-      const chat = await at(characterIndex, chatIndex);
-      if (!chat) throw new Error('Risu API \'setChatToIndex\' reaches only the open chat in Hazelle');
-      const messages = await chat.messages();
-      if (value.message.length < messages.length) throw new Error('Risu API \'setChatToIndex\' cannot remove messages in Hazelle');
-      for (const key of Object.keys(value)) if (!CHAT_KEYS.has(key)) tell(`setChatToIndex:${key}`);
-      value.message.forEach((message, at) => {
-        if (at >= messages.length) chat.add(message.role === 'user' ? 'user' : 'char', message.data);
-        else if (message.data !== messages[at]!.raw) chat.edit(at, message.data);
-      });
-      for (const [key, held] of Object.entries(value.scriptstate ?? {})) {
-        if (!key.startsWith('$') || held === undefined) tell(`setChatToIndex:scriptstate.${key}`);
-        else chat.variables.set(key.slice(1), typeof held === 'string' ? held : JSON.stringify(held));
-      }
-      if (!value.localLore) return;
-      const before = new Map((await chat.lorebook()).filter(({ owner }) => owner.kind === 'chat').map((entry) => [entry.name, entry]));
-      const written = value.localLore.map(fromLore);
-      const names = new Set(written.map(({ name }) => name));
-      if ([...before.keys()].some((name) => !names.has(name))) tell('setChatToIndex:localLore.remove');
-      for (const entry of written) {
-        const held = before.get(entry.name);
-        if (!held || !sameLore(held, entry)) chat.writeLore(entry);
-      }
+    setChatToIndex: async (characterIndex: number, chatIndex: number, value: Parameters<typeof writeChat>[3]) => {
+      const open = await at(characterIndex, chatIndex);
+      if (!open) throw new Error('Risu API \'setChatToIndex\' reaches only the open chat in Hazelle');
+      await writeChat('setChatToIndex', '', open, value);
     },
     // Risu answers false when its permission is refused and throws for any other refusal.
     sendChat: async (message: string) => {
-      const chat = await frame.chat();
+      const chat = await current();
       if (!chat) throw new Error('No active chat found');
       const answer = await chat.send(String(message));
       if (answer.ok) return true;
@@ -403,7 +497,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       // A RisuAI model id, which nothing here may match to a connection by its name.
       if (staticModel !== undefined) return { type: 'fail', result: 'staticModel names a RisuAI model; Hazelle sends to the chat\'s own models only' };
       if (!messages.every((message) => MODEL_ROLES.has(message.role) && typeof message.content === 'string')) return { type: 'fail', result: 'only system, user and assistant text messages are sent' };
-      const chat = await frame.chat();
+      const chat = await current();
       if (!chat) return { type: 'fail', result: 'no chat is open' };
       const answer = await chat.model(mode === 'model' ? 'main' : 'aux', messages as Hazelle.ModelMessage[]);
       return answer.ok ? { type: 'success', result: answer.text } : { type: 'fail', result: answer.reason };
@@ -437,13 +531,13 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
       const unread = Object.entries({ messageIndex: messageIndex !== -1, runVar: runVar === true, processRegex: processRegex === true, role: role !== undefined, cbsConditions: cbsConditions !== undefined }).flatMap(([key, asked]) => (asked ? [key] : []));
       for (const key of unread) tell(`parseRisuChat:${key}`);
       if (unread.length) throw new Error(`Risu API 'parseRisuChat' cannot read with ${unread.join(', ')} in Hazelle`);
-      const chat = await frame.chat();
+      const chat = await current();
       if (!chat) throw new Error('No active chat found');
       return chat.cbs(String(text ?? ''));
     },
     // Risu's inlay asset; type is the MIME type's own word (image, video, audio), as Risu's are.
     readInlay: async (id: string) => {
-      const chat = await frame.chat();
+      const chat = await current();
       const inlay = chat && await chat.inlay(String(id));
       if (!inlay) return null;
       const [type, ext] = inlay.type.split('/');
@@ -485,23 +579,23 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   };
   // Only the chat's own request and reply pass these stages, so Risu's request type is always 'model'.
   const stages: { [E in (typeof STAGES)[Mode]]: Hazelle.Events[E] } = {
-    replying: async (_chat, text) => {
+    replying: (chat, text) => during(chat, async () => {
       let content = text;
       for (const replacer of [...replacers.afterRequest]) {
         const next = await replacer(content as never, 'model');
         if (typeof next === 'string') content = next;
       }
       return edited('output', content);
-    },
-    sending: (_chat, text) => edited('input', text),
-    requesting: async (_chat, messages) => {
+    }),
+    sending: (chat, text) => during(chat, () => edited('input', text)),
+    requesting: (chat, messages) => during(chat, async () => {
       const processed: Hazelle.RequestMessage[] = [];
       for (const message of messages) processed.push(message.message === undefined ? message : { ...message, content: await edited('process', message.content) });
       if (!replacers.beforeRequest.size) return processed;
       let risu: unknown = processed.map(({ role, content, message, cache }) => ({ role, content, ...(message !== undefined && { memo: message }), ...(cache && { cachePoint: true }) }));
       for (const replacer of [...replacers.beforeRequest]) risu = await replacer(risu as never, 'model');
       return fromRisu(risu, new Set(messages.flatMap(({ message }) => message ?? [])));
-    },
+    }),
     showing: async (_chat, shown) => {
       const texts: string[] = [];
       for (const { text } of shown) texts.push(await edited('display', text));
@@ -539,7 +633,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   api.on('reply', async (chat, reply) => {
     if (!listeners.size) return;
     const card = await chat.card();
-    const arg = { char: card && chatless(character(card, await chat.lorebook())), chat: await read(chat), characterIndex: card ? await characterAt(card.id) : -1, chatIndex: chatNumber(chat.id), messageIndex: reply.index };
+    const char = card && await characterOf(chat, card);
+    const arg = { char, chat: char ? char.chats[0]! : await read(chat), characterIndex: card ? await characterAt(card.id) : -1, chatIndex: chatNumber(chat.id), messageIndex: reply.index };
     for (const listener of [...listeners]) await listener(arg);
   });
 
@@ -570,6 +665,6 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   };
   // alert maps to a toast, never a blocking overlay. confirm/prompt must use allow-modals browser dialogs:
   // their synchronous answers cannot cross the host port.
-  scope.alert = (message?: unknown) => { void frame.chat().then((chat) => chat ? chat.say(String(message)) : console.log(message)); };
+  scope.alert = (message?: unknown) => { void current().then((chat) => chat ? chat.say(String(message)) : console.log(message)); };
   return () => { for (const unload of unloads) press(unload); };
 }

@@ -21,7 +21,8 @@ type Note =
   | { kind: 'failed'; message: string }
   | { kind: 'missing'; names: string[] }
   | { kind: 'stuck'; disabled?: true }
-  | { kind: 'no-model'; role: Role }
+  // own: the model that cannot run is the module's own pick, not the chat's.
+  | { kind: 'no-model'; role: Role; own?: true }
   | { kind: 'late' }
   | { kind: 'memory-held'; by: string }
   | { kind: 'stale-reply' }

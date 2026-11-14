@@ -30,7 +30,8 @@ export type Overview = {
   talk: { prompt: PromptChoice; pins: { prompt: StoredPrompt<'conversation'>; ref: ModelRef }[] };
   tasks: TaskRun[];
   // Every added model this setup reaches: the roles' and the tasks' as they resolve, 삽화's image model and, in 공용, each
-  // prompt's own (a conversation prompt's 대화 and 보조 모델, an agent's). Nothing here picks a model outside it.
+  // prompt's own (a conversation prompt's 대화 and 보조 모델, an agent's) and each module's. Nothing here picks a model
+  // outside it.
   used: ModelRef[];
 };
 
@@ -60,6 +61,7 @@ export function overviewOf(store: ObjectStore, chat: Chat | null): Overview {
     ...tasks.flatMap((task) => ['route' in task.runs ? task.runs.route : task.runs, ...(task.feature === 'illustrate' ? [task.draws] : [])]),
   ].flatMap((runs) => ('connection' in runs ? [refOf(runs.connection.id, runs.model)] : []));
   const picked = prompts.flatMap((each) => (ofSort(each, 'conversation') ? Object.values(each.value.models) : ofSort(each, 'agent') && each.value.model ? [each.value.model] : []));
-  const used = [...reached, ...picked].filter((ref, at, all) => all.findIndex((each) => sameModelRef(each, ref)) === at);
+  const modules = chat ? [] : store.list('module').filter(live).flatMap(({ value }) => (value.model ? [value.model] : []));
+  const used = [...reached, ...picked, ...modules].filter((ref, at, all) => all.findIndex((each) => sameModelRef(each, ref)) === at);
   return { roles, talk: { prompt, pins }, tasks, used };
 }

@@ -48,6 +48,7 @@ export const BOT_STUCK = '봇 스크립트가 끝나지 않아서 멈췄어요';
 export const TOOL = '플러그인';
 export const RISU_PLUGIN = 'Risu 플러그인';
 export const MODULE_MODELS = '모델 호출';
+export const MODULE_MODEL_HELP = `${MODEL_ROLES.aux} 호출에만 써요.`;
 export const OUTGOING = '보낼 메시지';
 // A script's or a plugin's 테스트, run on a chat without saving.
 export const TRIAL = { when: '실행 시점', run: '테스트 실행', running: '실행하는 중…', noChat: '채팅을 열지 못했어요.', failed: '결과를 만들지 못했어요.', stale: '코드가 바뀌었어요. 다시 실행하면 지금 코드로 테스트해요.', unchanged: '변경되는 내용이 없어요.' };

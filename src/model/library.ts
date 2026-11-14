@@ -1,6 +1,7 @@
 export type PackOwner = { kind: 'character' | 'module'; id: string };
 // A lorebook's owner: a pack's, or a chat's own (채팅 로어북), which owns no scripts, so PackOwner leaves it out.
 export type LoreOwner = { kind: PackOwner['kind'] | 'chat'; id: string };
+import type { ModelRef } from '../connectors/assignment';
 import type { FileRef } from '../vault/files';
 import { grouped } from './fields';
 import type { AssetUse } from '../engine/assets';
@@ -71,10 +72,12 @@ export type Character = Mark & {
 // Lore/assets remain owned children. namespace serves {{moduleenabled}}; risu keeps exported identity for move/charx pairing.
 // takesMemory replaces built-in memory; network covers relay fetches and frame pictures/fonts.
 // Absent consent fields mean not asked, never implicitly allowed.
+// model: its own model for the 보조 calls its scripts and plugin make; absent, the chat's 보조 모델.
 export type Module = Pack & Mark & {
   botModels?: boolean;
   takesMemory?: boolean;
   network?: boolean;
+  model?: ModelRef;
   name: string;
   description: string;
   namespace: string | null;

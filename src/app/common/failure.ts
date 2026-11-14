@@ -164,6 +164,8 @@ const EMBED_UNCALLED = `${MODEL_ROLES.embed}을 호출하지 못했어요.`;
 // tooLarge: what was too long for one call, in the caller's words.
 const describeEmbedFailure = ({ reason, receipt }: EmbedFailure, tooLarge: string) => (reason === 'too-large' ? tooLarge : receipt?.error ? describeReplyError(receipt.error) : EMBED_UNCALLED);
 export const describeRoleFailure = (role: Role, failure: RouteFailure) => describeRoute(failure, MODEL_ROLES[role], null);
+// own: the module picked its own (model/library Module.model); else it follows 보조 모델.
+export const describeModuleModelFailure = (failure: Unrouted, own: boolean) => describeRoute(failure, MODEL_ROLES.aux, own ? '여기' : null);
 
 const SECRET = { password: '비밀번호가', recovery: '복구 키가' } as const;
 
