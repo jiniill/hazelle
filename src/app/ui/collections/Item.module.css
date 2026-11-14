@@ -155,7 +155,7 @@
 .item[aria-pressed='true'],
 .item[aria-current]:hover:not(:disabled),
 .item[aria-pressed='true']:hover:not(:disabled) {
-  background: var(--current-fill, var(--color-surface-raised));
+  background: var(--current-fill, var(--color-row-current));
 }
 
 /* On the dark current fill, faint cannot reach 4.5:1 and stay a rung under muted (tokens.test.ts). */

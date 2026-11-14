@@ -6,7 +6,8 @@ import { MODE, SchemeContext, schemeAttributes, type Mode, type Scheme } from '.
 // 기본 does, and tokens.css derives the rest from them by the picks' rules; a rung stated here goes over the rule's.
 // line is a divider's and a control's outline both, outline the control's where it is not the divider's. rail left out is the sidebar's; muted and faint left out stay the
 // mode's; name, a speaker's in the story, left out is the mark's, and is stated for the theme's own page. pointed is
-// the ground under a message the pointer is on, none when left out. bubble is the fill a message shape boxes
+// the ground under a message the pointer is on, none when left out. current is the fill of the row that is open in
+// a list, raised's when left out. bubble is the fill a message shape boxes
 // words in where the box is not the accent's: the others' speech bubbles, a page's box of mine; the surface's when
 // left out. action is the story's action voice, the mode's when left out,
 // and is stated when that is too dim on the theme's page or bubble. mark is the accent where it is read, as words,
@@ -30,6 +31,7 @@ export type Tone = {
   faint?: string;
   name?: string;
   pointed?: string;
+  current?: string;
   bubble?: string;
   action?: string;
   mark?: string;
@@ -115,6 +117,7 @@ const GROUND: Partial<Record<keyof Tone, string[]>> = {
   line: ['--color-divider', '--color-border'],
   outline: ['--color-border'],
   pointed: ['--color-row-pointed'],
+  current: ['--color-row-current'],
   bubble: ['--color-bubble'],
 };
 // A 강조 pick colours the names too, as it does in 기본, and a name is stated against the theme's page, so a theme's

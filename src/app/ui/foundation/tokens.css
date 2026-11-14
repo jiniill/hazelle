@@ -306,6 +306,8 @@
   --color-send: var(--color-accent);
   --color-on-send: var(--color-on-accent);
   --color-row-pointed: transparent;
+  /* The fill of a list's open row: the raised surface's, but in a theme that states one. */
+  --color-row-current: var(--color-surface-raised);
   /* A speech bubble's fill, the others' (theme.ts bubble); mine is the accent's. */
   --color-bubble: var(--color-surface);
   /* A theme's finish (theme.ts) turns these on the element that names it, so they are declared again on every element
