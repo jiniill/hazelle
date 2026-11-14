@@ -1,17 +1,21 @@
 import { PICTURE_PERCENT, type Backdrop } from '../../model/library';
 import type { SavedLook } from '../../model/settings';
-import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, QUOTE_SHAPE, MODE, SHADE, THEMES, type Mode, type QuoteShape, type Reading, type Scheme, type StageSide, type ThemeId } from '../ui';
+import { ACCENT, applyScheme, BG, DIALOGUE, FONTS, INK, QUOTE_SHAPE, MODE, SHADE, THEMES, type Letters, type Mode, type QuoteShape, type Reading, type Scheme, type StageSide, type Theme, type ThemeId } from '../ui';
 import type { Cue } from '../../runtime/chat/cues';
 import { CHIMES, type Chime } from './sounds';
 import { readPersisted } from './usePersisted';
 
 // Per device, never in the synced settings, since a phone and a desktop screen differ (user, 2026-09-29).
 export const READING = 'risu-alpha:reading';
+// Where a theme that states letters keeps the reader's changes to them: one record per theme, beside READING, which
+// stays the record of the themes that state none (user, 2026-11-13).
+export const lettersKey = (theme: Theme) => `${READING}:${theme.id}`;
 export const DISPLAY = 'risu-alpha:display';
 
 export const SIZE = { min: 14, max: 21 };
 
-export const SPACING: Record<Reading['leading'], string> = { narrow: '좁게', normal: '보통', wide: '넓게', widest: '매우 넓게' };
+export const SPACING: Record<Reading['leading'], string> = { narrow: '좁게', normal: '보통', wide: '넓게', widest: '더 넓게' };
+export const WIDTH: Record<Reading['width'], string> = { ...SPACING, full: '가득' };
 export const REPLY: Record<Reading['reply'], string> = { follow: '자동 스크롤', stay: '스크롤 고정' };
 export const SIDE: Record<StageSide, string> = { right: '오른쪽', left: '왼쪽' };
 
@@ -30,33 +34,37 @@ function fields<K extends string>(stored: string): Partial<Record<K, unknown>> {
 
 // Stored on the device, so another version or a hand may have written it: a field that is not one of the choices
 // starts from fallback's.
-export function parseReading(stored: string, fallback: Reading): Reading {
-  const read = fields<keyof Reading>(stored);
+export function parseLetters(stored: string, fallback: Letters): Letters {
+  const read = fields<keyof Letters>(stored);
   return {
     font: known(FONTS, read.font, fallback.font),
     size: sized(read.size) ?? fallback.size,
     leading: known(SPACING, read.leading, fallback.leading),
-    width: known(SPACING, read.width, fallback.width),
-    reply: known(REPLY, read.reply, fallback.reply),
+    width: known(WIDTH, read.width, fallback.width),
   };
 }
+
+export const parseReading = (stored: string, fallback: Reading): Reading => ({ ...parseLetters(stored, fallback), reply: known(REPLY, fields<keyof Reading>(stored).reply, fallback.reply) });
+
+export const lettersOf = ({ font, size, leading, width }: Letters): Letters => ({ font, size, leading, width });
 
 // Reading chrome (quotes/pictureSide/inlineIllustrations/portrait) never comes from presets.
 // Portrait stage is reserved for chats without illustration (user, 2026-10-16); width cap preserves old default (2026-10-17).
 // Track last system mode so reload preserves manual edits until the next mode change (user, 2026-10-20).
 // Chimes default off and use chimeSounds once enabled (user, 2026-10-26).
-export type Display = Scheme & { theme: ThemeId; chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; toolsFollow: boolean; userStops: boolean };
+export type Display = Scheme & { theme: ThemeId; chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; toolsFollow: boolean; splitReplies: boolean; userStops: boolean };
 
 export type Follow = Record<Mode, string> & { applied: Mode };
 
 const PLAIN = { bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' } as const;
 
-export const DISPLAY_DEFAULT: Display = { theme: 'base', chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, mode: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, toolsFollow: true, userStops: false };
+export const DISPLAY_DEFAULT: Display = { theme: 'base', chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, mode: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, toolsFollow: true, splitReplies: true, userStops: false };
 
 export function parseDisplay(stored: string, fallback: Display): Display {
   const read = fields<keyof Display | 'enterSends'>(stored);
   return {
-    theme: known(THEMES, read.theme, fallback.theme),
+    // 디스코드 was offered as channel (v0.6.34, by 설정 › 테마's address) before the themes took the products' names.
+    theme: known(THEMES, read.theme === 'channel' ? 'discord' : read.theme, fallback.theme),
     chimes: flag(read.chimes, fallback.chimes),
     chimeSounds: parseChimeSounds(read.chimeSounds, fallback.chimeSounds),
     // The key theme held the mode until 2026-11-13, when theme came to mean the app's whole look. A display saved
@@ -81,6 +89,7 @@ export function parseDisplay(stored: string, fallback: Display): Display {
     stepButtons: flag(read.stepButtons, fallback.stepButtons),
     scrubber: flag(read.scrubber, fallback.scrubber),
     toolsFollow: flag(read.toolsFollow, fallback.toolsFollow),
+    splitReplies: flag(read.splitReplies, fallback.splitReplies),
     userStops: flag(read.userStops, fallback.userStops),
   };
 }
@@ -114,14 +123,14 @@ export function applyStoredScheme() {
 
 // A preset sets the look only, never 응답이 올 때 or the reading chrome. No preset id is stored: the current preset is
 // the one whose every value matches.
-export type Look = Pick<Reading, 'font' | 'size' | 'leading' | 'width'> & Scheme;
+export type Look = Letters & Scheme;
 // id: what a 시스템 따라 바꾸기 slot and a character's look hold, its saved id.
 export type Preset = { id: string; name: string; look: Look };
 
 // The words a look is shown by, on a preset's card and a theme's.
 export const LOOK_SAMPLE = '그녀는 찻잔을 내려놓고 고개를 들었다.';
 
-export const lookOf = ({ font, size, leading, width }: Reading, { mode, bg, ink, accent, dialogue }: Display): Look => ({ mode, bg, ink, accent, dialogue, font, size, leading, width });
+export const lookOf = (letters: Letters, { mode, bg, ink, accent, dialogue }: Display): Look => ({ mode, bg, ink, accent, dialogue, ...lettersOf(letters) });
 
 const LOOK: Record<keyof Look, true> = { mode: true, bg: true, ink: true, accent: true, dialogue: true, font: true, size: true, leading: true, width: true };
 const LOOK_KEYS = Object.keys(LOOK) as (keyof Look)[];
@@ -151,7 +160,7 @@ function parseLook(look: SavedLook['look']): Look | null {
     font: named(FONTS, look.font),
     size: sized(look.size),
     leading: named(SPACING, look.leading),
-    width: named(SPACING, look.width),
+    width: named(WIDTH, look.width),
   };
   return LOOK_KEYS.every((key) => read[key] !== undefined) ? (read as Look) : null;
 }

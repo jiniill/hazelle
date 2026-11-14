@@ -15,7 +15,7 @@
 
 .check {
   display: flex;
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .error {
@@ -25,7 +25,7 @@
 
 .star {
   display: flex;
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .star svg {

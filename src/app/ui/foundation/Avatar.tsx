@@ -8,8 +8,9 @@ type Props = {
   face: string | LucideIcon;
   // A character's picture. face stands in while there is none.
   image?: string | null;
-  // fill: the whole of the frame it stands in, which sets the letter's size (CardGrid's pictures).
-  size?: 'sm' | 'md' | 'rail' | 'lg' | 'fill';
+  // story: the speaker's beside a message, md's unless the theme says otherwise (theme.ts speakers). fill: the whole
+  // of the frame it stands in, which sets the letter's size (CardGrid's pictures).
+  size?: 'sm' | 'md' | 'story' | 'rail' | 'lg' | 'fill';
   // accent: the operator's face on the board.
   tone?: 'plain' | 'you' | 'accent';
 };

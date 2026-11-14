@@ -7,7 +7,7 @@ export { CommentBox } from './CommentBox';
 export { CodeField, type CodeAside } from './CodeField';
 export type { CodeCompletion, CodeDoc, CodeItem, CodeLanguage, CodeProblem, CodeSpan } from './codeLanguage';
 export { FontPicker } from './FontPicker';
-export { Composer } from './Composer';
+export { Composer, ComposerTools, useAside, useToolRow } from './Composer';
 export { EditBox } from './EditBox';
 export { FileButton, pickFiles } from './FileButton';
 export { FoldButton } from './FoldButton';

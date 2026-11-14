@@ -5,12 +5,11 @@ import { ACTS } from '../common/acts';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { AgentSwitches } from '../common/AgentSwitches';
 import type { Writes } from '../../model/chat';
-import { pinnedBy } from '../../runtime/models/assignment';
-import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, ONBOARDING, promptName, PHONE, STATUS_DETAIL, READING_SETTINGS } from '../common/words';
+import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEAGE, NO_CHARACTER, ONBOARDING, PHONE, STATUS_DETAIL, READING_SETTINGS } from '../common/words';
 import { useRemembering, useSession, useToolFrames } from '../session';
 import { navigate } from '../shell/router';
 import { runShortcut } from '../shortcuts';
-import { Avatar, ChatTitle, Divider, IconButton, Menu, MenuItem, MoreMenu, ToolButton, useMenuHandle, useMenuOpener, useWide } from '../ui';
+import { Avatar, ChatTitle, Divider, IconButton, Menu, MenuItem, MoreMenu, ToolButton, useAside, useMenuHandle, useMenuOpener, useWide } from '../ui';
 import { ChatCastMenu } from './ChatCastMenu';
 import { ChatOnboarding } from './ChatOnboarding';
 import { MOVE_TO_FOLDER } from '../common/folders/FolderParts';
@@ -19,7 +18,7 @@ import { ChatFolderMenu, useChatFolders } from './ChatFolderMenu';
 import { useFamily } from './ChatLineage';
 import { alone } from './lineage';
 import { ChatExport } from './ChatExport';
-import { ModelMenu } from '../common/ModelMenu';
+import { ChatModel } from './ChatModel';
 import { PersonaDialog } from './ChatPersonaPicker';
 import { ChatPromptPicker, PromptDialog } from './ChatPromptPicker';
 import { ReadingDialog } from './ChatReading';
@@ -42,7 +41,7 @@ export function ChatHeading({ chat }: { chat: OpenChat }) {
 }
 
 export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
-  const { id, item, place, shelf, cast, route, toggles, panel, features, modelMenu, castMenu, actions } = chat;
+  const { id, item, place, shelf, cast, toggles, panel, features, castMenu, actions } = chat;
   const remembering = useRemembering();
   const session = useSession();
   // Subscribed for items, which read the frame tools' registrations.
@@ -59,12 +58,12 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
   const openFolders = useMenuOpener(folderMenu);
   const folders = useChatFolders(shelf?.id ?? null);
   const fileable = item && folders.index.folders.length > 0;
-  const pin = pinnedBy(place, chat.prompt);
+  const aside = useAside();
   return (
     <>
       <ChatPromptPicker prompt={chat.prompt} out={chat.promptOut && chat.card === null} open={chat.dialog === 'prompt'} onOpen={() => actions.openDialog('prompt')} />
       <ChatCastMenu handle={castMenu} cast={cast} character={shelf?.id ?? null} onChange={actions.setCast} />
-      <ModelMenu handle={modelMenu} route={route} pin={pin && { name: promptName(pin.value.name), open: () => actions.side({ kind: 'prompts', id: pin.id, pane: 'model' }) }} onPick={actions.pickModel} />
+      {!aside && <ChatModel chat={chat} />}
       {fileable && <ChatFolderMenu handle={folderMenu} chat={item.id} folder={item.chat.folder ?? null} folders={folders} />}
       <Menu kind="dialog" size="form" handle={featuresMenu} place="below-end" label={FEATURES_TITLE} trigger={() => null}>
         <FeatureSwitches owner={{ kind: 'chat', chat: place }} own={place.features} onChange={actions.setFeature} />

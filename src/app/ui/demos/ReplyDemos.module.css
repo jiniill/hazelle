@@ -107,7 +107,7 @@
   grid-template-columns: var(--space-24) 1fr;
   align-items: center;
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .meter {

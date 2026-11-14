@@ -25,7 +25,8 @@ function Drawn({ title, description, css, reading, rows, onDrawn }: Props) {
   const article = useRef<HTMLElement>(null);
   const references = useRef<HTMLDivElement>(null);
   const drawn = useRef(onDrawn);
-  const scope = readingScope(reading);
+  // A log is read on another page, so one made at 가득 is the widest step's, not this window's.
+  const scope = readingScope(reading.width === 'full' ? { ...reading, width: 'widest' } : reading);
 
   useEffect(() => {
     let live = true;
@@ -53,7 +54,7 @@ function Drawn({ title, description, css, reading, rows, onDrawn }: Props) {
           {rows.map(({ key, name, mine, stories }) => {
             return (
               <section key={key} className={styles.message}>
-                <Speech name={name} mine={mine}>
+                <Speech name={name} mine={mine} words={mine ? 'box' : 'ground'}>
                   {stories.map((html, index) => <Story key={index} html={html} css={css} whole />)}
                 </Speech>
               </section>

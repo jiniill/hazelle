@@ -1,12 +1,16 @@
-import { createContext, useContext, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { presetsOf } from '../model/settings';
-import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, wornLook, parseReading, parseStoredDisplay, presetOf, READING, savedPresets, systemMode, type Display, type Follow, type Look, type Preset } from './common/reading';
+import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, wornLook, parseStoredDisplay, presetOf, savedPresets, systemMode, type Display, type Follow, type Look, type Preset } from './common/reading';
+import { useReading } from './common/useReading';
 import { usePersisted } from './common/usePersisted';
 import { useSettings } from './session';
-import { applyScheme, QuoteShapeContext, readingDefault, ThemeContext, THEMES, useCoarsePointer, useDarkScheme, VeilContext, type Mode, type Reading } from './ui';
+import { applyScheme, BubblesContext, QuoteShapeContext, SchemeContext, ThemeContext, THEMES, useCoarsePointer, useDarkScheme, VeilContext, type Letters, type Mode, type Reading, type ThemeId } from './ui';
 
 type DisplayControl = {
+  // The worn theme's: its own letters where it states them.
   reading: Reading;
+  // The letters a theme would be read in, for its card.
+  lettersIn: (theme: ThemeId) => Letters;
   // enterSends is what Enter does now, resolved here; only enterSendsChoice is stored.
   display: Display & { enterSends: boolean };
   presets: Preset[];
@@ -25,19 +29,19 @@ type DisplayControl = {
 
 const DisplayContext = createContext<DisplayControl | null>(null);
 
-// The one owner of both stores: two usePersisted on one key would not see each other's writes, so the chat's 읽기 설정
+// The one owner of the stores: two usePersisted on one key would not see each other's writes, so the chat's 읽기 설정
 // and 설정 › 디스플레이 both edit through this.
 export function DisplayProvider({ children }: { children: ReactNode }) {
-  const [initial] = useState(readingDefault);
-  const [reading, setReading] = usePersisted(READING, (stored) => parseReading(stored, initial), initial);
   const [display, setDisplay] = usePersisted(DISPLAY, parseStoredDisplay, DISPLAY_DEFAULT);
+  const theme = THEMES[display.theme];
+  const { reading, setReading, first, lettersIn } = useReading(theme);
   const saved = presetsOf(useSettings());
   const { presets, unread } = useMemo(() => savedPresets(saved), [saved]);
   const system = systemMode(useDarkScheme());
   const coarsePointer = useCoarsePointer();
   const { mode, bg, ink, accent, dialogue, follow } = display;
-  const theme = THEMES[display.theme];
-  useLayoutEffect(() => applyScheme({ mode, bg, ink, accent, dialogue }, theme), [mode, bg, ink, accent, dialogue, theme]);
+  const scheme = useMemo(() => ({ mode, bg, ink, accent, dialogue }), [mode, bg, ink, accent, dialogue]);
+  useLayoutEffect(() => applyScheme(scheme, theme), [scheme, theme]);
   const veil = useMemo(() => (display.hidePictures ? { revealed: new Set<string>() } : null), [display.hidePictures]);
   const find = (id: string | undefined) => (id === undefined ? undefined : presets.find((preset) => preset.id === id));
   const wear = ({ mode, bg, ink, accent, dialogue, ...look }: Look, follow: Follow | null) => {
@@ -59,6 +63,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   }
   const control: DisplayControl = {
     reading,
+    lettersIn: (id) => lettersIn(THEMES[id]),
     display: { ...display, enterSends: effectiveEnterSends(display.enterSendsChoice, coarsePointer) },
     presets,
     unread,
@@ -66,7 +71,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     changeReading: (change) => setReading({ ...reading, ...change }),
     changeDisplay: (change) => setDisplay({ ...display, ...change }),
     pick,
-    reset: () => wear(lookOf(initial, DISPLAY_DEFAULT), follow),
+    reset: () => wear(lookOf(first, DISPLAY_DEFAULT), follow),
     followSystem,
     assign: (slot, preset) => {
       if (!follow) return;
@@ -77,9 +82,13 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   return (
     <DisplayContext value={control}>
       <ThemeContext value={theme}>
-        <VeilContext value={veil}>
-          <QuoteShapeContext value={display.quotes}>{children}</QuoteShapeContext>
-        </VeilContext>
+        <SchemeContext value={scheme}>
+          <VeilContext value={veil}>
+            <QuoteShapeContext value={display.quotes}>
+              <BubblesContext value={display.splitReplies}>{children}</BubblesContext>
+            </QuoteShapeContext>
+          </VeilContext>
+        </SchemeContext>
       </ThemeContext>
     </DisplayContext>
   );

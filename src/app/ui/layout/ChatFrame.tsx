@@ -1,18 +1,17 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref, type RefObject } from 'react';
 import { IconButton } from '../controls/IconButton';
-import { faceStyle, FONTS, type FontId } from '../foundation/fonts';
+import { faceStyle, FONTS } from '../foundation/fonts';
+import { Icon } from '../foundation/Icon';
 import { schemeAttributes, type Scheme } from '../foundation/scheme';
-import { ThemeContext } from '../foundation/theme';
+import { ThemeContext, usePart, useShape, type Letters, type Shapes, type Spacing, type Width } from '../foundation/theme';
 import { usePanelsBeside, useShortWide } from '../foundation/media';
 import { useReadingRail } from '../story/readingRail';
 import styles from './ChatFrame.module.css';
 import { tokenPx } from '../foundation/tokenPx';
 
-type Spacing = 'narrow' | 'normal' | 'wide' | 'widest';
-
 // How the story reads (읽기 설정). tokens.css holds each look; reply is how the view meets a reply (useFollow).
-export type Reading = { font: FontId; size: number; leading: Spacing; width: Spacing; reply: 'follow' | 'stay' };
+export type Reading = Letters & { reply: 'follow' | 'stay' };
 
 // The look before any reading setting. The size is read from tokens.css, not repeated here, since Story keeps it
 // outside the chat.
@@ -25,7 +24,7 @@ export const readingDefault = (): Reading => ({
 });
 
 const LEADING: Record<Spacing, string> = { narrow: styles.leadingNarrow, normal: styles.leadingNormal, wide: styles.leadingWide, widest: styles.leadingWidest };
-const WIDTH: Record<Spacing, string> = { narrow: styles.widthNarrow, normal: styles.widthNormal, wide: styles.widthWide, widest: styles.widthWidest };
+const WIDTH: Record<Width, string> = { narrow: styles.widthNarrow, normal: styles.widthNormal, wide: styles.widthWide, widest: styles.widthWidest, full: styles.widthFull };
 
 // The reading settings on the element a story sits in: the chat's column, or an exported log (LogExport).
 export const readingScope = ({ font, size, leading, width }: Reading) => ({ className: `${styles[FONTS[font].kind]} ${LEADING[leading]} ${WIDTH[width]}`, style: { ...faceStyle(font), '--reading-size': `${size}px` } as CSSProperties });
@@ -77,6 +76,8 @@ type Props = {
 export function ChatFrame({ back, title, actions, children, above, footer, dockRef, panel, beside, peek, backdrop, edge, pinned, reading, scheme, hideHeader, stage, side, portrait, pictures, compact, scrollRef, onScroll }: Props) {
   const scope = readingScope(reading);
   const theme = useContext(ThemeContext);
+  // A theme's colours for a chat's column go over the scheme the chat is drawn in, a character's look or the app's.
+  const own = usePart('room', scheme);
   const pairs = usePanelsBeside();
   // A phone on its side leaves the story too little height to keep the header over it.
   const hides = useShortWide() || hideHeader;
@@ -184,7 +185,7 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
     <div className={styles.frame}>
       <main
         ref={columnRef}
-        {...(scheme && schemeAttributes(scheme, theme))}
+        {...(own ?? (scheme && schemeAttributes(scheme, theme)))}
         className={`${styles.column} ${scope.className} ${staged ? styles.staged : ''} ${backdrop ? styles.backdropped : ''}`}
         style={
           {
@@ -249,25 +250,86 @@ type TitleProps = {
   onRename?: () => void;
 };
 
-export function ChatTitle({ name, description, face, expanded, onClick, onRename }: TitleProps) {
-  const who = (
-    <>
-      {face}
-      <span className={styles.name}>{name}</span>
-      {onClick && <ChevronRight className={styles.chevron} size={16} aria-hidden />}
-    </>
+const titlePart = (className: string, content: ReactNode, onPress: (() => void) | undefined, expanded?: boolean) =>
+  onPress ? (
+    <button type="button" className={`${className} ${styles.press}`} aria-expanded={expanded} onClick={onPress}>
+      {content}
+    </button>
+  ) : (
+    <span className={className}>{content}</span>
   );
+
+const chevronOf = (onClick: TitleProps['onClick']) => onClick && <ChevronRight className={styles.chevron} size={16} aria-hidden />;
+
+function plainTitle({ name, description, face, expanded, onClick, onRename }: TitleProps) {
   const under = face ? `${styles.sub} ${styles.beside}` : styles.sub;
   return (
     <h1 className={styles.heading}>
-      {onClick ? (
-        <button type="button" className={`${styles.who} ${styles.press}`} aria-expanded={expanded} onClick={onClick}>
-          {who}
-        </button>
-      ) : (
-        <span className={styles.who}>{who}</span>
+      {titlePart(
+        styles.who,
+        <>
+          {face}
+          <span className={styles.name}>{name}</span>
+          {chevronOf(onClick)}
+        </>,
+        onClick,
+        expanded,
       )}
-      {description && (onRename ? <button type="button" className={`${under} ${styles.press}`} onClick={onRename}>{description}</button> : <span className={under}>{description}</span>)}
+      {description && titlePart(under, description, onRename)}
     </h1>
   );
+}
+
+// plain: the face and the character's name over the chat's. topic: the chat's name leads after a #, and the
+// character's follows a line, quiet, with no face; on a phone, with no room for both on a line, it goes under. A
+// title with no chat's name has nothing to lead with, and is plain. bare: the chat's name alone; the character's is
+// not drawn, and names the mark after it that opens the character.
+const TITLES: Record<Shapes['header'], (props: TitleProps) => ReactNode> = {
+  plain: plainTitle,
+  topic: (props) => {
+    const { name, description, expanded, onClick, onRename } = props;
+    if (!description) return plainTitle(props);
+    return (
+      <h1 className={`${styles.heading} ${styles.topic}`}>
+        {titlePart(
+          styles.who,
+          <>
+            <span className={styles.hash}>
+              <Icon icon={Hash} size="sm" />
+            </span>
+            <span className={styles.name}>{description}</span>
+          </>,
+          onRename,
+        )}
+        <span className={styles.split} />
+        {titlePart(
+          styles.after,
+          <>
+            <span className={styles.name}>{name}</span>
+            {chevronOf(onClick)}
+          </>,
+          onClick,
+          expanded,
+        )}
+      </h1>
+    );
+  },
+  bare: (props) => {
+    const { name, description, expanded, onClick, onRename } = props;
+    if (!description) return plainTitle(props);
+    return (
+      <h1 className={`${styles.heading} ${styles.bare}`}>
+        {titlePart(styles.who, <span className={styles.name}>{description}</span>, onRename)}
+        {onClick && (
+          <button type="button" className={`${styles.open} ${styles.press}`} aria-label={name} title={name} aria-expanded={expanded} onClick={onClick}>
+            <ChevronRight size={16} aria-hidden />
+          </button>
+        )}
+      </h1>
+    );
+  },
+};
+
+export function ChatTitle(props: TitleProps) {
+  return TITLES[useShape('header')](props);
 }

@@ -95,11 +95,11 @@
   }
 
   a {
-    color: var(--color-accent);
+    color: var(--color-accent-mark);
   }
 
   a:is(:hover, :active) {
-    color: var(--color-accent-hover);
+    color: var(--color-accent-mark-hover);
   }
 
   :focus-visible {

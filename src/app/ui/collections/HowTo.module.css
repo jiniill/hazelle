@@ -37,7 +37,7 @@
   border: var(--border-thin) solid var(--color-accent-border);
   border-radius: var(--radius-full);
   background: var(--color-accent-bg);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;

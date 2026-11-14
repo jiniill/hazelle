@@ -42,6 +42,8 @@ export class ScriptDisplay {
   // Whether each script, by its code, holds an editDisplay listener, as its engine said when a pass asked. Only the
   // engine decides who takes part: a listener may be registered under a computed name, which the source does not show.
   private readonly listens = new Map<string, boolean>();
+  // The displays asked for and not answered yet, by chat.
+  private readonly asked = new Map<string, number>();
 
   private readonly stopReload: () => void;
 
@@ -73,7 +75,11 @@ export class ScriptDisplay {
     this.listeners.clear();
   }
 
+  // A display asked for and not answered yet may be another screen's, taking the chat over as its page is mounted
+  // again (it asks before it listens): what it stands on is not this leave's to drop. It releases the chat itself
+  // when it lands with nobody listening.
   private release(chat: string) {
+    if (this.asked.has(chat)) return;
     const pass = this.passes.get(chat);
     if (pass) void this.runner?.then((runner) => runner.forgetDisplay(chat, pass.revision));
     this.passes.delete(chat);
@@ -83,6 +89,20 @@ export class ScriptDisplay {
   }
 
   async display(id: string, chat: Chat, messages: Message[], screen: ChatScope['screen'], signal?: AbortSignal): Promise<Display> {
+    this.asked.set(id, (this.asked.get(id) ?? 0) + 1);
+    try {
+      return await this.pass(id, chat, messages, screen, signal);
+    } finally {
+      const left = this.asked.get(id)! - 1;
+      if (left) this.asked.set(id, left);
+      else {
+        this.asked.delete(id);
+        if (!this.listeners.has(id)) this.release(id);
+      }
+    }
+  }
+
+  private async pass(id: string, chat: Chat, messages: Message[], screen: ChatScope['screen'], signal?: AbortSignal): Promise<Display> {
     const revision = ++this.revisions;
     this.characters.set(id, chat.character);
     const reader = { store: this.store };

@@ -19,7 +19,7 @@
 /* A titled group's places stand on the sidebar itself, and the current one takes the accent. */
 .box {
   --current-fill: var(--color-accent-bg);
-  --current-mark: var(--color-accent);
+  --current-mark: var(--color-accent-mark);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

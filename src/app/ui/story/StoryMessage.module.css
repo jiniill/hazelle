@@ -76,7 +76,20 @@
 }
 
 .name {
-  color: var(--color-accent);
+  color: var(--color-name);
+}
+
+.unseen {
+  composes: srOnly from '../foundation/a11y.module.css';
+}
+
+/* A head whose name is not drawn takes no line unless it holds something else. */
+.head:has(> .unseen:only-child) {
+  display: contents;
+}
+
+.own .head:has(> .unseen) {
+  justify-content: flex-end;
 }
 
 .me {
@@ -132,14 +145,22 @@
 }
 
 /* A story sized by its words can be no size container (Story.module.css), nor one a status box nests in it. The bot's
-   boxes in its shadow root are freed by Story.shadow.css (FitsWordsContext). */
-.bubble * {
+   boxes in its shadow root are freed by Story.shadow.css (WordsContext). */
+.fit * {
   container-type: normal;
 }
 
-.bubble {
+.fit {
   align-self: flex-start;
   max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.box {
+  composes: fit;
+  display: block;
   padding: var(--space-12) var(--space-16);
   border: var(--border-thin) solid var(--color-surface-hover);
   border-radius: var(--radius-lg);
@@ -227,6 +248,218 @@
 @media (hover: hover) {
   .message:hover .time {
     opacity: 1;
+  }
+}
+
+.row .time {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .row:hover {
+    background: var(--color-row-pointed);
+  }
+}
+
+.row .main {
+  gap: var(--space-4);
+}
+
+/* page (a message shape). No face stands in the side, so the reading rail alone hangs before the words. */
+.page .side {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--space-12) * -1);
+}
+
+/* Mine is a note in the app's own letters, not the story's. */
+.page.own .box {
+  align-self: flex-end;
+  max-width: var(--bubble-reach);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-bubble);
+  --prose-font: var(--font-sans);
+}
+
+/* Where the words start at the column's edge the tools lead their line under them, a page's time after them; mine's
+   in a page or a bubble end it, a page's time before them. */
+.page .tools,
+.row .tools,
+.balloon .tools {
+  order: -2;
+  margin-left: 0;
+}
+
+.page .time {
+  order: -1;
+  align-self: center;
+}
+
+.page.own .tools,
+.balloon.own .tools {
+  order: 1;
+}
+
+.page.own .time {
+  order: 0;
+}
+
+/* Stuck over a long reply, tools at the start would cover where its lines begin. */
+@supports (container-type: scroll-state) {
+  @container scroll-state(stuck: bottom) {
+    .page .tools,
+    .row .tools,
+    .balloon .tools {
+      order: 1;
+    }
+  }
+}
+
+/* bubble (a message shape). What a bubble is drawn with is named here and read where the bubble is: the box below, or
+   each block in the story's shadow root (Story.shadow.css). Mine is the accent's, its every word in what stands on it. */
+.balloon {
+  --bubble-fill: var(--color-bubble);
+  --bubble-ink: var(--color-prose-narration);
+  --bubble-voice: var(--color-prose-dialogue);
+  --bubble-thought: var(--color-prose-thought);
+  --bubble-quiet: var(--color-prose-action);
+  --bubble-link: var(--color-accent-mark);
+  --bubble-found: var(--color-found-term);
+}
+
+.balloon.own {
+  --bubble-fill: var(--color-accent);
+  --bubble-ink: var(--color-on-accent);
+  --bubble-voice: var(--color-on-accent);
+  --bubble-thought: var(--color-on-accent);
+  --bubble-quiet: var(--color-on-accent);
+  --bubble-link: var(--color-on-accent);
+  --bubble-found: var(--color-on-accent-wash);
+  --bubble-lead: auto;
+}
+
+.balloon .main {
+  gap: var(--space-4);
+}
+
+.balloon .name {
+  font-weight: var(--weight-regular);
+}
+
+/* Mine has no face: its column goes with it, the reading rail too. */
+.balloon.own .side {
+  display: none;
+}
+
+.line {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-8);
+  max-width: var(--bubble-reach);
+}
+
+.line > :first-child {
+  min-width: 0;
+}
+
+/* On a narrow story the time beside the words leaves a bubble little room, so its line reaches across. */
+@container story (max-width: 560px) {
+  .line {
+    max-width: 100%;
+  }
+}
+
+.own .line {
+  flex-direction: row-reverse;
+  align-self: flex-end;
+}
+
+/* Beside the last bubble, which may be narrower than the widest (--bubble-slack, Speech): moved, not laid out
+   there, so the room it keeps at the line's end is what keeps the widest bubble clear of it. */
+.stamp {
+  flex: none;
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  translate: calc(var(--bubble-slack, 0px) * -1);
+}
+
+.own .stamp {
+  translate: var(--bubble-slack, 0px);
+}
+
+/* While a reply is written the words end in its waiting note, not a bubble, and the last bubble still grows. */
+.writing .stamp {
+  translate: none;
+}
+
+.balloon .box {
+  padding: var(--space-8) var(--space-12);
+  border: 0;
+  background: var(--bubble-fill);
+  --color-prose-narration: var(--bubble-ink);
+  --color-prose-dialogue: var(--bubble-voice);
+  --color-prose-thought: var(--bubble-thought);
+  --color-prose-action: var(--bubble-quiet);
+  --color-accent-mark: var(--bubble-link);
+  --color-found-term: var(--bubble-found);
+}
+
+.balloon .failure {
+  background: var(--color-warn-bubble);
+}
+
+/* Floating tools stand on the last bubble's line at the side the bubbles leave free: half below it, they would cover
+   the next message's bubble, which may stand at either side. */
+.balloon .float {
+  transform: none;
+}
+
+.balloon.own .float {
+  right: auto;
+  left: 0;
+}
+
+@media (hover: hover) {
+  .balloon:hover .stamp {
+    color: var(--color-text-muted);
+  }
+}
+
+/* The foot of a row whose tools float keeps no line for them. */
+.loose {
+  min-height: 0;
+}
+
+/* Given only where a pointer hovers (StoryMessage), so :hover here is never a touch screen's last tap. */
+.shy {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-respond);
+}
+
+.message:hover .shy,
+.message:focus-within .shy,
+.shy:has([aria-expanded='true']) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Half below the foot, over the gap to the next row, so little of the words is covered; stuck over the composer, it
+   stands on the foot's line as the tools of prose do. */
+.float {
+  composes: glass from '../foundation/surface.module.css';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  transform: translateY(50%);
+}
+
+@supports (container-type: scroll-state) {
+  @container scroll-state(stuck: bottom) {
+    .float {
+      transform: none;
+    }
   }
 }
 

@@ -141,7 +141,7 @@
 }
 
 .cut.set {
-  --cut: var(--color-accent);
+  --cut: var(--color-accent-mark);
 }
 
 .cut.auto {
@@ -309,7 +309,7 @@
 .flag {
   flex-shrink: 0;
   display: flex;
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .title {

@@ -22,13 +22,14 @@ const RECENT = 3;
 
 // Added models only, recent ones first. It never lists providers. pin: the prompt whose own model the chat talks on
 // (runtime/models/assignment pinnedBy), marked on the button and opened from the menu's head.
-export function ModelMenu({ route, pin, onPick, handle }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure; pin?: { name: string; open: () => void } | null }) {
+// place: the side it opens to, for a button at a screen's foot.
+export function ModelMenu({ route, pin, onPick, handle, place = 'below-end' }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure; pin?: { name: string; open: () => void } | null; place?: 'below-end' | 'above-end' }) {
   const current = 'kind' in route ? null : refOf(route.connection.id, route.model);
   const label = 'kind' in route ? PICK_MODEL : entryName(route.model);
   return (
     <Menu
       handle={handle}
-      place="below-end"
+      place={place}
       size="lg"
       label="모델"
       trigger={(opener) => <ChipButton label={label} title={pin ? `모델 바꾸기 · ${MODEL_PINNED}` : '모델 바꾸기'} leading={<Icon icon={pin ? Pin : Layers} size="sm" />} phone="icon" {...opener} />}

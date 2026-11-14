@@ -1,3 +1,4 @@
+import { createContext } from 'react';
 import type { Theme } from './theme';
 
 export type Mode = 'dark' | 'light';
@@ -14,6 +15,9 @@ export const ACCENT: Record<Accent, string> = { base: '기본', rose: '분홍', 
 export const DIALOGUE: Record<Dialogue, string> = { base: '기본', plain: '무채색', sky: '하늘', rose: '분홍', lime: '연두' };
 
 export type Scheme = { mode: Mode; bg: Bg; ink: Ink; accent: Accent; dialogue: Dialogue };
+
+// The scheme the app wears, for a part that draws itself in another by it (theme.ts usePart).
+export const SchemeContext = createContext<Scheme>({ mode: 'dark', bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' });
 
 // tokens.css turns its color tokens by these, on the document or on an element drawn in another scheme. A theme with
 // colours of its own is named beside them, since its rules match only the element that names it with a mode.

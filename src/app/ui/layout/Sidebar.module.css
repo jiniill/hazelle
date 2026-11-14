@@ -11,6 +11,8 @@
   /* A layer's window (Shell.module.css) floats its sidebar apart from the body, with no rule between them. */
   border-right: var(--sidebar-rule, var(--border-thin) solid var(--color-divider));
   background: var(--color-sidebar);
+  /* Stated, not inherited: as a theme's side it is in a scheme of its own. */
+  color: var(--color-text);
 }
 
 .page {
@@ -77,7 +79,8 @@
   gap: var(--space-8);
   padding: var(--space-16) 0 var(--space-12);
   border-right: var(--border-thin) solid var(--color-divider);
-  background: var(--color-sidebar);
+  background: var(--color-rail);
+  color: var(--color-text);
 }
 
 .mark {
@@ -145,7 +148,34 @@
   right: var(--space-4);
   width: calc(var(--dot) + 2 * var(--border-thick));
   height: calc(var(--dot) + 2 * var(--border-thick));
-  border: var(--border-thick) solid var(--color-sidebar);
+  border: var(--border-thick) solid var(--color-rail);
   border-radius: var(--radius-full);
   background: var(--color-accent);
+}
+
+/* servers (a rail shape): a slimmer rail of round faces, the open one squared off with a bar at the rail's edge in the
+   ring's place. */
+.servers,
+.labels {
+  width: var(--rail-width-slim);
+}
+
+.servers .faceButton > :first-child {
+  border-radius: var(--radius-full);
+}
+
+.servers .current > :first-child {
+  outline: none;
+  border-radius: var(--radius-lg);
+}
+
+.servers .current::before {
+  content: '';
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: calc((var(--control-lg) - var(--rail-width-slim)) / 2);
+  width: var(--space-4);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  background: var(--color-text);
 }

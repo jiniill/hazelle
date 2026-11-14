@@ -78,7 +78,7 @@
   composes: twinkle from '../foundation/motion.module.css';
   width: var(--icon-sm);
   height: var(--icon-sm);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
   fill: currentColor;
 }
 

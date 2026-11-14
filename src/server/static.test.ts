@@ -69,9 +69,9 @@ describe('the client files', () => {
     expect(home).toContain('<link rel="canonical" href="https://hazelle.app/" />');
     expect(home).toContain('<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication"');
     expect(home).toMatch(/<div id="root"><main class="boot landing"><h1>내 API 키로 바로 시작하는 AI 캐릭터 챗<\/h1>.*<p role="status">불러오는 중…<\/p><\/main><\/div>$/);
-    for (const path of ['/', '/now', '/tools/calculator', '/guide', '/guide/api-key', '/guide/move-from-risu', '/guide/gone', '/terms', '/privacy', '/board', '/s/no-cover-share00', '/index.html']) {
+    for (const path of ['/', '/now', '/tools/calculator', '/guide', '/guide/api-key', '/guide/move-from-risu', '/guide/themes', '/guide/gone', '/terms', '/privacy', '/board', '/s/no-cover-share00', '/index.html']) {
       const response = await client.request(path, { headers: PAGE });
-      const hidden = !['/', '/now', '/tools/calculator', '/guide', '/guide/api-key', '/guide/move-from-risu'].includes(path);
+      const hidden = !['/', '/now', '/tools/calculator', '/guide', '/guide/api-key', '/guide/move-from-risu', '/guide/themes'].includes(path);
       expect([path, response.headers.get('x-robots-tag'), (await response.text()).includes(`<link rel="canonical" href="https://hazelle.app${path}" />`)]).toEqual([path, hidden ? 'noindex' : null, !hidden]);
     }
     expect(await (await client.request('/index.html', { headers: PAGE })).text()).not.toContain('landing');
@@ -80,7 +80,7 @@ describe('the client files', () => {
 
   it('lists the public pages in the sitemap and points robots.txt at it', async () => {
     expect(await (await client.request('/sitemap.xml')).text()).toBe(
-      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url><url><loc>https://hazelle.app/tools/calculator</loc></url><url><loc>https://hazelle.app/guide</loc></url><url><loc>https://hazelle.app/guide/api-key</loc><lastmod>2026-11-06</lastmod></url><url><loc>https://hazelle.app/guide/move-from-risu</loc><lastmod>2026-11-06</lastmod></url></urlset>\n',
+      '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://hazelle.app/</loc></url><url><loc>https://hazelle.app/now</loc></url><url><loc>https://hazelle.app/tools/calculator</loc></url><url><loc>https://hazelle.app/guide</loc></url><url><loc>https://hazelle.app/guide/api-key</loc><lastmod>2026-11-06</lastmod></url><url><loc>https://hazelle.app/guide/move-from-risu</loc><lastmod>2026-11-06</lastmod></url><url><loc>https://hazelle.app/guide/themes</loc><lastmod>2026-11-14</lastmod></url></urlset>\n',
     );
     expect(await (await client.request('/robots.txt')).text()).toBe('User-agent: *\nDisallow: /api/\nSitemap: https://hazelle.app/sitemap.xml\n');
   });

@@ -14,6 +14,10 @@ describe('stored reading settings', () => {
     expect(parseReading('null', FALLBACK)).toEqual(FALLBACK);
   });
 
+  it('takes 가득 for 읽기 폭 alone: 줄 간격 has no such step', () => {
+    expect(parseReading(JSON.stringify({ ...FALLBACK, leading: 'full', width: 'full' }), FALLBACK)).toEqual({ ...FALLBACK, width: 'full' });
+  });
+
   it('reads reading settings stored before 응답이 올 때 as following the reply', () => {
     expect(parseReading(JSON.stringify({ font: 'sans', size: 17, leading: 'normal', width: 'normal' }), FALLBACK).reply).toBe('follow');
     expect(parseReading(JSON.stringify({ ...FALLBACK, reply: 'jump' }), FALLBACK).reply).toBe('follow');
@@ -26,12 +30,13 @@ describe('stored display settings', () => {
   });
 
   it('reads a theme beside a mode, and starts one it does not know from the fallback', () => {
-    expect(parseDisplay(JSON.stringify({ mode: 'light', theme: 'channel' }), DISPLAY_DEFAULT)).toMatchObject({ mode: 'light', theme: 'channel' });
+    expect(parseDisplay(JSON.stringify({ mode: 'light', theme: 'discord' }), DISPLAY_DEFAULT)).toMatchObject({ mode: 'light', theme: 'discord' });
     expect(parseDisplay(JSON.stringify({ mode: 'light', theme: 'toString' }), DISPLAY_DEFAULT).theme).toBe('base');
+    expect(parseDisplay(JSON.stringify({ mode: 'light', theme: 'channel' }), DISPLAY_DEFAULT).theme).toBe('discord');
   });
 
   it('keeps a known mode, color picks and real switches, and starts anything else from the fallback', () => {
-    const chosen = { theme: 'channel', chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, mode: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSendsChoice: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, toolsFollow: false, userStops: true } as const;
+    const chosen = { theme: 'discord', chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, mode: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSendsChoice: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, toolsFollow: false, splitReplies: false, userStops: true } as const;
     expect(parseDisplay(JSON.stringify(chosen), DISPLAY_DEFAULT)).toEqual(chosen);
     expect(parseDisplay(JSON.stringify({ chimes: 'yes', chimeSounds: { 'reply-started': 'bell', translated: 3 }, mode: 'sepia', bg: 'teal', accent: 3, quotes: 'bubble', follow: { light: 'study', dark: 3, applied: 'dark' }, hideHeader: 'no', enterSendsChoice: 0, enterSends: 0, hidePictures: 1, pictureWidest: 5, wideFill: 'no', pictureSide: 'top', inlineIllustrations: 'yes', portrait: 'yes' }), DISPLAY_DEFAULT)).toEqual(DISPLAY_DEFAULT);
   });
@@ -84,6 +89,11 @@ describe('saved presets', () => {
     ]);
     expect(read).toEqual({ presets: [{ id: 'a', name: '숲', look }], unread: 1 });
     expect(presetOf(read.presets, FALLBACK, { ...DISPLAY_DEFAULT, bg: 'green', accent: 'violet' })?.name).toBe('숲');
+  });
+
+  it('reads a look saved at 가득, and counts one whose 줄 간격 is full as unknown', () => {
+    const look = lookOf({ ...FALLBACK, width: 'full' }, DISPLAY_DEFAULT);
+    expect(savedPresets([{ id: 'a', name: '가득', look }, { id: 'b', name: '줄', look: { ...look, leading: 'full' } }])).toEqual({ presets: [{ id: 'a', name: '가득', look }], unread: 1 });
   });
 
   it('reads a look saved before 대사 as the base dialogue', () => {

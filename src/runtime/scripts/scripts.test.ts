@@ -360,6 +360,26 @@ describe("the display with the bot's Lua", () => {
       leave();
     }));
 
+  it('shows a screen that takes a chat over from another in one commit', () =>
+    server.withSession(async (session) => {
+      const { chat, messages } = await chatWith(session, '');
+      const opening = { chat: session.store.get('chat', chat)!.value, messages: messages() };
+      const screenOf = () => session.read.screen(chat, session.talk, session.illustrator, opening, session.display);
+      const old = screenOf();
+      const leaveOld = old.subscribe(() => {});
+      old.setInputs(opening, { width: 1200, height: 800 });
+      await vi.waitFor(() => expect(old.snapshot().pending).toBeUndefined());
+      // React's order when a chat's page is mounted again: the new one's layout effect, the old one's cleanup, then
+      // the new one's subscription.
+      const next = screenOf();
+      next.setInputs(opening, { width: 390, height: 780 });
+      leaveOld();
+      const leave = next.subscribe(() => {});
+      await vi.waitFor(() => expect(next.snapshot().pending).toBeUndefined());
+      expect(next.snapshot().display.texts).toEqual(old.snapshot().display.texts);
+      leave();
+    }));
+
   it('passes a message again when a toggle its listener reads changes', () =>
     server.withSession(async (session) => {
       const { chat, messages } = await chatWith(session, `listenEdit('editDisplay', function(id, value) return value .. ' <' .. getGlobalVar(id, 'toggle_hard') .. '>' end)`, [{ key: 'hard', label: '어렵게', kind: 'check', default: '0' }]);

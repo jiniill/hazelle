@@ -137,7 +137,7 @@
 }
 
 .done .icon {
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .active .label {
@@ -145,7 +145,7 @@
 }
 
 .active .icon {
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .pending {

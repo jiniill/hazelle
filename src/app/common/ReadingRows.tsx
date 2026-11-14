@@ -1,6 +1,6 @@
 import { useDisplay } from '../display';
 import { ChoiceGroup, FontPicker, SettingRow, Stepper, Switch } from '../ui';
-import { choices, REPLY, SIZE, SPACING, type Preset } from './reading';
+import { choices, REPLY, SIZE, SPACING, WIDTH, type Preset } from './reading';
 
 export const presetChoices = (presets: Preset[]) => presets.map(({ id, name }) => ({ value: id, label: name }));
 
@@ -25,7 +25,7 @@ export function ReadingRows({ fontHeld = false }: { fontHeld?: boolean }) {
       />
       <SettingRow
         label="읽기 폭"
-        control={<ChoiceGroup layout="segmented" label="읽기 폭" options={choices(SPACING)} value={reading.width} onChange={(width) => changeReading({ width })} />}
+        control={<ChoiceGroup layout="segmented" label="읽기 폭" options={choices(WIDTH)} value={reading.width} onChange={(width) => changeReading({ width })} />}
       />
     </>
   );

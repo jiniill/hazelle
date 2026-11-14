@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { ToolChatData } from '../../model/tool';
 import type { ToolManifest } from '../../tool-api/manifest';
-import { badgesByVersion, inToolOrder, pressRuns, toolActions, toolComposer, toolMenu } from './toolMenu';
+import { badgesByVersion, behindMenu, inToolOrder, pressRuns, standing, toolActions, toolComposer, toolMenu } from './toolMenu';
 
 const manifest = (displayName: string, page: ToolManifest['page'], menu: ToolManifest['menu']): ToolManifest => ({ api: 1, name: displayName, author: 'author', displayName, version: '1', description: '', uses: [], page, menu, settings: [] });
 
@@ -53,4 +53,11 @@ it('shows tools in the saved order, a tool not saved yet after them in the app\'
   const tools = ['attach', 'note', 'plugin-a', 'plugin-b'].map((key) => ({ key }));
   expect(inToolOrder(tools, ['note', 'gone', 'attach']).map(({ key }) => key)).toEqual(['note', 'attach', 'plugin-a', 'plugin-b']);
   expect(inToolOrder(tools, []).map(({ key }) => key)).toEqual(['attach', 'note', 'plugin-a', 'plugin-b']);
+});
+
+it('stands every tool the account did not hide in a row, and with no row only one that runs', () => {
+  const tools = [{ key: 'attach' }, { key: 'note' }, { key: 'illustrate', running: true }];
+  const keys = (row: boolean) => standing(tools, behindMenu(tools, ['note', 'illustrate'], row)).map(({ key }) => key);
+  expect(keys(true)).toEqual(['attach', 'illustrate']);
+  expect(keys(false)).toEqual(['illustrate']);
 });

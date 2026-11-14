@@ -55,16 +55,26 @@ function hexOf([L, a, b]: number[]): string {
   return `#${channels.map((channel) => Math.round(255 * (channel <= 0.0031308 ? 12.92 * Math.max(0, channel) : 1.055 * Math.min(1, channel) ** (1 / 2.4) - 0.055)).toString(16).padStart(2, '0')).join('')}`;
 }
 
-// The rung a 배경 pick's rule gives a page: a share of white or black over it, mixed in oklab.
-function rung(mode: Mode, role: string, page: string): string {
-  const rules = new RegExp(`\\[data-mode='${mode}'\\]:is\\(\\[data-bg\\][^{]*\\{([\\s\\S]*?)\\n\\}`).exec(tokens)![1]!;
-  const [, tint, share] = new RegExp(`--color-${role}: color-mix\\(in oklab, var\\(--palette-(white|black)\\) ([\\d.]+)%, var\\(--color-pick-bg\\)\\);`).exec(rules)!;
-  const [over, under] = [oklab(tint === 'white' ? '#ffffff' : '#000000'), oklab(page)];
+// What a pick's rule gives a seed: a share of white or black over it, mixed in oklab.
+function mixed(mode: Mode, pick: 'bg' | 'accent', role: string, seed: string): string {
+  const rules = new RegExp(`\\[data-mode='${mode}'\\]:is\\(\\[data-${pick}\\][^{]*\\{([\\s\\S]*?)\\n\\}`).exec(tokens)![1]!;
+  const [, tint, share] = new RegExp(`--color-${role}: color-mix\\(in oklab, var\\(--palette-(white|black)\\) ([\\d.]+)%, var\\(--color-pick-${pick}\\)\\);`).exec(rules)!;
+  const [over, under] = [oklab(tint === 'white' ? '#ffffff' : '#000000'), oklab(seed)];
   return hexOf(over.map((value, at) => (Number(share) / 100) * value + (1 - Number(share) / 100) * under[at]!));
 }
 
+const rung = (mode: Mode, role: string, page: string) => mixed(mode, 'bg', role, page);
+
+// The fills words stand on, as the theme states them or as the rule gives them to its page.
+const fillsOf = (mode: Mode, tone: Tone) => [tone.page, tone.sidebar ?? rung(mode, 'sidebar', tone.page), tone.surface ?? rung(mode, 'surface', tone.page), tone.hover ?? rung(mode, 'surface-hover', tone.page)];
+
 const WORN: Scheme = { mode: 'dark', bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' };
-const themed = Object.values<Theme>(THEMES).flatMap((theme) => (theme.tones ? (Object.entries(theme.tones) as [Mode, Tone][]).map((tone) => [theme.id, ...tone] as const) : []));
+// Every set of colours a theme states: its own per mode, and a part's in the mode the part takes, whose sidebar is
+// its page.
+const themed = Object.values<Theme>(THEMES).flatMap((theme) => [
+  ...(theme.tones ? (Object.entries(theme.tones) as [Mode, Tone][]).map((tone) => [theme.id, ...tone, theme] as const) : []),
+  ...(['side', 'room'] as const).flatMap((part) => Object.values(theme[part] ?? {}).map(({ mode, tone }) => [`${theme.id}'s ${part}`, mode, { ...tone, sidebar: tone.page } as Tone, theme] as const)),
+]);
 
 it('lists each theme under its own id', () => {
   expect(Object.entries<Theme>(THEMES).map(([id, theme]) => theme.id === id)).not.toContain(false);
@@ -75,19 +85,74 @@ it.each(themed)('states the %s theme in %s as six-digit colours', (_, __, tone) 
 });
 
 it.each(themed)('keeps the %s theme in %s to the faint text rule, on the rungs it states and the ones the rule gives it', (_, mode, tone) => {
-  const fills = [tone.page, tone.sidebar ?? rung(mode, 'sidebar', tone.page), tone.surface ?? rung(mode, 'surface', tone.page), tone.hover ?? rung(mode, 'surface-hover', tone.page)];
+  const fills = fillsOf(mode, tone);
   const faint = tone.faint ?? color(mode === 'dark' ? dark! : light!, 'text-faint');
   const muted = tone.muted ?? color(mode === 'dark' ? dark! : light!, 'text-muted');
   for (const fill of fills) expect(contrast(faint, fill)).toBeGreaterThanOrEqual(4.5);
   expect(Math.abs(lightness(faint) - lightness(muted))).toBeGreaterThanOrEqual(4);
 });
 
+it.each(themed)('keeps a name the %s theme states in %s readable on its page', (_, __, tone) => {
+  if (tone.name) expect(contrast(tone.name, tone.page)).toBeGreaterThanOrEqual(4.5);
+});
+
+it.each(themed)('keeps what the %s theme states on its accent in %s readable there, at rest and under a pointer', (_, mode, tone) => {
+  if (!tone.onAccent) return;
+  for (const fill of [tone.accent, tone.accentHover ?? mixed(mode, 'accent', 'accent-hover', tone.accent)]) expect(contrast(tone.onAccent, fill)).toBeGreaterThanOrEqual(4.5);
+});
+
+it.each(themed)('keeps what the %s theme states on its send button in %s readable there', (_, __, tone) => {
+  if (tone.onSend) expect(contrast(tone.onSend, tone.send ?? tone.accent)).toBeGreaterThanOrEqual(4.5);
+});
+
+it.each(themed)('keeps the words, the dialogue, the action voice and what is read in the accent of the %s theme in %s readable on its page, and in the bubble fill where its message shape draws with it', (_, mode, tone, theme) => {
+  const action = tone.action ?? color(mode === 'dark' ? dark! : light!, 'prose-action');
+  const fills = [tone.page, ...(['bubble', 'page'].includes(theme.shapes.message) ? [tone.bubble ?? tone.surface ?? rung(mode, 'surface', tone.page)] : [])];
+  for (const fill of fills) for (const ink of [tone.text, tone.dialogue, action, tone.mark ?? tone.accent]) expect(contrast(ink, fill)).toBeGreaterThanOrEqual(4.5);
+});
+
+// 기본's accent clears this on the same fills, so a theme is held to it too: by its accent, or by the mark it states.
+it.each(themed)('keeps what is read in the accent of the %s theme in %s at AA on the fills words stand on', (_, mode, tone) => {
+  const fills = fillsOf(mode, tone);
+  for (const fill of fills) expect(contrast(tone.mark ?? tone.accent, fill)).toBeGreaterThanOrEqual(4.5);
+});
+
+it('writes a finish as token rules for the element that names the theme, a stated name for the base 배경 and 강조 only, and a mark for the base 강조 on any page', () => {
+  const tones = { dark: { page: '#101010', text: '#f0f0f0', accent: '#8080ff', dialogue: '#ffffff', name: '#ffcc00' }, light: { page: '#ffffff', text: '#101010', accent: '#3030c0', dialogue: '#000000' } };
+  const plain = themeRules({ ...BASE, id: 'night', name: '밤', tones });
+  expect(plain).toContain("[data-theme='night'][data-mode='dark'][data-bg='base'][data-accent='base']{--color-name:#ffcc00;}");
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, mark: '#2020a0' } } })).toContain("[data-theme='night'][data-mode='light'][data-accent='base']{--color-accent-mark:#2020a0;}");
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, action: '#404040', bubble: '#f0f0f0', current: '#e0e0e0' } } })).toContain("[data-theme='night'][data-mode='light'][data-bg='base']{--color-row-current:#e0e0e0;--color-bubble:#f0f0f0;}[data-theme='night'][data-mode='light'][data-dialogue='base']{--color-prose-action:#404040;}");
+  expect(themeRules(THEMES.kakaotalk)).toContain("[data-theme='kakaotalk/room/light'][data-mode='light'][data-bg='base']{--color-name:#2b3540;}");
+  expect(plain).not.toContain('[data-mode]{');
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close', speakers: 'large', corners: 'tight', dock: 'flush' } })).toBe(
+    plain +
+      "[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);--face-radius-sm:var(--radius-full);--face-radius-md:var(--radius-full);--face-radius-rail:var(--radius-full);--face-radius-lg:var(--radius-full);--reading-leading-narrow:var(--prose-leading-close-narrow);--reading-leading-normal:var(--prose-leading-close-normal);--reading-leading-wide:var(--prose-leading-close-wide);--reading-leading-widest:var(--prose-leading-close-widest);--avatar-story:var(--avatar-rail);--avatar-story-letter:var(--text-lg);--radius-sm:var(--radius-tight-sm);--radius-md:var(--radius-tight);--radius-lg:var(--radius-tight);--dock-inset:0;}",
+  );
+});
+
+it('writes a part under a name of its own by the page\'s mode, its page the sidebar\'s ground, with the theme\'s finish', () => {
+  const tones = { dark: { page: '#101010', text: '#f0f0f0', accent: '#8080ff', dialogue: '#ffffff' }, light: { page: '#ffffff', text: '#101010', accent: '#3030c0', dialogue: '#000000' } };
+  const side = { light: { mode: 'dark' as const, tone: { page: '#300030', text: '#f0e0f0', accent: '#80c0ff', dialogue: '#f0e0f0', muted: '#c0b0c0' } } };
+  const plain = themeRules({ ...BASE, id: 'night', name: '밤', tones });
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, side })).toBe(
+    plain +
+      "[data-theme='night/side/light'][data-mode='dark']{--color-pick-bg-base:#300030;--color-pick-ink-base:#f0e0f0;--color-pick-accent-base:#80c0ff;--color-pick-dialogue-base:#f0e0f0;--color-text-muted:#c0b0c0;}" +
+      "[data-theme='night/side/light'][data-mode='dark'][data-bg='base']{--color-sidebar:#300030;}",
+  );
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, side, finish: { ...BASE.finish, rows: 'close' } })).toContain("[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);}[data-theme='night/side/light'][data-mode]{--story-gap:var(--story-gap-close);}");
+});
+
+it('gives a finish of its own only to a theme with tones, the only kind an element names', () => {
+  for (const theme of Object.values<Theme>(THEMES)) expect(Boolean(theme.tones) || JSON.stringify(theme.finish) === JSON.stringify(BASE.finish)).toBe(true);
+});
+
 it('names a theme on a scheme element only when it has colours of its own, and gives its rungs only to the base page', () => {
   expect(schemeAttributes(WORN, BASE)['data-theme']).toBeUndefined();
   expect(themeRules(BASE)).toBe('');
-  expect(schemeAttributes(WORN, THEMES.channel)['data-theme']).toBe('channel');
+  expect(schemeAttributes(WORN, THEMES.discord)['data-theme']).toBe('discord');
   const tones = { dark: { page: '#101010', text: '#f0f0f0', accent: '#8080ff', dialogue: '#ffffff', sidebar: '#0a0a0a', line: '#303030', muted: '#b0b0b0' }, light: { page: '#ffffff', text: '#101010', accent: '#3030c0', dialogue: '#000000' } };
-  expect(themeRules({ id: 'night', name: '밤', tones })).toBe(
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones })).toBe(
     "[data-theme='night'][data-mode='dark']{--color-pick-bg-base:#101010;--color-pick-ink-base:#f0f0f0;--color-pick-accent-base:#8080ff;--color-pick-dialogue-base:#ffffff;--color-text-muted:#b0b0b0;}" +
       "[data-theme='night'][data-mode='dark'][data-bg='base']{--color-sidebar:#0a0a0a;--color-divider:#303030;--color-border:#303030;}" +
       "[data-theme='night'][data-mode='light']{--color-pick-bg-base:#ffffff;--color-pick-ink-base:#101010;--color-pick-accent-base:#3030c0;--color-pick-dialogue-base:#000000;}",

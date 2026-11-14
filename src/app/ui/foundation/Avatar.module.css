@@ -11,28 +11,35 @@
 .sm {
   width: var(--avatar-sm);
   height: var(--avatar-sm);
-  border-radius: var(--radius-sm);
+  border-radius: var(--face-radius-sm);
   font-size: var(--text-xs);
 }
 
 .md {
   width: var(--avatar-md);
   height: var(--avatar-md);
-  border-radius: var(--radius-md);
+  border-radius: var(--face-radius-md);
   font-size: var(--text-md);
+}
+
+.story {
+  width: var(--avatar-story);
+  height: var(--avatar-story);
+  border-radius: var(--face-radius-md);
+  font-size: var(--avatar-story-letter);
 }
 
 .rail {
   width: var(--avatar-rail);
   height: var(--avatar-rail);
-  border-radius: var(--radius-md);
+  border-radius: var(--face-radius-rail);
   font-size: var(--text-lg);
 }
 
 .lg {
   width: var(--avatar-lg);
   height: var(--avatar-lg);
-  border-radius: var(--radius-lg);
+  border-radius: var(--face-radius-lg);
   font-size: var(--text-xl);
 }
 
@@ -59,7 +66,7 @@
 
 .accent {
   background: var(--color-accent-bg);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .letter {

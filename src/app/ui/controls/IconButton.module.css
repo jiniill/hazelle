@@ -23,6 +23,24 @@
   color: var(--color-text-soft);
 }
 
+/* As wide as a slim rail leaves it, and as tall as its name's lines make it. */
+.labelled {
+  flex-direction: column;
+  gap: var(--space-2);
+  width: calc(var(--rail-width-slim) - 2 * var(--space-4));
+  height: auto;
+  min-height: var(--control-lg);
+  padding: var(--space-4) 0;
+  color: var(--color-text-soft);
+}
+
+.caption {
+  font-size: var(--text-mark);
+  line-height: var(--leading-tight);
+  text-align: center;
+  word-break: keep-all;
+}
+
 .button[aria-current] {
   background: var(--color-surface-hover);
   color: var(--color-text);
@@ -41,7 +59,7 @@
 }
 
 .button[aria-pressed='true'] {
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .button[aria-pressed='true'] svg {

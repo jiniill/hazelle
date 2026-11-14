@@ -219,6 +219,7 @@
   --shadow-popover: 0 12px 32px var(--palette-shadow);
   --color-scroll-cue: var(--palette-shadow);
   --shadow-card: 0 6px 18px var(--palette-shadow);
+  --shadow-dock: 0 4px 18px var(--palette-shadow-soft);
 
   /* A segmented choice's trough: a shade over whatever ground it stands on. */
   --color-trough: color-mix(in oklab, var(--palette-black) 26%, transparent);
@@ -257,10 +258,16 @@
 :root,
 [data-mode] {
   --color-accent-bg: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+  /* The accent where it is read, as words and icons and the focus ring; the accent itself is a fill's, a line's and a
+     ring's around what is picked. A theme whose accent is too dim to read on its page states another (theme.ts mark). */
+  --color-accent-mark: var(--color-accent);
+  --color-accent-mark-hover: var(--color-accent-hover);
   /* The accent as words on that tint; light takes it a step darker, so words of body size clear 4.5:1. */
-  --color-accent-text: var(--color-accent);
+  --color-accent-text: var(--color-accent-mark);
   --color-accent-border: color-mix(in srgb, var(--color-accent) 40%, var(--color-bg));
   --color-warn-bg: color-mix(in srgb, var(--color-warn) 10%, var(--color-bg));
+  /* The warning's ground where it stands as a bubble, whose fill may be far from the page. */
+  --color-warn-bubble: color-mix(in srgb, var(--color-warn) 10%, var(--color-bubble));
   --color-warn-border: color-mix(in srgb, var(--color-warn) 40%, var(--color-bg));
   --color-warn-text: color-mix(in srgb, var(--color-warn) 30%, var(--color-text));
   --color-success-bg: color-mix(in srgb, var(--color-success) 10%, var(--color-bg));
@@ -281,6 +288,8 @@
   --color-chart-quiet: color-mix(in srgb, var(--color-text-faint) 55%, transparent);
   --color-selection: color-mix(in srgb, var(--color-accent) 35%, transparent);
   --color-found-term: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  /* The same mark on an accent fill, where the accent's own would not show. */
+  --color-on-accent-wash: color-mix(in srgb, var(--color-on-accent) 30%, transparent);
   --color-diff-before: color-mix(in srgb, var(--color-warn) 40%, transparent);
   --color-diff-after: color-mix(in srgb, var(--color-success) 40%, transparent);
   /* Neutral on purpose: the accent already means picked, current and dropping, so a gold folder would read as picked. */
@@ -289,7 +298,38 @@
   --color-folder-bg: color-mix(in srgb, var(--color-text-muted) 18%, var(--color-surface));
   --color-folder-bg-hover: color-mix(in srgb, var(--color-text-muted) 26%, var(--color-surface));
   --color-folder-slot: color-mix(in srgb, var(--color-text-muted) 8%, var(--color-surface));
-  --color-focus: var(--color-accent);
+  --color-focus: var(--color-accent-mark);
+  /* The rail's ground: the sidebar's, but in a theme that states one. */
+  --color-rail: var(--color-sidebar);
+  --color-name: var(--color-accent-mark);
+  /* The send button's fill and what stands on it: the accent's, but in a theme that states them. */
+  --color-send: var(--color-accent);
+  --color-on-send: var(--color-on-accent);
+  --color-row-pointed: transparent;
+  /* The fill of a list's open row: the raised surface's, but in a theme that states one. */
+  --color-row-current: var(--color-surface-raised);
+  /* A speech bubble's fill, the others' (theme.ts bubble); mine is the accent's. */
+  --color-bubble: var(--color-surface);
+  /* A theme's finish (theme.ts) turns these on the element that names it, so they are declared again on every element
+     with a scheme of its own, which may name none. */
+  --story-gap: var(--space-24);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --avatar-story: var(--avatar-md);
+  --avatar-story-letter: var(--text-md);
+  --face-radius-sm: var(--radius-sm);
+  --face-radius-md: var(--radius-md);
+  --face-radius-rail: var(--radius-md);
+  --face-radius-lg: var(--radius-lg);
+  /* The composer's dock: 1 while it stands inset from the column's sides and foot with its corners, 0 flush with
+     them; and the shadow under it. */
+  --dock-inset: 1;
+  --dock-shadow: none;
+  --reading-leading-narrow: var(--prose-leading-narrow);
+  --reading-leading-normal: var(--prose-leading-normal);
+  --reading-leading-wide: var(--prose-leading-wide);
+  --reading-leading-widest: var(--prose-leading-widest);
   /* 속마음 mixes dialogue and narration as the mode and the 대사 pick leave them. */
   --color-prose-thought: color-mix(in oklab, var(--color-prose-dialogue) 55%, var(--color-prose-narration));
   --color-glass: color-mix(in oklab, var(--color-surface) 60%, transparent);
@@ -354,6 +394,10 @@
   --prose-leading-normal: 1.9;
   --prose-leading-wide: 2.1;
   --prose-leading-widest: 2.3;
+  --prose-leading-close-narrow: 1.3;
+  --prose-leading-close-normal: 1.45;
+  --prose-leading-close-wide: 1.6;
+  --prose-leading-close-widest: 1.75;
   /* 고딕 reads larger than 명조 at one size, so the story sets it a pixel smaller and a little tighter. */
   --prose-sans-shrink: 1px;
   --prose-sans-tighten: 0.1;
@@ -379,14 +423,18 @@
   --space-4: 4px;
   --space-8: 8px;
   --space-12: 12px;
+  --story-gap-close: var(--space-12);
   --space-16: 16px;
   --space-24: 24px;
   --space-32: 32px;
 
+  /* sm, md and lg are a theme's to tighten, so they stand with the finish's tokens (:root, [data-mode]). */
   --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-tight-sm: 6px;
+  --radius-tight: 8px;
+  --radius-round: 20px;
+  /* A share of the face, so every size is the same shape. */
+  --radius-squircle: 38%;
   --radius-full: 999px;
 
   /* Control marks are not a rung in the control-height scale. */
@@ -484,6 +532,7 @@
   --window-radius-md: 8px;
   --window-radius-lg: 10px;
   --rail-width: 72px;
+  --rail-width-slim: 64px;
   --panel-width: 400px;
   --tool-frame-min-height: 16rem;
   /* A share of the room a list and its picked item split, so the item keeps a phone's width in the narrowest window. */
@@ -518,6 +567,8 @@
   --avatar-sm: 22px;
   --avatar-md: 32px;
   --avatar-rail: 40px;
+  /* A speaker's face between md and the rail's, a theme's pick (theme.ts speakers). */
+  --avatar-story-medium: 36px;
   --avatar-lg: 72px;
   --attachment-size: 64px;
   --attachment-file-width: 240px;
@@ -624,6 +675,10 @@
   --read-normal: 800px;
   --read-wide: 960px;
   --read-widest: 1200px;
+  /* No cap: wider than any column, so what it caps fills its column. */
+  --read-full: 100vw;
+  /* How far across its column a speech bubble's line reaches. */
+  --bubble-reach: min(78%, 560px);
   --read-gutter: 40px;
   --read-stage-least: 64px;
   --peek-tab-width: 27px;
@@ -886,7 +941,7 @@
   --color-text-soft: var(--palette-lilac-800);
   --color-accent: var(--palette-gold-700);
   --color-accent-hover: var(--palette-gold-800);
-  --color-accent-text: var(--color-accent-hover);
+  --color-accent-text: var(--color-accent-mark-hover);
   --color-on-accent: var(--palette-sand-10);
   --color-warn: var(--palette-coral-700);
   --color-success: var(--palette-mint-700);
@@ -1045,12 +1100,14 @@
 [data-mode='dark']:is([data-accent]:not([data-accent='base']), [data-theme][data-accent]) {
   --color-accent: var(--color-pick-accent);
   --color-accent-hover: color-mix(in oklab, var(--palette-white) 25%, var(--color-pick-accent));
+  --color-accent-mark-hover: color-mix(in oklab, var(--palette-white) 25%, var(--color-accent-mark));
   --color-on-accent: color-mix(in oklab, var(--color-pick-accent) 15%, var(--palette-black));
 }
 
 [data-mode='light']:is([data-accent]:not([data-accent='base']), [data-theme][data-accent]) {
   --color-accent: var(--color-pick-accent);
   --color-accent-hover: color-mix(in oklab, var(--palette-black) 20%, var(--color-pick-accent));
+  --color-accent-mark-hover: color-mix(in oklab, var(--palette-black) 20%, var(--color-accent-mark));
   --color-on-accent: color-mix(in oklab, var(--color-pick-accent) 5%, var(--palette-white));
 }
 

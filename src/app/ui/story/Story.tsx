@@ -575,8 +575,13 @@ function showBound(shadow: ShadowRoot, values: ReadonlyMap<string, string>, draw
   }
 }
 
-// Given by a box sized by its story's words (StoryMessage's bubble), named in Story.shadow.css.
-export const FitsWordsContext = createContext(false);
+// How a story's words are set, given by what draws around them (StoryMessage) and named in Story.shadow.css: on the
+// ground; in a box of their own size; or each of the story's own blocks a bubble of its size.
+export type Words = 'ground' | 'box' | 'each';
+export const WordsContext = createContext<Words>('ground');
+// Told what the last block drawn leaves of the words' width, where each block is a bubble: what stands beside the
+// words (StoryMessage's Speech) stands beside the last bubble by it.
+export const SlackContext = createContext<((room: number) => void) | null>(null);
 
 // A message's text, drawn in a shadow root so a bot's HTML and CSS can never restyle or cover the app.
 export function Story({ html, css = '', cursor = false, tone = 'plain', buttons = 'inert', onPress, term = '', whole = false, inlays = [], illustrations = [], ref, bind }: Props) {
@@ -590,7 +595,7 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   const hovered = useRef<string | null>(null);
   const veil = useVeil();
   const quotes = useQuoteShape();
-  const fits = useContext(FitsWordsContext);
+  const words = useContext(WordsContext);
   // A veil tapped open or shut changes only veil.revealed, which no render sees.
   const [veilTaps, tapVeil] = useReducer((count: number) => count + 1, 0);
   const host = useRef<HTMLDivElement>(null);
@@ -619,6 +624,24 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   useLayoutEffect(() => {
     if (bind) showBound(root(), bind.values, false);
   });
+
+  const slack = useContext(SlackContext);
+  useLayoutEffect(() => {
+    if (words !== 'each' || !slack) return;
+    // A slot has no box of its own.
+    const last = [...root().children].findLast((block) => (block as HTMLElement).offsetWidth > 0) as HTMLElement | undefined;
+    if (!last) return;
+    const measure = () => slack(host.current!.offsetWidth - last.offsetWidth);
+    const sizes = new ResizeObserver(measure);
+    sizes.observe(host.current!);
+    sizes.observe(last);
+    measure();
+    // Told none again when this story no longer says: its words set another way, or something else in its place.
+    return () => {
+      sizes.disconnect();
+      slack(0);
+    };
+  }, [words, slack, html, cursor, pictures, veil, veilTaps, whole, placed, math, code]);
 
   const bound = bind?.onChange;
   useEffect(() => {
@@ -778,7 +801,7 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   return (
     <>
       <div ref={ref} className={tone === 'faded' ? `${styles.story} ${styles.faded}` : styles.story}>
-        <div ref={host} data-buttons={buttons} data-quotes={quotes} data-fits={fits || undefined} data-scrollbars={scrollbarKind()}>
+        <div ref={host} data-buttons={buttons} data-quotes={quotes} data-fits={words !== 'ground' || undefined} data-bubbles={words === 'each' || undefined} data-scrollbars={scrollbarKind()}>
           {cursor && <span slot="cursor" className={styles.cursor} aria-hidden />}
           {slotted.map(({ node }, index) =>
             beside && index < illustrations.length ? (

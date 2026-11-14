@@ -69,7 +69,7 @@
   padding: 0 var(--space-12);
   border: 0;
   border-radius: var(--radius-md);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
   font-size: inherit;
   white-space: nowrap;
 }
