@@ -12,7 +12,7 @@ export function ReadingPreview({ label, reading, rows }: { label: string; readin
   return (
     <div className={`${styles.preview} ${scope.className}`} style={scope.style} role="group" aria-label={label} inert>
       {rows.map(({ name, mine, html }, index) => (
-        <StoryMessage key={index} avatar={<Avatar face={name} tone={mine ? 'you' : 'plain'} />} name={name} time="" mine={mine} id={String(index)}>
+        <StoryMessage key={index} avatar={<Avatar size="story" face={name} tone={mine ? 'you' : 'plain'} />} name={name} time="" mine={mine} id={String(index)}>
           <Story html={html} />
         </StoryMessage>
       ))}

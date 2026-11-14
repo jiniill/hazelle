@@ -101,9 +101,9 @@ it('writes a finish as token rules for the element that names the theme, and a s
   expect(plain).toContain("[data-theme='night'][data-mode='dark'][data-bg='base'][data-accent='base']{--color-name:#ffcc00;}");
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, mark: '#2020a0' } } })).toContain("[data-theme='night'][data-mode='light'][data-bg='base'][data-accent='base']{--color-accent-mark:#2020a0;}");
   expect(plain).not.toContain('[data-mode]{');
-  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close' } })).toBe(
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close', speakers: 'large' } })).toBe(
     plain +
-      "[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);--face-radius-sm:var(--radius-full);--face-radius-md:var(--radius-full);--face-radius-rail:var(--radius-full);--face-radius-lg:var(--radius-full);--reading-leading-narrow:var(--prose-leading-close-narrow);--reading-leading-normal:var(--prose-leading-close-normal);--reading-leading-wide:var(--prose-leading-close-wide);--reading-leading-widest:var(--prose-leading-close-widest);}",
+      "[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);--face-radius-sm:var(--radius-full);--face-radius-md:var(--radius-full);--face-radius-rail:var(--radius-full);--face-radius-lg:var(--radius-full);--reading-leading-narrow:var(--prose-leading-close-narrow);--reading-leading-normal:var(--prose-leading-close-normal);--reading-leading-wide:var(--prose-leading-close-wide);--reading-leading-widest:var(--prose-leading-close-widest);--avatar-story:var(--avatar-rail);--avatar-story-letter:var(--text-lg);}",
   );
 });
 

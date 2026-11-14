@@ -25,7 +25,7 @@ and only this folder styles elements.**
   a region differently, the component gives it the one fact it needs under a name of its own (`useToolRow`: the
   composer stands its tools in a row), never the shape.
   A theme's finish (`Finish`) is named picks over what no reader's setting owns (the gap between messages, the
-  corners of a face `Avatar` draws, the scale 줄 간격's steps stand on in a chat): `themeRules` writes a pick as token rules for
+  corners of a face `Avatar` draws, the scale 줄 간격's steps stand on in a chat, the size of a speaker's face): `themeRules` writes a pick as token rules for
   the element that names the theme, and the values are `tokens.css`'s. A new pick is a token a module already reads,
   its second value there, and a name in `FINISH`. A theme may also state `letters` (글꼴, 글자 크기, 줄 간격, 읽기 폭):
   what it is first read in, as choices 읽기 already offers. The app keeps the reader's changes to them per theme.
@@ -129,7 +129,7 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 | foundation | `quotes.ts` (`QuoteShapeContext`, `QUOTE_SHAPE`) | — | 대사 모양: how a story's outermost dialogue and 속마음 marks stand (색만 · 줄바꿈 · 상자 · 점선 속마음); the user's bubble keeps 색만 |
 | foundation | `mark.ts` (`MARK`) | — | The one drawing of the logo mark, also read by `brand/render.mjs` for the favicon and icons |
 | foundation | `keys.ts` (`Chord`, `pressed`, `pressedKey`, `isComposing`, `keyCaps`, `formatKeys`) | — | Matching a key press, the IME guard, and keys written as text |
-| foundation | `Avatar` | `Avatar.module.css` | A face: picture, icon, or a name's first letter, tinted by the name (the user's own in their colour, the operator's in the accent); four sizes, or `fill`, the frame it stands in (`CardGrid`'s pictures) |
+| foundation | `Avatar` | `Avatar.module.css` | A face: picture, icon, or a name's first letter, tinted by the name (the user's own in their colour, the operator's in the accent); four sizes, `story` (a speaker's beside a message, the theme's to size), or `fill`, the frame it stands in (`CardGrid`'s pictures) |
 | foundation | `Brand` | `Brand.module.css` | The wordmark |
 | foundation | `ControlName` | `ControlName.module.css` | A Hazelle control's name inside running text, drawn as the button it names (a guide's 「」) |
 | foundation | `Figure` | `Figure.module.css` | A picture in a guide's text, its caption under it |

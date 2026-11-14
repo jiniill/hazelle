@@ -301,6 +301,8 @@
   /* A theme's finish (theme.ts) turns these on the element that names it, so they are declared again on every element
      with a scheme of its own, which may name none. */
   --story-gap: var(--space-24);
+  --avatar-story: var(--avatar-md);
+  --avatar-story-letter: var(--text-md);
   --face-radius-sm: var(--radius-sm);
   --face-radius-md: var(--radius-md);
   --face-radius-rail: var(--radius-md);
@@ -508,6 +510,7 @@
   --window-radius-md: 8px;
   --window-radius-lg: 10px;
   --rail-width: 72px;
+  --rail-width-slim: 64px;
   --panel-width: 400px;
   --tool-frame-min-height: 16rem;
   /* A share of the room a list and its picked item split, so the item keeps a phone's width in the narrowest window. */

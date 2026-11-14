@@ -368,7 +368,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
 
   return (
     <StoryMessage
-      avatar={mine ? <Avatar face={me?.name ?? '?'} image={me?.image} tone="you" /> : character ? <Avatar face={character.name} image={character.image} /> : <Avatar face={Bot} />}
+      avatar={<Avatar size="story" {...(mine ? { face: me?.name ?? '?', image: me?.image, tone: 'you' } : character ? { face: character.name, image: character.image } : { face: Bot })} />}
       name={speaker(message, character, me, modelName)}
       time={timeOfDay(version.at)}
       mine={mine && editing === null}

@@ -153,6 +153,12 @@
   padding: var(--space-4) var(--space-8);
 }
 
+/* A bar is its fill alone, with the caret in it too: the caret is what says it is being written in. */
+.bar,
+.bar:focus-within {
+  border-color: transparent;
+}
+
 .line {
   display: flex;
   align-items: flex-end;

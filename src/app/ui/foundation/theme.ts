@@ -56,12 +56,14 @@ export type Finish = {
   faces: 'soft' | 'round';
   // The scale 줄 간격's four steps stand on in a chat; a story drawn outside one keeps the app's.
   lines: 'open' | 'close';
+  // The size of the speaker's face beside a message.
+  speakers: 'small' | 'large';
 };
 
 // tones left out is the app's own colours, as tokens.css has them.
 export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; shapes: Shapes; finish: Finish; letters?: Letters };
 
-export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose' }, finish: { rows: 'open', faces: 'soft', lines: 'open' } };
+export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose' }, finish: { rows: 'open', faces: 'soft', lines: 'open', speakers: 'small' } };
 
 // The theme the app wears: an element drawn in a scheme of its own inside it names it, and a component reads its
 // region's shape from it. A theme's card provides its own.
@@ -95,6 +97,7 @@ const FINISH: { [Part in keyof Finish]: Record<Finish[Part], string> } = {
   rows: { open: '', close: '--story-gap:var(--story-gap-close);' },
   faces: { soft: '', round: ['sm', 'md', 'rail', 'lg'].map((size) => `--face-radius-${size}:var(--radius-full);`).join('') },
   lines: { open: '', close: ['narrow', 'normal', 'wide', 'widest'].map((step) => `--reading-leading-${step}:var(--prose-leading-close-${step});`).join('') },
+  speakers: { small: '', large: '--avatar-story:var(--avatar-rail);--avatar-story-letter:var(--text-lg);' },
 };
 
 function rule(selector: string, tone: Tone, tokens: Partial<Record<keyof Tone, string[]>>) {

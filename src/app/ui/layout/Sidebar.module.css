@@ -150,7 +150,12 @@
   background: var(--color-accent);
 }
 
-/* servers (a rail shape): round faces, and the open one squared off with a bar at the rail's edge in the ring's place. */
+/* servers (a rail shape): a slimmer rail of round faces, the open one squared off with a bar at the rail's edge in the
+   ring's place. */
+.servers {
+  width: var(--rail-width-slim);
+}
+
 .servers .faceButton > :first-child {
   border-radius: var(--radius-full);
 }
@@ -165,7 +170,7 @@
   position: absolute;
   top: 25%;
   bottom: 25%;
-  left: calc((var(--control-lg) - var(--rail-width)) / 2);
+  left: calc((var(--control-lg) - var(--rail-width-slim)) / 2);
   width: var(--space-4);
   border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
   background: var(--color-text);
