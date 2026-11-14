@@ -1,5 +1,5 @@
 import { ChevronLeft, FolderInput, FolderPlus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toggle } from '../../../connectors/values';
 import { chatFolderOf, type ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
@@ -58,8 +58,11 @@ export function ShelfChats({ page, shelf }: Props) {
   const [renaming, setRenaming] = useState<ChatSummary | null>(null);
   const [starredOnly, setStarredOnly] = useState(false);
   const starred = useMemo(() => shelf.chats.filter(({ chat }) => chat.starred), [shelf.chats]);
-  // With the last star gone its filter goes too, and the list is whole again.
+  // With the last star gone its filter goes too, at once and for the next star: the list is whole again.
   const onlyStarred = starredOnly && starred.length > 0;
+  useEffect(() => {
+    if (!starred.length) setStarredOnly(false);
+  }, [starred.length]);
   const opened = useMemo(() => new Set(openFolders), [openFolders]);
   const unfolded = useMemo(() => new Set(openGroups), [openGroups]);
   const grouped = useMemo(() => groupCopies(shelf.chats, CHAT), [shelf.chats]);

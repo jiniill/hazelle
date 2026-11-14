@@ -1,5 +1,5 @@
 import { Bell, FileText, Inbox, ListFilter, PenLine, Send } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CATEGORIES, STATUSES, type Category, type Sort, type Status } from '../../contracts/board';
 import { GuestLine } from '../common/GuestNotice';
 import { CATEGORY_LOOK } from '../common/postRow';
@@ -34,11 +34,20 @@ export function BoardScreen({ operator, category, query, back }: { operator: boo
   const onlyOperator = operator || suspended;
   const news = category === 'news';
   const ask = { sort, category: category ?? undefined, status: news ? undefined : (status ?? undefined), visibility: onlyOperator ? ('operator' as const) : undefined, q: query || undefined };
+  // The words this screen put in the address: others (the rail's 게시판, a step back) are typed for it.
+  const shown = useRef(query);
   // Replaced: neither a tab nor a word typed is a step back of its own.
-  const show = (tab: Category | null, q: string) => navigate({ kind: 'board', operator, ...(tab && { category: tab }), ...(q && { q }) }, { replace: true });
+  const show = (tab: Category | null, q: string) => {
+    shown.current = q;
+    navigate({ kind: 'board', operator, ...(tab && { category: tab }), ...(q && { q }) }, { replace: true });
+  };
   useEffect(() => {
     if (words !== query) show(category, words);
   }, [words]);
+  useEffect(() => {
+    if (query !== shown.current) setTyped(query);
+    shown.current = query;
+  }, [query]);
   const write = () => gate(() => navigate({ kind: 'board-write', operator: onlyOperator }));
   return (
     <Screen

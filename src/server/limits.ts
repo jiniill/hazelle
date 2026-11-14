@@ -151,7 +151,7 @@ function remember<T>(entries: Map<string, T>, key: string, value: T, maxKeys: nu
 }
 
 const LOGIN_VISITORS = 10_000;
-const POST_VIEWERS = 100_000;
+const READER_POSTS = 200;
 const FAILURE_IDLE_MS = 24 * 60 * 60_000;
 type Failures = { count: number; until: number; at: number };
 
@@ -231,9 +231,9 @@ export function dailyDistinct(max: number, clock: () => number = Date.now, maxKe
 
 // Anonymous limits count requests, not bytes; file downloads may need hundreds per bot.
 // received deduplicates per visitor/day; guests bounds distinct daily reply ids; signups bounds hourly attempts.
-// views counts a post's reader once a day (board.ts), up to POST_VIEWERS readers of one post.
+// views counts a reader's posts once each a day (board.ts), up to READER_POSTS of them.
 export const visitorLimits = () => ({
-  views: dailyDistinct(POST_VIEWERS), reads: tokenBucket(120), files: tokenBucket(1200), reports: tokenBucket(6), received: dailyDistinct(1), guests: dailyDistinct(GUESTS_PER_ADDRESS), diagnoses: tokenBucket(30), diagnosers: dailyDistinct(VISITORS_PER_ADDRESS),
+  views: dailyDistinct(READER_POSTS), reads: tokenBucket(120), files: tokenBucket(1200), reports: tokenBucket(6), received: dailyDistinct(1), guests: dailyDistinct(GUESTS_PER_ADDRESS), diagnoses: tokenBucket(30), diagnosers: dailyDistinct(VISITORS_PER_ADDRESS),
   signups: tokenBucket(10, 60 * 60_000), logins: tokenBucket(30, 60_000, () => performance.now(), LOGIN_VISITORS), proofs: proofBackoff(),
 });
 

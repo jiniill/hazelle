@@ -205,7 +205,7 @@ board.get('/posts/:id', async (c) => {
   if (!row) return fail(c, 404, 'not-found');
   const { text, diagnostics, statusAt, accountId, username, ...shown } = row;
   // A reader is an account or, without one, an address: a guest makes a new secret freely.
-  if (shown.visibility === 'public' && !shown.deleted && !shown.mine && !account.admin && c.env.limits.visitors.views.add(String(id), account.guest ? visitorOf(c) : account.id) === 'new') {
+  if (shown.visibility === 'public' && !shown.deleted && !shown.mine && !account.admin && c.env.limits.visitors.views.add(account.guest ? visitorOf(c) : account.id, String(id)) === 'new') {
     await db.prepare('UPDATE posts SET views = views + 1 WHERE id = ?').bind(id).run();
     shown.views += 1;
   }
