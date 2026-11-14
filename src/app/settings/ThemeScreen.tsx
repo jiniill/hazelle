@@ -2,6 +2,7 @@ import { LOOK_SAMPLE, modeIn, wearing } from '../common/reading';
 import { PAGES } from '../common/words';
 import { useDisplay } from '../display';
 import { backBar } from '../shell/router';
+import { ThemeSample } from './ThemeSample';
 import type { Back } from '../shell/routes';
 import { NavBar, Screen, Section, SettingGroup, SettingRow, Swatches, Switch, THEMES, useSplitsReplies, type ThemeId } from '../ui';
 
@@ -9,7 +10,7 @@ export function ThemeScreen({ back }: { back: Back | null }) {
   const { lettersIn, display, changeDisplay } = useDisplay();
   const { bg, ink, accent, dialogue } = display;
   const splits = useSplitsReplies();
-  const items = (Object.keys(THEMES) as ThemeId[]).map((id) => ({ name: THEMES[id].name, theme: THEMES[id], mode: modeIn(display, id), bg, ink, accent, dialogue, font: lettersIn(id).font, size: lettersIn(id).size, pressed: id === display.theme, onPick: () => changeDisplay(wearing(display, id)) }));
+  const items = (Object.keys(THEMES) as ThemeId[]).map((id) => ({ name: THEMES[id].name, theme: THEMES[id], mode: modeIn(display, id), bg, ink, accent, dialogue, font: lettersIn(id).font, size: lettersIn(id).size, picture: <ThemeSample reading={{ ...lettersIn(id), reply: 'stay' }} />, pressed: id === display.theme, onPick: () => changeDisplay(wearing(display, id)) }));
   return (
     <Screen width="page" top={<NavBar title={PAGES.theme} {...backBar(back)} />}>
       <Swatches label={PAGES.theme} sample={LOOK_SAMPLE} items={items} />

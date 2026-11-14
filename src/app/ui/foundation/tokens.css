@@ -683,6 +683,12 @@
   --read-stage-least: 64px;
   --peek-tab-width: 27px;
   --swatch-min-height: 84px;
+  /* A card's picture of the app: a window's shape beside the sidebar, a phone's where there is none. */
+  --swatch-picture-zoom: 0.4;
+  --swatch-picture-ratio: 16 / 10;
+  --swatch-picture-min-width: 300px;
+  --swatch-picture-ratio-narrow: 9 / 16;
+  --swatch-picture-min-width-narrow: 150px;
   --stripe-width: 2px;
 
   --beside-main-min-width: 600px;

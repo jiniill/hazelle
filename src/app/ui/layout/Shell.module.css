@@ -34,7 +34,7 @@
   composes: settleIn from '../foundation/motion.module.css';
   /* Read by Sidebar.module.css and ListDetail.module.css; the titles by NavBar, TitleField and Sidebar. */
   --sidebar-width: var(--window-side-width);
-  --sidebar-height: 100%;
+  --frame-height: 100%;
   --sidebar-rule: 0;
   --split-height: 100%;
   --screen-title-font: var(--font-sans);
