@@ -62,6 +62,8 @@ export type Route =
   | { kind: 'notices' }
   // 내 구성: what runs on what, and what needs fixing.
   | { kind: 'setup' }
+  // 기능: the list of what the app does, 대화 and each feature, whose pages open beside it.
+  | { kind: 'features' }
   | { kind: 'chat-settings' }
   | { kind: 'feature'; feature: Feature }
   | { kind: 'theme' }
@@ -202,6 +204,7 @@ export function parseRoute(at: string): Route {
   const feature = FEATURES.find((candidate) => candidate === id);
   if (top === 'settings' && feature && sub === undefined) return { kind: 'feature', feature };
   if (top === 'settings' && id === 'setup' && sub === undefined) return { kind: 'setup' };
+  if (top === 'settings' && id === 'features' && sub === undefined) return { kind: 'features' };
   if (top === 'settings' && id === 'theme' && sub === undefined) return { kind: 'theme' };
   if (top === 'settings' && id === 'display' && sub === undefined) return { kind: 'display' };
   if (top === 'settings' && id === 'controls' && sub === undefined) return { kind: 'controls' };
@@ -308,6 +311,8 @@ export function href(route: Route): string {
       return '/account/notices';
     case 'setup':
       return '/settings/setup';
+    case 'features':
+      return '/settings/features';
     case 'chat-settings':
       return '/settings/chat';
     case 'feature':
@@ -351,9 +356,14 @@ export function href(route: Route): string {
 
 export const sidebarPage = (route: Route) => route.kind === 'home' || route.kind === 'shelf';
 
-// null outside API 연결's screens: every other item 설정 lists is a page of its own, never beside its list.
-export function listOf(route: Route): Kind<'connections' | 'add-connection'> | null {
+// The list a route's page stands beside: API 연결's and 기능's. Every other item 설정 lists is a page of its own, never
+// beside its list.
+export function listOf(route: Route): Kind<'connections' | 'add-connection' | 'features'> | null {
   switch (route.kind) {
+    case 'features':
+    case 'chat-settings':
+    case 'feature':
+      return { kind: 'features' };
     case 'connections':
     case 'connection':
       return { kind: 'connections' };
@@ -367,7 +377,7 @@ export function listOf(route: Route): Kind<'connections' | 'add-connection'> | n
 }
 
 // A feature's page is one of 설정's own, named by the feature.
-export type SettingsPage = 'setup' | 'models' | 'connections' | 'chat' | Feature | 'prompts' | 'personas' | 'modules' | 'plugins' | 'theme' | 'display' | 'controls' | 'sounds' | 'labs' | 'account' | 'admin' | 'translator' | 'calculator';
+export type SettingsPage = 'setup' | 'models' | 'connections' | 'features' | 'chat' | Feature | 'prompts' | 'personas' | 'modules' | 'plugins' | 'theme' | 'display' | 'controls' | 'sounds' | 'labs' | 'account' | 'admin' | 'translator' | 'calculator';
 
 // 'list' for 설정's own list, or null outside 설정. While it is not null, the settings layer stands in for the library.
 export function settingsPage(route: Route): SettingsPage | 'list' | null {
@@ -392,6 +402,8 @@ export function settingsPage(route: Route): SettingsPage | 'list' | null {
     case 'model':
       return 'models';
     case 'account':
+    case 'setup':
+    case 'features':
     case 'theme':
     case 'display':
     case 'controls':
@@ -406,8 +418,6 @@ export function settingsPage(route: Route): SettingsPage | 'list' | null {
     case 'usage':
     case 'notices':
       return 'account';
-    case 'setup':
-      return 'setup';
     case 'chat-settings':
       return 'chat';
     case 'feature':
@@ -487,18 +497,20 @@ export function up(route: Below, chatShelf?: string | null): Route {
     case 'connections':
     case 'models':
     case 'account':
-    case 'chat-settings':
+    case 'features':
     case 'theme':
     case 'display':
     case 'controls':
     case 'sounds':
     case 'labs':
     case 'admin':
-    case 'feature':
     case 'setup':
     case 'translator':
     case 'calculator':
       return { kind: 'settings' };
+    case 'chat-settings':
+    case 'feature':
+      return { kind: 'features' };
     case 'usage':
     case 'notices':
       return { kind: 'account', section: null };

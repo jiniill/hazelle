@@ -84,6 +84,7 @@ const EXAMPLES = {
   admin: [{ kind: 'admin' }],
   'admin-list': [{ kind: 'admin-list', list: 'accounts' }, { kind: 'admin-list', list: 'reports' }, { kind: 'admin-list', list: 'log' }],
   setup: [{ kind: 'setup' }],
+  features: [{ kind: 'features' }],
   'chat-settings': [{ kind: 'chat-settings' }],
   feature: FEATURES.map((feature) => ({ kind: 'feature', feature })),
   theme: [{ kind: 'theme' }],
@@ -167,12 +168,19 @@ it("goes back from a module's 토글 page to the module", () => {
   expect(up({ kind: 'module', id: CHAT, pane: 'toggles' })).toEqual({ kind: 'module', id: CHAT, pane: null });
 });
 
-it("opens a feature as 설정's own page, lit by its feature, its way back 설정", () => {
+it("opens a feature beside 기능's list, lit by its feature, its way back 기능 and 기능's 설정", () => {
   const route = { kind: 'feature', feature: 'memory' } as const;
   expect(href(route)).toBe('/settings/memory');
   expect(parseRoute('/settings/chat/memory')).toEqual(route);
-  expect(up(route)).toEqual({ kind: 'settings' });
   expect(settingsPage(route)).toBe('memory');
+  for (const page of [route, { kind: 'chat-settings' }] as const) {
+    expect(listOf(page)).toEqual({ kind: 'features' });
+    expect(up(page)).toEqual({ kind: 'features' });
+  }
+  expect(parseRoute('/settings/features')).toEqual({ kind: 'features' });
+  expect(listOf({ kind: 'features' })).toEqual({ kind: 'features' });
+  expect(up({ kind: 'features' })).toEqual({ kind: 'settings' });
+  expect(settingsPage({ kind: 'features' })).toBe('features');
 });
 
 it("opens a tool as 설정's own page at its own path, its way back 설정, and the old list's path as home", () => {

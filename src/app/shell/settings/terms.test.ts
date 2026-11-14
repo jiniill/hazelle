@@ -3,7 +3,7 @@ import { matches } from '../../common/search';
 import { FEATURE_NAMES, PAGES, PICTURE_PLACE, TOOL_PAGES } from '../../common/words';
 import { FEATURES } from '../../../model/features';
 import { EMPTY_SETTINGS } from '../../../model/settings';
-import type { SettingsPage } from '../routes';
+import type { Route, SettingsPage } from '../routes';
 import { hitsOf, hitTexts, subpages } from './terms';
 
 const PLACES = [
@@ -64,6 +64,14 @@ describe('설정 검색', () => {
   it('leads with the page a search names, before the rows that hold the words', () => {
     expect(search('모델')[0]).toMatchObject({ term: PAGES.models, where: [] });
     expect(search('새 연결')[0]).toMatchObject({ where: [PAGES.connections], to: { kind: 'add-connection' } });
+  });
+
+  it('seeks the pages a place lists in its own body as it is, each under its own name', () => {
+    type Sought = { page: SettingsPage; label: string; route: Route; holds?: Sought[] };
+    const translate: Sought = { page: 'translate', label: FEATURE_NAMES.translate, route: { kind: 'feature', feature: 'translate' } };
+    const held = hitsOf<Sought>([{ page: 'features', label: '기능', route: { kind: 'features' }, holds: [translate] }], {});
+    expect(held.map(({ term }) => term).slice(0, 2)).toEqual(['기능', FEATURE_NAMES.translate]);
+    expect(held.find(({ term }) => term === '응답 번역 언어')).toMatchObject({ where: [FEATURE_NAMES.translate], to: translate.route });
   });
 
   it('keys each row of a result list apart', () => {

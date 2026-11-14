@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { Route, RolePick } from '../../runtime/models/assignment';
 import type { Overview, TaskRun } from '../../runtime/tasks/overview';
-import { failingOf, findingsOf, mapOf } from './setup';
+import { failingOf, failsAt, findingsOf, mapOf } from './setup';
 
 const connection = { id: 'c', value: { label: 'C', starred: [{ id: 'm', name: 'M' }] } } as never;
 const route = { connection, model: { id: 'm', name: 'M' } } as never as Route;
@@ -33,6 +33,15 @@ it('marks every feature that is on and cannot run, whatever the cause, and none 
   expect(Object.keys(failingOf(failing, ['translate', 'memory']))).toEqual(['translate']);
   expect(failingOf({ ...failing, tasks: failing.tasks.map((task) => ({ ...task, on: false })) }, ['translate', 'memory'])).toEqual({});
   expect(Object.keys(failingOf({ ...overview(picked('aux')), roles: { main: none, aux: picked('aux'), embed: none } }, ['translate']))).toEqual(['chat']);
+});
+
+it("says a place's own reason, and for a place that lists pages of its own, each failing one's by name", () => {
+  const failing = { illustrate: '이미지 모델이 없어요.', chat: '대화 모델이 없어요.' };
+  const chat = { page: 'chat', label: '대화' };
+  const features = { page: 'features', label: '기능', holds: [chat, { page: 'translate', label: '번역' }, { page: 'illustrate', label: '삽화' }] };
+  expect(failsAt(failing, chat)).toBe('대화 모델이 없어요.');
+  expect(failsAt(failing, features)).toBe('대화: 대화 모델이 없어요.\n삽화: 이미지 모델이 없어요.');
+  expect(failsAt({}, features)).toBeUndefined();
 });
 
 it('draws an added model the setup does not reach as off, which the map folds away', () => {

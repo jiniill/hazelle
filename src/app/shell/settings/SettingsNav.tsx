@@ -1,4 +1,4 @@
-import { Calculator, FileText, FlaskConical, Hand, Languages, Layers, LayoutTemplate, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
+import { Calculator, FileText, FlaskConical, Hand, Languages, Layers, LayoutTemplate, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, Sparkles, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { litIn } from '../../common/search';
 import { useSearch } from '../../common/useSearch';
@@ -11,16 +11,17 @@ import { availableFeatures, sharedFeatures } from '../../../runtime/tasks/featur
 import { overviewOf } from '../../../runtime/tasks/overview';
 import { useAccount, useCaptured, useConnections, useModulesAndPlugins, usePersonas, useProfiles, usePrompts, useSession, useSettings, useStore } from '../../session';
 import { Empty, FoundRow, Icon, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen, seekRow, THEMES } from '../../ui';
-import { failingOf } from '../../settings/setup';
-import { navigate } from '../router';
-import type { Route, SettingsPage } from '../routes';
+import { failingOf, failsAt } from '../../settings/setup';
+import { backBar, navigate, useRoute } from '../router';
+import { settingsPage, type Back, type Route, type SettingsPage } from '../routes';
 import { hitsOf, hitTexts, subpages, type Hit } from './terms';
 
-type Place = { page: SettingsPage; label: string; icon: LucideIcon; route: Route };
-// Untitled: a place that stands apart from every set, such as 내 구성 at the top.
+// holds: the pages a place lists in its own body, beside the one picked, instead of in the sidebar.
+type Place = { page: SettingsPage; label: string; icon: LucideIcon; route: Route; holds?: Place[] };
+// Untitled: the places that stand apart from every set, 내 구성 and 기능 at the top, each drawing the whole.
 type Group = { title?: string; places: Place[] };
 
-const SETUP: Group = { places: [{ page: 'setup', label: PAGES.setup, icon: Network, route: { kind: 'setup' } }] };
+const SETUP: Place = { page: 'setup', label: PAGES.setup, icon: Network, route: { kind: 'setup' } };
 // List built pages only; group headings cannot repeat child labels. A connection comes before the models it adds.
 const AI: Group = {
   title: 'AI 엔진',
@@ -29,10 +30,14 @@ const AI: Group = {
     { page: 'models', label: PAGES.models, icon: Layers, route: { kind: 'models' } },
   ],
 };
-// What the person has the app do: 대화, then each feature 실험실 leaves on.
-const doing = (features: readonly Feature[]): Group => ({
-  title: FEATURES_TITLE,
-  places: [
+// What the person has the app do: 대화, then each feature 실험실 leaves on. One row, so the sidebar does not grow by a
+// row with every feature; its body lists them.
+const doing = (features: readonly Feature[]): Place => ({
+  page: 'features',
+  label: FEATURES_TITLE,
+  icon: Sparkles,
+  route: { kind: 'features' },
+  holds: [
     { page: 'chat', label: PAGES.chat, icon: MessageSquare, route: { kind: 'chat-settings' } },
     ...features.map((feature) => ({ page: feature, label: FEATURE_NAMES[feature], icon: FEATURE_ICONS[feature], route: { kind: 'feature', feature } as const })),
   ],
@@ -65,37 +70,47 @@ const TOOLBOX: Group = {
   ],
 };
 
-function useSettingsNav() {
-  const { admin } = useAccount();
+// 기능 and, of 대화 and the features that are on in 공용, why each that cannot run now cannot, marked in its row.
+function useFeatures() {
   const available = availableFeatures(useSettings());
-  const groups: Group[] = [SETUP, AI, doing(available), HAVE, { title: '앱', places: admin ? [...APP, ADMIN] : APP }, TOOLBOX];
-  // 대화 and the features that are on in 공용 and cannot run now, each marked in its row with why.
-  const fails: Partial<Record<SettingsPage, string>> = failingOf(
+  const failing: Partial<Record<SettingsPage, string>> = failingOf(
     useCaptured((store) => overviewOf(store, null), []),
     available,
   );
+  return { features: doing(available), fails: (place: Place) => failsAt(failing, place) };
+}
+
+// Whether chats use each feature, at its row's end.
+function useFeatureStates(): Record<Feature, string> {
+  const store = useStore();
+  // Subscribed for sharedFeatures, which reads the settings from the store.
+  useSettings();
+  const used = sharedFeatures(store);
+  return Object.fromEntries(FEATURES.map((feature) => [feature, [FEATURE_LABS[feature] && LAB, onOff(used[feature])].filter(Boolean).join(' · ')])) as Record<Feature, string>;
+}
+
+function useSettingsNav() {
+  const { admin } = useAccount();
+  const { features, fails } = useFeatures();
+  const groups: Group[] = [{ places: [SETUP, features] }, AI, HAVE, { title: '앱', places: admin ? [...APP, ADMIN] : APP }, TOOLBOX];
   return { groups, holds: useHolds(), fails, search: useSettingsSearch(groups.flatMap(({ places }) => places)) };
 }
 
-// What each page holds, at its row's end in the sidebar and the phone list: a feature, whether chats use it.
+// What each page holds, at its row's end in the sidebar and the phone list.
 function useHolds(): Record<SettingsPage, string | undefined> {
-  const store = useStore();
   const prompts = usePrompts();
   const personas = usePersonas();
   const { modules, plugins } = useModulesAndPlugins();
   const connections = useConnections();
   const { username } = useSession();
   const { reading, display, presets } = useDisplay();
-  // Subscribed for sharedFeatures, which reads the settings from the store.
-  useSettings();
-  const used = sharedFeatures(store);
-  const state = (feature: Feature) => [FEATURE_LABS[feature] && LAB, onOff(used[feature])].filter(Boolean).join(' · ');
   return {
     setup: undefined,
     models: `${connections.reduce((sum, connection) => sum + connection.value.starred.length, 0)}개`,
     connections: `${connections.length}개`,
+    features: undefined,
     chat: undefined,
-    ...(Object.fromEntries(FEATURES.map((feature) => [feature, state(feature)])) as Record<Feature, string>),
+    ...useFeatureStates(),
     prompts: `${prompts.length}개`,
     personas: `${personas.length}개`,
     modules: `${modules.length}개`,
@@ -152,7 +167,15 @@ export function SettingsSidebar({ current, onClose }: { current: SettingsPage | 
         groups.map(({ title, places }) => (
           <NavGroup key={title ?? places[0]!.page} title={title}>
             {places.map((place) => (
-              <NavRow key={place.page} icon={place.icon} label={place.label} note={holds[place.page]} error={fails[place.page]} current={place.page === current} onClick={() => navigate(place.route, { replace: true })} />
+              <NavRow
+                key={place.page}
+                icon={place.icon}
+                label={place.label}
+                note={holds[place.page]}
+                error={fails(place)}
+                current={place.page === current || place.holds?.some(({ page }) => page === current)}
+                onClick={() => navigate(place.route, { replace: true })}
+              />
             ))}
           </NavGroup>
         ))
@@ -177,12 +200,38 @@ export function SettingsList({ onClose }: { onClose: () => void }) {
           <NavGroup key={title ?? places[0]!.page} title={title}>
             <List places label={title ?? SETTINGS}>
               {places.map((place) => (
-                <ListItem key={place.page} title={place.label} note={holds[place.page]} error={fails[place.page]} onClick={() => navigate(place.route)} />
+                <ListItem key={place.page} title={place.label} note={holds[place.page]} error={fails(place)} onClick={() => navigate(place.route)} />
               ))}
             </List>
           </NavGroup>
         ))
       )}
+    </Screen>
+  );
+}
+
+// 기능's own list: 대화 and each feature with its state, the one open beside it marked. Its state only: which model a
+// feature runs on is 내 구성's to draw. Beside a page it is walked as the sidebar is, leaving no step behind; alone, on
+// a phone, a row is a step in.
+export function FeaturesList({ back }: { back: Back | null }) {
+  const { features, fails } = useFeatures();
+  const states: Partial<Record<SettingsPage, string>> = useFeatureStates();
+  const current = settingsPage(useRoute());
+  return (
+    <Screen width="page" top={<NavBar title={features.label} {...backBar(back)} />}>
+      <List places label={features.label}>
+        {features.holds!.map((place) => (
+          <ListItem
+            key={place.page}
+            leading={<Icon icon={place.icon} size="sm" />}
+            title={place.label}
+            note={states[place.page]}
+            error={fails(place)}
+            current={place.page === current}
+            onClick={() => navigate(place.route, { replace: current !== 'features' })}
+          />
+        ))}
+      </List>
     </Screen>
   );
 }

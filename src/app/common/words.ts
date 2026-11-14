@@ -215,8 +215,10 @@ export const CHAT_SEARCH = searchOf(THINGS.chat.noun);
 export const MESSAGE_FIELD = '메시지';
 export const TOOL_PAGES = { translator: '번역기', calculator: '비용 계산기' };
 
-export const inSettings = (page: keyof typeof PAGES) => `${SETTINGS} › ${PAGES[page]}`;
-export const inFeature = (feature: Feature) => `${SETTINGS} › ${FEATURE_NAMES[feature]}`;
+// 대화 and each feature stand under 기능.
+const inFeatures = (label: string) => `${SETTINGS} › ${FEATURES_TITLE} › ${label}`;
+export const inSettings = (page: keyof typeof PAGES) => (page === 'chat' ? inFeatures(PAGES.chat) : `${SETTINGS} › ${PAGES[page]}`);
+export const inFeature = (feature: Feature) => inFeatures(FEATURE_NAMES[feature]);
 
 export const opens = (place: string) => `${place} 열기`;
 

@@ -74,6 +74,11 @@ export function failingOf({ roles, talk, tasks }: Overview, available: readonly 
   return failing;
 }
 
+// Why a place of 설정 cannot run now: its own reason, or, where it lists pages of its own, each of theirs by name.
+type Marked = { page: string; label: string; holds?: readonly Marked[] };
+export const failsAt = (failing: Partial<Record<string, string>>, place: Marked): string | undefined =>
+  place.holds ? place.holds.flatMap(({ page, label }) => (failing[page] ? [`${label}: ${failing[page]}`] : [])).join('\n') || undefined : failing[place.page];
+
 const NO_EMBED = `${MODEL_ROLES.embed}이 지정되지 않아서 ${FEATURE_NAMES.memory}이 비슷한 기록을 찾아 넣지 않아요.`;
 
 // What fails now, truthfully: each said once, where it starts. A task that follows a 보조 모델 which fails is that

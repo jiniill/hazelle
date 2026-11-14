@@ -16,7 +16,7 @@ import { useAccount, useCharacter, useChatModel, useChatSummary, useConnections,
 import { Button, Callout, Empty, Intro, ListDetail, NavBar, Progress, Screen, useWide } from '../ui';
 import { backBar, closeLayer, navigate } from './router';
 import { backTo, HOME, href, listOf, up, type Back, type Below, type Route } from './routes';
-import { SettingsList, settingsEntry } from './settings/SettingsNav';
+import { FeaturesList, SettingsList, settingsEntry } from './settings/SettingsNav';
 
 const ToolPageScreen = lazy(() => import('../modules/ToolPageScreen').then(({ ToolPageScreen }) => ({ default: ToolPageScreen })));
 const AdminScreen = lazy(() => import('../admin/AdminScreen').then(({ AdminScreen }) => ({ default: AdminScreen })));
@@ -148,6 +148,8 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
         return <NoticesScreen back={back(at)} />;
       case 'setup':
         return <SetupScreen back={sideBack(at)} />;
+      case 'features':
+        return <FeaturesList back={sideBack(at)} />;
       case 'chat-settings':
         return <ChatSettingsScreen back={sideBack(at)} />;
       case 'feature':
@@ -193,12 +195,19 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
   const list = listOf(route);
   if (!list) return <ScreenLoad at={at}>{screen(route)}</ScreenLoad>;
   const detail = route.kind === list.kind ? null : screen(route);
-  const pane = detail ?? (list.kind === 'connections' ? <Landing /> : <Empty variant="pane">연결할 제공자를 선택해 주세요.</Empty>);
+  const pane = detail ?? LANDS[list.kind];
   // One boundary for the pair, so a first visit shows one loader, and one inside for the detail alone.
   // Wide, 설정 is a window, and its list and the item picked from it stand side by side.
   if (wide) return <ScreenLoad at={at}><ListDetail list={screen(list)} detail={<ScreenLoad at={at}>{pane}</ScreenLoad>} /></ScreenLoad>;
   return <ScreenLoad at={at}>{detail ?? screen(list)}</ScreenLoad>;
 }
+
+// What stands beside a list while nothing is picked from it. 기능 opens on 대화, its first.
+const LANDS: Record<NonNullable<ReturnType<typeof listOf>>['kind'], ReactNode> = {
+  connections: <Landing />,
+  'add-connection': <Empty variant="pane">연결할 제공자를 선택해 주세요.</Empty>,
+  features: <Replace to={{ kind: 'chat-settings' }} />,
+};
 
 // API 연결 opens on its connection: the 대화 모델's, else the first, replaced before paint so 뒤로 does not land here again.
 // With none, the list's own empty state speaks, and nothing stands under it.

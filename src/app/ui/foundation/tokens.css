@@ -524,6 +524,7 @@
   --window-gap: 10px;
   --window-radius: 14px;
   --window-side-width: 216px;
+  --window-control-compact: 32px;
   --window-control-md: 36px;
   --window-control-lg: 44px;
   --window-radius-md: 8px;
