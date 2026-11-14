@@ -143,6 +143,9 @@ export type Preset = { id: string; name: string; look: Look };
 
 export const lookOf = (letters: Letters, { mode, bg, ink, accent, dialogue }: Display): Look => ({ mode, bg, ink, accent, dialogue, ...lettersOf(letters) });
 
+// 초기화's: a theme's first letters with no colour picked, in the mode the theme states; 기본 states none and takes the default's.
+export const firstLook = (letters: Letters, theme: ThemeId): Look => lookOf(letters, { ...DISPLAY_DEFAULT, mode: THEMES[theme].mode ?? DISPLAY_DEFAULT.mode });
+
 const LOOK: Record<keyof Look, true> = { mode: true, bg: true, ink: true, accent: true, dialogue: true, font: true, size: true, leading: true, width: true };
 const LOOK_KEYS = Object.keys(LOOK) as (keyof Look)[];
 

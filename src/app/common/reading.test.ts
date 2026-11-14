@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { STARTER_PRESETS } from '../../model/settings';
 import type { Reading } from '../ui';
-import { backdropShades, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, modeIn, parseDisplay, parseReading, presetOf, savedPresets, wearing, wornLook } from './reading';
+import { backdropShades, DISPLAY_DEFAULT, effectiveEnterSends, firstLook, lookOf, modeIn, parseDisplay, parseReading, presetOf, savedPresets, wearing, wornLook } from './reading';
 
 const FALLBACK: Reading = { font: 'serif', size: 17, leading: 'normal', width: 'normal', reply: 'follow' };
 const STARTERS = savedPresets(STARTER_PRESETS).presets;
@@ -64,6 +64,12 @@ describe('a theme and its mode', () => {
     expect(wearing(old, 'base')).toMatchObject({ theme: 'base', mode: 'light', modes: { discord: 'light' } });
     expect(modeIn(old, 'slack')).toBe('light');
     expect(modeIn(worn({ theme: 'base', mode: 'light' }), 'discord')).toBe('dark');
+  });
+
+  it('resets to the mode the theme states and no colour picked, 기본 to the default mode', () => {
+    expect(firstLook(FALLBACK, 'discord')).toMatchObject({ mode: 'dark', bg: DISPLAY_DEFAULT.bg, accent: DISPLAY_DEFAULT.accent, font: FALLBACK.font });
+    expect(firstLook(FALLBACK, 'kakaotalk').mode).toBe('light');
+    expect(firstLook(FALLBACK, 'base').mode).toBe(DISPLAY_DEFAULT.mode);
   });
 
   it('leaves the presets that follow the system as they are', () => {

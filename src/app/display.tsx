@@ -1,6 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { presetsOf } from '../model/settings';
-import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, wornLook, parseStoredDisplay, presetOf, savedPresets, systemMode, type Display, type Follow, type Look, type Preset } from './common/reading';
+import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, firstLook, wornLook, parseStoredDisplay, presetOf, savedPresets, systemMode, type Display, type Follow, type Look, type Preset } from './common/reading';
 import { useReading } from './common/useReading';
 import { usePersisted } from './common/usePersisted';
 import { useSettings } from './session';
@@ -71,7 +71,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     changeReading: (change) => setReading({ ...reading, ...change }),
     changeDisplay: (change) => setDisplay({ ...display, ...change }),
     pick,
-    reset: () => wear(lookOf(first, { ...DISPLAY_DEFAULT, mode: theme.mode ?? DISPLAY_DEFAULT.mode }), follow),
+    reset: () => wear(firstLook(first, display.theme), follow),
     followSystem,
     assign: (slot, preset) => {
       if (!follow) return;
