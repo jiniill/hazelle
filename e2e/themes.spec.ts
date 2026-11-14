@@ -4,8 +4,9 @@ import { assignFake, CARD, enter, fakeProvider, importFile, pickBot } from './he
 // The first block is the widest, so the last bubble is not.
 const REPLY = 'The lantern swung once over the long stair and settled against the wall.\n\n"Mind the third step."\n\nShe went up.';
 
-// 기본 is what every other spec runs in. Each of the others is worn from 설정 › 테마 and a turn is taken in it.
-for (const name of ['클로드', '디스코드', '슬랙', '카카오톡']) {
+// 기본 is what every other spec runs in, dark. Each of the others is worn from 설정 › 테마, which takes it in the mode
+// it states, and a turn is taken in it; 기본 is taken again in the mode it was left in.
+for (const [name, mode] of [['클로드', 'light'], ['디스코드', 'dark'], ['슬랙', 'light'], ['카카오톡', 'light']] as const) {
   test(`${name}: worn from 설정, a turn and its versions, kept over a reload`, async ({ page }) => {
     await fakeProvider(() => [REPLY]);
     await assignFake(page, await enter(page), ['대화 모델']);
@@ -13,6 +14,7 @@ for (const name of ['클로드', '디스코드', '슬랙', '카카오톡']) {
     const card = page.getByRole('group', { name: '테마' }).getByRole('button', { name, exact: true });
     await card.click();
     await expect(card).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('html')).toHaveAttribute('data-mode', mode);
 
     await page.goto('/');
     const report = await importFile(page, pickBot, CARD);
@@ -42,6 +44,9 @@ for (const name of ['클로드', '디스코드', '슬랙', '카카오톡']) {
     await expect(page.getByRole('article').last().getByText('She went up.')).toBeVisible();
     await page.goto('/settings/theme');
     await expect(page.getByRole('group', { name: '테마' }).getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('html')).toHaveAttribute('data-mode', mode);
+    await page.getByRole('group', { name: '테마' }).getByRole('button', { name: '기본', exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-mode', 'dark');
   });
 }
 
