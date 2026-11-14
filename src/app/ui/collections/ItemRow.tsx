@@ -1,4 +1,5 @@
 import type { MouseEvent, ReactNode } from 'react';
+import { StarMark } from '../foundation/Icon';
 import { Item } from './Item';
 import { RowControl, type RowMenu } from './RowControl';
 import styles from './ItemRow.module.css';
@@ -8,6 +9,8 @@ type Props = {
   title: string;
   time: string;
   typing: boolean;
+  // Its star's name while it is starred, drawn before the time.
+  starred?: string;
   preview: string;
   current?: boolean;
   // One of a pick of several; absent while not picking.
@@ -23,7 +26,7 @@ type Props = {
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
-export function ItemRow({ avatar, title, time, typing, preview, current = false, selected, control, drag, menu, onDropCard, onClick }: Props) {
+export function ItemRow({ avatar, title, time, typing, starred, preview, current = false, selected, control, drag, menu, onDropCard, onClick }: Props) {
   return (
     <RowControl control={control} drag={drag} onDropCard={onDropCard} menu={menu}>
       <Item
@@ -31,7 +34,12 @@ export function ItemRow({ avatar, title, time, typing, preview, current = false,
         scheme="side"
         leading={avatar}
         title={title}
-        meta={typing ? <span className={styles.typing}>생성 중</span> : time}
+        meta={
+          <>
+            {starred !== undefined && <StarMark label={starred} />}
+            {typing ? <span className={styles.typing}>생성 중</span> : time}
+          </>
+        }
         preview={preview}
         current={current}
         pressed={selected}

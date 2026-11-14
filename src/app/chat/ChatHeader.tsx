@@ -10,7 +10,7 @@ import { BOOKMARK, CAST, CHAT_LORE, EXPORT, FEATURE_NAMES, FEATURES_TITLE, LINEA
 import { useRemembering, useSession, useToolFrames } from '../session';
 import { navigate } from '../shell/router';
 import { runShortcut } from '../shortcuts';
-import { Avatar, ChatTitle, Divider, Menu, MenuItem, MoreMenu, ToolButton, useMenuHandle, useMenuOpener, useWide } from '../ui';
+import { Avatar, ChatTitle, Divider, IconButton, Menu, MenuItem, MoreMenu, ToolButton, useMenuHandle, useMenuOpener, useWide } from '../ui';
 import { ChatCastMenu } from './ChatCastMenu';
 import { ChatOnboarding } from './ChatOnboarding';
 import { MOVE_TO_FOLDER } from '../common/folders/FolderParts';
@@ -79,10 +79,13 @@ export function ChatHeaderActions({ chat }: { chat: OpenChat }) {
         expanded={panel?.kind === 'toggles'}
         onClick={actions.flipToggles}
       />
+      {/* One press where the header has room; in the ⋯ where it does not. */}
+      {item && wide && <IconButton icon={ACTS.star.icon} label={ACTS.star.label} size="sm" pressed={item.chat.starred ?? false} onClick={actions.star} />}
       <MoreMenu of="채팅" dot={failed}>
         {shelf && <MenuItem icon={SquarePen} label="캐릭터 편집" onClick={() => actions.side({ kind: 'character', id: shelf.id, part: null })} />}
         {!wide && <MenuItem icon={ACTS.newChat.icon} label={ACTS.newChat.label} onClick={() => navigate({ kind: 'new-chat', character: shelf?.id ?? null })} />}
         {item && <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => actions.openDialog('rename')} />}
+        {item && !wide && <MenuItem icon={ACTS.star.icon} label={ACTS.star.label} checked={item.chat.starred ?? false} multiple onClick={actions.star} />}
         {item && <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={actions.duplicate} />}
         {fileable && <MenuItem icon={FolderInput} label={MOVE_TO_FOLDER} onClick={openFolders.onClick} />}
         {chat.onboarding && <MenuItem icon={ClipboardList} label={ONBOARDING} onClick={() => actions.openDialog('onboarding')} />}

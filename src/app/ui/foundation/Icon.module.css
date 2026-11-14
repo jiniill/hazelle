@@ -22,3 +22,12 @@
   display: flex;
   color: var(--color-warn);
 }
+
+.star {
+  display: flex;
+  color: var(--color-accent);
+}
+
+.star svg {
+  fill: currentColor;
+}

@@ -1,6 +1,6 @@
 import type { ChatSummary } from '../../model/chat';
 import { allWritten, type ApiResult } from '../../runtime/api';
-import { forgetOrigin as forgetChatOrigin, removeChat, renameChat, restoreChat } from '../../runtime/chat/chat-log';
+import { forgetOrigin as forgetChatOrigin, removeChat, renameChat, restoreChat, starChat } from '../../runtime/chat/chat-log';
 import { branchFrom, duplicateChat } from '../../runtime/chat/message-acts';
 import { NameDialog } from '../common/NameDialog';
 import { BIN_KEEPS, COPY_SAID, copyName } from '../common/words';
@@ -10,7 +10,7 @@ import { useToast } from '../toast';
 
 type Edited = { id: string; title: string; character: string | null };
 
-// Chats renamed, copied or deleted from a chat's header ⋯, a message's ⋯, its row in the list, or a pick of rows.
+// Chats renamed, starred, copied or deleted from a chat's header ⋯, a message's ⋯, its row in the list, or a pick of rows.
 export function useChatEdits() {
   const session = useSession();
   const { store, talk } = session;
@@ -38,6 +38,7 @@ export function useChatEdits() {
     }, BIN_KEEPS);
   };
   const forgetOrigin = (id: string) => toast.settled(forgetChatOrigin(store, id));
+  const star = ({ id, chat }: Pick<ChatSummary, 'id' | 'chat'>) => toast.settled(starChat(store, id, !chat.starred));
   // A copy is not opened: the reader stays where the next copy is made from, and its toast offers 열기.
   const copying = async (made: Promise<ApiResult<string>>, said: { busy: string; failed: string; made: string }) => {
     toast.show(said.busy);
@@ -47,7 +48,7 @@ export function useChatEdits() {
   };
   const branch = (chat: string, message: string) => copying(branchFrom(session, chat, message), { busy: '채팅 분기 중…', failed: '채팅을 분기하지 못했어요.', made: '새 채팅으로 분기했어요.' });
   const duplicate = ({ id, title }: Pick<ChatSummary, 'id' | 'title'>) => copying(duplicateChat(session, id, copyName(title)), COPY_SAID);
-  return { rename, drop, forgetOrigin, branch, duplicate };
+  return { rename, star, drop, forgetOrigin, branch, duplicate };
 }
 
 // A branch or copy left untitled is named after its origin (chatTitle), not its first message.

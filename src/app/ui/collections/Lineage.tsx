@@ -6,7 +6,7 @@ import { tokenPx } from '../foundation/tokenPx';
 import { classNames } from '../foundation/classNames';
 
 // What a stem's head says, from its owner; where it stands in the family, the map adds.
-export type LineageHead = { title: string; note?: string; preview?: string; control?: ReactNode; onClick?: () => void };
+export type LineageHead = { title: string; note?: string; preview?: string; starred?: string; control?: ReactNode; onClick?: () => void };
 
 type Props = {
   root: Stem;
@@ -43,7 +43,7 @@ function Head({ stem, via, onPath, head, preview, own, style }: HeadProps) {
   const said = head(stem);
   return (
     <li ref={stem.current ? own : undefined} className={styles.head} style={style}>
-      <LineageCard title={said.title} note={said.note} tag={stem.ghost ? undefined : tagOf(via)} preview={preview ? said.preview : undefined} variant={frameOf(stem, via)} current={stem.current} tone={onPath ? 'accent' : 'plain'} control={said.control} onClick={said.onClick} />
+      <LineageCard title={said.title} note={said.note} tag={stem.ghost ? undefined : tagOf(via)} preview={preview ? said.preview : undefined} starred={said.starred} variant={frameOf(stem, via)} current={stem.current} tone={onPath ? 'accent' : 'plain'} control={said.control} onClick={said.onClick} />
     </li>
   );
 }
