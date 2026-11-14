@@ -332,6 +332,17 @@
   --color-prose-action: var(--bubble-quiet);
 }
 
+/* Floating tools stand on the last bubble's line at the side the bubbles leave free: half below it, they would cover
+   the next message's bubble, which may stand at either side. */
+.balloon .float {
+  transform: none;
+}
+
+.balloon.own .float {
+  right: auto;
+  left: 0;
+}
+
 @media (hover: hover) {
   .balloon:hover .stamp {
     color: var(--color-text-muted);
