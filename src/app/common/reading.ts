@@ -63,7 +63,8 @@ export const DISPLAY_DEFAULT: Display = { theme: 'base', chimes: false, chimeSou
 export function parseDisplay(stored: string, fallback: Display): Display {
   const read = fields<keyof Display | 'enterSends'>(stored);
   return {
-    theme: known(THEMES, read.theme, fallback.theme),
+    // 디스코드 was offered as channel (v0.6.34, by 설정 › 테마's address) before the themes took the products' names.
+    theme: known(THEMES, read.theme === 'channel' ? 'discord' : read.theme, fallback.theme),
     chimes: flag(read.chimes, fallback.chimes),
     chimeSounds: parseChimeSounds(read.chimeSounds, fallback.chimeSounds),
     // The key theme held the mode until 2026-11-13, when theme came to mean the app's whole look. A display saved

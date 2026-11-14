@@ -32,6 +32,7 @@ describe('stored display settings', () => {
   it('reads a theme beside a mode, and starts one it does not know from the fallback', () => {
     expect(parseDisplay(JSON.stringify({ mode: 'light', theme: 'discord' }), DISPLAY_DEFAULT)).toMatchObject({ mode: 'light', theme: 'discord' });
     expect(parseDisplay(JSON.stringify({ mode: 'light', theme: 'toString' }), DISPLAY_DEFAULT).theme).toBe('base');
+    expect(parseDisplay(JSON.stringify({ mode: 'light', theme: 'channel' }), DISPLAY_DEFAULT).theme).toBe('discord');
   });
 
   it('keeps a known mode, color picks and real switches, and starts anything else from the fallback', () => {

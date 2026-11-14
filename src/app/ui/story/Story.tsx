@@ -630,14 +630,18 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
     if (words !== 'each' || !slack) return;
     // A slot has no box of its own.
     const last = [...root().children].findLast((block) => (block as HTMLElement).offsetWidth > 0) as HTMLElement | undefined;
-    if (!last) return slack(0);
+    if (!last) return;
     const measure = () => slack(host.current!.offsetWidth - last.offsetWidth);
     const sizes = new ResizeObserver(measure);
     sizes.observe(host.current!);
     sizes.observe(last);
     measure();
-    return () => sizes.disconnect();
-  }, [words, slack, html, cursor, placed, math, code]);
+    // Told none again when this story no longer says: its words set another way, or something else in its place.
+    return () => {
+      sizes.disconnect();
+      slack(0);
+    };
+  }, [words, slack, html, cursor, pictures, veil, veilTaps, whole, placed, math, code]);
 
   const bound = bind?.onChange;
   useEffect(() => {

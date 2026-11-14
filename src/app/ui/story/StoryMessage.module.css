@@ -385,6 +385,11 @@
   translate: var(--bubble-slack, 0px);
 }
 
+/* While a reply is written the words end in its waiting note, not a bubble, and the last bubble still grows. */
+.writing .stamp {
+  translate: none;
+}
+
 .balloon .box {
   padding: var(--space-8) var(--space-12);
   border: 0;
