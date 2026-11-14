@@ -155,7 +155,8 @@
 
 /* servers (a rail shape): a slimmer rail of round faces, the open one squared off with a bar at the rail's edge in the
    ring's place. */
-.servers {
+.servers,
+.labels {
   width: var(--rail-width-slim);
 }
 

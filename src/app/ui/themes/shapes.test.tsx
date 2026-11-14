@@ -1,8 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactNode } from 'react';
+import { Wrench } from 'lucide-react';
 import { expect, it } from 'vitest';
 import { ChatRow } from '../collections/ItemRow';
 import { Composer } from '../controls/Composer';
+import { IconButton } from '../controls/IconButton';
 import { SchemeContext, type Scheme } from '../foundation/scheme';
 import { BASE, ThemeContext } from '../foundation/theme';
 import { ChatTitle } from '../layout/ChatFrame';
@@ -68,4 +70,9 @@ it('draws the rail and the sidebar in a side\'s scheme under the page\'s mode th
   expect(worn({}, <Sidebar page actions={null}>{null}</Sidebar>)).not.toContain('data-theme');
   expect(worn({ mode: 'dark' }, rail)).not.toContain('data-theme');
   expect(worn({ bg: 'blue' }, rail)).not.toContain('data-theme');
+});
+
+it('writes a framed button\'s name under its icon in a labels rail only, and no other button\'s', () => {
+  const named = (theme: Parameters<typeof drawn>[0], framed: boolean) => drawn(theme, <IconButton icon={Wrench} label="도구" framed={framed} onClick={() => {}} />).includes('>도구</span>');
+  expect([named(THEMES.work, true), named(THEMES.work, false), named(BASE, true), named(THEMES.channel, true)]).toEqual([true, false, false, false]);
 });

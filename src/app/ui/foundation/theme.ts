@@ -39,7 +39,7 @@ export type Tone = {
 // not build.
 export type Shapes = {
   header: 'plain' | 'topic';
-  rail: 'icons' | 'servers';
+  rail: 'icons' | 'servers' | 'labels';
   list: 'cards' | 'channels';
   composer: 'box' | 'bar' | 'toolbar';
   message: 'prose' | 'row';
