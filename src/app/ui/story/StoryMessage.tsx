@@ -63,13 +63,18 @@ type Props = {
 // under a pointer they float over the row's foot, half below it, and show while the row is pointed at or holds the
 // focus. With no pointer to hover, or told to stay, a row's tools keep prose's line. bubble: everyone's words in
 // bubbles, each of a reply's blocks one or the whole reply one (BubblesContext), mine in the accent at the end with no
-// face or name, the time beside the words, and the tools as a row's.
-// words: how the words are set (Story's Words). stamps: the time stands beside the words, not by the name.
-type Shape = { root?: string; words: (mine: boolean, each: boolean) => Words; floats: boolean; stamps: boolean };
+// face or name, the time beside the words, and the tools as a row's. page: nobody's face or name, the words on the
+// ground and mine in a box at the end; what else the head holds, a mark or a badge, keeps its line over the words, the
+// time stands in the tools' line, the tools under the words where they start (mine's where its box ends), and the
+// reading rail before the words, in the column's edge.
+// words: how the words are set (Story's Words). time: where the time stands: by the name, beside the words, or in the
+// tools' line. speaker: whether the face and the name are drawn; a name not drawn is still said.
+type Shape = { root?: string; words: (mine: boolean, each: boolean) => Words; floats: boolean; time: 'head' | 'beside' | 'foot'; speaker: (mine: boolean) => boolean };
 const SHAPES: Record<Shapes['message'], Shape> = {
-  prose: { words: (mine) => (mine ? 'box' : 'ground'), floats: false, stamps: false },
-  row: { root: styles.row, words: () => 'ground', floats: true, stamps: false },
-  bubble: { root: styles.balloon, words: (_, each) => (each ? 'each' : 'box'), floats: true, stamps: true },
+  prose: { words: (mine) => (mine ? 'box' : 'ground'), floats: false, time: 'head', speaker: () => true },
+  page: { root: styles.page, words: (mine) => (mine ? 'box' : 'ground'), floats: false, time: 'foot', speaker: () => false },
+  row: { root: styles.row, words: () => 'ground', floats: true, time: 'head', speaker: () => true },
+  bubble: { root: styles.balloon, words: (_, each) => (each ? 'each' : 'box'), floats: true, time: 'beside', speaker: (mine) => !mine },
 };
 
 // Whether a bubble message's reply is a bubble a block, or one bubble whole.
@@ -89,8 +94,10 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
   const pinned = timePin?.pinned === id;
   const follows = useContext(ToolsFollowContext);
   const each = useContext(BubblesContext);
-  const stamps = shape.stamps && !plain;
-  const stamp = <span className={stamps ? styles.stamp : styles.time}>{time}</span>;
+  // Words on the ground at the message's width have no side for the time to stand beside.
+  const at = plain && shape.time === 'beside' ? 'head' : shape.time;
+  const stamp = <span className={at === 'beside' ? styles.stamp : styles.time}>{time}</span>;
+  const speaker = shape.speaker(mine);
   const foundDelay = useMemo(() => `-${Math.max(0, Date.now() - found)}ms`, [found]);
   const memory = useContext(RowMemoryContext);
   const revisited = useRef(memory?.visited ?? false);
@@ -104,7 +111,7 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
       {found !== 0 && <span key={found} className={styles.found} style={{ animationDelay: foundDelay }} aria-hidden />}
       {marked && <span className={styles.marked} aria-hidden />}
       <div className={styles.side}>
-        {avatar}
+        {speaker && avatar}
         <div className={styles.rail} aria-hidden {...{ [RAIL]: '' }}>
           <div className={styles.reading}>
             <span className={styles.track}>
@@ -117,14 +124,15 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
         <Speech
           name={name}
           mine={mine}
+          named={speaker}
           words={plain ? 'ground' : shape.words(mine, each)}
-          beside={stamps && stamp}
+          beside={at === 'beside' && stamp}
           head={
             <>
               {mark && <span className={styles.mark}>{mark}</span>}
               {badges.slice(0, BADGES_SHOWN).map((badge, index) => <span key={index} className={styles.badge}>{badge}</span>)}
               {badges.length > BADGES_SHOWN && <span className={styles.badge} title={badges.slice(BADGES_SHOWN).join(' · ')}>{`+${badges.length - BADGES_SHOWN}`}</span>}
-              {!stamps && stamp}
+              {at === 'head' && stamp}
             </>
           }
         >
@@ -134,6 +142,7 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
         <div className={classNames(styles.foot, floating && styles.loose, follows && styles.follows)}>
           <div className={styles.after}>{after}</div>
           {tools && <div className={classNames(styles.tools, floating && styles.float)}>{tools}</div>}
+          {at === 'foot' && stamp}
         </div>
       </div>
     </article>
@@ -141,8 +150,9 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
 }
 
 // Who speaks and what they said, as the chat and its exported log (LogExport) both draw it; head: what stands by the
-// name. words: how the words are set. beside: what stands at the words' end, on their last line.
-export function Speech({ name, mine, words, head, beside, children }: { name: string; mine: boolean; words: Words; head?: ReactNode; beside?: ReactNode; children: ReactNode }) {
+// name. words: how the words are set. beside: what stands at the words' end, on their last line. named: the name is
+// drawn; one that is not is kept for who cannot see the page.
+export function Speech({ name, mine, named = true, words, head, beside, children }: { name: string; mine: boolean; named?: boolean; words: Words; head?: ReactNode; beside?: ReactNode; children: ReactNode }) {
   // Words in a box or in bubbles are already boxed: their dialogue keeps to color, whatever 대사 모양 says.
   const set = words === 'ground' ? children : (
     <div className={words === 'box' ? styles.box : styles.fit}>
@@ -154,7 +164,7 @@ export function Speech({ name, mine, words, head, beside, children }: { name: st
   return (
     <>
       <div className={styles.head}>
-        <span className={mine ? styles.me : styles.name}>{name}</span>
+        <span className={named ? (mine ? styles.me : styles.name) : styles.unseen}>{name}</span>
         {head}
       </div>
       {beside ? (

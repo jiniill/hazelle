@@ -29,3 +29,17 @@ test('a bubble message sets its words a bubble a block, or in one box where told
   const theirs = renderToStaticMarkup(message(false));
   for (const name of [styles.box, styles.fit, styles.line]) expect(theirs).not.toContain(name);
 });
+
+test('a page message draws no face and no name but still says who spoke, with the time after the tools; a bubble does so for mine alone', () => {
+  const message = (mine: boolean) => <StoryMessage avatar={<i>얼굴</i>} name="미라" time="오후 9:39" mine={mine} id="m" tools="도구">본문</StoryMessage>;
+  const drawn = (theme: (typeof THEMES)[keyof typeof THEMES], mine: boolean) => renderToStaticMarkup(<ThemeContext value={theme}>{message(mine)}</ThemeContext>);
+  for (const mine of [false, true]) {
+    const page = drawn(THEMES.doc, mine);
+    expect(page).not.toContain('얼굴');
+    expect(page).toContain(`<span class="${styles.unseen}">미라</span>`);
+    expect(page.indexOf('도구')).toBeLessThan(page.indexOf('오후 9:39'));
+  }
+  expect(drawn(THEMES.bubble, false)).toContain('얼굴');
+  expect(drawn(THEMES.bubble, true)).toContain(styles.unseen);
+  expect(drawn(THEMES.base, true)).toContain('얼굴');
+});

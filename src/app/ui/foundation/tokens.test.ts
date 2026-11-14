@@ -105,9 +105,9 @@ it.each(themed)('keeps what the %s theme states on its send button in %s readabl
   if (tone.onSend) expect(contrast(tone.onSend, tone.send ?? tone.accent)).toBeGreaterThanOrEqual(4.5);
 });
 
-it.each(themed)('keeps the words, the dialogue, the action voice and what is read in the accent of the %s theme in %s readable on its page, and in its bubble where it draws one', (_, mode, tone, theme) => {
+it.each(themed)('keeps the words, the dialogue, the action voice and what is read in the accent of the %s theme in %s readable on its page, and in the bubble fill where its message shape draws with it', (_, mode, tone, theme) => {
   const action = tone.action ?? color(mode === 'dark' ? dark! : light!, 'prose-action');
-  const fills = [tone.page, ...(theme.shapes.message === 'bubble' ? [tone.bubble ?? tone.surface ?? rung(mode, 'surface', tone.page)] : [])];
+  const fills = [tone.page, ...(['bubble', 'page'].includes(theme.shapes.message) ? [tone.bubble ?? tone.surface ?? rung(mode, 'surface', tone.page)] : [])];
   for (const fill of fills) for (const ink of [tone.text, tone.dialogue, action, tone.mark ?? tone.accent]) expect(contrast(ink, fill)).toBeGreaterThanOrEqual(4.5);
 });
 

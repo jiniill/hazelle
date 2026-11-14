@@ -79,6 +79,19 @@
   color: var(--color-name);
 }
 
+.unseen {
+  composes: srOnly from '../foundation/a11y.module.css';
+}
+
+/* A head whose name is not drawn takes no line unless it holds something else. */
+.head:has(> .unseen:only-child) {
+  display: contents;
+}
+
+.own .head:has(> .unseen) {
+  justify-content: flex-end;
+}
+
 .me {
   color: var(--color-text);
 }
@@ -252,6 +265,39 @@
   gap: var(--space-4);
 }
 
+/* page (a message shape). No face stands in the side, so the reading rail alone hangs before the words. */
+.page .side {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--space-12) * -1);
+}
+
+.page.own .box {
+  align-self: flex-end;
+  max-width: var(--bubble-reach);
+  border: 0;
+  background: var(--color-bubble);
+}
+
+/* The tools lead their line under the words, the time after them; mine's end it, the time before them. */
+.page .tools {
+  order: -2;
+  margin-left: 0;
+}
+
+.page .time {
+  order: -1;
+  align-self: center;
+}
+
+.page.own .tools {
+  order: 1;
+}
+
+.page.own .time {
+  order: 0;
+}
+
 /* bubble (a message shape). What a bubble is drawn with is named here and read where the bubble is: the box below, or
    each block in the story's shadow root (Story.shadow.css). Mine is the accent's, its every word in what stands on it. */
 .balloon {
@@ -283,17 +329,8 @@
   font-weight: var(--weight-regular);
 }
 
-/* Mine has no face and no name: what else its head holds, a mark or a badge, stands at the end over the bubble. */
-.balloon.own .side,
-.balloon.own .me {
-  display: none;
-}
-
-.balloon.own .head {
-  justify-content: flex-end;
-}
-
-.balloon.own .head:not(:has(.mark, .badge)) {
+/* Mine has no face: its column goes with it, the reading rail too. */
+.balloon.own .side {
   display: none;
 }
 

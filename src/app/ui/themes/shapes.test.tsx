@@ -73,6 +73,7 @@ it('floats a row message\'s tools only under a pointer that hovers, and never on
   expect(toolsFloat('row', false, false)).toBe(false);
   expect(toolsFloat('row', true, true)).toBe(false);
   expect(toolsFloat('prose', true, false)).toBe(false);
+  expect(toolsFloat('page', true, false)).toBe(false);
 });
 
 it('draws the rail and the sidebar in a side\'s scheme under the page\'s mode that has one, but not a sidebar that is the page, nor under a 배경 pick', () => {

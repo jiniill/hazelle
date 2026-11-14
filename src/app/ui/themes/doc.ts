@@ -3,7 +3,7 @@ import type { Theme } from '../foundation/theme';
 export const doc: Theme = {
   id: 'doc',
   name: '문서',
-  shapes: { header: 'bare', rail: 'icons', list: 'cards', composer: 'box', message: 'prose', day: 'rule' },
+  shapes: { header: 'bare', rail: 'icons', list: 'cards', composer: 'box', message: 'page', day: 'rule' },
   finish: { rows: 'open', faces: 'soft', lines: 'open', speakers: 'small', corners: 'soft' },
   letters: { font: 'serif', size: 16, leading: 'narrow', width: 'narrow' },
   tones: {

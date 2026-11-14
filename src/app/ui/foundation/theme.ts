@@ -46,7 +46,7 @@ export type Shapes = {
   rail: 'icons' | 'servers' | 'labels';
   list: 'cards' | 'channels' | 'people';
   composer: 'box' | 'bar' | 'toolbar';
-  message: 'prose' | 'row' | 'bubble';
+  message: 'prose' | 'page' | 'row' | 'bubble';
   day: 'rule' | 'pill';
 };
 
