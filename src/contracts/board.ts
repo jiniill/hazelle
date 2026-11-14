@@ -17,6 +17,8 @@ export const MAX_TITLE_LENGTH = 80;
 export const MAX_POST_LENGTH = 8000;
 export const MAX_COMMENT_LENGTH = 2000;
 export const MAX_REASON_LENGTH = 200;
+// A list's search words (PostList q).
+export const MAX_SEARCH_LENGTH = 50;
 // A 문제 진단 sent with an operator-only post, clipped to this by the sender.
 export const MAX_DIAGNOSTICS_LENGTH = 16000;
 // Per account or guest browser, counted over the last 24 hours in the database, so a restart resets nothing.
@@ -61,6 +63,8 @@ export type PostRow = {
   editedAt: number | null;
   votes: number;
   voted: boolean;
+  // Readers who opened it, each once a day, its author and the operator apart; an operator-only post counts none.
+  views: number;
   commentCount: number;
   locked: boolean;
   hidden: Hidden | null;

@@ -168,7 +168,7 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
       case 'calculator':
         return <CalculatorScreen back={sideBack(at)} />;
       case 'board':
-        return <BoardScreen key={String(at.operator)} operator={at.operator} category={at.category ?? null} back={sideBack(at)} />;
+        return <BoardScreen key={String(at.operator)} operator={at.operator} category={at.category ?? null} query={at.q ?? ''} back={sideBack(at)} />;
       case 'post':
         return <PostScreen key={at.id} id={at.id} back={back(at)} />;
       case 'board-write':

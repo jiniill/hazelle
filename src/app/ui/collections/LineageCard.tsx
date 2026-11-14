@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { StarMark } from '../foundation/Icon';
 import { Tag } from '../foundation/Tag';
 import { RowControl } from './RowControl';
 import styles from './LineageCard.module.css';
@@ -11,6 +12,8 @@ type Props = {
   // Before the note: where it came from (원본, 25번째에서, 사본).
   tag?: string;
   preview?: string;
+  // Its star's name while it is starred, drawn before the tag.
+  starred?: string;
   // copy: a dashed frame. ghost: a dotted one with no fill, its title muted, standing in for a chat gone.
   variant?: 'plain' | 'copy' | 'ghost';
   current?: boolean;
@@ -23,7 +26,7 @@ type Props = {
 
 const FRAMES = { plain: '', copy: styles.copy, ghost: styles.ghost };
 
-export function LineageCard({ title, note, tag, preview, variant = 'plain', current = false, tone = 'plain', control, onClick }: Props) {
+export function LineageCard({ title, note, tag, preview, starred, variant = 'plain', current = false, tone = 'plain', control, onClick }: Props) {
   const classes = classNames(styles.card, FRAMES[variant], current && styles.current);
   const content = (
     <>
@@ -31,8 +34,9 @@ export function LineageCard({ title, note, tag, preview, variant = 'plain', curr
         {current && <span className={styles.spark} aria-hidden />}
         {title}
       </span>
-      {(tag !== undefined || note !== undefined) && (
+      {(tag !== undefined || note !== undefined || starred !== undefined) && (
         <span className={styles.meta}>
+          {starred !== undefined && <StarMark label={starred} />}
           {tag !== undefined && <Tag tone={tone === 'accent' ? 'accent' : 'faint'}>{tag}</Tag>}
           {note}
         </span>

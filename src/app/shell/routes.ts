@@ -72,8 +72,8 @@ export type Route =
   | { kind: 'translator' }
   | { kind: 'calculator' }
   // 게시판 (design §6.13). operator: the operator-only posts, listed or preset in the compose.
-  // category: the tab open, none for 전체; in a compose, the one a fresh post starts with.
-  | { kind: 'board'; operator: boolean; category?: Category }
+  // category: the tab open, none for 전체; in a compose, the one a fresh post starts with. q: the list's search words.
+  | { kind: 'board'; operator: boolean; category?: Category; q?: string }
   | { kind: 'post'; id: number }
   | { kind: 'board-write'; operator: boolean; category?: Category }
   | { kind: 'board-edit'; id: number }
@@ -102,9 +102,6 @@ export type Below = Exclude<Route, Kind<'home' | 'settings' | 'tools' | 'share'>
 
 const ID = /^[0-9a-f-]{36}$/;
 const POST_ID = /^[1-9][0-9]{0,14}$/;
-const TO_OPERATOR = 'to=operator';
-const boardQuery = ({ operator, category }: { operator: boolean; category?: Category }) =>
-  operator || category ? `?${[operator && TO_OPERATOR, category && `category=${category}`].filter(Boolean).join('&')}` : '';
 const NONE = 'none';
 // Before the connection type ids, so a type can never take over 직접 연결's path.
 const DIRECT = 'direct';
@@ -219,7 +216,8 @@ export function parseRoute(at: string): Route {
   if (top === 'board') {
     const operator = params.get('to') === 'operator';
     const category = CATEGORIES.find((each) => each === params.get('category'));
-    if (id === undefined) return category ? { kind: 'board', operator, category } : { kind: 'board', operator };
+    const q = params.get('q');
+    if (id === undefined) return { kind: 'board', operator, ...(category && { category }), ...(q && { q }) };
     if (id === 'write' && sub === undefined) return category ? { kind: 'board-write', operator, category } : { kind: 'board-write', operator };
     if (id === 'activity' && sub === undefined) return { kind: 'board-activity' };
     if (id === 'mine' && sub === undefined) return { kind: 'board-mine' };
@@ -239,6 +237,7 @@ const query = (values: Record<string, string | undefined>) => {
   const given = new URLSearchParams(Object.entries(values).filter((entry): entry is [string, string] => entry[1] !== undefined));
   return given.size > 0 ? `?${given}` : '';
 };
+const boardQuery = ({ operator, category, q }: { operator: boolean; category?: Category; q?: string }) => query({ to: operator ? 'operator' : undefined, category, q });
 
 // A malformed escape (a stray %) names no model.
 function decoded(segments: string[]): string | null {

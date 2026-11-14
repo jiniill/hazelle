@@ -352,6 +352,10 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     if (item) void edits.duplicate(item);
   }
 
+  function star() {
+    if (item) edits.star(item);
+  }
+
   // Scripts/tools require a saved chat, including actions on an unsaved greeting.
   async function saved() {
     const unstarted = id === null && await starting().saved;
@@ -455,6 +459,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       toolInput: (module: string, item: string) => void toolInput.run(module, item),
       stopToolInput: toolInput.stop,
       rename,
+      star,
       drop,
       duplicate,
     }),

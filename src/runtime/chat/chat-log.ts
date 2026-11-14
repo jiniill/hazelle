@@ -105,7 +105,7 @@ export async function copyChat(store: ObjectStore, source: string, copy: Copy): 
     writes.push(...(await branchToolData(store, source, id, messages, versions)));
     const print = chatPrint(store, source);
     if (print) writes.push({ type: 'create', kind: 'cacheprint', id: cachePrintId(id), parent: id, value: print.value });
-    const chat = { ...withBookmarks(item.chat, carried(item.chat.bookmarks, messages)), seed: item.chat.seed ?? source };
+    const chat = { ...without(withBookmarks(item.chat, carried(item.chat.bookmarks, messages)), 'starred'), seed: item.chat.seed ?? source };
     // An untitled branch's or copy's own title is its origin's with · 분기/· 사본 (originTitle), so a copy of it names that
     // origin, never X · 분기 · 사본.
     const name = item.chat.title ?? item.chat.origin?.name ?? item.title;
@@ -305,6 +305,8 @@ export function copyShown(store: ObjectStore, chat: string, message: Message) {
 
 // A blank name gives the chat back its first message as its name.
 export const renameChat = (store: ObjectStore, id: string, name: string) => store.update('chat', id, (current) => ({ ...current, title: name.trim() || null }));
+
+export const starChat = (store: ObjectStore, id: string, starred: boolean) => store.update('chat', id, (current) => (starred ? { ...current, starred: true } : without(current, 'starred')));
 
 // Drops the 분기됨 divider and the branch title fallback; the chat reads as one of its own from then on.
 export const forgetOrigin = (store: ObjectStore, id: string) => store.update('chat', id, (current) => without(current, 'origin'));

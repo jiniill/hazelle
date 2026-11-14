@@ -51,6 +51,8 @@ export type Chat = Mark & {
   movedPictures?: true;
   // A chat folder of its own character's; one gone or another character's reads as none.
   folder?: string;
+  // 즐겨찾기: marked to be found again among its branches and copies, which do not take the mark with them.
+  starred?: true;
 };
 
 // Risu's 유틸리티 봇: a card made for a task, not a role, keeps the prompt's blocks and the persona out, and so does a chat

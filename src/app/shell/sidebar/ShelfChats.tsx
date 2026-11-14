@@ -1,5 +1,5 @@
 import { ChevronLeft, FolderInput, FolderPlus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toggle } from '../../../connectors/values';
 import { chatFolderOf, type ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
@@ -56,10 +56,17 @@ export function ShelfChats({ page, shelf }: Props) {
   const chatFolders = useChatFolders(shelf.id);
   const [asked, setAsked] = useState<{ chat: ChatSummary; at?: { x: number; y: number } } | null>(null);
   const [renaming, setRenaming] = useState<ChatSummary | null>(null);
+  const [starredOnly, setStarredOnly] = useState(false);
+  const starred = useMemo(() => shelf.chats.filter(({ chat }) => chat.starred), [shelf.chats]);
+  // With the last star gone its filter goes too, at once and for the next star: the list is whole again.
+  const onlyStarred = starredOnly && starred.length > 0;
+  useEffect(() => {
+    if (!starred.length) setStarredOnly(false);
+  }, [starred.length]);
   const opened = useMemo(() => new Set(openFolders), [openFolders]);
   const unfolded = useMemo(() => new Set(openGroups), [openGroups]);
   const grouped = useMemo(() => groupCopies(shelf.chats, CHAT), [shelf.chats]);
-  const { field, found, none, words } = useSearch(shelf.chats, '이 목록에서 검색', (item) => [item.title, item.preview ?? '']);
+  const { field, found, none, words } = useSearch(onlyStarred ? starred : shelf.chats, '이 목록에서 검색', (item) => [item.title, item.preview ?? '']);
   const writing = useWritingChats();
   const { pickChats } = useImport();
   const route = useRoute();
@@ -68,10 +75,12 @@ export function ShelfChats({ page, shelf }: Props) {
   // 캐릭터 없이 has a page only beside its chats.
   const open = id !== null ? () => openCharacter(id, !page) : page ? undefined : () => navigate({ kind: 'shelf', character: null });
 
-  // Searching and picking several keep every chat in its own place, so each can be found and picked.
-  const flat = Boolean(words) || moving.picked !== null;
+  // Searched or starred only, the chats found stand alone, each saying its folder.
+  const sought = Boolean(words) || onlyStarred;
+  // Those and picking several keep every chat in its own place, so each can be found and picked.
+  const flat = sought || moving.picked !== null;
   const rows = useMemo(() => {
-    if (words) return found.map((chat): ListRow => ({ key: chat.id, depth: 0, chat }));
+    if (sought) return found.map((chat): ListRow => ({ key: chat.id, depth: 0, chat }));
     const result: ListRow[] = [];
     const latest = latestFirst(CHAT, (item) => item.at, grouped.copies);
     const top = new Set(grouped.top);
@@ -93,7 +102,7 @@ export function ShelfChats({ page, shelf }: Props) {
     index.folders.forEach((folder) => visit(folder, 0));
     place(index.loose, 0);
     return result;
-  }, [words, found, index, opened, grouped, unfolded, flat]);
+  }, [sought, found, index, opened, grouped, unfolded, flat]);
 
   const listed = useMemo(() => rows.flatMap((row) => ('chat' in row ? [row.chat.id] : [])), [rows]);
   const toggleFolder = (folder: string) => setOpenFolders(toggle(openFolders, folder));
@@ -101,7 +110,7 @@ export function ShelfChats({ page, shelf }: Props) {
 
   const chatRow = (item: ChatSummary) => {
     const preview = item.preview ?? '미리보기 없음';
-    const where = words ? whereIs(index, chatFolderOf(item)) : undefined;
+    const where = sought ? whereIs(index, chatFolderOf(item)) : undefined;
     const hung = flat ? 0 : (grouped.copies.get(item.id)?.length ?? 0);
     return (
       <ItemRow
@@ -109,12 +118,13 @@ export function ShelfChats({ page, shelf }: Props) {
         title={item.title}
         time={item.at === null ? '' : ago(item.at)}
         typing={writing.has(item.id)}
+        starred={item.chat.starred && ACTS.star.label}
         preview={where ? `${where} · ${preview}` : preview}
         current={item.id === openChat}
         selected={moving.picked ? moving.picked.has(item.id) : undefined}
         control={hung > 0 && <FoldButton open={unfolded.has(item.id)} onToggle={() => toggleGroup(item.id)} noun="분기·사본" count={hung} brief />}
         drag={moving.dropInto && item.id}
-        onDropCard={words ? undefined : moving.dropInto?.(chatFolderOf(item))}
+        onDropCard={sought ? undefined : moving.dropInto?.(chatFolderOf(item))}
         menu={moving.picked ? undefined : { handle: chatMenu, onOpen: () => setAsked({ chat: item, at: chatMenu.read().at }) }}
         onClick={(event) => {
           if (event.ctrlKey || event.metaKey) moving.toggle(item.id);
@@ -143,6 +153,7 @@ export function ShelfChats({ page, shelf }: Props) {
               {ACTS.newChat.label}
             </Button>
             {moving.button}
+            {starred.length > 0 && <IconButton icon={ACTS.star.icon} label={`${ACTS.star.label}만 보기`} size="sm" pressed={onlyStarred} onClick={() => setStarredOnly(!onlyStarred)} />}
             <IconButton icon={FolderPlus} label={newOf('폴더')} size="sm" onClick={() => naming.name({ id: null, name: '' })} />
             <IconButton icon={ACTS.import.icon} label={IMPORT_CHATS} size="sm" onClick={() => pickChats(shelf.id)} />
           </Row>
@@ -173,6 +184,7 @@ export function ShelfChats({ page, shelf }: Props) {
         {asked && (
           <>
             <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setRenaming(asked.chat)} />
+            <MenuItem icon={ACTS.star.icon} label={ACTS.star.label} checked={asked.chat.chat.starred ?? false} multiple onClick={() => edits.star(asked.chat)} />
             <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void edits.duplicate(asked.chat)} />
             {index.folders.length > 0 && <MenuItem icon={FolderInput} label={MOVE_TO_FOLDER} onClick={() => folderMenu.set({ open: true, from: null, at: asked.at })} />}
             <Divider variant="menu" />
