@@ -8,7 +8,8 @@ import { MODE, type Mode } from './scheme';
 // mode's; name, a speaker's in the story, left out is the mark's, and is stated for the theme's own page. pointed is
 // the ground under a message the pointer is on, none when left out. mark is the accent where it is read, as words,
 // icons and the focus ring: left out is the accent, and is stated when that is too dim on the theme's fills.
-// onAccent is what stands on an accent fill, a button's words and a switch's knob: left out is the rule's.
+// onAccent is what stands on an accent fill, a button's words and a switch's knob, and accentHover that fill under
+// a pointer: left out are the rule's.
 export type Tone = {
   page: string;
   text: string;
@@ -26,6 +27,7 @@ export type Tone = {
   pointed?: string;
   mark?: string;
   onAccent?: string;
+  accentHover?: string;
 };
 
 // A region's shape by name: which arrangement the kit component that draws the region takes. The first of each is
@@ -96,7 +98,7 @@ const GROUND: Partial<Record<keyof Tone, string[]>> = {
 const VOICE: Partial<Record<keyof Tone, string[]>> = { name: ['--color-name'] };
 // What is read in the accent and what stands on it follow a 강조 pick as well, but no 배경 pick changes the accent,
 // so a theme's hold on any page while 강조 is base; a name not held then is the mark's (tokens.css).
-const ACCENTED: Partial<Record<keyof Tone, string[]>> = { mark: ['--color-accent-mark'], onAccent: ['--color-on-accent'] };
+const ACCENTED: Partial<Record<keyof Tone, string[]>> = { mark: ['--color-accent-mark'], onAccent: ['--color-on-accent'], accentHover: ['--color-accent-hover'] };
 
 const FINISH: { [Part in keyof Finish]: Record<Finish[Part], string> } = {
   rows: { open: '', close: '--story-gap:var(--story-gap-close);' },

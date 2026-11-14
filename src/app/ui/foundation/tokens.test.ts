@@ -55,13 +55,15 @@ function hexOf([L, a, b]: number[]): string {
   return `#${channels.map((channel) => Math.round(255 * (channel <= 0.0031308 ? 12.92 * Math.max(0, channel) : 1.055 * Math.min(1, channel) ** (1 / 2.4) - 0.055)).toString(16).padStart(2, '0')).join('')}`;
 }
 
-// The rung a 배경 pick's rule gives a page: a share of white or black over it, mixed in oklab.
-function rung(mode: Mode, role: string, page: string): string {
-  const rules = new RegExp(`\\[data-mode='${mode}'\\]:is\\(\\[data-bg\\][^{]*\\{([\\s\\S]*?)\\n\\}`).exec(tokens)![1]!;
-  const [, tint, share] = new RegExp(`--color-${role}: color-mix\\(in oklab, var\\(--palette-(white|black)\\) ([\\d.]+)%, var\\(--color-pick-bg\\)\\);`).exec(rules)!;
-  const [over, under] = [oklab(tint === 'white' ? '#ffffff' : '#000000'), oklab(page)];
+// What a pick's rule gives a seed: a share of white or black over it, mixed in oklab.
+function mixed(mode: Mode, pick: 'bg' | 'accent', role: string, seed: string): string {
+  const rules = new RegExp(`\\[data-mode='${mode}'\\]:is\\(\\[data-${pick}\\][^{]*\\{([\\s\\S]*?)\\n\\}`).exec(tokens)![1]!;
+  const [, tint, share] = new RegExp(`--color-${role}: color-mix\\(in oklab, var\\(--palette-(white|black)\\) ([\\d.]+)%, var\\(--color-pick-${pick}\\)\\);`).exec(rules)!;
+  const [over, under] = [oklab(tint === 'white' ? '#ffffff' : '#000000'), oklab(seed)];
   return hexOf(over.map((value, at) => (Number(share) / 100) * value + (1 - Number(share) / 100) * under[at]!));
 }
+
+const rung = (mode: Mode, role: string, page: string) => mixed(mode, 'bg', role, page);
 
 // The fills words stand on, as the theme states them or as the rule gives them to its page.
 const fillsOf = (mode: Mode, tone: Tone) => [tone.page, tone.sidebar ?? rung(mode, 'sidebar', tone.page), tone.surface ?? rung(mode, 'surface', tone.page), tone.hover ?? rung(mode, 'surface-hover', tone.page)];
@@ -89,8 +91,9 @@ it.each(themed)('keeps a name the %s theme states in %s readable on its page', (
   if (tone.name) expect(contrast(tone.name, tone.page)).toBeGreaterThanOrEqual(4.5);
 });
 
-it.each(themed)('keeps what the %s theme states on its accent in %s readable there', (_, __, tone) => {
-  if (tone.onAccent) expect(contrast(tone.onAccent, tone.accent)).toBeGreaterThanOrEqual(4.5);
+it.each(themed)('keeps what the %s theme states on its accent in %s readable there, at rest and under a pointer', (_, mode, tone) => {
+  if (!tone.onAccent) return;
+  for (const fill of [tone.accent, tone.accentHover ?? mixed(mode, 'accent', 'accent-hover', tone.accent)]) expect(contrast(tone.onAccent, fill)).toBeGreaterThanOrEqual(4.5);
 });
 
 // 기본's accent clears this on the same fills, so a theme is held to it too: by its accent, or by the mark it states.
