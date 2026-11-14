@@ -11,6 +11,8 @@
   /* A layer's window (Shell.module.css) floats its sidebar apart from the body, with no rule between them. */
   border-right: var(--sidebar-rule, var(--border-thin) solid var(--color-divider));
   background: var(--color-sidebar);
+  /* Stated, not inherited: as a theme's side it is in a scheme of its own. */
+  color: var(--color-text);
 }
 
 .page {
@@ -78,6 +80,7 @@
   padding: var(--space-16) 0 var(--space-12);
   border-right: var(--border-thin) solid var(--color-divider);
   background: var(--color-rail);
+  color: var(--color-text);
 }
 
 .mark {

@@ -7,8 +7,8 @@
   height: var(--control-compact);
   border: var(--border-medium) solid transparent;
   border-radius: var(--radius-md);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+  background: var(--color-send);
+  color: var(--color-on-send);
   transition: background-color var(--motion-respond);
 }
 

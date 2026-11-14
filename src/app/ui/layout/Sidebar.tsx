@@ -4,7 +4,7 @@ import { IconButton } from '../controls/IconButton';
 import { Brand } from '../foundation/Brand';
 import { classNames } from '../foundation/classNames';
 import { Divider } from '../foundation/Divider';
-import { useShape, type Shapes } from '../foundation/theme';
+import { useShape, useSide, type Shapes } from '../foundation/theme';
 import styles from './Sidebar.module.css';
 
 type Props = {
@@ -15,9 +15,11 @@ type Props = {
   corner?: ReactNode;
 };
 
+// As a page it is the page, in the page's colours; beside the rail it is the frame's side (useSide).
 export function Sidebar({ page = false, actions, children, corner }: Props) {
+  const side = useSide();
   return (
-    <aside className={page ? `${styles.sidebar} ${styles.page}` : styles.sidebar} aria-label="캐릭터 목록">
+    <aside {...(page ? undefined : side)} className={page ? `${styles.sidebar} ${styles.page}` : styles.sidebar} aria-label="캐릭터 목록">
       {/* Beside the rail, whose mark is the brand, the panel starts with its own rows. */}
       {page && (
         <div className={styles.head}>
@@ -68,6 +70,7 @@ const RAIL_SHAPE: Record<Shapes['rail'], string | undefined> = { icons: undefine
 // actions stand under them, over the places.
 export function Rail({ fold, actions, places, children }: RailProps) {
   const shape = useShape('rail');
+  const side = useSide();
   const acts = (
     <>
       {actions}
@@ -76,7 +79,7 @@ export function Rail({ fold, actions, places, children }: RailProps) {
   );
   const faces = <div className={styles.railList}>{children}</div>;
   return (
-    <aside className={classNames(styles.rail, RAIL_SHAPE[shape])} aria-label="캐릭터 바로가기">
+    <aside {...side} className={classNames(styles.rail, RAIL_SHAPE[shape])} aria-label="캐릭터 바로가기">
       <div className={styles.mark}>
         <Brand variant="mark" />
       </div>

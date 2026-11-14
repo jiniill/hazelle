@@ -3,9 +3,10 @@ import type { ReactNode } from 'react';
 import { expect, it } from 'vitest';
 import { ChatRow } from '../collections/ItemRow';
 import { Composer } from '../controls/Composer';
+import { SchemeContext, type Scheme } from '../foundation/scheme';
 import { BASE, ThemeContext } from '../foundation/theme';
 import { ChatTitle } from '../layout/ChatFrame';
-import { Rail } from '../layout/Sidebar';
+import { Rail, Sidebar } from '../layout/Sidebar';
 import { toolsFloat } from '../story/StoryMessage';
 import { THEMES } from '.';
 
@@ -55,4 +56,15 @@ it('floats a row message\'s tools only under a pointer that hovers, and never on
   expect(toolsFloat('row', false, false)).toBe(false);
   expect(toolsFloat('row', true, true)).toBe(false);
   expect(toolsFloat('prose', true, false)).toBe(false);
+});
+
+it('draws the rail and the sidebar in a side\'s scheme under the page\'s mode that has one, but not a sidebar that is the page, nor under a 배경 pick', () => {
+  const worn = (scheme: Partial<Scheme>, node: ReactNode) => drawn(THEMES.work, <SchemeContext value={{ mode: 'light', bg: 'base', ink: 'base', accent: 'base', dialogue: 'base', ...scheme }}>{node}</SchemeContext>);
+  const rail = <Rail actions={null} places={null}>{null}</Rail>;
+  const side = 'data-mode="dark" data-bg="base" data-ink="base" data-accent="base" data-dialogue="base" data-theme="work/light"';
+  expect(worn({}, rail)).toContain(side);
+  expect(worn({}, <Sidebar actions={null}>{null}</Sidebar>)).toContain(side);
+  expect(worn({}, <Sidebar page actions={null}>{null}</Sidebar>)).not.toContain('data-theme');
+  expect(worn({ mode: 'dark' }, rail)).not.toContain('data-theme');
+  expect(worn({ bg: 'blue' }, rail)).not.toContain('data-theme');
 });

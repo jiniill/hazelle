@@ -4,7 +4,7 @@ import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, wornLook, parseS
 import { useReading } from './common/useReading';
 import { usePersisted } from './common/usePersisted';
 import { useSettings } from './session';
-import { applyScheme, QuoteShapeContext, ThemeContext, THEMES, useCoarsePointer, useDarkScheme, VeilContext, type Letters, type Mode, type Reading, type ThemeId } from './ui';
+import { applyScheme, QuoteShapeContext, SchemeContext, ThemeContext, THEMES, useCoarsePointer, useDarkScheme, VeilContext, type Letters, type Mode, type Reading, type ThemeId } from './ui';
 
 type DisplayControl = {
   // The worn theme's: its own letters where it states them.
@@ -40,7 +40,8 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const system = systemMode(useDarkScheme());
   const coarsePointer = useCoarsePointer();
   const { mode, bg, ink, accent, dialogue, follow } = display;
-  useLayoutEffect(() => applyScheme({ mode, bg, ink, accent, dialogue }, theme), [mode, bg, ink, accent, dialogue, theme]);
+  const scheme = useMemo(() => ({ mode, bg, ink, accent, dialogue }), [mode, bg, ink, accent, dialogue]);
+  useLayoutEffect(() => applyScheme(scheme, theme), [scheme, theme]);
   const veil = useMemo(() => (display.hidePictures ? { revealed: new Set<string>() } : null), [display.hidePictures]);
   const find = (id: string | undefined) => (id === undefined ? undefined : presets.find((preset) => preset.id === id));
   const wear = ({ mode, bg, ink, accent, dialogue, ...look }: Look, follow: Follow | null) => {
@@ -81,9 +82,11 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   return (
     <DisplayContext value={control}>
       <ThemeContext value={theme}>
-        <VeilContext value={veil}>
-          <QuoteShapeContext value={display.quotes}>{children}</QuoteShapeContext>
-        </VeilContext>
+        <SchemeContext value={scheme}>
+          <VeilContext value={veil}>
+            <QuoteShapeContext value={display.quotes}>{children}</QuoteShapeContext>
+          </VeilContext>
+        </SchemeContext>
       </ThemeContext>
     </DisplayContext>
   );

@@ -297,6 +297,9 @@
   /* The rail's ground: the sidebar's, but in a theme that states one. */
   --color-rail: var(--color-sidebar);
   --color-name: var(--color-accent-mark);
+  /* The send button's fill and what stands on it: the accent's, but in a theme that states them. */
+  --color-send: var(--color-accent);
+  --color-on-send: var(--color-on-accent);
   --color-row-pointed: transparent;
   /* A theme's finish (theme.ts) turns these on the element that names it, so they are declared again on every element
      with a scheme of its own, which may name none. */
@@ -548,6 +551,8 @@
   --avatar-sm: 22px;
   --avatar-md: 32px;
   --avatar-rail: 40px;
+  /* A speaker's face between md and the rail's, a theme's pick (theme.ts speakers). */
+  --avatar-story-medium: 36px;
   --avatar-lg: 72px;
   --attachment-size: 64px;
   --attachment-file-width: 240px;
