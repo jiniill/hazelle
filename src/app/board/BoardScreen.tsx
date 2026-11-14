@@ -1,16 +1,17 @@
 import { Bell, FileText, Inbox, ListFilter, PenLine, Send } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CATEGORIES, STATUSES, type Category, type Sort, type Status } from '../../contracts/board';
 import { GuestLine } from '../common/GuestNotice';
 import { CATEGORY_LOOK } from '../common/postRow';
 import { ago } from '../common/time';
 import { count } from '../common/typedNumber';
 import { useLoaded } from '../common/useLoaded';
-import { ACCOUNT_ONLY, BOARD } from '../common/words';
+import { useSettled } from '../common/useSettled';
+import { ACCOUNT_ONLY, BOARD, noResults, searchOf } from '../common/words';
 import { useAccount, useStanding } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
-import { Button, ChoiceGroup, IconButton, Menu, MenuItem, NavBar, NavGroup, NavRow, NoticeBar, Row, Screen, Tabs, useSplit } from '../ui';
+import { Button, ChoiceGroup, IconButton, Menu, MenuItem, NavBar, NavGroup, NavRow, NoticeBar, Row, Screen, SearchField, Tabs, useSplit } from '../ui';
 import { readPosts } from '../../runtime/service/board';
 import { useNicknameGate, useOwnNickname } from './nickname';
 import { PostList } from './parts';
@@ -19,17 +20,25 @@ const ALL = 'all';
 const SORTS: { value: Sort; label: string }[] = [{ value: 'new', label: '최신' }, { value: 'top', label: BOARD.vote }];
 
 // operator: the operator-only posts, the only ones a suspended account reads (design §6.13).
-// category: the tab open, held in the address so back and a reload return to it. Guests write without a nickname.
-export function BoardScreen({ operator, category, back }: { operator: boolean; category: Category | null; back: Back | null }) {
+// category and query: the tab open and the words searched, held in the address so back and a reload return to them.
+// Guests write without a nickname.
+export function BoardScreen({ operator, category, query, back }: { operator: boolean; category: Category | null; query: string; back: Back | null }) {
   const { guest } = useAccount();
   const { unreadBoard, suspended } = useStanding();
   const split = useSplit();
   const { gate, dialog } = useNicknameGate();
   const [sort, setSort] = useState<Sort>('new');
   const [status, setStatus] = useState<Status | null>(null);
+  const [typed, setTyped] = useState(query);
+  const words = useSettled(typed.trim());
   const onlyOperator = operator || suspended;
   const news = category === 'news';
-  const ask = { sort, category: category ?? undefined, status: news ? undefined : (status ?? undefined), visibility: onlyOperator ? ('operator' as const) : undefined };
+  const ask = { sort, category: category ?? undefined, status: news ? undefined : (status ?? undefined), visibility: onlyOperator ? ('operator' as const) : undefined, q: query || undefined };
+  // Replaced: neither a tab nor a word typed is a step back of its own.
+  const show = (tab: Category | null, q: string) => navigate({ kind: 'board', operator, ...(tab && { category: tab }), ...(q && { q }) }, { replace: true });
+  useEffect(() => {
+    if (words !== query) show(category, words);
+  }, [words]);
   const write = () => gate(() => navigate({ kind: 'board-write', operator: onlyOperator }));
   return (
     <Screen
@@ -63,7 +72,7 @@ export function BoardScreen({ operator, category, back }: { operator: boolean; c
           label="분류"
           items={[{ value: ALL, label: '전체' }, ...CATEGORIES.filter((value) => !onlyOperator || value !== 'news').map((value) => ({ value, label: BOARD.categories[value] }))]}
           value={category ?? ALL}
-          onChange={(tab) => navigate({ kind: 'board', operator, ...(tab === ALL ? {} : { category: tab }) }, { replace: true })}
+          onChange={(tab) => show(tab === ALL ? null : tab, query)}
         />
         <Row kind="toolbar">
           <ChoiceGroup label="정렬" options={SORTS} value={sort} onChange={setSort} layout="segmented" />
@@ -85,8 +94,9 @@ export function BoardScreen({ operator, category, back }: { operator: boolean; c
           )}
         </Row>
       </Row>
-      {category === null && !onlyOperator && <LatestNews />}
-      <PostList key={JSON.stringify(ask)} ask={ask} label={BOARD.title} empty="아직 글이 없어요." votes={!onlyOperator && !guest} />
+      <SearchField label={searchOf('글')} value={typed} onChange={setTyped} />
+      {category === null && !onlyOperator && !query && <LatestNews />}
+      <PostList key={JSON.stringify(ask)} ask={ask} label={BOARD.title} empty={query ? noResults(query) : '아직 글이 없어요.'} votes={!onlyOperator && !guest} />
       {dialog}
     </Screen>
   );

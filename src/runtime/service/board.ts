@@ -22,11 +22,12 @@ export const readNickname = () => api<{ name: string | null }>('GET', 'board/nam
 export const setNickname = (name: string) => api<undefined>('PUT', 'board/name', { name });
 
 // mine: only what this account wrote. visibility 'operator' lists operator-only posts: one's own, or every one for the
-// operator. 'top' sorts by votes; its cursor is the server's (contracts/board PostList).
-export type ListAsk = { sort: Sort; category?: Category; status?: Status; visibility?: Visibility; mine?: boolean; limit?: number };
-export const readPosts = async (after: string | null, { sort, category, status, visibility, mine, limit }: ListAsk) => {
+// operator. 'top' sorts by votes; its cursor is the server's (contracts/board PostList). q: search words, 소식 among
+// the found when no category is asked.
+export type ListAsk = { sort: Sort; category?: Category; status?: Status; visibility?: Visibility; mine?: boolean; q?: string; limit?: number };
+export const readPosts = async (after: string | null, ask: ListAsk) => {
   const headers = await guestHeaders();
-  return headers.ok ? page<'posts', PostRow>('board/posts', 'posts', after, { sort, category, status, visibility, mine, limit }, headers.data) : headers;
+  return headers.ok ? page<'posts', PostRow>('board/posts', 'posts', after, ask, headers.data) : headers;
 };
 
 export const readPost = (id: number) => boardApi<{ post: Post }>('GET', `board/posts/${id}`);

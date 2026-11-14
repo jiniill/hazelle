@@ -7,15 +7,13 @@ import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
 import { useFolderIndex, whereIs } from '../common/folders/filing';
 import { ago } from '../common/time';
+import { useSettled } from '../common/useSettled';
 import { CHAT_SEARCH, noResults } from '../common/words';
 import { useLibrary, useSession } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { SHORTCUTS, useShortcut } from '../shortcuts';
 import { Callout, Empty, FoundRow, List, NavBar, Screen, SearchField, Stack, Text, type Marked } from '../ui';
-
-// Typing settles this long before the messages are read for it; titles and previews answer every key.
-const SETTLE_MS = 300;
 
 
 type Props = {
@@ -33,11 +31,8 @@ export function SearchScreen({ query, back, face, name }: Props) {
   const shelves = useMemo(() => new Map([...library.characters, library.none].flatMap((shelf) => shelf.chats.map((chat) => [chat.id, shelf] as const))), [library]);
   const [typed, setTyped] = useState(query);
   const term = foldTerm(typed);
-  const [settled, setSettled] = useState(term);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(term), SETTLE_MS);
-    return () => clearTimeout(timer);
-  }, [term]);
+  // The messages are read for settled words; titles and previews answer every key.
+  const settled = useSettled(term);
   useEffect(() => finder.find(settled, chats), [settled, chats]);
   useEffect(() => () => finder.stop(), []);
   // Replaced, so 뒤로 from a chat it opened lands on these words, and none of them is a step back of its own.
