@@ -265,6 +265,8 @@
   --color-accent-text: var(--color-accent-mark);
   --color-accent-border: color-mix(in srgb, var(--color-accent) 40%, var(--color-bg));
   --color-warn-bg: color-mix(in srgb, var(--color-warn) 10%, var(--color-bg));
+  /* The warning's ground where it stands as a bubble, whose fill may be far from the page. */
+  --color-warn-bubble: color-mix(in srgb, var(--color-warn) 10%, var(--color-bubble));
   --color-warn-border: color-mix(in srgb, var(--color-warn) 40%, var(--color-bg));
   --color-warn-text: color-mix(in srgb, var(--color-warn) 30%, var(--color-text));
   --color-success-bg: color-mix(in srgb, var(--color-success) 10%, var(--color-bg));

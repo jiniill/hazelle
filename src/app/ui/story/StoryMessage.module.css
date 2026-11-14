@@ -279,8 +279,11 @@
   background: var(--color-bubble);
 }
 
-/* The tools lead their line under the words, the time after them; mine's end it, the time before them. */
-.page .tools {
+/* Where the words start at the column's edge the tools lead their line under them, a page's time after them; mine's
+   in a page or a bubble end it, a page's time before them. */
+.page .tools,
+.row .tools,
+.balloon .tools {
   order: -2;
   margin-left: 0;
 }
@@ -290,7 +293,8 @@
   align-self: center;
 }
 
-.page.own .tools {
+.page.own .tools,
+.balloon.own .tools {
   order: 1;
 }
 
@@ -301,7 +305,9 @@
 /* Stuck over a long reply, tools at the start would cover where its lines begin. */
 @supports (container-type: scroll-state) {
   @container scroll-state(stuck: bottom) {
-    .page .tools {
+    .page .tools,
+    .row .tools,
+    .balloon .tools {
       order: 1;
     }
   }
@@ -382,6 +388,10 @@
   --color-prose-action: var(--bubble-quiet);
   --color-accent-mark: var(--bubble-link);
   --color-found-term: var(--bubble-found);
+}
+
+.balloon .failure {
+  background: var(--color-warn-bubble);
 }
 
 /* Floating tools stand on the last bubble's line at the side the bubbles leave free: half below it, they would cover
