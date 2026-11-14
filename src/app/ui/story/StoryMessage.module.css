@@ -298,6 +298,15 @@
   order: 0;
 }
 
+/* Stuck over a long reply, tools at the start would cover where its lines begin. */
+@supports (container-type: scroll-state) {
+  @container scroll-state(stuck: bottom) {
+    .page .tools {
+      order: 1;
+    }
+  }
+}
+
 /* bubble (a message shape). What a bubble is drawn with is named here and read where the bubble is: the box below, or
    each block in the story's shadow root (Story.shadow.css). Mine is the accent's, its every word in what stands on it. */
 .balloon {
