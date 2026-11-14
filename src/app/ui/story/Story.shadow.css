@@ -30,8 +30,25 @@
     margin: 0;
   }
 
-  :host > * + * {
-    margin-top: var(--space-12);
+  :host {
+    --story-gap: var(--space-12);
+  }
+
+  :host([data-bubbles]) {
+    --story-gap: var(--space-4);
+  }
+
+  /* The gap after the prose's own block is its margin-bottom, so what follows it stands apart even with no margin of
+     its own: a bot's box centred with margin: auto, an illustration's slot, which has no box to hold one. Any other gap
+     is the next one's margin-top, never both after the block: an inline box's margins do not collapse, so one right
+     after it would take the gap twice. A hidden box last in a message leaves the block's gap at its end. */
+  :host > :not(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, table) + * {
+    margin-top: var(--story-gap);
+  }
+
+  /* Before an original its own closer gap stands alone. */
+  :host > :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, table):has(+ :not([data-original])) {
+    margin-bottom: var(--story-gap);
   }
 
   /* The one look a bot cannot override, whence !important: a bubble's padding is its edge, so a bot's paragraph margin
@@ -59,10 +76,6 @@
     --color-prose-action: var(--bubble-quiet);
     --color-accent-mark: var(--bubble-link);
     --color-found-term: var(--bubble-found);
-  }
-
-  :host([data-bubbles]) > * + * {
-    margin-top: var(--space-4);
   }
 
   /* A list's markers stand inside its bubble. */
