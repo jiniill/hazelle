@@ -1,6 +1,6 @@
 import { Bell, FileText, Inbox, ListFilter, PenLine, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { CATEGORIES, STATUSES, type Category, type Sort, type Status } from '../../contracts/board';
+import { CATEGORIES, MAX_SEARCH_LENGTH, STATUSES, type Category, type Sort, type Status } from '../../contracts/board';
 import { GuestLine } from '../common/GuestNotice';
 import { CATEGORY_LOOK } from '../common/postRow';
 import { ago } from '../common/time';
@@ -103,7 +103,7 @@ export function BoardScreen({ operator, category, query, back }: { operator: boo
           )}
         </Row>
       </Row>
-      <SearchField label={searchOf('글')} value={typed} onChange={setTyped} />
+      <SearchField label={searchOf('글')} value={typed} onChange={(value) => setTyped(value.slice(0, MAX_SEARCH_LENGTH))} />
       {category === null && !onlyOperator && !query && <LatestNews />}
       <PostList key={JSON.stringify(ask)} ask={ask} label={BOARD.title} empty={query ? noResults(query) : '아직 글이 없어요.'} votes={!onlyOperator && !guest} />
       {dialog}
