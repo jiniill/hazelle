@@ -4,7 +4,7 @@ export const kakaotalk: Theme = {
   id: 'kakaotalk',
   name: '카카오톡',
   shapes: { header: 'plain', rail: 'icons', list: 'people', composer: 'bar', message: 'bubble', day: 'pill' },
-  finish: { rows: 'close', faces: 'soft', lines: 'close', speakers: 'medium', corners: 'soft' },
+  finish: { rows: 'close', faces: 'squircle', lines: 'close', speakers: 'medium', corners: 'soft', dock: 'flush' },
   letters: { font: 'sans', size: 15, leading: 'normal', width: 'full' },
   tones: {
     dark: { page: '#1f2023', text: '#f2f2f2', accent: '#fee500', dialogue: '#ffd86b', sidebar: '#1a1a1a', rail: '#141414', surface: '#2a2a2c', hover: '#303032', raised: '#3a3a3c', line: '#333333', muted: '#a6a6a6', faint: '#9a9a9a', name: '#d0d0d0', onAccent: '#191919', bubble: '#3a3a3c', action: '#b0a9bc' },

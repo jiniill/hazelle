@@ -219,6 +219,7 @@
   --shadow-popover: 0 12px 32px var(--palette-shadow);
   --color-scroll-cue: var(--palette-shadow);
   --shadow-card: 0 6px 18px var(--palette-shadow);
+  --shadow-dock: 0 4px 18px var(--palette-shadow-soft);
 
   /* A segmented choice's trough: a shade over whatever ground it stands on. */
   --color-trough: color-mix(in oklab, var(--palette-black) 26%, transparent);
@@ -319,6 +320,10 @@
   --face-radius-md: var(--radius-md);
   --face-radius-rail: var(--radius-md);
   --face-radius-lg: var(--radius-lg);
+  /* The composer's dock: 1 while it stands inset from the column's sides and foot with its corners, 0 flush with
+     them; and the shadow under it. */
+  --dock-inset: 1;
+  --dock-shadow: none;
   --reading-leading-narrow: var(--prose-leading-narrow);
   --reading-leading-normal: var(--prose-leading-normal);
   --reading-leading-wide: var(--prose-leading-wide);
@@ -425,6 +430,9 @@
   --radius-xs: 4px;
   --radius-tight-sm: 6px;
   --radius-tight: 8px;
+  --radius-round: 20px;
+  /* A share of the face, so every size is the same shape. */
+  --radius-squircle: 38%;
   --radius-full: 999px;
 
   /* Control marks are not a rung in the control-height scale. */

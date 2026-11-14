@@ -4,7 +4,7 @@ export const slack: Theme = {
   id: 'slack',
   name: '슬랙',
   shapes: { header: 'topic', rail: 'labels', list: 'channels', composer: 'toolbar', message: 'row', day: 'rule' },
-  finish: { rows: 'close', faces: 'soft', lines: 'close', speakers: 'medium', corners: 'tight' },
+  finish: { rows: 'close', faces: 'soft', lines: 'close', speakers: 'medium', corners: 'tight', dock: 'inset' },
   letters: { font: 'sans', size: 15, leading: 'normal', width: 'full' },
   tones: {
     dark: { page: '#1a1d21', text: '#d1d2d3', accent: '#1d9bd1', dialogue: '#8fc8ea', sidebar: '#19171d', rail: '#121016', surface: '#222529', hover: '#26292d', raised: '#35373b', line: '#35373b', outline: '#565856', muted: '#9a9b9e', faint: '#8e9093', name: '#e8e8e8', pointed: '#222529', send: '#007a5a', onSend: '#ffffff' },

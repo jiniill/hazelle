@@ -125,9 +125,9 @@ it('writes a finish as token rules for the element that names the theme, a state
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, action: '#404040', bubble: '#f0f0f0' } } })).toContain("[data-theme='night'][data-mode='light'][data-bg='base']{--color-bubble:#f0f0f0;}[data-theme='night'][data-mode='light'][data-dialogue='base']{--color-prose-action:#404040;}");
   expect(themeRules(THEMES.kakaotalk)).toContain("[data-theme='kakaotalk/room/light'][data-mode='light'][data-bg='base']{--color-name:#2b3540;}");
   expect(plain).not.toContain('[data-mode]{');
-  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close', speakers: 'large', corners: 'tight' } })).toBe(
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close', speakers: 'large', corners: 'tight', dock: 'flush' } })).toBe(
     plain +
-      "[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);--face-radius-sm:var(--radius-full);--face-radius-md:var(--radius-full);--face-radius-rail:var(--radius-full);--face-radius-lg:var(--radius-full);--reading-leading-narrow:var(--prose-leading-close-narrow);--reading-leading-normal:var(--prose-leading-close-normal);--reading-leading-wide:var(--prose-leading-close-wide);--reading-leading-widest:var(--prose-leading-close-widest);--avatar-story:var(--avatar-rail);--avatar-story-letter:var(--text-lg);--radius-sm:var(--radius-tight-sm);--radius-md:var(--radius-tight);--radius-lg:var(--radius-tight);}",
+      "[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);--face-radius-sm:var(--radius-full);--face-radius-md:var(--radius-full);--face-radius-rail:var(--radius-full);--face-radius-lg:var(--radius-full);--reading-leading-narrow:var(--prose-leading-close-narrow);--reading-leading-normal:var(--prose-leading-close-normal);--reading-leading-wide:var(--prose-leading-close-wide);--reading-leading-widest:var(--prose-leading-close-widest);--avatar-story:var(--avatar-rail);--avatar-story-letter:var(--text-lg);--radius-sm:var(--radius-tight-sm);--radius-md:var(--radius-tight);--radius-lg:var(--radius-tight);--dock-inset:0;}",
   );
 });
 

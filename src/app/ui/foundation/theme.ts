@@ -67,13 +67,16 @@ export type Finish = {
   // The gap between one message and the next.
   rows: 'open' | 'close';
   // The corners of a face Avatar draws.
-  faces: 'soft' | 'round';
+  faces: 'soft' | 'round' | 'squircle';
   // The scale 줄 간격's four steps stand on in a chat; a story drawn outside one keeps the app's.
   lines: 'open' | 'close';
   // The size of the speaker's face beside a message.
   speakers: 'small' | 'medium' | 'large';
   // The corners of boxes, rows and controls: the radius scale from sm to lg.
-  corners: 'soft' | 'tight';
+  corners: 'soft' | 'tight' | 'round';
+  // How the composer stands at the column's foot: inset from its sides and foot, that with a shadow under it, or
+  // flush with them, as wide as the column and square.
+  dock: 'inset' | 'lifted' | 'flush';
 };
 
 // A part of the frame a theme draws in colours other than its page's: the mode it takes and its colours there. Its
@@ -86,7 +89,7 @@ type Parts = { [Name in (typeof PARTS)[number]]?: Partial<Record<Mode, Part>> };
 // tones left out is the app's own colours, as tokens.css has them. A part is by the page's mode, and rides on tones.
 export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; shapes: Shapes; finish: Finish; letters?: Letters } & Parts;
 
-export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose', day: 'rule' }, finish: { rows: 'open', faces: 'soft', lines: 'open', speakers: 'small', corners: 'soft' } };
+export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose', day: 'rule' }, finish: { rows: 'open', faces: 'soft', lines: 'open', speakers: 'small', corners: 'soft', dock: 'inset' } };
 
 // The theme the app wears: an element drawn in a scheme of its own inside it names it, and a component reads its
 // region's shape from it. A theme's card provides its own.
@@ -124,12 +127,14 @@ const SPOKEN: Partial<Record<keyof Tone, string[]>> = { action: ['--color-prose-
 // so a theme's hold on any page while 강조 is base; a name not held then is the mark's (tokens.css).
 const ACCENTED: Partial<Record<keyof Tone, string[]>> = { mark: ['--color-accent-mark'], onAccent: ['--color-on-accent'], accentHover: ['--color-accent-hover'], send: ['--color-send'], onSend: ['--color-on-send'] };
 
+const faces = (radius: string) => ['sm', 'md', 'rail', 'lg'].map((size) => `--face-radius-${size}:var(--radius-${radius});`).join('');
 const FINISH: { [Part in keyof Finish]: Record<Finish[Part], string> } = {
   rows: { open: '', close: '--story-gap:var(--story-gap-close);' },
-  faces: { soft: '', round: ['sm', 'md', 'rail', 'lg'].map((size) => `--face-radius-${size}:var(--radius-full);`).join('') },
+  faces: { soft: '', round: faces('full'), squircle: faces('squircle') },
   lines: { open: '', close: ['narrow', 'normal', 'wide', 'widest'].map((step) => `--reading-leading-${step}:var(--prose-leading-close-${step});`).join('') },
   speakers: { small: '', medium: '--avatar-story:var(--avatar-story-medium);', large: '--avatar-story:var(--avatar-rail);--avatar-story-letter:var(--text-lg);' },
-  corners: { soft: '', tight: '--radius-sm:var(--radius-tight-sm);--radius-md:var(--radius-tight);--radius-lg:var(--radius-tight);' },
+  corners: { soft: '', tight: '--radius-sm:var(--radius-tight-sm);--radius-md:var(--radius-tight);--radius-lg:var(--radius-tight);', round: '--radius-lg:var(--radius-round);' },
+  dock: { inset: '', lifted: '--dock-shadow:var(--shadow-dock);', flush: '--dock-inset:0;' },
 };
 
 function rule(selector: string, tone: Tone, tokens: Partial<Record<keyof Tone, string[]>>) {
