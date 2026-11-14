@@ -90,7 +90,6 @@ const EXAMPLES = {
   display: [{ kind: 'display' }],
   controls: [{ kind: 'controls' }],
   sounds: [{ kind: 'sounds' }],
-  tools: [{ kind: 'tools' }],
   translator: [{ kind: 'translator' }],
   calculator: [{ kind: 'calculator' }],
   labs: [{ kind: 'labs' }],
@@ -174,6 +173,16 @@ it("opens a feature as 설정's own page, lit by its feature, its way back 설�
   expect(parseRoute('/settings/chat/memory')).toEqual(route);
   expect(up(route)).toEqual({ kind: 'settings' });
   expect(settingsPage(route)).toBe('memory');
+});
+
+it("opens a tool as 설정's own page at its own path, its way back 설정, and the old list's path as home", () => {
+  for (const [route, path] of [[{ kind: 'translator' }, '/tools/translator'], [{ kind: 'calculator' }, '/tools/calculator']] as const) {
+    expect(href(route)).toBe(path);
+    expect(parseRoute(path)).toEqual(route);
+    expect(up(route)).toEqual({ kind: 'settings' });
+    expect(settingsPage(route)).toBe(route.kind);
+  }
+  expect(parseRoute('/tools')).toEqual(HOME);
 });
 
 it('opens the compose with 운영자에게만 preset from ?to=operator, and goes back from an edit to its post and from a post to the list', () => {

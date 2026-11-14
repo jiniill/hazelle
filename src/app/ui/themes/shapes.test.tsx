@@ -93,8 +93,8 @@ it('draws the rail and the sidebar in a side\'s scheme under the page\'s mode th
   expect(worn({ bg: 'blue' }, rail)).not.toContain('data-theme');
 });
 
-it('writes a framed button\'s name under its icon in a labels rail only, and no other button\'s', () => {
-  const named = (theme: Parameters<typeof drawn>[0], framed: boolean) => drawn(theme, <IconButton icon={Wrench} label="도구" framed={framed} onClick={() => {}} />).includes('>도구</span>');
+it('writes a rail button\'s name under its icon in a labels rail only, and no other button\'s', () => {
+  const named = (theme: Parameters<typeof drawn>[0], rail: boolean) => drawn(theme, <IconButton icon={Wrench} label="도구" rail={rail} onClick={() => {}} />).includes('>도구</span>');
   expect([named(THEMES.slack, true), named(THEMES.slack, false), named(BASE, true), named(THEMES.discord, true)]).toEqual([true, false, false, false]);
 });
 

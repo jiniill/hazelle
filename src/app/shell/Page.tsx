@@ -17,7 +17,6 @@ import { Button, Callout, Empty, Intro, ListDetail, NavBar, Progress, Screen, us
 import { backBar, closeLayer, navigate } from './router';
 import { backTo, HOME, href, listOf, up, type Back, type Below, type Route } from './routes';
 import { SettingsList, settingsEntry } from './settings/SettingsNav';
-import { ToolsList, toolsEntry } from './tools/ToolsNav';
 
 const ToolPageScreen = lazy(() => import('../modules/ToolPageScreen').then(({ ToolPageScreen }) => ({ default: ToolPageScreen })));
 const AdminScreen = lazy(() => import('../admin/AdminScreen').then(({ AdminScreen }) => ({ default: AdminScreen })));
@@ -161,8 +160,6 @@ export function Page({ route, onPaired }: { route: Route; onPaired: (paired: boo
         return <ControlsScreen back={sideBack(at)} />;
       case 'sounds':
         return <SoundsScreen back={sideBack(at)} />;
-      case 'tools':
-        return wide ? <Replace to={toolsEntry(true)} /> : <ToolsList onClose={closeLayer} />;
       case 'translator':
         return <TranslatorScreen back={sideBack(at)} />;
       case 'calculator':

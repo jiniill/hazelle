@@ -3,16 +3,15 @@ import { LABS } from '../../common/labs';
 import { NUMBER, PROFILE_LABELS, PROFILE_ROWS } from '../../common/settingWords';
 import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, IDLE_MODELS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, HOST, IMAGE_MODEL, COST_ESTIMATE, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE, PROMPT_MODELS } from '../../common/words';
 import type { Settings } from '../../../model/settings';
-import { BIN_PLACE, type Route, type SettingsPage, type ToolsPage } from '../routes';
+import { BIN_PLACE, type Route, type SettingsPage } from '../routes';
 import { ROLES_TITLE } from '../../settings/setup';
 import { TRANSLATE_SWITCHES } from '../../common/TranslateRows';
 
-// 설정 검색's index: the section titles and setting labels each page shows, beside its own label; 도구's pages too.
+// 설정 검색's index: the section titles and setting labels each page shows, beside its own label.
 // terms.test.ts fails on a literal label a page shows and this does not hold; a label given as a constant is only held by
 // being named here. A row on one item's page (a connection, a model) sits here under the list that leads to it, since no
 // item is implied.
-type Page = SettingsPage | ToolsPage;
-const TERMS: Record<Page, string[]> = {
+const TERMS: Record<SettingsPage, string[]> = {
   setup: [FINDINGS, ROLES_TITLE, STARRED, FEATURES_TITLE],
   models: [DEFAULT_MODELS, SCOPE.default, MODEL_ROLES.main, MODEL_ROLES.aux, MODEL_ROLES.embed, STARRED, IDLE_MODELS, MODEL_SETTINGS, '기능별 모델', PROMPT_MODELS, '모델 이름', '모델 ID', '이미지 설정', PICTURE_INPUT, HOST],
   connections: ['모델', '계정', '계정 추가', '그룹', '전환일', '사용량과 한도', RETRY_COUNT, '사용 내역', '연결 이름', '키 변경', '모델 ID로 추가'],
@@ -56,7 +55,7 @@ type Subpage = { label: string; where?: string; route: Route; terms: string[] };
 
 // A page's own pages: a hit on one of their labels or terms opens that page. Which 모델 설정 a row's term means is not
 // implied either, so it opens the default one, and 모델 when there is none, whose 모델 설정 section makes one.
-export const subpages = (settings: Settings, profiles: readonly { id: string }[]): Partial<Record<Page, Subpage[]>> => {
+export const subpages = (settings: Settings, profiles: readonly { id: string }[]): Partial<Record<SettingsPage, Subpage[]>> => {
   const profile = profiles.find(({ id }) => id === settings.profile);
   return {
     models: [{ label: `기본 ${MODEL_SETTINGS}`, route: profile ? { kind: 'profile', id: profile.id } : { kind: 'models' }, terms: [...PROFILE_LABELS, '사용 중인 모델', SET_DEFAULT] }],
@@ -69,11 +68,10 @@ export const subpages = (settings: Settings, profiles: readonly { id: string }[]
 // seek: the row or section it names on the page it opens; a page's own label names none.
 export type Hit<Place> = { term: string; place: Place; where: readonly string[]; to: Route; seek: string | undefined };
 
-// A place's where: names the place, as Subpage's does, when it is not in 설정, as 도구's pages are not.
 // The pages come before the rows on them, so a page found by its own name leads the results.
-export function hitsOf<Place extends { page: Page; label: string; route: Route; where?: string }>(places: readonly Place[], subs: ReturnType<typeof subpages>): Hit<Place>[] {
+export function hitsOf<Place extends { page: SettingsPage; label: string; route: Route }>(places: readonly Place[], subs: ReturnType<typeof subpages>): Hit<Place>[] {
   const hits = places.flatMap((place): Hit<Place>[] => [
-    ...[place.label, ...TERMS[place.page]].map((term) => ({ term, place, where: term !== place.label ? [place.label] : place.where ? [place.where] : [], to: place.route, seek: term === place.label ? undefined : term })),
+    ...[place.label, ...TERMS[place.page]].map((term) => ({ term, place, where: term !== place.label ? [place.label] : [], to: place.route, seek: term === place.label ? undefined : term })),
     ...(subs[place.page] ?? []).flatMap((sub) =>
       [sub.label, ...sub.terms].map((term) => ({ term, place, where: term === sub.label ? [sub.where ?? place.label] : [place.label, sub.label], to: sub.route, seek: term === sub.label ? undefined : term })),
     ),

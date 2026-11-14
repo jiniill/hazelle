@@ -10,7 +10,6 @@ import { navigate } from '../router';
 import { AddMenu } from './AddMenu';
 import { HOME } from '../routes';
 import { settingsEntry } from '../settings/SettingsNav';
-import { toolsEntry } from '../tools/ToolsNav';
 
 type Props = {
   shelves: Shelf<ChatSummary>[];
@@ -31,16 +30,15 @@ export function SidebarRail({ shelves, current, home, search, board, typing, onE
       fold={fold}
       actions={
         <>
-          <IconButton {...PLACES.gallery} framed current={home} onClick={() => navigate(HOME)} />
-          <IconButton {...PLACES.search} title={titled(PLACES.search.label, SHORTCUTS.search.keys)} framed current={search} onClick={() => navigate({ kind: 'search', query: '' })} />
-          <AddMenu trigger={(opener) => <IconButton icon={ACTS.create.icon} label={ACTS.create.label} framed {...opener} />} />
+          <IconButton {...PLACES.gallery} rail current={home} onClick={() => navigate(HOME)} />
+          <IconButton {...PLACES.search} title={titled(PLACES.search.label, SHORTCUTS.search.keys)} rail current={search} onClick={() => navigate({ kind: 'search', query: '' })} />
+          <AddMenu trigger={(opener) => <IconButton icon={ACTS.create.icon} label={ACTS.create.label} rail {...opener} />} />
         </>
       }
       places={
         <>
-          <IconButton {...PLACES.board} framed current={board} count={unreadBoard} onClick={() => navigate({ kind: 'board', operator: false })} />
-          <IconButton {...PLACES.tools} framed onClick={() => navigate(toolsEntry(true))} />
-          <IconButton {...PLACES.settings} framed onClick={() => navigate(settingsEntry(true))} />
+          <IconButton {...PLACES.board} rail current={board} count={unreadBoard} onClick={() => navigate({ kind: 'board', operator: false })} />
+          <IconButton {...PLACES.settings} rail onClick={() => navigate(settingsEntry(true))} />
         </>
       }
     >

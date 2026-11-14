@@ -22,18 +22,18 @@ type Props = {
   dot?: boolean;
   // How many wait behind it, such as unread alerts; shown from 1, and read out with the label.
   count?: number;
-  // The rail's button: a frame around the icon, or in a labels rail no frame and its label under the icon.
-  framed?: boolean;
+  // The rail's button: as large as a face, and in a labels rail with its label under the icon.
+  rail?: boolean;
 };
 
 // label is required: an icon-only button has no other accessible name.
-export function IconButton({ icon, label, title = label, onClick, pressed, current, popup, expanded, ref, size = 'md', disabled = false, dot = false, count = 0, framed = false }: Props) {
-  const labelled = useShape('rail') === 'labels' && framed;
+export function IconButton({ icon, label, title = label, onClick, pressed, current, popup, expanded, ref, size = 'md', disabled = false, dot = false, count = 0, rail = false }: Props) {
+  const labelled = useShape('rail') === 'labels' && rail;
   return (
     <button
       ref={ref}
       type="button"
-      className={classNames(styles.button, size !== 'md' && styles[size], framed && (labelled ? styles.labelled : styles.framed))}
+      className={classNames(styles.button, size !== 'md' && styles[size], rail && (labelled ? styles.labelled : styles.rail))}
       aria-label={count > 0 ? `${label}, ${count}개` : label}
       title={title}
       aria-pressed={pressed}
