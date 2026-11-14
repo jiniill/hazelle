@@ -33,16 +33,15 @@ export function ThemeSample({ reading }: { reading: Reading }) {
           <Rail
             actions={
               <>
-                <IconButton {...PLACES.gallery} framed onClick={nothing} />
-                <IconButton {...PLACES.search} framed onClick={nothing} />
-                <IconButton {...ACTS.create} framed onClick={nothing} />
+                <IconButton {...PLACES.gallery} rail onClick={nothing} />
+                <IconButton {...PLACES.search} rail onClick={nothing} />
+                <IconButton {...ACTS.create} rail onClick={nothing} />
               </>
             }
             places={
               <>
-                <IconButton {...PLACES.board} framed onClick={nothing} />
-                <IconButton {...PLACES.tools} framed onClick={nothing} />
-                <IconButton {...PLACES.settings} framed onClick={nothing} />
+                <IconButton {...PLACES.board} rail onClick={nothing} />
+                <IconButton {...PLACES.settings} rail onClick={nothing} />
               </>
             }
           >

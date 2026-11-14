@@ -1,9 +1,9 @@
-import { FileText, FlaskConical, Hand, Layers, LayoutTemplate, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
+import { Calculator, FileText, FlaskConical, Hand, Languages, Layers, LayoutTemplate, Lock, MessageSquare, Network, Package, Plug, Puzzle, ShieldCheck, SunMoon, User, Volume2, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { litIn } from '../../common/search';
 import { useSearch } from '../../common/useSearch';
 import { FEATURE_ICONS } from '../../common/featureIcons';
-import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS, TOOLS, LAB, SEARCH_RESULTS, searchOf } from '../../common/words';
+import { FEATURE_NAMES, FEATURES_TITLE, onOff, PAGES, SETTINGS, TOOL_PAGES, TOOLS, LAB, SEARCH_RESULTS, searchOf } from '../../common/words';
 import { presetOf } from '../../common/reading';
 import { useDisplay } from '../../display';
 import { FEATURE_LABS, FEATURES, type Feature } from '../../../model/features';
@@ -13,8 +13,7 @@ import { useAccount, useCaptured, useConnections, useModulesAndPlugins, usePerso
 import { Empty, FoundRow, Icon, LayerSidebar, List, ListItem, NavBar, NavGroup, NavRow, Screen, seekRow, THEMES } from '../../ui';
 import { failingOf } from '../../settings/setup';
 import { navigate } from '../router';
-import type { Route, SettingsPage, ToolsPage } from '../routes';
-import { TOOL_PLACES } from '../tools/ToolsNav';
+import type { Route, SettingsPage } from '../routes';
 import { hitsOf, hitTexts, subpages, type Hit } from './terms';
 
 type Place = { page: SettingsPage; label: string; icon: LucideIcon; route: Route };
@@ -57,20 +56,25 @@ const APP: Place[] = [
   { page: 'account', label: PAGES.account, icon: Lock, route: { kind: 'account', section: null } },
 ];
 const ADMIN: Place = { page: 'admin', label: PAGES.admin, icon: ShieldCheck, route: { kind: 'admin' } };
-// 설정 검색 finds 도구's pages too, under the window that holds them.
-type Sought = { page: SettingsPage | ToolsPage; label: string; icon: LucideIcon; route: Route; where?: string };
-const TOOLS_SOUGHT: Sought[] = TOOL_PLACES.map((place) => ({ ...place, where: TOOLS }));
+// What works apart from every chat. Only built tools are listed.
+const TOOLBOX: Group = {
+  title: TOOLS,
+  places: [
+    { page: 'translator', label: TOOL_PAGES.translator, icon: Languages, route: { kind: 'translator' } },
+    { page: 'calculator', label: TOOL_PAGES.calculator, icon: Calculator, route: { kind: 'calculator' } },
+  ],
+};
 
 function useSettingsNav() {
   const { admin } = useAccount();
   const available = availableFeatures(useSettings());
-  const groups: Group[] = [SETUP, AI, doing(available), HAVE, { title: '앱', places: admin ? [...APP, ADMIN] : APP }];
+  const groups: Group[] = [SETUP, AI, doing(available), HAVE, { title: '앱', places: admin ? [...APP, ADMIN] : APP }, TOOLBOX];
   // 대화 and the features that are on in 공용 and cannot run now, each marked in its row with why.
   const fails: Partial<Record<SettingsPage, string>> = failingOf(
     useCaptured((store) => overviewOf(store, null), []),
     available,
   );
-  return { groups, holds: useHolds(), fails, search: useSettingsSearch([...groups.flatMap(({ places }): Sought[] => places), ...TOOLS_SOUGHT]) };
+  return { groups, holds: useHolds(), fails, search: useSettingsSearch(groups.flatMap(({ places }) => places)) };
 }
 
 // What each page holds, at its row's end in the sidebar and the phone list: a feature, whether chats use it.
@@ -103,14 +107,16 @@ function useHolds(): Record<SettingsPage, string | undefined> {
     labs: undefined,
     account: username,
     admin: undefined,
+    translator: undefined,
+    calculator: undefined,
   };
 }
 
 // 설정 검색: a page by its label, or by a title or label shown on it; a hit opens the page at that row and clears the words.
-function useSettingsSearch(places: Sought[]) {
+function useSettingsSearch(places: Place[]) {
   const query = useState('');
   const hits = hitsOf(places, subpages(useSettings(), useProfiles()));
-  const open = (hit: Hit<Sought>) => {
+  const open = (hit: Hit<Place>) => {
     query[1]('');
     navigate(hit.to);
     if (hit.seek) seekRow(hit.seek);

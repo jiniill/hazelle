@@ -68,7 +68,6 @@ export type Route =
   | { kind: 'display' }
   | { kind: 'controls' }
   | { kind: 'sounds' }
-  | { kind: 'tools' }
   | { kind: 'translator' }
   | { kind: 'calculator' }
   // 게시판 (design §6.13). operator: the operator-only posts, listed or preset in the compose.
@@ -98,7 +97,7 @@ const placeOf = (params: URLSearchParams) => {
 const placed = (path: string, place: string | null) => (place === null ? path : `${path}?in=${place}`);
 
 type Kind<K extends Route['kind']> = Extract<Route, { kind: K }>;
-export type Below = Exclude<Route, Kind<'home' | 'settings' | 'tools' | 'share'>>;
+export type Below = Exclude<Route, Kind<'home' | 'settings' | 'share'>>;
 
 const ID = /^[0-9a-f-]{36}$/;
 const POST_ID = /^[1-9][0-9]{0,14}$/;
@@ -209,7 +208,6 @@ export function parseRoute(at: string): Route {
   if (top === 'settings' && id === 'sounds' && sub === undefined) return { kind: 'sounds' };
   if (top === 'settings' && id === 'labs' && sub === undefined) return { kind: 'labs' };
   if (top === 'tools' && sub === undefined) {
-    if (id === undefined) return { kind: 'tools' };
     if (id === 'translator') return { kind: 'translator' };
     if (id === 'calculator') return { kind: 'calculator' };
   }
@@ -322,8 +320,6 @@ export function href(route: Route): string {
       return '/settings/controls';
     case 'sounds':
       return '/settings/sounds';
-    case 'tools':
-      return '/tools';
     case 'translator':
       return '/tools/translator';
     case 'calculator':
@@ -371,7 +367,7 @@ export function listOf(route: Route): Kind<'connections' | 'add-connection'> | n
 }
 
 // A feature's page is one of 설정's own, named by the feature.
-export type SettingsPage = 'setup' | 'models' | 'connections' | 'chat' | Feature | 'prompts' | 'personas' | 'modules' | 'plugins' | 'theme' | 'display' | 'controls' | 'sounds' | 'labs' | 'account' | 'admin';
+export type SettingsPage = 'setup' | 'models' | 'connections' | 'chat' | Feature | 'prompts' | 'personas' | 'modules' | 'plugins' | 'theme' | 'display' | 'controls' | 'sounds' | 'labs' | 'account' | 'admin' | 'translator' | 'calculator';
 
 // 'list' for 설정's own list, or null outside 설정. While it is not null, the settings layer stands in for the library.
 export function settingsPage(route: Route): SettingsPage | 'list' | null {
@@ -402,6 +398,8 @@ export function settingsPage(route: Route): SettingsPage | 'list' | null {
     case 'sounds':
     case 'labs':
     case 'admin':
+    case 'translator':
+    case 'calculator':
       return route.kind;
     case 'admin-list':
       return 'admin';
@@ -425,24 +423,9 @@ const BOARD_KINDS: readonly Route['kind'][] = ['board', 'post', 'board-write', '
 // The rail's 게시판 stays lit on every page of the board.
 export const onBoard = (route: Route) => BOARD_KINDS.includes(route.kind);
 
-export type ToolsPage = 'translator' | 'calculator';
-
-// 도구, a layer beside 설정 for tools apart from every chat: 'list' for its own list, or null outside it.
-export function toolsPage(route: Route): ToolsPage | 'list' | null {
-  switch (route.kind) {
-    case 'translator':
-    case 'calculator':
-      return route.kind;
-    case 'tools':
-      return 'list';
-    default:
-      return null;
-  }
-}
-
-// 설정 and 도구 stand over the page they were opened from, which keeps the path while the layer rides in the hash:
+// 설정 stands over the page it was opened from, which keeps the path while the layer rides in the hash:
 // /chats/…#/settings/display. A layer's own path, as a bookmark or a link from outside, stands over home.
-export const layered = (route: Route) => settingsPage(route) !== null || toolsPage(route) !== null;
+export const layered = (route: Route) => settingsPage(route) !== null;
 // under: the page a layer stands over, null while none is open.
 export type Address = { route: Route; under: Route | null };
 
@@ -513,10 +496,9 @@ export function up(route: Below, chatShelf?: string | null): Route {
     case 'admin':
     case 'feature':
     case 'setup':
-      return { kind: 'settings' };
     case 'translator':
     case 'calculator':
-      return { kind: 'tools' };
+      return { kind: 'settings' };
     case 'usage':
     case 'notices':
       return { kind: 'account', section: null };

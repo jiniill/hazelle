@@ -16,10 +16,9 @@
   border-radius: var(--radius-sm);
 }
 
-.framed {
+.rail {
   width: var(--control-lg);
   height: var(--control-lg);
-  border: var(--border-thin) solid var(--color-border);
   color: var(--color-text-soft);
 }
 

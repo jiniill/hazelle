@@ -1,18 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { matches } from '../../common/search';
-import { FEATURE_NAMES, PAGES, PICTURE_PLACE, TOOL_PAGES, TOOLS } from '../../common/words';
+import { FEATURE_NAMES, PAGES, PICTURE_PLACE, TOOL_PAGES } from '../../common/words';
 import { FEATURES } from '../../../model/features';
 import { EMPTY_SETTINGS } from '../../../model/settings';
 import type { SettingsPage } from '../routes';
-import { TOOL_PLACES } from '../tools/ToolsNav';
 import { hitsOf, hitTexts, subpages } from './terms';
 
 const PLACES = [
   ...(['models', 'connections', 'chat', 'labs', 'prompts', 'personas', 'modules', 'plugins', 'theme', 'display', 'controls', 'sounds', 'account', 'admin'] satisfies SettingsPage[]).map((page) => ({ page, label: PAGES[page] })),
   ...FEATURES.map((page) => ({ page, label: FEATURE_NAMES[page] })),
 ].map((place) => ({ ...place, route: { kind: 'settings' } as const }));
-const TOOLS_SOUGHT = TOOL_PLACES.map((place) => ({ ...place, where: TOOLS }));
-const hits = hitsOf([...PLACES, ...TOOLS_SOUGHT], subpages({ ...EMPTY_SETTINGS, profile: 'main' }, [{ id: 'main' }]));
+const TOOL_PLACES = (['translator', 'calculator'] as const).map((page) => ({ page, label: TOOL_PAGES[page], route: { kind: page } }));
+const hits = hitsOf([...PLACES, ...TOOL_PLACES], subpages({ ...EMPTY_SETTINGS, profile: 'main' }, [{ id: 'main' }]));
 const search = (words: string) => hits.filter((hit) => matches(words, ...hitTexts(hit)));
 
 const SHOWN = Object.values(
@@ -40,9 +39,9 @@ describe('설정 검색', () => {
     for (const [word, label] of [['캐싱', '캐시'], ['폰트', '글꼴'], ['다크', '모드'], ['메모리', '장기 기억'], ['temperature', '온도'], ['최대 토큰', '응답 최대 길이'], ['API 키', 'API 연결']] as const) expect(search(word).map(({ term }) => term), word).toEqual([label]);
   });
 
-  it('opens the pages of 도구, named by the window that holds them', () => {
-    expect(search('계산기').map(({ term, where, to }) => [term, where, to])).toEqual([[TOOL_PAGES.calculator, [TOOLS], { kind: 'calculator' }]]);
-    expect(search(TOOL_PAGES.translator).find(({ term }) => term === TOOL_PAGES.translator)).toMatchObject({ where: [TOOLS], to: { kind: 'translator' } });
+  it('opens the tools, pages of 설정 like any other', () => {
+    expect(search('계산기').map(({ term, where, to }) => [term, where, to])).toEqual([[TOOL_PAGES.calculator, [], { kind: 'calculator' }]]);
+    expect(search(TOOL_PAGES.translator).find(({ term }) => term === TOOL_PAGES.translator)).toMatchObject({ where: [], to: { kind: 'translator' } });
     expect(search('원문').find(({ where }) => where[0] === TOOL_PAGES.translator)?.to).toEqual({ kind: 'translator' });
   });
 

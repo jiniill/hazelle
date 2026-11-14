@@ -65,17 +65,17 @@ type RailProps = {
 const RAIL_SHAPE: Record<Shapes['rail'], string | undefined> = { icons: undefined, servers: styles.servers, labels: styles.labels };
 
 // Keep fold last so actions never move; split bottom places into two groups (user, 2026-10-20).
-// Brand mark is not home navigation: use the framed action button (user, 2026-10-12).
+// Brand mark is not home navigation: use the rail's action button (user, 2026-10-12).
 // icons: the actions over the faces. servers: the faces lead, round, the open one marked at the rail's edge, and the
 // actions stand under them, over the places. labels: icons' order on a slimmer rail, each action and place with its
-// name under its icon (IconButton framed), the faces as they are.
+// name under its icon (IconButton rail), the faces as they are.
 export function Rail({ fold, actions, places, children }: RailProps) {
   const shape = useShape('rail');
   const side = usePart('side');
   const acts = (
     <>
       {actions}
-      {fold && <IconButton icon={PanelLeft} label={fold.open ? '접기' : '펼치기'} framed onClick={fold.onToggle} />}
+      {fold && <IconButton icon={PanelLeft} label={fold.open ? '접기' : '펼치기'} rail onClick={fold.onToggle} />}
     </>
   );
   const faces = <div className={styles.railList}>{children}</div>;

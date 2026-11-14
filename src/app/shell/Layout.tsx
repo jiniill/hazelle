@@ -6,10 +6,9 @@ import { useChatOpening } from '../session';
 import { backLayers, Dialog, LayerWindow, Section, Shell, Shortcuts, Stack, Text, useLingering, useWide } from '../ui';
 import { Page } from './Page';
 import { closeLayer, holdBack, navigate, ShownRoute, useAddress } from './router';
-import { HOME, settingsPage, sidebarPage, toolsPage, type Route } from './routes';
-import { SETTINGS, TOOLS } from '../common/words';
+import { HOME, settingsPage, sidebarPage, type Route } from './routes';
+import { SETTINGS } from '../common/words';
 import { settingsEntry, SettingsSidebar } from './settings/SettingsNav';
-import { ToolsSidebar } from './tools/ToolsNav';
 import { LibrarySidebar } from './sidebar/LibrarySidebar';
 
 const COLLAPSED = 'risu-alpha:sidebar-collapsed';
@@ -33,7 +32,6 @@ export function Layout() {
     setCollapsed(to);
   };
   const settings = settingsPage(route);
-  const tools = toolsPage(route);
   const [listing, setListing] = useState(false);
   const { display, changeDisplay } = useDisplay();
 
@@ -43,7 +41,7 @@ export function Layout() {
   useShortcut('prompts', () => navigate({ kind: 'prompts', place: null, sort: null }), fallback);
   useShortcut('search', () => navigate({ kind: 'search', query: '' }), fallback);
   useShortcut('shortcutList', () => setListing((open) => !open), fallback);
-  useShortcut('sidebar', () => (wide && settings === null && tools === null ? fold(!folded) : false), fallback);
+  useShortcut('sidebar', () => (wide && settings === null ? fold(!folded) : false), fallback);
   useShortcut('pictures', () => changeDisplay({ hidePictures: !display.hidePictures }), fallback);
 
   const listed = listing && <ShortcutList enterSends={display.enterSends} onClose={() => setListing(false)} />;
@@ -57,8 +55,8 @@ export function Layout() {
   );
 
   const sidebar = (asPage: boolean) => <LibrarySidebar page={asPage} collapsed={folded} onCollapse={fold} />;
-  if (!wide) return settings !== null || tools !== null || !sidebarPage(route) ? page : <ShownRoute.Provider value={route}>{sidebar(true)}</ShownRoute.Provider>;
-  const layer = settings !== null ? { label: SETTINGS, side: <SettingsSidebar current={settings} onClose={closeLayer} /> } : tools !== null ? { label: TOOLS, side: <ToolsSidebar current={tools} onClose={closeLayer} /> } : null;
+  if (!wide) return settings !== null || !sidebarPage(route) ? page : <ShownRoute.Provider value={route}>{sidebar(true)}</ShownRoute.Provider>;
+  const layer = settings !== null ? { label: SETTINGS, side: <SettingsSidebar current={settings} onClose={closeLayer} /> } : null;
   const held = layer !== null;
   const outside = under ?? HOME;
   // The page a layer is opened from keeps its place in the tree, so it stays as it was behind the window.
