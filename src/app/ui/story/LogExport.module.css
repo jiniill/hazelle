@@ -13,8 +13,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-24);
-  /* A log is read on another page, so one made at 가득 is the widest step's, not this window's. */
-  width: min(var(--read-width), var(--read-widest));
+  width: var(--read-width);
   padding: var(--space-24);
   background: var(--color-bg);
   color: var(--color-text);
