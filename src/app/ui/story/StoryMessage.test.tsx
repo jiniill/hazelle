@@ -15,7 +15,7 @@ test('the tools follow the reader unless 메시지 도구 따라오기 is off', 
 
 test('a bubble message sets its words a bubble a block, or in one box where told, with the time after them, but one told to be plain; prose keeps the time by the name and boxes mine alone', () => {
   const message = (mine: boolean) => <StoryMessage avatar={null} name="미라" time="오후 9:39" mine={mine} id="m">본문</StoryMessage>;
-  const bubble = (node: React.ReactNode) => renderToStaticMarkup(<ThemeContext value={THEMES.bubble}>{node}</ThemeContext>);
+  const bubble = (node: React.ReactNode) => renderToStaticMarkup(<ThemeContext value={THEMES.kakaotalk}>{node}</ThemeContext>);
   const each = bubble(message(false));
   expect(each.indexOf('본문')).toBeLessThan(each.indexOf('오후 9:39'));
   expect(each).toContain(styles.fit);
@@ -34,12 +34,12 @@ test('a page message draws no face and no name but still says who spoke, with th
   const message = (mine: boolean) => <StoryMessage avatar={<i>얼굴</i>} name="미라" time="오후 9:39" mine={mine} id="m" tools="도구">본문</StoryMessage>;
   const drawn = (theme: (typeof THEMES)[keyof typeof THEMES], mine: boolean) => renderToStaticMarkup(<ThemeContext value={theme}>{message(mine)}</ThemeContext>);
   for (const mine of [false, true]) {
-    const page = drawn(THEMES.doc, mine);
+    const page = drawn(THEMES.claude, mine);
     expect(page).not.toContain('얼굴');
     expect(page).toContain(`<span class="${styles.unseen}">미라</span>`);
     expect(page.indexOf('도구')).toBeLessThan(page.indexOf('오후 9:39'));
   }
-  expect(drawn(THEMES.bubble, false)).toContain('얼굴');
-  expect(drawn(THEMES.bubble, true)).toContain(styles.unseen);
+  expect(drawn(THEMES.kakaotalk, false)).toContain('얼굴');
+  expect(drawn(THEMES.kakaotalk, true)).toContain(styles.unseen);
   expect(drawn(THEMES.base, true)).toContain('얼굴');
 });

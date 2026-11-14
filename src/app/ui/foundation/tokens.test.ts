@@ -123,7 +123,7 @@ it('writes a finish as token rules for the element that names the theme, a state
   expect(plain).toContain("[data-theme='night'][data-mode='dark'][data-bg='base'][data-accent='base']{--color-name:#ffcc00;}");
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, mark: '#2020a0' } } })).toContain("[data-theme='night'][data-mode='light'][data-accent='base']{--color-accent-mark:#2020a0;}");
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, action: '#404040', bubble: '#f0f0f0' } } })).toContain("[data-theme='night'][data-mode='light'][data-bg='base']{--color-bubble:#f0f0f0;}[data-theme='night'][data-mode='light'][data-dialogue='base']{--color-prose-action:#404040;}");
-  expect(themeRules(THEMES.bubble)).toContain("[data-theme='bubble/room/light'][data-mode='light'][data-bg='base']{--color-name:#2b3540;}");
+  expect(themeRules(THEMES.kakaotalk)).toContain("[data-theme='kakaotalk/room/light'][data-mode='light'][data-bg='base']{--color-name:#2b3540;}");
   expect(plain).not.toContain('[data-mode]{');
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close', speakers: 'large', corners: 'tight' } })).toBe(
     plain +
@@ -150,7 +150,7 @@ it('gives a finish of its own only to a theme with tones, the only kind an eleme
 it('names a theme on a scheme element only when it has colours of its own, and gives its rungs only to the base page', () => {
   expect(schemeAttributes(WORN, BASE)['data-theme']).toBeUndefined();
   expect(themeRules(BASE)).toBe('');
-  expect(schemeAttributes(WORN, THEMES.channel)['data-theme']).toBe('channel');
+  expect(schemeAttributes(WORN, THEMES.discord)['data-theme']).toBe('discord');
   const tones = { dark: { page: '#101010', text: '#f0f0f0', accent: '#8080ff', dialogue: '#ffffff', sidebar: '#0a0a0a', line: '#303030', muted: '#b0b0b0' }, light: { page: '#ffffff', text: '#101010', accent: '#3030c0', dialogue: '#000000' } };
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones })).toBe(
     "[data-theme='night'][data-mode='dark']{--color-pick-bg-base:#101010;--color-pick-ink-base:#f0f0f0;--color-pick-accent-base:#8080ff;--color-pick-dialogue-base:#ffffff;--color-text-muted:#b0b0b0;}" +

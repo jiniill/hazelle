@@ -1,8 +1,8 @@
 import type { Theme } from '../foundation/theme';
 
-export const bubble: Theme = {
-  id: 'bubble',
-  name: '말풍선',
+export const kakaotalk: Theme = {
+  id: 'kakaotalk',
+  name: '카카오톡',
   shapes: { header: 'plain', rail: 'icons', list: 'people', composer: 'bar', message: 'bubble', day: 'pill' },
   finish: { rows: 'close', faces: 'soft', lines: 'close', speakers: 'medium', corners: 'soft' },
   letters: { font: 'sans', size: 15, leading: 'normal', width: 'full' },
