@@ -55,14 +55,17 @@ export function ItemRow({ avatar, title, time, typing, starred, preview, current
 }
 
 // sought: a search listed it, by its name or by what was said. place: where it is kept, said while a search lists chats
-// out of their folders.
-type ChatProps = Omit<Props, 'avatar'> & { sought: boolean; place?: string };
+// out of their folders. face: whose chat it is, for a list that leads each row with it.
+type ChatProps = Omit<Props, 'avatar'> & { sought: boolean; place?: string; face: ReactNode };
 
 // A chat in its character's list, the region a theme's list shape draws. cards: its name and when, over a line of what
 // was said. channels: its name alone after a #; when it was written is left out, and what was said shows only under a
-// row a search found, which it may be what matched, with where the chat is kept at the row's end.
+// row a search found, which it may be what matched, with where the chat is kept at the row's end. people: a card led by
+// the face.
+const kept = (place: string | undefined, preview: string) => (place ? `${place} · ${preview}` : preview);
 const CHAT_ROWS: Record<Shapes['list'], (props: ChatProps) => ReactNode> = {
-  cards: ({ place, preview, ...row }) => <ItemRow {...row} preview={place ? `${place} · ${preview}` : preview} />,
+  cards: ({ place, preview, ...row }) => <ItemRow {...row} preview={kept(place, preview)} />,
+  people: ({ place, preview, face, ...row }) => <ItemRow {...row} avatar={face} preview={kept(place, preview)} />,
   channels: ({ title, typing, starred, preview, sought, place, current = false, selected, control, drag, menu, onDropCard, onClick }) => (
     <RowControl control={control} drag={drag} onDropCard={onDropCard} menu={menu}>
       <Item

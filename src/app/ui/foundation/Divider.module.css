@@ -29,6 +29,18 @@
   background: var(--color-divider);
 }
 
+/* The fill a row under the pointer has, which the quietest text is held readable on. */
+.pill {
+  display: flex;
+  align-items: center;
+  gap: inherit;
+  min-width: 0;
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-12);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-hover);
+}
+
 .menu {
   height: var(--border-thin);
   margin: var(--space-4) var(--space-8);

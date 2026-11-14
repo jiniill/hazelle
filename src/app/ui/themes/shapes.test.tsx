@@ -6,6 +6,7 @@ import { ChatRow } from '../collections/ItemRow';
 import { Composer } from '../controls/Composer';
 import { IconButton } from '../controls/IconButton';
 import { SchemeContext, type Scheme } from '../foundation/scheme';
+import { Divider } from '../foundation/Divider';
 import { BASE, ThemeContext } from '../foundation/theme';
 import { ChatTitle } from '../layout/ChatFrame';
 import { Rail, Sidebar } from '../layout/Sidebar';
@@ -34,8 +35,8 @@ it('puts the faces of a servers rail over its actions, and the fold last of them
   expect(rising(order(drawn(THEMES.channel, rail), '얼굴', '둘러보기', '사이드바 접기', '설정'))).toBe(true);
 });
 
-it('draws a chat as a channel by its name alone, with what was said and where it is kept under one a search found, and its star in both', () => {
-  const row = (sought: boolean, place?: string) => <ChatRow title="첫 채팅" time="2일 전" typing={false} preview="어서 와요." sought={sought} place={place} onClick={() => {}} />;
+it('draws a chat as a channel by its name alone, with what was said and where it is kept under one a search found, its star in both, and a people row led by the face', () => {
+  const row = (sought: boolean, place?: string) => <ChatRow title="첫 채팅" time="2일 전" typing={false} preview="어서 와요." sought={sought} face={<i>얼굴</i>} place={place} onClick={() => {}} />;
   const card = drawn(BASE, row(true, '여관'));
   expect(card).toContain('여관 · 어서 와요.');
   expect(card).toContain('2일 전');
@@ -44,10 +45,12 @@ it('draws a chat as a channel by its name alone, with what was said and where it
   expect(channel).not.toContain('어서 와요.');
   expect(channel).not.toContain('2일 전');
   expect(rising(order(drawn(THEMES.channel, row(true, '여관')), '첫 채팅', '여관', '어서 와요.'))).toBe(true);
-  expect(drawn(THEMES.channel, <ChatRow title="첫 채팅" time="" typing preview="" sought={false} onClick={() => {}} />)).toContain('생성 중');
-  const starred = <ChatRow title="첫 채팅" time="2일 전" typing={false} starred="즐겨찾기" preview="어서 와요." sought={false} place="여관" onClick={() => {}} />;
+  expect(drawn(THEMES.channel, <ChatRow title="첫 채팅" time="" typing preview="" sought={false} face={<i>얼굴</i>} onClick={() => {}} />)).toContain('생성 중');
+  const starred = <ChatRow title="첫 채팅" time="2일 전" typing={false} starred="즐겨찾기" preview="어서 와요." sought={false} face={<i>얼굴</i>} place="여관" onClick={() => {}} />;
   expect(rising(order(drawn(BASE, starred), 'aria-label="즐겨찾기"', '2일 전'))).toBe(true);
   expect(rising(order(drawn(THEMES.channel, starred), 'aria-label="즐겨찾기"', '여관'))).toBe(true);
+  expect(rising(order(drawn(THEMES.bubble, row(true, '여관')), '얼굴', '첫 채팅', '여관 · 어서 와요.'))).toBe(true);
+  expect(card).not.toContain('얼굴');
 });
 
 it('writes a bar composer as its menu, its field and its send button, what stands all the same under them, and a toolbar as its tools, its field, then the menu and the send button', () => {
@@ -78,4 +81,13 @@ it('draws the rail and the sidebar in a side\'s scheme under the page\'s mode th
 it('writes a framed button\'s name under its icon in a labels rail only, and no other button\'s', () => {
   const named = (theme: Parameters<typeof drawn>[0], framed: boolean) => drawn(theme, <IconButton icon={Wrench} label="도구" framed={framed} onClick={() => {}} />).includes('>도구</span>');
   expect([named(THEMES.work, true), named(THEMES.work, false), named(BASE, true), named(THEMES.channel, true)]).toEqual([true, false, false, false]);
+});
+
+it('draws a day line between two rules, or as a pill with none, and one that says nothing as a rule in both', () => {
+  const rules = (markup: string) => markup.match(/class="[^"]*rule/g)?.length ?? 0;
+  expect(rules(drawn(BASE, <Divider label="어제" />))).toBe(2);
+  const pill = drawn(THEMES.bubble, <Divider label="어제" />);
+  expect(rules(pill)).toBe(0);
+  expect(pill).toMatch(/class="[^"]*pill[^"]*"><span[^>]*>어제/);
+  expect(rules(drawn(THEMES.bubble, <Divider label="" />))).toBe(1);
 });

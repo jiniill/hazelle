@@ -122,6 +122,7 @@ export function ShelfChats({ page, shelf }: Props) {
         preview={preview}
         sought={sought}
         place={where}
+        face={<ShelfFace shelf={shelf} />}
         current={item.id === openChat}
         selected={moving.picked ? moving.picked.has(item.id) : undefined}
         control={hung > 0 && <FoldButton open={unfolded.has(item.id)} onToggle={() => toggleGroup(item.id)} noun="분기·사본" count={hung} brief />}

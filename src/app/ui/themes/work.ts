@@ -3,7 +3,7 @@ import type { Theme } from '../foundation/theme';
 export const work: Theme = {
   id: 'work',
   name: '업무',
-  shapes: { header: 'topic', rail: 'labels', list: 'channels', composer: 'toolbar', message: 'row' },
+  shapes: { header: 'topic', rail: 'labels', list: 'channels', composer: 'toolbar', message: 'row', day: 'rule' },
   finish: { rows: 'close', faces: 'soft', lines: 'close', speakers: 'medium', corners: 'tight' },
   letters: { font: 'sans', size: 15, leading: 'normal', width: 'full' },
   tones: {

@@ -3,7 +3,7 @@ import type { Theme } from '../foundation/theme';
 export const channel: Theme = {
   id: 'channel',
   name: '채널',
-  shapes: { header: 'topic', rail: 'servers', list: 'channels', composer: 'bar', message: 'row' },
+  shapes: { header: 'topic', rail: 'servers', list: 'channels', composer: 'bar', message: 'row', day: 'rule' },
   finish: { rows: 'close', faces: 'round', lines: 'close', speakers: 'large', corners: 'tight' },
   letters: { font: 'sans', size: 15, leading: 'normal', width: 'full' },
   tones: {

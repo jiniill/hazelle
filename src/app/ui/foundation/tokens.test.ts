@@ -72,8 +72,8 @@ const WORN: Scheme = { mode: 'dark', bg: 'base', ink: 'base', accent: 'base', di
 // Every set of colours a theme states: its own per mode, and a part's in the mode the part takes, whose sidebar is
 // its page.
 const themed = Object.values<Theme>(THEMES).flatMap((theme) => [
-  ...(theme.tones ? (Object.entries(theme.tones) as [Mode, Tone][]).map((tone) => [theme.id, ...tone] as const) : []),
-  ...(['side', 'room'] as const).flatMap((part) => Object.values(theme[part] ?? {}).map(({ mode, tone }) => [`${theme.id}'s ${part}`, mode, { ...tone, sidebar: tone.page } as Tone] as const)),
+  ...(theme.tones ? (Object.entries(theme.tones) as [Mode, Tone][]).map((tone) => [theme.id, ...tone, theme] as const) : []),
+  ...(['side', 'room'] as const).flatMap((part) => Object.values(theme[part] ?? {}).map(({ mode, tone }) => [`${theme.id}'s ${part}`, mode, { ...tone, sidebar: tone.page } as Tone, theme] as const)),
 ]);
 
 it('lists each theme under its own id', () => {
@@ -105,8 +105,10 @@ it.each(themed)('keeps what the %s theme states on its send button in %s readabl
   if (tone.onSend) expect(contrast(tone.onSend, tone.send ?? tone.accent)).toBeGreaterThanOrEqual(4.5);
 });
 
-it.each(themed)('keeps the words and the dialogue of the %s theme in %s readable in the bubble it states', (_, __, tone) => {
-  if (tone.bubble) for (const ink of [tone.text, tone.dialogue]) expect(contrast(ink, tone.bubble)).toBeGreaterThanOrEqual(4.5);
+it.each(themed)('keeps the words, the dialogue and the action voice of the %s theme in %s readable on its page, and in its bubble where it draws one', (_, mode, tone, theme) => {
+  const action = tone.action ?? color(mode === 'dark' ? dark! : light!, 'prose-action');
+  const fills = [tone.page, ...(theme.shapes.message === 'bubble' ? [tone.bubble ?? tone.surface ?? rung(mode, 'surface', tone.page)] : [])];
+  for (const fill of fills) for (const ink of [tone.text, tone.dialogue, action]) expect(contrast(ink, fill)).toBeGreaterThanOrEqual(4.5);
 });
 
 // 기본's accent clears this on the same fills, so a theme is held to it too: by its accent, or by the mark it states.
@@ -120,6 +122,7 @@ it('writes a finish as token rules for the element that names the theme, a state
   const plain = themeRules({ ...BASE, id: 'night', name: '밤', tones });
   expect(plain).toContain("[data-theme='night'][data-mode='dark'][data-bg='base'][data-accent='base']{--color-name:#ffcc00;}");
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, mark: '#2020a0' } } })).toContain("[data-theme='night'][data-mode='light'][data-accent='base']{--color-accent-mark:#2020a0;}");
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, action: '#404040', bubble: '#f0f0f0' } } })).toContain("[data-theme='night'][data-mode='light'][data-bg='base']{--color-bubble:#f0f0f0;}[data-theme='night'][data-mode='light'][data-dialogue='base']{--color-prose-action:#404040;}");
   expect(plain).not.toContain('[data-mode]{');
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close', speakers: 'large', corners: 'tight' } })).toBe(
     plain +

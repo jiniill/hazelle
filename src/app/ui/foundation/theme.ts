@@ -7,7 +7,8 @@ import { MODE, SchemeContext, schemeAttributes, type Mode, type Scheme } from '.
 // line is a divider's and a control's outline both, outline the control's where it is not the divider's. rail left out is the sidebar's; muted and faint left out stay the
 // mode's; name, a speaker's in the story, left out is the mark's, and is stated for the theme's own page. pointed is
 // the ground under a message the pointer is on, none when left out. bubble is a speech bubble's fill, the others',
-// the surface's when left out; mine is the accent's. mark is the accent where it is read, as words,
+// the surface's when left out; mine is the accent's. action is the story's action voice, the mode's when left out,
+// and is stated when that is too dim on the theme's page or bubble. mark is the accent where it is read, as words,
 // icons and the focus ring: left out is the accent, and is stated when that is too dim on the theme's fills.
 // onAccent is what stands on an accent fill, a button's words and a switch's knob, and accentHover that fill under
 // a pointer: left out are the rule's. send and onSend are the send button's fill and what stands on it, the accent's
@@ -29,6 +30,7 @@ export type Tone = {
   name?: string;
   pointed?: string;
   bubble?: string;
+  action?: string;
   mark?: string;
   onAccent?: string;
   accentHover?: string;
@@ -42,9 +44,10 @@ export type Tone = {
 export type Shapes = {
   header: 'plain' | 'topic';
   rail: 'icons' | 'servers' | 'labels';
-  list: 'cards' | 'channels';
+  list: 'cards' | 'channels' | 'people';
   composer: 'box' | 'bar' | 'toolbar';
   message: 'prose' | 'row' | 'bubble';
+  day: 'rule' | 'pill';
 };
 
 export type Spacing = 'narrow' | 'normal' | 'wide' | 'widest';
@@ -82,7 +85,7 @@ type Parts = { [Name in (typeof PARTS)[number]]?: Partial<Record<Mode, Part>> };
 // tones left out is the app's own colours, as tokens.css has them. A part is by the page's mode, and rides on tones.
 export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; shapes: Shapes; finish: Finish; letters?: Letters } & Parts;
 
-export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose' }, finish: { rows: 'open', faces: 'soft', lines: 'open', speakers: 'small', corners: 'soft' } };
+export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose', day: 'rule' }, finish: { rows: 'open', faces: 'soft', lines: 'open', speakers: 'small', corners: 'soft' } };
 
 // The theme the app wears: an element drawn in a scheme of its own inside it names it, and a component reads its
 // region's shape from it. A theme's card provides its own.
@@ -113,6 +116,8 @@ const GROUND: Partial<Record<keyof Tone, string[]>> = {
 // A 강조 pick colours the names too, as it does in 기본, and a name is stated against the theme's page, so a theme's
 // holds only while both picks are base.
 const VOICE: Partial<Record<keyof Tone, string[]>> = { name: ['--color-name'] };
+// 대사's 무채색 pick sets the action voice with it, so a theme's holds only while that pick is base.
+const SPOKEN: Partial<Record<keyof Tone, string[]>> = { action: ['--color-prose-action'] };
 // What is read in the accent and what stands on it follow a 강조 pick as well, but no 배경 pick changes the accent,
 // so a theme's hold on any page while 강조 is base; a name not held then is the mark's (tokens.css).
 const ACCENTED: Partial<Record<keyof Tone, string[]>> = { mark: ['--color-accent-mark'], onAccent: ['--color-on-accent'], accentHover: ['--color-accent-hover'], send: ['--color-send'], onSend: ['--color-on-send'] };
@@ -132,7 +137,7 @@ function rule(selector: string, tone: Tone, tokens: Partial<Record<keyof Tone, s
 
 function toneRules(name: string, mode: Mode, tone: Tone) {
   const worn = `[data-theme='${name}'][data-mode='${mode}']`;
-  return rule(worn, tone, OWN) + rule(`${worn}[data-bg='base']`, tone, GROUND) + rule(`${worn}[data-bg='base'][data-accent='base']`, tone, VOICE) + rule(`${worn}[data-accent='base']`, tone, ACCENTED);
+  return rule(worn, tone, OWN) + rule(`${worn}[data-bg='base']`, tone, GROUND) + rule(`${worn}[data-bg='base'][data-accent='base']`, tone, VOICE) + rule(`${worn}[data-accent='base']`, tone, ACCENTED) + rule(`${worn}[data-dialogue='base']`, tone, SPOKEN);
 }
 
 // A part is named apart from its theme, by the page's mode: under the theme's own name the theme's colours for the
