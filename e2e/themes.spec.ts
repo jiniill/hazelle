@@ -28,11 +28,14 @@ for (const name of ['클로드', '디스코드', '슬랙', '카카오톡']) {
     await expect(reply.getByText('She went up.')).toBeVisible();
 
     if (name === '카카오톡') {
-      const last = (await reply.getByText('She went up.').boundingBox())!;
-      const time = (await reply.getByText(/^오[전후] \d/).boundingBox())!;
-      const gap = time.x - (last.x + last.width);
-      expect(gap).toBeGreaterThanOrEqual(0);
-      expect(gap).toBeLessThan(16);
+      // The time beside the last bubble, not at the widest one's edge; while the reply is written it keeps the line's end.
+      const gap = async () => {
+        const last = (await reply.getByText('She went up.').boundingBox())!;
+        const time = (await reply.getByText(/^오[전후] \d/).boundingBox())!;
+        return time.x - (last.x + last.width);
+      };
+      await expect.poll(gap).toBeLessThan(16);
+      expect(await gap()).toBeGreaterThanOrEqual(0);
     }
 
     await page.reload();
