@@ -27,5 +27,5 @@
   height: var(--caret-height);
   margin-left: var(--space-2);
   vertical-align: -0.16em;
-  background: var(--color-accent);
+  background: var(--color-accent-mark);
 }

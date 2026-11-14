@@ -57,6 +57,8 @@
     --color-prose-dialogue: var(--bubble-voice);
     --color-prose-thought: var(--bubble-thought);
     --color-prose-action: var(--bubble-quiet);
+    --color-accent-mark: var(--bubble-link);
+    --color-found-term: var(--bubble-found);
   }
 
   :host([data-bubbles]) > * + * {

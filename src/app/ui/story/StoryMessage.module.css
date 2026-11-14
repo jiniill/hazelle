@@ -260,6 +260,8 @@
   --bubble-voice: var(--color-prose-dialogue);
   --bubble-thought: var(--color-prose-thought);
   --bubble-quiet: var(--color-prose-action);
+  --bubble-link: var(--color-accent-mark);
+  --bubble-found: var(--color-found-term);
 }
 
 .balloon.own {
@@ -268,6 +270,8 @@
   --bubble-voice: var(--color-on-accent);
   --bubble-thought: var(--color-on-accent);
   --bubble-quiet: var(--color-on-accent);
+  --bubble-link: var(--color-on-accent);
+  --bubble-found: var(--color-on-accent-wash);
   --bubble-lead: auto;
 }
 
@@ -330,6 +334,8 @@
   --color-prose-dialogue: var(--bubble-voice);
   --color-prose-thought: var(--bubble-thought);
   --color-prose-action: var(--bubble-quiet);
+  --color-accent-mark: var(--bubble-link);
+  --color-found-term: var(--bubble-found);
 }
 
 /* Floating tools stand on the last bubble's line at the side the bubbles leave free: half below it, they would cover

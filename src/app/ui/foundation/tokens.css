@@ -285,6 +285,8 @@
   --color-chart-quiet: color-mix(in srgb, var(--color-text-faint) 55%, transparent);
   --color-selection: color-mix(in srgb, var(--color-accent) 35%, transparent);
   --color-found-term: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  /* The same mark on an accent fill, where the accent's own would not show. */
+  --color-on-accent-wash: color-mix(in srgb, var(--color-on-accent) 30%, transparent);
   --color-diff-before: color-mix(in srgb, var(--color-warn) 40%, transparent);
   --color-diff-after: color-mix(in srgb, var(--color-success) 40%, transparent);
   /* Neutral on purpose: the accent already means picked, current and dropping, so a gold folder would read as picked. */

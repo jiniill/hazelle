@@ -10,7 +10,7 @@ import { useDisplay, useWorn } from '../display';
 import { backdropShades } from '../common/reading';
 import { useAssetUrl } from '../session';
 import { day } from '../common/time';
-import { aimedAtPanel, BackdropPicture, BubblesContext, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, StoryBackdrop, ToolsFollowContext, usePanelsBeside, useWide } from '../ui';
+import { aimedAtPanel, BackdropPicture, ChatFrame, Pill, Scrubber, SidePeeks, StepButtons, StoryBackdrop, ToolsFollowContext, usePanelsBeside, useWide } from '../ui';
 import { ChatAutopilot } from './ChatAutopilot';
 import { ChatBookmarks } from './ChatBookmarks';
 import { ChatInspect } from './ChatInspect';
@@ -172,9 +172,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
         onScroll={scroll.onScroll}
       >
         <ToolsFollowContext value={display.toolsFollow}>
-          <BubblesContext value={display.splitReplies}>
-            <ChatLog chat={chat} />
-          </BubblesContext>
+          <ChatLog chat={chat} />
         </ToolsFollowContext>
       </ChatFrame>
       <ChatDialogs chat={chat} />

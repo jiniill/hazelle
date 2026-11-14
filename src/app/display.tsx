@@ -4,7 +4,7 @@ import { DISPLAY, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, wornLook, parseS
 import { useReading } from './common/useReading';
 import { usePersisted } from './common/usePersisted';
 import { useSettings } from './session';
-import { applyScheme, QuoteShapeContext, SchemeContext, ThemeContext, THEMES, useCoarsePointer, useDarkScheme, VeilContext, type Letters, type Mode, type Reading, type ThemeId } from './ui';
+import { applyScheme, BubblesContext, QuoteShapeContext, SchemeContext, ThemeContext, THEMES, useCoarsePointer, useDarkScheme, VeilContext, type Letters, type Mode, type Reading, type ThemeId } from './ui';
 
 type DisplayControl = {
   // The worn theme's: its own letters where it states them.
@@ -84,7 +84,9 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
       <ThemeContext value={theme}>
         <SchemeContext value={scheme}>
           <VeilContext value={veil}>
-            <QuoteShapeContext value={display.quotes}>{children}</QuoteShapeContext>
+            <QuoteShapeContext value={display.quotes}>
+              <BubblesContext value={display.splitReplies}>{children}</BubblesContext>
+            </QuoteShapeContext>
           </VeilContext>
         </SchemeContext>
       </ThemeContext>
