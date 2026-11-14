@@ -10,7 +10,7 @@ import { ToolSetting } from '../common/ToolSetting';
 import { opensPage } from '../common/ToolView';
 import type { Write } from '../common/saveQueue';
 import { useAutosave } from '../common/useAutosave';
-import { MEMORY_CLAIM_HELP, MODULE_MODEL, MODULE_MODEL_HELP, MODULE_MODELS, modelsHelp, NETWORK, NETWORK_CALLED, NETWORK_HELP, SAVE_FAILED, TOOL, toolVersion, type Asker } from '../common/words';
+import { MEMORY_CLAIM_HELP, MODEL_ROLES, MODULE_MODEL_HELP, MODULE_MODELS, modelsHelp, NETWORK, NETWORK_CALLED, NETWORK_HELP, SAVE_FAILED, TOOL, toolVersion, type Asker } from '../common/words';
 import { useSession, useSettings, useTool, useToolHosts } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
@@ -42,7 +42,7 @@ function OwnModel({ module }: { module: Stored<'module'> }) {
   const writer = 'kind' in route ? route : writerOf(store, route);
   return (
     <TaskModelRow
-      label={MODULE_MODEL}
+      label={MODEL_ROLES.aux}
       help={MODULE_MODEL_HELP}
       own={own}
       runs={'kind' in writer ? { why: describeModuleModelFailure(writer, own !== undefined) } : writer}
