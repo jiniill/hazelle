@@ -3,6 +3,7 @@ import type { Theme } from '../foundation/theme';
 export const kakaotalk: Theme = {
   id: 'kakaotalk',
   name: '카카오톡',
+  mode: 'light',
   shapes: { header: 'plain', rail: 'icons', list: 'people', composer: 'bar', message: 'bubble', day: 'pill' },
   finish: { rows: 'close', faces: 'squircle', lines: 'close', speakers: 'medium', corners: 'soft', dock: 'flush' },
   letters: { font: 'sans', size: 15, leading: 'normal', width: 'full' },

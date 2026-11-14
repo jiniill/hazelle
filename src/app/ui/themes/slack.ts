@@ -3,6 +3,7 @@ import type { Theme } from '../foundation/theme';
 export const slack: Theme = {
   id: 'slack',
   name: '슬랙',
+  mode: 'light',
   shapes: { header: 'topic', rail: 'labels', list: 'channels', composer: 'toolbar', message: 'row', day: 'rule' },
   finish: { rows: 'close', faces: 'soft', lines: 'close', speakers: 'medium', corners: 'tight', dock: 'inset' },
   letters: { font: 'sans', size: 15, leading: 'normal', width: 'full' },

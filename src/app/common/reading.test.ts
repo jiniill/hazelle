@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { STARTER_PRESETS } from '../../model/settings';
 import type { Reading } from '../ui';
-import { backdropShades, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, parseDisplay, parseReading, presetOf, savedPresets, wornLook } from './reading';
+import { backdropShades, DISPLAY_DEFAULT, effectiveEnterSends, lookOf, modeIn, parseDisplay, parseReading, presetOf, savedPresets, wearing, wornLook } from './reading';
 
 const FALLBACK: Reading = { font: 'serif', size: 17, leading: 'normal', width: 'normal', reply: 'follow' };
 const STARTERS = savedPresets(STARTER_PRESETS).presets;
@@ -36,9 +36,40 @@ describe('stored display settings', () => {
   });
 
   it('keeps a known mode, color picks and real switches, and starts anything else from the fallback', () => {
-    const chosen = { theme: 'discord', chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, mode: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSendsChoice: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, toolsFollow: false, splitReplies: false, userStops: true } as const;
+    const chosen = { theme: 'discord', chimes: true, chimeSounds: { 'reply-started': 'tap', 'reply-received': 'off', translated: 'ding' }, mode: 'light', bg: 'blue', ink: 'soft', accent: 'rose', dialogue: 'plain', follow: { light: 'deleted-own', dark: 'sea', applied: 'dark' }, quotes: 'box', hideHeader: false, foldComposer: true, enterSendsChoice: false, hidePictures: true, pictureWidest: 60, wideFill: false, pictureSide: 'left', inlineIllustrations: true, portrait: true, stepButtons: true, scrubber: false, toolsFollow: false, splitReplies: false, userStops: true, modes: { base: 'dark', slack: 'dark' } } as const;
     expect(parseDisplay(JSON.stringify(chosen), DISPLAY_DEFAULT)).toEqual(chosen);
     expect(parseDisplay(JSON.stringify({ chimes: 'yes', chimeSounds: { 'reply-started': 'bell', translated: 3 }, mode: 'sepia', bg: 'teal', accent: 3, quotes: 'bubble', follow: { light: 'study', dark: 3, applied: 'dark' }, hideHeader: 'no', enterSendsChoice: 0, enterSends: 0, hidePictures: 1, pictureWidest: 5, wideFill: 'no', pictureSide: 'top', inlineIllustrations: 'yes', portrait: 'yes' }), DISPLAY_DEFAULT)).toEqual(DISPLAY_DEFAULT);
+  });
+});
+
+describe('a theme and its mode', () => {
+  const worn = (stored: object) => parseDisplay(JSON.stringify(stored), DISPLAY_DEFAULT);
+
+  it('reads a display saved before modes with none left, and drops a mode or a theme it does not know', () => {
+    expect(worn({ theme: 'discord', mode: 'light' })).toMatchObject({ theme: 'discord', mode: 'light', modes: {} });
+    expect(worn({ modes: { slack: 'sepia', toString: 'dark', claude: 'dark' } }).modes).toEqual({ claude: 'dark' });
+  });
+
+  it('takes a theme in the mode it states, and leaves the worn mode with the one taken off', () => {
+    const base = worn({ theme: 'base', mode: 'dark' });
+    expect(wearing(base, 'kakaotalk')).toEqual({ theme: 'kakaotalk', mode: 'light', modes: { base: 'dark' } });
+    const back = wearing({ ...base, ...wearing(base, 'kakaotalk'), mode: 'dark' }, 'base');
+    expect(back).toEqual({ theme: 'base', mode: 'dark', modes: { base: 'dark', kakaotalk: 'dark' } });
+    expect(modeIn({ ...base, ...back }, 'kakaotalk')).toBe('dark');
+  });
+
+  it('keeps the mode of a theme that was worn before modes, and takes 기본 in the mode worn now where none was left', () => {
+    const old = worn({ theme: 'discord', mode: 'light' });
+    expect(modeIn(old, 'discord')).toBe('light');
+    expect(wearing(old, 'base')).toMatchObject({ theme: 'base', mode: 'light', modes: { discord: 'light' } });
+    expect(modeIn(old, 'slack')).toBe('light');
+    expect(modeIn(worn({ theme: 'base', mode: 'light' }), 'discord')).toBe('dark');
+  });
+
+  it('leaves the presets that follow the system as they are', () => {
+    const follow = { light: 'paper', dark: 'sea', applied: 'dark' as const };
+    const base = worn({ theme: 'base', mode: 'dark', follow });
+    expect({ ...base, ...wearing(base, 'claude') }).toMatchObject({ mode: 'light', follow });
   });
 });
 

@@ -71,7 +71,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     changeReading: (change) => setReading({ ...reading, ...change }),
     changeDisplay: (change) => setDisplay({ ...display, ...change }),
     pick,
-    reset: () => wear(lookOf(first, DISPLAY_DEFAULT), follow),
+    reset: () => wear(lookOf(first, { ...DISPLAY_DEFAULT, mode: theme.mode ?? DISPLAY_DEFAULT.mode }), follow),
     followSystem,
     assign: (slot, preset) => {
       if (!follow) return;
