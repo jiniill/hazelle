@@ -48,7 +48,7 @@ export type Shapes = {
   header: 'plain' | 'topic' | 'bare';
   rail: 'icons' | 'servers' | 'labels';
   list: 'cards' | 'titles' | 'channels' | 'people';
-  composer: 'box' | 'bar' | 'toolbar';
+  composer: 'box' | 'bar' | 'toolbar' | 'tray';
   message: 'prose' | 'page' | 'row' | 'bubble';
   day: 'rule' | 'pill';
 };

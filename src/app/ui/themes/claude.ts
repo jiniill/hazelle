@@ -3,7 +3,7 @@ import type { Theme } from '../foundation/theme';
 export const claude: Theme = {
   id: 'claude',
   name: '클로드',
-  shapes: { header: 'bare', rail: 'icons', list: 'titles', composer: 'box', message: 'page', day: 'rule' },
+  shapes: { header: 'bare', rail: 'icons', list: 'titles', composer: 'tray', message: 'page', day: 'rule' },
   finish: { rows: 'open', faces: 'soft', lines: 'open', speakers: 'small', corners: 'round', dock: 'lifted' },
   letters: { font: 'serif', size: 16, leading: 'narrow', width: 'normal' },
   tones: {
