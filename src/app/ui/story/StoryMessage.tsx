@@ -63,7 +63,7 @@ type Props = {
 // under a pointer they float over the row's foot, half below it, and show while the row is pointed at or holds the
 // focus. With no pointer to hover, or told to stay, a row's tools keep prose's line. bubble: everyone's words in
 // bubbles, each of a reply's blocks one or the whole reply one (BubblesContext), mine in the accent at the end with no
-// face or name, the time beside the words, and the tools as a row's. page: nobody's face or name, the words on the
+// face or name, the time beside the last bubble, and the tools as a row's. page: nobody's face or name, the words on the
 // ground and mine in a box at the end; what else the head holds, a mark or a badge, keeps its line over the words, the
 // time stands in the tools' line, the tools under the words where they start (mine's where its box ends), and the
 // reading rail before the words, in the column's edge.
