@@ -644,6 +644,8 @@
   --read-normal: 800px;
   --read-wide: 960px;
   --read-widest: 1200px;
+  /* No cap: wider than any column, so what it caps fills its column. */
+  --read-full: 100vw;
   --read-gutter: 40px;
   --read-stage-least: 64px;
   --peek-tab-width: 27px;

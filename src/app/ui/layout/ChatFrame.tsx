@@ -4,7 +4,7 @@ import { IconButton } from '../controls/IconButton';
 import { faceStyle, FONTS } from '../foundation/fonts';
 import { Icon } from '../foundation/Icon';
 import { schemeAttributes, type Scheme } from '../foundation/scheme';
-import { ThemeContext, useShape, type Letters, type Shapes, type Spacing } from '../foundation/theme';
+import { ThemeContext, useShape, type Letters, type Shapes, type Spacing, type Width } from '../foundation/theme';
 import { usePanelsBeside, useShortWide } from '../foundation/media';
 import { useReadingRail } from '../story/readingRail';
 import styles from './ChatFrame.module.css';
@@ -24,7 +24,7 @@ export const readingDefault = (): Reading => ({
 });
 
 const LEADING: Record<Spacing, string> = { narrow: styles.leadingNarrow, normal: styles.leadingNormal, wide: styles.leadingWide, widest: styles.leadingWidest };
-const WIDTH: Record<Spacing, string> = { narrow: styles.widthNarrow, normal: styles.widthNormal, wide: styles.widthWide, widest: styles.widthWidest };
+const WIDTH: Record<Width, string> = { narrow: styles.widthNarrow, normal: styles.widthNormal, wide: styles.widthWide, widest: styles.widthWidest, full: styles.widthFull };
 
 // The reading settings on the element a story sits in: the chat's column, or an exported log (LogExport).
 export const readingScope = ({ font, size, leading, width }: Reading) => ({ className: `${styles[FONTS[font].kind]} ${LEADING[leading]} ${WIDTH[width]}`, style: { ...faceStyle(font), '--reading-size': `${size}px` } as CSSProperties });

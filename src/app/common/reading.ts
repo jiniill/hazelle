@@ -15,6 +15,7 @@ export const DISPLAY = 'risu-alpha:display';
 export const SIZE = { min: 14, max: 21 };
 
 export const SPACING: Record<Reading['leading'], string> = { narrow: '좁게', normal: '보통', wide: '넓게', widest: '매우 넓게' };
+export const WIDTH: Record<Reading['width'], string> = { ...SPACING, full: '가득' };
 export const REPLY: Record<Reading['reply'], string> = { follow: '자동 스크롤', stay: '스크롤 고정' };
 export const SIDE: Record<StageSide, string> = { right: '오른쪽', left: '왼쪽' };
 
@@ -39,7 +40,7 @@ export function parseLetters(stored: string, fallback: Letters): Letters {
     font: known(FONTS, read.font, fallback.font),
     size: sized(read.size) ?? fallback.size,
     leading: known(SPACING, read.leading, fallback.leading),
-    width: known(SPACING, read.width, fallback.width),
+    width: known(WIDTH, read.width, fallback.width),
   };
 }
 
@@ -157,7 +158,7 @@ function parseLook(look: SavedLook['look']): Look | null {
     font: named(FONTS, look.font),
     size: sized(look.size),
     leading: named(SPACING, look.leading),
-    width: named(SPACING, look.width),
+    width: named(WIDTH, look.width),
   };
   return LOOK_KEYS.every((key) => read[key] !== undefined) ? (read as Look) : null;
 }

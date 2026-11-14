@@ -14,6 +14,10 @@ describe('stored reading settings', () => {
     expect(parseReading('null', FALLBACK)).toEqual(FALLBACK);
   });
 
+  it('takes 가득 for 읽기 폭 alone: 줄 간격 has no such step', () => {
+    expect(parseReading(JSON.stringify({ ...FALLBACK, leading: 'full', width: 'full' }), FALLBACK)).toEqual({ ...FALLBACK, width: 'full' });
+  });
+
   it('reads reading settings stored before 응답이 올 때 as following the reply', () => {
     expect(parseReading(JSON.stringify({ font: 'sans', size: 17, leading: 'normal', width: 'normal' }), FALLBACK).reply).toBe('follow');
     expect(parseReading(JSON.stringify({ ...FALLBACK, reply: 'jump' }), FALLBACK).reply).toBe('follow');
@@ -84,6 +88,11 @@ describe('saved presets', () => {
     ]);
     expect(read).toEqual({ presets: [{ id: 'a', name: '숲', look }], unread: 1 });
     expect(presetOf(read.presets, FALLBACK, { ...DISPLAY_DEFAULT, bg: 'green', accent: 'violet' })?.name).toBe('숲');
+  });
+
+  it('reads a look saved at 가득, and counts one whose 줄 간격 is full as unknown', () => {
+    const look = lookOf({ ...FALLBACK, width: 'full' }, DISPLAY_DEFAULT);
+    expect(savedPresets([{ id: 'a', name: '가득', look }, { id: 'b', name: '줄', look: { ...look, leading: 'full' } }])).toEqual({ presets: [{ id: 'a', name: '가득', look }], unread: 1 });
   });
 
   it('reads a look saved before 대사 as the base dialogue', () => {

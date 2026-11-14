@@ -36,10 +36,12 @@ export type Shapes = {
 };
 
 export type Spacing = 'narrow' | 'normal' | 'wide' | 'widest';
+// 읽기 폭's steps: full has no cap, so the story is as wide as its column.
+export type Width = Spacing | 'full';
 
 // 글꼴, 글자 크기, 줄 간격 and 읽기 폭: what 읽기 sets. A theme that states them starts with its own, and the reader's
 // changes while wearing it are kept as that theme's, apart from the ones made in a theme that states none.
-export type Letters = { font: FontId; size: number; leading: Spacing; width: Spacing };
+export type Letters = { font: FontId; size: number; leading: Spacing; width: Width };
 
 // What a theme sets of the things no reader's setting owns, each by name: the values are tokens.css's. The first of
 // each is 기본's and writes no rule. Only a theme with tones is named on its
