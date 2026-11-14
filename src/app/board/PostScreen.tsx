@@ -26,7 +26,7 @@ import { withParticle } from '../common/particles';
 import { RestoresDialog } from '../common/RestoresDialog';
 import { ReportDialog } from '../common/ReportDialog';
 import { counted, TextDialog } from '../common/TextDialog';
-import { ago, moment } from '../common/time';
+import { moment } from '../common/time';
 import { count, readCount } from '../common/typedNumber';
 import { useAttempt } from '../common/useAttempt';
 import { useLoaded } from '../common/useLoaded';
@@ -58,7 +58,8 @@ function useAct(then: () => void) {
   return (request: () => Promise<ApiResult<undefined>>, failed: string) => void request().then((answer) => (answer.ok ? then() : toast.failed(answer, failed)));
 }
 
-const edited = (at: number, editedAt: number | null) => (editedAt === null ? ago(at) : `${ago(at)} · 수정됨`);
+// A post's page names the day and time of everything on it; a feed says how long ago.
+const written = (at: number, editedAt: number | null) => (editedAt === null ? moment(at) : `${moment(at)} · ${moment(editedAt)} 수정`);
 const hiddenLine = (what: string, { reason, until }: Hidden) => `운영자가 가린 ${what}이에요. 이유: ${reason}${until === null ? '' : ` · ${moment(until)}까지`}`;
 
 export function PostScreen({ id, back }: { id: number; back: Back }) {
@@ -155,7 +156,10 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
         <Row kind="tags">
           <PostMarks row={post} />
         </Row>
-        <AuthorLine author={post.author} note={edited(post.createdAt, post.editedAt)} size="md" />
+        <Row kind="spread">
+          <AuthorLine author={post.author} note={written(post.createdAt, post.editedAt)} size="md" />
+          {post.visibility === 'public' && <PostStat icon={Eye} label={BOARD.views} count={count(post.views)} />}
+        </Row>
         {post.hidden && <Callout tone="warn">{hiddenLine('글', post.hidden)}</Callout>}
         {post.visibility === 'operator' && <Text variant="note">운영자만 읽을 수 있는 글이에요.</Text>}
         {live && tour && (
@@ -277,7 +281,7 @@ function Comments({ post, admin, guest, gate, onAsk, onChanged }: { post: Post; 
           <AuthorLine
             author={comment.author}
             size="md"
-            note={edited(comment.createdAt, comment.editedAt)}
+            note={written(comment.createdAt, comment.editedAt)}
             marks={
               <>
                 {comment.byAuthor && <Tag>{BOARD.author}</Tag>}
@@ -348,7 +352,7 @@ function Comments({ post, admin, guest, gate, onAsk, onChanged }: { post: Post; 
   // Only the last status change is kept, so it alone stands among the comments, where its time falls.
   const { statusAt } = post;
   const change = statusAt !== null && (
-    <ThreadEvent key="status" icon={statusIcon(post.status)} note={ago(statusAt)}>
+    <ThreadEvent key="status" icon={statusIcon(post.status)} note={moment(statusAt)}>
       {`${withParticle(OPERATOR_NAME, '이/가')} ${withParticle(BOARD.statuses[post.status], '으로/로')} 바꿨어요`}
       {post.status === 'done' && post.version && ` · ${post.version}`}
     </ThreadEvent>

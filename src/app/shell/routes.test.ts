@@ -75,7 +75,7 @@ const EXAMPLES = {
   ],
   usage: [{ kind: 'usage' }],
   notices: [{ kind: 'notices' }],
-  board: [{ kind: 'board', operator: false }, { kind: 'board', operator: true }, { kind: 'board', operator: false, category: 'news' }, { kind: 'board', operator: true, category: 'bug' }],
+  board: [{ kind: 'board', operator: false }, { kind: 'board', operator: true }, { kind: 'board', operator: false, category: 'news' }, { kind: 'board', operator: true, category: 'bug' }, { kind: 'board', operator: false, q: '검색 100%' }, { kind: 'board', operator: true, category: 'idea', q: 'a&b' }],
   post: [{ kind: 'post', id: 1 }, { kind: 'post', id: 4821 }],
   'board-write': [{ kind: 'board-write', operator: false }, { kind: 'board-write', operator: true }, { kind: 'board-write', operator: false, category: 'question' }],
   'board-edit': [{ kind: 'board-edit', id: 12 }],

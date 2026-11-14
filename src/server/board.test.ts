@@ -139,6 +139,46 @@ it("sorts 'top' by votes, then newest, and pages it on the server's cursor", asy
   expect((await t.get('board/posts?sort=top&after=12', author.cookie)).status).toBe(400);
 });
 
+it('finds posts by every word in the title or the text, 소식 among them, and never one the asker may not read', async () => {
+  const admin = await operator();
+  const author = await member('author');
+  const other = await member('other');
+  await posted(author, { title: '게시글 검색 기능', text: '같은 제안을 찾고 싶어요' });
+  await posted(author, { title: '즐겨찾기', text: '채팅 검색이 어려워요' });
+  await posted(author, { title: '100%_완료', text: '없음' });
+  await posted(author, { title: '비공개 검색', visibility: 'operator' });
+  const held = await posted(author, { title: '가려진 검색' });
+  await t.put(`board/posts/${held}/hidden`, { hidden: { reason: '광고', days: null } }, admin.cookie);
+  await posted(admin, { title: '검색이 생겼어요', category: 'news' });
+  const found = (who: Who, q: string, more = '') => titles(who, `sort=new&q=${encodeURIComponent(q)}${more}`);
+
+  expect(await found(other, '검색')).toEqual(['검색이 생겼어요', '즐겨찾기', '게시글 검색 기능']);
+  expect(await found(other, ' 제안  게시글 ')).toEqual(['게시글 검색 기능']);
+  expect(await found(other, '검색', '&category=idea')).toEqual(['즐겨찾기', '게시글 검색 기능']);
+  expect(await found(other, '%')).toEqual(['100%_완료']);
+  expect(await found(other, '0_완')).toEqual([]);
+  expect(await found(other, '%_')).toEqual(['100%_완료']);
+  expect(await found(author, '검색', '&visibility=operator')).toEqual(['비공개 검색']);
+  expect(await found(other, '검색', '&visibility=operator')).toEqual([]);
+  expect(await found(author, '가려진')).toEqual(['가려진 검색']);
+  expect((await t.get(`board/posts?sort=new&q=${'가'.repeat(51)}`, other.cookie)).status).toBe(400);
+});
+
+it("counts a public post's reader once a day, an account or an address, never its author or the operator", async () => {
+  const admin = await operator();
+  const author = await member('author');
+  const reader = await member('reader');
+  const id = await posted(author);
+  const asked = await posted(author, { visibility: 'operator' });
+  const visit = async (address: string) => ((await (await t.get(`board/posts/${id}`, undefined, { [VISITOR_HEADER]: address })).json()) as { post: Post }).post.views;
+
+  expect([(await read(author, id)).views, (await read(admin, id)).views]).toEqual([0, 0]);
+  expect([(await read(reader, id)).views, (await read(reader, id)).views]).toEqual([1, 1]);
+  expect([await visit('203.0.113.7'), await visit('203.0.113.7'), await visit('203.0.113.8')]).toEqual([2, 2, 3]);
+  expect((await read(admin, asked)).views).toBe(0);
+  expect((await list(author)).posts.map(({ views }) => views)).toEqual([3]);
+});
+
 it('counts one vote per account, taken back by voting false, and refuses votes on an operator-only post', async () => {
   await operator();
   const author = await member('author');

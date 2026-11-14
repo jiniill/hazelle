@@ -34,7 +34,7 @@ it('puts the faces of a servers rail over its actions, and the fold last of them
   expect(rising(order(drawn(THEMES.channel, rail), '얼굴', '둘러보기', '사이드바 접기', '설정'))).toBe(true);
 });
 
-it('draws a chat as a channel by its name alone, with what was said and where it is kept under one a search found', () => {
+it('draws a chat as a channel by its name alone, with what was said and where it is kept under one a search found, and its star in both', () => {
   const row = (sought: boolean, place?: string) => <ChatRow title="첫 채팅" time="2일 전" typing={false} preview="어서 와요." sought={sought} place={place} onClick={() => {}} />;
   const card = drawn(BASE, row(true, '여관'));
   expect(card).toContain('여관 · 어서 와요.');
@@ -45,6 +45,9 @@ it('draws a chat as a channel by its name alone, with what was said and where it
   expect(channel).not.toContain('2일 전');
   expect(rising(order(drawn(THEMES.channel, row(true, '여관')), '첫 채팅', '여관', '어서 와요.'))).toBe(true);
   expect(drawn(THEMES.channel, <ChatRow title="첫 채팅" time="" typing preview="" sought={false} onClick={() => {}} />)).toContain('생성 중');
+  const starred = <ChatRow title="첫 채팅" time="2일 전" typing={false} starred="즐겨찾기" preview="어서 와요." sought={false} place="여관" onClick={() => {}} />;
+  expect(rising(order(drawn(BASE, starred), 'aria-label="즐겨찾기"', '2일 전'))).toBe(true);
+  expect(rising(order(drawn(THEMES.channel, starred), 'aria-label="즐겨찾기"', '여관'))).toBe(true);
 });
 
 it('writes a bar composer as its menu, its field and its send button, what stands all the same under them, and a toolbar as its tools, its field, then the menu and the send button', () => {

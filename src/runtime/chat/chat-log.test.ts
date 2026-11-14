@@ -5,7 +5,7 @@ import type { StatusChange } from '../../model/status';
 import { memoryId, type MemoryRecord } from '../../model/memory';
 import { chatPrint } from '../diagnostics/cache';
 import { chatFile, readChatFile } from '../export/chat-file';
-import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, copyChat, copyShown, editMessage, forgetOrigin, importChat, nameBookmark, removeMessage, replyMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setStatusByHand, setVariableByHand, startChat, withOwn } from './chat-log';
+import { appendCost, appendReply, appendScripted, appendTranslation, appendUserMessage, copyChat, copyShown, editMessage, forgetOrigin, importChat, nameBookmark, removeMessage, replyMessage, removeMessages, restoreMessages, selectVersion, setBookmark, setCast, setChatOwn, setStatusByHand, setVariableByHand, starChat, startChat, withOwn } from './chat-log';
 import { setChatModel, withMainModel } from '../models/assignment';
 import type { Files } from '../files/files';
 import { summaryId } from '../store/summary';
@@ -274,6 +274,23 @@ describe('copyChat', () => {
     expect(store.get('chat', again.data.id)!.value.origin).toMatchObject({ id: first.data.id, name: '기숙사의 밤' });
     expect(await forgetOrigin(store, again.data.id)).toMatchObject({ ok: true });
     expect(store.get('chat', again.data.id)!.value.origin).toBeUndefined();
+  });
+
+  it('stars a chat and takes the star back, and gives neither its branch nor its copy the star', async () => {
+    const { store } = await server.account();
+    const source = crypto.randomUUID();
+    await server.hold(store, source);
+    await startChat(store, source, { title: '기숙사의 밤', character: null, models: {} }, null);
+    const said = crypto.randomUUID();
+    await appendUserMessage(store, source, { id: said, text: '안녕' });
+    expect(await starChat(store, source, true)).toMatchObject({ ok: true });
+    expect(store.get('chat', source)!.value.starred).toBe(true);
+    const branched = await copyChat(store, source, { kind: 'branch', at: said });
+    const copied = await copyChat(store, source, { kind: 'duplicate', title: '사본' });
+    if (!branched.ok || !copied.ok) throw new Error('copy');
+    expect([branched, copied].map(({ data }) => 'starred' in store.get('chat', data.id)!.value)).toEqual([false, false]);
+    await starChat(store, source, false);
+    expect('starred' in store.get('chat', source)!.value).toBe(false);
   });
 
   it('duplicates a chat whole under the name given, remembering its origin with no split, keeping the seed', async () => {

@@ -81,9 +81,11 @@ export function ChatLineage({ current, shelf, onClose }: Props) {
       title: chat.title,
       note: [chat.count === null ? null : `${chat.count}개`, chat.at === null ? null : ago(chat.at)].filter((part) => part !== null).join(' · '),
       preview: chat.preview ?? undefined,
+      starred: chat.chat.starred && ACTS.star.label,
       control: (
         <MoreMenu of={`'${chat.title}'`}>
           <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setNaming(chat)} />
+          <MenuItem icon={ACTS.star.icon} label={ACTS.star.label} checked={chat.chat.starred ?? false} multiple onClick={() => edits.star(chat)} />
           <MenuItem icon={ACTS.duplicate.icon} label={ACTS.duplicate.label} onClick={() => void edits.duplicate(chat)} />
           {chat.chat.origin && <MenuItem label={FORGET_ORIGIN} onClick={() => edits.forgetOrigin(chat.id)} />}
           <Divider variant="menu" />

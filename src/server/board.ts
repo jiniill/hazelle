@@ -10,6 +10,7 @@ import {
   MAX_POST_LENGTH,
   MAX_POST_PICTURES,
   MAX_REASON_LENGTH,
+  MAX_SEARCH_LENGTH,
   MAX_TITLE_LENGTH,
   nicknameKey,
   OPERATOR_NAME,
@@ -99,7 +100,7 @@ const hiddenOf = (row: HiddenSql, sees: boolean): Hidden | null => (row.hiddenNo
 // A list shows the start of each post's text, a feed card's two lines at most.
 const EXCERPT_LENGTH = 200;
 const POST_COLUMNS = (account: Reader) => `p.id, p.title, substr(p.text, 1, ${EXCERPT_LENGTH}) AS excerpt, p.category, p.status, p.version, p.visibility, p.created_at AS createdAt, p.edited_at AS editedAt,
-  p.locked, p.deleted, ${HIDDEN('p')}, ${AUTHOR('p')},
+  p.views, p.locked, p.deleted, ${HIDDEN('p')}, ${AUTHOR('p')},
   (SELECT COUNT(*) FROM post_votes v WHERE v.post_id = p.id) AS votes,
   EXISTS (SELECT 1 FROM post_votes v WHERE v.post_id = p.id AND v.account_id = ?1) AS voted,
   (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted = 0 AND ${commentShown(account)}) AS commentCount`;
@@ -147,7 +148,8 @@ board.put('/name', async (c) => {
 });
 
 // mine: the asker's own posts of both visibilities, else one visibility, public when not asked. A 'top' page cursors on
-// `${votes}:${id}` (contracts/board PostList), a 'new' one on id.
+// `${votes}:${id}` (contracts/board PostList), a 'new' one on id. q: every word of it stands in the title or the text,
+// 소식 among them; comments are not searched, a hidden one's words would show by its post being found.
 board.get('/posts', async (c) => {
   const account = readerOf(c);
   const sort = c.req.query('sort') ?? 'new';
@@ -155,12 +157,14 @@ board.get('/posts', async (c) => {
   const status = c.req.query('status');
   const visibility = c.req.query('visibility') ?? 'public';
   const mine = c.req.query('mine') === '1';
+  const q = c.req.query('q') ?? '';
+  const words = q.split(/\s+/).filter(Boolean);
   const after = c.req.query('after');
   const limit = limitOf(c);
   const cursor = after === undefined ? null : (sort === 'top' ? /^(\d{1,15}):([1-9]\d{0,15})$/ : /^()([1-9]\d{0,15})$/).exec(after);
   if (
     !oneOf(SORTS, sort) || (category !== undefined && !oneOf(CATEGORIES, category)) || (status !== undefined && !oneOf(STATUSES, status)) ||
-    !oneOf(['public', 'operator'], visibility) || limit === null || (after !== undefined && cursor === null)
+    !oneOf(['public', 'operator'], visibility) || limit === null || (after !== undefined && cursor === null) || q.length > MAX_SEARCH_LENGTH
   ) {
     return fail(c, 400, 'bad-input');
   }
@@ -168,8 +172,12 @@ board.get('/posts', async (c) => {
   const bind = (value: SqlValue) => `?${values.push(value)}`;
   const where = [readable(account), mine ? owns('p') : `p.visibility = ${bind(visibility)}`];
   if (category !== undefined) where.push(`p.category = ${bind(category)}`);
-  else if (!mine) where.push("p.category != 'news'");
+  else if (!mine && !words.length) where.push("p.category != 'news'");
   if (status !== undefined) where.push(`p.status = ${bind(status)}`);
+  for (const word of words) {
+    const like = bind(`%${word.replace(/[\\%_]/g, '\\$&')}%`);
+    where.push(`(p.title LIKE ${like} ESCAPE '\\' OR p.text LIKE ${like} ESCAPE '\\')`);
+  }
   let next = 'TRUE';
   if (cursor) {
     const id = bind(Number(cursor[2]));
@@ -196,6 +204,11 @@ board.get('/posts/:id', async (c) => {
     .first<PostSql & { text: string | null; diagnostics: string | null; statusAt: number | null; accountId: string | null; username: string | null }>();
   if (!row) return fail(c, 404, 'not-found');
   const { text, diagnostics, statusAt, accountId, username, ...shown } = row;
+  // A reader is an account or, without one, an address: a guest makes a new secret freely.
+  if (shown.visibility === 'public' && !shown.deleted && !shown.mine && !account.admin && c.env.limits.visitors.views.add(account.guest ? visitorOf(c) : account.id, String(id)) === 'new') {
+    await db.prepare('UPDATE posts SET views = views + 1 WHERE id = ?').bind(id).run();
+    shown.views += 1;
+  }
   const { results } = await db.prepare(`SELECT ${COMMENT_COLUMNS} FROM comments c WHERE c.post_id = ?2 ORDER BY c.id`).bind(account.id, id).all<CommentSql>();
   const { results: pictures } = await db.prepare('SELECT id, type FROM post_pictures WHERE post_id = ? ORDER BY id').bind(id).all<PostPicture>();
   const post: Post = {

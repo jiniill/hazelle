@@ -196,6 +196,7 @@ export const BOARD = {
   hidden: '가려짐',
   deleted: '삭제됨',
   vote: '추천',
+  views: '조회',
   comment: '댓글',
   reply: '답글',
   author: '작성자',

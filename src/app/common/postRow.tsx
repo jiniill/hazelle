@@ -80,6 +80,7 @@ export function PostItem({ row, vote }: { row: PostRow; vote?: { voted: boolean;
       byline={<AuthorLine author={row.author} note={ago(row.createdAt)} />}
       stats={
         <>
+          {row.visibility === 'public' && <PostStat icon={Eye} label={BOARD.views} count={count(row.views)} />}
           {!vote && row.visibility === 'public' && <PostStat icon={ThumbsUp} label={BOARD.vote} count={count(row.votes)} />}
           <PostStat icon={MessageSquare} label={BOARD.comment} count={count(row.commentCount)} />
         </>

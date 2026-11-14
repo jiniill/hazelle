@@ -1,6 +1,6 @@
 import { Hash } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
-import { Icon } from '../foundation/Icon';
+import { Icon, StarMark } from '../foundation/Icon';
 import { useShape, type Shapes } from '../foundation/theme';
 import { Item } from './Item';
 import { RowControl, type RowMenu } from './RowControl';
@@ -11,6 +11,8 @@ type Props = {
   title: string;
   time: string;
   typing: boolean;
+  // Its star's name while it is starred, drawn before the time.
+  starred?: string;
   preview: string;
   current?: boolean;
   // One of a pick of several; absent while not picking.
@@ -26,9 +28,15 @@ type Props = {
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
-const WRITING = <span className={styles.typing}>생성 중</span>;
+// What stands at a row's end: its star while it has one, then that it is being written, or what the row says there.
+const ending = (starred: string | undefined, typing: boolean, rest: ReactNode) => (
+  <>
+    {starred !== undefined && <StarMark label={starred} />}
+    {typing ? <span className={styles.typing}>생성 중</span> : rest}
+  </>
+);
 
-export function ItemRow({ avatar, title, time, typing, preview, current = false, selected, control, drag, menu, onDropCard, onClick }: Props) {
+export function ItemRow({ avatar, title, time, typing, starred, preview, current = false, selected, control, drag, menu, onDropCard, onClick }: Props) {
   return (
     <RowControl control={control} drag={drag} onDropCard={onDropCard} menu={menu}>
       <Item
@@ -36,7 +44,7 @@ export function ItemRow({ avatar, title, time, typing, preview, current = false,
         scheme="side"
         leading={avatar}
         title={title}
-        meta={typing ? WRITING : time}
+        meta={ending(starred, typing, time)}
         preview={preview}
         current={current}
         pressed={selected}
@@ -55,14 +63,14 @@ type ChatProps = Omit<Props, 'avatar'> & { sought: boolean; place?: string };
 // row a search found, which it may be what matched, with where the chat is kept at the row's end.
 const CHAT_ROWS: Record<Shapes['list'], (props: ChatProps) => ReactNode> = {
   cards: ({ place, preview, ...row }) => <ItemRow {...row} preview={place ? `${place} · ${preview}` : preview} />,
-  channels: ({ title, typing, preview, sought, place, current = false, selected, control, drag, menu, onDropCard, onClick }) => (
+  channels: ({ title, typing, starred, preview, sought, place, current = false, selected, control, drag, menu, onDropCard, onClick }) => (
     <RowControl control={control} drag={drag} onDropCard={onDropCard} menu={menu}>
       <Item
         density="compact"
         scheme="side"
         leading={<Icon icon={Hash} size="sm" />}
         title={<span className={styles.line}>{title}</span>}
-        meta={typing ? WRITING : place}
+        meta={ending(starred, typing, place)}
         preview={sought ? <span className={styles.line}>{preview}</span> : undefined}
         current={current}
         pressed={selected}
