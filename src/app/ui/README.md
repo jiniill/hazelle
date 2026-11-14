@@ -29,9 +29,10 @@ and only this folder styles elements.**
   the element that names the theme, and the values are `tokens.css`'s. A new pick is a token a module already reads,
   its second value there, and a name in `FINISH`. A theme may also state `letters` (글꼴, 글자 크기, 줄 간격, 읽기 폭):
   what it is first read in, as choices 읽기 already offers. The app keeps the reader's changes to them per theme.
-  A theme may draw the frame's side (the rail and the sidebar) in another brightness than its page (`side`, by the
-  page's mode): `Rail` and `Sidebar` put that scheme on their own element (`useSide`, from `SchemeContext`, the scheme
-  the app wears), so every token is mixed again from the side's colours and what opens from it is drawn in them.
+  A theme may draw a part of the frame in colours other than its page's, by the page's mode: `side`, the rail and
+  the sidebar, and `room`, a chat's column. `Rail`, `Sidebar` and `ChatFrame` put that scheme on their own element
+  (`usePart`, from `SchemeContext`, the scheme the app wears), so every token is mixed again from the part's colours
+  and what opens from it is drawn in them.
 - `foundation/global.css` loads tokens and sets element defaults. `main.tsx` imports it once, then loads
   `foundation/fonts.css` after paint; slow or unavailable webfonts leave the system faces usable. A tool page
   (`sandbox.html`) has no application bootstrap, so `foundation/sandbox.css` imports both directly.

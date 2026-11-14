@@ -4,7 +4,7 @@ import { IconButton } from '../controls/IconButton';
 import { faceStyle, FONTS } from '../foundation/fonts';
 import { Icon } from '../foundation/Icon';
 import { schemeAttributes, type Scheme } from '../foundation/scheme';
-import { ThemeContext, useShape, type Letters, type Shapes, type Spacing, type Width } from '../foundation/theme';
+import { ThemeContext, usePart, useShape, type Letters, type Shapes, type Spacing, type Width } from '../foundation/theme';
 import { usePanelsBeside, useShortWide } from '../foundation/media';
 import { useReadingRail } from '../story/readingRail';
 import styles from './ChatFrame.module.css';
@@ -76,6 +76,8 @@ type Props = {
 export function ChatFrame({ back, title, actions, children, above, footer, dockRef, panel, beside, peek, backdrop, edge, pinned, reading, scheme, hideHeader, stage, side, portrait, pictures, compact, scrollRef, onScroll }: Props) {
   const scope = readingScope(reading);
   const theme = useContext(ThemeContext);
+  // A theme's colours for a chat's column go over the scheme the chat is drawn in, a character's look or the app's.
+  const own = usePart('room', scheme);
   const pairs = usePanelsBeside();
   // A phone on its side leaves the story too little height to keep the header over it.
   const hides = useShortWide() || hideHeader;
@@ -183,7 +185,7 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
     <div className={styles.frame}>
       <main
         ref={columnRef}
-        {...(scheme && schemeAttributes(scheme, theme))}
+        {...(own ?? (scheme && schemeAttributes(scheme, theme)))}
         className={`${styles.column} ${scope.className} ${staged ? styles.staged : ''} ${backdrop ? styles.backdropped : ''}`}
         style={
           {

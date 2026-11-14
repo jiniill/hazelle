@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { FontId } from './fonts';
-import { MODE, SchemeContext, schemeAttributes, type Mode } from './scheme';
+import { MODE, SchemeContext, schemeAttributes, type Mode, type Scheme } from './scheme';
 
 // One mode's colours as a theme states them, each #rrggbb. page, text, accent and dialogue stand where a 색 pick's
 // 기본 does, and tokens.css derives the rest from them by the picks' rules; a rung stated here goes over the rule's.
@@ -70,12 +70,15 @@ export type Finish = {
   corners: 'soft' | 'tight';
 };
 
-// The frame's side, the rail and the sidebar, where a theme draws it in a brightness other than its page's: the mode
-// it takes and its colours there. Its page is the sidebar's own ground.
-export type Side = { mode: Mode; tone: Omit<Tone, 'sidebar'> };
+// A part of the frame a theme draws in colours other than its page's: the mode it takes and its colours there. Its
+// page is its own ground, the sidebar's too.
+export type Part = { mode: Mode; tone: Omit<Tone, 'sidebar'> };
+// side: the rail and the sidebar. room: a chat's column, under its header and around its composer.
+const PARTS = ['side', 'room'] as const;
+type Parts = { [Name in (typeof PARTS)[number]]?: Partial<Record<Mode, Part>> };
 
-// tones left out is the app's own colours, as tokens.css has them. side is by the page's mode, and rides on tones.
-export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; side?: Partial<Record<Mode, Side>>; shapes: Shapes; finish: Finish; letters?: Letters };
+// tones left out is the app's own colours, as tokens.css has them. A part is by the page's mode, and rides on tones.
+export type Theme = { id: string; name: string; tones?: Record<Mode, Tone>; shapes: Shapes; finish: Finish; letters?: Letters } & Parts;
 
 export const BASE: Theme = { id: 'base', name: '기본', shapes: { header: 'plain', rail: 'icons', list: 'cards', composer: 'box', message: 'prose' }, finish: { rows: 'open', faces: 'soft', lines: 'open', speakers: 'small', corners: 'soft' } };
 
@@ -129,29 +132,32 @@ function toneRules(name: string, mode: Mode, tone: Tone) {
   return rule(worn, tone, OWN) + rule(`${worn}[data-bg='base']`, tone, GROUND) + rule(`${worn}[data-bg='base'][data-accent='base']`, tone, VOICE) + rule(`${worn}[data-accent='base']`, tone, ACCENTED);
 }
 
-// A side is named apart from its theme, by the page's mode: under the theme's own name the theme's colours for the
-// mode the side takes would stand wherever the side states none.
-const sideName = (id: string, page: Mode) => `${id}/${page}`;
+// A part is named apart from its theme, by the page's mode: under the theme's own name the theme's colours for the
+// mode the part takes would stand wherever the part states none.
+const partName = (id: string, part: keyof Parts, page: Mode) => `${id}/${part}/${page}`;
 
 // A theme's rules, read after tokens.css: each matches the element that names the theme and a mode, as an element
-// drawn in another scheme does (schemeAttributes), so nothing reaches an element that names neither. A side's are
-// its theme's again under the side's name: its colours, the sidebar's ground being its page, and the finish.
-export function themeRules({ id, tones, side, finish }: Theme): string {
+// drawn in another scheme does (schemeAttributes), so nothing reaches an element that names neither. A part's are
+// its theme's again under the part's name: its colours, the sidebar's ground being its page, and the finish.
+export function themeRules(theme: Theme): string {
+  const { id, tones, finish } = theme;
   if (!tones) return '';
   const picked = (Object.keys(FINISH) as (keyof Finish)[]).map((part) => (FINISH[part] as Record<string, string>)[finish[part]]).join('');
   const modes = Object.keys(MODE) as Mode[];
-  const sides = modes.flatMap((page) => (side?.[page] ? [{ name: sideName(id, page), ...side[page] }] : []));
-  const colours = [...modes.map((mode) => toneRules(id, mode, tones[mode])), ...sides.map(({ name, mode, tone }) => toneRules(name, mode, { ...tone, sidebar: tone.page }))];
-  return colours.join('') + (picked ? [id, ...sides.map(({ name }) => name)].map((name) => `[data-theme='${name}'][data-mode]{${picked}}`).join('') : '');
+  const parts = PARTS.flatMap((part) => modes.flatMap((page) => (theme[part]?.[page] ? [{ name: partName(id, part, page), ...theme[part][page] }] : [])));
+  const colours = [...modes.map((mode) => toneRules(id, mode, tones[mode])), ...parts.map(({ name, mode, tone }) => toneRules(name, mode, { ...tone, sidebar: tone.page }))];
+  return colours.join('') + (picked ? [id, ...parts.map(({ name }) => name)].map((name) => `[data-theme='${name}'][data-mode]{${picked}}`).join('') : '');
 }
 
-// What the rail and the sidebar put on their own element: the side's scheme under a theme that states one for the
-// worn mode, nothing otherwise. Not while a 배경 is picked: a theme's rungs give way to a pick's, and so does its side.
-export function useSide() {
+// What a part's element puts on itself: the part's scheme under a theme that states one for the mode of the scheme it
+// is drawn in (its own, as a chat in a character's look has, or the worn one), nothing otherwise. Not while a 배경
+// is picked: a theme's rungs give way to a pick's, and so do its parts.
+export function usePart(part: keyof Parts, own?: Scheme) {
   const theme = useContext(ThemeContext);
-  const scheme = useContext(SchemeContext);
-  const side = scheme.bg === 'base' ? theme.side?.[scheme.mode] : undefined;
-  return side && { ...schemeAttributes({ ...scheme, mode: side.mode }, theme), 'data-theme': sideName(theme.id, scheme.mode) };
+  const worn = useContext(SchemeContext);
+  const scheme = own ?? worn;
+  const stated = scheme.bg === 'base' ? theme[part]?.[scheme.mode] : undefined;
+  return stated && { ...schemeAttributes({ ...scheme, mode: stated.mode }, theme), 'data-theme': partName(theme.id, part, scheme.mode) };
 }
 
 // Once, before the first paint: a constructed sheet stands after the document's own, so a theme's rungs go over the

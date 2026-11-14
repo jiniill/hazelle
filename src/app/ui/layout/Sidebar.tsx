@@ -4,7 +4,7 @@ import { IconButton } from '../controls/IconButton';
 import { Brand } from '../foundation/Brand';
 import { classNames } from '../foundation/classNames';
 import { Divider } from '../foundation/Divider';
-import { useShape, useSide, type Shapes } from '../foundation/theme';
+import { usePart, useShape, type Shapes } from '../foundation/theme';
 import styles from './Sidebar.module.css';
 
 type Props = {
@@ -15,9 +15,9 @@ type Props = {
   corner?: ReactNode;
 };
 
-// As a page it is the page, in the page's colours; beside the rail it is the frame's side (useSide).
+// As a page it is the page, in the page's colours; beside the rail it is the frame's side (a theme's part).
 export function Sidebar({ page = false, actions, children, corner }: Props) {
-  const side = useSide();
+  const side = usePart('side');
   return (
     <aside {...(page ? undefined : side)} className={page ? `${styles.sidebar} ${styles.page}` : styles.sidebar} aria-label="캐릭터 목록">
       {/* Beside the rail, whose mark is the brand, the panel starts with its own rows. */}
@@ -71,7 +71,7 @@ const RAIL_SHAPE: Record<Shapes['rail'], string | undefined> = { icons: undefine
 // name under its icon (IconButton framed), the faces as they are.
 export function Rail({ fold, actions, places, children }: RailProps) {
   const shape = useShape('rail');
-  const side = useSide();
+  const side = usePart('side');
   const acts = (
     <>
       {actions}

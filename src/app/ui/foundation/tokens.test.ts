@@ -69,11 +69,11 @@ const rung = (mode: Mode, role: string, page: string) => mixed(mode, 'bg', role,
 const fillsOf = (mode: Mode, tone: Tone) => [tone.page, tone.sidebar ?? rung(mode, 'sidebar', tone.page), tone.surface ?? rung(mode, 'surface', tone.page), tone.hover ?? rung(mode, 'surface-hover', tone.page)];
 
 const WORN: Scheme = { mode: 'dark', bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' };
-// Every set of colours a theme states: its own per mode, and a side's in the mode the side takes, whose sidebar is
+// Every set of colours a theme states: its own per mode, and a part's in the mode the part takes, whose sidebar is
 // its page.
 const themed = Object.values<Theme>(THEMES).flatMap((theme) => [
   ...(theme.tones ? (Object.entries(theme.tones) as [Mode, Tone][]).map((tone) => [theme.id, ...tone] as const) : []),
-  ...Object.values(theme.side ?? {}).map(({ mode, tone }) => [`${theme.id}'s side`, mode, { ...tone, sidebar: tone.page } as Tone] as const),
+  ...(['side', 'room'] as const).flatMap((part) => Object.values(theme[part] ?? {}).map(({ mode, tone }) => [`${theme.id}'s ${part}`, mode, { ...tone, sidebar: tone.page } as Tone] as const)),
 ]);
 
 it('lists each theme under its own id', () => {
@@ -123,16 +123,16 @@ it('writes a finish as token rules for the element that names the theme, a state
   );
 });
 
-it('writes a side under a name of its own by the page\'s mode, its page the sidebar\'s ground, with the theme\'s finish', () => {
+it('writes a part under a name of its own by the page\'s mode, its page the sidebar\'s ground, with the theme\'s finish', () => {
   const tones = { dark: { page: '#101010', text: '#f0f0f0', accent: '#8080ff', dialogue: '#ffffff' }, light: { page: '#ffffff', text: '#101010', accent: '#3030c0', dialogue: '#000000' } };
   const side = { light: { mode: 'dark' as const, tone: { page: '#300030', text: '#f0e0f0', accent: '#80c0ff', dialogue: '#f0e0f0', muted: '#c0b0c0' } } };
   const plain = themeRules({ ...BASE, id: 'night', name: '밤', tones });
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, side })).toBe(
     plain +
-      "[data-theme='night/light'][data-mode='dark']{--color-pick-bg-base:#300030;--color-pick-ink-base:#f0e0f0;--color-pick-accent-base:#80c0ff;--color-pick-dialogue-base:#f0e0f0;--color-text-muted:#c0b0c0;}" +
-      "[data-theme='night/light'][data-mode='dark'][data-bg='base']{--color-sidebar:#300030;}",
+      "[data-theme='night/side/light'][data-mode='dark']{--color-pick-bg-base:#300030;--color-pick-ink-base:#f0e0f0;--color-pick-accent-base:#80c0ff;--color-pick-dialogue-base:#f0e0f0;--color-text-muted:#c0b0c0;}" +
+      "[data-theme='night/side/light'][data-mode='dark'][data-bg='base']{--color-sidebar:#300030;}",
   );
-  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, side, finish: { ...BASE.finish, rows: 'close' } })).toContain("[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);}[data-theme='night/light'][data-mode]{--story-gap:var(--story-gap-close);}");
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, side, finish: { ...BASE.finish, rows: 'close' } })).toContain("[data-theme='night'][data-mode]{--story-gap:var(--story-gap-close);}[data-theme='night/side/light'][data-mode]{--story-gap:var(--story-gap-close);}");
 });
 
 it('gives a finish of its own only to a theme with tones, the only kind an element names', () => {

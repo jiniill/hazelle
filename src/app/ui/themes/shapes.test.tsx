@@ -67,7 +67,7 @@ it('floats a row message\'s tools only under a pointer that hovers, and never on
 it('draws the rail and the sidebar in a side\'s scheme under the page\'s mode that has one, but not a sidebar that is the page, nor under a 배경 pick', () => {
   const worn = (scheme: Partial<Scheme>, node: ReactNode) => drawn(THEMES.work, <SchemeContext value={{ mode: 'light', bg: 'base', ink: 'base', accent: 'base', dialogue: 'base', ...scheme }}>{node}</SchemeContext>);
   const rail = <Rail actions={null} places={null}>{null}</Rail>;
-  const side = 'data-mode="dark" data-bg="base" data-ink="base" data-accent="base" data-dialogue="base" data-theme="work/light"';
+  const side = 'data-mode="dark" data-bg="base" data-ink="base" data-accent="base" data-dialogue="base" data-theme="work/side/light"';
   expect(worn({}, rail)).toContain(side);
   expect(worn({}, <Sidebar actions={null}>{null}</Sidebar>)).toContain(side);
   expect(worn({}, <Sidebar page actions={null}>{null}</Sidebar>)).not.toContain('data-theme');

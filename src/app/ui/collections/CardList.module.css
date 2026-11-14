@@ -10,7 +10,7 @@
 .card {
   composes: box from '../foundation/surface.module.css';
   --current-fill: var(--color-accent-bg);
-  --current-mark: var(--color-accent);
+  --current-mark: var(--color-accent-mark);
 
   min-width: 0;
   padding: var(--space-4);
