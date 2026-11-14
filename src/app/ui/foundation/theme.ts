@@ -44,7 +44,7 @@ export type Tone = {
 export type Shapes = {
   header: 'plain' | 'topic' | 'bare';
   rail: 'icons' | 'servers' | 'labels';
-  list: 'cards' | 'channels' | 'people';
+  list: 'cards' | 'titles' | 'channels' | 'people';
   composer: 'box' | 'bar' | 'toolbar';
   message: 'prose' | 'page' | 'row' | 'bubble';
   day: 'rule' | 'pill';

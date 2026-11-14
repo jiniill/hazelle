@@ -60,18 +60,17 @@ type ChatProps = Omit<Props, 'avatar'> & { sought: boolean; place?: string; face
 
 // A chat in its character's list, the region a theme's list shape draws. cards: its name and when, over a line of what
 // was said. channels: its name alone after a #; when it was written is left out, and what was said shows only under a
-// row a search found, which it may be what matched, with where the chat is kept at the row's end. people: a card led by
-// the face.
+// row a search found, which it may be what matched, with where the chat is kept at the row's end. titles: a channel
+// with nothing before its name. people: a card led by the face.
 const kept = (place: string | undefined, preview: string) => (place ? `${place} · ${preview}` : preview);
-const CHAT_ROWS: Record<Shapes['list'], (props: ChatProps) => ReactNode> = {
-  cards: ({ place, preview, ...row }) => <ItemRow {...row} preview={kept(place, preview)} />,
-  people: ({ place, preview, face, ...row }) => <ItemRow {...row} avatar={face} preview={kept(place, preview)} />,
-  channels: ({ title, typing, starred, preview, sought, place, current = false, selected, control, drag, menu, onDropCard, onClick }) => (
+const line =
+  (leading?: ReactNode) =>
+  ({ title, typing, starred, preview, sought, place, current = false, selected, control, drag, menu, onDropCard, onClick }: ChatProps) => (
     <RowControl control={control} drag={drag} onDropCard={onDropCard} menu={menu}>
       <Item
         density="compact"
         scheme="side"
-        leading={<Icon icon={Hash} size="sm" />}
+        leading={leading}
         title={<span className={styles.line}>{title}</span>}
         meta={ending(starred, typing, place)}
         preview={sought ? <span className={styles.line}>{preview}</span> : undefined}
@@ -80,7 +79,12 @@ const CHAT_ROWS: Record<Shapes['list'], (props: ChatProps) => ReactNode> = {
         onClick={onClick}
       />
     </RowControl>
-  ),
+  );
+const CHAT_ROWS: Record<Shapes['list'], (props: ChatProps) => ReactNode> = {
+  cards: ({ place, preview, ...row }) => <ItemRow {...row} preview={kept(place, preview)} />,
+  people: ({ place, preview, face, ...row }) => <ItemRow {...row} avatar={face} preview={kept(place, preview)} />,
+  titles: line(),
+  channels: line(<Icon icon={Hash} size="sm" />),
 };
 
 export function ChatRow(props: ChatProps) {

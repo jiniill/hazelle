@@ -43,7 +43,7 @@ it('puts the faces of a servers rail over its actions, and the fold last of them
   expect(rising(order(drawn(THEMES.channel, rail), '얼굴', '둘러보기', '사이드바 접기', '설정'))).toBe(true);
 });
 
-it('draws a chat as a channel by its name alone, with what was said and where it is kept under one a search found, its star in both, and a people row led by the face', () => {
+it('draws a chat as a channel by its name alone, with what was said and where it is kept under one a search found, its star in both, a title as a channel without its mark, and a people row led by the face', () => {
   const row = (sought: boolean, place?: string) => <ChatRow title="첫 채팅" time="2일 전" typing={false} preview="어서 와요." sought={sought} face={<i>얼굴</i>} place={place} onClick={() => {}} />;
   const card = drawn(BASE, row(true, '여관'));
   expect(card).toContain('여관 · 어서 와요.');
@@ -58,6 +58,10 @@ it('draws a chat as a channel by its name alone, with what was said and where it
   expect(rising(order(drawn(BASE, starred), 'aria-label="즐겨찾기"', '2일 전'))).toBe(true);
   expect(rising(order(drawn(THEMES.channel, starred), 'aria-label="즐겨찾기"', '여관'))).toBe(true);
   expect(rising(order(drawn(THEMES.bubble, row(true, '여관')), '얼굴', '첫 채팅', '여관 · 어서 와요.'))).toBe(true);
+  const titled = drawn(THEMES.doc, row(false));
+  expect(titled).toContain('첫 채팅');
+  for (const left of ['lucide-hash', '어서 와요.', '2일 전']) expect(titled).not.toContain(left);
+  expect(rising(order(drawn(THEMES.doc, row(true, '여관')), '첫 채팅', '여관', '어서 와요.'))).toBe(true);
   expect(card).not.toContain('얼굴');
 });
 
