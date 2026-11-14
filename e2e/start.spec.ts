@@ -91,6 +91,10 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   await expect(page.getByRole('heading', { level: 1, name: '내 API 키로 바로 시작하는 AI 캐릭터 챗' })).toHaveCount(0);
 });
 
+// One gesture's wheel events, sent at once: awaited one by one they reach the page some 135 ms apart, and at 160 ms the
+// page takes the next for a new gesture.
+const flick = (page: Page, deltas: number[]) => Promise.all(deltas.map((delta) => page.mouse.wheel(0, delta)));
+
 test('one gesture moves one stop at once, and the door looks the same on any screen', async ({ page }) => {
   const scrollTop = () => page.evaluate<number>('Math.round(scrollY)');
   const centred = (id: string) => page.evaluate<number>(`(() => { const { top, height } = document.getElementById('${id}').getBoundingClientRect(); return Math.round(top + scrollY + (height - innerHeight) / 2); })()`);
@@ -100,10 +104,7 @@ test('one gesture moves one stop at once, and the door looks the same on any scr
   const example = await centred('example');
 
   // A flick and its inertia: one stop, not several.
-  for (const delta of [120, 90, 60, 40, 25, 15, 8, 4]) {
-    await page.mouse.wheel(0, delta);
-    await page.waitForTimeout(16);
-  }
+  await flick(page, [120, 90, 60, 40, 25, 15, 8, 4]);
   await expect.poll(scrollTop, { timeout: 5000 }).toBe(example);
   await page.waitForTimeout(400);
   expect(await scrollTop()).toBe(example);
@@ -132,10 +133,7 @@ test('one gesture moves one stop at once, and the door looks the same on any scr
   })()`);
   await list.hover();
   const inRoom = await scrollTop();
-  for (let flick = 0; flick < 30; flick++) {
-    await page.mouse.wheel(0, 60);
-    await page.waitForTimeout(16);
-  }
+  await flick(page, Array<number>(30).fill(60));
   await page.waitForTimeout(300);
   expect(await scrollTop()).toBe(inRoom);
   expect(await page.evaluate<number>(`document.querySelector('[data-test-scroller]').scrollTop`)).toBeGreaterThan(0);
