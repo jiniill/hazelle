@@ -10,7 +10,7 @@ import { Divider } from '../foundation/Divider';
 import { BASE, ThemeContext } from '../foundation/theme';
 import { ChatTitle } from '../layout/ChatFrame';
 import { Rail, Sidebar } from '../layout/Sidebar';
-import { toolsFloat } from '../story/StoryMessage';
+import { toolsShown } from '../story/StoryMessage';
 import { THEMES } from '.';
 
 const drawn = (theme: (typeof THEMES)[keyof typeof THEMES], node: ReactNode) => renderToStaticMarkup(<ThemeContext value={theme}>{node}</ThemeContext>);
@@ -72,12 +72,12 @@ it('writes a bar composer as its menu, its field and its send button, what stand
   expect(rising(order(drawn(THEMES.slack, composer), '서 있는 것', '<textarea', '도구 메뉴', '보내기'))).toBe(true);
 });
 
-it('floats a row message\'s tools only under a pointer that hovers, and never ones told to stay', () => {
-  expect(toolsFloat('row', true, false)).toBe(true);
-  expect(toolsFloat('row', false, false)).toBe(false);
-  expect(toolsFloat('row', true, true)).toBe(false);
-  expect(toolsFloat('prose', true, false)).toBe(false);
-  expect(toolsFloat('page', true, false)).toBe(false);
+it('floats a row message\'s tools and hides a page\'s mine only under a pointer that hovers, and never ones told to stay', () => {
+  expect(toolsShown('row', false, true, false)).toBe('float');
+  expect(toolsShown('row', false, false, false)).toBe('stand');
+  expect(toolsShown('row', false, true, true)).toBe('stand');
+  expect(toolsShown('prose', true, true, false)).toBe('stand');
+  expect([toolsShown('page', false, true, false), toolsShown('page', true, true, false), toolsShown('page', true, false, false), toolsShown('page', true, true, true)]).toEqual(['stand', 'shy', 'stand', 'stand']);
 });
 
 it('draws the rail and the sidebar in a side\'s scheme under the page\'s mode that has one, but not a sidebar that is the page, nor under a 배경 pick', () => {

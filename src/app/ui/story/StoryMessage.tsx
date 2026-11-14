@@ -65,16 +65,17 @@ type Props = {
 // bubbles, each of a reply's blocks one or the whole reply one (BubblesContext), mine in the accent at the end with no
 // face or name, the time beside the last bubble, and the tools as a row's. page: nobody's face or name, the words on the
 // ground and mine in a box at the end; what else the head holds, a mark or a badge, keeps its line over the words, the
-// time stands in the tools' line, the tools under the words where they start (mine's where its box ends), and the
-// reading rail before the words, in the column's edge.
+// time stands in the tools' line, the tools under the words where they start (mine's where its box ends, shown only
+// under a pointer as a row's are, on their line), and the reading rail before the words, in the column's edge.
 // words: how the words are set (Story's Words). time: where the time stands: by the name, beside the words, or in the
-// tools' line. speaker: whether the face and the name are drawn; a name not drawn is still said.
-type Shape = { root?: string; words: (mine: boolean, each: boolean) => Words; floats: boolean; time: 'head' | 'beside' | 'foot'; speaker: (mine: boolean) => boolean };
+// tools' line. speaker: whether the face and the name are drawn; a name not drawn is still said. tools: how the tools
+// show under a pointer (Tools).
+type Shape = { root?: string; words: (mine: boolean, each: boolean) => Words; tools: (mine: boolean) => Tools; time: 'head' | 'beside' | 'foot'; speaker: (mine: boolean) => boolean };
 const SHAPES: Record<Shapes['message'], Shape> = {
-  prose: { words: (mine) => (mine ? 'box' : 'ground'), floats: false, time: 'head', speaker: () => true },
-  page: { root: styles.page, words: (mine) => (mine ? 'box' : 'ground'), floats: false, time: 'foot', speaker: () => false },
-  row: { root: styles.row, words: () => 'ground', floats: true, time: 'head', speaker: () => true },
-  bubble: { root: styles.balloon, words: (_, each) => (each ? 'each' : 'box'), floats: true, time: 'beside', speaker: (mine) => !mine },
+  prose: { words: (mine) => (mine ? 'box' : 'ground'), tools: () => 'stand', time: 'head', speaker: () => true },
+  page: { root: styles.page, words: (mine) => (mine ? 'box' : 'ground'), tools: (mine) => (mine ? 'shy' : 'stand'), time: 'foot', speaker: () => false },
+  row: { root: styles.row, words: () => 'ground', tools: () => 'float', time: 'head', speaker: () => true },
+  bubble: { root: styles.balloon, words: (_, each) => (each ? 'each' : 'box'), tools: () => 'float', time: 'beside', speaker: (mine) => !mine },
 };
 
 // Whether a bubble message's reply is a bubble a block, or one bubble whole.
@@ -83,13 +84,17 @@ export const BubblesContext = createContext(true);
 // Whether the message shape drawn can set a reply a bubble a block: where it cannot, the choice changes nothing.
 export const useSplitsReplies = () => SHAPES[useShape('message')].words(false, true) === 'each';
 
-export const toolsFloat = (shape: Shapes['message'], hover: boolean, stay: boolean) => SHAPES[shape].floats && hover && !stay;
+// stand: on their line. shy: on their line, shown only while the message is pointed at, holds the focus or has a menu
+// open. float: shy, and over the message's foot with no line kept. With no pointer to hover, or told to stay, they stand.
+type Tools = 'stand' | 'shy' | 'float';
+export const toolsShown = (shape: Shapes['message'], mine: boolean, hover: boolean, stay: boolean): Tools => (hover && !stay ? SHAPES[shape].tools(mine) : 'stand');
 
 export function StoryMessage({ avatar, name, time, mine, mark, badges = [], children, after, tools, stay = false, plain = false, id, found = 0, marked = false, writing = false }: Props) {
   const hover = useHover();
   const drawn = useShape('message');
   const shape = SHAPES[drawn];
-  const floating = toolsFloat(drawn, hover, stay);
+  const shown = toolsShown(drawn, mine, hover, stay);
+  const floating = shown === 'float';
   const timePin = useContext(TimePinContext);
   const pinned = timePin?.pinned === id;
   const follows = useContext(ToolsFollowContext);
@@ -141,7 +146,7 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
         {/* The foot keeps its height while the tools are absent, as while a reply streams, so nothing moves when they come. */}
         <div className={classNames(styles.foot, floating && styles.loose, follows && styles.follows)}>
           <div className={styles.after}>{after}</div>
-          {tools && <div className={classNames(styles.tools, floating && styles.float)}>{tools}</div>}
+          {tools && <div className={classNames(styles.tools, shown !== 'stand' && styles.shy, floating && styles.float)}>{tools}</div>}
           {at === 'foot' && stamp}
         </div>
       </div>
