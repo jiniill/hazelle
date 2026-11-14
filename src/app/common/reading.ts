@@ -14,7 +14,7 @@ export const DISPLAY = 'risu-alpha:display';
 
 export const SIZE = { min: 14, max: 21 };
 
-export const SPACING: Record<Reading['leading'], string> = { narrow: '좁게', normal: '보통', wide: '넓게', widest: '매우 넓게' };
+export const SPACING: Record<Reading['leading'], string> = { narrow: '좁게', normal: '보통', wide: '넓게', widest: '더 넓게' };
 export const WIDTH: Record<Reading['width'], string> = { ...SPACING, full: '가득' };
 export const REPLY: Record<Reading['reply'], string> = { follow: '자동 스크롤', stay: '스크롤 고정' };
 export const SIDE: Record<StageSide, string> = { right: '오른쪽', left: '왼쪽' };

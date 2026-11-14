@@ -75,7 +75,7 @@ export function Rail({ fold, actions, places, children }: RailProps) {
   const acts = (
     <>
       {actions}
-      {fold && <IconButton icon={PanelLeft} label={fold.open ? '사이드바 접기' : '사이드바 펼치기'} framed onClick={fold.onToggle} />}
+      {fold && <IconButton icon={PanelLeft} label={fold.open ? '접기' : '펼치기'} framed onClick={fold.onToggle} />}
     </>
   );
   const faces = <div className={styles.railList}>{children}</div>;

@@ -39,8 +39,8 @@ it('puts the faces of a servers rail over its actions, and the fold last of them
       <i>얼굴</i>
     </Rail>
   );
-  expect(rising(order(drawn(BASE, rail), '둘러보기', '사이드바 접기', '얼굴', '설정'))).toBe(true);
-  expect(rising(order(drawn(THEMES.discord, rail), '얼굴', '둘러보기', '사이드바 접기', '설정'))).toBe(true);
+  expect(rising(order(drawn(BASE, rail), '둘러보기', 'aria-label="접기"', '얼굴', '설정'))).toBe(true);
+  expect(rising(order(drawn(THEMES.discord, rail), '얼굴', '둘러보기', 'aria-label="접기"', '설정'))).toBe(true);
 });
 
 it('draws a chat as a channel by its name alone, with what was said and where it is kept under one a search found, its star in both, a title as a channel without its mark, and a people row led by the face', () => {
