@@ -38,6 +38,8 @@ export default {
       '/^(transition|animation)/': ['/(^|[\\s,(])-?[\\d.]+m?s\\b/'],
       '/^transition$/': ['/(^|,)\\s*[a-z-]+\\s+var\\(--duration-(?!instant)[a-z]+\\)(?!\\s+(step-|linear))/'],
       '/^transition-(duration|timing-function)$/': ['/var\\(--(duration|ease)-(?!instant)/'],
+      // Words and icons take the accent as --color-accent-mark, which a theme may state apart from its fills'.
+      '/^(caret-)?color$/': ['/var\\(--color-accent(-hover)?\\)/'],
     },
     'scale-unlimited/declaration-strict-value': [
       TOKEN_PROPERTIES,

@@ -65,7 +65,7 @@
 }
 
 .name > svg {
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .card:has(> .menu) .meta {

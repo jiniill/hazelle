@@ -13,7 +13,7 @@
 .accent {
   border: var(--border-medium) dashed var(--color-accent-border);
   background: var(--color-accent-bg);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .icon {

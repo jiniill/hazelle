@@ -15,7 +15,7 @@
 
 .check {
   display: flex;
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .error {

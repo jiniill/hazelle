@@ -3,12 +3,12 @@
   align-items: center;
   gap: var(--space-4);
   align-self: flex-start;
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
   font-size: var(--text-sm);
   text-decoration: underline;
   text-underline-offset: var(--space-2);
 }
 
 .link:is(:hover, :active) {
-  color: var(--color-accent-hover);
+  color: var(--color-accent-mark-hover);
 }

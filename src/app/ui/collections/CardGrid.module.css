@@ -103,7 +103,7 @@
 
 .iconPicture {
   background: var(--color-accent-bg);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .card:is(:hover, :active) .picture {

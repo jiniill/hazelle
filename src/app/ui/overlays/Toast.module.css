@@ -104,7 +104,7 @@
 
 .action button {
   border-radius: var(--radius-full);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
   font-weight: var(--weight-semibold);
 }
 

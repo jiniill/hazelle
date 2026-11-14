@@ -63,6 +63,9 @@ function rung(mode: Mode, role: string, page: string): string {
   return hexOf(over.map((value, at) => (Number(share) / 100) * value + (1 - Number(share) / 100) * under[at]!));
 }
 
+// The fills words stand on, as the theme states them or as the rule gives them to its page.
+const fillsOf = (mode: Mode, tone: Tone) => [tone.page, tone.sidebar ?? rung(mode, 'sidebar', tone.page), tone.surface ?? rung(mode, 'surface', tone.page), tone.hover ?? rung(mode, 'surface-hover', tone.page)];
+
 const WORN: Scheme = { mode: 'dark', bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' };
 const themed = Object.values<Theme>(THEMES).flatMap((theme) => (theme.tones ? (Object.entries(theme.tones) as [Mode, Tone][]).map((tone) => [theme.id, ...tone] as const) : []));
 
@@ -75,7 +78,7 @@ it.each(themed)('states the %s theme in %s as six-digit colours', (_, __, tone) 
 });
 
 it.each(themed)('keeps the %s theme in %s to the faint text rule, on the rungs it states and the ones the rule gives it', (_, mode, tone) => {
-  const fills = [tone.page, tone.sidebar ?? rung(mode, 'sidebar', tone.page), tone.surface ?? rung(mode, 'surface', tone.page), tone.hover ?? rung(mode, 'surface-hover', tone.page)];
+  const fills = fillsOf(mode, tone);
   const faint = tone.faint ?? color(mode === 'dark' ? dark! : light!, 'text-faint');
   const muted = tone.muted ?? color(mode === 'dark' ? dark! : light!, 'text-muted');
   for (const fill of fills) expect(contrast(faint, fill)).toBeGreaterThanOrEqual(4.5);
@@ -86,10 +89,17 @@ it.each(themed)('keeps a name the %s theme states in %s readable on its page', (
   if (tone.name) expect(contrast(tone.name, tone.page)).toBeGreaterThanOrEqual(4.5);
 });
 
+// 기본's accent clears this on the same fills, so a theme is held to it too: by its accent, or by the mark it states.
+it.each(themed)('keeps what is read in the accent of the %s theme in %s at AA on the fills words stand on', (_, mode, tone) => {
+  const fills = fillsOf(mode, tone);
+  for (const fill of fills) expect(contrast(tone.mark ?? tone.accent, fill)).toBeGreaterThanOrEqual(4.5);
+});
+
 it('writes a finish as token rules for the element that names the theme, and a stated name for the base 배경 and 강조 only', () => {
   const tones = { dark: { page: '#101010', text: '#f0f0f0', accent: '#8080ff', dialogue: '#ffffff', name: '#ffcc00' }, light: { page: '#ffffff', text: '#101010', accent: '#3030c0', dialogue: '#000000' } };
   const plain = themeRules({ ...BASE, id: 'night', name: '밤', tones });
   expect(plain).toContain("[data-theme='night'][data-mode='dark'][data-bg='base'][data-accent='base']{--color-name:#ffcc00;}");
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, mark: '#2020a0' } } })).toContain("[data-theme='night'][data-mode='light'][data-bg='base'][data-accent='base']{--color-accent-mark:#2020a0;}");
   expect(plain).not.toContain('[data-mode]{');
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close' } })).toBe(
     plain +

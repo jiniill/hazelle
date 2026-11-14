@@ -37,7 +37,7 @@
 
 .editor :global(.cm-editor) :global(.cm-content) {
   padding: var(--space-12) 0;
-  caret-color: var(--color-accent);
+  caret-color: var(--color-accent-mark);
 }
 
 .editor :global(.cm-editor) :global(.cm-cursor) {
@@ -145,7 +145,7 @@
 }
 
 .editor :global(.cm-editor) :global(.cm-completionMatchedText) {
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
   text-decoration: none;
 }
 
@@ -176,7 +176,7 @@
 }
 
 .form {
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
   font-family: var(--font-mono);
 }
 

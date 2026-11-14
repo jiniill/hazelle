@@ -6,7 +6,8 @@ import { MODE, type Mode } from './scheme';
 // 기본 does, and tokens.css derives the rest from them by the picks' rules; a rung stated here goes over the rule's.
 // line is a divider's and a control's outline both. rail left out is the sidebar's; muted and faint left out stay the
 // mode's; name, a speaker's in the story, left out is the accent, and is stated for the theme's own page. pointed is
-// the ground under a message the pointer is on, none when left out.
+// the ground under a message the pointer is on, none when left out. mark is the accent where it is read, as words,
+// icons and the focus ring: left out is the accent, and is stated when that is too dim on the theme's fills.
 export type Tone = {
   page: string;
   text: string;
@@ -22,6 +23,7 @@ export type Tone = {
   faint?: string;
   name?: string;
   pointed?: string;
+  mark?: string;
 };
 
 // A region's shape by name: which arrangement the kit component that draws the region takes. The first of each is
@@ -85,9 +87,9 @@ const GROUND: Partial<Record<keyof Tone, string[]>> = {
   line: ['--color-divider', '--color-border'],
   pointed: ['--color-row-pointed'],
 };
-// A 강조 pick colours the names too, as it does in 기본, and a name is stated against the theme's page, so a theme's
-// holds only while both picks are base.
-const VOICE: Partial<Record<keyof Tone, string[]>> = { name: ['--color-name'] };
+// A 강조 pick colours the names and what is read in the accent too, as it does in 기본, and both are stated against
+// the theme's page, so a theme's hold only while both picks are base.
+const VOICE: Partial<Record<keyof Tone, string[]>> = { name: ['--color-name'], mark: ['--color-accent-mark'] };
 
 const FINISH: { [Part in keyof Finish]: Record<Finish[Part], string> } = {
   rows: { open: '', close: '--story-gap:var(--story-gap-close);' },

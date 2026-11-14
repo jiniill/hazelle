@@ -1,5 +1,5 @@
 .typing {
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 /* A compact row's title wraps; a chat's name in the channels shape keeps to its line. */

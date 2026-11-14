@@ -151,7 +151,7 @@
 /* HTML on the way to the current chat (a count, a pill's words, the legend's line); .onPath is the lines'. After the
    count and the pill, whose own colour it takes over. */
 .lit {
-  color: var(--color-accent-hover);
+  color: var(--color-accent-mark-hover);
 }
 
 .copyPill {

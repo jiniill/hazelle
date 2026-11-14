@@ -257,8 +257,12 @@
 :root,
 [data-mode] {
   --color-accent-bg: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+  /* The accent where it is read, as words and icons and the focus ring; the accent itself is a fill's, a line's and a
+     ring's around what is picked. A theme whose accent is too dim to read on its page states another (theme.ts mark). */
+  --color-accent-mark: var(--color-accent);
+  --color-accent-mark-hover: var(--color-accent-hover);
   /* The accent as words on that tint; light takes it a step darker, so words of body size clear 4.5:1. */
-  --color-accent-text: var(--color-accent);
+  --color-accent-text: var(--color-accent-mark);
   --color-accent-border: color-mix(in srgb, var(--color-accent) 40%, var(--color-bg));
   --color-warn-bg: color-mix(in srgb, var(--color-warn) 10%, var(--color-bg));
   --color-warn-border: color-mix(in srgb, var(--color-warn) 40%, var(--color-bg));
@@ -289,7 +293,7 @@
   --color-folder-bg: color-mix(in srgb, var(--color-text-muted) 18%, var(--color-surface));
   --color-folder-bg-hover: color-mix(in srgb, var(--color-text-muted) 26%, var(--color-surface));
   --color-folder-slot: color-mix(in srgb, var(--color-text-muted) 8%, var(--color-surface));
-  --color-focus: var(--color-accent);
+  --color-focus: var(--color-accent-mark);
   /* The rail's ground: the sidebar's, but in a theme that states one. */
   --color-rail: var(--color-sidebar);
   --color-name: var(--color-accent);
@@ -908,7 +912,7 @@
   --color-text-soft: var(--palette-lilac-800);
   --color-accent: var(--palette-gold-700);
   --color-accent-hover: var(--palette-gold-800);
-  --color-accent-text: var(--color-accent-hover);
+  --color-accent-text: var(--color-accent-mark-hover);
   --color-on-accent: var(--palette-sand-10);
   --color-warn: var(--palette-coral-700);
   --color-success: var(--palette-mint-700);
@@ -1067,12 +1071,14 @@
 [data-mode='dark']:is([data-accent]:not([data-accent='base']), [data-theme][data-accent]) {
   --color-accent: var(--color-pick-accent);
   --color-accent-hover: color-mix(in oklab, var(--palette-white) 25%, var(--color-pick-accent));
+  --color-accent-mark-hover: color-mix(in oklab, var(--palette-white) 25%, var(--color-accent-mark));
   --color-on-accent: color-mix(in oklab, var(--color-pick-accent) 15%, var(--palette-black));
 }
 
 [data-mode='light']:is([data-accent]:not([data-accent='base']), [data-theme][data-accent]) {
   --color-accent: var(--color-pick-accent);
   --color-accent-hover: color-mix(in oklab, var(--palette-black) 20%, var(--color-pick-accent));
+  --color-accent-mark-hover: color-mix(in oklab, var(--palette-black) 20%, var(--color-accent-mark));
   --color-on-accent: color-mix(in oklab, var(--color-pick-accent) 5%, var(--palette-white));
 }
 

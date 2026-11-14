@@ -11,6 +11,9 @@ and only this folder styles elements.**
   text, dialogue and accent tokens to a color pick. `foundation/scheme.ts` (`applyScheme`) sets the attributes on the
   document, and `schemeAttributes` on an element drawn in another scheme (a preset's swatch). A module
   never reads `--palette-*`.
+- The accent has two tokens: `--color-accent` is a fill's, a line's and a ring's around what is picked;
+  `--color-accent-mark` is the accent where it is read, as words, icons and the focus ring (`--color-focus`). They
+  are one colour unless a theme states a `mark`, so `color` never takes `--color-accent` itself (stylelint).
 - Themes: a theme (`foundation/theme.ts`) is data, one file each in `themes/`, and the one place besides `tokens.css`
   that states a colour. What it states stands where the picks' base does: `adoptThemes` writes each as rules for the
   element that names it (`data-theme`, set with the scheme's attributes), and `tokens.css` derives the rest by the

@@ -41,7 +41,7 @@
 }
 
 .button[aria-pressed='true'] {
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .button[aria-pressed='true'] svg {

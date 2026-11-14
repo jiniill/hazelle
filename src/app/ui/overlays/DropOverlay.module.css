@@ -20,7 +20,7 @@
   border: var(--border-thick) dashed var(--color-accent-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface-raised);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
 }

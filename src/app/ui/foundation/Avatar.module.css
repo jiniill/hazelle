@@ -59,7 +59,7 @@
 
 .accent {
   background: var(--color-accent-bg);
-  color: var(--color-accent);
+  color: var(--color-accent-mark);
 }
 
 .letter {
