@@ -1,4 +1,3 @@
-import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useState } from 'react';
 import { readToggles } from '../../engine/import/toggles';
 import { isToggle, type Toggle, type ToggleLine, type ToggleMark, type UnreadLine } from '../../model/prompt';
@@ -11,7 +10,7 @@ import { ToggleList } from './ToggleList';
 import { keyProblem, LINE_WORDS, lineTitle } from './toggleWords';
 import { useSearch } from './useSearch';
 import { Button, Checkbox, ChoiceGroup, Dialog, Empty, Menu, MenuItem, MoreMenu, Row, Section, SettingRow, Switch, TextField } from '../ui';
-import { MOVE, NO_TOGGLES, searchOf, FIELD_ERRORS } from './words';
+import { NO_TOGGLES, searchOf, FIELD_ERRORS } from './words';
 
 type Props = {
   // The prompt's, character's or module's id (common/ToggleList).
@@ -76,8 +75,8 @@ export function TogglePane({ owner, lines, uses, onAdd, onEdit, onType, onMove, 
           onClick={() => setEditing({ at, field: line.kind === 'unread' ? 'line' : 'label' })}
         />
         {isToggle(line) && <MenuItem label="키 변경" description={uses ? '조건에 쓴 키도 함께 바뀌어요' : undefined} onClick={() => setEditing({ at, field: 'key' })} />}
-        {moves?.up && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => onMove(line, moves.up!)} />}
-        {moves?.down && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => onMove(line, moves.down!)} />}
+        {moves?.up && <MenuItem icon={ACTS.moveUp.icon} label={ACTS.moveUp.label} onClick={() => onMove(line, moves.up!)} />}
+        {moves?.down && <MenuItem icon={ACTS.moveDown.icon} label={ACTS.moveDown.label} onClick={() => onMove(line, moves.down!)} />}
         <MenuItem
           icon={ACTS.remove.icon}
           label={ACTS.remove.label}

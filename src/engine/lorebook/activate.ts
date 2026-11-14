@@ -252,7 +252,8 @@ function activate(shelf: (Book | string)[], books: Book[], { scanDepth, recursiv
   };
 }
 
-function prepare({ id, value }: LoreEntries[number], fullWordMatching: boolean, invalidKeys: Activation['invalidKeys']): Book {
+// An entry's rules as its fields and decorators state them, and its body past the decorators.
+function read(value: LoreEntries[number]['value']): { rules: Rules; body: string } {
   const { decorators, body } = parseDecorators(value.content);
   const rules: Rules = {
     trigger: 'keys',
@@ -279,6 +280,15 @@ function prepare({ id, value }: LoreEntries[number], fullWordMatching: boolean, 
   for (const decorator of decorators) {
     if (!apply(rules, decorator)) decorator.fallbacks.some((fallback) => apply(rules, fallback));
   }
+  return { rules, body };
+}
+
+// The greeting an entry opens with (@@is_greeting), an index into Card.greetings; null when it names none. A card's
+// editor asks before its greetings change places, since the number then names another.
+export const greetingRule = (value: LoreEntries[number]['value']): number | null => read(value).rules.greeting;
+
+function prepare({ id, value }: LoreEntries[number], fullWordMatching: boolean, invalidKeys: Activation['invalidKeys']): Book {
+  const { rules, body } = read(value);
   const mode = { regex: value.useRegex, caseSensitive: value.caseSensitive, fullWord: rules.fullWord ?? fullWordMatching };
   const query = (keys: string[]): Query =>
     keys

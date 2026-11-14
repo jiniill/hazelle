@@ -4,7 +4,7 @@ import { risuChatFile } from '../../engine/import/risu-character';
 import { openZip } from '../../engine/import/zip';
 import { fold, type Receipt } from '../../model/chat';
 import { indexZip, readEntry, type BackupOutput } from './backup-zip';
-import { importCharacter } from '../library/characters';
+import { editCharacter, importCharacter } from '../library/characters';
 import { appendReply, appendUserMessage, editMessage, setBookmark, setVariableByHand, startChat } from '../chat/chat-log';
 import { projectGreetings } from '../chat/greetings';
 import { exportEveryCharacter, exportRisuChat } from './risu-export';
@@ -65,4 +65,13 @@ it('zips every character as its charx and its chats in Risu form, the line past 
 
   const one = await exportRisuChat({ store }, edited);
   expect(one.ok && one.data.left.greetings).toBe(1);
+
+  // The card's greetings change places after the chat began: its greeting goes by where the card holds it now.
+  await editCharacter(store, character.data.id, { greetings: ['또 왔네', '안녕'] });
+  const swapped = await exportRisuChat({ store }, chat);
+  expect(swapped.ok && [risuChatFile(JSON.parse(swapped.data.text))!.chats[0]!.greeting, swapped.data.left.greetings]).toEqual([0, 0]);
+  // And one the card no longer reads as the chat does goes as an edited one, at the index the chat kept.
+  await editCharacter(store, character.data.id, { greetings: ['다른 인사', '안녕'] });
+  const gone = await exportRisuChat({ store }, chat);
+  expect(gone.ok && gone.data.left.greetings).toBe(1);
 });

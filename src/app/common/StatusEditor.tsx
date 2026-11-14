@@ -1,4 +1,3 @@
-import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { nameTaken, rostered, type RosterEntry } from '../../engine/status';
 import { moved, without } from '../../model/fields';
@@ -17,7 +16,7 @@ import { sampleState } from './statusSample';
 import { shownApp, shownView } from './statusView';
 import { fieldSummary, STATUS_KIND, STATUS_KINDS, STATUS_PROBLEM, STATUS_WORDS, STATUS_WRITER } from './statusWords';
 import { Button, ChoiceGroup, ConfirmDialog, Empty, List, ListItem, Menu, MenuItem, MoreMenu, PhraseField, Section, SettingGroup, SettingRow, Stack, STATUS_APP, STATUS_FRAME, STATUS_MOOD, StatusPanel, StatusPhone, Switch, Text, TextField } from '../ui';
-import { MOVE, namedObject, STATUS, statusTaken, PHONE } from './words';
+import { namedObject, STATUS, statusTaken, PHONE } from './words';
 
 type Change = (next: StatusDefinition) => void;
 // The definition without something it held, named with its kind's word: gone at once, with a way back.
@@ -74,8 +73,8 @@ function Fields({ definition, list, onChange, onRemove }: Editing & { list: Fiel
               onClick={() => setEditing({ kind: field.kind, field })}
               control={
                 <MoreMenu of={`'${field.name}'`}>
-                  {at > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => write(moved(fields, at, at - 1))} />}
-                  {at < fields.length - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => write(moved(fields, at, at + 1))} />}
+                  {at > 0 && <MenuItem icon={ACTS.moveUp.icon} label={ACTS.moveUp.label} onClick={() => write(moved(fields, at, at - 1))} />}
+                  {at < fields.length - 1 && <MenuItem icon={ACTS.moveDown.icon} label={ACTS.moveDown.label} onClick={() => write(moved(fields, at, at + 1))} />}
                   <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onRemove(withFields(definition, list, fields.filter(({ id }) => id !== field.id)), field.name, STATUS_WORDS.field)} />
                 </MoreMenu>
               }
@@ -154,8 +153,8 @@ function Parts({ definition, of, onChange, onRemove, children }: Editing & { of:
           action={
             <MoreMenu of={`'${name}'`}>
               <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => naming.ask({ title: ACTS.rename.label, value: name, among, self: id, onSave: (next) => rename(id, next) })} />
-              {at > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => move(at, at - 1)} />}
-              {at < parts.length - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => move(at, at + 1)} />}
+              {at > 0 && <MenuItem icon={ACTS.moveUp.icon} label={ACTS.moveUp.label} onClick={() => move(at, at - 1)} />}
+              {at < parts.length - 1 && <MenuItem icon={ACTS.moveDown.icon} label={ACTS.moveDown.label} onClick={() => move(at, at + 1)} />}
               <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onRemove(remove(definition, id), name, word)} />
             </MoreMenu>
           }
@@ -227,8 +226,8 @@ function Views({ definition, onChange, onRemove }: Editing) {
             action={
               <MoreMenu of={`'${name}'`}>
                 <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => naming.ask({ title: ACTS.rename.label, value: name, among: views, self: id, onSave: (next) => write(id, { name: next }) })} />
-                {at > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => onChange({ ...definition, views: moved(views, at, at - 1) })} />}
-                {at < views.length - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => onChange({ ...definition, views: moved(views, at, at + 1) })} />}
+                {at > 0 && <MenuItem icon={ACTS.moveUp.icon} label={ACTS.moveUp.label} onClick={() => onChange({ ...definition, views: moved(views, at, at - 1) })} />}
+                {at < views.length - 1 && <MenuItem icon={ACTS.moveDown.icon} label={ACTS.moveDown.label} onClick={() => onChange({ ...definition, views: moved(views, at, at + 1) })} />}
                 <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onRemove(withoutView(definition, id), name, STATUS_WORDS.view)} />
               </MoreMenu>
             }

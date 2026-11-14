@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, GitBranch, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, GitBranch, X } from 'lucide-react';
 import { useMemo, type Ref } from 'react';
 import { ACTS, addOf, newOf } from '../common/acts';
 import { cbsLanguage } from '../common/code/cbs';
@@ -12,7 +12,7 @@ import { Button, ChoiceGroup, Divider, Empty, Hint, IconButton, MarkupArea, Menu
 import { blockTitle, CACHE_WORDS, describeRange, firstLine, MARKS, RANGES, rangeKey, ROLES, type CacheMark, TRANSLATIONS } from './blocks';
 import { CommandMenu } from './CommandMenu';
 import { RECENT_MAX, type Snippet } from './edits';
-import { MOVE, NO_TOGGLES, CARD_INSTRUCTIONS, DEFAULT_NOTE } from '../common/words';
+import { NO_TOGGLES, CARD_INSTRUCTIONS, DEFAULT_NOTE } from '../common/words';
 
 
 type Props = {
@@ -85,8 +85,8 @@ export function BlockPane({ block, sort, index, count, toggles, authorNote, onCh
                     <Divider variant="menu" />
                   </>
                 )}
-                {index > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => onMove(index - 1)} />}
-                {index < count - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => onMove(index + 1)} />}
+                {index > 0 && <MenuItem icon={ACTS.moveUp.icon} label={ACTS.moveUp.label} onClick={() => onMove(index - 1)} />}
+                {index < count - 1 && <MenuItem icon={ACTS.moveDown.icon} label={ACTS.moveDown.label} onClick={() => onMove(index + 1)} />}
                 <MenuItem icon={X} tone="warn" label="빼기" onClick={onRemove} />
               </MoreMenu>
             </>

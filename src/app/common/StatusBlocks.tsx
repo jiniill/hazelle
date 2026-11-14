@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CornerDownRight } from 'lucide-react';
+import { CornerDownRight } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { nameTaken } from '../../engine/status';
 import { moved, without } from '../../model/fields';
@@ -7,7 +7,7 @@ import { blockNames, blockPlaces, blocksAt, movedBlock, withBlocksAt, type Block
 import { ACTS, addOf } from './acts';
 import { blockWords, FIELD_LOOKS, STATUS_BLOCK, STATUS_LOG_LOOK, STATUS_LOOK, STATUS_RECORDS_LOOK, STATUS_WORDS } from './statusWords';
 import { Button, Checkbox, ChoiceGroup, Dialog, Empty, List, ListItem, MenuItem, MoreMenu, PhraseField, SettingGroup, SettingRow, Stack, Switch, TextField } from '../ui';
-import { MOVE, statusEdit } from './words';
+import { statusEdit } from './words';
 
 // onRemove: the blocks without one, named as its row is.
 type Props = { definition: StatusDefinition; view: StatusView; onChange: (blocks: StatusBlock[]) => void; onRemove: (blocks: StatusBlock[], name: string) => void };
@@ -164,8 +164,8 @@ export function StatusBlocks({ definition, view, onChange, onRemove }: Props) {
           control={
             <MoreMenu of={`'${title}'`}>
               {block.kind === 'section' && inside([...path, { at }])}
-              {at > 0 && <MenuItem icon={ArrowUp} label={MOVE.up} onClick={() => change(path, (blocks) => moved(blocks, at, at - 1))} />}
-              {at < list.length - 1 && <MenuItem icon={ArrowDown} label={MOVE.down} onClick={() => change(path, (blocks) => moved(blocks, at, at + 1))} />}
+              {at > 0 && <MenuItem icon={ACTS.moveUp.icon} label={ACTS.moveUp.label} onClick={() => change(path, (blocks) => moved(blocks, at, at - 1))} />}
+              {at < list.length - 1 && <MenuItem icon={ACTS.moveDown.icon} label={ACTS.moveDown.label} onClick={() => change(path, (blocks) => moved(blocks, at, at + 1))} />}
               {places({ path, at }).length > 0 && <MenuItem icon={CornerDownRight} label={STATUS_WORDS.moveTo} onClick={() => setMoving({ path, at })} />}
               <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => onRemove(withBlocksAt(view.blocks, path, (blocks) => blocks.filter((_, each) => each !== at)), title)} />
             </MoreMenu>

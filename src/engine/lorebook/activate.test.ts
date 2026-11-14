@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { HistoryMessage } from '../history';
 import type { LoreEntry } from '../import/types';
 import { onProgress } from '../progress';
-import { prepareLore, type Activation, type LoreEntries, type LoreScan, type LoreTurn } from './activate';
+import { greetingRule, prepareLore, type Activation, type LoreEntries, type LoreScan, type LoreTurn } from './activate';
 
 const SCAN: LoreScan = { scanDepth: 5, tokenBudget: 800, recursive: true, fullWordMatching: false };
 
@@ -197,6 +197,11 @@ describe('activate', () => {
     expect(book.activate(input).fired).toEqual(first.fired);
     expect(reads).toBe(3);
     expect(prepareLore([{ ...entries[0]!, value: { ...entries[0]!.value, enabled: false } }], SCAN).sticky).toBe(false);
+  });
+
+  it('names the greeting an entry opens with, as activation reads it', () => {
+    expect(greetingRule(lore('second', { content: '@@is_greeting 1\nsecond' }).value)).toBe(1);
+    expect(greetingRule(lore('plain', { content: 'is_greeting 1' }).value)).toBeNull();
   });
 
   it('gates on the turn and the greeting, @@is_greeting 0 being first_mes as in Risu, and fires @@activate without keys under the same gates', () => {

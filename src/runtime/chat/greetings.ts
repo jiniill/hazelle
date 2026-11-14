@@ -48,3 +48,12 @@ export function greetingOf(messages: readonly Message[]): ChatScope['greeting'] 
   if (version.greeting !== undefined && !version.text.trim()) return null;
   return { index: version.greeting ?? null };
 }
+
+// Where the card holds a chat's greeting now. A chat keeps the index its card had when it began, and a card's
+// greetings can change places since: its index while the card still reads that text there, else wherever the card
+// reads it, else null, the card no longer holding it.
+export function greetingNow(greetings: readonly string[], index: number, text: string): number | null {
+  if (greetings[index] === text) return index;
+  const at = greetings.indexOf(text);
+  return at === -1 ? null : at;
+}

@@ -1,4 +1,4 @@
-import { CopyPlus, Copy, Download, Flag, MessageSquarePlus, Pencil, Plus, RefreshCw, RotateCcw, RotateCw, Save, Star, Trash2, Upload, type LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, CopyPlus, Copy, Download, Flag, MessageSquarePlus, Pencil, Plus, RefreshCw, RotateCcw, RotateCw, Save, Star, Trash2, Upload, type LucideIcon } from 'lucide-react';
 import { EXPORT } from './words';
 
 // Keep action icons synchronized across screens (lint-enforced). Retry, regenerate and restore are distinct acts.
@@ -20,6 +20,9 @@ export const ACTS = {
   restore: { label: '복원', icon: RotateCcw },
   newChat: { label: '새 채팅', icon: MessageSquarePlus },
   report: { label: '신고', icon: Flag },
+  // One step in a list whose order its owner keeps.
+  moveUp: { label: '위로 옮기기', icon: ArrowUp },
+  moveDown: { label: '아래로 옮기기', icon: ArrowDown },
   // A chat marked to be found again; a message's mark is 북마크, a record's or a toggle's 고정.
   star: { label: '즐겨찾기', icon: Star },
 } satisfies Record<string, Act>;

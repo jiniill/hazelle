@@ -8,6 +8,7 @@ import type { ApiFailure, ApiResult } from '../api';
 import { BackupZip, bufferedBackupOutput, type BackupOutput } from './backup-zip';
 import { charxContent, lorebookOf, writeCharxFile, type ExportStep } from './card-file';
 import { scopeOf } from '../chat/chat-context';
+import { greetingNow } from '../chat/greetings';
 import { evaluationFailure } from '../evaluation/evaluation';
 import type { Session } from '../session';
 import type { ObjectStore } from '../store/store';
@@ -46,7 +47,10 @@ async function lineOf({ store }: Reader, id: string): Promise<ApiResult<{ chat: 
   // version the model wrote over it, goes as an edited one does.
   const opening = messages[0]?.role === 'assistant' && messages[0].versions[0]!.greeting !== undefined;
   const greeting = scope.greeting?.index ?? null;
-  const edited = opening && (greeting === null || shown(messages[0]!).edited);
+  // Risu shows the card's greeting by its index, so the index goes as the card holds that greeting now; one the card
+  // no longer reads as the chat does goes as an edited one.
+  const held = opening && greeting !== null && !shown(messages[0]!).edited ? greetingNow(scope.card?.greetings ?? [], greeting, shown(messages[0]!).text) : null;
+  const edited = opening && held === null;
   const lore = lorebookOf(store, id, chat.loreFolders ?? []);
   // Risu carries a text file inside the message as its own {{file::name::base64}}. The stages have read the message's
   // tags away (cbs/tags.ts), so they are found in the text as stored and lead the message, as the composer put them.
@@ -65,7 +69,7 @@ async function lineOf({ store }: Reader, id: string): Promise<ApiResult<{ chat: 
     id: crypto.randomUUID(),
     title: chatTitle(chat, messages, state.staged),
     note: chat.note ?? '',
-    greeting: opening ? greeting : null,
+    greeting: opening ? (held ?? greeting) : null,
     messages: line,
     variables: state.variables,
     bookmarks: chat.bookmarks ?? [],

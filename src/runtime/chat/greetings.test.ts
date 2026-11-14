@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { fold, shown, type Chat, type Entry } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
 import { chatWrites, editMessage, appendScripted } from './chat-log';
-import { greetingOf, greetingPreview, projectGreetings, startingGreetings } from './greetings';
+import { greetingNow, greetingOf, greetingPreview, projectGreetings, startingGreetings } from './greetings';
 import type { ObjectStore } from '../store/store';
 import type { Write } from '../store/object-writes';
 
@@ -61,4 +61,12 @@ it('keeps greeting identity through user and script edits instead of matching th
   expect(greetingOf(fold(held))).toEqual({ index: 2 });
   await appendScripted(store, 'chat', { edits: [{ message: fold(held)[0]!, text: 'scripted', wrote: [] }], removed: [], added: [], vars: null });
   expect(greetingOf(fold(held))).toEqual({ index: 2 });
+});
+
+it("finds a chat's greeting where the card holds it now: its own index, the text's new place, or nowhere", () => {
+  expect(greetingNow(['a', 'b', 'c'], 1, 'b')).toBe(1);
+  expect(greetingNow(['b', 'a', 'c'], 1, 'b')).toBe(0);
+  // Two greetings that read the same: the chat's own index stands.
+  expect(greetingNow(['b', 'b'], 1, 'b')).toBe(1);
+  expect(greetingNow(['a', 'c'], 1, 'b')).toBeNull();
 });

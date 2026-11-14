@@ -5,6 +5,7 @@ import type { ObjectStore } from '../../runtime/store/store';
 import { BookOpen, Braces, Eye, Gauge, IdCard, Images, Languages, MessageSquareQuote, Package, Palette, ScrollText, SlidersHorizontal, Sparkles, Square, ToggleRight, UserRound, Variable, type LucideIcon } from 'lucide-react';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { storyHtml } from '../../engine/display';
+import { greetingRule } from '../../engine/lorebook/activate';
 import { unused } from '../../engine/pipeline';
 import type { ChatSummary } from '../../model/chat';
 import type { CharacterShelf, Pictures } from '../../model/library';
@@ -116,6 +117,8 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
   const wide = useWide();
   const original = useCharacter(origin?.id ?? null);
   const lore = useChildren('lore', id);
+  // Its own lorebook's entries that open by a greeting's number, which a change of the greetings' order moves to another.
+  const numbered = useMemo(() => lore.filter(({ value }) => greetingRule(value) !== null).length, [lore]);
   const assets = useChildren('asset', id);
   const likeness = useStored('likeness', likenessId(id));
   const modules = useModules();
@@ -276,6 +279,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     greetings: (
       <Section title={PARTS.greetings.label} help="새 채팅을 시작할 때 이 중에서 선택할 수 있어요." action={readingSwitch}>
         {translatorMissing}
+        {!translated && text.greetings.length > 1 && numbered > 0 && <Callout tone="tip">{`로어북 항목 ${numbered}개가 첫인사 번호로 켜져요. 순서를 바꾸면 그 번호가 가리키는 첫인사가 달라져요.`}</Callout>}
         {translated ? (
           card.greetings.map((greeting, index) => translatedField(`첫인사 ${index + 1}`, greeting, 6))
         ) : (
@@ -284,11 +288,28 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
             onChange={(greetings) => change({ greetings })}
             name={(index) => `첫인사 ${index + 1}`}
             blank=""
+            reorder
             addLabel={addOf('첫인사')}
             empty="첫인사가 없어요."
             removed={(index) => `${index + 1}번째 첫인사를 삭제했어요.`}
           >
-            {({ value, name, set, remove }) => <CountedField label={name} lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={value} onChange={set} action={remove} />}
+            {({ value, name, set, remove, move }) => (
+              <CountedField
+                label={name}
+                lines={6}
+                expand={SHORTCUTS.bigEdit.keys}
+                language={cbs}
+                aside={trial.cbs}
+                value={value}
+                onChange={set}
+                action={
+                  <>
+                    {move}
+                    {remove}
+                  </>
+                }
+              />
+            )}
           </EntryList>
         )}
       </Section>
