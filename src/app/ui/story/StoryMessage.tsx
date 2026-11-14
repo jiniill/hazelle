@@ -1,5 +1,5 @@
 import { Ban, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ImageIcon, Languages, Scissors, Square, TriangleAlert, WandSparkles, Wrench } from 'lucide-react';
-import { createContext, useContext, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Button } from '../controls/Button';
 import { Facts, type FactItem } from '../collections/Facts';
 import { IconButton } from '../controls/IconButton';
@@ -11,7 +11,7 @@ import { QuoteShapeContext } from '../foundation/quotes';
 import { useHover } from '../foundation/media';
 import { Menu, MenuItem } from '../overlays/Menu';
 import { RowMemoryContext } from '../collections/row-memory';
-import { WordsContext, type Words } from './Story';
+import { SlackContext, WordsContext, type Words } from './Story';
 import { MESSAGE, RAIL } from './readingRail';
 import styles from './StoryMessage.module.css';
 
@@ -161,6 +161,8 @@ export function Speech({ name, mine, named = true, words, head, beside, children
       </WordsContext>
     </div>
   );
+  const line = useRef<HTMLDivElement>(null);
+  const slack = useCallback((room: number) => line.current?.style.setProperty('--bubble-slack', `${room}px`), []);
   return (
     <>
       <div className={styles.head}>
@@ -168,8 +170,8 @@ export function Speech({ name, mine, named = true, words, head, beside, children
         {head}
       </div>
       {beside ? (
-        <div className={styles.line}>
-          {set}
+        <div ref={line} className={styles.line}>
+          <SlackContext value={slack}>{set}</SlackContext>
           {beside}
         </div>
       ) : (

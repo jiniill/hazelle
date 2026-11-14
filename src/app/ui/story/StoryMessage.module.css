@@ -372,10 +372,17 @@
   align-self: flex-end;
 }
 
+/* Beside the last bubble, which may be narrower than the widest (--bubble-slack, Speech): moved, not laid out
+   there, so the room it keeps at the line's end is what keeps the widest bubble clear of it. */
 .stamp {
   flex: none;
   color: var(--color-text-faint);
   font-size: var(--text-xs);
+  translate: calc(var(--bubble-slack, 0px) * -1);
+}
+
+.own .stamp {
+  translate: var(--bubble-slack, 0px);
 }
 
 .balloon .box {

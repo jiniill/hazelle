@@ -579,6 +579,9 @@ function showBound(shadow: ShadowRoot, values: ReadonlyMap<string, string>, draw
 // ground; in a box of their own size; or each of the story's own blocks a bubble of its size.
 export type Words = 'ground' | 'box' | 'each';
 export const WordsContext = createContext<Words>('ground');
+// Told what the last block drawn leaves of the words' width, where each block is a bubble: what stands beside the
+// words (StoryMessage's Speech) stands beside the last bubble by it.
+export const SlackContext = createContext<((room: number) => void) | null>(null);
 
 // A message's text, drawn in a shadow root so a bot's HTML and CSS can never restyle or cover the app.
 export function Story({ html, css = '', cursor = false, tone = 'plain', buttons = 'inert', onPress, term = '', whole = false, inlays = [], illustrations = [], ref, bind }: Props) {
@@ -621,6 +624,20 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   useLayoutEffect(() => {
     if (bind) showBound(root(), bind.values, false);
   });
+
+  const slack = useContext(SlackContext);
+  useLayoutEffect(() => {
+    if (words !== 'each' || !slack) return;
+    // A slot has no box of its own.
+    const last = [...root().children].findLast((block) => (block as HTMLElement).offsetWidth > 0) as HTMLElement | undefined;
+    if (!last) return slack(0);
+    const measure = () => slack(host.current!.offsetWidth - last.offsetWidth);
+    const sizes = new ResizeObserver(measure);
+    sizes.observe(host.current!);
+    sizes.observe(last);
+    measure();
+    return () => sizes.disconnect();
+  }, [words, slack, html, cursor, placed, math, code]);
 
   const bound = bind?.onChange;
   useEffect(() => {
