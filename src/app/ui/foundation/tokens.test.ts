@@ -89,17 +89,21 @@ it.each(themed)('keeps a name the %s theme states in %s readable on its page', (
   if (tone.name) expect(contrast(tone.name, tone.page)).toBeGreaterThanOrEqual(4.5);
 });
 
+it.each(themed)('keeps what the %s theme states on its accent in %s readable there', (_, __, tone) => {
+  if (tone.onAccent) expect(contrast(tone.onAccent, tone.accent)).toBeGreaterThanOrEqual(4.5);
+});
+
 // 기본's accent clears this on the same fills, so a theme is held to it too: by its accent, or by the mark it states.
 it.each(themed)('keeps what is read in the accent of the %s theme in %s at AA on the fills words stand on', (_, mode, tone) => {
   const fills = fillsOf(mode, tone);
   for (const fill of fills) expect(contrast(tone.mark ?? tone.accent, fill)).toBeGreaterThanOrEqual(4.5);
 });
 
-it('writes a finish as token rules for the element that names the theme, and a stated name for the base 배경 and 강조 only', () => {
+it('writes a finish as token rules for the element that names the theme, a stated name for the base 배경 and 강조 only, and a mark for the base 강조 on any page', () => {
   const tones = { dark: { page: '#101010', text: '#f0f0f0', accent: '#8080ff', dialogue: '#ffffff', name: '#ffcc00' }, light: { page: '#ffffff', text: '#101010', accent: '#3030c0', dialogue: '#000000' } };
   const plain = themeRules({ ...BASE, id: 'night', name: '밤', tones });
   expect(plain).toContain("[data-theme='night'][data-mode='dark'][data-bg='base'][data-accent='base']{--color-name:#ffcc00;}");
-  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, mark: '#2020a0' } } })).toContain("[data-theme='night'][data-mode='light'][data-bg='base'][data-accent='base']{--color-accent-mark:#2020a0;}");
+  expect(themeRules({ ...BASE, id: 'night', name: '밤', tones: { ...tones, light: { ...tones.light, mark: '#2020a0' } } })).toContain("[data-theme='night'][data-mode='light'][data-accent='base']{--color-accent-mark:#2020a0;}");
   expect(plain).not.toContain('[data-mode]{');
   expect(themeRules({ ...BASE, id: 'night', name: '밤', tones, finish: { rows: 'close', faces: 'round', lines: 'close', speakers: 'large' } })).toBe(
     plain +

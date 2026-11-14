@@ -5,9 +5,10 @@ import { MODE, type Mode } from './scheme';
 // One mode's colours as a theme states them, each #rrggbb. page, text, accent and dialogue stand where a 색 pick's
 // 기본 does, and tokens.css derives the rest from them by the picks' rules; a rung stated here goes over the rule's.
 // line is a divider's and a control's outline both. rail left out is the sidebar's; muted and faint left out stay the
-// mode's; name, a speaker's in the story, left out is the accent, and is stated for the theme's own page. pointed is
+// mode's; name, a speaker's in the story, left out is the mark's, and is stated for the theme's own page. pointed is
 // the ground under a message the pointer is on, none when left out. mark is the accent where it is read, as words,
 // icons and the focus ring: left out is the accent, and is stated when that is too dim on the theme's fills.
+// onAccent is what stands on an accent fill, a button's words and a switch's knob: left out is the rule's.
 export type Tone = {
   page: string;
   text: string;
@@ -24,6 +25,7 @@ export type Tone = {
   name?: string;
   pointed?: string;
   mark?: string;
+  onAccent?: string;
 };
 
 // A region's shape by name: which arrangement the kit component that draws the region takes. The first of each is
@@ -89,9 +91,12 @@ const GROUND: Partial<Record<keyof Tone, string[]>> = {
   line: ['--color-divider', '--color-border'],
   pointed: ['--color-row-pointed'],
 };
-// A 강조 pick colours the names and what is read in the accent too, as it does in 기본, and both are stated against
-// the theme's page, so a theme's hold only while both picks are base.
-const VOICE: Partial<Record<keyof Tone, string[]>> = { name: ['--color-name'], mark: ['--color-accent-mark'] };
+// A 강조 pick colours the names too, as it does in 기본, and a name is stated against the theme's page, so a theme's
+// holds only while both picks are base.
+const VOICE: Partial<Record<keyof Tone, string[]>> = { name: ['--color-name'] };
+// What is read in the accent and what stands on it follow a 강조 pick as well, but no 배경 pick changes the accent,
+// so a theme's hold on any page while 강조 is base; a name not held then is the mark's (tokens.css).
+const ACCENTED: Partial<Record<keyof Tone, string[]>> = { mark: ['--color-accent-mark'], onAccent: ['--color-on-accent'] };
 
 const FINISH: { [Part in keyof Finish]: Record<Finish[Part], string> } = {
   rows: { open: '', close: '--story-gap:var(--story-gap-close);' },
@@ -112,7 +117,7 @@ export function themeRules({ id, tones, finish }: Theme): string {
   const picked = (Object.keys(FINISH) as (keyof Finish)[]).map((part) => (FINISH[part] as Record<string, string>)[finish[part]]).join('');
   const colours = (Object.keys(MODE) as Mode[]).map((mode) => {
     const worn = `[data-theme='${id}'][data-mode='${mode}']`;
-    return rule(worn, tones[mode], OWN) + rule(`${worn}[data-bg='base']`, tones[mode], GROUND) + rule(`${worn}[data-bg='base'][data-accent='base']`, tones[mode], VOICE);
+    return rule(worn, tones[mode], OWN) + rule(`${worn}[data-bg='base']`, tones[mode], GROUND) + rule(`${worn}[data-bg='base'][data-accent='base']`, tones[mode], VOICE) + rule(`${worn}[data-accent='base']`, tones[mode], ACCENTED);
   });
   return colours.join('') + (picked ? `[data-theme='${id}'][data-mode]{${picked}}` : '');
 }

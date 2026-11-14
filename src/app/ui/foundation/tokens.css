@@ -296,7 +296,7 @@
   --color-focus: var(--color-accent-mark);
   /* The rail's ground: the sidebar's, but in a theme that states one. */
   --color-rail: var(--color-sidebar);
-  --color-name: var(--color-accent);
+  --color-name: var(--color-accent-mark);
   --color-row-pointed: transparent;
   /* A theme's finish (theme.ts) turns these on the element that names it, so they are declared again on every element
      with a scheme of its own, which may name none. */
