@@ -25,6 +25,14 @@ it('leads a topic header with the chat and a plain one with the character, both 
   expect(topic.match(/<button/g)).toHaveLength(2);
 });
 
+it('draws a bare header as the chat alone, the character named by the mark that opens it, and as plain with no chat to name', () => {
+  const bare = drawn(THEMES.doc, <ChatTitle name="미라" description="첫 채팅" onClick={() => {}} onRename={() => {}} />);
+  expect(bare).toContain('aria-label="미라"');
+  expect(bare).not.toContain('>미라<');
+  expect(bare.match(/<button/g)).toHaveLength(2);
+  expect(drawn(THEMES.doc, <ChatTitle name="미라" onClick={() => {}} />)).toContain('>미라<');
+});
+
 it('puts the faces of a servers rail over its actions, and the fold last of them in both', () => {
   const rail = (
     <Rail fold={{ open: true, onToggle: () => {} }} actions={<i>둘러보기</i>} places={<i>설정</i>}>

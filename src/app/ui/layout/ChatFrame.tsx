@@ -282,7 +282,8 @@ function plainTitle({ name, description, face, expanded, onClick, onRename }: Ti
 
 // plain: the face and the character's name over the chat's. topic: the chat's name leads after a #, and the
 // character's follows a line, quiet, with no face; on a phone, with no room for both on a line, it goes under. A
-// title with no chat's name has nothing to lead with, and is plain.
+// title with no chat's name has nothing to lead with, and is plain. bare: the chat's name alone; the character's is
+// not drawn, and names the mark after it that opens the character.
 const TITLES: Record<Shapes['header'], (props: TitleProps) => ReactNode> = {
   plain: plainTitle,
   topic: (props) => {
@@ -309,6 +310,20 @@ const TITLES: Record<Shapes['header'], (props: TitleProps) => ReactNode> = {
           </>,
           onClick,
           expanded,
+        )}
+      </h1>
+    );
+  },
+  bare: (props) => {
+    const { name, description, expanded, onClick, onRename } = props;
+    if (!description) return plainTitle(props);
+    return (
+      <h1 className={`${styles.heading} ${styles.bare}`}>
+        {titlePart(styles.who, <span className={styles.name}>{description}</span>, onRename)}
+        {onClick && (
+          <button type="button" className={`${styles.open} ${styles.press}`} aria-label={name} title={name} aria-expanded={expanded} onClick={onClick}>
+            <ChevronRight size={16} aria-hidden />
+          </button>
         )}
       </h1>
     );

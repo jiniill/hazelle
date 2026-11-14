@@ -42,7 +42,7 @@ export type Tone = {
 // 기본's. A component maps its region's names to classes with a Record over them, so a name it does not draw does
 // not build.
 export type Shapes = {
-  header: 'plain' | 'topic';
+  header: 'plain' | 'topic' | 'bare';
   rail: 'icons' | 'servers' | 'labels';
   list: 'cards' | 'channels' | 'people';
   composer: 'box' | 'bar' | 'toolbar';
