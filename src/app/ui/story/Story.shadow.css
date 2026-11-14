@@ -44,6 +44,30 @@
     margin-bottom: 0 !important;
   }
 
+  /* Each of the prose's own blocks a speech bubble of its size (StoryMessage's bubble shape, which names what a bubble
+     is drawn with); a bot's box stays on the ground. --bubble-lead pushes mine to the end. */
+  :host([data-bubbles]) > :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, table) {
+    width: fit-content;
+    max-width: 100%;
+    margin-left: var(--bubble-lead, 0);
+    padding: var(--space-8) var(--space-12);
+    border-radius: var(--radius-lg);
+    background: var(--bubble-fill);
+    color: var(--bubble-ink);
+    --color-prose-dialogue: var(--bubble-voice);
+    --color-prose-thought: var(--bubble-thought);
+    --color-prose-action: var(--bubble-quiet);
+  }
+
+  :host([data-bubbles]) > * + * {
+    margin-top: var(--space-4);
+  }
+
+  /* A list's markers stand inside its bubble. */
+  :host([data-bubbles]) > :is(ul, ol) {
+    padding-left: var(--space-32);
+  }
+
   :host > :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, table) em {
     font-style: normal;
     color: var(--color-prose-action);

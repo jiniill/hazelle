@@ -301,6 +301,8 @@
   --color-send: var(--color-accent);
   --color-on-send: var(--color-on-accent);
   --color-row-pointed: transparent;
+  /* A speech bubble's fill, the others' (theme.ts bubble); mine is the accent's. */
+  --color-bubble: var(--color-surface);
   /* A theme's finish (theme.ts) turns these on the element that names it, so they are declared again on every element
      with a scheme of its own, which may name none. */
   --story-gap: var(--space-24);
@@ -661,6 +663,8 @@
   --read-widest: 1200px;
   /* No cap: wider than any column, so what it caps fills its column. */
   --read-full: 100vw;
+  /* How far across its column a speech bubble's line reaches. */
+  --bubble-reach: min(78%, 560px);
   --read-gutter: 40px;
   --read-stage-least: 64px;
   --peek-tab-width: 27px;

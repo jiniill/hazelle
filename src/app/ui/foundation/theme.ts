@@ -6,7 +6,8 @@ import { MODE, SchemeContext, schemeAttributes, type Mode, type Scheme } from '.
 // 기본 does, and tokens.css derives the rest from them by the picks' rules; a rung stated here goes over the rule's.
 // line is a divider's and a control's outline both, outline the control's where it is not the divider's. rail left out is the sidebar's; muted and faint left out stay the
 // mode's; name, a speaker's in the story, left out is the mark's, and is stated for the theme's own page. pointed is
-// the ground under a message the pointer is on, none when left out. mark is the accent where it is read, as words,
+// the ground under a message the pointer is on, none when left out. bubble is a speech bubble's fill, the others',
+// the surface's when left out; mine is the accent's. mark is the accent where it is read, as words,
 // icons and the focus ring: left out is the accent, and is stated when that is too dim on the theme's fills.
 // onAccent is what stands on an accent fill, a button's words and a switch's knob, and accentHover that fill under
 // a pointer: left out are the rule's. send and onSend are the send button's fill and what stands on it, the accent's
@@ -27,6 +28,7 @@ export type Tone = {
   faint?: string;
   name?: string;
   pointed?: string;
+  bubble?: string;
   mark?: string;
   onAccent?: string;
   accentHover?: string;
@@ -42,7 +44,7 @@ export type Shapes = {
   rail: 'icons' | 'servers' | 'labels';
   list: 'cards' | 'channels';
   composer: 'box' | 'bar' | 'toolbar';
-  message: 'prose' | 'row';
+  message: 'prose' | 'row' | 'bubble';
 };
 
 export type Spacing = 'narrow' | 'normal' | 'wide' | 'widest';
@@ -106,6 +108,7 @@ const GROUND: Partial<Record<keyof Tone, string[]>> = {
   line: ['--color-divider', '--color-border'],
   outline: ['--color-border'],
   pointed: ['--color-row-pointed'],
+  bubble: ['--color-bubble'],
 };
 // A 강조 pick colours the names too, as it does in 기본, and a name is stated against the theme's page, so a theme's
 // holds only while both picks are base.

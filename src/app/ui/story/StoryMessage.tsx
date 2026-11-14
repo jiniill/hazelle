@@ -11,7 +11,7 @@ import { QuoteShapeContext } from '../foundation/quotes';
 import { useHover } from '../foundation/media';
 import { Menu, MenuItem } from '../overlays/Menu';
 import { RowMemoryContext } from '../collections/row-memory';
-import { FitsWordsContext } from './Story';
+import { WordsContext, type Words } from './Story';
 import { MESSAGE, RAIL } from './readingRail';
 import styles from './StoryMessage.module.css';
 
@@ -59,11 +59,19 @@ type Props = {
 // prose: the words on the ground under a name, mine in a box, the time shown when asked for, the tools on a line of
 // their own under the words. row: mine drawn as any other, the time always by the name, and no line kept for the tools:
 // under a pointer they float over the row's foot, half below it, and show while the row is pointed at or holds the
-// focus. With no pointer to hover, or told to stay, a row's tools keep prose's line.
-const SHAPES: Record<Shapes['message'], { root?: string; boxesMine: boolean; floats: boolean }> = {
-  prose: { boxesMine: true, floats: false },
-  row: { root: styles.row, boxesMine: false, floats: true },
+// focus. With no pointer to hover, or told to stay, a row's tools keep prose's line. bubble: everyone's words in
+// bubbles, each of a reply's blocks one or the whole reply one (BubblesContext), mine in the accent at the end with no
+// face or name, the time beside the words, and the tools as a row's.
+// words: how the words are set (Story's Words). stamps: the time stands beside the words, not by the name.
+type Shape = { root?: string; words: (mine: boolean, each: boolean) => Words; floats: boolean; stamps: boolean };
+const SHAPES: Record<Shapes['message'], Shape> = {
+  prose: { words: (mine) => (mine ? 'box' : 'ground'), floats: false, stamps: false },
+  row: { root: styles.row, words: () => 'ground', floats: true, stamps: false },
+  bubble: { root: styles.balloon, words: (_, each) => (each ? 'each' : 'box'), floats: true, stamps: true },
 };
+
+// Whether a bubble message's reply is a bubble a block, or one bubble whole.
+export const BubblesContext = createContext(true);
 
 export const toolsFloat = (shape: Shapes['message'], hover: boolean, stay: boolean) => SHAPES[shape].floats && hover && !stay;
 
@@ -75,6 +83,8 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
   const timePin = useContext(TimePinContext);
   const pinned = timePin?.pinned === id;
   const follows = useContext(ToolsFollowContext);
+  const each = useContext(BubblesContext);
+  const stamp = <span className={shape.stamps ? styles.stamp : styles.time}>{time}</span>;
   const foundDelay = useMemo(() => `-${Math.max(0, Date.now() - found)}ms`, [found]);
   const memory = useContext(RowMemoryContext);
   const revisited = useRef(memory?.visited ?? false);
@@ -84,7 +94,7 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
     timePin.pin(id);
   };
   return (
-    <article className={classNames(styles.message, shape.root, pinned && styles.pinned, revisited.current && styles.revisited, writing && styles.writing)} onClick={tap} {...{ [MESSAGE]: '' }}>
+    <article className={classNames(styles.message, shape.root, mine && styles.own, pinned && styles.pinned, revisited.current && styles.revisited, writing && styles.writing)} onClick={tap} {...{ [MESSAGE]: '' }}>
       {found !== 0 && <span key={found} className={styles.found} style={{ animationDelay: foundDelay }} aria-hidden />}
       {marked && <span className={styles.marked} aria-hidden />}
       <div className={styles.side}>
@@ -101,13 +111,14 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
         <Speech
           name={name}
           mine={mine}
-          box={mine && shape.boxesMine}
+          words={shape.words(mine, each)}
+          beside={shape.stamps && stamp}
           head={
             <>
               {mark && <span className={styles.mark}>{mark}</span>}
               {badges.slice(0, BADGES_SHOWN).map((badge, index) => <span key={index} className={styles.badge}>{badge}</span>)}
               {badges.length > BADGES_SHOWN && <span className={styles.badge} title={badges.slice(BADGES_SHOWN).join(' · ')}>{`+${badges.length - BADGES_SHOWN}`}</span>}
-              <span className={styles.time}>{time}</span>
+              {!shape.stamps && stamp}
             </>
           }
         >
@@ -124,16 +135,30 @@ export function StoryMessage({ avatar, name, time, mine, mark, badges = [], chil
 }
 
 // Who speaks and what they said, as the chat and its exported log (LogExport) both draw it; head: what stands by the
-// name. box: the words are set in a box of their own size.
-export function Speech({ name, mine, box, head, children }: { name: string; mine: boolean; box: boolean; head?: ReactNode; children: ReactNode }) {
+// name. words: how the words are set. beside: what stands at the words' end, on their last line.
+export function Speech({ name, mine, words, head, beside, children }: { name: string; mine: boolean; words: Words; head?: ReactNode; beside?: ReactNode; children: ReactNode }) {
+  // Words in a box or in bubbles are already boxed: their dialogue keeps to color, whatever 대사 모양 says.
+  const set = words === 'ground' ? children : (
+    <div className={words === 'box' ? styles.box : styles.fit}>
+      <WordsContext value={words}>
+        <QuoteShapeContext value="color">{children}</QuoteShapeContext>
+      </WordsContext>
+    </div>
+  );
   return (
     <>
       <div className={styles.head}>
         <span className={mine ? styles.me : styles.name}>{name}</span>
         {head}
       </div>
-      {/* The bubble is already a box: its dialogue keeps to color, whatever 대사 모양 says. */}
-      {box ? <div className={styles.bubble}><FitsWordsContext value><QuoteShapeContext value="color">{children}</QuoteShapeContext></FitsWordsContext></div> : children}
+      {beside ? (
+        <div className={styles.line}>
+          {set}
+          {beside}
+        </div>
+      ) : (
+        set
+      )}
     </>
   );
 }

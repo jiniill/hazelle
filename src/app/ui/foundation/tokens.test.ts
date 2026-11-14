@@ -105,6 +105,10 @@ it.each(themed)('keeps what the %s theme states on its send button in %s readabl
   if (tone.onSend) expect(contrast(tone.onSend, tone.send ?? tone.accent)).toBeGreaterThanOrEqual(4.5);
 });
 
+it.each(themed)('keeps the words and the dialogue of the %s theme in %s readable in the bubble it states', (_, __, tone) => {
+  if (tone.bubble) for (const ink of [tone.text, tone.dialogue]) expect(contrast(ink, tone.bubble)).toBeGreaterThanOrEqual(4.5);
+});
+
 // 기본's accent clears this on the same fills, so a theme is held to it too: by its accent, or by the mark it states.
 it.each(themed)('keeps what is read in the accent of the %s theme in %s at AA on the fills words stand on', (_, mode, tone) => {
   const fills = fillsOf(mode, tone);

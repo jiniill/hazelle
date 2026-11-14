@@ -132,14 +132,22 @@
 }
 
 /* A story sized by its words can be no size container (Story.module.css), nor one a status box nests in it. The bot's
-   boxes in its shadow root are freed by Story.shadow.css (FitsWordsContext). */
-.bubble * {
+   boxes in its shadow root are freed by Story.shadow.css (WordsContext). */
+.fit * {
   container-type: normal;
 }
 
-.bubble {
+.fit {
   align-self: flex-start;
   max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.box {
+  composes: fit;
+  display: block;
   padding: var(--space-12) var(--space-16);
   border: var(--border-thin) solid var(--color-surface-hover);
   border-radius: var(--radius-lg);
@@ -242,6 +250,85 @@
 
 .row .main {
   gap: var(--space-4);
+}
+
+/* bubble (a message shape). What a bubble is drawn with is named here and read where the bubble is: the box below, or
+   each block in the story's shadow root (Story.shadow.css). Mine is the accent's, its every word in what stands on it. */
+.balloon {
+  --bubble-fill: var(--color-bubble);
+  --bubble-ink: var(--color-prose-narration);
+  --bubble-voice: var(--color-prose-dialogue);
+  --bubble-thought: var(--color-prose-thought);
+  --bubble-quiet: var(--color-prose-action);
+}
+
+.balloon.own {
+  --bubble-fill: var(--color-accent);
+  --bubble-ink: var(--color-on-accent);
+  --bubble-voice: var(--color-on-accent);
+  --bubble-thought: var(--color-on-accent);
+  --bubble-quiet: var(--color-on-accent);
+  --bubble-lead: auto;
+}
+
+.balloon .main {
+  gap: var(--space-4);
+}
+
+.balloon .name {
+  font-weight: var(--weight-regular);
+}
+
+/* Mine has no face and no name: what else its head holds, a mark or a badge, stands at the end over the bubble. */
+.balloon.own .side,
+.balloon.own .me {
+  display: none;
+}
+
+.balloon.own .head {
+  justify-content: flex-end;
+}
+
+.balloon.own .head:not(:has(.mark, .badge)) {
+  display: none;
+}
+
+.line {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-8);
+  max-width: var(--bubble-reach);
+}
+
+.line > :first-child {
+  min-width: 0;
+}
+
+.own .line {
+  flex-direction: row-reverse;
+  align-self: flex-end;
+}
+
+.stamp {
+  flex: none;
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+}
+
+.balloon .box {
+  padding: var(--space-8) var(--space-12);
+  border: 0;
+  background: var(--bubble-fill);
+  --color-prose-narration: var(--bubble-ink);
+  --color-prose-dialogue: var(--bubble-voice);
+  --color-prose-thought: var(--bubble-thought);
+  --color-prose-action: var(--bubble-quiet);
+}
+
+@media (hover: hover) {
+  .balloon:hover .stamp {
+    color: var(--color-text-muted);
+  }
 }
 
 /* The foot of a row whose tools float keeps no line for them. */

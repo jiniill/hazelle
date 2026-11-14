@@ -575,8 +575,10 @@ function showBound(shadow: ShadowRoot, values: ReadonlyMap<string, string>, draw
   }
 }
 
-// Given by a box sized by its story's words (StoryMessage's bubble), named in Story.shadow.css.
-export const FitsWordsContext = createContext(false);
+// How a story's words are set, given by what draws around them (StoryMessage) and named in Story.shadow.css: on the
+// ground; in a box of their own size; or each of the story's own blocks a bubble of its size.
+export type Words = 'ground' | 'box' | 'each';
+export const WordsContext = createContext<Words>('ground');
 
 // A message's text, drawn in a shadow root so a bot's HTML and CSS can never restyle or cover the app.
 export function Story({ html, css = '', cursor = false, tone = 'plain', buttons = 'inert', onPress, term = '', whole = false, inlays = [], illustrations = [], ref, bind }: Props) {
@@ -590,7 +592,7 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   const hovered = useRef<string | null>(null);
   const veil = useVeil();
   const quotes = useQuoteShape();
-  const fits = useContext(FitsWordsContext);
+  const words = useContext(WordsContext);
   // A veil tapped open or shut changes only veil.revealed, which no render sees.
   const [veilTaps, tapVeil] = useReducer((count: number) => count + 1, 0);
   const host = useRef<HTMLDivElement>(null);
@@ -778,7 +780,7 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   return (
     <>
       <div ref={ref} className={tone === 'faded' ? `${styles.story} ${styles.faded}` : styles.story}>
-        <div ref={host} data-buttons={buttons} data-quotes={quotes} data-fits={fits || undefined} data-scrollbars={scrollbarKind()}>
+        <div ref={host} data-buttons={buttons} data-quotes={quotes} data-fits={words !== 'ground' || undefined} data-bubbles={words === 'each' || undefined} data-scrollbars={scrollbarKind()}>
           {cursor && <span slot="cursor" className={styles.cursor} aria-hidden />}
           {slotted.map(({ node }, index) =>
             beside && index < illustrations.length ? (
