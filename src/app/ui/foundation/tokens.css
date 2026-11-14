@@ -301,6 +301,9 @@
   /* A theme's finish (theme.ts) turns these on the element that names it, so they are declared again on every element
      with a scheme of its own, which may name none. */
   --story-gap: var(--space-24);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --avatar-story: var(--avatar-md);
   --avatar-story-letter: var(--text-md);
   --face-radius-sm: var(--radius-sm);
@@ -409,10 +412,10 @@
   --space-24: 24px;
   --space-32: 32px;
 
+  /* sm, md and lg are a theme's to tighten, so they stand with the finish's tokens (:root, [data-mode]). */
   --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-tight-sm: 6px;
+  --radius-tight: 8px;
   --radius-full: 999px;
 
   /* Control marks are not a rung in the control-height scale. */
