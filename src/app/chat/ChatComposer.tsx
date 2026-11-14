@@ -18,10 +18,11 @@ import { SHORTCUTS, typing, useSendKeys, useShortcut } from '../shortcuts';
 import { useDisplay } from '../display';
 import { useRemembering, useSettings, useTools } from '../session';
 import { useImport } from '../common/importing';
-import { Attachments, type Attached, Callout, Composer, DropOverlay, Hint, pressed, pressedKey, SendButton, SendNote, titled, useFileDrop, useMenuOpener } from '../ui';
+import { Attachments, type Attached, Callout, Composer, DropOverlay, Hint, pressed, pressedKey, SendButton, SendNote, titled, useAside, useFileDrop, useMenuOpener } from '../ui';
 import { ChatAsk } from './ChatAsk';
 import { attachTool } from './ChatAttach';
 import { ChatCache } from './ChatCache';
+import { ChatModel } from './ChatModel';
 import { composerTool } from './ChatComposerTools';
 import { illustrateTool } from './ChatIllustrate';
 import { noteTool } from './ChatNote';
@@ -82,6 +83,7 @@ export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFol
   };
   const editPrompt = (door: PromptDoor) => actions.side(promptEditor(door));
   const storedTools = useTools();
+  const aside = useAside();
   const rowTools: RowTool[] = [
     attachTool({ sees: attachments.sees, moved: attachments.moved, onAttach: actions.attach, onMoved: actions.sendMoved }),
     personaTool({ persona: chat.persona, open: chat.dialog === 'persona', onOpen: () => actions.openDialog('persona') }),
@@ -192,6 +194,7 @@ export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFol
         onFiles={actions.attach}
         tools={<ChatToolRow tools={rowTools} after={<ChatPinnedToggles toggles={chat.toggles} onFlip={actions.flip} />} />}
         more={<ChatToolMore tools={rowTools} foot={<PinnedTogglesLayout toggles={chat.toggles} />} />}
+        aside={aside && <ChatModel chat={chat} opens="above-end" />}
         actions={
           <>
             {!busy && chat.sendNotes.leaving && chat.id !== null && chat.sendNotes.sending && 'turn' in chat.sendNotes.sending ? <LeavingNote count={chat.sendNotes.leaving} causes={leavingCauses(chat.sendNotes.sending.prompt, chat.id, remembering)} onOpen={chat.features.memory ? () => actions.memory(null) : undefined} /> : null}

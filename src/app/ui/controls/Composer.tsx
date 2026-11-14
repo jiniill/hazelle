@@ -26,13 +26,15 @@ type Props = {
   // attachments: what the message carries, above its text (Attachments). onFiles: files pasted with no text.
   attachments?: ReactNode;
   onFiles?: (files: File[]) => void;
+  // What stands at the end of the tools' line where the shape has that end (useAside), such as the chat's model.
+  aside?: ReactNode;
 };
 
 // Read by SendButton, which gives the focus back to it.
 export const ComposerField = createContext<RefObject<HTMLTextAreaElement | null>>({ current: null });
 
 // press: a press on the box's own edge, for a shape whose box is not the composer itself.
-type Parts = Record<'label' | 'attachments' | 'input' | 'tools' | 'more' | 'actions', ReactNode> & { press: MouseEventHandler<HTMLDivElement> };
+type Parts = Record<'label' | 'attachments' | 'input' | 'tools' | 'more' | 'actions' | 'aside', ReactNode> & { press: MouseEventHandler<HTMLDivElement> };
 
 // box: the field over a line of its tools, the menu of them at that line's end before the send button; folded, the
 // line goes and the box is the text alone. bar: one line, the menu first, then the field and the send button; the
@@ -40,9 +42,10 @@ type Parts = Record<'label' | 'attachments' | 'input' | 'tools' | 'more' | 'acti
 // its buttons: only a long text draws back to its first line. toolbar: the tools on a line of their own over the
 // field, a rule under them, and under the field the menu at the start and the send button at the end; folded, both
 // lines go, the rule with the tools. tray: the box is the field and the send button on one line, and under the box,
-// on the ground, the menu and then the tools; folded, that line goes.
-// toolRow: the tools stand in a row by the field. sign, place: the menu's button and the side it opens to.
-type Shape = { rows: number; root: string; toolRow: boolean; sign?: LucideIcon; place: 'above-end' | 'above-start'; lay: (parts: Parts) => ReactNode };
+// on the ground, the menu, the tools and at the line's end the aside; folded, that line goes.
+// toolRow: the tools stand in a row by the field. aside: it stands the aside. sign, place: the menu's button and
+// the side it opens to.
+type Shape = { rows: number; root: string; toolRow: boolean; aside?: true; sign?: LucideIcon; place: 'above-end' | 'above-start'; lay: (parts: Parts) => ReactNode };
 
 const SHAPES: Record<Shapes['composer'], Shape> = {
   box: {
@@ -121,9 +124,10 @@ const SHAPES: Record<Shapes['composer'], Shape> = {
     rows: 1,
     root: styles.tray,
     toolRow: true,
+    aside: true,
     sign: Plus,
     place: 'above-start',
-    lay: ({ label, attachments, input, tools, more, actions, press }) => (
+    lay: ({ label, attachments, input, tools, more, actions, aside, press }) => (
       <>
         <div className={styles.well} onMouseDown={press}>
           {attachments}
@@ -138,6 +142,7 @@ const SHAPES: Record<Shapes['composer'], Shape> = {
             <div className={styles.foot}>
               <span className={styles.more}>{more}</span>
               <div className={styles.toolRow}>{tools}</div>
+              <div className={styles.aside}>{aside}</div>
             </div>
           </div>
         </div>
@@ -146,7 +151,7 @@ const SHAPES: Record<Shapes['composer'], Shape> = {
   },
 };
 
-export function Composer({ value, onChange, onKeyDown, placeholder, tools, more, actions, inputRef, compact, onOpen, readOnly, enterKeyHint, attachments, onFiles }: Props) {
+export function Composer({ value, onChange, onKeyDown, placeholder, tools, more, actions, inputRef, compact, onOpen, readOnly, enterKeyHint, attachments, onFiles, aside }: Props) {
   const id = useId();
   const shape = useShape('composer');
   const { rows, root, lay } = SHAPES[shape];
@@ -198,6 +203,7 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, more,
           tools,
           more,
           actions,
+          aside,
           press,
         })}
       </ComposerField.Provider>
@@ -208,6 +214,9 @@ export function Composer({ value, onChange, onKeyDown, placeholder, tools, more,
 // Whether the composer stands its tools in a row by the field. Where it does not, only what cannot wait behind the
 // menu is handed to it as tools.
 export const useToolRow = () => SHAPES[useShape('composer')].toolRow;
+
+// Whether the composer stands an aside. Where it does, what a screen would stand elsewhere is handed to it there.
+export const useAside = () => SHAPES[useShape('composer')].aside === true;
 
 // The menu of the composer's tools: ⋯ at the end of their row, or + before the field where there is no row.
 export function ComposerTools({ dot, children }: { dot: boolean; children: ReactNode }) {

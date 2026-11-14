@@ -6,10 +6,10 @@
   max-width: var(--chip-max-width);
   height: var(--control-chip);
   padding: 0 var(--space-8) 0 var(--space-12);
-  /* --chip-line, --chip-fill: where a chip stands as its words alone (a bare chat header). */
-  border: var(--border-thin) solid var(--chip-line, var(--color-border));
+  /* --chip-bare: transparent where a chip stands as its words alone (a bare chat header, a tray composer's aside). */
+  border: var(--border-thin) solid var(--chip-bare, var(--color-border));
   border-radius: var(--radius-full);
-  background: var(--chip-fill, var(--color-surface));
+  background: var(--chip-bare, var(--color-surface));
   color: var(--color-text);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);

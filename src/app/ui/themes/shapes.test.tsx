@@ -65,12 +65,13 @@ it('draws a chat as a channel by its name alone, with what was said and where it
   expect(card).not.toContain('얼굴');
 });
 
-it('writes a bar composer as its menu, its field and its send button, what stands all the same under them, a toolbar as its tools, its field, then the menu and the send button, and a tray as its field and its send button, then the menu and the tools', () => {
-  const composer = <Composer value="" onChange={() => {}} onKeyDown={() => {}} placeholder="메시지" inputRef={{ current: null }} compact={false} onOpen={() => {}} tools={<i>서 있는 것</i>} more={<i>도구 메뉴</i>} actions={<i>보내기</i>} />;
+it('writes a bar composer as its menu, its field and its send button, what stands all the same under them, a toolbar as its tools, its field, then the menu and the send button, and a tray as its field and its send button, then the menu, the tools and the aside, which no other shape draws', () => {
+  const composer = <Composer value="" onChange={() => {}} onKeyDown={() => {}} placeholder="메시지" inputRef={{ current: null }} compact={false} onOpen={() => {}} tools={<i>서 있는 것</i>} more={<i>도구 메뉴</i>} actions={<i>보내기</i>} aside={<i>곁에 선 것</i>} />;
   expect(rising(order(drawn(BASE, composer), '<textarea', '서 있는 것', '도구 메뉴', '보내기'))).toBe(true);
   expect(rising(order(drawn(THEMES.discord, composer), '도구 메뉴', '<textarea', '보내기', '서 있는 것'))).toBe(true);
   expect(rising(order(drawn(THEMES.slack, composer), '서 있는 것', '<textarea', '도구 메뉴', '보내기'))).toBe(true);
-  expect(rising(order(drawn(THEMES.claude, composer), '<textarea', '보내기', '도구 메뉴', '서 있는 것'))).toBe(true);
+  expect(rising(order(drawn(THEMES.claude, composer), '<textarea', '보내기', '도구 메뉴', '서 있는 것', '곁에 선 것'))).toBe(true);
+  for (const theme of [BASE, THEMES.discord, THEMES.slack, THEMES.kakaotalk]) expect(drawn(theme, composer)).not.toContain('곁에 선 것');
 });
 
 it('floats a row message\'s tools and hides a page\'s mine only under a pointer that hovers, and never ones told to stay', () => {

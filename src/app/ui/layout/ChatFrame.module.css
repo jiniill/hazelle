@@ -390,8 +390,7 @@
 
 /* Beside a bare title the header's chips are their words alone, until pointed at. */
 .header:has(.bare) .actions {
-  --chip-line: transparent;
-  --chip-fill: transparent;
+  --chip-bare: transparent;
 }
 
 .open {

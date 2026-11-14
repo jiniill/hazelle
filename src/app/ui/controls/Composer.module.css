@@ -247,5 +247,18 @@
 
 .tray .foot {
   align-items: flex-start;
-  padding: var(--space-4) var(--space-8) 0;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) 0;
+}
+
+.tray .toolRow {
+  gap: var(--space-4);
+}
+
+.aside {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: var(--control-compact);
+  --chip-bare: transparent;
 }
