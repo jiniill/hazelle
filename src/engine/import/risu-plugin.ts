@@ -87,6 +87,7 @@ export function scanRisu(body: string): RisuScan {
     for (const found of code.matchAll(UNMAPPED_ANYWHERE)) missing.add(found[1]!);
     for (const found of code.matchAll(REPLACER_ANYWHERE)) if (!RISU_REPLACERS.has(found[2]!)) missing.add(`addRisuReplacer:${found[2]}`);
   }
-  const hosts = new Set([...body.matchAll(/https?:\/\/([\w-]+(?:\.[\w-]+)*)(?![\w-]|\.[\w-]|\.?\$)/gi)].map((url) => url[1]!.toLowerCase()));
+  // An XML namespace (the xmlns of an inline <svg>) is a name the browser never loads, not a host.
+  const hosts = new Set([...body.replace(/http:\/\/www\.w3\.org\/(?:\d{4}|XML)\//g, '').matchAll(/https?:\/\/([\w-]+(?:\.[\w-]+)*)(?![\w-]|\.[\w-]|\.?\$)/gi)].map((url) => url[1]!.toLowerCase()));
   return { verdict: unread ? 'unread' : missing.size > 0 ? 'partial' : 'all', missing: [...missing], hosts: [...hosts] };
 }

@@ -214,6 +214,30 @@ it('reads the greeting apart from the messages, which count from after it', () =
   } finally { host.close(); }
 }));
 
+it('takes a tool\'s removal of a message the chat holds, and of no other', () => withTools(async (session, connect) => {
+  const f = await fixture(session, '', 'Welcome.');
+  const transport = inProcessTools((api) => { api.on('prompt', (chat) => { chat.remove(0); chat.remove(1); chat.remove(-1); return null; }); });
+  const host = connect(transport.open);
+  try {
+    const context = f.context();
+    expect((await host.run(f.chat, f.tool(), context.scope, { kind: 'prompt', turn: { memory: false } }, context.host)).removed).toEqual([0]);
+  } finally { host.close(); }
+}));
+
+it('unsets a variable back to the default the bot gives it', () => withTools(async (session, connect) => {
+  const f = await fixture(session, '', 'Welcome.');
+  let read: (string | undefined)[] = [];
+  const transport = inProcessTools((api) => { api.on('prompt', async (chat) => { read = [await chat.variables.get('hp'), await chat.variables.get('mp')]; chat.variables.delete('hp'); chat.variables.delete('mp'); return null; }); });
+  const host = connect(transport.open);
+  try {
+    const context = f.context();
+    const scope = { ...context.scope, card: { ...context.scope.card!, variables: [['hp', '10'], ['mp', '5']] as [string, string][] }, variables: [['hp', '3']] as [string, string][] };
+    const outcome = await host.run(f.chat, f.tool(), scope, { kind: 'prompt', turn: { memory: false } }, context.host);
+    expect(read).toEqual(['3', '5']);
+    expect(outcome.writes).toEqual([['hp', '10']]);
+  } finally { host.close(); }
+}));
+
 it('refuses undeclared spending and forged event contexts, and isolates module storage', () => withTools(async (session, connect) => {
   const f = await fixture(session, '');
   let answer: Hazelle.ModelAnswer | null = null;
@@ -580,7 +604,7 @@ it('ignores malformed outcomes and all messages from a frame after it has closed
     await vi.waitFor(() => expect(release).toBeDefined());
     const frame = transport.frames[0]!;
     const event = (frame.host.sent as Down[]).find((message) => message.kind === 'event')!;
-    frame.emit({ kind: 'done', id: event.id, outcome: { writes: [['key', NaN]], edits: [], added: [] } } as unknown as Up);
+    frame.emit({ kind: 'done', id: event.id, outcome: { writes: [['key', NaN]], edits: [], removed: [], added: [] } } as unknown as Up);
     await refused;
     const receive = frame.host.onmessage!;
     host.close();
@@ -664,9 +688,27 @@ it('writes the chat\'s own lorebook by name and its variables unprefixed, sends 
     chat.writeLore({ name: 'save', keys: ['hero'], text: '{}', always: false, on: true });
     chat.variables.set('sh_Player', 'Jin');
     expect(() => chat.variables.set('tool:other/x:k', '1')).toThrow();
+    chat.state.set('turn', 1);
+    expect(await chat.variables.entries()).toEqual([['sh_Player', 'Jin']]);
     expect(await chat.send('')).toEqual({ ok: true });
-    expect(session.store.children('entry', f.chat).filter(({ value }) => value.type === 'vars')).toMatchObject([{ value: { set: [['sh_Player', 'Jin']] } }]);
+    expect(session.store.children('entry', f.chat).filter(({ value }) => value.type === 'vars')).toMatchObject([{ value: { set: expect.arrayContaining([['sh_Player', 'Jin']]) } }]);
     expect(await chat.variables.get('sh_Player')).toBe('Jin');
+    expect(await chat.state.get('turn')).toBe(1);
+    expect(await chat.variables.entries()).toEqual([['sh_Player', 'Jin']]);
+    const rows = () => session.store.children('entry', f.chat).filter(({ value }) => value.type === 'vars').length;
+    const before = rows();
+    chat.variables.delete('sh_Player');
+    await vi.waitFor(() => expect(rows()).toBe(before + 1));
+    expect(session.store.children('entry', f.chat).findLast(({ value }) => value.type === 'vars')).toMatchObject({ value: { set: [['sh_Player', 'null']] } });
+    expect([await chat.variables.get('sh_Player'), await chat.variables.entries()]).toEqual([undefined, []]);
+    chat.variables.delete('sh_Player');
+    chat.variables.delete('never');
+    chat.variables.set('door', 'open');
+    await vi.waitFor(() => expect(rows()).toBe(before + 2));
+    expect(session.store.children('entry', f.chat).findLast(({ value }) => value.type === 'vars')).toMatchObject({ value: { set: [['door', 'open']] } });
+    expect(await chat.variables.entries()).toEqual([['door', 'open']]);
+    chat.remove(0);
+    await vi.waitFor(() => expect(session.store.children('entry', f.chat).filter(({ value }) => value.type === 'delete')).toMatchObject([{ value: { message: hello!.id } }]));
     expect(screen).toHaveBeenCalledWith('');
     expect(session.store.children('lore', f.chat).map(({ value }) => value)).toMatchObject([{ name: 'save', keys: ['hero'], content: '{}', constant: false, enabled: true }]);
     screen.mockResolvedValueOnce('busy');
@@ -700,7 +742,7 @@ it('shares the write budget with forged page outcomes and bounds tool notices ac
     await vi.waitFor(() => expect(transport.frames[0]!.api).not.toBeNull());
     const frame = transport.frames[0]!;
     await expect(frame.api!.storage.set('x'.repeat(257), null)).rejects.toThrow('key-too-long');
-    for (let i = 0; i < 1000; i++) frame.emit({ kind: 'done', id: 0, outcome: { writes: [], edits: [], added: [{ role: 'char', text: 'flood' }], data: [], badges: [], lore: [], variables: [] } });
+    for (let i = 0; i < 1000; i++) frame.emit({ kind: 'done', id: 0, outcome: { writes: [], edits: [], removed: [], added: [{ role: 'char', text: 'flood' }], data: [], badges: [], lore: [], variables: [] } });
     await vi.waitFor(() => expect(apply).toHaveBeenCalledTimes(30));
     expect(frame.host.sent).toContainEqual(expect.objectContaining({ kind: 'answer', call: 0, ok: false, value: 'too-many-writes' }));
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });

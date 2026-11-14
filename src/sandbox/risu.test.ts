@@ -13,9 +13,13 @@ function fakeApi({ open = true } = {}) {
   const missing: string[] = [];
   const edits: [number, string][] = [];
   const added: [Hazelle.Role, string][] = [];
+  const cut: number[] = [];
+  const data = new Map<string, Hazelle.Json>();
   const said: string[] = [];
   const lore: Omit<Hazelle.LoreEntry, 'owner'>[] = [];
   const variables: [string, string][] = [];
+  const held = new Map([['door', 'shut']]);
+  const removed: string[] = [];
   const messages: Hazelle.Message[] = [
     { index: 0, id: 'm0', version: 'v0', role: 'user', text: 'hello', raw: 'hello', time: 1, translation: { text: '안녕', sent: true } },
     { index: 1, id: 'm1', version: 'v1', role: 'char', text: 'hi there', raw: '<b>hi there</b>', time: 2, translation: { text: '반가워', sent: false } },
@@ -40,9 +44,10 @@ function fakeApi({ open = true } = {}) {
   const chat = {
     id: 'chat-1', character: { name: 'Mira', description: 'A sailor' }, persona: null, length: messages.length,
     messages: async () => messages, greeting: async () => null, card: async () => card, lorebook: async () => lorebook, setup: async () => setup,
-    edit: (index: number, text: string) => { edits.push([index, text]); }, add: (role: Hazelle.Role, text: string) => { added.push([role, text]); },
+    edit: (index: number, text: string) => { edits.push([index, text]); }, add: (role: Hazelle.Role, text: string) => { added.push([role, text]); }, remove: (index: number) => { cut.push(index); },
+    data: { get: async (key: string) => data.get(key), set: (key: string, value: Hazelle.Json) => { data.set(key, value); } },
     writeLore: (entry: Omit<Hazelle.LoreEntry, 'owner'>) => { lore.push(entry); },
-    variables: { set: (name: string, value: string) => { variables.push([name, value]); } },
+    variables: { set: (name: string, value: string) => { variables.push([name, value]); }, entries: async () => [...held], delete: (name: string) => { removed.push(name); } },
     model, send, editCard, say: (text: string) => { said.push(text); },
     rendered: async (at: Hazelle.At | null) => (at === null ? { html: '<i>welcome</i>', css: '.b { color: red; }', text: 'welcome' } : at.id === 'm1' ? { html: '<b>hi there</b>', css: '.b { color: red; }', text: 'hi there' } : null),
   } as unknown as Hazelle.Chat;
@@ -57,7 +62,7 @@ function fakeApi({ open = true } = {}) {
     frame: { chat: async () => (open ? chat : null), show: vi.fn(), hide: vi.fn(), menu: (items: { id: string; label: string }[]) => { menus.push(items); }, missing: (name: string) => { missing.push(name); } },
   } as unknown as Hazelle.Api;
   const fire = (event: string, ...args: unknown[]) => (handlers.get(event) as (...args: unknown[]) => unknown)(...args);
-  return { api, chat, card, handlers, storage, menus, missing, edits, added, said, lore, variables, model, send, editCard, settings, fire };
+  return { api, chat, card, handlers, storage, menus, missing, edits, added, said, lore, variables, held, removed, cut, data, model, send, editCard, settings, fire };
 }
 const install = (fake: ReturnType<typeof fakeApi>, scope: Record<string, unknown> = {}) => {
   installRisu(fake.api, scope);
@@ -73,7 +78,7 @@ describe('the Risu adapter', () => {
     expect((await Risuai.getDatabase!(['characters'] as never) as { characters: { chaId: string }[] }).characters[characterIndex]?.chaId).toBe('character-1');
     expect(await Risuai.getChatFromIndex!(characterIndex as never, chatIndex as never)).toEqual({
       id: 'chat-1', message: [{ role: 'user', data: 'hello', time: 1, chatId: 'm0' }, { role: 'char', data: '<b>hi there</b>', time: 2, chatId: 'm1' }],
-      localLore: [{ comment: 'Weather', key: '', content: 'Rain.', alwaysActive: true, disabled: false }],
+      localLore: [{ comment: 'Weather', key: '', content: 'Rain.', alwaysActive: true, disabled: false }], scriptstate: { $door: 'shut' },
     });
     expect(await Risuai.getChatFromIndex!(characterIndex as never, (chatIndex + 1) as never)).toBeNull();
     await Risuai.setChatToIndex!(characterIndex as never, chatIndex as never, { message: [{ role: 'user', data: 'edited' }, { role: 'char', data: '<b>hi there</b>' }, { role: 'user', data: 'more' }] } as never);
@@ -87,18 +92,92 @@ describe('the Risu adapter', () => {
     expect(await closed.getCharacter!()).toBeNull();
   });
 
+  it('removes the messages a plugin was handed and left out, keeps one that landed since, and refuses a shorter list it has no record of', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const at = [await Risuai.getCurrentCharacterIndex!(), await Risuai.getCurrentChatIndex!()] as never[];
+    const chat = await Risuai.getChatFromIndex!(...at) as { message: { role: string; data: string; chatId?: string }[] };
+    await expect(Risuai.setChatToIndex!(...at, { ...chat, message: [{ role: 'char', data: '<b>hi there</b>' }] } as never)).rejects.toThrow('cannot remove messages it cannot tell apart');
+    await expect(Risuai.setChatToIndex!(...at, { message: [] } as never)).rejects.toThrow('cannot remove messages it cannot tell apart');
+    await Risuai.setChatToIndex!(...at, { ...chat, message: [chat.message[1]!, chat.message[0]!] } as never);
+    expect([fake.cut, fake.edits, fake.added]).toEqual([[], [[0, '<b>hi there</b>'], [1, 'hello']], []]);
+    fake.edits.length = 0;
+    (await fake.chat.messages()).push({ index: 2, id: 'm2', version: 'v2', role: 'user', text: 'since', raw: 'since', time: 3, translation: null });
+    chat.message.splice(0, 1);
+    chat.message[0]!.data = 'kept';
+    for (let again = 0; again < 2; again++) await Risuai.setChatToIndex!(...at, chat as never);
+    expect([fake.cut, fake.edits.slice(0, 1), fake.added]).toEqual([[0], [[1, 'kept']], []]);
+    const held = await Risuai.getCharacter!() as { chatPage: number; chats: { message: unknown[] }[] };
+    (await fake.chat.messages()).push({ index: 3, id: 'm3', version: 'v3', role: 'char', text: 'later', raw: 'later', time: 4, translation: null });
+    held.chats[held.chatPage]!.message = [];
+    await Risuai.setCharacter!(held as never);
+    expect(fake.cut).toEqual([0, 0, 1, 2]);
+  });
+
+  it('keeps a plugin\'s own keys with the chat, hands them back, and drops one it removed from the chat it was handed', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const at = [await Risuai.getCurrentCharacterIndex!(), await Risuai.getCurrentChatIndex!()] as never[];
+    const chat = await Risuai.getChatFromIndex!(...at) as Record<string, unknown>;
+    await Risuai.setChatToIndex!(...at, { ...chat, wikiScope: 'w1', seen: { turn: 2 }, name: 'Run', broken: undefined } as never);
+    expect(fake.data.get('risu:chat')).toEqual({ wikiScope: 'w1', seen: { turn: 2 } });
+    expect(fake.missing).toEqual(['setChatToIndex:name', 'setChatToIndex:broken']);
+    await Risuai.setChatToIndex!(...at, { message: (chat.message as unknown[]), note: 'x' } as never);
+    const held = await Risuai.getCharacter!() as { chatPage: number; chats: Record<string, unknown>[] };
+    expect(held.chats[held.chatPage]).toMatchObject({ id: 'chat-1', wikiScope: 'w1', seen: { turn: 2 } });
+    delete held.chats[held.chatPage]!.seen;
+    await Risuai.setCharacter!(held as never);
+    expect(fake.data.get('risu:chat')).toEqual({ wikiScope: 'w1' });
+  });
+
   it('writes back the localLore it changed and scriptstate\'s variables, and tells 점검 of what it cannot write', async () => {
     const fake = fakeApi();
     const { Risuai } = install(fake);
     const at = [await Risuai.getCurrentCharacterIndex!(), await Risuai.getCurrentChatIndex!()] as never[];
-    const chat = await Risuai.getChatFromIndex!(...at) as { localLore: Record<string, unknown>[] };
+    const chat = await Risuai.getChatFromIndex!(...at) as { localLore: Record<string, unknown>[]; scriptstate: Record<string, unknown> };
     const save = { key: '', comment: 'save', content: '{"turn":1}', mode: 'normal', insertorder: 100, alwaysActive: false, secondkey: '', selective: false, useRegex: false };
-    await Risuai.setChatToIndex!(...at, { ...chat, name: 'Run', scriptstate: { $sh_Player_Name: 'Jin', $sh_Turn: 2, plain: 'x' }, localLore: [...chat.localLore, save] } as never);
+    await Risuai.setChatToIndex!(...at, { ...chat, name: 'Run', scriptstate: { ...chat.scriptstate, $sh_Player_Name: 'Jin', $sh_Turn: 2, plain: 'x' }, localLore: [...chat.localLore, save] } as never);
     expect(fake.lore).toEqual([{ name: 'save', keys: [], text: '{"turn":1}', always: false, on: true }]);
     expect(fake.variables).toEqual([['sh_Player_Name', 'Jin'], ['sh_Turn', '2']]);
     expect(fake.missing).toEqual(['setChatToIndex:name', 'setChatToIndex:scriptstate.plain']);
-    await Risuai.setChatToIndex!(...at, { ...chat, localLore: [] } as never);
-    expect(fake.missing).toContain('setChatToIndex:localLore.remove');
+    await Risuai.setChatToIndex!(...at, { ...chat, localLore: [], scriptstate: {} } as never);
+    expect(fake.missing.slice(2)).toEqual(['setChatToIndex:scriptstate.remove', 'setChatToIndex:localLore.remove']);
+    expect([fake.variables.length, fake.removed]).toEqual([2, []]);
+  });
+
+  it('writes the variables a plugin changed in its character\'s chat, leaving one the bot\'s scripts changed since it read them, and unsets one it removed', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const held = await Risuai.getCharacter!() as { chatPage: number; chats: { scriptstate: Record<string, unknown> }[] };
+    fake.held.set('door', 'open');
+    held.chats[held.chatPage]!.scriptstate.$bell = 'rung';
+    await Risuai.setCharacter!(held as never);
+    expect(fake.variables).toEqual([['bell', 'rung']]);
+    delete held.chats[held.chatPage]!.scriptstate.$door;
+    for (let at = 0; at < 2; at++) await Risuai.setCharacter!(held as never);
+    expect(fake.variables).toEqual([['bell', 'rung']]);
+    expect(fake.removed).toEqual(['door']);
+    expect(fake.missing).toEqual([]);
+    expect(fake.editCard).not.toHaveBeenCalled();
+  });
+
+  it('acts on a turn stage\'s chat while its handlers run, and on the frame\'s own once it ends', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const turn: [string, string][] = [];
+    const stage = { ...fake.chat, messages: async () => (await fake.chat.messages()).slice(0, 1), variables: { set: (name: string, value: string) => { turn.push([name, value]); }, entries: async () => [['door', 'ajar']] } } as unknown as Hazelle.Chat;
+    const write = async (value: string) => {
+      const held = await Risuai.getCharacter!() as { chatPage: number; chats: { scriptstate: Record<string, unknown> }[] };
+      const state = held.chats[held.chatPage]!.scriptstate;
+      state.$seen = `${String(state.$door)} ${value}`;
+      await Risuai.setCharacter!(held as never);
+    };
+    await Risuai.addRisuScriptHandler!('input' as never, (async (text: string) => { await write(text); return text; }) as never);
+    expect(await fake.fire('sending', stage, 'hi')).toBe('hi');
+    await write('after');
+    expect(turn).toEqual([['seen', 'ajar hi']]);
+    expect(fake.variables).toEqual([['seen', 'shut after']]);
+    expect([fake.edits, fake.added]).toEqual([[], []]);
   });
 
   it('writes only the character\'s fields that changed, skips a refused write as Risu does, and tells a key it cannot write', async () => {
@@ -117,18 +196,27 @@ describe('the Risu adapter', () => {
     await expect(Risuai.setCharacterToIndex!(1 as never, held as never)).rejects.toThrow('reaches only the open chat\'s character');
   });
 
-  it('hands out characters without their chats, told to 점검 when read, and takes them back as they were read', async () => {
+  it('keeps the database\'s characters without chats, told to 점검 when read, and hands the open chat\'s character that chat alone, which chatPage answers too', async () => {
     const fake = fakeApi();
     const { Risuai } = install(fake);
     const db = await Risuai.getDatabase!() as { characters: Record<string, unknown>[] };
-    const held = await Risuai.getCharacter!() as Record<string, unknown>;
-    expect(fake.missing).toEqual([]);
+    const held = await Risuai.getCharacter!() as { chatPage: number; chats: { id: string }[] };
     await Risuai.setDatabase!(structuredClone(db) as never);
     await Risuai.setCharacter!({ ...held } as never);
+    await Risuai.setCharacter!(structuredClone(held) as never);
     expect(fake.editCard).not.toHaveBeenCalled();
+    expect(fake.variables).toEqual([]);
+    expect(held.chatPage).toBe(await Risuai.getCurrentChatIndex!());
+    expect(Array.isArray(held.chats)).toBe(true);
+    expect(held.chats.map(({ id }) => id)).toEqual(['chat-1']);
+    expect(held.chats[held.chatPage]).toBe(held.chats[0]);
+    expect((JSON.parse(JSON.stringify(held)) as typeof held).chats).toEqual(structuredClone(held).chats);
+    const next = { id: 'chat-1' };
+    held.chats[held.chatPage] = next;
+    expect(held.chats).toHaveLength(1);
+    expect(held.chats[0]).toBe(next);
     expect(fake.missing).toEqual([]);
     expect(Array.isArray(db.characters[0]!.chats)).toBe(false);
-    expect(held.chats).toBeUndefined();
     expect(fake.missing).toEqual(['character.chats']);
   });
 
@@ -179,6 +267,14 @@ describe('the Risu adapter', () => {
     await vi.waitFor(() => expect(panel).toHaveBeenCalledTimes(1));
     await Risuai.unregisterUIPart!('chat' as never);
     expect(fake.menus.at(-1)).toEqual([{ id: 'side', label: 'SimCore' }]);
+  });
+
+  it('refuses a button with no name, as Risu does, and keeps the plugin\'s other buttons listed', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    await expect(Risuai.registerButton!('Dashboard' as never, vi.fn() as never)).rejects.toThrow('name must be a non-empty string');
+    await Risuai.registerButton!({ name: '도감', id: 'book' } as never, vi.fn() as never);
+    expect(fake.menus).toEqual([[{ id: 'book', label: '도감' }]]);
   });
 
   it('runs a plugin whose top level awaits, as Risu does', async () => {
@@ -233,6 +329,18 @@ describe('the Risu adapter', () => {
     expect(await (await root.querySelectorAll('link[rel~="stylesheet"]')).length()).toBe(0);
     expect(await root.querySelector('[data-chat-index="0"] .chattext')).toBeNull();
     expect(await root.querySelector('body')).toBeNull();
+    expect(fake.missing).toEqual(['getRootDocument:page']);
+  });
+
+  it('tells 점검 of a member of the page\'s document or of an element that it does not answer, which reads undefined', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    const root = await Risuai.getRootDocument!() as unknown as { addEventListener?: unknown; querySelector(selector: string): Promise<{ setStyle?: unknown; innerText(): Promise<string> }> };
+    const row = await root.querySelector('[data-chat-index="1"]');
+    expect(await row.innerText()).toBe('hi there');
+    expect(fake.missing).toEqual([]);
+    expect(root.addEventListener).toBeUndefined();
+    expect(row.setStyle).toBeUndefined();
     expect(fake.missing).toEqual(['getRootDocument:page']);
   });
 
@@ -472,9 +580,10 @@ describe.runIf(availableB)('the phase B acceptance plugins, unmodified', () => {
     expect(sent[0]).toEqual(request[0]);
     expect(sent.at(-1)).toEqual(request[1]);
     expect(sent.slice(1, -1).every(({ role, content }) => role === 'system' && content.includes('RISUPOT'))).toBe(true);
-    // It reaches for the app's page past a drawn message and for the character's chats, both declined, and goes on
-    // without them; its scope id on the chat is not kept.
-    expect(fake.missing).toEqual(['getRootDocument:page', 'character.chats', 'setChatToIndex:risupotWikiScopeId']);
+    // It reaches for the app's page past a drawn message, declined, and goes on without it; its scope id is kept with
+    // the chat.
+    expect(fake.missing).toEqual(['getRootDocument:page']);
+    expect(fake.data.get('risu:chat')).toEqual({ risupotWikiScopeId: expect.any(String) });
   }, 30_000);
 
   // Opening its screen needs a real document, which only a browser run gives.

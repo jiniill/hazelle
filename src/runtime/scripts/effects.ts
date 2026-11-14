@@ -39,15 +39,15 @@ export class ScriptEffects {
     const messages = new Map(current.map((message) => [shown(message).id, message]));
     const latest = current.at(-1);
     const stale = reply !== undefined && (!latest || shown(latest).id !== reply);
-    // A reply handler may always keep state/storage and edit its own shown reply. Adds and other edits
+    // A reply handler may always keep state/storage and edit its own shown reply. Adds, removals and other edits
     // land only while that reply is still the latest shown version; a delayed job cannot rewrite a newer story.
-    if (stale && (outcome.added.length || outcome.edits.some(({ index }) => scope.messages[index + greeting]?.id !== reply))) this.interactions.tell(chat, 'stale-reply', { kind: 'stale-reply' }, from);
+    if (stale && (outcome.added.length || outcome.removed.length || outcome.edits.some(({ index }) => scope.messages[index + greeting]?.id !== reply))) this.interactions.tell(chat, 'stale-reply', { kind: 'stale-reply' }, from);
     const at = (index: number) => messages.get(scope.messages[index + greeting]?.id ?? '');
     const edits = outcome.edits.flatMap(({ index, text, wrote }) => {
       const message = at(index);
       return message && (!stale || shown(message).id === reply) ? [{ message, wrote, text }] : [];
     });
-    const removed = outcome.removed.flatMap((index) => at(index)?.id ?? []);
+    const removed = (stale ? [] : outcome.removed).flatMap((index) => at(index)?.id ?? []);
     const adding = (stale ? [] : outcome.added).map(({ role, text, before }) => ({ role: role === 'user' ? ('user' as const) : ('assistant' as const), text, before }));
     // Each run of adds ahead of one message (or after the last) continues the message before that place.
     const runs = new Map<number | null, typeof adding>();

@@ -52,6 +52,7 @@ function moduleFacts(store: Reader['store'], id: string): Facts {
     toggles: module.toggles.length,
     takesMemory: module.takesMemory === true,
     network: module.network === true,
+    ownModel: module.model !== undefined,
     tool: tool ? { name: known(tool.manifest.name), version: known(tool.manifest.version), uses: counted(tool.manifest.uses), size: tool.size } : null,
   };
 }

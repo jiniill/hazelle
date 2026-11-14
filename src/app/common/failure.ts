@@ -30,7 +30,7 @@ import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
 import { SORT_PROMPT, defaultPrompt } from './prompt-words';
-import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE } from './words';
+import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, MODULE_MODEL, NO_IMAGE_MODEL, NEEDS_ACCOUNT, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -164,6 +164,8 @@ const EMBED_UNCALLED = `${MODEL_ROLES.embed}을 호출하지 못했어요.`;
 // tooLarge: what was too long for one call, in the caller's words.
 const describeEmbedFailure = ({ reason, receipt }: EmbedFailure, tooLarge: string) => (reason === 'too-large' ? tooLarge : receipt?.error ? describeReplyError(receipt.error) : EMBED_UNCALLED);
 export const describeRoleFailure = (role: Role, failure: RouteFailure) => describeRoute(failure, MODEL_ROLES[role], null);
+// own: the module picked its own (model/library Module.model); else it follows 보조 모델.
+export const describeModuleModelFailure = (failure: Unrouted, own: boolean) => (own ? describeRoute(failure, MODULE_MODEL, '여기') : describeRoute(failure, MODEL_ROLES.aux, null));
 
 const SECRET = { password: '비밀번호가', recovery: '복구 키가' } as const;
 

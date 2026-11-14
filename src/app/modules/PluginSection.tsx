@@ -1,13 +1,18 @@
 import { ExternalLink } from 'lucide-react';
 import type { Stored } from '../../model/kinds';
-import { setModels, setNetwork, setTakesMemory } from '../../runtime/library/pack';
+import { setModels, setModuleModel, setNetwork, setTakesMemory } from '../../runtime/library/pack';
+import { sharedModel } from '../../runtime/models/assignment';
+import { writerOf } from '../../runtime/models/profiles';
 import { scriptsOf } from '../../runtime/scripts/selection';
+import { describeModuleModelFailure } from '../common/failure';
+import { TaskModelRow } from '../common/TaskPrompt';
 import { ToolSetting } from '../common/ToolSetting';
 import { opensPage } from '../common/ToolView';
 import type { Write } from '../common/saveQueue';
 import { useAutosave } from '../common/useAutosave';
-import { MEMORY_CLAIM_HELP, MODULE_MODELS, modelsHelp, NETWORK, NETWORK_CALLED, NETWORK_HELP, TOOL, toolVersion, type Asker } from '../common/words';
-import { useSession, useTool, useToolHosts } from '../session';
+import { MEMORY_CLAIM_HELP, MODULE_MODEL, MODULE_MODEL_HELP, MODULE_MODELS, modelsHelp, NETWORK, NETWORK_CALLED, NETWORK_HELP, SAVE_FAILED, TOOL, toolVersion, type Asker } from '../common/words';
+import { useSession, useSettings, useTool, useToolHosts } from '../session';
+import { useToast } from '../toast';
 import { navigate } from '../shell/router';
 import { Button, Disclosure, Facts, Section, SettingGroup, SettingRow, Stack, Switch } from '../ui';
 
@@ -26,9 +31,29 @@ function ModelsRow({ module, asker }: { module: Stored<'module'>; asker: Asker }
   );
 }
 
+// What the module's 보조 calls run on outside a chat's own pick: the row cannot know which chat will call.
+function OwnModel({ module }: { module: Stored<'module'> }) {
+  const { store } = useSession();
+  const toast = useToast();
+  // Subscribed for sharedModel, which reads the settings from the store.
+  useSettings();
+  const own = module.value.model;
+  const route = sharedModel(store, 'aux', own ?? null);
+  const writer = 'kind' in route ? route : writerOf(store, route);
+  return (
+    <TaskModelRow
+      label={MODULE_MODEL}
+      help={MODULE_MODEL_HELP}
+      own={own}
+      runs={'kind' in writer ? { why: describeModuleModelFailure(writer, own !== undefined) } : writer}
+      onPick={(ref) => toast.settled(setModuleModel(store, module.id, ref), SAVE_FAILED)}
+    />
+  );
+}
+
 // A module's Lua may call a model; a plugin's switch sits in its own section.
 export function ModelsConsent({ module }: { module: Stored<'module'> }) {
-  return hasLua(module) ? <SettingGroup label={MODULE_MODELS}><ModelsRow module={module} asker="module" /></SettingGroup> : null;
+  return hasLua(module) ? <SettingGroup label={MODULE_MODELS}><ModelsRow module={module} asker="module" /><OwnModel module={module} /></SettingGroup> : null;
 }
 
 export function PluginSection({ module }: { module: Stored<'module'> }) {
@@ -48,6 +73,7 @@ export function PluginSection({ module }: { module: Stored<'module'> }) {
         <Facts items={[{ label: '버전', value: toolVersion(manifest.version) }, { label: '제작자', value: manifest.author }]} />
         {(models || memory || network || manifest.settings.length > 0) && <SettingGroup label={`${TOOL} 설정`}>
           {models && <ModelsRow module={module} asker="plugin" />}
+          {(hasLua(module) || manifest.uses.includes('model')) && <OwnModel module={module} />}
           {network && (
             <FlagRow
               saveKey={`module-network:${module.id}`}

@@ -23,6 +23,7 @@ it('buffers per-event changes, reads its own writes, and answers heartbeats whil
       chat.state.delete('gone');
       expect(await chat.state.get('gone')).toBeUndefined();
       chat.edit(0, 'edited');
+      chat.remove(1);
       chat.add('char', 'added');
       return (await chat.model('aux', [{ role: 'user', content: 'summary' }])).ok ? 'summary' : null;
     });
@@ -36,7 +37,7 @@ it('buffers per-event changes, reads its own writes, and answers heartbeats whil
   port.receive({ kind: 'ping' });
   expect(port.sent.at(-1)).toEqual({ kind: 'pong' });
   port.receive({ kind: 'answer', call: call.call, ok: true, value: { ok: true, text: 'made' } });
-  await vi.waitFor(() => expect(port.sent).toContainEqual({ kind: 'done', id: 7, outcome: { value: 'summary', writes: [['n', 1], ['gone', undefined]], edits: [{ index: 0, text: 'edited' }], added: [{ role: 'char', text: 'added' }], data: [], badges: [], lore: [], variables: [] } }));
+  await vi.waitFor(() => expect(port.sent).toContainEqual({ kind: 'done', id: 7, outcome: { value: 'summary', writes: [['n', 1], ['gone', undefined]], edits: [{ index: 0, text: 'edited' }], removed: [1], added: [{ role: 'char', text: 'added' }], data: [], badges: [], lore: [], variables: [] } }));
   close();
 });
 
@@ -60,9 +61,32 @@ it('buffers chat data and badges, merges pending keys, carries the prompt answer
   const keys = port.sent.findLast((message) => message.kind === 'call')!;
   expect(keys).toMatchObject({ event: 1, args: [] });
   port.receive({ kind: 'answer', call: keys.call, ok: true, value: ['old', 'kept'] });
-  await vi.waitFor(() => expect(port.sent).toContainEqual({ kind: 'done', id: 1, outcome: { value: { memory: { text: 'remembered', through: 'm2' }, tool: 'recall' }, writes: [], edits: [], added: [], data: [['index', [1]], ['old', undefined]], badges: [{ index: 2, text: '요약됨' }], lore: [], variables: [] } }));
+  await vi.waitFor(() => expect(port.sent).toContainEqual({ kind: 'done', id: 1, outcome: { value: { memory: { text: 'remembered', through: 'm2' }, tool: 'recall' }, writes: [], edits: [], removed: [], added: [], data: [['index', [1]], ['old', undefined]], badges: [{ index: 2, text: '요약됨' }], lore: [], variables: [] } }));
   port.receive({ kind: 'event', id: 2, event: 'change', chat, change: { kind: 'edit', index: 0, id: 'm1', version: 'v2' } });
   await vi.waitFor(() => expect(port.sent).toContainEqual(expect.objectContaining({ kind: 'failed', id: 2 })));
+  close();
+});
+
+it('hides a variable it unset from its own reads, and sends the unset with the outcome', async () => {
+  const port = new FakePort();
+  const close = connectApi(port, (_code, api) => {
+    api.on('prompt', async (chat) => {
+      chat.variables.set('bell', 'rung');
+      chat.variables.delete('door');
+      expect(() => chat.variables.delete('tool:jin/other:k')).toThrow();
+      expect(await chat.variables.get('door')).toBeUndefined();
+      expect(await chat.variables.entries()).toEqual([['key', 'kept'], ['bell', 'rung']]);
+      return 'done';
+    });
+  });
+  port.receive(load());
+  await vi.waitFor(() => expect(port.sent.some((message) => message.kind === 'loaded')).toBe(true));
+  port.receive({ kind: 'event', id: 1, event: 'prompt', chat, turn: { memory: false } });
+  await vi.waitFor(() => expect(port.sent.some((message) => message.kind === 'call')).toBe(true));
+  const entries = port.sent.find((message) => message.kind === 'call')!;
+  expect(entries).toMatchObject({ event: 1, method: 'chat.variables.entries' });
+  port.receive({ kind: 'answer', call: entries.call, ok: true, value: [['door', 'shut'], ['key', 'kept']] });
+  await vi.waitFor(() => expect(port.sent).toContainEqual(expect.objectContaining({ kind: 'done', id: 1, outcome: expect.objectContaining({ variables: [['bell', 'rung'], ['door', undefined]] }) })));
   close();
 });
 
