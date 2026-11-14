@@ -19,7 +19,7 @@ import { useImport } from '../../common/importing';
 import { ago } from '../../common/time';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
 import { useWritingChats } from '../../session';
-import { Button, Divider, Empty, FoldButton, FolderRow, IconButton, ItemRow, Menu, MenuItem, NavRow, Row, SideTitle, Sidebar, TreeRow, useMenuHandle, Viewport } from '../../ui';
+import { Button, Divider, Empty, FoldButton, FolderRow, IconButton, ItemRow, Menu, MenuItem, NavRow, Row, SideTitle, Sidebar, Tabs, TreeRow, useMenuHandle, Viewport } from '../../ui';
 import { navigate, useRoute } from '../router';
 import { HOME } from '../routes';
 import { LayerButtons } from './LayerButtons';
@@ -153,11 +153,18 @@ export function ShelfChats({ page, shelf }: Props) {
               {ACTS.newChat.label}
             </Button>
             {moving.button}
-            {starred.length > 0 && <IconButton icon={ACTS.star.icon} label={`${ACTS.star.label}만 보기`} size="sm" pressed={onlyStarred} onClick={() => setStarredOnly(!onlyStarred)} />}
             <IconButton icon={FolderPlus} label={newOf('폴더')} size="sm" onClick={() => naming.name({ id: null, name: '' })} />
             <IconButton icon={ACTS.import.icon} label={IMPORT_CHATS} size="sm" onClick={() => pickChats(shelf.id)} />
           </Row>
           {field}
+          {starred.length > 0 && (
+            <Tabs
+              label="채팅 보기"
+              items={[{ value: 'all', label: '전체' }, { value: 'starred', label: ACTS.star.label }]}
+              value={onlyStarred ? 'starred' : 'all'}
+              onChange={(tab) => setStarredOnly(tab === 'starred')}
+            />
+          )}
         </>
       }
       corner={<LayerButtons />}
