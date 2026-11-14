@@ -36,7 +36,9 @@ type Parts = Record<'label' | 'attachments' | 'input' | 'tools' | 'more' | 'acti
 // box: the field over a line of its tools, the menu of them at that line's end before the send button; folded, the
 // line goes and the box is the text alone. bar: one line, the menu first, then the field and the send button; the
 // tools are behind the menu, and what must stand all the same (useToolRow) goes under the line. Folded, a bar keeps
-// its buttons: only a long text draws back to its first line.
+// its buttons: only a long text draws back to its first line. toolbar: the tools on a line of their own over the
+// field, a rule under them, and under the field the menu at the start and the send button at the end; folded, both
+// lines go, the rule with the tools.
 // toolRow: the tools stand in a row by the field. sign, place: the menu's button and the side it opens to.
 type Shape = { rows: number; root?: string; toolRow: boolean; sign?: LucideIcon; place: 'above-end' | 'above-start'; lay: (parts: Parts) => ReactNode };
 
@@ -80,6 +82,35 @@ const SHAPES: Record<Shapes['composer'], Shape> = {
           <div className={styles.actions}>{actions}</div>
         </div>
         <div className={styles.toolRow}>{tools}</div>
+      </>
+    ),
+  },
+  toolbar: {
+    rows: 1,
+    root: styles.toolbar,
+    toolRow: true,
+    sign: Plus,
+    place: 'above-start',
+    lay: ({ label, attachments, input, tools, more, actions }) => (
+      <>
+        <div className={styles.fold}>
+          <div className={styles.tools}>
+            <div className={styles.head}>
+              <div className={styles.toolRow}>{tools}</div>
+            </div>
+          </div>
+        </div>
+        {label}
+        {attachments}
+        {input}
+        <div className={styles.fold}>
+          <div className={styles.tools}>
+            <div className={styles.foot}>
+              <span className={styles.more}>{more}</span>
+              <div className={styles.actions}>{actions}</div>
+            </div>
+          </div>
+        </div>
       </>
     ),
   },

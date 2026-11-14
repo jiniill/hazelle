@@ -41,7 +41,7 @@ export type Shapes = {
   header: 'plain' | 'topic';
   rail: 'icons' | 'servers';
   list: 'cards' | 'channels';
-  composer: 'box' | 'bar';
+  composer: 'box' | 'bar' | 'toolbar';
   message: 'prose' | 'row';
 };
 

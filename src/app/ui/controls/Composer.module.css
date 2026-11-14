@@ -105,7 +105,8 @@
   transition-timing-function: step-start;
 }
 
-.compact .foot {
+.compact .foot,
+.compact .head {
   visibility: hidden;
   opacity: 0;
   transition:
@@ -113,10 +114,14 @@
     visibility var(--motion-respond);
 }
 
-.foot {
+.foot,
+.head {
   transition:
     opacity var(--motion-respond) var(--duration-fast),
     visibility var(--motion-respond) var(--duration-fast);
+}
+
+.foot {
   display: flex;
   align-items: flex-end;
   gap: var(--space-8);
@@ -198,4 +203,26 @@
 
 .bar .toolRow:empty {
   display: none;
+}
+
+/* toolbar: the tools' line and the rule under it fold as one, the space to the field inside it. */
+.head {
+  padding-bottom: var(--space-8);
+}
+
+.head .toolRow {
+  padding-block: 0 var(--space-8);
+  border-bottom: var(--border-thin) solid var(--color-divider);
+}
+
+.head:has(.toolRow:empty) {
+  display: none;
+}
+
+.toolbar:not(.compact) .input {
+  height: clamp(var(--one-line), var(--autosize), var(--composer-max-height));
+}
+
+.toolbar .foot {
+  justify-content: space-between;
 }
