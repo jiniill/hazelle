@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { refOf, sameModelRef } from '../../connectors/assignment';
-import { entryKey, entryName } from '../../connectors/types';
+import { entryName } from '../../connectors/types';
 import type { IllustrateSwitches, Rung } from '../../model/illustration';
 import type { IllustrateSetup } from '../../runtime/library/characters';
 import { drawingModels, imageRoute, type ImageRoute, type sceneWriterOf } from '../../runtime/tasks/illustrate';
@@ -10,6 +9,7 @@ import { Button, ChipButton, Menu, MenuHeading, MenuItem, NumberInput, SettingGr
 import { ACTS, addOf, newOf } from './acts';
 import { DetailFold } from './DetailFold';
 import { EntryList } from './EntryList';
+import { ModelChoices } from './ModelChoices';
 import { describeIllustrateFailure } from './failure';
 import { readTyped } from './typedNumber';
 import { appliesTo, TaskModelRow, TaskPromptMenu, type PromptDoor } from './TaskPrompt';
@@ -183,15 +183,7 @@ function ImageModelMenu({ routes, illustrate, card, opens, onPick }: Pick<Props,
     >
       <MenuHeading>{appliesTo(card, illustrate.own)}</MenuHeading>
       <MenuItem label={follows(`첫 ${IMAGE_MODEL}`)} description={entryName(routes[0]!.model)} checked={!own} onClick={() => onPick({ model: undefined })} />
-      {routes.map(({ connection, model }) => (
-        <MenuItem
-          key={`${connection.id}/${entryKey(model)}`}
-          label={entryName(model)}
-          description={connection.value.label}
-          checked={!!own && sameModelRef(own, refOf(connection.id, model))}
-          onClick={() => onPick({ model: refOf(connection.id, model) })}
-        />
-      ))}
+      <ModelChoices routes={routes} current={own ?? null} onPick={(model) => onPick({ model })} />
     </Menu>
   );
 }

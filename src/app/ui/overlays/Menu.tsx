@@ -5,6 +5,7 @@ import { Item } from '../collections/Item';
 import { ButtonSlot } from '../controls/Button';
 import { CheckMark, Icon } from '../foundation/Icon';
 import { faceStyle, type FontId } from '../foundation/fonts';
+import { isComposing } from '../foundation/keys';
 import { useLeaves } from '../foundation/leave';
 import { hasFinePointer } from '../foundation/media';
 import { anchorTo, keepOnScreen, lift, menuEdge, openingField, restBox, useLayer } from './layers';
@@ -79,9 +80,12 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   // A menu that is not on the page is closed, so no button elsewhere shows it open.
   useEffect(() => () => menu.set(CLOSED), [menu]);
 
+  // The one picked is in view whatever took the focus, so a long list opens on what it is set to.
   useEffect(() => {
-    if (open) panel.current?.querySelector<HTMLElement>(`${openingField(hasFinePointer())}, [role^="menuitem"], button`)?.focus();
-  }, [open]);
+    if (!open || !panel.current) return;
+    firstStop(panel.current, kind, hasFinePointer())?.focus();
+    panel.current.querySelector(PICKED)?.scrollIntoView({ block: 'nearest' });
+  }, [open, kind]);
 
   const holders = useContext(Holders);
   const hide = useMemo(() => () => menu.set(CLOSED), [menu]);
@@ -140,7 +144,7 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
     <div
       ref={leaving}
       popover="manual"
-      className={`${styles.menu} ${at ? styles.point : styles[side]} ${styles[size]} ${kind === 'dialog' ? styles.dialog : ''}`}
+      className={`${styles.menu} ${at ? styles.point : styles[side]} ${styles[size]} ${kind === 'dialog' ? styles.dialog : styles.rows}`}
       role={kind}
       aria-label={label}
       onKeyDown={kind === 'menu' ? (event) => moveByKey(panel.current!, event) : undefined}
@@ -160,15 +164,30 @@ export function Menu({ label, trigger, place = 'below-start', size = 'md', kind 
   );
 }
 
+// The one picked among a menu's radios; a menu of several ticks has no one row to open on.
+const PICKED = '[role="menuitemradio"][aria-checked="true"]:not(:disabled)';
+
+// Rows open on the search over them, so what is typed filters them, else on the one picked, as a select does; a form
+// opens where it is read from, on its first control of any kind.
+export function firstStop(panel: ParentNode, kind: 'menu' | 'dialog', fine: boolean) {
+  const find = (selector: string) => panel.querySelector<HTMLElement>(selector);
+  return kind === 'menu' ? (find(openingField(fine)) ?? find(PICKED) ?? find('button')) : find(`${openingField(fine)}, [role^="menuitem"], button`);
+}
+
 // ↑ ↓ step through this menu's own items, round its ends, and Home End go to them; a menu inside it steps its own
-// first. A field in it keeps these keys for its caret.
+// first. A field in it keeps these keys for its caret, but a search, whose one line has no use for ↑ ↓, gives those two
+// to the rows it filters.
 export function moveByKey(panel: HTMLElement, event: KeyboardEvent) {
-  if (event.defaultPrevented || (event.target as Element).matches('input, textarea')) return;
+  const steps = event.key === 'ArrowDown' || event.key === 'ArrowUp';
+  if (event.defaultPrevented || isComposing(event.nativeEvent) || (event.target as Element).matches(steps ? 'input:not([type="search"]), textarea' : 'input, textarea')) return;
   const items = [...panel.querySelectorAll<HTMLElement>('[role^="menuitem"]:not(:disabled)')].filter((item) => item.closest('[role="menu"]') === panel);
-  // -1 while the focus is on none of them, such as on MenuBack.
+  // -1 while the focus is on none of them, such as on MenuBack or in a search among them: it then steps from where it
+  // stands, to the first item after it or the last before it.
   const at = items.indexOf(document.activeElement as HTMLElement);
+  const after = at === -1 ? items.filter((item) => (event.target as Node).compareDocumentPosition(item) & Node.DOCUMENT_POSITION_PRECEDING).length : at + 1;
+  const before = at === -1 ? after - 1 : at - 1;
   const count = items.length;
-  const next = count === 0 ? undefined : ({ Home: 0, End: count - 1, ArrowDown: (at + 1) % count, ArrowUp: (at <= 0 ? count : at) - 1 } as Record<string, number>)[event.key];
+  const next = count === 0 ? undefined : ({ Home: 0, End: count - 1, ArrowDown: after % count, ArrowUp: (before + count) % count } as Record<string, number>)[event.key];
   if (next === undefined) return;
   event.preventDefault();
   items[next]!.focus();

@@ -524,7 +524,6 @@
   --window-gap: 10px;
   --window-radius: 14px;
   --window-side-width: 216px;
-  --window-control-compact: 32px;
   --window-control-md: 36px;
   --window-control-lg: 44px;
   --window-radius-md: 8px;
@@ -562,6 +561,8 @@
   --mascot-portrait-width-phone: 100px;
   --header-height: 60px;
   --control-compact: 38px;
+  /* A compact row under a mouse: a menu's, and a window's sidebar's (hover.module.css dense). */
+  --control-compact-fine: 32px;
   --avatar-sm: 22px;
   --avatar-md: 32px;
   --avatar-rail: 40px;

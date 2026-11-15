@@ -1,4 +1,4 @@
-/* How a control answers the pointer and a press, and how far from it a finger may press. A component takes a look by composing its class and never redeclares it. */
+/* How a control answers the pointer and a press, how far from it a finger may press, and how close rows stand under a mouse. A component takes a look by composing its class and never redeclares it. */
 @layer reset, looks;
 
 @layer looks {
@@ -28,6 +28,15 @@
 
   .reach {
     position: relative;
+  }
+
+  /* Under a mouse the compact rows inside, and the search over them, stand closer (Item.module.css); a finger keeps
+     the app's. */
+  @media (pointer: fine) {
+    .dense {
+      --control-compact: var(--control-compact-fine);
+      --compact-inset: var(--space-4);
+    }
   }
 
   /* Under a finger the press area grows to a control's height each way, the drawing unchanged. A later sibling's

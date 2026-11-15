@@ -57,17 +57,11 @@
   background: var(--color-sidebar);
 }
 
+/* The window's desktop scale for its sidebar's rows and search. */
 .side {
+  composes: dense from '../foundation/hover.module.css';
   display: flex;
   flex-shrink: 0;
-}
-
-/* The window's desktop scale for its sidebar's rows and search (Item.module.css); a finger keeps the app's. */
-@media (pointer: fine) {
-  .side {
-    --control-compact: var(--window-control-compact);
-    --compact-inset: var(--space-4);
-  }
 }
 
 .window > .main {

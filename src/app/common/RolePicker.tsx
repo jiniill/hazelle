@@ -1,10 +1,11 @@
-import type { ReactElement } from 'react';
-import { fitsRole, refOf, sameModelRef, type ModelRef, type Role } from '../../connectors/assignment';
+import { fitsRole, type ModelRef, type Role } from '../../connectors/assignment';
 import { entryName, entryOf } from '../../connectors/types';
 import { embedRoute } from '../../connectors/registry';
 import type { Stored } from '../../model/kinds';
-import { ChipButton, Empty, Menu, MenuHeading, MenuItem, PickCard, SettingRow } from '../ui';
-import { AUX_HELP, EMBED_HELP, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, noStarred, NOT_PICKED } from './words';
+import type { Route } from '../../runtime/models/assignment';
+import { ChipButton, Divider, Menu, MenuItem, PickCard, SettingRow } from '../ui';
+import { ModelChoices } from './ModelChoices';
+import { AUX_HELP, EMBED_HELP, follows, MAIN_HELP, MODEL_ROLES, MODEL_SETTINGS, NOT_STARRED, NOT_PICKED } from './words';
 
 // A role's own row in 공용: what it is for, and what it reads while unpicked.
 export const ROLE_ROWS: Record<Role, { help: string; follow: string | null }> = {
@@ -14,18 +15,9 @@ export const ROLE_ROWS: Record<Role, { help: string; follow: string | null }> = 
 };
 
 // 임베딩 모델 offers only what its connection embeds: the type says so, not the model (design §4).
-export function starredModels(connections: readonly Stored<'connection'>[], role: Role) {
+export function starredModels(connections: readonly Stored<'connection'>[], role: Role): Route[] {
   return connections.flatMap((connection) =>
-    connection.value.starred.filter((model) => fitsRole(model, role) && (role !== 'embed' || embedRoute(connection.value, model) !== null)).map((model) => ({ ref: refOf(connection.id, model), name: entryName(model), model, source: connection.value.label })),
-  );
-}
-
-type Choice = ReturnType<typeof starredModels>[number];
-
-// Keep connection headings, not per-model sublabels; caller must preserve starredModels connection grouping.
-export function byConnection(choices: readonly Choice[], item: (choice: Choice) => ReactElement): ReactElement[] {
-  return choices.flatMap((choice, at) =>
-    choices[at - 1]?.ref.connection === choice.ref.connection ? [item(choice)] : [<MenuHeading key={`heading/${choice.ref.connection}`}>{choice.source}</MenuHeading>, item(choice)],
+    connection.value.starred.filter((model) => fitsRole(model, role) && (role !== 'embed' || embedRoute(connection.value, model) !== null)).map((model) => ({ connection, model })),
   );
 }
 
@@ -104,19 +96,17 @@ export function RoleCard({ role, help, own, follow, connections, onPick, values,
 }
 
 function RoleChoices({ role, own, follow, connections, onPick, open }: CardProps) {
-  const starred = starredModels(connections, role);
   return (
     <>
-      {open && <MenuItem tone="muted" label={`${MODEL_SETTINGS} 열기`} onClick={open} />}
+      {open && (
+        <>
+          <MenuItem tone="muted" label={`${MODEL_SETTINGS} 열기`} onClick={open} />
+          <Divider variant="menu" />
+        </>
+      )}
       {follow && <MenuItem label={follow} checked={!own} onClick={() => onPick(null)} />}
       {own && !findStarred(own, connections) && <MenuItem label={NOT_STARRED} description={own.model} checked onClick={() => undefined} />}
-      {starred.length === 0 ? (
-        <Empty variant="menu">{noStarred('선택할 수 있어요')}</Empty>
-      ) : (
-        byConnection(starred, (choice) => (
-          <MenuItem key={`${choice.ref.connection}/${choice.ref.model}`} label={choice.name} checked={!!own && sameModelRef(own, choice.ref)} onClick={() => onPick(choice.ref)} />
-        ))
-      )}
+      <ModelChoices routes={starredModels(connections, role)} current={own ?? null} onPick={onPick} />
     </>
   );
 }

@@ -15,6 +15,8 @@
   padding: var(--space-8);
   overflow-y: auto;
   border-radius: var(--radius-lg);
+  /* A row stepped or scrolled to stops at the padding, not at the panel's edge. */
+  scroll-padding-block: var(--space-8);
   translate: var(--nudge, 0) 0;
   --scroll-cue-ground: var(--color-surface);
 }
@@ -38,6 +40,11 @@
 
 .dialog {
   padding: var(--space-16) var(--space-16);
+}
+
+/* A menu of rows, not a form opened as one, whose fields keep the app's scale. */
+.rows {
+  composes: dense from '../foundation/hover.module.css';
 }
 
 /* A menu opened inside another stays short enough to fit beside it. */
@@ -92,6 +99,23 @@
   composes: detail from '../foundation/type.module.css';
   padding: var(--space-8) var(--space-8) var(--space-2);
   font-weight: var(--weight-semibold);
+}
+
+/* A search over the rows stays at the panel's head while they scroll under it, its shadow the panel's ground over the
+   padding above it; a row stepped to stops under it, not behind it. */
+.rows > :has(> input[type='search']) {
+  position: sticky;
+  top: 0;
+  box-shadow: 0 calc(-1 * var(--space-8)) var(--scroll-cue-ground);
+}
+
+.rows:has(> * > input[type='search']) {
+  scroll-padding-block-start: calc(var(--space-8) + var(--control-compact) + var(--space-2));
+}
+
+/* Under a row a heading starts a group: further from the row above it than two rows stand apart. */
+.menu > [role^='menuitem'] + .heading {
+  margin-block-start: var(--space-8);
 }
 
 .face {

@@ -1,5 +1,5 @@
 import { useState, type ReactNode, type Ref } from 'react';
-import { Empty, SearchField } from '../ui';
+import { Empty, isComposing, SearchField } from '../ui';
 import { matches, SEARCH_FROM } from './search';
 import { noResults } from './words';
 
@@ -30,7 +30,7 @@ export function useSearch<T>(items: readonly T[], label: string, texts: (item: T
         onKeyDown={
           onEnter &&
           ((event) => {
-            if (event.key !== 'Enter' || !words || first === undefined) return;
+            if (event.key !== 'Enter' || isComposing(event.nativeEvent) || !words || first === undefined) return;
             event.preventDefault();
             onEnter(first);
           })

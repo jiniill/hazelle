@@ -1,18 +1,18 @@
-import { refOf } from '../../connectors/assignment';
-import { entryKey, entryName, entryTerms } from '../../connectors/types';
+import { refOf, type ModelRef } from '../../connectors/assignment';
+import { entryKey, entryName } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
 import { addProfile, modelProfile, removeProfile, restoreProfile, setDefaultProfile, setModelProfile, setProfileSettings, type ProfileUser } from '../../runtime/models/profiles';
 import { ACTS, addOf } from '../common/acts';
-import { useSearch } from '../common/useSearch';
+import { ModelChoices } from '../common/ModelChoices';
 import { saveWords } from '../common/useAutosave';
-import { BIN_KEEPS, cannotRemove, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SAVE_FAILED, SET_DEFAULT, searchOf, SET_DEFAULT_FAILED } from '../common/words';
+import { BIN_KEEPS, cannotRemove, defaultMark, MODEL_SETTINGS, ORIGINAL, resetTo, SAVE_FAILED, SET_DEFAULT, SET_DEFAULT_FAILED } from '../common/words';
 import { useConnections, useProfiles, useSettings, useStore } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useMaking } from '../common/useMaking';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
-import { Button, Empty, List, ListItem, Menu, MenuHeading, MenuItem, NavBar, Screen, Section, Tag } from '../ui';
+import { Button, Empty, List, ListItem, Menu, MenuItem, NavBar, Screen, Section, Tag } from '../ui';
 import { changeWords, NOT_CALLABLE } from '../common/settingWords';
 import { useProfileEditor, type User } from './useProfileEditor';
 
@@ -38,8 +38,8 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
     const choice = modelProfile(store, model);
     return choice.kind === 'profile' ? choice.profile.value.name : '없음';
   };
-  const others = connections.map((connection) => ({ connection, models: connection.value.starred.filter((model) => !using.has(`${connection.id}/${entryKey(model)}`)) })).filter((group) => group.models.length > 0);
-  const attach = (connection: string, model: string) => toast.settled(setModelProfile(store, connection, model, id), SAVE_FAILED);
+  const others = connections.flatMap((connection) => connection.value.starred.filter((model) => !using.has(`${connection.id}/${entryKey(model)}`)).map((model) => ({ connection, model })));
+  const attach = ({ connection, model }: ModelRef) => toast.settled(setModelProfile(store, connection, model, id), SAVE_FAILED);
 
   const copy = () => making.copy({ flush, name: () => name, make: (copied, made) => addProfile(store, { name: copied, settings: shown }, made), open: (made) => navigate({ kind: 'profile', id: made }) });
 
@@ -111,7 +111,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
                 </Button>
               )}
             >
-              <AddChoices groups={others} now={profileName} onPick={attach} />
+              <ModelChoices routes={others} describe={({ model }) => `현재: ${profileName(model)}`} onPick={attach} />
             </Menu>
           )
         }
@@ -135,26 +135,5 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
 
       {rows}
     </Screen>
-  );
-}
-
-type Group = { connection: Stored<'connection'>; models: ProfileUser['model'][] };
-
-// Mounted only while the menu is open, so each opening starts with an empty search.
-function AddChoices({ groups, now, onPick }: { groups: Group[]; now: (model: Group['models'][number]) => string; onPick: (connection: string, model: string) => void }) {
-  const choices = groups.flatMap(({ connection, models }) => models.map((model) => ({ connection, model })));
-  const search = useSearch(choices, searchOf('모델'), ({ connection, model }) => [...entryTerms(model), connection.value.label]);
-  const shown = groups.flatMap(({ connection }) => {
-    const found = search.found.filter((choice) => choice.connection === connection);
-    return found.length === 0 ? [] : [
-      <MenuHeading key={connection.id}>{connection.value.label}</MenuHeading>,
-      ...found.map(({ model }) => <MenuItem key={`${connection.id}/${entryKey(model)}`} label={entryName(model)} description={`현재: ${now(model)}`} onClick={() => onPick(connection.id, entryKey(model))} />),
-    ];
-  });
-  return (
-    <>
-      {search.field}
-      {search.none ? <Empty variant="menu">{search.none}</Empty> : shown}
-    </>
   );
 }
