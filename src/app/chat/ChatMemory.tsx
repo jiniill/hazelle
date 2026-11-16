@@ -1,11 +1,11 @@
-import { useState, type ComponentProps, type ReactNode } from 'react';
+import { useState, useSyncExternalStore, type ComponentProps, type ReactNode } from 'react';
 import { untilSpan } from '../../engine/memory';
 import type { Chat, ChatItem } from '../../model/chat';
 import { emptyMemory, type Fact, type MemorySettings, type Thread } from '../../model/memory';
 import { embedModel } from '../../runtime/models/assignment';
 import { memoryOwner, memorySetup, memoryWriter } from '../../runtime/tasks/memory-read';
 import { memoryView, type MemoryView } from '../../runtime/tasks/memory-view';
-import { removeFact, removeThread, setChatMemory, setFact, setThread } from '../../runtime/tasks/memory';
+import { removeFact, removeThread, setChatMemory, setFact, setThread, type MemoryFailure } from '../../runtime/tasks/memory';
 import { ACTS, addOf } from '../common/acts';
 import { describeMemoryFailure } from '../common/failure';
 import { MemoryFields, MemorySplit, settingsOf } from '../common/MemoryFields';
@@ -15,13 +15,13 @@ import { taskRuns } from '../common/taskRuns';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
 import { useLoad } from '../common/useLoaded';
-import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag, FEATURE_NAMES, ONLY_THIS_CHAT, UNDO_FAILED, MEMORY_WORKING } from '../common/words';
+import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag, FEATURE_NAMES, ONLY_THIS_CHAT, UNDO_FAILED, MEMORY_WORKING, RESPONSE_RAW } from '../common/words';
 import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
 import { Button, Callout, ConfirmDialog, Empty, IconButton, List, MenuItem, MoreMenu, Progress, Row, Section, SidePanel, Stack, Text, TextField } from '../ui';
 import { MemoryRow, type ChatMemoryRecord } from './ChatMemoryRecord';
-import { factGroups, memoryRows, MessagePositions } from './memory';
+import { answeredCall, factGroups, memoryRows, MessagePositions, overNote } from './memory';
 import type { OpenChat } from './useChat';
 
 const NO_MEMORY = emptyMemory();
@@ -35,10 +35,12 @@ type Props = Pick<OpenChat, 'messages' | 'busy'> & {
   onTool: (id: string) => void;
   onEditPrompt: (() => void) | undefined;
   onRecord: (id: string | null) => void;
+  // Opens 점검's request log at a memory call's entry, by its receipt's id.
+  onResponse: (call: string) => void;
   renderRecord: (record: Omit<ComponentProps<typeof ChatMemoryRecord>, 'actions'>) => ReactNode;
 };
 
-export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEditPrompt, onRecord, renderRecord }: Props) {
+export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEditPrompt, onRecord, onResponse, renderRecord }: Props) {
   const { id, chat: own } = item;
   const session = useSession();
   const { store } = session;
@@ -47,6 +49,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   const settings = useSettings();
   const prompts = usePrompts();
   const { running, failed, chapterFailed, indexing, indexFailed } = useRemembering();
+  const logged = useSyncExternalStore(session.log.subscribe, () => session.log.of(id));
   const [messagePositions] = useState(() => new MessagePositions());
   const positions = messagePositions.read(messages);
   // A tool holding the slot leaves these records as they are, readable, until the slot is theirs again (design §6.10).
@@ -79,6 +82,11 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   const unindexed = indexFailed.get(id);
   const rows = memoryRows(memory);
   const retry = { label: ACTS.retry.label, onClick: () => session.memory.retry(id) };
+  const acts = (failure: MemoryFailure) => {
+    const call = answeredCall(failure, logged.entries);
+    return call ? [retry, { label: `${RESPONSE_RAW} 보기`, onClick: () => onResponse(call) }] : retry;
+  };
+  const over = view && !holder ? overNote(memory, view) : null;
   const more = (
     <MoreMenu of={FEATURE_NAMES.memory}>
       <MenuItem label="원문에서 전부 다시 만들기" onClick={() => setRebuilding(true)} />
@@ -97,13 +105,13 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
         <Text variant="note">{`${MEMORY_WORKING} · ${writing.model} · ${writing.left}번 남음`}</Text>
       ) : (
         failure && (
-          <Callout tone="warn" action={retry}>
+          <Callout tone="warn" action={acts(failure)}>
             {`기억을 정리하지 못했어요. ${describeMemoryFailure(failure)}`}
           </Callout>
         )
       )}
       {!writing && unchaptered && (
-        <Callout tone="warn" action={retry}>
+        <Callout tone="warn" action={acts(unchaptered)}>
           {`${CHAPTER}를 만들지 못했어요. ${describeMemoryFailure(unchaptered)}`}
         </Callout>
       )}
@@ -146,7 +154,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
       {(!holder || memory.threads.length > 0) && <Threads chat={id} threads={memory.threads} adding={!holder} />}
 
       {(!holder || memory.records.length > 0) && <Section level={3} title="기록" note={`${rows.filter((each) => !each.forgotten).length}개`}>
-        {view?.crowded && <Callout tone="warn">고정한 기록이 한도를 다 채워서 나머지 기록은 보내지 않아요.</Callout>}
+        {view?.crowded ? <Callout tone="warn">고정한 기록이 한도를 다 채워서 나머지 기록은 보내지 않아요.</Callout> : over && <Callout tone="warn">{over}</Callout>}
         {memory.records.length ? (
           <List label="기록" places>
             {rows.map((each) => (

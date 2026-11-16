@@ -24,10 +24,10 @@ const TABS: { value: InspectTab; label: string }[] = [
   { value: 'log', label: '기록' },
 ];
 
-type ChatInspectProps = Pick<OpenChat, 'busy' | 'prompt'> & { chat: string; character: string | null; tab: InspectTab; notes: SendNotes; onTab: (tab: InspectTab) => void; onClose: () => void; onEdit: (side: Side) => void };
+type ChatInspectProps = Pick<OpenChat, 'busy' | 'prompt'> & { chat: string; character: string | null; tab: InspectTab; call: string | undefined; notes: SendNotes; onTab: (tab: InspectTab) => void; onClose: () => void; onEdit: (side: Side) => void };
 
 // 점검: every tab before a send reads the composer's one next-send result (useSendNotes), never a prompt of its own.
-export function ChatInspect({ chat, character, tab, notes, busy, prompt, onTab, onClose, onEdit }: ChatInspectProps) {
+export function ChatInspect({ chat, character, tab, call, notes, busy, prompt, onTab, onClose, onEdit }: ChatInspectProps) {
   const { store } = useSession();
   const conversation = prompt.kind === 'prompt' ? { id: prompt.prompt.id, blocks: prompt.prompt.value.blocks } : null;
   const editor = (from: From) => editorOf(from, conversation, character, (lore) => store.get('lore', lore)?.parent ?? null);
@@ -46,7 +46,7 @@ export function ChatInspect({ chat, character, tab, notes, busy, prompt, onTab, 
       {tab === 'variables' && <Variables chat={chat} sending={notes.sending && 'turn' in notes.sending ? notes.sending : null} busy={busy} />}
       {tab === 'modules' && ready((sending) => <Modules sending={sending} />)}
       {tab === 'scripts' && <Scripts chat={chat} />}
-      {tab === 'log' && <Log chat={chat} />}
+      {tab === 'log' && <Log key={call} chat={chat} call={call} />}
     </SidePanel>
   );
 }

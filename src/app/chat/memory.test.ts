@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { factGroups, MessagePositions, spanOf } from './memory';
+import type { Receipt } from '../../model/chat';
+import type { Memory, MemoryRecord } from '../../model/memory';
+import type { LogEntry } from '../../runtime/models/request-log';
+import type { MemoryFailure } from '../../runtime/tasks/memory';
+import { answeredCall, factGroups, MessagePositions, overNote, spanOf } from './memory';
 
 const source = (message: string) => ({ message, version: `${message}-v` });
 const messages = ['a', 'b', 'c', 'd'].map((id) => ({ id }));
@@ -27,5 +31,28 @@ describe('a record in the memory panel', () => {
       ['하나', ['나이', '말투']],
       ['둘', ['사는 곳']],
     ]);
+  });
+});
+
+describe('the memory panel over the budget and after a failure', () => {
+  it('counts the records the budget leaves out, offers raising 기록 only while the setting binds, and says nothing when no memory is sent', () => {
+    const memory = { records: ['r1', 'r2', 'r3'].map((id) => ({ id }) as MemoryRecord), chapters: [], state: [], threads: [] } as Memory;
+    const records = new Map([['r1', 'over'], ['r2', 'over'], ['r3', 'sent'], ['c1', 'over']] as const);
+    const view = { records, slot: true, crowded: false, tokens: { budget: 25_000 }, setup: { budget: 25_000 } } as unknown as Parameters<typeof overNote>[1];
+    expect(overNote(memory, view)).toMatch(/^기록 2개를 보내지 않아요\. .* 아래 설정의 기록에서 한도를 늘릴 수 있어요\.$/);
+    expect(overNote(memory, { ...view, tokens: { ...view.tokens, budget: 16_000 } })).not.toContain('한도를 늘릴');
+    expect(overNote(memory, { ...view, slot: false })).toBeNull();
+    expect(overNote(memory, { ...view, crowded: true })).toBeNull();
+    expect(overNote(memory, { ...view, records: new Map() })).toBeNull();
+  });
+
+  it("names a failed job's call only while the request log holds that call's answer", () => {
+    const receipt = { id: 'call' } as Receipt;
+    const entry = (response: string | null) => ({ receipt, response }) as LogEntry;
+    const invalid = { kind: 'invalid', receipt, reason: 'unreadable' } as MemoryFailure;
+    expect(answeredCall(invalid, [entry('{"chapter": ')])).toBe('call');
+    expect(answeredCall(invalid, [entry(null)])).toBeNull();
+    expect(answeredCall(invalid, [])).toBeNull();
+    expect(answeredCall({ kind: 'tokenizer' }, [entry('{')])).toBeNull();
   });
 });

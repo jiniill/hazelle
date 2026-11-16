@@ -83,7 +83,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
     else actions.openInspect('request');
   });
   const inUse = prompt.kind === 'prompt' ? prompt.prompt.id : null;
-  const inspect = chat.inspect && <ChatInspect chat={chatId} tab={chat.inspect.tab} notes={chat.sendNotes} busy={busy} prompt={prompt} character={shelf?.id ?? null} onTab={actions.switchInspectTab} onClose={actions.closeInspect} onEdit={actions.side} />;
+  const inspect = chat.inspect && <ChatInspect chat={chatId} tab={chat.inspect.tab} call={chat.inspect.call} notes={chat.sendNotes} busy={busy} prompt={prompt} character={shelf?.id ?? null} onTab={actions.switchInspectTab} onClose={actions.closeInspect} onEdit={actions.side} />;
   const paired = usePanelsBeside() && !!panel && !!chat.inspect;
   useEffect(() => {
     onPaired(paired);
@@ -113,6 +113,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
               onTool={actions.tool}
               onEditPrompt={prompt.kind === 'prompt' ? () => actions.side({ kind: 'prompts', id: prompt.prompt.id, pane: null }) : undefined}
               onRecord={actions.memory}
+              onResponse={(call) => actions.openInspect('log', call)}
               renderRecord={(record) => <ChatMemoryRecord {...record} actions={actions} />}
             />
           ) : panel?.kind === 'bookmarks' ? (

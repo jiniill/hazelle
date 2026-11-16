@@ -27,13 +27,14 @@ const PURPOSES: Record<CallPurpose, string> = {
   embedding: ROLE_TAGS.embed,
 };
 
-export function Log({ chat }: { chat: string }) {
+// call: the entry opened at first, by its receipt's id.
+export function Log({ chat, call }: { chat: string; call: string | undefined }) {
   const { log } = useSession();
   const held = useSyncExternalStore(log.subscribe, () => log.of(chat));
   // Recorded as each call ends; read by when each began.
   const entries = useMemo(() => held.entries.map((entry, index) => ({ entry, key: held.omitted + index })).sort((a, b) => b.entry.at - a.entry.at), [held]);
-  const [more, setMore] = useState(PAGE);
-  const [open, setOpen] = useState<number | null>(null);
+  const [open, setOpen] = useState(() => entries.find(({ entry }) => entry.receipt.id === call)?.key ?? null);
+  const [more, setMore] = useState(() => Math.max(PAGE, entries.findIndex(({ key }) => key === open) + 1));
   const picked = held.entries.filter((entry) => entry.picked).length;
   return (
     <Section title="요청 기록" help="이 화면에서 이 채팅을 위해 보낸 모델 요청이에요. 새로고침하면 사라져요.">

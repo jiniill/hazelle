@@ -59,7 +59,7 @@ export function useChatPanels(chatId: string, id: string | null, tools: ToolMenu
       switchInfoTab: (tab: InfoTab) => setPanels((current) => (current.panel?.kind === 'info' ? { ...current, panel: { kind: 'info', tab } } : current)),
       flipToggles: () => flipKind('toggles'),
       memory: (record: string | null) => open({ kind: 'memory', record }),
-      openInspect: (tab: InspectTab) => open({ kind: 'inspect', tab }),
+      openInspect: (tab: InspectTab, call?: string) => open({ kind: 'inspect', tab, ...(call && { call }) }),
       switchInspectTab: (tab: InspectTab) => setPanels((current) => current.inspect ? { ...current, inspect: { kind: 'inspect', tab } } : current),
       closeInspect: () => setPanels((current) => ({ ...current, inspect: null })),
       side: (panel: Panel) => open(panel),
