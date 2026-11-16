@@ -154,6 +154,7 @@ export const NEVER_WORDS: Record<string, string> = {
   unregisterMCP: '모델에 도구 연결하기',
   getFetchLogs: '앱의 요청 기록 읽기',
   saveSecretHeader: '요청용 비밀 값 저장하기',
+  installPlugin: '플러그인 설치하기',
   loadPlugins: '플러그인 새로고침',
   createMutationObserver: '앱 화면 변화 감지하기',
   getColorScheme: DISPLAY_READ,

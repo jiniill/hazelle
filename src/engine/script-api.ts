@@ -40,6 +40,7 @@ export type ToolEvent =
   | { kind: 'reply'; reply: Hazelle.At }
   | { kind: 'replying' | 'sending'; text: string }
   | { kind: 'requesting'; messages: Hazelle.RequestMessage[] }
+  | { kind: 'calling'; role: 'main' | 'aux'; messages: ModelMessage[] }
   | { kind: 'showing'; shown: Hazelle.Shown[] }
   | { kind: 'prompt'; turn: Hazelle.Turn }
   | { kind: 'change'; change: Hazelle.Change }

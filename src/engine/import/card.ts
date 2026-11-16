@@ -1,5 +1,6 @@
 import { errorMessage } from '../../error-message';
-import { add, cardSource, convert, convertModule, counted, extensionOf, lorebookSource, offSpec, record, type Converted, type ConvertedModule, type Json, type Tally } from './convert';
+import { add, cardSource, convert, convertModule, counted, lorebookSource, offSpec, record, type Converted, type ConvertedModule, type Json, type Tally } from './convert';
+import { extensionOf } from '../../tool-api/risu-assets';
 import { readLorebook } from './lorebook';
 import { METADATA_BYTES } from './inflate';
 import { hazelleSource, printOf, readHazelle, readModule, type ConvertedBundle } from './hazelle';

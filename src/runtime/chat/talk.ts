@@ -43,7 +43,8 @@ export type Turn = {
   // whole: asked for in one piece (ModelSettings streaming), so it is shown when it lands, not paced as bursts are.
   whole?: true;
   // batch waits for an accepted whole reply; stopping still polls cancellation to completion.
-  // retrying precedes first output. preparing names pending preread/pre-agent/tool request steps.
+  // retrying precedes first output. preparing names pending preread/pre-agent steps, and the tool a stage waits on,
+  // before the reply as after its text came.
   batch?: true;
   retrying?: true;
   stopping?: true;
@@ -149,7 +150,7 @@ export class Talk {
     private readonly costs: Costs,
     private readonly tokens: Tokens,
     // ended: a reply as its stream ended, which the bot's Lua may rewrite before it is saved. saved: once it is.
-    private readonly ended: (chat: string, reply: Written) => Promise<Written>,
+    private readonly ended: (chat: string, reply: Written, signal: AbortSignal, running: (name: string) => void) => Promise<Written>,
     private readonly saved: (chat: string, reply: Written) => void,
     // The calls this page reads (runtime/models/streams).
     private readonly reading: Set<string>,
@@ -200,6 +201,11 @@ export class Talk {
       const failure = await lease.ready;
       return failure ? { kind: 'unsaved', reply, failure } : await this.save(unsaved.chat, unsaved.reply, unsaved.call);
     } finally { lease.release(); }
+  }
+
+  // The reply's last stage before it is saved, which 멈추기 ends; the turn shows which tool it waits on.
+  private ending(held: Held, reply: Written): Promise<Written> {
+    return this.ended(held.turn.chat, reply, held.abort.signal, (running) => this.change(held, { ...held.turn, preparing: { step: 'tools', running, since: Date.now() } }));
   }
 
   // A reply not saved keeps its call's marker, so a reload saves it too.
@@ -370,7 +376,7 @@ export class Talk {
     // The view is null where the request was not this page's, which a receipt without points does not tell apart.
     const kept = opening.cache && (cacheKept(opened) || prefixKept(this.store, chat, opened));
     const printing = kept && writePrint(this.store, chat, first.call, wireOf(route.connection.id, opening.account, opening.cache!, prompt.parts));
-    const saved = await this.save(chat, await this.ended(chat, written), last.call);
+    const saved = await this.save(chat, await this.ending(held, written), last.call);
     await printing;
     return saved;
   }
@@ -395,7 +401,7 @@ export class Talk {
         // Not Date.now(): the call may have ended long before this page read it, and the cache timer counts back from at.
         const at = stream.value.at + answer.totalMs;
         // A round that called tools ends here: the page that would have run them is gone.
-        if (!this.closed) await this.save(chat, await this.ended(chat, this.written(held, reply, stream.value.call, answer, at, undefined, undefined, undefined, toolsAsked(answer.calls, []))), stream.id);
+        if (!this.closed) await this.save(chat, await this.ending(held, this.written(held, reply, stream.value.call, answer, at, undefined, undefined, undefined, toolsAsked(answer.calls, []))), stream.id);
       });
     } finally {
       this.unseat(held);

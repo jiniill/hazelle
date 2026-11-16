@@ -34,6 +34,22 @@ export const editLore = (store: ObjectStore, id: string, patch: Partial<Lore>): 
 export const removeLore = (store: ObjectStore, id: string) => store.take('lore', id);
 export const restoreLore = (store: ObjectStore, removed: Stored<'lore'>) => store.restore(removed);
 
+// The fields a tool writes (Hazelle.LoreEntry), over a new entry's defaults.
+export const toolLore = ({ name, keys, text, always, on }: Omit<Hazelle.LoreEntry, 'owner'>): Omit<Lore, 'folder'> => ({
+  name, keys, secondaryKeys: [], content: text, enabled: on, constant: always, selective: false, useRegex: false, caseSensitive: false,
+  insertionOrder: DEFAULT_ORDER, priority: null, position: null,
+});
+
+// A tool's entry in a character's lorebook (Hazelle.CardEdit): over the one of its name, whose other fields (the user's
+// secondary keys, order, place and folder) stay, or new when the lorebook has none. A name it holds more than once
+// names no one entry, and nothing of the lorebook is ever taken out here: lore has no 휴지통.
+export const cardLoreNamed = (store: ObjectStore, character: string, name: string) => store.children('lore', character).filter(({ value }) => value.name === name);
+export function writeCardLore(store: ObjectStore, character: string, entry: Omit<Hazelle.LoreEntry, 'owner'>): Promise<ApiResult<unknown>> {
+  const [held] = cardLoreNamed(store, character, entry.name);
+  const { keys, content, constant, enabled } = toolLore(entry);
+  return held ? store.update('lore', held.id, (current) => ({ ...current, keys, content, constant, enabled })) : store.create('lore', { ...toolLore(entry), folder: null }, { parent: character });
+}
+
 // Upsert chat lore by name, but keep the first match's id/folder so script writes do not undo user placement.
 export function upsertChatLore(store: ObjectStore, chat: string, entry: Omit<Lore, 'folder'>): Promise<ApiResult<null>> {
   const [first, ...rest] = store.children('lore', chat).filter(({ value }) => value.name === entry.name);

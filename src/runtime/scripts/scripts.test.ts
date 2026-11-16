@@ -905,12 +905,12 @@ describe('tool events through Scripts', () => {
     }, binding);
   });
 
-  it('hands a reply to each tool after the bot Lua, and passes it on unchanged past a tool that misses the deadline', async () => {
-    const late: (() => void)[] = [];
+  it('hands a reply to each tool after the bot Lua, waits for one past the tool deadline, naming it, and passes it on unchanged once 멈추기 ends the wait', async () => {
+    const late: ((value: string) => void)[] = [];
     let hang = false;
     const run = vi.fn<Binding<ToolUnit>['run']>(async (_chat, _unit, _scope, event) => {
       if (event.kind !== 'replying') return noOutcome();
-      if (hang) return new Promise((resolve) => late.push(() => resolve({ ...noOutcome(), value: 'too late' })));
+      if (hang) return new Promise((resolve) => late.push((value) => resolve({ ...noOutcome(), handled: true, value })));
       return { ...noOutcome(), handled: true, value: `${event.text} [tool]` };
     });
     await server.withSession(async (session) => {
@@ -926,12 +926,40 @@ describe('tool events through Scripts', () => {
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       try {
         const reply: Written = { id: crypto.randomUUID(), message: null, replaces: null, at: Date.now(), text: 'again', receipt: { state: 'done' } as Written['receipt'] };
-        const ending = session.scriptTurns.ending(f.chat, reply);
+        const running: string[] = [];
+        const ending = session.scriptTurns.ending(f.chat, reply, new AbortController().signal, (name) => running.push(name));
         await vi.waitFor(() => expect(late).toHaveLength(1));
-        await vi.advanceTimersByTimeAsync(5001);
-        expect((await ending).text).toBe('again [lua]');
-        expect(session.scriptInteractions.snapshot().notes).toContainEqual(expect.objectContaining({ kind: 'late', from: { kind: 'module', id: f.module } }));
-      } finally { vi.useRealTimers(); for (const resolve of late) resolve(); }
+        await vi.advanceTimersByTimeAsync(60_000);
+        late[0]!('again, slowly');
+        expect((await ending).text).toBe('again, slowly');
+        expect(running).toHaveLength(1);
+        const stop = new AbortController();
+        const stopped = session.scriptTurns.ending(f.chat, reply, stop.signal, () => {});
+        await vi.waitFor(() => expect(late).toHaveLength(2));
+        stop.abort();
+        expect((await stopped).text).toBe('again [lua]');
+        expect(session.scriptInteractions.snapshot().notes.filter(({ kind }) => kind === 'late')).toEqual([]);
+      } finally { vi.useRealTimers(); for (const resolve of late) resolve(''); }
+    }, { run, close: () => {} });
+  });
+
+  it('hands a bot script\'s model call to each tool before it is sent, with the model it asks for, and sends what they answer', async () => {
+    const seen: Extract<ToolEvent, { kind: 'calling' }>[] = [];
+    const run = vi.fn<Binding<ToolUnit>['run']>(async (_chat, _unit, _scope, event) => {
+      if (event.kind !== 'calling') return noOutcome();
+      seen.push(event);
+      return { ...noOutcome(), handled: true, value: event.messages.map(({ role, content }) => ({ role, content: content.replace('[LP_AX]\n', '') })) };
+    });
+    await server.withSession(async (session) => {
+      const { chat, messages } = await chatWith(session, `onOutput = async(function(id) setChatVar(id, 'made', axLLM(id, { { role = 'user', content = '[LP_AX]\\nsum' } }).result) end)`);
+      await notesTool(session);
+      const log = stubRelay(inTurn([saying('reply'), saying('summary')]));
+      expect(await takeTurn(session, chat, { kind: 'send', text: '안녕' })).toBeNull();
+      await expect.poll(() => session.scriptInteractions.snapshot().questions).toMatchObject([{ chat, question: { kind: 'model' } }]);
+      session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'yes');
+      await expect.poll(() => shown(messages()[2]!).after).toEqual([['made', 'summary']]);
+      expect(seen).toEqual([{ kind: 'calling', role: 'aux', messages: [{ role: 'user', content: '[LP_AX]\nsum' }] }]);
+      expect((JSON.parse(log[1]!.sent.body!) as { messages: unknown }).messages).toEqual([{ role: 'user', content: 'sum' }]);
     }, { run, close: () => {} });
   });
 

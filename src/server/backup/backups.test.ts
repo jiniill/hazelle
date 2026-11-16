@@ -16,7 +16,7 @@ let reached = () => {};
 let t: Awaited<ReturnType<typeof testApp>>;
 beforeAll(async () => {
   t = await testApp(async (url, init) => {
-    sent.push({ url: url.href, body: JSON.parse(init.body!) });
+    sent.push({ url: url.href, body: JSON.parse(init.body as string) });
     reached();
     await answered;
     return new Response(null, { status: 204 });

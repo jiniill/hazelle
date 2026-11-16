@@ -254,7 +254,7 @@ it('leaves no ping timer behind a reader whose client left, and the box still go
 function tried(...answers: (Response | null)[]) {
   const sent: { at: number; url: string; headers: [string, string][]; body: string | null }[] = [];
   const upstream: Upstream = async (url, init) => {
-    sent.push({ at: Date.now(), url: url.href, headers: [...init.headers], body: init.body });
+    sent.push({ at: Date.now(), url: url.href, headers: [...init.headers], body: init.body as string | null });
     const answer = answers.shift()!;
     if (!answer) throw new Error('connect ECONNREFUSED');
     return answer;

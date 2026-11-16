@@ -118,6 +118,8 @@ describe('relay', () => {
     ['an unknown method', envelope({ method: 'CONNECT' })],
     ['a GET with a body', envelope({ method: 'GET' })],
     ['a non-string header', envelope({ headers: { a: 1 } })],
+    ['a binary body that is no base64', envelope({ body: 'not base64!', binary: true })],
+    ['a binary mark with no body', envelope({ body: null, binary: true })],
   ])('refuses an envelope with %s', async (_label, body) => {
     const upstream = vi.fn<Upstream>();
     const response = await createRelay(upstream)(post(body));
@@ -233,6 +235,13 @@ it('passes an HTML error page on as its status alone', async () => {
   const response = await relay(post(envelope()));
   expect([response.status, response.headers.get('x-relay'), response.headers.get('content-type'), await response.text()]).toEqual([403, 'upstream', null, '']);
   expect(cancel).toHaveBeenCalledOnce();
+});
+
+it('sends a binary body as the bytes its base64 holds', async () => {
+  const upstream = vi.fn<Upstream>(async () => Response.json({ ok: true }));
+  const response = await createRelay(upstream)(post(envelope({ body: Buffer.from([0, 255, 137, 80]).toString('base64'), binary: true })));
+  expect(response.status).toBe(200);
+  expect(upstream.mock.calls[0]![1].body).toEqual(new Uint8Array([0, 255, 137, 80]));
 });
 
 it('refuses mutation methods outside the provider GET/POST contract before reaching a destination', async () => {

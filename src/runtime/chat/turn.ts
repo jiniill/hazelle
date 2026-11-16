@@ -188,7 +188,8 @@ async function gatheredTurn(session: Pick<Session, 'store' | 'read'>, chat: stri
 async function prepare(session: Session, chat: string, gathered: TurnContext, signal: AbortSignal, again: (answer: boolean) => Promise<TurnContext | Blocked | Unevaluated | null>, preparing: (step: Preparing) => void, skip: Skip): Promise<Ask | Halted | TurnFailure> {
   const translated = gathered.said && chatTranslate(session.store, gathered.chat).input ? await sendTranslated(session, chat, gathered, signal) : gathered;
   if ('kind' in translated) return translated;
-  const started = await session.scriptTurns.starting(chat, translated, again, signal);
+  const toolRunning = (name: string) => preparing({ step: 'tools', running: name, since: Date.now() });
+  const started = await session.scriptTurns.starting(chat, translated, again, signal, toolRunning);
   if ('kind' in started) return started;
   const prompted = await session.scriptTurns.prompting(chat, started.turn, () => again(translated.said !== null && started.turn.said === null), signal);
   if ('kind' in prompted) return prompted;
@@ -211,7 +212,7 @@ async function prepare(session: Session, chat: string, gathered: TurnContext, si
   const fit = providerFit(route, settings, calibration.fit.allowance);
   const prompt = await evaluating(session.store.evaluation.prompt({ asker: 'send', chat }, { tools, scope, seed: reply.id, budget, fit, continuing: reply.continues !== null, answerInstruction: answerInstructionOf(session.store), memory, notes: agents.notes, additional, pictures: turn.pictures }, signal));
   if ('kind' in prompt) return { ...prompt, ...kept };
-  const requested = await session.scriptTurns.requesting(chat, turn, prompt, signal, (name) => preparing({ step: 'tools', running: name, since: Date.now() }));
+  const requested = await session.scriptTurns.requesting(chat, turn, prompt, signal, toolRunning);
   if (signal.aborted) return { kind: 'halted' };
   const rewritten = await evaluating(session.store.evaluation.rewrite({ asker: 'send', chat }, scope, { prompt, messages: requested.messages, fit }, signal));
   if ('kind' in rewritten) return { ...rewritten, ...kept };

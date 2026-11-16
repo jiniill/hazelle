@@ -2,7 +2,8 @@ import { count, list, text } from '../../connectors/values';
 import { isRecord } from '../../record';
 import type { Portrait, PortraitSource } from '../../model/likeness';
 import { fingerprint } from '../memory';
-import { add, convertModule, DEFAULT_ORDER, extensionOf, finite, lorebookSource, luaCodes, nativeHolds, readTriggers, record, regexScripts, stampIds, strings, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';
+import { add, convertModule, DEFAULT_ORDER, finite, lorebookSource, luaCodes, nativeHolds, readTriggers, record, regexScripts, stampIds, strings, triggerSource, type Converted, type ConvertedModule, type Json, type Tally, type Unstamped } from './convert';
+import { risuAsset } from '../../tool-api/risu-assets';
 import { risuRegex } from '../../tool-api/risu-regex';
 import { readStatus } from './status';
 import { readToggles, writeToggles } from './toggles';
@@ -285,7 +286,7 @@ export function moduleSource({ risu, name, description, namespace, pack, lore, l
     trigger: apart.triggers,
     ...(pack.background !== undefined && { backgroundEmbedding: pack.background }),
     customModuleToggle: writeToggles(pack.toggles),
-    assets: assets.map(({ name, type }) => [name, '', extensionOf(type)]),
+    assets: assets.map(({ name, type }) => risuAsset(name, '', type)),
     hideIcon: false,
     ...(apart.lua && { lowLevelAccess: true }),
   };

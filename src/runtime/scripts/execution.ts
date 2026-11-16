@@ -1,5 +1,5 @@
 import type { ChatScope } from '../../engine/render';
-import type { Event, ScriptUnit, ToolEvent, ToolReach } from '../../engine/script-api';
+import type { Event, ModelMessage, ScriptUnit, ToolEvent, ToolReach } from '../../engine/script-api';
 import type { Chat } from '../../model/chat';
 import type { Writes } from '../../model/chat';
 import { live, type PackOwner } from '../../model/library';
@@ -23,16 +23,16 @@ type Units = { lua: ScriptUnit[]; event: Event } | { tool: ToolUnit; event: Tool
 
 const ownerOf = (units: Units): PackOwner | null => 'tool' in units ? { kind: 'module', id: units.tool.module } : null;
 // What an event hands a tool to rewrite, in the shape of its answer; an event that hands nothing is answered an addition.
-const handed = (event: ToolEvent) => 'text' in event ? event.text : event.kind === 'requesting' ? event.messages : event.kind === 'showing' ? event.shown.map(({ text }) => text) : undefined;
+const handed = (event: ToolEvent) => 'text' in event ? event.text : event.kind === 'requesting' || event.kind === 'calling' ? event.messages : event.kind === 'showing' ? event.shown.map(({ text }) => text) : undefined;
 
-// A tool's answer in a stage a turn or a display waits on (prompt, sending, replying, showing); one that misses it is cut
-// off and the turn goes on. requesting has none (Chained.turn).
+// A tool's answer where nothing can stop the wait (prompt, showing, calling); one that misses it is cut off and the
+// stage goes on. sending, requesting and replying have none (Chained.turn), as Risu's hooks have none.
 export const TOOL_DEADLINE_MS = 5000;
 
 // A step of the tools' chain (ScriptExecution.chained). scope: the chat as the step sees it, after the writes of the tools
 // before it. answer: what a tool answered makes of the value, an Error when it cannot. quiet: nothing it does is saved.
-// turn: a step the turn waits on as on its pre agents, with no deadline: ended by 멈추기, told each tool's name as it
-// starts, and free to ask for a card.
+// turn: a step the turn waits on as on its pre agents, with no deadline: ended by 멈추기, which passes the value on as
+// it came, told each tool's name as it starts, and free to ask for a card.
 type Chained<T> = { event(value: T): ToolEvent; scope(writes: Writes): ChatScope; answer(answered: unknown, value: T): T | Error; quiet?: true; turn?: { signal: AbortSignal; running(name: string): void } };
 
 export class ScriptExecution {
@@ -68,8 +68,8 @@ export class ScriptExecution {
     return value;
   }
 
-  // Each tool in pack order, after the bot's Lua, under the deadline, handed what the one before it left; one that
-  // misses the deadline is cut off and the value passes on as it came.
+  // Each tool in pack order, after the bot's Lua, handed what the one before it left; one that misses the step's
+  // deadline, or is stopped, is cut off and the value passes on as it came.
   async chained<T>(chat: string, units: ToolUnit[], first: T, step: Chained<T>): Promise<{ value: T; writes: Writes }> {
     let value = first;
     let writes: Writes = [];
@@ -94,6 +94,18 @@ export class ScriptExecution {
   }
 
   // A tool whose frame has not loaded yet may listen.
+  // A bot's script's model call, through the chat's tools' calling first, as Risu's replacers meet a Lua LLM call
+  // (requestChatData); a tool's own call meets none, as Risu's runLLMModel meets none. Run where the script waits, on
+  // no queue: its event holds the chat's.
+  private calling(chat: string, scope: ChatScope, model: ToolReach['model']): ToolReach['model'] {
+    return async (role, messages, from, signal) => {
+      const stored = live(this.session.store.get('chat', chat));
+      const units = stored ? this.listening(stored.value, 'calling') : [];
+      const sent = await this.chained(chat, units, messages, { event: (value) => ({ kind: 'calling', role, messages: value }), scope: () => scope, answer: (answered) => answered as ModelMessage[], quiet: true });
+      return model(role, sent.value, from, signal);
+    };
+  }
+
   listening(chat: Chat, event: EventName): ToolUnit[] {
     return toolsOf(this.session.store, chat).filter(({ module }) => this.bindings.tools.hears(module, event) !== false);
   }
@@ -138,7 +150,7 @@ export class ScriptExecution {
     try {
       const host = this.reach.host(chat, scope, signal, deadline);
       const running = 'lua' in units
-        ? this.bindings.lua().then((runner) => runner.run(chat, units.lua, scope, event, host, 'event'))
+        ? this.bindings.lua().then((runner) => runner.run(chat, units.lua, scope, event, { ...host, model: this.calling(chat, scope, host.model) }, 'event'))
         : this.bindings.tools.run(chat, units.tool, scope, units.event, host, signal);
       const outcome = await until(running, signal);
       this.journal.report(chat, outcome, from);

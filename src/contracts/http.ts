@@ -85,9 +85,10 @@ export type ServerError =
   | 'guest-board-blocked'
   | 'guest-board-closed'
   | 'wrong-login';
-// A provider call the relay forwards as given.
+// A call the relay forwards as given. binary: body is the base64 of the bytes to send, where a text would not hold
+// them (a plugin's upload).
 export const RELAY_METHODS = ['GET', 'POST'] as const;
-export type HttpRequest = { url: string; method: (typeof RELAY_METHODS)[number]; headers: Record<string, string>; body: string | null };
+export type HttpRequest = { url: string; method: (typeof RELAY_METHODS)[number]; headers: Record<string, string>; body: string | null; binary?: true };
 // A keyset page of a list: next is what the following page is asked after, null on the last.
 export type Paged<K extends string, T> = Record<K, T[]> & { next: string | null };
 // The relay's own refusals, answered marked RELAY_HEADER: error (server/relay).

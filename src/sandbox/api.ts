@@ -14,10 +14,10 @@ const outcome = (pending: Buffer, value?: ToolOutcome['value']): ToolOutcome => 
   data: [...pending.data], badges: [...pending.badges].map(([index, text]) => ({ index, text })), lore: [...pending.lore.values()], variables: [...pending.variables],
 });
 // An event about the user's own change must not rewrite the story under them, nor one inside a turn or a showing.
-const STORY_LOCKED = new Set<EventName>(['change', 'branch', 'replying', 'sending', 'requesting', 'showing', 'tool']);
+const STORY_LOCKED = new Set<EventName>(['change', 'branch', 'replying', 'sending', 'requesting', 'calling', 'showing', 'tool']);
 // Nothing a showing answers is saved, so a write there would be lost.
-const QUIET = new Set<EventName>(['showing']);
-const ANSWERS = new Set<EventName>(['replying', 'sending', 'requesting', 'showing', 'input', 'tool']);
+const QUIET = new Set<EventName>(['showing', 'calling']);
+const ANSWERS = new Set<EventName>(['replying', 'sending', 'requesting', 'calling', 'showing', 'input', 'tool']);
 // The name a plugin's code runs under, so a stack names its lines (lineOf), which are the file's.
 export const sourced = (code: string) => `${code}\n//# sourceURL=hazelle-plugin.js`;
 const lineOf = (error: unknown) => {
@@ -138,6 +138,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       lore: (reserve) => call('lore', [reserve ?? null], event),
       lorebook: () => call('chat.lorebook', [], event),
       inlay: (name) => call('chat.inlay', [name], event),
+      asset: (id) => call('chat.asset', [id], event),
       send: async (text) => { await landed(); return call('chat.send', [header.id, text]); },
       rendered: (at) => call('chat.rendered', [header.id, at]),
       editCard: (edit) => call('chat.card.edit', [header.id, edit]),
@@ -228,7 +229,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       const pending = buffer();
       const chat = data.chat && chatOf(data.chat, data.id, pending, STORY_LOCKED.has(data.event), QUIET.has(data.event));
       const args = {
-        reply: [chat, data.reply], replying: [chat, data.text], sending: [chat, data.text], requesting: [chat, data.messages], showing: [chat, data.shown], prompt: [chat, data.turn],
+        reply: [chat, data.reply], replying: [chat, data.text], sending: [chat, data.text], requesting: [chat, data.messages], calling: [chat, data.messages, data.role], showing: [chat, data.shown], prompt: [chat, data.turn],
         change: [chat, data.change], branch: [chat, data.from], menu: [chat, data.item], action: [chat, data.item, data.message], input: [chat, data.item, data.text], tool: [chat, data.name, data.args],
       }[data.event as string] ?? [chat];
       const answer = (value: unknown) => data.event === 'prompt' ? (value as Hazelle.PromptAnswer | undefined) ?? null : ANSWERS.has(data.event) && value !== null ? value as ToolOutcome['value'] : undefined;

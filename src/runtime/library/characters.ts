@@ -93,6 +93,9 @@ export async function setAvatar(store: ObjectStore, files: Files, id: string, by
   return held ? store.update('avatar', held.id, () => saved.data) : store.create('avatar', saved.data, { parent: id });
 }
 
+// A character's own assets as a tool reads them (Hazelle.Card), its backgrounds left out.
+export const cardAssets = (store: ObjectStore, character: string) => store.children('asset', character).filter(({ value }) => !value.use);
+
 // owner: the character or module the files join, each named by its file's name without the extension; use: a
 // character's backgrounds.
 export async function addAssets(store: ObjectStore, files: Files, owner: string, picked: Pick<File, 'name' | 'arrayBuffer'>[], use?: AssetUse): Promise<ApiResult<{ added: number; unsupported: Unsupported }>> {

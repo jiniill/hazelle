@@ -12,6 +12,7 @@ import type { GuestStep } from '../../contracts/admin';
 import type { PulseLabel } from '../../contracts/pulse';
 import { streamOpener } from '../../vault/streams';
 import { discardBody, fetchApi } from '../api';
+import { fromBase64 } from '../../base64';
 import { pause } from '../pause';
 import { CONNECTION_TYPES } from '../../connectors/registry';
 
@@ -74,7 +75,7 @@ export function directTransport(guest: string | null): Transport {
     signal = signal ? AbortSignal.any([signal, closing.signal]) : closing.signal;
     if (signal.aborted) return lost(signal);
     try {
-      const response = await fetch(request.url, { method: request.method, headers: { ...request.headers, ...(type?.browser && type.browser.headers) }, body: request.body, signal, credentials: 'omit' });
+      const response = await fetch(request.url, { method: request.method, headers: { ...request.headers, ...(type?.browser && type.browser.headers) }, body: request.binary && request.body !== null ? fromBase64(request.body) : request.body, signal, credentials: 'omit' });
       if (response.ok && pulse?.kind === 'call' && pulse.role === 'chat' && !closing.signal.aborted) count('replied');
       return response;
     } catch {

@@ -60,12 +60,14 @@ export class ScriptTurns {
   }
 
   // The bot's scripts on the way to a reply (startStages), each saved as it lands. again gathers the turn anew once the
-  // chat has changed under it: answer, once the user's message is saved and no longer sent.
+  // chat has changed under it: answer, once the user's message is saved and no longer sent. running: told each tool's
+  // name as its sending starts.
   async starting(
     chat: string,
     first: TurnContext,
     again: (answer: boolean) => Promise<TurnContext | Blocked | { kind: 'unsent'; failure: ApiFailure } | null>,
     signal: AbortSignal,
+    running: (name: string) => void,
   ): Promise<Started> {
     const scripts = triggersOf(packsOf(this.session.store, first.chat));
     const units = first.said ? this.execution.listening(first.chat, 'sending') : [];
@@ -91,6 +93,7 @@ export class ScriptTurns {
           event: (text) => ({ kind: 'sending', text }),
           scope: (writes) => ({ ...scope, pending: [...(scope.pending ?? []), ...writes] }),
           answer: (answered) => answered as string,
+          turn: { signal, running },
         }),
         changed: regather,
         send: async (text, before) => {
@@ -139,8 +142,9 @@ export class ScriptTurns {
     });
   }
 
-  // editOutput: the bot's Lua, then each tool's replying in pack order, each handing the next the text it left.
-  async ending(chat: string, reply: Written): Promise<Written> {
+  // editOutput: the bot's Lua, then each tool's replying in pack order, each handing the next the text it left. The
+  // reply is not saved until they end, so a page that reloads meanwhile runs them again on the reply it picks up.
+  async ending(chat: string, reply: Written, signal: AbortSignal, running: (name: string) => void): Promise<Written> {
     const stored = this.session.store.get('chat', chat);
     const scripts = stored ? scriptsOf(packsOf(this.session.store, stored.value)) : [];
     const units = stored ? this.execution.listening(stored.value, 'replying') : [];
@@ -163,6 +167,7 @@ export class ScriptTurns {
         event: (text) => ({ kind: 'replying', text }),
         scope: (writes) => ({ ...scope, pending: [...lua, ...writes] }),
         answer: (answered) => answered as string,
+        turn: { signal, running },
       });
       text = tooled.value;
       before = [...before, ...tooled.writes];

@@ -259,11 +259,30 @@ it('refuses undeclared spending and forged event contexts, and isolates module s
     expect(fetch).not.toHaveBeenCalled();
     const frame = transport.frames[0]!;
     frame.emit({ kind: 'call', call: 900, event: 9999, method: 'model', args: ['aux', []] });
-    await vi.waitFor(() => expect(frame.host.sent).toContainEqual(expect.objectContaining({ kind: 'answer', call: 900, ok: false })));
+    await vi.waitFor(() => expect(frame.host.sent).toContainEqual(expect.objectContaining({ kind: 'answer', call: 900, ok: false, value: 'stopped' })));
     const other = await session.store.create('module', { name: 'other', description: '', namespace: null, loreFolders: [], regex: [], triggers: [], toggles: [] });
     if (!other.ok) throw new Error('fixture');
     await setToolData(session, other.data.id, 'secret', 'private');
     expect(await frame.api!.storage.get('secret')).toBeUndefined();
+  } finally { host.close(); }
+}));
+
+it('hands a tool a bot script\'s model call with the model it asks for, takes the list it answers, refuses one that is no message list and saves nothing in it', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  let wrote = '';
+  let bad = false;
+  const transport = inProcessTools((api) => api.on('calling', (chat, messages, role) => {
+    try { chat.data.set('seen', true); } catch (error) { wrote = (error as Error).message; }
+    return bad ? [{ role: 'tool', content: 3 }] as never : [...messages, { role: 'system', content: role }];
+  }));
+  const host = connect(transport.open);
+  try {
+    const context = f.context();
+    const run = () => host.run(f.chat, f.tool(), context.scope, { kind: 'calling', role: 'aux', messages: [{ role: 'user', content: 'sum' }] }, context.host);
+    expect((await run()).value).toEqual([{ role: 'user', content: 'sum' }, { role: 'system', content: 'aux' }]);
+    expect(wrote).toBe('Nothing is saved in this event');
+    bad = true;
+    await expect(run()).rejects.toThrow('Invalid tool outcome');
   } finally { host.close(); }
 }));
 
@@ -301,15 +320,17 @@ it('asks once before a tool reaches the network, sends nothing when refused, and
     expect(new TextDecoder().decode(answer.body)).toBe('{"error":"expired"}');
     expect(answer.headers).toContainEqual(['content-type', 'application/json']);
     expect(answer.headers.map(([name]) => name)).not.toContain(RELAY_HEADER);
+    await chat.fetch(url, { method: 'POST', body: new Uint8Array([0, 255, 137]) });
+    expect(log.at(-1)!.sent).toEqual({ url, method: 'POST', headers: {}, body: 'AP+J', binary: true });
 
     hold = true;
     const abort = new AbortController();
     const held = chat.fetch(url, { signal: abort.signal });
-    await vi.waitFor(() => expect(signals).toHaveLength(2));
+    await vi.waitFor(() => expect(signals).toHaveLength(3));
     abort.abort();
     await expect(held).rejects.toMatchObject({ name: 'AbortError' });
-    await vi.waitFor(() => expect(signals[1]!.aborted).toBe(true));
-    expect(host.hosts().get(f.module)).toEqual(new Map([['api.example.com', 1]]));
+    await vi.waitFor(() => expect(signals[2]!.aborted).toBe(true));
+    expect(host.hosts().get(f.module)).toEqual(new Map([['api.example.com', 2]]));
   } finally { close(); host.close(); }
 }));
 
@@ -919,6 +940,47 @@ it('rewrites the chat\'s character\'s card under the character\'s one answer, th
     expect(await asked).toEqual({ ok: true });
     expect(session.store.get('character', character)!.value).toMatchObject({ cardWrites: true, card: { description: 'A captain', greetings: ['Ahoy.', 'Hi again.'] } });
     await expect(chat.editCard({ description: 3 } as never)).rejects.toThrow('Invalid tool call');
+  } finally { close(); host.close(); }
+}));
+
+it('reads the card\'s later greetings, scripts that are on and own assets, and adds lore and the tool\'s saved assets to the character', () => withTools(async (session, connect) => {
+  const f = await fixture(session, undefined, 'Hello.');
+  const character = session.store.get('chat', f.chat)!.value.character!;
+  const wave = { name: 'wave', find: '~', replace: '!', stage: 'display', flags: null } as const;
+  await session.store.update('character', character, (current) => ({ ...current, card: { ...current.card, nickname: 'Mi', greetings: ['Hello.', 'Hi again.'], regex: [{ id: 'r1', ...wave }, { id: 'r2', ...wave, name: 'off', off: true }] } }));
+  const smile = new Uint8Array([137, 80, 78, 71, 1]);
+  const held = await session.files.save([smile, new Uint8Array([137, 80, 78, 71, 2])]);
+  if (!held.ok) throw new Error(held.error);
+  await session.store.create('asset', { name: 'smile', type: 'image/png', size: 5, file: held.data[0]! }, { parent: character });
+  await session.store.create('asset', { name: 'wall', type: 'image/png', size: 5, file: held.data[1]!, use: 'background' }, { parent: character });
+  const written = { keys: ['k'], secondaryKeys: ['x'], enabled: true, constant: false, selective: true, useRegex: false, caseSensitive: false, insertionOrder: 7, priority: null, position: null, folder: null };
+  for (const [name, content] of [['', 'one'], ['', 'two'], ['Keep', 'three']] as const) await session.store.create('lore', { ...written, name, content }, { parent: character });
+  const transport = inProcessTools(() => {});
+  const host = connect(transport.open);
+  const close = host.page(f.module, page(f.chat));
+  try {
+    await vi.waitFor(() => expect(transport.frames[0]?.api).not.toBeNull());
+    const api = transport.frames[0]!.api!;
+    const chat = api.page!.chat!;
+    const card = (await chat.card())!;
+    expect(card).toMatchObject({ nickname: 'Mi', greeting: 'Hello.', alternates: ['Hi again.'], scripts: [wave], assets: [{ name: 'smile', type: 'image/png', saved: null }] });
+    expect(await chat.asset(card.assets[0]!.id)).toEqual({ type: 'image/png', bytes: smile });
+    expect(await chat.asset('none')).toBeNull();
+    const saved = await api.assets.save(Uint8Array.from(atob(PICTURE), (char) => char.charCodeAt(0)));
+    const entry = { name: 'Data', keys: [], text: '{"version":1}', always: false, on: true };
+    const asked = chat.editCard({ lore: [entry], assets: [{ name: 'made.png', saved }] });
+    await vi.waitFor(() => expect(session.scriptInteractions.snapshot().questions).toHaveLength(1));
+    session.scriptInteractions.answer(session.scriptInteractions.snapshot().questions[0]!.id, 'yes');
+    expect(await asked).toEqual({ ok: true });
+    expect(await chat.editCard({ lore: [{ ...entry, text: '{"version":2}' }, { name: 'Keep', keys: ['k2'], text: 'new', always: true, on: true }], assets: [{ name: 'made.png', saved }] })).toEqual({ ok: true });
+    const lore = session.store.children('lore', character).map(({ value }) => value);
+    expect(lore.map(({ name, content }) => [name, content]).sort()).toEqual([['', 'one'], ['', 'two'], ['Data', '{"version":2}'], ['Keep', 'new']]);
+    expect(lore.find(({ name }) => name === 'Keep')).toEqual({ ...written, name: 'Keep', keys: ['k2'], content: 'new', constant: true });
+    expect((await chat.card())!.assets).toEqual([expect.objectContaining({ name: 'smile', saved: null }), { id: expect.any(String) as string, name: 'made.png', type: 'image/png', saved }]);
+    expect((await chat.lorebook()).find(({ name }) => name === 'Data')).toEqual({ ...entry, text: '{"version":2}', owner: { kind: 'character', id: character } });
+    await expect(chat.editCard({ lore: [{ ...entry, name: '' }] })).rejects.toThrow('More than one lore entry is named ');
+    await expect(chat.editCard({ lore: [entry, entry] })).rejects.toThrow('More than one lore entry is named Data');
+    await expect(chat.editCard({ assets: [{ name: 'x', saved: 'none' }] })).rejects.toThrow('This tool saved no asset named none');
   } finally { close(); host.close(); }
 }));
 

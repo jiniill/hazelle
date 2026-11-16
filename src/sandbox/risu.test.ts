@@ -16,6 +16,7 @@ function fakeApi({ open = true } = {}) {
   const cut: number[] = [];
   const data = new Map<string, Hazelle.Json>();
   const said: string[] = [];
+  const tones: string[] = [];
   const lore: Omit<Hazelle.LoreEntry, 'owner'>[] = [];
   const variables: [string, string][] = [];
   const held = new Map([['door', 'shut']]);
@@ -25,7 +26,9 @@ function fakeApi({ open = true } = {}) {
     { index: 1, id: 'm1', version: 'v1', role: 'char', text: 'hi there', raw: '<b>hi there</b>', time: 2, translation: { text: '반가워', sent: false } },
   ];
   const card: Hazelle.Card = {
-    id: 'character-1', name: 'Mira', description: 'A sailor', personality: 'calm', scenario: 'harbor', greeting: null, creatorNotes: '', tags: ['sea'],
+    id: 'character-1', name: 'Mira', nickname: 'Mi', description: 'A sailor', personality: 'calm', scenario: 'harbor', greeting: null, alternates: ['Ahoy again.'], creatorNotes: '', tags: ['sea'],
+    scripts: [{ name: 'wave', find: '~', replace: '🌊', stage: 'display', flags: null }],
+    assets: [{ id: 'asset-1', name: 'smile', type: 'image/webp', saved: null }, { id: 'asset-2', name: 'made.png', type: 'image/png', saved: 'b'.repeat(64) }],
   };
   const lorebook: Hazelle.LoreEntry[] = [
     { name: 'Port', keys: ['port', 'dock'], text: 'The port.', always: false, on: true, owner: { kind: 'character', id: 'character-1' } },
@@ -48,7 +51,7 @@ function fakeApi({ open = true } = {}) {
     data: { get: async (key: string) => data.get(key), set: (key: string, value: Hazelle.Json) => { data.set(key, value); } },
     writeLore: (entry: Omit<Hazelle.LoreEntry, 'owner'>) => { lore.push(entry); },
     variables: { set: (name: string, value: string) => { variables.push([name, value]); }, entries: async () => [...held], delete: (name: string) => { removed.push(name); } },
-    model, send, editCard, say: (text: string) => { said.push(text); },
+    model, send, editCard, say: (text: string, tone = 'normal') => { said.push(text); tones.push(tone); },
     rendered: async (at: Hazelle.At | null) => (at === null ? { html: '<i>welcome</i>', css: '.b { color: red; }', text: 'welcome' } : at.id === 'm1' ? { html: '<b>hi there</b>', css: '.b { color: red; }', text: 'hi there' } : null),
   } as unknown as Hazelle.Chat;
   const api = {
@@ -62,7 +65,7 @@ function fakeApi({ open = true } = {}) {
     frame: { chat: async () => (open ? chat : null), show: vi.fn(), hide: vi.fn(), menu: (items: { id: string; label: string }[]) => { menus.push(items); }, missing: (name: string) => { missing.push(name); } },
   } as unknown as Hazelle.Api;
   const fire = (event: string, ...args: unknown[]) => (handlers.get(event) as (...args: unknown[]) => unknown)(...args);
-  return { api, chat, card, handlers, storage, menus, missing, edits, added, said, lore, variables, held, removed, cut, data, model, send, editCard, settings, fire };
+  return { api, chat, card, handlers, storage, menus, missing, edits, added, said, tones, lore, variables, held, removed, cut, data, model, send, editCard, settings, fire };
 }
 const install = (fake: ReturnType<typeof fakeApi>, scope: Record<string, unknown> = {}) => {
   installRisu(fake.api, scope);
@@ -186,14 +189,64 @@ describe('the Risu adapter', () => {
     const held = await Risuai.getCharacter!() as Record<string, unknown>;
     await Risuai.setCharacter!(held as never);
     expect(fake.editCard).not.toHaveBeenCalled();
-    await Risuai.setCharacter!({ ...held, desc: 'A captain', firstMessage: 'Ahoy', globalLore: [], emotionImages: [] } as never);
+    await Risuai.setCharacter!({ ...held, desc: 'A captain', firstMessage: 'Ahoy', customscript: [], emotionImages: [] } as never);
     expect(fake.editCard).toHaveBeenCalledWith({ description: 'A captain', greeting: 'Ahoy' });
-    expect(fake.missing).toEqual(['setCharacter:globalLore', 'setCharacter:emotionImages']);
+    expect(fake.missing).toEqual(['setCharacter:customscript', 'setCharacter:emotionImages']);
     fake.editCard.mockResolvedValueOnce({ ok: false, reason: 'not-allowed' });
     await expect(Risuai.setChar!({ ...held, name: 'Mia' } as never)).resolves.toBeUndefined();
     fake.editCard.mockResolvedValueOnce({ ok: false, reason: 'failed' });
     await expect(Risuai.setCharacterToIndex!(0 as never, { ...held, tags: ['sea', 'ship'] } as never)).rejects.toThrow("Risu API 'setCharacterToIndex' failed in Hazelle: failed");
     await expect(Risuai.setCharacterToIndex!(1 as never, held as never)).rejects.toThrow('reaches only the open chat\'s character');
+  });
+
+  it('reads the character\'s nickname, later greetings, scripts and assets, and adds to its lorebook and assets what a write adds or changes', async () => {
+    const fake = fakeApi();
+    const asset = vi.fn(async (id: string) => (id === 'asset-1' ? { type: 'image/webp', bytes: new Uint8Array([82, 73]) } : null));
+    Object.assign(fake.chat, { asset });
+    const { Risuai } = install(fake);
+    const saved = `assets/${'b'.repeat(64)}.png`;
+    const held = await Risuai.getCharacter!() as unknown as { globalLore: Record<string, unknown>[]; additionalAssets: string[][] };
+    expect(held).toMatchObject({
+      nickname: 'Mi', alternateGreetings: ['Ahoy again.'], customscript: [{ comment: 'wave', in: '~', out: '🌊', type: 'editdisplay' }],
+      additionalAssets: [['smile', 'assets/asset-1.webp', 'webp'], ['made.png', saved, 'png']],
+    });
+    expect(await Risuai.readImage!('assets/asset-1.webp' as never)).toEqual(new Uint8Array([82, 73]));
+    expect(await Risuai.readImage!('assets/gone.webp' as never)).toBeNull();
+    // Omni Nexus: its data entry by comment, and a saved picture under a name, each read back after.
+    const made = `assets/${'c'.repeat(64)}.png`;
+    await Risuai.setCharacter!({
+      ...held,
+      globalLore: [...held.globalLore, { comment: 'omni.nexus.data.global', key: '', secondkey: '', alwaysActive: false, selective: false, mode: 'normal', insertorder: 0, content: '{"version":1}' }],
+      additionalAssets: [...held.additionalAssets, ['new.webp', made, 'webp']],
+    } as never);
+    expect(fake.editCard).toHaveBeenLastCalledWith({
+      lore: [{ name: 'omni.nexus.data.global', keys: [], text: '{"version":1}', always: false, on: true }],
+      assets: [{ name: 'new.webp', saved: 'c'.repeat(64) }],
+    });
+    expect(fake.missing).toEqual([]);
+    // One left out stays, and a path saveAsset never answered joins nothing: each told to 점검.
+    await Risuai.setCharacter!({ ...held, globalLore: [], additionalAssets: [held.additionalAssets[1], ['web', 'https://example.com/a.png', 'png']] } as never);
+    expect(fake.editCard).toHaveBeenCalledTimes(1);
+    expect(fake.missing).toEqual(['setCharacter:globalLore.remove', 'setCharacter:additionalAssets.remove', 'setCharacter:additionalAssets.path']);
+  });
+
+  it('adds to a character lorebook that repeats names without writing its other entries, keeps keys it did not touch, and refuses a name that names no one entry', async () => {
+    const fake = fakeApi();
+    const owner = { kind: 'character', id: 'character-1' } as const;
+    const entry = { always: false, on: true, owner };
+    Object.assign(fake.chat, { lorebook: async () => [{ ...entry, name: '', keys: ['a'], text: 'one' }, { ...entry, name: '', keys: ['b'], text: 'two' }, { ...entry, name: 'Regex', keys: ['/a,b/', ' padded'], text: 'three' }] });
+    const { Risuai } = install(fake);
+    const held = await Risuai.getCharacter!() as unknown as { globalLore: Record<string, unknown>[] };
+    const write = (globalLore: Record<string, unknown>[]) => Risuai.setCharacter!({ ...held, globalLore } as never);
+    await write([...structuredClone(held.globalLore), { comment: 'data', key: '', content: '{}', alwaysActive: false }]);
+    expect(fake.editCard).toHaveBeenLastCalledWith({ lore: [{ name: 'data', keys: [], text: '{}', always: false, on: true }] });
+    await write(held.globalLore.map((each, at) => (at === 2 ? { ...each, content: 'new' } : each)));
+    expect(fake.editCard).toHaveBeenLastCalledWith({ lore: [{ name: 'Regex', keys: ['/a,b/', ' padded'], text: 'new', always: false, on: true }] });
+    expect(fake.missing).toEqual([]);
+    await write(held.globalLore.map((each, at) => (at === 0 ? { ...each, content: 'other' } : each)));
+    await write([...held.globalLore, { ...held.globalLore[2], content: 'twin' }]);
+    expect(fake.editCard).toHaveBeenCalledTimes(2);
+    expect(fake.missing).toEqual(['setCharacter:globalLore.name']);
   });
 
   it('keeps the database\'s characters without chats, told to 점검 when read, and hands the open chat\'s character that chat alone, which chatPage answers too', async () => {
@@ -300,6 +353,25 @@ describe('the Risu adapter', () => {
     await expect(Risuai.checkCharOrder!()).resolves.toBeUndefined();
   });
 
+  it('fails a name Risu itself lacks in Risu\'s own words, told to 점검', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    await expect(Risuai.saveFile!()).rejects.toThrow(/^API method saveFile not found$/);
+    expect(fake.missing).toEqual(['saveFile']);
+  });
+
+  it('says Risu\'s notices in the chat, an error in its tone, and asks its question with the browser\'s own dialog', async () => {
+    const fake = fakeApi();
+    const asked: string[] = [];
+    const { Risuai } = install(fake, { confirm: (message: string) => { asked.push(message); return true; } });
+    await Risuai.alert!('saved' as never);
+    await Risuai.alertError!('broke' as never);
+    await vi.waitFor(() => expect(fake.said).toEqual(['saved', 'broke']));
+    expect(fake.tones).toEqual(['normal', 'error']);
+    expect(await Risuai.alertConfirm!('delete it?' as never)).toBe(true);
+    expect(asked).toEqual(['delete it?']);
+  });
+
   it('says why a name with nothing in Hazelle fails, and why staticModel does', async () => {
     const { Risuai } = install(fakeApi());
     await expect(Risuai.addTTSPreprocessor!((() => {}) as never)).rejects.toThrow("Risu API 'addTTSPreprocessor' is not available in Hazelle: Hazelle has no text-to-speech");
@@ -347,16 +419,18 @@ describe('the Risu adapter', () => {
   it('saves an asset at Risu\'s path and reads it back with or without the assets/ prefix, refusing other folders', async () => {
     const fake = fakeApi();
     const kept = new Map<string, Uint8Array>();
-    Object.assign(fake.api, { assets: { save: async (bytes: Uint8Array) => { kept.set('abc', bytes); return 'abc'; }, read: async (name: string) => kept.get(name) ?? null } });
+    const abc = 'a'.repeat(64);
+    Object.assign(fake.api, { assets: { save: async (bytes: Uint8Array) => { kept.set(abc, bytes); return abc; }, read: async (name: string) => kept.get(name) ?? null } });
+    Object.assign(fake.chat, { asset: async () => null });
     const { Risuai } = install(fake);
     const bytes = new Uint8Array([137, 80, 78, 71]);
-    expect(await Risuai.saveAsset!(bytes as never)).toBe('assets/abc.png');
-    expect(await Risuai.readImage!('assets/abc.png' as never)).toBe(bytes);
-    expect(await Risuai.readImage!('abc.png' as never)).toBe(bytes);
-    expect(await Risuai.readImage!('assets/other.png' as never)).toBeNull();
-    expect(await Risuai.readImage!('abc' as never)).toBeNull();
-    await expect(Risuai.readImage!('assets/../abc.png' as never)).rejects.toThrow('readImage path');
-    await expect(Risuai.readImage!('..\\abc.png' as never)).rejects.toThrow('readImage path');
+    expect(await Risuai.saveAsset!(bytes as never)).toBe(`assets/${abc}.png`);
+    expect(await Risuai.readImage!(`assets/${abc}.png` as never)).toBe(bytes);
+    expect(await Risuai.readImage!(`${abc}.png` as never)).toBe(bytes);
+    expect(await Risuai.readImage!(`assets/${'d'.repeat(64)}.png` as never)).toBeNull();
+    expect(await Risuai.readImage!(abc as never)).toBeNull();
+    await expect(Risuai.readImage!(`assets/../${abc}.png` as never)).rejects.toThrow('readImage path');
+    await expect(Risuai.readImage!(`..\\${abc}.png` as never)).rejects.toThrow('readImage path');
   });
 
   it('answers the translation cache from the open chat\'s translations, a message sent translated from the user\'s own words', async () => {
@@ -427,6 +501,22 @@ describe('the Risu adapter', () => {
     const request: Hazelle.RequestMessage[] = [{ role: 'system', content: 'rules', cache: true }, { role: 'user', content: 'hello', message: 'm0' }];
     expect(await fake.fire('requesting', fake.chat, request)).toEqual([{ role: 'system', content: 'rules', cache: true }, { role: 'user', content: 'hello!', message: 'm0' }, { role: 'system', content: 'note' }]);
     expect(seen).toEqual([[{ role: 'system', content: 'rules', cachePoint: true }, { role: 'user', content: 'hello!', memo: 'm0' }], 'model']);
+  });
+
+  it('hands beforeRequest a bot script\'s model call too, a call for the 보조 모델 as Risu\'s otherAx and with no process handler', async () => {
+    const fake = fakeApi();
+    const { Risuai } = install(fake);
+    await Risuai.addRisuScriptHandler!('process' as never, ((text: string) => `${text}!`) as never);
+    expect(fake.handlers.has('calling')).toBe(false);
+    const types: string[] = [];
+    // Life: its replacer takes the marker its module's Lua put before an axLLM prompt.
+    await Risuai.addRisuReplacer!('beforeRequest' as never, ((messages: { role: string; content: string }[], type: string) => {
+      types.push(type);
+      return messages.map((message) => ({ ...message, content: message.content.replace('[LP_AX]\n', '') }));
+    }) as never);
+    expect(await fake.fire('calling', fake.chat, [{ role: 'user', content: '[LP_AX]\nsum' }], 'aux')).toEqual([{ role: 'user', content: 'sum' }]);
+    expect(await fake.fire('calling', fake.chat, [{ role: 'user', content: 'sum' }], 'main')).toEqual([{ role: 'user', content: 'sum' }]);
+    expect(types).toEqual(['otherAx', 'model']);
   });
 
   it('fails a beforeRequest answer Hazelle cannot send and tells a field it cannot carry', async () => {
@@ -515,9 +605,25 @@ describe('the Risu adapter', () => {
     expect([picture.ok, picture.headers.get('content-type'), [...new Uint8Array(await picture.arrayBuffer())]]).toEqual([true, 'image/png', [137, 80]]);
     expect((await nativeFetch('https://api.example.com/empty')).status).toBe(204);
     await expect(nativeFetch('https://10.0.0.1/')).rejects.toThrow(new TypeError('Failed to fetch: refused (not-public)'));
-    await expect(nativeFetch('https://api.example.com/', { method: 'PUT', body: 'x' })).rejects.toThrow(TypeError);
-    await expect(nativeFetch('https://api.example.com/', { method: 'POST', body: new Uint8Array([1]) })).rejects.toThrow(TypeError);
+    await expect(nativeFetch('https://api.example.com/', { method: 'PUT', body: 'x' })).rejects.toThrow(new TypeError('Failed to fetch: Hazelle sends GET and POST only, not PUT'));
+    await expect(nativeFetch('https://api.example.com/', { method: 'GET', body: 'x' })).rejects.toThrow(TypeError);
     expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it('sends a nativeFetch body that is no text as the bytes fetch would send, under the type it would name', async () => {
+    const fake = fakeApi();
+    const fetch = vi.fn<Hazelle.Chat['fetch']>(async () => ({ ok: true, status: 200, headers: [], body: new ArrayBuffer(0) }));
+    Object.assign(fake.chat, { fetch });
+    const { Risuai } = install(fake);
+    const nativeFetch = Risuai.nativeFetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
+    await nativeFetch('https://api.example.com/item', { method: 'post', body: new Uint8Array([1, 2, 3]) });
+    expect(fetch).toHaveBeenLastCalledWith('https://api.example.com/item', { method: 'POST', headers: {}, body: new Uint8Array([1, 2, 3]) });
+    const form = new FormData();
+    form.append('image', new Blob([new Uint8Array([9])], { type: 'image/png' }), 'a.png');
+    await nativeFetch('https://api.example.com/upload', { method: 'POST', headers: { Authorization: 'Bearer k' }, body: form });
+    const [, sent] = fetch.mock.lastCall!;
+    expect(sent!.headers).toMatchObject({ authorization: 'Bearer k', 'content-type': expect.stringMatching(/^multipart\/form-data; boundary=/) as string });
+    expect(new TextDecoder().decode(sent!.body as Uint8Array)).toContain('filename="a.png"');
   });
 });
 

@@ -254,9 +254,6 @@ export function cardSource(card: Card, assets: Json[], extensions: Json, lowLeve
   };
 }
 
-const EXTENSIONS: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/avif': 'avif', 'video/mp4': 'mp4', 'video/webm': 'webm' };
-export const extensionOf = (type: string) => EXTENSIONS[type] ?? 'png';
-
 export type ConvertedModule = Omit<ImportedModule, 'assets' | 'unsupported'> & { assets: string[] };
 
 // A Risu module as RisuModule holds it (src/ts/process/modules.ts), without its pictures. Its lowLevelAccess is not

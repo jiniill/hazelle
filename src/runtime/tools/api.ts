@@ -1,12 +1,13 @@
 import type { HttpRequest } from '../../contracts/http';
+import { toBase64 } from '../../base64';
 import { isRecord } from '../../record';
-import { RELAY_HEADER } from '../../contracts/http';
+import { RELAY_HEADER, RELAY_METHODS } from '../../contracts/http';
 import { Runaway } from '../../engine/cbs/evaluate';
 import { SIGNATURE } from '../../engine/assets';
-import { DEFAULT_ORDER } from '../../engine/import/convert';
 import { fieldValue, TOOL_ACTION_CHARS, TOOL_ACTIONS } from '../../engine/import/tool';
 import { UNSET, type ToolEvent, type ModelMessage, type Question } from '../../engine/script-api';
 import { defaultVariables, type ChatScope } from '../../engine/render';
+import type { Pack } from '../../engine/import/types';
 import { unsetValue } from '../../engine/cbs/tags';
 import { live } from '../../model/library';
 import { accountSettings } from '../account-settings';
@@ -21,6 +22,8 @@ import type { RanAway } from '../../engine/pipeline';
 import { changedTail } from '../evaluation/history-delta';
 import { attachIllustration } from '../tasks/illustrate';
 import type { ScriptOutcome } from '../scripts/lua/event';
+import { cardAssets } from '../library/characters';
+import { toolLore } from '../library/lore';
 import { chatPersona } from '../library/personas';
 import { noOutcome, ToolStopped } from '../scripts/binding';
 import type { ScriptPages } from '../scripts/pages';
@@ -29,10 +32,10 @@ import type { Session } from '../session';
 import type { MenuItem, ToolHosts } from './facade';
 import { isFrameTool, type Context, type Entry, type EntryTrial, type Frame } from './frame-state';
 import { decodeState, encodeState } from './state';
-import { readToolAsset, saveToolAsset, setToolSettings, toolChatData, toolChatKeys, toolKeys, ToolStorage } from './store';
+import { readToolAsset, saveToolAsset, setToolSettings, toolAssetId, toolChatData, toolChatKeys, toolKeys, ToolStorage } from './store';
 
 // The sandbox refuses story changes in these too (sandbox/api.ts); a page that posts its own outcome is not trusted to.
-const STORY_LOCKED = new Set<ToolEvent['kind']>(['change', 'branch', 'replying', 'sending', 'requesting', 'showing']);
+const STORY_LOCKED = new Set<ToolEvent['kind']>(['change', 'branch', 'replying', 'sending', 'requesting', 'calling', 'showing']);
 const isMenu = (value: unknown): value is MenuItem[] => Array.isArray(value) && value.every((item) => isRecord(item) && typeof item.id === 'string' && typeof item.label === 'string');
 
 function isJson(value: unknown): value is Json {
@@ -59,11 +62,15 @@ function isQuestion(value: unknown): value is Question {
 function isModelMessages(value: unknown): value is ModelMessage[] {
   return Array.isArray(value) && value.every((message) => isRecord(message) && (message.role === 'system' || message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string');
 }
-// The relay's envelope, less the URL: GET or POST, text headers, and a text body only with POST.
-function isRequest(value: unknown): value is Omit<HttpRequest, 'url'> {
-  return isRecord(value) && (value.method === 'GET' || value.method === 'POST') && isRecord(value.headers) && Object.values(value.headers).every((each) => typeof each === 'string')
-    && (value.body === null || (value.method === 'POST' && typeof value.body === 'string'));
+// A tool's fetch as the sandbox sends it: one of the relay's methods, text headers, and a body of text or bytes, never
+// with GET.
+type Asked = Pick<HttpRequest, 'method' | 'headers'> & { body: string | Uint8Array | null };
+function isRequest(value: unknown): value is Asked {
+  return isRecord(value) && RELAY_METHODS.some((method) => method === value.method) && isRecord(value.headers) && Object.values(value.headers).every((each) => typeof each === 'string')
+    && (value.body === null || (value.method !== 'GET' && (typeof value.body === 'string' || value.body instanceof Uint8Array)));
 }
+// The relay's envelope of it, bytes as base64.
+const relayed = (url: string, { method, headers, body }: Asked): HttpRequest => (body instanceof Uint8Array ? { url, method, headers, body: toBase64(body), binary: true } : { url, method, headers, body });
 // A name that reads as unset is not held, as a tool's own state is not (decodeState).
 const held = (variables: [string, string][]) => new Map(variables.filter(([, value]) => value !== UNSET));
 const isPairs = (value: unknown) => Array.isArray(value) && value.every((pair) => Array.isArray(pair) && pair.length === 2 && typeof pair[0] === 'string' && (pair[1] === undefined || isJson(pair[1])));
@@ -74,8 +81,13 @@ function isAnswer(value: unknown): value is Hazelle.PromptAnswer | undefined {
   return value.memory === undefined || (isRecord(value.memory) && typeof value.memory.text === 'string' && (value.memory.through === null || typeof value.memory.through === 'string'));
 }
 const CARD_TEXTS = new Set(['name', 'description', 'personality', 'scenario', 'creatorNotes', 'greeting']);
+const isLore = (entry: unknown): entry is ToolOutcome['lore'][number] => isRecord(entry) && typeof entry.name === 'string' && Array.isArray(entry.keys) && entry.keys.every((key) => typeof key === 'string')
+  && typeof entry.text === 'string' && typeof entry.always === 'boolean' && typeof entry.on === 'boolean';
 const isCardEdit = (value: unknown): value is Hazelle.CardEdit => isRecord(value) && Object.entries(value).every(([key, field]) =>
-  CARD_TEXTS.has(key) ? typeof field === 'string' : key === 'tags' && Array.isArray(field) && field.every((tag) => typeof tag === 'string'));
+  CARD_TEXTS.has(key) ? typeof field === 'string'
+    : key === 'tags' ? Array.isArray(field) && field.every((tag) => typeof tag === 'string')
+    : key === 'lore' ? Array.isArray(field) && field.every(isLore)
+    : key === 'assets' && Array.isArray(field) && field.every((asset) => isRecord(asset) && typeof asset.name === 'string' && typeof asset.saved === 'string'));
 const isRequestMessages = (value: unknown): value is Hazelle.RequestMessage[] => Array.isArray(value) && value.every((message) => isModelMessages([message])
   && (message.message === undefined || typeof message.message === 'string') && (message.cache === undefined || message.cache === true));
 const answers = (event: ToolEvent['kind'] | undefined, value: unknown) => {
@@ -84,6 +96,7 @@ const answers = (event: ToolEvent['kind'] | undefined, value: unknown) => {
     case 'prompt': return isAnswer(value);
     case 'replying': case 'sending': case 'input': case 'tool': return typeof value === 'string';
     case 'requesting': return isRequestMessages(value);
+    case 'calling': return isModelMessages(value);
     case 'showing': return Array.isArray(value) && value.every((text) => typeof text === 'string');
     default: return false;
   }
@@ -94,8 +107,7 @@ function isOutcome(value: unknown, event: ToolEvent['kind'] | undefined): value 
     && Array.isArray(value.removed) && value.removed.every((index) => Number.isInteger(index))
     && Array.isArray(value.added) && value.added.every((item) => isRecord(item) && (item.role === 'user' || item.role === 'char') && typeof item.text === 'string')
     && Array.isArray(value.badges) && value.badges.every((badge) => isRecord(badge) && Number.isInteger(badge.index) && (badge.text === null || typeof badge.text === 'string'))
-    && Array.isArray(value.lore) && value.lore.every((entry) => isRecord(entry) && typeof entry.name === 'string' && Array.isArray(entry.keys) && entry.keys.every((key) => typeof key === 'string')
-      && typeof entry.text === 'string' && typeof entry.always === 'boolean' && typeof entry.on === 'boolean')
+    && Array.isArray(value.lore) && value.lore.every(isLore)
     && Array.isArray(value.variables) && value.variables.every((pair) => Array.isArray(pair) && pair.length === 2 && typeof pair[0] === 'string' && !pair[0].startsWith(TOOL_VARIABLES) && (pair[1] === undefined || typeof pair[1] === 'string'));
 }
 // A test run's calls that would write outside its outcome: storage and settings change its own copy, the rest are
@@ -128,15 +140,21 @@ function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unkno
   // Never on to the store-backed calls, which would write.
   throw new Error('Invalid tool call');
 }
-// The fields a tool writes, over a new entry's defaults; upsertChatLore keeps the folder of the one it replaces.
-const chatLore = ({ name, keys, text, always, on }: ToolOutcome['lore'][number]): ScriptOutcome['lore'][number] => ({
-  name, keys, secondaryKeys: [], content: text, enabled: on, constant: always, selective: false, useRegex: false, caseSensitive: false,
-  insertionOrder: DEFAULT_ORDER, priority: null, position: null,
-});
-function cardOf(character: string | null, scope: ChatScope): Hazelle.Card | null {
+const scriptsOf = ({ regex }: Pack): Hazelle.Script[] => regex.flatMap(({ name, find, replace, stage, flags, off }) => off ? [] : [{ name, find, replace, stage, flags }]);
+// saved: a file a module holds is one its tool saved only under the id a save gives that name (toolAssetId); another
+// asset of the module is the user's.
+async function cardOf(store: Session['store'], module: string, character: string | null, scope: ChatScope): Promise<Hazelle.Card | null> {
   const { card } = scope;
   if (!card || character === null) return null;
-  return { id: character, name: card.name, description: card.description, personality: card.personality, scenario: card.scenario, greeting: card.greetings[0] ?? null, creatorNotes: card.creatorNotes, tags: card.tags };
+  const held = store.children('asset', module);
+  const assets = await Promise.all(cardAssets(store, character).map(async ({ id, value }) => {
+    const same = held.find((asset) => asset.value.file.id === value.file.id);
+    return { id, name: value.name, type: value.type, saved: same && same.id === await toolAssetId(module, same.value.name) ? same.value.name : null };
+  }));
+  return {
+    id: character, name: card.name, nickname: card.nickname, description: card.description, personality: card.personality, scenario: card.scenario,
+    greeting: card.greetings[0] ?? null, alternates: card.greetings.slice(1), creatorNotes: card.creatorNotes, tags: card.tags, scripts: scriptsOf(card), assets,
+  };
 }
 // scope.lore holds only the character's, the cast's, the chat's own and the on modules' entries.
 function lorebookOf(chat: string, character: string | null, scope: ChatScope): Hazelle.LoreEntry[] {
@@ -321,7 +339,15 @@ export class ToolApi {
           frame.messages = messages;
           return tail;
         }
-        if (method === 'chat.card') return cardOf(live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
+        if (method === 'chat.card') return cardOf(this.session.store, entry.module, live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
+        if (method === 'chat.asset' && typeof first === 'string') {
+          const character = live(this.session.store.get('chat', context.chat))?.value.character ?? null;
+          const asset = character === null ? undefined : cardAssets(this.session.store, character).find(({ id }) => id === first);
+          if (!asset) return null;
+          const read = await this.session.files.read(asset.value.file, { signal: context.signal });
+          if (!read.ok) throw new Error(read.error);
+          return { type: asset.value.type, bytes: read.data };
+        }
         if (method === 'chat.lorebook') return lorebookOf(context.chat, live(this.session.store.get('chat', context.chat))?.value.character ?? null, context.scope);
         if (method === 'chat.cbs' && typeof first === 'string') return (await this.read(frame, context, (lane) => this.session.store.evaluation.toolText(lane, context.scope, first, context.signal))).read;
         if (method === 'chat.inlay' && typeof first === 'string') {
@@ -338,7 +364,7 @@ export class ToolApi {
           return {
             persona: persona.kind === 'persona' ? persona.persona.id : null,
             limits: limitsOf(store, chat),
-            modules: packsOf(store, chat).flatMap(({ id, pack, module }) => module ? [{ id, name: store.get('module', id)!.value.name, regex: pack.regex.flatMap(({ name, find, replace, stage, flags, off }) => off ? [] : [{ name, find, replace, stage, flags }]) }] : []),
+            modules: packsOf(store, chat).flatMap(({ id, pack, module }) => module ? [{ id, name: store.get('module', id)!.value.name, regex: scriptsOf(pack) }] : []),
           } satisfies Hazelle.Setup;
         }
         if (method === 'chat.greeting') return context.scope.greeting === null ? null : (await this.state(frame, context)).texts[0]!;
@@ -358,7 +384,7 @@ export class ToolApi {
         }
         if (method === 'fetch' && typeof first === 'string' && URL.canParse(first) && isRequest(second)) {
           if (!entry.tool.manifest.uses.includes('network')) return { ok: false, reason: 'not-declared' } satisfies Hazelle.FetchAnswer;
-          return this.fetch(entry, context, { url: first, ...second }, cancel);
+          return this.fetch(entry, context, relayed(first, second), cancel);
         }
         if (method === 'tokens' && typeof first === 'string') return context.host.tokens(first);
         if (method === 'lore' && (first === null || typeof first === 'number' && Number.isFinite(first) && first >= 0)) return context.host.lore(first);
@@ -430,7 +456,7 @@ export class ToolApi {
     // A page's write takes its share of the write rate before it is converted (pageWrite).
     if (context.event && (data.length || badges.length || value.lore.length)) this.storage.take(frame.entry.module);
     const story = context.event && STORY_LOCKED.has(context.event) ? { edits: [], added: [] } : { edits: edits.map((edit) => ({ ...edit, wrote: state!.wrote[edit.index + greeting]! })), removed: value.removed.filter((index) => within({ index })), added: value.added.map((item) => ({ ...item, before: null })) };
-    return { ...noOutcome(), value: value.value, handled: true, writes: [...[...new Map(value.writes)].map(([key, json]): [string, string] => [toolVar(frame.entry.tool.manifest, key), encodeState(json)]), ...written], ...story, lore: value.lore.map(chatLore), tool: { data, badges } };
+    return { ...noOutcome(), value: value.value, handled: true, writes: [...[...new Map(value.writes)].map(([key, json]): [string, string] => [toolVar(frame.entry.tool.manifest, key), encodeState(json)]), ...written], ...story, lore: value.lore.map(toolLore), tool: { data, badges } };
   }
 
   async pageWrite(frame: Frame, value: unknown) {

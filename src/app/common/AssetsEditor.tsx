@@ -2,7 +2,7 @@ import { unsupportedCount } from '../../engine/import/types';
 import { ImageUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { findAsset, isVideo, type AssetUse } from '../../engine/assets';
-import { extensionOf } from '../../engine/import/convert';
+import { extensionOf } from '../../tool-api/risu-assets';
 import type { Stored } from '../../model/kinds';
 import { addAssets, removeAssets, renameAsset, replaceAsset, restoreAssets } from '../../runtime/library/characters';
 import { useAssetUrl, useChildren, useFiles, useStore, useUnfoundAssets } from '../session';

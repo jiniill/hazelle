@@ -21,7 +21,7 @@ import type { DraftTrial } from './drafts';
 import { isFrameTool, ToolFailure, type Entry, type EntryCode, type EntryTrial, type Frame, type TrialWrite } from './frame-state';
 import { toolsOf } from './store';
 
-const EVENTS = new Set<EventName>(['reply', 'replying', 'sending', 'requesting', 'showing', 'prompt', 'change', 'branch', 'menu', 'action', 'input', 'tool', 'settings', 'open', 'message']);
+const EVENTS = new Set<EventName>(['reply', 'replying', 'sending', 'requesting', 'calling', 'showing', 'prompt', 'change', 'branch', 'menu', 'action', 'input', 'tool', 'settings', 'open', 'message']);
 const IDLE_MS = 10 * 60_000;
 const STUCK_MS = 8000;
 const STALLS = 3;
@@ -42,6 +42,7 @@ const eventFields = (event: ToolEvent): Partial<Extract<Down, { kind: 'event' }>
     case 'reply': return { reply: event.reply };
     case 'replying': case 'sending': return { text: event.text };
     case 'requesting': return { messages: event.messages };
+    case 'calling': return { messages: event.messages, role: event.role };
     case 'showing': return { shown: event.shown };
     case 'prompt': return { turn: event.turn };
     case 'change': return { change: event.change };
@@ -54,6 +55,9 @@ const eventFields = (event: ToolEvent): Partial<Extract<Down, { kind: 'event' }>
 };
 
 export type TrialRun = (scope: ChatScope, event: ToolEvent, host: ToolReach) => Promise<{ outcome: ScriptOutcome; writes: TrialWrite[] } | null>;
+
+// What a failed call tells its tool: a stop carries no words of its own.
+const told = (error: unknown) => (error instanceof ToolStopped ? 'stopped' : errorMessage(error));
 
 export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> {
   private readonly entries = new Map<string, Entry>();
@@ -363,7 +367,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
       frame.calls.set(call, cancel);
       void this.api.call(frame, data.method, data.args, data.event, cancel.signal).then(
         (value) => this.send(frame, { kind: 'answer', call, ok: true, value }),
-        (error: unknown) => this.send(frame, { kind: 'answer', call, ok: false, value: errorMessage(error) }),
+        (error: unknown) => this.send(frame, { kind: 'answer', call, ok: false, value: told(error) }),
       ).finally(() => frame.calls.delete(call));
       return;
     }
@@ -377,7 +381,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
         else if (data.kind === 'done' && this.api.chatOf(frame)) {
           void this.api.pageWrite(frame, data.outcome).then(
             () => this.send(frame, { kind: 'answer', call: 0, ok: true, value: null }),
-            (error: unknown) => this.send(frame, { kind: 'answer', call: 0, ok: false, value: errorMessage(error) }),
+            (error: unknown) => this.send(frame, { kind: 'answer', call: 0, ok: false, value: told(error) }),
           );
         }
         return;

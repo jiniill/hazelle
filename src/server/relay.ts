@@ -7,7 +7,7 @@ import type { RelayAllowance } from './limits';
 export type UpstreamInit = {
   method: string;
   headers: Headers;
-  body: string | null;
+  body: string | Uint8Array<ArrayBuffer> | null;
   redirect: 'manual';
   signal: AbortSignal;
 };
@@ -16,7 +16,8 @@ export type UpstreamInit = {
 // that failed on the way.
 export type Upstream = (url: URL, init: UpstreamInit) => Promise<Response>;
 
-type Envelope = Omit<HttpRequest, 'url'> & { url: URL };
+type Envelope = Pick<HttpRequest, 'method' | 'headers'> & { url: URL; body: UpstreamInit['body'] };
+const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 
@@ -156,7 +157,8 @@ function parseEnvelope(value: unknown): Envelope | null {
   if (!Object.values(headers).every((v) => typeof v === 'string')) return null;
   if (body !== null && typeof body !== 'string') return null;
   if (method === 'GET' && body !== null) return null;
-  return { url: new URL(url), method, headers: headers as Record<string, string>, body };
+  if (value.binary !== undefined && (value.binary !== true || body === null || !BASE64.test(body))) return null;
+  return { url: new URL(url), method, headers: headers as Record<string, string>, body: value.binary && body !== null ? new Uint8Array(Buffer.from(body, 'base64')) : body };
 }
 
 function outboundHeaders(input: Record<string, string>): Headers {

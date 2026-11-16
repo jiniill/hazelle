@@ -16,7 +16,7 @@ import { toolLine, usageFacts, usageLine, writtenSoFar } from '../common/receipt
 import { useTokens } from '../common/useTokens';
 import { useFocusReturn } from '../ui';
 import { timeOfDay } from '../common/time';
-import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolWaiting } from '../common/words';
+import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolFinishing, toolWaiting } from '../common/words';
 import type { Reading } from '../../runtime/chat/talk';
 import type { Preparing } from '../../runtime/chat/turn-steps';
 import { useAssetUrl } from '../session';
@@ -254,6 +254,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
       {editing === null && translationMark}
       {editing === null && receipt?.toolsRefused && <Marker reason="tool" label="이 모델은 모델 도구를 지원하지 않아서 도구 없이 응답했어요." />}
       {editing === null && receipt && toolLine(receipt) && <Marker reason="tool" label={toolLine(receipt)!} />}
+      {live && !empty && message.preparing?.step === 'tools' && <Marker reason="tool" label={toolFinishing(message.preparing.running)} />}
       {drawing?.writing && <Marker reason="illustration" label="장면 구성 중" />}
       {polishing && <Marker reason="agent" label={polishingNow(polishing)} />}
       {raw && <Marker reason="agent" label="다듬기 전 응답" action={{ label: '다듬기 전으로 복원', disabled: busy, onClick: () => actions.restoreRaw(message) }} />}

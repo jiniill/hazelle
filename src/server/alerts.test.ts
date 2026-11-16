@@ -8,7 +8,7 @@ const sent: string[] = [];
 let t: Awaited<ReturnType<typeof testApp>>;
 beforeAll(async () => {
   t = await testApp(async (_url, init) => {
-    sent.push((JSON.parse(init.body!) as { text: string }).text);
+    sent.push((JSON.parse(init.body as string) as { text: string }).text);
     return new Response(null, { status: 204 });
   });
 });

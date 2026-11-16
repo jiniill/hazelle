@@ -106,6 +106,14 @@ it('adds the type’s browser headers only on direct calls and leaves unknown ne
   expect(await relayJson({ ...request, url: 'https://custom.example/models' })).toEqual({ ok: false, failure: { kind: 'offline' } });
 });
 
+it('sends a direct call\'s binary body as the bytes its base64 holds', async () => {
+  holdTransport(directTransport(null));
+  const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async () => Response.json({}));
+  vi.stubGlobal('fetch', fetch);
+  await relayRaw({ url: 'https://custom.example/upload', method: 'POST', headers: {}, body: 'AP+J', binary: true });
+  expect(fetch.mock.calls[0]![1].body).toEqual(new Uint8Array([0, 255, 137]));
+});
+
 it('retries a direct stream in-page, counts it once, and aborts the provider without stream-box requests', async () => {
   holdTransport(directTransport(crypto.randomUUID()));
   let signal: AbortSignal | undefined;

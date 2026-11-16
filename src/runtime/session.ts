@@ -190,7 +190,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     log,
     costs,
     tokens,
-    (chat, reply) => scriptTurns.ending(chat, cutStatus(store, chat, reply)),
+    (chat, reply, signal, running) => scriptTurns.ending(chat, cutStatus(store, chat, reply), signal, running),
     // Keep the chat leased past Talk: onOutput can edit the reply, and continuations/translations must read that result.
     (chat, reply) => {
       const lease = store.retainChat(chat);

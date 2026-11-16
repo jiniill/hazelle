@@ -19,9 +19,10 @@ declare namespace Hazelle {
   // model: the embedding model that made the vectors; vectors from another model cannot be compared with them.
   type EmbedAnswer = { ok: true; model: string; vectors: number[][] } | { ok: false; reason: ModelRefusal | 'too-large' };
   // refused: the relay or the app refused the call, code naming why (not-https, not-public, upstream-redirect,
-  // upstream-not-api, relay-host-limit, relay-traffic-limit, …). A body is text; a redirect is not followed.
+  // upstream-not-api, relay-host-limit, relay-traffic-limit, …). A body is text, or bytes sent as they are, with POST
+  // only; a redirect is not followed.
   type FetchRefusal = 'not-allowed' | 'not-declared' | 'flood' | 'refused' | 'offline' | 'stopped';
-  type FetchInit = { method?: 'GET' | 'POST'; headers?: Record<string, string>; body?: string; signal?: AbortSignal };
+  type FetchInit = { method?: 'GET' | 'POST'; headers?: Record<string, string>; body?: string | Uint8Array; signal?: AbortSignal };
   type FetchAnswer = { ok: true; status: number; headers: [string, string][]; body: ArrayBuffer } | { ok: false; reason: FetchRefusal; code?: string };
   // busy: a turn is under way in the chat. closed: the chat is not open on screen. failed: the turn failed, which the
   // screen tells as it tells a typed message's failure.
@@ -33,13 +34,22 @@ declare namespace Hazelle {
   type Question = { kind: 'input'; text: string } | { kind: 'confirm'; text: string } | { kind: 'select'; text?: string; options: string[] };
   type Settings = Record<string, string | number | boolean>;
   // The chat's character card. id: the character's, the same in every chat with it. greeting: the card's first
-  // message, null when it has none.
+  // message, null when it has none; alternates: its greetings after the first, at their places. scripts: its regex
+  // scripts that are on, in its order. assets: the character's own pictures and videos, its backgrounds left out.
   interface Card {
-    readonly id: string; name: string; description: string; personality: string; scenario: string; greeting: string | null;
-    creatorNotes: string; tags: string[];
+    readonly id: string; name: string; nickname: string | null; description: string; personality: string; scenario: string; greeting: string | null;
+    alternates: string[]; creatorNotes: string; tags: string[]; scripts: Script[]; assets: CardAsset[];
   }
-  // The fields of a card a tool rewrites; greeting takes the place of the first. no-character: the chat has none.
-  type CardEdit = Partial<Pick<Card, 'name' | 'description' | 'personality' | 'scenario' | 'creatorNotes' | 'tags'>> & { greeting?: string };
+  // id: what Chat.asset reads it by. saved: the name of the asset this tool saved (Assets) that holds the same file,
+  // null when it saved none such.
+  interface CardAsset { id: string; name: string; type: string; saved: string | null }
+  // What of a card a tool rewrites; greeting takes the place of the first. lore: entries of the character's lorebook,
+  // each written over the one of its name, whose other settings stay, or added when it has none; a name the lorebook
+  // or the edit holds more than once throws. assets: assets this tool saved, joining the character's under a name,
+  // one that already holds that file under it left as it is. Neither takes anything out. no-character: the chat has
+  // none.
+  type CardEdit = Partial<Pick<Card, 'name' | 'description' | 'personality' | 'scenario' | 'creatorNotes' | 'tags'>>
+    & { greeting?: string; lore?: Omit<LoreEntry, 'owner'>[]; assets?: { name: string; saved: string }[] };
   type CardAnswer = { ok: true } | { ok: false; reason: 'not-allowed' | 'no-character' | 'failed' };
   // A lorebook entry as written, before any activation. on: whether it is switched on. owner: whose lorebook holds it,
   // with that one's id: the chat's character, one of its 등장인물, the chat itself, or a module on in it.
@@ -111,6 +121,8 @@ declare namespace Hazelle {
     // A picture the chat holds, by the name a message's raw text gives it in {{inlay::name}}: its MIME type and bytes.
     // null when the chat holds no picture by that name; throws when its file cannot be read.
     inlay(name: string): Promise<{ type: string; bytes: Uint8Array } | null>;
+    // One of the card's assets, by its id, as inlay reads a picture. null when the character has none by that id.
+    asset(id: string): Promise<{ type: string; bytes: Uint8Array } | null>;
     // An entry of the chat's own lorebook, taking the place of every one of its name there, as Lua's
     // upsertLocalLoreBook does; lands with the event's outcome.
     writeLore(entry: Omit<LoreEntry, 'owner'>): void;
@@ -156,16 +168,22 @@ declare namespace Hazelle {
   type Branched = { from: string; messages: Record<string, string>; versions: Record<string, string> };   // old id → new
   interface Events {
     reply(chat: Chat, reply: At): void | Promise<void>;                     // a reply was saved
-    // a reply about to be saved, after the bot's Lua: a text answered is saved instead; 5 s deadline, past which the
-    // reply is saved as it came. The story cannot be changed here.
+    // a reply about to be saved, after the bot's Lua: a text answered is saved instead. No deadline: the turn waits,
+    // naming this tool, and the user may stop the wait, which saves the reply as it came. A page that reloads meanwhile
+    // runs it again on the reply it picks up. The story cannot be changed here.
     replying(chat: Chat, text: string): string | void | Promise<string | void>;
-    // The same after the bot's Lua, with the same deadline, past which it goes on as it came; the story cannot be
-    // changed in them. sending: the user's message about to be saved. requesting: the request about to be sent, which a
-    // list answered replaces. showing: messages about to be shown, a stretch at a time, whose texts answered (one per
-    // message, in order) are shown instead; nothing is saved in it, so its writes throw.
+    // The same after the bot's Lua; the story cannot be changed in them. sending: the user's message about to be saved.
+    // requesting: the request about to be sent, which a list answered replaces. Both wait as replying does, a stop
+    // passing on what came. showing: messages about to be shown, a stretch at a time, whose texts answered (one per
+    // message, in order) are shown instead; 5 s deadline, past which they show as they came; nothing is saved in it, so
+    // its writes throw.
     sending(chat: Chat, text: string): string | void | Promise<string | void>;
     requesting(chat: Chat, messages: RequestMessage[]): RequestMessage[] | void | Promise<RequestMessage[] | void>;
     showing(chat: Chat, shown: Shown[]): string[] | void | Promise<string[] | void>;
+    // A model call the bot's own scripts make in this chat (Lua's LLM and axLLM), about to be sent, which a list
+    // answered replaces; role: the model it asks for. Never a tool's own call (Chat.model). 5 s deadline, past which
+    // it goes as it came, and nothing is saved in it, as in showing.
+    calling(chat: Chat, messages: ModelMessage[], role: 'main' | 'aux'): ModelMessage[] | void | Promise<ModelMessage[] | void>;
     prompt(chat: Chat, turn: Turn): PromptAnswer | Promise<PromptAnswer>;   // this turn's slots; 5 s deadline
     change(chat: Chat, change: Change): void | Promise<void>;               // the user edited, switched, deleted or restored
     branch(chat: Chat, from: Branched): void | Promise<void>;              // chat is the new branch

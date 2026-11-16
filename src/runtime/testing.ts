@@ -63,7 +63,7 @@ const viaStreams: Upstream = async (url, { method, headers, body, signal }) => {
   // The server's own price fetch leaves through the same outbound; runtime tests price nothing.
   if (url.origin === 'https://models.dev') return Response.json({});
   if (!relay) throw new Error('This test gave the relay no answers.');
-  const answer = relay({ url: url.toString(), method: method as HttpRequest['method'], headers: Object.fromEntries(headers), body });
+  const answer = relay({ url: url.toString(), method: method as HttpRequest['method'], headers: Object.fromEntries(headers), body: body as string | null });
   if (!answer) throw new TypeError('Failed to fetch');
   return abortable(answer, signal);
 };

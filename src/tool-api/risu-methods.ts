@@ -2,13 +2,13 @@
 // so unsupported calls remain discoverable.
 export const RISU_NAMES: readonly string[] = [
   'addPluginChannelListener', 'addProvider', 'addRisuChatListener', 'addRisuReplacer', 'addRisuScriptHandler', 'addTTSPostprocessor', 'addTTSPreprocessor',
-  'apiVersion', 'apiVersionCompatibleWith', 'changeColorScheme', 'changeTextTheme', 'checkCharOrder', 'createMutationObserver', 'getArg', 'getArgument',
+  'alert', 'alertConfirm', 'alertError', 'apiVersion', 'apiVersionCompatibleWith', 'changeColorScheme', 'changeTextTheme', 'checkCharOrder', 'createMutationObserver', 'getArg', 'getArgument',
   'getChar', 'getCharacter', 'getCharacterFromIndex', 'getChatFromIndex', 'getColorScheme', 'getCurrentCharacterIndex', 'getCurrentChatIndex',
   'getCurrentLorebookEntries', 'getDatabase', 'getFetchLogs', 'getLocalPluginStorage', 'getRootDocument', 'getRuntimeInfo', 'getTextTheme',
-  'getTranslationCache', 'hideContainer', 'loadPlugins', 'log', 'nativeFetch', 'onUnload', 'parseRisuChat', 'pluginStorage', 'postPluginChannelMessage',
+  'getTranslationCache', 'hideContainer', 'installPlugin', 'loadPlugins', 'log', 'nativeFetch', 'onUnload', 'parseRisuChat', 'pluginStorage', 'postPluginChannelMessage',
   'readImage', 'readInlay', 'registerBodyIntercepter', 'registerButton', 'registerMCP', 'registerSetting', 'removeRisuChatListener', 'removeRisuReplacer',
   'removeRisuScriptHandler', 'requestPluginPermission', 'risuFetch', 'runLLMModel', 'safeLocalStorage', 'saveAsset', 'saveSecretHeader',
-  'searchTranslationCache', 'sendChat', 'setArg', 'setArgument', 'setChar', 'setCharacter', 'setCharacterToIndex', 'setChatToIndex', 'setColorScheme',
+  'searchTranslationCache', 'sendChat', 'setArg', 'setArgument', 'setChar', 'setCharacter', 'setCharacterToIndex', 'setChatPanel', 'setChatToIndex', 'setColorScheme',
   'setCustomTextTheme', 'setDatabase', 'setDatabaseLite', 'showContainer', 'unregisterBodyIntercepter', 'unregisterMCP', 'unregisterUIPart', 'unwarpSafeArray',
 ];
 // Keep adapter mappings (src/sandbox/risu.ts) and import diagnostics in sync through this set only.
@@ -20,7 +20,7 @@ export const RISU_MAPPED: ReadonlySet<string> = new Set([
   'addRisuScriptHandler', 'removeRisuScriptHandler', 'getDatabase', 'getCurrentLorebookEntries', 'getCharacterFromIndex', 'setArgument', 'setArg',
   'unwarpSafeArray', 'nativeFetch', 'risuFetch', 'getRuntimeInfo', 'saveAsset', 'readImage', 'sendChat', 'getRootDocument',
   'apiVersion', 'apiVersionCompatibleWith', 'checkCharOrder', 'setCharacter', 'setChar', 'setCharacterToIndex', 'setDatabase', 'setDatabaseLite',
-  'readInlay', 'parseRisuChat', 'getTranslationCache', 'searchTranslationCache',
+  'readInlay', 'parseRisuChat', 'getTranslationCache', 'searchTranslationCache', 'alert', 'alertConfirm', 'alertError',
 ]);
 // addRisuReplacer kinds the adapter runs; another kind is missing as `addRisuReplacer:<kind>`.
 export const RISU_REPLACERS: ReadonlySet<string> = new Set(['beforeRequest', 'afterRequest']);
@@ -36,7 +36,7 @@ export const RISU_ABSENT: ReadonlyMap<string, string> = new Map(Object.entries({
   'Hazelle registers no tools for the chat model at run time': ['registerMCP', 'unregisterMCP'],
   'Hazelle shows no plugin the app\'s own requests': ['getFetchLogs'],
   'Hazelle has no write-only secret store': ['saveSecretHeader'],
-  'a plugin does not reload plugins in Hazelle': ['loadPlugins'],
+  'a plugin does not install or reload plugins in Hazelle': ['installPlugin', 'loadPlugins'],
   'Hazelle has no live page to watch; getRootDocument reads a copy': ['createMutationObserver'],
   'a plugin is not told the app\'s colors in Hazelle': ['getColorScheme', 'getTextTheme'],
   'the app\'s colors are the user\'s display settings in Hazelle': ['changeColorScheme', 'setColorScheme', 'changeTextTheme', 'setCustomTextTheme'],
