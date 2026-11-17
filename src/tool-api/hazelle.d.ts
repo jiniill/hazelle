@@ -201,6 +201,11 @@ declare namespace Hazelle {
     message(data: Json): void;                                              // from the other side (page <-> background)
   }
   interface Page { readonly chat: Chat | null; readonly theme: 'dark' | 'light'; close(): void }
+  // A box of a frame tool's layer in its own viewport: left, top, right, bottom.
+  type LayerBox = [number, number, number, number];
+  // A pointer on nothing of a layer's own: a touch that landed there (down) and ended (up), a mouse that moved there
+  // (over).
+  type LayerMiss = 'down' | 'up' | 'over';
   // A frame tool's one document, which holds its listeners and its screen together (a RisuAI plugin's, through the
   // adapter). It is shown on the tool's page only while it asks to be; closing the page hides it.
   interface Frame {
@@ -212,6 +217,14 @@ declare namespace Hazelle {
     // past 3 items or a label past 16 characters, as the header's limits.
     actions(items: { id: string; label: string }[]): Promise<void>;
     missing(name: string): void;               // tells 점검 it met a name the API it was written for has and this one lacks
+    // Its layer over the open chat (design §6.10), which the app shows in place of its page while that chat's screen
+    // is up. layer: the layer's boxes, replacing the last: takes are the ones that take pointer input, shows the ones
+    // that are only seen and are pressed through. missed: a pointer is on nothing of its own, so the app takes that
+    // pointer. layered: told when the app shows the layer and in which mode, and again whenever the app has given its
+    // pointer input back.
+    layer(takes: LayerBox[], shows: LayerBox[]): void;
+    missed(what: LayerMiss): void;
+    layered(listener: (on: boolean, theme: 'dark' | 'light') => void): void;
   }
   interface Api {
     // Unreleased until tools are published (design §6.10, phase 3): version 1 changes in place until then.

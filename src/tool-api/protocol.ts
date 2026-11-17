@@ -12,7 +12,7 @@ export type ToolOutcome = {
 };
 export type Method =
   | 'chat.messages' | 'chat.greeting' | 'chat.card' | 'chat.state.get' | 'chat.variables.get' | 'chat.variables.entries' | 'chat.data.get' | 'chat.data.keys' | 'chat.lorebook' | 'chat.inlay' | 'chat.asset' | 'chat.cbs' | 'chat.setup' | 'chat.picture' | 'chat.send' | 'chat.rendered' | 'chat.card.edit' | 'model' | 'embed' | 'fetch' | 'ask' | 'say' | 'tokens' | 'lore'
-  | 'storage.get' | 'storage.set' | 'storage.delete' | 'storage.keys' | 'assets.save' | 'assets.read' | 'settings' | 'settings.set' | 'account' | 'post' | 'page.close' | 'frame.chat' | 'frame.show' | 'frame.hide' | 'frame.menu' | 'frame.actions' | 'frame.missing';
+  | 'storage.get' | 'storage.set' | 'storage.delete' | 'storage.keys' | 'assets.save' | 'assets.read' | 'settings' | 'settings.set' | 'account' | 'post' | 'page.close' | 'frame.chat' | 'frame.show' | 'frame.hide' | 'frame.menu' | 'frame.actions' | 'frame.missing' | 'frame.layer' | 'frame.missed';
 export type Role = 'background' | 'page' | 'frame';
 export type Down =
   | { kind: 'load'; api: 1; role: Role; code: string; manifest: ToolManifest; settings: Settings; chat: ChatHeader | null; theme: 'dark' | 'light' }
@@ -22,6 +22,7 @@ export type Down =
   | { kind: 'message'; data: Json }
   | { kind: 'settings'; values: Settings }
   | { kind: 'open' }
+  | { kind: 'layer'; on: boolean; theme: 'dark' | 'light' }
   | { kind: 'ping' };
 export type Up =
   | { kind: 'loaded'; listens: EventName[] }

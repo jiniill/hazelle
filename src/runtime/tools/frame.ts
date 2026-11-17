@@ -15,6 +15,10 @@ export const toolFrame: OpenFrame = (opening) => {
   const page = opening.role === 'page' ? opening.page : null;
   const role: Role = opening.role;
   const frame = page ? null : document.createElement('iframe');
+  // A frame tool's iframe is born in a holder of its own and never leaves it:
+  // laid as a layer, the holder is the scroller a scroll the frame cannot use passes to (FrameLayer), and an iframe
+  // put anywhere else is loaded again.
+  const holder = opening.role === 'frame' ? document.createElement('div') : null;
   const channel = new MessageChannel();
   let target = page?.window ?? null;
   let connected = false;
@@ -35,7 +39,8 @@ export const toolFrame: OpenFrame = (opening) => {
     frame.setAttribute('sandbox', TOOL_SANDBOX);
     frame.allow = TOOL_ALLOW;
     frame.src = `/sandbox.html?role=${role}${opening.role === 'frame' && opening.network ? '&network=1' : ''}`;
-    document.body.append(frame);
+    holder?.append(frame);
+    document.body.append(holder ?? frame);
     target = frame.contentWindow;
   }
   // A visible frame may already have loaded before React hands over its window.
@@ -49,7 +54,7 @@ export const toolFrame: OpenFrame = (opening) => {
       target?.postMessage({ kind: 'hazelle-stop' }, '*');
       if (!connected) reject(new ToolStopped());
       const end = () => {
-        frame?.remove();
+        (holder ?? frame)?.remove();
         channel.port1.close();
         channel.port2.close();
       };

@@ -192,7 +192,7 @@ export function testServer() {
       stubPage('hidden');
       const { accountId, vaultKey } = await harness.account();
       const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal, undefined, undefined, { tools: typeof tools === 'function' ? tools : tools && (({ store }) => ({
-        ...tools, warm: async () => {}, menus: () => [], menusOf: () => [], draft: () => () => {}, page: () => () => {}, attach: () => () => {}, subscribe: () => () => {}, frames: () => new Map(), hosts: () => new Map(), trial: (_chat, _draft, _signal, use) => use(async () => null),
+        ...tools, warm: async () => {}, menus: () => [], menusOf: () => [], draft: () => () => {}, page: () => () => {}, attach: () => () => {}, layer: () => ({ taken: () => {}, close: () => {} }), subscribe: () => () => {}, frames: () => new Map(), hosts: () => new Map(), trial: (_chat, _draft, _signal, use) => use(async () => null),
         items: (module) => store.get('tool', toolId(module))?.value.manifest.menu ?? [], actions: (module) => store.get('tool', toolId(module))?.value.manifest.actions ?? [], hears: () => true,
       })), lua: async () => {
         const machine = await lua;

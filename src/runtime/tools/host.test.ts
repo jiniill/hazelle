@@ -858,6 +858,42 @@ it('runs a frame tool as one frame: its registered items, a press from the chat,
   } finally { host.close(); }
 }));
 
+it('lays a frame tool\'s layer: its boxes are drawn without telling it, its word of a missed pointer reaches the screen, and it is told when the screen takes it back', () => withTools(async (session, connect) => {
+  await answerable(session);
+  const parsed = source('1', '');
+  const added = await importTool(session.store, session.files, { ...parsed, manifest: { ...parsed.manifest, page: null, menu: [], risu: { verdict: 'all', missing: [], hosts: [] } } });
+  if (!added.ok) throw new Error(added.error);
+  await setModuleAlways(session.store, added.data.id, true);
+  const chat = crypto.randomUUID();
+  await server.hold(session.store, chat);
+  await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+  const module = added.data.id;
+  const transport = inProcessRisu(() => {});
+  const host = connect(transport.open);
+  try {
+    await host.warm(chat);
+    await vi.waitFor(() => expect(host.frames().get(module)).toBeDefined());
+    const frame = transport.frames[0]!.api!.frame!;
+    const told = vi.fn();
+    frame.layered(told);
+    const screen = { chat, theme: 'light' as const, draw: vi.fn(), missed: vi.fn() };
+    const laid = host.layer(module, screen);
+    await vi.waitFor(() => expect(told.mock.calls).toEqual([[true, 'light']]));
+    frame.layer([[1, 2, 3, 4]], [[5, 6, 7, 8]]);
+    await vi.waitFor(() => expect(screen.draw.mock.lastCall?.[1]).toEqual({ takes: [[1, 2, 3, 4]], shows: [[5, 6, 7, 8]] }));
+    frame.missed('down');
+    frame.missed('anywhere' as 'down');
+    frame.missed('over');
+    await vi.waitFor(() => expect(screen.missed.mock.calls).toEqual([['down'], ['over']]));
+    expect(told).toHaveBeenCalledTimes(1);
+    laid.taken();
+    await vi.waitFor(() => expect(told.mock.calls).toEqual([[true, 'light'], [true, 'light']]));
+    laid.close();
+    await vi.waitFor(() => expect(told).toHaveBeenLastCalledWith(false, 'dark'));
+    expect(screen.draw).toHaveBeenLastCalledWith(null, { takes: [], shows: [] });
+  } finally { host.close(); }
+}));
+
 it('writes a tool\'s own settings field and refuses a value the field cannot hold', () => withTools(async (session, connect) => {
   const f = await fixture(session);
   const transport = inProcessTools(() => {});

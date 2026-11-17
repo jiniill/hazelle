@@ -15,7 +15,7 @@ import type { StoreChange } from '../store/object-index';
 import type { ObjectStore } from '../store/store';
 import { Heartbeat } from '../worker';
 import { ToolApi, header, type ToolServices } from './api';
-import type { MenuItem, ToolFrames, ToolMenu, ToolPage, ToolSlot, Tools } from './facade';
+import type { LaidLayer, MenuItem, ToolFrames, ToolMenu, ToolLayer, ToolPage, ToolSlot, Tools } from './facade';
 import { toolFrame, type OpenFrame } from './frame';
 import type { DraftTrial } from './drafts';
 import { isFrameTool, ToolFailure, type Entry, type EntryCode, type EntryTrial, type Frame, type TrialWrite } from './frame-state';
@@ -33,7 +33,7 @@ const storedAt = (store: ObjectStore, kind: 'tooldata' | 'toolfile', id: string)
 };
 const blankEntry = (module: string, tool: Entry['tool'], code: EntryCode, data: Entry['data']): Entry => ({
   ...code, module, tool, settings: JSON.stringify(tool.settings), background: null, pages: new Set(), chats: new Set(), idle: null, data,
-  chat: null, menu: [], actions: [], shown: false, slot: null, leaving: false,
+  chat: null, menu: [], actions: [], shown: false, slot: null, leaving: false, region: { takes: [], shows: [] },
 });
 const toolFailure = (message: unknown, line: unknown) => new ToolFailure(typeof message === 'string' ? message : 'Tool failed', Number.isSafeInteger(line) ? Number(line) : null);
 const framesOf = (entry: Entry) => [...(entry.background ? [entry.background] : []), ...entry.pages];
@@ -78,6 +78,8 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
     this.api = new ToolApi(session, services, {
       allowed: (chat, module) => this.allowed(chat, module),
       publish: () => this.publish(),
+      lay: (entry, tell) => this.lay(entry, tell),
+      missed: (entry, what) => this.layers.get(entry.module)?.missed(what),
       background: (entry) => this.background(entry),
       send: (frame, message) => this.send(frame, message),
       endFrame: (frame, error, closePage) => this.endFrame(frame, error, closePage),
@@ -216,6 +218,39 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
     return () => { this.endFrame(frame, new ToolStopped()); this.idle(frame.entry); };
   }
 
+  // The layer is what the frame shows while its page is not. Held by module: an entry is made anew when its tool
+  // restarts (a consent, an update), and the screen's layer outlives it.
+  private readonly layers = new Map<string, ToolLayer>();
+  // tell: the frame is told too, which it is not for a change of its own boxes.
+  private lay(entry: Entry, tell = true) {
+    const frame = entry.background;
+    if (!frame?.loaded) return;
+    const layer = this.layers.get(entry.module);
+    // With no screen to lay it on, the frame shows its own page again: its slot may be a page with no chat open.
+    const on = layer !== undefined && !(entry.shown && entry.slot);
+    if (tell) this.send(frame, { kind: 'layer', on, theme: layer?.theme ?? 'dark' });
+    layer?.draw(on ? frame.connection.frame : null, entry.region);
+  }
+
+  layer(module: string, layer: ToolLayer): LaidLayer {
+    this.layers.get(module)?.draw(null, { takes: [], shows: [] });
+    this.layers.set(module, layer);
+    const again = () => {
+      const entry = this.entries.get(module);
+      if (entry) this.lay(entry);
+    };
+    again();
+    return {
+      taken: () => { if (this.layers.get(module) === layer) again(); },
+      close: () => {
+        if (this.layers.get(module) !== layer) return;
+        this.layers.delete(module);
+        layer.draw(null, { takes: [], shows: [] });
+        again();
+      },
+    };
+  }
+
   // The frame is shown over slot while it asks to be; a slot attached while it does not is the user opening its page.
   attach(module: string, slot: ToolSlot): () => void {
     let entry: Entry;
@@ -237,13 +272,14 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
     this.publish();
     void this.background(entry).then((frame) => {
       if (entry.slot !== slot) return;
-      if (entry.shown) slot.place(frame.connection.frame);
+      if (entry.shown) { this.lay(entry); slot.place(frame.connection.frame); }
       else this.send(frame, { kind: 'open' });
     }, (error: unknown) => this.services.journal.report(slot.chat ?? '', error, { kind: 'module', id: module }));
     return () => {
       if (entry.slot !== slot) return;
       entry.slot = null;
       slot.place(null);
+      this.lay(entry);
       // A slot replaced within the same commit is a remount (StrictMode, a resize across layouts), not the user closing
       // it. shown drops now, so no other tool's panel is pushed aside meanwhile, and a remount restores it.
       if (entry.shown) {
@@ -356,6 +392,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
       this.stalls.delete(frame.entry.module);
       frame.resolve();
       this.idle(frame.entry);
+      if (frame.entry.background === frame) this.lay(frame.entry);
       return;
     }
     if (data.kind === 'load-failed' && typeof data.message === 'string') { this.endFrame(frame, toolFailure(data.message, data.line), true); return; }
