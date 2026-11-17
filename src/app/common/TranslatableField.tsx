@@ -63,9 +63,9 @@ export function useFieldTranslation(field: Field) {
 export function TranslatableField(props: ComponentProps<typeof CountedField>) {
   const { running, start, stop } = useFieldTranslation(props);
   const button = running ? (
-    <IconButton icon={Square} size="sm" label={`${props.label} 번역 ${STOP}`} onClick={stop} />
+    <IconButton icon={Square} size="sm" label={`'${props.label}' 번역 ${STOP}`} onClick={stop} />
   ) : (
-    <IconButton icon={FEATURE_ICONS.translate} size="sm" label={`${props.label} ${INTO_WORDS} 번역`} disabled={!props.value.trim()} onClick={start} />
+    <IconButton icon={FEATURE_ICONS.translate} size="sm" label={`'${props.label}' ${INTO_WORDS} 번역`} disabled={!props.value.trim()} onClick={start} />
   );
   return (
     <CountedField

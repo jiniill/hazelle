@@ -35,7 +35,7 @@ export function ChatInspect({ chat, character, tab, call, notes, busy, stuck, pr
   const ready = (view: (sending: Sending) => ReactNode) =>
     busy ? <Empty variant="section">응답이 끝나면 다시 계산해요.</Empty>
     // The chat's verdict refuses the forecast, though a send still runs.
-    : stuck ? <Empty variant="section">{`${REGEX_OFF}. 그동안은 요청을 미리 계산하지 않아요.`}</Empty>
+    : stuck ? <Empty variant="section">{`${REGEX_OFF}. 그동안은 다음에 보낼 내용을 미리 볼 수 없어요.`}</Empty>
     : notes.sending === null ? <Empty variant="section">지금은 요청을 보낼 수 없어서 계산하지 못했어요.</Empty>
     : notes.sending && 'turn' in notes.sending ? view(notes.sending)
     : notes.sending ? <Empty variant="section">{describeTurnFailure(notes.sending)}</Empty>

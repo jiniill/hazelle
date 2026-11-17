@@ -17,7 +17,7 @@ export const LEAVING: Record<GapCause, { words: string; why: string }> = {
   off: { words: '장기 기억 꺼짐', why: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠지는데, 장기 기억이 꺼져 있어요.' },
   'no-slot': { words: '프롬프트에 기억 없음', why: '기록은 있지만 프롬프트에 장기 기억 블록이 없거나 토글로 꺼져 있어서 보내지 않아요.' },
   stale: { words: STALE, why: '원문 메시지가 수정되거나 삭제된 기록은 다시 만들 때까지 보내지 않아요.' },
-  over: { words: '기록 한도 넘음', why: '기록이 이 요청의 한도를 넘어서 오래된 기록부터 빠져요. 컨텍스트 길이가 짧은 모델이면 한도도 줄어요.' },
+  over: { words: '기록 한도 넘음', why: '모델이나 설정의 한도를 넘어서 오래된 기록부터 빠져요.' },
   forgotten: { words: '기록 삭제됨', why: '삭제한 기록의 메시지는 요청에도 기억에도 없어요.' },
   unrecorded: { words: '기록에서 빠짐', why: '이미 정리된 구간 사이에 넣은 메시지는 장기 기억에 들어가지 않아요.' },
   'no-room': { words: '컨텍스트 부족', why: '컨텍스트 한도에 맞추느라 오래된 메시지가 빠지는데, 아직 장기 기억에 없어요.' },
@@ -30,7 +30,7 @@ export const LEAVING: Record<GapCause, { words: string; why: string }> = {
 export function overNote(memory: Memory, view: Pick<MemoryView, 'records' | 'slot' | 'crowded' | 'tokens' | 'setup'>): string | null {
   const count = memory.records.filter(({ id }) => view.records.get(id) === 'over').length;
   if (!count || !view.slot || view.crowded) return null;
-  const raise = view.tokens.budget < view.setup.budget ? '' : ` 아래 설정의 ${MEMORY_BUDGET}에서 한도를 늘릴 수 있어요.`;
+  const raise = view.tokens.budget < view.setup.budget ? '' : ` 아래 '${MEMORY_BUDGET}' 설정에서 한도를 늘릴 수 있어요.`;
   return `기록 ${count}개를 보내지 않아요. ${LEAVING.over.why}${raise}`;
 }
 

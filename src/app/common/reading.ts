@@ -18,7 +18,7 @@ export const SPACING: Record<Reading['leading'], string> = { narrow: '좁게', n
 export const WIDTH: Record<Reading['width'], string> = { ...SPACING, full: '가득' };
 export const REPLY: Record<Reading['reply'], string> = { follow: '자동 스크롤', stay: '스크롤 고정' };
 // The view going down by itself while it is read. Not REPLY's 자동 스크롤, which follows a reply to its end.
-export const GLIDE = { label: '자동으로 내려가기', pace: '내려가는 속도' };
+export const GLIDE = { label: '자동으로 천천히 내려가기', pace: '내려가는 속도' };
 export type Pace = 'slow' | 'normal' | 'fast' | 'fastest';
 export const PACE: Record<Pace, string> = { slow: '느리게', normal: '보통', fast: '빠르게', fastest: '더 빠르게' };
 export const SIDE: Record<StageSide, string> = { right: '오른쪽', left: '왼쪽' };

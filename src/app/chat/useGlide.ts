@@ -53,7 +53,7 @@ function screenWake() {
   };
 }
 
-// 자동으로 내려가기: the story goes down at speed px a second while there is more below; 0 is off. Its scroll events are
+// 자동으로 천천히 내려가기: the story goes down at speed px a second while there is more below; 0 is off. Its scroll events are
 // the reader reading down to useFollow and ChatFrame, which is what it is.
 export function useGlide(scrollRef: RefObject<HTMLElement | null>, speed: number) {
   useEffect(() => {

@@ -111,7 +111,7 @@ export function ProfileScreen({ stored, back }: { stored: Stored<'profile'>; bac
                 </Button>
               )}
             >
-              <ModelChoices routes={others} describe={({ model }) => `현재: ${profileName(model)}`} onPick={attach} />
+              <ModelChoices routes={others} describe={({ model }) => `'${profileName(model)}' 사용 중`} onPick={attach} />
             </Menu>
           )
         }

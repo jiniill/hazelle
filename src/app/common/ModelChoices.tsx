@@ -3,7 +3,7 @@ import { entryName, entryTerms } from '../../connectors/types';
 import type { Route } from '../../runtime/models/assignment';
 import { Empty, MenuHeading, MenuItem, useMenuClose } from '../ui';
 import { useSearch } from './useSearch';
-import { noStarred, searchOf, STARRED } from './words';
+import { NO_STARRED_MENU, searchOf, STARRED } from './words';
 
 type Props = {
   // Each connection's models together.
@@ -33,7 +33,7 @@ export function ModelChoices({ routes, current, recent = [], describe, onPick }:
     const ref = refTo(route);
     return <MenuItem key={`${ref.connection}/${ref.model}`} label={entryName(route.model)} description={description} checked={current === undefined ? undefined : !!current && sameModelRef(ref, current)} onClick={() => onPick(ref)} />;
   };
-  if (routes.length === 0) return <Empty variant="menu">{noStarred('선택할 수 있어요')}</Empty>;
+  if (routes.length === 0) return <Empty variant="menu">{NO_STARRED_MENU}</Empty>;
   const first = search.words ? [] : recent;
   const grouped = search.found.filter((route) => !first.includes(route));
   return (

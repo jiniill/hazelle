@@ -48,7 +48,7 @@ export function GlideRows() {
     <>
       <SettingRow
         label={GLIDE.label}
-        help={{ text: '손을 대지 않아도 화면이 천천히 내려가요. 화면을 누르고 있으면 멈추고, 직접 스크롤하면 잠시 뒤에 다시 내려가요.' }}
+        help={{ text: '화면이 천천히 내려가고, 누르고 있거나 스크롤하면 잠시 멈춰요.' }}
         control={<Switch label={GLIDE.label} checked={display.glide} onChange={(glide) => changeDisplay({ glide })} />}
       />
       {display.glide && (

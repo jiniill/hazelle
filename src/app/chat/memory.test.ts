@@ -39,7 +39,7 @@ describe('the memory panel over the budget and after a failure', () => {
     const memory = { records: ['r1', 'r2', 'r3'].map((id) => ({ id }) as MemoryRecord), chapters: [], state: [], threads: [] } as Memory;
     const records = new Map([['r1', 'over'], ['r2', 'over'], ['r3', 'sent'], ['c1', 'over']] as const);
     const view = { records, slot: true, crowded: false, tokens: { budget: 25_000 }, setup: { budget: 25_000 } } as unknown as Parameters<typeof overNote>[1];
-    expect(overNote(memory, view)).toMatch(/^기록 2개를 보내지 않아요\. .* 아래 설정의 기록에서 한도를 늘릴 수 있어요\.$/);
+    expect(overNote(memory, view)).toMatch(/^기록 2개를 보내지 않아요\. .* 아래 '기록' 설정에서 한도를 늘릴 수 있어요\.$/);
     expect(overNote(memory, { ...view, tokens: { ...view.tokens, budget: 16_000 } })).not.toContain('한도를 늘릴');
     expect(overNote(memory, { ...view, slot: false })).toBeNull();
     expect(overNote(memory, { ...view, crowded: true })).toBeNull();
