@@ -8,7 +8,7 @@ import type { Stored } from '../../model/kinds';
 import { runs } from '../../runtime/tasks/illustrate';
 import { ACTS, newOf } from '../common/acts';
 import { MASCOT_PICTURES } from '../common/mascots';
-import { BOOKMARK, TURN_FAILED, REPLY_INFO, RETRANSLATE } from '../common/words';
+import { BOOKMARK, TURN_FAILED, REPLY_INFO, RETRANSLATE, TRANSLATE_FAILED } from '../common/words';
 import { describeFailedReply, describeTranslateFailure } from '../common/failure';
 import { languageLabel } from '../common/languages';
 import { withParticle } from '../common/particles';
@@ -217,7 +217,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
     pending ? (
       <Marker reason="translation" label="번역 기다리는 중" />
     ) : untranslated ? (
-      <Marker reason="translation" label={`번역하지 못했어요. ${describeTranslateFailure(untranslated)}`} action={canTranslate ? again : undefined} />
+      <Marker reason="translation" label={`${TRANSLATE_FAILED} ${describeTranslateFailure(untranslated)}`} action={canTranslate ? again : undefined} />
     ) : translatingText === null && !flipped && translation?.receipt?.state === 'cut' ? (
       <Marker reason="translation" label="번역 잘림" action={canTranslate ? again : undefined} />
     ) : translatingText === null && !sentTranslated && translationOutdated(version) ? (

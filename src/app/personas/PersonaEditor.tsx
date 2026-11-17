@@ -7,7 +7,7 @@ import { thumbnail } from '../../runtime/files/picture';
 import { useChats, useLibrary, useSettings, useStore } from '../session';
 import { ACTS } from '../common/acts';
 import { aliased } from '../common/alias';
-import { CountedField } from '../common/CountedFields';
+import { TranslatableField } from '../common/TranslatableField';
 import { FaceChange } from '../common/FaceChange';
 import { framePage } from '../common/frame';
 import { ModuleSwitches } from '../common/ModuleSwitches';
@@ -79,7 +79,7 @@ export function PersonaEditor({ stored, back }: { stored: Stored<'persona'>; bac
       <FaceChange face={<Avatar face={persona.name} image={persona.picture} size="lg" tone="you" />} apply={picture} />
       {facts.length > 0 && <Facts items={facts} />}
       {identity.fields}
-      <CountedField label="설명" lines={8} value={persona.description} onChange={(description) => autosave.change({ description })} />
+      <TranslatableField label="설명" lines={8} value={persona.description} onChange={(description) => autosave.change({ description })} />
       <ModuleSwitches owner={{ kind: 'persona', id }} own={stored.value.modules ?? []} />
       <PortraitsEditor owner={id} />
     </>

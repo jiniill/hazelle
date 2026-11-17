@@ -47,6 +47,7 @@ export const SLOT = {
   agentMemory: { name: '에이전트 기억', hint: '이 에이전트가 채팅마다 이어 적는 기억', line: '이 에이전트의 이전 기억과 기억을 갱신하는 형식이 여기에 들어가요.', kind: 'note', icon: Brain },
 } satisfies Record<SlotKind, { name: string; hint: string; line: string; kind: OutlineKind; icon: LucideIcon }>;
 
+export const bareSlot = (block: string) => `'${block}' 블록의 {{slot}}은 채워지지 않고 그대로 보내져요. 번역할 언어는 {{language}}로 써 주세요.`;
 export const NO_PERSONA_SLOT = `프롬프트에 '${SLOT.persona.name}' 블록이 없어서 페르소나 설명이 대화에 들어가지 않아요.`;
 
 export const MESSAGE_ROLES: Record<Role, string> = { system: '시스템', user: '사용자', assistant: 'AI' };

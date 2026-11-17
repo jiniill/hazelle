@@ -14,7 +14,7 @@ import { withParticle } from '../common/particles';
 import { sizeText } from '../common/size';
 import { useCopyHtml } from '../common/useCopy';
 import { useLoad } from '../common/useLoaded';
-import { ARCA_LOG, CHAT_FILE, EXPORT, RISU_CHAT_FILE, RISU_LOSES, risuLeftOut, STOP, CHAT_LOADING } from '../common/words';
+import { ARCA_LOG, CHAT_FILE, EXPORT, RISU_CHAT_FILE, RISU_LOSES, risuLeftOut, STOP, CHAT_LOADING, TRANSLATE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useFiles, useStore } from '../session';
 import { useToast } from '../toast';
@@ -176,7 +176,7 @@ export function ChatExport({ item, messages, view, placed, pictures, flipped, sh
                 }
               />
             )}
-            {unbatched && <Callout tone="warn">{`번역하지 못했어요. ${describeTranslateFailure(unbatched)}`}</Callout>}
+            {unbatched && <Callout tone="warn">{`${TRANSLATE_FAILED} ${describeTranslateFailure(unbatched)}`}</Callout>}
             <SettingRow label="이미지 포함" control={<Switch label="이미지 포함" checked={choices.pictures} onChange={(pictures) => change({ pictures })} />} />
             <SettingRow label="내 이름 가리기" control={<Switch label="내 이름 가리기" checked={choices.hideMe} onChange={(hideMe) => change({ hideMe })} />} />
             {waiting ? (

@@ -19,7 +19,7 @@ import { retrieval, retrievalRoom } from './retrieval';
 import { COMIC_PAGE, lastScene, numbered, profileNames, seenBy, severalScenes, type Earlier, type Told } from './illustrate';
 import { mascotSheet } from './mascot';
 import type { TranslationRequest } from './translate';
-import { protect, protectRules, type ProtectInvalid } from './protect';
+import { codeSpans, protect, protectRules, type ProtectInvalid } from './protect';
 import { keepsMemory, memorySheet } from './agent';
 import { statusSent } from './status';
 
@@ -528,7 +528,8 @@ function translation({ scope, take, prompt, translations, notes, request, langua
   if ('kind' in rules) return rules;
   const { texts, variables } = renderChat('display', scope, take);
   const before = request.kind === 'message' ? request.index : texts.length;
-  const { masked: source, spans } = protect(request.kind === 'message' ? texts[request.index]! : request.text, rules);
+  // A message is translated as shown, its CBS already run; typed text still holds its code.
+  const { masked: source, spans } = request.kind === 'message' ? protect(texts[request.index]!, rules) : protect(request.text, rules, codeSpans(request.text));
   const history = request.kind === 'message' ? scope.messages.slice(0, request.index + 1) : [...scope.messages, { id: seed, message: seed, seed, role: 'user' as const, text: request.text, time: null }];
   const laid = lay(scope, prompt.blocks, history, variables, seed, remembered(countTokens), language);
   const { parts } = templateOf<'translate'>(prompt.blocks, laid, { description: [], persona: scope.persona, lorebook: laid.lorebook, note: notes, recent: recentOf(scope, texts, before, translations), source });

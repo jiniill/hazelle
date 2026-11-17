@@ -18,6 +18,19 @@ export function parseDecorators(content: string): { decorators: Decorator[]; bod
   return { decorators, body: lines.slice(at).join('\n').trim() };
 }
 
+// The decorator lines as content holds them, for a reader that must leave them as written (engine/protect).
+export function decoratorSpan(content: string): { start: number; end: number } | null {
+  const start = content.length - content.trimStart().length;
+  let at = start;
+  let end = start;
+  for (const line of content.slice(start).split('\n')) {
+    if (!line.startsWith('@@')) break;
+    end = at + line.length;
+    at = end + 1;
+  }
+  return end === start ? null : { start, end };
+}
+
 function read(line: string): DecoratorLine {
   const space = line.indexOf(' ');
   return space === -1 ? { name: line, value: '' } : { name: line.slice(0, space), value: line.slice(space + 1).trim() };

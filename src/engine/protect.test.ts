@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { protect, protectRules, restore } from './protect';
+import { codeSpans, protect, protectRules, restore } from './protect';
 
 describe('protect', () => {
   it('keeps code, comments, styles, scripts and media tags out, and puts them back', () => {
@@ -26,6 +26,16 @@ describe('protect', () => {
     const rules = protectRules(['\\[\\[.*?\\]\\]', '<img']);
     if ('kind' in rules) throw new Error(rules.kind);
     expect(protect('[[a <img src=x>]] then <img src=y>', rules)).toEqual({ masked: '⟦1⟧ then ⟦2⟧', spans: ['[[a <img src=x>]]', '<img src=y>'] });
+  });
+
+  it('keeps the code of text not yet evaluated: its decorator lines and every tag but a bare name', () => {
+    const text = '@@depth 0\n@@@end\n{{char}}는 {{getvar::호감도}}만큼 {{user}}를 좋아한다.\n{{#if {{? {{getvar::호감도}} > 50}}}}다정하다.{{/if}} {{random::웃음::미소}}';
+    const { masked, spans } = protect(text, [], codeSpans(text));
+    expect(masked).toBe('⟦1⟧\n{{char}}는 ⟦2⟧만큼 {{user}}를 좋아한다.\n⟦3⟧다정하다.⟦4⟧ ⟦5⟧');
+    expect(spans).toEqual(['@@depth 0\n@@@end', '{{getvar::호감도}}', '{{#if {{? {{getvar::호감도}} > 50}}}}', '{{/if}}', '{{random::웃음::미소}}']);
+    expect(restore(masked, spans)).toEqual({ text, missing: 0 });
+    // A line of @@ past the first text is the text's own.
+    expect(codeSpans('본문\n@@depth 0')).toEqual([]);
   });
 
   it('counts a token the answer lost, and puts back one it repeats each time', () => {

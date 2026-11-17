@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { holdsPersona } from '../../engine/pipeline';
+import { writesBareSlot } from '../../engine/translate';
 import type { Stored } from '../../model/kinds';
 import { labOn } from '../../model/settings';
 import { isToggle, slotsOf, sortOf, type Block, type ConversationPrompt, type TextBlock, type Toggle, type WrappedSlot } from '../../model/prompt';
@@ -12,12 +13,12 @@ import { ACTS, addOf } from '../common/acts';
 import { DefaultVariables } from '../common/DefaultVariables';
 import { FeatureSwitches } from '../common/FeatureSwitches';
 import { ModuleSwitches } from '../common/ModuleSwitches';
-import { defaultPrompt, NO_PERSONA_SLOT, SLOT } from '../common/prompt-words';
+import { bareSlot, defaultPrompt, NO_PERSONA_SLOT, SLOT } from '../common/prompt-words';
 import type { Frame } from '../common/frame';
 import { useAutosave } from '../common/useAutosave';
 import { byPromptName } from '../common/promptCopies';
 import { useSearch } from '../common/useSearch';
-import { copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, PAGES, promptName, STAGE_NAMES, STATUS, THINGS, SEARCH_RESULTS, searchOf } from '../common/words';
+import { opens, copyOf, DEFAULT_VARIABLES, FEATURES_TITLE, PAGES, promptName, STAGE_NAMES, STATUS, THINGS, SEARCH_RESULTS, searchOf } from '../common/words';
 import { useConnections, useModules, usePrompts, useSettings, useStore } from '../session';
 import type { PromptPane } from '../shell/routes';
 import { typing, useShortcut } from '../shortcuts';
@@ -322,6 +323,7 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
 
   const warning = sort === 'conversation' ? chatWarning(draft.blocks) : null;
   const noPersona = sort === 'conversation' && !holdsPersona(draft.blocks);
+  const unfilled = sort === 'translate' ? draft.blocks.find(writesBareSlot) : undefined;
   const addPersona = () => insert(draft.blocks.findIndex((each) => each.kind === 'slot' && each.slot === 'description') + 1, { slot: 'persona' });
   const outline = (
     <>
@@ -358,6 +360,11 @@ export function PromptEditor({ stored, layout, at: { pane, block: named }, onAt,
         {search.shown(
           <>
             {warning && <Callout tone="warn">{warning}</Callout>}
+            {unfilled && (
+              <Callout tone="warn" action={{ label: opens('블록'), onClick: () => pick(unfilled.id) }}>
+                {bareSlot(blockTitle(unfilled).title)}
+              </Callout>
+            )}
             {noPersona && (
               <Callout tone="warn" action={{ label: addOf(SLOT.persona.name), onClick: addPersona }}>
                 {NO_PERSONA_SLOT}

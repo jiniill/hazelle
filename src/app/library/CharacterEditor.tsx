@@ -18,6 +18,7 @@ import { aliased } from '../common/alias';
 import { cbsLanguage } from '../common/code/cbs';
 import { useTrial } from '../common/code/Trial';
 import { CountedField } from '../common/CountedFields';
+import { TranslatableField } from '../common/TranslatableField';
 import { describeTranslateFailure } from '../common/failure';
 import { describeUnused } from '../common/unused';
 import { AssetsEditor } from '../common/AssetsEditor';
@@ -258,11 +259,11 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
           </>
         ) : (
           <>
-            <CountedField label="설명" lines={20} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.description} onChange={(value) => change({ description: value })} />
-            {legacy.personality && <CountedField label="성격" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.personality} onChange={(value) => change({ personality: value })} />}
-            {legacy.scenario && <CountedField label="상황" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.scenario} onChange={(value) => change({ scenario: value })} />}
-            <CountedField label="예시 대화" lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.exampleDialogue} onChange={(value) => change({ exampleDialogue: value })} />
-            <CountedField
+            <TranslatableField label="설명" lines={20} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.description} onChange={(value) => change({ description: value })} />
+            {legacy.personality && <TranslatableField label="성격" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.personality} onChange={(value) => change({ personality: value })} />}
+            {legacy.scenario && <TranslatableField label="상황" lines={4} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.scenario} onChange={(value) => change({ scenario: value })} />}
+            <TranslatableField label="예시 대화" lines={6} expand={SHORTCUTS.bigEdit.keys} language={cbs} aside={trial.cbs} value={text.exampleDialogue} onChange={(value) => change({ exampleDialogue: value })} />
+            <TranslatableField
               label={ADDITIONAL_TEXT}
               lines={6}
               expand={SHORTCUTS.bigEdit.keys}
@@ -294,7 +295,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
             removed={(index) => `${index + 1}번째 첫인사를 삭제했어요.`}
           >
             {({ value, name, set, remove, move }) => (
-              <CountedField
+              <TranslatableField
                 label={name}
                 lines={6}
                 expand={SHORTCUTS.bigEdit.keys}
@@ -316,7 +317,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
     ),
     instructions: (
       <Section title={PARTS.instructions.label}>
-        <CountedField
+        <TranslatableField
           label={CARD_INSTRUCTIONS.systemPrompt}
           lines={6}
           expand={SHORTCUTS.bigEdit.keys}
@@ -326,7 +327,7 @@ export function CharacterEditor({ shelf, layout, part, onPart, script, onScript,
           onChange={(value) => change({ systemPrompt: value })}
           help={{ text: '비워 두면 기본 지시문을 써요. {{original}}을 넣으면 그 자리에 기본 지시문이 들어가요.', open: { label: opens(inSettings('prompts')), onClick: () => navigate({ kind: 'prompts', place: null, sort: 'conversation' }) } }}
         />
-        <CountedField
+        <TranslatableField
           label={CARD_INSTRUCTIONS.postHistoryInstructions}
           lines={4}
           expand={SHORTCUTS.bigEdit.keys}

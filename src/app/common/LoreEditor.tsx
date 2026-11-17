@@ -16,12 +16,12 @@ import { Button, ChipButton, ChoiceGroup, Empty, FileButton, List, ListItem, Men
 import { ACTS, addOf, newOf } from './acts';
 import { cbsLanguage } from './code/cbs';
 import { useTrial } from './code/Trial';
-import { CountedField } from './CountedFields';
 import type { Defaults } from './code/variables';
 import { DetailFold } from './DetailFold';
 import { download, fileNamed } from './download';
 import { FolderMenu, useNaming, type FolderActions, type Naming } from './folders/FolderParts';
 import { OpenRow, RowFoot, useOpenRows, type OpenRows } from './OpenRows';
+import { TranslatableField } from './TranslatableField';
 import { SLOT } from './prompt-words';
 import { typedText, useTypedNumber } from './typed';
 import { count, readCount, readOptional, reader } from './typedNumber';
@@ -309,7 +309,7 @@ function EntryFields({ shown, folders, language, trial, change }: FieldsProps) {
         {toggle('useRegex', '정규식 사용', '키워드를 /패턴/ 또는 /패턴/플래그 형식의 정규식으로 인식해요.')}
         {toggle('caseSensitive', '대소문자 구분')}
       </SettingGroup>
-      <CountedField label="내용" lines={8} expand={SHORTCUTS.bigEdit.keys} language={language} aside={trial} value={shown.content} onChange={(content) => change({ content })} help="@@로 시작하는 줄은 삽입 방식을 정하는 명령이에요. 예: @@depth 0" />
+      <TranslatableField label="내용" lines={8} expand={SHORTCUTS.bigEdit.keys} language={language} aside={trial} value={shown.content} onChange={(content) => change({ content })} help="@@로 시작하는 줄은 삽입 방식을 정하는 명령이에요. 예: @@depth 0" />
       <SettingGroup label="삽입">
         {toggle('enabled', '켬')}
         {toggle('constant', '항상 삽입', '키워드와 상관없이 항상 넣어요.')}

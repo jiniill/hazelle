@@ -295,6 +295,7 @@ export const copyName = (name: string) => `${name} (사본)`;
 export const copyOf = (name: string) => `'${name}'의 사본`;
 export const SEE_ORIGINAL = '원본 보기';
 export const RETRANSLATE = '다시 번역';
+export const TRANSLATE_FAILED = '번역하지 못했어요.';
 // Making a copy of anything: the busy toast, the failure and the result.
 export const COPY_SAID = { busy: '사본 만드는 중…', failed: '사본을 만들지 못했어요.', made: '사본을 만들었어요.' };
 export const ORIGINAL_GONE = '원본이 삭제됐어요';

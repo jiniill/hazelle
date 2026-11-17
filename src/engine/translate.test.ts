@@ -4,7 +4,7 @@ import { blankCard } from './import/card';
 import type { Card } from './import/types';
 import { assembleTranslation } from './pipeline';
 import type { ChatScope } from './render';
-import { translatorPrompt } from './translate';
+import { translatorPrompt, writesBareSlot } from './translate';
 
 const card: Card = {
   ...blankCard('Luna'),
@@ -68,6 +68,21 @@ describe('the default translation prompt', () => {
     expect(messages[0]!.content).toContain('- Rewrite the source text into English.');
     expect(messages[3]!.content).toContain('[jin]\nIs the LAMP lit?\nIts translation:\n등불 켜졌어?\n\n[Luna]\nThe LAMP is lit, jin.');
     expect(messages.at(-1)).toEqual({ role: 'user', content: '응, {{user}}.' });
+  });
+
+  it('sends typed text with its code kept as tokens, and a displayed message as it is shown', () => {
+    expect(translate({ request: { kind: 'input', text: '{{setvar::기분::좋음}}응, {{user}}.' }, language: 'English' }).messages.at(-1)).toEqual({ role: 'user', content: '⟦1⟧응, {{user}}.' });
+    const shown = { ...scope, messages: [message('a1', 'assistant', 'The lamp is lit. {{nosuchtag::등불}}')] };
+    expect(translate({ scope: shown, request: { kind: 'message', index: 0 }, language: 'Korean' }).spans).toEqual([]);
+  });
+
+  it('sends a bare {{slot}} in a text as written, which the editor warns of, and fills {{language}}', () => {
+    const [text, ...rest] = translatorPrompt().blocks;
+    const pasted = { ...text!, kind: 'text' as const, role: 'system' as const, mark: null, text: "Rewrite it into '{{ Slot }}', that is {{language}}." };
+    const { messages } = translate({ request: { kind: 'input', text: 'Hi' }, language: 'Korean', prompt: { ...translatorPrompt(), blocks: [pasted, ...rest] } });
+    expect(messages[0]!.content).toBe("Rewrite it into '{{ Slot }}', that is Korean.");
+    expect(writesBareSlot(pasted)).toBe(true);
+    expect(translatorPrompt().blocks.some(writesBareSlot)).toBe(false);
   });
 
   it('holds as many earlier messages in 앞 메시지 as its count says', () => {

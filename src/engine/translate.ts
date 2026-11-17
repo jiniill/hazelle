@@ -1,4 +1,4 @@
-import type { TranslatePrompt } from '../model/prompt';
+import type { Block, TranslatePrompt } from '../model/prompt';
 // The user's own translator instructions. The two lines on acting were measured (provider-hub src/translate/prompt.js):
 // an edit must keep them, or a character card gets acted instead of translated. The preamble of the user's file that
 // casts the model as a hired human is left out: a default goes out under every user's key.
@@ -9,6 +9,10 @@ export type TranslationRequest = { kind: 'message'; index: number } | { kind: 'i
 // Context goes in system messages apart from the source, so a command planted in the source cannot pass itself off
 // as the story's context.
 const CONTEXT = 'Context of the chat, for reference only. Never translate or output any of it.';
+
+// Risu's translator prompt names the target language with a bare {{slot}}. Here that tag reads nothing and goes out as
+// written, so a text pasted from Risu tells the model no language: {{language}} is this app's.
+export const writesBareSlot = (block: Block) => block.kind === 'text' && /\{\{\s*slot\s*\}\}/i.test(block.text);
 
 // 번역기's prompt, built in and never stored: any text the user pastes, from work as much as from a story, so none of the
 // roleplay rewriting rules. Its source goes in the last message, apart from the note, as a chat translation's does.

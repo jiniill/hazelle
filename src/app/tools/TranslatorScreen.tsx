@@ -8,7 +8,7 @@ import { LanguageMenu } from '../common/IntoLanguage';
 import { TranslatorNoteField } from '../common/TranslatorNoteField';
 import { count } from '../common/typedNumber';
 import { useCopy } from '../common/useCopy';
-import { inSettings, MODEL_ROLES, noteLines, opens, STOP, TOOL_PAGES, TRANSLATOR_NOTE } from '../common/words';
+import { inSettings, MODEL_ROLES, noteLines, opens, STOP, TOOL_PAGES, TRANSLATE_FAILED, TRANSLATOR_NOTE } from '../common/words';
 import { useConnections, useSession, useSettings } from '../session';
 import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
@@ -148,7 +148,7 @@ export function TranslatorScreen({ back }: { back: Back | null }) {
           text,
           placeholder: running ? '응답 기다리는 중…' : '',
           busy: running,
-          notice: run.kind === 'failed' && <Callout tone="warn">{`번역하지 못했어요. ${describeTranslateFailure(run.failure)}`}</Callout>,
+          notice: run.kind === 'failed' && <Callout tone="warn">{`${TRANSLATE_FAILED} ${describeTranslateFailure(run.failure)}`}</Callout>,
           foot: {
             note: resultNote,
             actions: (
