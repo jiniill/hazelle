@@ -84,7 +84,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
     else actions.openInspect('request');
   });
   const inUse = prompt.kind === 'prompt' ? prompt.prompt.id : null;
-  const inspect = chat.inspect && <ChatInspect chat={chatId} tab={chat.inspect.tab} call={chat.inspect.call} notes={chat.sendNotes} busy={busy} prompt={prompt} character={shelf?.id ?? null} onTab={actions.switchInspectTab} onClose={actions.closeInspect} onEdit={actions.side} />;
+  const inspect = chat.inspect && <ChatInspect chat={chatId} tab={chat.inspect.tab} call={chat.inspect.call} notes={chat.sendNotes} busy={busy} stuck={chat.stuck} prompt={prompt} character={shelf?.id ?? null} onTab={actions.switchInspectTab} onClose={actions.closeInspect} onEdit={actions.side} />;
   const beside = usePanelsBeside();
   const paired = beside && !!panel && !!chat.inspect;
   // Not read past: a message being edited in place, and a story a panel covers.
@@ -114,6 +114,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
               item={chat.item}
               messages={chat.messages}
               busy={busy}
+              stuck={chat.stuck}
               onClose={actions.closePanel}
               onTool={actions.tool}
               onEditPrompt={prompt.kind === 'prompt' ? () => actions.side({ kind: 'prompts', id: prompt.prompt.id, pane: null }) : undefined}

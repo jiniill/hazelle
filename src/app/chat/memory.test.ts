@@ -3,7 +3,7 @@ import type { Receipt } from '../../model/chat';
 import type { Memory, MemoryRecord } from '../../model/memory';
 import type { LogEntry } from '../../runtime/models/request-log';
 import type { MemoryFailure } from '../../runtime/tasks/memory';
-import { answeredCall, factGroups, MessagePositions, overNote, spanOf } from './memory';
+import { answeredCall, factGroups, MessagePositions, overNote, ownFailure, spanOf } from './memory';
 
 const source = (message: string) => ({ message, version: `${message}-v` });
 const messages = ['a', 'b', 'c', 'd'].map((id) => ({ id }));
@@ -54,5 +54,11 @@ describe('the memory panel over the budget and after a failure', () => {
     expect(answeredCall(invalid, [entry(null)])).toBeNull();
     expect(answeredCall(invalid, [])).toBeNull();
     expect(answeredCall({ kind: 'tokenizer' }, [entry('{')])).toBeNull();
+  });
+
+  it("leaves a refusal to the verdict's notice while the verdict stands, and says it as the job's once it is lifted", () => {
+    const refused = { kind: 'unsaved', failure: { ok: false, error: 'bot-stuck' }, refused: true } as MemoryFailure;
+    const silent = { ...refused, refused: false } as MemoryFailure;
+    expect([ownFailure(refused, true), ownFailure(refused, false), ownFailure(silent, true), ownFailure(undefined, true)]).toEqual([undefined, refused, silent, undefined]);
   });
 });

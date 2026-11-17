@@ -2,7 +2,6 @@ import { CircleCheck, Lightbulb, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '../controls/Button';
 import { Icon } from '../foundation/Icon';
-import { Row } from '../layout/Row';
 import styles from './Callout.module.css';
 
 const ICONS = { warn: TriangleAlert, success: CircleCheck, tip: Lightbulb };
@@ -26,15 +25,16 @@ export function Callout({ tone, alert = false, action, children }: Props) {
     </div>
   );
   if (!action) return note;
-  const button = ({ label, onClick }: Act) => (
-    <Button key={label} variant="secondary" size="md" onClick={onClick}>
-      {label}
-    </Button>
-  );
   return (
     <div className={styles.withAction}>
       {note}
-      {'label' in action ? button(action) : <Row kind="actions">{action.map(button)}</Row>}
+      <div className={styles.acts}>
+        {('label' in action ? [action] : action).map(({ label, onClick }) => (
+          <Button key={label} variant="secondary" size="md" onClick={onClick}>
+            {label}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 }

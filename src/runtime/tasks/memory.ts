@@ -297,6 +297,8 @@ export class Rememberer {
   }
 
   retry(chat: string) {
+    // Under the chat's verdict memory work is refused, so 다시 시도 clears it first, as the composer's does.
+    if (this.session.store.projections.verdict(chat)) this.session.store.projections.clear(chat);
     this.unchaptered.delete(chat);
     this.change(chat, { failed: null, chapterFailed: null, indexFailed: null });
     this.start(chat, 'full');

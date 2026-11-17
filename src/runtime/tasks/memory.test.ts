@@ -205,7 +205,7 @@ describe('Rememberer', () => {
       await vi.waitFor(() => expect(chatMemory(session.store, chat).records[0]).toMatchObject({ what: 'jin and Luna meet at the pier.' }));
       expect(log).toHaveLength(1);
     }));
-  it("tells a run the evaluation refused under the chat's verdict from one whose own job went silent, under the same bot-stuck", () =>
+  it("tells a run the evaluation refused under the chat's verdict from one whose own job went silent, under the same bot-stuck, and clears a verdict that stands on 다시 시도, whatever failed", () =>
     server.withSession(async (session) => {
       await answerable(session);
       const chat = crypto.randomUUID();
@@ -217,10 +217,18 @@ describe('Rememberer', () => {
       session.memory.check(chat);
       await vi.waitFor(() => expect(session.memory.snapshot().failed.get(chat)).toEqual({ kind: 'unsaved', failure: { ok: false, error: 'bot-stuck' }, refused: true }));
       expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', refused: true, call: null });
-      session.store.projections.clear(chat);
       const read = vi.spyOn(session.store.evaluation, 'read').mockRejectedValue(new EvaluationStuck('Evaluation worker stuck', true));
       try {
+        expect(session.store.projections.verdict(chat)).not.toBeNull();
         session.memory.retry(chat);
+        expect(session.store.projections.verdict(chat)).toBeNull();
+        await vi.waitFor(() => expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', refused: false, call: null }));
+        const clear = vi.spyOn(session.store.projections, 'clear');
+        session.store.projections.judge(chat);
+        session.memory.retry(chat);
+        expect(session.store.projections.verdict(chat)).toBeNull();
+        session.memory.retry(chat);
+        expect(clear).toHaveBeenCalledTimes(1);
         await vi.waitFor(() => expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', refused: false, call: null }));
       } finally { read.mockRestore(); }
     }));

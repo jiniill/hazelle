@@ -3,14 +3,14 @@ import type { MemorySettings } from '../../model/memory';
 import { DetailFold } from './DetailFold';
 import { typedText } from './typed';
 import { readCount } from './typedNumber';
-import { MODEL_ROLES, FEATURE_NAMES } from './words';
+import { MODEL_ROLES, FEATURE_NAMES, MEMORY_BUDGET } from './words';
 import { Breakdown, NumberInput, SettingGroup, SettingRow, Switch } from '../ui';
 
 type Count = 'budget' | 'window' | 'batch';
 
 // One name per part, for its row in the split and its setting; the settings keep the split's order, oldest first.
 const COUNTS: Record<Count, { label: string; unit: string; help?: string }> = {
-  budget: { label: '기록', unit: '토큰', help: `메시지를 보낼 때마다 최대 이만큼 넣어요. ${MODEL_ROLES.embed}로 찾은 기록은 이 한도와 별개로 최대 1/5까지 더 들어가요.` },
+  budget: { label: MEMORY_BUDGET, unit: '토큰', help: `메시지를 보낼 때마다 최대 이만큼 넣어요. ${MODEL_ROLES.embed}로 찾은 기록은 이 한도와 별개로 최대 1/5까지 더 들어가요.` },
   batch: { label: '정리 대기 중인 대화', unit: '토큰', help: '오래된 대화가 이만큼 쌓이면 기록으로 정리해요.' },
   window: { label: '원문으로 보낼 최근 대화', unit: '토큰' },
 };

@@ -10,7 +10,7 @@ import { describeTurnFailure } from '../common/failure';
 import { withParticle } from '../common/particles';
 import { ACTS } from '../common/acts';
 import { count } from '../common/typedNumber';
-import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES, PICK_MODEL, MESSAGE_FIELD } from '../common/words';
+import { ANSWER, NO_PICTURES, UNKNOWN_PICTURES, PICK_MODEL, MESSAGE_FIELD, REGEX_OFF } from '../common/words';
 import { LEAVING } from './memory';
 import type { PromptDoor } from '../common/TaskPrompt';
 import { navigate } from '../shell/router';
@@ -161,7 +161,7 @@ export function ChatComposer({ chat, fold }: { chat: OpenChat; fold: ComposerFol
       )}
       {stuck && (
         <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: actions.retryRegex }}>
-          봇 스크립트가 끝나지 않아서 정규식을 껐어요.
+          {`${REGEX_OFF}.`}
           <Hint label="정규식 꺼짐">캐릭터나 모듈의 정규식, 또는 로어북 키워드 중 하나가 원인이에요.</Hint>
         </Callout>
       )}

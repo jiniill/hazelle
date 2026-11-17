@@ -9,8 +9,10 @@ import type { ToggleSection } from './toggles';
 // block selects a prompt block, absent for its list.
 export type Side = { kind: 'prompts'; id: string | null; pane: PromptPane | null; block?: string; fromToggles?: true } | { kind: 'character'; id: string; part: CharacterPart | null; fromToggles?: true } | { kind: 'module'; id: string };
 export type InspectTab = 'request' | 'cache' | 'variables' | 'modules' | 'scripts' | 'log';
-// call: the request log entry the 기록 tab opens with, by its receipt's id.
-type InspectPanel = { kind: 'inspect'; tab: InspectTab; call?: string };
+// The request log entry the 기록 tab opens with, by its receipt's id. press tells one ask from the next, so asking for the
+// entry already asked for opens it again.
+export type LogCall = { id: string; press: number };
+type InspectPanel = { kind: 'inspect'; tab: InspectTab; call?: LogCall };
 export type InfoTab = 'reply' | 'lore' | 'memory' | 'request' | 'response';
 export type Panel = InspectPanel | { kind: 'toggles' } | { kind: 'memory'; record: string | null } | { kind: 'info'; tab: InfoTab } | { kind: 'tool'; module: string } | { kind: 'bookmarks' } | { kind: 'lineage' } | { kind: 'lore' } | { kind: 'autopilot' } | { kind: 'state' } | { kind: 'phone' } | Side;
 

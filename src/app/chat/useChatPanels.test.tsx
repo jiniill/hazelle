@@ -29,3 +29,22 @@ it('closes the 장기 기억 panel once memory is turned off, and leaves it clos
     await act(() => root.unmount());
   }
 });
+
+it('asks for a request log entry anew on each press, so the entry already asked for opens again', async () => {
+  let panels: ReturnType<typeof useChatPanels>;
+  function Probe() {
+    panels = useChatPanels('chat', 'chat', [], false, true, [], null);
+    return null;
+  }
+  const root = probeRoot();
+  try {
+    await act(() => root.render(<Probe />));
+    await act(() => panels!.actions.openInspect('log', 'call'));
+    const first = panels!.inspect;
+    await act(() => panels!.actions.openInspect('log', 'call'));
+    expect([first?.call?.id, panels!.inspect?.call?.id]).toEqual(['call', 'call']);
+    expect(panels!.inspect?.call?.press).not.toBe(first?.call?.press);
+  } finally {
+    await act(() => root.unmount());
+  }
+});

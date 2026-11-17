@@ -10,10 +10,10 @@ import { Modules } from './InspectModules';
 import { NextRequest } from './InspectRequest';
 import { Scripts } from './InspectScripts';
 import { Variables } from './InspectVariables';
-import { editorOf, type InspectTab, type Side } from './panels';
+import { editorOf, type InspectTab, type LogCall, type Side } from './panels';
 import type { OpenChat } from './useChat';
 import type { SendNotes } from './useSendNotes';
-import { COUNTING } from '../common/words';
+import { COUNTING, REGEX_OFF } from '../common/words';
 
 const TABS: { value: InspectTab; label: string }[] = [
   { value: 'request', label: '요청' },
@@ -24,16 +24,18 @@ const TABS: { value: InspectTab; label: string }[] = [
   { value: 'log', label: '기록' },
 ];
 
-type ChatInspectProps = Pick<OpenChat, 'busy' | 'prompt'> & { chat: string; character: string | null; tab: InspectTab; call: string | undefined; notes: SendNotes; onTab: (tab: InspectTab) => void; onClose: () => void; onEdit: (side: Side) => void };
+type ChatInspectProps = Pick<OpenChat, 'busy' | 'prompt' | 'stuck'> & { chat: string; character: string | null; tab: InspectTab; call: LogCall | undefined; notes: SendNotes; onTab: (tab: InspectTab) => void; onClose: () => void; onEdit: (side: Side) => void };
 
 // 점검: every tab before a send reads the composer's one next-send result (useSendNotes), never a prompt of its own.
-export function ChatInspect({ chat, character, tab, call, notes, busy, prompt, onTab, onClose, onEdit }: ChatInspectProps) {
+export function ChatInspect({ chat, character, tab, call, notes, busy, stuck, prompt, onTab, onClose, onEdit }: ChatInspectProps) {
   const { store } = useSession();
   const conversation = prompt.kind === 'prompt' ? { id: prompt.prompt.id, blocks: prompt.prompt.value.blocks } : null;
   const editor = (from: From) => editorOf(from, conversation, character, (lore) => store.get('lore', lore)?.parent ?? null);
   const tabs = <Tabs label="점검" items={TABS} value={tab} onChange={onTab} />;
   const ready = (view: (sending: Sending) => ReactNode) =>
     busy ? <Empty variant="section">응답이 끝나면 다시 계산해요.</Empty>
+    // The chat's verdict refuses the forecast, though a send still runs.
+    : stuck ? <Empty variant="section">{`${REGEX_OFF}. 그동안은 요청을 미리 계산하지 않아요.`}</Empty>
     : notes.sending === null ? <Empty variant="section">지금은 요청을 보낼 수 없어서 계산하지 못했어요.</Empty>
     : notes.sending && 'turn' in notes.sending ? view(notes.sending)
     : notes.sending ? <Empty variant="section">{describeTurnFailure(notes.sending)}</Empty>
@@ -46,7 +48,7 @@ export function ChatInspect({ chat, character, tab, call, notes, busy, prompt, o
       {tab === 'variables' && <Variables chat={chat} sending={notes.sending && 'turn' in notes.sending ? notes.sending : null} busy={busy} />}
       {tab === 'modules' && ready((sending) => <Modules sending={sending} />)}
       {tab === 'scripts' && <Scripts chat={chat} />}
-      {tab === 'log' && <Log key={call} chat={chat} call={call} />}
+      {tab === 'log' && <Log key={call?.press} chat={chat} call={call?.id} />}
     </SidePanel>
   );
 }

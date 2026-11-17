@@ -15,20 +15,20 @@ import { taskRuns } from '../common/taskRuns';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
 import { useLoad } from '../common/useLoaded';
-import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag, FEATURE_NAMES, ONLY_THIS_CHAT, UNDO_FAILED, MEMORY_WORKING, RESPONSE_RAW } from '../common/words';
+import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag, FEATURE_NAMES, ONLY_THIS_CHAT, UNDO_FAILED, MEMORY_WORKING, REGEX_OFF, RESPONSE_RAW, SEE } from '../common/words';
 import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
 import { useToast } from '../toast';
 import { navigate } from '../shell/router';
 import { Button, Callout, ConfirmDialog, Empty, IconButton, List, MenuItem, MoreMenu, Progress, Row, Section, SidePanel, Stack, Text, TextField } from '../ui';
 import { MemoryRow, type ChatMemoryRecord } from './ChatMemoryRecord';
-import { answeredCall, factGroups, memoryRows, MessagePositions, overNote } from './memory';
+import { answeredCall, factGroups, memoryRows, MessagePositions, overNote, ownFailure } from './memory';
 import type { OpenChat } from './useChat';
 
 const NO_MEMORY = emptyMemory();
 
 // 장기 기억 (design §6.2). Without memoryView's answer nothing is said about what is sent: no status, no tokens, no missing
 // slot.
-type Props = Pick<OpenChat, 'messages' | 'busy'> & {
+type Props = Pick<OpenChat, 'messages' | 'busy' | 'stuck'> & {
   item: ChatItem;
   record: string | null;
   onClose: () => void;
@@ -40,7 +40,7 @@ type Props = Pick<OpenChat, 'messages' | 'busy'> & {
   renderRecord: (record: Omit<ComponentProps<typeof ChatMemoryRecord>, 'actions'>) => ReactNode;
 };
 
-export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEditPrompt, onRecord, onResponse, renderRecord }: Props) {
+export function ChatMemory({ record, item, messages, busy, stuck, onClose, onTool, onEditPrompt, onRecord, onResponse, renderRecord }: Props) {
   const { id, chat: own } = item;
   const session = useSession();
   const { store } = session;
@@ -56,8 +56,11 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   const { setup, owner, embeds } = useCaptured((store) => ({ setup: memorySetup(store, own), owner: memoryOwner(store, own), embeds: !('kind' in embedModel(store)) }), [own]);
   const holder = owner?.kind === 'tool' ? owner.unit : null;
   // While a reply streams the last answer stands, since every chunk changes the messages.
-  const loaded = useLoad(() => memoryView(session, id), [id, memory, own, messages, settings, prompts], { describe: () => '보낼 기억을 계산하지 못했어요.', skip: busy, keep: true });
+  const loaded = useLoad(() => memoryView(session, id), [id, memory, own, messages, settings, prompts, stuck], { describe: () => '보낼 기억을 계산하지 못했어요.', skip: busy, keep: true });
   const view = loaded.data ?? null;
+  const retry = { label: ACTS.retry.label, onClick: () => session.memory.retry(id) };
+  // The chat's verdict refuses this read as it does the work: its notice stands for both, and 다시 시도 clears it.
+  const unread = stuck ? <Callout tone="warn" action={retry}>{`${REGEX_OFF}.`}</Callout> : loaded.failure;
   const [rebuilding, setRebuilding] = useState(false);
   const [resets, setResets] = useState(0);
   const save = useAutosave<MemorySettings>(`chat-memory:${id}`, (patch) => {
@@ -67,7 +70,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   });
 
   const opened = record === null ? undefined : [...memory.records, ...memory.chapters].find((each) => each.id === record);
-  if (opened) return renderRecord({ chat: id, item: opened, memory, view, failure: loaded.failure, positions });
+  if (opened) return renderRecord({ chat: id, item: opened, memory, view, failure: unread, positions });
 
   async function revert() {
     if (!(await save.flush())) return;
@@ -76,15 +79,14 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
   }
 
   const writing = running.get(id);
-  const failure = failed.get(id);
+  const failure = ownFailure(failed.get(id), stuck);
   const unchaptered = chapterFailed.get(id);
   const embedding = indexing.get(id);
   const unindexed = indexFailed.get(id);
   const rows = memoryRows(memory);
-  const retry = { label: ACTS.retry.label, onClick: () => session.memory.retry(id) };
   const acts = (failure: MemoryFailure) => {
     const call = answeredCall(failure, logged.entries);
-    return call ? [retry, { label: `${RESPONSE_RAW} 보기`, onClick: () => onResponse(call) }] : retry;
+    return call ? [retry, { label: `${RESPONSE_RAW} ${SEE}`, onClick: () => onResponse(call) }] : retry;
   };
   const over = view && !holder ? overNote(memory, view) : null;
   const more = (
@@ -130,7 +132,7 @@ export function ChatMemory({ record, item, messages, busy, onClose, onTool, onEd
         </Row>
       )}
       {!owner && <Text variant="note">이 채팅은 장기 기억을 쓰지 않아요.</Text>}
-      {loaded.failure}
+      {unread}
       {owner && view && !view.slot && (
         <Callout tone="warn" action={onEditPrompt ? { label: '프롬프트 열기', onClick: onEditPrompt } : undefined}>
           프롬프트에 장기 기억 블록이 없어서 기억을 보내지 않아요.

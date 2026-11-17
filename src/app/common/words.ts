@@ -44,6 +44,8 @@ export const CARD_WRITES = '스크립트의 카드 수정';
 export const CARD_WRITES_HELP = '봇 스크립트나 플러그인이 이 캐릭터의 카드(배경 HTML, 설명, 첫인사 등)를 바꿔서 저장해요. 바뀐 내용은 이 캐릭터의 모든 채팅에 적용돼요.';
 export const CARD_WRITE_ASK_HELP = '허용하면 바뀐 카드가 이 캐릭터의 모든 채팅에 적용돼요. 나중에 캐릭터 편집에서 권한을 바꿀 수 있어요.';
 export const BOT_STUCK = '봇 스크립트가 끝나지 않아서 멈췄어요';
+// What a chat judged stuck says above the composer, and in its memory panel, where the verdict refuses the work.
+export const REGEX_OFF = '봇 스크립트가 끝나지 않아서 정규식을 껐어요';
 
 export const TOOL = '플러그인';
 export const RISU_PLUGIN = 'Risu 플러그인';
@@ -111,6 +113,8 @@ export const COUNTING = '계산하는 중…';
 // The spans a usage count is read over.
 export const SPANS = { hour: '지난 1시간', today: '오늘', week: '이번 주', month: '이번 달', year: '올해', all: '전체' };
 export const COST_ESTIMATE = '예상 비용';
+// 장기 기억's setting for how much of its records a request takes, as its row and the notes pointing at it name it.
+export const MEMORY_BUDGET = '기록';
 // Marks a chat shows on trouble, which 운영's 자동 진단 names the same.
 export const TURN_FAILED = '응답 실패';
 export const MEMORY_GAP = '기억에 없음';

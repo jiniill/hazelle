@@ -252,7 +252,7 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 | overlays | `ToastStack` | `ToastStack.module.css` | Notices, newest in front, bottom right (under the header on a phone), those behind as edges the front one's width, and +N for the ones waiting; a mouse pointing at it, or the focus in it, opens it and holds their time, a finger slides one sideways or away from the edge it stands at to put it away. Above every layer but the file drop |
 | feedback | `ActionCard` | `ActionCard.module.css` | A choice with a description, `sm` beneath the ones that lead |
 | feedback | `AskCard` (`AskAnswer`) | `AskCard.module.css` | A question that waits beside what the user is doing, such as a bot's above the composer: who asks, the question with an ⓘ explanation, a line to type or a few choices, and a × that puts it away |
-| feedback | `Callout` | `Callout.module.css` | A warning, success or tip note, with an optional action, or a row of them, under it |
+| feedback | `Callout` | `Callout.module.css` | A warning, success or tip note, with an optional action under it, or a few sharing its width evenly |
 | feedback | `CodeBlock` | `CodeBlock.module.css` | Text as a program sent it, such as a request's address and body in 요청 원문; in body letters, what a prompt example gives |
 | feedback | `CodeCard` | `CodeCard.module.css` | A code to copy, such as the recovery key |
 | feedback | `Empty` | `Empty.module.css` | What stands where a list, grid, pane or panel has nothing to show, in the look of where it stands: a body, a section, the story, the pane beside a list, the sidebar or a menu; the first step out of it under the sentence |

@@ -42,3 +42,11 @@
   flex-direction: column;
   gap: var(--space-12);
 }
+
+/* The actions share the note's width evenly, so one fills it as two do. */
+.acts {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+}

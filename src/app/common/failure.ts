@@ -464,7 +464,7 @@ export function describeMemoryFailure(failure: MemoryFailure): string {
     case 'invalid':
       return MEMORY_INVALID[failure.reason];
     case 'unsaved':
-      return `기억을 저장하지 못했어요. ${describeFailure(failure.failure)}`;
+      return describeFailure(failure.failure);
     case 'embed':
       return describeEmbedFailure(failure, `기록이 ${MODEL_ROLES.embed}의 한도보다 길어요.`);
   }

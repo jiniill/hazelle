@@ -4,7 +4,7 @@ import type { LogEntry } from '../../runtime/models/request-log';
 import type { MemoryFailure } from '../../runtime/tasks/memory';
 import type { MemoryView } from '../../runtime/tasks/memory-view';
 import type { GapCause } from '../../contracts/auto-diagnosis';
-import { CHAPTER, MEMORY_GAP, MEMORY_WORKING } from '../common/words';
+import { CHAPTER, MEMORY_BUDGET, MEMORY_GAP, MEMORY_WORKING } from '../common/words';
 
 export const STALE = '원문 바뀜';
 
@@ -30,9 +30,12 @@ export const LEAVING: Record<GapCause, { words: string; why: string }> = {
 export function overNote(memory: Memory, view: Pick<MemoryView, 'records' | 'slot' | 'crowded' | 'tokens' | 'setup'>): string | null {
   const count = memory.records.filter(({ id }) => view.records.get(id) === 'over').length;
   if (!count || !view.slot || view.crowded) return null;
-  const raise = view.tokens.budget < view.setup.budget ? '' : ' 아래 설정의 기록에서 한도를 늘릴 수 있어요.';
+  const raise = view.tokens.budget < view.setup.budget ? '' : ` 아래 설정의 ${MEMORY_BUDGET}에서 한도를 늘릴 수 있어요.`;
   return `기록 ${count}개를 보내지 않아요. ${LEAVING.over.why}${raise}`;
 }
+
+// The failure the panel says as the job's own: under the chat's verdict a refusal is the verdict's, which its notice says once.
+export const ownFailure = (failure: MemoryFailure | undefined, stuck: boolean) => (stuck && failure?.kind === 'unsaved' && failure.refused ? undefined : failure);
 
 // The call a failed memory job made, while the request log still holds its answer to show; null otherwise.
 export function answeredCall(failure: MemoryFailure, entries: readonly LogEntry[]): string | null {
