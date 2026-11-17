@@ -4,6 +4,9 @@ import type { AskAnswer } from '../ui';
 
 const CONSENT: AskAnswer = { kind: 'choices', choices: [{ label: '허용', value: 'yes', primary: true }, { label: '안 함', value: 'no' }] };
 
+// What the app asks on its asker's behalf, which the asker must not answer for the user: not a question of its own.
+export const isConsent = (question: ScriptQuestion['question']) => question.kind === 'model' || question.kind === 'card' || question.kind === 'plugin';
+
 // Each value is what ScriptInteractions.answer takes for that kind (runtime/scripts/interactions): the line typed, 'yes' or a dismissal, an
 // option's index, and for a model call, a card write or a plugin's grants 'yes' or 'no'.
 export function asking(question: ScriptQuestion['question'], asker: Asker): { text?: string; help?: string; answer: AskAnswer } {

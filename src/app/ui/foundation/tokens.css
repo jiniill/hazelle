@@ -532,6 +532,10 @@
   --rail-width-slim: 64px;
   --panel-width: 400px;
   --tool-frame-min-height: 16rem;
+  /* How far a tool layer's holder can be scrolled: the chat is moved by what it moves, so it must never reach an end. */
+  --tool-layer-range: 2000000px;
+  /* A tool layer's frame is as wide as the screen whatever holds it. */
+  --tool-layer-width: 100vw;
   /* A share of the room a list and its picked item split, so the item keeps a phone's width in the narrowest window. */
   --list-pane-width: clamp(260px, 32%, 360px);
   --pane-max-width: 560px;

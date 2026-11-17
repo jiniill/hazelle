@@ -1,4 +1,5 @@
 import { connectApi, sourced } from './api';
+import { pageLayer } from './layer';
 import { installRisu, risuScript } from './risu';
 
 declare const BACKGROUND_SOURCE: string;
@@ -26,7 +27,7 @@ addEventListener('message', (event: MessageEvent) => {
   Reflect.deleteProperty(globalThis, 'webkitRTCPeerConnection');
   if (event.data.role === 'frame') {
     connectApi(port, (code, api) => {
-      unload = installRisu(api, globalThis as unknown as Record<string, unknown>);
+      unload = installRisu(api, globalThis as unknown as Record<string, unknown>, pageLayer);
       return (0, eval)(risuScript(code)) as Promise<void>;
     });
     return;

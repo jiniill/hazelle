@@ -7,7 +7,7 @@ import type { FileRef } from '../../vault/files';
 import type { ToolState } from '../evaluation/evaluation-core';
 import type { ScriptOutcome } from '../scripts/lua/event';
 import type { Heartbeat } from '../worker';
-import type { MenuItem, ToolPage, ToolSlot } from './facade';
+import type { LayerRegion, MenuItem, ToolPage, ToolSlot } from './facade';
 import type { Connection } from './frame';
 
 // event: absent for a page's own calls and writes.
@@ -33,6 +33,7 @@ export type EntryCode = { file: FileRef; trial: null } | { file: null; trial: En
 export type Entry = EntryCode & {
   module: string; tool: Pick<Tool, 'manifest' | 'settings'>; settings: string; background: Frame | null; pages: Set<Frame>; chats: Set<string>; idle: ReturnType<typeof setTimeout> | null; data: Map<string, { key: string; json: string }>;
   chat: string | null; menu: MenuItem[]; actions: MenuItem[]; shown: boolean; slot: ToolSlot | null; leaving: boolean;
+  region: LayerRegion;
 };
 export const isFrameTool = (tool: Pick<Tool, 'manifest'>) => tool.manifest.risu !== undefined;
 // A run's error with its line in the file, when the sandbox could tell it.

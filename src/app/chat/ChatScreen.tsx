@@ -1,4 +1,5 @@
 import { ChatToolPanel } from './ChatToolPanel';
+import { ChatToolLayers } from './ChatToolLayers';
 import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import type { ChatItem, ChatSummary } from '../../model/chat';
 import type { CharacterShelf } from '../../model/library';
@@ -96,6 +97,7 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
   }, [paired, onPaired]);
   return (
     <>
+      <ChatToolLayers chat={chatId} scrollRef={scroll.scrollRef} />
       <ChatFrame
         back={back ? { label: back.label, onClick: () => navigate(back.to) } : undefined}
         title={chat.search ? <ChatSearch search={chat.search} onSearch={actions.searchFor} onStep={actions.stepSearch} onClose={actions.closeSearch} /> : <ChatHeading chat={chat} />}

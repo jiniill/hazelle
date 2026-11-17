@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import { RISU_MAPPED } from '../tool-api/risu-methods';
+import type { pageLayer } from './layer';
 import { installRisu, risuScript } from './risu';
 
 type Handler = (...args: never[]) => unknown;
@@ -62,13 +63,24 @@ function fakeApi({ open = true } = {}) {
       delete: async (key: string) => { storage.delete(key); }, keys: async () => [...storage.keys()], onChange: () => () => {},
     },
     settings: async () => settings, setSetting: async (key: string, value: string | number | boolean) => { settings[key] = value; }, account: async () => account, post: () => {}, page: null,
-    frame: { chat: async () => (open ? chat : null), show: vi.fn(), hide: vi.fn(), menu: (items: { id: string; label: string }[]) => { menus.push(items); }, missing: (name: string) => { missing.push(name); } },
+    frame: { chat: async () => (open ? chat : null), show: vi.fn(), hide: vi.fn(), menu: (items: { id: string; label: string }[]) => { menus.push(items); }, missing: (name: string) => { missing.push(name); }, layer: vi.fn(), missed: vi.fn(), layered: (listener: typeof layer.word) => { layer.word = listener; } },
   } as unknown as Hazelle.Api;
+  // The plugin's layer with no page under it: body alone is in it, and what is made there is another stand-in.
+  const layer = {
+    word: (() => {}) as (on: boolean, theme: 'dark' | 'light') => void, lay: vi.fn(), close: vi.fn(), body: { nodeName: async () => 'DIV' },
+    of: (() => ({
+      document: {
+        querySelector: async (selector: string) => (selector === 'body' ? layer.body : null), querySelectorAll: async () => [], createElement: async () => standIn(),
+        addEventListener: async () => 'listener', removeEventListener: async () => {},
+      },
+      lay: layer.lay, close: layer.close,
+    })) as unknown as typeof pageLayer,
+  };
   const fire = (event: string, ...args: unknown[]) => (handlers.get(event) as (...args: unknown[]) => unknown)(...args);
-  return { api, chat, card, handlers, storage, menus, missing, edits, added, said, tones, lore, variables, held, removed, cut, data, model, send, editCard, settings, fire };
+  return { api, chat, card, layer, handlers, storage, menus, missing, edits, added, said, tones, lore, variables, held, removed, cut, data, model, send, editCard, settings, fire };
 }
 const install = (fake: ReturnType<typeof fakeApi>, scope: Record<string, unknown> = {}) => {
-  installRisu(fake.api, scope);
+  installRisu(fake.api, scope, fake.layer.of);
   return scope as Record<string, unknown> & { Risuai: Record<string, (...args: never[]) => Promise<unknown>> & Record<string, Record<string, (...args: never[]) => Promise<unknown>>> };
 };
 
@@ -378,7 +390,7 @@ describe('the Risu adapter', () => {
     expect(await Risuai.runLLMModel!({ messages: [], mode: 'model', staticModel: 'gemini-2.5-pro' } as never)).toEqual({ type: 'fail', result: 'staticModel names a RisuAI model; Hazelle sends to the chat\'s own models only' });
   });
 
-  it('finds in getRootDocument the chat screen\'s rows, greeting at -1, a body by chatId as CSS.escape writes it or by index, and the bot\'s sheet', async () => {
+  it('finds in getRootDocument the chat screen\'s rows, greeting at -1, a body by chatId as CSS.escape writes it or by index, and the bot\'s sheet, and the rest in its own layer', async () => {
     type Found = { getOuterHTML(): Promise<string>; getInnerHTML(): Promise<string>; innerText(): Promise<string>; getAttribute(name: string): Promise<string | null>; scrollIntoView(): Promise<void> };
     type Safe<T> = { at(index: number): Promise<T | undefined>; length(): Promise<number> };
     const fake = fakeApi();
@@ -400,20 +412,36 @@ describe('the Risu adapter', () => {
     expect(await Promise.all((await Risuai.unwarpSafeArray!(await root.querySelectorAll('style') as never) as Found[]).map((sheet) => sheet.getOuterHTML()))).toEqual(['<style>.b { color: red; }</style>']);
     expect(await (await root.querySelectorAll('link[rel~="stylesheet"]')).length()).toBe(0);
     expect(await root.querySelector('[data-chat-index="0"] .chattext')).toBeNull();
-    expect(await root.querySelector('body')).toBeNull();
-    expect(fake.missing).toEqual(['getRootDocument:page']);
+    expect(await root.querySelector('body')).toBe(fake.layer.body);
+    expect(await root.querySelector('.text-input-area')).toBeNull();
+    expect(await (await root.querySelectorAll('.text-input-area button') as unknown as unknown[]).length).toBe(0);
+    expect(fake.missing).toEqual([]);
   });
 
-  it('tells 점검 of a member of the page\'s document or of an element that it does not answer, which reads undefined', async () => {
+  it('tells 점검 of a member a chat row does not answer, which reads undefined: a row is read and its own layer written', async () => {
     const fake = fakeApi();
     const { Risuai } = install(fake);
     const root = await Risuai.getRootDocument!() as unknown as { addEventListener?: unknown; querySelector(selector: string): Promise<{ setStyle?: unknown; innerText(): Promise<string> }> };
     const row = await root.querySelector('[data-chat-index="1"]');
     expect(await row.innerText()).toBe('hi there');
+    expect(root.addEventListener).toBeDefined();
     expect(fake.missing).toEqual([]);
-    expect(root.addEventListener).toBeUndefined();
     expect(row.setStyle).toBeUndefined();
     expect(fake.missing).toEqual(['getRootDocument:page']);
+  });
+
+  it('makes its layer when the app first lays it or it first reaches for its page, and closes it as it stops', async () => {
+    const idle = fakeApi();
+    installRisu(idle.api, {}, idle.layer.of)();
+    idle.layer.word(false, 'dark');
+    expect([idle.layer.lay.mock.calls, idle.layer.close.mock.calls]).toEqual([[], []]);
+    const fake = fakeApi();
+    const stop = installRisu(fake.api, {}, fake.layer.of);
+    fake.layer.word(true, 'light');
+    fake.layer.word(false, 'dark');
+    expect(fake.layer.lay.mock.calls).toEqual([[true, 'light'], [false, 'dark']]);
+    stop();
+    expect(fake.layer.close).toHaveBeenCalledTimes(1);
   });
 
   it('saves an asset at Risu\'s path and reads it back with or without the assets/ prefix, refusing other folders', async () => {
@@ -653,7 +681,7 @@ const load = async (path: string) => {
     setTimeout, clearTimeout, setInterval, clearInterval, requestAnimationFrame: () => 0, cancelAnimationFrame: () => {}, crypto, confirm: () => false, prompt: () => null,
     TextEncoder, TextDecoder, URL, URLSearchParams, AbortController, AbortSignal, queueMicrotask, structuredClone, performance, location: standIn(), localStorage: standIn(),
   };
-  installRisu(fake.api, scope);
+  installRisu(fake.api, scope, fake.layer.of);
   await runInNewContext(risuScript(readFileSync(port(path), 'utf8')), scope, { timeout: 20_000 });
   return fake;
 };
@@ -686,9 +714,8 @@ describe.runIf(availableB)('the phase B acceptance plugins, unmodified', () => {
     expect(sent[0]).toEqual(request[0]);
     expect(sent.at(-1)).toEqual(request[1]);
     expect(sent.slice(1, -1).every(({ role, content }) => role === 'system' && content.includes('RISUPOT'))).toBe(true);
-    // It reaches for the app's page past a drawn message, declined, and goes on without it; its scope id is kept with
-    // the chat.
-    expect(fake.missing).toEqual(['getRootDocument:page']);
+    // What it puts on the page goes to its own layer; its scope id is kept with the chat.
+    expect(fake.missing).toEqual([]);
     expect(fake.data.get('risu:chat')).toEqual({ risupotWikiScopeId: expect.any(String) });
   }, 30_000);
 

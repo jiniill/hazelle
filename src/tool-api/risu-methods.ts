@@ -25,8 +25,8 @@ export const RISU_MAPPED: ReadonlySet<string> = new Set([
 // addRisuReplacer kinds the adapter runs; another kind is missing as `addRisuReplacer:<kind>`.
 export const RISU_REPLACERS: ReadonlySet<string> = new Set(['beforeRequest', 'afterRequest']);
 // Permanently declined names return undefined, distinct from not-yet-mapped names (design §6.10).
-// getRootDocument:page means app DOM outside rendered messages; character.chats a character's chats, read from the
-// database's characters: the open chat's character holds that chat alone.
+// getRootDocument:page means the app's own page, past the plugin's layer and the chat's rows as read; character.chats
+// a character's chats, read from the database's characters: the open chat's character holds that chat alone.
 export const RISU_DECLINED: ReadonlySet<string> = new Set([
   'getRootDocument:page', 'character.chats', 'addProvider', 'registerBodyIntercepter', 'unregisterBodyIntercepter', 'addPluginChannelListener', 'postPluginChannelMessage',
 ]);
@@ -37,7 +37,7 @@ export const RISU_ABSENT: ReadonlyMap<string, string> = new Map(Object.entries({
   'Hazelle shows no plugin the app\'s own requests': ['getFetchLogs'],
   'Hazelle has no write-only secret store': ['saveSecretHeader'],
   'a plugin does not install or reload plugins in Hazelle': ['installPlugin', 'loadPlugins'],
-  'Hazelle has no live page to watch; getRootDocument reads a copy': ['createMutationObserver'],
+  'Hazelle has no live page to watch; getRootDocument reads the chat as a copy': ['createMutationObserver'],
   'a plugin is not told the app\'s colors in Hazelle': ['getColorScheme', 'getTextTheme'],
   'the app\'s colors are the user\'s display settings in Hazelle': ['changeColorScheme', 'setColorScheme', 'changeTextTheme', 'setCustomTextTheme'],
 }).flatMap(([reason, names]) => names.map((name) => [name, reason])));

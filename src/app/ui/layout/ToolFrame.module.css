@@ -19,3 +19,40 @@
   z-index: var(--layer-panel);
   border: 0;
 }
+
+/* A frame tool's iframe as a layer over the screen, and its holder: a scroller over the bounds of the tool's own
+   boxes that nothing can press, which FrameLayer places and clips. Over the chat's header and menus, under dialogs
+   and toasts. */
+.holder {
+  position: fixed;
+  z-index: var(--layer-panel);
+  overflow: hidden auto;
+  pointer-events: none;
+  scrollbar-width: none;
+}
+
+.holder::after {
+  display: block;
+  height: var(--tool-layer-range);
+  content: '';
+}
+
+.layer {
+  position: sticky;
+  top: 0;
+  display: block;
+  width: var(--tool-layer-width);
+  height: 100dvh;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+}
+
+/* Its display would outdo the hidden a frame is given as it stops. */
+.layer[hidden] {
+  display: none;
+}
+
+.released {
+  pointer-events: none;
+}

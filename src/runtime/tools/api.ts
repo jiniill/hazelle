@@ -169,6 +169,8 @@ export type ToolServices = { pages: Pick<ScriptPages, 'pageContext' | 'pageWrite
 type FrameRuntime = {
   allowed(chat: string, module: string): boolean;
   publish(): void;
+  lay(entry: Entry, tell?: boolean): void;
+  missed(entry: Entry, what: Hazelle.LayerMiss): void;
   background(entry: Entry): Promise<Frame>;
   send(frame: Frame, message: Down): void;
   endFrame(frame: Frame, error: Error, closePage?: boolean): void;
@@ -225,6 +227,7 @@ export class ToolApi {
       case 'frame.show':
         if (!own) break;
         entry.shown = true;
+        this.runtime.lay(entry);
         entry.slot?.place(frame.connection.frame);
         this.runtime.publish();
         return;
@@ -233,7 +236,19 @@ export class ToolApi {
         entry.shown = false;
         entry.slot?.place(null);
         entry.slot?.close();
+        this.runtime.lay(entry);
         this.runtime.publish();
+        return;
+      case 'frame.layer': {
+        const boxes = (value: unknown): value is Hazelle.LayerBox[] => Array.isArray(value) && value.length <= 64 && value.every((box) => Array.isArray(box) && box.length === 4 && box.every((edge) => typeof edge === 'number' && Number.isFinite(edge)));
+        if (!own || !boxes(first) || !boxes(args[1])) break;
+        entry.region = { takes: first, shows: args[1] };
+        this.runtime.lay(entry, false);
+        return;
+      }
+      case 'frame.missed':
+        if (!own || (first !== 'down' && first !== 'up' && first !== 'over')) break;
+        this.runtime.missed(entry, first);
         return;
       case 'frame.menu':
         if (!own || !isMenu(first)) break;

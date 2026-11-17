@@ -1,4 +1,5 @@
 import { connectApi } from '../../sandbox/api';
+import { pageLayer } from '../../sandbox/layer';
 import { installRisu } from '../../sandbox/risu';
 import type { Up } from '../../tool-api/protocol';
 import { UNLOAD_MS, type OpenFrame, type Opening } from '../tools/frame';
@@ -49,6 +50,6 @@ export function inProcessTools(execute: (api: Hazelle.Api, code: string, frame: 
 // A Risu plugin's frame: plugin runs with Risuai, risuai and the dialog shims in scope, handed the code the host loaded.
 export const inProcessRisu = (plugin: (scope: Record<string, unknown>, code: string) => void) => inProcessTools((api, code, frame) => {
   const scope: Record<string, unknown> = {};
-  frame.stop = installRisu(api, scope);
+  frame.stop = installRisu(api, scope, pageLayer);
   plugin(scope, code);
 });

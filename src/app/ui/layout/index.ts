@@ -18,4 +18,4 @@ export { aimedAtPanel, SidePanel } from './SidePanel';
 export { SidePeek, SidePeeks } from './SidePeek';
 export { Stack } from './Stack';
 export { TranslateDesk } from './TranslateDesk';
-export { FrameSlot, ToolFrame } from './ToolFrame';
+export { FrameLayer, FrameSlot, ToolFrame } from './ToolFrame';

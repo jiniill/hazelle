@@ -40,6 +40,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
   const waiting = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
   const handlers = new Map<EventName, ((...args: never[]) => unknown)[]>();
   const storageListeners = new Set<(keys: string[]) => void>();
+  let layered: ((on: boolean, theme: 'dark' | 'light') => void) | null = null;
   const send = (message: Up) => { if (!closed) port.postMessage(message); };
   const call = <T>(method: Method, args: unknown[], event?: number, signal?: AbortSignal): Promise<T> => {
     if (closed) return Promise.reject(new Error('closed'));
@@ -209,6 +210,9 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
           menu: (items) => fire('frame.menu', [items]),
           actions: (items) => call('frame.actions', [items]),
           missing: (name) => fire('frame.missing', [name]),
+          layer: (takes, shows) => fire('frame.layer', [takes, shows]),
+          missed: (what) => fire('frame.missed', [what]),
+          layered: (listener) => { layered = listener; },
         } : null,
       };
       void Promise.resolve().then(() => execute(data.code, api)).then(() => {
@@ -224,6 +228,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
     }
     if (data.kind === 'message') { void dispatch('message', [data.data]).catch((error: unknown) => failed(0, error)); return; }
     if (data.kind === 'settings') { void dispatch('settings', [data.values]).catch((error: unknown) => failed(0, error)); return; }
+    if (data.kind === 'layer') { layered?.(data.on, data.theme); return; }
     if (data.kind === 'open') { void dispatch('open', []).catch((error: unknown) => failed(0, error)); return; }
     if (data.kind === 'event') {
       const pending = buffer();

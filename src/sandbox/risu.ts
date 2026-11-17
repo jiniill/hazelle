@@ -1,4 +1,5 @@
 import { toBase64 } from '../base64';
+import type { pageLayer } from './layer';
 import { RISU_ABSENT, RISU_DECLINED, RISU_NAMES, RISU_REPLACERS } from '../tool-api/risu-methods';
 import { risuAsset } from '../tool-api/risu-assets';
 import { risuRegex } from '../tool-api/risu-regex';
@@ -155,10 +156,15 @@ const API_VERSION = '3.0';
 export const risuScript = (code: string) => `(async () => {${code}\n})()`;
 
 // Installs Risuai, risuai and the dialog shims into scope; answers the frame's stop, which runs onUnload callbacks.
-export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
+export function installRisu(api: Hazelle.Api, scope: Scope, layerOf: typeof pageLayer): () => void {
   const frame = api.frame!;
   const told = new Set<string>();
   const tell = (name: string) => { if (told.has(name)) return; told.add(name); frame.missing(name); };
+  // The plugin's own layer over the chat (design §6.10), made when the app first lays it or the plugin first reaches
+  // for its page.
+  let layer: ReturnType<typeof pageLayer> | null = null;
+  const layered = () => layer ??= layerOf(safeArray, frame.layer, frame.missed);
+  frame.layered((on, theme) => { if (on || layer) layered().lay(on, theme); });
   // A name Risu itself lacks fails in Risu's own words (its apiV3/factory.ts), which a plugin written for a fork's
   // extra call reads to fall back (Asset Maid's saveFile).
   const refuse = (name: string): never => {
@@ -493,9 +499,10 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
     setArgument,
     setArg: setArgument,
     unwarpSafeArray: async (array: ReturnType<typeof safeArray>) => array[ITEMS],
-    // Read-only, and only the chat screen and its messages: the rest of the page (body, to put a box of its own on the
-    // app) is declined (design §6.10) and found nowhere.
+    // The plugin's own layer, which is what it finds as the page and where a box of its own goes, with the chat screen
+    // and its messages read into it, never written. The rest of the app's page is found nowhere (design §6.10).
     getRootDocument: async () => paged({
+      ...layered().document,
       querySelector: async (selector: string) => {
         const wanted = selector.trim();
         if (wanted === SCREEN) {
@@ -508,7 +515,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
         }
         const body = BODY.exec(wanted);
         const one = body ?? ONE_ROW.exec(wanted);
-        if (!one) { tell('getRootDocument:page'); return null; }
+        if (!one) return layered().document.querySelector(wanted);
         const row = await rowAt(one[1] as 'id' | 'index', unescapeCss(one[2]!));
         return row && paged(body ? bodyOf(row.drawn) : rowOf(row));
       },
@@ -516,7 +523,7 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
         const wanted = selector.trim();
         if (ROWS.test(wanted)) return safeArray((await rows())?.map((row) => paged(rowOf(row))) ?? []);
         if (LINKS.test(wanted)) return safeArray([]);
-        if (!STYLES.test(wanted) && !SHEETS.test(wanted)) { tell('getRootDocument:page'); return safeArray([]); }
+        if (!STYLES.test(wanted) && !SHEETS.test(wanted)) return layered().document.querySelectorAll(wanted);
         return safeArray(sheet === null ? [] : [paged({ getOuterHTML: async () => `<style>${sheet}</style>`, textContent: async () => sheet })]);
       },
     }),
@@ -746,5 +753,8 @@ export function installRisu(api: Hazelle.Api, scope: Scope): () => void {
   // alert maps to a toast, never a blocking overlay. confirm/prompt must use allow-modals browser dialogs:
   // their synchronous answers cannot cross the host port.
   scope.alert = say('normal');
-  return () => { for (const unload of unloads) press(unload); };
+  return () => {
+    for (const unload of unloads) press(unload);
+    layer?.close();
+  };
 }
