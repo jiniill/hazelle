@@ -32,10 +32,11 @@ export function ChatInspect({ chat, character, tab, call, notes, busy, stuck, pr
   const conversation = prompt.kind === 'prompt' ? { id: prompt.prompt.id, blocks: prompt.prompt.value.blocks } : null;
   const editor = (from: From) => editorOf(from, conversation, character, (lore) => store.get('lore', lore)?.parent ?? null);
   const tabs = <Tabs label="점검" items={TABS} value={tab} onChange={onTab} />;
+  // The chat's verdict refuses the forecast and the read of the variables, though a send still runs.
+  const refused = stuck && <Empty variant="section">{`${REGEX_OFF}. 그동안은 다음에 보낼 내용을 미리 볼 수 없어요.`}</Empty>;
   const ready = (view: (sending: Sending) => ReactNode) =>
     busy ? <Empty variant="section">응답이 끝나면 다시 계산해요.</Empty>
-    // The chat's verdict refuses the forecast, though a send still runs.
-    : stuck ? <Empty variant="section">{`${REGEX_OFF}. 그동안은 다음에 보낼 내용을 미리 볼 수 없어요.`}</Empty>
+    : refused ? refused
     : notes.sending === null ? <Empty variant="section">지금은 요청을 보낼 수 없어서 계산하지 못했어요.</Empty>
     : notes.sending && 'turn' in notes.sending ? view(notes.sending)
     : notes.sending ? <Empty variant="section">{describeTurnFailure(notes.sending)}</Empty>
@@ -45,7 +46,7 @@ export function ChatInspect({ chat, character, tab, call, notes, busy, stuck, pr
       {tabs}
       {tab === 'request' && ready((sending) => <NextRequest chat={chat} sending={sending} request={notes.request} editor={editor} onEdit={onEdit} />)}
       {tab === 'cache' && <Cache chat={chat} cache={notes.cache} next={ready((sending) => <NextCacheView chat={chat} sending={sending} cache={notes.cache} editor={editor} onEdit={onEdit} />)} />}
-      {tab === 'variables' && <Variables chat={chat} sending={notes.sending && 'turn' in notes.sending ? notes.sending : null} busy={busy} />}
+      {tab === 'variables' && (refused || <Variables chat={chat} sending={notes.sending && 'turn' in notes.sending ? notes.sending : null} busy={busy} />)}
       {tab === 'modules' && ready((sending) => <Modules sending={sending} />)}
       {tab === 'scripts' && <Scripts chat={chat} />}
       {tab === 'log' && <Log key={call?.press} chat={chat} call={call?.id} />}

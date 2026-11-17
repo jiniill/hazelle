@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 import { REGEX_OFF } from '../common/words';
 import { probeRoot } from '../ui/probe';
 import { ChatInspect } from './ChatInspect';
+import type { InspectTab } from './panels';
 import type { OpenChat } from './useChat';
 import type { SendNotes } from './useSendNotes';
 
@@ -15,11 +16,14 @@ vi.mock('../ui', async (original) => ({
   Empty: (props: { children: string }) => said(props),
 }));
 
-it("says the regex is off, not that nothing can be sent, while the chat's verdict refuses the forecast", async () => {
+it("says the regex is off, not that nothing can be sent or nothing at all, while the chat's verdict refuses the forecast", async () => {
   const root = probeRoot();
-  const panel = (stuck: boolean) => <ChatInspect chat="chat" character={null} tab="request" call={undefined} notes={{ sending: null } as SendNotes} busy={false} stuck={stuck} prompt={{ kind: 'missing' } as OpenChat['prompt']} onTab={() => {}} onClose={() => {}} onEdit={() => {}} />;
+  const panel = (stuck: boolean, tab: InspectTab = 'request') => <ChatInspect chat="chat" character={null} tab={tab} call={undefined} notes={{ sending: null } as SendNotes} busy={false} stuck={stuck} prompt={{ kind: 'missing' } as OpenChat['prompt']} onTab={() => {}} onClose={() => {}} onEdit={() => {}} />;
   try {
     await act(async () => root.render(panel(true)));
+    expect(said.mock.lastCall![0].children).toContain(REGEX_OFF);
+    said.mockClear();
+    await act(async () => root.render(panel(true, 'variables')));
     expect(said.mock.lastCall![0].children).toContain(REGEX_OFF);
     await act(async () => root.render(panel(false)));
     expect(said.mock.lastCall![0].children).toBe('지금은 요청을 보낼 수 없어서 계산하지 못했어요.');
