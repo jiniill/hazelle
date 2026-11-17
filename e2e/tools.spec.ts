@@ -332,3 +332,97 @@ test('a plugin tool the chat model calls runs in the turn, and the reply shows t
   await page.reload();
   await expect(page.getByRole('article').last().getByText('roll → 17', { exact: true })).toBeVisible();
 });
+
+// The fixture's boxes, in a 1440 by 900 window: a button at the right, and a band that only shows over the composer.
+const LAYER_BUTTON = [1326, 184] as const;
+const LAYER_PANEL = [1326, 250] as const;
+const LAYER_BAND = 140;
+
+test('a Risu plugin draws on a layer of its own over the chat: its boxes are its own, the rest of the screen the app\'s', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await fakeProvider(() => [Array.from({ length: 60 }, (_, line) => `Line ${line}.`).join('\n\n')]);
+  await assign(page, ['대화 모델']);
+  await page.goto('/');
+  const report = await importFile(page, pickBot, CARD);
+  await report.getByRole('button', { name: '새 채팅', exact: true }).click();
+  await page.getByLabel('메시지', { exact: true }).fill('Tell me all of it.');
+  await page.getByRole('button', { name: '보내기', exact: true }).click();
+  await expect(page.getByRole('article').last()).toContainText('Line 59.');
+  await expect(page.getByRole('article').last().getByRole('button', { name: '다시 생성', exact: true })).toBeAttached();
+  const chat = page.url();
+  await importPlugin(page, 'layer');
+  await page.goto(chat);
+  const frame = page.locator('iframe[src*="role=frame"]');
+  const clip = () => frame.evaluate((element) => element.style.clipPath);
+  const storyTop = () => page.locator('main > div').filter({ has: page.locator('[data-key]') }).evaluate((element) => element.scrollTop);
+
+  await test.step('the frame shows over the chat, on its boxes alone, and a press on its button is its own', async () => {
+    await expect(frame).toBeVisible();
+    await expect.poll(clip).toContain('path(');
+    await page.mouse.click(...LAYER_BUTTON);
+    await expect(page.getByText('layer pressed 1', { exact: true })).toBeVisible();
+  });
+
+  await test.step('a press on a box that only shows goes through to the app, and the frame has its button back after', async () => {
+    const field = page.getByLabel('메시지', { exact: true });
+    const at = (await field.boundingBox())!;
+    const [x, y] = [at.x + at.width / 2, at.y + at.height / 2];
+    expect(y).toBeGreaterThan(900 - LAYER_BAND);
+    await page.mouse.move(x, y - 4);
+    await page.mouse.move(x, y);
+    await expect(frame).toHaveClass(/released/);
+    await page.mouse.click(x, y);
+    await expect(field).toBeFocused();
+    await page.keyboard.type('through');
+    await expect(field).toHaveValue('through');
+    await page.mouse.move(...LAYER_BUTTON);
+    await expect(frame).not.toHaveClass(/released/);
+    await page.mouse.click(...LAYER_BUTTON);
+    await expect(page.getByText('layer pressed 2', { exact: true })).toBeVisible();
+  });
+
+  await test.step('a wheel over its box, which scrolls nothing of its own, moves the chat', async () => {
+    const top = await storyTop();
+    expect(top).toBeGreaterThan(400);
+    await page.mouse.move(...LAYER_PANEL);
+    await page.mouse.wheel(0, -300);
+    await expect.poll(storyTop).toBeLessThan(top - 100);
+  });
+
+  await test.step('its own page opens from the chat menu in place of the layer, which comes back as the page closes', async () => {
+    await page.getByRole('button', { name: '채팅 메뉴', exact: true }).click();
+    await page.locator('[role^="menuitem"]', { hasText: '레이어 시험 열기' }).click();
+    const inner = page.frameLocator('iframe[src*="role=frame"]');
+    await expect(inner.getByRole('heading', { name: 'layer probe page', exact: true })).toBeVisible();
+    await expect.poll(clip).toBe('');
+    await inner.getByRole('button', { name: '닫기', exact: true }).click();
+    await expect.poll(clip).toContain('path(');
+  });
+
+  await test.step('a window over the chat takes the layer away until it closes, and the plugin is turned off for the specs after', async () => {
+    // The rail's 설정 is under the band that only shows: the mouse over it is what lets the frame go.
+    const settings = page.getByRole('button', { name: '설정', exact: true });
+    const at = (await settings.boundingBox())!;
+    const over = async () => {
+      await page.mouse.move(at.x + at.width / 2 - 2, at.y + at.height / 2);
+      await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
+      await expect(frame).toHaveClass(/released/);
+    };
+    await over();
+    await settings.click();
+    await expect(page.getByRole('navigation', { name: '설정' })).toBeVisible();
+    await expect(frame).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('navigation', { name: '설정' })).toHaveCount(0);
+    await expect(frame).toBeVisible();
+    await expect.poll(clip).toContain('path(');
+    await over();
+    await settings.click();
+    await settingsPage(page, '플러그인');
+    await page.getByRole('button', { name: /레이어 시험/ }).click();
+    const saved = saving(page);
+    await page.getByRole('switch', { name: '항상 켜기', exact: true }).click();
+    await saved;
+    await expect(page.getByRole('switch', { name: '항상 켜기', exact: true })).not.toBeChecked();
+  });
+});

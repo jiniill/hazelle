@@ -1,4 +1,5 @@
-import { useCallback, useEffect, type RefObject } from 'react';
+import { useCallback, useContext, useEffect, type RefObject } from 'react';
+import { Held } from './Shell';
 import styles from './ToolFrame.module.css';
 
 type Props = { title: string; sandbox: string; allow: string; onMount: (window: Window) => () => void };
@@ -93,8 +94,11 @@ const HEARD: Record<string, Exclude<Heard['on'], 'missed'>> = { pointermove: 'mo
 // - A box that only shows is pressed through. The frame takes pointer input wherever it shows, says when a pointer is
 //   on nothing of its own, and is let go (styles.released) until that touch has ended and its click has been aimed,
 //   or until the mouse is over no such box; it is told when it has its input back (holdAfter).
+// - The frame stands in the body, over a LayerWindow too: it is not laid while one holds the page.
 export function FrameLayer({ scrollRef, onMount }: { scrollRef: RefObject<HTMLElement | null>; onMount: (layer: Layer) => Laid }) {
+  const held = useContext(Held);
   useEffect(() => {
+    if (held) return;
     let laid: HTMLIFrameElement | null = null;
     let region: Region = { takes: [], shows: [] };
     let hold = HELD;
@@ -171,6 +175,6 @@ export function FrameLayer({ scrollRef, onMount }: { scrollRef: RefObject<HTMLEl
       draw(null, { takes: [], shows: [] });
       for (const type of Object.keys(HEARD)) window.removeEventListener(type, pointed, { capture: true });
     };
-  }, [scrollRef, onMount]);
+  }, [scrollRef, onMount, held]);
   return null;
 }

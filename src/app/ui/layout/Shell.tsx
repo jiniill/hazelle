@@ -6,13 +6,16 @@ import styles from './Shell.module.css';
 // Read by Screen: a screen in the window takes the window's desktop scale.
 export const InWindow = createContext(false);
 
+// Read by FrameLayer: what it lays stands outside the Shell, so it is taken away while a LayerWindow holds the page.
+export const Held = createContext(false);
+
 // held: a LayerWindow stands over the page, which stays mounted where it was, inert and at its scroll.
 export function Shell({ side, held = false, children }: { side: ReactNode; held?: boolean; children: ReactNode }) {
   useHeldScroll(held);
   return (
     <div className={held ? `${styles.shell} ${styles.held}` : styles.shell} inert={held}>
       {side}
-      <div className={styles.main}>{children}</div>
+      <div className={styles.main}><Held.Provider value={held}>{children}</Held.Provider></div>
     </div>
   );
 }
