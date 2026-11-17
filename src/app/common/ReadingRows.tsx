@@ -1,6 +1,6 @@
 import { useDisplay } from '../display';
 import { ChoiceGroup, FontPicker, SettingRow, Stepper, Switch } from '../ui';
-import { choices, REPLY, SIZE, SPACING, WIDTH, type Preset } from './reading';
+import { choices, GLIDE, PACE, REPLY, SIZE, SPACING, WIDTH, type Preset } from './reading';
 
 export const presetChoices = (presets: Preset[]) => presets.map(({ id, name }) => ({ value: id, label: name }));
 
@@ -39,6 +39,25 @@ export function ReplyRow() {
       help={{ text: '응답이 길어져 화면 아래로 넘어갈 때 새 줄을 따라 내려갈지, 읽던 위치를 유지할지 정해요.', demo: { name: 'replyScroll', ways: { labels: [REPLY.follow, REPLY.stay], now: reading.reply === 'follow' ? 0 : 1 } } }}
       control={<ChoiceGroup layout="segmented" label="응답 수신 시" options={choices(REPLY)} value={reading.reply} onChange={(reply) => changeReading({ reply })} />}
     />
+  );
+}
+
+export function GlideRows() {
+  const { display, changeDisplay } = useDisplay();
+  return (
+    <>
+      <SettingRow
+        label={GLIDE.label}
+        help={{ text: '손을 대지 않아도 화면이 천천히 내려가요. 화면을 누르고 있으면 멈추고, 직접 스크롤하면 잠시 뒤에 다시 내려가요.' }}
+        control={<Switch label={GLIDE.label} checked={display.glide} onChange={(glide) => changeDisplay({ glide })} />}
+      />
+      {display.glide && (
+        <SettingRow
+          label={GLIDE.pace}
+          control={<ChoiceGroup layout="segmented" label={GLIDE.pace} options={choices(PACE)} value={display.glidePace} onChange={(glidePace) => changeDisplay({ glidePace })} />}
+        />
+      )}
+    </>
   );
 }
 

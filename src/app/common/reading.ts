@@ -17,6 +17,10 @@ export const SIZE = { min: 14, max: 21 };
 export const SPACING: Record<Reading['leading'], string> = { narrow: '좁게', normal: '보통', wide: '넓게', widest: '더 넓게' };
 export const WIDTH: Record<Reading['width'], string> = { ...SPACING, full: '가득' };
 export const REPLY: Record<Reading['reply'], string> = { follow: '자동 스크롤', stay: '스크롤 고정' };
+// The view going down by itself while it is read. Not REPLY's 자동 스크롤, which follows a reply to its end.
+export const GLIDE = { label: '자동으로 내려가기', pace: '내려가는 속도' };
+export type Pace = 'slow' | 'normal' | 'fast' | 'fastest';
+export const PACE: Record<Pace, string> = { slow: '느리게', normal: '보통', fast: '빠르게', fastest: '더 빠르게' };
 export const SIDE: Record<StageSide, string> = { right: '오른쪽', left: '왼쪽' };
 
 export const choices = <T extends string>(labels: Record<T, string>) => (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
@@ -52,13 +56,13 @@ export const lettersOf = ({ font, size, leading, width }: Letters): Letters => (
 // Portrait stage is reserved for chats without illustration (user, 2026-10-16); width cap preserves old default (2026-10-17).
 // Track last system mode so reload preserves manual edits until the next mode change (user, 2026-10-20).
 // Chimes default off and use chimeSounds once enabled (user, 2026-10-26).
-export type Display = Scheme & { theme: ThemeId; chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; toolsFollow: boolean; splitReplies: boolean; userStops: boolean; modes: Partial<Record<ThemeId, Mode>> };
+export type Display = Scheme & { theme: ThemeId; chimes: boolean; chimeSounds: Record<Cue, Chime>; follow: Follow | null; quotes: QuoteShape; hideHeader: boolean; foldComposer: boolean; enterSendsChoice: boolean | null; hidePictures: boolean; pictureWidest: number; wideFill: boolean; pictureSide: StageSide; inlineIllustrations: boolean; portrait: boolean; stepButtons: boolean; scrubber: boolean; toolsFollow: boolean; splitReplies: boolean; userStops: boolean; glide: boolean; glidePace: Pace; modes: Partial<Record<ThemeId, Mode>> };
 
 export type Follow = Record<Mode, string> & { applied: Mode };
 
 const PLAIN = { bg: 'base', ink: 'base', accent: 'base', dialogue: 'base' } as const;
 
-export const DISPLAY_DEFAULT: Display = { theme: 'base', chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, mode: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, toolsFollow: true, splitReplies: true, userStops: false, modes: {} };
+export const DISPLAY_DEFAULT: Display = { theme: 'base', chimes: false, chimeSounds: { 'reply-started': 'off', 'reply-received': 'ding', translated: 'dingdong' }, mode: 'dark', ...PLAIN, follow: null, quotes: 'color', hideHeader: false, foldComposer: true, enterSendsChoice: null, hidePictures: false, pictureWidest: 100, wideFill: true, pictureSide: 'right', inlineIllustrations: false, portrait: false, stepButtons: false, scrubber: true, toolsFollow: true, splitReplies: true, userStops: false, glide: false, glidePace: 'normal', modes: {} };
 
 export function parseDisplay(stored: string, fallback: Display): Display {
   const read = fields<keyof Display | 'enterSends'>(stored);
@@ -91,6 +95,8 @@ export function parseDisplay(stored: string, fallback: Display): Display {
     toolsFollow: flag(read.toolsFollow, fallback.toolsFollow),
     splitReplies: flag(read.splitReplies, fallback.splitReplies),
     userStops: flag(read.userStops, fallback.userStops),
+    glide: flag(read.glide, fallback.glide),
+    glidePace: known(PACE, read.glidePace, fallback.glidePace),
     modes: parseModes(read.modes),
   };
 }

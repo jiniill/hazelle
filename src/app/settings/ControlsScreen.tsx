@@ -1,5 +1,5 @@
 import { DetailFold } from '../common/DetailFold';
-import { ReplyRow } from '../common/ReadingRows';
+import { GlideRows, ReplyRow } from '../common/ReadingRows';
 import { PAGES } from '../common/words';
 import { useDisplay } from '../display';
 import { backBar } from '../shell/router';
@@ -14,6 +14,7 @@ export function ControlsScreen({ back }: { back: Back | null }) {
       <Section title="스크롤할 때">
         <SettingGroup label="스크롤할 때">
           <ReplyRow />
+          <GlideRows />
           <SettingRow
             label="헤더 숨기기"
             help={{ text: '아래로 스크롤하면 숨기고, 위로 스크롤하면 다시 보여요.', demo: { name: 'hideHeader', ways: { on: display.hideHeader } } }}

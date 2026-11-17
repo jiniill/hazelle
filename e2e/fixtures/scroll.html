@@ -7,16 +7,21 @@
       import { createElement as h, useState } from 'react';
       import { createRoot } from 'react-dom/client';
       import { useFollow } from '../../src/app/chat/useFollow';
+      import { useGlide } from '../../src/app/chat/useGlide';
       import { ChatFrame } from '../../src/app/ui/layout/ChatFrame';
       import { Viewport } from '../../src/app/ui/collections/Viewport';
       import '../../src/app/ui/foundation/global.css';
 
-      const stay = new URLSearchParams(location.search).get('reply') !== 'follow';
+      const params = new URLSearchParams(location.search);
+      const stay = params.get('reply') !== 'follow';
+      // px a second; absent, the view does not go down by itself.
+      const glide = Number(params.get('glide'));
       function Chat() {
         const [rows, setRows] = useState(() => Array.from({ length: 10 }, (_, i) => ({ id: `m${i}`, height: 150 })));
         const [streaming, setStreaming] = useState(false);
         const [composer, setComposer] = useState(90);
         const scroll = useFollow(rows.length, streaming, streaming ? 'user' : null, stay);
+        useGlide(scroll.scrollRef, glide);
         const button = (label, onClick) => h('button', { onClick }, label);
         return h(ChatFrame, {
           title: 'Chat scroll regression', actions: null, above: scroll.pill && h('output', null, scroll.pill),

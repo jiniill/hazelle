@@ -1,6 +1,6 @@
 import { setLook } from '../../runtime/library/characters';
 import { presetOf } from '../common/reading';
-import { HidePicturesRow, presetChoices, ReadingRows, ReplyRow } from '../common/ReadingRows';
+import { GlideRows, HidePicturesRow, presetChoices, ReadingRows, ReplyRow } from '../common/ReadingRows';
 import { PRESET, PRESET_GONE, PRESET_GONE_CHIP, RESET, SAVE_FAILED, READING_SETTINGS } from '../common/words';
 import { useDisplay } from '../display';
 import { useStore } from '../session';
@@ -19,6 +19,7 @@ export function ReadingDialog({ character, onClose }: { character: Held; onClose
         <HidePicturesRow />
         <ReadingRows fontHeld={find(character?.look) !== undefined} />
         <ReplyRow />
+        <GlideRows />
         <Row kind="actions">
           <Button variant="link" size="sm" onClick={reset}>
             {RESET}

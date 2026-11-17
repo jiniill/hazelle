@@ -32,6 +32,7 @@ import { toggleEditor, type Panel, type Side } from './panels';
 import { useAutopilot } from './useAutopilot';
 import { useChat } from './useChat';
 import { useComposerFold } from './useComposerFold';
+import { PACES, useGlide } from './useGlide';
 import type { SearchSeed } from './useChatSearch';
 
 // The lorebook panel brings the lorebook editor and the CBS language with it, so a chat loads them only when it opens.
@@ -84,7 +85,11 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
   });
   const inUse = prompt.kind === 'prompt' ? prompt.prompt.id : null;
   const inspect = chat.inspect && <ChatInspect chat={chatId} tab={chat.inspect.tab} call={chat.inspect.call} notes={chat.sendNotes} busy={busy} prompt={prompt} character={shelf?.id ?? null} onTab={actions.switchInspectTab} onClose={actions.closeInspect} onEdit={actions.side} />;
-  const paired = usePanelsBeside() && !!panel && !!chat.inspect;
+  const beside = usePanelsBeside();
+  const paired = beside && !!panel && !!chat.inspect;
+  // Not read past: a message being edited in place, and a story a panel covers.
+  const read = chat.editing === null && (beside || (!panel && !chat.inspect));
+  useGlide(scroll.scrollRef, display.glide && read ? PACES[display.glidePace] * worn.reading.size : 0);
   useEffect(() => {
     onPaired(paired);
     return () => onPaired(false);
