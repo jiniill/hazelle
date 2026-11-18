@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 import type { ApiResult } from '../../runtime/api';
 import type { Page } from '../../runtime/service/pages';
 import { probeRoot } from '../ui/probe';
-import { useLoad, usePages } from './useLoaded';
+import { useLoad, usePages, useShown } from './useLoaded';
 
 it('retries the page that failed, so a reload that failed is asked again from the first page', async () => {
   const asked: (string | null)[] = [];
@@ -70,4 +70,21 @@ it('drops the answer of an ask its deps replaced, keeps what was shown past a fa
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it('shows a held list a page at a time, from the row that must show, and drops the door once every row shows', async () => {
+  let shown: ReturnType<typeof useShown<number>>;
+  function Probe() {
+    shown = useShown([1, 2, 3, 4, 5, 6, 7], 2, 3);
+    return null;
+  }
+  const root = probeRoot();
+  await act(() => root.render(<Probe />));
+  expect(shown!.rows).toEqual([1, 2, 3]);
+  await act(async () => (shown!.more as { props: { onClick: () => void } }).props.onClick());
+  expect(shown!.rows).toEqual([1, 2, 3, 4, 5]);
+  await act(async () => (shown!.more as { props: { onClick: () => void } }).props.onClick());
+  expect(shown!.rows).toHaveLength(7);
+  expect(shown!.more).toBe(false);
+  await act(() => root.unmount());
 });

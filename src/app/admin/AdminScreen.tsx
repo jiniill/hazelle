@@ -48,7 +48,7 @@ export function AdminScreen({ back }: { back: Back | null }) {
       <Beside side={<LogSection key={acts} head />}>
         {!own && moderating && <ReportsSection head onActed={acted} />}
         {!own && <OperatorPostsSection />}
-        {!own && <DiagnosesSection />}
+        {!own && <DiagnosesSection head />}
         {!own && <VisitsSection />}
         {!own && <GuestBoardSection onSaved={acted} />}
         <AccountsSection loaded={accounts} total={service.data?.accounts ?? null} onActed={acted}>

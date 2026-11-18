@@ -9,6 +9,7 @@ import type { Sending } from '../../runtime/chat/turn-context';
 import { cacheShare, cost, tokens } from '../common/receipt';
 import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ago } from '../common/time';
+import { useShown } from '../common/useLoaded';
 import { CACHE_GUARD, COUNTING, MODEL_SETTINGS, opens, UNKNOWN, CACHE_BROKEN, CACHE_READ } from '../common/words';
 import { useLab } from '../common/labs';
 import { useCaptured, useSession } from '../session';
@@ -60,13 +61,17 @@ function PastReplies({ chat, replies }: { chat: string; replies: CacheNotes['rep
   const { log } = useSession();
   useSyncExternalStore(log.subscribe, () => log.of(chat));
   const [open, setOpen] = useState<string | null>(null);
+  const shown = useShown(replies, RECENT);
   if (!replies.length) return <Empty variant="section">받은 응답이 없어요.</Empty>;
   return (
-    <List label="지난 응답">
-      {replies.slice(0, RECENT).map(({ at, receipt }) => (
-        <PastReply key={receipt.id} at={at} receipt={receipt} entry={log.entry(chat, receipt.id)} open={open === receipt.id} onToggle={() => setOpen(open === receipt.id ? null : receipt.id)} />
-      ))}
-    </List>
+    <>
+      <List label="지난 응답">
+        {shown.rows.map(({ at, receipt }) => (
+          <PastReply key={receipt.id} at={at} receipt={receipt} entry={log.entry(chat, receipt.id)} open={open === receipt.id} onToggle={() => setOpen(open === receipt.id ? null : receipt.id)} />
+        ))}
+      </List>
+      {shown.more}
+    </>
   );
 }
 

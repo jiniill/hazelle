@@ -4,7 +4,6 @@ import type { Page } from '../../runtime/service/pages';
 import { Button, Callout, Empty, List, PostFeed, Text } from '../ui';
 import { ACTS } from './acts';
 import { describeFailure } from './failure';
-import { count } from './typedNumber';
 import { LOADING, SEE_ALL } from './words';
 
 // The one load protocol: asked on mount, on a change in deps and on reload, an older ask's answer dropped (its signal
@@ -66,6 +65,21 @@ function Refresh({ busy, onClick }: { busy?: boolean; onClick: () => void }) {
 // How many rows a list shows on a page that leads elsewhere to it whole (운영, 설정 › 계정): the newest, or what waits.
 export const HEAD_ROWS = 5;
 
+// The door to a list's next rows, where it stands.
+function More({ busy, onClick }: { busy?: boolean; onClick: () => void }) {
+  return (
+    <Button variant="ghost" size="sm" busy={busy} onClick={onClick}>
+      더 보기
+    </Button>
+  );
+}
+
+// A list held whole, shown a page at a time. least: a row that must show at first, counted from the top.
+export function useShown<T>(rows: T[], page: number, least = 0) {
+  const [shown, setShown] = useState(Math.max(page, least));
+  return { rows: rows.slice(0, shown), more: rows.length > shown && <More onClick={() => setShown(shown + page)} /> };
+}
+
 export function usePages<T>(load: (after: string | null) => Promise<ApiResult<Page<T>>>) {
   const [rows, setRows] = useState<T[] | null>(null);
   const [next, setNext] = useState<string | null>(null);
@@ -100,11 +114,7 @@ export function usePages<T>(load: (after: string | null) => Promise<ApiResult<Pa
     whole: rows !== null && next === null,
     loading: rows === null && failure === null && LOADING_NOTE,
     failure: failure && <Callout tone="warn" action={{ label: ACTS.retry.label, onClick: () => void fetch(failure.after) }}>{failure.text}</Callout>,
-    more: next !== null && (
-      <Button variant="ghost" size="sm" busy={busy} onClick={() => void fetch(next)}>
-        더 보기
-      </Button>
-    ),
+    more: next !== null && <More busy={busy} onClick={() => void fetch(next)} />,
     // After an act that changed rows not in hand, such as every report on one share: the first page again.
     reload: () => void fetch(null),
     refresh: <Refresh busy={busy} onClick={() => void fetch(null)} />,
@@ -112,11 +122,11 @@ export function usePages<T>(load: (after: string | null) => Promise<ApiResult<Pa
   };
 }
 
-// The door to the rest of a list: a page when total is unknown (the list pages), else the same place, folding back with 접기.
-export function SeeAll({ total, open = false, onClick }: { total?: number; open?: boolean; onClick: () => void }) {
+// The door from a list's head to the list whole, on a page of its own.
+export function SeeAll({ onClick }: { onClick: () => void }) {
   return (
     <Button variant="secondary" onClick={onClick}>
-      {open ? '접기' : total === undefined ? SEE_ALL : `${SEE_ALL} (${count(total)})`}
+      {SEE_ALL}
     </Button>
   );
 }

@@ -27,7 +27,7 @@ import { typedText, useTypedNumber } from './typed';
 import { count, readCount, readOptional, reader } from './typedNumber';
 import { useAutosave } from './useAutosave';
 import { useSearch } from './useSearch';
-import { follows, LORE_SCAN_WORDS, loreName, SAVE_FAILED, SCOPE, searchOf, LOREBOOK, FIELD_ERRORS, SECONDARY_KEYS } from './words';
+import { firstOf, follows, LORE_SCAN_WORDS, loreName, SAVE_FAILED, SCOPE, searchOf, LOREBOOK, FIELD_ERRORS, SECONDARY_KEYS } from './words';
 
 type Position = Lore['position'];
 const POSITIONS: { value: NonNullable<Position> | 'lorebook'; label: string }[] = [
@@ -123,8 +123,7 @@ function ownerName(store: ObjectStore, { kind, id }: LoreOwner): string {
 
 function when({ enabled, constant, keys }: Lore) {
   const named = keys.filter((key) => key.trim());
-  const more = named.length > KEYS_SHOWN ? ` 외 ${named.length - KEYS_SHOWN}개` : '';
-  return !enabled ? '꺼짐' : constant ? '항상' : named.length ? named.slice(0, KEYS_SHOWN).join(', ') + more : '키워드 없음';
+  return !enabled ? '꺼짐' : constant ? '항상' : named.length ? firstOf(named, KEYS_SHOWN) : '키워드 없음';
 }
 
 // An owner's lorebook folders, which hold no folders.

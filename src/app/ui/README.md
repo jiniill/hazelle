@@ -99,6 +99,12 @@ One kind of thing looks and reads one way on every screen. The kit decides what 
 - **Lists:** a › says a press opens something: a list whose rows open a page, the pane beside or a side panel is `List places` (`CardList places`, `PagedList places`), whatever its rows hold, the user's own things too. A row that acts where it stands (picks, toggles, unfolds, opens a dialog) shows none.
   Contents go in `description`, where it is used in `note`; an unused thing says nothing there. Counts read
   `{label} N개`, joined by ` · `. The default is the `badge` 기본.
+- **Length:** a list that grows with use never stands whole among other things, and none is cut without its door. A server
+  list pages by `after`, `limit` and `next` (`server/http` `limitOf`, `runtime/service/pages`) and is drawn through
+  `common/useLoaded`: `usePages` and `PagedList`, on a page that holds more than the list a `head` of `HEAD_ROWS` with
+  `SeeAll` to a page of its own, and 더 보기 there. A list held whole is cut by `useShown`, behind the same 더 보기. A run of
+  names inside a sentence is `firstOf` (`common/words.ts`): the first few, then 외 N개. No screen slices rows at a constant
+  of its own (lint). A window of time (최근 14일) is a bound already and needs none of this.
 - **Search** comes from `common/useSearch`: the field shows from `SEARCH_FROM` (`common/search.ts`) items and stays while words are typed;
   it stands first in the body's toolbar `Row`, sort and filters beside it. Its no-results `Empty` takes the variant
   of the list's own empty state.

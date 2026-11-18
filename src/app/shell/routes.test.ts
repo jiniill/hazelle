@@ -82,7 +82,7 @@ const EXAMPLES = {
   'board-activity': [{ kind: 'board-activity' }],
   'board-mine': [{ kind: 'board-mine' }],
   admin: [{ kind: 'admin' }],
-  'admin-list': [{ kind: 'admin-list', list: 'accounts' }, { kind: 'admin-list', list: 'reports' }, { kind: 'admin-list', list: 'log' }],
+  'admin-list': [{ kind: 'admin-list', list: 'accounts' }, { kind: 'admin-list', list: 'reports' }, { kind: 'admin-list', list: 'diagnoses' }, { kind: 'admin-list', list: 'log' }],
   setup: [{ kind: 'setup' }],
   features: [{ kind: 'features' }],
   'chat-settings': [{ kind: 'chat-settings' }],

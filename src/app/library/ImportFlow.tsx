@@ -18,7 +18,7 @@ import { ACTS } from '../common/acts';
 import { ImportContext } from '../common/importing';
 import { PRESET_EXTENSIONS } from '../../engine/import/preset';
 import { useSearch } from '../common/useSearch';
-import { BIN, MISSED, NO_CHARACTER, THINGS, TOOL, UNREADABLE_FILE, WRONG_PASSWORD, searchOf, IMPORTING } from '../common/words';
+import { BIN, firstOf, MISSED, NO_CHARACTER, THINGS, TOOL, UNREADABLE_FILE, WRONG_PASSWORD, searchOf, IMPORTING } from '../common/words';
 import { useFiles, useLibrary, useSettings, useStore } from '../session';
 import { navigate, useRoute } from '../shell/router';
 import type { Route } from '../shell/routes';
@@ -52,8 +52,7 @@ const UNPACK_FAILURE: Record<UnpackFailure, string> = {
   unreadable: '압축 파일을 읽지 못했어요. 파일이 손상됐을 수 있어요.',
 };
 const SKIPPED_SHOWN = 3;
-const skippedLine = (names: string[]) =>
-  `가져오지 않은 파일 ${names.length}개: ${names.slice(0, SKIPPED_SHOWN).join(', ')}${names.length > SKIPPED_SHOWN ? ' 등' : ''}`;
+const skippedLine = (names: string[]) => `가져오지 않은 파일 ${names.length}개: ${firstOf(names, SKIPPED_SHOWN)}`;
 
 // The page a route shows, where a module dropped or picked there is turned on first (placeOn): a character's page,
 // editor or chat, a prompt's editor, a persona's page, or 설정 › 모듈 for 항상, which also reads any .charx as a module.

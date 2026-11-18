@@ -87,6 +87,7 @@ function ModelPick({ models, failure, onPick }: { models: Model[]; failure: stri
       <TextField label={searchOf('모델')} showLabel={false} placeholder={`모델 ${models.length}개 검색`} value={search} onChange={setSearch} />
       {failure && <Callout tone="warn" alert>{failure}</Callout>}
       <List label="모델" box>
+        {/* eslint-disable-next-line no-restricted-syntax -- a picker's first matches, which typing narrows */}
         {shown.slice(0, MODELS_SHOWN).map((model) => <ListItem key={model.id} title={model.name} code={model.id} onClick={() => onPick(model)} />)}
       </List>
     </Stack>

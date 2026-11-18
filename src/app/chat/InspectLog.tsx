@@ -6,7 +6,8 @@ import { cacheShare, finish, seconds, tokens } from '../common/receipt';
 import { ago } from '../common/time';
 import { FEATURE_NAMES, ROLE_TAGS, STAGE_NAMES, UNKNOWN, USE_NAMES, INPUT_TRANSLATION, RESPONSE_RAW } from '../common/words';
 import { useSession } from '../session';
-import { Button, Callout, Empty, List, ListItem, Section, Stack, Text } from '../ui';
+import { useShown } from '../common/useLoaded';
+import { Callout, Empty, List, ListItem, Section, Stack, Text } from '../ui';
 import { SentRequest, SentResponse } from './ChatSent';
 
 const PAGE = 20;
@@ -34,22 +35,18 @@ export function Log({ chat, call }: { chat: string; call: string | undefined }) 
   // Recorded as each call ends; read by when each began.
   const entries = useMemo(() => held.entries.map((entry, index) => ({ entry, key: held.omitted + index })).sort((a, b) => b.entry.at - a.entry.at), [held]);
   const [open, setOpen] = useState(() => entries.find(({ entry }) => entry.receipt.id === call)?.key ?? null);
-  const [more, setMore] = useState(() => Math.max(PAGE, entries.findIndex(({ key }) => key === open) + 1));
+  const shown = useShown(entries, PAGE, entries.findIndex(({ key }) => key === open) + 1);
   const picked = held.entries.filter((entry) => entry.picked).length;
   return (
     <Section title="요청 기록" help="이 화면에서 이 채팅을 위해 보낸 모델 요청이에요. 새로고침하면 사라져요.">
       {entries.length ? (
         <Stack gap="related">
           <List label="요청 기록">
-            {entries.slice(0, more).map(({ entry, key }) => (
+            {shown.rows.map(({ entry, key }) => (
               <Row key={key} entry={entry} open={open === key} onToggle={() => setOpen(open === key ? null : key)} />
             ))}
           </List>
-          {entries.length > more && (
-            <Button variant="secondary" size="sm" onClick={() => setMore(more + PAGE)}>
-              더 보기
-            </Button>
-          )}
+          {shown.more}
           {picked > 0 && <Text variant="note">{`${picked}개는 새로고침 전에 보낸 요청이라 원문을 알 수 없어요.`}</Text>}
           {held.omitted > 0 && <Text variant="note">{`오래된 기록 ${held.omitted}개는 빠졌어요.`}</Text>}
         </Stack>

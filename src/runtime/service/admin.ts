@@ -8,7 +8,6 @@ import { page } from './pages';
 // not-admin.
 
 export const readService = () => api<Service>('GET', 'admin/service');
-export const readDiagnoses = () => api<{ rows: AutoRow[] }>('GET', 'admin/diagnoses');
 export const readVisits = () => api<Visits>('GET', 'admin/visits');
 export const setService = (values: Pick<Service, 'signupCap' | 'accountBytesCap' | 'accountFileBytesCap'>) => api<undefined>('PUT', 'admin/service', values);
 export const setBackupFolder = (folder: string | null) => api<undefined>('PUT', 'admin/backup-folder', { folder });
@@ -54,6 +53,7 @@ export const removeAccount = (account: string) => api<undefined>('DELETE', `admi
 export const readReports = (after: string | null, ask: { open?: boolean; limit?: number } = {}) => page<'reports', Report>('admin/reports', 'reports', after, ask);
 export const resolveReport = (id: number) => api<undefined>('POST', `admin/reports/${id}/resolve`);
 export const readLog = (after: string | null, ask: { limit?: number } = {}) => page<'log', LogRow>('admin/log', 'log', after, ask);
+export const readDiagnoses = (after: string | null, ask: { limit?: number } = {}) => page<'diagnoses', AutoRow>('admin/diagnoses', 'diagnoses', after, ask);
 
 export const setFileBlocked = (file: string, blocked: boolean) => api<undefined>('PUT', `admin/files/${file}/blocked`, { blocked });
 

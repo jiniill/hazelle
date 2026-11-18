@@ -5,17 +5,19 @@ import { backBar } from '../shell/router';
 import type { AdminList, Back } from '../shell/routes';
 import { NavBar, Screen } from '../ui';
 import { AccountsSection } from './AccountsSection';
+import { DIAGNOSES, DiagnosesSection } from './DiagnosesSection';
 import { LogSection } from './LogSection';
 import { ReportsSection } from './ReportsSection';
 import { useAccounts } from './useAccounts';
 
-const TITLES: Record<AdminList, string> = { accounts: '계정', reports: NOTICES.received, log: '기록' };
+const TITLES: Record<AdminList, string> = { accounts: '계정', reports: NOTICES.received, diagnoses: DIAGNOSES, log: '기록' };
 
 export function AdminListScreen({ list, back }: { list: AdminList; back: Back | null }) {
   return (
     <Screen width="page" top={<NavBar title={TITLES[list]} {...backBar(back)} />}>
       {list === 'accounts' && <AllAccounts />}
       {list === 'reports' && <ReportsSection head={false} />}
+      {list === 'diagnoses' && <DiagnosesSection head={false} />}
       {list === 'log' && <LogSection head={false} />}
     </Screen>
   );

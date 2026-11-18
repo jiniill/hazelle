@@ -53,6 +53,7 @@ afterEach(() => {
 
 const send = (report: unknown = REPORT, agent = 'Browser', visitor = '192.0.2.1') =>
   t.post('diagnoses', report, undefined, { 'user-agent': agent, [VISITOR_HEADER]: visitor });
+const read = async () => (await readDiagnoses(t.env.db, undefined, 100))!.rows;
 const stored = () => t.env.db.prepare('SELECT person, times, facts FROM auto_diagnoses').all<{ person: string; times: number; facts: string }>();
 
 it('rejects old or unlisted causes before storage and keeps the accepted cause in the latest facts', async () => {
@@ -64,7 +65,7 @@ it('rejects old or unlisted causes before storage and keeps the accepted cause i
   expect((await send(report)).status).toBe(204);
   expect(JSON.parse((await stored()).results[0]!.facts)).toMatchObject({ cause: 'fetch', origin: 'rejection' });
   expect((await send({ ...report, cause: 'module-import' })).status).toBe(204);
-  const [row] = await readDiagnoses(t.env.db);
+  const [row] = await read();
   expect(row).toMatchObject({ times: 2, people: 1 });
   expect(JSON.parse(row!.facts)).toMatchObject({ cause: 'module-import' });
 });
@@ -81,7 +82,7 @@ it('takes a silent evaluation job by closed words and sizes, a row for each kind
   expect(readAutoReport({ ...REPORT, chat: { ...CHAT, work: { ...CHAT.work, failed: { ...CHAT.work.failed, refused: 'by a verdict' } } } })).toBeNull();
   expect((await send(report)).status).toBe(204);
   expect((await send({ ...report, detail: 'read', job: { ...job, asker: 'memory' } })).status).toBe(204);
-  const rows = await readDiagnoses(t.env.db);
+  const rows = await read();
   expect(rows.map(({ event, detail }) => `${event} ${detail}`).sort()).toEqual(['evaluation-stuck display', 'evaluation-stuck read']);
   expect(JSON.parse(rows.find(({ detail }) => detail === 'display')!.facts)).toMatchObject({ job });
 });
@@ -97,7 +98,7 @@ it('keeps a person to one row a day, under a hash that changes with the day and 
   expect(today!.facts).not.toContain('secret-model');
   expect(today!.facts).toContain('"dropped":15');
   expect((await send(REPORT, 'Other browser')).status).toBe(204);
-  expect((await readDiagnoses(t.env.db))[0]).toMatchObject({ event: 'memory-gap', version: 'v0.6.4', people: 2, times: 3 });
+  expect((await read())[0]).toMatchObject({ event: 'memory-gap', version: 'v0.6.4', people: 2, times: 3 });
 
   vi.setSystemTime(Date.parse('2026-11-03T03:00:00Z'));
   await send();
@@ -115,4 +116,24 @@ it('forgets a report after 30 days', async () => {
   vi.setSystemTime(Date.now() + 2 * DAY_MS);
   await forgetOldRecords(t.env.db);
   expect((await stored()).results).toHaveLength(0);
+});
+
+it('pages the groups newest first, each once though several were last reported in one millisecond, and refuses a cursor it never gave', async () => {
+  vi.useFakeTimers({ now: Date.parse('2026-11-02T03:00:00Z'), toFake: ['Date'] });
+  const job: AutoJob = { asker: 'projection', regex: true, scope: { regex: 12, messages: 7, chars: 9000, lore: 3 }, jobs: 0, ran: 4100 };
+  for (const detail of ['display', 'read']) await send({ ...REPORT, event: 'evaluation-stuck', detail, chat: null, job });
+  vi.setSystemTime(Date.now() + 1000);
+  await send();
+  const admin = await t.signUp('operator');
+  type Page = { diagnoses: { event: string; detail: string }[]; next: string | null };
+  const seen: string[] = [];
+  let query = 'limit=1';
+  for (;;) {
+    const page = (await (await t.get(`admin/diagnoses?${query}`, admin.cookie)).json()) as Page;
+    seen.push(...page.diagnoses.map(({ event, detail }) => `${event} ${detail}`));
+    if (page.next === null) break;
+    query = `limit=1&after=${encodeURIComponent(page.next)}`;
+  }
+  expect(seen).toEqual(['memory-gap ', 'evaluation-stuck read', 'evaluation-stuck display']);
+  for (const after of ['1', '[1,"a"]', '["1","a","b","c","d"]']) expect((await t.get(`admin/diagnoses?after=${encodeURIComponent(after)}`, admin.cookie)).status).toBe(400);
 });

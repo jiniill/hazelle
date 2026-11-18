@@ -16,7 +16,7 @@ import { useCopy } from './useCopy';
 import { useSearch } from './useSearch';
 import { useSelection } from './useSelection';
 import { withParticle } from './particles';
-import { ASSET, CHANGE_IMAGE, namedObject, REMOVE_FAILED, SAVE_FAILED } from './words';
+import { ASSET, CHANGE_IMAGE, firstOf, namedObject, REMOVE_FAILED, SAVE_FAILED } from './words';
 
 // What runtime/library/characters keeps as an asset (engine/import assetType), and as a background (a picture).
 const KEEPS = {
@@ -126,7 +126,7 @@ export function AssetsEditor({ owner, shelves = false }: { owner: string; shelve
         {shelves && <Tabs label={ASSET} items={SHELF_ORDER.map((value) => ({ value, label: SHELVES[value].label, count: onShelf(value).length }))} value={shelf} onChange={(next) => { selection.clear(); setShelf(next); }} />}
         {unfound.length > 0 && (
           <Callout tone="warn">
-            {`채팅에서 찾지 못한 에셋 이름이 ${unfound.length}개 있어요: ${unfound.slice(0, UNFOUND_SHOWN).join(', ')}${unfound.length > UNFOUND_SHOWN ? ` 외 ${unfound.length - UNFOUND_SHOWN}개` : ''}`}
+            {`채팅에서 찾지 못한 에셋 이름이 ${unfound.length}개 있어요: ${firstOf(unfound, UNFOUND_SHOWN)}`}
           </Callout>
         )}
         <Row kind="toolbar">

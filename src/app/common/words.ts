@@ -431,6 +431,8 @@ export const NO_TOGGLES = '토글이 없어요.';
 export const LAB = '실험';
 export const PROMPT_MODELS = '프롬프트별 지정 모델';
 export const SEE_ALL = '모두 보기';
+// The first few of a run of names, the rest counted.
+export const firstOf = (names: string[], shown: number) => `${names.slice(0, shown).join(', ')}${names.length > shown ? ` 외 ${names.length - shown}개` : ''}`;
 export const MISSED = '가져오지 못한 항목';
 export const EMPTY_FOLDER = '비어 있는 폴더예요.';
 export const SET_DEFAULT = '기본으로 지정';

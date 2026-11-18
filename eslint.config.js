@@ -24,6 +24,11 @@ const RAW_TRANSFER = {
   selector: 'CallExpression[callee.property.name=/^(readFile|putFile)$/]',
   message: 'Read and send stored files through runtime/files/files (Files, or transfers.run), which holds the page to one transfer policy.',
 };
+// The fix each long list once got on its own: rows cut at a constant where they are drawn, with a door of its own or none.
+const HAND_CUT = {
+  selector: "CallExpression[callee.property.name='map'] > MemberExpression > CallExpression[callee.property.name='slice'][arguments.0.value=0][arguments.1.name=/^[A-Z][A-Z_0-9]+$/]",
+  message: 'A list cut by hand: page it through src/app/common/useLoaded.tsx (usePages for a server list, useShown for one held whole), which gives it its door to the rest.',
+};
 const STYLE_PROPS = {
   selector: 'JSXAttribute[name.name=/^(className|style)$/]',
   message: 'Only src/app/ui styles elements (src/app/ui/README.md).',
@@ -50,7 +55,7 @@ export default defineConfig([
   {
     files: ['src/app/**'],
     ignores: ['src/app/ui/**', 'src/app/main.tsx'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [CSS_IMPORT], paths: [ACT_ICONS] }], 'no-restricted-syntax': ['error', HEX_COLOR, STYLE_PROPS, RETIRED_COPY] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [CSS_IMPORT], paths: [ACT_ICONS] }], 'no-restricted-syntax': ['error', HEX_COLOR, STYLE_PROPS, RETIRED_COPY, HAND_CUT] },
   },
   {
     // A theme's definition states its own colours (user, 2026-11-13), and tokens.test.ts checks them as written.

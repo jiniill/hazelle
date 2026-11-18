@@ -1,4 +1,5 @@
 import type { Notice } from '../contracts/accounts';
+import type { AutoRow } from '../contracts/auto-diagnosis';
 import type { BoardSettings } from '../contracts/board';
 import { Hono, type Context } from 'hono';
 import { KEEP_YEARS, MAX_NOTICE_LENGTH, type AccountState, type AdminAccount, type BackupFolder, type LogRow, type Report, type RestoreAction, type Service, type ShareVersion, type UsagePage, type Visits } from '../contracts/admin';
@@ -60,7 +61,12 @@ admin.use(requireSession);
 admin.use(operator);
 
 admin.get('/visits', async (c) => c.json({ days: await readVisits(c.env.db), cohorts: await readCohorts(c.env.db), pulse: await readPulseDays(c.env.db) } satisfies Visits));
-admin.get('/diagnoses', async (c) => c.json({ rows: await readDiagnoses(c.env.db) }));
+admin.get('/diagnoses', async (c) => {
+  const limit = limitOf(c);
+  const listed = limit === null ? null : await readDiagnoses(c.env.db, c.req.query('after'), limit);
+  if (!listed) return fail(c, 400, 'bad-input');
+  return c.json({ diagnoses: listed.rows, next: listed.next } satisfies Paged<'diagnoses', AutoRow>);
+});
 
 // The accounts row a log row or a notice names, by ?2.
 const ACCOUNT = 'accounts WHERE id = ?2';
