@@ -461,7 +461,7 @@ const MEMORY_INVALID: Record<Exclude<Extract<MemoryFailure, { kind: 'invalid' }>
 export function describeMemoryFailure(failure: MemoryFailure): string {
   switch (failure.kind) {
     case 'invalid':
-      return failure.reason === 'order' ? `모델 응답의 기록 범위가 메시지 순서와 맞지 않아요. ${failure.record}번째 기록이 ${failure.to}번 메시지에서 끝나는데, ${failure.after + 1}~${failure.of}번이어야 해요.` : MEMORY_INVALID[failure.reason];
+      return failure.reason === 'order' ? `모델이 ${failure.record}번째 기록의 마지막 메시지를 ${failure.to}번으로 적었는데, ${failure.after + 1}~${failure.of}번이어야 해요.` : MEMORY_INVALID[failure.reason];
     case 'unsaved':
       return describeFailure(failure.failure);
     case 'embed':
