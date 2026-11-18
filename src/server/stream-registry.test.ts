@@ -143,6 +143,22 @@ describe('the stream registry', () => {
     expect(streams.live()).toBe(0);
   });
 
+  it('drops an account\'s oldest streams as it starts one past the bytes it may keep, and no other account\'s', async () => {
+    const { seen, upstream } = provider();
+    const streams = registryWithBudget(store(), upstream, relayBudget(), 0);
+    for (const name of ['u:1', 'v:1', 'u:2']) await (await streams.start(name, await body(), staying, () => {})).body?.cancel();
+    expect(seen.aborted).toBe(1);
+    expect((await streams.read('u:1', 0, staying)).status).toBe(404);
+    for (const name of ['v:1', 'u:2']) {
+      const kept = await streams.read(name, 0, staying);
+      expect(kept.status).toBe(200);
+      await kept.body?.cancel();
+    }
+    streams.stop('v:1');
+    streams.stop('u:2');
+    await streams.settled();
+  });
+
   it('expires a stream at its alarm: the call ends and its rows go', async () => {
     const { seen, upstream } = provider();
     const streams = streamRegistry(store(), upstream);

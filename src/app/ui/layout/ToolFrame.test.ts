@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { holdAfter, type Heard, type Hold } from './ToolFrame';
+import { clipped, holdAfter, type Heard, type Hold } from './ToolFrame';
 
 const HELD: Hold = { held: true, mouse: false };
 const pointer = (on: Exclude<Heard['on'], 'missed'>, mouse: boolean, where: 'takes' | 'shows' | 'neither'): Heard => ({ on, mouse, takes: where === 'takes', shows: where === 'shows' });
@@ -28,4 +28,12 @@ it('lets a laid frame go for a mouse over a box that only shows, until the mouse
   expect(holdAfter(let_go.hold, missed('up'))).toEqual({ hold: let_go.hold });
   expect(holdAfter(let_go.hold, pointer('move', true, 'takes'))).toEqual({ hold: HELD, after: null });
   expect(holdAfter(let_go.hold, pointer('move', true, 'neither'))).toEqual({ hold: HELD, after: null });
+});
+
+it('lays a layer\'s boxes no further than the chat\'s column, and none that lies outside it', () => {
+  const column = { left: 300, top: 0, right: 1000, bottom: 800 };
+  expect(clipped({ takes: [[0, 0, 100000, 100000], [0, 0, 300, 800]], shows: [[400, 700, 1200, 900], [500, 100, 600, 200]] }, column)).toEqual({
+    takes: [[300, 0, 1000, 800]],
+    shows: [[400, 700, 1000, 800], [500, 100, 600, 200]],
+  });
 });

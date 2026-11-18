@@ -1,7 +1,7 @@
 import type { Retry } from '../contracts/streams';
 import type { RelayBudget } from './limits';
 import type { Upstream } from './relay';
-import { StreamBox } from './stream-box';
+import { LIMIT_BYTES, StreamBox } from './stream-box';
 import type { StreamStore } from './db/streams-db';
 
 // The reply streams of this process: at most one StreamBox per name, kept while its call runs or a reader reads it. A
@@ -20,7 +20,13 @@ export type Streams = {
   close(): void;
 };
 
-export function streamRegistry(store: StreamStore, upstream: Upstream, budget: RelayBudget): Streams {
+// The pages an account's streams keep at once. A client deletes a reply once it has read it, so only what no device
+// came back for stays; past this the account's oldest go as a new call starts, or one account's replies, kept a day
+// each, would fill the disk.
+const KEEP_BYTES = 8 * LIMIT_BYTES;
+const accountOf = (name: string) => name.split(':')[0]!;
+
+export function streamRegistry(store: StreamStore, upstream: Upstream, budget: RelayBudget, keep = KEEP_BYTES): Streams {
   const boxes = new Map<string, StreamBox>();
   const box = (name: string) => {
     const found = boxes.get(name);
@@ -29,7 +35,7 @@ export function streamRegistry(store: StreamStore, upstream: Upstream, budget: R
       store.storage(name),
       upstream,
       () => { if (boxes.get(name) === made) boxes.delete(name); },
-      budget.account(name.split(':')[0]!),
+      budget.account(accountOf(name)),
     );
     boxes.set(name, made);
     return made;
@@ -42,7 +48,15 @@ export function streamRegistry(store: StreamStore, upstream: Upstream, budget: R
     store.remove(name);
   };
   return {
-    start: (name, body, signal, leave, counted) => box(name).start(body, signal, leave, counted),
+    start: async (name, body, signal, leave, counted) => {
+      try {
+        for (const old of store.over(accountOf(name), keep)) if (old !== name) await drop(old);
+      } catch (error) {
+        leave();
+        throw error;
+      }
+      return box(name).start(body, signal, leave, counted);
+    },
     read: (name, from, signal) => box(name).read(from, signal),
     stop: (name) => boxes.get(name)?.stop(),
     drop,

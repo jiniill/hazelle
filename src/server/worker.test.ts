@@ -423,6 +423,13 @@ describe('guards', () => {
     expect(await response.json()).toEqual({ error: 'no-session' });
   });
 
+  it('marks every answer nosniff: a refusal, a missing route and a relayed reply', async () => {
+    const cookie = sessionCookie(await post('signup', signupBody()));
+    const relayed = await post('relay', { url: 'https://api.example.com/', method: 'GET', headers: {}, body: null }, cookie);
+    expect(relayed.headers.get('x-relay')).toBe('upstream');
+    for (const response of [await get('objects'), await get('nowhere'), relayed]) expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+  });
+
   it('refuses a state-changing request without a JSON content type', async () => {
     const response = await t.raw('login', { method: 'POST', body: 'username=jin' });
     expect(response.status).toBe(415);

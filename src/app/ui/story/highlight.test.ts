@@ -14,6 +14,10 @@ it('highlights a fence of a known language, keeping its text, and leaves an unkn
 
   const unknown = '<pre><code class="language-klingon">qapla\n</code></pre>\n';
   expect(drawCode(unknown)).toBe(unknown);
+  for (const inherited of ['constructor', '__proto__', 'valueOf']) {
+    const fence = `<pre><code class="language-${inherited}">x\n</code></pre>\n`;
+    expect(drawCode(fence)).toBe(fence);
+  }
   const bot = '<pre><code class="language-js"><b>x</b> &nbsp;</code></pre>';
   expect(drawCode(bot)).toBe(bot);
 });

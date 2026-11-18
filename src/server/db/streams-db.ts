@@ -8,6 +8,8 @@ const VERSION = 1;
 export type StreamStore = {
   storage(stream: string): BoxStorage;
   due(now: number): string[];
+  // The account's streams, oldest first, whose removal leaves it no more than bytes of pages.
+  over(account: string, bytes: number): string[];
   remove(stream: string): void;
   close(): void;
 };
@@ -36,6 +38,7 @@ export function streamStore(path: string): StreamStore {
   const get = db.prepare('SELECT value FROM pages WHERE stream = ? AND key = ?');
   const list = db.prepare('SELECT key, value FROM pages WHERE stream = ? AND key >= ? AND key < ? ORDER BY key LIMIT ?');
   const due = db.prepare('SELECT stream FROM alarms WHERE at <= ?');
+  const held = db.prepare('SELECT a.stream, (SELECT COALESCE(SUM(length(value)), 0) FROM pages p WHERE p.stream = a.stream) AS bytes FROM alarms a WHERE a.stream >= ? AND a.stream < ? ORDER BY a.at, a.rowid');
   const removePages = db.prepare('DELETE FROM pages WHERE stream = ?');
   const removeAlarm = db.prepare('DELETE FROM alarms WHERE stream = ?');
 
@@ -53,6 +56,11 @@ export function streamStore(path: string): StreamStore {
         new Map((list.all(stream, start, end, limit) as { key: string; value: Uint8Array }[]).map(({ key, value }) => [key, value])),
     }),
     due: (now) => (due.all(now) as { stream: string }[]).map(({ stream }) => stream),
+    over: (account, bytes) => {
+      const streams = held.all(`${account}:`, `${account};`) as { stream: string; bytes: number }[];
+      let total = streams.reduce((sum, each) => sum + each.bytes, 0);
+      return streams.filter((each) => total > bytes && ((total -= each.bytes), true)).map((each) => each.stream);
+    },
     remove: (stream) =>
       transaction(db, () => {
         removePages.run(stream);

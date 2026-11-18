@@ -7,20 +7,21 @@ export type AdmittedCall = { body: unknown; bytes: number; leave: () => void };
 // Before reading a provider-call body, reserve daily relay traffic, an account live-call slot and upload bytes.
 // bytes is the Content-Length required by worker.ts.
 export async function admitCall(c: Context<AppEnv>): Promise<AdmittedCall | Response> {
-  const allowance = c.env.limits.relay.account(c.get('account').id);
+  const account = c.get('account').id;
+  const allowance = c.env.limits.relay.account(account);
   if (!allowance.take(0)) return unread(c, refuse(429, 'relay-traffic-limit'));
   const leave = allowance.enter();
   if (!leave) return unread(c, fail(c, 429, 'too-many-live-calls'));
   const bytes = Number(c.req.header('content-length'));
   const { uploads } = c.env.limits;
-  if (!(await uploads.take(bytes))) {
+  if (!(await uploads.take(bytes, account))) {
     leave();
     return unread(c, fail(c, 503, 'busy', { retryAfter: RETRY_SECONDS }));
   }
   try {
     return { body: await c.req.json().catch(() => null), bytes, leave };
   } finally {
-    uploads.give(bytes);
+    uploads.give(bytes, account);
   }
 }
 

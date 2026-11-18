@@ -85,6 +85,12 @@ describe('relay', () => {
             'clear-site-data': '"cookies", "storage"',
             nel: '{"report_to":"cf-nel"}',
             'x-relay': 'spoofed',
+            'x-account-bytes': '0',
+            'x-account-file-bytes': '0',
+            'x-unread-notices': '99',
+            'x-unread-board': '99',
+            'x-hazelle-version': 'spoofed',
+            'x-stream': 'frames',
           },
         }),
     );
@@ -100,6 +106,7 @@ describe('relay', () => {
     expect(response.headers.get('www-authenticate')).toBeNull();
     expect(response.headers.get('clear-site-data')).toBeNull();
     expect(response.headers.get('nel')).toBeNull();
+    for (const own of ['x-account-bytes', 'x-account-file-bytes', 'x-unread-notices', 'x-unread-board', 'x-hazelle-version', 'x-stream']) expect(response.headers.get(own)).toBeNull();
     expect(await response.text()).toBe('{"error":"rate"}');
   });
 

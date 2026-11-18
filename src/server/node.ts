@@ -49,8 +49,8 @@ function wholeFrom(name: string, fallback: number, min: number, max: number): nu
   }
   return value;
 }
-// Addresses or CIDR ranges, comma-separated, whose X-Forwarded-For names the visitor (frontend-worker.ts). Blank trusts
-// none. An entry that is neither refuses the start, as a malformed number does.
+// Addresses or CIDR ranges, comma-separated, whose X-Forwarded-For names the visitor, beside this machine's own
+// (visitor.ts). An entry that is neither refuses the start, as a malformed number does.
 function proxiesFrom(name: string): BlockList {
   const trusted = new BlockList();
   for (const entry of (process.env[name] ?? '').split(',').map((part) => part.trim()).filter(Boolean)) {

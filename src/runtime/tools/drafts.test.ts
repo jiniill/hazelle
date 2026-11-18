@@ -107,7 +107,7 @@ it('opens the installed file once as identity and body, reuses its edited draft 
   expect(await draftOfTool(store, files, module)).toEqual({ ok: false, error: 'risu-plugin' });
 });
 
-it('carries a draft without edits along with an imported file, keeps one with edits, and tells 적용 what it would replace', async () => {
+it('carries a draft without edits along with an imported file, keeps one with edits, tells 적용 what it would replace, and asks every consent again of the file', async () => {
   const { store, files } = await server.account();
   const written = (body: string) => { const read = readTool(new TextEncoder().encode(`//@version 1.0.0\n//@author jin\n\n//@api 1\n//@name notes\n\n\n${body}`)); if (!read.ok) throw new Error('fixture'); return read.tool; };
   const first = await importFile(store, files, written('first();'));
@@ -117,8 +117,11 @@ it('carries a draft without edits along with an imported file, keeps one with ed
   const draft = () => store.get('tooldraft', opened.data)!.value;
   expect(await installedDiffers(store, files, draft())).toBe(false);
 
+  const answers = () => store.get('module', first.data.id)!.value;
+  await store.update('module', first.data.id, (current) => ({ ...current, botModels: false, takesMemory: true, network: true }));
   const second = await importFile(store, files, written('second();'));
   if (!second.ok) throw new Error(second.error);
+  for (const answer of ['botModels', 'takesMemory', 'network'] as const) expect(answers()[answer]).toBeUndefined();
   expect(draft()).toMatchObject({ body: 'second();' });
   expect(draftState(draft())).toBe('applied');
   expect(await installedDiffers(store, files, draft())).toBe(false);

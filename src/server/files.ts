@@ -47,14 +47,15 @@ files.put('/:id', canWrite, async (c) => {
   // read and dropped, never held. Its size is Content-Length: worker.ts refuses a chunked body before the route runs.
   const size = Number(c.req.header('content-length') ?? 0);
   const { uploads } = c.env.limits;
-  if (!(await uploads.take(size))) {
+  const account = c.get('account').id;
+  if (!(await uploads.take(size, account))) {
     await c.req.raw.body?.pipeTo(new WritableStream());
     return fail(c, 503, 'busy', { retryAfter: RETRY_SECONDS });
   }
   try {
     return await publish(c, id);
   } finally {
-    uploads.give(size);
+    uploads.give(size, account);
   }
 });
 
@@ -79,12 +80,15 @@ async function publish(c: Context<AppEnv>, id: string) {
   if (!(await db.prepare(`SELECT ${ALIVE} AS alive`).bind(incarnation).first<number>('alive'))) return outlived(c);
   if (await db.prepare('UPDATE account_files SET claimed_at = ?3 WHERE incarnation = ?1 AND id = ?2 AND stored = 1 RETURNING id').bind(incarnation, id, Date.now()).first()) return c.body(null, 204);
   // A released copy is taken back unless its bytes are being deleted, which the reservation then waits out.
+  // Released bytes stay on disk until they are due (file_removals), outside the cap: with what the account holds they
+  // may reach twice the cap, or releasing and uploading again would store without bound.
   const [, , , reservation] = await db.batch<{ reserved: number; stored: number; alive: number; removing: number }>([
     db
       .prepare(
         `INSERT INTO account_files (incarnation, id, size, stored, created_at, claimed_at)
          SELECT incarnation, ?2, ?3, EXISTS (SELECT 1 FROM file_removals WHERE incarnation = ?1 AND id = ?2), ?4, ?4
          FROM accounts WHERE incarnation = ?1 AND COALESCE(file_bytes + ?3 <= ${CAP.fileBytes}, 1)
+           AND COALESCE(file_bytes + ?3 + (SELECT COALESCE(SUM(size), 0) FROM file_removals WHERE incarnation = ?1 AND id != ?2) <= 2 * (${CAP.fileBytes}), 1)
            AND NOT EXISTS (SELECT 1 FROM file_removals WHERE incarnation = ?1 AND id = ?2 AND removing = 1)
          ON CONFLICT DO NOTHING`,
       )

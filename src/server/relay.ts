@@ -1,4 +1,4 @@
-import { RELAY_HEADER, RELAY_METHODS, RELAY_SOURCE, type HttpRequest, type RelayError } from '../contracts/http';
+import { ACCOUNT_USAGE_HEADERS, BUILD_HEADER, RELAY_HEADER, RELAY_METHODS, RELAY_SOURCE, STREAM_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, type HttpRequest, type RelayError } from '../contracts/http';
 import { HOP_BY_HOP } from './hop-by-hop';
 import { isRecord } from '../record';
 import { PolicyRefusal } from './ssrf';
@@ -46,6 +46,12 @@ const DROPPED_RESPONSE_HEADERS = new Set([
   'reporting-endpoints',
   'strict-transport-security',
   'alt-svc',
+  // What this server tells the page of the account and of itself (runtime/api.ts reads them on every answer).
+  ...Object.values(ACCOUNT_USAGE_HEADERS),
+  UNREAD_NOTICES_HEADER,
+  UNREAD_BOARD_HEADER,
+  BUILD_HEADER,
+  STREAM_HEADER,
 ]);
 
 export class RelayTrafficLimit extends Error {

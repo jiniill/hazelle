@@ -177,7 +177,7 @@ The app keeps a cache of what it reads in the volume, up to `HAZELLE_FILES_CACHE
 
 Also under the app's `environment`: `HAZELLE_SNAPSHOT_HOUR` (the UTC hour of the daily snapshot, default 3) and `HAZELLE_DRAIN_SECONDS` (how long a stop waits for work in flight, default 60; keep `stop_grace_period` above it).
 
-Behind a reverse proxy of your own, set `HAZELLE_TRUSTED_PROXIES` in `.env` to the address the app sees it connect from, or a CIDR range (comma-separated; in Docker, the network's gateway for a proxy on the host). The visitor that proxy names in `X-Forwarded-For` is then what the login, signup and share-link limits count. Left empty, the connection's peer is the visitor, and every visitor through one proxy shares one limit. A malformed entry stops the app from starting.
+Behind a reverse proxy of your own, set `HAZELLE_TRUSTED_PROXIES` in `.env` to the address the app sees it connect from, or a CIDR range (comma-separated; in Docker, the network's gateway for a proxy on the host). The visitor that proxy names in `X-Forwarded-For` is then what the login, signup and share-link limits count. A proxy or tunnel on the same machine as an app started without Docker (cloudflared, `tailscale serve`) connects from loopback and is trusted without being listed. Left empty, any other connection's peer is the visitor, and every visitor through one proxy shares one limit. A malformed entry stops the app from starting.
 
 ## Development
 

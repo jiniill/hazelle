@@ -3,6 +3,7 @@ import type { AccountState } from '../contracts/admin';
 import { VISITOR_HEADER } from '../contracts/http';
 import type { Db } from './db/service-db';
 import { fail, sha256Hex, type AppEnv } from './http';
+import { LOOPBACK } from './visitor';
 
 export type Method = 'password' | 'recovery';
 type StoredAccount = {
@@ -41,13 +42,12 @@ export function findAccount(db: Db, column: 'id' | 'username', value: string) {
     .first<StoredAccount>();
 }
 
-// Skip in-process/loopback requests. External visitors come only from the socket peer or trusted proxy,
-// never a client-supplied key (frontend-worker.ts).
-const LOCAL = /^(?:127\.|::1$|::ffff:127\.)/;
+// Skip in-process/loopback requests. External visitors come only from the socket peer or a proxy's word of them,
+// never a client-supplied key (visitor.ts).
 
 export function outsideVisitor(c: Context<AppEnv>): string | null {
   const visitor = c.req.header(VISITOR_HEADER);
-  return visitor && !LOCAL.test(visitor) ? visitor : null;
+  return visitor && !LOOPBACK.test(visitor) ? visitor : null;
 }
 
 // Password change and deletion share the login's visitor+username key, not a session key a new login could bypass.

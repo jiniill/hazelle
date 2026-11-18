@@ -15,11 +15,11 @@ function ChatToolLayer({ module, chat, scrollRef }: { module: string; chat: stri
   return <FrameLayer scrollRef={scrollRef} onMount={mount} />;
 }
 
-// The frame tools whose layers lie over chat (design §6.10). Not one whose consent the chat is asking for: a box of its layer that only
+// The frame tools whose layers lie over chat (design §6.10). None while the chat asks for a consent, whoever asks: a box that only
 // shows could be drawn over that card, and a press on it would still be the card's.
 export function layered(frames: ToolFrames, questions: ScriptQuestion[], chat: string): string[] {
-  const asking = (module: string) => questions.some((asked) => asked.chat === chat && asked.from.kind === 'module' && asked.from.id === module && isConsent(asked.question));
-  return [...frames].filter(([module, frame]) => frame.chat === chat && !asking(module)).map(([module]) => module);
+  if (questions.some((asked) => asked.chat === chat && isConsent(asked.question))) return [];
+  return [...frames].filter(([, frame]) => frame.chat === chat).map(([module]) => module);
 }
 
 export function ChatToolLayers({ chat, scrollRef }: { chat: string; scrollRef: Scroll }) {
