@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Connection } from '../../connectors/types';
-import { addFirstProfile, addProfile, FIRST_PROFILE_ID, modelProfile, profileUsers, removeProfile, setModelProfile, setProfileSettings, writerOf } from './profiles';
+import { setDefaultModel } from './assignment';
+import { addFirstProfile, addProfile, FIRST_PROFILE_ID, modelProfile, profileUsers, removeProfile, setModelProfile, setProfileSettings, taskWriter, writerOf } from './profiles';
 import { testConnection, testModel as model, testServer } from '../testing';
 
 const server = testServer();
@@ -34,6 +35,18 @@ describe('설정 묶음', () => {
     await addFirstProfile(store);
     expect(writerOf(store, { connection, model })).toEqual({ route: { connection, model }, settings: {} });
     expect(writerOf(store, { connection, model: { ...model, profile: 'gone' } })).toEqual({ kind: 'profile-missing', own: true });
+  });
+
+  it('gives a task its 묶음 without the seed, which a route’s own writer keeps', async () => {
+    const { store } = await server.account();
+    const created = await store.create('connection', openRouter);
+    const connection = created.ok ? created.data : null!;
+    await addFirstProfile(store);
+    await setProfileSettings(store, FIRST_PROFILE_ID, { seed: 7, temperature: 1 });
+    await setDefaultModel(store, 'aux', { connection: connection.id, model: model.id });
+    expect(writerOf(store, { connection, model })).toMatchObject({ settings: { seed: 7, temperature: 1 } });
+    expect(taskWriter(store, { title: null, character: null, models: {} }, undefined)).toMatchObject({ route: { model }, settings: { temperature: 1 } });
+    expect(taskWriter(store, { title: null, character: null, models: {} }, undefined)).not.toHaveProperty('settings.seed');
   });
 
   it('merges each change into what is stored, so another device’s change to another field survives', async () => {

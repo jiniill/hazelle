@@ -38,10 +38,13 @@ export function writerOf(store: Pick<ObjectStore, 'get'>, route: Route): Writer 
 }
 
 // A task's own model (runtime/models/assignment taskModel), else the chat's 보조, with its 설정 묶음: what a 삽화 scene, a
-// pack's profiles and a mascot's line are written by.
+// pack's profiles and a mascot's line are written by. Without the 묶음's seed: a task's answer is checked, and under a
+// fixed seed 다시 시도 after a refused one is answered the same again.
 export function taskWriter(store: Pick<ObjectStore, 'get'>, chat: Chat, own: ModelRef | undefined): ReturnType<typeof writerOf> | RouteFailure {
   const route = taskModel(store, chat, own);
-  return 'kind' in route ? route : writerOf(store, route);
+  if ('kind' in route) return route;
+  const writer = writerOf(store, route);
+  return 'kind' in writer ? writer : { ...writer, settings: without(writer.settings, 'seed') };
 }
 
 // A model that only draws uses no 묶음, whatever it names.
