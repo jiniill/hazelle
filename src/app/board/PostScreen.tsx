@@ -1,6 +1,6 @@
 import { Check, EyeOff, Sparkles, Eye, History, Lock, LockOpen, PenLine, Tag as TagIcon, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
-import { HOLD_DAYS_MAX, MAX_COMMENT_LENGTH, MAX_REASON_LENGTH, OPERATOR_NAME, STATUSES, type Comment, type Hidden, type Post, type Status } from '../../contracts/board';
+import { hasStatus, HOLD_DAYS_MAX, MAX_COMMENT_LENGTH, MAX_REASON_LENGTH, OPERATOR_NAME, STATUSES, type Comment, type Hidden, type Post, type Status } from '../../contracts/board';
 import type { ApiResult } from '../../runtime/api';
 import {
   blockGuestPost,
@@ -127,7 +127,7 @@ function PostView({ post, reload, back }: { post: Post; reload: () => void; back
       ? [
           <MenuHeading key="operate">운영</MenuHeading>,
           ...(post.author.guest ? [<MenuItem key="block-guest" icon={Lock} label="이 손님 글쓰기 차단" onClick={() => act(() => blockGuestPost(post.id), '차단하지 못했어요.')} />] : []),
-          ...(post.category === 'news' ? [] : [<MenuItem key="status" icon={TagIcon} label="상태 변경" onClick={() => setAsking({ kind: 'status' })} />]),
+          ...(hasStatus(post.category) ? [<MenuItem key="status" icon={TagIcon} label="상태 변경" onClick={() => setAsking({ kind: 'status' })} />] : []),
           post.hidden ? (
             <MenuItem key="show" icon={Eye} label="가림 해제" onClick={() => act(() => setPostHidden(post.id, null), '가림을 해제하지 못했어요.')} />
           ) : (

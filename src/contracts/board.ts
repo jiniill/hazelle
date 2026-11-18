@@ -33,9 +33,12 @@ export const GUEST_ADDRESS_CAP_MULTIPLIER = 10;
 // 임시조치 (정보통신망법 제44조의2): a reported post is held hidden at most this long.
 export const HOLD_DAYS_MAX = 30;
 
-// News stays out of the uncategorized feed. No chat category: feedback only (migration 0019).
-export const CATEGORIES = ['bug', 'idea', 'question', 'news'] as const;
+// News stays out of the uncategorized feed. No chat category (migration 0019): 팁 is for how-tos, not talk.
+export const CATEGORIES = ['bug', 'idea', 'question', 'tip', 'news'] as const;
 export type Category = (typeof CATEGORIES)[number];
+// The operator sets no status on these, and a status filter never lists them.
+export const STATUSLESS = ['news', 'tip'] as const satisfies readonly Category[];
+export const hasStatus = (category: Category) => !(STATUSLESS as readonly Category[]).includes(category);
 // News posts have no status; their version names the release, not resolution of a report.
 export const STATUSES = ['open', 'seen', 'working', 'done', 'declined'] as const;
 export type Status = (typeof STATUSES)[number];

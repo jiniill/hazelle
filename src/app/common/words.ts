@@ -189,7 +189,7 @@ export const DIAGNOSIS_NOTE = '대화 내용과 API 키 없이 설정값, 토큰
 
 export const BOARD = {
   title: '게시판',
-  categories: { bug: '버그', idea: '제안', question: '질문', news: '소식' } satisfies Record<Category, string>,
+  categories: { bug: '버그', idea: '제안', question: '질문', tip: '팁', news: '소식' } satisfies Record<Category, string>,
   statuses: { open: '열림', seen: '확인함', working: '진행 중', done: '완료', declined: '안 함' } satisfies Record<Status, string>,
   write: '글쓰기',
   mine: '내 글',

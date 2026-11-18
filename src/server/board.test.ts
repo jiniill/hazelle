@@ -72,6 +72,16 @@ it('keeps 소식 to the operator, public and without a status, and out of the fe
   expect(await titles(reader, 'sort=new&category=news')).toEqual(['소식']);
 });
 
+it('keeps 팁 without a status: none set, none shown under a status filter', async () => {
+  const admin = await operator();
+  const reader = await member('reader');
+  const tip = await posted(reader, { title: '팁', category: 'tip' });
+  await posted(reader, { title: '제안' });
+  expect((await t.put(`board/posts/${tip}/status`, { status: 'done', version: null }, admin.cookie)).status).toBe(404);
+  expect(await titles(reader)).toEqual(['제안', '팁']);
+  expect(await titles(reader, 'sort=new&status=open')).toEqual(['제안']);
+});
+
 it('lists a public post to every account and an operator-only one to its author and the operator alone', async () => {
   const admin = await operator();
   const author = await member('author');

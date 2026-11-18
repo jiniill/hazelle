@@ -1,6 +1,6 @@
-import { Bug, CircleCheck, Megaphone, CircleDot, CircleDashed, CircleHelp, CircleSlash, Eye, EyeOff, Lightbulb, Lock, MessageSquare, ShieldCheck, ThumbsUp, UserX, type LucideIcon } from 'lucide-react';
+import { Bug, CircleCheck, Megaphone, CircleDot, CircleDashed, CircleHelp, CircleSlash, Eye, EyeOff, Lightbulb, Lock, MessageSquare, ShieldCheck, Sparkles, ThumbsUp, UserX, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { OPERATOR_NAME, type Author, type Category, type PostRow, type Status } from '../../contracts/board';
+import { hasStatus, OPERATOR_NAME, type Author, type Category, type PostRow, type Status } from '../../contracts/board';
 import { navigate } from '../shell/router';
 import { Byline, PostCard, PostStat, Tag, VoteButton } from '../ui';
 import { ACTS } from './acts';
@@ -15,6 +15,7 @@ export const CATEGORY_LOOK: Record<Category, { hue: 1 | 2 | 3 | 4 | 5; icon: Luc
   bug: { hue: 4, icon: Bug, description: '오류나 비정상적인 동작을 제보해요' },
   idea: { hue: 1, icon: Lightbulb, description: '필요한 기능이나 개선할 점을 제안해요' },
   question: { hue: 2, icon: CircleHelp, description: '사용 방법을 질문해요' },
+  tip: { hue: 3, icon: Sparkles, description: '알아낸 기능이나 활용법을 나눠요' },
   news: { hue: 5, icon: Megaphone, description: '업데이트 내역과 공지사항' },
 };
 
@@ -43,7 +44,7 @@ export function PostMarks({ row }: { row: PostRow }) {
     <>
       <CategoryTag category={row.category} />
       {row.category === 'news' && row.version && <Tag>{row.version}</Tag>}
-      {row.status !== 'open' && (
+      {hasStatus(row.category) && row.status !== 'open' && (
         <Tag tone={STATUS_LOOK[row.status].tone} icon={STATUS_LOOK[row.status].icon}>
           {statusWord(row)}
         </Tag>

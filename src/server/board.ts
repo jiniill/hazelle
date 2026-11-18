@@ -17,6 +17,7 @@ import {
   PICTURES_PER_DAY,
   SORTS,
   STATUSES,
+  STATUSLESS,
   validNickname,
   type Activity,
   type Author,
@@ -34,6 +35,8 @@ import { boardDailyLimit } from './limits';
 import { act, logged, operator } from './operator';
 import { requireSession } from './session';
 import { activity, hidden, OPERATOR, tellUnread } from './unread';
+
+const STATUSLESS_SQL = `(${STATUSLESS.map((category) => `'${category}'`).join(', ')})`;
 
 // A page stating an account always goes through its session, whatever guest secret it carries. Guests may only
 // read posts and use the author routes: 추천, 신고, nicknames and activity remain account-only.
@@ -173,7 +176,7 @@ board.get('/posts', async (c) => {
   const where = [readable(account), mine ? owns('p') : `p.visibility = ${bind(visibility)}`];
   if (category !== undefined) where.push(`p.category = ${bind(category)}`);
   else if (!mine && !words.length) where.push("p.category != 'news'");
-  if (status !== undefined) where.push(`p.status = ${bind(status)}`);
+  if (status !== undefined) where.push(`p.status = ${bind(status)} AND p.category NOT IN ${STATUSLESS_SQL}`);
   for (const word of words) {
     const like = bind(`%${word.replace(/[\\%_]/g, '\\$&')}%`);
     where.push(`(p.title LIKE ${like} ESCAPE '\\' OR p.text LIKE ${like} ESCAPE '\\')`);
@@ -512,8 +515,8 @@ board.put('/posts/:id/status', operator, async (c) => {
   const trimmed = version === null ? null : version.trim();
   return act(
     c,
-    logged(db, now, 'post-status', { from: "posts WHERE id = ?2 AND category != 'news'", detail: { status: '?3', version: '?4' } }, id, status, trimmed),
-    db.prepare("UPDATE posts SET status = ?3, version = ?4, status_at = ?2 WHERE id = ?1 AND category != 'news' RETURNING id").bind(id, now, status, trimmed),
+    logged(db, now, 'post-status', { from: `posts WHERE id = ?2 AND category NOT IN ${STATUSLESS_SQL}`, detail: { status: '?3', version: '?4' } }, id, status, trimmed),
+    db.prepare(`UPDATE posts SET status = ?3, version = ?4, status_at = ?2 WHERE id = ?1 AND category NOT IN ${STATUSLESS_SQL} RETURNING id`).bind(id, now, status, trimmed),
   );
 });
 

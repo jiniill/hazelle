@@ -1,6 +1,6 @@
 import { Bell, FileText, Inbox, ListFilter, PenLine, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { CATEGORIES, MAX_SEARCH_LENGTH, STATUSES, type Category, type Sort, type Status } from '../../contracts/board';
+import { CATEGORIES, hasStatus, MAX_SEARCH_LENGTH, STATUSES, type Category, type Sort, type Status } from '../../contracts/board';
 import { GuestLine } from '../common/GuestNotice';
 import { CATEGORY_LOOK } from '../common/postRow';
 import { ago } from '../common/time';
@@ -32,8 +32,8 @@ export function BoardScreen({ operator, category, query, back }: { operator: boo
   const [typed, setTyped] = useState(query);
   const words = useSettled(typed.trim());
   const onlyOperator = operator || suspended;
-  const news = category === 'news';
-  const ask = { sort, category: category ?? undefined, status: news ? undefined : (status ?? undefined), visibility: onlyOperator ? ('operator' as const) : undefined, q: query || undefined };
+  const statused = category === null || hasStatus(category);
+  const ask = { sort, category: category ?? undefined, status: statused ? (status ?? undefined) : undefined, visibility: onlyOperator ? ('operator' as const) : undefined, q: query || undefined };
   // The words this screen put in the address: others (the rail's 게시판, a step back) are typed for it.
   const shown = useRef(query);
   // Replaced: neither a tab nor a word typed is a step back of its own.
@@ -85,7 +85,7 @@ export function BoardScreen({ operator, category, query, back }: { operator: boo
         />
         <Row kind="toolbar">
           <ChoiceGroup label="정렬" options={SORTS} value={sort} onChange={setSort} layout="segmented" />
-          {!news && (
+          {statused && (
             <Menu
               label="상태 필터"
               place="below-end"
