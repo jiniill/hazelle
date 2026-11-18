@@ -41,7 +41,9 @@ describe('parseRecords', () => {
     expect(parseRecords(answer([[]]), span)).toEqual({ ok: false, reason: 'shape' });
     expect(parseRecords(answer([{ ...record(3), opens: undefined }]), span)).toEqual({ ok: false, reason: 'opens' });
     expect(parseRecords(answer([{ ...record(3), outcome: null }]), span)).toEqual({ ok: false, reason: 'outcome' });
-    expect(parseRecords(answer([record(2), record(1)]), span)).toEqual({ ok: false, reason: 'order' });
+    expect(parseRecords(answer([record(2), record(1)]), span)).toEqual({ ok: false, reason: 'order', record: 2, to: 1, after: 2, of: 3 });
+    expect(parseRecords(answer([record(1), record(1), record(3)]), span)).toEqual({ ok: false, reason: 'order', record: 2, to: 1, after: 1, of: 3 });
+    expect(parseRecords(answer([record(4)]), span)).toEqual({ ok: false, reason: 'order', record: 1, to: 4, after: 0, of: 3 });
     expect(parseRecords(answer([record(2)]), span)).toEqual({ ok: false, reason: 'short' });
     expect(parseRecords(answer([record(1), record(3, [{ speaker: 'Luna', text: 'I will wait for you until spring.' }])]), span)).toMatchObject({ ok: true, records: [{ lines: [] }, { lines: [] }] });
   });

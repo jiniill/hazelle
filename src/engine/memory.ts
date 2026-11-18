@@ -498,7 +498,7 @@ export const memoryFormat = (count: number, target: number) =>
   [
     `${ONE_OBJECT} {"records": [...]}`,
     `The records are about ${target} tokens long in all, so a scene keeps its detail: who did what, what was agreed, what was said.`,
-    `The records cover the numbered messages in order, without gaps: each record's "to" is the number of its last message, and the last record's "to" is ${count}. Start a new record only at a scene break.`,
+    `The records cover the numbered messages in order, without gaps: each record's "to" is the number of its last message, greater than the "to" before it, and the last record's "to" is ${count}. Start a new record only at a scene break between messages: a message is never split, so when one message holds several scenes, one record tells them all in order, with "when" and "where" naming each scene's.`,
     `Every record has every field: "to" (a number); "when" and "where" (text, or null when the messages do not say); "who" (a list of the names of those present, one spelling per person); "what" (what happened); "lines" (a list of key lines, each {"speaker": who says the line in the text, not always the author of the message, "text": the line copied word for word from the messages}); "outcome" (text); "state" (a list of only the facts this record changes, each {"about": name, "field": what it is, "value": its new value, or null when the fact no longer holds, such as a healed injury, an item given away or a place left}; one value per field, so merge duplicates of the same about and field into one); "opens" (a list of new unresolved promises, foreshadowing or events, each as text); "closes" (a list of the labels of the open threads it resolves, such as ["T-1a2b3c4d"]). ${EMPTY_LIST}`,
   ].join('\n');
 
@@ -521,6 +521,8 @@ type Field = 'when' | 'where' | 'who' | 'what' | 'lines' | 'outcome' | 'to' | 's
 // shape: no {"records": [...]} or {"chapter": {...}}, or an item that is no object; order: a "to" that does not move
 // forward inside the span; short: records that stop before the span's last message.
 export type Invalid = 'unreadable' | 'shape' | 'order' | 'short' | Field;
+// record: which record's "to" it is, counted from 1; after: the "to" before it, 0 for the first; of: the span's messages.
+export type Refusal = { reason: Exclude<Invalid, 'order'> } | { reason: 'order'; record: number; to: number; after: number; of: number };
 
 const textOrNull = (value: unknown): value is string | null => value === null || isText(value);
 const textsOf = (value: unknown): value is string[] => Array.isArray(value) && value.every(isText);
@@ -546,7 +548,7 @@ function linesSaid(lines: Line[], source: string): Line[] {
 // A memory task's answer (design §6.2, Validation): JSON in memoryFormat's shape, its records covering span (the
 // messages' texts as the prompt rendered them) exactly and every field present, with the key lines its own messages
 // say (linesSaid).
-export function parseRecords(answer: string, span: string[]): { ok: true; records: Drafted[] } | { ok: false; reason: Invalid } {
+export function parseRecords(answer: string, span: string[]): { ok: true; records: Drafted[] } | ({ ok: false } & Refusal) {
   const read = answerJson(answer);
   if (!read.ok) return { ok: false, reason: 'unreadable' };
   const parsed = read.value;
@@ -557,7 +559,7 @@ export function parseRecords(answer: string, span: string[]): { ok: true; record
     if (!isRecord(item)) return { ok: false, reason: 'shape' };
     const record = drafted(item);
     if (typeof record === 'string') return { ok: false, reason: record };
-    if (record.to <= from || record.to > span.length) return { ok: false, reason: 'order' };
+    if (record.to <= from || record.to > span.length) return { ok: false, reason: 'order', record: records.length + 1, to: record.to, after: from, of: span.length };
     records.push({ ...record, lines: linesSaid(record.lines, span.slice(from, record.to).join('\n')) });
     from = record.to;
   }
@@ -565,7 +567,7 @@ export function parseRecords(answer: string, span: string[]): { ok: true; record
 }
 
 // A chapter job's answer, by the same rules over its whole span, with no state or threads.
-export function parseChapter(answer: string, span: string[]): { ok: true; chapter: Scene } | { ok: false; reason: Invalid } {
+export function parseChapter(answer: string, span: string[]): { ok: true; chapter: Scene } | ({ ok: false } & Refusal) {
   const read = answerJson(answer);
   if (!read.ok) return { ok: false, reason: 'unreadable' };
   const parsed = read.value;

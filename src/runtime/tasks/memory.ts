@@ -4,7 +4,7 @@ import { entryName } from '../../connectors/types';
 import { chatMemory, memoryOwner, memorySetup, sourcesOf, storedMemory, memoryWriter, type Tools } from './memory-read';
 import { chatSent, type ChatSent } from './memory-view';
 import { MemorySchedule, type MemoryCheck } from './memory-schedule';
-import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextMerge, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, standingChapters, staleness, threadLabel, type Drafted, type Invalid, type Scene } from '../../engine/memory';
+import { chapterCap, chapterTarget, coveredBy, fingerprint, isChapter, memoryBudget, nextChapters, nextMerge, nextSpan, owned, parseChapter, parseRecords, placesOf, rawParts, standingChapters, staleness, threadLabel, type Drafted, type Refusal, type Scene } from '../../engine/memory';
 import type { RanAway } from '../../engine/pipeline';
 import { fold, shown, type Message, type Receipt } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
@@ -237,7 +237,7 @@ export type MemoryFailure =
   | { kind: 'profile-missing'; own: boolean }
   | { kind: 'tokenizer' }
   | { kind: 'failed'; receipt: Receipt }
-  | { kind: 'invalid'; receipt: Receipt; reason: Invalid }
+  | ({ kind: 'invalid'; receipt: Receipt } & Refusal)
   | { kind: 'unsaved'; failure: ApiFailure; refused?: boolean }
   | EmbedFailure
   | RanAway;
@@ -560,7 +560,7 @@ export class Rememberer {
       if (answer.state !== 'done') return { kind: 'failed', receipt };
       const texts = span.map(({ text }) => text);
       const parsed = job.chapter ? parseChapter(text, texts) : parseRecords(text, texts);
-      if (!parsed.ok) return { kind: 'invalid', receipt, reason: parsed.reason };
+      if (!parsed.ok) return { kind: 'invalid', receipt, ...without(parsed, 'ok') };
       const saved = await changeMemory(store, chat, (memory) => {
         if (!applies(memory, fold(store.children('entry', chat)), job)) return null;
         return 'chapter' in parsed ? withChapter(memory, job, job.chapter!, parsed.chapter, span, receipt, first) : committed(memory, job, parsed.records, span, receipt, first);
