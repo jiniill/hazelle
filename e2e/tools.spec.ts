@@ -400,15 +400,9 @@ test('a Risu plugin draws on a layer of its own over the chat: its boxes are its
   });
 
   await test.step('a window over the chat takes the layer away until it closes, and the plugin is turned off for the specs after', async () => {
-    // The rail's 설정 is under the band that only shows: the mouse over it is what lets the frame go.
+    // The band that only shows asks for the whole width; laid no further than the chat's column, it leaves the rail's 설정
+    // to the app.
     const settings = page.getByRole('button', { name: '설정', exact: true });
-    const at = (await settings.boundingBox())!;
-    const over = async () => {
-      await page.mouse.move(at.x + at.width / 2 - 2, at.y + at.height / 2);
-      await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
-      await expect(frame).toHaveClass(/released/);
-    };
-    await over();
     await settings.click();
     await expect(page.getByRole('navigation', { name: '설정' })).toBeVisible();
     await expect(frame).toBeHidden();
@@ -416,7 +410,6 @@ test('a Risu plugin draws on a layer of its own over the chat: its boxes are its
     await expect(page.getByRole('navigation', { name: '설정' })).toHaveCount(0);
     await expect(frame).toBeVisible();
     await expect.poll(clip).toContain('path(');
-    await over();
     await settings.click();
     await settingsPage(page, '플러그인');
     await page.getByRole('button', { name: /레이어 시험/ }).click();
