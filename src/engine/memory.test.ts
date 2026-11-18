@@ -36,15 +36,15 @@ describe('parseRecords', () => {
     expect(parseRecords(line("I like it. You're insane."), said)).toMatchObject({ ok: true, records: [{ lines: [] }] });
   });
 
-  it('refuses an answer that is not JSON, one with a field missing or a gap left, naming the check, and a key line said by other messages', () => {
-    expect(parseRecords('Here is the summary.', span)).toEqual({ ok: false, reason: 'unreadable' });
-    expect(parseRecords(answer([[]]), span)).toEqual({ ok: false, reason: 'shape' });
-    expect(parseRecords(answer([{ ...record(3), opens: undefined }]), span)).toEqual({ ok: false, reason: 'opens' });
-    expect(parseRecords(answer([{ ...record(3), outcome: null }]), span)).toEqual({ ok: false, reason: 'outcome' });
-    expect(parseRecords(answer([record(2), record(1)]), span)).toEqual({ ok: false, reason: 'order', record: 2, to: 1, after: 2, of: 3 });
-    expect(parseRecords(answer([record(1), record(1), record(3)]), span)).toEqual({ ok: false, reason: 'order', record: 2, to: 1, after: 1, of: 3 });
-    expect(parseRecords(answer([record(4)]), span)).toEqual({ ok: false, reason: 'order', record: 1, to: 4, after: 0, of: 3 });
-    expect(parseRecords(answer([record(2)]), span)).toEqual({ ok: false, reason: 'short' });
+  it('refuses an answer that is not JSON, one with a field missing or a gap left, naming the check and keeping the records read before it, and a key line said by other messages', () => {
+    expect(parseRecords('Here is the summary.', span)).toEqual({ ok: false, refusal: { reason: 'unreadable' }, kept: [] });
+    expect(parseRecords(answer([[]]), span)).toEqual({ ok: false, refusal: { reason: 'shape' }, kept: [] });
+    expect(parseRecords(answer([{ ...record(3), opens: undefined }]), span)).toEqual({ ok: false, refusal: { reason: 'opens' }, kept: [] });
+    expect(parseRecords(answer([{ ...record(3), outcome: null }]), span)).toEqual({ ok: false, refusal: { reason: 'outcome' }, kept: [] });
+    expect(parseRecords(answer([record(2), record(1)]), span)).toMatchObject({ ok: false, refusal: { reason: 'order', record: 2, to: 1, after: 2, of: 3 }, kept: [{ to: 2 }] });
+    expect(parseRecords(answer([record(1), record(1), record(3)]), span)).toMatchObject({ ok: false, refusal: { reason: 'order', record: 2, to: 1, after: 1, of: 3 }, kept: [{ to: 1 }] });
+    expect(parseRecords(answer([record(4)]), span)).toEqual({ ok: false, refusal: { reason: 'order', record: 1, to: 4, after: 0, of: 3 }, kept: [] });
+    expect(parseRecords(answer([record(2)]), span)).toMatchObject({ ok: false, refusal: { reason: 'short' }, kept: [{ to: 2 }] });
     expect(parseRecords(answer([record(1), record(3, [{ speaker: 'Luna', text: 'I will wait for you until spring.' }])]), span)).toMatchObject({ ok: true, records: [{ lines: [] }, { lines: [] }] });
   });
 });
@@ -250,7 +250,7 @@ describe('parseChapter', () => {
 
   it('reads one chapter over the whole span and refuses a missing field or a key line the messages never said', () => {
     expect(parseChapter(JSON.stringify({ chapter: { ...scene, state: [{ about: 'Luna' }] } }), span)).toEqual({ ok: true, chapter: scene });
-    expect(parseChapter(JSON.stringify({ chapter: { ...scene, outcome: undefined } }), span)).toEqual({ ok: false, reason: 'outcome' });
+    expect(parseChapter(JSON.stringify({ chapter: { ...scene, outcome: undefined } }), span)).toEqual({ ok: false, refusal: { reason: 'outcome' } });
     expect(parseChapter(JSON.stringify({ chapter: { ...scene, lines: [{ speaker: 'Luna', text: 'I will always wait.' }] } }), span)).toEqual({ ok: true, chapter: { ...scene, lines: [] } });
   });
 });

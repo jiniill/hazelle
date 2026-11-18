@@ -559,13 +559,20 @@ export class Rememberer {
     const outcome = await (async (): Promise<Outcome> => {
       if (answer.state !== 'done') return { kind: 'failed', receipt };
       const texts = span.map(({ text }) => text);
-      const parsed = job.chapter ? parseChapter(text, texts) : parseRecords(text, texts);
-      if (!parsed.ok) return { kind: 'invalid', receipt, ...without(parsed, 'ok') };
+      const records = job.chapter ? null : parseRecords(text, texts);
+      const parsed = records ?? parseChapter(text, texts);
+      // A refused answer still gives new messages the records read before the refusal, and the rest of the span stays
+      // raw for the next job. One made again replaces its record whole or not at all: a part would leave the rest of its
+      // messages in no record, where nothing summarizes them.
+      const kept = records && !records.ok && !job.redo ? records.kept : [];
+      if (!parsed.ok && !kept.length) return { kind: 'invalid', receipt, ...parsed.refusal };
       const saved = await changeMemory(store, chat, (memory) => {
         if (!applies(memory, fold(store.children('entry', chat)), job)) return null;
+        if (!parsed.ok) return committed(memory, job, kept, span, receipt, first);
         return 'chapter' in parsed ? withChapter(memory, job, job.chapter!, parsed.chapter, span, receipt, first) : committed(memory, job, parsed.records, span, receipt, first);
       });
       if (saved.ok) await keepRow(store, 'memory', receipt, Date.now(), chatPlace(store, chat));
+      if (!parsed.ok) return { kind: 'invalid', receipt, ...parsed.refusal };
       return saved.ok ? 'done' : saved.error === 'gone' ? 'moved' : { kind: 'unsaved', failure: saved };
     })();
     endCall(store, id);

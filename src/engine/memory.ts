@@ -548,32 +548,34 @@ function linesSaid(lines: Line[], source: string): Line[] {
 // A memory task's answer (design §6.2, Validation): JSON in memoryFormat's shape, its records covering span (the
 // messages' texts as the prompt rendered them) exactly and every field present, with the key lines its own messages
 // say (linesSaid).
-export function parseRecords(answer: string, span: string[]): { ok: true; records: Drafted[] } | ({ ok: false } & Refusal) {
+// kept: the records read before the refusal, each checked on its own, which cover the span's first messages.
+export function parseRecords(answer: string, span: string[]): { ok: true; records: Drafted[] } | { ok: false; refusal: Refusal; kept: Drafted[] } {
   const read = answerJson(answer);
-  if (!read.ok) return { ok: false, reason: 'unreadable' };
+  if (!read.ok) return { ok: false, refusal: { reason: 'unreadable' }, kept: [] };
   const parsed = read.value;
-  if (!isRecord(parsed) || !Array.isArray(parsed.records) || !parsed.records.length) return { ok: false, reason: 'shape' };
   const records: Drafted[] = [];
+  const refused = (refusal: Refusal) => ({ ok: false as const, refusal, kept: records });
+  if (!isRecord(parsed) || !Array.isArray(parsed.records) || !parsed.records.length) return refused({ reason: 'shape' });
   let from = 0;
   for (const item of parsed.records as unknown[]) {
-    if (!isRecord(item)) return { ok: false, reason: 'shape' };
+    if (!isRecord(item)) return refused({ reason: 'shape' });
     const record = drafted(item);
-    if (typeof record === 'string') return { ok: false, reason: record };
-    if (record.to <= from || record.to > span.length) return { ok: false, reason: 'order', record: records.length + 1, to: record.to, after: from, of: span.length };
+    if (typeof record === 'string') return refused({ reason: record });
+    if (record.to <= from || record.to > span.length) return refused({ reason: 'order', record: records.length + 1, to: record.to, after: from, of: span.length });
     records.push({ ...record, lines: linesSaid(record.lines, span.slice(from, record.to).join('\n')) });
     from = record.to;
   }
-  return from === span.length ? { ok: true, records } : { ok: false, reason: 'short' };
+  return from === span.length ? { ok: true, records } : refused({ reason: 'short' });
 }
 
 // A chapter job's answer, by the same rules over its whole span, with no state or threads.
-export function parseChapter(answer: string, span: string[]): { ok: true; chapter: Scene } | ({ ok: false } & Refusal) {
+export function parseChapter(answer: string, span: string[]): { ok: true; chapter: Scene } | { ok: false; refusal: Refusal } {
   const read = answerJson(answer);
-  if (!read.ok) return { ok: false, reason: 'unreadable' };
+  if (!read.ok) return { ok: false, refusal: { reason: 'unreadable' } };
   const parsed = read.value;
-  if (!isRecord(parsed) || !isRecord(parsed.chapter)) return { ok: false, reason: 'shape' };
+  if (!isRecord(parsed) || !isRecord(parsed.chapter)) return { ok: false, refusal: { reason: 'shape' } };
   const chapter = sceneOf(parsed.chapter);
-  if (typeof chapter === 'string') return { ok: false, reason: chapter };
+  if (typeof chapter === 'string') return { ok: false, refusal: { reason: chapter } };
   return { ok: true, chapter: { ...chapter, lines: linesSaid(chapter.lines, span.join('\n')) } };
 }
 

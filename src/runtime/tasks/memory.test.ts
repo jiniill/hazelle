@@ -119,6 +119,34 @@ describe('Rememberer', () => {
       expect(memory.threads).toEqual([]);
       expect(memory.records[1]).toMatchObject({ state: [{ about: 'Luna', field: 'place', value: null }], closes: ['Luna waits for jin.', 'Luna wants a new lamp.'] });
     }));
+  it('keeps the records read before a refused one, leaves the rest of the span raw under the failure, and summarizes from there on 다시 시도', () =>
+    server.withSession(async (session) => {
+      await answerable(session);
+      await setDefaultMemory(session.store, { window: 1, batch: 140 });
+      const chat = crypto.randomUUID();
+      await server.hold(session.store, chat);
+      await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+      const ids = Array.from({ length: 7 }, () => crypto.randomUUID());
+      for (const [index, id] of ids.entries()) await appendUserMessage(session.store, chat, { id, text: `Scene ${index}. ${'word '.repeat(40)}` });
+      const record = (to: number, what: string) => ({ to, when: null, where: null, who: [], what, lines: [], outcome: '', state: [{ about: 'Luna', field: 'place', value: what }], opens: [], closes: [] });
+      const bodies: string[] = [];
+      stubRelay(({ body }) => {
+        bodies.push(String(body));
+        const count = bodies.at(-1)!.match(/\[#\d+ /g)!.length;
+        return saying(JSON.stringify({ records: bodies.length === 1 ? [record(1, 'first'), record(1, 'again'), record(count, 'rest')] : [record(count, 'rest')] }));
+      });
+      session.memory.check(chat);
+      await vi.waitFor(() => expect(session.memory.snapshot().failed.get(chat)).toMatchObject({ kind: 'invalid', reason: 'order', record: 2, to: 1, after: 1 }));
+      const covered = () => chatMemory(session.store, chat).records.map(({ sources }) => sources.map(({ message }) => message));
+      expect(covered()).toEqual([[ids[0]]]);
+      expect(chatMemory(session.store, chat).state).toMatchObject([{ value: 'first' }]);
+      expect(bodies).toHaveLength(1);
+      session.memory.retry(chat);
+      await vi.waitFor(() => expect(covered()).toHaveLength(2));
+      expect(covered()[1]![0]).toBe(ids[1]);
+      expect(bodies[1]).not.toContain('Scene 0.');
+      expect(session.memory.snapshot().failed.has(chat)).toBe(false);
+    }));
   it("summarizes nothing while the chat's prompt holds no 장기 기억 slot, so no message leaves the request for a memory never sent", () =>
     server.withSession(async (session) => {
       await answerable(session);
