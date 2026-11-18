@@ -166,7 +166,7 @@ describe('the server process', () => {
     }
   }, 15_000);
 
-  it('takes the visitor from X-Forwarded-For only when the connection comes from a trusted proxy', async () => {
+  it('takes the visitor a proxy on this machine names in X-Forwarded-For, listed or not, and the peer where none is named', async () => {
     const visitors: unknown[] = [];
     const api = httpServer((incoming, outgoing) => {
       visitors.push(incoming.headers[VISITOR_HEADER]);
@@ -183,12 +183,13 @@ describe('the server process', () => {
       try {
         await once(frontend, 'message');
         await fetch(`http://127.0.0.1:${port}/api/probe`, { headers: { 'x-forwarded-for': '127.0.0.1, 203.0.113.9' } });
+        await fetch(`http://127.0.0.1:${port}/api/probe`);
       } finally {
         await frontend.terminate();
       }
     }
     await new Promise<void>((resolve) => api.close(() => resolve()));
-    expect(visitors).toEqual(['::ffff:127.0.0.1', '203.0.113.9']);
+    expect(visitors).toEqual(['203.0.113.9', '::ffff:127.0.0.1', '203.0.113.9', '::ffff:127.0.0.1']);
   }, 15_000);
 
   it('retires idle proxy sockets before the API deadline without timing out an active response', async () => {

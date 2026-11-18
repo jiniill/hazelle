@@ -7,7 +7,7 @@ import { DAY_MS, visitDay } from './http';
 // visitors (visitorLimits). The caller picks the key.
 
 export type Limiter = { limit(key: string): { success: boolean } };
-export type UploadBudget = { take(size: number): Promise<boolean>; give(size: number): void };
+export type UploadBudget = { take(size: number, owner: string): Promise<boolean>; give(size: number, owner: string): void };
 
 // enter: a live call of the account's own, or null while it holds LIVE_CALLS; the function it answers ends that call, once.
 export type RelayAllowance = { visit(url: URL): boolean; take(bytes: number): boolean; enter(): (() => void) | null };
@@ -77,25 +77,40 @@ const UPLOAD_BYTES = 256 * 1024 * 1024;
 const UPLOAD_WAIT_MS = 30_000;
 
 // FIFO admission: later fitting bodies cannot bypass the head. A timeout must wake the next waiter like a release.
-export function uploadBudget(bytes = UPLOAD_BYTES, waitMs = UPLOAD_WAIT_MS): UploadBudget {
+// share: what one owner (an account) holds at once. A body is reserved by the length it states, before any of it has
+// come, so one account stating large bodies and sending nothing would otherwise hold the whole budget; its bodies past
+// the share wait for its own, and stand in no one else's way.
+export function uploadBudget(bytes = UPLOAD_BYTES, waitMs = UPLOAD_WAIT_MS, share = bytes / 4): UploadBudget {
   let free = bytes;
-  const waiting: { size: number; enter: () => void }[] = [];
+  const held = new Map<string, number>();
+  const waiting: { size: number; owner: string; enter: () => void }[] = [];
+  const fits = (size: number, owner: string) => (held.get(owner) ?? 0) + size <= share;
+  const hold = (size: number, owner: string) => {
+    free -= size;
+    held.set(owner, (held.get(owner) ?? 0) + size);
+  };
   const admit = () => {
-    while (waiting.length && waiting[0]!.size <= free) {
-      const next = waiting.shift()!;
-      free -= next.size;
-      next.enter();
+    for (let at = 0; at < waiting.length; ) {
+      const next = waiting[at]!;
+      if (!fits(next.size, next.owner)) at++;
+      else if (next.size > free) return;
+      else {
+        waiting.splice(at, 1);
+        hold(next.size, next.owner);
+        next.enter();
+      }
     }
   };
   return {
-    take: (size) =>
+    take: (size, owner) =>
       new Promise<boolean>((resolve) => {
-        if (waiting.length === 0 && free >= size) {
-          free -= size;
+        if (fits(size, owner) && free >= size && !waiting.some((ahead) => fits(ahead.size, ahead.owner))) {
+          hold(size, owner);
           return resolve(true);
         }
         const waiter = {
           size,
+          owner,
           enter: () => {
             clearTimeout(timer);
             resolve(true);
@@ -108,8 +123,11 @@ export function uploadBudget(bytes = UPLOAD_BYTES, waitMs = UPLOAD_WAIT_MS): Upl
         }, waitMs);
         waiting.push(waiter);
       }),
-    give: (size) => {
+    give: (size, owner) => {
       free += size;
+      const left = held.get(owner)! - size;
+      if (left) held.set(owner, left);
+      else held.delete(owner);
       admit();
     },
   };

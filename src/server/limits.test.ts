@@ -99,29 +99,39 @@ describe('credential limits', () => {
 
 describe('uploadBudget', () => {
   it('holds bodies by their bytes, lets waiters in by arrival order as bytes free, and answers false once the wait runs out', async () => {
-    const budget = uploadBudget(10, 20);
-    expect(await Promise.all([budget.take(6), budget.take(4)])).toEqual([true, true]);
-    const big = budget.take(5);
-    const small = budget.take(1);
-    budget.give(4);
+    const budget = uploadBudget(10, 20, Infinity);
+    expect(await Promise.all([budget.take(6, 'a'), budget.take(4, 'a')])).toEqual([true, true]);
+    const big = budget.take(5, 'a');
+    const small = budget.take(1, 'a');
+    budget.give(4, 'a');
     let entered = false;
     void small.then(() => (entered = true));
     await new Promise((resolve) => setTimeout(resolve, 5));
     expect(entered).toBe(false);
-    budget.give(6);
+    budget.give(6, 'a');
     expect(await Promise.all([big, small])).toEqual([true, true]);
-    expect(await budget.take(5)).toBe(false);
-    budget.give(5);
-    expect(await budget.take(5)).toBe(true);
+    expect(await budget.take(5, 'a')).toBe(false);
+    budget.give(5, 'a');
+    expect(await budget.take(5, 'a')).toBe(true);
   });
 
   it('lets the body behind a head that gave up in, without waiting for a give', async () => {
-    const budget = uploadBudget(10, 20);
-    expect(await budget.take(8)).toBe(true);
-    const big = budget.take(5);
-    const small = budget.take(2);
+    const budget = uploadBudget(10, 20, Infinity);
+    expect(await budget.take(8, 'a')).toBe(true);
+    const big = budget.take(5, 'a');
+    const small = budget.take(2, 'a');
     expect(await big).toBe(false);
     expect(await Promise.race([small, new Promise((resolve) => setTimeout(() => resolve('late'), 10))])).toBe(true);
+  });
+
+  it('holds one owner to its share: its bodies past it wait for its own, and stand in no other owner\'s way', async () => {
+    const budget = uploadBudget(12, 20, 4);
+    expect(await Promise.all([budget.take(2, 'a'), budget.take(2, 'a')])).toEqual([true, true]);
+    const over = budget.take(2, 'a');
+    expect(await Promise.all([budget.take(4, 'b'), budget.take(4, 'c')])).toEqual([true, true]);
+    budget.give(2, 'a');
+    expect(await over).toBe(true);
+    expect(await budget.take(1, 'a')).toBe(false);
   });
 });
 

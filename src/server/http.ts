@@ -43,6 +43,10 @@ export function fail(c: Context, status: ContentfulStatusCode, error: ServerErro
   return c.json({ error, ...detail }, status);
 }
 
+// On the pages' answers and the API routes' (worker.ts): bytes an account uploaded (a share's file) must never be read
+// as a script or a page.
+export const NOSNIFF = { 'X-Content-Type-Options': 'nosniff' } as const;
+
 export const RETRY_SECONDS = 5;
 export const MINUTE_MS = 60 * 1000;
 export const HOUR_MS = 60 * MINUTE_MS;

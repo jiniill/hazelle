@@ -1,6 +1,7 @@
 import { readTool, splitTool, toolSource, type ImportedTool } from '../../engine/import/tool';
 import type { ImportFailure } from '../../engine/import/types';
 import type { Stored } from '../../model/kinds';
+import { without } from '../../model/fields';
 import { live } from '../../model/library';
 import { toolId, type DraftAsk, type Tool, type ToolDraft, type ToolIdentity } from '../../model/tool';
 import type { ToolManifest, ToolUse } from '../../tool-api/manifest';
@@ -81,7 +82,14 @@ export type FileImport = ToolImport & { carried: Stored<'tooldraft'> | null };
 
 // A file imported over a plugin carries the plugin's draft along. A draft with edits of its own, or one that could not
 // hold the file, stays as it was, and installedDiffers tells 적용 so.
+// The identity is a name the file states of itself, so what its module answered was answered to other code: every
+// consent is asked again, and reset before this code is exposed. A draft applied is the user's own edit (applyDraft).
 export async function importFile(store: ObjectStore, files: Files, tool: ImportedTool): Promise<ApiResult<FileImport>> {
+  const module = sameTool(store, tool.manifest)?.parent;
+  if (module && live(store.get('module', module))) {
+    const reset = await store.update('module', module, (current) => (['botModels', 'takesMemory', 'network'] as const).reduce((value, answer) => without(value, answer), current));
+    if (!reset.ok) return reset;
+  }
   const installed = await importTool(store, files, tool);
   if (!installed.ok) return installed;
   const draft = draftsOf(store).find(({ value }) => value.module === installed.data.id);

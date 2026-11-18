@@ -1,6 +1,6 @@
 import { getRequestListener } from '@hono/node-server';
 import { Agent, createServer, request, type ClientRequest } from 'node:http';
-import { isIPv6, type BlockList } from 'node:net';
+import type { BlockList } from 'node:net';
 import { parentPort, workerData } from 'node:worker_threads';
 import { VISITOR_HEADER } from '../contracts/http';
 import type { PulseAnswer } from '../contracts/pulse';
@@ -8,7 +8,7 @@ import type { PriceTable } from '../connectors/models-dev';
 import type { ShareCover } from '../contracts/shares';
 import { endToEnd } from './hop-by-hop';
 import { clientFiles, type PageStamp } from './static';
-import { visitorKey } from './visitor';
+import { visitorFrom } from './visitor';
 
 // host undefined listens on every interface, as Docker's port mapping needs.
 export type FrontendOptions = { port: number; host: string | undefined; apiPort: number; clientDir: string; trustedProxies: BlockList; selfHost: boolean; stamp: PageStamp | null };
@@ -48,12 +48,8 @@ let draining = false;
 
 const server = createServer((incoming, outgoing) => {
   const path = incoming.url?.split('?')[0] ?? '/';
-  // Use peer address, or the last X-Forwarded-For entry only from a trusted proxy.
   // Overwrite visitor headers so outsiders cannot choose keys or claim loopback.
-  const peer = incoming.socket.remoteAddress;
-  const forwarded = incoming.headers['x-forwarded-for'];
-  const proxied = peer !== undefined && trustedProxies.check(peer, isIPv6(peer) ? 'ipv6' : 'ipv4');
-  const visitor = visitorKey((proxied && (Array.isArray(forwarded) ? forwarded.join(',') : forwarded)?.split(',').at(-1)?.trim()) || peer || 'unknown');
+  const visitor = visitorFrom(incoming.socket.remoteAddress, incoming.headers['x-forwarded-for'], trustedProxies);
   incoming.headers[VISITOR_HEADER] = visitor;
   if (path !== '/api' && !path.startsWith('/api/')) return void files(incoming, outgoing);
 

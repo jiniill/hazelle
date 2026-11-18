@@ -44,7 +44,9 @@ const FENCE = /<pre><code class="language-([^"\s]+)">([^<]*)<\/code><\/pre>/g;
 
 export function drawCode(htmlText: string): string {
   return htmlText.replace(FENCE, (fence, language: string, escaped: string) => {
-    const mode = MODES[language.toLowerCase()];
+    const name = language.toLowerCase();
+    // Own names only: "constructor" is a fence's language too, and Object's is no parser.
+    const mode = Object.hasOwn(MODES, name) ? MODES[name] : undefined;
     if (!mode || FOREIGN_ENTITY.test(escaped)) return fence;
     let parser = parsers.get(mode);
     if (!parser) parsers.set(mode, (parser = StreamLanguage.define(mode).parser));

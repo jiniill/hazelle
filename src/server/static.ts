@@ -13,6 +13,7 @@ import { TOOL_SANDBOX } from '../contracts/sandbox';
 import { SHARE_ID, SHARE_PAGE, type ShareCover } from '../contracts/shares';
 import { VISITOR_HEADER } from '../contracts/http';
 import { HOSTED } from '../contracts/installation';
+import { NOSNIFF } from './http';
 import type { PageVisit } from './visits';
 
 // frame-src is also the tool pages' navigation boundary: adding any host there opens a way out for them.
@@ -28,8 +29,8 @@ export const SANDBOX_CSP = `sandbox ${TOOL_SANDBOX}; default-src 'none'; script-
 // stylesheets that load webfonts may come from outside. connect-src stays closed; its fetches go through the host.
 export const SANDBOX_NETWORK_CSP = SANDBOX_CSP.replace("img-src data: blob:", 'img-src data: blob: https:').replace("style-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline' https:").replace("font-src 'self' data:", "font-src 'self' data: https:");
 // The two variants differ in URL, so a cached copy of one is never served for the other.
-export const sandboxHeaders = (network: boolean) => ({ 'Content-Security-Policy': network ? SANDBOX_NETWORK_CSP : SANDBOX_CSP, 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-cache' });
-const HEADERS = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' };
+export const sandboxHeaders = (network: boolean) => ({ 'Content-Security-Policy': network ? SANDBOX_NETWORK_CSP : SANDBOX_CSP, ...NOSNIFF, 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-cache' });
+const HEADERS = { ...NOSNIFF, 'Referrer-Policy': 'no-referrer' };
 // Every file under /assets has a content hash in its name, so a changed file is a new URL.
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 // Only pages whose words reach a crawler that runs no script; this set also drives the sitemap. The legal pages stay

@@ -82,10 +82,20 @@ export function holdAfter(hold: Hold, heard: Heard): { hold: Hold; after?: numbe
   }
 }
 
+// A layer's boxes as they are laid: no further than bounds, the chat's column. Left as asked, a tool could lay one box
+// over the whole app, take every press and draw the app's own screens there.
+export function clipped(region: Region, bounds: Pick<DOMRect, 'left' | 'top' | 'right' | 'bottom'>): Region {
+  const clip = (boxes: Box[]) =>
+    boxes
+      .map(([left, top, right, bottom]): Box => [Math.max(left, bounds.left), Math.max(top, bounds.top), Math.min(right, bounds.right), Math.min(bottom, bounds.bottom)])
+      .filter(([left, top, right, bottom]) => right > left && bottom > top);
+  return { takes: clip(region.takes), shows: clip(region.shows) };
+}
+
 const HEARD: Record<string, Exclude<Heard['on'], 'missed'>> = { pointermove: 'move', pointerdown: 'down', pointerup: 'up', pointercancel: 'up', click: 'click' };
 
-// A frame laid over the whole screen as a layer (design §6.10): it is seen on its boxes alone, and everything else is
-// the app's.
+// A frame laid over the whole screen as a layer (design §6.10): it is seen on its boxes alone, within the chat's column
+// (clipped), and everything else is the app's.
 // - The clip keeps a press and a tap outside the boxes for the app.
 // - A scroll is aimed by the boxes' bounds, not their shape, and outside its own lists the frame can use none. The
 //   frame's holder is a scroller over those bounds which nothing can press: such a scroll passes to it by the
@@ -100,7 +110,8 @@ export function FrameLayer({ scrollRef, onMount }: { scrollRef: RefObject<HTMLEl
   useEffect(() => {
     if (held) return;
     let laid: HTMLIFrameElement | null = null;
-    let region: Region = { takes: [], shows: [] };
+    let asked: Region = { takes: [], shows: [] };
+    let region = asked;
     let hold = HELD;
     let again = 0;
     let rest = 0;
@@ -153,10 +164,12 @@ export function FrameLayer({ scrollRef, onMount }: { scrollRef: RefObject<HTMLEl
       }
       const fresh = laid !== frame;
       laid = frame;
-      region = next;
+      asked = next;
+      const column = scrollRef.current?.closest('main');
+      region = column ? clipped(next, column.getBoundingClientRect()) : { takes: [], shows: [] };
       if (!frame) return;
       const holder = frame.parentElement!;
-      const seen = [...next.takes, ...next.shows];
+      const seen = [...region.takes, ...region.shows];
       const edge = (at: 0 | 1 | 2 | 3, most: (...values: number[]) => number) => (seen.length ? most(...seen.map((box) => box[at])) : 0);
       const [left, top, right, bottom] = [edge(0, Math.min), edge(1, Math.min), edge(2, Math.max), edge(3, Math.max)];
       Object.assign(holder.style, { left: `${left}px`, top: `${top}px`, width: `${right - left}px`, height: `${bottom - top}px` });
@@ -169,9 +182,17 @@ export function FrameLayer({ scrollRef, onMount }: { scrollRef: RefObject<HTMLEl
       holder.addEventListener('scroll', scrolled, { passive: true });
       centre(holder);
     };
+    // The column moves as the window or a panel beside it does.
+    const fit = () => draw(laid, asked);
+    const observer = new ResizeObserver(fit);
+    const column = scrollRef.current?.closest('main');
+    if (column) observer.observe(column);
+    window.addEventListener('resize', fit);
     const handle = onMount({ draw, missed: (what) => hear({ on: 'missed', what }) });
     return () => {
       handle.close();
+      observer.disconnect();
+      window.removeEventListener('resize', fit);
       draw(null, { takes: [], shows: [] });
       for (const type of Object.keys(HEARD)) window.removeEventListener(type, pointed, { capture: true });
     };

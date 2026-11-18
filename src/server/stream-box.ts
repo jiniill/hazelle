@@ -32,7 +32,7 @@ const PAGE_BYTES = 256 * 1024;
 const LIMIT_MS = 14.5 * 60 * 1000;
 // The provider's body bytes a call keeps; past them it ends as limit, as at its time. A long reply with long reasoning
 // is a few MB of text, and its SSE envelope can take some ten times that.
-const LIMIT_BYTES = 32 * 1024 * 1024;
+export const LIMIT_BYTES = 32 * 1024 * 1024;
 // Pages a reader takes from storage at once. A page holds PAGE_BYTES and at most one frame more.
 const PAGE = 4;
 // Whatever no device came back for is dropped this long after the call started.

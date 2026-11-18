@@ -145,6 +145,18 @@ describe('files', () => {
     expect(await missing([earlyId, lateId], jin.cookie)).toEqual([]);
   });
 
+  it('holds what an account has released and not yet lost, with what it keeps, to twice the cap', async () => {
+    await t.env.db.prepare('UPDATE service SET account_file_bytes_cap = 5').run();
+    const jin = await signup();
+    const [kept, small] = [new Uint8Array([1, 2, 3]), new Uint8Array([7])];
+    expect((await put(sha256Hex(kept), kept, jin.cookie)).status).toBe(204);
+    const release = (size: number) => t.env.db.prepare('INSERT OR REPLACE INTO file_removals (incarnation, id, size, created_at, released_at, due_at) VALUES (?, ?, ?, 0, 0, 0)').bind(jin.incarnation, '0'.repeat(64), size).run();
+    await release(7);
+    expect(await (await put(sha256Hex(small), small, jin.cookie)).json()).toEqual({ error: 'files-full' });
+    await release(6);
+    expect((await put(sha256Hex(small), small, jin.cookie)).status).toBe(204);
+  });
+
   it('refuses a file past the cap at its reservation, storing nothing, under the account’s own cap when it has one', async () => {
     await t.env.db.prepare('UPDATE service SET account_file_bytes_cap = 5').run();
     const jin = await signup();
@@ -211,7 +223,7 @@ describe('files', () => {
 
   it('holds upload bodies up to the budget: a ninth is not read until one of them ends', async () => {
     const { uploads } = t.env.limits;
-    t.env.limits.uploads = uploadBudget(16);
+    t.env.limits.uploads = uploadBudget(16, undefined, 16);
     const jin = await signup();
     const bytes = Array.from({ length: 9 }, (_, index) => new Uint8Array([index, 42]));
     const ids = bytes.map(sha256Hex);

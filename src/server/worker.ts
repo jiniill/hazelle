@@ -10,7 +10,7 @@ import { files } from './files';
 import { MAX_PICTURE_BYTES } from '../contracts/board';
 import { MAX_FILE_BYTES } from '../contracts/files';
 import { BATCH_LIMITS } from '../contracts/objects';
-import { fail, type Account, type AppEnv } from './http';
+import { fail, NOSNIFF, type Account, type AppEnv } from './http';
 import { objects } from './objects';
 import { modelsDev } from './models-dev';
 import { pulse } from './pulse';
@@ -35,6 +35,11 @@ app.use(async (c, next) => {
   if (ms > SLOW_MS && !OWN_TIME.some((path) => path.test(c.req.path))) {
     console.warn('slow request', { method: c.req.method, path: c.req.path, status: c.res.status, ms, storeMs: c.get('storeMs') ?? null });
   }
+});
+
+app.use(async (c, next) => {
+  await next();
+  for (const [name, value] of Object.entries(NOSNIFF)) c.res.headers.set(name, value);
 });
 
 // Labelled requests mark a session-read account active even on failures: owed seen may ride a missing stream.
