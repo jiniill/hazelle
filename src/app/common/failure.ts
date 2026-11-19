@@ -23,6 +23,7 @@ import type { KeyFailure } from '../../runtime/models/connections';
 import type { ReplyError } from '../../runtime/models/generate';
 import type { MetersFailure } from '../../runtime/models/meters';
 import type { HostsFailure } from '../../runtime/models/hosts';
+import type { GrantFailure } from '../../runtime/account/grant';
 import type { SignInFailure } from '../../runtime/account/sign-in';
 import type { TranslateFailure, TranslatorFailure } from '../../runtime/tasks/translate';
 import type { TurnFailure } from '../../runtime/chat/turn';
@@ -266,9 +267,17 @@ const SIGN_IN_REFUSED: Record<string, string> = {
   access_denied: '로그인을 취소했어요.',
 };
 
+const unread = (site: string) => `${site}의 응답을 읽지 못했어요. 다시 시도해 주세요.`;
+
 export function describeSignInFailure(failure: SignInFailure, site: string): string {
-  if (failure.kind === 'bad-answer') return `${site}의 응답을 읽지 못했어요. 다시 시도해 주세요.`;
+  if (failure.kind === 'bad-answer') return unread(site);
   if (failure.kind === 'refused') return SIGN_IN_REFUSED[failure.code] ?? `${site}에서 로그인을 거절했어요 (${failure.code}).`;
+  return describeReplyError(failure);
+}
+
+export function describeGrantFailure(failure: GrantFailure, site: string): string {
+  if (failure.kind === 'bad-answer') return unread(site);
+  if (failure.kind === 'unasked') return `${site}에서 돌아왔지만 이 브라우저에서 시작한 로그인이 아니거나 시간이 지났어요. 다시 시도해 주세요.`;
   return describeReplyError(failure);
 }
 

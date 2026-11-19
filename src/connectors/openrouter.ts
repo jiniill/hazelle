@@ -100,6 +100,14 @@ export const openRouter: ConnectionType = {
 
   parseModels: openRouterModels,
 
+  // The code runs out 10 minutes after the page hands it over.
+  grant: {
+    site: 'openrouter.ai',
+    page: (challenge, state, back) => `https://openrouter.ai/auth?${new URLSearchParams({ callback_url: back, code_challenge: challenge, code_challenge_method: 'S256', state, key_label: 'Hazelle' })}`,
+    exchange: (code, verifier) => ({ url: 'https://openrouter.ai/api/v1/auth/keys', method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, code_verifier: verifier, code_challenge_method: 'S256' }) }),
+    parse: (payload) => (isRecord(payload) && typeof payload.key === 'string' && payload.key ? payload.key : null),
+  },
+
   reasoningBudget: (tokens) => ({ reasoning: { max_tokens: tokens } }),
 
   // Models that cache by cache points read it; the provider is left to say whether the others ignore it.

@@ -82,10 +82,10 @@ it('counts a first page step once per address a day, with no id, and never a cra
   const clock = vi.spyOn(Date, 'now').mockReturnValue(NOON);
   try {
     const step = (name: string, visitor: string, agent = 'Mozilla/5.0') => t.post('visits/first-page', { step: name }, undefined, { [VISITOR_HEADER]: visitor, 'user-agent': agent });
-    for (const [name, visitor] of [['shown', 'first a'], ['shown', 'first a'], ['shown', 'first b'], ['door', 'first a']] as const) expect((await step(name, visitor)).status).toBe(204);
+    for (const [name, visitor] of [['shown', 'first a'], ['shown', 'first a'], ['shown', 'first b'], ['door', 'first a'], ['asked', 'first a'], ['granted', 'first a']] as const) expect((await step(name, visitor)).status).toBe(204);
     expect((await step('shown', 'first c', 'Googlebot/2.1')).status).toBe(204);
     expect((await step('paid', 'first a')).status).toBe(400);
-    expect((await readVisits(t.env.db, NOON))[0]).toMatchObject({ shown: 2, door: 1, read: 0, visitors: 0 });
+    expect((await readVisits(t.env.db, NOON))[0]).toMatchObject({ shown: 2, door: 1, asked: 1, granted: 1, read: 0, visitors: 0 });
   } finally {
     clock.mockRestore();
   }

@@ -2,7 +2,9 @@ import { Fragment, lazy, Suspense, useEffect, useRef, useState, type FormEvent }
 import { CONNECTION_TYPES, detect } from '../../connectors/registry';
 import type { ConnectionType } from '../../connectors/types';
 import { OPEN_APP, START_AGAIN, START_PAGE } from '../../contracts/start';
+import { grantReturn, type Granting } from '../../runtime/account/grant';
 import { countFirstPage } from '../../runtime/service/first-page';
+import { KeyGrant } from '../common/KeyGrant';
 import { LegalNotice } from '../common/LegalNotice';
 import { Beat, Brand, Button, Callout, ChoiceGroup, ExampleTalk, Hero, Indoors, KeyPlaces, Link, NightScene, PanelBody, Progress, Promises, Row, Said, SayChoices, Stack, TextField, Text, TrialSteps, Upcoming, WalkOnHint } from '../ui';
 import { EXAMPLE, type ExampleLine, type ExampleStrand } from './example';
@@ -20,6 +22,9 @@ const PLACES = OFFERED.map(({ id, name }) => {
   const href = typeOf(id).keyPage!;
   return { name, href, site: new URL(href).host, action: '키 받기' };
 });
+
+// The one way in that needs no key made by hand, and whose free models need no payment.
+const GRANTING = CONNECTION_TYPES.find((type): type is Granting => type.id === 'openrouter')!;
 
 const BEATS_COUNTED = { example: 'read', trial: 'door' } as const;
 
@@ -41,6 +46,11 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
     countFirstPage('entered');
     doors.onOpen();
   };
+
+  // Back from a provider's sign-in, the visit goes on where it left: at the key form.
+  useEffect(() => {
+    if (grantReturn()) document.getElementById('trial')!.scrollIntoView();
+  }, []);
 
   useEffect(() => {
     if (!doors) return;
@@ -101,7 +111,7 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
                 />
               </Suspense>
             ) : (
-              <KeyForm typed={typed} onType={setTyped} refused={refused} privacy={doors ? trial.privacy : START_AGAIN.privacy} onSkip={doors ? enter : undefined} onEnter={(type, secret) => { if (doors) countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
+              <KeyForm typed={typed} onType={setTyped} refused={refused} privacy={doors ? trial.privacy : START_AGAIN.privacy} onSkip={doors ? enter : undefined} onGrant={doors ? countFirstPage : undefined} onEnter={(type, secret) => { if (doors) countFirstPage('keyed'); setRefused(null); setEntered({ type, secret }); }} />
             )}
           </PanelBody>
         </Indoors>
@@ -120,7 +130,9 @@ export function StartPage({ doors }: { doors: { onOpen: () => void; onSignIn: ()
 }
 
 // onSkip: a first visit's way into the app without a key; the key is never the only way on.
-function KeyForm({ typed, onType, refused, privacy, onSkip, onEnter }: { typed: Typed; onType: (typed: Typed) => void; refused: string | null; privacy: string; onSkip?: () => void; onEnter: (type: ConnectionType, secret: string) => void }) {
+// onGrant: a first visit's count of the sign-in's two steps. Walked again, the page keeps nothing, so it offers no
+// sign-in: that would leave a key at the provider that nothing here holds.
+function KeyForm({ typed, onType, refused, privacy, onSkip, onGrant, onEnter }: { typed: Typed; onType: (typed: Typed) => void; refused: string | null; privacy: string; onSkip?: () => void; onGrant?: (step: 'asked' | 'granted') => void; onEnter: (type: ConnectionType, secret: string) => void }) {
   const secret = typed.key.trim();
   const known = detect(secret);
   const type = known?.kind === 'key' ? known.type : typeOf(typed.picked);
@@ -133,6 +145,7 @@ function KeyForm({ typed, onType, refused, privacy, onSkip, onEnter }: { typed: 
   return (
     <form onSubmit={submit}>
       <Stack>
+        {onGrant && <KeyGrant type={GRANTING} label={START_PAGE.trial.grant} onStart={() => onGrant('asked')} onKey={(granted) => { onGrant('granted'); onEnter(GRANTING, granted); }} />}
         <ChoiceGroup label="제공자" options={OFFERED.map(({ id, name }) => ({ value: id, label: name }))} value={OFFERED.some(({ id }) => id === type.id) ? type.id : null} empty={type.label} onChange={(picked) => onType({ ...typed, picked })} />
         <TextField label={`${type.label} API 키`} kind="key" value={typed.key} onChange={(key) => onType({ ...typed, key })} placeholder={type.keyForm?.placeholder} help={privacy} focus={refused !== null} />
         {refused && <Callout tone="warn" alert>{refused}</Callout>}

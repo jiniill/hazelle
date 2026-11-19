@@ -1,4 +1,5 @@
 import { fitsRole } from '../../connectors/assignment';
+import { isFree } from '../../connectors/pricing';
 import type { Connection, ConnectionType, Model } from '../../connectors/types';
 import type { CatalogResult } from '../models/catalog';
 import { blankCard } from '../../engine/import/card';
@@ -22,7 +23,11 @@ export async function connectTrial(session: Session, type: ConnectionType, secre
   return { ok: true, id: added.id, catalog: await session.catalogs.load(connection) };
 }
 
-export const talkableModels = (models: Model[]) => models.filter((model) => fitsRole(model, 'main'));
+// Free ones first, each part in the catalog's order: a visitor who has paid a provider nothing gets a reply from those.
+export function talkableModels(models: Model[]): Model[] {
+  const fit = models.filter((model) => fitsRole(model, 'main'));
+  return [...fit.filter(isFree), ...fit.filter((model) => !isFree(model))];
+}
 
 export const pickTrialModel = (session: Session, connection: string, model: Model) => addModel(session.store, connection, model);
 

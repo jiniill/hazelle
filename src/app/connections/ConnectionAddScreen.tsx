@@ -19,6 +19,8 @@ const GROUPS: Record<ConnectionType['group'], string> = {
   subscription: '구독 계정 연결',
 };
 
+const signsIn = (site: string) => `${site} 로그인`;
+
 // Ollama, LM Studio and koboldcpp at the ports launch.ts and docker-compose.yml list; another listed one goes by its address.
 const LOCAL_NAMES: Partial<Record<string, string>> = { '11434': 'Ollama', '1234': 'LM Studio', '5001': 'koboldcpp' };
 
@@ -77,7 +79,7 @@ export function ConnectionAddScreen({ back }: { back: Back }) {
                   key={type.id}
                   title={type.label}
                   description={type.description}
-                  tags={[type.signIn ? `${type.signIn.site} 로그인` : (type.keyForm?.label ?? 'API 키'), ...(count ? [`연결 ${count}개`] : []), ...(guest && !type.browser ? [NEEDS_ACCOUNT] : [])]}
+                  tags={[...(type.signIn ? [signsIn(type.signIn.site)] : [...(type.grant ? [signsIn(type.grant.site)] : []), type.keyForm?.label ?? 'API 키']), ...(count ? [`연결 ${count}개`] : []), ...(guest && !type.browser ? [NEEDS_ACCOUNT] : [])]}
                   current={route.kind === 'connect' && route.type === type}
                   onClick={() => navigate({ kind: 'connect', type })}
                 />

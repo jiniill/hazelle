@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
+import { isFree } from '../../connectors/pricing';
 import type { ConnectionType, Model } from '../../connectors/types';
 import { countFirstPage } from '../../runtime/service/first-page';
 import type { Session } from '../../runtime/session';
@@ -84,16 +85,18 @@ function ModelPick({ models, failure, onPick }: { models: Model[]; failure: stri
   const shown = useMemo(() => models.filter((model) => `${model.name} ${model.id}`.toLowerCase().includes(search.trim().toLowerCase())), [models, search]);
   return (
     <Stack>
-      <TextField label={searchOf('모델')} showLabel={false} placeholder={`모델 ${models.length}개 검색`} value={search} onChange={setSearch} />
+      <TextField label={searchOf('모델')} showLabel={false} placeholder={`모델 ${models.length}개 검색`} help={models.some(isFree) ? FREE_HELP : undefined} value={search} onChange={setSearch} />
       {failure && <Callout tone="warn" alert>{failure}</Callout>}
       <List label="모델" box>
         {/* eslint-disable-next-line no-restricted-syntax -- a picker's first matches, which typing narrows */}
-        {shown.slice(0, MODELS_SHOWN).map((model) => <ListItem key={model.id} title={model.name} code={model.id} onClick={() => onPick(model)} />)}
+        {shown.slice(0, MODELS_SHOWN).map((model) => <ListItem key={model.id} title={model.name} code={model.id} tags={isFree(model) ? ['무료'] : undefined} onClick={() => onPick(model)} />)}
       </List>
     </Stack>
   );
 }
 const MODELS_SHOWN = 8;
+// True of every provider's free models, not one's rule: a 0 price also comes from models.dev (Google, Mistral, Groq).
+const FREE_HELP = '무료 모델은 제공자가 정한 사용 한도가 있고, 제공자에 따라 보낸 글이 학습에 쓰일 수 있어요.';
 
 function TrialChat({ session, kept, onReplied }: { session: Session; kept: boolean; onReplied: () => void }) {
   const [chat] = useState(() => crypto.randomUUID());
