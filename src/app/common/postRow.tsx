@@ -15,7 +15,7 @@ export const CATEGORY_LOOK: Record<Category, { hue: 1 | 2 | 3 | 4 | 5; icon: Luc
   bug: { hue: 4, icon: Bug, description: '오류나 비정상적인 동작을 제보해요' },
   idea: { hue: 1, icon: Lightbulb, description: '필요한 기능이나 개선할 점을 제안해요' },
   question: { hue: 2, icon: CircleHelp, description: '사용 방법을 질문해요' },
-  tip: { hue: 3, icon: Sparkles, description: '알아낸 기능이나 활용법을 나눠요' },
+  tip: { hue: 3, icon: Sparkles, description: '유용한 기능이나 활용법을 나눠요' },
   news: { hue: 5, icon: Megaphone, description: '업데이트 내역과 공지사항' },
 };
 

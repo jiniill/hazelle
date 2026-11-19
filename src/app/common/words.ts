@@ -97,8 +97,6 @@ export const ACCOUNT_ONLY = '계정을 만들면 돼요';
 export const PULSE = { ...PULSE_PAGE, sharing: `${PULSE_PAGE.title} 집계 참여` };
 // The times a restore can go back to (contracts/admin).
 export const RESTORE_SPAN = `${NEWEST_RESTORE_MINUTES}분 전부터 ${OLDEST_RESTORE_DAYS}일 전 사이`;
-const DIRECT_CALLS_COST = '탭을 닫거나 새로고침하면 받던 응답이 끊기고, 브라우저 요청을 막는 연결은 쓸 수 없어요.';
-export const DIRECT_CALLS = { label: '직접 요청', help: `켜 두면 모델 요청을 서버를 거치지 않고 이 브라우저에서 바로 보내요. ${DIRECT_CALLS_COST}`, ask: '직접 요청을 켤까요?', cost: DIRECT_CALLS_COST, confirm: '켜기' };
 export const AUTO_DIAGNOSIS = { label: '자동 진단 보내기', help: '켜 두면 오류가 나거나 기억에 없는 메시지가 생겼을 때 앱 버전, 브라우저 종류, 모델, 설정값, 메시지 수와 토큰 수를 보내요. 아이디, 대화 내용, 이름, 오류 메시지는 보내지 않아요.' };
 
 // A write's failure, before why (toast.failed).
@@ -158,6 +156,9 @@ export const ILLUSTRATE_NOTE = '삽화 노트';
 export const ILLUSTRATE_NOTE_UNSENT = `삽화 프롬프트에 '${ILLUSTRATE_NOTE}' 블록을 추가해야 노트가 적용돼요.`;
 
 export const PAGES = { setup: '내 구성', models: '모델', connections: 'API 연결', chat: '대화', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', theme: '테마', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용 기록', admin: '운영' };
+const DIRECT_CALLS_LABEL = '브라우저 직접 요청';
+const DIRECT_CALLS_COST = `탭을 닫거나 새로고침하면 받던 응답이 끊겨요. 브라우저 요청을 막는 ${PAGES.connections}은 쓸 수 없어요.`;
+export const DIRECT_CALLS = { label: DIRECT_CALLS_LABEL, help: `켜 두면 서버를 거치지 않고 모델 제공자에게 바로 요청해요. ${DIRECT_CALLS_COST}`, ask: `${withParticle(DIRECT_CALLS_LABEL, '을/를')} 켤까요?`, cost: DIRECT_CALLS_COST, confirm: '켜기' };
 
 // Keep always-on module wording consistent: editable only in global settings, read-only marks elsewhere.
 export const ALWAYS = '항상';
