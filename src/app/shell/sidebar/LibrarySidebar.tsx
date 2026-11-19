@@ -7,7 +7,7 @@ import { storedStrings, usePersisted } from '../../common/usePersisted';
 import { useSortedLibrary } from '../../common/characterOrder';
 import { useCharacter, useChatSummary, useWritingChats } from '../../session';
 import { useWide } from '../../ui';
-import { navigate, useRoute } from '../router';
+import { linkTo, useRoute } from '../router';
 import { enterShelf, onBoard, shelfOf } from '../routes';
 import { CharacterTree } from './CharacterTree';
 import { ShelfChats } from './ShelfChats';
@@ -51,13 +51,13 @@ export function LibrarySidebar({ page, collapsed, onCollapse }: Props) {
   const typing = (shelf: Shelf<ChatSummary>) => shelf.chats.some((item) => writing.has(item.id));
 
   // Picking a character goes inside it, even when its latest chat is the page already open.
-  const enter = (shelf: Shelf<ChatSummary>) => navigate(enterShelf(shelf, wide));
+  const linkOf = (shelf: Shelf<ChatSummary>) => linkTo(enterShelf(shelf, wide));
 
   const chats = current && <ShelfChats key={current.id ?? 'none'} page={page} shelf={current} />;
   if (page) return chats || (
     <CharacterTree
       typing={typing}
-      onEnter={enter}
+      linkOf={linkOf}
       query={query}
       onQuery={setQuery}
       openFolders={openFolders}
@@ -66,7 +66,7 @@ export function LibrarySidebar({ page, collapsed, onCollapse }: Props) {
   );
   return (
     <>
-      <SidebarRail shelves={railShelves} current={current} home={route.kind === 'home' || route.kind === 'gallery'} search={route.kind === 'search'} board={onBoard(route)} typing={typing} onEnter={enter} fold={chats ? { open: !collapsed, onToggle: () => onCollapse(!collapsed) } : undefined} />
+      <SidebarRail shelves={railShelves} current={current} home={route.kind === 'home' || route.kind === 'gallery'} search={route.kind === 'search'} board={onBoard(route)} typing={typing} linkOf={linkOf} fold={chats ? { open: !collapsed, onToggle: () => onCollapse(!collapsed) } : undefined} />
       {!collapsed && chats}
     </>
   );

@@ -1,11 +1,12 @@
 import { Check, GripVertical, type LucideIcon } from 'lucide-react';
-import { Fragment, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode, type Ref } from 'react';
+import { Fragment, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode, type Ref } from 'react';
 import { bothDrops, cardDrag, useCardDrop, useCardPlace } from './cardDrag';
 import { CardOrderScope, useOrderHandle } from './cardOrder';
 import { FolderMark } from './FolderMark';
 import { Viewport } from './Viewport';
 import { Avatar } from '../foundation/Avatar';
 import { Icon } from '../foundation/Icon';
+import { Press } from '../foundation/Press';
 import { Tag } from '../foundation/Tag';
 import { useVeil } from '../foundation/veil';
 import { MenuSlot, useMenuSlot } from '../overlays/MoreMenu';
@@ -34,8 +35,8 @@ export function CardGrid({ label, keys, variant = 'portrait', current, children 
   // Arrows move between the cards drawn; a row the viewport has not drawn yet is reached by scrolling.
   function move(event: KeyboardEvent<HTMLDivElement>) {
     const step = STEPS[event.key];
-    const cards = [...root.current!.querySelectorAll<HTMLButtonElement>(`.${styles.card}`)];
-    const from = cards.indexOf(event.target as HTMLButtonElement);
+    const cards = [...root.current!.querySelectorAll<HTMLElement>(`.${styles.card}`)];
+    const from = cards.indexOf(event.target as HTMLElement);
     if (!step || from === -1) return;
     const to = cards[from + step(columns)];
     if (!to) return;
@@ -66,7 +67,9 @@ type CardProps = {
   tag?: string;
   // A note that says what is missing reads fainter than a real one.
   faint?: boolean;
-  onClick: () => void;
+  // Where the card goes, which makes it a link (Press).
+  href?: string;
+  onClick: (event: MouseEvent<HTMLElement>) => void;
   popup?: 'menu' | 'dialog';
   expanded?: boolean;
   ref?: Ref<HTMLButtonElement>;
@@ -92,15 +95,15 @@ function OrderHandle({ handle }: { handle: Handle }) {
   );
 }
 
-export function FaceCard({ image, video = false, name, note, selected, current = false, tag, faint = false, onClick, popup, expanded, ref, menu, drag, onPlace, arrange }: CardProps) {
+export function FaceCard({ image, video = false, name, note, selected, current = false, tag, faint = false, href, onClick, popup, expanded, ref, menu, drag, onPlace, arrange }: CardProps) {
   const slot = useMenuSlot();
   const place = useCardPlace(onPlace, 'card');
   const handle = useOrderHandle(arrange, 'card', onPlace);
   return (
     <div className={boxClass(place.side ?? handle?.side ?? null, handle)} onContextMenu={slot.onContextMenu} {...handle?.box}>
-      <button
+      <Press
         ref={ref}
-        type="button"
+        href={href}
         className={classNames(styles.card, selected && styles.selected, current && styles.current)}
         aria-pressed={selected ?? undefined}
         aria-current={current || undefined}
@@ -118,7 +121,7 @@ export function FaceCard({ image, video = false, name, note, selected, current =
         <span className={faint ? `${styles.detail} ${styles.faint}` : styles.detail}>{note}</span>
         {/* After the name, so the card is named by its name first; drawn over the picture's corner. */}
         {tag && <span className={styles.tag}><Tag tone="accent">{tag}</Tag></span>}
-      </button>
+      </Press>
       {handle && <OrderHandle handle={handle} />}
       {menu && (
         <div className={styles.menu}>

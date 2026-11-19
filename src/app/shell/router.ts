@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
+import { createContext, useContext, useMemo, useSyncExternalStore, type MouseEvent } from 'react';
 import { HOSTED } from '../../contracts/installation';
 import { selfHost } from '../../runtime/installation';
 import { addressOf, layered, onBoard, parseAddress, type Address, type Back, type Route } from './routes';
@@ -126,6 +126,20 @@ export function navigate(route: Route, { replace = false } = {}) {
   window.dispatchEvent(new Event(NAVIGATED));
   // An overlay that stays across the route (단축키 over a keyboard shortcut) has just lost its guard, with no layer change to say so.
   queueMicrotask(settle);
+}
+
+// A route as a link (Press's href): a plain click goes in this tab; a middle click or one with a modifier key is the
+// browser's, a new tab or window.
+export type RouteLink = ReturnType<typeof linkTo>;
+export function linkTo(route: Route) {
+  return {
+    href: target(route, parseAddress(address())),
+    onClick: (event: MouseEvent) => {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      navigate(route);
+    },
+  };
 }
 
 // What an editor opens from its own list: beside the list it takes the entry's place, as 설정's sidebar does; drilled

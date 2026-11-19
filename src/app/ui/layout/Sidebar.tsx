@@ -1,9 +1,10 @@
 import { PanelLeft, X } from 'lucide-react';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import { IconButton } from '../controls/IconButton';
 import { Brand } from '../foundation/Brand';
 import { classNames } from '../foundation/classNames';
 import { Divider } from '../foundation/Divider';
+import { Press } from '../foundation/Press';
 import { usePart, useShape, type Shapes } from '../foundation/theme';
 import styles from './Sidebar.module.css';
 
@@ -104,13 +105,14 @@ export function Rail({ fold, actions, places, children }: RailProps) {
   );
 }
 
-type FaceButtonProps = { label: string; current?: boolean; dot?: boolean; onClick: () => void; children: ReactNode };
+// href: where the face goes, which makes it a link (Press).
+type FaceButtonProps = { label: string; current?: boolean; dot?: boolean; href?: string; onClick: (event: MouseEvent<HTMLElement>) => void; children: ReactNode };
 
-export function FaceButton({ label, current = false, dot, onClick, children }: FaceButtonProps) {
+export function FaceButton({ label, current = false, dot, href, onClick, children }: FaceButtonProps) {
   return (
-    <button type="button" className={current ? `${styles.faceButton} ${styles.current}` : styles.faceButton} aria-label={label} title={label} aria-current={current || undefined} onClick={onClick}>
+    <Press href={href} className={current ? `${styles.faceButton} ${styles.current}` : styles.faceButton} aria-label={label} title={label} aria-current={current || undefined} onClick={onClick}>
       {children}
       {dot && <span className={styles.dot} />}
-    </button>
+    </Press>
   );
 }

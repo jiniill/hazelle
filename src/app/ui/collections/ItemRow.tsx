@@ -24,8 +24,10 @@ type Props = {
   menu?: RowMenu;
   // A dragged row's key, let go over this one.
   onDropCard?: (key: string) => void;
+  // Where the row goes, which makes it a link (Press).
+  href?: string;
   // event: its modifier keys pick several (Ctrl, Shift) where the list offers it.
-  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+  onClick: (event: MouseEvent<HTMLElement>) => void;
 };
 
 // What stands at a row's end: its star while it has one, then that it is being written, or what the row says there.
@@ -36,7 +38,7 @@ const ending = (starred: string | undefined, typing: boolean, rest: ReactNode) =
   </>
 );
 
-export function ItemRow({ avatar, title, time, typing, starred, preview, current = false, selected, control, drag, menu, onDropCard, onClick }: Props) {
+export function ItemRow({ avatar, title, time, typing, starred, preview, current = false, selected, control, drag, menu, onDropCard, href, onClick }: Props) {
   return (
     <RowControl control={control} drag={drag} onDropCard={onDropCard} menu={menu}>
       <Item
@@ -48,6 +50,7 @@ export function ItemRow({ avatar, title, time, typing, starred, preview, current
         preview={preview}
         current={current}
         pressed={selected}
+        href={href}
         onClick={onClick}
       />
     </RowControl>
@@ -65,7 +68,7 @@ type ChatProps = Omit<Props, 'avatar'> & { sought: boolean; place?: string; face
 const kept = (place: string | undefined, preview: string) => (place ? `${place} · ${preview}` : preview);
 const line =
   (leading?: ReactNode) =>
-  ({ title, typing, starred, preview, sought, place, current = false, selected, control, drag, menu, onDropCard, onClick }: ChatProps) => (
+  ({ title, typing, starred, preview, sought, place, current = false, selected, control, drag, menu, onDropCard, href, onClick }: ChatProps) => (
     <RowControl control={control} drag={drag} onDropCard={onDropCard} menu={menu}>
       <Item
         density="compact"
@@ -76,6 +79,7 @@ const line =
         preview={sought ? <span className={styles.line}>{preview}</span> : undefined}
         current={current}
         pressed={selected}
+        href={href}
         onClick={onClick}
       />
     </RowControl>

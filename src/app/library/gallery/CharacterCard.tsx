@@ -7,7 +7,7 @@ import { ACCOUNT_ONLY, RISU_CHAT_FILE, SHARE } from '../../common/words';
 import { aliased } from '../../common/alias';
 import { OrderItems, type Ordering } from '../../common/folders/FolderParts';
 import { useAccount } from '../../session';
-import { navigate } from '../../shell/router';
+import { linkTo, navigate } from '../../shell/router';
 import { enterShelf } from '../../shell/routes';
 import { FaceCard, MenuItem, MoreMenu, useMenuHandle, useMenuOpener, useWide } from '../../ui';
 import { binCardNote, cardNote } from '../shelf';
@@ -51,7 +51,7 @@ export function CharacterCard({ shelf, binned, busy, picked, onPick, actions, on
       )}
     </MoreMenu>
   );
-  const press = arranging ? { onClick: () => {} } : picked !== null ? { onClick: onPick } : binned ? (shows ? card : { onClick: () => {} }) : { onClick: () => navigate(enterShelf(shelf, wide)) };
+  const press = arranging ? { onClick: () => {} } : picked !== null ? { onClick: onPick } : binned ? (shows ? card : { onClick: () => {} }) : linkTo(enterShelf(shelf, wide));
   return (
     <FaceCard
       image={shelf.face}

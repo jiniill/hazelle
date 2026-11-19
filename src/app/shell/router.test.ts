@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChangeSignal } from '../../change-signal';
 import { HOSTED } from '../../contracts/installation';
 import { markSelfHost } from '../../runtime/installation';
-import { backBar, closeLayer, holdBack, navigate, openPart } from './router';
+import { backBar, closeLayer, holdBack, linkTo, navigate, openPart } from './router';
 import { href, type Route } from './routes';
 
 afterEach(() => {
@@ -24,6 +24,22 @@ it("opens every way into a self-host's 게시판 on hazelle.app and leaves the p
 });
 
 const popstate = new Set<() => void>();
+
+it('goes by a link in this tab on a plain click and leaves a click with a modifier key to the browser', () => {
+  const page = browser();
+  const chat: Route = { kind: 'chat', id: '6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b' };
+  const link = linkTo(chat);
+  expect(link.href).toBe(href(chat));
+  const click = (keys: Partial<Record<'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey', boolean>>) => {
+    const event = { ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...keys, preventDefault: vi.fn() };
+    link.onClick(event as unknown as Parameters<typeof link.onClick>[0]);
+    return event.preventDefault;
+  };
+  for (const key of ['ctrlKey', 'metaKey', 'shiftKey', 'altKey'] as const) expect(click({ [key]: true })).not.toHaveBeenCalled();
+  expect(page.url()).toBe('/');
+  expect(click({})).toHaveBeenCalled();
+  expect(page.url()).toBe(href(chat));
+});
 
 it('steps into a part on a phone, which back takes back, and swaps parts in place beside the list', () => {
   const page = browser();

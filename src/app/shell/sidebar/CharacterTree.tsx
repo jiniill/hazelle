@@ -13,20 +13,20 @@ import { Welcome } from '../../library/HomeScreen';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
 import { useCharacterSort, useSortedLibrary } from '../../common/characterOrder';
 import { Button, Empty, FolderRow, ItemRow, Row, Sidebar, Tag, TreeRow, Viewport } from '../../ui';
-import { navigate } from '../router';
+import { navigate, type RouteLink } from '../router';
 import { AddMenu } from './AddMenu';
 import { LayerButtons } from './LayerButtons';
 
 type Props = {
   typing: (shelf: Shelf<ChatSummary>) => boolean;
-  onEnter: (shelf: Shelf<ChatSummary>) => void;
+  linkOf: (shelf: Shelf<ChatSummary>) => RouteLink;
   query: string;
   onQuery: (query: string) => void;
   openFolders: string[];
   onToggleFolder: (id: string) => void;
 };
 
-export function CharacterTree({ typing, onEnter, query, onQuery, openFolders, onToggleFolder }: Props) {
+export function CharacterTree({ typing, linkOf, query, onQuery, openFolders, onToggleFolder }: Props) {
   const [sort] = useCharacterSort();
   const { characters, none, folders, byFolder, loose } = useSortedLibrary(sort);
   const empty = characters.length === 0 && none.chats.length === 0;
@@ -46,7 +46,7 @@ export function CharacterTree({ typing, onEnter, query, onQuery, openFolders, on
         time={latest?.at ? ago(latest.at) : ''}
         typing={typing(shelf)}
         preview={latest ? latest.preview || latest.title : shelf.character ? NO_CHATS : '모델과 대화해요'}
-        onClick={() => onEnter(shelf)}
+        {...linkOf(shelf)}
       />
     );
   };

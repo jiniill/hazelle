@@ -1,0 +1,10 @@
+@layer reset, looks;
+
+/* Under each component's own colours, which are unlayered; over the reset's link colour. */
+@layer reset {
+  .link,
+  .link:is(:hover, :active) {
+    color: inherit;
+    text-decoration: none;
+  }
+}

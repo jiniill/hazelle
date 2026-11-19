@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 import { Icon } from '../foundation/Icon';
+import { Press } from '../foundation/Press';
 import styles from './Item.module.css';
 import { classNames } from '../foundation/classNames';
 
@@ -22,12 +23,13 @@ type Props = {
   checked?: boolean;
   tone?: 'plain' | 'muted' | 'warn';
   disabled?: boolean;
-  // With onClick the whole row is one button, so trailing must not hold a control then.
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  // With onClick the whole row is one button, so trailing must not hold a control then; with href too, one link.
+  href?: string;
+  onClick?: (event: MouseEvent<HTMLElement>) => void;
 };
 
 // Visual current/pressed state must derive from ARIA so it cannot disagree with accessibility state.
-export function Item({ density, scheme, leading, title, meta, preview, trailing, trailingWraps = false, current, pressed, expanded, role, checked, tone = 'plain', disabled, onClick }: Props) {
+export function Item({ density, scheme, leading, title, meta, preview, trailing, trailingWraps = false, current, pressed, expanded, role, checked, tone = 'plain', disabled, href, onClick }: Props) {
   const branch = expanded !== undefined;
   const line = density === 'tall' && meta === undefined && preview === undefined;
   const classes = classNames(styles.item, styles[density], styles[scheme], line && styles.line, onClick && styles.pressable, branch && styles.branch, tone !== 'plain' && styles[tone]);
@@ -63,8 +65,8 @@ export function Item({ density, scheme, leading, title, meta, preview, trailing,
   );
   if (!onClick) return <div className={classes}>{content}</div>;
   return (
-    <button type="button" className={classes} role={role} aria-checked={checked} aria-current={current || undefined} aria-pressed={pressed} aria-expanded={expanded} disabled={disabled} onClick={onClick}>
+    <Press href={href} className={classes} role={role} aria-checked={checked} aria-current={current || undefined} aria-pressed={pressed} aria-expanded={expanded} disabled={disabled} onClick={onClick}>
       {content}
-    </button>
+    </Press>
   );
 }

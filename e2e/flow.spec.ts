@@ -326,7 +326,7 @@ test('a new account imports a card, chats through the fake provider and finds th
 
   await test.step('크게 편집 draws the code editor with its own stylesheet, which the page policy admits by its nonce', async () => {
     await page.goto('/');
-    await page.getByRole('complementary', { name: '캐릭터 바로가기' }).getByRole('button', { name: /^Mira/ }).first().click();
+    await page.getByRole('complementary', { name: '캐릭터 바로가기' }).getByRole('link', { name: /^Mira/ }).first().click();
     await page.getByRole('complementary', { name: '캐릭터 목록' }).getByRole('button', { name: /^Mira/ }).first().click();
     await page.getByRole('navigation', { name: '개요' }).getByRole('button', { name: '캐릭터', exact: true }).click();
     await page.getByRole('textbox', { name: '설명', exact: true }).click();

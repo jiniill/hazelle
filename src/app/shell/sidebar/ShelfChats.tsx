@@ -20,7 +20,7 @@ import { ago } from '../../common/time';
 import { NO_CHATS, ShelfFace, shelfName } from '../../library/shelf';
 import { useWritingChats } from '../../session';
 import { Button, ChatRow, Divider, Empty, FoldButton, FolderRow, IconButton, Menu, MenuItem, NavRow, Row, SideTitle, Sidebar, Tabs, TreeRow, useMenuHandle, Viewport } from '../../ui';
-import { navigate, useRoute } from '../router';
+import { linkTo, navigate, useRoute } from '../router';
 import { HOME } from '../routes';
 import { LayerButtons } from './LayerButtons';
 
@@ -112,6 +112,7 @@ export function ShelfChats({ page, shelf }: Props) {
     const preview = item.preview ?? '미리보기 없음';
     const where = sought ? whereIs(index, chatFolderOf(item)) : undefined;
     const hung = flat ? 0 : (grouped.copies.get(item.id)?.length ?? 0);
+    const link = linkTo({ kind: 'chat', id: item.id });
     return (
       <ChatRow
         key={item.id}
@@ -129,11 +130,14 @@ export function ShelfChats({ page, shelf }: Props) {
         drag={moving.dropInto && item.id}
         onDropCard={sought ? undefined : moving.dropInto?.(chatFolderOf(item))}
         menu={moving.picked ? undefined : { handle: chatMenu, onOpen: () => setAsked({ chat: item, at: chatMenu.read().at }) }}
+        href={moving.picked ? undefined : link.href}
+        // Ctrl and Shift pick here, so a new tab is a middle click's alone.
         onClick={(event) => {
+          if (!moving.picked && !event.ctrlKey && !event.metaKey && !event.shiftKey) return link.onClick(event);
+          event.preventDefault();
           if (event.ctrlKey || event.metaKey) moving.toggle(item.id);
           else if (event.shiftKey) moving.range(item.id, listed);
-          else if (moving.picked) moving.toggle(item.id);
-          else navigate({ kind: 'chat', id: item.id });
+          else moving.toggle(item.id);
         }}
       />
     );
