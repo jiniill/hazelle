@@ -3,11 +3,11 @@ import { isFree } from '../../connectors/pricing';
 import type { ConnectionType, Model } from '../../connectors/types';
 import { countFirstPage } from '../../runtime/service/first-page';
 import type { Session } from '../../runtime/session';
-import { connectTrial, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels, type TrialCharacter } from '../../runtime/account/trial';
+import { connectTrial, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels } from '../../runtime/account/trial';
+import { ARIN } from '../common/arin';
 import { describeCatalogFailure, describeFailure, describeKeyFailure, describeTurnFailure } from '../common/failure';
 import { href } from '../shell/routes';
-import { ARIN_PICTURE, Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, TextField } from '../ui';
-import { EXAMPLE } from './example';
+import { Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, TextField } from '../ui';
 import { searchOf } from '../common/words';
 
 type Phase =
@@ -21,13 +21,6 @@ const open = (at: string) => {
   location.assign(at);
 };
 
-const ARIN: TrialCharacter = {
-  name: EXAMPLE.name,
-  description: EXAMPLE.description,
-  greeting: EXAMPLE.greeting,
-  picture: async () => new Uint8Array(await (await fetch(ARIN_PICTURE)).arrayBuffer()),
-};
-
 // Runs the rest of the visit, loaded only once a key is entered: the engine is the page's heaviest part.
 // kept: on this browser's guest, so the app opens on it; otherwise on a throwaway session, with no way into the app.
 export function Trial({ type, secret, kept, onStep, onReplied, onRefused }: { type: ConnectionType; secret: string; kept: boolean; onStep: (step: number) => void; onReplied: () => void; onRefused: (message: string) => void }) {
@@ -38,7 +31,7 @@ export function Trial({ type, secret, kept, onStep, onReplied, onRefused }: { ty
     const leaving = new AbortController();
     let session: Session | null = null;
     void (async () => {
-      const opened = await openTrial(leaving.signal, kept);
+      const opened = await openTrial(leaving.signal, kept, ARIN);
       if (leaving.signal.aborted) return opened.ok ? opened.data.close() : undefined;
       if (!opened.ok) return onRefused(describeFailure(opened));
       session = opened.data;
@@ -135,9 +128,9 @@ function TrialChat({ session, kept, onReplied }: { session: Session; kept: boole
         </>
       }
     >
-      <Said by="them" name={EXAMPLE.name}>{EXAMPLE.greeting}</Said>
-      {log.map(({ by, text }, index) => <Said key={index} by={by} name={by === 'them' ? EXAMPLE.name : undefined}>{text}</Said>)}
-      {turn && <Said by="them" name={EXAMPLE.name} typing>{turn.text}</Said>}
+      <Said by="them" name={ARIN.name}>{ARIN.greeting}</Said>
+      {log.map(({ by, text }, index) => <Said key={index} by={by} name={by === 'them' ? ARIN.name : undefined}>{text}</Said>)}
+      {turn && <Said by="them" name={ARIN.name} typing>{turn.text}</Said>}
       {failure && <Callout tone="warn" alert>{failure}</Callout>}
     </TalkBox>
   );

@@ -2,14 +2,14 @@ import { unavailableCalibration } from '../../model/token-calibration';
 import { serverBackend } from '../store/backend';
 import { describe, expect, it, vi } from 'vitest';
 import type { Card, LoreEntry } from '../../engine/import/types';
-import { KEEP_DELETED, textTranslation, type Character, type Lore } from '../../model/library';
+import { KEEP_DELETED, STARTER_AVATAR_ID, STARTER_CHARACTER_ID, textTranslation, type Character, type Lore } from '../../model/library';
 import { cachePrintId } from '../../model/cache';
 import { memoryId } from '../../model/memory';
 import { likenessId } from '../../model/likeness';
 import { randomBytes } from '../../vault/aead';
 import { sealFile } from '../../vault/files';
 import { api, holdAccount } from '../api';
-import { addAssets, addCharacter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, setPinnedTogglesSpread, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setBackdrop, setLook, setOwnTranslate, setPictures, setTextTranslation, setToggleValues, setTranslate, translateSwitches } from './characters';
+import { addAssets, addCharacter, addStarter, removeAssets, replaceAsset, restoreAssets, copyCharacter, createCharacter, illustrateSwitches, importCharacter, setIllustrate, setOwnIllustrate, pinToggle, setPinnedTogglesSpread, hideTool, setToolOrder, resetToggles, setAvatar, setDeleted, setBackdrop, setLook, setOwnTranslate, setPictures, setTextTranslation, setToggleValues, setTranslate, translateSwitches } from './characters';
 import { markDeleted, purgeExpired, purgeNow } from './removal';
 import { createFolder } from './folders';
 import { appendUserMessage, removeChat, restoreChat, startChat } from '../chat/chat-log';
@@ -211,6 +211,28 @@ describe('addAssets', () => {
     const next = png();
     expect(await replaceAsset(store, files, held!.id, next)).toMatchObject({ ok: true, data: { id: held!.id, value: { name: 'smile', size: next.length } } });
     expect(await files.read(store.children('asset', id)[0]!.value.file)).toEqual({ ok: true, data: next });
+  });
+});
+
+describe('addStarter', () => {
+  it('makes her once at her fixed ids, with her description, greeting and picture', async () => {
+    const { store, files } = await server.account();
+    const bytes = png();
+    const starter = { name: '아린', description: '숲지기', greeting: '살폈다.', picture: async () => bytes };
+    expect(await addStarter(store, files, starter)).toEqual({ ok: true, data: STARTER_CHARACTER_ID });
+    expect(store.get('character', STARTER_CHARACTER_ID)!.value.card).toMatchObject({ name: '아린', description: '숲지기', greetings: ['살폈다.'] });
+    await vi.waitFor(() => expect(store.get('avatar', STARTER_AVATAR_ID)?.parent).toBe(STARTER_CHARACTER_ID));
+    expect(await files.read(store.get('avatar', STARTER_AVATAR_ID)!.value.file)).toEqual({ ok: true, data: bytes });
+
+    await markDeleted(store, 'character', STARTER_CHARACTER_ID, Date.now());
+    expect(await addStarter(store, files, { ...starter, name: '다른 이름' })).toEqual({ ok: true, data: STARTER_CHARACTER_ID });
+    expect(store.get('character', STARTER_CHARACTER_ID)!.value).toMatchObject({ card: { name: '아린' }, deleted: expect.any(Number) });
+  });
+
+  it('leaves her without a picture that does not load', async () => {
+    const { store, files } = await server.account();
+    expect((await addStarter(store, files, { name: '아린', description: '', greeting: '', picture: () => Promise.reject(new Error('offline')) })).ok).toBe(true);
+    expect(store.children('avatar', STARTER_CHARACTER_ID)).toEqual([]);
   });
 });
 

@@ -11,6 +11,7 @@ import { BackupZip, indexZip, readEntry, unzipEntry, type BackupOutput } from '.
 import { inOrder, type Files } from '../files/files';
 import { BACKUP_PAGE_BYTES as PAGE_BYTES, BACKUP_PAGE_ROWS as PAGE_ROWS, BackupStorageError, type BackupRecord, type BackupRecords } from './backup-records';
 import { FIRST_ID } from '../library/personas';
+import { STARTER_AVATAR_ID, STARTER_CHARACTER_ID } from '../../model/library';
 import { FIRST_PROFILE_ID } from '../models/profiles';
 import { DEFAULT_PROMPT_IDS } from '../library/prompts';
 import { ownershipDepth } from '../library/removal';
@@ -32,7 +33,7 @@ const PICTURE_ROWS = 12;
 // page, sealed there).
 const RESTORE_AHEAD = 4;
 
-export const SEEDED: ReadonlySet<string> = new Set([...DEFAULT_PROMPT_IDS, FIRST_ID, FIRST_PROFILE_ID, SETTINGS_ID, ORDER_ID]);
+export const SEEDED: ReadonlySet<string> = new Set([...DEFAULT_PROMPT_IDS, FIRST_ID, FIRST_PROFILE_ID, SETTINGS_ID, ORDER_ID, STARTER_AVATAR_ID, STARTER_CHARACTER_ID]);
 // Written by every visit, not made by the person: they never make an account hold something of its own, and a restore
 // keeps them beside the backup's.
 export const VISITS: ReadonlySet<string> = new Set<Kind>(['presence']);

@@ -1,7 +1,7 @@
 import { lazy, useLayoutEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { Stored } from '../../model/kinds';
 import { entryOf } from '../../connectors/types';
-import { binsChat, isBinned, live } from '../../model/library';
+import { binsChat, isBinned, isUntouchedStarter, live } from '../../model/library';
 import type { SideAt } from '../chat/ChatScreen';
 import { ACTS } from '../common/acts';
 import { describeFailure } from '../common/failure';
@@ -230,7 +230,7 @@ function Replace({ to }: { to: Route }) {
 
 function HomePage() {
   const { read } = useSession();
-  const populated = useSyncExternalStore(read.library.subscribe, () => read.library.snapshot().characters.length > 0);
+  const populated = useSyncExternalStore(read.library.subscribe, () => !read.library.snapshot().characters.every(isUntouchedStarter));
   return populated ? <GalleryScreen place={null} back={null} lead={<GuestLine />} /> : <HomeScreen />;
 }
 

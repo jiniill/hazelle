@@ -2,6 +2,7 @@ import { isRecord } from '../../record';
 import { BATCH_LIMITS, type SealedChange, type SealedWrite } from '../../contracts/objects';
 import { isValue, KINDS, type Kind } from '../../model/kinds';
 import { ORDER_ID, toFront, type Order } from '../../model/order';
+import { STARTER_AVATAR_ID } from '../../model/library';
 import { forgetGuestVault, recallGuest, rememberVault } from '../../vault/device';
 import { sameVaultKey, type VaultKey } from '../../vault/keys';
 import { objectKey, openObject, sealObject } from '../../vault/objects';
@@ -49,7 +50,9 @@ export async function guestWithContent(): Promise<ApiResult<Guest | null>> {
   // Ignore untouched starter defaults when deciding to prompt; guest data stays intact until explicit upload/discard.
   if (held.data.rows.some(({ id, kind, body }) => body !== null && !SEEDED.has(id) && !VISITS.has(kind))) return { ok: true, data: guest };
   const files = await guestBackend(guest.accountId).heldFiles(null);
-  return files.ok ? { ok: true, data: files.data.ids.length ? guest : null } : files;
+  // The starter character's picture is the one file opening adds.
+  const seeded = held.data.rows.some(({ id, body }) => id === STARTER_AVATAR_ID && body !== null) ? 1 : 0;
+  return files.ok ? { ok: true, data: files.data.ids.length > seeded ? guest : null } : files;
 }
 
 export async function discardGuest(): Promise<ApiResult<null>> {

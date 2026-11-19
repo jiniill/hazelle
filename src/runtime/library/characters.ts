@@ -6,7 +6,7 @@ import { UNSUPPORTED_KINDS, type Card, type Imported, type Pack, type Picture, t
 import type { Translation, TranslateSwitches } from '../../model/chat';
 import type { IllustrateSwitches, Rung } from '../../model/illustration';
 import type { Stored, Values } from '../../model/kinds';
-import { readableTexts, type Asset, type Avatar, type Backdrop, type Character, type Lore, type Pictures } from '../../model/library';
+import { readableTexts, STARTER_AVATAR_ID, STARTER_CHARACTER_ID, type Asset, type Avatar, type Backdrop, type Character, type Lore, type Pictures } from '../../model/library';
 import { likenessId, type Likeness } from '../../model/likeness';
 import type { ToggleValues } from '../../model/prompt';
 import { ORDER_ID, putBack, rearrange, toFront } from '../../model/order';
@@ -83,6 +83,24 @@ async function savedAvatar(files: Files, picture: Picture): Promise<ApiResult<Av
 
 // The old file stays held: a copy (copyCharacter) may still name it, so only the sweep after a removal for good weighs
 // it (runtime/files/files).
+export type Starter = { name: string; description: string; greeting: string; picture: () => Promise<Uint8Array<ArrayBuffer>> };
+
+// The character a new account starts with. Hers once: an account that held anything before never gets her, and one
+// that deleted her keeps her gone. Without her picture she still talks.
+export async function addStarter(store: ObjectStore, files: Files, { name, description, greeting, picture }: Starter): Promise<ApiResult<string>> {
+  if (store.get('character', STARTER_CHARACTER_ID)) return { ok: true, data: STARTER_CHARACTER_ID };
+  const added = await addCharacter(store, { card: { ...blankCard(name), description, greetings: [greeting] }, folder: null, loreFolders: [] }, { avatar: null, assets: [], lore: [], likeness: null }, () => {}, { id: STARTER_CHARACTER_ID });
+  if (!added.ok) return added;
+  const portrait = async () => {
+    const bytes = await picture();
+    const type = imageType(bytes);
+    const saved = type && (await savedAvatar(files, { bytes, type }));
+    if (saved && saved.ok) await store.create('avatar', saved.data, { parent: STARTER_CHARACTER_ID, id: STARTER_AVATAR_ID });
+  };
+  void portrait().catch(() => {});
+  return added;
+}
+
 export async function setAvatar(store: ObjectStore, files: Files, id: string, bytes: Uint8Array<ArrayBuffer>): Promise<ApiResult<Stored<'avatar'>>> {
   if (!store.get('character', id)) return { ok: false, error: 'gone' };
   const type = imageType(bytes);

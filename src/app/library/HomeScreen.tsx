@@ -1,9 +1,11 @@
-import { Link, PackageOpen, Plug, UserRoundPlus } from 'lucide-react';
+import { Lamp, Link, PackageOpen, Plug, UserRoundPlus } from 'lucide-react';
+import { isUntouchedStarter } from '../../model/library';
 import { ACTS, importOf, newOf } from '../common/acts';
+import { withParticle } from '../common/particles';
 import { GuestAgreement, GuestLine } from '../common/GuestNotice';
 import { MARKS } from '../common/tutorial';
 import { TUTORIAL, useTutorials } from '../common/Tutorial';
-import { useChats, useConnections } from '../session';
+import { useChats, useConnections, useLibrary } from '../session';
 import { navigate } from '../shell/router';
 import { ActionCard, Button, Columns, GuideMark, Intro, Row, Screen, Stack } from '../ui';
 import { useImport } from '../common/importing';
@@ -15,6 +17,8 @@ export function Welcome() {
   const chats = useChats();
   const { pick, pickLink, move } = useImport();
   const create = useNewCharacter();
+  // The starter character while nobody has talked to her: where the list is not on screen, this is her door.
+  const starter = useLibrary().characters.find(isUntouchedStarter);
   const tutorials = useTutorials();
   return (
     <Stack gap="section">
@@ -36,6 +40,7 @@ export function Welcome() {
             </GuideMark>
           )}
           <ActionCard icon={PackageOpen} title={MOVE_IN} description="캐릭터와 채팅, 프롬프트를 한 번에 옮겨요" onClick={move} />
+          {starter && <ActionCard icon={Lamp} title={`${withParticle(starter.character.card.name, '과/와')} 대화`} description="기본 캐릭터에게 말을 걸어 봐요" onClick={() => navigate({ kind: 'new-chat', character: starter.id })} />}
         </Columns>
         <Columns min={connections.length > 0 ? 'wide' : 'small'}>
           <ActionCard size="sm" icon={ACTS.import.icon} title={importOf('봇')} description="PNG · charx · zip 파일을 끌어다 놓거나 선택해요" onClick={pick} />

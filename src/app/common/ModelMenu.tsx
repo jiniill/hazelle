@@ -1,4 +1,5 @@
-import { Layers, Pin } from 'lucide-react';
+import { Layers, Pin, Plug } from 'lucide-react';
+import { newOf } from './acts';
 import { refOf, sameModelRef, type ModelRef } from '../../connectors/assignment';
 import { recentModels } from '../../model/chat';
 import { entryName, entryOf } from '../../connectors/types';
@@ -26,6 +27,7 @@ const RECENT = 3;
 export function ModelMenu({ route, pin, onPick, handle, place = 'below-end' }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure; pin?: { name: string; open: () => void } | null; place?: 'below-end' | 'above-end' }) {
   const current = 'kind' in route ? null : refOf(route.connection.id, route.model);
   const label = 'kind' in route ? PICK_MODEL : entryName(route.model);
+  const connected = useConnections().length > 0;
   return (
     <Menu
       handle={handle}
@@ -43,7 +45,7 @@ export function ModelMenu({ route, pin, onPick, handle, place = 'below-end' }: P
       <RecentFirst current={current} onPick={onPick} />
       <Divider variant="menu" />
       {current && <ProfileItem current={current} />}
-      <MenuItem tone="muted" label="추가한 모델 관리" onClick={() => navigate({ kind: 'connections' })} />
+      {connected ? <MenuItem tone="muted" label="추가한 모델 관리" onClick={() => navigate({ kind: 'connections' })} /> : <MenuItem icon={Plug} label={newOf('연결')} onClick={() => navigate({ kind: 'add-connection' })} />}
     </Menu>
   );
 }

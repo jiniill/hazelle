@@ -260,6 +260,14 @@ test('the room lets a visitor without a key open the app', async ({ page }) => {
   }
   await page.getByRole('button', { name: '키 없이 둘러보기' }).click();
   await expect(page.getByRole('heading', { name: '비어 있어요', exact: true })).toBeVisible();
+  // A new guest starts with her; with no connection, the model button leads straight to 새 연결.
+  await page.getByRole('button', { name: /아린과 대화/ }).click();
+  await expect(page.getByText('저는 아린이에요')).toBeVisible();
+  await page.getByPlaceholder('메시지').fill('안녕하세요');
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: '모델 선택', exact: true }).last().click();
+  await page.getByRole('menuitem', { name: '새 연결' }).click();
+  await expect(page).toHaveURL(/\/connections\/new$/);
 });
 
 test('someone already using the app can walk it again and try it, uncounted, keeping nothing', async ({ page }) => {
