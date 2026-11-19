@@ -14,7 +14,7 @@ import { chatMemory } from '../tasks/memory-read';
 import { gather, generate, receiptOf, unsettled, type Caller, type GenerateInput } from './generate';
 import { routeFields } from './connections';
 import type { Writer } from './profiles';
-import { detachedReplies, dropStream } from './relay';
+import { accountBehind, dropStream } from './relay';
 import type { ObjectStore } from '../store/store';
 
 // The only writer of `stream` objects, each the marker of a generation call the server is making for a chat
@@ -32,7 +32,8 @@ export async function newCall({ store, tokens }: Pick<Session, 'store' | 'tokens
   const at = Date.now();
   const requestClass = purpose.kind === 'reply' ? 'conversation' : purpose.kind === 'input' || purpose.kind === 'note' ? 'translation' : purpose.kind;
   const call: GenerateInput['call'] = { id, key: key.private, public: key.public, logged: { chat, purpose: purpose.kind, call: callOf(route) }, ...calibrate({ store, tokens }, route, requestClass, chat) };
-  call.started = !detachedReplies() || chat === null ? undefined : (batch?: string) => void store.create('stream', { ...(batch === undefined ? { key: key.private } : { batch }), call: callOf(route), calibration: call.calibration!, at, result, for: purpose }, { id, parent: chat });
+  // A call the page makes itself never calls started, so it leaves no marker; its batch does.
+  call.started = !accountBehind() || chat === null ? undefined : (batch?: string) => void store.create('stream', { ...(batch === undefined ? { key: key.private } : { batch }), call: callOf(route), calibration: call.calibration!, at, result, for: purpose }, { id, parent: chat });
   return call;
 }
 
@@ -101,7 +102,7 @@ export class Streams {
   }
 
   pickUp() {
-    if (this.closed || !detachedReplies()) return;
+    if (this.closed || !accountBehind()) return;
     for (const stream of this.store.list('stream')) {
       // A deleted chat's calls stay untaken: they go with its purge, or after its 되돌리기 the next pick-up takes them.
       if (this.reading.has(stream.id) || this.checking.has(stream.id) || !live(this.store.get('chat', stream.parent!))) continue;

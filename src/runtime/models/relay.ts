@@ -15,6 +15,10 @@ import { discardBody, fetchApi } from '../api';
 import { fromBase64 } from '../../base64';
 import { pause } from '../pause';
 import { CONNECTION_TYPES } from '../../connectors/registry';
+import { without } from '../../model/fields';
+import type { Settings } from '../../model/settings';
+import type { ObjectStore } from '../store/store';
+import { changeSettings } from '../account-settings';
 
 // Preserve refusal ownership: X-Relay: error is the relay's; no X-Relay means the app's (e.g. expired session).
 // Provider code and Retry-After stay distinct from app/relay errors.
@@ -31,7 +35,10 @@ export type JsonAnswer = { ok: true; data: unknown } | { ok: false; failure: Rel
 const lost = (signal?: AbortSignal): RelayFailure => (signal?.aborted ? { kind: 'stopped' } : { kind: 'offline' });
 
 export type Transport = {
-  detached: boolean;
+  // An account stands behind it: markers to pick up, batches, and sites' fetches relayed. false, a guest.
+  account: boolean;
+  // Its new calls run on the server and outlive the page; false, a call ends with its page.
+  readonly detached: boolean;
   problem(type?: ConnectionType | null): Extract<RelayFailure, { kind: 'app' }> | null;
   close(): void;
   raw(request: HttpRequest, signal?: AbortSignal, bot?: string, pulse?: PulseLabel, type?: ConnectionType | null): Promise<Response | RelayFailure>;
@@ -41,12 +48,43 @@ export type Transport = {
   connected(): void;
 };
 
-export const accountTransport: Transport = { detached: true, problem: () => null, close: () => {}, raw: accountRaw, stream: accountStream, stop: (id) => accountStop(id), drop: (id) => accountDrop(id), connected: () => {} };
+// 직접 요청: absent, an account's provider calls go through the relay.
+export const callsFromBrowser = (settings: Settings) => settings.browserCalls === true;
+
+export const setBrowserCalls = (store: ObjectStore, on: boolean) =>
+  changeSettings(store, (current) => (on ? { ...current, browserCalls: true } : without(current, 'browserCalls')));
+
+// direct: 직접 요청, read at each call, so a flip on any device moves the next call and leaves a running one on its
+// path. Only a call naming its connection type leaves from the browser; a read of a call the server holds, sign-in and
+// sites' fetches (links, bots, tools) stay on the server.
+export function accountTransport(direct: () => boolean): Transport {
+  const page = directTransport(null, 'needs-relay');
+  // The calls page holds, so stop and drop never reach the server for a call it never saw.
+  const held = new Set<string>();
+  return {
+    account: true,
+    get detached() {
+      return !direct();
+    },
+    problem: (type) => (direct() ? page.problem(type) : null),
+    close: () => page.close(),
+    raw: (request, signal, bot, pulse, type) => (type && direct() ? page.raw(request, signal, bot, pulse, type) : accountRaw(request, signal, bot, pulse)),
+    stream: (call, request, signal, retry, pulse, type) => {
+      if (!request || !direct()) return accountStream(call, request, signal, retry, pulse);
+      held.add(call.id);
+      return page.stream(call, request, signal, retry, pulse, type);
+    },
+    stop: (id) => (held.has(id) ? page.stop(id) : accountStop(id)),
+    drop: (id) => (held.delete(id) ? page.drop(id) : accountDrop(id)),
+    connected: () => {},
+  };
+}
 
 // Like api's held account, the one open session owns the page's provider transport. Never infer it from cookies.
-let transport = accountTransport;
+let transport = accountTransport(() => false);
 export const holdTransport = (held: Transport) => { transport = held; };
 export const detachedReplies = () => transport.detached;
+export const accountBehind = () => transport.account;
 export const transportProblem = (type: ConnectionType | null | undefined) => transport.problem(type);
 export const relayRaw = (request: HttpRequest, signal?: AbortSignal, bot?: string, pulse?: PulseLabel, type?: ConnectionType | null) => transport.raw(request, signal, bot, pulse, type);
 export const stream = (call: StreamCall, request: HttpRequest | null, signal: AbortSignal, retry: Retry | null = null, pulse?: PulseLabel, type?: ConnectionType | null) => transport.stream(call, request, signal, retry, pulse, type);
@@ -60,13 +98,14 @@ export const countGuest = (guest: string, step: GuestStep) =>
   });
 
 // guest: whose steps count toward the operator's daily figures; null, a session that is nobody's and counts nothing.
-export function directTransport(guest: string | null): Transport {
+// refusal: what a connection a browser may not call answers.
+export function directTransport(guest: string | null, refusal: 'needs-account' | 'needs-relay'): Transport {
   const count = (step: GuestStep) => {
     if (guest) countGuest(guest, step);
   };
   const calls = new Map<string, AbortController>();
   const closing = new AbortController();
-  const problem: Transport['problem'] = (type) => type?.browser === false ? { kind: 'app', code: 'needs-account' } : null;
+  const problem: Transport['problem'] = (type) => type?.browser === false ? { kind: 'app', code: refusal } : null;
   const raw: Transport['raw'] = async (request, signal, _bot, pulse, type) => {
     // Sign-in runs before a connection exists, so its type is found from the registry's OAuth addresses.
     if (type === undefined) type = CONNECTION_TYPES.find(({ signIn }) => signIn && [signIn.codeUrl, signIn.tokenUrl, signIn.account.request('').url].includes(request.url));
@@ -84,6 +123,7 @@ export function directTransport(guest: string | null): Transport {
     }
   };
   return {
+    account: false,
     detached: false,
     problem,
     close: () => { closing.abort(); calls.clear(); },

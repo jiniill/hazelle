@@ -7,7 +7,10 @@ import { fetchApi } from './api';
 import { editPersona } from './library/personas';
 import { autoDiagnose, setDiagnosisSharing } from './diagnostics/auto-diagnosis';
 import { setPulseSharing } from './service/pulse';
-import { stubPage, stubRelay, testServer, upstream } from './testing';
+import { answerable, saying, stubPage, stubRelay, testServer, upstream } from './testing';
+import { fold, shown } from '../model/chat';
+import { takeTurn } from './chat/turn';
+import { setBrowserCalls } from './models/relay';
 
 const server = testServer();
 
@@ -116,3 +119,24 @@ describe('session', () => {
     expect(reported()).toBe(1);
   });
 });
+
+it('sends an account’s turn from the browser under 직접 요청, through no stream and with no marker', () =>
+  server.withSession(async (session) => {
+    await answerable(session);
+    await setBrowserCalls(session.store, true);
+    const chat = crypto.randomUUID();
+    await server.hold(session.store, chat);
+    await startChat(session.store, chat, { title: null, character: null, models: {} }, null);
+    await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'hello' });
+    const relayed = globalThis.fetch;
+    const sent: string[] = [];
+    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+      sent.push(url);
+      return url.startsWith('https://') ? Promise.resolve(saying('안녕')) : relayed(url, init);
+    });
+    await takeTurn(session, chat, { kind: 'answer' });
+    expect(shown(fold(session.store.children('entry', chat))[1]!)).toMatchObject({ text: '안녕', receipt: { state: 'done' } });
+    expect(sent.filter((url) => url.startsWith('https://'))).toHaveLength(1);
+    expect(sent.filter((url) => url.startsWith('/api/streams') || url === '/api/relay')).toEqual([]);
+    expect(session.store.list('stream')).toEqual([]);
+  }));

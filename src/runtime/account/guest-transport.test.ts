@@ -21,7 +21,7 @@ let session: Session | undefined;
 afterEach(() => {
   session?.close();
   session = undefined;
-  holdTransport(accountTransport);
+  holdTransport(accountTransport(() => false));
   vi.unstubAllGlobals();
 });
 
@@ -77,7 +77,7 @@ it('opens a guest session, sends a turn directly, parses and saves it in-page, a
 });
 
 it('refuses every needs-account type before catalog, token exchange, or OAuth fetch', async () => {
-  holdTransport(directTransport(crypto.randomUUID()));
+  holdTransport(directTransport(crypto.randomUUID(), 'needs-account'));
   const fetch = vi.fn();
   vi.stubGlobal('fetch', fetch);
   const credentials = new Credentials();
@@ -99,7 +99,7 @@ it('adds the type’s browser headers only on direct calls and leaves unknown ne
   vi.stubGlobal('fetch', fetch);
   await relayRaw(request, undefined, undefined, undefined, anthropic);
   expect(JSON.parse(fetch.mock.calls[0]![1].body as string)).toEqual(request);
-  holdTransport(directTransport(crypto.randomUUID()));
+  holdTransport(directTransport(crypto.randomUUID(), 'needs-account'));
   await relayRaw(request, undefined, undefined, undefined, anthropic);
   expect(fetch.mock.calls[1]).toMatchObject(['https://api.anthropic.com/v1/models', { headers: { 'x-api-key': 'test-key', 'anthropic-dangerous-direct-browser-access': 'true' } }]);
   vi.stubGlobal('fetch', () => Promise.reject(new TypeError('Failed to fetch')));
@@ -107,7 +107,7 @@ it('adds the type’s browser headers only on direct calls and leaves unknown ne
 });
 
 it('sends a direct call\'s binary body as the bytes its base64 holds', async () => {
-  holdTransport(directTransport(null));
+  holdTransport(directTransport(null, 'needs-account'));
   const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async () => Response.json({}));
   vi.stubGlobal('fetch', fetch);
   await relayRaw({ url: 'https://custom.example/upload', method: 'POST', headers: {}, body: 'AP+J', binary: true });
@@ -115,7 +115,7 @@ it('sends a direct call\'s binary body as the bytes its base64 holds', async () 
 });
 
 it('retries a direct stream in-page, counts it once, and aborts the provider without stream-box requests', async () => {
-  holdTransport(directTransport(crypto.randomUUID()));
+  holdTransport(directTransport(crypto.randomUUID(), 'needs-account'));
   let signal: AbortSignal | undefined;
   const fetch = vi.fn(async (url: string, init: RequestInit) => {
     if (url === '/api/visits/guest') return new Response(null, { status: 204 });
@@ -142,7 +142,7 @@ it('mints a Vertex token through the browser’s existing exchange and uses it o
   const pair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
   const der = await crypto.subtle.exportKey('pkcs8', pair.privateKey);
   const secret = JSON.stringify({ type: 'service_account', project_id: 'test', client_email: 'bot@test.iam.gserviceaccount.com', token_uri: 'https://oauth2.googleapis.com/token', private_key: `-----BEGIN PRIVATE KEY-----\n${btoa(String.fromCharCode(...new Uint8Array(der)))}\n-----END PRIVATE KEY-----` });
-  holdTransport(directTransport(crypto.randomUUID()));
+  holdTransport(directTransport(crypto.randomUUID(), 'needs-account'));
   const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async (url) => url === 'https://oauth2.googleapis.com/token' ? Response.json({ access_token: 'minted', expires_in: 3600 }) : Response.json({ publisherModels: [] }));
   vi.stubGlobal('fetch', fetch);
   const resolved = resolveConnection({ ...connection('vertex'), accounts: [{ id: 'key', secret }] })!;

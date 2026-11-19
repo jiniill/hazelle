@@ -1,5 +1,5 @@
 import { importable, PACKED_EXTENSION } from '../../engine/import/extensions';
-import { detachedReplies, relay, type RelayFailure } from '../models/relay';
+import { accountBehind, relay, type RelayFailure } from '../models/relay';
 
 const REALM_PAGE = /\brealm\.risuai\.net\/\S*?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
 const PROTON_LINK = /\bhttps:\/\/drive\.proton\.me\/urls\/[\w-]+#\S+/i;
@@ -53,7 +53,7 @@ async function download(link: ImportLink, signal: AbortSignal, progress: Progres
       return downloadDirect(link.url, signal, progress);
     case 'proton': {
       // Proton's API answers no other site's page, so only the relay reaches it; a guest has none. The module is heavy: it loads for this link alone.
-      if (!detachedReplies()) return { ok: false, failure: { kind: 'needs-account' } };
+      if (!accountBehind()) return { ok: false, failure: { kind: 'needs-account' } };
       const { downloadProton } = await import('./proton');
       return downloadProton(link.url, link.password, signal, progress);
     }
@@ -105,7 +105,7 @@ async function downloadDirect(address: string, signal: AbortSignal, progress: Pr
     if (response.kind === 'provider') return { ok: false, failure: { kind: response.status === 404 || response.status === 410 ? 'missing' : 'refused' } };
     if (response.kind === 'stopped') return { ok: false, failure: { kind: 'cancelled' } };
     // A guest's browser asks the site itself, and most sites answer no one but their own pages.
-    if (response.kind === 'offline' && !detachedReplies()) return { ok: false, failure: { kind: 'guest-blocked' } };
+    if (response.kind === 'offline' && !accountBehind()) return { ok: false, failure: { kind: 'guest-blocked' } };
     return { ok: false, failure: { kind: 'relay', failure: response } };
   }
   return { ok: false, failure: { kind: 'refused' } };

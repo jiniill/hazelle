@@ -106,4 +106,6 @@ export type Settings = {
   pulse?: false;
   // 자동 진단 (design §6.13): false sends none; absent sends (the default).
   diagnosis?: false;
+  // 직접 요청: true sends provider calls from the browser (runtime/models/relay accountTransport); absent, through the relay.
+  browserCalls?: true;
 };

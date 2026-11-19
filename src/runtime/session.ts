@@ -57,7 +57,7 @@ import { backfillSummaries } from './store/summary';
 import { receiveReply, resumeSend } from './chat/turn';
 import { moveTaskModels, saveUpgraded } from './store/upgrade';
 import { rereadOriginals } from './import/reread';
-import { accountTransport, countGuest, directTransport, holdTransport, type Transport } from './models/relay';
+import { accountTransport, callsFromBrowser, countGuest, directTransport, holdTransport, type Transport } from './models/relay';
 import { guestAccount, dropGuestStore, guestBackend, throwawayGuest } from './account/guest-store';
 
 export type Session = {
@@ -107,7 +107,6 @@ const luaWorker = (): Promise<LuaRunner> => Promise.resolve(new LuaWorker());
 // Aborted opens start nothing; cached opens never wait on network. Caller keeps drafts for the unlocked vault.
 // Guests use their browser master directly, without a redundant device cache.
 export async function openSession(accountId: string, vaultKey: VaultKey, username: string, signal: AbortSignal, progress?: (progress: PullProgress) => void, kept: { backend: Backend; cache?: DeviceCache; log?: BrowserLogCache; transport?: Transport } = { backend: serverBackend(), cache: deviceCache(accountId), log: logCache(accountId) }, bindings: { lua?: () => Promise<LuaRunner>; tools?: typeof createTools; drafts?: Drafts } = {}): Promise<ApiResult<Session>> {
-  const transport = kept.transport ?? accountTransport;
   const opening = async () => {
     const store = await ObjectStore.open(accountId, vaultKey, kept.backend, kept.cache, signal);
     const pulled = signal.aborted ? { ok: false as const, error: 'stopped' as const } : store.cached ? null : await store.pull({ signal, progress });
@@ -130,12 +129,13 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     store.close();
     return { ok: false, error: 'stopped' };
   }
+  const transport = kept.transport ?? accountTransport(() => callsFromBrowser(accountSettings(store)));
   // The opening pull is sent before the switch is read, so the page-load mark rides the next request.
   holdTransport(transport);
   const holdSharing = () => {
     const settings = accountSettings(store);
-    holdPulse(transport.detached && sharesPulse(settings));
-    holdDiagnosis(transport.detached && sharesDiagnosis(settings));
+    holdPulse(transport.account && sharesPulse(settings));
+    holdDiagnosis(transport.account && sharesDiagnosis(settings));
   };
   holdSharing();
   markSeen();
@@ -288,7 +288,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
 export async function openThrowawaySession(signal: AbortSignal): Promise<ApiResult<Session>> {
   const { accountId, vaultKey } = await throwawayGuest();
   const forget = () => void dropGuestStore(accountId);
-  const opened = await openSession(accountId, vaultKey, '손님', signal, undefined, { backend: guestBackend(accountId), transport: directTransport(null) });
+  const opened = await openSession(accountId, vaultKey, '손님', signal, undefined, { backend: guestBackend(accountId), transport: directTransport(null, 'needs-account') });
   if (!opened.ok) {
     forget();
     return opened;
@@ -301,7 +301,7 @@ export async function openGuestSession(signal: AbortSignal, progress?: (progress
   const { accountId, vaultKey } = await guestAccount();
   if (signal.aborted) return { ok: false, error: 'stopped' };
   holdAccount(null);
-  const opened = await openSession(accountId, vaultKey, '손님', signal, progress, { backend: guestBackend(accountId), log: logCache(accountId), transport: directTransport(accountId) }, bindings);
+  const opened = await openSession(accountId, vaultKey, '손님', signal, progress, { backend: guestBackend(accountId), log: logCache(accountId), transport: directTransport(accountId, 'needs-account') }, bindings);
   if (opened.ok) countGuest(accountId, 'opened');
   return opened;
 }
