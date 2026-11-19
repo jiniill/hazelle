@@ -18,7 +18,7 @@ import type { PoolFailure } from './pool';
 import { callLabel, PULSE_ROLE } from '../service/pulse';
 import type { ObjectStore } from '../store/store';
 import { pause } from '../pause';
-import { relay, relayJson, stopStream, stream, transportProblem, detachedReplies, type RelayFailure, type StreamCall } from './relay';
+import { relay, relayJson, stopStream, stream, transportProblem, accountBehind, type RelayFailure, type StreamCall } from './relay';
 import { redacted, type Logged, type RequestLog } from './request-log';
 
 export type ReplyError =
@@ -112,8 +112,8 @@ export async function generate({ credentials, log, connection, model, settings, 
     route = resolveModel(resolved, model);
     protocol = route.endpoint.protocol;
     batches = batching ? batchLane(route, asked) : null;
-    // A provider batch can keep running and billing after the page closes; a guest has no detached replies.
-    if (batches && !detachedReplies()) return reply(...failedWith({ kind: 'app', code: 'needs-account' }));
+    // A provider batch can keep running and billing after the page closes; a guest keeps no marker to find it again.
+    if (batches && !accountBehind()) return reply(...failedWith({ kind: 'app', code: 'needs-account' }));
     // A batch answers whole, and both batch formats refuse a request that streams.
     const prepared = prepareChat(route, { ...asked, settings: batches ? { ...settings, streaming: false } : settings });
     request = prepared.request;

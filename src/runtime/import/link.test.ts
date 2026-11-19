@@ -62,10 +62,10 @@ it('names a file from its header or address, else by its first bytes', () => {
 });
 
 it('tells a guest a Proton link needs an account, without loading its heavy module', async () => {
-  holdTransport(directTransport('guest'));
+  holdTransport(directTransport('guest', 'needs-account'));
   try {
     expect(await downloadLink({ kind: 'proton', url: 'https://drive.proton.me/urls/A#b' }, signal, () => {})).toEqual({ ok: false, failure: { kind: 'needs-account' } });
   } finally {
-    holdTransport(accountTransport);
+    holdTransport(accountTransport(() => false));
   }
 });

@@ -1,7 +1,7 @@
 import { ACTS, importOf, newOf } from '../../common/acts';
 import { LABS } from '../../common/labs';
 import { NUMBER, PROFILE_LABELS, PROFILE_ROWS } from '../../common/settingWords';
-import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, IDLE_MODELS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, HOST, IMAGE_MODEL, COST_ESTIMATE, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE, PROMPT_MODELS } from '../../common/words';
+import { AUTO_DIAGNOSIS, ANSWER_INSTRUCTION_LABEL, DIRECT_CALLS, BIN, BOARD, CHAT_DETAIL, DEFAULT_MODELS, DIRECT_CONNECTION, CHAT_LOOK, FEATURE_NAMES, FEATURES_TITLE, FINDINGS, IDLE_MODELS, PICTURE_PLACE, LORE_SCAN_WORDS, MODEL_ROLES, MODEL_SETTINGS, NETWORK, NOTICES, PAGES, PICTURE_INPUT, HOST, IMAGE_MODEL, COST_ESTIMATE, PRE_READ, PULSE, RETRY_COUNT, SCOPE, SCRIPTS, SET_DEFAULT, SHARE, STAGE_NAMES, STARRED, TASK_MODELS, TOOL, TRANSLATOR_NOTE, PROMPT_MODELS } from '../../common/words';
 import type { Settings } from '../../../model/settings';
 import { BIN_PLACE, type Route, type SettingsPage } from '../routes';
 import { ROLES_TITLE } from '../../settings/setup';
@@ -35,7 +35,7 @@ const TERMS: Record<SettingsPage, string[]> = {
   display: [CHAT_LOOK, '사용량 표시', '캐시 표시', '미리보기', '프리셋', '시스템 설정 연동', '밝은 모드일 때', '어두운 모드일 때', '색', '모드', '배경', '글자', '대사', '강조', '이미지', '이미지 가리기', '가로 이미지는 꽉 채우기', '삽화를 본문에 넣기', PICTURE_PLACE, '캐릭터 이미지 크게 보기', '이미지 최대 폭', '텍스트', '글꼴', '글자 크기', '줄 간격', '읽기 폭', '대사 따옴표'],
   controls: ['스크롤할 때', '응답 수신 시', '자동 스크롤', GLIDE.label, GLIDE.pace, '헤더 숨기기', '입력창 접기', '메시지 도구 따라오기', '빠른 스크롤 막대', '메시지 이동 버튼', '내 메시지에서도 멈추기', '입력창', 'Enter로 보내기', '단축키', '단축키 목록'],
   sounds: ['알림음', '세부 설정', '응답이 시작될 때', '응답이 도착했을 때', '번역이 끝났을 때'],
-  account: ['저장 공간', PAGES.usage, '사용량', '잠그기', '로그아웃', '다른 기기에서 로그아웃', '백업', '전체 백업', ACTS.export.label, 'Risu로 옮길 파일', importOf('백업'), '이전 시점으로 복원', SHARE.list, NOTICES.from, BOARD.title, BOARD.mine, BOARD.toOperator, '새 소식', '앱 정보', '버전', PULSE.sharing, AUTO_DIAGNOSIS.label, '문제 진단', '탈퇴', '계정 삭제'],
+  account: ['저장 공간', PAGES.usage, '사용량', '잠그기', '로그아웃', '다른 기기에서 로그아웃', DIRECT_CALLS.label, '백업', '전체 백업', ACTS.export.label, 'Risu로 옮길 파일', importOf('백업'), '이전 시점으로 복원', SHARE.list, NOTICES.from, BOARD.title, BOARD.mine, BOARD.toOperator, '새 소식', '앱 정보', '버전', PULSE.sharing, AUTO_DIAGNOSIS.label, '문제 진단', '탈퇴', '계정 삭제'],
   translator: ['원문', '번역 결과', '번역할 언어', MODEL_ROLES.aux, TRANSLATOR_NOTE],
   calculator: ['모델', '토큰', '가격', COST_ESTIMATE],
   admin: ['서비스', '가입 정원', '계정당 텍스트 한도', '계정당 이미지 한도', '백업 폴더', '관리 도구', `모두에게 ${NOTICES.send}`, '링크 보류', '파일 차단', '계정', '게시판', '손님 글쓰기', '기록', NOTICES.received, '운영자에게만 온 글', '자동 진단', '방문자 통계', '가입 주별 재방문'],

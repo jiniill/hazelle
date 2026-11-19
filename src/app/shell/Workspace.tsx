@@ -123,17 +123,17 @@ function Chimes() {
   return null;
 }
 
-// A reply that streams in this page ends with it (a guest's, design §6.14): while one is written the browser asks
-// before the tab goes.
+// A reply that streams in this page ends with it (a guest's, design §6.14, or 직접 요청's): while one is written the
+// browser asks before the tab goes.
 function ReplyHold() {
   const { transport, talk } = useSession();
   const saves = useSaves();
   useEffect(() => {
-    if (transport.detached) return;
     let release: (() => void) | null = null;
     const leave = talk.subscribe(() => {
       const writing = talk.writing().size > 0;
-      if (writing && !release) release = saves.hold();
+      // Read as a reply starts: 직접 요청 may be switched on any device.
+      if (writing && !release && !transport.detached) release = saves.hold();
       if (!writing && release) {
         release();
         release = null;

@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HttpRequest } from '../../contracts/http';
 import { streamKey } from '../../vault/streams';
 import { holdAccount, holdPulse } from '../api';
-import { directTransport, dropStream, relay, relayJson, stopStream, stream } from './relay';
+import { CONNECTION_TYPES } from '../../connectors/registry';
+import { accountTransport, directTransport, dropStream, relay, relayJson, stopStream, stream } from './relay';
 
 const request: HttpRequest = { url: 'https://example.com/models', method: 'GET', headers: {}, body: null };
 const broken = () => new Response(new ReadableStream({ start: (controller) => controller.error(new TypeError('network error')) }), { headers: { 'x-relay': 'upstream' } });
@@ -199,7 +200,7 @@ it('cancels unused stop, drop and guest-visit response bodies', async () => {
     : new Response(new ReadableStream({ cancel: canceled })));
   stopStream('call');
   dropStream('call');
-  const transport = directTransport('guest');
+  const transport = directTransport('guest', 'needs-account');
   const reply = await transport.stream({ id: 'call', key: {} }, request, new AbortController().signal, null, { kind: 'call', role: 'chat', type: 'openai', model: 'm' });
   expect(reply instanceof Response && await reply.text()).toBe('reply');
   await vi.waitFor(() => expect(canceled).toHaveBeenCalledTimes(3));
@@ -211,10 +212,41 @@ it('still retries a guest call when discarding the failed response body rejects'
     .mockResolvedValueOnce(new Response(new ReadableStream({ start: (controller) => controller.error(new TypeError('Load failed')) }), { status: 503, headers: { 'retry-after': '0' } }))
     .mockResolvedValueOnce(new Response('reply'));
   vi.stubGlobal('fetch', fetch);
-  const transport = directTransport('guest');
+  const transport = directTransport('guest', 'needs-account');
   const response = await transport.stream({ id: 'call', key: {} }, request, new AbortController().signal, { times: 1, statuses: [503] });
   expect(response instanceof Response && await response.text()).toBe('reply');
   expect(fetch).toHaveBeenCalledTimes(2);
+  transport.close();
+});
+
+it('sends an account’s typed calls from the browser under 직접 요청, keeps the rest on the server, and follows a flip at the next call', async () => {
+  const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async (url) => (url === request.url ? new Response('reply') : Response.json({ error: 'stream-gone' }, { status: 404 })));
+  vi.stubGlobal('fetch', fetch);
+  const openai = CONNECTION_TYPES.find(({ id }) => id === 'openai')!;
+  const copilot = CONNECTION_TYPES.find(({ id }) => id === 'copilot')!;
+  let direct = true;
+  const transport = accountTransport(() => direct);
+  const started = vi.fn();
+  const mine = { id: crypto.randomUUID(), key: {}, public: 'k', started };
+  const held = crypto.randomUUID();
+  const signal = new AbortController().signal;
+
+  expect(transport.detached).toBe(false);
+  expect(transport.problem(copilot)).toEqual({ kind: 'app', code: 'needs-relay' });
+  const reply = await transport.stream(mine, request, signal, null, undefined, openai);
+  expect(reply instanceof Response && (await reply.text())).toBe('reply');
+  await transport.raw(request, signal, undefined, undefined, openai);
+  await transport.raw(request, signal);
+  await transport.stream({ id: held, key: {} }, null, signal);
+  transport.drop(mine.id);
+  transport.drop(held);
+  expect(started).not.toHaveBeenCalled();
+
+  direct = false;
+  expect(transport.detached).toBe(true);
+  expect(transport.problem(copilot)).toBeNull();
+  await transport.stream({ id: crypto.randomUUID(), key: {}, public: 'k' }, request, signal, null, undefined, openai);
+  expect(fetch.mock.calls.map(([url]) => url.replace(/[0-9a-f-]{36}/, ':id'))).toEqual([request.url, request.url, '/api/relay', '/api/streams/:id?from=0', '/api/streams/:id', '/api/streams/:id']);
   transport.close();
 });
 

@@ -1,8 +1,11 @@
+import { useState } from 'react';
+import { Check } from 'lucide-react';
 import { logOutOthers } from '../../runtime/account/account';
 import { START_AGAIN } from '../../contracts/start';
 import { BUILT_VERSION, readRelease, selfHost } from '../../runtime/installation';
 import { setDiagnosisSharing, sharesDiagnosis } from '../../runtime/diagnostics/auto-diagnosis';
 import { setPulseSharing, sharesPulse } from '../../runtime/service/pulse';
+import { callsFromBrowser, setBrowserCalls } from '../../runtime/models/relay';
 import { sizeText } from '../common/size';
 import { count } from '../common/typedNumber';
 import { GuestNotice } from '../common/GuestNotice';
@@ -13,8 +16,8 @@ import { useToast } from '../toast';
 import { LegalNotice } from '../common/LegalNotice';
 import { INSTALL_GUIDE } from '../common/legal';
 import { useLoaded } from '../common/useLoaded';
-import { AUTO_DIAGNOSIS, BIN, BOARD, PAGES, PULSE, UNKNOWN, CHANGE_FAILED, SEE } from '../common/words';
-import { Avatar, Button, Columns, FaceRow, Gauge, Link, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
+import { AUTO_DIAGNOSIS, BIN, BOARD, DIRECT_CALLS, PAGES, PULSE, UNKNOWN, CHANGE_FAILED, SEE } from '../common/words';
+import { Avatar, Button, Columns, ConfirmDialog, FaceRow, Gauge, Link, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
 import { BackupSection } from './BackupSection';
 import { Diagnostics } from './Diagnostics';
 import { LeaveSection } from './LeaveSection';
@@ -58,6 +61,10 @@ function SignedIn() {
   const { onLock, onLogout } = useSignedIn();
   const { suspended } = useStanding();
   const toast = useToast();
+  const store = useStore();
+  const direct = callsFromBrowser(useSettings());
+  const [asking, setAsking] = useState(false);
+  const setDirect = (on: boolean) => toast.settled(setBrowserCalls(store, on), CHANGE_FAILED);
   async function logOutElsewhere() {
     const ended = await logOutOthers();
     if (!ended.ok) return toast.failed(ended, '다른 기기에서 로그아웃하지 못했어요.');
@@ -99,7 +106,26 @@ function SignedIn() {
             </Button>
           }
         />
+        <SettingRow
+          label={DIRECT_CALLS.label}
+          help={DIRECT_CALLS.help}
+          control={<Switch label={DIRECT_CALLS.label} checked={direct} onChange={(on) => (on ? setAsking(true) : setDirect(false))} />}
+        />
       </SettingGroup>
+      {asking && (
+        <ConfirmDialog
+          title={DIRECT_CALLS.ask}
+          confirm={DIRECT_CALLS.confirm}
+          icon={Check}
+          onConfirm={() => {
+            setAsking(false);
+            setDirect(true);
+          }}
+          onClose={() => setAsking(false)}
+        >
+          {DIRECT_CALLS.cost}
+        </ConfirmDialog>
+      )}
     </Stack>
   );
 }
