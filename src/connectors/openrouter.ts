@@ -37,7 +37,7 @@ function meters(payload: unknown): Meter[] | null {
   const free = isRecord(data.free_model_daily_requests) ? data.free_model_daily_requests : {};
   const freeLeft = count(free.remaining);
   const freeLimit = count(free.limit);
-  if (freeLeft !== null && freeLimit !== null) found.push({ kind: 'left', label: '무료 모델 요청', unit: 'requests', amount: freeLeft, limit: freeLimit, resets: 'daily' });
+  if (freeLeft !== null && freeLimit !== null) found.push({ kind: 'left', label: '무료 모델 요청', unit: 'requests', amount: freeLeft, limit: freeLimit, resets: 'daily', free: true });
   return found;
 }
 

@@ -1,6 +1,6 @@
 import { fitsRole } from '../../connectors/assignment';
 import { isFree } from '../../connectors/pricing';
-import type { Connection, ConnectionType, Model } from '../../connectors/types';
+import type { Connection, ConnectionType, LeftMeter, Model } from '../../connectors/types';
 import type { CatalogResult } from '../models/catalog';
 import { addStarter, type Starter } from '../library/characters';
 import { startChat } from '../chat/chat-log';
@@ -26,6 +26,14 @@ export async function connectTrial(session: Session, type: ConnectionType, secre
 export function talkableModels(models: Model[]): Model[] {
   const fit = models.filter((model) => fitsRole(model, 'main'));
   return [...fit.filter(isFree), ...fit.filter((model) => !isFree(model))];
+}
+
+// What the free models may still ask today; null where the connection's type reports no such allowance or the read
+// failed. fresh: asked again, after a reply has drawn on it.
+export async function freeAllowance(session: Session, connection: string, fresh: boolean): Promise<LeftMeter | null> {
+  const value: Connection = session.store.get('connection', connection)!.value;
+  const read = await session.credentials.pool.meters(value, value.accounts[0]!, { fresh });
+  return read?.meters.find((meter): meter is LeftMeter => meter.kind === 'left' && meter.free === true) ?? null;
 }
 
 export const pickTrialModel = (session: Session, connection: string, model: Model) => addModel(session.store, connection, model);

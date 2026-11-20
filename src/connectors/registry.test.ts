@@ -324,7 +324,7 @@ describe('meters', () => {
       { kind: 'left', label: '이 키 한도', unit: 'usd', amount: 74.5, limit: 100, resets: 'monthly' },
       { kind: 'spent', label: '이번 달 사용 금액', unit: 'usd', amount: 25.5 },
       { kind: 'spent', label: '총 사용 금액', unit: 'usd', amount: 25.5 },
-      { kind: 'left', label: '무료 모델 요청', unit: 'requests', amount: 38, limit: 50, resets: 'daily' },
+      { kind: 'left', label: '무료 모델 요청', unit: 'requests', amount: 38, limit: 50, resets: 'daily', free: true },
     ]);
   });
 
