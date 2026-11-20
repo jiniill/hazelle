@@ -86,7 +86,7 @@ function Stale() {
   useEffect(() => {
     if (PAGE_BUILD === null) return;
     hearServedBuild((served) => {
-      if (served !== PAGE_BUILD) toast.show('새 버전이 나왔어요', { action: { label: '새로고침', onClick: () => location.reload() } });
+      if (served !== PAGE_BUILD) toast.show('새 버전이 나왔어요', { stays: true, action: { label: '새로고침', onClick: () => location.reload() } });
     });
     return () => hearServedBuild(null);
   }, [toast]);

@@ -274,6 +274,7 @@ it('reports a job that went silent by closed words and sizes, once with the rege
     const running = expect(evaluation.display(lane, chat, new Set())).rejects.toBeInstanceOf(EvaluationStuck);
     const worker = workers.at(-1)!;
     worker.receive({ started: jobs(worker).at(-1)!.id });
+    worker.receive({ progress: true });
     await vi.advanceTimersByTimeAsync(5_000);
     await running;
   };
@@ -284,7 +285,7 @@ it('reports a job that went silent by closed words and sizes, once with the rege
   await expect(evaluation.read({ asker: 'memory', chat: 'reported-chat' }, chat, null)).rejects.toBeInstanceOf(EvaluationRefused);
   const reports = sent.mock.calls.map(([, init]) => JSON.parse(init.body as string) as { job: { ran: number } });
   expect(reports).toMatchObject([
-    { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: true, scope: { regex: 1, messages: 2, chars: 9, lore: 0 }, jobs: 1 } },
+    { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: true, scope: { regex: 1, messages: 2, chars: 9, lore: 0 }, jobs: 1, signs: 1 } },
     { event: 'evaluation-stuck', detail: 'display', chat: null, job: { asker: 'projection', regex: false, scope: { regex: 0, messages: 2, chars: 9, lore: 0 }, jobs: 0 } },
   ]);
   expect(reports).toHaveLength(2);

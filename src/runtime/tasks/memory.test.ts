@@ -524,7 +524,7 @@ describe('chapters', () => {
         stubRelay(inTurn([saying('Luna smiles.'), saying('No chapter today.')]));
         expect(await takeTurn(session, chat, { kind: 'answer' })).toBeNull();
         await vi.waitFor(() => expect(paused).toBe(true));
-        expect(session.memory.snapshot().chapterFailed.get(chat)).toMatchObject({ kind: 'invalid', reason: 'unreadable' });
+        expect(session.memory.snapshot().chapterFailed.get(chat)).toMatchObject({ kind: 'invalid', reason: 'no-json' });
         expect(session.memory.snapshot().failed.has(chat)).toBe(false);
 
         await setDefaultMemory(session.store, { batch: 1, budget: 1_000_000 });
@@ -614,6 +614,38 @@ describe('chapters', () => {
       expect(memory.chapters[0]!.records).toEqual([memory.records[0]!, memory.records[1]!].map(({ id, at }) => ({ id, at })));
       expect([memory.records[0]!.what, log.length]).toEqual(['jin and Luna meet.', 2]);
     }));
+
+  it('plans again, with no failure said, a call picked up after a reload that the server holds no longer', async () => {
+    vi.stubGlobal('window', new EventTarget());
+    stubPage('hidden');
+    const { accountId, vaultKey } = await server.account();
+    const open = async () => {
+      const opened = await openSession(accountId, vaultKey, 'jin', new AbortController().signal);
+      if (!opened.ok) throw new Error(opened.error);
+      opened.data.startBackground();
+      return opened.data;
+    };
+    const first = await open();
+    const { chat } = await recorded(first, {});
+    const provider = new TransformStream<Uint8Array, Uint8Array>();
+    const log = stubRelay(inTurn([saying('Luna smiles.'), new Response(provider.readable, { headers: { 'x-relay': 'upstream' } }), saying(chapterAnswer)]));
+    expect(await takeTurn(first, chat, { kind: 'answer' })).toBeNull();
+    await vi.waitFor(() => expect(first.store.list('stream')).toHaveLength(1));
+    await vi.waitFor(() => expect(log).toHaveLength(2));
+    first.close();
+
+    const served = fetch;
+    vi.stubGlobal('fetch', (url: string, init: RequestInit = {}) => (url.includes('/streams/') && (init.method ?? 'GET') === 'GET' ? Promise.resolve(Response.json({ error: 'stream-gone' }, { status: 404 })) : served(url, init)));
+    const second = await open();
+    try {
+      await server.hold(second.store, chat);
+      await vi.waitFor(() => expect(chatMemory(second.store, chat).chapters).toHaveLength(1));
+      expect(log).toHaveLength(3);
+      expect([second.memory.snapshot().failed.has(chat), second.memory.snapshot().chapterFailed.has(chat)]).toEqual([false, false]);
+    } finally {
+      second.close();
+    }
+  });
 
   it('commits a chapter call picked up after a reload as a chapter', async () => {
     vi.stubGlobal('window', new EventTarget());

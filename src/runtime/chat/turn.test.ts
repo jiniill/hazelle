@@ -15,7 +15,7 @@ import type { EvaluationDown } from '../evaluation/evaluation-core';
 import type { Session } from '../session';
 import { answerable, inTurn, saying, stubRelay, testServer, upstream } from '../testing';
 import type { Shown } from './talk';
-import { autoContinue, takeTurn } from './turn';
+import { autoContinue, takeTurn, turnHalted } from './turn';
 import { chatScripts, statusBoxes, statusPlaces } from './chat-context';
 import { blocked, wouldSend } from './turn-context';
 
@@ -201,6 +201,12 @@ it('refuses a send while another turn holds its chat, saving and sending nothing
     session.talk.stop(chat);
     await holding;
   }));
+
+it('counts a turn stopped before its message was saved as no failure, and one the server refused as one', () => {
+  expect(turnHalted({ kind: 'unsent', failure: { ok: false, error: 'stopped' } })).toBe(true);
+  expect(turnHalted({ kind: 'unsent', failure: { ok: false, error: 'conflict' } })).toBe(false);
+  expect(turnHalted({ kind: 'gone' })).toBe(false);
+});
 
 describe('이어 쓰기', () => {
   it('continues on its own a reply cut at its length or left without its end, once, never a stop, a failure or an empty reply', () => {

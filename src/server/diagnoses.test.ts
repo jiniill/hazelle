@@ -18,7 +18,7 @@ const CHAT: AutoChat = {
   memory: { on: true, own: false, budget: 8000, clamped: 4000, window: 12_000, batch: 4000 },
   aux: { type: 'openrouter', model: 'someone-private/secret-aux' },
   stored: { records: 4, chapters: 1, facts: 2, threads: 1 },
-  work: { left: null, failed: { kind: 'invalid', reason: 'outcome', refused: false, call: { state: 'done', cut: 'length', finish: 'MAX_TOKENS', error: null, status: null, code: null, tries: 1, input: 900, cached: null, written: null, output: 400, reasoning: 20, first: 900, total: 4000 } }, chapter: null },
+  work: { left: null, failed: { kind: 'invalid', reason: 'outcome', refused: false, call: { state: 'done', cut: 'length', finish: 'MAX_TOKENS', error: null, status: null, code: null, tries: 1, input: 900, cached: null, written: null, output: 400, reasoning: 20, first: 900, total: 4000 } }, chapter: null, index: null },
   last: null,
   turn: null,
   cache: null,
@@ -71,7 +71,7 @@ it('rejects old or unlisted causes before storage and keeps the accepted cause i
 });
 
 it('takes a silent evaluation job by closed words and sizes, a row for each kind of job, and no free word in their place', async () => {
-  const job: AutoJob = { asker: 'projection', regex: true, scope: { regex: 12, messages: 7, chars: 9000, lore: 3 }, jobs: 0, ran: 4100 };
+  const job: AutoJob = { asker: 'projection', regex: true, scope: { regex: 12, messages: 7, chars: 9000, lore: 3 }, jobs: 0, ran: 4100, signs: 3 };
   const report = { ...REPORT, event: 'evaluation-stuck', detail: 'display', chat: null, job };
   expect(readAutoReport(report)).toEqual(report);
   expect(readAutoReport({ ...report, detail: '비밀 봇' })).toBeNull();
@@ -120,7 +120,7 @@ it('forgets a report after 30 days', async () => {
 
 it('pages the groups newest first, each once though several were last reported in one millisecond, and refuses a cursor it never gave', async () => {
   vi.useFakeTimers({ now: Date.parse('2026-11-02T03:00:00Z'), toFake: ['Date'] });
-  const job: AutoJob = { asker: 'projection', regex: true, scope: { regex: 12, messages: 7, chars: 9000, lore: 3 }, jobs: 0, ran: 4100 };
+  const job: AutoJob = { asker: 'projection', regex: true, scope: { regex: 12, messages: 7, chars: 9000, lore: 3 }, jobs: 0, ran: 4100, signs: 3 };
   for (const detail of ['display', 'read']) await send({ ...REPORT, event: 'evaluation-stuck', detail, chat: null, job });
   vi.setSystemTime(Date.now() + 1000);
   await send();

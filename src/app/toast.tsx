@@ -7,8 +7,9 @@ import { SHORTCUTS, typing, useShortcut } from './shortcuts';
 import { Toast, ToastStack, type ToastAction } from './ui';
 
 type Action = { label: string; onClick: () => void };
-// report: offers 오류 제보, for a failure that is the app's rather than the user's input.
-type Extra = { detail?: string; action?: Action; report?: true };
+// report: offers 오류 제보, for a failure that is the app's rather than the user's input. stays: its time never takes
+// it away, for what holds until the user acts on it.
+type Extra = { detail?: string; action?: Action; report?: true; stays?: true };
 type From = { name: string; face: string | null };
 // ends: null while it waits behind the notices shown, its time not yet running; Infinity once kept open.
 type Notice = { key: number; message: string; detail?: string; tone: 'plain' | 'warn'; action?: ToastAction; offer?: ToastAction; said?: { from: From; keep: () => void }; close: () => void; undo: boolean; times: number; life: number; ends: number | null };
@@ -62,11 +63,11 @@ export function ToastProvider({ standing, onReport, children }: { standing: Stan
   const [floor, setFloor] = useState<HTMLElement | null>(null);
   const toasts = useMemo<Toasts>(() => {
     let next = 0;
-    const add = (message: string, tone: Notice['tone'], { detail, action, report, from }: Extra & { from?: From } = {}, undo = false) => {
+    const add = (message: string, tone: Notice['tone'], { detail, action, report, stays, from }: Extra & { from?: From } = {}, undo = false) => {
       const key = ++next;
       // Not a speaker's words: a plugin or bot may quote the chat in them.
       if (tone === 'warn' && !from) noteProblem(detail ? `${message} ${detail}` : message);
-      const life = lifeOf(tone, `${message}${detail ?? ''}`, action !== undefined);
+      const life = stays ? 0 : lifeOf(tone, `${message}${detail ?? ''}`, action !== undefined);
       const close = () => setNotices((all) => lineUp(all.filter((notice) => notice.key !== key)));
       const keep = () => setNotices((all) => all.map((notice) => (notice.key === key ? { ...notice, ends: Infinity } : notice)));
       const pressed = action && { ...action, onClick: () => (close(), action.onClick()), ...(undo && { keys: SHORTCUTS.undoToast.keys }) };
@@ -78,7 +79,7 @@ export function ToastProvider({ standing, onReport, children }: { standing: Stan
       setNotices((all) => {
         const same = all.find(repeats);
         const again = (notice: Notice) => ({ ...notice, times: notice.times + 1, ends: notice.ends === null ? null : Math.max(notice.ends, Date.now() + life) });
-        return lineUp(same ? all.map((notice) => (notice === same ? again(notice) : notice)) : [{ key, message, detail, tone, action: pressed, offer, said: from && { from, keep }, close, undo, times: 1, life, ends: null }, ...all]);
+        return lineUp(same ? all.map((notice) => (notice === same ? again(notice) : notice)) : [{ key, message, detail, tone, action: pressed, offer, said: from && { from, keep }, close, undo, times: 1, life, ends: stays ? Infinity : null }, ...all]);
       });
       return close;
     };

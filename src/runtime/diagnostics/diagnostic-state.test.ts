@@ -47,6 +47,8 @@ describe('the state a 문제 진단 reports', () => {
       const auto = { event: 'memory-gap', detail: null, cause: null, version: null, browser: 'chrome', major: 1, os: 'linux', mobile: false, place: null, frames: null, origin: null, screen: 'chat', page: 1, online: true, visible: true, standalone: false, cores: null, memoryGb: null, width: 1, height: 1, language: null, chat: autoChat(session, chat, sending, session.memory.snapshot()), job: null };
       expect(readAutoReport(auto)).toEqual(auto);
       expect(auto.chat).toMatchObject({ type: expect.any(String), messages: 1, stored: { facts: 1 }, request: { dropped: 0, missing: 0, records: { over: 0, stale: 0 }, shape: { chapters: [], status: {} }, tokens: expect.any(Object) } });
+      const unindexed = autoChat(session, chat, null, { ...session.memory.snapshot(), indexFailed: new Map([[chat, { kind: 'embed', reason: 'flood', receipt: null }]]) });
+      expect(unindexed?.work.index).toEqual({ kind: 'embed', reason: 'flood', refused: false, call: null });
       expect(JSON.stringify(auto)).not.toContain('CANARY');
       expect(JSON.stringify(auto)).not.toContain('keeper');
     }));

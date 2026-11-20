@@ -37,7 +37,8 @@ describe('parseRecords', () => {
   });
 
   it('refuses an answer that is not JSON, one with a field missing or a gap left, naming the check and keeping the records read before it, and a key line said by other messages', () => {
-    expect(parseRecords('Here is the summary.', span)).toEqual({ ok: false, refusal: { reason: 'unreadable' }, kept: [] });
+    expect(parseRecords('Here is the summary.', span)).toEqual({ ok: false, refusal: { reason: 'no-json' }, kept: [] });
+    expect(parseRecords('{"records": [', span)).toEqual({ ok: false, refusal: { reason: 'unreadable' }, kept: [] });
     expect(parseRecords(answer([[]]), span)).toEqual({ ok: false, refusal: { reason: 'shape' }, kept: [] });
     expect(parseRecords(answer([{ ...record(3), opens: undefined }]), span)).toEqual({ ok: false, refusal: { reason: 'opens' }, kept: [] });
     expect(parseRecords(answer([{ ...record(3), outcome: null }]), span)).toEqual({ ok: false, refusal: { reason: 'outcome' }, kept: [] });

@@ -91,6 +91,22 @@ it('counts a notice said again while it is up, a speaker\'s words too, but shows
   }
 });
 
+it('keeps a notice that stays until it is closed, with no time to draw', async () => {
+  vi.useFakeTimers();
+  const { toasts, start, end } = provider();
+  try {
+    await start();
+    await act(() => void toasts().show('새 버전이 나왔어요', { stays: true, action: { label: '새로고침', onClick: () => {} } }));
+    await act(() => vi.advanceTimersByTime(60_000));
+    expect(props()).toEqual([expect.objectContaining({ message: '새 버전이 나왔어요', life: 0 })]);
+    await act(() => props()[0]!.onClose!());
+    expect(props()).toHaveLength(0);
+  } finally {
+    await end();
+    vi.useRealTimers();
+  }
+});
+
 it('lets a plain notice go past the three shown, but keeps a 되돌리기 waiting, its time stopped, until one ahead leaves', async () => {
   vi.useFakeTimers();
   const { toasts, start, end } = provider();

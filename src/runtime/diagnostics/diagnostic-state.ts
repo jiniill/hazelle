@@ -244,7 +244,7 @@ function placeFacts(session: Reader, { kind, id }: Place): Facts | Promise<Facts
 }
 
 // 자동 진단's read of a chat: store reads and a request already built, so a report never makes a worker build another.
-export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: string, sending: Sending | null, { running, failed, chapterFailed }: Pick<Remembering, 'running' | 'failed' | 'chapterFailed'>, more: Partial<Pick<AutoChat, 'gap' | 'turn' | 'cache'>> = {}): AutoChat | null {
+export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: string, sending: Sending | null, { running, failed, chapterFailed, indexFailed }: Remembering, more: Partial<Pick<AutoChat, 'gap' | 'turn' | 'cache'>> = {}): AutoChat | null {
   const chat = live(store.get('chat', id))?.value;
   if (!chat) return null;
   const route = chatModel(store, chat, 'main');
@@ -265,7 +265,7 @@ export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: s
     memory: { on, own, budget, clamped: memoryBudget(budget, promptBudget(store, chat)), window, batch },
     aux: auxFacts(store, chat),
     stored: memory && { records: memory.records.length, chapters: memory.chapters.length, facts: memory.state.length, threads: memory.threads.length },
-    work: { left: running.get(id)?.left ?? null, failed: failureFacts(failed.get(id)), chapter: failureFacts(chapterFailed.get(id)) },
+    work: { left: running.get(id)?.left ?? null, failed: failureFacts(failed.get(id)), chapter: failureFacts(chapterFailed.get(id)), index: failureFacts(indexFailed.get(id)) },
     last: receipt ? callFacts(receipt) : null,
     turn: more.turn ?? null,
     cache: more.cache ?? null,
