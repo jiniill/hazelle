@@ -89,7 +89,7 @@ function ModelPick({ models, failure, onPick }: { models: Model[]; failure: stri
 }
 const MODELS_SHOWN = 8;
 // True of every provider's free models, not one's rule: a 0 price also comes from models.dev (Google, Mistral, Groq).
-const FREE_HELP = '무료 모델은 제공자가 정한 사용 한도가 있고, 제공자에 따라 보낸 글이 학습에 쓰일 수 있어요.';
+const FREE_HELP = '무료 모델은 제공자마다 사용 한도가 있고, 대화 내용이 학습에 쓰일 수 있어요.';
 
 function TrialChat({ session, kept, onReplied }: { session: Session; kept: boolean; onReplied: () => void }) {
   const [chat] = useState(() => crypto.randomUUID());

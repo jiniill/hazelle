@@ -40,7 +40,7 @@ export function Welcome() {
             </GuideMark>
           )}
           <ActionCard icon={PackageOpen} title={MOVE_IN} description="캐릭터와 채팅, 프롬프트를 한 번에 옮겨요" onClick={move} />
-          {starter && <ActionCard icon={Lamp} title={`${withParticle(starter.character.card.name, '과/와')} 대화`} description="기본 캐릭터에게 말을 걸어 봐요" onClick={() => navigate({ kind: 'new-chat', character: starter.id })} />}
+          {starter && <ActionCard icon={Lamp} title={`${withParticle(starter.character.card.name, '과/와')} 대화`} description="바로 시작할 수 있는 기본 캐릭터예요" onClick={() => navigate({ kind: 'new-chat', character: starter.id })} />}
         </Columns>
         <Columns min={connections.length > 0 ? 'wide' : 'small'}>
           <ActionCard size="sm" icon={ACTS.import.icon} title={importOf('봇')} description="PNG · charx · zip 파일을 끌어다 놓거나 선택해요" onClick={pick} />

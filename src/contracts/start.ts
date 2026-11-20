@@ -16,7 +16,7 @@ export const START_PAGE = {
     line: '여기서 연결한 키는 자동 저장돼요.',
     steps: ['API 키 붙여 넣기', '모델 선택', '대화하기'],
     privacy: '키는 이 브라우저에만 저장하고, 제공자에게 바로 보내요.',
-    grant: 'OpenRouter로 무료로 시작',
+    grant: 'OpenRouter로 무료 시작',
     skip: '키 없이 둘러보기',
     walkOn: '키가 없어도 아래로 계속',
   },

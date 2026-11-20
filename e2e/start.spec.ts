@@ -124,7 +124,7 @@ test('a first visit signs in at OpenRouter instead of pasting a key, and talks o
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
-  await page.getByRole('button', { name: 'OpenRouter로 무료로 시작', exact: true }).click();
+  await page.getByRole('button', { name: 'OpenRouter로 무료 시작', exact: true }).click();
 
   // Back on the first page, at the key form's place, with the code gone from the address.
   const models = page.getByRole('list', { name: '모델' }).getByRole('button');
@@ -286,7 +286,7 @@ test('someone already using the app can walk it again and try it, uncounted, kee
   await expect(heading).toBeVisible();
   await expect(again.getByRole('button', { name: '가입 없이 열기' })).toHaveCount(0);
   await expect(again.getByRole('button', { name: '키 없이 둘러보기' })).toHaveCount(0);
-  await expect(again.getByRole('button', { name: 'OpenRouter로 무료로 시작' })).toHaveCount(0);
+  await expect(again.getByRole('button', { name: 'OpenRouter로 무료 시작' })).toHaveCount(0);
   await fakeAnthropic(again);
   await again.evaluate(`document.getElementById('trial').scrollIntoView()`);
   await again.getByLabel(/API 키$/).fill(KEY);

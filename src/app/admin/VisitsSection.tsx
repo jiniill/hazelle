@@ -29,7 +29,7 @@ const FIRST_PAGE_COLUMNS: TableColumn[] = [
   { label: '예시 대화', track: 'figure' },
   { label: '체험', track: 'figure' },
   { label: '로그인 시작', track: 'figure' },
-  { label: '키 받음', track: 'figure' },
+  { label: '키 발급', track: 'figure' },
   { label: '키 입력', track: 'figure' },
   { label: '앱 입장', track: 'figure' },
 ];
@@ -90,7 +90,7 @@ export function VisitsSection() {
       <Panel title={FIRST_PAGE} note="최근 14일 · 한국 시간" help={FIRST_PAGE_HELP}>
         {loaded.data && <Table label={FIRST_PAGE} columns={FIRST_PAGE_COLUMNS} rows={loaded.data.days.map((day) => ({
           key: String(day.day),
-          summary: `열람 ${count(day.shown)} → 예시 대화 ${count(day.read)} → 체험 ${count(day.door)} → 로그인 시작 ${count(day.asked)} → 키 받음 ${count(day.granted)} → 키 입력 ${count(day.keyed)} → 앱 입장 ${count(day.entered)}`,
+          summary: `열람 ${count(day.shown)} → 예시 대화 ${count(day.read)} → 체험 ${count(day.door)} → 로그인 시작 ${count(day.asked)} → 키 발급 ${count(day.granted)} → 키 입력 ${count(day.keyed)} → 앱 입장 ${count(day.entered)}`,
           cells: [seoulDate(day.day), count(day.shown), count(day.read), count(day.door), count(day.asked), count(day.granted), count(day.keyed), count(day.entered)],
         }))} />}
       </Panel>

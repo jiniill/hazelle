@@ -267,7 +267,7 @@ const SIGN_IN_REFUSED: Record<string, string> = {
   access_denied: '로그인을 취소했어요.',
 };
 
-const unread = (site: string) => `${site}의 응답을 읽지 못했어요. 다시 시도해 주세요.`;
+const unread = (site: string) => `${withParticle(site, '과/와')} 연결하지 못했어요. 다시 시도해 주세요.`;
 
 export function describeSignInFailure(failure: SignInFailure, site: string): string {
   if (failure.kind === 'bad-answer') return unread(site);
@@ -277,7 +277,7 @@ export function describeSignInFailure(failure: SignInFailure, site: string): str
 
 export function describeGrantFailure(failure: GrantFailure, site: string): string {
   if (failure.kind === 'bad-answer') return unread(site);
-  if (failure.kind === 'unasked') return `${site}에서 돌아왔지만 이 브라우저에서 시작한 로그인이 아니거나 시간이 지났어요. 다시 시도해 주세요.`;
+  if (failure.kind === 'unasked') return '로그인 시간이 지났거나 기록이 없어요. 같은 브라우저에서 다시 시도해 주세요.';
   return describeReplyError(failure);
 }
 
