@@ -19,6 +19,16 @@
   gap: var(--space-8);
 }
 
+.split {
+  flex-wrap: nowrap;
+  gap: var(--space-8);
+}
+
+.split > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .spread > :first-child {
   flex: 1 1 auto;
   min-width: 0;

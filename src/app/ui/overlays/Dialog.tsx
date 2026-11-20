@@ -3,6 +3,7 @@ import { useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ButtonSlot } from '../controls/Button';
 import { IconButton } from '../controls/IconButton';
+import { classNames } from '../foundation/classNames';
 import { Kbd } from '../foundation/Kbd';
 import { useLeaves } from '../foundation/leave';
 import { keyCaps, type Chord } from '../foundation/keys';
@@ -26,12 +27,14 @@ type Props = {
   // Above and below the scrolling body, always in view, as the actions are.
   toolbar?: ReactNode;
   footer?: ReactNode;
+  // A drawing of what the dialog is about across its top, edge to edge, the × over its corner.
+  picture?: ReactNode;
   // Stepped by the head's switcher, ← → and a sideways swipe, the dialog showing one of them at a time.
   pages?: Pages;
   children: ReactNode;
 };
 
-export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout = 'row', size = 'normal', toolbar, footer, pages, children }: Props) {
+export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout = 'row', size = 'normal', picture, toolbar, footer, pages, children }: Props) {
   const scrim = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
   // Only the scrim itself is outside: the toast sits above the dialog and stays pressable while it is open.
@@ -50,7 +53,8 @@ export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout 
   return createPortal(
     <ButtonSlot value={null}>
     <div ref={useLeaves(scrim)} className={size === 'normal' ? styles.scrim : `${styles.scrim} ${size === 'wide' ? styles.sheet : styles.bare}`}>
-      <div ref={box} className={size === 'normal' ? styles.dialog : `${styles.dialog} ${styles[size]}`} role="dialog" aria-modal="true" aria-label={title} onKeyDown={(event) => { trap(event); stepByKey(paged, event); }} {...swipe}>
+      <div ref={box} className={classNames(styles.dialog, size !== 'normal' && styles[size], picture !== undefined && styles.pictured)} role="dialog" aria-modal="true" aria-label={title} onKeyDown={(event) => { trap(event); stepByKey(paged, event); }} {...swipe}>
+        {picture !== undefined && <div className={styles.picture}>{picture}</div>}
         <div className={styles.head}>
           <h2 className={styles.title}>{title}</h2>
           {paged && (
@@ -60,7 +64,11 @@ export function Dialog({ title, note, onClose, onSubmit, actions, actionsLayout 
               next={{ label: '다음', onClick: () => paged.onStep(1) }}
             />
           )}
-          {onClose && <IconButton icon={X} label="닫기" size="sm" onClick={onClose} />}
+          {onClose && (
+            <span className={styles.close}>
+              <IconButton icon={X} label="닫기" size="sm" onClick={onClose} />
+            </span>
+          )}
         </div>
         {note && <p className={styles.note}>{note}</p>}
         {toolbar}

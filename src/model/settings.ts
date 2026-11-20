@@ -39,7 +39,26 @@ export const presetsOf = (settings: Pick<Settings, 'presets'>) => settings.prese
 // Shared defaults are resolved by runtime/chat/chat-context, runtime/library/characters and runtime/tasks/memory;
 // character-owned translation and illustration settings replace their shared settings.
 // What this person has been shown, so no device of theirs shows it again.
-export type Seen = { tutorials?: string[]; welcome?: true; tour?: string; opened?: string };
+// offers: the offers answered, either way (OFFERS).
+export type Seen = { tutorials?: string[]; welcome?: true; tour?: string; opened?: string; offers?: OfferId[] };
+
+// 써볼래요? (design §6.15): a switch that begins off for the accounts older than it, each asked once whether to turn
+// it on. take turns it on; taken says it already is, so nobody is asked for what they turned on themselves.
+export const OFFERS = {
+  ink: { take: (settings: Settings): Settings => ({ ...settings, ink: true }), taken: (settings: Settings) => settings.ink === true },
+};
+export type OfferId = keyof typeof OFFERS;
+const OFFER_IDS = Object.keys(OFFERS) as OfferId[];
+
+// An account that begins now has every offer's switch on and none left to answer: offers are for who came before them.
+export const begun = (settings: Settings): Settings => OFFER_IDS.reduce<Settings>((taken, id) => OFFERS[id].take(taken), { ...settings, seen: { ...settings.seen, offers: OFFER_IDS } });
+
+export const offerAnswered = (settings: Settings, id: OfferId, taken: boolean): Settings => {
+  const offers = [...new Set([...(settings.seen?.offers ?? []), id])];
+  return { ...(taken ? OFFERS[id].take(settings) : settings), seen: { ...settings.seen, offers } };
+};
+
+export const offerOpen = (settings: Settings, id: OfferId) => !OFFERS[id].taken(settings) && !settings.seen?.offers?.includes(id);
 
 export type Settings = {
   models: Assignment;
@@ -108,4 +127,6 @@ export type Settings = {
   diagnosis?: false;
   // 직접 요청: true sends provider calls from the browser (runtime/models/relay accountTransport); absent, through the relay.
   browserCalls?: true;
+  // A reply being written comes in by ink (app/ui/story/ink.ts); absent, whole to its cursor.
+  ink?: true;
 };

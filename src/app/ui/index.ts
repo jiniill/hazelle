@@ -1,5 +1,6 @@
 export * from './collections';
 export * from './controls';
+export * from './demos';
 export * from './feedback';
 export * from './foundation';
 export * from './landing';

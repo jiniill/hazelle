@@ -245,6 +245,8 @@ export const FEATURES_TITLE = '기능';
 export const onOff = (on: boolean) => (on ? '켬' : '끔');
 // 디스플레이's section for how a chat's own lines show, and its row for where pictures stand (the 삽화 page's door to it).
 export const CHAT_LOOK = '채팅 화면';
+// The switch and its offer (common/release OFFERS) name it alike.
+export const REPLY_INK = { label: '응답 부드럽게 표시', help: '응답이 나올 때 서서히 선명해져요.' };
 export const PICTURE_PLACE = '이미지 위치';
 // 토큰 절약 (runtime/tasks/preread), a 실험실 experiment whose name may still change: every screen names it through this.
 export const PRE_READ = '토큰 절약';

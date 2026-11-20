@@ -4,7 +4,7 @@ import { useReducedMotion } from '../foundation/media';
 import { CacheNoteDemo, EnterSendsDemo } from './ComposerDemos';
 import { FollowSystemDemo, LorebookDemo, MemoryDemo, PromptCacheDemo, ReverseDemo } from './FlowDemos';
 import { AutoIllustrateDemo, ComicDemo, FoldLongDemo, HidePicturesDemo, InlineIllustrationsDemo, PictureSideDemo, PortraitDemo, PovDemo, WideFillDemo } from './PictureDemos';
-import { BotStyleDemo, ThoughtsDemo, TranslateOriginalDemo, UsageDemo } from './ReplyDemos';
+import { BotStyleDemo, InkDemo, ThoughtsDemo, TranslateOriginalDemo, UsageDemo } from './ReplyDemos';
 import { FoldComposerDemo, HideHeaderDemo, ReplyScrollDemo, ScrubberDemo, StepButtonsDemo, UserStopsDemo } from './ScrollDemos';
 import styles from './Demo.module.css';
 
@@ -26,6 +26,7 @@ const DRAWINGS = {
   pictureSide: PictureSideDemo,
   portrait: PortraitDemo,
   usage: UsageDemo,
+  ink: InkDemo,
   cacheNote: CacheNoteDemo,
   followSystem: FollowSystemDemo,
   botStyle: BotStyleDemo,
@@ -56,13 +57,14 @@ export type Round = { way: Way; held: boolean; count: number };
 // A round ends: the next alternates unless a way was picked, and replays (count) either way.
 export const nextRound = (round: Round, alternates: boolean): Round => ({ ...round, way: alternates && !round.held ? (round.way === 0 ? 1 : 0) : round.way, count: round.count + 1 });
 
-export function Demo({ label, name, ways }: DemoSpec & { label: string }) {
+// bare: the stage alone to its box's edges, for a box that frames it (a dialog's picture).
+export function Demo({ label, name, ways, bare = false }: DemoSpec & { label: string; bare?: boolean }) {
   const still = useReducedMotion();
   const choice: Choice | undefined = ways && ('on' in ways ? { labels: SWITCH_WAYS, now: ways.on ? 0 : 1 } : ways);
   const [round, setRound] = useState<Round>({ way: choice?.now ?? 0, held: false, count: 0 });
   const Drawing: DemoDrawing = DRAWINGS[name];
   return (
-    <div className={styles.demo}>
+    <div className={bare ? `${styles.demo} ${styles.bare}` : styles.demo}>
       <div className={styles.stage} aria-hidden>
         <Drawing key={round.count} way={round.way} />
       </div>

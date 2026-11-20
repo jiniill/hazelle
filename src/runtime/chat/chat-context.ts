@@ -13,7 +13,7 @@ import { keepsPromptOut, shown, statusChanges, type Chat, type Message } from '.
 import { live } from '../../model/library';
 import type { Toggle, ToggleLine, TogglePreset } from '../../model/prompt';
 import { without } from '../../model/fields';
-import type { Seen, Settings } from '../../model/settings';
+import { offerAnswered, OFFERS, type OfferId, type Seen, type Settings } from '../../model/settings';
 import { chatStatus, statusAfter, type StatusDefinition } from '../../model/status';
 import { chatToggles, toggleValue } from '../../model/toggles';
 import { chatModel, type Route } from '../models/assignment';
@@ -88,12 +88,18 @@ export const setAnswerInstruction = (store: ObjectStore, text: string) =>
   changeSettings(store, (current) => (text === ANSWER_INSTRUCTION ? without(current, 'answerInstruction') : { ...current, answerInstruction: text }));
 
 export const usageShownOf = (store: Reader['store']) => accountSettings(store).usageShown ?? false;
+export const inkedOf = (store: Reader['store']) => accountSettings(store).ink ?? false;
 
 export const setToolRounds = (store: ObjectStore, rounds: number) =>
   changeSettings(store, (current) => (rounds === TOOL_ROUNDS ? without(current, 'toolRounds') : { ...current, toolRounds: rounds }));
 
 export const setUsageShown = (store: ObjectStore, shown: boolean) =>
   changeSettings(store, (current) => (shown ? { ...current, usageShown: true } : without(current, 'usageShown')));
+
+export const setInk = (store: ObjectStore, on: boolean) =>
+  changeSettings(store, (current) => (on ? OFFERS.ink.take(current) : without(current, 'ink')));
+
+export const answerOffer = (store: ObjectStore, id: OfferId, taken: boolean) => changeSettings(store, (current) => offerAnswered(current, id, taken));
 
 export const markSeen = (store: ObjectStore, change: Seen) =>
   changeSettings(store, (current) => ({ ...current, seen: { ...current.seen, ...change } }));

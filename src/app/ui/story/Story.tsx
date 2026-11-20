@@ -32,6 +32,8 @@ type Props = {
   html: string;
   css?: string;
   cursor?: boolean;
+  // The text under a cursor comes in by ink (ink.ts) where the browser can draw it; false: whole to its cursor.
+  inked?: boolean;
   tone?: 'plain' | 'faded';
   buttons?: 'live' | 'inert';
   // A press on one of the bot's buttons; null for a plain button, which names nothing to run.
@@ -588,7 +590,7 @@ export const WordsContext = createContext<Words>('ground');
 export const SlackContext = createContext<((room: number) => void) | null>(null);
 
 // A message's text, drawn in a shadow root so a bot's HTML and CSS can never restyle or cover the app.
-export function Story({ html, css = '', cursor = false, tone = 'plain', buttons = 'inert', onPress, term = '', whole = false, inlays = [], illustrations = [], ref, bind }: Props) {
+export function Story({ html, css = '', cursor = false, inked = false, tone = 'plain', buttons = 'inert', onPress, term = '', whole = false, inlays = [], illustrations = [], ref, bind }: Props) {
   const room = useMarginRoom();
   const beside = illustrations.length > 0 && room;
   // Beside, each picture's slot stands empty where its mark is, which MarginPictures levels the picture with.
@@ -625,10 +627,10 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
     morph(root(), fragment);
     for (const picture of root().querySelectorAll<HTMLImageElement>(`[${PICTURE}] > img`)) markWide(picture);
     if (bind) showBound(root(), bind.values, true);
-    if (cursor && !ink.current && inkable()) ink.current = inkOn(host.current!, root(), !drawnBefore.current);
+    if (cursor && inked && !ink.current && inkable()) ink.current = inkOn(host.current!, root(), !drawnBefore.current);
     drawnBefore.current = true;
     ink.current?.drawn(cursor);
-  }, [html, cursor, pictures, veil, veilTaps, whole, placed, math, code]);
+  }, [html, cursor, inked, pictures, veil, veilTaps, whole, placed, math, code]);
   useEffect(() => () => ink.current?.end(), []);
 
   // After every draw too, which takes back what the last marked.

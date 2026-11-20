@@ -4,6 +4,7 @@ import type { Connection } from '../connectors/types';
 import { firstTurns } from '../model/turns';
 import { appendUserMessage, startChat } from './chat/chat-log';
 import { fetchApi } from './api';
+import { accountSettings } from './account-settings';
 import { editPersona } from './library/personas';
 import { autoDiagnose, setDiagnosisSharing } from './diagnostics/auto-diagnosis';
 import { setPulseSharing } from './service/pulse';
@@ -38,6 +39,11 @@ describe('session', () => {
       expect(await session.credentials.get(resolved, copilot.accounts[0]!.secret)).toEqual(stopped);
       expect(await session.catalogs.load(copilot)).toEqual(stopped);
       expect(log.map((call) => call.sent.url)).toEqual([EXCHANGE, USER, MODELS, EXCHANGE]);
+    }));
+
+  it('begins a new account with every offer’s switch on and none left to answer', () =>
+    server.withSession(async (session) => {
+      expect(accountSettings(session.store)).toMatchObject({ ink: true, seen: { offers: ['ink'] } });
     }));
 
   it('opens with each sort’s default prompt', () =>

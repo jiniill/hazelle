@@ -28,6 +28,20 @@
   background: var(--color-divider);
 }
 
+.bare {
+  gap: 0;
+}
+
+.bare .stage {
+  border: 0;
+  border-radius: 0;
+}
+
+.bare .clock {
+  margin: 0;
+  border-radius: 0;
+}
+
 .hand {
   display: block;
   width: 0;
