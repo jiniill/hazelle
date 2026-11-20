@@ -726,6 +726,12 @@
   --focus-ring-reach: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 
   --duration-instant: 0.01ms;
+  /* A reply's ink (story/ink.ts Pace), and how long a block it reaches takes to come in. */
+  --duration-ink-follow: 450ms;
+  --duration-ink-even: 200ms;
+  --duration-ink-idle: 250ms;
+  --duration-ink-close: 350ms;
+  --duration-ink-block: 320ms;
   --duration-fast: 120ms;
   --duration-intent: 200ms;
   /* How long a wait goes unshown (motion.module.css lateIn, useLingering.ts): a shorter one passes with nothing between. */
