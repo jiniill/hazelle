@@ -1,3 +1,4 @@
+import { STARTER_AVATAR_ID, STARTER_CHARACTER_ID } from '../../model/library';
 import 'fake-indexeddb/auto';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { unzipSync } from 'fflate';
@@ -38,6 +39,9 @@ import { exportBackup, readBackup, restoreBackup } from '../testing/backup';
 import type { BackupOutput } from '../export/backup-zip';
 import { importTool, readToolAsset, saveToolAsset, saveToolChat, setToolData, toolChatId, toolData, toolDataId, toolFileId, TOOL_ROW_BYTES } from '../tools/store';
 import { changeSettings } from '../account-settings';
+
+// The starter character's picture needs a canvas to shrink on.
+vi.mock('../files/picture', () => ({ thumbnail: vi.fn(async () => 'data:thumb') }));
 
 let app: Awaited<ReturnType<typeof testApp>>;
 let password: Awaited<ReturnType<typeof passwordCredential>>;
@@ -129,10 +133,40 @@ async function contents() {
   return { ...held, character, chat, message, image, ref };
 }
 
-it('does not ask about a guest that holds only the first open’s defaults and the minutes it was open', async () => {
+it('gives the starter character only to a store that held nothing when it opened', async () => {
   const { accountId, vaultKey, backend } = await guest();
-  const opened = await openSession(accountId, vaultKey, '손님', new AbortController().signal, undefined, { backend });
+  const starter = { name: '아린', description: '', greeting: '', picture: async () => png() };
+  const open = async (bindings: { starter?: typeof starter }) => {
+    const opened = await openSession(accountId, vaultKey, '손님', new AbortController().signal, undefined, { backend }, bindings);
+    if (!opened.ok) throw new Error(opened.error);
+    const has = opened.data.store.get('character', STARTER_CHARACTER_ID) !== null;
+    opened.data.close();
+    return has;
+  };
+  expect(await open({})).toBe(false);
+  expect(await open({ starter })).toBe(false);
+});
+
+it('copies a guest’s starter character into an account that already existed as an ordinary character', async () => {
+  const { accountId, vaultKey, backend } = await guest();
+  const starter = { name: '아린', description: '', greeting: '', picture: async () => png() };
+  const opened = await openSession(accountId, vaultKey, '손님', new AbortController().signal, undefined, { backend }, { starter });
   if (!opened.ok) throw new Error(opened.error);
+  await vi.waitFor(() => expect(opened.data.store.get('avatar', STARTER_AVATAR_ID)).toBeTruthy());
+  opened.data.close();
+  const target = await destination();
+  expect(await transferGuest(target.accountId, target.vaultKey)).toEqual({ ok: true, data: null });
+  expect(await target.store.pull()).toBeNull();
+  expect(target.store.get('character', STARTER_CHARACTER_ID)).toBeNull();
+  expect(target.store.list('character').map(({ value }) => value.card.name)).toEqual(['아린']);
+});
+
+it('does not ask about a guest that holds only the first open’s defaults, the starter character with her picture among them, and the minutes it was open', async () => {
+  const { accountId, vaultKey, backend } = await guest();
+  const starter = { name: '아린', description: '', greeting: '', picture: async () => png() };
+  const opened = await openSession(accountId, vaultKey, '손님', new AbortController().signal, undefined, { backend }, { starter });
+  if (!opened.ok) throw new Error(opened.error);
+  await vi.waitFor(() => expect(opened.data.store.get('avatar', STARTER_AVATAR_ID)).toBeTruthy());
   expect(await savePresence(opened.data.store, presenceMemory(), [minuteOf(Date.now())])).toBe(true);
   opened.data.close();
   expect(await guestWithContent()).toEqual({ ok: true, data: null });

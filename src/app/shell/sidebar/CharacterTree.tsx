@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { ChatSummary } from '../../../model/chat';
 import type { FolderTree } from '../../../model/folders';
-import { characterTexts, type Shelf } from '../../../model/library';
+import { characterTexts, isUntouchedStarter, type Shelf } from '../../../model/library';
 import { ACTS } from '../../common/acts';
 import { useSearch } from '../../common/useSearch';
 import { ago } from '../../common/time';
@@ -29,7 +29,7 @@ type Props = {
 export function CharacterTree({ typing, linkOf, query, onQuery, openFolders, onToggleFolder }: Props) {
   const [sort] = useCharacterSort();
   const { characters, none, folders, byFolder, loose } = useSortedLibrary(sort);
-  const empty = characters.length === 0 && none.chats.length === 0;
+  const empty = characters.every(isUntouchedStarter) && none.chats.length === 0;
   const search = useSearch(characters, searchOf(THINGS.character.noun), ({ character }) => characterTexts(character), { query: [query, onQuery] });
   const { words } = search;
   const opened = useMemo(() => new Set(openFolders), [openFolders]);

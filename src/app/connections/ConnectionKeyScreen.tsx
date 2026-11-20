@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { ConnectionType } from '../../connectors/types';
 import { providerConnection } from '../../runtime/models/connections';
+import { KeyGrant } from '../common/KeyGrant';
 import { useAttempt } from '../common/useAttempt';
 import { MARKS } from '../common/tutorial';
 import { useSession } from '../session';
@@ -16,6 +17,7 @@ export function ConnectionKeyScreen({ type, back }: { type: ConnectionType; back
   const [key, setKey] = useState('');
   const { busy, failure, run } = useAttempt();
   const secret = key.trim();
+  const { grant } = type;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -34,6 +36,7 @@ export function ConnectionKeyScreen({ type, back }: { type: ConnectionType; back
       }
     >
       <Intro title={type.label}>{type.description}</Intro>
+      {grant && <KeyGrant type={{ ...type, grant }} label={`${type.label} 로그인으로 연결`} onKey={(granted) => void run((signal) => connect(session, providerConnection(type, granted), signal))} />}
       <GuideMark name={MARKS.connectKey}>
         <KeyField type={type} value={key} onChange={setKey} />
       </GuideMark>

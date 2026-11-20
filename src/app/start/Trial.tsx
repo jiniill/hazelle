@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
+import { isFree } from '../../connectors/pricing';
 import type { ConnectionType, Model } from '../../connectors/types';
 import { countFirstPage } from '../../runtime/service/first-page';
 import type { Session } from '../../runtime/session';
-import { connectTrial, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels, type TrialCharacter } from '../../runtime/account/trial';
+import { connectTrial, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels } from '../../runtime/account/trial';
+import { ARIN } from '../common/arin';
 import { describeCatalogFailure, describeFailure, describeKeyFailure, describeTurnFailure } from '../common/failure';
 import { href } from '../shell/routes';
-import { ARIN_PICTURE, Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, TextField } from '../ui';
-import { EXAMPLE } from './example';
+import { Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, TextField } from '../ui';
 import { searchOf } from '../common/words';
 
 type Phase =
@@ -20,13 +21,6 @@ const open = (at: string) => {
   location.assign(at);
 };
 
-const ARIN: TrialCharacter = {
-  name: EXAMPLE.name,
-  description: EXAMPLE.description,
-  greeting: EXAMPLE.greeting,
-  picture: async () => new Uint8Array(await (await fetch(ARIN_PICTURE)).arrayBuffer()),
-};
-
 // Runs the rest of the visit, loaded only once a key is entered: the engine is the page's heaviest part.
 // kept: on this browser's guest, so the app opens on it; otherwise on a throwaway session, with no way into the app.
 export function Trial({ type, secret, kept, onStep, onReplied, onRefused }: { type: ConnectionType; secret: string; kept: boolean; onStep: (step: number) => void; onReplied: () => void; onRefused: (message: string) => void }) {
@@ -37,7 +31,7 @@ export function Trial({ type, secret, kept, onStep, onReplied, onRefused }: { ty
     const leaving = new AbortController();
     let session: Session | null = null;
     void (async () => {
-      const opened = await openTrial(leaving.signal, kept);
+      const opened = await openTrial(leaving.signal, kept, ARIN);
       if (leaving.signal.aborted) return opened.ok ? opened.data.close() : undefined;
       if (!opened.ok) return onRefused(describeFailure(opened));
       session = opened.data;
@@ -84,16 +78,18 @@ function ModelPick({ models, failure, onPick }: { models: Model[]; failure: stri
   const shown = useMemo(() => models.filter((model) => `${model.name} ${model.id}`.toLowerCase().includes(search.trim().toLowerCase())), [models, search]);
   return (
     <Stack>
-      <TextField label={searchOf('모델')} showLabel={false} placeholder={`모델 ${models.length}개 검색`} value={search} onChange={setSearch} />
+      <TextField label={searchOf('모델')} showLabel={false} placeholder={`모델 ${models.length}개 검색`} help={models.some(isFree) ? FREE_HELP : undefined} value={search} onChange={setSearch} />
       {failure && <Callout tone="warn" alert>{failure}</Callout>}
       <List label="모델" box>
         {/* eslint-disable-next-line no-restricted-syntax -- a picker's first matches, which typing narrows */}
-        {shown.slice(0, MODELS_SHOWN).map((model) => <ListItem key={model.id} title={model.name} code={model.id} onClick={() => onPick(model)} />)}
+        {shown.slice(0, MODELS_SHOWN).map((model) => <ListItem key={model.id} title={model.name} code={model.id} tags={isFree(model) ? ['무료'] : undefined} onClick={() => onPick(model)} />)}
       </List>
     </Stack>
   );
 }
 const MODELS_SHOWN = 8;
+// True of every provider's free models, not one's rule: a 0 price also comes from models.dev (Google, Mistral, Groq).
+const FREE_HELP = '무료 모델은 제공자가 정한 사용 한도가 있고, 제공자에 따라 보낸 글이 학습에 쓰일 수 있어요.';
 
 function TrialChat({ session, kept, onReplied }: { session: Session; kept: boolean; onReplied: () => void }) {
   const [chat] = useState(() => crypto.randomUUID());
@@ -132,9 +128,9 @@ function TrialChat({ session, kept, onReplied }: { session: Session; kept: boole
         </>
       }
     >
-      <Said by="them" name={EXAMPLE.name}>{EXAMPLE.greeting}</Said>
-      {log.map(({ by, text }, index) => <Said key={index} by={by} name={by === 'them' ? EXAMPLE.name : undefined}>{text}</Said>)}
-      {turn && <Said by="them" name={EXAMPLE.name} typing>{turn.text}</Said>}
+      <Said by="them" name={ARIN.name}>{ARIN.greeting}</Said>
+      {log.map(({ by, text }, index) => <Said key={index} by={by} name={by === 'them' ? ARIN.name : undefined}>{text}</Said>)}
+      {turn && <Said by="them" name={ARIN.name} typing>{turn.text}</Said>}
       {failure && <Callout tone="warn" alert>{failure}</Callout>}
     </TalkBox>
   );

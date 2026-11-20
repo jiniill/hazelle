@@ -236,6 +236,8 @@ type TypeHooks = {
   // Absent for a type the user connects by signing in: there is no key to paste.
   detect?: { key: RegExp | null; host: string };
   signIn?: SignIn;
+  // Beside the key form, never in its place: signIn stands in for the form, a grant fills it.
+  grant?: Grant;
   // One connection may hold several signed-in accounts; the core picks one per reply, by its group's turn and by the
   // allowance its meters leave.
   pool?: true;
@@ -352,6 +354,15 @@ export type Draws = {
 export type Costs = 'plan' | 'size' | 'steps' | 'allowance' | 'unknown';
 
 export type Token = { value: string; expiresAt: number };
+
+// OAuth authorization code with PKCE (RFC 7636) whose exchange answers an API key: the person signs in on the
+// provider's page, which sends them to back with a single-use code and the state it was given.
+export type Grant = {
+  site: string;
+  page(challenge: string, state: string, back: string): string;
+  exchange(code: string, verifier: string): HttpRequest;
+  parse(payload: unknown): string | null;
+};
 
 // OAuth device authorization (RFC 8628): the token that comes back is an account's secret. account names who
 // signed in, so two accounts of one type can be told apart.

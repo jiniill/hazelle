@@ -48,11 +48,11 @@ export async function dayHash(db: Db, day: number, input: unknown[]): Promise<st
 
 export async function readVisits(db: Db, now = Date.now()): Promise<VisitDay[]> {
   const today = visitDay(now);
-  const { results } = await db.prepare('SELECT day, visitors, opened, connected, guests, accounts, converted, shown, read, door, keyed, entered FROM visit_days WHERE day >= ? AND day <= ? ORDER BY day DESC').bind(today - 13 * DAY_MS, today).all<VisitDay>();
+  const { results } = await db.prepare('SELECT day, visitors, opened, connected, guests, accounts, converted, shown, read, door, asked, granted, keyed, entered FROM visit_days WHERE day >= ? AND day <= ? ORDER BY day DESC').bind(today - 13 * DAY_MS, today).all<VisitDay>();
   const days = new Map(results.map((row) => [row.day, row]));
   return Array.from({ length: 14 }, (_, index) => {
     const day = today - index * DAY_MS;
-    return days.get(day) ?? { day, visitors: 0, opened: 0, connected: 0, guests: 0, accounts: 0, converted: 0, shown: 0, read: 0, door: 0, keyed: 0, entered: 0 };
+    return days.get(day) ?? { day, visitors: 0, opened: 0, connected: 0, guests: 0, accounts: 0, converted: 0, shown: 0, read: 0, door: 0, asked: 0, granted: 0, keyed: 0, entered: 0 };
   });
 }
 

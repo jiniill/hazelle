@@ -7,6 +7,9 @@ export function statedPrice(input: number | null, output: number | null, cacheRe
   return input === null || output === null ? undefined : { input, output, cacheRead, cacheWrite, tiers: [] };
 }
 
+// By its listed price alone, never by its name.
+export const isFree = ({ price }: Model) => price?.input === 0 && price.output === 0;
+
 // Provider catalog values win. Match models.dev ids exactly, then case-insensitively, never fuzzily.
 export function joinModelsDev(models: Model[], list: ModelsDevList | null): Model[] {
   if (!list?.fetchedAt) return models;

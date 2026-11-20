@@ -91,6 +91,71 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
   await expect(page.getByRole('heading', { level: 1, name: '내 API 키로 바로 시작하는 AI 캐릭터 챗' })).toHaveCount(0);
 });
 
+// OpenRouter's sign-in page, its exchange and its API, all in the browser as a guest's calls are. The page sends the
+// visitor straight back with a code, as it does once they approve.
+async function fakeOpenRouter(page: Page) {
+  const seen: { challenge: string | null; exchanged: { code: string; code_verifier: string }[]; said: string[] } = { challenge: null, exchanged: [], said: [] };
+  await page.route('https://openrouter.ai/**', (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname === '/auth') {
+      seen.challenge = url.searchParams.get('code_challenge');
+      const back = new URL(url.searchParams.get('callback_url')!);
+      back.searchParams.set('code', 'e2e-code');
+      back.searchParams.set('state', url.searchParams.get('state')!);
+      return route.fulfill({ contentType: 'text/html', body: `<script>location.replace(${JSON.stringify(back.href)})</script>` });
+    }
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
+    if (url.pathname.endsWith('/auth/keys')) {
+      seen.exchanged.push(request.postDataJSON());
+      return route.fulfill({ headers: CORS, json: { key: 'sk-or-v1-e2e' } });
+    }
+    const model = (id: string, name: string, price: string) => ({ id, name, context_length: 100000, architecture: { input_modalities: ['text'], output_modalities: ['text'] }, pricing: { prompt: price, completion: price }, supported_parameters: [] });
+    if (url.pathname.endsWith('/models')) return route.fulfill({ headers: CORS, json: { data: [model('maker/paid', 'Paid E2E', '0.000003'), model('maker/gift', 'Gift E2E', '0')] } });
+    if (url.pathname.endsWith('/key')) return route.fulfill({ headers: CORS, json: { data: { label: 'Hazelle', limit: null, limit_remaining: null, usage: 0, free_model_daily_requests: { used: 0, limit: 50, remaining: 50 } } } });
+    seen.said.push(request.postData() ?? '');
+    return route.fulfill({ headers: { ...CORS, 'content-type': 'text/event-stream' }, body: `data: ${JSON.stringify({ choices: [{ delta: { content: '무료로 온 답이에요.' }, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n` });
+  });
+  return seen;
+}
+
+test('a first visit signs in at OpenRouter instead of pasting a key, and talks on a free model', async ({ page }) => {
+  const seen = await fakeOpenRouter(page);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
+  await page.getByRole('button', { name: 'OpenRouter로 무료로 시작', exact: true }).click();
+
+  // Back on the first page, at the key form's place, with the code gone from the address.
+  const models = page.getByRole('list', { name: '모델' }).getByRole('button');
+  await expect(models).toHaveCount(2);
+  expect(new URL(page.url()).search).toBe('');
+  await expect(models.first()).toContainText('Gift E2E');
+  await expect(models.first()).toContainText('무료');
+  await expect(models.last()).not.toContainText('무료');
+  expect(seen.exchanged).toHaveLength(1);
+  const digest = await page.evaluate<string, string>(async (verifier) => btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))))), seen.exchanged[0]!.code_verifier);
+  expect(digest.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')).toBe(seen.challenge);
+
+  await models.first().click();
+  await page.getByRole('textbox', { name: '보낼 말' }).fill('안녕');
+  await page.getByRole('button', { name: '보내기', exact: true }).click();
+  await expect(page.getByText('무료로 온 답이에요.')).toBeVisible();
+  expect(seen.said.at(-1)).toContain('maker/gift');
+
+  // The key is an ordinary connection's: a reload asks OpenRouter for nothing again and the app holds it.
+  await page.getByRole('button', { name: '앱에서 대화 이어 가기', exact: true }).click();
+  await expect(page).toHaveURL(/\/chats\//);
+  expect(seen.exchanged).toHaveLength(1);
+
+  // The same sign-in from the app's own key screen lands on the connection it made.
+  await page.goto('/connections/new/openrouter');
+  await page.getByRole('button', { name: 'OpenRouter 로그인으로 연결', exact: true }).click();
+  await expect(page).toHaveURL(/\/connections\/[0-9a-f-]{36}$/);
+  await expect(page.getByText('Gift E2E').first()).toBeVisible();
+  expect(seen.exchanged).toHaveLength(2);
+});
+
 // One gesture's wheel events, sent at once: awaited one by one they reach the page some 135 ms apart, and at 160 ms the
 // page takes the next for a new gesture.
 const flick = (page: Page, deltas: number[]) => Promise.all(deltas.map((delta) => page.mouse.wheel(0, delta)));
@@ -122,7 +187,15 @@ test('one gesture moves one stop at once, and the door looks the same on any scr
   await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(room + 500);
 
   // A list inside the panel scrolls first, and a flick that runs it to its end stays in the room; only a fresh notch leaves.
+  // The notch's glide is let end first: still running, it carries the page off the room again under the next step.
+  const rested = async () => {
+    const at = await scrollTop();
+    await page.waitForTimeout(200);
+    return (await scrollTop()) === at;
+  };
+  await expect.poll(rested, { timeout: 5000 }).toBe(true);
   await page.evaluate(`document.getElementById('trial').scrollIntoView()`);
+  await expect.poll(scrollTop).toBe(room);
   const list = page.getByLabel(/API 키$/);
   await page.evaluate(`(() => {
     let scroller = document.querySelector('#trial input').parentElement;
@@ -134,8 +207,7 @@ test('one gesture moves one stop at once, and the door looks the same on any scr
   await list.hover();
   const inRoom = await scrollTop();
   await flick(page, Array<number>(30).fill(60));
-  await page.waitForTimeout(300);
-  expect(await scrollTop()).toBe(inRoom);
+  await page.waitForTimeout(300);  expect(await scrollTop()).toBe(inRoom);
   expect(await page.evaluate<number>(`document.querySelector('[data-test-scroller]').scrollTop`)).toBeGreaterThan(0);
   await page.mouse.wheel(0, 100);
   await expect.poll(scrollTop, { timeout: 5000 }).toBeGreaterThan(inRoom + 500);
@@ -188,6 +260,14 @@ test('the room lets a visitor without a key open the app', async ({ page }) => {
   }
   await page.getByRole('button', { name: '키 없이 둘러보기' }).click();
   await expect(page.getByRole('heading', { name: '비어 있어요', exact: true })).toBeVisible();
+  // A new guest starts with her; with no connection, the model button leads straight to 새 연결.
+  await page.getByRole('button', { name: /아린과 대화/ }).click();
+  await expect(page.getByText('저는 아린이에요')).toBeVisible();
+  await page.getByPlaceholder('메시지').fill('안녕하세요');
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: '모델 선택', exact: true }).last().click();
+  await page.getByRole('menuitem', { name: '새 연결' }).click();
+  await expect(page).toHaveURL(/\/connections\/new$/);
 });
 
 test('someone already using the app can walk it again and try it, uncounted, keeping nothing', async ({ page }) => {
@@ -206,6 +286,7 @@ test('someone already using the app can walk it again and try it, uncounted, kee
   await expect(heading).toBeVisible();
   await expect(again.getByRole('button', { name: '가입 없이 열기' })).toHaveCount(0);
   await expect(again.getByRole('button', { name: '키 없이 둘러보기' })).toHaveCount(0);
+  await expect(again.getByRole('button', { name: 'OpenRouter로 무료로 시작' })).toHaveCount(0);
   await fakeAnthropic(again);
   await again.evaluate(`document.getElementById('trial').scrollIntoView()`);
   await again.getByLabel(/API 키$/).fill(KEY);

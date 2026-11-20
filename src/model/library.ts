@@ -104,6 +104,11 @@ export type Removable = (typeof REMOVABLE)[number];
 export type Mark = { deleted?: number; purging?: true };
 
 // Whether it is out of 휴지통, and whether 휴지통 shows it: one being removed for good (purging) is neither.
+// The starter character's rows. Fixed, as the default prompts' are: a restore and a guest's upload know them as what
+// opening added, and two pages opening one new account make one of her.
+export const STARTER_CHARACTER_ID = '00000000-0000-4000-8000-00000000000a';
+export const STARTER_AVATAR_ID = '00000000-0000-4000-8000-00000000000b';
+
 export const isLive = ({ deleted }: Mark) => deleted === undefined;
 export const isBinned = ({ deleted, purging }: Mark) => deleted !== undefined && !purging;
 
@@ -155,6 +160,9 @@ export type TextFile = { name: string; title: string; text: string };
 // avatar: its id, whose file is the picture at full size.
 export type Shelf<C> = { id: string | null; character: Character | null; face: string | null; avatar: string | null; chats: C[] };
 export type CharacterShelf<C> = Shelf<C> & { id: string; character: Character };
+
+// The starter character nobody has talked to yet: a library holding only her is still the empty home's.
+export const isUntouchedStarter = <C>({ id, chats }: Shelf<C>) => id === STARTER_CHARACTER_ID && chats.length === 0;
 
 type ChatLike = { chat: { character: string | null } & Mark; order: number; at: number | null };
 

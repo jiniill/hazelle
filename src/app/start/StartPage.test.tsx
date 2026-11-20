@@ -14,6 +14,8 @@ vi.mock('../ui', () => ({
 }));
 vi.mock('./Trial', () => ({ Trial: ({ onRefused }: { onRefused: (message: string) => void }) => ((live.refuse = onRefused), null) }));
 vi.mock('../common/LegalNotice', () => ({ LegalNotice: () => null }));
+vi.mock('../common/KeyGrant', () => ({ KeyGrant: () => null }));
+vi.mock('../../runtime/account/grant', () => ({ grantReturn: () => null }));
 
 afterEach(() => {
   vi.unstubAllGlobals();

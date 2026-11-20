@@ -224,6 +224,11 @@ export async function relayBytes(request: HttpRequest, signal: AbortSignal, puls
   }
 }
 
+// Leaves from the page whoever is signed in, and before anyone is: a grant's exchange answers a key, which the server
+// has no part in.
+export const pageJson = async (request: HttpRequest, type: ConnectionType, signal?: AbortSignal): Promise<JsonAnswer> =>
+  readJson(await answered(await directTransport(null, 'needs-relay').raw(request, signal, undefined, undefined, type)), signal);
+
 // OAuth puts its refusals in a JSON body for the caller to read: RFC 8628 answers "not yet" with a 400.
 export async function relayOAuth(request: HttpRequest, signal?: AbortSignal): Promise<JsonAnswer> {
   return readJson(await relayRaw(request, signal), signal);

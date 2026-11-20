@@ -2,12 +2,12 @@ import { unzipSync, zipSync } from 'fflate';
 import { describe, expect, it, vi } from 'vitest';
 import type { Card } from '../../engine/import/types';
 import { fold, type Chat } from '../../model/chat';
-import type { Lore } from '../../model/library';
+import { STARTER_AVATAR_ID, STARTER_CHARACTER_ID, type Lore } from '../../model/library';
 import { randomBytes } from '../../vault/aead';
 import type { BackupStep } from './backup-core';
 import { exportBackup, readBackup, restoreBackup } from '../testing/backup';
 import type { Files } from '../files/files';
-import { editCharacter, importCharacter, setDeleted } from '../library/characters';
+import { addStarter, editCharacter, importCharacter, setDeleted } from '../library/characters';
 import { appendUserMessage, removeChat, startChat } from '../chat/chat-log';
 import { projectGreetings } from '../chat/greetings';
 import { addFirstPersona } from '../library/personas';
@@ -333,6 +333,41 @@ describe('backup', () => {
     const before = await held(store);
     expect(await restoreBackup(store, files, second)).toEqual({ ok: false, error: 'not-new' });
     expect(await held(store)).toEqual(before);
+  });
+
+  it('loads into an account holding the starter character, who goes as the other defaults do', async () => {
+    const old = await oldAccount();
+    const backup = await read(await exported(old.store, old.files));
+
+    await server.wipe();
+    const { store, files } = await open('someone');
+    await addStarter(store, files, { name: '아린', description: '', greeting: '', picture: async () => png() });
+    await vi.waitFor(() => expect(store.get('avatar', STARTER_AVATAR_ID)).toBeTruthy());
+    expect(await restoreBackup(store, files, backup)).toEqual({ ok: true, data: { skipped: 0 } });
+    expect(store.get('character', STARTER_CHARACTER_ID)).toBeNull();
+    expect(store.get('avatar', STARTER_AVATAR_ID)).toBeNull();
+  });
+
+  it('loads a backup that holds the starter character over the one opening added', async () => {
+    const starter = { name: '아린', description: '', greeting: '', picture: async () => png() };
+    const old = await oldAccount();
+    await addStarter(old.store, old.files, starter);
+    await vi.waitFor(() => expect(old.store.get('avatar', STARTER_AVATAR_ID)).toBeTruthy());
+    await editCharacter(old.store, STARTER_CHARACTER_ID, { name: '내 아린' });
+    const chat = crypto.randomUUID();
+    await server.hold(old.store, chat);
+    await startChat(old.store, chat, { title: null, character: STARTER_CHARACTER_ID, models: {} }, null);
+    const picture = old.store.get('avatar', STARTER_AVATAR_ID)!.value.file;
+    const backup = await read(await exported(old.store, old.files));
+
+    await server.wipe();
+    const { store, files } = await open('someone');
+    await addStarter(store, files, starter);
+    await vi.waitFor(() => expect(store.get('avatar', STARTER_AVATAR_ID)).toBeTruthy());
+    expect(await restoreBackup(store, files, backup)).toEqual({ ok: true, data: { skipped: 0 } });
+    expect(store.get('character', STARTER_CHARACTER_ID)!.value.card.name).toBe('내 아린');
+    expect(store.children('avatar', STARTER_CHARACTER_ID).map(({ id, value }) => [id, value.file])).toEqual([[STARTER_AVATAR_ID, picture]]);
+    expect(store.get('chat', chat)!.value.character).toBe(STARTER_CHARACTER_ID);
   });
 
   it('refuses an account holding something of its own, and writes nothing', async () => {

@@ -9,7 +9,8 @@ import { serverBackend, type Backend } from './store/backend';
 import { AssetUrls, UnfoundAssets } from './files/assets';
 import { Catalogs } from './models/catalog';
 import { ChatFinder } from './chat/chat-search';
-import { seedOrder } from './library/characters';
+import { SETTINGS_ID } from '../model/settings';
+import { addStarter, seedOrder, type Starter } from './library/characters';
 import { purgeExpired } from './library/removal';
 import { Costs } from './models/cost';
 import { Credentials } from './models/credential';
@@ -106,7 +107,7 @@ const luaWorker = (): Promise<LuaRunner> => Promise.resolve(new LuaWorker());
 
 // Aborted opens start nothing; cached opens never wait on network. Caller keeps drafts for the unlocked vault.
 // Guests use their browser master directly, without a redundant device cache.
-export async function openSession(accountId: string, vaultKey: VaultKey, username: string, signal: AbortSignal, progress?: (progress: PullProgress) => void, kept: { backend: Backend; cache?: DeviceCache; log?: BrowserLogCache; transport?: Transport } = { backend: serverBackend(), cache: deviceCache(accountId), log: logCache(accountId) }, bindings: { lua?: () => Promise<LuaRunner>; tools?: typeof createTools; drafts?: Drafts } = {}): Promise<ApiResult<Session>> {
+export async function openSession(accountId: string, vaultKey: VaultKey, username: string, signal: AbortSignal, progress?: (progress: PullProgress) => void, kept: { backend: Backend; cache?: DeviceCache; log?: BrowserLogCache; transport?: Transport } = { backend: serverBackend(), cache: deviceCache(accountId), log: logCache(accountId) }, bindings: { lua?: () => Promise<LuaRunner>; tools?: typeof createTools; drafts?: Drafts; starter?: Starter } = {}): Promise<ApiResult<Session>> {
   const opening = async () => {
     const store = await ObjectStore.open(accountId, vaultKey, kept.backend, kept.cache, signal);
     const pulled = signal.aborted ? { ok: false as const, error: 'stopped' as const } : store.cached ? null : await store.pull({ signal, progress });
@@ -124,7 +125,10 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   // A new account sees its defaults on the first screen; a cached account fills missing defaults after catch-up.
   // The task models move once the row upgrades are written, so the two never write one object at once.
   const defaults = () => Promise.all([addDefaults(store), addFirstPersona(store, username).then(() => recordChatPersonas(store)), addFirstProfile(store), saveUpgraded(store).then(() => moveTaskModels(store))]);
-  if (!store.cached) await defaults();
+  // Read before the defaults write the settings: only an account holding nothing yet starts with the character, and a
+  // failed write is not tried again, since the next open cannot tell this account from an older one.
+  const starter = !store.cached && !store.get('settings', SETTINGS_ID) ? bindings.starter : undefined;
+  if (!store.cached) await Promise.all([defaults(), starter && addStarter(store, files, starter)]);
   if (signal.aborted) {
     store.close();
     return { ok: false, error: 'stopped' };
@@ -285,10 +289,10 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
 }
 
 // The whole app's engine for one page, for someone whose own data must not change: nothing it holds can be read after the page, and it counts toward nothing.
-export async function openThrowawaySession(signal: AbortSignal): Promise<ApiResult<Session>> {
+export async function openThrowawaySession(signal: AbortSignal, bindings: Parameters<typeof openSession>[6] = {}): Promise<ApiResult<Session>> {
   const { accountId, vaultKey } = await throwawayGuest();
   const forget = () => void dropGuestStore(accountId);
-  const opened = await openSession(accountId, vaultKey, '손님', signal, undefined, { backend: guestBackend(accountId), transport: directTransport(null, 'needs-account') });
+  const opened = await openSession(accountId, vaultKey, '손님', signal, undefined, { backend: guestBackend(accountId), transport: directTransport(null, 'needs-account') }, bindings);
   if (!opened.ok) {
     forget();
     return opened;

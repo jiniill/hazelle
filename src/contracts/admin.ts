@@ -6,8 +6,9 @@ export const MAX_NOTICE_LENGTH = 2000;
 // opened, connected, guests: the guest ids that opened the app, added a connection or got a reply that day (GUEST_STEPS).
 export const GUEST_STEPS = ['opened', 'connected', 'replied'] as const;
 export type GuestStep = (typeof GUEST_STEPS)[number];
-// The first page's visitors per address that day: saw it, came down to the example, came down to the key form, entered a key, went into the app.
-export const FIRST_PAGE_STEPS = ['shown', 'read', 'door', 'keyed', 'entered'] as const;
+// The first page's visitors per address that day: saw it, came down to the example, came down to the key form, left for a
+// provider's sign-in, came back from it with a key, entered a key (that one or a pasted one), went into the app.
+export const FIRST_PAGE_STEPS = ['shown', 'read', 'door', 'asked', 'granted', 'keyed', 'entered'] as const;
 export type FirstPageStep = (typeof FIRST_PAGE_STEPS)[number];
 export type VisitDay = { day: number; visitors: number; opened: number; connected: number; guests: number; accounts: number; converted: number } & Record<FirstPageStep, number>;
 // weeks: the closed weeks shown, oldest first. people lines up with weeks; null is under PULSE_FLOORS.row.

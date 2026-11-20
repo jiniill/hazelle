@@ -8,6 +8,7 @@ import { openGuestSession, openSession, type Session } from '../../runtime/sessi
 import type { PullProgress } from '../../runtime/store/store';
 import type { Unlocked } from '../account/AccountFlow';
 import { UnreachableScreen } from '../account/UnreachableScreen';
+import { ARIN } from '../common/arin';
 import { describeFailure } from '../common/failure';
 import { readPosts } from '../../runtime/service/board';
 import { carryDeviceValues, type DeviceStorage } from '../../runtime/device/device-values';
@@ -226,7 +227,7 @@ export function Workspace({ accountId, vaultKey, username, ...account }: Unlocke
     const progress = (progress: PullProgress) => {
       if (!abandon.signal.aborted) setProgress(progress);
     };
-    const opening = account.guest ? openGuestSession(abandon.signal, progress, { drafts }) : openSession(accountId, vaultKey, username, abandon.signal, progress, undefined, { drafts });
+    const opening = account.guest ? openGuestSession(abandon.signal, progress, { drafts, starter: ARIN }) : openSession(accountId, vaultKey, username, abandon.signal, progress, undefined, { drafts, starter: ARIN });
     void opening.then((result) => {
       if (abandon.signal.aborted) return;
       if (!result.ok) return setFailure(describeFailure(result));
