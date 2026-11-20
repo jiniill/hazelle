@@ -94,22 +94,25 @@ it('counts a first page step once per address a day, with no id, and never a cra
 it('closes a week into people per signup week, only from the policy week on and never under the floor', async () => {
   const counted = WEEK_FROM + WEEK;
   await t.env.db.prepare('UPDATE service SET pulse_cohorts_from = ?').bind(counted).run();
-  const signUpAt = async (now: number, count: number) => {
+  // A session is read by the same clock it was made under: by the real one it is past its life.
+  const under = async <T>(now: number, run: () => Promise<T>) => {
     const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
     try {
-      return await people(count);
+      return await run();
     } finally {
       clock.mockRestore();
     }
   };
-  const first = await signUpAt(NOON, 10);
-  await seen(first);
+  const first = await under(NOON, async () => {
+    const cookies = await people(10);
+    await seen(cookies);
+    return cookies;
+  });
   at(NOON + 5 * DAY);
   await board();
   expect((await t.env.db.prepare('SELECT * FROM pulse_week_cohorts').all()).results).toEqual([]);
   at(NOON + WEEK);
-  const late = await signUpAt(NOON + WEEK, 3);
-  await seen([...first, ...late]);
+  await under(NOON + WEEK, async () => seen([...first, ...(await people(3))]));
   at(NOON + WEEK + 5 * DAY);
   await board();
   expect((await t.env.db.prepare('SELECT week, cohort, people FROM pulse_week_cohorts').all()).results).toEqual([{ week: counted, cohort: WEEK_FROM, people: 10 }]);
