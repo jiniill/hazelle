@@ -165,6 +165,11 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
     if (!ink || (settled(ink) && !writing)) host.removeAttribute(INK);
     else host.setAttribute(INK, Math.round(ink.edge) < ink.length ? 'behind' : 'level');
   };
+  const rest = () => {
+    cancelAnimationFrame(frame);
+    frame = 0;
+    clear();
+  };
   const run = () => {
     if (frame || !ink || settled(ink)) return;
     last = performance.now();
@@ -186,7 +191,8 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
       // Settled and no longer written: nothing to read until the writing begins again.
       if (!writing && (!ink || settled(ink))) {
         ink = null;
-        clear();
+        // A frame asked for while it was unsettled may still wait: a text rewritten whole settles it between frames.
+        rest();
         gateAt(null);
         return mark();
       }
@@ -201,10 +207,6 @@ export function inkOn(host: HTMLElement, shadow: ShadowRoot, fresh: boolean): St
       mark();
       run();
     },
-    end() {
-      cancelAnimationFrame(frame);
-      frame = 0;
-      clear();
-    },
+    end: rest,
   };
 }

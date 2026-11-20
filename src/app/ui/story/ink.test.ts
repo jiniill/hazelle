@@ -1,5 +1,5 @@
-import { expect, it } from 'vitest';
-import { drawnInk, settled, startInk, stepInk, WIDTH, type Ink } from './ink';
+import { expect, it, vi } from 'vitest';
+import { drawnInk, inkOn, settled, startInk, stepInk, WIDTH, type Ink } from './ink';
 
 const pace = { follow: 450, even: 200, idle: 250, close: 350 };
 const FRAME = 16;
@@ -38,4 +38,32 @@ it('closes on the end once nothing more comes, and waits on its gradient while m
 it('stays inside a text that got shorter', () => {
   const ink = drawnInk({ ...startInk(0, 0), length: 300, edge: 250, solid: 220 }, 230, 10);
   expect(ink).toMatchObject({ length: 230, edge: 230, solid: 220 });
+});
+
+it('asks for no frame once a text rewritten whole is no longer written', () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  const text = { data: '', parentElement: { localName: 'p' }, parentNode: null as unknown };
+  const shadow = { adoptedStyleSheets: [], children: [] };
+  text.parentNode = shadow;
+  vi.stubGlobal('requestAnimationFrame', (tick: FrameRequestCallback) => frames.set(frames.size + 1, tick).size);
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
+  vi.stubGlobal('getComputedStyle', () => ({ color: 'rgb(0, 0, 0)', getPropertyValue: () => '100ms' }));
+  vi.stubGlobal('CSSStyleSheet', class { replaceSync() {} });
+  vi.stubGlobal('Highlight', Set);
+  vi.stubGlobal('CSS', { highlights: new Map() });
+  vi.stubGlobal('Range', class { setStart() {} setEnd() {} });
+  vi.stubGlobal('Element', class {});
+  vi.stubGlobal('NodeFilter', { SHOW_TEXT: 4 });
+  vi.stubGlobal('document', { createTreeWalker: () => { const left = [text]; return { nextNode: () => left.shift() ?? null }; } });
+  const ink = inkOn({ setAttribute() {}, removeAttribute() {} } as unknown as HTMLElement, shadow as unknown as ShadowRoot, true);
+  text.data = '가나다라마바사';
+  ink.drawn(true);
+  frames.get(1)!(performance.now() + 50);
+  expect(frames.size).toBe(2);
+  text.data = '다시 쓴 글';
+  ink.drawn(true);
+  ink.drawn(false);
+  frames.delete(1);
+  expect(frames.size).toBe(0);
+  vi.unstubAllGlobals();
 });
