@@ -18,7 +18,7 @@ import { greetingOf } from '../../runtime/chat/greetings';
 import type { Shown } from '../../runtime/chat/talk';
 import { blocked, isBlocked, type Target } from '../../runtime/chat/turn-context';
 import { packsOf, togglesOf, usageShownOf } from '../../runtime/chat/chat-context';
-import { polishAgain, takeTurn, type TurnFailure } from '../../runtime/chat/turn';
+import { polishAgain, takeTurn, turnHalted, type TurnFailure } from '../../runtime/chat/turn';
 import { skippedStep, type Skip, type StepFailure } from '../../runtime/chat/turn-steps';
 import { agentsOf } from '../../runtime/tasks/agents';
 import type { PersonaChoice } from '../../runtime/library/personas';
@@ -197,6 +197,8 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   function report(failure: TurnFailure | null, target?: Target, skip: Skip = {}) {
     if (!failure) return;
     if (isBlocked(failure)) return setStopped(true);
+    // 멈추기 or a store that closed under the turn: nothing failed, and the draft is already back (send).
+    if (turnHalted(failure)) return;
     if (failure.kind !== 'busy') autoDiagnose({ event: 'turn-failed', detail: failure.kind, chat: { id: chatId, read: () => autoChat(session, chatId, null, session.memory.snapshot(), { turn: turnFacts(failure) }) } });
     const skipped = target && skippedStep(failure, skip);
     if (skipped) return setSkippable({ ...skipped, target });

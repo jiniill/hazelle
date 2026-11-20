@@ -91,20 +91,22 @@ type Work = { key: string; on: Lane | null; scope: ChatScope | null; regex: bool
 const keyOf = ({ asker, chat, tool }: Lane) => `${asker}:${chat}${tool === undefined ? '' : `:${tool}`}`;
 const bare = (scope: ChatScope): ChatScope => ({ ...scope, packs: scope.packs.map((pack) => ({ ...pack, regex: [] })) });
 // 자동 진단's read of a job that went silent: its sizes and closed words, nothing a chat or a bot wrote or is named.
-const jobFacts = ({ on, scope, regex }: Work, jobs: number, ran: number): AutoJob => ({
+const jobFacts = ({ on, scope, regex }: Work, jobs: number, ran: number, signs: number): AutoJob => ({
   asker: on?.asker ?? null,
   regex,
   scope: scope && { regex: scope.packs.reduce((sum, pack) => sum + pack.regex.length, 0), messages: scope.messages.length, chars: scope.messages.reduce((sum, { text }) => sum + text.length, 0), lore: scope.lore.length },
   jobs,
   ran,
+  signs,
 });
 
 export class Evaluation {
   private worker: Worker | null = null;
   private warming: ReturnType<typeof setTimeout> | null = null;
   private warmed: Worker | null = null;
-  // started: when its pass began, null before. answered: the jobs this worker has answered.
-  private active: { id: number; work: Work; started: number | null } | null = null;
+  // started: when its pass began, null before. signs: the signs of life it has posted. answered: the jobs this worker
+  // has answered.
+  private active: { id: number; work: Work; started: number | null; signs: number } | null = null;
   private answered = 0;
   private readonly waiting = new Map<string, Work>();
   private readonly histories = new Map<string, ChatScope['messages']>();
@@ -284,7 +286,7 @@ export class Evaluation {
     const work = this.next();
     if (!work) return this.heart.rest();
     const id = ++this.ids;
-    this.active = { id, work, started: null };
+    this.active = { id, work, started: null, signs: 0 };
     try {
       const worker = this.open();
       let input: EvaluationInput;
@@ -319,6 +321,7 @@ export class Evaluation {
   }
 
   private receive(data: EvaluationUp) {
+    if ('progress' in data && this.active) this.active.signs++;
     if ('pong' in data || 'progress' in data) return this.heart.answered();
     if ('trouble' in data) {
       autoDiagnose({ event: 'worker-trouble' });
@@ -354,7 +357,7 @@ export class Evaluation {
     if (!active || active.started === null) return this.end(new EvaluationFailed('Evaluation worker stuck'));
     const { on, job, regex } = active.work;
     // One report for a chat's asker with the regex and one without it, so a verdict's rerun that stalls too is seen.
-    autoDiagnose({ event: 'evaluation-stuck', detail: job.kind, job: { id: [on?.chat, on?.asker, regex].join(':'), facts: jobFacts(active.work, this.answered, Date.now() - active.started) } });
+    autoDiagnose({ event: 'evaluation-stuck', detail: job.kind, job: { id: [on?.chat, on?.asker, regex].join(':'), facts: jobFacts(active.work, this.answered, Date.now() - active.started, active.signs) } });
     this.worker?.terminate();
     this.worker = null;
     this.cancelWarm();

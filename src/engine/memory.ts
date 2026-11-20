@@ -519,8 +519,9 @@ export type Drafted = Scene & Pick<MemoryRecord, 'state' | 'opens'> & { to: numb
 // A field names the first field of a record or chapter that is missing or of the wrong kind.
 type Field = 'when' | 'where' | 'who' | 'what' | 'lines' | 'outcome' | 'to' | 'state' | 'opens' | 'closes';
 // shape: no {"records": [...]} or {"chapter": {...}}, or an item that is no object; order: a "to" that does not move
-// forward inside the span; short: records that stop before the span's last message.
-export type Invalid = 'unreadable' | 'shape' | 'order' | 'short' | Field;
+// forward inside the span; short: records that stop before the span's last message. no-json: an answer with no object
+// or list in it at all, as a model that declines in a sentence writes; unreadable: one that has, and does not parse.
+export type Invalid = 'no-json' | 'unreadable' | 'shape' | 'order' | 'short' | Field;
 // record: which record's "to" it is, counted from 1; after: the "to" before it, 0 for the first; of: the span's messages.
 export type Refusal = { reason: Exclude<Invalid, 'order'> } | { reason: 'order'; record: number; to: number; after: number; of: number };
 
@@ -545,13 +546,15 @@ function linesSaid(lines: Line[], source: string): Line[] {
   });
 }
 
+const unread = (answer: string): Refusal => ({ reason: /[{[]/.test(answer) ? 'unreadable' : 'no-json' });
+
 // A memory task's answer (design §6.2, Validation): JSON in memoryFormat's shape, its records covering span (the
 // messages' texts as the prompt rendered them) exactly and every field present, with the key lines its own messages
 // say (linesSaid).
 // kept: the records read before the refusal, each checked on its own, which cover the span's first messages.
 export function parseRecords(answer: string, span: string[]): { ok: true; records: Drafted[] } | { ok: false; refusal: Refusal; kept: Drafted[] } {
   const read = answerJson(answer);
-  if (!read.ok) return { ok: false, refusal: { reason: 'unreadable' }, kept: [] };
+  if (!read.ok) return { ok: false, refusal: unread(answer), kept: [] };
   const parsed = read.value;
   const records: Drafted[] = [];
   const refused = (refusal: Refusal) => ({ ok: false as const, refusal, kept: records });
@@ -571,7 +574,7 @@ export function parseRecords(answer: string, span: string[]): { ok: true; record
 // A chapter job's answer, by the same rules over its whole span, with no state or threads.
 export function parseChapter(answer: string, span: string[]): { ok: true; chapter: Scene } | { ok: false; refusal: Refusal } {
   const read = answerJson(answer);
-  if (!read.ok) return { ok: false, refusal: { reason: 'unreadable' } };
+  if (!read.ok) return { ok: false, refusal: unread(answer) };
   const parsed = read.value;
   if (!isRecord(parsed) || !isRecord(parsed.chapter)) return { ok: false, refusal: { reason: 'shape' } };
   const chapter = sceneOf(parsed.chapter);

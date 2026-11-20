@@ -103,8 +103,9 @@ const CHAT = {
   aux: { type: orNull(TYPE), model: orNull(new RegExp(`^.{1,${MODEL_MOST}}$`, 's')) },
   // How much the chat's memory holds, null while the chat is not loaded.
   stored: orNull({ records: 'number', chapters: 'number', facts: 'number', threads: 'number' }),
-  // The summaries still to run on this page, and what stopped them: records in failed, chapters in chapter.
-  work: { left: orNull('number'), failed: orNull(FAILURE), chapter: orNull(FAILURE) },
+  // The summaries still to run on this page, and what stopped them: records in failed, chapters in chapter, the
+  // records' embeddings in index.
+  work: { left: orNull('number'), failed: orNull(FAILURE), chapter: orNull(FAILURE), index: orNull(FAILURE) },
   // The latest message's call, on any report.
   last: orNull(CALL),
   // On turn-failed: what the failure says besides its kind.
@@ -148,6 +149,9 @@ const JOB = {
   jobs: 'number',
   // Milliseconds from its start to the silence that ended it.
   ran: 'number',
+  // The signs of life it posted before that (engine/progress, at most one every 250 ms): 0 for a job whose first unit
+  // never ended.
+  signs: 'number',
 } as const;
 
 const REPORT = {

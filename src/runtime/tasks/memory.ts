@@ -516,6 +516,14 @@ export class Rememberer {
   private async resumed(chat: string, stream: Stored<'stream'>, { sources, print, chapter }: Extract<Stream['for'], { kind: 'memory' }>) {
     const text = gather();
     const answer = await this.reads(stream.id, (signal) => resume(this.session, stream, signal, text));
+    // The server holds it no longer (a day passed, or the account's share let it go): nothing was answered, so its
+    // work is planned again, not failed.
+    if (answer.error?.kind === 'app' && answer.error.code === 'stream-gone') {
+      endCall(this.session.store, stream.id);
+      this.ended.add(stream.id);
+      this.schedule.queue(chat, 'full');
+      return;
+    }
     const sent = await chatSent(this.session, chat, 'memory', null);
     if (sent && 'kind' in sent) return this.change(chat, { failed: sent });
     const places = placesOf(sent?.read.shown ?? []);

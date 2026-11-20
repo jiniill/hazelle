@@ -23,7 +23,8 @@ type Props = {
   // The × that puts it away: on the notice's corner while a pointer is on it, so the notice keeps its size, and in the
   // head of one opened to stay. On a phone the others are slid away (ToastStack).
   onClose?: () => void;
-  // How long it stays, in ms: a notice with an action draws it as a shrinking line, which stops while paused.
+  // How long it stays, in ms, 0 for one no time takes away: a notice with an action draws it as a shrinking line, which
+  // stops while paused.
   life: number;
   paused: boolean;
 };
@@ -75,7 +76,7 @@ export function Toast({ message, detail, tone, action, times = 1, from, onKeep, 
             )}
           </div>
         )}
-        {action && <div className={styles.time} />}
+        {action && life > 0 && <div className={styles.time} />}
       </div>
       {close && !open && <span className={styles.corner}>{close}</span>}
     </div>

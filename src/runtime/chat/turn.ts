@@ -1,3 +1,4 @@
+import { isHalted } from '../store/store';
 import { providerFit } from '../models/token-calibration';
 import { answerInstructionOf, translationInput, tokenLimits, sentSettings } from './chat-context';
 import { cacheSend, gatherTurn, type Target, type Blocked, type TurnContext } from './turn-context';
@@ -39,6 +40,9 @@ export type TurnFailure = (
   | AdditionalFailure
   | StepFailure
 ) & { kept?: true };
+
+// 멈추기 before the message was saved, or a store that closed under the turn: nothing failed, and nothing is said.
+export const turnHalted = (failure: TurnFailure) => failure.kind === 'unsent' && isHalted(failure.failure);
 
 // Auto-translate only replies received here, never existing messages, greetings or version/switch changes (user, 2026-10-04).
 // Re-read after onOutput, which may edit/delete the saved message. Keep the chat loaded until this returns.
