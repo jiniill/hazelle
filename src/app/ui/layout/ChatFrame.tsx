@@ -172,7 +172,7 @@ export function ChatFrame({ back, title, actions, children, above, footer, dockR
 
   // A move that ends at the story's end is the view following it (the story shrank as its font loaded, a reply
   // grew), not the reader going up.
-  // A null ref: React has let go of the frame, and a scroll queued before that still lands (seen in 자동 진단).
+  // A null ref: React has let go of the frame, and a scroll queued before that still lands.
   function scrolled() {
     const element = scrollRef.current;
     if (!element) return;
