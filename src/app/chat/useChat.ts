@@ -17,7 +17,7 @@ import { triggersOf } from '../../runtime/scripts/selection';
 import { greetingOf } from '../../runtime/chat/greetings';
 import type { Shown } from '../../runtime/chat/talk';
 import { blocked, isBlocked, type Target } from '../../runtime/chat/turn-context';
-import { packsOf, togglesOf, usageShownOf } from '../../runtime/chat/chat-context';
+import { inkedOf, packsOf, togglesOf, usageShownOf } from '../../runtime/chat/chat-context';
 import { polishAgain, takeTurn, turnHalted, type TurnFailure } from '../../runtime/chat/turn';
 import { skippedStep, type Skip, type StepFailure } from '../../runtime/chat/turn-steps';
 import { agentsOf } from '../../runtime/tasks/agents';
@@ -83,7 +83,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     void session.tools.warm(id);
     session.scriptInteractions.claims(id);
   }, [id, tools]);
-  const { toggles, scripted, features, stages, translate, usageShown } = useCaptured((store) => {
+  const { toggles, scripted, features, stages, translate, usageShown, inked } = useCaptured((store) => {
     const packs = packsOf(store, chat);
     return {
       toggles: toggleRows(togglesOf(store, chat, prompt, packs)),
@@ -93,6 +93,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
       stages: agentsOf(store, chat),
       translate: chatTranslate(store, chat),
       usageShown: usageShownOf(store),
+      inked: inkedOf(store),
     };
   }, [chat, prompt]);
   const card = shelf?.character.card ?? null;
@@ -426,6 +427,7 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
     tools,
     bookmarked,
     usageShown,
+    inked,
     onboarding,
     modelMenu,
     castMenu,

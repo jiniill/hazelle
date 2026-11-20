@@ -1,4 +1,7 @@
+import { offerOpen, type OfferId, type Settings } from '../../model/settings';
 import type { Route } from '../shell/routes';
+import type { DemoSpec } from '../ui';
+import { inSettings, REPLY_INK } from './words';
 
 // The pictures common/tourArt draws, one name per page.
 export type TourArt = 'board-list' | 'board-thread' | 'board-operator';
@@ -31,3 +34,12 @@ export function tourToShow(built: string | null, seen: string, tours: Tour[], se
   const newest = tours[0];
   return built !== null && settled && newest && newest.version !== seen ? newest : null;
 }
+
+// What an offer says and where (model/settings OFFERS: what it turns on): asked on a route `on` passes. place: where
+// its switch is, said after either answer. demo: the drawing its switch's ⓘ shows.
+export type Offer = { id: OfferId; title: string; text: string; demo: DemoSpec['name']; on: (route: Route) => boolean; place: string };
+
+export const OFFERS: Offer[] = [{ id: 'ink', title: '응답이 번지듯 나타나요', text: `${REPLY_INK.what} 써 볼래요?`, demo: 'ink', on: ({ kind }) => kind === 'chat', place: inSettings('display') }];
+
+// Asked of who is past the tutorials, as a tour is, and where the offer belongs.
+export const offerToShow = (offers: Offer[], settings: Settings, route: Route, settled: boolean): Offer | null => (settled ? (offers.find(({ id, on }) => offerOpen(settings, id) && on(route)) ?? null) : null);

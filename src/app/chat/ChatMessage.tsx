@@ -52,7 +52,7 @@ const MARK = { length: 'length', 'no-terminal': 'length', stopped: 'stopped', re
 
 export const ChatMessage = memo(function ChatMessage(props: Props) {
   const { row, modelMenu, actions } = props;
-  const { message, text: original, decor: decoration, opening, last, busy, branching, usageShown } = row.story.value;
+  const { message, text: original, decor: decoration, opening, last, busy, branching, usageShown, inked } = row.story.value;
   const { translatingText, untranslated, canTranslate, awaited, flipped, showOriginal, shownTranslation } = row.translation.value;
   const { placed, pictures, drawing, canIllustrate, pictureSizes } = row.illustration.value;
   const { remark, fresh } = row.mascot.value;
@@ -61,8 +61,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const { polishing, agents } = row.agents.value;
   const { character, me, modelName } = row.speakers.value;
   const { editing, replyNext } = row.edit.value;
-  const { bookmarked } = row.bookmark.value;
-  const { found, marked, term } = row.search.value;
+  const { bookmarked } = row.bookmark.value;  const { found, marked, term } = row.search.value;
   const otherModel = useMenuOpener(modelMenu);
   const wide = useWide();
   const version = shown(message);
@@ -197,6 +196,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
             term={term}
             tone={pending ? 'faded' : 'plain'}
             cursor={live || reveal.revealing || (translatingText !== null && !flipped)}
+            inked={inked}
             illustrations={illustrations}
             inlays={part ? [{ mark: PART_MARK, node: <EditBox value={part.value} caret={part.caret} onChange={actions.changePart} onKeyDown={editKeys} /> }] : undefined}
             ref={story}

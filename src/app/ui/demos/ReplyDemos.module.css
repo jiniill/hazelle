@@ -179,6 +179,56 @@
   opacity: var(--prose-faded-opacity);
 }
 
+.inked,
+.pieced {
+  justify-content: center;
+  padding-inline: var(--space-24);
+}
+
+/* A sentence being written, on one line so its edge runs straight across it. */
+.written {
+  width: fit-content;
+  white-space: nowrap;
+  animation-duration: var(--duration-demo);
+  animation-delay: calc(var(--duration-demo) * var(--at));
+  animation-fill-mode: both;
+}
+
+.inked .written {
+  mask-image: linear-gradient(to right, var(--color-text) 40%, transparent 60%);
+  mask-size: 250% 100%;
+  mask-repeat: no-repeat;
+  animation-name: ink;
+  animation-timing-function: linear;
+}
+
+.pieced .written {
+  animation-name: piece;
+  animation-timing-function: steps(4, jump-end);
+}
+
+@keyframes ink {
+  0% {
+    mask-position: 100% 0;
+  }
+
+  20%,
+  100% {
+    mask-position: 0 0;
+  }
+}
+
+@keyframes piece {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  20%,
+  100% {
+    clip-path: inset(0);
+  }
+}
+
 @keyframes flip {
   0%,
   3% {

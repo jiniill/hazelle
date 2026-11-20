@@ -113,6 +113,27 @@
   gap: var(--space-8);
 }
 
+.close {
+  display: flex;
+}
+
+/* The picture takes the dialog's top, to its edges, and the × stands over the picture's corner. */
+.pictured {
+  position: relative;
+  padding-top: 0;
+  overflow: hidden;
+}
+
+.picture {
+  margin-inline: calc(-1 * var(--space-24));
+}
+
+.pictured .close {
+  position: absolute;
+  top: var(--space-8);
+  right: var(--space-8);
+}
+
 /* Takes the free width, so a switcher stands beside the close button. */
 .title {
   composes: titleLg from '../foundation/type.module.css';

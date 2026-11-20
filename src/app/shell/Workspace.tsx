@@ -13,6 +13,7 @@ import { describeFailure } from '../common/failure';
 import { readPosts } from '../../runtime/service/board';
 import { carryDeviceValues, type DeviceStorage } from '../../runtime/device/device-values';
 import { forgetPersisted, readPersisted } from '../common/usePersisted';
+import { Offers } from '../common/Offer';
 import { openedNewRelease, TOURS, tourToShow, type Tour } from '../common/release';
 import { TourDialog } from '../common/Tour';
 import { TutorialProvider, useTutorials } from '../common/Tutorial';
@@ -167,6 +168,7 @@ function News() {
   const store = useStore();
   const { opened: lastOpened = '', tour: tourSeen = '' } = useSettings().seen ?? {};
   const [tour, setTour] = useState<Tour | null>(null);
+  const [toured, setToured] = useState(false);
   const said = useRef(false);
   useEffect(() => {
     if (BUILT_VERSION === null || said.current) return;
@@ -174,8 +176,10 @@ function News() {
     const settled = tutorials.offered.length === 0;
     const showing = tourToShow(BUILT_VERSION, tourSeen, TOURS, settled);
     const welcoming = !settled && tutorials.welcome();
-    if (showing) setTour(showing);
-    else if (!welcoming && openedNewRelease(BUILT_VERSION, lastOpened)) {
+    if (showing) {
+      setTour(showing);
+      setToured(true);
+    } else if (!welcoming && openedNewRelease(BUILT_VERSION, lastOpened)) {
       // A self-host publishes no 소식 of its own; its board link opens hazelle.app's.
       if (selfHost()) toast.show('새 버전으로 바뀌었어요', { action: { label: '바뀐 점 보기', onClick: () => navigate({ kind: 'board', operator: false, category: 'news' }) } });
       else void readPosts(null, { sort: 'new', category: 'news', limit: 1 }).then((read) => {
@@ -185,7 +189,7 @@ function News() {
     }
     if (lastOpened !== BUILT_VERSION) void markSeen(store, { opened: BUILT_VERSION });
   }, []);
-  if (!tour) return null;
+  if (!tour) return <Offers held={toured} />;
   return (
     <TourDialog
       tour={tour}

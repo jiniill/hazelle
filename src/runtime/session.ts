@@ -9,7 +9,7 @@ import { serverBackend, type Backend } from './store/backend';
 import { AssetUrls, UnfoundAssets } from './files/assets';
 import { Catalogs } from './models/catalog';
 import { ChatFinder } from './chat/chat-search';
-import { SETTINGS_ID } from '../model/settings';
+import { begun, SETTINGS_ID } from '../model/settings';
 import { addStarter, seedOrder, type Starter } from './library/characters';
 import { purgeExpired } from './library/removal';
 import { Costs } from './models/cost';
@@ -34,7 +34,7 @@ import { addDefaults } from './library/prompts';
 import { holdDiagnosis, sharesDiagnosis } from './diagnostics/auto-diagnosis';
 import { sharesPulse } from './service/pulse';
 import { keepSynced, ObjectStore, type PullProgress } from './store/store';
-import { accountSettings } from './account-settings';
+import { accountSettings, changeSettings } from './account-settings';
 import { Talk } from './chat/talk';
 import { Translator } from './tasks/translate';
 import { Cues } from './chat/cues';
@@ -125,10 +125,13 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   // A new account sees its defaults on the first screen; a cached account fills missing defaults after catch-up.
   // The task models move once the row upgrades are written, so the two never write one object at once.
   const defaults = () => Promise.all([addDefaults(store), addFirstPersona(store, username).then(() => recordChatPersonas(store)), addFirstProfile(store), saveUpgraded(store).then(() => moveTaskModels(store))]);
-  // Read before the defaults write the settings: only an account holding nothing yet starts with the character, and a
-  // failed write is not tried again, since the next open cannot tell this account from an older one.
-  const starter = !store.cached && !store.get('settings', SETTINGS_ID) ? bindings.starter : undefined;
-  if (!store.cached) await Promise.all([defaults(), starter && addStarter(store, files, starter)]);
+  // Read before the defaults write the settings: only an account holding nothing yet starts with the character and as
+  // one begun now (model/settings begun), and a failed write is not tried again, since the next open cannot tell this
+  // account from an older one.
+  const fresh = !store.cached && !store.get('settings', SETTINGS_ID);
+  if (!store.cached) await Promise.all([defaults(), fresh && bindings.starter && addStarter(store, files, bindings.starter)]);
+  // After the defaults, so the two never write the settings at once.
+  if (fresh) await changeSettings(store, begun);
   if (signal.aborted) {
     store.close();
     return { ok: false, error: 'stopped' };

@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
-import { setUsageShown } from '../../runtime/chat/chat-context';
+import { setInk, setUsageShown } from '../../runtime/chat/chat-context';
 import { STARTER_PRESETS, presetsOf } from '../../model/settings';
 import { addLook, addStarters, editLook, moveLook, removeLook, restoreLook } from '../../runtime/library/looks';
 import { CacheNoteRow } from '../common/CacheNoteRow';
@@ -12,7 +12,7 @@ import { LOOK_CHAT, LOOK_SAMPLE } from '../common/lookSample';
 import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
 import { useTypedNumber } from '../common/typed';
 import { reader } from '../common/typedNumber';
-import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, PRESET, PRESET_GONE, PRESET_GONE_CHIP, SAVE_FAILED } from '../common/words';
+import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, PRESET, PRESET_GONE, PRESET_GONE_CHIP, REPLY_INK, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useSettings, useStore } from '../session';
 import { backBar } from '../shell/router';
@@ -162,6 +162,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
       </Section>
       <Section title={CHAT_LOOK}>
         <SettingGroup label={CHAT_LOOK}>
+          <InkRow />
           <UsageShownRow />
           <CacheNoteRow />
         </SettingGroup>
@@ -187,6 +188,13 @@ function PictureWidestRow() {
 }
 
 // An account's setting, not this device's: the usage line is part of the reply wherever it is read.
+function InkRow() {
+  const store = useStore();
+  const toast = useToast();
+  const { ink } = useSettings();
+  return <SettingRow label={REPLY_INK.label} help={{ text: REPLY_INK.help, demo: { name: 'ink', ways: { on: ink !== undefined } } }} changed={ink !== undefined} control={<Switch label={REPLY_INK.label} checked={ink !== undefined} onChange={(on) => toast.settled(setInk(store, on))} />} />;
+}
+
 function UsageShownRow() {
   const store = useStore();
   const toast = useToast();

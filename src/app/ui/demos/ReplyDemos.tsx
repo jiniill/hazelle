@@ -121,6 +121,21 @@ export function BotStyleDemo({ way }: { way: Way }) {
   );
 }
 
+const SENTENCES = PARAGRAPHS.flatMap(({ translated }) => translated.split(/(?<=\.) /));
+
+// way 0 writes each sentence in from clear to solid behind a soft edge; way 1 in the pieces it arrives in.
+export function InkDemo({ way }: { way: Way }) {
+  return (
+    <span className={classNames(styles.prose, way === 0 ? styles.inked : styles.pieced)}>
+      {SENTENCES.map((sentence, at) => (
+        <span key={sentence} className={classNames(styles.translated, styles.written)} style={when(0.06 + at * 0.2)}>
+          {sentence}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 // The original unfolds under each translated paragraph.
 export function TranslateOriginalDemo() {
   return (

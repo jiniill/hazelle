@@ -30,6 +30,8 @@ export function messageRow(chat: OpenChat, index: number) {
       branching: chat.branching,
       // 사용량 표시: each reply's usage on a line under it.
       usageShown: chat.usageShown,
+      // 응답이 번지듯 나타나기: a reply being written comes in by ink.
+      inked: chat.inked,
     }, { message: Object.is, decor: sameFields }),
     translation: rowPart({
       translatingText: chat.translating.live.get(version) ?? null,
