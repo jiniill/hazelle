@@ -22,6 +22,19 @@ describe('Scripts', () => {
     }
   });
 
+  it('gives a sign of life before each earlier message a repeat_back reads, so a long chat is not one silent unit', () => {
+    const history = ['A1', 'none', 'none', 'none', 'none'].map((text, index) => message('assistant', text, index));
+    const scripts = new Scripts([script('A\\d', '@@repeat_back end')], history);
+    let signs = 0;
+    onProgress(() => signs++);
+    try {
+      scripts.apply('display', 'none', { index: 4, cbs: (text) => text });
+      expect(signs).toBe(5);
+    } finally {
+      onProgress(() => {});
+    }
+  });
+
   it('runs only its stage, globally by default; a custom flag string replaces g and keeps only valid flag letters', () => {
     expect(apply([script('a', 'b'), script('a', 'X', { stage: 'output' })], 'aAa').text).toBe('bAb');
     expect(apply([script('a', 'b', { flags: 'iz' })], 'AaA').text).toBe('baA');

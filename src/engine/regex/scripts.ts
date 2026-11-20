@@ -140,6 +140,7 @@ function latestMatches(messages: readonly HistoryMessage[]): (pattern: RegExp, i
         for (let at = index - 1; at >= 0; at--) {
           const message = messages[at]!;
           if (message.role !== role) continue;
+          progressed();
           const match = reset(pattern).exec(message.text);
           if (match) { state.last = { index: at, text: match[0] }; break; }
         }
@@ -148,6 +149,7 @@ function latestMatches(messages: readonly HistoryMessage[]): (pattern: RegExp, i
     for (; state.through < index; state.through++) {
       const message = messages[state.through]!;
       if (message.role !== role) continue;
+      progressed();
       const match = reset(pattern).exec(message.text);
       if (match) state.last = { index: state.through, text: match[0] };
     }
