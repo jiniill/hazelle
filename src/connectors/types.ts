@@ -133,10 +133,11 @@ export type Usage = {
 // price-list is an estimate: catalog prices can lag behind the provider's.
 export type Cost = { unit: 'usd' | 'credit'; amount: number; source: 'reported' | 'price-list' };
 
-// Units are never summed together.
+// Units are never summed together. free: the allowance only the models the catalog prices at nothing draw on.
 export type Meter =
-  | { kind: 'left'; label: string; unit: MeterUnit; amount: number; limit: number | null; resets: MeterReset | null }
+  | { kind: 'left'; label: string; unit: MeterUnit; amount: number; limit: number | null; resets: MeterReset | null; free?: true }
   | { kind: 'spent'; label: string; unit: MeterUnit; amount: number };
+export type LeftMeter = Extract<Meter, { kind: 'left' }>;
 
 // concurrency: units a provider's plan lets requests hold at once (Featherless), not a count of requests. percent: a
 // share of an allowance the provider states only as a share (NovelAI's usage limit), out of a limit of 100.

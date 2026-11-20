@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { isFree } from '../../connectors/pricing';
-import type { ConnectionType, Model } from '../../connectors/types';
+import type { ConnectionType, LeftMeter, Model } from '../../connectors/types';
 import { countFirstPage } from '../../runtime/service/first-page';
 import type { Session } from '../../runtime/session';
-import { connectTrial, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels } from '../../runtime/account/trial';
+import { connectTrial, freeAllowance, openTrial, pickTrialModel, sayInTrial, startTrialChat, talkableModels } from '../../runtime/account/trial';
 import { ARIN } from '../common/arin';
 import { describeCatalogFailure, describeFailure, describeKeyFailure, describeTurnFailure } from '../common/failure';
 import { href } from '../shell/routes';
-import { Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, TextField } from '../ui';
+import { meterLabel, meterLeft } from '../common/meters';
+import { Button, Callout, List, ListItem, Progress, Said, SendRow, Stack, TalkBox, Text, TextField } from '../ui';
 import { searchOf } from '../common/words';
 
 type Phase =
   | { kind: 'connecting' }
   | { kind: 'models'; session: Session; connection: string; models: Model[] }
   | { kind: 'listless'; connection: string; message: string }
-  | { kind: 'chat'; session: Session };
+  | { kind: 'chat'; session: Session; connection: string; free: boolean };
 
 const open = (at: string) => {
   countFirstPage('entered');
@@ -57,7 +58,7 @@ export function Trial({ type, secret, kept, onStep, onReplied, onRefused }: { ty
       </Stack>
     );
   }
-  if (phase.kind === 'chat') return <TrialChat session={phase.session} kept={kept} onReplied={onReplied} />;
+  if (phase.kind === 'chat') return <TrialChat session={phase.session} connection={phase.connection} free={phase.free} kept={kept} onReplied={onReplied} />;
   return (
     <ModelPick
       models={phase.models}
@@ -66,7 +67,7 @@ export function Trial({ type, secret, kept, onStep, onReplied, onRefused }: { ty
         void pickTrialModel(phase.session, phase.connection, model).then((added) => {
           if (!added.ok) return setFailure(describeFailure(added));
           onStep(2);
-          setPhase({ kind: 'chat', session: phase.session });
+          setPhase({ kind: 'chat', session: phase.session, connection: phase.connection, free: isFree(model) });
         });
       }}
     />
@@ -91,7 +92,12 @@ const MODELS_SHOWN = 8;
 // True of every provider's free models, not one's rule: a 0 price also comes from models.dev (Google, Mistral, Groq).
 const FREE_HELP = '무료 모델은 제공자마다 사용 한도가 있고, 대화 내용이 학습에 쓰일 수 있어요.';
 
-function TrialChat({ session, kept, onReplied }: { session: Session; kept: boolean; onReplied: () => void }) {
+function allowanceLine(meter: LeftMeter) {
+  const { amount, of } = meterLeft(meter);
+  return `${meterLabel(meter)} · ${amount} ${of}`;
+}
+
+function TrialChat({ session, connection, free, kept, onReplied }: { session: Session; connection: string; free: boolean; kept: boolean; onReplied: () => void }) {
   const [chat] = useState(() => crypto.randomUUID());
   const [log, setLog] = useState<{ by: 'me' | 'them'; text: string }[]>([]);
   const [draft, setDraft] = useState('');
@@ -100,6 +106,16 @@ function TrialChat({ session, kept, onReplied }: { session: Session; kept: boole
   const live = useRef('');
   if (turn) live.current = turn.text;
   const replied = log.some(({ by }) => by === 'them');
+  const [turns, setTurns] = useState(0);
+  const [allowance, setAllowance] = useState<LeftMeter | null>(null);
+  useEffect(() => {
+    if (!free) return;
+    let current = true;
+    void freeAllowance(session, connection, turns > 0).then((left) => current && setAllowance(left));
+    return () => {
+      current = false;
+    };
+  }, [turns]);
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -110,6 +126,7 @@ function TrialChat({ session, kept, onReplied }: { session: Session; kept: boole
     setLog((now) => [...now, { by: 'me', text }]);
     live.current = '';
     const failed = await (log.length === 0 ? startTrialChat(session, chat, text, ARIN) : sayInTrial(session, chat, text));
+    setTurns((held) => held + 1);
     if (failed) return setFailure(describeTurnFailure(failed));
     setLog((now) => [...now, { by: 'them', text: live.current }]);
     onReplied();
@@ -124,6 +141,7 @@ function TrialChat({ session, kept, onReplied }: { session: Session; kept: boole
             <TextField label="보낼 말" showLabel={false} placeholder="길을 잃은 것 같아요" value={draft} onChange={setDraft} />
             <Button type="submit" disabled={!draft.trim() || turn !== null}>보내기</Button>
           </SendRow>
+          {allowance && <Text variant="note">{allowanceLine(allowance)}</Text>}
           {kept && replied && <div><Button onClick={() => open(href({ kind: 'chat', id: chat }))}>앱에서 대화 이어 가기</Button></div>}
         </>
       }

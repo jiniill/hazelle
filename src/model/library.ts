@@ -161,8 +161,9 @@ export type TextFile = { name: string; title: string; text: string };
 export type Shelf<C> = { id: string | null; character: Character | null; face: string | null; avatar: string | null; chats: C[] };
 export type CharacterShelf<C> = Shelf<C> & { id: string; character: Character };
 
-// The starter character nobody has talked to yet: a library holding only her is still the empty home's.
-export const isUntouchedStarter = <C>({ id, chats }: Shelf<C>) => id === STARTER_CHARACTER_ID && chats.length === 0;
+// The starter character nobody has talked to yet: a library holding only her is still the empty home's, and a guest's
+// copy into another account leaves her out (runtime/account/guest-transfer).
+export const isUntouchedStarter = <C>({ id, chats }: Pick<Shelf<C>, 'id' | 'chats'>) => id === STARTER_CHARACTER_ID && chats.length === 0;
 
 type ChatLike = { chat: { character: string | null } & Mark; order: number; at: number | null };
 

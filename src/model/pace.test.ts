@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
-import type { Meter } from '../connectors/types';
+import type { LeftMeter } from '../connectors/types';
 import { pace, verdict } from './pace';
 
 const DAY = 24 * 60 * 60 * 1000;
-const credits = (amount: number, at: number): Extract<Meter, { kind: 'left' }> => ({ kind: 'left', label: 'AI 크레딧', unit: 'credit', amount, limit: 300, resets: { at } });
+const credits = (amount: number, at: number): LeftMeter => ({ kind: 'left', label: 'AI 크레딧', unit: 'credit', amount, limit: 300, resets: { at } });
 
 it('compares the spent share with an even spend over the month to the reset, cut to the group’s turn, and gives none from unknown inputs', () => {
   const november = Date.UTC(2026, 10, 1);
