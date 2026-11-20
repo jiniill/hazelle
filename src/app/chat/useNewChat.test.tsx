@@ -1,4 +1,6 @@
 import { act } from 'react';
+import { shown, type ChatSummary } from '../../model/chat';
+import type { CharacterShelf } from '../../model/library';
 import { afterEach, expect, it, vi } from 'vitest';
 import { navigate } from '../shell/router';
 import { probeRoot } from '../ui/probe';
@@ -41,4 +43,27 @@ it('keeps a screen left before then, and still moves the draft to the chat', asy
   await act(async () => projected());
   expect(navigate).not.toHaveBeenCalled();
   expect(session.drafts.move).toHaveBeenCalledWith(expect.anything(), 'chat');
+});
+
+it('keeps the picked greeting through a change of the card beside it, and the default once the card drops it', async () => {
+  let newChat: ReturnType<typeof useNewChat>;
+  function Probe({ greetings }: { greetings: string[] }) {
+    const shelf = { character: { card: { greetings } } } as unknown as CharacterShelf<ChatSummary>;
+    newChat = useNewChat('chat', true, { title: null, character: 'character', models: {} }, shelf, 'Korean');
+    return null;
+  }
+  const root = probeRoot();
+  const opened = () => shown(newChat.unstarted!).text;
+  await act(async () => root.render(<Probe greetings={['a', 'b', 'c']} />));
+  act(() => newChat.pickGreeting(1));
+  expect(opened()).toBe('b');
+  await act(async () => root.render(<Probe greetings={['b', 'a', 'c']} />));
+  expect(opened()).toBe('b');
+  await act(async () => root.render(<Probe greetings={['bb', 'a', 'c']} />));
+  expect(opened()).toBe('bb');
+  await act(async () => root.render(<Probe greetings={['a', 'bb', 'c']} />));
+  expect(opened()).toBe('bb');
+  await act(async () => root.render(<Probe greetings={['a', 'c']} />));
+  expect(opened()).toBe('a');
+  act(() => root.unmount());
 });

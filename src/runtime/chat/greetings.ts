@@ -8,8 +8,7 @@ export function projectGreetings(texts: string[], ids: string[], picked: number 
   // A new chat opens on the first greeting that says something; a blank one only when picked.
   const first = texts.findIndex((text) => text.trim());
   if (first === -1) return null;
-  // Editing the card beside an open new chat can remove its selected greeting.
-  const selected = picked === null || picked >= texts.length ? first : picked;
+  const selected = picked ?? first;
   return {
     choices: texts.map((text, index) => {
       const translation = translated?.(text);
@@ -56,4 +55,20 @@ export function greetingNow(greetings: readonly string[], index: number, text: s
   if (greetings[index] === text) return index;
   const at = greetings.indexOf(text);
   return at === -1 ? null : at;
+}
+
+// The ids a new chat's greetings keep while its card changes beside it: each its own place while the card reads it
+// there, else the first place left that reads it, else, the card still holding as many, where it stood, edited there;
+// a greeting new to the card takes a new id.
+export function followGreetings(before: readonly string[], ids: readonly string[], after: readonly string[]): string[] {
+  const next = after.map((text, index): string | undefined => (before[index] === text ? ids[index] : undefined));
+  const lost: number[] = [];
+  before.forEach((text, index) => {
+    if (after[index] === text) return;
+    const at = after.findIndex((each, place) => each === text && next[place] === undefined);
+    if (at === -1) lost.push(index);
+    else next[at] = ids[index];
+  });
+  if (after.length === before.length) for (const index of lost) next[index] ??= ids[index];
+  return next.map((id) => id ?? crypto.randomUUID());
 }
