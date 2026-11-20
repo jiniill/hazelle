@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { HistoryMessage } from '../history';
 import type { RegexScript } from '../import/types';
+import { onProgress } from '../progress';
 import { checkScript, Scripts, trySample, type Context } from './scripts';
 
 const script = (find: string, replace: string, over: Partial<RegexScript> = {}): RegexScript => ({ id: find, name: find, find, replace, stage: 'display', flags: null, ...over });
@@ -10,6 +11,17 @@ const apply = (scripts: RegexScript[], text: string, over: Partial<Context> = {}
   new Scripts(scripts, [message('assistant', text, 0)]).apply('display', text, { index: 0, cbs, ...over });
 
 describe('Scripts', () => {
+  it('gives a sign of life before each script, so a bot of many scripts is not one silent unit', () => {
+    let signs = 0;
+    onProgress(() => signs++);
+    try {
+      apply([script('a', 'b'), script('x', 'y'), script('q', 'r', { stage: 'output' })], 'a');
+      expect(signs).toBe(2);
+    } finally {
+      onProgress(() => {});
+    }
+  });
+
   it('runs only its stage, globally by default; a custom flag string replaces g and keeps only valid flag letters', () => {
     expect(apply([script('a', 'b'), script('a', 'X', { stage: 'output' })], 'aAa').text).toBe('bAb');
     expect(apply([script('a', 'b', { flags: 'iz' })], 'AaA').text).toBe('baA');

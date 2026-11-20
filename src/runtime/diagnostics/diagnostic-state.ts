@@ -91,7 +91,8 @@ function failureFacts(failure: MemoryFailure | undefined): AutoFailure | null {
 
 export function turnFacts(failure: TurnFailure): AutoChat['turn'] {
   const inner = 'failure' in failure ? failure.failure : null;
-  return { reason: inner && 'error' in inner ? closedWord(String(inner.error)) : null, tokens: 'tokens' in failure ? failure.tokens : null, budget: 'budget' in failure ? failure.budget : null };
+  // An api failure's code, or the kind of a step's own failure (a translation's, a pre agent's).
+  return { reason: inner === null ? null : 'error' in inner ? closedWord(inner.error) : 'kind' in inner ? inner.kind : null, tokens: 'tokens' in failure ? failure.tokens : null, budget: 'budget' in failure ? failure.budget : null };
 }
 
 // The writer's type and model, read with the same word for both reports.
