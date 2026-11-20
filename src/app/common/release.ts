@@ -39,7 +39,7 @@ export function tourToShow(built: string | null, seen: string, tours: Tour[], se
 // its switch is, said after either answer. demo: the drawing its switch's ⓘ shows.
 export type Offer = { id: OfferId; title: string; text: string; demo: DemoSpec['name']; on: (route: Route) => boolean; place: string };
 
-export const OFFERS: Offer[] = [{ id: 'ink', title: '응답이 번지듯 나타나요', text: `${REPLY_INK.what} 써 볼래요?`, demo: 'ink', on: ({ kind }) => kind === 'chat', place: inSettings('display') }];
+export const OFFERS: Offer[] = [{ id: 'ink', title: '응답이 부드럽게 나타나요', text: `${REPLY_INK.help} 써볼래요?`, demo: 'ink', on: ({ kind }) => kind === 'chat', place: inSettings('display') }];
 
 // Asked of who is past the tutorials, as a tour is, and where the offer belongs.
 export const offerToShow = (offers: Offer[], settings: Settings, route: Route, settled: boolean): Offer | null => (settled ? (offers.find(({ id, on }) => offerOpen(settings, id) && on(route)) ?? null) : null);

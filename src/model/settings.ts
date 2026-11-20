@@ -42,7 +42,7 @@ export const presetsOf = (settings: Pick<Settings, 'presets'>) => settings.prese
 // offers: the offers answered, either way (OFFERS).
 export type Seen = { tutorials?: string[]; welcome?: true; tour?: string; opened?: string; offers?: OfferId[] };
 
-// 써 볼래요? (design §6.15): a switch that begins off for the accounts older than it, each asked once whether to turn
+// 써볼래요? (design §6.15): a switch that begins off for the accounts older than it, each asked once whether to turn
 // it on. take turns it on; taken says it already is, so nobody is asked for what they turned on themselves.
 export const OFFERS = {
   ink: { take: (settings: Settings): Settings => ({ ...settings, ink: true }), taken: (settings: Settings) => settings.ink === true },

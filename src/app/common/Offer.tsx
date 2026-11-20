@@ -6,7 +6,7 @@ import { Button, Demo, Dialog, Row, Text } from '../ui';
 import { OFFERS, offerToShow, type Offer } from './release';
 import { useTutorials } from './Tutorial';
 
-export const OFFER = { take: '써 볼게요', pass: '괜찮아요', taken: (place: string) => `켰어요. ${place}에서 끌 수 있어요.`, passed: (place: string) => `${place}에서 켤 수 있어요.` };
+export const OFFER = { take: '써볼게요', pass: '괜찮아요', taken: (place: string) => `켰어요. ${place}에서 끌 수 있어요.`, passed: (place: string) => `${place}에서 켤 수 있어요.` };
 
 export function OfferDialog({ offer, onAnswer }: { offer: Offer; onAnswer: (taken: boolean) => void }) {
   return (
