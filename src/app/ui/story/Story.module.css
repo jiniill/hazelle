@@ -20,6 +20,12 @@
   opacity: var(--prose-faded-opacity);
 }
 
+/* The ink's edge shows where the words are being written; the cursor stands in for it once the edge is level with
+   them, as while the model stalls. */
+[data-ink='behind'] > .cursor {
+  visibility: hidden;
+}
+
 .cursor {
   composes: blink from '../foundation/motion.module.css';
   display: inline-block;

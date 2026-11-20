@@ -6,6 +6,7 @@ import { MEDIA, mediaQuery } from '../foundation/media';
 import { tokenMotion, tokenMs } from '../foundation/tokenPx';
 import { useQuoteShape } from '../foundation/quotes';
 import { useVeil, type Veil } from '../foundation/veil';
+import { inkable, inkOn, inkSheet, type StoryInk } from './ink';
 import { inlaid } from './inlay';
 import { useMarginRoom } from '../layout/ChatFrame';
 import { MarginPictures } from './MarginPictures';
@@ -232,7 +233,9 @@ function sheetOnce(css: string) {
 }
 const baseSheet = sheetOnce(shadowCss);
 const backdropSheet = sheetOnce(backdropCss);
-export const botSheets = (shadow: ShadowRoot) => shadow.adoptedStyleSheets.filter((sheet) => sheet !== baseSheet());
+// The sheets made of a bot's CSS (sheetFor), which stay a bot's after the cache lets them go.
+const botMade = new WeakSet<CSSStyleSheet>();
+export const botSheets = (shadow: ShadowRoot) => shadow.adoptedStyleSheets.filter((sheet) => botMade.has(sheet));
 
 const BREAKS = /^(?:P|DIV|LI|TR|BLOCKQUOTE|PRE|H[1-6]|SECTION|ARTICLE|HEADER|FOOTER|UL|OL|TABLE|DETAILS|SUMMARY)$/;
 // Use inert DOMPurify parsing, not raw DOMParser strings (Trusted Types).
@@ -255,6 +258,7 @@ function sheetFor(css: string, veiled: boolean): CSSStyleSheet {
   let sheet = sheets.get(key);
   if (!sheet) {
     sheet = new CSSStyleSheet();
+    botMade.add(sheet);
     sheet.replaceSync(cleanCss(css, veiled));
     groundRules(sheet.cssRules);
     sheets.set(key, sheet);
@@ -606,6 +610,9 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   const placed = JSON.stringify(marks);
   const math = useMath(html);
   const code = useCode(html);
+  // A reply being written comes in by ink (ink.ts), from its first draw with a cursor on.
+  const ink = useRef<StoryInk | null>(null);
+  const drawnBefore = useRef(false);
   useLayoutEffect(() => {
     const marked = marks.reduce((text: string, mark) => (mark ? inlaid(text, mark, mark) : text), html);
     const fragment = sanitize([math, code].reduce((text, draw) => (draw ? draw(text) : text), marked), cursor, veil);
@@ -618,7 +625,11 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
     morph(root(), fragment);
     for (const picture of root().querySelectorAll<HTMLImageElement>(`[${PICTURE}] > img`)) markWide(picture);
     if (bind) showBound(root(), bind.values, true);
+    if (cursor && !ink.current && inkable()) ink.current = inkOn(host.current!, root(), !drawnBefore.current);
+    drawnBefore.current = true;
+    ink.current?.drawn(cursor);
   }, [html, cursor, pictures, veil, veilTaps, whole, placed, math, code]);
+  useEffect(() => () => ink.current?.end(), []);
 
   // After every draw too, which takes back what the last marked.
   useLayoutEffect(() => {
@@ -684,7 +695,7 @@ export function Story({ html, css = '', cursor = false, tone = 'plain', buttons 
   }, [html, cursor, pictures, veil, veilTaps, term, placed, math, code]);
 
   useLayoutEffect(() => {
-    root().adoptedStyleSheets = css ? [baseSheet(), sheetFor(css, veil !== null)] : [baseSheet()];
+    root().adoptedStyleSheets = [baseSheet(), inkSheet(), ...(css ? [sheetFor(css, veil !== null)] : []), ...(ink.current ? [ink.current.gate] : [])];
   }, [css, veil]);
 
   useEffect(() => {

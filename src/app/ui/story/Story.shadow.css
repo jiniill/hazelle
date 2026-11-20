@@ -235,6 +235,16 @@
   background-color: var(--color-found-term);
 }
 
+/* A reply being written (ink.ts): what the ink has not reached is unseen, and a block it reaches comes in with its
+   picture, bullets and box. The gradient's steps are ink.ts's, a rule for each colour it meets. */
+::highlight(ink-unseen) {
+  color: transparent;
+}
+
+:host([data-ink]) > * {
+  transition: opacity var(--duration-ink-block) var(--ease-enter);
+}
+
 /* Fold the line, never stretch the picture. Story.tsx eases explicit heights because none cannot transition; hover/tap reveals it. */
 [data-picture] {
   max-height: var(--story-picture-peek);
