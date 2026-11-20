@@ -32,7 +32,9 @@ import { feedQuery, serverBackend, type Backend } from '../store/backend';
 import { deviceCache } from '../device/device-cache';
 import { Files } from '../files/files';
 import { guestAccount, guestBackend, guestBoardSecret } from './guest-store';
-import { discardGuest, guestWithContent, transferGuest } from './guest-transfer';
+import { discardGuest, guestWithContent, transferGuest, type GuestTransferStep } from './guest-transfer';
+import { addLore } from '../library/lore';
+import { addStarter } from '../library/characters';
 import { openSession } from '../session';
 import { ObjectStore } from '../store/store';
 import { exportBackup, readBackup, restoreBackup } from '../testing/backup';
@@ -147,18 +149,84 @@ it('gives the starter character only to a store that held nothing when it opened
   expect(await open({ starter })).toBe(false);
 });
 
-it('copies a guest’s starter character into an account that already existed as an ordinary character', async () => {
+const starter = { name: '아린', description: '', greeting: '', picture: async () => png() };
+
+// A guest as a first visit leaves it: the starter character with her picture.
+async function starterGuest() {
   const { accountId, vaultKey, backend } = await guest();
-  const starter = { name: '아린', description: '', greeting: '', picture: async () => png() };
   const opened = await openSession(accountId, vaultKey, '손님', new AbortController().signal, undefined, { backend }, { starter });
   if (!opened.ok) throw new Error(opened.error);
   await vi.waitFor(() => expect(opened.data.store.get('avatar', STARTER_AVATAR_ID)).toBeTruthy());
-  opened.data.close();
+  return opened.data;
+}
+
+async function withOwnStarter() {
+  const target = await destination();
+  expect((await addStarter(target.store, target.files, starter)).ok).toBe(true);
+  await vi.waitFor(() => expect(target.store.get('avatar', STARTER_AVATAR_ID)).toBeTruthy());
+  return target;
+}
+
+it('leaves a guest’s untouched starter character, what she owns, her picture and her place in the order out of a copy into an account that holds its own', async () => {
+  const session = await starterGuest();
+  const picture = session.store.get('avatar', STARTER_AVATAR_ID)!.value.file;
+  expect((await addLore(session.store, STARTER_CHARACTER_ID, null, crypto.randomUUID())).ok).toBe(true);
+  const made = await session.store.create('character', { card: blankCard('Guest bot'), folder: null, loreFolders: [] });
+  if (!made.ok) throw new Error(made.error);
+  expect((await session.store.upsert('order', () => ({ ids: [STARTER_CHARACTER_ID, made.data.id] }))).ok).toBe(true);
+  session.close();
+  const target = await withOwnStarter();
+  const own = target.store.get('avatar', STARTER_AVATAR_ID)!;
+  const steps: GuestTransferStep[] = [];
+  expect(await transferGuest(target.accountId, target.vaultKey, { progress: (step) => steps.push(step) })).toEqual({ ok: true, data: null });
+  expect(await target.store.pull()).toBeNull();
+  const copy = target.store.list('character').find(({ id }) => id !== STARTER_CHARACTER_ID)!;
+  expect(copy.value.card.name).toBe('Guest bot');
+  expect(target.store.list('character')).toHaveLength(2);
+  expect(target.store.list('avatar')).toEqual([own]);
+  expect(target.store.list('lore')).toEqual([]);
+  expect(target.store.get('order', ORDER_ID)?.value.ids).toEqual([copy.id]);
+  expect(await target.backend.missingFiles([picture.id])).toMatchObject({ ok: true, data: { missing: [picture.id] } });
+  expect(steps).toContainEqual({ kind: 'pictures', done: 0, total: 0 });
+  const last = steps.filter(({ kind }) => kind === 'objects').at(-1)!;
+  expect(last.done).toBe(last.total);
+});
+
+it('copies a guest’s starter character someone talked to as an ordinary character, beside the account’s own untouched one', async () => {
+  const session = await starterGuest();
+  const chat = crypto.randomUUID();
+  expect((await session.store.batch([{ type: 'create', kind: 'chat', id: chat, parent: null, value: { character: STARTER_CHARACTER_ID, title: 'A chat', models: {}, persona: FIRST_ID } }])).ok).toBe(true);
+  session.close();
+  const target = await withOwnStarter();
+  expect(await transferGuest(target.accountId, target.vaultKey)).toEqual({ ok: true, data: null });
+  expect(await target.store.pull()).toBeNull();
+  const copy = target.store.list('character').find(({ id }) => id !== STARTER_CHARACTER_ID)!;
+  expect(copy.value.card.name).toBe('아린');
+  expect(target.store.children('avatar', copy.id)).toHaveLength(1);
+  expect(target.store.list('chat').map(({ value }) => value.character)).toEqual([copy.id]);
+  expect(target.store.get('character', STARTER_CHARACTER_ID)?.value.card.name).toBe('아린');
+});
+
+it('still copies an untouched starter character’s picture that a copy of her names', async () => {
+  const session = await starterGuest();
+  const avatar = session.store.get('avatar', STARTER_AVATAR_ID)!.value;
+  const made = await session.store.create('character', { card: blankCard('아린 사본'), folder: null, loreFolders: [] });
+  if (!made.ok) throw new Error(made.error);
+  expect((await session.store.create('avatar', avatar, { parent: made.data.id })).ok).toBe(true);
+  session.close();
   const target = await destination();
   expect(await transferGuest(target.accountId, target.vaultKey)).toEqual({ ok: true, data: null });
   expect(await target.store.pull()).toBeNull();
-  expect(target.store.get('character', STARTER_CHARACTER_ID)).toBeNull();
-  expect(target.store.list('character').map(({ value }) => value.card.name)).toEqual(['아린']);
+  expect(target.store.list('character').map(({ value }) => value.card.name)).toEqual(['아린 사본']);
+  expect(target.store.list('avatar').map(({ value }) => value.file)).toEqual([avatar.file]);
+  expect(await target.backend.missingFiles([avatar.file.id])).toMatchObject({ ok: true, data: { missing: [] } });
+});
+
+it('does not ask about a guest whose only change is to the starter character nobody talked to', async () => {
+  const session = await starterGuest();
+  expect((await addLore(session.store, STARTER_CHARACTER_ID, null, crypto.randomUUID())).ok).toBe(true);
+  session.close();
+  expect(await guestWithContent()).toEqual({ ok: true, data: null });
 });
 
 it('does not ask about a guest that holds only the first open’s defaults, the starter character with her picture among them, and the minutes it was open', async () => {

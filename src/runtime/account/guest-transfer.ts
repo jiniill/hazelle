@@ -1,8 +1,8 @@
 import { isRecord } from '../../record';
 import { BATCH_LIMITS, type SealedChange, type SealedWrite } from '../../contracts/objects';
-import { isValue, KINDS, type Kind } from '../../model/kinds';
+import { FILE_KINDS, isValue, KINDS, type Kind, type Rule } from '../../model/kinds';
 import { ORDER_ID, toFront, type Order } from '../../model/order';
-import { STARTER_AVATAR_ID } from '../../model/library';
+import { isUntouchedStarter, STARTER_CHARACTER_ID } from '../../model/library';
 import { forgetGuestVault, recallGuest, rememberVault } from '../../vault/device';
 import { sameVaultKey, type VaultKey } from '../../vault/keys';
 import { objectKey, openObject, sealObject } from '../../vault/objects';
@@ -11,13 +11,15 @@ import { api, type ApiFailure, type ApiResult } from '../api';
 import { deviceCache, forgetLog } from '../device/device-cache';
 import { clearGuestStore, guestBackend, guestBoardSecret } from './guest-store';
 import { SEEDED, VISITS } from '../backup/backup-core';
-import { inOrder, transfers } from '../files/files';
+import { inOrder, namedFile, transfers } from '../files/files';
 import { toolAssetId, toolChatId, toolDataId, toolFileId } from '../tools/store';
 
 export type GuestTransferStep = { kind: 'objects' | 'pictures'; done: number; total: number };
 export type GuestTransferOptions = { signal?: AbortSignal; progress?: (step: GuestTransferStep) => void };
 type Guest = { accountId: string; vaultKey: VaultKey };
 type Inventory = { rows: SealedChange[]; timeline: string; rev: number };
+type Left = { ids: ReadonlySet<string>; files: ReadonlySet<string> };
+const NONE: Left = { ids: new Set(), files: new Set() };
 const failed = (error: string) => ({ ok: false as const, error });
 // Pictures asked about at once; the next ones are asked while these go up, the room each answer gives counting only its own.
 const PICTURES_PER_ASK = 100;
@@ -45,14 +47,15 @@ export async function guestWithContent(): Promise<ApiResult<Guest | null>> {
   const secret = await guestBoardSecret(guest.accountId);
   if (!secret.ok) return secret;
   if (secret.data) return { ok: true, data: guest };
-  const held = await inventory(guestBackend(guest.accountId));
+  const source = guestBackend(guest.accountId);
+  const held = await inventory(source);
   if (!held.ok) return held;
+  const left = await leftOut(guest, source, held.data);
+  if (!left.ok) return left;
   // Ignore untouched starter defaults when deciding to prompt; guest data stays intact until explicit upload/discard.
-  if (held.data.rows.some(({ id, kind, body }) => body !== null && !SEEDED.has(id) && !VISITS.has(kind))) return { ok: true, data: guest };
-  const files = await guestBackend(guest.accountId).heldFiles(null);
-  // The starter character's picture is the one file opening adds.
-  const seeded = held.data.rows.some(({ id, body }) => id === STARTER_AVATAR_ID && body !== null) ? 1 : 0;
-  return files.ok ? { ok: true, data: files.data.ids.length > seeded ? guest : null } : files;
+  if (held.data.rows.some(({ id, kind, body }) => body !== null && !SEEDED.has(id) && !VISITS.has(kind) && !left.data.ids.has(id))) return { ok: true, data: guest };
+  const files = await source.heldFiles(null);
+  return files.ok ? { ok: true, data: files.data.ids.some((id) => !left.data.files.has(id)) ? guest : null } : files;
 }
 
 export async function discardGuest(): Promise<ApiResult<null>> {
@@ -76,7 +79,11 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
   const held = await inventory(source, options.signal);
   if (!held.ok) return held;
   let replacements: ReadonlyMap<string, string> | null = null;
+  let left = NONE;
   if (!conversion) {
+    const leaving = await leftOut(guest, source, held.data, options.signal);
+    if (!leaving.ok) return leaving;
+    left = leaving.data;
     const copying = await copyAddresses(guest, accountId, source, held.data, options.signal);
     if (!copying.ok) return copying;
     replacements = copying.data;
@@ -93,7 +100,8 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
     pictures.push(...page.data.ids);
     if (!page.data.more) break;
   }
-  progress({ kind: 'pictures', done: 0, total: pictures.length });
+  const going = pictures.filter((id) => !left.files.has(id));
+  progress({ kind: 'pictures', done: 0, total: going.length });
   let picturesDone = 0;
   const move = async (ids: string[]): Promise<ApiFailure | null> => {
     const missing = await target.missingFiles(ids, signal);
@@ -115,17 +123,17 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
         const sent = await target.putFile(id, body.data, signal);
         if (!sent.ok) { failure ??= sent; return; }
       }
-      progress({ kind: 'pictures', done: ++picturesDone, total: pictures.length });
+      progress({ kind: 'pictures', done: ++picturesDone, total: going.length });
     }, true, signal)));
     return failure;
   };
-  const asks = Array.from({ length: Math.ceil(pictures.length / PICTURES_PER_ASK) }, (_, index) => pictures.slice(index * PICTURES_PER_ASK, (index + 1) * PICTURES_PER_ASK));
+  const asks = Array.from({ length: Math.ceil(going.length / PICTURES_PER_ASK) }, (_, index) => going.slice(index * PICTURES_PER_ASK, (index + 1) * PICTURES_PER_ASK));
   for await (const [, failure] of inOrder(asks, move, { ahead: 2 })) {
     if (signal?.aborted) return failed('stopped');
     if (failure) return failure;
   }
   const present = new Map(destination.data.rows.map((row) => [row.id, row]));
-  const countable = (row: SealedChange) => row.body !== null && (conversion || !('id' in KINDS[row.kind as Kind]));
+  const countable = (row: SealedChange) => row.body !== null && !left.ids.has(row.id) && (conversion || !('id' in KINDS[row.kind as Kind]));
   if (held.data.rows.some((row) => !Object.hasOwn(KINDS, row.kind))) return failed('unreadable');
   const total = held.data.rows.filter(countable).length;
   let done = 0;
@@ -145,7 +153,7 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
         guestOrder = value;
       }
     }
-    const prepared = conversion ? { ok: true as const, data: page.data.changes } : await copies(guest, accountId, vaultKey, page.data.changes, replacements!, present);
+    const prepared = conversion ? { ok: true as const, data: page.data.changes } : await copies(guest, accountId, vaultKey, page.data.changes.filter(({ id }) => !left.ids.has(id)), replacements!, present);
     if (!prepared.ok) return prepared;
     const writes: SealedWrite[] = [];
     for (const row of prepared.data) {
@@ -180,7 +188,7 @@ export async function transferGuest(accountId: string, vaultKey: VaultKey, optio
     if (!page.data.more) break;
   }
   if (guestOrder) {
-    const copied = new Set(held.data.rows.filter(({ kind, body }) => body !== null && (kind === 'character' || kind === 'folder')).map(({ id }) => id));
+    const copied = new Set(held.data.rows.filter(({ id, kind, body }) => body !== null && !left.ids.has(id) && (kind === 'character' || kind === 'folder')).map(({ id }) => id));
     const ids = guestOrder.ids.filter((id) => copied.has(id)).map((id) => replacements!.get(id)!);
     if (ids.length) {
       const ordered = await copyOrder(target, accountId, vaultKey, destination.data.timeline, ids, signal);
@@ -246,31 +254,82 @@ async function copyAddresses(guest: Guest, accountId: string, source: Backend, h
   }));
   const copyId = (id: string) => replacements.get(id) ?? id;
   const kinds = new Map(held.rows.map(({ id, kind }) => [id, kind]));
-  const key = await objectKey(guest.vaultKey);
   // Resolve these before copying any page: a summary on an earlier page can refer to one on a later page.
-  for (const kind of ['tooldata', 'toolfile', 'toolchat', 'asset']) {
-    if (!held.rows.some((row) => row.kind === kind && row.body !== null)) continue;
-    let since = 0;
-    for (;;) {
-      if (signal?.aborted) return failed('stopped');
-      const page = await source.feed(feedQuery({ since, timeline: held.timeline, until: held.rev, bootstrap: true, kind }), signal);
-      if (!page.ok) return page;
-      for (const row of page.data.changes) {
-        if (row.body === null) continue;
-        const value = await openObject(key, guest.accountId, row, row.body!);
-        if (!isRecord(value)) return failed('unreadable');
-        if (kind === 'tooldata') replacements.set(row.id, await toolDataId(copyId(row.parent!), value.key as string));
-        else if (kind === 'toolfile') replacements.set(row.id, await toolFileId(copyId(row.parent!), value.key as string));
-        else if (kind === 'toolchat') replacements.set(row.id, await toolChatId(copyId(value.module as string), copyId(row.parent!), value.key as string | null));
-        else if (kinds.get(row.parent!) === 'module' && row.id === await toolAssetId(row.parent!, value.name as string)) {
-          replacements.set(row.id, await toolAssetId(copyId(row.parent!), value.name as string));
-        }
+  for (const kind of ['tooldata', 'toolfile', 'toolchat', 'asset'] as const) {
+    const failure = await eachOfKind(guest, source, held, kind, async (row, value) => {
+      if (kind === 'tooldata') replacements.set(row.id, await toolDataId(copyId(row.parent!), value.key as string));
+      else if (kind === 'toolfile') replacements.set(row.id, await toolFileId(copyId(row.parent!), value.key as string));
+      else if (kind === 'toolchat') replacements.set(row.id, await toolChatId(copyId(value.module as string), copyId(row.parent!), value.key as string | null));
+      else if (kinds.get(row.parent!) === 'module' && row.id === await toolAssetId(row.parent!, value.name as string)) {
+        replacements.set(row.id, await toolAssetId(copyId(row.parent!), value.name as string));
       }
-      since = page.data.cursor;
-      if (!page.data.more) break;
-    }
+    }, signal);
+    if (failure) return failure;
   }
   return { ok: true, data: replacements };
+}
+
+async function eachOfKind(guest: Guest, source: Backend, held: Inventory, kind: Kind, each: (row: SealedChange, value: Record<string, unknown>) => Promise<void> | void, signal?: AbortSignal): Promise<ApiFailure | null> {
+  if (!held.rows.some((row) => row.kind === kind && row.body !== null)) return null;
+  const key = await objectKey(guest.vaultKey);
+  let since = 0;
+  for (;;) {
+    if (signal?.aborted) return failed('stopped');
+    const page = await source.feed(feedQuery({ since, timeline: held.timeline, until: held.rev, bootstrap: true, kind }), signal);
+    if (!page.ok) return page;
+    for (const row of page.data.changes) {
+      if (row.body === null) continue;
+      const value = await openObject(key, guest.accountId, row, row.body!);
+      if (!isRecord(value)) return failed('unreadable');
+      await each(row, value);
+    }
+    since = page.data.cursor;
+    if (!page.data.more) return null;
+  }
+}
+
+const CHARACTER_OWNED = (Object.keys(KINDS) as Kind[]).flatMap((kind) => {
+  const { owner }: Rule = KINDS[kind];
+  return owner?.kind === 'character' ? [{ kind, field: owner.field }] : [];
+});
+
+// What a copy into another account leaves out: the starter character nobody talked to, what she owns, and the pictures
+// only those name. A chat in 휴지통 counts as talked to: it goes up naming her.
+async function leftOut(guest: Guest, source: Backend, held: Inventory, signal?: AbortSignal): Promise<ApiResult<Left>> {
+  if (!held.rows.some(({ id, body }) => id === STARTER_CHARACTER_ID && body !== null)) return { ok: true, data: NONE };
+  const ids = new Set([STARTER_CHARACTER_ID]);
+  const chats: string[] = [];
+  for (const { kind, field } of CHARACTER_OWNED) {
+    const failure = await eachOfKind(guest, source, held, kind, (row, value) => {
+      if (value[field] !== STARTER_CHARACTER_ID) return;
+      if (kind === 'chat') chats.push(row.id);
+      else ids.add(row.id);
+    }, signal);
+    if (failure) return failure;
+  }
+  if (!isUntouchedStarter({ id: STARTER_CHARACTER_ID, chats })) return { ok: true, data: NONE };
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const { id, parent, body } of held.rows) {
+      if (body === null || parent === null || !ids.has(parent) || ids.has(id)) continue;
+      ids.add(id);
+      grew = true;
+    }
+  }
+  // Files are shared within an account: a copy of her names her picture too.
+  const theirs = new Set<string>();
+  const kept = new Set<string>();
+  for (const kind of FILE_KINDS) {
+    let unnamed = false;
+    const failure = await eachOfKind(guest, source, held, kind, (row, value) => {
+      const file = namedFile(value);
+      if (file === null) unnamed = true;
+      else (ids.has(row.id) ? theirs : kept).add(file);
+    }, signal);
+    if (failure) return failure;
+    if (unnamed) return failed('unreadable');
+  }
+  return { ok: true, data: { ids, files: new Set([...theirs].filter((file) => !kept.has(file))) } };
 }
 
 async function copies(guest: Guest, accountId: string, vaultKey: VaultKey, rows: SealedChange[], replacements: ReadonlyMap<string, string>, present: ReadonlyMap<string, SealedChange>): Promise<ApiResult<SealedChange[]>> {
