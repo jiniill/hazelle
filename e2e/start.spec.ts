@@ -77,7 +77,7 @@ test('a first visit connects, picks, talks and finds it all in the app', async (
     const height = await page.evaluate<number>('document.documentElement.scrollHeight - innerHeight');
     for (const [name, at] of [['2-example', 0.2], ['3-keys', 0.38], ['5-features', 0.8], ['6-finish', 1]] as const) {
       await page.evaluate(`scrollTo(0, ${height * at})`);
-      await page.waitForTimeout(800);
+      await page.waitForTimeout(2500);
       await page.screenshot({ path: `${SHOTS}/${name}.png` });
     }
   }
@@ -142,6 +142,7 @@ test('a first visit signs in at OpenRouter instead of pasting a key, and talks o
   await page.getByRole('button', { name: '보내기', exact: true }).click();
   await expect(page.getByText('무료로 온 답이에요.')).toBeVisible();
   expect(seen.said.at(-1)).toContain('maker/gift');
+  await expect(page.getByText('무료 모델 요청 · 매일 초기화 · 50 / 50회 남음')).toBeVisible();
 
   // The key is an ordinary connection's: a reload asks OpenRouter for nothing again and the app holds it.
   await page.getByRole('button', { name: '앱에서 대화 이어 가기', exact: true }).click();
