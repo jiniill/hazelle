@@ -40,8 +40,22 @@ describe('parseRecords', () => {
     expect(parseRecords('Here is the summary.', span)).toEqual({ ok: false, refusal: { reason: 'no-json' }, kept: [] });
     expect(parseRecords('{"records": [', span)).toEqual({ ok: false, refusal: { reason: 'unreadable' }, kept: [] });
     expect(parseRecords(answer([[]]), span)).toEqual({ ok: false, refusal: { reason: 'shape' }, kept: [] });
-    expect(parseRecords(answer([{ ...record(3), opens: undefined }]), span)).toEqual({ ok: false, refusal: { reason: 'opens' }, kept: [] });
-    expect(parseRecords(answer([{ ...record(3), outcome: null }]), span)).toEqual({ ok: false, refusal: { reason: 'outcome' }, kept: [] });
+    expect(parseRecords(answer([{ ...record(3), opens: undefined }]), span)).toEqual({ ok: false, refusal: { reason: 'opens', wrong: { part: 'itself', was: 'missing' } }, kept: [] });
+    expect(parseRecords(answer([{ ...record(3), outcome: null }]), span)).toEqual({ ok: false, refusal: { reason: 'outcome', wrong: { part: 'itself', was: 'null' } }, kept: [] });
+    // Where the wrong thing stood and its kind, never the answer's own words.
+    const wrong = (change: object) => {
+      const read = parseRecords(answer([{ ...record(3), ...change }]), span);
+      return !read.ok && 'wrong' in read.refusal ? [read.refusal.reason, read.refusal.wrong.part, read.refusal.wrong.was] : null;
+    };
+    expect(wrong({ state: { Luna: 'SECRET' } })).toEqual(['state', 'itself', 'object']);
+    expect(wrong({ state: ['SECRET'] })).toEqual(['state', 'item', 'text']);
+    expect(wrong({ state: [{ about: 'Luna', field: 'age', value: 7 }] })).toEqual(['state', 'value', 'number']);
+    expect(wrong({ state: [{ about: 'Luna', value: 'SECRET' }] })).toEqual(['state', 'field', 'missing']);
+    expect(wrong({ who: [null] })).toEqual(['who', 'item', 'null']);
+    expect(wrong({ who: null })).toEqual(['who', 'itself', 'null']);
+    expect(wrong({ what: ' ' })).toEqual(['what', 'itself', 'blank']);
+    expect(wrong({ lines: [{ speaker: 'Luna', text: '' }] })).toEqual(['lines', 'text', 'blank']);
+    expect(wrong({ to: '3' })).toEqual(['to', 'itself', 'text']);
     expect(parseRecords(answer([record(2), record(1)]), span)).toMatchObject({ ok: false, refusal: { reason: 'order', record: 2, to: 1, after: 2, of: 3 }, kept: [{ to: 2 }] });
     expect(parseRecords(answer([record(1), record(1), record(3)]), span)).toMatchObject({ ok: false, refusal: { reason: 'order', record: 2, to: 1, after: 1, of: 3 }, kept: [{ to: 1 }] });
     expect(parseRecords(answer([record(4)]), span)).toEqual({ ok: false, refusal: { reason: 'order', record: 1, to: 4, after: 0, of: 3 }, kept: [] });
@@ -251,7 +265,7 @@ describe('parseChapter', () => {
 
   it('reads one chapter over the whole span and refuses a missing field or a key line the messages never said', () => {
     expect(parseChapter(JSON.stringify({ chapter: { ...scene, state: [{ about: 'Luna' }] } }), span)).toEqual({ ok: true, chapter: scene });
-    expect(parseChapter(JSON.stringify({ chapter: { ...scene, outcome: undefined } }), span)).toEqual({ ok: false, refusal: { reason: 'outcome' } });
+    expect(parseChapter(JSON.stringify({ chapter: { ...scene, outcome: undefined } }), span)).toEqual({ ok: false, refusal: { reason: 'outcome', wrong: { part: 'itself', was: 'missing' } } });
     expect(parseChapter(JSON.stringify({ chapter: { ...scene, lines: [{ speaker: 'Luna', text: 'I will always wait.' }] } }), span)).toEqual({ ok: true, chapter: { ...scene, lines: [] } });
   });
 });

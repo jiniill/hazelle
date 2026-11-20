@@ -68,7 +68,9 @@ const CALL = {
 
 // refused: the evaluation turned the job away under its chat's verdict. A bot-stuck reason without it is a job of the
 // chat that went silent on this page, which that job's evaluation-stuck report names.
-const FAILURE = { kind: FAILURES, reason: orNull(WORD), refused: 'flag', call: orNull(CALL) } as const;
+// wrong: in a memory answer refused for a field, where the first thing of the wrong kind stood and its kind.
+const WRONG = { part: ['itself', 'item', 'about', 'field', 'value', 'speaker', 'text'], was: ['missing', 'null', 'text', 'blank', 'number', 'boolean', 'object', 'list'] } as const;
+const FAILURE = { kind: FAILURES, reason: orNull(WORD), wrong: orNull(WRONG), refused: 'flag', call: orNull(CALL) } as const;
 
 const SHAPE = {
   budget: 'number',

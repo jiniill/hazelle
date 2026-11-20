@@ -523,7 +523,10 @@ type Field = 'when' | 'where' | 'who' | 'what' | 'lines' | 'outcome' | 'to' | 's
 // or list in it at all, as a model that declines in a sentence writes; unreadable: one that has, and does not parse.
 export type Invalid = 'no-json' | 'unreadable' | 'shape' | 'order' | 'short' | Field;
 // record: which record's "to" it is, counted from 1; after: the "to" before it, 0 for the first; of: the span's messages.
-export type Refusal = { reason: Exclude<Invalid, 'order'> } | { reason: 'order'; record: number; to: number; after: number; of: number };
+// wrong: where in a refused field the first thing of the wrong kind stands, and its kind. Closed words only: a model's
+// own keys and values are the chat's words.
+export type Wrong = { part: 'itself' | 'item' | 'about' | 'field' | 'value' | 'speaker' | 'text'; was: 'missing' | 'null' | 'text' | 'blank' | 'number' | 'boolean' | 'object' | 'list' };
+export type Refusal = { reason: Exclude<Invalid, 'order' | Field> } | { reason: Field; wrong: Wrong } | { reason: 'order'; record: number; to: number; after: number; of: number };
 
 const textOrNull = (value: unknown): value is string | null => value === null || isText(value);
 const textsOf = (value: unknown): value is string[] => Array.isArray(value) && value.every(isText);
@@ -563,7 +566,7 @@ export function parseRecords(answer: string, span: string[]): { ok: true; record
   for (const item of parsed.records as unknown[]) {
     if (!isRecord(item)) return refused({ reason: 'shape' });
     const record = drafted(item);
-    if (typeof record === 'string') return refused({ reason: record });
+    if (typeof record === 'string') return refused(refusedField(item, record));
     if (record.to <= from || record.to > span.length) return refused({ reason: 'order', record: records.length + 1, to: record.to, after: from, of: span.length });
     records.push({ ...record, lines: linesSaid(record.lines, span.slice(from, record.to).join('\n')) });
     from = record.to;
@@ -578,8 +581,29 @@ export function parseChapter(answer: string, span: string[]): { ok: true; chapte
   const parsed = read.value;
   if (!isRecord(parsed) || !isRecord(parsed.chapter)) return { ok: false, refusal: { reason: 'shape' } };
   const chapter = sceneOf(parsed.chapter);
-  if (typeof chapter === 'string') return { ok: false, refusal: { reason: chapter } };
+  if (typeof chapter === 'string') return { ok: false, refusal: refusedField(parsed.chapter, chapter) };
   return { ok: true, chapter: { ...chapter, lines: linesSaid(chapter.lines, span.join('\n')) } };
+}
+
+const kindOf = (value: unknown): Wrong['was'] =>
+  value === undefined ? 'missing' : value === null ? 'null' : Array.isArray(value) ? 'list' : typeof value === 'string' ? (flat(value) ? 'text' : 'blank') : typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'object';
+
+// The keys a list's items are read by, in the order they are checked.
+const ITEM_KEYS = { state: ['about', 'field', 'value'], lines: ['speaker', 'text'] } as const;
+
+// Read after the refusal, so the checks above stay the one rule of what is right: a field that is no list is wrong
+// itself; in a list, the first item that is not what its neighbours must be, or the first key of it that is not text.
+function refusedField(item: Record<string, unknown>, field: Field): Refusal {
+  const value = item[field];
+  const wrong = (part: Wrong['part'], of: unknown): Refusal => ({ reason: field, wrong: { part, was: kindOf(of) } });
+  if (!Array.isArray(value)) return wrong('itself', value);
+  const keys = field === 'state' || field === 'lines' ? ITEM_KEYS[field] : null;
+  for (const each of value as unknown[]) {
+    if (keys ? !isRecord(each) : kindOf(each) !== 'text' && kindOf(each) !== 'blank') return wrong('item', each);
+    const key = keys?.find((name) => kindOf((each as Record<string, unknown>)[name]) !== 'text');
+    if (key) return wrong(key, (each as Record<string, unknown>)[key]);
+  }
+  return wrong('itself', value);
 }
 
 function sceneOf(item: Record<string, unknown>): Scene | Field {

@@ -244,20 +244,20 @@ describe('Rememberer', () => {
       session.store.projections.judge(chat);
       session.memory.check(chat);
       await vi.waitFor(() => expect(session.memory.snapshot().failed.get(chat)).toEqual({ kind: 'unsaved', failure: { ok: false, error: 'bot-stuck' }, refused: true }));
-      expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', refused: true, call: null });
+      expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', wrong: null, refused: true, call: null });
       const read = vi.spyOn(session.store.evaluation, 'read').mockRejectedValue(new EvaluationStuck('Evaluation worker stuck', true));
       try {
         expect(session.store.projections.verdict(chat)).not.toBeNull();
         session.memory.retry(chat);
         expect(session.store.projections.verdict(chat)).toBeNull();
-        await vi.waitFor(() => expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', refused: false, call: null }));
+        await vi.waitFor(() => expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', wrong: null, refused: false, call: null }));
         const clear = vi.spyOn(session.store.projections, 'clear');
         session.store.projections.judge(chat);
         session.memory.retry(chat);
         expect(session.store.projections.verdict(chat)).toBeNull();
         session.memory.retry(chat);
         expect(clear).toHaveBeenCalledTimes(1);
-        await vi.waitFor(() => expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', refused: false, call: null }));
+        await vi.waitFor(() => expect(failed()).toEqual({ kind: 'unsaved', reason: 'bot-stuck', wrong: null, refused: false, call: null }));
       } finally { read.mockRestore(); }
     }));
 
