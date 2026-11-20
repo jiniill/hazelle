@@ -51,19 +51,13 @@
 }
 
 .menu {
+  composes: reveal from '../foundation/hover.module.css';
+  --button-radius: var(--radius-full);
   position: absolute;
   top: var(--space-8);
   right: var(--space-8);
-  border-radius: var(--radius-full);
+  border-radius: var(--button-radius);
   background: var(--color-surface-raised);
-  transition: opacity var(--motion-respond);
-}
-
-/* A touch screen keeps :hover on whatever was tapped last, so there the ⋯ stays shown. */
-@media (hover: hover) {
-  .cardBox:not(:hover, :focus-within) .menu {
-    opacity: 0;
-  }
 }
 
 .card {
@@ -97,8 +91,10 @@
   margin-bottom: var(--space-4);
   overflow: hidden;
   border-radius: var(--radius-md);
+  outline: var(--border-thin) solid transparent;
   background: var(--color-surface-raised);
   font-size: var(--text-hero);
+  transition: outline-color var(--motion-respond);
 }
 
 .iconPicture {
@@ -107,13 +103,15 @@
 }
 
 .card:is(:hover, :active) .picture {
-  outline: var(--border-thin) solid var(--color-border-strong);
+  outline-color: var(--color-border-strong);
+  transition-duration: var(--duration-instant);
 }
 
 .selected .picture,
 .selected:is(:hover, :active) .picture {
   outline: var(--focus-ring-width) solid var(--color-accent);
   outline-offset: var(--focus-ring-offset);
+  transition: none;
 }
 
 .image {
@@ -135,6 +133,7 @@
 .current:is(:hover, :active) .picture {
   outline: var(--focus-ring-width) solid var(--color-accent);
   outline-offset: var(--focus-ring-offset);
+  transition: none;
 }
 
 .tag {
@@ -226,6 +225,7 @@
 }
 
 .tab {
+  composes: eased from '../foundation/hover.module.css';
   flex-shrink: 0;
   width: 42%;
   height: var(--space-8);
@@ -234,6 +234,7 @@
 }
 
 .body {
+  composes: eased from '../foundation/hover.module.css';
   display: grid;
   flex-grow: 1;
   grid-template: 1fr 1fr / 1fr 1fr;
@@ -247,6 +248,7 @@
 .card:is(:hover, :active) .tab,
 .card:is(:hover, :active) .body {
   background: var(--color-folder-bg-hover);
+  transition-duration: var(--duration-instant);
 }
 
 .slot {

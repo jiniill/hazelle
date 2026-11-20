@@ -19,6 +19,8 @@
   scroll-padding-block: var(--space-8);
   translate: var(--nudge, 0) 0;
   --scroll-cue-ground: var(--color-surface);
+  /* Its own ground: the round one its button may stand on (a card's ⋯) does not reach the buttons inside. */
+  --button-radius: initial;
 }
 
 /* A menu longer than its height scrolls; its rows keep their own height instead of squeezing into it. */

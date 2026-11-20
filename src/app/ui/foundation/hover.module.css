@@ -6,6 +6,7 @@
   .eased {
     transition:
       background-color var(--motion-respond),
+      border-color var(--motion-respond),
       color var(--motion-respond);
   }
 
@@ -15,6 +16,15 @@
 
   .ink {
     composes: eased;
+  }
+
+  .edge {
+    composes: eased;
+  }
+
+  /* Shown while its parent is under the pointer or holds the focus. A finger has no hover, so there it stays shown. */
+  .reveal {
+    transition: opacity var(--motion-respond);
   }
 
   /* Lit while what it opens is open, as under the pointer. */
@@ -62,6 +72,18 @@
     color: var(--color-text);
   }
 
+  .edge:hover:not(:disabled) {
+    border-color: var(--color-border-strong);
+  }
+
+  :not(:hover, :focus-within) > .reveal {
+    opacity: 0;
+  }
+
+  :is(:hover, :focus-within) > .reveal {
+    transition-duration: var(--duration-instant);
+  }
+
   /* The answer comes at once and only its going eases, for a component's own hover too: it composes eased. Not under
      a finger, where the hover stays after a tap and the press would go as abruptly as it came. */
   .eased:hover:not(:disabled) {
@@ -78,6 +100,10 @@
 .ink:active:not(:disabled),
 .inkOpen[aria-expanded='true'] {
   color: var(--color-text);
+}
+
+.edge:active:not(:disabled) {
+  border-color: var(--color-border-strong);
 }
 
 .eased:active:not(:disabled) {

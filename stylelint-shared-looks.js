@@ -37,7 +37,7 @@ const textLooks = looksIn('type.module.css', ['note', 'detail', 'title', 'titleL
 textLooks.set('error', { ...textLooks.get('note'), ...textLooks.get('error') });
 const track = looksIn('surface.module.css', ['track']).get('track');
 const grounds = looksIn('surface.module.css', ['glass', 'floating']);
-const hovers = looksIn('hover.module.css', ['fill', 'ink'], String.raw`:hover:not\(:disabled\)`);
+const hovers = looksIn('hover.module.css', ['fill', 'ink', 'edge'], String.raw`:hover:not\(:disabled\)`);
 
 // Report matching text looks only when no text property differs; e.g. an independent weight makes a distinct look.
 const redeclaresText = (own, look) =>

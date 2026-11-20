@@ -73,8 +73,9 @@ img.image {
   composes: floating from '../foundation/surface.module.css';
   display: flex;
   align-items: center;
+  --button-radius: var(--radius-full);
   padding: var(--space-2);
-  border-radius: var(--radius-full);
+  border-radius: var(--button-radius);
   pointer-events: auto;
 }
 

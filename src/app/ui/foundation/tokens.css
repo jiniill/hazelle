@@ -305,6 +305,7 @@
   /* The send button's fill and what stands on it: the accent's, but in a theme that states them. */
   --color-send: var(--color-accent);
   --color-on-send: var(--color-on-accent);
+  --send-hover-mix: 15%;
   --color-row-pointed: transparent;
   /* The fill of a list's open row: the raised surface's, but in a theme that states one. */
   --color-row-current: var(--color-surface-raised);

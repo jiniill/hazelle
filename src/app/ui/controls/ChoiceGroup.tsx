@@ -7,6 +7,7 @@ import styles from './ChoiceGroup.module.css';
 // fit uses chips only for a few short choices; long/many choices use a menu to avoid crushed labels.
 // mark precedes the label, tag follows it (segmented and buttons); menu renders a quiet inline chooser.
 const STRIP = { options: 4, letters: 14 };
+const LOOK = { buttons: styles.button, segmented: styles.segment, list: styles.option, cards: styles.card };
 
 type Props<T extends string> = {
   label: string;
@@ -41,7 +42,7 @@ export function ChoiceGroup<T extends string>({ label, showLabel = false, option
         layout === 'chips' ? (
           <Item key={option.value} density="chip" scheme="tab" leading={option.mark} title={option.label} pressed={option.value === value} onClick={() => onChange(option.value)} />
         ) : (
-          <button key={option.value} type="button" className={layout === 'list' ? `${styles.choice} ${styles.option}` : layout === 'cards' ? `${styles.choice} ${styles.card}` : styles.choice} aria-pressed={option.value === value}
+          <button key={option.value} type="button" className={`${styles.choice} ${LOOK[layout]}`} aria-pressed={option.value === value}
             // A card is named by its label alone; its description describes it.
             {...(layout === 'cards' && { 'aria-labelledby': `${id}-${option.value}`, 'aria-describedby': option.description ? `${id}-${option.value}-sub` : undefined })}
             onClick={() => onChange(option.value)}

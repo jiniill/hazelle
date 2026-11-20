@@ -14,10 +14,15 @@
   composes: eased from '../foundation/hover.module.css';
   border: var(--border-thin) solid var(--color-border);
   color: var(--color-text-muted);
-  transition:
-    border-color var(--motion-respond),
-    background-color var(--motion-respond),
-    color var(--motion-respond);
+}
+
+.button {
+  composes: fill from '../foundation/hover.module.css';
+}
+
+/* Its picked fill is the hover fill, so the words answer. */
+.segment {
+  composes: ink from '../foundation/hover.module.css';
 }
 
 .buttons .choice {
@@ -34,6 +39,11 @@
   color: var(--color-text);
 }
 
+/* Written over the hover fill, which outranks the picked one. */
+.button[aria-pressed='true']:is(:hover, :active):not(:disabled) {
+  background: var(--color-surface-raised);
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--choice-card-min), 1fr));
@@ -41,6 +51,7 @@
 }
 
 .card {
+  composes: edge from '../foundation/hover.module.css';
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -51,11 +62,9 @@
   text-align: start;
 }
 
-.card:is(:hover, :active):not([aria-pressed='true']) {
-  border-color: var(--color-border-strong);
-}
-
-.card[aria-pressed='true'] {
+/* Also written under the pointer, so the picked edge outranks the hover edge. */
+.card[aria-pressed='true'],
+.card[aria-pressed='true']:is(:hover, :active):not(:disabled) {
   border-color: var(--color-text-muted);
 }
 
