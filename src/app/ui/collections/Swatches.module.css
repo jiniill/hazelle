@@ -19,6 +19,7 @@
 
 .card {
   composes: box from '../foundation/surface.module.css';
+  composes: eased from '../foundation/hover.module.css';
   position: relative;
   min-width: 0;
 }

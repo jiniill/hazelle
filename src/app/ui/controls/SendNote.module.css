@@ -13,6 +13,10 @@
   color: var(--color-warn-text);
 }
 
+.press {
+  composes: eased from '../foundation/hover.module.css';
+}
+
 .press:is(:hover, :active) {
   color: var(--color-text-muted);
 }

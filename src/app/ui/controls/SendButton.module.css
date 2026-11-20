@@ -12,14 +12,8 @@
   color: var(--color-on-send);
 }
 
-@media (hover: hover) {
-  .send:hover:not(:disabled, .stop) {
-    background: color-mix(in oklab, var(--color-text) var(--send-hover-mix), var(--color-send));
-  }
-}
-
-.send:active:not(:disabled, .stop) {
-  background: color-mix(in oklab, var(--color-text) var(--send-hover-mix), var(--color-send));
+.send:is(:hover, :active):not(:disabled, .stop) {
+  background: var(--color-send-hover);
 }
 
 .send:disabled {

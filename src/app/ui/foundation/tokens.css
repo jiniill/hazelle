@@ -302,10 +302,10 @@
   /* The rail's ground: the sidebar's, but in a theme that states one. */
   --color-rail: var(--color-sidebar);
   --color-name: var(--color-accent-mark);
-  /* The send button's fill and what stands on it: the accent's, but in a theme that states them. */
+  /* The send button's fill, what stands on it and the fill under a pointer: the accent's, but in a theme that states them. */
   --color-send: var(--color-accent);
   --color-on-send: var(--color-on-accent);
-  --send-hover-mix: 15%;
+  --color-send-hover: var(--color-accent-hover);
   --color-row-pointed: transparent;
   /* The fill of a list's open row: the raised surface's, but in a theme that states one. */
   --color-row-current: var(--color-surface-raised);

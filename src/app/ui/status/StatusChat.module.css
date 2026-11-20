@@ -24,6 +24,7 @@
 
 /* A conversation in the list: who it is with, and the last thing said on one line. */
 .thread {
+  composes: eased from '../foundation/hover.module.css';
   display: flex;
   align-items: center;
   gap: var(--space-12);
@@ -33,7 +34,6 @@
   border-radius: var(--status-radius);
   color: inherit;
   text-align: left;
-  transition: background var(--motion-respond);
 }
 
 .thread:hover {
@@ -126,6 +126,7 @@
 }
 
 .reply {
+  composes: eased from '../foundation/hover.module.css';
   display: flex;
   align-items: center;
   align-self: flex-end;
@@ -136,7 +137,6 @@
   border-radius: var(--radius-full);
   color: var(--status-text);
   font-size: var(--text-xs);
-  transition: border-color var(--motion-respond);
 }
 
 .reply:hover:not(:disabled) {

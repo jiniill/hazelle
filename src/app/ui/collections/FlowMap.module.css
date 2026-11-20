@@ -44,7 +44,7 @@
 
 .node {
   composes: frame from '../foundation/surface.module.css';
-  composes: fill from '../foundation/hover.module.css';
+  composes: fill edge from '../foundation/hover.module.css';
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -55,10 +55,6 @@
     background-color var(--motion-respond),
     border-color var(--motion-respond),
     opacity var(--motion-respond);
-}
-
-.node:is(:hover, :active):not(:disabled) {
-  border-color: var(--color-border-strong);
 }
 
 .warn {
