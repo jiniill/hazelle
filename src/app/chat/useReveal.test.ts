@@ -44,4 +44,11 @@ describe('revealCut', () => {
     expect(revealCut('a < b and <3 more', 3)).toBe(3);
     expect(revealCut('a <3 more', 3)).toBe(3);
   });
+
+  it('holds back a tag or a surrogate pair the reply has only half of yet', () => {
+    const arrived = '가 <img src="blob:';
+    expect(revealCut(arrived, arrived.length)).toBe(2);
+    expect(revealCut('가\uD83D', 2)).toBe(1);
+    expect(revealCut('a < b', 5)).toBe(5);
+  });
 });

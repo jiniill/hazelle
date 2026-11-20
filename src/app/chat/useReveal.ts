@@ -63,10 +63,10 @@ export function useReveal(version: string, text: string, live: boolean): { text:
   return { text: text.slice(0, revealCut(text, Math.floor(own.pace.shown))), revealing };
 }
 
-// Never split surrogate pairs or HTML tags. A transient bare < or </ breaks picture-line detection
-// and flashes a folded image at full height.
+// Never split surrogate pairs or HTML tags, at the end of what has arrived too: a chunk ends where the provider cut
+// it, and a tag half arrived is drawn as its source until the rest comes. A transient bare < or </ breaks
+// picture-line detection and flashes a folded image at full height.
 export function revealCut(text: string, cut: number): number {
-  if (cut >= text.length) return cut;
   if (/[\uD800-\uDBFF]/.test(text[cut - 1] ?? '')) cut -= 1;
   const open = text.lastIndexOf('<', cut - 1);
   const inside = open >= 0 && /[A-Za-z/!]/.test(text[open + 1] ?? '') && !text.slice(open, cut).includes('>');
