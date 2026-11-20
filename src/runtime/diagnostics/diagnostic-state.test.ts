@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readTool } from '../../engine/import/tool';
 import { appendUserMessage, startChat } from '../chat/chat-log';
 import { readAutoReport } from '../../contracts/auto-diagnosis';
-import { autoChat, stateFacts, cacheCause, cacheFacts } from './diagnostic-state';
+import { autoChat, stateFacts, cacheCause, cacheFacts, turnFacts } from './diagnostic-state';
 import { setFact } from '../tasks/memory';
 import { setModuleAlways } from '../library/modules';
 import { answerable, testServer } from '../testing';
@@ -50,6 +50,11 @@ describe('the state a 문제 진단 reports', () => {
       expect(JSON.stringify(auto)).not.toContain('CANARY');
       expect(JSON.stringify(auto)).not.toContain('keeper');
     }));
+});
+
+it('names a failed turn by its api code, or by the kind of its step\'s own failure', () => {
+  expect(turnFacts({ kind: 'unsent', failure: { ok: false, error: 'conflict' } })).toEqual({ reason: 'conflict', tokens: null, budget: null });
+  expect(turnFacts({ kind: 'untranslated', failure: { kind: 'tokenizer' } })).toEqual({ reason: 'tokenizer', tokens: null, budget: null });
 });
 
 it('reports a cache break by what proves it, and leaves out one that only expired', () => {

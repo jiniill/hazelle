@@ -41,7 +41,8 @@ export const evaluatingTask = <T>(work: Promise<T>): Promise<T | { kind: 'stoppe
     return failure.error === 'stopped' ? { kind: 'stopped' as const } : { kind: 'unsaved' as const, failure };
   });
 
-// STUCK_MS bounds a stage/scan/count unit, not a whole long-chat pass (engine/progress).
+// STUCK_MS bounds a unit (one regex script over a message, a lorebook entry's scan, a count), not a whole long-chat
+// pass (engine/progress).
 // Before started/tokenizer load, use LOAD_MS only for a worker that cannot answer.
 const STUCK_MS = 3_000;
 const LOAD_MS = 20_000;

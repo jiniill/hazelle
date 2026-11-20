@@ -1,5 +1,6 @@
 import type { HistoryMessage } from '../history';
 import type { RegexScript } from '../import/types';
+import { progressed } from '../progress';
 
 // A box a script drew, taken out of the text (상태창 지정, design §6.4). script is its place in the caller's scripts.
 // at: which end of the text it stood at, or for a box within the text, the end.
@@ -66,6 +67,7 @@ export class Scripts {
     const boxes: Box[] = [];
     let result = cbs(text);
     for (const { source, place, flags, dynamic, plain, directive, kind: planned, argument, pattern: fixed } of this.plans[stage]) {
+      progressed();
       const pattern = dynamic ? compile(cbs(source), flags) : fixed;
       if (!pattern) continue;
       const regex = () => reset(pattern.regex);

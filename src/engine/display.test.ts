@@ -131,14 +131,14 @@ describe('the editDisplay pass', () => {
   });
 });
 
-it('gives a sign of life per stage of each message, and per row a Lua pass patches', () => {
+it('gives a sign of life per stage of each message and per script it runs, and likewise per row a Lua pass patches', () => {
   let signs = 0;
   onProgress(() => signs++);
   try {
     const pass = new DisplayPass({ ...scope, messages: [message('a', 'user', 'one'), message('b', 'assistant', 'two')] }, new Set(), () => null);
-    expect(signs).toBe(4);
+    expect(signs).toBe(8);
     pass.patch([{ version: 'b', text: 'done' }]);
-    expect(signs).toBe(5);
+    expect(signs).toBe(10);
   } finally {
     onProgress(() => {});
   }
