@@ -3,12 +3,15 @@ import type { Chat, ChatSummary } from '../../model/chat';
 import { textTranslation, type CharacterShelf } from '../../model/library';
 import { startChat } from '../../runtime/chat/chat-log';
 import { draftKey } from '../../runtime/device/drafts';
-import { greetingPreview, projectGreetings, startingGreetings } from '../../runtime/chat/greetings';
+import { followGreetings, greetingPreview, projectGreetings, startingGreetings } from '../../runtime/chat/greetings';
 import type { Shown } from '../../runtime/chat/talk';
 import type { Starting } from '../../runtime/chat/turn';
 import type { Unsaved } from '../../runtime/chat/turn-context';
 import { useSession } from '../session';
 import { navigate } from '../shell/router';
+import { sameItems } from './rowPart';
+
+const sameTexts = sameItems<string>(Object.is);
 
 // A new chat's greeting, shown until its first save, and that save. fresh: the chat is not saved yet.
 export function useNewChat(chatId: string, fresh: boolean, chat: Chat, shelf: CharacterShelf<ChatSummary> | null, replyLanguage: string) {
@@ -16,14 +19,20 @@ export function useNewChat(chatId: string, fresh: boolean, chat: Chat, shelf: Ch
   const card = shelf?.character.card ?? null;
   const [openedAt] = useState(() => Date.now());
   const greetings = card?.greetings ?? [];
-  const [picked, pickGreeting] = useState<number | null>(null);
-  // Preserve greeting ids through first save so seeds and story rows stay stable. Newly added greetings get new ids.
-  const [madeIds, setOpeningIds] = useState(() => greetings.map(() => crypto.randomUUID()));
-  const openingIds = madeIds.length < greetings.length ? [...madeIds, ...greetings.slice(madeIds.length).map(() => crypto.randomUUID())] : madeIds;
-  if (openingIds !== madeIds) setOpeningIds(openingIds);
+  // Preserve greeting ids through first save so seeds and story rows stay stable; each follows its greeting through the
+  // card's edits beside the chat, and the pick follows its id. A picked greeting the card drops leaves the default.
+  const [opening, setOpening] = useState(() => ({ texts: greetings, ids: followGreetings([], [], greetings) }));
+  const [picked, setPicked] = useState<string | null>(null);
+  let { ids } = opening;
+  if (!sameTexts(opening.texts, greetings)) {
+    ids = followGreetings(opening.texts, ids, greetings);
+    setOpening({ texts: greetings, ids });
+  }
+  const at = picked === null ? -1 : ids.indexOf(picked);
+  const selected = at === -1 ? null : at;
   const choices = useMemo(() => fresh && card
-    ? projectGreetings(greetings, openingIds, picked, (text) => textTranslation(shelf!.character, text, replyLanguage))
-    : null, [fresh, card, shelf?.character.translations, replyLanguage, openingIds, picked]);
+    ? projectGreetings(greetings, ids, selected, (text) => textTranslation(shelf!.character, text, replyLanguage))
+    : null, [fresh, card, shelf?.character.translations, replyLanguage, ids, selected]);
   const unstarted: Shown | null = useMemo(() => {
     const preview = greetingPreview(choices, openedAt);
     return preview && { ...preview, live: null };
@@ -62,5 +71,5 @@ export function useNewChat(chatId: string, fresh: boolean, chat: Chat, shelf: Ch
     return (start.current = { greeting: greetings && greetings.choices[greetings.selected]!.id, saved });
   }
 
-  return { unstarted, unsaved, pickGreeting, starting };
+  return { unstarted, unsaved, pickGreeting: (index: number) => setPicked(ids[index]!), starting };
 }

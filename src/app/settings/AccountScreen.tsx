@@ -16,7 +16,7 @@ import { useToast } from '../toast';
 import { LegalNotice } from '../common/LegalNotice';
 import { INSTALL_GUIDE } from '../common/legal';
 import { useLoaded } from '../common/useLoaded';
-import { AUTO_DIAGNOSIS, BIN, BOARD, DIRECT_CALLS, PAGES, PULSE, UNKNOWN, CHANGE_FAILED, SEE } from '../common/words';
+import { AUTO_DIAGNOSIS, BOARD, DIRECT_CALLS, PAGES, PULSE, UNKNOWN, CHANGE_FAILED, SEE, PURGE_FREES } from '../common/words';
 import { Avatar, Button, Columns, ConfirmDialog, FaceRow, Gauge, Link, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
 import { BackupSection } from './BackupSection';
 import { Diagnostics } from './Diagnostics';
@@ -138,14 +138,14 @@ function Storage() {
       label={PAGES.usage}
       control={
         <Button variant="secondary" size="sm" onClick={() => navigate({ kind: 'usage' })}>
-          보기
+          {SEE}
         </Button>
       }
     />
   );
   if (guest) return <Panel title="저장 공간" help="이 브라우저에만 저장돼요.">{usage}</Panel>;
   return (
-    <Panel title="저장 공간" help={`${BIN}에서 영구 삭제하면 공간이 생겨요.`}>
+    <Panel title="저장 공간" help={PURGE_FREES}>
       <Used label="텍스트" bytes={storage.bytes} cap={storage.bytesCap} />
       <Used label="이미지" bytes={storage.fileBytes} cap={storage.fileBytesCap} />
       {usage}
@@ -210,7 +210,7 @@ function AppInfo() {
           label="새 소식"
           control={
             <Button variant="secondary" size="sm" onClick={() => navigate({ kind: 'board', operator: false, category: 'news' })}>
-              보기
+              {SEE}
             </Button>
           }
         />

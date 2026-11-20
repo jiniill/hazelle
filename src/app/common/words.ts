@@ -132,6 +132,7 @@ export const PRESET = { noun: '프리셋', save: '프리셋으로 저장', renam
 export const BIN = '휴지통';
 export const PURGE = '영구 삭제';
 export const BIN_KEEPS = `${KEEP_DAYS}일 안에 '${BIN}'에서 복원할 수 있어요.`;
+export const PURGE_FREES = `${BIN}에서 ${PURGE}하면 공간이 생겨요.`;
 
 export const COMMAND = '명령어';
 export const ASSET = '에셋';

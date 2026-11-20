@@ -31,7 +31,7 @@ import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
 import { SORT_PROMPT, defaultPrompt } from './prompt-words';
-import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, DIRECT_CALLS, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE } from './words';
+import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, DIRECT_CALLS, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE, PURGE_FREES } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -70,6 +70,8 @@ type OnFallback =
 // Said on the username field when 다음 checks the name.
 export const USERNAME_TAKEN = '이미 쓰고 있는 아이디예요.';
 
+const ACCOUNT_OPENS = '계정을 만들면 쓸 수 있어요.';
+
 const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in OnFallback]?: never } & Partial<Record<string, string>> = {
   'bad-username': `아이디는 ${count(USERNAME_LENGTH.min)}~${count(USERNAME_LENGTH.max)}자의 글자와 숫자, ${[...USERNAME_MARKS].join(' ')}로만 만들 수 있어요.`,
   'signup-closed': '가입 정원이 다 차서 새 계정을 만들 수 없어요.',
@@ -80,7 +82,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   suspended: `정지된 계정이라 내용을 저장하거나 모델을 호출할 수 없어요. 백업 파일은 ${inSettings('account')}에서 받을 수 있어요.`,
   'too-many-calls': '모델을 너무 자주 호출했어요. 잠시 뒤에 다시 시도해 주세요.',
   'too-many-live-calls': '동시에 받는 응답이 너무 많아요. 받고 있는 응답이 끝난 뒤 다시 시도해 주세요.',
-  'storage-full': `저장 공간이 가득 찼어요. ${BIN}에서 영구 삭제하면 공간이 생겨요.`,
+  'storage-full': `저장 공간이 가득 찼어요. ${PURGE_FREES}`,
   'tool-file-refused': '플러그인 파일을 저장하지 못했어요. 파일 용량 한도나 차단 여부를 확인해 주세요.',
   'draft-too-large': '플러그인 코드가 512KB를 넘어서 여기서 편집할 수 없어요.',
   'risu-plugin': 'Risu 플러그인은 여기서 편집할 수 없어요.',
@@ -98,7 +100,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'post-locked': '운영자가 댓글을 닫은 글이에요.',
   'not-author': '댓글과 답글은 글쓴이와 운영자만 달 수 있어요.',
   'guest-board-blocked': '운영자가 글쓰기를 막았어요.',
-  'guest-board-closed': '지금은 손님 글쓰기가 닫혀 있어요. 계정을 만들면 쓸 수 있어요.',
+  'guest-board-closed': `지금은 손님 글쓰기가 닫혀 있어요. ${ACCOUNT_OPENS}`,
   'too-many-posts': `글은 하루에 ${count(POSTS_PER_DAY)}개까지 쓸 수 있어요.`,
   'too-many-comments': `댓글은 하루에 ${count(COMMENTS_PER_DAY)}개까지 쓸 수 있어요.`,
   'too-many-pictures': `사진은 글 하나에 ${count(MAX_POST_PICTURES)}장, 하루에 ${count(PICTURES_PER_DAY)}장까지 올릴 수 있어요.`,
@@ -110,7 +112,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'share-held': SHARE.heldNote,
   'no-consent': '링크로 공유하려면 먼저 공유 규칙에 동의해야 해요.',
   'not-admin': '운영자 계정으로만 할 수 있어요.',
-  'needs-account': `${NEEDS_ACCOUNT}. 계정을 만들면 쓸 수 있어요.`,
+  'needs-account': `${NEEDS_ACCOUNT}. ${ACCOUNT_OPENS}`,
   'needs-relay': `${withParticle(DIRECT_CALLS.label, '으로/로')}는 이 연결을 쓸 수 없어요. ${inSettings('account')}에서 끄면 쓸 수 있어요.`,
   'no-session': '로그인이 풀렸어요. 새로고침한 뒤 다시 로그인해 주세요.',
   conflict: '다른 기기에서 동시에 바꿔서 저장하지 못했어요. 다시 시도해 주세요.',

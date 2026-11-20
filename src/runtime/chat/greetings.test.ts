@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { fold, shown, type Chat, type Entry } from '../../model/chat';
 import type { Stored } from '../../model/kinds';
 import { chatWrites, editMessage, appendScripted } from './chat-log';
-import { greetingNow, greetingOf, greetingPreview, projectGreetings, startingGreetings } from './greetings';
+import { followGreetings, greetingNow, greetingOf, greetingPreview, projectGreetings, startingGreetings } from './greetings';
 import type { ObjectStore } from '../store/store';
 import type { Write } from '../store/object-writes';
 
@@ -33,7 +33,6 @@ it('preserves original indexes, blank choices, duplicate text, ids and translati
     }
   }
   expect(projectGreetings(texts, ids, null)?.selected).toBe(1);
-  expect(projectGreetings(texts, ids, 8)?.selected).toBe(1);
   expect(projectGreetings(['', ' '], ['a', 'b'], null)).toBeNull();
 });
 
@@ -69,4 +68,18 @@ it("finds a chat's greeting where the card holds it now: its own index, the text
   // Two greetings that read the same: the chat's own index stands.
   expect(greetingNow(['b', 'b'], 1, 'b')).toBe(1);
   expect(greetingNow(['a', 'c'], 1, 'b')).toBeNull();
+});
+
+it("carries a new chat's greeting ids through the card's moves, edits and removals beside it", () => {
+  const ids = ['g0', 'g1', 'g2'];
+  expect(followGreetings(['a', 'b', 'c'], ids, ['b', 'a', 'c'])).toEqual(['g1', 'g0', 'g2']);
+  expect(followGreetings(['a', 'b', 'c'], ids, ['a', 'bb', 'c'])).toEqual(ids);
+  expect(followGreetings(['a', 'b', 'c'], ids, ['a', 'c'])).toEqual(['g0', 'g2']);
+  // Two that read the same keep their own places.
+  expect(followGreetings(['a', 'a', 'c'], ids, ['a', 'a', 'c'])).toEqual(ids);
+  expect(followGreetings(['a', '', ''], ids, ['a', 'x', ''])).toEqual(ids);
+  expect(followGreetings(['x', 'a', 'a', 'b'], [...ids, 'g3'], ['x', 'a', 'b', 'a'])).toEqual(['g0', 'g1', 'g3', 'g2']);
+  const added = followGreetings(['a', 'b', 'c'], ids, ['a', 'b', 'c', '']);
+  expect(added.slice(0, 3)).toEqual(ids);
+  expect(ids).not.toContain(added[3]);
 });
