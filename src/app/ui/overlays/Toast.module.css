@@ -115,13 +115,13 @@
   top: calc(-1 * var(--space-8));
   left: calc(-1 * var(--space-16));
   display: none;
-  border-radius: var(--radius-full);
+  --button-radius: var(--radius-full);
+  border-radius: var(--button-radius);
 }
 
 .corner button {
   width: var(--control-xs);
   height: var(--control-xs);
-  border-radius: var(--radius-full);
 }
 
 @media (hover: hover) {

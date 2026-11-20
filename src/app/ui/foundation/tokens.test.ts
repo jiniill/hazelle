@@ -101,8 +101,9 @@ it.each(themed)('keeps what the %s theme states on its accent in %s readable the
   for (const fill of [tone.accent, tone.accentHover ?? mixed(mode, 'accent', 'accent-hover', tone.accent)]) expect(contrast(tone.onAccent, fill)).toBeGreaterThanOrEqual(4.5);
 });
 
-it.each(themed)('keeps what the %s theme states on its send button in %s readable there', (_, __, tone) => {
-  if (tone.onSend) expect(contrast(tone.onSend, tone.send ?? tone.accent)).toBeGreaterThanOrEqual(4.5);
+it.each(themed)('keeps what the %s theme states on its send button in %s readable there, at rest and under a pointer', (_, __, tone) => {
+  if (tone.send) expect(tone.sendHover).toBeDefined();
+  if (tone.onSend) for (const fill of [tone.send ?? tone.accent, ...(tone.sendHover ? [tone.sendHover] : [])]) expect(contrast(tone.onSend, fill)).toBeGreaterThanOrEqual(4.5);
 });
 
 it.each(themed)('keeps the words, the dialogue, the action voice and what is read in the accent of the %s theme in %s readable on its page, and in the bubble fill where its message shape draws with it', (_, mode, tone, theme) => {

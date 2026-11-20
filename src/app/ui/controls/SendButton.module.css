@@ -1,4 +1,5 @@
 .send {
+  composes: eased from '../foundation/hover.module.css';
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -9,7 +10,10 @@
   border-radius: var(--radius-md);
   background: var(--color-send);
   color: var(--color-on-send);
-  transition: background-color var(--motion-respond);
+}
+
+.send:is(:hover, :active):not(:disabled, .stop) {
+  background: var(--color-send-hover);
 }
 
 .send:disabled {
@@ -19,6 +23,7 @@
 }
 
 .stop {
+  composes: fill from '../foundation/hover.module.css';
   border-color: var(--color-accent);
   background: transparent;
   color: var(--color-accent-mark);

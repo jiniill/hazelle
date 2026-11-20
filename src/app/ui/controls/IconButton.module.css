@@ -6,14 +6,15 @@
   width: var(--control-md);
   height: var(--control-md);
   flex-shrink: 0;
-  border-radius: var(--radius-md);
+  /* --button-radius: the radius of the ground it stands on, where that ground is not the page (a card's round ⋯). */
+  border-radius: var(--button-radius, var(--radius-md));
   color: var(--color-text-muted);
 }
 
 .sm {
   width: var(--control-chip);
   height: var(--control-chip);
-  border-radius: var(--radius-sm);
+  border-radius: var(--button-radius, var(--radius-sm));
 }
 
 .rail {

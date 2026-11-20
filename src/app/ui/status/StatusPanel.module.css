@@ -113,13 +113,13 @@
 }
 
 .tab {
+  composes: eased from '../foundation/hover.module.css';
   flex-shrink: 0;
   min-height: var(--control-md);
   padding: 0 var(--space-16);
   border-bottom: var(--border-thick) solid transparent;
   color: var(--status-muted);
   white-space: nowrap;
-  transition: color var(--motion-respond);
 }
 
 .tab:hover,
@@ -133,6 +133,7 @@
 }
 
 .choice {
+  composes: eased from '../foundation/hover.module.css';
   min-height: var(--control-md);
   padding: var(--space-8) var(--space-16);
   border: var(--border-thin) solid var(--status-line);
@@ -141,7 +142,6 @@
   color: var(--status-text);
   text-align: left;
   overflow-wrap: anywhere;
-  transition: border-color var(--motion-respond);
 }
 
 .choice:hover:not(:disabled) {
