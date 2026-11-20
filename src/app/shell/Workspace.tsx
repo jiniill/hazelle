@@ -19,7 +19,7 @@ import { TutorialProvider, useTutorials } from '../common/Tutorial';
 import { count } from '../common/typedNumber';
 import { playSound, unlockSound } from '../common/sounds';
 import { DisplayProvider, useDisplay } from '../display';
-import { BIN, BOARD, inSettings, NOTICES, LOADING_TITLE, OPEN_STEPS, SEE } from '../common/words';
+import { BOARD, inSettings, NOTICES, LOADING_TITLE, OPEN_STEPS, PURGE_FREES, SEE } from '../common/words';
 import { ImportProvider } from '../library/ImportFlow';
 import { PasteReader } from './PasteReader';
 import { SessionProvider, useHeldLeave, useSaves, useSession, useSettings, useStore } from '../session';
@@ -38,7 +38,7 @@ const SUSPENDED: Standing = {
   detail: `읽기만 할 수 있고 저장과 모델 요청은 막혀 있어요. ${inSettings('account')}에서 ${NOTICES.from}을 확인할 수 있어요.`,
 };
 // Said once, and standing until the account shrinks: each refused write saying it again would be a stream of toasts.
-const FULL: Standing = { message: '저장 공간이 가득 찼어요', detail: `새로 만든 내용은 저장되지 않아요. ${BIN}에서 영구 삭제하면 공간이 생겨요.` };
+const FULL: Standing = { message: '저장 공간이 가득 찼어요', detail: `새로 만든 내용은 저장되지 않아요. ${PURGE_FREES}` };
 // Ahead of 연결이 불안정해요: calls wait out a restore as they wait out a dropped connection.
 const RESTORING: Standing = { message: '계정 복원 중', detail: '' };
 const subscribeNothing = () => () => {};
