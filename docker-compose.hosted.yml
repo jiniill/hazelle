@@ -2,7 +2,8 @@
 #   hazelle-compose up -d   (installed by infra/cloud-init.yaml.tftpl)
 # /etc/hazelle/env holds HAZELLE_IMAGE (written by scripts/deploy.sh), HAZELLE_BACKUP_REMOTE, HAZELLE_ALERT_WEBHOOK and,
 # for pictures in R2 (infra/README.md "Pictures in R2"), HAZELLE_FILES_BUCKET=r2 with the HAZELLE_FILES_R2_* values and
-# optionally HAZELLE_FILES_CACHE_BYTES, which docker-compose.yml passes through; left out, pictures stay on /data.
+# optionally HAZELLE_FILES_CACHE_BYTES, and for the proxy (infra/README.md "Proxy") HAZELLE_PROXY_URL and
+# HAZELLE_PROXY_KEY, which docker-compose.yml passes through; left out, pictures stay on /data and no proxy is offered.
 # Copy this file and docker-compose.yml to /etc/hazelle together: the R2 keys reach the app only through the base file.
 services:
   app:

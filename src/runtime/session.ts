@@ -58,7 +58,7 @@ import { backfillSummaries } from './store/summary';
 import { receiveReply, resumeSend } from './chat/turn';
 import { moveTaskModels, saveUpgraded } from './store/upgrade';
 import { rereadOriginals } from './import/reread';
-import { accountTransport, callsFromBrowser, countGuest, directTransport, holdTransport, type Transport } from './models/relay';
+import { accountTransport, callRoute, countGuest, directTransport, holdTransport, type Transport } from './models/relay';
 import { guestAccount, dropGuestStore, guestBackend, throwawayGuest } from './account/guest-store';
 
 export type Session = {
@@ -136,7 +136,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     store.close();
     return { ok: false, error: 'stopped' };
   }
-  const transport = kept.transport ?? accountTransport(() => callsFromBrowser(accountSettings(store)));
+  const transport = kept.transport ?? accountTransport(() => callRoute(accountSettings(store)));
   // The opening pull is sent before the switch is read, so the page-load mark rides the next request.
   holdTransport(transport);
   const holdSharing = () => {

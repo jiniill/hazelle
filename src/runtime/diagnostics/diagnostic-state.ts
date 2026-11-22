@@ -4,7 +4,9 @@ import type { CacheDiagnosis, Forecast } from '../../model/cache';
 import { shown, type Chat, type Receipt } from '../../model/chat';
 import { live } from '../../model/library';
 import { toolId } from '../../model/tool';
+import { accountSettings } from '../account-settings';
 import { chatModel } from '../models/assignment';
+import { callRoute } from '../models/relay';
 import { forecast, prior } from './cache';
 import { diagnoseCache } from './cache-diagnosis';
 import { limitsOf, packsOf, promptBudget } from '../chat/chat-context';
@@ -256,6 +258,7 @@ export function autoChat({ store, read }: Pick<Session, 'store' | 'read'>, id: s
   const receipt = latest && shown(latest).receipt;
   return {
     type: 'kind' in route ? null : labelledType(route.connection.value),
+    calls: callRoute(accountSettings(store)),
     model: 'kind' in route ? null : route.model.id,
     hardContext: 'kind' in route ? null : route.model.contextLength,
     context,
@@ -285,6 +288,7 @@ export async function stateFacts(session: Reader, place: Place | null): Promise<
     personas: store.list('persona').length,
     modules: store.list('module').length,
     connections: counted(store.list('connection').map(({ value }) => value.type)),
+    calls: known(callRoute(accountSettings(store))),
   };
   const page = Math.round(performance.now() / 1000);
   if (!place) return { place: null, page, account };

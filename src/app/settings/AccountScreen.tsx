@@ -5,7 +5,7 @@ import { START_AGAIN } from '../../contracts/start';
 import { BUILT_VERSION, readRelease, selfHost } from '../../runtime/installation';
 import { setDiagnosisSharing, sharesDiagnosis } from '../../runtime/diagnostics/auto-diagnosis';
 import { setPulseSharing, sharesPulse } from '../../runtime/service/pulse';
-import { callsFromBrowser, setBrowserCalls } from '../../runtime/models/relay';
+import { callRoute, setCallRoute, type CallRoute } from '../../runtime/models/relay';
 import { sizeText } from '../common/size';
 import { count } from '../common/typedNumber';
 import { GuestNotice } from '../common/GuestNotice';
@@ -16,8 +16,8 @@ import { useToast } from '../toast';
 import { LegalNotice } from '../common/LegalNotice';
 import { INSTALL_GUIDE } from '../common/legal';
 import { useLoaded } from '../common/useLoaded';
-import { AUTO_DIAGNOSIS, BOARD, DIRECT_CALLS, PAGES, PULSE, UNKNOWN, CHANGE_FAILED, SEE, PURGE_FREES } from '../common/words';
-import { Avatar, Button, Columns, ConfirmDialog, FaceRow, Gauge, Link, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
+import { AUTO_DIAGNOSIS, BOARD, CALL_ROUTE, PAGES, PULSE, UNKNOWN, CHANGE_FAILED, SEE, PURGE_FREES } from '../common/words';
+import { Avatar, Button, ChoiceGroup, Columns, ConfirmDialog, FaceRow, Gauge, Link, NavBar, Panel, Screen, SettingGroup, SettingRow, Stack, Switch, Text } from '../ui';
 import { BackupSection } from './BackupSection';
 import { Diagnostics } from './Diagnostics';
 import { LeaveSection } from './LeaveSection';
@@ -62,9 +62,11 @@ function SignedIn() {
   const { suspended } = useStanding();
   const toast = useToast();
   const store = useStore();
-  const direct = callsFromBrowser(useSettings());
-  const [asking, setAsking] = useState(false);
-  const setDirect = (on: boolean) => toast.settled(setBrowserCalls(store, on), CHANGE_FAILED);
+  const { proxy } = useAccount();
+  const route = callRoute(useSettings());
+  const routes = (['server', 'browser', 'proxy'] as const).filter((each) => each !== 'proxy' || proxy).map((value) => ({ value, label: CALL_ROUTE.routes[value] }));
+  const [asking, setAsking] = useState<Exclude<CallRoute, 'server'> | null>(null);
+  const setRoute = (next: CallRoute) => toast.settled(setCallRoute(store, next), CHANGE_FAILED);
   async function logOutElsewhere() {
     const ended = await logOutOthers();
     if (!ended.ok) return toast.failed(ended, '다른 기기에서 로그아웃하지 못했어요.');
@@ -107,23 +109,23 @@ function SignedIn() {
           }
         />
         <SettingRow
-          label={DIRECT_CALLS.label}
-          help={DIRECT_CALLS.help}
-          control={<Switch label={DIRECT_CALLS.label} checked={direct} onChange={(on) => (on ? setAsking(true) : setDirect(false))} />}
+          label={CALL_ROUTE.label}
+          help={CALL_ROUTE.help}
+          control={<ChoiceGroup layout="fit" label={CALL_ROUTE.label} options={routes} value={route} onChange={(next) => (next === 'server' ? setRoute(next) : setAsking(next))} />}
         />
       </SettingGroup>
       {asking && (
         <ConfirmDialog
-          title={DIRECT_CALLS.ask}
-          confirm={DIRECT_CALLS.confirm}
+          title={CALL_ROUTE.ask[asking].title}
+          confirm={CALL_ROUTE.confirm}
           icon={Check}
           onConfirm={() => {
-            setAsking(false);
-            setDirect(true);
+            setAsking(null);
+            setRoute(asking);
           }}
-          onClose={() => setAsking(false)}
+          onClose={() => setAsking(null)}
         >
-          {DIRECT_CALLS.cost}
+          {CALL_ROUTE.ask[asking].cost}
         </ConfirmDialog>
       )}
     </Stack>

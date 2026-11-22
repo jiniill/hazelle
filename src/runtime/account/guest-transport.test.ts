@@ -21,7 +21,7 @@ let session: Session | undefined;
 afterEach(() => {
   session?.close();
   session = undefined;
-  holdTransport(accountTransport(() => false));
+  holdTransport(accountTransport(() => 'server'));
   vi.unstubAllGlobals();
 });
 

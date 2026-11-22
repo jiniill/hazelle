@@ -39,6 +39,7 @@ export async function testApp(upstream: Upstream = () => Promise.reject(new Type
     streams: streamRegistry(streamStore(join(dir, 'streams.sqlite')), outbound, limits.relay),
     outbound,
     localProviders: new Set(),
+    proxy: false,
     limits,
     backups: backups(dir, 3, alerts('https://alerts.test/hook'), async () => disk.freePercent),
     pulse: openPulse(db, () => clock.now()),

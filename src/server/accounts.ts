@@ -197,5 +197,6 @@ async function describe(c: Context<AppEnv>, account: Pick<Account, 'id' | 'usern
     unreadNotices,
     unreadBoard,
     localProviders: [...c.env.localProviders],
+    proxy: c.env.proxy,
   };
 }

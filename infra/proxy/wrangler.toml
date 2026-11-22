@@ -1,0 +1,14 @@
+# The proxy (src/proxy/worker.ts, infra/README.md "Proxy"): a second exit for provider calls, beside the server's own.
+#   wrangler deploy --config infra/proxy/wrangler.toml
+#   wrangler secret put KEY --config infra/proxy/wrangler.toml   (the value of HAZELLE_PROXY_KEY in /etc/hazelle/env)
+name = "hazelle-proxy"
+main = "../../src/proxy/worker.ts"
+compatibility_date = "2026-11-01"
+workers_dev = true
+# It keeps nothing of a call, its host's logs included.
+[observability]
+enabled = false
+
+# Run near here whoever calls, or the calls would leave from the edge nearest the server, in Seoul as its own do.
+[placement]
+region = "gcp:us-central1"

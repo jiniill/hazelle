@@ -18,6 +18,8 @@ export type SessionFacts = {
   unreadNotices: number;
   unreadBoard: number;
   localProviders: readonly string[];
+  // The operator runs a proxy (contracts/proxy), so 요청 경로 may offer it.
+  proxy: boolean;
 };
 // What the operator sent, newest first (server/admin notices).
 export type Notice = { id: number; text: string; createdAt: number };

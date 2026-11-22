@@ -158,7 +158,7 @@ it('stops before remembering a guest vault when its head write fails, shows the 
 });
 
 it('stops landing when guest content cannot be read and asks the guest-data question after a successful retry', async () => {
-  const session: SessionFacts = { accountId: crypto.randomUUID(), username: 'tester', admin: false, suspended: false, state: 'active', storage: { bytes: 0, bytesCap: null, fileBytes: 0, fileBytesCap: null }, unreadNotices: 0, unreadBoard: 0, localProviders: [] };
+  const session: SessionFacts = { accountId: crypto.randomUUID(), username: 'tester', admin: false, suspended: false, state: 'active', storage: { bytes: 0, bytesCap: null, fileBytes: 0, fileBytesCap: null }, unreadNotices: 0, unreadBoard: 0, localProviders: [], proxy: false };
   const vaultKey = randomBytes(32);
   const device = await import('../../vault/device');
   await device.rememberVault(session.accountId, vaultKey);

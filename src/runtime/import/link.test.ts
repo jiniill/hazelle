@@ -66,6 +66,6 @@ it('tells a guest a Proton link needs an account, without loading its heavy modu
   try {
     expect(await downloadLink({ kind: 'proton', url: 'https://drive.proton.me/urls/A#b' }, signal, () => {})).toEqual({ ok: false, failure: { kind: 'needs-account' } });
   } finally {
-    holdTransport(accountTransport(() => false));
+    holdTransport(accountTransport(() => 'server'));
   }
 });

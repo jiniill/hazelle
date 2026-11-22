@@ -63,6 +63,8 @@ resource "vultr_instance" "hazelle" {
       "HAZELLE_FILES_R2_BUCKET=${var.r2_files_bucket}",
       "HAZELLE_FILES_R2_ACCESS_KEY_ID=${var.r2_files_access_key_id}",
       "HAZELLE_FILES_R2_SECRET_ACCESS_KEY=${var.r2_files_secret_access_key}",
+      "HAZELLE_PROXY_URL=${var.proxy_url}",
+      "HAZELLE_PROXY_KEY=${var.proxy_key}",
     ])
     # [files]: the picture store, which the copier reads for snapshot archives (deploy/rclone-backup.sh).
     rclone_conf = join("\n", concat([

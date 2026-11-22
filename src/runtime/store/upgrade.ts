@@ -48,8 +48,15 @@ export function readRow(line: unknown): Stored<Kind> | null {
 }
 
 function upgradeSettings(value: Record<string, unknown>) {
-  const held = presetsHoldAll(value);
-  return presetsNameMode(held ?? value) ?? held;
+  let upgraded: Record<string, unknown> | null = null;
+  for (const step of [presetsHoldAll, presetsNameMode, callsNameRoute]) upgraded = step(upgraded ?? value) ?? upgraded;
+  return upgraded;
+}
+
+// Until 2026-11-22 직접 요청 was a switch of its own; with the proxy, where calls leave from became one choice.
+// An app from before still writes the switch, and one it turned on is the later word.
+function callsNameRoute(value: Record<string, unknown>) {
+  return 'browserCalls' in value ? { ...without(value, 'browserCalls'), calls: 'browser' } : null;
 }
 
 // Until 2026-11-13 the starter presets were the app's and looks held only the account's own; presets now hold them all.

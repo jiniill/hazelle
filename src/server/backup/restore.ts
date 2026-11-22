@@ -146,6 +146,7 @@ export async function restoreGeneration(generation: string, dataDir: string, mig
     streams: streamRegistry(streamStore(':memory:'), outbound, relay),
     outbound,
     localProviders: new Set(),
+    proxy: false,
     limits: { relay, calls: tokenBucket(1), botCalls: tokenBucket(1), visitors: visitorLimits(), uploads: uploadBudget() },
     backups: backups(dataDir, 0, alerts(null)),
 

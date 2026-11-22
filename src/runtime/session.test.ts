@@ -11,7 +11,7 @@ import { setPulseSharing } from './service/pulse';
 import { answerable, saying, stubPage, stubRelay, testServer, upstream } from './testing';
 import { fold, shown } from '../model/chat';
 import { takeTurn } from './chat/turn';
-import { setBrowserCalls } from './models/relay';
+import { setCallRoute } from './models/relay';
 
 const server = testServer();
 
@@ -129,7 +129,7 @@ describe('session', () => {
 it('sends an account’s turn from the browser under 직접 요청, through no stream and with no marker', () =>
   server.withSession(async (session) => {
     await answerable(session);
-    await setBrowserCalls(session.store, true);
+    await setCallRoute(session.store, 'browser');
     const chat = crypto.randomUUID();
     await server.hold(session.store, chat);
     await startChat(session.store, chat, { title: null, character: null, models: {} }, null);

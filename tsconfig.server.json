@@ -5,6 +5,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["src/server"],
-  "exclude": ["src/server/testing.ts", "src/server/**/*.test.ts"]
+  "include": ["src/server", "src/proxy"],
+  "exclude": ["src/server/testing.ts", "src/server/**/*.test.ts", "src/proxy/**/*.test.ts"]
 }

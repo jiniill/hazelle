@@ -32,7 +32,7 @@ describe('the state a 문제 진단 reports', () => {
       expect(report).not.toContain(chat);
       expect(facts).toMatchObject({
         place: 'chat',
-        account: { chats: 1 },
+        account: { chats: 1, calls: 'server' },
         facts: {
           messages: 1,
           model: { id: 'm' },

@@ -86,10 +86,10 @@ export type ServerError =
   | 'guest-board-closed'
   | 'wrong-login';
 // A call the relay forwards as given. binary: body is the base64 of the bytes to send, where a text would not hold
-// them (a plugin's upload).
+// them (a plugin's upload). proxy: it leaves through the operator's proxy (contracts/proxy), not from the server's address.
 export const RELAY_METHODS = ['GET', 'POST'] as const;
-export type HttpRequest = { url: string; method: (typeof RELAY_METHODS)[number]; headers: Record<string, string>; body: string | null; binary?: true };
+export type HttpRequest = { url: string; method: (typeof RELAY_METHODS)[number]; headers: Record<string, string>; body: string | null; binary?: true; proxy?: true };
 // A keyset page of a list: next is what the following page is asked after, null on the last.
 export type Paged<K extends string, T> = Record<K, T[]> & { next: string | null };
 // The relay's own refusals, answered marked RELAY_HEADER: error (server/relay).
-export type RelayError = 'bad-envelope' | 'not-https' | 'not-public' | 'upstream-unreachable' | 'upstream-redirect' | 'upstream-not-api' | 'relay-traffic-limit' | 'relay-host-limit';
+export type RelayError = 'bad-envelope' | 'not-https' | 'not-public' | 'upstream-unreachable' | 'upstream-redirect' | 'upstream-not-api' | 'relay-traffic-limit' | 'relay-host-limit' | 'no-proxy' | 'proxy-unreachable';

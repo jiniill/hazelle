@@ -38,6 +38,7 @@ const AREAS = {
     why: 'the model is pure domain, saved values and what is computed from them with no I/O, and takes only types from connectors, the engine and the vault (a stored file\'s reference); the plain-object test imports nothing.',
   },
   vault: { paths: ['src/vault'], imports: ['base64', 'hex'], why: 'the vault is crypto and device storage only; it never reaches the network.' },
+  proxy: { paths: ['src/proxy'], imports: ['contracts'], why: 'the proxy is a worker of its own on another host, built without the app: it knows only the wire contract it shares with the server.' },
   server: {
     paths: ['src/server'],
     imports: ['contracts', 'base64', 'hex', 'record', 'errorMessage', 'modelsDev', 'destination'],

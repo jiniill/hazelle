@@ -230,6 +230,7 @@ it('restores a generation into an empty directory: logins, counts, pictures and 
     streams: streamRegistry(streamStore(':memory:'), outbound, relay),
     outbound,
     localProviders: new Set(),
+    proxy: false,
     limits: { relay, calls: tokenBucket(240), botCalls: tokenBucket(20), visitors: visitorLimits(), uploads: uploadBudget() },
     backups: backups(dir, 3, alerts(null)),
 

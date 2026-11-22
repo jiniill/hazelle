@@ -3,7 +3,7 @@ import type { HttpRequest } from '../../contracts/http';
 import { streamKey } from '../../vault/streams';
 import { holdAccount, holdPulse } from '../api';
 import { CONNECTION_TYPES } from '../../connectors/registry';
-import { accountTransport, directTransport, dropStream, relay, relayJson, stopStream, stream } from './relay';
+import { accountTransport, directTransport, dropStream, relay, relayJson, stopStream, stream, type CallRoute } from './relay';
 
 const request: HttpRequest = { url: 'https://example.com/models', method: 'GET', headers: {}, body: null };
 const broken = () => new Response(new ReadableStream({ start: (controller) => controller.error(new TypeError('network error')) }), { headers: { 'x-relay': 'upstream' } });
@@ -219,13 +219,13 @@ it('still retries a guest call when discarding the failed response body rejects'
   transport.close();
 });
 
-it('sends an account’s typed calls from the browser under 직접 요청, keeps the rest on the server, and follows a flip at the next call', async () => {
+it('sends an account’s typed calls from the browser or through the proxy as 요청 경로 says, keeps the rest on the server, and follows a change at the next call', async () => {
   const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async (url) => (url === request.url ? new Response('reply') : Response.json({ error: 'stream-gone' }, { status: 404 })));
   vi.stubGlobal('fetch', fetch);
   const openai = CONNECTION_TYPES.find(({ id }) => id === 'openai')!;
   const copilot = CONNECTION_TYPES.find(({ id }) => id === 'copilot')!;
-  let direct = true;
-  const transport = accountTransport(() => direct);
+  let route: CallRoute = 'browser';
+  const transport = accountTransport(() => route);
   const started = vi.fn();
   const mine = { id: crypto.randomUUID(), key: {}, public: 'k', started };
   const held = crypto.randomUUID();
@@ -242,11 +242,20 @@ it('sends an account’s typed calls from the browser under 직접 요청, keeps
   transport.drop(held);
   expect(started).not.toHaveBeenCalled();
 
-  direct = false;
+  route = 'server';
   expect(transport.detached).toBe(true);
   expect(transport.problem(copilot)).toBeNull();
   await transport.stream({ id: crypto.randomUUID(), key: {}, public: 'k' }, request, signal, null, undefined, openai);
   expect(fetch.mock.calls.map(([url]) => url.replace(/[0-9a-f-]{36}/, ':id'))).toEqual([request.url, request.url, '/api/relay', '/api/streams/:id?from=0', '/api/streams/:id', '/api/streams/:id']);
+
+  // The proxy is the server's to reach: the call stays detached and says only that it goes that way.
+  route = 'proxy';
+  expect([transport.detached, transport.problem(copilot)]).toEqual([true, null]);
+  await transport.stream({ id: crypto.randomUUID(), key: {}, public: 'k' }, request, signal, null, undefined, openai);
+  await transport.raw(request, signal, undefined, undefined, openai);
+  await transport.raw(request, signal);
+  const sent = fetch.mock.calls.slice(-3).map(([, init]) => JSON.parse(init.body as string) as { request?: { proxy?: true }; proxy?: true });
+  expect([sent[0]!.request!.proxy, sent[1]!.proxy, sent[2]!.proxy]).toEqual([true, true, undefined]);
   transport.close();
 });
 

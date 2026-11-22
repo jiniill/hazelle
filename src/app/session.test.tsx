@@ -16,7 +16,7 @@ import { SessionProvider, type Account, useAssetUrl, useChatDisplay, useChatMode
 import { probeRoot } from './ui/probe';
 
 const facts = new AccountFacts({ suspended: false, state: 'active', storage: { bytes: 0, bytesCap: null, fileBytes: 0, fileBytesCap: null }, unreadNotices: 0, unreadBoard: 0 });
-const account: Account = { admin: false, localProviders: [], facts, guest: null, onLock() {}, onLogout: async () => null };
+const account: Account = { admin: false, localProviders: [], proxy: false, facts, guest: null, onLock() {}, onLogout: async () => null };
 
 // A store over a server that holds nothing and takes every write.
 function openStore() {

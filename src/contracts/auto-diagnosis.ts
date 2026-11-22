@@ -42,6 +42,8 @@ const BROWSERS = ['chrome', 'edge', 'firefox', 'safari', 'samsung', 'other'] as 
 const SYSTEMS = ['windows', 'mac', 'linux', 'android', 'ios', 'other'] as const;
 const SOURCES = ['prior', 'model', 'chat', 'drift-reset', 'unavailable'] as const;
 const BOUNDS = ['hard-upper', 'hard-centre', 'user-centre', 'refusal'] as const;
+// 요청 경로 (runtime/models/relay CallRoute).
+const CALLS = ['server', 'browser', 'proxy'] as const;
 
 const orNull = <S extends Spec>(spec: S) => ({ orNull: spec });
 
@@ -93,6 +95,8 @@ const CACHE = { broken: orNull(WORD), read: orNull('number'), of: orNull('number
 
 const CHAT = {
   type: orNull(TYPE),
+  // Where the account's provider calls leave from.
+  calls: CALLS,
   // The id the model was asked by. The server keeps its name only when a list it holds confirms it (server/pulse).
   model: orNull(new RegExp(`^.{1,${MODEL_MOST}}$`, 's')),
   hardContext: orNull('number'),

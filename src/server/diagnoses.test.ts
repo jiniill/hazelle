@@ -9,6 +9,7 @@ import { testApp } from './testing';
 
 const CHAT: AutoChat = {
   type: 'openrouter',
+  calls: 'server',
   model: 'someone-private/secret-model',
   hardContext: 100_000,
   context: 48_000,

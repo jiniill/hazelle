@@ -21,7 +21,7 @@ import { chooseBucket } from './files/choose';
 import type { FrontendOptions } from './frontend-worker';
 import { DAY_MS, fail, HOUR_MS, MINUTE_MS, visitDay, type Services } from './http';
 import { RELAY_DAILY, relayBudget, tokenBucket, uploadBudget, visitorLimits } from './limits';
-import { localProviders, pinnedOutbound } from './outbound';
+import { localProviders, pinnedOutbound, proxyFrom } from './outbound';
 import { refreshModelsDev } from './models-dev';
 import { forgetPulse, openPulse } from './pulse';
 import { reconcile } from './reconcile';
@@ -141,7 +141,8 @@ const limits = {
 };
 const operatorAlerts = alerts(process.env.HAZELLE_ALERT_WEBHOOK || null);
 const local = localProviders(process.env.HAZELLE_LOCAL_PROVIDERS ?? '');
-const outbound = pinnedOutbound(local);
+const proxy = proxyFrom(process.env.HAZELLE_PROXY_URL, process.env.HAZELLE_PROXY_KEY);
+const outbound = pinnedOutbound(local, proxy);
 const release = releases(outbound, version);
 const services: Services = {
   db,
@@ -150,6 +151,7 @@ const services: Services = {
   streams: streamRegistry(streamStore(join(dataDir, 'streams.sqlite')), outbound, limits.relay),
   outbound,
   localProviders: local,
+  proxy: proxy !== null,
   limits,
   backups: backups(dataDir, snapshotHour, operatorAlerts, freePercent, !selfHost ? 'remote' : !container && files.kind === 'disk' ? 'folder' : 'optional'),
   pulse: openPulse(db),

@@ -28,7 +28,7 @@ vi.mock('../toast', () => ({ useToast: () => ({ settled: vi.fn(), show: vi.fn(),
 vi.mock('../../runtime/chat/turn-context', async (original) => ({ ...(await original<typeof import('../../runtime/chat/turn-context')>()), forecastSend: vi.fn(async () => null) }));
 
 const facts = new AccountFacts({ suspended: false, state: 'active', storage: { bytes: 0, bytesCap: null, fileBytes: 0, fileBytesCap: null }, unreadNotices: 0, unreadBoard: 0 });
-const account = { admin: false, localProviders: [], facts, guest: null, onLock() {}, onLogout: async () => null };
+const account = { admin: false, localProviders: [], proxy: false, facts, guest: null, onLock() {}, onLogout: async () => null };
 const chat: Chat = { title: null, character: null, models: {} };
 const VIEW: Display = { texts: [], css: '', picture: null, background: '', drawn: [[0]], boxes: [], pass: false, unfound: [], stopped: null };
 const TRANSLATING = { awaited: new Set(), live: new Map(), failed: new Map() };

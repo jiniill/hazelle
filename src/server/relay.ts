@@ -1,3 +1,4 @@
+import { PROXY_HEADER } from '../contracts/proxy';
 import { ACCOUNT_USAGE_HEADERS, BUILD_HEADER, RELAY_HEADER, RELAY_METHODS, RELAY_SOURCE, STREAM_HEADER, UNREAD_BOARD_HEADER, UNREAD_NOTICES_HEADER, type HttpRequest, type RelayError } from '../contracts/http';
 import { HOP_BY_HOP } from './hop-by-hop';
 import { isRecord } from '../record';
@@ -10,13 +11,23 @@ export type UpstreamInit = {
   body: string | Uint8Array<ArrayBuffer> | null;
   redirect: 'manual';
   signal: AbortSignal;
+  // Through the operator's proxy (HttpRequest proxy).
+  proxy?: true;
 };
 
-// Rejects with PolicyRefusal for a destination the outbound policy refuses (outbound.ts), with anything else for a call
-// that failed on the way.
+// Rejects with PolicyRefusal for a destination the outbound policy refuses (outbound.ts), with ProxyFailure for a call
+// the proxy did not carry, with anything else for a call that failed on the way.
 export type Upstream = (url: URL, init: UpstreamInit) => Promise<Response>;
 
-type Envelope = Pick<HttpRequest, 'method' | 'headers'> & { url: URL; body: UpstreamInit['body'] };
+// A call asked through the proxy that it did not carry: the operator set none, or what answered was not it. Not the
+// provider's failure, and not one a retry a moment later mends.
+export class ProxyFailure extends Error {
+  constructor(readonly failure: Extract<RelayError, 'no-proxy' | 'proxy-unreachable'>) {
+    super(failure);
+  }
+}
+
+type Envelope = Pick<HttpRequest, 'method' | 'headers' | 'proxy'> & { url: URL; body: UpstreamInit['body'] };
 const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 const REDIRECTS = new Set([301, 302, 303, 307, 308]);
@@ -52,6 +63,7 @@ const DROPPED_RESPONSE_HEADERS = new Set([
   UNREAD_BOARD_HEADER,
   BUILD_HEADER,
   STREAM_HEADER,
+  PROXY_HEADER,
 ]);
 
 export class RelayTrafficLimit extends Error {
@@ -80,9 +92,11 @@ export async function forward(upstream: Upstream, body: unknown, bytes: number, 
       body: envelope.body,
       redirect: 'manual',
       signal: upstreamSignal,
+      ...(envelope.proxy && { proxy: true }),
     });
   } catch (error) {
     if (error instanceof PolicyRefusal) return refuse(403, error.refusal);
+    if (error instanceof ProxyFailure) return refuse(502, error.failure);
     // The client or the stream ended the call: nothing failed on the way.
     if (upstreamSignal.aborted) return refuse(502, 'upstream-unreachable');
     return unreachable({ codes: errorCodes(error) });
@@ -164,7 +178,8 @@ function parseEnvelope(value: unknown): Envelope | null {
   if (body !== null && typeof body !== 'string') return null;
   if (method === 'GET' && body !== null) return null;
   if (value.binary !== undefined && (value.binary !== true || body === null || !BASE64.test(body))) return null;
-  return { url: new URL(url), method, headers: headers as Record<string, string>, body: value.binary && body !== null ? new Uint8Array(Buffer.from(body, 'base64')) : body };
+  if (value.proxy !== undefined && value.proxy !== true) return null;
+  return { url: new URL(url), method, headers: headers as Record<string, string>, ...(value.proxy && { proxy: true }), body: value.binary && body !== null ? new Uint8Array(Buffer.from(body, 'base64')) : body };
 }
 
 function outboundHeaders(input: Record<string, string>): Headers {

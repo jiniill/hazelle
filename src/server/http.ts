@@ -22,7 +22,8 @@ export type Account = { id: string; username: string; suspended: boolean; incarn
 // Account and object ids are UUIDs made by the client.
 export const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-// Production/tests build the same Services. outbound owns provider access; localProviders is also sent in sessions.
+// Production/tests build the same Services. outbound owns provider access; localProviders and proxy (whether the
+// operator runs one) are also sent in sessions.
 // Limits distinguish accounts, bot chats, anonymous visitors and credential/signup attempts.
 export type Services = {
   db: Db;
@@ -31,6 +32,7 @@ export type Services = {
   streams: Streams;
   outbound: Upstream;
   localProviders: ReadonlySet<string>;
+  proxy: boolean;
   limits: { relay: RelayBudget; calls: Limiter; botCalls: Limiter; visitors: ReturnType<typeof visitorLimits>; uploads: UploadBudget };
   backups: Backups;
   pulse: Pulse;

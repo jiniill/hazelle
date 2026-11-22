@@ -27,10 +27,10 @@ import type { Turn } from '../runtime/chat/talk';
 import type { Translating } from '../runtime/tasks/translate';
 import { Saves } from './common/saveQueue';
 
-// admin/localProviders come from session opening; facts track later server answers.
+// admin/localProviders/proxy come from session opening; facts track later server answers.
 // Guests have no lock/logout, only signup/sign-in doors; signupOpen follows the operator cap.
 export type GuestDoors = { signupOpen: boolean; onSignup: () => void; onSignIn: () => void };
-export type Account = { admin: boolean; localProviders: readonly string[]; facts: AccountFacts } & (
+export type Account = { admin: boolean; localProviders: readonly string[]; proxy: boolean; facts: AccountFacts } & (
   | { guest: null; onLock: () => void; onLogout: () => Promise<string | null> }
   | { guest: GuestDoors }
 );

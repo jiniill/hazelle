@@ -9,7 +9,7 @@ unless `start = false`, runs `hazelle-compose up -d`.
 
 ## Inputs
 
-The provider keys are read from the shell, `VULTR_API_KEY` and `CLOUDFLARE_API_TOKEN` (Zone DNS Edit and Zone Read on the domain, R2 Edit on the account); they are in no file. Everything else is a
+The provider keys are read from the shell, `VULTR_API_KEY` and `CLOUDFLARE_API_TOKEN` (Zone DNS Edit and Zone Read on the domain, R2 Edit and Workers Scripts Edit on the account); they are in no file. Everything else is a
 variable (`variables.tf`), passed as `-var` or `TF_VAR_*`, or in a `*.tfvars` file, which git ignores:
 
 | variable | what |
@@ -20,6 +20,7 @@ variable (`variables.tf`), passed as `-var` or `TF_VAR_*`, or in a `*.tfvars` fi
 | `r2_account_id`, `r2_access_key_id`, `r2_secret_access_key`, `r2_bucket` | the off-site backup bucket and a key that may read, write and delete in it |
 | `r2_files_bucket`, `r2_files_access_key_id`, `r2_files_secret_access_key` | optional: the app's own picture bucket and a key that may read, write and delete in it alone (see Pictures in R2); empty keeps pictures on `/data` |
 | `alert_webhook` | optional Discord/Slack webhook for backup, disk and server-slowness alerts |
+| `proxy_url`, `proxy_key` | optional: the proxy's address and its key (see Proxy); empty offers no 프록시 route |
 | `plan` | the Vultr plan; a smaller one than the machine has only through `scripts/rebuild.sh` (see Commands) |
 | `start` | `true` (default): the stack starts on first boot; `scripts/rebuild.sh` passes `false` so the restore fills `/data` first |
 | `domain` | the Cloudflare zone whose apex A record points at the reserved IP; `hazelle.app` |
@@ -130,6 +131,24 @@ Moving the hosted machine's existing archives, as root on it:
 4. Take a generation (`hazelle-compose exec -T app kill -USR2 1`), let the copier run, and check that the remote holds
    `snapshots/hazelle-files/...` and the generation's `copied`. Then run the restore drill (`scripts/machine-restore.sh
    drill`, as `scripts/destroy.sh` does) to prove the text restores from the backup bucket alone.
+
+## Proxy
+
+The proxy is 요청 경로's third route (tech-spec §6 Proxy): a Cloudflare Worker, `src/proxy/worker.ts`, that sends on the
+one provider call the server hands it. It is deployed on its own, outside the image.
+
+1. `wrangler deploy --config infra/proxy/wrangler.toml` (the token needs Workers Scripts: Edit on the account). It
+   prints the worker's `workers.dev` address.
+2. Make a key (`openssl rand -hex 32`) and give it to the worker: `wrangler secret put KEY --config
+   infra/proxy/wrangler.toml`. Without a KEY the worker answers no one.
+3. Append `HAZELLE_PROXY_URL=<the address>` and `HAZELLE_PROXY_KEY=<the key>` to `/etc/hazelle/env`. The app reads
+   them when it starts, so the route shows after the next deploy or `hazelle-compose up -d`.
+4. Set `proxy_url` and `proxy_key` in `terraform.tfvars` to the same two (then R2, see State), so a rebuilt machine
+   starts with them.
+
+Its exit is set by `[placement]` in the config. To move the exit to a machine instead, run the same handler there and
+change `HAZELLE_PROXY_URL`; nothing else knows where the proxy is. To take the route away, remove the two values:
+an account still set to 프록시 is told there is none and to change its 요청 경로.
 
 ## Edge
 

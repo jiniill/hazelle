@@ -247,6 +247,7 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
         vaultKey: state.vaultKey,
         admin: false,
         localProviders: [],
+        proxy: false,
         facts: state.facts,
         guest: {
           signupOpen: state.signupOpen,
@@ -379,6 +380,7 @@ export function AccountFlow({ first, children }: { first?: (doors: FirstDoors) =
         username: state.session.username,
         admin: state.session.admin,
         localProviders: state.session.localProviders,
+        proxy: state.session.proxy,
         facts: state.facts,
         vaultKey: state.vaultKey,
         guest: null,

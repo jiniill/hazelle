@@ -61,7 +61,7 @@ function page(initial: Stored<Kind>[], guest = false) {
   } as unknown as ObjectStore;
   const read = new ReadModels(store);
   const session = { store, read } as Session;
-  const account: Account = { admin: false, localProviders: [], facts: {} as AccountFacts, ...(guest ? { guest: { signupOpen: true, onSignup() {}, onSignIn() {} } } : { guest: null, onLock() {}, onLogout: async () => null }) };
+  const account: Account = { admin: false, localProviders: [], proxy: false, facts: {} as AccountFacts, ...(guest ? { guest: { signupOpen: true, onSignup() {}, onSignIn() {} } } : { guest: null, onLock() {}, onLogout: async () => null }) };
   const root = probeRoot();
   const commits = vi.fn();
   list.mockClear();

@@ -84,6 +84,18 @@ variable "r2_files_secret_access_key" {
   default   = ""
 }
 
+# The proxy for 요청 경로 (README "Proxy"): the worker's address and the key it answers to; empty offers none.
+variable "proxy_url" {
+  type    = string
+  default = ""
+}
+
+variable "proxy_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
 # A Discord- or Slack-compatible webhook for backup and disk alerts; empty sends none.
 variable "alert_webhook" {
   type      = string

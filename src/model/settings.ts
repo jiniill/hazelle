@@ -125,8 +125,9 @@ export type Settings = {
   pulse?: false;
   // 자동 진단 (design §6.13): false sends none; absent sends (the default).
   diagnosis?: false;
-  // 직접 요청: true sends provider calls from the browser (runtime/models/relay accountTransport); absent, through the relay.
-  browserCalls?: true;
+  // 요청 경로, where provider calls leave from (runtime/models/relay accountTransport): the browser, or the operator's
+  // proxy; absent, the server.
+  calls?: 'browser' | 'proxy';
   // A reply being written comes in by ink (app/ui/story/ink.ts); absent, whole to its cursor.
   ink?: true;
 };

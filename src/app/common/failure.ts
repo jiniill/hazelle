@@ -31,7 +31,7 @@ import { SHARE_LIMITS } from '../../contracts/shares';
 import { count } from './typedNumber';
 import { withParticle } from './particles';
 import { SORT_PROMPT, defaultPrompt } from './prompt-words';
-import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, DIRECT_CALLS, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE, PURGE_FREES } from './words';
+import { ADDITIONAL_TEXT, BIN, BOT_STUCK, DISCOUNT, HOST, inFeature, inSettings, MODEL_ROLES, MODEL_SETTINGS, NO_IMAGE_MODEL, NEEDS_ACCOUNT, CALL_ROUTE, NO_PICTURES, PRE_READ, SHARE, TASK_MODELS, UNREADABLE_IMAGE, BAD_PICTURE, PURGE_FREES } from './words';
 
 export const RELOAD_RETRY = '새로고침한 뒤 다시 시도해 주세요.';
 
@@ -71,6 +71,7 @@ type OnFallback =
 export const USERNAME_TAKEN = '이미 쓰고 있는 아이디예요.';
 
 const ACCOUNT_OPENS = '계정을 만들면 쓸 수 있어요.';
+const ROUTE_OPENS = `${inSettings('account')}에서 ${withParticle(CALL_ROUTE.label, '을/를')} 바꾸면 쓸 수 있어요.`;
 
 const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in OnFallback]?: never } & Partial<Record<string, string>> = {
   'bad-username': `아이디는 ${count(USERNAME_LENGTH.min)}~${count(USERNAME_LENGTH.max)}자의 글자와 숫자, ${[...USERNAME_MARKS].join(' ')}로만 만들 수 있어요.`,
@@ -113,7 +114,7 @@ const MESSAGES: Record<Exclude<ServerError, OnFallback>, string> & { [code in On
   'no-consent': '링크로 공유하려면 먼저 공유 규칙에 동의해야 해요.',
   'not-admin': '운영자 계정으로만 할 수 있어요.',
   'needs-account': `${NEEDS_ACCOUNT}. ${ACCOUNT_OPENS}`,
-  'needs-relay': `${withParticle(DIRECT_CALLS.label, '으로/로')}는 이 연결을 쓸 수 없어요. ${inSettings('account')}에서 끄면 쓸 수 있어요.`,
+  'needs-relay': `${withParticle(CALL_ROUTE.label, '이/가')} ${CALL_ROUTE.routes.browser}일 때는 이 연결을 쓸 수 없어요. ${ROUTE_OPENS}`,
   'no-session': '로그인이 풀렸어요. 새로고침한 뒤 다시 로그인해 주세요.',
   conflict: '다른 기기에서 동시에 바꿔서 저장하지 못했어요. 다시 시도해 주세요.',
   unreadable: '암호화 키로 열 수 없는 항목이라 바꿀 수 없어요.',
@@ -218,6 +219,8 @@ const RELAY: Record<Exclude<RelayError, 'bad-envelope'>, string> & Partial<Recor
   'relay-host-limit': '오늘 연결할 수 있는 주소 개수를 넘었어요. 매일 오전 9시에 다시 채워져요.',
   'upstream-not-api': '이 주소에서 API 응답 대신 웹 페이지를 보냈어요. 주소를 다시 확인해 주세요.',
   'upstream-redirect': '주소가 다른 곳으로 바뀌었어요. 주소를 다시 확인해 주세요.',
+  'no-proxy': `이 서버에는 ${withParticle(CALL_ROUTE.routes.proxy, '이/가')} 없어요. ${ROUTE_OPENS}`,
+  'proxy-unreachable': `${withParticle(CALL_ROUTE.routes.proxy, '이/가')} 응답하지 않았어요. 잠시 후 다시 시도하거나 ${withParticle(CALL_ROUTE.label, '을/를')} 바꿔 주세요.`,
 };
 
 // The provider's own words follow ours, so an unfamiliar refusal still says what happened.

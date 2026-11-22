@@ -2,7 +2,8 @@ import { AUTO_KEEP_DAYS } from '../../contracts/auto-diagnosis';
 import { GUESTS_PER_ADDRESS, KEEP_YEARS, RETENTION_DAYS, SELF_RESTORES_PER_DAY, VISITORS_PER_ADDRESS } from '../../contracts/admin';
 import { COMMENTS_PER_DAY, GUEST_ADDRESS_CAP_MULTIPLIER, HOLD_DAYS_MAX, POSTS_PER_DAY } from '../../contracts/board';
 import { PULSE_FLOORS } from '../../contracts/pulse';
-import { AUTO_DIAGNOSIS, PULSE, RESTORE_SPAN } from './words';
+import { withParticle } from './particles';
+import { AUTO_DIAGNOSIS, CALL_ROUTE, PULSE, RESTORE_SPAN } from './words';
 // The only place the terms and the privacy page are written. Every factual sentence states what the code does: a change
 // to accounts, storage, deletion, the relay or the operator's routes may make one false.
 
@@ -11,7 +12,7 @@ export const REPOSITORY = 'https://github.com/jiniill/hazelle';
 export const INSTALL_GUIDE = `${REPOSITORY}/blob/master/README.ko.md`;
 export const PLUGIN_GUIDE = `${REPOSITORY}/blob/master/src/tool-api/README.md`;
 // The date the current text takes effect, set by the operator. Changing either text sets it anew.
-export const EFFECTIVE: string = '2026년 11월 20일';
+export const EFFECTIVE: string = '2026년 11월 22일';
 
 type Block = string | string[];
 export type LegalText = { path: string; title: string; sections: { title: string; body: Block[] }[] };
@@ -203,7 +204,7 @@ export const PRIVACY: LegalText = {
           `${PULSE.title}의 일별 이용 집계(날짜, 그날 앱을 연 사람 수, 대화 응답을 받은 사람 수와 그 응답 수): 운영자 화면에서 날짜별 이용 추세를 확인하는 데 사용합니다. 하루가 끝나면 만들고, 계정을 담지 않으며, 앱을 연 사람 수는 ${PULSE_FLOORS.row}명 이상일 때, 대화 응답을 받은 사람 수와 응답 수는 응답을 받은 사람이 ${PULSE_FLOORS.row}명 이상일 때만 숫자를 저장합니다. 탈퇴해도 삭제되지 않습니다.`,
           `${PULSE.title}의 시간별 집계(시각, 역할별 호출 수): 최근 24시간을 보여 주는 데 사용합니다. 계정을 담지 않으며, 48시간이 지나면 삭제합니다.`,
           `${PULSE.title}의 사람 수를 세는 목록(계정 id, 앱을 연 날짜, 쓴 역할·모델 이름·연결 종류, 대화 응답의 시간별 응답 수): 같은 사람을 한 번만 세어 최근 7일·최근 24시간 순위와 주별 재방문·일별 이용 집계를 만드는 데 사용합니다. 목록 자체는 운영자 화면에 표시하지 않으며, 모델은 쓴 사람이 ${PULSE_FLOORS.row}명 이상일 때만 순위와 숫자를 페이지에 보여 줍니다. ${PULSE_FLOORS.row}명이 안 되는 모델은 그런 모델이 ${PULSE_FLOORS.below}개 이상일 때 숫자 없이 이름만 많이 쓴 순서대로 보여 줍니다. 날짜별 목록은 7일이 지나면, 시간별 대화 응답 목록은 48시간이 지나면 삭제하며, 탈퇴하면 함께 삭제합니다.`,
-          `자동 진단(날짜, 문제의 종류, 앱 버전, 브라우저와 운영체제의 종류와 주 버전, 휴대 기기 여부, 오류 이름, 오류 분류(네트워크 요청·앱 코드 로딩·기타), 앱 코드 안의 위치, 보던 화면의 종류, 온라인 여부, 탭이 보이는지 여부, 앱으로 설치했는지 여부, CPU 코어 수, 메모리 크기, 창 크기, 언어, 보던 채팅의 설정값·메시지 수·요청의 구성별 토큰 수·기억 항목의 개수와 토큰 수·상태별 기억 기록 수·기억 정리 상태·경고가 이어진 시간·캐시가 깨진 이유·채팅을 열지 못한 이유, 최근 호출과 실패한 호출의 종료 사유·오류 종류와 코드·토큰 수·걸린 시간·형식이 맞지 않은 기억 정리 응답의 오류 위치와 값의 종류, 봇 스크립트가 멈춘 작업의 종류·요청한 기능·정규식 적용 여부·정규식 수·메시지 수와 글자 수·로어북 항목 수·그 전에 끝낸 작업 수·걸린 시간·멈추기 전 진행 보고 횟수, 페이지를 연 뒤 지난 시간, 대화 모델과 요약 모델의 연결 종류, 서버가 가진 모델 목록에 있는 모델 이름, 같은 날 같은 문제의 횟수, 접속 주소와 브라우저 정보를 하루 동안만 유효한 키로 해시한 값): 앱 오류, 봇 스크립트 멈춤, 응답 실패, 장기 기억 실패, 채팅 열기 실패, 기억에 없는 메시지 경고, 캐시 깨짐이 생기면 앱이 자동으로 보내며, 문제를 확인하는 데 사용합니다. 아이디와 쿠키를 보내지 않으므로 어느 계정의 기록인지 저장하지 않습니다. 대화, 캐릭터, 페르소나, 프롬프트, 플러그인, 모듈의 내용과 이름, 오류 메시지, 연결한 키는 포함하지 않습니다. 해시에 쓴 키는 하루가 끝나면 삭제합니다. ${AUTO_KEEP_DAYS}일이 지나면 삭제하며, 탈퇴해도 삭제되지 않습니다. 설정 › 계정 › 앱 정보의 ${AUTO_DIAGNOSIS.label}로 끌 수 있으며 기본값은 켜짐입니다. 손님과 이용자가 직접 설치한 헤이젤은 보내지 않습니다.`,
+          `자동 진단(날짜, 문제의 종류, 앱 버전, 브라우저와 운영체제의 종류와 주 버전, 휴대 기기 여부, 오류 이름, 오류 분류(네트워크 요청·앱 코드 로딩·기타), 앱 코드 안의 위치, 보던 화면의 종류, 온라인 여부, 탭이 보이는지 여부, 앱으로 설치했는지 여부, CPU 코어 수, 메모리 크기, 창 크기, 언어, 보던 채팅의 설정값·${CALL_ROUTE.label}·메시지 수·요청의 구성별 토큰 수·기억 항목의 개수와 토큰 수·상태별 기억 기록 수·기억 정리 상태·경고가 이어진 시간·캐시가 깨진 이유·채팅을 열지 못한 이유, 최근 호출과 실패한 호출의 종료 사유·오류 종류와 코드·토큰 수·걸린 시간·형식이 맞지 않은 기억 정리 응답의 오류 위치와 값의 종류, 봇 스크립트가 멈춘 작업의 종류·요청한 기능·정규식 적용 여부·정규식 수·메시지 수와 글자 수·로어북 항목 수·그 전에 끝낸 작업 수·걸린 시간·멈추기 전 진행 보고 횟수, 페이지를 연 뒤 지난 시간, 대화 모델과 요약 모델의 연결 종류, 서버가 가진 모델 목록에 있는 모델 이름, 같은 날 같은 문제의 횟수, 접속 주소와 브라우저 정보를 하루 동안만 유효한 키로 해시한 값): 앱 오류, 봇 스크립트 멈춤, 응답 실패, 장기 기억 실패, 채팅 열기 실패, 기억에 없는 메시지 경고, 캐시 깨짐이 생기면 앱이 자동으로 보내며, 문제를 확인하는 데 사용합니다. 아이디와 쿠키를 보내지 않으므로 어느 계정의 기록인지 저장하지 않습니다. 대화, 캐릭터, 페르소나, 프롬프트, 플러그인, 모듈의 내용과 이름, 오류 메시지, 연결한 키는 포함하지 않습니다. 해시에 쓴 키는 하루가 끝나면 삭제합니다. ${AUTO_KEEP_DAYS}일이 지나면 삭제하며, 탈퇴해도 삭제되지 않습니다. 설정 › 계정 › 앱 정보의 ${AUTO_DIAGNOSIS.label}로 끌 수 있으며 기본값은 켜짐입니다. 손님과 이용자가 직접 설치한 헤이젤은 보내지 않습니다.`,
           '운영자가 보낸 알림: 통지에 사용합니다. 한 계정에만 보낸 알림은 탈퇴 시 삭제하고, 전체 이용자에게 보낸 알림은 남습니다.',
           `운영자 기록(아래 참조): 운영자가 한 조치를 남깁니다. 탈퇴 후에도 남으며, 기록한 날부터 ${KEEP_YEARS}년이 지나면 삭제합니다.`,
         ],
@@ -239,6 +240,8 @@ export const PRIVACY: LegalText = {
       body: [
         [
           '응답을 받거나 번역할 때 브라우저가 만든 요청과 연결의 키가 서비스의 서버를 거쳐 제공자에게 전달됩니다. 요청에는 해당 대화에 쓰인 메시지, 캐릭터, 페르소나, 로어북 등의 내용이 포함됩니다. 브라우저는 제공자에게 직접 전송하지 않습니다.',
+          `설정 › 계정의 ${withParticle(CALL_ROUTE.label, '을/를')} ${withParticle(`"${CALL_ROUTE.routes.browser}"`, '으로/로')} 바꾸면 모델 호출과 모델 목록 조회를 브라우저가 제공자에게 직접 보냅니다. 이 호출은 서비스의 서버를 거치지 않으므로 서버는 그 내용과 키를 받지 않으며, 제공자는 이용자의 IP 주소를 알 수 있습니다.`,
+          `${withParticle(CALL_ROUTE.label, '을/를')} ${withParticle(`"${CALL_ROUTE.routes.proxy}"`, '으로/로')} 바꾸면 같은 호출의 요청과 키가 서비스의 서버에 이어 Cloudflare, Inc.(미국)에서 실행되는 서비스의 프록시를 거쳐 제공자에게 전달되며, 요청은 Cloudflare의 네트워크에서 나갑니다. 프록시는 요청과 응답을 전달하는 동안에만 그 내용을 처리하며, 저장하거나 기록에 남기지 않습니다.`,
           '모델 목록, 사용량과 남은 한도 조회, Copilot 로그인도 같은 경로로 전달됩니다.',
           '요청은 대한민국 서울에 있는 서비스의 서버에서 나갑니다. 서버는 이용자의 IP 주소를 요청에 포함하지 않습니다.',
           '서버는 요청과 응답을 전달하는 동안에만 그 내용을 처리합니다. 요청과 키는 저장하지 않으며 기록에도 남기지 않습니다.',
@@ -257,7 +260,7 @@ export const PRIVACY: LegalText = {
           '계정 정보와 계정별로 저장한 내용은 이 서버의 디스크에, 이미지는 암호화된 상태로 Cloudflare, Inc.(미국)의 파일 저장소(R2)에 저장합니다.',
           '브라우저와 서버 사이의 통신은 Cloudflare, Inc.(미국)의 네트워크를 거쳐 전달됩니다.',
           '매일 한 번 서버에 저장된 내용을 백업하여 그 사본을 Cloudflare의 파일 저장소(R2)에 둡니다. 백업 사본은 7일이 지나면 삭제합니다.',
-          '모델 제공자에게 전달되는 요청은 서울의 서버에서 나갑니다.',
+          `모델 제공자에게 전달되는 요청은 서울의 서버에서 나갑니다. ${withParticle(CALL_ROUTE.label, '을/를')} ${withParticle(`"${CALL_ROUTE.routes.proxy}"`, '으로/로')} 바꾼 경우에는 Cloudflare, Inc.(미국)의 네트워크에서 나갑니다.`,
           `${CONTACT}으로 보낸 메일은 Cloudflare, Inc.(미국)를 거쳐 Google LLC(미국)의 Gmail 계정으로 전달되어 보관됩니다. 보낸 사람의 메일 주소와 내용은 문의를 처리하는 데에만 사용하며, 처리한 날부터 1년이 지나면 삭제합니다.`,
         ],
         '보관 기간은 위 목록과 아래 "삭제"에 따릅니다. Vultr와 Cloudflare가 개인정보를 처리하는 방법은 각 회사의 개인정보 처리방침에 따릅니다.',

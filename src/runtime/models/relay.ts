@@ -48,16 +48,19 @@ export type Transport = {
   connected(): void;
 };
 
-// 직접 요청: absent, an account's provider calls go through the relay.
-export const callsFromBrowser = (settings: Settings) => settings.browserCalls === true;
+// 요청 경로: where an account's provider calls leave from. server, the relay's own address.
+export type CallRoute = 'server' | NonNullable<Settings['calls']>;
+export const callRoute = (settings: Settings): CallRoute => settings.calls ?? 'server';
 
-export const setBrowserCalls = (store: ObjectStore, on: boolean) =>
-  changeSettings(store, (current) => (on ? { ...current, browserCalls: true } : without(current, 'browserCalls')));
+export const setCallRoute = (store: ObjectStore, route: CallRoute) =>
+  changeSettings(store, (current) => (route === 'server' ? without(current, 'calls') : { ...current, calls: route }));
 
-// direct: 직접 요청, read at each call, so a flip on any device moves the next call and leaves a running one on its
-// path. Only a call naming its connection type leaves from the browser; a read of a call the server holds, sign-in and
-// sites' fetches (links, bots, tools) stay on the server.
-export function accountTransport(direct: () => boolean): Transport {
+// route: 요청 경로, read at each call, so a change on any device moves the next call and leaves a running one on its
+// path. Only a call naming its connection type leaves from the browser or through the proxy; a read of a call the
+// server holds, sign-in and sites' fetches (links, bots, tools) stay on the server's own address.
+export function accountTransport(route: () => CallRoute): Transport {
+  const direct = () => route() === 'browser';
+  const sent = (request: HttpRequest): HttpRequest => (route() === 'proxy' ? { ...request, proxy: true } : request);
   const page = directTransport(null, 'needs-relay');
   // The calls page holds, so stop and drop never reach the server for a call it never saw.
   const held = new Set<string>();
@@ -68,9 +71,9 @@ export function accountTransport(direct: () => boolean): Transport {
     },
     problem: (type) => (direct() ? page.problem(type) : null),
     close: () => page.close(),
-    raw: (request, signal, bot, pulse, type) => (type && direct() ? page.raw(request, signal, bot, pulse, type) : accountRaw(request, signal, bot, pulse)),
+    raw: (request, signal, bot, pulse, type) => (type && direct() ? page.raw(request, signal, bot, pulse, type) : accountRaw(type ? sent(request) : request, signal, bot, pulse)),
     stream: (call, request, signal, retry, pulse, type) => {
-      if (!request || !direct()) return accountStream(call, request, signal, retry, pulse);
+      if (!request || !direct()) return accountStream(call, request && sent(request), signal, retry, pulse);
       held.add(call.id);
       return page.stream(call, request, signal, retry, pulse, type);
     },
@@ -81,7 +84,7 @@ export function accountTransport(direct: () => boolean): Transport {
 }
 
 // Like api's held account, the one open session owns the page's provider transport. Never infer it from cookies.
-let transport = accountTransport(() => false);
+let transport = accountTransport(() => 'server');
 export const holdTransport = (held: Transport) => { transport = held; };
 export const detachedReplies = () => transport.detached;
 export const accountBehind = () => transport.account;

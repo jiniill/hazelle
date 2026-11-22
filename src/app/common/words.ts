@@ -157,9 +157,19 @@ export const ILLUSTRATE_NOTE = '삽화 노트';
 export const ILLUSTRATE_NOTE_UNSENT = `삽화 프롬프트에 '${ILLUSTRATE_NOTE}' 블록을 추가해야 노트가 적용돼요.`;
 
 export const PAGES = { setup: '내 구성', models: '모델', connections: 'API 연결', chat: '대화', prompts: '프롬프트', personas: '페르소나', modules: '모듈', plugins: '플러그인', theme: '테마', display: '디스플레이', controls: '조작', sounds: '소리', labs: '실험실', account: '계정', usage: '사용 기록', admin: '운영' };
-const DIRECT_CALLS_LABEL = '브라우저 직접 요청';
-const DIRECT_CALLS_COST = `탭을 닫거나 새로고침하면 받던 응답이 끊겨요. 브라우저 요청을 막는 ${PAGES.connections}은 쓸 수 없어요.`;
-export const DIRECT_CALLS = { label: DIRECT_CALLS_LABEL, help: `켜 두면 서버를 거치지 않고 모델 제공자에게 바로 요청해요. ${DIRECT_CALLS_COST}`, ask: `${withParticle(DIRECT_CALLS_LABEL, '을/를')} 켤까요?`, cost: DIRECT_CALLS_COST, confirm: '켜기' };
+// 요청 경로 (runtime/models/relay CallRoute): where provider calls leave from. ask: what a route other than the server's
+// costs, said before it is taken.
+export const CALL_ROUTE = {
+  label: '요청 경로',
+  help: '모델 제공자에게 요청을 어디서 보낼지 골라요. 헤이젤 서버에서, 이 브라우저에서 바로, 또는 운영자의 프록시를 거쳐서 보내요.',
+  // Short enough for ChoiceGroup's strip, with or without the proxy.
+  routes: { server: '서버', browser: '브라우저', proxy: '프록시' },
+  ask: {
+    browser: { title: '브라우저에서 바로 요청할까요?', cost: `탭을 닫거나 새로고침하면 받던 응답이 끊겨요. 브라우저 요청을 막는 ${PAGES.connections}은 쓸 수 없어요.` },
+    proxy: { title: '프록시를 거쳐 요청할까요?', cost: '요청과 키가 헤이젤 서버에 이어 운영자의 프록시를 한 번 더 거쳐요. 제공자에게는 프록시의 주소로 보이고, 제공자가 그 주소의 요청을 제한하거나 막을 수 있어요.' },
+  },
+  confirm: '바꾸기',
+} as const;
 
 // Keep always-on module wording consistent: editable only in global settings, read-only marks elsewhere.
 export const ALWAYS = '항상';

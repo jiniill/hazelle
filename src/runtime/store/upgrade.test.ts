@@ -118,6 +118,12 @@ describe('upgradeValue', () => {
     expect(upgradeValue('settings', { models: {}, presets: [now] })).toBeNull();
   });
 
+  it('names 직접 요청 as a 요청 경로, over a route an older app wrote its switch beside, and leaves a current one alone', () => {
+    expect(upgradeValue('settings', { models: {}, browserCalls: true })).toEqual({ models: {}, calls: 'browser' });
+    expect(upgradeValue('settings', { models: {}, calls: 'proxy', browserCalls: true })).toEqual({ models: {}, calls: 'browser' });
+    expect(upgradeValue('settings', { models: {}, calls: 'proxy' })).toBeNull();
+  });
+
   it('leaves a current character or module alone, so the write-back touches only old ones', () => {
     expect(upgradeValue('character', { folder: null, card: { regex: [], triggers: [], additionalText: '' } })).toBeNull();
     expect(upgradeValue('character', { card: { regex: [{ id: 'x' }], triggers: [{ id: 'y' }], additionalText: '' }, statusScripts: ['x'] })).toBeNull();
