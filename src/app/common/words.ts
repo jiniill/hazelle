@@ -161,12 +161,12 @@ export const PAGES = { setup: '내 구성', models: '모델', connections: 'API 
 // costs, said before it is taken.
 export const CALL_ROUTE = {
   label: '요청 경로',
-  help: '모델 제공자에게 요청을 어디서 보낼지 골라요. 헤이젤 서버에서, 이 브라우저에서 바로, 또는 운영자의 프록시를 거쳐서 보내요.',
+  help: '모델 제공자에게 요청을 보내는 곳을 골라요. 헤이젤 서버가 기본이고, 요청 제한이 잦을 때 다른 경로로 바꿔 쓸 수 있어요.',
   // Short enough for ChoiceGroup's strip, with or without the proxy.
   routes: { server: '서버', browser: '브라우저', proxy: '프록시' },
   ask: {
     browser: { title: '브라우저에서 바로 요청할까요?', cost: `탭을 닫거나 새로고침하면 받던 응답이 끊겨요. 브라우저 요청을 막는 ${PAGES.connections}은 쓸 수 없어요.` },
-    proxy: { title: '프록시를 거쳐 요청할까요?', cost: '요청과 키가 헤이젤 서버에 이어 운영자의 프록시를 한 번 더 거쳐요. 제공자에게는 프록시의 주소로 보이고, 제공자가 그 주소의 요청을 제한하거나 막을 수 있어요.' },
+    proxy: { title: '프록시를 거쳐 요청할까요?', cost: '요청과 키가 헤이젤 서버를 지나 운영자 프록시를 한 번 더 거쳐요. 제공자에게는 프록시 주소로 보여서 요청이 제한되거나 막힐 수 있어요.' },
   },
   confirm: '바꾸기',
 } as const;

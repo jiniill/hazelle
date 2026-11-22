@@ -94,7 +94,7 @@ export function ChatMemory({ record, item, messages, busy, stuck, onClose, onToo
   const whole = memoryWhole(memory);
   const more = (
     <MoreMenu of={FEATURE_NAMES.memory}>
-      <MenuItem label={`텍스트로 ${ACTS.copy.label}`} disabled={whole === ''} onClick={() => copy(whole)} />
+      <MenuItem label={`전체 ${ACTS.copy.label}`} disabled={whole === ''} onClick={() => copy(whole)} />
       <MenuItem label="원문에서 전부 다시 만들기" onClick={() => setRebuilding(true)} />
     </MoreMenu>
   );
