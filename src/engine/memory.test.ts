@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Chapter, Memory, MemoryRecord } from '../model/memory';
-import { chapterFormat, fingerprint, memoryBefore, memoryBudget, memoryFormat, nextChapters, nextMerge, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, standing, untilSpan, windowStart, type ChatRead, memoryShape } from './memory';
+import { chapterFormat, fingerprint, memoryBefore, memoryBudget, memoryFormat, nextChapters, nextMerge, nextSpan, parseChapter, parseRecords, printOf, rawParts, recordsTarget, recordText, memoryWhole, standing, untilSpan, windowStart, type ChatRead, memoryShape } from './memory';
 
 const span = ['Luna: "I will  wait\nfor you until spring."', 'jin leaves the lighthouse.', 'Spring comes. Luna lights the lamp.'];
 const record = (to: number, lines: { speaker: string; text: string }[] = []) => ({
@@ -135,6 +135,18 @@ describe('memoryBefore', () => {
     expect(text).toMatch(/^Current state \(\d+ of at most 5 tokens; over the limit, so remove or merge facts\):\n- Luna, mood: calm/);
     expect(text).toContain('- [T-1a2b3c4d] jin will come back.');
   });
+});
+
+it('writes all of a memory as text: state, threads and every record not deleted, chapters left out', () => {
+  const written = (id: string, what: string, more: object = {}) => ({ id, sources: [], print: '', when: null, where: null, who: [], what, lines: [], outcome: '', receipt: null, at: 0, ...more });
+  const memory: Memory = {
+    records: [{ ...written('r0', 'Luna waits.'), state: [], opens: [], closes: [] }, { ...written('r1', 'jin leaves.', { forgotten: true }), state: [], opens: [], closes: [] }],
+    chapters: [{ ...written('c0', 'A winter passes.'), records: [{ id: 'r0', at: 0 }] }],
+    state: [{ about: 'Luna', field: 'mood', value: 'calm', record: null }],
+    threads: [{ id: 't0', text: 'jin will come back.', opened: null }],
+  };
+  expect(memoryWhole(memory)).toBe('Current state:\n- Luna, mood: calm\n\nOpen threads:\n- jin will come back.\n\nWhat happened, in the order of the chat:\n\n[When: unknown · Where: unknown]\nLuna waits.');
+  expect(memoryWhole({ records: [], chapters: [], state: [], threads: [] })).toBe('');
 });
 
 describe('chapters and recall in what memory sends', () => {

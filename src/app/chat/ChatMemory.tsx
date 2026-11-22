@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore, type ComponentProps, type ReactNode } from 'react';
-import { untilSpan } from '../../engine/memory';
+import { memoryWhole, untilSpan } from '../../engine/memory';
 import type { Chat, ChatItem } from '../../model/chat';
 import { emptyMemory, type Fact, type MemorySettings, type Thread } from '../../model/memory';
 import { embedModel } from '../../runtime/models/assignment';
@@ -14,6 +14,7 @@ import { AccountTaskModel } from '../common/TaskPrompt';
 import { taskRuns } from '../common/taskRuns';
 import { filled, typedText } from '../common/typed';
 import { useAutosave } from '../common/useAutosave';
+import { useCopy } from '../common/useCopy';
 import { useLoad } from '../common/useLoaded';
 import { CHAPTER, EVERY_CHAT, inFeature, inSettings, MODEL_ROLES, opens, REMOVE_FAILED, resetTo, SAVE_FAILED, SCOPE, scopeTag, FEATURE_NAMES, ONLY_THIS_CHAT, UNDO_FAILED, MEMORY_WORKING, REGEX_OFF, RESPONSE_RAW, SEE } from '../common/words';
 import { useCaptured, useChatMemory, usePrompts, useRemembering, useSession, useSettings, useStore } from '../session';
@@ -45,6 +46,7 @@ export function ChatMemory({ record, item, messages, busy, stuck, onClose, onToo
   const session = useSession();
   const { store } = session;
   const toast = useToast();
+  const copy = useCopy();
   const memory = useChatMemory(id) ?? NO_MEMORY;
   const settings = useSettings();
   const prompts = usePrompts();
@@ -89,8 +91,10 @@ export function ChatMemory({ record, item, messages, busy, stuck, onClose, onToo
     return call ? [retry, { label: `${RESPONSE_RAW} ${SEE}`, onClick: () => onResponse(call) }] : retry;
   };
   const over = view && !holder ? overNote(memory, view) : null;
+  const whole = memoryWhole(memory);
   const more = (
     <MoreMenu of={FEATURE_NAMES.memory}>
+      <MenuItem label={`텍스트로 ${ACTS.copy.label}`} disabled={whole === ''} onClick={() => copy(whole)} />
       <MenuItem label="원문에서 전부 다시 만들기" onClick={() => setRebuilding(true)} />
     </MoreMenu>
   );

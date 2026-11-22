@@ -424,6 +424,10 @@ export function recordText(item: Written): string {
   return [headOf(item), what, ...lines.map(({ speaker, text }) => `${speaker}: "${text}"`), ...(outcome ? [`Outcome: ${outcome}`] : [])].join('\n');
 }
 
+// 텍스트로 복사: all that is kept, whatever the budget sends. Records stand for their chapters, which only shorten them.
+export const memoryWhole = (memory: Memory) =>
+  memoryText(memory.state, memory.threads.map(({ text }) => text), memory.records.filter(({ forgotten }) => !forgotten).map(recordText));
+
 export function recalledText(record: MemoryRecord, chat: ChatRead, places: ReadonlyMap<string, number>): string {
   const said = record.sources.flatMap(({ message }) => {
     const at = places.get(message);
