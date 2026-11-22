@@ -26,6 +26,8 @@ export type Connection = {
   starred: Starred[];
   // Absent follows the account; 0 disables retries. A model's profile can override this (retriesOf).
   retries?: number;
+  // One of the type's locations (ConnectionType locations); absent is its first.
+  location?: string;
 };
 
 // name: who signed in, shown only on 연결; the label stays the type's own. A pasted key names no one.
@@ -208,11 +210,12 @@ export type Embeds = {
 };
 
 // Absent hooks inherit the codec. Static models replace fetching; image-only types have no chat endpoint.
-// endpointFor reads a non-pool secret (e.g. Vertex project), returning null for an invalid key.
+// endpointFor reads a non-pool secret (e.g. Vertex project) and the connection's location, returning null for an
+// invalid key or a location the type does not list.
 export type ConnectionType = TypeHooks &
   (
     | { endpoint: Endpoint; endpointFor?: never; models?: Model[] }
-    | { endpoint?: never; endpointFor: (secret: string) => Endpoint | null; models?: never }
+    | { endpoint?: never; endpointFor: (secret: string, location?: string) => Endpoint | null; models?: never }
     | { endpoint?: never; endpointFor?: never; models: Model[] }
   );
 
@@ -234,6 +237,9 @@ type TypeHooks = {
   // Multiline/file secrets may also expose folded parts; join returns empty until required parts are filled.
   keyForm?: { label: string; lines: number; placeholder: string; accept: string; parts?: KeyParts };
   routes?: Partial<Record<Protocol, string>>;
+  // Where the provider serves a connection's calls, for a type whose endpointFor takes more than one place (Vertex AI's
+  // global and multi-region endpoints). The first choice is where a connection naming none is served.
+  locations?: { label: string; help: string; choices: { id: string; label: string }[] };
   // Absent for a type the user connects by signing in: there is no key to paste.
   detect?: { key: RegExp | null; host: string };
   signIn?: SignIn;
@@ -284,6 +290,8 @@ export type Discount = {
   rates: DiscountRates;
   // null means the catalog does not say.
   accepted: Accepts;
+  // The lane runs only at these of the type's endpoints; absent, at every one.
+  at?: (endpoint: Endpoint) => boolean;
 } & (
   | {
     lane: 'tier';

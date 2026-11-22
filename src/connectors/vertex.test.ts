@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { catalogRequest, detect, embedAnswer, embedRequests, embedRoute, parseCatalog, resolveConnection, withCredential, type Route } from './registry';
+import { bareModel } from './chat-completions';
+import { catalogRequest, detect, embedAnswer, embedRequests, embedRoute, modelSettings, parseCatalog, resolveConnection, withCredential, type Route } from './registry';
 import { prepareChat } from './preparation';
 import { decodeStream } from './stream';
 import type { Connection } from './types';
@@ -62,6 +63,19 @@ describe('Vertex AI', () => {
     expect(request.url).toBe('https://aiplatform.googleapis.com/v1/projects/test-project/locations/global/publishers/google/models/gemini-2.5-flash:streamGenerateContent?alt=sse');
     expect(request.headers.authorization).toBe('Bearer token');
     expect(resolveConnection({ ...connection, accounts: [{ id: 'key', secret: '{"type": "service_account"}' }] })).toBeNull();
+  });
+
+  it('serves a connection at the location it names, the half-price lane at the global one alone', () => {
+    const model = bareModel('gemini-3.8-flash');
+    const at = (location?: string) => resolveConnection({ ...connection, ...(location && { location }) }) as Route | null;
+    expect(at('us')!.endpoint.baseUrl).toBe('https://aiplatform.us.rep.googleapis.com/v1/projects/test-project/locations/us/publishers/google');
+    expect(at('eu')!.endpoint.baseUrl).toBe('https://aiplatform.eu.rep.googleapis.com/v1/projects/test-project/locations/eu/publishers/google');
+    expect(at('global')).toEqual(at());
+    expect(at('us-central1')).toBeNull();
+    expect(modelSettings(connection, model)!.discount).toBeNull();
+    expect(modelSettings({ ...connection, location: 'us' }, model)!.discount).toBe(false);
+    expect(prepareChat(at('us')!, { model, messages: [{ role: 'user', content: '안녕' }], settings: { discount: true } }).request.headers).not.toHaveProperty('x-vertex-ai-llm-shared-request-type');
+    expect(prepareChat(at()!, { model, messages: [{ role: 'user', content: '안녕' }], settings: { discount: true } }).request.headers).toHaveProperty('x-vertex-ai-llm-shared-request-type', 'flex');
   });
 
   it('embeds one text a request through embedContent, the purpose of Gemini Embedding 2 written before the text', () => {

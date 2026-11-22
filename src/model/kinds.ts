@@ -242,6 +242,7 @@ const SHAPES = {
     turns: orNull(shape({ day: num, groups: listOf(shape({ id: str, name: str, accounts: listOf(str) })), anchor: shape({ group: str, cycle: num }) })),
     starred: listOf(shape({ id: str, name: str, entry: optStr, label: optStr, pictures: (value) => value === undefined || value === true, host: optStr })),
     retries: (value) => value === undefined || num(value),
+    location: optStr,
   }),
   settings: shape({ models: isRecord }),
   order: shape({ ids: listOf(str) }),

@@ -92,7 +92,7 @@ export function resolveConnection(connection: Connection): Resolved | null {
   const type = CONNECTION_TYPES.find((candidate) => candidate.id === connection.type);
   if (!type) return null;
   if (type.endpointFor) {
-    const endpoint = type.endpointFor(connection.accounts[0]!.secret);
+    const endpoint = type.endpointFor(connection.accounts[0]!.secret, connection.location);
     return endpoint && { type, endpoint, codec: CODECS[endpoint.protocol]! };
   }
   return type.endpoint ? { type, endpoint: type.endpoint, codec: CODECS[type.endpoint.protocol]! } : { type, endpoint: null, codec: null, models: type.models };
@@ -166,12 +166,13 @@ const cacheWay = ({ type, codec }: Route, model: Model): CacheWay | null => code
 function carries(route: Route, model: Model): Carries {
   const { reasoning } = route.codec.carries;
   const way = cacheWay(route, model);
+  const lane = route.type?.discount;
   return {
     ...route.codec.carries,
     reasoning: reasoning.budget || !route.type?.reasoningBudget ? reasoning : { ...reasoning, budget: { min: null, max: null } },
     // accepted null is unknown, not refused.
     cache: way ? way.accepted : false,
-    discount: route.type?.discount ? route.type.discount.accepted : false,
+    discount: lane && (lane.at?.(route.endpoint) ?? true) ? lane.accepted : false,
     pdf: route.codec.pack !== undefined,
   };
 }

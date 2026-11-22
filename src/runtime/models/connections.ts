@@ -179,6 +179,8 @@ export const retriesOf = (store: ObjectStore, connection: Connection, settings: 
 export const setRetries = (store: ObjectStore, id: string, retries: number | undefined) =>
   store.update('connection', id, (current) => (retries === undefined ? without(current, 'retries') : { ...current, retries }));
 
+export const setLocation = (store: ObjectStore, id: string, location: string) => store.update('connection', id, (current) => ({ ...current, location }));
+
 // The default count is kept as none, so it follows the default.
 export const setSharedRetries = (store: ObjectStore, retries: number) =>
   changeSettings(store, (current) => (retries === RETRIES ? without(current, 'retries') : { ...current, retries }));

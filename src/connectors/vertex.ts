@@ -5,8 +5,17 @@ import { ConnectorError, type ConnectionType, type Endpoint } from './types';
 import { count, jsonObject, vector } from './values';
 import { isRecord } from '../record';
 
-// Service-account JWT buys a one-hour token. Gemini calls require the project at the global location;
-// model listing requires project-free v1beta1 (live-verified 2026-10-13).
+// Service-account JWT buys a one-hour token. Gemini calls name the project and one of PLACES; model listing requires
+// project-free v1beta1 (live-verified 2026-10-13).
+
+// The global endpoint, and the multi-region ones that keep processing inside the US or the EU. No single region is
+// listed: us-central1, us-east5, europe-west4 and asia-northeast3 answer 404 for every Gemini 3 and 4 model (live
+// 2026-11-22).
+const PLACES = [
+  { id: 'global', label: '글로벌', host: 'aiplatform.googleapis.com' },
+  { id: 'us', label: '미국', host: 'aiplatform.us.rep.googleapis.com' },
+  { id: 'eu', label: 'EU', host: 'aiplatform.eu.rep.googleapis.com' },
+];
 
 // keyId is absent from a key typed as separate values; the token endpoint finds the key by the account without it.
 type ServiceAccount = { projectId: string; keyId?: string; privateKey: string; clientEmail: string; tokenUri: string };
@@ -73,10 +82,12 @@ export const vertex: ConnectionType = {
       join: joinedAccount,
     },
   },
-  detect: { key: /^\{[\s\S]*"type"\s*:\s*"service_account"[\s\S]*\}$/, host: 'aiplatform.googleapis.com' },
-  endpointFor(secret): Endpoint | null {
+  detect: { key: /^\{[\s\S]*"type"\s*:\s*"service_account"[\s\S]*\}$/, host: PLACES[0]!.host },
+  locations: { label: '리전', help: '요청을 처리할 곳이에요. 한 곳에서 요청이 거절되면 다른 곳으로 바꿔 볼 수 있어요. 할인 받기는 글로벌에서만 돼요.', choices: PLACES },
+  endpointFor(secret, location = PLACES[0]!.id): Endpoint | null {
     const account = serviceAccount(secret);
-    return account && { baseUrl: `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(account.projectId)}/locations/global/publishers/google`, protocol: 'gemini' };
+    const place = PLACES.find(({ id }) => id === location);
+    return account && place ? { baseUrl: `https://${place.host}/v1/projects/${encodeURIComponent(account.projectId)}/locations/${place.id}/publishers/google`, protocol: 'gemini' } : null;
   },
   // Asked only of a secret endpointFor read, so it is a service-account key.
   exchange: {
@@ -109,7 +120,8 @@ export const vertex: ConnectionType = {
     });
   },
   usagePage: 'https://console.cloud.google.com/billing',
-  // Gemini Embedding 2 requires global :embedContent, one input per request; no batchEmbedContents or :predict.
+  // Gemini Embedding 2 requires :embedContent, one input per request; no batchEmbedContents or :predict. Every one of
+  // PLACES serves it (live 2026-11-22).
   // Older :predict-only models fail upstream (REST reference/client reports, 2026-10-20; not live-verified).
   embeds: {
     perRequest: 1,
@@ -125,7 +137,8 @@ export const vertex: ConnectionType = {
       return { vectors: [payload.embedding.values], usage: embedUsage(count(usage.promptTokenCount)), raw: usage };
     },
   },
-  // Flex PayGo needs both headers on the global endpoint; one alone permits Provisioned Throughput first.
+  // Flex PayGo needs both headers on the global endpoint; one alone permits Provisioned Throughput first. us and eu
+  // answer 400 "Flex API is not supported for project … or selected region" (live 2026-11-22).
   // Half input/output; unspecified cache discounts stay full-price. Eligibility remains unknown.
   // Do not classify 429 RESOURCE_EXHAUSTED as Flex capacity: ordinary project quota uses it too
   // (docs.cloud.google.com/vertex-ai/generative-ai/docs/flex-paygo, 2026-10-14; no live refusal verified).
@@ -135,6 +148,7 @@ export const vertex: ConnectionType = {
     served: 'ON_DEMAND_FLEX',
     busy: () => false,
     accepted: null,
+    at: ({ baseUrl }) => baseUrl.startsWith(`https://${PLACES[0]!.host}/`),
     rates: { input: 0.5, output: 0.5, cacheRead: 1, cacheWrite: 1 },
   },
 };

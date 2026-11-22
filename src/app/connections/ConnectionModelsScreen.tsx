@@ -6,7 +6,7 @@ import { refOf } from '../../connectors/assignment';
 import { entriesOf, entryKey, entryName, entryTerms, type Model, type Starred } from '../../connectors/types';
 import type { Stored } from '../../model/kinds';
 import { catalogKey, type CatalogResult } from '../../runtime/models/catalog';
-import { addCopy, addModel, putModelBack, refreshStarred, removeConnection, removeModel, renameConnection, restoreConnection, setRetries } from '../../runtime/models/connections';
+import { addCopy, addModel, putModelBack, refreshStarred, removeConnection, removeModel, renameConnection, restoreConnection, setLocation, setRetries } from '../../runtime/models/connections';
 import { modelProfile } from '../../runtime/models/profiles';
 import { ACTS, addOf } from '../common/acts';
 import { describeCatalogFailure } from '../common/failure';
@@ -23,7 +23,7 @@ import { backBar, navigate } from '../shell/router';
 import type { Back } from '../shell/routes';
 import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
-import { Button, Callout, ChoiceGroup, Columns, Empty, GuideMark, IconButton, List, ListItem, MenuItem, NavBar, Panel, Row, Screen, Stack, Text } from '../ui';
+import { Button, Callout, ChoiceGroup, Columns, Empty, GuideMark, IconButton, List, ListItem, MenuItem, NavBar, Panel, Row, Screen, SettingRow, Stack, Text } from '../ui';
 import { ConnectionAccounts } from './ConnectionAccounts';
 import { ConnectionKeyDialog } from './ConnectionKeyDialog';
 import { ConnectionMeters } from './ConnectionMeters';
@@ -168,6 +168,10 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
   // Accounts join a pool by signing in, so a pool type always has a sign-in.
   const pool = connection.turns && signIn ? { connection: { ...connection, turns: connection.turns }, signIn } : null;
 
+  const locations = resolved?.type?.locations;
+  const location = locations ? (connection.location ?? locations.choices[0]!.id) : null;
+  const moved = locations !== undefined && location !== locations.choices[0]!.id;
+
   const who = connection.turns ? `계정 ${connection.accounts.length}개` : connection.accounts[0]!.name;
   const listed = !catalog ? '모델 목록을 불러오는 중…' : catalog.ok ? `모델 ${catalog.models.length}개` : '모델 목록을 불러오지 못했어요';
   const menu = {
@@ -220,7 +224,15 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
           <ConnectionSent connection={id} />
         </Stack>
       </Columns>
-      <DetailFold set={connection.retries === undefined ? 0 : 1}>
+      <DetailFold set={Number(connection.retries !== undefined) + Number(moved)}>
+        {locations && (
+          <SettingRow
+            label={locations.label}
+            help={locations.help}
+            changed={moved}
+            control={<ChoiceGroup layout="fit" label={locations.label} options={locations.choices.map(({ id: value, label }) => ({ value, label }))} value={location} onChange={(picked) => toast.settled(setLocation(store, id, picked))} />}
+          />
+        )}
         <RetriesRow
           value={connection.retries}
           follows={followsRetries('shared', shared ?? RETRIES)}
