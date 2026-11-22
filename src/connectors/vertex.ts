@@ -83,7 +83,11 @@ export const vertex: ConnectionType = {
     },
   },
   detect: { key: /^\{[\s\S]*"type"\s*:\s*"service_account"[\s\S]*\}$/, host: PLACES[0]!.host },
-  locations: { label: '리전', help: '요청을 처리할 곳이에요. 한 곳에서 요청이 거절되면 다른 곳으로 바꿔 볼 수 있어요. 할인 받기는 글로벌에서만 돼요.', choices: PLACES },
+  locations: {
+    label: '처리 지역',
+    help: `${PLACES[0]!.label}이 기본이에요. 한 곳에서 요청이 거절되면 다른 곳으로 바꿔 쓸 수 있어요. ${PLACES[1]!.label}·${PLACES[2]!.label}는 데이터를 그 지역 안에서 처리하고, '할인 받기'는 ${PLACES[0]!.label}에서만 돼요.`,
+    choices: PLACES,
+  },
   endpointFor(secret, location = PLACES[0]!.id): Endpoint | null {
     const account = serviceAccount(secret);
     const place = PLACES.find(({ id }) => id === location);

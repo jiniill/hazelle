@@ -16,7 +16,7 @@ import { useSearch } from '../common/useSearch';
 import { RetriesRow } from '../common/RetriesRow';
 import { followsRetries, NO_PROFILE_VALUES, profileLine } from '../common/settingWords';
 import { useAutosave } from '../common/useAutosave';
-import { MODEL_SETTINGS, searchOf } from '../common/words';
+import { MODEL_SETTINGS, searchOf, STARRED } from '../common/words';
 import { MARKS } from '../common/tutorial';
 import { useSession, useSettings } from '../session';
 import { backBar, navigate } from '../shell/router';
@@ -196,7 +196,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
             )
           }
         >
-          <Text variant="note">{[listed, entries.length ? `추가한 모델 ${entries.length}개` : ''].filter(Boolean).join(' · ')}</Text>
+          <Text variant="note">{[listed, entries.length ? `${STARRED} ${entries.length}개` : ''].filter(Boolean).join(' · ')}</Text>
           <Row kind="toolbar">
             {search.field}
             {known && <ChoiceGroup label="모델 필터" options={FILTER_CHOICES} value={filter} onChange={setFilter} />}
@@ -210,7 +210,7 @@ export function ConnectionModelsScreen({ stored, back }: { stored: Stored<'conne
             <Stack gap="group">
               {entriesShown.length > 0 && (
                 <GuideMark name={MARKS.modelAdded}>
-                  <List label="추가한 모델" keys={entriesShown.map(entryKey)} box>{(index) => entryRow(entriesShown[index]!)}</List>
+                  <List label={STARRED} keys={entriesShown.map(entryKey)} box>{(index) => entryRow(entriesShown[index]!)}</List>
                 </GuideMark>
               )}
               {modelsShown.length > 0 && <List label="모델" keys={modelsShown.map((model) => model.id)} box>{(index) => modelRow(modelsShown[index]!, index === 0)}</List>}
