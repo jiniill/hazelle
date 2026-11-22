@@ -258,6 +258,8 @@
 :root,
 [data-mode] {
   --color-accent-bg: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+  /* The current place in a sidebar (NavGroup): the accent faint over the sidebar, a rung above it. */
+  --color-accent-side: color-mix(in srgb, var(--color-accent) 12%, var(--color-sidebar));
   /* The accent where it is read, as words and icons and the focus ring; the accent itself is a fill's, a line's and a
      ring's around what is picked. A theme whose accent is too dim to read on its page states another (theme.ts mark). */
   --color-accent-mark: var(--color-accent);

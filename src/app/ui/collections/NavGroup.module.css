@@ -1,4 +1,8 @@
+/* Its places stand on the sidebar itself, and the current one takes the accent, with a bar at its start (Item). */
 .group {
+  --current-fill: var(--color-accent-side);
+  --current-mark: var(--color-accent-mark);
+  --current-bar: var(--color-accent);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -16,10 +20,7 @@
   font-weight: var(--weight-bold);
 }
 
-/* A titled group's places stand on the sidebar itself, and the current one takes the accent. */
 .box {
-  --current-fill: var(--color-accent-bg);
-  --current-mark: var(--color-accent-mark);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

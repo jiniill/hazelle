@@ -3,7 +3,6 @@
   --box-inset: var(--space-16);
   --section-title: var(--text-xl);
   --section-gap: var(--space-32);
-  --box-line: transparent;
 
   min-height: 100dvh;
   max-width: var(--screen-narrow);
@@ -167,10 +166,6 @@
 .screen.windowed {
   --section-title: var(--text-md);
   --section-gap: var(--space-24);
-  --box-inset: 0px;
-  --group-fill: transparent;
-  --group-radius: 0;
-  --group-rules: inset 0 var(--border-thin) var(--color-divider), inset 0 calc(-1 * var(--border-thin)) var(--color-divider);
   --control-md: var(--window-control-md);
   --control-lg: var(--window-control-lg);
   --radius-md: var(--window-radius-md);

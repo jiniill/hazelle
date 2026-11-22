@@ -166,7 +166,19 @@
 
 .side {
   composes: ink from '../foundation/hover.module.css';
+  position: relative;
   color: var(--color-text-muted);
+}
+
+/* Drawn where the place's group gives one (NavGroup). */
+.side[aria-current]::before {
+  content: '';
+  position: absolute;
+  inset-block: var(--space-8);
+  inset-inline-start: 0;
+  width: var(--border-thick);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  background: var(--current-bar, transparent);
 }
 
 .side[aria-current] {

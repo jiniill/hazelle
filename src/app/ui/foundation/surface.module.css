@@ -20,8 +20,9 @@
     box-shadow: var(--shadow-popover);
   }
 
+  /* Set in as far as the rows' words (Item, SettingGroup), so the line between two rows ends inside their box. */
   .ruled + .ruled {
-    border-top: var(--border-thin) solid var(--color-divider);
+    background: linear-gradient(var(--color-divider), var(--color-divider)) 50% 0 / calc(100% - 2 * max(var(--space-8), var(--box-inset))) var(--border-thin) no-repeat;
   }
 
   .frame {

@@ -78,9 +78,8 @@
   transform: scale(var(--swatch-picture-scale));
   transform-origin: top left;
   --frame-height: 100%;
-  /* What the window and the screen the card stands in set for their own boxes and side, as a dialog sets them back. */
+  /* What the window the card stands in sets for its own sidebar. */
   --sidebar-rule: initial;
-  --box-line: initial;
 }
 
 .small > :last-child {
