@@ -131,8 +131,8 @@ export function TestPane({ draft, setup, onSetup, editor }: { draft: DraftFile; 
 
   return (
     <Stack gap="related">
-      <SettingRow label={TRIAL.chat} control={<ChoiceGroup label={TRIAL.chat} layout="menu" options={chats.map(({ id, title }) => ({ value: id, label: title }))} value={chosen.id} onChange={(chat) => onSetup({ ...setup, chat })} />} />
-      <SettingRow label={TRIAL.when} help={TRIAL.whenHelp} control={<ChoiceGroup label={TRIAL.when} layout="menu" options={picks.map(({ value, label, sub }) => ({ value, label, description: sub }))} value={picked.value} onChange={setPick} />} />
+      <SettingRow label={TRIAL.chat} control={<ChoiceGroup label={TRIAL.chat} layout="fit" options={chats.map(({ id, title }) => ({ value: id, label: title }))} value={chosen.id} onChange={(chat) => onSetup({ ...setup, chat })} />} />
+      <SettingRow label={TRIAL.when} help={TRIAL.whenHelp} control={<ChoiceGroup label={TRIAL.when} layout="fit" options={picks.map(({ value, label, sub }) => ({ value, label, description: sub }))} value={picked.value} onChange={setPick} />} />
       {picked.text && <TextField label={picked.value === 'sending' ? OUTGOING : picked.sub === 'tool' ? '인자(JSON)' : '입력창 내용'} value={text} onChange={setText} />}
       {read.trial.tool.manifest.uses.includes('model') && (
         <>
