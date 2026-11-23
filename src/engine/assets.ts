@@ -79,11 +79,33 @@ const NEAR = 4;
 const EXTENSIONS = /\.(webp|png|jpe?g|gif|mp4|webm|avi|m4p|m4v|mp3|wav|ogg)$/;
 const bare = (name: string) => name.replace(EXTENSIONS, '').trim().replace(/[\s_.-]/g, '');
 
+// By the list itself, which every tag of a display pass shares: a bot's thousands of names are folded once, and a name
+// that matches none is searched for once. A list is never changed in place: a changed one is another list.
+type Named = { same: Map<string, { name: string }[]>; bare: string[]; near: Map<string, { name: string } | null> };
+const indexes = new WeakMap<readonly { name: string }[], Named>();
+function indexOf(assets: readonly { name: string }[]): Named {
+  let index = indexes.get(assets);
+  if (!index) {
+    const same = new Map<string, { name: string }[]>();
+    for (const asset of assets) {
+      const name = asset.name.toLowerCase();
+      const held = same.get(name);
+      if (held) held.push(asset);
+      else same.set(name, [asset]);
+    }
+    indexes.set(assets, (index = { same, bare: assets.map((asset) => bare(asset.name.toLowerCase())), near: new Map() }));
+  }
+  return index;
+}
+
 // As Risu finds one: the name in any case, one of several that share it by the tag's own roll; else the name nearest
 // within NEAR edits, its extension and separators aside.
 export function findAsset<A extends { name: string }>(assets: readonly A[], name: string, random: () => number): A | null {
   const wanted = name.toLowerCase();
-  const same = assets.filter((asset) => asset.name.toLowerCase() === wanted);
-  if (same.length) return same[Math.floor(random() * same.length)]!;
-  return nearest(bare(wanted), assets, (asset) => bare(asset.name.toLowerCase()), NEAR);
+  const index = indexOf(assets);
+  const same = index.same.get(wanted);
+  if (same) return same[Math.floor(random() * same.length)] as A;
+  let near = index.near.get(wanted);
+  if (near === undefined) index.near.set(wanted, (near = assets[nearest(bare(wanted), index.bare.keys(), (at) => index.bare[at]!, NEAR) ?? -1] ?? null));
+  return near as A | null;
 }
