@@ -12,8 +12,8 @@ import { unsetValue } from '../../engine/cbs/tags';
 import { live } from '../../model/library';
 import { accountSettings } from '../account-settings';
 import { toolId } from '../../model/tool';
-import { TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
-import type { ChatHeader, Down, Message, ToolOutcome } from '../../tool-api/protocol';
+import { TOOL_LOG_CHARS, TOOL_PROGRESS_CHARS, TOOL_VARIABLES, toolVar, type Json } from '../../tool-api/manifest';
+import { called, type ChatHeader, type Down, type Message, type ToolOutcome } from '../../tool-api/protocol';
 import { RISU_DECLINED } from '../../tool-api/risu-methods';
 import { limitsOf, packsOf } from '../chat/chat-context';
 import type { ToolState } from '../evaluation/evaluation-core';
@@ -112,12 +112,11 @@ function isOutcome(value: unknown, event: ToolEvent['kind'] | undefined): value 
     && Array.isArray(value.variables) && value.variables.every((pair) => Array.isArray(pair) && pair.length === 2 && typeof pair[0] === 'string' && !pair[0].startsWith(TOOL_VARIABLES) && (pair[1] === undefined || typeof pair[1] === 'string'));
 }
 const TRIAL_CALLS = 100;
-const TRIAL_CALL_CHARS = 200;
 // A value as a test run's record of its calls keeps it: bytes by their length.
 function shown(value: unknown): string {
   let text: string;
   try { text = JSON.stringify(value, (_key, each: unknown) => (each instanceof Uint8Array ? `<${each.length} bytes>` : each)) ?? ''; } catch { text = String(value); }
-  return text.length > TRIAL_CALL_CHARS ? `${text.slice(0, TRIAL_CALL_CHARS)}…` : text;
+  return text.length > TOOL_LOG_CHARS ? `${text.slice(0, TOOL_LOG_CHARS)}…` : text;
 }
 // null: past TRIAL_CALLS, counted only.
 function recorded({ calls }: EntryTrial, method: string, args: unknown[]): TrialCall | null {
@@ -125,6 +124,11 @@ function recorded({ calls }: EntryTrial, method: string, args: unknown[]): Trial
   const call: TrialCall = { method, args: args.map(shown).join(', '), gave: null, failed: false };
   calls.made.push(call);
   return call;
+}
+// A console line of a test run, among its calls where it was written.
+export function logged(trial: EntryTrial, level: string, text: string) {
+  const line = recorded(trial, `console.${level}`, [text]);
+  if (line) Object.assign(line, { gave: '', failed: level === 'error' });
 }
 // The module whose stored data an entry's calls read: its own, or for a test run the installed plugin's, if any.
 const holder = (entry: Entry) => entry.trial?.installed ?? entry.module;
@@ -237,7 +241,7 @@ export class ToolApi {
   async call(frame: Frame, method: string, args: unknown[], event: unknown, cancel: AbortSignal): Promise<unknown> {
     const { trial } = frame.entry;
     if (!trial) return this.answer(frame, method, args, event, cancel);
-    const made = recorded(trial, method, args);
+    const made = recorded(trial, called(method), args);
     try {
       const value = await this.answer(frame, method, args, event, cancel);
       if (made) made.gave = shown(value);

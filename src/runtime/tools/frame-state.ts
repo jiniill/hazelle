@@ -30,8 +30,9 @@ export type Frame = {
 // would replace, whose stored data (storage, chat data, saved files) the run reads under its own writes; null: none, so
 // it reads nothing stored. storage: what the run wrote, undefined for a key it deleted.
 export type TrialWrite = { kind: 'storage' | 'setting'; key: string; value: Json | undefined } | { kind: 'refused'; call: 'assets.save' | 'chat.picture' | 'chat.send' | 'chat.card.edit' };
-// One call a test run made of the app, by its protocol name: its arguments and its answer as cut text. gave null: not
-// answered when the calls were read. failed: gave is what the call threw.
+// One call a test run made of the app, named as its code names it (protocol called), or a console line it wrote: its
+// arguments as sent and its answer, as cut text. gave null: not answered when the calls were read. failed: gave is what
+// the call threw; a console.error.
 export type TrialCall = { method: string; args: string; gave: string | null; failed: boolean };
 // made: in the order made, up to TRIAL_CALLS. omitted: how many came after.
 export type TrialCalls = { made: TrialCall[]; omitted: number };

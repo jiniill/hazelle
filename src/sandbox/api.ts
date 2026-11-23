@@ -1,6 +1,6 @@
 import { errorMessage } from '../error-message';
-import { dataBytes, TOOL_KEY_CHARS, TOOL_ROW_BYTES, TOOL_VARIABLES, type Json, type Settings } from '../tool-api/manifest';
-import type { ChatHeader, Down, EventName, Message, Method, Port, ToolOutcome, Up } from '../tool-api/protocol';
+import { dataBytes, TOOL_KEY_CHARS, TOOL_LOG_CHARS, TOOL_ROW_BYTES, TOOL_VARIABLES, type Json, type Settings } from '../tool-api/manifest';
+import { LOG_LEVELS, type ChatHeader, type Down, type EventName, type Message, type Method, type Port, type ToolOutcome, type Up } from '../tool-api/protocol';
 
 type Load = Extract<Down, { kind: 'load' }>;
 type Buffer = {
@@ -31,8 +31,16 @@ const lineOf = (error: unknown) => {
   return line === undefined ? {} : { line: Number(line) };
 };
 
+// A console argument as one line of a test run's record holds it.
+const worded = (value: unknown) => {
+  if (typeof value === 'string') return value;
+  if (value instanceof Error) return String(value);
+  try { return JSON.stringify(value) ?? String(value); } catch { return String(value); }
+};
+
 export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api) => void | Promise<void>): () => void {
   let load: Load | null = null;
+  let quiet = () => {};
   let calls = 0;
   let closed = false;
   let loaded = false;
@@ -184,6 +192,16 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
     if (data.kind === 'load') {
       if (load) return;
       load = data;
+      if (data.console) {
+        const real = LOG_LEVELS.map((level) => console[level]);
+        LOG_LEVELS.forEach((level, at) => {
+          console[level] = (...args: unknown[]) => {
+            real[at]!(...args);
+            send({ kind: 'log', level, text: args.map(worded).join(' ').slice(0, TOOL_LOG_CHARS) });
+          };
+        });
+        quiet = () => LOG_LEVELS.forEach((level, at) => { console[level] = real[at]!; });
+      }
       const api: Hazelle.Api = {
         api: 1,
         tool: { name: data.manifest.name, author: data.manifest.author, displayName: data.manifest.displayName, version: data.manifest.version },
@@ -252,6 +270,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
   port.start();
   return () => {
     closed = true;
+    quiet();
     port.onmessage = null;
     port.close();
     for (const waiter of waiting.values()) waiter.reject(new Error('closed'));

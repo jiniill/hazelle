@@ -14,29 +14,42 @@ export const DRAFT_STATES: Record<Exclude<DraftState, 'applied'>, string> = { un
 export const SEE_IN_CODE = '코드에서 보기';
 export const USE_TAGS: Record<ToolUse, string> = { model: MODULE_MODELS, embed: '임베딩', memory: FEATURE_NAMES.memory, network: NETWORK };
 
-// What 테스트 can run a draft on: the turn's stages, then each item its header declares. text: the event takes the text
-// typed for it.
+// What 테스트 can run a draft on: a saved reply, then the turn's stages in their order, a message shown or changed, then
+// each item its header declares. text: the event takes the text typed for it. request: it runs on the chat's next
+// request (TEST_REQUEST). A branch is not offered: it happens to another chat.
 export type TestPick = { value: string; label: string; sub: string; text: boolean };
+export const TEST_REQUEST = new Set(['requesting', 'calling']);
 export const testPicks = (manifest: ToolManifest): TestPick[] => [
   { value: 'reply', label: '응답이 저장된 뒤', sub: 'reply · 마지막 응답', text: false },
   { value: 'sending', label: '메시지를 보내기 전', sub: 'sending', text: true },
   { value: 'prompt', label: '요청을 만들 때', sub: 'prompt', text: false },
+  { value: 'requesting', label: '요청을 보내기 전', sub: 'requesting · 다음 요청', text: false },
+  { value: 'calling', label: '봇 스크립트가 모델을 부를 때', sub: 'calling · 다음 요청을 부른 것으로', text: false },
+  { value: 'replying', label: '응답을 저장하기 전', sub: 'replying · 마지막 응답', text: false },
+  { value: 'showing', label: '메시지를 표시할 때', sub: 'showing · 마지막 메시지', text: false },
+  { value: 'change', label: '메시지를 수정한 뒤', sub: 'change · 마지막 메시지', text: false },
   ...manifest.menu.map(({ id, label }) => ({ value: `menu:${id}`, label: `⋯ 메뉴 · ${label}`, sub: 'menu', text: false })),
   ...(manifest.actions ?? []).map(({ id, label }) => ({ value: `action:${id}`, label: `메시지 버튼 · ${label}`, sub: 'action · 마지막 메시지', text: false })),
   ...(manifest.inputs ?? []).map(({ id, label }) => ({ value: `input:${id}`, label: `입력창 버튼 · ${label}`, sub: 'input', text: true })),
   ...(manifest.functions ?? []).map(({ name }) => ({ value: `tool:${name}`, label: `모델 도구 · ${name}`, sub: 'tool', text: true })),
 ];
 
-// The event a pick runs on the chat as it stands; null when the chat holds no message it needs, or a tool's arguments
-// are not a JSON object. No arguments typed is a call with none.
-export function testEvent(pick: string, scope: ChatScope, text: string, manifest: ToolManifest): ToolEvent | null {
+// The event a pick runs on the chat as it stands; null when the chat holds no message it needs, a tool's arguments are
+// not a JSON object, or a TEST_REQUEST pick is given no request. No arguments typed is a call with none.
+export function testEvent(pick: string, scope: ChatScope, text: string, manifest: ToolManifest, request: Hazelle.RequestMessage[] | null = null): ToolEvent | null {
   const told = scope.messages.slice(scope.greeting === null ? 0 : 1);
   const at = (message: { message: string } | undefined) => message ? atOf(scope, message.message) : null;
+  const reply = told.findLast((message) => message.role === 'assistant');
   const [kind, item = ''] = pick.split(/:(.*)/s);
   switch (kind) {
-    case 'reply': { const reply = at(told.findLast((message) => message.role === 'assistant')); return reply && { kind: 'reply', reply }; }
+    case 'reply': { const saved = at(reply); return saved && { kind: 'reply', reply: saved }; }
     case 'sending': return { kind: 'sending', text };
     case 'prompt': return { kind: 'prompt', turn: { memory: manifest.uses.includes('memory') } };
+    case 'requesting': return request && { kind: 'requesting', messages: request };
+    case 'calling': return request && { kind: 'calling', role: 'main', messages: request.map(({ role, content }) => ({ role, content })) };
+    case 'replying': return reply ? { kind: 'replying', text: reply.text } : null;
+    case 'showing': { const last = scope.messages.at(-1); return last ? { kind: 'showing', shown: [{ at: told.length ? at(last) : null, text: last.text }] } : null; }
+    case 'change': { const changed = at(told.at(-1)); return changed && { kind: 'change', change: { ...changed, kind: 'edit' } }; }
     case 'menu': return { kind: 'menu', item };
     case 'action': { const message = at(told.at(-1)); return message && { kind: 'action', item, message }; }
     case 'tool': { const args = argsOf(text.trim() || '{}'); return args && { kind: 'tool', name: item, args }; }
