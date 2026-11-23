@@ -39,7 +39,10 @@
             button('Type', () => setComposer((height) => height + 60)),
           ),
         }, h(Viewport, { variant: 'story', keys: rows.map((row) => row.id), seek: scroll.seek },
-          (index) => h('div', { style: { height: rows[index].height } }, rows[index].id),
+          (index) => {
+            window.rowDraws = (window.rowDraws ?? 0) + 1;
+            return h('div', { style: { height: rows[index].height } }, rows[index].id);
+          },
         ));
       }
       createRoot(document.getElementById('root')).render(h(Chat));

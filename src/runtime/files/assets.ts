@@ -6,9 +6,14 @@ import { inOrder, PERMANENT, type Files } from './files';
 import type { ObjectStore } from '../store/store';
 
 const INACTIVE_BYTES = 32 * 1024 * 1024;
-type Cached = { url: string | null; bytes: number; owners: Set<string>; removed: boolean };
+// stamp: the version at the file's last change, its own from the first so one read again after eviction is never taken
+// for the one before; a watch compares it with the one its view looked the file up at.
+type Cached = { url: string | null; bytes: number; owners: Set<string>; removed: boolean; stamp: number };
 // url is undefined until read, and for a picture that is gone or unreadable.
 type AssetView = { url: PictureUrl; hold: () => () => void };
+// One consumer's views, one after another. snapshot moves only once a file its latest view looked up has changed, so a
+// picture loading draws again what shows it and nothing else.
+type AssetWatch = { snapshot: () => number; view: () => AssetView };
 
 const KINDS = new Set<string>(['asset', 'inlay', 'illustration', 'avatar'] satisfies PictureKind[]);
 
@@ -42,6 +47,7 @@ export class AssetUrls {
         this.sources.delete(ref);
         const cached = this.urls.get(file)!;
         cached.owners.delete(ref);
+        cached.stamp = ++this.version;
         if (!cached.owners.size) {
           cached.removed = true;
           // Removal invalidates new lookups immediately, but a mounted view keeps its old URL until it leaves.
@@ -49,7 +55,7 @@ export class AssetUrls {
         }
         changed = true;
       }
-      if (changed) this.changed();
+      if (changed) this.changes.notify();
     });
   }
 
@@ -66,16 +72,33 @@ export class AssetUrls {
 
   readonly subscribe = this.changes.subscribe;
 
-  readonly snapshot = () => this.version;
+  watch(): AssetWatch {
+    let seen = new Map<string, number>();
+    let version = 0;
+    return {
+      snapshot: () => {
+        for (const [file, stamp] of seen) {
+          if (this.urls.get(file)?.stamp === stamp) continue;
+          version++;
+          // Until the next view: the same answer however often it is asked.
+          seen = new Map();
+          break;
+        }
+        return version;
+      },
+      view: () => this.view((seen = new Map())),
+    };
+  }
 
   // Render-time views hold nothing until committed mount; cleanup releases resolved files.
   // Allow reactivation because StrictMode replays mount effects.
-  view(): AssetView {
+  private view(seen: Map<string, number>): AssetView {
     const files = new Set<string>();
     let held = false;
     let generation = 0;
     return {
-      url: (kind, id) => this.lookup(kind, id, (file) => {
+      url: (kind, id) => this.lookup(kind, id, (file, stamp) => {
+        seen.set(file, stamp);
         if (files.has(file)) return;
         files.add(file);
         if (held) this.pin(file);
@@ -98,16 +121,15 @@ export class AssetUrls {
     };
   }
 
-  private lookup(kind: PictureKind, id: string, named: (file: string) => void): string | undefined {
+  private lookup(kind: PictureKind, id: string, named: (file: string, stamp: number) => void): string | undefined {
     if (this.closed) return undefined;
     const picture = this.store.get(kind, id)?.value;
     if (!picture) return undefined;
     const { file, type } = picture;
     const ref = pictureRef(kind, id);
-    named(file.id);
     let cached = this.urls.get(file.id);
     if (!cached) {
-      cached = { url: null, bytes: 0, owners: new Set(), removed: false };
+      cached = { url: null, bytes: 0, owners: new Set(), removed: false, stamp: ++this.version };
       this.urls.set(file.id, cached);
       const loading = cached;
       void this.files.read(file).then((read) => {
@@ -118,10 +140,12 @@ export class AssetUrls {
         }
         loading.url = URL.createObjectURL(new Blob([read.data], { type }));
         loading.bytes = read.data.byteLength;
+        loading.stamp = ++this.version;
         if (!this.pins.has(file.id)) this.rest(file.id, loading);
-        this.changed();
+        this.changes.notify();
       });
     }
+    named(file.id, cached.stamp);
     cached.removed = false;
     cached.owners.add(ref);
     this.sources.set(ref, file.id);
@@ -167,11 +191,6 @@ export class AssetUrls {
     this.urls.delete(file);
     for (const ref of cached.owners) if (this.sources.get(ref) === file) this.sources.delete(ref);
     if (cached.url) URL.revokeObjectURL(cached.url);
-  }
-
-  private changed() {
-    this.version++;
-    this.changes.notify();
   }
 
   close() {

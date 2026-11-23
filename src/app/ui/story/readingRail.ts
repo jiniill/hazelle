@@ -38,10 +38,11 @@ export function useReadingRail(scrollRef: RefObject<HTMLElement | null>, footerR
         marked = reading;
       }
       if (!reading) return;
-      const rail = reading.querySelector(`[${RAIL}]`)!.getBoundingClientRect();
+      // On the rail, which alone reads them: on the message, each frame's values would restyle its whole story.
+      const rail = reading.querySelector<HTMLElement>(`[${RAIL}]`)!;
       const share = Math.min(1, Math.max(0, (bottom - box!.top) / box!.height));
-      reading.style.setProperty('--reading-length', `${Math.min(box!.bottom, bottom - gap) - Math.max(rail.top, top + gap)}px`);
-      reading.style.setProperty('--reading-share', String(share));
+      rail.style.setProperty('--reading-length', `${Math.min(box!.bottom, bottom - gap) - Math.max(rail.getBoundingClientRect().top, top + gap)}px`);
+      rail.style.setProperty('--reading-share', String(share));
     };
     const schedule = () => {
       frame ||= requestAnimationFrame(place);

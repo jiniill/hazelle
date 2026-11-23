@@ -147,6 +147,22 @@ test('a view going down by itself moves at under a pixel a frame, waits on a whe
   await page.close();
 });
 
+test('a scroll that brings no row into reach draws no row again', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 });
+  await page.goto(`${url}e2e/fixtures/scroll.html?reply=stay`);
+  const frame = page.locator('main > div').filter({ has: page.locator('[data-key]') });
+  const to = async (top: number) => {
+    await frame.evaluate((element, top) => { element.scrollTop = top; }, top);
+    await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+  };
+  // Ten rows of 150px: from any of these tops, all of them are within a view above and two below.
+  await to(300);
+  const drawn = await page.evaluate('window.rowDraws');
+  for (const top of [100, 400, 200]) await to(top);
+  expect(await frame.evaluate((element) => element.scrollTop)).toBe(200);
+  expect(await page.evaluate('window.rowDraws')).toBe(drawn);
+});
+
 test('a view going down by itself waits at the end, and goes on as a reply grows below a reader who stays', async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.goto(`${url}e2e/fixtures/scroll.html?reply=stay&glide=600`);

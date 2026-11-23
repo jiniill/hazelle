@@ -71,7 +71,8 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
   const cache = useRef(new Map<string, { height: number; memory: RowMemory }>());
   const [widthRevision, setWidthRevision] = useState(0);
   const [estimate, setEstimate] = useState(1);
-  const [view, setView] = useState({ top: 0, height: 0 });
+  // As last read, past React: a scroll draws again only when the rows to mount change.
+  const view = useRef({ top: 0, height: 0 });
   const [focused, setFocused] = useState<string | null>(null);
   const [, redraw] = useState(0);
   const sizes = useMemo(() => {
@@ -111,6 +112,7 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
     const at = offset + sizes.offset(index) - line;
     if (seek || (held.current?.key === room.current!.key && frame.scrollTop < at)) frame.scrollTop = at;
   };
+  const drawn = useRef({ from: 0, through: 0 });
   const reading = useRef<Reading | null>(null);
   const update = useRef<() => void>(() => {});
   const active = useRef(sizes);
@@ -125,8 +127,9 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
     let width = element.clientWidth;
     const read = () => {
       reading.current = across(element, frame);
-      const offset = offsetIn(element, frame);
-      setView({ top: frame.scrollTop - offset, height: frameHeight(frame) });
+      view.current = { top: frame.scrollTop - offsetIn(element, frame), height: frameHeight(frame) };
+      const [from, through] = around(active.current, view.current);
+      if (from !== drawn.current.from || through !== drawn.current.through) redraw((n) => n + 1);
     };
     update.current = read;
     setEstimate(tokenPx('--viewport-estimate', element));
@@ -179,7 +182,7 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
       frame.scrollTop = offset + sizes.offset(Math.min(index, keys.length)) + inside;
       anchor.current = null;
     }
-    if (target && (jump.current !== target || !view.height)) {
+    if (target && (jump.current !== target || !view.current.height)) {
       const index = keys.indexOf(target.key);
       if (index >= 0) {
         const offset = offsetIn(element, frame);
@@ -200,8 +203,8 @@ export function Viewport({ keys: given, children, variant = 'list', list, keep =
     update.current();
   }, [sizes, estimate, seek, target]);
 
-  const from = sizes.at(Math.max(0, view.top - view.height));
-  const through = sizes.at(Math.max(0, view.top + view.height * 2));
+  const [from, through] = around(sizes, view.current);
+  drawn.current = { from, through };
   const indexes = new Set<number>();
   for (let i = from; i <= through && i < keys.length; i++) indexes.add(i);
   for (const key of [...keep, ...(focused ? [focused] : [])]) {
@@ -321,6 +324,9 @@ function across(root: HTMLElement, frame: HTMLElement): Reading | null {
   }
   return { row, element, path, inside: inside({ row, element }) };
 }
+
+// The rows mounted around a view: one view above it and two below.
+const around = (sizes: RowSizes, { top, height }: { top: number; height: number }) => [sizes.at(Math.max(0, top - height)), sizes.at(Math.max(0, top + height * 2))] as const;
 
 const MOVES = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
 function frameHeight(frame: HTMLElement) { return frame === document.scrollingElement ? window.innerHeight : frame.clientHeight; }

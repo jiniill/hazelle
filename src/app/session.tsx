@@ -99,8 +99,9 @@ export function useAssetUrl(inputs: readonly unknown[]): PictureUrl {
   const { assets } = useSession();
   // Keep the chat-id key stable on first save so mounted picture URLs survive.
   // Inputs must cover every condition that changes this consumer's lookups, including no longer showing a picture.
-  const version = useSyncExternalStore(assets.subscribe, assets.snapshot);
-  const view = useMemo(() => assets.view(), [assets, version, ...inputs]);
+  const watch = useMemo(() => assets.watch(), [assets]);
+  const version = useSyncExternalStore(assets.subscribe, watch.snapshot);
+  const view = useMemo(() => watch.view(), [watch, version, ...inputs]);
   useLayoutEffect(view.hold, [view]);
   return view.url;
 }

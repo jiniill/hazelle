@@ -12,7 +12,7 @@ function urlsReading(answers: ApiResult<Uint8Array<ArrayBuffer>>[]) {
   let reads = 0;
   const files = { read: () => Promise.resolve(answers[reads++]!) } as unknown as Files;
   const urls = new AssetUrls(store, files);
-  return { urls, url: urls.view().url, reads: () => reads };
+  return { urls, url: urls.watch().view().url, reads: () => reads };
 }
 
 const settled = () => new Promise((resolve) => setTimeout(resolve));
@@ -40,8 +40,8 @@ it('evicts only inactive bytes, shares active pins, and reloads an evicted pictu
   const read = vi.fn(async () => ({ ok: true as const, data: new Uint8Array(2) }));
   const store = { get: (_kind: string, id: string) => ({ value: { ...asset, file: { id, key: 'k' } } }), subscribe: () => () => {} } as unknown as ObjectStore;
   const urls = new AssetUrls(store, { read }, 2);
-  const first = urls.view();
-  const second = urls.view();
+  const first = urls.watch().view();
+  const second = urls.watch().view();
   const releaseFirst = first.hold();
   const releaseSecond = second.hold();
   first.url('asset', 'a');
@@ -57,7 +57,7 @@ it('evicts only inactive bytes, shares active pins, and reloads an evicted pictu
   releaseSecond();
   await settled();
   expect(revoke).toHaveBeenCalledExactlyOnceWith(a);
-  const idle = urls.view();
+  const idle = urls.watch().view();
   expect(idle.url('asset', 'b')).toBe(b);
   expect(idle.url('asset', 'a')).toBeUndefined();
   await settled();
@@ -76,7 +76,7 @@ it('defers removal revocation while mounted and supports strict-effect reactivat
   } as unknown as ObjectStore;
   const read = vi.fn(async () => ({ ok: true as const, data: new Uint8Array(2) }));
   const urls = new AssetUrls(store, { read }, 2);
-  const view = urls.view();
+  const view = urls.watch().view();
   view.url('asset', 'x');
   view.hold()();
   const release = view.hold();
@@ -97,7 +97,7 @@ it('defers removal revocation while mounted and supports strict-effect reactivat
 it('reads a picture by its kind, so a 삽화 id is never looked up as an asset', async () => {
   const store = { get: (kind: string) => (kind === 'illustration' ? { value: { type: 'image/png', file: { id: 'f', key: 'k' } } } : null), subscribe: () => () => {} } as unknown as ObjectStore;
   const read = vi.fn(async () => ({ ok: true as const, data: new Uint8Array(1) }));
-  const view = new AssetUrls(store, { read }).view();
+  const view = new AssetUrls(store, { read }).watch().view();
   view.url('illustration', 'x');
   await settled();
   expect([view.url('illustration', 'x'), view.url('asset', 'x'), read.mock.calls.length]).toEqual([expect.stringMatching(/^blob:/), undefined, 1]);
@@ -111,7 +111,7 @@ it('lets a picture go when a change reports it in a chat no longer held', async 
     subscribe: (listener: typeof change) => { change = listener; return () => {}; },
   } as unknown as ObjectStore;
   const urls = new AssetUrls(store, { read: async () => ({ ok: true, data: new Uint8Array(1) }) });
-  const view = urls.view();
+  const view = urls.watch().view();
   view.url('inlay', 'x');
   view.hold()();
   await settled();
@@ -129,7 +129,7 @@ it('lets a picture go when a change reports it in a chat no longer held', async 
 
 it('keeps a loaded picture pinned through StrictMode hold-release-hold with no inactive budget', async () => {
   const urls = new AssetUrls(store, { read: async () => ({ ok: true, data: new Uint8Array(1) }) }, 0);
-  const view = urls.view();
+  const view = urls.watch().view();
   view.url('asset', 'x');
   const release = view.hold();
   await settled();
@@ -166,4 +166,20 @@ it('reads the pictures for data URLs together and keeps their order', async () =
   expect(found.urls.get('asset:two')).toBe('data:image/png;base64,Yg==');
   expect(found.missing).toBe(1);
   expect(most).toBe(2);
+});
+
+it('moves a watch only once a file its view looked up has changed', async () => {
+  const loads = new Map<string, (read: ApiResult<Uint8Array<ArrayBuffer>>) => void>();
+  const store = { get: (_kind: string, id: string) => ({ value: { ...asset, file: { id, key: 'k' } } }), subscribe: () => () => {} } as unknown as ObjectStore;
+  const read = ({ id }: { id: string }) => new Promise<ApiResult<Uint8Array<ArrayBuffer>>>((resolve) => loads.set(id, resolve));
+  const urls = new AssetUrls(store, { read });
+  const shows = urls.watch();
+  const other = urls.watch();
+  shows.view().url('asset', 'a');
+  other.view().url('asset', 'b');
+  const before = [shows.snapshot(), other.snapshot()];
+  loads.get('a')!({ ok: true, data: new Uint8Array(1) });
+  await settled();
+  expect([shows.snapshot(), shows.snapshot(), other.snapshot()]).toEqual([before[0]! + 1, before[0]! + 1, before[1]]);
+  urls.close();
 });

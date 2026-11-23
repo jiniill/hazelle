@@ -167,6 +167,33 @@ it('releases only pictures whose mounted rows leave or stop using them with no i
   }
 });
 
+it('draws again only the row whose picture loaded', async () => {
+  const loads = new Map<string, () => void>();
+  const store = { get: (_kind: string, id: string) => ({ value: { type: 'image/png', file: { id, key: 'k' } } }), subscribe: () => () => {} } as unknown as ObjectStore;
+  const read = ({ id }: { id: string }) => new Promise<ApiResult<Uint8Array<ArrayBuffer>>>((resolve) => loads.set(id, () => resolve({ ok: true, data: new Uint8Array(1) })));
+  const assets = new AssetUrls(store, { read });
+  const root = probeRoot();
+  const draws = new Map<string, (string | undefined)[]>();
+  function Row({ picture }: { picture: string }) {
+    const url = useAssetUrl([picture]);
+    draws.set(picture, [...(draws.get(picture) ?? []), url('asset', picture)]);
+    return null;
+  }
+  try {
+    await act(() => root.render(<SessionProvider session={{ store, assets } as Session} account={account}><Row picture="a" /><Row picture="b" /></SessionProvider>));
+    await act(async () => {
+      loads.get('a')!();
+      await new Promise((resolve) => setTimeout(resolve));
+    });
+    expect(draws.get('a')).toEqual([undefined, expect.stringMatching(/^blob:/)]);
+    expect(draws.get('b')).toEqual([undefined]);
+  } finally {
+    await act(() => root.unmount());
+    assets.close();
+    vi.unstubAllGlobals();
+  }
+});
+
 it('shares a picture until its last row leaves, holding replacement owners before releasing old ones', async () => {
   const pictures = mountedPictures();
   try {
