@@ -26,7 +26,9 @@ export type Frame = {
 // Frame tools run in the background frame. Outside-event calls use chat; menu/actions/shown are live registrations.
 // leaving lasts one commit so reattaching a slot is a remount, not a close.
 // A studio draft's test run (ToolHost.trial), its code held as text. What it would write outside its outcome lands in
-// its own copy (storage, settings) or is refused, each listed in writes.
+// its own copy (storage, settings) or is refused, each listed in writes. installed: the module of the plugin its file
+// would replace, whose stored data (storage, chat data, saved files) the run reads under its own writes; null: none, so
+// it reads nothing stored. storage: what the run wrote, undefined for a key it deleted.
 export type TrialWrite = { kind: 'storage' | 'setting'; key: string; value: Json | undefined } | { kind: 'refused'; call: 'assets.save' | 'chat.picture' | 'chat.send' | 'chat.card.edit' };
 // One call a test run made of the app, by its protocol name: its arguments and its answer as cut text. gave null: not
 // answered when the calls were read. failed: gave is what the call threw.
@@ -34,7 +36,7 @@ export type TrialCall = { method: string; args: string; gave: string | null; fai
 // made: in the order made, up to TRIAL_CALLS. omitted: how many came after.
 export type TrialCalls = { made: TrialCall[]; omitted: number };
 export const noCalls = (): TrialCalls => ({ made: [], omitted: 0 });
-export type EntryTrial = { code: string; chat: string; storage: Map<string, Json>; writes: TrialWrite[]; calls: TrialCalls };
+export type EntryTrial = { code: string; chat: string; installed: string | null; storage: Map<string, Json | undefined>; writes: TrialWrite[]; calls: TrialCalls };
 export type EntryCode = { file: FileRef; trial: null } | { file: null; trial: EntryTrial };
 export type Entry = EntryCode & {
   module: string; tool: Pick<Tool, 'manifest' | 'settings'>; settings: string; background: Frame | null; pages: Set<Frame>; chats: Set<string>; idle: ReturnType<typeof setTimeout> | null; data: Map<string, { key: string; json: string }>;
