@@ -1,6 +1,7 @@
 import { pinnedBy } from '../../runtime/models/assignment';
 import { ModelMenu } from '../common/ModelMenu';
 import { promptName } from '../common/words';
+import { ChatPresetItems, useChatPresets } from './ChatPresets';
 import type { OpenChat } from './useChat';
 
 // The chat's model and the menu that picks another: in the header, or at the composer's foot where its shape stands
@@ -8,5 +9,6 @@ import type { OpenChat } from './useChat';
 export function ChatModel({ chat, opens }: { chat: OpenChat; opens?: 'above-end' }) {
   const { place, route, modelMenu, actions } = chat;
   const pin = pinnedBy(place, chat.prompt);
-  return <ModelMenu handle={modelMenu} place={opens} route={route} pin={pin && { name: promptName(pin.value.name), open: () => actions.side({ kind: 'prompts', id: pin.id, pane: 'model' }) }} onPick={actions.pickModel} />;
+  const presets = useChatPresets(chat);
+  return <ModelMenu handle={modelMenu} place={opens} route={route} named={presets.current?.name} head={<ChatPresetItems presets={presets} onManage={() => actions.openDialog('presets')} />} pin={pin && { name: promptName(pin.value.name), open: () => actions.side({ kind: 'prompts', id: pin.id, pane: 'model' }) }} onPick={actions.pickModel} />;
 }

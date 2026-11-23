@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Toggle } from './prompt';
-import { chatToggles, lineMoves, toggleTree, toggleValue } from './toggles';
+import { chatToggles, lineMoves, presetHolds, presetMisses, presetSets, toggleTree, toggleValue, valuesNow } from './toggles';
 
 const check = (key: string, label: string): Toggle => ({ key, label, kind: 'check', default: '0' });
 
@@ -33,5 +33,20 @@ describe('toggles', () => {
     expect(lineMoves(nodes, 1)).toEqual({ up: { from: 1, count: 3, to: 0 }, down: { from: 1, count: 3, to: 2 } });
     expect(lineMoves(nodes, 5)).toEqual({ up: null, down: { from: 5, count: 2, to: 7 } });
     expect(lineMoves(nodes, 7)).toEqual({ up: { from: 7, count: 2, to: 5 }, down: null });
+  });
+
+  it('saves every toggle shown as a preset, sets on a pick only those still shown, and holds only while all match', () => {
+    const sims = check('sims', '시뮬레이터 모드');
+    const length: Toggle = { key: 'length', label: '대사 길이', kind: 'choice', options: ['짧게', '보통', '길게'], default: '1' };
+    expect(valuesNow([{ toggle: sims, value: '0' }, { toggle: length, value: '2' }])).toEqual({ sims: '0', length: '2' });
+
+    const rows = [{ toggle: sims, value: '1' }, { toggle: length, value: '0' }];
+    const novel = { sims: '1', length: '0', gone: '1' };
+    const short = { length: '0' };
+    expect(presetSets(rows, novel)).toEqual({ sims: '1', length: '0' });
+    expect(presetSets(rows, short)).toEqual({ length: '0' });
+    expect(presetHolds(rows, novel)).toBe(true);
+    expect(presetHolds(rows, short)).toBe(false);
+    expect(presetMisses(rows, short)).toBe(1);
   });
 });

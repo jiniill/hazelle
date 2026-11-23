@@ -40,6 +40,11 @@ export const presetsOf = (settings: Pick<Settings, 'presets'>) => settings.prese
 // character-owned translation and illustration settings replace their shared settings.
 // What this person has been shown, so no device of theirs shows it again.
 // offers: the offers answered, either way (OFFERS).
+// 대화 프리셋: what a chat ran on when saved, written back by a pick into each part's own place (runtime/chat/presets).
+// model: the added model it talked on. prompt: its conversation prompt. toggles: a value for every toggle that prompt
+// declared, as a 토글 프리셋 holds a section's. translate: 번역's 기능 in the chat.
+export type ChatPreset = { id: string; name: string; model: ModelRef; prompt: string; toggles: ToggleValues; translate: boolean };
+
 export type Seen = { tutorials?: string[]; welcome?: true; tour?: string; opened?: string; offers?: OfferId[] };
 
 // 써볼래요? (design §6.15): a switch that begins off for the accounts older than it, each asked once whether to turn
@@ -103,6 +108,8 @@ export type Settings = {
   reread?: number;
   // 디스플레이 presets, in the order shown. Absent: STARTER_PRESETS.
   presets?: SavedLook[];
+  // 대화 프리셋, in the order shown.
+  chatPresets?: ChatPreset[];
   // How many model calls one reply may make while its model calls plugin tools, absent for TOOL_ROUNDS.
   toolRounds?: number;
   // The shared 실패하면 다시 보내기, absent for RETRIES; a connection or a 설정 묶음 overrides it (runtime/models/connections retriesOf).

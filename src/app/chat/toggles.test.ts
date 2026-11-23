@@ -4,7 +4,7 @@ import type { ToggleLine, ToggleValues } from '../../model/prompt';
 import { chatToggles, toggleValue } from '../../model/toggles';
 import type { ToggleSource } from '../../runtime/chat/chat-context';
 import type { Laid } from '../common/toggleLayout';
-import { currentPreset, presetValues, sectionValues, shownRows, toggleRows, type ToggleRow } from './toggles';
+import { shownRows, toggleRows, type ToggleRow } from './toggles';
 
 const PROMPT: ToggleLine[] = [
   { key: 'sims', label: '시뮬레이터 모드', kind: 'check', default: '0' },
@@ -59,21 +59,5 @@ describe('toggle panel rows', () => {
       ['note', '적어 둔 말'],
     ]);
     expect(rows.changed).toBe(1);
-  });
-});
-
-describe('toggle presets', () => {
-  it('saves every toggle of its section, sets on pick only those the section still shows, and is current only while all match', () => {
-    const sources = (presets: ToggleSource['presets']) => [{ from: 'prompt' as const, id: 'P', name: 'P', lines: PROMPT, presets }];
-    const [saved] = toggleRows(set(sources([]), { length: '2' })).sections;
-    expect(sectionValues(saved!)).toEqual({ sims: '0', length: '2' });
-
-    const novel = { id: 'n', name: '소설', values: { sims: '1', length: '0', gone: '1' } };
-    const short = { id: 's', name: '짧게', values: { length: '0' } };
-    const [section] = toggleRows(set(sources([short, novel]), { sims: '1', length: '0' })).sections;
-    expect(presetValues(section!, novel)).toEqual({ sims: '1', length: '0' });
-    expect(presetValues(section!, short)).toEqual({ length: '0' });
-    expect(currentPreset(section!)?.id).toBe('n');
-    expect(currentPreset({ ...section!, presets: [short] })).toBeNull();
   });
 });

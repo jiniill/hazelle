@@ -15,7 +15,7 @@ import type { Toggle, ToggleLine, TogglePreset } from '../../model/prompt';
 import { without } from '../../model/fields';
 import { offerAnswered, OFFERS, type OfferId, type Seen, type Settings } from '../../model/settings';
 import { chatStatus, statusAfter, type StatusDefinition } from '../../model/status';
-import { chatToggles, toggleValue } from '../../model/toggles';
+import { chatToggles, toggleValue, type ToggleNow } from '../../model/toggles';
 import { chatModel, type Route } from '../models/assignment';
 import { chatTranslate, featuresOf } from '../tasks/features';
 import { greetingOf } from './greetings';
@@ -205,6 +205,13 @@ export function togglesOf(store: Reader['store'], chat: Chat, prompt: PromptChoi
   ];
   const declared = chatToggles(sources.flatMap(({ lines }) => lines));
   return { declared, sources, value:toggleValue(declared, (character ? character.toggles : accountSettings(store).toggles) ?? {}) };
+}
+
+// A key declared again by a later source shows once, in the source that declares it (model/toggles chatToggles keeps
+// the very line, so it is matched by identity).
+export function sourceRows({ declared, value }: ChatToggleSet, { lines }: Pick<ToggleSource, 'lines'>): ToggleNow[] {
+  const own = new Set(lines);
+  return declared.filter((toggle) => own.has(toggle)).map((toggle) => ({ toggle, value: value(toggle.key)! }));
 }
 
 type InspectedToggle = { declaration: Toggle; value: string | null; sources: ToggleSource[] };

@@ -2,22 +2,21 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { setInk, setUsageShown } from '../../runtime/chat/chat-context';
 import { STARTER_PRESETS, presetsOf } from '../../model/settings';
-import { addLook, addStarters, editLook, moveLook, removeLook, restoreLook } from '../../runtime/library/looks';
+import { addStarters, savedLooks } from '../../runtime/library/looks';
 import { CacheNoteRow } from '../common/CacheNoteRow';
 import { ACTS } from '../common/acts';
-import { NameDialog } from '../common/NameDialog';
 import { readPicturePercent } from '../common/picturePercent';
 import { HidePicturesRow, presetChoices, ReadingRows } from '../common/ReadingRows';
 import { LOOK_CHAT, LOOK_SAMPLE } from '../common/lookSample';
 import { choices, SIDE, lookOf, presetOf, type Preset } from '../common/reading';
+import { usePresetActs } from '../common/usePresetActs';
 import { useTypedNumber } from '../common/typed';
 import { reader } from '../common/typedNumber';
-import { CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, PRESET, PRESET_GONE, PRESET_GONE_CHIP, REPLY_INK, SAVE_FAILED } from '../common/words';
+import { MOVE_FAILED, CHAT_LOOK, DETAIL, detailLabel, PAGES, PICTURE_PLACE, PRESET, PRESET_GONE, PRESET_GONE_CHIP, REPLY_INK, SAVE_FAILED } from '../common/words';
 import { useDisplay } from '../display';
 import { useSettings, useStore } from '../session';
 import { backBar } from '../shell/router';
 import type { Back } from '../shell/routes';
-import { useRemoval } from '../common/useRemoval';
 import { useToast } from '../toast';
 import { ACCENT, BG, Button, DIALOGUE, QUOTE_SHAPE, ChoiceGroup, ColorDot, Disclosure, INK, MenuItem, NavBar, NumberInput, ReadingPreview, Screen, Section, SettingGroup, SettingRow, Swatches, Switch, MODE, type Mode } from '../ui';
 
@@ -31,35 +30,32 @@ export function DisplayScreen({ back }: { back: Back | null }) {
   const { reading, display, presets, unread, changeDisplay, pick, followSystem, assign } = useDisplay();
   const store = useStore();
   const toast = useToast();
-  const removal = useRemoval();
+  const looks = savedLooks(store);
   const saved = presetsOf(useSettings());
   const current = presetOf(presets, reading, display);
-  const [naming, setNaming] = useState<{ preset: Preset | null } | null>(null);
   const missing = (mode: Mode) => display.follow !== null && !presets.some((preset) => preset.id === display.follow![mode]);
   // Folded, a slot whose preset is gone would say so to no one.
   const [detailOpen, setDetailOpen] = useState(() => SLOT_KEYS.some(missing));
 
-  function name(typed: string) {
-    const preset = naming?.preset;
-    setNaming(null);
-    if (preset) return toast.settled(editLook(store, preset.id, { name: typed.trim() || preset.name }), '이름을 바꾸지 못했어요.');
-    toast.settled(addLook(store, { id: crypto.randomUUID(), name: typed.trim() || PRESET.named(presets.length), look: lookOf(reading, display) }), SAVE_FAILED);
-  }
-
-  const remove = ({ id, name }: Preset) => removal({ name: () => name, noun: PRESET.noun, task: () => removeLook(store, id), restore: (removed) => restoreLook(store, removed) });
-
-  const move = (from: number, to: number) => toast.settled(moveLook(store, presets[from]!.id, presets[to]!.id), '옮기지 못했어요.');
+  const move = (from: number, to: number) => toast.settled(looks.move(presets[from]!.id, presets[to]!.id), MOVE_FAILED);
+  const acts = usePresetActs({
+    count: presets.length,
+    current,
+    keep: { add: (name) => looks.add({ id: crypto.randomUUID(), name, look: lookOf(reading, display) }), over: ({ id }) => looks.edit(id, { look: lookOf(reading, display) }) },
+    rename: ({ id }: Preset, name) => looks.edit(id, { name }),
+    remove: ({ id }) => looks.remove(id),
+    restore: looks.restore,
+  });
 
   const swatch = (preset: Preset) => ({ name: preset.name, ...preset.look, pressed: preset === current, onPick: () => pick(preset) });
-  const menu = (preset: Preset, index: number) => (
-    <>
-      <MenuItem icon={ACTS.rename.icon} label={ACTS.rename.label} onClick={() => setNaming({ preset })} />
-      {preset !== current && <MenuItem icon={ACTS.overwrite.icon} label={ACTS.overwrite.label} onClick={() => toast.settled(editLook(store, preset.id, { look: lookOf(reading, display) }), SAVE_FAILED)} />}
-      {index > 0 && <MenuItem icon={ArrowLeft} label="앞으로 옮기기" onClick={() => move(index, index - 1)} />}
-      {index < presets.length - 1 && <MenuItem icon={ArrowRight} label="뒤로 옮기기" onClick={() => move(index, index + 1)} />}
-      <MenuItem icon={ACTS.remove.icon} label={ACTS.remove.label} tone="warn" onClick={() => void remove(preset)} />
-    </>
-  );
+  const menu = (preset: Preset, index: number) =>
+    acts.items(
+      preset,
+      <>
+        {index > 0 && <MenuItem icon={ArrowLeft} label="앞으로 옮기기" onClick={() => move(index, index - 1)} />}
+        {index < presets.length - 1 && <MenuItem icon={ArrowRight} label="뒤로 옮기기" onClick={() => move(index, index + 1)} />}
+      </>,
+    );
   return (
     <Screen
       width="page"
@@ -76,7 +72,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
         note={unread > 0 ? `읽지 못한 ${PRESET.noun} ${unread}개` : undefined}
         action={
           !current && (
-            <Button variant="ghost" onClick={() => setNaming({ preset: null })}>
+            <Button variant="ghost" onClick={acts.save!}>
               현재 설정 저장
             </Button>
           )
@@ -107,14 +103,7 @@ export function DisplayScreen({ back }: { back: Back | null }) {
           </SettingGroup>
         </Disclosure>
       </Section>
-      {naming && (
-        <NameDialog
-          title={naming.preset ? PRESET.rename : PRESET.save}
-          value={naming.preset?.name ?? PRESET.named(presets.length)}
-          onSave={name}
-          onClose={() => setNaming(null)}
-        />
-      )}
+      {acts.dialog}
       <Section title="색">
         <SettingGroup label="색">
           <SettingRow label="모드" control={<ChoiceGroup layout="fit" label="모드" options={choices(MODE)} value={display.mode} onChange={(mode) => changeDisplay({ mode })} />} />

@@ -1,35 +1,25 @@
-import type { Toggle, ToggleLine, TogglePreset, ToggleValues } from '../../model/prompt';
-import { toggleTree } from '../../model/toggles';
-import type { ChatToggleSet, ToggleSource } from '../../runtime/chat/chat-context';
+import type { ToggleLine } from '../../model/prompt';
+import { toggleTree, type ToggleNow } from '../../model/toggles';
+import { sourceRows, type ChatToggleSet, type ToggleSource } from '../../runtime/chat/chat-context';
 import { laidOut, type Laid } from '../common/toggleLayout';
 
-export type ToggleRow = { toggle: Toggle; value: string; changed: boolean };
+export type ToggleRow = ToggleNow & { changed: boolean };
 
 // A text toggle's typed value waits under this key (common/useAutosave) before it is stored.
 export const toggleSaveKey = (owner: string | null, key: string) => `toggle:${owner ?? ''}:${key}`;
 export type ToggleSection = Pick<ToggleSource, 'from' | 'id' | 'name' | 'presets'> & { rows: ToggleRow[]; items: Laid<ToggleRow>[] };
 export type ToggleRows = { sections: ToggleSection[]; changed: number };
 
-// A key declared again by a later source shows once, in the source that declares it (model/toggles chatToggles keeps
-// the very line, so it is matched by identity). A source with no toggle of its own is left out.
-export function toggleRows({ declared, sources, value }: ChatToggleSet): ToggleRows {
-  const rows = new Map<ToggleLine, ToggleRow>(
-    declared.map((toggle) => {
-      const current = value(toggle.key)!;
-      return [toggle, { toggle, value: current, changed: current !== toggle.default }];
-    }),
-  );
-  const sections = sources
-    .map(({ from, id, name, lines, presets }) => ({
-      from,
-      id,
-      name,
-      presets,
-      rows: lines.flatMap((line) => rows.get(line) ?? []),
-      items: asRisu(laidOut(toggleTree(lines), (line) => rows.get(line) ?? null)),
-    }))
+// A source with no toggle of its own is left out.
+export function toggleRows(set: ChatToggleSet): ToggleRows {
+  const sections = set.sources
+    .map(({ from, id, name, lines, presets }) => {
+      const rows = sourceRows(set, { lines }).map((row) => ({ ...row, changed: row.value !== row.toggle.default }));
+      const byLine = new Map<ToggleLine, ToggleRow>(rows.map((row) => [row.toggle, row]));
+      return { from, id, name, presets, rows, items: asRisu(laidOut(toggleTree(lines), (line) => byLine.get(line) ?? null)) };
+    })
     .filter((section) => section.rows.length > 0);
-  return { sections, changed: [...rows.values()].filter((row) => row.changed).length };
+  return { sections, changed: sections.flatMap(({ rows }) => rows).filter((row) => row.changed).length };
 }
 
 const repeated = (item: Laid<ToggleRow>, last: Laid<ToggleRow> | undefined) =>
@@ -49,10 +39,3 @@ export function shownRows(rows: readonly ToggleRow[], found: ReadonlySet<ToggleR
   const kept = rows.filter((row) => found.has(row) && (!onlyChanged || row.changed));
   return [...kept.filter((row) => first.has(row.toggle.key)), ...kept.filter((row) => !first.has(row.toggle.key))];
 }
-
-// A preset saves every toggle its section shows. Picked, it sets those the section still shows; one it lacks (added
-// since) keeps its value, so that preset is never current until it is saved again.
-export const sectionValues = ({ rows }: ToggleSection): ToggleValues => Object.fromEntries(rows.map(({ toggle, value }) => [toggle.key, value]));
-export const presetValues = ({ rows }: ToggleSection, { values }: TogglePreset): ToggleValues =>
-  Object.fromEntries(rows.flatMap(({ toggle }) => (Object.hasOwn(values, toggle.key) ? [[toggle.key, values[toggle.key]!]] : [])));
-export const currentPreset = ({ rows, presets }: ToggleSection) => presets.find(({ values }) => rows.every(({ toggle, value }) => values[toggle.key] === value)) ?? null;

@@ -129,6 +129,36 @@ test('a new account imports a card, chats through the fake provider and finds th
     expect(prompt.at(-1)).toEqual({ role: 'user', content: '(OOC: Continue the story with your next reply.)' });
   });
 
+  await test.step('the chat\'s setup is kept as a 대화 프리셋, which a pick puts back over another model and whose 되돌리기 takes it away again', async () => {
+    const chip = page.locator('[title^="모델 바꾸기"]').first();
+    const preset = page.getByRole('menuitemradio', { name: /^여관 세트/ });
+    await chip.click();
+    await page.getByRole('menuitem', { name: /^대화 프리셋/ }).click();
+    const presets = page.getByRole('dialog', { name: '대화 프리셋', exact: true });
+    await presets.getByRole('button', { name: '프리셋으로 저장', exact: true }).click();
+    const naming = page.getByRole('dialog', { name: '프리셋으로 저장', exact: true });
+    await naming.getByLabel('이름', { exact: true }).fill('여관 세트');
+    await naming.getByRole('button', { name: '저장', exact: true }).click();
+    await expect(presets.getByRole('button', { name: '프리셋으로 저장', exact: true })).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(chip).toContainText('여관 세트');
+    await chip.click();
+    await expect(preset).toBeChecked();
+    await page.getByRole('menuitemradio', { name: new RegExp(`^${COPY}`) }).first().click();
+    await expect(chip).toContainText(COPY);
+    await chip.click();
+    // The menu just closed plays its leaving beside the one opened.
+    await expect(preset).toHaveCount(1);
+    await expect(preset).not.toBeChecked();
+    await preset.click();
+    await expect(chip).toContainText('여관 세트');
+    await page.getByRole('button', { name: '되돌리기' }).click();
+    await expect(chip).toContainText(COPY);
+    await chip.click();
+    await page.getByRole('menuitemradio', { name: new RegExp(`^${FAKE_MODEL}(?! low)`) }).first().click();
+    await expect(chip).toContainText('여관 세트');
+  });
+
   await test.step('Ctrl+P opens the chat\'s prompt choice, whose 프롬프트 관리 opens the prompts beside the chat, a right-click on a prompt there opens its menu, a role changed there comes back with Ctrl+Z, Ctrl+F there leaves the chat\'s search closed and opens it once the panel is gone, Ctrl+/ lists every shortcut, and Ctrl+S opens and closes 설정', async () => {
     await page.keyboard.press('Control+p');
     await page.getByRole('dialog', { name: '이 채팅의 프롬프트' }).getByRole('button', { name: '프롬프트 관리' }).click();

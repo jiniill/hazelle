@@ -6,7 +6,7 @@ import { usePanelsBeside } from '../ui';
 import { pickStarted } from './infoReply';
 import { inspectShown, NO_PANELS, opened, takeCarried, type InfoTab, type InspectTab, type Panel, type Panels } from './panels';
 
-type Dialog = 'rename' | 'reading' | 'persona' | 'prompt' | 'export' | 'onboarding';
+type Dialog = 'rename' | 'reading' | 'persona' | 'prompt' | 'presets' | 'export' | 'onboarding';
 
 // onboarding: the chat opens with that dialog. replyTarget: the message a reply is being written into.
 export function useChatPanels(chatId: string, id: string | null, tools: ToolMenu[], onboarding: boolean, memory: boolean, messages: Shown[], replyTarget: string | null) {

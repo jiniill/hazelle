@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react';
 import type { ModelRef } from '../../connectors/assignment';
 import type { Chat, Writes } from '../../model/chat';
 import type { Feature } from '../../model/features';
+import type { ChatPreset } from '../../model/settings';
 import { setAgentAt, withAgent } from '../../runtime/tasks/agents';
 import type { ApiFailure, ApiResult } from '../../runtime/api';
 import { chatModel, setChatModel, withMainModel } from '../../runtime/models/assignment';
-import { setCast, setChatOwn, withCast, withOwn, withPromptOut, withPromptSent, type Own } from '../../runtime/chat/chat-log';
+import { pickChatPreset as pickPreset } from '../../runtime/chat/presets';
+import { setCast, setChatOwn, withCast, withOwn, withPrompt, withPromptOut, type Own } from '../../runtime/chat/chat-log';
 import { setFeatureAt, withFeature } from '../../runtime/tasks/features';
 import { chatPersona, pinPersona, setCurrentPersona } from '../../runtime/library/personas';
 import { chatPrompt } from '../../runtime/library/prompts';
@@ -37,9 +39,11 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
   // null: follow the default again. A new chat holds it until its first send. The caller reports a failure.
   const setOwn = (field: Own, value: string | null) => change((current) => withOwn(current, field, value), (id) => setChatOwn(store, id, field, value));
 
-  const setPrompt = (value: string | null) =>
-    character === null ? change((current) => withPromptSent(current, value), (id) => store.update('chat', id, (current) => withPromptSent(current, value))) : setOwn('prompt', value);
+  const setPrompt = (value: string | null) => change((current) => withPrompt(current, character, value), (id) => store.update('chat', id, (current) => withPrompt(current, character, value)));
   const keepPromptOut = () => change(withPromptOut, (id) => store.update('chat', id, withPromptOut));
+
+  // The answer holds the pick's undo.
+  const pickChatPreset = (preset: ChatPreset) => pickPreset(store, chat, preset, (apply) => change(apply, (id) => store.update('chat', id, apply)));
 
   // A pick is this chat's persona and the current one, which a chat not saved yet follows.
   async function choosePersona(persona: string): Promise<{ ok: true } | ApiFailure> {
@@ -61,6 +65,7 @@ export function useChatSettings(id: string | null, saved: Chat | null, character
     persona,
     actions: {
       pickModel,
+      pickChatPreset,
       setPrompt,
       keepPromptOut,
       setNote: (value: string | null) => setOwn('note', value),

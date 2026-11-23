@@ -1,12 +1,13 @@
 import type { Chat } from '../../model/chat';
 import type { TogglePreset, ToggleValues } from '../../model/prompt';
+import { presetSets, valuesNow } from '../../model/toggles';
 import type { ApiResult } from '../../runtime/api';
 import { resetToggles, setToggleValues } from '../../runtime/library/characters';
 import { packsOf, togglesOf } from '../../runtime/chat/chat-context';
 import type { PromptChoice } from '../../runtime/library/prompts';
 import { useSaves, useSession } from '../session';
 import { useToast } from '../toast';
-import { presetValues, sectionValues, toggleRows, toggleSaveKey, type ToggleRows, type ToggleSection } from './toggles';
+import { toggleRows, toggleSaveKey, type ToggleRows, type ToggleSection } from './toggles';
 
 export function useChatToggles(chat: Chat, prompt: PromptChoice, toggles: ToggleRows) {
   const { store } = useSession();
@@ -31,14 +32,14 @@ export function useChatToggles(chat: Chat, prompt: PromptChoice, toggles: Toggle
 
   async function pickPreset(section: ToggleSection, preset: TogglePreset) {
     await settleTyped();
-    toast.settled(setToggleValues(store, chat.character, presetValues(section, preset)));
+    toast.settled(setToggleValues(store, chat.character, presetSets(section.rows, preset.values)));
   }
 
   // Read again once typed values are stored, not from the rows this render holds.
   async function sectionNow(id: string): Promise<ApiResult<ToggleValues>> {
     await settleTyped();
     const section = toggleRows(togglesOf(store, chat, prompt, packsOf(store, chat))).sections.find((each) => each.id === id);
-    return section ? { ok: true, data: sectionValues(section) } : { ok: false, error: 'gone' };
+    return section ? { ok: true, data: valuesNow(section.rows) } : { ok: false, error: 'gone' };
   }
 
   return {

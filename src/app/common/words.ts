@@ -105,6 +105,7 @@ export const REMOVE_FAILED = '삭제하지 못했어요.';
 export const CHANGE_FAILED = '바꾸지 못했어요.';
 export const APPLY_FAILED = '적용하지 못했어요.';
 export const UNDO_FAILED = '되돌리지 못했어요.';
+export const MOVE_FAILED = '옮기지 못했어요.';
 // Goes to what a notice or a row points at; not the 보기 a status panel is drawn in (statusWords).
 export const SEE = '보기';
 // A field left without what it needs.
@@ -128,6 +129,9 @@ export const namedObject = (name: string, noun: string) => `'${name}' ${withPart
 
 // A preset of the user's own: 디스플레이's looks and a toggle section's.
 export const PRESET = { noun: '프리셋', save: '프리셋으로 저장', rename: '프리셋 이름 바꾸기', named: (count: number) => `내 프리셋 ${count + 1}` };
+
+// What a chat runs on, saved whole: its model, its prompt, that prompt's toggle values and 번역.
+export const CHAT_PRESET = '대화 프리셋';
 
 export const BIN = '휴지통';
 export const PURGE = '영구 삭제';

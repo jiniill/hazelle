@@ -1,4 +1,5 @@
 import { Layers, Pin, Plug } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { newOf } from './acts';
 import { refOf, sameModelRef, type ModelRef } from '../../connectors/assignment';
 import { recentModels } from '../../model/chat';
@@ -23,10 +24,12 @@ const RECENT = 3;
 
 // Added models only, recent ones first. It never lists providers. pin: the prompt whose own model the chat talks on
 // (runtime/models/assignment pinnedBy), marked on the button and opened from the menu's head.
-// place: the side it opens to, for a button at a screen's foot.
-export function ModelMenu({ route, pin, onPick, handle, place = 'below-end' }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure; pin?: { name: string; open: () => void } | null; place?: 'below-end' | 'above-end' }) {
+// place: the side it opens to, for a button at a screen's foot. head: its owner's rows over the models, such as a
+// chat's presets. named: what its owner calls what is in use, shown on the button in the model's place.
+export function ModelMenu({ route, pin, head, named, onPick, handle, place = 'below-end' }: Pick<Props, 'onPick' | 'handle'> & { route: Route | RouteFailure; pin?: { name: string; open: () => void } | null; head?: ReactNode; named?: string; place?: 'below-end' | 'above-end' }) {
   const current = 'kind' in route ? null : refOf(route.connection.id, route.model);
-  const label = 'kind' in route ? PICK_MODEL : entryName(route.model);
+  const model = 'kind' in route ? PICK_MODEL : entryName(route.model);
+  const title = ['모델 바꾸기', named && model, pin && MODEL_PINNED].filter(Boolean).join(' · ');
   const connected = useConnections().length > 0;
   return (
     <Menu
@@ -34,8 +37,9 @@ export function ModelMenu({ route, pin, onPick, handle, place = 'below-end' }: P
       place={place}
       size="lg"
       label="모델"
-      trigger={(opener) => <ChipButton label={label} title={pin ? `모델 바꾸기 · ${MODEL_PINNED}` : '모델 바꾸기'} leading={<Icon icon={pin ? Pin : Layers} size="sm" />} phone="icon" {...opener} />}
+      trigger={(opener) => <ChipButton label={named ?? model} title={title} leading={<Icon icon={pin ? Pin : Layers} size="sm" />} phone="icon" {...opener} />}
     >
+      {head}
       {pin && (
         <>
           <MenuItem tone="muted" label={pin.name} description="이 프롬프트가 지정한 모델이에요. 여기서 바꾸면 이 채팅에만 적용돼요." tag={<Tag>{MODEL_PINNED}</Tag>} onClick={pin.open} />

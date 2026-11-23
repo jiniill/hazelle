@@ -67,6 +67,18 @@ export const keyInUse = (lines: readonly ToggleLine[], key: string) => lines.som
 // The lines alone; what names the key elsewhere is its owner's to rewrite (app/prompts/edits rekey).
 export const rekeyed = (lines: readonly ToggleLine[], from: string, to: string): ToggleLine[] => lines.map((line) => (isToggle(line) && line.key === from ? { ...line, key: to } : line));
 
+// A toggle a source shows and its value now.
+export type ToggleNow = { toggle: Toggle; value: string };
+
+// 토글 프리셋's rule, which a 대화 프리셋 keeps for its prompt's toggles. A preset saves every toggle shown. Picked, it
+// sets those still shown; one it lacks (added since) keeps its value, so that preset is never current until it is saved
+// again. Misses: how many of those shown stand otherwise than it has them.
+export const valuesNow = (rows: readonly ToggleNow[]): ToggleValues => Object.fromEntries(rows.map(({ toggle, value }) => [toggle.key, value]));
+export const presetSets = (rows: readonly ToggleNow[], values: ToggleValues): ToggleValues =>
+  Object.fromEntries(rows.flatMap(({ toggle }) => (Object.hasOwn(values, toggle.key) ? [[toggle.key, values[toggle.key]!]] : [])));
+export const presetMisses = (rows: readonly ToggleNow[], values: ToggleValues) => rows.filter(({ toggle, value }) => values[toggle.key] !== value).length;
+export const presetHolds = (rows: readonly ToggleNow[], values: ToggleValues) => presetMisses(rows, values) === 0;
+
 export function toggleValue(declared: readonly Toggle[], values: ToggleValues): (key: string) => string | null {
   const defaults = new Map(declared.map((toggle) => [toggle.key, toggle.default]));
   return (key) => (!defaults.has(key) ? null : Object.hasOwn(values, key) ? values[key]! : defaults.get(key)!);

@@ -327,6 +327,8 @@ export const setChatOwn = (store: ObjectStore, chat: string, field: Own, value: 
 // A 캐릭터 없이 chat's prompt picker: a pick sends that prompt, or the default (null), from then on; 유틸리티 봇처럼 keeps
 // it out again and drops the pick.
 export const withPromptSent = <T extends Pick<Chat, 'prompt' | 'sendsPrompt'>>(chat: T, value: string | null): T => ({ ...withOwn(chat, 'prompt', value), sendsPrompt: true });
+// A pick of the chat's prompt, by hand or by a 대화 프리셋.
+export const withPrompt = <T extends Pick<Chat, Own | 'sendsPrompt'>>(chat: T, character: string | null, value: string | null): T => (character === null ? withPromptSent(chat, value) : withOwn(chat, 'prompt', value));
 export const withPromptOut = <T extends Pick<Chat, 'prompt' | 'sendsPrompt'>>(chat: T): T => without(without(chat, 'prompt'), 'sendsPrompt');
 
 export function withCast<T extends Pick<Chat, 'cast'>>(chat: T, character: string | null, ids: string[]): T {

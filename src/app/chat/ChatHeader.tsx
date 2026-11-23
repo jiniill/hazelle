@@ -19,6 +19,7 @@ import { useFamily } from './ChatLineage';
 import { alone } from './lineage';
 import { ChatExport } from './ChatExport';
 import { ChatModel } from './ChatModel';
+import { ChatPresetsDialog } from './ChatPresets';
 import { PersonaDialog } from './ChatPersonaPicker';
 import { ChatPromptPicker, PromptDialog } from './ChatPromptPicker';
 import { ReadingDialog } from './ChatReading';
@@ -140,6 +141,7 @@ export function ChatDialogs({ chat }: { chat: OpenChat }) {
     />
   );
   if (dialog === 'prompt') return <PromptDialog prompt={chat.prompt} plain={chat.card === null} out={chat.promptOut && chat.card === null} onChoose={actions.setPrompt} onKeepOut={actions.keepPromptOut} onEdit={(id) => actions.side({ kind: 'prompts', id, pane: null })} onClose={actions.closeDialog} />;
+  if (dialog === 'presets') return <ChatPresetsDialog chat={chat} />;
   if (dialog === 'reading') return <ReadingDialog character={chat.shelf && { id: chat.shelf.id, look: chat.shelf.character.look }} onClose={actions.closeDialog} />;
   if (dialog === 'onboarding' && chat.onboarding) {
     const done = (answers: Writes) => {
