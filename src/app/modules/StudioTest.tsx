@@ -4,6 +4,8 @@ import { sumCosts } from '../../connectors/pricing';
 import { sharedModel } from '../../runtime/models/assignment';
 import { splitTool } from '../../engine/import/tool';
 import { chatNow } from '../../runtime/chat/chat-context';
+import { forecastSend } from '../../runtime/chat/turn-context';
+import { sentOf, toolRequest } from '../../runtime/scripts/request';
 import type { ChatScope } from '../../engine/render';
 import type { ToolTrial } from '../../runtime/scripts/preview';
 import type { Session } from '../../runtime/session';
@@ -11,6 +13,7 @@ import { bodyLine, draftTrial, type DraftFile } from '../../runtime/tools/drafts
 import { ToolFailure, type TrialCalls, type TrialWrite } from '../../runtime/tools/frame-state';
 import { trialReport, type PluginRunner, type TestMessage, type TestMoment, type TestRun, type TestStep } from '../../runtime/tools/plugin-writer';
 import { errorMessage } from '../../error-message';
+import { describeTurnFailure } from '../common/failure';
 import { describeImportFailure } from '../common/importFailure';
 import { ModelMenu } from '../common/ModelMenu';
 import { cost, seconds } from '../common/receipt';
@@ -18,8 +21,8 @@ import { trialFacts } from '../common/code/Trial';
 import { MODULE_MODELS, TRIAL, OUTGOING } from '../common/words';
 import { useShown } from '../common/useLoaded';
 import { useChats, useSession } from '../session';
-import { Button, Callout, ChoiceGroup, CodeBlock, Empty, Facts, Row, Section, SettingRow, Stack, StepList, Switch, Text, TextField } from '../ui';
-import { fixAsk, lineRange, SEE_IN_CODE, testEvent, testPicks, type TestPick } from './studio';
+import { Button, Callout, ChoiceGroup, CodeBlock, Disclosure, Empty, Facts, Row, Section, SettingRow, Stack, StepList, Switch, Text, TextField } from '../ui';
+import { fixAsk, lineRange, SEE_IN_CODE, TEST_REQUEST, testEvent, testPicks, type TestPick } from './studio';
 
 const REFUSED: Record<Extract<TrialWrite, { kind: 'refused' }>['call'], string> = { 'assets.save': '파일 저장', 'chat.picture': '이미지 넣기', 'chat.send': '메시지 보내기', 'chat.card.edit': '캐릭터 카드 수정' };
 
@@ -43,10 +46,14 @@ async function runTest(session: Session, draft: DraftFile, chat: string, moments
   try {
     const scope = await chatNow(session, chat, signal);
     if (!scope) return [{ failed: TRIAL.noChat, line: null, code: false }];
-    const events = moments.map(({ moment, text }) => (at: ChatScope) => testEvent(moment, at, text, read.trial.tool.manifest));
+    // The request the chat would send next, as it stands before the run.
+    const sending = moments.some(({ moment }) => TEST_REQUEST.has(moment)) ? await forecastSend(session, chat, { kind: 'answer' }, signal, 'view') : null;
+    if (sending && 'kind' in sending) return [{ failed: describeTurnFailure(sending), line: null, code: false }];
+    const request = sending && toolRequest(sentOf(sending.prompt));
+    const events = moments.map(({ moment, text }) => (at: ChatScope) => testEvent(moment, at, text, read.trial.tool.manifest, request));
     const tried = await session.scriptPreview.tool(chat, scope, read.trial, messages, events, setup.calling ? { model: setup.model } : null, signal);
-    const missing = (at: number) => (moments[at]!.moment.startsWith('tool:') ? '인자가 JSON 객체가 아니에요.' : '이 채팅에는 테스트할 메시지가 없어요.');
-    return tried.map((each, at) => (each === 'unheard' ? null : each === 'no-event' ? { failed: missing(at), line: null, code: false } : 'error' in each ? failed(each.error, each.log) : each));
+    const missing = ({ moment }: TestMoment) => (moment.startsWith('tool:') ? '인자가 JSON 객체가 아니에요.' : TEST_REQUEST.has(moment) ? '이 채팅의 다음 요청을 만들지 못했어요.' : '이 채팅에는 테스트할 메시지가 없어요.');
+    return tried.map((each, at) => (each === 'unheard' ? null : each === 'no-event' ? { failed: missing(moments[at]!), line: null, code: false } : 'error' in each ? failed(each.error, each.log) : each));
   } catch (error) {
     return [failed(error)];
   }
@@ -193,12 +200,16 @@ function TestResult({ ran: { pick, result }, stale, fix }: ResultProps) {
     <Stack gap="related">
       {stale && <Text variant="note">{TRIAL.stale}</Text>}
       <Callout tone="success">{`오류 없이 끝났어요 · ${seconds(took)}`}</Callout>
-      {answer.map(({ label, text }) => (
+      {answer.map(({ label, text, folded }) => (folded ? (
+        <Disclosure key={label} label={label}>
+          <CodeBlock variant="prose">{text}</CodeBlock>
+        </Disclosure>
+      ) : (
         <Fragment key={label}>
           <Text variant="note">{label}</Text>
           <CodeBlock variant="prose">{text}</CodeBlock>
         </Fragment>
-      ))}
+      )))}
       {facts.length > 0 && <Facts items={facts} />}
       {answer.length === 0 && facts.length === 0 && <Text variant="note">{TRIAL.unchanged}</Text>}
       <CallLog log={log} />
@@ -225,9 +236,14 @@ function CallLog({ log: { made, omitted } }: { log: TrialCalls }) {
   );
 }
 
-// What the run answered: a prompt's slot texts, or the text a sending or input answer puts in place.
-function answerText(value: unknown): { label: string; text: string }[] {
+// What the run answered: a prompt's slot texts, the text a sending, replying or input answer puts in place, or the
+// list a requesting, calling or showing answer does, folded since a request is long.
+function answerText(value: unknown): { label: string; text: string; folded?: true }[] {
   if (typeof value === 'string') return value ? [{ label: '결과', text: value }] : [];
+  if (Array.isArray(value)) {
+    const texts = (value as (string | Hazelle.RequestMessage)[]).map((each) => (typeof each === 'string' ? each : `[${each.role}]\n${each.content}`));
+    return [{ label: `결과 · ${value.length}개`, text: texts.join('\n\n'), folded: true }];
+  }
   if (value === null || typeof value !== 'object') return [];
   const { tool, memory } = value as Exclude<Hazelle.PromptAnswer, string | null>;
   return [...(tool ? [{ label: '플러그인 블록', text: tool }] : []), ...(memory ? [{ label: '장기 기억 블록', text: memory.text }] : [])];

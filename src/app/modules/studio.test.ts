@@ -7,8 +7,8 @@ import { fixAsk, lineRange, testEvent, testPicks } from './studio';
 const manifest: ToolManifest = { api: 1, name: 'n', author: 'a', displayName: 'N', version: '1', description: '', uses: ['memory'], page: null, menu: [], settings: [], actions: [{ id: 'redo', label: '다시' }], inputs: [{ id: 'tidy', label: '다듬기' }], composer: { label: '글' }, functions: [{ name: 'roll', description: 'Rolls a die.', parameters: { type: 'object' } }] };
 const message = (id: string, role: 'user' | 'assistant') => ({ id: `${id}-v`, message: id, seed: '', role, text: id, time: null });
 
-it('offers each declared item and runs it on the chat as it stands, none on a chat without the message it needs or on arguments that are no object', () => {
-  expect(testPicks(manifest).map(({ value }) => value)).toEqual(['reply', 'sending', 'prompt', 'action:redo', 'input:tidy', 'tool:roll']);
+it('offers the turn\'s stages and each declared item and runs one on the chat as it stands, none on a chat without the message it needs, without the request it needs or on arguments that are no object', () => {
+  expect(testPicks(manifest).map(({ value }) => value)).toEqual(['reply', 'sending', 'prompt', 'requesting', 'calling', 'replying', 'showing', 'change', 'action:redo', 'input:tidy', 'tool:roll']);
   const scope: ChatScope = { ...SAMPLE, greeting: { index: 0 }, messages: [message('greet', 'assistant'), message('said', 'user'), message('told', 'assistant'), message('again', 'user')] };
   expect(testEvent('reply', scope, '', manifest)).toEqual({ kind: 'reply', reply: { index: 1, id: 'told', version: 'told-v' } });
   expect(testEvent('action:redo', scope, '', manifest)).toEqual({ kind: 'action', item: 'redo', message: { index: 2, id: 'again', version: 'again-v' } });
@@ -16,7 +16,16 @@ it('offers each declared item and runs it on the chat as it stands, none on a ch
   expect(testEvent('prompt', scope, '', manifest)).toEqual({ kind: 'prompt', turn: { memory: true } });
   expect(testEvent('tool:roll', scope, '{"sides":6}', manifest)).toEqual({ kind: 'tool', name: 'roll', args: { sides: 6 } });
   expect(testEvent('tool:roll', scope, ' ', manifest)).toEqual({ kind: 'tool', name: 'roll', args: {} });
+  expect(testEvent('replying', scope, '', manifest)).toEqual({ kind: 'replying', text: 'told' });
+  expect(testEvent('showing', scope, '', manifest)).toEqual({ kind: 'showing', shown: [{ at: { index: 2, id: 'again', version: 'again-v' }, text: 'again' }] });
+  expect(testEvent('showing', { ...scope, messages: scope.messages.slice(0, 1) }, '', manifest)).toEqual({ kind: 'showing', shown: [{ at: null, text: 'greet' }] });
+  expect(testEvent('change', scope, '', manifest)).toEqual({ kind: 'change', change: { index: 2, id: 'again', version: 'again-v', kind: 'edit' } });
+  const request: Hazelle.RequestMessage[] = [{ role: 'system', content: 'be kind' }, { role: 'user', content: 'again', message: 'again' }];
+  expect(testEvent('requesting', scope, '', manifest, request)).toEqual({ kind: 'requesting', messages: request });
+  expect(testEvent('calling', scope, '', manifest, request)).toEqual({ kind: 'calling', role: 'main', messages: [{ role: 'system', content: 'be kind' }, { role: 'user', content: 'again' }] });
+  expect(testEvent('requesting', scope, '', manifest)).toBeNull();
   expect(testEvent('reply', { ...scope, messages: scope.messages.slice(0, 2) }, '', manifest)).toBeNull();
+  expect(testEvent('replying', { ...scope, messages: scope.messages.slice(0, 2) }, '', manifest)).toBeNull();
   expect(testEvent('tool:roll', scope, '[6]', manifest)).toBeNull();
 });
 

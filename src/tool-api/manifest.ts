@@ -8,6 +8,8 @@ export const TOOL_ROW_BYTES = 512 * 1024;
 export const TOOL_KEY_CHARS = 256;
 // What a tool says it is doing (Chat.progress), as the waiting mark shows it beside its name.
 export const TOOL_PROGRESS_CHARS = 40;
+// One line of a test run's record: a call's arguments, its answer, a console line.
+export const TOOL_LOG_CHARS = 200;
 const encoder = new TextEncoder();
 export const dataBytes = (key: string, value: Json) => encoder.encode(key).byteLength + encoder.encode(JSON.stringify(value)).byteLength;
 export const toolVar = (manifest: Pick<ToolManifest, 'author' | 'name'>, key: string) => `${TOOL_VARIABLES}${manifest.author}/${manifest.name}:${key}`;

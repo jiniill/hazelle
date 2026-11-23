@@ -7,14 +7,14 @@ import type { Chat } from '../../model/chat';
 import { live } from '../../model/library';
 import { toolId, type Tool, type ToolUnit } from '../../model/tool';
 import type { FileRef } from '../../vault/files';
-import type { Down, EventName } from '../../tool-api/protocol';
+import { LOG_LEVELS, type Down, type EventName } from '../../tool-api/protocol';
 import type { ScriptOutcome } from '../scripts/lua/event';
 import { aborted, noOutcome, ToolStopped, ToolStuck, until, type Binding } from '../scripts/binding';
 import type { Session } from '../session';
 import type { StoreChange } from '../store/object-index';
 import type { ObjectStore } from '../store/store';
 import { Heartbeat } from '../worker';
-import { ToolApi, header, type ToolServices } from './api';
+import { ToolApi, header, logged, type ToolServices } from './api';
 import type { LaidLayer, MenuItem, ToolFrames, ToolMenu, ToolLayer, ToolPage, ToolSlot, Tools } from './facade';
 import { toolFrame, type OpenFrame } from './frame';
 import type { DraftTrial } from './drafts';
@@ -367,7 +367,7 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
       if (page?.chat && !context) throw new ToolStopped();
       frame.loadTimer = setTimeout(() => this.stalled(frame), STUCK_MS);
       frame.heart.start(STUCK_MS);
-      this.send(frame, { kind: 'load', api: 1, role: page ? 'page' : isFrameTool(entry.tool) ? 'frame' : 'background', code, manifest: entry.tool.manifest, settings: entry.tool.settings, chat: context ? header(page!.chat!, context.scope) : null, theme: page?.theme ?? 'dark', ...(page && { colors: page.colors }) });
+      this.send(frame, { kind: 'load', api: 1, role: page ? 'page' : isFrameTool(entry.tool) ? 'frame' : 'background', code, manifest: entry.tool.manifest, settings: entry.tool.settings, chat: context ? header(page!.chat!, context.scope) : null, theme: page?.theme ?? 'dark', ...(page && { colors: page.colors }), ...(entry.trial && { console: true as const }) });
     }).catch((error: unknown) => this.endFrame(frame, error instanceof Error ? error : new Error(String(error)), true));
     return frame;
   }
@@ -386,6 +386,10 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   private receive(frame: Frame, data: unknown) {
     if (!isRecord(data) || (frame.closing.signal.aborted && !(frame.unloading && data.kind === 'call'))) return;
     if (data.kind === 'pong') { frame.heart.answered(); return; }
+    if (data.kind === 'log') {
+      if (frame.entry.trial && typeof data.text === 'string' && LOG_LEVELS.some((level) => level === data.level)) logged(frame.entry.trial, data.level as string, data.text);
+      return;
+    }
     const listens = data.kind === 'loaded' && Array.isArray(data.listens) && data.listens.every((event) => EVENTS.has(event as EventName)) ? new Set(data.listens as EventName[]) : null;
     if (listens && frame.loadTimer === null && frame.loaded) {
       // A listener added after load (sandbox/api.ts sends the whole list again).

@@ -143,13 +143,13 @@ it('aborts the model call an input item is waiting on when the run is stopped', 
   } finally { host.close(); }
 }));
 
-it('runs a draft as no installed plugin, keeping its storage and settings writes in its own copy across its events, lists the calls each made, a failed one\'s too, and names an error\'s line', () => withTools(async (session, connect) => {
+it('runs a draft as no installed plugin, keeping its storage and settings writes in its own copy across its events, lists the calls each made as its code names them, a failed one\'s and its console lines too, and names an error\'s line', () => withTools(async (session, connect) => {
   const f = await fixture(session);
   const code = [
     '//@api 1', '//@name draft', '//@author jin', '//@setting {"key":"title","type":"text","label":"Title","default":"A"}', '',
     'hazelle.on("prompt", async (chat) => { await hazelle.storage.set("seen", ((await hazelle.storage.get("seen")) ?? 0) + 1); await hazelle.setSetting("title", "B"); chat.state.set("n", 2); return `${await hazelle.storage.get("seen")}${(await hazelle.settings()).title}`; });',
     'hazelle.on("menu", () => { throw new Error("boom"); });',
-    'hazelle.on("sending", async () => { await hazelle.assets.save(new Uint8Array(3)).catch(() => {}); for (let n = 0; n < 100; n++) await hazelle.storage.keys(); throw new Error("late"); });',
+    'hazelle.on("sending", async () => { console.info("late", { n: 1 }); await hazelle.assets.save(new Uint8Array(3)).catch(() => {}); for (let n = 0; n < 100; n++) await hazelle.storage.keys(); throw new Error("late"); });',
   ].join('\n');
   const read = readTool(new TextEncoder().encode(code));
   if (!read.ok) throw new Error('fixture');
@@ -179,13 +179,13 @@ it('runs a draft as no installed plugin, keeping its storage and settings writes
       { outcome: { value: '2B' }, writes: [{ kind: 'storage', key: 'seen', value: 2 }, { kind: 'setting', key: 'title', value: 'B' }] },
     ]);
     expect(calls).toEqual([
-      { made: [{ method: 'storage.get', args: '"seen"', gave: '', failed: false }, { method: 'storage.set', args: '"seen", 1', gave: '', failed: false }, { method: 'settings.set', args: '"title", "B"', gave: '', failed: false }, { method: 'storage.get', args: '"seen"', gave: '1', failed: false }, { method: 'settings', args: '', gave: '{"title":"B"}', failed: false }], omitted: 0 },
-      { made: [{ method: 'storage.get', args: '"seen"', gave: '1', failed: false }, { method: 'storage.set', args: '"seen", 2', gave: '', failed: false }, { method: 'settings.set', args: '"title", "B"', gave: '', failed: false }, { method: 'storage.get', args: '"seen"', gave: '2', failed: false }, { method: 'settings', args: '', gave: '{"title":"B"}', failed: false }], omitted: 0 },
+      { made: [{ method: 'hazelle.storage.get', args: '"seen"', gave: '', failed: false }, { method: 'hazelle.storage.set', args: '"seen", 1', gave: '', failed: false }, { method: 'hazelle.setSetting', args: '"title", "B"', gave: '', failed: false }, { method: 'hazelle.storage.get', args: '"seen"', gave: '1', failed: false }, { method: 'hazelle.settings', args: '', gave: '{"title":"B"}', failed: false }], omitted: 0 },
+      { made: [{ method: 'hazelle.storage.get', args: '"seen"', gave: '1', failed: false }, { method: 'hazelle.storage.set', args: '"seen", 2', gave: '', failed: false }, { method: 'hazelle.setSetting', args: '"title", "B"', gave: '', failed: false }, { method: 'hazelle.storage.get', args: '"seen"', gave: '2', failed: false }, { method: 'hazelle.settings', args: '', gave: '{"title":"B"}', failed: false }], omitted: 0 },
     ]);
     await expect(trial({ kind: 'sending', text: 'hi' })).rejects.toMatchObject({ message: 'late' });
     expect(calls[0]!.made).toHaveLength(100);
-    expect(calls[0]!.made.slice(0, 2)).toEqual([{ method: 'assets.save', args: '"<3 bytes>"', gave: 'Not run in a test', failed: true }, { method: 'storage.keys', args: '', gave: '[]', failed: false }]);
-    expect(calls[0]!.omitted).toBe(1);
+    expect(calls[0]!.made.slice(0, 3)).toEqual([{ method: 'console.info', args: '"late {\\"n\\":1}"', gave: '', failed: false }, { method: 'hazelle.assets.save', args: '"<3 bytes>"', gave: 'Not run in a test', failed: true }, { method: 'hazelle.storage.keys', args: '', gave: '[]', failed: false }]);
+    expect(calls[0]!.omitted).toBe(2);
     await expect(trial({ kind: 'menu', item: 'now' })).rejects.toMatchObject({ message: 'boom', line: 7 });
     expect(await trial({ kind: 'input', item: 'tidy', text: '' })).toEqual([null]);
     expect(stored()).toEqual(before);

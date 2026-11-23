@@ -56,7 +56,7 @@ const RUN_TEST: ToolDef = {
         items: {
           type: 'object',
           properties: {
-            moment: { type: 'string', description: 'reply: after the last reply is saved; sending: before a message is sent; prompt: when a request is built; menu:<id>, action:<id> (on the last message) or input:<id>, with an id from that line of the code; tool:<name>, the chat model calling that //@tool tool.' },
+            moment: { type: 'string', description: 'reply: after the last reply is saved; sending: before a message is sent; prompt: when a request is built; requesting: before the chat\'s next request is sent, with its messages; calling: a bot script\'s model call, given that request as its messages; replying: before a reply is saved, with the last reply\'s text; showing: the last message being shown; change: the last message edited; menu:<id>, action:<id> (on the last message) or input:<id>, with an id from that line of the code; tool:<name>, the chat model calling that //@tool tool.' },
             text: { type: 'string', description: 'The text typed, for the sending and input: moments; for tool:, the arguments as a JSON object.' },
           },
           required: ['moment'],
@@ -83,6 +83,7 @@ export function trialReport({ outcome, said, asked, calls, writes, called }: Too
   const lines = [
     'Ran without an error.',
     typeof value === 'string' && `Answered text: ${JSON.stringify(value)}`,
+    Array.isArray(value) && `Answered a list of ${value.length}`,
     value && typeof value === 'object' && value.tool && `Plugin prompt block: ${JSON.stringify(value.tool)}`,
     value && typeof value === 'object' && value.memory && `Memory prompt block: ${JSON.stringify(value.memory.text)}`,
     said.length > 0 && `Showed: ${said.map(({ text }) => JSON.stringify(text)).join(', ')}`,
