@@ -3,7 +3,7 @@ import { identity, readTool, toolSource } from '../../engine/import/tool';
 import { toolId } from '../../model/tool';
 import { setModuleDeleted } from '../library/modules';
 import { testServer } from '../testing';
-import { addDraftAsk, applyDraft, applyPreview, blankDraft, createDraft, deleteDraft, DRAFT_BYTES, draftOfTool, draftsOf, draftState, importFile, installedDiffers, installedFile, restoreDraft, saveDraft, undoFileImport } from './drafts';
+import { addDraftAsk, applyDraft, applyPreview, blankDraft, createDraft, deleteDraft, DRAFT_BYTES, draftOfTool, draftsOf, draftState, draftTrial, importFile, installedDiffers, installedFile, restoreDraft, saveDraft, undoFileImport } from './drafts';
 import { importTool } from './store';
 
 const server = testServer();
@@ -98,6 +98,9 @@ it('opens the installed file once as identity and body, reuses its edited draft 
   if (!opened.ok) throw new Error(opened.error);
   const draft = store.get('tooldraft', opened.data)!.value;
   expect(draft).toMatchObject({ identity: file.identity, body: file.body, applied: text, module });
+  // A test of it runs over that plugin's stored data; one under another name, over none.
+  expect(draftTrial(store, file)).toMatchObject({ ok: true, trial: { module } });
+  expect(draftTrial(store, { identity: { ...file.identity, name: 'another' }, body: file.body })).toMatchObject({ ok: true, trial: { module: null } });
   await saveDraft(store, opened.data, { body: 'unfinished' });
   const reading = vi.spyOn(files, 'read');
   expect(await draftOfTool(store, files, module)).toEqual(opened);

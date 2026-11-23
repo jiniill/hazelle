@@ -126,17 +126,26 @@ function recorded({ calls }: EntryTrial, method: string, args: unknown[]): Trial
   calls.made.push(call);
   return call;
 }
+// The module whose stored data an entry's calls read: its own, or for a test run the installed plugin's, if any.
+const holder = (entry: Entry) => entry.trial?.installed ?? entry.module;
 // A test run's calls that would write outside its outcome: storage and settings change its own copy, the rest are
-// refused, each listed. null: the call runs as in any run, which reads what the run's own module holds: nothing.
-function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unknown, second: unknown): { answer: unknown } | null {
+// refused, each listed. null: the call runs as in any run, reading what its holder has stored. stored: the holder's
+// storage keys.
+function trialCall(entry: Entry, trial: EntryTrial, method: string, first: unknown, second: unknown, stored: () => string[]): { answer: unknown } | null {
   switch (method) {
-    case 'storage.get': if (typeof first !== 'string') break; return { answer: trial.storage.get(first) };
-    case 'storage.keys': return { answer: [...trial.storage.keys()] };
+    case 'storage.get': if (typeof first !== 'string') break; return trial.storage.has(first) ? { answer: trial.storage.get(first) } : null;
+    case 'storage.keys': {
+      const keys = new Set(stored());
+      for (const [key, value] of trial.storage) {
+        if (value === undefined) keys.delete(key);
+        else keys.add(key);
+      }
+      return { answer: [...keys] };
+    }
     case 'storage.set': case 'storage.delete': {
       if (typeof first !== 'string' || (method === 'storage.set' && !isJson(second))) break;
       const value = method === 'storage.set' ? second as Json : undefined;
-      if (value === undefined) trial.storage.delete(first);
-      else trial.storage.set(first, value);
+      trial.storage.set(first, value);
       trial.writes.push({ kind: 'storage', key: first, value });
       return { answer: undefined };
     }
@@ -244,7 +253,7 @@ export class ToolApi {
     if (!entry.trial && !live(this.session.store.get('module', entry.module))) throw new ToolStopped();
     const [first, second] = args;
     if (entry.trial) {
-      const kept = trialCall(entry, entry.trial, method, first, second);
+      const kept = trialCall(entry, entry.trial, method, first, second, () => toolKeys(this.session.store, holder(entry)));
       if (kept) return kept.answer;
     }
     const own = !frame.page && isFrameTool(entry.tool);
@@ -301,7 +310,7 @@ export class ToolApi {
         this.services.journal.report(entry.chat ?? '', { errors: [], missing: RISU_DECLINED.has(first) ? [] : [first], trace: { entries: [log], omitted: 0 } }, from);
         return;
       }
-      case 'storage.get': if (typeof first === 'string') return this.storage.read(entry.module, first); break;
+      case 'storage.get': if (typeof first === 'string') return this.storage.read(holder(entry), first); break;
       case 'storage.keys': return toolKeys(this.session.store, entry.module);
       case 'storage.set': if (typeof first === 'string' && isJson(second)) return this.storage.write(entry.module, first, second); break;
       case 'storage.delete': if (typeof first === 'string') return this.storage.write(entry.module, first, undefined); break;
@@ -314,7 +323,7 @@ export class ToolApi {
       }
       case 'assets.read': {
         if (typeof first !== 'string') break;
-        const read = await readToolAsset(this.session.store, this.session.files, entry.module, first);
+        const read = await readToolAsset(this.session.store, this.session.files, holder(entry), first);
         if (!read.ok) throw new Error(read.error);
         return read.data;
       }
@@ -417,8 +426,8 @@ export class ToolApi {
         if (method === 'chat.state.get' && typeof first === 'string') return decodeState(new Map((await this.state(frame, context)).variables).get(toolVar(entry.tool.manifest, first)));
         if (method === 'chat.variables.get' && typeof first === 'string' && !first.startsWith(TOOL_VARIABLES)) return held((await this.state(frame, context)).variables).get(first);
         if (method === 'chat.variables.entries') return [...held((await this.state(frame, context)).variables)].filter(([name]) => !name.startsWith(TOOL_VARIABLES));
-        if (method === 'chat.data.get' && typeof first === 'string') return toolChatData(this.session.store, entry.module, context.chat, first);
-        if (method === 'chat.data.keys') return toolChatKeys(this.session.store, entry.module, context.chat);
+        if (method === 'chat.data.get' && typeof first === 'string') return toolChatData(this.session.store, holder(entry), context.chat, first);
+        if (method === 'chat.data.keys') return toolChatKeys(this.session.store, holder(entry), context.chat);
         if (method === 'embed' && Array.isArray(first) && first.every((text) => typeof text === 'string') && (second === null || second === 'query' || second === 'document')) {
           if (!entry.tool.manifest.uses.includes('embed')) return { ok: false, reason: 'not-declared' };
           return context.host.embed(first as string[], second, owner, context.signal);

@@ -26,7 +26,7 @@ import { ToolHost } from './host';
 import { UNLOAD_MS, type OpenFrame } from './frame';
 import type { TrialCalls } from './frame-state';
 import { TOOL_PROGRESS_CHARS, TOOL_ROW_BYTES } from '../../tool-api/manifest';
-import { importTool, setToolData, setToolSettings, toolData, toolDataId } from './store';
+import { importTool, saveToolChat, setToolData, setToolSettings, toolChatData, toolData, toolDataId } from './store';
 
 const server = testServer();
 function withTools(test: (session: Session, connect: (open: OpenFrame) => ToolHost) => Promise<void>) {
@@ -153,7 +153,7 @@ it('runs a draft as no installed plugin, keeping its storage and settings writes
   ].join('\n');
   const read = readTool(new TextEncoder().encode(code));
   if (!read.ok) throw new Error('fixture');
-  const draft = { code, tool: { manifest: read.tool.manifest, settings: { title: 'A' } } };
+  const draft = { code, module: null, tool: { manifest: read.tool.manifest, settings: { title: 'A' } } };
   const transport = inProcessTools((api, text) => {
     Object.defineProperty(globalThis, 'hazelle', { value: api, configurable: true });
     // As sandbox/api.ts names a plugin's code, so a stack names its lines.
@@ -192,6 +192,36 @@ it('runs a draft as no installed plugin, keeping its storage and settings writes
   } finally { host.close(); Reflect.deleteProperty(globalThis, 'hazelle'); }
 }));
 
+it('runs a draft over what the plugin it would replace has stored, its own writes on top, and leaves that as it was', () => withTools(async (session, connect) => {
+  const f = await fixture(session);
+  await setToolData(session, f.module, 'seen', 5);
+  await setToolData(session, f.module, 'old', 1);
+  await saveToolChat(session.store, f.module, f.chat, [['note', 'kept']], []);
+  const code = [
+    '//@api 1', '//@name draft', '//@author jin', '',
+    'hazelle.on("prompt", async (chat) => {',
+    '  const before = [await hazelle.storage.get("seen"), (await hazelle.storage.keys()).sort(), await chat.data.get("note"), await chat.data.keys()];',
+    '  await hazelle.storage.set("seen", 6); await hazelle.storage.delete("old"); await hazelle.storage.set("new", true);',
+    '  return JSON.stringify([before, await hazelle.storage.get("seen"), await hazelle.storage.get("old") ?? null, (await hazelle.storage.keys()).sort()]);',
+    '});',
+  ].join('\n');
+  const read = readTool(new TextEncoder().encode(code));
+  if (!read.ok) throw new Error('fixture');
+  const transport = inProcessTools((api, text) => {
+    Object.defineProperty(globalThis, 'hazelle', { value: api, configurable: true });
+    return (0, eval)(text) as void;
+  });
+  const host = connect(transport.open);
+  try {
+    const { scope, host: reach } = f.context();
+    const run = (module: string | null) => host.trial(f.chat, { code, module, tool: { manifest: read.tool.manifest, settings: {} } }, new AbortController().signal, (run) => run(scope, { kind: 'prompt', turn: { memory: false } }, reach));
+    expect(JSON.parse((await run(f.module))!.outcome.value as string)).toEqual([[5, ['old', 'seen'], 'kept', ['note']], 6, null, ['new', 'seen']]);
+    expect(JSON.parse((await run(null))!.outcome.value as string)).toEqual([[null, [], null, []], 6, null, ['new', 'seen']]);
+    expect([await toolData(session, f.module, 'seen'), await toolData(session, f.module, 'old'), await toolData(session, f.module, 'new')]).toEqual([{ ok: true, data: 5 }, { ok: true, data: 1 }, { ok: true, data: undefined }]);
+    expect(toolChatData(session.store, f.module, f.chat, 'note')).toBe('kept');
+  } finally { host.close(); Reflect.deleteProperty(globalThis, 'hazelle'); }
+}));
+
 it('reads a version\'s translation with its message', () => withTools(async (session, connect) => {
   const f = await fixture(session);
   const said = shown(session.store.foldedChat(f.chat).messages[0]!);
@@ -224,7 +254,7 @@ it('keeps a draft\'s chat open for its run, so it reads the chat\'s log after th
   });
   const host = connect(transport.open);
   try {
-    const ran = await host.trial(chat, { code, tool: { manifest: read.tool.manifest, settings: {} } }, new AbortController().signal, (run) => run(scope, { kind: 'prompt', turn: { memory: false } }, f.context().host));
+    const ran = await host.trial(chat, { code, module: null, tool: { manifest: read.tool.manifest, settings: {} } }, new AbortController().signal, (run) => run(scope, { kind: 'prompt', turn: { memory: false } }, f.context().host));
     expect(ran).toMatchObject({ outcome: { value: 'hello' } });
     expect(session.store.scopeState(chat)).toBe('unloaded');
   } finally { host.close(); Reflect.deleteProperty(globalThis, 'hazelle'); }

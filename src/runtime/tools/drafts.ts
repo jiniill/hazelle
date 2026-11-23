@@ -157,15 +157,17 @@ export function applyPreview(store: Pick<ObjectStore, 'list' | 'get'>, draft: To
   return { ok: true, manifest, previous: previous ? { module: previous.parent!, manifest: previous.value.manifest } : null, added: manifest.uses.filter((use) => !previous?.value.manifest.uses.includes(use)) };
 }
 
-// A draft as a test runs it: the file 적용 would install, on the installed plugin's settings, else the defaults. line in
-// a run's failure is the file's; bodyLine maps it into the editor's body.
-export type DraftTrial = { tool: Pick<Tool, 'manifest' | 'settings'>; code: string };
+// A draft as a test runs it: the file 적용 would install, on the settings and over the stored data of the installed
+// plugin it would replace (module), else the defaults and nothing stored. line in a run's failure is the file's;
+// bodyLine maps it into the editor's body.
+export type DraftTrial = { tool: Pick<Tool, 'manifest' | 'settings'>; module: string | null; code: string };
 export function draftTrial(store: Pick<ObjectStore, 'list'>, draft: DraftFile): { ok: true; trial: DraftTrial } | { ok: false; failure: ImportFailure } {
   const code = sourceOf(draft);
   const read = readTool(encoder.encode(code));
   if (!read.ok) return read;
   const { manifest } = read.tool;
-  return { ok: true, trial: { code, tool: { manifest, settings: toolSettings(manifest, sameTool(store, manifest)?.value.settings ?? {}) } } };
+  const installed = sameTool(store, manifest);
+  return { ok: true, trial: { code, module: installed?.parent ?? null, tool: { manifest, settings: toolSettings(manifest, installed?.value.settings ?? {}) } } };
 }
 export const bodyLine = (draft: DraftFile, line: number) => line - (sourceOf(draft).split('\n').length - draft.body.split('\n').length);
 

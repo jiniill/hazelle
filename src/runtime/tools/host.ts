@@ -162,11 +162,12 @@ export class ToolHost implements Tools, Binding<ToolUnit, ToolEvent, ToolReach> 
   }
 
   // A studio draft run on chat as no installed plugin: under its own module id, no consent, journal, stall count or stored
-  // data of a plugin is touched, and its outcomes are only returned. use runs its events on one frame, so its globals and
+  // data of a plugin is touched, and its outcomes are only returned. What the plugin it would replace has stored is read,
+  // never written (draft.module). use runs its events on one frame, so its globals and
   // storage carry from one to the next. null: the draft does not listen to that event. The chat stays open for the run,
   // as its reads of the chat's log need.
   async trial<T>(chat: string, draft: DraftTrial, signal: AbortSignal, use: (run: TrialRun, made: TrialMade) => Promise<T>): Promise<T> {
-    const trial: EntryTrial = { code: draft.code, chat, storage: new Map(), writes: [], calls: noCalls() };
+    const trial: EntryTrial = { code: draft.code, chat, installed: draft.module, storage: new Map(), writes: [], calls: noCalls() };
     const entry = blankEntry(`trial:${crypto.randomUUID()}`, draft.tool, { file: null, trial }, new Map());
     this.trials.set(entry.module, entry);
     const lease = this.session.store.retainChat(chat, { summarize: false });
