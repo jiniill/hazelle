@@ -196,6 +196,7 @@ export class ScriptPreview {
     return {
       ...this.reach.reads(chat, scope, () => { heard.loreRanAway = true; }),
       say: (tone, text) => { if (!signal.aborted) heard.said.push({ tone, text }); },
+      progress: () => {},
       ask: async (question) => { if (!signal.aborted) heard.asked.push(question); return null; },
       model: async () => { heard.calls.model++; return { success: false, reason: 'failed', result: NOT_REHEARSED }; },
       embed: async () => { heard.calls.embed++; return { ok: false, reason: 'failed' }; },

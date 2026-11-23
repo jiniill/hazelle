@@ -28,8 +28,9 @@ export type Host = {
   // when refused or not saved.
   background(html: string, from: PackOwner, signal?: AbortSignal): Promise<boolean>;
 };
-// A tool reaches the network too, which Lua never does.
+// A tool reaches the network too, which Lua never does, and says what it is doing to whoever waits on its run.
 export type ToolReach = Host & {
+  progress(text: string): void;
   // Through the relay, under module's one answer for the network; the upstream's answer whatever its status.
   fetch(request: HttpRequest, module: string, signal?: AbortSignal): Promise<FetchResult>;
 };

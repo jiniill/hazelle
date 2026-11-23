@@ -11,11 +11,11 @@ export type ToolOutcome = {
   variables: [string, string | undefined][];
 };
 export type Method =
-  | 'chat.messages' | 'chat.greeting' | 'chat.card' | 'chat.state.get' | 'chat.variables.get' | 'chat.variables.entries' | 'chat.data.get' | 'chat.data.keys' | 'chat.lorebook' | 'chat.inlay' | 'chat.asset' | 'chat.cbs' | 'chat.setup' | 'chat.picture' | 'chat.send' | 'chat.rendered' | 'chat.card.edit' | 'model' | 'embed' | 'fetch' | 'ask' | 'say' | 'tokens' | 'lore'
+  | 'chat.messages' | 'chat.greeting' | 'chat.card' | 'chat.state.get' | 'chat.variables.get' | 'chat.variables.entries' | 'chat.data.get' | 'chat.data.keys' | 'chat.lorebook' | 'chat.inlay' | 'chat.asset' | 'chat.cbs' | 'chat.setup' | 'chat.picture' | 'chat.send' | 'chat.rendered' | 'chat.card.edit' | 'model' | 'embed' | 'fetch' | 'ask' | 'say' | 'progress' | 'tokens' | 'lore'
   | 'storage.get' | 'storage.set' | 'storage.delete' | 'storage.keys' | 'assets.save' | 'assets.read' | 'settings' | 'settings.set' | 'account' | 'post' | 'page.close' | 'frame.chat' | 'frame.show' | 'frame.hide' | 'frame.menu' | 'frame.actions' | 'frame.missing' | 'frame.layer' | 'frame.missed';
 export type Role = 'background' | 'page' | 'frame';
 export type Down =
-  | { kind: 'load'; api: 1; role: Role; code: string; manifest: ToolManifest; settings: Settings; chat: ChatHeader | null; theme: 'dark' | 'light' }
+  | { kind: 'load'; api: 1; role: Role; code: string; manifest: ToolManifest; settings: Settings; chat: ChatHeader | null; theme: 'dark' | 'light'; colors?: Hazelle.Colors }
   | { kind: 'event'; id: number; event: EventName; chat: ChatHeader | null; reply?: Hazelle.At; turn?: Hazelle.Turn; change?: Hazelle.Change; from?: Hazelle.Branched; item?: string; message?: Hazelle.At; text?: string; messages?: Hazelle.RequestMessage[]; role?: 'main' | 'aux'; shown?: Hazelle.Shown[]; name?: string; args?: { [key: string]: Hazelle.Json } }
   | { kind: 'answer'; call: number; ok: boolean; value: unknown }
   | { kind: 'storage'; keys: string[] }

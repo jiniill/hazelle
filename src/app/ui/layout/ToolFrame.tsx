@@ -2,11 +2,17 @@ import { useCallback, useContext, useEffect, type RefObject } from 'react';
 import { Held } from './Shell';
 import styles from './ToolFrame.module.css';
 
-type Props = { title: string; sandbox: string; allow: string; onMount: (window: Window) => () => void };
+// The colours a tool's page is told (tool-api Hazelle.Colors), each by the token that holds it.
+const COLORS = { page: '--color-bg', surface: '--color-surface', line: '--color-border', text: '--color-text', muted: '--color-text-muted', accent: '--color-accent', onAccent: '--color-on-accent' } as const;
+type Colors = Record<keyof typeof COLORS, string>;
+export const colorsOf = (style: Pick<CSSStyleDeclaration, 'getPropertyValue'>) => Object.fromEntries(Object.entries(COLORS).map(([name, token]) => [name, style.getPropertyValue(token).trim()])) as Colors;
+
+// colors: as they stand where the frame is, under the theme and mode worn there.
+type Props = { title: string; sandbox: string; allow: string; onMount: (window: Window, colors: Colors) => () => void };
 
 export function ToolFrame({ title, sandbox, allow, onMount }: Props) {
   const attach = useCallback((frame: HTMLIFrameElement | null) => {
-    if (frame?.contentWindow) return onMount(frame.contentWindow);
+    if (frame?.contentWindow) return onMount(frame.contentWindow, colorsOf(getComputedStyle(frame)));
   }, [onMount]);
   return <iframe ref={attach} className={styles.frame} title={title} sandbox={sandbox} allow={allow} src="/sandbox.html?role=page" referrerPolicy="no-referrer" />;
 }

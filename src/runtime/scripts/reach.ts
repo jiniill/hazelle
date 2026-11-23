@@ -30,7 +30,8 @@ export class ScriptReach {
   ) {}
 
   // deadline: the run is under a tool deadline (TOOL_DEADLINE_MS), which would dismiss a card before anyone read it.
-  host(chat: string, scope: ChatScope, signal?: AbortSignal, deadline = false): ToolReach {
+  // progress: who waits on the run and shows what it says it is doing; nobody does off a turn's stages.
+  host(chat: string, scope: ChatScope, signal?: AbortSignal, deadline = false, progress: ToolReach['progress'] = () => {}): ToolReach {
     const either = (callSignal?: AbortSignal) => (callSignal ? AbortSignal.any([...(signal ? [signal] : []), callSignal]) : signal);
     return {
       ...this.reads(chat, scope, () => this.interactions.tell(chat, 'runaway', { kind: 'runaway' })),
@@ -40,6 +41,7 @@ export class ScriptReach {
       embed: (texts, as, from, callSignal) => this.embed(chat, texts, as, from, deadline, either(callSignal)),
       background: (html, from, callSignal) => this.background(chat, html, from, deadline, either(callSignal)),
       fetch: (request, module, callSignal) => this.fetch(chat, request, module, deadline, either(callSignal)),
+      progress: (text) => { if (!signal?.aborted) progress(text); },
     };
   }
 

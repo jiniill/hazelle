@@ -51,7 +51,7 @@ it('runs the reference notepad page and background, saves through merged storage
     const module = await imported(session, 'notepad');
     const chat = await chatOf(session);
     await appendUserMessage(session.store, chat, { id: crypto.randomUUID(), text: 'hello' });
-    const open = () => host.page(module, { window: {} as Window, chat, theme: 'dark', close: () => {} });
+    const open = () => host.page(module, { window: {} as Window, chat, theme: 'dark', colors: { page: '#131216', surface: '#26232d', line: '#383441', text: '#f1ece4', muted: '#a8a1b4', accent: '#e6b35c', onAccent: '#1b1407' }, close: () => {} });
     let close = open();
     try {
       await vi.waitFor(() => expect(pages[0]?.body.children).toHaveLength(4));

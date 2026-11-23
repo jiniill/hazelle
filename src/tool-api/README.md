@@ -65,6 +65,8 @@ The file runs in a sandboxed iframe with no access to the app's page. Register h
 - `hazelle.context` is `'background'` in a worker with no `document`. With `//@page`, the same file also runs on the plugin's page, with `hazelle.context === 'page'` and the page's own document. The two sides talk through `hazelle.post` and the `message` event. A page cannot load outside scripts; outside pictures, fonts and stylesheets load only once the user has allowed the network.
 - Each `//@uses` line is asked of the user: model and embed once, memory and network each on their own. A call without its line answers `not-declared`, and one the user refused answers `not-allowed`. An update that adds a use asks for it again.
 - Tool data writes are limited to 30 a minute per plugin; past that a write throws `too-many-writes`. The other limits and each event's deadline are in `hazelle.d.ts`.
+- Text for the model goes in through `prompt`: answer it and the app places it, with the request's cache kept whole. The turn waits for `prompt`, `sending`, `requesting` and `replying` with no deadline, showing the plugin's name; `chat.progress('…')` adds what it is doing now.
+- A page is told the app's colours under the user's theme: `hazelle.page.colors`, and the same as CSS custom properties on its root (`var(--hazelle-page)`, `--hazelle-surface`, `--hazelle-line`, `--hazelle-text`, `--hazelle-muted`, `--hazelle-accent`, `--hazelle-on-accent`).
 
 Example:
 

@@ -276,8 +276,10 @@ export const CACHE_GUARD_HELP = '캐시가 깨졌을 때 해결 방법과 절약
 export const STAGE_NAMES: Record<AgentStage, string> = { pre: '전처리', post: '후처리' };
 export const agentsWaiting = ({ running, retrying, total }: { running: readonly string[]; retrying: readonly string[]; total: number }) => `${withParticle((retrying.length ? retrying : running).join(', '), '이/가')} ${retrying.length ? RESENDING : '먼저 읽고 있어요'}${total > 1 ? ` · ${total - running.length}/${total} 끝남` : '.'}`;
 export const polishingNow = ({ name, at, total, retrying }: { name: string; at: number; total: number; retrying?: true }) => `${withParticle(name, '이/가')} ${retrying ? RESENDING : '응답을 다듬고 있어요'}${total > 1 ? ` · ${at}/${total}` : '.'}`;
-export const toolWaiting = (name: string) => `${withParticle(name, '이/가')} 보낼 내용을 준비하는 중`;
-export const toolFinishing = (name: string) => `'${name}' 실행 중…`;
+// note: what the tool says it is doing (Chat.progress), which then stands for the app's own words.
+const toolSaid = (name: string, note: string) => `${name} · ${note}`;
+export const toolWaiting = (name: string, note?: string) => note ? toolSaid(name, note) : `${withParticle(name, '이/가')} 보낼 내용을 준비하는 중`;
+export const toolFinishing = (name: string, note?: string) => note ? toolSaid(name, note) : `'${name}' 실행 중…`;
 export const STATUS = '상태';
 // Placeholders until the copy batch, as every word of 상태 is.
 export const STATUS_REWRITE = '상태 다시 쓰기';

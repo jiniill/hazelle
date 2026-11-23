@@ -152,6 +152,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       setup: () => call('chat.setup', [], event),
       ask: (question) => call('ask', [question], event),
       say: (text, tone = 'normal') => fire('say', [tone, text], event),
+      progress: (text) => fire('progress', [text], event),
     };
   };
 
@@ -208,7 +209,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
         setSetting: (key, value) => call('settings.set', [key, value]),
         account: () => call('account', []),
         post: (data) => fire('post', [data]),
-        page: data.role === 'page' ? { chat: data.chat && chatOf(data.chat), theme: data.theme, close: () => fire('page.close', []) } : null,
+        page: data.role === 'page' ? { chat: data.chat && chatOf(data.chat), theme: data.theme, colors: data.colors!, close: () => fire('page.close', []) } : null,
         frame: data.role === 'frame' ? {
           chat: async () => { const header = await call<ChatHeader | null>('frame.chat', []); return header && chatOf(header); },
           show: () => fire('frame.show', []),

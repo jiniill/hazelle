@@ -136,6 +136,10 @@ declare namespace Hazelle {
     // A notice in the chat. A tool's notices, its failures among them, show at most 3 a minute in a chat; the rest
     // are dropped.
     say(text: string, tone?: 'normal' | 'error'): void;
+    // What this tool is doing now, shown beside its name while a turn waits on it (sending, prompt, requesting,
+    // replying): cut to 40 characters, and the last one stands until the event ends. From any other event it shows
+    // nowhere.
+    progress(text: string): void;
     // needs //@uses model, under the same answer, since the turn spends on the chat's model. text goes as the user's
     // message through the chat screen's own send, as if typed; '' asks for a reply after the last message (응답 받기).
     // Bound to the chat, not the event, and sent once this tool's page writes have landed; answers when the turn ends,
@@ -194,7 +198,11 @@ declare namespace Hazelle {
     // answered replaces; role: the model it asks for. Never a tool's own call (Chat.model). 5 s deadline, past which
     // it goes as it came, and nothing is saved in it, as in showing.
     calling(chat: Chat, messages: ModelMessage[], role: 'main' | 'aux'): ModelMessage[] | void | Promise<ModelMessage[] | void>;
-    prompt(chat: Chat, turn: Turn): PromptAnswer | Promise<PromptAnswer>;   // this turn's slots; 5 s deadline
+    // This turn's slots, asked before the request is built. It waits as replying does, a stop ending the turn, so what a
+    // turn needs made first (a recall, a summary, a note for the reply, by a model call if need be) is made here and
+    // answered as tool: the app places it in the prompt's tool slot, after the history where the prompt has none, so
+    // the cached part of the request stays whole.
+    prompt(chat: Chat, turn: Turn): PromptAnswer | Promise<PromptAnswer>;
     change(chat: Chat, change: Change): void | Promise<void>;               // the user edited, switched, deleted or restored
     branch(chat: Chat, from: Branched): void | Promise<void>;              // chat is the new branch
     menu(chat: Chat, item: string): void | Promise<void>;                   // a //@menu item pressed in the chat's ⋯
@@ -210,7 +218,11 @@ declare namespace Hazelle {
     open(): void | Promise<void>;                                           // the user opened a frame tool's page
     message(data: Json): void;                                              // from the other side (page <-> background)
   }
-  interface Page { readonly chat: Chat | null; readonly theme: 'dark' | 'light'; close(): void }
+  // The app's colours under the user's theme and mode, each a CSS color: page is the ground, surface a box on it, line
+  // a border, muted the lesser words, onAccent what stands on an accent fill. The page's root holds each as a custom
+  // property too (--hazelle-page … --hazelle-on-accent). Read once, as the page starts: a change of theme reloads it.
+  type Colors = { page: string; surface: string; line: string; text: string; muted: string; accent: string; onAccent: string };
+  interface Page { readonly chat: Chat | null; readonly theme: 'dark' | 'light'; readonly colors: Colors; close(): void }
   // A box of a frame tool's layer in its own viewport: left, top, right, bottom.
   type LayerBox = [number, number, number, number];
   // A pointer on nothing of a layer's own: a touch that landed there (down) and ended (up), a mouse that moved there
