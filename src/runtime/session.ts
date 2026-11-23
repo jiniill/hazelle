@@ -7,6 +7,7 @@ import { withInside } from '../model/folders';
 import { holdAccount, holdPulse, markSeen, type ApiResult } from './api';
 import { serverBackend, type Backend } from './store/backend';
 import { AssetUrls, UnfoundAssets } from './files/assets';
+import { SentPictures } from './files/attachments';
 import { Catalogs } from './models/catalog';
 import { ChatFinder } from './chat/chat-search';
 import { begun, SETTINGS_ID } from '../model/settings';
@@ -66,6 +67,7 @@ export type Session = {
   username: string;
   store: ObjectStore;
   files: Files;
+  pictures: SentPictures;
   assets: AssetUrls;
   unfound: UnfoundAssets;
   talk: Talk;
@@ -121,6 +123,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
   if (!opened.ok) return opened;
   const store = opened.data;
   const files = new Files(kept.backend, store);
+  const pictures = new SentPictures(files);
   const assets = new AssetUrls(store, files);
   // A new account sees its defaults on the first screen; a cached account fills missing defaults after catch-up.
   // The task models move once the row upgrades are written, so the two never write one object at once.
@@ -287,7 +290,7 @@ export async function openSession(accountId: string, vaultKey: VaultKey, usernam
     assets.close();
     store.close();
   };
-  const session: Session = { transport, tools, username, store, files, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, statusWriter, polisher, briefs, additions, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, finder, close, startBackground };
+  const session: Session = { transport, tools, username, store, files, pictures, assets, unfound, talk, log, costs, usage, tokens, translator, cues, memory, illustrator, likenesses, commentator, statusWriter, polisher, briefs, additions, drafts, streams, scriptInteractions, scriptJournal, scriptTurns, scriptPreview, scriptCommands, scriptPages, credentials, catalogs, read, display, finder, close, startBackground };
   return { ok: true, data: session };
 }
 

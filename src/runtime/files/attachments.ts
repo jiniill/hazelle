@@ -64,16 +64,49 @@ export async function keepAttachments(store: ObjectStore, chat: string, pictures
   }
 }
 
+const HELD_CHARS = 32 * 1024 * 1024;
+
+// What a model is sent of a stored picture, kept by the file it was drawn from: a file's bytes never change, so a
+// chat's pictures are read, drawn and encoded once, not at every send. Only one that was read is kept: a failure is
+// tried again.
+export class SentPictures {
+  private readonly held = new Map<string, InputPicture>();
+  private chars = 0;
+
+  constructor(private readonly files: Pick<Files, 'read'>, private readonly budget = HELD_CHARS) {}
+
+  async read({ file, type }: Pick<Inlay, 'file' | 'type'>, signal?: AbortSignal): Promise<ApiResult<InputPicture>> {
+    const key = `${type}:${file.id}`;
+    const held = this.held.get(key);
+    if (held) {
+      this.held.delete(key);
+      this.held.set(key, held);
+      return { ok: true, data: held };
+    }
+    const bytes = await this.files.read(file, { signal });
+    if (!bytes.ok) return bytes;
+    const sent = await sentPicture({ bytes: bytes.data, type }).catch(() => null);
+    if (!sent) return { ok: false, error: 'unreadable' };
+    const data = { type: sent.type, data: toBase64(sent.bytes) };
+    // Two messages of one send may name the same picture: the second to land is not counted twice.
+    if (!this.held.has(key)) this.chars += data.data.length;
+    this.held.set(key, data);
+    // The longest unsent go first, the one just read never.
+    for (const [oldest, { data: { length } }] of this.held) {
+      if (this.chars <= this.budget || oldest === key) break;
+      this.held.delete(oldest);
+      this.chars -= length;
+    }
+    return { ok: true, data };
+  }
+}
+
 // Resolve picture ids only at send time. Imported inlays need resizing; composer attachments are already normalized.
-export async function withPictures({ store, files }: { store: Pick<ObjectStore, 'get'>; files: Pick<Files, 'read'> }, prompt: Assembled, signal?: AbortSignal): Promise<ApiResult<Assembled>> {
+export async function withPictures({ store, pictures }: { store: Pick<ObjectStore, 'get'>; pictures: SentPictures }, prompt: Assembled, signal?: AbortSignal): Promise<ApiResult<Assembled>> {
   if (!prompt.messages.some(({ inlays }) => inlays)) return { ok: true, data: prompt };
   const read = async (id: string): Promise<ApiResult<InputPicture>> => {
     const inlay = store.get('inlay', id)?.value;
-    if (!inlay) return { ok: false, error: 'not-found' };
-    const bytes = await files.read(inlay.file, { signal });
-    if (!bytes.ok) return bytes;
-    const sent = await sentPicture({ bytes: bytes.data, type: inlay.type }).catch(() => null);
-    return sent ? { ok: true, data: { type: sent.type, data: toBase64(sent.bytes) } } : { ok: false, error: 'unreadable' };
+    return inlay ? pictures.read(inlay, signal) : { ok: false, error: 'not-found' };
   };
   const messages: ChatMessage[] = [];
   for (const { inlays, ...message } of prompt.messages) {

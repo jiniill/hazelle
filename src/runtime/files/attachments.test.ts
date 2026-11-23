@@ -3,7 +3,8 @@ import { withAttachments } from '../../engine/assets';
 import { toBase64 } from '../../base64';
 import { setDefaultModel } from '../models/assignment';
 import { startChat } from '../chat/chat-log';
-import { addDraftFile, keepAttachments } from './attachments';
+import { addDraftFile, keepAttachments, SentPictures } from './attachments';
+import type { Files } from './files';
 import { exportRisuChat } from '../export/risu-export';
 import { png, saying, stubRelay, testConnection, testModel, testServer } from '../testing';
 import { takeTurn } from '../chat/turn';
@@ -54,3 +55,20 @@ it("sends a text file ahead of its message's text, named, refuses a binary one, 
     const exported = await exportRisuChat(session, chat);
     expect(exported.ok && exported.data.text).toContain(`{{file::a.ts::${toBase64(new TextEncoder().encode('const a = 1;'))}}}이거 봐`);
   }));
+
+it('draws a stored picture once across sends, lets the one sent longest ago go past its budget and tries a failed one again', async () => {
+  const reads: string[] = [];
+  let online = false;
+  const files: Pick<Files, 'read'> = { read: async ({ id }) => { reads.push(id); return id === 'c' && !online ? { ok: false, error: 'offline' } : { ok: true, data: new Uint8Array([1, 2, 3]) }; } };
+  const pictures = new SentPictures(files, 8);
+  const inlay = (id: string) => ({ file: { id, key: '' }, type: 'image/png' });
+  const sent = { ok: true, data: { type: 'image/png', data: toBase64(new Uint8Array([1, 2, 3])) } };
+  expect([await pictures.read(inlay('a')), await pictures.read(inlay('b')), await pictures.read(inlay('a'))]).toEqual([sent, sent, sent]);
+  expect(reads).toEqual(['a', 'b']);
+  expect(await pictures.read(inlay('c'))).toEqual({ ok: false, error: 'offline' });
+  online = true;
+  expect(await pictures.read(inlay('c'))).toEqual(sent);
+  await pictures.read(inlay('a'));
+  await pictures.read(inlay('b'));
+  expect(reads).toEqual(['a', 'b', 'c', 'c', 'b']);
+});
