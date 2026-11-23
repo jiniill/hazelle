@@ -1,5 +1,5 @@
 import { errorMessage } from '../error-message';
-import { TOOL_VARIABLES, type Json, type Settings } from '../tool-api/manifest';
+import { dataBytes, TOOL_KEY_CHARS, TOOL_ROW_BYTES, TOOL_VARIABLES, type Json, type Settings } from '../tool-api/manifest';
 import type { ChatHeader, Down, EventName, Message, Method, Port, ToolOutcome, Up } from '../tool-api/protocol';
 
 type Load = Extract<Down, { kind: 'load' }>;
@@ -18,6 +18,12 @@ const STORY_LOCKED = new Set<EventName>(['change', 'branch', 'replying', 'sendin
 // Nothing a showing answers is saved, so a write there would be lost.
 const QUIET = new Set<EventName>(['showing', 'calling']);
 const ANSWERS = new Set<EventName>(['replying', 'sending', 'requesting', 'calling', 'showing', 'input', 'tool']);
+// What the host would refuse of the whole event's data once it ends (runtime/tools/store saveToolChat), told where it is
+// set, while the tool can still act on it.
+const held = (key: string, value: Json) => {
+  if (key.length > TOOL_KEY_CHARS) throw new Error('key-too-long');
+  if (dataBytes(key, value) > TOOL_ROW_BYTES) throw new Error('too-large');
+};
 // The name a plugin's code runs under, so a stack names its lines (lineOf), which are the file's.
 export const sourced = (code: string) => `${code}\n//# sourceURL=hazelle-plugin.js`;
 const lineOf = (error: unknown) => {
@@ -111,7 +117,7 @@ export function connectApi(port: Port, execute: (code: string, api: Hazelle.Api)
       },
       data: {
         get: <T extends Json>(key: string) => overlaid<T>('data', 'chat.data.get', key),
-        set: (key, value) => { pending().data.set(key, value); changed(); },
+        set: (key, value) => { held(key, value); pending().data.set(key, value); changed(); },
         delete: (key) => { pending().data.set(key, undefined); changed(); },
         keys: async () => {
           const keys = new Set(await call<string[]>('chat.data.keys', [], event));

@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { TOOL_KEY_CHARS, TOOL_ROW_BYTES } from '../tool-api/manifest';
 import type { Down, Up } from '../tool-api/protocol';
 import { connectApi } from './api';
 
@@ -64,6 +65,22 @@ it('buffers chat data and badges, merges pending keys, carries the prompt answer
   await vi.waitFor(() => expect(port.sent).toContainEqual({ kind: 'done', id: 1, outcome: { value: { memory: { text: 'remembered', through: 'm2' }, tool: 'recall' }, writes: [], edits: [], removed: [], added: [], data: [['index', [1]], ['old', undefined]], badges: [{ index: 2, text: '요약됨' }], lore: [], variables: [] } }));
   port.receive({ kind: 'event', id: 2, event: 'change', chat, change: { kind: 'edit', index: 0, id: 'm1', version: 'v2' } });
   await vi.waitFor(() => expect(port.sent).toContainEqual(expect.objectContaining({ kind: 'failed', id: 2 })));
+  close();
+});
+
+it('refuses a chat value past a row, or under too long a key, where it is set and saves the event\'s other writes', async () => {
+  const port = new FakePort();
+  const close = connectApi(port, (_code, api) => {
+    api.on('reply', (chat) => {
+      expect(() => chat.data.set('wiki', '가'.repeat(TOOL_ROW_BYTES / 3))).toThrow('too-large');
+      expect(() => chat.data.set('k'.repeat(TOOL_KEY_CHARS + 1), 1)).toThrow('key-too-long');
+      chat.data.set('kept', 1);
+    });
+  });
+  port.receive(load());
+  await vi.waitFor(() => expect(port.sent.some((message) => message.kind === 'loaded')).toBe(true));
+  port.receive({ kind: 'event', id: 1, event: 'reply', chat, reply: { index: 0, id: 'm1', version: 'v1' } });
+  await vi.waitFor(() => expect(port.sent).toContainEqual(expect.objectContaining({ kind: 'done', id: 1, outcome: expect.objectContaining({ data: [['kept', 1]] }) })));
   close();
 });
 

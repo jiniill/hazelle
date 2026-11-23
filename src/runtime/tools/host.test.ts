@@ -24,7 +24,8 @@ import { upsertChatLore } from '../library/lore';
 import { inProcessRisu, inProcessTools } from '../testing/tool-transport';
 import { ToolHost } from './host';
 import { UNLOAD_MS, type OpenFrame } from './frame';
-import { importTool, setToolData, setToolSettings, toolData, toolDataId, TOOL_ROW_BYTES } from './store';
+import { TOOL_ROW_BYTES } from '../../tool-api/manifest';
+import { importTool, setToolData, setToolSettings, toolData, toolDataId } from './store';
 
 const server = testServer();
 function withTools(test: (session: Session, connect: (open: OpenFrame) => ToolHost) => Promise<void>) {

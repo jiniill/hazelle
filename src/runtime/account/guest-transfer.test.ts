@@ -39,7 +39,8 @@ import { openSession } from '../session';
 import { ObjectStore } from '../store/store';
 import { exportBackup, readBackup, restoreBackup } from '../testing/backup';
 import type { BackupOutput } from '../export/backup-zip';
-import { importTool, readToolAsset, saveToolAsset, saveToolChat, setToolData, toolChatId, toolData, toolDataId, toolFileId, TOOL_ROW_BYTES } from '../tools/store';
+import { TOOL_ROW_BYTES } from '../../tool-api/manifest';
+import { importTool, readToolAsset, saveToolAsset, saveToolChat, setToolData, toolChatId, toolData, toolDataId, toolFileId } from '../tools/store';
 import { changeSettings } from '../account-settings';
 
 // The starter character's picture needs a canvas to shrink on.

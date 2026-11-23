@@ -3,15 +3,20 @@ import { ToolSetting } from '../common/ToolSetting';
 import { useTool } from '../session';
 import { Button, Menu, Stack, ToolButton, useMenuClose } from '../ui';
 import type { RowTool } from './ChatToolRow';
-import { pressRuns, type ToolComposer } from './toolMenu';
+import { pressOf, type ToolComposer } from './toolMenu';
 
 type Props = { tool: ToolComposer; running: string | null; on: boolean; onRun: (module: string, item: string) => void; onStop: () => void; onOpen: (module: string) => void };
 
 // A //@composer item of the chat's tools: its fields are the module's own, the same in every chat, as 삽화's are.
 // running: the module whose input item runs now, whose button stops it.
+const pressed = ({ tool, onRun, onOpen }: Props) => {
+  const press = pressOf(tool);
+  return press && (() => (press.kind === 'run' ? onRun(tool.module, press.item.id) : onOpen(tool.module)));
+};
+
 export function composerTool(props: Props): RowTool {
-  const { tool, running, on, onRun } = props;
-  const runs = pressRuns(tool);
+  const { tool, running, on } = props;
+  const press = pressed(props);
   return {
     key: tool.module,
     label: tool.name,
@@ -19,16 +24,16 @@ export function composerTool(props: Props): RowTool {
     live: on,
     running: running === tool.module,
     node: <ChatComposerTool {...props} />,
-    open: runs ? () => onRun(tool.module, runs.id) : <ToolForm {...props} />,
-    openLabel: runs ? '실행' : undefined,
+    open: press ?? <ToolForm {...props} />,
+    openLabel: pressOf(tool)?.kind === 'run' ? '실행' : undefined,
   };
 }
 
 function ChatComposerTool(props: Props) {
-  const { tool, running, on, onRun, onStop } = props;
+  const { tool, running, on, onStop } = props;
   if (running === tool.module) return <ToolButton icon={Package} label="멈추기" detail={tool.label} busy onClick={onStop} />;
-  const runs = pressRuns(tool);
-  if (runs) return <ToolButton icon={Package} label={tool.label} phone="icon" onClick={() => onRun(tool.module, runs.id)} />;
+  const press = pressed(props);
+  if (press) return <ToolButton icon={Package} label={tool.label} phone="icon" onClick={press} />;
   return (
     <Menu
       kind="dialog"

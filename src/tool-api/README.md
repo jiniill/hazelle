@@ -29,7 +29,7 @@ Identity lines:
 Code lines:
 - `//@uses model | embed | memory | network`: one line for each ability the code calls. model: `chat.model` or `chat.send`. embed: `chat.embed`. memory: a prompt answer with memory. network: `chat.fetch`.
 - `//@setting {"key":"…","label":"…","type":"text"|"number"|"switch"|"choice","options":["…"],"default":…,"composer":true}`: one field on the plugin's page, as JSON on one line. options only for choice. default must fit the type. composer: true also shows the field from the chat input's button, which needs `//@composer`.
-- `//@composer <label>`: that button beside the chat input, at most 8 characters.
+- `//@composer <label>`: that button beside the chat input, at most 8 characters. With a page and no item or composer field, a press opens the page.
 - `//@input <id> <label>`: an item of that button, at most 3 of them, labels at most 16 characters, which needs `//@composer`. Pressing it sends the `input` event with the id and the text typed, and a text answered replaces the input's text. A button with one item and no composer field or page runs it on a press, with no menu. Use it to rewrite, translate or draft what the user is about to send.
 - `//@menu <id> <label>`: an item in the chat's ⋯ menu. Pressing it sends the `menu` event with the id.
 - `//@action <id> <label>`: an item in each message's ⋯, at most 3 of them, labels at most 16 characters. Pressing it sends the `action` event with the id.

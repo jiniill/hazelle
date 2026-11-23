@@ -8,7 +8,7 @@ import { sha256Hex, sha256Id } from '../../hex';
 import { without } from '../../model/fields';
 import { live } from '../../model/library';
 import { badgesOf, toolId, type Badges, type Tool } from '../../model/tool';
-import type { Json, Settings, ToolManifest } from '../../tool-api/manifest';
+import { dataBytes, TOOL_KEY_CHARS, TOOL_ROW_BYTES, type Json, type Settings, type ToolManifest } from '../../tool-api/manifest';
 import type { ApiResult } from '../api';
 import type { BackupOutput } from '../export/backup-zip';
 import { writeWhole } from '../export/export-file';
@@ -18,14 +18,11 @@ import type { ObjectStore } from '../store/store';
 import type { Write } from '../store/object-writes';
 
 export type ToolImport = { id: string; previous: Tool | null };
-// Bound inline tooldata/toolchat values by the maximum sealed BATCH_LIMITS.body.
-export const TOOL_ROW_BYTES = 512 * 1024;
-// Oversized values use toolfile: lazy reads avoid loading them at every account open.
+// Values past a row (tool-api/manifest TOOL_ROW_BYTES) use toolfile: lazy reads avoid loading them at every account open.
 // Their bytes count toward the picture budget.
 export const TOOL_VALUE_BYTES = 4 * 1024 * 1024;
 export const TOOL_DATA_BYTES = 32 * 1024 * 1024;
 export const TOOL_CHAT_BYTES = 8 * 1024 * 1024;
-export const TOOL_KEY_CHARS = 256;
 const TOOL_WRITES_PER_MINUTE = 30;
 export const TOOL_NOTICES_PER_MINUTE = 3;
 const WRITE_PAUSE_MS = 1000;
@@ -34,7 +31,6 @@ const SWEEP_AFTER_MS = CLAIM_SETTLE_MS + 60_000;
 const RATE_WINDOW_MS = 60_000;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
-const dataBytes = (key: string, value: Json) => encoder.encode(key).byteLength + encoder.encode(JSON.stringify(value)).byteLength;
 
 export class ToolRate {
   private readonly sent = new Map<string, number[]>();

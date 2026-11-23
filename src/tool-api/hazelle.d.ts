@@ -14,6 +14,7 @@ declare namespace Hazelle {
   interface RequestMessage extends ModelMessage { message?: string; cache?: true }
   // A message about to be shown; at: null for the greeting.
   type Shown = { at: At | null; text: string };
+  // flood: past 20 model, embed and fetch calls a minute in the chat, its bot's scripts and every tool counted together.
   type ModelRefusal = 'not-allowed' | 'not-declared' | 'no-model' | 'flood' | 'failed';
   type ModelAnswer = { ok: true; text: string } | { ok: false; reason: ModelRefusal };
   // model: the embedding model that made the vectors; vectors from another model cannot be compared with them.
@@ -78,9 +79,12 @@ declare namespace Hazelle {
     set(name: string, value: string): void;     // lands with the event's outcome; from a page, after the latest message
     delete(name: string): void;                 // unsets it, as a script's nil write does: it reads its default again, or as not held
   }
-  // This tool's data for this chat: synced, goes with the chat and its branches, not versioned. Vectors keep best as
-  // base64 float32 or int8, not JSON numbers. A message id it holds that the chat no longer has is stale: a branch made
-  // while the tool was off keeps the source chat's ids.
+  // This tool's data for this chat: synced, goes with the chat and its branches, not versioned. A value is at most
+  // 512 KB of JSON, past which set throws too-large, and a tool's values in one chat 8 MB: an event whose writes pass
+  // that saves none of its data and badge writes, and the user is told. A set sends its whole value again, so what
+  // grows without end (a log, a history) goes under keys of its own, cut to size. Vectors keep best as base64 float32
+  // or int8, not JSON numbers. A message id it holds that the chat no longer has is stale: a branch made while the tool
+  // was off keeps the source chat's ids.
   interface ChatData {
     get<T extends Json = Json>(key: string): Promise<T | undefined>;
     set(key: string, value: Json): void;        // lands with the event's outcome
@@ -127,7 +131,10 @@ declare namespace Hazelle {
     // upsertLocalLoreBook does; lands with the event's outcome.
     writeLore(entry: Omit<LoreEntry, 'owner'>): void;
     setup(): Promise<Setup>;
+    // input: the text typed; confirm: 'yes'; select: the option's index. null: dismissed.
     ask(question: Question): Promise<string | null>;
+    // A notice in the chat. A tool's notices, its failures among them, show at most 3 a minute in a chat; the rest
+    // are dropped.
     say(text: string, tone?: 'normal' | 'error'): void;
     // needs //@uses model, under the same answer, since the turn spends on the chat's model. text goes as the user's
     // message through the chat screen's own send, as if typed; '' asks for a reply after the last message (응답 받기).
@@ -166,6 +173,9 @@ declare namespace Hazelle {
   type PromptAnswer = string | null | { tool?: string | null; memory?: { text: string; through: string | null } };
   type Change = At & { kind: 'edit' | 'select' | 'delete' | 'restore' };
   type Branched = { from: string; messages: Record<string, string>; versions: Record<string, string> };   // old id → new
+  // reply, change, branch, menu, action and input run one at a time for a tool in a chat, in the order they came. The
+  // events of a turn (sending, requesting, prompt, tool, replying) do not wait for them: the next turn's may run while
+  // a reply's handler is still under way.
   interface Events {
     reply(chat: Chat, reply: At): void | Promise<void>;                     // a reply was saved
     // a reply about to be saved, after the bot's Lua: a text answered is saved instead. No deadline: the turn waits,
