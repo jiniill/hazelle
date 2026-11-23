@@ -60,7 +60,6 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
   const { reading, display } = useDisplay();
   const chat = useChat(chatId, item, shelf, reading.reply, find);
   const worn = useWorn(shelf?.character.look);
-  const picture = display.hidePictures ? null : chat.backdropPicture;
   const { id, busy, panel, scroll, prompt, actions } = chat;
   const autopilot = useAutopilot(chat);
   const wide = useWide();
@@ -161,9 +160,9 @@ export function ChatScreen({ id: chatId, item, shelf, find, back, side, onPaired
           </SidePeeks>
         }
         backdrop={
-          (picture || chat.backdrop) && (
+          (chat.backdropPicture || chat.backdrop) && (
             <>
-              {picture && <BackdropPicture src={picture} {...backdropShades(shelf?.character.backdrop)} />}
+              {chat.backdropPicture && <BackdropPicture src={chat.backdropPicture} {...backdropShades(shelf?.character.backdrop)} />}
               {chat.backdrop && <StoryBackdrop html={chat.backdrop} />}
             </>
           )

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { entryName } from '../../connectors/types';
-import { resolveAssets, withAttachments } from '../../engine/assets';
+import { resolveAssets, withAttachments, type PictureUrl } from '../../engine/assets';
 import { holdsPersona, unused } from '../../engine/pipeline';
 import { activeOnboarding } from '../../engine/import/onboarding';
 import { calls, keepsPromptOut, shown, type ChatItem, type ChatSummary } from '../../model/chat';
@@ -32,7 +32,7 @@ import { LORE_BUDGET_LABEL, CHAT_SHOW_FAILED } from '../common/words';
 import { useAssetUrl, useCaptured, useChatDisplay, useChatMemory, useChatTools, useChildren, useSession, useToolFrames, useReplying } from '../session';
 import { useToast } from '../toast';
 import { useChatEdits } from './ChatEdits';
-import { storyText, useMenuHandle, useTimePin, useViewport, type BotButton, type Reading } from '../ui';
+import { storyText, useMenuHandle, useTimePin, useVeil, useViewport, type BotButton, type Reading } from '../ui';
 import { useSendNotes } from './useSendNotes';
 import { displayed } from './exportLog';
 import { useDraft } from './useDraft';
@@ -59,6 +59,7 @@ import { joinParts } from './joinParts';
 
 // The chats told this session that a reply's lorebook entries went past the 로어북 최대 분량: each is told once.
 const cutTold = new Set<string>();
+const NO_PICTURE: PictureUrl = () => undefined;
 
 export type OpenChat = ReturnType<typeof useChat>;
 
@@ -113,8 +114,12 @@ export function useChat(chatId: string, item: ChatItem | null, shelf: CharacterS
   }, [displayError]);
   const { texts, css, picture, background } = view;
   const bot = shelf?.character.decor !== false;
-  const pictured = picture !== null && shelf?.character.backdrop?.off !== true;
-  const url = useAssetUrl([bot, css, background, pictured]);
+  // 이미지 가리기 draws no picture of the bot's CSS, its background or the character's (Story's cleanCss, StoryBackdrop),
+  // so none is read.
+  const veiled = useVeil() !== null;
+  const pictured = !veiled && picture !== null && shelf?.character.backdrop?.off !== true;
+  const read = useAssetUrl([bot, css, background, pictured, veiled]);
+  const url = veiled ? NO_PICTURE : read;
   const decor = useMemo(() => ({ bot, css: bot ? resolveAssets(css, url) : '', buttons: scripted ? ('live' as const) : ('inert' as const) }), [bot, css, url, scripted]);
   // Apart from decor, which every message reads: a background that changes draws no message again.
   const backdrop = useMemo(() => (bot ? resolveAssets(background, url) : ''), [bot, background, url]);

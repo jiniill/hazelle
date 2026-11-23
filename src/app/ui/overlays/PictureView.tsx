@@ -42,7 +42,7 @@ export function PictureView({ src, label, video = false, title, note, actions = 
   const veil = useVeil();
   // Opened by a press of its own, so each picture it shows, a version stepped to as well, stays uncovered after.
   useEffect(() => {
-    if (src) veil?.revealed.add(src);
+    if (src) veil?.open(src);
   }, [veil, src]);
   const [size, setSize] = useState<Size | null>(null);
   const measured = size?.src === src ? size : null;

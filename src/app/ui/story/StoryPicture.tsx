@@ -1,5 +1,5 @@
-import { useReducer, useState, type CSSProperties, type ReactNode } from 'react';
-import { useVeil } from '../foundation/veil';
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useVeilTaps } from '../foundation/veil';
 import { PictureView } from '../overlays/PictureView';
 import styles from './StoryPicture.module.css';
 import { Switcher } from './StoryMessage';
@@ -20,11 +20,9 @@ type Props = {
 export function StoryPicture({ src, label, width, height, status, foot, pages }: Props) {
   const count = pages?.versions.length ?? 0;
   const step = (by: -1 | 1) => pages!.onPage((pages!.at + by + count) % count);
-  const veil = useVeil();
-  // A veil tapped open or shut changes only veil.revealed, which no render sees.
-  const [, tapVeil] = useReducer((count: number) => count + 1, 0);
+  const { veil } = useVeilTaps();
   const [open, setOpen] = useState(false);
-  const veiled = veil !== null && src !== undefined && !open && !veil.revealed.has(src);
+  const veiled = veil !== null && src !== undefined && !open && !veil.shows(src);
   return (
     <figure className={styles.picture}>
       <div className={status ? `${styles.frame} ${styles.making}` : styles.frame} style={{ '--ratio': width / height } as CSSProperties}>
@@ -34,10 +32,7 @@ export function StoryPicture({ src, label, width, height, status, foot, pages }:
           <button
             type="button"
             className={styles.veil}
-            onClick={() => {
-              veil.revealed.add(src);
-              tapVeil();
-            }}
+            onClick={() => veil.open(src)}
           >
             이미지 보기
           </button>
@@ -53,10 +48,7 @@ export function StoryPicture({ src, label, width, height, status, foot, pages }:
                   type="button"
                   className={styles.cover}
                   aria-label="이미지 가리기"
-                  onClick={() => {
-                    veil.revealed.delete(src);
-                    tapVeil();
-                  }}
+                  onClick={() => veil.cover(src)}
                 >
                   가리기
                 </button>

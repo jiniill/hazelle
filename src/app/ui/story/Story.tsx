@@ -1,11 +1,11 @@
 import DOMPurify from 'dompurify';
-import { createContext, useContext, useEffect, useLayoutEffect, useReducer, useRef, type ReactNode, type Ref } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, type ReactNode, type Ref } from 'react';
 import { useRowState } from '../collections/row-memory';
 import { scrollbarKind } from '../foundation/scrollbar';
 import { MEDIA, mediaQuery } from '../foundation/media';
 import { tokenMotion, tokenMs } from '../foundation/tokenPx';
 import { useQuoteShape } from '../foundation/quotes';
-import { useVeil, type Veil } from '../foundation/veil';
+import { unread, useVeil, useVeilTaps, type Veil } from '../foundation/veil';
 import { inkable, inkOn, inkSheet, type StoryInk } from './ink';
 import { inlaid } from './inlay';
 import { useMarginRoom } from '../layout/ChatFrame';
@@ -380,11 +380,13 @@ function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFra
   const revealed: { element: Element; source: string; what: Veiled }[] = [];
   // A video is veiled whole: one tapped open keeps the sources inside it.
   const opened = new Set<Element>();
+  // One tapped open stays covered until it is read.
+  const covered = (source: string) => !veil!.shows(source) || unread(source);
   if (veil) {
     for (const video of fragment.querySelectorAll('video')) {
       const source = videoSource(video);
       if (source === null) continue;
-      if (!veil.revealed.has(source)) video.replaceWith(veilFor(source, '영상'));
+      if (covered(source)) video.replaceWith(veilFor(source, '영상'));
       else {
         opened.add(video);
         revealed.push({ element: video, source, what: '영상' });
@@ -399,10 +401,10 @@ function sanitize(html: string, cursor: boolean, veil: Veil | null): DocumentFra
     const source = element.getAttribute('src') ?? '';
     const own = OWN_SOURCE.test(source);
     if (element.tagName !== 'IMG') {
-      if (!own || (veil && !inOpened(element))) element.removeAttribute('src');
+      if (!own || unread(source) || (veil && !inOpened(element))) element.removeAttribute('src');
     } else if (!own) {
       element.remove();
-    } else if (veil && !veil.revealed.has(source)) {
+    } else if (veil && covered(source)) {
       element.replaceWith(veilFor(source, '이미지'));
     } else if (veil) {
       revealed.push({ element, source, what: '이미지' });
@@ -599,11 +601,9 @@ export function Story({ html, css = '', cursor = false, inked = false, tone = 'p
   const pictures = useRowState(PICTURES, () => new Set<string>());
   // The picture the pointer holds open, kept over a draw as a tapped one is.
   const hovered = useRef<string | null>(null);
-  const veil = useVeil();
+  const { veil, taps: veilTaps } = useVeilTaps();
   const quotes = useQuoteShape();
   const words = useContext(WordsContext);
-  // A veil tapped open or shut changes only veil.revealed, which no render sees.
-  const [veilTaps, tapVeil] = useReducer((count: number) => count + 1, 0);
   const host = useRef<HTMLDivElement>(null);
   const root = () => host.current!.shadowRoot ?? host.current!.attachShadow({ mode: 'open' });
 
@@ -750,16 +750,14 @@ export function Story({ html, css = '', cursor = false, inked = false, tone = 'p
       }
       const veiled = (event.target as Element).closest(`[${VEILED}]`);
       if (veiled && veil) {
-        veil.revealed.add(veiled.getAttribute(VEILED)!);
-        tapVeil();
+        veil.open(veiled.getAttribute(VEILED)!);
         event.preventDefault();
         return;
       }
       // Before the picture's line, which holds it and would fold instead.
       const cover = (event.target as Element).closest(`[${COVER}]`);
       if (cover && veil) {
-        veil.revealed.delete(cover.getAttribute(COVER)!);
-        tapVeil();
+        veil.cover(cover.getAttribute(COVER)!);
         event.preventDefault();
         return;
       }

@@ -19,7 +19,6 @@ import { timeOfDay } from '../common/time';
 import { agentsWaiting, DISCOUNT_STOPPING, DISCOUNT_WAITING, polishingNow, PRE_READ_RETRYING, PRE_READ_WAITING, RETRYING, toolFinishing, toolWaiting } from '../common/words';
 import type { Reading } from '../../runtime/chat/talk';
 import type { Preparing } from '../../runtime/chat/turn-steps';
-import { useAssetUrl } from '../session';
 import { SHORTCUTS } from '../shortcuts';
 import { MASCOTS } from '../../model/mascot';
 import { Avatar, Button, Divider, EditBox, Failure, IconButton, Marker, MascotRemark, Menu, MenuHeading, MenuItem, MoreMenu, pressed, SelectionButton, Story, StoryMessage, Switcher, Text, titled, Usage, useMenuOpener, useWide, Waiting, type MenuHandle } from '../ui';
@@ -27,6 +26,7 @@ import { useNow } from './ChatCache';
 import { ChatPicture } from './ChatPicture';
 import { linesOf, markPart, PART_MARK, partOf } from './editPart';
 import { picturePlaces } from './picturePlaces';
+import { useStoryUrl } from './useStoryUrl';
 import type { ChatActions } from './useChat';
 import type { PartAt } from './useMessageEdit';
 import type { MessageRow } from './messageRow';
@@ -88,7 +88,7 @@ export const ChatMessage = memo(function ChatMessage(props: Props) {
   const storyText = useMemo(() => (both ? withOriginal(translatedText, original) : translatedText), [both, translatedText, original]);
   const part = editing?.part ?? null;
   const drawnText = part ? markPart(storyText, part.shown) : storyText;
-  const url = useAssetUrl([row, drawnText, raw]);
+  const url = useStoryUrl([row, drawnText, raw]);
   const decor = useMemo(() => ({ ...decoration, url }), [decoration, url]);
   // The parse apart from its pictures' addresses, which are looked up again whenever the row changes, as with every
   // chunk of a reply being written.

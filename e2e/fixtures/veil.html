@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Veiled pictures</title></head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import { createElement as h, useState } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { Story } from '../../src/app/ui/story/Story';
+      import { useVeilTaps, Veil, VeilContext, veiledSource } from '../../src/app/ui/foundation/veil';
+      import '../../src/app/ui/foundation/global.css';
+
+      const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+      const address = URL.createObjectURL(new Blob([png], { type: 'image/png' }));
+      const veil = new Veil();
+      // As a message gives a story its pictures (app/chat/useStoryUrl): one is asked for once tapped open, and read a while later.
+      window.asked = [];
+      function Message() {
+        const { veil } = useVeilTaps();
+        const [read, setRead] = useState(false);
+        const source = (key) => {
+          if (!veil.shows(key)) return veiledSource(key, undefined);
+          if (!window.asked.includes(key)) window.asked.push(key);
+          return veiledSource(key, read ? address : undefined);
+        };
+        return h('main', null,
+          h('button', { onClick: () => setRead(true) }, 'Read'),
+          h(Story, { html: `<p>before</p><p><img src="${source('asset:a')}"></p><p><img src="${source('asset:b')}"></p>` }),
+        );
+      }
+      createRoot(document.getElementById('root')).render(h(VeilContext, { value: veil }, h(Message)));
+    </script>
+  </body>
+</html>
