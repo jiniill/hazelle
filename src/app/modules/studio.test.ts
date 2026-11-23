@@ -30,7 +30,7 @@ it('offers the turn\'s stages and each declared item and runs one on the chat as
 });
 
 it('asks to fix the error with its line as the body numbers it, and without one when the error has none', () => {
-  expect(fixAsk('boom', '응답이 저장된 뒤', 'a\n  b()\n', 2)).toBe('테스트에서 난 오류를 수정해 주세요.\n실행 시점: 응답이 저장된 뒤\n오류: boom\n2번째 줄: b()');
+  expect(fixAsk('boom', '응답을 저장한 뒤', 'a\n  b()\n', 2)).toBe('테스트에서 난 오류를 수정해 주세요.\n실행 시점: 응답을 저장한 뒤\n오류: boom\n2번째 줄: b()');
   expect(fixAsk('boom', '요청을 만들 때', 'a', null)).toBe('테스트에서 난 오류를 수정해 주세요.\n실행 시점: 요청을 만들 때\n오류: boom');
 });
 

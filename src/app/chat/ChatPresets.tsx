@@ -10,8 +10,8 @@ import { useToast } from '../toast';
 import { Button, Dialog, Divider, MenuHeading, MenuItem } from '../ui';
 import type { OpenChat } from './useChat';
 
-const GONE = { model: '추가한 모델에 없는 모델이에요.', prompt: '삭제된 프롬프트예요.' };
-const NOTHING_TO_KEEP = { model: '대화 모델이 없어서 저장할 수 없어요.', prompt: '프롬프트를 보내지 않는 채팅이라 저장할 수 없어요.' };
+const GONE = { model: '추가한 모델에 없어요.', prompt: '삭제된 프롬프트예요.' };
+const NOTHING_TO_KEEP = { model: '대화 모델이 없어서 저장할 수 없어요.', prompt: '프롬프트를 쓰지 않는 채팅이라 저장할 수 없어요.' };
 
 // A chat's presets as its rows say them, and the one it runs on now. A row names what a pick changes, and the toggles
 // that stand otherwise, which nothing else on it would show.
@@ -26,7 +26,7 @@ export function useChatPresets({ place, actions }: OpenChat) {
         const names = presetNames(store, preset);
         if ('lacks' in names) return { preset, words: { error: GONE[names.lacks] } };
         const apart = 'lacks' in setup ? 0 : togglesApart(setup, preset);
-        return { preset, words: { description: [names.model, promptName(names.prompt), `${FEATURE_NAMES.translate} ${onOff(preset.translate)}`, ...(apart ? [`토글 ${apart}개 다름`] : [])].join(' · ') } };
+        return { preset, words: { description: [names.model, promptName(names.prompt), `${FEATURE_NAMES.translate} ${onOff(preset.translate)}`, ...(apart ? [`토글 ${apart}개 변경`] : [])].join(' · ') } };
       });
       return { setup, rows, current: 'lacks' in setup ? null : (rows.find(({ preset }) => holds(setup, preset))?.preset ?? null), idle: !(replies || input || reverse) };
     },
@@ -36,7 +36,7 @@ export function useChatPresets({ place, actions }: OpenChat) {
   async function pick(preset: ChatPreset) {
     const picked = await actions.pickChatPreset(preset);
     if (!picked.ok) return toast.failed(picked, '프리셋을 적용하지 못했어요.');
-    toast.undoable(`${namedObject(preset.name, PRESET.noun)} 적용했어요.`, picked.data, preset.translate && read.idle ? '자동 번역은 꺼져 있어요. 입력창의 번역에서 켤 수 있어요.' : undefined);
+    toast.undoable(`${namedObject(preset.name, PRESET.noun)} 적용했어요.`, picked.data, preset.translate && read.idle ? "자동 번역은 꺼져 있어요. 입력창의 '번역'에서 켤 수 있어요." : undefined);
   }
 
   return { ...read, pick };

@@ -53,7 +53,7 @@ export const MODULE_MODELS = '모델 호출';
 export const MODULE_MODEL_HELP = `${MODEL_ROLES.aux} 호출에만 써요.`;
 export const OUTGOING = '보낼 메시지';
 // A script's or a plugin's 테스트, run on a chat without saving.
-export const TRIAL = { name: '테스트', chat: '채팅', when: '실행 시점', whenHelp: '플러그인은 대화의 정해진 시점마다 실행돼요. 고른 시점의 코드를 이 채팅에서 한 번 실행하고, 무엇을 했는지 보여줘요.', run: '테스트 실행', running: '실행하는 중…', noChat: '채팅을 열지 못했어요.', failed: '결과를 만들지 못했어요.', stale: '코드가 바뀌었어요. 다시 실행하면 지금 코드로 테스트해요.', unchanged: '변경되는 내용이 없어요.' };
+export const TRIAL = { name: '테스트', chat: '채팅', when: '실행 시점', whenHelp: '플러그인은 대화의 정해진 시점마다 실행돼요. 고른 시점의 코드를 한 번 실행해 보고 결과를 보여줘요. 채팅과 저장소는 바뀌지 않아요.', run: '테스트 실행', running: '실행 중…', noChat: '채팅을 열지 못했어요.', failed: '테스트를 실행하지 못했어요.', stale: '코드가 바뀌었어요. 다시 실행하면 지금 코드로 테스트해요.', unchanged: '바뀌는 내용이 없어요.' };
 // Who a script's question or switch speaks for; a module that holds a tool is a plugin. Each noun takes 이.
 const ASKER = { character: '봇', module: '모듈', plugin: TOOL };
 export type Asker = keyof typeof ASKER;
@@ -105,7 +105,7 @@ export const REMOVE_FAILED = '삭제하지 못했어요.';
 export const CHANGE_FAILED = '바꾸지 못했어요.';
 export const APPLY_FAILED = '적용하지 못했어요.';
 export const UNDO_FAILED = '되돌리지 못했어요.';
-export const MOVE_FAILED = '옮기지 못했어요.';
+export const MOVE_FAILED = '순서를 바꾸지 못했어요.';
 // Goes to what a notice or a row points at; not the 보기 a status panel is drawn in (statusWords).
 export const SEE = '보기';
 // A field left without what it needs.
@@ -277,9 +277,8 @@ export const STAGE_NAMES: Record<AgentStage, string> = { pre: '전처리', post:
 export const agentsWaiting = ({ running, retrying, total }: { running: readonly string[]; retrying: readonly string[]; total: number }) => `${withParticle((retrying.length ? retrying : running).join(', '), '이/가')} ${retrying.length ? RESENDING : '먼저 읽고 있어요'}${total > 1 ? ` · ${total - running.length}/${total} 끝남` : '.'}`;
 export const polishingNow = ({ name, at, total, retrying }: { name: string; at: number; total: number; retrying?: true }) => `${withParticle(name, '이/가')} ${retrying ? RESENDING : '응답을 다듬고 있어요'}${total > 1 ? ` · ${at}/${total}` : '.'}`;
 // note: what the tool says it is doing (Chat.progress), which then stands for the app's own words.
-const toolSaid = (name: string, note: string) => `${name} · ${note}`;
-export const toolWaiting = (name: string, note?: string) => note ? toolSaid(name, note) : `${withParticle(name, '이/가')} 보낼 내용을 준비하는 중`;
-export const toolFinishing = (name: string, note?: string) => note ? toolSaid(name, note) : `'${name}' 실행 중…`;
+export const toolWaiting = (name: string, note = '보낼 내용 준비 중') => `${name} · ${note}`;
+export const toolFinishing = (name: string, note = '실행 중…') => `${name} · ${note}`;
 export const STATUS = '상태';
 // Placeholders until the copy batch, as every word of 상태 is.
 export const STATUS_REWRITE = '상태 다시 쓰기';

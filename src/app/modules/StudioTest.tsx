@@ -233,13 +233,13 @@ function CallLog({ log: { made, omitted } }: { log: TrialCalls }) {
   const shown = useShown(made, CALL_ROWS);
   if (!made.length) return null;
   return (
-    <Section title="호출 기록" level={3} note={`${made.length + omitted}번`} help="플러그인이 실행 중에 앱에 요청한 것과 받은 답이에요. 메시지 수정이나 배지처럼 끝날 때 한꺼번에 반영되는 것은 여기 없어요.">
+    <Section title="호출 기록" level={3} note={`${made.length + omitted}번`} help="플러그인이 실행 중에 앱에 요청한 것과 받은 답이에요. 메시지 수정이나 배지처럼 끝날 때 한꺼번에 반영되는 것은 여기에 기록되지 않아요.">
       <StepList
         label="호출 기록"
         steps={shown.rows.map(({ method, args, gave, failed }) => ({ source: `${method}(${args})`, result: gave ?? '', depth: 0, ...(gave === null && { note: '답을 받기 전에 실행이 끝났어요.' }), ...(failed && { tone: 'warn' as const }) }))}
       />
       {shown.more}
-      {!shown.more && omitted > 0 && <Text variant="note">{`이 뒤의 ${omitted}번은 기록하지 않았어요.`}</Text>}
+      {!shown.more && omitted > 0 && <Text variant="note">{`이후 ${omitted}번은 기록하지 않았어요.`}</Text>}
     </Section>
   );
 }
@@ -247,10 +247,10 @@ function CallLog({ log: { made, omitted } }: { log: TrialCalls }) {
 // What the run answered: a prompt's slot texts, the text a sending, replying or input answer puts in place, or the
 // list a requesting, calling or showing answer does, folded since a request is long.
 function answerText(value: unknown): { label: string; text: string; folded?: true }[] {
-  if (typeof value === 'string') return value ? [{ label: '결과', text: value }] : [];
+  if (typeof value === 'string') return value ? [{ label: '반환값', text: value }] : [];
   if (Array.isArray(value)) {
     const texts = (value as (string | Hazelle.RequestMessage)[]).map((each) => (typeof each === 'string' ? each : `[${each.role}]\n${each.content}`));
-    return [{ label: `결과 · ${value.length}개`, text: texts.join('\n\n'), folded: true }];
+    return [{ label: `반환값 · ${value.length}개`, text: texts.join('\n\n'), folded: true }];
   }
   if (value === null || typeof value !== 'object') return [];
   const { tool, memory } = value as Exclude<Hazelle.PromptAnswer, string | null>;

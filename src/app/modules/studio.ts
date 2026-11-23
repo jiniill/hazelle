@@ -20,11 +20,11 @@ export const USE_TAGS: Record<ToolUse, string> = { model: MODULE_MODELS, embed: 
 export type TestPick = { value: string; label: string; sub: string; text: boolean };
 export const TEST_REQUEST = new Set(['requesting', 'calling']);
 export const testPicks = (manifest: ToolManifest): TestPick[] => [
-  { value: 'reply', label: '응답이 저장된 뒤', sub: 'reply · 마지막 응답', text: false },
+  { value: 'reply', label: '응답을 저장한 뒤', sub: 'reply · 마지막 응답', text: false },
   { value: 'sending', label: '메시지를 보내기 전', sub: 'sending', text: true },
   { value: 'prompt', label: '요청을 만들 때', sub: 'prompt', text: false },
   { value: 'requesting', label: '요청을 보내기 전', sub: 'requesting · 다음 요청', text: false },
-  { value: 'calling', label: '봇 스크립트가 모델을 부를 때', sub: 'calling · 다음 요청을 부른 것으로', text: false },
+  { value: 'calling', label: '봇 스크립트가 모델을 호출할 때', sub: 'calling · 다음 요청을 대신 전달', text: false },
   { value: 'replying', label: '응답을 저장하기 전', sub: 'replying · 마지막 응답', text: false },
   { value: 'showing', label: '메시지를 표시할 때', sub: 'showing · 마지막 메시지', text: false },
   { value: 'change', label: '메시지를 수정한 뒤', sub: 'change · 마지막 메시지', text: false },
